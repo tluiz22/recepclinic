@@ -31,7 +31,7 @@ export async function cancelAppointmentsInBulk(
       .eq("id", appointmentId)
       .neq("status", "canceled")
       .select(
-        "patient_id, scheduled_at, appointment_type, exam_type_id, google_event_id, clinic_location_id, patients ( full_name, guardians ( id, full_name, phone ) ), clinic_locations ( type ), exam_types ( id, name, scheduling_mode )"
+        "patient_id, scheduled_at, appointment_type, exam_type_id, google_event_id, clinic_location_id, home_visit_address, patients ( full_name, guardians ( id, full_name, phone ) ), clinic_locations ( type ), exam_types ( id, name, scheduling_mode )"
       )
       .maybeSingle();
 
@@ -104,6 +104,10 @@ export async function cancelAppointmentsInBulk(
         location_category: isExam ? null : location?.type === "home_visit" ? "home_visit" : "clinic",
         appointment_type: appointment.appointment_type,
         exam_type_id: isExam ? (examType?.id ?? appointment.exam_type_id) : null,
+        // Leva o endereço da consulta cancelada pro link de remarcação — sem
+        // isso, quem reagenda por esse link perde o endereço já combinado e
+        // a nova consulta nasce sem ele (Fase 16).
+        home_visit_address: !isExam && location?.type === "home_visit" ? appointment.home_visit_address : null,
         mode: "create",
         guardian_phone: guardian.phone,
         expires_at: new Date(Date.now() + LINK_EXPIRY_MS).toISOString(),

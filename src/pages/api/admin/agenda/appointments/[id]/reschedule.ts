@@ -19,6 +19,10 @@ export const POST: APIRoute = async ({ params, request, cookies, redirect }) => 
   // lista recalculada no servidor e usamos o clinicLocationId QUE ELA devolve.
   const startParam = formData.get("start")?.toString();
   const startIso = startParam?.split("|")[0];
+  // Endereço reconfirmado/editado pela secretária ao remarcar um atendimento
+  // domiciliar — ver Fase 16 no plano (reconfirma sempre, nunca reaproveita
+  // o antigo sem passar pela tela de novo).
+  const homeVisitAddress = formData.get("home_visit_address")?.toString().trim() || null;
 
   const appointmentType: AppointmentType | null =
     appointmentTypeRaw === "first_visit" || appointmentTypeRaw === "return_visit" || appointmentTypeRaw === "exam"
@@ -26,6 +30,7 @@ export const POST: APIRoute = async ({ params, request, cookies, redirect }) => 
       : null;
   const isExam = appointmentType === "exam";
   const locationCategory: LocationCategory = locationCategoryRaw === "home_visit" ? "home_visit" : "clinic";
+  const isHomeVisit = !isExam && locationCategory === "home_visit";
 
   const back = (error: string) =>
     isExam
@@ -38,12 +43,16 @@ export const POST: APIRoute = async ({ params, request, cookies, redirect }) => 
     return back("1");
   }
 
+  if (isHomeVisit && !homeVisitAddress) {
+    return back("missing_address");
+  }
+
   const supabase = createClient(request, cookies);
 
   const { data: appointment } = await supabase
     .from("appointments")
     .select(
-      "id, google_event_id, status, exam_type_id, scheduled_at, patients ( full_name, guardians ( id, full_name, phone ) )"
+      "id, google_event_id, status, exam_type_id, scheduled_at, home_visit_address, patients ( full_name, guardians ( id, full_name, phone ) )"
     )
     .eq("id", id)
     .single();
@@ -181,6 +190,7 @@ export const POST: APIRoute = async ({ params, request, cookies, redirect }) => 
         scheduled_at: startDate.toISOString(),
         duration_minutes: durationMinutes,
         appointment_type: appointmentType,
+        home_visit_address: isHomeVisit ? homeVisitAddress : null,
       })
       .eq("id", id);
 
@@ -213,7 +223,7 @@ export const POST: APIRoute = async ({ params, request, cookies, redirect }) => 
       typeLabel: buildAppointmentTypeLabel(appointmentType, examName),
       scheduledAt: startDate,
       locationLabel: location?.type === "clinic" ? "Consultório" : location?.type === "exam" ? "Exames" : "Domiciliar",
-      locationAddress: location?.address ?? null,
+      locationAddress: isHomeVisit ? homeVisitAddress : (location?.address ?? null),
     });
   }
 

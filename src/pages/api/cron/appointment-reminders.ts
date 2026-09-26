@@ -31,7 +31,7 @@ export const GET: APIRoute = async ({ request }) => {
   const { data: candidates, error } = await supabase
     .from("appointments")
     .select(
-      "id, google_event_id, scheduled_at, appointment_type, clinic_locations ( type, address ), exam_types ( name ), patients ( full_name, guardians ( id, full_name, phone ) )"
+      "id, google_event_id, scheduled_at, appointment_type, home_visit_address, clinic_locations ( type, address ), exam_types ( name ), patients ( full_name, guardians ( id, full_name, phone ) )"
     )
     .in("status", ["scheduled", "confirmed"])
     .is("reminder_sent_at", null)
@@ -100,7 +100,7 @@ export const GET: APIRoute = async ({ request }) => {
       typeLabel: buildAppointmentTypeLabel(appointment.appointment_type, examType?.name),
       scheduledAt: new Date(appointment.scheduled_at),
       locationLabel: location?.type === "clinic" ? "Consultório" : location?.type === "exam" ? "Exames" : "Domiciliar",
-      locationAddress: location?.address ?? null,
+      locationAddress: appointment.home_visit_address ?? location?.address ?? null,
     });
 
     if (status === "sent") sent++;

@@ -6,6 +6,18 @@ const typeSelect = document.getElementById("appointment_type") as HTMLSelectElem
 const slotsContainer = document.getElementById("slots_container") as HTMLDivElement;
 const dateWarning = document.getElementById("date_availability_warning") as HTMLParagraphElement;
 const submitBtn = document.getElementById("submit_btn") as HTMLButtonElement;
+const homeAddressField = document.getElementById("home_visit_address_field") as HTMLDivElement | null;
+const homeAddressInput = document.getElementById("home_visit_address") as HTMLInputElement | null;
+
+// Endereço só faz sentido (e só é obrigatório) para atendimento domiciliar
+// — ver Fase 16 no plano.
+function syncHomeAddressField() {
+  if (!homeAddressField || !homeAddressInput) return;
+  const isHomeVisit = locationSelect.value === "home_visit";
+  homeAddressField.classList.toggle("hidden", !isHomeVisit);
+  homeAddressInput.required = isHomeVisit;
+  if (!isHomeVisit) homeAddressInput.value = "";
+}
 
 function renderEmptySlots(message: string) {
   slotsContainer.innerHTML = `<p class="text-sm text-slate-500">${message}</p>`;
@@ -90,5 +102,6 @@ async function refreshDates() {
 }
 
 locationSelect.addEventListener("change", refreshDates);
+locationSelect.addEventListener("change", syncHomeAddressField);
 typeSelect.addEventListener("change", refreshDates);
 dateSelect.addEventListener("change", refreshSlots);

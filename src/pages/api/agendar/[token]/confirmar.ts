@@ -151,7 +151,11 @@ export const POST: APIRoute = async ({ params, request, redirect }) => {
     phone: string;
   } | null;
   const locationLabel = location?.type === "clinic" ? "Consultório" : location?.type === "exam" ? "Exames" : "Domiciliar";
-  const locationAddress = location?.address ?? null;
+  // Endereço do consultório físico (`clinic_locations.address`) — sempre
+  // nulo pra domiciliar, que usa o endereço específico do paciente em vez
+  // dele (`home_visit_address`, resolvido por branch logo abaixo: do link
+  // ao criar, da própria consulta ao remarcar — ver Fase 16 no plano).
+  const clinicAddress = location?.address ?? null;
   // Retorno não tem valor próprio — está incluso no valor da consulta
   // anterior (decisão do cliente); `null` aciona esse texto na notificação.
   // Exame tem valor próprio, em exam_types (não em clinic_locations).
@@ -182,7 +186,7 @@ export const POST: APIRoute = async ({ params, request, redirect }) => {
   if (link.mode === "reschedule") {
     const { data: appointment } = await supabase
       .from("appointments")
-      .select("id, google_event_id, status, scheduled_at")
+      .select("id, google_event_id, status, scheduled_at, home_visit_address")
       .eq("id", link.appointment_id)
       .single();
 
@@ -191,6 +195,11 @@ export const POST: APIRoute = async ({ params, request, redirect }) => {
     }
 
     appointmentId = appointment.id;
+    // O bot sempre reconfirma o endereço ao remarcar um domiciliar (Fase 16)
+    // — `link.home_visit_address` é o valor já reconfirmado/corrigido nessa
+    // conversa; cai pro que já estava gravado só como rede de segurança
+    // (link antigo, ou remarcação de um tipo que não passa por lá).
+    const locationAddress = link.home_visit_address ?? appointment.home_visit_address ?? clinicAddress;
 
     if (isGroupExam && matchedSession) {
       const { error: rpcError } = await supabase.rpc("reschedule_group_exam_session", {
@@ -248,6 +257,7 @@ export const POST: APIRoute = async ({ params, request, redirect }) => {
           scheduled_at: startDate.toISOString(),
           duration_minutes: durationMinutes,
           appointment_type: appointmentType,
+          home_visit_address: locationAddress && link.location_category === "home_visit" ? locationAddress : null,
         })
         .eq("id", appointment.id);
 
@@ -293,6 +303,8 @@ export const POST: APIRoute = async ({ params, request, redirect }) => {
       return back("1");
     }
 
+    const locationAddress = link.home_visit_address ?? clinicAddress;
+
     if (isGroupExam && matchedSession) {
       const { data: newAppointmentId, error: rpcError } = await supabase.rpc("book_group_exam_session", {
         p_exam_type_id: link.exam_type_id,
@@ -330,6 +342,7 @@ export const POST: APIRoute = async ({ params, request, redirect }) => {
           duration_minutes: durationMinutes,
           appointment_type: appointmentType,
           exam_type_id: appointmentType === "exam" ? link.exam_type_id : null,
+          home_visit_address: link.home_visit_address ?? null,
           status: "scheduled",
           booking_channel: "whatsapp_bot",
         })
@@ -344,7 +357,9 @@ export const POST: APIRoute = async ({ params, request, redirect }) => {
 
       const event = await createEvent({
         summary: `${typeLabel} — ${patient.full_name}${guardian ? ` (resp. ${guardian.full_name})` : ""}`,
-        description: `Tel: ${guardian?.phone ?? "—"} | Tipo: ${typeLabel} | Local: ${locationLabel}`,
+        description:
+          `Tel: ${guardian?.phone ?? "—"} | Tipo: ${typeLabel} | Local: ${locationLabel}` +
+          (link.home_visit_address ? ` | Endereço: ${link.home_visit_address}` : ""),
         start: startDate.toISOString(),
         end: endDate.toISOString(),
         appointmentId: newAppointment.id,

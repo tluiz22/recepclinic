@@ -28,13 +28,25 @@ import {
 } from "./shared";
 import * as texts from "./messages";
 
-export const RESCHEDULE_STATES: ReadonlySet<string> = new Set(["RESCHEDULE_SELECT"]);
+export const RESCHEDULE_STATES: ReadonlySet<string> = new Set(["RESCHEDULE_SELECT", "RESCHEDULE_HOME_ADDRESS"]);
 
 interface RescheduleContext {
   category: AppointmentCategory;
-  awaiting?: "appointment_choice" | "birthdate_search" | "confirm_appointment";
+  awaiting?:
+    | "appointment_choice"
+    | "birthdate_search"
+    | "confirm_appointment"
+    | "home_address_confirm_current"
+    | "home_address_input"
+    | "home_address_confirm_new";
   candidates?: AppointmentCandidate[];
+  // Reaproveitado também pra carregar a consulta durante a reconfirmação de
+  // endereço (Fase 16) — mesmo objeto, papel análogo (a consulta "em mãos"
+  // enquanto falta um último passo antes de gerar o link).
   pending_appointment?: AppointmentCandidate;
+  // Endereço candidato ainda não confirmado (o gravado na consulta, ou o
+  // texto recém-digitado) — só existe entre perguntar e confirmar/corrigir.
+  pending_home_address?: string;
 }
 
 // Consultas > Remarcar ou Exames > Remarcar → identifica a(s) consulta(s)/
@@ -169,6 +181,81 @@ export async function handleRescheduleState(
     await sendAndLog(supabase, guardianId, "bot_reschedule_confirm", body, () =>
       sendTextMessage({ to: guardianPhone, body })
     );
+    return;
+  }
+
+  // --- endereço do atendimento domiciliar (Fase 16) ----------------------
+
+  const appointment = context.pending_appointment;
+  if (!appointment || !guardianId) {
+    if (context.awaiting?.startsWith("home_address")) {
+      await sendRescheduleLinkError(supabase, guardianPhone, guardianId);
+    }
+    return;
+  }
+
+  if (context.awaiting === "home_address_confirm_current") {
+    const answer = selection.text.trim().toLowerCase();
+    if (answer.startsWith("s")) {
+      await finishRescheduleWithAddress(supabase, guardianPhone, guardianId, appointment, context.pending_home_address ?? "", {
+        updateDefault: false,
+      });
+      return;
+    }
+    if (answer.startsWith("n")) {
+      await askRescheduleHomeAddress(supabase, guardianPhone, guardianId, context.category, appointment);
+      return;
+    }
+
+    const notUnderstood = texts.notUnderstoodYesNoText();
+    await sendAndLog(supabase, guardianId, "bot_not_understood", notUnderstood, () =>
+      sendTextMessage({ to: guardianPhone, body: notUnderstood })
+    );
+    const body = texts.homeAddressConfirmCurrentText(context.pending_home_address ?? "");
+    await sendAndLog(supabase, guardianId, "bot_reschedule_home_address_confirm_current", body, () =>
+      sendTextMessage({ to: guardianPhone, body })
+    );
+    return;
+  }
+
+  if (context.awaiting === "home_address_input") {
+    const address = selection.text.trim();
+    if (!address) {
+      await askRescheduleHomeAddress(supabase, guardianPhone, guardianId, context.category, appointment);
+      return;
+    }
+
+    const body = texts.homeAddressConfirmNewText(address);
+    await sendAndLog(supabase, guardianId, "bot_reschedule_home_address_confirm_new", body, () =>
+      sendTextMessage({ to: guardianPhone, body })
+    );
+    await updateConversationState(supabase, guardianPhone, "RESCHEDULE_HOME_ADDRESS", {
+      context: { ...context, awaiting: "home_address_confirm_new", pending_home_address: address } satisfies RescheduleContext,
+    });
+    return;
+  }
+
+  if (context.awaiting === "home_address_confirm_new") {
+    const answer = selection.text.trim().toLowerCase();
+    if (answer.startsWith("s")) {
+      await finishRescheduleWithAddress(supabase, guardianPhone, guardianId, appointment, context.pending_home_address ?? "", {
+        updateDefault: true,
+      });
+      return;
+    }
+    if (answer.startsWith("n")) {
+      await askRescheduleHomeAddress(supabase, guardianPhone, guardianId, context.category, appointment);
+      return;
+    }
+
+    const notUnderstood = texts.notUnderstoodYesNoText();
+    await sendAndLog(supabase, guardianId, "bot_not_understood", notUnderstood, () =>
+      sendTextMessage({ to: guardianPhone, body: notUnderstood })
+    );
+    const body = texts.homeAddressConfirmNewText(context.pending_home_address ?? "");
+    await sendAndLog(supabase, guardianId, "bot_reschedule_home_address_confirm_new", body, () =>
+      sendTextMessage({ to: guardianPhone, body })
+    );
   }
 }
 
@@ -252,6 +339,101 @@ async function finishReschedule(
     locationCategory = currentLocation?.type === "home_visit" ? "home_visit" : "clinic";
   }
 
+  // Domiciliar: reconfirma o endereço antes de gerar o link (regra do
+  // cliente, Fase 16) — o link só é criado depois, em `finishRescheduleWithAddress`.
+  if (locationCategory === "home_visit") {
+    await enterRescheduleHomeAddress(supabase, guardianPhone, guardianId, "consulta", appointment);
+    return;
+  }
+
+  await createRescheduleLink(supabase, guardianPhone, guardianId, appointment, locationCategory, null);
+}
+
+// --- endereço do atendimento domiciliar ao remarcar (Fase 16) -------------
+
+// Sempre reconfirma, nunca reaproveita o endereço gravado sem perguntar de
+// novo (decisão do cliente) — se houver um, pergunta "ainda é esse?"; sem
+// um gravado (achado raro, ex.: consulta muito antiga), pede direto.
+async function enterRescheduleHomeAddress(
+  supabase: SupabaseClient,
+  guardianPhone: string,
+  guardianId: string,
+  category: AppointmentCategory,
+  appointment: AppointmentCandidate
+): Promise<void> {
+  if (appointment.home_visit_address) {
+    const body = texts.homeAddressConfirmCurrentText(appointment.home_visit_address);
+    await sendAndLog(supabase, guardianId, "bot_reschedule_home_address_confirm_current", body, () =>
+      sendTextMessage({ to: guardianPhone, body })
+    );
+    await updateConversationState(supabase, guardianPhone, "RESCHEDULE_HOME_ADDRESS", {
+      context: {
+        category,
+        awaiting: "home_address_confirm_current",
+        pending_appointment: appointment,
+        pending_home_address: appointment.home_visit_address,
+      } satisfies RescheduleContext,
+    });
+    return;
+  }
+
+  await askRescheduleHomeAddress(supabase, guardianPhone, guardianId, category, appointment);
+}
+
+async function askRescheduleHomeAddress(
+  supabase: SupabaseClient,
+  guardianPhone: string,
+  guardianId: string,
+  category: AppointmentCategory,
+  appointment: AppointmentCandidate
+): Promise<void> {
+  const body = texts.homeAddressAskText();
+  await sendAndLog(supabase, guardianId, "bot_reschedule_home_address_ask", body, () =>
+    sendTextMessage({ to: guardianPhone, body })
+  );
+  await updateConversationState(supabase, guardianPhone, "RESCHEDULE_HOME_ADDRESS", {
+    context: {
+      category,
+      awaiting: "home_address_input",
+      pending_appointment: appointment,
+      pending_home_address: undefined,
+    } satisfies RescheduleContext,
+  });
+}
+
+// Endereço confirmado: atualiza o "padrão" do responsável (só quando mudou
+// de fato — confirmar o que já estava gravado não precisa regravar nada) e
+// segue pra criação do link, agora com o endereço em mãos.
+async function finishRescheduleWithAddress(
+  supabase: SupabaseClient,
+  guardianPhone: string,
+  guardianId: string,
+  appointment: AppointmentCandidate,
+  address: string,
+  options: { updateDefault: boolean }
+): Promise<void> {
+  if (options.updateDefault) {
+    const { error } = await supabase
+      .from("guardians")
+      .update({ default_home_address: address })
+      .eq("id", guardianId);
+    if (error) {
+      console.error("[whatsapp bot] erro ao atualizar endereço padrão do responsável:", error.message);
+    }
+  }
+
+  await createRescheduleLink(supabase, guardianPhone, guardianId, appointment, "home_visit", address);
+}
+
+async function createRescheduleLink(
+  supabase: SupabaseClient,
+  guardianPhone: string,
+  guardianId: string,
+  appointment: AppointmentCandidate,
+  locationCategory: "clinic" | "home_visit" | null,
+  homeVisitAddress: string | null
+): Promise<void> {
+  const isExam = appointment.appointment_type === "exam";
   const expiresAt = new Date(Date.now() + 30 * 60_000).toISOString();
   const { data: link, error } = await supabase
     .from("booking_links")
@@ -262,6 +444,7 @@ async function finishReschedule(
       location_category: locationCategory,
       appointment_type: appointment.appointment_type,
       exam_type_id: appointment.exam_type_id,
+      home_visit_address: homeVisitAddress,
       mode: "reschedule",
       appointment_id: appointment.id,
       guardian_phone: guardianPhone,
@@ -276,7 +459,7 @@ async function finishReschedule(
     return;
   }
 
-  const category: AppointmentCategory = appointment.appointment_type === "exam" ? "exame" : "consulta";
+  const category: AppointmentCategory = isExam ? "exame" : "consulta";
   const url = buildAppUrl(`/agendar/${link.id}`);
   const body = texts.rescheduleLinkText(appointment.patient_name, url, category);
   await sendAndLog(supabase, guardianId, "bot_reschedule_link", body, () =>

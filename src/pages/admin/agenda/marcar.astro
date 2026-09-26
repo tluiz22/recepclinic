@@ -44,6 +44,7 @@ const errorMessages: Record<string, string> = {
   slot_taken: "Esse horário acabou de deixar de estar livre. Escolha outro.",
   patient_already_scheduled:
     "Esse paciente já tem uma consulta futura marcada. Cancele ou remarque a existente antes de criar uma nova.",
+  missing_address: "Informe o endereço para o atendimento domiciliar.",
   "1": "Não foi possível marcar a consulta. Confira os dados e tente novamente.",
 };
 const errorParam = Astro.url.searchParams.get("error");
@@ -154,6 +155,18 @@ const slots = date ? await getAvailableSlotsForDate({ supabase, clinicLocationId
           </a>{" "}
           (abre em outra aba).
         </p>
+      </div>
+
+      <div id="home_visit_address_field" class={locationCategory === "home_visit" ? "" : "hidden"}>
+        <label for="home_visit_address" class="block text-sm font-medium text-slate-700">Endereço *</label>
+        <input
+          type="text"
+          id="home_visit_address"
+          name="home_visit_address"
+          required={locationCategory === "home_visit"}
+          placeholder="Rua, número, bairro, complemento, ponto de referência"
+          class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-sky-600 focus:outline-none focus:ring-1 focus:ring-sky-600"
+        />
       </div>
 
       <div>

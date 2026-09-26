@@ -43,6 +43,7 @@ interface AppointmentRow {
   google_event_id: string | null;
   scheduled_at: string;
   appointment_type: string;
+  home_visit_address: string | null;
   patients: { full_name: string } | { full_name: string }[] | null;
 }
 
@@ -51,11 +52,18 @@ function patientName(row: AppointmentRow): string {
   return patient?.full_name ?? "Paciente";
 }
 
-// "09h00 - João Silva · 10h30 - Maria Souza" — parâmetros de corpo de
-// template da Meta não aceitam quebra de linha, a lista inteira fica numa
-// linha só, itens já ordenados por horário (a query abaixo ordena).
+// "09h00 - João Silva · 10h30 - Maria Souza (Rua X, 123 - Bairro Y)" —
+// parâmetros de corpo de template da Meta não aceitam quebra de linha, a
+// lista inteira fica numa linha só, itens já ordenados por horário (a query
+// abaixo ordena). Atendimento domiciliar leva o endereço completo junto —
+// só ele tem `home_visit_address` preenchido (ver Fase 16 no plano).
 function buildListText(rows: AppointmentRow[]): string {
-  return rows.map((row) => `${formatTimeFortaleza(new Date(row.scheduled_at))} - ${patientName(row)}`).join(" · ");
+  return rows
+    .map((row) => {
+      const base = `${formatTimeFortaleza(new Date(row.scheduled_at))} - ${patientName(row)}`;
+      return row.home_visit_address ? `${base} (${row.home_visit_address})` : base;
+    })
+    .join(" · ");
 }
 
 export const GET: APIRoute = async ({ request, url }) => {
@@ -80,7 +88,7 @@ export const GET: APIRoute = async ({ request, url }) => {
 
   const { data: candidates, error } = await supabase
     .from("appointments")
-    .select("id, google_event_id, scheduled_at, appointment_type, patients ( full_name )")
+    .select("id, google_event_id, scheduled_at, appointment_type, home_visit_address, patients ( full_name )")
     .in("status", ["scheduled", "confirmed"])
     .gte("scheduled_at", dayStart.toISOString())
     .lt("scheduled_at", dayEnd.toISOString())

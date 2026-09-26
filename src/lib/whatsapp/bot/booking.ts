@@ -25,6 +25,7 @@ import * as texts from "./messages";
 
 export const BOOKING_STATES: ReadonlySet<string> = new Set([
   "BOOK_LOCATION",
+  "BOOK_HOME_ADDRESS",
   "BOOK_PATIENT_SELECT",
   "BOOK_PATIENT_NEW",
 ]);
@@ -57,6 +58,15 @@ export interface BookingContext {
   clinic_location_id?: string;
   location_category?: "clinic" | "home_visit";
   clinic_location_label?: string;
+  // Endereço do atendimento domiciliar (Fase 16), já confirmado/corrigido
+  // pelo responsável — carregado até `finishBookingWithPatient` para gravar
+  // em `booking_links.home_visit_address` (a consulta em si só é criada
+  // depois, na página `/agendar/[token]`).
+  home_visit_address?: string;
+  // Endereço candidato ainda não confirmado nesta etapa (o "padrão" salvo do
+  // responsável, ou o texto que ele acabou de digitar) — só existe entre
+  // perguntar e confirmar/corrigir.
+  pending_home_address?: string;
   // Só preenchidos quando appointment_type === "exam" (case 6 · Marcar
   // exame, ver exam.ts) — carregados até finishBookingWithPatient para
   // gravar em booking_links e compor a mensagem do link.
@@ -64,6 +74,9 @@ export interface BookingContext {
   exam_type_name?: string;
   location_options?: LocationOption[];
   awaiting?:
+    | "home_address_confirm_default"
+    | "home_address_input"
+    | "home_address_confirm_new"
     | "patient_choice"
     | "birthdate_search"
     | "confirm_patient"
@@ -134,6 +147,9 @@ export async function handleBookingState(
     case "BOOK_LOCATION":
       await handleLocation(supabase, guardianPhone, guardianId, context, selection);
       return;
+    case "BOOK_HOME_ADDRESS":
+      await handleHomeAddress(supabase, guardianPhone, guardianId, context, selection);
+      return;
     case "BOOK_PATIENT_SELECT":
       await handlePatientSelect(supabase, guardianPhone, guardianId, context, selection);
       return;
@@ -186,8 +202,170 @@ async function handleLocation(
     location_category: match.id as "clinic" | "home_visit",
     clinic_location_label: match.label,
   };
+
+  if (newContext.location_category === "home_visit") {
+    await enterHomeAddress(supabase, guardianPhone, guardianId, newContext);
+    return;
+  }
+
   await updateConversationState(supabase, guardianPhone, "BOOK_PATIENT_SELECT", { context: newContext });
   await enterPatientSelect(supabase, guardianPhone, guardianId, newContext);
+}
+
+// --- BOOK_HOME_ADDRESS (endereço do atendimento domiciliar, Fase 16) -----
+
+// Se o responsável já existe e tem um endereço padrão salvo (de uma visita
+// domiciliar anterior), pergunta se ainda vale — resposta "sim" já conta
+// como a confirmação exigida pelo cliente, sem perguntar de novo. Sem
+// padrão (responsável novo, ou primeira vez com atendimento domiciliar),
+// pede o endereço direto.
+async function enterHomeAddress(
+  supabase: SupabaseClient,
+  guardianPhone: string,
+  guardianId: string | null,
+  context: BookingContext
+): Promise<void> {
+  const defaultAddress = guardianId
+    ? (
+        await supabase.from("guardians").select("default_home_address").eq("id", guardianId).maybeSingle()
+      ).data?.default_home_address ?? null
+    : null;
+
+  if (defaultAddress) {
+    const body = texts.homeAddressConfirmDefaultText(defaultAddress);
+    await sendAndLog(supabase, guardianId, "bot_book_home_address_confirm_default", body, () =>
+      sendTextMessage({ to: guardianPhone, body })
+    );
+    await updateConversationState(supabase, guardianPhone, "BOOK_HOME_ADDRESS", {
+      context: {
+        ...context,
+        awaiting: "home_address_confirm_default",
+        pending_home_address: defaultAddress,
+      } satisfies BookingContext,
+    });
+    return;
+  }
+
+  await askHomeAddress(supabase, guardianPhone, guardianId, context);
+}
+
+async function askHomeAddress(
+  supabase: SupabaseClient,
+  guardianPhone: string,
+  guardianId: string | null,
+  context: BookingContext
+): Promise<void> {
+  const body = texts.homeAddressAskText();
+  await sendAndLog(supabase, guardianId, "bot_book_home_address_ask", body, () =>
+    sendTextMessage({ to: guardianPhone, body })
+  );
+  await updateConversationState(supabase, guardianPhone, "BOOK_HOME_ADDRESS", {
+    context: { ...context, awaiting: "home_address_input", pending_home_address: undefined } satisfies BookingContext,
+  });
+}
+
+async function handleHomeAddress(
+  supabase: SupabaseClient,
+  guardianPhone: string,
+  guardianId: string | null,
+  context: BookingContext,
+  selection: Selection
+): Promise<void> {
+  if (context.awaiting === "home_address_confirm_default") {
+    const answer = selection.text.trim().toLowerCase();
+    if (answer.startsWith("s")) {
+      await confirmHomeAddress(supabase, guardianPhone, guardianId, context, context.pending_home_address ?? "", {
+        updateDefault: false,
+      });
+      return;
+    }
+    if (answer.startsWith("n")) {
+      await askHomeAddress(supabase, guardianPhone, guardianId, context);
+      return;
+    }
+
+    const notUnderstood = texts.notUnderstoodYesNoText();
+    await sendAndLog(supabase, guardianId, "bot_not_understood", notUnderstood, () =>
+      sendTextMessage({ to: guardianPhone, body: notUnderstood })
+    );
+    const body = texts.homeAddressConfirmDefaultText(context.pending_home_address ?? "");
+    await sendAndLog(supabase, guardianId, "bot_book_home_address_confirm_default", body, () =>
+      sendTextMessage({ to: guardianPhone, body })
+    );
+    return;
+  }
+
+  if (context.awaiting === "home_address_input") {
+    const address = selection.text.trim();
+    if (!address) {
+      await askHomeAddress(supabase, guardianPhone, guardianId, context);
+      return;
+    }
+
+    const body = texts.homeAddressConfirmNewText(address);
+    await sendAndLog(supabase, guardianId, "bot_book_home_address_confirm_new", body, () =>
+      sendTextMessage({ to: guardianPhone, body })
+    );
+    await updateConversationState(supabase, guardianPhone, "BOOK_HOME_ADDRESS", {
+      context: { ...context, awaiting: "home_address_confirm_new", pending_home_address: address } satisfies BookingContext,
+    });
+    return;
+  }
+
+  if (context.awaiting === "home_address_confirm_new") {
+    const answer = selection.text.trim().toLowerCase();
+    if (answer.startsWith("s")) {
+      await confirmHomeAddress(supabase, guardianPhone, guardianId, context, context.pending_home_address ?? "", {
+        updateDefault: true,
+      });
+      return;
+    }
+    if (answer.startsWith("n")) {
+      await askHomeAddress(supabase, guardianPhone, guardianId, context);
+      return;
+    }
+
+    const notUnderstood = texts.notUnderstoodYesNoText();
+    await sendAndLog(supabase, guardianId, "bot_not_understood", notUnderstood, () =>
+      sendTextMessage({ to: guardianPhone, body: notUnderstood })
+    );
+    const body = texts.homeAddressConfirmNewText(context.pending_home_address ?? "");
+    await sendAndLog(supabase, guardianId, "bot_book_home_address_confirm_new", body, () =>
+      sendTextMessage({ to: guardianPhone, body })
+    );
+  }
+}
+
+// Endereço confirmado: grava no contexto (segue até `finishBookingWithPatient`,
+// que carrega para `booking_links`) e, quando o responsável já existe,
+// atualiza o "padrão" pra próxima vez — só quando o endereço mudou de fato
+// (confirmar o padrão sugerido não precisa regravar o que já está lá).
+async function confirmHomeAddress(
+  supabase: SupabaseClient,
+  guardianPhone: string,
+  guardianId: string | null,
+  context: BookingContext,
+  address: string,
+  options: { updateDefault: boolean }
+): Promise<void> {
+  if (options.updateDefault && guardianId) {
+    const { error } = await supabase
+      .from("guardians")
+      .update({ default_home_address: address })
+      .eq("id", guardianId);
+    if (error) {
+      console.error("[whatsapp bot] erro ao atualizar endereço padrão do responsável:", error.message);
+    }
+  }
+
+  const nextContext: BookingContext = {
+    appointment_type: context.appointment_type,
+    location_category: context.location_category,
+    clinic_location_label: context.clinic_location_label,
+    home_visit_address: address,
+  };
+  await updateConversationState(supabase, guardianPhone, "BOOK_PATIENT_SELECT", { context: nextContext });
+  await enterPatientSelect(supabase, guardianPhone, guardianId, nextContext);
 }
 
 // --- BOOK_PATIENT_SELECT (identificação da criança) ----------------------
@@ -325,6 +503,7 @@ async function askNewPatientName(
     clinic_location_id: context.clinic_location_id,
     location_category: context.location_category,
     clinic_location_label: context.clinic_location_label,
+    home_visit_address: context.home_visit_address,
     exam_type_id: context.exam_type_id,
     exam_type_name: context.exam_type_name,
     awaiting: "new_patient_name",
@@ -535,9 +714,16 @@ async function createPatientAndFinishBooking(
   let guardianIdToUse = guardianId;
   if (!guardianIdToUse) {
     const guardianName = context.new_guardian_name ?? "Responsável";
+    // Responsável novo (telefone nunca visto): se já confirmou um endereço
+    // domiciliar nesta mesma conversa (context.home_visit_address), já
+    // nasce com o "padrão" salvo — evita digitar de novo na próxima vez.
     const { data: newGuardian, error } = await supabase
       .from("guardians")
-      .insert({ full_name: guardianName, phone: guardianPhone })
+      .insert({
+        full_name: guardianName,
+        phone: guardianPhone,
+        default_home_address: context.home_visit_address ?? null,
+      })
       .select("id")
       .single();
     if (error || !newGuardian) {
@@ -628,6 +814,7 @@ async function finishBookingWithPatient(
       clinic_location_id: context.clinic_location_id,
       location_category: context.location_category,
       clinic_location_label: context.clinic_location_label,
+      home_visit_address: context.home_visit_address,
       exam_type_id: context.exam_type_id,
       exam_type_name: context.exam_type_name,
     };
@@ -645,6 +832,7 @@ async function finishBookingWithPatient(
       location_category: isExam ? null : context.location_category,
       appointment_type: context.appointment_type,
       exam_type_id: context.exam_type_id ?? null,
+      home_visit_address: context.location_category === "home_visit" ? (context.home_visit_address ?? null) : null,
       mode: "create",
       guardian_phone: guardianPhone,
       expires_at: expiresAt,

@@ -20,7 +20,7 @@ if (!appointmentId) {
 const { data: appointment } = await supabase
   .from("appointments")
   .select(
-    "id, appointment_type, clinic_location_id, scheduled_at, status, patients ( full_name, guardians ( full_name, phone ) )"
+    "id, appointment_type, clinic_location_id, scheduled_at, status, home_visit_address, patients ( full_name, guardians ( full_name, phone ) )"
   )
   .eq("id", appointmentId)
   .single();
@@ -73,6 +73,7 @@ const appointmentType: AppointmentType =
 
 const errorMessages: Record<string, string> = {
   slot_taken: "Esse horário acabou de deixar de estar livre. Escolha outro.",
+  missing_address: "Informe o endereço para o atendimento domiciliar.",
   "1": "Não foi possível remarcar a consulta. Confira os dados e tente novamente.",
 };
 const errorParam = Astro.url.searchParams.get("error");
@@ -171,6 +172,19 @@ const slots = date ? await getAvailableSlotsForDate({ supabase, clinicLocationId
             <option value="return_visit" selected={appointmentType === "return_visit"}>Retorno</option>
           </select>
         </div>
+      </div>
+
+      <div id="home_visit_address_field" class={locationCategory === "home_visit" ? "" : "hidden"}>
+        <label for="home_visit_address" class="block text-sm font-medium text-slate-700">Endereço *</label>
+        <input
+          type="text"
+          id="home_visit_address"
+          name="home_visit_address"
+          required={locationCategory === "home_visit"}
+          value={appointment.home_visit_address ?? ""}
+          placeholder="Rua, número, bairro, complemento, ponto de referência"
+          class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-sky-600 focus:outline-none focus:ring-1 focus:ring-sky-600"
+        />
       </div>
 
       <div>

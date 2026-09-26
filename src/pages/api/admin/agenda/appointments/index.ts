@@ -15,6 +15,11 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
   const examTypeId = formData.get("exam_type_id")?.toString();
   const date = formData.get("date")?.toString();
   const appointmentTypeRaw = formData.get("appointment_type")?.toString();
+  // Endereço digitado pela secretária quando o local é domiciliar — ver
+  // Fase 16 no plano. `clinic_locations.address` do local domiciliar é
+  // sempre nulo (endereço varia por família, não é fixo como o do
+  // consultório).
+  const homeVisitAddress = formData.get("home_visit_address")?.toString().trim() || null;
   // O rádio de horário carrega "<iso>|<clinicLocationId>" — o local físico
   // específico já vem decidido pelo horário escolhido; revalidamos contra a
   // lista recalculada no servidor e usamos o clinicLocationId QUE ELA devolve.
@@ -27,6 +32,7 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
       : null;
   const isExam = appointmentType === "exam";
   const locationCategory: LocationCategory = locationCategoryRaw === "home_visit" ? "home_visit" : "clinic";
+  const isHomeVisit = !isExam && locationCategory === "home_visit";
 
   const back = (error: string) =>
     isExam
@@ -37,6 +43,10 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
 
   if (!patientId || !date || !startIso || !appointmentType || (isExam && !examTypeId)) {
     return back("1");
+  }
+
+  if (isHomeVisit && !homeVisitAddress) {
+    return back("missing_address");
   }
 
   const supabase = createClient(request, cookies);
@@ -152,6 +162,7 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
 
   const typeLabel = buildAppointmentTypeLabel(appointmentType, examTypeInfo?.name);
   const locationLabel = location?.type === "clinic" ? "Consultório" : location?.type === "exam" ? "Exames" : "Domiciliar";
+  const locationAddress = isHomeVisit ? homeVisitAddress : (location?.address ?? null);
 
   let newAppointmentId: string;
 
@@ -192,6 +203,7 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
         duration_minutes: durationMinutes,
         appointment_type: appointmentType,
         exam_type_id: isExam ? examTypeId : null,
+        home_visit_address: isHomeVisit ? homeVisitAddress : null,
         status: "scheduled",
         booking_channel: "admin",
       })
@@ -207,7 +219,9 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
     const guardianForEvent = (patient.guardians ?? null) as unknown as { full_name: string; phone: string } | null;
     const event = await createEvent({
       summary: `${typeLabel} — ${patient.full_name}${guardianForEvent ? ` (resp. ${guardianForEvent.full_name})` : ""}`,
-      description: `Tel: ${guardianForEvent?.phone ?? "—"} | Tipo: ${typeLabel} | Local: ${locationLabel}`,
+      description:
+        `Tel: ${guardianForEvent?.phone ?? "—"} | Tipo: ${typeLabel} | Local: ${locationLabel}` +
+        (isHomeVisit && homeVisitAddress ? ` | Endereço: ${homeVisitAddress}` : ""),
       start: startDate.toISOString(),
       end: endDate.toISOString(),
       appointmentId: newAppointment.id,
@@ -252,7 +266,7 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
       typeLabel,
       scheduledAt: startDate,
       locationLabel,
-      locationAddress: location?.address ?? null,
+      locationAddress,
       // Retorno não tem valor próprio — está incluso no valor da consulta
       // anterior (decisão do cliente); exame tem valor próprio em
       // exam_types.price_cents; `null` aciona o texto de "incluso" na

@@ -271,6 +271,29 @@ export function noLocationAvailableText(): string {
   return "No momento não temos nenhum local de atendimento configurado — escolha [4] Falar com a secretária no menu principal.";
 }
 
+// --- endereço do atendimento domiciliar (Fase 16) ----------------------
+
+export function homeAddressAskText(): string {
+  return (
+    "Qual é o endereço para o atendimento domiciliar? (rua, número, bairro, complemento e um ponto de referência, se tiver)\n\n" +
+    "Esse endereço é usado só para a nossa equipe chegar até vocês nessa consulta."
+  );
+}
+
+export function homeAddressConfirmDefaultText(address: string): string {
+  return `A última visita domiciliar foi feita neste endereço: *${address}*. Ainda é esse? Responda Sim ou Não.`;
+}
+
+// Reconfirmação ao remarcar (Fase 16) — mesma ideia do texto acima, mas
+// falando da consulta específica sendo remarcada, não de um "padrão" salvo.
+export function homeAddressConfirmCurrentText(address: string): string {
+  return `O endereço gravado para esse atendimento domiciliar é: *${address}*. Ainda é esse? Responda Sim ou Não.`;
+}
+
+export function homeAddressConfirmNewText(address: string): string {
+  return `Confirma que o endereço é esse? *${address}*\nResponda Sim ou Não.`;
+}
+
 interface PatientCandidate {
   id: string;
   full_name: string;
