@@ -20,6 +20,10 @@ dialog.addEventListener("click", (event) => {
 });
 
 acceptBtn.addEventListener("click", () => {
+  // Envia antes de fechar o <dialog> — em alguns navegadores, fechar o
+  // modal primeiro consome o gesto do usuário e o envio seguinte não sai.
+  // `submit()` (em vez de `requestSubmit()`) porque esses formulários não
+  // têm campo nenhum pra validar, e é a API mais antiga/compatível das duas.
+  pendingForm?.submit();
   dialog.close();
-  pendingForm?.requestSubmit();
 });
