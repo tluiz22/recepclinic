@@ -11,7 +11,7 @@ import { cancelAppointmentsInBulk } from "../../../../lib/scheduling/cancelAppoi
 // uma falha isolada (Calendar, link, notificação) não trava os demais.
 // Rotina em `cancelAppointmentsInBulk` — compartilhada com o bloqueio de
 // agenda (Fase 13 etapa 2), que reaproveita o mesmo cancelamento.
-export const POST: APIRoute = async ({ request, cookies }) => {
+export const POST: APIRoute = async ({ request, cookies, locals }) => {
   const body = await request.json().catch(() => ({}));
   const appointmentIds = Array.isArray(body?.appointmentIds)
     ? body.appointmentIds.filter((id: unknown): id is string => typeof id === "string")
@@ -25,7 +25,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
   }
 
   const supabase = createClient(request, cookies);
-  const { canceled, skipped } = await cancelAppointmentsInBulk(supabase, appointmentIds);
+  const { canceled, skipped } = await cancelAppointmentsInBulk(supabase, appointmentIds, locals.userId ?? null);
 
   return new Response(JSON.stringify({ ok: true, canceled, skipped }), {
     headers: { "Content-Type": "application/json" },

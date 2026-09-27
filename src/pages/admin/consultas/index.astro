@@ -21,6 +21,13 @@ import { buildAppointmentTypeLabel } from "../../../lib/whatsapp/notifications";
 import { formatWhen, TIMEZONE } from "../../../lib/whatsapp/formatDateTime";
 import { formatPhoneBR } from "../../../lib/phone";
 import { formatAge } from "../../../lib/age";
+import {
+  AUTHORSHIP_COLUMNS,
+  describeAuthorship,
+  fetchStaffLabels,
+  formatBookedByLine,
+  type AuthorshipRow,
+} from "../../../lib/authorship";
 
 const PAST_WINDOW_DAYS = 60;
 const PAGE_SIZE = 20;
@@ -70,7 +77,10 @@ function typeBadgeVariant(type: string): BadgeVariant {
   return "info";
 }
 
-function mapRow(a: {
+// "Marcado por / Remarcado por / Cancelado por" (Fase 17).
+const staffLabels = await fetchStaffLabels(supabase);
+
+function mapRow(a: AuthorshipRow & {
   id: string;
   scheduled_at: string;
   appointment_type: string;
@@ -93,11 +103,12 @@ function mapRow(a: {
     homeVisitAddress: a.home_visit_address,
     whenLabel: formatWhen(new Date(a.scheduled_at)),
     status: a.status,
+    bookedByLine: formatBookedByLine(a, staffLabels),
   };
 }
 
 function mapResumoRow(
-  a: {
+  a: AuthorshipRow & {
     id: string;
     scheduled_at: string;
     appointment_type: string;
@@ -130,6 +141,7 @@ function mapResumoRow(
     typeVariant: typeBadgeVariant(a.appointment_type),
     locationLabel: locationLabel(location?.type),
     homeVisitAddress: a.home_visit_address,
+    bookedByLine: formatBookedByLine(a, staffLabels),
   };
 }
 
@@ -159,7 +171,7 @@ function buildRebookUrl(
   return `/admin/agenda/marcar?${params.toString()}`;
 }
 
-function mapAguardandoRow(a: {
+function mapAguardandoRow(a: AuthorshipRow & {
   id: string;
   patient_id: string;
   scheduled_at: string;
@@ -184,11 +196,11 @@ function mapAguardandoRow(a: {
     typeVariant: typeBadgeVariant(a.appointment_type),
     whenLabel: formatWhen(new Date(a.scheduled_at)),
     rebookUrl: buildRebookUrl(a.appointment_type, a.patient_id, patientName, guardian, examType?.id ?? null),
+    canceledBy: describeAuthorship(a, staffLabels).canceledBy,
   };
 }
 
-const SELECT_COLUMNS =
-  "id, scheduled_at, appointment_type, status, home_visit_address, patients ( full_name ), exam_types ( name ), clinic_locations ( type )";
+const SELECT_COLUMNS = `id, scheduled_at, appointment_type, status, home_visit_address, ${AUTHORSHIP_COLUMNS}, patients ( full_name ), exam_types ( name ), clinic_locations ( type )`;
 
 let cards: ReturnType<typeof mapRow>[] = [];
 let rows: ReturnType<typeof mapRow>[] = [];
@@ -207,7 +219,7 @@ if (tab === "resumo") {
   const { data } = await supabase
     .from("appointments")
     .select(
-      "id, scheduled_at, appointment_type, google_event_id, home_visit_address, patients ( full_name, birthdate, guardians ( full_name, phone ) ), exam_types ( name ), clinic_locations ( type )"
+      `id, scheduled_at, appointment_type, google_event_id, home_visit_address, ${AUTHORSHIP_COLUMNS}, patients ( full_name, birthdate, guardians ( full_name, phone ) ), exam_types ( name ), clinic_locations ( type )`
     )
     .neq("status", "canceled")
     .gte("scheduled_at", dayStart)
@@ -236,7 +248,7 @@ if (tab === "resumo") {
   const { data: canceledRows } = await supabase
     .from("appointments")
     .select(
-      "id, patient_id, scheduled_at, canceled_at, appointment_type, patients ( full_name, guardians ( full_name, phone ) ), exam_types ( id, name )"
+      `id, patient_id, scheduled_at, canceled_at, appointment_type, ${AUTHORSHIP_COLUMNS}, patients ( full_name, guardians ( full_name, phone ) ), exam_types ( id, name )`
     )
     .eq("status", "canceled")
     .eq("canceled_via", "admin")
@@ -453,6 +465,7 @@ function confirmadasPageUrl(targetPage: number): string {
                     {row.locationLabel}
                     {row.homeVisitAddress && ` — ${row.homeVisitAddress}`}
                   </p>
+                  {row.bookedByLine && <p class="mt-0.5 text-xs text-slate-400">{row.bookedByLine}</p>}
                 </div>
               </Card>
             ))
@@ -510,6 +523,7 @@ function confirmadasPageUrl(targetPage: number): string {
               </div>
               <p class="mt-1 text-sm text-slate-500">{card.whenLabel}</p>
               {card.homeVisitAddress && <p class="mt-1 text-sm text-slate-500">Endereço: {card.homeVisitAddress}</p>}
+              {card.bookedByLine && <p class="mt-1 text-xs text-slate-400">{card.bookedByLine}</p>}
 
               <div class="mt-3 flex gap-2">
                 <form method="POST" action={`/api/admin/consultas/${card.id}/status`} class="flex-1">
@@ -561,7 +575,10 @@ function confirmadasPageUrl(targetPage: number): string {
               {rows.length ? (
                 rows.map((row) => (
                   <tr class="border-t border-slate-200">
-                    <td class="px-3 py-2">{row.patientName}</td>
+                    <td class="px-3 py-2">
+                      {row.patientName}
+                      {row.bookedByLine && <div class="text-xs text-slate-400">{row.bookedByLine}</div>}
+                    </td>
                     <td class="px-3 py-2">
                       <Badge variant={row.typeVariant}>{row.typeLabel}</Badge>
                     </td>
@@ -650,6 +667,7 @@ function confirmadasPageUrl(targetPage: number): string {
                 <Badge variant={row.typeVariant}>{row.typeLabel}</Badge>
               </div>
               <p class="mt-1 text-sm text-slate-500">Estava marcado(a) para {row.whenLabel}</p>
+              {row.canceledBy && <p class="mt-0.5 text-xs text-slate-400">Cancelado por: {row.canceledBy}</p>}
               <p class="mt-1.5 text-sm text-slate-700">
                 Resp.: {row.guardianName}
                 {row.guardianPhone && (

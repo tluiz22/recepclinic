@@ -236,6 +236,9 @@ export interface AppointmentCandidate {
   // Endereço gravado nesse atendimento (só preenchido para domiciliar) —
   // usado pela remarcação (Fase 16) pra reconfirmar antes de gerar o link.
   home_visit_address: string | null;
+  // Consulta de origem de um retorno (Fase 17) — a remarcação respeita o
+  // mesmo prazo dela.
+  origin_appointment_id: string | null;
 }
 
 // "consulta" e "exame" são jornadas separadas (pedido do cliente, set/2026):
@@ -253,7 +256,7 @@ export async function fetchUpcomingAppointments(
   const { data: rows } = await supabase
     .from("appointments")
     .select(
-      "id, scheduled_at, clinic_location_id, appointment_type, exam_type_id, google_event_id, home_visit_address, patient_id, patients!inner(full_name, birthdate, guardian_id)"
+      "id, scheduled_at, clinic_location_id, appointment_type, exam_type_id, google_event_id, home_visit_address, origin_appointment_id, patient_id, patients!inner(full_name, birthdate, guardian_id)"
     )
     .eq("patients.guardian_id", guardianId)
     .in("appointment_type", typeFilter)
@@ -273,6 +276,7 @@ export async function fetchUpcomingAppointments(
     exam_type_id: row.exam_type_id ?? null,
     google_event_id: row.google_event_id ?? null,
     home_visit_address: row.home_visit_address ?? null,
+    origin_appointment_id: row.origin_appointment_id ?? null,
   }));
 }
 

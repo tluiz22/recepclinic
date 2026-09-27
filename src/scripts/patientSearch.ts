@@ -30,10 +30,19 @@ function updateClearButton() {
   clearBtn.classList.toggle("hidden", !hiddenInput.value);
 }
 
+// Avisa outros scripts da página (ex.: avisos de retorno da Fase 17) que o
+// paciente escolhido mudou — o valor do campo hidden muda por código, sem
+// disparar "change" sozinho.
+function notifyPatientChange() {
+  hiddenInput.dispatchEvent(new Event("change"));
+}
+
 function resetSelection() {
+  const hadPatient = !!hiddenInput.value;
   hiddenInput.value = "";
   hideWarning();
   updateClearButton();
+  if (hadPatient) notifyPatientChange();
 }
 
 // Evita ter que apagar o nome escolhido letra por letra pra buscar de novo.
@@ -94,6 +103,7 @@ searchInput.addEventListener("input", () => {
           searchInput.value = label;
           resultsBox.innerHTML = "";
           updateClearButton();
+          notifyPatientChange();
           if (patient.has_upcoming_appointment) {
             showWarning(alreadyScheduledMessage);
           } else {

@@ -4,7 +4,7 @@ import { cancelEvent } from "../../../../../../lib/google/calendar";
 import { leaveGroupSessionEvent } from "../../../../../../lib/scheduling/groupSessionCalendar";
 import { buildAppointmentTypeLabel, sendAppointmentCancellation } from "../../../../../../lib/whatsapp/notifications";
 
-export const POST: APIRoute = async ({ params, request, cookies }) => {
+export const POST: APIRoute = async ({ params, request, cookies, locals }) => {
   const { id } = params;
 
   if (!id) {
@@ -37,7 +37,12 @@ export const POST: APIRoute = async ({ params, request, cookies }) => {
   // mostrava a consulta como ativa).
   const { data: appointment } = await supabase
     .from("appointments")
-    .update({ status: "canceled", canceled_via: "admin", canceled_at: new Date().toISOString() })
+    .update({
+      status: "canceled",
+      canceled_via: "admin",
+      canceled_at: new Date().toISOString(),
+      canceled_by: locals.userId ?? null,
+    })
     .eq("id", appointmentId)
     .neq("status", "canceled")
     .select(

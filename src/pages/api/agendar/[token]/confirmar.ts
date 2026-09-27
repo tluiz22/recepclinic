@@ -6,6 +6,7 @@ import { getExamAvailableSlotsForDate } from "../../../../lib/scheduling/getExam
 import { getNextAvailableGroupDates, type AvailableGroupSession } from "../../../../lib/scheduling/getNextAvailableGroupDates";
 import { joinOrCreateGroupSessionEvent, leaveGroupSessionEvent } from "../../../../lib/scheduling/groupSessionCalendar";
 import { resolveClinicLocationIds, type LocationCategory } from "../../../../lib/scheduling/resolveClinicLocationIds";
+import { getBookingLinkLastDate, hasActiveReturnVisit } from "../../../../lib/scheduling/returnVisitDeadline";
 import {
   buildAppointmentTypeLabel,
   sendAppointmentConfirmation,
@@ -107,6 +108,21 @@ export const POST: APIRoute = async ({ params, request, redirect }) => {
     // ativos dela (ver "Backlog futuro" no plano) — o horário escolhido
     // decide qual deles atende.
     const clinicLocationIds = await resolveClinicLocationIds(supabase, (link.location_category as LocationCategory) ?? "clinic");
+
+    // Retorno vinculado a uma Consulta (Fase 17): revalida o prazo (a
+    // página já não oferece datas depois dele; aqui só impede um POST
+    // montado à mão) e "1 retorno por consulta" — o link pode ter sido
+    // gerado antes de outro retorno ser marcado pra mesma consulta (outro
+    // link, ou a secretária). Na remarcação, o próprio retorno não conta.
+    if (appointmentType === "return_visit" && link.origin_appointment_id) {
+      const lastDate = await getBookingLinkLastDate(supabase, link);
+      if (lastDate && date > lastDate) {
+        return back("slot_taken");
+      }
+      if (await hasActiveReturnVisit(supabase, link.origin_appointment_id, link.appointment_id)) {
+        return back("return_used");
+      }
+    }
 
     const slots = await getAvailableSlotsForDate({
       supabase,
@@ -267,6 +283,12 @@ export const POST: APIRoute = async ({ params, request, redirect }) => {
       });
     }
 
+    // Autoria da remarcação (Fase 17): pelo link do WhatsApp.
+    await supabase
+      .from("appointments")
+      .update({ rescheduled_via: "whatsapp_bot", rescheduled_by: null, rescheduled_at: new Date().toISOString() })
+      .eq("id", appointment.id);
+
     if (guardian?.phone) {
       await sendAppointmentReschedule({
         supabase,
@@ -343,6 +365,7 @@ export const POST: APIRoute = async ({ params, request, redirect }) => {
           appointment_type: appointmentType,
           exam_type_id: appointmentType === "exam" ? link.exam_type_id : null,
           home_visit_address: link.home_visit_address ?? null,
+          origin_appointment_id: appointmentType === "return_visit" ? (link.origin_appointment_id ?? null) : null,
           status: "scheduled",
           booking_channel: "whatsapp_bot",
         })

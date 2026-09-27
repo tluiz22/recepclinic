@@ -270,6 +270,12 @@ function formatBirthdate(birthdate: string): string {
                   <td class="whitespace-nowrap px-3 py-2 text-right">
                     <div class="flex flex-nowrap justify-end gap-1.5">
                       <a
+                        href={`/admin/pacientes/${guardian.id}/criancas/${patient.id}/historico`}
+                        class="rounded-md border border-slate-300 px-2.5 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50"
+                      >
+                        Histórico
+                      </a>
+                      <a
                         href={`/admin/pacientes/${guardian.id}/criancas/${patient.id}/editar`}
                         class="rounded-md border border-slate-300 px-2.5 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50"
                       >

@@ -11,3 +11,10 @@ interface ImportMetaEnv {
 interface ImportMeta {
   readonly env: ImportMetaEnv;
 }
+
+declare namespace App {
+  interface Locals {
+    // Preenchido pelo middleware em /admin e /api/admin (login ativo).
+    userId?: string;
+  }
+}

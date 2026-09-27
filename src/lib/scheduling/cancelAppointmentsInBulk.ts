@@ -17,7 +17,9 @@ const LINK_EXPIRY_MS = 2 * 24 * 60 * 60 * 1000;
 // melhor esforço: uma falha isolada não trava os demais.
 export async function cancelAppointmentsInBulk(
   supabase: SupabaseClient,
-  appointmentIds: string[]
+  appointmentIds: string[],
+  // Login que disparou o cancelamento em massa/bloqueio (Fase 17).
+  canceledBy: string | null
 ): Promise<{ canceled: number; skipped: number }> {
   let canceled = 0;
   let skipped = 0;
@@ -27,11 +29,17 @@ export async function cancelAppointmentsInBulk(
     // só segue se a consulta ainda não estava cancelada.
     const { data: appointment } = await supabase
       .from("appointments")
-      .update({ status: "canceled", canceled_via: "admin", canceled_at: new Date().toISOString(), mass_canceled: true })
+      .update({
+        status: "canceled",
+        canceled_via: "admin",
+        canceled_at: new Date().toISOString(),
+        canceled_by: canceledBy,
+        mass_canceled: true,
+      })
       .eq("id", appointmentId)
       .neq("status", "canceled")
       .select(
-        "patient_id, scheduled_at, appointment_type, exam_type_id, google_event_id, clinic_location_id, home_visit_address, patients ( full_name, guardians ( id, full_name, phone ) ), clinic_locations ( type ), exam_types ( id, name, scheduling_mode )"
+        "patient_id, scheduled_at, appointment_type, exam_type_id, google_event_id, clinic_location_id, home_visit_address, origin_appointment_id, patients ( full_name, guardians ( id, full_name, phone ) ), clinic_locations ( type ), exam_types ( id, name, scheduling_mode )"
       )
       .maybeSingle();
 
@@ -108,6 +116,11 @@ export async function cancelAppointmentsInBulk(
         // isso, quem reagenda por esse link perde o endereço já combinado e
         // a nova consulta nasce sem ele (Fase 16).
         home_visit_address: !isExam && location?.type === "home_visit" ? appointment.home_visit_address : null,
+        // Retorno cancelado pela clínica: o novo continua vinculado à mesma
+        // Consulta de origem, mas sem o limite do prazo (Fase 17, decisão
+        // do cliente — a família não perde o direito pelo cancelamento).
+        origin_appointment_id: appointment.appointment_type === "return_visit" ? appointment.origin_appointment_id : null,
+        return_deadline_waived: appointment.appointment_type === "return_visit" && !!appointment.origin_appointment_id,
         mode: "create",
         guardian_phone: guardian.phone,
         expires_at: new Date(Date.now() + LINK_EXPIRY_MS).toISOString(),

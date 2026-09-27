@@ -35,6 +35,7 @@ export async function getNextAvailableDates({
   examDurationMinutes,
   count = DEFAULT_DATE_COUNT,
   maxDaysAhead = MAX_DAYS_AHEAD,
+  lastDate,
 }: {
   supabase: SupabaseClient;
   // Um ou mais `clinic_location_id` (mais de um consultório físico type=
@@ -44,6 +45,9 @@ export async function getNextAvailableDates({
   examDurationMinutes?: number;
   count?: number;
   maxDaysAhead?: number;
+  // Última data (YYYY-MM-DD, inclusive) que pode ser oferecida — usada no
+  // prazo do retorno (ver returnVisitDeadline.ts).
+  lastDate?: string | null;
 }): Promise<AvailableDate[]> {
   if (clinicLocationIds.length === 0) return [];
 
@@ -75,7 +79,11 @@ export async function getNextAvailableDates({
   const results: AvailableDate[] = [];
   let date = startDate;
 
-  for (let offset = 0; offset < maxDaysAhead && results.length < count; offset++) {
+  for (
+    let offset = 0;
+    offset < maxDaysAhead && results.length < count && (!lastDate || date <= lastDate);
+    offset++
+  ) {
     const weekday = new Date(`${date}T00:00:00-03:00`).getUTCDay();
     const windowsForDay = windowsByWeekday.get(weekday);
 

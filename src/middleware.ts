@@ -21,5 +21,9 @@ export const onRequest = defineMiddleware(async (context, next) => {
     return redirect("/admin/login");
   }
 
+  // Login de quem está usando a tela — gravado como autor ao marcar,
+  // remarcar e cancelar (Fase 17).
+  context.locals.userId = user.id;
+
   return next();
 });

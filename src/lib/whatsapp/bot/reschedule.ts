@@ -27,6 +27,7 @@ import {
   type Selection,
 } from "./shared";
 import * as texts from "./messages";
+import { getReturnVisitLastDate, todayFortaleza } from "../../scheduling/returnVisitDeadline";
 
 export const RESCHEDULE_STATES: ReadonlySet<string> = new Set(["RESCHEDULE_SELECT", "RESCHEDULE_HOME_ADDRESS"]);
 
@@ -325,6 +326,22 @@ async function finishReschedule(
     return;
   }
 
+  // Retorno vinculado a uma Consulta (Fase 17): mesmo prazo dela. Se já
+  // acabou, a página não teria nenhuma data — avisa e orienta falar com a
+  // secretária, que pode abrir exceção pela tela (decisão do cliente).
+  if (appointment.appointment_type === "return_visit" && appointment.origin_appointment_id) {
+    const lastDate = await getReturnVisitLastDate(supabase, appointment.origin_appointment_id);
+    if (lastDate && todayFortaleza() > lastDate) {
+      const [year, month, day] = lastDate.split("-");
+      const body = texts.rescheduleReturnDeadlinePassedText(appointment.patient_name, `${day}/${month}/${year}`);
+      await sendAndLog(supabase, guardianId, "bot_reschedule_return_deadline_passed", body, () =>
+        sendTextMessage({ to: guardianPhone, body })
+      );
+      await updateConversationState(supabase, guardianPhone, "WELCOME", { context: {} });
+      return;
+    }
+  }
+
   // Remarcar consulta/retorno também deixa a data escolhida decidir o
   // consultório físico (pode não ser o mesmo de antes) — mesma lógica do
   // agendamento novo. Exame continua preso ao único local type='exam'.
@@ -445,6 +462,8 @@ async function createRescheduleLink(
       appointment_type: appointment.appointment_type,
       exam_type_id: appointment.exam_type_id,
       home_visit_address: homeVisitAddress,
+      // Retorno: a página limita as datas ao prazo da Consulta de origem.
+      origin_appointment_id: appointment.appointment_type === "return_visit" ? appointment.origin_appointment_id : null,
       mode: "reschedule",
       appointment_id: appointment.id,
       guardian_phone: guardianPhone,

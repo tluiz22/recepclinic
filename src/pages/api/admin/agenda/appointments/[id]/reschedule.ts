@@ -6,9 +6,10 @@ import { getExamAvailableSlotsForDate } from "../../../../../../lib/scheduling/g
 import { getNextAvailableGroupDates, type AvailableGroupSession } from "../../../../../../lib/scheduling/getNextAvailableGroupDates";
 import { joinOrCreateGroupSessionEvent, leaveGroupSessionEvent } from "../../../../../../lib/scheduling/groupSessionCalendar";
 import { resolveClinicLocationIds, type LocationCategory } from "../../../../../../lib/scheduling/resolveClinicLocationIds";
+import { getReturnOriginCheck } from "../../../../../../lib/scheduling/returnVisitEligibility";
 import { buildAppointmentTypeLabel, sendAppointmentReschedule } from "../../../../../../lib/whatsapp/notifications";
 
-export const POST: APIRoute = async ({ params, request, cookies, redirect }) => {
+export const POST: APIRoute = async ({ params, request, cookies, redirect, locals }) => {
   const { id } = params;
   const formData = await request.formData();
   const locationCategoryRaw = formData.get("location_category")?.toString();
@@ -52,7 +53,7 @@ export const POST: APIRoute = async ({ params, request, cookies, redirect }) => 
   const { data: appointment } = await supabase
     .from("appointments")
     .select(
-      "id, google_event_id, status, exam_type_id, scheduled_at, home_visit_address, patients ( full_name, guardians ( id, full_name, phone ) )"
+      "id, patient_id, google_event_id, status, exam_type_id, scheduled_at, home_visit_address, origin_appointment_id, patients ( full_name, guardians ( id, full_name, phone ) )"
     )
     .eq("id", id)
     .single();
@@ -183,6 +184,21 @@ export const POST: APIRoute = async ({ params, request, cookies, redirect }) => 
 
     await supabase.from("appointments").update({ google_event_id: newEventId }).eq("id", id);
   } else {
+    // Retorno (Fase 17): mantém a Consulta de origem já vinculada, ou vincula
+    // a última Consulta da criança (retorno antigo, ou Consulta virando
+    // retorno). A tela só avisa (prazo, domiciliar, retorno já vinculado),
+    // nunca bloqueia. Virou Consulta → sem vínculo.
+    const originAppointmentId =
+      appointmentType === "return_visit"
+        ? ((
+            await getReturnOriginCheck(supabase, {
+              patientId: appointment.patient_id,
+              originAppointmentId: appointment.origin_appointment_id,
+              ignoreAppointmentId: id,
+            })
+          ).origin?.id ?? null)
+        : null;
+
     await supabase
       .from("appointments")
       .update({
@@ -191,6 +207,7 @@ export const POST: APIRoute = async ({ params, request, cookies, redirect }) => 
         duration_minutes: durationMinutes,
         appointment_type: appointmentType,
         home_visit_address: isHomeVisit ? homeVisitAddress : null,
+        origin_appointment_id: originAppointmentId,
       })
       .eq("id", id);
 
@@ -199,6 +216,13 @@ export const POST: APIRoute = async ({ params, request, cookies, redirect }) => 
       end: endDate.toISOString(),
     });
   }
+
+  // Autoria da remarcação (Fase 17) — vale pros dois caminhos acima
+  // (sessão de grupo e consulta/exame individual).
+  await supabase
+    .from("appointments")
+    .update({ rescheduled_via: "admin", rescheduled_by: locals.userId ?? null, rescheduled_at: new Date().toISOString() })
+    .eq("id", id);
 
   // Notificação de remarcação por WhatsApp (Fase 3a) — melhor esforço.
   const patient = (appointment.patients ?? null) as unknown as {

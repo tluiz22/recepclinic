@@ -357,6 +357,17 @@ export function askNewPatientBirthdateText(): string {
   return "Qual a data de nascimento da criança? (formato dd/mm/aaaa)";
 }
 
+// Confirmação antes de cadastrar a criança nova — se o responsável
+// responder Não, volta a pedir os dados (ver handlePatientNew em booking.ts).
+export function confirmNewPatientText(fullName: string, birthdateLabel: string): string {
+  return (
+    "Confira os dados da criança:\n" +
+    `Nome: *${fullName}*\n` +
+    `Data de nascimento: *${birthdateLabel}*\n\n` +
+    "Está tudo certo? Responda Sim ou Não."
+  );
+}
+
 export function bookingLinkText(patientName: string, url: string): string {
   return (
     `Prontinho! Escolha o melhor dia e horário para a consulta de ${patientName} neste link:\n${url}\n\n` +
@@ -373,6 +384,60 @@ export function patientAlreadyScheduledText(patientName: string, whenLabel: stri
   return (
     `*${patientName}* já tem uma consulta marcada para ${whenLabel}. ` +
     `Se quiser mudar o dia ou horário, escolha ${menuPath} no menu principal.`
+  );
+}
+
+// --- Agendar retorno (Fase 17) --------------------------------------------
+//
+// Só crianças com direito a retorno (ver returnVisitEligibility.ts) — sem
+// pergunta de local (retorno é sempre no consultório) e sem "Outra criança"
+// (criança nova nunca tem direito).
+
+export function returnVisitChoiceBodyText(deadlineDays: number): string {
+  return `O retorno deve ser realizado em até ${deadlineDays} dias após a consulta. Para qual criança é o retorno?`;
+}
+
+export function returnVisitChoiceSections(candidates: PatientCandidate[]): ListSection[] {
+  const rows = candidates.map((c, index) => ({
+    id: `book_return_patient_${c.id}`,
+    title: listRowTitle(index, c.full_name),
+  }));
+  rows.push({ id: BACK_TO_MENU_LIST_ID, title: listRowTitle(candidates.length, "Voltar ao menu") });
+  return [{ rows }];
+}
+
+export function returnVisitAskBirthdateText(deadlineDays: number): string {
+  return (
+    `O retorno deve ser realizado em até ${deadlineDays} dias após a consulta. ` +
+    "Qual a data de nascimento da criança? (formato dd/mm/aaaa)"
+  );
+}
+
+export function returnVisitBirthdateNotFoundText(): string {
+  return (
+    "Não encontramos nenhuma criança com essa data de nascimento com direito a retorno. " +
+    "Confira a data e envie de novo (formato dd/mm/aaaa), ou digite 0 para voltar ao menu."
+  );
+}
+
+export function returnVisitNoRecentConsultationText(deadlineDays: number): string {
+  return (
+    `A última consulta tem mais de ${deadlineDays} dias. O retorno deve ser realizado em até ${deadlineDays} dias ` +
+    "após a consulta — passado esse prazo, é preciso marcar uma nova consulta em Consultas > Agendar consulta."
+  );
+}
+
+export function returnVisitHomeVisitText(): string {
+  return (
+    "A última consulta foi um atendimento domiciliar, e consulta domiciliar não dá direito a retorno. " +
+    "Para um novo atendimento, escolha Consultas > Agendar consulta."
+  );
+}
+
+export function returnVisitAlreadyUsedText(patientName: string): string {
+  return (
+    `O retorno da última consulta de *${patientName}* já foi agendado — cada consulta dá direito a um retorno. ` +
+    "Para um novo atendimento, escolha Consultas > Agendar consulta."
   );
 }
 
@@ -506,6 +571,16 @@ export function rescheduleLinkText(patientName: string, url: string, category: A
   return (
     `Prontinho! Escolha o novo dia e horário para ${w.article} ${w.noun} de ${patientName} neste link:\n${url}\n\n` +
     "O link expira em 30 minutos."
+  );
+}
+
+// Remarcar retorno depois do fim do prazo da Consulta de origem (Fase 17):
+// não gera link (a página não teria datas) — a secretária pode abrir
+// exceção pela tela (decisão do cliente).
+export function rescheduleReturnDeadlinePassedText(patientName: string, lastDateLabel: string): string {
+  return (
+    `O prazo para o retorno de *${patientName}* terminou em ${lastDateLabel}, então não é possível remarcar por aqui. ` +
+    "Por favor, escolha [4] Falar com a secretária no menu principal."
   );
 }
 

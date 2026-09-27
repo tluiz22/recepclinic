@@ -6,9 +6,10 @@ import { getExamAvailableSlotsForDate } from "../../../../../lib/scheduling/getE
 import { getNextAvailableGroupDates, type AvailableGroupSession } from "../../../../../lib/scheduling/getNextAvailableGroupDates";
 import { joinOrCreateGroupSessionEvent } from "../../../../../lib/scheduling/groupSessionCalendar";
 import { resolveClinicLocationIds, type LocationCategory } from "../../../../../lib/scheduling/resolveClinicLocationIds";
+import { getReturnOriginCheck } from "../../../../../lib/scheduling/returnVisitEligibility";
 import { buildAppointmentTypeLabel, sendAppointmentConfirmation } from "../../../../../lib/whatsapp/notifications";
 
-export const POST: APIRoute = async ({ request, cookies, redirect }) => {
+export const POST: APIRoute = async ({ request, cookies, redirect, locals }) => {
   const formData = await request.formData();
   const patientId = formData.get("patient_id")?.toString();
   const locationCategoryRaw = formData.get("location_category")?.toString();
@@ -181,6 +182,8 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
     }
 
     newAppointmentId = rpcAppointmentId as string;
+    // A RPC atômica não recebe o autor — grava logo em seguida.
+    await supabase.from("appointments").update({ created_by: locals.userId ?? null }).eq("id", newAppointmentId);
 
     const eventId = await joinOrCreateGroupSessionEvent({
       supabase,
@@ -194,6 +197,14 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
 
     await supabase.from("appointments").update({ google_event_id: eventId }).eq("id", newAppointmentId);
   } else {
+    // Retorno (Fase 17): vincula a última Consulta da criança — a tela só
+    // avisa (fora do prazo, domiciliar, sem consulta, retorno já vinculado),
+    // nunca bloqueia (exceções combinadas com a médica).
+    const originAppointmentId =
+      appointmentType === "return_visit"
+        ? ((await getReturnOriginCheck(supabase, { patientId })).origin?.id ?? null)
+        : null;
+
     const { data: newAppointment, error: insertError } = await supabase
       .from("appointments")
       .insert({
@@ -204,8 +215,10 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
         appointment_type: appointmentType,
         exam_type_id: isExam ? examTypeId : null,
         home_visit_address: isHomeVisit ? homeVisitAddress : null,
+        origin_appointment_id: originAppointmentId,
         status: "scheduled",
         booking_channel: "admin",
+        created_by: locals.userId ?? null,
       })
       .select("id")
       .single();

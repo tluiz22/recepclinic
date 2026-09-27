@@ -3,6 +3,7 @@ import { createServiceClient } from "../../../../lib/supabase/service";
 import { getAvailableSlotsForDate, type AppointmentType } from "../../../../lib/scheduling/getAvailableSlotsForDate";
 import { getExamAvailableSlotsForDate } from "../../../../lib/scheduling/getExamAvailableSlotsForDate";
 import { resolveClinicLocationIds, type LocationCategory } from "../../../../lib/scheduling/resolveClinicLocationIds";
+import { getBookingLinkLastDate } from "../../../../lib/scheduling/returnVisitDeadline";
 
 export const GET: APIRoute = async ({ params, url }) => {
   const token = params.token;
@@ -20,7 +21,7 @@ export const GET: APIRoute = async ({ params, url }) => {
   const { data: link } = await supabase
     .from("booking_links")
     .select(
-      "clinic_location_id, location_category, appointment_type, exam_type_id, used_at, expires_at, exam_types ( duration_minutes, scheduling_mode )"
+      "clinic_location_id, location_category, appointment_type, exam_type_id, origin_appointment_id, return_deadline_waived, used_at, expires_at, exam_types ( duration_minutes, scheduling_mode )"
     )
     .eq("id", token)
     .maybeSingle();
@@ -39,6 +40,12 @@ export const GET: APIRoute = async ({ params, url }) => {
   // vem junto da data) — devolve vazio em vez de calcular horário errado
   // (individual) pra uma sessão de grupo.
   if (appointmentType === "exam" && examType?.scheduling_mode === "group") {
+    return new Response(JSON.stringify({ slots: [] }), { headers: { "Content-Type": "application/json" } });
+  }
+
+  // Retorno fora do prazo da Consulta de origem (Fase 17): nenhum horário.
+  const lastDate = await getBookingLinkLastDate(supabase, link);
+  if (lastDate && date > lastDate) {
     return new Response(JSON.stringify({ slots: [] }), { headers: { "Content-Type": "application/json" } });
   }
 

@@ -25,7 +25,7 @@ function json(data: unknown, status = 200) {
 // que de fato é cancelado). `true` cancela a lista antes de criar o
 // bloqueio (aviso por WhatsApp + link de remarcação); `false` só cria o
 // bloqueio, mantendo os atendimentos como aviso/registro.
-export const POST: APIRoute = async ({ request, cookies }) => {
+export const POST: APIRoute = async ({ request, cookies, locals }) => {
   const body = await request.json().catch(() => ({}));
   const startDate = typeof body?.start_date === "string" ? body.start_date : undefined;
   const endDate = typeof body?.end_date === "string" ? body.end_date : undefined;
@@ -89,7 +89,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
         ).data?.map((appointment) => appointment.id) ?? [];
 
     if (idsToCancel.length) {
-      await cancelAppointmentsInBulk(supabase, idsToCancel);
+      await cancelAppointmentsInBulk(supabase, idsToCancel, locals.userId ?? null);
     }
   }
 

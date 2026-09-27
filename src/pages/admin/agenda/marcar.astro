@@ -157,6 +157,8 @@ const slots = date ? await getAvailableSlotsForDate({ supabase, clinicLocationId
         </p>
       </div>
 
+      <div id="return_origin_box" class="hidden"></div>
+
       <div id="home_visit_address_field" class={locationCategory === "home_visit" ? "" : "hidden"}>
         <label for="home_visit_address" class="block text-sm font-medium text-slate-700">Endereço *</label>
         <input
@@ -217,3 +219,4 @@ const slots = date ? await getAvailableSlotsForDate({ supabase, clinicLocationId
 
 <script src="../../../scripts/patientSearch.ts"></script>
 <script src="../../../scripts/appointmentSlotPicker.ts"></script>
+<script src="../../../scripts/returnOriginWarnings.ts"></script>

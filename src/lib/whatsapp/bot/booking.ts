@@ -2,7 +2,9 @@
 // BOOK_PATIENT_NEW da máquina de estados do bot. A modalidade (consulta ou
 // retorno) não é mais perguntada aqui — "Agendar consulta" e "Agendar
 // retorno" são opções separadas do menu principal (ver router.ts), que já
-// chamam `startBooking` com o `appointmentType` decidido.
+// chamam `startBooking` com o `appointmentType` decidido. O retorno tem
+// fluxo próprio desde a Fase 17 (prazo + Consulta de origem, ver
+// startReturnBooking).
 //
 // Ao final (criança identificada ou cadastrada), gera uma linha em
 // `booking_links` e envia o link de `/agendar/[token]` — a escolha de
@@ -22,6 +24,7 @@ import {
   type Selection,
 } from "./shared";
 import * as texts from "./messages";
+import { getReturnVisitEligibility, type ReturnVisitPatient } from "../../scheduling/returnVisitEligibility";
 
 export const BOOKING_STATES: ReadonlySet<string> = new Set([
   "BOOK_LOCATION",
@@ -39,6 +42,16 @@ interface PatientCandidate {
   id: string;
   full_name: string;
 }
+
+// Criança com direito a retorno (Fase 17), já com a Consulta de origem.
+interface ReturnCandidate extends PatientCandidate {
+  birthdate: string;
+  origin_appointment_id: string;
+}
+
+// Lista interativa do WhatsApp aceita no máximo 10 linhas — 9 crianças +
+// "Voltar ao menu". Acima disso, pede a data de nascimento.
+const MAX_RETURN_LIST_CANDIDATES = 9;
 
 interface PendingPatient {
   id: string;
@@ -82,7 +95,10 @@ export interface BookingContext {
     | "confirm_patient"
     | "new_guardian_name"
     | "new_patient_name"
-    | "new_patient_birthdate";
+    | "new_patient_birthdate"
+    | "new_patient_confirm"
+    | "return_patient_choice"
+    | "return_birthdate_search";
   patient_candidates?: PatientCandidate[];
   pending_patient?: PendingPatient;
   new_guardian_name?: string;
@@ -91,22 +107,36 @@ export interface BookingContext {
   // (veio de uma busca por duplicidade) — evita perguntar de novo em
   // "new_patient_birthdate".
   known_birthdate?: string;
+  // Data de nascimento da criança nova aguardando a confirmação dos dados
+  // ("new_patient_confirm", junto de new_patient_name) antes de cadastrar.
+  new_patient_birthdate?: string;
   // Diferencia o texto do estado "birthdate_search" quando há mais de uma
   // criança com a mesma data: desambiguar entre várias crianças com
   // consulta futura (texto padrão) vs. checagem de duplicidade ao
   // cadastrar uma criança nova (texto dedicado).
   birthdate_search_reason?: "duplicate_check";
+  // Agendar retorno (Fase 17): crianças com direito, cada uma com a sua
+  // Consulta de origem, e a origem escolhida — gravada em
+  // `booking_links.origin_appointment_id` ao gerar o link.
+  return_candidates?: ReturnCandidate[];
+  return_deadline_days?: number;
+  origin_appointment_id?: string;
 }
 
-// MENU opção 1 ("Agendar consulta") ou 2 ("Agendar retorno") → busca os
-// locais de atendimento e já pergunta o local (a modalidade vem escolhida
-// do próprio menu principal, não é mais perguntada aqui).
+// MENU opção 1 ("Agendar consulta") → busca os locais de atendimento e já
+// pergunta o local. Opção 2 ("Agendar retorno") segue fluxo próprio, sem
+// pergunta de local (ver startReturnBooking).
 export async function startBooking(
   supabase: SupabaseClient,
   guardianPhone: string,
   guardianId: string | null,
   appointmentType: "first_visit" | "return_visit"
 ): Promise<void> {
+  if (appointmentType === "return_visit") {
+    await startReturnBooking(supabase, guardianPhone, guardianId);
+    return;
+  }
+
   const { data: locationRows } = await supabase
     .from("clinic_locations")
     .select("type")
@@ -157,6 +187,209 @@ export async function handleBookingState(
       await handlePatientNew(supabase, guardianPhone, guardianId, context, selection);
       return;
   }
+}
+
+// --- Agendar retorno (Fase 17) ------------------------------------------
+//
+// Retorno é sempre no consultório (o endereço sai da data escolhida na
+// página, como na consulta) e só para crianças com direito: última Consulta
+// dentro do prazo, não domiciliar e ainda sem retorno vinculado (ver
+// returnVisitEligibility.ts). Sem nenhuma criança com direito, explica o
+// motivo e encerra (próxima mensagem mostra o menu, como nos outros fluxos).
+async function startReturnBooking(
+  supabase: SupabaseClient,
+  guardianPhone: string,
+  guardianId: string | null
+): Promise<void> {
+  const { data: clinicRows } = await supabase
+    .from("clinic_locations")
+    .select("id")
+    .eq("type", "clinic")
+    .eq("is_active", true)
+    .limit(1);
+
+  if (!clinicRows?.length) {
+    const body = texts.noLocationAvailableText();
+    await sendAndLog(supabase, guardianId, "bot_book_no_location", body, () =>
+      sendTextMessage({ to: guardianPhone, body })
+    );
+    await updateConversationState(supabase, guardianPhone, "WELCOME", { context: {} });
+    return;
+  }
+
+  const { deadlineDays, patients } = guardianId
+    ? await getReturnVisitEligibility(supabase, guardianId)
+    : { deadlineDays: await fetchReturnDeadlineDays(supabase), patients: [] as ReturnVisitPatient[] };
+
+  const candidates: ReturnCandidate[] = patients
+    .filter((p) => p.status === "eligible" && p.originAppointmentId)
+    .map((p) => ({
+      id: p.patientId,
+      full_name: p.fullName,
+      birthdate: p.birthdate,
+      origin_appointment_id: p.originAppointmentId as string,
+    }));
+
+  if (candidates.length === 0) {
+    await sendReturnNotEligible(supabase, guardianPhone, guardianId, deadlineDays, patients);
+    return;
+  }
+
+  const context: BookingContext = {
+    appointment_type: "return_visit",
+    location_category: "clinic",
+    clinic_location_label: "Consultório",
+    return_candidates: candidates,
+    return_deadline_days: deadlineDays,
+  };
+
+  if (candidates.length <= MAX_RETURN_LIST_CANDIDATES) {
+    await sendReturnPatientChoice(supabase, guardianPhone, guardianId, candidates, deadlineDays);
+    await updateConversationState(supabase, guardianPhone, "BOOK_PATIENT_SELECT", {
+      context: { ...context, awaiting: "return_patient_choice" } satisfies BookingContext,
+    });
+    return;
+  }
+
+  const body = texts.returnVisitAskBirthdateText(deadlineDays);
+  await sendAndLog(supabase, guardianId, "bot_book_return_ask_birthdate", body, () =>
+    sendTextMessage({ to: guardianPhone, body })
+  );
+  await updateConversationState(supabase, guardianPhone, "BOOK_PATIENT_SELECT", {
+    context: { ...context, awaiting: "return_birthdate_search" } satisfies BookingContext,
+  });
+}
+
+async function fetchReturnDeadlineDays(supabase: SupabaseClient): Promise<number> {
+  const { data } = await supabase
+    .from("appointment_settings")
+    .select("return_visit_deadline_days")
+    .eq("id", 1)
+    .single();
+  return data?.return_visit_deadline_days ?? 30;
+}
+
+// Nenhuma criança com direito: um único motivo, do mais específico ao mais
+// genérico (domiciliar > retorno já marcado > consulta/retorno futuro já
+// marcado > sem consulta no prazo).
+async function sendReturnNotEligible(
+  supabase: SupabaseClient,
+  guardianPhone: string,
+  guardianId: string | null,
+  deadlineDays: number,
+  patients: ReturnVisitPatient[]
+): Promise<void> {
+  const homeVisit = patients.find((p) => p.status === "home_visit");
+  const returnUsed = patients.find((p) => p.status === "return_used");
+  const future = patients.find((p) => p.status === "future_appointment");
+
+  let body: string;
+  let kind: string;
+  if (homeVisit) {
+    body = texts.returnVisitHomeVisitText();
+    kind = "bot_book_return_home_visit";
+  } else if (returnUsed) {
+    body = texts.returnVisitAlreadyUsedText(returnUsed.fullName);
+    kind = "bot_book_return_already_used";
+  } else if (future?.futureScheduledAt) {
+    body = texts.patientAlreadyScheduledText(future.fullName, formatWhen(new Date(future.futureScheduledAt)), false);
+    kind = "bot_book_already_scheduled";
+  } else {
+    body = texts.returnVisitNoRecentConsultationText(deadlineDays);
+    kind = "bot_book_return_no_recent_consultation";
+  }
+
+  await sendAndLog(supabase, guardianId, kind, body, () => sendTextMessage({ to: guardianPhone, body }));
+  await updateConversationState(supabase, guardianPhone, "WELCOME", { context: {} });
+}
+
+async function sendReturnPatientChoice(
+  supabase: SupabaseClient,
+  guardianPhone: string,
+  guardianId: string | null,
+  candidates: ReturnCandidate[],
+  deadlineDays: number
+): Promise<void> {
+  const body = texts.returnVisitChoiceBodyText(deadlineDays);
+  await sendAndLog(supabase, guardianId, "bot_book_return_patient_choice", body, () =>
+    sendInteractiveListMessage({
+      to: guardianPhone,
+      bodyText: body,
+      buttonText: "Escolher opção",
+      sections: texts.returnVisitChoiceSections(candidates),
+    })
+  );
+}
+
+async function handleReturnPatientSelect(
+  supabase: SupabaseClient,
+  guardianPhone: string,
+  guardianId: string | null,
+  context: BookingContext,
+  selection: Selection
+): Promise<void> {
+  const candidates = context.return_candidates ?? [];
+  const deadlineDays = context.return_deadline_days ?? 30;
+
+  if (context.awaiting === "return_patient_choice") {
+    const match = resolveByListOrDigit(selection, candidates, (c) => `book_return_patient_${c.id}`);
+    if (!match) {
+      const body = texts.notUnderstoodText();
+      await sendAndLog(supabase, guardianId, "bot_not_understood", body, () =>
+        sendTextMessage({ to: guardianPhone, body })
+      );
+      await sendReturnPatientChoice(supabase, guardianPhone, guardianId, candidates, deadlineDays);
+      return;
+    }
+    await finishReturnBooking(supabase, guardianPhone, guardianId, context, match);
+    return;
+  }
+
+  // "return_birthdate_search": mais crianças com direito do que cabe na lista.
+  const isoBirthdate = parseBirthdateInput(selection.text);
+  if (!isoBirthdate) {
+    const body = texts.invalidBirthdateText();
+    await sendAndLog(supabase, guardianId, "bot_invalid_birthdate", body, () =>
+      sendTextMessage({ to: guardianPhone, body })
+    );
+    return;
+  }
+
+  const matches = candidates.filter((c) => c.birthdate === isoBirthdate);
+  if (matches.length === 0) {
+    const body = texts.returnVisitBirthdateNotFoundText();
+    await sendAndLog(supabase, guardianId, "bot_book_return_birthdate_not_found", body, () =>
+      sendTextMessage({ to: guardianPhone, body })
+    );
+    return;
+  }
+
+  if (matches.length === 1) {
+    await finishReturnBooking(supabase, guardianPhone, guardianId, context, matches[0]);
+    return;
+  }
+
+  // Mais de uma criança com direito e a mesma data (ex.: gêmeos).
+  await sendReturnPatientChoice(supabase, guardianPhone, guardianId, matches, deadlineDays);
+  await updateConversationState(supabase, guardianPhone, "BOOK_PATIENT_SELECT", {
+    context: { ...context, awaiting: "return_patient_choice", return_candidates: matches } satisfies BookingContext,
+  });
+}
+
+async function finishReturnBooking(
+  supabase: SupabaseClient,
+  guardianPhone: string,
+  guardianId: string | null,
+  context: BookingContext,
+  candidate: ReturnCandidate
+): Promise<void> {
+  const nextContext: BookingContext = {
+    appointment_type: "return_visit",
+    location_category: "clinic",
+    clinic_location_label: context.clinic_location_label,
+    origin_appointment_id: candidate.origin_appointment_id,
+  };
+  await finishBookingWithPatient(supabase, guardianPhone, guardianId, nextContext, candidate.id, candidate.full_name);
 }
 
 // --- BOOK_LOCATION ------------------------------------------------------
@@ -506,6 +739,7 @@ async function askNewPatientName(
     home_visit_address: context.home_visit_address,
     exam_type_id: context.exam_type_id,
     exam_type_name: context.exam_type_name,
+    new_guardian_name: context.new_guardian_name,
     awaiting: "new_patient_name",
     known_birthdate: knownBirthdate,
   };
@@ -519,6 +753,11 @@ async function handlePatientSelect(
   context: BookingContext,
   selection: Selection
 ): Promise<void> {
+  if (context.awaiting === "return_patient_choice" || context.awaiting === "return_birthdate_search") {
+    await handleReturnPatientSelect(supabase, guardianPhone, guardianId, context, selection);
+    return;
+  }
+
   if (context.awaiting === "patient_choice") {
     const candidates = context.patient_candidates ?? [];
     const isOther =
@@ -667,9 +906,9 @@ async function handlePatientNew(
     }
 
     // Data de nascimento já coletada na checagem de duplicidade — não
-    // pergunta de novo, cadastra direto.
+    // pergunta de novo, vai direto para a confirmação dos dados.
     if (context.known_birthdate) {
-      await createPatientAndFinishBooking(supabase, guardianPhone, guardianId, context, text, context.known_birthdate);
+      await askNewPatientConfirm(supabase, guardianPhone, guardianId, context, text, context.known_birthdate);
       return;
     }
 
@@ -694,8 +933,77 @@ async function handlePatientNew(
     }
 
     const patientName = context.new_patient_name ?? "Paciente";
-    await createPatientAndFinishBooking(supabase, guardianPhone, guardianId, context, patientName, isoBirthdate);
+    await askNewPatientConfirm(supabase, guardianPhone, guardianId, context, patientName, isoBirthdate);
+    return;
   }
+
+  if (context.awaiting === "new_patient_confirm") {
+    const patientName = context.new_patient_name;
+    const isoBirthdate = context.new_patient_birthdate;
+    if (!patientName || !isoBirthdate) {
+      await askNewPatientName(supabase, guardianPhone, guardianId, context);
+      return;
+    }
+
+    const answer = text.toLowerCase();
+    if (answer.startsWith("s")) {
+      await createPatientAndFinishBooking(supabase, guardianPhone, guardianId, context, patientName, isoBirthdate);
+      return;
+    }
+    if (answer.startsWith("n")) {
+      // Volta a pedir os dados da criança desde o primeiro passo: responsável
+      // já cadastrado começa pela data de nascimento (checagem de
+      // duplicidade, que pode achar uma criança existente com a data
+      // corrigida); telefone novo começa pelo nome, já que ali a data vem
+      // depois do nome (decisão do cliente, set/2026).
+      const resetContext: BookingContext = {
+        ...context,
+        new_patient_name: undefined,
+        new_patient_birthdate: undefined,
+        known_birthdate: undefined,
+      };
+      if (guardianId) {
+        await beginNewPatientRegistration(supabase, guardianPhone, guardianId, resetContext);
+      } else {
+        await askNewPatientName(supabase, guardianPhone, guardianId, resetContext);
+      }
+      return;
+    }
+
+    const notUnderstood = texts.notUnderstoodYesNoText();
+    await sendAndLog(supabase, guardianId, "bot_not_understood", notUnderstood, () =>
+      sendTextMessage({ to: guardianPhone, body: notUnderstood })
+    );
+    const body = texts.confirmNewPatientText(patientName, formatBirthdateLabel(isoBirthdate));
+    await sendAndLog(supabase, guardianId, "bot_book_confirm_new_patient", body, () =>
+      sendTextMessage({ to: guardianPhone, body })
+    );
+  }
+}
+
+// Pede ao responsável para conferir nome e data de nascimento antes de
+// cadastrar a criança nova (pedido do cliente, set/2026) — evita gravar um
+// cadastro com erro de digitação.
+async function askNewPatientConfirm(
+  supabase: SupabaseClient,
+  guardianPhone: string,
+  guardianId: string | null,
+  context: BookingContext,
+  patientName: string,
+  isoBirthdate: string
+): Promise<void> {
+  const body = texts.confirmNewPatientText(patientName, formatBirthdateLabel(isoBirthdate));
+  await sendAndLog(supabase, guardianId, "bot_book_confirm_new_patient", body, () =>
+    sendTextMessage({ to: guardianPhone, body })
+  );
+  await updateConversationState(supabase, guardianPhone, "BOOK_PATIENT_NEW", {
+    context: {
+      ...context,
+      awaiting: "new_patient_confirm",
+      new_patient_name: patientName,
+      new_patient_birthdate: isoBirthdate,
+    } satisfies BookingContext,
+  });
 }
 
 // Cadastra o responsável (se ainda não existir) e a criança, e finaliza o
@@ -805,6 +1113,13 @@ async function finishBookingWithPatient(
     await sendAndLog(supabase, guardianId, "bot_book_already_scheduled", body, () =>
       sendTextMessage({ to: guardianPhone, body })
     );
+    // Retorno: a lista de crianças com direito já exclui quem tem consulta
+    // futura — chegar aqui é corrida rara (marcou por outro caminho no meio
+    // da conversa); só encerra.
+    if (context.appointment_type === "return_visit" && context.origin_appointment_id) {
+      await updateConversationState(supabase, guardianPhone, "WELCOME", { context: {} });
+      return;
+    }
     // Em vez de encerrar em MENU (sem reenviar o menu — o usuário via só
     // essa mensagem e travava até digitar algo), volta direto pra escolha
     // de criança, com o mesmo tipo/local já selecionados, pra tentar outra
@@ -833,6 +1148,7 @@ async function finishBookingWithPatient(
       appointment_type: context.appointment_type,
       exam_type_id: context.exam_type_id ?? null,
       home_visit_address: context.location_category === "home_visit" ? (context.home_visit_address ?? null) : null,
+      origin_appointment_id: context.appointment_type === "return_visit" ? (context.origin_appointment_id ?? null) : null,
       mode: "create",
       guardian_phone: guardianPhone,
       expires_at: expiresAt,

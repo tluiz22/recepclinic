@@ -65,7 +65,7 @@ interface MinuteGap {
   clinicLocationId: string;
 }
 
-/** No máximo 4 sugestões para consulta de retorno, para não afogar a secretária de opções. */
+/** No máximo 4 horários de retorno por dia (Fase 17). */
 const MAX_RETURN_VISIT_SUGGESTIONS = 4;
 
 export function computeAvailableSlots({
@@ -140,31 +140,25 @@ export function computeAvailableSlots({
   }
 
   if (appointmentType === "exam") {
-    // Mesmo princípio do first_visit — sem a priorização/reserva do retorno,
+    // Mesmo princípio do first_visit — sem a priorização de buracos do retorno,
     // que só faz sentido quando exame e consulta disputam o mesmo horário.
     return gaps.flatMap((gap) => slotsFromGap(gap, examDurationMinutes ?? firstVisitDurationMinutes));
   }
 
-  // Retorno: prioriza buracos que nunca caberiam uma primeira consulta (não faz diferença
-  // usá-los para retorno) e só depois oferece a sobra de buracos grandes o suficiente para
-  // uma primeira consulta — reservando mentalmente o início do buraco para ela, sem fragmentar
-  // um bloco que pode ser precisado inteiro por uma consulta maior.
+  // Retorno ("tapar buracos" na agenda da médica, Fase 17): prioriza os
+  // intervalos livres menores que uma consulta — que nunca seriam usados por
+  // ela — e, se não houver ou não completar o limite, completa com os
+  // primeiros horários livres do dia (sem reservar o início dos intervalos
+  // grandes para uma consulta, como era antes). Exibidos em ordem de horário.
   const prioritySlots: AvailableSlot[] = [];
-  const leftoverSlots: AvailableSlot[] = [];
+  const otherSlots: AvailableSlot[] = [];
 
   for (const gap of gaps) {
-    const gapDuration = gap.end - gap.start;
-    if (gapDuration < firstVisitDurationMinutes) {
-      prioritySlots.push(...slotsFromGap(gap, returnVisitDurationMinutes));
-    } else {
-      const leftover: MinuteGap = {
-        start: gap.start + firstVisitDurationMinutes,
-        end: gap.end,
-        clinicLocationId: gap.clinicLocationId,
-      };
-      leftoverSlots.push(...slotsFromGap(leftover, returnVisitDurationMinutes));
-    }
+    const target = gap.end - gap.start < firstVisitDurationMinutes ? prioritySlots : otherSlots;
+    target.push(...slotsFromGap(gap, returnVisitDurationMinutes));
   }
 
-  return [...prioritySlots, ...leftoverSlots].slice(0, MAX_RETURN_VISIT_SUGGESTIONS);
+  return [...prioritySlots, ...otherSlots]
+    .slice(0, MAX_RETURN_VISIT_SUGGESTIONS)
+    .sort((a, b) => a.start.getTime() - b.start.getTime());
 }
