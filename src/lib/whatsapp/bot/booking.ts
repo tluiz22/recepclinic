@@ -20,6 +20,9 @@ import {
   parseBirthdateInput,
   resolveByListOrDigit,
   sendAndLog,
+  endFlow,
+  getFunnelSession,
+  logFunnelStep,
   updateConversationState,
   type Selection,
 } from "./shared";
@@ -154,7 +157,7 @@ export async function startBooking(
     await sendAndLog(supabase, guardianId, "bot_book_no_location", body, () =>
       sendTextMessage({ to: guardianPhone, body })
     );
-    await updateConversationState(supabase, guardianPhone, "WELCOME", { context: {} });
+    await endFlow(supabase, guardianPhone, guardianId, "blocked", { reason: "no_location" });
     return;
   }
 
@@ -213,7 +216,7 @@ async function startReturnBooking(
     await sendAndLog(supabase, guardianId, "bot_book_no_location", body, () =>
       sendTextMessage({ to: guardianPhone, body })
     );
-    await updateConversationState(supabase, guardianPhone, "WELCOME", { context: {} });
+    await endFlow(supabase, guardianPhone, guardianId, "blocked", { reason: "no_location" });
     return;
   }
 
@@ -300,7 +303,7 @@ async function sendReturnNotEligible(
   }
 
   await sendAndLog(supabase, guardianId, kind, body, () => sendTextMessage({ to: guardianPhone, body }));
-  await updateConversationState(supabase, guardianPhone, "WELCOME", { context: {} });
+  await endFlow(supabase, guardianPhone, guardianId, "blocked", { reason: kind.replace(/^bot_book_/, "") });
 }
 
 async function sendReturnPatientChoice(
@@ -1117,7 +1120,7 @@ async function finishBookingWithPatient(
     // futura — chegar aqui é corrida rara (marcou por outro caminho no meio
     // da conversa); só encerra.
     if (context.appointment_type === "return_visit" && context.origin_appointment_id) {
-      await updateConversationState(supabase, guardianPhone, "WELCOME", { context: {} });
+      await endFlow(supabase, guardianPhone, guardianId, "blocked", { reason: "already_scheduled" });
       return;
     }
     // Em vez de encerrar em MENU (sem reenviar o menu — o usuário via só
@@ -1133,11 +1136,16 @@ async function finishBookingWithPatient(
       exam_type_id: context.exam_type_id,
       exam_type_name: context.exam_type_name,
     };
+    // Não encerra a tentativa (volta pra escolha de criança), mas registra
+    // o bloqueio no funil (Fase 15).
+    await logFunnelStep(supabase, guardianPhone, guardianId, "already_scheduled");
     await enterPatientSelect(supabase, guardianPhone, guardianId, cleanContext);
     return;
   }
 
   const expiresAt = new Date(Date.now() + 30 * 60_000).toISOString();
+  // Liga os passos da página /agendar à tentativa do funil (Fase 15).
+  const funnelSession = await getFunnelSession(supabase, guardianPhone);
   const { data: link, error } = await supabase
     .from("booking_links")
     .insert({
@@ -1151,6 +1159,7 @@ async function finishBookingWithPatient(
       origin_appointment_id: context.appointment_type === "return_visit" ? (context.origin_appointment_id ?? null) : null,
       mode: "create",
       guardian_phone: guardianPhone,
+      funnel_session_id: funnelSession?.sessionId ?? null,
       expires_at: expiresAt,
     })
     .select("id")
@@ -1170,7 +1179,7 @@ async function finishBookingWithPatient(
   await sendAndLog(supabase, guardianId, "bot_booking_link", body, () =>
     sendTextMessage({ to: guardianPhone, body })
   );
-  await updateConversationState(supabase, guardianPhone, "WELCOME", { context: {} });
+  await endFlow(supabase, guardianPhone, guardianId, "link_sent", { booking_link_id: link.id });
 }
 
 async function sendBookingLinkError(
@@ -1182,7 +1191,7 @@ async function sendBookingLinkError(
   await sendAndLog(supabase, guardianId, "bot_book_link_error", body, () =>
     sendTextMessage({ to: guardianPhone, body })
   );
-  await updateConversationState(supabase, guardianPhone, "WELCOME", { context: {} });
+  await endFlow(supabase, guardianPhone, guardianId, "error", { reason: "link_error" });
 }
 
 // --- helpers --------------------------------------------------------------

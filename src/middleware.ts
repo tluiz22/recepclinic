@@ -1,10 +1,11 @@
 import { defineMiddleware } from "astro:middleware";
 import { createClient } from "./lib/supabase/server";
 
-// Fase 14: telas (e APIs) só da médica — por enquanto só as métricas.
-// Todo o resto do admin, incluindo Configurações, é compartilhado com a
-// secretária (decisão do cliente ao validar a etapa 1).
-const MEDICA_ONLY_PREFIXES = ["/admin/relatorios"];
+// Fase 14: telas (e APIs) só da médica — as de métricas (Relatórios e
+// Métricas do WhatsApp, Fase 15). Todo o resto do admin, incluindo
+// Configurações, é compartilhado com a secretária (decisão do cliente ao
+// validar a etapa 1).
+const MEDICA_ONLY_PREFIXES = ["/admin/relatorios", "/admin/metricas"];
 
 const isMedicaOnlyPath = (pathname: string) =>
   MEDICA_ONLY_PREFIXES.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`));

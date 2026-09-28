@@ -19,15 +19,18 @@ const primaryNavItems: { label: string; href: string; icon: IconName }[] = [
   { label: "Consultas", href: "/admin/consultas", icon: "check-circle" },
 ];
 
-// Perfil do login ativo, resolvido pelo middleware (Fase 14). Relatórios é
-// só da médica — escondido do menu, não só bloqueado na rota.
+// Perfil do login ativo, resolvido pelo middleware (Fase 14). Relatórios e
+// Métricas são só da médica — escondidos do menu, não só bloqueados na rota.
 const role = Astro.locals.role ?? "secretaria";
 const roleLabel = role === "medica" ? "Médica" : "Secretária";
 
 const moreNavItems: { label: string; href: string; icon: IconName }[] = [
   { label: "Configurações", href: "/admin/configuracoes", icon: "settings" },
   ...(role === "medica"
-    ? [{ label: "Relatórios", href: "/admin/relatorios", icon: "chart-bar" as IconName }]
+    ? [
+        { label: "Relatórios", href: "/admin/relatorios", icon: "chart-bar" as IconName },
+        { label: "Métricas", href: "/admin/metricas", icon: "funnel" as IconName },
+      ]
     : []),
 ];
 

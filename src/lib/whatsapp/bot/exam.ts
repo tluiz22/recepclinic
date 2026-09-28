@@ -9,7 +9,7 @@
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { sendInteractiveListMessage, sendTextMessage } from "../client";
-import { resolveByListOrDigit, sendAndLog, updateConversationState, type Selection } from "./shared";
+import { endFlow, resolveByListOrDigit, sendAndLog, updateConversationState, type Selection } from "./shared";
 import { enterPatientSelect, type BookingContext } from "./booking";
 import { filterExamTypesWithSchedule } from "../../scheduling/examScheduleAvailability";
 import * as texts from "./messages";
@@ -46,7 +46,7 @@ export async function startExam(
     await sendAndLog(supabase, guardianId, "bot_exam_no_types", body, () =>
       sendTextMessage({ to: guardianPhone, body })
     );
-    await updateConversationState(supabase, guardianPhone, "WELCOME", { context: {} });
+    await endFlow(supabase, guardianPhone, guardianId, "blocked", { reason: "no_exam_types" });
     return;
   }
 
@@ -105,7 +105,7 @@ export async function handleExamState(
     await sendAndLog(supabase, guardianId, "bot_exam_no_types", body, () =>
       sendTextMessage({ to: guardianPhone, body })
     );
-    await updateConversationState(supabase, guardianPhone, "WELCOME", { context: {} });
+    await endFlow(supabase, guardianPhone, guardianId, "error", { reason: "no_exam_location" });
     return;
   }
 

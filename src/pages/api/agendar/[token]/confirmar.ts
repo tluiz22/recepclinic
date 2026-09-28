@@ -12,6 +12,7 @@ import {
   sendAppointmentConfirmation,
   sendAppointmentReschedule,
 } from "../../../../lib/whatsapp/notifications";
+import { logWebFunnelEvent, type FunnelLink } from "../../../../lib/whatsapp/funnel";
 
 export const POST: APIRoute = async ({ params, request, redirect }) => {
   const token = params.token;
@@ -25,13 +26,20 @@ export const POST: APIRoute = async ({ params, request, redirect }) => {
   const startParam = formData.get("start")?.toString();
   const startIso = startParam?.split("|")[0];
 
-  const back = (error: string) => redirect(`/agendar/${token}?date=${date ?? ""}&error=${error}`);
+  const supabase = createServiceClient();
+
+  // Funil (Fase 15): toda volta pra página com erro é uma tentativa de
+  // confirmar que falhou — registrada com o motivo, depois que o link já
+  // foi carregado (antes disso não há tentativa a que ligar).
+  let funnelLink: FunnelLink | null = null;
+  const back = async (error: string) => {
+    if (funnelLink) await logWebFunnelEvent(supabase, funnelLink, "confirm_failed", { reason: error });
+    return redirect(`/agendar/${token}?date=${date ?? ""}&error=${error}`);
+  };
 
   if (!token || !date || !startIso) {
     return back("1");
   }
-
-  const supabase = createServiceClient();
 
   const { data: link } = await supabase
     .from("booking_links")
@@ -44,6 +52,7 @@ export const POST: APIRoute = async ({ params, request, redirect }) => {
   if (!link || link.used_at || new Date(link.expires_at) < new Date()) {
     return redirect(`/agendar/${token}`);
   }
+  funnelLink = link;
 
   const appointmentType = link.appointment_type as AppointmentType;
   const examType = link.exam_types as unknown as {
@@ -412,6 +421,8 @@ export const POST: APIRoute = async ({ params, request, redirect }) => {
   // consulta gerada, para a página mostrar a confirmação mesmo se o link
   // for reaberto depois.
   await supabase.from("booking_links").update({ appointment_id: appointmentId }).eq("id", token);
+
+  await logWebFunnelEvent(supabase, link, "confirmed", { appointment_id: appointmentId });
 
   return redirect(`/agendar/${token}`);
 };

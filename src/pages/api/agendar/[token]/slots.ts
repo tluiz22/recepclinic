@@ -4,6 +4,7 @@ import { getAvailableSlotsForDate, type AppointmentType } from "../../../../lib/
 import { getExamAvailableSlotsForDate } from "../../../../lib/scheduling/getExamAvailableSlotsForDate";
 import { resolveClinicLocationIds, type LocationCategory } from "../../../../lib/scheduling/resolveClinicLocationIds";
 import { getBookingLinkLastDate } from "../../../../lib/scheduling/returnVisitDeadline";
+import { logWebFunnelEvent } from "../../../../lib/whatsapp/funnel";
 
 export const GET: APIRoute = async ({ params, url }) => {
   const token = params.token;
@@ -21,7 +22,7 @@ export const GET: APIRoute = async ({ params, url }) => {
   const { data: link } = await supabase
     .from("booking_links")
     .select(
-      "clinic_location_id, location_category, appointment_type, exam_type_id, origin_appointment_id, return_deadline_waived, used_at, expires_at, exam_types ( duration_minutes, scheduling_mode )"
+      "clinic_location_id, location_category, appointment_type, exam_type_id, origin_appointment_id, return_deadline_waived, used_at, expires_at, mode, guardian_id, guardian_phone, funnel_session_id, exam_types ( duration_minutes, scheduling_mode )"
     )
     .eq("id", token)
     .maybeSingle();
@@ -64,6 +65,9 @@ export const GET: APIRoute = async ({ params, url }) => {
           date,
           appointmentType,
         });
+
+  // Funil (Fase 15): trocou a data pra ver outros horários.
+  await logWebFunnelEvent(supabase, link, "date_changed", { date, slots: slots.length });
 
   return new Response(
     JSON.stringify({

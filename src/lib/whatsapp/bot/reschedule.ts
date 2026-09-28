@@ -21,6 +21,8 @@ import {
   parseBirthdateInput,
   resolveByListOrDigit,
   sendAndLog,
+  endFlow,
+  getFunnelSession,
   updateConversationState,
   type AppointmentCandidate,
   type AppointmentCategory,
@@ -64,7 +66,7 @@ export async function startReschedule(
     await sendAndLog(supabase, guardianId, "bot_reschedule_no_guardian", body, () =>
       sendTextMessage({ to: guardianPhone, body })
     );
-    await updateConversationState(supabase, guardianPhone, "WELCOME", { context: {} });
+    await endFlow(supabase, guardianPhone, guardianId, "blocked", { reason: "no_guardian" });
     return;
   }
 
@@ -113,7 +115,7 @@ export async function handleRescheduleState(
       await sendAndLog(supabase, guardianId, "bot_reschedule_no_match", body, () =>
         sendTextMessage({ to: guardianPhone, body })
       );
-      await updateConversationState(supabase, guardianPhone, "WELCOME", { context: {} });
+      await endFlow(supabase, guardianPhone, guardianId, "blocked", { reason: "no_match" });
       return;
     }
 
@@ -152,7 +154,7 @@ export async function handleRescheduleState(
       await sendAndLog(supabase, guardianId, "bot_reschedule_error", body, () =>
         sendTextMessage({ to: guardianPhone, body })
       );
-      await updateConversationState(supabase, guardianPhone, "WELCOME", { context: {} });
+      await endFlow(supabase, guardianPhone, guardianId, "error", { reason: "appointment_not_identified" });
       return;
     }
 
@@ -166,7 +168,7 @@ export async function handleRescheduleState(
       await sendAndLog(supabase, guardianId, "bot_reschedule_error", body, () =>
         sendTextMessage({ to: guardianPhone, body })
       );
-      await updateConversationState(supabase, guardianPhone, "WELCOME", { context: {} });
+      await endFlow(supabase, guardianPhone, guardianId, "declined", {});
       return;
     }
 
@@ -274,7 +276,7 @@ async function presentCandidates(
     await sendAndLog(supabase, guardianId, "bot_reschedule_no_appointments", body, () =>
       sendTextMessage({ to: guardianPhone, body })
     );
-    await updateConversationState(supabase, guardianPhone, "WELCOME", { context: {} });
+    await endFlow(supabase, guardianPhone, guardianId, "blocked", { reason: "no_appointments" });
     return;
   }
 
@@ -337,7 +339,7 @@ async function finishReschedule(
       await sendAndLog(supabase, guardianId, "bot_reschedule_return_deadline_passed", body, () =>
         sendTextMessage({ to: guardianPhone, body })
       );
-      await updateConversationState(supabase, guardianPhone, "WELCOME", { context: {} });
+      await endFlow(supabase, guardianPhone, guardianId, "blocked", { reason: "return_deadline_passed" });
       return;
     }
   }
@@ -452,6 +454,8 @@ async function createRescheduleLink(
 ): Promise<void> {
   const isExam = appointment.appointment_type === "exam";
   const expiresAt = new Date(Date.now() + 30 * 60_000).toISOString();
+  // Liga os passos da página /agendar à tentativa do funil (Fase 15).
+  const funnelSession = await getFunnelSession(supabase, guardianPhone);
   const { data: link, error } = await supabase
     .from("booking_links")
     .insert({
@@ -467,6 +471,7 @@ async function createRescheduleLink(
       mode: "reschedule",
       appointment_id: appointment.id,
       guardian_phone: guardianPhone,
+      funnel_session_id: funnelSession?.sessionId ?? null,
       expires_at: expiresAt,
     })
     .select("id")
@@ -484,7 +489,7 @@ async function createRescheduleLink(
   await sendAndLog(supabase, guardianId, "bot_reschedule_link", body, () =>
     sendTextMessage({ to: guardianPhone, body })
   );
-  await updateConversationState(supabase, guardianPhone, "WELCOME", { context: {} });
+  await endFlow(supabase, guardianPhone, guardianId, "link_sent", { booking_link_id: link.id });
 }
 
 async function sendRescheduleLinkError(
@@ -496,5 +501,5 @@ async function sendRescheduleLinkError(
   await sendAndLog(supabase, guardianId, "bot_reschedule_link_error", body, () =>
     sendTextMessage({ to: guardianPhone, body })
   );
-  await updateConversationState(supabase, guardianPhone, "WELCOME", { context: {} });
+  await endFlow(supabase, guardianPhone, guardianId, "error", { reason: "link_error" });
 }

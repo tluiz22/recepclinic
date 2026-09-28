@@ -22,6 +22,7 @@ import {
   parseBirthdateInput,
   resolveByListOrDigit,
   sendAndLog,
+  endFlow,
   updateConversationState,
   type AppointmentCandidate,
   type AppointmentCategory,
@@ -52,7 +53,7 @@ export async function startCancel(
     await sendAndLog(supabase, guardianId, "bot_cancel_no_guardian", body, () =>
       sendTextMessage({ to: guardianPhone, body })
     );
-    await updateConversationState(supabase, guardianPhone, "WELCOME", { context: {} });
+    await endFlow(supabase, guardianPhone, guardianId, "blocked", { reason: "no_guardian" });
     return;
   }
 
@@ -121,7 +122,7 @@ async function handleCancelSelect(
       await sendAndLog(supabase, guardianId, "bot_cancel_no_match", body, () =>
         sendTextMessage({ to: guardianPhone, body })
       );
-      await updateConversationState(supabase, guardianPhone, "WELCOME", { context: {} });
+      await endFlow(supabase, guardianPhone, guardianId, "blocked", { reason: "no_match" });
       return;
     }
 
@@ -153,7 +154,7 @@ async function handleCancelConfirm(
     await sendAndLog(supabase, guardianId, "bot_cancel_error", body, () =>
       sendTextMessage({ to: guardianPhone, body })
     );
-    await updateConversationState(supabase, guardianPhone, "WELCOME", { context: {} });
+    await endFlow(supabase, guardianPhone, guardianId, "error", { reason: "appointment_not_identified" });
     return;
   }
 
@@ -169,7 +170,7 @@ async function handleCancelConfirm(
     await sendAndLog(supabase, guardianId, "bot_cancel_aborted", body, () =>
       sendTextMessage({ to: guardianPhone, body })
     );
-    await updateConversationState(supabase, guardianPhone, "WELCOME", { context: {} });
+    await endFlow(supabase, guardianPhone, guardianId, "declined", {});
     return;
   }
 
@@ -248,7 +249,7 @@ async function performCancel(
       await sendAndLog(supabase, guardianId, "bot_cancel_error", body, () =>
         sendTextMessage({ to: guardianPhone, body })
       );
-      await updateConversationState(supabase, guardianPhone, "WELCOME", { context: {} });
+      await endFlow(supabase, guardianPhone, guardianId, "error", { reason: "calendar_error" });
       return;
     }
   } else {
@@ -271,7 +272,7 @@ async function performCancel(
   await sendAndLog(supabase, guardianId, "bot_cancel_success", body, () =>
     sendTextMessage({ to: guardianPhone, body })
   );
-  await updateConversationState(supabase, guardianPhone, "WELCOME", { context: {} });
+  await endFlow(supabase, guardianPhone, guardianId, "canceled", { appointment_id: appointment.id });
 }
 
 // --- helpers --------------------------------------------------------------
@@ -288,7 +289,7 @@ async function presentCandidates(
     await sendAndLog(supabase, guardianId, "bot_cancel_no_appointments", body, () =>
       sendTextMessage({ to: guardianPhone, body })
     );
-    await updateConversationState(supabase, guardianPhone, "WELCOME", { context: {} });
+    await endFlow(supabase, guardianPhone, guardianId, "blocked", { reason: "no_appointments" });
     return;
   }
 

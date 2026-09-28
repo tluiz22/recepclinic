@@ -3,6 +3,7 @@
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { TIMEZONE } from "../formatDateTime";
+import { logFunnelEvent, type FunnelFlow } from "../funnel";
 
 // "5584981880777" (formato da Meta) → "+5584981880777".
 export function toE164(waFrom: string | undefined): string | null {
@@ -180,19 +181,108 @@ export function resolveByListOrDigit<T>(
 
 // --- estado da conversa -----------------------------------------------
 
+// Estados fora de qualquer fluxo do funil (Fase 15) — entrar num deles
+// encerra a tentativa em andamento.
+const NON_FUNNEL_STATES = new Set([
+  "WELCOME",
+  "MENU",
+  "CONSULTAS_MENU",
+  "EXAMES_MENU",
+  "INFO_MENU",
+  "HUMAN_HANDOFF",
+]);
+
+// Toda troca de estado passa por aqui — por isso o funil (Fase 15) também:
+// dentro de uma tentativa, cada estado alcançado vira um evento (repetições
+// do mesmo estado, ex. resposta não entendida, são deduplicadas na leitura).
 export async function updateConversationState(
   supabase: SupabaseClient,
   guardianPhone: string,
   state: string,
   extra: Record<string, unknown> = {}
 ): Promise<void> {
-  const { error } = await supabase
+  const endsFunnel = NON_FUNNEL_STATES.has(state);
+  const { data, error } = await supabase
     .from("conversation_state")
-    .update({ state, updated_at: new Date().toISOString(), ...extra })
-    .eq("guardian_phone", guardianPhone);
+    .update({
+      state,
+      updated_at: new Date().toISOString(),
+      ...(endsFunnel ? { funnel_session_id: null, funnel_flow: null } : {}),
+      ...extra,
+    })
+    .eq("guardian_phone", guardianPhone)
+    .select("funnel_session_id, funnel_flow, guardian_id")
+    .maybeSingle();
   if (error) {
     console.error("[whatsapp bot] erro ao atualizar conversation_state:", error.message);
+    return;
   }
+
+  if (!endsFunnel && data?.funnel_session_id && data.funnel_flow) {
+    await logFunnelEvent(supabase, {
+      sessionId: data.funnel_session_id,
+      flow: data.funnel_flow as FunnelFlow,
+      step: state,
+      guardianPhone,
+      guardianId: data.guardian_id ?? null,
+    });
+  }
+}
+
+// --- funil: passos avulsos e resultado da tentativa (Fase 15) --------------
+
+// Resultado de uma tentativa: link enviado (agendar/remarcar), cancelado,
+// desistência explícita ("Não" na confirmação), barrada por regra (motivo em
+// `reason`) ou erro técnico. Tentativa sem resultado = abandono.
+export type FunnelOutcome = "link_sent" | "canceled" | "declined" | "blocked" | "error";
+
+// Grava um passo na tentativa em andamento (se houver) — para o que não é
+// uma troca de estado, ex. resultado ou um bloqueio no meio do fluxo.
+// Tentativa em andamento na conversa — também gravada no `booking_links`
+// ao gerar o link, pra ligar os passos da página /agendar a ela.
+export async function getFunnelSession(
+  supabase: SupabaseClient,
+  guardianPhone: string
+): Promise<{ sessionId: string; flow: FunnelFlow } | null> {
+  const { data } = await supabase
+    .from("conversation_state")
+    .select("funnel_session_id, funnel_flow")
+    .eq("guardian_phone", guardianPhone)
+    .maybeSingle();
+  if (!data?.funnel_session_id || !data.funnel_flow) return null;
+  return { sessionId: data.funnel_session_id, flow: data.funnel_flow as FunnelFlow };
+}
+
+export async function logFunnelStep(
+  supabase: SupabaseClient,
+  guardianPhone: string,
+  guardianId: string | null,
+  step: string,
+  metadata: Record<string, unknown> = {}
+): Promise<void> {
+  const session = await getFunnelSession(supabase, guardianPhone);
+  if (!session) return;
+  await logFunnelEvent(supabase, {
+    sessionId: session.sessionId,
+    flow: session.flow,
+    step,
+    guardianPhone,
+    guardianId,
+    metadata,
+  });
+}
+
+// Fim de um fluxo: grava o resultado e volta a conversa pro WELCOME (o que
+// também encerra a tentativa, ver `updateConversationState`).
+export async function endFlow(
+  supabase: SupabaseClient,
+  guardianPhone: string,
+  guardianId: string | null,
+  outcome: FunnelOutcome,
+  metadata: Record<string, unknown> = {}
+): Promise<void> {
+  await logFunnelStep(supabase, guardianPhone, guardianId, outcome, metadata);
+  await updateConversationState(supabase, guardianPhone, "WELCOME", { context: {} });
 }
 
 // --- envio + log ---------------------------------------------------------

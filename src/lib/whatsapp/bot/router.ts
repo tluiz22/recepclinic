@@ -31,6 +31,7 @@ import { CANCEL_STATES, handleCancelState, startCancel } from "./cancel";
 import { RESCHEDULE_STATES, handleRescheduleState, startReschedule } from "./reschedule";
 import { EXAM_STATES, handleExamState, startExam } from "./exam";
 import * as texts from "./messages";
+import { logFunnelEvent, startFunnel, type FunnelFlow } from "../funnel";
 
 // "Falar com a secretária" temporariamente desligado enquanto o sistema
 // ainda está em teste (pedido do cliente, set/2026) — evita transferir de
@@ -44,6 +45,8 @@ interface ConversationStateRow {
   atendimento_humano: boolean;
   context: Record<string, unknown> | null;
   updated_at: string;
+  funnel_session_id: string | null;
+  funnel_flow: string | null;
 }
 
 export async function routeIncomingMessage(
@@ -53,7 +56,7 @@ export async function routeIncomingMessage(
 ): Promise<void> {
   const { data: convo, error } = await supabase
     .from("conversation_state")
-    .select("state, guardian_id, atendimento_humano, context, updated_at")
+    .select("state, guardian_id, atendimento_humano, context, updated_at, funnel_session_id, funnel_flow")
     .eq("guardian_phone", guardianPhone)
     .maybeSingle<ConversationStateRow>();
 
@@ -98,6 +101,7 @@ export async function routeIncomingMessage(
   // reinicia do zero em vez de tentar reencaixar esta mensagem num contexto
   // que o responsável provavelmente já esqueceu.
   if (convo.state !== "WELCOME" && isPastIdleTimeout(new Date(convo.updated_at))) {
+    await logAbandonment(supabase, guardianPhone, guardianId, convo, "timeout");
     await updateConversationState(supabase, guardianPhone, "WELCOME", { context: {} });
     convo.state = "WELCOME";
     convo.context = {};
@@ -110,6 +114,7 @@ export async function routeIncomingMessage(
   // cliente para não deixar o responsável preso num sub-fluxo. WELCOME/MENU
   // ficam de fora: já mostram o menu ou ainda nem chegaram lá.
   if (convo.state !== "WELCOME" && convo.state !== "MENU" && isBackToMenuSelection(selection)) {
+    await logAbandonment(supabase, guardianPhone, guardianId, convo, "back_to_menu");
     await updateConversationState(supabase, guardianPhone, "MENU", { context: {} });
     await sendMenu(supabase, guardianPhone, guardianId);
     return;
@@ -157,6 +162,32 @@ export async function routeIncomingMessage(
       // conversa travada num estado sem handler.
       await handleWelcome(supabase, guardianPhone, guardianId);
   }
+}
+
+// --- funil (Fase 15) --------------------------------------------------------
+
+// Tentativa em andamento interrompida (timeout de inatividade ou "voltar ao
+// menu") — registra o abandono na última etapa alcançada. Tentativa de quem
+// some e nunca mais escreve não passa por aqui: é abandono calculado na
+// leitura (sem evento de resultado).
+async function logAbandonment(
+  supabase: SupabaseClient,
+  guardianPhone: string,
+  guardianId: string | null,
+  convo: ConversationStateRow,
+  reason: "timeout" | "back_to_menu"
+): Promise<void> {
+  if (!convo.funnel_session_id || !convo.funnel_flow) return;
+  await logFunnelEvent(supabase, {
+    sessionId: convo.funnel_session_id,
+    flow: convo.funnel_flow as FunnelFlow,
+    step: "abandoned",
+    guardianPhone,
+    guardianId,
+    metadata: { reason, last_step: convo.state },
+  });
+  convo.funnel_session_id = null;
+  convo.funnel_flow = null;
 }
 
 // --- menus (compartilhados por WELCOME/MENU/INFO_MENU) --------------------
@@ -267,6 +298,17 @@ async function handleMenu(
   }
 
   if (matchesOption(selection, "4", texts.MENU_LIST_ID.secretaria)) {
+    // Funil (Fase 15): evento avulso, registrado mesmo com a transferência
+    // desligada — mostra quanta gente procura a secretária.
+    await logFunnelEvent(supabase, {
+      sessionId: crypto.randomUUID(),
+      flow: "handoff",
+      step: "requested",
+      guardianPhone,
+      guardianId,
+      metadata: { handoff_enabled: !SECRETARIA_HANDOFF_DISABLED },
+    });
+
     if (SECRETARIA_HANDOFF_DISABLED) {
       const body = texts.handoffDisabledText();
       await sendAndLog(supabase, guardianId, "bot_handoff_disabled", body, () =>
@@ -300,21 +342,25 @@ async function handleConsultasMenu(
   selection: Selection
 ): Promise<void> {
   if (matchesOption(selection, "1", texts.CONSULTAS_LIST_ID.agendarConsulta)) {
+    await startFunnel(supabase, guardianPhone, guardianId, "booking");
     await startBooking(supabase, guardianPhone, guardianId, "first_visit");
     return;
   }
 
   if (matchesOption(selection, "2", texts.CONSULTAS_LIST_ID.agendarRetorno)) {
+    await startFunnel(supabase, guardianPhone, guardianId, "return_booking");
     await startBooking(supabase, guardianPhone, guardianId, "return_visit");
     return;
   }
 
   if (matchesOption(selection, "3", texts.CONSULTAS_LIST_ID.cancelar)) {
+    await startFunnel(supabase, guardianPhone, guardianId, "cancel", { category: "consulta" });
     await startCancel(supabase, guardianPhone, guardianId, "consulta");
     return;
   }
 
   if (matchesOption(selection, "4", texts.CONSULTAS_LIST_ID.remarcar)) {
+    await startFunnel(supabase, guardianPhone, guardianId, "reschedule", { category: "consulta" });
     await startReschedule(supabase, guardianPhone, guardianId, "consulta");
     return;
   }
@@ -335,16 +381,19 @@ async function handleExamesMenu(
   selection: Selection
 ): Promise<void> {
   if (matchesOption(selection, "1", texts.EXAMES_LIST_ID.marcar)) {
+    await startFunnel(supabase, guardianPhone, guardianId, "exam");
     await startExam(supabase, guardianPhone, guardianId);
     return;
   }
 
   if (matchesOption(selection, "2", texts.EXAMES_LIST_ID.cancelar)) {
+    await startFunnel(supabase, guardianPhone, guardianId, "cancel", { category: "exame" });
     await startCancel(supabase, guardianPhone, guardianId, "exame");
     return;
   }
 
   if (matchesOption(selection, "3", texts.EXAMES_LIST_ID.remarcar)) {
+    await startFunnel(supabase, guardianPhone, guardianId, "reschedule", { category: "exame" });
     await startReschedule(supabase, guardianPhone, guardianId, "exame");
     return;
   }

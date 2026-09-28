@@ -1,0 +1,311 @@
+---
+// Fase 15 — Métricas do WhatsApp: funil de cada fluxo do bot (+ passos da
+// página /agendar), resultado das tentativas, WhatsApp × tela e quem não
+// concluiu (pra retomar contato). Só a médica (ver middleware). Gráfico em
+// barras CSS, sem lib de gráfico (decisão do cliente). Ver plano, "Fase 15".
+import AdminLayout from "../../layouts/AdminLayout.astro";
+import Card from "../../components/admin/Card.astro";
+import Badge from "../../components/admin/Badge.astro";
+import Icon from "../../components/admin/Icon.astro";
+import { createClient } from "../../lib/supabase/server";
+import { formatPhoneBR } from "../../lib/phone";
+import { buildFunnelReport, type FunnelEventRow } from "../../lib/metrics/whatsappFunnel";
+
+const supabase = createClient(Astro.request, Astro.cookies);
+
+function todayFortaleza(): string {
+  return new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString().slice(0, 10);
+}
+
+function addMonths(monthStr: string, delta: number): string {
+  const [year, month] = monthStr.split("-").map(Number);
+  const totalMonths = year * 12 + (month - 1) + delta;
+  const newYear = Math.floor(totalMonths / 12);
+  const newMonth = (totalMonths % 12) + 1;
+  return `${newYear}-${String(newMonth).padStart(2, "0")}`;
+}
+
+const monthNames = [
+  "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
+  "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro",
+];
+
+const monthParam = Astro.url.searchParams.get("month");
+const currentMonth = todayFortaleza().slice(0, 7);
+const month = monthParam && /^\d{4}-\d{2}$/.test(monthParam) ? monthParam : currentMonth;
+const [monthYear, monthNum] = month.split("-").map(Number);
+
+const monthStart = new Date(`${month}-01T00:00:00-03:00`);
+const monthEnd = new Date(`${addMonths(month, 1)}-01T00:00:00-03:00`);
+// Tentativa iniciada no fim do mês ainda pode ter passos na página logo
+// depois da virada — busca 1 dia a mais (o link vale 30min).
+const eventsEnd = new Date(monthEnd.getTime() + 24 * 60 * 60 * 1000);
+
+// Paginado: o Supabase devolve no máximo 1000 linhas por consulta.
+const PAGE = 1000;
+const events: FunnelEventRow[] = [];
+for (let from = 0; ; from += PAGE) {
+  const { data, error } = await supabase
+    .from("bot_funnel_events")
+    .select("session_id, flow, step, source, guardian_phone, guardian_id, metadata, occurred_at")
+    .gte("occurred_at", monthStart.toISOString())
+    .lt("occurred_at", eventsEnd.toISOString())
+    .order("occurred_at", { ascending: true })
+    .range(from, from + PAGE - 1);
+  if (error) {
+    console.error("[metricas] erro ao ler bot_funnel_events:", error.message);
+    break;
+  }
+  events.push(...((data ?? []) as FunnelEventRow[]));
+  if (!data || data.length < PAGE) break;
+}
+
+const report = buildFunnelReport(events, monthStart, monthEnd);
+
+// Quem não concluiu: nome do responsável (quando já cadastrado).
+const INCOMPLETE_LIMIT = 50;
+const incomplete = report.incomplete.slice(0, INCOMPLETE_LIMIT);
+const guardianIds = [...new Set(incomplete.map((row) => row.guardianId).filter((id): id is string => !!id))];
+const { data: guardianRows } = guardianIds.length
+  ? await supabase.from("guardians").select("id, full_name").in("id", guardianIds)
+  : { data: [] };
+const guardianNames = new Map((guardianRows ?? []).map((row) => [row.id as string, row.full_name as string]));
+
+// WhatsApp × tela (Fase 17 já grava o canal de cada ação em `appointments`),
+// pela data da ação — mesmo critério de "Agendamentos por origem" em
+// Relatórios, que tem o detalhe por perfil.
+async function countByChannel(dateColumn: string, channelColumn: string, channel: string): Promise<number> {
+  const { count } = await supabase
+    .from("appointments")
+    .select("id", { count: "exact", head: true })
+    .gte(dateColumn, monthStart.toISOString())
+    .lt(dateColumn, monthEnd.toISOString())
+    .eq(channelColumn, channel);
+  return count ?? 0;
+}
+
+const channelActions = [
+  { label: "Marcou", date: "created_at", channel: "booking_channel" },
+  { label: "Remarcou", date: "rescheduled_at", channel: "rescheduled_via" },
+  { label: "Cancelou", date: "canceled_at", channel: "canceled_via" },
+];
+const channelRows = await Promise.all(
+  channelActions.map(async (action) => {
+    const [whatsapp, admin] = await Promise.all([
+      countByChannel(action.date, action.channel, "whatsapp_bot"),
+      countByChannel(action.date, action.channel, "admin"),
+    ]);
+    const total = whatsapp + admin;
+    return { label: action.label, whatsapp, admin, share: total > 0 ? whatsapp / total : null };
+  })
+);
+
+function formatPercent(rate: number | null): string {
+  return rate === null ? "—" : `${Math.round(rate * 100)}%`;
+}
+
+function formatDateTime(iso: string): string {
+  const date = new Date(iso);
+  const day = new Intl.DateTimeFormat("pt-BR", {
+    timeZone: "America/Fortaleza",
+    day: "2-digit",
+    month: "2-digit",
+  }).format(date);
+  const time = new Intl.DateTimeFormat("pt-BR", {
+    timeZone: "America/Fortaleza",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  })
+    .format(date)
+    .replace(":", "h");
+  return `${day} às ${time}`;
+}
+
+const summaryCards = [
+  { label: "Tentativas iniciadas", value: report.totals.started, color: "text-sky-700" },
+  { label: "Concluídas", value: report.totals.concluded, color: "text-emerald-600" },
+  { label: "Abandonos", value: report.totals.abandoned, color: "text-amber-600" },
+  { label: "Pediram a secretária", value: report.handoffRequests, color: "text-slate-700" },
+];
+---
+
+<AdminLayout title="Métricas do WhatsApp">
+  <h1 class="text-2xl font-bold text-slate-900">Métricas do WhatsApp</h1>
+  <p class="mt-2 text-slate-600">
+    Onde os responsáveis concluem ou abandonam cada fluxo do bot (tentativas iniciadas no mês).
+  </p>
+
+  <div class="mt-6 flex items-center justify-between gap-2 rounded-lg border border-slate-200 bg-white p-2 sm:max-w-sm">
+    <a
+      href={`/admin/metricas?month=${addMonths(month, -1)}`}
+      aria-label="Mês anterior"
+      class="rounded-md p-2 text-slate-500 hover:bg-slate-100 hover:text-sky-700"
+    >
+      <Icon name="chevron-left" class="h-5 w-5" />
+    </a>
+    <div class="flex flex-wrap items-center justify-center gap-2">
+      <p class="text-sm font-medium text-slate-900">
+        {monthNames[monthNum - 1]} de {monthYear}
+      </p>
+      {
+        month !== currentMonth && (
+          <a
+            href="/admin/metricas"
+            class="rounded-md border border-slate-300 px-2.5 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50"
+          >
+            Mês atual
+          </a>
+        )
+      }
+    </div>
+    <a
+      href={`/admin/metricas?month=${addMonths(month, 1)}`}
+      aria-label="Próximo mês"
+      class="rounded-md p-2 text-slate-500 hover:bg-slate-100 hover:text-sky-700"
+    >
+      <Icon name="chevron-right" class="h-5 w-5" />
+    </a>
+  </div>
+
+  <div class="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
+    {
+      summaryCards.map((card) => (
+        <Card class="text-center">
+          <p class={`text-3xl font-bold ${card.color}`}>{card.value}</p>
+          <p class="mt-1 text-sm text-slate-600">{card.label}</p>
+        </Card>
+      ))
+    }
+  </div>
+
+  <h2 class="mt-8 text-base font-semibold text-slate-900">Funil por fluxo</h2>
+  <p class="mt-1 text-sm text-slate-500">
+    Cada barra é proporcional a quem iniciou; a porcentagem é a conversão em relação à etapa anterior. Sem resposta
+    há mais de 30 minutos conta como abandono na última etapa alcançada.
+  </p>
+
+  <div class="mt-3 grid gap-4 lg:grid-cols-2">
+    {
+      report.flows.map((flow) => {
+        const first = flow.stages[0]?.count ?? 0;
+        return (
+          <Card>
+            <h3 class="font-semibold text-slate-900">{flow.label}</h3>
+            {first === 0 ? (
+              <p class="mt-3 text-sm text-slate-500">Nenhuma tentativa no mês.</p>
+            ) : (
+              <>
+                <div class="mt-3 space-y-2">
+                  {flow.stages.map((stage) => (
+                    <div class="grid grid-cols-[8.5rem_1fr_4.5rem] items-center gap-2 text-xs sm:text-sm">
+                      <span class="truncate text-slate-600">{stage.label}</span>
+                      <div class="h-5 rounded bg-slate-100">
+                        <div
+                          class="h-5 rounded bg-sky-500"
+                          style={`width: ${first > 0 ? Math.max((stage.count / first) * 100, stage.count > 0 ? 2 : 0) : 0}%`}
+                        />
+                      </div>
+                      <span class="text-right tabular-nums text-slate-900">
+                        <span class="font-semibold">{stage.count}</span>
+                        {stage.conversion !== null && (
+                          <span class="ml-1 text-slate-500">{formatPercent(stage.conversion)}</span>
+                        )}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+
+                <div class="mt-4 flex flex-wrap gap-1.5">
+                  <Badge variant="success">Concluídas: {flow.outcomes.concluded}</Badge>
+                  <Badge variant="warning">Abandonaram: {flow.outcomes.abandoned}</Badge>
+                  {flow.outcomes.blocked > 0 && <Badge variant="neutral">Barradas: {flow.outcomes.blocked}</Badge>}
+                  {flow.outcomes.declined > 0 && <Badge variant="neutral">Desistiram: {flow.outcomes.declined}</Badge>}
+                  {flow.outcomes.error > 0 && <Badge variant="danger">Erro: {flow.outcomes.error}</Badge>}
+                  {flow.outcomes.in_progress > 0 && (
+                    <Badge variant="info">Em andamento: {flow.outcomes.in_progress}</Badge>
+                  )}
+                </div>
+
+                {flow.blockedReasons.length > 0 && (
+                  <ul class="mt-3 space-y-0.5 text-xs text-slate-500">
+                    {flow.blockedReasons.map((reason) => (
+                      <li>
+                        Barradas — {reason.label}: {reason.count}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </>
+            )}
+          </Card>
+        );
+      })
+    }
+  </div>
+
+  <h2 class="mt-8 text-base font-semibold text-slate-900">WhatsApp × tela</h2>
+  <p class="mt-1 text-sm text-slate-500">
+    Ações feitas no mês pelo próprio responsável (WhatsApp) ou pela equipe (tela). O detalhe por perfil está em
+    <a href={`/admin/relatorios?month=${month}`} class="text-sky-700 underline">Relatórios</a>.
+  </p>
+  <div class="mt-3 rounded-lg border border-slate-200 bg-white shadow-sm">
+    <table class="w-full table-fixed border-collapse text-left text-xs sm:text-sm">
+      <thead class="bg-slate-50 text-slate-600">
+        <tr>
+          <th class="w-[31%] px-1.5 py-2 font-medium">Ação</th>
+          <th class="w-[23%] px-1.5 py-2 text-right font-medium">WhatsApp</th>
+          <th class="w-[23%] px-1.5 py-2 text-right font-medium">Tela</th>
+          <th class="w-[23%] px-1.5 py-2 text-right font-medium">% WhatsApp</th>
+        </tr>
+      </thead>
+      <tbody>
+        {
+          channelRows.map((row) => (
+            <tr class="border-t border-slate-200">
+              <td class="px-1.5 py-2">{row.label}</td>
+              <td class="px-1.5 py-2 text-right">{row.whatsapp}</td>
+              <td class="px-1.5 py-2 text-right">{row.admin}</td>
+              <td class="px-1.5 py-2 text-right">{formatPercent(row.share)}</td>
+            </tr>
+          ))
+        }
+      </tbody>
+    </table>
+  </div>
+
+  <h2 class="mt-8 text-base font-semibold text-slate-900">Não concluíram</h2>
+  <p class="mt-1 text-sm text-slate-500">
+    Abandonos e erros do mês, para retomar o contato. Sai da lista quem concluiu o mesmo fluxo depois.
+    {report.incomplete.length > INCOMPLETE_LIMIT && ` Mostrando os ${INCOMPLETE_LIMIT} mais recentes.`}
+  </p>
+
+  {
+    incomplete.length === 0 ? (
+      <p class="mt-3 text-sm text-slate-500">Ninguém nessa situação no mês.</p>
+    ) : (
+      <div class="mt-3 grid gap-3 sm:grid-cols-2">
+        {incomplete.map((row) => (
+          <Card>
+            <div class="flex items-start justify-between gap-2">
+              <div>
+                <p class="font-medium text-slate-900">
+                  {(row.guardianId && guardianNames.get(row.guardianId)) || "Responsável sem cadastro"}
+                </p>
+                <a href={`tel:${row.guardianPhone}`} class="text-sm font-semibold text-sky-700 underline">
+                  {formatPhoneBR(row.guardianPhone)}
+                </a>
+              </div>
+              <Badge variant="info">{row.flowLabel}</Badge>
+            </div>
+            <p class="mt-2 text-sm text-slate-600">
+              Última etapa: <span class="font-medium text-slate-800">{row.lastStage}</span>
+            </p>
+            <p class="text-sm text-slate-600">{row.detail}</p>
+            <p class="mt-1 text-xs text-slate-400">Iniciou em {formatDateTime(row.startedAt)}</p>
+          </Card>
+        ))}
+      </div>
+    )
+  }
+</AdminLayout>

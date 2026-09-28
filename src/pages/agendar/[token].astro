@@ -10,6 +10,7 @@ import { getExamAvailableSlotsForDate } from "../../lib/scheduling/getExamAvaila
 import { resolveClinicLocationIds } from "../../lib/scheduling/resolveClinicLocationIds";
 import { getBookingLinkLastDate } from "../../lib/scheduling/returnVisitDeadline";
 import { formatPhoneBR } from "../../lib/phone";
+import { logWebFunnelEvent } from "../../lib/whatsapp/funnel";
 
 const { token } = Astro.params;
 const supabase = createServiceClient();
@@ -23,7 +24,7 @@ const { data: link } = token
       .from("booking_links")
       .select(
         `id, mode, appointment_type, clinic_location_id, location_category, home_visit_address, expires_at, used_at, exam_type_id,
-         origin_appointment_id, return_deadline_waived,
+         origin_appointment_id, return_deadline_waived, guardian_id, guardian_phone, funnel_session_id,
          guardians ( full_name, phone ),
          patients ( full_name, birthdate ),
          appointments!appointment_id ( scheduled_at, clinic_locations ( name, type, address ) ),
@@ -189,6 +190,18 @@ if (state === "form" && link) {
         examDurationMinutes,
       });
     }
+  }
+}
+
+// Funil (Fase 15): abertura do link. A volta pra cá depois de uma tentativa
+// de confirmar que falhou (`?error=`) não conta de novo — essa falha já é
+// registrada pelo endpoint de confirmar.
+if (link && !Astro.url.searchParams.has("error")) {
+  if (state === "form") {
+    const dateCount = isGroupExam ? groupDateOptions.length : availableDates.length;
+    await logWebFunnelEvent(supabase, link, "page_opened", { available_dates: dateCount });
+  } else if (state === "expired") {
+    await logWebFunnelEvent(supabase, link, "link_expired");
   }
 }
 
