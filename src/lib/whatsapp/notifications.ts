@@ -7,10 +7,11 @@
 // originou.
 
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { sendTemplateMessage } from "./client";
+import { sendTemplateMessage, sendTextMessage } from "./client";
 import { formatWhen } from "./formatDateTime";
 import { formatCentsBRL } from "../money";
-import { updateConversationState } from "./bot/shared";
+import { buildAppUrl, updateConversationState } from "./bot/shared";
+import { preparationText } from "./bot/messages";
 
 interface NotificationInput {
   supabase: SupabaseClient;
@@ -267,4 +268,114 @@ export function sendAppointmentReminder(input: NotificationInput): Promise<strin
       `Lembrete: ${type} de ${name} é amanhã, ${when}, no ${location}. ${address} ` +
       "Nos vemos em breve! Qualquer dúvida ou se precisar remarcar, é só responder esta mensagem.",
   });
+}
+
+// --- preparo do exame (Fase 18) --------------------------------------------
+
+// Margem sobre as 24h da Meta: a última mensagem do responsável pode ter
+// chegado quase no limite, e o envio acontece alguns segundos depois da
+// checagem.
+const CUSTOMER_SERVICE_WINDOW_MS = 23.5 * 60 * 60 * 1000;
+
+// Janela de atendimento de 24h aberta = o responsável mandou alguma
+// mensagem nas últimas 24h (sempre o caso quando marcou pelo bot). Só aí a
+// Meta aceita texto livre, com o preparo formatado.
+async function isCustomerServiceWindowOpen(supabase: SupabaseClient, guardianId: string): Promise<boolean> {
+  const since = new Date(Date.now() - CUSTOMER_SERVICE_WINDOW_MS).toISOString();
+  const { data, error } = await supabase
+    .from("whatsapp_messages")
+    .select("id")
+    .eq("guardian_id", guardianId)
+    .eq("direction", "inbound")
+    .gte("created_at", since)
+    .limit(1);
+  if (error) {
+    console.error("[whatsapp] falha ao checar a janela de 24h:", error.message);
+    return false;
+  }
+  return (data?.length ?? 0) > 0;
+}
+
+interface ExamPreparationInput {
+  supabase: SupabaseClient;
+  appointmentId: string;
+  guardianId: string;
+  guardianPhone: string;
+  examTypeId: string;
+}
+
+// Preparo do exame, enviado logo depois da confirmação, da remarcação e do
+// lembrete (decisão do cliente). Janela de 24h aberta → texto formatado pela
+// médica + link da página `/preparo/[id]`; fechada → template com o nome do
+// exame e o link (parâmetro de template não aceita quebra de linha, por isso
+// o texto não vai direto). Exame sem preparo cadastrado → não envia nada
+// (retorna null). Melhor esforço, como as demais notificações: registra em
+// `whatsapp_messages` e nunca lança.
+export async function sendExamPreparation({
+  supabase,
+  appointmentId,
+  guardianId,
+  guardianPhone,
+  examTypeId,
+}: ExamPreparationInput): Promise<string | null> {
+  const { data: exam } = await supabase
+    .from("exam_types")
+    .select("name, preparation_instructions")
+    .eq("id", examTypeId)
+    .maybeSingle();
+  const preparation = exam?.preparation_instructions?.trim();
+  if (!exam || !preparation) return null;
+
+  const url = buildAppUrl(`/preparo/${examTypeId}`);
+  const windowOpen = await isCustomerServiceWindowOpen(supabase, guardianId);
+  const templateName = windowOpen
+    ? null
+    : ((import.meta.env.WHATSAPP_TEMPLATE_EXAM_PREPARATION as string | undefined) ?? null);
+  const body = windowOpen
+    ? preparationText(preparation, url)
+    : `Olá! Seguem as orientações de preparo para o exame ${exam.name}.\n\n` +
+      `Para ver todas as orientações, acesse: ${url}\n\n` +
+      "Qualquer dúvida, estamos à disposição!\n\n" +
+      "*Dra. Ana Karina Fernandes – Pneumopediatra*\nCRM 5751 | RQE 6271";
+
+  let status: string;
+  let waMessageId: string | null = null;
+
+  if (!windowOpen && !templateName) {
+    status = "skipped_no_template";
+    console.warn("[whatsapp] template de exam_preparation não configurado — não enviado, apenas registrado.");
+  } else {
+    try {
+      const { id } = windowOpen
+        ? await sendTextMessage({ to: guardianPhone, body })
+        : await sendTemplateMessage({
+            to: guardianPhone,
+            templateName: templateName!,
+            languageCode: (import.meta.env.WHATSAPP_TEMPLATE_LANGUAGE as string | undefined) ?? "pt_BR",
+            bodyParameters: [exam.name, url],
+          });
+      status = "sent";
+      waMessageId = id;
+      console.log(`[whatsapp] exam_preparation (${windowOpen ? "texto" : "template"}) enviado (${id}) para ${guardianPhone}`);
+    } catch (err) {
+      status = "failed";
+      console.error("[whatsapp] falha ao enviar exam_preparation:", err instanceof Error ? err.message : String(err));
+    }
+  }
+
+  const { error } = await supabase.from("whatsapp_messages").insert({
+    appointment_id: appointmentId,
+    guardian_id: guardianId,
+    direction: "outbound",
+    message_type: "exam_preparation",
+    template_name: templateName,
+    body,
+    status,
+    wa_message_id: waMessageId,
+  });
+  if (error) {
+    console.error("[whatsapp] falha ao registrar whatsapp_messages:", error.message);
+  }
+
+  return status;
 }

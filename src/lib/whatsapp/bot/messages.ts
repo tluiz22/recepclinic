@@ -54,6 +54,7 @@ export const INFO_LIST_ID = {
   valores: "info_valores",
   convenios: "info_convenios",
   endereco: "info_endereco",
+  preparo: "info_preparo",
 } as const;
 
 // Decisão de negócio #1 do plano: o aviso de atendimento particular vem
@@ -135,10 +136,52 @@ export function infoMenuSections(): ListSection[] {
         { id: INFO_LIST_ID.valores, title: listRowTitle(0, "Valores") },
         { id: INFO_LIST_ID.convenios, title: listRowTitle(1, "Convênios") },
         { id: INFO_LIST_ID.endereco, title: listRowTitle(2, "Endereço") },
-        { id: BACK_TO_MENU_LIST_ID, title: listRowTitle(3, "Voltar ao menu") },
+        { id: INFO_LIST_ID.preparo, title: listRowTitle(3, "Preparo para exames") },
+        { id: BACK_TO_MENU_LIST_ID, title: listRowTitle(4, "Voltar ao menu") },
       ],
     },
   ];
+}
+
+// --- Informações gerais > Preparo para exames (Fase 18) -------------------
+
+interface PreparationExamOption {
+  id: string;
+  name: string;
+}
+
+// A lista interativa da Meta aceita no máximo 10 linhas — 9 exames + "Voltar
+// ao menu".
+export const MAX_PREPARATION_EXAMS = 9;
+
+export function preparationChoiceBodyText(): string {
+  return "De qual exame você quer ver o preparo?";
+}
+
+// Nome completo na descrição da linha (até 72 caracteres): o título corta em
+// 24 (ex.: "FeNO - Fração exalada de óxido nítrico").
+export function preparationExamSections(exams: PreparationExamOption[]): ListSection[] {
+  const rows: ListSection["rows"] = exams.map((exam, index) => {
+    const title = listRowTitle(index, exam.name);
+    const truncated = !title.endsWith(exam.name);
+    return {
+      id: `prep_exam_${exam.id}`,
+      title,
+      ...(truncated ? { description: exam.name.slice(0, 72) } : {}),
+    };
+  });
+  rows.push({ id: BACK_TO_MENU_LIST_ID, title: listRowTitle(exams.length, "Voltar ao menu") });
+  return [{ rows }];
+}
+
+export function noPreparationExamsText(): string {
+  return "No momento nenhum exame tem orientações de preparo cadastradas. Se tiver dúvida, fale com a secretária pelo menu principal.";
+}
+
+// Preparo como a médica escreveu (já no formato do WhatsApp) + o link da
+// página, para guardar ou compartilhar.
+export function preparationText(preparation: string, url: string): string {
+  return `${preparation}\n\n🔗 Para guardar ou compartilhar estas orientações:\n${url}`;
 }
 
 interface ClinicLocationRow {

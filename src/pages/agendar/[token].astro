@@ -10,6 +10,7 @@ import { getExamAvailableSlotsForDate } from "../../lib/scheduling/getExamAvaila
 import { resolveClinicLocationIds } from "../../lib/scheduling/resolveClinicLocationIds";
 import { getBookingLinkLastDate } from "../../lib/scheduling/returnVisitDeadline";
 import { formatPhoneBR } from "../../lib/phone";
+import { whatsAppTextToHtml } from "../../lib/whatsappFormat";
 import { logWebFunnelEvent } from "../../lib/whatsapp/funnel";
 
 const { token } = Astro.params;
@@ -301,9 +302,13 @@ const confirmedLocation = currentAppointment?.clinic_locations ?? null;
             )}
 
             {link.appointment_type === "exam" && examType?.preparation_instructions && (
-              <p class="mt-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
-                <strong>Preparo:</strong> {examType.preparation_instructions}
-              </p>
+              <div class="mt-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+                <p class="font-semibold">Preparo</p>
+                <div
+                  class="mt-1 whitespace-pre-line break-words"
+                  set:html={whatsAppTextToHtml(examType.preparation_instructions)}
+                />
+              </div>
             )}
 
             {errorMessage && (

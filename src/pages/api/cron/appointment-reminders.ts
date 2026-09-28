@@ -1,7 +1,11 @@
 import type { APIRoute } from "astro";
 import { createServiceClient } from "../../../lib/supabase/service";
 import { listEvents } from "../../../lib/google/calendar";
-import { buildAppointmentTypeLabel, sendAppointmentReminder } from "../../../lib/whatsapp/notifications";
+import {
+  buildAppointmentTypeLabel,
+  sendAppointmentReminder,
+  sendExamPreparation,
+} from "../../../lib/whatsapp/notifications";
 
 // Cron da Vercel (ver `vercel.json`). Dispara o lembrete de consulta para
 // todo agendamento ativo nas próximas ~26h que ainda não recebeu lembrete
@@ -31,7 +35,7 @@ export const GET: APIRoute = async ({ request }) => {
   const { data: candidates, error } = await supabase
     .from("appointments")
     .select(
-      "id, google_event_id, scheduled_at, appointment_type, home_visit_address, clinic_locations ( type, address ), exam_types ( name ), patients ( full_name, guardians ( id, full_name, phone ) )"
+      "id, google_event_id, scheduled_at, appointment_type, exam_type_id, home_visit_address, clinic_locations ( type, address ), exam_types ( name ), patients ( full_name, guardians ( id, full_name, phone ) )"
     )
     .in("status", ["scheduled", "confirmed"])
     .is("reminder_sent_at", null)
@@ -102,6 +106,19 @@ export const GET: APIRoute = async ({ request }) => {
       locationLabel: location?.type === "clinic" ? "Consultório" : location?.type === "exam" ? "Exames" : "Domiciliar",
       locationAddress: appointment.home_visit_address ?? location?.address ?? null,
     });
+
+    // Preparo do exame junto do lembrete (Fase 18) — melhor esforço, fora
+    // da contagem e sem nova tentativa: o lembrete é o que controla
+    // `reminder_sent_at`.
+    if (status !== "failed" && appointment.appointment_type === "exam" && appointment.exam_type_id) {
+      await sendExamPreparation({
+        supabase,
+        appointmentId: appointment.id,
+        guardianId: guardian.id,
+        guardianPhone: guardian.phone,
+        examTypeId: appointment.exam_type_id,
+      });
+    }
 
     if (status === "sent") sent++;
     else if (status === "failed") failed++;

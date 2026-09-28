@@ -11,6 +11,7 @@ import {
   buildAppointmentTypeLabel,
   sendAppointmentConfirmation,
   sendAppointmentReschedule,
+  sendExamPreparation,
 } from "../../../../lib/whatsapp/notifications";
 import { logWebFunnelEvent, type FunnelLink } from "../../../../lib/whatsapp/funnel";
 
@@ -415,6 +416,18 @@ export const POST: APIRoute = async ({ params, request, redirect }) => {
         priceCents,
       });
     }
+  }
+
+  // Preparo do exame logo depois da confirmação/remarcação (Fase 18) — vale
+  // pros dois caminhos acima.
+  if (appointmentType === "exam" && link.exam_type_id && guardian?.phone) {
+    await sendExamPreparation({
+      supabase,
+      appointmentId,
+      guardianId: guardian.id,
+      guardianPhone: guardian.phone,
+      examTypeId: link.exam_type_id,
+    });
   }
 
   // `used_at` já foi gravado atomicamente acima — só falta guardar a

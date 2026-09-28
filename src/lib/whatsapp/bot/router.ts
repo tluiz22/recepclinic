@@ -16,11 +16,13 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { WaMessage } from "../types";
 import { sendInteractiveListMessage, sendTextMessage } from "../client";
 import {
+  buildAppUrl,
   extractSelection,
   isBackToMenuSelection,
   isPastHumanHandoffDeadline,
   isPastIdleTimeout,
   matchesOption,
+  resolveByListOrDigit,
   resolveGuardianId,
   sendAndLog,
   updateConversationState,
@@ -155,6 +157,9 @@ export async function routeIncomingMessage(
       return;
     case "INFO_MENU":
       await handleInfoMenu(supabase, guardianPhone, guardianId, selection);
+      return;
+    case "INFO_PREP_SELECT":
+      await handleInfoPrepSelect(supabase, guardianPhone, guardianId, context, selection);
       return;
     default:
       // Estado desconhecido/obsoleto (ex.: enum antigo já removido da
@@ -453,9 +458,96 @@ async function handleInfoMenu(
     return;
   }
 
+  if (matchesOption(selection, "4", texts.INFO_LIST_ID.preparo)) {
+    const { data } = await supabase
+      .from("exam_types")
+      .select("id, name")
+      .eq("is_active", true)
+      .not("preparation_instructions", "is", null)
+      .order("name")
+      .limit(texts.MAX_PREPARATION_EXAMS);
+    const exams = data ?? [];
+
+    if (!exams.length) {
+      const body = texts.noPreparationExamsText();
+      await sendAndLog(supabase, guardianId, "bot_info_preparo_vazio", body, () =>
+        sendTextMessage({ to: guardianPhone, body })
+      );
+      await sendInfoMenu(supabase, guardianPhone, guardianId);
+      return;
+    }
+
+    await sendPreparationExamQuestion(supabase, guardianPhone, guardianId, exams);
+    const context: InfoPrepContext = { prep_exam_candidates: exams };
+    await updateConversationState(supabase, guardianPhone, "INFO_PREP_SELECT", { context });
+    return;
+  }
+
   const notUnderstood = texts.notUnderstoodText();
   await sendAndLog(supabase, guardianId, "bot_not_understood", notUnderstood, () =>
     sendTextMessage({ to: guardianPhone, body: notUnderstood })
   );
+  await sendInfoMenu(supabase, guardianPhone, guardianId);
+}
+
+// --- INFO_PREP_SELECT (Informações gerais > Preparo para exames, Fase 18) --
+
+interface InfoPrepContext {
+  prep_exam_candidates?: { id: string; name: string }[];
+}
+
+async function sendPreparationExamQuestion(
+  supabase: SupabaseClient,
+  guardianPhone: string,
+  guardianId: string | null,
+  exams: { id: string; name: string }[]
+): Promise<void> {
+  const body = texts.preparationChoiceBodyText();
+  await sendAndLog(supabase, guardianId, "bot_info_preparo_escolha", body, () =>
+    sendInteractiveListMessage({
+      to: guardianPhone,
+      bodyText: body,
+      buttonText: "Escolher exame",
+      sections: texts.preparationExamSections(exams),
+    })
+  );
+}
+
+// Escolheu o exame: manda o preparo (lido de novo do banco — pode ter sido
+// editado depois da lista) + o link da página, e volta ao menu de
+// Informações (mesmo comportamento de Valores/Convênios/Endereço).
+async function handleInfoPrepSelect(
+  supabase: SupabaseClient,
+  guardianPhone: string,
+  guardianId: string | null,
+  rawContext: Record<string, unknown>,
+  selection: Selection
+): Promise<void> {
+  const candidates = (rawContext as InfoPrepContext).prep_exam_candidates ?? [];
+  const match = resolveByListOrDigit(selection, candidates, (c) => `prep_exam_${c.id}`);
+
+  if (!match) {
+    const body = texts.notUnderstoodText();
+    await sendAndLog(supabase, guardianId, "bot_not_understood", body, () =>
+      sendTextMessage({ to: guardianPhone, body })
+    );
+    await sendPreparationExamQuestion(supabase, guardianPhone, guardianId, candidates);
+    return;
+  }
+
+  const { data: exam } = await supabase
+    .from("exam_types")
+    .select("preparation_instructions")
+    .eq("id", match.id)
+    .maybeSingle();
+  const preparation = exam?.preparation_instructions?.trim();
+
+  const body = preparation
+    ? texts.preparationText(preparation, buildAppUrl(`/preparo/${match.id}`))
+    : texts.noPreparationExamsText();
+  await sendAndLog(supabase, guardianId, "bot_info_preparo", body, () =>
+    sendTextMessage({ to: guardianPhone, body })
+  );
+  await updateConversationState(supabase, guardianPhone, "INFO_MENU", { context: {} });
   await sendInfoMenu(supabase, guardianPhone, guardianId);
 }

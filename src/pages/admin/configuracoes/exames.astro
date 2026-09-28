@@ -4,7 +4,9 @@ import ConfiguracoesTabs from "../../../components/admin/ConfiguracoesTabs.astro
 import Card from "../../../components/admin/Card.astro";
 import Badge from "../../../components/admin/Badge.astro";
 import ConfirmDeleteDialog from "../../../components/admin/ConfirmDeleteDialog.astro";
+import PreparationField from "../../../components/admin/PreparationField.astro";
 import { createClient } from "../../../lib/supabase/server";
+import { whatsAppTextSummary } from "../../../lib/whatsappFormat";
 
 const supabase = createClient(Astro.request, Astro.cookies);
 
@@ -90,7 +92,9 @@ function formatCentsBRL(cents: number): string {
                   </td>
                   <td class="px-3 py-2">{exam.duration_minutes} min</td>
                   <td class="px-3 py-2">{formatCentsBRL(exam.price_cents)}</td>
-                  <td class="px-3 py-2">{exam.preparation_instructions || "—"}</td>
+                  <td class="px-3 py-2 text-slate-600">
+                    {exam.preparation_instructions ? whatsAppTextSummary(exam.preparation_instructions) : "—"}
+                  </td>
                   <td class="px-3 py-2">
                     {exam.scheduling_mode === "group" ? (
                       <Badge variant="info">Em grupo</Badge>
@@ -190,17 +194,8 @@ function formatCentsBRL(cents: number): string {
             class="mt-1 w-28 rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-sky-600 focus:outline-none focus:ring-1 focus:ring-sky-600"
           />
         </div>
-        <div class="min-w-[14rem] flex-1">
-          <label for="preparation_instructions" class="block text-sm font-medium text-slate-700">
-            Instruções de preparo
-          </label>
-          <input
-            type="text"
-            id="preparation_instructions"
-            name="preparation_instructions"
-            placeholder="ex.: jejum de 8 horas"
-            class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-sky-600 focus:outline-none focus:ring-1 focus:ring-sky-600"
-          />
+        <div class="basis-full">
+          <PreparationField />
         </div>
         <button
           type="submit"

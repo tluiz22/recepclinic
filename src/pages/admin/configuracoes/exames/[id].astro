@@ -2,6 +2,7 @@
 import AdminLayout from "../../../../layouts/AdminLayout.astro";
 import Card from "../../../../components/admin/Card.astro";
 import Icon from "../../../../components/admin/Icon.astro";
+import PreparationField from "../../../../components/admin/PreparationField.astro";
 import { createClient } from "../../../../lib/supabase/server";
 
 const supabase = createClient(Astro.request, Astro.cookies);
@@ -38,9 +39,9 @@ const errorMessage = errorParam ? "Não foi possível salvar. Confira os dados e
     )
   }
 
-  <Card class="mt-4 max-w-xl">
+  <Card class="mt-4 max-w-4xl">
     <form method="POST" action={`/api/admin/configuracoes/exam-types/${exam.id}`} class="flex flex-col gap-4">
-      <div>
+      <div class="max-w-xl">
         <label for="name" class="block text-sm font-medium text-slate-700">Nome</label>
         <input
           type="text"
@@ -78,20 +79,8 @@ const errorMessage = errorParam ? "Não foi possível salvar. Confira os dados e
           class="mt-1 w-28 rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-sky-600 focus:outline-none focus:ring-1 focus:ring-sky-600"
         />
       </div>
-      <div>
-        <label for="preparation_instructions" class="block text-sm font-medium text-slate-700">
-          Instruções de preparo
-        </label>
-        <input
-          type="text"
-          id="preparation_instructions"
-          name="preparation_instructions"
-          value={exam.preparation_instructions ?? ""}
-          placeholder="ex.: jejum de 8 horas"
-          class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-sky-600 focus:outline-none focus:ring-1 focus:ring-sky-600"
-        />
-      </div>
-      <div>
+      <PreparationField value={exam.preparation_instructions} />
+      <div class="max-w-xl">
         <label for="scheduling_mode" class="block text-sm font-medium text-slate-700">Modo de agendamento</label>
         <select
           id="scheduling_mode"

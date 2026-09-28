@@ -7,7 +7,11 @@ import { getNextAvailableGroupDates, type AvailableGroupSession } from "../../..
 import { joinOrCreateGroupSessionEvent } from "../../../../../lib/scheduling/groupSessionCalendar";
 import { resolveClinicLocationIds, type LocationCategory } from "../../../../../lib/scheduling/resolveClinicLocationIds";
 import { getReturnOriginCheck } from "../../../../../lib/scheduling/returnVisitEligibility";
-import { buildAppointmentTypeLabel, sendAppointmentConfirmation } from "../../../../../lib/whatsapp/notifications";
+import {
+  buildAppointmentTypeLabel,
+  sendAppointmentConfirmation,
+  sendExamPreparation,
+} from "../../../../../lib/whatsapp/notifications";
 
 export const POST: APIRoute = async ({ request, cookies, redirect, locals }) => {
   const formData = await request.formData();
@@ -287,6 +291,17 @@ export const POST: APIRoute = async ({ request, cookies, redirect, locals }) => 
       // notificação.
       priceCents: isExam ? examTypeInfo?.price_cents : appointmentType === "return_visit" ? null : location?.price_first_visit_cents,
     });
+
+    // Preparo do exame logo depois da confirmação (Fase 18).
+    if (isExam && examTypeId) {
+      await sendExamPreparation({
+        supabase,
+        appointmentId: newAppointmentId,
+        guardianId: guardian.id,
+        guardianPhone: guardian.phone,
+        examTypeId,
+      });
+    }
   }
 
   return redirect(`/admin/agenda?date=${date}`);

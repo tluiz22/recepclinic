@@ -7,7 +7,11 @@ import { getNextAvailableGroupDates, type AvailableGroupSession } from "../../..
 import { joinOrCreateGroupSessionEvent, leaveGroupSessionEvent } from "../../../../../../lib/scheduling/groupSessionCalendar";
 import { resolveClinicLocationIds, type LocationCategory } from "../../../../../../lib/scheduling/resolveClinicLocationIds";
 import { getReturnOriginCheck } from "../../../../../../lib/scheduling/returnVisitEligibility";
-import { buildAppointmentTypeLabel, sendAppointmentReschedule } from "../../../../../../lib/whatsapp/notifications";
+import {
+  buildAppointmentTypeLabel,
+  sendAppointmentReschedule,
+  sendExamPreparation,
+} from "../../../../../../lib/whatsapp/notifications";
 
 export const POST: APIRoute = async ({ params, request, cookies, redirect, locals }) => {
   const { id } = params;
@@ -249,6 +253,17 @@ export const POST: APIRoute = async ({ params, request, cookies, redirect, local
       locationLabel: location?.type === "clinic" ? "Consultório" : location?.type === "exam" ? "Exames" : "Domiciliar",
       locationAddress: isHomeVisit ? homeVisitAddress : (location?.address ?? null),
     });
+
+    // Preparo do exame de novo, com a data nova (Fase 18).
+    if (appointmentType === "exam" && appointment.exam_type_id) {
+      await sendExamPreparation({
+        supabase,
+        appointmentId: id,
+        guardianId: guardian.id,
+        guardianPhone: guardian.phone,
+        examTypeId: appointment.exam_type_id,
+      });
+    }
   }
 
   return redirect(`/admin/agenda?date=${date}`);
