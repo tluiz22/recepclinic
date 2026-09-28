@@ -96,6 +96,17 @@ export interface CalendarEvent {
   };
 }
 
+// O Google nunca apaga um evento de vez: cancelado/apagado continua vindo em
+// `listEvents` (showDeleted) com status "cancelled". A Agenda mostra
+// cancelamentos esmaecidos, mas só faz sentido pra um agendamento que ainda
+// existe no banco — sem ele (ex.: dados de teste limpos, bloqueio desfeito
+// no celular), o evento cancelado é só lixo e fica escondido.
+export function isVisibleInAgenda(event: CalendarEvent, existingAppointmentIds: { has(id: string): boolean }): boolean {
+  if (event.status !== "cancelled") return true;
+  const appointmentId = event.extendedProperties?.private?.appointment_id;
+  return Boolean(appointmentId && existingAppointmentIds.has(appointmentId));
+}
+
 export async function listEvents(timeMin: Date, timeMax: Date): Promise<CalendarEvent[]> {
   const client = getAuthClient();
 

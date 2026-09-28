@@ -5,7 +5,7 @@ import Badge from "../../components/admin/Badge.astro";
 import type { BadgeVariant } from "../../components/admin/Badge.astro";
 import Icon from "../../components/admin/Icon.astro";
 import { createClient } from "../../lib/supabase/server";
-import { listEvents } from "../../lib/google/calendar";
+import { isVisibleInAgenda, listEvents } from "../../lib/google/calendar";
 import { formatPhoneBR } from "../../lib/phone";
 import { AUTHORSHIP_COLUMNS, fetchStaffLabels, formatBookedByLines } from "../../lib/authorship";
 
@@ -64,7 +64,7 @@ function formatTime(dateTime: string | undefined): string {
   return new Date(d.getTime() - 3 * 60 * 60 * 1000).toISOString().slice(11, 16);
 }
 
-const sortedEvents = [...events].sort(
+const sortedEvents = events.filter((event) => isVisibleInAgenda(event, appointmentsById)).sort(
   (a, b) => new Date(a.start.dateTime ?? 0).getTime() - new Date(b.start.dateTime ?? 0).getTime()
 );
 ---

@@ -4,7 +4,7 @@ import Card from "../../../components/admin/Card.astro";
 import type { BadgeVariant } from "../../../components/admin/Badge.astro";
 import Icon from "../../../components/admin/Icon.astro";
 import { createClient } from "../../../lib/supabase/server";
-import { listEvents, type CalendarEvent } from "../../../lib/google/calendar";
+import { isVisibleInAgenda, listEvents, type CalendarEvent } from "../../../lib/google/calendar";
 
 const supabase = createClient(Astro.request, Astro.cookies);
 
@@ -91,6 +91,7 @@ const accentBorderByVariant: Record<BadgeVariant, string> = {
 const eventsByDate = new Map<string, CalendarEvent[]>();
 for (const date of weekDates) eventsByDate.set(date, []);
 for (const event of events) {
+  if (!isVisibleInAgenda(event, appointmentsById)) continue;
   const dateTime = event.start.dateTime;
   if (!dateTime) continue;
   const dateStr = fortalezaDateStr(dateTime);
