@@ -14,6 +14,10 @@ import { formatPhoneBR } from "../../lib/phone";
 const { token } = Astro.params;
 const supabase = createServiceClient();
 
+// `appointments!appointment_id`: desde a Fase 17 o link tem duas ligações
+// com appointments (appointment_id e origin_appointment_id) — sem indicar
+// qual, o Supabase recusa o embed por ambiguidade e o link aparece como
+// inválido.
 const { data: link } = token
   ? await supabase
       .from("booking_links")
@@ -22,7 +26,7 @@ const { data: link } = token
          origin_appointment_id, return_deadline_waived,
          guardians ( full_name, phone ),
          patients ( full_name, birthdate ),
-         appointments ( scheduled_at, clinic_locations ( name, type, address ) ),
+         appointments!appointment_id ( scheduled_at, clinic_locations ( name, type, address ) ),
          exam_types ( name, duration_minutes, preparation_instructions, scheduling_mode )`
       )
       .eq("id", token)
