@@ -37,7 +37,10 @@ const [{ data: todayRows }, { count: pendingCount }] = await Promise.all([
 const appointmentsToday = (todayRows ?? []).filter((row) => row.appointment_type !== "exam").length;
 const examsToday = (todayRows ?? []).length - appointmentsToday;
 
-const shortcuts: { label: string; href: string; icon: IconName }[] = [
+// Redirecionado pelo middleware ao tentar abrir uma tela só da médica (Fase 14).
+const accessDenied = Astro.url.searchParams.get("aviso") === "acesso_negado";
+
+const shortcuts:{ label: string; href: string; icon: IconName }[] = [
   { label: "Agenda do dia", href: "/admin/agenda", icon: "calendar" },
   { label: "Marcar consulta", href: "/admin/agenda/marcar", icon: "plus" },
   { label: "Marcar exame", href: "/admin/agenda/marcar-exame", icon: "plus" },
@@ -48,6 +51,14 @@ const shortcuts: { label: string; href: string; icon: IconName }[] = [
 <AdminLayout title="Dashboard">
   <h1 class="text-2xl font-bold text-slate-900">Dashboard</h1>
   <p class="mt-2 text-slate-600">Resumo de hoje.</p>
+
+  {
+    accessDenied && (
+      <p class="mt-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+        Essa tela é de acesso exclusivo da médica.
+      </p>
+    )
+  }
 
   <div class="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3">
     <Card class="text-center">

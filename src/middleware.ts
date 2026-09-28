@@ -1,6 +1,14 @@
 import { defineMiddleware } from "astro:middleware";
 import { createClient } from "./lib/supabase/server";
 
+// Fase 14: telas (e APIs) só da médica — por enquanto só as métricas.
+// Todo o resto do admin, incluindo Configurações, é compartilhado com a
+// secretária (decisão do cliente ao validar a etapa 1).
+const MEDICA_ONLY_PREFIXES = ["/admin/relatorios"];
+
+const isMedicaOnlyPath = (pathname: string) =>
+  MEDICA_ONLY_PREFIXES.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`));
+
 export const onRequest = defineMiddleware(async (context, next) => {
   const { url, request, cookies, redirect } = context;
 
@@ -24,6 +32,26 @@ export const onRequest = defineMiddleware(async (context, next) => {
   // Login de quem está usando a tela — gravado como autor ao marcar,
   // remarcar e cancelar (Fase 17).
   context.locals.userId = user.id;
+
+  // Login sem linha em `staff_profiles` é tratado como secretária (acesso
+  // restrito por padrão — decisão do cliente, Fase 14).
+  const { data: profile } = await supabase
+    .from("staff_profiles")
+    .select("role")
+    .eq("user_id", user.id)
+    .maybeSingle();
+  const role = profile?.role === "medica" ? "medica" : "secretaria";
+  context.locals.role = role;
+
+  if (role !== "medica" && isMedicaOnlyPath(url.pathname)) {
+    if (url.pathname.startsWith("/api/")) {
+      return new Response(JSON.stringify({ error: "forbidden" }), {
+        status: 403,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+    return redirect("/admin/dashboard?aviso=acesso_negado");
+  }
 
   return next();
 });

@@ -19,9 +19,16 @@ const primaryNavItems: { label: string; href: string; icon: IconName }[] = [
   { label: "Consultas", href: "/admin/consultas", icon: "check-circle" },
 ];
 
+// Perfil do login ativo, resolvido pelo middleware (Fase 14). Relatórios é
+// só da médica — escondido do menu, não só bloqueado na rota.
+const role = Astro.locals.role ?? "secretaria";
+const roleLabel = role === "medica" ? "Médica" : "Secretária";
+
 const moreNavItems: { label: string; href: string; icon: IconName }[] = [
   { label: "Configurações", href: "/admin/configuracoes", icon: "settings" },
-  { label: "Relatórios", href: "/admin/relatorios", icon: "chart-bar" },
+  ...(role === "medica"
+    ? [{ label: "Relatórios", href: "/admin/relatorios", icon: "chart-bar" as IconName }]
+    : []),
 ];
 
 const desktopNavItems = [...primaryNavItems, ...moreNavItems];
@@ -83,14 +90,19 @@ const isMoreActive = moreNavItems.some((item) => isActive(item.href));
           }
         </nav>
 
-        <form method="POST" action="/api/admin/auth/logout">
-          <button
-            type="submit"
-            class="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-100"
-          >
-            Sair
-          </button>
-        </form>
+        <div class="flex items-center gap-3">
+          <span class="rounded-full bg-sky-50 px-2.5 py-1 text-xs font-medium text-sky-700">
+            {roleLabel}
+          </span>
+          <form method="POST" action="/api/admin/auth/logout">
+            <button
+              type="submit"
+              class="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-100"
+            >
+              Sair
+            </button>
+          </form>
+        </div>
       </div>
     </header>
 
