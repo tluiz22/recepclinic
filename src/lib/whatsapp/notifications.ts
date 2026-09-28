@@ -37,6 +37,9 @@ interface NotificationInput {
   // confirmação — pedido do cliente, para o responsável já saber o valor e a
   // forma de pagamento na primeira mensagem que recebe.
   priceCents?: number | null;
+  // Só a confirmação usa: retorno tem template próprio, sem a frase de
+  // pagamento (retorno não tem valor próprio — pedido do cliente).
+  appointmentType?: string;
   // URL de `/agendar/[token]` pra remarcar — só o cancelamento em massa
   // (Fase 12) usa, com um `booking_links` de validade mais longa (a
   // notificação é passiva, sem conversa ativa pra justificar os 30min
@@ -195,16 +198,23 @@ async function sendNotification(
   return status;
 }
 
-// Consulta/retorno/exame recém-marcado.
+// Consulta/retorno/exame recém-marcado. Retorno usa um template próprio
+// (`WHATSAPP_TEMPLATE_CONFIRMATION_RETURN`), com as mesmas variáveis mas sem
+// a frase fixa de pagamento — o retorno não tem valor próprio (pedido do
+// cliente). Enquanto esse template não existir/não for aprovado na Meta, cai
+// no template geral, com a frase.
 export function sendAppointmentConfirmation(input: NotificationInput): Promise<string> {
+  const returnTemplate = import.meta.env.WHATSAPP_TEMPLATE_CONFIRMATION_RETURN as string | undefined;
+  const useReturnTemplate = input.appointmentType === "return_visit" && !!returnTemplate;
+
   return sendNotification(input, {
     messageType: "appointment_confirmation",
-    templateName: import.meta.env.WHATSAPP_TEMPLATE_CONFIRMATION,
+    templateName: useReturnTemplate ? returnTemplate : import.meta.env.WHATSAPP_TEMPLATE_CONFIRMATION,
     includeAddress: true,
     includePrice: true,
     buildPreview: (type, name, when, location, address, price) =>
-      `Atendimento confirmado: ${type} de ${name}, para ${when}, no ${location}. ${address} ${price} ` +
-      "Atendimento somente particular — pagamento em dinheiro, transferência bancária ou PIX.",
+      `Atendimento confirmado: ${type} de ${name}, para ${when}, no ${location}. ${address} ${price}` +
+      (useReturnTemplate ? "" : " Atendimento somente particular — pagamento em dinheiro, transferência bancária ou PIX."),
   });
 }
 

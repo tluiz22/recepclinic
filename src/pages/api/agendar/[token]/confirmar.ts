@@ -402,6 +402,7 @@ export const POST: APIRoute = async ({ params, request, redirect }) => {
         scheduledAt: startDate,
         locationLabel,
         locationAddress,
+        appointmentType,
         priceCents,
       });
     }
