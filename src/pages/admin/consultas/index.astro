@@ -23,9 +23,9 @@ import { formatPhoneBR } from "../../../lib/phone";
 import { formatAge } from "../../../lib/age";
 import {
   AUTHORSHIP_COLUMNS,
-  describeAuthorship,
   fetchStaffLabels,
-  formatBookedByLine,
+  formatBookedByLines,
+  formatCanceledByLine,
   type AuthorshipRow,
 } from "../../../lib/authorship";
 
@@ -103,7 +103,7 @@ function mapRow(a: AuthorshipRow & {
     homeVisitAddress: a.home_visit_address,
     whenLabel: formatWhen(new Date(a.scheduled_at)),
     status: a.status,
-    bookedByLine: formatBookedByLine(a, staffLabels),
+    bookedByLines: formatBookedByLines(a, staffLabels),
   };
 }
 
@@ -141,7 +141,7 @@ function mapResumoRow(
     typeVariant: typeBadgeVariant(a.appointment_type),
     locationLabel: locationLabel(location?.type),
     homeVisitAddress: a.home_visit_address,
-    bookedByLine: formatBookedByLine(a, staffLabels),
+    bookedByLines: formatBookedByLines(a, staffLabels),
   };
 }
 
@@ -196,7 +196,7 @@ function mapAguardandoRow(a: AuthorshipRow & {
     typeVariant: typeBadgeVariant(a.appointment_type),
     whenLabel: formatWhen(new Date(a.scheduled_at)),
     rebookUrl: buildRebookUrl(a.appointment_type, a.patient_id, patientName, guardian, examType?.id ?? null),
-    canceledBy: describeAuthorship(a, staffLabels).canceledBy,
+    canceledByLine: formatCanceledByLine(a, staffLabels),
   };
 }
 
@@ -248,7 +248,7 @@ if (tab === "resumo") {
   const { data: canceledRows } = await supabase
     .from("appointments")
     .select(
-      `id, patient_id, scheduled_at, canceled_at, appointment_type, ${AUTHORSHIP_COLUMNS}, patients ( full_name, guardians ( full_name, phone ) ), exam_types ( id, name )`
+      `id, patient_id, scheduled_at, appointment_type, ${AUTHORSHIP_COLUMNS}, patients ( full_name, guardians ( full_name, phone ) ), exam_types ( id, name )`
     )
     .eq("status", "canceled")
     .eq("canceled_via", "admin")
@@ -465,7 +465,7 @@ function confirmadasPageUrl(targetPage: number): string {
                     {row.locationLabel}
                     {row.homeVisitAddress && ` — ${row.homeVisitAddress}`}
                   </p>
-                  {row.bookedByLine && <p class="mt-0.5 text-xs text-slate-400">{row.bookedByLine}</p>}
+                  {row.bookedByLines.map((line) => <p class="mt-0.5 text-xs text-slate-400">{line}</p>)}
                 </div>
               </Card>
             ))
@@ -523,7 +523,7 @@ function confirmadasPageUrl(targetPage: number): string {
               </div>
               <p class="mt-1 text-sm text-slate-500">{card.whenLabel}</p>
               {card.homeVisitAddress && <p class="mt-1 text-sm text-slate-500">Endereço: {card.homeVisitAddress}</p>}
-              {card.bookedByLine && <p class="mt-1 text-xs text-slate-400">{card.bookedByLine}</p>}
+              {card.bookedByLines.map((line) => <p class="mt-0.5 text-xs text-slate-400">{line}</p>)}
 
               <div class="mt-3 flex gap-2">
                 <form method="POST" action={`/api/admin/consultas/${card.id}/status`} class="flex-1">
@@ -577,7 +577,7 @@ function confirmadasPageUrl(targetPage: number): string {
                   <tr class="border-t border-slate-200">
                     <td class="px-3 py-2">
                       {row.patientName}
-                      {row.bookedByLine && <div class="text-xs text-slate-400">{row.bookedByLine}</div>}
+                      {row.bookedByLines.map((line) => <div class="text-xs text-slate-400">{line}</div>)}
                     </td>
                     <td class="px-3 py-2">
                       <Badge variant={row.typeVariant}>{row.typeLabel}</Badge>
@@ -667,7 +667,7 @@ function confirmadasPageUrl(targetPage: number): string {
                 <Badge variant={row.typeVariant}>{row.typeLabel}</Badge>
               </div>
               <p class="mt-1 text-sm text-slate-500">Estava marcado(a) para {row.whenLabel}</p>
-              {row.canceledBy && <p class="mt-0.5 text-xs text-slate-400">Cancelado por: {row.canceledBy}</p>}
+              {row.canceledByLine && <p class="mt-0.5 text-xs text-slate-400">{row.canceledByLine}</p>}
               <p class="mt-1.5 text-sm text-slate-700">
                 Resp.: {row.guardianName}
                 {row.guardianPhone && (

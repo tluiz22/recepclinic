@@ -5,15 +5,19 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 // Colunas de `appointments` necessárias pra montar os rótulos — somar ao
 // `select` de quem exibe.
-export const AUTHORSHIP_COLUMNS = "booking_channel, created_by, rescheduled_via, rescheduled_by, canceled_via, canceled_by";
+export const AUTHORSHIP_COLUMNS =
+  "booking_channel, created_by, created_at, rescheduled_via, rescheduled_by, rescheduled_at, canceled_via, canceled_by, canceled_at";
 
 export interface AuthorshipRow {
   booking_channel?: string | null;
   created_by?: string | null;
+  created_at?: string | null;
   rescheduled_via?: string | null;
   rescheduled_by?: string | null;
+  rescheduled_at?: string | null;
   canceled_via?: string | null;
   canceled_by?: string | null;
+  canceled_at?: string | null;
 }
 
 const ROLE_LABELS: Record<string, string> = {
@@ -43,10 +47,42 @@ export function describeAuthorship(row: AuthorshipRow, staff: Map<string, string
   };
 }
 
-/** "Marcado por: Secretária · Remarcado por: WhatsApp" (remarcação só se houve). */
-export function formatBookedByLine(row: AuthorshipRow, staff: Map<string, string>): string | null {
+// "27/09/2026 às 14h30", no fuso de Fortaleza.
+function formatDateTime(iso: string): string {
+  const date = new Intl.DateTimeFormat("pt-BR", {
+    timeZone: "America/Fortaleza",
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  }).format(new Date(iso));
+  const time = new Intl.DateTimeFormat("pt-BR", {
+    timeZone: "America/Fortaleza",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  })
+    .format(new Date(iso))
+    .replace(":", "h");
+  return `${date} às ${time}`;
+}
+
+function actionLine(verb: string, author: string | null, at: string | null | undefined): string | null {
+  if (!author) return null;
+  return at ? `${verb} por ${author} no dia ${formatDateTime(at)}` : `${verb} por ${author}`;
+}
+
+/**
+ * ["Marcado por Secretária no dia 27/09/2026 às 14h30", "Remarcado por
+ * WhatsApp no dia …"] — remarcação só se houve.
+ */
+export function formatBookedByLines(row: AuthorshipRow, staff: Map<string, string>): string[] {
   const { createdBy, rescheduledBy } = describeAuthorship(row, staff);
-  const parts = [createdBy && `Marcado por: ${createdBy}`, rescheduledBy && `Remarcado por: ${rescheduledBy}`];
-  const line = parts.filter(Boolean).join(" · ");
-  return line || null;
+  return [actionLine("Marcado", createdBy, row.created_at), actionLine("Remarcado", rescheduledBy, row.rescheduled_at)].filter(
+    (line): line is string => line !== null
+  );
+}
+
+/** "Cancelado por Secretária no dia 27/09/2026 às 14h30" (null se não cancelado). */
+export function formatCanceledByLine(row: AuthorshipRow, staff: Map<string, string>): string | null {
+  return actionLine("Cancelado", describeAuthorship(row, staff).canceledBy, row.canceled_at);
 }

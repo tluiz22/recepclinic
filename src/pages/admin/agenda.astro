@@ -7,7 +7,7 @@ import Icon from "../../components/admin/Icon.astro";
 import { createClient } from "../../lib/supabase/server";
 import { listEvents } from "../../lib/google/calendar";
 import { formatPhoneBR } from "../../lib/phone";
-import { AUTHORSHIP_COLUMNS, fetchStaffLabels, formatBookedByLine } from "../../lib/authorship";
+import { AUTHORSHIP_COLUMNS, fetchStaffLabels, formatBookedByLines } from "../../lib/authorship";
 
 const supabase = createClient(Astro.request, Astro.cookies);
 
@@ -223,9 +223,9 @@ const sortedEvents = [...events].sort(
                   {appointment.home_visit_address && (
                     <p class="mt-1.5 text-slate-500">Endereço: {appointment.home_visit_address}</p>
                   )}
-                  {formatBookedByLine(appointment, staffLabels) && (
-                    <p class="mt-1.5 text-xs text-slate-400">{formatBookedByLine(appointment, staffLabels)}</p>
-                  )}
+                  {formatBookedByLines(appointment, staffLabels).map((line, index) => (
+                    <p class={`${index === 0 ? "mt-1.5" : "mt-0.5"} text-xs text-slate-400`}>{line}</p>
+                  ))}
                   {!isCancelled && !isPast && (
                     <div class="mt-3 flex gap-2">
                       <a

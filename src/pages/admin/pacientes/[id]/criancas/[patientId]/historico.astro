@@ -10,7 +10,7 @@ import Icon from "../../../../../../components/admin/Icon.astro";
 import { createClient } from "../../../../../../lib/supabase/server";
 import { buildAppointmentTypeLabel } from "../../../../../../lib/whatsapp/notifications";
 import { formatWhen } from "../../../../../../lib/whatsapp/formatDateTime";
-import { AUTHORSHIP_COLUMNS, describeAuthorship, fetchStaffLabels } from "../../../../../../lib/authorship";
+import { AUTHORSHIP_COLUMNS, fetchStaffLabels, formatBookedByLines, formatCanceledByLine } from "../../../../../../lib/authorship";
 
 const supabase = createClient(Astro.request, Astro.cookies);
 const { id: guardianId, patientId } = Astro.params;
@@ -40,7 +40,7 @@ const [{ data: appointments }, staffLabels] = await Promise.all([
   supabase
     .from("appointments")
     .select(
-      `id, scheduled_at, appointment_type, status, home_visit_address, created_at, rescheduled_at, canceled_at, ${AUTHORSHIP_COLUMNS}, clinic_locations ( type ), exam_types ( name ), origin:origin_appointment_id ( scheduled_at )`
+      `id, scheduled_at, appointment_type, status, home_visit_address, ${AUTHORSHIP_COLUMNS}, clinic_locations ( type ), exam_types ( name ), origin:origin_appointment_id ( scheduled_at )`
     )
     .eq("patient_id", patient.id)
     .order("scheduled_at", { ascending: false }),
@@ -80,16 +80,10 @@ const rows = (appointments ?? []).map((a) => {
   const location = (a.clinic_locations ?? null) as unknown as { type: string } | null;
   const examType = (a.exam_types ?? null) as unknown as { name: string } | null;
   const origin = (a.origin ?? null) as unknown as { scheduled_at: string } | null;
-  const authorship = describeAuthorship(a, staffLabels);
   const status = statusLabels[a.status] ?? { label: a.status, variant: "neutral" as BadgeVariant };
 
-  const authorLines = [
-    authorship.createdBy && `Marcado por ${authorship.createdBy} em ${formatDateBR(a.created_at)}`,
-    authorship.rescheduledBy &&
-      `Remarcado por ${authorship.rescheduledBy}${a.rescheduled_at ? ` em ${formatDateBR(a.rescheduled_at)}` : ""}`,
-    authorship.canceledBy &&
-      `Cancelado por ${authorship.canceledBy}${a.canceled_at ? ` em ${formatDateBR(a.canceled_at)}` : ""}`,
-  ].filter((line): line is string => Boolean(line));
+  const canceledByLine = formatCanceledByLine(a, staffLabels);
+  const authorLines = [...formatBookedByLines(a, staffLabels), ...(canceledByLine ? [canceledByLine] : [])];
 
   return {
     id: a.id,
