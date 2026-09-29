@@ -392,6 +392,17 @@ export function askGuardianNameText(): string {
   return "Antes de continuar, qual é o seu nome completo (responsável pela criança)?";
 }
 
+// Confirmação do nome do responsável (telefone novo) antes de pedir os
+// dados da criança — Não pede o nome de novo (ver handlePatientNew em
+// booking.ts).
+export function confirmGuardianNameText(fullName: string): string {
+  return (
+    "Confira o seu nome:\n" +
+    `Nome do responsável: *${fullName}*\n\n` +
+    "Está correto? Responda Sim ou Não."
+  );
+}
+
 export function askNewPatientNameText(): string {
   return "Qual é o nome completo da criança?";
 }

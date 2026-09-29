@@ -7,6 +7,7 @@ import { getNextAvailableGroupDates, type AvailableGroupSession } from "../../..
 import { joinOrCreateGroupSessionEvent, leaveGroupSessionEvent } from "../../../../../../lib/scheduling/groupSessionCalendar";
 import { resolveClinicLocationIds, type LocationCategory } from "../../../../../../lib/scheduling/resolveClinicLocationIds";
 import { getReturnOriginCheck } from "../../../../../../lib/scheduling/returnVisitEligibility";
+import { RESCHEDULE_PRESENCE_RESET } from "../../../../../../lib/presence";
 import {
   sendAppointmentReschedule,
   sendExamPreparation,
@@ -221,10 +222,16 @@ export const POST: APIRoute = async ({ params, request, cookies, redirect, local
   }
 
   // Autoria da remarcação (Fase 17) — vale pros dois caminhos acima
-  // (sessão de grupo e consulta/exame individual).
+  // (sessão de grupo e consulta/exame individual). Zera também o lembrete e
+  // a confirmação de presença (Fase 19): a data nova pede outros.
   await supabase
     .from("appointments")
-    .update({ rescheduled_via: "admin", rescheduled_by: locals.userId ?? null, rescheduled_at: new Date().toISOString() })
+    .update({
+      rescheduled_via: "admin",
+      rescheduled_by: locals.userId ?? null,
+      rescheduled_at: new Date().toISOString(),
+      ...RESCHEDULE_PRESENCE_RESET,
+    })
     .eq("id", id);
 
   // Notificação de remarcação por WhatsApp (Fase 3a) — melhor esforço.

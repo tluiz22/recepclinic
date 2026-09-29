@@ -97,6 +97,7 @@ export interface BookingContext {
     | "birthdate_search"
     | "confirm_patient"
     | "new_guardian_name"
+    | "new_guardian_confirm"
     | "new_patient_name"
     | "new_patient_birthdate"
     | "new_patient_confirm"
@@ -889,13 +890,52 @@ async function handlePatientNew(
       );
       return;
     }
-    const body = texts.askNewPatientNameText();
-    await sendAndLog(supabase, guardianId, "bot_book_ask_patient_name", body, () =>
+    // Confere o nome do responsável antes de seguir para a criança, como já
+    // é feito com os dados da criança (pedido do cliente, set/2026).
+    const body = texts.confirmGuardianNameText(text);
+    await sendAndLog(supabase, guardianId, "bot_book_confirm_guardian_name", body, () =>
       sendTextMessage({ to: guardianPhone, body })
     );
     await updateConversationState(supabase, guardianPhone, "BOOK_PATIENT_NEW", {
-      context: { ...context, awaiting: "new_patient_name", new_guardian_name: text } satisfies BookingContext,
+      context: { ...context, awaiting: "new_guardian_confirm", new_guardian_name: text } satisfies BookingContext,
     });
+    return;
+  }
+
+  if (context.awaiting === "new_guardian_confirm") {
+    const guardianName = context.new_guardian_name;
+    const answer = text.toLowerCase();
+    if (guardianName && answer.startsWith("s")) {
+      const body = texts.askNewPatientNameText();
+      await sendAndLog(supabase, guardianId, "bot_book_ask_patient_name", body, () =>
+        sendTextMessage({ to: guardianPhone, body })
+      );
+      await updateConversationState(supabase, guardianPhone, "BOOK_PATIENT_NEW", {
+        context: { ...context, awaiting: "new_patient_name" } satisfies BookingContext,
+      });
+      return;
+    }
+    if (!guardianName || answer.startsWith("n")) {
+      // Pede só o nome do responsável de novo — nada da criança foi
+      // coletado ainda nesse ponto.
+      const body = texts.askGuardianNameText();
+      await sendAndLog(supabase, guardianId, "bot_book_ask_guardian_name", body, () =>
+        sendTextMessage({ to: guardianPhone, body })
+      );
+      await updateConversationState(supabase, guardianPhone, "BOOK_PATIENT_NEW", {
+        context: { ...context, awaiting: "new_guardian_name", new_guardian_name: undefined } satisfies BookingContext,
+      });
+      return;
+    }
+
+    const notUnderstood = texts.notUnderstoodYesNoText();
+    await sendAndLog(supabase, guardianId, "bot_not_understood", notUnderstood, () =>
+      sendTextMessage({ to: guardianPhone, body: notUnderstood })
+    );
+    const body = texts.confirmGuardianNameText(guardianName);
+    await sendAndLog(supabase, guardianId, "bot_book_confirm_guardian_name", body, () =>
+      sendTextMessage({ to: guardianPhone, body })
+    );
     return;
   }
 

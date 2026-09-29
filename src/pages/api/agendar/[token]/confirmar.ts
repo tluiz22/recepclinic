@@ -7,6 +7,7 @@ import { getNextAvailableGroupDates, type AvailableGroupSession } from "../../..
 import { joinOrCreateGroupSessionEvent, leaveGroupSessionEvent } from "../../../../lib/scheduling/groupSessionCalendar";
 import { resolveClinicLocationIds, type LocationCategory } from "../../../../lib/scheduling/resolveClinicLocationIds";
 import { getBookingLinkLastDate, hasActiveReturnVisit } from "../../../../lib/scheduling/returnVisitDeadline";
+import { RESCHEDULE_PRESENCE_RESET } from "../../../../lib/presence";
 import {
   buildAppointmentTypeLabel,
   sendAppointmentConfirmation,
@@ -293,10 +294,16 @@ export const POST: APIRoute = async ({ params, request, redirect }) => {
       });
     }
 
-    // Autoria da remarcação (Fase 17): pelo link do WhatsApp.
+    // Autoria da remarcação (Fase 17): pelo link do WhatsApp. Zera também o
+    // lembrete e a confirmação de presença (Fase 19): a data nova pede outros.
     await supabase
       .from("appointments")
-      .update({ rescheduled_via: "whatsapp_bot", rescheduled_by: null, rescheduled_at: new Date().toISOString() })
+      .update({
+        rescheduled_via: "whatsapp_bot",
+        rescheduled_by: null,
+        rescheduled_at: new Date().toISOString(),
+        ...RESCHEDULE_PRESENCE_RESET,
+      })
       .eq("id", appointment.id);
 
     if (guardian?.phone) {
