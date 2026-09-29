@@ -74,6 +74,18 @@ export async function startReschedule(
   await presentCandidates(supabase, guardianPhone, guardianId, category, candidates);
 }
 
+// Botão "Remarcar" do lembrete (Fase 19): o atendimento já vem escolhido —
+// pula a identificação e segue direto pro link (reconfirmando o endereço
+// antes, se for domiciliar).
+export async function startRescheduleForAppointment(
+  supabase: SupabaseClient,
+  guardianPhone: string,
+  guardianId: string | null,
+  appointment: AppointmentCandidate
+): Promise<void> {
+  await finishReschedule(supabase, guardianPhone, guardianId, appointment);
+}
+
 export async function handleRescheduleState(
   supabase: SupabaseClient,
   guardianPhone: string,

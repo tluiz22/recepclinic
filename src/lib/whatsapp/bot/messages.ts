@@ -674,3 +674,24 @@ export function cancelSuccessText(patientName: string, whenLabel: string, catego
 export function cancelErrorText(): string {
   return "Tivemos um problema para cancelar a consulta. Por favor, escolha [4] Falar com a secretária no menu principal.";
 }
+
+// --- botões do lembrete (Fase 19) -------------------------------------------
+
+export function reminderPresenceConfirmedText(patientName: string, whenLabel: string): string {
+  return (
+    "Presença confirmada ✓\n\n" +
+    `👶 Paciente: ${patientName}\n` +
+    `📅 Data: ${whenLabel}\n\n` +
+    "Obrigado! Qualquer dúvida, é só chamar por aqui."
+  );
+}
+
+export function reminderPresenceAlreadyConfirmedText(patientName: string, whenLabel: string): string {
+  return `A presença de ${patientName} em ${whenLabel} já estava confirmada ✓`;
+}
+
+// Toque atrasado/inválido: o atendimento do lembrete foi cancelado,
+// remarcado, já passou ou não é deste responsável.
+export function reminderInactiveText(): string {
+  return "Esse agendamento não está mais ativo.";
+}

@@ -61,6 +61,18 @@ export async function startCancel(
   await presentCandidates(supabase, guardianPhone, guardianId, category, candidates);
 }
 
+// Botão "Cancelar" do lembrete (Fase 19): o atendimento já vem escolhido —
+// vai direto para o Sim/Não do CANCEL_CONFIRM, contra toque acidental.
+export async function startCancelForAppointment(
+  supabase: SupabaseClient,
+  guardianPhone: string,
+  guardianId: string | null,
+  appointment: AppointmentCandidate
+): Promise<void> {
+  const category: AppointmentCategory = appointment.appointment_type === "exam" ? "exame" : "consulta";
+  await goToConfirm(supabase, guardianPhone, guardianId, category, appointment);
+}
+
 export async function handleCancelState(
   supabase: SupabaseClient,
   guardianPhone: string,

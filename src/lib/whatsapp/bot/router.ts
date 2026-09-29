@@ -32,6 +32,7 @@ import { BOOKING_STATES, handleBookingState, startBooking } from "./booking";
 import { CANCEL_STATES, handleCancelState, startCancel } from "./cancel";
 import { RESCHEDULE_STATES, handleRescheduleState, startReschedule } from "./reschedule";
 import { EXAM_STATES, handleExamState, startExam } from "./exam";
+import { handleReminderTap, parseReminderTap } from "./reminder";
 import * as texts from "./messages";
 import { logFunnelEvent, startFunnel, type FunnelFlow } from "../funnel";
 
@@ -77,6 +78,26 @@ export async function routeIncomingMessage(
     "state=" + convo.state,
     "atendimento_humano=" + convo.atendimento_humano
   );
+
+  // Toque num botão do lembrete (Fase 19) — vale em qualquer estado da
+  // conversa, por isso vem antes da máquina de estados. A pausa do
+  // atendimento humano é decidida lá dentro (Confirmar vale mesmo pausado).
+  const reminderTap = parseReminderTap(waMsg);
+  if (reminderTap) {
+    const botPaused = convo.atendimento_humano && !isPastHumanHandoffDeadline(new Date(convo.updated_at));
+    if (convo.atendimento_humano && !botPaused) {
+      // Prazo do atendimento humano vencido: devolve ao bot, como abaixo —
+      // senão a troca de estado renovaria o `updated_at` da pausa.
+      await updateConversationState(supabase, guardianPhone, "WELCOME", { atendimento_humano: false, context: {} });
+    }
+    const tapGuardianId = convo.guardian_id ?? (await resolveGuardianId(supabase, guardianPhone));
+    const result = await handleReminderTap(supabase, guardianPhone, tapGuardianId, waMsg, reminderTap, botPaused);
+    if (result === "inactive" && !botPaused) {
+      await updateConversationState(supabase, guardianPhone, "MENU", { context: {} });
+      await sendMenu(supabase, guardianPhone, tapGuardianId);
+    }
+    return;
+  }
 
   // Secretária conduzindo a conversa pelo app (coexistência) — o bot fica em
   // silêncio, a menos que o prazo de resposta já tenha vencido (24h corridas,

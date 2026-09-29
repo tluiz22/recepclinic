@@ -7,7 +7,9 @@ export interface WaMessage {
   to?: string;
   type?: string;
   text?: { body?: string };
-  button?: { text?: string };
+  // Toque num botão de resposta rápida de template (ex.: lembrete da Fase
+  // 19) — `payload` é o definido no envio.
+  button?: { text?: string; payload?: string };
   interactive?: {
     list_reply?: { id?: string; title?: string };
     button_reply?: { id?: string; title?: string };
