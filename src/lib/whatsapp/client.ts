@@ -35,12 +35,34 @@ export async function sendTemplateMessage({
   templateName,
   languageCode,
   bodyParameters = [],
+  quickReplyPayloads = [],
 }: {
   to: string;
   templateName: string;
   languageCode: string;
   bodyParameters?: string[];
+  // Payload de cada botão de resposta rápida do template, na ordem dos
+  // botões (índice 0, 1, 2…) — volta no webhook em `msg.button.payload`
+  // quando o paciente toca. Só para templates aprovados COM esses botões:
+  // mandar para um template sem botões dá erro na Meta.
+  quickReplyPayloads?: string[];
 }): Promise<{ id: string }> {
+  const components: Record<string, unknown>[] = [];
+  if (bodyParameters.length > 0) {
+    components.push({
+      type: "body",
+      parameters: bodyParameters.map((text) => ({ type: "text", text })),
+    });
+  }
+  quickReplyPayloads.forEach((payload, index) => {
+    components.push({
+      type: "button",
+      sub_type: "quick_reply",
+      index: String(index),
+      parameters: [{ type: "payload", payload }],
+    });
+  });
+
   return postToGraphApi({
     messaging_product: "whatsapp",
     to: to.replace(/^\+/, ""),
@@ -48,16 +70,7 @@ export async function sendTemplateMessage({
     template: {
       name: templateName,
       language: { code: languageCode },
-      ...(bodyParameters.length > 0
-        ? {
-            components: [
-              {
-                type: "body",
-                parameters: bodyParameters.map((text) => ({ type: "text", text })),
-              },
-            ],
-          }
-        : {}),
+      ...(components.length > 0 ? { components } : {}),
     },
   });
 }
