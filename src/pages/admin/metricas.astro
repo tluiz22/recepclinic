@@ -10,6 +10,11 @@ import Icon from "../../components/admin/Icon.astro";
 import { createClient } from "../../lib/supabase/server";
 import { formatPhoneBR } from "../../lib/phone";
 import { buildFunnelReport, type FunnelEventRow } from "../../lib/metrics/whatsappFunnel";
+import {
+  buildReminderResponseReport,
+  type ReminderSentRow,
+  type ReminderTapRow,
+} from "../../lib/metrics/reminderResponses";
 
 const supabase = createClient(Astro.request, Astro.cookies);
 
@@ -100,6 +105,58 @@ const channelRows = await Promise.all(
   })
 );
 
+// Lembrete com botões (Fase 19): enviados no mês e o que cada responsável
+// tocou. Só conta lembretes do layout novo (com a frase dos botões) que a
+// Meta aceitou — os antigos, sem botões, nunca teriam resposta.
+async function fetchAllRows<T>(
+  build: (from: number, to: number) => PromiseLike<{ data: unknown[] | null; error: { message: string } | null }>
+): Promise<T[]> {
+  const rows: T[] = [];
+  for (let from = 0; ; from += PAGE) {
+    const { data, error } = await build(from, from + PAGE - 1);
+    if (error) {
+      console.error("[metricas] erro ao ler whatsapp_messages:", error.message);
+      break;
+    }
+    rows.push(...((data ?? []) as T[]));
+    if (!data || data.length < PAGE) break;
+  }
+  return rows;
+}
+
+const remindersSinceMonthStart = await fetchAllRows<ReminderSentRow>((from, to) =>
+  supabase
+    .from("whatsapp_messages")
+    .select("appointment_id, created_at")
+    .eq("message_type", "appointment_reminder")
+    .in("status", ["sent", "delivered", "read"])
+    .like("body", "%confirme sua presença%")
+    .gte("created_at", monthStart.toISOString())
+    .order("created_at", { ascending: true })
+    .range(from, to)
+);
+const reminderTaps = await fetchAllRows<ReminderTapRow>((from, to) =>
+  supabase
+    .from("whatsapp_messages")
+    .select("appointment_id, message_type, created_at")
+    .in("message_type", ["reminder_confirm", "reminder_reschedule", "reminder_cancel"])
+    .gte("created_at", monthStart.toISOString())
+    .order("created_at", { ascending: true })
+    .range(from, to)
+);
+const reminderReport = buildReminderResponseReport(
+  remindersSinceMonthStart.filter((row) => Date.parse(row.created_at) < monthEnd.getTime()),
+  remindersSinceMonthStart,
+  reminderTaps
+);
+const reminderCards = [
+  { label: "Lembretes enviados", value: reminderReport.sent, color: "text-sky-700", share: false },
+  { label: "Confirmaram presença", value: reminderReport.confirmed, color: "text-emerald-600", share: true },
+  { label: "Pediram para remarcar", value: reminderReport.reschedule, color: "text-indigo-600", share: true },
+  { label: "Pediram para cancelar", value: reminderReport.cancel, color: "text-red-600", share: true },
+  { label: "Não responderam", value: reminderReport.noResponse, color: "text-amber-600", share: true },
+];
+
 function formatPercent(rate: number | null): string {
   return rate === null ? "—" : `${Math.round(rate * 100)}%`;
 }
@@ -174,6 +231,28 @@ const summaryCards = [
         <Card class="text-center">
           <p class={`text-3xl font-bold ${card.color}`}>{card.value}</p>
           <p class="mt-1 text-sm text-slate-600">{card.label}</p>
+        </Card>
+      ))
+    }
+  </div>
+
+  <h2 class="mt-8 text-base font-semibold text-slate-900">Lembretes com confirmação de presença</h2>
+  <p class="mt-1 text-sm text-slate-500">
+    Lembretes enviados no mês e o botão que o responsável tocou (vale o último toque). "Pediram para remarcar/cancelar"
+    conta o toque no botão, mesmo que não tenham concluído. Quem confirmou por ligação e foi marcado à mão não entra
+    aqui.
+  </p>
+  <div class="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-5">
+    {
+      reminderCards.map((card) => (
+        <Card class="text-center">
+          <p class={`text-3xl font-bold ${card.color}`}>{card.value}</p>
+          <p class="mt-1 text-sm text-slate-600">{card.label}</p>
+          {card.share && (
+            <p class="mt-0.5 text-xs text-slate-400">
+              {formatPercent(reminderReport.sent > 0 ? card.value / reminderReport.sent : null)}
+            </p>
+          )}
         </Card>
       ))
     }
