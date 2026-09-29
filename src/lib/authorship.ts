@@ -86,3 +86,19 @@ export function formatBookedByLines(row: AuthorshipRow, staff: Map<string, strin
 export function formatCanceledByLine(row: AuthorshipRow, staff: Map<string, string>): string | null {
   return actionLine("Cancelado", describeAuthorship(row, staff).canceledBy, row.canceled_at);
 }
+
+// Presença confirmada (Fase 19): `patient_confirmed_by` nulo = WhatsApp
+// (botão do lembrete); preenchido = login que marcou pela tela.
+export const PRESENCE_COLUMNS = "patient_confirmed_at, patient_confirmed_by";
+
+export interface PresenceRow {
+  patient_confirmed_at?: string | null;
+  patient_confirmed_by?: string | null;
+}
+
+/** "Confirmada por WhatsApp no dia 27/09/2026 às 14h30" (null se não confirmada). */
+export function formatPresenceLine(row: PresenceRow, staff: Map<string, string>): string | null {
+  if (!row.patient_confirmed_at) return null;
+  const author = row.patient_confirmed_by ? authorLabel("admin", row.patient_confirmed_by, staff) : "WhatsApp";
+  return actionLine("Confirmada", author, row.patient_confirmed_at);
+}
