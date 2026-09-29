@@ -2,7 +2,7 @@ import type { APIRoute } from "astro";
 import { createClient } from "../../../../../../lib/supabase/server";
 import { cancelEvent } from "../../../../../../lib/google/calendar";
 import { leaveGroupSessionEvent } from "../../../../../../lib/scheduling/groupSessionCalendar";
-import { buildAppointmentTypeLabel, sendAppointmentCancellation } from "../../../../../../lib/whatsapp/notifications";
+import { sendAppointmentCancellation } from "../../../../../../lib/whatsapp/notifications";
 
 export const POST: APIRoute = async ({ params, request, cookies, locals }) => {
   const { id } = params;
@@ -103,9 +103,10 @@ export const POST: APIRoute = async ({ params, request, cookies, locals }) => {
       guardianId: guardian.id,
       guardianPhone: guardian.phone,
       patientName: patient.full_name,
-      typeLabel: buildAppointmentTypeLabel(appointment.appointment_type, examType?.name),
+      appointmentType: appointment.appointment_type,
+      examName: examType?.name,
       scheduledAt: new Date(appointment.scheduled_at),
-      locationLabel: location?.type === "clinic" ? "Consultório" : location?.type === "exam" ? "Exames" : "Domiciliar",
+      locationType: location?.type,
     });
   }
 

@@ -8,7 +8,6 @@ import { joinOrCreateGroupSessionEvent, leaveGroupSessionEvent } from "../../../
 import { resolveClinicLocationIds, type LocationCategory } from "../../../../../../lib/scheduling/resolveClinicLocationIds";
 import { getReturnOriginCheck } from "../../../../../../lib/scheduling/returnVisitEligibility";
 import {
-  buildAppointmentTypeLabel,
   sendAppointmentReschedule,
   sendExamPreparation,
 } from "../../../../../../lib/whatsapp/notifications";
@@ -248,9 +247,10 @@ export const POST: APIRoute = async ({ params, request, cookies, redirect, local
       guardianId: guardian.id,
       guardianPhone: guardian.phone,
       patientName: patient.full_name,
-      typeLabel: buildAppointmentTypeLabel(appointmentType, examName),
+      appointmentType: appointmentType,
+      examName: examName,
       scheduledAt: startDate,
-      locationLabel: location?.type === "clinic" ? "Consultório" : location?.type === "exam" ? "Exames" : "Domiciliar",
+      locationType: location?.type,
       locationAddress: isHomeVisit ? homeVisitAddress : (location?.address ?? null),
     });
 

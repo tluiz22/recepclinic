@@ -280,11 +280,11 @@ export const POST: APIRoute = async ({ request, cookies, redirect, locals }) => 
       guardianId: guardian.id,
       guardianPhone: guardian.phone,
       patientName: patient.full_name,
-      typeLabel,
-      scheduledAt: startDate,
-      locationLabel,
-      locationAddress,
       appointmentType,
+      examName: examTypeInfo?.name,
+      locationType: location?.type,
+      scheduledAt: startDate,
+      locationAddress,
       // Retorno não tem valor próprio — está incluso no valor da consulta
       // anterior (decisão do cliente); exame tem valor próprio em
       // exam_types.price_cents; `null` aciona o texto de "incluso" na

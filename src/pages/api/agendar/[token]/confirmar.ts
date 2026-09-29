@@ -306,9 +306,10 @@ export const POST: APIRoute = async ({ params, request, redirect }) => {
         guardianId: guardian.id,
         guardianPhone: guardian.phone,
         patientName: patient.full_name,
-        typeLabel,
+        appointmentType,
+        examName: examType?.name,
+        locationType: location?.type,
         scheduledAt: startDate,
-        locationLabel,
         locationAddress,
       });
     }
@@ -408,11 +409,11 @@ export const POST: APIRoute = async ({ params, request, redirect }) => {
         guardianId: guardian.id,
         guardianPhone: guardian.phone,
         patientName: patient.full_name,
-        typeLabel,
-        scheduledAt: startDate,
-        locationLabel,
-        locationAddress,
         appointmentType,
+        examName: examType?.name,
+        locationType: location?.type,
+        scheduledAt: startDate,
+        locationAddress,
         priceCents,
       });
     }

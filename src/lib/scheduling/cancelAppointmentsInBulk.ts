@@ -1,7 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { cancelEvent } from "../google/calendar";
 import { leaveGroupSessionEvent } from "./groupSessionCalendar";
-import { buildAppointmentTypeLabel, sendMassCancellationNotice } from "../whatsapp/notifications";
+import { sendMassCancellationNotice } from "../whatsapp/notifications";
 import { buildAppUrl } from "../whatsapp/bot/shared";
 
 // Notificação passiva (sem conversa ativa em andamento) — validade bem maior
@@ -139,9 +139,10 @@ export async function cancelAppointmentsInBulk(
       guardianId: guardian.id,
       guardianPhone: guardian.phone,
       patientName: patient.full_name,
-      typeLabel: buildAppointmentTypeLabel(appointment.appointment_type, examType?.name),
+      appointmentType: appointment.appointment_type,
+      examName: examType?.name,
       scheduledAt: new Date(appointment.scheduled_at),
-      locationLabel: location?.type === "clinic" ? "Consultório" : location?.type === "exam" ? "Exames" : "Domiciliar",
+      locationType: location?.type,
       link: buildAppUrl(`/agendar/${link.id}`),
     });
   }

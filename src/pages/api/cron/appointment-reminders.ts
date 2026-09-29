@@ -2,7 +2,6 @@ import type { APIRoute } from "astro";
 import { createServiceClient } from "../../../lib/supabase/service";
 import { listEvents } from "../../../lib/google/calendar";
 import {
-  buildAppointmentTypeLabel,
   sendAppointmentReminder,
   sendExamPreparation,
 } from "../../../lib/whatsapp/notifications";
@@ -101,9 +100,10 @@ export const GET: APIRoute = async ({ request }) => {
       guardianId: guardian.id,
       guardianPhone: guardian.phone,
       patientName: patient.full_name,
-      typeLabel: buildAppointmentTypeLabel(appointment.appointment_type, examType?.name),
+      appointmentType: appointment.appointment_type,
+      examName: examType?.name,
       scheduledAt: new Date(appointment.scheduled_at),
-      locationLabel: location?.type === "clinic" ? "Consultório" : location?.type === "exam" ? "Exames" : "Domiciliar",
+      locationType: location?.type,
       locationAddress: appointment.home_visit_address ?? location?.address ?? null,
     });
 
