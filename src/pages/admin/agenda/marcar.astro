@@ -3,6 +3,7 @@ import AdminLayout from "../../../layouts/AdminLayout.astro";
 import Card from "../../../components/admin/Card.astro";
 import Icon from "../../../components/admin/Icon.astro";
 import { createClient } from "../../../lib/supabase/server";
+import { getConsultationAgeLimit } from "../../../lib/patientRegistration";
 import { getAvailableSlotsForDate, type AppointmentType } from "../../../lib/scheduling/getAvailableSlotsForDate";
 import { getNextAvailableDates } from "../../../lib/scheduling/getNextAvailableDates";
 import { resolveClinicLocationIds, type LocationCategory } from "../../../lib/scheduling/resolveClinicLocationIds";
@@ -39,6 +40,15 @@ const appointmentType: AppointmentType =
 // anterior.
 const prefillPatientId = Astro.url.searchParams.get("patient_id") ?? "";
 const prefillPatientLabel = Astro.url.searchParams.get("patient_label") ?? "";
+
+// Avisos de idade (Fase 21, sem bloquear) — ver patientAgeWarnings.ts. O
+// paciente escolhido na busca traz a data de nascimento; o pré-preenchido
+// precisa buscar.
+const consultationAgeLimit = await getConsultationAgeLimit(supabase);
+const prefillBirthdate = prefillPatientId
+  ? ((await supabase.from("patients").select("birthdate").eq("id", prefillPatientId).maybeSingle()).data?.birthdate ??
+    "")
+  : "";
 
 const errorMessages: Record<string, string> = {
   slot_taken: "Esse horário acabou de deixar de estar livre. Escolha outro.",
@@ -137,7 +147,7 @@ const slots = date ? await getAvailableSlotsForDate({ supabase, clinicLocationId
           id="patient_search"
           autocomplete="off"
           value={prefillPatientLabel}
-          placeholder="Buscar pelo nome da criança ou telefone do responsável"
+          placeholder="Buscar pelo nome do paciente ou telefone do responsável"
           class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-sky-600 focus:outline-none focus:ring-1 focus:ring-sky-600"
         />
         <input type="hidden" id="patient_id" name="patient_id" value={prefillPatientId} />
@@ -150,7 +160,7 @@ const slots = date ? await getAvailableSlotsForDate({ supabase, clinicLocationId
         <div id="patient_results" class="mt-1 flex flex-col overflow-hidden rounded-lg border border-slate-200 empty:hidden empty:border-0"></div>
         <p class="mt-1 text-xs text-slate-500">
           Não encontrou?{" "}
-          <a href="/admin/pacientes" target="_blank" class="text-sky-700 hover:underline">
+          <a href="/admin/pacientes?tab=cadastrar" target="_blank" class="text-sky-700 hover:underline">
             Cadastrar novo paciente
           </a>{" "}
           (abre em outra aba).
@@ -158,6 +168,15 @@ const slots = date ? await getAvailableSlotsForDate({ supabase, clinicLocationId
       </div>
 
       <div id="return_origin_box" class="hidden"></div>
+
+      <p
+        id="patient_age_warning"
+        class="hidden rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800"
+        data-birthdate={prefillBirthdate}
+        data-age-limit={consultationAgeLimit}
+        data-today={todayFortaleza()}
+      >
+      </p>
 
       <div id="home_visit_address_field" class={locationCategory === "home_visit" ? "" : "hidden"}>
         <label for="home_visit_address" class="block text-sm font-medium text-slate-700">Endereço *</label>
@@ -220,3 +239,4 @@ const slots = date ? await getAvailableSlotsForDate({ supabase, clinicLocationId
 <script src="../../../scripts/patientSearch.ts"></script>
 <script src="../../../scripts/appointmentSlotPicker.ts"></script>
 <script src="../../../scripts/returnOriginWarnings.ts"></script>
+<script src="../../../scripts/patientAgeWarnings.ts"></script>

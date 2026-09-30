@@ -11,13 +11,17 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
     ?.toString();
   const bufferMinutes = formData.get("buffer_minutes_between_appointments")?.toString();
   const returnVisitDeadlineDays = formData.get("return_visit_deadline_days")?.toString();
+  const consultationAgeLimitYears = formData.get("consultation_age_limit_years")?.toString();
 
   if (
     !defaultAppointmentDuration ||
     !defaultReturnVisitDuration ||
     !bufferMinutes ||
     !returnVisitDeadlineDays ||
-    !(Number(returnVisitDeadlineDays) > 0)
+    !(Number(returnVisitDeadlineDays) > 0) ||
+    !consultationAgeLimitYears ||
+    !Number.isInteger(Number(consultationAgeLimitYears)) ||
+    !(Number(consultationAgeLimitYears) > 0)
   ) {
     return redirect("/admin/configuracoes/duracao?error=1");
   }
@@ -30,6 +34,7 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
       default_return_visit_duration_minutes: Number(defaultReturnVisitDuration),
       buffer_minutes_between_appointments: Number(bufferMinutes),
       return_visit_deadline_days: Number(returnVisitDeadlineDays),
+      consultation_age_limit_years: Number(consultationAgeLimitYears),
       updated_at: new Date().toISOString(),
     })
     .eq("id", 1);

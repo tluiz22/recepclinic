@@ -1,3 +1,33 @@
+// Maioridade (Fase 21): 18+ pode ser o próprio responsável e marcar exame
+// para si.
+export const ADULT_AGE_YEARS = 18;
+
+// Idade em anos completos, com as mesmas datas puras de formatAge. Quem faz
+// aniversário na data de referência já conta o ano novo.
+export function ageInYears(birthdateIso: string, referenceDateIso: string): number {
+  const [by, bm, bd] = birthdateIso.split("-").map(Number);
+  const [ry, rm, rd] = referenceDateIso.split("-").map(Number);
+
+  let years = ry - by;
+  if (rm < bm || (rm === bm && rd < bd)) years -= 1;
+  return years;
+}
+
+export function isAdult(birthdateIso: string, referenceDateIso: string): boolean {
+  return ageInYears(birthdateIso, referenceDateIso) >= ADULT_AGE_YEARS;
+}
+
+// Idade limite para Consulta (Configurações > Duração): pode marcar até
+// completar o limite — com limite 14, 13 anos e 11 meses pode; no dia em que
+// faz 14, não pode mais. Não vale para Retorno nem Exame.
+export function isOverConsultationAgeLimit(
+  birthdateIso: string,
+  referenceDateIso: string,
+  limitYears: number,
+): boolean {
+  return ageInYears(birthdateIso, referenceDateIso) >= limitYears;
+}
+
 // Idade legível a partir de uma data de nascimento (YYYY-MM-DD), relativa a
 // uma data de referência (também YYYY-MM-DD — evita qualquer ambiguidade de
 // fuso horário, os dois são datas puras, sem hora). Detalhada pra bebês e

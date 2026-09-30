@@ -15,5 +15,5 @@ export const POST: APIRoute = async ({ params, request, cookies, redirect }) => 
     return redirect("/admin/pacientes?error=1");
   }
 
-  return redirect("/admin/pacientes");
+  return redirect("/admin/pacientes?tab=responsaveis");
 };

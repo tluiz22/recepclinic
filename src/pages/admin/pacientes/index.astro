@@ -5,22 +5,53 @@ import Badge from "../../../components/admin/Badge.astro";
 import ConfirmDeleteDialog from "../../../components/admin/ConfirmDeleteDialog.astro";
 import { createClient } from "../../../lib/supabase/server";
 import { formatPhoneBR } from "../../../lib/phone";
+import { formatDateBR } from "../../../lib/dates";
+import { formatAge } from "../../../lib/age";
+import { todayFortaleza } from "../../../lib/scheduling/returnVisitDeadline";
+import {
+  PATIENT_FORM_ERRORS,
+  consultationAgeLimitWarning,
+  getConsultationAgeLimit,
+} from "../../../lib/patientRegistration";
 
 const PAGE_SIZE = 20;
 
 const supabase = createClient(Astro.request, Astro.cookies);
 
-const errorMessages: Record<string, string> = {
-  invalid_phone: "Telefone inválido — informe DDD + número, ex.: 84981880777.",
-  invalid_birthdate: "Data de nascimento inválida.",
-  not_found: "Responsável não encontrado.",
-  "1": "Não foi possível salvar. Confira os dados e tente novamente.",
-};
 const errorParam = Astro.url.searchParams.get("error");
-const errorMessage = errorParam ? (errorMessages[errorParam] ?? errorMessages["1"]) : null;
+const errorMessage = errorParam ? (PATIENT_FORM_ERRORS[errorParam] ?? PATIENT_FORM_ERRORS["1"]) : null;
 
+// Volta do cadastro: nome do paciente cadastrado e, se passou da idade
+// limite para consulta, o aviso (sem bloquear — pode ser paciente de exame).
+const createdName = Astro.url.searchParams.get("created");
+const ageLimit = await getConsultationAgeLimit(supabase);
+const createdAgeLimitWarning = Astro.url.searchParams.get("age_limit_warning") === "1";
+
+// "Próprio responsável" com telefone que já é de um responsável: a rota
+// devolve os dados para perguntar se é a mesma pessoa.
+const confirmSelf =
+  Astro.url.searchParams.get("confirm_self") === "1"
+    ? {
+        guardianId: Astro.url.searchParams.get("guardian_id") ?? "",
+        guardianName: Astro.url.searchParams.get("guardian_name") ?? "",
+        fullName: Astro.url.searchParams.get("full_name") ?? "",
+        birthdate: Astro.url.searchParams.get("birthdate") ?? "",
+        phone: Astro.url.searchParams.get("phone") ?? "",
+        notes: Astro.url.searchParams.get("notes") ?? "",
+      }
+    : null;
+
+// Pacientes (padrão) | Responsáveis. "cadastrar" não é aba: abre pelo botão
+// "Cadastrar paciente". O antigo `tab=cadastrados` (lista de responsáveis)
+// continua funcionando.
+type Tab = "pacientes" | "responsaveis" | "cadastrar";
 const tabParam = Astro.url.searchParams.get("tab");
-const tab: "cadastrados" | "cadastrar" = tabParam === "cadastrar" ? "cadastrar" : "cadastrados";
+const tab: Tab =
+  tabParam === "cadastrar"
+    ? "cadastrar"
+    : tabParam === "responsaveis" || tabParam === "cadastrados"
+      ? "responsaveis"
+      : "pacientes";
 
 const q = Astro.url.searchParams.get("q")?.trim() ?? "";
 const showInactive = Astro.url.searchParams.get("show_inactive") === "1";
@@ -28,10 +59,38 @@ const page = Math.max(1, Number(Astro.url.searchParams.get("page")) || 1);
 const from = (page - 1) * PAGE_SIZE;
 const to = from + PAGE_SIZE - 1;
 
-let guardians: { id: string; full_name: string; phone: string; is_active: boolean; patients: unknown }[] = [];
-let totalPages = 1;
+// Filtro de responsável por nome ou telefone, no formato do `.or()` do
+// PostgREST. Vírgula/parênteses quebram a sintaxe do filtro e são trocados
+// por espaço; o telefone é gravado só com dígitos, então "(84) 98188-0777"
+// busca pelos dígitos.
+function searchSafe(term: string): string {
+  return term.replace(/[,()*%\\]/g, " ").trim();
+}
 
-if (tab === "cadastrados") {
+function guardianSearchFilter(term: string): string {
+  const safe = searchSafe(term);
+  const digits = term.replace(/\D/g, "");
+  const parts = [`full_name.ilike.%${safe}%`];
+  if (digits.length >= 4) parts.push(`phone.ilike.%${digits}%`);
+  return parts.join(",");
+}
+
+type GuardianRow = { id: string; full_name: string; phone: string; is_active: boolean; patients: unknown };
+type PatientRow = {
+  id: string;
+  full_name: string;
+  birthdate: string;
+  is_active: boolean;
+  is_guardian_self: boolean;
+  guardians: { id: string; full_name: string; phone: string; is_active: boolean };
+};
+
+let guardians: GuardianRow[] = [];
+let patients: PatientRow[] = [];
+let totalPages = 1;
+const today = todayFortaleza();
+
+if (tab === "responsaveis") {
   let guardiansQuery = supabase
     .from("guardians")
     .select("id, full_name, phone, is_active, patients(count)", { count: "exact" })
@@ -39,20 +98,48 @@ if (tab === "cadastrados") {
     .range(from, to);
 
   if (!showInactive) guardiansQuery = guardiansQuery.eq("is_active", true);
-  if (q) guardiansQuery = guardiansQuery.or(`full_name.ilike.%${q}%,phone.ilike.%${q}%`);
+  if (q) guardiansQuery = guardiansQuery.or(guardianSearchFilter(q));
 
   const { data, count } = await guardiansQuery;
   guardians = data ?? [];
   totalPages = Math.max(1, Math.ceil((count ?? 0) / PAGE_SIZE));
 }
 
-function tabUrl(target: "cadastrados" | "cadastrar"): string {
-  return `/admin/pacientes?tab=${target}`;
+if (tab === "pacientes") {
+  // Busca pelo nome do paciente ou pelo nome/telefone do responsável. O
+  // PostgREST não junta num mesmo `or` colunas de duas tabelas, então os
+  // responsáveis que batem com a busca entram como lista de ids.
+  let matchingGuardianIds: string[] = [];
+  if (q) {
+    const { data } = await supabase.from("guardians").select("id").or(guardianSearchFilter(q));
+    matchingGuardianIds = (data ?? []).map((guardian) => guardian.id);
+  }
+
+  let patientsQuery = supabase
+    .from("patients")
+    .select(
+      "id, full_name, birthdate, is_active, is_guardian_self, guardians!inner ( id, full_name, phone, is_active )",
+      { count: "exact" },
+    )
+    .order("full_name")
+    .range(from, to);
+
+  // Paciente de responsável inativo também conta como inativo aqui.
+  if (!showInactive) patientsQuery = patientsQuery.eq("is_active", true).eq("guardians.is_active", true);
+  if (q) {
+    const parts = [`full_name.ilike.%${searchSafe(q)}%`];
+    if (matchingGuardianIds.length) parts.push(`guardian_id.in.(${matchingGuardianIds.join(",")})`);
+    patientsQuery = patientsQuery.or(parts.join(","));
+  }
+
+  const { data, count } = await patientsQuery;
+  patients = (data ?? []) as unknown as PatientRow[];
+  totalPages = Math.max(1, Math.ceil((count ?? 0) / PAGE_SIZE));
 }
 
 function pageUrl(targetPage: number): string {
   const params = new URLSearchParams();
-  params.set("tab", "cadastrados");
+  params.set("tab", tab);
   if (q) params.set("q", q);
   if (showInactive) params.set("show_inactive", "1");
   params.set("page", String(targetPage));
@@ -61,29 +148,35 @@ function pageUrl(targetPage: number): string {
 ---
 
 <AdminLayout title="Pacientes">
-  <h1 class="text-2xl font-bold text-slate-900">Pacientes</h1>
-  <p class="mt-2 text-slate-600">
-    Responsáveis e crianças cadastradas. Um responsável pode ter mais de uma criança sob o mesmo
-    telefone (ex.: prefeitura conveniada agendando por várias crianças).
-  </p>
+  <div class="flex flex-wrap items-start justify-between gap-3">
+    <div>
+      <h1 class="text-2xl font-bold text-slate-900">Pacientes</h1>
+      <p class="mt-2 text-slate-600">
+        Pacientes e responsáveis cadastrados. Um responsável pode ter mais de um paciente sob o mesmo
+        telefone (ex.: prefeitura conveniada agendando por vários pacientes).
+      </p>
+    </div>
+    {tab !== "cadastrar" && (
+      <a
+        href="/admin/pacientes?tab=cadastrar"
+        class="rounded-md bg-sky-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-sky-800"
+      >
+        Cadastrar paciente
+      </a>
+    )}
+  </div>
 
   <nav class="mt-6 flex gap-x-6 border-b border-slate-200 text-sm font-medium">
-    <a
-      href={tabUrl("cadastrados")}
-      class={`-mb-px border-b-2 pb-2 ${
-        tab === "cadastrados" ? "border-sky-700 text-sky-700" : "border-transparent text-slate-600 hover:text-sky-700"
-      }`}
-    >
-      Cadastrados
-    </a>
-    <a
-      href={tabUrl("cadastrar")}
-      class={`-mb-px border-b-2 pb-2 ${
-        tab === "cadastrar" ? "border-sky-700 text-sky-700" : "border-transparent text-slate-600 hover:text-sky-700"
-      }`}
-    >
-      Cadastrar
-    </a>
+    {(["pacientes", "responsaveis"] as const).map((target) => (
+      <a
+        href={`/admin/pacientes?tab=${target}`}
+        class={`-mb-px border-b-2 pb-2 ${
+          tab === target ? "border-sky-700 text-sky-700" : "border-transparent text-slate-600 hover:text-sky-700"
+        }`}
+      >
+        {target === "pacientes" ? "Pacientes" : "Responsáveis"}
+      </a>
+    ))}
   </nav>
 
   {
@@ -92,95 +185,190 @@ function pageUrl(targetPage: number): string {
     )
   }
 
-  {tab === "cadastrar" && (
+  {
+    createdName && (
+      <div class="mt-4 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
+        <p>Paciente <strong>{createdName}</strong> cadastrado.</p>
+        {createdAgeLimitWarning && <p class="mt-1 text-amber-800">{consultationAgeLimitWarning(ageLimit)}</p>}
+      </div>
+    )
+  }
+
+  {tab === "cadastrar" && confirmSelf && (
     <section class="mt-6">
-    <p class="text-sm text-slate-600">
-      Se o telefone já existir, a criança é adicionada ao responsável existente.
-    </p>
+      <Card class="max-w-xl border-amber-200 bg-amber-50">
+        <p class="text-sm text-amber-900">
+          Esse telefone ({formatPhoneBR(confirmSelf.phone)}) já é do responsável <strong>{confirmSelf.guardianName}</strong>.
+        </p>
+        <p class="mt-2 text-sm text-amber-900">
+          O paciente <strong>{confirmSelf.fullName}</strong> é a própria pessoa {confirmSelf.guardianName}? Se for, ele
+          passa a ser paciente ligado ao próprio cadastro, junto dos pacientes que já estão com esse responsável.
+        </p>
+        <div class="mt-4 flex flex-wrap gap-2">
+          <a
+            href="/admin/pacientes?tab=cadastrar"
+            class="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-50"
+          >
+            Não, voltar ao formulário
+          </a>
+          <form method="POST" action="/api/admin/pacientes">
+            <input type="hidden" name="patient_full_name" value={confirmSelf.fullName} />
+            <input type="hidden" name="patient_birthdate" value={confirmSelf.birthdate} />
+            <input type="hidden" name="patient_notes" value={confirmSelf.notes} />
+            <input type="hidden" name="guardian_self" value="1" />
+            <input type="hidden" name="self_phone" value={confirmSelf.phone} />
+            <input type="hidden" name="guardian_id" value={confirmSelf.guardianId} />
+            <input type="hidden" name="confirm_same_person" value="1" />
+            <button
+              type="submit"
+              class="rounded-md bg-sky-700 px-3 py-1.5 text-sm font-semibold text-white hover:bg-sky-800"
+            >
+              Sim, é a mesma pessoa
+            </button>
+          </form>
+        </div>
+      </Card>
+    </section>
+  )}
+
+  {tab === "cadastrar" && !confirmSelf && (
+    <section class="mt-6">
+    <h2 class="text-lg font-semibold text-slate-900">Cadastrar paciente</h2>
 
     <Card class="mt-4 max-w-xl">
-      <form method="POST" action="/api/admin/pacientes" class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <div>
-          <label for="guardian_full_name" class="block text-sm font-medium text-slate-700">
-            Nome do responsável
-          </label>
-          <input
-            type="text"
-            id="guardian_full_name"
-            name="guardian_full_name"
-            required
-            class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-sky-600 focus:outline-none focus:ring-1 focus:ring-sky-600"
-          />
+      <form
+        id="patient_registration_form"
+        method="POST"
+        action="/api/admin/pacientes"
+        data-age-limit={ageLimit}
+        data-today={todayFortaleza()}
+        class="flex flex-col gap-4"
+      >
+        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div class="sm:col-span-2">
+            <label for="patient_full_name" class="block text-sm font-medium text-slate-700">Nome do paciente</label>
+            <input type="text" id="patient_full_name" name="patient_full_name" required class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-sky-600 focus:outline-none focus:ring-1 focus:ring-sky-600" />
+          </div>
+          <div>
+            <label for="patient_birthdate" class="block text-sm font-medium text-slate-700">Data de nascimento</label>
+            <input
+              type="date"
+              id="patient_birthdate"
+              name="patient_birthdate"
+              min="1900-01-01"
+              max={todayFortaleza()}
+              required
+              class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-sky-600 focus:outline-none focus:ring-1 focus:ring-sky-600"
+            />
+          </div>
+          <div class="sm:col-span-2">
+            <label for="patient_notes" class="block text-sm font-medium text-slate-700">
+              Observação (operacional, não clínica)
+            </label>
+            <input
+              type="text"
+              id="patient_notes"
+              name="patient_notes"
+              placeholder="ex.: prefere período da manhã"
+              class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-sky-600 focus:outline-none focus:ring-1 focus:ring-sky-600"
+            />
+          </div>
         </div>
-        <div>
-          <label for="guardian_phone" class="block text-sm font-medium text-slate-700">
-            Telefone
+
+        <p id="age_limit_warning" class="hidden rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+          {consultationAgeLimitWarning(ageLimit)}
+        </p>
+
+        <div id="guardian_self_box" class="hidden rounded-lg border border-slate-200 p-3">
+          <label class="flex items-center gap-2 text-sm font-medium text-slate-700">
+            <input
+              type="checkbox"
+              id="guardian_self"
+              name="guardian_self"
+              value="1"
+              checked
+              class="rounded border-slate-300 text-sky-700 focus:ring-sky-600"
+            />
+            O paciente é o próprio responsável
           </label>
-          <input
-            type="tel"
-            id="guardian_phone"
-            name="guardian_phone"
-            placeholder="84981880777"
-            required
-            class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-sky-600 focus:outline-none focus:ring-1 focus:ring-sky-600"
-          />
-          <p class="mt-1 text-xs text-slate-500">
-            Sem o +55 informado, ele é adicionado automaticamente.
-          </p>
+          <div id="self_phone_box" class="mt-3">
+            <label for="self_phone" class="block text-sm font-medium text-slate-700">Telefone do paciente</label>
+            <input type="tel" id="self_phone" name="self_phone" placeholder="84981880777" class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-sky-600 focus:outline-none focus:ring-1 focus:ring-sky-600" />
+            <p class="mt-1 text-xs text-slate-500">Sem o +55 informado, ele é adicionado automaticamente.</p>
+          </div>
         </div>
-        <div>
-          <label for="patient_full_name" class="block text-sm font-medium text-slate-700">
-            Nome da criança
-          </label>
-          <input
-            type="text"
-            id="patient_full_name"
-            name="patient_full_name"
-            required
-            class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-sky-600 focus:outline-none focus:ring-1 focus:ring-sky-600"
-          />
+
+        <fieldset id="guardian_box" class="hidden rounded-lg border border-slate-200 p-3">
+          <legend class="px-1 text-sm font-semibold text-slate-900">Responsável</legend>
+          <div class="flex flex-wrap gap-x-6 gap-y-2 text-sm text-slate-700">
+            <label class="flex items-center gap-1.5">
+              <input type="radio" name="guardian_mode" value="existing" checked class="text-sky-700 focus:ring-sky-600" />
+              Já cadastrado
+            </label>
+            <label class="flex items-center gap-1.5">
+              <input type="radio" name="guardian_mode" value="new" class="text-sky-700 focus:ring-sky-600" />
+              Novo responsável
+            </label>
+          </div>
+
+          <div id="guardian_existing_box" class="mt-3">
+            <label for="guardian_search" class="block text-sm font-medium text-slate-700">Buscar responsável</label>
+            <input
+              type="text"
+              id="guardian_search"
+              autocomplete="off"
+              placeholder="Nome ou telefone do responsável"
+              class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-sky-600 focus:outline-none focus:ring-1 focus:ring-sky-600"
+            />
+            <input type="hidden" id="guardian_id" name="guardian_id" />
+            <div class="mt-1 flex items-center justify-between gap-2">
+              <p id="guardian_warning" class="hidden text-xs text-amber-700"></p>
+              <button type="button" id="guardian_clear" class="hidden shrink-0 text-xs font-medium text-sky-700 hover:underline">
+                Trocar responsável
+              </button>
+            </div>
+            <div id="guardian_results" class="mt-1 flex flex-col overflow-hidden rounded-lg border border-slate-200 empty:hidden empty:border-0"></div>
+          </div>
+
+          <div id="guardian_new_box" class="mt-3 hidden grid-cols-1 gap-4 sm:grid-cols-2">
+            <div>
+              <label for="guardian_full_name" class="block text-sm font-medium text-slate-700">Nome do responsável</label>
+              <input type="text" id="guardian_full_name" name="guardian_full_name" class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-sky-600 focus:outline-none focus:ring-1 focus:ring-sky-600" />
+            </div>
+            <div>
+              <label for="guardian_phone" class="block text-sm font-medium text-slate-700">Telefone</label>
+              <input type="tel" id="guardian_phone" name="guardian_phone" placeholder="84981880777" class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-sky-600 focus:outline-none focus:ring-1 focus:ring-sky-600" />
+              <p class="mt-1 text-xs text-slate-500">
+                Sem o +55 informado, ele é adicionado automaticamente. Se o telefone já existir, o paciente é
+                adicionado ao responsável existente.
+              </p>
+            </div>
+          </div>
+        </fieldset>
+
+        <div class="flex flex-col-reverse gap-2 sm:flex-row sm:items-center">
+          <a
+            href="/admin/pacientes"
+            class="w-full rounded-md border border-slate-300 px-4 py-3 text-center text-sm font-semibold text-slate-600 hover:bg-slate-50 sm:w-fit"
+          >
+            Cancelar
+          </a>
+          <button
+            type="submit"
+            class="w-full rounded-md bg-sky-700 px-4 py-3 text-sm font-semibold text-white hover:bg-sky-800 sm:w-fit"
+          >
+            Cadastrar
+          </button>
         </div>
-        <div>
-          <label for="patient_birthdate" class="block text-sm font-medium text-slate-700">
-            Data de nascimento
-          </label>
-          <input
-            type="date"
-            id="patient_birthdate"
-            name="patient_birthdate"
-            min="1900-01-01"
-            max={new Date().toISOString().slice(0, 10)}
-            required
-            class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-sky-600 focus:outline-none focus:ring-1 focus:ring-sky-600"
-          />
-        </div>
-        <div class="sm:col-span-2">
-          <label for="patient_notes" class="block text-sm font-medium text-slate-700">
-            Observação (operacional, não clínica)
-          </label>
-          <input
-            type="text"
-            id="patient_notes"
-            name="patient_notes"
-            placeholder="ex.: prefere período da manhã"
-            class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-sky-600 focus:outline-none focus:ring-1 focus:ring-sky-600"
-          />
-        </div>
-        <button
-          type="submit"
-          class="mt-2 w-full rounded-md bg-sky-700 px-4 py-3 text-sm font-semibold text-white hover:bg-sky-800 sm:col-span-2 sm:w-fit"
-        >
-          Cadastrar
-        </button>
       </form>
     </Card>
     </section>
   )}
 
-  {tab === "cadastrados" && (
+  {tab === "responsaveis" && (
   <section class="mt-6">
     <form method="GET" action="/admin/pacientes" class="flex flex-wrap items-center gap-3">
-      <input type="hidden" name="tab" value="cadastrados" />
+      <input type="hidden" name="tab" value="responsaveis" />
       <input
         type="search"
         name="q"
@@ -212,7 +400,7 @@ function pageUrl(targetPage: number): string {
           <tr>
             <th class="px-3 py-2 font-medium">Responsável</th>
             <th class="px-3 py-2 font-medium">Telefone</th>
-            <th class="px-3 py-2 font-medium">Crianças</th>
+            <th class="px-3 py-2 font-medium">Pacientes</th>
             <th class="px-3 py-2"></th>
           </tr>
         </thead>
@@ -281,8 +469,115 @@ function pageUrl(targetPage: number): string {
       </table>
     </div>
 
-    {
-      totalPages > 1 && (
+  </section>
+  )}
+
+  {tab === "pacientes" && (
+  <section class="mt-6">
+    <form method="GET" action="/admin/pacientes" class="flex flex-wrap items-center gap-3">
+      <input type="hidden" name="tab" value="pacientes" />
+      <input
+        type="search"
+        name="q"
+        value={q}
+        placeholder="Paciente, responsável ou telefone"
+        class="w-72 rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-sky-600 focus:outline-none focus:ring-1 focus:ring-sky-600"
+      />
+      <label class="flex items-center gap-1.5 text-sm text-slate-600">
+        <input
+          type="checkbox"
+          name="show_inactive"
+          value="1"
+          checked={showInactive}
+          class="rounded border-slate-300 text-sky-700 focus:ring-sky-600"
+        />
+        Mostrar inativos
+      </label>
+      <button
+        type="submit"
+        class="rounded-md border border-slate-300 px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50"
+      >
+        Buscar
+      </button>
+    </form>
+
+    <div class="mt-4 overflow-x-auto rounded-lg border border-slate-200 bg-white shadow-sm">
+      <table class="w-full min-w-[720px] border-collapse text-left text-sm">
+        <thead class="bg-slate-50 text-slate-600">
+          <tr>
+            <th class="px-3 py-2 font-medium">Paciente</th>
+            <th class="px-3 py-2 font-medium">Nascimento</th>
+            <th class="px-3 py-2 font-medium">Responsável</th>
+            <th class="px-3 py-2"></th>
+          </tr>
+        </thead>
+        <tbody>
+          {
+            patients.length ? (
+              patients.map((patient) => (
+                <tr class="border-t border-slate-200">
+                  <td class="px-3 py-2">
+                    {patient.full_name}
+                    {(!patient.is_active || !patient.guardians.is_active) && (
+                      <Badge variant="neutral" class="ml-2 align-middle">
+                        Inativo
+                      </Badge>
+                    )}
+                  </td>
+                  <td class="whitespace-nowrap px-3 py-2 text-slate-600">
+                    {formatDateBR(patient.birthdate)}
+                    <span class="text-slate-500"> · {formatAge(patient.birthdate, today)}</span>
+                  </td>
+                  <td class="px-3 py-2">
+                    {patient.is_guardian_self ? (
+                      <span class="text-slate-600">Próprio responsável</span>
+                    ) : (
+                      <a href={`/admin/pacientes/${patient.guardians.id}`} class="text-sky-700 hover:underline">
+                        {patient.guardians.full_name}
+                      </a>
+                    )}
+                    <span class="block text-xs text-slate-500">{formatPhoneBR(patient.guardians.phone)}</span>
+                  </td>
+                  <td class="whitespace-nowrap px-3 py-2 text-right">
+                    <div class="flex flex-nowrap justify-end gap-1.5">
+                      <a
+                        href={`/admin/pacientes/${patient.guardians.id}/criancas/${patient.id}/historico`}
+                        class="rounded-md border border-sky-300 px-2.5 py-1.5 text-xs font-medium text-sky-700 hover:bg-sky-50"
+                      >
+                        Histórico
+                      </a>
+                      <a
+                        href={`/admin/pacientes/${patient.guardians.id}/criancas/${patient.id}/editar`}
+                        class="rounded-md border border-slate-300 px-2.5 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50"
+                      >
+                        Editar
+                      </a>
+                      <a
+                        href={`/admin/pacientes/${patient.guardians.id}`}
+                        class="rounded-md border border-slate-300 px-2.5 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50"
+                      >
+                        Responsável
+                      </a>
+                    </div>
+                  </td>
+                </tr>
+              ))
+            ) : (
+              <tr class="border-t border-slate-200">
+                <td class="px-3 py-4 text-slate-500" colspan="4">
+                  {q ? "Nenhum resultado para essa busca." : "Nenhum paciente cadastrado ainda."}
+                </td>
+              </tr>
+            )
+          }
+        </tbody>
+      </table>
+    </div>
+  </section>
+  )}
+
+  {
+    tab !== "cadastrar" && totalPages > 1 && (
         <div class="mt-3 flex items-center justify-between text-sm text-slate-600">
           <span>
             Página {page} de {totalPages}
@@ -296,10 +591,10 @@ function pageUrl(targetPage: number): string {
             )}
           </div>
         </div>
-      )
-    }
-  </section>
-  )}
+    )
+  }
 
   <ConfirmDeleteDialog />
 </AdminLayout>
+
+<script src="../../../scripts/patientRegistrationForm.ts"></script>

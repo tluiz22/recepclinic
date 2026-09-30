@@ -65,7 +65,7 @@ export const FLOW_DEFS: FlowDef[] = [
     success: "confirmed",
     stages: [
       { label: "Iniciaram", steps: ["started"] },
-      { label: "Escolheram o exame", steps: ["BOOK_PATIENT_SELECT", "BOOK_PATIENT_NEW"] },
+      { label: "Escolheram o exame", steps: ["EXAM_FOR_WHOM", "BOOK_PATIENT_SELECT", "BOOK_PATIENT_NEW"] },
       { label: "Receberam o link", steps: ["link_sent"] },
       { label: "Abriram o link", steps: LINK_OPENED_STEPS },
       { label: "Confirmaram", steps: ["confirmed"] },
@@ -112,6 +112,9 @@ const REASON_LABELS: Record<string, string> = {
   return_already_used: "Retorno já utilizado",
   return_no_recent_consultation: "Sem consulta dentro do prazo",
   return_deadline_passed: "Prazo do retorno vencido",
+  consultation_age_limit: "Acima da idade limite para consulta",
+  return_adult: "Paciente 18+ no retorno",
+  exam_self_minor: "Menor de 18 marcando exame para si",
   // error / confirm_failed
   link_error: "Erro ao gerar o link",
   // Só em registros antigos (antes da Fase 20, quando cancelar passava pelo Google).

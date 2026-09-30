@@ -208,7 +208,7 @@ if (selectedExamType && isGroupExam) {
           id="patient_search"
           autocomplete="off"
           value={prefillPatientLabel}
-          placeholder="Buscar pelo nome da criança ou telefone do responsável"
+          placeholder="Buscar pelo nome do paciente ou telefone do responsável"
           data-search-category="exame"
           data-already-scheduled-list-suffix="já tem esse tipo de exame marcado"
           data-already-scheduled-message="Este paciente já tem um exame futuro marcado."
@@ -224,7 +224,7 @@ if (selectedExamType && isGroupExam) {
         <div id="patient_results" class="mt-1 flex flex-col overflow-hidden rounded-lg border border-slate-200 empty:hidden empty:border-0"></div>
         <p class="mt-1 text-xs text-slate-500">
           Não encontrou?{" "}
-          <a href="/admin/pacientes" target="_blank" class="text-sky-700 hover:underline">
+          <a href="/admin/pacientes?tab=cadastrar" target="_blank" class="text-sky-700 hover:underline">
             Cadastrar novo paciente
           </a>{" "}
           (abre em outra aba).

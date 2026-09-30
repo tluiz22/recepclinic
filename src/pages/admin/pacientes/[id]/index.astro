@@ -24,7 +24,7 @@ if (!guardian) {
 
 const errorMessages: Record<string, string> = {
   invalid_birthdate: "Data de nascimento inválida.",
-  not_found: "Criança não encontrada.",
+  not_found: "Paciente não encontrado.",
   "1": "Não foi possível salvar. Confira os dados e tente novamente.",
 };
 const errorParam = Astro.url.searchParams.get("error");
@@ -71,11 +71,11 @@ function formatBirthdate(birthdate: string): string {
 
 <AdminLayout title={guardian.full_name}>
   <a
-    href="/admin/pacientes"
+    href="/admin/pacientes?tab=responsaveis"
     class="inline-flex items-center gap-1 rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-50"
   >
     <Icon name="chevron-left" class="h-4 w-4" />
-    Pacientes
+    Responsáveis
   </a>
 
   {
@@ -129,16 +129,16 @@ function formatBirthdate(birthdate: string): string {
   </Card>
 
   <section class="mt-10">
-    <h2 class="text-lg font-semibold text-slate-900">Adicionar criança</h2>
+    <h2 class="text-lg font-semibold text-slate-900">Adicionar paciente</h2>
 
     {
       duplicateParam ? (
         <Card class="mt-4 max-w-xl border-amber-200 bg-amber-50">
           <p class="text-sm text-amber-900">
-            Já existe criança cadastrada com essa data de nascimento para este responsável: <strong>{existingNames}</strong>.
+            Já existe paciente cadastrado com essa data de nascimento para este responsável: <strong>{existingNames}</strong>.
           </p>
           <p class="mt-2 text-sm text-amber-900">
-            Tem certeza que quer cadastrar <strong>{pendingFullName}</strong> como uma criança nova? Se for a mesma criança, cancele e use a que já está cadastrada.
+            Tem certeza que quer cadastrar <strong>{pendingFullName}</strong> como um paciente novo? Se for o mesmo paciente, cancele e use o que já está cadastrado.
           </p>
           <div class="mt-4 flex flex-wrap gap-2">
             <a
@@ -214,7 +214,7 @@ function formatBirthdate(birthdate: string): string {
 
   <section class="mt-10">
     <div class="flex flex-wrap items-center justify-between gap-3">
-      <h2 class="text-lg font-semibold text-slate-900">Crianças cadastradas</h2>
+      <h2 class="text-lg font-semibold text-slate-900">Pacientes cadastrados</h2>
       <form method="GET" action={`/admin/pacientes/${guardian.id}`} class="flex flex-wrap items-center gap-3">
         <input
           type="search"
@@ -231,7 +231,7 @@ function formatBirthdate(birthdate: string): string {
             checked={showInactive}
             class="rounded border-slate-300 text-sky-700 focus:ring-sky-600"
           />
-          Mostrar inativas
+          Mostrar inativos
         </label>
         <button
           type="submit"
@@ -261,7 +261,7 @@ function formatBirthdate(birthdate: string): string {
                     {patient.full_name}
                     {!patient.is_active && (
                       <Badge variant="neutral" class="ml-2 align-middle">
-                        Inativa
+                        Inativo
                       </Badge>
                     )}
                   </td>
@@ -289,7 +289,7 @@ function formatBirthdate(birthdate: string): string {
                           <button
                             type="submit"
                             class="js-confirm-delete rounded-md border border-red-200 px-2.5 py-1.5 text-xs font-medium text-red-700 hover:bg-red-50"
-                            data-confirm-message={`Excluir ${patient.full_name}? Fica marcada como inativa — os dados continuam guardados e dá pra reativar depois em "Mostrar inativas".`}
+                            data-confirm-message={`Excluir ${patient.full_name}? Fica marcado como inativo — os dados continuam guardados e dá pra reativar depois em "Mostrar inativos".`}
                           >
                             Excluir
                           </button>
@@ -314,7 +314,7 @@ function formatBirthdate(birthdate: string): string {
             ) : (
               <tr class="border-t border-slate-200">
                 <td class="px-3 py-4 text-slate-500" colspan="4">
-                  {q ? "Nenhum resultado para essa busca." : "Nenhuma criança cadastrada ainda."}
+                  {q ? "Nenhum resultado para essa busca." : "Nenhum paciente cadastrado ainda."}
                 </td>
               </tr>
             )

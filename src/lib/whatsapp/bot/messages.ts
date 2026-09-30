@@ -342,54 +342,63 @@ interface PatientCandidate {
   full_name: string;
 }
 
-export function patientChoiceBodyText(): string {
-  return "Encontramos consultas futuras para estas crianças. Para qual delas é o agendamento?";
+// Fase 21: no exame o paciente pode ser adulto — os textos da identificação
+// do paciente dizem "paciente" quando `isExam`; consulta/retorno continuam
+// dizendo "criança".
+export function patientChoiceBodyText(isExam = false): string {
+  return isExam
+    ? "Encontramos exames futuros para estes pacientes. Para qual deles é o exame?"
+    : "Encontramos consultas futuras para estas crianças. Para qual delas é o agendamento?";
 }
 
 export const PATIENT_NEW_LIST_ID = "book_patient_new";
 
-export function patientChoiceSections(candidates: PatientCandidate[]): ListSection[] {
+export function patientChoiceSections(candidates: PatientCandidate[], isExam = false): ListSection[] {
   const rows = candidates.map((c, index) => ({
     id: `book_patient_${c.id}`,
     title: listRowTitle(index, c.full_name),
   }));
-  rows.push({ id: PATIENT_NEW_LIST_ID, title: listRowTitle(candidates.length, "Outra criança") });
+  rows.push({ id: PATIENT_NEW_LIST_ID, title: listRowTitle(candidates.length, isExam ? "Outro paciente" : "Outra criança") });
   rows.push({ id: BACK_TO_MENU_LIST_ID, title: listRowTitle(candidates.length + 1, "Voltar ao menu") });
   return [{ rows }];
 }
 
-export function askBirthdateText(): string {
-  return (
-    "Encontramos várias crianças cadastradas nesse telefone. " +
-    "Qual a data de nascimento da criança? (formato dd/mm/aaaa)"
-  );
+export function askBirthdateText(isExam = false): string {
+  return isExam
+    ? "Encontramos vários pacientes cadastrados nesse telefone. " +
+        "Qual a data de nascimento do paciente? (formato dd/mm/aaaa)"
+    : "Encontramos várias crianças cadastradas nesse telefone. " +
+        "Qual a data de nascimento da criança? (formato dd/mm/aaaa)";
 }
 
 // Usado ao cadastrar uma criança nova, antes de pedir o nome — evita
 // duplicar o cadastro de uma criança já existente (sem consulta futura)
 // com o nome digitado de um jeito ligeiramente diferente.
-export function askBirthdateForDuplicateCheckText(): string {
-  return "Informe a data de nascimento da criança (formato dd/mm/aaaa)";
+export function askBirthdateForDuplicateCheckText(isExam = false): string {
+  return `Informe a data de nascimento ${isExam ? "do paciente" : "da criança"} (formato dd/mm/aaaa)`;
 }
 
-export function birthdateMatchChoiceBodyText(): string {
-  return "Encontramos crianças já cadastradas com essa data de nascimento nesse telefone. É uma delas?";
+export function birthdateMatchChoiceBodyText(isExam = false): string {
+  return isExam
+    ? "Encontramos pacientes já cadastrados com essa data de nascimento nesse telefone. É um deles?"
+    : "Encontramos crianças já cadastradas com essa data de nascimento nesse telefone. É uma delas?";
 }
 
 export function invalidBirthdateText(): string {
   return "Não consegui entender essa data. Por favor, digite no formato dd/mm/aaaa (ex.: 10/03/2020).";
 }
 
-export function confirmPatientText(fullName: string, birthdateLabel: string): string {
-  return `Encontramos *${fullName}*, nascido(a) em ${birthdateLabel} — é essa a criança? Responda Sim ou Não.`;
+export function confirmPatientText(fullName: string, birthdateLabel: string, isExam = false): string {
+  const question = isExam ? "é esse o paciente?" : "é essa a criança?";
+  return `Encontramos *${fullName}*, nascido(a) em ${birthdateLabel} — ${question} Responda Sim ou Não.`;
 }
 
 export function notUnderstoodYesNoText(): string {
   return "Não entendi 🙏 Responda apenas Sim ou Não.";
 }
 
-export function askGuardianNameText(): string {
-  return "Antes de continuar, qual é o seu nome completo (responsável pela criança)?";
+export function askGuardianNameText(isExam = false): string {
+  return `Antes de continuar, qual é o seu nome completo (responsável ${isExam ? "pelo paciente" : "pela criança"})?`;
 }
 
 // Confirmação do nome do responsável (telefone novo) antes de pedir os
@@ -403,19 +412,19 @@ export function confirmGuardianNameText(fullName: string): string {
   );
 }
 
-export function askNewPatientNameText(): string {
-  return "Qual é o nome completo da criança?";
+export function askNewPatientNameText(isExam = false): string {
+  return `Qual é o nome completo ${isExam ? "do paciente" : "da criança"}?`;
 }
 
-export function askNewPatientBirthdateText(): string {
-  return "Qual a data de nascimento da criança? (formato dd/mm/aaaa)";
+export function askNewPatientBirthdateText(isExam = false): string {
+  return `Qual a data de nascimento ${isExam ? "do paciente" : "da criança"}? (formato dd/mm/aaaa)`;
 }
 
 // Confirmação antes de cadastrar a criança nova — se o responsável
 // responder Não, volta a pedir os dados (ver handlePatientNew em booking.ts).
-export function confirmNewPatientText(fullName: string, birthdateLabel: string): string {
+export function confirmNewPatientText(fullName: string, birthdateLabel: string, isExam = false): string {
   return (
-    "Confira os dados da criança:\n" +
+    `Confira os dados ${isExam ? "do paciente" : "da criança"}:\n` +
     `Nome: *${fullName}*\n` +
     `Data de nascimento: *${birthdateLabel}*\n\n` +
     "Está tudo certo? Responda Sim ou Não."
@@ -436,7 +445,7 @@ export function bookingLinkErrorText(): string {
 export function patientAlreadyScheduledText(patientName: string, whenLabel: string, isExam: boolean): string {
   const menuPath = isExam ? "Exames > Remarcar" : "Consultas > Remarcar";
   return (
-    `*${patientName}* já tem uma consulta marcada para ${whenLabel}. ` +
+    `*${patientName}* já tem ${isExam ? "um exame marcado" : "uma consulta marcada"} para ${whenLabel}. ` +
     `Se quiser mudar o dia ou horário, escolha ${menuPath} no menu principal.`
   );
 }
@@ -495,6 +504,18 @@ export function returnVisitAlreadyUsedText(patientName: string): string {
   );
 }
 
+// --- limites de idade (Fase 21) --------------------------------------------
+
+// Consulta: pode marcar até completar a idade limite (Configurações > Duração).
+export function consultationAgeLimitText(limitYears: number): string {
+  return `A Dra. Ana Karina atende consultas de pacientes até ${limitYears - 1} anos.`;
+}
+
+// Retorno: paciente 18+ nunca entra (consulta e retorno são só para crianças).
+export function returnVisitAdultText(): string {
+  return "A Dra. Ana Karina atende retornos somente de pacientes menores de 18 anos.";
+}
+
 // --- case 6 · Marcar exame (Fase 6) ---------------------------------------
 //
 // Reaproveita a identificação de paciente do case 1 (BOOK_PATIENT_SELECT/
@@ -518,6 +539,44 @@ export function examTypeSections(examTypes: ExamTypeOption[]): ListSection[] {
   }));
   rows.push({ id: BACK_TO_MENU_LIST_ID, title: listRowTitle(examTypes.length, "Voltar ao menu") });
   return [{ rows }];
+}
+
+// "Para quem é o exame?" (Fase 21) — botões de resposta.
+export const EXAM_FOR_WHOM_ID = {
+  self: "exam_for_self",
+  other: "exam_for_other",
+} as const;
+
+export function examForWhomBodyText(): string {
+  return "O exame é para você ou para outra pessoa?";
+}
+
+export function examForWhomButtons(): { id: string; title: string }[] {
+  return [
+    { id: EXAM_FOR_WHOM_ID.self, title: "Para mim" },
+    { id: EXAM_FOR_WHOM_ID.other, title: "Outra pessoa" },
+  ];
+}
+
+export function examSelfAskBirthdateText(): string {
+  return "Qual é a sua data de nascimento? (formato dd/mm/aaaa)";
+}
+
+export function examSelfMinorText(): string {
+  return "Para menores de 18 anos, o exame precisa ser marcado pelo responsável.";
+}
+
+export function examSelfAskNameText(): string {
+  return "Qual é o seu nome completo?";
+}
+
+export function confirmSelfPatientText(fullName: string, birthdateLabel: string): string {
+  return (
+    "Confira os seus dados:\n" +
+    `Nome: *${fullName}*\n` +
+    `Data de nascimento: *${birthdateLabel}*\n\n` +
+    "Está tudo certo? Responda Sim ou Não."
+  );
 }
 
 export function noExamTypesAvailableText(): string {

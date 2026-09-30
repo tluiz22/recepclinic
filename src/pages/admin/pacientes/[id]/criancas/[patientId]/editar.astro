@@ -3,6 +3,13 @@ import AdminLayout from "../../../../../../layouts/AdminLayout.astro";
 import Card from "../../../../../../components/admin/Card.astro";
 import Icon from "../../../../../../components/admin/Icon.astro";
 import { createClient } from "../../../../../../lib/supabase/server";
+import { isOverConsultationAgeLimit } from "../../../../../../lib/age";
+import { todayFortaleza } from "../../../../../../lib/scheduling/returnVisitDeadline";
+import {
+  PATIENT_FORM_ERRORS,
+  consultationAgeLimitWarning,
+  getConsultationAgeLimit,
+} from "../../../../../../lib/patientRegistration";
 
 const supabase = createClient(Astro.request, Astro.cookies);
 const { id: guardianId, patientId } = Astro.params;
@@ -19,7 +26,7 @@ if (!guardian) {
 
 const { data: patient } = await supabase
   .from("patients")
-  .select("id, full_name, birthdate, notes")
+  .select("id, full_name, birthdate, notes, is_guardian_self")
   .eq("id", patientId)
   .eq("guardian_id", guardianId)
   .maybeSingle();
@@ -28,12 +35,12 @@ if (!patient) {
   return Astro.redirect(`/admin/pacientes/${guardianId}?error=not_found`);
 }
 
-const errorMessages: Record<string, string> = {
-  invalid_birthdate: "Data de nascimento inválida.",
-  "1": "Não foi possível salvar. Confira os dados e tente novamente.",
-};
 const errorParam = Astro.url.searchParams.get("error");
-const errorMessage = errorParam ? (errorMessages[errorParam] ?? errorMessages["1"]) : null;
+const errorMessage = errorParam ? (PATIENT_FORM_ERRORS[errorParam] ?? PATIENT_FORM_ERRORS["1"]) : null;
+
+// Aviso (sem bloquear) pela data de nascimento já gravada.
+const ageLimit = await getConsultationAgeLimit(supabase);
+const overAgeLimit = isOverConsultationAgeLimit(patient.birthdate, todayFortaleza(), ageLimit);
 ---
 
 <AdminLayout title={`Editar ${patient.full_name}`}>
@@ -45,7 +52,22 @@ const errorMessage = errorParam ? (errorMessages[errorParam] ?? errorMessages["1
     {guardian.full_name}
   </a>
 
-  <h1 class="mt-3 text-2xl font-bold text-slate-900">Editar criança</h1>
+  <h1 class="mt-3 text-2xl font-bold text-slate-900">Editar paciente</h1>
+  {
+    patient.is_guardian_self && (
+      <p class="mt-1 text-sm text-slate-600">
+        Próprio responsável — o nome do responsável acompanha o nome do paciente, e a data de nascimento precisa
+        ser de 18 anos ou mais.
+      </p>
+    )
+  }
+  {
+    overAgeLimit && (
+      <p class="mt-3 max-w-xl rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+        {consultationAgeLimitWarning(ageLimit)}
+      </p>
+    )
+  }
 
   {
     errorMessage && (
@@ -80,7 +102,7 @@ const errorMessage = errorParam ? (errorMessages[errorParam] ?? errorMessages["1
           name="birthdate"
           value={patient.birthdate}
           min="1900-01-01"
-          max={new Date().toISOString().slice(0, 10)}
+          max={todayFortaleza()}
           required
           class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-sky-600 focus:outline-none focus:ring-1 focus:ring-sky-600"
         />

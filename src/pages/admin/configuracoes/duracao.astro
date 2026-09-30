@@ -31,8 +31,9 @@ const errorMessage = errorParam ? "Não foi possível salvar. Confira os dados e
   <section class="mt-6">
     <h2 class="text-lg font-semibold text-slate-900">Duração e intervalo</h2>
     <p class="mt-1 text-sm text-slate-600">
-      Duração padrão de cada tipo de atendimento, o intervalo mínimo entre consultas e o prazo, a partir da
-      consulta, para marcar o retorno.
+      Duração padrão de cada tipo de atendimento, o intervalo mínimo entre consultas, o prazo, a partir da
+      consulta, para marcar o retorno e a idade limite para consulta (o paciente pode marcar consulta até
+      completar essa idade; não vale para retorno nem exame).
     </p>
 
     <Card class="mt-4">
@@ -89,6 +90,20 @@ const errorMessage = errorParam ? "Não foi possível salvar. Confira os dados e
             id="return_visit_deadline_days"
             name="return_visit_deadline_days"
             value={settings?.return_visit_deadline_days}
+            required
+            class="mt-1 w-28 rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-sky-600 focus:outline-none focus:ring-1 focus:ring-sky-600"
+          />
+        </div>
+        <div>
+          <label for="consultation_age_limit_years" class="block text-sm font-medium text-slate-700">
+            Idade limite para consulta (anos)
+          </label>
+          <input
+            type="number"
+            min="1"
+            id="consultation_age_limit_years"
+            name="consultation_age_limit_years"
+            value={settings?.consultation_age_limit_years}
             required
             class="mt-1 w-28 rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-sky-600 focus:outline-none focus:ring-1 focus:ring-sky-600"
           />

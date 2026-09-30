@@ -159,7 +159,7 @@ export async function routeIncomingMessage(
   }
 
   if (EXAM_STATES.has(convo.state)) {
-    await handleExamState(supabase, guardianPhone, guardianId, context, selection);
+    await handleExamState(supabase, guardianPhone, guardianId, convo.state, context, selection);
     return;
   }
 

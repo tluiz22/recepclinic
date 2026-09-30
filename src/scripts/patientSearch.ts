@@ -40,6 +40,7 @@ function notifyPatientChange() {
 function resetSelection() {
   const hadPatient = !!hiddenInput.value;
   hiddenInput.value = "";
+  delete hiddenInput.dataset.birthdate;
   hideWarning();
   updateClearButton();
   if (hadPatient) notifyPatientChange();
@@ -88,6 +89,7 @@ searchInput.addEventListener("input", () => {
       (patient: {
         id: string;
         full_name: string;
+        birthdate: string;
         guardian_name: string;
         guardian_phone: string;
         has_upcoming_appointment: boolean;
@@ -100,6 +102,8 @@ searchInput.addEventListener("input", () => {
         item.textContent = patient.has_upcoming_appointment ? `${label} ⚠ ${alreadyScheduledListSuffix}` : label;
         item.addEventListener("click", () => {
           hiddenInput.value = patient.id;
+          // Lida pelos avisos de idade da Fase 21 (patientAgeWarnings.ts).
+          hiddenInput.dataset.birthdate = patient.birthdate;
           searchInput.value = label;
           resultsBox.innerHTML = "";
           updateClearButton();

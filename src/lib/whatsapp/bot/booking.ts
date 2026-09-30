@@ -28,6 +28,9 @@ import {
 } from "./shared";
 import * as texts from "./messages";
 import { getReturnVisitEligibility, type ReturnVisitPatient } from "../../scheduling/returnVisitEligibility";
+import { todayFortaleza } from "../../scheduling/returnVisitDeadline";
+import { isAdult, isOverConsultationAgeLimit } from "../../age";
+import { getConsultationAgeLimit } from "../../patientRegistration";
 
 export const BOOKING_STATES: ReadonlySet<string> = new Set([
   "BOOK_LOCATION",
@@ -624,7 +627,7 @@ export async function enterPatientSelect(
   context: BookingContext
 ): Promise<void> {
   if (!guardianId) {
-    const body = texts.askGuardianNameText();
+    const body = texts.askGuardianNameText(isExamContext(context));
     await sendAndLog(supabase, guardianId, "bot_book_ask_guardian_name", body, () =>
       sendTextMessage({ to: guardianPhone, body })
     );
@@ -658,14 +661,14 @@ export async function enterPatientSelect(
   }
 
   if (candidates.length <= 3) {
-    await sendPatientChoice(supabase, guardianPhone, guardianId, candidates);
+    await sendPatientChoice(supabase, guardianPhone, guardianId, candidates, isExamContext(context));
     await updateConversationState(supabase, guardianPhone, "BOOK_PATIENT_SELECT", {
       context: { ...context, awaiting: "patient_choice", patient_candidates: candidates } satisfies BookingContext,
     });
     return;
   }
 
-  const body = texts.askBirthdateText();
+  const body = texts.askBirthdateText(isExamContext(context));
   await sendAndLog(supabase, guardianId, "bot_book_ask_birthdate", body, () =>
     sendTextMessage({ to: guardianPhone, body })
   );
@@ -679,15 +682,16 @@ async function sendPatientChoice(
   guardianPhone: string,
   guardianId: string | null,
   candidates: PatientCandidate[],
+  isExam: boolean,
   bodyTextOverride?: string
 ): Promise<void> {
-  const body = bodyTextOverride ?? texts.patientChoiceBodyText();
+  const body = bodyTextOverride ?? texts.patientChoiceBodyText(isExam);
   await sendAndLog(supabase, guardianId, "bot_book_patient_choice", body, () =>
     sendInteractiveListMessage({
       to: guardianPhone,
       bodyText: body,
       buttonText: "Escolher opção",
-      sections: texts.patientChoiceSections(candidates),
+      sections: texts.patientChoiceSections(candidates, isExam),
     })
   );
 }
@@ -711,7 +715,7 @@ async function beginNewPatientRegistration(
     return;
   }
 
-  const body = texts.askBirthdateForDuplicateCheckText();
+  const body = texts.askBirthdateForDuplicateCheckText(isExamContext(context));
   await sendAndLog(supabase, guardianId, "bot_book_ask_birthdate", body, () =>
     sendTextMessage({ to: guardianPhone, body })
   );
@@ -731,7 +735,7 @@ async function askNewPatientName(
   context: BookingContext,
   knownBirthdate?: string
 ): Promise<void> {
-  const body = texts.askNewPatientNameText();
+  const body = texts.askNewPatientNameText(isExamContext(context));
   await sendAndLog(supabase, guardianId, "bot_book_ask_patient_name", body, () =>
     sendTextMessage({ to: guardianPhone, body })
   );
@@ -786,7 +790,7 @@ async function handlePatientSelect(
       await sendAndLog(supabase, guardianId, "bot_not_understood", body, () =>
         sendTextMessage({ to: guardianPhone, body })
       );
-      await sendPatientChoice(supabase, guardianPhone, guardianId, candidates);
+      await sendPatientChoice(supabase, guardianPhone, guardianId, candidates, isExamContext(context));
       return;
     }
 
@@ -804,6 +808,10 @@ async function handlePatientSelect(
       return;
     }
 
+    // Idade limite da consulta (Fase 21): recusa já pela data informada —
+    // vale tanto para a criança já cadastrada quanto para o cadastro novo.
+    if (await refuseOverConsultationAgeLimit(supabase, guardianPhone, guardianId, context, isoBirthdate)) return;
+
     const { data: matches } = await supabase
       .from("patients")
       .select("id, full_name, birthdate")
@@ -818,7 +826,7 @@ async function handlePatientSelect(
 
     if (matches.length === 1) {
       const pending = matches[0] as PendingPatient;
-      const body = texts.confirmPatientText(pending.full_name, formatBirthdateLabel(pending.birthdate));
+      const body = texts.confirmPatientText(pending.full_name, formatBirthdateLabel(pending.birthdate), isExamContext(context));
       await sendAndLog(supabase, guardianId, "bot_book_confirm_patient", body, () =>
         sendTextMessage({ to: guardianPhone, body })
       );
@@ -830,8 +838,8 @@ async function handlePatientSelect(
 
     // Mais de uma criança com a mesma data de nascimento (ex.: gêmeos).
     const bodyTextOverride =
-      context.birthdate_search_reason === "duplicate_check" ? texts.birthdateMatchChoiceBodyText() : undefined;
-    await sendPatientChoice(supabase, guardianPhone, guardianId, matches, bodyTextOverride);
+      context.birthdate_search_reason === "duplicate_check" ? texts.birthdateMatchChoiceBodyText(isExamContext(context)) : undefined;
+    await sendPatientChoice(supabase, guardianPhone, guardianId, matches, isExamContext(context), bodyTextOverride);
     await updateConversationState(supabase, guardianPhone, "BOOK_PATIENT_SELECT", {
       context: {
         ...context,
@@ -864,7 +872,7 @@ async function handlePatientSelect(
     await sendAndLog(supabase, guardianId, "bot_not_understood", notUnderstood, () =>
       sendTextMessage({ to: guardianPhone, body: notUnderstood })
     );
-    const body = texts.confirmPatientText(pending.full_name, formatBirthdateLabel(pending.birthdate));
+    const body = texts.confirmPatientText(pending.full_name, formatBirthdateLabel(pending.birthdate), isExamContext(context));
     await sendAndLog(supabase, guardianId, "bot_book_confirm_patient", body, () =>
       sendTextMessage({ to: guardianPhone, body })
     );
@@ -884,7 +892,7 @@ async function handlePatientNew(
 
   if (context.awaiting === "new_guardian_name") {
     if (!text) {
-      const body = texts.askGuardianNameText();
+      const body = texts.askGuardianNameText(isExamContext(context));
       await sendAndLog(supabase, guardianId, "bot_book_ask_guardian_name", body, () =>
         sendTextMessage({ to: guardianPhone, body })
       );
@@ -906,7 +914,7 @@ async function handlePatientNew(
     const guardianName = context.new_guardian_name;
     const answer = text.toLowerCase();
     if (guardianName && answer.startsWith("s")) {
-      const body = texts.askNewPatientNameText();
+      const body = texts.askNewPatientNameText(isExamContext(context));
       await sendAndLog(supabase, guardianId, "bot_book_ask_patient_name", body, () =>
         sendTextMessage({ to: guardianPhone, body })
       );
@@ -918,7 +926,7 @@ async function handlePatientNew(
     if (!guardianName || answer.startsWith("n")) {
       // Pede só o nome do responsável de novo — nada da criança foi
       // coletado ainda nesse ponto.
-      const body = texts.askGuardianNameText();
+      const body = texts.askGuardianNameText(isExamContext(context));
       await sendAndLog(supabase, guardianId, "bot_book_ask_guardian_name", body, () =>
         sendTextMessage({ to: guardianPhone, body })
       );
@@ -941,7 +949,7 @@ async function handlePatientNew(
 
   if (context.awaiting === "new_patient_name") {
     if (!text) {
-      const body = texts.askNewPatientNameText();
+      const body = texts.askNewPatientNameText(isExamContext(context));
       await sendAndLog(supabase, guardianId, "bot_book_ask_patient_name", body, () =>
         sendTextMessage({ to: guardianPhone, body })
       );
@@ -955,7 +963,7 @@ async function handlePatientNew(
       return;
     }
 
-    const body = texts.askNewPatientBirthdateText();
+    const body = texts.askNewPatientBirthdateText(isExamContext(context));
     await sendAndLog(supabase, guardianId, "bot_book_ask_birthdate", body, () =>
       sendTextMessage({ to: guardianPhone, body })
     );
@@ -974,6 +982,9 @@ async function handlePatientNew(
       );
       return;
     }
+
+    // Idade limite da consulta (Fase 21): recusa sem cadastrar.
+    if (await refuseOverConsultationAgeLimit(supabase, guardianPhone, guardianId, context, isoBirthdate)) return;
 
     const patientName = context.new_patient_name ?? "Paciente";
     await askNewPatientConfirm(supabase, guardianPhone, guardianId, context, patientName, isoBirthdate);
@@ -1017,7 +1028,7 @@ async function handlePatientNew(
     await sendAndLog(supabase, guardianId, "bot_not_understood", notUnderstood, () =>
       sendTextMessage({ to: guardianPhone, body: notUnderstood })
     );
-    const body = texts.confirmNewPatientText(patientName, formatBirthdateLabel(isoBirthdate));
+    const body = texts.confirmNewPatientText(patientName, formatBirthdateLabel(isoBirthdate), isExamContext(context));
     await sendAndLog(supabase, guardianId, "bot_book_confirm_new_patient", body, () =>
       sendTextMessage({ to: guardianPhone, body })
     );
@@ -1035,7 +1046,7 @@ async function askNewPatientConfirm(
   patientName: string,
   isoBirthdate: string
 ): Promise<void> {
-  const body = texts.confirmNewPatientText(patientName, formatBirthdateLabel(isoBirthdate));
+  const body = texts.confirmNewPatientText(patientName, formatBirthdateLabel(isoBirthdate), isExamContext(context));
   await sendAndLog(supabase, guardianId, "bot_book_confirm_new_patient", body, () =>
     sendTextMessage({ to: guardianPhone, body })
   );
@@ -1102,7 +1113,7 @@ async function createPatientAndFinishBooking(
 
 // --- finalização: gera e envia o link de `/agendar/[token]` --------------
 
-async function finishBookingWithPatient(
+export async function finishBookingWithPatient(
   supabase: SupabaseClient,
   guardianPhone: string,
   guardianId: string | null,
@@ -1117,6 +1128,24 @@ async function finishBookingWithPatient(
     console.error("[whatsapp bot] contexto de agendamento incompleto ao gerar o link:", context);
     await sendBookingLinkError(supabase, guardianPhone, guardianId);
     return;
+  }
+
+  // Limites de idade (Fase 21) para a criança escolhida numa lista — o
+  // cadastro novo e a busca por data já foram checados ao informar a data.
+  // Consulta: idade limite (Configurações); retorno: nunca 18+.
+  if (context.appointment_type !== "exam") {
+    const { data: patient } = await supabase.from("patients").select("birthdate").eq("id", patientId).single();
+    if (patient?.birthdate) {
+      if (await refuseOverConsultationAgeLimit(supabase, guardianPhone, guardianId, context, patient.birthdate)) return;
+      if (context.appointment_type === "return_visit" && isAdult(patient.birthdate, todayFortaleza())) {
+        const body = texts.returnVisitAdultText();
+        await sendAndLog(supabase, guardianId, "bot_book_return_adult", body, () =>
+          sendTextMessage({ to: guardianPhone, body })
+        );
+        await endFlow(supabase, guardianPhone, guardianId, "blocked", { reason: "return_adult" });
+        return;
+      }
+    }
   }
 
   // Evita gerar um link que só falharia depois, na confirmação da página
@@ -1222,7 +1251,30 @@ async function finishBookingWithPatient(
   await endFlow(supabase, guardianPhone, guardianId, "link_sent", { booking_link_id: link.id });
 }
 
-async function sendBookingLinkError(
+// Consulta (first_visit) para quem já completou a idade limite: avisa e
+// encerra, sem cadastrar nem gerar link (decisão do cliente, Fase 21).
+// Retorna `true` quando recusou.
+async function refuseOverConsultationAgeLimit(
+  supabase: SupabaseClient,
+  guardianPhone: string,
+  guardianId: string | null,
+  context: BookingContext,
+  birthdate: string
+): Promise<boolean> {
+  if (context.appointment_type !== "first_visit") return false;
+
+  const limitYears = await getConsultationAgeLimit(supabase);
+  if (!isOverConsultationAgeLimit(birthdate, todayFortaleza(), limitYears)) return false;
+
+  const body = texts.consultationAgeLimitText(limitYears);
+  await sendAndLog(supabase, guardianId, "bot_book_consultation_age_limit", body, () =>
+    sendTextMessage({ to: guardianPhone, body })
+  );
+  await endFlow(supabase, guardianPhone, guardianId, "blocked", { reason: "consultation_age_limit" });
+  return true;
+}
+
+export async function sendBookingLinkError(
   supabase: SupabaseClient,
   guardianPhone: string,
   guardianId: string | null
@@ -1235,6 +1287,10 @@ async function sendBookingLinkError(
 }
 
 // --- helpers --------------------------------------------------------------
+
+function isExamContext(context: BookingContext): boolean {
+  return context.appointment_type === "exam";
+}
 
 function dedupePatients(
   rows: { id: string; full_name: string }[]

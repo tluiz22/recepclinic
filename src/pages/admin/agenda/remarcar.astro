@@ -3,6 +3,8 @@ import AdminLayout from "../../../layouts/AdminLayout.astro";
 import Card from "../../../components/admin/Card.astro";
 import Icon from "../../../components/admin/Icon.astro";
 import { createClient } from "../../../lib/supabase/server";
+import { getConsultationAgeLimit } from "../../../lib/patientRegistration";
+import { todayFortaleza } from "../../../lib/scheduling/returnVisitDeadline";
 import { getAvailableSlotsForDate, type AppointmentType } from "../../../lib/scheduling/getAvailableSlotsForDate";
 import { getNextAvailableDates } from "../../../lib/scheduling/getNextAvailableDates";
 import { resolveClinicLocationIds, type LocationCategory } from "../../../lib/scheduling/resolveClinicLocationIds";
@@ -20,7 +22,7 @@ if (!appointmentId) {
 const { data: appointment } = await supabase
   .from("appointments")
   .select(
-    "id, patient_id, appointment_type, clinic_location_id, scheduled_at, status, home_visit_address, patients ( full_name, guardians ( full_name, phone ) )"
+    "id, patient_id, appointment_type, clinic_location_id, scheduled_at, status, home_visit_address, patients ( full_name, birthdate, guardians ( full_name, phone ) )"
   )
   .eq("id", appointmentId)
   .single();
@@ -70,6 +72,9 @@ const appointmentType: AppointmentType =
   appointmentTypeParam === "first_visit" || appointmentTypeParam === "return_visit"
     ? appointmentTypeParam
     : (appointment.appointment_type as AppointmentType);
+
+// Avisos de idade (Fase 21, sem bloquear) — ver patientAgeWarnings.ts.
+const consultationAgeLimit = await getConsultationAgeLimit(supabase);
 
 const errorMessages: Record<string, string> = {
   slot_taken: "Esse horário acabou de deixar de estar livre. Escolha outro.",
@@ -182,6 +187,15 @@ const slots = date ? await getAvailableSlotsForDate({ supabase, clinicLocationId
       >
       </div>
 
+      <p
+        id="patient_age_warning"
+        class="hidden rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800"
+        data-birthdate={patient?.birthdate ?? ""}
+        data-age-limit={consultationAgeLimit}
+        data-today={todayFortaleza()}
+      >
+      </p>
+
       <div id="home_visit_address_field" class={locationCategory === "home_visit" ? "" : "hidden"}>
         <label for="home_visit_address" class="block text-sm font-medium text-slate-700">Endereço *</label>
         <input
@@ -243,3 +257,4 @@ const slots = date ? await getAvailableSlotsForDate({ supabase, clinicLocationId
 
 <script src="../../../scripts/appointmentSlotPicker.ts"></script>
 <script src="../../../scripts/returnOriginWarnings.ts"></script>
+<script src="../../../scripts/patientAgeWarnings.ts"></script>

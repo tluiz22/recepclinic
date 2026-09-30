@@ -116,3 +116,27 @@ export async function sendInteractiveListMessage({
     },
   });
 }
+
+// Mensagem interativa com botões de resposta (até 3, título com no máximo 20
+// caracteres) — mesma janela de 24h. Usada em perguntas curtas de escolha
+// única, ex.: "O exame é para você ou para outra pessoa?" (Fase 21).
+export async function sendInteractiveButtonsMessage({
+  to,
+  bodyText,
+  buttons,
+}: {
+  to: string;
+  bodyText: string;
+  buttons: { id: string; title: string }[];
+}): Promise<{ id: string }> {
+  return postToGraphApi({
+    messaging_product: "whatsapp",
+    to: to.replace(/^\+/, ""),
+    type: "interactive",
+    interactive: {
+      type: "button",
+      body: { text: bodyText },
+      action: { buttons: buttons.map((button) => ({ type: "reply", reply: button })) },
+    },
+  });
+}
