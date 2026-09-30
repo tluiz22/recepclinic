@@ -54,15 +54,14 @@ import { doctor } from "../data/doctor";
       <section>
         <h2 class="text-xl font-bold text-slate-900">Contato</h2>
         <p class="mt-2">
-          Se precisar falar com a equipe da {doctor.professionalName}, use o e-mail
+          Se precisar falar com a equipe da {doctor.professionalName}, use o e-mail{" "}
           <a href={`mailto:${doctor.email}`} class="font-medium text-sky-700 underline hover:text-sky-900">
             {doctor.email}
-          </a>
-          ou o telefone
+          </a>{" "}
+          ou o telefone{" "}
           <a href={`tel:+${doctor.phone}`} class="font-medium text-sky-700 underline hover:text-sky-900">
             {doctor.displayPhone}
-          </a>
-          .
+          </a>.
         </p>
       </section>
     </div>

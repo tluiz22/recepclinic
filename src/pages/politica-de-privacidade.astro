@@ -106,15 +106,14 @@ import { doctor } from "../data/doctor";
         <h2 class="text-xl font-bold text-slate-900">Como falar conosco</h2>
         <p class="mt-2">
           Se você quiser solicitar correção, atualização ou exclusão de dados enviados por este
-          site, entre em contato pelo e-mail
+          site, entre em contato pelo e-mail{" "}
           <a href={`mailto:${doctor.email}`} class="font-medium text-sky-700 underline hover:text-sky-900">
             {doctor.email}
-          </a>
-          ou pelo telefone
+          </a>{" "}
+          ou pelo telefone{" "}
           <a href={`tel:+${doctor.phone}`} class="font-medium text-sky-700 underline hover:text-sky-900">
             {doctor.displayPhone}
-          </a>
-          .
+          </a>.
         </p>
       </section>
     </div>

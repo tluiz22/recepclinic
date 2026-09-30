@@ -14,8 +14,8 @@ const { hideAddress = false } = Astro.props;
 
 <footer class="border-t border-slate-200 bg-slate-50">
   <div class="mx-auto max-w-5xl px-4 py-8 text-sm text-slate-600">
-    <p class="font-semibold text-slate-900">{doctor.professionalName}</p>
-    <p>{doctor.crm} · {doctor.rqePediatria} · {doctor.rqePneumologia}</p>
+    <p class="font-semibold text-slate-900">{doctor.professionalName} – {doctor.shortTitle}</p>
+    <p>{doctor.shortCredentials}</p>
 
     {
       !hideAddress && (
@@ -38,7 +38,7 @@ const { hideAddress = false } = Astro.props;
       </li>
       <li>
         E-mail:
-        <a href={`mailto: ${doctor.email}`} class="hover:text-slate-900">{doctor.email}</a>
+        <a href={`mailto:${doctor.email}`} class="hover:text-slate-900">{doctor.email}</a>
       </li>
       <li>
         Instagram: 

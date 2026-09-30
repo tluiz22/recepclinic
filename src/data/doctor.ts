@@ -2,9 +2,10 @@ export const doctor = {
   name: "Ana Karina de Sousa Fernandes",
   professionalName: "Dra. Ana Karina Fernandes",
   title: "Pediatra e Pneumologista Pediátrica",
-  crm: "CRM-RN 5751",
-  rqePediatria: "RQE Pediatria 1557",
-  rqePneumologia: "RQE Pneumologia Pediátrica 6271",
+  // Forma curta usada no rodapé, na página Sobre e nos guias (pedido do
+  // cliente, set/2026).
+  shortTitle: "Pneumopediatra",
+  shortCredentials: "CRM 5751 | RQE 6271",
   yearsOfExperience: "13 anos",
   medicalSchool: "Universidade Federal de Campina Grande",
   pediatricsResidency: "Hospital Infantil Albert Sabin - Fortaleza/CE",
@@ -25,7 +26,7 @@ export const doctor = {
   serviceHours: "Quintas à tarde ou consultas domiciliares conforme demanda",
   phone: "5584981880777",
   displayPhone: "(84) 98188-0777",
-  email: "akpneumologiapediatrica@gmail.com",
+  email: "anakarinapneumo@gmail.com",
   instagram: "dra.anakarina.pneumo",
   whatsappMessage:
     "Olá, gostaria de agendar uma consulta com a Dra. Ana Karina Fernandes. Encontrei o contato pelo site.",
