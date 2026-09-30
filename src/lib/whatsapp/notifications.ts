@@ -65,7 +65,7 @@ interface NotificationSpec {
   // o cancelamento em massa (Fase 12) usa.
   includeLink?: boolean;
   // Payloads dos botões de resposta rápida do template, na ordem dos
-  // botões — só o lembrete no layout novo usa (Fase 19).
+  // botões — só o lembrete usa (Fase 19).
   quickReplyPayloads?: string[];
   buildPreview: (
     typeLabel: string,
@@ -332,34 +332,29 @@ export function reminderButtonPayload(action: ReminderAction, appointmentId: str
   return `reminder:${action}:${appointmentId}`;
 }
 
-// Lembrete disparado pelo cron ~1 dia antes da consulta/retorno/exame.
-// Layout novo (Fase 19: lista + assinatura + 3 botões, sem "amanhã" — a
-// janela de 26h do cron também pega atendimentos do mesmo dia) só com
-// `WHATSAPP_TEMPLATE_REMINDER_NEW_LAYOUT=true`, depois da aprovação da
-// versão com botões na Meta: mandar payload de botão para o template antigo
-// (sem botões) dá erro.
 // Template do lembrete ligado? O cron checa antes de enviar (Fase 22):
 // desligado não conta como lembrado e é registrado como "não enviado".
 export function isReminderTemplateConfigured(): boolean {
   return Boolean(import.meta.env.WHATSAPP_TEMPLATE_REMINDER);
 }
 
+// Lembrete disparado ~1 dia antes da consulta/retorno/exame. Layout da Fase
+// 19: lista + assinatura + 3 botões, sem "amanhã" — a janela de 26h também
+// pega atendimentos do mesmo dia. O payload de cada botão identifica o
+// atendimento; sem ele, o toque chega só com o texto do botão e o bot não
+// reconhece. A versão com botões foi aprovada na Meta em 30/09/2026 e a
+// antiga (sem botões) deixou de existir — por isso não há mais a env var
+// `WHATSAPP_TEMPLATE_REMINDER_NEW_LAYOUT`.
 export function sendAppointmentReminder(input: NotificationInput): Promise<string> {
-  const newLayout = import.meta.env.WHATSAPP_TEMPLATE_REMINDER_NEW_LAYOUT === "true";
   return sendNotification(input, {
     messageType: "appointment_reminder",
     templateName: import.meta.env.WHATSAPP_TEMPLATE_REMINDER,
     includeAddress: true,
-    quickReplyPayloads: newLayout
-      ? REMINDER_ACTIONS.map((action) => reminderButtonPayload(action, input.appointmentId))
-      : undefined,
+    quickReplyPayloads: REMINDER_ACTIONS.map((action) => reminderButtonPayload(action, input.appointmentId)),
     buildPreview: (type, name, when, location, address) =>
-      newLayout
-        ? `${listPreview("Passando para lembrar do seu agendamento:", type, name, `📅 Data: ${when}`, location)}\n\n` +
-          `${address}\n\nPor favor, confirme sua presença tocando em um dos botões abaixo.\n\n${SIGNATURE_PREVIEW}\n\n` +
-          "[Confirmar presença] [Remarcar] [Cancelar]"
-        : `Lembrete: ${type} de ${name} é amanhã, ${when}, no ${location}. ${address} ` +
-          "Nos vemos em breve! Qualquer dúvida ou se precisar remarcar, é só responder esta mensagem.",
+      `${listPreview("Passando para lembrar do seu agendamento:", type, name, `📅 Data: ${when}`, location)}\n\n` +
+      `${address}\n\nPor favor, confirme sua presença tocando em um dos botões abaixo.\n\n${SIGNATURE_PREVIEW}\n\n` +
+      "[Confirmar presença] [Remarcar] [Cancelar]",
   });
 }
 

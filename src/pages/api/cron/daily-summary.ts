@@ -45,6 +45,7 @@ interface AppointmentRow {
   scheduled_at: string;
   appointment_type: string;
   home_visit_address: string | null;
+  patient_confirmed_at: string | null;
   patients: { full_name: string } | { full_name: string }[] | null;
 }
 
@@ -53,18 +54,22 @@ function patientName(row: AppointmentRow): string {
   return patient?.full_name ?? "Paciente";
 }
 
-// "09h00 - João Silva · 10h30 - Maria Souza (Rua X, 123 - Bairro Y)" —
-// parâmetros de corpo de template da Meta não aceitam quebra de linha, a
-// lista inteira fica numa linha só, itens já ordenados por horário (a query
-// abaixo ordena). Atendimento domiciliar leva o endereço completo junto —
+// "▪️ 09h00 - João Silva (✅ confirmado) ▪️ 10h30 - Maria Souza (sem
+// confirmação) - Endereço: Rua X, 123 - Bairro Y" — parâmetros de corpo de
+// template da Meta não aceitam quebra de linha, então a lista inteira fica
+// numa linha só; o marcador "▪️" separa cada paciente (decisão do cliente,
+// set/2026 — no celular o texto quebra sozinho). Itens já ordenados por
+// horário (a query abaixo ordena). Presença confirmada (Fase 19) em texto
+// nos dois casos. Atendimento domiciliar leva o endereço completo junto —
 // só ele tem `home_visit_address` preenchido (ver Fase 16 no plano).
 function buildListText(rows: AppointmentRow[]): string {
   return rows
     .map((row) => {
-      const base = `${formatTimeFortaleza(new Date(row.scheduled_at))} - ${patientName(row)}`;
-      return row.home_visit_address ? `${base} (${row.home_visit_address})` : base;
+      const presence = row.patient_confirmed_at ? "(✅ confirmado)" : "(sem confirmação)";
+      const base = `▪️ ${formatTimeFortaleza(new Date(row.scheduled_at))} - ${patientName(row)} ${presence}`;
+      return row.home_visit_address ? `${base} - Endereço: ${row.home_visit_address}` : base;
     })
-    .join(" · ");
+    .join(" ");
 }
 
 export const GET: APIRoute = async ({ request, url }) => {
@@ -93,7 +98,7 @@ export const GET: APIRoute = async ({ request, url }) => {
 
     const { data: candidates, error } = await supabase
       .from("appointments")
-      .select("id, scheduled_at, appointment_type, home_visit_address, patients ( full_name )")
+      .select("id, scheduled_at, appointment_type, home_visit_address, patient_confirmed_at, patients ( full_name )")
       .in("status", ["scheduled", "confirmed"])
       .gte("scheduled_at", dayStart.toISOString())
       .lt("scheduled_at", dayEnd.toISOString())
