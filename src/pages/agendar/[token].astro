@@ -119,7 +119,7 @@ if (state === "form" && link) {
   const examDurationMinutes = examType?.duration_minutes;
 
   if (isGroupExam) {
-    // Exame em grupo: sem freebusy do Calendar, um único horário fixo por
+    // Exame em grupo: sem horários ocupados da agenda, um único horário fixo por
     // dia da semana — a "Data" já carrega o horário junto (ver script no
     // fim da página), sem etapa separada de escolher horário.
     const sessions = await getNextAvailableGroupDates({ supabase, examTypeId: link.exam_type_id ?? "" });

@@ -1,6 +1,5 @@
 import type { APIRoute } from "astro";
 import { createClient } from "../../../../lib/supabase/server";
-import { createBlockEvent } from "../../../../lib/google/calendar";
 import { cancelAppointmentsInBulk } from "../../../../lib/scheduling/cancelAppointmentsInBulk";
 
 function addDaysStr(dateStr: string, delta: number): string {
@@ -93,7 +92,17 @@ export const POST: APIRoute = async ({ request, cookies, locals }) => {
     }
   }
 
-  await createBlockEvent({ description: motivo, start: start.toISOString(), end: end.toISOString() });
+  const { error: insertError } = await supabase.from("schedule_blocks").insert({
+    starts_at: start.toISOString(),
+    ends_at: end.toISOString(),
+    reason: motivo,
+    created_by: locals.userId ?? null,
+  });
+
+  if (insertError) {
+    console.error("[bloqueio] erro ao gravar:", insertError);
+    return json({ error: "save_failed" }, 500);
+  }
 
   return json({ ok: true, redirectTo: `/admin/agenda?date=${startDate}` });
 };

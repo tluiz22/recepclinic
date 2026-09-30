@@ -2,13 +2,9 @@
 import AdminLayout from "../../../../../layouts/AdminLayout.astro";
 import Card from "../../../../../components/admin/Card.astro";
 import Icon from "../../../../../components/admin/Icon.astro";
-import { getEvent } from "../../../../../lib/google/calendar";
+import { createClient } from "../../../../../lib/supabase/server";
 
 const { id } = Astro.params;
-
-function todayFortaleza(): string {
-  return new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString().slice(0, 10);
-}
 
 function addDaysStr(dateStr: string, delta: number): string {
   const d = new Date(`${dateStr}T12:00:00Z`);
@@ -20,31 +16,34 @@ function toFortaleza(dateTime: string): Date {
   return new Date(new Date(dateTime).getTime() - 3 * 60 * 60 * 1000);
 }
 
-const today = todayFortaleza();
+const supabase = createClient(Astro.request, Astro.cookies);
+const { data: block } = id
+  ? await supabase
+      .from("schedule_blocks")
+      .select("starts_at, ends_at, reason")
+      .eq("id", id)
+      .is("removed_at", null)
+      .maybeSingle()
+  : { data: null };
 
-const event = id
-  ? await getEvent(id).catch(() => null)
-  : null;
-
-const isAdminBlock = event?.extendedProperties?.private?.admin_block === "true";
-
-if (!event || !isAdminBlock || event.status === "cancelled") {
+if (!block) {
   return Astro.redirect("/admin/agenda/bloqueios");
 }
 
-const startLocal = event.start.dateTime ? toFortaleza(event.start.dateTime) : null;
-const endLocal = event.end.dateTime ? toFortaleza(event.end.dateTime) : null;
+const startLocal = toFortaleza(block.starts_at);
+const endLocal = toFortaleza(block.ends_at);
 
-const startDate = startLocal ? startLocal.toISOString().slice(0, 10) : today;
-const startTime = startLocal ? startLocal.toISOString().slice(11, 16) : "";
-const endTime = endLocal ? endLocal.toISOString().slice(11, 16) : "";
+const startDate = startLocal.toISOString().slice(0, 10);
+const startTime = startLocal.toISOString().slice(11, 16);
+const endTime = endLocal.toISOString().slice(11, 16);
 const isFullDayCurrently = startTime === "00:00" && endTime === "00:00";
-const endDateRaw = endLocal ? endLocal.toISOString().slice(0, 10) : today;
+const endDateRaw = endLocal.toISOString().slice(0, 10);
 const endDate = isFullDayCurrently ? addDaysStr(endDateRaw, -1) : endDateRaw;
-const motivo = event.description ?? "";
+const motivo = block.reason;
 
 const errorMessages: Record<string, string> = {
   invalid_range: "O fim precisa ser depois do início.",
+  save_failed: "Não foi possível salvar o bloqueio. Tente de novo.",
   "1": "Preencha todos os campos antes de confirmar.",
 };
 const errorParam = Astro.url.searchParams.get("error");

@@ -4,7 +4,7 @@ import Card from "../../../components/admin/Card.astro";
 import type { BadgeVariant } from "../../../components/admin/Badge.astro";
 import Icon from "../../../components/admin/Icon.astro";
 import { createClient } from "../../../lib/supabase/server";
-import { isVisibleInAgenda, listEvents, type CalendarEvent } from "../../../lib/google/calendar";
+import { groupSessionTitle, loadAgendaItems, type AgendaItem } from "../../../lib/scheduling/agendaItems";
 
 const supabase = createClient(Astro.request, Astro.cookies);
 
@@ -28,13 +28,8 @@ function startOfWeek(dateStr: string): string {
   return addDays(dateStr, mondayOffset);
 }
 
-function fortalezaDateStr(dateTime: string): string {
-  return new Date(new Date(dateTime).getTime() - 3 * 60 * 60 * 1000).toISOString().slice(0, 10);
-}
-
-function formatTime(dateTime: string | undefined): string {
-  if (!dateTime) return "—";
-  return new Date(new Date(dateTime).getTime() - 3 * 60 * 60 * 1000).toISOString().slice(11, 16);
+function formatTime(d: Date): string {
+  return new Date(d.getTime() - 3 * 60 * 60 * 1000).toISOString().slice(11, 16);
 }
 
 function formatShortDate(dateStr: string): string {
@@ -50,20 +45,7 @@ const weekDates = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
 const rangeStart = new Date(`${weekDates[0]}T00:00:00-03:00`);
 const rangeEnd = new Date(`${addDays(weekDates[6], 1)}T00:00:00-03:00`);
 
-const events = await listEvents(rangeStart, rangeEnd);
-
-const appointmentIds = events
-  .map((event) => event.extendedProperties?.private?.appointment_id)
-  .filter((id): id is string => Boolean(id));
-
-const { data: appointments } = appointmentIds.length
-  ? await supabase
-      .from("appointments")
-      .select("id, appointment_type, patients ( full_name )")
-      .in("id", appointmentIds)
-  : { data: [] as any[] };
-
-const appointmentsById = new Map((appointments ?? []).map((appointment) => [appointment.id, appointment]));
+const items = await loadAgendaItems(supabase, rangeStart, rangeEnd, "appointment_type, patients ( full_name )");
 
 const appointmentTypeLabels: Record<string, string> = {
   first_visit: "Consulta",
@@ -88,17 +70,20 @@ const accentBorderByVariant: Record<BadgeVariant, string> = {
   danger: "border-l-red-400",
 };
 
-const eventsByDate = new Map<string, CalendarEvent[]>();
-for (const date of weekDates) eventsByDate.set(date, []);
-for (const event of events) {
-  if (!isVisibleInAgenda(event, appointmentsById)) continue;
-  const dateTime = event.start.dateTime;
-  if (!dateTime) continue;
-  const dateStr = fortalezaDateStr(dateTime);
-  eventsByDate.get(dateStr)?.push(event);
-}
-for (const list of eventsByDate.values()) {
-  list.sort((a, b) => new Date(a.start.dateTime ?? 0).getTime() - new Date(b.start.dateTime ?? 0).getTime());
+// Cada item entra em todo dia que ele toca — um bloqueio de vários dias
+// (ex.: férias) aparece em cada um deles, como na Agenda (dia).
+const itemsByDate = new Map<string, AgendaItem[]>();
+for (const date of weekDates) {
+  const dayStart = new Date(`${date}T00:00:00-03:00`).getTime();
+  const dayEnd = dayStart + 24 * 60 * 60_000;
+  itemsByDate.set(
+    date,
+    items.filter((item) =>
+      item.kind === "block"
+        ? item.start.getTime() < dayEnd && item.end.getTime() > dayStart
+        : item.start.getTime() >= dayStart && item.start.getTime() < dayEnd
+    )
+  );
 }
 
 const weekdayLabels = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
@@ -179,7 +164,7 @@ const today = todayFortaleza();
   <div class="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-7">
     {
       weekDates.map((date) => {
-        const dayEvents = eventsByDate.get(date) ?? [];
+        const dayItems = itemsByDate.get(date) ?? [];
         const isToday = date === today;
 
         return (
@@ -189,12 +174,10 @@ const today = todayFortaleza();
               <p class="text-xs text-slate-500">{formatShortDate(date)}</p>
             </a>
             <div class="mt-2 flex flex-col gap-1.5">
-              {dayEvents.length ? (
-                dayEvents.map((event) => {
-                  const groupExamTypeId = event.extendedProperties?.private?.group_exam_type_id;
-                  const appointmentId = event.extendedProperties?.private?.appointment_id;
-                  const appointment = appointmentId ? appointmentsById.get(appointmentId) : undefined;
-                  const isCancelled = event.status === "cancelled";
+              {dayItems.length ? (
+                dayItems.map((item) => {
+                  const appointment = item.kind === "appointment" ? (item.appointment as any) : undefined;
+                  const isCancelled = item.canceled;
                   const patient = (appointment?.patients ?? null) as any;
 
                   return (
@@ -203,10 +186,10 @@ const today = todayFortaleza();
                       class={`block rounded-md border-l-4 bg-slate-50/60 py-1 pl-2 pr-1.5 text-xs hover:bg-slate-100 ${
                         isCancelled
                           ? "border-l-slate-300 text-slate-400 line-through"
-                          : `${accentBorderByVariant[groupExamTypeId ? "warning" : typeBadgeVariant(appointment?.appointment_type)]} text-slate-700`
+                          : `${accentBorderByVariant[item.kind === "group_session" ? "warning" : item.kind === "block" ? "neutral" : typeBadgeVariant(appointment?.appointment_type)]} text-slate-700`
                       }`}
                     >
-                      <span class="font-medium">{formatTime(event.start.dateTime)}</span>{" "}
+                      <span class="font-medium">{formatTime(item.start)}</span>{" "}
                       {appointment ? (
                         <>
                           {patient?.full_name}
@@ -215,7 +198,9 @@ const today = todayFortaleza();
                           )}
                         </>
                       ) : (
-                        <span class="text-slate-500">{event.summary || "Bloqueio manual"}</span>
+                        <span class="text-slate-500">
+                          {item.kind === "group_session" ? groupSessionTitle(item) : "Bloqueio"}
+                        </span>
                       )}
                     </a>
                   );

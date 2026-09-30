@@ -1,10 +1,9 @@
 import type { APIRoute } from "astro";
 import { createClient } from "../../../../../../lib/supabase/server";
-import { rescheduleEvent } from "../../../../../../lib/google/calendar";
 import { getAvailableSlotsForDate, type AppointmentType } from "../../../../../../lib/scheduling/getAvailableSlotsForDate";
 import { getExamAvailableSlotsForDate } from "../../../../../../lib/scheduling/getExamAvailableSlotsForDate";
 import { getNextAvailableGroupDates, type AvailableGroupSession } from "../../../../../../lib/scheduling/getNextAvailableGroupDates";
-import { joinOrCreateGroupSessionEvent, leaveGroupSessionEvent } from "../../../../../../lib/scheduling/groupSessionCalendar";
+import { isOverlapError } from "../../../../../../lib/scheduling/overlap";
 import { resolveClinicLocationIds, type LocationCategory } from "../../../../../../lib/scheduling/resolveClinicLocationIds";
 import { getReturnOriginCheck } from "../../../../../../lib/scheduling/returnVisitEligibility";
 import { RESCHEDULE_PRESENCE_RESET } from "../../../../../../lib/presence";
@@ -57,12 +56,12 @@ export const POST: APIRoute = async ({ params, request, cookies, redirect, local
   const { data: appointment } = await supabase
     .from("appointments")
     .select(
-      "id, patient_id, google_event_id, status, exam_type_id, scheduled_at, home_visit_address, origin_appointment_id, patients ( full_name, guardians ( id, full_name, phone ) )"
+      "id, patient_id, status, exam_type_id, scheduled_at, home_visit_address, origin_appointment_id, patients ( full_name, guardians ( id, full_name, phone ) )"
     )
     .eq("id", id)
     .single();
 
-  if (!appointment || !appointment.google_event_id || !["scheduled", "confirmed"].includes(appointment.status)) {
+  if (!appointment || !["scheduled", "confirmed"].includes(appointment.status)) {
     return back("1");
   }
 
@@ -74,7 +73,6 @@ export const POST: APIRoute = async ({ params, request, cookies, redirect, local
   let examName: string | undefined;
   let clinicLocationId: string;
   let startDate: Date;
-  let endDate: Date;
   let durationMinutes: number;
   let matchedSession: AvailableGroupSession | undefined;
   let isGroupExam = false;
@@ -98,7 +96,7 @@ export const POST: APIRoute = async ({ params, request, cookies, redirect, local
     if (!examLocation) return back("1");
 
     if (isGroupExam) {
-      // Sem freebusy do Calendar: revalida a sessão (data+horário fixo)
+      // Sem horários ocupados da agenda: revalida a sessão (data+horário fixo)
       // contra a capacidade recalculada agora. A trava de verdade contra
       // duas confirmações simultâneas é a RPC atômica logo abaixo.
       const sessions = await getNextAvailableGroupDates({ supabase, examTypeId: appointment.exam_type_id ?? "" });
@@ -109,7 +107,6 @@ export const POST: APIRoute = async ({ params, request, cookies, redirect, local
       clinicLocationId = examLocation.id;
       durationMinutes = examType.duration_minutes;
       startDate = new Date(`${matchedSession.date}T${matchedSession.startTime}:00-03:00`);
-      endDate = new Date(`${matchedSession.date}T${matchedSession.endTime}:00-03:00`);
     } else {
       const slots = await getExamAvailableSlotsForDate({
         supabase,
@@ -123,7 +120,6 @@ export const POST: APIRoute = async ({ params, request, cookies, redirect, local
       clinicLocationId = matchedSlot.clinicLocationId;
       durationMinutes = examType.duration_minutes ?? settings.default_appointment_duration_minutes;
       startDate = matchedSlot.start;
-      endDate = new Date(startDate.getTime() + durationMinutes * 60_000);
     }
   } else {
     const clinicLocationIds = await resolveClinicLocationIds(supabase, locationCategory);
@@ -136,7 +132,6 @@ export const POST: APIRoute = async ({ params, request, cookies, redirect, local
         ? settings.default_return_visit_duration_minutes
         : settings.default_appointment_duration_minutes;
     startDate = matchedSlot.start;
-    endDate = new Date(startDate.getTime() + durationMinutes * 60_000);
   }
 
   if (isGroupExam && matchedSession) {
@@ -150,43 +145,6 @@ export const POST: APIRoute = async ({ params, request, cookies, redirect, local
     if (rpcError) {
       return back("slot_taken");
     }
-
-    // Sai da sessão antiga (some do evento compartilhado, ou cancela o
-    // evento se era o último) e entra/cria o evento da sessão nova.
-    const oldWeekday = new Date(new Date(appointment.scheduled_at).getTime() - 3 * 60 * 60 * 1000).getUTCDay();
-    const oldTime = new Date(new Date(appointment.scheduled_at).getTime() - 3 * 60 * 60 * 1000)
-      .toISOString()
-      .slice(11, 16);
-    const { data: oldWindow } = await supabase
-      .from("exam_type_availability_windows")
-      .select("capacity")
-      .eq("exam_type_id", appointment.exam_type_id)
-      .eq("weekday", oldWeekday)
-      .eq("start_time", `${oldTime}:00`)
-      .eq("is_active", true)
-      .maybeSingle();
-
-    await leaveGroupSessionEvent({
-      supabase,
-      appointmentIdLeaving: id,
-      examTypeId: appointment.exam_type_id!,
-      examName: examName ?? "Exame",
-      capacity: oldWindow?.capacity ?? matchedSession.capacity,
-      startIso: appointment.scheduled_at,
-      googleEventId: appointment.google_event_id,
-    });
-
-    const newEventId = await joinOrCreateGroupSessionEvent({
-      supabase,
-      appointmentId: id,
-      examTypeId: appointment.exam_type_id!,
-      examName: examName ?? "Exame",
-      capacity: matchedSession.capacity,
-      startIso: startDate.toISOString(),
-      endIso: endDate.toISOString(),
-    });
-
-    await supabase.from("appointments").update({ google_event_id: newEventId }).eq("id", id);
   } else {
     // Retorno (Fase 17): mantém a Consulta de origem já vinculada, ou vincula
     // a última Consulta da criança (retorno antigo, ou Consulta virando
@@ -203,7 +161,7 @@ export const POST: APIRoute = async ({ params, request, cookies, redirect, local
           ).origin?.id ?? null)
         : null;
 
-    await supabase
+    const { error: updateError } = await supabase
       .from("appointments")
       .update({
         clinic_location_id: clinicLocationId,
@@ -215,10 +173,12 @@ export const POST: APIRoute = async ({ params, request, cookies, redirect, local
       })
       .eq("id", id);
 
-    await rescheduleEvent(appointment.google_event_id, {
-      start: startDate.toISOString(),
-      end: endDate.toISOString(),
-    });
+    if (isOverlapError(updateError)) {
+      return back("slot_taken");
+    }
+    if (updateError) {
+      return back("1");
+    }
   }
 
   // Autoria da remarcação (Fase 17) — vale pros dois caminhos acima

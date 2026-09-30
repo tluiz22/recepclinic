@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { queryFreeBusy } from "../google/calendar";
 import { isNationalHoliday } from "../holidays";
+import { getBusyIntervals } from "./busyIntervals";
 import { computeAvailableSlots, type AvailableSlot } from "./slots";
 
 /**
@@ -43,7 +43,7 @@ export async function getExamAvailableSlotsForDate({
 
   const dayStart = new Date(`${date}T00:00:00-03:00`);
   const dayEnd = new Date(dayStart.getTime() + 24 * 60 * 60_000);
-  const busy = await queryFreeBusy(dayStart, dayEnd);
+  const busy = await getBusyIntervals(supabase, dayStart, dayEnd);
 
   return computeAvailableSlots({
     date,

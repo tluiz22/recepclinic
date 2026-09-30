@@ -1,6 +1,5 @@
 import type { APIRoute } from "astro";
 import { createServiceClient } from "../../../lib/supabase/service";
-import { listEvents } from "../../../lib/google/calendar";
 import { sendDailySummaryMessage } from "../../../lib/whatsapp/dailySummary";
 import { TIMEZONE } from "../../../lib/whatsapp/formatDateTime";
 
@@ -40,7 +39,6 @@ function formatTimeFortaleza(date: Date): string {
 
 interface AppointmentRow {
   id: string;
-  google_event_id: string | null;
   scheduled_at: string;
   appointment_type: string;
   home_visit_address: string | null;
@@ -88,7 +86,7 @@ export const GET: APIRoute = async ({ request, url }) => {
 
   const { data: candidates, error } = await supabase
     .from("appointments")
-    .select("id, google_event_id, scheduled_at, appointment_type, home_visit_address, patients ( full_name )")
+    .select("id, scheduled_at, appointment_type, home_visit_address, patients ( full_name )")
     .in("status", ["scheduled", "confirmed"])
     .gte("scheduled_at", dayStart.toISOString())
     .lt("scheduled_at", dayEnd.toISOString())
@@ -98,23 +96,7 @@ export const GET: APIRoute = async ({ request, url }) => {
     return json({ error: error.message }, 500);
   }
 
-  // O Calendar é a fonte da verdade: descarta o que foi cancelado pelo
-  // celular e o Supabase ainda não sabe (mesma leitura já feita no cron de
-  // lembrete).
-  let activeEventIds: Set<string> | null = null;
-  try {
-    const events = await listEvents(dayStart, dayEnd);
-    activeEventIds = new Set(events.filter((e) => e.status !== "cancelled").map((e) => e.id));
-  } catch (err) {
-    console.error(
-      "[cron daily-summary] falha ao ler o Calendar — seguindo apenas com o status do Supabase:",
-      err instanceof Error ? err.message : String(err)
-    );
-  }
-
-  const active = ((candidates ?? []) as AppointmentRow[]).filter(
-    (a) => !activeEventIds || !a.google_event_id || activeEventIds.has(a.google_event_id)
-  );
+  const active = (candidates ?? []) as AppointmentRow[];
 
   const consultas = active.filter((a) => a.appointment_type === "first_visit" || a.appointment_type === "return_visit");
   const exames = active.filter((a) => a.appointment_type === "exam");

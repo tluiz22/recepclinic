@@ -1,6 +1,5 @@
 import type { APIRoute } from "astro";
 import { createServiceClient } from "../../../lib/supabase/service";
-import { listEvents } from "../../../lib/google/calendar";
 import {
   sendAppointmentReminder,
   sendExamPreparation,
@@ -34,7 +33,7 @@ export const GET: APIRoute = async ({ request }) => {
   const { data: candidates, error } = await supabase
     .from("appointments")
     .select(
-      "id, google_event_id, scheduled_at, appointment_type, exam_type_id, home_visit_address, clinic_locations ( type, address ), exam_types ( name ), patients ( full_name, guardians ( id, full_name, phone ) )"
+      "id, scheduled_at, appointment_type, exam_type_id, home_visit_address, clinic_locations ( type, address ), exam_types ( name ), patients ( full_name, guardians ( id, full_name, phone ) )"
     )
     .in("status", ["scheduled", "confirmed"])
     .is("reminder_sent_at", null)
@@ -49,36 +48,11 @@ export const GET: APIRoute = async ({ request }) => {
     return json({ candidates: 0, sent: 0, failed: 0, skipped: 0 });
   }
 
-  // O Calendar é a fonte da verdade: se alguém cancelou pelo celular, o
-  // `status` no Supabase pode estar defasado. Uma única leitura da janela
-  // resolve para o lote inteiro.
-  let activeEventIds: Set<string> | null = null;
-  try {
-    const events = await listEvents(now, windowEnd);
-    activeEventIds = new Set(
-      events.filter((e) => e.status !== "cancelled").map((e) => e.id)
-    );
-  } catch (err) {
-    console.error(
-      "[cron reminders] falha ao ler o Calendar — seguindo apenas com o status do Supabase:",
-      err instanceof Error ? err.message : String(err)
-    );
-  }
-
   let sent = 0;
   let failed = 0;
   let skipped = 0;
 
   for (const appointment of candidates) {
-    if (
-      activeEventIds &&
-      appointment.google_event_id &&
-      !activeEventIds.has(appointment.google_event_id)
-    ) {
-      // Evento cancelado/ausente no Calendar — não lembra.
-      continue;
-    }
-
     const patient = (appointment.patients ?? null) as unknown as {
       full_name: string;
       guardians: { id: string; full_name: string; phone: string } | null;

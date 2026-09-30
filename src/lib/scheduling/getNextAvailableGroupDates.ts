@@ -25,8 +25,8 @@ function addDays(dateStr: string, delta: number): string {
 
 /**
  * Datas com sessão disponível pra um exame em modo "grupo" (turma) — ao
- * contrário de `getNextAvailableDates`, não depende de freebusy do Google
- * Calendar: projeta os dias da semana cadastrados em
+ * contrário de `getNextAvailableDates`, não depende dos horários ocupados da
+ * agenda: projeta os dias da semana cadastrados em
  * `exam_type_availability_windows`, pula feriados, e conta contra a
  * `capacity` de cada janela só os agendamentos não cancelados desse exame na
  * mesma data+hora exata (a sessão é um único horário fixo por dia da semana,
@@ -65,7 +65,7 @@ export async function getNextAvailableGroupDates({
   const rangeEnd = new Date(rangeStart.getTime() + maxDaysAhead * 24 * 60 * 60_000);
 
   // Uma única consulta pra todo o período (em vez de uma por dia candidato),
-  // mesmo espírito de `getNextAvailableDates` com o freebusy do Calendar.
+  // mesmo espírito de `getNextAvailableDates` com os horários ocupados.
   const { data: existingAppointments } = await supabase
     .from("appointments")
     .select("scheduled_at")

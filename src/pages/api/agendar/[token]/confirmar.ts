@@ -1,15 +1,13 @@
 import type { APIRoute } from "astro";
 import { createServiceClient } from "../../../../lib/supabase/service";
-import { createEvent, rescheduleEvent } from "../../../../lib/google/calendar";
 import { getAvailableSlotsForDate, type AppointmentType } from "../../../../lib/scheduling/getAvailableSlotsForDate";
 import { getExamAvailableSlotsForDate } from "../../../../lib/scheduling/getExamAvailableSlotsForDate";
 import { getNextAvailableGroupDates, type AvailableGroupSession } from "../../../../lib/scheduling/getNextAvailableGroupDates";
-import { joinOrCreateGroupSessionEvent, leaveGroupSessionEvent } from "../../../../lib/scheduling/groupSessionCalendar";
+import { isOverlapError } from "../../../../lib/scheduling/overlap";
 import { resolveClinicLocationIds, type LocationCategory } from "../../../../lib/scheduling/resolveClinicLocationIds";
 import { getBookingLinkLastDate, hasActiveReturnVisit } from "../../../../lib/scheduling/returnVisitDeadline";
 import { RESCHEDULE_PRESENCE_RESET } from "../../../../lib/presence";
 import {
-  buildAppointmentTypeLabel,
   sendAppointmentConfirmation,
   sendAppointmentReschedule,
   sendExamPreparation,
@@ -72,13 +70,12 @@ export const POST: APIRoute = async ({ params, request, redirect }) => {
   }
 
   let startDate: Date;
-  let endDate: Date;
   let resolvedClinicLocationId: string;
   let durationMinutes: number;
   let matchedSession: AvailableGroupSession | undefined;
 
   if (isGroupExam) {
-    // Sem freebusy do Calendar: revalida a sessão (data+horário fixo) contra
+    // Sem horários ocupados da agenda: revalida a sessão (data+horário fixo) contra
     // a capacidade recalculada agora — mesmo espírito da revalidação de
     // horário individual logo abaixo, só que contando vagas em vez de
     // conflito de agenda. A confirmação final ainda passa pela trava
@@ -94,7 +91,6 @@ export const POST: APIRoute = async ({ params, request, redirect }) => {
     resolvedClinicLocationId = link.clinic_location_id ?? "";
     durationMinutes = examType?.duration_minutes ?? settings.default_appointment_duration_minutes;
     startDate = new Date(`${matchedSession.date}T${matchedSession.startTime}:00-03:00`);
-    endDate = new Date(`${matchedSession.date}T${matchedSession.endTime}:00-03:00`);
   } else if (appointmentType === "exam") {
     // Exame individual: disponibilidade própria do exame, não a de um local
     // (ver Fase 11).
@@ -113,7 +109,6 @@ export const POST: APIRoute = async ({ params, request, redirect }) => {
     resolvedClinicLocationId = matchedSlot.clinicLocationId;
     durationMinutes = examType?.duration_minutes ?? settings.default_appointment_duration_minutes;
     startDate = matchedSlot.start;
-    endDate = new Date(startDate.getTime() + durationMinutes * 60_000);
   } else {
     // Consulta/retorno: categoria mesclando todos os consultórios físicos
     // ativos dela (ver "Backlog futuro" no plano) — o horário escolhido
@@ -152,7 +147,6 @@ export const POST: APIRoute = async ({ params, request, redirect }) => {
         ? settings.default_return_visit_duration_minutes
         : settings.default_appointment_duration_minutes;
     startDate = matchedSlot.start;
-    endDate = new Date(startDate.getTime() + durationMinutes * 60_000);
   }
 
   const [{ data: patient }, { data: location }] = await Promise.all([
@@ -177,7 +171,6 @@ export const POST: APIRoute = async ({ params, request, redirect }) => {
     full_name: string;
     phone: string;
   } | null;
-  const locationLabel = location?.type === "clinic" ? "Consultório" : location?.type === "exam" ? "Exames" : "Domiciliar";
   // Endereço do consultório físico (`clinic_locations.address`) — sempre
   // nulo pra domiciliar, que usa o endereço específico do paciente em vez
   // dele (`home_visit_address`, resolvido por branch logo abaixo: do link
@@ -188,7 +181,6 @@ export const POST: APIRoute = async ({ params, request, redirect }) => {
   // Exame tem valor próprio, em exam_types (não em clinic_locations).
   const priceCents =
     appointmentType === "exam" ? examType?.price_cents : appointmentType === "return_visit" ? null : location?.price_first_visit_cents;
-  const typeLabel = buildAppointmentTypeLabel(appointmentType, examType?.name);
 
   // Trava atômica contra corrida (duplo toque em "Confirmar", conexão
   // lenta): a checagem de `link.used_at` lá em cima não impede duas
@@ -208,16 +200,24 @@ export const POST: APIRoute = async ({ params, request, redirect }) => {
     return redirect(`/agendar/${token}`);
   }
 
+  // O horário foi ocupado entre a checagem acima e a gravação (trava da
+  // turma ou `appointments_no_overlap`): devolve o link, senão a página o
+  // trataria como já usado e o responsável não poderia escolher outro.
+  const slotTaken = async () => {
+    await supabase.from("booking_links").update({ used_at: null }).eq("id", token);
+    return back("slot_taken");
+  };
+
   let appointmentId: string;
 
   if (link.mode === "reschedule") {
     const { data: appointment } = await supabase
       .from("appointments")
-      .select("id, google_event_id, status, scheduled_at, home_visit_address")
+      .select("id, status, scheduled_at, home_visit_address")
       .eq("id", link.appointment_id)
       .single();
 
-    if (!appointment || !appointment.google_event_id || !["scheduled", "confirmed"].includes(appointment.status)) {
+    if (!appointment || !["scheduled", "confirmed"].includes(appointment.status)) {
       return back("1");
     }
 
@@ -237,47 +237,10 @@ export const POST: APIRoute = async ({ params, request, redirect }) => {
         p_duration_minutes: durationMinutes,
       });
       if (rpcError) {
-        return back("slot_taken");
+        return slotTaken();
       }
-
-      // Sai da sessão antiga (some do evento compartilhado, ou cancela o
-      // evento se era o último) e entra/cria o evento da sessão nova.
-      const oldWeekday = new Date(new Date(appointment.scheduled_at).getTime() - 3 * 60 * 60 * 1000).getUTCDay();
-      const oldTime = new Date(new Date(appointment.scheduled_at).getTime() - 3 * 60 * 60 * 1000)
-        .toISOString()
-        .slice(11, 16);
-      const { data: oldWindow } = await supabase
-        .from("exam_type_availability_windows")
-        .select("capacity")
-        .eq("exam_type_id", link.exam_type_id)
-        .eq("weekday", oldWeekday)
-        .eq("start_time", `${oldTime}:00`)
-        .eq("is_active", true)
-        .maybeSingle();
-
-      await leaveGroupSessionEvent({
-        supabase,
-        appointmentIdLeaving: appointment.id,
-        examTypeId: link.exam_type_id!,
-        examName: examType?.name ?? "Exame",
-        capacity: oldWindow?.capacity ?? matchedSession.capacity,
-        startIso: appointment.scheduled_at,
-        googleEventId: appointment.google_event_id,
-      });
-
-      const newEventId = await joinOrCreateGroupSessionEvent({
-        supabase,
-        appointmentId: appointment.id,
-        examTypeId: link.exam_type_id!,
-        examName: examType?.name ?? "Exame",
-        capacity: matchedSession.capacity,
-        startIso: startDate.toISOString(),
-        endIso: endDate.toISOString(),
-      });
-
-      await supabase.from("appointments").update({ google_event_id: newEventId }).eq("id", appointment.id);
     } else {
-      await supabase
+      const { error: updateError } = await supabase
         .from("appointments")
         .update({
           clinic_location_id: resolvedClinicLocationId,
@@ -288,10 +251,12 @@ export const POST: APIRoute = async ({ params, request, redirect }) => {
         })
         .eq("id", appointment.id);
 
-      await rescheduleEvent(appointment.google_event_id, {
-        start: startDate.toISOString(),
-        end: endDate.toISOString(),
-      });
+      if (isOverlapError(updateError)) {
+        return slotTaken();
+      }
+      if (updateError) {
+        return back("1");
+      }
     }
 
     // Autoria da remarcação (Fase 17): pelo link do WhatsApp. Zera também o
@@ -356,22 +321,10 @@ export const POST: APIRoute = async ({ params, request, redirect }) => {
       });
 
       if (rpcError || !newAppointmentId) {
-        return back("slot_taken");
+        return slotTaken();
       }
 
       appointmentId = newAppointmentId as string;
-
-      const eventId = await joinOrCreateGroupSessionEvent({
-        supabase,
-        appointmentId,
-        examTypeId: link.exam_type_id!,
-        examName: examType?.name ?? "Exame",
-        capacity: matchedSession.capacity,
-        startIso: startDate.toISOString(),
-        endIso: endDate.toISOString(),
-      });
-
-      await supabase.from("appointments").update({ google_event_id: eventId }).eq("id", appointmentId);
     } else {
       const { data: newAppointment, error: insertError } = await supabase
         .from("appointments")
@@ -390,23 +343,14 @@ export const POST: APIRoute = async ({ params, request, redirect }) => {
         .select("id")
         .single();
 
+      if (isOverlapError(insertError)) {
+        return slotTaken();
+      }
       if (insertError || !newAppointment) {
         return back("1");
       }
 
       appointmentId = newAppointment.id;
-
-      const event = await createEvent({
-        summary: `${typeLabel} — ${patient.full_name}${guardian ? ` (resp. ${guardian.full_name})` : ""}`,
-        description:
-          `Tel: ${guardian?.phone ?? "—"} | Tipo: ${typeLabel} | Local: ${locationLabel}` +
-          (link.home_visit_address ? ` | Endereço: ${link.home_visit_address}` : ""),
-        start: startDate.toISOString(),
-        end: endDate.toISOString(),
-        appointmentId: newAppointment.id,
-      });
-
-      await supabase.from("appointments").update({ google_event_id: event.id }).eq("id", newAppointment.id);
     }
 
     if (guardian?.phone) {

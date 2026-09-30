@@ -22,7 +22,7 @@ interface NotificationInput {
   // Tipo e local do atendimento — os rótulos das variáveis {{1}} (tipo) e
   // {{4}} (local) são montados aqui dentro (ver `notificationTypeLabel` /
   // `notificationLocationLabel`), não pelo chamador, pra todos os templates
-  // falarem igual. Agenda/Calendar continuam com os rótulos deles.
+  // falarem igual. A Agenda continua com os rótulos dela.
   appointmentType: string; // "first_visit" | "return_visit" | "exam"
   examName?: string | null;
   locationType?: string | null; // `clinic_locations.type`: "clinic" | "home_visit" | "exam"
@@ -78,8 +78,7 @@ interface NotificationSpec {
   ) => string;
 }
 
-// "Consulta" | "Retorno" | "Exame (<nome>)" — rótulo usado também na Agenda
-// e no evento do Calendar.
+// "Consulta" | "Retorno" | "Exame (<nome>)" — rótulo usado também na Agenda.
 export function buildAppointmentTypeLabel(
   appointmentType: string,
   examName?: string | null

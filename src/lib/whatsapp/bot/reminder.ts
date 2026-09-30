@@ -131,7 +131,7 @@ async function fetchActiveReminderAppointment(
   const { data: row } = await supabase
     .from("appointments")
     .select(
-      "id, status, scheduled_at, reminder_sent_at, patient_confirmed_at, clinic_location_id, appointment_type, exam_type_id, google_event_id, home_visit_address, origin_appointment_id, patient_id, patients!inner(full_name, birthdate, guardian_id)"
+      "id, status, scheduled_at, reminder_sent_at, patient_confirmed_at, clinic_location_id, appointment_type, exam_type_id, home_visit_address, origin_appointment_id, patient_id, patients!inner(full_name, birthdate, guardian_id)"
     )
     .eq("id", appointmentId)
     .maybeSingle();
@@ -157,7 +157,6 @@ async function fetchActiveReminderAppointment(
     clinic_location_id: row.clinic_location_id,
     appointment_type: row.appointment_type,
     exam_type_id: row.exam_type_id ?? null,
-    google_event_id: row.google_event_id ?? null,
     home_visit_address: row.home_visit_address ?? null,
     origin_appointment_id: row.origin_appointment_id ?? null,
     patient_confirmed_at: row.patient_confirmed_at ?? null,

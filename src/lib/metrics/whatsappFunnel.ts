@@ -114,7 +114,9 @@ const REASON_LABELS: Record<string, string> = {
   return_deadline_passed: "Prazo do retorno vencido",
   // error / confirm_failed
   link_error: "Erro ao gerar o link",
+  // Só em registros antigos (antes da Fase 20, quando cancelar passava pelo Google).
   calendar_error: "Erro no Google Calendar",
+  cancel_error: "Erro ao gravar o cancelamento",
   appointment_not_identified: "Atendimento não identificado",
   no_exam_location: "Local de exames não configurado",
   slot_taken: "Horário ocupado ao confirmar",

@@ -5,10 +5,10 @@ import { cancelAppointmentsInBulk } from "../../../../lib/scheduling/cancelAppoi
 // Cancelamento em massa de um dia (Fase 12): recebe a lista de
 // `appointment_id`s selecionados na aba "Resumo do dia" de /admin/consultas
 // e roda, pra cada um, a mesma rotina do cancelamento individual (trava
-// atômica contra dupla ação, cancela no Calendar, marca canceled) — mas com
+// atômica contra dupla ação, marca canceled) — mas com
 // o motivo fixo ("imprevisto da médica") e um link de agendamento novo,
 // pra facilitar a remarcação sem precisar escrever pro bot. Melhor esforço:
-// uma falha isolada (Calendar, link, notificação) não trava os demais.
+// uma falha isolada (link, notificação) não trava os demais.
 // Rotina em `cancelAppointmentsInBulk` — compartilhada com o bloqueio de
 // agenda (Fase 13 etapa 2), que reaproveita o mesmo cancelamento.
 export const POST: APIRoute = async ({ request, cookies, locals }) => {

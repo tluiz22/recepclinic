@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { queryFreeBusy } from "../google/calendar";
 import { isNationalHoliday } from "../holidays";
+import { getBusyIntervals } from "./busyIntervals";
 import { computeAvailableSlots, type AvailabilityWindow } from "./slots";
 import type { AvailableDate } from "./getNextAvailableDates";
 
@@ -22,7 +22,7 @@ function addDays(dateStr: string, delta: number): string {
  * é a do próprio exame (`exam_type_availability_windows`), não a de um
  * `clinic_location_id` — cada exame tem seu próprio dia/horário cadastrado,
  * em vez de todos dividirem o horário do local genérico "Exames". Ainda
- * cruza com o freebusy do Google Calendar, igual à consulta/retorno.
+ * cruza com os horários ocupados da agenda, igual à consulta/retorno.
  */
 export async function getExamNextAvailableDates({
   supabase,
@@ -35,7 +35,7 @@ export async function getExamNextAvailableDates({
   supabase: SupabaseClient;
   examTypeId: string;
   // Local físico único de todo exame — só carregado nos horários pra virar
-  // o `clinicLocationId` do slot (Calendar/appointments), não afeta o
+  // o `clinicLocationId` do slot (appointments), não afeta o
   // cálculo em si.
   examLocationId: string;
   examDurationMinutes: number;
@@ -64,7 +64,7 @@ export async function getExamNextAvailableDates({
   const startDate = todayFortaleza();
   const rangeStart = new Date(`${startDate}T00:00:00-03:00`);
   const rangeEnd = new Date(rangeStart.getTime() + maxDaysAhead * 24 * 60 * 60_000);
-  const busy = await queryFreeBusy(rangeStart, rangeEnd);
+  const busy = await getBusyIntervals(supabase, rangeStart, rangeEnd);
 
   const results: AvailableDate[] = [];
   let date = startDate;

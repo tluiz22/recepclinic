@@ -1,5 +1,5 @@
 import type { APIRoute } from "astro";
-import { rescheduleEvent, updateEventDetails } from "../../../../../../lib/google/calendar";
+import { createClient } from "../../../../../../lib/supabase/server";
 
 function addDaysStr(dateStr: string, delta: number): string {
   const d = new Date(`${dateStr}T12:00:00Z`);
@@ -10,7 +10,7 @@ function addDaysStr(dateStr: string, delta: number): string {
 // Fase 13 etapa 3: edita data/hora e motivo de um bloqueio já criado — sem
 // checar conflito com atendimentos de novo (só a criação faz essa
 // pergunta, ver bloqueios.ts).
-export const POST: APIRoute = async ({ params, request, redirect }) => {
+export const POST: APIRoute = async ({ params, request, cookies, locals, redirect }) => {
   const { id } = params;
   const formData = await request.formData();
   const startDate = formData.get("start_date")?.toString();
@@ -34,8 +34,23 @@ export const POST: APIRoute = async ({ params, request, redirect }) => {
     return back("invalid_range");
   }
 
-  await rescheduleEvent(id, { start: start.toISOString(), end: end.toISOString() });
-  await updateEventDetails(id, { summary: "Bloqueio administrativo", description: motivo });
+  const supabase = createClient(request, cookies);
+  const { error } = await supabase
+    .from("schedule_blocks")
+    .update({
+      starts_at: start.toISOString(),
+      ends_at: end.toISOString(),
+      reason: motivo,
+      updated_at: new Date().toISOString(),
+      updated_by: locals.userId ?? null,
+    })
+    .eq("id", id)
+    .is("removed_at", null);
+
+  if (error) {
+    console.error("[bloqueio] erro ao editar:", error);
+    return back("save_failed");
+  }
 
   return redirect("/admin/agenda/bloqueios");
 };

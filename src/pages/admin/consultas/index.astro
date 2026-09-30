@@ -8,7 +8,7 @@
 //
 // Fase 12 — aba "Resumo do dia" (padrão ao abrir a página): visão mais
 // detalhada que a Agenda (idade, responsável, telefone com link pra ligar),
-// lida direto do Supabase (sem depender da API do Calendar) — é uma
+// lida direto do Supabase — é uma
 // referência de identificação do dia, não a ferramenta de gestão pontual da
 // grade (isso continua sendo a Agenda). Base pra próxima etapa: seleção pra
 // cancelamento em massa.
@@ -119,7 +119,6 @@ function mapResumoRow(
     scheduled_at: string;
     status: string;
     appointment_type: string;
-    google_event_id: string | null;
     home_visit_address: string | null;
     patients: unknown;
     exam_types: unknown;
@@ -138,7 +137,6 @@ function mapResumoRow(
 
   return {
     id: a.id,
-    googleEventId: a.google_event_id,
     time: formatTime(a.scheduled_at),
     patientName: patient?.full_name ?? "Paciente",
     age: patient?.birthdate ? formatAge(patient.birthdate, referenceDate) : null,
@@ -161,7 +159,7 @@ function tabUrl(target: "resumo" | "pendentes" | "confirmadas" | "aguardando_rem
 }
 
 // Leva pra "Marcar consulta"/"Marcar exame" com o paciente já selecionado —
-// a consulta cancelada já morreu (Calendar e status), não dá pra usar o
+// a consulta cancelada já morreu (status), não dá pra usar o
 // fluxo de "remarcar" de uma consulta ativa; é uma marcação nova.
 function buildRebookUrl(
   appointmentType: string,
@@ -230,7 +228,7 @@ if (tab === "resumo") {
   const { data } = await supabase
     .from("appointments")
     .select(
-      `id, scheduled_at, status, appointment_type, google_event_id, home_visit_address, ${AUTHORSHIP_COLUMNS}, ${PRESENCE_COLUMNS}, patients ( full_name, birthdate, guardians ( full_name, phone ) ), exam_types ( name ), clinic_locations ( type )`
+      `id, scheduled_at, status, appointment_type, home_visit_address, ${AUTHORSHIP_COLUMNS}, ${PRESENCE_COLUMNS}, patients ( full_name, birthdate, guardians ( full_name, phone ) ), exam_types ( name ), clinic_locations ( type )`
     )
     .neq("status", "canceled")
     .gte("scheduled_at", dayStart)
@@ -506,7 +504,7 @@ function confirmadasPageUrl(targetPage: number): string {
           <div class="p-5">
             <h2 class="text-base font-semibold text-slate-900">Cancelar atendimentos selecionados?</h2>
             <p class="mt-2 text-sm text-slate-600">
-              <span id="mass_cancel_dialog_count">0</span> atendimento(s) serão cancelados no Calendar. Cada
+              <span id="mass_cancel_dialog_count">0</span> atendimento(s) serão cancelados. Cada
               responsável recebe um aviso por WhatsApp (motivo: imprevisto da médica) com um link novo pra remarcar,
               válido por 2 dias.
             </p>

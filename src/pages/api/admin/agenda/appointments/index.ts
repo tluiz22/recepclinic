@@ -1,17 +1,12 @@
 import type { APIRoute } from "astro";
 import { createClient } from "../../../../../lib/supabase/server";
-import { createEvent } from "../../../../../lib/google/calendar";
 import { getAvailableSlotsForDate, type AppointmentType } from "../../../../../lib/scheduling/getAvailableSlotsForDate";
 import { getExamAvailableSlotsForDate } from "../../../../../lib/scheduling/getExamAvailableSlotsForDate";
 import { getNextAvailableGroupDates, type AvailableGroupSession } from "../../../../../lib/scheduling/getNextAvailableGroupDates";
-import { joinOrCreateGroupSessionEvent } from "../../../../../lib/scheduling/groupSessionCalendar";
+import { isOverlapError } from "../../../../../lib/scheduling/overlap";
 import { resolveClinicLocationIds, type LocationCategory } from "../../../../../lib/scheduling/resolveClinicLocationIds";
 import { getReturnOriginCheck } from "../../../../../lib/scheduling/returnVisitEligibility";
-import {
-  buildAppointmentTypeLabel,
-  sendAppointmentConfirmation,
-  sendExamPreparation,
-} from "../../../../../lib/whatsapp/notifications";
+import { sendAppointmentConfirmation, sendExamPreparation } from "../../../../../lib/whatsapp/notifications";
 
 export const POST: APIRoute = async ({ request, cookies, redirect, locals }) => {
   const formData = await request.formData();
@@ -64,7 +59,6 @@ export const POST: APIRoute = async ({ request, cookies, redirect, locals }) => 
   let examTypeInfo: { name: string; duration_minutes: number; price_cents: number; scheduling_mode: string } | null = null;
   let clinicLocationId: string;
   let startDate: Date;
-  let endDate: Date;
   let durationMinutes: number;
   let matchedSession: AvailableGroupSession | undefined;
 
@@ -86,7 +80,7 @@ export const POST: APIRoute = async ({ request, cookies, redirect, locals }) => 
     if (!examLocation) return back("1");
 
     if (examTypeInfo.scheduling_mode === "group") {
-      // Sem freebusy do Calendar: revalida a sessão (data+horário fixo)
+      // Sem horários ocupados da agenda: revalida a sessão (data+horário fixo)
       // contra a capacidade recalculada agora. A trava de verdade contra
       // duas confirmações simultâneas é a RPC atômica logo abaixo — essa
       // aqui é só uma primeira checagem, mais barata.
@@ -98,7 +92,6 @@ export const POST: APIRoute = async ({ request, cookies, redirect, locals }) => 
       clinicLocationId = examLocation.id;
       durationMinutes = examTypeInfo.duration_minutes;
       startDate = new Date(`${matchedSession.date}T${matchedSession.startTime}:00-03:00`);
-      endDate = new Date(`${matchedSession.date}T${matchedSession.endTime}:00-03:00`);
     } else {
       const slots = await getExamAvailableSlotsForDate({
         supabase,
@@ -112,7 +105,6 @@ export const POST: APIRoute = async ({ request, cookies, redirect, locals }) => 
       clinicLocationId = matchedSlot.clinicLocationId;
       durationMinutes = examTypeInfo.duration_minutes ?? settings.default_appointment_duration_minutes;
       startDate = matchedSlot.start;
-      endDate = new Date(startDate.getTime() + durationMinutes * 60_000);
     }
   } else {
     const clinicLocationIds = await resolveClinicLocationIds(supabase, locationCategory);
@@ -125,7 +117,6 @@ export const POST: APIRoute = async ({ request, cookies, redirect, locals }) => 
         ? settings.default_return_visit_duration_minutes
         : settings.default_appointment_duration_minutes;
     startDate = matchedSlot.start;
-    endDate = new Date(startDate.getTime() + durationMinutes * 60_000);
   }
 
   const { data: patient } = await supabase
@@ -165,8 +156,6 @@ export const POST: APIRoute = async ({ request, cookies, redirect, locals }) => 
     .eq("id", clinicLocationId)
     .single();
 
-  const typeLabel = buildAppointmentTypeLabel(appointmentType, examTypeInfo?.name);
-  const locationLabel = location?.type === "clinic" ? "Consultório" : location?.type === "exam" ? "Exames" : "Domiciliar";
   const locationAddress = isHomeVisit ? homeVisitAddress : (location?.address ?? null);
 
   let newAppointmentId: string;
@@ -188,18 +177,6 @@ export const POST: APIRoute = async ({ request, cookies, redirect, locals }) => 
     newAppointmentId = rpcAppointmentId as string;
     // A RPC atômica não recebe o autor — grava logo em seguida.
     await supabase.from("appointments").update({ created_by: locals.userId ?? null }).eq("id", newAppointmentId);
-
-    const eventId = await joinOrCreateGroupSessionEvent({
-      supabase,
-      appointmentId: newAppointmentId,
-      examTypeId: examTypeId!,
-      examName: examTypeInfo.name,
-      capacity: matchedSession.capacity,
-      startIso: startDate.toISOString(),
-      endIso: endDate.toISOString(),
-    });
-
-    await supabase.from("appointments").update({ google_event_id: eventId }).eq("id", newAppointmentId);
   } else {
     // Retorno (Fase 17): vincula a última Consulta da criança — a tela só
     // avisa (fora do prazo, domiciliar, sem consulta, retorno já vinculado),
@@ -227,24 +204,15 @@ export const POST: APIRoute = async ({ request, cookies, redirect, locals }) => 
       .select("id")
       .single();
 
+    if (isOverlapError(insertError)) {
+      return back("slot_taken");
+    }
+
     if (insertError || !newAppointment) {
       return back("1");
     }
 
     newAppointmentId = newAppointment.id;
-
-    const guardianForEvent = (patient.guardians ?? null) as unknown as { full_name: string; phone: string } | null;
-    const event = await createEvent({
-      summary: `${typeLabel} — ${patient.full_name}${guardianForEvent ? ` (resp. ${guardianForEvent.full_name})` : ""}`,
-      description:
-        `Tel: ${guardianForEvent?.phone ?? "—"} | Tipo: ${typeLabel} | Local: ${locationLabel}` +
-        (isHomeVisit && homeVisitAddress ? ` | Endereço: ${homeVisitAddress}` : ""),
-      start: startDate.toISOString(),
-      end: endDate.toISOString(),
-      appointmentId: newAppointment.id,
-    });
-
-    await supabase.from("appointments").update({ google_event_id: event.id }).eq("id", newAppointment.id);
   }
 
   // Invalida qualquer link de agendamento ainda pendente desse paciente pro
@@ -272,7 +240,7 @@ export const POST: APIRoute = async ({ request, cookies, redirect, locals }) => 
   } | null;
 
   // Confirmação por WhatsApp (Fase 3a) — melhor esforço: uma falha aqui não
-  // pode invalidar a consulta já criada no Supabase e no Calendar.
+  // pode invalidar a consulta já criada.
   if (guardian?.phone) {
     await sendAppointmentConfirmation({
       supabase,

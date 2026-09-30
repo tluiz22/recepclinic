@@ -15,8 +15,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { sendInteractiveListMessage, sendTextMessage } from "../client";
 import { formatWhen } from "../formatDateTime";
-import { cancelEvent } from "../../google/calendar";
-import { leaveGroupSessionEvent } from "../../scheduling/groupSessionCalendar";
 import {
   fetchUpcomingAppointments,
   parseBirthdateInput,
@@ -209,71 +207,18 @@ async function performCancel(
   category: AppointmentCategory,
   appointment: AppointmentCandidate
 ): Promise<void> {
-  if (appointment.google_event_id) {
-    try {
-      let isGroupExam = false;
-      if (appointment.appointment_type === "exam" && appointment.exam_type_id) {
-        const { data: examType } = await supabase
-          .from("exam_types")
-          .select("name, scheduling_mode")
-          .eq("id", appointment.exam_type_id)
-          .maybeSingle();
-        isGroupExam = examType?.scheduling_mode === "group";
-
-        if (isGroupExam) {
-          // Sessão de grupo: sai do evento compartilhado (atualiza a
-          // contagem) em vez de cancelar o evento de todo mundo — só
-          // cancela de verdade quando esse cancelamento deixa a sessão vazia.
-          const weekday = new Date(new Date(appointment.scheduled_at).getTime() - 3 * 60 * 60 * 1000).getUTCDay();
-          const time = new Date(new Date(appointment.scheduled_at).getTime() - 3 * 60 * 60 * 1000)
-            .toISOString()
-            .slice(11, 16);
-          const { data: window } = await supabase
-            .from("exam_type_availability_windows")
-            .select("capacity")
-            .eq("exam_type_id", appointment.exam_type_id)
-            .eq("weekday", weekday)
-            .eq("start_time", `${time}:00`)
-            .eq("is_active", true)
-            .maybeSingle();
-
-          await leaveGroupSessionEvent({
-            supabase,
-            appointmentIdLeaving: appointment.id,
-            examTypeId: appointment.exam_type_id,
-            examName: examType?.name ?? "Exame",
-            capacity: window?.capacity ?? 1,
-            startIso: appointment.scheduled_at,
-            googleEventId: appointment.google_event_id,
-          });
-        }
-      }
-
-      if (!isGroupExam) {
-        await cancelEvent(appointment.google_event_id);
-      }
-    } catch (err) {
-      console.error(
-        "[whatsapp bot] erro ao cancelar evento no Google Calendar:",
-        err instanceof Error ? err.message : String(err)
-      );
-      const body = texts.cancelErrorText();
-      await sendAndLog(supabase, guardianId, "bot_cancel_error", body, () =>
-        sendTextMessage({ to: guardianPhone, body })
-      );
-      await endFlow(supabase, guardianPhone, guardianId, "error", { reason: "calendar_error" });
-      return;
-    }
-  } else {
-    console.error("[whatsapp bot] consulta sem google_event_id ao cancelar:", appointment.id);
-  }
-
   const { error } = await supabase
     .from("appointments")
     .update({ status: "canceled", canceled_via: "whatsapp_bot", canceled_at: new Date().toISOString() })
     .eq("id", appointment.id);
   if (error) {
     console.error("[whatsapp bot] erro ao marcar consulta como cancelada:", error.message);
+    const body = texts.cancelErrorText();
+    await sendAndLog(supabase, guardianId, "bot_cancel_error", body, () =>
+      sendTextMessage({ to: guardianPhone, body })
+    );
+    await endFlow(supabase, guardianPhone, guardianId, "error", { reason: "cancel_error" });
+    return;
   }
 
   const body = texts.cancelSuccessText(

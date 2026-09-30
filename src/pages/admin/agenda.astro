@@ -6,7 +6,7 @@ import type { BadgeVariant } from "../../components/admin/Badge.astro";
 import Icon from "../../components/admin/Icon.astro";
 import PresenceControl from "../../components/admin/PresenceControl.astro";
 import { createClient } from "../../lib/supabase/server";
-import { isVisibleInAgenda, listEvents } from "../../lib/google/calendar";
+import { groupSessionTitle, loadAgendaItems } from "../../lib/scheduling/agendaItems";
 import { formatPhoneBR } from "../../lib/phone";
 import {
   AUTHORSHIP_COLUMNS,
@@ -34,24 +34,16 @@ const date = dateParam && /^\d{4}-\d{2}-\d{2}$/.test(dateParam) ? dateParam : to
 const dayStart = new Date(`${date}T00:00:00-03:00`);
 const dayEnd = new Date(dayStart.getTime() + 24 * 60 * 60_000);
 
-const events = await listEvents(dayStart, dayEnd);
+const items = await loadAgendaItems(
+  supabase,
+  dayStart,
+  dayEnd,
+  `appointment_type, home_visit_address, ${AUTHORSHIP_COLUMNS}, ${PRESENCE_COLUMNS}, patients ( full_name, guardians ( full_name, phone ) ), clinic_locations ( name, type )`
+);
 
-const appointmentIds = events
-  .map((event) => event.extendedProperties?.private?.appointment_id)
-  .filter((id): id is string => Boolean(id));
-
-const { data: appointments } = appointmentIds.length
-  ? await supabase
-      .from("appointments")
-      .select(
-        `id, appointment_type, home_visit_address, ${AUTHORSHIP_COLUMNS}, ${PRESENCE_COLUMNS}, patients ( full_name, guardians ( full_name, phone ) ), clinic_locations ( name, type )`
-      )
-      .in("id", appointmentIds)
-  : { data: [] as any[] };
-
-const staffLabels = appointmentIds.length ? await fetchStaffLabels(supabase) : new Map<string, string>();
-
-const appointmentsById = new Map((appointments ?? []).map((appointment) => [appointment.id, appointment]));
+const staffLabels = items.some((item) => item.kind === "appointment")
+  ? await fetchStaffLabels(supabase)
+  : new Map<string, string>();
 
 const appointmentTypeLabels: Record<string, string> = {
   first_visit: "Consulta",
@@ -65,18 +57,12 @@ function typeBadgeVariant(type: string | undefined): BadgeVariant {
   return "info";
 }
 
-function formatTime(dateTime: string | undefined): string {
-  if (!dateTime) return "—";
-  const d = new Date(dateTime);
+function formatTime(d: Date): string {
   return new Date(d.getTime() - 3 * 60 * 60 * 1000).toISOString().slice(11, 16);
 }
 
 // Erro do botão de presença confirmada (volta com `?error=presenca`).
 const presenceError = Astro.url.searchParams.get("error") === "presenca";
-
-const sortedEvents = events.filter((event) => isVisibleInAgenda(event, appointmentsById)).sort(
-  (a, b) => new Date(a.start.dateTime ?? 0).getTime() - new Date(b.start.dateTime ?? 0).getTime()
-);
 ---
 
 <AdminLayout title="Agenda">
@@ -178,14 +164,11 @@ const sortedEvents = events.filter((event) => isVisibleInAgenda(event, appointme
 
   <div class="mt-6 flex flex-col gap-3">
     {
-      sortedEvents.length ? (
-        sortedEvents.map((event) => {
-          const groupExamTypeId = event.extendedProperties?.private?.group_exam_type_id;
-          const appointmentId = event.extendedProperties?.private?.appointment_id;
-          const isAdminBlock = event.extendedProperties?.private?.admin_block === "true";
-          const appointment = appointmentId ? appointmentsById.get(appointmentId) : undefined;
-          const isCancelled = event.status === "cancelled";
-          const isPast = Boolean(event.start.dateTime) && new Date(event.start.dateTime!).getTime() < Date.now();
+      items.length ? (
+        items.map((item) => {
+          const appointment = item.kind === "appointment" ? (item.appointment as any) : undefined;
+          const isCancelled = item.canceled;
+          const isPast = item.start.getTime() < Date.now();
           const patient = (appointment?.patients ?? null) as any;
           const guardian = patient?.guardians ?? null;
           const location = (appointment?.clinic_locations ?? null) as any;
@@ -194,17 +177,17 @@ const sortedEvents = events.filter((event) => isVisibleInAgenda(event, appointme
             <Card muted={isCancelled}>
               <div class="flex flex-wrap items-center justify-between gap-2">
                 <span class="text-base font-semibold text-slate-900">
-                  {formatTime(event.start.dateTime)} – {formatTime(event.end.dateTime)}
+                  {formatTime(item.start)} – {formatTime(item.end)}
                 </span>
                 {isCancelled && <Badge variant="neutral">Cancelado</Badge>}
               </div>
-              {groupExamTypeId ? (
-                // Sessão de exame em grupo (Fase 11 etapa 4): um evento só,
-                // compartilhado por vários pacientes — sem nome de paciente
-                // aqui de propósito (pedido do cliente). "Ver pacientes" leva
-                // pro Resumo do dia, que lista cada um individualmente.
+              {item.kind === "group_session" ? (
+                // Turma de exame (Fase 11 etapa 4): um card só por turma —
+                // sem nome de paciente aqui de propósito (pedido do cliente).
+                // "Ver pacientes" leva pro Resumo do dia, que lista cada um
+                // individualmente.
                 <div class="mt-2 text-sm text-slate-700">
-                  <p class="font-medium text-slate-900">{event.summary}</p>
+                  <p class="font-medium text-slate-900">{groupSessionTitle(item)}</p>
                   <div class="mt-2">
                     <Badge variant="warning">Exame em grupo</Badge>
                   </div>
@@ -263,7 +246,6 @@ const sortedEvents = events.filter((event) => isVisibleInAgenda(event, appointme
                       <button
                         type="button"
                         class="cancel-appointment-btn flex-1 rounded-md border border-red-300 px-3 py-2 text-xs font-semibold text-red-700 hover:bg-red-50"
-                        data-event-id={event.id}
                         data-appointment-id={appointment.id}
                       >
                         Cancelar
@@ -280,22 +262,16 @@ const sortedEvents = events.filter((event) => isVisibleInAgenda(event, appointme
                     </p>
                   )}
                 </div>
-              ) : isAdminBlock ? (
-                // Bloqueio criado pelo admin (Fase 13 etapa 1) — diferente do
-                // bloqueio manual feito direto no app do Google Calendar
-                // (esse não tem o marcador `admin_block`, cai no else abaixo).
+              ) : item.kind === "block" ? (
+                // Bloqueio de agenda (Fase 13, no banco desde a Fase 20).
                 <div class="mt-2 text-sm text-slate-700">
                   <p class="font-medium text-slate-900">Bloqueio administrativo</p>
-                  {event.description && <p class="mt-1 text-slate-500">{event.description}</p>}
+                  <p class="mt-1 text-slate-500">{item.reason}</p>
                   <div class="mt-2">
                     <Badge variant="neutral">Bloqueio</Badge>
                   </div>
                 </div>
-              ) : (
-                <p class="mt-2 text-sm text-slate-500">
-                  {event.summary || "Bloqueio manual"} (sem registro de paciente vinculado)
-                </p>
-              )}
+              ) : null}
             </Card>
           );
         })
@@ -344,13 +320,11 @@ const sortedEvents = events.filter((event) => isVisibleInAgenda(event, appointme
   const acceptBtn = document.getElementById("cancel_dialog_accept") as HTMLButtonElement;
   const errorMsg = document.getElementById("cancel_dialog_error") as HTMLParagraphElement;
 
-  let pendingEventId: string | null = null;
   let pendingAppointmentId: string | null = null;
 
   document.querySelectorAll(".cancel-appointment-btn").forEach((btn) => {
     btn.addEventListener("click", () => {
       const button = btn as HTMLButtonElement;
-      pendingEventId = button.dataset.eventId!;
       pendingAppointmentId = button.dataset.appointmentId!;
       errorMsg.classList.add("hidden");
       acceptBtn.disabled = false;
@@ -365,16 +339,14 @@ const sortedEvents = events.filter((event) => isVisibleInAgenda(event, appointme
   });
 
   acceptBtn.addEventListener("click", async () => {
-    if (!pendingEventId || !pendingAppointmentId) return;
+    if (!pendingAppointmentId) return;
 
     acceptBtn.disabled = true;
     acceptBtn.textContent = "Cancelando…";
     errorMsg.classList.add("hidden");
 
-    const response = await fetch(`/api/admin/agenda/events/${encodeURIComponent(pendingEventId)}/cancel`, {
+    const response = await fetch(`/api/admin/agenda/appointments/${encodeURIComponent(pendingAppointmentId)}/cancel`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ appointmentId: pendingAppointmentId }),
     });
 
     if (response.ok) {

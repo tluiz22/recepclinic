@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { queryFreeBusy } from "../google/calendar";
 import { isNationalHoliday } from "../holidays";
+import { getBusyIntervals } from "./busyIntervals";
 import { computeAvailableSlots, type AppointmentType, type AvailabilityWindow } from "./slots";
 
 export interface AvailableDate {
@@ -24,9 +24,8 @@ function addDays(dateStr: string, delta: number): string {
 /**
  * Varre os próximos dias a partir de hoje e retorna as primeiras `count` datas com pelo menos
  * um horário livre para o local/tipo de consulta informados (usadas no passo BOOK_DATE_SELECT
- * do bot de WhatsApp e reutilizáveis pela tela de admin). Faz uma única consulta de freeBusy
- * cobrindo toda a janela de busca, em vez de uma por dia, para não multiplicar chamadas à API
- * do Google Calendar.
+ * do bot de WhatsApp e reutilizáveis pela tela de admin). Busca os horários ocupados de toda
+ * a janela de uma vez, em vez de uma consulta por dia.
  */
 export async function getNextAvailableDates({
   supabase,
@@ -74,7 +73,7 @@ export async function getNextAvailableDates({
   const startDate = todayFortaleza();
   const rangeStart = new Date(`${startDate}T00:00:00-03:00`);
   const rangeEnd = new Date(rangeStart.getTime() + maxDaysAhead * 24 * 60 * 60_000);
-  const busy = await queryFreeBusy(rangeStart, rangeEnd);
+  const busy = await getBusyIntervals(supabase, rangeStart, rangeEnd);
 
   const results: AvailableDate[] = [];
   let date = startDate;
