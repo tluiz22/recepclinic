@@ -1,6 +1,7 @@
 import type { APIRoute } from "astro";
 import { createClient } from "../../../../../../lib/supabase/server";
 import { sendAppointmentCancellation } from "../../../../../../lib/whatsapp/notifications";
+import { logAppointmentEvent } from "../../../../../../lib/audit";
 
 export const POST: APIRoute = async ({ params, request, cookies, locals }) => {
   const { id: appointmentId } = params;
@@ -40,6 +41,13 @@ export const POST: APIRoute = async ({ params, request, cookies, locals }) => {
       headers: { "Content-Type": "application/json" },
     });
   }
+
+  await logAppointmentEvent(supabase, {
+    appointmentId,
+    type: "canceled",
+    channel: "admin",
+    actorId: locals.userId ?? null,
+  });
 
   // Notificação de cancelamento por WhatsApp (Fase 3a) — melhor esforço.
   const patient = (appointment.patients ?? null) as unknown as {

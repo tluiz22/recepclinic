@@ -88,7 +88,7 @@ export const POST: APIRoute = async ({ request, cookies, locals }) => {
         ).data?.map((appointment) => appointment.id) ?? [];
 
     if (idsToCancel.length) {
-      await cancelAppointmentsInBulk(supabase, idsToCancel, locals.userId ?? null);
+      await cancelAppointmentsInBulk(supabase, idsToCancel, locals.userId ?? null, "schedule_block");
     }
   }
 

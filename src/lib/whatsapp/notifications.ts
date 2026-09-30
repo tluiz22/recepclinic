@@ -338,6 +338,12 @@ export function reminderButtonPayload(action: ReminderAction, appointmentId: str
 // `WHATSAPP_TEMPLATE_REMINDER_NEW_LAYOUT=true`, depois da aprovação da
 // versão com botões na Meta: mandar payload de botão para o template antigo
 // (sem botões) dá erro.
+// Template do lembrete ligado? O cron checa antes de enviar (Fase 22):
+// desligado não conta como lembrado e é registrado como "não enviado".
+export function isReminderTemplateConfigured(): boolean {
+  return Boolean(import.meta.env.WHATSAPP_TEMPLATE_REMINDER);
+}
+
 export function sendAppointmentReminder(input: NotificationInput): Promise<string> {
   const newLayout = import.meta.env.WHATSAPP_TEMPLATE_REMINDER_NEW_LAYOUT === "true";
   return sendNotification(input, {

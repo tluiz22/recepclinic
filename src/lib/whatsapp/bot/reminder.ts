@@ -12,6 +12,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { sendTextMessage } from "../client";
 import { formatWhen } from "../formatDateTime";
 import { startFunnel } from "../funnel";
+import { logAppointmentEvent } from "../../audit";
 import { REMINDER_ACTIONS, type ReminderAction } from "../notifications";
 import type { WaMessage } from "../types";
 import { sendAndLog, type AppointmentCandidate } from "./shared";
@@ -80,6 +81,12 @@ export async function handleReminderTap(
     .eq("id", appointment.id);
   if (error) {
     console.error("[whatsapp bot] erro ao gravar resposta ao lembrete:", error.message);
+  } else if (confirmNow) {
+    await logAppointmentEvent(supabase, {
+      appointmentId: appointment.id,
+      type: "presence_confirmed",
+      channel: "whatsapp_bot",
+    });
   }
   if (waMsg.id) {
     await supabase

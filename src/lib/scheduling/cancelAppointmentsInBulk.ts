@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { sendMassCancellationNotice } from "../whatsapp/notifications";
 import { buildAppUrl } from "../whatsapp/bot/shared";
+import { logAppointmentEvent } from "../audit";
 
 // Notificação passiva (sem conversa ativa em andamento) — validade bem maior
 // que os 30min padrão dos links gerados pelo bot no meio de uma conversa.
@@ -16,7 +17,10 @@ export async function cancelAppointmentsInBulk(
   supabase: SupabaseClient,
   appointmentIds: string[],
   // Login que disparou o cancelamento em massa/bloqueio (Fase 17).
-  canceledBy: string | null
+  canceledBy: string | null,
+  // Origem na trilha de auditoria (Fase 22): tela de cancelamento em massa
+  // ou bloqueio de agenda.
+  channel: "mass_cancel" | "schedule_block"
 ): Promise<{ canceled: number; skipped: number }> {
   let canceled = 0;
   let skipped = 0;
@@ -45,6 +49,8 @@ export async function cancelAppointmentsInBulk(
       continue;
     }
     canceled += 1;
+
+    await logAppointmentEvent(supabase, { appointmentId, type: "canceled", channel, actorId: canceledBy });
 
     const examType = (appointment.exam_types ?? null) as unknown as { id: string; name: string } | null;
 

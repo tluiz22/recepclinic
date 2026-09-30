@@ -7,6 +7,7 @@ import { isOverlapError } from "../../../../../../lib/scheduling/overlap";
 import { resolveClinicLocationIds, type LocationCategory } from "../../../../../../lib/scheduling/resolveClinicLocationIds";
 import { getReturnOriginCheck } from "../../../../../../lib/scheduling/returnVisitEligibility";
 import { RESCHEDULE_PRESENCE_RESET } from "../../../../../../lib/presence";
+import { logAppointmentEvent } from "../../../../../../lib/audit";
 import {
   sendAppointmentReschedule,
   sendExamPreparation,
@@ -193,6 +194,14 @@ export const POST: APIRoute = async ({ params, request, cookies, redirect, local
       ...RESCHEDULE_PRESENCE_RESET,
     })
     .eq("id", id);
+
+  await logAppointmentEvent(supabase, {
+    appointmentId: id,
+    type: "rescheduled",
+    channel: "admin",
+    actorId: locals.userId ?? null,
+    details: { from: appointment.scheduled_at, to: startDate.toISOString() },
+  });
 
   // Notificação de remarcação por WhatsApp (Fase 3a) — melhor esforço.
   const patient = (appointment.patients ?? null) as unknown as {

@@ -13,6 +13,7 @@ import {
   sendExamPreparation,
 } from "../../../../lib/whatsapp/notifications";
 import { logWebFunnelEvent, type FunnelLink } from "../../../../lib/whatsapp/funnel";
+import { logAppointmentEvent } from "../../../../lib/audit";
 
 export const POST: APIRoute = async ({ params, request, redirect }) => {
   const token = params.token;
@@ -271,6 +272,13 @@ export const POST: APIRoute = async ({ params, request, redirect }) => {
       })
       .eq("id", appointment.id);
 
+    await logAppointmentEvent(supabase, {
+      appointmentId,
+      type: "rescheduled",
+      channel: "booking_link",
+      details: { from: appointment.scheduled_at, to: startDate.toISOString() },
+    });
+
     if (guardian?.phone) {
       await sendAppointmentReschedule({
         supabase,
@@ -352,6 +360,8 @@ export const POST: APIRoute = async ({ params, request, redirect }) => {
 
       appointmentId = newAppointment.id;
     }
+
+    await logAppointmentEvent(supabase, { appointmentId, type: "created", channel: "booking_link" });
 
     if (guardian?.phone) {
       await sendAppointmentConfirmation({

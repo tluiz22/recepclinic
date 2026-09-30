@@ -5,6 +5,9 @@ import Badge from "../../components/admin/Badge.astro";
 import type { BadgeVariant } from "../../components/admin/Badge.astro";
 import Icon from "../../components/admin/Icon.astro";
 import PresenceControl from "../../components/admin/PresenceControl.astro";
+import ResendReminderButton from "../../components/admin/ResendReminderButton.astro";
+import ResendReminderNotice from "../../components/admin/ResendReminderNotice.astro";
+import { fetchReminderResendable } from "../../lib/reminderResend";
 import { createClient } from "../../lib/supabase/server";
 import { groupSessionTitle, loadAgendaItems } from "../../lib/scheduling/agendaItems";
 import { formatPhoneBR } from "../../lib/phone";
@@ -38,12 +41,23 @@ const items = await loadAgendaItems(
   supabase,
   dayStart,
   dayEnd,
-  `appointment_type, home_visit_address, ${AUTHORSHIP_COLUMNS}, ${PRESENCE_COLUMNS}, patients ( full_name, guardians ( full_name, phone ) ), clinic_locations ( name, type )`
+  `appointment_type, home_visit_address, reminder_sent_at, ${AUTHORSHIP_COLUMNS}, ${PRESENCE_COLUMNS}, patients ( full_name, guardians ( full_name, phone ) ), clinic_locations ( name, type )`
 );
 
 const staffLabels = items.some((item) => item.kind === "appointment")
   ? await fetchStaffLabels(supabase)
   : new Map<string, string>();
+
+// "Reenviar lembrete" (Fase 22 · etapa 6): atendimentos ativos e ainda por
+// vir sem lembrete entregue.
+const resendable = await fetchReminderResendable(
+  supabase,
+  items.flatMap((item) =>
+    item.kind === "appointment" && !item.canceled && item.start.getTime() > Date.now()
+      ? [{ id: item.appointment.id, reminder_sent_at: (item.appointment.reminder_sent_at as string | null) ?? null }]
+      : []
+  )
+);
 
 const appointmentTypeLabels: Record<string, string> = {
   first_visit: "Consulta",
@@ -162,6 +176,8 @@ const presenceError = Astro.url.searchParams.get("error") === "presenca";
     )
   }
 
+  <ResendReminderNotice />
+
   <div class="mt-6 flex flex-col gap-3">
     {
       items.length ? (
@@ -234,6 +250,12 @@ const presenceError = Astro.url.searchParams.get("error") === "presenca";
                       returnTo={`/admin/agenda?date=${date}`}
                       editable={!isPast}
                     />
+                  )}
+                  {resendable.has(appointment.id) && (
+                    <div class="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1.5">
+                      <span class="text-xs text-slate-400">Lembrete ainda não entregue</span>
+                      <ResendReminderButton appointmentId={appointment.id} returnTo={`/admin/agenda?date=${date}`} />
+                    </div>
                   )}
                   {!isCancelled && !isPast && (
                     <div class="mt-3 flex gap-2">

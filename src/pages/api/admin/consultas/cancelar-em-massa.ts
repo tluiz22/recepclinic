@@ -25,7 +25,7 @@ export const POST: APIRoute = async ({ request, cookies, locals }) => {
   }
 
   const supabase = createClient(request, cookies);
-  const { canceled, skipped } = await cancelAppointmentsInBulk(supabase, appointmentIds, locals.userId ?? null);
+  const { canceled, skipped } = await cancelAppointmentsInBulk(supabase, appointmentIds, locals.userId ?? null, "mass_cancel");
 
   return new Response(JSON.stringify({ ok: true, canceled, skipped }), {
     headers: { "Content-Type": "application/json" },

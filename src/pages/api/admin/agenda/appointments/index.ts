@@ -7,6 +7,7 @@ import { isOverlapError } from "../../../../../lib/scheduling/overlap";
 import { resolveClinicLocationIds, type LocationCategory } from "../../../../../lib/scheduling/resolveClinicLocationIds";
 import { getReturnOriginCheck } from "../../../../../lib/scheduling/returnVisitEligibility";
 import { sendAppointmentConfirmation, sendExamPreparation } from "../../../../../lib/whatsapp/notifications";
+import { logAppointmentEvent } from "../../../../../lib/audit";
 
 export const POST: APIRoute = async ({ request, cookies, redirect, locals }) => {
   const formData = await request.formData();
@@ -214,6 +215,13 @@ export const POST: APIRoute = async ({ request, cookies, redirect, locals }) => 
 
     newAppointmentId = newAppointment.id;
   }
+
+  await logAppointmentEvent(supabase, {
+    appointmentId: newAppointmentId,
+    type: "created",
+    channel: "admin",
+    actorId: locals.userId ?? null,
+  });
 
   // Invalida qualquer link de agendamento ainda pendente desse paciente pro
   // mesmo tipo (ex.: de um cancelamento em massa, Fase 12) — evita que o

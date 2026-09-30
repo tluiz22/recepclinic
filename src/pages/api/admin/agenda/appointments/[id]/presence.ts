@@ -1,5 +1,6 @@
 import type { APIRoute } from "astro";
 import { createClient } from "../../../../../../lib/supabase/server";
+import { logAppointmentEvent } from "../../../../../../lib/audit";
 
 // Confirmação manual de presença (Fase 19): pra quem confirmou por ligação
 // ou por texto. Marca ou desfaz `patient_confirmed_at`, gravando quem
@@ -19,7 +20,16 @@ export const POST: APIRoute = async ({ params, request, cookies, locals, redirec
   if (!id) return redirect(withError);
 
   const supabase = createClient(request, cookies);
-  const { error } = await supabase
+
+  // Estado anterior, pra trilha (Fase 22) só registrar mudança de fato — um
+  // segundo clique na tela desatualizada não vira evento repetido.
+  const { data: before } = await supabase
+    .from("appointments")
+    .select("patient_confirmed_at")
+    .eq("id", id)
+    .maybeSingle();
+
+  const { data: updated, error } = await supabase
     .from("appointments")
     .update(
       confirmed
@@ -27,7 +37,18 @@ export const POST: APIRoute = async ({ params, request, cookies, locals, redirec
         : { patient_confirmed_at: null, patient_confirmed_by: null }
     )
     .eq("id", id)
-    .in("status", ["scheduled", "confirmed"]);
+    .in("status", ["scheduled", "confirmed"])
+    .select("id")
+    .maybeSingle();
+
+  if (updated && before && Boolean(before.patient_confirmed_at) !== confirmed) {
+    await logAppointmentEvent(supabase, {
+      appointmentId: id,
+      type: confirmed ? "presence_confirmed" : "presence_unconfirmed",
+      channel: "admin",
+      actorId: locals.userId ?? null,
+    });
+  }
 
   return redirect(error ? withError : returnTo);
 };

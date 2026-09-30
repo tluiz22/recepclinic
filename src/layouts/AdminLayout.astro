@@ -25,6 +25,8 @@ const role = Astro.locals.role ?? "secretaria";
 const roleLabel = role === "medica" ? "Médica" : "Secretária";
 
 const moreNavItems: { label: string; href: string; icon: IconName }[] = [
+  // Fase 22 · etapa 5: execuções dos crons e envios com falha — Secretária e Médica.
+  { label: "Envios", href: "/admin/envios", icon: "paper-airplane" },
   { label: "Configurações", href: "/admin/configuracoes", icon: "settings" },
   ...(role === "medica"
     ? [

@@ -15,6 +15,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { sendInteractiveListMessage, sendTextMessage } from "../client";
 import { formatWhen } from "../formatDateTime";
+import { logAppointmentEvent } from "../../audit";
 import {
   fetchUpcomingAppointments,
   parseBirthdateInput,
@@ -220,6 +221,8 @@ async function performCancel(
     await endFlow(supabase, guardianPhone, guardianId, "error", { reason: "cancel_error" });
     return;
   }
+
+  await logAppointmentEvent(supabase, { appointmentId: appointment.id, type: "canceled", channel: "whatsapp_bot" });
 
   const body = texts.cancelSuccessText(
     appointment.patient_name,

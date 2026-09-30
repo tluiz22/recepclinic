@@ -6,6 +6,7 @@ import Card from "../../components/admin/Card.astro";
 import Icon from "../../components/admin/Icon.astro";
 import type { IconName } from "../../components/admin/Icon.astro";
 import { createClient } from "../../lib/supabase/server";
+import { describeSendsAlert, fetchSendsAlert } from "../../lib/automaticSends";
 
 const PENDING_WINDOW_DAYS = 60;
 
@@ -22,7 +23,7 @@ const todayEnd = new Date(`${todayStr}T23:59:59.999-03:00`);
 // e amanhã que já receberam o lembrete, ativos e sem presença confirmada.
 const tomorrowEnd = new Date(todayEnd.getTime() + 24 * 60 * 60 * 1000);
 
-const [{ data: todayRows }, { count: pendingCount }, { count: unconfirmedCount }] = await Promise.all([
+const [{ data: todayRows }, { count: pendingCount }, { count: unconfirmedCount }, sendsAlert] = await Promise.all([
   supabase
     .from("appointments")
     .select("appointment_type")
@@ -43,7 +44,11 @@ const [{ data: todayRows }, { count: pendingCount }, { count: unconfirmedCount }
     .is("patient_confirmed_at", null)
     .gte("scheduled_at", now.toISOString())
     .lte("scheduled_at", tomorrowEnd.toISOString()),
+  // Alerta de envios automáticos (Fase 22 · etapa 5).
+  fetchSendsAlert(supabase, now),
 ]);
+
+const sendsAlertLines = describeSendsAlert(sendsAlert);
 
 const appointmentsToday = (todayRows ?? []).filter((row) => row.appointment_type !== "exam").length;
 const examsToday = (todayRows ?? []).length - appointmentsToday;
@@ -68,6 +73,18 @@ const shortcuts:{ label: string; href: string; icon: IconName }[] = [
       <p class="mt-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
         Essa tela é de acesso exclusivo da médica.
       </p>
+    )
+  }
+
+  {
+    sendsAlertLines.length > 0 && (
+      <a
+        href="/admin/envios"
+        class="mt-4 block rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800 hover:bg-red-100"
+      >
+        {sendsAlertLines.map((line) => <p>⚠ {line}</p>)}
+        <p class="mt-1 font-medium underline">Ver envios automáticos</p>
+      </a>
     )
   }
 

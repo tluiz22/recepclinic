@@ -1,0 +1,232 @@
+---
+// Envios automáticos (Fase 22 · etapa 5): se os crons rodaram (`job_runs`)
+// e quais atendimentos futuros têm envio com falha. Secretária e Médica.
+// Os envios são disparados pelo agendador do Supabase (pg_cron, migrações
+// 0029/0030), inclusive no preview.
+import AdminLayout from "../../layouts/AdminLayout.astro";
+import Card from "../../components/admin/Card.astro";
+import Badge from "../../components/admin/Badge.astro";
+import type { BadgeVariant } from "../../components/admin/Badge.astro";
+import ResendReminderButton from "../../components/admin/ResendReminderButton.astro";
+import ResendReminderNotice from "../../components/admin/ResendReminderNotice.astro";
+import { createClient } from "../../lib/supabase/server";
+import { fetchReminderResendable } from "../../lib/reminderResend";
+import { formatWhen } from "../../lib/whatsapp/formatDateTime";
+import { buildAppointmentTypeLabel } from "../../lib/whatsapp/notifications";
+import {
+  DAILY_SUMMARY_SCHEDULES,
+  REMINDER_HOUR_MAX,
+  REMINDER_HOUR_MIN,
+  describeSendsAlert,
+  fetchAppointmentsWithFailedSends,
+  fetchRecentJobRuns,
+  fetchReminderHour,
+  fetchSendsAlert,
+  jobRunState,
+  type JobRun,
+  type JobRunState,
+} from "../../lib/automaticSends";
+
+const supabase = createClient(Astro.request, Astro.cookies);
+const now = new Date();
+
+const [runs, failedAppointments, alert, reminderHour] = await Promise.all([
+  fetchRecentJobRuns(supabase),
+  fetchAppointmentsWithFailedSends(supabase, { now }),
+  fetchSendsAlert(supabase, now),
+  fetchReminderHour(supabase),
+]);
+
+// Horário do lembrete (etapa 7): horas cheias das 7h às 20h.
+const reminderHourOptions = Array.from(
+  { length: REMINDER_HOUR_MAX - REMINDER_HOUR_MIN + 1 },
+  (_, index) => REMINDER_HOUR_MIN + index
+);
+const hourSaved = Astro.url.searchParams.get("horario");
+
+// "Reenviar lembrete" (etapa 6) nos atendimentos com falha que ainda não
+// têm lembrete entregue.
+const resendable = await fetchReminderResendable(supabase, failedAppointments);
+
+// "27/09/2026 às 08h02", no fuso de Fortaleza.
+function formatAt(iso: string): string {
+  const parts = new Intl.DateTimeFormat("pt-BR", {
+    timeZone: "America/Fortaleza",
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).formatToParts(new Date(iso));
+  const get = (type: string) => parts.find((part) => part.type === type)?.value ?? "";
+  return `${get("day")}/${get("month")}/${get("year")} às ${get("hour")}h${get("minute")}`;
+}
+
+const stateBadges: Record<JobRunState, { label: string; variant: BadgeVariant }> = {
+  ok: { label: "Concluída", variant: "success" },
+  error: { label: "Erro", variant: "danger" },
+  running: { label: "Em andamento", variant: "info" },
+  stuck: { label: "Interrompida", variant: "danger" },
+};
+
+function jobLabel(run: JobRun): string {
+  if (run.job === "appointment_reminders") return "Lembrete";
+  return run.variant === "final" ? "Resumo do dia (manhã)" : "Resumo do dia (véspera)";
+}
+
+function plural(count: number, singular: string, pluralForm: string): string {
+  return `${count} ${count === 1 ? singular : pluralForm}`;
+}
+
+// Totais em uma linha, só o que não é zero (menos o total principal).
+function totalsLine(run: JobRun): string {
+  const t = run.totals ?? {};
+  const parts: string[] = [];
+  if (run.job === "appointment_reminders") {
+    parts.push(plural(t.candidates ?? 0, "atendimento na janela", "atendimentos na janela"));
+    if (t.sent) parts.push(plural(t.sent, "enviado", "enviados"));
+    if (t.failed) parts.push(plural(t.failed, "com falha", "com falha"));
+    if (t.not_sent_no_phone) parts.push(`${t.not_sent_no_phone} sem telefone`);
+    if (t.not_sent_no_template) parts.push(`${t.not_sent_no_template} com template desligado`);
+  } else {
+    parts.push(`${plural(t.consultas ?? 0, "consulta", "consultas")}, ${plural(t.exames ?? 0, "exame", "exames")}`);
+    if (!t.consultas && !t.exames) parts.push("nada a enviar");
+    if (t.sent) parts.push(plural(t.sent, "mensagem enviada", "mensagens enviadas"));
+    if (t.failed) parts.push(plural(t.failed, "com falha", "com falha"));
+    if (t.not_sent_no_template) parts.push(`${t.not_sent_no_template} com template desligado`);
+    if (t.lists_without_recipient) parts.push("sem destinatário ativo em Configurações > Contatos");
+  }
+  return parts.join(" · ");
+}
+
+function hasSendProblem(run: JobRun): boolean {
+  const t = run.totals ?? {};
+  return Boolean(t.failed || t.not_sent_no_phone || t.not_sent_no_template || t.lists_without_recipient);
+}
+
+const runRows = runs.map((run) => {
+  const state = jobRunState(run, now);
+  return {
+    id: run.id,
+    job: jobLabel(run),
+    startedAt: formatAt(run.started_at),
+    state: stateBadges[state],
+    totals: totalsLine(run),
+    totalsWarning: hasSendProblem(run),
+    error: run.error_message,
+  };
+});
+
+const failedRows = failedAppointments.map((a) => ({
+  id: a.id,
+  whenLabel: formatWhen(new Date(a.scheduled_at)),
+  typeLabel: buildAppointmentTypeLabel(a.appointment_type, a.exam_name ?? undefined),
+  patientName: a.patient_name,
+  failedLabel: plural(a.failedSends, "envio com falha", "envios com falha"),
+  historyHref: `/admin/pacientes/${a.guardian_id}/criancas/${a.patient_id}/historico#card-${a.id}`,
+  canResend: resendable.has(a.id),
+}));
+
+const alertLines = describeSendsAlert(alert);
+---
+
+<AdminLayout title="Envios automáticos">
+  <h1 class="text-2xl font-bold text-slate-900">Envios automáticos</h1>
+  <p class="mt-2 text-slate-600">Lembretes e resumos do dia enviados pelo sistema.</p>
+
+  {
+    alertLines.length > 0 && (
+      <div class="mt-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
+        {alertLines.map((line) => <p>⚠ {line}</p>)}
+      </div>
+    )
+  }
+
+  <ResendReminderNotice />
+
+  <h2 class="mt-8 text-sm font-semibold uppercase tracking-wide text-slate-500">Horários</h2>
+  <Card class="mt-3">
+    <form method="POST" action="/api/admin/envios/reminder-hour" class="flex flex-wrap items-end gap-3">
+      <label class="flex flex-col gap-1 text-sm">
+        <span class="font-medium text-slate-700">Horário do lembrete</span>
+        <select name="reminder_hour" class="rounded-md border border-slate-300 px-3 py-2 text-sm">
+          {
+            reminderHourOptions.map((hour) => (
+              <option value={hour} selected={hour === reminderHour}>
+                {String(hour).padStart(2, "0")}:00
+              </option>
+            ))
+          }
+        </select>
+      </label>
+      <button type="submit" class="rounded-md bg-sky-700 px-4 py-2 text-sm font-medium text-white hover:bg-sky-800">
+        Salvar
+      </button>
+    </form>
+    {hourSaved === "ok" && <p class="mt-2 text-sm text-emerald-700">Horário salvo.</p>}
+    {hourSaved === "erro" && <p class="mt-2 text-sm text-red-700">Não foi possível salvar o horário. Tente novamente.</p>}
+    <p class="mt-2 text-xs text-slate-400">
+      Todo dia nesse horário o sistema envia o lembrete para os atendimentos das próximas 26h que ainda não
+      receberam.
+    </p>
+
+    <dl class="mt-4 grid gap-2 border-t border-slate-100 pt-3 text-sm sm:grid-cols-[12rem_1fr]">
+      <dt class="font-medium text-slate-700">Resumo do dia (véspera)</dt>
+      <dd class="text-slate-600">{DAILY_SUMMARY_SCHEDULES.preview}</dd>
+      <dt class="font-medium text-slate-700">Resumo do dia (manhã)</dt>
+      <dd class="text-slate-600">{DAILY_SUMMARY_SCHEDULES.final}</dd>
+    </dl>
+  </Card>
+
+  <h2 class="mt-8 text-sm font-semibold uppercase tracking-wide text-slate-500">Atendimentos com envio com falha</h2>
+  <div class="mt-3 flex max-w-xl flex-col gap-3">
+    {
+      failedRows.length ? (
+        failedRows.map((row) => (
+          <Card>
+            <div class="flex flex-wrap items-center justify-between gap-2">
+              <span class="text-base font-semibold text-slate-900">{row.whenLabel}</span>
+              <span class="text-sm font-medium text-red-700">⚠ {row.failedLabel}</span>
+            </div>
+            <p class="mt-1 text-sm text-slate-700">{row.patientName}</p>
+            <div class="mt-1.5 flex flex-wrap items-center justify-between gap-2">
+              <Badge variant="neutral">{row.typeLabel}</Badge>
+              <a href={row.historyHref} class="text-sm font-medium text-sky-700 hover:underline">
+                Ver trilha
+              </a>
+            </div>
+            {row.canResend && (
+              <div class="mt-3">
+                <ResendReminderButton appointmentId={row.id} returnTo="/admin/envios" />
+              </div>
+            )}
+          </Card>
+        ))
+      ) : (
+        <Card class="text-sm text-slate-500">Nenhum atendimento futuro com envio com falha.</Card>
+      )
+    }
+  </div>
+
+  <h2 class="mt-8 text-sm font-semibold uppercase tracking-wide text-slate-500">Últimas execuções</h2>
+  <div class="mt-3 flex max-w-xl flex-col gap-3">
+    {
+      runRows.length ? (
+        runRows.map((row) => (
+          <Card>
+            <div class="flex flex-wrap items-center justify-between gap-2">
+              <span class="font-semibold text-slate-900">{row.job}</span>
+              <Badge variant={row.state.variant}>{row.state.label}</Badge>
+            </div>
+            <p class="mt-1 text-sm text-slate-500">{row.startedAt}</p>
+            <p class={`mt-1 text-sm ${row.totalsWarning ? "text-amber-700" : "text-slate-600"}`}>{row.totals}</p>
+            {row.error && <p class="mt-1 text-sm text-red-700">Erro: {row.error}</p>}
+          </Card>
+        ))
+      ) : (
+        <Card class="text-sm text-slate-500">Nenhuma execução registrada ainda.</Card>
+      )
+    }
+  </div>
+</AdminLayout>
