@@ -1,9 +1,10 @@
 // Feriados nacionais do Brasil — usado para nunca oferecer data de feriado
 // na agenda (nem nas sugestões automáticas, nem numa data escolhida
 // manualmente). Além dos feriados fixados em lei federal, inclui também
-// Carnaval (segunda e terça) e Corpus Christi por pedido do cliente — não
-// são feriados nacionais obrigatórios por lei ("ponto facultativo"), mas na
-// prática a clínica também não atende nesses dias.
+// Carnaval (segunda e terça), Quarta-feira de Cinzas (dia inteiro) e Corpus
+// Christi por pedido do cliente — não são feriados nacionais obrigatórios
+// por lei ("ponto facultativo"), mas na prática a clínica também não atende
+// nesses dias.
 
 const FIXED_HOLIDAYS: ReadonlyArray<readonly [month: number, day: number]> = [
   [1, 1], // Confraternização Universal
@@ -18,8 +19,8 @@ const FIXED_HOLIDAYS: ReadonlyArray<readonly [month: number, day: number]> = [
 ];
 
 // Domingo de Páscoa pelo algoritmo de Meeus/Jones/Butcher (calendário
-// gregoriano) — usado para achar Sexta-feira Santa, Carnaval e Corpus
-// Christi, todos calculados a partir dele.
+// gregoriano) — usado para achar Carnaval, Quarta-feira de Cinzas,
+// Sexta-feira Santa e Corpus Christi, todos calculados a partir dele.
 function easterSunday(year: number): { month: number; day: number } {
   const a = year % 19;
   const b = Math.floor(year / 100);
@@ -48,6 +49,7 @@ function shiftMonthDay(year: number, month: number, day: number, deltaDays: numb
 const EASTER_OFFSET_HOLIDAYS: ReadonlyArray<number> = [
   -48, // Segunda-feira de Carnaval
   -47, // Terça-feira de Carnaval
+  -46, // Quarta-feira de Cinzas
   -2, // Sexta-feira Santa
   60, // Corpus Christi
 ];
