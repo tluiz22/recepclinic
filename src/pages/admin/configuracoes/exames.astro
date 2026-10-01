@@ -7,6 +7,7 @@ import ConfirmDeleteDialog from "../../../components/admin/ConfirmDeleteDialog.a
 import PreparationField from "../../../components/admin/PreparationField.astro";
 import { createClient } from "../../../lib/supabase/server";
 import { whatsAppTextSummary } from "../../../lib/whatsappFormat";
+import { describeConflictFromUrl } from "../../../lib/scheduling/examWindowConflicts";
 
 const supabase = createClient(Astro.request, Astro.cookies);
 
@@ -21,8 +22,37 @@ if (!showInactive) examTypesQuery = examTypesQuery.eq("is_active", true);
 
 const { data: examTypes } = await examTypesQuery;
 
+// Resumo dos dias e horários de cada exame (cadastrados na tela do exame).
+const { data: examWindows } = examTypes?.length
+  ? await supabase
+      .from("exam_type_availability_windows")
+      .select("exam_type_id, weekday, start_time, end_time, capacity")
+      .in(
+        "exam_type_id",
+        examTypes.map((exam) => exam.id)
+      )
+      .eq("is_active", true)
+      .order("weekday")
+      .order("start_time")
+  : { data: [] };
+
+const weekdayShortLabels = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
+
+const scheduleByExam = new Map<string, string[]>();
+for (const window of examWindows ?? []) {
+  const list = scheduleByExam.get(window.exam_type_id) ?? [];
+  const vagas = window.capacity ? ` (${window.capacity} vagas)` : "";
+  list.push(
+    `${weekdayShortLabels[window.weekday]} ${window.start_time.slice(0, 5)}–${window.end_time.slice(0, 5)}${vagas}`
+  );
+  scheduleByExam.set(window.exam_type_id, list);
+}
+
 const errorParam = Astro.url.searchParams.get("error");
-const errorMessage = errorParam ? "Não foi possível salvar. Confira os dados e tente novamente." : null;
+const conflictMessage = await describeConflictFromUrl(supabase, Astro.url.searchParams);
+const errorMessage = errorParam
+  ? (conflictMessage ?? "Não foi possível salvar. Confira os dados e tente novamente.")
+  : null;
 
 function formatCentsBRL(cents: number): string {
   return (cents / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -46,8 +76,8 @@ function formatCentsBRL(cents: number): string {
       <div>
         <h2 class="text-lg font-semibold text-slate-900">Tipos de exame</h2>
         <p class="mt-1 text-sm text-slate-600">
-          Exames que podem ser marcados pelo bot. Todo exame usa o mesmo local ("Exames"); a
-          disponibilidade dele é configurada como qualquer outro local, na aba Disponibilidade.
+          Exames que podem ser marcados pelo bot e pela Agenda. Os dias e horários de cada exame
+          ficam na tela dele, em "Editar".
         </p>
       </div>
       <form method="GET" action="/admin/configuracoes/exames">
@@ -66,7 +96,7 @@ function formatCentsBRL(cents: number): string {
     </div>
 
     <div class="mt-4 overflow-x-auto rounded-lg border border-slate-200 bg-white shadow-sm">
-      <table class="w-full min-w-[720px] border-collapse text-left text-sm">
+      <table class="w-full min-w-[880px] border-collapse text-left text-sm">
         <thead class="bg-slate-50 text-slate-600">
           <tr>
             <th class="px-3 py-2 font-medium">Nome</th>
@@ -74,6 +104,7 @@ function formatCentsBRL(cents: number): string {
             <th class="px-3 py-2 font-medium">Valor</th>
             <th class="px-3 py-2 font-medium">Preparo</th>
             <th class="px-3 py-2 font-medium">Modo</th>
+            <th class="px-3 py-2 font-medium">Dias e horários</th>
             <th class="px-3 py-2"></th>
           </tr>
         </thead>
@@ -100,6 +131,17 @@ function formatCentsBRL(cents: number): string {
                       <Badge variant="info">Em grupo</Badge>
                     ) : (
                       <Badge variant="neutral">Individual</Badge>
+                    )}
+                  </td>
+                  <td class="px-3 py-2">
+                    {scheduleByExam.get(exam.id)?.length ? (
+                      <ul class="space-y-0.5">
+                        {scheduleByExam.get(exam.id)!.map((line) => (
+                          <li class="whitespace-nowrap">{line}</li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <span class="text-amber-700">Sem horários: não aparece para marcar</span>
                     )}
                   </td>
                   <td class="whitespace-nowrap px-3 py-2 text-right">
@@ -136,7 +178,7 @@ function formatCentsBRL(cents: number): string {
               ))
             ) : (
               <tr class="border-t border-slate-200">
-                <td class="px-3 py-4 text-slate-500" colspan="6">
+                <td class="px-3 py-4 text-slate-500" colspan="7">
                   Nenhum tipo de exame cadastrado ainda.
                 </td>
               </tr>
@@ -205,8 +247,8 @@ function formatCentsBRL(cents: number): string {
         </button>
       </form>
       <p class="mt-2 text-xs text-slate-500">
-        Escolhendo "Em grupo/turma", os dias/horários fixos e o número de vagas são cadastrados
-        depois, em "Editar" (precisa existir o exame primeiro).
+        Ao adicionar, a tela do exame abre para cadastrar os dias e horários (e as vagas, se for
+        "Em grupo/turma").
       </p>
     </Card>
   </section>

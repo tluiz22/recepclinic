@@ -3,7 +3,9 @@ import AdminLayout from "../../../../layouts/AdminLayout.astro";
 import Card from "../../../../components/admin/Card.astro";
 import Icon from "../../../../components/admin/Icon.astro";
 import PreparationField from "../../../../components/admin/PreparationField.astro";
+import ConfirmDeleteDialog from "../../../../components/admin/ConfirmDeleteDialog.astro";
 import { createClient } from "../../../../lib/supabase/server";
+import { describeConflictFromUrl } from "../../../../lib/scheduling/examWindowConflicts";
 
 const supabase = createClient(Astro.request, Astro.cookies);
 const { id } = Astro.params;
@@ -18,8 +20,49 @@ if (!exam) {
   return Astro.redirect("/admin/configuracoes/exames?error=1");
 }
 
+// Dias e horários do exame — ficam aqui, junto do cadastro (ajuste de
+// out/2026; antes ficavam em Configurações › Disponibilidade, misturados com
+// os locais de consulta).
+const { data: windows } = await supabase
+  .from("exam_type_availability_windows")
+  .select("id, weekday, start_time, end_time, capacity")
+  .eq("exam_type_id", exam.id)
+  .eq("is_active", true)
+  .order("weekday")
+  .order("start_time");
+
+const isGroup = exam.scheduling_mode === "group";
+
+const weekdayLabels = [
+  "Domingo",
+  "Segunda-feira",
+  "Terça-feira",
+  "Quarta-feira",
+  "Quinta-feira",
+  "Sexta-feira",
+  "Sábado",
+];
+
+// Erros do cadastro de horários (rota exam-type-availability-windows)
+// aparecem na seção de horários; os do formulário do exame (inclusive o
+// conflito ao mudar para "Em grupo/turma"), no topo.
+const windowErrorMessages: Record<string, string> = {
+  invalid_range: "O horário de início precisa ser antes do horário de fim.",
+  window: "Não foi possível salvar o horário. Confira os dados e tente novamente.",
+};
 const errorParam = Astro.url.searchParams.get("error");
-const errorMessage = errorParam ? "Não foi possível salvar. Confira os dados e tente novamente." : null;
+const conflictMessage = await describeConflictFromUrl(supabase, Astro.url.searchParams);
+const isWindowConflict = errorParam === "overlap_same" || errorParam === "overlap_group";
+const windowErrorMessage = isWindowConflict
+  ? (conflictMessage ?? windowErrorMessages.window)
+  : errorParam
+    ? (windowErrorMessages[errorParam] ?? null)
+    : null;
+const errorMessage =
+  errorParam && !windowErrorMessage
+    ? (conflictMessage ?? "Não foi possível salvar. Confira os dados e tente novamente.")
+    : null;
+const isNew = Astro.url.searchParams.get("novo") === "1";
 ---
 
 <AdminLayout title={`Editar ${exam.name}`}>
@@ -36,6 +79,15 @@ const errorMessage = errorParam ? "Não foi possível salvar. Confira os dados e
   {
     errorMessage && (
       <p class="mt-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{errorMessage}</p>
+    )
+  }
+
+  {
+    isNew && (
+      <p class="mt-4 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
+        Exame cadastrado. Agora cadastre os dias e horários dele, mais abaixo — sem eles o exame não
+        aparece para marcar.
+      </p>
     )
   }
 
@@ -95,13 +147,8 @@ const errorMessage = errorParam ? "Não foi possível salvar. Confira os dados e
           </option>
         </select>
         <p class="mt-1 text-xs text-slate-500">
-          Ex.: Prick Test para aeroalérgenos, feito no mesmo horário pra vários pacientes. Escolhendo
-          "Em grupo/turma" e salvando, os dias/horários fixos desse exame passam a ser cadastrados em
-          Configurações {"› "}
-          <a href="/admin/configuracoes" class="text-sky-700 hover:underline">
-            Disponibilidade
-          </a>
-          .
+          Ex.: Prick Test para aeroalérgenos, feito no mesmo horário pra vários pacientes. Em
+          "Em grupo/turma", cada dia e horário abaixo é uma turma, com o número de vagas.
         </p>
       </div>
       <div class="flex flex-col-reverse gap-2 sm:flex-row sm:items-center">
@@ -120,4 +167,139 @@ const errorMessage = errorParam ? "Não foi possível salvar. Confira os dados e
       </div>
     </form>
   </Card>
+
+  <section id="horarios" class="mt-8 max-w-4xl scroll-mt-4">
+    <h2 class="text-lg font-semibold text-slate-900">Dias e horários deste exame</h2>
+    <p class="mt-1 text-sm text-slate-600">
+      {
+        isGroup
+          ? "Cada linha é uma turma: o exame é feito no horário de início, com o limite de vagas. A turma não pode coincidir com o horário de nenhum outro exame."
+          : "Janelas em que a agenda pode oferecer este exame. Pode coincidir com a de outro exame individual: o horário marcado fica ocupado para todos. Sem nenhuma janela, o exame não aparece para marcar (nem no WhatsApp, nem na Agenda)."
+      }
+    </p>
+
+    {
+      windowErrorMessage && (
+        <p class="mt-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+          {windowErrorMessage}
+        </p>
+      )
+    }
+
+    <div class="mt-4 overflow-x-auto rounded-lg border border-slate-200 bg-white shadow-sm">
+      <table class="w-full min-w-[480px] border-collapse text-left text-sm">
+        <thead class="bg-slate-50 text-slate-600">
+          <tr>
+            <th class="px-3 py-2 font-medium">Dia</th>
+            <th class="px-3 py-2 font-medium">Início</th>
+            <th class="px-3 py-2 font-medium">Fim</th>
+            {isGroup && <th class="px-3 py-2 font-medium">Vagas</th>}
+            <th class="px-3 py-2"></th>
+          </tr>
+        </thead>
+        <tbody>
+          {
+            windows?.length ? (
+              windows.map((window) => (
+                <tr class="border-t border-slate-200">
+                  <td class="px-3 py-2">{weekdayLabels[window.weekday]}</td>
+                  <td class="px-3 py-2">{window.start_time.slice(0, 5)}</td>
+                  <td class="px-3 py-2">{window.end_time.slice(0, 5)}</td>
+                  {isGroup && <td class="px-3 py-2">{window.capacity ?? "—"}</td>}
+                  <td class="whitespace-nowrap px-3 py-2 text-right">
+                    <form method="POST" action={`/api/admin/configuracoes/exam-type-availability-windows/${window.id}`}>
+                      <button
+                        type="submit"
+                        class="js-confirm-delete rounded-md border border-red-200 px-2.5 py-1.5 text-xs font-medium text-red-700 hover:bg-red-50"
+                        data-confirm-message={`Remover ${weekdayLabels[window.weekday]} ${window.start_time.slice(0, 5)}–${window.end_time.slice(0, 5)} de ${exam.name}? Não tem como desfazer — se remover errado, é só cadastrar de novo com os mesmos horários.`}
+                      >
+                        Remover
+                      </button>
+                    </form>
+                  </td>
+                </tr>
+              ))
+            ) : (
+              <tr class="border-t border-slate-200">
+                <td class="px-3 py-4 text-slate-500" colspan={isGroup ? 5 : 4}>
+                  Nenhum dia e horário cadastrado — o exame não aparece para marcar.
+                </td>
+              </tr>
+            )
+          }
+        </tbody>
+      </table>
+    </div>
+
+    <Card class="mt-4">
+      <form
+        method="POST"
+        action="/api/admin/configuracoes/exam-type-availability-windows"
+        class="flex flex-wrap items-end gap-3"
+      >
+        <input type="hidden" name="exam_type_id" value={exam.id} />
+        <div>
+          <label for="weekday" class="block text-sm font-medium text-slate-700">Dia da semana</label>
+          <select
+            id="weekday"
+            name="weekday"
+            required
+            class="mt-1 rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-sky-600 focus:outline-none focus:ring-1 focus:ring-sky-600"
+          >
+            {weekdayLabels.map((label, index) => <option value={index}>{label}</option>)}
+          </select>
+        </div>
+        <div>
+          <label for="start_time" class="block text-sm font-medium text-slate-700">Início</label>
+          <input
+            type="time"
+            id="start_time"
+            name="start_time"
+            required
+            class="mt-1 rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-sky-600 focus:outline-none focus:ring-1 focus:ring-sky-600"
+          />
+        </div>
+        <div>
+          <label for="end_time" class="block text-sm font-medium text-slate-700">Fim</label>
+          <input
+            type="time"
+            id="end_time"
+            name="end_time"
+            required
+            class="mt-1 rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-sky-600 focus:outline-none focus:ring-1 focus:ring-sky-600"
+          />
+        </div>
+        {
+          isGroup && (
+            <div>
+              <label for="capacity" class="block text-sm font-medium text-slate-700">Vagas</label>
+              <input
+                type="number"
+                min="1"
+                id="capacity"
+                name="capacity"
+                required
+                class="mt-1 w-24 rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-sky-600 focus:outline-none focus:ring-1 focus:ring-sky-600"
+              />
+            </div>
+          )
+        }
+        <button
+          type="submit"
+          class="rounded-md bg-sky-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-sky-800"
+        >
+          Adicionar
+        </button>
+      </form>
+      <p class="mt-2 text-xs text-slate-500">
+        {
+          isGroup
+            ? "As vagas valem para o modo salvo do exame. Se mudar o modo acima, salve antes de cadastrar horários."
+            : "Se mudar o modo para \"Em grupo/turma\" acima, salve antes de cadastrar horários — aí aparece o campo de vagas."
+        }
+      </p>
+    </Card>
+  </section>
+
+  <ConfirmDeleteDialog />
 </AdminLayout>

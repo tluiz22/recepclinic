@@ -1,5 +1,6 @@
 import type { APIRoute } from "astro";
 import { createClient } from "../../../../../lib/supabase/server";
+import { conflictQuery, findExamWindowConflict } from "../../../../../lib/scheduling/examWindowConflicts";
 
 export const POST: APIRoute = async ({ request, cookies, redirect }) => {
   const formData = await request.formData();
@@ -9,12 +10,21 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
   const endTime = formData.get("end_time")?.toString();
   const capacityRaw = formData.get("capacity")?.toString();
 
-  if (!examTypeId || !weekday || !startTime || !endTime) {
-    return redirect("/admin/configuracoes?error=1");
+  if (!examTypeId) {
+    return redirect("/admin/configuracoes/exames?error=1");
+  }
+
+  // Os dias e horários são cadastrados na própria tela do exame — volta pra
+  // ela, já na seção de horários, com o erro (se houver).
+  const examPage = (error?: string, query = error ? `error=${error}` : "") =>
+    `/admin/configuracoes/exames/${examTypeId}${query ? `?${query}` : ""}#horarios`;
+
+  if (!weekday || !startTime || !endTime) {
+    return redirect(examPage("window"));
   }
 
   if (startTime >= endTime) {
-    return redirect("/admin/configuracoes?error=invalid_range");
+    return redirect(examPage("invalid_range"));
   }
 
   const supabase = createClient(request, cookies);
@@ -26,7 +36,7 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
     .maybeSingle();
 
   if (examTypeError || !examType) {
-    return redirect("/admin/configuracoes?error=1");
+    return redirect(examPage("window"));
   }
 
   // Vagas só existe (e é obrigatório) pra exame em modo grupo — o campo vem
@@ -35,31 +45,24 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
   const capacity = capacityRaw ? Number(capacityRaw) : NaN;
 
   if (isGroup && (!Number.isFinite(capacity) || capacity < 1)) {
-    return redirect("/admin/configuracoes?error=1");
+    return redirect(examPage("window"));
   }
 
-  // Checa contra TODOS os exames nesse dia da semana, não só o mesmo exame —
-  // a médica é uma pessoa só, não dá pra fazer dois exames diferentes ao
-  // mesmo tempo (achado do cliente: cadastrar FeNO e Prick Test no mesmo
-  // horário passava sem aviso nenhum).
-  const { data: existingWindows, error: fetchError } = await supabase
-    .from("exam_type_availability_windows")
-    .select("start_time, end_time")
-    .eq("weekday", Number(weekday))
-    .eq("is_active", true);
-
-  if (fetchError) {
-    return redirect("/admin/configuracoes?error=1");
+  // Exames individuais podem dividir horário; o mesmo exame consigo mesmo e
+  // exame em grupo com qualquer outro, não (ver `findExamWindowConflict`).
+  let conflict;
+  try {
+    conflict = await findExamWindowConflict(supabase, {
+      examTypeId,
+      schedulingMode: examType.scheduling_mode,
+      windows: [{ weekday: Number(weekday), startTime, endTime }],
+    });
+  } catch {
+    return redirect(examPage("window"));
   }
 
-  const overlaps = existingWindows?.some((window) => {
-    const existingStart = window.start_time.slice(0, 5);
-    const existingEnd = window.end_time.slice(0, 5);
-    return startTime < existingEnd && endTime > existingStart;
-  });
-
-  if (overlaps) {
-    return redirect("/admin/configuracoes?error=overlap");
+  if (conflict) {
+    return redirect(examPage(undefined, conflictQuery(conflict, "add")));
   }
 
   const { error } = await supabase.from("exam_type_availability_windows").insert({
@@ -71,8 +74,8 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
   });
 
   if (error) {
-    return redirect("/admin/configuracoes?error=1");
+    return redirect(examPage("window"));
   }
 
-  return redirect("/admin/configuracoes");
+  return redirect(examPage());
 };

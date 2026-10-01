@@ -25,17 +25,23 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
   }
 
   const supabase = createClient(request, cookies);
-  const { error } = await supabase.from("exam_types").insert({
-    name,
-    duration_minutes: durationMinutes,
-    price_cents: priceCents,
-    preparation_instructions: preparationInstructions,
-    scheduling_mode: schedulingMode,
-  });
+  const { data: created, error } = await supabase
+    .from("exam_types")
+    .insert({
+      name,
+      duration_minutes: durationMinutes,
+      price_cents: priceCents,
+      preparation_instructions: preparationInstructions,
+      scheduling_mode: schedulingMode,
+    })
+    .select("id")
+    .single();
 
-  if (error) {
+  if (error || !created) {
     return redirect("/admin/configuracoes/exames?error=1");
   }
 
-  return redirect("/admin/configuracoes/exames");
+  // Abre a tela do exame novo direto nos dias e horários — sem eles o exame
+  // não aparece pra marcar.
+  return redirect(`/admin/configuracoes/exames/${created.id}?novo=1#horarios`);
 };
