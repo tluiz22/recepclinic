@@ -5,11 +5,13 @@ import { fetchTrailSummaries } from "./appointmentTrail";
 // e atendimentos com envio com falha — base da tela "Envios automáticos" e
 // do alerta no Dashboard.
 
-// Resumo do dia: horários fixos do agendador do Supabase (migração 0030),
-// no fuso de Fortaleza (UTC-3), com disparo na hora exata.
+// Resumo do dia pelo agendador do Supabase (migrações 0030/0031), no fuso de
+// Fortaleza (UTC-3): o da véspera tem horário fixo; o do dia sai 1h antes do
+// início dos atendimentos (`dailySummarySchedule.ts`).
 export const DAILY_SUMMARY_SCHEDULES = {
   preview: "Todo dia às 18h (atendimentos de amanhã)",
-  final: "Todo dia às 6h30 (atendimentos de hoje)",
+  final:
+    "1h antes da primeira janela do dia na Disponibilidade (ou do primeiro atendimento, se for antes). Dia sem janela: 6h30. Reenvia se for marcado atendimento antes do primeiro horário já informado.",
 } as const;
 
 // Lembrete (etapa 7): hora cheia configurável, disparada pelo agendador do

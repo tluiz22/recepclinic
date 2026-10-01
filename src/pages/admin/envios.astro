@@ -26,15 +26,17 @@ import {
   type JobRun,
   type JobRunState,
 } from "../../lib/automaticSends";
+import { describeSummarySchedule, fetchFirstWindowStarts } from "../../lib/dailySummarySchedule";
 
 const supabase = createClient(Astro.request, Astro.cookies);
 const now = new Date();
 
-const [runs, failedAppointments, alert, reminderHour] = await Promise.all([
+const [runs, failedAppointments, alert, reminderHour, windowStarts] = await Promise.all([
   fetchRecentJobRuns(supabase),
   fetchAppointmentsWithFailedSends(supabase, { now }),
   fetchSendsAlert(supabase, now),
   fetchReminderHour(supabase),
+  fetchFirstWindowStarts(supabase),
 ]);
 
 // Horário do lembrete (etapa 7): horas cheias das 7h às 20h.
@@ -72,7 +74,7 @@ const stateBadges: Record<JobRunState, { label: string; variant: BadgeVariant }>
 
 function jobLabel(run: JobRun): string {
   if (run.job === "appointment_reminders") return "Lembrete";
-  return run.variant === "final" ? "Resumo do dia (manhã)" : "Resumo do dia (véspera)";
+  return run.variant === "final" ? "Resumo do dia (no dia)" : "Resumo do dia (véspera)";
 }
 
 function plural(count: number, singular: string, pluralForm: string): string {
@@ -96,6 +98,7 @@ function totalsLine(run: JobRun): string {
     if (t.failed) parts.push(plural(t.failed, "com falha", "com falha"));
     if (t.not_sent_no_template) parts.push(`${t.not_sent_no_template} com template desligado`);
     if (t.lists_without_recipient) parts.push("sem destinatário ativo em Configurações > Contatos");
+    if (t.resent_earlier_start) parts.push("reenviado: atendimento marcado antes do primeiro horário informado");
   }
   return parts.join(" · ");
 }
@@ -174,8 +177,12 @@ const alertLines = describeSendsAlert(alert);
     <dl class="mt-4 grid gap-2 border-t border-slate-100 pt-3 text-sm sm:grid-cols-[12rem_1fr]">
       <dt class="font-medium text-slate-700">Resumo do dia (véspera)</dt>
       <dd class="text-slate-600">{DAILY_SUMMARY_SCHEDULES.preview}</dd>
-      <dt class="font-medium text-slate-700">Resumo do dia (manhã)</dt>
-      <dd class="text-slate-600">{DAILY_SUMMARY_SCHEDULES.final}</dd>
+      <dt class="font-medium text-slate-700">Resumo do dia (no dia)</dt>
+      <dd class="text-slate-600">
+        {DAILY_SUMMARY_SCHEDULES.final}
+        <span class="mt-1 block">Consultas: {describeSummarySchedule(windowStarts.consultas)}</span>
+        <span class="block">Exames: {describeSummarySchedule(windowStarts.exames)}</span>
+      </dd>
     </dl>
   </Card>
 
