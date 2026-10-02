@@ -20,6 +20,7 @@ import type { BadgeVariant } from "../../../components/admin/Badge.astro";
 import Icon from "../../../components/admin/Icon.astro";
 import TabBar from "../../../components/admin/TabBar.astro";
 import LembretesDoDia from "../../../components/admin/LembretesDoDia.astro";
+import ListaDeEspera from "../../../components/admin/ListaDeEspera.astro";
 import ConfirmDeleteDialog from "../../../components/admin/ConfirmDeleteDialog.astro";
 import PresenceControl from "../../../components/admin/PresenceControl.astro";
 import { createClient } from "../../../lib/supabase/server";
@@ -44,7 +45,7 @@ const PAGE_SIZE = 20;
 const supabase = createClient(Astro.request, Astro.cookies);
 
 const tabParam = Astro.url.searchParams.get("tab");
-type ConsultasTab = "resumo" | "lembretes" | "pendentes" | "confirmadas" | "aguardando_remarcacao";
+type ConsultasTab = "resumo" | "lembretes" | "lista_espera" | "pendentes" | "confirmadas" | "aguardando_remarcacao";
 const tab: ConsultasTab =
   tabParam === "pendentes"
     ? "pendentes"
@@ -54,7 +55,9 @@ const tab: ConsultasTab =
         ? "aguardando_remarcacao"
         : tabParam === "lembretes"
           ? "lembretes"
-          : "resumo";
+          : tabParam === "lista_espera"
+            ? "lista_espera"
+            : "resumo";
 
 const now = new Date();
 
@@ -347,6 +350,7 @@ function confirmadasPageUrl(targetPage: number): string {
     tabs={[
       { label: "Resumo do dia", href: tabUrl("resumo"), active: tab === "resumo" },
       { label: "Lembretes", href: tabUrl("lembretes"), active: tab === "lembretes" },
+      { label: "Lista de espera", href: tabUrl("lista_espera"), active: tab === "lista_espera" },
       { label: "Aguardando remarcação", href: tabUrl("aguardando_remarcacao"), active: tab === "aguardando_remarcacao" },
       { label: "A registrar", href: tabUrl("pendentes"), active: tab === "pendentes" },
       { label: "Registradas", href: tabUrl("confirmadas"), active: tab === "confirmadas" },
@@ -354,6 +358,7 @@ function confirmadasPageUrl(targetPage: number): string {
   />
 
   {tab === "lembretes" && <LembretesDoDia date={date} />}
+  {tab === "lista_espera" && <ListaDeEspera />}
 
   {
     tab === "pendentes" && (

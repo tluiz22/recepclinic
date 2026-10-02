@@ -524,7 +524,7 @@ async function loadOffer(supabase: SupabaseClient, offerId: string, guardianId: 
   const { data } = await supabase
     .from("waitlist_offers")
     .select(
-      "id, entry_id, appointment_id, opening_id, status, expires_at, slot_scheduled_at, slot_clinic_location_id, appointments ( id, status, scheduled_at, appointment_type, exam_type_id, duration_minutes, is_group_session, home_visit_address, patients ( full_name, guardian_id, guardians ( phone ) ) )"
+      "id, entry_id, appointment_id, opening_id, status, expires_at, slot_scheduled_at, slot_clinic_location_id, appointments!waitlist_offers_appointment_id_fkey ( id, status, scheduled_at, appointment_type, exam_type_id, duration_minutes, is_group_session, home_visit_address, patients ( full_name, guardian_id, guardians ( phone ) ) )"
     )
     .eq("id", offerId)
     .maybeSingle();
@@ -709,4 +709,28 @@ export async function acceptOffer(
     patientName: patient?.full_name ?? "",
     whenLabel: relativeWhenLabel(slotStart),
   };
+}
+
+// --- retirada pela tela (etapa 5) ---------------------------------------------
+
+/**
+ * Retira a oferta em aberto de um atendimento que saiu da lista pela tela e
+ * passa a vaga ao próximo da fila na hora.
+ */
+export async function withdrawPendingOffersFor(supabase: SupabaseClient, appointmentId: string): Promise<void> {
+  const { data: withdrawn } = await supabase
+    .from("waitlist_offers")
+    .update({ status: "withdrawn", responded_at: new Date().toISOString(), details: { reason: "removed_from_list" } })
+    .eq("appointment_id", appointmentId)
+    .eq("status", "pending")
+    .select("opening_id");
+  const openingIds = [...new Set((withdrawn ?? []).map((row) => row.opening_id as string | null).filter(Boolean))] as string[];
+  for (const openingId of openingIds) {
+    await supabase
+      .from("waitlist_openings")
+      .update({ status: "open", updated_at: new Date().toISOString() })
+      .eq("id", openingId)
+      .eq("status", "offering");
+    await advanceOpening(supabase, openingId);
+  }
 }

@@ -2,6 +2,7 @@
 import PhoneLinks from "../../components/admin/PhoneLinks.astro";
 import NoShowBadge from "../../components/admin/NoShowBadge.astro";
 import { fetchNoShowStats } from "../../lib/noShow";
+import { fetchActiveWaitlistAppointmentIds } from "../../lib/waitlist";
 import AdminLayout from "../../layouts/AdminLayout.astro";
 import Card from "../../components/admin/Card.astro";
 import Badge from "../../components/admin/Badge.astro";
@@ -75,6 +76,12 @@ const noShowStats = await fetchNoShowStats(
   items.flatMap((item) =>
     item.kind === "appointment" && item.appointment.patient_id ? [item.appointment.patient_id as string] : []
   )
+);
+
+// Selo "Na lista de espera" (Fase 25 · etapa 5).
+const onWaitlist = await fetchActiveWaitlistAppointmentIds(
+  supabase,
+  items.flatMap((item) => (item.kind === "appointment" && !item.canceled ? [item.appointment.id as string] : []))
 );
 
 // "Reenviar preparo do exame" (ajuste de 02/out/2026): exames ativos e ainda
@@ -263,12 +270,17 @@ const presenceError = Astro.url.searchParams.get("error") === "presenca";
                       </>
                     )}
                   </p>
-                  <div class="mt-2">
+                  <div class="mt-2 flex flex-wrap items-center gap-1.5">
                     <Badge variant={typeBadgeVariant(appointment.appointment_type)}>
                       {appointment.appointment_type === "exam"
                         ? appointmentTypeLabels.exam
                         : `${appointmentTypeLabels[appointment.appointment_type] ?? appointment.appointment_type} · ${location?.type === "clinic" ? "Consultório" : "Domiciliar"}`}
                     </Badge>
+                    {onWaitlist.has(appointment.id) && (
+                      <a href="/admin/consultas?tab=lista_espera" class="hover:opacity-80">
+                        <Badge variant="accent">Na lista de espera</Badge>
+                      </a>
+                    )}
                   </div>
                   {appointment.home_visit_address && (
                     <p class="mt-1.5 text-slate-500">Endereço: {appointment.home_visit_address}</p>

@@ -2,6 +2,7 @@ const dialog = document.getElementById("delete_dialog") as HTMLDialogElement;
 const messageEl = document.getElementById("delete_dialog_message") as HTMLParagraphElement;
 const dismissBtn = document.getElementById("delete_dialog_dismiss") as HTMLButtonElement;
 const acceptBtn = document.getElementById("delete_dialog_accept") as HTMLButtonElement;
+const titleEl = document.getElementById("delete_dialog_title") as HTMLHeadingElement;
 
 let pendingForm: HTMLFormElement | null = null;
 
@@ -10,6 +11,8 @@ document.querySelectorAll<HTMLButtonElement>(".js-confirm-delete").forEach((btn)
     event.preventDefault();
     pendingForm = btn.closest("form");
     messageEl.textContent = btn.dataset.confirmMessage ?? "Tem certeza que quer excluir?";
+    titleEl.textContent = btn.dataset.confirmTitle ?? "Excluir?";
+    acceptBtn.textContent = btn.dataset.confirmLabel ?? "Excluir";
     dialog.showModal();
   });
 });
