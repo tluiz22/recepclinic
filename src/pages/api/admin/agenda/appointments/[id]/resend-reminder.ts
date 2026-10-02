@@ -2,8 +2,8 @@ import type { APIRoute } from "astro";
 import { createClient } from "../../../../../../lib/supabase/server";
 import { resendReminder } from "../../../../../../lib/reminderResend";
 
-// Botão "Reenviar lembrete" (Fase 22 · etapa 6), da Agenda (dia) e da tela
-// Envios automáticos: volta pra tela de onde veio (`return_to`) com o
+// Botão do lembrete (Fase 22 · etapa 6), da Agenda (dia; a tela Envios perdeu
+// os botões na Fase 23): volta pra tela de onde veio (`return_to`) com o
 // resultado em `?reenvio=`.
 export const POST: APIRoute = async ({ params, request, cookies, locals, redirect }) => {
   const { id } = params;

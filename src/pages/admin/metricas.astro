@@ -2,13 +2,15 @@
 // Métricas (Fase 15; em abas desde a Fase 23 · etapa 4): seletor de período
 // (abre em Hoje) e uma aba por assunto — cada aba busca só o que exibe. Só a
 // médica (ver middleware). Relatórios virou a aba Atendimentos; Lembretes foi
-// para Consultas (a secretária também usa).
+// para Consultas (a secretária também usa); Envios virou aba (etapa 5), sem
+// período — mostra os atendimentos futuros e as últimas execuções.
 import AdminLayout from "../../layouts/AdminLayout.astro";
 import TabBar from "../../components/admin/TabBar.astro";
 import VisaoGeral from "../../components/admin/metricas/VisaoGeral.astro";
 import Funil from "../../components/admin/metricas/Funil.astro";
 import Atendimentos from "../../components/admin/metricas/Atendimentos.astro";
 import RetomarContato from "../../components/admin/metricas/RetomarContato.astro";
+import Envios from "../../components/admin/metricas/Envios.astro";
 import { PERIOD_PRESETS, metricsUrl, parsePeriod, periodParams, todayFortaleza } from "../../lib/metrics/period";
 
 const TABS = [
@@ -16,6 +18,7 @@ const TABS = [
   { id: "funil", label: "Funil" },
   { id: "atendimentos", label: "Atendimentos" },
   { id: "retomar_contato", label: "Retomar contato" },
+  { id: "envios", label: "Envios" },
 ] as const;
 type TabId = (typeof TABS)[number]["id"];
 
@@ -39,71 +42,77 @@ const presetHref = (preset: string) =>
 <AdminLayout title="Métricas">
   <h1 class="text-2xl font-bold text-slate-900">Métricas</h1>
 
-  <div class="mt-4 flex flex-wrap items-center gap-2">
-    {
-      PERIOD_PRESETS.map((preset) => (
-        <a
-          href={presetHref(preset.id)}
-          aria-current={period.preset === preset.id ? "true" : undefined}
-          class={`rounded-md border px-2.5 py-1 text-xs font-medium ${
-            period.preset === preset.id
-              ? "border-sky-700 bg-sky-50 text-sky-800"
-              : "border-slate-300 bg-white text-slate-600 hover:border-sky-700 hover:text-sky-700"
-          }`}
-        >
-          {preset.label}
-        </a>
-      ))
-    }
-    <details class="custom-period group" open={period.preset === "personalizado" || period.invalid}>
-      <summary
-        class={`cursor-pointer list-none rounded-md border px-2.5 py-1 text-xs font-medium ${
-          period.preset === "personalizado"
-            ? "border-sky-700 bg-sky-50 text-sky-800"
-            : "border-slate-300 bg-white text-slate-600 hover:border-sky-700 hover:text-sky-700"
-        }`}
-      >
-        Personalizado
-      </summary>
-      <form method="GET" action="/admin/metricas" class="mt-2 flex flex-wrap items-end gap-2">
-        {tab !== "visao_geral" && <input type="hidden" name="tab" value={tab} />}
-        <input type="hidden" name="periodo" value="personalizado" />
-        <label class="flex flex-col gap-1 text-xs text-slate-600">
-          De
-          <input
-            type="date"
-            name="de"
-            required
-            max={today}
-            value={period.from}
-            class="rounded-md border border-slate-300 px-2 py-1.5 text-sm"
-          />
-        </label>
-        <label class="flex flex-col gap-1 text-xs text-slate-600">
-          Até
-          <input
-            type="date"
-            name="ate"
-            required
-            value={period.to}
-            class="rounded-md border border-slate-300 px-2 py-1.5 text-sm"
-          />
-        </label>
-        <button type="submit" class="rounded-md bg-sky-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-sky-800">
-          Aplicar
-        </button>
-      </form>
-    </details>
-  </div>
-
-  <p class="mt-2 text-sm text-slate-600">
-    Período: <span class="font-medium text-slate-900">{period.label}</span>
-  </p>
   {
-    period.invalid && (
-      <p class="mt-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
-        Período personalizado inválido (a data inicial deve vir antes da final, com até 1 ano). Mostrando hoje.
-      </p>
+    tab !== "envios" && (
+      <>
+        <div class="mt-4 flex flex-wrap items-center gap-2">
+          {
+            PERIOD_PRESETS.map((preset) => (
+              <a
+                href={presetHref(preset.id)}
+                aria-current={period.preset === preset.id ? "true" : undefined}
+                class={`rounded-md border px-2.5 py-1 text-xs font-medium ${
+                  period.preset === preset.id
+                    ? "border-sky-700 bg-sky-50 text-sky-800"
+                    : "border-slate-300 bg-white text-slate-600 hover:border-sky-700 hover:text-sky-700"
+                }`}
+              >
+                {preset.label}
+              </a>
+            ))
+          }
+          <details class="custom-period group" open={period.preset === "personalizado" || period.invalid}>
+            <summary
+              class={`cursor-pointer list-none rounded-md border px-2.5 py-1 text-xs font-medium ${
+                period.preset === "personalizado"
+                  ? "border-sky-700 bg-sky-50 text-sky-800"
+                  : "border-slate-300 bg-white text-slate-600 hover:border-sky-700 hover:text-sky-700"
+              }`}
+            >
+              Personalizado
+            </summary>
+            <form method="GET" action="/admin/metricas" class="mt-2 flex flex-wrap items-end gap-2">
+              {tab !== "visao_geral" && <input type="hidden" name="tab" value={tab} />}
+              <input type="hidden" name="periodo" value="personalizado" />
+              <label class="flex flex-col gap-1 text-xs text-slate-600">
+                De
+                <input
+                  type="date"
+                  name="de"
+                  required
+                  max={today}
+                  value={period.from}
+                  class="rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+                />
+              </label>
+              <label class="flex flex-col gap-1 text-xs text-slate-600">
+                Até
+                <input
+                  type="date"
+                  name="ate"
+                  required
+                  value={period.to}
+                  class="rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+                />
+              </label>
+              <button type="submit" class="rounded-md bg-sky-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-sky-800">
+                Aplicar
+              </button>
+            </form>
+          </details>
+        </div>
+
+        <p class="mt-2 text-sm text-slate-600">
+          Período: <span class="font-medium text-slate-900">{period.label}</span>
+        </p>
+        {
+          period.invalid && (
+            <p class="mt-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+              Período personalizado inválido (a data inicial deve vir antes da final, com até 1 ano). Mostrando hoje.
+            </p>
+          )
+        }
+      </>
     )
   }
 
@@ -113,6 +122,7 @@ const presetHref = (preset: string) =>
   {tab === "funil" && <Funil period={period} />}
   {tab === "atendimentos" && <Atendimentos period={period} />}
   {tab === "retomar_contato" && <RetomarContato period={period} />}
+  {tab === "envios" && <Envios />}
 </AdminLayout>
 
 <style>

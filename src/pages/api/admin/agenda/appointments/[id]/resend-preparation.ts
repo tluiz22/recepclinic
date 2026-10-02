@@ -2,8 +2,8 @@ import type { APIRoute } from "astro";
 import { createClient } from "../../../../../../lib/supabase/server";
 import { resendPreparation } from "../../../../../../lib/preparationResend";
 
-// Botão "Reenviar preparo do exame" (ajuste de 02/out/2026), da Agenda (dia)
-// e da tela Envios automáticos: volta pra tela de onde veio (`return_to`)
+// Botão "Reenviar preparo do exame" (ajuste de 02/out/2026), da Agenda (dia;
+// a tela Envios perdeu os botões na Fase 23): volta pra tela de onde veio (`return_to`)
 // com o resultado em `?preparo=`.
 export const POST: APIRoute = async ({ params, request, cookies, locals, redirect }) => {
   const { id } = params;

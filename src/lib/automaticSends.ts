@@ -2,8 +2,8 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { fetchTrailSummaries } from "./appointmentTrail";
 
 // Envios automáticos (Fase 22 · etapa 5): execuções dos crons (`job_runs`)
-// e atendimentos com envio com falha — base da tela "Envios automáticos" e
-// do alerta no Dashboard.
+// e atendimentos com envio com falha — base da aba Envios de Métricas (Fase
+// 23) e do alerta no Dashboard.
 
 // Resumo do dia pelo agendador do Supabase (migrações 0030/0031), no fuso de
 // Fortaleza (UTC-3): o da véspera tem horário fixo; o do dia sai 1h antes do
@@ -209,7 +209,7 @@ export async function fetchSendsAlert(supabase: SupabaseClient, now = new Date()
   };
 }
 
-/** Frases do alerta (Dashboard e tela Envios automáticos); vazio = sem alerta. */
+/** Frases do alerta (Dashboard e aba Envios de Métricas); vazio = sem alerta. */
 export function describeSendsAlert(alert: SendsAlert): string[] {
   const lines: string[] = [];
   if (alert.reminderNotRun) lines.push("O lembrete de hoje ainda não rodou.");

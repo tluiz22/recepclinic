@@ -16,7 +16,8 @@ const primaryNavItems: { label: string; href: string; icon: IconName }[] = [
   { label: "Início", href: "/admin/dashboard", icon: "home" },
   { label: "Agenda", href: "/admin/agenda", icon: "calendar" },
   { label: "Pacientes", href: "/admin/pacientes", icon: "users" },
-  { label: "Consultas", href: "/admin/consultas", icon: "check-circle" },
+  // "Consultas" renomeado a pedido do cliente (Fase 23); a tela continua em /admin/consultas.
+  { label: "Resumo do Dia", href: "/admin/consultas", icon: "check-circle" },
 ];
 
 // Perfil do login ativo, resolvido pelo middleware (Fase 14). Métricas é só
@@ -26,8 +27,7 @@ const role = Astro.locals.role ?? "secretaria";
 const roleLabel = role === "medica" ? "Médica" : "Secretária";
 
 const moreNavItems: { label: string; href: string; icon: IconName }[] = [
-  // Fase 22 · etapa 5: execuções dos crons e envios com falha — Secretária e Médica.
-  { label: "Envios", href: "/admin/envios", icon: "paper-airplane" },
+  // Envios automáticos virou aba de Métricas (Fase 23 · etapa 5).
   { label: "Configurações", href: "/admin/configuracoes", icon: "settings" },
   ...(role === "medica"
     ? [
@@ -148,11 +148,11 @@ const isMoreActive = moreNavItems.some((item) => isActive(item.href));
         primaryNavItems.map((item) => (
           <a
             href={item.href}
-            class={`flex flex-1 flex-col items-center gap-0.5 py-2 text-[11px] font-medium ${
+            class={`flex min-w-0 flex-1 flex-col items-center gap-0.5 py-2 text-center text-[11px] font-medium leading-tight ${
               isActive(item.href) ? "text-sky-700" : "text-slate-500"
             }`}
           >
-            <Icon name={item.icon} class="h-6 w-6" />
+            <Icon name={item.icon} class="h-6 w-6 shrink-0" />
             {item.label}
           </a>
         ))

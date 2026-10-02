@@ -45,6 +45,9 @@ const [{ data: todayRows }, { count: pendingCount }, reminderReport, sendsAlert]
 ]);
 
 const sendsAlertLines = describeSendsAlert(sendsAlert);
+// Alerta leva a médica à aba Envios de Métricas e a secretária à Agenda, onde
+// ficam os botões de envio (Fase 23 · etapa 5).
+const isMedica = Astro.locals.role === "medica";
 
 const appointmentsToday = (todayRows ?? []).filter((row) => row.appointment_type !== "exam").length;
 const examsToday = (todayRows ?? []).length - appointmentsToday;
@@ -75,11 +78,11 @@ const shortcuts:{ label: string; href: string; icon: IconName }[] = [
   {
     sendsAlertLines.length > 0 && (
       <a
-        href="/admin/envios"
+        href={isMedica ? "/admin/metricas?tab=envios" : "/admin/agenda"}
         class="mt-4 block rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800 hover:bg-red-100"
       >
         {sendsAlertLines.map((line) => <p>⚠ {line}</p>)}
-        <p class="mt-1 font-medium underline">Ver envios automáticos</p>
+        <p class="mt-1 font-medium underline">{isMedica ? "Ver envios automáticos" : "Ver na Agenda"}</p>
       </a>
     )
   }
