@@ -7,12 +7,13 @@ import {
   sendExamPreparation,
 } from "../../../lib/whatsapp/notifications";
 import { finishJobRun, logAppointmentEvent, startJobRun } from "../../../lib/audit";
-import { fortalezaHour } from "../../../lib/automaticSends";
+import { fetchReminderHour, fortalezaHour, reminderWindow } from "../../../lib/automaticSends";
 
-// Dispara o lembrete de consulta para todo agendamento ativo nas próximas
-// ~26h que ainda não recebeu lembrete (`reminder_sent_at is null`). Rodando
-// 1x/dia, cada consulta recebe exatamente um lembrete, na primeira execução
-// que cai dentro da janela — na prática, "no dia anterior".
+// Dispara o lembrete de consulta para todo agendamento ativo do dia seguinte
+// (00:00 às 23:59 de Fortaleza, `reminderWindow`) que ainda não recebeu
+// lembrete (`reminder_sent_at is null`) — ajuste de 02/out/2026; antes era a
+// janela das próximas 26h. Marcado depois do envio ou para o próprio dia fica
+// sem lembrete automático (decisão do cliente; "Reenviar lembrete" resolve).
 //
 // Horário configurável (Fase 22 · etapa 7): quem chama é o agendador do
 // Supabase (pg_cron, migrações 0029/0030), de hora em hora, com
@@ -23,14 +24,12 @@ import { fortalezaHour } from "../../../lib/automaticSends";
 //
 // Cada execução vira uma linha em `job_runs` (Fase 22), inclusive quando não
 // há ninguém na janela. Responsável sem telefone ou template desligado: não
-// envia, NÃO marca como lembrado (se o telefone/template aparecer, a próxima
-// execução ainda na janela envia) e registra "não enviado" na trilha uma vez
-// por data do atendimento.
+// envia, NÃO marca como lembrado (o "Reenviar lembrete" continua disponível;
+// como a janela é só o dia seguinte, o agendador não tenta de novo) e
+// registra "não enviado" na trilha uma vez por data do atendimento.
 //
 // Autenticação: `Authorization: Bearer <CRON_SECRET>` (o agendador lê o
 // segredo do Vault do Supabase).
-
-const WINDOW_HOURS = 26;
 
 type NotSentReason = "no_phone" | "template_disabled";
 
@@ -46,8 +45,7 @@ export const GET: APIRoute = async ({ request, url }) => {
   const supabase = createServiceClient();
 
   if (url.searchParams.get("trigger") === "scheduled") {
-    const { data: settings } = await supabase.from("appointment_settings").select("reminder_hour").eq("id", 1).single();
-    const reminderHour = settings?.reminder_hour ?? 8;
+    const reminderHour = await fetchReminderHour(supabase);
     if (fortalezaHour(new Date()) !== reminderHour) {
       return json({ skipped: "fora_do_horario", reminder_hour: reminderHour });
     }
@@ -58,8 +56,7 @@ export const GET: APIRoute = async ({ request, url }) => {
   const totals = { candidates: 0, sent: 0, failed: 0, not_sent_no_phone: 0, not_sent_no_template: 0 };
 
   try {
-    const now = new Date();
-    const windowEnd = new Date(now.getTime() + WINDOW_HOURS * 60 * 60 * 1000);
+    const range = reminderWindow(new Date());
 
     const { data: candidates, error } = await supabase
       .from("appointments")
@@ -68,8 +65,8 @@ export const GET: APIRoute = async ({ request, url }) => {
       )
       .in("status", ["scheduled", "confirmed"])
       .is("reminder_sent_at", null)
-      .gt("scheduled_at", now.toISOString())
-      .lte("scheduled_at", windowEnd.toISOString());
+      .gte("scheduled_at", range.start.toISOString())
+      .lt("scheduled_at", range.end.toISOString());
 
     if (error) {
       await finishJobRun(supabase, runId, { totals, error: error.message });
@@ -127,9 +124,9 @@ export const GET: APIRoute = async ({ request, url }) => {
         locationAddress: appointment.home_visit_address ?? location?.address ?? null,
       });
 
-      // Em falha, deixa `reminder_sent_at` nulo para o próximo cron tentar de
-      // novo (ainda dentro da janela de 26h). O status fica em
-      // `whatsapp_messages`, lido pela trilha.
+      // Em falha, deixa `reminder_sent_at` nulo: o botão "Reenviar lembrete"
+      // continua disponível (o agendador só envia na hora configurada). O
+      // status fica em `whatsapp_messages`, lido pela trilha.
       if (status !== "sent") {
         totals.failed++;
         continue;

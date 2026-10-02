@@ -338,9 +338,9 @@ export function isReminderTemplateConfigured(): boolean {
   return Boolean(import.meta.env.WHATSAPP_TEMPLATE_REMINDER);
 }
 
-// Lembrete disparado ~1 dia antes da consulta/retorno/exame. Layout da Fase
-// 19: lista + assinatura + 3 botões, sem "amanhã" — a janela de 26h também
-// pega atendimentos do mesmo dia. O payload de cada botão identifica o
+// Lembrete disparado na véspera da consulta/retorno/exame. Layout da Fase
+// 19: lista + assinatura + 3 botões, sem "amanhã" — o mesmo template sai pelo
+// "Reenviar lembrete", que vale para qualquer data futura. O payload de cada botão identifica o
 // atendimento; sem ele, o toque chega só com o texto do botão e o bot não
 // reconhece. A versão com botões foi aprovada na Meta em 30/09/2026 e a
 // antiga (sem botões) deixou de existir — por isso não há mais a env var

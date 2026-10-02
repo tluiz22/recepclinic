@@ -15,10 +15,23 @@ export const DAILY_SUMMARY_SCHEDULES = {
 } as const;
 
 // Lembrete (etapa 7): hora cheia configurável, disparada pelo agendador do
-// Supabase na hora exata. Opções decididas com o cliente: 7h às 20h.
+// Supabase na hora exata. Opções decididas com o cliente: 7h às 20h; padrão
+// 14h (ajuste de 02/out/2026, migração 0033).
 export const REMINDER_HOUR_MIN = 7;
 export const REMINDER_HOUR_MAX = 20;
-export const DEFAULT_REMINDER_HOUR = 8;
+export const DEFAULT_REMINDER_HOUR = 14;
+
+// Atendimentos que o lembrete cobre: o dia seguinte inteiro (00:00 às 23:59
+// de Fortaleza, UTC-3 sem horário de verão), todos os dias da semana.
+// Marcado depois do envio ou para o próprio dia fica sem lembrete automático
+// (decisão do cliente; "Reenviar lembrete" resolve).
+export function reminderWindow(now: Date): { start: Date; end: Date } {
+  const fortalezaNow = new Date(now.getTime() - 3 * 60 * 60 * 1000);
+  const start = new Date(
+    Date.UTC(fortalezaNow.getUTCFullYear(), fortalezaNow.getUTCMonth(), fortalezaNow.getUTCDate() + 1, 3)
+  );
+  return { start, end: new Date(start.getTime() + 24 * 60 * 60 * 1000) };
+}
 
 export async function fetchReminderHour(supabase: SupabaseClient): Promise<number> {
   const { data } = await supabase.from("appointment_settings").select("reminder_hour").eq("id", 1).maybeSingle();

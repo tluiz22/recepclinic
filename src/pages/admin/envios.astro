@@ -170,8 +170,9 @@ const alertLines = describeSendsAlert(alert);
     {hourSaved === "ok" && <p class="mt-2 text-sm text-emerald-700">Horário salvo.</p>}
     {hourSaved === "erro" && <p class="mt-2 text-sm text-red-700">Não foi possível salvar o horário. Tente novamente.</p>}
     <p class="mt-2 text-xs text-slate-400">
-      Todo dia nesse horário o sistema envia o lembrete para os atendimentos das próximas 26h que ainda não
-      receberam.
+      Todo dia nesse horário (inclusive fim de semana e feriado) o sistema envia o lembrete para todos os
+      atendimentos do dia seguinte. Atendimento marcado depois do envio ou para o próprio dia não recebe o
+      lembrete automático — use "Reenviar lembrete" na Agenda, se precisar.
     </p>
 
     <dl class="mt-4 grid gap-2 border-t border-slate-100 pt-3 text-sm sm:grid-cols-[12rem_1fr]">
