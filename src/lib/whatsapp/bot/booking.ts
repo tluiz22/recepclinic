@@ -28,6 +28,7 @@ import {
 } from "./shared";
 import * as texts from "./messages";
 import { sendMenu } from "./menu";
+import { funnelStartedFromWaitlist } from "../funnel";
 import { getReturnVisitEligibility, type ReturnVisitPatient } from "../../scheduling/returnVisitEligibility";
 import { todayFortaleza } from "../../scheduling/returnVisitDeadline";
 import { isAdult, isOverConsultationAgeLimit } from "../../age";
@@ -1250,6 +1251,8 @@ export async function finishBookingWithPatient(
       mode: "create",
       guardian_phone: guardianPhone,
       funnel_session_id: funnelSession?.sessionId ?? null,
+      // Lista de espera (Fase 25): pedida antes de ter marcação.
+      join_waitlist: funnelSession ? await funnelStartedFromWaitlist(supabase, funnelSession.sessionId) : false,
       expires_at: expiresAt,
     })
     .select("id")

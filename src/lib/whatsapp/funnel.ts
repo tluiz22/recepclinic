@@ -53,6 +53,20 @@ export async function startFunnel(
   await logFunnelEvent(supabase, { sessionId, flow, step: "started", guardianPhone, guardianId, metadata });
 }
 
+// Tentativa aberta pelo "Encaixe ou antecipar" sem nada marcado (Fase 25):
+// o link gerado leva `join_waitlist` e o atendimento entra na lista ao ser
+// confirmado pela página.
+export async function funnelStartedFromWaitlist(supabase: SupabaseClient, sessionId: string): Promise<boolean> {
+  const { data } = await supabase
+    .from("bot_funnel_events")
+    .select("metadata")
+    .eq("session_id", sessionId)
+    .eq("step", "started")
+    .limit(1)
+    .maybeSingle();
+  return (data?.metadata as Record<string, unknown> | null)?.waitlist === true;
+}
+
 // Passos na página /agendar/[token] (Fase 15 · etapa 3), ligados à tentativa
 // do bot que gerou o link. Link sem tentativa (ex.: gerado pelo cancelamento
 // em massa, ou anterior à Fase 15) não entra no funil.

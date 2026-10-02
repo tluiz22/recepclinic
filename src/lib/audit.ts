@@ -14,7 +14,11 @@ export type AppointmentEventType =
   | "attendance_corrected"
   | "message_not_sent"
   | "reminder_resent"
-  | "preparation_resent";
+  | "preparation_resent"
+  // Lista de espera (Fase 25)
+  | "waitlist_joined"
+  | "waitlist_left"
+  | "waitlist_advanced";
 
 export type AppointmentEventChannel =
   | "admin"

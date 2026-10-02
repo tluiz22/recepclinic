@@ -42,12 +42,14 @@ export const CONSULTAS_LIST_ID = {
   agendarRetorno: "consultas_agendar_retorno",
   cancelar: "consultas_cancelar",
   remarcar: "consultas_remarcar",
+  antecipar: "consultas_antecipar",
 } as const;
 
 export const EXAMES_LIST_ID = {
   marcar: "exames_marcar",
   cancelar: "exames_cancelar",
   remarcar: "exames_remarcar",
+  antecipar: "exames_antecipar",
 } as const;
 
 export const INFO_LIST_ID = {
@@ -93,7 +95,12 @@ export function consultasMenuSections(): ListSection[] {
         { id: CONSULTAS_LIST_ID.agendarRetorno, title: listRowTitle(1, "Agendar retorno") },
         { id: CONSULTAS_LIST_ID.cancelar, title: listRowTitle(2, "Cancelar") },
         { id: CONSULTAS_LIST_ID.remarcar, title: listRowTitle(3, "Remarcar") },
-        { id: BACK_TO_MENU_LIST_ID, title: listRowTitle(4, "Voltar ao menu") },
+        {
+          id: CONSULTAS_LIST_ID.antecipar,
+          title: listRowTitle(4, "Encaixe ou antecipar"),
+          description: "Lista de espera para um horário mais cedo",
+        },
+        { id: BACK_TO_MENU_LIST_ID, title: listRowTitle(5, "Voltar ao menu") },
       ],
     },
   ];
@@ -110,7 +117,12 @@ export function examesMenuSections(): ListSection[] {
         { id: EXAMES_LIST_ID.marcar, title: listRowTitle(0, "Marcar exame") },
         { id: EXAMES_LIST_ID.cancelar, title: listRowTitle(1, "Cancelar") },
         { id: EXAMES_LIST_ID.remarcar, title: listRowTitle(2, "Remarcar") },
-        { id: BACK_TO_MENU_LIST_ID, title: listRowTitle(3, "Voltar ao menu") },
+        {
+          id: EXAMES_LIST_ID.antecipar,
+          title: listRowTitle(3, "Encaixe ou antecipar"),
+          description: "Lista de espera para um horário mais cedo",
+        },
+        { id: BACK_TO_MENU_LIST_ID, title: listRowTitle(4, "Voltar ao menu") },
       ],
     },
   ];
@@ -674,7 +686,7 @@ function categoryWords(category: AppointmentCategory): CategoryWords {
   };
 }
 
-export function appointmentChoiceBodyText(action: "remarcar" | "cancelar", category: AppointmentCategory): string {
+export function appointmentChoiceBodyText(action: "remarcar" | "cancelar" | "antecipar", category: AppointmentCategory): string {
   return `Qual ${categoryWords(category).noun} você quer ${action}?`;
 }
 
@@ -814,4 +826,91 @@ export function reminderPresenceAlreadyConfirmedText(patientName: string, whenLa
 // remarcado, já passou ou não é deste responsável.
 export function reminderInactiveText(): string {
   return "Esse agendamento não está mais ativo.";
+}
+
+// --- Encaixe ou antecipar · lista de espera (Fase 25) ------------------------
+
+export const WAITLIST_BUTTON_ID = {
+  leave: "waitlist_leave",
+  stay: "waitlist_stay",
+  bookConsulta: "waitlist_book_consulta",
+  bookRetorno: "waitlist_book_retorno",
+  bookExame: "waitlist_book_exame",
+} as const;
+
+// "a consulta marcada", "o retorno marcado", "o exame Prick Test marcado".
+export interface WaitlistAppointmentWords {
+  phrase: string;
+  adjEnd: "a" | "o";
+}
+
+export function waitlistAppointmentWords(
+  appointmentType: "first_visit" | "return_visit" | "exam",
+  examName?: string | null
+): WaitlistAppointmentWords {
+  if (appointmentType === "first_visit") return { phrase: "a consulta", adjEnd: "a" };
+  if (appointmentType === "return_visit") return { phrase: "o retorno", adjEnd: "o" };
+  return { phrase: examName ? `o exame ${examName}` : "o exame", adjEnd: "o" };
+}
+
+function capitalizeFirst(text: string): string {
+  return text.charAt(0).toUpperCase() + text.slice(1);
+}
+
+export function waitlistJoinedText(patientName: string, words: WaitlistAppointmentWords, whenLabel: string): string {
+  return (
+    `Pronto! *${patientName}* está na lista de espera para antecipar ${words.phrase} marcad${words.adjEnd} para ${whenLabel}. ` +
+    "Se abrir uma vaga antes, eu aviso por aqui — você terá 60 minutos para responder."
+  );
+}
+
+export function waitlistAlreadyInText(patientName: string, words: WaitlistAppointmentWords, whenLabel: string): string {
+  return (
+    `*${patientName}* já está na lista de espera para antecipar ${words.phrase} marcad${words.adjEnd} para ${whenLabel}. ` +
+    "Quer sair da lista?"
+  );
+}
+
+export function waitlistAlreadyInButtons(): { id: string; title: string }[] {
+  return [
+    { id: WAITLIST_BUTTON_ID.leave, title: "Sair da lista" },
+    { id: WAITLIST_BUTTON_ID.stay, title: "Continuar na lista" },
+  ];
+}
+
+export function waitlistLeftText(patientName: string, words: WaitlistAppointmentWords, whenLabel: string): string {
+  return (
+    `Pronto, *${patientName}* saiu da lista de espera. ` +
+    `${capitalizeFirst(words.phrase)} continua marcad${words.adjEnd} para ${whenLabel}.`
+  );
+}
+
+export function waitlistStayText(patientName: string): string {
+  return `Ok, *${patientName}* continua na lista de espera. Se abrir uma vaga antes, eu aviso por aqui.`;
+}
+
+// Sem nada marcado: a lista serve para antecipar um horário já marcado —
+// oferece marcar no primeiro horário livre; ao confirmar pela página, entra
+// na lista sozinho.
+export function waitlistNoAppointmentText(category: AppointmentCategory): string {
+  const what = category === "exame" ? "um exame marcado" : "uma consulta ou um retorno marcado";
+  return (
+    `A lista de espera serve para antecipar um horário já marcado, e não encontramos ${what} neste número. ` +
+    "Quer marcar agora, no primeiro horário livre? Depois de confirmar pela página, o atendimento entra na lista " +
+    "de espera e eu aviso por aqui se abrir uma vaga antes."
+  );
+}
+
+export function waitlistNoAppointmentButtons(category: AppointmentCategory): { id: string; title: string }[] {
+  const back = { id: BACK_TO_MENU_LIST_ID, title: "Voltar ao menu" };
+  if (category === "exame") return [{ id: WAITLIST_BUTTON_ID.bookExame, title: "Marcar exame" }, back];
+  return [
+    { id: WAITLIST_BUTTON_ID.bookConsulta, title: "Agendar consulta" },
+    { id: WAITLIST_BUTTON_ID.bookRetorno, title: "Agendar retorno" },
+    back,
+  ];
+}
+
+export function waitlistErrorText(): string {
+  return "Tivemos um problema com a lista de espera. Por favor, tente de novo em instantes.";
 }

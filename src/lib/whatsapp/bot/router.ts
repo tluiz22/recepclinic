@@ -32,6 +32,7 @@ import { BOOKING_STATES, handleBookingState, startBooking } from "./booking";
 import { CANCEL_STATES, handleCancelState, startCancel } from "./cancel";
 import { RESCHEDULE_STATES, handleRescheduleState, startReschedule } from "./reschedule";
 import { EXAM_STATES, handleExamState, startExam } from "./exam";
+import { WAITLIST_STATES, handleWaitlistState, startWaitlist } from "./waitlist";
 import { handleReminderTap, parseReminderTap } from "./reminder";
 import * as texts from "./messages";
 import { sendMenu } from "./menu";
@@ -161,6 +162,11 @@ export async function routeIncomingMessage(
 
   if (EXAM_STATES.has(convo.state)) {
     await handleExamState(supabase, guardianPhone, guardianId, convo.state, context, selection);
+    return;
+  }
+
+  if (WAITLIST_STATES.has(convo.state)) {
+    await handleWaitlistState(supabase, guardianPhone, guardianId, convo.state, context, selection);
     return;
   }
 
@@ -377,6 +383,12 @@ async function handleConsultasMenu(
     return;
   }
 
+  // Lista de espera (Fase 25): fora do funil, como Falar com a secretária.
+  if (matchesOption(selection, "5", texts.CONSULTAS_LIST_ID.antecipar)) {
+    await startWaitlist(supabase, guardianPhone, guardianId, "consulta");
+    return;
+  }
+
   const notUnderstood = texts.notUnderstoodText();
   await sendAndLog(supabase, guardianId, "bot_not_understood", notUnderstood, () =>
     sendTextMessage({ to: guardianPhone, body: notUnderstood })
@@ -407,6 +419,11 @@ async function handleExamesMenu(
   if (matchesOption(selection, "3", texts.EXAMES_LIST_ID.remarcar)) {
     await startFunnel(supabase, guardianPhone, guardianId, "reschedule", { category: "exame" });
     await startReschedule(supabase, guardianPhone, guardianId, "exame");
+    return;
+  }
+
+  if (matchesOption(selection, "4", texts.EXAMES_LIST_ID.antecipar)) {
+    await startWaitlist(supabase, guardianPhone, guardianId, "exame");
     return;
   }
 

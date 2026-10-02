@@ -10,6 +10,11 @@ import { RESCHEDULE_PRESENCE_RESET } from "../../../../lib/presence";
 import { sendAppointmentConfirmation, sendAppointmentReschedule } from "../../../../lib/whatsapp/notifications";
 import { logWebFunnelEvent, type FunnelLink } from "../../../../lib/whatsapp/funnel";
 import { logAppointmentEvent } from "../../../../lib/audit";
+import { joinWaitlist } from "../../../../lib/waitlist";
+import { sendTextMessage } from "../../../../lib/whatsapp/client";
+import { formatWhen } from "../../../../lib/whatsapp/formatDateTime";
+import { sendAndLog } from "../../../../lib/whatsapp/bot/shared";
+import { waitlistAppointmentWords, waitlistJoinedText } from "../../../../lib/whatsapp/bot/messages";
 
 export const POST: APIRoute = async ({ params, request, redirect }) => {
   const token = params.token;
@@ -373,6 +378,26 @@ export const POST: APIRoute = async ({ params, request, redirect }) => {
         locationAddress,
         priceCents,
       });
+    }
+
+    // Lista de espera (Fase 25): pedida pelo "Encaixe ou antecipar" antes de
+    // ter marcação — o atendimento recém-marcado entra na fila e o bot avisa
+    // (conversa aberta há instantes, dentro da janela de 24h).
+    if (link.join_waitlist) {
+      const joined = await joinWaitlist(supabase, appointmentId, "booking_link");
+      if (joined === "joined" && guardian?.phone) {
+        const words = waitlistAppointmentWords(appointmentType, examType?.name);
+        const body = waitlistJoinedText(patient.full_name, words, formatWhen(startDate));
+        const phone = guardian.phone;
+        await sendAndLog(
+          supabase,
+          guardian.id,
+          "bot_waitlist_joined",
+          body,
+          () => sendTextMessage({ to: phone, body }),
+          appointmentId
+        );
+      }
     }
   }
 

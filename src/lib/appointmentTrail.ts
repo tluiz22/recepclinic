@@ -23,6 +23,7 @@ const MESSAGE_LABELS: Record<string, string> = {
   reminder_confirm: "Resposta ao lembrete: Confirmar presença",
   reminder_reschedule: "Resposta ao lembrete: Remarcar",
   reminder_cancel: "Resposta ao lembrete: Cancelar",
+  bot_waitlist_joined: "Aviso de entrada na lista de espera",
 };
 
 const DELIVERY_LABELS: Record<string, string> = {
@@ -209,6 +210,18 @@ function describeEvent(event: EventRow, staff: Map<string, string>): TrailEntry 
       return { at, text: `Lembrete ${details.first ? "enviado" : "reenviado"} por ${by}`, tone: "neutral" };
     case "preparation_resent":
       return { at, text: `Preparo do exame reenviado por ${by}`, tone: "neutral" };
+    case "waitlist_joined":
+      return { at, text: `Entrou na lista de espera por ${by}`, tone: "neutral" };
+    case "waitlist_left":
+      if (details.reason === "admin") return { at, text: `Retirado da lista de espera por ${by}`, tone: "neutral" };
+      if (details.reason === "bot") return { at, text: "Saiu da lista de espera pelo WhatsApp", tone: "neutral" };
+      return { at, text: "Saiu da lista de espera", tone: "neutral" };
+    case "waitlist_advanced": {
+      const from = typeof details.from === "string" ? formatWhen(new Date(details.from)) : null;
+      const to = typeof details.to === "string" ? formatWhen(new Date(details.to)) : null;
+      const change = from && to ? `: de ${from} para ${to}` : "";
+      return { at, text: `Antecipado pela lista de espera${change}`, tone: "success" };
+    }
     default:
       return { at, text: event.event_type, tone: "neutral" };
   }
