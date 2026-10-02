@@ -7,24 +7,32 @@ import { createClient } from "../../../lib/supabase/server";
 import { buildFunnelReport } from "../../../lib/metrics/whatsappFunnel";
 import { fetchFunnelEvents, formatPercent } from "../../../lib/metrics/data";
 import { metricsUrl, periodParams, type MetricsPeriod } from "../../../lib/metrics/period";
+import {
+  appointmentColumns,
+  filterParams,
+  scopeAppointments,
+  type MetricsFilter,
+} from "../../../lib/metrics/filter";
 
 interface Props {
   period: MetricsPeriod;
+  filter: MetricsFilter | null;
 }
 
-const { period } = Astro.props;
+const { period, filter } = Astro.props;
 const supabase = createClient(Astro.request, Astro.cookies);
 
 // WhatsApp × tela (Fase 17 já grava o canal de cada ação em `appointments`),
 // pela data da ação — mesmo critério de "Agendamentos por origem" na aba
 // Atendimentos, que tem o detalhe por perfil.
 async function countByChannel(dateColumn: string, channelColumn: string, channel: string): Promise<number> {
-  const { count } = await supabase
+  const query = supabase
     .from("appointments")
-    .select("id", { count: "exact", head: true })
+    .select(appointmentColumns("id", filter), { count: "exact", head: true })
     .gte(dateColumn, period.start.toISOString())
     .lt(dateColumn, period.end.toISOString())
     .eq(channelColumn, channel);
+  const { count } = await scopeAppointments(query, filter);
   return count ?? 0;
 }
 
@@ -35,7 +43,7 @@ const channelActions = [
 ];
 
 const [events, channelRows, { data: appointmentRows }] = await Promise.all([
-  fetchFunnelEvents(supabase, period.start, period.end),
+  fetchFunnelEvents(supabase, period.start, period.end, filter),
   Promise.all(
     channelActions.map(async (action) => {
       const [whatsapp, admin] = await Promise.all([
@@ -46,11 +54,14 @@ const [events, channelRows, { data: appointmentRows }] = await Promise.all([
       return { label: action.label, whatsapp, admin, share: total > 0 ? whatsapp / total : null };
     })
   ),
-  supabase
-    .from("appointments")
-    .select("status")
-    .gte("scheduled_at", period.start.toISOString())
-    .lt("scheduled_at", period.end.toISOString()),
+  scopeAppointments(
+    supabase
+      .from("appointments")
+      .select(appointmentColumns("status", filter))
+      .gte("scheduled_at", period.start.toISOString())
+      .lt("scheduled_at", period.end.toISOString()),
+    filter
+  ),
 ]);
 
 const report = buildFunnelReport(events, period.start, period.end);
@@ -63,7 +74,7 @@ const botCards = [
 ];
 
 // Atendimentos com data no período (como a aba Atendimentos).
-const statuses = (appointmentRows ?? []).map((row) => row.status as string);
+const statuses = ((appointmentRows ?? []) as unknown as { status: string }[]).map((row) => row.status);
 const completed = statuses.filter((status) => status === "completed").length;
 const noShow = statuses.filter((status) => status === "no_show").length;
 const attendanceCards = [
@@ -77,7 +88,7 @@ const attendanceCards = [
   },
 ];
 
-const atendimentosHref = metricsUrl({ tab: "atendimentos", ...periodParams(period) });
+const atendimentosHref = metricsUrl({ tab: "atendimentos", ...periodParams(period), ...filterParams(filter) });
 ---
 
 <h2 class="mt-6 text-base font-semibold text-slate-900">WhatsApp (bot)</h2>

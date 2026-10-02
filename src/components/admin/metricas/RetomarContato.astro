@@ -9,15 +9,17 @@ import { createClient } from "../../../lib/supabase/server";
 import { buildFunnelReport } from "../../../lib/metrics/whatsappFunnel";
 import { fetchFunnelEvents, formatDateTime } from "../../../lib/metrics/data";
 import type { MetricsPeriod } from "../../../lib/metrics/period";
+import type { MetricsFilter } from "../../../lib/metrics/filter";
 
 interface Props {
   period: MetricsPeriod;
+  filter: MetricsFilter | null;
 }
 
-const { period } = Astro.props;
+const { period, filter } = Astro.props;
 const supabase = createClient(Astro.request, Astro.cookies);
 
-const events = await fetchFunnelEvents(supabase, period.start, period.end);
+const events = await fetchFunnelEvents(supabase, period.start, period.end, filter);
 const report = buildFunnelReport(events, period.start, period.end);
 
 const LIMIT = 50;

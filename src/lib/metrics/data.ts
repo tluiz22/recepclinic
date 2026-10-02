@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { FunnelEventRow } from "./whatsappFunnel";
+import { funnelFilterExpression, type MetricsFilter } from "./filter";
 import {
   buildReminderResponseReport,
   type ReminderResponseReport,
@@ -33,17 +34,24 @@ export async function fetchAllRows<T>(
 // Eventos do funil das tentativas iniciadas no período. Busca 1 dia a mais:
 // tentativa iniciada no fim do período ainda pode ter passos na página logo
 // depois (o link vale 30min).
-export function fetchFunnelEvents(supabase: SupabaseClient, start: Date, end: Date): Promise<FunnelEventRow[]> {
+// Com filtro (etapa 8), só os eventos do responsável escolhido (ou do
+// responsável do paciente escolhido).
+export function fetchFunnelEvents(
+  supabase: SupabaseClient,
+  start: Date,
+  end: Date,
+  filter: MetricsFilter | null = null
+): Promise<FunnelEventRow[]> {
   const eventsEnd = new Date(end.getTime() + 24 * 60 * 60 * 1000);
-  return fetchAllRows<FunnelEventRow>("bot_funnel_events", (from, to) =>
-    supabase
+  return fetchAllRows<FunnelEventRow>("bot_funnel_events", (from, to) => {
+    let query = supabase
       .from("bot_funnel_events")
       .select("session_id, flow, step, source, guardian_phone, guardian_id, metadata, occurred_at")
       .gte("occurred_at", start.toISOString())
-      .lt("occurred_at", eventsEnd.toISOString())
-      .order("occurred_at", { ascending: true })
-      .range(from, to)
-  );
+      .lt("occurred_at", eventsEnd.toISOString());
+    if (filter) query = query.or(funnelFilterExpression(filter));
+    return query.order("occurred_at", { ascending: true }).range(from, to);
+  });
 }
 
 export function formatPercent(rate: number | null): string {

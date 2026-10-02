@@ -6,12 +6,14 @@ import { createClient } from "../../../lib/supabase/server";
 import { AUTHORSHIP_COLUMNS, describeAuthorship, fetchStaffLabels, type AuthorshipRow } from "../../../lib/authorship";
 import { formatPercent } from "../../../lib/metrics/data";
 import type { MetricsPeriod } from "../../../lib/metrics/period";
+import { appointmentColumns, scopeAppointments, type MetricsFilter } from "../../../lib/metrics/filter";
 
 interface Props {
   period: MetricsPeriod;
+  filter: MetricsFilter | null;
 }
 
-const { period } = Astro.props;
+const { period, filter } = Astro.props;
 const supabase = createClient(Astro.request, Astro.cookies);
 
 interface Row {
@@ -20,13 +22,16 @@ interface Row {
   clinic_locations: { type: string } | { type: string }[] | null;
 }
 
-const { data } = await supabase
-  .from("appointments")
-  .select("appointment_type, status, clinic_locations ( type )")
-  .gte("scheduled_at", period.start.toISOString())
-  .lt("scheduled_at", period.end.toISOString());
+const { data } = await scopeAppointments(
+  supabase
+    .from("appointments")
+    .select(appointmentColumns("appointment_type, status, clinic_locations ( type )", filter))
+    .gte("scheduled_at", period.start.toISOString())
+    .lt("scheduled_at", period.end.toISOString()),
+  filter
+);
 
-const rows = (data ?? []) as Row[];
+const rows = (data ?? []) as unknown as Row[];
 
 function locationType(row: Row): string | undefined {
   const location = Array.isArray(row.clinic_locations) ? row.clinic_locations[0] : row.clinic_locations;
@@ -77,21 +82,30 @@ const noShowTotalRow = { label: "Total geral", ...noShowRate(rows) };
 // não pela data do atendimento. Remarcação conta só a última de cada
 // atendimento (é o que fica registrado).
 const [{ data: createdData }, { data: rescheduledData }, { data: canceledData }, staffLabels] = await Promise.all([
-  supabase
-    .from("appointments")
-    .select(AUTHORSHIP_COLUMNS)
-    .gte("created_at", period.start.toISOString())
-    .lt("created_at", period.end.toISOString()),
-  supabase
-    .from("appointments")
-    .select(AUTHORSHIP_COLUMNS)
-    .gte("rescheduled_at", period.start.toISOString())
-    .lt("rescheduled_at", period.end.toISOString()),
-  supabase
-    .from("appointments")
-    .select(AUTHORSHIP_COLUMNS)
-    .gte("canceled_at", period.start.toISOString())
-    .lt("canceled_at", period.end.toISOString()),
+  scopeAppointments(
+    supabase
+      .from("appointments")
+      .select(appointmentColumns(AUTHORSHIP_COLUMNS, filter))
+      .gte("created_at", period.start.toISOString())
+      .lt("created_at", period.end.toISOString()),
+    filter
+  ),
+  scopeAppointments(
+    supabase
+      .from("appointments")
+      .select(appointmentColumns(AUTHORSHIP_COLUMNS, filter))
+      .gte("rescheduled_at", period.start.toISOString())
+      .lt("rescheduled_at", period.end.toISOString()),
+    filter
+  ),
+  scopeAppointments(
+    supabase
+      .from("appointments")
+      .select(appointmentColumns(AUTHORSHIP_COLUMNS, filter))
+      .gte("canceled_at", period.start.toISOString())
+      .lt("canceled_at", period.end.toISOString()),
+    filter
+  ),
   fetchStaffLabels(supabase),
 ]);
 
