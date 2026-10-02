@@ -756,6 +756,33 @@ export function cancelAbortedText(category: AppointmentCategory): string {
   return `Ok, mantivemos ${w.possessive} ${w.noun} marcad${w.adjEnd}.`;
 }
 
+// "Não" ao cancelar pelo botão do lembrete: mantém o atendimento e pergunta
+// se o responsável confirma a presença (presença continua sendo um ato
+// explícito — não cancelar não quer dizer que vai comparecer).
+export const CANCEL_KEPT_PRESENCE_ID = {
+  yes: "cancel_kept_presence_yes",
+  no: "cancel_kept_presence_no",
+} as const;
+
+export function cancelKeptAskPresenceText(category: AppointmentCategory): string {
+  return `${cancelAbortedText(category)}\n\nDeseja confirmar sua presença?`;
+}
+
+export function cancelKeptPresenceButtons(): { id: string; title: string }[] {
+  return [
+    { id: CANCEL_KEPT_PRESENCE_ID.yes, title: "Sim" },
+    { id: CANCEL_KEPT_PRESENCE_ID.no, title: "Não" },
+  ];
+}
+
+export function cancelKeptPresenceNotUnderstoodText(): string {
+  return "Não entendi. Deseja confirmar sua presença? Toque em Sim ou Não.";
+}
+
+export function cancelKeptPresenceDeclinedText(): string {
+  return 'Tudo bem! Se quiser confirmar depois, é só tocar em "Confirmar presença" no lembrete.';
+}
+
 export function cancelSuccessText(patientName: string, whenLabel: string, category: AppointmentCategory): string {
   const w = categoryWords(category);
   return (

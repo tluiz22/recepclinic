@@ -13,7 +13,7 @@
 // exame, e vice-versa, mesmo sendo o mesmo fluxo por baixo dos panos.
 
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { sendInteractiveListMessage, sendTextMessage } from "../client";
+import { sendInteractiveButtonsMessage, sendInteractiveListMessage, sendTextMessage } from "../client";
 import { formatWhen } from "../formatDateTime";
 import { logAppointmentEvent } from "../../audit";
 import {
@@ -33,9 +33,12 @@ export const CANCEL_STATES: ReadonlySet<string> = new Set(["CANCEL_SELECT", "CAN
 
 interface CancelContext {
   category: AppointmentCategory;
-  awaiting?: "appointment_choice" | "birthdate_search";
+  // "presence": depois do "Não" ao cancelar pelo lembrete, esperando a
+  // resposta a "Deseja confirmar sua presença?" (mesmo estado CANCEL_CONFIRM).
+  awaiting?: "appointment_choice" | "birthdate_search" | "presence";
   candidates?: AppointmentCandidate[];
   pending_appointment?: AppointmentCandidate;
+  from_reminder?: boolean;
 }
 
 // Consultas > Cancelar ou Exames > Cancelar → identifica a(s) consulta(s)/
@@ -69,21 +72,30 @@ export async function startCancelForAppointment(
   appointment: AppointmentCandidate
 ): Promise<void> {
   const category: AppointmentCategory = appointment.appointment_type === "exam" ? "exame" : "consulta";
-  await goToConfirm(supabase, guardianPhone, guardianId, category, appointment);
+  await goToConfirm(supabase, guardianPhone, guardianId, category, appointment, true);
 }
 
+// `waMessageId`: mensagem recebida, marcada como `reminder_confirm` quando
+// confirma a presença depois do "Não" (conta como confirmação nas métricas
+// do lembrete, que valem pelo último toque).
 export async function handleCancelState(
   supabase: SupabaseClient,
   guardianPhone: string,
   guardianId: string | null,
   state: string,
   rawContext: Record<string, unknown>,
-  selection: Selection
+  selection: Selection,
+  waMessageId?: string
 ): Promise<void> {
   const context = rawContext as unknown as CancelContext;
 
   if (state === "CANCEL_SELECT") {
     await handleCancelSelect(supabase, guardianPhone, guardianId, context, selection);
+    return;
+  }
+
+  if (state === "CANCEL_CONFIRM" && context.awaiting === "presence") {
+    await handleKeptPresence(supabase, guardianPhone, guardianId, context, selection, waMessageId);
     return;
   }
 
@@ -177,6 +189,23 @@ async function handleCancelConfirm(
   }
 
   if (answer.startsWith("n")) {
+    // Pelo lembrete, com presença ainda não confirmada: pergunta se confirma.
+    const askPresence =
+      context.from_reminder && (await fetchActiveAppointment(supabase, pending.id))?.patient_confirmed_at === null;
+    if (askPresence) {
+      const body = texts.cancelKeptAskPresenceText(context.category);
+      await sendAndLog(supabase, guardianId, "bot_cancel_aborted", body, () =>
+        sendInteractiveButtonsMessage({ to: guardianPhone, bodyText: body, buttons: texts.cancelKeptPresenceButtons() })
+      );
+      // A tentativa de cancelar termina aqui (funil); a pergunta da presença
+      // segue no mesmo estado, fora do funil.
+      await endFlow(supabase, guardianPhone, guardianId, "declined", {});
+      await updateConversationState(supabase, guardianPhone, "CANCEL_CONFIRM", {
+        context: { ...context, awaiting: "presence" } satisfies CancelContext,
+      });
+      return;
+    }
+
     const body = texts.cancelAbortedText(context.category);
     await sendAndLog(supabase, guardianId, "bot_cancel_aborted", body, () =>
       sendTextMessage({ to: guardianPhone, body })
@@ -197,6 +226,114 @@ async function handleCancelConfirm(
   await sendAndLog(supabase, guardianId, "bot_cancel_confirm", body, () =>
     sendTextMessage({ to: guardianPhone, body })
   );
+}
+
+// --- "Deseja confirmar sua presença?" (depois do "Não" pelo lembrete) -----
+
+async function handleKeptPresence(
+  supabase: SupabaseClient,
+  guardianPhone: string,
+  guardianId: string | null,
+  context: CancelContext,
+  selection: Selection,
+  waMessageId?: string
+): Promise<void> {
+  const normalized = selection.text.trim().toLowerCase();
+  const isYes =
+    selection.id === texts.CANCEL_KEPT_PRESENCE_ID.yes || normalized === "1" || normalized.startsWith("s");
+  const isNo =
+    selection.id === texts.CANCEL_KEPT_PRESENCE_ID.no ||
+    normalized === "2" ||
+    normalized === "n" ||
+    normalized.startsWith("não") ||
+    normalized.startsWith("nao");
+
+  if (!isYes && !isNo) {
+    const body = texts.cancelKeptPresenceNotUnderstoodText();
+    await sendAndLog(supabase, guardianId, "bot_not_understood", body, () =>
+      sendInteractiveButtonsMessage({ to: guardianPhone, bodyText: body, buttons: texts.cancelKeptPresenceButtons() })
+    );
+    return;
+  }
+
+  await updateConversationState(supabase, guardianPhone, "WELCOME", { context: {} });
+
+  if (isNo) {
+    const body = texts.cancelKeptPresenceDeclinedText();
+    await sendAndLog(supabase, guardianId, "bot_cancel_kept_presence_declined", body, () =>
+      sendTextMessage({ to: guardianPhone, body })
+    );
+    return;
+  }
+
+  // Revalida: pode ter sido cancelado/remarcado/confirmado pela tela enquanto
+  // a pergunta estava aberta.
+  const pending = context.pending_appointment;
+  const current = pending ? await fetchActiveAppointment(supabase, pending.id) : null;
+  if (!pending || !current) {
+    const body = texts.reminderInactiveText();
+    await sendAndLog(supabase, guardianId, "bot_reminder_inactive", body, () =>
+      sendTextMessage({ to: guardianPhone, body })
+    );
+    return;
+  }
+
+  const whenLabel = formatWhen(new Date(current.scheduled_at));
+  if (current.patient_confirmed_at) {
+    const body = texts.reminderPresenceAlreadyConfirmedText(pending.patient_name, whenLabel);
+    await sendAndLog(supabase, guardianId, "bot_reminder_confirmed", body, () =>
+      sendTextMessage({ to: guardianPhone, body })
+    );
+    return;
+  }
+
+  // Mesmo registro do botão "Confirmar presença" do lembrete (reminder.ts).
+  const now = new Date().toISOString();
+  const { error } = await supabase
+    .from("appointments")
+    .update({
+      reminder_response: "confirmed",
+      reminder_response_at: now,
+      patient_confirmed_at: now,
+      patient_confirmed_by: null,
+    })
+    .eq("id", pending.id);
+  if (error) {
+    console.error("[whatsapp bot] erro ao confirmar presença depois do Não:", error.message);
+    const body = texts.cancelErrorText();
+    await sendAndLog(supabase, guardianId, "bot_cancel_error", body, () =>
+      sendTextMessage({ to: guardianPhone, body })
+    );
+    return;
+  }
+  await logAppointmentEvent(supabase, { appointmentId: pending.id, type: "presence_confirmed", channel: "whatsapp_bot" });
+  if (waMessageId) {
+    await supabase
+      .from("whatsapp_messages")
+      .update({ appointment_id: pending.id, message_type: "reminder_confirm" })
+      .eq("wa_message_id", waMessageId);
+  }
+
+  const body = texts.reminderPresenceConfirmedText(pending.patient_name, whenLabel);
+  await sendAndLog(supabase, guardianId, "bot_reminder_confirmed", body, () =>
+    sendTextMessage({ to: guardianPhone, body })
+  );
+}
+
+// Atendimento ainda ativo e futuro (nulo se não), com a situação da presença.
+async function fetchActiveAppointment(
+  supabase: SupabaseClient,
+  appointmentId: string
+): Promise<{ scheduled_at: string; patient_confirmed_at: string | null } | null> {
+  const { data } = await supabase
+    .from("appointments")
+    .select("status, scheduled_at, patient_confirmed_at")
+    .eq("id", appointmentId)
+    .maybeSingle();
+  if (!data || !["scheduled", "confirmed"].includes(data.status) || new Date(data.scheduled_at).getTime() <= Date.now()) {
+    return null;
+  }
+  return { scheduled_at: data.scheduled_at, patient_confirmed_at: data.patient_confirmed_at ?? null };
 }
 
 // --- ação de cancelar de fato ---------------------------------------------
@@ -293,13 +430,18 @@ async function goToConfirm(
   guardianPhone: string,
   guardianId: string | null,
   category: AppointmentCategory,
-  appointment: AppointmentCandidate
+  appointment: AppointmentCandidate,
+  fromReminder = false
 ): Promise<void> {
   const body = texts.confirmCancelText(appointment.patient_name, formatWhen(new Date(appointment.scheduled_at)), category);
   await sendAndLog(supabase, guardianId, "bot_cancel_confirm", body, () =>
     sendTextMessage({ to: guardianPhone, body })
   );
   await updateConversationState(supabase, guardianPhone, "CANCEL_CONFIRM", {
-    context: { category, pending_appointment: appointment } satisfies CancelContext,
+    context: {
+      category,
+      pending_appointment: appointment,
+      ...(fromReminder ? { from_reminder: true } : {}),
+    } satisfies CancelContext,
   });
 }

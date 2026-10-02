@@ -155,7 +155,7 @@ export async function routeIncomingMessage(
   }
 
   if (CANCEL_STATES.has(convo.state)) {
-    await handleCancelState(supabase, guardianPhone, guardianId, convo.state, context, selection);
+    await handleCancelState(supabase, guardianPhone, guardianId, convo.state, context, selection, waMsg.id);
     return;
   }
 
