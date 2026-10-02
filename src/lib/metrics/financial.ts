@@ -19,7 +19,7 @@ export interface Bucket {
 
 export interface FinancialRow {
   label: string;
-  kind: "item" | "subtotal" | "total";
+  kind: "item" | "total";
   done: Bucket;
   expected: Bucket;
   noShow: Bucket;
@@ -109,7 +109,8 @@ export async function fetchFinancialReport(
     supabase.from("exam_types").select("id, name, is_active").order("name"),
   ]);
 
-  // Consulta por local: clínicas (subtotal "Consultório") e domiciliar. Local/exame inativo só aparece se tiver atendimento no período.
+  // Consulta por local: clínicas e domiciliar (sem subtotal "Consultório" —
+  // retirado a pedido do cliente, deixava a tabela confusa). Local/exame inativo só aparece se tiver atendimento no período.
   const clinics = ((locations ?? []) as LocationRow[]).filter((location) => location.type === "clinic");
   const homeVisits = ((locations ?? []) as LocationRow[]).filter((location) => location.type === "home_visit");
   const visitRows = new Map<string, FinancialRow>();
@@ -143,15 +144,12 @@ export async function fetchFinancialReport(
   const clinicItems = clinicGroups.filter(visibleGroup).map((group) => group.row);
   const homeItems = homeGroups.filter(visibleGroup).map((group) => group.row);
 
-  const visits: FinancialRow[] = [...clinicItems];
-  if (clinicItems.length > 0) visits.push(sum("Consultório", "subtotal", clinicItems));
-  visits.push(...homeItems);
+  const visits = [...clinicItems, ...homeItems];
 
   const exams = [...examRows.entries()]
     .filter(([id, row]) => examActive.get(id) || hasData(row))
     .map(([, row]) => row);
   if (hasData(otherExams)) exams.push(otherExams);
 
-  const items = [...clinicItems, ...homeItems, ...exams];
-  return { visits, exams, total: sum("Total", "total", items) };
+  return { visits, exams, total: sum("Total", "total", [...visits, ...exams]) };
 }
