@@ -3,7 +3,8 @@
 // (abre em Hoje) e uma aba por assunto — cada aba busca só o que exibe. Só a
 // médica (ver middleware). Relatórios virou a aba Atendimentos; Lembretes foi
 // para Consultas (a secretária também usa); Envios virou aba (etapa 5), sem
-// período — mostra os atendimentos futuros e as últimas execuções.
+// período — mostra os atendimentos futuros e as últimas execuções. Financeiro
+// (Fase 24) usa período e filtro.
 import AdminLayout from "../../layouts/AdminLayout.astro";
 import TabBar from "../../components/admin/TabBar.astro";
 import VisaoGeral from "../../components/admin/metricas/VisaoGeral.astro";
@@ -12,6 +13,7 @@ import Atendimentos from "../../components/admin/metricas/Atendimentos.astro";
 import RetomarContato from "../../components/admin/metricas/RetomarContato.astro";
 import Envios from "../../components/admin/metricas/Envios.astro";
 import Faltosos from "../../components/admin/metricas/Faltosos.astro";
+import Financeiro from "../../components/admin/metricas/Financeiro.astro";
 import { PERIOD_PRESETS, metricsUrl, parsePeriod, periodParams, todayFortaleza } from "../../lib/metrics/period";
 import { filterParams, resolveFilter, searchPeople } from "../../lib/metrics/filter";
 import { createClient } from "../../lib/supabase/server";
@@ -22,6 +24,7 @@ const TABS = [
   { id: "atendimentos", label: "Atendimentos" },
   { id: "retomar_contato", label: "Retomar contato" },
   { id: "faltosos", label: "Faltosos" },
+  { id: "financeiro", label: "Financeiro" },
   { id: "envios", label: "Envios" },
 ] as const;
 type TabId = (typeof TABS)[number]["id"];
@@ -213,6 +216,7 @@ const pickHref = (result: { kind: "patient" | "guardian"; id: string }) =>
   {tab === "atendimentos" && <Atendimentos period={period} filter={filter} />}
   {tab === "retomar_contato" && <RetomarContato period={period} filter={filter} />}
   {tab === "faltosos" && <Faltosos />}
+  {tab === "financeiro" && <Financeiro period={period} filter={filter} />}
   {tab === "envios" && <Envios />}
 </AdminLayout>
 

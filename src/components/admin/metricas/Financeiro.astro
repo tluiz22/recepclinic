@@ -1,0 +1,132 @@
+---
+// Métricas › Financeiro (Fase 24 · etapa 2): quantidade e valor por local/tipo
+// e por exame — Realizado, Previsto e Faltas (valor potencialmente perdido).
+// Valor da tabela gravado na marcação; não é o valor recebido.
+import { createClient } from "../../../lib/supabase/server";
+import { formatCentsBRL } from "../../../lib/money";
+import { fetchFinancialReport, type Bucket, type FinancialRow } from "../../../lib/metrics/financial";
+import type { MetricsPeriod } from "../../../lib/metrics/period";
+import type { MetricsFilter } from "../../../lib/metrics/filter";
+
+interface Props {
+  period: MetricsPeriod;
+  filter: MetricsFilter | null;
+}
+
+const { period, filter } = Astro.props;
+const supabase = createClient(Astro.request, Astro.cookies);
+const report = await fetchFinancialReport(supabase, period, filter);
+
+const sections = [
+  { title: "Consultas e retornos", rows: report.visits },
+  { title: "Exames", rows: report.exams },
+];
+
+const summary = [
+  { label: "Realizado", bucket: report.total.done, tone: "text-emerald-700" },
+  { label: "Previsto", bucket: report.total.expected, tone: "text-sky-700" },
+  { label: "Perdido com faltas", bucket: report.total.noShow, tone: "text-rose-700" },
+];
+
+const columns = [
+  { key: "done", label: "Realizado" },
+  { key: "expected", label: "Previsto" },
+  { key: "noShow", label: "Faltas" },
+] as const;
+
+function valueText(row: FinancialRow, bucket: Bucket): string {
+  if (bucket.count === 0) return "—";
+  return row.included ? "incluso" : formatCentsBRL(bucket.cents);
+}
+
+function rowClass(row: FinancialRow): string {
+  if (row.kind === "total") return "border-t-2 border-slate-300 bg-slate-50 font-semibold text-slate-900";
+  if (row.kind === "subtotal") return "border-t border-slate-200 bg-slate-50 font-semibold text-slate-800";
+  return "border-t border-slate-200";
+}
+---
+
+<p class="mt-6 text-sm text-slate-600">
+  Valor pela tabela vigente na marcação de cada atendimento — é o esperado, não o recebido (o pagamento é feito no
+  consultório). <strong>Previsto</strong> inclui os atendimentos que já passaram e ainda não tiveram o comparecimento
+  registrado. Cancelados não entram.
+</p>
+
+<div class="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
+  {
+    summary.map((item) => (
+      <div class="rounded-lg border border-slate-200 bg-white px-4 py-3 shadow-sm">
+        <p class="text-xs font-medium uppercase tracking-wide text-slate-500">{item.label}</p>
+        <p class={`mt-1 text-xl font-bold ${item.tone}`}>{formatCentsBRL(item.bucket.cents)}</p>
+        <p class="text-xs text-slate-500">
+          {item.bucket.count} {item.bucket.count === 1 ? "atendimento" : "atendimentos"}
+        </p>
+      </div>
+    ))
+  }
+</div>
+
+{
+  sections.map((section) => (
+    <>
+      <h2 class="mt-8 text-base font-semibold text-slate-900">{section.title}</h2>
+      {section.rows.length === 0 ? (
+        <p class="mt-2 text-sm text-slate-500">Nada cadastrado.</p>
+      ) : (
+        <div class="mt-3 rounded-lg border border-slate-200 bg-white shadow-sm">
+          <table class="w-full table-fixed border-collapse text-left text-xs sm:text-sm">
+            <thead class="bg-slate-50 text-slate-600">
+              <tr>
+                <th class="w-[34%] px-1.5 py-2 font-medium">Tipo</th>
+                {columns.map((column) => (
+                  <th class="w-[22%] px-1.5 py-2 text-right font-medium">{column.label}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {section.rows.map((row) => (
+                <tr class={rowClass(row)}>
+                  <td class="px-1.5 py-2 align-top">{row.label}</td>
+                  {columns.map((column) => (
+                    <td class="px-1.5 py-2 text-right align-top">
+                      <span class="block">{row[column.key].count}</span>
+                      <span class="block text-[11px] text-slate-500 sm:text-xs">{valueText(row, row[column.key])}</span>
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </>
+  ))
+}
+
+<h2 class="mt-8 text-base font-semibold text-slate-900">Total do período</h2>
+<div class="mt-3 rounded-lg border border-slate-200 bg-white shadow-sm">
+  <table class="w-full table-fixed border-collapse text-left text-xs sm:text-sm">
+    <thead class="bg-slate-50 text-slate-600">
+      <tr>
+        <th class="w-[34%] px-1.5 py-2 font-medium"></th>
+        {columns.map((column) => <th class="w-[22%] px-1.5 py-2 text-right font-medium">{column.label}</th>)}
+      </tr>
+    </thead>
+    <tbody>
+      <tr class="border-t border-slate-200 font-semibold text-slate-900">
+        <td class="px-1.5 py-2 align-top">Consultas, retornos e exames</td>
+        {
+          columns.map((column) => (
+            <td class="px-1.5 py-2 text-right align-top">
+              <span class="block">{report.total[column.key].count}</span>
+              <span class="block text-[11px] sm:text-xs">{formatCentsBRL(report.total[column.key].cents)}</span>
+            </td>
+          ))
+        }
+      </tr>
+    </tbody>
+  </table>
+</div>
+<p class="mt-2 text-xs text-slate-500">
+  Retorno conta na quantidade com R$ 0 (incluso na consulta). Convênios e prefeituras pelo mesmo valor da tabela.
+</p>
