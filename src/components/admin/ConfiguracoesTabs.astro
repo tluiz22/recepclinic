@@ -2,7 +2,7 @@
 import TabBar from "./TabBar.astro";
 
 interface Props {
-  current: "disponibilidade" | "duracao" | "valores" | "exames" | "contatos";
+  current: "disponibilidade" | "duracao" | "valores" | "exames" | "contatos" | "envios";
 }
 
 const { current } = Astro.props;
@@ -13,6 +13,7 @@ const tabs = [
   { id: "valores", label: "Valores", href: "/admin/configuracoes/valores" },
   { id: "exames", label: "Tipos de exame", href: "/admin/configuracoes/exames" },
   { id: "contatos", label: "Contatos", href: "/admin/configuracoes/contatos" },
+  { id: "envios", label: "Envios automáticos", href: "/admin/configuracoes/envios" },
 ] as const;
 ---
 

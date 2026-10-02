@@ -49,7 +49,6 @@ const { tabs, label = "Abas", class: className = "" } = Astro.props;
   /* Rola com o dedo, sem barra de rolagem visível. */
   .tab-bar-scroll {
     scrollbar-width: none;
-    -webkit-overflow-scrolling: touch;
   }
   .tab-bar-scroll::-webkit-scrollbar {
     display: none;
@@ -58,9 +57,24 @@ const { tabs, label = "Abas", class: className = "" } = Astro.props;
 
 <script>
   // Aba ativa visível e centralizada ao abrir (ex.: a última aba no celular).
-  for (const bar of document.querySelectorAll<HTMLElement>("[data-tab-bar] .tab-bar-scroll")) {
-    const active = bar.querySelector<HTMLElement>("[data-active]");
-    if (!active) continue;
-    bar.scrollLeft = active.offsetLeft - (bar.clientWidth - active.offsetWidth) / 2;
+  // Medida pela posição na tela (não depende de qual elemento é o pai
+  // posicionado) e repetida depois do layout final: no celular, ajustar a
+  // rolagem cedo demais era ignorado e a faixa abria no início.
+  function centerActiveTabs() {
+    for (const bar of document.querySelectorAll<HTMLElement>("[data-tab-bar] .tab-bar-scroll")) {
+      const active = bar.querySelector<HTMLElement>("[data-active]");
+      if (!active) continue;
+      const barBox = bar.getBoundingClientRect();
+      const tabBox = active.getBoundingClientRect();
+      const offset = tabBox.left - barBox.left - (barBox.width - tabBox.width) / 2;
+      bar.scrollLeft = Math.max(0, bar.scrollLeft + offset);
+    }
   }
+
+  requestAnimationFrame(centerActiveTabs);
+  window.addEventListener("load", centerActiveTabs);
+  // Voltar pelo navegador reabre a página do cache.
+  window.addEventListener("pageshow", (event) => {
+    if (event.persisted) centerActiveTabs();
+  });
 </script>

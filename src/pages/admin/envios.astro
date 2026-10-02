@@ -16,37 +16,24 @@ import { fetchPreparationResendable } from "../../lib/preparationResend";
 import { formatWhen } from "../../lib/whatsapp/formatDateTime";
 import { buildAppointmentTypeLabel } from "../../lib/whatsapp/notifications";
 import {
-  DAILY_SUMMARY_SCHEDULES,
-  REMINDER_HOUR_MAX,
-  REMINDER_HOUR_MIN,
   describeSendsAlert,
   fetchAppointmentsWithFailedSends,
   fetchRecentJobRuns,
-  fetchReminderHour,
   fetchSendsAlert,
   jobRunState,
   type JobRun,
   type JobRunState,
 } from "../../lib/automaticSends";
-import { describeSummarySchedule, fetchFirstWindowStarts } from "../../lib/dailySummarySchedule";
 
 const supabase = createClient(Astro.request, Astro.cookies);
 const now = new Date();
 
-const [runs, failedAppointments, alert, reminderHour, windowStarts] = await Promise.all([
+const [runs, failedAppointments, alert] = await Promise.all([
   fetchRecentJobRuns(supabase),
   fetchAppointmentsWithFailedSends(supabase, { now }),
   fetchSendsAlert(supabase, now),
-  fetchReminderHour(supabase),
-  fetchFirstWindowStarts(supabase),
 ]);
 
-// Horário do lembrete (etapa 7): horas cheias das 7h às 20h.
-const reminderHourOptions = Array.from(
-  { length: REMINDER_HOUR_MAX - REMINDER_HOUR_MIN + 1 },
-  (_, index) => REMINDER_HOUR_MIN + index
-);
-const hourSaved = Astro.url.searchParams.get("horario");
 
 // Um botão por tipo de envio (ajuste de 02/out/2026): "Reenviar lembrete"
 // (etapa 6) nos atendimentos com falha que ainda não têm lembrete entregue, e
@@ -147,7 +134,10 @@ const alertLines = describeSendsAlert(alert);
 
 <AdminLayout title="Envios automáticos">
   <h1 class="text-2xl font-bold text-slate-900">Envios automáticos</h1>
-  <p class="mt-2 text-slate-600">Lembretes e resumos do dia enviados pelo sistema.</p>
+  <p class="mt-2 text-slate-600">
+    Lembretes e resumos do dia enviados pelo sistema. Os horários ficam em
+    <a href="/admin/configuracoes/envios" class="text-sky-700 hover:underline">Configurações › Envios automáticos</a>.
+  </p>
 
   {
     alertLines.length > 0 && (
@@ -159,44 +149,6 @@ const alertLines = describeSendsAlert(alert);
 
   <ResendReminderNotice />
 
-  <h2 class="mt-8 text-sm font-semibold uppercase tracking-wide text-slate-500">Horários</h2>
-  <Card class="mt-3">
-    <form method="POST" action="/api/admin/envios/reminder-hour" class="flex flex-wrap items-end gap-3">
-      <label class="flex flex-col gap-1 text-sm">
-        <span class="font-medium text-slate-700">Horário do lembrete</span>
-        <select name="reminder_hour" class="rounded-md border border-slate-300 px-3 py-2 text-sm">
-          {
-            reminderHourOptions.map((hour) => (
-              <option value={hour} selected={hour === reminderHour}>
-                {String(hour).padStart(2, "0")}:00
-              </option>
-            ))
-          }
-        </select>
-      </label>
-      <button type="submit" class="rounded-md bg-sky-700 px-4 py-2 text-sm font-medium text-white hover:bg-sky-800">
-        Salvar
-      </button>
-    </form>
-    {hourSaved === "ok" && <p class="mt-2 text-sm text-emerald-700">Horário salvo.</p>}
-    {hourSaved === "erro" && <p class="mt-2 text-sm text-red-700">Não foi possível salvar o horário. Tente novamente.</p>}
-    <p class="mt-2 text-xs text-slate-400">
-      Todo dia nesse horário (inclusive fim de semana e feriado) o sistema envia o lembrete para todos os
-      atendimentos do dia seguinte. Atendimento marcado depois do envio ou para o próprio dia não recebe o
-      lembrete automático — use "Reenviar lembrete" na Agenda, se precisar.
-    </p>
-
-    <dl class="mt-4 grid gap-2 border-t border-slate-100 pt-3 text-sm sm:grid-cols-[12rem_1fr]">
-      <dt class="font-medium text-slate-700">Resumo do dia (véspera)</dt>
-      <dd class="text-slate-600">{DAILY_SUMMARY_SCHEDULES.preview}</dd>
-      <dt class="font-medium text-slate-700">Resumo do dia (no dia)</dt>
-      <dd class="text-slate-600">
-        {DAILY_SUMMARY_SCHEDULES.final}
-        <span class="mt-1 block">Consultas: {describeSummarySchedule(windowStarts.consultas)}</span>
-        <span class="block">Exames: {describeSummarySchedule(windowStarts.exames)}</span>
-      </dd>
-    </dl>
-  </Card>
 
   <h2 class="mt-8 text-sm font-semibold uppercase tracking-wide text-slate-500">Atendimentos com envio com falha</h2>
   <div class="mt-3 flex max-w-xl flex-col gap-3">
