@@ -914,3 +914,31 @@ export function waitlistNoAppointmentButtons(category: AppointmentCategory): { i
 export function waitlistErrorText(): string {
   return "Tivemos um problema com a lista de espera. Por favor, tente de novo em instantes.";
 }
+
+// --- resposta à oferta de vaga da lista de espera (Fase 25 · etapa 3) --------
+
+const STILL_IN_LIST = " Você continua na lista de espera — se abrir outra vaga, eu aviso por aqui.";
+
+export function waitlistOfferAcceptedText(patientName: string, whenLabel: string): string {
+  return `Pronto! ✓ O atendimento de *${patientName}* foi antecipado para ${whenLabel}. Os detalhes seguem na mensagem de remarcação.`;
+}
+
+export function waitlistOfferDeclinedText(patientName: string, whenLabel: string, stillInList: boolean): string {
+  return `Ok, mantivemos o horário de *${patientName}* (${whenLabel}).${stillInList ? STILL_IN_LIST : ""}`;
+}
+
+export function waitlistOfferLateText(stillInList: boolean): string {
+  return `Essa vaga já foi oferecida a outra pessoa.${stillInList ? STILL_IN_LIST : ""}`;
+}
+
+export function waitlistOfferTakenText(stillInList: boolean): string {
+  return `Que pena, essa vaga acabou de ser ocupada.${stillInList ? STILL_IN_LIST : ""}`;
+}
+
+export function waitlistOfferAlreadyAcceptedText(): string {
+  return "Essa vaga já está confirmada para você ✓";
+}
+
+export function waitlistOfferNotFoundText(): string {
+  return "Essa oferta não está mais ativa.";
+}

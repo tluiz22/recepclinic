@@ -33,6 +33,7 @@ import { CANCEL_STATES, handleCancelState, startCancel } from "./cancel";
 import { RESCHEDULE_STATES, handleRescheduleState, startReschedule } from "./reschedule";
 import { EXAM_STATES, handleExamState, startExam } from "./exam";
 import { WAITLIST_STATES, handleWaitlistState, startWaitlist } from "./waitlist";
+import { handleOfferTap, parseOfferTap } from "./waitlistOffer";
 import { handleReminderTap, parseReminderTap } from "./reminder";
 import * as texts from "./messages";
 import { sendMenu } from "./menu";
@@ -98,6 +99,15 @@ export async function routeIncomingMessage(
       await updateConversationState(supabase, guardianPhone, "MENU", { context: {} });
       await sendMenu(supabase, guardianPhone, tapGuardianId);
     }
+    return;
+  }
+
+  // Resposta à oferta de vaga da lista de espera (Fase 25) — também antes
+  // da máquina de estados e mesmo com o bot pausado (ver waitlistOffer.ts).
+  const offerTap = parseOfferTap(waMsg);
+  if (offerTap) {
+    const offerGuardianId = convo.guardian_id ?? (await resolveGuardianId(supabase, guardianPhone));
+    await handleOfferTap(supabase, guardianPhone, offerGuardianId, offerTap);
     return;
   }
 

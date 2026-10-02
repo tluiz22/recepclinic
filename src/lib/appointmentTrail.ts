@@ -24,6 +24,7 @@ const MESSAGE_LABELS: Record<string, string> = {
   reminder_reschedule: "Resposta ao lembrete: Remarcar",
   reminder_cancel: "Resposta ao lembrete: Cancelar",
   bot_waitlist_joined: "Aviso de entrada na lista de espera",
+  waitlist_offer: "Oferta de vaga da lista de espera",
 };
 
 const DELIVERY_LABELS: Record<string, string> = {

@@ -368,7 +368,7 @@ const CUSTOMER_SERVICE_WINDOW_MS = 23.5 * 60 * 60 * 1000;
 // Janela de atendimento de 24h aberta = o responsável mandou alguma
 // mensagem nas últimas 24h (sempre o caso quando marcou pelo bot). Só aí a
 // Meta aceita texto livre, com o preparo formatado.
-async function isCustomerServiceWindowOpen(supabase: SupabaseClient, guardianId: string): Promise<boolean> {
+export async function isCustomerServiceWindowOpen(supabase: SupabaseClient, guardianId: string): Promise<boolean> {
   const since = new Date(Date.now() - CUSTOMER_SERVICE_WINDOW_MS).toISOString();
   const { data, error } = await supabase
     .from("whatsapp_messages")
