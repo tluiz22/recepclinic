@@ -1,4 +1,5 @@
 ---
+import PhoneLinks from "../../../components/admin/PhoneLinks.astro";
 import AdminLayout from "../../../layouts/AdminLayout.astro";
 import Card from "../../../components/admin/Card.astro";
 import Icon from "../../../components/admin/Icon.astro";
@@ -8,7 +9,6 @@ import { todayFortaleza } from "../../../lib/scheduling/returnVisitDeadline";
 import { getAvailableSlotsForDate, type AppointmentType } from "../../../lib/scheduling/getAvailableSlotsForDate";
 import { getNextAvailableDates } from "../../../lib/scheduling/getNextAvailableDates";
 import { resolveClinicLocationIds, type LocationCategory } from "../../../lib/scheduling/resolveClinicLocationIds";
-import { formatPhoneBR } from "../../../lib/phone";
 import { formatDateOptionLabel } from "../../../lib/dates";
 
 const supabase = createClient(Astro.request, Astro.cookies);
@@ -111,7 +111,13 @@ const slots = date ? await getAvailableSlotsForDate({ supabase, clinicLocationId
   <div class="mt-4 rounded-lg border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
     <p class="font-medium text-slate-900">{patient?.full_name}</p>
     <p class="text-slate-500">
-      Resp.: {guardian?.full_name} · {guardian?.phone && formatPhoneBR(guardian.phone)}
+      Resp.: {guardian?.full_name}
+      {guardian?.phone && (
+        <>
+          {" · "}
+          <PhoneLinks phone={guardian.phone} plain />
+        </>
+      )}
     </p>
     <p class="mt-1 text-slate-500">
       Atualmente em {currentDateStr.split("-").reverse().join("/")} às {currentTimeStr}

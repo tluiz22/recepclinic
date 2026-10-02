@@ -1,0 +1,140 @@
+---
+// Métricas › Visão geral (Fase 23 · etapa 4): números do bot (tentativas,
+// concluídas, abandonos, pediram a secretária), atendimentos do período e
+// WhatsApp × tela.
+import Card from "../Card.astro";
+import { createClient } from "../../../lib/supabase/server";
+import { buildFunnelReport } from "../../../lib/metrics/whatsappFunnel";
+import { fetchFunnelEvents, formatPercent } from "../../../lib/metrics/data";
+import { metricsUrl, periodParams, type MetricsPeriod } from "../../../lib/metrics/period";
+
+interface Props {
+  period: MetricsPeriod;
+}
+
+const { period } = Astro.props;
+const supabase = createClient(Astro.request, Astro.cookies);
+
+// WhatsApp × tela (Fase 17 já grava o canal de cada ação em `appointments`),
+// pela data da ação — mesmo critério de "Agendamentos por origem" na aba
+// Atendimentos, que tem o detalhe por perfil.
+async function countByChannel(dateColumn: string, channelColumn: string, channel: string): Promise<number> {
+  const { count } = await supabase
+    .from("appointments")
+    .select("id", { count: "exact", head: true })
+    .gte(dateColumn, period.start.toISOString())
+    .lt(dateColumn, period.end.toISOString())
+    .eq(channelColumn, channel);
+  return count ?? 0;
+}
+
+const channelActions = [
+  { label: "Marcou", date: "created_at", channel: "booking_channel" },
+  { label: "Remarcou", date: "rescheduled_at", channel: "rescheduled_via" },
+  { label: "Cancelou", date: "canceled_at", channel: "canceled_via" },
+];
+
+const [events, channelRows, { data: appointmentRows }] = await Promise.all([
+  fetchFunnelEvents(supabase, period.start, period.end),
+  Promise.all(
+    channelActions.map(async (action) => {
+      const [whatsapp, admin] = await Promise.all([
+        countByChannel(action.date, action.channel, "whatsapp_bot"),
+        countByChannel(action.date, action.channel, "admin"),
+      ]);
+      const total = whatsapp + admin;
+      return { label: action.label, whatsapp, admin, share: total > 0 ? whatsapp / total : null };
+    })
+  ),
+  supabase
+    .from("appointments")
+    .select("status")
+    .gte("scheduled_at", period.start.toISOString())
+    .lt("scheduled_at", period.end.toISOString()),
+]);
+
+const report = buildFunnelReport(events, period.start, period.end);
+
+const botCards = [
+  { label: "Tentativas iniciadas", value: report.totals.started, color: "text-sky-700" },
+  { label: "Concluídas", value: report.totals.concluded, color: "text-emerald-600" },
+  { label: "Abandonos", value: report.totals.abandoned, color: "text-amber-600" },
+  { label: "Pediram a secretária", value: report.handoffRequests, color: "text-slate-700" },
+];
+
+// Atendimentos com data no período (como a aba Atendimentos).
+const statuses = (appointmentRows ?? []).map((row) => row.status as string);
+const completed = statuses.filter((status) => status === "completed").length;
+const noShow = statuses.filter((status) => status === "no_show").length;
+const attendanceCards = [
+  { label: "Atendimentos", value: String(statuses.filter((status) => status !== "canceled").length), color: "text-sky-700" },
+  { label: "Realizados", value: String(completed), color: "text-emerald-600" },
+  { label: "Não compareceram", value: String(noShow), color: "text-red-600" },
+  {
+    label: "Taxa de não comparecimento",
+    value: formatPercent(completed + noShow > 0 ? noShow / (completed + noShow) : null),
+    color: "text-slate-700",
+  },
+];
+
+const atendimentosHref = metricsUrl({ tab: "atendimentos", ...periodParams(period) });
+---
+
+<h2 class="mt-6 text-base font-semibold text-slate-900">WhatsApp (bot)</h2>
+<p class="mt-1 text-sm text-slate-500">Tentativas iniciadas no período.</p>
+<div class="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
+  {
+    botCards.map((card) => (
+      <Card class="text-center">
+        <p class={`text-3xl font-bold ${card.color}`}>{card.value}</p>
+        <p class="mt-1 text-sm text-slate-600">{card.label}</p>
+      </Card>
+    ))
+  }
+</div>
+
+<h2 class="mt-8 text-base font-semibold text-slate-900">Atendimentos</h2>
+<p class="mt-1 text-sm text-slate-500">
+  Com data no período. A taxa só considera os que já têm Realizada ou Não compareceu.
+  <a href={atendimentosHref} class="text-sky-700 underline">Ver detalhes</a>
+</p>
+<div class="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
+  {
+    attendanceCards.map((card) => (
+      <Card class="text-center">
+        <p class={`text-3xl font-bold ${card.color}`}>{card.value}</p>
+        <p class="mt-1 text-sm text-slate-600">{card.label}</p>
+      </Card>
+    ))
+  }
+</div>
+
+<h2 class="mt-8 text-base font-semibold text-slate-900">WhatsApp × tela</h2>
+<p class="mt-1 text-sm text-slate-500">
+  Ações feitas no período pelo próprio responsável (WhatsApp) ou pela equipe (tela). O detalhe por perfil está na aba
+  <a href={atendimentosHref} class="text-sky-700 underline">Atendimentos</a>.
+</p>
+<div class="mt-3 rounded-lg border border-slate-200 bg-white shadow-sm">
+  <table class="w-full table-fixed border-collapse text-left text-xs sm:text-sm">
+    <thead class="bg-slate-50 text-slate-600">
+      <tr>
+        <th class="w-[31%] px-1.5 py-2 font-medium">Ação</th>
+        <th class="w-[23%] px-1.5 py-2 text-right font-medium">WhatsApp</th>
+        <th class="w-[23%] px-1.5 py-2 text-right font-medium">Tela</th>
+        <th class="w-[23%] px-1.5 py-2 text-right font-medium">% WhatsApp</th>
+      </tr>
+    </thead>
+    <tbody>
+      {
+        channelRows.map((row) => (
+          <tr class="border-t border-slate-200">
+            <td class="px-1.5 py-2">{row.label}</td>
+            <td class="px-1.5 py-2 text-right">{row.whatsapp}</td>
+            <td class="px-1.5 py-2 text-right">{row.admin}</td>
+            <td class="px-1.5 py-2 text-right">{formatPercent(row.share)}</td>
+          </tr>
+        ))
+      }
+    </tbody>
+  </table>
+</div>

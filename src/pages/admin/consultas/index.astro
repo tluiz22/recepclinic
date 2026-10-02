@@ -12,12 +12,14 @@
 // referência de identificação do dia, não a ferramenta de gestão pontual da
 // grade (isso continua sendo a Agenda). Base pra próxima etapa: seleção pra
 // cancelamento em massa.
+import PhoneLinks from "../../../components/admin/PhoneLinks.astro";
 import AdminLayout from "../../../layouts/AdminLayout.astro";
 import Card from "../../../components/admin/Card.astro";
 import Badge from "../../../components/admin/Badge.astro";
 import type { BadgeVariant } from "../../../components/admin/Badge.astro";
 import Icon from "../../../components/admin/Icon.astro";
 import TabBar from "../../../components/admin/TabBar.astro";
+import LembretesDoDia from "../../../components/admin/LembretesDoDia.astro";
 import ConfirmDeleteDialog from "../../../components/admin/ConfirmDeleteDialog.astro";
 import PresenceControl from "../../../components/admin/PresenceControl.astro";
 import { createClient } from "../../../lib/supabase/server";
@@ -42,14 +44,17 @@ const PAGE_SIZE = 20;
 const supabase = createClient(Astro.request, Astro.cookies);
 
 const tabParam = Astro.url.searchParams.get("tab");
-const tab: "resumo" | "pendentes" | "confirmadas" | "aguardando_remarcacao" =
+type ConsultasTab = "resumo" | "lembretes" | "pendentes" | "confirmadas" | "aguardando_remarcacao";
+const tab: ConsultasTab =
   tabParam === "pendentes"
     ? "pendentes"
     : tabParam === "confirmadas"
       ? "confirmadas"
       : tabParam === "aguardando_remarcacao"
         ? "aguardando_remarcacao"
-        : "resumo";
+        : tabParam === "lembretes"
+          ? "lembretes"
+          : "resumo";
 
 const now = new Date();
 
@@ -155,7 +160,7 @@ function mapResumoRow(
   };
 }
 
-function tabUrl(target: "resumo" | "pendentes" | "confirmadas" | "aguardando_remarcacao"): string {
+function tabUrl(target: ConsultasTab): string {
   return `/admin/consultas?tab=${target}`;
 }
 
@@ -341,11 +346,14 @@ function confirmadasPageUrl(targetPage: number): string {
     class="mt-3"
     tabs={[
       { label: "Resumo do dia", href: tabUrl("resumo"), active: tab === "resumo" },
+      { label: "Lembretes", href: tabUrl("lembretes"), active: tab === "lembretes" },
       { label: "Aguardando remarcação", href: tabUrl("aguardando_remarcacao"), active: tab === "aguardando_remarcacao" },
       { label: "A registrar", href: tabUrl("pendentes"), active: tab === "pendentes" },
       { label: "Registradas", href: tabUrl("confirmadas"), active: tab === "confirmadas" },
     ]}
   />
+
+  {tab === "lembretes" && <LembretesDoDia date={date} />}
 
   {
     tab === "pendentes" && (
@@ -447,9 +455,7 @@ function confirmadasPageUrl(targetPage: number): string {
                     {row.guardianPhone && (
                       <>
                         {" · "}
-                        <a href={`tel:${row.guardianPhone}`} class="text-sky-700 hover:underline">
-                          {formatPhoneBR(row.guardianPhone)}
-                        </a>
+                        <PhoneLinks phone={row.guardianPhone} plain class="text-sky-700" />
                       </>
                     )}
                   </p>
@@ -671,9 +677,7 @@ function confirmadasPageUrl(targetPage: number): string {
                 {row.guardianPhone && (
                   <>
                     {" · "}
-                    <a href={`tel:${row.guardianPhone}`} class="font-medium text-sky-700 hover:underline">
-                      {formatPhoneBR(row.guardianPhone)}
-                    </a>
+                    <PhoneLinks phone={row.guardianPhone} plain class="font-medium text-sky-700" />
                   </>
                 )}
               </p>

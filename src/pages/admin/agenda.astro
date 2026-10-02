@@ -1,4 +1,5 @@
 ---
+import PhoneLinks from "../../components/admin/PhoneLinks.astro";
 import AdminLayout from "../../layouts/AdminLayout.astro";
 import Card from "../../components/admin/Card.astro";
 import Badge from "../../components/admin/Badge.astro";
@@ -12,7 +13,6 @@ import { fetchReminderActions } from "../../lib/reminderResend";
 import { fetchPreparationResendable } from "../../lib/preparationResend";
 import { createClient } from "../../lib/supabase/server";
 import { groupSessionTitle, loadAgendaItems } from "../../lib/scheduling/agendaItems";
-import { formatPhoneBR } from "../../lib/phone";
 import {
   AUTHORSHIP_COLUMNS,
   PRESENCE_COLUMNS,
@@ -246,9 +246,7 @@ const presenceError = Astro.url.searchParams.get("error") === "presenca";
                     {guardian?.phone && (
                       <>
                         {" · "}
-                        <a href={`tel:${guardian.phone}`} class="text-sky-700 hover:underline">
-                          {formatPhoneBR(guardian.phone)}
-                        </a>
+                        <PhoneLinks phone={guardian.phone} plain class="text-sky-700" />
                       </>
                     )}
                   </p>

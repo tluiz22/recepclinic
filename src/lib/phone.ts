@@ -17,3 +17,9 @@ export function formatPhoneBR(e164: string): string {
   const [, ddd, prefix, suffix] = match;
   return `(${ddd}) ${prefix}-${suffix}`;
 }
+
+// Conversa no WhatsApp instalado no aparelho de quem está usando o painel
+// (wa.me, sem texto pronto) — Fase 23, ao lado de cada telefone do admin.
+export function whatsappHref(e164: string): string {
+  return `https://wa.me/${e164.replace(/\D/g, "")}`;
+}

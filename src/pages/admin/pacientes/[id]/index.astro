@@ -1,11 +1,11 @@
 ---
+import PhoneLinks from "../../../../components/admin/PhoneLinks.astro";
 import AdminLayout from "../../../../layouts/AdminLayout.astro";
 import Card from "../../../../components/admin/Card.astro";
 import Badge from "../../../../components/admin/Badge.astro";
 import Icon from "../../../../components/admin/Icon.astro";
 import ConfirmDeleteDialog from "../../../../components/admin/ConfirmDeleteDialog.astro";
 import { createClient } from "../../../../lib/supabase/server";
-import { formatPhoneBR } from "../../../../lib/phone";
 
 const PAGE_SIZE = 20;
 
@@ -94,7 +94,7 @@ function formatBirthdate(birthdate: string): string {
           </Badge>
         )}
       </h1>
-      <p class="mt-1 text-slate-600">{formatPhoneBR(guardian.phone)}</p>
+      <PhoneLinks phone={guardian.phone} plain class="mt-1 text-slate-600" />
     </div>
     <div class="flex gap-2">
       <a

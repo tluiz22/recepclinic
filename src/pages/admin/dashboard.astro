@@ -1,6 +1,7 @@
 ---
 // Fase 9 — resumo do dia: lê só o `status` do Supabase (a única agenda desde
 // a Fase 20). Ver plano, seção "Fase 9".
+import { fetchReminderResponseReport } from "../../lib/metrics/data";
 import AdminLayout from "../../layouts/AdminLayout.astro";
 import Card from "../../components/admin/Card.astro";
 import Icon from "../../components/admin/Icon.astro";
@@ -19,11 +20,13 @@ const todayStr = new Date(now.getTime() - 3 * 60 * 60 * 1000).toISOString().slic
 const todayStart = new Date(`${todayStr}T00:00:00-03:00`);
 const todayEnd = new Date(`${todayStr}T23:59:59.999-03:00`);
 
-// "Presença não confirmada" (Fase 19): atendimentos de hoje (ainda por vir)
-// e amanhã que já receberam o lembrete, ativos e sem presença confirmada.
-const tomorrowEnd = new Date(todayEnd.getTime() + 24 * 60 * 60 * 1000);
+// "Presença não confirmada" (Fase 19; revisto na Fase 23 a pedido do
+// cliente): lembretes enviados hoje ainda sem resposta — o mesmo número de
+// "Não responderam" em Consultas › Lembretes, que o cartão abre. Antes do
+// envio do dia fica 0.
+const tomorrowStart = new Date(todayEnd.getTime() + 1);
 
-const [{ data: todayRows }, { count: pendingCount }, { count: unconfirmedCount }, sendsAlert] = await Promise.all([
+const [{ data: todayRows }, { count: pendingCount }, reminderReport, sendsAlert] = await Promise.all([
   supabase
     .from("appointments")
     .select("appointment_type")
@@ -36,14 +39,7 @@ const [{ data: todayRows }, { count: pendingCount }, { count: unconfirmedCount }
     .in("status", ["scheduled", "confirmed"])
     .lt("scheduled_at", now.toISOString())
     .gte("scheduled_at", new Date(now.getTime() - PENDING_WINDOW_DAYS * 24 * 60 * 60 * 1000).toISOString()),
-  supabase
-    .from("appointments")
-    .select("id", { count: "exact", head: true })
-    .in("status", ["scheduled", "confirmed"])
-    .not("reminder_sent_at", "is", null)
-    .is("patient_confirmed_at", null)
-    .gte("scheduled_at", now.toISOString())
-    .lte("scheduled_at", tomorrowEnd.toISOString()),
+  fetchReminderResponseReport(supabase, todayStart, tomorrowStart),
   // Alerta de envios automáticos (Fase 22 · etapa 5).
   fetchSendsAlert(supabase, now),
 ]);
@@ -103,11 +99,10 @@ const shortcuts:{ label: string; href: string; icon: IconName }[] = [
         <p class="mt-1 text-sm text-slate-600">Comparecimento a registrar</p>
       </Card>
     </a>
-    <a href="/admin/agenda">
+    <a href="/admin/consultas?tab=lembretes&lista=sem_resposta">
       <Card class="h-full text-center hover:border-sky-300 hover:bg-sky-50">
-        <p class="text-3xl font-bold text-amber-600">{unconfirmedCount ?? 0}</p>
+        <p class="text-3xl font-bold text-amber-600">{reminderReport.noResponse}</p>
         <p class="mt-1 text-sm text-slate-600">Presença não confirmada</p>
-        <p class="mt-0.5 text-xs text-slate-400">hoje e amanhã</p>
       </Card>
     </a>
   </div>

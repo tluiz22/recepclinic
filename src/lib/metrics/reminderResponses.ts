@@ -15,12 +15,23 @@ export interface ReminderTapRow {
   created_at: string;
 }
 
+export type ReminderOutcome = "confirmed" | "reschedule" | "cancel" | "noResponse";
+
+export interface ReminderResponseItem {
+  appointmentId: string;
+  sentAt: string;
+  outcome: ReminderOutcome;
+}
+
 export interface ReminderResponseReport {
   sent: number;
   confirmed: number;
   reschedule: number;
   cancel: number;
   noResponse: number;
+  // Um por atendimento lembrado, com a resposta (lista ao tocar num cartão,
+  // Fase 23 · etapa 4).
+  items: ReminderResponseItem[];
 }
 
 const OUTCOME_BY_TYPE: Record<string, "confirmed" | "reschedule" | "cancel"> = {
@@ -29,42 +40,54 @@ const OUTCOME_BY_TYPE: Record<string, "confirmed" | "reschedule" | "cancel"> = {
   reminder_cancel: "cancel",
 };
 
-// Resposta de um lembrete = último toque no mesmo atendimento depois dele e
-// antes do lembrete seguinte desse atendimento (remarcado para dentro da
-// janela recebe outro lembrete). Vale o último toque, como em
-// `reminder_response`. Sem toque = não respondeu (o bot já recusa toques
-// depois do horário do atendimento, então não há corte extra por data).
-// `reminders` = os do mês; `allReminders` inclui os posteriores, só para
-// saber onde termina a janela de cada um.
+// Uma linha por atendimento lembrado no período (Fase 23: o mesmo
+// atendimento pode receber mais de um lembrete no dia — automático e
+// "Enviar/Reenviar lembrete" — e deve aparecer uma vez só, com a situação
+// mais recente). Resposta = último toque no atendimento depois do primeiro
+// lembrete do período e antes de um lembrete seguinte fora dele (remarcado
+// para outro dia recebe outro lembrete). Sem toque = não respondeu (o bot já
+// recusa toques depois do horário do atendimento, então não há corte extra
+// por data). `reminders` = os do período; `allReminders` inclui os
+// posteriores, só para saber onde termina a janela.
 export function buildReminderResponseReport(
   reminders: ReminderSentRow[],
   allReminders: ReminderSentRow[],
   taps: ReminderTapRow[]
 ): ReminderResponseReport {
-  const report: ReminderResponseReport = { sent: 0, confirmed: 0, reschedule: 0, cancel: 0, noResponse: 0 };
+  const report: ReminderResponseReport = {
+    sent: 0,
+    confirmed: 0,
+    reschedule: 0,
+    cancel: 0,
+    noResponse: 0,
+    items: [],
+  };
 
+  const remindersInPeriod = groupByAppointment(reminders);
   const remindersByAppointment = groupByAppointment(allReminders);
   const tapsByAppointment = groupByAppointment(taps);
 
-  for (const reminder of reminders) {
-    if (!reminder.appointment_id) continue;
+  for (const [appointmentId, sentRows] of remindersInPeriod) {
     report.sent += 1;
 
-    const sentAt = Date.parse(reminder.created_at);
-    const nextReminder = (remindersByAppointment.get(reminder.appointment_id) ?? [])
+    const firstSentAt = Date.parse(sentRows[0].created_at);
+    const lastSent = sentRows[sentRows.length - 1];
+    const lastSentAt = Date.parse(lastSent.created_at);
+    const nextReminder = (remindersByAppointment.get(appointmentId) ?? [])
       .map((row) => Date.parse(row.created_at))
-      .find((time) => time > sentAt);
+      .find((time) => time > lastSentAt);
     const windowEnd = nextReminder ?? Number.POSITIVE_INFINITY;
 
-    const lastTap = (tapsByAppointment.get(reminder.appointment_id) ?? [])
+    const lastTap = (tapsByAppointment.get(appointmentId) ?? [])
       .filter((tap) => {
         const time = Date.parse(tap.created_at);
-        return time > sentAt && time < windowEnd && OUTCOME_BY_TYPE[tap.message_type];
+        return time > firstSentAt && time < windowEnd && OUTCOME_BY_TYPE[tap.message_type];
       })
       .at(-1);
 
-    if (lastTap) report[OUTCOME_BY_TYPE[lastTap.message_type]] += 1;
-    else report.noResponse += 1;
+    const outcome: ReminderOutcome = lastTap ? OUTCOME_BY_TYPE[lastTap.message_type] : "noResponse";
+    report[outcome] += 1;
+    report.items.push({ appointmentId, sentAt: lastSent.created_at, outcome });
   }
 
   return report;
