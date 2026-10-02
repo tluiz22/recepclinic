@@ -1,12 +1,13 @@
 ---
 // Métricas › Financeiro (Fase 24 · etapa 2): quantidade e valor por local/tipo
 // e por exame — Realizado, Previsto e Faltas (valor potencialmente perdido).
-// Valor da tabela gravado na marcação; não é o valor recebido.
+// Valor da tabela gravado na marcação; não é o valor recebido. "Baixar
+// planilha" (etapa 3) leva as mesmas linhas, com o mesmo período e filtro.
 import { createClient } from "../../../lib/supabase/server";
 import { formatCentsBRL } from "../../../lib/money";
 import { fetchFinancialReport, type Bucket, type FinancialRow } from "../../../lib/metrics/financial";
-import type { MetricsPeriod } from "../../../lib/metrics/period";
-import type { MetricsFilter } from "../../../lib/metrics/filter";
+import { periodParams, type MetricsPeriod } from "../../../lib/metrics/period";
+import { filterParams, type MetricsFilter } from "../../../lib/metrics/filter";
 
 interface Props {
   period: MetricsPeriod;
@@ -16,6 +17,9 @@ interface Props {
 const { period, filter } = Astro.props;
 const supabase = createClient(Astro.request, Astro.cookies);
 const report = await fetchFinancialReport(supabase, period, filter);
+
+const csvQuery = new URLSearchParams({ ...periodParams(period), ...filterParams(filter) }).toString();
+const csvHref = `/admin/metricas/financeiro.csv${csvQuery ? `?${csvQuery}` : ""}`;
 
 const sections = [
   { title: "Consultas e retornos", rows: report.visits },
@@ -46,11 +50,20 @@ function rowClass(row: FinancialRow): string {
 }
 ---
 
-<p class="mt-6 text-sm text-slate-600">
-  Valor pela tabela vigente na marcação de cada atendimento — é o esperado, não o recebido (o pagamento é feito no
-  consultório). <strong>Previsto</strong> inclui os atendimentos que já passaram e ainda não tiveram o comparecimento
-  registrado. Cancelados não entram.
-</p>
+<div class="mt-6 flex flex-wrap items-start gap-3">
+  <p class="min-w-0 flex-1 basis-64 text-sm text-slate-600">
+    Valor pela tabela vigente na marcação de cada atendimento — é o esperado, não o recebido (o pagamento é feito no
+    consultório). <strong>Previsto</strong> inclui os atendimentos que já passaram e ainda não tiveram o comparecimento
+    registrado. Cancelados não entram.
+  </p>
+  <a
+    href={csvHref}
+    download
+    class="shrink-0 rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+  >
+    ⬇ Baixar planilha
+  </a>
+</div>
 
 <div class="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
   {
