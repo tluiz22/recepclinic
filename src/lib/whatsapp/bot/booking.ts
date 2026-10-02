@@ -1146,6 +1146,11 @@ export async function finishBookingWithPatient(
     return;
   }
 
+  // Funil (Fase 23 · etapa 6): todos os caminhos de identificação da criança
+  // ou do paciente (lista, data de nascimento, cadastro novo, "para mim",
+  // retorno) chegam aqui — etapa "Identificaram a criança/o paciente".
+  await logFunnelStep(supabase, guardianPhone, guardianId, "patient_identified", { patient_id: patientId });
+
   // Limites de idade (Fase 21) para a criança escolhida numa lista — o
   // cadastro novo e a busca por data já foram checados ao informar a data.
   // Consulta: idade limite (Configurações); retorno: nunca 18+.
@@ -1333,6 +1338,8 @@ async function handleAgeLimitOtherChild(
     normalized.startsWith("nao");
 
   if (isYes) {
+    // Funil (Fase 23 · etapa 6): "tentaram outra criança" depois da idade limite.
+    await logFunnelStep(supabase, guardianPhone, guardianId, "age_limit_other_child");
     await beginNewPatientRegistration(supabase, guardianPhone, guardianId, context);
     return;
   }

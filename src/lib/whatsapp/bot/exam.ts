@@ -18,6 +18,7 @@ import { sendInteractiveButtonsMessage, sendInteractiveListMessage, sendTextMess
 import {
   endFlow,
   formatBirthdateLabel,
+  logFunnelStep,
   parseBirthdateInput,
   resolveByListOrDigit,
   sendAndLog,
@@ -206,6 +207,10 @@ async function handleForWhom(
       const isOther =
         selection.id === texts.EXAM_FOR_WHOM_ID.other || normalized === "2" || normalized === "outra pessoa";
 
+      // Funil (Fase 23 · etapa 6): etapa "Disseram para quem".
+      if (isOther || isSelf) {
+        await logFunnelStep(supabase, guardianPhone, guardianId, "exam_for_whom", { answer: isSelf ? "self" : "other" });
+      }
       if (isOther) {
         await updateConversationState(supabase, guardianPhone, "BOOK_PATIENT_SELECT", { context: booking });
         await enterPatientSelect(supabase, guardianPhone, guardianId, booking);

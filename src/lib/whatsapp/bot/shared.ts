@@ -75,9 +75,29 @@ export async function pauseBotForAgent(
 ): Promise<void> {
   const { data: convo } = await supabase
     .from("conversation_state")
-    .select("state, guardian_id, funnel_session_id, funnel_flow")
+    .select("state, guardian_id, funnel_session_id, funnel_flow, atendimento_humano, updated_at")
     .eq("guardian_phone", guardianPhone)
     .maybeSingle();
+
+  // Funil (Fase 23 · etapa 6, cartão "Atendimento humano"): conta só o
+  // início de cada pausa — as mensagens seguintes dela só renovam o prazo.
+  const pauseActive =
+    convo?.atendimento_humano === true &&
+    !!convo.updated_at &&
+    !isPastHumanHandoffDeadline(new Date(convo.updated_at as string));
+  if (!pauseActive) {
+    await logFunnelEvent(supabase, {
+      sessionId: crypto.randomUUID(),
+      flow: "handoff",
+      step: "agent_took_over",
+      guardianPhone,
+      guardianId: convo?.guardian_id ?? null,
+      metadata: {
+        mid_journey: !!convo?.funnel_session_id,
+        ...(convo?.funnel_flow ? { journey_flow: convo.funnel_flow } : {}),
+      },
+    });
+  }
 
   if (convo?.funnel_session_id && convo.funnel_flow) {
     await logFunnelEvent(supabase, {

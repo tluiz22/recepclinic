@@ -22,11 +22,25 @@ interface StageDef {
   steps: string[];
 }
 
+// De onde a tentativa começou (Fase 23 · etapa 6): Remarcar e Cancelar têm
+// funis separados para quem veio pelo menu e para quem tocou no botão do
+// lembrete (`started.metadata.source = "reminder"`).
+type FlowOrigin = "menu" | "reminder";
+
 interface FlowDef {
+  // Chave única do funil (o mesmo fluxo pode ter um funil por origem).
+  id: string;
   flow: FunnelFlow;
+  origin?: FlowOrigin;
   label: string;
   stages: StageDef[];
   success: string;
+  // Contagens extras exibidas abaixo das barras.
+  notes?: (sessions: Session[]) => { label: string; count: number }[];
+}
+
+function countWithStep(sessions: Session[], ...steps: string[]): number {
+  return sessions.filter((session) => session.events.some((event) => steps.includes(event.step))).length;
 }
 
 const LINK_OPENED_STEPS = ["page_opened", "date_changed", "confirm_failed", "link_expired", "confirmed"];
@@ -36,44 +50,68 @@ const LINK_OPENED_STEPS = ["page_opened", "date_changed", "confirm_failed", "lin
 // escolha de criança — lista de 1 só — ainda conta nas etapas anteriores).
 export const FLOW_DEFS: FlowDef[] = [
   {
+    id: "booking",
     flow: "booking",
     label: "Agendar consulta",
     success: "confirmed",
     stages: [
       { label: "Iniciaram", steps: ["started"] },
-      { label: "Escolheram o local", steps: ["BOOK_HOME_ADDRESS", "BOOK_PATIENT_SELECT", "BOOK_PATIENT_NEW"] },
+      {
+        label: "Escolheram o local",
+        steps: ["BOOK_HOME_ADDRESS", "BOOK_PATIENT_SELECT", "BOOK_PATIENT_NEW", "BOOK_AGE_LIMIT"],
+      },
+      { label: "Identificaram a criança", steps: ["patient_identified"] },
       { label: "Receberam o link", steps: ["link_sent"] },
       { label: "Abriram o link", steps: LINK_OPENED_STEPS },
       { label: "Confirmaram", steps: ["confirmed"] },
     ],
+    notes: (sessions) => {
+      const ageLimit = countWithStep(sessions, "BOOK_AGE_LIMIT");
+      const otherChild = countWithStep(sessions, "age_limit_other_child");
+      return [
+        {
+          label: `Barradas pela idade limite${ageLimit > 0 ? ` (${otherChild} tentaram outra criança)` : ""}`,
+          count: ageLimit,
+        },
+        { label: "Já tinham consulta marcada", count: countWithStep(sessions, "already_scheduled") },
+      ];
+    },
   },
   {
+    id: "return_booking",
     flow: "return_booking",
     label: "Agendar retorno",
     success: "confirmed",
     stages: [
       { label: "Iniciaram", steps: ["started"] },
-      { label: "Tinham direito", steps: ["BOOK_PATIENT_SELECT", "BOOK_PATIENT_NEW"] },
+      { label: "Tinham direito", steps: ["BOOK_PATIENT_SELECT", "BOOK_PATIENT_NEW", "patient_identified"] },
       { label: "Receberam o link", steps: ["link_sent"] },
       { label: "Abriram o link", steps: LINK_OPENED_STEPS },
       { label: "Confirmaram", steps: ["confirmed"] },
     ],
   },
   {
+    id: "exam",
     flow: "exam",
     label: "Marcar exame",
     success: "confirmed",
     stages: [
       { label: "Iniciaram", steps: ["started"] },
-      { label: "Escolheram o exame", steps: ["EXAM_FOR_WHOM", "BOOK_PATIENT_SELECT", "BOOK_PATIENT_NEW"] },
+      { label: "Escolheram o exame", steps: ["EXAM_FOR_WHOM"] },
+      // Antes da Fase 23 só a escolha de criança marcava esta etapa.
+      { label: "Disseram para quem", steps: ["exam_for_whom", "BOOK_PATIENT_SELECT", "BOOK_PATIENT_NEW"] },
+      { label: "Identificaram o paciente", steps: ["patient_identified"] },
       { label: "Receberam o link", steps: ["link_sent"] },
       { label: "Abriram o link", steps: LINK_OPENED_STEPS },
       { label: "Confirmaram", steps: ["confirmed"] },
     ],
+    notes: (sessions) => [{ label: "Já tinham esse exame marcado", count: countWithStep(sessions, "already_scheduled") }],
   },
   {
+    id: "reschedule_menu",
     flow: "reschedule",
-    label: "Remarcar",
+    origin: "menu",
+    label: "Remarcar (pelo menu)",
     success: "confirmed",
     stages: [
       { label: "Iniciaram", steps: ["started"] },
@@ -84,8 +122,23 @@ export const FLOW_DEFS: FlowDef[] = [
     ],
   },
   {
+    id: "reschedule_reminder",
+    flow: "reschedule",
+    origin: "reminder",
+    label: "Remarcar (pelo lembrete)",
+    success: "confirmed",
+    stages: [
+      { label: "Tocaram em Remarcar", steps: ["started"] },
+      { label: "Receberam o link", steps: ["link_sent"] },
+      { label: "Abriram o link", steps: LINK_OPENED_STEPS },
+      { label: "Confirmaram", steps: ["confirmed"] },
+    ],
+  },
+  {
+    id: "cancel_menu",
     flow: "cancel",
-    label: "Cancelar",
+    origin: "menu",
+    label: "Cancelar (pelo menu)",
     success: "canceled",
     stages: [
       { label: "Iniciaram", steps: ["started"] },
@@ -94,7 +147,27 @@ export const FLOW_DEFS: FlowDef[] = [
       { label: "Cancelaram", steps: ["canceled"] },
     ],
   },
+  {
+    id: "cancel_reminder",
+    flow: "cancel",
+    origin: "reminder",
+    label: "Cancelar (pelo lembrete)",
+    success: "canceled",
+    stages: [
+      { label: "Tocaram em Cancelar", steps: ["started"] },
+      { label: "Chegaram à confirmação", steps: ["CANCEL_CONFIRM"] },
+      { label: "Cancelaram", steps: ["canceled"] },
+    ],
+  },
 ];
+
+function sessionOrigin(session: Session): FlowOrigin {
+  return findStep(session, "started")?.metadata?.source === "reminder" ? "reminder" : "menu";
+}
+
+function matchesDef(def: FlowDef, session: Session): boolean {
+  return session.flow === def.flow && (!def.origin || sessionOrigin(session) === def.origin);
+}
 
 // Sem evento novo por esse tempo = tentativa encerrada (o link de agendar
 // vale 30min; o timeout de inatividade do bot é 15min).
@@ -149,11 +222,13 @@ interface Session {
 }
 
 export interface FlowFunnel {
+  id: string;
   flow: FunnelFlow;
   label: string;
   stages: { label: string; count: number; conversion: number | null }[];
   outcomes: Record<SessionOutcome, number>;
   blockedReasons: { label: string; count: number }[];
+  notes: { label: string; count: number }[];
 }
 
 export interface IncompleteSession {
@@ -233,6 +308,9 @@ export interface FunnelReport {
   flows: FlowFunnel[];
   totals: { started: number; concluded: number; abandoned: number };
   handoffRequests: number;
+  // Cartão "Atendimento humano" (Fase 23 · etapa 6): pausas do bot porque a
+  // secretária escreveu pelo app; `midJourney` = no meio de uma tentativa.
+  agentTookOver: { total: number; midJourney: number };
   incomplete: IncompleteSession[];
 }
 
@@ -255,13 +333,21 @@ export function buildFunnelReport(
     return started ? inPeriod(started.occurred_at) : false;
   });
 
-  const handoffRequests = sessions.filter((session) => session.flow === "handoff").length;
+  const handoffSessions = sessions.filter((session) => session.flow === "handoff");
+  // Registros anteriores à Fase 23 só têm o pedido ("requested").
+  const handoffRequests = handoffSessions.filter((session) => findStep(session, "requested")).length;
+  const tookOver = handoffSessions.filter((session) => findStep(session, "agent_took_over"));
+  const agentTookOver = {
+    total: tookOver.length,
+    midJourney: tookOver.filter((session) => findStep(session, "agent_took_over")?.metadata?.mid_journey === true)
+      .length,
+  };
 
   // Quem concluiu o mesmo fluxo numa tentativa posterior não precisa de
   // retomada de contato.
   const lastSuccess = new Map<string, number>();
   for (const session of allSessions) {
-    const def = FLOW_DEFS.find((d) => d.flow === session.flow);
+    const def = FLOW_DEFS.find((d) => matchesDef(d, session));
     if (!def || !findStep(session, def.success)) continue;
     const key = `${session.guardianPhone}:${session.flow}`;
     const startedAt = new Date(session.startedAt).getTime();
@@ -273,7 +359,7 @@ export function buildFunnelReport(
   const nowMs = now.getTime();
 
   const flows = FLOW_DEFS.map((def): FlowFunnel => {
-    const flowSessions = sessions.filter((session) => session.flow === def.flow);
+    const flowSessions = sessions.filter((session) => matchesDef(def, session));
     const stageCounts = def.stages.map(() => 0);
     const outcomes: Record<SessionOutcome, number> = {
       concluded: 0,
@@ -318,6 +404,7 @@ export function buildFunnelReport(
     totals.abandoned += outcomes.abandoned;
 
     return {
+      id: def.id,
       flow: def.flow,
       label: def.label,
       stages: def.stages.map((stage, index) => ({
@@ -329,10 +416,11 @@ export function buildFunnelReport(
       blockedReasons: [...blockedReasons.entries()]
         .map(([label, count]) => ({ label, count }))
         .sort((a, b) => b.count - a.count),
+      notes: def.notes ? def.notes(flowSessions).filter((note) => note.count > 0) : [],
     };
   });
 
   incomplete.sort((a, b) => new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime());
 
-  return { flows, totals, handoffRequests, incomplete };
+  return { flows, totals, handoffRequests, agentTookOver, incomplete };
 }

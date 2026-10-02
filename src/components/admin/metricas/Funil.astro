@@ -1,7 +1,9 @@
 ---
-// Métricas › Funil (Fase 15; aba própria na Fase 23 · etapa 4): etapas de
-// cada fluxo do bot + passos da página /agendar. As etapas novas entram na
-// etapa 6 da Fase 23. Gráfico em barras CSS, sem lib (decisão do cliente).
+// Métricas › Funil (Fase 15; aba própria na Fase 23 · etapa 4, etapas
+// atualizadas na etapa 6): etapas de cada fluxo do bot + passos da página
+// /agendar, Remarcar e Cancelar separados por origem (menu ou lembrete) e o
+// cartão "Atendimento humano". Gráfico em barras CSS, sem lib (decisão do
+// cliente).
 import Card from "../Card.astro";
 import Badge from "../Badge.astro";
 import { createClient } from "../../../lib/supabase/server";
@@ -67,6 +69,16 @@ const report = buildFunnelReport(events, period.start, period.end);
                 )}
               </div>
 
+              {flow.notes.length > 0 && (
+                <ul class="mt-3 space-y-0.5 text-xs text-slate-600">
+                  {flow.notes.map((note) => (
+                    <li>
+                      {note.label}: <span class="font-semibold">{note.count}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+
               {flow.blockedReasons.length > 0 && (
                 <ul class="mt-3 space-y-0.5 text-xs text-slate-500">
                   {flow.blockedReasons.map((reason) => (
@@ -82,4 +94,29 @@ const report = buildFunnelReport(events, period.start, period.end);
       );
     })
   }
+
+  <Card>
+    <h3 class="font-semibold text-slate-900">Atendimento humano</h3>
+    <dl class="mt-3 space-y-2 text-sm">
+      <div class="flex items-baseline justify-between gap-3">
+        <dt class="text-slate-600">Pediram a secretária pelo menu</dt>
+        <dd class="font-semibold tabular-nums text-slate-900">{report.handoffRequests}</dd>
+      </div>
+      <div class="flex items-baseline justify-between gap-3">
+        <dt class="text-slate-600">
+          Secretária assumiu pelo app
+          {report.agentTookOver.total > 0 && (
+            <span class="block text-xs text-slate-500">
+              {report.agentTookOver.midJourney} no meio de um agendamento, remarcação ou cancelamento
+            </span>
+          )}
+        </dt>
+        <dd class="font-semibold tabular-nums text-slate-900">{report.agentTookOver.total}</dd>
+      </div>
+    </dl>
+    <p class="mt-3 text-xs text-slate-400">
+      "Assumiu pelo app" conta cada vez que a secretária escreveu pelo WhatsApp Business e o bot pausou (registrado a
+      partir de 02/10/2026).
+    </p>
+  </Card>
 </div>
