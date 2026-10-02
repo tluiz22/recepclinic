@@ -1,5 +1,7 @@
 ---
 import PhoneLinks from "../../components/admin/PhoneLinks.astro";
+import NoShowBadge from "../../components/admin/NoShowBadge.astro";
+import { fetchNoShowStats } from "../../lib/noShow";
 import AdminLayout from "../../layouts/AdminLayout.astro";
 import Card from "../../components/admin/Card.astro";
 import Badge from "../../components/admin/Badge.astro";
@@ -43,7 +45,7 @@ const items = await loadAgendaItems(
   supabase,
   dayStart,
   dayEnd,
-  `appointment_type, home_visit_address, reminder_sent_at, ${AUTHORSHIP_COLUMNS}, ${PRESENCE_COLUMNS}, patients ( full_name, guardians ( full_name, phone ) ), clinic_locations ( name, type )`
+  `patient_id, appointment_type, home_visit_address, reminder_sent_at, ${AUTHORSHIP_COLUMNS}, ${PRESENCE_COLUMNS}, patients ( full_name, guardians ( full_name, phone ) ), clinic_locations ( name, type )`
 );
 
 const staffLabels = items.some((item) => item.kind === "appointment")
@@ -64,6 +66,14 @@ const reminderActions = await fetchReminderActions(
           },
         ]
       : []
+  )
+);
+
+// Selo "Faltou X de Y" (Fase 23 · etapa 7) nos pacientes faltosos.
+const noShowStats = await fetchNoShowStats(
+  supabase,
+  items.flatMap((item) =>
+    item.kind === "appointment" && item.appointment.patient_id ? [item.appointment.patient_id as string] : []
   )
 );
 
@@ -240,7 +250,10 @@ const presenceError = Astro.url.searchParams.get("error") === "presenca";
                 </div>
               ) : appointment ? (
                 <div class="mt-2 text-sm text-slate-700">
-                  <p class="font-medium text-slate-900">{patient?.full_name}</p>
+                  <p class="flex flex-wrap items-center gap-x-2 gap-y-1 font-medium text-slate-900">
+                    {patient?.full_name}
+                    <NoShowBadge stats={noShowStats.get(appointment.patient_id as string)} />
+                  </p>
                   <p class="mt-0.5 text-slate-500">
                     Resp.: {guardian?.full_name}
                     {guardian?.phone && (

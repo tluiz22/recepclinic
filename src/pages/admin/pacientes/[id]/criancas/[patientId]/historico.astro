@@ -5,6 +5,8 @@
 // antigos" de 10 em 10 (`?passados=`); cada card traz a trilha recolhida,
 // buscada só ao abrir (`/admin/trilha/[id]`), e o aviso de envio com falha
 // visível mesmo fechado.
+import NoShowBadge from "../../../../../../components/admin/NoShowBadge.astro";
+import { fetchNoShowStats } from "../../../../../../lib/noShow";
 import AdminLayout from "../../../../../../layouts/AdminLayout.astro";
 import Card from "../../../../../../components/admin/Card.astro";
 import Badge from "../../../../../../components/admin/Badge.astro";
@@ -39,6 +41,9 @@ const { data: patient } = await supabase
 if (!patient) {
   return Astro.redirect(`/admin/pacientes/${guardianId}?error=not_found`);
 }
+
+// Selo "Faltou X de Y" (Fase 23 · etapa 7).
+const noShowStats = await fetchNoShowStats(supabase, [patient.id]);
 
 const PAST_PAGE_SIZE = 10;
 const requestedPast = Number.parseInt(Astro.url.searchParams.get("passados") ?? "", 10);
@@ -144,7 +149,10 @@ const sections = [
   </a>
 
   <h1 class="mt-3 text-2xl font-bold text-slate-900">Histórico de agendamentos</h1>
-  <p class="mt-1 text-slate-600">{patient.full_name}</p>
+  <p class="mt-1 flex flex-wrap items-center gap-2 text-slate-600">
+    {patient.full_name}
+    <NoShowBadge stats={noShowStats.get(patient.id)} />
+  </p>
 
   <div class="mt-6 flex max-w-xl flex-col gap-6">
     {

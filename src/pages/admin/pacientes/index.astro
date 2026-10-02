@@ -1,4 +1,6 @@
 ---
+import NoShowBadge from "../../../components/admin/NoShowBadge.astro";
+import { fetchNoShowStats } from "../../../lib/noShow";
 import PhoneLinks from "../../../components/admin/PhoneLinks.astro";
 import AdminLayout from "../../../layouts/AdminLayout.astro";
 import Card from "../../../components/admin/Card.astro";
@@ -137,6 +139,12 @@ if (tab === "pacientes") {
   patients = (data ?? []) as unknown as PatientRow[];
   totalPages = Math.max(1, Math.ceil((count ?? 0) / PAGE_SIZE));
 }
+
+// Selo "Faltou X de Y" (Fase 23 · etapa 7) nos pacientes faltosos da página.
+const noShowStats = await fetchNoShowStats(
+  supabase,
+  patients.map((patient) => patient.id)
+);
 
 function pageUrl(targetPage: number): string {
   const params = new URLSearchParams();
@@ -519,6 +527,9 @@ function pageUrl(targetPage: number): string {
                 <tr class="border-t border-slate-200">
                   <td class="px-3 py-2">
                     {patient.full_name}
+                    <span class="ml-2 align-middle">
+                      <NoShowBadge stats={noShowStats.get(patient.id)} />
+                    </span>
                     {(!patient.is_active || !patient.guardians.is_active) && (
                       <Badge variant="neutral" class="ml-2 align-middle">
                         Inativo
