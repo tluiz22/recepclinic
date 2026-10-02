@@ -44,14 +44,15 @@ export const GET: APIRoute = async ({ request, url }) => {
 
   const supabase = createServiceClient();
 
-  if (url.searchParams.get("trigger") === "scheduled") {
+  const scheduled = url.searchParams.get("trigger") === "scheduled";
+  if (scheduled) {
     const reminderHour = await fetchReminderHour(supabase);
     if (fortalezaHour(new Date()) !== reminderHour) {
       return json({ skipped: "fora_do_horario", reminder_hour: reminderHour });
     }
   }
 
-  const runId = await startJobRun(supabase, "appointment_reminders");
+  const runId = await startJobRun(supabase, "appointment_reminders", null, scheduled ? "scheduled" : "manual");
 
   const totals = { candidates: 0, sent: 0, failed: 0, not_sent_no_phone: 0, not_sent_no_template: 0 };
 

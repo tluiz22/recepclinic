@@ -49,6 +49,8 @@ export interface JobRun {
   id: number;
   job: "appointment_reminders" | "daily_summary";
   variant: "preview" | "final" | null;
+  // Nulo só se a gravação for anterior à migração 0035 e não preenchida.
+  trigger: "scheduled" | "manual" | null;
   started_at: string;
   finished_at: string | null;
   status: "running" | "ok" | "error";
@@ -87,7 +89,7 @@ export function fortalezaHour(now: Date): number {
 export async function fetchRecentJobRuns(supabase: SupabaseClient, limit = 30): Promise<JobRun[]> {
   const { data } = await supabase
     .from("job_runs")
-    .select("id, job, variant, started_at, finished_at, status, error_message, totals")
+    .select("id, job, variant, trigger, started_at, finished_at, status, error_message, totals")
     .order("started_at", { ascending: false })
     .limit(limit);
   return (data ?? []) as JobRun[];
@@ -188,14 +190,16 @@ export async function fetchSendsAlert(supabase: SupabaseClient, now = new Date()
     fetchReminderHour(supabase),
     supabase
       .from("job_runs")
-      .select("id, job, variant, started_at, finished_at, status, error_message, totals")
+      .select("id, job, variant, trigger, started_at, finished_at, status, error_message, totals")
       .eq("job", "appointment_reminders")
       .gte("started_at", today.start.toISOString())
       .order("started_at", { ascending: false }),
     fetchAppointmentsWithFailedSends(supabase, { until: tomorrow.end, now }),
   ]);
 
-  const runs = (todayRuns ?? []) as JobRun[];
+  // Só o agendador conta: um teste manual não esconde que o lembrete
+  // automático de hoje não rodou ou falhou.
+  const runs = ((todayRuns ?? []) as JobRun[]).filter((run) => run.trigger !== "manual");
   const latest = runs[0];
 
   return {

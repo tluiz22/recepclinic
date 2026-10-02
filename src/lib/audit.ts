@@ -48,6 +48,10 @@ export async function logAppointmentEvent(supabase: SupabaseClient, event: Appoi
 
 export type JobName = "appointment_reminders" | "daily_summary";
 
+// Quem disparou: o agendador do Supabase (`?trigger=scheduled`) ou uma
+// chamada à mão da rota (teste) — marcada na tela Envios (migração 0035).
+export type JobTrigger = "scheduled" | "manual";
+
 /**
  * Abre a execução como 'running' e devolve o id para `finishJobRun` (null se
  * a gravação falhou — o cron segue normalmente).
@@ -55,9 +59,10 @@ export type JobName = "appointment_reminders" | "daily_summary";
 export async function startJobRun(
   supabase: SupabaseClient,
   job: JobName,
-  variant: "preview" | "final" | null = null
+  variant: "preview" | "final" | null,
+  trigger: JobTrigger
 ): Promise<number | null> {
-  const { data, error } = await supabase.from("job_runs").insert({ job, variant }).select("id").single();
+  const { data, error } = await supabase.from("job_runs").insert({ job, variant, trigger }).select("id").single();
   if (error) {
     console.error("[audit] erro ao abrir execução:", job, variant, error.message);
     return null;

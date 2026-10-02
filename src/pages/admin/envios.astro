@@ -122,6 +122,7 @@ const runRows = runs.map((run) => {
   return {
     id: run.id,
     job: jobLabel(run),
+    manual: run.trigger === "manual",
     startedAt: formatAt(run.started_at),
     state: stateBadges[state],
     totals: totalsLine(run),
@@ -237,7 +238,10 @@ const alertLines = describeSendsAlert(alert);
         runRows.map((row) => (
           <Card>
             <div class="flex flex-wrap items-center justify-between gap-2">
-              <span class="font-semibold text-slate-900">{row.job}</span>
+              <span class="flex flex-wrap items-center gap-2">
+                <span class="font-semibold text-slate-900">{row.job}</span>
+                {row.manual && <Badge variant="neutral">Teste manual</Badge>}
+              </span>
               <Badge variant={row.state.variant}>{row.state.label}</Badge>
             </div>
             <p class="mt-1 text-sm text-slate-500">{row.startedAt}</p>

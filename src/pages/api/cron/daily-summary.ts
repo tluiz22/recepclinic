@@ -156,7 +156,10 @@ export const GET: APIRoute = async ({ request, url }) => {
   if (send !== "preview" && send !== "final") {
     return json({ error: "parâmetro send inválido — use preview ou final" }, 400);
   }
-  const scheduled = send === "final" && url.searchParams.get("trigger") === "scheduled";
+  // `trigger=scheduled` = agendador (os dois envios). Só o do dia decide a
+  // hora na rota; o da véspera já é chamado às 18h em ponto.
+  const fromScheduler = url.searchParams.get("trigger") === "scheduled";
+  const scheduled = send === "final" && fromScheduler;
 
   const supabase = createServiceClient();
   const targetDate = send === "preview" ? addDays(todayFortaleza(), 1) : todayFortaleza();
@@ -176,7 +179,7 @@ export const GET: APIRoute = async ({ request, url }) => {
     resentKinds = due.resent;
   }
 
-  const runId = await startJobRun(supabase, "daily_summary", send);
+  const runId = await startJobRun(supabase, "daily_summary", send, fromScheduler ? "scheduled" : "manual");
 
   const totals = {
     consultas: 0,
