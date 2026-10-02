@@ -27,7 +27,7 @@ const { data: link } = token
          origin_appointment_id, return_deadline_waived, guardian_id, guardian_phone, funnel_session_id,
          guardians ( full_name, phone ),
          patients ( full_name, birthdate ),
-         appointments!appointment_id ( scheduled_at, clinic_locations ( name, type, address ) ),
+         appointments!appointment_id ( scheduled_at, home_visit_address, clinic_locations ( name, type, address ) ),
          exam_types ( name, duration_minutes, preparation_instructions, scheduling_mode )`
       )
       .eq("id", token)
@@ -53,6 +53,7 @@ const patient = (link?.patients ?? null) as unknown as { full_name: string; birt
 // confirmar; ver "Backlog futuro — Múltiplos consultórios" no plano).
 const currentAppointment = (link?.appointments ?? null) as unknown as {
   scheduled_at: string;
+  home_visit_address: string | null;
   clinic_locations: { name: string; type: string; address: string | null } | null;
 } | null;
 const examType = (link?.exam_types ?? null) as unknown as {
@@ -217,7 +218,14 @@ const isExam = link?.appointment_type === "exam";
 
 const pageTitle = link?.mode === "reschedule" ? "Remarcar consulta" : isExam ? "Marcar exame" : "Agendar consulta";
 
-const confirmedLocation = currentAppointment?.clinic_locations ?? null;
+// Página "confirmado": só o endereço — o título já diz se é exame ou consulta,
+// e o endereço do local já começa pelo nome da clínica (pedido do cliente,
+// 02/out/2026). Domiciliar: o endereço informado pela família.
+const confirmedAddress =
+  currentAppointment?.clinic_locations?.address ??
+  currentAppointment?.home_visit_address ??
+  link?.home_visit_address ??
+  null;
 ---
 
 <html lang="pt-BR">
@@ -257,20 +265,9 @@ const confirmedLocation = currentAppointment?.clinic_locations ?? null;
             <h1 class="text-lg font-bold text-emerald-900">{isExam ? "Exame confirmado!" : "Consulta confirmada!"}</h1>
             <p class="mt-2 text-sm text-emerald-800">
               {patient?.full_name}
-              {currentAppointment && (
-                <>
-                  {" "}
-                  — {formatDateTimeBR(currentAppointment.scheduled_at)} · {locationLabel}
-                </>
-              )}
+              {currentAppointment && <> — {formatDateTimeBR(currentAppointment.scheduled_at)}</>}
             </p>
-            {confirmedLocation?.address && (
-              <p class="mt-2 text-sm text-emerald-800">
-                {confirmedLocation.name}
-                <br />
-                {confirmedLocation.address}
-              </p>
-            )}
+            {confirmedAddress && <p class="mt-2 text-sm text-emerald-800">{confirmedAddress}</p>}
             {/* O preparo não aparece mais no formulário (texto longo empurrava a
                 escolha de data para o fim da página): fica num link para a mesma
                 página `/preparo/[id]` enviada pelo WhatsApp. */}
