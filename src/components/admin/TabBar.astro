@@ -1,0 +1,66 @@
+---
+// Faixa de abas rolável na horizontal (Fase 23 · etapa 1): uma linha só,
+// mesmo com muitas abas, fixa no topo ao rolar a página e com a aba ativa
+// centralizada ao abrir. Decisão do cliente para o uso no celular — mesmo
+// componente em Configurações, Consultas e Métricas. Cada aba é um link
+// (a troca de aba recarrega a página, sem estado no cliente).
+
+interface Tab {
+  label: string;
+  href: string;
+  active: boolean;
+}
+
+interface Props {
+  tabs: Tab[];
+  label?: string;
+  class?: string;
+}
+
+const { tabs, label = "Abas", class: className = "" } = Astro.props;
+---
+
+<nav
+  data-tab-bar
+  aria-label={label}
+  class={`sticky top-0 z-10 -mx-4 border-b border-slate-200 bg-slate-50/95 px-4 py-2 backdrop-blur ${className}`}
+>
+  <div class="tab-bar-scroll flex gap-2 overflow-x-auto">
+    {
+      tabs.map((tab) => (
+        <a
+          href={tab.href}
+          aria-current={tab.active ? "page" : undefined}
+          data-active={tab.active ? "true" : undefined}
+          class={`shrink-0 whitespace-nowrap rounded-full border px-3.5 py-1.5 text-sm font-medium ${
+            tab.active
+              ? "border-sky-700 bg-sky-700 text-white"
+              : "border-slate-300 bg-white text-slate-600 hover:border-sky-700 hover:text-sky-700"
+          }`}
+        >
+          {tab.label}
+        </a>
+      ))
+    }
+  </div>
+</nav>
+
+<style>
+  /* Rola com o dedo, sem barra de rolagem visível. */
+  .tab-bar-scroll {
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+  .tab-bar-scroll::-webkit-scrollbar {
+    display: none;
+  }
+</style>
+
+<script>
+  // Aba ativa visível e centralizada ao abrir (ex.: a última aba no celular).
+  for (const bar of document.querySelectorAll<HTMLElement>("[data-tab-bar] .tab-bar-scroll")) {
+    const active = bar.querySelector<HTMLElement>("[data-active]");
+    if (!active) continue;
+    bar.scrollLeft = active.offsetLeft - (bar.clientWidth - active.offsetWidth) / 2;
+  }
+</script>
