@@ -10,8 +10,7 @@ import type { MetricsPeriod } from "./period";
 // inclusive passado sem comparecimento registrado) e Faltas (Não compareceu,
 // com o valor potencialmente perdido). Cancelados ficam fora, e o retorno
 // também (incluso na consulta, não gera valor — decisão do cliente ao validar
-// a etapa 3).
-// As mesmas linhas alimentam a planilha (etapa 3).
+// a etapa 3; a planilha CSV da etapa 3 foi retirada a pedido do cliente).
 
 export interface Bucket {
   count: number;
