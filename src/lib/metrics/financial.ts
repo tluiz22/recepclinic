@@ -8,7 +8,9 @@ import type { MetricsPeriod } from "./period";
 // 0036) — o pagamento é presencial, fora do sistema. Período pela data do
 // atendimento. Colunas: Realizado (Realizada), Previsto (ainda marcado,
 // inclusive passado sem comparecimento registrado) e Faltas (Não compareceu,
-// com o valor potencialmente perdido). Cancelados ficam fora.
+// com o valor potencialmente perdido). Cancelados ficam fora, e o retorno
+// também (incluso na consulta, não gera valor — decisão do cliente ao validar
+// a etapa 3).
 // As mesmas linhas alimentam a planilha (etapa 3).
 
 export interface Bucket {
@@ -19,8 +21,6 @@ export interface Bucket {
 export interface FinancialRow {
   label: string;
   kind: "item" | "subtotal" | "total";
-  // Retorno: incluso na consulta (R$ 0) — a tela mostra "incluso".
-  included: boolean;
   done: Bucket;
   expected: Bucket;
   noShow: Bucket;
@@ -55,8 +55,8 @@ interface ExamTypeRow {
 
 const emptyBucket = (): Bucket => ({ count: 0, cents: 0 });
 
-function emptyRow(label: string, kind: FinancialRow["kind"] = "item", included = false): FinancialRow {
-  return { label, kind, included, done: emptyBucket(), expected: emptyBucket(), noShow: emptyBucket() };
+function emptyRow(label: string, kind: FinancialRow["kind"] = "item"): FinancialRow {
+  return { label, kind, done: emptyBucket(), expected: emptyBucket(), noShow: emptyBucket() };
 }
 
 function add(row: FinancialRow, appointment: AppointmentRow) {
@@ -98,6 +98,7 @@ export async function fetchFinancialReport(
           .from("appointments")
           .select(appointmentColumns("appointment_type, status, price_cents, clinic_location_id, exam_type_id", filter))
           .neq("status", "canceled")
+          .neq("appointment_type", "return_visit")
           .gte("scheduled_at", period.start.toISOString())
           .lt("scheduled_at", period.end.toISOString()),
         filter
@@ -109,22 +110,18 @@ export async function fetchFinancialReport(
     supabase.from("exam_types").select("id, name, is_active").order("name"),
   ]);
 
-  // Consulta e Retorno por local: clínicas (subtotal "Consultório") e
-  // domiciliar. Local/exame inativo só aparece se tiver atendimento no período.
+  // Consulta por local: clínicas (subtotal "Consultório") e domiciliar. Local/exame inativo só aparece se tiver atendimento no período.
   const clinics = ((locations ?? []) as LocationRow[]).filter((location) => location.type === "clinic");
   const homeVisits = ((locations ?? []) as LocationRow[]).filter((location) => location.type === "home_visit");
   const visitRows = new Map<string, FinancialRow>();
-  const visitKey = (type: string, locationId: string) => `${type}:${locationId}`;
-  const locationRows = (location: LocationRow, place: string) => {
-    const first = emptyRow(`Consulta – ${place}`);
-    const ret = emptyRow(`Retorno – ${place}`, "item", true);
-    visitRows.set(visitKey("first_visit", location.id), first);
-    visitRows.set(visitKey("return_visit", location.id), ret);
-    return { location, rows: [first, ret] };
+  const locationRow = (location: LocationRow, place: string) => {
+    const row = emptyRow(`Consulta – ${place}`);
+    visitRows.set(location.id, row);
+    return { location, row };
   };
-  const clinicGroups = clinics.map((location) => locationRows(location, location.name));
+  const clinicGroups = clinics.map((location) => locationRow(location, location.name));
   const homeGroups = homeVisits.map((location) =>
-    locationRows(location, homeVisits.length > 1 ? location.name : "Domiciliar")
+    locationRow(location, homeVisits.length > 1 ? location.name : "Domiciliar")
   );
 
   const examRows = new Map<string, FinancialRow>(
@@ -136,16 +133,16 @@ export async function fetchFinancialReport(
   for (const appointment of appointments) {
     if (appointment.appointment_type === "exam") {
       add((appointment.exam_type_id && examRows.get(appointment.exam_type_id)) || otherExams, appointment);
-    } else {
-      const row = visitRows.get(visitKey(appointment.appointment_type, appointment.clinic_location_id));
+    } else if (appointment.appointment_type === "first_visit") {
+      const row = visitRows.get(appointment.clinic_location_id);
       if (row) add(row, appointment);
     }
   }
 
-  const visibleGroup = (group: { location: LocationRow; rows: FinancialRow[] }) =>
-    group.location.is_active || group.rows.some(hasData);
-  const clinicItems = clinicGroups.filter(visibleGroup).flatMap((group) => group.rows);
-  const homeItems = homeGroups.filter(visibleGroup).flatMap((group) => group.rows);
+  const visibleGroup = (group: { location: LocationRow; row: FinancialRow }) =>
+    group.location.is_active || hasData(group.row);
+  const clinicItems = clinicGroups.filter(visibleGroup).map((group) => group.row);
+  const homeItems = homeGroups.filter(visibleGroup).map((group) => group.row);
 
   const visits: FinancialRow[] = [...clinicItems];
   if (clinicItems.length > 0) visits.push(sum("Consultório", "subtotal", clinicItems));

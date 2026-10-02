@@ -47,7 +47,7 @@ export const GET: APIRoute = async ({ request, cookies, url }) => {
     line(["Relatório financeiro"]),
     line(["Período", period.label]),
     ...(filter ? [line(["Só de", filter.label])] : []),
-    line(["Valor pela tabela vigente na marcação (esperado, não o recebido). Retorno incluso na consulta (R$ 0). Cancelados não entram."]),
+    line(["Valor pela tabela vigente na marcação (esperado, não o recebido). Retornos (inclusos na consulta) e cancelados não entram."]),
     "",
     line([
       "Grupo",
@@ -59,7 +59,7 @@ export const GET: APIRoute = async ({ request, cookies, url }) => {
       "Faltas (qtd.)",
       "Perdido com faltas (R$)",
     ]),
-    ...report.visits.map((row) => rowLine("Consultas e retornos", row)),
+    ...report.visits.map((row) => rowLine("Consultas", row)),
     ...report.exams.map((row) => rowLine("Exames", row)),
     rowLine("Total", report.total),
   ];
@@ -67,7 +67,7 @@ export const GET: APIRoute = async ({ request, cookies, url }) => {
   const fileName =
     period.from === period.to ? `financeiro_${period.from}.csv` : `financeiro_${period.from}_a_${period.to}.csv`;
 
-  return new Response(`﻿${lines.join("\r\n")}\r\n`, {
+  return new Response(`\uFEFF${lines.join("\r\n")}\r\n`, {
     headers: {
       "Content-Type": "text/csv; charset=utf-8",
       "Content-Disposition": `attachment; filename="${fileName}"`,

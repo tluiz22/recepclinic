@@ -1,11 +1,12 @@
 ---
-// Métricas › Financeiro (Fase 24 · etapa 2): quantidade e valor por local/tipo
-// e por exame — Realizado, Previsto e Faltas (valor potencialmente perdido).
+// Métricas › Financeiro (Fase 24 · etapa 2): quantidade e valor da consulta
+// por local e de cada exame — Realizado, Previsto e Faltas (valor
+// potencialmente perdido). Retorno fica fora: não gera valor.
 // Valor da tabela gravado na marcação; não é o valor recebido. "Baixar
 // planilha" (etapa 3) leva as mesmas linhas, com o mesmo período e filtro.
 import { createClient } from "../../../lib/supabase/server";
 import { formatCentsBRL } from "../../../lib/money";
-import { fetchFinancialReport, type Bucket, type FinancialRow } from "../../../lib/metrics/financial";
+import { fetchFinancialReport, type FinancialRow } from "../../../lib/metrics/financial";
 import { periodParams, type MetricsPeriod } from "../../../lib/metrics/period";
 import { filterParams, type MetricsFilter } from "../../../lib/metrics/filter";
 
@@ -22,7 +23,7 @@ const csvQuery = new URLSearchParams({ ...periodParams(period), ...filterParams(
 const csvHref = `/admin/metricas/financeiro.csv${csvQuery ? `?${csvQuery}` : ""}`;
 
 const sections = [
-  { title: "Consultas e retornos", rows: report.visits },
+  { title: "Consultas", rows: report.visits },
   { title: "Exames", rows: report.exams },
 ];
 
@@ -38,11 +39,6 @@ const columns = [
   { key: "noShow", label: "Faltas" },
 ] as const;
 
-function valueText(row: FinancialRow, bucket: Bucket): string {
-  if (bucket.count === 0) return "—";
-  return row.included ? "incluso" : formatCentsBRL(bucket.cents);
-}
-
 function rowClass(row: FinancialRow): string {
   if (row.kind === "total") return "border-t-2 border-slate-300 bg-slate-50 font-semibold text-slate-900";
   if (row.kind === "subtotal") return "border-t border-slate-200 bg-slate-50 font-semibold text-slate-800";
@@ -54,7 +50,7 @@ function rowClass(row: FinancialRow): string {
   <p class="min-w-0 flex-1 basis-64 text-sm text-slate-600">
     Valor pela tabela vigente na marcação de cada atendimento — é o esperado, não o recebido (o pagamento é feito no
     consultório). <strong>Previsto</strong> inclui os atendimentos que já passaram e ainda não tiveram o comparecimento
-    registrado. Cancelados não entram.
+    registrado. Retornos (inclusos na consulta) e cancelados não entram.
   </p>
   <a
     href={csvHref}
@@ -103,7 +99,7 @@ function rowClass(row: FinancialRow): string {
                   {columns.map((column) => (
                     <td class="px-1.5 py-2 text-right align-top">
                       <span class="block">{row[column.key].count}</span>
-                      <span class="block text-[11px] text-slate-500 sm:text-xs">{valueText(row, row[column.key])}</span>
+                      <span class="block text-[11px] text-slate-500 sm:text-xs">{row[column.key].count === 0 ? "—" : formatCentsBRL(row[column.key].cents)}</span>
                     </td>
                   ))}
                 </tr>
@@ -127,7 +123,7 @@ function rowClass(row: FinancialRow): string {
     </thead>
     <tbody>
       <tr class="border-t border-slate-200 font-semibold text-slate-900">
-        <td class="px-1.5 py-2 align-top">Consultas, retornos e exames</td>
+        <td class="px-1.5 py-2 align-top">Consultas e exames</td>
         {
           columns.map((column) => (
             <td class="px-1.5 py-2 text-right align-top">
@@ -141,5 +137,5 @@ function rowClass(row: FinancialRow): string {
   </table>
 </div>
 <p class="mt-2 text-xs text-slate-500">
-  Retorno conta na quantidade com R$ 0 (incluso na consulta). Convênios e prefeituras pelo mesmo valor da tabela.
+  Convênios e prefeituras pelo mesmo valor da tabela.
 </p>
