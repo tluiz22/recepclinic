@@ -60,6 +60,53 @@ export async function returnControlToBot(
   }
 }
 
+// Pausa o bot quando a secretária escreve pelo app do WhatsApp Business
+// (echo `smb_message_echoes`, ajuste de out/2026): sem isso, a resposta do
+// responsável a ela caía no bot, que mandava saudação + menu no meio da
+// conversa. Mesma pausa do "Falar com a secretária" — 24h pelo
+// `isPastHumanHandoffDeadline`, contadas do `updated_at`, que é renovado a
+// cada mensagem dela; `#bot` devolve antes. Pausa mesmo com o responsável
+// no meio de uma jornada (decisão do cliente): a tentativa fica como
+// abandono com motivo "secretária assumiu". Número que nunca falou com o bot
+// ganha a linha de `conversation_state` já pausada.
+export async function pauseBotForAgent(
+  supabase: SupabaseClient,
+  guardianPhone: string
+): Promise<void> {
+  const { data: convo } = await supabase
+    .from("conversation_state")
+    .select("state, guardian_id, funnel_session_id, funnel_flow")
+    .eq("guardian_phone", guardianPhone)
+    .maybeSingle();
+
+  if (convo?.funnel_session_id && convo.funnel_flow) {
+    await logFunnelEvent(supabase, {
+      sessionId: convo.funnel_session_id,
+      flow: convo.funnel_flow as FunnelFlow,
+      step: "abandoned",
+      guardianPhone,
+      guardianId: convo.guardian_id ?? null,
+      metadata: { reason: "secretary_took_over", last_step: convo.state },
+    });
+  }
+
+  const { error } = await supabase.from("conversation_state").upsert(
+    {
+      guardian_phone: guardianPhone,
+      state: "HUMAN_HANDOFF",
+      atendimento_humano: true,
+      context: {},
+      funnel_session_id: null,
+      funnel_flow: null,
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: "guardian_phone" }
+  );
+  if (error) {
+    console.error("[whatsapp bot] erro ao pausar o bot pela secretária:", error.message);
+  }
+}
+
 // Prazo do transbordo para a secretária: 24h corridas, mas nunca vencendo
 // num fim de semana — se cair no sábado ou domingo, empurra pra segunda no
 // mesmo horário. Não considera feriados (fora de escopo por ora). Passado o

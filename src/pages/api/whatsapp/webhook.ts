@@ -4,7 +4,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { createServiceClient } from "../../../lib/supabase/service";
 import type { WaMessage } from "../../../lib/whatsapp/types";
 import { routeIncomingMessage } from "../../../lib/whatsapp/bot/router";
-import { resolveGuardianId, returnControlToBot, toE164 } from "../../../lib/whatsapp/bot/shared";
+import { pauseBotForAgent, resolveGuardianId, returnControlToBot, toE164 } from "../../../lib/whatsapp/bot/shared";
 
 // GET: handshake de verificação exigido pela Meta ao cadastrar a URL do
 // webhook no painel do App (WhatsApp > Configuração > Webhooks).
@@ -27,7 +27,8 @@ export const GET: APIRoute = async ({ url }) => {
 //   - `message_echoes`  → mensagens que a secretária enviou pelo app do
 //                         WhatsApp Business (coexistência — campo
 //                         `smb_message_echoes`; também é aqui que a
-//                         palavra-chave "#bot" devolve a conversa ao bot).
+//                         palavra-chave "#bot" devolve a conversa ao bot;
+//                         qualquer outra mensagem dela pausa o bot).
 // Toda `messages` inbound também é passada para o roteador da máquina de
 // estados do bot (`../../../lib/whatsapp/bot/router.ts`, Fase 3b).
 export const POST: APIRoute = async ({ request }) => {
@@ -236,10 +237,18 @@ async function handleAgentEcho(supabase: SupabaseClient, echo: WaMessage): Promi
     console.error("[whatsapp webhook] erro ao registrar echo:", error.message);
   }
 
+  if (!recipient) return;
+
   // Palavra-chave "#bot" da secretária dentro do próprio app do WhatsApp
   // Business devolve a conversa ao bot (ver "Coexistência" no plano) — match
   // case-insensitive em qualquer parte da mensagem.
-  if (recipient && body && /#bot/i.test(body)) {
+  if (body && /#bot/i.test(body)) {
     await returnControlToBot(supabase, recipient);
+    return;
   }
+
+  // Qualquer outra mensagem dela pausa o bot naquele número (out/2026) —
+  // por isso as mensagens automáticas do app (saudação/ausência) precisam
+  // estar desligadas.
+  await pauseBotForAgent(supabase, recipient);
 }

@@ -128,6 +128,7 @@ const REASON_LABELS: Record<string, string> = {
   // abandoned
   timeout: "tempo esgotado",
   back_to_menu: "voltou ao menu",
+  secretary_took_over: "secretária assumiu",
 };
 
 export function reasonLabel(reason: string | undefined | null): string {
