@@ -40,6 +40,8 @@ export const EXAM_STATES: ReadonlySet<string> = new Set(["EXAM_TYPE_SELECT", "EX
 interface ExamTypeCandidate {
   id: string;
   name: string;
+  // Valor na descrição da linha da lista (valor no início da jornada).
+  price_cents?: number | null;
 }
 
 interface ExamContext {
@@ -65,7 +67,7 @@ export async function startExam(
 ): Promise<void> {
   const { data: allExamTypes } = await supabase
     .from("exam_types")
-    .select("id, name, scheduling_mode")
+    .select("id, name, scheduling_mode, price_cents")
     .eq("is_active", true)
     .order("name");
 

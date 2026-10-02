@@ -34,6 +34,7 @@ import { RESCHEDULE_STATES, handleRescheduleState, startReschedule } from "./res
 import { EXAM_STATES, handleExamState, startExam } from "./exam";
 import { handleReminderTap, parseReminderTap } from "./reminder";
 import * as texts from "./messages";
+import { sendMenu } from "./menu";
 import { logFunnelEvent, startFunnel, type FunnelFlow } from "../funnel";
 
 // "Falar com a secretária" temporariamente desligado enquanto o sistema
@@ -217,22 +218,7 @@ async function logAbandonment(
 }
 
 // --- menus (compartilhados por WELCOME/MENU/INFO_MENU) --------------------
-
-export async function sendMenu(
-  supabase: SupabaseClient,
-  guardianPhone: string,
-  guardianId: string | null
-): Promise<void> {
-  const body = texts.menuBodyText();
-  await sendAndLog(supabase, guardianId, "bot_menu", body, () =>
-    sendInteractiveListMessage({
-      to: guardianPhone,
-      bodyText: body,
-      buttonText: "Escolher opção",
-      sections: texts.menuSections(),
-    })
-  );
-}
+// O menu principal (`sendMenu`) fica em menu.ts.
 
 async function sendInfoMenu(
   supabase: SupabaseClient,

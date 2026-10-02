@@ -195,6 +195,10 @@ interface ExamTypePriceRow {
   price_cents: number;
 }
 
+// Mesmo texto no item Valores e na primeira mensagem do retorno (pedido do
+// cliente, out/2026: avisar que o retorno não tem custo).
+const RETURN_VISIT_INCLUDED_TEXT = "O retorno está incluso no valor da consulta.";
+
 // Decisão de negócio #2/#3 do plano: o bot sempre informa o valor e reforça
 // que o pagamento é 100% presencial, sem sinal antecipado. `locations` já
 // vem sem o local "Exames" (chamador filtra por type != 'exam' — o valor de
@@ -232,7 +236,7 @@ export function valoresText(locations: ClinicLocationRow[], examTypes: ExamTypeP
 
   return (
     `${[...locationLines, ...examLines].join("\n\n")}\n\n` +
-    "O retorno está incluso no valor da consulta.\n\n" +
+    `${RETURN_VISIT_INCLUDED_TEXT}\n\n` +
     "Pagamento no dia da consulta (dinheiro, transferência bancária ou PIX) — sem cobrança antecipada."
   );
 }
@@ -295,6 +299,9 @@ export function handoffDisabledText(): string {
 export interface LocationOption {
   id: string;
   label: string;
+  // Valor da consulta nesse tipo de local, mostrado na descrição da linha
+  // (pedido do cliente, out/2026: valor no início da jornada).
+  priceCents?: number | null;
 }
 
 export function locationBodyText(): string {
@@ -302,9 +309,10 @@ export function locationBodyText(): string {
 }
 
 export function locationSections(options: LocationOption[]): ListSection[] {
-  const rows = options.map((opt, index) => ({
+  const rows: ListSection["rows"] = options.map((opt, index) => ({
     id: `book_location_${opt.id}`,
     title: listRowTitle(index, opt.label),
+    ...(opt.priceCents != null ? { description: `Consulta: ${formatCentsBRL(opt.priceCents)}` } : {}),
   }));
   rows.push({ id: BACK_TO_MENU_LIST_ID, title: listRowTitle(options.length, "Voltar ao menu") });
   return [{ rows }];
@@ -457,7 +465,7 @@ export function patientAlreadyScheduledText(patientName: string, whenLabel: stri
 // (criança nova nunca tem direito).
 
 export function returnVisitChoiceBodyText(deadlineDays: number): string {
-  return `O retorno deve ser realizado em até ${deadlineDays} dias após a consulta. Para qual criança é o retorno?`;
+  return `${RETURN_VISIT_INCLUDED_TEXT}\n\nO retorno deve ser realizado em até ${deadlineDays} dias após a consulta. Para qual criança é o retorno?`;
 }
 
 export function returnVisitChoiceSections(candidates: PatientCandidate[]): ListSection[] {
@@ -471,6 +479,7 @@ export function returnVisitChoiceSections(candidates: PatientCandidate[]): ListS
 
 export function returnVisitAskBirthdateText(deadlineDays: number): string {
   return (
+    `${RETURN_VISIT_INCLUDED_TEXT}\n\n` +
     `O retorno deve ser realizado em até ${deadlineDays} dias após a consulta. ` +
     "Qual a data de nascimento da criança? (formato dd/mm/aaaa)"
   );
@@ -511,6 +520,28 @@ export function consultationAgeLimitText(limitYears: number): string {
   return `A Dra. Ana Karina atende consultas de pacientes até ${limitYears - 1} anos.`;
 }
 
+// Depois da recusa pela idade limite (pedido do cliente, out/2026): pergunta
+// se quer agendar para outra criança — botões de resposta, na mesma mensagem.
+export const AGE_LIMIT_OTHER_CHILD_ID = {
+  yes: "age_limit_other_child_yes",
+  no: "age_limit_other_child_no",
+} as const;
+
+export function consultationAgeLimitOtherChildText(limitYears: number): string {
+  return `${consultationAgeLimitText(limitYears)}\n\nDeseja agendar para outra criança?`;
+}
+
+export function ageLimitOtherChildButtons(): { id: string; title: string }[] {
+  return [
+    { id: AGE_LIMIT_OTHER_CHILD_ID.yes, title: "Sim" },
+    { id: AGE_LIMIT_OTHER_CHILD_ID.no, title: "Não" },
+  ];
+}
+
+export function ageLimitOtherChildNotUnderstoodText(): string {
+  return "Não entendi. Deseja agendar para outra criança? Toque em Sim ou Não.";
+}
+
 // Retorno: paciente 18+ nunca entra (consulta e retorno são só para crianças).
 export function returnVisitAdultText(): string {
   return "A Dra. Ana Karina atende retornos somente de pacientes menores de 18 anos.";
@@ -526,6 +557,8 @@ export function returnVisitAdultText(): string {
 interface ExamTypeOption {
   id: string;
   name: string;
+  // Valor do exame na descrição da linha (valor no início da jornada).
+  price_cents?: number | null;
 }
 
 export function examTypeChoiceBodyText(): string {
@@ -533,9 +566,10 @@ export function examTypeChoiceBodyText(): string {
 }
 
 export function examTypeSections(examTypes: ExamTypeOption[]): ListSection[] {
-  const rows = examTypes.map((exam, index) => ({
+  const rows: ListSection["rows"] = examTypes.map((exam, index) => ({
     id: `exam_type_${exam.id}`,
     title: listRowTitle(index, exam.name),
+    ...(exam.price_cents != null ? { description: formatCentsBRL(exam.price_cents) } : {}),
   }));
   rows.push({ id: BACK_TO_MENU_LIST_ID, title: listRowTitle(examTypes.length, "Voltar ao menu") });
   return [{ rows }];

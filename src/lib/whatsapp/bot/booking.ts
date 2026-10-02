@@ -12,7 +12,7 @@
 // aqui (ver "Agendamento e remarcação via página web" no plano).
 
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { sendInteractiveListMessage, sendTextMessage } from "../client";
+import { sendInteractiveButtonsMessage, sendInteractiveListMessage, sendTextMessage } from "../client";
 import { formatWhen } from "../formatDateTime";
 import {
   buildAppUrl,
@@ -27,6 +27,7 @@ import {
   type Selection,
 } from "./shared";
 import * as texts from "./messages";
+import { sendMenu } from "./menu";
 import { getReturnVisitEligibility, type ReturnVisitPatient } from "../../scheduling/returnVisitEligibility";
 import { todayFortaleza } from "../../scheduling/returnVisitDeadline";
 import { isAdult, isOverConsultationAgeLimit } from "../../age";
@@ -37,11 +38,13 @@ export const BOOKING_STATES: ReadonlySet<string> = new Set([
   "BOOK_HOME_ADDRESS",
   "BOOK_PATIENT_SELECT",
   "BOOK_PATIENT_NEW",
+  "BOOK_AGE_LIMIT",
 ]);
 
 interface LocationOption {
   id: string;
   label: string;
+  priceCents?: number | null;
 }
 
 interface PatientCandidate {
@@ -146,15 +149,25 @@ export async function startBooking(
 
   const { data: locationRows } = await supabase
     .from("clinic_locations")
-    .select("type")
+    .select("type, price_first_visit_cents")
     .eq("is_active", true)
     .neq("type", "exam");
 
   // Categoria, não endereço específico — ver BookingContext.location_category.
-  const types = new Set((locationRows ?? []).map((loc) => loc.type));
+  // O valor da consulta vai na descrição da opção (valor no início da
+  // jornada, out/2026); os consultórios têm o mesmo valor, como no item
+  // Valores, então vale o do primeiro de cada tipo.
+  const priceByType = new Map<string, number>();
+  for (const loc of locationRows ?? []) {
+    if (!priceByType.has(loc.type)) priceByType.set(loc.type, loc.price_first_visit_cents);
+  }
   const options: LocationOption[] = [];
-  if (types.has("clinic")) options.push({ id: "clinic", label: "Consultório" });
-  if (types.has("home_visit")) options.push({ id: "home_visit", label: "Atendimento domiciliar" });
+  if (priceByType.has("clinic")) {
+    options.push({ id: "clinic", label: "Consultório", priceCents: priceByType.get("clinic") });
+  }
+  if (priceByType.has("home_visit")) {
+    options.push({ id: "home_visit", label: "Atendimento domiciliar", priceCents: priceByType.get("home_visit") });
+  }
 
   if (options.length === 0) {
     const body = texts.noLocationAvailableText();
@@ -192,6 +205,9 @@ export async function handleBookingState(
       return;
     case "BOOK_PATIENT_NEW":
       await handlePatientNew(supabase, guardianPhone, guardianId, context, selection);
+      return;
+    case "BOOK_AGE_LIMIT":
+      await handleAgeLimitOtherChild(supabase, guardianPhone, guardianId, context, selection);
       return;
   }
 }
@@ -1266,12 +1282,72 @@ async function refuseOverConsultationAgeLimit(
   const limitYears = await getConsultationAgeLimit(supabase);
   if (!isOverConsultationAgeLimit(birthdate, todayFortaleza(), limitYears)) return false;
 
-  const body = texts.consultationAgeLimitText(limitYears);
-  await sendAndLog(supabase, guardianId, "bot_book_consultation_age_limit", body, () =>
-    sendTextMessage({ to: guardianPhone, body })
-  );
-  await endFlow(supabase, guardianPhone, guardianId, "blocked", { reason: "consultation_age_limit" });
+  // Em vez de encerrar, pergunta se quer agendar para outra criança (pedido
+  // do cliente, out/2026). A tentativa no funil continua aberta: só fecha
+  // como "blocked" se a resposta for Não (ver handleAgeLimitOtherChild).
+  await sendAgeLimitOtherChildQuestion(supabase, guardianPhone, guardianId, limitYears);
+  const retryContext: BookingContext = {
+    appointment_type: context.appointment_type,
+    location_category: context.location_category,
+    clinic_location_label: context.clinic_location_label,
+    home_visit_address: context.home_visit_address,
+    // Telefone novo: o responsável só é gravado junto com a criança, então o
+    // nome dele precisa seguir no contexto.
+    new_guardian_name: context.new_guardian_name,
+  };
+  await updateConversationState(supabase, guardianPhone, "BOOK_AGE_LIMIT", { context: retryContext });
   return true;
+}
+
+async function sendAgeLimitOtherChildQuestion(
+  supabase: SupabaseClient,
+  guardianPhone: string,
+  guardianId: string | null,
+  limitYears: number
+): Promise<void> {
+  const body = texts.consultationAgeLimitOtherChildText(limitYears);
+  await sendAndLog(supabase, guardianId, "bot_book_consultation_age_limit", body, () =>
+    sendInteractiveButtonsMessage({ to: guardianPhone, bodyText: body, buttons: texts.ageLimitOtherChildButtons() })
+  );
+}
+
+// BOOK_AGE_LIMIT — resposta a "Deseja agendar para outra criança?".
+// Sim: recomeça o cadastro da criança, mantendo local e endereço (o
+// responsável já cadastrado começa pela data de nascimento, que também acha
+// uma criança já cadastrada). Não: encerra a tentativa e manda o menu.
+async function handleAgeLimitOtherChild(
+  supabase: SupabaseClient,
+  guardianPhone: string,
+  guardianId: string | null,
+  context: BookingContext,
+  selection: Selection
+): Promise<void> {
+  const normalized = selection.text.trim().toLowerCase();
+  const isYes =
+    selection.id === texts.AGE_LIMIT_OTHER_CHILD_ID.yes || normalized === "1" || normalized.startsWith("s");
+  const isNo =
+    selection.id === texts.AGE_LIMIT_OTHER_CHILD_ID.no ||
+    normalized === "2" ||
+    normalized === "n" ||
+    normalized.startsWith("não") ||
+    normalized.startsWith("nao");
+
+  if (isYes) {
+    await beginNewPatientRegistration(supabase, guardianPhone, guardianId, context);
+    return;
+  }
+
+  if (isNo) {
+    await logFunnelStep(supabase, guardianPhone, guardianId, "blocked", { reason: "consultation_age_limit" });
+    await updateConversationState(supabase, guardianPhone, "MENU", { context: {} });
+    await sendMenu(supabase, guardianPhone, guardianId);
+    return;
+  }
+
+  const body = texts.ageLimitOtherChildNotUnderstoodText();
+  await sendAndLog(supabase, guardianId, "bot_not_understood", body, () =>
+    sendInteractiveButtonsMessage({ to: guardianPhone, bodyText: body, buttons: texts.ageLimitOtherChildButtons() })
+  );
 }
 
 export async function sendBookingLinkError(
