@@ -1,11 +1,7 @@
 import type { APIRoute } from "astro";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createServiceClient } from "../../../lib/supabase/service";
-import {
-  isReminderTemplateConfigured,
-  sendAppointmentReminder,
-  sendExamPreparation,
-} from "../../../lib/whatsapp/notifications";
+import { isReminderTemplateConfigured, sendAppointmentReminder } from "../../../lib/whatsapp/notifications";
 import { finishJobRun, logAppointmentEvent, startJobRun } from "../../../lib/audit";
 import { fetchReminderHour, fortalezaHour, reminderWindow } from "../../../lib/automaticSends";
 
@@ -134,23 +130,12 @@ export const GET: APIRoute = async ({ request, url }) => {
       }
       totals.sent++;
 
+      // O preparo do exame não vai junto do lembrete (regra do cliente,
+      // 02/out/2026): sai depois da confirmação ou da presença confirmada.
       await supabase
         .from("appointments")
         .update({ reminder_sent_at: new Date().toISOString() })
         .eq("id", appointment.id);
-
-      // Preparo do exame junto do lembrete (Fase 18) — melhor esforço, fora
-      // da contagem e sem nova tentativa: o lembrete é o que controla
-      // `reminder_sent_at`.
-      if (appointment.appointment_type === "exam" && appointment.exam_type_id) {
-        await sendExamPreparation({
-          supabase,
-          appointmentId: appointment.id,
-          guardianId: guardian.id,
-          guardianPhone: guardian.phone,
-          examTypeId: appointment.exam_type_id,
-        });
-      }
     }
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);

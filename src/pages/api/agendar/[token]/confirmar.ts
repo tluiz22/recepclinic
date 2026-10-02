@@ -7,11 +7,7 @@ import { isOverlapError } from "../../../../lib/scheduling/overlap";
 import { resolveClinicLocationIds, type LocationCategory } from "../../../../lib/scheduling/resolveClinicLocationIds";
 import { getBookingLinkLastDate, hasActiveReturnVisit } from "../../../../lib/scheduling/returnVisitDeadline";
 import { RESCHEDULE_PRESENCE_RESET } from "../../../../lib/presence";
-import {
-  sendAppointmentConfirmation,
-  sendAppointmentReschedule,
-  sendExamPreparation,
-} from "../../../../lib/whatsapp/notifications";
+import { sendAppointmentConfirmation, sendAppointmentReschedule } from "../../../../lib/whatsapp/notifications";
 import { logWebFunnelEvent, type FunnelLink } from "../../../../lib/whatsapp/funnel";
 import { logAppointmentEvent } from "../../../../lib/audit";
 
@@ -380,17 +376,8 @@ export const POST: APIRoute = async ({ params, request, redirect }) => {
     }
   }
 
-  // Preparo do exame logo depois da confirmação/remarcação (Fase 18) — vale
-  // pros dois caminhos acima.
-  if (appointmentType === "exam" && link.exam_type_id && guardian?.phone) {
-    await sendExamPreparation({
-      supabase,
-      appointmentId,
-      guardianId: guardian.id,
-      guardianPhone: guardian.phone,
-      examTypeId: link.exam_type_id,
-    });
-  }
+  // O preparo do exame sai depois que a Meta avisar que a confirmação ou a
+  // remarcação foi entregue (webhook, `preparationAfterDelivery.ts`).
 
   // `used_at` já foi gravado atomicamente acima — só falta guardar a
   // consulta gerada, para a página mostrar a confirmação mesmo se o link

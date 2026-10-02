@@ -6,7 +6,7 @@ import { getNextAvailableGroupDates, type AvailableGroupSession } from "../../..
 import { isOverlapError } from "../../../../../lib/scheduling/overlap";
 import { resolveClinicLocationIds, type LocationCategory } from "../../../../../lib/scheduling/resolveClinicLocationIds";
 import { getReturnOriginCheck } from "../../../../../lib/scheduling/returnVisitEligibility";
-import { sendAppointmentConfirmation, sendExamPreparation } from "../../../../../lib/whatsapp/notifications";
+import { sendAppointmentConfirmation } from "../../../../../lib/whatsapp/notifications";
 import { logAppointmentEvent } from "../../../../../lib/audit";
 
 export const POST: APIRoute = async ({ request, cookies, redirect, locals }) => {
@@ -267,17 +267,8 @@ export const POST: APIRoute = async ({ request, cookies, redirect, locals }) => 
       // notificação.
       priceCents: isExam ? examTypeInfo?.price_cents : appointmentType === "return_visit" ? null : location?.price_first_visit_cents,
     });
-
-    // Preparo do exame logo depois da confirmação (Fase 18).
-    if (isExam && examTypeId) {
-      await sendExamPreparation({
-        supabase,
-        appointmentId: newAppointmentId,
-        guardianId: guardian.id,
-        guardianPhone: guardian.phone,
-        examTypeId,
-      });
-    }
+    // O preparo do exame sai depois que a Meta avisar que esta mensagem foi
+    // entregue (webhook, `preparationAfterDelivery.ts`) — nunca antes dela.
   }
 
   return redirect(`/admin/agenda?date=${date}`);

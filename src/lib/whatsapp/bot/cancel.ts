@@ -314,9 +314,15 @@ async function handleKeptPresence(
       .eq("wa_message_id", waMessageId);
   }
 
+  // Gatilho do preparo do exame, como o botão Confirmar do lembrete.
   const body = texts.reminderPresenceConfirmedText(pending.patient_name, whenLabel);
-  await sendAndLog(supabase, guardianId, "bot_reminder_confirmed", body, () =>
-    sendTextMessage({ to: guardianPhone, body })
+  await sendAndLog(
+    supabase,
+    guardianId,
+    "bot_presence_confirmed",
+    body,
+    () => sendTextMessage({ to: guardianPhone, body }),
+    pending.id
   );
 }
 

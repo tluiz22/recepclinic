@@ -8,10 +8,7 @@ import { resolveClinicLocationIds, type LocationCategory } from "../../../../../
 import { getReturnOriginCheck } from "../../../../../../lib/scheduling/returnVisitEligibility";
 import { RESCHEDULE_PRESENCE_RESET } from "../../../../../../lib/presence";
 import { logAppointmentEvent } from "../../../../../../lib/audit";
-import {
-  sendAppointmentReschedule,
-  sendExamPreparation,
-} from "../../../../../../lib/whatsapp/notifications";
+import { sendAppointmentReschedule } from "../../../../../../lib/whatsapp/notifications";
 
 export const POST: APIRoute = async ({ params, request, cookies, redirect, locals }) => {
   const { id } = params;
@@ -229,17 +226,8 @@ export const POST: APIRoute = async ({ params, request, cookies, redirect, local
       locationType: location?.type,
       locationAddress: isHomeVisit ? homeVisitAddress : (location?.address ?? null),
     });
-
-    // Preparo do exame de novo, com a data nova (Fase 18).
-    if (appointmentType === "exam" && appointment.exam_type_id) {
-      await sendExamPreparation({
-        supabase,
-        appointmentId: id,
-        guardianId: guardian.id,
-        guardianPhone: guardian.phone,
-        examTypeId: appointment.exam_type_id,
-      });
-    }
+    // O preparo do exame sai depois que a Meta avisar que esta mensagem foi
+    // entregue (webhook, `preparationAfterDelivery.ts`) — nunca antes dela.
   }
 
   return redirect(`/admin/agenda?date=${date}`);

@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { logAppointmentEvent } from "./audit";
-import { isReminderTemplateConfigured, sendAppointmentReminder, sendExamPreparation } from "./whatsapp/notifications";
+import { isReminderTemplateConfigured, sendAppointmentReminder } from "./whatsapp/notifications";
 
 // Botão "Reenviar lembrete" (Fase 22 · etapa 6): Agenda (dia) e Envios
 // automáticos. Vale para atendimento ativo, futuro e sem lembrete entregue
@@ -105,18 +105,9 @@ export async function resendReminder(
 
   if (status !== "sent") return "failed";
 
-  // Mesmo efeito do cron: conta como lembrado (o cron não manda de novo) e
-  // o preparo do exame vai junto (Fase 18).
+  // Mesmo efeito do cron: conta como lembrado (o cron não manda de novo). O
+  // preparo do exame não vai junto (regra do cliente, 02/out/2026).
   await supabase.from("appointments").update({ reminder_sent_at: new Date().toISOString() }).eq("id", appointment.id);
-  if (appointment.appointment_type === "exam" && appointment.exam_type_id) {
-    await sendExamPreparation({
-      supabase,
-      appointmentId: appointment.id,
-      guardianId: guardian.id,
-      guardianPhone: guardian.phone,
-      examTypeId: appointment.exam_type_id,
-    });
-  }
   return "sent";
 }
 

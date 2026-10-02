@@ -5,6 +5,7 @@ import { createServiceClient } from "../../../lib/supabase/service";
 import type { WaMessage } from "../../../lib/whatsapp/types";
 import { routeIncomingMessage } from "../../../lib/whatsapp/bot/router";
 import { pauseBotForAgent, resolveGuardianId, returnControlToBot, toE164 } from "../../../lib/whatsapp/bot/shared";
+import { sendPreparationAfterDelivery } from "../../../lib/whatsapp/preparationAfterDelivery";
 
 // GET: handshake de verificação exigido pela Meta ao cadastrar a URL do
 // webhook no painel do App (WhatsApp > Configuração > Webhooks).
@@ -81,7 +82,12 @@ export const POST: APIRoute = async ({ request }) => {
       }
     }
     for (const status of value.statuses ?? []) {
-      await handleDeliveryStatus(supabase, status);
+      await handleDeliveryStatus(supabase, status).catch((err) => {
+        console.error(
+          "[whatsapp webhook] erro ao tratar status de entrega:",
+          err instanceof Error ? err.message : String(err)
+        );
+      });
     }
     for (const echo of value.message_echoes ?? []) {
       await handleAgentEcho(supabase, echo);
@@ -181,23 +187,15 @@ async function handleInboundMessage(supabase: SupabaseClient, msg: WaMessage): P
   }
 }
 
+// Status que contam como "chegou no celular" (gatilho do preparo do exame).
+const DELIVERED_RANK = DELIVERY_STATUS_RANK.delivered;
+
 async function handleDeliveryStatus(supabase: SupabaseClient, status: WaStatus): Promise<void> {
   const waId = status.id;
   const newStatus = status.status;
   if (!waId || !newStatus) return;
 
-  const { data: row } = await supabase
-    .from("whatsapp_messages")
-    .select("id, status")
-    .eq("wa_message_id", waId)
-    .maybeSingle();
-
-  // Status de uma mensagem que não é nossa, ou que ainda não foi gravada.
-  if (!row) return;
-
-  const currentRank = DELIVERY_STATUS_RANK[row.status ?? ""] ?? 0;
   const newRank = DELIVERY_STATUS_RANK[newStatus] ?? 0;
-  if (newRank < currentRank) return;
 
   if (newStatus === "failed" && status.errors?.length) {
     console.error(
@@ -206,12 +204,42 @@ async function handleDeliveryStatus(supabase: SupabaseClient, status: WaStatus):
     );
   }
 
-  const { error } = await supabase
-    .from("whatsapp_messages")
-    .update({ status: newStatus })
-    .eq("id", row.id);
-  if (error) {
-    console.error("[whatsapp webhook] erro ao atualizar status:", error.message);
+  // Atualização condicional (só se o status ainda for o lido): quando
+  // "entregue" e "lida" chegam ao mesmo tempo, só uma chamada vê a passagem
+  // para "chegou no celular" — e só ela dispara o preparo do exame. Quem
+  // perde a corrida relê e tenta de novo. A mensagem é gravada logo depois de
+  // a Meta aceitar o envio; se o status chegar antes da gravação, espera um
+  // pouco (antes, esse status era perdido).
+  for (let attempt = 0; attempt < 4; attempt++) {
+    const { data: row } = await supabase
+      .from("whatsapp_messages")
+      .select("id, status, appointment_id, message_type, created_at")
+      .eq("wa_message_id", waId)
+      .maybeSingle();
+
+    if (!row) {
+      // Status de uma mensagem que não é nossa, ou que ainda não foi gravada.
+      if (newRank < DELIVERED_RANK || attempt >= 2) return;
+      await new Promise((resolve) => setTimeout(resolve, 1500));
+      continue;
+    }
+
+    // Evita regredir se a Meta entregar os webhooks fora de ordem.
+    const currentRank = DELIVERY_STATUS_RANK[row.status ?? ""] ?? 0;
+    if (newRank < currentRank) return;
+
+    let update = supabase.from("whatsapp_messages").update({ status: newStatus }).eq("id", row.id);
+    update = row.status === null ? update.is("status", null) : update.eq("status", row.status);
+    const { data: updated, error } = await update.select("id");
+    if (error) {
+      console.error("[whatsapp webhook] erro ao atualizar status:", error.message);
+      return;
+    }
+    if (!updated?.length) continue; // outra chamada mudou o status antes; relê
+
+    const reachedPhone = newStatus !== "failed" && newRank >= DELIVERED_RANK && currentRank < DELIVERED_RANK;
+    if (reachedPhone) await sendPreparationAfterDelivery(supabase, row);
+    return;
   }
 }
 

@@ -19,6 +19,7 @@ const MESSAGE_LABELS: Record<string, string> = {
   appointment_mass_cancellation: "Aviso de cancelamento (imprevisto da médica)",
   appointment_reminder: "Lembrete",
   exam_preparation: "Preparo do exame",
+  bot_presence_confirmed: "Presença confirmada (resposta do bot)",
   reminder_confirm: "Resposta ao lembrete: Confirmar presença",
   reminder_reschedule: "Resposta ao lembrete: Remarcar",
   reminder_cancel: "Resposta ao lembrete: Cancelar",

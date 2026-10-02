@@ -98,12 +98,24 @@ export async function handleReminderTap(
   const whenLabel = formatWhen(new Date(appointment.scheduled_at));
 
   if (tap.action === "confirm") {
-    const body = confirmNow
-      ? texts.reminderPresenceConfirmedText(appointment.patient_name, whenLabel)
-      : texts.reminderPresenceAlreadyConfirmedText(appointment.patient_name, whenLabel);
-    await sendAndLog(supabase, guardianId, "bot_reminder_confirmed", body, () =>
-      sendTextMessage({ to: guardianPhone, body })
-    );
+    if (confirmNow) {
+      // Gatilho do preparo do exame: sai depois que esta resposta for
+      // entregue (`preparationAfterDelivery.ts`).
+      const body = texts.reminderPresenceConfirmedText(appointment.patient_name, whenLabel);
+      await sendAndLog(
+        supabase,
+        guardianId,
+        "bot_presence_confirmed",
+        body,
+        () => sendTextMessage({ to: guardianPhone, body }),
+        appointment.id
+      );
+    } else {
+      const body = texts.reminderPresenceAlreadyConfirmedText(appointment.patient_name, whenLabel);
+      await sendAndLog(supabase, guardianId, "bot_reminder_confirmed", body, () =>
+        sendTextMessage({ to: guardianPhone, body })
+      );
+    }
     return "handled";
   }
 

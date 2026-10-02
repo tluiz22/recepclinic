@@ -1,6 +1,7 @@
 import type { APIRoute } from "astro";
 import { createClient } from "../../../../../../lib/supabase/server";
 import { logAppointmentEvent } from "../../../../../../lib/audit";
+import { sendPreparationIfExam } from "../../../../../../lib/whatsapp/preparationAfterDelivery";
 
 // Confirmação manual de presença (Fase 19): pra quem confirmou por ligação
 // ou por texto. Marca ou desfaz `patient_confirmed_at`, gravando quem
@@ -48,6 +49,9 @@ export const POST: APIRoute = async ({ params, request, cookies, locals, redirec
       channel: "admin",
       actorId: locals.userId ?? null,
     });
+    // Presença confirmada pela tela também envia o preparo do exame (decisão
+    // do cliente, 02/out/2026); sem mensagem antes, sai na hora.
+    if (confirmed) await sendPreparationIfExam(supabase, id);
   }
 
   return redirect(error ? withError : returnTo);

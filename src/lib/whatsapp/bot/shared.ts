@@ -335,22 +335,25 @@ export async function endFlow(
 
 // --- envio + log ---------------------------------------------------------
 
+// `appointmentId`: liga a mensagem ao atendimento (trilha; e, para
+// `bot_presence_confirmed`, gatilho do preparo do exame depois da entrega).
 export async function sendAndLog(
   supabase: SupabaseClient,
   guardianId: string | null,
   messageType: string,
   bodyForLog: string,
-  send: () => Promise<{ id: string }>
+  send: () => Promise<{ id: string }>,
+  appointmentId: string | null = null
 ): Promise<void> {
   try {
     const { id } = await send();
-    await logOutbound(supabase, guardianId, messageType, bodyForLog, id, "sent");
+    await logOutbound(supabase, guardianId, messageType, bodyForLog, id, "sent", appointmentId);
   } catch (err) {
     console.error(
       `[whatsapp bot] falha ao enviar ${messageType}:`,
       err instanceof Error ? err.message : String(err)
     );
-    await logOutbound(supabase, guardianId, messageType, bodyForLog, null, "failed");
+    await logOutbound(supabase, guardianId, messageType, bodyForLog, null, "failed", appointmentId);
   }
 }
 
@@ -448,9 +451,11 @@ async function logOutbound(
   messageType: string,
   body: string,
   waMessageId: string | null,
-  status: string
+  status: string,
+  appointmentId: string | null
 ): Promise<void> {
   const { error } = await supabase.from("whatsapp_messages").insert({
+    appointment_id: appointmentId,
     guardian_id: guardianId,
     direction: "outbound",
     message_type: messageType,
