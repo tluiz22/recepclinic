@@ -206,6 +206,8 @@ function describeEvent(event: EventRow, staff: Map<string, string>): TrailEntry 
     }
     case "reminder_resent":
       return { at, text: `Lembrete reenviado por ${by}`, tone: "neutral" };
+    case "preparation_resent":
+      return { at, text: `Preparo do exame reenviado por ${by}`, tone: "neutral" };
     default:
       return { at, text: event.event_type, tone: "neutral" };
   }

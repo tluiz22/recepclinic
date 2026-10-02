@@ -6,8 +6,10 @@ import type { BadgeVariant } from "../../components/admin/Badge.astro";
 import Icon from "../../components/admin/Icon.astro";
 import PresenceControl from "../../components/admin/PresenceControl.astro";
 import ResendReminderButton from "../../components/admin/ResendReminderButton.astro";
+import ResendPreparationButton from "../../components/admin/ResendPreparationButton.astro";
 import ResendReminderNotice from "../../components/admin/ResendReminderNotice.astro";
 import { fetchReminderResendable } from "../../lib/reminderResend";
+import { fetchPreparationResendable } from "../../lib/preparationResend";
 import { createClient } from "../../lib/supabase/server";
 import { groupSessionTitle, loadAgendaItems } from "../../lib/scheduling/agendaItems";
 import { formatPhoneBR } from "../../lib/phone";
@@ -55,6 +57,20 @@ const resendable = await fetchReminderResendable(
   items.flatMap((item) =>
     item.kind === "appointment" && !item.canceled && item.start.getTime() > Date.now()
       ? [{ id: item.appointment.id, reminder_sent_at: (item.appointment.reminder_sent_at as string | null) ?? null }]
+      : []
+  )
+);
+
+// "Reenviar preparo do exame" (ajuste de 02/out/2026): exames ativos e ainda
+// por vir com o preparo não entregue.
+const preparationResendable = await fetchPreparationResendable(
+  supabase,
+  items.flatMap((item) =>
+    item.kind === "appointment" &&
+    !item.canceled &&
+    item.start.getTime() > Date.now() &&
+    item.appointment.appointment_type === "exam"
+      ? [item.appointment.id]
       : []
   )
 );
@@ -255,6 +271,12 @@ const presenceError = Astro.url.searchParams.get("error") === "presenca";
                     <div class="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1.5">
                       <span class="text-xs text-slate-400">Lembrete ainda não entregue</span>
                       <ResendReminderButton appointmentId={appointment.id} returnTo={`/admin/agenda?date=${date}`} />
+                    </div>
+                  )}
+                  {preparationResendable.has(appointment.id) && (
+                    <div class="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1.5">
+                      <span class="text-xs text-slate-400">Preparo do exame não entregue</span>
+                      <ResendPreparationButton appointmentId={appointment.id} returnTo={`/admin/agenda?date=${date}`} />
                     </div>
                   )}
                   {!isCancelled && !isPast && (

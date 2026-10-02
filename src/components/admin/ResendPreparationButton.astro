@@ -1,0 +1,38 @@
+---
+// Botão "Reenviar preparo do exame" (ajuste de 02/out/2026) — só renderizado
+// para exame cujo preparo não foi entregue (`fetchPreparationResendable`).
+interface Props {
+  appointmentId: string;
+  // Tela pra onde voltar depois do reenvio.
+  returnTo: string;
+}
+
+const { appointmentId, returnTo } = Astro.props;
+---
+
+<form
+  method="POST"
+  action={`/api/admin/agenda/appointments/${appointmentId}/resend-preparation`}
+  class="resend-preparation-form"
+>
+  <input type="hidden" name="return_to" value={returnTo} />
+  <button
+    type="submit"
+    class="rounded-md border border-amber-300 px-2.5 py-1 text-xs font-semibold text-amber-700 hover:bg-amber-50 disabled:opacity-60"
+  >
+    Reenviar preparo do exame
+  </button>
+</form>
+
+<script>
+  // Evita dois envios num clique duplo.
+  document.querySelectorAll<HTMLFormElement>(".resend-preparation-form").forEach((form) => {
+    form.addEventListener("submit", () => {
+      const button = form.querySelector("button");
+      if (button) {
+        button.disabled = true;
+        button.textContent = "Enviando…";
+      }
+    });
+  });
+</script>

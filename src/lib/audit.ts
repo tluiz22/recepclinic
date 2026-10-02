@@ -13,7 +13,8 @@ export type AppointmentEventType =
   | "attendance_recorded"
   | "attendance_corrected"
   | "message_not_sent"
-  | "reminder_resent";
+  | "reminder_resent"
+  | "preparation_resent";
 
 export type AppointmentEventChannel =
   | "admin"

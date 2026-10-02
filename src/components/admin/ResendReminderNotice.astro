@@ -1,13 +1,19 @@
 ---
-// Resultado do "Reenviar lembrete" (Fase 22 · etapa 6), lido de `?reenvio=`.
+// Resultado do "Reenviar lembrete" (Fase 22 · etapa 6), lido de `?reenvio=`,
+// e do "Reenviar preparo do exame" (ajuste de 02/out/2026), de `?preparo=`.
 import { RESEND_MESSAGES, parseResendOutcome } from "../../lib/reminderResend";
+import { PREPARATION_RESEND_MESSAGES, parsePreparationResendOutcome } from "../../lib/preparationResend";
 
-const outcome = parseResendOutcome(Astro.url.searchParams.get("reenvio"));
-const message = outcome ? RESEND_MESSAGES[outcome] : null;
+const reminderOutcome = parseResendOutcome(Astro.url.searchParams.get("reenvio"));
+const preparationOutcome = parsePreparationResendOutcome(Astro.url.searchParams.get("preparo"));
+const messages = [
+  reminderOutcome ? RESEND_MESSAGES[reminderOutcome] : null,
+  preparationOutcome ? PREPARATION_RESEND_MESSAGES[preparationOutcome] : null,
+].filter((message) => message !== null);
 ---
 
 {
-  message && (
+  messages.map((message) => (
     <p
       class={`mt-4 rounded-lg border px-3 py-2 text-sm ${
         message.ok ? "border-emerald-200 bg-emerald-50 text-emerald-800" : "border-amber-200 bg-amber-50 text-amber-800"
@@ -15,5 +21,5 @@ const message = outcome ? RESEND_MESSAGES[outcome] : null;
     >
       {message.text}
     </p>
-  )
+  ))
 }
