@@ -24,7 +24,7 @@ export const DEFAULT_REMINDER_HOUR = 14;
 // Atendimentos que o lembrete cobre: o dia seguinte inteiro (00:00 às 23:59
 // de Fortaleza, UTC-3 sem horário de verão), todos os dias da semana.
 // Marcado depois do envio ou para o próprio dia fica sem lembrete automático
-// (decisão do cliente; "Reenviar lembrete" resolve).
+// (decisão do cliente; o botão "Enviar lembrete" da Agenda resolve).
 export function reminderWindow(now: Date): { start: Date; end: Date } {
   const fortalezaNow = new Date(now.getTime() - 3 * 60 * 60 * 1000);
   const start = new Date(

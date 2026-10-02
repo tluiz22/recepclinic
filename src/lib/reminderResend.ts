@@ -2,42 +2,78 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { logAppointmentEvent } from "./audit";
 import { isReminderTemplateConfigured, sendAppointmentReminder } from "./whatsapp/notifications";
 
-// Botão "Reenviar lembrete" (Fase 22 · etapa 6): Agenda (dia) e Envios
-// automáticos. Vale para atendimento ativo, futuro e sem lembrete entregue
-// — falhou, não enviado ou ainda não enviado (inclusive antes da janela do
-// cron). Some depois de um envio com sucesso.
+import { fetchReminderHour } from "./automaticSends";
+
+// Botão do lembrete na Agenda (Fase 22 · etapa 6; regra revista na Fase 23 ·
+// etapa 3, decisão do cliente) — vale para atendimento ativo e futuro:
+// - "Reenviar lembrete": já houve tentativa (do agendador ou da tela) que
+//   não foi entregue;
+// - "Enviar lembrete": nenhuma tentativa e o envio automático da véspera já
+//   passou — inclui quem foi marcado depois dele ou para o próprio dia, que
+//   nunca recebe o lembrete automático;
+// - nenhum botão antes do envio automático da véspera ou depois de um envio
+//   com sucesso.
 
 const NOT_DELIVERED = new Set(["failed", "skipped_no_template"]);
 
+export type ReminderAction = "send" | "resend";
+
+export interface ReminderActionInput {
+  id: string;
+  scheduled_at: string;
+  reminder_sent_at: string | null;
+}
+
+/** Envio automático que cobriria o atendimento: véspera, na hora configurada (Fortaleza, UTC-3). */
+export function reminderCutoff(scheduledAt: Date, reminderHour: number): Date {
+  const local = new Date(scheduledAt.getTime() - 3 * 60 * 60 * 1000);
+  return new Date(Date.UTC(local.getUTCFullYear(), local.getUTCMonth(), local.getUTCDate() - 1, reminderHour + 3));
+}
+
 /**
- * Quais destes atendimentos (ativos e futuros — o chamador filtra) podem
- * reenviar: sem `reminder_sent_at`, ou com a última tentativa do lembrete
- * falhada (a Meta pode avisar a falha de entrega depois do envio aceito).
+ * Qual botão cada atendimento (ativo e futuro — o chamador filtra) mostra.
+ * Fora do mapa = nenhum botão.
  */
-export async function fetchReminderResendable(
+export async function fetchReminderActions(
   supabase: SupabaseClient,
-  appointments: { id: string; reminder_sent_at: string | null }[]
-): Promise<Set<string>> {
-  if (appointments.length === 0) return new Set();
-  const { data } = await supabase
-    .from("whatsapp_messages")
-    .select("appointment_id, status")
-    .eq("message_type", "appointment_reminder")
-    .eq("direction", "outbound")
-    .in(
-      "appointment_id",
-      appointments.map((a) => a.id)
-    )
-    .order("created_at");
+  appointments: ReminderActionInput[],
+  now = new Date()
+): Promise<Map<string, ReminderAction>> {
+  const actions = new Map<string, ReminderAction>();
+  if (appointments.length === 0) return actions;
+
+  const [reminderHour, { data }] = await Promise.all([
+    fetchReminderHour(supabase),
+    supabase
+      .from("whatsapp_messages")
+      .select("appointment_id, status")
+      .eq("message_type", "appointment_reminder")
+      .eq("direction", "outbound")
+      .in(
+        "appointment_id",
+        appointments.map((a) => a.id)
+      )
+      .order("created_at"),
+  ]);
 
   const latestStatus = new Map<string, string | null>();
   for (const row of data ?? []) latestStatus.set(row.appointment_id as string, row.status as string | null);
 
-  return new Set(
-    appointments
-      .filter((a) => !a.reminder_sent_at || NOT_DELIVERED.has(latestStatus.get(a.id) ?? ""))
-      .map((a) => a.id)
-  );
+  for (const appointment of appointments) {
+    const attempted = latestStatus.has(appointment.id);
+    if (attempted) {
+      // A Meta pode avisar a falha de entrega depois do envio aceito.
+      if (NOT_DELIVERED.has(latestStatus.get(appointment.id) ?? "") || !appointment.reminder_sent_at) {
+        actions.set(appointment.id, "resend");
+      }
+    } else if (
+      !appointment.reminder_sent_at &&
+      now.getTime() >= reminderCutoff(new Date(appointment.scheduled_at), reminderHour).getTime()
+    ) {
+      actions.set(appointment.id, "send");
+    }
+  }
+  return actions;
 }
 
 export type ResendOutcome = "sent" | "failed" | "no_template" | "no_phone" | "not_eligible";
@@ -63,9 +99,10 @@ export async function resendReminder(
     return "not_eligible";
   }
 
-  // Tela desatualizada ou clique duplo: o lembrete já saiu com sucesso.
-  const resendable = await fetchReminderResendable(supabase, [appointment]);
-  if (!resendable.has(appointment.id)) return "not_eligible";
+  // Tela desatualizada ou clique duplo (o lembrete já saiu com sucesso), ou
+  // antes do envio automático da véspera.
+  const actions = await fetchReminderActions(supabase, [appointment]);
+  if (!actions.has(appointment.id)) return "not_eligible";
 
   const patient = (appointment.patients ?? null) as unknown as {
     full_name: string;
@@ -94,13 +131,15 @@ export async function resendReminder(
     locationAddress: appointment.home_visit_address ?? location?.address ?? null,
   });
 
-  // Quem reenviou fica na trilha mesmo se falhar — o resultado do envio
-  // está na mensagem, em `whatsapp_messages`.
+  // Quem enviou fica na trilha mesmo se falhar — o resultado do envio está
+  // na mensagem, em `whatsapp_messages`. `first`: primeira tentativa
+  // ("Enviar lembrete"), não um reenvio.
   await logAppointmentEvent(supabase, {
     appointmentId: appointment.id,
     type: "reminder_resent",
     channel: "admin",
     actorId,
+    details: { first: actions.get(appointment.id) === "send" },
   });
 
   if (status !== "sent") return "failed";
@@ -113,12 +152,13 @@ export async function resendReminder(
 
 // Aviso na tela depois do reenvio (`?reenvio=`).
 export const RESEND_MESSAGES: Record<ResendOutcome, { text: string; ok: boolean }> = {
-  sent: { text: "Lembrete reenviado.", ok: true },
+  sent: { text: "Lembrete enviado.", ok: true },
   failed: { text: "O lembrete não foi enviado: o WhatsApp recusou o envio. Veja a trilha do atendimento.", ok: false },
   no_template: { text: "O lembrete não foi enviado: o template do lembrete está desligado.", ok: false },
   no_phone: { text: "O lembrete não foi enviado: o responsável está sem telefone cadastrado.", ok: false },
   not_eligible: {
-    text: "Nada a reenviar: o atendimento já recebeu o lembrete, foi cancelado ou já passou.",
+    text:
+      "Nada a enviar: o atendimento já recebeu o lembrete, foi cancelado, já passou ou o envio automático da véspera ainda não aconteceu.",
     ok: false,
   },
 };

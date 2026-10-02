@@ -11,7 +11,7 @@ import ResendReminderButton from "../../components/admin/ResendReminderButton.as
 import ResendPreparationButton from "../../components/admin/ResendPreparationButton.astro";
 import ResendReminderNotice from "../../components/admin/ResendReminderNotice.astro";
 import { createClient } from "../../lib/supabase/server";
-import { fetchReminderResendable } from "../../lib/reminderResend";
+import { fetchReminderActions } from "../../lib/reminderResend";
 import { fetchPreparationResendable } from "../../lib/preparationResend";
 import { formatWhen } from "../../lib/whatsapp/formatDateTime";
 import { buildAppointmentTypeLabel } from "../../lib/whatsapp/notifications";
@@ -38,8 +38,8 @@ const [runs, failedAppointments, alert] = await Promise.all([
 // Um botão por tipo de envio (ajuste de 02/out/2026): "Reenviar lembrete"
 // (etapa 6) nos atendimentos com falha que ainda não têm lembrete entregue, e
 // "Reenviar preparo do exame" nos exames com o preparo não entregue.
-const [resendable, preparationResendable] = await Promise.all([
-  fetchReminderResendable(supabase, failedAppointments),
+const [reminderActions, preparationResendable] = await Promise.all([
+  fetchReminderActions(supabase, failedAppointments),
   fetchPreparationResendable(
     supabase,
     failedAppointments.filter((a) => a.appointment_type === "exam").map((a) => a.id)
@@ -125,7 +125,7 @@ const failedRows = failedAppointments.map((a) => ({
   patientName: a.patient_name,
   failedLabel: plural(a.failedSends, "envio com falha", "envios com falha"),
   historyHref: `/admin/pacientes/${a.guardian_id}/criancas/${a.patient_id}/historico#card-${a.id}`,
-  canResend: resendable.has(a.id),
+  reminderAction: reminderActions.get(a.id),
   canResendPreparation: preparationResendable.has(a.id),
 }));
 
@@ -167,9 +167,11 @@ const alertLines = describeSendsAlert(alert);
                 Ver trilha
               </a>
             </div>
-            {(row.canResend || row.canResendPreparation) && (
+            {(row.reminderAction || row.canResendPreparation) && (
               <div class="mt-3 flex flex-wrap items-center gap-2">
-                {row.canResend && <ResendReminderButton appointmentId={row.id} returnTo="/admin/envios" />}
+                {row.reminderAction && (
+                  <ResendReminderButton appointmentId={row.id} action={row.reminderAction} returnTo="/admin/envios" />
+                )}
                 {row.canResendPreparation && (
                   <ResendPreparationButton appointmentId={row.id} returnTo="/admin/envios" />
                 )}
