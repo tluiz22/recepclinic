@@ -314,7 +314,11 @@ async function handleKeptPresence(
       .eq("wa_message_id", waMessageId);
   }
 
-  const body = texts.reminderPresenceConfirmedText(pending.patient_name, whenLabel);
+  const body = texts.reminderPresenceConfirmedText(
+    pending.patient_name,
+    whenLabel,
+    pending.appointment_type === "exam"
+  );
   await sendAndLog(
     supabase,
     guardianId,

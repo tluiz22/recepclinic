@@ -809,11 +809,14 @@ export function cancelErrorText(): string {
 
 // --- botões do lembrete (Fase 19) -------------------------------------------
 
-export function reminderPresenceConfirmedText(patientName: string, whenLabel: string): string {
+// Exame: lembra de seguir o preparo, que saiu uma vez só, na marcação
+// (pedido do cliente, 03/out/2026).
+export function reminderPresenceConfirmedText(patientName: string, whenLabel: string, isExam = false): string {
   return (
     "Presença confirmada ✓\n\n" +
     `👶 Paciente: ${patientName}\n` +
     `📅 Data: ${whenLabel}\n\n` +
+    (isExam ? "Lembre-se de seguir as orientações de preparo do exame que enviamos anteriormente.\n\n" : "") +
     "Obrigado! Qualquer dúvida, é só chamar por aqui."
   );
 }

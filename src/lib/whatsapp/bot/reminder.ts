@@ -99,7 +99,11 @@ export async function handleReminderTap(
 
   if (tap.action === "confirm") {
     if (confirmNow) {
-      const body = texts.reminderPresenceConfirmedText(appointment.patient_name, whenLabel);
+      const body = texts.reminderPresenceConfirmedText(
+        appointment.patient_name,
+        whenLabel,
+        appointment.appointment_type === "exam"
+      );
       await sendAndLog(
         supabase,
         guardianId,
