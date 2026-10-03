@@ -54,6 +54,9 @@ interface NotificationSpec {
   // Substitui o rótulo do tipo na variável {{1}} — só a confirmação no
   // layout novo usa ("Agradecemos por agendar {{1}}.").
   firstParameter?: string;
+  // Substitui o rótulo do local na variável {{4}} — o lembrete curto
+  // (03/out/2026) manda o endereço ali, sem a variável de endereço/mapa.
+  locationParameter?: string;
   // Quando true, adiciona o endereço como próxima variável do template —
   // usado nas notificações que precisam dizer ao responsável onde será a
   // consulta.
@@ -165,7 +168,7 @@ async function sendNotification(
   const languageCode = (import.meta.env.WHATSAPP_TEMPLATE_LANGUAGE as string | undefined) ?? "pt_BR";
 
   const typeLabel = spec.firstParameter ?? notificationTypeLabel(appointmentType, examName, locationType);
-  const locationLabel = notificationLocationLabel(locationType);
+  const locationLabel = spec.locationParameter ?? notificationLocationLabel(locationType);
   const whenLabel = formatWhen(scheduledAt);
   const addressText = spec.includeAddress ? buildLocationAddressText(locationAddress) : null;
   const priceText = spec.includePrice ? buildPriceText(priceCents) : null;
@@ -345,7 +348,26 @@ export function isReminderTemplateConfigured(): boolean {
 // reconhece. A versão com botões foi aprovada na Meta em 30/09/2026 e a
 // antiga (sem botões) deixou de existir — por isso não há mais a env var
 // `WHATSAPP_TEMPLATE_REMINDER_NEW_LAYOUT`.
+//
+// Lembrete curto (pedido do cliente, 03/out/2026: o texto estava grande e
+// confundia): sem o link do mapa nem a assinatura, o endereço vai em
+// "📍 Local: {{4}}" e termina em "Posso confirmar?" — 4 variáveis e os mesmos
+// 3 botões. Template novo (`lembrete_confirmacao`); enquanto a Meta não aprova,
+// `WHATSAPP_TEMPLATE_REMINDER_SHORT` fica desligada e sai o layout atual.
 export function sendAppointmentReminder(input: NotificationInput): Promise<string> {
+  if (import.meta.env.WHATSAPP_TEMPLATE_REMINDER_SHORT === "true") {
+    const place =
+      input.locationAddress ?? (input.locationType === "home_visit" ? "Atendimento domiciliar" : "Consultório");
+    return sendNotification(input, {
+      messageType: "appointment_reminder",
+      templateName: import.meta.env.WHATSAPP_TEMPLATE_REMINDER,
+      locationParameter: place,
+      quickReplyPayloads: REMINDER_ACTIONS.map((action) => reminderButtonPayload(action, input.appointmentId)),
+      buildPreview: (type, name, when, location) =>
+        `${listPreview("Passando para lembrar do seu agendamento:", type, name, `📅 Data: ${when}`, location)}\n\n` +
+        "Posso confirmar?\n\n[Confirmar presença] [Remarcar] [Cancelar]",
+    });
+  }
   return sendNotification(input, {
     messageType: "appointment_reminder",
     templateName: import.meta.env.WHATSAPP_TEMPLATE_REMINDER,
