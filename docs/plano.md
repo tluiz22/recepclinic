@@ -127,10 +127,11 @@ perfil da clínica.
 
 ## F5 — Páginas públicas e domínio
 
-**Objetivo:** links públicos com a marca da clínica e páginas legais do produto.
+**Objetivo:** links públicos com a marca da clínica, no endereço do produto.
 
-**Escopo:** `/agendar` e `/preparo` com nome, logo, cor e profissionais da clínica; política de
-privacidade e termos de uso do RecepClinic; domínio do produto (pendente do cliente).
+**Escopo:** `/agendar` e `/preparo` com nome, logo, cor e profissionais da clínica; aplicativo em
+`app.recepclinic.com.br`; links para a política de privacidade e os termos, que ficam no site do
+produto (projeto separado, ver D7).
 
 ## F6 — WhatsApp por clínica e bot
 
@@ -174,7 +175,7 @@ para o modelo novo; acompanhamento das primeiras semanas.
 |---|---|
 | Instalar Docker e a CLI do Supabase | F0.3 |
 | Verificação da empresa e Tech Provider na Meta (CNPJ, site) | F8 (começar já, por causa do prazo) |
-| Domínio do RecepClinic | F5 |
+| Site `www.recepclinic.com.br` com política de privacidade e termos (projeto separado) | F8 (Meta) e F5 |
 | Número de teste na Meta para o staging | F6 |
 | CNPJ, contrato com as clínicas, termo de tratamento de dados | F10 |
 | Custo da Meta por mensagem | definição de preço (fora do código) |

@@ -243,8 +243,21 @@ riscos (L12, L38).
 - **O site da Dra. sai do produto** e fica no repositório do piloto, como cliente externo. Ele
   pode ter um botão "Agendar pelo WhatsApp" apontando para o número da clínica.
 - Domínio próprio da clínica fica para quando alguma pedir.
-- **Pendente do cliente**: escolher e registrar o domínio (ex.: verificar `recepclinic.com.br` no
-  registro.br).
+- Domínio registrado pelo cliente: `recepclinic.com.br`.
+
+**Ajuste (03/out/2026): site do produto em projeto separado.** O cliente registrou
+`recepclinic.com.br`. O domínio continua único, mas com **um subdomínio por função**, não por
+clínica:
+
+| Endereço | O que serve | Projeto |
+|---|---|---|
+| `www.recepclinic.com.br` | apresentação do produto, contato, **política de privacidade** e **termos de uso** | site estático, repositório separado |
+| `app.recepclinic.com.br` | painel e links públicos enviados por WhatsApp | este repositório |
+
+O site precisa estar no ar **antes** do produto, porque a verificação da empresa e o app de Tech
+Provider na Meta pedem um site no domínio da empresa e a URL da política de privacidade. Por isso
+ele não pode depender do ritmo do produto. O aplicativo aponta para as páginas legais do site. O
+site fica numa hospedagem estática gratuita que permita uso comercial (a Vercel Hobby não permite).
 
 **Descartado:** subdomínio por clínica (trabalho de DNS e certificado sem ganho de segurança, já que
 o token identifica a clínica); domínio da clínica (trabalho por clínica).
@@ -319,6 +332,5 @@ Todos os 50 limites têm destino:
 
 - **Meta**: iniciar a verificação da empresa e o cadastro como Tech Provider (D3a). Depende de CNPJ e
   de um site com política de privacidade.
-- **Domínio** do RecepClinic (D7).
 - **CNPJ, contrato com as clínicas e termo de tratamento de dados** (LGPD).
 - **Custo da Meta por mensagem** (L50).
