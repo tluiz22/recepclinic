@@ -57,3 +57,50 @@ generalizar).
   um profissional.
 
 **Resolve:** L02; prepara o terreno para L06 (tipos de atendimento ligados a agendas).
+
+## D3 — WhatsApp por clínica (03/out/2026)
+
+### D3a — Conexão com o número da clínica
+
+**Decisão: o RecepClinic será Tech Provider da Meta, com um BSP como reserva.**
+
+- Cada clínica conecta o **próprio número** pelo **Embedded Signup**, com **coexistência**: a
+  secretária continua usando o app do WhatsApp Business no mesmo número.
+- O RecepClinic tem o **próprio app na Meta** e segue chamando a **Cloud API direto**, como hoje.
+  Token, número (`phone_number_id`), conta (WABA) e segredos passam a ser **guardados por clínica**,
+  não em variáveis de ambiente.
+- O **webhook identifica a clínica** pelo `metadata.phone_number_id` de cada evento e processa tudo
+  sob as permissões daquela clínica (D1).
+- A **camada de WhatsApp fica isolada** (envio, recebimento, templates) para poder trocar por um
+  BSP sem mexer no resto, se a verificação da Meta travar.
+- **Começar o processo da Meta já** (verificação da empresa, app, análise). Depende de CNPJ e de
+  um site com política de privacidade (L32). Requisitos e prazos devem ser conferidos nas páginas
+  atuais da Meta antes de começar.
+
+**Por quê:** o código já fala direto com a Cloud API, não há custo por número além da Meta e não
+há um terceiro no caminho dos dados de saúde.
+
+**Descartado:** BSP desde o início (custo por número ou por mensagem e mais um intermediário; fica
+como alternativa).
+
+### D3b — Templates
+
+**Decisão: templates padrão do RecepClinic, criados pela API na conta de cada clínica.**
+
+- **Um só texto para todas as clínicas.** O que muda entra como variável: clínica, profissional,
+  tipo de atendimento, local, data.
+- Ao conectar o número, o RecepClinic **cria e envia os templates para aprovação** na conta da
+  clínica, sem trabalho manual.
+- **Nome e idioma de cada template guardados por clínica** (não em variável de ambiente). Isso
+  permite, no futuro, um texto próprio para uma clínica sem mudar código.
+- **Informações próprias da clínica saem dos templates** (forma de pagamento, convênio, assinatura
+  com registro profissional). Elas vão para mensagens de texto do bot, configuráveis por clínica.
+- As chaves de "layout novo/antigo" do piloto (`…_NEW_LAYOUT`, `…_REMINDER_SHORT`) não passam
+  para o RecepClinic: ele já começa com uma versão só de cada template.
+
+**Por quê:** onboarding sem espera nem redação por clínica, e manutenção de uma versão só.
+
+**Descartado:** texto livre por clínica (12 textos para escrever e aprovar a cada clínica e uma
+versão por clínica para manter).
+
+**Resolve:** L18, L19, L20 (encaminha), L21, L22, L25 (parte das mensagens).
