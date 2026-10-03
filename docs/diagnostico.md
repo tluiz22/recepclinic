@@ -269,7 +269,7 @@ Todas as tabelas de `public` estão com RLS ligado. Há três padrões de polít
 | **Só leitura** para logados (escrita só pela service role) | `staff_profiles`, `bot_funnel_events`, `job_runs`, `waitlist_offers`, `waitlist_openings`; `appointment_events` também aceita inserção |
 | **Sem política** (só service role) | `daily_summary_sends` |
 
-`anon` não tem política nenhuma: sem login, o Postgres não devolve nada. As 10 migrações que usam
+`anon` não tem política nenhuma: sem login, o Postgres não devolve nada. As 11 migrações que usam
 `auth.uid()` usam só para "está logado", nunca para dono de linha.
 
 ### Acesso sem login (service role, ignora o RLS)
