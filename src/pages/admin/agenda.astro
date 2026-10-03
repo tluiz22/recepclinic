@@ -64,6 +64,7 @@ const reminderActions = await fetchReminderActions(
             id: item.appointment.id,
             scheduled_at: item.start.toISOString(),
             reminder_sent_at: (item.appointment.reminder_sent_at as string | null) ?? null,
+            rescheduled_at: (item.appointment.rescheduled_at as string | null) ?? null,
           },
         ]
       : []

@@ -13,6 +13,9 @@ import { fetchReminderHour } from "./automaticSends";
 //   nunca recebe o lembrete automático;
 // - nenhum botão antes do envio automático da véspera ou depois de um envio
 //   com sucesso.
+// Só contam os lembretes enviados depois da última remarcação: remarcar zera
+// o lembrete (a data nova pede outro), e o lembrete da data antiga não é
+// "tentativa não entregue" (achado do cliente, 02/out/2026).
 
 const NOT_DELIVERED = new Set(["failed", "skipped_no_template"]);
 
@@ -22,6 +25,7 @@ export interface ReminderActionInput {
   id: string;
   scheduled_at: string;
   reminder_sent_at: string | null;
+  rescheduled_at?: string | null;
 }
 
 /** Envio automático que cobriria o atendimento: véspera, na hora configurada (Fortaleza, UTC-3). */
@@ -46,7 +50,7 @@ export async function fetchReminderActions(
     fetchReminderHour(supabase),
     supabase
       .from("whatsapp_messages")
-      .select("appointment_id, status")
+      .select("appointment_id, status, created_at")
       .eq("message_type", "appointment_reminder")
       .eq("direction", "outbound")
       .in(
@@ -56,8 +60,15 @@ export async function fetchReminderActions(
       .order("created_at"),
   ]);
 
+  const rescheduledAt = new Map(
+    appointments.map((a) => [a.id, a.rescheduled_at ? Date.parse(a.rescheduled_at) : null])
+  );
   const latestStatus = new Map<string, string | null>();
-  for (const row of data ?? []) latestStatus.set(row.appointment_id as string, row.status as string | null);
+  for (const row of data ?? []) {
+    const since = rescheduledAt.get(row.appointment_id as string);
+    if (since && Date.parse(row.created_at as string) < since) continue;
+    latestStatus.set(row.appointment_id as string, row.status as string | null);
+  }
 
   for (const appointment of appointments) {
     const attempted = latestStatus.has(appointment.id);
