@@ -179,3 +179,35 @@ impossíveis de testar, e segue a regra de não criar dezenas de configurações
 **Descartado:** três tipos fixos para todas (não atende clínicas com outros serviços).
 
 **Resolve:** L06, L08.
+
+## D5 — Forma de evolução do código (03/out/2026)
+
+**Decisão: evoluir no lugar, com base nova e rede de segurança.**
+
+- **Mantém a stack**: Astro + Supabase + Vercel. O problema não é a tecnologia, é o modelo de
+  uma clínica só.
+- **Schema novo consolidado**: como o RecepClinic não tem dados reais (os dados da Dra. ficam no
+  banco do piloto), o banco recomeça com uma **migração-base** já no modelo alvo (clínica, agendas,
+  serviços, contato → paciente, RLS por clínica). Não se empilha a 39ª migração sobre o modelo
+  atual. As 38 migrações do piloto ficam no histórico do git como referência.
+- **Migrações versionadas pela CLI do Supabase**, aplicadas igual em todos os ambientes (fim do SQL
+  Editor à mão).
+- **Rede de segurança antes de adaptar o código**: testes automatizados das regras críticas
+  (horários livres, retorno, idade, lista de espera, lembretes) e **testes de isolamento** (usuário,
+  bot e agendador da clínica A não leem nem escrevem dados da clínica B). Testes rodam no CI.
+- **Acesso ao banco concentrado por domínio** (agenda, pacientes, mensagens…) em vez de consultas
+  espalhadas por páginas e rotas.
+- **Código adaptado módulo por módulo** (agenda, bot, envios, painel, páginas públicas),
+  reaproveitando telas, fluxos e regras validados no piloto.
+- **Cenário B** (a Dra. passar para o RecepClinic): script de importação do banco do piloto para o
+  modelo novo, feito só quando for o caso.
+
+**Por quê:** as regras validadas em uso real são o maior valor do código. Sem dados para migrar, o
+schema pode recomeçar limpo. Os testes e a concentração do acesso ao banco atacam os dois maiores
+riscos (L12, L38).
+
+**Descartado:**
+- Reescrever noutra stack: perde o que foi validado e demora mais.
+- Evoluir direto: refatoração grande sem testes.
+
+**Resolve:** L09, L12, L37, L38; encaminha L36 (ambientes) e L40 (datas, junto do fuso por clínica).
