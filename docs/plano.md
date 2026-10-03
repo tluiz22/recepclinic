@@ -175,7 +175,7 @@ para o modelo novo; acompanhamento das primeiras semanas.
 
 | Frente | Situação | Depende de | Destrava |
 |---|---|---|---|
-| **Site do RecepClinic** (`www.recepclinic.com.br`, repositório separado) | em planejamento: [`site-plano.md`](site-plano.md), execução numa sessão paralela | — | Tech Provider; páginas legais usadas pela F5 |
+| **Site do RecepClinic** (`www.recepclinic.com.br`, repositório separado) | **planejado**: [`site-plano.md`](site-plano.md), execução numa sessão paralela | — | Tech Provider; páginas legais usadas pela F5 |
 | **Cadastro como Tech Provider na Meta** (verificação da empresa, app do RecepClinic, análise) | **pendente, a tratar depois da construção do site** | site no ar com política de privacidade e termos; CNPJ | F8 (e a conexão de números de outras clínicas) |
 
 ## Pendências do cliente que afetam o plano

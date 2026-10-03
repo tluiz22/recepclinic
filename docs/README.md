@@ -58,3 +58,4 @@ credenciais do piloto (banco, agendador e Vault do Supabase, número e app da Me
 - [`limites.md`](limites.md): limites e problemas para várias clínicas (etapa 2).
 - [`arquitetura.md`](arquitetura.md): decisões da arquitetura alvo (etapa 3).
 - [`plano.md`](plano.md): plano de evolução em fases (etapa 4).
+- [`site-plano.md`](site-plano.md): plano do site `www.recepclinic.com.br` (frente paralela).
