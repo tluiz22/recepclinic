@@ -858,10 +858,9 @@ function capitalizeFirst(text: string): string {
 }
 
 export function waitlistJoinedText(patientName: string, words: WaitlistAppointmentWords, whenLabel: string): string {
-  return (
-    `Pronto! *${patientName}* está na lista de espera para antecipar ${words.phrase} marcad${words.adjEnd} para ${whenLabel}. ` +
-    "Se abrir uma vaga antes, eu aviso por aqui — você terá 60 minutos para responder."
-  );
+  // Sem "Se abrir uma vaga antes, eu aviso por aqui…" (pedido do cliente,
+  // 03/out/2026).
+  return `Pronto! *${patientName}* está na lista de espera para antecipar ${words.phrase} marcad${words.adjEnd} para ${whenLabel}.`;
 }
 
 export function waitlistAlreadyInText(patientName: string, words: WaitlistAppointmentWords, whenLabel: string): string {
