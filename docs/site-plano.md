@@ -63,7 +63,7 @@
 - Criar o repositório **vazio e privado** `tluiz22/recepclinic-site` no GitHub e cloná-lo:
   `git clone https://github.com/tluiz22/recepclinic-site.git ~/Documents/Desenvolvimento/recepclinic-site`.
   É aí que a sessão do site é aberta. **Só isto é necessário para começar.**
-- Criar a conta na **Cloudflare** (pode ser feito depois, até a S5) (plano Free), adicionar o domínio `recepclinic.com.br` e **trocar
+- Criar a conta na **Cloudflare** (plano Free; pode ser depois, até a S5), adicionar o domínio `recepclinic.com.br` e **trocar
   os servidores DNS no registro.br** pelos que a Cloudflare indicar. A troca pode levar até 24–48h
   para valer, por isso convém fazer cedo.
 - **Validar:** painel da Cloudflare mostra o domínio como "Active".
