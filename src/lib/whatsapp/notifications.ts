@@ -352,8 +352,9 @@ export function isReminderTemplateConfigured(): boolean {
 // Lembrete curto (pedido do cliente, 03/out/2026: o texto estava grande e
 // confundia): sem o link do mapa nem a assinatura, o endereço vai em
 // "📍 Local: {{4}}" e termina em "Posso confirmar?" — 4 variáveis e os mesmos
-// 3 botões. Template novo (`lembrete_confirmacao`); enquanto a Meta não aprova,
-// `WHATSAPP_TEMPLATE_REMINDER_SHORT` fica desligada e sai o layout atual.
+// 3 botões. O cliente editou o próprio `lembrete_consulta` na Meta e ligou
+// `WHATSAPP_TEMPLATE_REMINDER_SHORT` antes da aprovação (aceitou o envio
+// falhar até lá — não havia lembrete previsto). Desligada = layout antigo.
 export function sendAppointmentReminder(input: NotificationInput): Promise<string> {
   if (import.meta.env.WHATSAPP_TEMPLATE_REMINDER_SHORT === "true") {
     const place =
