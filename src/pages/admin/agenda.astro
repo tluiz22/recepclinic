@@ -15,7 +15,8 @@ import ResendReminderNotice from "../../components/admin/ResendReminderNotice.as
 import { fetchReminderActions } from "../../lib/reminderResend";
 import { fetchPreparationResendable } from "../../lib/preparationResend";
 import { createClient } from "../../lib/supabase/server";
-import { groupSessionTitle, loadAgendaItems } from "../../lib/scheduling/agendaItems";
+import { groupSessionTitle, loadAgendaItems, type AgendaItem } from "../../lib/scheduling/agendaItems";
+import MassCancelControls from "../../components/admin/MassCancelControls.astro";
 import {
   AUTHORSHIP_COLUMNS,
   PRESENCE_COLUMNS,
@@ -117,6 +118,18 @@ function formatTime(d: Date): string {
 
 // Erro do botão de presença confirmada (volta com `?error=presenca`).
 const presenceError = Astro.url.searchParams.get("error") === "presenca";
+
+// Cancelamento em massa (Fase 12, movido do Resumo do dia em 03/out/2026):
+// atendimentos ainda marcados e por vir; turma = todos os pacientes ativos.
+function massCancelIds(item: AgendaItem): string[] {
+  if (item.start.getTime() <= Date.now()) return [];
+  if (item.kind === "group_session") return item.cancelableIds;
+  if (item.kind === "appointment" && ["scheduled", "confirmed"].includes(item.appointment.status)) {
+    return [item.appointment.id];
+  }
+  return [];
+}
+const hasMassCancel = items.some((item) => massCancelIds(item).length > 0);
 ---
 
 <AdminLayout title="Agenda">
@@ -218,6 +231,8 @@ const presenceError = Astro.url.searchParams.get("error") === "presenca";
 
   <ResendReminderNotice />
 
+  {hasMassCancel && <MassCancelControls />}
+
   <div class="mt-6 flex flex-col gap-3">
     {
       items.length ? (
@@ -232,9 +247,19 @@ const presenceError = Astro.url.searchParams.get("error") === "presenca";
           return (
             <Card muted={isCancelled}>
               <div class="flex flex-wrap items-center justify-between gap-2">
-                <span class="text-base font-semibold text-slate-900">
-                  {formatTime(item.start)} – {formatTime(item.end)}
-                </span>
+                <label class="flex items-center gap-2">
+                  {massCancelIds(item).length > 0 && (
+                    <input
+                      type="checkbox"
+                      class="mass-cancel-checkbox h-4 w-4 shrink-0 rounded border-slate-300 text-sky-700 focus:ring-sky-600"
+                      value={massCancelIds(item).join(",")}
+                      aria-label={`Selecionar ${formatTime(item.start)} para cancelamento em massa`}
+                    />
+                  )}
+                  <span class="text-base font-semibold text-slate-900">
+                    {formatTime(item.start)} – {formatTime(item.end)}
+                  </span>
+                </label>
                 {isCancelled && <Badge variant="neutral">Cancelado</Badge>}
               </div>
               {item.kind === "group_session" ? (

@@ -33,6 +33,8 @@ export type AgendaItem =
       examName: string;
       booked: number;
       capacity: number | null;
+      // Atendimentos ainda marcados da turma (cancelamento em massa na Agenda).
+      cancelableIds: string[];
     }
   | { kind: "block"; start: Date; end: Date; canceled: false; id: string; reason: string };
 
@@ -117,6 +119,7 @@ export async function loadAgendaItems(
         examName: first.exam_types?.name ?? "Exame",
         booked,
         capacity: capacityByKey.get(`${first.exam_type_id}|${weekday}|${time}`) ?? null,
+        cancelableIds: list.filter((row) => row.status === "scheduled" || row.status === "confirmed").map((row) => row.id),
       });
     }
   }

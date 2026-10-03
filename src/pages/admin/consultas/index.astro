@@ -10,8 +10,9 @@
 // detalhada que a Agenda (idade, responsável, telefone com link pra ligar),
 // lida direto do Supabase — é uma
 // referência de identificação do dia, não a ferramenta de gestão pontual da
-// grade (isso continua sendo a Agenda). Base pra próxima etapa: seleção pra
-// cancelamento em massa.
+// grade (isso continua sendo a Agenda). Desde 03/out/2026 é só informação
+// (decisão do cliente): presença confirmada/não confirmada sem botões, e o
+// cancelamento em massa foi para a Agenda (`MassCancelControls`).
 import PhoneLinks from "../../../components/admin/PhoneLinks.astro";
 import AdminLayout from "../../../layouts/AdminLayout.astro";
 import Card from "../../../components/admin/Card.astro";
@@ -22,7 +23,6 @@ import TabBar from "../../../components/admin/TabBar.astro";
 import LembretesDoDia from "../../../components/admin/LembretesDoDia.astro";
 import ListaDeEspera from "../../../components/admin/ListaDeEspera.astro";
 import ConfirmDeleteDialog from "../../../components/admin/ConfirmDeleteDialog.astro";
-import PresenceControl from "../../../components/admin/PresenceControl.astro";
 import { createClient } from "../../../lib/supabase/server";
 import { buildAppointmentTypeLabel } from "../../../lib/whatsapp/notifications";
 import { formatWhen, TIMEZONE } from "../../../lib/whatsapp/formatDateTime";
@@ -156,9 +156,10 @@ function mapResumoRow(
     locationLabel: locationLabel(location?.type),
     homeVisitAddress: a.home_visit_address,
     bookedByLines: formatBookedByLines(a, staffLabels),
-    // Presença confirmada (Fase 19) — botão só pra atendimento ativo e por vir.
+    // Presença (Fase 19), só informação desde 03/out/2026 — as ações ficam na
+    // Agenda. "Não confirmada" só para atendimento ativo e ainda por vir.
     presenceLine: formatPresenceLine(a, staffLabels),
-    presenceEditable:
+    presencePending:
       ["scheduled", "confirmed"].includes(a.status) && new Date(a.scheduled_at).getTime() > Date.now(),
   };
 }
@@ -370,14 +371,6 @@ function confirmadasPageUrl(targetPage: number): string {
   }
 
   {
-    tab === "resumo" && Astro.url.searchParams.get("error") === "presenca" && (
-      <p class="mt-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-        Não foi possível atualizar a presença confirmada. Tente novamente.
-      </p>
-    )
-  }
-
-  {
     tab === "resumo" && (
       <>
         <form
@@ -417,36 +410,11 @@ function confirmadasPageUrl(targetPage: number): string {
           )}
         </form>
 
-        {resumoRows.length > 0 && (
-          <div class="mt-6 flex flex-wrap items-center justify-between gap-3">
-            <div class="flex gap-3 text-sm">
-              <button type="button" id="select_all_btn" class="text-sky-700 hover:underline">
-                Selecionar todos
-              </button>
-              <button type="button" id="select_none_btn" class="text-sky-700 hover:underline">
-                Selecionar nenhum
-              </button>
-            </div>
-            <button
-              type="button"
-              id="mass_cancel_open_btn"
-              class="rounded-md border border-red-300 px-3 py-2 text-sm font-semibold text-red-700 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              Cancelar selecionados (<span id="mass_cancel_count">0</span>)
-            </button>
-          </div>
-        )}
-
         <div class="mt-4 flex flex-col gap-3">
           {resumoRows.length ? (
             resumoRows.map((row) => (
-              <Card class="flex gap-3">
-                <input
-                  type="checkbox"
-                  class="mass-cancel-checkbox mt-1 h-4 w-4 shrink-0 rounded border-slate-300 text-sky-700 focus:ring-sky-600"
-                  value={row.id}
-                />
-                <div class="min-w-0 flex-1">
+              <Card>
+                <div class="min-w-0">
                   <div class="flex flex-wrap items-center justify-between gap-2">
                     <span class="text-base font-semibold text-slate-900">{row.time}</span>
                     <Badge variant={row.typeVariant}>{row.typeLabel}</Badge>
@@ -469,12 +437,18 @@ function confirmadasPageUrl(targetPage: number): string {
                     {row.homeVisitAddress && ` — ${row.homeVisitAddress}`}
                   </p>
                   {row.bookedByLines.map((line) => <p class="mt-0.5 text-xs text-slate-400">{line}</p>)}
-                  <PresenceControl
-                    appointmentId={row.id}
-                    confirmedLine={row.presenceLine}
-                    returnTo={`/admin/consultas?tab=resumo&date=${date}`}
-                    editable={row.presenceEditable}
-                  />
+                  {row.presenceLine ? (
+                    <p class="mt-2 flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                      <Badge variant="success">Presença confirmada ✓</Badge>
+                      <span class="text-xs text-slate-400">{row.presenceLine}</span>
+                    </p>
+                  ) : (
+                    row.presencePending && (
+                      <p class="mt-2">
+                        <Badge variant="warning" class="font-semibold">Presença não confirmada</Badge>
+                      </p>
+                    )
+                  )}
                 </div>
               </Card>
             ))
@@ -483,38 +457,6 @@ function confirmadasPageUrl(targetPage: number): string {
           )}
         </div>
 
-        <dialog
-          id="mass_cancel_dialog"
-          class="w-[calc(100%-2rem)] max-w-sm rounded-lg border border-slate-200 bg-white p-0 shadow-xl backdrop:bg-slate-900/40"
-        >
-          <div class="p-5">
-            <h2 class="text-base font-semibold text-slate-900">Cancelar atendimentos selecionados?</h2>
-            <p class="mt-2 text-sm text-slate-600">
-              <span id="mass_cancel_dialog_count">0</span> atendimento(s) serão cancelados. Cada
-              responsável recebe um aviso por WhatsApp (motivo: imprevisto da médica) com um link novo pra remarcar,
-              válido por 2 dias.
-            </p>
-            <p id="mass_cancel_dialog_error" class="mt-2 hidden text-sm text-red-700">
-              Não foi possível cancelar. Tente novamente.
-            </p>
-            <div class="mt-5 flex justify-end gap-2">
-              <button
-                type="button"
-                id="mass_cancel_dialog_dismiss"
-                class="rounded-md border border-slate-300 px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50"
-              >
-                Voltar
-              </button>
-              <button
-                type="button"
-                id="mass_cancel_dialog_accept"
-                class="rounded-md bg-red-600 px-3 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                Cancelar atendimentos
-              </button>
-            </div>
-          </div>
-        </dialog>
       </>
     )
   }
@@ -716,79 +658,3 @@ function confirmadasPageUrl(targetPage: number): string {
 
   <ConfirmDeleteDialog />
 </AdminLayout>
-
-<script>
-  const checkboxes = document.querySelectorAll<HTMLInputElement>(".mass-cancel-checkbox");
-  const openBtn = document.getElementById("mass_cancel_open_btn") as HTMLButtonElement | null;
-  const countLabel = document.getElementById("mass_cancel_count");
-  const dialog = document.getElementById("mass_cancel_dialog") as HTMLDialogElement | null;
-  const dialogCount = document.getElementById("mass_cancel_dialog_count");
-  const dialogError = document.getElementById("mass_cancel_dialog_error");
-  const dismissBtn = document.getElementById("mass_cancel_dialog_dismiss") as HTMLButtonElement | null;
-  const acceptBtn = document.getElementById("mass_cancel_dialog_accept") as HTMLButtonElement | null;
-  const selectAllBtn = document.getElementById("select_all_btn") as HTMLButtonElement | null;
-  const selectNoneBtn = document.getElementById("select_none_btn") as HTMLButtonElement | null;
-
-  // Só existe na aba "Resumo do dia" — nas outras abas nada disso está no DOM.
-  if (checkboxes.length && openBtn && countLabel && dialog && dialogCount && dismissBtn && acceptBtn) {
-    function selectedIds(): string[] {
-      return Array.from(checkboxes)
-        .filter((cb) => cb.checked)
-        .map((cb) => cb.value);
-    }
-
-    function refreshCount(): void {
-      const n = selectedIds().length;
-      countLabel!.textContent = String(n);
-      openBtn!.disabled = n === 0;
-    }
-
-    checkboxes.forEach((cb) => cb.addEventListener("change", refreshCount));
-    selectAllBtn?.addEventListener("click", () => {
-      checkboxes.forEach((cb) => (cb.checked = true));
-      refreshCount();
-    });
-    selectNoneBtn?.addEventListener("click", () => {
-      checkboxes.forEach((cb) => (cb.checked = false));
-      refreshCount();
-    });
-    refreshCount();
-
-    openBtn.addEventListener("click", () => {
-      dialogCount!.textContent = String(selectedIds().length);
-      dialogError?.classList.add("hidden");
-      acceptBtn!.disabled = false;
-      acceptBtn!.textContent = "Cancelar atendimentos";
-      dialog!.showModal();
-    });
-
-    dismissBtn.addEventListener("click", () => dialog!.close());
-    dialog.addEventListener("click", (event) => {
-      if (event.target === dialog) dialog!.close();
-    });
-
-    acceptBtn.addEventListener("click", async () => {
-      const ids = selectedIds();
-      if (!ids.length) return;
-
-      acceptBtn!.disabled = true;
-      acceptBtn!.textContent = "Cancelando…";
-      dialogError?.classList.add("hidden");
-
-      const response = await fetch("/api/admin/consultas/cancelar-em-massa", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ appointmentIds: ids }),
-      });
-
-      if (response.ok) {
-        window.location.reload();
-      } else {
-        acceptBtn!.disabled = false;
-        acceptBtn!.textContent = "Cancelar atendimentos";
-        dialogError?.classList.remove("hidden");
-      }
-    });
-  }
-
-</script>
