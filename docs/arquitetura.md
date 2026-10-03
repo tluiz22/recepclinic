@@ -156,3 +156,26 @@ impossíveis de testar, e segue a regra de não criar dezenas de configurações
 **Descartado:** tudo campo a campo (tela grande e combinações demais para testar).
 
 **Resolve:** L24, L25, L26, L29, L30; L28 fica como padrão do produto.
+
+### D4c — Tipos de atendimento
+
+**Decisão: catálogo de serviços por clínica, com categorias de comportamento fixas.**
+
+- Cada clínica cadastra seus **serviços**: nome, duração, preço, agenda em que ocupa horário (D2)
+  e categoria.
+- **Três categorias**, com comportamento no código e testado:
+  - **Consulta**: atendimento comum.
+  - **Retorno**: ligado a uma consulta de origem, com prazo e preço próprios (hoje: grátis, 30 dias,
+    domiciliar sem retorno — vira regra do serviço).
+  - **Exame/procedimento**: preparo, turma com vagas opcional, disponibilidade própria.
+- Os exames do piloto viram serviços da categoria Exame. "Consulta" e "Retorno" viram serviços
+  cadastrados, não mais valores fixos do banco.
+- Os **menus do bot** são montados a partir do catálogo da clínica, agrupados por categoria.
+- Local de atendimento (consultório, domiciliar) continua separado do serviço. O local fictício
+  "Exames" deixa de existir (L08), porque a agenda do serviço resolve isso.
+
+**Por quê:** é o que o genérico (D4a) exige, mantendo poucos comportamentos para testar.
+
+**Descartado:** três tipos fixos para todas (não atende clínicas com outros serviços).
+
+**Resolve:** L06, L08.
