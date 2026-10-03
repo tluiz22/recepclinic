@@ -48,7 +48,7 @@ Só dependências de produção, nenhuma de desenvolvimento:
 - `typescript` 6
 
 Não há biblioteca de WhatsApp (chamadas `fetch` diretas à Graph API da Meta), nem ORM, nem
-framework de testes, nem biblioteca de datas (fuso de São Paulo tratado à mão em `lib/dates.ts`). O
+framework de testes, nem biblioteca de datas (fuso `America/Fortaleza` tratado à mão, em `lib/dates.ts` e no SQL). O
 `package.json` ainda tem nome (`site-ana-karina`) e descrição herdados de um modelo de
 "Agent Skills do Copilot".
 
@@ -153,3 +153,134 @@ Tudo é **de uma conta só**: um número de WhatsApp, um conjunto de templates e
 Referência registrada no planejamento de produto (30/set, confirmar preços antes de decidir):
 Vercel Pro + Supabase Pro ≈ US$ 45/mês; cada projeto Supabase a mais na mesma organização Pro
 ≈ US$ 10/mês.
+
+---
+
+## 1.2 Dados e acesso
+
+### Banco
+
+Um projeto **Supabase** (Postgres) com o schema `public` montado por 38 migrações. Extensões:
+`pgcrypto`, `btree_gist` (implícita na restrição de sobreposição), `pg_cron`, `pg_net` e Vault. Há
+também um schema `internal` (fechado para `anon`/`authenticated`) com a função
+`internal.call_cron_route`, que chama as rotas `/api/cron/*`.
+
+**Nenhuma tabela tem coluna de clínica/consultório.** O banco inteiro é de um consultório só, e os
+dados de configuração ficam em linhas fixas, como a `appointment_settings` com `id = 1`.
+
+### Tabelas (estado em `aad94dd`)
+
+| Grupo | Tabela | Para que serve |
+|---|---|---|
+| **Configuração** | `appointment_settings` | linha única (`id = 1`): durações, intervalo entre atendimentos, prazo do retorno, idade limite da consulta, hora do lembrete |
+| | `clinic_locations` | "locais", com `type` = `clinic` (consultório físico), `home_visit` (domiciliar) ou `exam` (local fictício "Exames"); preços da consulta e do retorno |
+| | `availability_windows` | janelas semanais de atendimento por local (dia da semana, início, fim) |
+| | `exam_types` | exames: duração, preço, preparo, modo `individual` ou `group` (turma) |
+| | `exam_type_availability_windows` | janelas semanais por exame; com `capacity` = turma |
+| | `schedule_blocks` | bloqueios de agenda (período, motivo, quem criou, editou e removeu) |
+| | `notification_recipients` | contatos da equipe que recebem o resumo do dia (consultas e/ou exames) |
+| **Pessoas** | `guardians` | responsável: nome, **telefone único**, endereço domiciliar padrão, ativo |
+| | `patients` | paciente: nome, nascimento, responsável, observações, ativo; `is_guardian_self` = o próprio responsável (adulto no exame) |
+| | `staff_profiles` | perfil do login: nome e `role` = `secretaria` ou `medica` |
+| **Agenda** | `appointments` | atendimento (ver abaixo) |
+| | `booking_links` | link de uso único para marcar/remarcar pela página `/agendar/[token]` |
+| | `waitlist_entries` | quem está na lista de espera (por atendimento) |
+| | `waitlist_openings` | vaga aberta por cancelamento ou remarcação |
+| | `waitlist_offers` | oferta de vaga feita a uma pessoa da lista |
+| **WhatsApp e bot** | `conversation_state` | estado da conversa por telefone (máquina de estados do bot, `context` em JSON, pausa por atendimento humano) |
+| | `whatsapp_messages` | mensagens enviadas/recebidas e status de entrega (`wa_message_id`) |
+| | `bot_funnel_events` | eventos do funil (fluxo, passo, origem bot/web, telefone) |
+| **Auditoria e jobs** | `appointment_events` | trilha do atendimento: tipo do evento, quem, canal, detalhes |
+| | `job_runs` | execuções do lembrete e do resumo do dia (status, totais, automática ou manual) |
+| | `daily_summary_sends` | controle de envio do resumo da manhã |
+
+**`appointments`** é a tabela central (~35 colunas, juntando todas as fases): paciente, local,
+exame, horário, duração, tipo (`first_visit`, `return_visit`, `exam`), status (`scheduled`,
+`confirmed`, `completed`, `canceled`, `no_show`), canal de marcação, preço gravado, endereço
+domiciliar, retorno ligado à consulta de origem (`origin_appointment_id`), autoria (`created_by`,
+`rescheduled_by`, `canceled_by` + canais), lembrete e resposta ao lembrete, presença confirmada,
+cancelamento em massa e turma (`is_group_session`). Sobraram duas colunas sem uso no código:
+`google_event_id` (da época do Google Calendar) e `confirmed_at`.
+
+### Relacionamentos
+
+```text
+guardians 1─┬─N patients 1───N appointments N───1 clinic_locations 1───N availability_windows
+            │                    │   │  └──N───1 exam_types 1───N exam_type_availability_windows
+            │                    │   └── origin_appointment_id → appointments (retorno)
+            ├─N booking_links ───┘ (patient, appointment, location, exam_type)
+            ├─N whatsapp_messages (appointment opcional)
+            └─N bot_funnel_events / conversation_state (pelo telefone, guardian opcional)
+
+appointments 1───N appointment_events
+appointments 1───N waitlist_entries 1───N waitlist_offers N───1 waitlist_openings
+auth.users  1───1 staff_profiles;  auth.users ← created_by/rescheduled_by/canceled_by/
+                                                 patient_confirmed_by/actor_id/ended_by…
+```
+
+O **telefone** é a chave natural do responsável: `guardians.phone` é único no banco inteiro, e o bot
+encontra a conversa e o responsável por ele. O mesmo telefone não pode ser responsável em dois
+cadastros.
+
+### Regras garantidas pelo banco
+
+| Regra | Como |
+|---|---|
+| **Sem sobreposição de atendimentos ativos** | restrição de exclusão `appointments_no_overlap` (GiST) sobre o período `[início, início + duração)` de **todos** os atendimentos ativos que não são turma, **em todos os locais**. Pressupõe uma única agenda (uma médica). |
+| Vagas da turma | funções `book_group_exam_session` / `reschedule_group_exam_session` (`security definer`, trava a janela e conta as vagas) |
+| Marca de turma | gatilho `appointments_set_is_group_session` |
+| Preço gravado | gatilho `appointments_set_price` (retorno = 0, exame = preço do exame, consulta = preço do local) |
+| Lista de espera | gatilho `appointments_waitlist` (`security definer`): fecha entradas e ofertas, abre vaga e chama a rota por `pg_net` |
+| Um "próprio responsável" por responsável | índice único parcial em `patients` |
+| Estados do bot | `check` com a lista de estados (cada estado novo exige uma migração) |
+| Fuso | `America/Fortaleza` fixo nas funções e nos horários dos jobs (horários em UTC no `cron.schedule`) |
+
+### Autenticação
+
+- **Supabase Auth com e-mail e senha.** `POST /api/admin/auth/login` → `signInWithPassword`. A sessão
+  fica em cookie (`@supabase/ssr`, cliente em `lib/supabase/server.ts`).
+- Não há cadastro, convite, recuperação de senha nem troca de senha no sistema: os logins são
+  criados à mão no painel do Supabase. O perfil (`staff_profiles`) é cadastrado por SQL (seed em
+  comentário na `0020`). Hoje só a médica tem perfil.
+- Sem 2FA e sem limite de tentativas próprio (só o do Supabase Auth).
+
+### Autorização
+
+Feita **na aplicação**, no `src/middleware.ts`:
+
+1. Qualquer caminho `/admin/*` ou `/api/admin/*` (fora o login) exige usuário logado. Sem login, vai
+   para `/admin/login`.
+2. O perfil vem de `staff_profiles.role`. **Login sem perfil é tratado como secretária.**
+3. Só a médica acessa `/admin/relatorios` e `/admin/metricas` (incluindo as abas Faltosos e Envios).
+   As outras telas e APIs, Configurações inclusive, são das duas. A tela antiga `/admin/envios` e
+   o Início verificam o perfil por conta própria para redirecionar ou mostrar os links.
+4. `locals.userId` é gravado como autor nas ações (marcar, remarcar, cancelar, presença,
+   bloqueios, lista de espera).
+
+O banco **não conhece os perfis**: secretária e médica têm o mesmo acesso no RLS.
+
+### RLS
+
+Todas as tabelas de `public` estão com RLS ligado. Há três padrões de política:
+
+| Política | Tabelas |
+|---|---|
+| **"authenticated full access"**: todo usuário logado lê e escreve tudo (`auth.uid() is not null`) | `clinic_locations`, `availability_windows`, `appointment_settings`, `guardians`, `patients`, `appointments`, `whatsapp_messages`, `conversation_state`, `booking_links`, `exam_types`, `exam_type_availability_windows`, `notification_recipients`, `schedule_blocks`, `waitlist_entries` |
+| **Só leitura** para logados (escrita só pela service role) | `staff_profiles`, `bot_funnel_events`, `job_runs`, `waitlist_offers`, `waitlist_openings`; `appointment_events` também aceita inserção |
+| **Sem política** (só service role) | `daily_summary_sends` |
+
+`anon` não tem política nenhuma: sem login, o Postgres não devolve nada. As 10 migrações que usam
+`auth.uid()` usam só para "está logado", nunca para dono de linha.
+
+### Acesso sem login (service role, ignora o RLS)
+
+| Quem | Como se autentica |
+|---|---|
+| Webhook do WhatsApp (`/api/whatsapp/webhook`) e todo o bot | assinatura `X-Hub-Signature-256` com o `WHATSAPP_APP_SECRET` (HMAC, comparação em tempo constante); `GET` de verificação com `WHATSAPP_WEBHOOK_VERIFY_TOKEN` |
+| Rotas do agendador (`/api/cron/*`) | `Authorization: Bearer <CRON_SECRET>` |
+| Página `/agendar/[token]` e suas APIs | o **token é o `id` (UUID) do `booking_link`**, com validade (`expires_at`) e uso único (`used_at`) |
+| Página `/preparo/[id]` | o `id` (UUID) do tipo de exame; mostra só nome e preparo |
+| Saída da lista de espera pela tela (`/api/admin/.../waitlist`) | login normal (middleware) e service role para gravar em `waitlist_offers`/`openings` |
+
+O código que roda com a service role confia apenas nos filtros que ele mesmo aplica. Como não
+existe clínica no modelo, nenhum desses caminhos filtra por clínica.
