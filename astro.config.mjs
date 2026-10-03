@@ -4,11 +4,7 @@ import vercel from "@astrojs/vercel";
 
 const site =
   process.env.SITE_URL ??
-  (process.env.VERCEL_ENV === "production"
-    ? "https://draanakarinapneumo.com.br"
-    : process.env.VERCEL_URL
-      ? `https://${process.env.VERCEL_URL}`
-      : "http://localhost:4321");
+  (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:4321");
 
 export default defineConfig({
   site,

@@ -18,7 +18,7 @@
 
 | Fase | Entrega | Situação |
 |---|---|---|
-| F0 | Base de trabalho | **em andamento** (F0.1 concluída) |
+| F0 | Base de trabalho | **em andamento** (F0.1 e F0.2 concluídas) |
 | F1 | Testes das regras atuais | a detalhar |
 | F2 | Schema novo | a detalhar |
 | F3 | Acesso ao banco e contexto da clínica | a detalhar |
@@ -66,6 +66,9 @@ próprio, banco local e testes rodando no CI. Nenhuma regra de negócio muda nes
   `localhost`.
 - **Validar:** `git grep -n "draanakarinapneumo" -- astro.config.mjs package.json public` vazio;
   build sem erro.
+- **Feito em 03/out**, além do previsto: `resolveSiteUrl()` (links enviados pelo bot) perdeu o mesmo
+  domínio da Dra. em produção, e os botões "Voltar para o site" de `/agendar` e `/preparo` saíram
+  (decisão do cliente; voltam na F5).
 
 ### F0.3 — Supabase local e migrações pela CLI (D5, D8)
 
@@ -135,7 +138,8 @@ perfil da clínica.
 
 **Escopo:** `/agendar` e `/preparo` com nome, logo, cor e profissionais da clínica; aplicativo em
 `app.recepclinic.com.br`; links para a política de privacidade e os termos, que ficam no site do
-produto (projeto separado, ver D7).
+produto (projeto separado, ver D7). O botão "Voltar para o site", removido na F0.2 (decisão do
+cliente, 03/out), volta apontando para o site da clínica, só quando ela tiver um.
 
 ## F6 — WhatsApp por clínica e bot
 

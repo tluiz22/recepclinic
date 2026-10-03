@@ -155,15 +155,12 @@ export function isPastIdleTimeout(lastUpdatedAt: Date, now: Date = new Date()): 
 }
 
 // Base pública do site, para montar o link de `/agendar/[token]` enviado
-// pelo bot. Mesma lógica de fallback do `astro.config.mjs` (site institucional
-// em produção, preview da Vercel, ou localhost em dev) — só que resolvida em
-// runtime, já que o webhook roda como função de servidor.
+// pelo bot. Mesma lógica de fallback do `astro.config.mjs` (`SITE_URL`,
+// endereço da Vercel ou localhost em dev) — só que resolvida em runtime, já
+// que o webhook roda como função de servidor.
 export function resolveSiteUrl(): string {
   const explicit = import.meta.env.SITE_URL as string | undefined;
   if (explicit) return explicit.replace(/\/$/, "");
-
-  const vercelEnv = import.meta.env.VERCEL_ENV as string | undefined;
-  if (vercelEnv === "production") return "https://draanakarinapneumo.com.br";
 
   const vercelUrl = import.meta.env.VERCEL_URL as string | undefined;
   if (vercelUrl) return `https://${vercelUrl}`;

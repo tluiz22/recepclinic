@@ -1,7 +1,7 @@
 {
-  "name": "site-ana-karina",
+  "name": "recepclinic",
   "version": "1.0.0",
-  "description": "Este pacote contém uma estrutura de **Agent Skills** para orientar o GitHub Copilot no ciclo de desenvolvimento de demandas pessoais.",
+  "description": "RecepClinic — a recepção inteligente da sua clínica: atendimento pelo WhatsApp, agendamento, lembretes e painel da clínica.",
   "main": "index.js",
   "directories": {
     "doc": "docs"

@@ -1,6 +1,6 @@
 {
-  "name": "Painel do consultório — Dra. Ana Karina",
-  "short_name": "Consultório",
+  "name": "RecepClinic",
+  "short_name": "RecepClinic",
   "start_url": "/admin/dashboard",
   "scope": "/admin",
   "display": "standalone",

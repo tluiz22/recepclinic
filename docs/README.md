@@ -4,8 +4,8 @@
 >
 > - **Etapas 0 a 4 concluídas**: cópia isolada, [diagnóstico](diagnostico.md), [limites](limites.md),
 >   [arquitetura](arquitetura.md) (decisões D1–D8) e [plano](plano.md) (fases F0–F10).
-> - **Produto: F0.1 concluída** (site da Dra. fora do repositório). **Próxima etapa: F0.2** (nome do
->   produto).
+> - **Produto: F0.1 e F0.2 concluídas** (site da Dra. fora do repositório; nome RecepClinic).
+>   **Próxima etapa: F0.3** (Supabase local), que depende do Docker e da CLI do Supabase instalados.
 > - **Frente paralela, o site** `www.recepclinic.com.br`: [`site-plano.md`](site-plano.md), etapas
 >   S0–S6, a executar numa **sessão separada, na pasta `~/Documents/Desenvolvimento/recepclinic-site`**
 >   (nunca nesta pasta, para as duas sessões não se cruzarem). **S0 concluída em 03/out**: repositório
