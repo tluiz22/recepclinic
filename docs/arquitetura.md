@@ -230,3 +230,23 @@ riscos (L12, L38).
 **Descartado:** manter secretária/médica (sem quem gerencie a equipe nem suporte da plataforma).
 
 **Resolve:** L13, L14, L15.
+
+## D7 — Endereço do produto (03/out/2026)
+
+**Decisão: um domínio único do RecepClinic.**
+
+- O mesmo domínio serve o **painel**, os **links públicos** enviados por WhatsApp (agendar, preparo,
+  lista de espera), a **política de privacidade** e os **termos de uso** do produto.
+- A clínica é identificada pelo **token do link** ou pelo **login**, não pelo endereço.
+- As páginas públicas mostram a **marca da clínica** (nome, logo, cor, profissionais; D4b), não a
+  do RecepClinic em primeiro plano.
+- **O site da Dra. sai do produto** e fica no repositório do piloto, como cliente externo. Ele
+  pode ter um botão "Agendar pelo WhatsApp" apontando para o número da clínica.
+- Domínio próprio da clínica fica para quando alguma pedir.
+- **Pendente do cliente**: escolher e registrar o domínio (ex.: verificar `recepclinic.com.br` no
+  registro.br).
+
+**Descartado:** subdomínio por clínica (trabalho de DNS e certificado sem ganho de segurança, já que
+o token identifica a clínica); domínio da clínica (trabalho por clínica).
+
+**Resolve:** L27, L31, L32 (as páginas entram no plano).
