@@ -103,8 +103,19 @@ function countFailedSends(events: EventRow[], messages: MessageRow[], scheduledA
   // Última tentativa de cada tipo (lista já em ordem cronológica).
   const latestByType = new Map<string, MessageRow>();
   for (const message of outbound) latestByType.set(message.message_type, message);
+  // Confirmação com falha deixa de contar quando um aviso de remarcação sai
+  // com sucesso depois — ele já leva a data e o local atualizados (decisão do
+  // cliente, 02/out/2026).
+  const supersededByReschedule = (m: MessageRow) =>
+    m.message_type === "appointment_confirmation" &&
+    outbound.some(
+      (later) =>
+        later.message_type === "appointment_reschedule" &&
+        DELIVERED.has(later.status ?? "") &&
+        Date.parse(later.created_at) > Date.parse(m.created_at)
+    );
   let failed = [...latestByType.values()].filter(
-    (m) => m.status === "failed" || m.status === "skipped_no_template"
+    (m) => (m.status === "failed" || m.status === "skipped_no_template") && !supersededByReschedule(m)
   ).length;
 
   // "Não enviado" (Fase 22 · etapa 3) só conta se nada do mesmo tipo saiu
