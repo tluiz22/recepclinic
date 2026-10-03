@@ -30,4 +30,5 @@ npm run dev      # inicia o servidor de desenvolvimento
 npm run build    # gera o build de produção
 npm run preview  # serve o build de produção localmente
 npm run check    # executa a verificação de tipos do Astro
+npm test         # roda os testes automatizados (Vitest)
 ```

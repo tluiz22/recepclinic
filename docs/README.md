@@ -4,8 +4,9 @@
 >
 > - **Etapas 0 a 4 concluídas**: cópia isolada, [diagnóstico](diagnostico.md), [limites](limites.md),
 >   [arquitetura](arquitetura.md) (decisões D1–D8) e [plano](plano.md) (fases F0–F10).
-> - **Produto: F0.1 e F0.2 concluídas** (site da Dra. fora do repositório; nome RecepClinic).
->   **Próxima etapa: F0.3** (Supabase local), que depende do Docker e da CLI do Supabase instalados.
+> - **Produto: F0.1, F0.2 e F0.4 concluídas** (site da Dra. fora do repositório; nome RecepClinic;
+>   Vitest e `npm test` no CI). **Próxima etapa: F0.3** (Supabase local); Docker (OrbStack), CLI do
+>   Supabase e `gh` já instalados.
 > - **Frente paralela, o site** `www.recepclinic.com.br`: [`site-plano.md`](site-plano.md), etapas
 >   S0–S6, a executar numa **sessão separada, na pasta `~/Documents/Desenvolvimento/recepclinic-site`**
 >   (nunca nesta pasta, para as duas sessões não se cruzarem). **S0 concluída em 03/out**: repositório
@@ -15,7 +16,6 @@
 > - **Pendências do cliente**:
 >   - abrir o CNPJ (SLU, ME, Simples Nacional);
 >   - conta na Cloudflare e troca do DNS no registro.br (até a S5 do site);
->   - instalar o Docker e a CLI do Supabase (necessários na F0.3);
 >   - comprar o chip de testes do RecepClinic (necessário na F6);
 >   - advogado para revisar as páginas legais (antes do 1º piloto).
 > - **Triagem do piloto**: nenhum commit novo do piloto desde `aad94dd` até esta data.

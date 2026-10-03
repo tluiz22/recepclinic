@@ -18,7 +18,7 @@
 
 | Fase | Entrega | Situação |
 |---|---|---|
-| F0 | Base de trabalho | **em andamento** (F0.1 e F0.2 concluídas) |
+| F0 | Base de trabalho | **em andamento** (F0.1, F0.2 e F0.4 concluídas) |
 | F1 | Testes das regras atuais | a detalhar |
 | F2 | Schema novo | a detalhar |
 | F3 | Acesso ao banco e contexto da clínica | a detalhar |
@@ -72,8 +72,7 @@ próprio, banco local e testes rodando no CI. Nenhuma regra de negócio muda nes
 
 ### F0.3 — Supabase local e migrações pela CLI (D5, D8)
 
-- **Pré-requisitos do cliente:** instalar o Docker (Docker Desktop ou OrbStack) e a CLI do
-  Supabase (`brew install supabase/tap/supabase`). Nenhum dos dois está instalado hoje.
+- **Pré-requisitos do cliente:** Docker (OrbStack) e CLI do Supabase, instalados em 03/out.
 - `supabase init` (`supabase/config.toml`). As 38 migrações do piloto vão para
   `supabase/piloto-migrations/` como **referência, sem aplicar** (o schema novo é a F2). A pasta
   `supabase/migrations/` fica vazia até a F2.
@@ -88,6 +87,9 @@ próprio, banco local e testes rodando no CI. Nenhuma regra de negócio muda nes
   configuração.
 - CI (`.github/workflows/ci.yml`): `npm ci` → `check` → `test` → `build`.
 - **Validar:** `npm test` passa localmente; o CI do push fica verde no GitHub.
+- **Feita em 03/out, antes da F0.3** (decisão do cliente, enquanto instalava o Docker). O CI já
+  existia (herdado do piloto); ganhou o passo `npm test`. O `phone.ts` não tem regra de nono dígito:
+  o primeiro teste cobre normalização E.164, formatação e link do wa.me.
 
 ---
 
