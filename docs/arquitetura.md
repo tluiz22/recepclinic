@@ -104,3 +104,30 @@ como alternativa).
 versão por clínica para manter).
 
 **Resolve:** L18, L19, L20 (encaminha), L21, L22, L25 (parte das mensagens).
+
+## D4 — Nicho e configuração por clínica (03/out/2026)
+
+### D4a — Escopo do nicho
+
+**Decisão: genérico desde a 1ª versão.** A pediatria (o piloto, e pediatras e alergistas como
+nicho comercial inicial) é um caso de uso entre outros, não uma premissa do modelo.
+
+- **Modelo**: "contato" (quem conversa no WhatsApp) → pacientes. O paciente **pode ser o próprio
+  contato** em qualquer atendimento. Um contato pode cuidar de vários pacientes (pais, cuidadores,
+  convênios com muitas crianças).
+- **Regras de idade** (idade limite, restrições de retorno ou de quem pode marcar por si)
+  configuráveis por clínica. Numa clínica de adultos ficam desligadas.
+- **Vocabulário configurável por clínica** nos textos do bot, nas páginas públicas e no painel
+  (ex.: "criança" × "paciente", "responsável" × "contato"). Como configurar está na D4b.
+
+**Por quê:** decisão do cliente. O produto não deve depender de um nicho e precisa servir clínicas
+de adultos sem mudar o modelo depois.
+
+**Implicação registrada:** é a escolha de maior esforço. Os textos do bot (`messages.ts`, 946
+linhas), as notificações, as páginas públicas e as telas passam por revisão de vocabulário. Para não
+cair em "dezenas de configurações" (regra 4 do README), a forma de configurar deve ser enxuta
+(D4b).
+
+**Descartado:** pediatria com modelo aberto a adulto, mas vocabulário pediátrico; e só pediatria.
+
+**Resolve:** L07; parte de L24.
