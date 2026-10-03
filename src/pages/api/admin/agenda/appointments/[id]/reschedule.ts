@@ -226,8 +226,8 @@ export const POST: APIRoute = async ({ params, request, cookies, redirect, local
       locationType: location?.type,
       locationAddress: isHomeVisit ? homeVisitAddress : (location?.address ?? null),
     });
-    // O preparo do exame sai depois que a Meta avisar que esta mensagem foi
-    // entregue (webhook, `preparationAfterDelivery.ts`) — nunca antes dela.
+    // Remarcação não reenvia o preparo do exame (envio único, na marcação —
+    // `preparationAfterDelivery.ts`).
   }
 
   return redirect(`/admin/agenda?date=${date}`);

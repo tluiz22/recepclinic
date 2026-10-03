@@ -392,11 +392,11 @@ interface ExamPreparationInput {
   examTypeId: string;
 }
 
-// Preparo do exame (Fase 18). Regra do cliente (02/out/2026): só depois da
-// confirmação do agendamento/remarcação ou da presença confirmada, nunca
-// junto do lembrete — quem chama é o webhook, quando a Meta avisa que a
-// mensagem-gatilho foi entregue (`preparationAfterDelivery.ts`), a presença
-// marcada pela tela e o "Reenviar preparo do exame". Janela de 24h aberta → texto formatado pela
+// Preparo do exame (Fase 18). Regra do cliente (03/out/2026): uma única vez,
+// depois da confirmação da marcação — nunca junto do lembrete, nem na
+// remarcação ou na presença confirmada. Quem chama é o webhook, quando a
+// Meta avisa que a confirmação foi entregue (`preparationAfterDelivery.ts`),
+// e o "Reenviar preparo do exame". Janela de 24h aberta → texto formatado pela
 // médica + link da página `/preparo/[id]`; fechada → template com o nome do
 // exame e o link (parâmetro de template não aceita quebra de linha, por isso
 // o texto não vai direto). Exame sem preparo cadastrado → não envia nada

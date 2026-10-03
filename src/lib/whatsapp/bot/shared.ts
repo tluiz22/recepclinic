@@ -357,8 +357,7 @@ export async function endFlow(
 
 // --- envio + log ---------------------------------------------------------
 
-// `appointmentId`: liga a mensagem ao atendimento (trilha; e, para
-// `bot_presence_confirmed`, gatilho do preparo do exame depois da entrega).
+// `appointmentId`: liga a mensagem ao atendimento (trilha).
 export async function sendAndLog(
   supabase: SupabaseClient,
   guardianId: string | null,

@@ -401,8 +401,9 @@ export const POST: APIRoute = async ({ params, request, redirect }) => {
     }
   }
 
-  // O preparo do exame sai depois que a Meta avisar que a confirmação ou a
-  // remarcação foi entregue (webhook, `preparationAfterDelivery.ts`).
+  // O preparo do exame sai uma vez, depois que a Meta avisar que a
+  // confirmação da marcação foi entregue (webhook, `preparationAfterDelivery.ts`);
+  // a remarcação não reenvia.
 
   // `used_at` já foi gravado atomicamente acima — só falta guardar a
   // consulta gerada, para a página mostrar a confirmação mesmo se o link

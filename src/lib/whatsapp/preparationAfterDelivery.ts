@@ -1,21 +1,15 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { sendExamPreparation } from "./notifications";
 
-// Preparo do exame depois da entrega (ajuste de 02/out/2026). Regra do
-// cliente: as orientações só saem depois de o paciente receber a confirmação
-// da marcação (ou da remarcação) ou de confirmar a presença — nunca antes,
-// nem junto com o lembrete. Para garantir que cheguem DEPOIS no celular, o
-// preparo espera a Meta avisar (webhook de status) que a mensagem-gatilho
-// foi entregue ou lida; um intervalo fixo não garantia a ordem.
-//
-// Presença confirmada pela tela não tem mensagem antes: o preparo sai na
-// hora (`api/admin/agenda/appointments/[id]/presence.ts`).
+// Preparo do exame depois da entrega. Regra do cliente (03/out/2026, revendo
+// a de 02/out): as orientações saem **uma única vez**, depois que o paciente
+// recebe a confirmação da marcação do exame — nunca junto com o lembrete, nem
+// de novo na remarcação ou na presença confirmada (pelo lembrete ou pela
+// tela). Para chegarem DEPOIS no celular, o preparo espera a Meta avisar
+// (webhook de status) que a confirmação foi entregue ou lida. O botão
+// "Reenviar preparo do exame" da Agenda continua para reenvio manual.
 
-export const PREPARATION_TRIGGER_TYPES = [
-  "appointment_confirmation",
-  "appointment_reschedule",
-  "bot_presence_confirmed",
-] as const;
+export const PREPARATION_TRIGGER_TYPES = ["appointment_confirmation"] as const;
 
 export interface DeliveredMessage {
   appointment_id: string | null;
@@ -25,9 +19,9 @@ export interface DeliveredMessage {
 
 /**
  * Chamado pelo webhook quando uma mensagem passa a "entregue"/"lida" (uma
- * única vez por mensagem). Envia o preparo se ela é gatilho, o atendimento é
- * um exame ativo e futuro, ela é o gatilho mais recente do atendimento e
- * nenhum preparo saiu depois dela.
+ * única vez por mensagem). Envia o preparo se ela é a confirmação da
+ * marcação, o atendimento é um exame ativo e futuro e nenhum preparo foi
+ * enviado antes para ele (envio único).
  */
 export async function sendPreparationAfterDelivery(
   supabase: SupabaseClient,
@@ -36,25 +30,23 @@ export async function sendPreparationAfterDelivery(
   if (!message.appointment_id) return;
   if (!(PREPARATION_TRIGGER_TYPES as readonly string[]).includes(message.message_type)) return;
 
-  // Um gatilho mais novo (ex.: remarcou antes de a confirmação ser entregue)
-  // decide sozinho; e um preparo já enviado depois deste gatilho basta.
-  const { data: later } = await supabase
+  // Envio único: qualquer preparo já registrado para o atendimento basta (o
+  // que falhou é reenviado pelo botão da Agenda).
+  const { data: previous } = await supabase
     .from("whatsapp_messages")
-    .select("message_type")
+    .select("id")
     .eq("appointment_id", message.appointment_id)
     .eq("direction", "outbound")
-    .in("message_type", [...PREPARATION_TRIGGER_TYPES, "exam_preparation"])
-    .gt("created_at", message.created_at)
+    .eq("message_type", "exam_preparation")
     .limit(1);
-  if (later?.length) return;
+  if (previous?.length) return;
 
   await sendPreparationIfExam(supabase, message.appointment_id);
 }
 
 /**
  * Envia o preparo se o atendimento é um exame ativo e futuro com responsável
- * com telefone; senão não faz nada. Usado depois da entrega do gatilho e na
- * presença confirmada pela tela (que não tem mensagem antes).
+ * com telefone; senão não faz nada. Usado depois da entrega da confirmação.
  */
 export async function sendPreparationIfExam(supabase: SupabaseClient, appointmentId: string): Promise<void> {
   const { data: appointment } = await supabase

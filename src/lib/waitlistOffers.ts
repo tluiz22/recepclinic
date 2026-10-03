@@ -683,8 +683,8 @@ export async function acceptOffer(
     }),
   ]);
 
-  // Aviso de remarcação de sempre (e o preparo do exame depois da entrega,
-  // pela regra de 02/out).
+  // Aviso de remarcação de sempre (sem novo preparo do exame: ele sai uma
+  // vez só, na marcação).
   const patient = appointment.patients;
   const phone = patient?.guardians?.phone;
   if (patient && phone) {

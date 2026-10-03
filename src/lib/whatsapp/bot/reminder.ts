@@ -99,8 +99,6 @@ export async function handleReminderTap(
 
   if (tap.action === "confirm") {
     if (confirmNow) {
-      // Gatilho do preparo do exame: sai depois que esta resposta for
-      // entregue (`preparationAfterDelivery.ts`).
       const body = texts.reminderPresenceConfirmedText(appointment.patient_name, whenLabel);
       await sendAndLog(
         supabase,
