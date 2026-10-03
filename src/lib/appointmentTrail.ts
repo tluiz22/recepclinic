@@ -219,6 +219,7 @@ function describeEvent(event: EventRow, staff: Map<string, string>): TrailEntry 
       return { at, text: `${kind} não enviado — ${reason}`, tone: "danger" };
     }
     case "reminder_resent":
+      if (details.automatic) return { at, text: "Lembrete reenviado automaticamente (sem resposta em 4h)", tone: "neutral" };
       return { at, text: `Lembrete ${details.first ? "enviado" : "reenviado"} por ${by}`, tone: "neutral" };
     case "preparation_resent":
       return { at, text: `Preparo do exame reenviado por ${by}`, tone: "neutral" };

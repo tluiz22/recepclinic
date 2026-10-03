@@ -47,7 +47,7 @@ const items = await loadAgendaItems(
   supabase,
   dayStart,
   dayEnd,
-  `patient_id, appointment_type, home_visit_address, reminder_sent_at, ${AUTHORSHIP_COLUMNS}, ${PRESENCE_COLUMNS}, patients ( full_name, guardians ( full_name, phone ) ), clinic_locations ( name, type )`
+  `patient_id, appointment_type, home_visit_address, reminder_sent_at, reminder_response, ${AUTHORSHIP_COLUMNS}, ${PRESENCE_COLUMNS}, patients ( full_name, guardians ( full_name, phone ) ), clinic_locations ( name, type )`
 );
 
 const staffLabels = items.some((item) => item.kind === "appointment")
@@ -66,6 +66,8 @@ const reminderActions = await fetchReminderActions(
             scheduled_at: item.start.toISOString(),
             reminder_sent_at: (item.appointment.reminder_sent_at as string | null) ?? null,
             rescheduled_at: (item.appointment.rescheduled_at as string | null) ?? null,
+            reminder_response: (item.appointment.reminder_response as string | null) ?? null,
+            patient_confirmed_at: (item.appointment.patient_confirmed_at as string | null) ?? null,
           },
         ]
       : []
@@ -327,7 +329,9 @@ const hasMassCancel = items.some((item) => massCancelIds(item).length > 0);
                       <span class="text-xs text-slate-400">
                         {reminderActions.get(appointment.id) === "send"
                           ? "Sem lembrete automático"
-                          : "Lembrete não entregue"}
+                          : reminderActions.get(appointment.id) === "resend_unanswered"
+                            ? "Lembrete sem resposta"
+                            : "Lembrete não entregue"}
                       </span>
                       <ResendReminderButton
                         appointmentId={appointment.id}

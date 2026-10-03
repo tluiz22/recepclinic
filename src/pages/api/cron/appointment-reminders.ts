@@ -4,6 +4,7 @@ import { createServiceClient } from "../../../lib/supabase/service";
 import { isReminderTemplateConfigured, sendAppointmentReminder } from "../../../lib/whatsapp/notifications";
 import { finishJobRun, logAppointmentEvent, startJobRun } from "../../../lib/audit";
 import { fetchReminderHour, fortalezaHour, reminderWindow } from "../../../lib/automaticSends";
+import { autoResendUnanswered } from "../../../lib/reminderResend";
 
 // Dispara o lembrete de consulta para todo agendamento ativo do dia seguinte
 // (00:00 às 23:59 de Fortaleza, `reminderWindow`) que ainda não recebeu
@@ -41,10 +42,16 @@ export const GET: APIRoute = async ({ request, url }) => {
   const supabase = createServiceClient();
 
   const scheduled = url.searchParams.get("trigger") === "scheduled";
+
+  // Reenvio automático do lembrete sem resposta há 4h (03/out/2026) — toda
+  // chamada, de hora em hora; a função só age entre 7h e 20h. Fica na trilha
+  // ("Lembrete reenviado automaticamente"), sem linha em `job_runs`.
+  const autoResent = await autoResendUnanswered(supabase);
+
   if (scheduled) {
     const reminderHour = await fetchReminderHour(supabase);
     if (fortalezaHour(new Date()) !== reminderHour) {
-      return json({ skipped: "fora_do_horario", reminder_hour: reminderHour });
+      return json({ skipped: "fora_do_horario", reminder_hour: reminderHour, auto_resent: autoResent });
     }
   }
 
