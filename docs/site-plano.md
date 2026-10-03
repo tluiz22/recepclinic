@@ -7,6 +7,11 @@
 > o que foi feito e os comandos para o cliente validar; **parar até a confirmação explícita**;
 > nenhuma decisão de negócio tomada sozinha. Dúvidas novas: uma de cada vez, com opção recomendada.
 >
+> **Onde a sessão do site trabalha:** na pasta `~/Documents/Desenvolvimento/recepclinic-site`
+> (repositório `tluiz22/recepclinic-site`). Ela **só lê** este arquivo, no repositório do produto, e
+> **nunca faz commit no repositório do produto**: as duas sessões podem rodar ao mesmo tempo sem
+> conflito.
+>
 > **Por que o site vem agora:** a verificação da empresa e o cadastro como **Tech Provider** na
 > Meta (pendência registrada no plano do produto, a tratar **depois** do site) exigem um site no
 > domínio da empresa, com nome, contato e política de privacidade.
@@ -29,8 +34,8 @@
   Criado vazio pelo cliente no GitHub (o `gh` não está instalado).
 - **Tecnologia**: Astro em modo estático, CSS próprio com os tokens da proposta de valor, sem
   JavaScript além do tema claro/escuro. CI no GitHub (`check` + `build`).
-- **Este plano muda de casa** na etapa S1: vira `docs/plano.md` do repositório do site, e aqui fica
-  só um apontamento.
+- **Este plano é copiado** na etapa S1 para `docs/plano.md` do repositório do site, que passa a ser
+  a versão viva (a sessão do site o atualiza lá). Este arquivo fica como registro do planejamento.
 - **Texto do Início**: o posicionamento **genérico** do produto (D4a), "RecepClinic — a recepção
   inteligente da sua clínica", com a **pediatria como origem** ("nasceu num consultório
   pediátrico"), não como público único. **Sem citar a Dra. Ana Karina** (exige autorização) e **sem
@@ -55,8 +60,10 @@
 
 ### S0 — Preparação (cliente, pode começar já)
 
-- Criar o repositório **vazio e privado** `tluiz22/recepclinic-site` no GitHub.
-- Criar a conta na **Cloudflare** (plano Free), adicionar o domínio `recepclinic.com.br` e **trocar
+- Criar o repositório **vazio e privado** `tluiz22/recepclinic-site` no GitHub e cloná-lo:
+  `git clone https://github.com/tluiz22/recepclinic-site.git ~/Documents/Desenvolvimento/recepclinic-site`.
+  É aí que a sessão do site é aberta. **Só isto é necessário para começar.**
+- Criar a conta na **Cloudflare** (pode ser feito depois, até a S5) (plano Free), adicionar o domínio `recepclinic.com.br` e **trocar
   os servidores DNS no registro.br** pelos que a Cloudflare indicar. A troca pode levar até 24–48h
   para valer, por isso convém fazer cedo.
 - **Validar:** painel da Cloudflare mostra o domínio como "Active".
@@ -67,7 +74,7 @@
   rodapé (contato, links legais, **"RecepClinic é uma marca de [razão social] · CNPJ [em
   abertura]"** vindo de um único arquivo de configuração).
 - Tokens de cor e fontes da proposta de valor, tema claro e escuro, celular primeiro.
-- Mover este plano para `docs/plano.md` do site; aqui fica um apontamento.
+- Copiar este plano para `docs/plano.md` do site (versão viva a partir daqui).
 - CI (`check` + `build`).
 - **Validar:** `npm run dev` abre o esqueleto; `npm run build` sem erro.
 

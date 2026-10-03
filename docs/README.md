@@ -7,9 +7,10 @@
 > - **Produto, próxima etapa: F0.1** (tirar o site da Dra. deste repositório). Nada de código foi
 >   alterado ainda. Começar só com a confirmação do cliente.
 > - **Frente paralela, o site** `www.recepclinic.com.br`: [`site-plano.md`](site-plano.md), etapas
->   S0–S6, a executar numa **sessão separada**. A S0 é do cliente: criar o repositório
->   `tluiz22/recepclinic-site`, a conta na Cloudflare e trocar o DNS no registro.br. A pasta
->   `~/Documents/Desenvolvimento/recepclinic-site` é criada pela própria sessão na S1.
+>   S0–S6, a executar numa **sessão separada, na pasta `~/Documents/Desenvolvimento/recepclinic-site`**
+>   (nunca nesta pasta, para as duas sessões não se cruzarem). Para começar basta o cliente criar o
+>   repositório vazio `tluiz22/recepclinic-site` e cloná-lo nessa pasta. Cloudflare e DNS podem vir
+>   depois (até a S5).
 > - **Depois do site**: cadastro como Tech Provider na Meta (ver "Frentes paralelas" no plano).
 > - **Pendências do cliente**:
 >   - abrir o CNPJ (SLU, ME, Simples Nacional);
