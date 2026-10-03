@@ -250,3 +250,75 @@ riscos (L12, L38).
 o token identifica a clínica); domínio da clínica (trabalho por clínica).
 
 **Resolve:** L27, L31, L32 (as páginas entram no plano).
+
+## D8 — Ambientes e planos (03/out/2026)
+
+**Decisão: local + staging gratuito + produção paga só a partir do 1º piloto.**
+
+| Ambiente | Para quê | Onde | Custo |
+|---|---|---|---|
+| Local | desenvolver e rodar os testes | Supabase na máquina (CLI + Docker) | US$ 0 |
+| Staging | testar com WhatsApp de verdade, **só com números de teste** | projeto Supabase separado + preview da Vercel | US$ 0 |
+| Produção | 1º piloto do RecepClinic em diante | **Supabase Pro** (backup diário) + **Vercel Pro** (uso comercial) | ~US$ 45/mês |
+
+- **Nenhum ambiente do RecepClinic usa o banco, o número ou os segredos do piloto.**
+- O Free do Supabase permite 2 projetos ativos por organização (o piloto usa um); se faltar vaga,
+  o staging vai para uma organização separada. O Docker é pré-requisito do ambiente local.
+- O piloto atual não muda: segue a decisão já tomada de ir para produção no gratuito.
+
+**Por quê:** até o 1º piloto não há dados reais nem uso comercial; os planos pagos entram quando
+passam a ser necessários (backup, termos da Vercel).
+
+**Descartado:** sem ambiente local (testes e desenvolvimento num banco compartilhado); produção no
+gratuito (sem backup e fora dos termos comerciais da Vercel).
+
+**Resolve:** L36, L41, L48.
+
+---
+
+## Padrões assumidos (revisáveis)
+
+Pontos dos limites com caminho óbvio, que não precisaram de decisão. Qualquer um pode ser revisto.
+
+| Limite | Padrão |
+|---|---|
+| L16 Gestão de usuários | Convite por e-mail feito pelo Administrador da clínica, recuperação e troca de senha pelo próprio Supabase Auth. Fim dos logins criados à mão. |
+| L17 2FA / tentativas | Fica para P2. No P1, só o limite de tentativas do Supabase Auth. |
+| L23 Webhook | Responde 200 logo depois de validar e registrar o evento; o processamento continua em seguida, sem segurar a resposta. Eventos repetidos da Meta são ignorados pelo id da mensagem. |
+| L33 Envios automáticos | Cada execução percorre as clínicas ativas, cada uma com seu horário, fuso e contatos; a falha de uma não para as outras e fica registrada com a clínica. |
+| L34 Agendador | Configuração do `pg_cron` e dos segredos feita por migração e script, igual em todos os ambientes. |
+| L35 Gatilho da lista de espera | Mantido como está; revisto só se atrapalhar os testes. |
+| L39 Variáveis de ambiente | Validadas na subida da aplicação; só as da plataforma (as da clínica ficam no banco, D3). |
+| L40 Datas e fuso | Biblioteca de datas com suporte a fuso, usada em todo o código, junto do fuso por clínica (D4b). |
+| L42 LGPD | No P1: exclusão (anonimização) de paciente e contato a pedido, política de retenção escrita, termo de tratamento de dados e política de privacidade do produto (D7). Contrato com as clínicas: fora do código, pendente do cliente. |
+| L43 Logs | Sem telefone, nome ou texto de mensagem nos logs; só ids e a clínica. |
+| L44 Segurança das páginas | Cabeçalhos de segurança e `robots.txt` bloqueando painel e links públicos. |
+| L45 Observabilidade | Ferramenta de erros com a clínica em cada erro e monitor externo do painel e do webhook. Escolha da ferramenta no plano (etapa 4). |
+| L46 Formulários | Proteção de origem do Astro ligada explicitamente na configuração. |
+| L47 Onboarding | No P1, a clínica é criada pelo Suporte RecepClinic; o Administrador da clínica faz o resto pela tela (equipe, perfil, identidade, serviços, agendas, disponibilidade, conectar WhatsApp). Autocadastro fica para depois. |
+| L49 Cobrança | Sem billing. Só contadores de uso por clínica (mensagens enviadas, atendimentos) para não fechar a porta. |
+| L50 Custo da Meta | Levantar a tabela atual de preços por mensagem antes de definir o preço do produto (tarefa do cliente, fora do código). |
+
+## Cobertura dos limites
+
+Todos os 50 limites têm destino:
+
+| Destino | Limites |
+|---|---|
+| D1 Isolamento | L01, L03, L04, L05, L10, L11, L13 |
+| D2 Agendas | L02 |
+| D3 WhatsApp | L18, L19, L20, L21, L22 |
+| D4 Nicho e configuração | L06, L07, L08, L24, L25, L26, L28, L29, L30 |
+| D5 Evolução do código | L09, L12, L37, L38 |
+| D6 Papéis | L13, L14, L15 |
+| D7 Domínio | L27, L31, L32 |
+| D8 Ambientes | L36, L41, L48 |
+| Padrões assumidos | L16, L17, L23, L33, L34, L35, L39, L40, L42, L43, L44, L45, L46, L47, L49, L50 |
+
+## Pendências do cliente (fora do código)
+
+- **Meta**: iniciar a verificação da empresa e o cadastro como Tech Provider (D3a). Depende de CNPJ e
+  de um site com política de privacidade.
+- **Domínio** do RecepClinic (D7).
+- **CNPJ, contrato com as clínicas e termo de tratamento de dados** (LGPD).
+- **Custo da Meta por mensagem** (L50).
