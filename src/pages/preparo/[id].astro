@@ -10,7 +10,7 @@
 // (RLS), e lê só essas duas colunas. Exame inativo continua mostrando o
 // preparo: quem já tem um marcado ainda pode precisar dele.
 import "../../styles/global.css";
-import Footer from "../../components/Footer.astro";
+import PublicFooter from "../../components/PublicFooter.astro";
 import { createServiceClient } from "../../lib/supabase/service";
 import { whatsAppTextToHtml } from "../../lib/whatsappFormat";
 
@@ -70,6 +70,6 @@ const pageTitle = exam && preparation ? `Preparo: ${exam.name}` : "Preparo não 
         Voltar para o site
       </a>
     </main>
-    <Footer hideAddress />
+    <PublicFooter />
   </body>
 </html>

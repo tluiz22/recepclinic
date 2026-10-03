@@ -18,7 +18,7 @@
 
 | Fase | Entrega | Situação |
 |---|---|---|
-| F0 | Base de trabalho | **próxima** |
+| F0 | Base de trabalho | **em andamento** (F0.1 concluída) |
 | F1 | Testes das regras atuais | a detalhar |
 | F2 | Schema novo | a detalhar |
 | F3 | Acesso ao banco e contexto da clínica | a detalhar |
@@ -51,8 +51,12 @@ próprio, banco local e testes rodando no CI. Nenhuma regra de negócio muda nes
 - Sai das dependências o que só o site usava (`@astrojs/mdx`, `@astrojs/rss`, `@astrojs/sitemap`).
 - Os textos com a identidade da Dra. **dentro do sistema** (bot, notificações) continuam por
   enquanto: saem na F4/F6, quando a configuração por clínica existir.
-- **Validar:** `npm run check` e `npm run build` sem erro; `git grep -n "BaseLayout\|data/doctor"`
+- **Validar:** `npm run check` e `npm run build` sem erro; `git grep -n "BaseLayout\|data/doctor" -- src`
   vazio.
+- **Concluída em 03/out.** Além do previsto: `@types/node` passou a ser dependência direta (vinha
+  pelo `@astrojs/sitemap`; o webhook usa `Buffer` e `node:crypto`) e o `robots.txt` perdeu a linha
+  do sitemap. Os títulos "… | Dra. Ana Karina Fernandes" de `/agendar` e `/preparo` ficam para a
+  F4/F5.
 
 ### F0.2 — Nome do produto
 

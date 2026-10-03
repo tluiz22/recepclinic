@@ -1,6 +1,6 @@
 ---
 import "../../styles/global.css";
-import Footer from "../../components/Footer.astro";
+import PublicFooter from "../../components/PublicFooter.astro";
 import { createServiceClient } from "../../lib/supabase/service";
 import { getNextAvailableDates } from "../../lib/scheduling/getNextAvailableDates";
 import { getAvailableSlotsForDate, type AppointmentType } from "../../lib/scheduling/getAvailableSlotsForDate";
@@ -443,7 +443,7 @@ const confirmedAddress =
         )
       }
     </main>
-    <Footer hideAddress />
+    <PublicFooter />
   </body>
 </html>
 

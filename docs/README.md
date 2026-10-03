@@ -4,8 +4,8 @@
 >
 > - **Etapas 0 a 4 concluídas**: cópia isolada, [diagnóstico](diagnostico.md), [limites](limites.md),
 >   [arquitetura](arquitetura.md) (decisões D1–D8) e [plano](plano.md) (fases F0–F10).
-> - **Produto, próxima etapa: F0.1** (tirar o site da Dra. deste repositório). Nada de código foi
->   alterado ainda. Começar só com a confirmação do cliente.
+> - **Produto: F0.1 concluída** (site da Dra. fora do repositório). **Próxima etapa: F0.2** (nome do
+>   produto).
 > - **Frente paralela, o site** `www.recepclinic.com.br`: [`site-plano.md`](site-plano.md), etapas
 >   S0–S6, a executar numa **sessão separada, na pasta `~/Documents/Desenvolvimento/recepclinic-site`**
 >   (nunca nesta pasta, para as duas sessões não se cruzarem). **S0 concluída em 03/out**: repositório
