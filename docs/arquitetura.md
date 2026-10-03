@@ -131,3 +131,28 @@ cair em "dezenas de configurações" (regra 4 do README), a forma de configurar 
 **Descartado:** pediatria com modelo aberto a adulto, mas vocabulário pediátrico; e só pediatria.
 
 **Resolve:** L07; parte de L24.
+
+### D4b — Como cada clínica é configurada
+
+**Decisão: perfil pronto + poucos campos.**
+
+- **Perfil da clínica**: *Pediátrica*, *Adultos* ou *Mista*. Define o vocabulário dos textos
+  ("criança/responsável" × "paciente/contato") e as regras de idade padrão. A idade limite continua
+  ajustável.
+- **Identidade**: nome da clínica, profissionais (nome, especialidade, registro profissional),
+  endereços dos locais, logo e cor. Tudo por tela, incluindo criar, editar e desativar locais.
+- **Informações do bot**: textos curtos editáveis (formas de pagamento, convênios, observações).
+- **Fuso por clínica** e **feriados**: nacionais calculados + lista de datas extras da clínica
+  (feriado municipal, Carnaval etc.).
+- **Prazos do produto** (pausa de 24h da secretária, inatividade de 15 min, oferta de 60 min,
+  antecedência de 2h, busca de 60 dias, resumo 1h antes, lembrete das 7h às 20h) ficam como
+  **padrões do produto, sem tela**. Viram configuração só quando uma clínica pedir.
+- Continuam configuráveis como hoje: disponibilidade, durações, valores, exames, contatos do
+  resumo do dia, hora do lembrete.
+
+**Por quê:** cobre o genérico (D4a) com três perfis bem testados em vez de combinações livres
+impossíveis de testar, e segue a regra de não criar dezenas de configurações.
+
+**Descartado:** tudo campo a campo (tela grande e combinações demais para testar).
+
+**Resolve:** L24, L25, L26, L29, L30; L28 fica como padrão do produto.
