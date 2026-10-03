@@ -15,7 +15,6 @@ dist/
 
 # Project files not meant for git
 .github/skills/
-docs/
 
 # Optional local editor artifacts
 .vscode/
