@@ -161,7 +161,7 @@ Vercel Pro + Supabase Pro ≈ US$ 45/mês; cada projeto Supabase a mais na mesma
 ### Banco
 
 Um projeto **Supabase** (Postgres) com o schema `public` montado por 38 migrações. Extensões:
-`pgcrypto`, `btree_gist` (implícita na restrição de sobreposição), `pg_cron`, `pg_net` e Vault. Há
+`pgcrypto`, `pg_cron`, `pg_net` e Vault. Há
 também um schema `internal` (fechado para `anon`/`authenticated`) com a função
 `internal.call_cron_route`, que chama as rotas `/api/cron/*`.
 
@@ -194,7 +194,7 @@ dados de configuração ficam em linhas fixas, como a `appointment_settings` com
 | | `job_runs` | execuções do lembrete e do resumo do dia (status, totais, automática ou manual) |
 | | `daily_summary_sends` | controle de envio do resumo da manhã |
 
-**`appointments`** é a tabela central (~35 colunas, juntando todas as fases): paciente, local,
+**`appointments`** é a tabela central (31 colunas, juntando todas as fases): paciente, local,
 exame, horário, duração, tipo (`first_visit`, `return_visit`, `exam`), status (`scheduled`,
 `confirmed`, `completed`, `canceled`, `no_show`), canal de marcação, preço gravado, endereço
 domiciliar, retorno ligado à consulta de origem (`origin_appointment_id`), autoria (`created_by`,
