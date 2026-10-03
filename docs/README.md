@@ -8,13 +8,13 @@
 >   alterado ainda. Começar só com a confirmação do cliente.
 > - **Frente paralela, o site** `www.recepclinic.com.br`: [`site-plano.md`](site-plano.md), etapas
 >   S0–S6, a executar numa **sessão separada, na pasta `~/Documents/Desenvolvimento/recepclinic-site`**
->   (nunca nesta pasta, para as duas sessões não se cruzarem). Para começar basta o cliente criar o
->   repositório vazio `tluiz22/recepclinic-site` e cloná-lo nessa pasta. Cloudflare e DNS podem vir
+>   (nunca nesta pasta, para as duas sessões não se cruzarem). **S0 concluída em 03/out**: repositório
+>   `tluiz22/recepclinic-site` criado e clonado nessa pasta; próxima é a S1, na sessão do site. Cloudflare e DNS podem vir
 >   depois (até a S5).
 > - **Depois do site**: cadastro como Tech Provider na Meta (ver "Frentes paralelas" no plano).
 > - **Pendências do cliente**:
 >   - abrir o CNPJ (SLU, ME, Simples Nacional);
->   - S0 do site;
+>   - conta na Cloudflare e troca do DNS no registro.br (até a S5 do site);
 >   - instalar o Docker e a CLI do Supabase (necessários na F0.3);
 >   - comprar o chip de testes do RecepClinic (necessário na F6);
 >   - advogado para revisar as páginas legais (antes do 1º piloto).
