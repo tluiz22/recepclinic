@@ -137,7 +137,9 @@ produto (projeto separado, ver D7).
 
 **Objetivo:** o bot atendendo pela conexão de cada clínica.
 
-**Escopo:** criação do **staging** (projeto Supabase, preview da Vercel, número de teste da Meta);
+**Escopo:** criação do **staging** (projeto Supabase, preview da Vercel e o **chip novo de testes do
+RecepClinic**, comprado pelo cliente; o número usado no piloto não pertence ao cliente e não é usado
+aqui);
 conexão guardada por clínica (cadastrada pelo Suporte nesta fase); webhook que identifica a
 clínica pelo `phone_number_id` e responde rápido; envio por clínica; templates padrão do
 RecepClinic com nome e idioma por clínica; bot com menus montados pelo catálogo de serviços e textos
@@ -183,6 +185,6 @@ para o modelo novo; acompanhamento das primeiras semanas.
 | Instalar Docker e a CLI do Supabase | F0.3 |
 | Verificação da empresa e Tech Provider na Meta (CNPJ, site) | F8 (começar já, por causa do prazo) |
 | Site `www.recepclinic.com.br` com política de privacidade e termos (projeto separado) | F8 (Meta) e F5 |
-| Número de teste na Meta para o staging | F6 |
+| Chip novo de testes do RecepClinic (WhatsApp) | F6 |
 | CNPJ, contrato com as clínicas, termo de tratamento de dados | F10 |
 | Custo da Meta por mensagem | definição de preço (fora do código) |
