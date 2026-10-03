@@ -1,5 +1,24 @@
 # RecepClinic
 
+> **Estado atual (retomar daqui), 03/out/2026**
+>
+> - **Etapas 0 a 4 concluídas**: cópia isolada, [diagnóstico](diagnostico.md), [limites](limites.md),
+>   [arquitetura](arquitetura.md) (decisões D1–D8) e [plano](plano.md) (fases F0–F10).
+> - **Produto, próxima etapa: F0.1** (tirar o site da Dra. deste repositório). Nada de código foi
+>   alterado ainda. Começar só com a confirmação do cliente.
+> - **Frente paralela, o site** `www.recepclinic.com.br`: [`site-plano.md`](site-plano.md), etapas
+>   S0–S6, a executar numa **sessão separada**. A S0 é do cliente: criar o repositório
+>   `tluiz22/recepclinic-site`, a conta na Cloudflare e trocar o DNS no registro.br. A pasta
+>   `~/Documents/Desenvolvimento/recepclinic-site` é criada pela própria sessão na S1.
+> - **Depois do site**: cadastro como Tech Provider na Meta (ver "Frentes paralelas" no plano).
+> - **Pendências do cliente**:
+>   - abrir o CNPJ (SLU, ME, Simples Nacional);
+>   - S0 do site;
+>   - instalar o Docker e a CLI do Supabase (necessários na F0.3);
+>   - comprar o chip de testes do RecepClinic (necessário na F6);
+>   - advogado para revisar as páginas legais (antes do 1º piloto).
+> - **Triagem do piloto**: nenhum commit novo do piloto desde `aad94dd` até esta data.
+
 > **RecepClinic — a recepção inteligente da sua clínica.**
 
 Plataforma SaaS para automatizar a recepção de clínicas: atendimento inicial pelo WhatsApp,
