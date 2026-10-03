@@ -54,4 +54,4 @@ credenciais do piloto (banco, agendador e Vault do Supabase, número e app da Me
 ## Documentos
 
 - [`triagem-piloto.md`](triagem-piloto.md): registro das mudanças do piloto depois da cópia.
-- Diagnóstico da arquitetura atual: a fazer (etapa 1).
+- [`diagnostico.md`](diagnostico.md): diagnóstico da arquitetura atual (etapa 1).

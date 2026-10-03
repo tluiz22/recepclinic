@@ -5,8 +5,8 @@
 > etapa 2, a arquitetura alvo na etapa 3. Onde algo não pôde ser confirmado pelo código, isso está
 > indicado.
 >
-> Partes: **1.1 Estrutura e operação** · 1.2 Dados e acesso · 1.3 Domínio e integrações ·
-> 1.4 Uma clínica só + temas transversais.
+> Partes: 1.1 Estrutura e operação · 1.2 Dados e acesso · 1.3 Domínio e integrações ·
+> 1.4 Uma clínica só + temas transversais · Resumo. **Concluído em 03/out/2026.**
 
 ---
 
@@ -414,3 +414,131 @@ Hoje **não há** nenhuma outra integração. O Google Calendar foi retirado na 
 na branch `backup/google-calendar` do piloto). Não há e-mail, SMS, pagamento, nota fiscal,
 prontuário nem calendário externo (iCal). As únicas dependências externas em execução são a Meta,
 o Supabase e a Vercel.
+
+---
+
+## 1.4 Uma clínica só + temas transversais
+
+### O que está fixo da Dra. Ana Karina no sistema
+
+Busca feita em `src/lib`, `src/pages` (admin, api, agendar, preparo), `src/components/admin`,
+`src/scripts`, `public/manifest.json` e `supabase/`. O site institucional fica de fora, porque é
+dela mesmo.
+
+| O quê | Onde | Efeito |
+|---|---|---|
+| Nome "Dra. Ana Karina Fernandes" | `bot/messages.ts` (`DOCTOR_NAME`, boas-vindas, textos da idade limite e do retorno) e `notifications.ts` ("com a Dra. Ana Karina Fernandes") | aparece no bot e nas variáveis dos templates |
+| Assinatura "Pneumopediatra · CRM 5751 · RQE 6271" | `notifications.ts` (confirmação e preparo) | vai nas mensagens ao paciente |
+| Forma de pagamento ("dinheiro, transferência bancária ou PIX") e "atendimento particular" | `notifications.ts` (variável da confirmação) e `bot/messages.ts` (Valores, Convênios, boas-vindas) | regra comercial no código |
+| "Atendemos apenas de forma particular, sem convênio…" | `bot/messages.ts` (`conveniosText`) | resposta fixa do menu Informações |
+| Domínio `draanakarinapneumo.com.br` | `astro.config.mjs`, `bot/shared.ts` (`buildAppUrl`), `/agendar` e `/preparo` (link "voltar ao site") | base de todos os links enviados |
+| Título das páginas públicas "… \| Dra. Ana Karina Fernandes" e rodapé com os dados dela (`Footer` + `src/data/doctor.ts`) | `/agendar/[token]`, `/preparo/[id]` | identidade nas páginas do sistema |
+| Nome do app instalado (PWA) "Painel do consultório — Dra. Ana Karina" | `public/manifest.json` | celular da equipe |
+| Local inicial "Instituto Andre Camurça" e seed do perfil "Dra. Ana Karina" | migrações `0001` e `0020` | dados iniciais |
+| **Textos dos templates na Meta** | painel da Meta (fora do código) | os 12 templates foram aprovados com o texto deste consultório |
+
+### O que pressupõe "uma clínica e uma profissional"
+
+| Pressuposto | Onde aparece |
+|---|---|
+| Uma única agenda (uma profissional) | `busyIntervals.ts`, `appointments_no_overlap`, horários livres, Agenda, resumo do dia |
+| Pediatria: paciente é criança, ligado a um responsável; adulto só como "o próprio responsável" no exame; idade limite; "criança" em textos de 20 arquivos | modelo `guardians` → `patients`, bot, telas |
+| Tipos de atendimento fixos (Consulta / Retorno / Exame) e regra do retorno (prazo, grátis, domiciliar sem retorno) | `check` no banco, `returnVisitEligibility.ts`, gatilho de preço |
+| Um local fictício "Exames" para todos os exames | `clinic_locations.type = 'exam'` |
+| Configuração de linha única | `appointment_settings` (`id = 1`) |
+| Telefone do responsável único no banco | `guardians.phone unique`, `conversation_state.guardian_phone unique` |
+| Um número de WhatsApp, um token, um conjunto de templates | variáveis de ambiente; webhook sem `phone_number_id` |
+| Fuso `America/Fortaleza` e feriados só nacionais (+ Carnaval, Cinzas, Corpus Christi por pedido deste cliente) | `lib/dates.ts`, SQL, `holidays.ts` |
+| Brasil: telefone `+55` com regra do nono dígito, R$, `pt_BR` | `bot/shared.ts`, `money.ts`, templates |
+| Perfis fixos `secretaria` / `medica` e telas só da médica | `staff_profiles.role`, `middleware.ts` |
+
+### Configurações: o que dá para mudar sem código
+
+| Pela tela (Configurações) | Só por SQL / painel do Supabase | Só no código / env / Meta |
+|---|---|---|
+| Disponibilidade por local; duração e intervalo; prazo do retorno; idade limite; preço da consulta por local; tipos de exame (duração, preço, preparo, turma, disponibilidade); contatos do resumo do dia; hora do lembrete | **criar, renomear ou desativar local e endereço**; criar login; perfil da secretária ou médica; segredos do Vault; horários dos jobs | nome, CRM e assinatura; pagamento e convênio; domínio; textos do bot; prazos (pausa de 24h, inatividade de 15 min, oferta de 60 min, antecedência de 2h, busca de 60 dias, resumo 1h antes); feriados; textos dos templates; liga/desliga "Falar com secretária" |
+
+### Segurança
+
+- **Segredos** só em variáveis de ambiente e no Vault. Nenhum segredo no histórico do git (conferido
+  na etapa 0).
+- **Entrada pública**: webhook com assinatura HMAC da Meta; agendador com `CRON_SECRET`; links
+  `/agendar` com UUID aleatório, validade e uso único; `/preparo` mostra só nome e preparo do exame.
+- **Painel**: login obrigatório no middleware; RLS só barra quem não está logado (ver 1.2). Login
+  sem perfil = secretária. Não há 2FA nem bloqueio por tentativas além do padrão do Supabase.
+- **Formulários** do admin com cookie de sessão: proteção contra envio de outro site depende do
+  padrão do Astro (`security.checkOrigin`, não configurado explicitamente). Os redirecionamentos
+  `return_to` aceitam só caminhos `/admin/`.
+- **Sem cabeçalhos de segurança** configurados (CSP, `X-Frame-Options` etc.). `robots.txt` libera tudo.
+- **Dados de saúde (LGPD)**: nomes, nascimento, telefone e endereço de crianças e responsáveis, tipo
+  de exame e comparecimento. Pacientes e responsáveis são **desativados, nunca apagados**. Não há
+  rotina de retenção, exportação ou exclusão a pedido do titular. Os logs têm 62 chamadas
+  `console.*`, algumas com telefone.
+- Revisão de segurança feita na Fase 10 do piloto (set/2026).
+
+### Observabilidade
+
+- **Logs**: `console.*` vistos nos logs da Vercel (retenção do plano Hobby). Não há ferramenta de
+  erros (Sentry ou similar), métricas de infraestrutura nem alertas fora do sistema.
+- **Dentro do sistema**: `job_runs` (cada execução do agendador), status de entrega em
+  `whatsapp_messages`, trilha `appointment_events`, alerta "envios com problema" no Início e na aba
+  Envios, funil do bot em Métricas.
+- **Agendador**: histórico em `cron.job_run_details` e respostas em `net._http_response` (só pelo
+  SQL Editor).
+- Não há monitor externo de disponibilidade (já listado como pendência do piloto).
+
+### Backups
+
+- Supabase **Free: sem backup automático** nem recuperação a um ponto no tempo. O script
+  `reset-test-data.mjs` avisa que a limpeza é irreversível.
+- O código está no GitHub. As migrações recriam a estrutura, não os dados. Os segredos do Vault e as
+  variáveis de ambiente não têm cópia fora dos painéis.
+
+### Onboarding de uma clínica nova (como seria hoje)
+
+Hoje, colocar outra clínica no ar seria **montar uma cópia inteira à mão**:
+
+1. Criar projeto Supabase e rodar as 38 migrações uma por uma no SQL Editor.
+2. Cadastrar os segredos no Vault (URL, `cron_secret`).
+3. Criar projeto na Vercel com as ~26 variáveis de ambiente.
+4. Na Meta: app, número (coexistência exige Embedded Signup e, provavelmente, ser Tech Provider ou
+   usar um BSP), webhook e **aprovação dos 12 templates** com os textos da clínica.
+5. Criar os logins no Supabase e os perfis por SQL.
+6. Criar e ajustar os locais por SQL; configurar disponibilidade, valores e exames pela tela.
+7. **Alterar o código** onde há nome, CRM, assinatura, pagamento, convênio, domínio e textos da Dra.
+8. Fazer deploy de um código já diferente do original.
+
+### Billing
+
+Não existe nada de cobrança da clínica: planos, assinatura, limites ou medição de uso. O que o
+sistema chama de "Financeiro" é o **relatório de faturamento do consultório** (valores dos
+atendimentos), não cobrança do produto.
+
+---
+
+## Resumo do diagnóstico
+
+**O que existe:** um sistema completo e validado em uso real para **um consultório pediátrico com uma
+médica**. Tem bot de WhatsApp (marcar, remarcar, cancelar, lista de espera, lembrete com botões,
+coexistência com a secretária), página de agendamento por link, painel com agenda, pacientes,
+configurações e métricas, envios automáticos pelo agendador do banco e trilha de auditoria. São
+~26 mil linhas num projeto Astro + Supabase + Vercel, junto com o site institucional, que é ~5% do
+código.
+
+**Como está montado para uma clínica só**, em cinco pontos que se repetem em todas as partes:
+
+1. **Não há clínica nem profissional no modelo de dados.** O deploy é a clínica, e a agenda única é
+   a médica (1.2, 1.3).
+2. **O isolamento é por deploy, não por dado.** O RLS só distingue "logado" de "não logado". Bot,
+   agendador e páginas públicas usam a service role sem filtro de clínica (1.2).
+3. **A integração com a Meta é de um número só.** Conta, token e templates vêm das variáveis de
+   ambiente, e o webhook não identifica o número de destino (1.3).
+4. **A identidade e as regras comerciais da Dra. estão no código** (nome, CRM, pagamento, convênio,
+   domínio), além de regras pediátricas no modelo (1.4).
+5. **A operação é manual**: migrações no SQL Editor, segredos no Vault, logins e locais por SQL, sem
+   staging, sem testes automatizados, sem backup e sem monitoramento externo (1.1, 1.4).
+
+**Para a etapa 2 (limites e problemas)**, os temas a analisar saem desses cinco pontos: modelo de
+clínica e profissional, isolamento (RLS + service role), WhatsApp por clínica, separação do site,
+configuração por clínica em vez de código, e a base operacional (ambientes, migrações, testes,
+backup, observabilidade, LGPD).
