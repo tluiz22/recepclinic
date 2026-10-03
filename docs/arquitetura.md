@@ -211,3 +211,22 @@ riscos (L12, L38).
 - Evoluir direto: refatoração grande sem testes.
 
 **Resolve:** L09, L12, L37, L38; encaminha L36 (ambientes) e L40 (datas, junto do fuso por clínica).
+
+## D6 — Papéis no painel (03/out/2026)
+
+**Decisão: três papéis por clínica e o suporte da plataforma.**
+
+- **Papéis por clínica** (uma pessoa pode ter papel em várias clínicas):
+  - **Administrador**: tudo, incluindo equipe (convidar, remover, trocar papel), configurações e a
+    conexão do WhatsApp.
+  - **Profissional**: agenda, pacientes, métricas e financeiro (no piloto, a "médica").
+  - **Recepção**: agenda, pacientes, envios e lista de espera (no piloto, a "secretária").
+- **Suporte RecepClinic**: papel da plataforma, que entra numa clínica para dar suporte, com cada
+  acesso registrado na trilha de auditoria.
+- **Sem papel = sem acesso** (fim do "sem perfil = secretária").
+- Os papéis valem **no banco (RLS) e na aplicação**, não só no middleware.
+- No piloto, se migrar (cenário B): Dra. = Administradora + Profissional; secretária = Recepção.
+
+**Descartado:** manter secretária/médica (sem quem gerencie a equipe nem suporte da plataforma).
+
+**Resolve:** L13, L14, L15.
