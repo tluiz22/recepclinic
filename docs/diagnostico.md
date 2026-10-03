@@ -284,3 +284,132 @@ Todas as tabelas de `public` estão com RLS ligado. Há três padrões de polít
 
 O código que roda com a service role confia apenas nos filtros que ele mesmo aplica. Como não
 existe clínica no modelo, nenhum desses caminhos filtra por clínica.
+
+---
+
+## 1.3 Domínio e integrações
+
+### Conceitos do domínio, como existem hoje
+
+| Conceito | No sistema atual |
+|---|---|
+| **Clínica / consultório** | Não existe como entidade. É implícita: o deploy inteiro é a clínica. |
+| **Profissional** | Não existe como entidade. Há **uma única agenda**, a da médica. O perfil `medica` em `staff_profiles` é só permissão de login, não uma agenda. |
+| **Local** | `clinic_locations` com três tipos: `clinic` (consultório físico; hoje são 2 endereços), `home_visit` (domiciliar, sem endereço fixo) e `exam` (local fictício único de todos os exames). O responsável escolhe a **categoria** ("Consultório" ou "Domiciliar"). O dia e o horário decidem qual consultório físico atende. |
+| **Tipo de atendimento** | Fixo no código e no banco: `first_visit` (Consulta), `return_visit` (Retorno), `exam` (Exame). Não há cadastro de procedimentos. |
+| **Exame** | `exam_types` (cadastro na tela): duração, preço, preparo e modo `individual` ou `group` (turma com vagas). Disponibilidade própria por exame. |
+| **Responsável** | `guardians`, identificado pelo **telefone**. Pode ter várias crianças, inclusive convênios de prefeitura com centenas de crianças num número. |
+| **Paciente** | `patients`, sempre ligado a um responsável. É criança por padrão. O adulto só aparece como "o próprio responsável", para exame. |
+| **Equipe** | `staff_profiles` (`secretaria` / `medica`) para o painel; `notification_recipients` para quem recebe o resumo do dia. |
+
+### Regras de agenda
+
+- **Uma linha do tempo só.** Consultas, retornos, exames individuais, turmas e bloqueios ocupam a
+  mesma agenda (`busyIntervals.ts`). O banco reforça isso com `appointments_no_overlap`, exceto
+  para turmas.
+- **Horários livres** (`scheduling/`): janelas semanais por local (`availability_windows`) ou por
+  exame (`exam_type_availability_windows`), menos os ocupados, com intervalo
+  (`buffer_minutes_between_appointments`). Ficam fora os feriados nacionais mais Carnaval, Cinzas e
+  Corpus Christi (`holidays.ts`, calculados em código). Busca até **60 dias** à frente e sugere 10
+  datas.
+- **Durações**: consulta e retorno em `appointment_settings`; exame em `exam_types`.
+- **Retorno** (`returnVisitEligibility.ts`): exige consulta de origem dentro do prazo
+  (`return_visit_deadline_days`, padrão 30). Domiciliar não dá direito a retorno. Só um retorno por
+  consulta. A secretária pode dispensar o prazo.
+- **Idade limite** para consulta (`consultation_age_limit_years`, padrão 14). Exame não tem limite.
+  Adulto (18+) só como o próprio responsável no exame.
+- **Duplicidade**: não deixa marcar uma consulta se já houver consulta ou retorno futuro, nem o
+  mesmo exame duas vezes.
+- **Preço** gravado no atendimento por gatilho. Retorno = 0.
+- **Cancelamento em massa** de um dia e **bloqueio** de agenda cancelam atendimentos e mandam link
+  para remarcar (válido por 2 dias).
+- **Lista de espera** (`waitlist*`): vaga aberta por cancelamento ou remarcação com mais de 2h de
+  antecedência é oferecida em ordem de chegada, uma pessoa por vez, por 60 min.
+
+### Bot de WhatsApp
+
+- **Máquina de estados** guardada em `conversation_state` (uma linha por telefone, `context` em
+  JSON), com **24 estados** validados por `check` no banco. O roteador (`bot/router.ts`) delega para
+  os fluxos `booking.ts`, `exam.ts`, `cancel.ts`, `reschedule.ts` e `waitlist.ts`. Os textos ficam em
+  `bot/messages.ts` (946 linhas).
+- **Menu**: Consultas (agendar consulta, agendar retorno, remarcar, cancelar) · Exames (marcar,
+  remarcar, cancelar, preparo) · Informações · Falar com a secretária (**desligado** no código
+  durante os testes: `SECRETARIA_HANDOFF_DISABLED = true`).
+- **O bot não escolhe horário na conversa.** Ele identifica a criança ou o paciente, cria um
+  `booking_link` e manda o link de `/agendar/[token]`. A página mostra as datas e horários e grava o
+  atendimento (`/api/agendar/[token]/confirmar`). Remarcar segue o mesmo caminho
+  (`mode = reschedule`). Cancelar é feito na própria conversa.
+- **Identificação** pelo telefone. Com até 3 crianças ou atendimentos, mostra uma lista; com mais
+  (convênio), pede a data de nascimento para filtrar.
+- **Toques em botões de template** (lembrete: Confirmar, Remarcar, Cancelar; oferta da lista de
+  espera: Sim, Não) são tratados antes da máquina de estados e valem em qualquer estado.
+- **Coexistência com a secretária**: quando ela escreve pelo app do WhatsApp Business (echo
+  `smb_message_echoes`), o bot pausa naquela conversa por 24h. Esse prazo nunca vence no fim de
+  semana. `#bot` devolve a conversa ao bot.
+- **Inatividade**: 15 minutos parados fora do início fazem a conversa recomeçar.
+- **Funil**: cada passo vira um `bot_funnel_events`, com origem `bot` ou `web`, para as Métricas.
+- Telefones normalizados para E.164 brasileiro, incluindo o "9" que a Meta às vezes omite.
+
+### Integração com a Meta (WhatsApp Cloud API)
+
+- **Envio**: `fetch` direto à Graph API **v21.0** (`whatsapp/client.ts`): texto, lista interativa,
+  botões e template com variáveis e botões de resposta rápida. Uma conta: um
+  `WHATSAPP_PHONE_NUMBER_ID` e um token, ambos vindos das variáveis de ambiente.
+- **Recebimento**: `POST /api/whatsapp/webhook` valida a assinatura e trata `messages` (mensagem
+  recebida → registro + bot), `statuses` (entregue, lida, falhou → atualiza `whatsapp_messages`;
+  quando a confirmação de um exame é entregue, manda o preparo) e `message_echoes`
+  (secretária). Processa **tudo antes de responder 200** e ignora o
+  `metadata.phone_number_id` do payload: o webhook não identifica para qual número a mensagem foi.
+- **Janela de 24h**: dentro dela, texto livre; fora dela, só template
+  (`isCustomerServiceWindowOpen`).
+- **Templates usados** (nomes por variável de ambiente, todos em `pt_BR`):
+
+| Mensagem | Variável | Quando sai |
+|---|---|---|
+| Confirmação | `…_CONFIRMATION` (+ `…_CONFIRMATION_RETURN` para retorno) | marcou (bot/página/tela) |
+| Remarcação | `…_RESCHEDULE` | remarcou |
+| Cancelamento | `…_CANCELLATION` | cancelou pela tela |
+| Cancelamento em massa | `…_MASS_CANCELLATION` | cancelamento do dia ou bloqueio |
+| Lembrete (com 3 botões) | `…_REMINDER` (+ `…_REMINDER_SHORT`) | véspera, na hora configurada |
+| Preparo do exame | `…_EXAM_PREPARATION` | confirmação do exame entregue, fora da janela |
+| Oferta da lista de espera (Sim/Não) | `…_WAITLIST_OFFER` | vaga aberta |
+| Resumo do dia (equipe) | `…_DAILY_SUMMARY_CONSULTAS`/`_EXAMES` e `_TODAY` | véspera 18h e manhã |
+
+  Sem o template configurado, a mensagem é registrada como `skipped_no_template` e a operação
+  continua. Todo envio é "melhor esforço" e grava em `whatsapp_messages`.
+- **Links `wa.me`** no painel (ao lado de cada telefone) abrem o WhatsApp de quem usa o painel. Não
+  passam pela API.
+
+### Envios automáticos (agendador)
+
+Os jobs `pg_cron` no banco chamam as rotas com o `CRON_SECRET`, e cada execução vai para
+`job_runs`:
+
+| Job (pg_cron) | Frequência | Rota | O que faz |
+|---|---|---|---|
+| `lembrete-de-hora-em-hora` | de hora em hora | `/api/cron/appointment-reminders` | só age na hora de `reminder_hour` (padrão 14h): lembrete para os atendimentos do **dia seguinte**; em toda chamada, reenvia uma vez o lembrete sem resposta há 4h+ (das 7h às 20h) |
+| `resumo-do-dia-vespera` | 18h (Fortaleza) | `/api/cron/daily-summary?send=preview` | resumo de amanhã para a equipe |
+| `resumo-do-dia-manha` | a cada 5 min | `/api/cron/daily-summary?send=final` | resumo de hoje, 1h antes da primeira janela de Disponibilidade (consultas e exames separados) |
+| `lista-de-espera-ofertas` | a cada 5 min (+ gatilho imediato) | `/api/cron/waitlist-offers` | expira ofertas, oferece a vaga ao próximo da fila |
+
+Quando um envio automático falha, a tela avisa e oferece o reenvio manual na Agenda (lembrete,
+preparo).
+
+### Painel (`/admin`)
+
+| Tela | Para quê |
+|---|---|
+| Início | cartões do dia, alertas de envio, atalhos |
+| Agenda (dia, semana, mês) | atendimentos, turmas e bloqueios; ações: marcar, remarcar, cancelar, presença, reenviar lembrete/preparo, lista de espera |
+| Resumo do Dia (`/admin/consultas`) | abas: resumo do dia, Lembretes, comparecimento a registrar, registradas, aguardando remarcação, lista de espera |
+| Pacientes | responsáveis, crianças, histórico, selo de faltoso |
+| Configurações | disponibilidade, duração, valores, exames, contatos, envios automáticos |
+| Métricas (só médica) | visão geral, funil, atendimentos, financeiro, retomar contato, faltosos, envios |
+| Trilha (`/admin/trilha/[id]`) | histórico do atendimento (`appointment_events`) |
+
+### Outras integrações
+
+Hoje **não há** nenhuma outra integração. O Google Calendar foi retirado na Fase 20 (versão guardada
+na branch `backup/google-calendar` do piloto). Não há e-mail, SMS, pagamento, nota fiscal,
+prontuário nem calendário externo (iCal). As únicas dependências externas em execução são a Meta,
+o Supabase e a Vercel.
