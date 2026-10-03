@@ -57,3 +57,4 @@ credenciais do piloto (banco, agendador e Vault do Supabase, número e app da Me
 - [`diagnostico.md`](diagnostico.md): diagnóstico da arquitetura atual (etapa 1).
 - [`limites.md`](limites.md): limites e problemas para várias clínicas (etapa 2).
 - [`arquitetura.md`](arquitetura.md): decisões da arquitetura alvo (etapa 3).
+- [`plano.md`](plano.md): plano de evolução em fases (etapa 4).
