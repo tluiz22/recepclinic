@@ -30,3 +30,30 @@ todas) e protege contra o maior risco da evolução: 309 consultas espalhadas e 
 - Clínica só no código: um filtro esquecido viraria vazamento.
 
 **Resolve:** L01, L03, L04, L05 (configuração por clínica), L10, L11, L13; reduz o risco de L12.
+
+## D2 — Agendas por clínica (03/out/2026)
+
+**Decisão: a agenda entra no modelo agora e o uso de várias agendas é ligado aos poucos.**
+
+- Cada clínica tem uma ou mais **agendas**: um profissional ou um recurso (ex.: "Exames", quando a
+  secretária faz o exame sem a médica).
+- Atendimentos e bloqueios pertencem a uma agenda. A **trava de horários e o cálculo de horários
+  livres valem por agenda**, não mais pela clínica inteira. Disponibilidade também é por agenda.
+- **1ª versão**: o tipo de atendimento ou o exame define a agenda. O bot **não pergunta "com
+  quem"**, e telas e resumos seguem como hoje, só respeitando as agendas. A clínica com uma só
+  agenda não percebe diferença.
+- Escolher o profissional no bot e filtrar telas e métricas por profissional fica para quando uma
+  clínica precisar. Nesse momento, não haverá migração de dados.
+
+**Por quê:** mudar o modelo depois, com dados reais, custa caro. O piloto já tem o caso dos exames
+feitos pela secretária, que hoje bloqueiam a agenda da médica sem necessidade. A escolha de
+profissional no bot e nas telas não foi validada por nenhuma clínica ainda (regra de não
+generalizar).
+
+**Descartado:**
+- Várias agendas completas já: esforço alto em quase todas as telas e no bot, sem demanda
+  validada.
+- Uma agenda por clínica: barato agora, mas exigiria migrar dados para atender clínicas com mais de
+  um profissional.
+
+**Resolve:** L02; prepara o terreno para L06 (tipos de atendimento ligados a agendas).
