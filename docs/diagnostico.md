@@ -332,9 +332,10 @@ existe clínica no modelo, nenhum desses caminhos filtra por clínica.
   JSON), com **24 estados** validados por `check` no banco. O roteador (`bot/router.ts`) delega para
   os fluxos `booking.ts`, `exam.ts`, `cancel.ts`, `reschedule.ts` e `waitlist.ts`. Os textos ficam em
   `bot/messages.ts` (946 linhas).
-- **Menu**: Consultas (agendar consulta, agendar retorno, remarcar, cancelar) · Exames (marcar,
-  remarcar, cancelar, preparo) · Informações · Falar com a secretária (**desligado** no código
-  durante os testes: `SECRETARIA_HANDOFF_DISABLED = true`).
+- **Menu**: Consultas (agendar consulta, agendar retorno, cancelar, remarcar, encaixe ou antecipar)
+  · Exames (marcar, cancelar, remarcar, encaixe ou antecipar) · Informações gerais (valores,
+  convênios, endereço, preparo para exames) · Falar com secretária (**desligado** no código durante
+  os testes: `SECRETARIA_HANDOFF_DISABLED = true`).
 - **O bot não escolhe horário na conversa.** Ele identifica a criança ou o paciente, cria um
   `booking_link` e manda o link de `/agendar/[token]`. A página mostra as datas e horários e grava o
   atendimento (`/api/agendar/[token]/confirmar`). Remarcar segue o mesmo caminho
@@ -368,7 +369,7 @@ existe clínica no modelo, nenhum desses caminhos filtra por clínica.
 |---|---|---|
 | Confirmação | `…_CONFIRMATION` (+ `…_CONFIRMATION_RETURN` para retorno) | marcou (bot/página/tela) |
 | Remarcação | `…_RESCHEDULE` | remarcou |
-| Cancelamento | `…_CANCELLATION` | cancelou pela tela |
+| Cancelamento | `…_CANCELLATION` | cancelou pela tela (pelo bot, a resposta é texto na conversa) |
 | Cancelamento em massa | `…_MASS_CANCELLATION` | cancelamento do dia ou bloqueio |
 | Lembrete (com 3 botões) | `…_REMINDER` (+ `…_REMINDER_SHORT`) | véspera, na hora configurada |
 | Preparo do exame | `…_EXAM_PREPARATION` | confirmação do exame entregue, fora da janela |
@@ -401,7 +402,7 @@ preparo).
 |---|---|
 | Início | cartões do dia, alertas de envio, atalhos |
 | Agenda (dia, semana, mês) | atendimentos, turmas e bloqueios; ações: marcar, remarcar, cancelar, presença, reenviar lembrete/preparo, lista de espera |
-| Resumo do Dia (`/admin/consultas`) | abas: resumo do dia, Lembretes, comparecimento a registrar, registradas, aguardando remarcação, lista de espera |
+| Resumo do Dia (`/admin/consultas`) | abas: Resumo do dia, Lembretes, Lista de espera, Aguardando remarcação, A registrar, Registradas (comparecimento) |
 | Pacientes | responsáveis, crianças, histórico, selo de faltoso |
 | Configurações | disponibilidade, duração, valores, exames, contatos, envios automáticos |
 | Métricas (só médica) | visão geral, funil, atendimentos, financeiro, retomar contato, faltosos, envios |
