@@ -231,7 +231,16 @@ novo não tem). Etapas (cada uma com `npm test`, `test:db`, `check`, `build` e C
   Métricas); a trilha mostra o papel de quem fez (antes "Secretária"/"Médica"), e nome ou papel se
   decide na F3.6. 14 testes unitários e 15 de banco novos.
 - **F3.3 — Credencial limitada:** emissão do token `clinic_service` da clínica da requisição para
-  bot, agendador e páginas públicas; service role só em rotinas da plataforma.
+  bot, agendador e páginas públicas; service role só em rotinas da plataforma. **Concluída em
+  04/out**: `createClinicServiceClient(clinicId)` (`src/lib/data/clinicService.ts`) assina um token
+  de 15 minutos com `SUPABASE_JWT_SECRET` (nova variável obrigatória). A service role ficou presa em
+  `src/lib/data/platform.ts`, que só descobre a clínica de cada porta pública: número do WhatsApp
+  (função da F2.6), link de agendamento e serviço da página de preparo (migração `20261004200000`);
+  o resto segue com a credencial limitada. Um teste de arquitetura reprova qualquer arquivo novo com
+  a service role e lista os herdados do piloto com a etapa em que saem (páginas públicas na F5, bot
+  na F6, rotinas na F7, retirada da lista de espera na F3.7). **Conferir ao criar o projeto na
+  nuvem:** o esquema de assinatura (segredo compartilhado HS256, como no local; alternativa: chave
+  ES256 própria importada). 8 testes unitários e 8 de banco novos.
 - **F3.4 a F3.8 — Acesso por domínio:** configuração; pacientes; agenda (atendimentos, séries,
   bloqueios, links); lista de espera; WhatsApp e rotinas. Cada uma com testes de integração,
   incluindo as regras que a F1 deixou para o banco (elegibilidade do retorno, conflitos de exame,

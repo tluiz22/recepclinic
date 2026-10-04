@@ -5,6 +5,7 @@ const valid = {
   PUBLIC_SUPABASE_URL: "http://127.0.0.1:54321",
   PUBLIC_SUPABASE_ANON_KEY: "anon-key",
   SUPABASE_SERVICE_ROLE_KEY: "service-role-key",
+  SUPABASE_JWT_SECRET: "j".repeat(32),
   CRON_SECRET: "x".repeat(32),
 };
 
@@ -24,6 +25,7 @@ describe("variáveis da plataforma", () => {
       supabaseUrl: "http://127.0.0.1:54321",
       supabaseAnonKey: "anon-key",
       supabaseServiceRoleKey: "service-role-key",
+      supabaseJwtSecret: "j".repeat(32),
       cronSecret: "x".repeat(32),
       siteUrl: null,
     });
@@ -41,6 +43,7 @@ describe("variáveis da plataforma", () => {
       "PUBLIC_SUPABASE_URL não definida",
       "PUBLIC_SUPABASE_ANON_KEY não definida",
       "SUPABASE_SERVICE_ROLE_KEY não definida",
+      "SUPABASE_JWT_SECRET não definida",
       "CRON_SECRET não definida",
     ]);
   });
@@ -56,6 +59,12 @@ describe("variáveis da plataforma", () => {
     expect(problemsOf({ ...valid, PUBLIC_SUPABASE_URL: "127.0.0.1:54321", SITE_URL: "ftp://x" })).toEqual([
       "PUBLIC_SUPABASE_URL não é um endereço http(s): 127.0.0.1:54321",
       "SITE_URL não é um endereço http(s): ftp://x",
+    ]);
+  });
+
+  it("SUPABASE_JWT_SECRET precisa de 32 caracteres ou mais", () => {
+    expect(problemsOf({ ...valid, SUPABASE_JWT_SECRET: "curto" })).toEqual([
+      "SUPABASE_JWT_SECRET curta demais (mínimo 32 caracteres)",
     ]);
   });
 

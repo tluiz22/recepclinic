@@ -11,6 +11,8 @@ export type PlatformEnv = {
   supabaseAnonKey: string;
   /** Só para rotinas da plataforma (D1); bot, agendador e páginas públicas usam a credencial limitada. */
   supabaseServiceRoleKey: string;
+  /** Segredo que assina a credencial limitada à clínica (clinic_service, F3.3). */
+  supabaseJwtSecret: string;
   /** Segredo que a Vercel manda nas rotinas agendadas (Authorization: Bearer). */
   cronSecret: string;
   /** Endereço público do sistema; sem ele, vale o `site` do astro.config.mjs. */
@@ -18,6 +20,7 @@ export type PlatformEnv = {
 };
 
 export const CRON_SECRET_MIN_LENGTH = 32;
+export const JWT_SECRET_MIN_LENGTH = 32;
 
 export class PlatformEnvError extends Error {
   constructor(readonly problems: string[]) {
@@ -59,6 +62,10 @@ export function parsePlatformEnv(source: EnvSource): PlatformEnv {
   url("PUBLIC_SUPABASE_URL", supabaseUrl);
   const supabaseAnonKey = required("PUBLIC_SUPABASE_ANON_KEY");
   const supabaseServiceRoleKey = required("SUPABASE_SERVICE_ROLE_KEY");
+  const supabaseJwtSecret = required("SUPABASE_JWT_SECRET");
+  if (supabaseJwtSecret && supabaseJwtSecret.length < JWT_SECRET_MIN_LENGTH) {
+    problems.push(`SUPABASE_JWT_SECRET curta demais (mínimo ${JWT_SECRET_MIN_LENGTH} caracteres)`);
+  }
   const cronSecret = required("CRON_SECRET");
   if (cronSecret && cronSecret.length < CRON_SECRET_MIN_LENGTH) {
     problems.push(`CRON_SECRET curta demais (mínimo ${CRON_SECRET_MIN_LENGTH} caracteres)`);
@@ -67,7 +74,7 @@ export function parsePlatformEnv(source: EnvSource): PlatformEnv {
   url("SITE_URL", siteUrl);
 
   if (problems.length) throw new PlatformEnvError(problems);
-  return { supabaseUrl, supabaseAnonKey, supabaseServiceRoleKey, cronSecret, siteUrl };
+  return { supabaseUrl, supabaseAnonKey, supabaseServiceRoleKey, supabaseJwtSecret, cronSecret, siteUrl };
 }
 
 let cached: PlatformEnv | undefined;
@@ -79,6 +86,7 @@ export function platformEnv(): PlatformEnv {
     PUBLIC_SUPABASE_URL: import.meta.env.PUBLIC_SUPABASE_URL,
     PUBLIC_SUPABASE_ANON_KEY: import.meta.env.PUBLIC_SUPABASE_ANON_KEY,
     SUPABASE_SERVICE_ROLE_KEY: import.meta.env.SUPABASE_SERVICE_ROLE_KEY,
+    SUPABASE_JWT_SECRET: import.meta.env.SUPABASE_JWT_SECRET,
     CRON_SECRET: import.meta.env.CRON_SECRET,
     SITE_URL: import.meta.env.SITE_URL,
   });

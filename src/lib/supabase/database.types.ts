@@ -1008,6 +1008,12 @@ isOneToOne: false
 "reschedule_group_session":
 { Args: { "p_appointment_id": string,"p_channel": Database["public"]['Enums']["action_channel"],"p_scheduled_at": string }; Returns: undefined
                            },
+"resolve_booking_link_clinic":
+{ Args: { "p_link_id": string }; Returns: string
+                           },
+"resolve_service_clinic":
+{ Args: { "p_service_id": string }; Returns: string
+                           },
 "resolve_whatsapp_clinic":
 { Args: { "p_phone_number_id": string }; Returns: string
                            },
