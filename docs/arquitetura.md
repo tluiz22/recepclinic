@@ -250,6 +250,9 @@ riscos (L12, L38).
   Recepção, com a opção de o Administrador **restringir a pessoa a agendas selecionadas**.
 - O **Profissional vê só a própria agenda** (e os atendimentos dela), salvo se liberado para outras.
 - Vale **no banco (RLS)** e na aplicação, como os papéis.
+- **Pacientes** (cadastro, contato, convênio, observações): **toda a equipe da clínica vê todos**,
+  como no piloto (cliente, 04/out). O acesso por agenda vale para agendas e atendimentos.
+  Descartado: restringir o cadastro pelo acesso às agendas.
 
 **Revisão de 04/out/2026 (cliente): acesso do Suporte RecepClinic.**
 

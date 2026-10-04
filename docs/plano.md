@@ -20,7 +20,7 @@
 |---|---|---|
 | F0 | Base de trabalho | concluída (04/out) |
 | F1 | Testes das regras atuais | concluída (04/out; 197 testes) |
-| F2 | Schema novo | **em andamento** (F2.1 e F2.2 concluídas) |
+| F2 | Schema novo | **em andamento** (F2.1 a F2.3 concluídas) |
 | F3 | Acesso ao banco e contexto da clínica | a detalhar |
 | F4 | Painel | a detalhar |
 | F5 | Páginas públicas e domínio | a detalhar |
@@ -163,7 +163,10 @@ para a F7.
   America/Fortaleza. (Substitui `appointment_settings`, `clinic_locations`, `exam_types`, `availability_windows`,
   `exam_type_group_schedule`, `notification_recipients`.)
 - **F2.3 — Pacientes:** contatos e pacientes, telefone único por clínica; plano do paciente
-  (particular ou plano, carteirinha, validade; D10). (`guardians`, `patients`.)
+  (particular ou plano, carteirinha, validade; D10). (`guardians`, `patients`.) **Concluída em 04/out** (17 testes de
+  banco; toda a equipe vê todos os pacientes, D6). O banco recusa nascimento futuro (fuso da
+  clínica) e data inexistente: achados 1 e 2 da F1.2 resolvidos no banco (a mensagem da tela fica
+  para a F3/F4).
 - **F2.4 — Atendimentos e séries:** atendimentos ligados a serviço e agenda, trava de horário por
   agenda, preço automático, turmas, bloqueios, links de agendamento, trilha; **séries recorrentes**
   (D9: frequência, fim por data, por sessões ou sem fim, sessões ligadas à série); particular ou
