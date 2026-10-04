@@ -18,7 +18,7 @@
 
 | Fase | Entrega | Situação |
 |---|---|---|
-| F0 | Base de trabalho | **em andamento** (F0.1, F0.2 e F0.4 concluídas) |
+| F0 | Base de trabalho | concluída (04/out) |
 | F1 | Testes das regras atuais | a detalhar |
 | F2 | Schema novo | a detalhar |
 | F3 | Acesso ao banco e contexto da clínica | a detalhar |
@@ -79,6 +79,9 @@ próprio, banco local e testes rodando no CI. Nenhuma regra de negócio muda nes
 - Scripts no `package.json`: `db:start`, `db:stop`, `db:reset`.
 - **Validar:** `npm run db:start` sobe o banco local; `supabase status` mostra as URLs locais;
   `npm run db:stop`.
+- **Feita em 04/out**: Postgres 17 local, sem projeto vinculado (`linked_project: null`) e com o
+  schema `public` vazio. `supabase/.temp/cli-latest` (cache da CLI) saiu do git. Dois avisos
+  esperados até a F2 no start/reset: `.gitkeep` ignorado e `seed.sql` inexistente.
 
 ### F0.4 — Testes automatizados no CI (D5)
 
@@ -192,7 +195,6 @@ para o modelo novo; acompanhamento das primeiras semanas.
 
 | Pendência | Necessária para |
 |---|---|
-| Instalar Docker e a CLI do Supabase | F0.3 |
 | Verificação da empresa e Tech Provider na Meta (CNPJ, site) | F8 (começar já, por causa do prazo) |
 | Site `www.recepclinic.com.br` com política de privacidade e termos (projeto separado) | F8 (Meta) e F5 |
 | Chip novo de testes do RecepClinic (WhatsApp) | F6 |
