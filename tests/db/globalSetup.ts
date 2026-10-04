@@ -15,7 +15,7 @@ export default function setup() {
     if (match) process.env[`SUPABASE_LOCAL_${match[1]}`] = match[2];
   }
 
-  for (const key of ["API_URL", "ANON_KEY", "SERVICE_ROLE_KEY", "JWT_SECRET"]) {
+  for (const key of ["API_URL", "ANON_KEY", "SERVICE_ROLE_KEY", "JWT_SECRET", "DB_URL"]) {
     if (!process.env[`SUPABASE_LOCAL_${key}`]) throw new Error(`supabase status sem ${key}`);
   }
 }

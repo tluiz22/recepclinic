@@ -1,21 +1,28 @@
 # RecepClinic
 
-> **Estado atual (retomar daqui), 03/out/2026**
+> **Estado atual (retomar daqui), 04/out/2026**
 >
 > - **Etapas 0 a 4 concluídas**: cópia isolada, [diagnóstico](diagnostico.md), [limites](limites.md),
 >   [arquitetura](arquitetura.md) (decisões D1–D10) e [plano](plano.md) (fases F0–F10).
-> - **Produto: F0 concluída** (site da Dra. fora do repositório; nome RecepClinic; Supabase local
->   pela CLI; Vitest e `npm test` no CI). **F1 concluída** (197 testes das regras de cálculo; achados 1–5 anotados
->   no plano para a F3/F4). **F2.1 a F2.6 concluídas** (núcleo; configuração, profissionais, agendas,
->   serviços e convênios; pacientes; atendimentos e séries; lista de espera; WhatsApp e rotinas; 149
->   testes de banco no CI). **Próxima etapa: F2.7** (dados de teste e isolamento completo); F2 detalhada em
->   F2.1–F2.7, com D2 e D6 revistas e as novas D9 (recorrência) e D10
->   (convênios, só o banco antes do piloto) em 04/out.
+> - **Produto:**
+>   - **F0 concluída**: site da Dra. fora do repositório; nome RecepClinic; Supabase local pela CLI;
+>     Vitest e CI.
+>   - **F1 concluída**: 197 testes das regras de cálculo; achados 1–5 anotados no plano para a F3/F4.
+>   - **F2 concluída**: schema multi-clínica em 7 migrações (D2 e D6 revistas, D9 recorrência, D10
+>     convênios só no banco); dados de teste locais com logins no README da raiz; 158 testes de
+>     banco no CI, com varredura de isolamento automática.
+>   - **Próxima etapa: F3** (acesso ao banco e contexto da clínica), a detalhar com o cliente.
+>     **Para retomar:** ler a F3 em [`plano.md`](plano.md) (inclui o cuidado com insert de várias
+>     linhas no `supabase-js`) e os achados 1–5 da F1; propor ao cliente a divisão da F3 em etapas,
+>     como foi feito na F1 e na F2, antes de mudar código. O código da aplicação ainda usa o schema
+>     antigo do piloto: a F3 é a fase que o liga ao schema novo. Para rodar o banco: abrir o
+>     OrbStack, `npm run db:start`, `npm run db:reset` (carrega os dados de teste) e
+>     `npm run test:db`.
 > - **Frente paralela, o site** `www.recepclinic.com.br`: [`site-plano.md`](site-plano.md), etapas
 >   S0–S6, a executar numa **sessão separada, na pasta `~/Documents/Desenvolvimento/recepclinic-site`**
 >   (nunca nesta pasta, para as duas sessões não se cruzarem). **S0 concluída em 03/out**: repositório
->   `tluiz22/recepclinic-site` criado e clonado nessa pasta; próxima é a S1, na sessão do site. Cloudflare e DNS podem vir
->   depois (até a S5).
+>   `tluiz22/recepclinic-site` criado e clonado nessa pasta; próxima é a S1, na sessão do site.
+>   Cloudflare e DNS podem vir depois (até a S5).
 > - **Depois do site**: cadastro como Tech Provider na Meta (ver "Frentes paralelas" no plano).
 > - **Pendências do cliente**:
 >   - abrir o CNPJ (SLU, ME, Simples Nacional);

@@ -48,3 +48,21 @@ npm run test:db   # testes de banco (RLS e isolamento entre clínicas); requer o
 
 `supabase/migrations/` tem o schema novo multi-clínica (F2). As migrações do piloto estão em
 `supabase/piloto-migrations/` só como referência.
+
+### Dados de teste locais
+
+O `npm run db:reset` carrega `supabase/seed.sql`: duas clínicas fictícias (**Clínica Exemplo
+Saúde**, com pediatra, psicóloga, fisioterapeuta e exames, e **Odonto Exemplo**) com dados em todas
+as tabelas. Logins só para o ambiente local, todos com a senha `recepclinic-local`:
+
+| Login | Papel |
+|---|---|
+| `admin@exemplo-saude.local` | Administrador |
+| `pediatra@exemplo-saude.local` | Profissional (só a própria agenda) |
+| `psicologa@exemplo-saude.local` | Profissional (só a própria agenda) |
+| `fisio@exemplo-saude.local` | Profissional (só a própria agenda) |
+| `recepcao@exemplo-saude.local` | Recepção (todas as agendas) |
+| `recepcao2@exemplo-saude.local` | Recepção restrita (psicóloga e fisioterapeuta) |
+| `admin@odonto-exemplo.local` | Administrador + Profissional (outra clínica) |
+| `recepcao@odonto-exemplo.local` | Recepção (outra clínica) |
+| `suporte@recepclinic.local` | Suporte RecepClinic |

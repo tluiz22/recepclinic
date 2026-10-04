@@ -20,8 +20,8 @@
 |---|---|---|
 | F0 | Base de trabalho | concluída (04/out) |
 | F1 | Testes das regras atuais | concluída (04/out; 197 testes) |
-| F2 | Schema novo | **em andamento** (F2.1 a F2.6 concluídas) |
-| F3 | Acesso ao banco e contexto da clínica | a detalhar |
+| F2 | Schema novo | concluída (04/out; 158 testes de banco) |
+| F3 | Acesso ao banco e contexto da clínica | **próxima** (a detalhar) |
 | F4 | Painel | a detalhar |
 | F5 | Páginas públicas e domínio | a detalhar |
 | F6 | WhatsApp por clínica e bot | a detalhar |
@@ -185,7 +185,11 @@ para a F7.
   `phone_number_id`; rotinas registradas por clínica; contadores de uso por mês.
 - **F2.7 — Dados de teste e isolamento completo:** duas clínicas fictícias (uma com vários
   profissionais e recepção restrita a parte das agendas); varredura de isolamento em todas as
-  tabelas para usuário, bot e agendador.
+  tabelas para usuário, bot e agendador. **Concluída em 04/out**: `supabase/seed.sql` com
+  as duas clínicas e logins locais (README); varredura automática pelo catálogo (RLS em toda tabela,
+  ligação direta com a clínica, registro do Suporte, leitura e escrita bloqueadas para o
+  Administrador e o bot de outra clínica e para o acesso anônimo, cobertura de dados em todas as
+  tabelas). **F2 concluída** (158 testes de banco).
 
 ## F3 — Acesso ao banco e contexto da clínica
 

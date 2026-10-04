@@ -1,5 +1,6 @@
 import { createHmac, randomUUID } from "node:crypto";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import pg from "pg";
 
 const env = (key: string) => {
   const value = process.env[`SUPABASE_LOCAL_${key}`];
@@ -81,4 +82,23 @@ export async function deleteClinics(ids: string[]): Promise<void> {
 
 export async function deleteUsers(users: TestUser[]): Promise<void> {
   for (const user of users) await adminClient().auth.admin.deleteUser(user.id);
+}
+
+/** Entra com um login dos dados de teste (supabase/seed.sql). */
+export async function signInSeedUser(email: string): Promise<SupabaseClient> {
+  const client = anonClient();
+  const { error } = await client.auth.signInWithPassword({ email, password: "recepclinic-local" });
+  if (error) throw new Error(`Login de teste ${email} falhou (rodou npm run db:reset?): ${error.message}`);
+  return client;
+}
+
+/** Conexão direta ao Postgres local, para consultar o catálogo e contar linhas. */
+export async function withDatabase<T>(run: (db: pg.Client) => Promise<T>): Promise<T> {
+  const db = new pg.Client({ connectionString: env("DB_URL") });
+  await db.connect();
+  try {
+    return await run(db);
+  } finally {
+    await db.end();
+  }
 }
