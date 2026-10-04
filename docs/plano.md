@@ -245,6 +245,22 @@ novo não tem). Etapas (cada uma com `npm test`, `test:db`, `check`, `build` e C
   bloqueios, links); lista de espera; WhatsApp e rotinas. Cada uma com testes de integração,
   incluindo as regras que a F1 deixou para o banco (elegibilidade do retorno, conflitos de exame,
   ofertas e reenvios), e corrigindo os achados 1–5 da F1 onde aparecerem.
+- **F3.4 — Configuração: concluída em 04/out.** `src/lib/data/config/`: perfil e identidade da
+  clínica, profissionais, locais, agendas e acesso de cada membro às agendas, serviços (agendas e
+  locais com preço próprio), dias e horários, feriados extras, contatos do resumo do dia, planos de
+  saúde (busca e exceções por profissional). Base comum em `src/lib/data/errors.ts` (erros do banco
+  traduzidos: inválido, repetido, não encontrado, em uso, sem permissão, conflito). **Decisão do
+  cliente (04/out): a sobreposição de horários vale por agenda**, mesmo em locais diferentes; na
+  mesma agenda e no mesmo dia conflitam horário geral com qualquer outro, o mesmo serviço consigo
+  mesmo e turma com qualquer outro; serviços individuais diferentes podem dividir horário (regra do
+  piloto para exames); agendas diferentes nunca conflitam. Padrões assumidos (revisáveis): a
+  categoria do serviço e o tipo e o profissional da agenda não mudam depois de criados; horário de
+  um serviço só numa agenda que atende o serviço; turma exige vagas e individual não aceita (piloto);
+  profissionais, locais, agendas, serviços, contatos e planos saem por desativação, horários e
+  feriados podem ser apagados (piloto). Sem limites novos além dos do banco e do piloto (endereço do
+  local continua opcional). Cuidado novo: insert com `.select()` em `agendas` falha no RLS (a
+  leitura consulta a própria tabela); gerar o id na aplicação e ler depois. 23 testes unitários e 24
+  de banco novos.
 
 **Cuidado registrado na F2.5:** num insert de várias linhas, o `supabase-js` manda `null` nas
 colunas ausentes de alguma linha, e o valor padrão do banco não é aplicado (ex.: `details` da

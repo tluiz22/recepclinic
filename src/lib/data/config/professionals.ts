@@ -1,0 +1,103 @@
+import type { DbClient } from "../clients";
+import { cleanText, unwrap, unwrapOne, Validation } from "../errors";
+
+// Profissionais (D4b: genérico — médico, dentista, psicólogo…). Saem por
+// desativação, nunca apagados: têm agenda e atendimentos ligados.
+
+export type Professional = {
+  id: string;
+  /** Login da equipe ligado ao profissional; null = não usa o painel. */
+  userId: string | null;
+  displayName: string;
+  profession: string;
+  specialty: string | null;
+  council: string | null;
+  councilNumber: string | null;
+  councilState: string | null;
+  isActive: boolean;
+};
+
+export type ProfessionalInput = Omit<Professional, "id" | "isActive">;
+
+const COLUMNS = "id, user_id, display_name, profession, specialty, council, council_number, council_state, is_active";
+
+type Row = {
+  id: string;
+  user_id: string | null;
+  display_name: string;
+  profession: string;
+  specialty: string | null;
+  council: string | null;
+  council_number: string | null;
+  council_state: string | null;
+  is_active: boolean;
+};
+
+const toProfessional = (row: Row): Professional => ({
+  id: row.id,
+  userId: row.user_id,
+  displayName: row.display_name,
+  profession: row.profession,
+  specialty: row.specialty,
+  council: row.council,
+  councilNumber: row.council_number,
+  councilState: row.council_state,
+  isActive: row.is_active,
+});
+
+export function validateProfessional(input: ProfessionalInput) {
+  const v = new Validation();
+  const row = {
+    user_id: input.userId ?? null,
+    display_name: cleanText(input.displayName) ?? "",
+    profession: cleanText(input.profession) ?? "",
+    specialty: cleanText(input.specialty),
+    council: cleanText(input.council)?.toUpperCase() ?? null,
+    council_number: cleanText(input.councilNumber),
+    council_state: cleanText(input.councilState)?.toUpperCase() ?? null,
+  };
+  v.check(row.display_name.length > 0, "displayName", "Informe o nome");
+  v.check(row.profession.length > 0, "profession", "Informe a profissão");
+  v.check(row.council_state === null || /^[A-Z]{2}$/.test(row.council_state), "councilState", "UF com 2 letras");
+  v.throwIfInvalid("Profissional");
+  return row;
+}
+
+export async function listProfessionals(
+  db: DbClient,
+  clinicId: string,
+  { includeInactive = false }: { includeInactive?: boolean } = {},
+): Promise<Professional[]> {
+  let query = db.from("professionals").select(COLUMNS).eq("clinic_id", clinicId).order("display_name");
+  if (!includeInactive) query = query.eq("is_active", true);
+  return unwrap(await query, "Profissionais").map(toProfessional);
+}
+
+export async function createProfessional(db: DbClient, clinicId: string, input: ProfessionalInput): Promise<Professional> {
+  const row = validateProfessional(input);
+  return toProfessional(
+    unwrap(await db.from("professionals").insert({ clinic_id: clinicId, ...row }).select(COLUMNS).single(), "Profissional"),
+  );
+}
+
+export async function updateProfessional(
+  db: DbClient,
+  clinicId: string,
+  id: string,
+  input: ProfessionalInput,
+): Promise<Professional> {
+  const row = validateProfessional(input);
+  return toProfessional(
+    unwrapOne(
+      await db.from("professionals").update(row).eq("clinic_id", clinicId).eq("id", id).select(COLUMNS).maybeSingle(),
+      "Profissional",
+    ),
+  );
+}
+
+export async function setProfessionalActive(db: DbClient, clinicId: string, id: string, isActive: boolean): Promise<void> {
+  unwrapOne(
+    await db.from("professionals").update({ is_active: isActive }).eq("clinic_id", clinicId).eq("id", id).select("id").maybeSingle(),
+    "Profissional",
+  );
+}
