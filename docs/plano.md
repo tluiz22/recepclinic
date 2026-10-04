@@ -201,6 +201,24 @@ clínica ativa a partir do login; **credencial limitada à clínica** para bot, 
 públicas (fim da service role nesses caminhos); validação das variáveis de ambiente da plataforma
 (L39); biblioteca de datas com fuso por clínica (L40).
 
+**Detalhada em 04/out** (divisão aprovada pelo cliente). A F3 entrega o acesso ao banco testado
+contra o Supabase local; as telas e APIs do painel são ligadas a ele na F4, e páginas públicas, bot
+e envios nas F5–F7. Até lá o painel não abre com dados (o código antigo usa tabelas que o schema
+novo não tem). Etapas (cada uma com `npm test`, `test:db`, `check`, `build` e CI verdes):
+
+- **F3.1 — Base técnica:** tipos do banco gerados pela CLI do Supabase (o código passa a acusar
+  tabela ou coluna inexistente); validação das variáveis de ambiente da plataforma na subida (L39);
+  biblioteca de datas com fuso por clínica (L40).
+- **F3.2 — Contexto da clínica:** clínica ativa a partir do login, papéis e agendas acessíveis em
+  cada requisição; fim de `staff_profiles`. Quem é membro de várias clínicas cai na última usada; a
+  tela de escolha é da F4.
+- **F3.3 — Credencial limitada:** emissão do token `clinic_service` da clínica da requisição para
+  bot, agendador e páginas públicas; service role só em rotinas da plataforma.
+- **F3.4 a F3.8 — Acesso por domínio:** configuração; pacientes; agenda (atendimentos, séries,
+  bloqueios, links); lista de espera; WhatsApp e rotinas. Cada uma com testes de integração,
+  incluindo as regras que a F1 deixou para o banco (elegibilidade do retorno, conflitos de exame,
+  ofertas e reenvios), e corrigindo os achados 1–5 da F1 onde aparecerem.
+
 **Cuidado registrado na F2.5:** num insert de várias linhas, o `supabase-js` manda `null` nas
 colunas ausentes de alguma linha, e o valor padrão do banco não é aplicado (ex.: `details` da
 trilha). Mandar todas as colunas em todas as linhas, ou usar `defaultToNull: false`.

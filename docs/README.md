@@ -11,13 +11,11 @@
 >   - **F2 concluída**: schema multi-clínica em 7 migrações (D2 e D6 revistas, D9 recorrência, D10
 >     convênios só no banco); dados de teste locais com logins no README da raiz; 158 testes de
 >     banco no CI, com varredura de isolamento automática.
->   - **Próxima etapa: F3** (acesso ao banco e contexto da clínica), a detalhar com o cliente.
->     **Para retomar:** ler a F3 em [`plano.md`](plano.md) (inclui o cuidado com insert de várias
->     linhas no `supabase-js`) e os achados 1–5 da F1; propor ao cliente a divisão da F3 em etapas,
->     como foi feito na F1 e na F2, antes de mudar código. O código da aplicação ainda usa o schema
->     antigo do piloto: a F3 é a fase que o liga ao schema novo. Para rodar o banco: abrir o
->     OrbStack, `npm run db:start`, `npm run db:reset` (carrega os dados de teste) e
->     `npm run test:db`.
+>   - **F3 em andamento** (acesso ao banco e contexto da clínica): divisão em etapas aprovada em
+>     04/out (F3.1 base técnica, F3.2 contexto da clínica, F3.3 credencial limitada, F3.4–F3.8
+>     acesso por domínio; ver [`plano.md`](plano.md)). As telas só são ligadas ao schema novo na
+>     F4. **Próxima etapa: F3.1.** Para rodar o banco: abrir o OrbStack, `npm run db:start`,
+>     `npm run db:reset` (carrega os dados de teste) e `npm run test:db`.
 > - **Frente paralela, o site** `www.recepclinic.com.br`: [`site-plano.md`](site-plano.md), etapas
 >   S0–S6, a executar numa **sessão separada, na pasta `~/Documents/Desenvolvimento/recepclinic-site`**
 >   (nunca nesta pasta, para as duas sessões não se cruzarem). **S0 concluída em 03/out**: repositório
