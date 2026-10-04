@@ -19,7 +19,7 @@
 | Fase | Entrega | Situação |
 |---|---|---|
 | F0 | Base de trabalho | concluída (04/out) |
-| F1 | Testes das regras atuais | **próxima** (detalhada) |
+| F1 | Testes das regras atuais | **em andamento** (F1.1 concluída) |
 | F2 | Schema novo | a detalhar |
 | F3 | Acesso ao banco e contexto da clínica | a detalhar |
 | F4 | Painel | a detalhar |
@@ -110,7 +110,9 @@ fora.
 
 Etapas (cada uma com `npm test`, `check` e `build` verdes e CI verde):
 
-- **F1.1 — Agenda:** horários livres (`computeAvailableSlots`), feriados nacionais.
+- **F1.1 — Agenda:** horários livres (`computeAvailableSlots`), feriados nacionais. **Concluída em
+  04/out** (39 testes). Observação para depois: só há feriados nacionais (+ Carnaval, Cinzas,
+  Corpus Christi); feriados estaduais e municipais passam a importar com clínicas em outras cidades.
 - **F1.2 — Paciente e idade:** idade, adulto, idade limite da consulta e o aviso dela, data de
   nascimento válida, responsável como paciente.
 - **F1.3 — Prazos e envios:** prazo do retorno, corte e janela do lembrete, dia e hora em

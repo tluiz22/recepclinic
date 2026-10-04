@@ -5,8 +5,8 @@
 > - **Etapas 0 a 4 concluídas**: cópia isolada, [diagnóstico](diagnostico.md), [limites](limites.md),
 >   [arquitetura](arquitetura.md) (decisões D1–D8) e [plano](plano.md) (fases F0–F10).
 > - **Produto: F0 concluída** (site da Dra. fora do repositório; nome RecepClinic; Supabase local
->   pela CLI; Vitest e `npm test` no CI). **Próxima etapa: F1.1** (testes da agenda); F1 detalhada
->   em F1.1–F1.4 no plano.
+>   pela CLI; Vitest e `npm test` no CI). **F1.1 concluída** (testes da agenda). **Próxima etapa: F1.2**
+>   (paciente e idade); F1 detalhada em F1.1–F1.4 no plano.
 > - **Frente paralela, o site** `www.recepclinic.com.br`: [`site-plano.md`](site-plano.md), etapas
 >   S0–S6, a executar numa **sessão separada, na pasta `~/Documents/Desenvolvimento/recepclinic-site`**
 >   (nunca nesta pasta, para as duas sessões não se cruzarem). **S0 concluída em 03/out**: repositório
