@@ -20,7 +20,7 @@
 |---|---|---|
 | F0 | Base de trabalho | concluída (04/out) |
 | F1 | Testes das regras atuais | concluída (04/out; 197 testes) |
-| F2 | Schema novo | **em andamento** (F2.1 a F2.5 concluídas) |
+| F2 | Schema novo | **em andamento** (F2.1 a F2.6 concluídas) |
 | F3 | Acesso ao banco e contexto da clínica | a detalhar |
 | F4 | Painel | a detalhar |
 | F5 | Páginas públicas e domínio | a detalhar |
@@ -180,7 +180,9 @@ para a F7.
 - **F2.6 — WhatsApp e rotinas:** estado da conversa, mensagens, funil, conexão e templates do
   WhatsApp por clínica, execuções das rotinas, envios do resumo, contadores de uso.
   (`conversation_state`, `whatsapp_messages`, `bot_funnel_events`, `job_runs`,
-  `daily_summary_sends`.)
+  `daily_summary_sends`.) **Concluída em 04/out** (19 testes de banco). Token da
+  Meta no Vault do Supabase, lido só pelo bot da própria clínica; webhook descobre a clínica pelo
+  `phone_number_id`; rotinas registradas por clínica; contadores de uso por mês.
 - **F2.7 — Dados de teste e isolamento completo:** duas clínicas fictícias (uma com vários
   profissionais e recepção restrita a parte das agendas); varredura de isolamento em todas as
   tabelas para usuário, bot e agendador.
