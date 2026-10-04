@@ -19,7 +19,7 @@
 | Fase | Entrega | Situação |
 |---|---|---|
 | F0 | Base de trabalho | concluída (04/out) |
-| F1 | Testes das regras atuais | **em andamento** (F1.1 concluída) |
+| F1 | Testes das regras atuais | **em andamento** (F1.1 e F1.2 concluídas) |
 | F2 | Schema novo | a detalhar |
 | F3 | Acesso ao banco e contexto da clínica | a detalhar |
 | F4 | Painel | a detalhar |
@@ -114,7 +114,12 @@ Etapas (cada uma com `npm test`, `check` e `build` verdes e CI verde):
   04/out** (39 testes). Observação para depois: só há feriados nacionais (+ Carnaval, Cinzas,
   Corpus Christi); feriados estaduais e municipais passam a importar com clínicas em outras cidades.
 - **F1.2 — Paciente e idade:** idade, adulto, idade limite da consulta e o aviso dela, data de
-  nascimento válida, responsável como paciente.
+  nascimento válida, responsável como paciente. **Concluída em
+  04/out** (42 testes). Achados registrados nos testes como estão, a corrigir na F3/F4 (decisão do
+  cliente): (1) `api/admin/pacientes/[id]/criancas/index.ts` tem cópia própria de
+  `isValidBirthdate` com o dia em UTC e aceita a data de amanhã entre 21h e 24h de Fortaleza;
+  (2) datas inexistentes (31/02, mês 13) passam na validação e só o banco recusa, com a mensagem
+  genérica; (3) `formatAge` com nascimento futuro devolve texto sem sentido ("11 meses").
 - **F1.3 — Prazos e envios:** prazo do retorno, corte e janela do lembrete, dia e hora em
   Fortaleza, horário e descrição do resumo do dia, regra e rótulo de faltoso, estado das execuções
   automáticas, leitura dos resultados de reenvio.
