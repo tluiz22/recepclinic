@@ -19,8 +19,8 @@
 | Fase | Entrega | Situação |
 |---|---|---|
 | F0 | Base de trabalho | concluída (04/out) |
-| F1 | Testes das regras atuais | **em andamento** (F1.1 a F1.3 concluídas) |
-| F2 | Schema novo | a detalhar |
+| F1 | Testes das regras atuais | concluída (04/out; 197 testes) |
+| F2 | Schema novo | **próxima** (a detalhar) |
 | F3 | Acesso ao banco e contexto da clínica | a detalhar |
 | F4 | Painel | a detalhar |
 | F5 | Páginas públicas e domínio | a detalhar |
@@ -128,7 +128,7 @@ Etapas (cada uma com `npm test`, `check` e `build` verdes e CI verde):
   mostra janela antes de 1h como "23h30" sem indicar a véspera.
 - **F1.4 — Formatação e textos:** datas, valores, data e hora do WhatsApp, texto do WhatsApp para
   HTML, períodos das métricas, texto e prazo da oferta da lista de espera, título de sessão em
-  grupo.
+  grupo. **Concluída em 04/out** (56 testes, sem achados).
 
 Os testes registram o comportamento **atual**, inclusive o que parecer estranho: o que for dúvida de
 regra vira pergunta ao cliente, não correção silenciosa.
