@@ -43,7 +43,8 @@ npm run db:start  # sobe o Supabase local (na 1ª vez baixa as imagens)
 npm run db:stop   # para o Supabase local
 npm run db:reset  # recria o banco local do zero a partir de supabase/migrations
 supabase status   # mostra as URLs locais (API, banco, Studio)
+npm run test:db   # testes de banco (RLS e isolamento entre clínicas); requer o banco ligado
 ```
 
-`supabase/migrations/` fica vazia até o schema novo (F2). As migrações do piloto estão em
+`supabase/migrations/` tem o schema novo multi-clínica (F2). As migrações do piloto estão em
 `supabase/piloto-migrations/` só como referência.

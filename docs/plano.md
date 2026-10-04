@@ -20,7 +20,7 @@
 |---|---|---|
 | F0 | Base de trabalho | concluída (04/out) |
 | F1 | Testes das regras atuais | concluída (04/out; 197 testes) |
-| F2 | Schema novo | **próxima** (detalhada) |
+| F2 | Schema novo | **em andamento** (F2.1 concluída) |
 | F3 | Acesso ao banco e contexto da clínica | a detalhar |
 | F4 | Painel | a detalhar |
 | F5 | Páginas públicas e domínio | a detalhar |
@@ -148,7 +148,9 @@ para a F7.
 
 - **F2.1 — Núcleo:** clínicas; membros e papéis (Administrador, Profissional, Recepção); Suporte da
   plataforma; funções "é membro", "tem papel"; padrão de RLS; ambiente de testes de banco no CI.
-  (Substitui `staff_profiles`.)
+  (Substitui `staff_profiles`.) **Concluída em 04/out** (23 testes de banco). Padrões
+  assumidos: a clínica nunca fica sem Administrador; o Administrador vê o registro do Suporte da
+  própria clínica; "suspensa" ainda não bloqueia nada (decisão futura, com contrato e cobrança).
 - **F2.2 — Configuração, profissionais e agendas:** perfil e identidade da clínica; profissionais
   genéricos (profissão, especialidade, conselho, número, UF); locais; **agendas** (profissional ou
   recurso); **acesso de cada membro às agendas** (todas por padrão para Administrador e Recepção,

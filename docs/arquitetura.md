@@ -251,6 +251,15 @@ riscos (L12, L38).
 - O **Profissional vê só a própria agenda** (e os atendimentos dela), salvo se liberado para outras.
 - Vale **no banco (RLS)** e na aplicação, como os papéis.
 
+**Revisão de 04/out/2026 (cliente): acesso do Suporte RecepClinic.**
+
+- O Suporte tem **acesso permanente a todas as clínicas**, sem sessão nem autorização da clínica.
+- **Tudo fica registrado:** alterações pelo próprio banco (gatilhos, desde a F2.1); leituras pela
+  aplicação, a cada tela ou consulta aberta pelo Suporte (F3/F4).
+- **LGPD:** o acesso do Suporte precisa constar no termo de tratamento de dados e no contrato com
+  as clínicas (pendência do cliente, com revisão de advogado).
+- **Descartado:** sessão com motivo e prazo; autorização prévia da clínica a cada acesso.
+
 ## D7 — Endereço do produto (03/out/2026)
 
 **Decisão: um domínio único do RecepClinic.**
@@ -407,5 +416,6 @@ Todos os 50 limites têm destino:
 
 - **Meta**: iniciar a verificação da empresa e o cadastro como Tech Provider (D3a). Depende de CNPJ e
   de um site com política de privacidade.
-- **CNPJ, contrato com as clínicas e termo de tratamento de dados** (LGPD).
+- **CNPJ, contrato com as clínicas e termo de tratamento de dados** (LGPD), incluindo o acesso
+  permanente do Suporte RecepClinic aos dados das clínicas (D6, revisão de 04/out).
 - **Custo da Meta por mensagem** (L50).
