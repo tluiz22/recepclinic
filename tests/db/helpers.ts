@@ -74,7 +74,9 @@ export async function makePlatformStaff(userId: string): Promise<void> {
 }
 
 export async function deleteClinics(ids: string[]): Promise<void> {
-  if (ids.length) await adminClient().from("clinics").delete().in("id", ids);
+  if (!ids.length) return;
+  const { error } = await adminClient().from("clinics").delete().in("id", ids);
+  if (error) throw new Error(`Limpeza das clínicas de teste falhou: ${error.message}`);
 }
 
 export async function deleteUsers(users: TestUser[]): Promise<void> {

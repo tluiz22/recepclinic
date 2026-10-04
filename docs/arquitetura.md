@@ -69,6 +69,9 @@ generalizar).
   do atendimento de origem. Com um profissional só, não pergunta nada.
 - **Painel:** a recepção **escolhe a agenda (profissional) para exibir**. Sai do "fica para quando
   uma clínica precisar"; entra na F4.
+- **Lista de espera:** a vaga que abre numa agenda é oferecida **só a quem espera na mesma agenda,
+  para o mesmo serviço** (o paciente antecipa sem trocar de profissional). Descartado: oferecer a
+  quem espera o serviço com outro profissional; deixar o paciente escolher ao entrar na fila.
 
 ## D3 — WhatsApp por clínica (03/out/2026)
 
@@ -338,6 +341,8 @@ nutricionistas e outros profissionais com sessões que se repetem.
   série ou muda dia/horário dali em diante). Sessões passadas nunca mudam.
 - **WhatsApp:** o bot **não cria séries**. O paciente cancela ou remarca **só a sessão** do lembrete,
   e a série continua.
+- **Lista de espera** (padrão assumido): sessão de série cancelada abre vaga normalmente; a sessão
+  de série **não entra na fila** para antecipar (horário fixo combinado).
 
 **Por quê:** decisão do cliente; o produto é genérico (D4a) e esses profissionais trabalham em
 sessões contínuas.

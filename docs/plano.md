@@ -20,7 +20,7 @@
 |---|---|---|
 | F0 | Base de trabalho | concluída (04/out) |
 | F1 | Testes das regras atuais | concluída (04/out; 197 testes) |
-| F2 | Schema novo | **em andamento** (F2.1 a F2.4 concluídas) |
+| F2 | Schema novo | **em andamento** (F2.1 a F2.5 concluídas) |
 | F3 | Acesso ao banco e contexto da clínica | a detalhar |
 | F4 | Painel | a detalhar |
 | F5 | Páginas públicas e domínio | a detalhar |
@@ -170,9 +170,13 @@ para a F7.
 - **F2.4 — Atendimentos e séries:** atendimentos ligados a serviço e agenda, trava de horário por
   agenda, preço automático, turmas, bloqueios, links de agendamento, trilha; **séries recorrentes**
   (D9: frequência, fim por data, por sessões ou sem fim, sessões ligadas à série); particular ou
-  plano do atendimento, copiado do paciente (D10). RLS também pelo acesso às agendas. (`appointments`, `schedule_blocks`, `booking_links`, `appointment_events`.) **Concluída em 04/out** (30 testes de banco). Gerar as sessões da
-  série, pular conflitos e alterar "esta e as próximas" ficam na aplicação (F4).
-- **F2.5 — Lista de espera:** inscrições, vagas abertas, ofertas e o gatilho. (`waitlist_*`.)
+  plano do atendimento, copiado do paciente (D10). RLS também pelo acesso às agendas.
+  (`appointments`, `schedule_blocks`, `booking_links`, `appointment_events`.) **Concluída em 04/out**
+  (30 testes de banco). Gerar as sessões da série, pular conflitos e alterar "esta e as próximas"
+  ficam na aplicação (F4).
+- **F2.5 — Lista de espera:** inscrições, vagas abertas, ofertas e o gatilho. (`waitlist_*`.) **Concluída em 04/out** (16 testes de banco). A
+  vaga vai só para quem espera na mesma agenda e no mesmo serviço (D2); sessão de série não entra
+  na fila (D9). A chamada do gatilho à rota das ofertas entra na F7.
 - **F2.6 — WhatsApp e rotinas:** estado da conversa, mensagens, funil, conexão e templates do
   WhatsApp por clínica, execuções das rotinas, envios do resumo, contadores de uso.
   (`conversation_state`, `whatsapp_messages`, `bot_funnel_events`, `job_runs`,
@@ -190,6 +194,10 @@ clínica é.
 clínica ativa a partir do login; **credencial limitada à clínica** para bot, agendador e páginas
 públicas (fim da service role nesses caminhos); validação das variáveis de ambiente da plataforma
 (L39); biblioteca de datas com fuso por clínica (L40).
+
+**Cuidado registrado na F2.5:** num insert de várias linhas, o `supabase-js` manda `null` nas
+colunas ausentes de alguma linha, e o valor padrão do banco não é aplicado (ex.: `details` da
+trilha). Mandar todas as colunas em todas as linhas, ou usar `defaultToNull: false`.
 
 ## F4 — Painel
 
