@@ -20,7 +20,7 @@
 |---|---|---|
 | F0 | Base de trabalho | concluída (04/out) |
 | F1 | Testes das regras atuais | concluída (04/out; 197 testes) |
-| F2 | Schema novo | **em andamento** (F2.1 concluída) |
+| F2 | Schema novo | **em andamento** (F2.1 e F2.2 concluídas) |
 | F3 | Acesso ao banco e contexto da clínica | a detalhar |
 | F4 | Painel | a detalhar |
 | F5 | Páginas públicas e domínio | a detalhar |
@@ -157,7 +157,10 @@ para a F7.
   restringível; Profissional só a própria); **serviços** (consulta, retorno, exame) **em várias
   agendas**; disponibilidade por agenda; turmas de exame; feriados extras; contatos do resumo do
   dia; **planos de saúde atendidos** (com nomes alternativos e busca por semelhança, `pg_trgm`),
-  exceções por profissional e a opção "exigir dados do convênio na marcação" (D10). (Substitui `appointment_settings`, `clinic_locations`, `exam_types`, `availability_windows`,
+  exceções por profissional e a opção "exigir dados do convênio na marcação" (D10). **Concluída em 04/out**
+  (44 testes de banco). Padrões assumidos: profissional pode existir sem login; preço no serviço com
+  preço próprio opcional por local; intervalo entre atendimentos por agenda; fuso padrão
+  America/Fortaleza. (Substitui `appointment_settings`, `clinic_locations`, `exam_types`, `availability_windows`,
   `exam_type_group_schedule`, `notification_recipients`.)
 - **F2.3 — Pacientes:** contatos e pacientes, telefone único por clínica; plano do paciente
   (particular ou plano, carteirinha, validade; D10). (`guardians`, `patients`.)
