@@ -2,6 +2,7 @@
 import "../styles/global.css";
 import Icon from "../components/admin/Icon.astro";
 import type { IconName } from "../components/admin/Icon.astro";
+import { canAccessArea, roleLabel as describeRoles } from "../lib/clinicAccess";
 
 interface Props {
   title: string;
@@ -20,19 +21,19 @@ const primaryNavItems: { label: string; href: string; icon: IconName }[] = [
   { label: "Resumo do Dia", href: "/admin/consultas", icon: "check-circle" },
 ];
 
-// Perfil do login ativo, resolvido pelo middleware (Fase 14). Métricas é só
-// da médica — escondida do menu, não só bloqueada na rota. Relatórios virou
-// uma aba de Métricas (Fase 23 · etapa 4).
-const role = Astro.locals.role ?? "secretaria";
-const roleLabel = role === "medica" ? "Médica" : "Secretária";
+// Papéis do login na clínica ativa, resolvidos pelo middleware (F3.2, D6).
+// Áreas sem acesso somem do menu, não só ficam bloqueadas na rota.
+// Relatórios virou uma aba de Métricas (Fase 23 · etapa 4).
+const access = Astro.locals.clinic ?? { roles: [], isPlatformStaff: false };
+const roleLabel = describeRoles(access);
 
 const moreNavItems: { label: string; href: string; icon: IconName }[] = [
   // Envios automáticos virou aba de Métricas (Fase 23 · etapa 5).
-  { label: "Configurações", href: "/admin/configuracoes", icon: "settings" },
-  ...(role === "medica"
-    ? [
-        { label: "Métricas", href: "/admin/metricas", icon: "funnel" as IconName },
-      ]
+  ...(canAccessArea(access, "settings")
+    ? [{ label: "Configurações", href: "/admin/configuracoes", icon: "settings" as IconName }]
+    : []),
+  ...(canAccessArea(access, "metrics")
+    ? [{ label: "Métricas", href: "/admin/metricas", icon: "funnel" as IconName }]
     : []),
 ];
 

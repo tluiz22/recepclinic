@@ -8,6 +8,7 @@ import Icon from "../../components/admin/Icon.astro";
 import type { IconName } from "../../components/admin/Icon.astro";
 import { createClient } from "../../lib/supabase/server";
 import { describeSendsAlert, fetchSendsAlert } from "../../lib/automaticSends";
+import { canAccessArea } from "../../lib/clinicAccess";
 
 const PENDING_WINDOW_DAYS = 60;
 
@@ -45,9 +46,9 @@ const [{ data: todayRows }, { count: pendingCount }, reminderReport, sendsAlert]
 ]);
 
 const sendsAlertLines = describeSendsAlert(sendsAlert);
-// Alerta leva a médica à aba Envios de Métricas e a secretária à Agenda, onde
-// ficam os botões de envio (Fase 23 · etapa 5).
-const isMedica = Astro.locals.role === "medica";
+// Alerta leva quem vê Métricas à aba Envios e os demais à Agenda, onde ficam
+// os botões de envio (Fase 23 · etapa 5; papéis da D6 desde a F3.2).
+const isMedica = canAccessArea(Astro.locals.clinic ?? { roles: [], isPlatformStaff: false }, "metrics");
 
 const appointmentsToday = (todayRows ?? []).filter((row) => row.appointment_type !== "exam").length;
 const examsToday = (todayRows ?? []).length - appointmentsToday;

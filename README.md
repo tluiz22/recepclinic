@@ -70,4 +70,4 @@ as tabelas. Logins só para o ambiente local, todos com a senha `recepclinic-loc
 | `recepcao2@exemplo-saude.local` | Recepção restrita (psicóloga e fisioterapeuta) |
 | `admin@odonto-exemplo.local` | Administrador + Profissional (outra clínica) |
 | `recepcao@odonto-exemplo.local` | Recepção (outra clínica) |
-| `suporte@recepclinic.local` | Suporte RecepClinic |
+| `suporte@recepclinic.local` | Suporte RecepClinic (escolhe a clínica por `POST /api/admin/clinica-ativa`, campo `clinicId`) |

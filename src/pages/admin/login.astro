@@ -1,7 +1,10 @@
 ---
 import "../../styles/global.css";
 
-const hasError = Astro.url.searchParams.has("error");
+const error = Astro.url.searchParams.get("error");
+// "sem_acesso": login certo, mas sem papel em nenhuma clínica (D6, F3.2).
+const errorMessage =
+  error === "sem_acesso" ? "Este login não tem acesso a nenhuma clínica." : error !== null ? "E-mail ou senha inválidos." : null;
 ---
 
 <html lang="pt-BR">
@@ -16,9 +19,9 @@ const hasError = Astro.url.searchParams.has("error");
       <h1 class="text-xl font-bold text-slate-900">Painel do consultório</h1>
       <p class="mt-1 text-sm text-slate-600">Acesso restrito à equipe.</p>
       {
-        hasError && (
+        errorMessage && (
           <p class="mt-4 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">
-            E-mail ou senha inválidos.
+            {errorMessage}
           </p>
         )
       }

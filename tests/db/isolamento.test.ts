@@ -11,8 +11,10 @@ const CLINIC_B = "0b000000-0000-4000-8000-000000000001"; // Odonto Exemplo
 // - platform_audit_log: o registro do Suporte sobrevive à exclusão da clínica
 //   (sem FK) e só é gravado por gatilho (sem gatilho de auditoria próprio).
 // - clinic_usage_monthly: só gatilhos gravam; o Suporte não altera.
-const NO_DIRECT_FK = new Set(["platform_audit_log"]);
-const NO_AUDIT_TRIGGER = new Set(["platform_audit_log", "clinic_usage_monthly"]);
+// - platform_access_log: leituras do Suporte (F3.2); como o registro das
+//   alterações, sobrevive à exclusão da clínica e só a função grava.
+const NO_DIRECT_FK = new Set(["platform_audit_log", "platform_access_log"]);
+const NO_AUDIT_TRIGGER = new Set(["platform_audit_log", "platform_access_log", "clinic_usage_monthly"]);
 const NOT_IN_DATA_SWEEP = new Set(["platform_audit_log"]);
 
 let clinicTables: string[] = [];

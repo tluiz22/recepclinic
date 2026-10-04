@@ -1,7 +1,8 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { roleLabel, type ClinicRole } from "./clinicAccess";
 
 // Autoria de marcar/remarcar/cancelar (Fase 17): canal (tela x WhatsApp) +
-// login de quem fez pela tela, exibido como WhatsApp / Secretária / Médica.
+// login de quem fez pela tela, exibido como WhatsApp ou o papel de quem fez (D6).
 
 // Colunas de `appointments` necessárias pra montar os rótulos — somar ao
 // `select` de quem exibe.
@@ -20,19 +21,21 @@ export interface AuthorshipRow {
   canceled_at?: string | null;
 }
 
-const ROLE_LABELS: Record<string, string> = {
-  secretaria: "Secretária",
-  medica: "Médica",
-};
-
-/** Login → "Secretária"/"Médica", a partir de `staff_profiles`. */
+/**
+ * Login → rótulo do papel ("Recepção", "Administrador + Profissional"…), a
+ * partir de `clinic_members` (F3.2; antes, `staff_profiles`). O RLS limita às
+ * clínicas do login. Nome da pessoa ou papel na trilha: decidir quando a agenda
+ * passar para o modelo novo (F3.6).
+ */
 export async function fetchStaffLabels(supabase: SupabaseClient): Promise<Map<string, string>> {
-  const { data } = await supabase.from("staff_profiles").select("user_id, role");
-  return new Map((data ?? []).map((row) => [row.user_id as string, ROLE_LABELS[row.role] ?? row.role]));
+  const { data } = await supabase.from("clinic_members").select("user_id, roles");
+  return new Map(
+    (data ?? []).map((row) => [row.user_id as string, roleLabel({ roles: row.roles as ClinicRole[], isPlatformStaff: false })])
+  );
 }
 
 // Canal 'admin' sem login conhecido = registro anterior à Fase 17, ou login
-// ainda sem perfil em `staff_profiles`.
+// que já não é membro da clínica.
 function authorLabel(via: string | null | undefined, userId: string | null | undefined, staff: Map<string, string>) {
   if (!via) return null;
   if (via === "whatsapp_bot") return "WhatsApp";

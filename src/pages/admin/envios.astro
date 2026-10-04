@@ -1,7 +1,9 @@
 ---
-// Envios automáticos virou a aba Envios de Métricas, só da médica (Fase 23 ·
-// etapa 5). Links antigos: a médica vai para a aba; a secretária, para a
-// Agenda, onde ficam os botões de envio do lembrete e do preparo.
-const role = Astro.locals.role ?? "secretaria";
-return Astro.redirect(role === "medica" ? "/admin/metricas?tab=envios" : "/admin/agenda");
+import { canAccessArea } from "../../lib/clinicAccess";
+
+// Envios automáticos virou a aba Envios de Métricas (Fase 23 · etapa 5).
+// Links antigos: quem vê Métricas vai para a aba; os demais, para a Agenda,
+// onde ficam os botões de envio do lembrete e do preparo.
+const access = Astro.locals.clinic ?? { roles: [], isPlatformStaff: false };
+return Astro.redirect(canAccessArea(access, "metrics") ? "/admin/metricas?tab=envios" : "/admin/agenda");
 ---

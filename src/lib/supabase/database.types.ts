@@ -603,6 +603,19 @@ isOneToOne: false
       referencedColumns: ["clinic_id","id"]
     }
                   ]
+                },"platform_access_log": {
+                  Row: {
+                    "actor_user_id": string,"clinic_id": string,"id": number,"method": string,"occurred_at": string,"path": string
+                  }
+                  Insert: {
+                    "actor_user_id": string,"clinic_id": string,"id"?: never,"method": string,"occurred_at"?: string,"path": string
+                  }
+                  Update: {
+                    "actor_user_id"?: string,"clinic_id"?: string,"id"?: never,"method"?: string,"occurred_at"?: string,"path"?: string
+                  }
+                  Relationships: [
+                    
+                  ]
                 },"platform_audit_log": {
                   Row: {
                     "actor_user_id": string,"clinic_id": string | null,"id": number,"new_row": Json | null,"occurred_at": string,"old_row": Json | null,"operation": string,"table_name": string
@@ -988,6 +1001,9 @@ isOneToOne: false
                            },
 "get_whatsapp_access_token":
 { Args: Record<PropertyKey, never>; Returns: string
+                           },
+"log_platform_access":
+{ Args: { "p_clinic_id": string,"p_method": string,"p_path": string }; Returns: undefined
                            },
 "reschedule_group_session":
 { Args: { "p_appointment_id": string,"p_channel": Database["public"]['Enums']["action_channel"],"p_scheduled_at": string }; Returns: undefined

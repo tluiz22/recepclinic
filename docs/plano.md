@@ -218,7 +218,18 @@ novo não tem). Etapas (cada uma com `npm test`, `test:db`, `check`, `build` e C
   domínio passa para os tipos e para `clinicTime` na sua etapa (F3.4–F3.8). 33 testes novos.
 - **F3.2 — Contexto da clínica:** clínica ativa a partir do login, papéis e agendas acessíveis em
   cada requisição; fim de `staff_profiles`. Quem é membro de várias clínicas cai na última usada; a
-  tela de escolha é da F4.
+  tela de escolha é da F4. **Concluída em 04/out**: o middleware monta o contexto
+  (`src/lib/data/clinicContext.ts`: clínica, fuso, perfil, papéis e agendas acessíveis, lidos com o
+  login da pessoa, sob RLS) e guarda a última clínica num cookie do navegador; sem cookie, abre a
+  clínica em que a pessoa entrou primeiro. Login sem papel em clínica nenhuma sai com "sem acesso".
+  Áreas da D6 na aplicação (`src/lib/clinicAccess.ts`): Configurações só do Administrador;
+  Métricas e relatórios do Administrador e do Profissional; o resto de todos (no piloto,
+  Configurações era da secretária também). O Suporte abre qualquer clínica pelo
+  `POST /api/admin/clinica-ativa` (a tela de escolha é da F4) e **cada leitura dele fica registrada**
+  em `platform_access_log` (migração `20261004190000`; sem o registro, a página não responde).
+  Pendências para a F4: tela de escolha da clínica; aba Envios para a Recepção (D6; hoje é aba de
+  Métricas); a trilha mostra o papel de quem fez (antes "Secretária"/"Médica"), e nome ou papel se
+  decide na F3.6. 14 testes unitários e 15 de banco novos.
 - **F3.3 — Credencial limitada:** emissão do token `clinic_service` da clínica da requisição para
   bot, agendador e páginas públicas; service role só em rotinas da plataforma.
 - **F3.4 a F3.8 — Acesso por domínio:** configuração; pacientes; agenda (atendimentos, séries,

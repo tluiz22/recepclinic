@@ -323,5 +323,10 @@ begin
     values (c_b, pt_b, s_b, ag_b, l_b, (monday + 1 + time '10:00') at time zone tz, 40, 'whatsapp_bot');
   insert into public.whatsapp_connections (clinic_id, phone_number_id, waba_id, display_phone, status)
     values (c_b, 'local-phone-number-id-b', 'local-waba-b', '+55 84 3333-0002', 'pending');
+
+  -- Leituras do Suporte (F3.2): uma em cada clínica.
+  insert into public.platform_access_log (actor_user_id, clinic_id, method, path) values
+    (u_support, c_a, 'GET', '/admin/agenda'),
+    (u_support, c_b, 'GET', '/admin/pacientes');
 end
 $$;
