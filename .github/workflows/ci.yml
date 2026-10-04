@@ -19,6 +19,8 @@ jobs:
       - run: npm ci
       - run: npm run check
       - run: npm test
+      # As datas não podem depender do fuso do servidor (L40).
+      - run: TZ=America/Los_Angeles npx vitest run src/lib/clinicTime.test.ts
       - run: npm run build
 
   db:
@@ -39,3 +41,5 @@ jobs:
       # Só o necessário para os testes de banco: Postgres, Auth, PostgREST e o gateway.
       - run: supabase start -x studio,imgproxy,edge-runtime,logflare,vector,realtime,storage-api,mailpit,postgres-meta,supavisor
       - run: npm run test:db
+      # Os tipos do banco precisam estar em dia com as migrações (`npm run db:types`).
+      - run: npm run db:types && git diff --exit-code src/lib/supabase/database.types.ts

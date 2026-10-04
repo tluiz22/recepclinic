@@ -208,7 +208,14 @@ novo não tem). Etapas (cada uma com `npm test`, `test:db`, `check`, `build` e C
 
 - **F3.1 — Base técnica:** tipos do banco gerados pela CLI do Supabase (o código passa a acusar
   tabela ou coluna inexistente); validação das variáveis de ambiente da plataforma na subida (L39);
-  biblioteca de datas com fuso por clínica (L40).
+  biblioteca de datas com fuso por clínica (L40). **Concluída em 04/out**: `npm run db:types` gera
+  `src/lib/supabase/database.types.ts` e o CI confere que está em dia com as migrações;
+  `src/lib/env.ts` confere as variáveis da plataforma no middleware (erro 500 com a lista no log);
+  `src/lib/clinicTime.ts` com `date-fns` e `@date-fns/tz` (data e hora da clínica, começo e fim do
+  dia, horário de verão), testado também com o servidor em outro fuso. A conversão de hora local
+  para instante é feita à mão porque o `TZDate` escolhe a hora repetida do horário de verão pelo
+  fuso do servidor. O código antigo continua com os clientes sem tipo e o "-03:00" fixo; cada
+  domínio passa para os tipos e para `clinicTime` na sua etapa (F3.4–F3.8). 33 testes novos.
 - **F3.2 — Contexto da clínica:** clínica ativa a partir do login, papéis e agendas acessíveis em
   cada requisição; fim de `staff_profiles`. Quem é membro de várias clínicas cai na última usada; a
   tela de escolha é da F4.

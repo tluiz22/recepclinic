@@ -1,4 +1,5 @@
 import { defineMiddleware } from "astro:middleware";
+import { platformEnv } from "./lib/env";
 import { createClient } from "./lib/supabase/server";
 
 // Fase 14: telas (e APIs) só da médica — as de métricas (Relatórios e
@@ -12,6 +13,16 @@ const isMedicaOnlyPath = (pathname: string) =>
 
 export const onRequest = defineMiddleware(async (context, next) => {
   const { url, request, cookies, redirect } = context;
+
+  // Páginas geradas no build (404) não precisam das variáveis do servidor.
+  if (!context.isPrerendered) {
+    try {
+      platformEnv();
+    } catch (error) {
+      console.error(error);
+      return new Response("Sistema mal configurado. Avise o suporte.", { status: 500 });
+    }
+  }
 
   const isAdminPath = url.pathname.startsWith("/admin") || url.pathname.startsWith("/api/admin");
   const isPublicAdminPath =

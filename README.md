@@ -20,7 +20,9 @@ A documentação do projeto (diagnóstico, arquitetura, plano e estado atual) es
 npm install
 ```
 
-As variáveis de ambiente estão descritas em `.env.example`. Este repositório ainda não tem banco
+As variáveis de ambiente estão descritas em `.env.example`. As da plataforma são conferidas na
+primeira requisição (`src/lib/env.ts`): faltando alguma, o sistema responde erro 500 e o log lista
+todas as que faltam. Este repositório ainda não tem banco
 nem credenciais próprios; nunca use as do sistema piloto.
 
 ## Scripts disponíveis
@@ -44,7 +46,10 @@ npm run db:stop   # para o Supabase local
 npm run db:reset  # recria o banco local do zero a partir de supabase/migrations
 supabase status   # mostra as URLs locais (API, banco, Studio)
 npm run test:db   # testes de banco (RLS e isolamento entre clínicas); requer o banco ligado
+npm run db:types  # regenera src/lib/supabase/database.types.ts depois de mudar uma migração
 ```
+
+Toda migração nova pede `npm run db:reset` e `npm run db:types`; o CI recusa tipos desatualizados.
 
 `supabase/migrations/` tem o schema novo multi-clínica (F2). As migrações do piloto estão em
 `supabase/piloto-migrations/` só como referência.
