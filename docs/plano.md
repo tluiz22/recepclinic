@@ -19,7 +19,7 @@
 | Fase | Entrega | Situação |
 |---|---|---|
 | F0 | Base de trabalho | concluída (04/out) |
-| F1 | Testes das regras atuais | **em andamento** (F1.1 e F1.2 concluídas) |
+| F1 | Testes das regras atuais | **em andamento** (F1.1 a F1.3 concluídas) |
 | F2 | Schema novo | a detalhar |
 | F3 | Acesso ao banco e contexto da clínica | a detalhar |
 | F4 | Painel | a detalhar |
@@ -122,7 +122,10 @@ Etapas (cada uma com `npm test`, `check` e `build` verdes e CI verde):
   genérica; (3) `formatAge` com nascimento futuro devolve texto sem sentido ("11 meses").
 - **F1.3 — Prazos e envios:** prazo do retorno, corte e janela do lembrete, dia e hora em
   Fortaleza, horário e descrição do resumo do dia, regra e rótulo de faltoso, estado das execuções
-  automáticas, leitura dos resultados de reenvio.
+  automáticas, leitura dos resultados de reenvio. **Concluída em 04/out** (53 testes). Achados,
+  também para a F3/F4: (4) `parseResendOutcome`/`parsePreparationResendOutcome` aceitam nomes
+  herdados de Object (`?reenvio=toString` mostra um aviso vazio); (5) `describeSummarySchedule`
+  mostra janela antes de 1h como "23h30" sem indicar a véspera.
 - **F1.4 — Formatação e textos:** datas, valores, data e hora do WhatsApp, texto do WhatsApp para
   HTML, períodos das métricas, texto e prazo da oferta da lista de espera, título de sessão em
   grupo.
