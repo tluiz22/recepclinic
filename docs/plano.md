@@ -19,7 +19,7 @@
 | Fase | Entrega | Situação |
 |---|---|---|
 | F0 | Base de trabalho | concluída (04/out) |
-| F1 | Testes das regras atuais | a detalhar |
+| F1 | Testes das regras atuais | **próxima** (detalhada) |
 | F2 | Schema novo | a detalhar |
 | F3 | Acesso ao banco e contexto da clínica | a detalhar |
 | F4 | Painel | a detalhar |
@@ -101,10 +101,27 @@ próprio, banco local e testes rodando no CI. Nenhuma regra de negócio muda nes
 **Objetivo:** cobrir com testes as regras validadas no piloto **antes** de mudá-las, para que a
 adaptação mostre quando uma regra quebrar.
 
-**Escopo:** funções sem banco ou com banco simulado: horários livres (`scheduling/slots.ts` e
-afins), feriados, idade e idade limite, elegibilidade do retorno, corte e janela do lembrete,
-horário do resumo do dia, regra de faltosos, formatação de datas e valores, textos que dependem de
-regra (ex.: idade limite).
+**Escopo (detalhado em 04/out):** só as regras de **cálculo**, que não consultam o banco: as funções
+puras e a parte pura dos módulos que também acessam o banco. **Decisão do cliente (04/out):** as
+regras que dependem de consulta ao banco (elegibilidade do retorno, conflitos de exame, lista de
+espera e ofertas, reenvios) **não ganham banco simulado**; recebem testes de integração contra o
+Supabase local logo depois da F2, já no schema novo, para não escrever testes que seriam jogados
+fora.
+
+Etapas (cada uma com `npm test`, `check` e `build` verdes e CI verde):
+
+- **F1.1 — Agenda:** horários livres (`computeAvailableSlots`), feriados nacionais.
+- **F1.2 — Paciente e idade:** idade, adulto, idade limite da consulta e o aviso dela, data de
+  nascimento válida, responsável como paciente.
+- **F1.3 — Prazos e envios:** prazo do retorno, corte e janela do lembrete, dia e hora em
+  Fortaleza, horário e descrição do resumo do dia, regra e rótulo de faltoso, estado das execuções
+  automáticas, leitura dos resultados de reenvio.
+- **F1.4 — Formatação e textos:** datas, valores, data e hora do WhatsApp, texto do WhatsApp para
+  HTML, períodos das métricas, texto e prazo da oferta da lista de espera, título de sessão em
+  grupo.
+
+Os testes registram o comportamento **atual**, inclusive o que parecer estranho: o que for dúvida de
+regra vira pergunta ao cliente, não correção silenciosa.
 
 ## F2 — Schema novo
 
