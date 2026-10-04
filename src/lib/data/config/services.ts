@@ -124,7 +124,7 @@ export async function getService(db: DbClient, clinicId: string, id: string): Pr
 export async function createService(db: DbClient, clinicId: string, input: ServiceInput): Promise<Service> {
   const row = validateService(input);
   const created = await db.from("services").insert({ clinic_id: clinicId, ...row }).select("id").single();
-  const { id } = unwrap<{ id: string }>(created, "Serviço");
+  const { id } = unwrap(created, "Serviço");
   return getService(db, clinicId, id);
 }
 

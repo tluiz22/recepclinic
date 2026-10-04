@@ -14,10 +14,11 @@
 >   - **F3 em andamento** (acesso ao banco e contexto da clínica): divisão em etapas aprovada em
 >     04/out (F3.1 base técnica, F3.2 contexto da clínica, F3.3 credencial limitada, F3.4–F3.8
 >     acesso por domínio; ver [`plano.md`](plano.md)). As telas só são ligadas ao schema novo na
->     F4. **F3.1 a F3.4 concluídas** (tipos do banco, variáveis de ambiente, datas com fuso;
+>     F4. **F3.1 a F3.5 concluídas** (tipos do banco, variáveis de ambiente, datas com fuso;
 >     contexto da clínica, papéis da D6 e registro das leituras do Suporte; credencial limitada à
 >     clínica e service role presa a um arquivo; acesso à configuração, com a decisão de que a
->     sobreposição de horários vale por agenda). **Próxima etapa: F3.5** (acesso a pacientes).
+>     sobreposição de horários vale por agenda; acesso a pacientes, com os achados 1–3 da F1
+>     resolvidos). **Próxima etapa: F3.6** (acesso à agenda: atendimentos, séries, bloqueios, links).
 >     Para rodar o banco: abrir o OrbStack, `npm run db:start`, `npm run db:reset` (carrega os
 >     dados de teste) e `npm run test:db`.
 > - **Frente paralela, o site** `www.recepclinic.com.br`: [`site-plano.md`](site-plano.md), etapas

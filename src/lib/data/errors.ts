@@ -68,16 +68,16 @@ export function fromDbError(error: unknown, context: string): DataError {
  * Sem erro, select e insert…select sempre trazem dados; insert sem select
  * traz null, e quem chama não usa o retorno.
  */
-export function unwrap<T>(result: { data: T | null; error: unknown }, context: string): T {
+export function unwrap<R extends { data: unknown; error: unknown }>(result: R, context: string): NonNullable<R["data"]> {
   if (result.error) throw fromDbError(result.error, context);
-  return result.data as T;
+  return result.data as NonNullable<R["data"]>;
 }
 
 /**
  * Para update/delete numa linha: o RLS esconde o que o login não pode mexer,
  * e o banco responde "0 linhas" em vez de erro. Aqui isso vira not_found.
  */
-export function unwrapOne<T>(result: { data: T | null; error: unknown }, context: string): T {
+export function unwrapOne<R extends { data: unknown; error: unknown }>(result: R, context: string): NonNullable<R["data"]> {
   const data = unwrap(result, context);
   if (data === null || data === undefined) throw new DataError("not_found", `${context}: não encontrado`);
   return data;

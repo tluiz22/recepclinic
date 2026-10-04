@@ -84,9 +84,11 @@ describe("formatAge", () => {
     expect(formatAge("2025-12-25", "2026-01-04")).toBe("10 dias");
   });
 
-  // Comportamento atual registrado como está: data futura não chega aqui pelo
-  // cadastro (isValidBirthdate recusa), mas, se chegar, o texto sai errado.
-  it("data de nascimento futura: sai um texto sem sentido (comportamento atual)", () => {
-    expect(formatAge("2026-10-10", "2026-10-04")).toBe("11 meses");
+  // Achado 3 da F1, corrigido na F3.5 (decisão do cliente): o banco recusa
+  // nascimento futuro, mas um dado errado aparece como tal, não como idade.
+  it("data de nascimento futura: \"nascimento inválido\"", () => {
+    expect(formatAge("2026-10-10", "2026-10-04")).toBe("nascimento inválido");
+    expect(formatAge("2026-10-05", "2026-10-04")).toBe("nascimento inválido");
+    expect(formatAge("2026-10-04", "2026-10-04")).toBe("0 dias");
   });
 });

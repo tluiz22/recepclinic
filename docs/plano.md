@@ -261,6 +261,19 @@ novo não tem). Etapas (cada uma com `npm test`, `test:db`, `check`, `build` e C
   local continua opcional). Cuidado novo: insert com `.select()` em `agendas` falha no RLS (a
   leitura consulta a própria tabela); gerar o id na aplicação e ler depois. 23 testes unitários e 24
   de banco novos.
+- **F3.5 — Pacientes: concluída em 04/out.** `src/lib/data/patients.ts`: contatos (busca por nome
+  ou telefone, edição, desativação) e pacientes (cadastro pela tela ou pelo bot, edição, plano do
+  paciente da D10, busca, desativação), com as regras do cadastro do piloto (Fase 21): só maior de
+  18 é o próprio contato, inclusive ao editar; telefone já cadastrado reaproveita o contato (e o
+  reativa), e sendo o próprio paciente pede confirmação de que é a mesma pessoa; um só "próprio
+  paciente" por contato; o nome do contato acompanha o do próprio paciente; idade limite da
+  consulta só avisa. **Achados da F1:** (1) e (2) resolvidos na camada nova e no banco (data que
+  existe, até hoje no fuso da clínica); a cópia antiga em `criancas/index.ts` e o
+  `isValidBirthdate` herdado saem com as telas antigas na F4. (3) `formatAge` com nascimento no
+  futuro mostra **"nascimento inválido"** (decisão do cliente, 04/out). Padrão assumido
+  (revisável): o aviso de possível duplicado (mesmo contato e mesmo nascimento) vale sempre que o
+  contato já existe; no piloto, só ao incluir paciente pela tela do responsável. O aviso "já tem
+  atendimento marcado" da busca entra com a agenda (F3.6). 5 testes unitários e 14 de banco novos.
 
 **Cuidado registrado na F2.5:** num insert de várias linhas, o `supabase-js` manda `null` nas
 colunas ausentes de alguma linha, e o valor padrão do banco não é aplicado (ex.: `details` da

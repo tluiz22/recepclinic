@@ -34,6 +34,10 @@ export function isOverConsultationAgeLimit(
 // crianças pequenas (contexto pediátrico, onde meses importam), simples a
 // partir de 3 anos.
 export function formatAge(birthdateIso: string, referenceDateIso: string): string {
+  // Nascimento depois da data de referência só vem de dado errado (o banco
+  // recusa): aparece como tal (achado 3 da F1, decisão do cliente na F3.5).
+  if (birthdateIso > referenceDateIso) return "nascimento inválido";
+
   const [by, bm, bd] = birthdateIso.split("-").map(Number);
   const [ry, rm, rd] = referenceDateIso.split("-").map(Number);
 
