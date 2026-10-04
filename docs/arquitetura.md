@@ -58,6 +58,18 @@ generalizar).
 
 **Resolve:** L02; prepara o terreno para L06 (tipos de atendimento ligados a agendas).
 
+**Revisão de 04/out/2026 (cliente, requisitos de várias agendas):**
+
+- Uma clínica pode ter **vários profissionais, cada um com a sua agenda**, e várias pessoas na
+  recepção.
+- Um **serviço pode estar em várias agendas** (dois médicos fazem "Consulta"). Substitui o "o tipo
+  de atendimento define a agenda" da 1ª versão.
+- **Bot:** com mais de um profissional para o serviço, pergunta **"com quem?"** e oferece também
+  **"primeiro horário disponível"**. Retorno e sessões de série ficam com o **mesmo profissional**
+  do atendimento de origem. Com um profissional só, não pergunta nada.
+- **Painel:** a recepção **escolhe a agenda (profissional) para exibir**. Sai do "fica para quando
+  uma clínica precisar"; entra na F4.
+
 ## D3 — WhatsApp por clínica (03/out/2026)
 
 ### D3a — Conexão com o número da clínica
@@ -139,7 +151,8 @@ cair em "dezenas de configurações" (regra 4 do README), a forma de configurar 
 - **Perfil da clínica**: *Pediátrica*, *Adultos* ou *Mista*. Define o vocabulário dos textos
   ("criança/responsável" × "paciente/contato") e as regras de idade padrão. A idade limite continua
   ajustável.
-- **Identidade**: nome da clínica, profissionais (nome, especialidade, registro profissional),
+- **Identidade**: nome da clínica, profissionais (nome, profissão e especialidade, registro no
+  conselho de classe: conselho, número e UF, ex.: CRM, CRO, CRP, CREFITO, CRN; revisão de 04/out),
   endereços dos locais, logo e cor. Tudo por tela, incluindo criar, editar e desativar locais.
 - **Informações do bot**: textos curtos editáveis (formas de pagamento, convênios, observações).
 - **Fuso por clínica** e **feriados**: nacionais calculados + lista de datas extras da clínica
@@ -231,6 +244,13 @@ riscos (L12, L38).
 
 **Resolve:** L13, L14, L15.
 
+**Revisão de 04/out/2026 (cliente): acesso por agenda.**
+
+- Além do papel, cada membro tem um **acesso às agendas**: **todas por padrão** para Administrador e
+  Recepção, com a opção de o Administrador **restringir a pessoa a agendas selecionadas**.
+- O **Profissional vê só a própria agenda** (e os atendimentos dela), salvo se liberado para outras.
+- Vale **no banco (RLS)** e na aplicação, como os papéis.
+
 ## D7 — Endereço do produto (03/out/2026)
 
 **Decisão: um domínio único do RecepClinic.**
@@ -288,6 +308,61 @@ gratuito (sem backup e fora dos termos comerciais da Vercel).
 **Resolve:** L36, L41, L48.
 
 ---
+
+## D9 — Atendimentos recorrentes (04/out/2026)
+
+**Decisão: séries de atendimentos criadas no painel.** Necessidade de psicólogos, fisioterapeutas,
+nutricionistas e outros profissionais com sessões que se repetem.
+
+- **Quem cria:** a recepção ou o profissional, **no painel**. Frequência semanal, quinzenal ou a
+  cada N semanas, com dia e horário fixos e o mesmo profissional, serviço e local.
+- **Fim:** por data, por número de sessões ou **sem fim**. Sem fim, o sistema mantém as próximas
+  sessões criadas num **horizonte móvel** (padrão do produto, ex.: 3 meses à frente).
+- **Cada sessão é um atendimento comum**, ligado à série: lembrete, confirmação, presença, preço,
+  trilha e lista de espera funcionam como em qualquer atendimento.
+- **Conflitos** (feriado, bloqueio, horário ocupado): a sessão **é pulada** e a tela **lista as
+  datas puladas e o motivo** para a recepção remarcar à mão, se quiser.
+- **Alterar ou cancelar no painel:** **"só esta sessão"** ou **"esta e as próximas"** (encerra a
+  série ou muda dia/horário dali em diante). Sessões passadas nunca mudam.
+- **WhatsApp:** o bot **não cria séries**. O paciente cancela ou remarca **só a sessão** do lembrete,
+  e a série continua.
+
+**Por quê:** decisão do cliente; o produto é genérico (D4a) e esses profissionais trabalham em
+sessões contínuas.
+
+**Descartado:** séries sempre com fim (exigiria renovar terapias sem prazo); criação de série pelo
+bot (sem demanda validada); "cancelar todas as próximas" pelo WhatsApp (o paciente encerraria o
+tratamento sem a clínica perceber); bloquear a série inteira por um conflito.
+
+## D10 — Convênios e planos de saúde (04/out/2026)
+
+**Decisão: o banco já nasce preparado para convênios; telas e bot entram depois do 1º piloto.**
+
+- **Planos atendidos:** cada clínica cadastra os planos que atende (nome, nomes alternativos para a
+  busca e, opcional, registro ANS). Por padrão **todo profissional atende todos os planos da
+  clínica**, com a opção de marcar exceções (ex.: Dr. João aceita Unimed, Dra. Ana não). O bot só
+  oferece profissional que atende o plano do paciente.
+- **Paciente:** plano (ou particular), número da carteirinha e validade, opcionais. Guardado no
+  cadastro para não perguntar de novo.
+- **Atendimento:** guarda se foi particular ou por qual plano, **copiado do paciente na marcação**
+  e editável; trocar de plano depois não altera o histórico.
+- **No WhatsApp** (clínica que atende convênio): ao pedir o nome do paciente, o bot pede também o
+  convênio. O nome digitado é **buscado por semelhança** entre os planos da clínica e o bot pede
+  **uma confirmação única** de nome, idade e convênio. Convênio não atendido ou não encontrado: o
+  bot avisa, mostra os planos atendidos (se forem poucos) e oferece **seguir como particular,
+  tentar outro nome ou falar com a recepção**. "Particular" segue direto.
+- **Na página de escolha de data e horário:** a clínica escolhe se **exige os dados do convênio**
+  (carteirinha, validade) na marcação.
+- **Fora por enquanto:** preço por plano, guias, autorizações e faturamento de convênio. Cada
+  atendimento continua com o preço do serviço.
+
+**Por quê:** decisão do cliente. Boa parte das clínicas atende convênio; mudar o modelo depois,
+com dados reais, custaria caro.
+
+**Descartado:** lista só por clínica (não cobre credenciamentos diferentes por profissional); planos
+por profissional e serviço (combinações demais sem demanda); plano só no paciente (histórico errado
+quando ele troca de plano); encaminhar todo plano não atendido para a recepção; marcar com "plano a
+confirmar" (marcaria quem a clínica não atende).
 
 ## Padrões assumidos (revisáveis)
 

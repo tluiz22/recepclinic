@@ -20,7 +20,7 @@
 |---|---|---|
 | F0 | Base de trabalho | concluída (04/out) |
 | F1 | Testes das regras atuais | concluída (04/out; 197 testes) |
-| F2 | Schema novo | **próxima** (a detalhar) |
+| F2 | Schema novo | **próxima** (detalhada) |
 | F3 | Acesso ao banco e contexto da clínica | a detalhar |
 | F4 | Painel | a detalhar |
 | F5 | Páginas públicas e domínio | a detalhar |
@@ -135,15 +135,42 @@ regra vira pergunta ao cliente, não correção silenciosa.
 
 ## F2 — Schema novo
 
-**Objetivo:** a migração-base no modelo alvo (D1, D2, D4, D6), com RLS e testes de isolamento.
+**Objetivo:** a migração-base no modelo alvo (D1, D2, D4, D6, D9, D10), com RLS e testes de isolamento.
 
-**Escopo:** clínicas; membros e papéis (Administrador, Profissional, Recepção) e Suporte da
-plataforma; perfil e configuração da clínica (D4b); agendas; locais; serviços com categoria (D4c) e
-disponibilidade por agenda; contatos → pacientes; atendimentos com trava de horários por agenda;
-bloqueios; lista de espera; conversa e mensagens; funil; trilha; execuções dos jobs; conexão do
-WhatsApp e templates por clínica; feriados extras; contadores de uso. RLS por clínica e por papel;
-funções e gatilhos portados do piloto; dados de teste com 2 clínicas; **testes de isolamento** (A
-não lê nem escreve B, para usuário, bot e agendador).
+**Detalhada em 04/out**, já com as revisões de D2 e D6 e a nova D9 (várias agendas, acesso por
+agenda, serviço em várias agendas, profissional genérico, atendimentos recorrentes) e a D10
+(convênios: só o banco nesta fase). Cada etapa
+traz a sua migração em `supabase/migrations/` (o conjunto é a migração-base da D5, já que ainda não
+existe banco na nuvem), o RLS das suas tabelas e **testes de isolamento** contra o Supabase local
+(Vitest entrando como usuários reais de cada clínica, `npm run test:db`, também no CI). O código da
+aplicação continua no schema antigo até a F3; o agendamento das rotinas no banco (`pg_cron`) fica
+para a F7.
+
+- **F2.1 — Núcleo:** clínicas; membros e papéis (Administrador, Profissional, Recepção); Suporte da
+  plataforma; funções "é membro", "tem papel"; padrão de RLS; ambiente de testes de banco no CI.
+  (Substitui `staff_profiles`.)
+- **F2.2 — Configuração, profissionais e agendas:** perfil e identidade da clínica; profissionais
+  genéricos (profissão, especialidade, conselho, número, UF); locais; **agendas** (profissional ou
+  recurso); **acesso de cada membro às agendas** (todas por padrão para Administrador e Recepção,
+  restringível; Profissional só a própria); **serviços** (consulta, retorno, exame) **em várias
+  agendas**; disponibilidade por agenda; turmas de exame; feriados extras; contatos do resumo do
+  dia; **planos de saúde atendidos** (com nomes alternativos e busca por semelhança, `pg_trgm`),
+  exceções por profissional e a opção "exigir dados do convênio na marcação" (D10). (Substitui `appointment_settings`, `clinic_locations`, `exam_types`, `availability_windows`,
+  `exam_type_group_schedule`, `notification_recipients`.)
+- **F2.3 — Pacientes:** contatos e pacientes, telefone único por clínica; plano do paciente
+  (particular ou plano, carteirinha, validade; D10). (`guardians`, `patients`.)
+- **F2.4 — Atendimentos e séries:** atendimentos ligados a serviço e agenda, trava de horário por
+  agenda, preço automático, turmas, bloqueios, links de agendamento, trilha; **séries recorrentes**
+  (D9: frequência, fim por data, por sessões ou sem fim, sessões ligadas à série); particular ou
+  plano do atendimento, copiado do paciente (D10). RLS também pelo acesso às agendas. (`appointments`, `schedule_blocks`, `booking_links`, `appointment_events`.)
+- **F2.5 — Lista de espera:** inscrições, vagas abertas, ofertas e o gatilho. (`waitlist_*`.)
+- **F2.6 — WhatsApp e rotinas:** estado da conversa, mensagens, funil, conexão e templates do
+  WhatsApp por clínica, execuções das rotinas, envios do resumo, contadores de uso.
+  (`conversation_state`, `whatsapp_messages`, `bot_funnel_events`, `job_runs`,
+  `daily_summary_sends`.)
+- **F2.7 — Dados de teste e isolamento completo:** duas clínicas fictícias (uma com vários
+  profissionais e recepção restrita a parte das agendas); varredura de isolamento em todas as
+  tabelas para usuário, bot e agendador.
 
 ## F3 — Acesso ao banco e contexto da clínica
 
@@ -161,8 +188,10 @@ públicas (fim da service role nesses caminhos); validação das variáveis de a
 
 **Escopo:** login, convite e recuperação de senha, escolha de clínica, papéis. **Configurações**
 (perfil, identidade, profissionais, locais, serviços, agendas, disponibilidade, feriados extras,
-contatos, equipe); depois Agenda, Pacientes, Resumo do Dia, Métricas, Trilha. Vocabulário pelo
-perfil da clínica.
+contatos, equipe e acesso de cada pessoa às agendas); depois Agenda (com **escolha da agenda/
+profissional a exibir**, D2 revista), **séries recorrentes** (criar, pular conflitos com aviso,
+alterar "só esta" ou "esta e as próximas", D9), Pacientes, Resumo do Dia, Métricas, Trilha.
+Vocabulário pelo perfil da clínica.
 
 ## F5 — Páginas públicas e domínio
 
@@ -183,7 +212,9 @@ aqui);
 conexão guardada por clínica (cadastrada pelo Suporte nesta fase); webhook que identifica a
 clínica pelo `phone_number_id` e responde rápido; envio por clínica; templates padrão do
 RecepClinic com nome e idioma por clínica; bot com menus montados pelo catálogo de serviços e textos
-pelo perfil; coexistência e pausa da recepção.
+pelo perfil; **"com quem?"** quando o serviço tem mais de um profissional, com "primeiro horário
+disponível" (D2 revista); sessão de série cancelada ou remarcada sozinha (D9); coexistência e pausa
+da recepção.
 
 ## F7 — Envios automáticos por clínica
 
@@ -208,6 +239,13 @@ anonimização de paciente/contato a pedido (LGPD); contadores de uso visíveis 
 **Escopo:** produção (Supabase Pro + Vercel Pro, backup conferido); criação da 1ª clínica pelo
 Suporte e configuração pelo Administrador; no cenário B, script de importação do banco do piloto
 para o modelo novo; acompanhamento das primeiras semanas.
+
+## Depois do 1º piloto (já previsto no banco)
+
+- **Convênios (D10):** telas de planos atendidos e exceções por profissional; plano no cadastro do
+  paciente e no atendimento; no bot, convênio pedido junto com o nome, busca por semelhança,
+  confirmação única de nome, idade e convênio, e "particular, outro nome ou recepção" quando não
+  atendido; dados do convênio na página de data e horário, se a clínica exigir.
 
 ---
 
