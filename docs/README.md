@@ -6,9 +6,9 @@
 >   [arquitetura](arquitetura.md) (decisões D1–D10) e [plano](plano.md) (fases F0–F10).
 > - **Produto: F0 concluída** (site da Dra. fora do repositório; nome RecepClinic; Supabase local
 >   pela CLI; Vitest e `npm test` no CI). **F1 concluída** (197 testes das regras de cálculo; achados 1–5 anotados
->   no plano para a F3/F4). **F2.1 a F2.3 concluídas** (núcleo; configuração, profissionais, agendas,
->   serviços e convênios; pacientes; 84 testes de banco no CI). **Próxima etapa: F2.4** (atendimentos e
->   séries); F2 detalhada em
+>   no plano para a F3/F4). **F2.1 a F2.4 concluídas** (núcleo; configuração, profissionais, agendas,
+>   serviços e convênios; pacientes; atendimentos e séries; 114 testes de banco no CI). **Próxima
+>   etapa: F2.5** (lista de espera); F2 detalhada em
 >   F2.1–F2.7, com D2 e D6 revistas e as novas D9 (recorrência) e D10
 >   (convênios, só o banco antes do piloto) em 04/out.
 > - **Frente paralela, o site** `www.recepclinic.com.br`: [`site-plano.md`](site-plano.md), etapas

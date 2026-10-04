@@ -20,7 +20,7 @@
 |---|---|---|
 | F0 | Base de trabalho | concluída (04/out) |
 | F1 | Testes das regras atuais | concluída (04/out; 197 testes) |
-| F2 | Schema novo | **em andamento** (F2.1 a F2.3 concluídas) |
+| F2 | Schema novo | **em andamento** (F2.1 a F2.4 concluídas) |
 | F3 | Acesso ao banco e contexto da clínica | a detalhar |
 | F4 | Painel | a detalhar |
 | F5 | Páginas públicas e domínio | a detalhar |
@@ -170,7 +170,8 @@ para a F7.
 - **F2.4 — Atendimentos e séries:** atendimentos ligados a serviço e agenda, trava de horário por
   agenda, preço automático, turmas, bloqueios, links de agendamento, trilha; **séries recorrentes**
   (D9: frequência, fim por data, por sessões ou sem fim, sessões ligadas à série); particular ou
-  plano do atendimento, copiado do paciente (D10). RLS também pelo acesso às agendas. (`appointments`, `schedule_blocks`, `booking_links`, `appointment_events`.)
+  plano do atendimento, copiado do paciente (D10). RLS também pelo acesso às agendas. (`appointments`, `schedule_blocks`, `booking_links`, `appointment_events`.) **Concluída em 04/out** (30 testes de banco). Gerar as sessões da
+  série, pular conflitos e alterar "esta e as próximas" ficam na aplicação (F4).
 - **F2.5 — Lista de espera:** inscrições, vagas abertas, ofertas e o gatilho. (`waitlist_*`.)
 - **F2.6 — WhatsApp e rotinas:** estado da conversa, mensagens, funil, conexão e templates do
   WhatsApp por clínica, execuções das rotinas, envios do resumo, contadores de uso.
