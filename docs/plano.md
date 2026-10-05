@@ -375,7 +375,14 @@ novo não tem). Etapas (cada uma com `npm test`, `test:db`, `check`, `build` e C
   unitários e 11 de banco novos.
 - **F3.9 — WhatsApp e rotinas** (antes F3.8): conexão e templates, conversas, mensagens e funil;
   lembrete e reenvios; resumo do dia e execuções das rotinas; achados 4–5 da F1. Divisão a
-  combinar com o cliente ao começar.
+  combinar com o cliente ao começar; proposta: **F3.9a** WhatsApp (conexão e templates por
+  clínica, estado da conversa e pausa da recepção, registro das mensagens com situação da entrega,
+  repetidas da Meta e janela de 24h, funil); **F3.9b** lembrete e reenvios (quem recebe no fuso e
+  hora da clínica, botões "Enviar"/"Reenviar lembrete", reenvio automático sem resposta, reenvio
+  do preparo, achado 4); **F3.9c** resumo do dia e execuções das rotinas (horário pelas janelas das
+  agendas, conteúdo, contatos, reenvio quando entra atendimento antes do horário avisado,
+  `job_runs`, achado 5). Envio de verdade pelo WhatsApp recebido de fora (F6/F7), como na F3.7b;
+  cada parte respeita os itens da matriz (D11).
 
 **Cuidado registrado na F2.5:** num insert de várias linhas, o `supabase-js` manda `null` nas
 colunas ausentes de alguma linha, e o valor padrão do banco não é aplicado (ex.: `details` da
