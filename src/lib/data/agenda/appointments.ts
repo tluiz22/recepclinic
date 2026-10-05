@@ -122,7 +122,10 @@ export type TrailEvent =
   | "presence_confirmed"
   | "presence_unconfirmed"
   | "attendance_recorded"
-  | "attendance_corrected";
+  | "attendance_corrected"
+  | "waitlist_joined"
+  | "waitlist_left"
+  | "waitlist_advanced";
 
 /** Grava na trilha; falha só vai para o log (não desfaz a ação já feita). */
 export async function logTrail(

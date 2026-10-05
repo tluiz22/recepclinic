@@ -19,8 +19,10 @@
 >     clínica e service role presa a um arquivo; acesso à configuração, com a decisão de que a
 >     sobreposição de horários vale por agenda; acesso a pacientes, com os achados 1–3 da F1
 >     resolvidos; F3.6a: horários livres e marcação, com duplicidade por agenda e retorno na
->     mesma agenda; F3.6b: bloqueios, links e séries, com horizonte de 3 meses). **Próxima etapa:
->     F3.7** (acesso à lista de espera).
+>     mesma agenda; F3.6b: bloqueios, links e séries, com horizonte de 3 meses). **F3.7 dividida
+>     em duas partes; F3.7a concluída** (entrar, sair e consultar a fila; a recepção também inclui
+>     pelo painel; retirada pela tela sem service role). **Próxima etapa: F3.7b** (motor de
+>     ofertas da lista de espera).
 >     Para rodar o banco: abrir o OrbStack, `npm run db:start`, `npm run db:reset` (carrega os
 >     dados de teste) e `npm run test:db`.
 > - **Frente paralela, o site** `www.recepclinic.com.br`: [`site-plano.md`](site-plano.md), etapas

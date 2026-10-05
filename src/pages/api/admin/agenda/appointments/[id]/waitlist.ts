@@ -1,13 +1,12 @@
 import type { APIRoute } from "astro";
-import { createClient } from "../../../../../../lib/supabase/server";
-import { createServiceClient } from "../../../../../../lib/supabase/service";
-import { leaveWaitlist } from "../../../../../../lib/waitlist";
-import { withdrawPendingOffersFor } from "../../../../../../lib/waitlistOffers";
+import { createUserClient } from "../../../../../../lib/data/clients";
+import { leaveWaitlist } from "../../../../../../lib/data/waitlist/entries";
 
 // Retirar da lista de espera pela tela (Fase 25 · etapa 5) — aba "Lista de
-// espera" de Consultas e selo da Agenda. Grava quem retirou (login) e, se
-// havia uma vaga oferecida a essa pessoa, passa a vaga ao próximo da fila na
-// hora. Volta pra tela de onde veio (`return_to`, só caminhos do admin).
+// espera" de Consultas e selo da Agenda. Grava quem retirou (login). A oferta
+// em aberto para essa pessoa é retirada pelo banco e a vaga volta à fila
+// (F3.7a, sem service role); oferecer ao próximo é do motor de ofertas.
+// Volta pra tela de onde veio (`return_to`, só caminhos do admin).
 export const POST: APIRoute = async ({ params, request, cookies, locals, redirect }) => {
   const { id } = params;
   const formData = await request.formData();
@@ -15,11 +14,14 @@ export const POST: APIRoute = async ({ params, request, cookies, locals, redirec
   const returnTo =
     returnToRaw.startsWith("/admin/") && !returnToRaw.startsWith("//") ? returnToRaw : "/admin/consultas?tab=lista_espera";
 
-  if (!id) return redirect(returnTo);
+  const clinic = locals.clinic;
+  if (!id || !clinic) return redirect(returnTo);
 
-  const removed = await leaveWaitlist(createClient(request, cookies), id, "admin", locals.userId ?? null);
-  // Ofertas e vagas só são gravadas pelo sistema (RLS: leitura na tela).
-  if (removed) await withdrawPendingOffersFor(createServiceClient(), id);
+  try {
+    await leaveWaitlist(createUserClient(request, cookies), clinic.clinicId, id, { channel: "admin", actorId: clinic.userId });
+  } catch (error) {
+    console.error("[lista de espera] erro ao retirar da lista:", error instanceof Error ? error.message : String(error));
+  }
 
   return redirect(returnTo);
 };

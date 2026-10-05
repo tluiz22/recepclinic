@@ -314,6 +314,20 @@ novo não tem). Etapas (cada uma com `npm test`, `test:db`, `check`, `build` e C
   série e abre outra com o mesmo fim por data, ou com as sessões que faltavam; hoje com o horário já
   passado não vira sessão nem data pulada. 8 testes unitários e 12 de banco novos (montagem da
   clínica de teste da agenda em `tests/db/agendaFixture.ts`). **F3.6 concluída.**
+- **F3.7 — Lista de espera:** dividida em duas partes (cliente, 04/out). **F3.7a:** entrar, sair,
+  consultar a fila (tela e selo da agenda) e retirada pela tela sem service role. **F3.7b:** motor
+  de ofertas (vencer ofertas, tirar da fila quem já passou, oferecer a vaga ao próximo da mesma
+  agenda e serviço, "Sim"/"Não"), com o envio do WhatsApp recebido de fora (ligado na F6/F7).
+- **F3.7a — concluída em 04/out.** `src/lib/data/waitlist/entries.ts`: entrar (já estar na fila
+  não é erro), sair pelo bot ("saiu") ou pela tela ("retirado", com quem retirou), quem está na
+  fila (selo da agenda), a fila na ordem de entrada com atendimento, paciente, contato e oferta em
+  aberto (filtro por agenda) e o histórico das últimas ofertas; tudo na trilha. **Decisão do
+  cliente (04/out): a recepção também inclui na lista pelo painel** (pedido por telefone ou no
+  balcão). Migração `20261004220000`: origem `admin` na inscrição e gatilho que, quando alguém sai
+  da lista, retira a oferta em aberto e devolve a vaga à fila. Com isso a rota de retirada pela
+  tela saiu da service role (passou para a camada nova). Padrões assumidos (revisáveis): só entra
+  atendimento marcado ou confirmado e ainda no futuro; quem sai pelo bot também perde a oferta em
+  aberto (no piloto, só quem era retirado pela tela). 4 testes unitários e 7 de banco novos.
 
 **Cuidado registrado na F2.5:** num insert de várias linhas, o `supabase-js` manda `null` nas
 colunas ausentes de alguma linha, e o valor padrão do banco não é aplicado (ex.: `details` da

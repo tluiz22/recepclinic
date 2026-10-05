@@ -29,7 +29,6 @@ const LEGACY = new Map([
   ["src/pages/api/cron/appointment-reminders.ts", "F7 (envios automáticos)"],
   ["src/pages/api/cron/daily-summary.ts", "F7 (envios automáticos)"],
   ["src/pages/api/cron/waitlist-offers.ts", "F7 (envios automáticos)"],
-  ["src/pages/api/admin/agenda/appointments/[id]/waitlist.ts", "F3.7 (lista de espera)"],
 ]);
 
 function sourceFiles(dir: string): string[] {
