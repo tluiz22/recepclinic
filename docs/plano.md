@@ -298,6 +298,22 @@ novo não tem). Etapas (cada uma com `npm test`, `test:db`, `check`, `build` e C
   realizado/falta não vale para atendimento cancelado; Retorno sem prazo cadastrado não tem limite.
   O link de remarcação e o aviso por WhatsApp do cancelamento em massa entram com os links (F3.6b)
   e o bot (F6/F7). 26 testes unitários e 17 de banco novos.
+- **F3.6b — concluída em 04/out.** `src/lib/data/agenda/`: links de agendar/remarcar (`links.ts`:
+  30 minutos no bot, 2 dias na remarcação pela clínica, uso atômico, prazo do retorno), bloqueios e
+  cancelamento do dia pela clínica com link de remarcação (`blocks.ts`) e séries recorrentes da D9
+  (`series.ts`). **Decisões do cliente (04/out):** séries sem fim mantêm as sessões **até 3 meses à
+  frente** (o agendador estende, F7); **sessões de série não contam na trava** "já tem atendimento
+  futuro" (nem a série é barrada por um avulso); no fim por número de sessões, **a data pulada não
+  conta e a série se estende** até completar. Migração `20261004210000`: o agendador
+  (`clinic_service`) registra as datas puladas da própria clínica. Padrões assumidos (revisáveis):
+  o bloqueio atinge os atendimentos que **cruzam** o período (no piloto, só os que começavam
+  dentro), e cancela só a lista escolhida na tela; o link de remarcação mantém a mesma agenda e o
+  tipo de local; a série não confere os horários de atendimento (dia e horário combinados), turma
+  não tem série e o local precisa oferecer o serviço; sessão cancelada uma a uma conta no número de
+  sessões (só a data pulada estende); "esta e as próximas" com mudança de dia/horário encerra a
+  série e abre outra com o mesmo fim por data, ou com as sessões que faltavam; hoje com o horário já
+  passado não vira sessão nem data pulada. 8 testes unitários e 12 de banco novos (montagem da
+  clínica de teste da agenda em `tests/db/agendaFixture.ts`). **F3.6 concluída.**
 
 **Cuidado registrado na F2.5:** num insert de várias linhas, o `supabase-js` manda `null` nas
 colunas ausentes de alguma linha, e o valor padrão do banco não é aplicado (ex.: `details` da

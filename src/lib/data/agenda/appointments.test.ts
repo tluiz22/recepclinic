@@ -14,6 +14,7 @@ const upcoming = (overrides: Partial<UpcomingAppointment>): UpcomingAppointment 
   agendaId: "pediatra",
   serviceId: "consulta",
   category: "consultation",
+  seriesId: null,
   ...overrides,
 });
 
@@ -43,6 +44,12 @@ describe("trava de duplicidade por agenda (decisão de 04/out)", () => {
     const list = [upcoming({ category: "exam", serviceId: "audiometria", agendaId: "exames" })];
     expect(findBlockingAppointment(list, { serviceId: "audiometria", agendaId: "outra", category: "exam" })).not.toBeNull();
     expect(findBlockingAppointment(list, { serviceId: "espirometria", agendaId: "exames", category: "exam" })).toBeNull();
+  });
+
+  it("sessão de série não trava (decisão de 04/out, F3.6b)", () => {
+    expect(
+      findBlockingAppointment([upcoming({ seriesId: "s1" })], { serviceId: "consulta", agendaId: "pediatra", category: "consultation" }),
+    ).toBeNull();
   });
 
   it("ao remarcar, o próprio atendimento não conta", () => {

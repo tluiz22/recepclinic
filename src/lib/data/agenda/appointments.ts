@@ -10,7 +10,8 @@ import { getFreeSlots, loadSchedulingPlan } from "./slots";
 //     do banco ainda barra dois atendimentos ao mesmo tempo na agenda);
 //   - **duplicidade por agenda** (cliente, 04/out): Consulta/Retorno não é
 //     marcado se o paciente já tem Consulta/Retorno futuro na mesma agenda;
-//     Exame, se já tem o mesmo exame futuro (como no piloto);
+//     Exame, se já tem o mesmo exame futuro (como no piloto). Sessões de série
+//     não contam nem são barradas pela trava (cliente, 04/out, F3.6b);
 //   - **retorno ligado à última consulta na mesma agenda**, com o prazo do
 //     serviço de Retorno (cliente, 04/out); na tela só avisa;
 //   - local domiciliar exige o endereço;
@@ -145,7 +146,15 @@ export async function logTrail(
 
 const VISIT_CATEGORIES: ServiceCategory[] = ["consultation", "return_visit"];
 
-export type UpcomingAppointment = { id: string; scheduledAt: Date; agendaId: string; serviceId: string; category: ServiceCategory };
+export type UpcomingAppointment = {
+  id: string;
+  scheduledAt: Date;
+  agendaId: string;
+  serviceId: string;
+  category: ServiceCategory;
+  /** Sessão de série recorrente (D9). */
+  seriesId: string | null;
+};
 
 /** Atendimentos ativos futuros dos pacientes (para a busca e para a trava de duplicidade). */
 export async function listUpcomingAppointments(
@@ -159,17 +168,32 @@ export async function listUpcomingAppointments(
   const rows = unwrap(
     await db
       .from("appointments")
-      .select("id, patient_id, scheduled_at, agenda_id, service_id, services ( category )")
+      .select("id, patient_id, scheduled_at, agenda_id, service_id, series_id, services ( category )")
       .eq("clinic_id", clinicId)
       .in("patient_id", patientIds)
       .in("status", ACTIVE)
       .gt("scheduled_at", now.toISOString())
       .order("scheduled_at"),
     "Próximos atendimentos",
-  ) as unknown as { id: string; patient_id: string; scheduled_at: string; agenda_id: string; service_id: string; services: { category: ServiceCategory } }[];
+  ) as unknown as {
+    id: string;
+    patient_id: string;
+    scheduled_at: string;
+    agenda_id: string;
+    service_id: string;
+    series_id: string | null;
+    services: { category: ServiceCategory };
+  }[];
   for (const row of rows) {
     const list = result.get(row.patient_id) ?? [];
-    list.push({ id: row.id, scheduledAt: new Date(row.scheduled_at), agendaId: row.agenda_id, serviceId: row.service_id, category: row.services.category });
+    list.push({
+      id: row.id,
+      scheduledAt: new Date(row.scheduled_at),
+      agendaId: row.agenda_id,
+      serviceId: row.service_id,
+      category: row.services.category,
+      seriesId: row.series_id,
+    });
     result.set(row.patient_id, list);
   }
   return result;
@@ -178,6 +202,7 @@ export async function listUpcomingAppointments(
 /**
  * O atendimento futuro que impede marcar outro (decisão de 04/out):
  * Consulta/Retorno → Consulta/Retorno na mesma agenda; Exame → o mesmo exame.
+ * Sessões de série não travam (decisão de 04/out, F3.6b).
  */
 export function findBlockingAppointment(
   upcoming: UpcomingAppointment[],
@@ -186,7 +211,7 @@ export function findBlockingAppointment(
 ): UpcomingAppointment | null {
   return (
     upcoming.find((appointment) => {
-      if (appointment.id === ignoreAppointmentId) return false;
+      if (appointment.id === ignoreAppointmentId || appointment.seriesId !== null) return false;
       if (target.category === "exam") return appointment.serviceId === target.serviceId;
       return appointment.agendaId === target.agendaId && VISIT_CATEGORIES.includes(appointment.category);
     }) ?? null
@@ -476,8 +501,11 @@ export async function rescheduleAppointment(
   const plan = await loadSchedulingPlan(db, clinicId, { serviceId: current.serviceId, agendaId: current.agendaId, locationId: input.locationId });
   if (!plan) throw new DataError("invalid", "Atendimento: serviço inativo ou não atendido nesta agenda", { serviceId: "Serviço não atendido nesta agenda" });
 
-  const category = await serviceCategory(db, clinicId, current.serviceId);
-  await assertNotDuplicate(db, clinicId, { ...current, category }, now, id);
+  // Sessão de série não passa pela trava (decisão de 04/out, F3.6b).
+  if (current.seriesId === null) {
+    const category = await serviceCategory(db, clinicId, current.serviceId);
+    await assertNotDuplicate(db, clinicId, { ...current, category }, now, id);
+  }
 
   if (plan.isGroup) {
     const { error } = await db.rpc("reschedule_group_session", {

@@ -1,5 +1,4 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import type { DbClient } from "../../src/lib/data/clients";
 import {
   bookAppointment,
   cancelAppointment,
@@ -17,46 +16,20 @@ import {
   getGroupSessions,
   getNextAvailableDates,
 } from "../../src/lib/data/agenda/slots";
-import { createAgenda, setMemberAgendaAccess } from "../../src/lib/data/config/agendas";
-import { addAvailabilityWindow } from "../../src/lib/data/config/availability";
+import { setMemberAgendaAccess } from "../../src/lib/data/config/agendas";
 import { addClinicHoliday } from "../../src/lib/data/config/holidays";
-import { createLocation } from "../../src/lib/data/config/locations";
-import { createProfessional } from "../../src/lib/data/config/professionals";
-import { createService, setServiceAgendas, setServiceLocations, type ServiceInput } from "../../src/lib/data/config/services";
-import { DataError } from "../../src/lib/data/errors";
-import { registerPatient } from "../../src/lib/data/patients";
-import { addMember, adminClient, createClinic, createUser, deleteClinics, deleteUsers, type TestUser } from "./helpers";
+import { adminClient } from "./helpers";
+import { asDb, at, codeOf, MON1, MON2, MON3, MON4, NOW, setupAgendaClinic, type AgendaFixture, type AgendaIds } from "./agendaFixture";
+import type { TestUser } from "./helpers";
 
-// F3.6a — horários livres e marcação, numa clínica criada para o teste.
-// Segundas-feiras de março/2031 (sem feriado nacional); "agora" é o domingo
-// anterior, ao meio-dia em Fortaleza.
-const at = (date: string, time: string) => new Date(`${date}T${time}:00-03:00`);
-const MON1 = "2031-03-10";
-const MON2 = "2031-03-17";
-const MON3 = "2031-03-24";
-const MON4 = "2031-03-31";
-const NOW = at("2031-03-09", "12:00");
-
+// F3.6a — horários livres e marcação, numa clínica criada para o teste
+// (tests/db/agendaFixture.ts).
+let fixture: AgendaFixture;
 let clinicId: string;
 let admin: TestUser;
 let reception: TestUser;
-const users: TestUser[] = [];
-const db = (user: TestUser) => user.client as unknown as DbClient;
-
-const ids = {} as Record<
-  "agendaDra" | "agendaDra2" | "agendaExams" | "office" | "home" | "consulta" | "retorno" | "exame" | "turma" | "p1" | "p2" | "p3",
-  string
->;
-
-async function codeOf(run: () => Promise<unknown>): Promise<string> {
-  try {
-    await run();
-  } catch (error) {
-    if (error instanceof DataError) return error.code;
-    throw error;
-  }
-  return "ok";
-}
+let ids: AgendaIds;
+const db = asDb;
 
 const book = (patient: string, service: string, agenda: string, start: Date, extra: Record<string, unknown> = {}, now = NOW) =>
   bookAppointment(db(reception), clinicId, { patientId: patient, serviceId: service, agendaId: agenda, start, channel: "admin", actorId: reception.id, ...extra }, now);
@@ -65,62 +38,12 @@ const times = (slots: { start: Date }[]) =>
   slots.map((slot) => slot.start.toLocaleTimeString("pt-BR", { timeZone: "America/Fortaleza", hour: "2-digit", minute: "2-digit" }));
 
 beforeAll(async () => {
-  clinicId = await createClinic("Clínica do teste de agenda");
-  admin = await createUser("ag-admin");
-  reception = await createUser("ag-recepcao");
-  users.push(admin, reception);
-  await addMember(clinicId, admin.id, ["admin"]);
-  await addMember(clinicId, reception.id, ["reception"]);
-
-  const a = db(admin);
-  const dra = await createProfessional(a, clinicId, { userId: null, displayName: "Dra. Agenda", profession: "Médica", specialty: null, council: null, councilNumber: null, councilState: null });
-  const dra2 = await createProfessional(a, clinicId, { userId: null, displayName: "Dr. Segundo", profession: "Médico", specialty: null, council: null, councilNumber: null, councilState: null });
-  ids.agendaDra = (await createAgenda(a, clinicId, { name: "Dra. Agenda", kind: "professional", professionalId: dra.id, bufferMinutes: 0 })).id;
-  ids.agendaDra2 = (await createAgenda(a, clinicId, { name: "Dr. Segundo", kind: "professional", professionalId: dra2.id, bufferMinutes: 0 })).id;
-  ids.agendaExams = (await createAgenda(a, clinicId, { name: "Exames", kind: "resource", professionalId: null, bufferMinutes: 0 })).id;
-  ids.office = (await createLocation(a, clinicId, { name: "Consultório", type: "clinic", address: "Rua A, 1" })).id;
-  ids.home = (await createLocation(a, clinicId, { name: "Domiciliar", type: "home_visit", address: null })).id;
-
-  const service = async (input: Partial<ServiceInput> & Pick<ServiceInput, "name" | "category">, agendas: string[], locations: string[]) => {
-    const created = await createService(a, clinicId, {
-      durationMinutes: 30,
-      priceCents: 30000,
-      returnDeadlineDays: null,
-      preparationInstructions: null,
-      schedulingMode: "individual",
-      ...input,
-    });
-    await setServiceAgendas(a, clinicId, created.id, agendas);
-    await setServiceLocations(a, clinicId, created.id, locations.map((locationId) => ({ locationId, priceCents: locationId === ids.home ? 45000 : null })));
-    return created.id;
-  };
-  ids.consulta = await service({ name: "Consulta", category: "consultation" }, [ids.agendaDra, ids.agendaDra2], [ids.office, ids.home]);
-  ids.retorno = await service({ name: "Retorno", category: "return_visit", durationMinutes: 20, priceCents: 0, returnDeadlineDays: 30 }, [ids.agendaDra], [ids.office, ids.home]);
-  ids.exame = await service({ name: "Exame", category: "exam", durationMinutes: 20, priceCents: 15000 }, [ids.agendaExams], [ids.office]);
-  ids.turma = await service({ name: "Turma", category: "exam", durationMinutes: 60, priceCents: 9000, schedulingMode: "group" }, [ids.agendaExams], [ids.office]);
-
-  const window = (agendaId: string, locationId: string, startTime: string, endTime: string, extra = {}) =>
-    addAvailabilityWindow(a, clinicId, { agendaId, locationId, serviceId: null, weekday: 1, startTime, endTime, capacity: null, ...extra });
-  await window(ids.agendaDra, ids.office, "08:00", "12:00");
-  await window(ids.agendaDra, ids.home, "14:00", "15:00");
-  await window(ids.agendaDra2, ids.office, "08:00", "09:00");
-  await window(ids.agendaExams, ids.office, "08:00", "09:00", { serviceId: ids.exame });
-  await window(ids.agendaExams, ids.office, "10:00", "11:00", { serviceId: ids.turma, capacity: 2 });
-
-  const today = "2031-03-09";
-  const patient = async (name: string, phone: string) => {
-    const result = await registerPatient(a, clinicId, { fullName: name, birthdate: "2020-01-01", contact: { mode: "new", fullName: `Resp. ${name}`, phone } }, today);
-    if (result.status !== "created") throw new Error(result.status);
-    return result.patient.id;
-  };
-  ids.p1 = await patient("Paciente Um", "85988880001");
-  ids.p2 = await patient("Paciente Dois", "85988880002");
-  ids.p3 = await patient("Paciente Três", "85988880003");
+  fixture = await setupAgendaClinic("Clínica do teste de agenda", "859888800");
+  ({ clinicId, admin, reception, ids } = fixture);
 });
 
 afterAll(async () => {
-  await deleteClinics([clinicId]);
-  await deleteUsers(users);
+  await fixture.cleanup();
 });
 
 describe("horários livres", () => {
