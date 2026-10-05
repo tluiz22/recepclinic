@@ -424,6 +424,11 @@ uma pode usar; o básico do consultório vem sempre ligado.**
 - **Dependências:** item que depende de outro só é ligado com ele; desligar o bot desliga a lista
   de espera e o Funil. Bot, lembrete, lista de espera e resumo do dia só enviam com o WhatsApp da
   clínica conectado (situação da conexão, não item da matriz).
+- **Limite de profissionais (cliente, 05/out/2026):** o Administrador do sistema define, na mesma
+  tela, quantos profissionais **ativos** cada clínica pode ter (desativar libera a vaga). Clínica nova
+  começa com **1**; as que já existiam ficaram com o que tinham. No limite, a clínica não cadastra
+  nem reativa profissional ("fale com o suporte"), e o banco também barra. Baixar o limite abaixo
+  dos ativos não desativa ninguém: só impede novos até ficar abaixo. A mudança fica no histórico.
 - **Papéis continuam fixos (D6):** a matriz diz o que a clínica tem; o papel diz quem, dentro dela,
   vê. Configurações continuam só do Administrador da clínica (inclusive os itens de configuração
   liberados).

@@ -9,6 +9,7 @@ import { DataError } from "./errors";
 const GENERIC: Record<string, string> = {
   forbidden: "Você não tem permissão para isso.",
   not_enabled: "Isso não está liberado para a clínica.",
+  limit_reached: "Limite de profissionais da clínica atingido. Fale com o suporte.",
   not_found: "Registro não encontrado.",
   in_use: "Está em uso e não pode sair.",
   unexpected: "Não foi possível salvar. Tente de novo.",

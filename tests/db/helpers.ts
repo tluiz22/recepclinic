@@ -60,10 +60,13 @@ export function clinicServiceClient(clinicId: string): SupabaseClient {
 
 /**
  * Clínica de teste. Por padrão com todos os itens da matriz de acesso
- * liberados (D11); `features` escolhe outros (lista vazia = só o básico).
+ * liberados (D11) e limite de 50 profissionais; `features` escolhe outros
+ * itens (lista vazia = só o básico).
  */
 export async function createClinic(name: string, features?: string[]): Promise<string> {
-  const { data, error } = await adminClient().from("clinics").insert({ name }).select("id").single();
+  // Limite de profissionais folgado (o padrão de clínica nova é 1, D11); os
+  // testes do limite mudam o número.
+  const { data, error } = await adminClient().from("clinics").insert({ name, max_professionals: 50 }).select("id").single();
   if (error) throw error;
   const id = data.id as string;
   let keys = features;

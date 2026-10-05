@@ -16,6 +16,8 @@ export type DataErrorCode =
   | "conflict"
   /** Item da matriz de acesso não liberado para a clínica (D11). */
   | "not_enabled"
+  /** Limite da clínica atingido (ex.: profissionais ativos, D11). */
+  | "limit_reached"
   /** Falha inesperada do banco ou da rede. */
   | "unexpected";
 
@@ -40,6 +42,9 @@ export function fromDbError(error: unknown, context: string): DataError {
   const say = (text: string) => `${context}: ${text}`;
   if (code === "P0001" && hint?.startsWith("feature_disabled:")) {
     return new DataError("not_enabled", say(message), {}, { cause: error });
+  }
+  if (code === "P0001" && hint === "professional_limit") {
+    return new DataError("limit_reached", say(message), {}, { cause: error });
   }
   switch (code) {
     case "23505":

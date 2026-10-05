@@ -8,7 +8,7 @@ import Card from "../../../components/admin/Card.astro";
 import FormMessage from "../../../components/admin/FormMessage.astro";
 import { formatInstant, DEFAULT_TIMEZONE } from "../../../lib/clinicTime";
 import { createUserClient } from "../../../lib/data/clients";
-import { listClinicsAccess, listFeatureChanges, listPlatformStaffNames } from "../../../lib/data/features";
+import { listClinicsAccess, listFeatureChanges, listPlatformStaffNames, listProfessionalLimitChanges } from "../../../lib/data/features";
 import { AREA_LABELS, FEATURES, featureLabel, type FeatureArea } from "../../../lib/features";
 
 const db = createUserClient(Astro.request, Astro.cookies);
@@ -17,14 +17,21 @@ const selectedId = Astro.url.searchParams.get("clinica");
 const selected = clinics.find((clinic) => clinic.id === selectedId) ?? null;
 
 let timeZone = DEFAULT_TIMEZONE;
-let history: Awaited<ReturnType<typeof listFeatureChanges>> = [];
+// Histórico: itens liberados e desligados, e mudanças do limite de profissionais.
+let history: { at: Date; actorId: string; text: string; strong: string }[] = [];
 if (selected) {
-  const [settings, changes] = await Promise.all([
+  const [settings, changes, limitChanges] = await Promise.all([
     db.from("clinic_settings").select("timezone").eq("clinic_id", selected.id).maybeSingle(),
     listFeatureChanges(db, selected.id, 50),
+    listProfessionalLimitChanges(db, selected.id, 50),
   ]);
   timeZone = settings.data?.timezone ?? DEFAULT_TIMEZONE;
-  history = changes;
+  history = [
+    ...changes.map((c) => ({ at: c.at, actorId: c.actorId, text: c.enabled ? "liberou" : "desligou", strong: featureLabel(c.feature) })),
+    ...limitChanges.map((c) => ({ at: c.at, actorId: c.actorId, text: `mudou o limite de profissionais de ${c.from} para`, strong: String(c.to) })),
+  ]
+    .sort((a, b) => b.at.getTime() - a.at.getTime())
+    .slice(0, 50);
 }
 const grants = new Map((selected?.features ?? []).map((grant) => [grant.key, grant]));
 const when = (date: Date) => formatInstant(date, timeZone, "dd/MM/yyyy 'às' HH:mm");
@@ -42,6 +49,7 @@ const areas = (Object.keys(AREA_LABELS) as FeatureArea[]).map((area) => ({
 const erro = Astro.url.searchParams.get("erro");
 const ERRORS: Record<string, string> = {
   dependencia: "Algum item ficou sem o item de que depende (ex.: lista de espera sem o bot). Nada foi salvo.",
+  limite: "O limite de profissionais precisa ser de pelo menos 1. Nada foi salvo.",
   clinica: "Clínica não encontrada.",
   falha: "Não foi possível salvar. Tente de novo.",
 };
@@ -70,6 +78,7 @@ const saved = Astro.url.searchParams.get("salvo") === "1";
                   {clinic.features.length === 0
                     ? "Nada liberado (só o básico)"
                     : `${clinic.features.length} ${clinic.features.length === 1 ? "item liberado" : "itens liberados"}`}
+                  {` · ${clinic.activeProfessionals} de ${clinic.maxProfessionals} profissionais`}
                   {clinic.status === "suspended" ? " · suspensa" : ""}
                 </p>
               </Card>
@@ -86,6 +95,29 @@ const saved = Astro.url.searchParams.get("salvo") === "1";
 
         <form method="POST" action="/api/admin/sistema/matriz" class="mt-4 flex flex-col gap-4" id="matriz">
           <input type="hidden" name="clinicId" value={selected.id} />
+          <Card>
+            <label for="max_professionals" class="text-sm font-semibold uppercase tracking-wide text-slate-500">
+              Limite de profissionais ativos
+            </label>
+            <div class="mt-2 flex items-center gap-3">
+              <input
+                type="number"
+                id="max_professionals"
+                name="max_professionals"
+                min="1"
+                required
+                value={selected.maxProfessionals}
+                class="w-24 rounded-lg border border-slate-300 px-3 py-2 text-sm"
+              />
+              <span class="text-sm text-slate-600">{selected.activeProfessionals} ativos agora</span>
+            </div>
+            {selected.activeProfessionals > selected.maxProfessionals && (
+              <p class="mt-2 text-xs text-amber-700">
+                A clínica está acima do limite: ninguém é desativado, mas ela não cadastra nem reativa profissional até ficar abaixo.
+              </p>
+            )}
+            <p class="mt-2 text-xs text-slate-500">Desativar um profissional libera a vaga.</p>
+          </Card>
           {areas.map(({ label, items }) => (
             <Card>
               <h3 class="text-sm font-semibold uppercase tracking-wide text-slate-500">{label}</h3>
@@ -135,7 +167,7 @@ const saved = Astro.url.searchParams.get("salvo") === "1";
           <ul class="mt-2 flex flex-col gap-1 text-sm text-slate-700">
             {history.map((change) => (
               <li>
-                {when(change.at)} · {who(change.actorId)} {change.enabled ? "liberou" : "desligou"} <strong>{featureLabel(change.feature)}</strong>
+                {when(change.at)} · {who(change.actorId)} {change.text} <strong>{change.strong}</strong>
               </li>
             ))}
           </ul>

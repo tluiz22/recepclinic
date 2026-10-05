@@ -90,7 +90,8 @@ begin
   -- -------------------------------------------------------------------------
   -- Clínica A: Clínica Exemplo Saúde (perfil Mista, vários profissionais)
   -- -------------------------------------------------------------------------
-  insert into public.clinics (id, name) values (c_a, 'Clínica Exemplo Saúde');
+  -- Limite de profissionais ativos (D11): definido pelo Suporte.
+  insert into public.clinics (id, name, max_professionals) values (c_a, 'Clínica Exemplo Saúde', 5);
   -- Matriz de acesso (D11): a clínica de exemplo tem tudo liberado.
   insert into public.clinic_features (clinic_id, feature_key) select c_a, key from public.features;
   update public.clinic_settings
@@ -297,7 +298,7 @@ begin
   -- -------------------------------------------------------------------------
   -- Clínica B: Odonto Exemplo (perfil Adultos)
   -- -------------------------------------------------------------------------
-  insert into public.clinics (id, name) values (c_b, 'Odonto Exemplo');
+  insert into public.clinics (id, name, max_professionals) values (c_b, 'Odonto Exemplo', 2);
   -- Matriz de acesso (D11): a clínica de exemplo tem tudo liberado.
   insert into public.clinic_features (clinic_id, feature_key) select c_b, key from public.features;
   update public.clinic_settings set profile = 'adult', reminder_hour = 10 where clinic_id = c_b;

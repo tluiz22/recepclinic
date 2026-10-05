@@ -416,13 +416,13 @@ isOneToOne: false
                   ]
                 },"clinics": {
                   Row: {
-                    "created_at": string,"id": string,"name": string,"status": Database["public"]['Enums']["clinic_status"],"updated_at": string
+                    "created_at": string,"id": string,"max_professionals": number,"name": string,"status": Database["public"]['Enums']["clinic_status"],"updated_at": string
                   }
                   Insert: {
-                    "created_at"?: string,"id"?: string,"name": string,"status"?: Database["public"]['Enums']["clinic_status"],"updated_at"?: string
+                    "created_at"?: string,"id"?: string,"max_professionals"?: number,"name": string,"status"?: Database["public"]['Enums']["clinic_status"],"updated_at"?: string
                   }
                   Update: {
-                    "created_at"?: string,"id"?: string,"name"?: string,"status"?: Database["public"]['Enums']["clinic_status"],"updated_at"?: string
+                    "created_at"?: string,"id"?: string,"max_professionals"?: number,"name"?: string,"status"?: Database["public"]['Enums']["clinic_status"],"updated_at"?: string
                   }
                   Relationships: [
                     
@@ -1068,6 +1068,9 @@ isOneToOne: false
                            },
 "set_clinic_features":
 { Args: { "p_clinic_id": string,"p_features": (string)[] }; Returns: undefined
+                           },
+"set_clinic_professional_limit":
+{ Args: { "p_clinic_id": string,"p_limit": number }; Returns: undefined
                            },
 "set_whatsapp_access_token":
 { Args: { "p_clinic_id": string,"p_token": string }; Returns: undefined

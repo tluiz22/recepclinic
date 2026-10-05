@@ -20,7 +20,15 @@ export async function hasFeature(db: DbClient, clinicId: string, key: FeatureKey
 
 export type FeatureGrant = { key: FeatureKey; enabledBy: string | null; enabledAt: Date };
 
-export type ClinicAccessSummary = { id: string; name: string; status: string; features: FeatureGrant[] };
+export type ClinicAccessSummary = {
+  id: string;
+  name: string;
+  status: string;
+  features: FeatureGrant[];
+  /** Limite de profissionais ativos (D11) e quantos estão ativos. */
+  maxProfessionals: number;
+  activeProfessionals: number;
+};
 
 /**
  * Clínicas e o que cada uma tem liberado (tela da matriz do Administrador do
@@ -28,7 +36,10 @@ export type ClinicAccessSummary = { id: string; name: string; status: string; fe
  */
 export async function listClinicsAccess(db: DbClient): Promise<ClinicAccessSummary[]> {
   const rows = unwrap(
-    await db.from("clinics").select("id, name, status, clinic_features ( feature_key, enabled_by, enabled_at )").order("name"),
+    await db
+      .from("clinics")
+      .select("id, name, status, max_professionals, clinic_features ( feature_key, enabled_by, enabled_at ), professionals ( is_active )")
+      .order("name"),
     "Clínicas",
   );
   return rows.map((row) => ({
@@ -38,6 +49,8 @@ export async function listClinicsAccess(db: DbClient): Promise<ClinicAccessSumma
     features: row.clinic_features
       .filter((grant) => isFeatureKey(grant.feature_key))
       .map((grant) => ({ key: grant.feature_key as FeatureKey, enabledBy: grant.enabled_by, enabledAt: new Date(grant.enabled_at) })),
+    maxProfessionals: row.max_professionals,
+    activeProfessionals: row.professionals.filter((p) => p.is_active).length,
   }));
 }
 
@@ -79,6 +92,57 @@ export async function listFeatureChanges(db: DbClient, clinicId: string, limit =
     const key = data?.feature_key;
     if (!key || !isFeatureKey(key) || row.operation === "UPDATE") return [];
     return [{ at: new Date(row.occurred_at), actorId: row.actor_user_id, feature: key, enabled: row.operation === "INSERT" }];
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Limite de profissionais ativos (D11, cliente, 05/out/2026)
+// ---------------------------------------------------------------------------
+
+/** Limite da clínica e quantos profissionais estão ativos (tela de Profissionais). */
+export async function getProfessionalLimit(db: DbClient, clinicId: string): Promise<{ max: number; active: number }> {
+  const [clinic, active] = await Promise.all([
+    db.from("clinics").select("max_professionals").eq("id", clinicId).maybeSingle(),
+    db.from("professionals").select("id", { count: "exact", head: true }).eq("clinic_id", clinicId).eq("is_active", true),
+  ]);
+  const row = unwrap(clinic, "Clínica");
+  if (active.error) throw fromDbError(active.error, "Profissionais");
+  if (!row) throw new DataError("not_found", "Clínica: não encontrada");
+  return { max: row.max_professionals, active: active.count ?? 0 };
+}
+
+/** Suporte: muda o limite. Baixar abaixo dos ativos não desativa ninguém. */
+export async function setClinicProfessionalLimit(db: DbClient, clinicId: string, limit: number): Promise<void> {
+  if (!Number.isInteger(limit) || limit < 1) {
+    throw new DataError("invalid", "Limite de profissionais: pelo menos 1", { maxProfessionals: "O limite precisa ser de pelo menos 1 profissional." });
+  }
+  const { error } = await db.rpc("set_clinic_professional_limit", { p_clinic_id: clinicId, p_limit: limit });
+  if (error) {
+    if ((error as { code?: string }).code === "P0002") throw new DataError("not_found", "Clínica: não encontrada", {}, { cause: error });
+    throw fromDbError(error, "Limite de profissionais");
+  }
+}
+
+export type ProfessionalLimitChange = { at: Date; actorId: string; from: number; to: number };
+
+/** Histórico das mudanças do limite (registro do Suporte, mais recentes primeiro). */
+export async function listProfessionalLimitChanges(db: DbClient, clinicId: string, limit = 50): Promise<ProfessionalLimitChange[]> {
+  const rows = unwrap(
+    await db
+      .from("platform_audit_log")
+      .select("occurred_at, actor_user_id, old_row, new_row")
+      .eq("clinic_id", clinicId)
+      .eq("table_name", "clinics")
+      .eq("operation", "UPDATE")
+      .order("occurred_at", { ascending: false })
+      .limit(limit),
+    "Histórico do limite de profissionais",
+  );
+  return rows.flatMap((row) => {
+    const from = (row.old_row as { max_professionals?: number } | null)?.max_professionals;
+    const to = (row.new_row as { max_professionals?: number } | null)?.max_professionals;
+    if (from === undefined || to === undefined || from === to) return [];
+    return [{ at: new Date(row.occurred_at), actorId: row.actor_user_id, from, to }];
   });
 }
 

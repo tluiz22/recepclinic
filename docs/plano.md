@@ -527,6 +527,15 @@ Vocabulário pelo perfil da clínica.
   tipo do local não muda depois de criado (como a categoria do serviço e o tipo da agenda); o login
   ligado ao profissional é definido na equipe (F4.4). 4 testes unitários novos (a camada de acesso
   já tinha os de banco da F3.4).
+  **Ajuste pedido na validação (cliente, 05/out, D11): limite de profissionais ativos por
+  clínica**, definido pelo Suporte na tela da matriz (com o número de ativos, aviso quando a
+  clínica está acima e a mudança no histórico). Contam só os ativos (desativar libera a vaga);
+  clínica nova começa com 1 e as que já existiam ficaram com o que tinham; baixar o limite não
+  desativa ninguém, só impede novos. Em Profissionais, "X de Y profissionais ativos" e "Novo
+  profissional" bloqueado no limite. Migração `20261005170000`: `clinics.max_professionals`, trava
+  no cadastro e na reativação (erro `limit_reached`, "Limite de profissionais da clínica atingido.
+  Fale com o suporte."), só o Suporte muda (`set_clinic_professional_limit`); dados de teste com
+  limite 5 e 2, clínicas dos testes com 50. 3 testes de banco novos.
 
 ## F5 — Páginas públicas e domínio
 
