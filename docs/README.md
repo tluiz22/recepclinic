@@ -34,8 +34,8 @@
 >     **F4 em andamento** (painel), dividida em nove partes (cliente,
 >     05/out; ver o plano). **F4.1 concluída** (login, convite e senha, escolha de clínica,
 >     vocabulário, tela inicial). **F4.2 concluída** (tela da matriz de acesso). **F4.3 concluída**
->     (Configurações: clínica, profissionais, locais, agendas, serviços). **Próxima: F4.4**
->     (começa pela tela "Nova clínica" do Suporte; depois Configurações II).
+>     (Configurações: clínica, profissionais, locais, agendas, serviços). **Próxima: F4.4a**
+>     (Nova clínica e pedido de informações por formulário); depois F4.4b (Configurações II).
 >     Para rodar o banco: abrir o OrbStack, `npm run db:start`, `npm run db:reset` (carrega os
 >     dados de teste) e `npm run test:db`.
 > - **Frente paralela, o site** `www.recepclinic.com.br`: [`site-plano.md`](site-plano.md), etapas
@@ -49,6 +49,8 @@
 >   - conta na Cloudflare e troca do DNS no registro.br (até a S5 do site);
 >   - comprar o chip de testes do RecepClinic (necessário na F6);
 >   - advogado para revisar as páginas legais (antes do 1º piloto).
+>   - provedor de e-mail (ex.: Resend) com o domínio `recepclinic.com.br` (antes do 1º piloto;
+>     pedido de informações e convites na nuvem).
 > - **Triagem do piloto**: nenhum commit novo do piloto desde `aad94dd` até esta data.
 
 > **RecepClinic — a recepção inteligente da sua clínica.**

@@ -465,7 +465,7 @@ Pontos dos limites com caminho óbvio, que não precisaram de decisão. Qualquer
 | L44 Segurança das páginas | Cabeçalhos de segurança e `robots.txt` bloqueando painel e links públicos. |
 | L45 Observabilidade | Ferramenta de erros com a clínica em cada erro e monitor externo do painel e do webhook. Escolha da ferramenta no plano (etapa 4). |
 | L46 Formulários | Proteção de origem do Astro ligada explicitamente na configuração. |
-| L47 Onboarding | No P1, a clínica é criada pelo Suporte RecepClinic; o Administrador da clínica faz o resto pela tela (equipe, perfil, identidade, serviços, agendas, disponibilidade, conectar WhatsApp). Autocadastro fica para depois. |
+| L47 Onboarding | No P1, a clínica é criada pelo Suporte RecepClinic pela tela "Nova clínica" (F4.4a), que **sempre convida o primeiro Administrador na criação**. A configuração é feita pelo Administrador da clínica ou, **se ele preferir, pelo Suporte** (que já abre qualquer clínica, D6): nesse caso, o Suporte envia por e-mail um **pedido de informações com um formulário por link** (8 seções: clínica, locais, profissionais, serviços, dias e horários, feriados, equipe, WhatsApp e avisos; campos para o simples e texto livre com exemplo para o que é tabela; só o que estiver liberado na matriz); as respostas ficam na tela do Suporte, que revisa e cadastra (nada entra sozinho). Cliente, 05/out/2026. Autocadastro fica para depois. |
 | L49 Cobrança | Sem billing. Só contadores de uso por clínica (mensagens enviadas, atendimentos) para não fechar a porta. O que cada clínica pode usar é liberado pela matriz de acesso (D11). |
 | L50 Custo da Meta | Levantar a tabela atual de preços por mensagem antes de definir o preço do produto (tarefa do cliente, fora do código). |
 
@@ -492,3 +492,6 @@ Todos os 50 limites têm destino:
 - **CNPJ, contrato com as clínicas e termo de tratamento de dados** (LGPD), incluindo o acesso
   permanente do Suporte RecepClinic aos dados das clínicas (D6, revisão de 04/out).
 - **Custo da Meta por mensagem** (L50).
+- **Provedor de e-mail** (ex.: Resend) com o domínio `recepclinic.com.br`: necessário para o pedido
+  de informações (F4.4a) e, na nuvem, para os convites e a recuperação de senha (o envio padrão do
+  Supabase tem limite muito baixo). Antes do 1º piloto; localmente os e-mails ficam no Mailpit.

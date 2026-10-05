@@ -470,12 +470,17 @@ Vocabulário pelo perfil da clínica.
 - **F4.2 — Matriz de acesso:** tela do Administrador do sistema (clínica, itens, histórico).
 - **F4.3 — Configurações I:** perfil e identidade, profissionais (telefone e resumo), locais,
   serviços (preço por local, preparo), agendas.
-- **F4.4 — Configurações II:** começa pela **tela "Nova clínica" do Suporte** (cliente, 05/out:
-  nome, perfil, fuso e e-mail do primeiro Administrador, que recebe o convite; nasce com a matriz
-  desligada e limite de 1 profissional; fecha a lacuna da L47/F10, que previam a criação pelo
-  Suporte sem tela); depois dias e horários, feriados extras, contatos do resumo, hora do
-  lembrete, convênios, equipe (convites, com o mesmo envio) e acesso às agendas, situação do
-  WhatsApp.
+- **F4.4 — dividida em duas partes (cliente, 05/out):**
+  - **F4.4a — Nova clínica e pedido de informações:** tela "Nova clínica" do Suporte (nome,
+    perfil, fuso e e-mail do primeiro Administrador; **o convite sai sempre na criação**; nasce com
+    a matriz desligada e limite de 1 profissional); **pedido de informações por e-mail** com
+    **formulário por link** (8 seções, campos para o simples e texto livre com exemplo para
+    serviços, horários e feriados, só o que estiver liberado), para quando o Administrador prefere
+    que o Suporte configure; respostas na tela do Suporte, que revisa e cadastra. Envio de e-mail
+    próprio (local: Mailpit; na nuvem, provedor de e-mail, pendência do cliente).
+  - **F4.4b — Configurações II:** dias e horários, feriados extras, contatos do resumo, hora do
+    lembrete, convênios, equipe (convites, com o mesmo envio) e acesso às agendas, situação do
+    WhatsApp.
 - **F4.5 — Agenda I:** dia, semana e mês com a escolha da agenda; marcar, remarcar, cancelar;
   presença e comparecimento; lembrete e preparo; lista de espera.
 - **F4.6 — Agenda II:** bloqueios, cancelamento do dia com link de remarcação, séries (D9).
