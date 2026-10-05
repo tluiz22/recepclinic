@@ -1,44 +1,32 @@
 # RecepClinic
 
-> **Estado atual (retomar daqui), 04/out/2026**
+> **Estado atual (retomar daqui), 05/out/2026**
 >
 > - **Etapas 0 a 4 concluídas**: cópia isolada, [diagnóstico](diagnostico.md), [limites](limites.md),
 >   [arquitetura](arquitetura.md) (decisões D1–D11) e [plano](plano.md) (fases F0–F10).
 > - **Produto:**
->   - **F0 concluída**: site da Dra. fora do repositório; nome RecepClinic; Supabase local pela CLI;
->     Vitest e CI.
->   - **F1 concluída**: 197 testes das regras de cálculo; achados 1–5 anotados no plano para a F3/F4.
->   - **F2 concluída**: schema multi-clínica em 7 migrações (D2 e D6 revistas, D9 recorrência, D10
->     convênios só no banco); dados de teste locais com logins no README da raiz; 158 testes de
->     banco no CI, com varredura de isolamento automática.
->   - **F3 concluída** (acesso ao banco e contexto da clínica): divisão em etapas aprovada em
->     04/out (F3.1 base técnica, F3.2 contexto da clínica, F3.3 credencial limitada, F3.4–F3.9
->     acesso por domínio; ver [`plano.md`](plano.md)). As telas só são ligadas ao schema novo na
->     F4. **F3.1 a F3.8 concluídas** (tipos do banco, variáveis de ambiente, datas com fuso;
->     contexto da clínica, papéis da D6 e registro das leituras do Suporte; credencial limitada à
->     clínica e service role presa a um arquivo; acesso à configuração, com a decisão de que a
->     sobreposição de horários vale por agenda; acesso a pacientes, com os achados 1–3 da F1
->     resolvidos; F3.6a: horários livres e marcação, com duplicidade por agenda e retorno na
->     mesma agenda; F3.6b: bloqueios, links e séries, com horizonte de 3 meses; F3.7a: entrar,
->     sair e consultar a lista de espera, com inclusão também pelo painel; F3.7b: motor de ofertas
->     da lista, com o envio do WhatsApp ligado na F6/F7). **Decisão D11 (05/out): matriz de
->     acesso por clínica**, liberada pelo Administrador do sistema; o básico do consultório sempre
->     ligado. **F3.8 concluída** (matriz no banco, com travas; no contexto e nas rotas; tela na F4).
->     **Próxima etapa: F3.9** (WhatsApp e rotinas), dividida em três partes (cliente, 05/out):
->     F3.9a WhatsApp, F3.9b lembrete e reenvios, F3.9c resumo do dia e rotinas. **F3.9a concluída**
->     (conexão, templates, mensagens, janela de 24h, conversa, pausa da recepção pulando fim de
->     semana e feriados, funil). **F3.9b concluída** (lembrete da véspera, botões e reenvio
->     automático, resposta aos botões, preparo do exame; achado 4 resolvido). **F3.9c concluída**
->     (resumo do dia também por profissional, decisão de 05/out na D2; execuções das rotinas e
->     alerta de envios; achado 5 resolvido). **F3 concluída** (achados 1–5 da F1 resolvidos).
->     **F4 em andamento** (painel), dividida em nove partes (cliente,
->     05/out; ver o plano). **F4.1 concluída** (login, convite e senha, escolha de clínica,
->     vocabulário, tela inicial). **F4.2 concluída** (tela da matriz de acesso). **F4.3 concluída**
->     (Configurações: clínica, profissionais, locais, agendas, serviços). **F4.4a concluída**
->     (Nova clínica, convite, pedido de informações por formulário, e-mail próprio). **Próxima:
->     F4.4b** (Configurações II).
->     Para rodar o banco: abrir o OrbStack, `npm run db:start`, `npm run db:reset` (carrega os
->     dados de teste) e `npm run test:db`.
+>   - **F0 a F3 concluídas**: base de trabalho; 197 testes das regras do piloto; schema
+>     multi-clínica; camada de acesso ao banco por domínio (configuração, pacientes, agenda, séries,
+>     lista de espera, WhatsApp, lembrete e reenvios, resumo do dia e rotinas), com a matriz de
+>     acesso (D11) e os achados 1–5 da F1 resolvidos. Detalhes de cada etapa no [plano](plano.md).
+>   - **F4 em andamento** (painel no banco novo), em nove partes (cliente, 05/out):
+>     - **Concluídas:** F4.1 (login, convite e senha, escolha de clínica, vocabulário, tela
+>       inicial); F4.2 (tela da matriz de acesso, com o **limite de profissionais ativos** por
+>       clínica); F4.3 (Configurações: clínica, profissionais com **RQE**, locais, agendas,
+>       serviços); F4.4a (**Nova clínica** pelo Suporte, convites, **pedido de informações por
+>       formulário**, e-mail próprio por SMTP).
+>     - **Próxima: F4.4b** (Configurações II: dias e horários, feriados, contatos do resumo, hora do
+>       lembrete, convênios, equipe com convites e acesso às agendas, situação do WhatsApp). Depois:
+>       F4.5 Agenda I, F4.6 Agenda II, F4.7 Pacientes, F4.8 dia a dia, F4.9 Métricas.
+>     - **A validar pelo cliente:** e-mails da F4.4a chegando ao Mailpit (`http://127.0.0.1:54324`)
+>       depois de reiniciar o `npm run dev` (o servidor só lê o `.env` ao iniciar).
+>   - **Decidido em 05/out para depois:** aba **"Mensagens"** em Configurações na **F6** (prévia no
+>     balão do WhatsApp; com o item "Mensagens personalizadas", o Administrador edita as mensagens de
+>     conversa e propõe os templates; D3b revista); envio dos templates personalizados pela API na
+>     F8; envio do **logo** da clínica na F5.
+>   - **Para rodar:** abrir o OrbStack, `npm run db:start`, `npm run db:reset` (dados de teste) e
+>     `npm run dev` com o `.env` local (ver "Painel local" no README da raiz); testes com `npm test`
+>     e `npm run test:db`.
 > - **Frente paralela, o site** `www.recepclinic.com.br`: [`site-plano.md`](site-plano.md), etapas
 >   S0–S6, a executar numa **sessão separada, na pasta `~/Documents/Desenvolvimento/recepclinic-site`**
 >   (nunca nesta pasta, para as duas sessões não se cruzarem). **S0 concluída em 03/out**: repositório
@@ -52,7 +40,7 @@
 >   - advogado para revisar as páginas legais (antes do 1º piloto).
 >   - provedor de e-mail (ex.: Resend) com o domínio `recepclinic.com.br` (antes do 1º piloto;
 >     pedido de informações e convites na nuvem).
-> - **Triagem do piloto**: nenhum commit novo do piloto desde `aad94dd` até esta data.
+> - **Triagem do piloto**: nenhum commit novo do piloto desde `aad94dd` até 05/out/2026.
 
 > **RecepClinic — a recepção inteligente da sua clínica.**
 
