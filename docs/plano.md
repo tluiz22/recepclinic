@@ -479,6 +479,21 @@ Vocabulário pelo perfil da clínica.
 - **F4.8 — Dia a dia:** Dashboard (resumo do dia), trilha, aba Envios (também para a Recepção).
 - **F4.9 — Métricas e relatórios:** abas pelos itens, escopo do Profissional; retirada do código
   antigo sem uso.
+- **F4.1 — concluída em 05/out.** Login no banco novo; **sem cadastro público** (convite); "Esqueci
+  minha senha" e aceite do convite pelo link do e-mail, conferido no servidor
+  (`/api/admin/auth/confirmar`, `token_hash`), com a tela de senha nova (mínimo de 8 caracteres;
+  `src/lib/data/auth.ts`, modelos em `supabase/templates/`); tela de escolha da clínica para quem é
+  membro de várias e para o Suporte (`/admin/escolher-clinica`, que agora recebe o Suporte sem
+  clínica), com "Trocar" no topo e o aviso de que as leituras do Suporte ficam registradas; topo com
+  o nome da clínica e a marca RecepClinic; **vocabulário pelo perfil** (`src/lib/vocabulary.ts`;
+  **decisão do cliente, 05/out: a Mista usa "paciente/responsável"**, D4b); tela inicial no banco
+  novo (atendimentos de hoje por tipo, comparecimento a registrar, lembretes sem resposta, alerta de
+  envios, atalhos e cartões pelos itens liberados; `src/lib/data/dashboard.ts`), adiantada da F4.8
+  por ser a primeira tela depois do login. Padrões assumidos (revisáveis): senha com pelo menos 8
+  caracteres; "Esqueci minha senha" responde igual exista ou não o e-mail; "Presença não
+  confirmada" conta os lembretes de hoje sem botão tocado. **Ao criar o projeto na nuvem:** desligar
+  o cadastro público, apontar o endereço do site para o painel e copiar os dois modelos de e-mail.
+  As outras telas continuam no código antigo até a sua parte. 4 testes unitários e 6 de banco novos.
 
 ## F5 — Páginas públicas e domínio
 

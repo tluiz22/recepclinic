@@ -1,58 +1,36 @@
 ---
-import "../../styles/global.css";
+import FormMessage from "../../components/admin/FormMessage.astro";
+import AuthLayout from "../../layouts/AuthLayout.astro";
 
 const error = Astro.url.searchParams.get("error");
-// "sem_acesso": login certo, mas sem papel em nenhuma clínica (D6, F3.2).
-const errorMessage =
-  error === "sem_acesso" ? "Este login não tem acesso a nenhuma clínica." : error !== null ? "E-mail ou senha inválidos." : null;
+const ERRORS: Record<string, string> = {
+  // Login certo, mas sem papel em nenhuma clínica (D6, F3.2).
+  sem_acesso: "Este login não tem acesso a nenhuma clínica.",
+  link_invalido: "O link do e-mail venceu ou já foi usado. Peça outro.",
+};
+const errorMessage = error === null ? null : (ERRORS[error] ?? "E-mail ou senha inválidos.");
 ---
 
-<html lang="pt-BR">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Entrar | Painel do consultório</title>
-    <meta name="robots" content="noindex, nofollow" />
-  </head>
-  <body class="flex min-h-screen items-center justify-center bg-slate-50 text-slate-900">
-    <div class="w-full max-w-sm rounded-lg border border-slate-200 bg-white p-8 shadow-sm">
-      <h1 class="text-xl font-bold text-slate-900">Painel do consultório</h1>
-      <p class="mt-1 text-sm text-slate-600">Acesso restrito à equipe.</p>
-      {
-        errorMessage && (
-          <p class="mt-4 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">
-            {errorMessage}
-          </p>
-        )
-      }
-      <form method="POST" action="/api/admin/auth/login" class="mt-6 flex flex-col gap-4">
-        <div>
-          <label for="email" class="block text-sm font-medium text-slate-700">E-mail</label>
-          <input
-            type="email"
-            name="email"
-            id="email"
-            required
-            class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
-          />
-        </div>
-        <div>
-          <label for="password" class="block text-sm font-medium text-slate-700">Senha</label>
-          <input
-            type="password"
-            name="password"
-            id="password"
-            required
-            class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
-          />
-        </div>
-        <button
-          type="submit"
-          class="mt-2 rounded-md bg-sky-700 px-4 py-2 text-sm font-medium text-white hover:bg-sky-800"
-        >
-          Entrar
-        </button>
-      </form>
+<AuthLayout title="Entrar no painel">
+  <p class="mt-1 text-sm text-slate-600">Acesso restrito à equipe da clínica.</p>
+  {errorMessage && <FormMessage tone="error">{errorMessage}</FormMessage>}
+  <form method="POST" action="/api/admin/auth/login" class="mt-6 flex flex-col gap-4">
+    <div>
+      <label for="email" class="block text-sm font-medium text-slate-700">E-mail</label>
+      <input type="email" name="email" id="email" required autocomplete="email" class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm" />
     </div>
-  </body>
-</html>
+    <div>
+      <label for="password" class="block text-sm font-medium text-slate-700">Senha</label>
+      <input
+        type="password"
+        name="password"
+        id="password"
+        required
+        autocomplete="current-password"
+        class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+      />
+    </div>
+    <button type="submit" class="mt-2 rounded-md bg-sky-700 px-4 py-2 text-sm font-medium text-white hover:bg-sky-800">Entrar</button>
+  </form>
+  <a href="/admin/esqueci-senha" class="mt-4 block text-center text-sm text-sky-700 hover:underline">Esqueci minha senha</a>
+</AuthLayout>

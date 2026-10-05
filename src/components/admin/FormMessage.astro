@@ -1,0 +1,15 @@
+---
+// Aviso das telas de acesso: erro (vermelho) ou confirmação (verde).
+interface Props {
+  tone: "error" | "success" | "warning";
+}
+
+const { tone } = Astro.props;
+const classes = {
+  error: "bg-red-50 text-red-700",
+  success: "bg-emerald-50 text-emerald-800",
+  warning: "border border-amber-200 bg-amber-50 text-amber-800",
+}[tone];
+---
+
+<p class={`mt-4 rounded-md px-3 py-2 text-sm ${classes}`}><slot /></p>

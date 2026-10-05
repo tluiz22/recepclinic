@@ -79,6 +79,7 @@ export async function loadClinicContext(
       isPlatformStaff,
       agendaIds: (agendas ?? []).map((agenda) => agenda.id),
       features: (features ?? []).map((row) => row.feature_key).filter(isFeatureKey),
+      canSwitchClinic: isPlatformStaff || memberships.filter((membership) => membership.roles.length > 0).length > 1,
     },
   };
 }

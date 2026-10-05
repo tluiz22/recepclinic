@@ -43,6 +43,8 @@ export type ClinicContext = {
   agendaIds: string[];
   /** Itens da matriz de acesso liberados para a clínica ativa (D11). */
   features: FeatureKey[];
+  /** Pode trocar de clínica: membro de mais de uma, ou Suporte (F4.1). */
+  canSwitchClinic: boolean;
 };
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;

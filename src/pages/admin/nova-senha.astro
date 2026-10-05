@@ -1,0 +1,44 @@
+---
+import FormMessage from "../../components/admin/FormMessage.astro";
+import AuthLayout from "../../layouts/AuthLayout.astro";
+import { isPasswordProblem, MIN_PASSWORD_LENGTH, PASSWORD_PROBLEMS } from "../../lib/data/auth";
+
+// Senha nova depois do convite ou da recuperação (F4.1). A sessão foi aberta
+// pelo link do e-mail (/api/admin/auth/confirmar).
+const origem = Astro.url.searchParams.get("origem") === "convite" ? "convite" : "recuperacao";
+const erro = Astro.url.searchParams.get("erro");
+const problem = isPasswordProblem(erro) ? PASSWORD_PROBLEMS[erro] : null;
+---
+
+<AuthLayout title={origem === "convite" ? "Bem-vindo! Crie a sua senha" : "Crie uma senha nova"}>
+  <p class="mt-1 text-sm text-slate-600">Use pelo menos {MIN_PASSWORD_LENGTH} caracteres.</p>
+  {problem && <FormMessage tone="error">{problem}</FormMessage>}
+  <form method="POST" action="/api/admin/auth/nova-senha" class="mt-6 flex flex-col gap-4">
+    <input type="hidden" name="origem" value={origem} />
+    <div>
+      <label for="password" class="block text-sm font-medium text-slate-700">Senha nova</label>
+      <input
+        type="password"
+        name="password"
+        id="password"
+        required
+        minlength={MIN_PASSWORD_LENGTH}
+        autocomplete="new-password"
+        class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+      />
+    </div>
+    <div>
+      <label for="confirmation" class="block text-sm font-medium text-slate-700">Repita a senha</label>
+      <input
+        type="password"
+        name="confirmation"
+        id="confirmation"
+        required
+        minlength={MIN_PASSWORD_LENGTH}
+        autocomplete="new-password"
+        class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+      />
+    </div>
+    <button type="submit" class="rounded-md bg-sky-700 px-4 py-2 text-sm font-medium text-white hover:bg-sky-800">Salvar senha</button>
+  </form>
+</AuthLayout>

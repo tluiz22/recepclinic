@@ -3,9 +3,9 @@ import { ACTIVE_CLINIC_COOKIE, activeClinicCookieOptions, isUuid } from "../../.
 import { createUserClient } from "../../../lib/data/clients";
 import { loadClinicContext } from "../../../lib/data/clinicContext";
 
-// Troca a clínica ativa (F3.2): campo `clinicId` no formulário. Só aceita
-// clínica em que a pessoa é membro, ou qualquer uma para o Suporte. A tela de
-// escolha entra na F4.
+// Troca a clínica ativa (F3.2): campo `clinicId` no formulário, enviado pela
+// tela /admin/escolher-clinica (F4.1). Só aceita clínica em que a pessoa é
+// membro, ou qualquer uma para o Suporte.
 export const POST: APIRoute = async ({ request, cookies, locals, url, redirect }) => {
   const formData = await request.formData().catch(() => null);
   const clinicId = formData?.get("clinicId")?.toString().toLowerCase();

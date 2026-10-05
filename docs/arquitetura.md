@@ -159,8 +159,8 @@ cair em "dezenas de configurações" (regra 4 do README), a forma de configurar 
 **Decisão: perfil pronto + poucos campos.**
 
 - **Perfil da clínica**: *Pediátrica*, *Adultos* ou *Mista*. Define o vocabulário dos textos
-  ("criança/responsável" × "paciente/contato") e as regras de idade padrão. A idade limite continua
-  ajustável.
+  ("criança/responsável" × "paciente/contato"; a *Mista* usa **"paciente/responsável"**, decisão do
+  cliente em 05/out/2026) e as regras de idade padrão. A idade limite continua ajustável.
 - **Identidade**: nome da clínica, profissionais (nome, profissão e especialidade, registro no
   conselho de classe: conselho, número e UF, ex.: CRM, CRO, CRP, CREFITO, CRN; revisão de 04/out),
   endereços dos locais, logo e cor. Tudo por tela, incluindo criar, editar e desativar locais.

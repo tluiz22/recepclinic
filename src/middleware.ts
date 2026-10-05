@@ -7,10 +7,24 @@ import { platformEnv } from "./lib/env";
 // Painel (/admin e /api/admin): login, clínica ativa, papéis e agendas da
 // pessoa (F3.2, D6). O banco (RLS) confere de novo cada leitura e escrita.
 
-const PUBLIC_ADMIN_PATHS = new Set(["/admin/login", "/api/admin/auth/login"]);
+// Sem login: entrar, recuperar a senha e o link dos e-mails (F4.1).
+const PUBLIC_ADMIN_PATHS = new Set([
+  "/admin/login",
+  "/admin/esqueci-senha",
+  "/api/admin/auth/login",
+  "/api/admin/auth/recuperar",
+  "/api/admin/auth/confirmar",
+]);
 
-// Funcionam com login mas sem clínica ativa: sair e escolher a clínica.
-const PATHS_WITHOUT_CLINIC = new Set(["/api/admin/auth/logout", "/api/admin/clinica-ativa"]);
+// Funcionam com login mas sem clínica ativa: sair, escolher a clínica e criar
+// a senha depois do convite ou da recuperação.
+const PATHS_WITHOUT_CLINIC = new Set([
+  "/api/admin/auth/logout",
+  "/api/admin/clinica-ativa",
+  "/admin/escolher-clinica",
+  "/admin/nova-senha",
+  "/api/admin/auth/nova-senha",
+]);
 
 const json = (status: number, body: Record<string, string>) =>
   new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } });
@@ -66,12 +80,9 @@ export const onRequest = defineMiddleware(async (context, next) => {
     return isApi ? json(403, { error: "no_clinic_access" }) : redirect("/admin/login?error=sem_acesso");
   }
 
-  // Suporte sem clínica escolhida. A tela de escolha vem na F4; até lá, a
-  // clínica é escolhida por POST em /api/admin/clinica-ativa.
+  // Suporte sem clínica escolhida.
   if (result.status === "choose_clinic") {
-    return isApi
-      ? json(409, { error: "choose_clinic" })
-      : new Response("Escolha a clínica em /api/admin/clinica-ativa.", { status: 409 });
+    return isApi ? json(409, { error: "choose_clinic" }) : redirect("/admin/escolher-clinica");
   }
 
   const { context: clinic } = result;

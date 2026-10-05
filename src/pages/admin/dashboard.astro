@@ -1,114 +1,89 @@
 ---
-// Fase 9 — resumo do dia: lê só o `status` do Supabase (a única agenda desde
-// a Fase 20). Ver plano, seção "Fase 9".
-import { fetchReminderResponseReport } from "../../lib/metrics/data";
+// Tela inicial (Fase 9 do piloto; banco novo na F4.1): números de hoje no dia
+// da clínica, alerta de envios automáticos e atalhos. Cartões e atalhos seguem
+// os itens liberados para a clínica (D11).
 import AdminLayout from "../../layouts/AdminLayout.astro";
 import Card from "../../components/admin/Card.astro";
+import FormMessage from "../../components/admin/FormMessage.astro";
 import Icon from "../../components/admin/Icon.astro";
 import type { IconName } from "../../components/admin/Icon.astro";
-import { createClient } from "../../lib/supabase/server";
-import { describeSendsAlert, fetchSendsAlert } from "../../lib/automaticSends";
 import { canAccessArea } from "../../lib/clinicAccess";
+import { createUserClient } from "../../lib/data/clients";
+import { getDashboardCounts } from "../../lib/data/dashboard";
+import { describeSendsAlert, getSendsAlert } from "../../lib/data/sends";
 
-const PENDING_WINDOW_DAYS = 60;
+const clinic = Astro.locals.clinic!;
+const db = createUserClient(Astro.request, Astro.cookies);
+const has = (feature: (typeof clinic.features)[number]) => clinic.features.includes(feature);
 
-const supabase = createClient(Astro.request, Astro.cookies);
-
-const now = new Date();
-
-// Mesma técnica de "hoje" usada em getNextAvailableDates.ts/daily-summary.ts.
-const todayStr = new Date(now.getTime() - 3 * 60 * 60 * 1000).toISOString().slice(0, 10);
-const todayStart = new Date(`${todayStr}T00:00:00-03:00`);
-const todayEnd = new Date(`${todayStr}T23:59:59.999-03:00`);
-
-// "Presença não confirmada" (Fase 19; revisto na Fase 23 a pedido do
-// cliente): lembretes enviados hoje ainda sem resposta — o mesmo número de
-// "Não responderam" em Consultas › Lembretes, que o cartão abre. Antes do
-// envio do dia fica 0.
-const tomorrowStart = new Date(todayEnd.getTime() + 1);
-
-const [{ data: todayRows }, { count: pendingCount }, reminderReport, sendsAlert] = await Promise.all([
-  supabase
-    .from("appointments")
-    .select("appointment_type")
-    .neq("status", "canceled")
-    .gte("scheduled_at", todayStart.toISOString())
-    .lte("scheduled_at", todayEnd.toISOString()),
-  supabase
-    .from("appointments")
-    .select("id", { count: "exact", head: true })
-    .in("status", ["scheduled", "confirmed"])
-    .lt("scheduled_at", now.toISOString())
-    .gte("scheduled_at", new Date(now.getTime() - PENDING_WINDOW_DAYS * 24 * 60 * 60 * 1000).toISOString()),
-  fetchReminderResponseReport(supabase, todayStart, tomorrowStart),
-  // Alerta de envios automáticos (Fase 22 · etapa 5).
-  fetchSendsAlert(supabase, now),
-]);
-
+const [counts, sendsAlert] = await Promise.all([getDashboardCounts(db, clinic.clinicId, clinic.timezone), getSendsAlert(db, clinic.clinicId)]);
 const sendsAlertLines = describeSendsAlert(sendsAlert);
-// Alerta leva quem vê Métricas à aba Envios e os demais à Agenda, onde ficam
-// os botões de envio (Fase 23 · etapa 5; papéis da D6 desde a F3.2).
-const isMedica = canAccessArea(Astro.locals.clinic ?? { roles: [], isPlatformStaff: false }, "metrics");
+// Quem vê Métricas vai à aba Envios; os demais, à Agenda (botões de envio).
+const seesMetrics = canAccessArea(clinic, "metrics") && has("metrics_sends");
 
-const appointmentsToday = (todayRows ?? []).filter((row) => row.appointment_type !== "exam").length;
-const examsToday = (todayRows ?? []).length - appointmentsToday;
+const aviso = Astro.url.searchParams.get("aviso");
+const NOTICES: Record<string, { tone: "warning" | "success"; text: string }> = {
+  // Redirecionado pelo middleware: área sem acesso para o papel ou item não liberado.
+  acesso_negado: { tone: "warning", text: "Essa tela não está disponível para o seu acesso." },
+  senha_definida: { tone: "success", text: "Senha salva. Use-a nos próximos logins." },
+};
+const notice = aviso ? NOTICES[aviso] : undefined;
 
-// Redirecionado pelo middleware ao tentar abrir uma tela só da médica (Fase 14).
-const accessDenied = Astro.url.searchParams.get("aviso") === "acesso_negado";
-
-const shortcuts:{ label: string; href: string; icon: IconName }[] = [
+const shortcuts: { label: string; href: string; icon: IconName }[] = [
   { label: "Agenda do dia", href: "/admin/agenda", icon: "calendar" },
   { label: "Marcar consulta", href: "/admin/agenda/marcar", icon: "plus" },
-  { label: "Marcar exame", href: "/admin/agenda/marcar-exame", icon: "plus" },
+  ...(has("exams") ? [{ label: "Marcar exame", href: "/admin/agenda/marcar-exame", icon: "plus" as IconName }] : []),
   { label: "Registrar comparecimento", href: "/admin/consultas?tab=pendentes", icon: "check-circle" },
 ];
 ---
 
-<AdminLayout title="Dashboard">
-  <h1 class="text-2xl font-bold text-slate-900">Dashboard</h1>
+<AdminLayout title="Início">
+  <h1 class="text-2xl font-bold text-slate-900">Início</h1>
   <p class="mt-2 text-slate-600">Resumo de hoje.</p>
 
-  {
-    accessDenied && (
-      <p class="mt-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
-        Essa tela é de acesso exclusivo da médica.
-      </p>
-    )
-  }
+  {notice && <FormMessage tone={notice.tone}>{notice.text}</FormMessage>}
 
   {
     sendsAlertLines.length > 0 && (
       <a
-        href={isMedica ? "/admin/metricas?tab=envios" : "/admin/agenda"}
+        href={seesMetrics ? "/admin/metricas?tab=envios" : "/admin/agenda"}
         class="mt-4 block rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800 hover:bg-red-100"
       >
         {sendsAlertLines.map((line) => <p>⚠ {line}</p>)}
-        <p class="mt-1 font-medium underline">{isMedica ? "Ver envios automáticos" : "Ver na Agenda"}</p>
+        <p class="mt-1 font-medium underline">{seesMetrics ? "Ver envios automáticos" : "Ver na Agenda"}</p>
       </a>
     )
   }
 
   <div class="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
     <Card class="text-center">
-      <p class="text-3xl font-bold text-sky-700">{appointmentsToday}</p>
+      <p class="text-3xl font-bold text-sky-700">{counts.consultationsToday}</p>
       <p class="mt-1 text-sm text-slate-600">Consultas hoje</p>
     </Card>
-    <Card class="text-center">
-      <p class="text-3xl font-bold text-sky-700">{examsToday}</p>
-      <p class="mt-1 text-sm text-slate-600">Exames hoje</p>
-    </Card>
+    {
+      has("exams") && (
+        <Card class="text-center">
+          <p class="text-3xl font-bold text-sky-700">{counts.examsToday}</p>
+          <p class="mt-1 text-sm text-slate-600">Exames hoje</p>
+        </Card>
+      )
+    }
     <a href="/admin/consultas?tab=pendentes">
       <Card class="h-full text-center hover:border-sky-300 hover:bg-sky-50">
-        <p class="text-3xl font-bold text-amber-600">{pendingCount ?? 0}</p>
+        <p class="text-3xl font-bold text-amber-600">{counts.pendingAttendance}</p>
         <p class="mt-1 text-sm text-slate-600">Comparecimento a registrar</p>
       </Card>
     </a>
-    <a href="/admin/consultas?tab=lembretes&lista=sem_resposta">
-      <Card class="h-full text-center hover:border-sky-300 hover:bg-sky-50">
-        <p class="text-3xl font-bold text-amber-600">{reminderReport.noResponse}</p>
-        <p class="mt-1 text-sm text-slate-600">Presença não confirmada</p>
-      </Card>
-    </a>
+    {
+      has("reminders") && (
+        <a href="/admin/consultas?tab=lembretes&lista=sem_resposta">
+          <Card class="h-full text-center hover:border-sky-300 hover:bg-sky-50">
+            <p class="text-3xl font-bold text-amber-600">{counts.unansweredReminders}</p>
+            <p class="mt-1 text-sm text-slate-600">Presença não confirmada</p>
+          </Card>
+        </a>
+      )
+    }
   </div>
 
   <h2 class="mt-8 text-sm font-semibold uppercase tracking-wide text-slate-500">Atalhos</h2>

@@ -1,0 +1,49 @@
+---
+import AuthLayout from "../../layouts/AuthLayout.astro";
+import { ACTIVE_CLINIC_COOKIE, roleLabel } from "../../lib/clinicAccess";
+import { createUserClient } from "../../lib/data/clients";
+import { isPlatformStaff, listSelectableClinics } from "../../lib/data/clinicChoice";
+
+// Escolha da clínica (F4.1): membro de várias clínicas ou Suporte. A troca é
+// feita por /api/admin/clinica-ativa.
+const db = createUserClient(Astro.request, Astro.cookies);
+const userId = Astro.locals.userId!;
+const [clinics, staff] = await Promise.all([listSelectableClinics(db, userId), isPlatformStaff(db, userId)]);
+const current = Astro.cookies.get(ACTIVE_CLINIC_COOKIE)?.value;
+
+---
+
+<AuthLayout title="Escolha a clínica">
+  {
+    staff && (
+      <p class="mt-1 text-sm text-slate-600">Você entra como Suporte RecepClinic: cada tela aberta fica registrada para a clínica.</p>
+    )
+  }
+  <ul class="mt-6 flex flex-col gap-2">
+    {
+      clinics.map((clinic) => (
+        <li>
+          <form method="POST" action="/api/admin/clinica-ativa">
+            <input type="hidden" name="clinicId" value={clinic.id} />
+            <button
+              type="submit"
+              class={`w-full rounded-md border px-4 py-3 text-left text-sm hover:border-sky-300 hover:bg-sky-50 ${
+                clinic.id === current ? "border-sky-300 bg-sky-50" : "border-slate-200"
+              }`}
+            >
+              <span class="block font-medium text-slate-900">{clinic.name}</span>
+              <span class="block text-xs text-slate-500">
+                {roleLabel({ roles: clinic.roles, isPlatformStaff: staff })}
+                {clinic.status === "suspended" ? " · suspensa" : ""}
+              </span>
+            </button>
+          </form>
+        </li>
+      ))
+    }
+  </ul>
+  {clinics.length === 0 && <p class="mt-4 text-sm text-slate-600">Nenhuma clínica disponível.</p>}
+  <form method="POST" action="/api/admin/auth/logout" class="mt-4 text-center">
+    <button type="submit" class="text-sm text-sky-700 hover:underline">Sair</button>
+  </form>
+</AuthLayout>

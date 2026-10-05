@@ -24,7 +24,8 @@ const primaryNavItems: { label: string; href: string; icon: IconName }[] = [
 // Papéis do login na clínica ativa, resolvidos pelo middleware (F3.2, D6).
 // Áreas sem acesso somem do menu, não só ficam bloqueadas na rota.
 // Relatórios virou uma aba de Métricas (Fase 23 · etapa 4).
-const access = Astro.locals.clinic ?? { roles: [], isPlatformStaff: false };
+const clinic = Astro.locals.clinic;
+const access = clinic ?? { roles: [], isPlatformStaff: false };
 const roleLabel = describeRoles(access);
 
 const moreNavItems: { label: string; href: string; icon: IconName }[] = [
@@ -48,7 +49,7 @@ const isMoreActive = moreNavItems.some((item) => isActive(item.href));
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <title>{title} | Painel do consultório</title>
+    <title>{title} | RecepClinic</title>
     <meta name="robots" content="noindex, nofollow" />
 
     <!-- PWA instalável (ícone na tela inicial do celular) — escopado só ao
@@ -60,7 +61,7 @@ const isMoreActive = moreNavItems.some((item) => isActive(item.href));
     <!-- Safari não segue o manifest sozinho, precisa destas tags à parte. -->
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-    <meta name="apple-mobile-web-app-title" content="Consultório" />
+    <meta name="apple-mobile-web-app-title" content="RecepClinic" />
     <link rel="apple-touch-icon" href="/admin-apple-touch-icon.png" />
     <style>
       /* Esconde o marcador padrão do <details>/<summary> (seta/triângulo) —
@@ -103,9 +104,19 @@ const isMoreActive = moreNavItems.some((item) => isActive(item.href));
     </div>
     <header class="border-b border-slate-200 bg-white pt-[env(safe-area-inset-top)]">
       <div class="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-4">
-        <span class="text-sm font-semibold uppercase tracking-wide text-sky-700">
-          Painel do consultório
-        </span>
+        <div class="min-w-0">
+          <span class="block text-xs font-semibold uppercase tracking-wide text-sky-700">RecepClinic</span>
+          <span class="block truncate text-sm font-medium text-slate-900">
+            {clinic?.clinicName}
+            {
+              clinic?.canSwitchClinic && (
+                <a href="/admin/escolher-clinica" class="ml-2 text-xs font-normal text-sky-700 hover:underline">
+                  Trocar
+                </a>
+              )
+            }
+          </span>
+        </div>
 
         <nav class="hidden flex-wrap gap-x-6 gap-y-2 text-sm font-medium sm:flex">
           {
@@ -135,6 +146,14 @@ const isMoreActive = moreNavItems.some((item) => isActive(item.href));
         </div>
       </div>
     </header>
+
+    {
+      clinic?.isPlatformStaff && (
+        <div class="border-b border-amber-200 bg-amber-50 px-4 py-2 text-center text-xs text-amber-800">
+          Você está como Suporte RecepClinic nesta clínica: cada tela aberta fica registrada.
+        </div>
+      )
+    }
 
     <main class="mx-auto w-full max-w-6xl flex-1 px-4 py-8 pb-28 sm:pb-8">
       <slot />
