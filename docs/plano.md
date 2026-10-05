@@ -602,6 +602,14 @@ Vocabulário pelo perfil da clínica.
   meses a partir da criação). Padrões assumidos (revisáveis): o motivo do bloqueio aparece só para
   a equipe; turma não tem série (as vagas são por sessão, regra da F3). 4 testes unitários e 1 de
   banco novos.
+  **Decidido na validação (cliente, 05/out): o cancelamento pela clínica volta a ser como no
+  piloto, nas fases certas.** Fica a tela "Avisar" por enquanto. Depois: **F4.8**, a aba
+  **"Aguardando remarcação"** do Resumo do Dia (cancelados pela clínica que ainda não
+  remarcaram); **F5**, a página pública do link; **F6**, "Cancelar selecionados" e o bloqueio
+  passam a mostrar um aviso de que **todos os selecionados recebem a mensagem pelo WhatsApp da
+  clínica, com o link de remarcação**, e a tela "Avisar" sai. Texto pedido pelo cliente: "Olá,
+  Maria! Aqui é da Clínica… Precisamos cancelar o atendimento de João (Consulta) de 12/10 às
+  08:00. Pedimos desculpas pelo transtorno." + o link para remarcar.
 - **F4.5 — Agenda I:** dia, semana e mês com a escolha da agenda; marcar, remarcar, cancelar;
   presença e comparecimento; lembrete e preparo; lista de espera.
 - **F4.6 — Agenda II:** bloqueios, cancelamento do dia com link de remarcação, séries (D9).
@@ -694,6 +702,9 @@ com o item **"Mensagens personalizadas"** (D11), o **Administrador da clínica**
 conversa do bot e propõe o texto dos templates (mesmas variáveis; versão nova revisada pelo
 Suporte e enviada à Meta à mão até a F8; o padrão continua até a aprovação e a troca é sozinha);
 `whatsapp_templates` passa a guardar versões, com o texto e a versão em uso.
+**Cancelamento pela clínica como no piloto** (cliente, 05/out): "Cancelar selecionados" e o
+bloqueio com cancelamento mostram o aviso de que todos recebem a mensagem pelo WhatsApp, com o link
+de remarcação (texto da F4.6), e enviam sozinhos; sai a tela "Avisar" da F4.6.
 
 ## F7 — Envios automáticos por clínica
 
