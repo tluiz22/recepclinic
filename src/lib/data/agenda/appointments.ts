@@ -125,7 +125,10 @@ export type TrailEvent =
   | "attendance_corrected"
   | "waitlist_joined"
   | "waitlist_left"
-  | "waitlist_advanced";
+  | "waitlist_advanced"
+  | "message_not_sent"
+  | "reminder_resent"
+  | "preparation_resent";
 
 /** Grava na trilha; falha só vai para o log (não desfaz a ação já feita). */
 export async function logTrail(
@@ -135,7 +138,7 @@ export async function logTrail(
   event: TrailEvent,
   channel: TrailChannel,
   actorId: string | null,
-  details: Record<string, string> = {},
+  details: Record<string, string | boolean> = {},
 ): Promise<void> {
   const { error } = await db
     .from("appointment_events")
@@ -490,7 +493,14 @@ export type RescheduleInput = {
 };
 
 /** Remarcar zera o lembrete e a confirmação de presença (a data nova pede outros). */
-const PRESENCE_RESET = { reminder_sent_at: null, confirmed_at: null, patient_confirmed_at: null, patient_confirmed_by: null };
+const PRESENCE_RESET = {
+  reminder_sent_at: null,
+  reminder_response: null,
+  reminder_response_at: null,
+  confirmed_at: null,
+  patient_confirmed_at: null,
+  patient_confirmed_by: null,
+};
 
 export async function rescheduleAppointment(
   db: DbClient,

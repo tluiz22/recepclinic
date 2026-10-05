@@ -3,6 +3,9 @@ import type { Enums } from "../../supabase/database.types";
 import type { DbClient } from "../clients";
 import { hasFeature } from "../features";
 import { DataError, unwrap } from "../errors";
+import type { SendOutcome } from "../whatsapp/messages";
+
+export type { SendOutcome };
 import { rescheduleAppointment } from "../agenda/appointments";
 import { getFreeSlots, getGroupSessions, getNextAvailableDates, loadSchedulingPlan, type SchedulingPlan } from "../agenda/slots";
 
@@ -55,7 +58,6 @@ export type OfferToSend = {
   expiresAt: Date;
 };
 
-export type SendOutcome = { sent: true; messageId: string } | { sent: false; reason: string };
 export type OfferSender = (offer: OfferToSend) => Promise<SendOutcome>;
 
 // ---------------------------------------------------------------------------

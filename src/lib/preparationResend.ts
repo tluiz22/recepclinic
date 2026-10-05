@@ -109,5 +109,6 @@ export const PREPARATION_RESEND_MESSAGES: Record<PreparationResendOutcome, { tex
 };
 
 export function parsePreparationResendOutcome(value: string | null): PreparationResendOutcome | null {
-  return value && value in PREPARATION_RESEND_MESSAGES ? (value as PreparationResendOutcome) : null;
+  // Só os códigos próprios (achado 4 da F1: `in` aceitava "toString" e outros herdados).
+  return value !== null && Object.hasOwn(PREPARATION_RESEND_MESSAGES, value) ? (value as PreparationResendOutcome) : null;
 }

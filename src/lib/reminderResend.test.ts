@@ -28,10 +28,9 @@ describe("parseResendOutcome e parsePreparationResendOutcome", () => {
     expect(parsePreparationResendOutcome(value)).toBeNull();
   });
 
-  // Comportamento atual registrado como está: o `in` também enxerga as
-  // propriedades herdadas de Object, então "toString" passa como código.
-  it("aceita nomes herdados de Object, como toString (comportamento atual)", () => {
-    expect(parseResendOutcome("toString")).toBe("toString");
-    expect(parsePreparationResendOutcome("constructor")).toBe("constructor");
+  // Achado 4 da F1, corrigido na F3.9b: nomes herdados de Object não são códigos.
+  it.each(["toString", "constructor", "__proto__", "hasOwnProperty"])("recusa o nome herdado %s", (value) => {
+    expect(parseResendOutcome(value)).toBeNull();
+    expect(parsePreparationResendOutcome(value)).toBeNull();
   });
 });

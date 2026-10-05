@@ -291,6 +291,20 @@ export async function returnToBot(db: DbClient, clinicId: string, phone: string)
 }
 
 /**
+ * Depois de um aviso que não passa pelo bot (confirmação, lembrete…), a
+ * conversa recomeça: uma resposta ao aviso não cai no meio de um fluxo antigo
+ * (piloto). A pausa da recepção continua valendo. Sem conversa, nada muda.
+ */
+export async function resetConversationAfterNotice(db: DbClient, clinicId: string, phone: string): Promise<void> {
+  const { error } = await db
+    .from("conversation_state")
+    .update({ state: WELCOME, context: {}, funnel_session_id: null, funnel_flow: null })
+    .eq("clinic_id", clinicId)
+    .eq("contact_phone", phone);
+  if (error) console.error("[conversa] não recomeçou depois do aviso", error.message);
+}
+
+/**
  * Mensagem do paciente numa conversa pausada: `paused` = o bot fica calado;
  * `resumed` = o prazo venceu e a conversa voltou ao bot (do começo); `active`
  * = não estava pausada.

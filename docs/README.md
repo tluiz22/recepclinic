@@ -27,7 +27,9 @@
 >     **Próxima etapa: F3.9** (WhatsApp e rotinas), dividida em três partes (cliente, 05/out):
 >     F3.9a WhatsApp, F3.9b lembrete e reenvios, F3.9c resumo do dia e rotinas. **F3.9a concluída**
 >     (conexão, templates, mensagens, janela de 24h, conversa, pausa da recepção pulando fim de
->     semana e feriados, funil). **Próxima: F3.9b** (lembrete e reenvios, achado 4).
+>     semana e feriados, funil). **F3.9b concluída** (lembrete da véspera, botões e reenvio
+>     automático, resposta aos botões, preparo do exame; achado 4 resolvido). **Próxima: F3.9c**
+>     (resumo do dia e execuções das rotinas, achado 5).
 >     Para rodar o banco: abrir o OrbStack, `npm run db:start`, `npm run db:reset` (carrega os
 >     dados de teste) e `npm run test:db`.
 > - **Frente paralela, o site** `www.recepclinic.com.br`: [`site-plano.md`](site-plano.md), etapas

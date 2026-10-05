@@ -16,6 +16,12 @@ import { deliveryRank, isDeliveryStatus, messageBody, reachedPhone, toE164, type
  */
 export const CUSTOMER_SERVICE_WINDOW_MS = 23.5 * 60 * 60_000;
 
+/** Resultado do envio de verdade, devolvido por quem envia (bot na F6, agendador na F7). */
+export type SendOutcome = ({ sent: true; messageId: string } | { sent: false; reason: string }) & {
+  /** Texto que o paciente vê (o do template preenchido), para o registro da mensagem. */
+  body?: string;
+};
+
 /** Contato ativo da clínica com este telefone (null = ainda não é contato). */
 export async function contactIdByPhone(db: DbClient, clinicId: string, phone: string): Promise<string | null> {
   const row = unwrap(

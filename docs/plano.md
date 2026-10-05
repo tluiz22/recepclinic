@@ -403,6 +403,26 @@ novo não tem). Etapas (cada uma com `npm test`, `test:db`, `check`, `build` e C
   ainda não é contato (no piloto, só de responsável cadastrado); pausar e devolver a conversa pela
   tela não existe no piloto e não entrou. Envio de verdade, roteador do bot e webhook na F6. 12
   testes unitários e 16 de banco novos.
+- **F3.9b — concluída em 05/out.** `src/lib/data/whatsapp/reminders.ts`: lembrete da véspera
+  (rodada por clínica, de hora em hora: na hora do lembrete da clínica, os atendimentos ativos do
+  dia seguinte no calendário dela; execução em `job_runs`, `src/lib/data/jobRuns.ts`), botões
+  "Enviar"/"Reenviar lembrete" (falhou, ou entregue e sem resposta há 2h; "Enviar" só depois do
+  envio da véspera; só contam as tentativas depois da última remarcação), reenvio automático (4h
+  sem resposta, uma vez, entre 7h e 20h da clínica, não a menos de 2h do atendimento, não depois
+  do botão) e resposta aos botões do lembrete (só o contato do paciente, atendimento ativo, futuro
+  e com o lembrete de pé; "Confirmar" marca a presença pelo WhatsApp e o toque fica ligado ao
+  atendimento). `preparation.ts`: preparo do exame uma única vez, quando a confirmação chega ao
+  celular (texto com a janela de 24h aberta, template com ela fechada), e "Reenviar preparo do
+  exame" quando a última tentativa não chegou. Tudo pelo item da matriz (D11: "Lembrete
+  automático"; preparo com "Exames e procedimentos") e só com o WhatsApp conectado; o envio de
+  verdade é recebido de quem chama (F6/F7), como na F3.7b. Migração `20261005140000`: resposta ao
+  lembrete no atendimento (a F2.4 a deixou de fora), zerada ao remarcar, inclusive turma.
+  **Achado 4 da F1 resolvido**: os avisos da tela só aceitam os próprios códigos
+  (`Object.hasOwn`), na camada nova e nas funções herdadas. Padrões assumidos (revisáveis): sem
+  conexão, o lembrete não sai e fica "não enviado" na trilha como no template desligado (novo
+  motivo "WhatsApp desconectado"); o "sem telefone" do piloto sumiu (o contato sempre tem
+  telefone); o reenvio automático usa as mesmas condições de envio. 15 testes unitários e 13 de
+  banco novos.
 
 **Cuidado registrado na F2.5:** num insert de várias linhas, o `supabase-js` manda `null` nas
 colunas ausentes de alguma linha, e o valor padrão do banco não é aplicado (ex.: `details` da

@@ -281,5 +281,6 @@ export const RESEND_MESSAGES: Record<ResendOutcome, { text: string; ok: boolean 
 };
 
 export function parseResendOutcome(value: string | null): ResendOutcome | null {
-  return value && value in RESEND_MESSAGES ? (value as ResendOutcome) : null;
+  // Só os códigos próprios (achado 4 da F1: `in` aceitava "toString" e outros herdados).
+  return value !== null && Object.hasOwn(RESEND_MESSAGES, value) ? (value as ResendOutcome) : null;
 }
