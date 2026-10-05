@@ -174,14 +174,18 @@ export async function setServiceAgendas(db: DbClient, clinicId: string, serviceI
 
 /**
  * Locais em que o serviço é oferecido, com preço próprio opcional (null = o
- * preço do serviço). Local fora da lista = serviço não oferecido ali.
+ * preço do serviço). Local fora da lista = serviço não oferecido ali. `keep`:
+ * locais que ficam como estão, nem gravados nem tirados (ex.: domiciliar com
+ * o item desligado na matriz, D11; religar o item traz de volta).
  */
 export async function setServiceLocations(
   db: DbClient,
   clinicId: string,
   serviceId: string,
   locations: ServiceLocationPrice[],
+  { keep = [] }: { keep?: string[] } = {},
 ): Promise<Service> {
+  locations = locations.filter((l) => !keep.includes(l.locationId));
   const v = new Validation();
   for (const { priceCents } of locations) {
     v.check(priceCents === null || isNonNegativeInt(priceCents), "priceCents", "Valor inválido");
@@ -205,7 +209,9 @@ export async function setServiceLocations(
       "Locais do serviço",
     );
   }
-  const toRemove = current.locations.map((l) => l.locationId).filter((id) => !locations.some((l) => l.locationId === id));
+  const toRemove = current.locations
+    .map((l) => l.locationId)
+    .filter((id) => !keep.includes(id) && !locations.some((l) => l.locationId === id));
   if (toRemove.length) {
     unwrap(
       await db.from("service_locations").delete().eq("clinic_id", clinicId).eq("service_id", serviceId).in("location_id", toRemove),

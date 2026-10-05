@@ -528,6 +528,13 @@ Vocabulário pelo perfil da clínica.
     remove da equipe (outro Administrador faz); remover um horário não mexe nos atendimentos já
     marcados; profissional desativado sai da lista de quem atende o plano, e as exceções dele
     ficam como estão. 4 testes unitários e 11 de banco novos.
+    **Ajuste pedido na validação (cliente, 05/out): item desligado depois de criado.** Um local
+    domiciliar (ou serviço de exame) criado com o item liberado continuava como opção em Serviços
+    e Horários depois de o item ser desligado na matriz. Agora, sem o item, eles saem das opções
+    (com o selo "não liberado" em Locais e nos horários já gravados); as ligações já gravadas
+    ficam guardadas e voltam se o item for liberado de novo (`setServiceLocations` com `keep`). O
+    banco também trava: migração `20261005210000` (ligar serviço a local domiciliar e cadastrar
+    ou reativar horário em local domiciliar ou de exame exigem o item). 1 teste de banco novo.
 - **F4.5 — Agenda I:** dia, semana e mês com a escolha da agenda; marcar, remarcar, cancelar;
   presença e comparecimento; lembrete e preparo; lista de espera.
 - **F4.6 — Agenda II:** bloqueios, cancelamento do dia com link de remarcação, séries (D9).

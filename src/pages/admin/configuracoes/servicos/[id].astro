@@ -34,7 +34,10 @@ const categories = (["consultation", "return_visit", "exam"] as const).filter((c
 // Desativados só aparecem se já estão ligados ao serviço.
 const agendaOptions = agendas.filter((a) => a.isActive || service?.agendaIds.includes(a.id));
 const offered = new Map((service?.locations ?? []).map((l) => [l.locationId, l.priceCents]));
-const locationOptions = locations.filter((l) => l.isActive || offered.has(l.id));
+// Domiciliar só com o item liberado (D11); sem ele, as ligações já gravadas ficam guardadas.
+const homeVisitOn = clinic.features.includes("home_visit");
+const locationOptions = locations.filter((l) => (l.isActive || offered.has(l.id)) && (homeVisitOn || l.type !== "home_visit"));
+const hiddenHomeVisit = !homeVisitOn && locations.some((l) => l.type === "home_visit" && offered.has(l.id));
 const action = `/api/admin/configuracoes/servicos/${id}`;
 ---
 
@@ -147,6 +150,9 @@ const action = `/api/admin/configuracoes/servicos/${id}`;
             })
           }
           {locationOptions.length === 0 && <p class="text-sm text-slate-600">Cadastre um local antes.</p>}
+          {hiddenHomeVisit && (
+            <p class={HINT}>O atendimento domiciliar não está liberado para a clínica. A ligação deste serviço com ele fica guardada e volta se o item for liberado.</p>
+          )}
         </div>
       </fieldset>
 

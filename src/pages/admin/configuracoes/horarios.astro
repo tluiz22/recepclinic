@@ -29,8 +29,15 @@ const windows = agenda ? await listAvailability(db, clinic.clinicId, agenda.id, 
 
 const locationName = new Map(locations.map((l) => [l.id, l.name]));
 const serviceById = new Map(services.map((s) => [s.id, s]));
-const activeLocations = locations.filter((l) => l.isActive);
-const agendaServices = agenda ? services.filter((s) => s.isActive && s.agendaIds.includes(agenda.id)) : [];
+// Domiciliar e exames só com o item liberado (D11). Horários já gravados com
+// eles continuam na lista, marcados como não liberados.
+const homeVisitOn = clinic.features.includes("home_visit");
+const examsOn = clinic.features.includes("exams");
+const homeVisitIds = new Set(locations.filter((l) => l.type === "home_visit").map((l) => l.id));
+const activeLocations = locations.filter((l) => l.isActive && (homeVisitOn || l.type !== "home_visit"));
+const agendaServices = agenda ? services.filter((s) => s.isActive && s.agendaIds.includes(agenda.id) && (examsOn || s.category !== "exam")) : [];
+const notEnabled = (w: { locationId: string; serviceId: string | null }) =>
+  (!homeVisitOn && homeVisitIds.has(w.locationId)) || (!examsOn && !!w.serviceId && serviceById.get(w.serviceId)?.category === "exam");
 const byWeekday = WEEKDAY_NAMES.map((name, weekday) => ({ name, windows: windows.filter((w) => w.weekday === weekday) })).filter(
   (day) => day.windows.length,
 );
@@ -90,7 +97,8 @@ const weekdayOrder = [1, 2, 3, 4, 5, 6, 0];
                     <li class={`flex flex-wrap items-center justify-between gap-2 py-2 ${w.isActive ? "" : "opacity-60"}`}>
                       <div class="text-sm">
                         <p class="font-medium text-slate-900">
-                          {w.startTime}–{w.endTime} {!w.isActive && <Badge>desativado</Badge>}
+                          {w.startTime}–{w.endTime} {!w.isActive && <Badge>desativado</Badge>}{" "}
+                          {notEnabled(w) && <Badge variant="warning">não liberado</Badge>}
                         </p>
                         <p class="text-slate-600">
                           {locationName.get(w.locationId) ?? "Local"}

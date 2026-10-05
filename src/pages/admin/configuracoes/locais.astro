@@ -11,6 +11,7 @@ import { listLocations } from "../../../lib/data/config/locations";
 
 const clinic = Astro.locals.clinic!;
 const showInactive = Astro.url.searchParams.get("todos") === "1";
+const homeVisitOn = clinic.features.includes("home_visit");
 const locations = await listLocations(createUserClient(Astro.request, Astro.cookies), clinic.clinicId, { includeInactive: showInactive });
 ---
 
@@ -34,7 +35,8 @@ const locations = await listLocations(createUserClient(Astro.request, Astro.cook
             <Card class="h-full hover:border-sky-300 hover:bg-sky-50" muted={!location.isActive}>
               <p class="font-medium text-slate-900">
                 {location.name} <Badge variant={location.type === "home_visit" ? "accent" : "info"}>{location.type === "home_visit" ? "Domiciliar" : "Consultório"}</Badge>{" "}
-                {!location.isActive && <Badge>desativado</Badge>}
+                {!location.isActive && <Badge>desativado</Badge>}{" "}
+                {location.isActive && location.type === "home_visit" && !homeVisitOn && <Badge variant="warning">não liberado</Badge>}
               </p>
               <p class="mt-1 text-sm text-slate-600">{location.type === "home_visit" ? "Endereço de cada paciente" : (location.address ?? "Sem endereço")}</p>
             </Card>

@@ -10,6 +10,7 @@ import {
   type SchedulingMode,
   type ServiceCategory,
 } from "../../../../../lib/data/config/services";
+import { listLocations } from "../../../../../lib/data/config/locations";
 import { runFormAction } from "../../../../../lib/data/formAction";
 import { formAll, formChecked, formInt, formMoneyCents, formOptionalInt, formOptionalMoneyCents, formText } from "../../../../../lib/forms";
 
@@ -51,7 +52,12 @@ export const POST: APIRoute = async (context) => {
         locationId,
         priceCents: formChecked(form, `own_price_${locationId}`) ? formOptionalMoneyCents(form, `price_${locationId}`) : null,
       }));
-      await setServiceLocations(db, clinicId, id, locations);
+      // Sem o item "Atendimento domiciliar" (D11), os locais domiciliares não
+      // aparecem na tela e as ligações já gravadas ficam como estão.
+      const keep = locals.clinic!.features.includes("home_visit")
+        ? []
+        : (await listLocations(db, clinicId, { includeInactive: true })).filter((l) => l.type === "home_visit").map((l) => l.id);
+      await setServiceLocations(db, clinicId, id, locations, { keep });
       return { redirectTo: page(), message: isNew ? "Serviço cadastrado." : "Serviço salvo." };
     },
     page,
