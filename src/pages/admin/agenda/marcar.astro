@@ -30,6 +30,7 @@ import { listServices } from "../../../lib/data/config/services";
 import { getContact, getPatient, searchPatients } from "../../../lib/data/patients";
 import { formatPhoneBR } from "../../../lib/phone";
 import { capitalize, vocabularyFor } from "../../../lib/vocabulary";
+import { frequencyLabel } from "../../../lib/seriesLabels";
 
 const clinic = Astro.locals.clinic!;
 const db = createUserClient(Astro.request, Astro.cookies);
@@ -125,6 +126,9 @@ const ageWarning =
     ? `${capitalize(vocabulary.patient)} com ${formatAge(patient.birthdate, today)}: a clínica marca Consulta só até ${settings.consultationAgeLimitYears} anos (aviso, não impede).`
     : null;
 const back = `${Astro.url.pathname}${Astro.url.search}`;
+// Série recorrente (D9; cliente, 05/out/2026: criada no próprio Marcar), só
+// com o item "Séries" e fora de turma.
+const canRepeat = clinic.features.includes("series") && !!service && !isGroup;
 const chip = (active: boolean) =>
   `rounded-lg border px-3 py-2 text-sm font-medium ${active ? "border-sky-700 bg-sky-700 text-white" : "border-slate-300 bg-white text-slate-700 hover:border-sky-600"}`;
 ---
@@ -260,6 +264,45 @@ const chip = (active: boolean) =>
               <label for="home_visit_address" class={LABEL}>Endereço do atendimento domiciliar</label>
               <input id="home_visit_address" name="home_visit_address" value={contact?.defaultHomeAddress ?? ""} placeholder="Rua, número, bairro, complemento" class={INPUT} />
             </div>
+            {canRepeat && (
+              <fieldset class="rounded-lg border border-slate-200 p-3">
+                <label class="flex items-center gap-2 text-sm font-medium text-slate-700">
+                  <input type="checkbox" name="repetir" data-repeat class="h-4 w-4 rounded border-slate-300" />
+                  Repetir este atendimento (série)
+                </label>
+                <div data-repeat-fields hidden class="mt-3 flex flex-col gap-3">
+                  <div>
+                    <label for="interval_weeks" class={LABEL}>Frequência</label>
+                    <select id="interval_weeks" name="interval_weeks" class={`${INPUT} sm:w-72`}>
+                      {Array.from({ length: 12 }, (_, i) => i + 1).map((n) => (
+                        <option value={n}>{frequencyLabel(n)}</option>
+                      ))}
+                    </select>
+                    <p class={HINT}>Mesmo dia da semana e mesmo horário do primeiro atendimento.</p>
+                  </div>
+                  <div>
+                    <span class={LABEL}>Até quando</span>
+                    <div class="mt-1 flex flex-col gap-2 text-sm text-slate-700">
+                      <label class="flex items-center gap-2">
+                        <input type="radio" name="fim" value="sem_fim" checked class="h-4 w-4" /> Sem data para terminar
+                      </label>
+                      <label class="flex flex-wrap items-center gap-2">
+                        <input type="radio" name="fim" value="data" class="h-4 w-4" /> Até o dia
+                        <input type="date" name="ends_on" min={today} class={`${INPUT} mt-0 w-44`} />
+                      </label>
+                      <label class="flex flex-wrap items-center gap-2">
+                        <input type="radio" name="fim" value="sessoes" class="h-4 w-4" />
+                        <input type="number" name="max_sessions" min="1" max="200" class={`${INPUT} mt-0 w-24`} /> sessões
+                      </label>
+                    </div>
+                    <p class={HINT}>
+                      Sem data para terminar, ficam marcadas as sessões dos próximos 3 meses. Feriado, bloqueio ou horário ocupado: a data é pulada e
+                      aparece na tela da série.
+                    </p>
+                  </div>
+                </div>
+              </fieldset>
+            )}
             {!patient && <p class="text-sm text-amber-700">Escolha o {vocabulary.patient} acima para marcar.</p>}
             <button
               type="submit"
@@ -291,6 +334,20 @@ const chip = (active: boolean) =>
     };
     document.querySelectorAll("input[name='slot']").forEach((input) => input.addEventListener("change", sync));
     sync();
+    // Série: mostra as opções e muda o texto da confirmação.
+    const repeat = document.querySelector<HTMLInputElement>("[data-repeat]");
+    const repeatFields = document.querySelector<HTMLElement>("[data-repeat-fields]");
+    const submit = document.querySelector<HTMLButtonElement>("form[method='POST'] button[type='submit']");
+    const firstTitle = submit?.dataset.confirmTitle;
+    const syncRepeat = () => {
+      if (repeatFields) repeatFields.hidden = !repeat?.checked;
+      if (submit) {
+        submit.dataset.confirmTitle = repeat?.checked ? "Criar a série?" : firstTitle;
+        submit.textContent = repeat?.checked ? "Marcar a série" : "Marcar";
+      }
+    };
+    repeat?.addEventListener("change", syncRepeat);
+    syncRepeat();
   </script>
   <ConfirmDeleteDialog />
 </AdminLayout>

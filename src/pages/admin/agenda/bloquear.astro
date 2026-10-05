@@ -1,302 +1,253 @@
 ---
+// Agenda › Bloquear (F4.6): período (dia todo ou horário), motivo e uma ou
+// várias agendas (cliente, 05/out/2026: um bloqueio para cada agenda
+// marcada). Se houver atendimentos no período, a tela lista e pergunta se
+// cancela ou mantém, como no piloto. Os cancelados vão para "Avisar", com a
+// mensagem pronta para o WhatsApp. A página mesma recebe o envio (os dados
+// voltam na tela na etapa da pergunta).
 import AdminLayout from "../../../layouts/AdminLayout.astro";
 import Card from "../../../components/admin/Card.astro";
+import ConfirmDeleteDialog from "../../../components/admin/ConfirmDeleteDialog.astro";
+import FormMessage from "../../../components/admin/FormMessage.astro";
 import Icon from "../../../components/admin/Icon.astro";
+import { HINT, INPUT, LABEL, PRIMARY_BUTTON, SECONDARY_BUTTON } from "../../../components/admin/fieldStyles";
+import { addDays, formatInstant, isCalendarDate, isClockTime, todayIn, toInstant } from "../../../lib/clinicTime";
+import { createUserClient } from "../../../lib/data/clients";
+import { createBlock, findBlockConflicts } from "../../../lib/data/agenda/blocks";
+import { listAgendaAppointmentsByIds, type AgendaAppointment } from "../../../lib/data/agenda/view";
+import { listAgendas } from "../../../lib/data/config/agendas";
+import { DataError } from "../../../lib/data/errors";
+import { describeDataError } from "../../../lib/data/formAction";
+import { setFlash } from "../../../lib/flash";
+import { formAll, formChecked, formText } from "../../../lib/forms";
 
-function todayFortaleza(): string {
-  return new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString().slice(0, 10);
+const clinic = Astro.locals.clinic!;
+const db = createUserClient(Astro.request, Astro.cookies);
+const today = todayIn(clinic.timezone);
+const agendas = await listAgendas(db, clinic.clinicId);
+const preselected = Astro.url.searchParams.get("agenda");
+const startParam = Astro.url.searchParams.get("date");
+
+const values = {
+  agendaIds: preselected && agendas.some((a) => a.id === preselected) ? [preselected] : ([] as string[]),
+  fullDay: true,
+  startDate: startParam && isCalendarDate(startParam) && startParam >= today ? startParam : today,
+  startTime: "08:00",
+  endDate: "",
+  endTime: "12:00",
+  reason: "",
+};
+values.endDate = values.startDate;
+let error: string | null = null;
+let conflicts: AgendaAppointment[] = [];
+
+function period() {
+  const v = new Map<string, string>();
+  if (!values.agendaIds.length) v.set("agenda", "Escolha ao menos uma agenda.");
+  if (!isCalendarDate(values.startDate) || !isCalendarDate(values.endDate)) v.set("date", "Datas inválidas.");
+  if (!values.fullDay && (!isClockTime(values.startTime) || !isClockTime(values.endTime))) v.set("time", "Horários inválidos.");
+  if (!values.reason.trim()) v.set("reason", "Informe o motivo.");
+  if (v.size) throw new DataError("invalid", "Bloqueio: dados inválidos", Object.fromEntries(v));
+  const startsAt = toInstant(values.startDate, values.fullDay ? "00:00" : values.startTime, clinic.timezone);
+  const endsAt = values.fullDay ? toInstant(addDays(values.endDate, 1), "00:00", clinic.timezone) : toInstant(values.endDate, values.endTime, clinic.timezone);
+  if (endsAt <= startsAt) throw new DataError("invalid", "Bloqueio: o fim precisa ser depois do início", { end: "O fim precisa ser depois do início." });
+  return { startsAt, endsAt };
 }
 
-const today = todayFortaleza();
+async function conflictsByAgenda(range: { startsAt: Date; endsAt: Date }) {
+  const perAgenda = await Promise.all(values.agendaIds.map(async (agendaId) => ({ agendaId, appointments: await findBlockConflicts(db, clinic.clinicId, { agendaId, ...range }) })));
+  return perAgenda;
+}
+
+if (Astro.request.method === "POST") {
+  const form = await Astro.request.formData().catch(() => null);
+  Object.assign(values, {
+    agendaIds: formAll(form, "agenda_id").filter((id) => agendas.some((a) => a.id === id)),
+    fullDay: formChecked(form, "full_day"),
+    startDate: formText(form, "start_date"),
+    startTime: formText(form, "start_time"),
+    endDate: formText(form, "end_date"),
+    endTime: formText(form, "end_time"),
+    reason: formText(form, "reason"),
+  });
+  let decision = formText(form, "decisao");
+  const seen = formText(form, "vistos").split(",").filter(Boolean).sort().join(",");
+  try {
+    const range = period();
+    const found = await conflictsByAgenda(range);
+    const total = found.reduce((sum, item) => sum + item.appointments.length, 0);
+    // Período mudado depois de ver a lista (ou atendimento novo nele): mostra de novo.
+    const current = found.flatMap((item) => item.appointments.map((a) => a.id)).sort().join(",");
+    if (decision && current !== seen) decision = "";
+    if (total > 0 && decision !== "cancelar" && decision !== "manter") {
+      conflicts = await listAgendaAppointmentsByIds(db, clinic.clinicId, found.flatMap((item) => item.appointments.map((a) => a.id)));
+    } else {
+      const canceledIds: string[] = [];
+      for (const item of found) {
+        const result = await createBlock(db, clinic.clinicId, {
+          agendaId: item.agendaId,
+          ...range,
+          reason: values.reason,
+          cancelAppointmentIds: decision === "cancelar" ? item.appointments.map((a) => a.id) : [],
+          actorId: Astro.locals.userId ?? null,
+        });
+        canceledIds.push(...result.canceled.map((c) => c.appointment.id));
+      }
+      const agendaWord = found.length > 1 ? `${found.length} agendas bloqueadas` : "Agenda bloqueada";
+      const backTo = `/admin/agenda?date=${values.startDate}`;
+      if (canceledIds.length) {
+        setFlash(Astro.cookies, { tone: "success", text: `${agendaWord}. ${canceledIds.length} atendimento(s) cancelado(s): avise cada um abaixo.` });
+        return Astro.redirect(`/admin/agenda/avisar?ids=${canceledIds.join(",")}&volta=${encodeURIComponent(backTo)}`, 303);
+      }
+      setFlash(Astro.cookies, { tone: "success", text: `${agendaWord}.${decision === "manter" ? " Os atendimentos do período foram mantidos." : ""}` });
+      return Astro.redirect(backTo, 303);
+    }
+  } catch (caught) {
+    if (!(caught instanceof DataError)) console.error(caught);
+    error = caught instanceof DataError ? describeDataError(caught) : "Não foi possível bloquear. Tente de novo.";
+  }
+}
+const agendaName = new Map(agendas.map((a) => [a.id, a.name]));
 ---
 
 <AdminLayout title="Bloquear agenda">
-  <a
-    href={`/admin/agenda?date=${today}`}
-    class="inline-flex items-center gap-1 text-sm font-medium text-sky-700 hover:underline"
-  >
-    <Icon name="chevron-left" class="h-4 w-4" />
-    Agenda
+  <a href={`/admin/agenda?date=${values.startDate}`} class="inline-flex items-center gap-1 text-sm font-medium text-sky-700 hover:underline">
+    <Icon name="chevron-left" class="h-4 w-4" /> Agenda
   </a>
-
   <div class="mt-3 flex flex-wrap items-center justify-between gap-3">
     <h1 class="text-2xl font-bold text-slate-900">Bloquear agenda</h1>
-    <a href="/admin/agenda/bloqueios" class="text-sm font-medium text-sky-700 hover:underline">
-      Ver bloqueios ativos
-    </a>
+    <a href="/admin/agenda/bloqueios" class="text-sm font-medium text-sky-700 hover:underline">Ver bloqueios</a>
   </div>
-  <p class="mt-1 text-sm text-slate-600">
-    Nenhum horário do período é oferecido enquanto o bloqueio existir. Se já houver atendimentos marcados no
-    período, perguntamos o que fazer antes de confirmar.
-  </p>
+  <p class="mt-1 text-sm text-slate-600">Nenhum horário do período é oferecido enquanto o bloqueio existir.</p>
+  {error && <FormMessage tone="error">{error}</FormMessage>}
 
-  <p id="form_error" class="mt-4 hidden rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-    Não foi possível criar o bloqueio. Confira os dados e tente novamente.
-  </p>
+  <form method="POST" class="mt-4 flex max-w-2xl flex-col gap-4">
+    <Card>
+      <fieldset>
+        <legend class={LABEL}>Agendas</legend>
+        <div class="mt-1 flex flex-col gap-2">
+          {
+            agendas.length > 1 && (
+              <label class="flex items-center gap-2 text-sm font-medium text-slate-700">
+                <input type="checkbox" data-all class="h-4 w-4 rounded border-slate-300" /> Todas
+              </label>
+            )
+          }
+          {
+            agendas.map((agenda) => (
+              <label class="flex items-center gap-2 text-sm text-slate-700">
+                <input type="checkbox" name="agenda_id" value={agenda.id} checked={values.agendaIds.includes(agenda.id) || agendas.length === 1} class="h-4 w-4 rounded border-slate-300" />
+                {agenda.name}
+              </label>
+            ))
+          }
+        </div>
+      </fieldset>
+    </Card>
 
-  <Card class="mt-6 max-w-xl">
-    <form id="block_form" class="flex flex-col gap-6">
+    <Card>
       <label class="flex items-center gap-2 text-sm font-medium text-slate-700">
-        <input
-          type="checkbox"
-          id="full_day"
-          name="full_day"
-          class="h-4 w-4 rounded border-slate-300 text-sky-700 focus:ring-sky-600"
-        />
-        Bloquear o dia todo (não precisa preencher hora)
+        <input type="checkbox" id="full_day" name="full_day" checked={values.fullDay} class="h-4 w-4 rounded border-slate-300" />
+        Dia todo
       </label>
-
-      <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+      <div class="mt-3 grid grid-cols-2 gap-3">
         <div>
-          <label for="start_date" class="block text-sm font-medium text-slate-700">Início — data *</label>
-          <input
-            type="date"
-            id="start_date"
-            name="start_date"
-            required
-            min={today}
-            class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-sky-600 focus:outline-none focus:ring-1 focus:ring-sky-600"
-          />
+          <label for="start_date" class={LABEL}>Início</label>
+          <input id="start_date" name="start_date" type="date" required min={today} value={values.startDate} class={INPUT} />
         </div>
-        <div id="start_time_field">
-          <label for="start_time" class="block text-sm font-medium text-slate-700">Início — hora *</label>
-          <input
-            type="time"
-            id="start_time"
-            name="start_time"
-            required
-            class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-sky-600 focus:outline-none focus:ring-1 focus:ring-sky-600"
-          />
+        <div data-time>
+          <label for="start_time" class={LABEL}>Hora</label>
+          <input id="start_time" name="start_time" type="time" value={values.startTime} class={INPUT} />
         </div>
         <div>
-          <label for="end_date" class="block text-sm font-medium text-slate-700">Fim — data *</label>
-          <input
-            type="date"
-            id="end_date"
-            name="end_date"
-            required
-            min={today}
-            class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-sky-600 focus:outline-none focus:ring-1 focus:ring-sky-600"
-          />
+          <label for="end_date" class={LABEL}>Fim</label>
+          <input id="end_date" name="end_date" type="date" required min={today} value={values.endDate} class={INPUT} />
         </div>
-        <div id="end_time_field">
-          <label for="end_time" class="block text-sm font-medium text-slate-700">Fim — hora *</label>
-          <input
-            type="time"
-            id="end_time"
-            name="end_time"
-            required
-            class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-sky-600 focus:outline-none focus:ring-1 focus:ring-sky-600"
-          />
+        <div data-time>
+          <label for="end_time" class={LABEL}>Hora</label>
+          <input id="end_time" name="end_time" type="time" value={values.endTime} class={INPUT} />
         </div>
       </div>
-      <p class="text-xs text-slate-500">
-        Pra bloquear vários dias seguidos (ex.: férias), escolha o dia todo e preencha início e fim com datas
-        diferentes.
-      </p>
-
-      <div>
-        <label for="motivo" class="block text-sm font-medium text-slate-700">Motivo *</label>
-        <textarea
-          id="motivo"
-          name="motivo"
-          required
-          rows={3}
-          placeholder="Ex.: imprevisto da médica, férias, feriado"
-          class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-sky-600 focus:outline-none focus:ring-1 focus:ring-sky-600"
-        ></textarea>
-        <p class="mt-1 text-xs text-slate-500">Aparece na Agenda e na lista de bloqueios.</p>
+      <div class="mt-3">
+        <label for="reason" class={LABEL}>Motivo</label>
+        <input id="reason" name="reason" required placeholder="Congresso, reunião, férias…" value={values.reason} class={INPUT} />
+        <p class={HINT}>Aparece na Agenda para a equipe.</p>
       </div>
+    </Card>
 
-      <div class="flex flex-col-reverse gap-2 sm:flex-row sm:items-center">
-        <a
-          href={`/admin/agenda?date=${today}`}
-          class="w-full rounded-md border border-slate-300 px-4 py-3 text-center text-sm font-semibold text-slate-600 hover:bg-slate-50 sm:w-fit"
-        >
-          Cancelar
-        </a>
+    {
+      conflicts.length > 0 ? (
+        <Card class="border-amber-200 bg-amber-50">
+          <input type="hidden" name="vistos" value={conflicts.map((a) => a.id).join(",")} />
+          <h2 class="font-semibold text-amber-900">Há {conflicts.length} atendimento(s) marcado(s) neste período</h2>
+          <ul class="mt-2 text-sm text-amber-900">
+            {conflicts.map((a) => (
+              <li>
+                {formatInstant(a.scheduledAt, clinic.timezone, "dd/MM HH:mm")} · {a.patientName} · {a.serviceName} · {agendaName.get(a.agendaId) ?? a.agendaName}
+              </li>
+            ))}
+          </ul>
+          <div class="mt-3 flex flex-wrap gap-2">
+            <button
+              type="submit"
+              name="decisao"
+              value="cancelar"
+              class="js-confirm-delete rounded-md bg-red-600 px-3 py-2 text-sm font-medium text-white hover:bg-red-700"
+              data-confirm-title="Bloquear e cancelar os atendimentos?"
+              data-confirm-message={`${conflicts.length} atendimento(s) serão cancelados. Depois, a tela mostra cada um com a mensagem pronta para avisar pelo WhatsApp.`}
+              data-confirm-label="Bloquear e cancelar"
+            >
+              Bloquear e cancelar estes atendimentos
+            </button>
+            <button
+              type="submit"
+              name="decisao"
+              value="manter"
+              class={`${SECONDARY_BUTTON} js-confirm-delete`}
+              data-confirm-title="Bloquear e manter os atendimentos?"
+              data-confirm-message="Os atendimentos continuam marcados; só os horários livres deixam de ser oferecidos."
+              data-confirm-label="Bloquear e manter"
+              data-confirm-tone="primary"
+            >
+              Bloquear e manter os atendimentos
+            </button>
+          </div>
+        </Card>
+      ) : (
         <button
-          id="submit_btn"
           type="submit"
-          class="w-full rounded-md bg-sky-700 px-4 py-3 text-sm font-semibold text-white hover:bg-sky-800 disabled:cursor-not-allowed disabled:opacity-50 sm:w-fit"
+          class={`${PRIMARY_BUTTON} js-confirm-delete self-start`}
+          data-confirm-title="Bloquear a agenda?"
+          data-confirm-message="Se houver atendimentos no período, a tela mostra quais antes de bloquear."
+          data-confirm-label="Bloquear"
+          data-confirm-tone="primary"
         >
-          Confirmar bloqueio
+          Bloquear
         </button>
-      </div>
-    </form>
-  </Card>
+      )
+    }
+  </form>
+  <ConfirmDeleteDialog />
 
-  <!-- Fase 13 etapa 2: aparece só quando há atendimentos marcados dentro do
-       período escolhido — pergunta o que fazer com eles antes de criar o
-       bloqueio de verdade. -->
-  <dialog
-    id="conflict_dialog"
-    class="w-[calc(100%-2rem)] max-w-sm rounded-lg border border-slate-200 bg-white p-0 shadow-xl backdrop:bg-slate-900/40"
-  >
-    <div class="p-5">
-      <h2 class="text-base font-semibold text-slate-900">
-        Há <span id="conflict_dialog_count">0</span> atendimento(s) nesse período
-      </h2>
-      <ul id="conflict_dialog_list" class="mt-2 max-h-40 list-disc space-y-1 overflow-y-auto pl-5 text-sm text-slate-700"></ul>
-      <p class="mt-3 text-sm text-slate-600">O que deseja fazer com eles?</p>
-      <p id="conflict_dialog_error" class="mt-2 hidden text-sm text-red-700">
-        Não foi possível concluir. Tente novamente.
-      </p>
-      <div class="mt-5 flex flex-col gap-2">
-        <button
-          type="button"
-          id="conflict_cancel_all_btn"
-          class="rounded-md bg-red-600 px-3 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          Cancelar atendimentos e bloquear
-        </button>
-        <button
-          type="button"
-          id="conflict_keep_btn"
-          class="rounded-md border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          Manter atendimentos, só bloquear o resto
-        </button>
-        <button
-          type="button"
-          id="conflict_dialog_dismiss"
-          class="rounded-md px-3 py-2 text-sm font-medium text-slate-500 hover:bg-slate-50"
-        >
-          Voltar sem bloquear
-        </button>
-      </div>
-    </div>
-  </dialog>
-</AdminLayout>
-
-<script>
-  const fullDayCheckbox = document.getElementById("full_day") as HTMLInputElement;
-  const startTimeField = document.getElementById("start_time_field") as HTMLDivElement;
-  const endTimeField = document.getElementById("end_time_field") as HTMLDivElement;
-  const startTimeInput = document.getElementById("start_time") as HTMLInputElement;
-  const endTimeInput = document.getElementById("end_time") as HTMLInputElement;
-
-  function applyFullDayState() {
-    const fullDay = fullDayCheckbox.checked;
-    startTimeField.classList.toggle("hidden", fullDay);
-    endTimeField.classList.toggle("hidden", fullDay);
-    startTimeInput.required = !fullDay;
-    endTimeInput.required = !fullDay;
-  }
-
-  fullDayCheckbox.addEventListener("change", applyFullDayState);
-  applyFullDayState();
-
-  const form = document.getElementById("block_form") as HTMLFormElement;
-  const submitBtn = document.getElementById("submit_btn") as HTMLButtonElement;
-  const formError = document.getElementById("form_error") as HTMLParagraphElement;
-
-  const conflictDialog = document.getElementById("conflict_dialog") as HTMLDialogElement;
-  const conflictCount = document.getElementById("conflict_dialog_count") as HTMLSpanElement;
-  const conflictList = document.getElementById("conflict_dialog_list") as HTMLUListElement;
-  const conflictError = document.getElementById("conflict_dialog_error") as HTMLParagraphElement;
-  const conflictCancelAllBtn = document.getElementById("conflict_cancel_all_btn") as HTMLButtonElement;
-  const conflictKeepBtn = document.getElementById("conflict_keep_btn") as HTMLButtonElement;
-  const conflictDismissBtn = document.getElementById("conflict_dialog_dismiss") as HTMLButtonElement;
-
-  // Ids exatos devolvidos pela checagem de conflito — guardados aqui e
-  // reenviados tal como vieram na hora de cancelar, em vez de o servidor
-  // consultar de novo (mesmo padrão do cancelamento em massa do Resumo do
-  // dia, que sempre opera sobre uma lista de ids explícita).
-  let pendingConflictIds: string[] = [];
-
-  function payload(extra: Record<string, unknown> = {}) {
-    const fullDay = fullDayCheckbox.checked;
-    return {
-      start_date: (document.getElementById("start_date") as HTMLInputElement).value,
-      start_time: fullDay ? "00:00" : startTimeInput.value,
-      end_date: (document.getElementById("end_date") as HTMLInputElement).value,
-      end_time: fullDay ? "00:00" : endTimeInput.value,
-      full_day: fullDay,
-      motivo: (document.getElementById("motivo") as HTMLTextAreaElement).value,
-      ...extra,
+  <script>
+    // "Dia todo" esconde as horas; "Todas" marca todas as agendas.
+    const fullDay = document.getElementById("full_day") as HTMLInputElement | null;
+    const syncTime = () => document.querySelectorAll<HTMLElement>("[data-time]").forEach((el) => (el.hidden = !!fullDay?.checked));
+    fullDay?.addEventListener("change", syncTime);
+    syncTime();
+    const all = document.querySelector<HTMLInputElement>("[data-all]");
+    const boxes = [...document.querySelectorAll<HTMLInputElement>("input[name='agenda_id']")];
+    const syncAll = () => {
+      if (all) all.checked = boxes.every((b) => b.checked);
     };
-  }
-
-  async function submitBlock(extra: Record<string, unknown> = {}) {
-    const response = await fetch("/api/admin/agenda/bloqueios", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload(extra)),
+    all?.addEventListener("change", () => boxes.forEach((b) => (b.checked = all.checked)));
+    boxes.forEach((b) => b.addEventListener("change", syncAll));
+    syncAll();
+    // Fim acompanha o início enquanto ninguém mexe nele.
+    const start = document.getElementById("start_date") as HTMLInputElement | null;
+    const end = document.getElementById("end_date") as HTMLInputElement | null;
+    start?.addEventListener("change", () => {
+      if (end && (!end.value || end.value < start.value)) end.value = start.value;
     });
-    const result = await response.json().catch(() => ({}));
-    return { ok: response.ok, result };
-  }
-
-  form.addEventListener("submit", async (event) => {
-    event.preventDefault();
-    formError.classList.add("hidden");
-    submitBtn.disabled = true;
-    submitBtn.textContent = "Verificando…";
-
-    const { ok, result } = await submitBlock();
-
-    if (ok && result.conflict) {
-      submitBtn.disabled = false;
-      submitBtn.textContent = "Confirmar bloqueio";
-      conflictCount.textContent = String(result.count);
-      conflictList.innerHTML = "";
-      pendingConflictIds = (result.appointments as { id: string; label: string }[]).map((a) => a.id);
-      for (const appointment of result.appointments as { label: string }[]) {
-        const li = document.createElement("li");
-        li.textContent = appointment.label;
-        conflictList.appendChild(li);
-      }
-      conflictError.classList.add("hidden");
-      conflictCancelAllBtn.disabled = false;
-      conflictCancelAllBtn.textContent = "Cancelar atendimentos e bloquear";
-      conflictKeepBtn.disabled = false;
-      conflictKeepBtn.textContent = "Manter atendimentos, só bloquear o resto";
-      conflictDialog.showModal();
-      return;
-    }
-
-    if (ok && result.ok) {
-      window.location.href = result.redirectTo;
-      return;
-    }
-
-    submitBtn.disabled = false;
-    submitBtn.textContent = "Confirmar bloqueio";
-    formError.classList.remove("hidden");
-  });
-
-  conflictDismissBtn.addEventListener("click", () => conflictDialog.close());
-  conflictDialog.addEventListener("click", (event) => {
-    if (event.target === conflictDialog) conflictDialog.close();
-  });
-
-  async function finalize(cancelConflicts: boolean, button: HTMLButtonElement, busyText: string, idleText: string) {
-    conflictCancelAllBtn.disabled = true;
-    conflictKeepBtn.disabled = true;
-    button.textContent = busyText;
-    conflictError.classList.add("hidden");
-
-    const { ok, result } = await submitBlock({
-      cancel_conflicts: cancelConflicts,
-      conflict_appointment_ids: pendingConflictIds,
-    });
-
-    if (ok && result.ok) {
-      window.location.href = result.redirectTo;
-      return;
-    }
-
-    conflictCancelAllBtn.disabled = false;
-    conflictKeepBtn.disabled = false;
-    button.textContent = idleText;
-    conflictError.classList.remove("hidden");
-  }
-
-  conflictCancelAllBtn.addEventListener("click", () =>
-    finalize(true, conflictCancelAllBtn, "Cancelando e bloqueando…", "Cancelar atendimentos e bloquear")
-  );
-  conflictKeepBtn.addEventListener("click", () =>
-    finalize(false, conflictKeepBtn, "Bloqueando…", "Manter atendimentos, só bloquear o resto")
-  );
-</script>
+  </script>
+</AdminLayout>

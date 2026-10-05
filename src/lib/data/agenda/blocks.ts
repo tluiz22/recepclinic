@@ -64,6 +64,12 @@ export async function listBlocks(
   return unwrap(await query, "Bloqueios").map(toBlock);
 }
 
+/** Um bloqueio ativo (null se removido ou se o login não vê a agenda). */
+export async function getBlock(db: DbClient, clinicId: string, id: string): Promise<ScheduleBlock | null> {
+  const row = unwrap(await db.from("schedule_blocks").select(COLUMNS).eq("clinic_id", clinicId).eq("id", id).is("removed_at", null).maybeSingle(), "Bloqueio");
+  return row ? toBlock(row) : null;
+}
+
 /** Atendimentos ativos da agenda que cruzam o período (a tela pergunta se cancela). */
 export async function findBlockConflicts(
   db: DbClient,

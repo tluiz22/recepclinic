@@ -1,6 +1,8 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { bookAppointment, recordAttendance } from "../../src/lib/data/agenda/appointments";
-import { buildDayItems, listAgendaAppointments, listNoShowStats } from "../../src/lib/data/agenda/view";
+import { cancelByClinic } from "../../src/lib/data/agenda/blocks";
+import { createSeries } from "../../src/lib/data/agenda/series";
+import { buildDayItems, listAgendaAppointments, listAgendaAppointmentsByIds, listNoShowStats, listSeriesAppointments } from "../../src/lib/data/agenda/view";
 import { asDb, at, MON1, MON2, MON3, NOW, setupAgendaClinic, type AgendaFixture } from "./agendaFixture";
 import { addMember, adminClient, createUser, deleteUsers, type TestUser } from "./helpers";
 
@@ -71,4 +73,25 @@ it("selo de faltas: só com 2 ou mais faltas e em pelo menos metade dos registra
   const second = await book(MON3);
   await recordAttendance(asDb(admin), clinicId, second.appointment.id, "no_show", admin.id);
   expect((await listNoShowStats(asDb(admin), clinicId, [ids.p3])).get(ids.p3)).toEqual({ noShows: 2, total: 2 });
+});
+
+describe("F4.6: série e avisos", () => {
+  it("a tela da série lista as sessões; o Avisar lê os cancelados pelos ids", async () => {
+    const { clinicId, ids, admin } = fixture;
+    const created = await createSeries(
+      asDb(admin),
+      clinicId,
+      { patientId: ids.p3, serviceId: ids.consulta, agendaId: ids.agendaDra, locationId: ids.office, intervalWeeks: 1, startsOn: MON1, startTime: "11:00", maxSessions: 3, actorId: admin.id },
+      NOW,
+    );
+    const sessions = await listSeriesAppointments(asDb(admin), clinicId, created.series.id);
+    expect(sessions).toHaveLength(3);
+    expect(sessions.every((s) => s.seriesId === created.series.id && s.patientName === "Paciente Três")).toBe(true);
+
+    const canceled = await cancelByClinic(asDb(admin), clinicId, [sessions[0].id, sessions[1].id], admin.id, NOW);
+    expect(canceled).toHaveLength(2);
+    const read = await listAgendaAppointmentsByIds(asDb(admin), clinicId, canceled.map((c) => c.appointment.id));
+    expect(read.map((a) => a.status)).toEqual(["canceled", "canceled"]);
+    expect(read[0]).toMatchObject({ contactName: "Resp. Paciente Três", serviceName: "Consulta" });
+  });
 });

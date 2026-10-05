@@ -15,9 +15,11 @@
 >       (Configurações, Nova clínica, convites, pedido de informações, equipe e WhatsApp); F4.5
 >       (Agenda: Dia, Semana e Mês, cartão com as ações, Marcar pelo serviço com "com quem?",
 >       Remarcar e cadastro rápido do paciente).
->     - **A validar pelo cliente:** F4.5 (comandos na mensagem da etapa).
->     - **Próxima: F4.6** Agenda II (bloqueios, cancelamento do dia com link de remarcação,
->       séries). Depois: F4.7 Pacientes, F4.8 dia a dia, F4.9 Métricas.
+>     - **F4.6 concluída** (Agenda II: bloqueios de uma ou várias agendas, cancelar selecionados
+>       com "Avisar" pelo WhatsApp de quem está no painel, séries no Marcar com "só esta" ou "esta e
+>       as próximas").
+>     - **A validar pelo cliente:** F4.6 (comandos na mensagem da etapa).
+>     - **Próxima: F4.7** Pacientes. Depois: F4.8 dia a dia, F4.9 Métricas.
 >   - **Decidido em 05/out para depois:** aba **"Mensagens"** em Configurações na **F6** (prévia no
 >     balão do WhatsApp; com o item "Mensagens personalizadas", o Administrador edita as mensagens de
 >     conversa e propõe os templates; D3b revista); envio dos templates personalizados pela API na

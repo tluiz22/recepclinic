@@ -1,6 +1,7 @@
 ---
 // Agenda › Remarcar (F4.5): mesma agenda e mesmo serviço, outra data e
-// horário (ou outra turma). Remarcar zera o lembrete e a presença confirmada
+// horário (ou outra turma). Sessão de série (F4.6, D9): "só esta sessão" ou
+// "esta e as próximas" (a série muda de dia e horário daqui em diante). Remarcar zera o lembrete e a presença confirmada
 // (a data nova pede outros); o horário atual não conta como ocupado.
 import AdminLayout from "../../../layouts/AdminLayout.astro";
 import Card from "../../../components/admin/Card.astro";
@@ -95,6 +96,23 @@ const chip = (active: boolean) =>
     }
     <form method="POST" action={`/api/admin/agenda/atendimentos/${appointment.id}`} class="mt-4 flex flex-col gap-4">
       <input type="hidden" name="acao" value="remarcar" />
+      {
+        appointment.seriesId && (
+          <fieldset class="rounded-lg border border-slate-200 p-3">
+            <legend class="px-1 text-sm font-medium text-slate-700">Esta sessão é de uma série</legend>
+            <div class="flex flex-col gap-2 text-sm text-slate-700">
+              <label class="flex items-start gap-2">
+                <input type="radio" name="modo" value="sessao" checked class="mt-0.5 h-4 w-4" />
+                <span>Só esta sessão (a série continua no dia e horário de sempre)</span>
+              </label>
+              <label class="flex items-start gap-2">
+                <input type="radio" name="modo" value="serie" class="mt-0.5 h-4 w-4" />
+                <span>Esta e as próximas: a série passa para o dia da semana e o horário escolhidos (as sessões passadas não mudam)</span>
+              </label>
+            </div>
+          </fieldset>
+        )
+      }
       <input type="hidden" name="return_to" value={returnTo} />
       <input type="hidden" name="back" value={`${Astro.url.pathname}${Astro.url.search}`} />
       <div class="flex flex-wrap gap-2">
@@ -114,7 +132,7 @@ const chip = (active: boolean) =>
         class={`${PRIMARY_BUTTON} js-confirm-delete self-start`}
         disabled={options.length === 0}
         data-confirm-title="Remarcar o atendimento?"
-        data-confirm-message={`${appointment.patientName} vai para o horário escolhido. O lembrete e a presença confirmada recomeçam.`}
+        data-confirm-message={`${appointment.patientName} vai para o horário escolhido. O lembrete e a presença confirmada recomeçam.${appointment.seriesId ? " Na opção 'esta e as próximas', a série inteira muda dali em diante." : ""}`}
         data-confirm-label="Remarcar"
         data-confirm-tone="primary"
       >

@@ -1,0 +1,122 @@
+---
+// Agenda › Série (F4.6, D9): o combinado (paciente, serviço, agenda, local,
+// frequência, dia, horário e fim), as sessões (passadas e próximas) e as
+// datas puladas com o motivo, para remarcar à mão se quiser. Encerrar fica
+// no cartão de uma sessão ("esta e as próximas") e aqui, a partir da próxima.
+import AdminLayout from "../../../../layouts/AdminLayout.astro";
+import Badge, { type BadgeVariant } from "../../../../components/admin/Badge.astro";
+import Card from "../../../../components/admin/Card.astro";
+import ConfirmDeleteDialog from "../../../../components/admin/ConfirmDeleteDialog.astro";
+import FlashMessage from "../../../../components/admin/FlashMessage.astro";
+import Icon from "../../../../components/admin/Icon.astro";
+import { SECONDARY_BUTTON } from "../../../../components/admin/fieldStyles";
+import { isUuid } from "../../../../lib/clinicAccess";
+import { formatCalendarDate, formatInstant } from "../../../../lib/clinicTime";
+import { createUserClient } from "../../../../lib/data/clients";
+import { getSeries, listSeriesSkips } from "../../../../lib/data/agenda/series";
+import { listSeriesAppointments } from "../../../../lib/data/agenda/view";
+import { listLocations } from "../../../../lib/data/config/locations";
+import { frequencyLabel, seriesEndLabel, SKIP_REASON_LABELS } from "../../../../lib/seriesLabels";
+import { WEEKDAY_NAMES } from "../../../../lib/data/config/availability";
+
+const clinic = Astro.locals.clinic!;
+const db = createUserClient(Astro.request, Astro.cookies);
+const id = Astro.params.id!;
+const series = isUuid(id) ? await getSeries(db, clinic.clinicId, id).catch(() => null) : null;
+if (!series) return Astro.redirect("/admin/agenda");
+const [sessions, skips, locations] = await Promise.all([
+  listSeriesAppointments(db, clinic.clinicId, series.id),
+  listSeriesSkips(db, clinic.clinicId, series.id),
+  listLocations(db, clinic.clinicId, { includeInactive: true }),
+]);
+const now = new Date();
+const first = sessions[0];
+const next = sessions.find((s) => (s.status === "scheduled" || s.status === "confirmed") && s.scheduledAt > now);
+const statusBadge: Record<string, { label: string; variant: BadgeVariant }> = {
+  scheduled: { label: "Marcada", variant: "info" },
+  confirmed: { label: "Marcada", variant: "info" },
+  canceled: { label: "Cancelada", variant: "neutral" },
+  completed: { label: "Compareceu", variant: "success" },
+  no_show: { label: "Faltou", variant: "danger" },
+};
+const locationName = locations.find((l) => l.id === series.locationId)?.name ?? "Local";
+---
+
+<AdminLayout title="Série">
+  <a href={next ? `/admin/agenda?date=${formatInstant(next.scheduledAt, clinic.timezone, "yyyy-MM-dd")}` : "/admin/agenda"} class="inline-flex items-center gap-1 text-sm font-medium text-sky-700 hover:underline">
+    <Icon name="chevron-left" class="h-4 w-4" /> Agenda
+  </a>
+  <h1 class="mt-3 text-2xl font-bold text-slate-900">Série {series.endedAt && <Badge>encerrada</Badge>}</h1>
+  <FlashMessage />
+
+  <Card class="mt-4 max-w-2xl">
+    <p class="font-medium text-slate-900">{first?.patientName ?? "Paciente"}</p>
+    <p class="text-sm text-slate-600">
+      {first?.serviceName ?? "Serviço"} · {first?.agendaName ?? "Agenda"} · {locationName}
+    </p>
+    <p class="mt-1 text-sm text-slate-700">
+      {frequencyLabel(series.intervalWeeks)}, {WEEKDAY_NAMES[series.weekday].toLowerCase()} às {series.startTime}, desde{" "}
+      {formatCalendarDate(series.startsOn, "dd/MM/yyyy")}, {seriesEndLabel(series)}.
+    </p>
+    {
+      series.endedAt && (
+        <p class="mt-1 text-sm text-slate-500">Encerrada em {formatInstant(series.endedAt, clinic.timezone, "dd/MM/yyyy")}.</p>
+      )
+    }
+    {
+      !series.endedAt && next && (
+        <form method="POST" action={`/api/admin/agenda/atendimentos/${next.id}`} class="mt-3 border-t border-slate-100 pt-3">
+          <input type="hidden" name="acao" value="encerrar_serie" />
+          <input type="hidden" name="return_to" value="/admin/agenda" />
+          <button
+            type="submit"
+            class={`${SECONDARY_BUTTON} js-confirm-delete text-red-700`}
+            data-confirm-title="Encerrar a série?"
+            data-confirm-message={`A próxima sessão (${formatInstant(next.scheduledAt, clinic.timezone, "dd/MM 'às' HH:mm")}) e as seguintes são canceladas. As que já passaram ficam como estão.`}
+            data-confirm-label="Encerrar a série"
+          >
+            Encerrar a série
+          </button>
+        </form>
+      )
+    }
+  </Card>
+
+  {
+    skips.length > 0 && (
+      <Card class="mt-4 max-w-2xl border-amber-200 bg-amber-50">
+        <h2 class="font-semibold text-amber-900">Datas puladas</h2>
+        <p class="text-sm text-amber-800">Não viraram sessão. Se quiser, marque à mão em outro horário.</p>
+        <ul class="mt-2 text-sm text-amber-900">
+          {skips.map((skip) => (
+            <li>
+              <span class="capitalize">{formatCalendarDate(skip.date, "EEE dd/MM/yyyy")}</span>: {SKIP_REASON_LABELS[skip.reason]}
+            </li>
+          ))}
+        </ul>
+      </Card>
+    )
+  }
+
+  <Card class="mt-4 max-w-2xl">
+    <h2 class="font-semibold text-slate-900">Sessões ({sessions.length})</h2>
+    <ul class="mt-2 divide-y divide-slate-100">
+      {
+        sessions.map((s) => (
+          <li class="flex items-center justify-between gap-2 py-2 text-sm">
+            <a href={`/admin/agenda?date=${formatInstant(s.scheduledAt, clinic.timezone, "yyyy-MM-dd")}`} class="capitalize text-slate-700 hover:text-sky-700 hover:underline">
+              {formatInstant(s.scheduledAt, clinic.timezone, "EEE dd/MM/yyyy 'às' HH:mm")}
+            </a>
+            <Badge variant={statusBadge[s.status].variant}>{statusBadge[s.status].label}</Badge>
+          </li>
+        ))
+      }
+    </ul>
+    {
+      !series.endedAt && !series.endsOn && !series.maxSessions && (
+        <p class="mt-2 text-xs text-slate-500">Sem data para terminar: ficam marcadas as sessões dos próximos 3 meses.</p>
+      )
+    }
+  </Card>
+  <ConfirmDeleteDialog />
+</AdminLayout>

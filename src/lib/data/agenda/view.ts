@@ -124,6 +124,22 @@ export async function listAgendaAppointments(
     .sort((a, b) => a.scheduledAt.getTime() - b.scheduledAt.getTime() || a.agendaName.localeCompare(b.agendaName) || a.patientName.localeCompare(b.patientName));
 }
 
+/** Atendimentos pelos ids (avisos depois de cancelar), em ordem de horário. */
+export async function listAgendaAppointmentsByIds(db: DbClient, clinicId: string, ids: string[]): Promise<AgendaAppointment[]> {
+  if (!ids.length) return [];
+  const rows = unwrap(await db.from("appointments").select(COLUMNS).eq("clinic_id", clinicId).in("id", ids).order("scheduled_at"), "Atendimentos") as unknown as Row[];
+  return rows.map(toAgendaAppointment);
+}
+
+/** Sessões de uma série (todas, as passadas inclusive), em ordem de horário. */
+export async function listSeriesAppointments(db: DbClient, clinicId: string, seriesId: string): Promise<AgendaAppointment[]> {
+  const rows = unwrap(
+    await db.from("appointments").select(COLUMNS).eq("clinic_id", clinicId).eq("series_id", seriesId).order("scheduled_at"),
+    "Sessões da série",
+  ) as unknown as Row[];
+  return rows.map(toAgendaAppointment);
+}
+
 /** Um atendimento com os dados do cartão (remarcar, avisos). */
 export async function getAgendaAppointment(db: DbClient, clinicId: string, id: string): Promise<AgendaAppointment | null> {
   const row = unwrap(await db.from("appointments").select(COLUMNS).eq("clinic_id", clinicId).eq("id", id).maybeSingle(), "Atendimento") as unknown as Row | null;

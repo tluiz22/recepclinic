@@ -1,0 +1,74 @@
+---
+// Agenda › Bloqueios › editar (F4.6): período e motivo. A agenda não muda
+// (para outra agenda, remova e bloqueie de novo). Mudar o período não
+// cancela atendimentos: para isso, use Bloquear ou cancele pela Agenda.
+import AdminLayout from "../../../../layouts/AdminLayout.astro";
+import Card from "../../../../components/admin/Card.astro";
+import ConfirmDeleteDialog from "../../../../components/admin/ConfirmDeleteDialog.astro";
+import FlashMessage from "../../../../components/admin/FlashMessage.astro";
+import Icon from "../../../../components/admin/Icon.astro";
+import { HINT, INPUT, LABEL, PRIMARY_BUTTON } from "../../../../components/admin/fieldStyles";
+import { localDateOf, localTimeOf } from "../../../../lib/clinicTime";
+import { createUserClient } from "../../../../lib/data/clients";
+import { getBlock } from "../../../../lib/data/agenda/blocks";
+import { listAgendas } from "../../../../lib/data/config/agendas";
+import { isUuid } from "../../../../lib/clinicAccess";
+
+const clinic = Astro.locals.clinic!;
+const db = createUserClient(Astro.request, Astro.cookies);
+const id = Astro.params.id!;
+const block = isUuid(id) ? await getBlock(db, clinic.clinicId, id) : null;
+if (!block) return Astro.redirect("/admin/agenda/bloqueios");
+const agendaName = (await listAgendas(db, clinic.clinicId, { includeInactive: true })).find((a) => a.id === block.agendaId)?.name ?? "Agenda";
+const tz = clinic.timezone;
+const lastMinute = new Date(block.endsAt.getTime() - 1);
+---
+
+<AdminLayout title="Editar bloqueio">
+  <a href="/admin/agenda/bloqueios" class="inline-flex items-center gap-1 text-sm font-medium text-sky-700 hover:underline">
+    <Icon name="chevron-left" class="h-4 w-4" /> Bloqueios
+  </a>
+  <h1 class="mt-3 text-2xl font-bold text-slate-900">Editar bloqueio</h1>
+  <FlashMessage />
+
+  <Card class="mt-4 max-w-2xl">
+    <p class="text-sm text-slate-700">Agenda: <span class="font-medium">{agendaName}</span></p>
+    <form method="POST" action={`/api/admin/agenda/bloqueios/${block.id}`} class="mt-3 flex flex-col gap-4">
+      <input type="hidden" name="acao" value="salvar" />
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label for="start_date" class={LABEL}>Início</label>
+          <input id="start_date" name="start_date" type="date" required value={localDateOf(block.startsAt, tz)} class={INPUT} />
+        </div>
+        <div>
+          <label for="start_time" class={LABEL}>Hora</label>
+          <input id="start_time" name="start_time" type="time" required value={localTimeOf(block.startsAt, tz)} class={INPUT} />
+        </div>
+        <div>
+          <label for="end_date" class={LABEL}>Fim</label>
+          <input id="end_date" name="end_date" type="date" required value={localDateOf(lastMinute, tz)} class={INPUT} />
+        </div>
+        <div>
+          <label for="end_time" class={LABEL}>Hora</label>
+          <input id="end_time" name="end_time" type="time" required value={localTimeOf(block.endsAt, tz) === "00:00" ? "23:59" : localTimeOf(block.endsAt, tz)} class={INPUT} />
+        </div>
+      </div>
+      <div>
+        <label for="reason" class={LABEL}>Motivo</label>
+        <input id="reason" name="reason" required value={block.reason} class={INPUT} />
+      </div>
+      <p class={HINT}>Mudar o período não cancela atendimentos. Para cancelar os que ficarem dentro, use a Agenda.</p>
+      <button
+        type="submit"
+        class={`${PRIMARY_BUTTON} js-confirm-delete self-start`}
+        data-confirm-title="Salvar o bloqueio?"
+        data-confirm-message="O período e o motivo novos passam a valer na hora."
+        data-confirm-label="Salvar"
+        data-confirm-tone="primary"
+      >
+        Salvar
+      </button>
+    </form>
+  </Card>
+  <ConfirmDeleteDialog />
+</AdminLayout>

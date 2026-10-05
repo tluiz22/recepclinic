@@ -1,5 +1,5 @@
 import type { APIRoute } from "astro";
-import { localDateOf } from "../../../../../lib/clinicTime";
+import { localDateOf, localTimeOf } from "../../../../../lib/clinicTime";
 import { parseSlot } from "../../../../../lib/agendaSlot";
 import { isUuid } from "../../../../../lib/clinicAccess";
 import {
@@ -16,7 +16,8 @@ import { joinWaitlist, leaveWaitlist } from "../../../../../lib/data/waitlist/en
 import { panelPreparationSender, panelReminderSender, SENDING_NOT_READY } from "../../../../../lib/data/whatsapp/panelSender";
 import { PREPARATION_RESEND_MESSAGES, resendPreparation } from "../../../../../lib/data/whatsapp/preparation";
 import { RESEND_MESSAGES, sendReminderFromPanel } from "../../../../../lib/data/whatsapp/reminders";
-import { formOptionalText, formText } from "../../../../../lib/forms";
+import { formChecked, formInt, formOptionalText, formText } from "../../../../../lib/forms";
+import { changeSeriesFrom, createSeries, endSeriesFrom } from "../../../../../lib/data/agenda/series";
 
 // Ações da Agenda (F4.5) num atendimento: marcar (`novo`), remarcar,
 // cancelar, presença confirmada, comparecimento, lembrete, preparo e lista
@@ -47,6 +48,24 @@ export const POST: APIRoute = async (context) => {
         case "marcar": {
           const slot = parseSlot(formText(form, "slot"));
           if (!slot) throw new DataError("invalid", "Atendimento: escolha o horário", { start: "Escolha o horário." });
+          if (formChecked(form, "repetir")) {
+            const fim = formText(form, "fim");
+            const created = await createSeries(db, clinic.clinicId, {
+              patientId: formText(form, "patient_id"),
+              serviceId: formText(form, "service_id"),
+              agendaId: slot.agendaId,
+              locationId: slot.locationId,
+              intervalWeeks: formInt(form, "interval_weeks"),
+              startsOn: localDateOf(slot.start, clinic.timezone),
+              startTime: localTimeOf(slot.start, clinic.timezone),
+              endsOn: fim === "data" ? formText(form, "ends_on") || "invalida" : null,
+              maxSessions: fim === "sessoes" ? formInt(form, "max_sessions") : null,
+              homeVisitAddress: formOptionalText(form, "home_visit_address"),
+              actorId,
+            });
+            const skipped = created.skipped.length ? ` ${created.skipped.length} data(s) pulada(s): veja abaixo.` : "";
+            return done(`Série criada: ${created.created.length} sessão(ões) marcada(s).${skipped}`, `/admin/agenda/serie/${created.series.id}`);
+          }
           const result = await bookAppointment(db, clinic.clinicId, {
             patientId: formText(form, "patient_id"),
             serviceId: formText(form, "service_id"),
@@ -63,12 +82,29 @@ export const POST: APIRoute = async (context) => {
         case "remarcar": {
           const slot = parseSlot(formText(form, "slot"));
           if (!slot) throw new DataError("invalid", "Atendimento: escolha o horário", { start: "Escolha o horário." });
+          // Sessão de série, "esta e as próximas": a série muda de dia e horário daqui em diante (D9).
+          if (formText(form, "modo") === "serie") {
+            const changed = await changeSeriesFrom(
+              db,
+              clinic.clinicId,
+              id,
+              { startsOn: localDateOf(slot.start, clinic.timezone), startTime: localTimeOf(slot.start, clinic.timezone) },
+              actorId,
+            );
+            if (!changed.next) return done("Série encerrada: não faltavam sessões.");
+            const skipped = changed.next.skipped.length ? ` ${changed.next.skipped.length} data(s) pulada(s): veja abaixo.` : "";
+            return done(`Série remarcada: ${changed.next.created.length} sessão(ões) no novo dia e horário.${skipped}`, `/admin/agenda/serie/${changed.next.series.id}`);
+          }
           const moved = await rescheduleAppointment(db, clinic.clinicId, id, { start: slot.start, locationId: slot.locationId, channel: "admin", actorId });
           return done("Atendimento remarcado.", `/admin/agenda?date=${localDateOf(moved.scheduledAt, clinic.timezone)}`);
         }
         case "cancelar": {
           const canceled = await cancelAppointment(db, clinic.clinicId, id, { channel: "admin", actorId });
           return done(canceled ? "Atendimento cancelado." : "Este atendimento já estava cancelado.");
+        }
+        case "encerrar_serie": {
+          const ended = await endSeriesFrom(db, clinic.clinicId, id, actorId);
+          return done(`Série encerrada: ${ended.canceled.length} sessão(ões) cancelada(s) a partir desta.`);
         }
         case "confirmar_presenca":
         case "desfazer_presenca":

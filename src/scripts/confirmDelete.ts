@@ -5,6 +5,7 @@ const acceptBtn = document.getElementById("delete_dialog_accept") as HTMLButtonE
 const titleEl = document.getElementById("delete_dialog_title") as HTMLHeadingElement;
 
 let pendingForm: HTMLFormElement | null = null;
+let pendingButton: HTMLButtonElement | null = null;
 
 // Tom do botão de confirmar (F4.5): vermelho para o que desfaz algo
 // (padrão), azul para confirmar uma ação comum (`data-confirm-tone="primary"`).
@@ -17,6 +18,7 @@ document.querySelectorAll<HTMLButtonElement>(".js-confirm-delete").forEach((btn)
   btn.addEventListener("click", (event) => {
     event.preventDefault();
     pendingForm = btn.closest("form");
+    pendingButton = btn;
     // Campo obrigatório vazio (ex.: nenhum horário escolhido): avisa no campo.
     if (pendingForm && !pendingForm.checkValidity()) {
       pendingForm.reportValidity();
@@ -42,6 +44,17 @@ acceptBtn.addEventListener("click", () => {
   // modal primeiro consome o gesto do usuário e o envio seguinte não sai.
   // `submit()` (em vez de `requestSubmit()`) porque esses formulários não
   // têm campo nenhum pra validar, e é a API mais antiga/compatível das duas.
+  // `submit()` não leva o botão clicado: o nome e o valor dele vão num campo
+  // escondido (ex.: "cancelar" ou "manter" no Bloquear).
+  if (pendingForm && pendingButton?.name) {
+    pendingForm.querySelector(`input[type=hidden][data-submitter]`)?.remove();
+    const field = document.createElement("input");
+    field.type = "hidden";
+    field.name = pendingButton.name;
+    field.value = pendingButton.value;
+    field.dataset.submitter = "";
+    pendingForm.append(field);
+  }
   pendingForm?.submit();
   dialog.close();
 });

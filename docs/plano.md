@@ -578,6 +578,30 @@ Vocabulário pelo perfil da clínica.
   com o paciente e o horário (cliques sem querer); Remarcar só abre a tela, e a confirmação fica
   no botão final dela, como no Marcar. O diálogo ganhou o tom azul para as confirmações comuns
   (`data-confirm-tone="primary"`) e não abre com campo obrigatório vazio.
+- **F4.6 — concluída em 05/out.** **Bloquear** no cabeçalho da Agenda: dia todo ou horário, motivo e
+  **uma ou várias agendas** (um bloqueio por agenda marcada; decisão do cliente, 05/out); com
+  atendimentos no período, a tela lista e pergunta "cancelar" ou "manter" (como no piloto), e se o
+  período mudar depois de ver a lista, mostra de novo. Lista **Bloqueios** com editar (período e
+  motivo; mudar o período não cancela nada) e remover; no Dia, o cartão do bloqueio tem Editar e
+  Remover. **Cancelar selecionados** no Dia (caixinhas nos cartões; turma = todos os pacientes
+  ativos dela), com o link de remarcação gerado com o bot liberado (D11). Depois de cancelar (em
+  massa ou pelo bloqueio), a tela **"Avisar"** mostra cada paciente com o botão "Enviar pelo
+  WhatsApp", que abre a conversa no WhatsApp de quem está no painel com a mensagem pronta (decisão
+  do cliente, 05/out); **a mensagem vai sem o link até a página pública existir (F5)** (decisão do
+  cliente, 05/out: hoje o link abriria inválido) e pede para responder; o envio automático com o
+  link vem com a F5/F6. **Séries** (D9, item "Séries"): no Marcar, **"Repetir este atendimento"**
+  (decisão do cliente, 05/out) com a frequência (toda semana, quinzenal, a cada N semanas, até 12)
+  e o fim (sem data, até o dia, N sessões); a tela da **série** mostra o combinado, as sessões e as
+  **datas puladas com o motivo** (feriado, agenda bloqueada, horário ocupado) e permite encerrar.
+  No cartão de uma sessão: "Cancelar só esta", "Encerrar a série" (esta e as próximas) e "Ver
+  série"; no Remarcar, "só esta sessão" ou "esta e as próximas" (a série passa para o dia e o
+  horário escolhidos). Toda ação nova pede confirmação. O diálogo de confirmação leva o botão
+  clicado junto (ex.: "cancelar" ou "manter"). Saíram as telas e rotas antigas de bloqueio e a
+  rota antiga do cancelamento em massa continua só para o Resumo do Dia antigo (F4.8). **Fica para
+  a F7**: a rotina que estende as séries sem fim (hoje ficam marcadas as sessões dos próximos 3
+  meses a partir da criação). Padrões assumidos (revisáveis): o motivo do bloqueio aparece só para
+  a equipe; turma não tem série (as vagas são por sessão, regra da F3). 4 testes unitários e 1 de
+  banco novos.
 - **F4.5 — Agenda I:** dia, semana e mês com a escolha da agenda; marcar, remarcar, cancelar;
   presença e comparecimento; lembrete e preparo; lista de espera.
 - **F4.6 — Agenda II:** bloqueios, cancelamento do dia com link de remarcação, séries (D9).

@@ -28,9 +28,11 @@ interface Props {
   noShow?: NoShowStats;
   /** Dentro do cartão da turma: sem o horário e mais compacto. */
   compact?: boolean;
+  /** Caixinha do cancelamento em massa (F4.6), ligada ao formulário da tela. */
+  massCancelForm?: string;
 }
 
-const { appointment: a, timeZone, now, showAgenda, vocabulary, returnTo, reminderAction, preparationResendable, waitlistOn, onWaitlist, noShow, compact = false } =
+const { appointment: a, timeZone, now, showAgenda, vocabulary, returnTo, reminderAction, preparationResendable, waitlistOn, onWaitlist, noShow, compact = false, massCancelForm } =
   Astro.props;
 const action = `/api/admin/agenda/atendimentos/${a.id}`;
 const time = (d: Date) => formatInstant(d, timeZone, "HH:mm");
@@ -121,6 +123,18 @@ if (isPast && (isActive || a.status === "completed" || a.status === "no_show")) 
     buttons.push({ acao: "faltou", label: isActive ? "Faltou" : "Corrigir: faltou", icon: "x-mark", danger: true, title: "Registrar a falta?", message: who, confirm: "Faltou" });
   }
 }
+// Sessão de série: "esta e as próximas" (D9).
+if (a.seriesId !== null && isActive && !isPast) {
+  buttons.push({
+    acao: "encerrar_serie",
+    label: "Encerrar a série",
+    icon: "x-mark",
+    danger: true,
+    title: "Encerrar a série a partir desta sessão?",
+    message: `${who}. Esta sessão e as próximas são canceladas; as que já passaram ficam como estão.`,
+    confirm: "Encerrar a série",
+  });
+}
 const canReschedule = isActive && !isPast;
 const BUTTON = "inline-flex items-center gap-1 rounded-md border bg-white px-2.5 py-1.5 text-xs font-semibold";
 const tone = (danger?: boolean) => (danger ? "border-red-300 text-red-700 hover:bg-red-50" : "border-slate-300 text-slate-700 hover:bg-slate-50");
@@ -130,9 +144,21 @@ const tone = (danger?: boolean) => (danger ? "border-red-300 text-red-700 hover:
   {
     !compact && (
       <div class="flex flex-wrap items-center justify-between gap-2">
-        <span class="text-base font-semibold text-slate-900">
-          {time(a.scheduledAt)} – {time(a.endsAt)}
-        </span>
+        <label class="flex items-center gap-2">
+          {massCancelForm && isActive && !isPast && (
+            <input
+              type="checkbox"
+              form={massCancelForm}
+              name="ids"
+              value={a.id}
+              class="js-mass-cancel h-4 w-4 rounded border-slate-300"
+              aria-label={`Selecionar ${a.patientName} para cancelar`}
+            />
+          )}
+          <span class="text-base font-semibold text-slate-900">
+            {time(a.scheduledAt)} – {time(a.endsAt)}
+          </span>
+        </label>
         {status && <Badge variant={status.variant}>{status.label}</Badge>}
       </div>
     )
@@ -170,7 +196,7 @@ const tone = (danger?: boolean) => (danger ? "border-red-300 text-red-700 hover:
     }
 
     {
-      (buttons.length > 0 || canReschedule) && (
+      (buttons.length > 0 || canReschedule || a.seriesId) && (
         <div class="mt-3 flex flex-wrap gap-2 border-t border-slate-100 pt-3">
           {buttons.map((b) => (
             <form method="POST" action={action}>
@@ -201,15 +227,20 @@ const tone = (danger?: boolean) => (danger ? "border-red-300 text-red-700 hover:
                 <button
                   type="submit"
                   class={`${BUTTON} ${tone(true)} js-confirm-delete`}
-                  data-confirm-title="Cancelar o atendimento?"
-                  data-confirm-message={`${who}. O horário fica livre de novo.`}
-                  data-confirm-label="Cancelar atendimento"
+                  data-confirm-title={a.seriesId ? "Cancelar só esta sessão?" : "Cancelar o atendimento?"}
+                  data-confirm-message={`${who}. O horário fica livre de novo.${a.seriesId ? " A série continua nas próximas." : ""}`}
+                  data-confirm-label={a.seriesId ? "Cancelar só esta" : "Cancelar atendimento"}
                 >
                   <Icon name="x-mark" class="h-3.5 w-3.5" />
-                  Cancelar
+                  {a.seriesId ? "Cancelar só esta" : "Cancelar"}
                 </button>
               </form>
             </>
+          )}
+          {a.seriesId && (
+            <a href={`/admin/agenda/serie/${a.seriesId}`} class={`${BUTTON} ${tone()}`}>
+              Ver série
+            </a>
           )}
         </div>
       )

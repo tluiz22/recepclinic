@@ -1,9 +1,9 @@
 ---
 // Cabeçalho da Agenda (F4.5): Dia, Semana e Mês, a escolha da agenda (todas
-// ou uma; cliente, 05/out/2026) e o botão de marcar. Bloqueios e
-// cancelamento do dia entram na F4.6.
+// ou uma; cliente, 05/out/2026), marcar e, desde a F4.6, bloquear e a
+// lista de bloqueios.
 import Icon from "../Icon.astro";
-import { INPUT, PRIMARY_BUTTON } from "../fieldStyles";
+import { INPUT, PRIMARY_BUTTON, SECONDARY_BUTTON } from "../fieldStyles";
 import { ALL_AGENDAS } from "../../../lib/agendaChoice";
 
 interface Props {
@@ -39,9 +39,13 @@ const current = views.find((v) => v.id === view)!;
       }
     </nav>
   </div>
-  <a href={`/admin/agenda/marcar?date=${date}${selectedAgendaId ? `&agenda_id=${selectedAgendaId}` : ""}`} class={`${PRIMARY_BUTTON} inline-flex items-center gap-1.5`}>
-    <Icon name="plus" class="h-4 w-4" /> Marcar
-  </a>
+  <div class="flex flex-wrap gap-2">
+    <a href={`/admin/agenda/marcar?date=${date}${selectedAgendaId ? `&agenda_id=${selectedAgendaId}` : ""}`} class={`${PRIMARY_BUTTON} inline-flex items-center gap-1.5`}>
+      <Icon name="plus" class="h-4 w-4" /> Marcar
+    </a>
+    <a href={`/admin/agenda/bloquear?date=${date}${selectedAgendaId ? `&agenda=${selectedAgendaId}` : ""}`} class={SECONDARY_BUTTON}>Bloquear</a>
+    <a href="/admin/agenda/bloqueios" class={SECONDARY_BUTTON}>Bloqueios</a>
+  </div>
 </div>
 
 {
