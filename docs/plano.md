@@ -571,6 +571,13 @@ Vocabulário pelo perfil da clínica.
   o painel (tudo se resolve pelo WhatsApp; o botão do WhatsApp continua ao lado); paciente sem
   responsável mostra só o número, sem rótulo. Botões Remarcar e Cancelar do cartão ficam
   compactos (antes ocupavam a largura toda).
+  **Cartão do atendimento (cliente, 05/out):** formato escolhido entre três opções: em cima, a
+  informação e os **selos da situação** (presença confirmada, lembrete, preparo, lista de espera,
+  comparecimento a registrar), que nunca são clicáveis; embaixo, **uma fileira de botões iguais,
+  com ícone** (vermelhos os que desfazem). **Toda ação pede confirmação** no diálogo do painel,
+  com o paciente e o horário (cliques sem querer); Remarcar só abre a tela, e a confirmação fica
+  no botão final dela, como no Marcar. O diálogo ganhou o tom azul para as confirmações comuns
+  (`data-confirm-tone="primary"`) e não abre com campo obrigatório vazio.
 - **F4.5 — Agenda I:** dia, semana e mês com a escolha da agenda; marcar, remarcar, cancelar;
   presença e comparecimento; lembrete e preparo; lista de espera.
 - **F4.6 — Agenda II:** bloqueios, cancelamento do dia com link de remarcação, séries (D9).

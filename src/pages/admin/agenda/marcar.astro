@@ -6,6 +6,7 @@
 import AdminLayout from "../../../layouts/AdminLayout.astro";
 import Badge from "../../../components/admin/Badge.astro";
 import Card from "../../../components/admin/Card.astro";
+import ConfirmDeleteDialog from "../../../components/admin/ConfirmDeleteDialog.astro";
 import FlashMessage from "../../../components/admin/FlashMessage.astro";
 import Icon from "../../../components/admin/Icon.astro";
 import { HINT, INPUT, LABEL, PRIMARY_BUTTON, SECONDARY_BUTTON } from "../../../components/admin/fieldStyles";
@@ -260,7 +261,15 @@ const chip = (active: boolean) =>
               <input id="home_visit_address" name="home_visit_address" value={contact?.defaultHomeAddress ?? ""} placeholder="Rua, número, bairro, complemento" class={INPUT} />
             </div>
             {!patient && <p class="text-sm text-amber-700">Escolha o {vocabulary.patient} acima para marcar.</p>}
-            <button type="submit" class={`${PRIMARY_BUTTON} self-start`} disabled={!patient || slotOptions.length === 0}>
+            <button
+              type="submit"
+              class={`${PRIMARY_BUTTON} js-confirm-delete self-start`}
+              disabled={!patient || slotOptions.length === 0}
+              data-confirm-title="Marcar o atendimento?"
+              data-confirm-message={`${patient?.fullName ?? ""}: ${service.name}, no horário escolhido.`}
+              data-confirm-label="Marcar"
+              data-confirm-tone="primary"
+            >
               Marcar
             </button>
           </form>
@@ -283,4 +292,5 @@ const chip = (active: boolean) =>
     document.querySelectorAll("input[name='slot']").forEach((input) => input.addEventListener("change", sync));
     sync();
   </script>
+  <ConfirmDeleteDialog />
 </AdminLayout>

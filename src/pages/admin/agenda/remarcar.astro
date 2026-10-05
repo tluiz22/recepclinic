@@ -4,6 +4,7 @@
 // (a data nova pede outros); o horário atual não conta como ocupado.
 import AdminLayout from "../../../layouts/AdminLayout.astro";
 import Card from "../../../components/admin/Card.astro";
+import ConfirmDeleteDialog from "../../../components/admin/ConfirmDeleteDialog.astro";
 import FlashMessage from "../../../components/admin/FlashMessage.astro";
 import Icon from "../../../components/admin/Icon.astro";
 import { PRIMARY_BUTTON } from "../../../components/admin/fieldStyles";
@@ -108,7 +109,18 @@ const chip = (active: boolean) =>
         }
         {(isGroup || date) && options.length === 0 && <p class="text-sm text-slate-500">{isGroup ? "Nenhuma outra turma com vaga." : "Nenhum horário livre nesta data."}</p>}
       </div>
-      <button type="submit" class={`${PRIMARY_BUTTON} self-start`} disabled={options.length === 0}>Remarcar</button>
+      <button
+        type="submit"
+        class={`${PRIMARY_BUTTON} js-confirm-delete self-start`}
+        disabled={options.length === 0}
+        data-confirm-title="Remarcar o atendimento?"
+        data-confirm-message={`${appointment.patientName} vai para o horário escolhido. O lembrete e a presença confirmada recomeçam.`}
+        data-confirm-label="Remarcar"
+        data-confirm-tone="primary"
+      >
+        Remarcar
+      </button>
     </form>
   </Card>
+  <ConfirmDeleteDialog />
 </AdminLayout>

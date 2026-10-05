@@ -6,13 +6,28 @@ const titleEl = document.getElementById("delete_dialog_title") as HTMLHeadingEle
 
 let pendingForm: HTMLFormElement | null = null;
 
+// Tom do botão de confirmar (F4.5): vermelho para o que desfaz algo
+// (padrão), azul para confirmar uma ação comum (`data-confirm-tone="primary"`).
+const TONES = {
+  danger: ["bg-red-600", "hover:bg-red-700"],
+  primary: ["bg-sky-700", "hover:bg-sky-800"],
+};
+
 document.querySelectorAll<HTMLButtonElement>(".js-confirm-delete").forEach((btn) => {
   btn.addEventListener("click", (event) => {
     event.preventDefault();
     pendingForm = btn.closest("form");
+    // Campo obrigatório vazio (ex.: nenhum horário escolhido): avisa no campo.
+    if (pendingForm && !pendingForm.checkValidity()) {
+      pendingForm.reportValidity();
+      return;
+    }
     messageEl.textContent = btn.dataset.confirmMessage ?? "Tem certeza que quer excluir?";
     titleEl.textContent = btn.dataset.confirmTitle ?? "Excluir?";
     acceptBtn.textContent = btn.dataset.confirmLabel ?? "Excluir";
+    const tone = btn.dataset.confirmTone === "primary" ? "primary" : "danger";
+    acceptBtn.classList.remove(...TONES.danger, ...TONES.primary);
+    acceptBtn.classList.add(...TONES[tone]);
     dialog.showModal();
   });
 });
