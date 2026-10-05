@@ -39,6 +39,7 @@ const pre = "mt-1 whitespace-pre-wrap rounded-md bg-slate-50 p-3 text-sm text-sl
         <li>
           {dash(p.name)} – {[p.profession, p.specialty].filter(Boolean).join(", ") || "profissão não informada"}
           {[p.council, p.councilNumber, p.councilState].some(Boolean) && ` – ${[p.council, p.councilNumber, p.councilState].filter(Boolean).join(" ")}`}
+          {p.rqe && ` | RQE ${p.rqe}`}
           {p.whatsapp && ` – WhatsApp ${p.whatsapp}`}
           {p.receivesSummary && " – recebe o resumo do dia"}
         </li>

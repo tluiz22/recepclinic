@@ -500,6 +500,11 @@ Vocabulário pelo perfil da clínica.
     Padrões assumidos (revisáveis): enviar ao Suporte exige ao menos o nome da clínica (o resto
     pode ficar em branco); o Suporte acompanha as respostas pela tela (sem e-mail de aviso ao
     Suporte); o link do pedido vale 30 dias. 8 testes unitários e 7 de banco novos.
+    **Ajuste pedido na validação (cliente, 05/out): RQE no cadastro do profissional**, campo
+    opcional que aceita mais de um número separado por vírgula ("6271, 8890"), também no
+    formulário de informações; o registro aparece como "CRM 5751 RN | RQE 6271"
+    (`professionalRegistry`, para a assinatura das mensagens na F6). Migração `20261005190000`.
+    3 testes unitários e 1 de banco novos.
 - **F4.5 — Agenda I:** dia, semana e mês com a escolha da agenda; marcar, remarcar, cancelar;
   presença e comparecimento; lembrete e preparo; lista de espera.
 - **F4.6 — Agenda II:** bloqueios, cancelamento do dia com link de remarcação, séries (D9).

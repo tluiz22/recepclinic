@@ -48,7 +48,7 @@ const action = `/api/admin/configuracoes/profissionais/${id}`;
           <input id="specialty" name="specialty" value={professional?.specialty ?? ""} class={INPUT} />
         </div>
       </div>
-      <div class="grid gap-4 sm:grid-cols-3">
+      <div class="grid gap-4 sm:grid-cols-4">
         <div>
           <label for="council" class={LABEL}>Conselho</label>
           <input id="council" name="council" list="councils" value={professional?.council ?? ""} class={INPUT} />
@@ -65,7 +65,12 @@ const action = `/api/admin/configuracoes/profissionais/${id}`;
             {BRAZIL_STATES.map((uf) => <option value={uf} selected={uf === professional?.councilState}>{uf}</option>)}
           </select>
         </div>
+        <div>
+          <label for="rqe" class={LABEL}>RQE (opcional)</label>
+          <input id="rqe" name="rqe" inputmode="numeric" placeholder="6271" value={professional?.rqe ?? ""} class={INPUT} />
+        </div>
       </div>
+      <p class={`${HINT} -mt-2`}>Mais de um RQE: separe por vírgula (ex.: 6271, 8890).</p>
       <div>
         <label for="phone" class={LABEL}>WhatsApp (opcional)</label>
         <input

@@ -30,7 +30,7 @@ import {
   listNotificationRecipients,
   setNotificationRecipientActive,
 } from "../../src/lib/data/config/notificationRecipients";
-import { createProfessional, listProfessionals, type Professional } from "../../src/lib/data/config/professionals";
+import { createProfessional, listProfessionals, updateProfessional, type Professional } from "../../src/lib/data/config/professionals";
 import {
   createService,
   listServices,
@@ -150,6 +150,15 @@ describe("profissionais, locais e agendas", () => {
     expect(professional).toMatchObject({ council: "CRM", councilState: "CE", userId: professionalUser.id, isActive: true });
     expect((await listProfessionals(db(reception), clinicId)).map((p) => p.displayName)).toEqual(["Dra. Teste"]);
     expect((await listLocations(db(reception), clinicId)).map((l) => l.name)).toEqual(["Consultório", "Domiciliar"]);
+  });
+
+  it("RQE opcional, um ou vários; sem o campo, fica como está", async () => {
+    const { id, isActive: _active, ...base } = professional;
+    expect(await updateProfessional(db(admin), clinicId, id, { ...base, rqe: "6271 / 8890" })).toMatchObject({ rqe: "6271, 8890" });
+    expect(await codeOf(() => updateProfessional(db(admin), clinicId, id, { ...base, rqe: "RQE 6271" }))).toBe("invalid");
+    const { rqe: _rqe, ...withoutRqe } = base;
+    expect(await updateProfessional(db(admin), clinicId, id, withoutRqe)).toMatchObject({ rqe: "6271, 8890" });
+    expect(await updateProfessional(db(admin), clinicId, id, { ...base, rqe: "" })).toMatchObject({ rqe: null });
   });
 
   it("cada login vê só as agendas que pode (D6)", async () => {

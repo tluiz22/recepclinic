@@ -17,18 +17,20 @@ export type Professional = {
   council: string | null;
   councilNumber: string | null;
   councilState: string | null;
+  /** RQE (Registro de Qualificação de Especialista); vários separados por vírgula. */
+  rqe: string | null;
   /** WhatsApp do profissional (E.164), para o resumo do dia. */
   phone: string | null;
   receivesDailySummary: boolean;
   isActive: boolean;
 };
 
-/** Telefone e resumo são opcionais: ausentes, ficam como estão (vazio na criação). */
-export type ProfessionalInput = Omit<Professional, "id" | "isActive" | "phone" | "receivesDailySummary"> &
-  Partial<Pick<Professional, "phone" | "receivesDailySummary">>;
+/** RQE, telefone e resumo são opcionais: ausentes, ficam como estão (vazio na criação). */
+export type ProfessionalInput = Omit<Professional, "id" | "isActive" | "rqe" | "phone" | "receivesDailySummary"> &
+  Partial<Pick<Professional, "rqe" | "phone" | "receivesDailySummary">>;
 
 const COLUMNS =
-  "id, user_id, display_name, profession, specialty, council, council_number, council_state, phone, receives_daily_summary, is_active";
+  "id, user_id, display_name, profession, specialty, council, council_number, council_state, rqe, phone, receives_daily_summary, is_active";
 
 type Row = {
   id: string;
@@ -39,6 +41,7 @@ type Row = {
   council: string | null;
   council_number: string | null;
   council_state: string | null;
+  rqe: string | null;
   phone: string | null;
   receives_daily_summary: boolean;
   is_active: boolean;
@@ -53,10 +56,24 @@ const toProfessional = (row: Row): Professional => ({
   council: row.council,
   councilNumber: row.council_number,
   councilState: row.council_state,
+  rqe: row.rqe,
   phone: row.phone,
   receivesDailySummary: row.receives_daily_summary,
   isActive: row.is_active,
 });
+
+/** "6271 / 8890" → "6271, 8890"; null se tiver algo além de números. */
+export function normalizeRqe(raw: string): string | null {
+  const parts = raw.split(/[\s,;/]+/).filter(Boolean);
+  if (!parts.length || parts.some((part) => !/^\d{1,10}$/.test(part))) return null;
+  return parts.join(", ");
+}
+
+/** Registro do profissional como aparece para o paciente: "CRM 5751 RN | RQE 6271". */
+export function professionalRegistry(p: Pick<Professional, "council" | "councilNumber" | "councilState" | "rqe">): string {
+  const council = [p.council, p.councilNumber, p.councilState].filter(Boolean).join(" ");
+  return [council, p.rqe ? `RQE ${p.rqe}` : ""].filter(Boolean).join(" | ");
+}
 
 export function validateProfessional(input: ProfessionalInput) {
   const v = new Validation();
@@ -72,7 +89,12 @@ export function validateProfessional(input: ProfessionalInput) {
   v.check(row.display_name.length > 0, "displayName", "Informe o nome");
   v.check(row.profession.length > 0, "profession", "Informe a profissão");
   v.check(row.council_state === null || /^[A-Z]{2}$/.test(row.council_state), "councilState", "UF com 2 letras");
-  const contact: { phone?: string | null; receives_daily_summary?: boolean } = {};
+  const contact: { rqe?: string | null; phone?: string | null; receives_daily_summary?: boolean } = {};
+  if (input.rqe !== undefined) {
+    const raw = cleanText(input.rqe);
+    contact.rqe = raw === null ? null : normalizeRqe(raw);
+    v.check(raw === null || contact.rqe !== null, "rqe", "RQE: só números, separados por vírgula");
+  }
   if (input.phone !== undefined) {
     const raw = cleanText(input.phone);
     contact.phone = raw === null ? null : normalizePhone(raw);

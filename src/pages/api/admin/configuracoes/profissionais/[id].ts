@@ -40,6 +40,7 @@ export const POST: APIRoute = async (context) => {
         council: formOptionalText(form, "council"),
         councilNumber: formOptionalText(form, "council_number"),
         councilState: formOptionalText(form, "council_state"),
+        rqe: formOptionalText(form, "rqe"),
         phone: formOptionalText(form, "phone"),
         ...(clinic.features.includes("daily_summary") ? { receivesDailySummary: formChecked(form, "receives_daily_summary") } : {}),
       };

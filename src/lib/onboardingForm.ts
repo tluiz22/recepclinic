@@ -14,6 +14,8 @@ export type OnboardingProfessional = {
   council: string;
   councilNumber: string;
   councilState: string;
+  /** RQE; vários separados por vírgula. */
+  rqe: string;
   whatsapp: string;
   receivesSummary: boolean;
 };
@@ -126,7 +128,17 @@ export function parseOnboardingForm(form: FormData, sections: OnboardingSections
     ),
     professionals: rows(
       form,
-      ["professional_name", "professional_profession", "professional_specialty", "professional_council", "professional_council_number", "professional_council_state", "professional_whatsapp", "professional_summary"],
+      [
+        "professional_name",
+        "professional_profession",
+        "professional_specialty",
+        "professional_council",
+        "professional_council_number",
+        "professional_council_state",
+        "professional_rqe",
+        "professional_whatsapp",
+        "professional_summary",
+      ],
       (get) => ({
         name: get("professional_name"),
         profession: get("professional_profession"),
@@ -134,6 +146,7 @@ export function parseOnboardingForm(form: FormData, sections: OnboardingSections
         council: get("professional_council"),
         councilNumber: get("professional_council_number"),
         councilState: get("professional_council_state").toUpperCase().slice(0, 2),
+        rqe: get("professional_rqe"),
         whatsapp: get("professional_whatsapp"),
         receivesSummary: sections.dailySummary && get("professional_summary") === "sim",
       }),
@@ -171,7 +184,8 @@ export function normalizeAnswers(raw: unknown): OnboardingAnswers {
   return {
     clinic: { ...base.clinic, ...(data.clinic ?? {}) },
     locations: Array.isArray(data.locations) ? data.locations : [],
-    professionals: Array.isArray(data.professionals) ? data.professionals : [],
+    // Respostas de antes do campo RQE ficam com ele vazio.
+    professionals: Array.isArray(data.professionals) ? data.professionals.map((p) => ({ ...p, rqe: p.rqe ?? "" })) : [],
     services: typeof data.services === "string" ? data.services : "",
     schedule: typeof data.schedule === "string" ? data.schedule : "",
     holidays: typeof data.holidays === "string" ? data.holidays : "",

@@ -162,7 +162,8 @@ cair em "dezenas de configurações" (regra 4 do README), a forma de configurar 
   ("criança/responsável" × "paciente/contato"; a *Mista* usa **"paciente/responsável"**, decisão do
   cliente em 05/out/2026) e as regras de idade padrão. A idade limite continua ajustável.
 - **Identidade**: nome da clínica, profissionais (nome, profissão e especialidade, registro no
-  conselho de classe: conselho, número e UF, ex.: CRM, CRO, CRP, CREFITO, CRN; revisão de 04/out),
+  conselho de classe: conselho, número e UF, ex.: CRM, CRO, CRP, CREFITO, CRN; revisão de 04/out; e o
+  RQE, opcional, um ou mais números, cliente em 05/out),
   endereços dos locais, logo e cor. Tudo por tela, incluindo criar, editar e desativar locais.
 - **Informações do bot**: textos curtos editáveis (formas de pagamento, convênios, observações).
 - **Fuso por clínica** e **feriados**: nacionais calculados + lista de datas extras da clínica

@@ -48,6 +48,7 @@ const blankProfessional: OnboardingProfessional = {
   council: "",
   councilNumber: "",
   councilState: "",
+  rqe: "",
   whatsapp: "",
   receivesSummary: false,
 };
@@ -188,6 +189,10 @@ const row = "grid gap-3 rounded-lg border border-slate-200 bg-white p-4";
                             </option>
                           ))}
                         </select>
+                      </div>
+                      <div>
+                        <label class={LABEL}>RQE (se tiver)</label>
+                        <input name="professional_rqe" inputmode="numeric" placeholder="6271, 8890" value={p.rqe} class={INPUT} />
                       </div>
                       <div>
                         <label class={LABEL}>WhatsApp</label>

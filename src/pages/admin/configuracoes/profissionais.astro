@@ -7,7 +7,7 @@ import ConfiguracoesTabs from "../../../components/admin/ConfiguracoesTabs.astro
 import FlashMessage from "../../../components/admin/FlashMessage.astro";
 import { PRIMARY_BUTTON } from "../../../components/admin/fieldStyles";
 import { createUserClient } from "../../../lib/data/clients";
-import { listProfessionals } from "../../../lib/data/config/professionals";
+import { listProfessionals, professionalRegistry } from "../../../lib/data/config/professionals";
 import { getProfessionalLimit } from "../../../lib/data/features";
 import { formatPhoneBR } from "../../../lib/phone";
 
@@ -20,7 +20,6 @@ const [professionals, limit] = await Promise.all([
 ]);
 // Limite de profissionais ativos (D11): definido pelo Suporte.
 const atLimit = limit.active >= limit.max;
-const council = (p: (typeof professionals)[number]) => [p.council, p.councilNumber, p.councilState].filter(Boolean).join(" ");
 ---
 
 <AdminLayout title="Profissionais">
@@ -66,7 +65,7 @@ const council = (p: (typeof professionals)[number]) => [p.council, p.councilNumb
                 {p.displayName} {!p.isActive && <Badge>desativado</Badge>}
               </p>
               <p class="mt-1 text-sm text-slate-600">{[p.profession, p.specialty].filter(Boolean).join(" · ")}</p>
-              {council(p) && <p class="text-sm text-slate-500">{council(p)}</p>}
+              {professionalRegistry(p) && <p class="text-sm text-slate-500">{professionalRegistry(p)}</p>}
               {p.phone && (
                 <p class="text-sm text-slate-500">
                   {formatPhoneBR(p.phone)}

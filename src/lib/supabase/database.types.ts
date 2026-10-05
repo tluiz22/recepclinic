@@ -757,13 +757,13 @@ isOneToOne: false
                   ]
                 },"professionals": {
                   Row: {
-                    "clinic_id": string,"council": string | null,"council_number": string | null,"council_state": string | null,"created_at": string,"display_name": string,"id": string,"is_active": boolean,"phone": string | null,"profession": string,"receives_daily_summary": boolean,"specialty": string | null,"updated_at": string,"user_id": string | null
+                    "clinic_id": string,"council": string | null,"council_number": string | null,"council_state": string | null,"created_at": string,"display_name": string,"id": string,"is_active": boolean,"phone": string | null,"profession": string,"receives_daily_summary": boolean,"rqe": string | null,"specialty": string | null,"updated_at": string,"user_id": string | null
                   }
                   Insert: {
-                    "clinic_id": string,"council"?: string | null,"council_number"?: string | null,"council_state"?: string | null,"created_at"?: string,"display_name": string,"id"?: string,"is_active"?: boolean,"phone"?: string | null,"profession": string,"receives_daily_summary"?: boolean,"specialty"?: string | null,"updated_at"?: string,"user_id"?: string | null
+                    "clinic_id": string,"council"?: string | null,"council_number"?: string | null,"council_state"?: string | null,"created_at"?: string,"display_name": string,"id"?: string,"is_active"?: boolean,"phone"?: string | null,"profession": string,"receives_daily_summary"?: boolean,"rqe"?: string | null,"specialty"?: string | null,"updated_at"?: string,"user_id"?: string | null
                   }
                   Update: {
-                    "clinic_id"?: string,"council"?: string | null,"council_number"?: string | null,"council_state"?: string | null,"created_at"?: string,"display_name"?: string,"id"?: string,"is_active"?: boolean,"phone"?: string | null,"profession"?: string,"receives_daily_summary"?: boolean,"specialty"?: string | null,"updated_at"?: string,"user_id"?: string | null
+                    "clinic_id"?: string,"council"?: string | null,"council_number"?: string | null,"council_state"?: string | null,"created_at"?: string,"display_name"?: string,"id"?: string,"is_active"?: boolean,"phone"?: string | null,"profession"?: string,"receives_daily_summary"?: boolean,"rqe"?: string | null,"specialty"?: string | null,"updated_at"?: string,"user_id"?: string | null
                   }
                   Relationships: [
                     {
