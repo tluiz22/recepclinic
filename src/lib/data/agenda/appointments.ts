@@ -484,6 +484,8 @@ export type RescheduleInput = {
   locationId?: string | null;
   channel: ActionChannel;
   trailChannel?: TrailChannel;
+  /** Evento da trilha, se não for "remarcado" (ex.: antecipado pela lista de espera). */
+  trailEvent?: TrailEvent;
   actorId: string | null;
 };
 
@@ -551,7 +553,7 @@ export async function rescheduleAppointment(
     unwrapOne({ data, error }, "Atendimento");
   }
 
-  await logTrail(db, clinicId, id, "rescheduled", input.trailChannel ?? input.channel, input.actorId, {
+  await logTrail(db, clinicId, id, input.trailEvent ?? "rescheduled", input.trailChannel ?? input.channel, input.actorId, {
     from: current.scheduledAt.toISOString(),
     to: input.start.toISOString(),
   });

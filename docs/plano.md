@@ -328,6 +328,20 @@ novo não tem). Etapas (cada uma com `npm test`, `test:db`, `check`, `build` e C
   tela saiu da service role (passou para a camada nova). Padrões assumidos (revisáveis): só entra
   atendimento marcado ou confirmado e ainda no futuro; quem sai pelo bot também perde a oferta em
   aberto (no piloto, só quem era retirado pela tela). 4 testes unitários e 7 de banco novos.
+- **F3.7b — concluída em 04/out.** `src/lib/data/waitlist/offers.ts`, com a credencial da clínica:
+  rodada por clínica (vence ofertas sem resposta, tira da fila quem já passou do horário, oferece
+  as vagas abertas), oferta da vaga e resposta "Sim" (antecipa pela regra de remarcar, com
+  "antecipado pela lista" na trilha, tira da fila e preenche a vaga) ou "Não" (a vaga passa ao
+  próximo na hora). Regras do piloto mantidas: vaga só com mais de 2h, ainda livre e sem horário
+  livre antes dela; um por vez, por ordem de entrada, 60 minutos para responder; só quem está
+  marcado depois da vaga; só o contato do paciente responde; quem não pode receber é pulado nessa
+  vaga (até 20 por rodada). Com a D2: só quem espera **na mesma agenda e no mesmo serviço**, e no
+  mesmo tipo de local (consultório com consultório, domiciliar com domiciliar, como no piloto). O
+  envio pelo WhatsApp (template ou texto com botões, janela de 24h) e o aviso de remarcação ficam
+  com quem chama (bot na F6, agendador na F7); o motor recebe a função que envia. Padrão assumido
+  (revisável): retirado da lista pela tela, a vaga volta à fila e é oferecida ao próximo na rodada
+  seguinte do agendador (no piloto, na hora). 9 testes unitários e 7 de banco novos. **F3.7
+  concluída.**
 
 **Cuidado registrado na F2.5:** num insert de várias linhas, o `supabase-js` manda `null` nas
 colunas ausentes de alguma linha, e o valor padrão do banco não é aplicado (ex.: `details` da
