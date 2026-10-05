@@ -125,6 +125,20 @@ como alternativa).
 **Descartado:** texto livre por clínica (12 textos para escrever e aprovar a cada clínica e uma
 versão por clínica para manter).
 
+**Revisão (cliente, 05/out/2026): templates personalizados como recurso de plano.** O padrão
+continua um só para todas; a clínica que contratar o item **"Mensagens personalizadas"** (D11)
+escreve o próprio texto de cada template, **com as mesmas variáveis e na mesma ordem** do padrão,
+vendo a prévia no balão do WhatsApp. O **Suporte revisa** e o sistema envia à Meta como **versão
+nova** (outro nome; o aprovado nunca é editado no lugar, por causa do limite da Meta de 1 edição a
+cada 24h e 10 em 30 dias). Enquanto a Meta analisa, a clínica segue com o padrão (ou a versão
+anterior); aprovado, a versão nova passa a ser a usada sozinha; recusado, nada muda para o
+paciente e o motivo aparece na tela. **Como a aplicação sabe:** o envio sempre pede "o template
+aprovado em uso desta clínica para este tipo de mensagem" (`whatsapp_templates`, por clínica); o
+personalizado é só outra linha (versão) dessa tabela, então envio, bot e agendador não mudam. O
+item da matriz libera só a tela de edição. O limite de templates é por conta de WhatsApp da
+clínica (250 sem verificação da empresa, até 6.000 verificada), longe do uso previsto. Criar o
+template pela API depende da F8 (Tech Provider); antes disso, o Suporte envia à Meta à mão.
+
 **Resolve:** L18, L19, L20 (encaminha), L21, L22, L25 (parte das mensagens).
 
 ## D4 — Nicho e configuração por clínica (03/out/2026)
