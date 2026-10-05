@@ -470,8 +470,12 @@ Vocabulário pelo perfil da clínica.
 - **F4.2 — Matriz de acesso:** tela do Administrador do sistema (clínica, itens, histórico).
 - **F4.3 — Configurações I:** perfil e identidade, profissionais (telefone e resumo), locais,
   serviços (preço por local, preparo), agendas.
-- **F4.4 — Configurações II:** dias e horários, feriados extras, contatos do resumo, hora do
-  lembrete, convênios, equipe (convites) e acesso às agendas, situação do WhatsApp.
+- **F4.4 — Configurações II:** começa pela **tela "Nova clínica" do Suporte** (cliente, 05/out:
+  nome, perfil, fuso e e-mail do primeiro Administrador, que recebe o convite; nasce com a matriz
+  desligada e limite de 1 profissional; fecha a lacuna da L47/F10, que previam a criação pelo
+  Suporte sem tela); depois dias e horários, feriados extras, contatos do resumo, hora do
+  lembrete, convênios, equipe (convites, com o mesmo envio) e acesso às agendas, situação do
+  WhatsApp.
 - **F4.5 — Agenda I:** dia, semana e mês com a escolha da agenda; marcar, remarcar, cancelar;
   presença e comparecimento; lembrete e preparo; lista de espera.
 - **F4.6 — Agenda II:** bloqueios, cancelamento do dia com link de remarcação, séries (D9).
@@ -581,7 +585,7 @@ anonimização de paciente/contato a pedido (LGPD); contadores de uso visíveis 
 ## F10 — Primeiro piloto
 
 **Escopo:** produção (Supabase Pro + Vercel Pro, backup conferido); criação da 1ª clínica pelo
-Suporte e configuração pelo Administrador; no cenário B, script de importação do banco do piloto
+Suporte (pela tela "Nova clínica", F4.4) e configuração pelo Administrador; no cenário B, script de importação do banco do piloto
 para o modelo novo; acompanhamento das primeiras semanas.
 
 ## Depois do 1º piloto (já previsto no banco)

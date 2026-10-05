@@ -35,7 +35,7 @@
 >     05/out; ver o plano). **F4.1 concluída** (login, convite e senha, escolha de clínica,
 >     vocabulário, tela inicial). **F4.2 concluída** (tela da matriz de acesso). **F4.3 concluída**
 >     (Configurações: clínica, profissionais, locais, agendas, serviços). **Próxima: F4.4**
->     (Configurações II).
+>     (começa pela tela "Nova clínica" do Suporte; depois Configurações II).
 >     Para rodar o banco: abrir o OrbStack, `npm run db:start`, `npm run db:reset` (carrega os
 >     dados de teste) e `npm run test:db`.
 > - **Frente paralela, o site** `www.recepclinic.com.br`: [`site-plano.md`](site-plano.md), etapas
