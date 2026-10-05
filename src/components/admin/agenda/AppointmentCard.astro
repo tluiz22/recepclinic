@@ -50,8 +50,6 @@ const reminderButton: Record<ReminderAction, string> = {
   resend: "Reenviar lembrete",
   resend_unanswered: "Reenviar lembrete",
 };
-// O paciente fala por si no WhatsApp (sem responsável).
-const selfLabel = vocabulary.patient === "criança" ? "Própria criança" : "Próprio paciente";
 const LINK_BUTTON = "rounded-md border px-2.5 py-1 text-xs font-semibold";
 const status = statusBadge[a.status];
 const canJoinWaitlist = waitlistOn && isActive && !isPast && a.seriesId === null;
@@ -75,7 +73,8 @@ const canJoinWaitlist = waitlistOn && isActive && !isPast && a.seriesId === null
       {compact && status && <Badge variant={status.variant}>{status.label}</Badge>}
     </p>
     <p class="mt-0.5 text-slate-500">
-      {a.isContactSelf ? selfLabel : `${capitalize(vocabulary.contact)}: ${a.contactName}`} · <PhoneLinks phone={a.contactPhone} plain class="text-sky-700" />
+      {!a.isContactSelf && `${capitalize(vocabulary.contact)}: ${a.contactName} · `}
+      <PhoneLinks phone={a.contactPhone} plain class="text-slate-600" />
     </p>
     {
       !compact && (
@@ -161,19 +160,16 @@ const canJoinWaitlist = waitlistOn && isActive && !isPast && a.seriesId === null
 
     {
       isActive && !isPast && (
-        <div class="mt-3 flex gap-2">
-          <a
-            href={`/admin/agenda/remarcar?id=${a.id}&return_to=${encodeURIComponent(returnTo)}`}
-            class="flex-1 rounded-md border border-sky-300 px-3 py-2 text-center text-xs font-semibold text-sky-700 hover:bg-sky-50"
-          >
+        <div class="mt-3 flex flex-wrap gap-2">
+          <a href={`/admin/agenda/remarcar?id=${a.id}&return_to=${encodeURIComponent(returnTo)}`} class={`${LINK_BUTTON} border-sky-300 text-sky-700 hover:bg-sky-50`}>
             Remarcar
           </a>
-          <form method="POST" action={action} class="flex-1">
+          <form method="POST" action={action}>
             <input type="hidden" name="acao" value="cancelar" />
             <input type="hidden" name="return_to" value={returnTo} />
             <button
               type="submit"
-              class="js-confirm-delete w-full rounded-md border border-red-300 px-3 py-2 text-xs font-semibold text-red-700 hover:bg-red-50"
+              class={`${LINK_BUTTON} js-confirm-delete border-red-300 text-red-700 hover:bg-red-50`}
               data-confirm-title="Cancelar o atendimento?"
               data-confirm-message={`${a.patientName}, ${formatInstant(a.scheduledAt, timeZone, "dd/MM 'às' HH:mm")}. O horário fica livre de novo.`}
               data-confirm-label="Cancelar atendimento"

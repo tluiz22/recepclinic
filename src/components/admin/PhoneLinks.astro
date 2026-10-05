@@ -1,7 +1,9 @@
 ---
 // Telefone do admin com o atalho para o WhatsApp ao lado (Fase 23, pedido do
-// cliente): o número liga (`tel:`) e o botão abre a conversa no WhatsApp do
-// aparelho de quem está usando o painel.
+// cliente): o botão abre a conversa no WhatsApp do aparelho de quem está
+// usando o painel. O número é texto simples, sem link de ligação (cliente,
+// 05/out/2026: tudo se resolve pelo WhatsApp; no computador o `tel:` abria
+// outro aplicativo e atrapalhava copiar o número).
 import { formatPhoneBR, whatsappHref } from "../../lib/phone";
 
 interface Props {
@@ -15,12 +17,7 @@ const { phone, plain = false, class: className = "" } = Astro.props;
 ---
 
 <span class={`inline-flex flex-wrap items-center gap-x-2 gap-y-1 ${className}`}>
-  <a
-    href={`tel:${phone}`}
-    class={plain ? "hover:text-sky-700 hover:underline" : "font-semibold text-sky-700 underline"}
-  >
-    {formatPhoneBR(phone)}
-  </a>
+  <span class={plain ? "" : "font-semibold text-slate-900"}>{formatPhoneBR(phone)}</span>
   <a
     href={whatsappHref(phone)}
     target="_blank"
