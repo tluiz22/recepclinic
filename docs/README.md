@@ -33,7 +33,8 @@
 >     alerta de envios; achado 5 resolvido). **F3 concluída** (achados 1–5 da F1 resolvidos).
 >     **F4 em andamento** (painel), dividida em nove partes (cliente,
 >     05/out; ver o plano). **F4.1 concluída** (login, convite e senha, escolha de clínica,
->     vocabulário, tela inicial). **Próxima: F4.2** (matriz de acesso).
+>     vocabulário, tela inicial). **F4.2 concluída** (tela da matriz de acesso). **Próxima: F4.3**
+>     (Configurações I).
 >     Para rodar o banco: abrir o OrbStack, `npm run db:start`, `npm run db:reset` (carrega os
 >     dados de teste) e `npm run test:db`.
 > - **Frente paralela, o site** `www.recepclinic.com.br`: [`site-plano.md`](site-plano.md), etapas

@@ -6,9 +6,11 @@ import { canAccessArea, roleLabel as describeRoles } from "../lib/clinicAccess";
 
 interface Props {
   title: string;
+  /** Tela da administração do sistema (só o Suporte, sem clínica ativa). */
+  platform?: boolean;
 }
 
-const { title } = Astro.props;
+const { title, platform = false } = Astro.props;
 
 // Os 4 primeiros são a barra inferior de abas no celular (uso frequente,
 // toque de um dedo só); Configurações/Relatórios ficam dentro de "Mais" —
@@ -35,6 +37,10 @@ const moreNavItems: { label: string; href: string; icon: IconName }[] = [
     : []),
   ...(canAccessArea(access, "metrics")
     ? [{ label: "Métricas", href: "/admin/metricas", icon: "funnel" as IconName }]
+    : []),
+  // Administração do sistema (F4.2): só o Suporte.
+  ...(platform || clinic?.isPlatformStaff
+    ? [{ label: "Matriz de acesso", href: "/admin/sistema/matriz", icon: "shield" as IconName }]
     : []),
 ];
 
@@ -107,11 +113,11 @@ const isMoreActive = moreNavItems.some((item) => isActive(item.href));
         <div class="min-w-0">
           <span class="block text-xs font-semibold uppercase tracking-wide text-sky-700">RecepClinic</span>
           <span class="block truncate text-sm font-medium text-slate-900">
-            {clinic?.clinicName}
+            {platform ? "Administração do sistema" : clinic?.clinicName}
             {
-              clinic?.canSwitchClinic && (
+              (platform || clinic?.canSwitchClinic) && (
                 <a href="/admin/escolher-clinica" class="ml-2 text-xs font-normal text-sky-700 hover:underline">
-                  Trocar
+                  {platform ? "Abrir uma clínica" : "Trocar"}
                 </a>
               )
             }
@@ -133,7 +139,7 @@ const isMoreActive = moreNavItems.some((item) => isActive(item.href));
 
         <div class="flex items-center gap-3">
           <span class="rounded-full bg-sky-50 px-2.5 py-1 text-xs font-medium text-sky-700">
-            {roleLabel}
+            {platform ? "Suporte RecepClinic" : roleLabel}
           </span>
           <form method="POST" action="/api/admin/auth/logout">
             <button

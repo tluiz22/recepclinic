@@ -53,6 +53,17 @@ export const FEATURES: readonly Feature[] = [
 
 const BY_KEY = new Map(FEATURES.map((feature) => [feature.key, feature]));
 
+export const AREA_LABELS: Record<FeatureArea, string> = { agenda: "Agenda", whatsapp: "WhatsApp", metrics: "Métricas" };
+
+export function featureLabel(key: FeatureKey): string {
+  return BY_KEY.get(key)?.label ?? key;
+}
+
+/** Itens marcados num formulário (valores desconhecidos ou repetidos saem). */
+export function parseFeatureSelection(values: readonly string[]): FeatureKey[] {
+  return FEATURES.map((feature) => feature.key).filter((key) => values.includes(key));
+}
+
 export function isFeatureKey(value: string): value is FeatureKey {
   return BY_KEY.has(value as FeatureKey);
 }

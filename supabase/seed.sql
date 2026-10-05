@@ -85,7 +85,7 @@ begin
     );
   end loop;
 
-  insert into public.platform_staff (user_id) values (u_support);
+  insert into public.platform_staff (user_id, display_name) values (u_support, 'Suporte Local');
 
   -- -------------------------------------------------------------------------
   -- Clínica A: Clínica Exemplo Saúde (perfil Mista, vários profissionais)

@@ -1,6 +1,7 @@
 import { defineMiddleware } from "astro:middleware";
 import { ACTIVE_CLINIC_COOKIE, activeClinicCookieOptions, canAccessPath } from "./lib/clinicAccess";
 import { createUserClient } from "./lib/data/clients";
+import { isPlatformStaff } from "./lib/data/clinicChoice";
 import { loadClinicContext, logPlatformAccess } from "./lib/data/clinicContext";
 import { platformEnv } from "./lib/env";
 
@@ -25,6 +26,11 @@ const PATHS_WITHOUT_CLINIC = new Set([
   "/admin/nova-senha",
   "/api/admin/auth/nova-senha",
 ]);
+
+// Administração do sistema (F4.2, matriz de acesso): só o Suporte, sem
+// clínica ativa (vale para todas).
+const PLATFORM_PREFIXES = ["/admin/sistema", "/api/admin/sistema"];
+const isPlatformPath = (pathname: string) => PLATFORM_PREFIXES.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`));
 
 const json = (status: number, body: Record<string, string>) =>
   new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } });
@@ -63,6 +69,18 @@ export const onRequest = defineMiddleware(async (context, next) => {
   context.locals.userId = user.id;
 
   if (PATHS_WITHOUT_CLINIC.has(url.pathname)) {
+    return next();
+  }
+
+  if (isPlatformPath(url.pathname)) {
+    let staff = false;
+    try {
+      staff = await isPlatformStaff(db, user.id);
+    } catch (error) {
+      console.error(error);
+      return isApi ? json(500, { error: "context_unavailable" }) : new Response("Erro ao abrir o painel.", { status: 500 });
+    }
+    if (!staff) return isApi ? json(403, { error: "forbidden" }) : redirect("/admin/dashboard?aviso=acesso_negado");
     return next();
   }
 

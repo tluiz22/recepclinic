@@ -494,6 +494,17 @@ Vocabulário pelo perfil da clínica.
   confirmada" conta os lembretes de hoje sem botão tocado. **Ao criar o projeto na nuvem:** desligar
   o cadastro público, apontar o endereço do site para o painel e copiar os dois modelos de e-mail.
   As outras telas continuam no código antigo até a sua parte. 4 testes unitários e 6 de banco novos.
+- **F4.2 — concluída em 05/out.** Tela da matriz de acesso do Administrador do sistema
+  (`/admin/sistema/matriz`): lista das clínicas com quantos itens cada uma tem, itens por área
+  (Agenda, WhatsApp, Métricas) com a dependência de cada um, quem liberou e quando, e o histórico
+  de mudanças com o nome de quem mudou; marcar um item marca o de que ele depende e desmarcar
+  desmarca os que dependem dele (o servidor confere de novo e não salva nada se faltar
+  dependência). As telas `/admin/sistema` são só do Suporte, sem clínica ativa (o middleware
+  confere; o banco confere de novo). "Matriz de acesso" no menu do Suporte e na escolha da clínica.
+  Migração `20261005160000`: nome de cada pessoa do Suporte (`platform_staff.display_name`, gravado
+  pela plataforma). Padrões assumidos (revisáveis): abrir a lista de clínicas da matriz não fica no
+  registro de leituras do Suporte (as mudanças ficam no registro de alterações); item liberado sem
+  pessoa aparece "pela plataforma". 2 testes unitários e 2 de banco novos.
 
 ## F5 — Páginas públicas e domínio
 

@@ -82,6 +82,12 @@ export async function listFeatureChanges(db: DbClient, clinicId: string, limit =
   });
 }
 
+/** Nome de cada pessoa do Suporte (quem liberou e quem mudou, na tela da matriz). */
+export async function listPlatformStaffNames(db: DbClient): Promise<Map<string, string>> {
+  const rows = unwrap(await db.from("platform_staff").select("user_id, display_name"), "Suporte");
+  return new Map(rows.map((row) => [row.user_id, row.display_name]));
+}
+
 /** Agendas do próprio profissional (métricas pessoais, D11): as ligadas ao login dele. */
 export async function ownAgendaIds(db: DbClient, clinicId: string, userId: string): Promise<string[]> {
   const rows = unwrap(
