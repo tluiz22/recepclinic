@@ -23,6 +23,7 @@ import {
   getNextAvailableDates,
   getNextAvailableDatesAnyAgenda,
 } from "../../../lib/data/agenda/slots";
+import { findReturnOrigin, returnWarnings } from "../../../lib/data/agenda/appointments";
 import { listAgendas } from "../../../lib/data/config/agendas";
 import { getClinicSettings } from "../../../lib/data/config/clinic";
 import { listLocations } from "../../../lib/data/config/locations";
@@ -120,6 +121,21 @@ if (service && searchAgendas.length) {
   }
 }
 
+// Retorno (Fase 17; cliente, 05/out/2026): a consulta de origem é a última já
+// iniciada na mesma agenda. No painel os avisos não impedem (a secretária
+// decide); o bot impede. Mostrados antes de marcar, como no piloto.
+const returnNotes =
+  patient && service?.category === "return_visit"
+    ? await Promise.all(
+        searchAgendas.map(async (agendaId) => {
+          const origin = await findReturnOrigin(db, clinic.clinicId, { patientId: patient.id, agendaId, returnServiceId: service.id });
+          const warnings = returnWarnings(origin, today);
+          const br = (d: string) => d.split("-").reverse().join("/");
+          const info = origin && !warnings.length ? `Retorno da consulta de ${br(origin.date)}${origin.lastDate ? `, até ${br(origin.lastDate)}` : ""}.` : null;
+          return { agenda: searchAgendas.length > 1 ? agendaName.get(agendaId) : null, info, warnings };
+        }),
+      )
+    : [];
 const ageWarning =
   patient && service?.category === "consultation" && settings.consultationAgeLimitYears !== null &&
   isOverConsultationAgeLimit(patient.birthdate, today, settings.consultationAgeLimitYears)
@@ -210,6 +226,14 @@ const chip = (active: boolean) =>
       </form>
       {service && serviceAgendaIds.length === 0 && <p class="mt-2 text-sm text-amber-700">Nenhuma agenda que você vê atende este serviço.</p>}
       {ageWarning && <p class="mt-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">{ageWarning}</p>}
+      {returnNotes.map((note) => (
+        <div class={`mt-2 rounded-lg border px-3 py-2 text-sm ${note.warnings.length ? "border-amber-200 bg-amber-50 text-amber-800" : "border-emerald-200 bg-emerald-50 text-emerald-800"}`}>
+          {note.agenda && <p class="font-medium">{note.agenda}</p>}
+          {note.info && <p>{note.info}</p>}
+          {note.warnings.map((w) => <p>{w}</p>)}
+          {note.warnings.length > 0 && <p class="mt-1 text-xs">Dá para marcar mesmo assim (pelo WhatsApp, o paciente não conseguiria).</p>}
+        </div>
+      ))}
     </Card>
 
     {

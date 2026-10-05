@@ -651,6 +651,15 @@ Vocabulário pelo perfil da clínica.
   O cartão do bloqueio no Dia deixa de ficar apagado: aparece como um atendimento ativo, com o
   selo "Bloqueio" escuro e em destaque (cliente, 05/out). O cartão do **retorno** mostra a consulta
   de origem ("Retorno da consulta de 12/10/2026 (cancelada)", ou "sem consulta de origem").
+  **Regra do retorno (cliente, 05/out):** todo retorno é de uma consulta **que já começou**: a
+  marcação do retorno é na data e hora de início da consulta de origem ou depois, e do mesmo
+  paciente (o sistema já ligava o retorno à última consulta passada na mesma agenda; agora o banco
+  também recusa o contrário, migração `20261005230000`). **O bot impede** o retorno sem consulta de
+  origem, fora do prazo, de consulta domiciliar ou já usado; **no painel, a secretária pode marcar**
+  com o aviso, que agora aparece **antes** de marcar, no Marcar (como no piloto). Com a regra, um
+  retorno não fica ligado a uma consulta cancelada (consulta passada não se cancela pela Agenda).
+  Dados de teste: o retorno do João passa a ser de uma consulta realizada 2 semanas antes (antes
+  estava ligado a uma consulta futura, o que confundiu na validação). 1 teste de banco novo.
 - **F4.5 — Agenda I:** dia, semana e mês com a escolha da agenda; marcar, remarcar, cancelar;
   presença e comparecimento; lembrete e preparo; lista de espera.
 - **F4.6 — Agenda II:** bloqueios, cancelamento do dia com link de remarcação, séries (D9).

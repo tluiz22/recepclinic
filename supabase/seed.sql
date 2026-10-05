@@ -46,7 +46,7 @@ declare
   ct_maria uuid; ct_carlos uuid; ct_julia uuid;
   pt_joao uuid; pt_ana uuid; pt_carlos uuid; pt_julia uuid;
   ser_psi uuid;
-  ap_first uuid; ap_waiting uuid; ap_canceled uuid; ap_session uuid;
+  ap_first uuid; ap_past uuid; ap_waiting uuid; ap_canceled uuid; ap_session uuid;
   e_waiting uuid; op_id uuid;
   v_secret uuid;
   -- Clínica B
@@ -211,8 +211,13 @@ begin
   insert into public.appointments (clinic_id, patient_id, service_id, agenda_id, location_id, scheduled_at, duration_minutes, booking_channel, status)
     values (c_a, pt_joao, s_consulta, ag_ped, l_office, (monday + time '08:00') at time zone tz, 30, 'whatsapp_bot', 'confirmed')
     returning id into ap_first;
+  -- Retorno de uma consulta que já aconteceu (2 semanas antes, compareceu): todo
+  -- retorno é de uma consulta já iniciada (cliente, 05/out/2026).
+  insert into public.appointments (clinic_id, patient_id, service_id, agenda_id, location_id, scheduled_at, duration_minutes, booking_channel, status)
+    values (c_a, pt_joao, s_consulta, ag_ped, l_office, (monday - 14 + time '09:00') at time zone tz, 30, 'admin', 'completed')
+    returning id into ap_past;
   insert into public.appointments (clinic_id, patient_id, service_id, agenda_id, location_id, scheduled_at, duration_minutes, booking_channel, origin_appointment_id)
-    values (c_a, pt_joao, s_retorno, ag_ped, l_office, (monday + 14 + time '10:00') at time zone tz, 20, 'admin', ap_first);
+    values (c_a, pt_joao, s_retorno, ag_ped, l_office, (monday + 14 + time '10:00') at time zone tz, 20, 'admin', ap_past);
   insert into public.appointments (clinic_id, patient_id, service_id, agenda_id, location_id, scheduled_at, duration_minutes, booking_channel, home_visit_address)
     values (c_a, pt_ana, s_consulta, ag_ped, l_home, (monday + 4 + time '14:00') at time zone tz, 30, 'whatsapp_bot', 'Rua A, 10 – Nova Betânia');
   insert into public.appointments (clinic_id, patient_id, service_id, agenda_id, location_id, scheduled_at, duration_minutes, booking_channel)

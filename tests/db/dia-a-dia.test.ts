@@ -80,3 +80,28 @@ it("a registrar e registradas", async () => {
   expect(recorded.total).toBeGreaterThan(0);
   void ids;
 });
+
+describe("retorno só de consulta já iniciada (cliente, 05/out)", () => {
+  it("o banco recusa retorno antes do início da consulta de origem ou de outro paciente", async () => {
+    const { clinicId, ids } = fixture;
+    const consult = await book(ids.p3, ids.consulta, ids.agendaDra, MON2, "10:00");
+    const insertReturn = (patientId: string, date: string, time: string) =>
+      adminClient().from("appointments").insert({
+        clinic_id: clinicId,
+        patient_id: patientId,
+        service_id: ids.retorno,
+        agenda_id: ids.agendaDra,
+        location_id: ids.office,
+        scheduled_at: at(date, time).toISOString(),
+        duration_minutes: 20,
+        booking_channel: "admin",
+        origin_appointment_id: consult.appointment.id,
+      });
+    const before = await insertReturn(ids.p3, MON1, "10:00");
+    expect(before.error?.message).toBe("O retorno precisa ser depois do início da consulta de origem.");
+    const otherPatient = await insertReturn(ids.p2, "2031-03-31", "10:00");
+    expect(otherPatient.error?.message).toBe("O retorno precisa ser de uma consulta do mesmo paciente.");
+    const ok = await insertReturn(ids.p3, "2031-03-31", "10:00");
+    expect(ok.error).toBeNull();
+  });
+});
