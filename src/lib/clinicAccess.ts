@@ -47,6 +47,16 @@ export type ClinicContext = {
   canSwitchClinic: boolean;
 };
 
+/**
+ * Pedido de navegação do navegador (página ou envio de formulário), que espera
+ * uma página de volta, e não chamada por código (fetch), que espera JSON. Erro
+ * de acesso numa rota /api vira redirecionamento com aviso, e não JSON cru na
+ * tela (F4.2).
+ */
+export function expectsPage(request: Request): boolean {
+  return (request.headers.get("accept") ?? "").includes("text/html");
+}
+
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export function isUuid(value: string | null | undefined): value is string {

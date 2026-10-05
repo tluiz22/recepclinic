@@ -1,5 +1,5 @@
 import { defineMiddleware } from "astro:middleware";
-import { ACTIVE_CLINIC_COOKIE, activeClinicCookieOptions, canAccessPath } from "./lib/clinicAccess";
+import { ACTIVE_CLINIC_COOKIE, activeClinicCookieOptions, canAccessPath, expectsPage } from "./lib/clinicAccess";
 import { createUserClient } from "./lib/data/clients";
 import { isPlatformStaff } from "./lib/data/clinicChoice";
 import { loadClinicContext, logPlatformAccess } from "./lib/data/clinicContext";
@@ -53,7 +53,9 @@ export const onRequest = defineMiddleware(async (context, next) => {
   if (!isAdminPath || PUBLIC_ADMIN_PATHS.has(url.pathname)) {
     return next();
   }
-  const isApi = url.pathname.startsWith("/api/");
+  // Formulário enviado pelo navegador a uma rota /api: os erros de acesso
+  // levam a uma página com aviso, como nas telas.
+  const isApi = url.pathname.startsWith("/api/") && !expectsPage(request);
 
   const db = createUserClient(request, cookies);
   const {

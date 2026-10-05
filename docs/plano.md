@@ -505,6 +505,10 @@ Vocabulário pelo perfil da clínica.
   pela plataforma). Padrões assumidos (revisáveis): abrir a lista de clínicas da matriz não fica no
   registro de leituras do Suporte (as mudanças ficam no registro de alterações); item liberado sem
   pessoa aparece "pela plataforma". 2 testes unitários e 2 de banco novos.
+  **Ajuste depois da validação (05/out):** erro de acesso numa rota `/api` enviada por formulário
+  do navegador (ex.: salvar a matriz depois de entrar com outro login em outra aba) passa a levar
+  ao Início com o aviso, ou ao login sem sessão, em vez de mostrar `{"error":"forbidden"}`; chamadas
+  por código continuam recebendo JSON (`expectsPage`).
 
 ## F5 — Páginas públicas e domínio
 

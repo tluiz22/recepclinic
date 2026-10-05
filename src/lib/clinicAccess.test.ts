@@ -4,6 +4,7 @@ import {
   areaOfPath,
   canAccessArea,
   chooseActiveClinic,
+  expectsPage,
   hasRole,
   isUuid,
   roleLabel,
@@ -145,5 +146,16 @@ describe("papéis e áreas do painel (D6)", () => {
     expect(roleLabel(support)).toBe("Suporte RecepClinic");
     expect(roleLabel({ roles: ["admin"], isPlatformStaff: true })).toBe("Administrador");
     expect(roleLabel(as())).toBe("Sem papel");
+  });
+});
+
+describe("expectsPage", () => {
+  const request = (accept: string | null) => new Request("http://localhost/api/admin/x", { headers: accept ? { accept } : {} });
+
+  it("formulário do navegador espera página; chamada por código, JSON", () => {
+    expect(expectsPage(request("text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"))).toBe(true);
+    expect(expectsPage(request("*/*"))).toBe(false);
+    expect(expectsPage(request("application/json"))).toBe(false);
+    expect(expectsPage(request(null))).toBe(false);
   });
 });
