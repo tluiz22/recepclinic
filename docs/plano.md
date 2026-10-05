@@ -423,6 +423,28 @@ novo não tem). Etapas (cada uma com `npm test`, `test:db`, `check`, `build` e C
   motivo "WhatsApp desconectado"); o "sem telefone" do piloto sumiu (o contato sempre tem
   telefone); o reenvio automático usa as mesmas condições de envio. 15 testes unitários e 13 de
   banco novos.
+- **F3.9c — concluída em 05/out.** `src/lib/data/whatsapp/dailySummary.ts`: resumo do dia por
+  clínica, com a véspera às 18h e o do dia 1h antes do início (primeira janela do público ou
+  primeiro atendimento; sem janela ou em feriado nacional ou da clínica, 6h30), novo envio quando
+  entra atendimento antes do horário avisado, lista vazia não envia, sem template aprovado fica
+  como "não enviado". **Decisões do cliente (05/out, D2 revista):** além dos contatos do resumo
+  (clínica inteira, consultas e exames, com o **nome da agenda em cada item** quando a lista tem
+  mais de uma agenda), **cada profissional recebe o resumo dos próprios atendimentos** no telefone
+  do cadastro, se marcar "Recebe o resumo do dia", **com o horário pela agenda dele** e também
+  separado em consultas e exames. **Achado 5 da F1 resolvido** (cliente): o resumo do dia
+  **nunca sai antes da 0h** do próprio dia e a tela mostra "0h" (antes, "23h30" sem dizer que era a
+  véspera), na camada nova e nas funções herdadas. `src/lib/data/sends.ts`: execuções das rotinas
+  (`job_runs`, com "travada" depois de 15 minutos), atendimentos com envio com falha (regra do
+  piloto) e o alerta do painel pela hora do lembrete e o fuso da clínica; `jobRuns.ts` grava as
+  execuções. Cadastro do profissional com telefone e a opção do resumo (`config/professionals.ts`).
+  Migração `20261005150000`: telefone e opção no profissional (a opção exige o item "Envio do
+  resumo do dia"), público (profissional) e envio (véspera ou do dia) no registro dos resumos.
+  Padrões assumidos (revisáveis): o feriado da clínica também usa a reserva das 6h30 (no piloto, só
+  o nacional); janela geral de uma agenda conta para os tipos de serviço que a agenda atende; agenda
+  de recurso (ex.: "Exames") só vai na lista geral; o da véspera também fica registrado (no piloto
+  era chamado uma vez às 18h em ponto; com várias clínicas, o agendador passa de tempos em tempos);
+  sem conexão, o resumo não roda. 14 testes unitários e 10 de banco novos. **F3.9 concluída. F3
+  concluída.**
 
 **Cuidado registrado na F2.5:** num insert de várias linhas, o `supabase-js` manda `null` nas
 colunas ausentes de alguma linha, e o valor padrão do banco não é aplicado (ex.: `details` da

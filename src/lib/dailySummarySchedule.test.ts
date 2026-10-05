@@ -44,6 +44,10 @@ describe("computeSummarySendAt", () => {
     expect(localTime(computeSummarySendAt(day, null, local(day, "07:00")))).toBe("06:00");
   });
 
+  it("nunca antes da 0h do próprio dia", () => {
+    expect(computeSummarySendAt(day, "00:30", local(day, "00:30")).getTime()).toBe(local(day, "00:00").getTime());
+  });
+
   it("feriado ignora a janela e usa a reserva das 6h30", () => {
     const holiday = "2026-10-12";
     expect(localTime(computeSummarySendAt(holiday, "08:00", local(holiday, "14:00")))).toBe("06:30");
@@ -65,9 +69,9 @@ describe("describeSummarySchedule", () => {
     expect(describeSummarySchedule(["09:00", null, null, null, null, null, "10:15"])).toBe("dom 8h · sáb 9h15");
   });
 
-  // Comportamento atual registrado como está: janela antes de 1h da manhã
-  // mostra o horário da véspera sem dizer que é a véspera.
-  it("janela à 0h30 aparece como 23h30 (comportamento atual)", () => {
-    expect(describeSummarySchedule([null, "00:30", null, null, null, null, null])).toBe("seg 23h30");
+  // Achado 5 da F1, corrigido na F3.9c (cliente, 05/out): nunca antes da 0h do próprio dia.
+  it("janela antes de 1h aparece como 0h", () => {
+    expect(describeSummarySchedule([null, "00:30", null, null, null, null, null])).toBe("seg 0h");
+    expect(describeSummarySchedule([null, null, "01:15", null, null, null, null])).toBe("ter 0h15");
   });
 });

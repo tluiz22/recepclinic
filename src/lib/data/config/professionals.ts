@@ -1,8 +1,11 @@
+import { normalizePhone } from "../../phone";
 import type { DbClient } from "../clients";
 import { cleanText, unwrap, unwrapOne, Validation } from "../errors";
 
 // Profissionais (D4b: genérico — médico, dentista, psicólogo…). Saem por
-// desativação, nunca apagados: têm agenda e atendimentos ligados.
+// desativação, nunca apagados: têm agenda e atendimentos ligados. Com
+// telefone e a opção marcada, o profissional recebe o resumo do dia dos
+// próprios atendimentos (D2 revista, 05/out/2026; item do resumo do dia, D11).
 
 export type Professional = {
   id: string;
@@ -14,12 +17,18 @@ export type Professional = {
   council: string | null;
   councilNumber: string | null;
   councilState: string | null;
+  /** WhatsApp do profissional (E.164), para o resumo do dia. */
+  phone: string | null;
+  receivesDailySummary: boolean;
   isActive: boolean;
 };
 
-export type ProfessionalInput = Omit<Professional, "id" | "isActive">;
+/** Telefone e resumo são opcionais: ausentes, ficam como estão (vazio na criação). */
+export type ProfessionalInput = Omit<Professional, "id" | "isActive" | "phone" | "receivesDailySummary"> &
+  Partial<Pick<Professional, "phone" | "receivesDailySummary">>;
 
-const COLUMNS = "id, user_id, display_name, profession, specialty, council, council_number, council_state, is_active";
+const COLUMNS =
+  "id, user_id, display_name, profession, specialty, council, council_number, council_state, phone, receives_daily_summary, is_active";
 
 type Row = {
   id: string;
@@ -30,6 +39,8 @@ type Row = {
   council: string | null;
   council_number: string | null;
   council_state: string | null;
+  phone: string | null;
+  receives_daily_summary: boolean;
   is_active: boolean;
 };
 
@@ -42,6 +53,8 @@ const toProfessional = (row: Row): Professional => ({
   council: row.council,
   councilNumber: row.council_number,
   councilState: row.council_state,
+  phone: row.phone,
+  receivesDailySummary: row.receives_daily_summary,
   isActive: row.is_active,
 });
 
@@ -59,8 +72,19 @@ export function validateProfessional(input: ProfessionalInput) {
   v.check(row.display_name.length > 0, "displayName", "Informe o nome");
   v.check(row.profession.length > 0, "profession", "Informe a profissão");
   v.check(row.council_state === null || /^[A-Z]{2}$/.test(row.council_state), "councilState", "UF com 2 letras");
+  const contact: { phone?: string | null; receives_daily_summary?: boolean } = {};
+  if (input.phone !== undefined) {
+    const raw = cleanText(input.phone);
+    contact.phone = raw === null ? null : normalizePhone(raw);
+    v.check(raw === null || contact.phone !== null, "phone", "Telefone inválido");
+  }
+  if (input.receivesDailySummary !== undefined) {
+    contact.receives_daily_summary = input.receivesDailySummary;
+    // Sem telefone informado agora, vale o que já está gravado (o banco confere).
+    v.check(!input.receivesDailySummary || contact.phone !== null, "phone", "Informe o telefone para receber o resumo do dia");
+  }
   v.throwIfInvalid("Profissional");
-  return row;
+  return { ...row, ...contact };
 }
 
 export async function listProfessionals(

@@ -70,15 +70,17 @@ export function computeSummarySendAt(
   const base = usableWindow
     ? new Date(`${isoDate}T${usableWindow}:00-03:00`).getTime() - leadMs
     : new Date(`${isoDate}T${SUMMARY_FALLBACK_TIME}:00-03:00`).getTime();
-  return new Date(Math.min(base, beforeFirst));
+  // Nunca antes da 0h do próprio dia (achado 5 da F1, cliente, 05/out/2026).
+  const dayStart = new Date(`${isoDate}T00:00:00-03:00`).getTime();
+  return new Date(Math.max(dayStart, Math.min(base, beforeFirst)));
 }
 
-/** "13:00" → "12h"; "13:30" → "12h30" (1h antes da janela). */
+/** "13:00" → "12h"; "13:30" → "12h30" (1h antes da janela); antes de 1h → "0h". */
 function formatLeadTime(windowStart: string): string {
   const [hours, minutes] = windowStart.split(":").map(Number);
-  const total = hours * 60 + minutes - SUMMARY_LEAD_MINUTES;
-  const h = Math.floor(((total % 1440) + 1440) % 1440 / 60);
-  const m = ((total % 60) + 60) % 60;
+  const total = Math.max(0, hours * 60 + minutes - SUMMARY_LEAD_MINUTES);
+  const h = Math.floor(total / 60);
+  const m = total % 60;
   return m === 0 ? `${h}h` : `${h}h${String(m).padStart(2, "0")}`;
 }
 

@@ -473,13 +473,13 @@ isOneToOne: false
                   ]
                 },"daily_summary_sends": {
                   Row: {
-                    "clinic_id": string,"first_scheduled_at": string,"id": number,"kind": string,"sent_at": string,"summary_date": string
+                    "clinic_id": string,"first_scheduled_at": string,"id": number,"kind": string,"professional_id": string | null,"sent_at": string,"summary_date": string,"variant": string
                   }
                   Insert: {
-                    "clinic_id": string,"first_scheduled_at": string,"id"?: never,"kind": string,"sent_at"?: string,"summary_date": string
+                    "clinic_id": string,"first_scheduled_at": string,"id"?: never,"kind": string,"professional_id"?: string | null,"sent_at"?: string,"summary_date": string,"variant"?: string
                   }
                   Update: {
-                    "clinic_id"?: string,"first_scheduled_at"?: string,"id"?: never,"kind"?: string,"sent_at"?: string,"summary_date"?: string
+                    "clinic_id"?: string,"first_scheduled_at"?: string,"id"?: never,"kind"?: string,"professional_id"?: string | null,"sent_at"?: string,"summary_date"?: string,"variant"?: string
                   }
                   Relationships: [
                     {
@@ -488,6 +488,12 @@ isOneToOne: false
 isOneToOne: false
       referencedRelation: "clinics"
       referencedColumns: ["id"]
+    },{
+      foreignKeyName: "daily_summary_sends_professional_fk"
+      columns: ["clinic_id","professional_id"]
+isOneToOne: false
+      referencedRelation: "professionals"
+      referencedColumns: ["clinic_id","id"]
     }
                   ]
                 },"features": {
@@ -713,13 +719,13 @@ isOneToOne: false
                   ]
                 },"professionals": {
                   Row: {
-                    "clinic_id": string,"council": string | null,"council_number": string | null,"council_state": string | null,"created_at": string,"display_name": string,"id": string,"is_active": boolean,"profession": string,"specialty": string | null,"updated_at": string,"user_id": string | null
+                    "clinic_id": string,"council": string | null,"council_number": string | null,"council_state": string | null,"created_at": string,"display_name": string,"id": string,"is_active": boolean,"phone": string | null,"profession": string,"receives_daily_summary": boolean,"specialty": string | null,"updated_at": string,"user_id": string | null
                   }
                   Insert: {
-                    "clinic_id": string,"council"?: string | null,"council_number"?: string | null,"council_state"?: string | null,"created_at"?: string,"display_name": string,"id"?: string,"is_active"?: boolean,"profession": string,"specialty"?: string | null,"updated_at"?: string,"user_id"?: string | null
+                    "clinic_id": string,"council"?: string | null,"council_number"?: string | null,"council_state"?: string | null,"created_at"?: string,"display_name": string,"id"?: string,"is_active"?: boolean,"phone"?: string | null,"profession": string,"receives_daily_summary"?: boolean,"specialty"?: string | null,"updated_at"?: string,"user_id"?: string | null
                   }
                   Update: {
-                    "clinic_id"?: string,"council"?: string | null,"council_number"?: string | null,"council_state"?: string | null,"created_at"?: string,"display_name"?: string,"id"?: string,"is_active"?: boolean,"profession"?: string,"specialty"?: string | null,"updated_at"?: string,"user_id"?: string | null
+                    "clinic_id"?: string,"council"?: string | null,"council_number"?: string | null,"council_state"?: string | null,"created_at"?: string,"display_name"?: string,"id"?: string,"is_active"?: boolean,"phone"?: string | null,"profession"?: string,"receives_daily_summary"?: boolean,"specialty"?: string | null,"updated_at"?: string,"user_id"?: string | null
                   }
                   Relationships: [
                     {

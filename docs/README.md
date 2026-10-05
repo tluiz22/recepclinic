@@ -11,7 +11,7 @@
 >   - **F2 concluída**: schema multi-clínica em 7 migrações (D2 e D6 revistas, D9 recorrência, D10
 >     convênios só no banco); dados de teste locais com logins no README da raiz; 158 testes de
 >     banco no CI, com varredura de isolamento automática.
->   - **F3 em andamento** (acesso ao banco e contexto da clínica): divisão em etapas aprovada em
+>   - **F3 concluída** (acesso ao banco e contexto da clínica): divisão em etapas aprovada em
 >     04/out (F3.1 base técnica, F3.2 contexto da clínica, F3.3 credencial limitada, F3.4–F3.9
 >     acesso por domínio; ver [`plano.md`](plano.md)). As telas só são ligadas ao schema novo na
 >     F4. **F3.1 a F3.8 concluídas** (tipos do banco, variáveis de ambiente, datas com fuso;
@@ -28,8 +28,10 @@
 >     F3.9a WhatsApp, F3.9b lembrete e reenvios, F3.9c resumo do dia e rotinas. **F3.9a concluída**
 >     (conexão, templates, mensagens, janela de 24h, conversa, pausa da recepção pulando fim de
 >     semana e feriados, funil). **F3.9b concluída** (lembrete da véspera, botões e reenvio
->     automático, resposta aos botões, preparo do exame; achado 4 resolvido). **Próxima: F3.9c**
->     (resumo do dia e execuções das rotinas, achado 5).
+>     automático, resposta aos botões, preparo do exame; achado 4 resolvido). **F3.9c concluída**
+>     (resumo do dia também por profissional, decisão de 05/out na D2; execuções das rotinas e
+>     alerta de envios; achado 5 resolvido). **F3 concluída** (achados 1–5 da F1 resolvidos).
+>     **Próxima etapa: F4** (painel), divisão a combinar.
 >     Para rodar o banco: abrir o OrbStack, `npm run db:start`, `npm run db:reset` (carrega os
 >     dados de teste) e `npm run test:db`.
 > - **Frente paralela, o site** `www.recepclinic.com.br`: [`site-plano.md`](site-plano.md), etapas

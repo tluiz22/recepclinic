@@ -44,6 +44,13 @@ todas) e protege contra o maior risco da evolução: 309 consultas espalhadas e 
   agenda não percebe diferença.
 - Escolher o profissional no bot e filtrar telas e métricas por profissional fica para quando uma
   clínica precisar. Nesse momento, não haverá migração de dados.
+- **Resumo do dia (revisto pelo cliente, 05/out/2026):** além dos contatos do resumo, que
+  continuam recebendo a clínica inteira separada em consultas e exames (com o nome da agenda em
+  cada item quando a lista tem mais de uma agenda), **cada profissional pode receber o resumo só
+  dos próprios atendimentos**, no telefone do cadastro do profissional, se marcar a opção
+  "Recebe o resumo do dia". O do profissional segue os mesmos dois envios (véspera às 18h e no
+  dia 1h antes do início), com o início contado **pela agenda dele**, e também separado em
+  consultas e exames. Faz parte do item "Envio do resumo do dia" da matriz (D11).
 
 **Por quê:** mudar o modelo depois, com dados reais, custa caro. O piloto já tem o caso dos exames
 feitos pela secretária, que hoje bloqueiam a agenda da médica sem necessidade. A escolha de
