@@ -463,6 +463,23 @@ profissional a exibir**, D2 revista), **séries recorrentes** (criar, pular conf
 alterar "só esta" ou "esta e as próximas", D9), Pacientes, Resumo do Dia, Métricas, Trilha.
 Vocabulário pelo perfil da clínica.
 
+**Dividida em nove partes (cliente, 05/out),** cada uma com validação:
+- **F4.1 — Base do painel:** login, recuperação de senha, aceite do convite, escolha de clínica
+  (membro de várias e Suporte), menus e abas pelos papéis e itens liberados, vocabulário pelo
+  perfil da clínica, alerta de envios.
+- **F4.2 — Matriz de acesso:** tela do Administrador do sistema (clínica, itens, histórico).
+- **F4.3 — Configurações I:** perfil e identidade, profissionais (telefone e resumo), locais,
+  serviços (preço por local, preparo), agendas.
+- **F4.4 — Configurações II:** dias e horários, feriados extras, contatos do resumo, hora do
+  lembrete, convênios, equipe (convites) e acesso às agendas, situação do WhatsApp.
+- **F4.5 — Agenda I:** dia, semana e mês com a escolha da agenda; marcar, remarcar, cancelar;
+  presença e comparecimento; lembrete e preparo; lista de espera.
+- **F4.6 — Agenda II:** bloqueios, cancelamento do dia com link de remarcação, séries (D9).
+- **F4.7 — Pacientes:** contatos, pacientes, plano de saúde, histórico.
+- **F4.8 — Dia a dia:** Dashboard (resumo do dia), trilha, aba Envios (também para a Recepção).
+- **F4.9 — Métricas e relatórios:** abas pelos itens, escopo do Profissional; retirada do código
+  antigo sem uso.
+
 ## F5 — Páginas públicas e domínio
 
 **Objetivo:** links públicos com a marca da clínica, no endereço do produto.

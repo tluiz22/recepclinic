@@ -31,7 +31,8 @@
 >     automático, resposta aos botões, preparo do exame; achado 4 resolvido). **F3.9c concluída**
 >     (resumo do dia também por profissional, decisão de 05/out na D2; execuções das rotinas e
 >     alerta de envios; achado 5 resolvido). **F3 concluída** (achados 1–5 da F1 resolvidos).
->     **Próxima etapa: F4** (painel), divisão a combinar.
+>     **F4 em andamento** (painel), dividida em nove partes (cliente,
+>     05/out; ver o plano). **Em andamento: F4.1** (base do painel).
 >     Para rodar o banco: abrir o OrbStack, `npm run db:start`, `npm run db:reset` (carrega os
 >     dados de teste) e `npm run test:db`.
 > - **Frente paralela, o site** `www.recepclinic.com.br`: [`site-plano.md`](site-plano.md), etapas
