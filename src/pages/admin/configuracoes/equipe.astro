@@ -1,0 +1,62 @@
+---
+// Configurações › Equipe (F4.4b, D6): quem entra no painel, com os papéis, o
+// acesso às agendas e o convite. Quem tem o papel Profissional precisa estar
+// ligado a um cadastro de profissional (cliente, 05/out/2026).
+import AdminLayout from "../../../layouts/AdminLayout.astro";
+import Badge from "../../../components/admin/Badge.astro";
+import Card from "../../../components/admin/Card.astro";
+import ConfiguracoesTabs from "../../../components/admin/ConfiguracoesTabs.astro";
+import FlashMessage from "../../../components/admin/FlashMessage.astro";
+import { PRIMARY_BUTTON } from "../../../components/admin/fieldStyles";
+import { createUserClient } from "../../../lib/data/clients";
+import { listProfessionals } from "../../../lib/data/config/professionals";
+import { listTeam, ROLE_LABELS } from "../../../lib/data/config/team";
+
+const clinic = Astro.locals.clinic!;
+const db = createUserClient(Astro.request, Astro.cookies);
+const [team, professionals] = await Promise.all([listTeam(db, clinic.clinicId), listProfessionals(db, clinic.clinicId, { includeInactive: true })]);
+const professionalName = new Map(professionals.map((p) => [p.id, p.displayName]));
+---
+
+<AdminLayout title="Equipe">
+  <h1 class="text-2xl font-bold text-slate-900">Configurações</h1>
+  <ConfiguracoesTabs current="equipe" />
+  <FlashMessage />
+
+  <div class="mt-4">
+    <a href="/admin/configuracoes/equipe/novo" class={PRIMARY_BUTTON}>Convidar pessoa</a>
+  </div>
+
+  <ul class="mt-4 grid gap-3 sm:grid-cols-2">
+    {
+      team.map((member) => {
+        const pending = member.invitation && !member.invitation.acceptedAt;
+        const missingLink = member.roles.includes("professional") && !member.professionalId;
+        return (
+          <li>
+            <a href={`/admin/configuracoes/equipe/${member.userId}`}>
+              <Card class="h-full hover:border-sky-300 hover:bg-sky-50">
+                <p class="break-all font-medium text-slate-900">
+                  {member.email ?? "Sem e-mail"} {member.userId === Astro.locals.userId && <span class="text-sm font-normal text-slate-500">(você)</span>}
+                </p>
+                <p class="mt-1 flex flex-wrap gap-1">
+                  {member.roles.map((role) => (
+                    <Badge variant={role === "admin" ? "accent" : "info"}>{ROLE_LABELS[role]}</Badge>
+                  ))}
+                  {pending && <Badge variant="warning">convite pendente</Badge>}
+                  {missingLink && <Badge variant="danger">falta ligar ao profissional</Badge>}
+                </p>
+                <p class="mt-1 text-sm text-slate-600">
+                  {member.professionalId ? `${professionalName.get(member.professionalId) ?? "Profissional"} · ` : ""}
+                  {member.roles.includes("admin") || member.agendaScope === "all"
+                    ? "Todas as agendas"
+                    : `Agendas selecionadas${member.grantedAgendaIds.length ? ` (${member.grantedAgendaIds.length} liberadas)` : ""}`}
+                </p>
+              </Card>
+            </a>
+          </li>
+        );
+      })
+    }
+  </ul>
+</AdminLayout>

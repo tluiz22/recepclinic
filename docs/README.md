@@ -14,12 +14,12 @@
 >       inicial); F4.2 (tela da matriz de acesso, com o **limite de profissionais ativos** por
 >       clínica); F4.3 (Configurações: clínica, profissionais com **RQE**, locais, agendas,
 >       serviços); F4.4a (**Nova clínica** pelo Suporte, convites, **pedido de informações por
->       formulário**, e-mail próprio por SMTP).
->     - **Próxima: F4.4b** (Configurações II: dias e horários, feriados, contatos do resumo, hora do
->       lembrete, convênios, equipe com convites e acesso às agendas, situação do WhatsApp). Depois:
->       F4.5 Agenda I, F4.6 Agenda II, F4.7 Pacientes, F4.8 dia a dia, F4.9 Métricas.
->     - **A validar pelo cliente:** e-mails da F4.4a chegando ao Mailpit (`http://127.0.0.1:54324`)
->       depois de reiniciar o `npm run dev` (o servidor só lê o `.env` ao iniciar).
+>       formulário**, e-mail próprio por SMTP); F4.4b (Configurações II: horários, feriados,
+>       convênios, equipe e WhatsApp, com o lembrete das 7h às 20h e o papel Profissional ligado
+>       ao cadastro).
+>     - **A validar pelo cliente:** F4.4b (comandos na mensagem da etapa).
+>     - **Próxima: F4.5** Agenda I. Depois: F4.6 Agenda II, F4.7 Pacientes, F4.8 dia a dia, F4.9
+>       Métricas.
 >   - **Decidido em 05/out para depois:** aba **"Mensagens"** em Configurações na **F6** (prévia no
 >     balão do WhatsApp; com o item "Mensagens personalizadas", o Administrador edita as mensagens de
 >     conversa e propõe os templates; D3b revista); envio dos templates personalizados pela API na

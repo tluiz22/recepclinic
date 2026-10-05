@@ -282,6 +282,10 @@ riscos (L12, L38).
   como no piloto (cliente, 04/out). O acesso por agenda vale para agendas e atendimentos.
   Descartado: restringir o cadastro pelo acesso às agendas.
 
+**Revisão de 05/out/2026 (cliente): papel Profissional ligado ao cadastro.** Quem tem o papel
+Profissional precisa estar ligado a um cadastro de profissional da clínica (é o que mostra a ele a
+própria agenda); um cadastro, um login. Conferido pela aplicação na tela Equipe (F4.4b).
+
 **Revisão de 05/out/2026 (cliente): matriz de acesso (D11).** O que cada clínica pode usar (telas,
 abas e funções) é liberado pelo Administrador do sistema (o Suporte RecepClinic). Métricas e
 relatórios: o Profissional só os vê com o item "Métricas pessoais do profissional" liberado, e só

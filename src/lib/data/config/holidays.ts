@@ -1,6 +1,6 @@
 import { isCalendarDate } from "../../clinicTime";
 import type { DbClient } from "../clients";
-import { cleanText, unwrap, unwrapOne, Validation } from "../errors";
+import { cleanText, DataError, unwrap, unwrapOne, Validation } from "../errors";
 
 // Feriados extras da clínica (municipais, estaduais, recesso), somados aos
 // nacionais de src/lib/holidays.ts. Um por data.
@@ -26,10 +26,9 @@ export async function addClinicHoliday(
   v.check(isCalendarDate(input.date), "date", "Data inválida");
   v.check(description.length > 0, "description", "Informe a descrição");
   v.throwIfInvalid("Feriado");
-  return unwrap(
-    await db.from("clinic_holidays").insert({ clinic_id: clinicId, date: input.date, description }).select(COLUMNS).single(),
-    "Feriado",
-  );
+  const result = await db.from("clinic_holidays").insert({ clinic_id: clinicId, date: input.date, description }).select(COLUMNS).single();
+  if (result.error?.code === "23505") throw new DataError("duplicate", "Feriado: já existe um feriado nessa data", { date: "Já existe um feriado nessa data." });
+  return unwrap(result, "Feriado");
 }
 
 export async function removeClinicHoliday(db: DbClient, clinicId: string, id: string): Promise<void> {

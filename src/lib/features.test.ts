@@ -62,7 +62,12 @@ describe("item que cada rota exige", () => {
     expect(route("/admin/consultas?tab=lista_espera")).toBe("waitlist");
     expect(route("/admin/agenda/marcar-exame")).toBe("exams");
     expect(route("/admin/configuracoes/contatos")).toBe("daily_summary");
-    expect(route("/api/admin/envios/reminder-hour")).toBe("reminders");
+    expect(route("/api/admin/configuracoes/lembrete")).toBe("reminders");
+    expect(route("/api/admin/configuracoes/contatos/novo")).toBe("daily_summary");
+    expect(route("/admin/configuracoes/convenios/novo")).toBe("insurance");
+    expect(route("/api/admin/configuracoes/convenios/opcoes")).toBe("insurance");
+    expect(route("/admin/configuracoes/equipe")).toBe(null);
+    expect(route("/admin/configuracoes/horarios")).toBe(null);
     expect(route("/api/admin/agenda/appointments/1/resend-reminder")).toBe("reminders");
     expect(route("/api/admin/agenda/appointments/1/resend-preparation")).toBe("exams");
     expect(route("/api/admin/agenda/appointments/1/waitlist")).toBe("waitlist");

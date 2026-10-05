@@ -1,0 +1,233 @@
+---
+// Configurações › Horários (F4.4b): dias e horários de atendimento de cada
+// agenda, por local. Um horário pode valer só para um serviço (ex.: exame só
+// na terça) e, se o serviço for em turma, define as vagas. A sobreposição
+// segue a regra de 04/out (por agenda; ver src/lib/data/config/availability.ts).
+import AdminLayout from "../../../layouts/AdminLayout.astro";
+import Badge from "../../../components/admin/Badge.astro";
+import Card from "../../../components/admin/Card.astro";
+import ConfiguracoesTabs from "../../../components/admin/ConfiguracoesTabs.astro";
+import ConfirmDeleteDialog from "../../../components/admin/ConfirmDeleteDialog.astro";
+import FlashMessage from "../../../components/admin/FlashMessage.astro";
+import { HINT, INPUT, LABEL, PRIMARY_BUTTON, SECONDARY_BUTTON } from "../../../components/admin/fieldStyles";
+import { createUserClient } from "../../../lib/data/clients";
+import { listAgendas } from "../../../lib/data/config/agendas";
+import { listAvailability, WEEKDAY_NAMES } from "../../../lib/data/config/availability";
+import { listLocations } from "../../../lib/data/config/locations";
+import { listServices } from "../../../lib/data/config/services";
+
+const clinic = Astro.locals.clinic!;
+const db = createUserClient(Astro.request, Astro.cookies);
+const showInactive = Astro.url.searchParams.get("todos") === "1";
+const [agendas, locations, services] = await Promise.all([
+  listAgendas(db, clinic.clinicId),
+  listLocations(db, clinic.clinicId, { includeInactive: true }),
+  listServices(db, clinic.clinicId, { includeInactive: true }),
+]);
+const agenda = agendas.find((a) => a.id === Astro.url.searchParams.get("agenda")) ?? agendas[0] ?? null;
+const windows = agenda ? await listAvailability(db, clinic.clinicId, agenda.id, { includeInactive: showInactive }) : [];
+
+const locationName = new Map(locations.map((l) => [l.id, l.name]));
+const serviceById = new Map(services.map((s) => [s.id, s]));
+const activeLocations = locations.filter((l) => l.isActive);
+const agendaServices = agenda ? services.filter((s) => s.isActive && s.agendaIds.includes(agenda.id)) : [];
+const byWeekday = WEEKDAY_NAMES.map((name, weekday) => ({ name, windows: windows.filter((w) => w.weekday === weekday) })).filter(
+  (day) => day.windows.length,
+);
+const action = "/api/admin/configuracoes/horarios";
+const agendaQuery = (extra = "") => `?agenda=${agenda?.id ?? ""}${extra}`;
+// Segunda a sábado primeiro, domingo no fim (como a semana da clínica).
+const weekdayOrder = [1, 2, 3, 4, 5, 6, 0];
+---
+
+<AdminLayout title="Horários">
+  <h1 class="text-2xl font-bold text-slate-900">Configurações</h1>
+  <ConfiguracoesTabs current="horarios" />
+  <FlashMessage />
+
+  {
+    !agenda ? (
+      <p class="mt-4 text-sm text-slate-600">
+        Nenhuma agenda ativa. Cadastre uma em{" "}
+        <a href="/admin/configuracoes/agendas" class="text-sky-700 hover:underline">
+          Agendas
+        </a>
+        .
+      </p>
+    ) : (
+      <>
+        <form method="GET" class="mt-4 flex flex-wrap items-end gap-3">
+          <div>
+            <label for="agenda" class={LABEL}>
+              Agenda
+            </label>
+            <select id="agenda" name="agenda" class={`${INPUT} min-w-56`} onchange="this.form.submit()">
+              {agendas.map((a) => (
+                <option value={a.id} selected={a.id === agenda.id}>
+                  {a.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          <noscript>
+            <button type="submit" class={SECONDARY_BUTTON}>
+              Ver
+            </button>
+          </noscript>
+          <a href={showInactive ? agendaQuery() : agendaQuery("&todos=1")} class="pb-2.5 text-sm text-sky-700 hover:underline">
+            {showInactive ? "Esconder desativados" : "Mostrar desativados"}
+          </a>
+        </form>
+
+        <div class="mt-4 grid gap-3 sm:grid-cols-2">
+          {byWeekday.map((day) => (
+            <Card>
+              <h2 class="font-semibold text-slate-900">{day.name}</h2>
+              <ul class="mt-2 divide-y divide-slate-100">
+                {day.windows.map((w) => {
+                  const service = w.serviceId ? serviceById.get(w.serviceId) : null;
+                  return (
+                    <li class={`flex flex-wrap items-center justify-between gap-2 py-2 ${w.isActive ? "" : "opacity-60"}`}>
+                      <div class="text-sm">
+                        <p class="font-medium text-slate-900">
+                          {w.startTime}–{w.endTime} {!w.isActive && <Badge>desativado</Badge>}
+                        </p>
+                        <p class="text-slate-600">
+                          {locationName.get(w.locationId) ?? "Local"}
+                          {service ? ` · só ${service.name}` : ""}
+                          {w.capacity !== null ? ` · ${w.capacity} vagas` : ""}
+                        </p>
+                      </div>
+                      <div class="flex gap-2">
+                        <form method="POST" action={action}>
+                          <input type="hidden" name="agenda_id" value={agenda.id} />
+                          <input type="hidden" name="window_id" value={w.id} />
+                          <input type="hidden" name="acao" value={w.isActive ? "desativar" : "reativar"} />
+                          <button type="submit" class={SECONDARY_BUTTON}>
+                            {w.isActive ? "Desativar" : "Reativar"}
+                          </button>
+                        </form>
+                        <form method="POST" action={action}>
+                          <input type="hidden" name="agenda_id" value={agenda.id} />
+                          <input type="hidden" name="window_id" value={w.id} />
+                          <input type="hidden" name="acao" value="remover" />
+                          <button
+                            type="submit"
+                            class={`${SECONDARY_BUTTON} js-confirm-delete text-red-700`}
+                            data-confirm-title="Remover o horário?"
+                            data-confirm-message={`${day.name}, ${w.startTime}–${w.endTime}. Os atendimentos já marcados continuam.`}
+                            data-confirm-label="Remover"
+                          >
+                            Remover
+                          </button>
+                        </form>
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            </Card>
+          ))}
+        </div>
+        {byWeekday.length === 0 && <p class="mt-4 text-sm text-slate-600">Nenhum horário cadastrado nesta agenda.</p>}
+
+        <Card class="mt-6 max-w-2xl">
+          <h2 class="font-semibold text-slate-900">Novo horário em {agenda.name}</h2>
+          {activeLocations.length === 0 ? (
+            <p class="mt-2 text-sm text-slate-600">
+              Cadastre um local em{" "}
+              <a href="/admin/configuracoes/locais" class="text-sky-700 hover:underline">
+                Locais
+              </a>{" "}
+              antes.
+            </p>
+          ) : (
+            <form method="POST" action={action} class="mt-3 flex flex-col gap-4">
+              <input type="hidden" name="acao" value="adicionar" />
+              <input type="hidden" name="agenda_id" value={agenda.id} />
+              <fieldset>
+                <legend class={LABEL}>Dias da semana</legend>
+                <div class="mt-1 flex flex-wrap gap-x-4 gap-y-2">
+                  {weekdayOrder.map((weekday) => (
+                    <label class="flex items-center gap-2 text-sm text-slate-700">
+                      <input type="checkbox" name="weekday" value={weekday} class="h-4 w-4 rounded border-slate-300" />
+                      {WEEKDAY_NAMES[weekday]}
+                    </label>
+                  ))}
+                </div>
+                <p class={HINT}>O mesmo horário entra em cada dia marcado.</p>
+              </fieldset>
+              <div class="flex flex-wrap gap-4">
+                <div>
+                  <label for="start_time" class={LABEL}>
+                    Início
+                  </label>
+                  <input id="start_time" name="start_time" type="time" required class={`${INPUT} w-32`} />
+                </div>
+                <div>
+                  <label for="end_time" class={LABEL}>
+                    Fim
+                  </label>
+                  <input id="end_time" name="end_time" type="time" required class={`${INPUT} w-32`} />
+                </div>
+              </div>
+              <div>
+                <label for="location_id" class={LABEL}>
+                  Local
+                </label>
+                <select id="location_id" name="location_id" class={INPUT}>
+                  {activeLocations.map((l) => (
+                    <option value={l.id}>{l.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label for="service_id" class={LABEL}>
+                  Serviço
+                </label>
+                <select id="service_id" name="service_id" class={INPUT}>
+                  <option value="">Qualquer serviço desta agenda</option>
+                  {agendaServices.map((s) => (
+                    <option value={s.id} data-group={s.schedulingMode === "group" ? "1" : undefined}>
+                      {s.name}
+                      {s.schedulingMode === "group" ? " (turma)" : ""}
+                    </option>
+                  ))}
+                </select>
+                <p class={HINT}>Escolha um serviço quando o horário for só dele (ex.: exame só na terça de manhã).</p>
+              </div>
+              <div data-capacity hidden>
+                <label for="capacity" class={LABEL}>
+                  Vagas da turma
+                </label>
+                <input id="capacity" name="capacity" type="number" min="1" class={`${INPUT} w-28`} />
+              </div>
+              <button type="submit" class={`${PRIMARY_BUTTON} self-start`}>
+                Adicionar
+              </button>
+            </form>
+          )}
+        </Card>
+        <ConfirmDeleteDialog />
+      </>
+    )
+  }
+
+  <script>
+    // Vagas só para serviço em turma.
+    const service = document.getElementById("service_id") as HTMLSelectElement | null;
+    const capacity = document.querySelector<HTMLElement>("[data-capacity]");
+    const sync = () => {
+      if (!service || !capacity) return;
+      const isGroup = service.selectedOptions[0]?.dataset.group === "1";
+      capacity.hidden = !isGroup;
+      const input = capacity.querySelector("input");
+      if (input) {
+        input.required = isGroup;
+        if (!isGroup) input.value = "";
+      }
+    };
+    service?.addEventListener("change", sync);
+    sync();
+  </script>
+</AdminLayout>

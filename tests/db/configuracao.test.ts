@@ -158,14 +158,14 @@ describe("configuração geral (clinic_settings)", () => {
 
     const { data: byReception } = await receptionA.client
       .from("clinic_settings")
-      .update({ reminder_hour: 3 })
+      .update({ reminder_hour: 8 })
       .eq("clinic_id", clinicA)
       .select("clinic_id");
     expect(byReception).toEqual([]);
 
     const { data: byOtherAdmin } = await adminB.client
       .from("clinic_settings")
-      .update({ reminder_hour: 3 })
+      .update({ reminder_hour: 8 })
       .eq("clinic_id", clinicA)
       .select("clinic_id");
     expect(byOtherAdmin).toEqual([]);

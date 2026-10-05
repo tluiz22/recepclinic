@@ -29,7 +29,7 @@ export type OnboardingDeps = {
 
 export type EmailOutcome = { sent: true } | { sent: false; reason: string };
 
-const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
+export const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 
 export function normalizeEmail(email: string): string {
   return email.trim().toLowerCase();
@@ -78,14 +78,16 @@ export async function inviteToClinic(
   roles: ("admin" | "professional" | "reception")[],
   deps: OnboardingDeps,
   now: Date = new Date(),
-): Promise<{ existingUser: boolean; email: EmailOutcome }> {
+): Promise<{ userId: string; existingUser: boolean; email: EmailOutcome }> {
   const address = normalizeEmail(email);
   const existing = await deps.findUserIdByEmail(address);
   const link = existing ? null : await deps.createPasswordLink(address, "invite");
   const userId = existing ?? link!.userId;
 
-  // Acesso a todas as agendas; a equipe ajusta depois (F4.4b).
-  unwrap(await db.from("clinic_members").insert({ clinic_id: clinic.id, user_id: userId, roles, agenda_scope: "all" }), "Membro da equipe");
+  // Acesso às agendas pelo papel (D6): todas para Administrador e Recepção, a
+  // própria para o Profissional; a Equipe ajusta depois (F4.4b).
+  const agenda_scope = roles.includes("admin") || roles.includes("reception") ? "all" : "restricted";
+  unwrap(await db.from("clinic_members").insert({ clinic_id: clinic.id, user_id: userId, roles, agenda_scope }), "Membro da equipe");
   unwrap(
     await db.from("clinic_invitations").insert({
       clinic_id: clinic.id,
@@ -103,7 +105,7 @@ export async function inviteToClinic(
   const message = existing
     ? addedToClinicEmail(address, { clinicName: clinic.name, loginUrl: `${deps.baseUrl}/admin/login` })
     : inviteEmail(address, { clinicName: clinic.name, link: passwordLink(deps, link!.tokenHash, link!.type) });
-  return { existingUser: !!existing, email: await trySend(() => deps.sendEmail(message)) };
+  return { userId, existingUser: !!existing, email: await trySend(() => deps.sendEmail(message)) };
 }
 
 /** Suporte: cria a clínica e convida o primeiro Administrador. */
@@ -127,8 +129,8 @@ export async function createClinicWithAdmin(
         .maybeSingle(),
       "Configuração da clínica",
     );
-    const result = await inviteToClinic(db, actorId, { id: clinicId, name: clean.name }, clean.adminEmail, ["admin"], deps, now);
-    return { clinicId, ...result };
+    const { existingUser, email } = await inviteToClinic(db, actorId, { id: clinicId, name: clean.name }, clean.adminEmail, ["admin"], deps, now);
+    return { clinicId, existingUser, email };
   } catch (error) {
     // Sem o Administrador, a clínica não fica pela metade.
     await db.from("clinics").delete().eq("id", clinicId);

@@ -1,0 +1,69 @@
+---
+// Configurações › Convênios (F4.4b, D10; só com o item "Convênios", D11):
+// planos atendidos, com os outros nomes que o paciente usa (busca do bot), e
+// a opção de pedir carteirinha e validade na marcação.
+import AdminLayout from "../../../layouts/AdminLayout.astro";
+import Badge from "../../../components/admin/Badge.astro";
+import Card from "../../../components/admin/Card.astro";
+import ConfiguracoesTabs from "../../../components/admin/ConfiguracoesTabs.astro";
+import FlashMessage from "../../../components/admin/FlashMessage.astro";
+import { HINT, PRIMARY_BUTTON, SECONDARY_BUTTON } from "../../../components/admin/fieldStyles";
+import { createUserClient } from "../../../lib/data/clients";
+import { getClinicSettings } from "../../../lib/data/config/clinic";
+import { listInsurancePlans } from "../../../lib/data/config/insurance";
+
+const clinic = Astro.locals.clinic!;
+const db = createUserClient(Astro.request, Astro.cookies);
+const showInactive = Astro.url.searchParams.get("todos") === "1";
+const [plans, settings] = await Promise.all([
+  listInsurancePlans(db, clinic.clinicId, { includeInactive: showInactive }),
+  getClinicSettings(db, clinic.clinicId),
+]);
+---
+
+<AdminLayout title="Convênios">
+  <h1 class="text-2xl font-bold text-slate-900">Configurações</h1>
+  <ConfiguracoesTabs current="convenios" />
+  <FlashMessage />
+
+  <Card class="mt-4 max-w-2xl">
+    <form method="POST" action="/api/admin/configuracoes/convenios/opcoes" class="flex flex-wrap items-center justify-between gap-3">
+      <label class="flex items-start gap-2 text-sm text-slate-700">
+        <input type="checkbox" name="require_insurance_details" checked={settings.requireInsuranceDetails} class="mt-0.5 h-4 w-4 rounded border-slate-300" />
+        <span>
+          Pedir o número da carteirinha e a validade na marcação por plano
+          <span class={`${HINT} block`}>Na página de data e horário e no painel.</span>
+        </span>
+      </label>
+      <button type="submit" class={SECONDARY_BUTTON}>Salvar</button>
+    </form>
+  </Card>
+
+  <div class="mt-4 flex flex-wrap items-center justify-between gap-3">
+    <a href="/admin/configuracoes/convenios/novo" class={PRIMARY_BUTTON}>Novo plano</a>
+    <a href={showInactive ? "?" : "?todos=1"} class="text-sm text-sky-700 hover:underline">
+      {showInactive ? "Esconder desativados" : "Mostrar desativados"}
+    </a>
+  </div>
+
+  <ul class="mt-4 grid gap-3 sm:grid-cols-2">
+    {
+      plans.map((plan) => (
+        <li>
+          <a href={`/admin/configuracoes/convenios/${plan.id}`}>
+            <Card class="h-full hover:border-sky-300 hover:bg-sky-50" muted={!plan.isActive}>
+              <p class="font-medium text-slate-900">
+                {plan.name} {!plan.isActive && <Badge>desativado</Badge>}
+              </p>
+              <p class="mt-1 text-sm text-slate-600">
+                {plan.alternativeNames.length ? `Também: ${plan.alternativeNames.join(", ")}` : "Sem outros nomes"}
+                {plan.ansCode ? ` · ANS ${plan.ansCode}` : ""}
+              </p>
+            </Card>
+          </a>
+        </li>
+      ))
+    }
+  </ul>
+  {plans.length === 0 && <p class="mt-4 text-sm text-slate-600">Nenhum plano cadastrado.</p>}
+</AdminLayout>

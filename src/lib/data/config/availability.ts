@@ -142,6 +142,8 @@ async function checkWindowService(db: DbClient, clinicId: string, input: Availab
   v.throwIfInvalid("Horário de atendimento");
 }
 
+export const WEEKDAY_NAMES = ["Domingo", "Segunda-feira", "Terça-feira", "Quarta-feira", "Quinta-feira", "Sexta-feira", "Sábado"];
+
 function conflictError(conflict: WindowConflict): DataError {
   const { window } = conflict;
   const reason = {
@@ -149,7 +151,8 @@ function conflictError(conflict: WindowConflict): DataError {
     same_service: "cruza com outro horário do mesmo serviço",
     group: "cruza com um horário de turma",
   }[conflict.kind];
-  return new DataError("conflict", `Horário de atendimento: ${reason} (${window.startTime}–${window.endTime})`, {
+  const when = `${WEEKDAY_NAMES[window.weekday].toLowerCase()}, ${window.startTime}–${window.endTime}`;
+  return new DataError("conflict", `Horário de atendimento: ${reason} (${when})`, {
     startTime: reason,
   });
 }
@@ -159,29 +162,49 @@ export async function addAvailabilityWindow(
   clinicId: string,
   input: AvailabilityWindowInput,
 ): Promise<AvailabilityWindow> {
-  validateWindowShape(input);
-  await checkWindowService(db, clinicId, input);
-  const conflict = findWindowConflict(input, await windowsThatCount(db, clinicId, input.agendaId));
-  if (conflict) throw conflictError(conflict);
-  return toWindow(
-    unwrap(
-      await db
-        .from("availability_windows")
-        .insert({
+  const [created] = await addAvailabilityWindows(db, clinicId, input, [input.weekday]);
+  return created;
+}
+
+/**
+ * O mesmo horário em vários dias da semana (tela de Horários, F4.4b): confere
+ * todos antes e grava de uma vez, então um conflito num dia não deixa os
+ * outros pela metade.
+ */
+export async function addAvailabilityWindows(
+  db: DbClient,
+  clinicId: string,
+  input: Omit<AvailabilityWindowInput, "weekday">,
+  weekdays: number[],
+): Promise<AvailabilityWindow[]> {
+  const days = [...new Set(weekdays)].sort();
+  if (!days.length) throw new DataError("invalid", "Horário de atendimento: escolha ao menos um dia", { weekday: "Escolha ao menos um dia da semana" });
+  const inputs = days.map((weekday) => ({ ...input, weekday }));
+  for (const one of inputs) validateWindowShape(one);
+  await checkWindowService(db, clinicId, inputs[0]);
+  const existing = await windowsThatCount(db, clinicId, input.agendaId);
+  for (const one of inputs) {
+    const conflict = findWindowConflict(one, existing);
+    if (conflict) throw conflictError(conflict);
+  }
+  return unwrap(
+    await db
+      .from("availability_windows")
+      .insert(
+        inputs.map((one) => ({
           clinic_id: clinicId,
-          agenda_id: input.agendaId,
-          location_id: input.locationId,
-          service_id: input.serviceId,
-          weekday: input.weekday,
-          start_time: input.startTime,
-          end_time: input.endTime,
-          capacity: input.capacity,
-        })
-        .select(COLUMNS)
-        .single(),
-      "Horário de atendimento",
-    ),
-  );
+          agenda_id: one.agendaId,
+          location_id: one.locationId,
+          service_id: one.serviceId,
+          weekday: one.weekday,
+          start_time: one.startTime,
+          end_time: one.endTime,
+          capacity: one.capacity,
+        })),
+      )
+      .select(COLUMNS),
+    "Horário de atendimento",
+  ).map(toWindow);
 }
 
 /** Reativar confere a sobreposição de novo (pode ter entrado outro horário no lugar). */

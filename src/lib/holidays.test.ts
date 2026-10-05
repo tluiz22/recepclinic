@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isNationalHoliday } from "./holidays";
+import { isNationalHoliday, listNationalHolidays } from "./holidays";
 
 describe("isNationalHoliday", () => {
   it.each([
@@ -38,4 +38,16 @@ describe("isNationalHoliday", () => {
       expect(isNationalHoliday(date)).toBe(false);
     },
   );
+});
+
+describe("listNationalHolidays", () => {
+  it("os 14 do ano, em ordem de data e com o nome", () => {
+    const holidays = listNationalHolidays(2026);
+    expect(holidays).toHaveLength(14);
+    expect(holidays.map((h) => h.date)).toEqual([...holidays.map((h) => h.date)].sort());
+    expect(holidays).toContainEqual({ date: "2026-02-16", name: "Segunda-feira de Carnaval" });
+    expect(holidays).toContainEqual({ date: "2026-04-03", name: "Sexta-feira Santa" });
+    expect(holidays).toContainEqual({ date: "2026-06-04", name: "Corpus Christi" });
+    expect(holidays.at(-1)).toEqual({ date: "2026-12-25", name: "Natal" });
+  });
 });

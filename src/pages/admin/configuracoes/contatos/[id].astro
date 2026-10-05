@@ -1,0 +1,66 @@
+---
+// Configurações › WhatsApp › contato do resumo do dia, novo ou editar
+// (F4.4b; só com o item "Envio do resumo do dia", D11). Exames só com o item.
+import AdminLayout from "../../../../layouts/AdminLayout.astro";
+import ActiveToggle from "../../../../components/admin/ActiveToggle.astro";
+import Card from "../../../../components/admin/Card.astro";
+import FlashMessage from "../../../../components/admin/FlashMessage.astro";
+import Icon from "../../../../components/admin/Icon.astro";
+import { HINT, INPUT, LABEL, PRIMARY_BUTTON } from "../../../../components/admin/fieldStyles";
+import { createUserClient } from "../../../../lib/data/clients";
+import { listNotificationRecipients } from "../../../../lib/data/config/notificationRecipients";
+import { formatPhoneBR } from "../../../../lib/phone";
+
+const clinic = Astro.locals.clinic!;
+const { id } = Astro.params;
+const isNew = id === "novo";
+const recipient = isNew
+  ? null
+  : ((await listNotificationRecipients(createUserClient(Astro.request, Astro.cookies), clinic.clinicId, { includeInactive: true })).find((r) => r.id === id) ??
+    null);
+if (!isNew && !recipient) return Astro.redirect("/admin/configuracoes/whatsapp");
+const examsOn = clinic.features.includes("exams");
+const action = `/api/admin/configuracoes/contatos/${id}`;
+---
+
+<AdminLayout title={isNew ? "Novo contato" : recipient!.label}>
+  <a href="/admin/configuracoes/whatsapp" class="inline-flex items-center gap-1 text-sm text-sky-700 hover:underline">
+    <Icon name="chevron-left" class="h-4 w-4" /> WhatsApp
+  </a>
+  <h1 class="mt-2 text-2xl font-bold text-slate-900">{isNew ? "Novo contato do resumo do dia" : "Editar contato"}</h1>
+  <FlashMessage />
+
+  <Card class="mt-4 max-w-2xl">
+    <form method="POST" action={action} class="flex flex-col gap-4">
+      <input type="hidden" name="acao" value="salvar" />
+      <div>
+        <label for="label" class={LABEL}>Nome</label>
+        <input id="label" name="label" required placeholder="Recepção, Maria…" value={recipient?.label ?? ""} class={INPUT} />
+      </div>
+      <div>
+        <label for="phone" class={LABEL}>WhatsApp</label>
+        <input id="phone" name="phone" type="tel" required placeholder="(84) 99999-9999" value={recipient ? formatPhoneBR(recipient.phone) : ""} class={INPUT} />
+      </div>
+      <fieldset>
+        <legend class={LABEL}>Recebe</legend>
+        <div class="mt-1 flex flex-col gap-2">
+          <label class="flex items-center gap-2 text-sm text-slate-700">
+            <input type="checkbox" name="receives_consultations" checked={recipient?.receivesConsultations ?? true} class="h-4 w-4 rounded border-slate-300" />
+            Consultas e retornos (de todas as agendas)
+          </label>
+          {
+            examsOn && (
+              <label class="flex items-center gap-2 text-sm text-slate-700">
+                <input type="checkbox" name="receives_exams" checked={recipient?.receivesExams ?? false} class="h-4 w-4 rounded border-slate-300" />
+                Exames e procedimentos
+              </label>
+            )
+          }
+        </div>
+        <p class={HINT}>Para quem não é profissional (ex.: recepção, gerente). Cada profissional recebe os próprios pelo cadastro dele.</p>
+      </fieldset>
+      <button type="submit" class={`${PRIMARY_BUTTON} self-start`}>{isNew ? "Cadastrar" : "Salvar"}</button>
+    </form>
+    {!isNew && <ActiveToggle action={action} isActive={recipient!.isActive} what="o contato" />}
+  </Card>
+</AdminLayout>

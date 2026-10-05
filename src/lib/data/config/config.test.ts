@@ -8,6 +8,7 @@ import { validateLocation } from "./locations";
 import { validateNotificationRecipient } from "./notificationRecipients";
 import { validateProfessional } from "./professionals";
 import { servicePriceAt, validateService, type ServiceInput } from "./services";
+import { validateMemberAccess } from "./team";
 
 function fieldsOf(run: () => unknown): Record<string, string> {
   try {
@@ -166,7 +167,7 @@ describe("configuração da clínica", () => {
       name: "Informe o nome da clínica",
       timezone: "Fuso horário inválido",
       consultationAgeLimitYears: "Idade limite em anos inteiros, maior que 0",
-      reminderHour: "Hora do lembrete deve ser de 0 a 23",
+      reminderHour: "Hora do lembrete das 7h às 20h",
       brandColor: "Cor no formato #RRGGBB",
     });
   });
@@ -246,5 +247,36 @@ describe("erros do banco", () => {
     expect(fromDbError({ code: "42501" }, "X").code).toBe("forbidden");
     expect(fromDbError({ code: "PGRST116" }, "X").code).toBe("not_found");
     expect(fromDbError({ code: "XX000", message: "boom" }, "X")).toMatchObject({ code: "unexpected", message: "X: boom" });
+  });
+});
+
+describe("equipe (F4.4b)", () => {
+  const base = { roles: ["reception"] as ("admin" | "professional" | "reception")[], professionalId: null, agendaScope: "all" as const, grantedAgendaIds: [] };
+
+  it("Profissional precisa do cadastro de profissional (cliente, 05/out)", () => {
+    expect(fieldsOf(() => validateMemberAccess({ ...base, roles: ["professional"] }))).toEqual({
+      professionalId: "Escolha o cadastro de profissional desta pessoa",
+    });
+    expect(validateMemberAccess({ ...base, roles: ["professional", "admin"], professionalId: "p1" })).toMatchObject({
+      roles: ["admin", "professional"],
+      professionalId: "p1",
+    });
+  });
+
+  it("sem o papel Profissional, solta o cadastro; acesso a todas, sem agendas avulsas", () => {
+    expect(validateMemberAccess({ ...base, professionalId: "p1", grantedAgendaIds: ["a1"] })).toEqual({
+      roles: ["reception"],
+      professionalId: null,
+      agendaScope: "all",
+      grantedAgendaIds: [],
+    });
+    expect(validateMemberAccess({ ...base, agendaScope: "restricted", grantedAgendaIds: ["a1", "a1"] }).grantedAgendaIds).toEqual(["a1"]);
+  });
+
+  it("recusa sem papel, papel desconhecido e acesso inválido", () => {
+    expect(fieldsOf(() => validateMemberAccess({ ...base, roles: ["dono" as never], agendaScope: "nenhum" as never }))).toEqual({
+      roles: "Escolha ao menos um papel",
+      agendaScope: "Escolha o acesso às agendas",
+    });
   });
 });

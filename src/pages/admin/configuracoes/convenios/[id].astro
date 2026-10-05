@@ -1,0 +1,74 @@
+---
+// Configurações › Convênios › novo ou editar (F4.4b, D10): nome, outros nomes
+// (para a busca do bot), código ANS e quais profissionais atendem o plano
+// (por padrão, todos; desmarcar vira exceção).
+import AdminLayout from "../../../../layouts/AdminLayout.astro";
+import ActiveToggle from "../../../../components/admin/ActiveToggle.astro";
+import Card from "../../../../components/admin/Card.astro";
+import FlashMessage from "../../../../components/admin/FlashMessage.astro";
+import Icon from "../../../../components/admin/Icon.astro";
+import { HINT, INPUT, LABEL, PRIMARY_BUTTON } from "../../../../components/admin/fieldStyles";
+import { createUserClient } from "../../../../lib/data/clients";
+import { listInsurancePlans, listPlanExclusions } from "../../../../lib/data/config/insurance";
+import { listProfessionals } from "../../../../lib/data/config/professionals";
+
+const clinic = Astro.locals.clinic!;
+const db = createUserClient(Astro.request, Astro.cookies);
+const { id } = Astro.params;
+const isNew = id === "novo";
+const [plans, professionals, exclusions] = await Promise.all([
+  isNew ? Promise.resolve([]) : listInsurancePlans(db, clinic.clinicId, { includeInactive: true }),
+  listProfessionals(db, clinic.clinicId),
+  isNew ? Promise.resolve([] as string[]) : listPlanExclusions(db, clinic.clinicId, id!),
+]);
+const plan = isNew ? null : (plans.find((p) => p.id === id) ?? null);
+if (!isNew && !plan) return Astro.redirect("/admin/configuracoes/convenios");
+const action = `/api/admin/configuracoes/convenios/${id}`;
+---
+
+<AdminLayout title={isNew ? "Novo plano" : plan!.name}>
+  <a href="/admin/configuracoes/convenios" class="inline-flex items-center gap-1 text-sm text-sky-700 hover:underline">
+    <Icon name="chevron-left" class="h-4 w-4" /> Convênios
+  </a>
+  <h1 class="mt-2 text-2xl font-bold text-slate-900">{isNew ? "Novo plano" : "Editar plano"}</h1>
+  <FlashMessage />
+
+  <Card class="mt-4 max-w-2xl">
+    <form method="POST" action={action} class="flex flex-col gap-4">
+      <input type="hidden" name="acao" value="salvar" />
+      <div>
+        <label for="name" class={LABEL}>Nome</label>
+        <input id="name" name="name" required placeholder="Unimed" value={plan?.name ?? ""} class={INPUT} />
+      </div>
+      <div>
+        <label for="alternative_names" class={LABEL}>Outros nomes</label>
+        <textarea id="alternative_names" name="alternative_names" rows="3" placeholder={"Unimed Natal\nUnimed Nacional"} class={INPUT}>{plan?.alternativeNames.join("\n") ?? ""}</textarea>
+        <p class={HINT}>Um por linha. Como o paciente pode escrever o plano no WhatsApp.</p>
+      </div>
+      <div>
+        <label for="ans_code" class={LABEL}>Código ANS (opcional)</label>
+        <input id="ans_code" name="ans_code" value={plan?.ansCode ?? ""} class={`${INPUT} w-40`} />
+      </div>
+      <fieldset>
+        <legend class={LABEL}>Profissionais que atendem este plano</legend>
+        {
+          professionals.length === 0 ? (
+            <p class={HINT}>Nenhum profissional ativo.</p>
+          ) : (
+            <div class="mt-1 flex flex-col gap-2">
+              {professionals.map((p) => (
+                <label class="flex items-center gap-2 text-sm text-slate-700">
+                  <input type="checkbox" name="accepts" value={p.id} checked={!exclusions.includes(p.id)} class="h-4 w-4 rounded border-slate-300" />
+                  {p.displayName}
+                </label>
+              ))}
+            </div>
+          )
+        }
+        <p class={HINT}>Desmarque quem não atende este plano.</p>
+      </fieldset>
+      <button type="submit" class={`${PRIMARY_BUTTON} self-start`}>{isNew ? "Cadastrar" : "Salvar"}</button>
+    </form>
+    {!isNew && <ActiveToggle action={action} isActive={plan!.isActive} what="o plano" />}
+  </Card>
+</AdminLayout>

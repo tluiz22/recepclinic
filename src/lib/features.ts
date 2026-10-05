@@ -114,9 +114,12 @@ const PATH_RULES: PathRule[] = [
   { prefix: "/api/admin/agenda/available-exam-dates", feature: "exams" },
   { prefix: "/api/admin/agenda/available-exam-group-dates", feature: "exams" },
   { prefix: "/api/admin/agenda/available-exam-slots", feature: "exams" },
-  // Envios pelo WhatsApp.
+  // Configurações (F4.4b): convênios, contatos do resumo do dia e hora do lembrete.
+  { prefix: "/admin/configuracoes/convenios", feature: "insurance" },
+  { prefix: "/api/admin/configuracoes/convenios", feature: "insurance" },
   { prefix: "/admin/configuracoes/contatos", feature: "daily_summary" },
-  { prefix: "/api/admin/envios/reminder-hour", feature: "reminders" },
+  { prefix: "/api/admin/configuracoes/contatos", feature: "daily_summary" },
+  { prefix: "/api/admin/configuracoes/lembrete", feature: "reminders" },
 ];
 
 // Ações por atendimento: /api/admin/agenda/appointments/<id>/<ação>.

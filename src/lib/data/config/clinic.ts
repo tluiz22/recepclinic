@@ -15,7 +15,7 @@ export type ClinicSettings = {
   timezone: string;
   /** Idade a partir da qual não marca Consulta (só Retorno/Exame); null = desligada. */
   consultationAgeLimitYears: number | null;
-  /** Hora do lembrete da véspera (0–23, no fuso da clínica). */
+  /** Hora do lembrete da véspera (7–20, no fuso da clínica). */
   reminderHour: number;
   botPaymentInfo: string | null;
   botInsuranceInfo: string | null;
@@ -29,6 +29,10 @@ export type ClinicSettings = {
 export type ClinicSettingsPatch = Partial<Omit<ClinicSettings, "clinicId">>;
 
 export const CLINIC_PROFILES: ClinicProfile[] = ["pediatric", "adult", "mixed"];
+
+/** Hora do lembrete: horas cheias das 7h às 20h, como no piloto (cliente, 05/out/2026). */
+export const REMINDER_HOUR_MIN = 7;
+export const REMINDER_HOUR_MAX = 20;
 
 const SETTINGS_COLUMNS =
   "clinic_id, profile, timezone, consultation_age_limit_years, reminder_hour, bot_payment_info, bot_insurance_info, bot_notes, logo_url, brand_color, require_insurance_details";
@@ -76,7 +80,11 @@ export function validateClinicSettingsPatch(patch: ClinicSettingsPatch): ClinicS
   }
   if ("reminderHour" in patch) {
     const hour = patch.reminderHour!;
-    v.check(Number.isInteger(hour) && hour >= 0 && hour <= 23, "reminderHour", "Hora do lembrete deve ser de 0 a 23");
+    v.check(
+      Number.isInteger(hour) && hour >= REMINDER_HOUR_MIN && hour <= REMINDER_HOUR_MAX,
+      "reminderHour",
+      `Hora do lembrete das ${REMINDER_HOUR_MIN}h às ${REMINDER_HOUR_MAX}h`,
+    );
   }
   for (const field of ["botPaymentInfo", "botInsuranceInfo", "botNotes"] as const) {
     if (field in patch) out[field] = cleanText(patch[field]);

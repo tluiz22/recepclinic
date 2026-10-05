@@ -136,6 +136,51 @@ export async function setProfessionalExclusions(
   return listProfessionalExclusions(db, clinicId, professionalId);
 }
 
+/** Profissionais que NÃO atendem o plano (a mesma exceção, vista pelo plano; tela do convênio, F4.4b). */
+export async function listPlanExclusions(db: DbClient, clinicId: string, insurancePlanId: string): Promise<string[]> {
+  const rows = unwrap(
+    await db
+      .from("professional_insurance_exclusions")
+      .select("professional_id")
+      .eq("clinic_id", clinicId)
+      .eq("insurance_plan_id", insurancePlanId),
+    "Profissionais que não atendem o plano",
+  );
+  return rows.map((row) => row.professional_id).sort();
+}
+
+export async function setPlanExclusions(
+  db: DbClient,
+  clinicId: string,
+  insurancePlanId: string,
+  professionalIds: string[],
+): Promise<string[]> {
+  const wanted = [...new Set(professionalIds)];
+  const current = await listPlanExclusions(db, clinicId, insurancePlanId);
+  const toAdd = wanted.filter((id) => !current.includes(id));
+  const toRemove = current.filter((id) => !wanted.includes(id));
+  if (toAdd.length) {
+    unwrap(
+      await db
+        .from("professional_insurance_exclusions")
+        .insert(toAdd.map((professional_id) => ({ clinic_id: clinicId, professional_id, insurance_plan_id: insurancePlanId }))),
+      "Profissionais que não atendem o plano",
+    );
+  }
+  if (toRemove.length) {
+    unwrap(
+      await db
+        .from("professional_insurance_exclusions")
+        .delete()
+        .eq("clinic_id", clinicId)
+        .eq("insurance_plan_id", insurancePlanId)
+        .in("professional_id", toRemove),
+      "Profissionais que não atendem o plano",
+    );
+  }
+  return listPlanExclusions(db, clinicId, insurancePlanId);
+}
+
 /** O profissional atende o plano? (ativo e fora das exceções) */
 export function professionalAcceptsPlan(plan: Pick<InsurancePlan, "id" | "isActive">, exclusions: string[]): boolean {
   return plan.isActive && !exclusions.includes(plan.id);

@@ -1,0 +1,190 @@
+---
+// Configurações › Equipe › convidar ou editar (F4.4b, D6): papéis, cadastro
+// de profissional ligado ao login (obrigatório para o papel Profissional,
+// cliente, 05/out/2026) e acesso às agendas. O convite usa o mesmo envio da
+// F4.4a; quem já tem login entra direto e recebe um aviso.
+import AdminLayout from "../../../../layouts/AdminLayout.astro";
+import Card from "../../../../components/admin/Card.astro";
+import ConfirmDeleteDialog from "../../../../components/admin/ConfirmDeleteDialog.astro";
+import FlashMessage from "../../../../components/admin/FlashMessage.astro";
+import Icon from "../../../../components/admin/Icon.astro";
+import { HINT, INPUT, LABEL, PRIMARY_BUTTON, SECONDARY_BUTTON } from "../../../../components/admin/fieldStyles";
+import { formatInstant } from "../../../../lib/clinicTime";
+import { createUserClient } from "../../../../lib/data/clients";
+import { listAgendas } from "../../../../lib/data/config/agendas";
+import { listProfessionals } from "../../../../lib/data/config/professionals";
+import { listTeam, ROLE_LABELS, ROLES } from "../../../../lib/data/config/team";
+
+const clinic = Astro.locals.clinic!;
+const db = createUserClient(Astro.request, Astro.cookies);
+const { id } = Astro.params;
+const isNew = id === "novo";
+const [team, professionals, agendas] = await Promise.all([
+  listTeam(db, clinic.clinicId),
+  listProfessionals(db, clinic.clinicId),
+  listAgendas(db, clinic.clinicId),
+]);
+const member = isNew ? null : (team.find((m) => m.userId === id) ?? null);
+if (!isNew && !member) return Astro.redirect("/admin/configuracoes/equipe");
+
+const isSelf = member?.userId === Astro.locals.userId;
+const roles = member?.roles ?? [];
+// Cadastros livres (e o já ligado a esta pessoa).
+const professionalOptions = professionals.filter((p) => !p.userId || p.userId === member?.userId);
+const scope = member?.agendaScope ?? "all";
+const pending = member?.invitation && !member.invitation.acceptedAt;
+const action = `/api/admin/configuracoes/equipe/${id}`;
+const roleHints: Record<string, string> = {
+  admin: "tudo, inclusive Configurações e a equipe",
+  professional: "agenda, pacientes e, se liberadas, as métricas da própria agenda",
+  reception: "agenda, pacientes, envios e lista de espera",
+};
+---
+
+<AdminLayout title={isNew ? "Convidar pessoa" : (member!.email ?? "Equipe")}>
+  <a href="/admin/configuracoes/equipe" class="inline-flex items-center gap-1 text-sm text-sky-700 hover:underline">
+    <Icon name="chevron-left" class="h-4 w-4" /> Equipe
+  </a>
+  <h1 class="mt-2 break-all text-2xl font-bold text-slate-900">{isNew ? "Convidar pessoa" : member!.email}</h1>
+  <FlashMessage />
+
+  {
+    pending && (
+      <Card class="mt-4 max-w-2xl border-amber-200 bg-amber-50">
+        <p class="text-sm text-amber-800">
+          Convite pendente: a pessoa ainda não criou a senha.
+          {member!.invitation!.lastSentAt && ` Último envio em ${formatInstant(member!.invitation!.lastSentAt, clinic.timezone, "dd/MM/yyyy 'às' HH:mm")}.`} O
+          link vale 24 horas.
+        </p>
+        <form method="POST" action={action} class="mt-2">
+          <input type="hidden" name="acao" value="reenviar" />
+          <button type="submit" class={SECONDARY_BUTTON}>Reenviar convite</button>
+        </form>
+      </Card>
+    )
+  }
+
+  <Card class="mt-4 max-w-2xl">
+    <form method="POST" action={action} class="flex flex-col gap-5">
+      <input type="hidden" name="acao" value={isNew ? "convidar" : "salvar"} />
+      {
+        isNew && (
+          <div>
+            <label for="email" class={LABEL}>
+              E-mail
+            </label>
+            <input id="email" name="email" type="email" required autocomplete="off" class={INPUT} />
+            <p class={HINT}>A pessoa recebe o convite para criar a senha. Se já tiver login no RecepClinic, entra direto e recebe um aviso.</p>
+          </div>
+        )
+      }
+
+      <fieldset>
+        <legend class={LABEL}>Papéis</legend>
+        <div class="mt-1 flex flex-col gap-2">
+          {
+            ROLES.map((role) => (
+              <label class="flex items-start gap-2 text-sm text-slate-700">
+                <input type="checkbox" name="role" value={role} checked={roles.includes(role)} class="mt-0.5 h-4 w-4 rounded border-slate-300" />
+                <span>
+                  <span class="font-medium">{ROLE_LABELS[role]}</span>: {roleHints[role]}
+                </span>
+              </label>
+            ))
+          }
+        </div>
+        {isSelf && <p class={HINT}>Você não pode tirar o seu próprio papel de Administrador.</p>}
+      </fieldset>
+
+      <div data-professional>
+        <label for="professional_id" class={LABEL}>Cadastro de profissional</label>
+        <select id="professional_id" name="professional_id" class={INPUT}>
+          <option value="">Escolha…</option>
+          {
+            professionalOptions.map((p) => (
+              <option value={p.id} selected={p.id === member?.professionalId}>
+                {p.displayName}
+              </option>
+            ))
+          }
+        </select>
+        <p class={HINT}>
+          Obrigatório para o papel Profissional: é o que mostra a ele a própria agenda. Não está na lista? Cadastre em{" "}
+          <a href="/admin/configuracoes/profissionais" class="text-sky-700 hover:underline">Profissionais</a>.
+        </p>
+      </div>
+
+      <fieldset>
+        <legend class={LABEL}>Acesso às agendas</legend>
+        <div class="mt-1 flex flex-col gap-2">
+          <label class="flex items-center gap-2 text-sm text-slate-700">
+            <input type="radio" name="agenda_scope" value="all" checked={scope === "all"} class="h-4 w-4 border-slate-300" />
+            Todas as agendas
+          </label>
+          <label class="flex items-center gap-2 text-sm text-slate-700">
+            <input type="radio" name="agenda_scope" value="restricted" checked={scope === "restricted"} class="h-4 w-4 border-slate-300" />
+            Só a do profissional ligado e as marcadas abaixo
+          </label>
+        </div>
+        <div data-agendas class="mt-2 flex flex-col gap-2 border-l-2 border-slate-200 pl-4">
+          {
+            agendas.map((agenda) => (
+              <label class="flex items-center gap-2 text-sm text-slate-700">
+                <input type="checkbox" name="agenda_id" value={agenda.id} checked={member?.grantedAgendaIds.includes(agenda.id)} class="h-4 w-4 rounded border-slate-300" />
+                {agenda.name}
+              </label>
+            ))
+          }
+        </div>
+        <p class={HINT}>
+          Novo convite: Administrador e Recepção começam com todas; o Profissional, só com a própria. O Administrador sempre vê todas.
+        </p>
+      </fieldset>
+
+      <button type="submit" class={`${PRIMARY_BUTTON} self-start`}>{isNew ? "Convidar" : "Salvar"}</button>
+    </form>
+
+    {
+      !isNew && !isSelf && (
+        <form method="POST" action={action} class="mt-6 border-t border-slate-200 pt-4">
+          <input type="hidden" name="acao" value="remover" />
+          <button
+            type="submit"
+            class={`${SECONDARY_BUTTON} js-confirm-delete text-red-700`}
+            data-confirm-title="Remover da equipe?"
+            data-confirm-message="A pessoa perde o acesso a esta clínica. O histórico fica, e dá para convidar de novo depois."
+            data-confirm-label="Remover"
+          >
+            Remover da equipe
+          </button>
+        </form>
+      )
+    }
+  </Card>
+  <ConfirmDeleteDialog />
+
+  <script define:vars={{ isNew }}>
+    // Profissional: escolhe o cadastro. Acesso restrito: escolhe as agendas.
+    // Num convite novo, o acesso segue o papel (D6) até a pessoa mudar à mão.
+    const form = document.querySelector("form input[name='role']")?.form;
+    const professional = document.querySelector("[data-professional]");
+    const agendaList = document.querySelector("[data-agendas]");
+    let scopeTouched = !isNew;
+    const checkedRoles = () => [...form.querySelectorAll("input[name='role']:checked")].map((input) => input.value);
+    const setScope = (value) => {
+      const radio = form.querySelector(`input[name='agenda_scope'][value='${value}']`);
+      if (radio) radio.checked = true;
+    };
+    const sync = () => {
+      const roles = checkedRoles();
+      professional.hidden = !roles.includes("professional");
+      if (!scopeTouched) setScope(roles.includes("admin") || roles.includes("reception") || !roles.length ? "all" : "restricted");
+      agendaList.hidden = form.querySelector("input[name='agenda_scope']:checked")?.value !== "restricted";
+    };
+    form.addEventListener("change", (event) => {
+      if (event.target.name === "agenda_scope") scopeTouched = true;
+      sync();
+    });
+    sync();
+  </script>
+</AdminLayout>

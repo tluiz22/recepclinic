@@ -505,6 +505,29 @@ Vocabulário pelo perfil da clínica.
     formulário de informações; o registro aparece como "CRM 5751 RN | RQE 6271"
     (`professionalRegistry`, para a assinatura das mensagens na F6). Migração `20261005190000`.
     3 testes unitários e 1 de banco novos.
+  - **F4.4b — concluída em 05/out** (cliente: numa etapa só). Cinco abas novas em Configurações:
+    **Horários** (escolhe a agenda; horários por dia e local, só de um serviço ou com vagas de
+    turma; o mesmo horário em vários dias de uma vez, conferidos antes e gravados juntos, e um
+    conflito num dia não grava nenhum; desativar, reativar e remover); **Feriados** (os da clínica,
+    com aviso próprio para data repetida, e os nacionais dos próximos 12 meses, só leitura, agora
+    com nome em `listNationalHolidays`); **Convênios**, só com o item (planos com outros nomes e
+    código ANS, "pedir carteirinha e validade" e quem atende cada plano, desmarcar = exceção);
+    **Equipe** (e-mail, papéis, convite pendente, profissional ligado e acesso às agendas;
+    convidar com o mesmo envio da F4.4a, reenviar convite, salvar e remover da clínica, o que
+    tira o convite e permite convidar de novo); **WhatsApp** (situação da conexão, só leitura, com
+    o cadastro pelo Suporte até a F8; **hora do lembrete**, com o item; e quem recebe o resumo
+    do dia, com o item: os profissionais marcados no cadastro e os outros contatos, com nome,
+    WhatsApp, consultas e, com o item de exames, exames). **Decisões do cliente (05/out):** hora do
+    lembrete em **horas cheias das 7h às 20h**, como no piloto (também no banco); **o papel
+    Profissional exige o cadastro de profissional ligado ao login** (um cadastro, um login; tirar
+    o papel solta o cadastro; D6). O convite segue a D6 no acesso às agendas (todas para
+    Administrador e Recepção, a própria para o Profissional). Migração `20261005200000`: faixa do
+    lembrete e `list_clinic_member_emails` (e-mails da equipe, só para o Administrador e o
+    Suporte). Saiu a rota antiga `/api/admin/envios/reminder-hour`, que gravava no schema do
+    piloto. Padrões assumidos (revisáveis): ninguém tira o próprio papel de Administrador nem se
+    remove da equipe (outro Administrador faz); remover um horário não mexe nos atendimentos já
+    marcados; profissional desativado sai da lista de quem atende o plano, e as exceções dele
+    ficam como estão. 4 testes unitários e 11 de banco novos.
 - **F4.5 — Agenda I:** dia, semana e mês com a escolha da agenda; marcar, remarcar, cancelar;
   presença e comparecimento; lembrete e preparo; lista de espera.
 - **F4.6 — Agenda II:** bloqueios, cancelamento do dia com link de remarcação, séries (D9).

@@ -1087,6 +1087,11 @@ isOneToOne: false
 "get_whatsapp_access_token":
 { Args: Record<PropertyKey, never>; Returns: string
                            },
+"list_clinic_member_emails":
+{ Args: { "p_clinic_id": string }; Returns: {
+              "email": string,"user_id": string
+            }[]
+                           },
 "log_platform_access":
 { Args: { "p_clinic_id": string,"p_method": string,"p_path": string }; Returns: undefined
                            },

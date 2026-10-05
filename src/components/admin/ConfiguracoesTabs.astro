@@ -1,25 +1,32 @@
 ---
 import TabBar from "./TabBar.astro";
 
-// Abas de Configurações (F4.3; as de horários, feriados, contatos, lembrete,
-// convênios, equipe e WhatsApp entram na F4.4).
+// Abas de Configurações (F4.3 e F4.4b). Convênios só com o item liberado (D11).
+type TabId = "clinica" | "profissionais" | "locais" | "agendas" | "servicos" | "horarios" | "feriados" | "convenios" | "equipe" | "whatsapp";
+
 interface Props {
-  current: "clinica" | "profissionais" | "locais" | "agendas" | "servicos";
+  current: TabId;
 }
 
 const { current } = Astro.props;
+const features = Astro.locals.clinic?.features ?? [];
 
-const tabs = [
+const tabs: { id: TabId; label: string; href: string; show?: boolean }[] = [
   { id: "clinica", label: "Clínica", href: "/admin/configuracoes" },
   { id: "profissionais", label: "Profissionais", href: "/admin/configuracoes/profissionais" },
   { id: "locais", label: "Locais", href: "/admin/configuracoes/locais" },
   { id: "agendas", label: "Agendas", href: "/admin/configuracoes/agendas" },
   { id: "servicos", label: "Serviços", href: "/admin/configuracoes/servicos" },
-] as const;
+  { id: "horarios", label: "Horários", href: "/admin/configuracoes/horarios" },
+  { id: "feriados", label: "Feriados", href: "/admin/configuracoes/feriados" },
+  { id: "convenios", label: "Convênios", href: "/admin/configuracoes/convenios", show: features.includes("insurance") },
+  { id: "equipe", label: "Equipe", href: "/admin/configuracoes/equipe" },
+  { id: "whatsapp", label: "WhatsApp", href: "/admin/configuracoes/whatsapp" },
+];
 ---
 
 <TabBar
   label="Seções de Configurações"
   class="mt-4"
-  tabs={tabs.map((tab) => ({ label: tab.label, href: tab.href, active: tab.id === current }))}
+  tabs={tabs.filter((tab) => tab.show !== false).map((tab) => ({ label: tab.label, href: tab.href, active: tab.id === current }))}
 />
