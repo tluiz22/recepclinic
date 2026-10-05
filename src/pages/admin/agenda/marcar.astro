@@ -50,6 +50,8 @@ const link = (changes: Partial<typeof state> & { busca?: string }) => {
   return `/admin/agenda/marcar?${next}`;
 };
 const busca = (params.get("busca") ?? "").trim();
+// O paciente fala por si no WhatsApp (sem responsável).
+const selfLabel = vocabulary.patient === "criança" ? "Própria criança" : "Próprio paciente";
 
 const [services, agendas, locations, settings] = await Promise.all([
   listServices(db, clinic.clinicId),
@@ -144,7 +146,7 @@ const chip = (active: boolean) =>
             <div>
               <p class="font-medium text-slate-900">{patient.fullName}</p>
               <p class="text-slate-500">
-                {formatAge(patient.birthdate, today)} · {patient.isContactSelf ? "WhatsApp" : `${capitalize(vocabulary.contact)}: ${contact.fullName}`} ·{" "}
+                {formatAge(patient.birthdate, today)} · {patient.isContactSelf ? selfLabel : `${capitalize(vocabulary.contact)}: ${contact.fullName}`} ·{" "}
                 {formatPhoneBR(contact.phone)}
               </p>
             </div>
@@ -168,7 +170,7 @@ const chip = (active: boolean) =>
                     <a href={link({ patient_id: r.id })} class="block px-3 py-2 text-sm hover:bg-sky-50">
                       <span class="font-medium text-slate-900">{r.fullName}</span>
                       <span class="block text-slate-500">
-                        {formatAge(r.birthdate, today)} · {r.isContactSelf ? "WhatsApp" : r.contact.fullName} · {formatPhoneBR(r.contact.phone)}
+                        {formatAge(r.birthdate, today)} · {r.isContactSelf ? selfLabel : r.contact.fullName} · {formatPhoneBR(r.contact.phone)}
                       </span>
                     </a>
                   </li>

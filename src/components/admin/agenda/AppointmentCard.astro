@@ -50,6 +50,8 @@ const reminderButton: Record<ReminderAction, string> = {
   resend: "Reenviar lembrete",
   resend_unanswered: "Reenviar lembrete",
 };
+// O paciente fala por si no WhatsApp (sem responsável).
+const selfLabel = vocabulary.patient === "criança" ? "Própria criança" : "Próprio paciente";
 const LINK_BUTTON = "rounded-md border px-2.5 py-1 text-xs font-semibold";
 const status = statusBadge[a.status];
 const canJoinWaitlist = waitlistOn && isActive && !isPast && a.seriesId === null;
@@ -73,7 +75,7 @@ const canJoinWaitlist = waitlistOn && isActive && !isPast && a.seriesId === null
       {compact && status && <Badge variant={status.variant}>{status.label}</Badge>}
     </p>
     <p class="mt-0.5 text-slate-500">
-      {a.isContactSelf ? "WhatsApp" : `${capitalize(vocabulary.contact)}: ${a.contactName}`} · <PhoneLinks phone={a.contactPhone} plain class="text-sky-700" />
+      {a.isContactSelf ? selfLabel : `${capitalize(vocabulary.contact)}: ${a.contactName}`} · <PhoneLinks phone={a.contactPhone} plain class="text-sky-700" />
     </p>
     {
       !compact && (
