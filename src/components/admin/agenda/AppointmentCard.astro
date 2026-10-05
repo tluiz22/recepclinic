@@ -169,7 +169,7 @@ const tone = (danger?: boolean) => (danger ? "border-red-300 text-red-700 hover:
   }
   <div class={`${compact ? "" : "mt-2"} text-sm text-slate-700`}>
     <p class="flex flex-wrap items-center gap-x-2 gap-y-1 font-medium text-slate-900">
-      <a href={`/admin/pacientes/${a.patientId}`} class={`hover:text-sky-700 hover:underline ${isCanceled ? CANCELED_TEXT : ""}`}>{a.patientName}</a>
+      <a href={`/admin/pacientes/${a.patientId}`} class="hover:text-sky-700 hover:underline">{a.patientName}</a>
       {noShow && <Badge variant="danger">Faltou {noShow.noShows} de {noShow.total}</Badge>}
       {compact && status && <Badge variant={status.variant}>{status.label}</Badge>}
     </p>

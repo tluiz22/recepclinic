@@ -646,10 +646,11 @@ Vocabulário pelo perfil da clínica.
   de quem fez) e o evento "Desistiu" na trilha. Saíram o Resumo do Dia, a trilha, as rotas e os
   componentes antigos. 4 testes unitários e 4 de banco novos.
   **Ajuste pedido na validação (cliente, 05/out): cancelado bem destacado.** Na Agenda e no Resumo
-  do dia, o atendimento cancelado tem faixa vermelha à esquerda, fundo avermelhado, horário e nome
-  riscados e o selo "Cancelado" em vermelho (também no histórico do paciente e na série).
+  do dia, o atendimento cancelado tem faixa vermelha à esquerda, fundo avermelhado, horário riscado
+  (o nome do paciente, não; cliente, 05/out) e o selo "Cancelado" em vermelho (também no histórico
+  do paciente e na série).
   O cartão do bloqueio no Dia deixa de ficar apagado: aparece como um atendimento ativo, com o
-  selo "Bloqueio" escuro e em destaque (cliente, 05/out). O cartão do **retorno** mostra a consulta
+  selo "Bloqueio" em cinza prateado (cliente, 05/out). O cartão do **retorno** mostra a consulta
   de origem ("Retorno da consulta de 12/10/2026 (cancelada)", ou "sem consulta de origem").
   **Regra do retorno (cliente, 05/out):** todo retorno é de uma consulta **que já começou**: a
   marcação do retorno é na data e hora de início da consulta de origem ou depois, e do mesmo

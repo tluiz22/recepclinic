@@ -43,8 +43,8 @@ const canceled = appointments.filter((a) => a.status === "canceled");
         <Card class={a.status === "canceled" ? CANCELED_CARD : ""}>
           <div class="flex flex-wrap items-start justify-between gap-2">
             <div class="text-sm">
-              <p class={`text-base font-semibold ${a.status === "canceled" ? CANCELED_TEXT : "text-slate-900"}`}>
-                {formatInstant(a.scheduledAt, timeZone, "HH:mm")} ·{" "}
+              <p class="text-base font-semibold text-slate-900">
+                <span class={a.status === "canceled" ? CANCELED_TEXT : ""}>{formatInstant(a.scheduledAt, timeZone, "HH:mm")}</span> ·{" "}
                 <a href={`/admin/pacientes/${a.patientId}`} class="hover:text-sky-700 hover:underline">
                   {a.patientName}
                 </a>{" "}

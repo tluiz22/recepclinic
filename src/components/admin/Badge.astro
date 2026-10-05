@@ -12,8 +12,8 @@ const { variant = "neutral", class: className = "" } = Astro.props;
 
 const variants: Record<BadgeVariant, string> = {
   neutral: "bg-slate-100 text-slate-600",
-  // Bloqueio da agenda (cliente, 05/out/2026: destacado, diferente de tudo).
-  strong: "bg-slate-800 font-semibold uppercase tracking-wide text-white",
+  // Bloqueio da agenda (cliente, 05/out/2026): cinza prateado, destacado sem pesar.
+  strong: "border border-slate-300 bg-slate-200 font-semibold uppercase tracking-wide text-slate-700",
   info: "bg-sky-100 text-sky-700",
   accent: "bg-indigo-100 text-indigo-700",
   success: "bg-emerald-100 text-emerald-700",
