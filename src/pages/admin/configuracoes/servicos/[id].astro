@@ -1,0 +1,171 @@
+---
+// Configurações › Serviços › novo ou editar (F4.3, D4c): dados do serviço,
+// agendas que atendem (D2) e locais em que é oferecido, com preço próprio
+// opcional por local. Exame só com o item "Exames e procedimentos" (D11); a
+// categoria não muda depois de criado. Os dias e horários entram na F4.4.
+import AdminLayout from "../../../../layouts/AdminLayout.astro";
+import ActiveToggle from "../../../../components/admin/ActiveToggle.astro";
+import Card from "../../../../components/admin/Card.astro";
+import FlashMessage from "../../../../components/admin/FlashMessage.astro";
+import Icon from "../../../../components/admin/Icon.astro";
+import PreparationField from "../../../../components/admin/PreparationField.astro";
+import { HINT, INPUT, LABEL, PRIMARY_BUTTON } from "../../../../components/admin/fieldStyles";
+import { createUserClient } from "../../../../lib/data/clients";
+import { listAgendas } from "../../../../lib/data/config/agendas";
+import { listLocations } from "../../../../lib/data/config/locations";
+import { listServices } from "../../../../lib/data/config/services";
+import { centsToInput } from "../../../../lib/forms";
+import { CATEGORY_LABELS } from "../../../../lib/serviceLabels";
+
+const clinic = Astro.locals.clinic!;
+const db = createUserClient(Astro.request, Astro.cookies);
+const { id } = Astro.params;
+const isNew = id === "novo";
+const [services, agendas, locations] = await Promise.all([
+  isNew ? Promise.resolve([]) : listServices(db, clinic.clinicId, { includeInactive: true }),
+  listAgendas(db, clinic.clinicId, { includeInactive: true }),
+  listLocations(db, clinic.clinicId, { includeInactive: true }),
+]);
+const service = isNew ? null : (services.find((s) => s.id === id) ?? null);
+if (!isNew && !service) return Astro.redirect("/admin/configuracoes/servicos");
+
+const examsOn = clinic.features.includes("exams");
+const categories = (["consultation", "return_visit", "exam"] as const).filter((c) => c !== "exam" || examsOn);
+// Desativados só aparecem se já estão ligados ao serviço.
+const agendaOptions = agendas.filter((a) => a.isActive || service?.agendaIds.includes(a.id));
+const offered = new Map((service?.locations ?? []).map((l) => [l.locationId, l.priceCents]));
+const locationOptions = locations.filter((l) => l.isActive || offered.has(l.id));
+const action = `/api/admin/configuracoes/servicos/${id}`;
+---
+
+<AdminLayout title={isNew ? "Novo serviço" : service!.name}>
+  <a href="/admin/configuracoes/servicos" class="inline-flex items-center gap-1 text-sm text-sky-700 hover:underline">
+    <Icon name="chevron-left" class="h-4 w-4" /> Serviços
+  </a>
+  <h1 class="mt-2 text-2xl font-bold text-slate-900">{isNew ? "Novo serviço" : "Editar serviço"}</h1>
+  <FlashMessage />
+
+  <Card class="mt-4 max-w-4xl">
+    <form method="POST" action={action} class="flex flex-col gap-5" data-service-form data-category={service?.category ?? ""}>
+      <input type="hidden" name="acao" value="salvar" />
+      <div>
+        <label for="category" class={LABEL}>Tipo</label>
+        {
+          isNew ? (
+            <select id="category" name="category" class={INPUT}>
+              {categories.map((c) => (
+                <option value={c}>{CATEGORY_LABELS[c]}</option>
+              ))}
+            </select>
+          ) : (
+            <p class="mt-1 text-sm text-slate-900">{CATEGORY_LABELS[service!.category]}</p>
+          )
+        }
+        {isNew && <p class={HINT}>O tipo não muda depois de criado.</p>}
+      </div>
+      <div>
+        <label for="name" class={LABEL}>Nome</label>
+        <input id="name" name="name" required placeholder="Consulta, Retorno, Espirometria…" value={service?.name ?? ""} class={INPUT} />
+      </div>
+      <div class="grid gap-4 sm:grid-cols-3">
+        <div>
+          <label for="duration_minutes" class={LABEL}>Duração (min)</label>
+          <input id="duration_minutes" name="duration_minutes" type="number" min="1" required value={service?.durationMinutes ?? 30} class={INPUT} />
+        </div>
+        <div>
+          <label for="price" class={LABEL}>Valor (R$)</label>
+          <input id="price" name="price" inputmode="decimal" required placeholder="0,00" value={centsToInput(service?.priceCents ?? null)} class={INPUT} />
+        </div>
+        <div data-only="return_visit">
+          <label for="return_deadline_days" class={LABEL}>Prazo do retorno (dias)</label>
+          <input id="return_deadline_days" name="return_deadline_days" type="number" min="1" value={service?.returnDeadlineDays ?? ""} class={INPUT} />
+          <p class={HINT}>Contado da última consulta na mesma agenda. Vazio = sem prazo.</p>
+        </div>
+      </div>
+
+      <div data-only="exam">
+        <span class={LABEL}>Como é marcado</span>
+        <div class="mt-1 flex flex-wrap gap-4 text-sm text-slate-700">
+          <label class="flex items-center gap-2">
+            <input type="radio" name="scheduling_mode" value="individual" checked={service?.schedulingMode !== "group"} /> Individual
+          </label>
+          <label class="flex items-center gap-2">
+            <input type="radio" name="scheduling_mode" value="group" checked={service?.schedulingMode === "group"} /> Em turma (vagas por horário)
+          </label>
+        </div>
+      </div>
+      <div data-only="exam">
+        <PreparationField value={service?.preparationInstructions} />
+      </div>
+
+      <fieldset class="border-t border-slate-200 pt-4">
+        <legend class="text-sm font-semibold uppercase tracking-wide text-slate-500">Agendas que atendem</legend>
+        <p class={HINT}>O serviço só aparece para marcar nas agendas marcadas aqui.</p>
+        <div class="mt-2 flex flex-col gap-2">
+          {
+            agendaOptions.map((agenda) => (
+              <label class="flex items-center gap-2 text-sm text-slate-700">
+                <input type="checkbox" name="agenda_id" value={agenda.id} checked={service?.agendaIds.includes(agenda.id)} class="h-4 w-4 rounded border-slate-300" />
+                {agenda.name}
+                {!agenda.isActive && " (desativada)"}
+              </label>
+            ))
+          }
+          {agendaOptions.length === 0 && <p class="text-sm text-slate-600">Cadastre uma agenda antes.</p>}
+        </div>
+      </fieldset>
+
+      <fieldset class="border-t border-slate-200 pt-4">
+        <legend class="text-sm font-semibold uppercase tracking-wide text-slate-500">Locais em que é oferecido</legend>
+        <p class={HINT}>Sem valor próprio, vale o valor do serviço.</p>
+        <div class="mt-2 flex flex-col gap-3">
+          {
+            locationOptions.map((location) => {
+              const own = offered.get(location.id) ?? null;
+              return (
+                <div class="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-slate-700">
+                  <label class="flex min-w-48 items-center gap-2">
+                    <input type="checkbox" name="location_id" value={location.id} checked={offered.has(location.id)} class="h-4 w-4 rounded border-slate-300" />
+                    {location.name}
+                    {location.type === "home_visit" && " (domiciliar)"}
+                    {!location.isActive && " (desativado)"}
+                  </label>
+                  <label class="flex items-center gap-2">
+                    <input type="checkbox" name={`own_price_${location.id}`} checked={own !== null} class="h-4 w-4 rounded border-slate-300" />
+                    valor próprio
+                  </label>
+                  <input
+                    name={`price_${location.id}`}
+                    inputmode="decimal"
+                    aria-label={`Valor em ${location.name}`}
+                    placeholder="0,00"
+                    value={centsToInput(own)}
+                    class={`${INPUT} mt-0 w-28`}
+                  />
+                </div>
+              );
+            })
+          }
+          {locationOptions.length === 0 && <p class="text-sm text-slate-600">Cadastre um local antes.</p>}
+        </div>
+      </fieldset>
+
+      <button type="submit" class={`${PRIMARY_BUTTON} self-start`}>{isNew ? "Cadastrar" : "Salvar"}</button>
+    </form>
+    {!isNew && <ActiveToggle action={action} isActive={service!.isActive} what="o serviço" />}
+  </Card>
+
+  <script>
+    // Mostra só os campos do tipo escolhido (prazo do retorno; turma e preparo do exame).
+    const form = document.querySelector<HTMLFormElement>("[data-service-form]");
+    const select = document.getElementById("category") as HTMLSelectElement | null;
+    const sync = () => {
+      const category = select?.value ?? form?.dataset.category ?? "";
+      form?.querySelectorAll<HTMLElement>("[data-only]").forEach((el) => {
+        el.hidden = el.dataset.only !== category;
+      });
+    };
+    select?.addEventListener("change", sync);
+    sync();
+  </script>
+</AdminLayout>

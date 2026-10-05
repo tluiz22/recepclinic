@@ -1,0 +1,55 @@
+---
+// Configurações › Profissionais (F4.3).
+import AdminLayout from "../../../layouts/AdminLayout.astro";
+import Badge from "../../../components/admin/Badge.astro";
+import Card from "../../../components/admin/Card.astro";
+import ConfiguracoesTabs from "../../../components/admin/ConfiguracoesTabs.astro";
+import FlashMessage from "../../../components/admin/FlashMessage.astro";
+import { PRIMARY_BUTTON } from "../../../components/admin/fieldStyles";
+import { createUserClient } from "../../../lib/data/clients";
+import { listProfessionals } from "../../../lib/data/config/professionals";
+import { formatPhoneBR } from "../../../lib/phone";
+
+const clinic = Astro.locals.clinic!;
+const showInactive = Astro.url.searchParams.get("todos") === "1";
+const professionals = await listProfessionals(createUserClient(Astro.request, Astro.cookies), clinic.clinicId, { includeInactive: showInactive });
+const council = (p: (typeof professionals)[number]) => [p.council, p.councilNumber, p.councilState].filter(Boolean).join(" ");
+---
+
+<AdminLayout title="Profissionais">
+  <h1 class="text-2xl font-bold text-slate-900">Configurações</h1>
+  <ConfiguracoesTabs current="profissionais" />
+  <FlashMessage />
+
+  <div class="mt-4 flex flex-wrap items-center justify-between gap-3">
+    <a href="/admin/configuracoes/profissionais/novo" class={PRIMARY_BUTTON}>Novo profissional</a>
+    <a href={showInactive ? "?" : "?todos=1"} class="text-sm text-sky-700 hover:underline">
+      {showInactive ? "Esconder desativados" : "Mostrar desativados"}
+    </a>
+  </div>
+
+  <ul class="mt-4 grid gap-3 sm:grid-cols-2">
+    {
+      professionals.map((p) => (
+        <li>
+          <a href={`/admin/configuracoes/profissionais/${p.id}`}>
+            <Card class="h-full hover:border-sky-300 hover:bg-sky-50" muted={!p.isActive}>
+              <p class="font-medium text-slate-900">
+                {p.displayName} {!p.isActive && <Badge>desativado</Badge>}
+              </p>
+              <p class="mt-1 text-sm text-slate-600">{[p.profession, p.specialty].filter(Boolean).join(" · ")}</p>
+              {council(p) && <p class="text-sm text-slate-500">{council(p)}</p>}
+              {p.phone && (
+                <p class="text-sm text-slate-500">
+                  {formatPhoneBR(p.phone)}
+                  {p.receivesDailySummary ? " · recebe o resumo do dia" : ""}
+                </p>
+              )}
+            </Card>
+          </a>
+        </li>
+      ))
+    }
+  </ul>
+  {professionals.length === 0 && <p class="mt-4 text-sm text-slate-600">Nenhum profissional cadastrado.</p>}
+</AdminLayout>

@@ -41,7 +41,8 @@ describe("item que cada rota exige", () => {
       "/admin/trilha/1",
       "/api/admin/agenda/appointments/1/cancel",
       "/api/admin/consultas/cancelar-em-massa",
-      "/admin/configuracoes/duracao",
+      "/admin/configuracoes/servicos",
+      "/admin/configuracoes/locais/novo",
     ]) {
       expect(route(url), url).toBeNull();
     }
@@ -60,8 +61,6 @@ describe("item que cada rota exige", () => {
     expect(route("/admin/consultas?tab=lembretes")).toBe("reminders");
     expect(route("/admin/consultas?tab=lista_espera")).toBe("waitlist");
     expect(route("/admin/agenda/marcar-exame")).toBe("exams");
-    expect(route("/admin/configuracoes/exames/1")).toBe("exams");
-    expect(route("/api/admin/configuracoes/exam-types/1/deactivate")).toBe("exams");
     expect(route("/admin/configuracoes/contatos")).toBe("daily_summary");
     expect(route("/api/admin/envios/reminder-hour")).toBe("reminders");
     expect(route("/api/admin/agenda/appointments/1/resend-reminder")).toBe("reminders");
@@ -90,7 +89,7 @@ describe("acesso à rota: papel (D6) e item liberado (D11)", () => {
   });
 
   it("item liberado não passa por cima do papel", () => {
-    expect(can(ctx(["reception"], ["exams"]), "/admin/configuracoes/exames")).toBe(false);
+    expect(can(ctx(["reception"], ["exams"]), "/admin/configuracoes/servicos")).toBe(false);
     expect(can(ctx(["reception"], ["metrics_financial"]), "/admin/metricas?tab=financeiro")).toBe(false);
   });
 

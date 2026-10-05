@@ -1,0 +1,94 @@
+---
+// Configurações › Agendas › nova ou editar (F4.3, D2).
+import AdminLayout from "../../../../layouts/AdminLayout.astro";
+import ActiveToggle from "../../../../components/admin/ActiveToggle.astro";
+import Card from "../../../../components/admin/Card.astro";
+import FlashMessage from "../../../../components/admin/FlashMessage.astro";
+import Icon from "../../../../components/admin/Icon.astro";
+import { HINT, INPUT, LABEL, PRIMARY_BUTTON } from "../../../../components/admin/fieldStyles";
+import { createUserClient } from "../../../../lib/data/clients";
+import { listAgendas } from "../../../../lib/data/config/agendas";
+import { listProfessionals } from "../../../../lib/data/config/professionals";
+
+const clinic = Astro.locals.clinic!;
+const db = createUserClient(Astro.request, Astro.cookies);
+const { id } = Astro.params;
+const isNew = id === "novo";
+const [agendas, professionals] = await Promise.all([
+  listAgendas(db, clinic.clinicId, { includeInactive: true }),
+  listProfessionals(db, clinic.clinicId, { includeInactive: true }),
+]);
+const agenda = isNew ? null : (agendas.find((a) => a.id === id) ?? null);
+if (!isNew && !agenda) return Astro.redirect("/admin/configuracoes/agendas");
+const professionalName = agenda?.professionalId ? professionals.find((p) => p.id === agenda.professionalId)?.displayName : null;
+const action = `/api/admin/configuracoes/agendas/${id}`;
+---
+
+<AdminLayout title={isNew ? "Nova agenda" : agenda!.name}>
+  <a href="/admin/configuracoes/agendas" class="inline-flex items-center gap-1 text-sm text-sky-700 hover:underline">
+    <Icon name="chevron-left" class="h-4 w-4" /> Agendas
+  </a>
+  <h1 class="mt-2 text-2xl font-bold text-slate-900">{isNew ? "Nova agenda" : "Editar agenda"}</h1>
+  <FlashMessage />
+
+  <Card class="mt-4 max-w-2xl">
+    <form method="POST" action={action} class="flex flex-col gap-4">
+      <input type="hidden" name="acao" value="salvar" />
+      <div>
+        <label for="name" class={LABEL}>Nome</label>
+        <input id="name" name="name" required placeholder="Dra. Ana, Exames…" value={agenda?.name ?? ""} class={INPUT} />
+      </div>
+      {
+        isNew ? (
+          <>
+            <div>
+              <label for="kind" class={LABEL}>
+                De quem é
+              </label>
+              <select id="kind" name="kind" class={INPUT}>
+                <option value="professional">De um profissional</option>
+                <option value="resource">De um recurso (ex.: exames feitos pela recepção)</option>
+              </select>
+            </div>
+            <div data-professional>
+              <label for="professional_id" class={LABEL}>
+                Profissional
+              </label>
+              <select id="professional_id" name="professional_id" class={INPUT}>
+                <option value="">Escolha…</option>
+                {professionals
+                  .filter((p) => p.isActive)
+                  .map((p) => (
+                    <option value={p.id}>{p.displayName}</option>
+                  ))}
+              </select>
+              <p class={HINT}>O tipo e o profissional não mudam depois de criada.</p>
+            </div>
+          </>
+        ) : (
+          <p class="text-sm text-slate-700">
+            {agenda!.kind === "professional" ? `Agenda de ${professionalName ?? "profissional"}` : "Agenda de recurso (sem profissional)"}
+          </p>
+        )
+      }
+      <div>
+        <label for="buffer_minutes" class={LABEL}>Intervalo entre atendimentos (min)</label>
+        <input id="buffer_minutes" name="buffer_minutes" type="number" min="0" required value={agenda?.bufferMinutes ?? 0} class={`${INPUT} w-28`} />
+        <p class={HINT}>Tempo livre deixado depois de cada atendimento desta agenda.</p>
+      </div>
+      <button type="submit" class={`${PRIMARY_BUTTON} self-start`}>{isNew ? "Cadastrar" : "Salvar"}</button>
+    </form>
+    {!isNew && <ActiveToggle action={action} isActive={agenda!.isActive} what="a agenda" />}
+  </Card>
+
+  <script>
+    // Agenda de recurso não tem profissional.
+    const kind = document.getElementById("kind") as HTMLSelectElement | null;
+    const professional = document.querySelector<HTMLElement>("[data-professional]");
+    const sync = () => {
+      if (kind && professional) professional.hidden = kind.value !== "professional";
+    };
+    kind?.addEventListener("change", sync);
+    sync();
+  </script>
+</AdminLayout>

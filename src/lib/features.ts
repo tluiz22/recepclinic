@@ -108,18 +108,14 @@ const PATH_RULES: PathRule[] = [
   // Resumo do Dia: abas do lembrete e da lista de espera.
   { prefix: "/admin/consultas", tab: "lembretes", feature: "reminders" },
   { prefix: "/admin/consultas", tab: "lista_espera", feature: "waitlist" },
-  // Exames.
+  // Exames (o cadastro de serviço de exame é travado no formulário e no banco, F4.3).
   { prefix: "/admin/agenda/marcar-exame", feature: "exams" },
   { prefix: "/admin/agenda/remarcar-exame", feature: "exams" },
   { prefix: "/api/admin/agenda/available-exam-dates", feature: "exams" },
   { prefix: "/api/admin/agenda/available-exam-group-dates", feature: "exams" },
   { prefix: "/api/admin/agenda/available-exam-slots", feature: "exams" },
-  { prefix: "/admin/configuracoes/exames", feature: "exams" },
-  { prefix: "/api/admin/configuracoes/exam-types", feature: "exams" },
-  { prefix: "/api/admin/configuracoes/exam-type-availability-windows", feature: "exams" },
   // Envios pelo WhatsApp.
   { prefix: "/admin/configuracoes/contatos", feature: "daily_summary" },
-  { prefix: "/api/admin/configuracoes/notification-recipients", feature: "daily_summary" },
   { prefix: "/api/admin/envios/reminder-hour", feature: "reminders" },
 ];
 

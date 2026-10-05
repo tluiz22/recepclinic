@@ -105,7 +105,7 @@ describe("papéis e áreas do painel (D6)", () => {
 
   it("Configurações: só Administrador (e Suporte)", () => {
     expect(areaOfPath("/admin/configuracoes")).toBe("settings");
-    expect(areaOfPath("/api/admin/configuracoes/exam-types/1")).toBe("settings");
+    expect(areaOfPath("/api/admin/configuracoes/servicos/1")).toBe("settings");
     expect(canAccessArea(as("admin"), "settings")).toBe(true);
     expect(canAccessArea(as("professional"), "settings")).toBe(false);
     expect(canAccessArea(as("reception"), "settings")).toBe(false);

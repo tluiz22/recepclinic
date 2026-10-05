@@ -1,0 +1,30 @@
+---
+import ConfirmDeleteDialog from "./ConfirmDeleteDialog.astro";
+import { SECONDARY_BUTTON } from "./fieldStyles";
+
+// Botão de desativar/reativar de um cadastro (F4.3): mesmo formulário da
+// rota de salvar, com o campo `acao`. Desativar pede confirmação no diálogo
+// do painel (não no window.confirm, que mostra o endereço da página).
+interface Props {
+  action: string;
+  isActive: boolean;
+  /** Ex.: "o profissional" — entra no botão e na confirmação. */
+  what: string;
+}
+
+const { action, isActive, what } = Astro.props;
+---
+
+<form method="POST" action={action} class="mt-6 border-t border-slate-200 pt-4">
+  <input type="hidden" name="acao" value={isActive ? "desativar" : "reativar"} />
+  <button
+    type="submit"
+    class={`${SECONDARY_BUTTON} ${isActive ? "js-confirm-delete text-red-700" : ""}`}
+    data-confirm-title={`Desativar ${what}?`}
+    data-confirm-message="Sai das telas de marcação; o histórico fica. Dá para reativar depois."
+    data-confirm-label="Desativar"
+  >
+    {isActive ? `Desativar ${what}` : `Reativar ${what}`}
+  </button>
+</form>
+{isActive && <ConfirmDeleteDialog />}

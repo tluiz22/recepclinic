@@ -1,0 +1,62 @@
+---
+// Configurações › Agendas (F4.3, D2): de um profissional ou de um recurso
+// (ex.: "Exames", quando a recepção faz o exame).
+import AdminLayout from "../../../layouts/AdminLayout.astro";
+import Badge from "../../../components/admin/Badge.astro";
+import Card from "../../../components/admin/Card.astro";
+import ConfiguracoesTabs from "../../../components/admin/ConfiguracoesTabs.astro";
+import FlashMessage from "../../../components/admin/FlashMessage.astro";
+import { PRIMARY_BUTTON } from "../../../components/admin/fieldStyles";
+import { createUserClient } from "../../../lib/data/clients";
+import { listAgendas } from "../../../lib/data/config/agendas";
+import { listProfessionals } from "../../../lib/data/config/professionals";
+import { listServices } from "../../../lib/data/config/services";
+
+const clinic = Astro.locals.clinic!;
+const db = createUserClient(Astro.request, Astro.cookies);
+const showInactive = Astro.url.searchParams.get("todos") === "1";
+const [agendas, professionals, services] = await Promise.all([
+  listAgendas(db, clinic.clinicId, { includeInactive: showInactive }),
+  listProfessionals(db, clinic.clinicId, { includeInactive: true }),
+  listServices(db, clinic.clinicId),
+]);
+const professionalName = new Map(professionals.map((p) => [p.id, p.displayName]));
+const servicesOf = (agendaId: string) => services.filter((s) => s.agendaIds.includes(agendaId)).map((s) => s.name);
+---
+
+<AdminLayout title="Agendas">
+  <h1 class="text-2xl font-bold text-slate-900">Configurações</h1>
+  <ConfiguracoesTabs current="agendas" />
+  <FlashMessage />
+
+  <div class="mt-4 flex flex-wrap items-center justify-between gap-3">
+    <a href="/admin/configuracoes/agendas/novo" class={PRIMARY_BUTTON}>Nova agenda</a>
+    <a href={showInactive ? "?" : "?todos=1"} class="text-sm text-sky-700 hover:underline">
+      {showInactive ? "Esconder desativadas" : "Mostrar desativadas"}
+    </a>
+  </div>
+
+  <ul class="mt-4 grid gap-3 sm:grid-cols-2">
+    {
+      agendas.map((agenda) => (
+        <li>
+          <a href={`/admin/configuracoes/agendas/${agenda.id}`}>
+            <Card class="h-full hover:border-sky-300 hover:bg-sky-50" muted={!agenda.isActive}>
+              <p class="font-medium text-slate-900">
+                {agenda.name} {!agenda.isActive && <Badge>desativada</Badge>}
+              </p>
+              <p class="mt-1 text-sm text-slate-600">
+                {agenda.kind === "professional" ? `Profissional: ${professionalName.get(agenda.professionalId!) ?? "—"}` : "Recurso (sem profissional)"}
+                {agenda.bufferMinutes > 0 ? ` · ${agenda.bufferMinutes} min entre atendimentos` : ""}
+              </p>
+              <p class="text-sm text-slate-500">
+                {servicesOf(agenda.id).length ? servicesOf(agenda.id).join(", ") : "Nenhum serviço ligado"}
+              </p>
+            </Card>
+          </a>
+        </li>
+      ))
+    }
+  </ul>
+  {agendas.length === 0 && <p class="mt-4 text-sm text-slate-600">Nenhuma agenda cadastrada.</p>}
+</AdminLayout>

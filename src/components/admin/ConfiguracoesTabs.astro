@@ -1,19 +1,20 @@
 ---
 import TabBar from "./TabBar.astro";
 
+// Abas de Configurações (F4.3; as de horários, feriados, contatos, lembrete,
+// convênios, equipe e WhatsApp entram na F4.4).
 interface Props {
-  current: "disponibilidade" | "duracao" | "valores" | "exames" | "contatos" | "envios";
+  current: "clinica" | "profissionais" | "locais" | "agendas" | "servicos";
 }
 
 const { current } = Astro.props;
 
 const tabs = [
-  { id: "disponibilidade", label: "Disponibilidade", href: "/admin/configuracoes" },
-  { id: "duracao", label: "Duração e intervalo", href: "/admin/configuracoes/duracao" },
-  { id: "valores", label: "Valores", href: "/admin/configuracoes/valores" },
-  { id: "exames", label: "Tipos de exame", href: "/admin/configuracoes/exames" },
-  { id: "contatos", label: "Contatos", href: "/admin/configuracoes/contatos" },
-  { id: "envios", label: "Envios automáticos", href: "/admin/configuracoes/envios" },
+  { id: "clinica", label: "Clínica", href: "/admin/configuracoes" },
+  { id: "profissionais", label: "Profissionais", href: "/admin/configuracoes/profissionais" },
+  { id: "locais", label: "Locais", href: "/admin/configuracoes/locais" },
+  { id: "agendas", label: "Agendas", href: "/admin/configuracoes/agendas" },
+  { id: "servicos", label: "Serviços", href: "/admin/configuracoes/servicos" },
 ] as const;
 ---
 

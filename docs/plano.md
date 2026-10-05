@@ -509,6 +509,24 @@ Vocabulário pelo perfil da clínica.
   do navegador (ex.: salvar a matriz depois de entrar com outro login em outra aba) passa a levar
   ao Início com o aviso, ou ao login sem sessão, em vez de mostrar `{"error":"forbidden"}`; chamadas
   por código continuam recebendo JSON (`expectsPage`).
+- **F4.3 — concluída em 05/out.** Configurações no banco novo, abas Clínica, Profissionais,
+  Locais, Agendas e Serviços: **Clínica** (nome, perfil com o vocabulário de cada um, fuso do
+  Brasil, idade limite da consulta, cor e, com o bot liberado, as informações que o bot responde);
+  **Profissionais** (nome, profissão, especialidade, conselho, número e UF, WhatsApp e "Recebe o
+  resumo do dia" com o item liberado); **Locais** (consultório com endereço ou domiciliar, este só
+  com o item); **Agendas** (de profissional ou de recurso, intervalo entre atendimentos);
+  **Serviços** (consulta, retorno e exame, este só com o item; duração, valor, prazo do retorno,
+  individual ou turma, preparo com prévia, agendas que atendem e locais com valor próprio
+  opcional). Cada cadastro com lista ("Mostrar desativados"), criar, editar, desativar (com
+  confirmação) e reativar. Aviso de salvo ou de erro num cookie de uso único (`src/lib/flash.ts`;
+  o texto não vai na URL), rotas de formulário com `runFormAction` e leitura dos campos em
+  `src/lib/forms.ts` (valores "150,50" e "1.234,56"). **Decisão do cliente (05/out): o envio do
+  logo fica para a F5**, junto das páginas que o mostram. Saíram as telas e rotas antigas de
+  Configurações (Disponibilidade, Duração, Valores, Tipos de exame, Contatos, Envios), que liam o
+  schema do piloto; as que voltam em outra forma ficam na F4.4. Padrões assumidos (revisáveis): o
+  tipo do local não muda depois de criado (como a categoria do serviço e o tipo da agenda); o login
+  ligado ao profissional é definido na equipe (F4.4). 4 testes unitários novos (a camada de acesso
+  já tinha os de banco da F3.4).
 
 ## F5 — Páginas públicas e domínio
 

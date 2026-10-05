@@ -1,0 +1,73 @@
+---
+// Configurações › Locais › novo ou editar (F4.3). Domiciliar só com o item
+// "Atendimento domiciliar" liberado (D11); o tipo não muda depois de criado.
+import AdminLayout from "../../../../layouts/AdminLayout.astro";
+import ActiveToggle from "../../../../components/admin/ActiveToggle.astro";
+import Card from "../../../../components/admin/Card.astro";
+import FlashMessage from "../../../../components/admin/FlashMessage.astro";
+import Icon from "../../../../components/admin/Icon.astro";
+import { HINT, INPUT, LABEL, PRIMARY_BUTTON } from "../../../../components/admin/fieldStyles";
+import { createUserClient } from "../../../../lib/data/clients";
+import { listLocations } from "../../../../lib/data/config/locations";
+
+const clinic = Astro.locals.clinic!;
+const { id } = Astro.params;
+const isNew = id === "novo";
+const location = isNew
+  ? null
+  : ((await listLocations(createUserClient(Astro.request, Astro.cookies), clinic.clinicId, { includeInactive: true })).find((l) => l.id === id) ?? null);
+if (!isNew && !location) return Astro.redirect("/admin/configuracoes/locais");
+const homeVisitOn = clinic.features.includes("home_visit");
+const action = `/api/admin/configuracoes/locais/${id}`;
+---
+
+<AdminLayout title={isNew ? "Novo local" : location!.name}>
+  <a href="/admin/configuracoes/locais" class="inline-flex items-center gap-1 text-sm text-sky-700 hover:underline">
+    <Icon name="chevron-left" class="h-4 w-4" /> Locais
+  </a>
+  <h1 class="mt-2 text-2xl font-bold text-slate-900">{isNew ? "Novo local" : "Editar local"}</h1>
+  <FlashMessage />
+
+  <Card class="mt-4 max-w-2xl">
+    <form method="POST" action={action} class="flex flex-col gap-4">
+      <input type="hidden" name="acao" value="salvar" />
+      <div>
+        <label for="name" class={LABEL}>Nome</label>
+        <input id="name" name="name" required placeholder="Consultório Centro" value={location?.name ?? ""} class={INPUT} />
+      </div>
+      <div>
+        <label for="type" class={LABEL}>Tipo</label>
+        {
+          isNew ? (
+            <select id="type" name="type" class={INPUT}>
+              <option value="clinic">Consultório</option>
+              {homeVisitOn && <option value="home_visit">Domiciliar (a equipe vai até o paciente)</option>}
+            </select>
+          ) : (
+            <p class="mt-1 text-sm text-slate-900">{location!.type === "home_visit" ? "Domiciliar" : "Consultório"}</p>
+          )
+        }
+        {isNew && <p class={HINT}>O tipo não muda depois de criado.</p>}
+      </div>
+      <div data-address>
+        <label for="address" class={LABEL}>Endereço</label>
+        <input id="address" name="address" placeholder="Rua, número – bairro, cidade" value={location?.address ?? ""} class={INPUT} />
+        <p class={HINT}>Vai no lembrete e na confirmação, com o link do mapa.</p>
+      </div>
+      <button type="submit" class={`${PRIMARY_BUTTON} self-start`}>{isNew ? "Cadastrar" : "Salvar"}</button>
+    </form>
+    {!isNew && <ActiveToggle action={action} isActive={location!.isActive} what="o local" />}
+  </Card>
+
+  <script define:vars={{ fixedType: location?.type ?? null }}>
+    // Domiciliar não tem endereço fixo: o campo some.
+    const select = document.getElementById("type");
+    const address = document.querySelector("[data-address]");
+    const sync = () => {
+      const type = select ? select.value : fixedType;
+      address.hidden = type === "home_visit";
+    };
+    select?.addEventListener("change", sync);
+    sync();
+  </script>
+</AdminLayout>

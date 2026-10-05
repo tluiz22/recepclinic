@@ -1,0 +1,95 @@
+---
+// Configurações › Profissionais › novo ou editar (F4.3, D4b): nome,
+// profissão, especialidade, conselho (número e UF) e o WhatsApp para o resumo
+// do dia dos próprios atendimentos (D2 revista, 05/out/2026).
+import AdminLayout from "../../../../layouts/AdminLayout.astro";
+import ActiveToggle from "../../../../components/admin/ActiveToggle.astro";
+import Card from "../../../../components/admin/Card.astro";
+import FlashMessage from "../../../../components/admin/FlashMessage.astro";
+import Icon from "../../../../components/admin/Icon.astro";
+import { HINT, INPUT, LABEL, PRIMARY_BUTTON } from "../../../../components/admin/fieldStyles";
+import { BRAZIL_STATES, COUNCIL_SUGGESTIONS } from "../../../../lib/brazilStates";
+import { createUserClient } from "../../../../lib/data/clients";
+import { listProfessionals } from "../../../../lib/data/config/professionals";
+import { formatPhoneBR } from "../../../../lib/phone";
+
+const clinic = Astro.locals.clinic!;
+const { id } = Astro.params;
+const isNew = id === "novo";
+const professional = isNew
+  ? null
+  : ((await listProfessionals(createUserClient(Astro.request, Astro.cookies), clinic.clinicId, { includeInactive: true })).find((p) => p.id === id) ?? null);
+if (!isNew && !professional) return Astro.redirect("/admin/configuracoes/profissionais");
+const summaryOn = clinic.features.includes("daily_summary");
+const action = `/api/admin/configuracoes/profissionais/${id}`;
+---
+
+<AdminLayout title={isNew ? "Novo profissional" : professional!.displayName}>
+  <a href="/admin/configuracoes/profissionais" class="inline-flex items-center gap-1 text-sm text-sky-700 hover:underline">
+    <Icon name="chevron-left" class="h-4 w-4" /> Profissionais
+  </a>
+  <h1 class="mt-2 text-2xl font-bold text-slate-900">{isNew ? "Novo profissional" : "Editar profissional"}</h1>
+  <FlashMessage />
+
+  <Card class="mt-4 max-w-2xl">
+    <form method="POST" action={action} class="flex flex-col gap-4">
+      <input type="hidden" name="acao" value="salvar" />
+      <div>
+        <label for="display_name" class={LABEL}>Nome (como aparece para o paciente)</label>
+        <input id="display_name" name="display_name" required value={professional?.displayName ?? ""} class={INPUT} />
+      </div>
+      <div class="grid gap-4 sm:grid-cols-2">
+        <div>
+          <label for="profession" class={LABEL}>Profissão</label>
+          <input id="profession" name="profession" required placeholder="Médica, Dentista, Psicóloga…" value={professional?.profession ?? ""} class={INPUT} />
+        </div>
+        <div>
+          <label for="specialty" class={LABEL}>Especialidade (opcional)</label>
+          <input id="specialty" name="specialty" value={professional?.specialty ?? ""} class={INPUT} />
+        </div>
+      </div>
+      <div class="grid gap-4 sm:grid-cols-3">
+        <div>
+          <label for="council" class={LABEL}>Conselho</label>
+          <input id="council" name="council" list="councils" value={professional?.council ?? ""} class={INPUT} />
+          <datalist id="councils">{COUNCIL_SUGGESTIONS.map((c) => <option value={c} />)}</datalist>
+        </div>
+        <div>
+          <label for="council_number" class={LABEL}>Número</label>
+          <input id="council_number" name="council_number" value={professional?.councilNumber ?? ""} class={INPUT} />
+        </div>
+        <div>
+          <label for="council_state" class={LABEL}>UF</label>
+          <select id="council_state" name="council_state" class={INPUT}>
+            <option value="">—</option>
+            {BRAZIL_STATES.map((uf) => <option value={uf} selected={uf === professional?.councilState}>{uf}</option>)}
+          </select>
+        </div>
+      </div>
+      <div>
+        <label for="phone" class={LABEL}>WhatsApp (opcional)</label>
+        <input
+          id="phone"
+          name="phone"
+          type="tel"
+          placeholder="(84) 99999-9999"
+          value={professional?.phone ? formatPhoneBR(professional.phone) : ""}
+          class={INPUT}
+        />
+      </div>
+      {
+        summaryOn && (
+          <label class="flex items-start gap-2 text-sm text-slate-700">
+            <input type="checkbox" name="receives_daily_summary" checked={professional?.receivesDailySummary ?? false} class="mt-0.5 h-4 w-4 rounded border-slate-300" />
+            <span>
+              Recebe o resumo do dia dos seus atendimentos
+              <span class={HINT}>Na véspera às 18h e no dia, 1h antes do início da agenda dele. Precisa do WhatsApp acima.</span>
+            </span>
+          </label>
+        )
+      }
+      <button type="submit" class={`${PRIMARY_BUTTON} self-start`}>{isNew ? "Cadastrar" : "Salvar"}</button>
+    </form>
+    {!isNew && <ActiveToggle action={action} isActive={professional!.isActive} what="o profissional" />}
+  </Card>
+</AdminLayout>
