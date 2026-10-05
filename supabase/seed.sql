@@ -278,10 +278,10 @@ begin
   insert into public.conversation_state (clinic_id, contact_phone, contact_id, state, human_handoff)
     values (c_a, '+5584988880002', ct_carlos, 'HUMAN_HANDOFF', true);
 
-  insert into public.whatsapp_messages (clinic_id, appointment_id, contact_id, direction, message_type, template_name, body, status, wa_message_id) values
-    (c_a, null, ct_maria, 'inbound', 'text', null, 'Oi, quero marcar uma consulta', 'received', 'wamid.local.1'),
-    (c_a, ap_first, ct_maria, 'outbound', 'template', 'recepclinic_confirmacao', null, 'delivered', 'wamid.local.2'),
-    (c_a, ap_first, ct_maria, 'outbound', 'template', 'recepclinic_lembrete', null, 'read', 'wamid.local.3');
+  insert into public.whatsapp_messages (clinic_id, appointment_id, contact_id, contact_phone, direction, message_type, template_name, body, status, wa_message_id) values
+    (c_a, null, ct_maria, '+5584988880001', 'inbound', 'text', null, 'Oi, quero marcar uma consulta', 'received', 'wamid.local.1'),
+    (c_a, ap_first, ct_maria, '+5584988880001', 'outbound', 'template', 'recepclinic_confirmacao', null, 'delivered', 'wamid.local.2'),
+    (c_a, ap_first, ct_maria, '+5584988880001', 'outbound', 'template', 'recepclinic_lembrete', null, 'read', 'wamid.local.3');
 
   insert into public.bot_funnel_events (clinic_id, session_id, flow, step, contact_phone, contact_id) values
     (c_a, '0a0f0000-0000-4000-8000-000000000001', 'booking', 'started', '+5584988880001', ct_maria),

@@ -25,8 +25,9 @@
 >     acesso por clínica**, liberada pelo Administrador do sistema; o básico do consultório sempre
 >     ligado. **F3.8 concluída** (matriz no banco, com travas; no contexto e nas rotas; tela na F4).
 >     **Próxima etapa: F3.9** (WhatsApp e rotinas), dividida em três partes (cliente, 05/out):
->     F3.9a WhatsApp, F3.9b lembrete e reenvios, F3.9c resumo do dia e rotinas. **Em andamento:
->     F3.9a.**
+>     F3.9a WhatsApp, F3.9b lembrete e reenvios, F3.9c resumo do dia e rotinas. **F3.9a concluída**
+>     (conexão, templates, mensagens, janela de 24h, conversa, pausa da recepção pulando fim de
+>     semana e feriados, funil). **Próxima: F3.9b** (lembrete e reenvios, achado 4).
 >     Para rodar o banco: abrir o OrbStack, `npm run db:start`, `npm run db:reset` (carrega os
 >     dados de teste) e `npm run test:db`.
 > - **Frente paralela, o site** `www.recepclinic.com.br`: [`site-plano.md`](site-plano.md), etapas

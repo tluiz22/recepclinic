@@ -448,13 +448,13 @@ isOneToOne: false
                   ]
                 },"conversation_state": {
                   Row: {
-                    "clinic_id": string,"contact_id": string | null,"contact_phone": string,"context": NonNullable<Json>,"funnel_flow": string | null,"funnel_session_id": string | null,"human_handoff": boolean,"id": string,"state": string,"updated_at": string
+                    "clinic_id": string,"contact_id": string | null,"contact_phone": string,"context": NonNullable<Json>,"funnel_flow": string | null,"funnel_session_id": string | null,"human_handoff": boolean,"human_handoff_at": string | null,"id": string,"state": string,"updated_at": string
                   }
                   Insert: {
-                    "clinic_id": string,"contact_id"?: string | null,"contact_phone": string,"context"?: NonNullable<Json>,"funnel_flow"?: string | null,"funnel_session_id"?: string | null,"human_handoff"?: boolean,"id"?: string,"state"?: string,"updated_at"?: string
+                    "clinic_id": string,"contact_id"?: string | null,"contact_phone": string,"context"?: NonNullable<Json>,"funnel_flow"?: string | null,"funnel_session_id"?: string | null,"human_handoff"?: boolean,"human_handoff_at"?: string | null,"id"?: string,"state"?: string,"updated_at"?: string
                   }
                   Update: {
-                    "clinic_id"?: string,"contact_id"?: string | null,"contact_phone"?: string,"context"?: NonNullable<Json>,"funnel_flow"?: string | null,"funnel_session_id"?: string | null,"human_handoff"?: boolean,"id"?: string,"state"?: string,"updated_at"?: string
+                    "clinic_id"?: string,"contact_id"?: string | null,"contact_phone"?: string,"context"?: NonNullable<Json>,"funnel_flow"?: string | null,"funnel_session_id"?: string | null,"human_handoff"?: boolean,"human_handoff_at"?: string | null,"id"?: string,"state"?: string,"updated_at"?: string
                   }
                   Relationships: [
                     {
@@ -980,13 +980,13 @@ isOneToOne: true
                   ]
                 },"whatsapp_messages": {
                   Row: {
-                    "appointment_id": string | null,"body": string | null,"clinic_id": string,"contact_id": string | null,"created_at": string,"direction": string,"id": string,"message_type": string,"status": string | null,"template_name": string | null,"wa_message_id": string | null
+                    "appointment_id": string | null,"body": string | null,"clinic_id": string,"contact_id": string | null,"contact_phone": string | null,"created_at": string,"direction": string,"id": string,"message_type": string,"status": string | null,"template_name": string | null,"wa_message_id": string | null
                   }
                   Insert: {
-                    "appointment_id"?: string | null,"body"?: string | null,"clinic_id": string,"contact_id"?: string | null,"created_at"?: string,"direction": string,"id"?: string,"message_type": string,"status"?: string | null,"template_name"?: string | null,"wa_message_id"?: string | null
+                    "appointment_id"?: string | null,"body"?: string | null,"clinic_id": string,"contact_id"?: string | null,"contact_phone"?: string | null,"created_at"?: string,"direction": string,"id"?: string,"message_type": string,"status"?: string | null,"template_name"?: string | null,"wa_message_id"?: string | null
                   }
                   Update: {
-                    "appointment_id"?: string | null,"body"?: string | null,"clinic_id"?: string,"contact_id"?: string | null,"created_at"?: string,"direction"?: string,"id"?: string,"message_type"?: string,"status"?: string | null,"template_name"?: string | null,"wa_message_id"?: string | null
+                    "appointment_id"?: string | null,"body"?: string | null,"clinic_id"?: string,"contact_id"?: string | null,"contact_phone"?: string | null,"created_at"?: string,"direction"?: string,"id"?: string,"message_type"?: string,"status"?: string | null,"template_name"?: string | null,"wa_message_id"?: string | null
                   }
                   Relationships: [
                     {

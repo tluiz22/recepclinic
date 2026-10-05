@@ -383,6 +383,26 @@ novo não tem). Etapas (cada uma com `npm test`, `test:db`, `check`, `build` e C
   agendas, conteúdo, contatos, reenvio quando entra atendimento antes do horário avisado,
   `job_runs`, achado 5). Envio de verdade pelo WhatsApp recebido de fora (F6/F7), como na F3.7b;
   cada parte respeita os itens da matriz (D11).
+- **F3.9a — concluída em 05/out.** `src/lib/data/whatsapp/`: conexão e token da Meta (Vault) e
+  templates por clínica, gravados pelo Suporte, vistos pela equipe e usados pelo bot só quando
+  conectada e com template aprovado (`connection.ts`); registro das mensagens recebidas, enviadas e
+  do eco da recepção pelo app, situação da entrega sem regredir e com a chegada ao celular vista
+  uma vez só, janela de 24h (com a margem de 23h30) e leitura por atendimento ou contato
+  (`messages.ts`); conversa (estado, contato, tentativa do funil, abandono), pausa da recepção e
+  volta ao bot por `#bot` ou pelo prazo (`conversations.ts`); funil do bot e da página de agendar
+  (`funnel.ts`); regras puras dos eventos da Meta (`meta.ts`: telefone com o 9 do celular, texto
+  da mensagem, ordem das situações). **Decisão do cliente (05/out):** o prazo da pausa (24h) que
+  cair em **sábado, domingo ou feriado da clínica** (nacional ou próprio) passa para o próximo dia
+  útil no mesmo horário, no fuso da clínica (no piloto, feriado não contava). Migração
+  `20261005130000`: fluxo "handoff" no funil (o piloto grava pedido e recepção que assume, e a F2.6
+  o deixou de fora); telefone na mensagem; repetidas da Meta barradas também nos ecos; início da
+  pausa em campo próprio (no piloto, `updated_at`); conversa e funil só com o item "Bot de
+  WhatsApp" liberado. Padrões assumidos (revisáveis): mensagens são registradas mesmo sem o bot
+  liberado (o lembrete e o resumo têm itens próprios); mensagem repetida da Meta não é tratada de
+  novo (no piloto, o roteador rodava outra vez); a janela de 24h é por número, inclusive de quem
+  ainda não é contato (no piloto, só de responsável cadastrado); pausar e devolver a conversa pela
+  tela não existe no piloto e não entrou. Envio de verdade, roteador do bot e webhook na F6. 12
+  testes unitários e 16 de banco novos.
 
 **Cuidado registrado na F2.5:** num insert de várias linhas, o `supabase-js` manda `null` nas
 colunas ausentes de alguma linha, e o valor padrão do banco não é aplicado (ex.: `details` da
