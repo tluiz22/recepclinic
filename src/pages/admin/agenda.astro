@@ -174,7 +174,7 @@ const groupActiveIds = (group: { appointments: typeof appointments }) =>
             </div>
           </Card>
         ) : (
-          <Card muted>
+          <Card>
             <div class="flex flex-wrap items-center justify-between gap-2">
               <span class="text-base font-semibold text-slate-900">
                 {formatInstant(item.start, clinic.timezone, "dd/MM HH:mm")} – {formatInstant(item.end, clinic.timezone, "dd/MM HH:mm")}
