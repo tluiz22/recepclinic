@@ -614,7 +614,8 @@ Vocabulário pelo perfil da clínica.
   presença e comparecimento; lembrete e preparo; lista de espera.
 - **F4.6 — Agenda II:** bloqueios, cancelamento do dia com link de remarcação, séries (D9).
 - **F4.7 — Pacientes:** contatos, pacientes, plano de saúde, histórico.
-- **F4.8 — Dia a dia:** Dashboard (resumo do dia), trilha, aba Envios (também para a Recepção).
+- **F4.8 — Dia a dia:** Dashboard (resumo do dia), trilha, aba Envios (também para a Recepção),
+  aba "Aguardando remarcação" (cancelados pela clínica, cliente, 05/out).
 - **F4.9 — Métricas e relatórios:** abas pelos itens, escopo do Profissional; retirada do código
   antigo sem uso.
 - **F4.1 — concluída em 05/out.** Login no banco novo; **sem cadastro público** (convite); "Esqueci
