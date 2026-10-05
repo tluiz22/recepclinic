@@ -218,7 +218,7 @@ export async function getNextAvailableDates(
   const firstDate = todayIn(plan.timeZone, now);
   const finalDate = addDays(firstDate, maxDaysAhead - 1);
   const [busy, holidays] = await Promise.all([
-    loadBusy(db, clinicId, query.agendaId, dayBounds(firstDate, plan.timeZone).start, dayBounds(finalDate, plan.timeZone).end),
+    loadBusy(db, clinicId, query.agendaId, dayBounds(firstDate, plan.timeZone).start, dayBounds(finalDate, plan.timeZone).end, query.ignoreAppointmentId),
     loadClinicHolidays(db, clinicId, firstDate, finalDate),
   ]);
   const result: DateWithSlots[] = [];

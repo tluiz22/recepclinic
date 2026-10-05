@@ -1,266 +1,114 @@
 ---
-import PhoneLinks from "../../../components/admin/PhoneLinks.astro";
+// Agenda › Remarcar (F4.5): mesma agenda e mesmo serviço, outra data e
+// horário (ou outra turma). Remarcar zera o lembrete e a presença confirmada
+// (a data nova pede outros); o horário atual não conta como ocupado.
 import AdminLayout from "../../../layouts/AdminLayout.astro";
 import Card from "../../../components/admin/Card.astro";
+import FlashMessage from "../../../components/admin/FlashMessage.astro";
 import Icon from "../../../components/admin/Icon.astro";
-import { createClient } from "../../../lib/supabase/server";
-import { getConsultationAgeLimit } from "../../../lib/patientRegistration";
-import { todayFortaleza } from "../../../lib/scheduling/returnVisitDeadline";
-import { getAvailableSlotsForDate, type AppointmentType } from "../../../lib/scheduling/getAvailableSlotsForDate";
-import { getNextAvailableDates } from "../../../lib/scheduling/getNextAvailableDates";
-import { resolveClinicLocationIds, type LocationCategory } from "../../../lib/scheduling/resolveClinicLocationIds";
-import { formatDateOptionLabel } from "../../../lib/dates";
+import { PRIMARY_BUTTON } from "../../../components/admin/fieldStyles";
+import { slotValue } from "../../../lib/agendaSlot";
+import { formatCalendarDate, formatInstant, isCalendarDate } from "../../../lib/clinicTime";
+import { createUserClient } from "../../../lib/data/clients";
+import { getFreeSlots, getGroupSessions, getNextAvailableDates } from "../../../lib/data/agenda/slots";
+import { getAgendaAppointment } from "../../../lib/data/agenda/view";
+import { listLocations } from "../../../lib/data/config/locations";
+import { listServices } from "../../../lib/data/config/services";
+import { setFlash } from "../../../lib/flash";
 
-const supabase = createClient(Astro.request, Astro.cookies);
-
-const appointmentId = Astro.url.searchParams.get("appointment_id");
-
-if (!appointmentId) {
-  return Astro.redirect("/admin/agenda");
+const clinic = Astro.locals.clinic!;
+const db = createUserClient(Astro.request, Astro.cookies);
+const params = Astro.url.searchParams;
+const returnToParam = params.get("return_to") ?? "";
+const returnTo = /^\/admin\/agenda(\/[a-z-]+)?(\?[^\s]*)?$/.test(returnToParam) ? returnToParam : "/admin/agenda";
+const appointment = await getAgendaAppointment(db, clinic.clinicId, params.get("id") ?? "").catch(() => null);
+const now = new Date();
+if (!appointment || !(appointment.status === "scheduled" || appointment.status === "confirmed") || appointment.scheduledAt <= now) {
+  setFlash(Astro.cookies, { tone: "error", text: "Só atendimento marcado e ainda por vir pode ser remarcado." });
+  return Astro.redirect(returnTo);
 }
 
-const { data: appointment } = await supabase
-  .from("appointments")
-  .select(
-    "id, patient_id, appointment_type, clinic_location_id, scheduled_at, status, home_visit_address, patients ( full_name, birthdate, guardians ( full_name, phone ) )"
-  )
-  .eq("id", appointmentId)
-  .single();
+const [services, locations] = await Promise.all([listServices(db, clinic.clinicId, { includeInactive: true }), listLocations(db, clinic.clinicId, { includeInactive: true })]);
+const isGroup = services.find((s) => s.id === appointment.serviceId)?.schedulingMode === "group";
+const locationName = new Map(locations.map((l) => [l.id, l.name]));
+const query = { serviceId: appointment.serviceId, agendaId: appointment.agendaId };
 
-if (!appointment || !["scheduled", "confirmed"].includes(appointment.status)) {
-  return Astro.redirect("/admin/agenda");
+let dates: string[] = [];
+let date = "";
+let options: { value: string; label: string; detail: string }[] = [];
+if (isGroup) {
+  options = (await getGroupSessions(db, clinic.clinicId, query))
+    .filter((s) => s.start.getTime() !== appointment.scheduledAt.getTime())
+    .map((s) => ({
+      value: slotValue({ agendaId: appointment.agendaId, start: s.start, locationId: s.locationId }),
+      label: formatInstant(s.start, clinic.timezone, "EEE dd/MM 'às' HH:mm"),
+      detail: `${locationName.get(s.locationId) ?? "Local"} · ${s.remaining} de ${s.capacity} vagas`,
+    }));
+} else {
+  dates = (await getNextAvailableDates(db, clinic.clinicId, { ...query, ignoreAppointmentId: appointment.id })).map((d) => d.date);
+  const wanted = params.get("date");
+  date = wanted && isCalendarDate(wanted) && dates.includes(wanted) ? wanted : (dates[0] ?? "");
+  if (date) {
+    options = (await getFreeSlots(db, clinic.clinicId, { ...query, date, ignoreAppointmentId: appointment.id }))
+      .filter((s) => s.start.getTime() !== appointment.scheduledAt.getTime())
+      .map((s) => ({
+        value: slotValue({ agendaId: appointment.agendaId, start: s.start, locationId: s.locationId }),
+        label: s.time,
+        detail: locationName.get(s.locationId) ?? "Local",
+      }));
+  }
 }
-
-const patient = (appointment.patients ?? null) as any;
-const guardian = patient?.guardians ?? null;
-
-// Local vira categoria ("Consultório"/"Atendimento domiciliar"), não um
-// endereço físico específico — pode haver mais de um consultório type=
-// 'clinic' (2 endereços, set/2026); o horário escolhido é que decide qual
-// deles atende (ver "Backlog futuro — Múltiplos consultórios" no plano).
-const { data: locationRows } = await supabase.from("clinic_locations").select("id, type").eq("is_active", true);
-
-const categoryOptions: { value: LocationCategory; label: string }[] = [];
-if (locationRows?.some((l) => l.type === "clinic")) categoryOptions.push({ value: "clinic", label: "Consultório" });
-if (locationRows?.some((l) => l.type === "home_visit")) {
-  categoryOptions.push({ value: "home_visit", label: "Atendimento domiciliar" });
-}
-
-const categoryByLocationId = new Map((locationRows ?? []).map((l) => [l.id, l.type as LocationCategory]));
-
-function toFortalezaDateStr(iso: string): string {
-  return new Date(new Date(iso).getTime() - 3 * 60 * 60 * 1000).toISOString().slice(0, 10);
-}
-
-function toFortalezaTimeStr(iso: string): string {
-  return new Date(new Date(iso).getTime() - 3 * 60 * 60 * 1000).toISOString().slice(11, 16);
-}
-
-const currentDateStr = toFortalezaDateStr(appointment.scheduled_at);
-const currentTimeStr = toFortalezaTimeStr(appointment.scheduled_at);
-
-const locationCategoryParam = Astro.url.searchParams.get("location_category");
-const locationCategory: LocationCategory =
-  locationCategoryParam === "home_visit"
-    ? "home_visit"
-    : locationCategoryParam === "clinic"
-      ? "clinic"
-      : (categoryByLocationId.get(appointment.clinic_location_id) ?? categoryOptions[0]?.value ?? "clinic");
-
-const appointmentTypeParam = Astro.url.searchParams.get("appointment_type");
-const appointmentType: AppointmentType =
-  appointmentTypeParam === "first_visit" || appointmentTypeParam === "return_visit"
-    ? appointmentTypeParam
-    : (appointment.appointment_type as AppointmentType);
-
-// Avisos de idade (Fase 21, sem bloquear) — ver patientAgeWarnings.ts.
-const consultationAgeLimit = await getConsultationAgeLimit(supabase);
-
-const errorMessages: Record<string, string> = {
-  slot_taken: "Esse horário acabou de deixar de estar livre. Escolha outro.",
-  missing_address: "Informe o endereço para o atendimento domiciliar.",
-  "1": "Não foi possível remarcar a consulta. Confira os dados e tente novamente.",
-};
-const errorParam = Astro.url.searchParams.get("error");
-const errorMessage = errorParam ? (errorMessages[errorParam] ?? errorMessages["1"]) : null;
-
-const clinicLocationIds = await resolveClinicLocationIds(supabase, locationCategory);
-const availableDates = await getNextAvailableDates({ supabase, clinicLocationIds, appointmentType });
-
-const dateParam = Astro.url.searchParams.get("date");
-const date = dateParam && availableDates.some((d) => d.date === dateParam)
-  ? dateParam
-  : availableDates.some((d) => d.date === currentDateStr)
-    ? currentDateStr
-    : (availableDates[0]?.date ?? "");
-
-const slots = date ? await getAvailableSlotsForDate({ supabase, clinicLocationIds, date, appointmentType }) : [];
+const link = (d: string) => `/admin/agenda/remarcar?id=${appointment.id}&date=${d}&return_to=${encodeURIComponent(returnTo)}`;
+const chip = (active: boolean) =>
+  `rounded-lg border px-3 py-2 text-sm font-medium ${active ? "border-sky-700 bg-sky-700 text-white" : "border-slate-300 bg-white text-slate-700 hover:border-sky-600"}`;
 ---
 
-<AdminLayout title="Remarcar consulta">
-  <a
-    href={`/admin/agenda?date=${currentDateStr}`}
-    class="inline-flex items-center gap-1 text-sm font-medium text-sky-700 hover:underline"
-  >
-    <Icon name="chevron-left" class="h-4 w-4" />
-    Agenda
+<AdminLayout title="Remarcar">
+  <a href={returnTo} class="inline-flex items-center gap-1 text-sm font-medium text-sky-700 hover:underline">
+    <Icon name="chevron-left" class="h-4 w-4" /> Agenda
   </a>
+  <h1 class="mt-3 text-2xl font-bold text-slate-900">Remarcar</h1>
+  <FlashMessage />
 
-  <h1 class="mt-3 text-2xl font-bold text-slate-900">Remarcar consulta</h1>
-
-  <div class="mt-4 rounded-lg border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
-    <p class="font-medium text-slate-900">{patient?.full_name}</p>
-    <p class="text-slate-500">
-      Resp.: {guardian?.full_name}
-      {guardian?.phone && (
-        <>
-          {" · "}
-          <PhoneLinks phone={guardian.phone} plain />
-        </>
-      )}
+  <Card class="mt-4 max-w-2xl">
+    <p class="font-medium text-slate-900">{appointment.patientName}</p>
+    <p class="text-sm text-slate-600">
+      {appointment.serviceName} · {appointment.agendaName} · hoje marcado para {formatInstant(appointment.scheduledAt, clinic.timezone, "EEE dd/MM 'às' HH:mm")}
     </p>
-    <p class="mt-1 text-slate-500">
-      Atualmente em {currentDateStr.split("-").reverse().join("/")} às {currentTimeStr}
-    </p>
-  </div>
+    <p class="mt-1 text-xs text-slate-500">Remarcar zera o lembrete e a presença confirmada.</p>
+  </Card>
 
-  {
-    errorMessage && (
-      <p class="mt-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{errorMessage}</p>
-    )
-  }
-
-  <Card class="mt-6 max-w-xl">
-    <form
-      method="POST"
-      action={`/api/admin/agenda/appointments/${appointmentId}/reschedule`}
-      class="flex flex-col gap-6"
-    >
-      <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <div>
-          <label for="location_category" class="block text-sm font-medium text-slate-700">Local</label>
-          <select
-            id="location_category"
-            name="location_category"
-            class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-sky-600 focus:outline-none focus:ring-1 focus:ring-sky-600"
-          >
-            {
-              categoryOptions.map((option) => (
-                <option value={option.value} selected={option.value === locationCategory}>{option.label}</option>
-              ))
-            }
-          </select>
+  <Card class="mt-4 max-w-2xl">
+    <h2 class="font-semibold text-slate-900">{isGroup ? "Outra turma" : "Nova data e horário"}</h2>
+    {
+      !isGroup && (
+        <div class="mt-2 flex flex-wrap gap-2">
+          {dates.map((d) => (
+            <a href={link(d)} class={chip(d === date)}>
+              <span class="capitalize">{formatCalendarDate(d, "EEE dd/MM")}</span>
+            </a>
+          ))}
+          {dates.length === 0 && <p class="text-sm text-slate-500">Sem horários livres nos próximos 60 dias.</p>}
         </div>
-        <div>
-          <label for="date" class="block text-sm font-medium text-slate-700">Data</label>
-          <select
-            id="date"
-            name="date"
-            disabled={!availableDates.length}
-            class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-sky-600 focus:outline-none focus:ring-1 focus:ring-sky-600 disabled:bg-slate-100"
-          >
-            {
-              availableDates.map((d) => (
-                <option value={d.date} selected={d.date === date}>{formatDateOptionLabel(d.date)}</option>
-              ))
-            }
-          </select>
-          <p
-            id="date_availability_warning"
-            class={`mt-1 text-xs text-amber-700 ${availableDates.length ? "hidden" : ""}`}
-          >
-            Não encontramos horários livres nos próximos dias. Fale com a secretária pelo WhatsApp.
-          </p>
-        </div>
-        <div>
-          <label for="appointment_type" class="block text-sm font-medium text-slate-700">Tipo</label>
-          <select
-            id="appointment_type"
-            name="appointment_type"
-            class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-sky-600 focus:outline-none focus:ring-1 focus:ring-sky-600"
-          >
-            <option value="first_visit" selected={appointmentType === "first_visit"}>Consulta</option>
-            <option value="return_visit" selected={appointmentType === "return_visit"}>Retorno</option>
-          </select>
-        </div>
+      )
+    }
+    <form method="POST" action={`/api/admin/agenda/atendimentos/${appointment.id}`} class="mt-4 flex flex-col gap-4">
+      <input type="hidden" name="acao" value="remarcar" />
+      <input type="hidden" name="return_to" value={returnTo} />
+      <input type="hidden" name="back" value={`${Astro.url.pathname}${Astro.url.search}`} />
+      <div class="flex flex-wrap gap-2">
+        {
+          options.map((o) => (
+            <label class="cursor-pointer rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm has-[:checked]:border-sky-700 has-[:checked]:bg-sky-50">
+              <input type="radio" name="slot" value={o.value} required class="mr-1" />
+              <span class="font-medium capitalize">{o.label}</span>
+              <span class="block text-xs text-slate-500">{o.detail}</span>
+            </label>
+          ))
+        }
+        {(isGroup || date) && options.length === 0 && <p class="text-sm text-slate-500">{isGroup ? "Nenhuma outra turma com vaga." : "Nenhum horário livre nesta data."}</p>}
       </div>
-
-      <div
-        id="return_origin_box"
-        class="hidden"
-        data-patient-id={appointment.patient_id}
-        data-appointment-id={appointment.id}
-      >
-      </div>
-
-      <p
-        id="patient_age_warning"
-        class="hidden rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800"
-        data-birthdate={patient?.birthdate ?? ""}
-        data-age-limit={consultationAgeLimit}
-        data-today={todayFortaleza()}
-      >
-      </p>
-
-      <div id="home_visit_address_field" class={locationCategory === "home_visit" ? "" : "hidden"}>
-        <label for="home_visit_address" class="block text-sm font-medium text-slate-700">Endereço *</label>
-        <input
-          type="text"
-          id="home_visit_address"
-          name="home_visit_address"
-          required={locationCategory === "home_visit"}
-          value={appointment.home_visit_address ?? ""}
-          placeholder="Rua, número, bairro, complemento, ponto de referência"
-          class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-sky-600 focus:outline-none focus:ring-1 focus:ring-sky-600"
-        />
-      </div>
-
-      <div>
-        <span class="block text-sm font-medium text-slate-700">Novo horário</span>
-        <div id="slots_container" class="mt-1 flex flex-wrap gap-2">
-          {
-            slots.length ? (
-              slots.map((slot) => (
-                <label class="cursor-pointer rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm font-medium text-slate-700 shadow-sm has-[:checked]:border-sky-700 has-[:checked]:bg-sky-50 has-[:checked]:text-sky-700">
-                  <input
-                    type="radio"
-                    name="start"
-                    value={`${slot.start.toISOString()}|${slot.clinicLocationId}`}
-                    required
-                    class="mr-1"
-                  />
-                  {slot.label}
-                </label>
-              ))
-            ) : (
-              <p class="text-sm text-slate-500">
-                Nenhum horário livre para essa data/local. Tente outra data.
-              </p>
-            )
-          }
-        </div>
-      </div>
-
-      <div class="flex flex-col-reverse gap-2 sm:flex-row sm:items-center">
-        <a
-          href={`/admin/agenda?date=${currentDateStr}`}
-          class="w-full rounded-md border border-slate-300 px-4 py-3 text-center text-sm font-semibold text-slate-600 hover:bg-slate-50 sm:w-fit"
-        >
-          Cancelar
-        </a>
-        <button
-          id="submit_btn"
-          type="submit"
-          disabled={!availableDates.length}
-          class="w-full rounded-md bg-sky-700 px-4 py-3 text-sm font-semibold text-white hover:bg-sky-800 disabled:cursor-not-allowed disabled:opacity-50 sm:w-fit"
-        >
-          Confirmar remarcação
-        </button>
-      </div>
+      <button type="submit" class={`${PRIMARY_BUTTON} self-start`} disabled={options.length === 0}>Remarcar</button>
     </form>
   </Card>
 </AdminLayout>
-
-<script src="../../../scripts/appointmentSlotPicker.ts"></script>
-<script src="../../../scripts/returnOriginWarnings.ts"></script>
-<script src="../../../scripts/patientAgeWarnings.ts"></script>

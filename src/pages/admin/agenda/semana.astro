@@ -1,217 +1,83 @@
 ---
+// Agenda › Semana (F4.5): segunda a domingo, os atendimentos de cada dia em
+// resumo (hora, paciente, serviço). Tocar no dia abre o Dia, com as ações.
 import AdminLayout from "../../../layouts/AdminLayout.astro";
-import Card from "../../../components/admin/Card.astro";
-import type { BadgeVariant } from "../../../components/admin/Badge.astro";
+import AgendaHeader from "../../../components/admin/agenda/AgendaHeader.astro";
 import Icon from "../../../components/admin/Icon.astro";
-import { createClient } from "../../../lib/supabase/server";
-import { groupSessionTitle, loadAgendaItems, type AgendaItem } from "../../../lib/scheduling/agendaItems";
+import { addDays, formatCalendarDate, formatInstant, isCalendarDate, localDateOf, todayIn } from "../../../lib/clinicTime";
+import { createUserClient } from "../../../lib/data/clients";
+import { loadAgendaScope } from "../../../lib/data/agenda/scope";
+import { listAgendaAppointments, listAgendaBlocks, weekStart } from "../../../lib/data/agenda/view";
 
-const supabase = createClient(Astro.request, Astro.cookies);
-
-function todayFortaleza(): string {
-  return new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString().slice(0, 10);
-}
-
-function addDays(dateStr: string, delta: number): string {
-  const d = new Date(`${dateStr}T12:00:00Z`);
-  d.setUTCDate(d.getUTCDate() + delta);
-  return d.toISOString().slice(0, 10);
-}
-
-function weekdayOf(dateStr: string): number {
-  return new Date(`${dateStr}T00:00:00-03:00`).getUTCDay();
-}
-
-function startOfWeek(dateStr: string): string {
-  const weekday = weekdayOf(dateStr);
-  const mondayOffset = weekday === 0 ? -6 : 1 - weekday;
-  return addDays(dateStr, mondayOffset);
-}
-
-function formatTime(d: Date): string {
-  return new Date(d.getTime() - 3 * 60 * 60 * 1000).toISOString().slice(11, 16);
-}
-
-function formatShortDate(dateStr: string): string {
-  const [, month, day] = dateStr.split("-");
-  return `${day}/${month}`;
-}
-
+const clinic = Astro.locals.clinic!;
+const db = createUserClient(Astro.request, Astro.cookies);
+const today = todayIn(clinic.timezone);
 const dateParam = Astro.url.searchParams.get("date");
-const anchorDate = dateParam && /^\d{4}-\d{2}-\d{2}$/.test(dateParam) ? dateParam : todayFortaleza();
-const weekStart = startOfWeek(anchorDate);
-const weekDates = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
+const date = dateParam && isCalendarDate(dateParam) ? dateParam : today;
+const monday = weekStart(date);
+const days = Array.from({ length: 7 }, (_, i) => addDays(monday, i));
 
-const rangeStart = new Date(`${weekDates[0]}T00:00:00-03:00`);
-const rangeEnd = new Date(`${addDays(weekDates[6], 1)}T00:00:00-03:00`);
-
-const items = await loadAgendaItems(supabase, rangeStart, rangeEnd, "appointment_type, patients ( full_name )");
-
-const appointmentTypeLabels: Record<string, string> = {
-  first_visit: "Consulta",
-  return_visit: "Retorno",
-  exam: "Exame",
-};
-
-function typeBadgeVariant(type: string | undefined): BadgeVariant {
-  if (type === "exam") return "warning";
-  if (type === "return_visit") return "accent";
-  return "info";
-}
-
-// Classes completas (não geradas por template string) pra o scanner do
-// Tailwind conseguir encontrá-las no build.
-const accentBorderByVariant: Record<BadgeVariant, string> = {
-  neutral: "border-l-slate-300",
-  info: "border-l-sky-400",
-  accent: "border-l-indigo-400",
-  success: "border-l-emerald-400",
-  warning: "border-l-amber-400",
-  danger: "border-l-red-400",
-};
-
-// Cada item entra em todo dia que ele toca — um bloqueio de vários dias
-// (ex.: férias) aparece em cada um deles, como na Agenda (dia).
-const itemsByDate = new Map<string, AgendaItem[]>();
-for (const date of weekDates) {
-  const dayStart = new Date(`${date}T00:00:00-03:00`).getTime();
-  const dayEnd = dayStart + 24 * 60 * 60_000;
-  itemsByDate.set(
-    date,
-    items.filter((item) =>
-      item.kind === "block"
-        ? item.start.getTime() < dayEnd && item.end.getTime() > dayStart
-        : item.start.getTime() >= dayStart && item.start.getTime() < dayEnd
-    )
-  );
-}
-
-const weekdayLabels = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
-const today = todayFortaleza();
+const scope = await loadAgendaScope(db, clinic.clinicId, Astro.url, Astro.cookies);
+const range = { fromDate: days[0], toDate: days[6], timeZone: clinic.timezone, agendaIds: scope.agendaIds };
+const [appointments, blocks] = await Promise.all([
+  listAgendaAppointments(db, clinic.clinicId, range),
+  listAgendaBlocks(db, clinic.clinicId, { ...range, agendaNames: scope.agendaNames }),
+]);
+const showAgenda = !scope.selectedAgendaId && scope.agendas.length > 1;
+const ofDay = (day: string) => appointments.filter((a) => a.status !== "canceled" && localDateOf(a.scheduledAt, clinic.timezone) === day);
+const blocksOf = (day: string) =>
+  blocks.filter((b) => localDateOf(b.startsAt, clinic.timezone) <= day && localDateOf(new Date(b.endsAt.getTime() - 1), clinic.timezone) >= day);
+const statusMark: Record<string, string> = { completed: "✓", no_show: "✗" };
 ---
 
-<AdminLayout title="Agenda — semana">
-  <div class="flex flex-wrap items-start justify-between gap-4">
-    <div>
-      <h1 class="text-2xl font-bold text-slate-900">Agenda</h1>
-      <nav class="mt-3 flex gap-x-5 border-b border-slate-200 text-sm font-medium">
-        <a
-          href={`/admin/agenda?date=${anchorDate}`}
-          class="-mb-px border-b-2 border-transparent pb-2 text-slate-600 hover:text-sky-700"
-        >
-          Dia
-        </a>
-        <span class="-mb-px border-b-2 border-sky-700 pb-2 text-sky-700">Semana</span>
-        <a
-          href={`/admin/agenda/mes?date=${anchorDate}`}
-          class="-mb-px border-b-2 border-transparent pb-2 text-slate-600 hover:text-sky-700"
-        >
-          Mês
-        </a>
-      </nav>
-    </div>
+<AdminLayout title="Agenda · Semana">
+  <AgendaHeader view="semana" date={date} agendas={scope.selectable} selectedAgendaId={scope.selectedAgendaId} />
 
-    <div class="flex flex-wrap gap-2">
-      <a
-        href={`/admin/agenda/marcar?date=${anchorDate}`}
-        class="inline-flex items-center gap-1.5 rounded-md bg-sky-700 px-4 py-2 text-sm font-medium text-white hover:bg-sky-800"
-      >
-        <Icon name="plus" class="h-4 w-4" />
-        Marcar consulta
-      </a>
-      <a
-        href={`/admin/agenda/marcar-exame?date=${anchorDate}`}
-        class="inline-flex items-center gap-1.5 rounded-md border border-sky-700 px-4 py-2 text-sm font-medium text-sky-700 hover:bg-sky-50"
-      >
-        <Icon name="plus" class="h-4 w-4" />
-        Marcar exame
-      </a>
-    </div>
-  </div>
-
-  <div class="mt-6 flex items-center justify-between gap-2 rounded-lg border border-slate-200 bg-white p-2">
-    <a
-      href={`/admin/agenda/semana?date=${addDays(weekStart, -7)}`}
-      aria-label="Semana anterior"
-      class="rounded-md p-2 text-slate-500 hover:bg-slate-100 hover:text-sky-700"
-    >
+  <div class="mt-4 flex flex-wrap items-center gap-2">
+    <a href={`?date=${addDays(monday, -7)}`} aria-label="Semana anterior" class="rounded-md border border-slate-200 bg-white p-2 text-slate-500 hover:text-sky-700">
       <Icon name="chevron-left" class="h-5 w-5" />
     </a>
-    <div class="flex flex-wrap items-center justify-center gap-2">
-      <span class="text-sm font-medium text-slate-900">
-        {formatShortDate(weekDates[0])} – {formatShortDate(weekDates[6])}
-      </span>
-      {
-        weekStart !== startOfWeek(today) && (
-          <a
-            href="/admin/agenda/semana"
-            class="rounded-md border border-slate-300 px-2.5 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50"
-          >
-            Semana atual
-          </a>
-        )
-      }
-    </div>
-    <a
-      href={`/admin/agenda/semana?date=${addDays(weekStart, 7)}`}
-      aria-label="Próxima semana"
-      class="rounded-md p-2 text-slate-500 hover:bg-slate-100 hover:text-sky-700"
-    >
+    <span class="text-sm font-medium text-slate-700">
+      {formatCalendarDate(days[0], "dd/MM")} a {formatCalendarDate(days[6], "dd/MM/yyyy")}
+    </span>
+    <a href={`?date=${addDays(monday, 7)}`} aria-label="Próxima semana" class="rounded-md border border-slate-200 bg-white p-2 text-slate-500 hover:text-sky-700">
       <Icon name="chevron-right" class="h-5 w-5" />
     </a>
+    {
+      !days.includes(today) && (
+        <a href="?" class="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50">
+          Esta semana
+        </a>
+      )
+    }
   </div>
 
-  <div class="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-7">
+  <div class="mt-4 grid gap-3 md:grid-cols-7">
     {
-      weekDates.map((date) => {
-        const dayItems = itemsByDate.get(date) ?? [];
-        const isToday = date === today;
-
-        return (
-          <Card class={isToday ? "border-sky-400 bg-sky-50/40" : ""}>
-            <a href={`/admin/agenda?date=${date}`} class="block hover:underline">
-              <p class="text-sm font-semibold text-slate-900">{weekdayLabels[weekdayOf(date)]}</p>
-              <p class="text-xs text-slate-500">{formatShortDate(date)}</p>
-            </a>
-            <div class="mt-2 flex flex-col gap-1.5">
-              {dayItems.length ? (
-                dayItems.map((item) => {
-                  const appointment = item.kind === "appointment" ? (item.appointment as any) : undefined;
-                  const isCancelled = item.canceled;
-                  const patient = (appointment?.patients ?? null) as any;
-
-                  return (
-                    <a
-                      href={`/admin/agenda?date=${date}`}
-                      class={`block rounded-md border-l-4 bg-slate-50/60 py-1 pl-2 pr-1.5 text-xs hover:bg-slate-100 ${
-                        isCancelled
-                          ? "border-l-slate-300 text-slate-400 line-through"
-                          : `${accentBorderByVariant[item.kind === "group_session" ? "warning" : item.kind === "block" ? "neutral" : typeBadgeVariant(appointment?.appointment_type)]} text-slate-700`
-                      }`}
-                    >
-                      <span class="font-medium">{formatTime(item.start)}</span>{" "}
-                      {appointment ? (
-                        <>
-                          {patient?.full_name}
-                          {appointment.appointment_type && (
-                            <span class="text-slate-400"> · {appointmentTypeLabels[appointment.appointment_type] ?? appointment.appointment_type}</span>
-                          )}
-                        </>
-                      ) : (
-                        <span class="text-slate-500">
-                          {item.kind === "group_session" ? groupSessionTitle(item) : "Bloqueio"}
-                        </span>
-                      )}
-                    </a>
-                  );
-                })
-              ) : (
-                <p class="text-xs text-slate-400">Sem consultas</p>
-              )}
-            </div>
-          </Card>
-        );
-      })
+      days.map((day) => (
+        <a
+          href={`/admin/agenda?date=${day}`}
+          class={`block rounded-lg border bg-white p-3 hover:border-sky-300 hover:bg-sky-50 ${day === today ? "border-sky-600" : "border-slate-200"}`}
+        >
+          <p class={`text-sm font-semibold capitalize ${day === today ? "text-sky-700" : "text-slate-900"}`}>{formatCalendarDate(day, "EEE dd/MM")}</p>
+          <ul class="mt-2 flex flex-col gap-1.5 text-xs text-slate-700">
+            {blocksOf(day).map((b) => (
+              <li class="rounded bg-slate-100 px-1.5 py-1 text-slate-500">Bloqueio: {b.reason}</li>
+            ))}
+            {ofDay(day).map((a) => (
+              <li>
+                <span class="font-semibold">{formatInstant(a.scheduledAt, clinic.timezone, "HH:mm")}</span> {a.patientName}
+                {statusMark[a.status] && <span class="ml-1">{statusMark[a.status]}</span>}
+                <span class="block text-slate-500">
+                  {a.serviceName}
+                  {showAgenda ? ` · ${a.agendaName}` : ""}
+                </span>
+              </li>
+            ))}
+            {ofDay(day).length === 0 && blocksOf(day).length === 0 && <li class="text-slate-400">Livre</li>}
+          </ul>
+        </a>
+      ))
     }
   </div>
 </AdminLayout>

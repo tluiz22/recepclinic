@@ -108,12 +108,8 @@ const PATH_RULES: PathRule[] = [
   // Resumo do Dia: abas do lembrete e da lista de espera.
   { prefix: "/admin/consultas", tab: "lembretes", feature: "reminders" },
   { prefix: "/admin/consultas", tab: "lista_espera", feature: "waitlist" },
-  // Exames (o cadastro de serviço de exame é travado no formulário e no banco, F4.3).
-  { prefix: "/admin/agenda/marcar-exame", feature: "exams" },
-  { prefix: "/admin/agenda/remarcar-exame", feature: "exams" },
-  { prefix: "/api/admin/agenda/available-exam-dates", feature: "exams" },
-  { prefix: "/api/admin/agenda/available-exam-group-dates", feature: "exams" },
-  { prefix: "/api/admin/agenda/available-exam-slots", feature: "exams" },
+  // Exames: na Agenda (F4.5), o serviço de exame só aparece com o item, e o
+  // banco recusa marcar sem ele (o cadastro do serviço é travado desde a F4.3).
   // Configurações (F4.4b): convênios, contatos do resumo do dia e hora do lembrete.
   { prefix: "/admin/configuracoes/convenios", feature: "insurance" },
   { prefix: "/api/admin/configuracoes/convenios", feature: "insurance" },
@@ -122,20 +118,10 @@ const PATH_RULES: PathRule[] = [
   { prefix: "/api/admin/configuracoes/lembrete", feature: "reminders" },
 ];
 
-// Ações por atendimento: /api/admin/agenda/appointments/<id>/<ação>.
-const APPOINTMENT_ACTION_RULES: Record<string, FeatureKey> = {
-  "resend-reminder": "reminders",
-  "resend-preparation": "exams",
-  waitlist: "waitlist",
-};
-
 const matchesPrefix = (pathname: string, prefix: string) => pathname === prefix || pathname.startsWith(`${prefix}/`);
 
 /** Item que a rota exige (null = básico, sempre ligado). */
 export function requiredFeature(pathname: string, searchParams: URLSearchParams): FeatureKey | null {
-  const action = pathname.match(/^\/api\/admin\/agenda\/appointments\/[^/]+\/([^/]+)$/)?.[1];
-  if (action && action in APPOINTMENT_ACTION_RULES) return APPOINTMENT_ACTION_RULES[action];
-
   const tab = searchParams.get("tab");
   const rule = PATH_RULES.find(
     (r) => matchesPrefix(pathname, r.prefix) && (r.tab === undefined || r.tab === tab || (r.tab === null && !tab)),

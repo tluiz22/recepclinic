@@ -39,7 +39,8 @@ describe("item que cada rota exige", () => {
       "/admin/consultas?tab=resumo",
       "/admin/consultas?tab=pendentes",
       "/admin/trilha/1",
-      "/api/admin/agenda/appointments/1/cancel",
+      "/admin/agenda/marcar",
+      "/api/admin/agenda/atendimentos/1",
       "/api/admin/consultas/cancelar-em-massa",
       "/admin/configuracoes/servicos",
       "/admin/configuracoes/locais/novo",
@@ -57,10 +58,9 @@ describe("item que cada rota exige", () => {
     expect(route("/admin/relatorios")).toBe("reports");
   });
 
-  it("abas do Resumo do Dia, exames, envios e ações por atendimento", () => {
+  it("abas do Resumo do Dia e Configurações pelos itens", () => {
     expect(route("/admin/consultas?tab=lembretes")).toBe("reminders");
     expect(route("/admin/consultas?tab=lista_espera")).toBe("waitlist");
-    expect(route("/admin/agenda/marcar-exame")).toBe("exams");
     expect(route("/admin/configuracoes/contatos")).toBe("daily_summary");
     expect(route("/api/admin/configuracoes/lembrete")).toBe("reminders");
     expect(route("/api/admin/configuracoes/contatos/novo")).toBe("daily_summary");
@@ -68,13 +68,10 @@ describe("item que cada rota exige", () => {
     expect(route("/api/admin/configuracoes/convenios/opcoes")).toBe("insurance");
     expect(route("/admin/configuracoes/equipe")).toBe(null);
     expect(route("/admin/configuracoes/horarios")).toBe(null);
-    expect(route("/api/admin/agenda/appointments/1/resend-reminder")).toBe("reminders");
-    expect(route("/api/admin/agenda/appointments/1/resend-preparation")).toBe("exams");
-    expect(route("/api/admin/agenda/appointments/1/waitlist")).toBe("waitlist");
   });
 
   it("prefixo parecido não conta", () => {
-    expect(route("/admin/agenda/marcar-exame-x")).toBeNull();
+    expect(route("/admin/configuracoes/convenios-x")).toBeNull();
     expect(route("/admin/relatorios-x")).toBeNull();
   });
 });
@@ -87,8 +84,8 @@ describe("acesso à rota: papel (D6) e item liberado (D11)", () => {
   };
 
   it("item desligado barra a rota até para o Administrador", () => {
-    expect(can(ctx(["admin"], []), "/admin/agenda/marcar-exame")).toBe(false);
-    expect(can(ctx(["admin"], ["exams"]), "/admin/agenda/marcar-exame")).toBe(true);
+    expect(can(ctx(["admin"], []), "/admin/configuracoes/convenios")).toBe(false);
+    expect(can(ctx(["admin"], ["insurance"]), "/admin/configuracoes/convenios")).toBe(true);
     expect(can(ctx(["reception"], ["waitlist", "whatsapp_bot"]), "/admin/consultas?tab=lista_espera")).toBe(true);
     expect(can(ctx(["reception"], []), "/admin/consultas?tab=lista_espera")).toBe(false);
   });

@@ -1,0 +1,71 @@
+---
+// Cabeçalho da Agenda (F4.5): Dia, Semana e Mês, a escolha da agenda (todas
+// ou uma; cliente, 05/out/2026) e o botão de marcar. Bloqueios e
+// cancelamento do dia entram na F4.6.
+import Icon from "../Icon.astro";
+import { INPUT, PRIMARY_BUTTON } from "../fieldStyles";
+import { ALL_AGENDAS } from "../../../lib/agendaChoice";
+
+interface Props {
+  view: "dia" | "semana" | "mes";
+  date: string;
+  agendas: { id: string; name: string }[];
+  selectedAgendaId: string | null;
+}
+
+const { view, date, agendas, selectedAgendaId } = Astro.props;
+const views = [
+  { id: "dia", label: "Dia", href: "/admin/agenda" },
+  { id: "semana", label: "Semana", href: "/admin/agenda/semana" },
+  { id: "mes", label: "Mês", href: "/admin/agenda/mes" },
+] as const;
+const current = views.find((v) => v.id === view)!;
+---
+
+<div class="flex flex-wrap items-start justify-between gap-4">
+  <div>
+    <h1 class="text-2xl font-bold text-slate-900">Agenda</h1>
+    <nav class="mt-3 flex gap-x-5 border-b border-slate-200 text-sm font-medium">
+      {
+        views.map((v) =>
+          v.id === view ? (
+            <span class="-mb-px border-b-2 border-sky-700 pb-2 text-sky-700">{v.label}</span>
+          ) : (
+            <a href={`${v.href}?date=${date}`} class="-mb-px border-b-2 border-transparent pb-2 text-slate-600 hover:text-sky-700">
+              {v.label}
+            </a>
+          ),
+        )
+      }
+    </nav>
+  </div>
+  <a href={`/admin/agenda/marcar?date=${date}${selectedAgendaId ? `&agenda_id=${selectedAgendaId}` : ""}`} class={`${PRIMARY_BUTTON} inline-flex items-center gap-1.5`}>
+    <Icon name="plus" class="h-4 w-4" /> Marcar
+  </a>
+</div>
+
+{
+  agendas.length > 1 && (
+    <form method="GET" action={current.href} class="mt-4">
+      <input type="hidden" name="date" value={date} />
+      <label for="agenda_choice" class="sr-only">
+        Agenda
+      </label>
+      <select id="agenda_choice" name="agenda" class={`${INPUT} mt-0 sm:w-72`} onchange="this.form.submit()">
+        <option value={ALL_AGENDAS} selected={!selectedAgendaId}>
+          Todas as agendas
+        </option>
+        {agendas.map((agenda) => (
+          <option value={agenda.id} selected={agenda.id === selectedAgendaId}>
+            {agenda.name}
+          </option>
+        ))}
+      </select>
+      <noscript>
+        <button type="submit" class="ml-2 text-sm text-sky-700">
+          Ver
+        </button>
+      </noscript>
+    </form>
+  )
+}

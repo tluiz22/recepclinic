@@ -1,0 +1,212 @@
+---
+// Cartão de um atendimento na Agenda (F4.5). Ativo e por vir: presença
+// confirmada, lembrete e preparo (com o item), lista de espera (com o item),
+// remarcar e cancelar. Ativo e já passado: compareceu ou faltou. Registrado:
+// o resultado, com a correção. Todas as ações vão para a mesma rota, com
+// `acao`, e voltam para a tela de onde saíram.
+import Badge, { type BadgeVariant } from "../Badge.astro";
+import Card from "../Card.astro";
+import PhoneLinks from "../PhoneLinks.astro";
+import { formatInstant } from "../../../lib/clinicTime";
+import type { AgendaAppointment, NoShowStats } from "../../../lib/data/agenda/view";
+import type { ReminderAction } from "../../../lib/data/whatsapp/reminders";
+import { capitalize, type Vocabulary } from "../../../lib/vocabulary";
+
+interface Props {
+  appointment: AgendaAppointment;
+  timeZone: string;
+  now: Date;
+  showAgenda: boolean;
+  vocabulary: Vocabulary;
+  returnTo: string;
+  reminderAction?: ReminderAction;
+  preparationResendable: boolean;
+  waitlistOn: boolean;
+  onWaitlist: boolean;
+  noShow?: NoShowStats;
+  /** Dentro do cartão da turma: sem o horário e mais compacto. */
+  compact?: boolean;
+}
+
+const { appointment: a, timeZone, now, showAgenda, vocabulary, returnTo, reminderAction, preparationResendable, waitlistOn, onWaitlist, noShow, compact = false } =
+  Astro.props;
+const action = `/api/admin/agenda/atendimentos/${a.id}`;
+const time = (d: Date) => formatInstant(d, timeZone, "HH:mm");
+const isActive = a.status === "scheduled" || a.status === "confirmed";
+const isPast = a.scheduledAt.getTime() <= now.getTime();
+const categoryVariant: Record<string, BadgeVariant> = { consultation: "info", return_visit: "accent", exam: "warning" };
+const statusBadge: Record<string, { label: string; variant: BadgeVariant } | undefined> = {
+  canceled: { label: "Cancelado", variant: "neutral" },
+  completed: { label: "Compareceu", variant: "success" },
+  no_show: { label: "Faltou", variant: "danger" },
+};
+const reminderLabel: Record<ReminderAction, string> = {
+  send: "Sem lembrete automático",
+  resend: "Lembrete não entregue",
+  resend_unanswered: "Lembrete sem resposta",
+};
+const reminderButton: Record<ReminderAction, string> = {
+  send: "Enviar lembrete",
+  resend: "Reenviar lembrete",
+  resend_unanswered: "Reenviar lembrete",
+};
+const LINK_BUTTON = "rounded-md border px-2.5 py-1 text-xs font-semibold";
+const status = statusBadge[a.status];
+const canJoinWaitlist = waitlistOn && isActive && !isPast && a.seriesId === null;
+---
+
+<Card muted={a.status === "canceled"} class={compact ? "p-3 shadow-none" : ""}>
+  {
+    !compact && (
+      <div class="flex flex-wrap items-center justify-between gap-2">
+        <span class="text-base font-semibold text-slate-900">
+          {time(a.scheduledAt)} – {time(a.endsAt)}
+        </span>
+        {status && <Badge variant={status.variant}>{status.label}</Badge>}
+      </div>
+    )
+  }
+  <div class={`${compact ? "" : "mt-2"} text-sm text-slate-700`}>
+    <p class="flex flex-wrap items-center gap-x-2 gap-y-1 font-medium text-slate-900">
+      {a.patientName}
+      {noShow && <Badge variant="danger">Faltou {noShow.noShows} de {noShow.total}</Badge>}
+      {compact && status && <Badge variant={status.variant}>{status.label}</Badge>}
+    </p>
+    <p class="mt-0.5 text-slate-500">
+      {a.isContactSelf ? "WhatsApp" : `${capitalize(vocabulary.contact)}: ${a.contactName}`} · <PhoneLinks phone={a.contactPhone} plain class="text-sky-700" />
+    </p>
+    {
+      !compact && (
+        <div class="mt-2 flex flex-wrap items-center gap-1.5">
+          <Badge variant={categoryVariant[a.category] ?? "info"}>{a.serviceName}</Badge>
+          <Badge variant="neutral">{a.locationName}</Badge>
+          {showAgenda && <Badge variant="neutral">{a.agendaName}</Badge>}
+          {a.seriesId && <Badge variant="accent">Série</Badge>}
+          {onWaitlist && <Badge variant="accent">Na lista de espera</Badge>}
+        </div>
+      )
+    }
+    {compact && onWaitlist && <Badge variant="accent">Na lista de espera</Badge>}
+    {a.homeVisitAddress && <p class="mt-1.5 text-slate-500">Endereço: {a.homeVisitAddress}</p>}
+
+    {
+      isActive && !isPast && (
+        <div class="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1.5">
+          {a.patientConfirmedAt ? (
+            <Badge variant="success">Presença confirmada ✓</Badge>
+          ) : (
+            a.reminderResponse === "confirm" && <Badge variant="success">Confirmou pelo lembrete</Badge>
+          )}
+          <form method="POST" action={action}>
+            <input type="hidden" name="acao" value={a.patientConfirmedAt ? "desfazer_presenca" : "confirmar_presenca"} />
+            <input type="hidden" name="return_to" value={returnTo} />
+            <button
+              type="submit"
+              class={
+                a.patientConfirmedAt
+                  ? "text-xs font-medium text-slate-500 hover:text-slate-700 hover:underline"
+                  : `${LINK_BUTTON} border-emerald-300 text-emerald-700 hover:bg-emerald-50`
+              }
+            >
+              {a.patientConfirmedAt ? "Desfazer presença confirmada" : "Marcar presença confirmada"}
+            </button>
+          </form>
+        </div>
+      )
+    }
+
+    {
+      reminderAction && (
+        <div class="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1.5">
+          <span class="text-xs text-slate-400">{reminderLabel[reminderAction]}</span>
+          <form method="POST" action={action}>
+            <input type="hidden" name="acao" value="lembrete" />
+            <input type="hidden" name="return_to" value={returnTo} />
+            <button type="submit" class={`${LINK_BUTTON} border-sky-300 text-sky-700 hover:bg-sky-50`}>
+              {reminderButton[reminderAction]}
+            </button>
+          </form>
+        </div>
+      )
+    }
+
+    {
+      preparationResendable && (
+        <div class="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1.5">
+          <span class="text-xs text-slate-400">Preparo do exame não entregue</span>
+          <form method="POST" action={action}>
+            <input type="hidden" name="acao" value="preparo" />
+            <input type="hidden" name="return_to" value={returnTo} />
+            <button type="submit" class={`${LINK_BUTTON} border-sky-300 text-sky-700 hover:bg-sky-50`}>
+              Reenviar preparo
+            </button>
+          </form>
+        </div>
+      )
+    }
+
+    {
+      canJoinWaitlist && (
+        <form method="POST" action={action} class="mt-2">
+          <input type="hidden" name="acao" value={onWaitlist ? "sair_lista_espera" : "entrar_lista_espera"} />
+          <input type="hidden" name="return_to" value={returnTo} />
+          <button type="submit" class="text-xs font-medium text-sky-700 hover:underline">
+            {onWaitlist ? "Tirar da lista de espera" : "Pôr na lista de espera (para antecipar)"}
+          </button>
+        </form>
+      )
+    }
+
+    {
+      isActive && !isPast && (
+        <div class="mt-3 flex gap-2">
+          <a
+            href={`/admin/agenda/remarcar?id=${a.id}&return_to=${encodeURIComponent(returnTo)}`}
+            class="flex-1 rounded-md border border-sky-300 px-3 py-2 text-center text-xs font-semibold text-sky-700 hover:bg-sky-50"
+          >
+            Remarcar
+          </a>
+          <form method="POST" action={action} class="flex-1">
+            <input type="hidden" name="acao" value="cancelar" />
+            <input type="hidden" name="return_to" value={returnTo} />
+            <button
+              type="submit"
+              class="js-confirm-delete w-full rounded-md border border-red-300 px-3 py-2 text-xs font-semibold text-red-700 hover:bg-red-50"
+              data-confirm-title="Cancelar o atendimento?"
+              data-confirm-message={`${a.patientName}, ${formatInstant(a.scheduledAt, timeZone, "dd/MM 'às' HH:mm")}. O horário fica livre de novo.`}
+              data-confirm-label="Cancelar atendimento"
+            >
+              Cancelar
+            </button>
+          </form>
+        </div>
+      )
+    }
+
+    {
+      isPast && (isActive || a.status === "completed" || a.status === "no_show") && (
+        <div class="mt-3 flex flex-wrap items-center gap-2">
+          {isActive && <span class="text-xs text-slate-500">Já passou. Registre:</span>}
+          {a.status !== "completed" && (
+            <form method="POST" action={action}>
+              <input type="hidden" name="acao" value="compareceu" />
+              <input type="hidden" name="return_to" value={returnTo} />
+              <button type="submit" class={`${LINK_BUTTON} border-emerald-300 text-emerald-700 hover:bg-emerald-50`}>
+                {isActive ? "Compareceu" : "Corrigir: compareceu"}
+              </button>
+            </form>
+          )}
+          {a.status !== "no_show" && (
+            <form method="POST" action={action}>
+              <input type="hidden" name="acao" value="faltou" />
+              <input type="hidden" name="return_to" value={returnTo} />
+              <button type="submit" class={`${LINK_BUTTON} border-red-300 text-red-700 hover:bg-red-50`}>
+                {isActive ? "Faltou" : "Corrigir: faltou"}
+              </button>
+            </form>
+          )}
+        </div>
+      )
+    }
+  </div>
+</Card>

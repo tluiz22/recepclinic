@@ -11,15 +11,13 @@
 >     acesso (D11) e os achados 1–5 da F1 resolvidos. Detalhes de cada etapa no [plano](plano.md).
 >   - **F4 em andamento** (painel no banco novo), em nove partes (cliente, 05/out):
 >     - **Concluídas:** F4.1 (login, convite e senha, escolha de clínica, vocabulário, tela
->       inicial); F4.2 (tela da matriz de acesso, com o **limite de profissionais ativos** por
->       clínica); F4.3 (Configurações: clínica, profissionais com **RQE**, locais, agendas,
->       serviços); F4.4a (**Nova clínica** pelo Suporte, convites, **pedido de informações por
->       formulário**, e-mail próprio por SMTP); F4.4b (Configurações II: horários, feriados,
->       convênios, equipe e WhatsApp, com o lembrete das 7h às 20h e o papel Profissional ligado
->       ao cadastro).
->     - **A validar pelo cliente:** F4.4b (comandos na mensagem da etapa).
->     - **Próxima: F4.5** Agenda I. Depois: F4.6 Agenda II, F4.7 Pacientes, F4.8 dia a dia, F4.9
->       Métricas.
+>       inicial); F4.2 (matriz de acesso e limite de profissionais); F4.3 e F4.4a/b
+>       (Configurações, Nova clínica, convites, pedido de informações, equipe e WhatsApp); F4.5
+>       (Agenda: Dia, Semana e Mês, cartão com as ações, Marcar pelo serviço com "com quem?",
+>       Remarcar e cadastro rápido do paciente).
+>     - **A validar pelo cliente:** F4.5 (comandos na mensagem da etapa).
+>     - **Próxima: F4.6** Agenda II (bloqueios, cancelamento do dia com link de remarcação,
+>       séries). Depois: F4.7 Pacientes, F4.8 dia a dia, F4.9 Métricas.
 >   - **Decidido em 05/out para depois:** aba **"Mensagens"** em Configurações na **F6** (prévia no
 >     balão do WhatsApp; com o item "Mensagens personalizadas", o Administrador edita as mensagens de
 >     conversa e propõe os templates; D3b revista); envio dos templates personalizados pela API na

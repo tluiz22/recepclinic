@@ -1,242 +1,286 @@
 ---
+// Agenda › Marcar (F4.5): paciente, serviço do catálogo (D4c), com quem (a
+// agenda ou "Primeiro horário disponível", D2 revista; cliente, 05/out/2026),
+// data e horário. Turma: escolhe a sessão com vaga. Cada escolha recarrega a
+// tela (sem estado escondido no navegador); a marcação confere tudo de novo.
 import AdminLayout from "../../../layouts/AdminLayout.astro";
+import Badge from "../../../components/admin/Badge.astro";
 import Card from "../../../components/admin/Card.astro";
+import FlashMessage from "../../../components/admin/FlashMessage.astro";
 import Icon from "../../../components/admin/Icon.astro";
-import { createClient } from "../../../lib/supabase/server";
-import { getConsultationAgeLimit } from "../../../lib/patientRegistration";
-import { getAvailableSlotsForDate, type AppointmentType } from "../../../lib/scheduling/getAvailableSlotsForDate";
-import { getNextAvailableDates } from "../../../lib/scheduling/getNextAvailableDates";
-import { resolveClinicLocationIds, type LocationCategory } from "../../../lib/scheduling/resolveClinicLocationIds";
-import { formatDateOptionLabel } from "../../../lib/dates";
+import { HINT, INPUT, LABEL, PRIMARY_BUTTON, SECONDARY_BUTTON } from "../../../components/admin/fieldStyles";
+import { isOverConsultationAgeLimit, formatAge } from "../../../lib/age";
+import { slotValue } from "../../../lib/agendaSlot";
+import { isUuid } from "../../../lib/clinicAccess";
+import { formatCalendarDate, formatInstant, isCalendarDate, todayIn } from "../../../lib/clinicTime";
+import { createUserClient } from "../../../lib/data/clients";
+import {
+  agendasForService,
+  getFreeSlots,
+  getFreeSlotsAnyAgenda,
+  getGroupSessions,
+  getNextAvailableDates,
+  getNextAvailableDatesAnyAgenda,
+} from "../../../lib/data/agenda/slots";
+import { listAgendas } from "../../../lib/data/config/agendas";
+import { getClinicSettings } from "../../../lib/data/config/clinic";
+import { listLocations } from "../../../lib/data/config/locations";
+import { listServices } from "../../../lib/data/config/services";
+import { getContact, getPatient, searchPatients } from "../../../lib/data/patients";
+import { formatPhoneBR } from "../../../lib/phone";
+import { capitalize, vocabularyFor } from "../../../lib/vocabulary";
 
-const supabase = createClient(Astro.request, Astro.cookies);
+const clinic = Astro.locals.clinic!;
+const db = createUserClient(Astro.request, Astro.cookies);
+const vocabulary = vocabularyFor(clinic.clinicProfile);
+const params = Astro.url.searchParams;
+const today = todayIn(clinic.timezone);
+const ANY = "primeiro";
 
-// Local vira categoria ("Consultório"/"Atendimento domiciliar"), não um
-// endereço físico específico — pode haver mais de um consultório type=
-// 'clinic' (2 endereços, set/2026); o horário escolhido é que decide qual
-// deles atende (ver "Backlog futuro — Múltiplos consultórios" no plano).
-const { data: locationRows } = await supabase.from("clinic_locations").select("id, type").eq("is_active", true);
-
-const categoryOptions: { value: LocationCategory; label: string }[] = [];
-if (locationRows?.some((l) => l.type === "clinic")) categoryOptions.push({ value: "clinic", label: "Consultório" });
-if (locationRows?.some((l) => l.type === "home_visit")) {
-  categoryOptions.push({ value: "home_visit", label: "Atendimento domiciliar" });
-}
-
-function todayFortaleza(): string {
-  return new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString().slice(0, 10);
-}
-
-const locationCategoryParam = Astro.url.searchParams.get("location_category");
-const locationCategory: LocationCategory =
-  locationCategoryParam === "home_visit" ? "home_visit" : (categoryOptions[0]?.value ?? "clinic");
-
-const appointmentType: AppointmentType =
-  Astro.url.searchParams.get("appointment_type") === "return_visit" ? "return_visit" : "first_visit";
-
-// Pré-preenche o paciente quando chega de um link com destinatário já
-// identificado (ex.: botão "Remarcar" da aba "Aguardando remarcação",
-// Fase 12) — evita ter que buscar de novo alguém que já estava na tela
-// anterior.
-const prefillPatientId = Astro.url.searchParams.get("patient_id") ?? "";
-const prefillPatientLabel = Astro.url.searchParams.get("patient_label") ?? "";
-
-// Avisos de idade (Fase 21, sem bloquear) — ver patientAgeWarnings.ts. O
-// paciente escolhido na busca traz a data de nascimento; o pré-preenchido
-// precisa buscar.
-const consultationAgeLimit = await getConsultationAgeLimit(supabase);
-const prefillBirthdate = prefillPatientId
-  ? ((await supabase.from("patients").select("birthdate").eq("id", prefillPatientId).maybeSingle()).data?.birthdate ??
-    "")
-  : "";
-
-const errorMessages: Record<string, string> = {
-  slot_taken: "Esse horário acabou de deixar de estar livre. Escolha outro.",
-  patient_already_scheduled:
-    "Esse paciente já tem uma consulta futura marcada. Cancele ou remarque a existente antes de criar uma nova.",
-  missing_address: "Informe o endereço para o atendimento domiciliar.",
-  "1": "Não foi possível marcar a consulta. Confira os dados e tente novamente.",
+// Estado da tela, todo no endereço.
+const state = {
+  patient_id: isUuid(params.get("patient_id")) ? params.get("patient_id")! : "",
+  service_id: isUuid(params.get("service_id")) ? params.get("service_id")! : "",
+  agenda_id: params.get("agenda_id") ?? "",
+  date: isCalendarDate(params.get("date") ?? "") ? params.get("date")! : "",
 };
-const errorParam = Astro.url.searchParams.get("error");
-const errorMessage = errorParam ? (errorMessages[errorParam] ?? errorMessages["1"]) : null;
+const link = (changes: Partial<typeof state> & { busca?: string }) => {
+  const next = new URLSearchParams();
+  for (const [key, value] of Object.entries({ ...state, ...changes })) if (value) next.set(key, value);
+  return `/admin/agenda/marcar?${next}`;
+};
+const busca = (params.get("busca") ?? "").trim();
 
-const clinicLocationIds = await resolveClinicLocationIds(supabase, locationCategory);
-const availableDates = await getNextAvailableDates({ supabase, clinicLocationIds, appointmentType });
+const [services, agendas, locations, settings] = await Promise.all([
+  listServices(db, clinic.clinicId),
+  listAgendas(db, clinic.clinicId),
+  listLocations(db, clinic.clinicId),
+  getClinicSettings(db, clinic.clinicId),
+]);
+const examsOn = clinic.features.includes("exams");
+const serviceOptions = services.filter((s) => examsOn || s.category !== "exam");
+const service = serviceOptions.find((s) => s.id === state.service_id) ?? null;
+const agendaName = new Map(agendas.map((a) => [a.id, a.name]));
+const location = new Map(locations.map((l) => [l.id, l]));
 
-const dateParam = Astro.url.searchParams.get("date");
-const date = dateParam && availableDates.some((d) => d.date === dateParam) ? dateParam : (availableDates[0]?.date ?? "");
+const patient = state.patient_id ? await getPatient(db, clinic.clinicId, state.patient_id).catch(() => null) : null;
+const contact = patient ? await getContact(db, clinic.clinicId, patient.contactId) : null;
+const results = !patient && busca ? await searchPatients(db, clinic.clinicId, busca) : [];
 
-const slots = date ? await getAvailableSlotsForDate({ supabase, clinicLocationIds, date, appointmentType }) : [];
+// Com quem: as agendas que atendem o serviço e que a pessoa vê.
+const serviceAgendaIds = service ? await agendasForService(db, clinic.clinicId, service.id) : [];
+let agendaChoice = state.agenda_id;
+if (serviceAgendaIds.length === 1) agendaChoice = serviceAgendaIds[0];
+else if (!(agendaChoice === ANY || serviceAgendaIds.includes(agendaChoice))) agendaChoice = ANY;
+const searchAgendas = agendaChoice === ANY ? serviceAgendaIds : [agendaChoice];
+
+type SlotOption = { value: string; label: string; detail: string; isHome: boolean };
+let dates: string[] = [];
+let date = "";
+let slotOptions: SlotOption[] = [];
+const isGroup = service?.schedulingMode === "group";
+if (service && searchAgendas.length) {
+  const describe = (agendaId: string, locationId: string) =>
+    [location.get(locationId)?.name ?? "Local", serviceAgendaIds.length > 1 ? agendaName.get(agendaId) : null].filter(Boolean).join(" · ");
+  if (isGroup) {
+    const sessions = (
+      await Promise.all(
+        searchAgendas.map(async (agendaId) => (await getGroupSessions(db, clinic.clinicId, { serviceId: service.id, agendaId })).map((s) => ({ ...s, agendaId }))),
+      )
+    )
+      .flat()
+      .sort((a, b) => a.start.getTime() - b.start.getTime());
+    slotOptions = sessions.map((s) => ({
+      value: slotValue({ agendaId: s.agendaId, start: s.start, locationId: s.locationId }),
+      label: formatInstant(s.start, clinic.timezone, "EEE dd/MM 'às' HH:mm"),
+      detail: `${describe(s.agendaId, s.locationId)} · ${s.remaining} de ${s.capacity} vagas`,
+      isHome: location.get(s.locationId)?.type === "home_visit",
+    }));
+  } else {
+    dates = (
+      agendaChoice === ANY
+        ? await getNextAvailableDatesAnyAgenda(db, clinic.clinicId, { serviceId: service.id })
+        : await getNextAvailableDates(db, clinic.clinicId, { serviceId: service.id, agendaId: agendaChoice })
+    ).map((d) => d.date);
+    date = dates.includes(state.date) ? state.date : (dates[0] ?? "");
+    if (date) {
+      const slots =
+        agendaChoice === ANY
+          ? await getFreeSlotsAnyAgenda(db, clinic.clinicId, { serviceId: service.id, date })
+          : (await getFreeSlots(db, clinic.clinicId, { serviceId: service.id, agendaId: agendaChoice, date })).map((s) => ({ ...s, agendaId: agendaChoice }));
+      slotOptions = slots.map((s) => ({
+        value: slotValue(s),
+        label: s.time,
+        detail: describe(s.agendaId, s.locationId),
+        isHome: location.get(s.locationId)?.type === "home_visit",
+      }));
+    }
+  }
+}
+
+const ageWarning =
+  patient && service?.category === "consultation" && settings.consultationAgeLimitYears !== null &&
+  isOverConsultationAgeLimit(patient.birthdate, today, settings.consultationAgeLimitYears)
+    ? `${capitalize(vocabulary.patient)} com ${formatAge(patient.birthdate, today)}: a clínica marca Consulta só até ${settings.consultationAgeLimitYears} anos (aviso, não impede).`
+    : null;
+const back = `${Astro.url.pathname}${Astro.url.search}`;
+const chip = (active: boolean) =>
+  `rounded-lg border px-3 py-2 text-sm font-medium ${active ? "border-sky-700 bg-sky-700 text-white" : "border-slate-300 bg-white text-slate-700 hover:border-sky-600"}`;
 ---
 
-<AdminLayout title="Marcar consulta">
-  <a
-    href={`/admin/agenda?date=${date || todayFortaleza()}`}
-    class="inline-flex items-center gap-1 text-sm font-medium text-sky-700 hover:underline"
-  >
-    <Icon name="chevron-left" class="h-4 w-4" />
-    Agenda
+<AdminLayout title="Marcar">
+  <a href={`/admin/agenda${state.date ? `?date=${state.date}` : ""}`} class="inline-flex items-center gap-1 text-sm font-medium text-sky-700 hover:underline">
+    <Icon name="chevron-left" class="h-4 w-4" /> Agenda
   </a>
+  <h1 class="mt-3 text-2xl font-bold text-slate-900">Marcar</h1>
+  <FlashMessage />
 
-  <h1 class="mt-3 text-2xl font-bold text-slate-900">Marcar consulta</h1>
-
-  {
-    errorMessage && (
-      <p class="mt-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{errorMessage}</p>
-    )
-  }
-
-  <Card class="mt-6 max-w-xl">
-    <form method="POST" action="/api/admin/agenda/appointments" class="flex flex-col gap-6">
-      <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <div>
-          <label for="location_category" class="block text-sm font-medium text-slate-700">Local *</label>
-          <select
-            id="location_category"
-            name="location_category"
-            required
-            class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-sky-600 focus:outline-none focus:ring-1 focus:ring-sky-600"
-          >
-            {
-              categoryOptions.map((option) => (
-                <option value={option.value} selected={option.value === locationCategory}>{option.label}</option>
-              ))
-            }
-          </select>
-        </div>
-        <div>
-          <label for="date" class="block text-sm font-medium text-slate-700">Data *</label>
-          <select
-            id="date"
-            name="date"
-            required
-            disabled={!availableDates.length}
-            class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-sky-600 focus:outline-none focus:ring-1 focus:ring-sky-600 disabled:bg-slate-100"
-          >
-            {
-              availableDates.map((d) => (
-                <option value={d.date} selected={d.date === date}>{formatDateOptionLabel(d.date)}</option>
-              ))
-            }
-          </select>
-          <p
-            id="date_availability_warning"
-            class={`mt-1 text-xs text-amber-700 ${availableDates.length ? "hidden" : ""}`}
-          >
-            Não encontramos horários livres nos próximos dias. Fale com a secretária pelo WhatsApp.
-          </p>
-        </div>
-        <div>
-          <label for="appointment_type" class="block text-sm font-medium text-slate-700">Tipo *</label>
-          <select
-            id="appointment_type"
-            name="appointment_type"
-            required
-            class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-sky-600 focus:outline-none focus:ring-1 focus:ring-sky-600"
-          >
-            <option value="first_visit" selected={appointmentType === "first_visit"}>Consulta</option>
-            <option value="return_visit" selected={appointmentType === "return_visit"}>Retorno</option>
-          </select>
-        </div>
-      </div>
-
-      <div>
-        <label for="patient_search" class="block text-sm font-medium text-slate-700">Paciente *</label>
-        <input
-          type="text"
-          id="patient_search"
-          autocomplete="off"
-          value={prefillPatientLabel}
-          placeholder="Buscar pelo nome do paciente ou telefone do responsável"
-          class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-sky-600 focus:outline-none focus:ring-1 focus:ring-sky-600"
-        />
-        <input type="hidden" id="patient_id" name="patient_id" value={prefillPatientId} />
-        <div class="mt-1 flex items-center justify-between gap-2">
-          <p id="patient_warning" class="hidden text-xs text-amber-700"></p>
-          <button type="button" id="patient_clear" class="hidden shrink-0 text-xs font-medium text-sky-700 hover:underline">
-            Trocar paciente
-          </button>
-        </div>
-        <div id="patient_results" class="mt-1 flex flex-col overflow-hidden rounded-lg border border-slate-200 empty:hidden empty:border-0"></div>
-        <p class="mt-1 text-xs text-slate-500">
-          Não encontrou?{" "}
-          <a href="/admin/pacientes?tab=cadastrar" target="_blank" class="text-sky-700 hover:underline">
-            Cadastrar novo paciente
-          </a>{" "}
-          (abre em outra aba).
-        </p>
-      </div>
-
-      <div id="return_origin_box" class="hidden"></div>
-
-      <p
-        id="patient_age_warning"
-        class="hidden rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800"
-        data-birthdate={prefillBirthdate}
-        data-age-limit={consultationAgeLimit}
-        data-today={todayFortaleza()}
-      >
-      </p>
-
-      <div id="home_visit_address_field" class={locationCategory === "home_visit" ? "" : "hidden"}>
-        <label for="home_visit_address" class="block text-sm font-medium text-slate-700">Endereço *</label>
-        <input
-          type="text"
-          id="home_visit_address"
-          name="home_visit_address"
-          required={locationCategory === "home_visit"}
-          placeholder="Rua, número, bairro, complemento, ponto de referência"
-          class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-sky-600 focus:outline-none focus:ring-1 focus:ring-sky-600"
-        />
-      </div>
-
-      <div>
-        <span class="block text-sm font-medium text-slate-700">Horário *</span>
-        <div id="slots_container" class="mt-1 flex flex-wrap gap-2">
-          {
-            slots.length ? (
-              slots.map((slot) => (
-                <label class="cursor-pointer rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm font-medium text-slate-700 shadow-sm has-[:checked]:border-sky-700 has-[:checked]:bg-sky-50 has-[:checked]:text-sky-700">
-                  <input
-                    type="radio"
-                    name="start"
-                    value={`${slot.start.toISOString()}|${slot.clinicLocationId}`}
-                    required
-                    class="mr-1"
-                  />
-                  {slot.label}
-                </label>
-              ))
-            ) : (
-              <p class="text-sm text-slate-500">
-                Nenhum horário livre para essa data/local. Tente outra data.
+  <div class="mt-4 flex max-w-2xl flex-col gap-4">
+    <Card>
+      <h2 class="font-semibold text-slate-900">1. {capitalize(vocabulary.patient)}</h2>
+      {
+        patient && contact ? (
+          <div class="mt-2 flex flex-wrap items-start justify-between gap-2 text-sm">
+            <div>
+              <p class="font-medium text-slate-900">{patient.fullName}</p>
+              <p class="text-slate-500">
+                {formatAge(patient.birthdate, today)} · {patient.isContactSelf ? "WhatsApp" : `${capitalize(vocabulary.contact)}: ${contact.fullName}`} ·{" "}
+                {formatPhoneBR(contact.phone)}
               </p>
-            )
+            </div>
+            <a href={link({ patient_id: "" })} class="text-sm font-medium text-sky-700 hover:underline">
+              Trocar
+            </a>
+          </div>
+        ) : (
+          <>
+            <form method="GET" class="mt-2 flex gap-2">
+              {Object.entries(state).map(([key, value]) => value && key !== "patient_id" && <input type="hidden" name={key} value={value} />)}
+              <input name="busca" value={busca} placeholder={`Nome do ${vocabulary.patient} ou telefone`} class={`${INPUT} mt-0`} autofocus />
+              <button type="submit" class={SECONDARY_BUTTON}>
+                Buscar
+              </button>
+            </form>
+            {busca && (
+              <ul class="mt-2 divide-y divide-slate-100 rounded-lg border border-slate-200">
+                {results.map((r) => (
+                  <li>
+                    <a href={link({ patient_id: r.id })} class="block px-3 py-2 text-sm hover:bg-sky-50">
+                      <span class="font-medium text-slate-900">{r.fullName}</span>
+                      <span class="block text-slate-500">
+                        {formatAge(r.birthdate, today)} · {r.isContactSelf ? "WhatsApp" : r.contact.fullName} · {formatPhoneBR(r.contact.phone)}
+                      </span>
+                    </a>
+                  </li>
+                ))}
+                {results.length === 0 && <li class="px-3 py-2 text-sm text-slate-500">Ninguém encontrado.</li>}
+              </ul>
+            )}
+            <p class={HINT}>
+              Não encontrou?{" "}
+              <a href={`/admin/agenda/paciente-novo?volta=${encodeURIComponent(link({}))}`} class="text-sky-700 hover:underline">
+                Cadastrar {vocabulary.patient} novo
+              </a>
+            </p>
+          </>
+        )
+      }
+    </Card>
+
+    <Card>
+      <h2 class="font-semibold text-slate-900">2. Serviço</h2>
+      <form method="GET" class="mt-2">
+        {Object.entries(state).map(([key, value]) => value && key !== "service_id" && key !== "date" && <input type="hidden" name={key} value={value} />)}
+        <select name="service_id" class={`${INPUT} mt-0`} onchange="this.form.submit()">
+          <option value="">Escolha…</option>
+          {
+            serviceOptions.map((s) => (
+              <option value={s.id} selected={s.id === service?.id}>
+                {s.name} ({s.durationMinutes} min){s.schedulingMode === "group" ? " · turma" : ""}
+              </option>
+            ))
           }
-        </div>
-      </div>
+        </select>
+        <noscript><button type="submit" class={`${SECONDARY_BUTTON} mt-2`}>Escolher</button></noscript>
+      </form>
+      {service && serviceAgendaIds.length === 0 && <p class="mt-2 text-sm text-amber-700">Nenhuma agenda que você vê atende este serviço.</p>}
+      {ageWarning && <p class="mt-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">{ageWarning}</p>}
+    </Card>
 
-      <div class="flex flex-col-reverse gap-2 sm:flex-row sm:items-center">
-        <a
-          href={`/admin/agenda?date=${date || todayFortaleza()}`}
-          class="w-full rounded-md border border-slate-300 px-4 py-3 text-center text-sm font-semibold text-slate-600 hover:bg-slate-50 sm:w-fit"
-        >
-          Cancelar
-        </a>
-        <button
-          id="submit_btn"
-          type="submit"
-          disabled={!availableDates.length}
-          class="w-full rounded-md bg-sky-700 px-4 py-3 text-sm font-semibold text-white hover:bg-sky-800 disabled:cursor-not-allowed disabled:opacity-50 sm:w-fit"
-        >
-          Confirmar agendamento
-        </button>
-      </div>
-    </form>
-  </Card>
+    {
+      service && serviceAgendaIds.length > 1 && (
+        <Card>
+          <h2 class="font-semibold text-slate-900">3. Com quem</h2>
+          <div class="mt-2 flex flex-wrap gap-2">
+            <a href={link({ agenda_id: ANY, date: "" })} class={chip(agendaChoice === ANY)}>
+              Primeiro horário disponível
+            </a>
+            {serviceAgendaIds.map((id) => (
+              <a href={link({ agenda_id: id, date: "" })} class={chip(agendaChoice === id)}>
+                {agendaName.get(id)}
+              </a>
+            ))}
+          </div>
+        </Card>
+      )
+    }
+
+    {
+      service && searchAgendas.length > 0 && (
+        <Card>
+          <h2 class="font-semibold text-slate-900">{isGroup ? "Turma" : "Data e horário"}</h2>
+          {!isGroup && (
+            <div class="mt-2 flex flex-wrap gap-2">
+              {dates.map((d) => (
+                <a href={link({ date: d, agenda_id: agendaChoice })} class={chip(d === date)}>
+                  <span class="capitalize">{formatCalendarDate(d, "EEE dd/MM")}</span>
+                </a>
+              ))}
+              {dates.length === 0 && <p class="text-sm text-slate-500">Sem horários livres nos próximos 60 dias.</p>}
+            </div>
+          )}
+
+          <form method="POST" action="/api/admin/agenda/atendimentos/novo" class="mt-4 flex flex-col gap-4">
+            <input type="hidden" name="acao" value="marcar" />
+            <input type="hidden" name="patient_id" value={patient?.id ?? ""} />
+            <input type="hidden" name="service_id" value={service.id} />
+            <input type="hidden" name="back" value={back} />
+            <div class="flex flex-wrap gap-2">
+              {slotOptions.map((slot) => (
+                <label class="cursor-pointer rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm has-[:checked]:border-sky-700 has-[:checked]:bg-sky-50">
+                  <input type="radio" name="slot" value={slot.value} required data-home={slot.isHome ? "1" : undefined} class="mr-1" />
+                  <span class="font-medium capitalize">{slot.label}</span>
+                  <span class="block text-xs text-slate-500">{slot.detail}</span>
+                </label>
+              ))}
+              {(isGroup || date) && slotOptions.length === 0 && <p class="text-sm text-slate-500">{isGroup ? "Nenhuma turma com vaga." : "Nenhum horário livre nesta data."}</p>}
+            </div>
+            <div data-home-address hidden>
+              <label for="home_visit_address" class={LABEL}>Endereço do atendimento domiciliar</label>
+              <input id="home_visit_address" name="home_visit_address" value={contact?.defaultHomeAddress ?? ""} placeholder="Rua, número, bairro, complemento" class={INPUT} />
+            </div>
+            {!patient && <p class="text-sm text-amber-700">Escolha o {vocabulary.patient} acima para marcar.</p>}
+            <button type="submit" class={`${PRIMARY_BUTTON} self-start`} disabled={!patient || slotOptions.length === 0}>
+              Marcar
+            </button>
+          </form>
+        </Card>
+      )
+    }
+  </div>
+
+  <script>
+    // Endereço só para horário em local domiciliar.
+    const box = document.querySelector<HTMLElement>("[data-home-address]");
+    const sync = () => {
+      const chosen = document.querySelector<HTMLInputElement>("input[name='slot']:checked");
+      const isHome = chosen?.dataset.home === "1";
+      if (!box) return;
+      box.hidden = !isHome;
+      const input = box.querySelector("input");
+      if (input) input.required = isHome;
+    };
+    document.querySelectorAll("input[name='slot']").forEach((input) => input.addEventListener("change", sync));
+    sync();
+  </script>
 </AdminLayout>
-
-<script src="../../../scripts/patientSearch.ts"></script>
-<script src="../../../scripts/appointmentSlotPicker.ts"></script>
-<script src="../../../scripts/returnOriginWarnings.ts"></script>
-<script src="../../../scripts/patientAgeWarnings.ts"></script>

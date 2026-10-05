@@ -535,6 +535,32 @@ Vocabulário pelo perfil da clínica.
     ficam guardadas e voltam se o item for liberado de novo (`setServiceLocations` com `keep`). O
     banco também trava: migração `20261005210000` (ligar serviço a local domiciliar e cadastrar
     ou reativar horário em local domiciliar ou de exame exigem o item). 1 teste de banco novo.
+- **F4.5 — concluída em 05/out** (cliente: numa etapa só). Agenda no banco novo: **Dia, Semana
+  e Mês** das agendas que a pessoa vê, **todas juntas por padrão**, com o nome da agenda em cada
+  atendimento, e um seletor para ver só uma, lembrado no navegador por clínica (decisão do
+  cliente, 05/out). Dia: atendimentos, **turma num cartão só** com os pacientes dentro, cancelados
+  apagados e bloqueios (só leitura; criar e remover é da F4.6). Cartão do atendimento: presença
+  confirmada (marcar/desfazer), "Confirmou pelo lembrete", lembrete e preparo não entregues com o
+  botão (com os itens), lista de espera (pôr e tirar, com o item), remarcar e cancelar (com
+  confirmação); **já passado: "Compareceu" / "Faltou"**, com correção depois; selo **"Faltou X de
+  Y"** com a regra do piloto (2 ou mais faltas e pelo menos metade dos registrados). **Marcar**
+  pelo serviço do catálogo (exame só com o item; turma escolhe a sessão com vaga), com **"com
+  quem?" e "Primeiro horário disponível"** quando mais de uma agenda atende (D2 revista; decisão
+  do cliente, 05/out), datas com horário livre (feriados fora), horários com o local, endereço
+  para o domiciliar e o aviso da idade limite da Consulta; **cadastro rápido do paciente novo**
+  (nome, nascimento e o WhatsApp do próprio paciente ou do responsável, com as confirmações de
+  mesma pessoa e possível repetido; decisão do cliente, 05/out; o cadastro completo é da F4.7).
+  **Remarcar** na mesma agenda e serviço (o horário atual não conta como ocupado). Todas as ações
+  numa rota (`/api/admin/agenda/atendimentos/[id]`), com aviso de salvo ou erro. Saíram as telas
+  e rotas antigas (Marcar exame, Remarcar exame, horários livres, origem do retorno, ações por
+  atendimento); "Marcar consulta" e "Marcar exame" viraram um "Marcar". **Envio pelo WhatsApp
+  (lembrete, preparo e os avisos ao paciente de marcado, remarcado e cancelado) fica para a F6**,
+  como no plano: os botões avisam que o envio ainda não está ligado, sem registrar tentativa
+  (`panelSender.ts`, um ponto só para ligar). Até a F4.6/F4.8, Bloquear, Bloqueios, cancelamento
+  em massa e o Resumo do Dia continuam nas telas antigas, fora do menu da Agenda. Padrões
+  assumidos (revisáveis): comparecimento também no cartão da Agenda (no piloto, só em Consultas);
+  a semana começa na segunda; o Mês mostra quantos atendimentos e marca feriado e bloqueio.
+  5 testes unitários e 3 de banco novos.
 - **F4.5 — Agenda I:** dia, semana e mês com a escolha da agenda; marcar, remarcar, cancelar;
   presença e comparecimento; lembrete e preparo; lista de espera.
 - **F4.6 — Agenda II:** bloqueios, cancelamento do dia com link de remarcação, séries (D9).

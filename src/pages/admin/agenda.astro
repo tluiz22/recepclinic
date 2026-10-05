@@ -1,481 +1,133 @@
 ---
-import PhoneLinks from "../../components/admin/PhoneLinks.astro";
-import NoShowBadge from "../../components/admin/NoShowBadge.astro";
-import { fetchNoShowStats } from "../../lib/noShow";
-import { fetchActiveWaitlistAppointmentIds } from "../../lib/waitlist";
+// Agenda › Dia (F4.5): atendimentos, turmas e bloqueios do dia nas agendas
+// escolhidas (todas por padrão, com o nome da agenda em cada um; cliente,
+// 05/out/2026), com as ações de cada atendimento no cartão.
 import AdminLayout from "../../layouts/AdminLayout.astro";
-import Card from "../../components/admin/Card.astro";
+import AgendaHeader from "../../components/admin/agenda/AgendaHeader.astro";
+import AppointmentCard from "../../components/admin/agenda/AppointmentCard.astro";
 import Badge from "../../components/admin/Badge.astro";
-import type { BadgeVariant } from "../../components/admin/Badge.astro";
+import Card from "../../components/admin/Card.astro";
+import ConfirmDeleteDialog from "../../components/admin/ConfirmDeleteDialog.astro";
+import FlashMessage from "../../components/admin/FlashMessage.astro";
 import Icon from "../../components/admin/Icon.astro";
-import PresenceControl from "../../components/admin/PresenceControl.astro";
-import ResendReminderButton from "../../components/admin/ResendReminderButton.astro";
-import ResendPreparationButton from "../../components/admin/ResendPreparationButton.astro";
-import ResendReminderNotice from "../../components/admin/ResendReminderNotice.astro";
-import { fetchReminderActions } from "../../lib/reminderResend";
-import { fetchPreparationResendable } from "../../lib/preparationResend";
-import { createClient } from "../../lib/supabase/server";
-import { groupSessionTitle, loadAgendaItems, type AgendaItem } from "../../lib/scheduling/agendaItems";
-import MassCancelControls from "../../components/admin/MassCancelControls.astro";
-import {
-  AUTHORSHIP_COLUMNS,
-  PRESENCE_COLUMNS,
-  fetchStaffLabels,
-  formatBookedByLines,
-  formatPresenceLine,
-} from "../../lib/authorship";
+import { addDays, formatCalendarDate, formatInstant, isCalendarDate, todayIn } from "../../lib/clinicTime";
+import { createUserClient } from "../../lib/data/clients";
+import { loadAgendaScope } from "../../lib/data/agenda/scope";
+import { buildDayItems, listAgendaAppointments, listAgendaBlocks, listNoShowStats } from "../../lib/data/agenda/view";
+import { activeWaitlistAppointmentIds } from "../../lib/data/waitlist/entries";
+import { listPreparationResendable } from "../../lib/data/whatsapp/preparation";
+import { listReminderActions } from "../../lib/data/whatsapp/reminders";
+import { vocabularyFor } from "../../lib/vocabulary";
 
-const supabase = createClient(Astro.request, Astro.cookies);
-
-function todayFortaleza(): string {
-  return new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString().slice(0, 10);
-}
-
-function addDays(dateStr: string, delta: number): string {
-  const d = new Date(`${dateStr}T12:00:00Z`);
-  d.setUTCDate(d.getUTCDate() + delta);
-  return d.toISOString().slice(0, 10);
-}
-
+const clinic = Astro.locals.clinic!;
+const db = createUserClient(Astro.request, Astro.cookies);
+const now = new Date();
+const today = todayIn(clinic.timezone, now);
 const dateParam = Astro.url.searchParams.get("date");
-const date = dateParam && /^\d{4}-\d{2}-\d{2}$/.test(dateParam) ? dateParam : todayFortaleza();
+const date = dateParam && isCalendarDate(dateParam) ? dateParam : today;
 
-const dayStart = new Date(`${date}T00:00:00-03:00`);
-const dayEnd = new Date(dayStart.getTime() + 24 * 60 * 60_000);
+const scope = await loadAgendaScope(db, clinic.clinicId, Astro.url, Astro.cookies);
+const range = { fromDate: date, toDate: date, timeZone: clinic.timezone, agendaIds: scope.agendaIds };
+const [appointments, blocks] = await Promise.all([
+  listAgendaAppointments(db, clinic.clinicId, range),
+  listAgendaBlocks(db, clinic.clinicId, { ...range, agendaNames: scope.agendaNames }),
+]);
+const items = buildDayItems(appointments, blocks);
 
-const items = await loadAgendaItems(
-  supabase,
-  dayStart,
-  dayEnd,
-  `patient_id, appointment_type, home_visit_address, reminder_sent_at, reminder_response, ${AUTHORSHIP_COLUMNS}, ${PRESENCE_COLUMNS}, patients ( full_name, guardians ( full_name, phone ) ), clinic_locations ( name, type )`
-);
+const activeFuture = appointments.filter((a) => (a.status === "scheduled" || a.status === "confirmed") && a.scheduledAt > now).map((a) => a.id);
+const examsFuture = appointments.filter((a) => a.category === "exam" && activeFuture.includes(a.id)).map((a) => a.id);
+const waitlistOn = clinic.features.includes("waitlist");
+const [reminderActions, preparationResendable, onWaitlist, noShows] = await Promise.all([
+  listReminderActions(db, clinic.clinicId, activeFuture, now),
+  clinic.features.includes("exams") ? listPreparationResendable(db, clinic.clinicId, examsFuture) : Promise.resolve(new Set<string>()),
+  waitlistOn ? activeWaitlistAppointmentIds(db, clinic.clinicId, activeFuture) : Promise.resolve(new Set<string>()),
+  listNoShowStats(db, clinic.clinicId, appointments.map((a) => a.patientId)),
+]);
 
-const staffLabels = items.some((item) => item.kind === "appointment")
-  ? await fetchStaffLabels(supabase)
-  : new Map<string, string>();
-
-// Botão do lembrete (Fase 22 · etapa 6; Fase 23 · etapa 3): "Enviar" ou
-// "Reenviar" nos atendimentos ativos e ainda por vir — ver `fetchReminderActions`.
-const reminderActions = await fetchReminderActions(
-  supabase,
-  items.flatMap((item) =>
-    item.kind === "appointment" && !item.canceled && item.start.getTime() > Date.now()
-      ? [
-          {
-            id: item.appointment.id,
-            scheduled_at: item.start.toISOString(),
-            reminder_sent_at: (item.appointment.reminder_sent_at as string | null) ?? null,
-            rescheduled_at: (item.appointment.rescheduled_at as string | null) ?? null,
-            reminder_response: (item.appointment.reminder_response as string | null) ?? null,
-            patient_confirmed_at: (item.appointment.patient_confirmed_at as string | null) ?? null,
-          },
-        ]
-      : []
-  )
-);
-
-// Selo "Faltou X de Y" (Fase 23 · etapa 7) nos pacientes faltosos.
-const noShowStats = await fetchNoShowStats(
-  supabase,
-  items.flatMap((item) =>
-    item.kind === "appointment" && item.appointment.patient_id ? [item.appointment.patient_id as string] : []
-  )
-);
-
-// Selo "Na lista de espera" (Fase 25 · etapa 5).
-const onWaitlist = await fetchActiveWaitlistAppointmentIds(
-  supabase,
-  items.flatMap((item) => (item.kind === "appointment" && !item.canceled ? [item.appointment.id as string] : []))
-);
-
-// "Reenviar preparo do exame" (ajuste de 02/out/2026): exames ativos e ainda
-// por vir com o preparo não entregue.
-const preparationResendable = await fetchPreparationResendable(
-  supabase,
-  items.flatMap((item) =>
-    item.kind === "appointment" &&
-    !item.canceled &&
-    item.start.getTime() > Date.now() &&
-    item.appointment.appointment_type === "exam"
-      ? [item.appointment.id]
-      : []
-  )
-);
-
-const appointmentTypeLabels: Record<string, string> = {
-  first_visit: "Consulta",
-  return_visit: "Retorno",
-  exam: "Exame",
-};
-
-function typeBadgeVariant(type: string | undefined): BadgeVariant {
-  if (type === "exam") return "warning";
-  if (type === "return_visit") return "accent";
-  return "info";
-}
-
-function formatTime(d: Date): string {
-  return new Date(d.getTime() - 3 * 60 * 60 * 1000).toISOString().slice(11, 16);
-}
-
-// Erro do botão de presença confirmada (volta com `?error=presenca`).
-const presenceError = Astro.url.searchParams.get("error") === "presenca";
-
-// Cancelamento em massa (Fase 12, movido do Resumo do dia em 03/out/2026):
-// atendimentos ainda marcados e por vir; turma = todos os pacientes ativos.
-function massCancelIds(item: AgendaItem): string[] {
-  if (item.start.getTime() <= Date.now()) return [];
-  if (item.kind === "group_session") return item.cancelableIds;
-  if (item.kind === "appointment" && ["scheduled", "confirmed"].includes(item.appointment.status)) {
-    return [item.appointment.id];
-  }
-  return [];
-}
-const hasMassCancel = items.some((item) => massCancelIds(item).length > 0);
+const vocabulary = vocabularyFor(clinic.clinicProfile);
+const showAgenda = !scope.selectedAgendaId && scope.agendas.length > 1;
+const returnTo = `/admin/agenda?date=${date}`;
+const time = (d: Date) => formatInstant(d, clinic.timezone, "HH:mm");
+const cardProps = (a: (typeof appointments)[number]) => ({
+  appointment: a,
+  timeZone: clinic.timezone,
+  now,
+  showAgenda,
+  vocabulary,
+  returnTo,
+  reminderAction: reminderActions.get(a.id),
+  preparationResendable: preparationResendable.has(a.id),
+  waitlistOn,
+  onWaitlist: onWaitlist.has(a.id),
+  noShow: noShows.get(a.patientId),
+});
 ---
 
 <AdminLayout title="Agenda">
-  <div class="flex flex-wrap items-start justify-between gap-4">
-    <div>
-      <h1 class="text-2xl font-bold text-slate-900">Agenda</h1>
-      <nav class="mt-3 flex gap-x-5 border-b border-slate-200 text-sm font-medium">
-        <span class="-mb-px border-b-2 border-sky-700 pb-2 text-sky-700">Dia</span>
-        <a
-          href={`/admin/agenda/semana?date=${date}`}
-          class="-mb-px border-b-2 border-transparent pb-2 text-slate-600 hover:text-sky-700"
-        >
-          Semana
-        </a>
-        <a
-          href={`/admin/agenda/mes?date=${date}`}
-          class="-mb-px border-b-2 border-transparent pb-2 text-slate-600 hover:text-sky-700"
-        >
-          Mês
-        </a>
-      </nav>
-    </div>
+  <AgendaHeader view="dia" date={date} agendas={scope.selectable} selectedAgendaId={scope.selectedAgendaId} />
 
-    <div class="flex flex-wrap gap-2">
-      <a
-        href={`/admin/agenda/marcar?date=${date}`}
-        class="inline-flex items-center gap-1.5 rounded-md bg-sky-700 px-4 py-2 text-sm font-medium text-white hover:bg-sky-800"
-      >
-        <Icon name="plus" class="h-4 w-4" />
-        Marcar consulta
-      </a>
-      <a
-        href={`/admin/agenda/marcar-exame?date=${date}`}
-        class="inline-flex items-center gap-1.5 rounded-md border border-sky-700 px-4 py-2 text-sm font-medium text-sky-700 hover:bg-sky-50"
-      >
-        <Icon name="plus" class="h-4 w-4" />
-        Marcar exame
-      </a>
-      <a
-        href="/admin/agenda/bloquear"
-        class="inline-flex items-center gap-1.5 rounded-md border border-slate-300 px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50"
-      >
-        Bloquear agenda
-      </a>
-      <a
-        href="/admin/agenda/bloqueios"
-        class="inline-flex items-center gap-1.5 rounded-md border border-slate-300 px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50"
-      >
-        Bloqueios ativos
-      </a>
-    </div>
-  </div>
-
-  <form
-    method="GET"
-    action="/admin/agenda"
-    class="mt-6 flex items-center gap-1 rounded-lg border border-slate-200 bg-white p-2 sm:inline-flex"
-  >
-    <a
-      href={`/admin/agenda?date=${addDays(date, -1)}`}
-      aria-label="Dia anterior"
-      class="rounded-md p-2 text-slate-500 hover:bg-slate-100 hover:text-sky-700"
-    >
+  <form method="GET" action="/admin/agenda" class="mt-4 flex items-center gap-1 rounded-lg border border-slate-200 bg-white p-2 sm:inline-flex">
+    <a href={`/admin/agenda?date=${addDays(date, -1)}`} aria-label="Dia anterior" class="rounded-md p-2 text-slate-500 hover:bg-slate-100 hover:text-sky-700">
       <Icon name="chevron-left" class="h-5 w-5" />
     </a>
-    <input
-      type="date"
-      name="date"
-      value={date}
-      onchange="this.form.submit()"
-      class="min-w-0 flex-1 rounded-md border border-slate-300 px-3 py-2 text-sm sm:flex-none"
-    />
-    <a
-      href={`/admin/agenda?date=${addDays(date, 1)}`}
-      aria-label="Próximo dia"
-      class="rounded-md p-2 text-slate-500 hover:bg-slate-100 hover:text-sky-700"
-    >
+    <input type="date" name="date" value={date} onchange="this.form.submit()" class="min-w-0 flex-1 rounded-md border border-slate-300 px-3 py-2 text-sm sm:flex-none" />
+    <a href={`/admin/agenda?date=${addDays(date, 1)}`} aria-label="Próximo dia" class="rounded-md p-2 text-slate-500 hover:bg-slate-100 hover:text-sky-700">
       <Icon name="chevron-right" class="h-5 w-5" />
     </a>
     {
-      date !== todayFortaleza() && (
-        <a
-          href="/admin/agenda"
-          class="ml-1 shrink-0 rounded-md border border-slate-300 px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50"
-        >
+      date !== today && (
+        <a href="/admin/agenda" class="ml-1 shrink-0 rounded-md border border-slate-300 px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50">
           Hoje
         </a>
       )
     }
   </form>
+  <p class="mt-2 text-sm capitalize text-slate-600">{formatCalendarDate(date, "EEEE, d 'de' MMMM 'de' yyyy")}</p>
+  <FlashMessage />
 
-  {
-    presenceError && (
-      <p class="mt-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-        Não foi possível atualizar a presença confirmada. Tente novamente.
-      </p>
-    )
-  }
-
-  <ResendReminderNotice />
-
-  {hasMassCancel && <MassCancelControls />}
-
-  <div class="mt-6 flex flex-col gap-3">
+  <div class="mt-4 flex flex-col gap-3">
     {
-      items.length ? (
-        items.map((item) => {
-          const appointment = item.kind === "appointment" ? (item.appointment as any) : undefined;
-          const isCancelled = item.canceled;
-          const isPast = item.start.getTime() < Date.now();
-          const patient = (appointment?.patients ?? null) as any;
-          const guardian = patient?.guardians ?? null;
-          const location = (appointment?.clinic_locations ?? null) as any;
-
-          return (
-            <Card muted={isCancelled}>
-              <div class="flex flex-wrap items-center justify-between gap-2">
-                <label class="flex items-center gap-2">
-                  {massCancelIds(item).length > 0 && (
-                    <input
-                      type="checkbox"
-                      class="mass-cancel-checkbox h-4 w-4 shrink-0 rounded border-slate-300 text-sky-700 focus:ring-sky-600"
-                      value={massCancelIds(item).join(",")}
-                      aria-label={`Selecionar ${formatTime(item.start)} para cancelamento em massa`}
-                    />
-                  )}
-                  <span class="text-base font-semibold text-slate-900">
-                    {formatTime(item.start)} – {formatTime(item.end)}
-                  </span>
-                </label>
-                {isCancelled && <Badge variant="neutral">Cancelado</Badge>}
-              </div>
-              {item.kind === "group_session" ? (
-                // Turma de exame (Fase 11 etapa 4): um card só por turma —
-                // sem nome de paciente aqui de propósito (pedido do cliente).
-                // "Ver pacientes" leva pro Resumo do dia, que lista cada um
-                // individualmente.
-                <div class="mt-2 text-sm text-slate-700">
-                  <p class="font-medium text-slate-900">{groupSessionTitle(item)}</p>
-                  <div class="mt-2">
-                    <Badge variant="warning">Exame em grupo</Badge>
-                  </div>
-                  {!isCancelled && (
-                    <a
-                      href={`/admin/consultas?tab=resumo&date=${date}`}
-                      class="mt-3 inline-block text-xs font-semibold text-sky-700 hover:underline"
-                    >
-                      Ver pacientes
-                    </a>
-                  )}
-                </div>
-              ) : appointment ? (
-                <div class="mt-2 text-sm text-slate-700">
-                  <p class="flex flex-wrap items-center gap-x-2 gap-y-1 font-medium text-slate-900">
-                    {patient?.full_name}
-                    <NoShowBadge stats={noShowStats.get(appointment.patient_id as string)} />
-                  </p>
-                  <p class="mt-0.5 text-slate-500">
-                    Resp.: {guardian?.full_name}
-                    {guardian?.phone && (
-                      <>
-                        {" · "}
-                        <PhoneLinks phone={guardian.phone} plain class="text-sky-700" />
-                      </>
-                    )}
-                  </p>
-                  <div class="mt-2 flex flex-wrap items-center gap-1.5">
-                    <Badge variant={typeBadgeVariant(appointment.appointment_type)}>
-                      {appointment.appointment_type === "exam"
-                        ? appointmentTypeLabels.exam
-                        : `${appointmentTypeLabels[appointment.appointment_type] ?? appointment.appointment_type} · ${location?.type === "clinic" ? "Consultório" : "Domiciliar"}`}
-                    </Badge>
-                    {onWaitlist.has(appointment.id) && (
-                      <a href="/admin/consultas?tab=lista_espera" class="hover:opacity-80">
-                        <Badge variant="accent">Na lista de espera</Badge>
-                      </a>
-                    )}
-                  </div>
-                  {appointment.home_visit_address && (
-                    <p class="mt-1.5 text-slate-500">Endereço: {appointment.home_visit_address}</p>
-                  )}
-                  {formatBookedByLines(appointment, staffLabels).map((line, index) => (
-                    <p class={`${index === 0 ? "mt-1.5" : "mt-0.5"} text-xs text-slate-400`}>{line}</p>
-                  ))}
-                  {!isCancelled && (
-                    <PresenceControl
-                      appointmentId={appointment.id}
-                      confirmedLine={formatPresenceLine(appointment, staffLabels)}
-                      returnTo={`/admin/agenda?date=${date}`}
-                      editable={!isPast}
-                    />
-                  )}
-                  {reminderActions.has(appointment.id) && (
-                    <div class="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1.5">
-                      <span class="text-xs text-slate-400">
-                        {reminderActions.get(appointment.id) === "send"
-                          ? "Sem lembrete automático"
-                          : reminderActions.get(appointment.id) === "resend_unanswered"
-                            ? "Lembrete sem resposta"
-                            : "Lembrete não entregue"}
-                      </span>
-                      <ResendReminderButton
-                        appointmentId={appointment.id}
-                        action={reminderActions.get(appointment.id)!}
-                        returnTo={`/admin/agenda?date=${date}`}
-                      />
-                    </div>
-                  )}
-                  {preparationResendable.has(appointment.id) && (
-                    <div class="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1.5">
-                      <span class="text-xs text-slate-400">Preparo do exame não entregue</span>
-                      <ResendPreparationButton appointmentId={appointment.id} returnTo={`/admin/agenda?date=${date}`} />
-                    </div>
-                  )}
-                  {!isCancelled && !isPast && (
-                    <div class="mt-3 flex gap-2">
-                      <a
-                        href={`${appointment.appointment_type === "exam" ? "/admin/agenda/remarcar-exame" : "/admin/agenda/remarcar"}?appointment_id=${appointment.id}`}
-                        class="flex-1 rounded-md border border-sky-300 px-3 py-2 text-center text-xs font-semibold text-sky-700 hover:bg-sky-50"
-                      >
-                        Remarcar
-                      </a>
-                      <button
-                        type="button"
-                        class="cancel-appointment-btn flex-1 rounded-md border border-red-300 px-3 py-2 text-xs font-semibold text-red-700 hover:bg-red-50"
-                        data-appointment-id={appointment.id}
-                      >
-                        Cancelar
-                      </button>
-                    </div>
-                  )}
-                  {!isCancelled && isPast && (
-                    <p class="mt-3 text-xs text-slate-400">
-                      Já passou —{" "}
-                      <a href="/admin/consultas?tab=pendentes" class="text-sky-700 hover:underline">
-                        registre o comparecimento em Consultas
-                      </a>
-                      .
-                    </p>
-                  )}
-                </div>
-              ) : item.kind === "block" ? (
-                // Bloqueio de agenda (Fase 13, no banco desde a Fase 20).
-                <div class="mt-2 text-sm text-slate-700">
-                  <p class="font-medium text-slate-900">Bloqueio administrativo</p>
-                  <p class="mt-1 text-slate-500">{item.reason}</p>
-                  <div class="mt-2">
-                    <Badge variant="neutral">Bloqueio</Badge>
-                  </div>
-                </div>
-              ) : null}
-            </Card>
-          );
-        })
-      ) : (
-        <Card class="text-center text-slate-500">Nenhum evento nesse dia.</Card>
+      items.map((item) =>
+        item.kind === "appointment" ? (
+          <AppointmentCard {...cardProps(item.appointment)} />
+        ) : item.kind === "group" ? (
+          <Card>
+            <div class="flex flex-wrap items-center justify-between gap-2">
+              <span class="text-base font-semibold text-slate-900">
+                {time(item.start)} – {time(item.end)}
+              </span>
+              <Badge variant="warning">Turma</Badge>
+            </div>
+            <p class="mt-2 text-sm font-medium text-slate-900">
+              {item.serviceName} · {item.appointments.filter((a) => a.status !== "canceled").length} {vocabulary.patients}
+            </p>
+            <p class="text-sm text-slate-500">
+              {item.locationName}
+              {showAgenda ? ` · ${item.agendaName}` : ""}
+            </p>
+            <div class="mt-3 flex flex-col gap-2">
+              {item.appointments.map((a) => (
+                <AppointmentCard {...cardProps(a)} compact />
+              ))}
+            </div>
+          </Card>
+        ) : (
+          <Card muted>
+            <div class="flex flex-wrap items-center justify-between gap-2">
+              <span class="text-base font-semibold text-slate-900">
+                {formatInstant(item.start, clinic.timezone, "dd/MM HH:mm")} – {formatInstant(item.end, clinic.timezone, "dd/MM HH:mm")}
+              </span>
+              <Badge>Bloqueio</Badge>
+            </div>
+            <p class="mt-2 text-sm text-slate-600">
+              {item.block.reason}
+              {showAgenda ? ` · ${item.agendaName}` : ""}
+            </p>
+          </Card>
+        ),
       )
     }
+    {items.length === 0 && <Card class="text-center text-slate-500">Nenhum atendimento neste dia.</Card>}
   </div>
-
-  <!-- Confirmação de cancelamento em modal próprio (não usa window.confirm) —
-       o diálogo nativo do navegador mostra a URL da página no título, o que
-       não fica bom no fluxo do admin. -->
-  <dialog
-    id="cancel_dialog"
-    class="w-[calc(100%-2rem)] max-w-sm rounded-lg border border-slate-200 bg-white p-0 shadow-xl backdrop:bg-slate-900/40"
-  >
-    <div class="p-5">
-      <h2 class="text-base font-semibold text-slate-900">Cancelar agendamento?</h2>
-      <p class="mt-2 text-sm text-slate-600">O horário volta a ficar livre na agenda.</p>
-      <p id="cancel_dialog_error" class="mt-2 hidden text-sm text-red-700">
-        Não foi possível cancelar. Tente novamente.
-      </p>
-      <div class="mt-5 flex justify-end gap-2">
-        <button
-          type="button"
-          id="cancel_dialog_dismiss"
-          class="rounded-md border border-slate-300 px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50"
-        >
-          Voltar
-        </button>
-        <button
-          type="button"
-          id="cancel_dialog_accept"
-          class="rounded-md bg-red-600 px-3 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          Cancelar agendamento
-        </button>
-      </div>
-    </div>
-  </dialog>
+  <ConfirmDeleteDialog />
 </AdminLayout>
-
-<script>
-  const dialog = document.getElementById("cancel_dialog") as HTMLDialogElement;
-  const dismissBtn = document.getElementById("cancel_dialog_dismiss") as HTMLButtonElement;
-  const acceptBtn = document.getElementById("cancel_dialog_accept") as HTMLButtonElement;
-  const errorMsg = document.getElementById("cancel_dialog_error") as HTMLParagraphElement;
-
-  let pendingAppointmentId: string | null = null;
-
-  document.querySelectorAll(".cancel-appointment-btn").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      const button = btn as HTMLButtonElement;
-      pendingAppointmentId = button.dataset.appointmentId!;
-      errorMsg.classList.add("hidden");
-      acceptBtn.disabled = false;
-      acceptBtn.textContent = "Cancelar agendamento";
-      dialog.showModal();
-    });
-  });
-
-  dismissBtn.addEventListener("click", () => dialog.close());
-  dialog.addEventListener("click", (event) => {
-    if (event.target === dialog) dialog.close();
-  });
-
-  acceptBtn.addEventListener("click", async () => {
-    if (!pendingAppointmentId) return;
-
-    acceptBtn.disabled = true;
-    acceptBtn.textContent = "Cancelando…";
-    errorMsg.classList.add("hidden");
-
-    const response = await fetch(`/api/admin/agenda/appointments/${encodeURIComponent(pendingAppointmentId)}/cancel`, {
-      method: "POST",
-    });
-
-    if (response.ok) {
-      const result = await response.json().catch(() => ({}));
-      if (result.already_canceled) {
-        acceptBtn.disabled = true;
-        acceptBtn.textContent = "Já estava cancelada";
-        errorMsg.textContent = "Essa consulta já tinha sido cancelada por outro canal — a página vai atualizar.";
-        errorMsg.classList.remove("hidden", "text-red-700");
-        errorMsg.classList.add("text-slate-600");
-        setTimeout(() => window.location.reload(), 1800);
-        return;
-      }
-      window.location.reload();
-    } else {
-      acceptBtn.disabled = false;
-      acceptBtn.textContent = "Cancelar agendamento";
-      errorMsg.classList.remove("hidden");
-    }
-  });
-</script>
