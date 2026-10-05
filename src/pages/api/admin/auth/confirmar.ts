@@ -10,5 +10,7 @@ export const GET: APIRoute = async ({ request, cookies, url, redirect }) => {
   if (!isEmailLinkType(type) || !(await verifyEmailLink(createUserClient(request, cookies), tokenHash, type))) {
     return redirect("/admin/login?error=link_invalido", 303);
   }
-  return redirect(`/admin/nova-senha?origem=${type === "invite" ? "convite" : "recuperacao"}`, 303);
+  // Convite reenviado usa o link de recuperação, mas a tela é a de boas-vindas.
+  const origem = type === "invite" || url.searchParams.get("origem") === "convite" ? "convite" : "recuperacao";
+  return redirect(`/admin/nova-senha?origem=${origem}`, 303);
 };

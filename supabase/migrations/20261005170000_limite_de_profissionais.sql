@@ -14,6 +14,8 @@ update public.clinics c
 create function app.guard_professional_limit_change()
 returns trigger
 language plpgsql
+-- Dono do banco: a credencial da clínica não lê o esquema auth (auth.role()).
+security definer
 set search_path = ''
 as $$
 begin

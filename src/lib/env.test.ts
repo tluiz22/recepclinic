@@ -28,10 +28,25 @@ describe("variáveis da plataforma", () => {
       supabaseJwtSecret: "j".repeat(32),
       cronSecret: "x".repeat(32),
       siteUrl: null,
+      email: null,
     });
     expect(parsePlatformEnv({ ...valid, SITE_URL: "https://app.recepclinic.com.br" }).siteUrl).toBe(
       "https://app.recepclinic.com.br",
     );
+  });
+
+  it("e-mail é opcional; com SMTP_HOST, porta e remetente são obrigatórios", () => {
+    expect(parsePlatformEnv({ ...valid, SMTP_HOST: "127.0.0.1", SMTP_PORT: "54325", EMAIL_FROM: "RecepClinic <a@b.c>" }).email).toEqual({
+      host: "127.0.0.1",
+      port: 54325,
+      user: null,
+      password: null,
+      from: "RecepClinic <a@b.c>",
+    });
+    expect(problemsOf({ ...valid, SMTP_HOST: "smtp.resend.com" })).toEqual([
+      "SMTP_PORT inválida (número da porta)",
+      "EMAIL_FROM não definida (remetente, ex.: RecepClinic <nao-responda@recepclinic.com.br>)",
+    ]);
   });
 
   it("tira espaços das pontas", () => {

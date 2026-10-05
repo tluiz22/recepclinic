@@ -1,0 +1,307 @@
+---
+// Formulário de informações para o Suporte configurar a clínica (F4.4a, L47;
+// cliente, 05/out/2026). Sem login: o link é a chave. Só mostra o que está
+// liberado para a clínica; dá para salvar e continuar depois; depois de
+// enviado (ou vencido), não muda mais.
+import PublicLayout from "../../layouts/PublicLayout.astro";
+import FormMessage from "../../components/admin/FormMessage.astro";
+import { HINT, INPUT, LABEL, PRIMARY_BUTTON, SECONDARY_BUTTON } from "../../components/admin/fieldStyles";
+import { BRAZIL_STATES } from "../../lib/brazilStates";
+import { formatInstant } from "../../lib/clinicTime";
+import { createClinicServiceClient } from "../../lib/data/clinicService";
+import { getClinicFeatures } from "../../lib/data/features";
+import { getInfoRequestByToken, hashToken } from "../../lib/data/onboarding";
+import { resolveClinicByOnboardingToken } from "../../lib/data/platform";
+import { takeFlash } from "../../lib/flash";
+import { examples, sectionsFor, type OnboardingLocation, type OnboardingProfessional, type OnboardingTeamMember } from "../../lib/onboardingForm";
+import { ROLE_NAMES } from "../../lib/onboardingLabels";
+import { PROFILE_LABELS } from "../../lib/vocabulary";
+
+const token = Astro.params.token ?? "";
+const clinicId = await resolveClinicByOnboardingToken(hashToken(token));
+const db = clinicId ? createClinicServiceClient(clinicId) : null;
+const [request, features, clinicRow, settingsRow] = db
+  ? await Promise.all([
+      getInfoRequestByToken(db, token),
+      getClinicFeatures(db, clinicId!),
+      db.from("clinics").select("name").eq("id", clinicId!).maybeSingle(),
+      db.from("clinic_settings").select("timezone").eq("clinic_id", clinicId!).maybeSingle(),
+    ])
+  : [null, [], null, null];
+const flash = takeFlash(Astro.cookies, "/formulario");
+
+const clinicName = clinicRow?.data?.name ?? "";
+const timeZone = settingsRow?.data?.timezone ?? "America/Sao_Paulo";
+const sections = sectionsFor(features);
+const ex = examples(sections);
+const answers = request?.answers;
+const closed = request ? request.status === "submitted" || request.status === "reviewed" : true;
+const expired = request ? !closed && request.expiresAt.getTime() < Date.now() : false;
+const editable = !!request && !closed && !expired;
+
+// Uma linha vazia no fim de cada lista, para começar a preencher.
+const blankLocation: OnboardingLocation = { name: "", type: "clinic", address: "" };
+const blankProfessional: OnboardingProfessional = {
+  name: "",
+  profession: "",
+  specialty: "",
+  council: "",
+  councilNumber: "",
+  councilState: "",
+  whatsapp: "",
+  receivesSummary: false,
+};
+const blankMember: OnboardingTeamMember = { name: "", email: "", role: "reception" };
+const locations = [...(answers?.locations ?? []), blankLocation];
+const professionals = [...(answers?.professionals ?? []), blankProfessional];
+const team = [...(answers?.team ?? []), blankMember];
+const section = "mt-8 text-lg font-semibold text-slate-900";
+const row = "grid gap-3 rounded-lg border border-slate-200 bg-white p-4";
+---
+
+<PublicLayout title="Informações da clínica">
+  {
+    !request ? (
+      <>
+        <h1 class="mt-2 text-2xl font-bold">Link inválido</h1>
+        <p class="mt-2 text-slate-600">Confira o endereço do e-mail ou peça um novo link ao Suporte RecepClinic.</p>
+      </>
+    ) : (
+      <>
+        <h1 class="mt-2 text-2xl font-bold">Informações para configurar a {clinicName}</h1>
+        {flash && <FormMessage tone={flash.tone}>{flash.text}</FormMessage>}
+        {closed && (
+          <p class="mt-4 text-slate-700">
+            Recebemos as informações em {formatInstant(request.submittedAt ?? request.savedAt ?? request.requestedAt, timeZone, "dd/MM/yyyy 'às' HH:mm")}. O
+            Suporte RecepClinic vai configurar a clínica e avisar quando estiver pronta.
+          </p>
+        )}
+        {expired && <p class="mt-4 text-slate-700">Este link venceu. Peça um novo ao Suporte RecepClinic.</p>}
+        {editable && (
+          <>
+            <p class="mt-2 text-slate-600">
+              Preencha o que souber. Dá para salvar e continuar depois pelo mesmo link (vale até{" "}
+              {formatInstant(request.expiresAt, timeZone, "dd/MM/yyyy")}). Quando terminar, toque em "Enviar ao Suporte".
+            </p>
+
+            <form method="POST" action={`/api/formulario/${token}`} class="flex flex-col">
+              <h2 class={section}>1. Clínica</h2>
+              <div class="mt-3 grid gap-3 sm:grid-cols-2">
+                <div class="sm:col-span-2">
+                  <label for="clinic_name" class={LABEL}>Nome da clínica</label>
+                  <input id="clinic_name" name="clinic_name" value={answers?.clinic.name || clinicName} class={INPUT} />
+                </div>
+                <div>
+                  <label for="clinic_profile" class={LABEL}>Atende</label>
+                  <select id="clinic_profile" name="clinic_profile" class={INPUT}>
+                    <option value="">Escolha…</option>
+                    {Object.entries(PROFILE_LABELS).map(([value, label]) => (
+                      <option value={value} selected={value === answers?.clinic.profile}>
+                        {value === "pediatric" ? "Crianças (pediátrica)" : value === "adult" ? "Adultos" : "Crianças e adultos (mista)"}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label for="clinic_city" class={LABEL}>Cidade e estado</label>
+                  <input id="clinic_city" name="clinic_city" placeholder="Natal – RN" value={answers?.clinic.city ?? ""} class={INPUT} />
+                </div>
+                {sections.botInfo && (
+                  <>
+                    <div class="sm:col-span-2">
+                      <label for="clinic_payment" class={LABEL}>Formas de pagamento</label>
+                      <textarea id="clinic_payment" name="clinic_payment" rows="2" placeholder="PIX, cartão, dinheiro" class={INPUT}>{answers?.clinic.paymentInfo ?? ""}</textarea>
+                    </div>
+                    <div class="sm:col-span-2">
+                      <label for="clinic_insurance" class={LABEL}>Convênios atendidos</label>
+                      <textarea id="clinic_insurance" name="clinic_insurance" rows="2" placeholder="Unimed, Amil… ou só particular" class={INPUT}>{answers?.clinic.insuranceInfo ?? ""}</textarea>
+                    </div>
+                    <div class="sm:col-span-2">
+                      <label for="clinic_notes" class={LABEL}>Observações para o atendimento pelo WhatsApp</label>
+                      <textarea id="clinic_notes" name="clinic_notes" rows="2" class={INPUT}>{answers?.clinic.notes ?? ""}</textarea>
+                    </div>
+                  </>
+                )}
+              </div>
+
+              <h2 class={section}>2. Locais de atendimento</h2>
+              <div class="mt-3 flex flex-col gap-3" data-rows="locations">
+                {locations.map((location) => (
+                  <div class={row} data-row>
+                    <div class="grid gap-3 sm:grid-cols-2">
+                      <div>
+                        <label class={LABEL}>Nome</label>
+                        <input name="location_name" placeholder="Consultório Centro" value={location.name} class={INPUT} />
+                      </div>
+                      <div>
+                        <label class={LABEL}>Tipo</label>
+                        <select name="location_type" class={INPUT}>
+                          <option value="clinic">Consultório</option>
+                          {sections.homeVisit && (
+                            <option value="home_visit" selected={location.type === "home_visit"}>
+                              Domiciliar (a equipe vai até o paciente)
+                            </option>
+                          )}
+                        </select>
+                      </div>
+                    </div>
+                    <div>
+                      <label class={LABEL}>Endereço (consultório)</label>
+                      <input name="location_address" placeholder="Rua, número – bairro, cidade" value={location.address} class={INPUT} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <button type="button" class={`${SECONDARY_BUTTON} mt-2 self-start`} data-add="locations">+ Outro local</button>
+
+              <h2 class={section}>3. Profissionais</h2>
+              <div class="mt-3 flex flex-col gap-3" data-rows="professionals">
+                {professionals.map((p) => (
+                  <div class={row} data-row>
+                    <div class="grid gap-3 sm:grid-cols-3">
+                      <div class="sm:col-span-2">
+                        <label class={LABEL}>Nome (como aparece para o paciente)</label>
+                        <input name="professional_name" value={p.name} class={INPUT} />
+                      </div>
+                      <div>
+                        <label class={LABEL}>Profissão</label>
+                        <input name="professional_profession" placeholder="Médica, Dentista…" value={p.profession} class={INPUT} />
+                      </div>
+                      <div>
+                        <label class={LABEL}>Especialidade</label>
+                        <input name="professional_specialty" value={p.specialty} class={INPUT} />
+                      </div>
+                      <div>
+                        <label class={LABEL}>Conselho e número</label>
+                        <div class="flex gap-2">
+                          <input name="professional_council" placeholder="CRM" value={p.council} class={`${INPUT} w-24`} />
+                          <input name="professional_council_number" placeholder="12345" value={p.councilNumber} class={INPUT} />
+                        </div>
+                      </div>
+                      <div>
+                        <label class={LABEL}>UF</label>
+                        <select name="professional_council_state" class={INPUT}>
+                          <option value="">—</option>
+                          {BRAZIL_STATES.map((uf) => (
+                            <option value={uf} selected={uf === p.councilState}>
+                              {uf}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <label class={LABEL}>WhatsApp</label>
+                        <input name="professional_whatsapp" type="tel" placeholder="(84) 99999-9999" value={p.whatsapp} class={INPUT} />
+                      </div>
+                      {sections.dailySummary && (
+                        <div class="sm:col-span-2">
+                          <label class={LABEL}>Recebe o resumo do dia dos seus atendimentos?</label>
+                          <select name="professional_summary" class={INPUT}>
+                            <option value="nao">Não</option>
+                            <option value="sim" selected={p.receivesSummary}>
+                              Sim, no WhatsApp acima
+                            </option>
+                          </select>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <button type="button" class={`${SECONDARY_BUTTON} mt-2 self-start`} data-add="professionals">+ Outro profissional</button>
+
+              <h2 class={section}>4. Serviços</h2>
+              <p class={HINT}>Um por linha: nome, duração, valor, onde é feito{sections.exams ? " e, para exames, o preparo" : ""}.</p>
+              <textarea name="services" rows="6" placeholder={ex.services} class={INPUT}>{answers?.services ?? ""}</textarea>
+
+              <h2 class={section}>5. Dias e horários de atendimento</h2>
+              <p class={HINT}>De cada profissional (ou serviço), com o local.</p>
+              <textarea name="schedule" rows="6" placeholder={ex.schedule} class={INPUT}>{answers?.schedule ?? ""}</textarea>
+
+              <h2 class={section}>6. Feriados próprios</h2>
+              <p class={HINT}>Os feriados nacionais já estão no sistema. Informe os da cidade e os recessos da clínica.</p>
+              <textarea name="holidays" rows="4" placeholder={ex.holidays} class={INPUT}>{answers?.holidays ?? ""}</textarea>
+
+              <h2 class={section}>7. Equipe que usa o painel</h2>
+              <p class={HINT}>Cada pessoa recebe um convite por e-mail.</p>
+              <div class="mt-3 flex flex-col gap-3" data-rows="team">
+                {team.map((member) => (
+                  <div class={row} data-row>
+                    <div class="grid gap-3 sm:grid-cols-3">
+                      <div>
+                        <label class={LABEL}>Nome</label>
+                        <input name="team_name" value={member.name} class={INPUT} />
+                      </div>
+                      <div>
+                        <label class={LABEL}>E-mail</label>
+                        <input name="team_email" type="email" value={member.email} class={INPUT} />
+                      </div>
+                      <div>
+                        <label class={LABEL}>Papel</label>
+                        <select name="team_role" class={INPUT}>
+                          {Object.entries(ROLE_NAMES).map(([value, label]) => (
+                            <option value={value} selected={value === member.role}>
+                              {label}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <button type="button" class={`${SECONDARY_BUTTON} mt-2 self-start`} data-add="team">+ Outra pessoa</button>
+
+              {sections.whatsapp && (
+                <>
+                  <h2 class={section}>8. WhatsApp e avisos</h2>
+                  <div class="mt-3 grid gap-3">
+                    <div>
+                      <label for="whatsapp_number" class={LABEL}>
+                        Número de WhatsApp da clínica
+                      </label>
+                      <input id="whatsapp_number" name="whatsapp_number" type="tel" value={answers?.whatsapp.number ?? ""} class={INPUT} />
+                    </div>
+                    {sections.dailySummary && (
+                      <div>
+                        <label for="summary_recipients" class={LABEL}>
+                          Quem mais recebe o resumo do dia (nome e WhatsApp)
+                        </label>
+                        <textarea id="summary_recipients" name="summary_recipients" rows="3" placeholder="Recepção – (84) 99999-0000" class={INPUT}>{answers?.whatsapp.summaryRecipients ?? ""}</textarea>
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
+
+              <div class="sticky bottom-0 -mx-4 mt-8 flex flex-wrap gap-3 border-t border-slate-200 bg-slate-50/95 px-4 py-3">
+                <button type="submit" name="acao" value="rascunho" class={SECONDARY_BUTTON}>
+                  Salvar e continuar depois
+                </button>
+                <button type="submit" name="acao" value="enviar" class={PRIMARY_BUTTON}>
+                  Enviar ao Suporte
+                </button>
+              </div>
+            </form>
+          </>
+        )}
+      </>
+    )
+  }
+
+  <script>
+    // "+ Outro …": copia a última linha da lista, vazia.
+    document.querySelectorAll<HTMLButtonElement>("[data-add]").forEach((button) => {
+      button.addEventListener("click", () => {
+        const list = document.querySelector(`[data-rows="${button.dataset.add}"]`);
+        const last = list?.querySelector<HTMLElement>("[data-row]:last-of-type");
+        if (!list || !last) return;
+        const copy = last.cloneNode(true) as HTMLElement;
+        copy.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>("input, textarea").forEach((field) => (field.value = ""));
+        copy.querySelectorAll<HTMLSelectElement>("select").forEach((field) => (field.selectedIndex = 0));
+        list.appendChild(copy);
+        copy.querySelector<HTMLElement>("input")?.focus();
+      });
+    });
+  </script>
+</PublicLayout>

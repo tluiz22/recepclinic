@@ -7,6 +7,11 @@ interface ImportMetaEnv {
   readonly SUPABASE_JWT_SECRET: string;
   readonly CRON_SECRET: string;
   readonly SITE_URL?: string;
+  readonly SMTP_HOST?: string;
+  readonly SMTP_PORT?: string;
+  readonly SMTP_USER?: string;
+  readonly SMTP_PASSWORD?: string;
+  readonly EMAIL_FROM?: string;
 }
 
 interface ImportMeta {

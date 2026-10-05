@@ -1,0 +1,130 @@
+---
+// Clínica, pelo Suporte (F4.4a): convites (com "Reenviar convite"), pedido de
+// informações por e-mail e as respostas do formulário para revisar. Para
+// configurar, o Suporte abre a clínica (escolha de clínica).
+import AdminLayout from "../../../../layouts/AdminLayout.astro";
+import Badge from "../../../../components/admin/Badge.astro";
+import Card from "../../../../components/admin/Card.astro";
+import FlashMessage from "../../../../components/admin/FlashMessage.astro";
+import Icon from "../../../../components/admin/Icon.astro";
+import OnboardingAnswersView from "../../../../components/admin/OnboardingAnswersView.astro";
+import { INPUT, LABEL, PRIMARY_BUTTON, SECONDARY_BUTTON } from "../../../../components/admin/fieldStyles";
+import { isUuid } from "../../../../lib/clinicAccess";
+import { formatInstant } from "../../../../lib/clinicTime";
+import { createUserClient } from "../../../../lib/data/clients";
+import { listInfoRequests, listInvitations } from "../../../../lib/data/onboarding";
+import { REQUEST_STATUS, ROLE_NAMES } from "../../../../lib/onboardingLabels";
+
+const { id } = Astro.params;
+if (!isUuid(id)) return Astro.redirect("/admin/sistema/clinicas");
+const db = createUserClient(Astro.request, Astro.cookies);
+const [{ data: clinic }, { data: settings }, invitations, requests] = await Promise.all([
+  db.from("clinics").select("id, name, max_professionals").eq("id", id).maybeSingle(),
+  db.from("clinic_settings").select("timezone").eq("clinic_id", id).maybeSingle(),
+  listInvitations(db, id),
+  listInfoRequests(db, id),
+]);
+if (!clinic || !settings) return Astro.redirect("/admin/sistema/clinicas");
+const when = (date: Date) => formatInstant(date, settings.timezone, "dd/MM/yyyy 'às' HH:mm");
+const firstAdmin = invitations.find((i) => i.roles.includes("admin"))?.email ?? "";
+const action = `/api/admin/sistema/clinicas/${id}`;
+const now = Date.now();
+// Vencido sem ter sido enviado ao Suporte.
+const expired = (request: (typeof requests)[number]) => (request.status === "sent" || request.status === "draft") && request.expiresAt.getTime() < now;
+---
+
+<AdminLayout title={clinic.name} platform>
+  <a href="/admin/sistema/clinicas" class="inline-flex items-center gap-1 text-sm text-sky-700 hover:underline">
+    <Icon name="chevron-left" class="h-4 w-4" /> Clínicas
+  </a>
+  <h1 class="mt-2 text-2xl font-bold text-slate-900">{clinic.name}</h1>
+  <FlashMessage />
+
+  <div class="mt-3 flex flex-wrap gap-3">
+    <form method="POST" action="/api/admin/clinica-ativa">
+      <input type="hidden" name="clinicId" value={clinic.id} />
+      <button type="submit" class={PRIMARY_BUTTON}>Abrir a clínica para configurar</button>
+    </form>
+    <a href={`/admin/sistema/matriz?clinica=${clinic.id}`} class={SECONDARY_BUTTON}>Matriz de acesso</a>
+  </div>
+
+  <Card class="mt-6">
+    <h2 class="text-sm font-semibold uppercase tracking-wide text-slate-500">Convites</h2>
+    <ul class="mt-3 flex flex-col gap-3">
+      {
+        invitations.map((invitation) => (
+          <li class="flex flex-wrap items-center justify-between gap-2">
+            <span class="text-sm text-slate-800">
+              {invitation.email} · {invitation.roles.map((r) => ROLE_NAMES[r]).join(" + ")}{" "}
+              {invitation.acceptedAt ? (
+                <Badge variant="success">aceito em {when(invitation.acceptedAt)}</Badge>
+              ) : (
+                <Badge variant="warning">sem resposta{invitation.lastSentAt ? ` · último envio ${when(invitation.lastSentAt)}` : ""}</Badge>
+              )}
+            </span>
+            {!invitation.acceptedAt && (
+              <form method="POST" action={action}>
+                <input type="hidden" name="acao" value="reenviar_convite" />
+                <input type="hidden" name="invitation_id" value={invitation.id} />
+                <button type="submit" class={SECONDARY_BUTTON}>
+                  Reenviar convite
+                </button>
+              </form>
+            )}
+          </li>
+        ))
+      }
+      {invitations.length === 0 && <li class="text-sm text-slate-600">Nenhum convite registrado.</li>}
+    </ul>
+  </Card>
+
+  <Card class="mt-4">
+    <h2 class="text-sm font-semibold uppercase tracking-wide text-slate-500">Pedir as informações ao Administrador</h2>
+    <p class="mt-1 text-sm text-slate-600">
+      Para quando o Administrador prefere que o Suporte configure: ele recebe um e-mail com o link do formulário (vale 30 dias), e as
+      respostas aparecem aqui. Nada entra sozinho na clínica.
+    </p>
+    <form method="POST" action={action} class="mt-3 flex flex-wrap items-end gap-3">
+      <input type="hidden" name="acao" value="pedir_informacoes" />
+      <div class="min-w-64 flex-1">
+        <label for="email" class={LABEL}>E-mail</label>
+        <input id="email" name="email" type="email" required value={firstAdmin} class={INPUT} />
+      </div>
+      <button type="submit" class={PRIMARY_BUTTON}>Enviar pedido</button>
+    </form>
+  </Card>
+
+  {
+    requests.map((request) => (
+      <Card class="mt-4">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <h3 class="text-sm font-semibold text-slate-900">
+            Pedido de {when(request.requestedAt)} para {request.email}{" "}
+            <Badge variant={REQUEST_STATUS[request.status].variant}>{REQUEST_STATUS[request.status].label}</Badge>
+            {expired(request) && <Badge variant="danger">vencido</Badge>}
+          </h3>
+          {request.status === "submitted" && (
+            <form method="POST" action={action}>
+              <input type="hidden" name="acao" value="marcar_revisado" />
+              <input type="hidden" name="request_id" value={request.id} />
+              <button type="submit" class={SECONDARY_BUTTON}>
+                Marcar como revisado
+              </button>
+            </form>
+          )}
+        </div>
+        <p class="mt-1 text-xs text-slate-500">
+          {request.submittedAt ? `Enviado em ${when(request.submittedAt)}` : request.savedAt ? `Rascunho salvo em ${when(request.savedAt)}` : "Ainda não aberto ou não salvo"}
+          {` · link vale até ${when(request.expiresAt)}`}
+          {request.reviewedAt ? ` · revisado em ${when(request.reviewedAt)}` : ""}
+        </p>
+        {(request.submittedAt || request.savedAt) && (
+          <details class="mt-3" open={request.status === "submitted"}>
+            <summary class="cursor-pointer text-sm text-sky-700">Ver respostas</summary>
+            <OnboardingAnswersView answers={request.answers} />
+          </details>
+        )}
+      </Card>
+    ))
+  }
+</AdminLayout>

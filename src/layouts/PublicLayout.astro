@@ -1,0 +1,26 @@
+---
+import "../styles/global.css";
+
+// Páginas públicas do RecepClinic (F4.4a: formulário de informações). Sem
+// login e sem menu; fora dos buscadores.
+interface Props {
+  title: string;
+}
+
+const { title } = Astro.props;
+---
+
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{title} | RecepClinic</title>
+    <meta name="robots" content="noindex, nofollow" />
+  </head>
+  <body class="min-h-screen bg-slate-50 text-slate-900">
+    <main class="mx-auto w-full max-w-3xl px-4 py-8">
+      <p class="text-sm font-semibold uppercase tracking-wide text-sky-700">RecepClinic</p>
+      <slot />
+    </main>
+  </body>
+</html>

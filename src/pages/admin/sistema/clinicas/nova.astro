@@ -1,0 +1,52 @@
+---
+// Nova clínica (F4.4a, L47): nome, perfil, fuso e o e-mail do primeiro
+// Administrador, que recebe o convite na hora. Nasce com a matriz desligada e
+// limite de 1 profissional.
+import AdminLayout from "../../../../layouts/AdminLayout.astro";
+import Card from "../../../../components/admin/Card.astro";
+import FlashMessage from "../../../../components/admin/FlashMessage.astro";
+import Icon from "../../../../components/admin/Icon.astro";
+import { HINT, INPUT, LABEL, PRIMARY_BUTTON } from "../../../../components/admin/fieldStyles";
+import { BRAZIL_TIME_ZONES } from "../../../../lib/timeZones";
+import { PROFILE_LABELS } from "../../../../lib/vocabulary";
+---
+
+<AdminLayout title="Nova clínica" platform>
+  <a href="/admin/sistema/clinicas" class="inline-flex items-center gap-1 text-sm text-sky-700 hover:underline">
+    <Icon name="chevron-left" class="h-4 w-4" /> Clínicas
+  </a>
+  <h1 class="mt-2 text-2xl font-bold text-slate-900">Nova clínica</h1>
+  <FlashMessage />
+
+  <Card class="mt-4 max-w-2xl">
+    <form method="POST" action="/api/admin/sistema/clinicas/nova" class="flex flex-col gap-4">
+      <div>
+        <label for="name" class={LABEL}>Nome da clínica</label>
+        <input id="name" name="name" required class={INPUT} />
+      </div>
+      <div class="grid gap-4 sm:grid-cols-2">
+        <div>
+          <label for="profile" class={LABEL}>Perfil</label>
+          <select id="profile" name="profile" class={INPUT}>
+            {Object.entries(PROFILE_LABELS).map(([value, label]) => <option value={value} selected={value === "mixed"}>{label}</option>)}
+          </select>
+        </div>
+        <div>
+          <label for="timezone" class={LABEL}>Fuso horário</label>
+          <select id="timezone" name="timezone" class={INPUT}>
+            {BRAZIL_TIME_ZONES.map((zone) => <option value={zone.value} selected={zone.value === "America/Sao_Paulo"}>{zone.label}</option>)}
+          </select>
+        </div>
+      </div>
+      <div>
+        <label for="admin_email" class={LABEL}>E-mail do primeiro Administrador</label>
+        <input id="admin_email" name="admin_email" type="email" required class={INPUT} />
+        <p class={HINT}>Recebe o convite na hora para criar a senha. Se já tiver login no RecepClinic, só ganha acesso à clínica.</p>
+      </div>
+      <p class="text-sm text-slate-600">
+        A clínica nasce com a matriz de acesso desligada (só o básico) e limite de 1 profissional. Depois, libere os itens na matriz.
+      </p>
+      <button type="submit" class={`${PRIMARY_BUTTON} self-start`}>Criar clínica e convidar</button>
+    </form>
+  </Card>
+</AdminLayout>

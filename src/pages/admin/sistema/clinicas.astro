@@ -1,0 +1,49 @@
+---
+// Clínicas (F4.4a): o Suporte cria clínicas, acompanha os convites e os
+// pedidos de informações.
+import AdminLayout from "../../../layouts/AdminLayout.astro";
+import Badge from "../../../components/admin/Badge.astro";
+import Card from "../../../components/admin/Card.astro";
+import FlashMessage from "../../../components/admin/FlashMessage.astro";
+import { PRIMARY_BUTTON } from "../../../components/admin/fieldStyles";
+import { DEFAULT_TIMEZONE, formatInstant } from "../../../lib/clinicTime";
+import { createUserClient } from "../../../lib/data/clients";
+import { listClinicsOverview } from "../../../lib/data/onboarding";
+import { REQUEST_STATUS } from "../../../lib/onboardingLabels";
+
+const clinics = await listClinicsOverview(createUserClient(Astro.request, Astro.cookies));
+---
+
+<AdminLayout title="Clínicas" platform>
+  <h1 class="text-2xl font-bold text-slate-900">Clínicas</h1>
+  <FlashMessage />
+  <div class="mt-4 flex flex-wrap gap-3">
+    <a href="/admin/sistema/clinicas/nova" class={PRIMARY_BUTTON}>Nova clínica</a>
+    <a href="/admin/sistema/matriz" class="self-center text-sm text-sky-700 hover:underline">Matriz de acesso</a>
+  </div>
+
+  <ul class="mt-4 grid gap-3 sm:grid-cols-2">
+    {
+      clinics.map((clinic) => (
+        <li>
+          <a href={`/admin/sistema/clinicas/${clinic.id}`}>
+            <Card class="h-full hover:border-sky-300 hover:bg-sky-50">
+              <p class="font-medium text-slate-900">
+                {clinic.name} {clinic.status === "suspended" && <Badge variant="warning">suspensa</Badge>}
+              </p>
+              <p class="mt-1 text-sm text-slate-600">Criada em {formatInstant(clinic.createdAt, DEFAULT_TIMEZONE, "dd/MM/yyyy")}</p>
+              <p class="mt-1 flex flex-wrap gap-2 text-xs">
+                {clinic.pendingInvitations > 0 && (
+                  <Badge variant="warning">
+                    {clinic.pendingInvitations} {clinic.pendingInvitations === 1 ? "convite sem resposta" : "convites sem resposta"}
+                  </Badge>
+                )}
+                {clinic.latestRequest && <Badge variant={REQUEST_STATUS[clinic.latestRequest].variant}>{REQUEST_STATUS[clinic.latestRequest].label}</Badge>}
+              </p>
+            </Card>
+          </a>
+        </li>
+      ))
+    }
+  </ul>
+</AdminLayout>

@@ -295,6 +295,13 @@ begin
   insert into public.daily_summary_sends (clinic_id, summary_date, kind, first_scheduled_at)
     values (c_a, monday, 'consultas', (monday + time '08:00') at time zone tz);
 
+  -- Convite do primeiro Administrador e pedido de informações (F4.4a). O
+  -- formulário abre em /formulario/recepclinic-local-formulario (só local).
+  insert into public.clinic_invitations (clinic_id, email, user_id, roles, invited_by, accepted_at)
+    values (c_a, 'admin@exemplo-saude.local', u_a_admin, '{admin}', u_support, now());
+  insert into public.onboarding_requests (clinic_id, token_hash, email, requested_by, expires_at)
+    values (c_a, encode(sha256(convert_to('recepclinic-local-formulario', 'UTF8')), 'hex'), 'admin@exemplo-saude.local', u_support, now() + interval '30 days');
+
   -- -------------------------------------------------------------------------
   -- Clínica B: Odonto Exemplo (perfil Adultos)
   -- -------------------------------------------------------------------------

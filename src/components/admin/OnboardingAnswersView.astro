@@ -1,0 +1,66 @@
+---
+// Respostas do pedido de informações, para o Suporte revisar (F4.4a).
+import type { OnboardingAnswers } from "../../lib/onboardingForm";
+import { ROLE_NAMES } from "../../lib/onboardingLabels";
+import { PROFILE_LABELS } from "../../lib/vocabulary";
+
+interface Props {
+  answers: OnboardingAnswers;
+}
+
+const { answers } = Astro.props;
+const dash = (value: string) => value || "—";
+const section = "mt-4 text-sm font-semibold uppercase tracking-wide text-slate-500";
+const pre = "mt-1 whitespace-pre-wrap rounded-md bg-slate-50 p-3 text-sm text-slate-800";
+---
+
+<div class="text-sm text-slate-800">
+  <h4 class={section}>Clínica</h4>
+  <p>
+    {dash(answers.clinic.name)} · {answers.clinic.profile ? PROFILE_LABELS[answers.clinic.profile] : "perfil não informado"} · {
+      dash(answers.clinic.city)
+    }
+  </p>
+  {answers.clinic.paymentInfo && <p class={pre}>Pagamento: {answers.clinic.paymentInfo}</p>}
+  {answers.clinic.insuranceInfo && <p class={pre}>Convênios: {answers.clinic.insuranceInfo}</p>}
+  {answers.clinic.notes && <p class={pre}>Observações: {answers.clinic.notes}</p>}
+
+  <h4 class={section}>Locais</h4>
+  {answers.locations.length === 0 ? <p>—</p> : (
+    <ul class="list-disc pl-5">
+      {answers.locations.map((l) => <li>{dash(l.name)} ({l.type === "home_visit" ? "domiciliar" : "consultório"}){l.address ? ` – ${l.address}` : ""}</li>)}
+    </ul>
+  )}
+
+  <h4 class={section}>Profissionais</h4>
+  {answers.professionals.length === 0 ? <p>—</p> : (
+    <ul class="list-disc pl-5">
+      {answers.professionals.map((p) => (
+        <li>
+          {dash(p.name)} – {[p.profession, p.specialty].filter(Boolean).join(", ") || "profissão não informada"}
+          {[p.council, p.councilNumber, p.councilState].some(Boolean) && ` – ${[p.council, p.councilNumber, p.councilState].filter(Boolean).join(" ")}`}
+          {p.whatsapp && ` – WhatsApp ${p.whatsapp}`}
+          {p.receivesSummary && " – recebe o resumo do dia"}
+        </li>
+      ))}
+    </ul>
+  )}
+
+  <h4 class={section}>Serviços</h4>
+  <p class={pre}>{dash(answers.services)}</p>
+  <h4 class={section}>Dias e horários</h4>
+  <p class={pre}>{dash(answers.schedule)}</p>
+  <h4 class={section}>Feriados próprios</h4>
+  <p class={pre}>{dash(answers.holidays)}</p>
+
+  <h4 class={section}>Equipe</h4>
+  {answers.team.length === 0 ? <p>—</p> : (
+    <ul class="list-disc pl-5">
+      {answers.team.map((m) => <li>{dash(m.name)} – {dash(m.email)} – {ROLE_NAMES[m.role]}</li>)}
+    </ul>
+  )}
+
+  <h4 class={section}>WhatsApp e avisos</h4>
+  <p>Número da clínica: {dash(answers.whatsapp.number)}</p>
+  {answers.whatsapp.summaryRecipients && <p class={pre}>Recebem o resumo do dia: {answers.whatsapp.summaryRecipients}</p>}
+</div>

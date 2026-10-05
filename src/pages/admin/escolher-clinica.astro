@@ -45,7 +45,10 @@ const current = Astro.cookies.get(ACTIVE_CLINIC_COOKIE)?.value;
   {clinics.length === 0 && <p class="mt-4 text-sm text-slate-600">Nenhuma clínica disponível.</p>}
   {
     staff && (
-      <a href="/admin/sistema/matriz" class="mt-4 block text-center text-sm text-sky-700 hover:underline">
+      <a href="/admin/sistema/clinicas" class="mt-4 block text-center text-sm text-sky-700 hover:underline">
+        Clínicas: nova clínica, convites e pedidos de informações
+      </a>
+      <a href="/admin/sistema/matriz" class="mt-2 block text-center text-sm text-sky-700 hover:underline">
         Matriz de acesso das clínicas
       </a>
     )

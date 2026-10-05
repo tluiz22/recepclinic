@@ -481,6 +481,25 @@ Vocabulário pelo perfil da clínica.
   - **F4.4b — Configurações II:** dias e horários, feriados extras, contatos do resumo, hora do
     lembrete, convênios, equipe (convites, com o mesmo envio) e acesso às agendas, situação do
     WhatsApp.
+  - **F4.4a — concluída em 05/out.** Telas do Suporte em `/admin/sistema/clinicas`: lista (convites
+    sem resposta, situação do pedido), **"Nova clínica"** (nome, perfil, fuso, e-mail do primeiro
+    Administrador; criada com o login do Suporte, que fica no registro; nasce com a matriz desligada
+    e limite de 1; o convite sai na hora; quem já tem login é só incluído e recebe um aviso) e o
+    detalhe (convites com "Reenviar convite", "Abrir a clínica para configurar", **"Pedir as
+    informações ao Administrador"** e as respostas, com "Marcar como revisado"). **Formulário
+    público** em `/formulario/[código]` (só o hash do código fica no banco; vale 30 dias; rascunho e
+    envio; as 8 seções, só o que está liberado; depois de enviado ou vencido, não muda; salvo pela
+    credencial da clínica, D1). **E-mail próprio por SMTP** (`src/lib/email.ts`, `nodemailer`;
+    variáveis opcionais `SMTP_*` e `EMAIL_FROM`; localmente, o Mailpit na porta 54325); sem envio, a
+    clínica e o pedido são criados e o painel avisa (o link do pedido aparece uma vez para o Suporte
+    mandar por outro meio). Links de convite e de senha passam a valer 24 horas. Migração
+    `20261005180000`: convites por clínica (`clinic_invitations`, aceito quando a pessoa cria a senha),
+    pedidos de informações (`onboarding_requests`, com trava para a página pública) e as funções da
+    plataforma (login por e-mail, clínica do link). Correção: as travas do formulário e do limite
+    de profissionais rodam como dono do banco (a credencial da clínica não lê o esquema `auth`).
+    Padrões assumidos (revisáveis): enviar ao Suporte exige ao menos o nome da clínica (o resto
+    pode ficar em branco); o Suporte acompanha as respostas pela tela (sem e-mail de aviso ao
+    Suporte); o link do pedido vale 30 dias. 8 testes unitários e 7 de banco novos.
 - **F4.5 — Agenda I:** dia, semana e mês com a escolha da agenda; marcar, remarcar, cancelar;
   presença e comparecimento; lembrete e preparo; lista de espera.
 - **F4.6 — Agenda II:** bloqueios, cancelamento do dia com link de remarcação, séries (D9).

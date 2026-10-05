@@ -357,6 +357,25 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"clinic_invitations": {
+                  Row: {
+                    "accepted_at": string | null,"clinic_id": string,"email": string,"id": string,"invited_at": string,"invited_by": string | null,"last_sent_at": string | null,"roles": (Database["public"]['Enums']["clinic_role"])[],"user_id": string | null
+                  }
+                  Insert: {
+                    "accepted_at"?: string | null,"clinic_id": string,"email": string,"id"?: string,"invited_at"?: string,"invited_by"?: string | null,"last_sent_at"?: string | null,"roles": (Database["public"]['Enums']["clinic_role"])[],"user_id"?: string | null
+                  }
+                  Update: {
+                    "accepted_at"?: string | null,"clinic_id"?: string,"email"?: string,"id"?: string,"invited_at"?: string,"invited_by"?: string | null,"last_sent_at"?: string | null,"roles"?: (Database["public"]['Enums']["clinic_role"])[],"user_id"?: string | null
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "clinic_invitations_clinic_id_fkey"
+      columns: ["clinic_id"]
+isOneToOne: false
+      referencedRelation: "clinics"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"clinic_members": {
                   Row: {
                     "agenda_scope": Database["public"]['Enums']["agenda_scope"],"clinic_id": string,"created_at": string,"roles": (Database["public"]['Enums']["clinic_role"])[],"updated_at": string,"user_id": string
@@ -610,6 +629,25 @@ isOneToOne: false
                   Relationships: [
                     {
       foreignKeyName: "notification_recipients_clinic_id_fkey"
+      columns: ["clinic_id"]
+isOneToOne: false
+      referencedRelation: "clinics"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"onboarding_requests": {
+                  Row: {
+                    "answers": NonNullable<Json>,"clinic_id": string,"email": string,"expires_at": string,"id": string,"requested_at": string,"requested_by": string | null,"reviewed_at": string | null,"reviewed_by": string | null,"saved_at": string | null,"status": string,"submitted_at": string | null,"token_hash": string
+                  }
+                  Insert: {
+                    "answers"?: NonNullable<Json>,"clinic_id": string,"email": string,"expires_at": string,"id"?: string,"requested_at"?: string,"requested_by"?: string | null,"reviewed_at"?: string | null,"reviewed_by"?: string | null,"saved_at"?: string | null,"status"?: string,"submitted_at"?: string | null,"token_hash": string
+                  }
+                  Update: {
+                    "answers"?: NonNullable<Json>,"clinic_id"?: string,"email"?: string,"expires_at"?: string,"id"?: string,"requested_at"?: string,"requested_by"?: string | null,"reviewed_at"?: string | null,"reviewed_by"?: string | null,"saved_at"?: string | null,"status"?: string,"submitted_at"?: string | null,"token_hash"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "onboarding_requests_clinic_id_fkey"
       columns: ["clinic_id"]
 isOneToOne: false
       referencedRelation: "clinics"
@@ -1043,17 +1081,26 @@ isOneToOne: false
             "book_group_session":
 { Args: { "p_agenda_id": string,"p_booking_channel": Database["public"]['Enums']["action_channel"],"p_location_id": string,"p_patient_id": string,"p_scheduled_at": string,"p_service_id": string }; Returns: string
                            },
+"find_user_id_by_email":
+{ Args: { "p_email": string }; Returns: string
+                           },
 "get_whatsapp_access_token":
 { Args: Record<PropertyKey, never>; Returns: string
                            },
 "log_platform_access":
 { Args: { "p_clinic_id": string,"p_method": string,"p_path": string }; Returns: undefined
                            },
+"mark_my_invitations_accepted":
+{ Args: Record<PropertyKey, never>; Returns: undefined
+                           },
 "reschedule_group_session":
 { Args: { "p_appointment_id": string,"p_channel": Database["public"]['Enums']["action_channel"],"p_scheduled_at": string }; Returns: undefined
                            },
 "resolve_booking_link_clinic":
 { Args: { "p_link_id": string }; Returns: string
+                           },
+"resolve_onboarding_request_clinic":
+{ Args: { "p_token_hash": string }; Returns: string
                            },
 "resolve_service_clinic":
 { Args: { "p_service_id": string }; Returns: string

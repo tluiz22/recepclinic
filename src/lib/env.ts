@@ -17,7 +17,11 @@ export type PlatformEnv = {
   cronSecret: string;
   /** Endereço público do sistema; sem ele, vale o `site` do astro.config.mjs. */
   siteUrl: string | null;
+  /** Envio de e-mail próprio por SMTP (F4.4a); null = sem envio (o painel avisa). */
+  email: EmailEnv | null;
 };
+
+export type EmailEnv = { host: string; port: number; user: string | null; password: string | null; from: string };
 
 export const CRON_SECRET_MIN_LENGTH = 32;
 export const JWT_SECRET_MIN_LENGTH = 32;
@@ -73,8 +77,19 @@ export function parsePlatformEnv(source: EnvSource): PlatformEnv {
   const siteUrl = text(source, "SITE_URL");
   url("SITE_URL", siteUrl);
 
+  // E-mail: opcional; com SMTP_HOST, o remetente e a porta passam a ser obrigatórios.
+  let email: EmailEnv | null = null;
+  const smtpHost = text(source, "SMTP_HOST");
+  if (smtpHost) {
+    const port = Number(text(source, "SMTP_PORT") ?? "");
+    if (!Number.isInteger(port) || port <= 0) problems.push("SMTP_PORT inválida (número da porta)");
+    const from = text(source, "EMAIL_FROM");
+    if (!from) problems.push("EMAIL_FROM não definida (remetente, ex.: RecepClinic <nao-responda@recepclinic.com.br>)");
+    email = { host: smtpHost, port, user: text(source, "SMTP_USER"), password: text(source, "SMTP_PASSWORD"), from: from ?? "" };
+  }
+
   if (problems.length) throw new PlatformEnvError(problems);
-  return { supabaseUrl, supabaseAnonKey, supabaseServiceRoleKey, supabaseJwtSecret, cronSecret, siteUrl };
+  return { supabaseUrl, supabaseAnonKey, supabaseServiceRoleKey, supabaseJwtSecret, cronSecret, siteUrl, email };
 }
 
 let cached: PlatformEnv | undefined;
@@ -89,6 +104,11 @@ export function platformEnv(): PlatformEnv {
     SUPABASE_JWT_SECRET: import.meta.env.SUPABASE_JWT_SECRET,
     CRON_SECRET: import.meta.env.CRON_SECRET,
     SITE_URL: import.meta.env.SITE_URL,
+    SMTP_HOST: import.meta.env.SMTP_HOST,
+    SMTP_PORT: import.meta.env.SMTP_PORT,
+    SMTP_USER: import.meta.env.SMTP_USER,
+    SMTP_PASSWORD: import.meta.env.SMTP_PASSWORD,
+    EMAIL_FROM: import.meta.env.EMAIL_FROM,
   });
   return cached;
 }

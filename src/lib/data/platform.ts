@@ -9,7 +9,8 @@ import type { DbClient } from "./clients";
 //
 // Nas portas públicas ela só descobre de qual clínica é a requisição; o resto
 // segue com createClinicServiceClient(clinicId). Rotinas administrativas da
-// plataforma (ex.: criar uma clínica) entram aqui quando existirem.
+// plataforma: achar o login de um e-mail e gerar o link de convite (F4.4a; a
+// clínica em si é criada com o login do Suporte, que fica no registro).
 
 type ServiceEnv = Pick<PlatformEnv, "supabaseUrl" | "supabaseServiceRoleKey">;
 
@@ -65,4 +66,50 @@ export async function resolveClinicByService(
     "serviço",
     await platformClient(env).rpc("resolve_service_clinic", { p_service_id: serviceId }),
   );
+}
+
+/** /formulario/[código]: clínica do pedido de informações (F4.4a), pelo hash do código. */
+export async function resolveClinicByOnboardingToken(
+  tokenHash: string,
+  env: ServiceEnv = platformEnv(),
+): Promise<string | null> {
+  if (!/^[0-9a-f]{64}$/.test(tokenHash)) return null;
+  return clinicIdOrNull(
+    "pedido de informações",
+    await platformClient(env).rpc("resolve_onboarding_request_clinic", { p_token_hash: tokenHash }),
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Logins (F4.4a): convite de quem ainda não tem acesso
+// ---------------------------------------------------------------------------
+
+export class PlatformAuthError extends Error {
+  constructor(what: string, cause: unknown) {
+    super(`Falha no login da plataforma (${what})`, { cause });
+    this.name = "PlatformAuthError";
+  }
+}
+
+/** Login já existente com este e-mail (null = ainda não tem). */
+export async function findUserIdByEmail(email: string, env: ServiceEnv = platformEnv()): Promise<string | null> {
+  const { data, error } = await platformClient(env).rpc("find_user_id_by_email", { p_email: email });
+  if (error) throw new PlatformAuthError("busca por e-mail", error);
+  return data ?? null;
+}
+
+/**
+ * Link para criar a senha (o e-mail é nosso, não do Supabase): convite para
+ * quem ainda não tem login (cria o login) ou, para quem foi convidado e não
+ * criou a senha, um novo link pelo mesmo caminho da recuperação.
+ */
+export async function createPasswordLink(
+  email: string,
+  kind: "invite" | "resend",
+  env: ServiceEnv = platformEnv(),
+): Promise<{ userId: string; tokenHash: string; type: "invite" | "recovery" }> {
+  const type = kind === "invite" ? "invite" : "recovery";
+  const { data, error } = await platformClient(env).auth.admin.generateLink({ type, email });
+  if (error || !data.user) throw new PlatformAuthError(kind === "invite" ? "convite" : "novo link do convite", error);
+  return { userId: data.user.id, tokenHash: data.properties.hashed_token, type };
 }
