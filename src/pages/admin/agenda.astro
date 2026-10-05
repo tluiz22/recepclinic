@@ -92,7 +92,14 @@ const cardProps = (a: (typeof appointments)[number]) => ({
   <p class="mt-2 text-sm capitalize text-slate-600">{formatCalendarDate(date, "EEEE, d 'de' MMMM 'de' yyyy")}</p>
   <FlashMessage />
 
-  <div class={byColumn ? "-mx-4 mt-4 flex gap-3 overflow-x-auto px-4 pb-2" : "mt-4"}>
+  {
+    byColumn && (
+      <div data-columns-top class="-mx-4 mt-4 overflow-x-auto px-4" aria-hidden="true">
+        <div data-columns-top-inner class="h-px" />
+      </div>
+    )
+  }
+  <div data-columns class={byColumn ? "-mx-4 mt-1 flex gap-3 overflow-x-auto px-4 pb-2" : "mt-4"}>
     {
       columns.map((column) => (
         <section class={byColumn ? "flex w-80 shrink-0 flex-col gap-3" : "flex flex-col gap-3"}>
@@ -142,4 +149,29 @@ const cardProps = (a: (typeof appointments)[number]) => ({
     }
   </div>
   <ConfirmDeleteDialog />
+
+  <script>
+    // Colunas por agenda: uma barra de rolagem também acima dos nomes
+    // (cliente, 05/out/2026), andando junto com a de baixo.
+    const top = document.querySelector<HTMLElement>("[data-columns-top]");
+    const inner = document.querySelector<HTMLElement>("[data-columns-top-inner]");
+    const columns = document.querySelector<HTMLElement>("[data-columns]");
+    if (top && inner && columns) {
+      const size = () => {
+        inner.style.width = `${columns.scrollWidth}px`;
+        top.hidden = columns.scrollWidth <= columns.clientWidth;
+      };
+      let syncing = false;
+      const follow = (from: HTMLElement, to: HTMLElement) => () => {
+        if (syncing) return;
+        syncing = true;
+        to.scrollLeft = from.scrollLeft;
+        requestAnimationFrame(() => (syncing = false));
+      };
+      top.addEventListener("scroll", follow(top, columns));
+      columns.addEventListener("scroll", follow(columns, top));
+      new ResizeObserver(size).observe(columns);
+      size();
+    }
+  </script>
 </AdminLayout>
