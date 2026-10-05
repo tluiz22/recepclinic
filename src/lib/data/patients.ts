@@ -254,6 +254,76 @@ export async function searchPatients(db: DbClient, clinicId: string, query: stri
   return rows.map((row) => ({ ...toPatient(row), contact: toContact(row.contacts) }));
 }
 
+export const PATIENTS_PAGE_SIZE = 20;
+
+export type Page<T> = { items: T[]; total: number; page: number; pageCount: number };
+
+const pageRange = (page: number) => {
+  const current = Math.max(1, Math.floor(page) || 1);
+  return { current, from: (current - 1) * PATIENTS_PAGE_SIZE, to: current * PATIENTS_PAGE_SIZE - 1 };
+};
+
+/**
+ * Lista de pacientes da tela (F4.7), 20 por página, em ordem de nome: busca
+ * pelo nome do paciente ou pelo telefone do contato (4+ dígitos), como no piloto.
+ */
+export async function listPatientsPage(
+  db: DbClient,
+  clinicId: string,
+  { query = "", includeInactive = false, page = 1 }: { query?: string; includeInactive?: boolean; page?: number } = {},
+): Promise<Page<PatientWithContact>> {
+  const q = query.trim();
+  const digits = q.replace(/\D/g, "");
+  const byPhone = digits.length >= 4;
+  const { current, from, to } = pageRange(page);
+  let request = db
+    .from("patients")
+    .select(`${PATIENT_COLUMNS}, contacts!inner ( ${CONTACT_COLUMNS} )`, { count: "exact" })
+    .eq("clinic_id", clinicId);
+  if (!includeInactive) request = request.eq("is_active", true);
+  if (q) request = byPhone ? request.ilike("contacts.phone", `%${digits}%`) : request.ilike("full_name", `%${escapeLike(q)}%`);
+  const { data, error, count } = await request.order("full_name").range(from, to);
+  const rows = unwrap({ data, error }, "Pacientes") as unknown as (PatientRow & { contacts: ContactRow })[];
+  const total = count ?? 0;
+  return {
+    items: rows.map((row) => ({ ...toPatient(row), contact: toContact(row.contacts) })),
+    total,
+    page: current,
+    pageCount: Math.max(1, Math.ceil(total / PATIENTS_PAGE_SIZE)),
+  };
+}
+
+export type ContactWithPatients = Contact & { patientNames: string[] };
+
+/** Lista de contatos (responsáveis) da tela, com os nomes dos pacientes ativos de cada um. */
+export async function listContactsPage(
+  db: DbClient,
+  clinicId: string,
+  { query = "", includeInactive = false, page = 1 }: { query?: string; includeInactive?: boolean; page?: number } = {},
+): Promise<Page<ContactWithPatients>> {
+  const q = query.trim();
+  const digits = q.replace(/\D/g, "");
+  const { current, from, to } = pageRange(page);
+  let request = db
+    .from("contacts")
+    .select(`${CONTACT_COLUMNS}, patients ( full_name, is_active )`, { count: "exact" })
+    .eq("clinic_id", clinicId);
+  if (!includeInactive) request = request.eq("is_active", true);
+  if (q) request = digits.length >= 4 ? request.ilike("phone", `%${digits}%`) : request.ilike("full_name", `%${escapeLike(q)}%`);
+  const { data, error, count } = await request.order("full_name").range(from, to);
+  const rows = unwrap({ data, error }, "Contatos") as unknown as (ContactRow & { patients: { full_name: string; is_active: boolean }[] })[];
+  const total = count ?? 0;
+  return {
+    items: rows.map((row) => ({
+      ...toContact(row),
+      patientNames: row.patients.filter((p) => p.is_active).map((p) => p.full_name).sort((a, b) => a.localeCompare(b)),
+    })),
+    total,
+    page: current,
+    pageCount: Math.max(1, Math.ceil(total / PATIENTS_PAGE_SIZE)),
+  };
+}
+
 export type ContactChoice =
   /** O próprio paciente, maior de idade, com o telefone dele. */
   | { mode: "self"; phone: string; confirmedContactId?: string }

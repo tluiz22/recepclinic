@@ -1,0 +1,176 @@
+---
+// Pacientes › paciente (F4.7): dados (nome, nascimento, observações), quem
+// fala com a clínica, plano de saúde (com o item "Convênios", D10), marcar,
+// desativar/reativar e o histórico (próximos e anteriores) das agendas que a
+// pessoa vê.
+import AdminLayout from "../../../layouts/AdminLayout.astro";
+import ActiveToggle from "../../../components/admin/ActiveToggle.astro";
+import Badge, { type BadgeVariant } from "../../../components/admin/Badge.astro";
+import Card from "../../../components/admin/Card.astro";
+import FlashMessage from "../../../components/admin/FlashMessage.astro";
+import Icon from "../../../components/admin/Icon.astro";
+import PhoneLinks from "../../../components/admin/PhoneLinks.astro";
+import { HINT, INPUT, LABEL, PRIMARY_BUTTON, SECONDARY_BUTTON } from "../../../components/admin/fieldStyles";
+import { formatAge, isOverConsultationAgeLimit } from "../../../lib/age";
+import { isUuid } from "../../../lib/clinicAccess";
+import { formatInstant, localDateOf, todayIn } from "../../../lib/clinicTime";
+import { createUserClient } from "../../../lib/data/clients";
+import { listNoShowStats, listPatientAppointments } from "../../../lib/data/agenda/view";
+import { getClinicSettings } from "../../../lib/data/config/clinic";
+import { listInsurancePlans } from "../../../lib/data/config/insurance";
+import { getContact, getPatient } from "../../../lib/data/patients";
+import { capitalize, vocabularyFor } from "../../../lib/vocabulary";
+
+const clinic = Astro.locals.clinic!;
+const db = createUserClient(Astro.request, Astro.cookies);
+const vocabulary = vocabularyFor(clinic.clinicProfile);
+const id = Astro.params.id!;
+const patient = isUuid(id) ? await getPatient(db, clinic.clinicId, id).catch(() => null) : null;
+if (!patient) return Astro.redirect("/admin/pacientes");
+const insuranceOn = clinic.features.includes("insurance");
+const [contact, history, noShows, plans, settings] = await Promise.all([
+  getContact(db, clinic.clinicId, patient.contactId),
+  listPatientAppointments(db, clinic.clinicId, patient.id),
+  listNoShowStats(db, clinic.clinicId, [patient.id]),
+  insuranceOn ? listInsurancePlans(db, clinic.clinicId, { includeInactive: true }) : Promise.resolve([]),
+  getClinicSettings(db, clinic.clinicId),
+]);
+const now = new Date();
+const today = todayIn(clinic.timezone);
+const upcoming = history.filter((a) => (a.status === "scheduled" || a.status === "confirmed") && a.scheduledAt > now).reverse();
+const previous = history.filter((a) => !upcoming.includes(a));
+const stats = noShows.get(patient.id);
+const statusBadge: Record<string, { label: string; variant: BadgeVariant }> = {
+  scheduled: { label: "Marcado", variant: "info" },
+  confirmed: { label: "Marcado", variant: "info" },
+  canceled: { label: "Cancelado", variant: "neutral" },
+  completed: { label: "Compareceu", variant: "success" },
+  no_show: { label: "Faltou", variant: "danger" },
+};
+const pending = (a: (typeof history)[number]) => (a.status === "scheduled" || a.status === "confirmed") && a.scheduledAt <= now;
+const action = `/api/admin/pacientes/${patient.id}`;
+const ageWarning =
+  settings.consultationAgeLimitYears !== null && isOverConsultationAgeLimit(patient.birthdate, today, settings.consultationAgeLimitYears)
+    ? `Passou da idade limite da Consulta (${settings.consultationAgeLimitYears} anos): só Retorno e Exame.`
+    : null;
+---
+
+<AdminLayout title={patient.fullName}>
+  <a href="/admin/pacientes" class="inline-flex items-center gap-1 text-sm font-medium text-sky-700 hover:underline">
+    <Icon name="chevron-left" class="h-4 w-4" />
+    {capitalize(vocabulary.patients)}
+  </a>
+  <div class="mt-3 flex flex-wrap items-center justify-between gap-3">
+    <h1 class="flex flex-wrap items-center gap-2 text-2xl font-bold text-slate-900">
+      {patient.fullName}
+      {!patient.isActive && <Badge>desativado</Badge>}
+      {stats && <Badge variant="danger">Faltou {stats.noShows} de {stats.total}</Badge>}
+    </h1>
+    {patient.isActive && <a href={`/admin/agenda/marcar?patient_id=${patient.id}`} class={PRIMARY_BUTTON}>Marcar</a>}
+  </div>
+  <FlashMessage />
+
+  <div class="mt-4 grid gap-4 lg:grid-cols-2">
+    <div class="flex flex-col gap-4">
+      <Card>
+        <h2 class="font-semibold text-slate-900">Dados</h2>
+        <p class="mt-1 text-sm text-slate-600">{formatAge(patient.birthdate, today)}</p>
+        {ageWarning && <p class="mt-1 text-sm text-amber-700">{ageWarning}</p>}
+        <form method="POST" action={action} class="mt-3 flex flex-col gap-3">
+          <input type="hidden" name="acao" value="salvar" />
+          <div>
+            <label for="full_name" class={LABEL}>Nome</label>
+            <input id="full_name" name="full_name" required value={patient.fullName} class={INPUT} />
+          </div>
+          <div>
+            <label for="birthdate" class={LABEL}>Data de nascimento</label>
+            <input id="birthdate" name="birthdate" type="date" required max={today} value={patient.birthdate} class={`${INPUT} w-48`} />
+          </div>
+          <div>
+            <label for="notes" class={LABEL}>Observações</label>
+            <textarea id="notes" name="notes" rows="3" class={INPUT}>{patient.notes ?? ""}</textarea>
+            <p class={HINT}>Só a equipe vê.</p>
+          </div>
+          <button type="submit" class={`${SECONDARY_BUTTON} self-start`}>Salvar</button>
+        </form>
+      </Card>
+
+      <Card>
+        <h2 class="font-semibold text-slate-900">{patient.isContactSelf ? "WhatsApp" : capitalize(vocabulary.contact)}</h2>
+        <p class="mt-1 text-sm text-slate-700">
+          {!patient.isContactSelf && <a href={`/admin/pacientes/contato/${contact.id}`} class="font-medium text-sky-700 hover:underline">{contact.fullName}</a>}
+          {!patient.isContactSelf && " · "}
+          <PhoneLinks phone={contact.phone} plain class="text-slate-700" />
+        </p>
+        {patient.isContactSelf && <a href={`/admin/pacientes/contato/${contact.id}`} class="mt-1 inline-block text-sm text-sky-700 hover:underline">Editar o telefone</a>}
+      </Card>
+
+      {
+        insuranceOn && (
+          <Card>
+            <h2 class="font-semibold text-slate-900">Plano de saúde</h2>
+            <form method="POST" action={action} class="mt-2 flex flex-col gap-3">
+              <input type="hidden" name="acao" value="plano" />
+              <select name="plan_id" class={`${INPUT} mt-0`}>
+                <option value="">Particular</option>
+                {plans
+                  .filter((plan) => plan.isActive || plan.id === patient.insurance?.planId)
+                  .map((plan) => (
+                    <option value={plan.id} selected={plan.id === patient.insurance?.planId}>
+                      {plan.name}
+                      {!plan.isActive && " (desativado)"}
+                    </option>
+                  ))}
+              </select>
+              <div class="grid gap-3 sm:grid-cols-2">
+                <div>
+                  <label for="card_number" class={LABEL}>Carteirinha</label>
+                  <input id="card_number" name="card_number" value={patient.insurance?.cardNumber ?? ""} class={INPUT} />
+                </div>
+                <div>
+                  <label for="card_valid_until" class={LABEL}>Validade</label>
+                  <input id="card_valid_until" name="card_valid_until" type="date" value={patient.insurance?.cardValidUntil ?? ""} class={INPUT} />
+                </div>
+              </div>
+              <button type="submit" class={`${SECONDARY_BUTTON} self-start`}>Salvar plano</button>
+            </form>
+          </Card>
+        )
+      }
+
+      <Card>
+        <ActiveToggle action={action} isActive={patient.isActive} what={`o ${vocabulary.patient}`} />
+      </Card>
+    </div>
+
+    <div class="flex flex-col gap-4">
+      {
+        [
+          { title: "Próximos", rows: upcoming },
+          { title: "Anteriores e cancelados", rows: previous },
+        ].map((section) => (
+          <Card>
+            <h2 class="font-semibold text-slate-900">
+              {section.title} ({section.rows.length})
+            </h2>
+            <ul class="mt-2 divide-y divide-slate-100">
+              {section.rows.map((a) => (
+                <li class="flex flex-wrap items-center justify-between gap-2 py-2 text-sm">
+                  <a href={`/admin/agenda?date=${localDateOf(a.scheduledAt, clinic.timezone)}`} class="hover:text-sky-700">
+                    <span class="font-medium capitalize text-slate-900">{formatInstant(a.scheduledAt, clinic.timezone, "EEE dd/MM/yyyy 'às' HH:mm")}</span>
+                    <span class="block text-slate-500">
+                      {a.serviceName} · {a.agendaName}
+                      {a.seriesId ? " · série" : ""}
+                    </span>
+                  </a>
+                  {pending(a) ? <Badge variant="warning">Registrar comparecimento</Badge> : <Badge variant={statusBadge[a.status].variant}>{statusBadge[a.status].label}</Badge>}
+                </li>
+              ))}
+              {section.rows.length === 0 && <li class="py-2 text-sm text-slate-500">Nenhum.</li>}
+            </ul>
+          </Card>
+        ))
+      }
+    </div>
+  </div>
+</AdminLayout>

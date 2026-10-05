@@ -131,6 +131,15 @@ export async function listAgendaAppointmentsByIds(db: DbClient, clinicId: string
   return rows.map(toAgendaAppointment);
 }
 
+/** Histórico do paciente (F4.7): todos os atendimentos das agendas que o login vê, do mais recente ao mais antigo. */
+export async function listPatientAppointments(db: DbClient, clinicId: string, patientId: string): Promise<AgendaAppointment[]> {
+  const rows = unwrap(
+    await db.from("appointments").select(COLUMNS).eq("clinic_id", clinicId).eq("patient_id", patientId).order("scheduled_at", { ascending: false }).limit(200),
+    "Histórico do paciente",
+  ) as unknown as Row[];
+  return rows.map(toAgendaAppointment);
+}
+
 /** Sessões de uma série (todas, as passadas inclusive), em ordem de horário. */
 export async function listSeriesAppointments(db: DbClient, clinicId: string, seriesId: string): Promise<AgendaAppointment[]> {
   const rows = unwrap(

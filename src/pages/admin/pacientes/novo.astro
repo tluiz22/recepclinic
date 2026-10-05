@@ -1,0 +1,210 @@
+---
+// Pacientes › cadastrar (F4.7; antes, o cadastro rápido do Marcar, F4.5):
+// nome, nascimento, observações, plano de saúde (com o item "Convênios") e
+// quem fala com a clínica pelo WhatsApp: o próprio paciente (maior de 18), um
+// responsável/contato novo, ou o contato da página dele (`?contato=`). Vindo
+// do Marcar (`?volta=`), volta para lá com o paciente escolhido. A página
+// mesma recebe o envio: as confirmações (mesma pessoa, possível repetido)
+// voltam na tela com os dados, nunca no endereço.
+import AdminLayout from "../../../layouts/AdminLayout.astro";
+import Card from "../../../components/admin/Card.astro";
+import FormMessage from "../../../components/admin/FormMessage.astro";
+import Icon from "../../../components/admin/Icon.astro";
+import { HINT, INPUT, LABEL, PRIMARY_BUTTON } from "../../../components/admin/fieldStyles";
+import { isUuid } from "../../../lib/clinicAccess";
+import { todayIn } from "../../../lib/clinicTime";
+import { createUserClient } from "../../../lib/data/clients";
+import { listInsurancePlans } from "../../../lib/data/config/insurance";
+import { DataError } from "../../../lib/data/errors";
+import { describeDataError } from "../../../lib/data/formAction";
+import { getContact, registerPatient, type ContactChoice } from "../../../lib/data/patients";
+import { setFlash } from "../../../lib/flash";
+import { formChecked, formOptionalText, formText } from "../../../lib/forms";
+import { formatPhoneBR } from "../../../lib/phone";
+import { capitalize, vocabularyFor } from "../../../lib/vocabulary";
+
+const clinic = Astro.locals.clinic!;
+const db = createUserClient(Astro.request, Astro.cookies);
+const vocabulary = vocabularyFor(clinic.clinicProfile);
+const today = todayIn(clinic.timezone);
+const params = Astro.url.searchParams;
+const volta = params.get("volta") ?? "";
+const backToBooking = /^\/admin\/agenda\/marcar(\?[^\s]*)?$/.test(volta) ? volta : null;
+const contactParam = params.get("contato");
+const fixedContact = isUuid(contactParam) ? await getContact(db, clinic.clinicId, contactParam).catch(() => null) : null;
+const insuranceOn = clinic.features.includes("insurance");
+const plans = insuranceOn ? await listInsurancePlans(db, clinic.clinicId) : [];
+const backHref = backToBooking ?? (fixedContact ? `/admin/pacientes/contato/${fixedContact.id}` : "/admin/pacientes");
+
+const values = {
+  full_name: "",
+  birthdate: "",
+  notes: "",
+  mode: fixedContact ? "existing" : clinic.clinicProfile === "adult" ? "self" : "new",
+  contact_name: "",
+  phone: "",
+  plan_id: "",
+  card_number: "",
+  card_valid_until: "",
+  confirmed_contact_id: "",
+};
+let error: string | null = null;
+let notice: string | null = null;
+let askDuplicate = false;
+
+if (Astro.request.method === "POST") {
+  const form = await Astro.request.formData().catch(() => null);
+  for (const key of Object.keys(values) as (keyof typeof values)[]) values[key] = formText(form, key);
+  if (fixedContact) values.mode = "existing";
+  const contact: ContactChoice =
+    values.mode === "existing" && fixedContact
+      ? { mode: "existing", contactId: fixedContact.id }
+      : values.mode === "self"
+        ? { mode: "self", phone: values.phone, confirmedContactId: formOptionalText(form, "confirmed_contact_id") ?? undefined }
+        : { mode: "new", fullName: values.contact_name, phone: values.phone };
+  try {
+    const result = await registerPatient(
+      db,
+      clinic.clinicId,
+      {
+        fullName: values.full_name,
+        birthdate: values.birthdate,
+        notes: values.notes,
+        insurance: insuranceOn && values.plan_id ? { planId: values.plan_id, cardNumber: values.card_number, cardValidUntil: values.card_valid_until } : null,
+        contact,
+        confirmDuplicate: formChecked(form, "confirm_duplicate"),
+      },
+      today,
+    );
+    if (result.status === "created") {
+      const age = result.overConsultationAgeLimit ? " Passou da idade limite da Consulta (só aviso)." : "";
+      setFlash(Astro.cookies, { tone: "success", text: `${capitalize(vocabulary.patient)} cadastrado.${age}` });
+      const to = backToBooking ? `${backToBooking}${backToBooking.includes("?") ? "&" : "?"}patient_id=${result.patient.id}` : `/admin/pacientes/${result.patient.id}`;
+      return Astro.redirect(to, 303);
+    }
+    if (result.status === "confirm_same_person") {
+      values.confirmed_contact_id = result.contact.id;
+      notice = `Este WhatsApp já é de ${result.contact.fullName}. Se for a mesma pessoa, confirme abaixo.`;
+    } else {
+      askDuplicate = true;
+      notice = `Este ${vocabulary.contact} já tem ${result.existingNames.join(", ")} com a mesma data de nascimento. Se for outra pessoa, marque a confirmação abaixo.`;
+    }
+  } catch (caught) {
+    if (!(caught instanceof DataError)) console.error(caught);
+    error = caught instanceof DataError ? describeDataError(caught) : "Não foi possível cadastrar. Tente de novo.";
+  }
+}
+---
+
+<AdminLayout title={`Cadastrar ${vocabulary.patient}`}>
+  <a href={backHref} class="inline-flex items-center gap-1 text-sm font-medium text-sky-700 hover:underline">
+    <Icon name="chevron-left" class="h-4 w-4" />
+    {backToBooking ? "Marcar" : fixedContact ? fixedContact.fullName : capitalize(vocabulary.patients)}
+  </a>
+  <h1 class="mt-3 text-2xl font-bold text-slate-900">Cadastrar {vocabulary.patient}</h1>
+  {error && <FormMessage tone="error">{error}</FormMessage>}
+  {notice && <FormMessage tone="error">{notice}</FormMessage>}
+
+  <form method="POST" class="mt-4 flex max-w-2xl flex-col gap-4">
+    <input type="hidden" name="confirmed_contact_id" value={values.confirmed_contact_id} />
+    <Card>
+      <div class="flex flex-col gap-4">
+        <div>
+          <label for="full_name" class={LABEL}>Nome do {vocabulary.patient}</label>
+          <input id="full_name" name="full_name" required value={values.full_name} class={INPUT} />
+        </div>
+        <div>
+          <label for="birthdate" class={LABEL}>Data de nascimento</label>
+          <input id="birthdate" name="birthdate" type="date" required max={today} value={values.birthdate} class={`${INPUT} w-48`} />
+        </div>
+        <div>
+          <label for="notes" class={LABEL}>Observações (opcional)</label>
+          <textarea id="notes" name="notes" rows="2" class={INPUT}>{values.notes}</textarea>
+          <p class={HINT}>Só a equipe vê.</p>
+        </div>
+      </div>
+    </Card>
+
+    <Card>
+      <h2 class="font-semibold text-slate-900">Quem fala com a clínica pelo WhatsApp</h2>
+      {
+        fixedContact ? (
+          <p class="mt-2 text-sm text-slate-700">
+            {fixedContact.fullName} · {formatPhoneBR(fixedContact.phone)}
+          </p>
+        ) : (
+          <div class="mt-2 flex flex-col gap-4">
+            <div class="flex flex-col gap-2 text-sm text-slate-700">
+              <label class="flex items-center gap-2">
+                <input type="radio" name="mode" value="self" checked={values.mode === "self"} class="h-4 w-4" /> O próprio {vocabulary.patient} (maior de 18 anos)
+              </label>
+              <label class="flex items-center gap-2">
+                <input type="radio" name="mode" value="new" checked={values.mode === "new"} class="h-4 w-4" /> Um {vocabulary.contact}
+              </label>
+            </div>
+            <div data-contact-name>
+              <label for="contact_name" class={LABEL}>Nome do {vocabulary.contact}</label>
+              <input id="contact_name" name="contact_name" value={values.contact_name} class={INPUT} />
+            </div>
+            <div>
+              <label for="phone" class={LABEL}>WhatsApp</label>
+              <input id="phone" name="phone" type="tel" required placeholder="(84) 99999-9999" value={values.phone} class={INPUT} />
+              <p class={HINT}>Se o número já for de um {vocabulary.contact} cadastrado, o {vocabulary.patient} entra junto dele.</p>
+            </div>
+          </div>
+        )
+      }
+    </Card>
+
+    {
+      insuranceOn && (
+        <Card>
+          <h2 class="font-semibold text-slate-900">Plano de saúde</h2>
+          <div class="mt-2 flex flex-col gap-3">
+            <select name="plan_id" class={`${INPUT} mt-0`}>
+              <option value="">Particular</option>
+              {plans.map((plan) => (
+                <option value={plan.id} selected={plan.id === values.plan_id}>
+                  {plan.name}
+                </option>
+              ))}
+            </select>
+            <div class="grid gap-3 sm:grid-cols-2">
+              <div>
+                <label for="card_number" class={LABEL}>Carteirinha (opcional)</label>
+                <input id="card_number" name="card_number" value={values.card_number} class={INPUT} />
+              </div>
+              <div>
+                <label for="card_valid_until" class={LABEL}>Validade (opcional)</label>
+                <input id="card_valid_until" name="card_valid_until" type="date" value={values.card_valid_until} class={INPUT} />
+              </div>
+            </div>
+          </div>
+        </Card>
+      )
+    }
+
+    {
+      askDuplicate && (
+        <label class="flex items-center gap-2 text-sm text-slate-700">
+          <input type="checkbox" name="confirm_duplicate" class="h-4 w-4 rounded border-slate-300" /> Confirmo que é outra pessoa
+        </label>
+      )
+    }
+    <button type="submit" class={`${PRIMARY_BUTTON} self-start`}>{notice ? "Confirmar e cadastrar" : "Cadastrar"}</button>
+  </form>
+
+  <script>
+    // Nome do responsável só quando não é o próprio paciente.
+    const box = document.querySelector<HTMLElement>("[data-contact-name]");
+    const sync = () => {
+      const mode = document.querySelector<HTMLInputElement>("input[name='mode']:checked")?.value;
+      if (!box) return;
+      box.hidden = mode === "self";
+      const input = box.querySelector("input");
+      if (input) input.required = mode !== "self";
+    };
+    document.querySelectorAll("input[name='mode']").forEach((input) => input.addEventListener("change", sync));
+    sync();
+  </script>
+</AdminLayout>

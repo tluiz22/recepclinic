@@ -610,6 +610,23 @@ Vocabulário pelo perfil da clínica.
   clínica, com o link de remarcação**, e a tela "Avisar" sai. Texto pedido pelo cliente: "Olá,
   Maria! Aqui é da Clínica… Precisamos cancelar o atendimento de João (Consulta) de 12/10 às
   08:00. Pedimos desculpas pelo transtorno." + o link para remarcar.
+- **F4.7 — concluída em 05/out.** Pacientes no banco novo, no vocabulário da clínica: lista com as
+  abas **Pacientes** e **Responsáveis/Contatos**, busca pelo nome ou pelo telefone (4+ dígitos), 20
+  por página e "Mostrar desativados" (como no piloto), com idade, plano (com o item) e o selo de
+  faltas. **Cadastro** numa tela só, também usada pelo "Cadastrar novo" do Marcar (o cadastro rápido
+  da F4.5 saiu): nome, nascimento, observações, plano de saúde com carteirinha e validade (com o
+  item "Convênios") e o WhatsApp do próprio paciente ou de um responsável, com as confirmações de
+  mesma pessoa e possível repetido; vindo da página do responsável, já entra ligado a ele.
+  **Página do paciente**: dados, aviso da idade limite da Consulta, responsável (com link), plano,
+  "Marcar", desativar/reativar e o **histórico** (próximos; anteriores e cancelados; "Registrar
+  comparecimento" nos que já passaram) das agendas que a pessoa vê. **Página do responsável**:
+  nome, WhatsApp (único na clínica, com aviso se já for de outro), endereço padrão do domiciliar
+  (com o item), os pacientes dele com "Cadastrar outro" e desativar/reativar. No cartão da Agenda,
+  o nome do paciente abre a página dele. Saíram as telas e rotas antigas de Pacientes e os scripts
+  de navegador das telas antigas de Marcar e Pacientes. Padrões assumidos (revisáveis): sem
+  confirmação nos formulários de cadastro e edição (como Configurações; a confirmação vale para as
+  ações da Agenda); desativar o responsável não desativa os pacientes dele; o histórico mostra até
+  os 200 atendimentos mais recentes. 3 testes de banco novos.
 - **F4.5 — Agenda I:** dia, semana e mês com a escolha da agenda; marcar, remarcar, cancelar;
   presença e comparecimento; lembrete e preparo; lista de espera.
 - **F4.6 — Agenda II:** bloqueios, cancelamento do dia com link de remarcação, séries (D9).
