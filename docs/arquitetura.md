@@ -135,7 +135,10 @@ anterior); aprovado, a versão nova passa a ser a usada sozinha; recusado, nada 
 paciente e o motivo aparece na tela. **Como a aplicação sabe:** o envio sempre pede "o template
 aprovado em uso desta clínica para este tipo de mensagem" (`whatsapp_templates`, por clínica); o
 personalizado é só outra linha (versão) dessa tabela, então envio, bot e agendador não mudam. O
-item da matriz libera só a tela de edição. O limite de templates é por conta de WhatsApp da
+item da matriz libera só a tela de edição. **As mensagens de conversa do bot** (saudação, menu,
+"não entendi", falar com a recepção, link enviado, cancelamento e presença confirmados), que não
+passam pela Meta, **também só são editáveis com esse item**; sem ele, a clínica usa os textos
+padrão. **Só o Administrador da clínica altera as mensagens** (cliente, 05/out/2026). O limite de templates é por conta de WhatsApp da
 clínica (250 sem verificação da empresa, até 6.000 verificada), longe do uso previsto. Criar o
 template pela API depende da F8 (Tech Provider); antes disso, o Suporte envia à Meta à mão.
 
@@ -431,7 +434,10 @@ uma pode usar; o básico do consultório vem sempre ligado.**
   - **WhatsApp:** bot (atendimento automático, links de agendamento, avisos de confirmação,
     remarcação e cancelamento, informações do bot); lembrete automático (lembrete da véspera, aba
     Lembretes, botões de envio e reenvio, reenvio automático, hora do lembrete); lista de espera
-    (aba e ofertas; **depende do bot**); envio do resumo do dia (e os contatos do resumo).
+    (aba e ofertas; **depende do bot**); envio do resumo do dia (e os contatos do resumo);
+    **mensagens personalizadas** (texto próprio dos templates e das mensagens de conversa do bot,
+    editados pelo Administrador da clínica; D3b revista, cliente, 05/out/2026; a tela mostra só o
+    que a clínica usa: as de conversa com o bot liberado).
   - **Métricas, uma aba por item:** Visão geral, Atendimentos, Faltosos, Retomar contato, Funil do
     bot (**depende do bot**), Financeiro, Envios; **Relatórios**.
   - **Métricas pessoais do profissional:** o Profissional vê as métricas e os relatórios liberados
