@@ -591,7 +591,12 @@ clínica pelo `phone_number_id` e responde rápido; envio por clínica; template
 RecepClinic com nome e idioma por clínica; bot com menus montados pelo catálogo de serviços e textos
 pelo perfil; **"com quem?"** quando o serviço tem mais de um profissional, com "primeiro horário
 disponível" (D2 revista); sessão de série cancelada ou remarcada sozinha (D9); coexistência e pausa
-da recepção.
+da recepção. **Aba "Mensagens" em Configurações** (cliente, 05/out, D3b revista): prévia de
+cada mensagem no balão do WhatsApp (templates e mensagens de conversa, com os dados da clínica);
+com o item **"Mensagens personalizadas"** (D11), o **Administrador da clínica** edita os textos de
+conversa do bot e propõe o texto dos templates (mesmas variáveis; versão nova revisada pelo
+Suporte e enviada à Meta à mão até a F8; o padrão continua até a aprovação e a troca é sozinha);
+`whatsapp_templates` passa a guardar versões, com o texto e a versão em uso.
 
 ## F7 — Envios automáticos por clínica
 
@@ -602,7 +607,9 @@ registro por clínica.
 ## F8 — Conexão self-service na Meta
 
 **Escopo:** Embedded Signup com coexistência (o Administrador conecta o número pela tela); criação
-e envio dos templates pela API na conta da clínica; acompanhamento da aprovação. **Depende** da
+e envio dos templates pela API na conta da clínica, **inclusive as versões personalizadas
+revisadas pelo Suporte** (D3b revista); acompanhamento da aprovação (webhook de situação do
+template: aprovado vira o usado, recusado mostra o motivo). **Depende** da
 aprovação do RecepClinic como Tech Provider (pendente do cliente).
 
 ## F9 — Operação e segurança
