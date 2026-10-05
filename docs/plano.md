@@ -627,6 +627,24 @@ Vocabulário pelo perfil da clínica.
   confirmação nos formulários de cadastro e edição (como Configurações; a confirmação vale para as
   ações da Agenda); desativar o responsável não desativa os pacientes dele; o histórico mostra até
   os 200 atendimentos mais recentes. 3 testes de banco novos.
+- **F4.8 — concluída em 05/out.** **Resumo do Dia** no banco novo, com as abas do piloto: **Resumo
+  do dia** (só informação: hora, paciente, idade, responsável e WhatsApp, serviço, local, agenda,
+  presença e quem marcou), **Lembretes** (item; enviados no dia, em grupos: confirmaram, pediram
+  para remarcar ou cancelar, não responderam, não entregue), **Lista de espera** (item; por agenda e
+  serviço, na ordem da vaga, com a oferta em andamento, "Tirar da lista" e as últimas ofertas),
+  **Aguardando remarcação** (cancelados pela clínica, em massa ou pelo bloqueio, que ainda não
+  remarcaram a mesma jornada; "Remarcar" abre o Marcar com paciente, serviço e agenda; "Desistiu",
+  na trilha), **A registrar** (últimos 60 dias) e **Registradas** (20 por página, com correção),
+  estas com o cartão da Agenda, e **Envios** (alerta, atendimentos com envio com falha e as últimas
+  execuções; **no Resumo do Dia, para toda a equipe**, com o lembrete ou o resumo do dia liberado;
+  decisão do cliente, 05/out; a aba de Métricas sai na F4.9). **Trilha** do atendimento
+  (`/admin/agenda/trilha/[id]`, pelo botão "Trilha" do cartão e pelo histórico do paciente): os
+  eventos e as mensagens do WhatsApp, com por onde e **quem fez pelo nome** (decisão do cliente,
+  05/out: campo **"Nome" na Equipe**, no convite e na edição; sem nome, o e-mail; o Suporte como
+  "Suporte RecepClinic (nome)"). O alerta de envios do Início leva à aba Envios. Migração
+  `20261005220000`: `clinic_members.display_name`, `clinic_actor_labels` (toda a equipe vê os nomes
+  de quem fez) e o evento "Desistiu" na trilha. Saíram o Resumo do Dia, a trilha, as rotas e os
+  componentes antigos. 4 testes unitários e 4 de banco novos.
 - **F4.5 — Agenda I:** dia, semana e mês com a escolha da agenda; marcar, remarcar, cancelar;
   presença e comparecimento; lembrete e preparo; lista de espera.
 - **F4.6 — Agenda II:** bloqueios, cancelamento do dia com link de remarcação, séries (D9).

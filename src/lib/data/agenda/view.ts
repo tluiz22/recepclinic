@@ -34,6 +34,12 @@ export type AgendaAppointment = {
   isContactSelf: boolean;
   patientConfirmedAt: Date | null;
   reminderResponse: string | null;
+  patientBirthdate: string;
+  /** Quem marcou pelo painel (null = WhatsApp, link ou sistema). */
+  createdBy: string | null;
+  bookingChannel: string;
+  canceledBy: string | null;
+  canceledAt: Date | null;
 };
 
 export type AgendaItem =
@@ -50,12 +56,12 @@ export type AgendaItem =
     }
   | { kind: "block"; start: Date; end: Date; agendaName: string; block: ScheduleBlock };
 
-const COLUMNS = `id, agenda_id, service_id, scheduled_at, duration_minutes, status, is_group_session, series_id, home_visit_address,
-  patient_confirmed_at, reminder_response,
+export const AGENDA_COLUMNS = `id, agenda_id, service_id, scheduled_at, duration_minutes, status, is_group_session, series_id, home_visit_address,
+  patient_confirmed_at, reminder_response, created_by, booking_channel, canceled_by, canceled_at,
   agendas ( name ), services ( name, category ), locations ( name, type ),
-  patients ( id, full_name, is_contact_self, contacts ( full_name, phone ) )`;
+  patients ( id, full_name, birthdate, is_contact_self, contacts ( full_name, phone ) )`;
 
-type Row = {
+export type AgendaRow = {
   id: string;
   agenda_id: string;
   service_id: string;
@@ -67,13 +73,17 @@ type Row = {
   home_visit_address: string | null;
   patient_confirmed_at: string | null;
   reminder_response: string | null;
+  created_by: string | null;
+  booking_channel: string;
+  canceled_by: string | null;
+  canceled_at: string | null;
   agendas: { name: string };
   services: { name: string; category: ServiceCategory };
   locations: { name: string; type: string };
-  patients: { id: string; full_name: string; is_contact_self: boolean; contacts: { full_name: string; phone: string } };
+  patients: { id: string; full_name: string; birthdate: string; is_contact_self: boolean; contacts: { full_name: string; phone: string } };
 };
 
-const toAgendaAppointment = (row: Row): AgendaAppointment => {
+export const toAgendaAppointment = (row: AgendaRow): AgendaAppointment => {
   const scheduledAt = new Date(row.scheduled_at);
   return {
     id: row.id,
@@ -97,6 +107,11 @@ const toAgendaAppointment = (row: Row): AgendaAppointment => {
     isContactSelf: row.patients.is_contact_self,
     patientConfirmedAt: row.patient_confirmed_at ? new Date(row.patient_confirmed_at) : null,
     reminderResponse: row.reminder_response,
+    patientBirthdate: row.patients.birthdate,
+    createdBy: row.created_by,
+    bookingChannel: row.booking_channel,
+    canceledBy: row.canceled_by,
+    canceledAt: row.canceled_at ? new Date(row.canceled_at) : null,
   };
 };
 
@@ -110,14 +125,14 @@ export async function listAgendaAppointments(
   const rows = unwrap(
     await db
       .from("appointments")
-      .select(COLUMNS)
+      .select(AGENDA_COLUMNS)
       .eq("clinic_id", clinicId)
       .in("agenda_id", agendaIds)
       .gte("scheduled_at", dayBounds(fromDate, timeZone).start.toISOString())
       .lt("scheduled_at", dayBounds(toDate, timeZone).end.toISOString())
       .order("scheduled_at"),
     "Agenda",
-  ) as unknown as Row[];
+  ) as unknown as AgendaRow[];
   // Mesmo horário em agendas diferentes: em ordem de agenda, sempre igual.
   return rows
     .map(toAgendaAppointment)
@@ -127,31 +142,31 @@ export async function listAgendaAppointments(
 /** Atendimentos pelos ids (avisos depois de cancelar), em ordem de horário. */
 export async function listAgendaAppointmentsByIds(db: DbClient, clinicId: string, ids: string[]): Promise<AgendaAppointment[]> {
   if (!ids.length) return [];
-  const rows = unwrap(await db.from("appointments").select(COLUMNS).eq("clinic_id", clinicId).in("id", ids).order("scheduled_at"), "Atendimentos") as unknown as Row[];
+  const rows = unwrap(await db.from("appointments").select(AGENDA_COLUMNS).eq("clinic_id", clinicId).in("id", ids).order("scheduled_at"), "Atendimentos") as unknown as AgendaRow[];
   return rows.map(toAgendaAppointment);
 }
 
 /** Histórico do paciente (F4.7): todos os atendimentos das agendas que o login vê, do mais recente ao mais antigo. */
 export async function listPatientAppointments(db: DbClient, clinicId: string, patientId: string): Promise<AgendaAppointment[]> {
   const rows = unwrap(
-    await db.from("appointments").select(COLUMNS).eq("clinic_id", clinicId).eq("patient_id", patientId).order("scheduled_at", { ascending: false }).limit(200),
+    await db.from("appointments").select(AGENDA_COLUMNS).eq("clinic_id", clinicId).eq("patient_id", patientId).order("scheduled_at", { ascending: false }).limit(200),
     "Histórico do paciente",
-  ) as unknown as Row[];
+  ) as unknown as AgendaRow[];
   return rows.map(toAgendaAppointment);
 }
 
 /** Sessões de uma série (todas, as passadas inclusive), em ordem de horário. */
 export async function listSeriesAppointments(db: DbClient, clinicId: string, seriesId: string): Promise<AgendaAppointment[]> {
   const rows = unwrap(
-    await db.from("appointments").select(COLUMNS).eq("clinic_id", clinicId).eq("series_id", seriesId).order("scheduled_at"),
+    await db.from("appointments").select(AGENDA_COLUMNS).eq("clinic_id", clinicId).eq("series_id", seriesId).order("scheduled_at"),
     "Sessões da série",
-  ) as unknown as Row[];
+  ) as unknown as AgendaRow[];
   return rows.map(toAgendaAppointment);
 }
 
 /** Um atendimento com os dados do cartão (remarcar, avisos). */
 export async function getAgendaAppointment(db: DbClient, clinicId: string, id: string): Promise<AgendaAppointment | null> {
-  const row = unwrap(await db.from("appointments").select(COLUMNS).eq("clinic_id", clinicId).eq("id", id).maybeSingle(), "Atendimento") as unknown as Row | null;
+  const row = unwrap(await db.from("appointments").select(AGENDA_COLUMNS).eq("clinic_id", clinicId).eq("id", id).maybeSingle(), "Atendimento") as unknown as AgendaRow | null;
   return row ? toAgendaAppointment(row) : null;
 }
 

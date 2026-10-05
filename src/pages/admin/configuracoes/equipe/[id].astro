@@ -41,11 +41,12 @@ const roleHints: Record<string, string> = {
 };
 ---
 
-<AdminLayout title={isNew ? "Convidar pessoa" : (member!.email ?? "Equipe")}>
+<AdminLayout title={isNew ? "Convidar pessoa" : (member!.displayName ?? member!.email ?? "Equipe")}>
   <a href="/admin/configuracoes/equipe" class="inline-flex items-center gap-1 text-sm text-sky-700 hover:underline">
     <Icon name="chevron-left" class="h-4 w-4" /> Equipe
   </a>
-  <h1 class="mt-2 break-all text-2xl font-bold text-slate-900">{isNew ? "Convidar pessoa" : member!.email}</h1>
+  <h1 class="mt-2 break-all text-2xl font-bold text-slate-900">{isNew ? "Convidar pessoa" : (member!.displayName ?? member!.email)}</h1>
+  {!isNew && member!.displayName && <p class="text-sm text-slate-500">{member!.email}</p>}
   <FlashMessage />
 
   {
@@ -78,6 +79,12 @@ const roleHints: Record<string, string> = {
           </div>
         )
       }
+
+      <div>
+        <label for="display_name" class={LABEL}>Nome</label>
+        <input id="display_name" name="display_name" value={member?.displayName ?? ""} placeholder="Maria" class={INPUT} />
+        <p class={HINT}>Como a pessoa aparece na trilha dos atendimentos ("Marcado por Maria"). Sem nome, aparece o e-mail.</p>
+      </div>
 
       <fieldset>
         <legend class={LABEL}>Papéis</legend>

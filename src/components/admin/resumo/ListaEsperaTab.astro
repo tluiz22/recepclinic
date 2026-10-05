@@ -1,0 +1,105 @@
+---
+// Resumo do Dia › Lista de espera (F4.8; item "Lista de espera"): quem
+// espera para antecipar, por agenda e serviço, na ordem em que a vaga é
+// oferecida (ordem de entrada), com a oferta em andamento e "Tirar da lista"
+// (com confirmação); abaixo, as últimas ofertas.
+import Badge, { type BadgeVariant } from "../Badge.astro";
+import Card from "../Card.astro";
+import PhoneLinks from "../PhoneLinks.astro";
+import { formatInstant } from "../../../lib/clinicTime";
+import type { OfferHistoryItem, OfferStatus, WaitlistEntry } from "../../../lib/data/waitlist/entries";
+
+interface Props {
+  entries: WaitlistEntry[];
+  offers: OfferHistoryItem[];
+  timeZone: string;
+}
+
+const { entries, offers, timeZone } = Astro.props;
+const when = (d: Date) => formatInstant(d, timeZone, "EEE dd/MM 'às' HH:mm");
+const groups = new Map<string, WaitlistEntry[]>();
+for (const entry of entries) {
+  const key = `${entry.appointment.agendaName} · ${entry.appointment.serviceName}`;
+  groups.set(key, [...(groups.get(key) ?? []), entry]);
+}
+const offerStatus: Record<OfferStatus, { label: string; variant: BadgeVariant }> = {
+  pending: { label: "Aguardando resposta", variant: "warning" },
+  accepted: { label: "Aceitou", variant: "success" },
+  declined: { label: "Recusou", variant: "neutral" },
+  expired: { label: "Venceu", variant: "neutral" },
+  withdrawn: { label: "Retirada", variant: "neutral" },
+  skipped: { label: "Pulada", variant: "neutral" },
+};
+const returnTo = "/admin/consultas?tab=lista_espera";
+---
+
+<div class="mt-4 flex flex-col gap-4">
+  {
+    [...groups].map(([title, list]) => (
+      <Card>
+        <h2 class="font-semibold text-slate-900">{title}</h2>
+        <ol class="mt-2 divide-y divide-slate-100">
+          {list.map((entry, index) => (
+            <li class="py-2 text-sm">
+              <div class="flex flex-wrap items-start justify-between gap-2">
+                <div>
+                  <p class="font-medium text-slate-900">
+                    {index + 1}º · <a href={`/admin/pacientes/${entry.patient.id}`} class="hover:text-sky-700 hover:underline">{entry.patient.fullName}</a>
+                  </p>
+                  <p class="text-slate-500">
+                    Marcado para {when(entry.appointment.scheduledAt)} · {entry.appointment.locationName}
+                  </p>
+                  <p class="text-slate-500">
+                    <PhoneLinks phone={entry.contact.phone} plain class="text-slate-600" />
+                  </p>
+                  {entry.pendingOffer && (
+                    <p class="mt-1">
+                      <Badge variant="warning">
+                        Oferta: {when(entry.pendingOffer.slotStart)} (vence {formatInstant(entry.pendingOffer.expiresAt, timeZone, "dd/MM HH:mm")})
+                      </Badge>
+                    </p>
+                  )}
+                </div>
+                <form method="POST" action={`/api/admin/agenda/atendimentos/${entry.appointment.id}`}>
+                  <input type="hidden" name="acao" value="sair_lista_espera" />
+                  <input type="hidden" name="return_to" value={returnTo} />
+                  <button
+                    type="submit"
+                    class="js-confirm-delete inline-flex items-center rounded-md border border-red-300 bg-white px-2.5 py-1.5 text-xs font-semibold text-red-700 hover:bg-red-50"
+                    data-confirm-title="Tirar da lista de espera?"
+                    data-confirm-message={`${entry.patient.fullName}: deixa de receber oferta de horário antes.`}
+                    data-confirm-label="Tirar da lista"
+                  >
+                    Tirar da lista
+                  </button>
+                </form>
+              </div>
+            </li>
+          ))}
+        </ol>
+      </Card>
+    ))
+  }
+  {entries.length === 0 && <Card class="text-center text-slate-500">Ninguém na lista de espera.</Card>}
+
+  <Card>
+    <h2 class="font-semibold text-slate-900">Últimas ofertas</h2>
+    <ul class="mt-2 divide-y divide-slate-100">
+      {
+        offers.map((offer) => (
+          <li class="flex flex-wrap items-center justify-between gap-2 py-2 text-sm">
+            <span>
+              <span class="font-medium text-slate-900">{offer.patientName}</span>
+              <span class="block text-slate-500">
+                Vaga de {when(offer.slotStart)} · oferecida {formatInstant(offer.offeredAt, timeZone, "dd/MM HH:mm")}
+                {offer.reason ? ` · ${offer.reason}` : ""}
+              </span>
+            </span>
+            <Badge variant={offerStatus[offer.status].variant}>{offerStatus[offer.status].label}</Badge>
+          </li>
+        ))
+      }
+      {offers.length === 0 && <li class="py-2 text-sm text-slate-500">Nenhuma oferta ainda.</li>}
+    </ul>
+  </Card>
+</div>

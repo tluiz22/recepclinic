@@ -1,6 +1,6 @@
 import type { ClinicRole } from "../../clinicAccess";
 import type { DbClient } from "../clients";
-import { DataError, unwrap, unwrapOne, Validation } from "../errors";
+import { cleanText, DataError, unwrap, unwrapOne, Validation } from "../errors";
 import { EMAIL_RE, inviteToClinic, listInvitations, normalizeEmail, type EmailOutcome, type OnboardingDeps } from "../onboarding";
 import { setMemberAgendaAccess, type AgendaScope } from "./agendas";
 
@@ -23,6 +23,8 @@ export const ROLES: ClinicRole[] = ["admin", "professional", "reception"];
 
 export type TeamMember = {
   userId: string;
+  /** Nome na clínica (aparece na trilha); sem nome, vale o e-mail. */
+  displayName: string | null;
   email: string | null;
   roles: ClinicRole[];
   agendaScope: AgendaScope;
@@ -36,6 +38,8 @@ export type TeamMember = {
 };
 
 export type MemberAccessInput = {
+  /** Nome na clínica (F4.8; opcional). */
+  displayName?: string | null;
   roles: ClinicRole[];
   professionalId: string | null;
   agendaScope: AgendaScope;
@@ -52,6 +56,7 @@ export function validateMemberAccess(input: MemberAccessInput): MemberAccessInpu
   v.check(input.agendaScope === "all" || input.agendaScope === "restricted", "agendaScope", "Escolha o acesso às agendas");
   v.throwIfInvalid("Equipe");
   return {
+    displayName: cleanText(input.displayName),
     roles,
     professionalId: isProfessional ? input.professionalId : null,
     agendaScope: input.agendaScope,
@@ -63,7 +68,7 @@ export async function listTeam(db: DbClient, clinicId: string): Promise<TeamMemb
   const [members, emails, invitations, professionals, grants] = await Promise.all([
     db
       .from("clinic_members")
-      .select("user_id, roles, agenda_scope, created_at")
+      .select("user_id, display_name, roles, agenda_scope, created_at")
       .eq("clinic_id", clinicId)
       .then((r) => unwrap(r, "Equipe")),
     db.rpc("list_clinic_member_emails", { p_clinic_id: clinicId }).then((r) => unwrap(r, "E-mails da equipe")),
@@ -87,6 +92,7 @@ export async function listTeam(db: DbClient, clinicId: string): Promise<TeamMemb
       const invitation = invitations.find((i) => i.email === email);
       return {
         userId: member.user_id,
+        displayName: member.display_name,
         email,
         roles: ROLES.filter((role) => member.roles.includes(role)),
         agendaScope: member.agenda_scope,
@@ -96,7 +102,7 @@ export async function listTeam(db: DbClient, clinicId: string): Promise<TeamMemb
         invitation: invitation ? { id: invitation.id, lastSentAt: invitation.lastSentAt, acceptedAt: invitation.acceptedAt } : null,
       };
     })
-    .sort((a, b) => (a.email ?? "").localeCompare(b.email ?? ""));
+    .sort((a, b) => (a.displayName ?? a.email ?? "").localeCompare(b.displayName ?? b.email ?? ""));
 }
 
 /** O cadastro de profissional pode ser ligado a este login? (ativo e livre) */
@@ -109,6 +115,10 @@ async function checkProfessionalLink(db: DbClient, clinicId: string, professiona
   v.check(!!professional && professional.is_active, "professionalId", "Escolha um profissional ativo");
   v.check(!professional?.user_id || professional.user_id === userId, "professionalId", "Este profissional já está ligado a outra pessoa da equipe");
   v.throwIfInvalid("Equipe");
+}
+
+async function setDisplayName(db: DbClient, clinicId: string, userId: string, displayName: string): Promise<void> {
+  unwrap(await db.from("clinic_members").update({ display_name: displayName }).eq("clinic_id", clinicId).eq("user_id", userId), "Equipe");
 }
 
 /** Liga o login a um cadastro de profissional (ou a nenhum), soltando o anterior. */
@@ -148,6 +158,7 @@ export async function inviteMember(
   }
 
   const result = await inviteToClinic(db, actorId, clinic, address, access.roles, deps);
+  if (access.displayName) await setDisplayName(db, clinic.id, result.userId, access.displayName);
   await linkProfessional(db, clinic.id, result.userId, access.professionalId);
   await setMemberAgendaAccess(db, clinic.id, result.userId, access.agendaScope, access.grantedAgendaIds);
   return result;
@@ -178,7 +189,7 @@ export async function updateMember(
   unwrapOne(
     await db
       .from("clinic_members")
-      .update({ roles: access.roles })
+      .update({ roles: access.roles, display_name: access.displayName ?? null })
       .eq("clinic_id", clinicId)
       .eq("user_id", userId)
       .select("user_id")

@@ -3,6 +3,7 @@
 // horário (ou outra turma). Sessão de série (F4.6, D9): "só esta sessão" ou
 // "esta e as próximas" (a série muda de dia e horário daqui em diante). Remarcar zera o lembrete e a presença confirmada
 // (a data nova pede outros); o horário atual não conta como ocupado.
+import { safeReturnPath } from "../../../lib/returnPath";
 import AdminLayout from "../../../layouts/AdminLayout.astro";
 import Card from "../../../components/admin/Card.astro";
 import ConfirmDeleteDialog from "../../../components/admin/ConfirmDeleteDialog.astro";
@@ -22,7 +23,7 @@ const clinic = Astro.locals.clinic!;
 const db = createUserClient(Astro.request, Astro.cookies);
 const params = Astro.url.searchParams;
 const returnToParam = params.get("return_to") ?? "";
-const returnTo = /^\/admin\/agenda(\/[a-z-]+)?(\?[^\s]*)?$/.test(returnToParam) ? returnToParam : "/admin/agenda";
+const returnTo = safeReturnPath(returnToParam, "/admin/agenda");
 const appointment = await getAgendaAppointment(db, clinic.clinicId, params.get("id") ?? "").catch(() => null);
 const now = new Date();
 if (!appointment || !(appointment.status === "scheduled" || appointment.status === "confirmed") || appointment.scheduledAt <= now) {

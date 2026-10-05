@@ -1,0 +1,78 @@
+---
+// Resumo do Dia › Resumo do dia (F4.8): só informação, como no piloto desde
+// 03/out/2026 (as ações ficam na Agenda): hora, paciente, idade, responsável,
+// telefone, serviço, local, agenda, presença confirmada e quem marcou.
+import Badge from "../Badge.astro";
+import Card from "../Card.astro";
+import PhoneLinks from "../PhoneLinks.astro";
+import { formatAge } from "../../../lib/age";
+import { formatInstant } from "../../../lib/clinicTime";
+import type { AgendaAppointment } from "../../../lib/data/agenda/view";
+import { actorText, type ActorLabel } from "../../../lib/data/agenda/trail";
+import { capitalize, type Vocabulary } from "../../../lib/vocabulary";
+
+interface Props {
+  appointments: AgendaAppointment[];
+  actors: Map<string, ActorLabel>;
+  date: string;
+  timeZone: string;
+  vocabulary: Vocabulary;
+  showAgenda: boolean;
+}
+
+const { appointments, actors, date, timeZone, vocabulary, showAgenda } = Astro.props;
+const now = new Date();
+const VIA: Record<string, string> = { admin: "pelo painel", whatsapp_bot: "pelo WhatsApp", booking_link: "pelo link" };
+const bookedBy = (a: AgendaAppointment) => {
+  const who = a.createdBy ? actorText(actors.get(a.createdBy)) : null;
+  return `Marcado ${VIA[a.bookingChannel] ?? ""}${who ? ` por ${who}` : ""}`;
+};
+const active = appointments.filter((a) => a.status !== "canceled");
+const canceled = appointments.filter((a) => a.status === "canceled");
+---
+
+<p class="mt-3 text-sm text-slate-600">
+  {active.length} {active.length === 1 ? "atendimento" : "atendimentos"}{canceled.length ? ` · ${canceled.length} cancelado(s)` : ""}
+</p>
+<div class="mt-3 flex flex-col gap-3">
+  {
+    [...active, ...canceled].map((a) => {
+      const isActive = a.status === "scheduled" || a.status === "confirmed";
+      return (
+        <Card muted={a.status === "canceled"}>
+          <div class="flex flex-wrap items-start justify-between gap-2">
+            <div class="text-sm">
+              <p class="text-base font-semibold text-slate-900">
+                {formatInstant(a.scheduledAt, timeZone, "HH:mm")} ·{" "}
+                <a href={`/admin/pacientes/${a.patientId}`} class="hover:text-sky-700 hover:underline">
+                  {a.patientName}
+                </a>{" "}
+                <span class="text-sm font-normal text-slate-500">{formatAge(a.patientBirthdate, date)}</span>
+              </p>
+              <p class="text-slate-500">
+                {!a.isContactSelf && `${capitalize(vocabulary.contact)}: ${a.contactName} · `}
+                <PhoneLinks phone={a.contactPhone} plain class="text-slate-600" />
+              </p>
+              <div class="mt-1.5 flex flex-wrap gap-1.5">
+                <Badge variant={a.category === "exam" ? "warning" : a.category === "return_visit" ? "accent" : "info"}>{a.serviceName}</Badge>
+                <Badge variant="neutral">{a.locationName}</Badge>
+                {showAgenda && <Badge variant="neutral">{a.agendaName}</Badge>}
+              </div>
+              {a.homeVisitAddress && <p class="mt-1 text-slate-500">Endereço: {a.homeVisitAddress}</p>}
+              <p class="mt-1 text-xs text-slate-400">{bookedBy(a)}</p>
+            </div>
+            <div class="flex flex-col items-end gap-1">
+              {a.status === "canceled" && <Badge>Cancelado</Badge>}
+              {a.status === "completed" && <Badge variant="success">Compareceu</Badge>}
+              {a.status === "no_show" && <Badge variant="danger">Faltou</Badge>}
+              {isActive && a.patientConfirmedAt && <Badge variant="success">Presença confirmada ✓</Badge>}
+              {isActive && !a.patientConfirmedAt && a.reminderResponse === "confirm" && <Badge variant="success">Confirmou pelo lembrete</Badge>}
+              {isActive && !a.patientConfirmedAt && a.reminderResponse !== "confirm" && a.scheduledAt > now && <Badge variant="warning">Presença não confirmada</Badge>}
+            </div>
+          </div>
+        </Card>
+      );
+    })
+  }
+  {appointments.length === 0 && <Card class="text-center text-slate-500">Nenhum atendimento neste dia.</Card>}
+</div>

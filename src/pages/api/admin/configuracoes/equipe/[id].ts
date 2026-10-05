@@ -22,6 +22,7 @@ export const POST: APIRoute = async (context) => {
   const page = (target: string) => `${list}/${target}`;
   const notSent = (reason: string) => ` Mas o e-mail não saiu (${reason}).`;
   const access = (): MemberAccessInput => ({
+    displayName: formOptionalText(form, "display_name"),
     roles: formAll(form, "role") as ClinicRole[],
     professionalId: formOptionalText(form, "professional_id"),
     agendaScope: formText(form, "agenda_scope") as AgendaScope,

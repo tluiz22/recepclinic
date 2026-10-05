@@ -264,7 +264,8 @@ describe("equipe (F4.4b)", () => {
   });
 
   it("sem o papel Profissional, solta o cadastro; acesso a todas, sem agendas avulsas", () => {
-    expect(validateMemberAccess({ ...base, professionalId: "p1", grantedAgendaIds: ["a1"] })).toEqual({
+    expect(validateMemberAccess({ ...base, professionalId: "p1", grantedAgendaIds: ["a1"], displayName: "  Maria  " })).toEqual({
+      displayName: "Maria",
       roles: ["reception"],
       professionalId: null,
       agendaScope: "all",

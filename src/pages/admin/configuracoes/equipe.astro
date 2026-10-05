@@ -37,8 +37,10 @@ const professionalName = new Map(professionals.map((p) => [p.id, p.displayName])
             <a href={`/admin/configuracoes/equipe/${member.userId}`}>
               <Card class="h-full hover:border-sky-300 hover:bg-sky-50">
                 <p class="break-all font-medium text-slate-900">
-                  {member.email ?? "Sem e-mail"} {member.userId === Astro.locals.userId && <span class="text-sm font-normal text-slate-500">(você)</span>}
+                  {member.displayName ?? member.email ?? "Sem e-mail"}{" "}
+                  {member.userId === Astro.locals.userId && <span class="text-sm font-normal text-slate-500">(você)</span>}
                 </p>
+                {member.displayName && <p class="break-all text-sm text-slate-500">{member.email}</p>}
                 <p class="mt-1 flex flex-wrap gap-1">
                   {member.roles.map((role) => (
                     <Badge variant={role === "admin" ? "accent" : "info"}>{ROLE_LABELS[role]}</Badge>

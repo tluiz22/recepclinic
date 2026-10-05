@@ -1,0 +1,61 @@
+---
+// Resumo do Dia › Lembretes (F4.8; item "Lembrete automático"): os lembretes
+// enviados no dia e o que cada um respondeu, em grupos (como no piloto).
+// Abrir o grupo mostra os pacientes, com o WhatsApp do contato.
+import Card from "../Card.astro";
+import PhoneLinks from "../PhoneLinks.astro";
+import { formatInstant, localDateOf } from "../../../lib/clinicTime";
+import { REMINDER_GROUP_LABELS, type ReminderGroup, type ReminderOfDay } from "../../../lib/data/daily";
+import { capitalize, type Vocabulary } from "../../../lib/vocabulary";
+
+interface Props {
+  reminders: ReminderOfDay[];
+  timeZone: string;
+  vocabulary: Vocabulary;
+  openGroup: string | null;
+}
+
+const { reminders, timeZone, vocabulary, openGroup } = Astro.props;
+const order: ReminderGroup[] = ["no_answer", "not_delivered", "reschedule", "cancel", "confirm"];
+const tone: Record<ReminderGroup, string> = {
+  confirm: "border-emerald-200",
+  reschedule: "border-amber-200",
+  cancel: "border-red-200",
+  no_answer: "border-amber-200",
+  not_delivered: "border-red-200",
+};
+---
+
+<p class="mt-3 text-sm text-slate-600">{reminders.length} lembrete(s) enviado(s) neste dia.</p>
+<div class="mt-3 flex flex-col gap-3">
+  {
+    order.map((group) => {
+      const items = reminders.filter((r) => r.group === group);
+      return (
+        <details class={`rounded-lg border bg-white p-4 shadow-sm ${tone[group]}`} open={openGroup === group || undefined}>
+          <summary class="cursor-pointer font-semibold text-slate-900">
+            {REMINDER_GROUP_LABELS[group]} ({items.length})
+          </summary>
+          <ul class="mt-2 divide-y divide-slate-100">
+            {items.map(({ appointment: a }) => (
+              <li class="py-2 text-sm">
+                <a href={`/admin/agenda?date=${localDateOf(a.scheduledAt, timeZone)}`} class="font-medium text-slate-900 hover:text-sky-700">
+                  {formatInstant(a.scheduledAt, timeZone, "EEE dd/MM HH:mm")} · {a.patientName}
+                </a>
+                <p class="text-slate-500">
+                  {a.serviceName} · {a.agendaName}
+                </p>
+                <p class="text-slate-500">
+                  {!a.isContactSelf && `${capitalize(vocabulary.contact)}: ${a.contactName} · `}
+                  <PhoneLinks phone={a.contactPhone} plain class="text-slate-600" />
+                </p>
+              </li>
+            ))}
+            {items.length === 0 && <li class="py-2 text-sm text-slate-500">Ninguém.</li>}
+          </ul>
+        </details>
+      );
+    })
+  }
+</div>
+{reminders.length === 0 && <Card class="mt-3 text-center text-slate-500">Nenhum lembrete enviado neste dia.</Card>}

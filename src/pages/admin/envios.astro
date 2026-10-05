@@ -1,9 +1,5 @@
 ---
-import { canAccessArea } from "../../lib/clinicAccess";
-
-// Envios automáticos virou a aba Envios de Métricas (Fase 23 · etapa 5).
-// Links antigos: quem vê Métricas vai para a aba; os demais, para a Agenda,
-// onde ficam os botões de envio do lembrete e do preparo.
-const access = Astro.locals.clinic ?? { roles: [], isPlatformStaff: false };
-return Astro.redirect(canAccessArea(access, "metrics") ? "/admin/metricas?tab=envios" : "/admin/agenda");
+// Endereço antigo dos envios automáticos: desde a F4.8 a aba Envios fica no
+// Resumo do Dia, para toda a equipe (cliente, 05/out/2026).
+return Astro.redirect("/admin/consultas?tab=envios");
 ---

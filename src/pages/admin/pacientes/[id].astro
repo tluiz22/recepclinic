@@ -163,7 +163,12 @@ const ageWarning =
                       {a.seriesId ? " · série" : ""}
                     </span>
                   </a>
-                  {pending(a) ? <Badge variant="warning">Registrar comparecimento</Badge> : <Badge variant={statusBadge[a.status].variant}>{statusBadge[a.status].label}</Badge>}
+                  <span class="flex items-center gap-2">
+                    {pending(a) ? <Badge variant="warning">Registrar comparecimento</Badge> : <Badge variant={statusBadge[a.status].variant}>{statusBadge[a.status].label}</Badge>}
+                    <a href={`/admin/agenda/trilha/${a.id}?volta=${encodeURIComponent(`/admin/pacientes/${patient.id}`)}`} class="text-xs font-medium text-sky-700 hover:underline">
+                      Trilha
+                    </a>
+                  </span>
                 </li>
               ))}
               {section.rows.length === 0 && <li class="py-2 text-sm text-slate-500">Nenhum.</li>}

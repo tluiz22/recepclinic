@@ -128,7 +128,8 @@ export type TrailEvent =
   | "waitlist_advanced"
   | "message_not_sent"
   | "reminder_resent"
-  | "preparation_resent";
+  | "preparation_resent"
+  | "rebooking_dismissed";
 
 /** Grava na trilha; falha só vai para o log (não desfaz a ação já feita). */
 export async function logTrail(

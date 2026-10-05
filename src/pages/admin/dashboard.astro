@@ -7,7 +7,6 @@ import Card from "../../components/admin/Card.astro";
 import FormMessage from "../../components/admin/FormMessage.astro";
 import Icon from "../../components/admin/Icon.astro";
 import type { IconName } from "../../components/admin/Icon.astro";
-import { canAccessArea } from "../../lib/clinicAccess";
 import { createUserClient } from "../../lib/data/clients";
 import { getDashboardCounts } from "../../lib/data/dashboard";
 import { describeSendsAlert, getSendsAlert } from "../../lib/data/sends";
@@ -18,8 +17,7 @@ const has = (feature: (typeof clinic.features)[number]) => clinic.features.inclu
 
 const [counts, sendsAlert] = await Promise.all([getDashboardCounts(db, clinic.clinicId, clinic.timezone), getSendsAlert(db, clinic.clinicId)]);
 const sendsAlertLines = describeSendsAlert(sendsAlert);
-// Quem vê Métricas vai à aba Envios; os demais, à Agenda (botões de envio).
-const seesMetrics = canAccessArea(clinic, "metrics") && has("metrics_sends");
+// A aba Envios fica no Resumo do Dia, para toda a equipe (cliente, 05/out/2026).
 
 const aviso = Astro.url.searchParams.get("aviso");
 const NOTICES: Record<string, { tone: "warning" | "success"; text: string }> = {
@@ -45,11 +43,11 @@ const shortcuts: { label: string; href: string; icon: IconName }[] = [
   {
     sendsAlertLines.length > 0 && (
       <a
-        href={seesMetrics ? "/admin/metricas?tab=envios" : "/admin/agenda"}
+        href="/admin/consultas?tab=envios"
         class="mt-4 block rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800 hover:bg-red-100"
       >
         {sendsAlertLines.map((line) => <p>⚠ {line}</p>)}
-        <p class="mt-1 font-medium underline">{seesMetrics ? "Ver envios automáticos" : "Ver na Agenda"}</p>
+        <p class="mt-1 font-medium underline">Ver os envios</p>
       </a>
     )
   }
@@ -75,7 +73,7 @@ const shortcuts: { label: string; href: string; icon: IconName }[] = [
     </a>
     {
       has("reminders") && (
-        <a href="/admin/consultas?tab=lembretes&lista=sem_resposta">
+        <a href="/admin/consultas?tab=lembretes&grupo=no_answer">
           <Card class="h-full text-center hover:border-sky-300 hover:bg-sky-50">
             <p class="text-3xl font-bold text-amber-600">{counts.unansweredReminders}</p>
             <p class="mt-1 text-sm text-slate-600">Presença não confirmada</p>

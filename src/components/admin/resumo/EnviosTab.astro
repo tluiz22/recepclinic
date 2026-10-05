@@ -1,0 +1,88 @@
+---
+// Resumo do Dia › Envios (F4.8; cliente, 05/out/2026: no Resumo do Dia, para
+// toda a equipe; o Profissional vê só as próprias agendas): se os envios
+// automáticos rodaram e quais atendimentos por vir têm envio com falha. Sem
+// botão de reenvio aqui: cada atendimento leva à Agenda do dia, onde ficam
+// "Enviar/Reenviar lembrete" e "Reenviar preparo" (como no piloto).
+import Badge, { type BadgeVariant } from "../Badge.astro";
+import Card from "../Card.astro";
+import { formatInstant, localDateOf } from "../../../lib/clinicTime";
+import { jobRunState, type JobRun, type AppointmentWithFailedSends, type JobRunState } from "../../../lib/data/sends";
+
+interface Props {
+  alerts: string[];
+  runs: JobRun[];
+  failed: AppointmentWithFailedSends[];
+  timeZone: string;
+}
+
+const { alerts, runs, failed, timeZone } = Astro.props;
+const now = new Date();
+const JOB_LABELS: Record<string, string> = {
+  appointment_reminders: "Lembretes",
+  daily_summary: "Resumo do dia",
+  waitlist_offers: "Ofertas da lista de espera",
+};
+const STATE: Record<JobRunState, { label: string; variant: BadgeVariant }> = {
+  ok: { label: "Rodou", variant: "success" },
+  error: { label: "Erro", variant: "danger" },
+  running: { label: "Rodando", variant: "info" },
+  stuck: { label: "Travou", variant: "danger" },
+};
+---
+
+<div class="mt-4 flex max-w-3xl flex-col gap-4">
+  {
+    alerts.length > 0 && (
+      <Card class="border-red-200 bg-red-50">
+        <ul class="list-inside list-disc text-sm text-red-800">
+          {alerts.map((line) => (
+            <li>{line}</li>
+          ))}
+        </ul>
+      </Card>
+    )
+  }
+
+  <Card>
+    <h2 class="font-semibold text-slate-900">Atendimentos com envio com falha ({failed.length})</h2>
+    <ul class="mt-2 divide-y divide-slate-100">
+      {
+        failed.map((a) => (
+          <li class="flex flex-wrap items-center justify-between gap-2 py-2 text-sm">
+            <a href={`/admin/agenda?date=${localDateOf(a.scheduledAt, timeZone)}`} class="hover:text-sky-700">
+              <span class="font-medium capitalize text-slate-900">{formatInstant(a.scheduledAt, timeZone, "EEE dd/MM HH:mm")}</span> · {a.patientName}
+              <span class="block text-slate-500">{a.serviceName}</span>
+            </a>
+            <Badge variant="danger">{a.failedSends} envio(s) com falha</Badge>
+          </li>
+        ))
+      }
+      {failed.length === 0 && <li class="py-2 text-sm text-slate-500">Nenhum.</li>}
+    </ul>
+  </Card>
+
+  <Card>
+    <h2 class="font-semibold text-slate-900">Últimas execuções dos envios automáticos</h2>
+    <ul class="mt-2 divide-y divide-slate-100">
+      {
+        runs.map((run) => {
+          const state = STATE[jobRunState(run, now)];
+          return (
+            <li class="flex flex-wrap items-center justify-between gap-2 py-2 text-sm">
+              <span>
+                <span class="font-medium text-slate-900">{JOB_LABELS[run.job] ?? run.job}</span>
+                <span class="block text-slate-500">
+                  {formatInstant(run.startedAt, timeZone, "dd/MM/yyyy HH:mm")}
+                  {run.trigger === "manual" ? " · manual" : ""}
+                </span>
+              </span>
+              <Badge variant={state.variant}>{state.label}</Badge>
+            </li>
+          );
+        })
+      }
+      {runs.length === 0 && <li class="py-2 text-sm text-slate-500">Nenhuma execução registrada ainda.</li>}
+    </ul>
+  </Card>
+</div>

@@ -1,3 +1,4 @@
+import { safeReturnPath } from "../../../../../lib/returnPath";
 import type { APIRoute } from "astro";
 import { localDateOf, localTimeOf } from "../../../../../lib/clinicTime";
 import { parseSlot } from "../../../../../lib/agendaSlot";
@@ -10,6 +11,7 @@ import {
   setPresenceConfirmed,
 } from "../../../../../lib/data/agenda/appointments";
 import { createUserClient } from "../../../../../lib/data/clients";
+import { dismissRebooking } from "../../../../../lib/data/daily";
 import { DataError } from "../../../../../lib/data/errors";
 import { runFormAction } from "../../../../../lib/data/formAction";
 import { joinWaitlist, leaveWaitlist } from "../../../../../lib/data/waitlist/entries";
@@ -25,8 +27,7 @@ import { changeSeriesFrom, createSeries, endSeriesFrom } from "../../../../../li
 // ao paciente pelo WhatsApp (marcado, remarcado, cancelado) entram com o bot
 // (F6), como no plano.
 
-const safeReturn = (value: string | null, fallback: string) =>
-  value && /^\/admin\/agenda(\/[a-z-]+)?(\?[^\s]*)?$/.test(value) ? value : fallback;
+const safeReturn = safeReturnPath;
 
 export const POST: APIRoute = async (context) => {
   const { request, cookies, locals, params } = context;
@@ -102,6 +103,9 @@ export const POST: APIRoute = async (context) => {
           const canceled = await cancelAppointment(db, clinic.clinicId, id, { channel: "admin", actorId });
           return done(canceled ? "Atendimento cancelado." : "Este atendimento já estava cancelado.");
         }
+        case "desistiu":
+          await dismissRebooking(db, clinic.clinicId, id, actorId);
+          return done("Fora da lista de aguardando remarcação.");
         case "encerrar_serie": {
           const ended = await endSeriesFrom(db, clinic.clinicId, id, actorId);
           return done(`Série encerrada: ${ended.canceled.length} sessão(ões) cancelada(s) a partir desta.`);

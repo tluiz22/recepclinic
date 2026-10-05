@@ -4,6 +4,7 @@
 // conversa no WhatsApp de quem está no painel, com a mensagem já escrita
 // (cliente, 05/out/2026). O envio automático vem com o WhatsApp por clínica
 // (F6); a mensagem vai sem o link até a página pública existir (F5).
+import { safeReturnPath } from "../../../lib/returnPath";
 import AdminLayout from "../../../layouts/AdminLayout.astro";
 import Card from "../../../components/admin/Card.astro";
 import FlashMessage from "../../../components/admin/FlashMessage.astro";
@@ -20,7 +21,7 @@ const clinic = Astro.locals.clinic!;
 const vocabulary = vocabularyFor(clinic.clinicProfile);
 const ids = (Astro.url.searchParams.get("ids") ?? "").split(",").filter(isUuid).slice(0, 200);
 const back = Astro.url.searchParams.get("volta") ?? "";
-const backTo = /^\/admin\/agenda(\/[a-z-]+)?(\?[^\s]*)?$/.test(back) ? back : "/admin/agenda";
+const backTo = safeReturnPath(back, "/admin/agenda");
 const appointments = (await listAgendaAppointmentsByIds(createUserClient(Astro.request, Astro.cookies), clinic.clinicId, ids)).filter(
   (a) => a.status === "canceled",
 );

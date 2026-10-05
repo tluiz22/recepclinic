@@ -1,3 +1,4 @@
+import { safeReturnPath } from "../../../../../lib/returnPath";
 import type { APIRoute } from "astro";
 import { isUuid } from "../../../../../lib/clinicAccess";
 import { toInstant } from "../../../../../lib/clinicTime";
@@ -16,7 +17,7 @@ export const POST: APIRoute = async (context) => {
   const clinic = locals.clinic!;
   const db = createUserClient(request, cookies);
   const returnTo = formOptionalText(form, "return_to");
-  const back = returnTo && /^\/admin\/agenda(\/[a-z-]+)?(\?[^\s]*)?$/.test(returnTo) ? returnTo : "/admin/agenda/bloqueios";
+  const back = safeReturnPath(returnTo, "/admin/agenda/bloqueios");
 
   return runFormAction(
     context,

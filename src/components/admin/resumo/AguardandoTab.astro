@@ -1,0 +1,77 @@
+---
+// Resumo do Dia › Aguardando remarcação (F4.8; cliente, 05/out/2026, como no
+// piloto): cancelados pela clínica (em massa ou pelo bloqueio) que ainda não
+// remarcaram. "Remarcar" abre o Marcar com o paciente, o serviço e a agenda;
+// "Desistiu" tira da lista (com confirmação; fica na trilha).
+import Card from "../Card.astro";
+import PhoneLinks from "../PhoneLinks.astro";
+import { formatInstant } from "../../../lib/clinicTime";
+import type { AgendaAppointment } from "../../../lib/data/agenda/view";
+import { actorText, type ActorLabel } from "../../../lib/data/agenda/trail";
+import { capitalize, type Vocabulary } from "../../../lib/vocabulary";
+
+interface Props {
+  appointments: AgendaAppointment[];
+  actors: Map<string, ActorLabel>;
+  timeZone: string;
+  vocabulary: Vocabulary;
+}
+
+const { appointments, actors, timeZone, vocabulary } = Astro.props;
+const BUTTON = "inline-flex items-center gap-1 rounded-md border bg-white px-2.5 py-1.5 text-xs font-semibold";
+---
+
+<p class="mt-3 text-sm text-slate-600">
+  Cancelados pela clínica que ainda não remarcaram. Saem da lista sozinhos quando remarcam.
+</p>
+<div class="mt-3 flex flex-col gap-3">
+  {
+    appointments.map((a) => {
+      const by = a.canceledBy ? actorText(actors.get(a.canceledBy)) : null;
+      return (
+        <Card>
+          <p class="font-medium text-slate-900">
+            <a href={`/admin/pacientes/${a.patientId}`} class="hover:text-sky-700 hover:underline">
+              {a.patientName}
+            </a>
+          </p>
+          <p class="text-sm text-slate-600">
+            {a.serviceName} · {a.agendaName} · era {formatInstant(a.scheduledAt, timeZone, "EEE dd/MM 'às' HH:mm")}
+          </p>
+          <p class="text-sm text-slate-500">
+            {!a.isContactSelf && `${capitalize(vocabulary.contact)}: ${a.contactName} · `}
+            <PhoneLinks phone={a.contactPhone} plain class="text-slate-600" />
+          </p>
+          {a.canceledAt && (
+            <p class="mt-1 text-xs text-slate-400">
+              Cancelado em {formatInstant(a.canceledAt, timeZone, "dd/MM 'às' HH:mm")}
+              {by ? ` por ${by}` : ""}
+            </p>
+          )}
+          <div class="mt-3 flex flex-wrap gap-2 border-t border-slate-100 pt-3">
+            <a
+              href={`/admin/agenda/marcar?patient_id=${a.patientId}&service_id=${a.serviceId}&agenda_id=${a.agendaId}`}
+              class={`${BUTTON} border-slate-300 text-slate-700 hover:bg-slate-50`}
+            >
+              Remarcar
+            </a>
+            <form method="POST" action={`/api/admin/agenda/atendimentos/${a.id}`}>
+              <input type="hidden" name="acao" value="desistiu" />
+              <input type="hidden" name="return_to" value="/admin/consultas?tab=aguardando_remarcacao" />
+              <button
+                type="submit"
+                class={`${BUTTON} js-confirm-delete border-red-300 text-red-700 hover:bg-red-50`}
+                data-confirm-title="Marcar como desistiu?"
+                data-confirm-message={`${a.patientName} sai desta lista (a clínica para de acompanhar a remarcação). Fica registrado na trilha.`}
+                data-confirm-label="Desistiu"
+              >
+                Desistiu
+              </button>
+            </form>
+          </div>
+        </Card>
+      );
+    })
+  }
+  {appointments.length === 0 && <Card class="text-center text-slate-500">Ninguém aguardando remarcação.</Card>}
+</div>

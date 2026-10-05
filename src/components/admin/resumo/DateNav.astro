@@ -1,0 +1,32 @@
+---
+// Navegação de data das abas do Resumo do Dia (F4.8): anterior, data, próximo e Hoje.
+import Icon from "../Icon.astro";
+import { addDays } from "../../../lib/clinicTime";
+
+interface Props {
+  tab: string;
+  date: string;
+  today: string;
+}
+
+const { tab, date, today } = Astro.props;
+const href = (d: string) => `/admin/consultas?tab=${tab}&date=${d}`;
+---
+
+<form method="GET" action="/admin/consultas" class="mt-4 flex items-center gap-1 rounded-lg border border-slate-200 bg-white p-2 sm:inline-flex">
+  <input type="hidden" name="tab" value={tab} />
+  <a href={href(addDays(date, -1))} aria-label="Dia anterior" class="rounded-md p-2 text-slate-500 hover:bg-slate-100 hover:text-sky-700">
+    <Icon name="chevron-left" class="h-5 w-5" />
+  </a>
+  <input type="date" name="date" value={date} onchange="this.form.submit()" class="min-w-0 flex-1 rounded-md border border-slate-300 px-3 py-2 text-sm sm:flex-none" />
+  <a href={href(addDays(date, 1))} aria-label="Próximo dia" class="rounded-md p-2 text-slate-500 hover:bg-slate-100 hover:text-sky-700">
+    <Icon name="chevron-right" class="h-5 w-5" />
+  </a>
+  {
+    date !== today && (
+      <a href={href(today)} class="ml-1 shrink-0 rounded-md border border-slate-300 px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50">
+        Hoje
+      </a>
+    )
+  }
+</form>

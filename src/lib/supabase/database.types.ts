@@ -378,13 +378,13 @@ isOneToOne: false
                   ]
                 },"clinic_members": {
                   Row: {
-                    "agenda_scope": Database["public"]['Enums']["agenda_scope"],"clinic_id": string,"created_at": string,"roles": (Database["public"]['Enums']["clinic_role"])[],"updated_at": string,"user_id": string
+                    "agenda_scope": Database["public"]['Enums']["agenda_scope"],"clinic_id": string,"created_at": string,"display_name": string | null,"roles": (Database["public"]['Enums']["clinic_role"])[],"updated_at": string,"user_id": string
                   }
                   Insert: {
-                    "agenda_scope": Database["public"]['Enums']["agenda_scope"],"clinic_id": string,"created_at"?: string,"roles": (Database["public"]['Enums']["clinic_role"])[],"updated_at"?: string,"user_id": string
+                    "agenda_scope": Database["public"]['Enums']["agenda_scope"],"clinic_id": string,"created_at"?: string,"display_name"?: string | null,"roles": (Database["public"]['Enums']["clinic_role"])[],"updated_at"?: string,"user_id": string
                   }
                   Update: {
-                    "agenda_scope"?: Database["public"]['Enums']["agenda_scope"],"clinic_id"?: string,"created_at"?: string,"roles"?: (Database["public"]['Enums']["clinic_role"])[],"updated_at"?: string,"user_id"?: string
+                    "agenda_scope"?: Database["public"]['Enums']["agenda_scope"],"clinic_id"?: string,"created_at"?: string,"display_name"?: string | null,"roles"?: (Database["public"]['Enums']["clinic_role"])[],"updated_at"?: string,"user_id"?: string
                   }
                   Relationships: [
                     {
@@ -1080,6 +1080,11 @@ isOneToOne: false
           Functions: {
             "book_group_session":
 { Args: { "p_agenda_id": string,"p_booking_channel": Database["public"]['Enums']["action_channel"],"p_location_id": string,"p_patient_id": string,"p_scheduled_at": string,"p_service_id": string }; Returns: string
+                           },
+"clinic_actor_labels":
+{ Args: { "p_clinic_id": string,"p_user_ids": (string)[] }; Returns: {
+              "is_support": boolean,"name": string,"roles": (Database["public"]['Enums']["clinic_role"])[],"user_id": string
+            }[]
                            },
 "find_user_id_by_email":
 { Args: { "p_email": string }; Returns: string

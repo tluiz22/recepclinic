@@ -1,660 +1,161 @@
 ---
-// Fase 8 — registro de comparecimento, mobile-first. "A registrar"
-// (`tab=pendentes`) é uma lista curta em cards, pra médica registrar rápido
-// pelo celular. "Registradas" (`tab=confirmadas`; rótulos renomeados na
-// Fase 19 — "confirmar" ficou só pra presença do paciente) tende a
-// crescer sem limite (é o histórico do que já foi decidido), por isso usa
-// grid com paginação — mesmo padrão da tela de Pacientes — em vez de cards.
-//
-// Fase 12 — aba "Resumo do dia" (padrão ao abrir a página): visão mais
-// detalhada que a Agenda (idade, responsável, telefone com link pra ligar),
-// lida direto do Supabase — é uma
-// referência de identificação do dia, não a ferramenta de gestão pontual da
-// grade (isso continua sendo a Agenda). Desde 03/out/2026 é só informação
-// (decisão do cliente): presença confirmada/não confirmada sem botões, e o
-// cancelamento em massa foi para a Agenda (`MassCancelControls`).
-import PhoneLinks from "../../../components/admin/PhoneLinks.astro";
+// Resumo do Dia (F4.8), no banco novo, com as abas do piloto: Resumo do dia
+// (só informação), Lembretes (item), Lista de espera (item), Aguardando
+// remarcação, A registrar, Registradas e Envios (cliente, 05/out/2026: aqui,
+// para toda a equipe; com o lembrete ou o resumo do dia liberado). Tudo das
+// agendas que a pessoa vê (o Profissional, só as próprias).
 import AdminLayout from "../../../layouts/AdminLayout.astro";
+import AppointmentCard from "../../../components/admin/agenda/AppointmentCard.astro";
 import Card from "../../../components/admin/Card.astro";
-import Badge from "../../../components/admin/Badge.astro";
-import type { BadgeVariant } from "../../../components/admin/Badge.astro";
-import Icon from "../../../components/admin/Icon.astro";
-import TabBar from "../../../components/admin/TabBar.astro";
-import LembretesDoDia from "../../../components/admin/LembretesDoDia.astro";
-import ListaDeEspera from "../../../components/admin/ListaDeEspera.astro";
 import ConfirmDeleteDialog from "../../../components/admin/ConfirmDeleteDialog.astro";
-import { createClient } from "../../../lib/supabase/server";
-import { buildAppointmentTypeLabel } from "../../../lib/whatsapp/notifications";
-import { formatWhen, TIMEZONE } from "../../../lib/whatsapp/formatDateTime";
-import { formatPhoneBR } from "../../../lib/phone";
-import { formatAge } from "../../../lib/age";
-import {
-  AUTHORSHIP_COLUMNS,
-  PRESENCE_COLUMNS,
-  fetchStaffLabels,
-  formatBookedByLines,
-  formatCanceledByLine,
-  formatPresenceLine,
-  type AuthorshipRow,
-  type PresenceRow,
-} from "../../../lib/authorship";
+import FlashMessage from "../../../components/admin/FlashMessage.astro";
+import TabBar from "../../../components/admin/TabBar.astro";
+import AguardandoTab from "../../../components/admin/resumo/AguardandoTab.astro";
+import DateNav from "../../../components/admin/resumo/DateNav.astro";
+import EnviosTab from "../../../components/admin/resumo/EnviosTab.astro";
+import LembretesTab from "../../../components/admin/resumo/LembretesTab.astro";
+import ListaEsperaTab from "../../../components/admin/resumo/ListaEsperaTab.astro";
+import ResumoDia from "../../../components/admin/resumo/ResumoDia.astro";
+import { isCalendarDate, todayIn } from "../../../lib/clinicTime";
+import { createUserClient } from "../../../lib/data/clients";
+import { loadActorLabels } from "../../../lib/data/agenda/trail";
+import { listAgendaAppointments, listNoShowStats, type AgendaAppointment } from "../../../lib/data/agenda/view";
+import { listAgendas } from "../../../lib/data/config/agendas";
+import { listAwaitingRebooking, listPendingAttendance, listRecordedPage, listRemindersOfDay } from "../../../lib/data/daily";
+import { describeSendsAlert, getSendsAlert, listAppointmentsWithFailedSends, listJobRuns } from "../../../lib/data/sends";
+import { listRecentOffers, listWaitlist } from "../../../lib/data/waitlist/entries";
+import { vocabularyFor } from "../../../lib/vocabulary";
 
-const PAST_WINDOW_DAYS = 60;
-const PAGE_SIZE = 20;
+const clinic = Astro.locals.clinic!;
+const db = createUserClient(Astro.request, Astro.cookies);
+const vocabulary = vocabularyFor(clinic.clinicProfile);
+const params = Astro.url.searchParams;
+const has = (key: string) => clinic.features.includes(key as never);
+const sendsOn = has("reminders") || has("daily_summary");
 
-const supabase = createClient(Astro.request, Astro.cookies);
-
-const tabParam = Astro.url.searchParams.get("tab");
-type ConsultasTab = "resumo" | "lembretes" | "lista_espera" | "pendentes" | "confirmadas" | "aguardando_remarcacao";
-const tab: ConsultasTab =
-  tabParam === "pendentes"
-    ? "pendentes"
-    : tabParam === "confirmadas"
-      ? "confirmadas"
-      : tabParam === "aguardando_remarcacao"
-        ? "aguardando_remarcacao"
-        : tabParam === "lembretes"
-          ? "lembretes"
-          : tabParam === "lista_espera"
-            ? "lista_espera"
-            : "resumo";
+type Tab = "resumo" | "lembretes" | "lista_espera" | "aguardando_remarcacao" | "pendentes" | "confirmadas" | "envios";
+const tabs: { id: Tab; label: string; show: boolean }[] = [
+  { id: "resumo", label: "Resumo do dia", show: true },
+  { id: "lembretes", label: "Lembretes", show: has("reminders") },
+  { id: "lista_espera", label: "Lista de espera", show: has("waitlist") },
+  { id: "aguardando_remarcacao", label: "Aguardando remarcação", show: true },
+  { id: "pendentes", label: "A registrar", show: true },
+  { id: "confirmadas", label: "Registradas", show: true },
+  { id: "envios", label: "Envios", show: sendsOn },
+];
+const visible = tabs.filter((t) => t.show);
+const tab: Tab = visible.find((t) => t.id === params.get("tab"))?.id ?? "resumo";
 
 const now = new Date();
+const today = todayIn(clinic.timezone, now);
+const date = isCalendarDate(params.get("date") ?? "") ? params.get("date")! : today;
+const agendas = await listAgendas(db, clinic.clinicId, { includeInactive: true });
+const showAgenda = agendas.length > 1;
+const returnTo = `/admin/consultas?tab=${tab}`;
 
-function todayFortaleza(): string {
-  return new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString().slice(0, 10);
-}
+let dayAppointments: AgendaAppointment[] = [];
+let cards: AgendaAppointment[] = [];
+let recorded: Awaited<ReturnType<typeof listRecordedPage>> | null = null;
+let reminders: Awaited<ReturnType<typeof listRemindersOfDay>> = [];
+let waitlist: Awaited<ReturnType<typeof listWaitlist>> = [];
+let offers: Awaited<ReturnType<typeof listRecentOffers>> = [];
+let awaiting: AgendaAppointment[] = [];
+let sends: { alerts: string[]; runs: Awaited<ReturnType<typeof listJobRuns>>; failed: Awaited<ReturnType<typeof listAppointmentsWithFailedSends>> } | null = null;
 
-function addDays(dateStr: string, delta: number): string {
-  const d = new Date(`${dateStr}T12:00:00Z`);
-  d.setUTCDate(d.getUTCDate() + delta);
-  return d.toISOString().slice(0, 10);
-}
-
-function formatTime(iso: string): string {
-  return new Intl.DateTimeFormat("pt-BR", {
-    timeZone: TIMEZONE,
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-  }).format(new Date(iso));
-}
-
-function locationLabel(type: string | undefined): string {
-  if (type === "clinic") return "Consultório";
-  if (type === "exam") return "Exames";
-  return "Domiciliar";
-}
-
-function typeBadgeVariant(type: string): BadgeVariant {
-  if (type === "exam") return "warning";
-  if (type === "return_visit") return "accent";
-  return "info";
-}
-
-// "Marcado por / Remarcado por / Cancelado por" (Fase 17).
-const staffLabels = await fetchStaffLabels(supabase);
-
-function mapRow(a: AuthorshipRow & {
-  id: string;
-  scheduled_at: string;
-  appointment_type: string;
-  status: string;
-  home_visit_address: string | null;
-  patients: unknown;
-  exam_types: unknown;
-  clinic_locations: unknown;
-}) {
-  const patient = (a.patients ?? null) as unknown as { full_name: string } | null;
-  const examType = (a.exam_types ?? null) as unknown as { name: string } | null;
-  const location = (a.clinic_locations ?? null) as unknown as { type: string } | null;
-
-  return {
-    id: a.id,
-    patientName: patient?.full_name ?? "Paciente",
-    typeLabel: buildAppointmentTypeLabel(a.appointment_type, examType?.name),
-    typeVariant: typeBadgeVariant(a.appointment_type),
-    locationLabel: locationLabel(location?.type),
-    homeVisitAddress: a.home_visit_address,
-    whenLabel: formatWhen(new Date(a.scheduled_at)),
-    status: a.status,
-    bookedByLines: formatBookedByLines(a, staffLabels),
-  };
-}
-
-function mapResumoRow(
-  a: AuthorshipRow & PresenceRow & {
-    id: string;
-    scheduled_at: string;
-    status: string;
-    appointment_type: string;
-    home_visit_address: string | null;
-    patients: unknown;
-    exam_types: unknown;
-    clinic_locations: unknown;
-  },
-  referenceDate: string
-) {
-  const patient = (a.patients ?? null) as unknown as {
-    full_name: string;
-    birthdate: string | null;
-    guardians: { full_name: string; phone: string } | null;
-  } | null;
-  const guardian = patient?.guardians ?? null;
-  const examType = (a.exam_types ?? null) as unknown as { name: string } | null;
-  const location = (a.clinic_locations ?? null) as unknown as { type: string } | null;
-
-  return {
-    id: a.id,
-    time: formatTime(a.scheduled_at),
-    patientName: patient?.full_name ?? "Paciente",
-    age: patient?.birthdate ? formatAge(patient.birthdate, referenceDate) : null,
-    guardianName: guardian?.full_name ?? "—",
-    guardianPhone: guardian?.phone ?? null,
-    typeLabel: buildAppointmentTypeLabel(a.appointment_type, examType?.name),
-    typeVariant: typeBadgeVariant(a.appointment_type),
-    locationLabel: locationLabel(location?.type),
-    homeVisitAddress: a.home_visit_address,
-    bookedByLines: formatBookedByLines(a, staffLabels),
-    // Presença (Fase 19), só informação desde 03/out/2026 — as ações ficam na
-    // Agenda. "Não confirmada" só para atendimento ativo e ainda por vir.
-    presenceLine: formatPresenceLine(a, staffLabels),
-    presencePending:
-      ["scheduled", "confirmed"].includes(a.status) && new Date(a.scheduled_at).getTime() > Date.now(),
-  };
-}
-
-function tabUrl(target: ConsultasTab): string {
-  return `/admin/consultas?tab=${target}`;
-}
-
-// Leva pra "Marcar consulta"/"Marcar exame" com o paciente já selecionado —
-// a consulta cancelada já morreu (status), não dá pra usar o
-// fluxo de "remarcar" de uma consulta ativa; é uma marcação nova.
-function buildRebookUrl(
-  appointmentType: string,
-  patientId: string,
-  patientName: string,
-  guardian: { full_name: string; phone: string } | null,
-  examTypeId: string | null
-): string {
-  const label = guardian ? `${patientName} — resp. ${guardian.full_name} (${formatPhoneBR(guardian.phone)})` : patientName;
-  const params = new URLSearchParams({ patient_id: patientId, patient_label: label });
-
-  if (appointmentType === "exam") {
-    if (examTypeId) params.set("exam_type_id", examTypeId);
-    return `/admin/agenda/marcar-exame?${params.toString()}`;
+switch (tab) {
+  case "resumo":
+    dayAppointments = await listAgendaAppointments(db, clinic.clinicId, { fromDate: date, toDate: date, timeZone: clinic.timezone, agendaIds: agendas.map((a) => a.id) });
+    break;
+  case "lembretes":
+    reminders = await listRemindersOfDay(db, clinic.clinicId, date, clinic.timezone);
+    break;
+  case "lista_espera":
+    [waitlist, offers] = await Promise.all([listWaitlist(db, clinic.clinicId), listRecentOffers(db, clinic.clinicId)]);
+    break;
+  case "aguardando_remarcacao":
+    awaiting = await listAwaitingRebooking(db, clinic.clinicId, now);
+    break;
+  case "pendentes":
+    cards = await listPendingAttendance(db, clinic.clinicId, now);
+    break;
+  case "confirmadas":
+    recorded = await listRecordedPage(db, clinic.clinicId, Number(params.get("pagina")) || 1);
+    cards = recorded.items;
+    break;
+  case "envios": {
+    const [alert, runs, failed] = await Promise.all([
+      getSendsAlert(db, clinic.clinicId, now),
+      listJobRuns(db, clinic.clinicId, { limit: 20 }),
+      listAppointmentsWithFailedSends(db, clinic.clinicId, {}, now),
+    ]);
+    sends = { alerts: describeSendsAlert(alert), runs, failed };
+    break;
   }
-
-  params.set("appointment_type", appointmentType === "return_visit" ? "return_visit" : "first_visit");
-  return `/admin/agenda/marcar?${params.toString()}`;
 }
-
-function mapAguardandoRow(a: AuthorshipRow & {
-  id: string;
-  patient_id: string;
-  scheduled_at: string;
-  appointment_type: string;
-  patients: unknown;
-  exam_types: unknown;
-}) {
-  const patient = (a.patients ?? null) as unknown as {
-    full_name: string;
-    guardians: { full_name: string; phone: string } | null;
-  } | null;
-  const guardian = patient?.guardians ?? null;
-  const examType = (a.exam_types ?? null) as unknown as { id: string; name: string } | null;
-  const patientName = patient?.full_name ?? "Paciente";
-
-  return {
-    id: a.id,
-    patientName,
-    guardianName: guardian?.full_name ?? "—",
-    guardianPhone: guardian?.phone ?? null,
-    typeLabel: buildAppointmentTypeLabel(a.appointment_type, examType?.name),
-    typeVariant: typeBadgeVariant(a.appointment_type),
-    whenLabel: formatWhen(new Date(a.scheduled_at)),
-    rebookUrl: buildRebookUrl(a.appointment_type, a.patient_id, patientName, guardian, examType?.id ?? null),
-    canceledByLine: formatCanceledByLine(a, staffLabels),
-  };
-}
-
-const SELECT_COLUMNS = `id, scheduled_at, appointment_type, status, home_visit_address, ${AUTHORSHIP_COLUMNS}, patients ( full_name ), exam_types ( name ), clinic_locations ( type )`;
-
-let cards: ReturnType<typeof mapRow>[] = [];
-let rows: ReturnType<typeof mapRow>[] = [];
-let page = 1;
-let totalPages = 1;
-let resumoRows: ReturnType<typeof mapResumoRow>[] = [];
-let aguardandoRows: ReturnType<typeof mapAguardandoRow>[] = [];
-
-const dateParam = Astro.url.searchParams.get("date");
-const date = dateParam && /^\d{4}-\d{2}-\d{2}$/.test(dateParam) ? dateParam : todayFortaleza();
-
-if (tab === "resumo") {
-  const dayStart = `${date}T00:00:00-03:00`;
-  const dayEnd = `${addDays(date, 1)}T00:00:00-03:00`;
-
-  const { data } = await supabase
-    .from("appointments")
-    .select(
-      `id, scheduled_at, status, appointment_type, home_visit_address, ${AUTHORSHIP_COLUMNS}, ${PRESENCE_COLUMNS}, patients ( full_name, birthdate, guardians ( full_name, phone ) ), exam_types ( name ), clinic_locations ( type )`
-    )
-    .neq("status", "canceled")
-    .gte("scheduled_at", dayStart)
-    .lt("scheduled_at", dayEnd)
-    .order("scheduled_at", { ascending: true });
-
-  resumoRows = (data ?? []).map((row) => mapResumoRow(row, date));
-} else if (tab === "pendentes") {
-  const windowStart = new Date(now.getTime() - PAST_WINDOW_DAYS * 24 * 60 * 60 * 1000);
-  const { data } = await supabase
-    .from("appointments")
-    .select(SELECT_COLUMNS)
-    .in("status", ["scheduled", "confirmed"])
-    .lt("scheduled_at", now.toISOString())
-    .gte("scheduled_at", windowStart.toISOString())
-    .order("scheduled_at", { ascending: false });
-
-  cards = (data ?? []).map(mapRow);
-} else if (tab === "aguardando_remarcacao") {
-  // Só cancelamentos em massa (Fase 12) ou pelo bloqueio de agenda (Fase 13)
-  // — não um cancelamento individual avulso (Agenda ou Resumo do dia), que
-  // já é uma ação pontual da própria secretária, sem precisar de
-  // acompanhamento à parte. Sai da lista sozinho quando o paciente remarca,
-  // sem precisar de nenhuma ação manual de "resolver". `rebooking_dismissed_at`
-  // preenchido (botão "Desistiu") também tira da lista, mesmo sem remarcar.
-  const { data: canceledRows } = await supabase
-    .from("appointments")
-    .select(
-      `id, patient_id, scheduled_at, appointment_type, ${AUTHORSHIP_COLUMNS}, patients ( full_name, guardians ( full_name, phone ) ), exam_types ( id, name )`
-    )
-    .eq("status", "canceled")
-    .eq("canceled_via", "admin")
-    .eq("mass_canceled", true)
-    .is("rebooking_dismissed_at", null)
-    .order("canceled_at", { ascending: false, nullsFirst: false })
-    .order("scheduled_at", { ascending: false });
-
-  // Consulta/retorno e exame são jornadas separadas (mesmo critério usado
-  // no resto do sistema) — a chave de agrupamento junta first_visit/
-  // return_visit num "consulta" só, mas mantém cada tipo de exame à parte.
-  function followUpKey(patientId: string, appointmentType: string, examTypeId: string | null | undefined): string {
-    return appointmentType === "exam" ? `${patientId}:exam:${examTypeId}` : `${patientId}:consulta`;
-  }
-
-  const patientIds = [...new Set((canceledRows ?? []).map((r) => r.patient_id))];
-
-  // "Já remarcou" precisa comparar pela MESMA jornada (consulta ou aquele
-  // exame específico), não só pelo paciente — achado em teste real: um
-  // paciente com exame agendado (sem relação nenhuma) sumia da lista de uma
-  // consulta cancelada só por ter QUALQUER outro atendimento futuro.
-  const { data: rebookedRows } = patientIds.length
-    ? await supabase
-        .from("appointments")
-        .select("patient_id, appointment_type, exam_type_id")
-        .in("patient_id", patientIds)
-        .in("status", ["scheduled", "confirmed"])
-        .gt("scheduled_at", now.toISOString())
-    : { data: [] as { patient_id: string; appointment_type: string; exam_type_id: string | null }[] };
-
-  const rebookedKeys = new Set(
-    (rebookedRows ?? []).map((r) => followUpKey(r.patient_id, r.appointment_type, r.exam_type_id))
-  );
-
-  // Um paciente pode ter mais de um cancelamento feito pela equipe (ex.:
-  // duas datas seguidas desmarcadas) — mostra só o cancelamento mais
-  // recente por paciente (por `canceled_at`, não pela data que estava
-  // marcada), não um card por cancelamento.
-  const seenKeys = new Set<string>();
-  const dedupedCanceledRows = (canceledRows ?? []).filter((r) => {
-    const examTypeId = (r.exam_types as unknown as { id: string } | null)?.id;
-    const key = followUpKey(r.patient_id, r.appointment_type, examTypeId);
-    if (seenKeys.has(key)) return false;
-    seenKeys.add(key);
-    return true;
-  });
-
-  aguardandoRows = dedupedCanceledRows
-    .filter((r) => {
-      const examTypeId = (r.exam_types as unknown as { id: string } | null)?.id;
-      return !rebookedKeys.has(followUpKey(r.patient_id, r.appointment_type, examTypeId));
-    })
-    .map(mapAguardandoRow);
-} else {
-  page = Math.max(1, Number(Astro.url.searchParams.get("page")) || 1);
-  const from = (page - 1) * PAGE_SIZE;
-  const to = from + PAGE_SIZE - 1;
-
-  const { data, count } = await supabase
-    .from("appointments")
-    .select(SELECT_COLUMNS, { count: "exact" })
-    .in("status", ["completed", "no_show"])
-    .order("scheduled_at", { ascending: false })
-    .range(from, to);
-
-  rows = (data ?? []).map(mapRow);
-  totalPages = Math.max(1, Math.ceil((count ?? 0) / PAGE_SIZE));
-}
-
-function confirmadasPageUrl(targetPage: number): string {
-  return `/admin/consultas?tab=confirmadas&page=${targetPage}`;
-}
+const actors = await loadActorLabels(db, clinic.clinicId, [...dayAppointments.map((a) => a.createdBy), ...awaiting.map((a) => a.canceledBy)]);
+const noShows = cards.length ? await listNoShowStats(db, clinic.clinicId, cards.map((a) => a.patientId)) : new Map();
 ---
 
-<AdminLayout title="Consultas">
-  <h1 class="text-2xl font-bold text-slate-900">Consultas</h1>
-
+<AdminLayout title="Resumo do Dia">
+  <h1 class="text-2xl font-bold text-slate-900">Resumo do Dia</h1>
   <TabBar
-    label="Abas de Consultas"
-    class="mt-3"
-    tabs={[
-      { label: "Resumo do dia", href: tabUrl("resumo"), active: tab === "resumo" },
-      { label: "Lembretes", href: tabUrl("lembretes"), active: tab === "lembretes" },
-      { label: "Lista de espera", href: tabUrl("lista_espera"), active: tab === "lista_espera" },
-      { label: "Aguardando remarcação", href: tabUrl("aguardando_remarcacao"), active: tab === "aguardando_remarcacao" },
-      { label: "A registrar", href: tabUrl("pendentes"), active: tab === "pendentes" },
-      { label: "Registradas", href: tabUrl("confirmadas"), active: tab === "confirmadas" },
-    ]}
+    label="Abas do Resumo do Dia"
+    class="mt-4"
+    tabs={visible.map((t) => ({ label: t.label, href: `/admin/consultas?tab=${t.id}`, active: t.id === tab }))}
   />
+  <FlashMessage />
 
-  {tab === "lembretes" && <LembretesDoDia date={date} />}
-  {tab === "lista_espera" && <ListaDeEspera />}
-
-  {
-    tab === "pendentes" && (
-      <p class="mt-3 text-slate-600">
-        Registre quem compareceu às consultas e exames passados. Toque em "Realizada" ou "Não
-        compareceu" — dá pra corrigir depois.
-      </p>
-    )
-  }
+  {(tab === "resumo" || tab === "lembretes") && <DateNav tab={tab} date={date} today={today} />}
+  {tab === "resumo" && <ResumoDia appointments={dayAppointments} actors={actors} date={date} timeZone={clinic.timezone} vocabulary={vocabulary} showAgenda={showAgenda} />}
+  {tab === "lembretes" && <LembretesTab reminders={reminders} timeZone={clinic.timezone} vocabulary={vocabulary} openGroup={params.get("grupo")} />}
+  {tab === "lista_espera" && <ListaEsperaTab entries={waitlist} offers={offers} timeZone={clinic.timezone} />}
+  {tab === "aguardando_remarcacao" && <AguardandoTab appointments={awaiting} actors={actors} timeZone={clinic.timezone} vocabulary={vocabulary} />}
+  {tab === "envios" && sends && <EnviosTab alerts={sends.alerts} runs={sends.runs} failed={sends.failed} timeZone={clinic.timezone} />}
 
   {
-    tab === "resumo" && (
+    (tab === "pendentes" || tab === "confirmadas") && (
       <>
-        <form
-          method="GET"
-          action="/admin/consultas"
-          class="mt-6 flex items-center gap-1 rounded-lg border border-slate-200 bg-white p-2 sm:inline-flex"
-        >
-          <input type="hidden" name="tab" value="resumo" />
-          <a
-            href={`/admin/consultas?tab=resumo&date=${addDays(date, -1)}`}
-            aria-label="Dia anterior"
-            class="rounded-md p-2 text-slate-500 hover:bg-slate-100 hover:text-sky-700"
-          >
-            <Icon name="chevron-left" class="h-5 w-5" />
-          </a>
-          <input
-            type="date"
-            name="date"
-            value={date}
-            onchange="this.form.submit()"
-            class="min-w-0 flex-1 rounded-md border border-slate-300 px-3 py-2 text-sm sm:flex-none"
-          />
-          <a
-            href={`/admin/consultas?tab=resumo&date=${addDays(date, 1)}`}
-            aria-label="Próximo dia"
-            class="rounded-md p-2 text-slate-500 hover:bg-slate-100 hover:text-sky-700"
-          >
-            <Icon name="chevron-right" class="h-5 w-5" />
-          </a>
-          {date !== todayFortaleza() && (
-            <a
-              href="/admin/consultas?tab=resumo"
-              class="ml-1 shrink-0 rounded-md border border-slate-300 px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50"
-            >
-              Hoje
-            </a>
-          )}
-        </form>
-
-        <div class="mt-4 flex flex-col gap-3">
-          {resumoRows.length ? (
-            resumoRows.map((row) => (
-              <Card>
-                <div class="min-w-0">
-                  <div class="flex flex-wrap items-center justify-between gap-2">
-                    <span class="text-base font-semibold text-slate-900">{row.time}</span>
-                    <Badge variant={row.typeVariant}>{row.typeLabel}</Badge>
-                  </div>
-                  <p class="mt-2 text-sm font-medium text-slate-900">
-                    {row.patientName}
-                    {row.age && <span class="font-normal text-slate-500"> · {row.age}</span>}
-                  </p>
-                  <p class="mt-0.5 text-sm text-slate-500">
-                    Resp.: {row.guardianName}
-                    {row.guardianPhone && (
-                      <>
-                        {" · "}
-                        <PhoneLinks phone={row.guardianPhone} plain class="text-sky-700" />
-                      </>
-                    )}
-                  </p>
-                  <p class="mt-0.5 text-xs text-slate-400">
-                    {row.locationLabel}
-                    {row.homeVisitAddress && ` — ${row.homeVisitAddress}`}
-                  </p>
-                  {row.bookedByLines.map((line) => <p class="mt-0.5 text-xs text-slate-400">{line}</p>)}
-                  {row.presenceLine ? (
-                    <p class="mt-2 flex flex-wrap items-center gap-x-2 gap-y-0.5">
-                      <Badge variant="success">Presença confirmada ✓</Badge>
-                      <span class="text-xs text-slate-400">{row.presenceLine}</span>
-                    </p>
-                  ) : (
-                    row.presencePending && (
-                      <p class="mt-2">
-                        <Badge variant="warning" class="font-semibold">Presença não confirmada</Badge>
-                      </p>
-                    )
-                  )}
-                </div>
-              </Card>
-            ))
-          ) : (
-            <Card class="text-slate-500">Nenhum atendimento agendado para esse dia.</Card>
-          )}
+        <p class="mt-3 text-sm text-slate-600">
+          {tab === "pendentes"
+            ? `Atendimentos dos últimos 60 dias que já passaram sem registro (${cards.length}).`
+            : `Comparecimento já registrado (${recorded?.total ?? 0}). Dá para corrigir.`}
+        </p>
+        <div class="mt-3 grid gap-3 lg:grid-cols-2">
+          {cards.map((a) => (
+            <AppointmentCard
+              appointment={a}
+              timeZone={clinic.timezone}
+              now={now}
+              showAgenda={showAgenda}
+              vocabulary={vocabulary}
+              returnTo={returnTo}
+              preparationResendable={false}
+              waitlistOn={false}
+              onWaitlist={false}
+              noShow={noShows.get(a.patientId)}
+            />
+          ))}
         </div>
-
+        {cards.length === 0 && <Card class="mt-3 text-center text-slate-500">{tab === "pendentes" ? "Nada a registrar." : "Nenhum registro ainda."}</Card>}
+        {recorded && recorded.pageCount > 1 && (
+          <nav class="mt-4 flex items-center gap-3 text-sm">
+            {recorded.page > 1 && (
+              <a href={`/admin/consultas?tab=confirmadas&pagina=${recorded.page - 1}`} class="text-sky-700 hover:underline">
+                Anterior
+              </a>
+            )}
+            <span class="text-slate-500">
+              Página {recorded.page} de {recorded.pageCount}
+            </span>
+            {recorded.page < recorded.pageCount && (
+              <a href={`/admin/consultas?tab=confirmadas&pagina=${recorded.page + 1}`} class="text-sky-700 hover:underline">
+                Próxima
+              </a>
+            )}
+          </nav>
+        )}
       </>
     )
   }
-
-  {
-    tab === "pendentes" && (
-      <div class="mt-6 flex max-w-md flex-col gap-3">
-        {cards.length ? (
-          cards.map((card) => (
-            <Card>
-              <p class="text-base font-semibold text-slate-900">{card.patientName}</p>
-              <div class="mt-1.5 flex flex-wrap items-center gap-2">
-                <Badge variant={card.typeVariant}>{card.typeLabel}</Badge>
-                <span class="text-sm text-slate-500">{card.locationLabel}</span>
-              </div>
-              <p class="mt-1 text-sm text-slate-500">{card.whenLabel}</p>
-              {card.homeVisitAddress && <p class="mt-1 text-sm text-slate-500">Endereço: {card.homeVisitAddress}</p>}
-              {card.bookedByLines.map((line) => <p class="mt-0.5 text-xs text-slate-400">{line}</p>)}
-
-              <div class="mt-3 flex gap-2">
-                <form method="POST" action={`/api/admin/consultas/${card.id}/status`} class="flex-1">
-                  <input type="hidden" name="status" value="completed" />
-                  <input type="hidden" name="tab" value={tab} />
-                  <button
-                    type="submit"
-                    class="w-full rounded-md border border-emerald-700 px-3 py-3 text-sm font-semibold text-emerald-700 hover:bg-emerald-50"
-                  >
-                    Realizada
-                  </button>
-                </form>
-                <form method="POST" action={`/api/admin/consultas/${card.id}/status`} class="flex-1">
-                  <input type="hidden" name="status" value="no_show" />
-                  <input type="hidden" name="tab" value={tab} />
-                  <button
-                    type="submit"
-                    class="w-full rounded-md border border-red-700 px-3 py-3 text-sm font-semibold text-red-700 hover:bg-red-50"
-                  >
-                    Não compareceu
-                  </button>
-                </form>
-              </div>
-            </Card>
-          ))
-        ) : (
-          <Card class="text-slate-500">Nenhum comparecimento a registrar.</Card>
-        )}
-      </div>
-    )
-  }
-
-  {
-    tab === "confirmadas" && (
-      <div class="mt-6">
-        <div class="overflow-x-auto rounded-lg border border-slate-200 bg-white shadow-sm">
-          <table class="w-full min-w-[720px] border-collapse text-left text-sm">
-            <thead class="bg-slate-50 text-slate-600">
-              <tr>
-                <th class="px-3 py-2 font-medium">Paciente</th>
-                <th class="px-3 py-2 font-medium">Tipo</th>
-                <th class="px-3 py-2 font-medium">Local</th>
-                <th class="px-3 py-2 font-medium">Data/hora</th>
-                <th class="px-3 py-2 font-medium">Status</th>
-                <th class="px-3 py-2" />
-              </tr>
-            </thead>
-            <tbody>
-              {rows.length ? (
-                rows.map((row) => (
-                  <tr class="border-t border-slate-200">
-                    <td class="px-3 py-2">
-                      {row.patientName}
-                      {row.bookedByLines.map((line) => <div class="text-xs text-slate-400">{line}</div>)}
-                    </td>
-                    <td class="px-3 py-2">
-                      <Badge variant={row.typeVariant}>{row.typeLabel}</Badge>
-                    </td>
-                    <td class="px-3 py-2 text-slate-500">
-                      {row.locationLabel}
-                      {row.homeVisitAddress && <div class="text-xs text-slate-400">{row.homeVisitAddress}</div>}
-                    </td>
-                    <td class="px-3 py-2 text-slate-500">{row.whenLabel}</td>
-                    <td class="px-3 py-2">
-                      <Badge variant={row.status === "completed" ? "success" : "danger"}>
-                        {row.status === "completed" ? "Realizada" : "Não compareceu"}
-                      </Badge>
-                    </td>
-                    <td class="whitespace-nowrap px-3 py-2 text-right">
-                      <div class="flex flex-nowrap justify-end gap-1.5">
-                        <form method="POST" action={`/api/admin/consultas/${row.id}/status`}>
-                          <input type="hidden" name="status" value="completed" />
-                          <input type="hidden" name="tab" value={tab} />
-                          <input type="hidden" name="page" value={page} />
-                          <button
-                            type="submit"
-                            disabled={row.status === "completed"}
-                            class="rounded-md border border-emerald-200 px-2.5 py-1.5 text-xs font-medium text-emerald-700 hover:bg-emerald-50 disabled:cursor-default disabled:border-slate-200 disabled:text-slate-300 disabled:hover:bg-transparent"
-                          >
-                            Marcar realizada
-                          </button>
-                        </form>
-                        <form method="POST" action={`/api/admin/consultas/${row.id}/status`}>
-                          <input type="hidden" name="status" value="no_show" />
-                          <input type="hidden" name="tab" value={tab} />
-                          <input type="hidden" name="page" value={page} />
-                          <button
-                            type="submit"
-                            disabled={row.status === "no_show"}
-                            class="rounded-md border border-red-200 px-2.5 py-1.5 text-xs font-medium text-red-700 hover:bg-red-50 disabled:cursor-default disabled:border-slate-200 disabled:text-slate-300 disabled:hover:bg-transparent"
-                          >
-                            Marcar não compareceu
-                          </button>
-                        </form>
-                      </div>
-                    </td>
-                  </tr>
-                ))
-              ) : (
-                <tr class="border-t border-slate-200">
-                  <td class="px-3 py-4 text-slate-500" colspan="6">
-                    Nenhum comparecimento registrado ainda.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-
-        {totalPages > 1 && (
-          <div class="mt-3 flex items-center justify-between text-sm text-slate-600">
-            <span>
-              Página {page} de {totalPages}
-            </span>
-            <div class="flex gap-3">
-              {page > 1 && (
-                <a href={confirmadasPageUrl(page - 1)} class="text-sky-700 hover:underline">
-                  Anterior
-                </a>
-              )}
-              {page < totalPages && (
-                <a href={confirmadasPageUrl(page + 1)} class="text-sky-700 hover:underline">
-                  Próxima
-                </a>
-              )}
-            </div>
-          </div>
-        )}
-      </div>
-    )
-  }
-
-  {
-    tab === "aguardando_remarcacao" && (
-      <div class="mt-6 flex flex-col gap-3">
-        {aguardandoRows.length ? (
-          aguardandoRows.map((row) => (
-            <Card>
-              <div class="flex flex-wrap items-center justify-between gap-2">
-                <p class="text-base font-semibold text-slate-900">{row.patientName}</p>
-                <Badge variant={row.typeVariant}>{row.typeLabel}</Badge>
-              </div>
-              <p class="mt-1 text-sm text-slate-500">Estava marcado(a) para {row.whenLabel}</p>
-              {row.canceledByLine && <p class="mt-0.5 text-xs text-slate-400">{row.canceledByLine}</p>}
-              <p class="mt-1.5 text-sm text-slate-700">
-                Resp.: {row.guardianName}
-                {row.guardianPhone && (
-                  <>
-                    {" · "}
-                    <PhoneLinks phone={row.guardianPhone} plain class="font-medium text-sky-700" />
-                  </>
-                )}
-              </p>
-              <div class="mt-3 flex gap-2">
-                <a
-                  href={row.rebookUrl}
-                  class="flex-1 inline-flex items-center justify-center rounded-md bg-sky-700 px-4 py-1.5 text-sm font-semibold text-white hover:bg-sky-800 sm:flex-none"
-                >
-                  Remarcar
-                </a>
-                <form method="POST" action={`/api/admin/consultas/aguardando-remarcacao/${row.id}/desistiu`} class="flex-1 sm:flex-none">
-                  <button
-                    type="submit"
-                    class="js-confirm-delete w-full rounded-md border border-slate-300 px-4 py-1.5 text-sm font-semibold text-slate-600 hover:bg-slate-50"
-                    data-confirm-message={`Marcar que ${row.patientName} desistiu? Sai da lista de aguardando remarcação, sem apagar o histórico.`}
-                  >
-                    Desistiu
-                  </button>
-                </form>
-              </div>
-            </Card>
-          ))
-        ) : (
-          <Card class="text-slate-500">
-            Nenhum paciente aguardando remarcação — todo cancelamento feito pela equipe já foi remarcado.
-          </Card>
-        )}
-      </div>
-    )
-  }
-
   <ConfirmDeleteDialog />
 </AdminLayout>
