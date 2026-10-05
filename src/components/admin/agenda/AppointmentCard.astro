@@ -9,6 +9,7 @@ import Badge, { type BadgeVariant } from "../Badge.astro";
 import Card from "../Card.astro";
 import Icon, { type IconName } from "../Icon.astro";
 import PhoneLinks from "../PhoneLinks.astro";
+import { CANCELED_CARD, CANCELED_TEXT } from "./canceledStyle";
 import { formatInstant } from "../../../lib/clinicTime";
 import type { AgendaAppointment, NoShowStats } from "../../../lib/data/agenda/view";
 import type { ReminderAction } from "../../../lib/data/whatsapp/reminders";
@@ -42,11 +43,12 @@ const who = `${a.patientName}, ${formatInstant(a.scheduledAt, timeZone, "dd/MM '
 
 const categoryVariant: Record<string, BadgeVariant> = { consultation: "info", return_visit: "accent", exam: "warning" };
 const statusBadge: Record<string, { label: string; variant: BadgeVariant } | undefined> = {
-  canceled: { label: "Cancelado", variant: "neutral" },
+  canceled: { label: "Cancelado", variant: "danger" },
   completed: { label: "Compareceu", variant: "success" },
   no_show: { label: "Faltou", variant: "danger" },
 };
 const status = statusBadge[a.status];
+const isCanceled = a.status === "canceled";
 
 // Selos da situação (só informação).
 const reminderBadge: Record<ReminderAction, { label: string; variant: BadgeVariant }> = {
@@ -140,7 +142,7 @@ const BUTTON = "inline-flex items-center gap-1 rounded-md border bg-white px-2.5
 const tone = (danger?: boolean) => (danger ? "border-red-300 text-red-700 hover:bg-red-50" : "border-slate-300 text-slate-700 hover:bg-slate-50");
 ---
 
-<Card muted={a.status === "canceled"} class={compact ? "p-3 shadow-none" : ""}>
+<Card class={`${compact ? "p-3 shadow-none" : ""} ${isCanceled ? CANCELED_CARD : ""}`}>
   {
     !compact && (
       <div class="flex flex-wrap items-center justify-between gap-2">
@@ -155,7 +157,7 @@ const tone = (danger?: boolean) => (danger ? "border-red-300 text-red-700 hover:
               aria-label={`Selecionar ${a.patientName} para cancelar`}
             />
           )}
-          <span class="text-base font-semibold text-slate-900">
+          <span class={`text-base font-semibold ${isCanceled ? CANCELED_TEXT : "text-slate-900"}`}>
             {time(a.scheduledAt)} – {time(a.endsAt)}
           </span>
         </label>
@@ -165,7 +167,7 @@ const tone = (danger?: boolean) => (danger ? "border-red-300 text-red-700 hover:
   }
   <div class={`${compact ? "" : "mt-2"} text-sm text-slate-700`}>
     <p class="flex flex-wrap items-center gap-x-2 gap-y-1 font-medium text-slate-900">
-      <a href={`/admin/pacientes/${a.patientId}`} class="hover:text-sky-700 hover:underline">{a.patientName}</a>
+      <a href={`/admin/pacientes/${a.patientId}`} class={`hover:text-sky-700 hover:underline ${isCanceled ? CANCELED_TEXT : ""}`}>{a.patientName}</a>
       {noShow && <Badge variant="danger">Faltou {noShow.noShows} de {noShow.total}</Badge>}
       {compact && status && <Badge variant={status.variant}>{status.label}</Badge>}
     </p>

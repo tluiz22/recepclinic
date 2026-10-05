@@ -645,6 +645,9 @@ Vocabulário pelo perfil da clínica.
   `20261005220000`: `clinic_members.display_name`, `clinic_actor_labels` (toda a equipe vê os nomes
   de quem fez) e o evento "Desistiu" na trilha. Saíram o Resumo do Dia, a trilha, as rotas e os
   componentes antigos. 4 testes unitários e 4 de banco novos.
+  **Ajuste pedido na validação (cliente, 05/out): cancelado bem destacado.** Na Agenda e no Resumo
+  do dia, o atendimento cancelado tem faixa vermelha à esquerda, fundo avermelhado, horário e nome
+  riscados e o selo "Cancelado" em vermelho (também no histórico do paciente e na série).
 - **F4.5 — Agenda I:** dia, semana e mês com a escolha da agenda; marcar, remarcar, cancelar;
   presença e comparecimento; lembrete e preparo; lista de espera.
 - **F4.6 — Agenda II:** bloqueios, cancelamento do dia com link de remarcação, séries (D9).

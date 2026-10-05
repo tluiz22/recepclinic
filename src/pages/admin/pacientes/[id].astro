@@ -43,7 +43,7 @@ const stats = noShows.get(patient.id);
 const statusBadge: Record<string, { label: string; variant: BadgeVariant }> = {
   scheduled: { label: "Marcado", variant: "info" },
   confirmed: { label: "Marcado", variant: "info" },
-  canceled: { label: "Cancelado", variant: "neutral" },
+  canceled: { label: "Cancelado", variant: "danger" },
   completed: { label: "Compareceu", variant: "success" },
   no_show: { label: "Faltou", variant: "danger" },
 };
