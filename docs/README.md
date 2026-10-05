@@ -3,7 +3,7 @@
 > **Estado atual (retomar daqui), 04/out/2026**
 >
 > - **Etapas 0 a 4 concluídas**: cópia isolada, [diagnóstico](diagnostico.md), [limites](limites.md),
->   [arquitetura](arquitetura.md) (decisões D1–D10) e [plano](plano.md) (fases F0–F10).
+>   [arquitetura](arquitetura.md) (decisões D1–D11) e [plano](plano.md) (fases F0–F10).
 > - **Produto:**
 >   - **F0 concluída**: site da Dra. fora do repositório; nome RecepClinic; Supabase local pela CLI;
 >     Vitest e CI.
@@ -12,17 +12,19 @@
 >     convênios só no banco); dados de teste locais com logins no README da raiz; 158 testes de
 >     banco no CI, com varredura de isolamento automática.
 >   - **F3 em andamento** (acesso ao banco e contexto da clínica): divisão em etapas aprovada em
->     04/out (F3.1 base técnica, F3.2 contexto da clínica, F3.3 credencial limitada, F3.4–F3.8
+>     04/out (F3.1 base técnica, F3.2 contexto da clínica, F3.3 credencial limitada, F3.4–F3.9
 >     acesso por domínio; ver [`plano.md`](plano.md)). As telas só são ligadas ao schema novo na
->     F4. **F3.1 a F3.6 concluídas** (tipos do banco, variáveis de ambiente, datas com fuso;
+>     F4. **F3.1 a F3.7 concluídas** (tipos do banco, variáveis de ambiente, datas com fuso;
 >     contexto da clínica, papéis da D6 e registro das leituras do Suporte; credencial limitada à
 >     clínica e service role presa a um arquivo; acesso à configuração, com a decisão de que a
 >     sobreposição de horários vale por agenda; acesso a pacientes, com os achados 1–3 da F1
 >     resolvidos; F3.6a: horários livres e marcação, com duplicidade por agenda e retorno na
 >     mesma agenda; F3.6b: bloqueios, links e séries, com horizonte de 3 meses; F3.7a: entrar,
 >     sair e consultar a lista de espera, com inclusão também pelo painel; F3.7b: motor de ofertas
->     da lista, com o envio do WhatsApp ligado na F6/F7). **Próxima etapa: F3.8** (acesso ao
->     WhatsApp e às rotinas, com reenvios e achados 4–5 da F1).
+>     da lista, com o envio do WhatsApp ligado na F6/F7). **Decisão D11 (05/out): matriz de
+>     acesso por clínica**, liberada pelo Administrador do sistema; o básico do consultório sempre
+>     ligado. **Próxima etapa: F3.8** (matriz de acesso no banco, no contexto e nas rotas); depois
+>     F3.9 (WhatsApp e rotinas, com reenvios e achados 4–5 da F1).
 >     Para rodar o banco: abrir o OrbStack, `npm run db:start`, `npm run db:reset` (carrega os
 >     dados de teste) e `npm run test:db`.
 > - **Frente paralela, o site** `www.recepclinic.com.br`: [`site-plano.md`](site-plano.md), etapas

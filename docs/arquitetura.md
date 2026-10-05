@@ -257,6 +257,11 @@ riscos (L12, L38).
   como no piloto (cliente, 04/out). O acesso por agenda vale para agendas e atendimentos.
   Descartado: restringir o cadastro pelo acesso às agendas.
 
+**Revisão de 05/out/2026 (cliente): matriz de acesso (D11).** O que cada clínica pode usar (telas,
+abas e funções) é liberado pelo Administrador do sistema (o Suporte RecepClinic). Métricas e
+relatórios: o Profissional só os vê com o item "Métricas pessoais do profissional" liberado, e só
+da própria agenda (antes, via a clínica toda).
+
 **Revisão de 04/out/2026 (cliente): acesso do Suporte RecepClinic.**
 
 - O Suporte tem **acesso permanente a todas as clínicas**, sem sessão nem autorização da clínica.
@@ -381,6 +386,54 @@ por profissional e serviço (combinações demais sem demanda); plano só no pac
 quando ele troca de plano); encaminhar todo plano não atendido para a recepção; marcar com "plano a
 confirmar" (marcaria quem a clínica não atende).
 
+## D11 — Matriz de acesso por clínica (05/out/2026)
+
+**Decisão: o Administrador do sistema libera, clínica a clínica, as telas, abas e funções que cada
+uma pode usar; o básico do consultório vem sempre ligado.**
+
+- **Quem configura:** o **Administrador do sistema**, dono do RecepClinic (na D6, o papel da
+  plataforma, "Suporte RecepClinic"). Ele **escolhe a clínica e marca o que ela pode acessar**. A
+  clínica, inclusive o Administrador dela, não muda o que tem liberado.
+- **Itens da matriz:** cada item é uma **tela ou aba** (ex.: aba Financeiro das Métricas) ou uma
+  **função sem tela** (ex.: bot, lembrete automático, atendimento domiciliar). Item desligado some
+  da clínica: menu, rota, bot, páginas públicas e envios automáticos.
+- **Sempre ligado (padrão de toda clínica, fora da matriz):** agenda (dia, semana, mês), bloqueios
+  e trilha; marcar, remarcar e cancelar consulta e retorno; pacientes e contatos (cadastro, edição,
+  histórico); a tela do Resumo do dia e o registro de comparecimento ("Aguardando remarcação", "A
+  registrar", "Registradas"); configurações básicas (perfil, identidade, profissionais, locais de
+  consultório, agendas, disponibilidade, feriados, serviços de consulta e retorno, equipe e
+  acessos).
+- **Liberados pelo Administrador do sistema** (clínica nova começa com todos desligados):
+  - **Agenda:** exames/procedimentos (serviços de exame, turmas, preparo); atendimento domiciliar
+    (locais domiciliares e a opção no painel e no bot); séries recorrentes (D9); convênios (D10).
+  - **WhatsApp:** bot (atendimento automático, links de agendamento, avisos de confirmação,
+    remarcação e cancelamento, informações do bot); lembrete automático (lembrete da véspera, aba
+    Lembretes, botões de envio e reenvio, reenvio automático, hora do lembrete); lista de espera
+    (aba e ofertas; **depende do bot**); envio do resumo do dia (e os contatos do resumo).
+  - **Métricas, uma aba por item:** Visão geral, Atendimentos, Faltosos, Retomar contato, Funil do
+    bot (**depende do bot**), Financeiro, Envios; **Relatórios**.
+  - **Métricas pessoais do profissional:** o Profissional vê as métricas e os relatórios liberados
+    **só da própria agenda**.
+- **Dependências:** item que depende de outro só é ligado com ele; desligar o bot desliga a lista
+  de espera e o Funil. Bot, lembrete, lista de espera e resumo do dia só enviam com o WhatsApp da
+  clínica conectado (situação da conexão, não item da matriz).
+- **Papéis continuam fixos (D6):** a matriz diz o que a clínica tem; o papel diz quem, dentro dela,
+  vê. Configurações continuam só do Administrador da clínica (inclusive os itens de configuração
+  liberados).
+- **Métricas e relatórios (muda a D6):** com o item liberado, o **Administrador da clínica** vê a
+  clínica toda. O **Profissional só vê métricas e relatórios se as "Métricas pessoais do
+  profissional" estiverem liberadas**, e aí só os da própria agenda. Sem esse item, não vê nenhum.
+- **Registro:** cada mudança na matriz guarda quem mudou e quando.
+- **Sem cobrança:** a matriz não cobra nem limita uso (L49 continua). Pacotes com nome, quando
+  forem definidos, viram combinações prontas de itens.
+
+**Por quê:** decisão do cliente. Permite vender pacotes diferentes sem código novo por clínica e
+liberar funções aos poucos.
+
+**Descartado:** liberar por função inteira (pouco controle sobre abas de valor comercial, como
+Financeiro); pacotes fixos no código (ainda não definidos); papéis configuráveis por clínica
+(combinações demais para testar; a D6 continua).
+
 ## Padrões assumidos (revisáveis)
 
 Pontos dos limites com caminho óbvio, que não precisaram de decisão. Qualquer um pode ser revisto.
@@ -401,7 +454,7 @@ Pontos dos limites com caminho óbvio, que não precisaram de decisão. Qualquer
 | L45 Observabilidade | Ferramenta de erros com a clínica em cada erro e monitor externo do painel e do webhook. Escolha da ferramenta no plano (etapa 4). |
 | L46 Formulários | Proteção de origem do Astro ligada explicitamente na configuração. |
 | L47 Onboarding | No P1, a clínica é criada pelo Suporte RecepClinic; o Administrador da clínica faz o resto pela tela (equipe, perfil, identidade, serviços, agendas, disponibilidade, conectar WhatsApp). Autocadastro fica para depois. |
-| L49 Cobrança | Sem billing. Só contadores de uso por clínica (mensagens enviadas, atendimentos) para não fechar a porta. |
+| L49 Cobrança | Sem billing. Só contadores de uso por clínica (mensagens enviadas, atendimentos) para não fechar a porta. O que cada clínica pode usar é liberado pela matriz de acesso (D11). |
 | L50 Custo da Meta | Levantar a tabela atual de preços por mensagem antes de definir o preço do produto (tarefa do cliente, fora do código). |
 
 ## Cobertura dos limites

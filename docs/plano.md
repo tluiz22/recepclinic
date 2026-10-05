@@ -215,7 +215,7 @@ novo não tem). Etapas (cada uma com `npm test`, `test:db`, `check`, `build` e C
   dia, horário de verão), testado também com o servidor em outro fuso. A conversão de hora local
   para instante é feita à mão porque o `TZDate` escolhe a hora repetida do horário de verão pelo
   fuso do servidor. O código antigo continua com os clientes sem tipo e o "-03:00" fixo; cada
-  domínio passa para os tipos e para `clinicTime` na sua etapa (F3.4–F3.8). 33 testes novos.
+  domínio passa para os tipos e para `clinicTime` na sua etapa (F3.4–F3.9). 33 testes novos.
 - **F3.2 — Contexto da clínica:** clínica ativa a partir do login, papéis e agendas acessíveis em
   cada requisição; fim de `staff_profiles`. Quem é membro de várias clínicas cai na última usada; a
   tela de escolha é da F4. **Concluída em 04/out**: o middleware monta o contexto
@@ -241,7 +241,7 @@ novo não tem). Etapas (cada uma com `npm test`, `test:db`, `check`, `build` e C
   na F6, rotinas na F7, retirada da lista de espera na F3.7). **Conferir ao criar o projeto na
   nuvem:** o esquema de assinatura (segredo compartilhado HS256, como no local; alternativa: chave
   ES256 própria importada). 8 testes unitários e 8 de banco novos.
-- **F3.4 a F3.8 — Acesso por domínio:** configuração; pacientes; agenda (atendimentos, séries,
+- **F3.4 a F3.7 e F3.9 — Acesso por domínio:** configuração; pacientes; agenda (atendimentos, séries,
   bloqueios, links); lista de espera; WhatsApp e rotinas. Cada uma com testes de integração,
   incluindo as regras que a F1 deixou para o banco (elegibilidade do retorno, conflitos de exame,
   ofertas e reenvios), e corrigindo os achados 1–5 da F1 onde aparecerem.
@@ -281,7 +281,7 @@ novo não tem). Etapas (cada uma com `npm test`, `test:db`, `check`, `build` e C
   retorno (Fase 17) e o aviso "já tem atendimento marcado". **F3.6b:** bloqueios (com o cancelamento
   dos atendimentos atingidos) e links de agendar/remarcar; séries recorrentes da D9 (gerar pulando
   conflitos, "só esta" / "esta e as próximas", encerrar, horizonte das séries sem fim). Reenvios e
-  achados 4–5 ficam na F3.8.
+  achados 4–5 ficam na F3.9 (antes F3.8; a F3.8 passou a ser a matriz de acesso, D11).
 - **F3.6a — concluída em 04/out.** `src/lib/data/agenda/`: cálculo puro dos horários livres com o
   fuso da clínica (`freeSlots.ts`, mesmos casos da F1 e horário de verão), horários livres, próximas
   datas, "primeiro disponível" e sessões de turma (`slots.ts`), e marcar, remarcar, cancelar
@@ -342,6 +342,19 @@ novo não tem). Etapas (cada uma com `npm test`, `test:db`, `check`, `build` e C
   (revisável): retirado da lista pela tela, a vaga volta à fila e é oferecida ao próximo na rodada
   seguinte do agendador (no piloto, na hora). 9 testes unitários e 7 de banco novos. **F3.7
   concluída.**
+- **F3.8 — Matriz de acesso (D11, cliente, 05/out):** entra antes do WhatsApp e das rotinas, que
+  passam a ser a F3.9. Escopo: itens da matriz no código (telas, abas e funções, com rótulo, área,
+  dependências e as rotas de cada um); itens liberados por clínica no banco, gravados só pelo
+  Administrador do sistema (Suporte), com quem mudou e quando, e lidos pela equipe e pelo bot da
+  própria clínica; o contexto da clínica passa a trazer os itens liberados e o middleware barra
+  rota de item desligado; regra nova das métricas (Profissional só com "Métricas pessoais", só a
+  própria agenda); a camada de acesso já feita passa a respeitar os itens (serviço de exame, local
+  domiciliar, séries, convênios, lista de espera, hora do lembrete, contatos do resumo); acesso do
+  Administrador do sistema para listar as clínicas e ler e gravar a matriz; dados de teste com
+  tudo liberado. A tela da matriz é da F4; bot e envios checam os itens na F6/F7.
+- **F3.9 — WhatsApp e rotinas** (antes F3.8): conexão e templates, conversas, mensagens e funil;
+  lembrete e reenvios; resumo do dia e execuções das rotinas; achados 4–5 da F1. Divisão a
+  combinar com o cliente ao começar.
 
 **Cuidado registrado na F2.5:** num insert de várias linhas, o `supabase-js` manda `null` nas
 colunas ausentes de alguma linha, e o valor padrão do banco não é aplicado (ex.: `details` da
@@ -351,7 +364,9 @@ trilha). Mandar todas as colunas em todas as linhas, ou usar `defaultToNull: fal
 
 **Objetivo:** o painel funcionando sobre o modelo novo, começando pela configuração.
 
-**Escopo:** login, convite e recuperação de senha, escolha de clínica, papéis. **Configurações**
+**Escopo:** login, convite e recuperação de senha, escolha de clínica, papéis; **tela da matriz de
+acesso** do Administrador do sistema (escolher a clínica e marcar os itens, D11); menus e abas
+seguindo os itens liberados. **Configurações**
 (perfil, identidade, profissionais, locais, serviços, agendas, disponibilidade, feriados extras,
 contatos, equipe e acesso de cada pessoa às agendas); depois Agenda (com **escolha da agenda/
 profissional a exibir**, D2 revista), **séries recorrentes** (criar, pular conflitos com aviso,
