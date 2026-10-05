@@ -274,6 +274,30 @@ novo não tem). Etapas (cada uma com `npm test`, `test:db`, `check`, `build` e C
   (revisável): o aviso de possível duplicado (mesmo contato e mesmo nascimento) vale sempre que o
   contato já existe; no piloto, só ao incluir paciente pela tela do responsável. O aviso "já tem
   atendimento marcado" da busca entra com a agenda (F3.6). 5 testes unitários e 14 de banco novos.
+- **F3.6 — Agenda:** dividida em duas partes (cliente, 04/out). **F3.6a:** horários livres por
+  agenda, serviço, local e dia (janelas, bloqueios, feriados, atendimentos, intervalo, fuso), próximas
+  datas, vagas de turma e "primeiro horário disponível" entre as agendas do serviço (D2); marcar,
+  remarcar, cancelar (individual e do dia), presença, realizado e falta, trilha, elegibilidade do
+  retorno (Fase 17) e o aviso "já tem atendimento marcado". **F3.6b:** bloqueios (com o cancelamento
+  dos atendimentos atingidos) e links de agendar/remarcar; séries recorrentes da D9 (gerar pulando
+  conflitos, "só esta" / "esta e as próximas", encerrar, horizonte das séries sem fim). Reenvios e
+  achados 4–5 ficam na F3.8.
+- **F3.6a — concluída em 04/out.** `src/lib/data/agenda/`: cálculo puro dos horários livres com o
+  fuso da clínica (`freeSlots.ts`, mesmos casos da F1 e horário de verão), horários livres, próximas
+  datas, "primeiro disponível" e sessões de turma (`slots.ts`), e marcar, remarcar, cancelar
+  (individual e vários), presença, realizado/falta e trilha (`appointments.ts`). **Decisões do
+  cliente (04/out):** a trava "já tem atendimento futuro" vale **por agenda** para Consulta/Retorno
+  (Exame: o mesmo exame, como no piloto); o retorno se liga à **última consulta na mesma agenda**,
+  com o **prazo do serviço de Retorno**. Mantido do piloto: o horário precisa estar entre os livres
+  calculados na hora; domiciliar exige endereço; marcar invalida os links pendentes do mesmo
+  serviço; remarcar zera lembrete e presença; cancelar é atômico; retorno na tela só avisa.
+  Padrões assumidos (revisáveis): serviço individual usa as janelas gerais da agenda e as do
+  próprio serviço, turma só as suas; no "tapar buracos" do retorno, a duração de referência é a
+  menor Consulta ativa da agenda; turmas respeitam os bloqueios da agenda (no piloto, não olhavam a
+  agenda); no "primeiro disponível", horário repetido fica com a primeira agenda em ordem de nome;
+  realizado/falta não vale para atendimento cancelado; Retorno sem prazo cadastrado não tem limite.
+  O link de remarcação e o aviso por WhatsApp do cancelamento em massa entram com os links (F3.6b)
+  e o bot (F6/F7). 26 testes unitários e 17 de banco novos.
 
 **Cuidado registrado na F2.5:** num insert de várias linhas, o `supabase-js` manda `null` nas
 colunas ausentes de alguma linha, e o valor padrão do banco não é aplicado (ex.: `details` da

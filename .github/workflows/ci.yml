@@ -20,7 +20,7 @@ jobs:
       - run: npm run check
       - run: npm test
       # As datas não podem depender do fuso do servidor (L40).
-      - run: TZ=America/Los_Angeles npx vitest run src/lib/clinicTime.test.ts
+      - run: TZ=America/Los_Angeles npx vitest run src/lib/clinicTime.test.ts src/lib/data/agenda
       - run: npm run build
 
   db:
