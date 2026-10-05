@@ -26,6 +26,7 @@ const appointment = (overrides: Partial<AgendaAppointment>): AgendaAppointment =
   patientConfirmedAt: null,
   reminderResponse: null,
   patientBirthdate: "2020-01-01",
+  originAppointmentId: null,
   createdBy: null,
   bookingChannel: "admin",
   canceledBy: null,

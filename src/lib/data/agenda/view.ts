@@ -35,6 +35,8 @@ export type AgendaAppointment = {
   patientConfirmedAt: Date | null;
   reminderResponse: string | null;
   patientBirthdate: string;
+  /** Retorno: a consulta de origem (`listOrigins` traz a data e a situação). */
+  originAppointmentId: string | null;
   /** Quem marcou pelo painel (null = WhatsApp, link ou sistema). */
   createdBy: string | null;
   bookingChannel: string;
@@ -58,6 +60,7 @@ export type AgendaItem =
 
 export const AGENDA_COLUMNS = `id, agenda_id, service_id, scheduled_at, duration_minutes, status, is_group_session, series_id, home_visit_address,
   patient_confirmed_at, reminder_response, created_by, booking_channel, canceled_by, canceled_at,
+  origin_appointment_id,
   agendas ( name ), services ( name, category ), locations ( name, type ),
   patients ( id, full_name, birthdate, is_contact_self, contacts ( full_name, phone ) )`;
 
@@ -77,6 +80,7 @@ export type AgendaRow = {
   booking_channel: string;
   canceled_by: string | null;
   canceled_at: string | null;
+  origin_appointment_id: string | null;
   agendas: { name: string };
   services: { name: string; category: ServiceCategory };
   locations: { name: string; type: string };
@@ -108,6 +112,7 @@ export const toAgendaAppointment = (row: AgendaRow): AgendaAppointment => {
     patientConfirmedAt: row.patient_confirmed_at ? new Date(row.patient_confirmed_at) : null,
     reminderResponse: row.reminder_response,
     patientBirthdate: row.patients.birthdate,
+    originAppointmentId: row.origin_appointment_id,
     createdBy: row.created_by,
     bookingChannel: row.booking_channel,
     canceledBy: row.canceled_by,
@@ -137,6 +142,16 @@ export async function listAgendaAppointments(
   return rows
     .map(toAgendaAppointment)
     .sort((a, b) => a.scheduledAt.getTime() - b.scheduledAt.getTime() || a.agendaName.localeCompare(b.agendaName) || a.patientName.localeCompare(b.patientName));
+}
+
+export type OriginInfo = { scheduledAt: Date; status: AppointmentStatus };
+
+/** Consultas de origem dos retornos (data e situação), para o cartão. */
+export async function listOrigins(db: DbClient, clinicId: string, appointments: AgendaAppointment[]): Promise<Map<string, OriginInfo>> {
+  const ids = [...new Set(appointments.map((a) => a.originAppointmentId).filter((id): id is string => !!id))];
+  if (!ids.length) return new Map();
+  const rows = unwrap(await db.from("appointments").select("id, scheduled_at, status").eq("clinic_id", clinicId).in("id", ids), "Consultas de origem");
+  return new Map(rows.map((row) => [row.id, { scheduledAt: new Date(row.scheduled_at), status: row.status }]));
 }
 
 /** Atendimentos pelos ids (avisos depois de cancelar), em ordem de horário. */

@@ -19,7 +19,7 @@ import ResumoDia from "../../../components/admin/resumo/ResumoDia.astro";
 import { isCalendarDate, todayIn } from "../../../lib/clinicTime";
 import { createUserClient } from "../../../lib/data/clients";
 import { loadActorLabels } from "../../../lib/data/agenda/trail";
-import { listAgendaAppointments, listNoShowStats, type AgendaAppointment } from "../../../lib/data/agenda/view";
+import { listAgendaAppointments, listNoShowStats, listOrigins, type AgendaAppointment } from "../../../lib/data/agenda/view";
 import { listAgendas } from "../../../lib/data/config/agendas";
 import { listAwaitingRebooking, listPendingAttendance, listRecordedPage, listRemindersOfDay } from "../../../lib/data/daily";
 import { describeSendsAlert, getSendsAlert, listAppointmentsWithFailedSends, listJobRuns } from "../../../lib/data/sends";
@@ -93,7 +93,9 @@ switch (tab) {
   }
 }
 const actors = await loadActorLabels(db, clinic.clinicId, [...dayAppointments.map((a) => a.createdBy), ...awaiting.map((a) => a.canceledBy)]);
-const noShows = cards.length ? await listNoShowStats(db, clinic.clinicId, cards.map((a) => a.patientId)) : new Map();
+const [noShows, origins] = cards.length
+  ? await Promise.all([listNoShowStats(db, clinic.clinicId, cards.map((a) => a.patientId)), listOrigins(db, clinic.clinicId, cards)])
+  : [new Map(), new Map()];
 ---
 
 <AdminLayout title="Resumo do Dia">
@@ -133,6 +135,7 @@ const noShows = cards.length ? await listNoShowStats(db, clinic.clinicId, cards.
               waitlistOn={false}
               onWaitlist={false}
               noShow={noShows.get(a.patientId)}
+              origin={a.originAppointmentId ? origins.get(a.originAppointmentId) : undefined}
             />
           ))}
         </div>

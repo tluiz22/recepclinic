@@ -13,7 +13,7 @@ import Icon from "../../components/admin/Icon.astro";
 import { addDays, formatCalendarDate, formatInstant, isCalendarDate, todayIn } from "../../lib/clinicTime";
 import { createUserClient } from "../../lib/data/clients";
 import { loadAgendaScope } from "../../lib/data/agenda/scope";
-import { buildDayItems, itemAgendaId, listAgendaAppointments, listAgendaBlocks, listNoShowStats } from "../../lib/data/agenda/view";
+import { buildDayItems, itemAgendaId, listAgendaAppointments, listAgendaBlocks, listNoShowStats, listOrigins } from "../../lib/data/agenda/view";
 import { activeWaitlistAppointmentIds } from "../../lib/data/waitlist/entries";
 import { listPreparationResendable } from "../../lib/data/whatsapp/preparation";
 import { listReminderActions } from "../../lib/data/whatsapp/reminders";
@@ -37,11 +37,12 @@ const items = buildDayItems(appointments, blocks);
 const activeFuture = appointments.filter((a) => (a.status === "scheduled" || a.status === "confirmed") && a.scheduledAt > now).map((a) => a.id);
 const examsFuture = appointments.filter((a) => a.category === "exam" && activeFuture.includes(a.id)).map((a) => a.id);
 const waitlistOn = clinic.features.includes("waitlist");
-const [reminderActions, preparationResendable, onWaitlist, noShows] = await Promise.all([
+const [reminderActions, preparationResendable, onWaitlist, noShows, origins] = await Promise.all([
   listReminderActions(db, clinic.clinicId, activeFuture, now),
   clinic.features.includes("exams") ? listPreparationResendable(db, clinic.clinicId, examsFuture) : Promise.resolve(new Set<string>()),
   waitlistOn ? activeWaitlistAppointmentIds(db, clinic.clinicId, activeFuture) : Promise.resolve(new Set<string>()),
   listNoShowStats(db, clinic.clinicId, appointments.map((a) => a.patientId)),
+  listOrigins(db, clinic.clinicId, appointments),
 ]);
 
 const vocabulary = vocabularyFor(clinic.clinicProfile);
@@ -67,6 +68,7 @@ const cardProps = (a: (typeof appointments)[number]) => ({
   waitlistOn,
   onWaitlist: onWaitlist.has(a.id),
   noShow: noShows.get(a.patientId),
+  origin: a.originAppointmentId ? origins.get(a.originAppointmentId) : undefined,
   massCancelForm: MASS_CANCEL,
 });
 // Cancelamento em massa (F4.6): caixinhas nos cartões, ligadas a este formulário.
@@ -179,7 +181,7 @@ const groupActiveIds = (group: { appointments: typeof appointments }) =>
               <span class="text-base font-semibold text-slate-900">
                 {formatInstant(item.start, clinic.timezone, "dd/MM HH:mm")} – {formatInstant(item.end, clinic.timezone, "dd/MM HH:mm")}
               </span>
-              <Badge>Bloqueio</Badge>
+              <Badge variant="strong">Bloqueio</Badge>
             </div>
             <p class="mt-2 text-sm text-slate-600">{item.block.reason}</p>
             <div class="mt-3 flex flex-wrap gap-2 border-t border-slate-100 pt-3">

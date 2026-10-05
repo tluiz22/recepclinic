@@ -648,8 +648,9 @@ Vocabulário pelo perfil da clínica.
   **Ajuste pedido na validação (cliente, 05/out): cancelado bem destacado.** Na Agenda e no Resumo
   do dia, o atendimento cancelado tem faixa vermelha à esquerda, fundo avermelhado, horário e nome
   riscados e o selo "Cancelado" em vermelho (também no histórico do paciente e na série).
-  O cartão do bloqueio no Dia deixa de ficar apagado: aparece como um atendimento ativo (cliente,
-  05/out).
+  O cartão do bloqueio no Dia deixa de ficar apagado: aparece como um atendimento ativo, com o
+  selo "Bloqueio" escuro e em destaque (cliente, 05/out). O cartão do **retorno** mostra a consulta
+  de origem ("Retorno da consulta de 12/10/2026 (cancelada)", ou "sem consulta de origem").
 - **F4.5 — Agenda I:** dia, semana e mês com a escolha da agenda; marcar, remarcar, cancelar;
   presença e comparecimento; lembrete e preparo; lista de espera.
 - **F4.6 — Agenda II:** bloqueios, cancelamento do dia com link de remarcação, séries (D9).

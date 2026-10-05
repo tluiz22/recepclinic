@@ -11,7 +11,7 @@ import Icon, { type IconName } from "../Icon.astro";
 import PhoneLinks from "../PhoneLinks.astro";
 import { CANCELED_CARD, CANCELED_TEXT } from "./canceledStyle";
 import { formatInstant } from "../../../lib/clinicTime";
-import type { AgendaAppointment, NoShowStats } from "../../../lib/data/agenda/view";
+import type { AgendaAppointment, NoShowStats, OriginInfo } from "../../../lib/data/agenda/view";
 import type { ReminderAction } from "../../../lib/data/whatsapp/reminders";
 import { capitalize, type Vocabulary } from "../../../lib/vocabulary";
 
@@ -29,11 +29,13 @@ interface Props {
   noShow?: NoShowStats;
   /** Dentro do cartão da turma: sem o horário e mais compacto. */
   compact?: boolean;
+  /** Retorno: a consulta de origem (data e situação). */
+  origin?: OriginInfo;
   /** Caixinha do cancelamento em massa (F4.6), ligada ao formulário da tela. */
   massCancelForm?: string;
 }
 
-const { appointment: a, timeZone, now, showAgenda, vocabulary, returnTo, reminderAction, preparationResendable, waitlistOn, onWaitlist, noShow, compact = false, massCancelForm } =
+const { appointment: a, timeZone, now, showAgenda, vocabulary, returnTo, reminderAction, preparationResendable, waitlistOn, onWaitlist, noShow, compact = false, massCancelForm, origin } =
   Astro.props;
 const action = `/api/admin/agenda/atendimentos/${a.id}`;
 const time = (d: Date) => formatInstant(d, timeZone, "HH:mm");
@@ -186,6 +188,17 @@ const tone = (danger?: boolean) => (danger ? "border-red-300 text-red-700 hover:
       )
     }
     {a.homeVisitAddress && <p class="mt-1.5 text-slate-500">Endereço: {a.homeVisitAddress}</p>}
+    {
+      a.category === "return_visit" && (
+        <p class="mt-1.5 text-slate-500">
+          {origin
+            ? `Retorno da consulta de ${formatInstant(origin.scheduledAt, timeZone, "dd/MM/yyyy")}${origin.status === "canceled" ? " (cancelada)" : ""}`
+            : a.originAppointmentId
+              ? "Retorno ligado a uma consulta"
+              : "Retorno sem consulta de origem"}
+        </p>
+      )
+    }
 
     {
       situation.length > 0 && (
