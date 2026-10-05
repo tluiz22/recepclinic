@@ -374,8 +374,8 @@ novo não tem). Etapas (cada uma com `npm test`, `test:db`, `check`, `build` e C
   primeiro; sem aba de Métricas liberada, o menu Métricas some até para o Administrador. 12 testes
   unitários e 11 de banco novos.
 - **F3.9 — WhatsApp e rotinas** (antes F3.8): conexão e templates, conversas, mensagens e funil;
-  lembrete e reenvios; resumo do dia e execuções das rotinas; achados 4–5 da F1. Divisão a
-  combinar com o cliente ao começar; proposta: **F3.9a** WhatsApp (conexão e templates por
+  lembrete e reenvios; resumo do dia e execuções das rotinas; achados 4–5 da F1. Dividida em
+  três partes (cliente, 05/out): **F3.9a** WhatsApp (conexão e templates por
   clínica, estado da conversa e pausa da recepção, registro das mensagens com situação da entrega,
   repetidas da Meta e janela de 24h, funil); **F3.9b** lembrete e reenvios (quem recebe no fuso e
   hora da clínica, botões "Enviar"/"Reenviar lembrete", reenvio automático sem resposta, reenvio
