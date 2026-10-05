@@ -38,7 +38,16 @@ export type AgendaAppointment = {
 
 export type AgendaItem =
   | { kind: "appointment"; start: Date; end: Date; appointment: AgendaAppointment }
-  | { kind: "group"; start: Date; end: Date; agendaName: string; serviceName: string; locationName: string; appointments: AgendaAppointment[] }
+  | {
+      kind: "group";
+      start: Date;
+      end: Date;
+      agendaId: string;
+      agendaName: string;
+      serviceName: string;
+      locationName: string;
+      appointments: AgendaAppointment[];
+    }
   | { kind: "block"; start: Date; end: Date; agendaName: string; block: ScheduleBlock };
 
 const COLUMNS = `id, agenda_id, service_id, scheduled_at, duration_minutes, status, is_group_session, series_id, home_visit_address,
@@ -121,6 +130,11 @@ export async function getAgendaAppointment(db: DbClient, clinicId: string, id: s
   return row ? toAgendaAppointment(row) : null;
 }
 
+/** Agenda de um item do dia (para as colunas por agenda). */
+export function itemAgendaId(item: AgendaItem): string {
+  return item.kind === "appointment" ? item.appointment.agendaId : item.kind === "group" ? item.agendaId : item.block.agendaId;
+}
+
 /**
  * Itens de um dia em ordem de horário: atendimentos, turmas (um item por
  * agenda, serviço e horário) e bloqueios. Cancelados ficam, apagados.
@@ -140,6 +154,7 @@ export function buildDayItems(appointments: AgendaAppointment[], blocks: (Schedu
         kind: "group",
         start: appointment.scheduledAt,
         end: appointment.endsAt,
+        agendaId: appointment.agendaId,
         agendaName: appointment.agendaName,
         serviceName: appointment.serviceName,
         locationName: appointment.locationName,

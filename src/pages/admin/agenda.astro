@@ -13,7 +13,7 @@ import Icon from "../../components/admin/Icon.astro";
 import { addDays, formatCalendarDate, formatInstant, isCalendarDate, todayIn } from "../../lib/clinicTime";
 import { createUserClient } from "../../lib/data/clients";
 import { loadAgendaScope } from "../../lib/data/agenda/scope";
-import { buildDayItems, listAgendaAppointments, listAgendaBlocks, listNoShowStats } from "../../lib/data/agenda/view";
+import { buildDayItems, itemAgendaId, listAgendaAppointments, listAgendaBlocks, listNoShowStats } from "../../lib/data/agenda/view";
 import { activeWaitlistAppointmentIds } from "../../lib/data/waitlist/entries";
 import { listPreparationResendable } from "../../lib/data/whatsapp/preparation";
 import { listReminderActions } from "../../lib/data/whatsapp/reminders";
@@ -45,14 +45,21 @@ const [reminderActions, preparationResendable, onWaitlist, noShows] = await Prom
 ]);
 
 const vocabulary = vocabularyFor(clinic.clinicProfile);
-const showAgenda = !scope.selectedAgendaId && scope.agendas.length > 1;
+// "Todas as agendas" com mais de uma: uma coluna por agenda, lado a lado
+// (cliente, 05/out/2026). Agenda desativada só aparece se tiver algo no dia.
+const byColumn = !scope.selectedAgendaId && scope.agendas.length > 1;
+const columns = byColumn
+  ? scope.agendas
+      .map((agenda) => ({ ...agenda, items: items.filter((item) => itemAgendaId(item) === agenda.id) }))
+      .filter((column) => column.isActive || column.items.length > 0)
+  : [{ id: scope.selectedAgendaId ?? "", name: "", isActive: true, items }];
 const returnTo = `/admin/agenda?date=${date}`;
 const time = (d: Date) => formatInstant(d, clinic.timezone, "HH:mm");
 const cardProps = (a: (typeof appointments)[number]) => ({
   appointment: a,
   timeZone: clinic.timezone,
   now,
-  showAgenda,
+  showAgenda: false,
   vocabulary,
   returnTo,
   reminderAction: reminderActions.get(a.id),
@@ -85,9 +92,13 @@ const cardProps = (a: (typeof appointments)[number]) => ({
   <p class="mt-2 text-sm capitalize text-slate-600">{formatCalendarDate(date, "EEEE, d 'de' MMMM 'de' yyyy")}</p>
   <FlashMessage />
 
-  <div class="mt-4 flex flex-col gap-3">
+  <div class={byColumn ? "-mx-4 mt-4 flex gap-3 overflow-x-auto px-4 pb-2" : "mt-4"}>
     {
-      items.map((item) =>
+      columns.map((column) => (
+        <section class={byColumn ? "flex w-80 shrink-0 flex-col gap-3" : "flex flex-col gap-3"}>
+          {byColumn && <h2 class="rounded-md bg-slate-100 px-3 py-2 text-sm font-semibold text-slate-800">{column.name}</h2>}
+    {
+      column.items.map((item) =>
         item.kind === "appointment" ? (
           <AppointmentCard {...cardProps(item.appointment)} />
         ) : item.kind === "group" ? (
@@ -103,7 +114,6 @@ const cardProps = (a: (typeof appointments)[number]) => ({
             </p>
             <p class="text-sm text-slate-500">
               {item.locationName}
-              {showAgenda ? ` · ${item.agendaName}` : ""}
             </p>
             <div class="mt-3 flex flex-col gap-2">
               {item.appointments.map((a) => (
@@ -121,13 +131,15 @@ const cardProps = (a: (typeof appointments)[number]) => ({
             </div>
             <p class="mt-2 text-sm text-slate-600">
               {item.block.reason}
-              {showAgenda ? ` · ${item.agendaName}` : ""}
             </p>
           </Card>
         ),
       )
     }
-    {items.length === 0 && <Card class="text-center text-slate-500">Nenhum atendimento neste dia.</Card>}
+          {column.items.length === 0 && <Card class="text-center text-sm text-slate-500">{byColumn ? "Nenhum atendimento." : "Nenhum atendimento neste dia."}</Card>}
+        </section>
+      ))
+    }
   </div>
   <ConfirmDeleteDialog />
 </AdminLayout>

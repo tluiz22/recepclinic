@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { parseSlot, slotValue } from "../../agendaSlot";
-import { buildDayItems, isFrequentNoShow, monthGrid, weekStart, type AgendaAppointment } from "./view";
+import { buildDayItems, isFrequentNoShow, itemAgendaId, monthGrid, weekStart, type AgendaAppointment } from "./view";
 
 const at = (time: string) => new Date(`2031-03-10T${time}:00-03:00`);
 const appointment = (overrides: Partial<AgendaAppointment>): AgendaAppointment => ({
@@ -37,6 +37,8 @@ describe("dia da agenda (F4.5)", () => {
     );
     expect(items.map((i) => i.kind)).toEqual(["group", "group", "block", "appointment"]);
     expect(items[0].kind === "group" && items[0].appointments).toHaveLength(2);
+    // Colunas por agenda (cliente, 05/out): cada item sabe a sua agenda.
+    expect(items.map(itemAgendaId)).toEqual(["agenda", "outra", "agenda", "agenda"]);
   });
 });
 

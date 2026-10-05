@@ -561,6 +561,10 @@ Vocabulário pelo perfil da clínica.
   assumidos (revisáveis): comparecimento também no cartão da Agenda (no piloto, só em Consultas);
   a semana começa na segunda; o Mês mostra quantos atendimentos e marca feriado e bloqueio.
   5 testes unitários e 3 de banco novos.
+  **Ajuste pedido na validação (cliente, 05/out): uma coluna por agenda no Dia.** Com "Todas as
+  agendas", o Dia mostra as agendas lado a lado, cada uma numa coluna com o nome no topo e os
+  atendimentos de cima para baixo (no celular, as colunas rolam para o lado); agenda desativada só
+  aparece se tiver algo no dia. A Semana continua com os 7 dias em colunas (decisão do cliente).
 - **F4.5 — Agenda I:** dia, semana e mês com a escolha da agenda; marcar, remarcar, cancelar;
   presença e comparecimento; lembrete e preparo; lista de espera.
 - **F4.6 — Agenda II:** bloqueios, cancelamento do dia com link de remarcação, séries (D9).
