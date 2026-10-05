@@ -313,6 +313,31 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"clinic_features": {
+                  Row: {
+                    "clinic_id": string,"enabled_at": string,"enabled_by": string | null,"feature_key": string
+                  }
+                  Insert: {
+                    "clinic_id": string,"enabled_at"?: string,"enabled_by"?: string | null,"feature_key": string
+                  }
+                  Update: {
+                    "clinic_id"?: string,"enabled_at"?: string,"enabled_by"?: string | null,"feature_key"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "clinic_features_clinic_id_fkey"
+      columns: ["clinic_id"]
+isOneToOne: false
+      referencedRelation: "clinics"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "clinic_features_feature_key_fkey"
+      columns: ["feature_key"]
+isOneToOne: false
+      referencedRelation: "features"
+      referencedColumns: ["key"]
+    }
+                  ]
                 },"clinic_holidays": {
                   Row: {
                     "clinic_id": string,"created_at": string,"date": string,"description": string,"id": string
@@ -464,6 +489,19 @@ isOneToOne: false
       referencedRelation: "clinics"
       referencedColumns: ["id"]
     }
+                  ]
+                },"features": {
+                  Row: {
+                    "area": string,"depends_on": (string)[],"key": string,"label": string,"sort_order": number
+                  }
+                  Insert: {
+                    "area": string,"depends_on"?: (string)[],"key": string,"label": string,"sort_order": number
+                  }
+                  Update: {
+                    "area"?: string,"depends_on"?: (string)[],"key"?: string,"label"?: string,"sort_order"?: number
+                  }
+                  Relationships: [
+                    
                   ]
                 },"insurance_plans": {
                   Row: {
@@ -1021,6 +1059,9 @@ isOneToOne: false
 { Args: { "p_clinic_id": string,"p_query": string }; Returns: {
               "id": string,"name": string,"score": number
             }[]
+                           },
+"set_clinic_features":
+{ Args: { "p_clinic_id": string,"p_features": (string)[] }; Returns: undefined
                            },
 "set_whatsapp_access_token":
 { Args: { "p_clinic_id": string,"p_token": string }; Returns: undefined

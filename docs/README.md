@@ -14,7 +14,7 @@
 >   - **F3 em andamento** (acesso ao banco e contexto da clínica): divisão em etapas aprovada em
 >     04/out (F3.1 base técnica, F3.2 contexto da clínica, F3.3 credencial limitada, F3.4–F3.9
 >     acesso por domínio; ver [`plano.md`](plano.md)). As telas só são ligadas ao schema novo na
->     F4. **F3.1 a F3.7 concluídas** (tipos do banco, variáveis de ambiente, datas com fuso;
+>     F4. **F3.1 a F3.8 concluídas** (tipos do banco, variáveis de ambiente, datas com fuso;
 >     contexto da clínica, papéis da D6 e registro das leituras do Suporte; credencial limitada à
 >     clínica e service role presa a um arquivo; acesso à configuração, com a decisão de que a
 >     sobreposição de horários vale por agenda; acesso a pacientes, com os achados 1–3 da F1
@@ -23,8 +23,9 @@
 >     sair e consultar a lista de espera, com inclusão também pelo painel; F3.7b: motor de ofertas
 >     da lista, com o envio do WhatsApp ligado na F6/F7). **Decisão D11 (05/out): matriz de
 >     acesso por clínica**, liberada pelo Administrador do sistema; o básico do consultório sempre
->     ligado. **Próxima etapa: F3.8** (matriz de acesso no banco, no contexto e nas rotas); depois
->     F3.9 (WhatsApp e rotinas, com reenvios e achados 4–5 da F1).
+>     ligado. **F3.8 concluída** (matriz no banco, com travas; no contexto e nas rotas; tela na F4).
+>     **Próxima etapa: F3.9** (WhatsApp e rotinas, com reenvios e achados 4–5 da F1; divisão a
+>     combinar).
 >     Para rodar o banco: abrir o OrbStack, `npm run db:start`, `npm run db:reset` (carrega os
 >     dados de teste) e `npm run test:db`.
 > - **Frente paralela, o site** `www.recepclinic.com.br`: [`site-plano.md`](site-plano.md), etapas

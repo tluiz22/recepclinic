@@ -1,6 +1,7 @@
 import { localDateOf } from "../../clinicTime";
 import type { Enums } from "../../supabase/database.types";
 import type { DbClient } from "../clients";
+import { hasFeature } from "../features";
 import { DataError, unwrap } from "../errors";
 import { rescheduleAppointment } from "../agenda/appointments";
 import { getFreeSlots, getGroupSessions, getNextAvailableDates, loadSchedulingPlan, type SchedulingPlan } from "../agenda/slots";
@@ -120,6 +121,8 @@ export type WaitlistRunTotals = { expired: number; closedEntries: number; offere
 
 export async function processWaitlist(db: DbClient, clinicId: string, send: OfferSender, now: Date = new Date()): Promise<WaitlistRunTotals> {
   const totals: WaitlistRunTotals = { expired: 0, closedEntries: 0, offered: 0, skipped: 0, closedOpenings: 0 };
+  // Lista de espera não liberada para a clínica (D11): nada a fazer.
+  if (!(await hasFeature(db, clinicId, "waitlist"))) return totals;
   totals.expired = await expireOffers(db, clinicId, now);
   totals.closedEntries = await closePastEntries(db, clinicId, now);
 

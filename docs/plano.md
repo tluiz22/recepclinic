@@ -352,6 +352,27 @@ novo não tem). Etapas (cada uma com `npm test`, `test:db`, `check`, `build` e C
   domiciliar, séries, convênios, lista de espera, hora do lembrete, contatos do resumo); acesso do
   Administrador do sistema para listar as clínicas e ler e gravar a matriz; dados de teste com
   tudo liberado. A tela da matriz é da F4; bot e envios checam os itens na F6/F7.
+- **F3.8 — concluída em 05/out.** Itens da matriz em `src/lib/features.ts` (17 itens: agenda,
+  WhatsApp e métricas aba a aba, com as dependências do bot) e na tabela `features` (um teste
+  confere que são iguais). Migração `20261005120000`: itens liberados por clínica
+  (`clinic_features`, com quem liberou e quando; o que sai fica no registro do Suporte), gravados
+  só pela função `set_clinic_features` (Administrador do sistema; recusa item sem o item de que
+  depende) e lidos pela equipe e pelo bot da própria clínica; **travas no banco**: com o item
+  desligado não se cadastra serviço de exame, local domiciliar, convênio (plano, exceção, plano do
+  paciente) nem contato do resumo, não se marca exame, domiciliar ou série e não se entra na lista
+  de espera, nem chamando a API direto (erro `not_enabled` na camada de acesso). Desativar o que
+  já existe, cancelar e registrar comparecimento continuam livres. O contexto da clínica traz os
+  itens liberados e o middleware barra a rota (e a aba, pelo `?tab=`) de item desligado, para
+  todos os papéis e para o Suporte. Métricas (muda a D6): o Administrador da clínica precisa de
+  alguma aba liberada; o Profissional só entra com "Métricas pessoais", e o escopo é a própria
+  agenda (`metricsScope`, `ownAgendaIds`). Na camada pronta: o motor da lista de espera não roda
+  sem o item; o cancelamento pela clínica só gera link de remarcação com o bot liberado. Acesso do
+  Administrador do sistema: clínicas com os itens liberados, gravar a matriz e o histórico de
+  mudanças (`src/lib/data/features.ts`). Dados de teste e clínicas dos testes com tudo liberado
+  (`createClinic(nome, itens)` escolhe outros). Padrões assumidos (revisáveis): o Suporte, ao
+  abrir uma clínica, vê só o que ela tem liberado; item ligado de novo mantém quem o liberou
+  primeiro; sem aba de Métricas liberada, o menu Métricas some até para o Administrador. 12 testes
+  unitários e 11 de banco novos.
 - **F3.9 — WhatsApp e rotinas** (antes F3.8): conexão e templates, conversas, mensagens e funil;
   lembrete e reenvios; resumo do dia e execuções das rotinas; achados 4–5 da F1. Divisão a
   combinar com o cliente ao começar.

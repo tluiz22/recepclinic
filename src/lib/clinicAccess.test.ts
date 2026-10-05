@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import type { FeatureKey } from "./features";
 import {
   areaOfPath,
   canAccessArea,
@@ -110,12 +111,18 @@ describe("papéis e áreas do painel (D6)", () => {
     expect(canAccessArea(support, "settings")).toBe(true);
   });
 
-  it("Métricas e relatórios: Administrador e Profissional", () => {
+  it("Métricas e relatórios (D11): Administrador com aba liberada; Profissional só com as métricas pessoais", () => {
     expect(areaOfPath("/admin/metricas")).toBe("metrics");
     expect(areaOfPath("/admin/relatorios/x")).toBe("metrics");
-    expect(canAccessArea(as("admin"), "metrics")).toBe(true);
-    expect(canAccessArea(as("professional"), "metrics")).toBe(true);
-    expect(canAccessArea(as("reception"), "metrics")).toBe(false);
+    const tabs: FeatureKey[] = ["metrics_overview"];
+    const personal: FeatureKey[] = ["metrics_overview", "metrics_personal"];
+    expect(canAccessArea({ ...as("admin"), features: tabs }, "metrics")).toBe(true);
+    expect(canAccessArea({ ...as("admin"), features: [] }, "metrics")).toBe(false);
+    expect(canAccessArea({ ...as("professional"), features: tabs }, "metrics")).toBe(false);
+    expect(canAccessArea({ ...as("professional"), features: personal }, "metrics")).toBe(true);
+    expect(canAccessArea({ ...as("professional"), features: ["metrics_personal"] }, "metrics")).toBe(false);
+    expect(canAccessArea({ ...as("reception"), features: personal }, "metrics")).toBe(false);
+    expect(canAccessArea({ ...support, features: tabs }, "metrics")).toBe(true);
   });
 
   it("o resto é de todos os papéis; prefixo parecido não conta", () => {

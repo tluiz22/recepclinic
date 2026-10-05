@@ -13,6 +13,8 @@ const CLINIC_B = "0b000000-0000-4000-8000-000000000001"; // Odonto Exemplo
 // - clinic_usage_monthly: só gatilhos gravam; o Suporte não altera.
 // - platform_access_log: leituras do Suporte (F3.2); como o registro das
 //   alterações, sobrevive à exclusão da clínica e só a função grava.
+// - features: lista dos itens da matriz de acesso (D11), igual para todas as
+//   clínicas (sem clinic_id); só a migração grava.
 const NO_DIRECT_FK = new Set(["platform_audit_log", "platform_access_log"]);
 const NO_AUDIT_TRIGGER = new Set(["platform_audit_log", "platform_access_log", "clinic_usage_monthly"]);
 const NOT_IN_DATA_SWEEP = new Set(["platform_audit_log"]);
@@ -171,7 +173,7 @@ describe("varredura de isolamento (dados de teste)", () => {
   });
 
   it("todas as tabelas do banco entraram na varredura ou têm exceção registrada", () => {
-    const covered = new Set([...dataTables, ...NOT_IN_DATA_SWEEP, "platform_staff"]);
+    const covered = new Set([...dataTables, ...NOT_IN_DATA_SWEEP, "platform_staff", "features"]);
     expect(allTables.filter((name) => !covered.has(name))).toEqual([]);
   });
 });

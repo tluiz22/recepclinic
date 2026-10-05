@@ -58,10 +58,23 @@ export function clinicServiceClient(clinicId: string): SupabaseClient {
   });
 }
 
-export async function createClinic(name: string): Promise<string> {
+/**
+ * Clínica de teste. Por padrão com todos os itens da matriz de acesso
+ * liberados (D11); `features` escolhe outros (lista vazia = só o básico).
+ */
+export async function createClinic(name: string, features?: string[]): Promise<string> {
   const { data, error } = await adminClient().from("clinics").insert({ name }).select("id").single();
   if (error) throw error;
-  return data.id as string;
+  const id = data.id as string;
+  let keys = features;
+  if (!keys) {
+    const { data: all, error: catalogError } = await adminClient().from("features").select("key");
+    if (catalogError) throw catalogError;
+    keys = all.map((row) => row.key as string);
+  }
+  const { error: featureError } = await adminClient().rpc("set_clinic_features", { p_clinic_id: id, p_features: keys });
+  if (featureError) throw featureError;
+  return id;
 }
 
 export async function addMember(clinicId: string, userId: string, roles: string[]): Promise<void> {

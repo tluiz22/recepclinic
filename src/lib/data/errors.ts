@@ -14,6 +14,8 @@ export type DataErrorCode =
   | "forbidden"
   /** Conflito de agenda (horários sobrepostos). */
   | "conflict"
+  /** Item da matriz de acesso não liberado para a clínica (D11). */
+  | "not_enabled"
   /** Falha inesperada do banco ou da rede. */
   | "unexpected";
 
@@ -30,12 +32,15 @@ export class DataError extends Error {
   }
 }
 
-type PostgrestLikeError = { code?: string; message?: string; details?: string | null };
+type PostgrestLikeError = { code?: string; message?: string; details?: string | null; hint?: string | null };
 
 /** Traduz o erro do supabase-js para DataError. */
 export function fromDbError(error: unknown, context: string): DataError {
-  const { code = "", message = "" } = (error ?? {}) as PostgrestLikeError;
+  const { code = "", message = "", hint } = (error ?? {}) as PostgrestLikeError;
   const say = (text: string) => `${context}: ${text}`;
+  if (code === "P0001" && hint?.startsWith("feature_disabled:")) {
+    return new DataError("not_enabled", say(message), {}, { cause: error });
+  }
   switch (code) {
     case "23505":
       return new DataError("duplicate", say("já existe um cadastro igual"), {}, { cause: error });

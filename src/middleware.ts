@@ -1,5 +1,5 @@
 import { defineMiddleware } from "astro:middleware";
-import { ACTIVE_CLINIC_COOKIE, activeClinicCookieOptions, areaOfPath, canAccessArea } from "./lib/clinicAccess";
+import { ACTIVE_CLINIC_COOKIE, activeClinicCookieOptions, canAccessPath } from "./lib/clinicAccess";
 import { createUserClient } from "./lib/data/clients";
 import { loadClinicContext, logPlatformAccess } from "./lib/data/clinicContext";
 import { platformEnv } from "./lib/env";
@@ -79,7 +79,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
     cookies.set(ACTIVE_CLINIC_COOKIE, clinic.clinicId, activeClinicCookieOptions(url));
   }
 
-  if (!canAccessArea(clinic, areaOfPath(url.pathname))) {
+  if (!canAccessPath(clinic, url.pathname, url.searchParams)) {
     return isApi ? json(403, { error: "forbidden" }) : redirect("/admin/dashboard?aviso=acesso_negado");
   }
 

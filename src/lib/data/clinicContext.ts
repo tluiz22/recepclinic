@@ -1,4 +1,5 @@
 import { chooseActiveClinic, type ClinicContext, type Membership } from "../clinicAccess";
+import { isFeatureKey } from "../features";
 import type { DbClient } from "./clients";
 
 // Contexto da clínica de cada requisição do painel (F3.2): lido com o login da
@@ -43,7 +44,7 @@ export async function loadClinicContext(
   if (choice.kind === "choose") return { status: "choose_clinic" };
 
   const { clinicId } = choice;
-  const [clinic, settings, agendas] = await Promise.all([
+  const [clinic, settings, agendas, features] = await Promise.all([
     db.from("clinics").select("id, name, status").eq("id", clinicId).maybeSingle().then((r) => check("clínica", r)),
     db
       .from("clinic_settings")
@@ -52,6 +53,7 @@ export async function loadClinicContext(
       .maybeSingle()
       .then((r) => check("configuração", r)),
     db.from("agendas").select("id").eq("clinic_id", clinicId).order("name").then((r) => check("agendas", r)),
+    db.from("clinic_features").select("feature_key").eq("clinic_id", clinicId).then((r) => check("matriz de acesso", r)),
   ]);
 
   if (!clinic || !settings) {
@@ -76,6 +78,7 @@ export async function loadClinicContext(
       roles: memberships.find((membership) => membership.clinicId === clinicId)?.roles ?? [],
       isPlatformStaff,
       agendaIds: (agendas ?? []).map((agenda) => agenda.id),
+      features: (features ?? []).map((row) => row.feature_key).filter(isFeatureKey),
     },
   };
 }

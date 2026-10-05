@@ -1,4 +1,5 @@
 import type { DbClient } from "../clients";
+import { hasFeature } from "../features";
 import { cleanText, unwrap, unwrapOne, Validation } from "../errors";
 import { cancelAppointments, listAppointmentsBetween, type Appointment } from "./appointments";
 import { createRebookingLink, type BookingLink } from "./links";
@@ -6,8 +7,9 @@ import { createRebookingLink, type BookingLink } from "./links";
 // Bloqueios por agenda e cancelamento do dia pela clínica (Fases 12 e 13 do
 // piloto). O bloqueio é criado em duas etapas na tela: primeiro a lista dos
 // atendimentos atingidos, depois a escolha de cancelar ou não. Cancela-se
-// exatamente a lista mostrada (não é recalculada). Cada cancelado ganha um
-// link de remarcação (2 dias); o aviso pelo WhatsApp entra com o bot (F6/F7).
+// exatamente a lista mostrada (não é recalculada). Com o bot liberado (D11),
+// cada cancelado ganha um link de remarcação (2 dias); o aviso pelo WhatsApp
+// entra com o bot (F6/F7).
 // Editar não pergunta de novo pelos atendimentos (como no piloto); remover
 // não apaga (fica o histórico).
 
@@ -82,14 +84,18 @@ async function cancelWithLinks(
   now: Date,
 ): Promise<CanceledWithLink[]> {
   const { canceled } = await cancelAppointments(db, clinicId, appointmentIds, { channel: "admin", trailChannel, actorId }, now);
+  // O link de remarcação é enviado pelo WhatsApp: só com o bot liberado (D11).
+  const withLinks = canceled.length > 0 && (await hasFeature(db, clinicId, "whatsapp_bot"));
   const result: CanceledWithLink[] = [];
   for (const appointment of canceled) {
     let rebookingLink: BookingLink | null = null;
-    try {
-      rebookingLink = await createRebookingLink(db, clinicId, appointment, now);
-    } catch (error) {
-      // Melhor esforço, como no piloto: falha num link não desfaz os cancelamentos.
-      console.error("[bloqueio] não gerou link de remarcação", appointment.id, error);
+    if (withLinks) {
+      try {
+        rebookingLink = await createRebookingLink(db, clinicId, appointment, now);
+      } catch (error) {
+        // Melhor esforço, como no piloto: falha num link não desfaz os cancelamentos.
+        console.error("[bloqueio] não gerou link de remarcação", appointment.id, error);
+      }
     }
     result.push({ appointment, rebookingLink });
   }

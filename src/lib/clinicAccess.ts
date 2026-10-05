@@ -1,3 +1,4 @@
+import { FEATURES, metricsScope, requiredFeature, type FeatureKey } from "./features";
 import type { Enums } from "./supabase/database.types";
 
 // Clínica ativa, papéis e áreas do painel (D6). Regras puras; quem consulta o
@@ -40,6 +41,8 @@ export type ClinicContext = {
   isPlatformStaff: boolean;
   /** Agendas da clínica ativa que a pessoa pode ver (D6, acesso por agenda). */
   agendaIds: string[];
+  /** Itens da matriz de acesso liberados para a clínica ativa (D11). */
+  features: FeatureKey[];
 };
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -81,6 +84,8 @@ export function chooseActiveClinic(input: {
 }
 
 type RoleHolder = Pick<ClinicContext, "roles" | "isPlatformStaff">;
+/** Sem `features`, nenhum item da matriz está liberado. */
+type AccessHolder = RoleHolder & { features?: readonly FeatureKey[] };
 
 /** Tem algum dos papéis na clínica ativa. O Suporte vale por todos, como no banco. */
 export function hasRole(context: RoleHolder, ...roles: ClinicRole[]): boolean {
@@ -90,7 +95,9 @@ export function hasRole(context: RoleHolder, ...roles: ClinicRole[]): boolean {
 // Áreas do painel com acesso restrito (D6). O resto (início, agenda,
 // pacientes, resumo do dia, trilha) é de todos os papéis.
 //   - Configurações: só o Administrador.
-//   - Métricas e relatórios: Administrador e Profissional.
+//   - Métricas e relatórios (D11, muda a D6): o Administrador, com alguma aba
+//     liberada; o Profissional, só com as "Métricas pessoais do profissional"
+//     (e só a própria agenda, `metricsScope`).
 export type PanelArea = "settings" | "metrics" | "shared";
 
 const AREA_PREFIXES: [string, PanelArea][] = [
@@ -111,8 +118,19 @@ export function areaOfPath(pathname: string): PanelArea {
   return match ? match[1] : "shared";
 }
 
-export function canAccessArea(context: RoleHolder, area: PanelArea): boolean {
-  return hasRole(context, ...AREA_ROLES[area]);
+const METRICS_TABS = FEATURES.filter((feature) => feature.area === "metrics" && feature.key !== "metrics_personal").map((f) => f.key);
+
+export function canAccessArea(context: AccessHolder, area: PanelArea): boolean {
+  if (area !== "metrics") return hasRole(context, ...AREA_ROLES[area]);
+  const features = context.features ?? [];
+  return metricsScope({ ...context, features }) !== "none" && METRICS_TABS.some((key) => features.includes(key));
+}
+
+/** Pode abrir a rota: papel da área (D6) e item da matriz liberado para a clínica (D11). */
+export function canAccessPath(context: AccessHolder, pathname: string, searchParams: URLSearchParams): boolean {
+  if (!canAccessArea(context, areaOfPath(pathname))) return false;
+  const feature = requiredFeature(pathname, searchParams);
+  return feature === null || (context.features ?? []).includes(feature);
 }
 
 const ROLE_LABELS: Record<ClinicRole, string> = {

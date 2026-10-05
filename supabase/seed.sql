@@ -91,6 +91,8 @@ begin
   -- Clínica A: Clínica Exemplo Saúde (perfil Mista, vários profissionais)
   -- -------------------------------------------------------------------------
   insert into public.clinics (id, name) values (c_a, 'Clínica Exemplo Saúde');
+  -- Matriz de acesso (D11): a clínica de exemplo tem tudo liberado.
+  insert into public.clinic_features (clinic_id, feature_key) select c_a, key from public.features;
   update public.clinic_settings
     set profile = 'mixed', consultation_age_limit_years = 14, reminder_hour = 14,
         bot_payment_info = 'Pix, cartão de crédito e débito.',
@@ -296,6 +298,8 @@ begin
   -- Clínica B: Odonto Exemplo (perfil Adultos)
   -- -------------------------------------------------------------------------
   insert into public.clinics (id, name) values (c_b, 'Odonto Exemplo');
+  -- Matriz de acesso (D11): a clínica de exemplo tem tudo liberado.
+  insert into public.clinic_features (clinic_id, feature_key) select c_b, key from public.features;
   update public.clinic_settings set profile = 'adult', reminder_hour = 10 where clinic_id = c_b;
 
   insert into public.clinic_members (clinic_id, user_id, roles) values
