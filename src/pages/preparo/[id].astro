@@ -1,35 +1,41 @@
 ---
-// Preparo de um exame (Fase 18) — página pública, sem login, com o texto de
-// preparo formatado pela médica. É o link enviado ao paciente pelo WhatsApp
-// (Informações gerais, confirmação/remarcação/lembrete do exame): fora da
-// janela de 24h da Meta o texto formatado não pode ir na conversa, só um
-// template com este link.
+// Preparo de um exame (piloto, Fase 18; F5.3 no banco novo) — página pública,
+// sem login, com o preparo formatado pela clínica e a marca dela (F5.1). É o
+// link enviado pelo WhatsApp (fora da janela de 24h da Meta, o texto
+// formatado não vai na conversa, só um template com este link).
 //
-// Não mostra nenhum dado de paciente — só nome do exame e preparo. Usa o
-// cliente de serviço porque `exam_types` só é legível por usuário logado
-// (RLS), e lê só essas duas colunas. Exame inativo continua mostrando o
-// preparo: quem já tem um marcado ainda pode precisar dele.
+// A clínica vem do serviço (plataforma) e o resto usa a credencial limitada a
+// ela (D1). Não mostra nenhum dado de paciente, só o nome do exame e o
+// preparo. Exame inativo continua mostrando o preparo: quem já tem um marcado
+// ainda pode precisar dele.
 import "../../styles/global.css";
 import PublicFooter from "../../components/PublicFooter.astro";
-import { createServiceClient } from "../../lib/supabase/service";
+import PublicHeader from "../../components/public/PublicHeader.astro";
+import { createClinicServiceClient } from "../../lib/data/clinicService";
+import { getPublicClinicBrand, type PublicClinicBrand } from "../../lib/data/config/brand";
+import { getService, type Service } from "../../lib/data/config/services";
+import { DataError } from "../../lib/data/errors";
+import { resolveClinicByService } from "../../lib/data/platform";
 import { whatsAppTextToHtml } from "../../lib/whatsappFormat";
 
-const { id } = Astro.params;
-const isUuid = !!id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+const id = Astro.params.id ?? "";
+const clinicId = await resolveClinicByService(id);
 
-const { data: exam } = isUuid
-  ? await createServiceClient()
-      .from("exam_types")
-      .select("name, preparation_instructions")
-      .eq("id", id)
-      .maybeSingle()
-  : { data: null };
-
-const preparation = exam?.preparation_instructions?.trim() || null;
-
-if (!preparation) {
-  Astro.response.status = 404;
+let exam: Service | null = null;
+let brand: PublicClinicBrand | null = null;
+if (clinicId) {
+  const db = createClinicServiceClient(clinicId);
+  [exam, brand] = await Promise.all([
+    getService(db, clinicId, id).catch((error) => {
+      if (error instanceof DataError && error.code === "not_found") return null;
+      throw error;
+    }),
+    getPublicClinicBrand(db, clinicId),
+  ]);
 }
+
+const preparation = exam?.category === "exam" ? exam.preparationInstructions?.trim() || null : null;
+if (!preparation) Astro.response.status = 404;
 
 const pageTitle = exam && preparation ? `Preparo: ${exam.name}` : "Preparo não encontrado";
 ---
@@ -39,14 +45,15 @@ const pageTitle = exam && preparation ? `Preparo: ${exam.name}` : "Preparo não 
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="robots" content="noindex, nofollow" />
-    <title>{pageTitle} | Dra. Ana Karina Fernandes</title>
+    <title>{pageTitle} | {brand?.name ?? "RecepClinic"}</title>
   </head>
   <body class="flex min-h-screen flex-col bg-slate-50 text-slate-900">
+    {brand && <PublicHeader brand={brand} />}
     <main class="mx-auto w-full max-w-xl flex-1 px-4 py-10">
       {
         exam && preparation ? (
           <>
-            <p class="text-sm font-medium text-sky-700">Preparo para exame</p>
+            <p class="text-sm font-medium text-slate-500">Preparo para exame</p>
             <h1 class="mt-1 text-2xl font-bold text-slate-900">{exam.name}</h1>
             <div
               class="mt-6 whitespace-pre-line break-words rounded-md border border-slate-200 bg-white p-5 text-base leading-relaxed text-slate-800"
@@ -57,8 +64,7 @@ const pageTitle = exam && preparation ? `Preparo: ${exam.name}` : "Preparo não 
           <div class="rounded-md border border-slate-200 bg-white p-6 text-center">
             <h1 class="text-lg font-bold text-slate-900">Preparo não encontrado</h1>
             <p class="mt-2 text-sm text-slate-600">
-              Não há instruções de preparo para este exame. Em caso de dúvida, fale com a gente pelo
-              WhatsApp.
+              Não há instruções de preparo para este exame. Em caso de dúvida, fale com a clínica pelo WhatsApp.
             </p>
           </div>
         )

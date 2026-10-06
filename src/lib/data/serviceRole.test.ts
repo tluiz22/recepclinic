@@ -21,7 +21,6 @@ const ALLOWED = new Set([
 // Herdado do piloto, com a etapa em que sai.
 const LEGACY = new Map([
   ["src/lib/supabase/service.ts", "sai com o último caminho abaixo"],
-  ["src/pages/preparo/[id].astro", "F5 (páginas públicas)"],
   ["src/pages/api/whatsapp/webhook.ts", "F6 (bot)"],
   ["src/pages/api/cron/appointment-reminders.ts", "F7 (envios automáticos)"],
   ["src/pages/api/cron/daily-summary.ts", "F7 (envios automáticos)"],

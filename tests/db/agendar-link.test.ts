@@ -9,6 +9,7 @@ import {
   listLinkSlots,
   loadBookingPage,
 } from "../../src/lib/data/agenda/publicBooking";
+import { getService } from "../../src/lib/data/config/services";
 import { adminClient, clinicServiceClient, createClinic, deleteClinics } from "./helpers";
 import { asDb, at, codeOf, MON1, MON2, MON3, MON4, NOW, setupAgendaClinic, type AgendaFixture } from "./agendaFixture";
 
@@ -214,5 +215,18 @@ describe("link de agendamento na página pública", () => {
     const other = clinicServiceClient(otherClinic) as unknown as DbClient;
     expect(await codeOf(() => loadBookingPage(other, otherClinic, created.id, NOW))).toBe("not_found");
     expect(await codeOf(() => loadBookingPage(other, fixture.clinicId, created.id, NOW))).toBe("not_found");
+  });
+});
+
+describe("página pública do preparo (F5.3)", () => {
+  it("a credencial da clínica lê o preparo do exame; a de outra clínica não", async () => {
+    await adminClient()
+      .from("services")
+      .update({ preparation_instructions: "*Jejum* de 4 horas." })
+      .eq("id", fixture.ids.exame);
+    const exam = await getService(bot, fixture.clinicId, fixture.ids.exame);
+    expect(exam).toMatchObject({ name: "Exame", category: "exam", preparationInstructions: "*Jejum* de 4 horas." });
+    const other = clinicServiceClient(otherClinic) as unknown as DbClient;
+    expect(await codeOf(() => getService(other, fixture.clinicId, fixture.ids.exame))).toBe("not_found");
   });
 });

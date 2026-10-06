@@ -777,7 +777,7 @@ dias (regra do piloto).
 - **F5.2 — `/agendar` no banco novo:** marcar e remarcar pelo link, serviço do catálogo, "primeiro
   horário disponível" ou a agenda escolhida, turma, local, prazo do retorno, lista de espera;
   "Voltar para o site" só para a clínica que tem site.
-- **F5.2 — feita em 05/out (aguardando a validação do cliente).** `/agendar/[token]` e as rotas de
+- **F5.2 — concluída e validada pelo cliente em 06/out.** `/agendar/[token]` e as rotas de
   horários e de confirmar no banco novo, com a **credencial limitada à clínica do link** (saem da
   service role) e a marca da clínica (F5.1). Módulo `src/lib/data/agenda/publicBooking.ts`:
   agendas do link (a escolhida, a do atendimento remarcado ou todas as do serviço, no "primeiro
@@ -793,6 +793,11 @@ dias (regra do piloto).
   **A confirmação pelo WhatsApp fica para a F6** (a página não promete mais a mensagem). Dados de
   teste: 4 links fixos, válidos por 30 dias (comentário no `seed.sql`). 8 testes de banco novos.
 - **F5.3 — `/preparo` no banco novo:** instruções de preparo do serviço de exame.
+- **F5.3 — feita em 06/out (aguardando a validação do cliente).** `/preparo/[id]` no banco novo: a
+  clínica vem do serviço e o preparo é lido com a **credencial limitada a ela** (sai da service
+  role), com a marca da clínica (F5.1). Mantido do piloto: nenhum dado de paciente, formatação do
+  WhatsApp (negrito, itálico), exame inativo continua mostrando o preparo; serviço que não é exame
+  ou sem preparo mostra "Preparo não encontrado" (404). 1 teste de banco novo.
 - **F5.4 — Link de remarcação na tela "Avisar":** a mensagem do cancelamento pela clínica passa a
   levar o link (o envio automático continua na F6).
 - **F5.5 — Domínio:** projeto na Vercel, banco na nuvem e `app.recepclinic.com.br` pela Cloudflare.
