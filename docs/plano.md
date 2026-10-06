@@ -23,8 +23,8 @@
 | F2 | Schema novo | concluída (04/out; 158 testes de banco) |
 | F3 | Acesso ao banco e contexto da clínica | concluída (05/out) |
 | F4 | Painel | concluída (05/out; validada pelo cliente) |
-| F5 | Páginas públicas e domínio | **em curso** (detalhada em 05/out) |
-| F6 | WhatsApp por clínica e bot | a detalhar |
+| F5 | Páginas públicas e domínio | concluída (06/out; validada pelo cliente) |
+| F6 | WhatsApp por clínica e bot | **próxima** (a detalhar) |
 | F7 | Envios automáticos por clínica | a detalhar |
 | F8 | Conexão self-service na Meta | a detalhar (depende da Meta) |
 | F9 | Operação e segurança | a detalhar |
@@ -811,12 +811,19 @@ dias (regra do piloto).
   automático continua na F6. 1 teste unitário e 1 de banco novos.
 - **F5.5 — Domínio:** projeto na Vercel, banco na nuvem e `app.recepclinic.com.br` pela Cloudflare.
 
-- **F5.5 — em curso (06/out).** Decisões do cliente (06/out): `app.recepclinic.com.br` serve o
-  **staging** (D8: Supabase Free numa organização própria, Vercel Hobby) até a F10, quando passa
-  para a produção e o staging vai para `teste.recepclinic.com.br`; o banco do staging tem só o
-  schema e o login do Suporte (clínicas de teste pela tela "Nova clínica"; o `seed.sql` fica no
-  local). Roteiro em [`staging.md`](staging.md); `scripts/criar-suporte.mjs` cria o login do
-  Suporte na nuvem e imprime o link de definir a senha (sem depender de e-mail).
+- **F5.5 — concluída e validada pelo cliente em 06/out.** Decisões do cliente (06/out):
+  `app.recepclinic.com.br` serve o **staging** (D8: Supabase Free na organização própria
+  "RecepClinic", projeto `recepclinic-staging` em São Paulo; Vercel Hobby, projeto `recepclinic`)
+  até a F10, quando passa para a produção e o staging vai para `teste.recepclinic.com.br`; o banco
+  do staging tem só o schema (26 migrações, sem o seed) e o login do Suporte; as clínicas de
+  teste são criadas pela tela "Nova clínica". DNS: CNAME `app` na Cloudflare, só DNS (certificado
+  da Vercel). Os modelos de e-mail do Supabase ficam para quando houver o provedor de e-mail (o
+  Supabase só deixa editar com SMTP próprio): até lá, "Esqueci minha senha" não funciona no
+  staging. O legacy JWT secret do Supabase (que assina a credencial limitada à clínica) **nunca
+  pode ser revogado**. Roteiro em [`staging.md`](staging.md); scripts `criar-suporte.mjs` (login
+  do Suporte com o link de definir a senha) e `trocar-email.mjs`. A tela de nova senha passou a
+  dizer o motivo da recusa do Auth (senha atual, fraca, link vencido). Conferido pelo cliente na
+  nuvem: login do Suporte, Nova clínica, logo e cor, e `/preparo` com a marca.
 
 ## F6 — WhatsApp por clínica e bot
 

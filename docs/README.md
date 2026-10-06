@@ -1,6 +1,6 @@
 # RecepClinic
 
-> **Estado atual (retomar daqui), 05/out/2026 (fim da sessão)**
+> **Estado atual (retomar daqui), 06/out/2026**
 >
 > - **Etapas 0 a 4 concluídas**: cópia isolada, [diagnóstico](diagnostico.md), [limites](limites.md),
 >   [arquitetura](arquitetura.md) (decisões D1–D11) e [plano](plano.md) (fases F0–F10).
@@ -16,19 +16,25 @@
 >     Remarcar, bloqueios, cancelar selecionados com "Avisar", séries); Pacientes; Resumo do Dia
 >     (com Aguardando remarcação e Envios) e trilha; Métricas. Detalhes e decisões de cada parte
 >     no [plano](plano.md).
->   - **Em curso: F5** — Páginas públicas e domínio, detalhada e aprovada em 05/out em cinco
->     partes (F5.1 marca da clínica, F5.2 `/agendar`, F5.3 `/preparo`, F5.4 link na tela "Avisar",
->     F5.5 domínio `app.recepclinic.com.br`). **F5.1 a F5.4 validadas; F5.5 (staging em `app.recepclinic.com.br`) em curso**, pelo roteiro [`staging.md`](staging.md). Decisões no [plano](plano.md).
+>   - **F5 concluída e validada pelo cliente em 06/out** (páginas públicas e domínio, cinco
+>     partes): marca da clínica (logo, cor com cores prontas, site) nas páginas públicas;
+>     `/agendar` e `/preparo` no banco novo com a credencial limitada à clínica (nenhuma página
+>     pública usa mais a service role); link de remarcação na mensagem da tela "Avisar";
+>     **staging no ar em `https://app.recepclinic.com.br`** (roteiro em [`staging.md`](staging.md)).
+>   - **Próxima: F6** — WhatsApp por clínica e bot. Detalhar com o cliente antes de começar
+>     (precisa do chip de testes do RecepClinic).
 >   - **Já combinado para as próximas fases:** F6 — envio pelo WhatsApp (lembrete, preparo,
 >     avisos), cancelamento pela clínica com aviso automático e link (sai a tela "Avisar"), abas
 >     Funil do bot e Retomar contato, aba "Mensagens"; F7 — rotinas automáticas (lembrete, resumo
 >     do dia, ofertas da lista de espera, extensão das séries sem fim).
->   - **Ambiente local:** a agenda "Thiago - TI", criada na validação, faz 2 testes de banco
->     falharem até um `npm run db:reset`.
 >   - **Decidido em 05/out para depois:** aba **"Mensagens"** em Configurações na **F6** (prévia no
 >     balão do WhatsApp; com o item "Mensagens personalizadas", o Administrador edita as mensagens de
 >     conversa e propõe os templates; D3b revista); envio dos templates personalizados pela API na
->     F8; envio do **logo** da clínica na F5.
+>     F8.
+>   - **Staging:** `https://app.recepclinic.com.br` (Vercel publica a cada push na `main`);
+>     migrações novas vão com `npx supabase db push` (repositório ligado ao projeto
+>     `recepclinic-staging`); variáveis no `.env.staging` (fora do git). "Esqueci minha senha" só
+>     funciona lá depois do provedor de e-mail.
 >   - **Para rodar:** abrir o OrbStack, `npm run db:start`, `npm run db:reset` (dados de teste) e
 >     `npm run dev` com o `.env` local (ver "Painel local" no README da raiz); testes com `npm test`
 >     e `npm run test:db`.
@@ -42,7 +48,8 @@
 >   - comprar o chip de testes do RecepClinic (necessário na F6);
 >   - advogado para revisar as páginas legais (antes do 1º piloto).
 >   - provedor de e-mail (ex.: Resend) com o domínio `recepclinic.com.br` (antes do 1º piloto;
->     pedido de informações e convites na nuvem).
+>     convites, pedido de informações e "Esqueci minha senha" na nuvem; também vira o SMTP do
+>     Supabase, para os modelos de e-mail).
 > - **Triagem do piloto**: nenhum commit novo do piloto desde `aad94dd` até 05/out/2026.
 
 > **RecepClinic — a recepção inteligente da sua clínica.**
