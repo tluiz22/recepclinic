@@ -21,8 +21,9 @@
 >     `/agendar` e `/preparo` no banco novo com a credencial limitada à clínica (nenhuma página
 >     pública usa mais a service role); link de remarcação na mensagem da tela "Avisar";
 >     **staging no ar em `https://app.recepclinic.com.br`** (roteiro em [`staging.md`](staging.md)).
->   - **Próxima: F6** — WhatsApp por clínica e bot. Detalhar com o cliente antes de começar
->     (precisa do chip de testes do RecepClinic).
+>   - **Em curso: F6** — WhatsApp por clínica e bot, detalhada e aprovada em 06/out em sete
+>     partes (F6.1 conexão e webhook … F6.7 métricas do bot). **Próxima etapa: F6.1.** O número
+>     de testes do RecepClinic vai direto na Cloud API (sem o app do celular).
 >   - **Já combinado para as próximas fases:** F6 — envio pelo WhatsApp (lembrete, preparo,
 >     avisos), cancelamento pela clínica com aviso automático e link (sai a tela "Avisar"), abas
 >     Funil do bot e Retomar contato, aba "Mensagens"; F7 — rotinas automáticas (lembrete, resumo
@@ -42,15 +43,15 @@
 >   **sessão separada, na pasta `~/Documents/Desenvolvimento/recepclinic-site`** (nunca nesta pasta).
 >   **No ar** (conferido em 05/out), com `/privacidade` e `/termos`; DNS de `recepclinic.com.br` já
 >   na Cloudflare.
-> - **Depois do site**: cadastro como Tech Provider na Meta (ver "Frentes paralelas" no plano).
+> - **Meta**: verificação da empresa aprovada e app RecepClinic criado (06/out); faltam a análise
+>   do app e o Tech Provider (destravam a F8). Ver "Frentes paralelas" no plano.
 > - **Pendências do cliente**:
 >   - abrir o CNPJ (SLU, ME, Simples Nacional);
->   - comprar o chip de testes do RecepClinic (necessário na F6);
 >   - advogado para revisar as páginas legais (antes do 1º piloto).
 >   - provedor de e-mail (ex.: Resend) com o domínio `recepclinic.com.br` (antes do 1º piloto;
 >     convites, pedido de informações e "Esqueci minha senha" na nuvem; também vira o SMTP do
 >     Supabase, para os modelos de e-mail).
-> - **Triagem do piloto**: nenhum commit novo do piloto desde `aad94dd` até 05/out/2026.
+> - **Triagem do piloto**: nenhum commit novo do piloto desde `aad94dd` até 06/out/2026 (início da F6).
 
 > **RecepClinic — a recepção inteligente da sua clínica.**
 

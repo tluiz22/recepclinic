@@ -24,7 +24,7 @@
 | F3 | Acesso ao banco e contexto da clínica | concluída (05/out) |
 | F4 | Painel | concluída (05/out; validada pelo cliente) |
 | F5 | Páginas públicas e domínio | concluída (06/out; validada pelo cliente) |
-| F6 | WhatsApp por clínica e bot | **próxima** (a detalhar) |
+| F6 | WhatsApp por clínica e bot | **em curso** (detalhada em 06/out) |
 | F7 | Envios automáticos por clínica | a detalhar |
 | F8 | Conexão self-service na Meta | a detalhar (depende da Meta) |
 | F9 | Operação e segurança | a detalhar |
@@ -849,6 +849,24 @@ Suporte e enviada à Meta à mão até a F8; o padrão continua até a aprovaç�
 bloqueio com cancelamento mostram o aviso de que todos recebem a mensagem pelo WhatsApp, com o link
 de remarcação (texto da F4.6), e enviam sozinhos; sai a tela "Avisar" da F4.6.
 
+**Dividida em sete partes (cliente, 06/out),** cada uma com validação:
+- **F6.1 — Conexão e webhook:** número de testes do RecepClinic **direto na Cloud API** do app
+  RecepClinic, sem o app do celular (cliente, 06/out: o número é só de testes; a coexistência fica
+  para a F8); conexão cadastrada pelo Suporte na tela WhatsApp da clínica; webhook novo que
+  identifica a clínica pelo `phone_number_id`, confere a assinatura da Meta e registra mensagens e
+  situações de entrega.
+- **F6.2 — Envio e templates padrão:** envio pela conexão de cada clínica; templates padrão do
+  RecepClinic criados pela API na conta (WABA) do RecepClinic; envios do painel (lembrete, preparo)
+  e a confirmação depois de marcar pela página `/agendar`.
+- **F6.3 — Bot I (marcar):** menu pelo catálogo de serviços, textos pelo perfil, "com quem?" com
+  "primeiro horário disponível", link de agendar, retorno e exame.
+- **F6.4 — Bot II:** cancelar, remarcar, resposta ao lembrete, lista de espera, sessões de série,
+  "falar com a recepção" e pausa do bot.
+- **F6.5 — Cancelamento pela clínica automático:** aviso a todos com o link; sai a tela "Avisar".
+- **F6.6 — Aba "Mensagens":** prévia no balão e edição com "Mensagens personalizadas".
+- **F6.7 — Métricas do bot:** abas Funil do bot e Retomar contato.
+O código antigo do bot e do webhook sai conforme cada parte o substitui.
+
 ## F7 — Envios automáticos por clínica
 
 **Escopo:** lembrete, reenvio sem resposta, resumo do dia e lista de espera percorrendo as clínicas
@@ -889,7 +907,7 @@ para o modelo novo; acompanhamento das primeiras semanas.
 | Frente | Situação | Depende de | Destrava |
 |---|---|---|---|
 | **Site do RecepClinic** (`www.recepclinic.com.br`, repositório separado) | **no ar** (05/out, com `/privacidade` e `/termos`; DNS na Cloudflare): [`site-plano.md`](site-plano.md), sessão paralela | — | Tech Provider; páginas legais usadas pela F5 |
-| **Cadastro como Tech Provider na Meta** (verificação da empresa, app do RecepClinic, análise) | **pendente, a tratar depois da construção do site** | site no ar com política de privacidade e termos; CNPJ | F8 (e a conexão de números de outras clínicas) |
+| **Cadastro como Tech Provider na Meta** (verificação da empresa, app do RecepClinic, análise) | **em andamento**: verificação da empresa aprovada e app RecepClinic criado (cliente, 06/out); faltam a análise do app (App Review) e o Tech Provider com o Embedded Signup | site no ar com política de privacidade e termos; CNPJ | F8 (e a conexão de números de outras clínicas) |
 
 ## Pendências do cliente que afetam o plano
 
