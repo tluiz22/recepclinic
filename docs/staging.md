@@ -76,6 +76,8 @@
    node --env-file=.env.staging scripts/criar-suporte.mjs <seu e-mail> "<seu nome>"
    ```
 2. Abrir o link, escolher a senha e entrar em `https://app.recepclinic.com.br/admin/login`.
+   E-mail digitado errado no passo 1? `node --env-file=.env.staging scripts/trocar-email.mjs
+   <e-mail errado> <e-mail certo>` (a senha continua a mesma).
 3. Criar uma clínica de teste em **Nova clínica**, cadastrar um exame com preparo e abrir
    `https://app.recepclinic.com.br/preparo/<id do exame>`: a página com a marca da clínica
    confirma que a credencial limitada à clínica funciona na nuvem.
