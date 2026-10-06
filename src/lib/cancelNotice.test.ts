@@ -24,6 +24,16 @@ describe("aviso de cancelamento pelo WhatsApp (F4.6)", () => {
     expect(cancelNoticeText({ ...base, isContactSelf: true, contactName: "João Souza" })).toContain("cancelar o seu atendimento (Consulta)");
   });
 
+  it("com o link de remarcação: o link, até quando vale e 'se preferir, responda' (F5.4)", () => {
+    const text = cancelNoticeText({
+      ...base,
+      rebooking: { url: "https://app.recepclinic.com.br/agendar/abc", expiresAt: new Date("2026-10-08T17:30:00Z") },
+    });
+    expect(text).toContain("Pedimos desculpas pelo transtorno.\n\nPara escolher um novo horário, use o link (vale até 08/10 às 14:30):\nhttps://app.recepclinic.com.br/agendar/abc");
+    expect(text.endsWith("Se preferir, responda esta mensagem.")).toBe(true);
+    expect(text).not.toContain("combinarmos");
+  });
+
   it("abre a conversa com a mensagem escrita", () => {
     expect(whatsappMessageHref("+5584999990000", "Oi, tudo bem?")).toBe("https://wa.me/5584999990000?text=Oi%2C%20tudo%20bem%3F");
   });

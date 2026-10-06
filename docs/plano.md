@@ -793,13 +793,22 @@ dias (regra do piloto).
   **A confirmação pelo WhatsApp fica para a F6** (a página não promete mais a mensagem). Dados de
   teste: 4 links fixos, válidos por 30 dias (comentário no `seed.sql`). 8 testes de banco novos.
 - **F5.3 — `/preparo` no banco novo:** instruções de preparo do serviço de exame.
-- **F5.3 — feita em 06/out (aguardando a validação do cliente).** `/preparo/[id]` no banco novo: a
+- **F5.3 — concluída e validada pelo cliente em 06/out.** `/preparo/[id]` no banco novo: a
   clínica vem do serviço e o preparo é lido com a **credencial limitada a ela** (sai da service
   role), com a marca da clínica (F5.1). Mantido do piloto: nenhum dado de paciente, formatação do
   WhatsApp (negrito, itálico), exame inativo continua mostrando o preparo; serviço que não é exame
   ou sem preparo mostra "Preparo não encontrado" (404). 1 teste de banco novo.
 - **F5.4 — Link de remarcação na tela "Avisar":** a mensagem do cancelamento pela clínica passa a
   levar o link (o envio automático continua na F6).
+- **F5.4 — feita em 06/out (aguardando a validação do cliente).** A mensagem da tela **"Avisar"**
+  (bloqueio e "Cancelar selecionados") leva o **link de remarcação ainda válido** de cada
+  cancelado, com a validade e "Se preferir, responda esta mensagem" (cliente, 06/out): "…Pedimos
+  desculpas pelo transtorno. / Para escolher um novo horário, use o link (vale até 08/10 às
+  14:30): <link> / Se preferir, responda esta mensagem." Sem link válido (bot não liberado, link
+  vencido ou usado), fica a mensagem da F4.6 ("Responda esta mensagem…"). O endereço do link é o
+  mesmo em que a equipe usa o painel. Migração `20261006090000`:
+  `booking_links.canceled_appointment_id`, preenchido ao gerar o link de remarcação. O envio
+  automático continua na F6. 1 teste unitário e 1 de banco novos.
 - **F5.5 — Domínio:** projeto na Vercel, banco na nuvem e `app.recepclinic.com.br` pela Cloudflare.
 
 ## F6 — WhatsApp por clínica e bot

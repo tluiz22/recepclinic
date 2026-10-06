@@ -40,6 +40,8 @@ export type BookingLink = {
 };
 
 export type BookingLinkInput = Omit<BookingLink, "id" | "expiresAt" | "usedAt" | "returnDeadlineWaived" | "joinWaitlist" | "funnelSessionId"> & {
+  /** Link de remarcação: o atendimento cancelado pela clínica (F5.4). */
+  canceledAppointmentId?: string | null;
   returnDeadlineWaived?: boolean;
   joinWaitlist?: boolean;
   funnelSessionId?: string | null;
@@ -116,6 +118,7 @@ export async function createBookingLink(
     home_visit_address: input.homeVisitAddress?.trim() || null,
     join_waitlist: input.joinWaitlist ?? false,
     funnel_session_id: input.funnelSessionId ?? null,
+    canceled_appointment_id: input.canceledAppointmentId ?? null,
     expires_at: new Date(now.getTime() + input.ttlMs).toISOString(),
   };
   return toLink(unwrap(await db.from("booking_links").insert(row).select(COLUMNS).single(), "Link de agendamento"));
@@ -205,8 +208,36 @@ export async function createRebookingLink(
       returnDeadlineWaived: isReturnWithOrigin,
       contactPhone: patient.contacts.phone,
       homeVisitAddress: location.type === "home_visit" ? appointment.homeVisitAddress : null,
+      canceledAppointmentId: appointment.id,
       ttlMs: REBOOKING_LINK_TTL_MS,
     },
     now,
   );
+}
+
+/**
+ * Link de remarcação ainda válido de cada atendimento cancelado pela clínica
+ * (o mais novo), para a mensagem da tela "Avisar" (F5.4).
+ */
+export async function listValidRebookingLinks(
+  db: DbClient,
+  clinicId: string,
+  canceledAppointmentIds: string[],
+  now: Date = new Date(),
+): Promise<Map<string, BookingLink>> {
+  if (!canceledAppointmentIds.length) return new Map();
+  const rows = unwrap(
+    await db
+      .from("booking_links")
+      .select(`${COLUMNS}, canceled_appointment_id`)
+      .eq("clinic_id", clinicId)
+      .in("canceled_appointment_id", canceledAppointmentIds)
+      .is("used_at", null)
+      .gt("expires_at", now.toISOString())
+      .order("created_at", { ascending: false }),
+    "Links de remarcação",
+  ) as (Row & { canceled_appointment_id: string })[];
+  const result = new Map<string, BookingLink>();
+  for (const row of rows) if (!result.has(row.canceled_appointment_id)) result.set(row.canceled_appointment_id, toLink(row));
+  return result;
 }

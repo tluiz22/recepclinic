@@ -1,7 +1,8 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import type { DbClient } from "../../src/lib/data/clients";
 import { bookAppointment, getAppointment } from "../../src/lib/data/agenda/appointments";
-import { createBookingLink, type BookingLinkInput } from "../../src/lib/data/agenda/links";
+import { createBlock } from "../../src/lib/data/agenda/blocks";
+import { createBookingLink, listValidRebookingLinks, type BookingLinkInput } from "../../src/lib/data/agenda/links";
 import {
   confirmBookingLink,
   listLinkDates,
@@ -228,5 +229,25 @@ describe("página pública do preparo (F5.3)", () => {
     expect(exam).toMatchObject({ name: "Exame", category: "exam", preparationInstructions: "*Jejum* de 4 horas." });
     const other = clinicServiceClient(otherClinic) as unknown as DbClient;
     expect(await codeOf(() => getService(other, fixture.clinicId, fixture.ids.exame))).toBe("not_found");
+  });
+});
+
+describe("link de remarcação na mensagem da tela Avisar (F5.4)", () => {
+  it("o bloqueio que cancela liga o link ao atendimento; usado ou vencido, não aparece mais", async () => {
+    const { appointment } = await bookAppointment(asDb(fixture.admin), fixture.clinicId, {
+      patientId: fixture.ids.p1, serviceId: fixture.ids.consulta, agendaId: fixture.ids.agendaDra2, start: at(MON4, "08:00"), channel: "admin", actorId: fixture.admin.id,
+    }, NOW);
+    const { canceled } = await createBlock(asDb(fixture.admin), fixture.clinicId, {
+      agendaId: fixture.ids.agendaDra2, startsAt: at(MON4, "08:00"), endsAt: at(MON4, "09:00"), reason: "Congresso",
+      cancelAppointmentIds: [appointment.id], actorId: fixture.admin.id,
+    }, NOW);
+    const linkId = canceled[0].rebookingLink!.id;
+
+    const found = await listValidRebookingLinks(asDb(fixture.reception), fixture.clinicId, [appointment.id], NOW);
+    expect(found.get(appointment.id)).toMatchObject({ id: linkId, agendaId: fixture.ids.agendaDra2, patientId: fixture.ids.p1 });
+    // Vence em 2 dias.
+    expect((await listValidRebookingLinks(asDb(fixture.reception), fixture.clinicId, [appointment.id], new Date(NOW.getTime() + 3 * 86_400_000))).size).toBe(0);
+    await adminClient().from("booking_links").update({ used_at: NOW.toISOString() }).eq("id", linkId);
+    expect((await listValidRebookingLinks(asDb(fixture.reception), fixture.clinicId, [appointment.id], NOW)).size).toBe(0);
   });
 });
