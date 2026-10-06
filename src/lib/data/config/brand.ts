@@ -14,6 +14,20 @@ export const LOGO_TYPES: Record<string, string> = { "image/png": "png", "image/j
 /** Cor das páginas públicas quando a clínica não escolheu uma. */
 export const DEFAULT_BRAND_COLOR = "#0369A1";
 
+/** Cores prontas em Configurações › Clínica (cliente, 05/out/2026); "Outra" escolhe qualquer cor. */
+export const BRAND_COLOR_OPTIONS: { value: string; label: string }[] = [
+  { value: "#0369A1", label: "Azul" },
+  { value: "#1E3A8A", label: "Azul-marinho" },
+  { value: "#0F766E", label: "Verde-água" },
+  { value: "#15803D", label: "Verde" },
+  { value: "#7C3AED", label: "Roxo" },
+  { value: "#BE185D", label: "Rosa" },
+  { value: "#B91C1C", label: "Vermelho" },
+  { value: "#C2410C", label: "Laranja" },
+  { value: "#A16207", label: "Dourado" },
+  { value: "#334155", label: "Grafite" },
+];
+
 export type PublicClinicBrand = {
   name: string;
   logoUrl: string | null;

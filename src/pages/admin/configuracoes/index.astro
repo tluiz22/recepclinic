@@ -9,7 +9,7 @@ import ConfiguracoesTabs from "../../../components/admin/ConfiguracoesTabs.astro
 import FlashMessage from "../../../components/admin/FlashMessage.astro";
 import { HINT, INPUT, LABEL, PRIMARY_BUTTON } from "../../../components/admin/fieldStyles";
 import { createUserClient } from "../../../lib/data/clients";
-import { DEFAULT_BRAND_COLOR, LOGO_TYPES } from "../../../lib/data/config/brand";
+import { BRAND_COLOR_OPTIONS, DEFAULT_BRAND_COLOR, LOGO_TYPES } from "../../../lib/data/config/brand";
 import { CLINIC_PROFILES, getClinicSettings } from "../../../lib/data/config/clinic";
 import { BRAZIL_TIME_ZONES } from "../../../lib/timeZones";
 import { PROFILE_LABELS, vocabularyFor } from "../../../lib/vocabulary";
@@ -20,6 +20,7 @@ const hasBot = clinic.features.includes("whatsapp_bot");
 const zones = BRAZIL_TIME_ZONES.some((zone) => zone.value === settings.timezone)
   ? BRAZIL_TIME_ZONES
   : [{ value: settings.timezone, label: settings.timezone }, ...BRAZIL_TIME_ZONES];
+const currentColor = settings.brandColor ?? DEFAULT_BRAND_COLOR;
 const profileHint = (profile: (typeof CLINIC_PROFILES)[number]) => {
   const words = vocabularyFor(profile);
   return `${PROFILE_LABELS[profile]}: "${words.patient}" e "${words.contact}"`;
@@ -114,8 +115,26 @@ const profileHint = (profile: (typeof CLINIC_PROFILES)[number]) => {
 
         <div>
           <label for="brand_color" class={LABEL}>Cor da clínica</label>
-          <input type="color" id="brand_color" name="brand_color" value={settings.brandColor ?? DEFAULT_BRAND_COLOR} class="mt-1 h-10 w-20 rounded border border-slate-300" />
-          <p class={HINT}>Fundo do topo, com o nome e o logo.</p>
+          <div class="mt-1 flex flex-wrap items-center gap-2" data-brand-swatches>
+            {
+              BRAND_COLOR_OPTIONS.map((option) => (
+                <button
+                  type="button"
+                  data-color={option.value}
+                  title={option.label}
+                  aria-label={option.label}
+                  aria-pressed={option.value === currentColor ? "true" : "false"}
+                  class="h-9 w-9 rounded-full border-2 border-white shadow ring-1 ring-slate-300 aria-pressed:ring-2 aria-pressed:ring-slate-900"
+                  style={`background-color: ${option.value};`}
+                />
+              ))
+            }
+            <label class="ml-1 flex items-center gap-2 text-sm text-slate-600">
+              Outra:
+              <input type="color" id="brand_color" name="brand_color" value={currentColor} class="h-9 w-14 rounded border border-slate-300" />
+            </label>
+          </div>
+          <p class={HINT}>Fundo do topo, com o nome e o logo. Escolha uma das cores ou outra em "Outra".</p>
         </div>
 
         <div>
@@ -155,3 +174,23 @@ const profileHint = (profile: (typeof CLINIC_PROFILES)[number]) => {
     </form>
   </Card>
 </AdminLayout>
+
+<script>
+  // Cores prontas: clicar marca a bolinha e passa a cor para o campo "Outra",
+  // que é o que vai no formulário; escolher em "Outra" desmarca as bolinhas.
+  document.querySelectorAll<HTMLElement>("[data-brand-swatches]").forEach((group) => {
+    const input = group.querySelector<HTMLInputElement>("input[type=color]")!;
+    const swatches = [...group.querySelectorAll<HTMLButtonElement>("button[data-color]")];
+    const mark = () =>
+      swatches.forEach((swatch) =>
+        swatch.setAttribute("aria-pressed", String(swatch.dataset.color!.toLowerCase() === input.value.toLowerCase())),
+      );
+    swatches.forEach((swatch) =>
+      swatch.addEventListener("click", () => {
+        input.value = swatch.dataset.color!;
+        mark();
+      }),
+    );
+    input.addEventListener("input", mark);
+  });
+</script>
