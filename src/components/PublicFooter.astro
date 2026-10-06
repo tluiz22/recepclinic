@@ -1,18 +1,25 @@
 ---
-// Rodapé neutro e provisório das páginas públicas do sistema (/agendar e
-// /preparo). A marca e o contato de cada clínica entram na F5.
+// Rodapé das páginas públicas (/agendar e /preparo, F5.1): aviso de
+// emergência para qualquer área, "Feito com RecepClinic" e as páginas legais
+// do site do produto (cliente, 05/out/2026). Sem contato nem endereço da
+// clínica.
+const PRODUCT_SITE = "https://www.recepclinic.com.br";
 ---
 
 <footer class="border-t border-slate-200 bg-slate-50">
-  <div class="mx-auto max-w-5xl px-4 py-8 text-sm text-slate-600">
+  <div class="mx-auto flex max-w-xl flex-col gap-4 px-4 py-8 text-sm text-slate-600">
     <aside
       class="rounded-lg border border-amber-200 bg-amber-50 px-4 py-4 text-sm text-amber-900"
       role="note"
       aria-label="Aviso de emergência"
     >
       <strong>Aviso de emergência:</strong> Esta página não realiza atendimento de urgência ou
-      emergência. Em caso de sintomas intensos, falta de ar, piora rápida ou emergência médica,
-      procure atendimento imediato.
+      emergência. Em caso de emergência, procure atendimento imediato ou ligue 192.
     </aside>
+    <nav aria-label="RecepClinic" class="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-xs text-slate-500">
+      <a href={PRODUCT_SITE} rel="noopener" class="hover:text-slate-700">Feito com <strong class="font-semibold">RecepClinic</strong></a>
+      <a href={`${PRODUCT_SITE}/privacidade`} rel="noopener" class="underline hover:text-slate-700">Privacidade</a>
+      <a href={`${PRODUCT_SITE}/termos`} rel="noopener" class="underline hover:text-slate-700">Termos de uso</a>
+    </nav>
   </div>
 </footer>

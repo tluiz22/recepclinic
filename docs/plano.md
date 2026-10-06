@@ -764,6 +764,16 @@ dias (regra do piloto).
 **Dividida em cinco partes (cliente, 05/out),** cada uma com validação:
 - **F5.1 — Marca da clínica:** em Configurações › Clínica, envio do logo, cor e site da clínica
   (campo novo); topo e rodapé públicos com a marca e os links legais.
+- **F5.1 — feita em 05/out (aguardando a validação do cliente).** Em Configurações › Clínica, bloco
+  **"Páginas públicas"**: logo (enviar, trocar, remover; PNG, JPG ou WebP até 1 MB), cor e **site da
+  clínica** (sem "https://" ganha o prefixo), com o link **"Ver como fica"** (prévia do topo e do
+  rodapé com a marca salva). Migração `20261005250000`: `clinic_settings.website_url` e o bucket
+  público `clinic-logos` (um arquivo por clínica, nome novo a cada envio, o anterior é apagado; só
+  quem edita os dados da clínica escreve na pasta dela). Topo público na cor da clínica, com o texto
+  branco ou escuro pelo contraste, logo e nome, e "Voltar para o site" só com site. Rodapé com o
+  aviso de emergência para qualquer área ("…procure atendimento imediato ou ligue 192"; cliente,
+  05/out), "Feito com RecepClinic", Privacidade e Termos de uso. `/agendar` e `/preparo` passam a
+  usar o topo e o rodapé na F5.2 e na F5.3. 2 testes unitários e 5 de banco novos.
 - **F5.2 — `/agendar` no banco novo:** marcar e remarcar pelo link, serviço do catálogo, "primeiro
   horário disponível" ou a agenda escolhida, turma, local, prazo do retorno, lista de espera;
   "Voltar para o site" só para a clínica que tem site.

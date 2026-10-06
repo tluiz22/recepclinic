@@ -1,0 +1,39 @@
+---
+// Topo das páginas públicas (/agendar e /preparo, F5.1): logo e nome da
+// clínica na cor dela; "Voltar para o site" só quando a clínica tem site
+// (cliente, 05/out/2026).
+import type { PublicClinicBrand } from "../../lib/data/config/brand";
+import { readableTextColor } from "../../lib/brandColor";
+
+interface Props {
+  brand: PublicClinicBrand;
+}
+
+const { brand } = Astro.props;
+const text = readableTextColor(brand.brandColor);
+---
+
+<header style={`background-color: ${brand.brandColor}; color: ${text};`}>
+  <div class="mx-auto flex w-full max-w-xl items-center justify-between gap-3 px-4 py-4">
+    <div class="flex min-w-0 items-center gap-3">
+      {
+        brand.logoUrl && (
+          <img src={brand.logoUrl} alt="" class="h-11 w-11 shrink-0 rounded-md bg-white object-contain p-1" />
+        )
+      }
+      <p class="truncate text-lg font-semibold">{brand.name}</p>
+    </div>
+    {
+      brand.websiteUrl && (
+        <a
+          href={brand.websiteUrl}
+          rel="noopener"
+          class="shrink-0 rounded-md border px-3 py-1.5 text-sm font-medium hover:opacity-80"
+          style={`border-color: ${text};`}
+        >
+          Voltar para o site
+        </a>
+      )
+    }
+  </div>
+</header>

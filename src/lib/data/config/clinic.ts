@@ -22,6 +22,8 @@ export type ClinicSettings = {
   botNotes: string | null;
   logoUrl: string | null;
   brandColor: string | null;
+  /** Site da clínica: o botão "Voltar para o site" das páginas públicas (F5). */
+  websiteUrl: string | null;
   /** Pedir carteirinha e validade na marcação por plano (D10). */
   requireInsuranceDetails: boolean;
 };
@@ -34,8 +36,17 @@ export const CLINIC_PROFILES: ClinicProfile[] = ["pediatric", "adult", "mixed"];
 export const REMINDER_HOUR_MIN = 7;
 export const REMINDER_HOUR_MAX = 20;
 
+const WEBSITE_URL_PATTERN = /^https?:\/\/[^\s/]+\.[^\s]+$/i;
+
+/** Site digitado sem "https://" ganha o prefixo; vazio = null. */
+export function normalizeWebsiteUrl(value: string | null | undefined): string | null {
+  const text = cleanText(value);
+  if (!text) return null;
+  return /^https?:\/\//i.test(text) ? text : `https://${text}`;
+}
+
 const SETTINGS_COLUMNS =
-  "clinic_id, profile, timezone, consultation_age_limit_years, reminder_hour, bot_payment_info, bot_insurance_info, bot_notes, logo_url, brand_color, require_insurance_details";
+  "clinic_id, profile, timezone, consultation_age_limit_years, reminder_hour, bot_payment_info, bot_insurance_info, bot_notes, logo_url, brand_color, website_url, require_insurance_details";
 
 export async function getClinicSettings(db: DbClient, clinicId: string): Promise<ClinicSettings> {
   const [clinic, settings] = await Promise.all([
@@ -59,6 +70,7 @@ export async function getClinicSettings(db: DbClient, clinicId: string): Promise
     botNotes: settings.bot_notes,
     logoUrl: settings.logo_url,
     brandColor: settings.brand_color,
+    websiteUrl: settings.website_url,
     requireInsuranceDetails: settings.require_insurance_details,
   };
 }
@@ -94,6 +106,14 @@ export function validateClinicSettingsPatch(patch: ClinicSettingsPatch): ClinicS
     out.brandColor = cleanText(patch.brandColor)?.toUpperCase() ?? null;
     v.check(out.brandColor === null || /^#[0-9A-F]{6}$/.test(out.brandColor), "brandColor", "Cor no formato #RRGGBB");
   }
+  if ("websiteUrl" in patch) {
+    out.websiteUrl = normalizeWebsiteUrl(patch.websiteUrl);
+    v.check(
+      out.websiteUrl === null || (WEBSITE_URL_PATTERN.test(out.websiteUrl) && out.websiteUrl.length <= 300),
+      "websiteUrl",
+      "Endereço do site inválido (ex.: www.suaclinica.com.br)",
+    );
+  }
 
   v.throwIfInvalid("Configuração da clínica");
   return out;
@@ -124,6 +144,7 @@ export async function updateClinicSettings(
     ["botNotes", "bot_notes"],
     ["logoUrl", "logo_url"],
     ["brandColor", "brand_color"],
+    ["websiteUrl", "website_url"],
     ["requireInsuranceDetails", "require_insurance_details"],
   ];
   for (const [key, column] of map) if (key in clean) row[column] = clean[key];

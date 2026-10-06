@@ -18,7 +18,7 @@
 >     no [plano](plano.md).
 >   - **Em curso: F5** — Páginas públicas e domínio, detalhada e aprovada em 05/out em cinco
 >     partes (F5.1 marca da clínica, F5.2 `/agendar`, F5.3 `/preparo`, F5.4 link na tela "Avisar",
->     F5.5 domínio `app.recepclinic.com.br`). **Próxima etapa: F5.1.** Decisões no [plano](plano.md).
+>     F5.5 domínio `app.recepclinic.com.br`). **F5.1 (marca da clínica) feita, aguardando a validação do cliente**; depois, F5.2. Decisões no [plano](plano.md).
 >   - **Já combinado para as próximas fases:** F6 — envio pelo WhatsApp (lembrete, preparo,
 >     avisos), cancelamento pela clínica com aviso automático e link (sai a tela "Avisar"), abas
 >     Funil do bot e Retomar contato, aba "Mensagens"; F7 — rotinas automáticas (lembrete, resumo

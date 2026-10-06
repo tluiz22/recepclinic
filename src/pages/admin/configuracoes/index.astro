@@ -1,13 +1,15 @@
 ---
 // Configurações › Clínica (F4.3, D4b): nome, perfil (vocabulário e regras de
 // idade), fuso, idade limite da consulta, cor e, com o bot liberado, as
-// informações que o bot responde. O logo entra na F5 (decisão do cliente).
+// informações que o bot responde. Marca das páginas públicas (F5.1): logo,
+// cor e site da clínica, com "Ver como fica".
 import AdminLayout from "../../../layouts/AdminLayout.astro";
 import Card from "../../../components/admin/Card.astro";
 import ConfiguracoesTabs from "../../../components/admin/ConfiguracoesTabs.astro";
 import FlashMessage from "../../../components/admin/FlashMessage.astro";
 import { HINT, INPUT, LABEL, PRIMARY_BUTTON } from "../../../components/admin/fieldStyles";
 import { createUserClient } from "../../../lib/data/clients";
+import { DEFAULT_BRAND_COLOR, LOGO_TYPES } from "../../../lib/data/config/brand";
 import { CLINIC_PROFILES, getClinicSettings } from "../../../lib/data/config/clinic";
 import { BRAZIL_TIME_ZONES } from "../../../lib/timeZones";
 import { PROFILE_LABELS, vocabularyFor } from "../../../lib/vocabulary";
@@ -30,7 +32,7 @@ const profileHint = (profile: (typeof CLINIC_PROFILES)[number]) => {
   <FlashMessage />
 
   <Card class="mt-4 max-w-3xl">
-    <form method="POST" action="/api/admin/configuracoes/clinica" class="flex flex-col gap-5">
+    <form method="POST" action="/api/admin/configuracoes/clinica" enctype="multipart/form-data" class="flex flex-col gap-5">
       <div>
         <label for="name" class={LABEL}>Nome da clínica</label>
         <input id="name" name="name" required value={settings.name} class={INPUT} />
@@ -71,11 +73,57 @@ const profileHint = (profile: (typeof CLINIC_PROFILES)[number]) => {
         <p class={HINT}>A partir desta idade, o bot não marca Consulta (só Retorno e Exame) e a tela avisa.</p>
       </div>
 
-      <div>
-        <label for="brand_color" class={LABEL}>Cor da clínica</label>
-        <input type="color" id="brand_color" name="brand_color" value={settings.brandColor ?? "#0369A1"} class="mt-1 h-10 w-20 rounded border border-slate-300" />
-        <p class={HINT}>Usada nas páginas públicas (agendamento e preparo).</p>
-      </div>
+      <fieldset class="flex flex-col gap-4 border-t border-slate-200 pt-4">
+        <legend class="text-sm font-semibold uppercase tracking-wide text-slate-500">Páginas públicas</legend>
+        <p class={HINT}>
+          Topo das páginas de agendamento e de preparo que o paciente abre pelo link.
+          <a href="/admin/configuracoes/previa" target="_blank" class="font-medium text-sky-700 underline">Ver como fica</a>
+        </p>
+
+        <div>
+          <span class={LABEL}>Logo</span>
+          <div class="mt-1 flex items-center gap-4">
+            {
+              settings.logoUrl ? (
+                <img src={settings.logoUrl} alt="Logo atual" class="h-16 w-16 rounded-md border border-slate-200 bg-white object-contain p-1" />
+              ) : (
+                <span class="flex h-16 w-16 items-center justify-center rounded-md border border-dashed border-slate-300 text-xs text-slate-400">Sem logo</span>
+              )
+            }
+            <div class="flex flex-col gap-2">
+              <input
+                type="file"
+                id="logo"
+                name="logo"
+                accept={Object.keys(LOGO_TYPES).join(",")}
+                aria-label={settings.logoUrl ? "Trocar o logo" : "Enviar o logo"}
+                class="text-sm text-slate-700 file:mr-3 file:rounded-md file:border file:border-slate-300 file:bg-white file:px-3 file:py-1.5 file:text-sm file:font-medium"
+              />
+              {
+                settings.logoUrl && (
+                  <label class="flex items-center gap-2 text-sm text-slate-700">
+                    <input type="checkbox" name="remove_logo" class="h-4 w-4 rounded border-slate-300" />
+                    Remover o logo
+                  </label>
+                )
+              }
+            </div>
+          </div>
+          <p class={HINT}>PNG, JPG ou WebP, até 1 MB. De preferência quadrado. Sem logo, aparece só o nome da clínica.</p>
+        </div>
+
+        <div>
+          <label for="brand_color" class={LABEL}>Cor da clínica</label>
+          <input type="color" id="brand_color" name="brand_color" value={settings.brandColor ?? DEFAULT_BRAND_COLOR} class="mt-1 h-10 w-20 rounded border border-slate-300" />
+          <p class={HINT}>Fundo do topo, com o nome e o logo.</p>
+        </div>
+
+        <div>
+          <label for="website_url" class={LABEL}>Site da clínica</label>
+          <input id="website_url" name="website_url" inputmode="url" placeholder="www.suaclinica.com.br" value={settings.websiteUrl ?? ""} class={INPUT} />
+          <p class={HINT}>Opcional. Com site, as páginas mostram o botão "Voltar para o site".</p>
+        </div>
+      </fieldset>
 
       {
         hasBot && (
