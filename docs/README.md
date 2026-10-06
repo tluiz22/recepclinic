@@ -18,7 +18,7 @@
 >     no [plano](plano.md).
 >   - **Em curso: F5** — Páginas públicas e domínio, detalhada e aprovada em 05/out em cinco
 >     partes (F5.1 marca da clínica, F5.2 `/agendar`, F5.3 `/preparo`, F5.4 link na tela "Avisar",
->     F5.5 domínio `app.recepclinic.com.br`). **F5.1 a F5.3 validadas; F5.4 (link na tela "Avisar") feita, aguardando a validação do cliente**; depois, F5.5 (domínio). Decisões no [plano](plano.md).
+>     F5.5 domínio `app.recepclinic.com.br`). **F5.1 a F5.4 validadas; F5.5 (staging em `app.recepclinic.com.br`) em curso**, pelo roteiro [`staging.md`](staging.md). Decisões no [plano](plano.md).
 >   - **Já combinado para as próximas fases:** F6 — envio pelo WhatsApp (lembrete, preparo,
 >     avisos), cancelamento pela clínica com aviso automático e link (sai a tela "Avisar"), abas
 >     Funil do bot e Retomar contato, aba "Mensagens"; F7 — rotinas automáticas (lembrete, resumo
@@ -104,3 +104,4 @@ credenciais do piloto (banco, agendador e Vault do Supabase, número e app da Me
 - [`arquitetura.md`](arquitetura.md): decisões da arquitetura alvo (etapa 3).
 - [`plano.md`](plano.md): plano de evolução em fases (etapa 4).
 - [`site-plano.md`](site-plano.md): plano do site `www.recepclinic.com.br` (frente paralela).
+- [`staging.md`](staging.md): roteiro do staging na nuvem (F5.5).

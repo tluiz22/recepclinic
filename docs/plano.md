@@ -800,7 +800,7 @@ dias (regra do piloto).
   ou sem preparo mostra "Preparo não encontrado" (404). 1 teste de banco novo.
 - **F5.4 — Link de remarcação na tela "Avisar":** a mensagem do cancelamento pela clínica passa a
   levar o link (o envio automático continua na F6).
-- **F5.4 — feita em 06/out (aguardando a validação do cliente).** A mensagem da tela **"Avisar"**
+- **F5.4 — concluída e validada pelo cliente em 06/out.** A mensagem da tela **"Avisar"**
   (bloqueio e "Cancelar selecionados") leva o **link de remarcação ainda válido** de cada
   cancelado, com a validade e "Se preferir, responda esta mensagem" (cliente, 06/out): "…Pedimos
   desculpas pelo transtorno. / Para escolher um novo horário, use o link (vale até 08/10 às
@@ -810,6 +810,13 @@ dias (regra do piloto).
   `booking_links.canceled_appointment_id`, preenchido ao gerar o link de remarcação. O envio
   automático continua na F6. 1 teste unitário e 1 de banco novos.
 - **F5.5 — Domínio:** projeto na Vercel, banco na nuvem e `app.recepclinic.com.br` pela Cloudflare.
+
+- **F5.5 — em curso (06/out).** Decisões do cliente (06/out): `app.recepclinic.com.br` serve o
+  **staging** (D8: Supabase Free numa organização própria, Vercel Hobby) até a F10, quando passa
+  para a produção e o staging vai para `teste.recepclinic.com.br`; o banco do staging tem só o
+  schema e o login do Suporte (clínicas de teste pela tela "Nova clínica"; o `seed.sql` fica no
+  local). Roteiro em [`staging.md`](staging.md); `scripts/criar-suporte.mjs` cria o login do
+  Suporte na nuvem e imprime o link de definir a senha (sem depender de e-mail).
 
 ## F6 — WhatsApp por clínica e bot
 
