@@ -764,7 +764,7 @@ dias (regra do piloto).
 **Dividida em cinco partes (cliente, 05/out),** cada uma com validação:
 - **F5.1 — Marca da clínica:** em Configurações › Clínica, envio do logo, cor e site da clínica
   (campo novo); topo e rodapé públicos com a marca e os links legais.
-- **F5.1 — feita em 05/out (aguardando a validação do cliente).** Em Configurações › Clínica, bloco
+- **F5.1 — concluída e validada pelo cliente em 05/out.** Em Configurações › Clínica, bloco
   **"Páginas públicas"**: logo (enviar, trocar, remover; PNG, JPG ou WebP até 1 MB), cor (**10 cores prontas** e "Outra" para
   qualquer cor; cliente, 05/out) e **site da clínica** (sem "https://" ganha o prefixo), com o link **"Ver como fica"** (prévia do topo e do
   rodapé com a marca salva). Migração `20261005250000`: `clinic_settings.website_url` e o bucket
@@ -777,6 +777,21 @@ dias (regra do piloto).
 - **F5.2 — `/agendar` no banco novo:** marcar e remarcar pelo link, serviço do catálogo, "primeiro
   horário disponível" ou a agenda escolhida, turma, local, prazo do retorno, lista de espera;
   "Voltar para o site" só para a clínica que tem site.
+- **F5.2 — feita em 05/out (aguardando a validação do cliente).** `/agendar/[token]` e as rotas de
+  horários e de confirmar no banco novo, com a **credencial limitada à clínica do link** (saem da
+  service role) e a marca da clínica (F5.1). Módulo `src/lib/data/agenda/publicBooking.ts`:
+  agendas do link (a escolhida, a do atendimento remarcado ou todas as do serviço, no "primeiro
+  horário disponível") e locais do serviço filtrados pelo link (local ou tipo); **cada horário
+  mostra o profissional e o local quando houver mais de um** (cliente, 05/out); o mesmo horário
+  aparece uma vez, na primeira agenda em ordem de nome (D2). Regras do piloto mantidas: link
+  vencido ou usado não marca; usar é atômico e o horário é conferido de novo ao confirmar (ocupado
+  no meio do caminho devolve o link); retorno ligado a uma consulta só até o prazo (o link da
+  clínica dispensa) e um retorno por consulta; turma pelas sessões com vagas; lista de espera
+  pedida antes entra ao confirmar; funil do bot (abriu, trocou a data, falhou, confirmou). Novo:
+  atendimento já marcado na agenda mostra o aviso para falar com a clínica; link usado mostra o
+  atendimento marcado (ou "cancelado"); a marcação aceita a consulta de origem indicada pelo link.
+  **A confirmação pelo WhatsApp fica para a F6** (a página não promete mais a mensagem). Dados de
+  teste: 4 links fixos, válidos por 30 dias (comentário no `seed.sql`). 8 testes de banco novos.
 - **F5.3 — `/preparo` no banco novo:** instruções de preparo do serviço de exame.
 - **F5.4 — Link de remarcação na tela "Avisar":** a mensagem do cancelamento pela clínica passa a
   levar o link (o envio automático continua na F6).

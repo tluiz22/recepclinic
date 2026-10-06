@@ -1,231 +1,102 @@
 ---
+// Página pública de agendar ou remarcar pelo link (F5.2), com a marca da
+// clínica (F5.1). A clínica vem do link (plataforma) e todo o resto usa a
+// credencial limitada a ela (D1). Cada horário mostra o profissional e o
+// local quando houver mais de um (cliente, 05/out/2026). A confirmação pelo
+// WhatsApp vem na F6.
 import "../../styles/global.css";
 import PublicFooter from "../../components/PublicFooter.astro";
-import { createServiceClient } from "../../lib/supabase/service";
-import { getNextAvailableDates } from "../../lib/scheduling/getNextAvailableDates";
-import { getAvailableSlotsForDate, type AppointmentType } from "../../lib/scheduling/getAvailableSlotsForDate";
-import { getNextAvailableGroupDates, type AvailableGroupSession } from "../../lib/scheduling/getNextAvailableGroupDates";
-import { getExamNextAvailableDates } from "../../lib/scheduling/getExamNextAvailableDates";
-import { getExamAvailableSlotsForDate } from "../../lib/scheduling/getExamAvailableSlotsForDate";
-import { resolveClinicLocationIds } from "../../lib/scheduling/resolveClinicLocationIds";
-import { getBookingLinkLastDate } from "../../lib/scheduling/returnVisitDeadline";
+import PublicHeader from "../../components/public/PublicHeader.astro";
+import { formatCalendarDate, formatInstant } from "../../lib/clinicTime";
+import { createClinicServiceClient } from "../../lib/data/clinicService";
+import {
+  listLinkDates,
+  listLinkGroupSessions,
+  listLinkSlots,
+  loadBookingPage,
+  logBookingPageStep,
+  slotChoiceValue,
+  slotDetails,
+  type BookingPage,
+  type PublicSlot,
+} from "../../lib/data/agenda/publicBooking";
+import { DEFAULT_BRAND_COLOR, getPublicClinicBrand, type PublicClinicBrand } from "../../lib/data/config/brand";
+import { DataError } from "../../lib/data/errors";
+import { resolveClinicByBookingLink } from "../../lib/data/platform";
+import { readableTextColor } from "../../lib/brandColor";
 import { formatPhoneBR } from "../../lib/phone";
-import { logWebFunnelEvent } from "../../lib/whatsapp/funnel";
+import { capitalize, vocabularyFor } from "../../lib/vocabulary";
 
-const { token } = Astro.params;
-const supabase = createServiceClient();
+const token = Astro.params.token ?? "";
+const clinicId = await resolveClinicByBookingLink(token);
+const db = clinicId ? createClinicServiceClient(clinicId) : null;
 
-// `appointments!appointment_id`: desde a Fase 17 o link tem duas ligações
-// com appointments (appointment_id e origin_appointment_id) — sem indicar
-// qual, o Supabase recusa o embed por ambiguidade e o link aparece como
-// inválido.
-const { data: link } = token
-  ? await supabase
-      .from("booking_links")
-      .select(
-        `id, mode, appointment_type, clinic_location_id, location_category, home_visit_address, expires_at, used_at, exam_type_id,
-         origin_appointment_id, return_deadline_waived, guardian_id, guardian_phone, funnel_session_id,
-         guardians ( full_name, phone ),
-         patients ( full_name, birthdate ),
-         appointments!appointment_id ( scheduled_at, home_visit_address, clinic_locations ( name, type, address ) ),
-         exam_types ( name, duration_minutes, preparation_instructions, scheduling_mode )`
-      )
-      .eq("id", token)
-      .maybeSingle()
-  : { data: null };
-
-type PageState = "invalid" | "used" | "expired" | "form";
-
-const state: PageState = !link
-  ? "invalid"
-  : link.used_at
-    ? "used"
-    : new Date(link.expires_at) < new Date()
-      ? "expired"
-      : "form";
-
-const guardian = (link?.guardians ?? null) as unknown as { full_name: string; phone: string } | null;
-const patient = (link?.patients ?? null) as unknown as { full_name: string; birthdate: string } | null;
-// Populado em modo "reschedule" (a consulta/exame sendo remarcado) e depois
-// de confirmar em modo "create" (o agendamento recém-criado) — nos dois
-// casos já existe um `clinic_location_id` resolvido para um local físico
-// específico (diferente do link em si, que só sabe a categoria antes de
-// confirmar; ver "Backlog futuro — Múltiplos consultórios" no plano).
-const currentAppointment = (link?.appointments ?? null) as unknown as {
-  scheduled_at: string;
-  home_visit_address: string | null;
-  clinic_locations: { name: string; type: string; address: string | null } | null;
-} | null;
-const examType = (link?.exam_types ?? null) as unknown as {
-  name: string;
-  duration_minutes: number;
-  preparation_instructions: string | null;
-  scheduling_mode: string;
-} | null;
-const isGroupExam = link?.appointment_type === "exam" && examType?.scheduling_mode === "group";
-
-function categoryLabel(type: string | undefined | null): string {
-  return type === "home_visit" ? "Atendimento domiciliar" : type === "exam" ? "Exames" : "Consultório";
+let page: BookingPage | null = null;
+let brand: PublicClinicBrand | null = null;
+if (clinicId && db) {
+  [page, brand] = await Promise.all([
+    loadBookingPage(db, clinicId, token).catch((error) => {
+      if (error instanceof DataError && error.code === "not_found") return null;
+      throw error;
+    }),
+    getPublicClinicBrand(db, clinicId),
+  ]);
 }
+if (!page) Astro.response.status = 404;
 
-// Antes de confirmar: só sabemos a categoria (Consultório/Domiciliar/Exames).
-// Depois de confirmar: sabemos o consultório físico exato.
-const locationLabel = categoryLabel(
-  currentAppointment?.clinic_locations?.type ?? link?.location_category ?? (link?.appointment_type === "exam" ? "exam" : undefined)
-);
-
-function formatDateBR(dateStr: string): string {
-  const [year, month, day] = dateStr.split("-");
-  return `${day}/${month}/${year}`;
-}
-
-function formatWeekdayFull(dateStr: string): string {
-  const label = new Intl.DateTimeFormat("pt-BR", { weekday: "long", timeZone: "America/Fortaleza" }).format(
-    new Date(`${dateStr}T12:00:00-03:00`)
-  );
-  return label.charAt(0).toUpperCase() + label.slice(1);
-}
-
-function formatDateTimeBR(iso: string): string {
-  const datePart = new Intl.DateTimeFormat("pt-BR", {
-    timeZone: "America/Fortaleza",
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-  }).format(new Date(iso));
-  const timePart = new Intl.DateTimeFormat("pt-BR", {
-    timeZone: "America/Fortaleza",
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-  })
-    .format(new Date(iso))
-    .replace(":", "h");
-  return `${datePart} às ${timePart}`;
-}
-
-function groupSessionStartIso(session: AvailableGroupSession): string {
-  return new Date(`${session.date}T${session.startTime}:00-03:00`).toISOString();
-}
-
-let availableDates: { date: string; weekday: number }[] = [];
-let initialSlots: { start: Date; label: string; clinicLocationId: string }[] = [];
-let groupDateOptions: AvailableGroupSession[] = [];
-let selectedGroupSession: AvailableGroupSession | undefined;
+let dates: { date: string }[] = [];
+let slots: PublicSlot[] = [];
+let sessions: PublicSlot[] = [];
 let selectedDate = "";
-
-if (state === "form" && link) {
-  const appointmentType = link.appointment_type as AppointmentType;
-  const examDurationMinutes = examType?.duration_minutes;
-
-  if (isGroupExam) {
-    // Exame em grupo: sem horários ocupados da agenda, um único horário fixo por
-    // dia da semana — a "Data" já carrega o horário junto (ver script no
-    // fim da página), sem etapa separada de escolher horário.
-    const sessions = await getNextAvailableGroupDates({ supabase, examTypeId: link.exam_type_id ?? "" });
-    const seenDates = new Set<string>();
-    for (const session of sessions) {
-      if (seenDates.has(session.date)) continue;
-      seenDates.add(session.date);
-      groupDateOptions.push(session);
-    }
-
-    const dateParam = Astro.url.searchParams.get("date");
-    selectedDate =
-      dateParam && groupDateOptions.some((d) => d.date === dateParam) ? dateParam : (groupDateOptions[0]?.date ?? "");
-    selectedGroupSession = groupDateOptions.find((d) => d.date === selectedDate);
-  } else if (appointmentType === "exam") {
-    // Exame individual: disponibilidade própria do exame (cada um tem a
-    // sua, não compartilha com nenhum local — ver Fase 11).
-    const examTypeId = link.exam_type_id ?? "";
-    const examLocationId = link.clinic_location_id ?? "";
-
-    availableDates = examTypeId
-      ? await getExamNextAvailableDates({
-          supabase,
-          examTypeId,
-          examLocationId,
-          examDurationMinutes: examDurationMinutes ?? 0,
-        })
-      : [];
-
-    const dateParam = Astro.url.searchParams.get("date");
-    selectedDate =
-      dateParam && availableDates.some((d) => d.date === dateParam) ? dateParam : (availableDates[0]?.date ?? "");
-
-    if (selectedDate && examTypeId) {
-      initialSlots = await getExamAvailableSlotsForDate({
-        supabase,
-        examTypeId,
-        examLocationId,
-        date: selectedDate,
-        examDurationMinutes: examDurationMinutes ?? 0,
-      });
-    }
+if (page?.state === "form" && db && clinicId) {
+  if (page.service.isGroup) {
+    sessions = await listLinkGroupSessions(db, clinicId, page);
   } else {
-    // Consulta/retorno: categoria mesclando todos os consultórios físicos
-    // ativos dela (ver "Backlog futuro" no plano).
-    const clinicLocationIds = await resolveClinicLocationIds(supabase, (link.location_category as "clinic" | "home_visit") ?? "clinic");
-
-    // Retorno vinculado a uma Consulta (Fase 17): só datas até o fim do prazo.
-    const lastDate = await getBookingLinkLastDate(supabase, link);
-
-    availableDates = await getNextAvailableDates({
-      supabase,
-      clinicLocationIds,
-      appointmentType,
-      examDurationMinutes,
-      lastDate,
-    });
-
-    const dateParam = Astro.url.searchParams.get("date");
-    selectedDate =
-      dateParam && availableDates.some((d) => d.date === dateParam) ? dateParam : (availableDates[0]?.date ?? "");
-
-    if (selectedDate) {
-      initialSlots = await getAvailableSlotsForDate({
-        supabase,
-        clinicLocationIds,
-        date: selectedDate,
-        appointmentType,
-        examDurationMinutes,
-      });
-    }
+    dates = await listLinkDates(db, clinicId, page);
+    const asked = Astro.url.searchParams.get("date");
+    selectedDate = asked && dates.some((d) => d.date === asked) ? asked : (dates[0]?.date ?? "");
+    if (selectedDate) slots = await listLinkSlots(db, clinicId, page, selectedDate);
   }
 }
 
-// Funil (Fase 15): abertura do link. A volta pra cá depois de uma tentativa
-// de confirmar que falhou (`?error=`) não conta de novo — essa falha já é
-// registrada pelo endpoint de confirmar.
-if (link && !Astro.url.searchParams.has("error")) {
-  if (state === "form") {
-    const dateCount = isGroupExam ? groupDateOptions.length : availableDates.length;
-    await logWebFunnelEvent(supabase, link, "page_opened", { available_dates: dateCount });
-  } else if (state === "expired") {
-    await logWebFunnelEvent(supabase, link, "link_expired");
+// Funil do bot: a volta depois de uma confirmação que falhou (?error=) não conta de novo.
+if (page && db && clinicId && !Astro.url.searchParams.has("error")) {
+  if (page.state === "form") {
+    await logBookingPageStep(db, clinicId, page, "page_opened", { available_dates: page.service.isGroup ? sessions.length : dates.length });
+  } else if (page.state === "expired") {
+    await logBookingPageStep(db, clinicId, page, "link_expired");
   }
 }
+
+const words = vocabularyFor(page?.profile ?? "mixed");
+const timeZone = page?.timeZone ?? "America/Fortaleza";
+const isReschedule = page?.link.mode === "reschedule";
+const serviceName = page?.service.name ?? "";
 
 const errorMessages: Record<string, string> = {
   slot_taken: "Esse horário acabou de deixar de estar livre. Escolha outro.",
-  return_used: "O retorno dessa consulta já foi agendado. Para um novo atendimento, agende uma nova consulta pelo WhatsApp.",
-  "1": "Não foi possível confirmar a consulta. Tente novamente.",
+  return_used: "O retorno dessa consulta já foi marcado. Para um novo atendimento, fale com a clínica pelo WhatsApp.",
+  duplicate: `${capitalize(words.patient)} já tem um atendimento marcado. Para mudar, fale com a clínica pelo WhatsApp.`,
+  failed: "Não foi possível confirmar. Tente de novo.",
 };
 const errorParam = Astro.url.searchParams.get("error");
-const errorMessage = errorParam ? (errorMessages[errorParam] ?? errorMessages["1"]) : null;
+const errorMessage = errorParam ? (errorMessages[errorParam] ?? errorMessages.failed) : null;
 
-const isExam = link?.appointment_type === "exam";
+const pageTitle = !page
+  ? "Link inválido"
+  : page.state === "expired"
+    ? "Link expirado"
+    : page.state === "used"
+      ? "Atendimento marcado"
+      : `${isReschedule ? "Remarcar" : "Agendar"}: ${serviceName}`;
 
-const pageTitle = link?.mode === "reschedule" ? "Remarcar consulta" : isExam ? "Marcar exame" : "Agendar consulta";
-
-// Página "confirmado": só o endereço — o título já diz se é exame ou consulta,
-// e o endereço do local já começa pelo nome da clínica (pedido do cliente,
-// 02/out/2026). Domiciliar: o endereço informado pela família.
-const confirmedAddress =
-  currentAppointment?.clinic_locations?.address ??
-  currentAppointment?.home_visit_address ??
-  link?.home_visit_address ??
-  null;
+const formatDay = (date: string) => capitalize(formatCalendarDate(date, "EEEE, dd/MM/yyyy"));
+const formatWhen = (instant: Date) => formatInstant(instant, timeZone, "dd/MM/yyyy 'às' HH'h'mm");
+const slotExtra = (slot: PublicSlot) => (page ? slotDetails(page.candidates, slot) : "");
+const confirmed = page?.state === "used" ? page.appointment : null;
+const confirmedActive = confirmed && (confirmed.status === "scheduled" || confirmed.status === "confirmed");
+const buttonColor = brand?.brandColor ?? DEFAULT_BRAND_COLOR;
+const SLOT_LABEL = "cursor-pointer rounded-md border border-slate-300 bg-white px-3 py-2 text-sm has-[:checked]:border-slate-900 has-[:checked]:ring-1 has-[:checked]:ring-slate-900";
 ---
 
 <html lang="pt-BR">
@@ -233,204 +104,175 @@ const confirmedAddress =
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="robots" content="noindex, nofollow" />
-    <title>{pageTitle} | Dra. Ana Karina Fernandes</title>
+    <title>{pageTitle} | {brand?.name ?? "RecepClinic"}</title>
   </head>
   <body class="flex min-h-screen flex-col bg-slate-50 text-slate-900">
+    {brand && <PublicHeader brand={brand} />}
     <main class="mx-auto w-full max-w-xl flex-1 px-4 py-10">
       {
-        state === "invalid" && (
+        !page && (
           <div class="rounded-md border border-slate-200 bg-white p-6 text-center">
             <h1 class="text-lg font-bold text-slate-900">Link inválido</h1>
-            <p class="mt-2 text-sm text-slate-600">
-              Este link de agendamento não existe. Volte à conversa no WhatsApp e peça um novo.
-            </p>
+            <p class="mt-2 text-sm text-slate-600">Este link de agendamento não existe. Volte à conversa no WhatsApp e peça um novo.</p>
           </div>
         )
       }
 
       {
-        state === "expired" && (
+        page?.state === "expired" && (
           <div class="rounded-md border border-slate-200 bg-white p-6 text-center">
             <h1 class="text-lg font-bold text-slate-900">Link expirado</h1>
-            <p class="mt-2 text-sm text-slate-600">
-              Este link de agendamento venceu. Volte à conversa no WhatsApp e peça um novo link.
-            </p>
+            <p class="mt-2 text-sm text-slate-600">Este link de agendamento venceu. Volte à conversa no WhatsApp e peça um novo link.</p>
           </div>
         )
       }
 
       {
-        state === "used" && (
+        page?.state === "used" && confirmed && confirmedActive && (
           <div class="rounded-md border border-emerald-200 bg-emerald-50 p-6 text-center">
-            <h1 class="text-lg font-bold text-emerald-900">{isExam ? "Exame confirmado!" : "Consulta confirmada!"}</h1>
+            <h1 class="text-lg font-bold text-emerald-900">{isReschedule ? "Atendimento remarcado!" : "Atendimento confirmado!"}</h1>
             <p class="mt-2 text-sm text-emerald-800">
-              {patient?.full_name}
-              {currentAppointment && <> — {formatDateTimeBR(currentAppointment.scheduled_at)}</>}
+              {serviceName} · {page.patient.fullName} · {formatWhen(confirmed.scheduledAt)}
             </p>
-            {confirmedAddress && <p class="mt-2 text-sm text-emerald-800">{confirmedAddress}</p>}
-            {/* O preparo não aparece mais no formulário (texto longo empurrava a
-                escolha de data para o fim da página): fica num link para a mesma
-                página `/preparo/[id]` enviada pelo WhatsApp. */}
-            {isExam && link?.exam_type_id && examType?.preparation_instructions?.trim() && (
-              <a
-                href={`/preparo/${link.exam_type_id}`}
-                class="mt-4 inline-block rounded-md border border-emerald-300 bg-white px-4 py-2 text-sm font-medium text-emerald-800 hover:bg-emerald-100"
-              >
-                Ver o preparo do exame
-              </a>
-            )}
-            <p class="mt-4 text-sm text-emerald-800">
-              Você também vai receber a confirmação pelo WhatsApp.
+            <p class="mt-1 text-sm text-emerald-800">{[confirmed.agendaName, confirmed.locationName].filter(Boolean).join(" · ")}</p>
+            {confirmed.address && <p class="mt-1 text-sm text-emerald-800">{confirmed.address}</p>}
+            {
+              page.service.hasPreparation && (
+                <a
+                  href={`/preparo/${page.service.id}`}
+                  class="mt-4 inline-block rounded-md border border-emerald-300 bg-white px-4 py-2 text-sm font-medium text-emerald-800 hover:bg-emerald-100"
+                >
+                  Ver o preparo do exame
+                </a>
+              )
+            }
+          </div>
+        )
+      }
+
+      {
+        page?.state === "used" && !(confirmed && confirmedActive) && (
+          <div class="rounded-md border border-slate-200 bg-white p-6 text-center">
+            <h1 class="text-lg font-bold text-slate-900">{confirmed ? "Atendimento cancelado" : "Link já usado"}</h1>
+            <p class="mt-2 text-sm text-slate-600">
+              {confirmed
+                ? "Este atendimento foi cancelado. Para marcar de novo, fale com a clínica pelo WhatsApp."
+                : "Este link já foi usado. Para marcar ou mudar um atendimento, fale com a clínica pelo WhatsApp."}
             </p>
           </div>
         )
       }
 
       {
-        state === "form" && link && (
+        page?.state === "form" && (
           <>
-            <h1 class="text-2xl font-bold text-slate-900">{pageTitle}</h1>
-            <p class="mt-1 text-sm text-slate-600">
-              {link.appointment_type === "exam"
-                ? examType?.name ?? "Exame"
-                : `${locationLabel} · ${link.appointment_type === "return_visit" ? "Retorno" : "Consulta"}`}
-            </p>
+            <h1 class="text-2xl font-bold text-slate-900">{isReschedule ? "Remarcar" : "Agendar"}: {serviceName}</h1>
+            {page.candidates.agendas.length === 1 && <p class="mt-1 text-sm text-slate-600">{page.candidates.agendas[0].name}</p>}
+            {
+              isReschedule && page.appointment && (
+                <p class="mt-2 text-sm text-slate-600">Atendimento atual: {formatWhen(page.appointment.scheduledAt)}</p>
+              )
+            }
 
-            {link.mode === "reschedule" && currentAppointment && (
-              <p class="mt-2 text-sm text-slate-600">
-                {isExam ? "Exame atual" : "Consulta atual"}: {formatDateTimeBR(currentAppointment.scheduled_at)}
-              </p>
-            )}
-
-            {errorMessage && (
-              <p class="mt-4 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">{errorMessage}</p>
-            )}
+            {errorMessage && <p class="mt-4 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">{errorMessage}</p>}
 
             <div class="mt-6 rounded-md border border-slate-200 bg-white p-4 text-sm text-slate-700">
-              <p class="font-medium text-slate-900">Responsável</p>
+              <p class="font-medium text-slate-900">{capitalize(words.patient)}</p>
               <p>
-                {guardian?.full_name} · {guardian?.phone && formatPhoneBR(guardian.phone)}
+                {page.patient.fullName} · nascimento em {formatCalendarDate(page.patient.birthdate, "dd/MM/yyyy")}
               </p>
-            </div>
-
-            <div class="mt-3 rounded-md border border-slate-200 bg-white p-4 text-sm text-slate-700">
-              <p class="font-medium text-slate-900">Paciente</p>
-              <p>
-                {patient?.full_name}
-                {patient?.birthdate && ` · nascido(a) em ${formatDateBR(patient.birthdate)}`}
-              </p>
-            </div>
-
-            {link.location_category === "home_visit" && link.home_visit_address && (
-              <div class="mt-3 rounded-md border border-slate-200 bg-white p-4 text-sm text-slate-700">
-                <p class="font-medium text-slate-900">Endereço</p>
-                <p>{link.home_visit_address}</p>
-              </div>
-            )}
-
-            <form
-              method="POST"
-              action={`/api/agendar/${link.id}/confirmar`}
-              class="mt-6 flex flex-col gap-6"
-            >
-              <div>
-                <label for="date" class="block text-sm font-medium text-slate-700">
-                  {isExam ? "Data do exame" : "Data da consulta"}
-                </label>
-                {isGroupExam ? (
-                  groupDateOptions.length ? (
-                    <select
-                      id="date"
-                      name="date"
-                      class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
-                    >
-                      {groupDateOptions.map((session) => (
-                        <option
-                          value={session.date}
-                          selected={session.date === selectedDate}
-                          data-start={groupSessionStartIso(session)}
-                          data-start-label={session.startTime}
-                          data-end-label={session.endTime}
-                          data-remaining={session.remainingCapacity}
-                        >
-                          {formatWeekdayFull(session.date)}, {formatDateBR(session.date)}
-                        </option>
-                      ))}
-                    </select>
-                  ) : (
-                    <p class="mt-1 text-sm text-slate-500">
-                      Não encontramos vaga nos próximos dias. Fale com a secretária pelo WhatsApp.
+              {
+                page.contact.fullName && page.contact.fullName !== page.patient.fullName && (
+                  <>
+                    <p class="mt-2 font-medium text-slate-900">{capitalize(words.contact)}</p>
+                    <p>
+                      {page.contact.fullName} · {formatPhoneBR(page.contact.phone)}
                     </p>
-                  )
-                ) : availableDates.length ? (
-                  <select
-                    id="date"
-                    name="date"
-                    class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
-                  >
-                    {availableDates.map((d) => (
-                      <option value={d.date} selected={d.date === selectedDate}>
-                        {formatWeekdayFull(d.date)}, {formatDateBR(d.date)}
-                      </option>
-                    ))}
-                  </select>
-                ) : (
-                  <p class="mt-1 text-sm text-slate-500">
-                    Não encontramos horários livres nos próximos dias. Fale com a secretária pelo
-                    WhatsApp.
-                  </p>
-                )}
-              </div>
+                  </>
+                )
+              }
+            </div>
 
-              {isGroupExam ? (
-                <div>
-                  <span class="block text-sm font-medium text-slate-700">Horário do exame</span>
-                  <p id="group_session_info" class="mt-1 text-sm text-slate-600">
-                    {selectedGroupSession && (
-                      <>
-                        Esse exame é sempre das {selectedGroupSession.startTime} às {selectedGroupSession.endTime} —
-                        escolha só a data. Vagas: {selectedGroupSession.remainingCapacity}.
-                      </>
-                    )}
-                  </p>
-                  <input
-                    type="hidden"
-                    id="group_start"
-                    name="start"
-                    value={selectedGroupSession ? `${groupSessionStartIso(selectedGroupSession)}|${link.clinic_location_id ?? ""}` : ""}
-                  />
+            {
+              page.link.homeVisitAddress && page.link.locationCategory === "home_visit" && (
+                <div class="mt-3 rounded-md border border-slate-200 bg-white p-4 text-sm text-slate-700">
+                  <p class="font-medium text-slate-900">Endereço do atendimento</p>
+                  <p>{page.link.homeVisitAddress}</p>
                 </div>
-              ) : (
-                <div>
-                  <span class="block text-sm font-medium text-slate-700">{isExam ? "Horário do exame" : "Horário da consulta"}</span>
-                  <div id="slots_container" class="mt-1 flex flex-wrap gap-2">
-                    {initialSlots.length ? (
-                      initialSlots.map((slot) => (
-                        <label class="cursor-pointer rounded-md border border-slate-300 px-3 py-2 text-sm has-[:checked]:border-sky-700 has-[:checked]:bg-sky-50">
-                          <input
-                            type="radio"
-                            name="start"
-                            value={`${slot.start.toISOString()}|${slot.clinicLocationId}`}
-                            required
-                            class="mr-1"
-                          />
-                          {slot.label}
-                        </label>
-                      ))
+              )
+            }
+
+            <form method="POST" action={`/api/agendar/${page.link.id}/confirmar`} class="mt-6 flex flex-col gap-6">
+              {
+                page.service.isGroup ? (
+                  <div>
+                    <span class="block text-sm font-medium text-slate-700">Dia e horário</span>
+                    {sessions.length ? (
+                      <div class="mt-1 flex flex-col gap-2">
+                        {sessions.map((session) => (
+                          <label class={SLOT_LABEL}>
+                            <input type="radio" name="start" value={slotChoiceValue(session)} required class="mr-2" />
+                            {formatInstant(session.start, timeZone, "EEEE, dd/MM 'às' HH:mm").replace(/^./, (c) => c.toUpperCase())}
+                            {slotExtra(session) && <span class="text-slate-500"> · {slotExtra(session)}</span>}
+                            <span class="text-slate-500">
+                              {" "}
+                              · {session.remaining} {session.remaining === 1 ? "vaga" : "vagas"}
+                            </span>
+                          </label>
+                        ))}
+                      </div>
                     ) : (
-                      <p class="text-sm text-slate-500">Nenhum horário livre nesse dia. Escolha outra data.</p>
+                      <p class="mt-1 text-sm text-slate-500">Não encontramos vaga nos próximos dias. Fale com a clínica pelo WhatsApp.</p>
                     )}
                   </div>
-                </div>
-              )}
+                ) : (
+                  <>
+                    <div>
+                      <label for="date" class="block text-sm font-medium text-slate-700">
+                        Data
+                      </label>
+                      {dates.length ? (
+                        <select id="date" name="date" class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm">
+                          {dates.map((d) => (
+                            <option value={d.date} selected={d.date === selectedDate}>
+                              {formatDay(d.date)}
+                            </option>
+                          ))}
+                        </select>
+                      ) : (
+                        <p class="mt-1 text-sm text-slate-500">
+                          Não encontramos horários livres nos próximos dias. Fale com a clínica pelo WhatsApp.
+                        </p>
+                      )}
+                    </div>
+                    <div>
+                      <span class="block text-sm font-medium text-slate-700">Horário</span>
+                      <div id="slots_container" data-slot-class={SLOT_LABEL} class="mt-1 flex flex-wrap gap-2">
+                        {slots.length ? (
+                          slots.map((slot) => (
+                            <label class={SLOT_LABEL}>
+                              <input type="radio" name="start" value={slotChoiceValue(slot)} required class="mr-1" />
+                              {formatInstant(slot.start, timeZone, "HH:mm")}
+                              {slotExtra(slot) && <span class="text-slate-500"> · {slotExtra(slot)}</span>}
+                            </label>
+                          ))
+                        ) : (
+                          dates.length > 0 && <p class="text-sm text-slate-500">Nenhum horário livre nesse dia. Escolha outra data.</p>
+                        )}
+                      </div>
+                    </div>
+                  </>
+                )
+              }
 
               <button
                 id="submit_btn"
                 type="submit"
-                disabled={isGroupExam ? !groupDateOptions.length : !availableDates.length}
-                class="w-fit rounded-md bg-sky-700 px-4 py-2 text-sm font-medium text-white hover:bg-sky-800 disabled:cursor-not-allowed disabled:opacity-50"
+                disabled={page.service.isGroup ? !sessions.length : !slots.length}
+                class="w-fit rounded-md px-4 py-2 text-sm font-medium hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+                style={`background-color: ${buttonColor}; color: ${readableTextColor(buttonColor)};`}
               >
-                {isExam ? "Confirmar exame" : "Confirmar consulta"}
+                {isReschedule ? "Confirmar remarcação" : "Confirmar"}
               </button>
             </form>
           </>
@@ -441,79 +283,57 @@ const confirmedAddress =
   </body>
 </html>
 
-<script define:vars={{ token: link?.id ?? "" }} is:inline>
-  window.__bookingToken = token;
-</script>
 <script>
+  // Trocar a data busca os horários do dia sem recarregar a página.
   const dateSelect = document.getElementById("date") as HTMLSelectElement | null;
-  const slotsContainer = document.getElementById("slots_container") as HTMLDivElement | null;
-  const submitBtn = document.getElementById("submit_btn") as HTMLButtonElement | null;
-  const token = (window as any).__bookingToken as string;
+  const container = document.getElementById("slots_container") as HTMLDivElement | null;
+  const submit = document.getElementById("submit_btn") as HTMLButtonElement | null;
+  const form = dateSelect?.form;
 
-  if (dateSelect && slotsContainer && submitBtn && token) {
+  if (dateSelect && container && submit && form) {
+    const slotClass = container.dataset.slotClass ?? "";
+    const message = (text: string, tone = "text-slate-500") => {
+      container.replaceChildren();
+      const p = document.createElement("p");
+      p.className = `text-sm ${tone}`;
+      p.textContent = text;
+      container.append(p);
+    };
+
     dateSelect.addEventListener("change", async () => {
-      slotsContainer.innerHTML = '<p class="text-sm text-slate-500">Buscando horários…</p>';
-      submitBtn.disabled = true;
-
-      const params = new URLSearchParams({ date: dateSelect.value });
-      const response = await fetch(`/api/agendar/${token}/slots?${params.toString()}`);
-
+      message("Buscando horários…");
+      submit.disabled = true;
+      const confirmUrl = form.getAttribute("action") ?? "";
+      const response = await fetch(`${confirmUrl.replace(/\/confirmar$/, "/slots")}?date=${encodeURIComponent(dateSelect.value)}`);
       if (!response.ok) {
-        slotsContainer.innerHTML =
-          '<p class="text-sm text-red-700">Não foi possível buscar os horários. Tente novamente.</p>';
+        message("Não foi possível buscar os horários. Tente de novo.", "text-red-700");
         return;
       }
-
-      const { slots } = await response.json();
-      slotsContainer.innerHTML = "";
-
+      const { slots } = (await response.json()) as { slots: { value: string; time: string; extra: string }[] };
       if (!slots.length) {
-        slotsContainer.innerHTML =
-          '<p class="text-sm text-slate-500">Nenhum horário livre nesse dia. Escolha outra data.</p>';
+        message("Nenhum horário livre nesse dia. Escolha outra data.");
         return;
       }
-
-      submitBtn.disabled = false;
-      slots.forEach((slot: { start: string; label: string; clinicLocationId: string }) => {
+      container.replaceChildren();
+      for (const slot of slots) {
         const label = document.createElement("label");
-        label.className =
-          "cursor-pointer rounded-md border border-slate-300 px-3 py-2 text-sm has-[:checked]:border-sky-700 has-[:checked]:bg-sky-50";
+        label.className = slotClass;
         const input = document.createElement("input");
         input.type = "radio";
         input.name = "start";
-        input.value = `${slot.start}|${slot.clinicLocationId}`;
+        input.value = slot.value;
         input.required = true;
         input.className = "mr-1";
-        label.appendChild(input);
-        label.append(slot.label);
-        slotsContainer.appendChild(label);
-      });
-    });
-  }
-</script>
-<script>
-  // Exame em grupo: cada <option> de data já carrega o horário fixo e as
-  // vagas (dataset), então trocar a data não precisa de fetch nenhum — só
-  // atualizar o texto informativo e o campo escondido "start".
-  const groupDateSelect = document.getElementById("date") as HTMLSelectElement | null;
-  const groupSessionInfo = document.getElementById("group_session_info") as HTMLParagraphElement | null;
-  const groupStartInput = document.getElementById("group_start") as HTMLInputElement | null;
-
-  if (groupDateSelect && groupSessionInfo && groupStartInput) {
-    const clinicLocationId = groupStartInput.value.split("|")[1] ?? "";
-
-    groupDateSelect.addEventListener("change", () => {
-      const option = groupDateSelect.selectedOptions[0];
-      const start = option?.dataset.start;
-      const startLabel = option?.dataset.startLabel;
-      const endLabel = option?.dataset.endLabel;
-      const remaining = option?.dataset.remaining;
-
-      if (!start) return;
-
-      groupStartInput.value = `${start}|${clinicLocationId}`;
-      groupSessionInfo.textContent =
-        `Esse exame é sempre das ${startLabel} às ${endLabel} — escolha só a data. Vagas: ${remaining}.`;
+        label.append(input, slot.time);
+        if (slot.extra) {
+          const extra = document.createElement("span");
+          extra.className = "text-slate-500";
+          extra.textContent = ` · ${slot.extra}`;
+          label.append(extra);
+        }
+        container.append(label);
+      }
+      submit.disabled = false;
     });
   }
 </script>

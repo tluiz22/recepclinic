@@ -1,82 +1,36 @@
 import type { APIRoute } from "astro";
-import { createServiceClient } from "../../../../lib/supabase/service";
-import { getAvailableSlotsForDate, type AppointmentType } from "../../../../lib/scheduling/getAvailableSlotsForDate";
-import { getExamAvailableSlotsForDate } from "../../../../lib/scheduling/getExamAvailableSlotsForDate";
-import { resolveClinicLocationIds, type LocationCategory } from "../../../../lib/scheduling/resolveClinicLocationIds";
-import { getBookingLinkLastDate } from "../../../../lib/scheduling/returnVisitDeadline";
-import { logWebFunnelEvent } from "../../../../lib/whatsapp/funnel";
+import { formatInstant, isCalendarDate } from "../../../../lib/clinicTime";
+import { createClinicServiceClient } from "../../../../lib/data/clinicService";
+import { listLinkSlots, loadBookingPage, logBookingPageStep, slotChoiceValue, slotDetails } from "../../../../lib/data/agenda/publicBooking";
+import { DataError } from "../../../../lib/data/errors";
+import { resolveClinicByBookingLink } from "../../../../lib/data/platform";
+
+// Horários livres de um dia para a página /agendar (F5.2), ao trocar a data.
+const json = (body: unknown, status = 200) =>
+  new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } });
 
 export const GET: APIRoute = async ({ params, url }) => {
-  const token = params.token;
-  const date = url.searchParams.get("date");
+  const token = params.token ?? "";
+  const date = url.searchParams.get("date") ?? "";
+  if (!isCalendarDate(date)) return json({ error: "date (YYYY-MM-DD) é obrigatório" }, 400);
 
-  if (!token || !date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
-    return new Response(JSON.stringify({ error: "date (YYYY-MM-DD) é obrigatório" }), {
-      status: 400,
-      headers: { "Content-Type": "application/json" },
-    });
-  }
+  const clinicId = await resolveClinicByBookingLink(token);
+  if (!clinicId) return json({ error: "link inválido" }, 404);
+  const db = createClinicServiceClient(clinicId);
+  const page = await loadBookingPage(db, clinicId, token).catch((error) => {
+    if (error instanceof DataError && error.code === "not_found") return null;
+    throw error;
+  });
+  if (!page || page.state !== "form") return json({ error: "link inválido ou expirado" }, 404);
+  if (page.service.isGroup) return json({ slots: [] });
 
-  const supabase = createServiceClient();
-
-  const { data: link } = await supabase
-    .from("booking_links")
-    .select(
-      "clinic_location_id, location_category, appointment_type, exam_type_id, origin_appointment_id, return_deadline_waived, used_at, expires_at, mode, guardian_id, guardian_phone, funnel_session_id, exam_types ( duration_minutes, scheduling_mode )"
-    )
-    .eq("id", token)
-    .maybeSingle();
-
-  if (!link || link.used_at || new Date(link.expires_at) < new Date()) {
-    return new Response(JSON.stringify({ error: "link inválido ou expirado" }), {
-      status: 404,
-      headers: { "Content-Type": "application/json" },
-    });
-  }
-
-  const examType = link.exam_types as unknown as { duration_minutes: number; scheduling_mode: string } | null;
-  const appointmentType = link.appointment_type as AppointmentType;
-
-  // Exame em grupo não usa esse endpoint (a página nem chama — o horário já
-  // vem junto da data) — devolve vazio em vez de calcular horário errado
-  // (individual) pra uma sessão de grupo.
-  if (appointmentType === "exam" && examType?.scheduling_mode === "group") {
-    return new Response(JSON.stringify({ slots: [] }), { headers: { "Content-Type": "application/json" } });
-  }
-
-  // Retorno fora do prazo da Consulta de origem (Fase 17): nenhum horário.
-  const lastDate = await getBookingLinkLastDate(supabase, link);
-  if (lastDate && date > lastDate) {
-    return new Response(JSON.stringify({ slots: [] }), { headers: { "Content-Type": "application/json" } });
-  }
-
-  const slots =
-    appointmentType === "exam"
-      ? await getExamAvailableSlotsForDate({
-          supabase,
-          examTypeId: link.exam_type_id ?? "",
-          examLocationId: link.clinic_location_id ?? "",
-          date,
-          examDurationMinutes: examType?.duration_minutes ?? 0,
-        })
-      : await getAvailableSlotsForDate({
-          supabase,
-          clinicLocationIds: await resolveClinicLocationIds(supabase, (link.location_category as LocationCategory) ?? "clinic"),
-          date,
-          appointmentType,
-        });
-
-  // Funil (Fase 15): trocou a data pra ver outros horários.
-  await logWebFunnelEvent(supabase, link, "date_changed", { date, slots: slots.length });
-
-  return new Response(
-    JSON.stringify({
-      slots: slots.map((slot) => ({
-        start: slot.start.toISOString(),
-        label: slot.label,
-        clinicLocationId: slot.clinicLocationId,
-      })),
-    }),
-    { headers: { "Content-Type": "application/json" } }
-  );
+  const slots = await listLinkSlots(db, clinicId, page, date);
+  await logBookingPageStep(db, clinicId, page, "date_changed", { date, slots: slots.length });
+  return json({
+    slots: slots.map((slot) => ({
+      value: slotChoiceValue(slot),
+      time: formatInstant(slot.start, page.timeZone, "HH:mm"),
+      extra: slotDetails(page.candidates, slot),
+    })),
+  });
 };

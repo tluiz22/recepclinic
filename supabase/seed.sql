@@ -241,8 +241,22 @@ begin
   insert into public.schedule_blocks (clinic_id, agenda_id, starts_at, ends_at, reason, created_by)
     values (c_a, ag_ped, (monday + 2 + time '10:00') at time zone tz, (monday + 2 + time '12:00') at time zone tz, 'Reunião clínica', u_a_admin);
 
-  insert into public.booking_links (clinic_id, contact_id, patient_id, service_id, mode, contact_phone, expires_at)
-    values (c_a, ct_maria, pt_ana, s_consulta, 'create', '+5584988880001', now() + interval '1 day');
+  -- Links da página pública /agendar (F5.2), com endereço fixo e 30 dias de
+  -- validade (só local):
+  --   /agendar/0a0e0000-0000-4000-8000-000000000001  Avaliação inicial, "primeiro horário
+  --       disponível" entre a psicóloga e o fisioterapeuta (cada horário mostra com quem)
+  --   /agendar/0a0e0000-0000-4000-8000-000000000002  remarcar a consulta de João (segunda, 8h)
+  --   /agendar/0a0e0000-0000-4000-8000-000000000003  turma de espirometria (com preparo)
+  --   /agendar/0a0e0000-0000-4000-8000-000000000004  consulta da Ana, que já tem consulta
+  --       marcada com a pediatra (confirmar mostra o aviso de atendimento já marcado)
+  insert into public.booking_links (id, clinic_id, contact_id, patient_id, service_id, mode, location_category, contact_phone, expires_at)
+    values ('0a0e0000-0000-4000-8000-000000000001', c_a, ct_julia, pt_julia, s_avaliacao, 'create', 'clinic', '+5584988880003', now() + interval '30 days');
+  insert into public.booking_links (id, clinic_id, contact_id, patient_id, service_id, mode, appointment_id, location_category, contact_phone, expires_at)
+    values ('0a0e0000-0000-4000-8000-000000000002', c_a, ct_maria, pt_joao, s_consulta, 'reschedule', ap_first, 'clinic', '+5584988880001', now() + interval '30 days');
+  insert into public.booking_links (id, clinic_id, contact_id, patient_id, service_id, mode, contact_phone, expires_at)
+    values ('0a0e0000-0000-4000-8000-000000000003', c_a, ct_maria, pt_ana, s_espiro, 'create', '+5584988880001', now() + interval '30 days');
+  insert into public.booking_links (id, clinic_id, contact_id, patient_id, service_id, mode, location_category, contact_phone, expires_at)
+    values ('0a0e0000-0000-4000-8000-000000000004', c_a, ct_maria, pt_ana, s_consulta, 'create', 'clinic', '+5584988880001', now() + interval '30 days');
 
   -- Lista de espera: Ana espera antecipar a consulta com a pediatra; um
   -- cancelamento na mesma agenda abre a vaga (gatilho) e ela recebe a oferta.

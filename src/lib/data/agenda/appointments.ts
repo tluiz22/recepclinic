@@ -344,6 +344,8 @@ export type BookInput = {
   /** Obrigatório só quando o mesmo horário existe em mais de um local. */
   locationId?: string | null;
   homeVisitAddress?: string | null;
+  /** Retorno: a consulta de origem indicada (link do bot ou da clínica); sem ela, a última da agenda. */
+  originAppointmentId?: string | null;
   channel: ActionChannel;
   /** Origem na trilha, se diferente do canal (ex.: link de agendamento). */
   trailChannel?: TrailChannel;
@@ -410,7 +412,12 @@ export async function bookAppointment(db: DbClient, clinicId: string, input: Boo
 
   let origin: ReturnOrigin | null = null;
   if (plan.category === "return_visit") {
-    origin = await findReturnOrigin(db, clinicId, { patientId: input.patientId, agendaId: input.agendaId, returnServiceId: input.serviceId }, now);
+    origin = await findReturnOrigin(
+      db,
+      clinicId,
+      { patientId: input.patientId, agendaId: input.agendaId, returnServiceId: input.serviceId, originAppointmentId: input.originAppointmentId },
+      now,
+    );
   }
 
   let id: string;
