@@ -25,16 +25,23 @@
      senha com no mínimo 8 caracteres.
    - *URL Configuration*: **Site URL** `https://app.recepclinic.com.br`; **Redirect URLs**
      `https://app.recepclinic.com.br/**`.
-   - *Emails › Templates*: **Invite user** e **Reset password** com o assunto e o texto de
-     `supabase/templates/convite.html` e `supabase/templates/recuperar-senha.html` (os assuntos
-     estão em `supabase/config.toml`). Até haver o provedor de e-mail próprio, o Supabase só
-     envia para os e-mails da equipe da organização, poucos por hora.
+   - *Emails › Templates*: **fica para quando houver o provedor de e-mail** (cliente, 06/out/2026:
+     o Supabase só deixa editar os modelos com SMTP próprio). Nessa hora, o mesmo provedor vira
+     o SMTP do painel e do Supabase, e os modelos **Invite user** e **Reset password** recebem o
+     assunto e o texto de `supabase/templates/convite.html` e `recuperar-senha.html` (assuntos em
+     `supabase/config.toml`). Até lá, **"Esqueci minha senha" não funciona no staging** (o e-mail
+     padrão não leva à tela de nova senha): quem esquecer pede ao Suporte. Os convites e o pedido
+     de informações não dependem desses modelos (o painel envia pelo próprio SMTP).
 4. **Project Settings**, para o arquivo `.env.staging` (fora do git) e para a Vercel:
    - *Data API*: Project URL → `PUBLIC_SUPABASE_URL`;
    - *API Keys*: a chave **anon** (ou *publishable*) → `PUBLIC_SUPABASE_ANON_KEY`; a
      **service_role** (ou *secret*) → `SUPABASE_SERVICE_ROLE_KEY`;
-   - *JWT Keys*: o **Legacy JWT Secret** → `SUPABASE_JWT_SECRET`. A credencial limitada à clínica
-     (páginas públicas, bot) é assinada com ele: ele não pode estar revogado.
+   - *JWT Keys*: o **Legacy JWT Secret** → `SUPABASE_JWT_SECRET`. Nos projetos novos ele já vem
+     "migrado para as JWT Signing Keys": o Supabase não assina mais com ele, mas continua
+     **verificando** os tokens assinados com ele. A credencial limitada à clínica (páginas
+     públicas, bot) é assinada por nós com esse segredo, e as chaves anon e service_role também
+     dependem dele: **nunca revogar o legacy secret** (conferido em 06/out/2026: token assinado
+     com ele aceito, com outro segredo recusado).
 
 ## B. Vercel
 
