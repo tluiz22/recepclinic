@@ -1,6 +1,6 @@
 # RecepClinic
 
-> **Estado atual (retomar daqui), 05/out/2026**
+> **Estado atual (retomar daqui), 05/out/2026 (fim da sessão)**
 >
 > - **Etapas 0 a 4 concluídas**: cópia isolada, [diagnóstico](diagnostico.md), [limites](limites.md),
 >   [arquitetura](arquitetura.md) (decisões D1–D11) e [plano](plano.md) (fases F0–F10).
@@ -9,17 +9,22 @@
 >     multi-clínica; camada de acesso ao banco por domínio (configuração, pacientes, agenda, séries,
 >     lista de espera, WhatsApp, lembrete e reenvios, resumo do dia e rotinas), com a matriz de
 >     acesso (D11) e os achados 1–5 da F1 resolvidos. Detalhes de cada etapa no [plano](plano.md).
->   - **F4 em andamento** (painel no banco novo), em nove partes (cliente, 05/out):
->     - **Concluídas:** F4.1 (login, convite e senha, escolha de clínica, vocabulário, tela
->       inicial); F4.2 (matriz de acesso e limite de profissionais); F4.3 e F4.4a/b
->       (Configurações, Nova clínica, convites, pedido de informações, equipe e WhatsApp); F4.5
->       (Agenda: Dia, Semana e Mês, cartão com as ações, Marcar pelo serviço com "com quem?",
->       Remarcar e cadastro rápido do paciente).
->     - **F4.6 a F4.9 concluídas** (Agenda II; Pacientes; Resumo do Dia com Envios e trilha;
->       Métricas com seletor de agenda, e a retirada do código antigo sem uso). Itens "Envios" e
->       "Relatórios" saíram da matriz; Funil do bot e Retomar contato ficam para a F6.
->     - **A validar pelo cliente:** F4.9 (comandos na mensagem da etapa). Com ela, **a F4 termina**.
->     - **Próxima: F5** Páginas públicas e domínio (a detalhar com o cliente).
+>   - **F4 concluída e validada pelo cliente em 05/out** (painel no banco novo, nove partes):
+>     login e escolha de clínica; matriz de acesso; Configurações (clínica, profissionais, locais,
+>     agendas, serviços, horários, feriados, convênios, equipe com nome, WhatsApp); Nova clínica e
+>     pedido de informações; Agenda (Dia com colunas por agenda, Semana, Mês, Marcar pelo serviço,
+>     Remarcar, bloqueios, cancelar selecionados com "Avisar", séries); Pacientes; Resumo do Dia
+>     (com Aguardando remarcação e Envios) e trilha; Métricas. Detalhes e decisões de cada parte
+>     no [plano](plano.md).
+>   - **Próxima: F5** — Páginas públicas e domínio (`/agendar` e `/preparo` no banco novo, com a
+>     marca da clínica; o link de remarcação passa a ir na mensagem de cancelamento). Detalhar
+>     com o cliente antes de começar.
+>   - **Já combinado para as próximas fases:** F6 — envio pelo WhatsApp (lembrete, preparo,
+>     avisos), cancelamento pela clínica com aviso automático e link (sai a tela "Avisar"), abas
+>     Funil do bot e Retomar contato, aba "Mensagens"; F7 — rotinas automáticas (lembrete, resumo
+>     do dia, ofertas da lista de espera, extensão das séries sem fim).
+>   - **Ambiente local:** a agenda "Thiago - TI", criada na validação, faz 2 testes de banco
+>     falharem até um `npm run db:reset`.
 >   - **Decidido em 05/out para depois:** aba **"Mensagens"** em Configurações na **F6** (prévia no
 >     balão do WhatsApp; com o item "Mensagens personalizadas", o Administrador edita as mensagens de
 >     conversa e propõe os templates; D3b revista); envio dos templates personalizados pela API na
