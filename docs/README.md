@@ -22,7 +22,7 @@
 >     pública usa mais a service role); link de remarcação na mensagem da tela "Avisar";
 >     **staging no ar em `https://app.recepclinic.com.br`** (roteiro em [`staging.md`](staging.md)).
 >   - **Em curso: F6** — WhatsApp por clínica e bot, detalhada e aprovada em 06/out em sete
->     partes (F6.1 conexão e webhook … F6.7 métricas do bot). **Próxima etapa: F6.1.** O número
+>     partes (F6.1 conexão e webhook … F6.7 métricas do bot). **F6.1 (conexão e webhook): código pronto, falta a configuração na Meta** (parte E do [`staging.md`](staging.md)). O número
 >     de testes do RecepClinic vai direto na Cloud API (sem o app do celular).
 >   - **Já combinado para as próximas fases:** F6 — envio pelo WhatsApp (lembrete, preparo,
 >     avisos), cancelamento pela clínica com aviso automático e link (sai a tela "Avisar"), abas

@@ -83,3 +83,34 @@
    confirma que a credencial limitada à clínica funciona na nuvem.
 
 O arquivo `.env.staging` tem as mesmas variáveis da tabela do passo B.2.
+
+## E. WhatsApp (F6.1)
+
+O número de testes do RecepClinic vai **direto na Cloud API**, no app RecepClinic (sem o app
+do celular; cliente, 06/out/2026). Nada do app ou do número do piloto.
+
+1. **Número** (business.facebook.com › portfólio RecepClinic › WhatsApp Manager › *Números de
+   telefone* › *Adicionar número*): nome de exibição, categoria e o código por SMS ou ligação
+   no chip. Anotar o **Phone number ID** e o **WhatsApp Business Account ID** (WABA), que
+   aparecem também no app, em *WhatsApp › Configuração da API*.
+2. **Token permanente** (*Configurações do negócio › Usuários › Usuários do sistema*): criar um
+   usuário do sistema **Administrador**, dar a ele o app RecepClinic e a conta do WhatsApp
+   (controle total) e gerar o token do app RecepClinic, **sem expiração**, com
+   `whatsapp_business_messaging` e `whatsapp_business_management`.
+3. **Vercel** (*Settings › Environment Variables*, Production) e `.env.staging`:
+   `WHATSAPP_APP_SECRET` (app RecepClinic › *Configurações do app › Básico › Chave secreta do
+   app*) e `WHATSAPP_WEBHOOK_VERIFY_TOKEN` (um valor aleatório, ex.: `openssl rand -hex 24`).
+   Depois, *Deployments › Redeploy* para valerem.
+4. **Webhook** (app RecepClinic › *WhatsApp › Configuração*): URL de retorno
+   `https://app.recepclinic.com.br/api/whatsapp/webhook`, o mesmo token de verificação; *Verificar
+   e salvar*; em *Campos do webhook*, assinar **messages**.
+5. **App em modo Ao vivo** (*Configurações do app › Básico*: URL da política de privacidade
+   `https://www.recepclinic.com.br/privacidade`, dos termos `https://www.recepclinic.com.br/termos`,
+   ícone e categoria; depois a chave **Ao vivo** no topo). Em desenvolvimento, a Meta não manda
+   ao webhook os eventos de números reais.
+6. **Painel** (logado como Suporte, na clínica de teste › *Configurações › WhatsApp*): no cartão
+   *Cadastro da conexão*, o Phone number ID, o WABA ID, o número exibido, a situação
+   **Conectado** e o token; *Salvar conexão*. Depois *Registrar o número* com um PIN de 6
+   números (guardar) e *Testar conexão* (a Meta responde e o app é inscrito na conta).
+7. **Conferir**: mandar uma mensagem de outro celular para o número de testes; ela aparece em
+   *Últimas mensagens* (o bot só responde a partir da F6.3).

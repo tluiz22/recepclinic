@@ -236,18 +236,22 @@ export type WhatsappMessage = {
   createdAt: Date;
 };
 
-/** Mensagens de um atendimento (trilha) ou de um contato, das mais novas para as mais antigas. */
+/**
+ * Mensagens de um atendimento (trilha), de um contato ou as últimas da
+ * clínica (Suporte, F6.1), das mais novas para as mais antigas.
+ */
 export async function listWhatsappMessages(
   db: DbClient,
   clinicId: string,
-  filter: { appointmentId: string } | { contactId: string },
+  filter: { appointmentId: string } | { contactId: string } | { latest: true },
   limit = 100,
 ): Promise<WhatsappMessage[]> {
   let query = db
     .from("whatsapp_messages")
     .select("id, direction, message_type, template_name, body, status, contact_phone, contact_id, appointment_id, created_at")
     .eq("clinic_id", clinicId);
-  query = "appointmentId" in filter ? query.eq("appointment_id", filter.appointmentId) : query.eq("contact_id", filter.contactId);
+  if ("appointmentId" in filter) query = query.eq("appointment_id", filter.appointmentId);
+  else if ("contactId" in filter) query = query.eq("contact_id", filter.contactId);
   const rows = unwrap(await query.order("created_at", { ascending: false }).limit(limit), "Mensagens do WhatsApp");
   return rows.map((row) => ({
     id: row.id,

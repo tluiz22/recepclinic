@@ -855,6 +855,16 @@ de remarcação (texto da F4.6), e enviam sozinhos; sai a tela "Avisar" da F4.6.
   para a F8); conexão cadastrada pelo Suporte na tela WhatsApp da clínica; webhook novo que
   identifica a clínica pelo `phone_number_id`, confere a assinatura da Meta e registra mensagens e
   situações de entrega.
+- **F6.1 — em andamento (06/out): código pronto, falta a configuração na Meta.** Webhook novo
+  (`/api/whatsapp/webhook`): confere a assinatura com o App Secret do app RecepClinic, descobre a
+  clínica pelo `phone_number_id` e grava com a credencial dela (mensagens recebidas, situações de
+  entrega, ecos da recepção); número sem clínica ou desconectado é ignorado (200 para a Meta);
+  sai da service role. O bot fica sem responder até a F6.3. Em Configurações › WhatsApp, só para
+  o Suporte: cadastro da conexão (token só para gravar, no Vault), **Registrar o número** na
+  Cloud API com o PIN, **Testar conexão** (a Meta responde pelo número e o app é inscrito na
+  conta) e **Últimas mensagens**. Variáveis da plataforma `WHATSAPP_APP_SECRET` e
+  `WHATSAPP_WEBHOOK_VERIFY_TOKEN`. API da Meta na versão v24.0 (a v21.0 do piloto vence em 2026).
+  Roteiro da Meta em [`staging.md`](staging.md) (parte E). 4 testes unitários e 6 de banco novos.
 - **F6.2 — Envio e templates padrão:** envio pela conexão de cada clínica; templates padrão do
   RecepClinic criados pela API na conta (WABA) do RecepClinic; envios do painel (lembrete, preparo)
   e a confirmação depois de marcar pela página `/agendar`.

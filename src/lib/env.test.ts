@@ -29,6 +29,7 @@ describe("variáveis da plataforma", () => {
       cronSecret: "x".repeat(32),
       siteUrl: null,
       email: null,
+      whatsapp: null,
     });
     expect(parsePlatformEnv({ ...valid, SITE_URL: "https://app.recepclinic.com.br" }).siteUrl).toBe(
       "https://app.recepclinic.com.br",
@@ -47,6 +48,15 @@ describe("variáveis da plataforma", () => {
       "SMTP_PORT inválida (número da porta)",
       "EMAIL_FROM não definida (remetente, ex.: RecepClinic <nao-responda@recepclinic.com.br>)",
     ]);
+  });
+
+  it("WhatsApp é opcional; com uma das duas, a outra é obrigatória (F6.1)", () => {
+    expect(parsePlatformEnv({ ...valid, WHATSAPP_APP_SECRET: "segredo", WHATSAPP_WEBHOOK_VERIFY_TOKEN: "verifica" }).whatsapp).toEqual({
+      appSecret: "segredo",
+      webhookVerifyToken: "verifica",
+    });
+    expect(() => parsePlatformEnv({ ...valid, WHATSAPP_APP_SECRET: "segredo" })).toThrow(/WHATSAPP_WEBHOOK_VERIFY_TOKEN não definida/);
+    expect(() => parsePlatformEnv({ ...valid, WHATSAPP_WEBHOOK_VERIFY_TOKEN: "verifica" })).toThrow(/WHATSAPP_APP_SECRET não definida/);
   });
 
   it("tira espaços das pontas", () => {

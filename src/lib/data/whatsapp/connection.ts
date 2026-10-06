@@ -1,5 +1,6 @@
 import type { DbClient } from "../clients";
 import { cleanText, DataError, unwrap, Validation } from "../errors";
+import { fetchPhoneNumberInfo, GraphRequestError, registerPhoneNumber, subscribeAppToWaba, type Fetcher, type PhoneNumberInfo } from "./graph";
 
 // Conexão do WhatsApp e templates por clínica (D3a, D3b), F3.9a.
 //
@@ -107,6 +108,55 @@ export async function getSendingSetup(db: DbClient, clinicId: string): Promise<S
   if (connection?.status !== "connected") return null;
   const accessToken = await getWhatsappAccessToken(db);
   return accessToken ? { phoneNumberId: connection.phoneNumberId, accessToken } : null;
+}
+
+export type ConnectionCheck =
+  | { ok: true; info: PhoneNumberInfo; subscribed: boolean; subscribeError: string | null }
+  | { ok: false; problem: "no_connection" | "no_token" | "meta_error"; message: string };
+
+/**
+ * Suporte, "Testar conexão" (F6.1): com a credencial da clínica (só ela lê o
+ * token), pergunta à Meta pelo número e inscreve o app na conta (WABA), para
+ * os eventos chegarem ao webhook. Não muda a situação da conexão.
+ */
+export async function checkWhatsappConnection(db: DbClient, clinicId: string, fetcher: Fetcher = fetch): Promise<ConnectionCheck> {
+  const connection = await getWhatsappConnection(db, clinicId);
+  if (!connection) return { ok: false, problem: "no_connection", message: "Cadastre a conexão antes de testar." };
+  const token = await getWhatsappAccessToken(db);
+  if (!token) return { ok: false, problem: "no_token", message: "Grave o token da Meta antes de testar." };
+  let info: PhoneNumberInfo;
+  try {
+    info = await fetchPhoneNumberInfo(connection.phoneNumberId, token, fetcher);
+  } catch (error) {
+    if (error instanceof GraphRequestError) return { ok: false, problem: "meta_error", message: error.message };
+    throw error;
+  }
+  try {
+    await subscribeAppToWaba(connection.wabaId, token, fetcher);
+    return { ok: true, info, subscribed: true, subscribeError: null };
+  } catch (error) {
+    if (error instanceof GraphRequestError) return { ok: true, info, subscribed: false, subscribeError: error.message };
+    throw error;
+  }
+}
+
+/**
+ * Suporte, "Registrar o número" (F6.1): registra o número da conexão na Cloud
+ * API com o PIN de 6 dígitos. null = registrado; senão, o motivo.
+ */
+export async function registerWhatsappNumber(db: DbClient, clinicId: string, pin: string, fetcher: Fetcher = fetch): Promise<string | null> {
+  if (!/^\d{6}$/.test(pin)) return "O PIN tem 6 números.";
+  const connection = await getWhatsappConnection(db, clinicId);
+  if (!connection) return "Cadastre a conexão antes de registrar o número.";
+  const token = await getWhatsappAccessToken(db);
+  if (!token) return "Grave o token da Meta antes de registrar o número.";
+  try {
+    await registerPhoneNumber(connection.phoneNumberId, pin, token, fetcher);
+    return null;
+  } catch (error) {
+    if (error instanceof GraphRequestError) return error.message;
+    throw error;
+  }
 }
 
 // ---------------------------------------------------------------------------

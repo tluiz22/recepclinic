@@ -3,8 +3,9 @@
 // estourar só quando a função que a usa rodar.
 //
 // Só entram aqui as variáveis da plataforma. O que é de cada clínica (número
-// e token do WhatsApp, templates) fica no banco (D3). As variáveis do app da
-// Meta entram quando o bot passar para o modelo novo (F6).
+// e token do WhatsApp, templates) fica no banco (D3). Do app RecepClinic na
+// Meta (F6.1), só o que é da plataforma: o App Secret, que assina o webhook,
+// e o token de verificação do cadastro do webhook.
 
 export type PlatformEnv = {
   supabaseUrl: string;
@@ -19,7 +20,11 @@ export type PlatformEnv = {
   siteUrl: string | null;
   /** Envio de e-mail próprio por SMTP (F4.4a); null = sem envio (o painel avisa). */
   email: EmailEnv | null;
+  /** App RecepClinic na Meta (F6.1); null = webhook desligado (recusa os eventos). */
+  whatsapp: WhatsappAppEnv | null;
 };
+
+export type WhatsappAppEnv = { appSecret: string; webhookVerifyToken: string };
 
 export type EmailEnv = { host: string; port: number; user: string | null; password: string | null; from: string };
 
@@ -88,8 +93,18 @@ export function parsePlatformEnv(source: EnvSource): PlatformEnv {
     email = { host: smtpHost, port, user: text(source, "SMTP_USER"), password: text(source, "SMTP_PASSWORD"), from: from ?? "" };
   }
 
+  // WhatsApp: opcional; uma sem a outra é configuração pela metade.
+  let whatsapp: WhatsappAppEnv | null = null;
+  const appSecret = text(source, "WHATSAPP_APP_SECRET");
+  const webhookVerifyToken = text(source, "WHATSAPP_WEBHOOK_VERIFY_TOKEN");
+  if (appSecret || webhookVerifyToken) {
+    if (!appSecret) problems.push("WHATSAPP_APP_SECRET não definida (App Secret do app RecepClinic na Meta)");
+    if (!webhookVerifyToken) problems.push("WHATSAPP_WEBHOOK_VERIFY_TOKEN não definida (token de verificação do webhook)");
+    if (appSecret && webhookVerifyToken) whatsapp = { appSecret, webhookVerifyToken };
+  }
+
   if (problems.length) throw new PlatformEnvError(problems);
-  return { supabaseUrl, supabaseAnonKey, supabaseServiceRoleKey, supabaseJwtSecret, cronSecret, siteUrl, email };
+  return { supabaseUrl, supabaseAnonKey, supabaseServiceRoleKey, supabaseJwtSecret, cronSecret, siteUrl, email, whatsapp };
 }
 
 let cached: PlatformEnv | undefined;
@@ -109,6 +124,8 @@ export function platformEnv(): PlatformEnv {
     SMTP_USER: import.meta.env.SMTP_USER,
     SMTP_PASSWORD: import.meta.env.SMTP_PASSWORD,
     EMAIL_FROM: import.meta.env.EMAIL_FROM,
+    WHATSAPP_APP_SECRET: import.meta.env.WHATSAPP_APP_SECRET,
+    WHATSAPP_WEBHOOK_VERIFY_TOKEN: import.meta.env.WHATSAPP_WEBHOOK_VERIFY_TOKEN,
   });
   return cached;
 }
