@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 import { parseResendOutcome, reminderCutoff } from "./reminderResend";
-import { parsePreparationResendOutcome } from "./preparationResend";
 
 describe("reminderCutoff", () => {
   it("é a hora do lembrete na véspera do atendimento, em Fortaleza", () => {
@@ -17,20 +16,17 @@ describe("reminderCutoff", () => {
   });
 });
 
-describe("parseResendOutcome e parsePreparationResendOutcome", () => {
+describe("parseResendOutcome", () => {
   it.each(["sent", "failed", "no_template", "no_phone", "not_eligible"])("aceita o código conhecido %s", (code) => {
     expect(parseResendOutcome(code)).toBe(code);
-    expect(parsePreparationResendOutcome(code)).toBe(code);
   });
 
   it.each([null, "", "enviado", "SENT"])("recusa ausente ou desconhecido: %s", (value) => {
     expect(parseResendOutcome(value)).toBeNull();
-    expect(parsePreparationResendOutcome(value)).toBeNull();
   });
 
   // Achado 4 da F1, corrigido na F3.9b: nomes herdados de Object não são códigos.
   it.each(["toString", "constructor", "__proto__", "hasOwnProperty"])("recusa o nome herdado %s", (value) => {
     expect(parseResendOutcome(value)).toBeNull();
-    expect(parsePreparationResendOutcome(value)).toBeNull();
   });
 });

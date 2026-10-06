@@ -66,19 +66,19 @@ describe("quem grava e quem lê", () => {
     expect(await codeOf(() => setClinicFeatures(db(admin), clinicId, []))).toBe("forbidden");
     const { error: fromBot } = await clinicServiceClient(clinicId).rpc("set_clinic_features", { p_clinic_id: clinicId, p_features: [] });
     expect(fromBot?.code).toBe("42501");
-    const { error: direct } = await admin.client.from("clinic_features").insert({ clinic_id: clinicId, feature_key: "reports" });
+    const { error: direct } = await admin.client.from("clinic_features").insert({ clinic_id: clinicId, feature_key: "metrics_personal" });
     expect(direct?.code).toBe("42501");
 
     await setFeatures([]);
-    await setFeatures(["exams", "reports"]);
-    expect((await getClinicFeatures(db(reception), clinicId)).sort()).toEqual(["exams", "reports"]);
+    await setFeatures(["exams", "metrics_personal"]);
+    expect((await getClinicFeatures(db(reception), clinicId)).sort()).toEqual(["exams", "metrics_personal"]);
     const { data: rows } = await adminClient().from("clinic_features").select("feature_key, enabled_by").eq("clinic_id", clinicId);
     expect(rows!.every((row) => row.enabled_by === support.id)).toBe(true);
 
     await setFeatures(["exams"]);
     const changes = await listFeatureChanges(db(support), clinicId);
-    expect(changes[0]).toMatchObject({ feature: "reports", enabled: false, actorId: support.id });
-    expect(changes.some((c) => c.feature === "reports" && c.enabled)).toBe(true);
+    expect(changes[0]).toMatchObject({ feature: "metrics_personal", enabled: false, actorId: support.id });
+    expect(changes.some((c) => c.feature === "metrics_personal" && c.enabled)).toBe(true);
   });
 
   it("item sem o item de que depende é recusado (aplicação e banco); item desconhecido também", async () => {

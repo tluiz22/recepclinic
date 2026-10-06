@@ -50,7 +50,7 @@ describe("matriz de acesso pela tela", () => {
   });
 
   it("a equipe da clínica não grava a matriz nem vê a lista do Suporte", async () => {
-    expect(await codeOf(() => setClinicFeatures(asDb(admin), clinicId, ["reports"]))).toBe("forbidden");
+    expect(await codeOf(() => setClinicFeatures(asDb(admin), clinicId, ["metrics_personal"]))).toBe("forbidden");
     expect((await listPlatformStaffNames(asDb(admin))).size).toBe(0);
     expect(await codeOf(() => setClinicFeatures(asDb(support), clinicId, ["waitlist"]))).toBe("invalid");
   });

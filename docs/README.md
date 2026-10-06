@@ -15,10 +15,11 @@
 >       (Configurações, Nova clínica, convites, pedido de informações, equipe e WhatsApp); F4.5
 >       (Agenda: Dia, Semana e Mês, cartão com as ações, Marcar pelo serviço com "com quem?",
 >       Remarcar e cadastro rápido do paciente).
->     - **F4.6, F4.7 e F4.8 concluídas** (Agenda II; Pacientes; Resumo do Dia com as abas do
->       piloto, Envios para toda a equipe, trilha com o nome de quem fez).
->     - **A validar pelo cliente:** F4.8 (comandos na mensagem da etapa).
->     - **Próxima: F4.9** Métricas e relatórios (e a retirada do código antigo sem uso).
+>     - **F4.6 a F4.9 concluídas** (Agenda II; Pacientes; Resumo do Dia com Envios e trilha;
+>       Métricas com seletor de agenda, e a retirada do código antigo sem uso). Itens "Envios" e
+>       "Relatórios" saíram da matriz; Funil do bot e Retomar contato ficam para a F6.
+>     - **A validar pelo cliente:** F4.9 (comandos na mensagem da etapa). Com ela, **a F4 termina**.
+>     - **Próxima: F5** Páginas públicas e domínio (a detalhar com o cliente).
 >   - **Decidido em 05/out para depois:** aba **"Mensagens"** em Configurações na **F6** (prévia no
 >     balão do WhatsApp; com o item "Mensagens personalizadas", o Administrador edita as mensagens de
 >     conversa e propõe os templates; D3b revista); envio dos templates personalizados pela API na

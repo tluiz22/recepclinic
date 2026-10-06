@@ -661,6 +661,22 @@ Vocabulário pelo perfil da clínica.
   retorno não fica ligado a uma consulta cancelada (consulta passada não se cancela pela Agenda).
   Dados de teste: o retorno do João passa a ser de uma consulta realizada 2 semanas antes (antes
   estava ligado a uma consulta futura, o que confundiu na validação). 1 teste de banco novo.
+- **F4.9 — concluída em 05/out.** **Métricas** no banco novo: período no fuso da clínica (Hoje, 7
+  dias, Este mês, Mês anterior, Personalizado até 366 dias), **seletor de agenda para o
+  Administrador** (decisão do cliente, 05/out; o Profissional, com "Métricas pessoais", vê só as
+  agendas do próprio cadastro, D11), filtro por paciente ou responsável e uma aba por item:
+  **Visão geral** (atendimentos sem os cancelados, compareceram, faltaram com a taxa, cancelados, a
+  registrar, por vir e por onde foram marcados), **Atendimentos** (volume por serviço e local, não
+  comparecimento por tipo e por origem), **Faltosos** (regra do piloto, todo o histórico) e
+  **Financeiro** (realizado, previsto e faltas por serviço e local, com o valor gravado na
+  marcação; retorno fora). Decisões do cliente (05/out): saem da matriz os itens **"Métricas:
+  Envios"** (a aba foi para o Resumo do Dia) e **"Relatórios"** (a aba Atendimentos cobre;
+  `/admin/relatorios` leva a ela); **Funil do bot e Retomar contato vão para a F6**, com o bot.
+  Migração `20261005240000`. **Retirada do código antigo sem uso**: métricas antigas, faltas,
+  datas, itens e cancelamento em massa antigos da agenda, conflitos de janela de exame, reenvio de
+  preparo antigo e os clientes antigos do Supabase (com os testes deles). O código antigo que
+  continua é o das páginas públicas `/agendar` e `/preparo` (F5), do webhook (F6) e das rotinas
+  automáticas (F7), que serão refeitos nessas fases. 3 testes unitários e 3 de banco novos.
 - **F4.5 — Agenda I:** dia, semana e mês com a escolha da agenda; marcar, remarcar, cancelar;
   presença e comparecimento; lembrete e preparo; lista de espera.
 - **F4.6 — Agenda II:** bloqueios, cancelamento do dia com link de remarcação, séries (D9).
@@ -754,6 +770,8 @@ com o item **"Mensagens personalizadas"** (D11), o **Administrador da clínica**
 conversa do bot e propõe o texto dos templates (mesmas variáveis; versão nova revisada pelo
 Suporte e enviada à Meta à mão até a F8; o padrão continua até a aprovação e a troca é sozinha);
 `whatsapp_templates` passa a guardar versões, com o texto e a versão em uso.
+**Métricas do bot** (cliente, 05/out, adiadas da F4.9): abas **Funil do bot** e **Retomar contato**
+(itens da matriz que já existem), com os passos do bot desta fase.
 **Cancelamento pela clínica como no piloto** (cliente, 05/out): "Cancelar selecionados" e o
 bloqueio com cancelamento mostram o aviso de que todos recebem a mensagem pelo WhatsApp, com o link
 de remarcação (texto da F4.6), e enviam sozinhos; sai a tela "Avisar" da F4.6.

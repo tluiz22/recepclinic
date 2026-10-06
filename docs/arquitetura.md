@@ -443,7 +443,9 @@ uma pode usar; o básico do consultório vem sempre ligado.**
     editados pelo Administrador da clínica; D3b revista, cliente, 05/out/2026; a tela mostra só o
     que a clínica usa: as de conversa com o bot liberado).
   - **Métricas, uma aba por item:** Visão geral, Atendimentos, Faltosos, Retomar contato, Funil do
-    bot (**depende do bot**), Financeiro, Envios; **Relatórios**.
+    bot (**depende do bot**), Financeiro. **Revisão de 05/out/2026 (cliente):** saem os itens
+    "Envios" (a aba foi para o Resumo do Dia, para toda a equipe, com o lembrete ou o resumo do dia
+    liberado) e "Relatórios" (a aba Atendimentos já cobre, como no piloto).
   - **Métricas pessoais do profissional:** o Profissional vê as métricas e os relatórios liberados
     **só da própria agenda**.
 - **Dependências:** item que depende de outro só é ligado com ele; desligar o bot desliga a lista

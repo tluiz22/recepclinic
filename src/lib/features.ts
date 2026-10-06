@@ -25,8 +25,6 @@ export type FeatureKey =
   | "metrics_recall"
   | "metrics_funnel"
   | "metrics_financial"
-  | "metrics_sends"
-  | "reports"
   | "metrics_personal";
 
 export type Feature = { key: FeatureKey; area: FeatureArea; label: string; dependsOn: FeatureKey[] };
@@ -46,8 +44,6 @@ export const FEATURES: readonly Feature[] = [
   { key: "metrics_recall", area: "metrics", label: "Métricas: Retomar contato", dependsOn: [] },
   { key: "metrics_funnel", area: "metrics", label: "Métricas: Funil do bot", dependsOn: ["whatsapp_bot"] },
   { key: "metrics_financial", area: "metrics", label: "Métricas: Financeiro", dependsOn: [] },
-  { key: "metrics_sends", area: "metrics", label: "Métricas: Envios", dependsOn: [] },
-  { key: "reports", area: "metrics", label: "Relatórios", dependsOn: [] },
   { key: "metrics_personal", area: "metrics", label: "Métricas pessoais do profissional", dependsOn: [] },
 ];
 
@@ -103,8 +99,6 @@ const PATH_RULES: PathRule[] = [
   { prefix: "/admin/metricas", tab: "retomar_contato", feature: "metrics_recall" },
   { prefix: "/admin/metricas", tab: "faltosos", feature: "metrics_no_shows" },
   { prefix: "/admin/metricas", tab: "financeiro", feature: "metrics_financial" },
-  { prefix: "/admin/metricas", tab: "envios", feature: "metrics_sends" },
-  { prefix: "/admin/relatorios", feature: "reports" },
   // Resumo do Dia: abas do lembrete e da lista de espera.
   { prefix: "/admin/consultas", tab: "lembretes", feature: "reminders" },
   { prefix: "/admin/consultas", tab: "lista_espera", feature: "waitlist" },

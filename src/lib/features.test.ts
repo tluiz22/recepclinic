@@ -54,8 +54,6 @@ describe("item que cada rota exige", () => {
     expect(route("/admin/metricas?tab=visao_geral")).toBe("metrics_overview");
     expect(route("/admin/metricas?tab=financeiro&periodo=mes")).toBe("metrics_financial");
     expect(route("/admin/metricas?tab=funil")).toBe("metrics_funnel");
-    expect(route("/admin/metricas?tab=envios")).toBe("metrics_sends");
-    expect(route("/admin/relatorios")).toBe("reports");
   });
 
   it("abas do Resumo do Dia e Configurações pelos itens", () => {
@@ -72,7 +70,7 @@ describe("item que cada rota exige", () => {
 
   it("prefixo parecido não conta", () => {
     expect(route("/admin/configuracoes/convenios-x")).toBeNull();
-    expect(route("/admin/relatorios-x")).toBeNull();
+    expect(route("/admin/metricas-x")).toBeNull();
   });
 });
 
