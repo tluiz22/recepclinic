@@ -21,9 +21,9 @@
 | F0 | Base de trabalho | concluída (04/out) |
 | F1 | Testes das regras atuais | concluída (04/out; 197 testes) |
 | F2 | Schema novo | concluída (04/out; 158 testes de banco) |
-| F3 | Acesso ao banco e contexto da clínica | **próxima** (a detalhar) |
-| F4 | Painel | a detalhar |
-| F5 | Páginas públicas e domínio | a detalhar |
+| F3 | Acesso ao banco e contexto da clínica | concluída (05/out) |
+| F4 | Painel | concluída (05/out; validada pelo cliente) |
+| F5 | Páginas públicas e domínio | **em curso** (detalhada em 05/out) |
 | F6 | WhatsApp por clínica e bot | a detalhar |
 | F7 | Envios automáticos por clínica | a detalhar |
 | F8 | Conexão self-service na Meta | a detalhar (depende da Meta) |
@@ -752,6 +752,26 @@ Vocabulário pelo perfil da clínica.
 produto (projeto separado, ver D7). O botão "Voltar para o site", removido na F0.2 (decisão do
 cliente, 03/out), volta apontando para o site da clínica, só quando ela tiver um.
 
+**Decisões do cliente (05/out):** o domínio `app.recepclinic.com.br` entra **nesta fase** (não
+espera o staging da F6). O site do produto já está no ar com `/privacidade` e `/termos`, e o DNS
+de `recepclinic.com.br` já está na Cloudflare. As páginas públicas mostram **só nome e logo** da
+clínica (topo na cor dela); o rodapé leva "Feito com RecepClinic" e os links
+`www.recepclinic.com.br/privacidade` e `/termos`, sem contato nem endereços da clínica.
+Padrões assumidos (revisáveis): a marca é editada por quem já edita os dados da clínica em
+Configurações; logo PNG, JPG ou WebP até 1 MB, no Supabase Storage; o link de remarcação vale 2
+dias (regra do piloto).
+
+**Dividida em cinco partes (cliente, 05/out),** cada uma com validação:
+- **F5.1 — Marca da clínica:** em Configurações › Clínica, envio do logo, cor e site da clínica
+  (campo novo); topo e rodapé públicos com a marca e os links legais.
+- **F5.2 — `/agendar` no banco novo:** marcar e remarcar pelo link, serviço do catálogo, "primeiro
+  horário disponível" ou a agenda escolhida, turma, local, prazo do retorno, lista de espera;
+  "Voltar para o site" só para a clínica que tem site.
+- **F5.3 — `/preparo` no banco novo:** instruções de preparo do serviço de exame.
+- **F5.4 — Link de remarcação na tela "Avisar":** a mensagem do cancelamento pela clínica passa a
+  levar o link (o envio automático continua na F6).
+- **F5.5 — Domínio:** projeto na Vercel, banco na nuvem e `app.recepclinic.com.br` pela Cloudflare.
+
 ## F6 — WhatsApp por clínica e bot
 
 **Objetivo:** o bot atendendo pela conexão de cada clínica.
@@ -815,7 +835,7 @@ para o modelo novo; acompanhamento das primeiras semanas.
 
 | Frente | Situação | Depende de | Destrava |
 |---|---|---|---|
-| **Site do RecepClinic** (`www.recepclinic.com.br`, repositório separado) | **planejado**: [`site-plano.md`](site-plano.md), execução numa sessão paralela | — | Tech Provider; páginas legais usadas pela F5 |
+| **Site do RecepClinic** (`www.recepclinic.com.br`, repositório separado) | **no ar** (05/out, com `/privacidade` e `/termos`; DNS na Cloudflare): [`site-plano.md`](site-plano.md), sessão paralela | — | Tech Provider; páginas legais usadas pela F5 |
 | **Cadastro como Tech Provider na Meta** (verificação da empresa, app do RecepClinic, análise) | **pendente, a tratar depois da construção do site** | site no ar com política de privacidade e termos; CNPJ | F8 (e a conexão de números de outras clínicas) |
 
 ## Pendências do cliente que afetam o plano

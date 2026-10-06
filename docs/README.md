@@ -16,9 +16,9 @@
 >     Remarcar, bloqueios, cancelar selecionados com "Avisar", séries); Pacientes; Resumo do Dia
 >     (com Aguardando remarcação e Envios) e trilha; Métricas. Detalhes e decisões de cada parte
 >     no [plano](plano.md).
->   - **Próxima: F5** — Páginas públicas e domínio (`/agendar` e `/preparo` no banco novo, com a
->     marca da clínica; o link de remarcação passa a ir na mensagem de cancelamento). Detalhar
->     com o cliente antes de começar.
+>   - **Em curso: F5** — Páginas públicas e domínio, detalhada e aprovada em 05/out em cinco
+>     partes (F5.1 marca da clínica, F5.2 `/agendar`, F5.3 `/preparo`, F5.4 link na tela "Avisar",
+>     F5.5 domínio `app.recepclinic.com.br`). **Próxima etapa: F5.1.** Decisões no [plano](plano.md).
 >   - **Já combinado para as próximas fases:** F6 — envio pelo WhatsApp (lembrete, preparo,
 >     avisos), cancelamento pela clínica com aviso automático e link (sai a tela "Avisar"), abas
 >     Funil do bot e Retomar contato, aba "Mensagens"; F7 — rotinas automáticas (lembrete, resumo
@@ -32,15 +32,13 @@
 >   - **Para rodar:** abrir o OrbStack, `npm run db:start`, `npm run db:reset` (dados de teste) e
 >     `npm run dev` com o `.env` local (ver "Painel local" no README da raiz); testes com `npm test`
 >     e `npm run test:db`.
-> - **Frente paralela, o site** `www.recepclinic.com.br`: [`site-plano.md`](site-plano.md), etapas
->   S0–S6, a executar numa **sessão separada, na pasta `~/Documents/Desenvolvimento/recepclinic-site`**
->   (nunca nesta pasta, para as duas sessões não se cruzarem). **S0 concluída em 03/out**: repositório
->   `tluiz22/recepclinic-site` criado e clonado nessa pasta; próxima é a S1, na sessão do site.
->   Cloudflare e DNS podem vir depois (até a S5).
+> - **Frente paralela, o site** `www.recepclinic.com.br`: [`site-plano.md`](site-plano.md), feito numa
+>   **sessão separada, na pasta `~/Documents/Desenvolvimento/recepclinic-site`** (nunca nesta pasta).
+>   **No ar** (conferido em 05/out), com `/privacidade` e `/termos`; DNS de `recepclinic.com.br` já
+>   na Cloudflare.
 > - **Depois do site**: cadastro como Tech Provider na Meta (ver "Frentes paralelas" no plano).
 > - **Pendências do cliente**:
 >   - abrir o CNPJ (SLU, ME, Simples Nacional);
->   - conta na Cloudflare e troca do DNS no registro.br (até a S5 do site);
 >   - comprar o chip de testes do RecepClinic (necessário na F6);
 >   - advogado para revisar as páginas legais (antes do 1º piloto).
 >   - provedor de e-mail (ex.: Resend) com o domínio `recepclinic.com.br` (antes do 1º piloto;
