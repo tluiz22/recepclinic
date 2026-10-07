@@ -19,6 +19,8 @@ export type WhatsappConnection = {
   displayPhone: string | null;
   status: ConnectionStatus;
   connectedAt: Date | null;
+  /** App WhatsApp Business + API no mesmo número: a recepção responde pelo app (F6.4). */
+  coexistence: boolean;
 };
 
 export type WhatsappConnectionInput = {
@@ -26,6 +28,7 @@ export type WhatsappConnectionInput = {
   wabaId: string;
   displayPhone?: string | null;
   status: ConnectionStatus;
+  coexistence?: boolean;
 };
 
 const CONNECTION_STATUSES: ConnectionStatus[] = ["pending", "connected", "disconnected"];
@@ -35,7 +38,7 @@ export async function getWhatsappConnection(db: DbClient, clinicId: string): Pro
   const row = unwrap(
     await db
       .from("whatsapp_connections")
-      .select("phone_number_id, waba_id, display_phone, status, connected_at")
+      .select("phone_number_id, waba_id, display_phone, status, connected_at, coexistence")
       .eq("clinic_id", clinicId)
       .maybeSingle(),
     "Conexão do WhatsApp",
@@ -47,6 +50,7 @@ export async function getWhatsappConnection(db: DbClient, clinicId: string): Pro
     displayPhone: row.display_phone,
     status: row.status as ConnectionStatus,
     connectedAt: row.connected_at ? new Date(row.connected_at) : null,
+    coexistence: row.coexistence,
   };
 }
 
@@ -81,6 +85,7 @@ export async function saveWhatsappConnection(
         display_phone: cleanText(input.displayPhone),
         status: input.status,
         connected_at: connectedAt?.toISOString() ?? null,
+        coexistence: input.coexistence ?? false,
       },
       { onConflict: "clinic_id" },
     ),

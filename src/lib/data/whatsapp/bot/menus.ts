@@ -3,11 +3,13 @@ import { go, say, sendList, type Bot } from "./engine";
 import { pick, type Selection } from "./input";
 import * as t from "./texts";
 import { startBooking, startReturn } from "./booking";
+import { handoff, startManage } from "./manage";
 
-// Menus do bot (F6.3), na estrutura do piloto e só com o que já funciona
-// (cliente, 07/out): Consultas › Marcar consulta / Marcar retorno; Exames ›
-// Marcar exame; Informações (itens com conteúdo). A F6.4 acrescenta
-// Cancelar, Remarcar, Encaixe e Falar com a recepção.
+// Menus do bot, na estrutura do piloto: Consultas › Marcar consulta / Marcar
+// retorno / Remarcar / Cancelar / Encaixe ou antecipar; Exames › Marcar exame
+// / Remarcar / Cancelar / Encaixe ou antecipar (F6.4; o Encaixe só com o item
+// "Lista de espera"); Informações (itens com conteúdo); Falar com a recepção
+// só com o número em coexistência (cliente, 07/out).
 
 type Item = { id: string; label: string; description?: string | null };
 
@@ -17,6 +19,7 @@ async function mainItems(b: Bot): Promise<Item[]> {
   if (servicesOf(catalog, "consultation").length || servicesOf(catalog, "return_visit").length) items.push({ id: "menu_consultations", label: "Consultas" });
   if (servicesOf(catalog, "exam").length) items.push({ id: "menu_exams", label: "Exames" });
   if ((await infoItems(b)).length) items.push({ id: "menu_info", label: "Informações" });
+  if (b.receptionAvailable) items.push({ id: "menu_reception", label: "Falar com a recepção" });
   return items;
 }
 
@@ -25,10 +28,17 @@ async function consultationItems(b: Bot): Promise<Item[]> {
   return [
     ...(servicesOf(catalog, "consultation").length ? [{ id: "book_consultation", label: "Marcar consulta" }] : []),
     ...(servicesOf(catalog, "return_visit").length ? [{ id: "book_return", label: "Marcar retorno" }] : []),
+    ...manageItems(b),
   ];
 }
 
-const EXAM_ITEMS: Item[] = [{ id: "book_exam", label: "Marcar exame" }];
+const manageItems = (b: Bot): Item[] => [
+  { id: "manage_reschedule", label: "Remarcar" },
+  { id: "manage_cancel", label: "Cancelar" },
+  ...(b.features.includes("waitlist") ? [{ id: "manage_waitlist", label: "Encaixe ou antecipar", description: "Lista de espera para um horário mais cedo" }] : []),
+];
+
+const examItems = (b: Bot): Item[] => [{ id: "book_exam", label: "Marcar exame" }, ...manageItems(b)];
 
 /** Menu principal; clínica sem nada para mostrar recebe o aviso e a conversa fica no começo. */
 export async function showMenu(b: Bot, { withWelcome = false, notUnderstood = false } = {}): Promise<void> {
@@ -49,6 +59,7 @@ export async function handleMenu(b: Bot, selection: Selection): Promise<void> {
   if (choice?.id === "menu_consultations") return showSubmenu(b, "CONSULTAS_MENU");
   if (choice?.id === "menu_exams") return showSubmenu(b, "EXAMES_MENU");
   if (choice?.id === "menu_info") return showInfo(b);
+  if (choice?.id === "menu_reception") return handoff(b);
   await showMenu(b, { notUnderstood: true });
 }
 
@@ -59,17 +70,21 @@ async function showSubmenu(b: Bot, state: "CONSULTAS_MENU" | "EXAMES_MENU", notU
     b,
     consultations ? "bot_consultations_menu" : "bot_exams_menu",
     consultations ? t.CONSULTATIONS_BODY : t.EXAMS_BODY,
-    t.numberedList(consultations ? await consultationItems(b) : EXAM_ITEMS),
+    t.numberedList(consultations ? await consultationItems(b) : examItems(b)),
   );
   await go(b, state);
 }
 
 export async function handleSubmenu(b: Bot, state: "CONSULTAS_MENU" | "EXAMES_MENU", selection: Selection): Promise<void> {
-  const items = state === "CONSULTAS_MENU" ? await consultationItems(b) : EXAM_ITEMS;
+  const items = state === "CONSULTAS_MENU" ? await consultationItems(b) : examItems(b);
+  const group = state === "CONSULTAS_MENU" ? "consultation" : "exam";
   const choice = pick(selection, items, (i) => i.id);
   if (choice?.id === "book_consultation") return startBooking(b, "consultation");
   if (choice?.id === "book_return") return startReturn(b);
   if (choice?.id === "book_exam") return startBooking(b, "exam");
+  if (choice?.id === "manage_reschedule") return startManage(b, "reschedule", group);
+  if (choice?.id === "manage_cancel") return startManage(b, "cancel", group);
+  if (choice?.id === "manage_waitlist") return startManage(b, "waitlist", group);
   await showSubmenu(b, state, true);
 }
 

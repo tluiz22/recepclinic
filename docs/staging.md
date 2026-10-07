@@ -172,3 +172,14 @@ do celular; cliente, 06/out/2026). Nada do app ou do número do piloto.
    - Marcar retorno (depois de uma consulta marcada como realizada) e Marcar exame;
    - Informações (valores, endereço, preparo, outras informações);
    - "0" no meio volta ao menu; parado por 15 minutos, chega o aviso de encerramento.
+
+## H. Bot II: cancelar, remarcar, lembrete e encaixe (F6.4)
+
+1. **Banco**: migração `20261007140000_coexistencia` (marca de coexistência na conexão).
+2. **Conferir** pelo celular, com um atendimento futuro marcado para o seu número:
+   - Consultas ou Exames › **Cancelar** (Sim/Não) e **Remarcar** (link de remarcação);
+   - **Encaixe ou antecipar** (só com o item "Lista de espera" na matriz): entrar e sair da lista;
+   - com os templates aprovados, os botões do lembrete ("Enviar lembrete" na Agenda): Confirmar
+     presença, Remarcar, Cancelar.
+3. **Falar com a recepção** só aparece com a conexão marcada como **Coexistência** (Suporte, em
+   Configurações › WhatsApp). O número de testes está só na API: deixar desmarcado.

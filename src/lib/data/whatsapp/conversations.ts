@@ -40,6 +40,8 @@ export const NON_FUNNEL_STATES = new Set([
   "INFO_PREP_SELECT",
   "WAITLIST_SELECT",
   "WAITLIST_LEAVE_CONFIRM",
+  // Depois do "Não" ao cancelar pelo lembrete: a tentativa de cancelar já terminou (F6.4).
+  "PRESENCE_CONFIRM",
   HUMAN_HANDOFF,
 ]);
 

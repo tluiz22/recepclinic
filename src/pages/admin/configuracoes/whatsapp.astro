@@ -115,6 +115,13 @@ const receives = (r: { receivesConsultations: boolean; receivesExams: boolean })
               <p class={HINT}>Só "Conectado" recebe as mensagens no webhook e envia.</p>
             </div>
             <div>
+              <label class="flex items-center gap-2 text-sm font-medium text-slate-700">
+                <input type="checkbox" name="coexistence" checked={connection?.coexistence ?? false} class="h-4 w-4 rounded border-slate-300" />
+                Coexistência (a recepção também usa o app WhatsApp Business neste número)
+              </label>
+              <p class={HINT}>Só com ela o bot oferece "Falar com a recepção": sem o app, ninguém responderia o paciente.</p>
+            </div>
+            <div>
               <label for="access_token" class={LABEL}>Token da Meta</label>
               <input id="access_token" name="access_token" type="password" autocomplete="off" placeholder="em branco = mantém o atual" class={INPUT} />
               <p class={HINT}>Token permanente do usuário do sistema do app RecepClinic. Fica guardado no cofre e não é mostrado de volta.</p>

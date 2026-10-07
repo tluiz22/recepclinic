@@ -1011,13 +1011,13 @@ isOneToOne: false
                   ]
                 },"whatsapp_connections": {
                   Row: {
-                    "access_token_secret_id": string | null,"clinic_id": string,"connected_at": string | null,"created_at": string,"display_phone": string | null,"phone_number_id": string,"status": string,"updated_at": string,"waba_id": string
+                    "access_token_secret_id": string | null,"clinic_id": string,"coexistence": boolean,"connected_at": string | null,"created_at": string,"display_phone": string | null,"phone_number_id": string,"status": string,"updated_at": string,"waba_id": string
                   }
                   Insert: {
-                    "access_token_secret_id"?: string | null,"clinic_id": string,"connected_at"?: string | null,"created_at"?: string,"display_phone"?: string | null,"phone_number_id": string,"status"?: string,"updated_at"?: string,"waba_id": string
+                    "access_token_secret_id"?: string | null,"clinic_id": string,"coexistence"?: boolean,"connected_at"?: string | null,"created_at"?: string,"display_phone"?: string | null,"phone_number_id": string,"status"?: string,"updated_at"?: string,"waba_id": string
                   }
                   Update: {
-                    "access_token_secret_id"?: string | null,"clinic_id"?: string,"connected_at"?: string | null,"created_at"?: string,"display_phone"?: string | null,"phone_number_id"?: string,"status"?: string,"updated_at"?: string,"waba_id"?: string
+                    "access_token_secret_id"?: string | null,"clinic_id"?: string,"coexistence"?: boolean,"connected_at"?: string | null,"created_at"?: string,"display_phone"?: string | null,"phone_number_id"?: string,"status"?: string,"updated_at"?: string,"waba_id"?: string
                   }
                   Relationships: [
                     {

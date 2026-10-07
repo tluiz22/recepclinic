@@ -64,6 +64,8 @@ export type BookingContext = {
   selfAskName?: boolean;
   originAppointmentId?: string;
   returnCandidates?: ReturnCandidate[];
+  /** Veio do "Encaixe ou antecipar" sem nada marcado: ao confirmar pela página, entra na lista de espera (F6.4). */
+  joinWaitlist?: boolean;
 };
 
 /** Estados dos fluxos de marcar (cada um vira passo do funil). */
@@ -85,9 +87,9 @@ async function serviceOf(b: Bot, ctx: BookingContext): Promise<BotService | null
   return (await b.catalog()).services.find((s) => s.id === ctx.serviceId) ?? null;
 }
 
-async function open(b: Bot, flow: "booking" | "exam" | "return_booking"): Promise<void> {
+async function open(b: Bot, flow: "booking" | "exam" | "return_booking", metadata: Record<string, unknown> = {}): Promise<void> {
   b.now = new Date(b.now.getTime() + 1);
-  const sessionId = await startFunnel(b.db, b.clinicId, b.phone, flow, {}, b.now);
+  const sessionId = await startFunnel(b.db, b.clinicId, b.phone, flow, metadata, b.now);
   b.convo = { ...b.convo, funnelSessionId: sessionId, funnelFlow: flow };
 }
 
@@ -102,21 +104,22 @@ const keepPath = (ctx: BookingContext): BookingContext => ({
   saveAddress: ctx.saveAddress,
   contactName: ctx.contactName,
   originAppointmentId: ctx.originAppointmentId,
+  joinWaitlist: ctx.joinWaitlist,
 });
 
 // ---------------------------------------------------------------------------
 // Serviço, profissional e local
 // ---------------------------------------------------------------------------
 
-export async function startBooking(b: Bot, category: "consultation" | "exam"): Promise<void> {
-  await open(b, category === "exam" ? "exam" : "booking");
+export async function startBooking(b: Bot, category: "consultation" | "exam", { joinWaitlist = false } = {}): Promise<void> {
+  await open(b, category === "exam" ? "exam" : "booking", joinWaitlist ? { waitlist: true } : {});
   const services = servicesOf(await b.catalog(), category);
   if (!services.length) {
     await say(b, "bot_nothing_to_book", t.NOTHING_TO_BOOK);
     return end(b, "blocked", { reason: "no_service" });
   }
   // Sempre mostra a lista, mesmo com um serviço só: o paciente vê e confirma o que está marcando (cliente, 07/out).
-  await askService(b, { category }, services);
+  await askService(b, { category, ...(joinWaitlist ? { joinWaitlist } : {}) }, services);
 }
 
 const minPrice = (s: BotService) => {
@@ -586,6 +589,7 @@ async function finish(b: Bot, ctx: BookingContext, patient: Candidate): Promise<
         contactPhone: b.phone,
         homeVisitAddress: ctx.locationCategory === "home_visit" ? (ctx.homeAddress ?? null) : null,
         funnelSessionId: b.convo.funnelSessionId,
+        joinWaitlist: ctx.joinWaitlist ?? false,
         ttlMs: BOT_LINK_TTL_MS,
       },
       b.now,
@@ -609,8 +613,8 @@ async function restart(b: Bot): Promise<void> {
 // Retorno (Fase 17)
 // ---------------------------------------------------------------------------
 
-export async function startReturn(b: Bot): Promise<void> {
-  await open(b, "return_booking");
+export async function startReturn(b: Bot, { joinWaitlist = false } = {}): Promise<void> {
+  await open(b, "return_booking", joinWaitlist ? { waitlist: true } : {});
   const services = servicesOf(await b.catalog(), "return_visit");
   const deadline = services[0]?.returnDeadlineDays ?? null;
   const patients = await activePatients(b);
@@ -655,6 +659,7 @@ export async function startReturn(b: Bot): Promise<void> {
   await go(b, "RETURN_SELECT", {
     category: "return_visit",
     returnCandidates: shown.map(({ service: _service, ...c }) => c),
+    ...(joinWaitlist ? { joinWaitlist } : {}),
   } satisfies BookingContext);
 }
 
@@ -703,6 +708,7 @@ async function handleReturn(b: Bot, selection: Selection): Promise<void> {
       agendaId: chosen.agendaId,
       locationCategory,
       originAppointmentId: chosen.originId,
+      joinWaitlist: ctx.joinWaitlist,
     },
     chosen,
   );

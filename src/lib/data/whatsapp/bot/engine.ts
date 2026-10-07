@@ -4,6 +4,7 @@ import type { ClinicProfile } from "../../../vocabulary";
 import type { DbClient } from "../../clients";
 import { unwrap, unwrapOne } from "../../errors";
 import { getClinicFeatures } from "../../features";
+import { getWhatsappConnection } from "../connection";
 import { logFunnelStep, setConversationState, WELCOME, type Conversation } from "../conversations";
 import { recordOutboundMessage, type SendOutcome } from "../messages";
 import type { ClinicSender, ListSection, ReplyButton } from "../send";
@@ -35,6 +36,10 @@ export type Bot = BotEnv & {
   clinic: BotClinic;
   words: Words;
   features: FeatureKey[];
+  /** "Falar com a recepção" só com o número em coexistência (cliente, 07/out). */
+  receptionAvailable: boolean;
+  /** Id da Meta da mensagem que está sendo respondida (registro do toque no lembrete). */
+  incomingId: string | null;
   /** Catálogo, lido na primeira vez que o fluxo precisa. */
   catalog(): Promise<BotCatalog>;
 };
@@ -62,8 +67,12 @@ export async function loadBotClinic(env: BotEnv): Promise<BotClinic> {
   };
 }
 
-export async function createBot(env: BotEnv, convo: Conversation): Promise<Bot> {
-  const [clinic, features] = await Promise.all([loadBotClinic(env), getClinicFeatures(env.db, env.clinicId)]);
+export async function createBot(env: BotEnv, convo: Conversation, incomingId: string | null = null): Promise<Bot> {
+  const [clinic, features, connection] = await Promise.all([
+    loadBotClinic(env),
+    getClinicFeatures(env.db, env.clinicId),
+    getWhatsappConnection(env.db, env.clinicId),
+  ]);
   let catalog: Promise<BotCatalog> | null = null;
   return {
     ...env,
@@ -72,6 +81,8 @@ export async function createBot(env: BotEnv, convo: Conversation): Promise<Bot> 
     clinic,
     words: wordsFor(clinic.profile),
     features,
+    receptionAvailable: connection?.coexistence ?? false,
+    incomingId,
     catalog: () => (catalog ??= loadCatalog(env.db, env.clinicId, features)),
   };
 }

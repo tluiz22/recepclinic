@@ -103,7 +103,7 @@ describe("bot: marcar consulta (número novo)", () => {
     const reply = await say(phone, "Oi");
     expect(reply[0]).toMatchObject({ kind: "text", body: "Olá! 👋 Aqui é da Clínica Bot F63." });
     expect(titles(reply)).toEqual(["1. Consultas", "2. Exames", "3. Informações"]);
-    expect(titles(await say(phone, "1"))).toEqual(["1. Marcar consulta", "2. Marcar retorno", "3. Voltar ao menu"]);
+    expect(titles(await say(phone, "1"))).toEqual(["1. Marcar consulta", "2. Marcar retorno", "3. Remarcar", "4. Cancelar", "5. Encaixe ou antecipar", "6. Voltar ao menu"]);
   });
 
   it("qual consulta (mesmo com uma só), com quem? (dois profissionais), local, para quem, cadastro, link", async () => {
@@ -203,7 +203,7 @@ describe("bot: exame para o contato já cadastrado", () => {
     const phone = "+5584991226301"; // contato do Paciente Um
     await say(phone, "Bom dia");
     let reply = await say(phone, "2");
-    expect(titles(reply)).toEqual(["1. Marcar exame", "2. Voltar ao menu"]);
+    expect(titles(reply)).toEqual(["1. Marcar exame", "2. Remarcar", "3. Cancelar", "4. Encaixe ou antecipar", "5. Voltar ao menu"]);
     reply = await say(phone, "1");
     expect(reply.at(-1)!.body).toBe("Qual exame você quer marcar?");
     expect(titles(reply)).toEqual(["1. Exame", "2. Turma", "3. Voltar ao menu"]);

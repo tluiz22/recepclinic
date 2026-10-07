@@ -186,3 +186,112 @@ export function addressText(locations: { name: string; address: string }[]): str
 
 export const PREPARATION_QUESTION = "De qual exame você quer ver o preparo?";
 export const preparationText = (instructions: string, url: string) => `${instructions}\n\n🔗 Para guardar ou compartilhar estas orientações:\n${url}`;
+
+// ---------------------------------------------------------------------------
+// Cancelar, remarcar, lembrete, encaixe e recepção (F6.4), aprovados pelo
+// cliente em 07/out: os do piloto, com "fale com a clínica" no lugar de
+// "Falar com a secretária" enquanto a recepção não atende pelo bot (F8).
+// ---------------------------------------------------------------------------
+
+export type Group = "consultation" | "exam";
+
+/** Palavra do grupo do menu ("consulta"/"exame"), com a concordância. */
+const groupWords = (group: Group) =>
+  group === "exam" ? { noun: "exame", none: "nenhum", future: "futuro" } : { noun: "consulta", none: "nenhuma", future: "futura" };
+
+/** O atendimento pelo serviço: "a consulta", "o retorno", "o exame Espirometria". */
+export function appointmentWords(category: "consultation" | "return_visit" | "exam", serviceName: string): { phrase: string; end: "a" | "o" } {
+  if (category === "consultation") return { phrase: "a consulta", end: "a" };
+  if (category === "return_visit") return { phrase: "o retorno", end: "o" };
+  return { phrase: `o exame ${serviceName}`, end: "o" };
+}
+
+const capital = (text: string) => text.charAt(0).toUpperCase() + text.slice(1);
+
+export const NO_REGISTRATION = "Não encontramos nenhum cadastro associado a este número. Se você já é paciente, fale com a clínica.";
+
+export const chooseAppointment = (action: "cancelar" | "remarcar" | "antecipar", group: Group) => `Qual ${groupWords(group).noun} você quer ${action}?`;
+
+export function noAppointments(action: "cancelar" | "remarcar", group: Group): string {
+  const w = groupWords(group);
+  return `Não encontramos ${w.none} ${w.noun} ${w.future} para ${action} neste número. Se precisar de ajuda, fale com a clínica.`;
+}
+
+export function noMatchingAppointment(group: Group): string {
+  const w = groupWords(group);
+  return `Não encontramos ${w.noun} ${w.future} para essa data de nascimento. Se precisar de ajuda, fale com a clínica.`;
+}
+
+export const couldNotIdentify = (group: Group) => `Não conseguimos confirmar qual ${groupWords(group).noun} é. Se precisar de ajuda, fale com a clínica.`;
+
+export const askAppointmentBirthdate = (w: Words) => askBirthdate(w);
+
+export const confirmCancel = (phrase: string, patientName: string, when: string) =>
+  `Confirma o cancelamento ${phrase.replace(/^a /, "da ").replace(/^o /, "do ")} de *${patientName}* em ${when}? Responda Sim ou Não.`;
+
+export const cancelDone = (phrase: string, end: "a" | "o", patientName: string, when: string, group: Group) =>
+  `Prontinho, cancelamos ${phrase} de ${patientName} que estava marcad${end} para ${when}. Se precisar marcar ${group === "exam" ? "um novo exame" : "uma nova consulta"}, é só me chamar de novo.`;
+
+/** "Ok, mantivemos sua consulta marcada." / "seu exame Espirometria marcado". */
+export const cancelKept = (phrase: string, end: "a" | "o") => `Ok, mantivemos ${phrase.replace(/^a /, "sua ").replace(/^o /, "seu ")} marcad${end}.`;
+export const keptAskPresence = (phrase: string, end: "a" | "o") => `${cancelKept(phrase, end)}\n\nDeseja confirmar sua presença?`;
+export const PRESENCE_NOT_UNDERSTOOD = "Não entendi. Deseja confirmar sua presença? Toque em Sim ou Não.";
+export const KEPT_PRESENCE_DECLINED = 'Tudo bem! Se quiser confirmar depois, é só tocar em "Confirmar presença" no lembrete.';
+
+export const confirmReschedule = (phrase: string, patientName: string, when: string) =>
+  `Encontramos ${phrase} de *${patientName}* em ${when}: é ${phrase.startsWith("a ") ? "essa" : "esse"} que você quer remarcar? Responda Sim ou Não.`;
+export const rescheduleLink = (phrase: string, patientName: string, url: string) =>
+  `Prontinho! Escolha o novo dia e horário para ${phrase} de ${patientName} neste link:\n${url}\n\nO link vale por 30 minutos.`;
+export const returnDeadlinePassed = (patientName: string, lastDate: string) =>
+  `O prazo para o retorno de *${patientName}* terminou em ${lastDate}, então não é possível remarcar por aqui. Por favor, fale com a clínica.`;
+export const homeAddressConfirmCurrent = (address: string) =>
+  `O endereço gravado para esse atendimento domiciliar é: *${address}*. Ainda é esse? Responda Sim ou Não.`;
+
+export function presenceConfirmed(patientName: string, when: string, isExam: boolean): string {
+  return (
+    "Presença confirmada ✓\n\n" +
+    `👤 Paciente: ${patientName}\n📅 ${when}\n\n` +
+    (isExam ? "Lembre-se de seguir as orientações de preparo do exame que enviamos anteriormente.\n\n" : "") +
+    "Obrigado! Qualquer dúvida, é só chamar por aqui."
+  );
+}
+export const presenceAlreadyConfirmed = (patientName: string, when: string) => `A presença de ${patientName} em ${when} já estava confirmada ✓`;
+export const APPOINTMENT_INACTIVE = "Esse agendamento não está mais ativo.";
+
+export const WAITLIST_IDS = {
+  leave: "waitlist_leave",
+  stay: "waitlist_stay",
+  bookConsultation: "waitlist_book_consultation",
+  bookReturn: "waitlist_book_return",
+  bookExam: "waitlist_book_exam",
+} as const;
+
+export const waitlistJoined = (patientName: string, phrase: string, end: "a" | "o", when: string) =>
+  `Pronto! *${patientName}* está na lista de espera para antecipar ${phrase} marcad${end} para ${when}.`;
+export const waitlistAlreadyIn = (patientName: string, phrase: string, end: "a" | "o", when: string) =>
+  `*${patientName}* já está na lista de espera para antecipar ${phrase} marcad${end} para ${when}. Quer sair da lista?`;
+export const WAITLIST_ALREADY_BUTTONS = [button(WAITLIST_IDS.leave, "Sair da lista"), button(WAITLIST_IDS.stay, "Continuar na lista")];
+export const waitlistLeft = (patientName: string, phrase: string, end: "a" | "o", when: string) =>
+  `Pronto, *${patientName}* saiu da lista de espera. ${capital(phrase)} continua marcad${end} para ${when}.`;
+export const waitlistStay = (patientName: string) => `Ok, *${patientName}* continua na lista de espera. Se abrir uma vaga antes, eu aviso por aqui.`;
+export function waitlistNoAppointment(group: Group): string {
+  const what = group === "exam" ? "um exame marcado" : "uma consulta marcada";
+  return (
+    `A lista de espera serve para antecipar um horário já marcado, e não encontramos ${what} neste número. ` +
+    "Quer marcar agora? Depois de confirmar pela página, o atendimento entra na lista de espera e eu aviso por aqui se abrir uma vaga antes."
+  );
+}
+export const WAITLIST_ERROR = "Tivemos um problema com a lista de espera. Por favor, tente de novo em instantes.";
+
+const STILL_IN_LIST = " Você continua na lista de espera: se abrir outra vaga, eu aviso por aqui.";
+export const offerAccepted = (patientName: string, when: string) =>
+  `Pronto! ✓ O atendimento de *${patientName}* foi antecipado para ${when}. Os detalhes seguem na mensagem de remarcação.`;
+export const offerDeclined = (patientName: string, when: string, stillInList: boolean) =>
+  `Ok, mantivemos o horário de *${patientName}* (${when}).${stillInList ? STILL_IN_LIST : ""}`;
+export const offerLate = (stillInList: boolean) => `Essa vaga já foi oferecida a outra pessoa.${stillInList ? STILL_IN_LIST : ""}`;
+export const offerTaken = (stillInList: boolean) => `Que pena, essa vaga acabou de ser ocupada.${stillInList ? STILL_IN_LIST : ""}`;
+export const OFFER_ALREADY_ACCEPTED = "Essa vaga já está confirmada para você ✓";
+export const OFFER_NOT_FOUND = "Essa oferta não está mais ativa.";
+
+export const HANDOFF =
+  "Combinado! Vou te transferir para a recepção, que responde por aqui assim que possível. O atendimento automático fica pausado até lá.";

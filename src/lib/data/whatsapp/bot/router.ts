@@ -9,12 +9,14 @@ import { BOOKING_STATES, handleBookingState } from "./booking";
 import { createBot, type BotEnv } from "./engine";
 import { extractSelection, isBackToMenu } from "./input";
 import { handleInfo, handleMenu, handlePreparationChoice, handleSubmenu, showMenu } from "./menus";
+import { handleManageState, handleOfferTap, handleReminderTap, MANAGE_STATES, offerTapOf, reminderTapOf } from "./manage";
 import { IDLE_CLOSED } from "./texts";
 
 // Entrada do bot (F6.3): chamado pelo webhook para cada mensagem recebida, já
 // registrada. Só com o item "Bot de WhatsApp" liberado (D11) e o WhatsApp da
-// clínica conectado. Conversa pausada pela recepção fica em silêncio (a pausa
-// entra de verdade na F6.4). Nunca lança: o erro vai para o log e a Meta
+// clínica conectado. Conversa pausada pela recepção fica em silêncio, menos
+// para os toques no lembrete (Confirmar) e na oferta de vaga, que respondem a
+// uma pergunta do sistema (F6.4). Nunca lança: o erro vai para o log e a Meta
 // recebe 200 do mesmo jeito.
 
 export async function handleIncomingMessage(env: BotEnv, message: WaMessage): Promise<"handled" | "skipped"> {
@@ -24,8 +26,19 @@ export async function handleIncomingMessage(env: BotEnv, message: WaMessage): Pr
 
   let convo = await openConversation(env.db, env.clinicId, phone, await contactIdByPhone(env.db, env.clinicId, phone));
   const handoff = await checkHandoff(env.db, env.clinicId, convo, env.now);
-  if (handoff === "paused") return "skipped";
+  const paused = handoff === "paused";
   if (handoff === "resumed") convo = await openConversation(env.db, env.clinicId, phone, convo.contactId);
+
+  // Toques em botões de template valem em qualquer ponto da conversa.
+  const offerTap = offerTapOf(message);
+  const reminderTap = reminderTapOf(message);
+  if (offerTap || reminderTap) {
+    const b = await createBot(env, convo, message.id ?? null);
+    if (offerTap) await handleOfferTap(b, offerTap);
+    else await handleReminderTap(b, reminderTap!, paused);
+    return "handled";
+  }
+  if (paused) return "skipped";
 
   // Parada há mais de 15 minutos (a rotina costuma ter encerrado antes): recomeça.
   if (convo.state !== WELCOME && isPastIdleTimeout(convo.updatedAt, env.now)) {
@@ -33,7 +46,7 @@ export async function handleIncomingMessage(env: BotEnv, message: WaMessage): Pr
     convo = await setConversationState(env.db, env.clinicId, phone, WELCOME, { context: {} }, env.now);
   }
 
-  const b = await createBot(env, convo);
+  const b = await createBot(env, convo, message.id ?? null);
   const selection = extractSelection(message);
 
   // "Voltar ao menu" vale no meio de qualquer fluxo.
@@ -43,6 +56,10 @@ export async function handleIncomingMessage(env: BotEnv, message: WaMessage): Pr
     return "handled";
   }
 
+  if (MANAGE_STATES.has(convo.state)) {
+    await handleManageState(b, convo.state, selection);
+    return "handled";
+  }
   if (BOOKING_STATES.has(convo.state)) {
     await handleBookingState(b, convo.state, selection);
     return "handled";

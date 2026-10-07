@@ -976,6 +976,28 @@ de remarcação (texto da F4.6), e enviam sozinhos; sai a tela "Avisar" da F4.6.
   `src/lib/data/config/setup.ts`; sem migração. 7 testes unitários novos.
 - **F6.4 — Bot II:** cancelar, remarcar, resposta ao lembrete, lista de espera, sessões de série,
   "falar com a recepção" e pausa do bot.
+  **Detalhada com o cliente em 07/out:** menus completos como no piloto (Consultas e Exames ›
+  Remarcar · Cancelar · Encaixe ou antecipar; o Encaixe só com o item "Lista de espera");
+  identificação do atendimento como no piloto (até 3 em lista, mais de 3 pela data de nascimento,
+  nunca misturando consulta e exame); cancelar com Sim/Não e resposta na conversa; remarcar com o
+  link de 30 minutos (mesmo profissional e serviço; retorno com o prazo vencido orienta falar com a
+  clínica; domiciliar reconfirma o endereço); sessão de série cancela ou remarca só ela (D9);
+  botões do lembrete (Confirmar presença vale até com o bot pausado; Remarcar e Cancelar respeitam
+  a pausa; "Não" ao cancelar pergunta se confirma a presença); Encaixe (entrar, sair, marcar e
+  entrar sozinho na lista) e a resposta à oferta de vaga (o envio das ofertas é da F7); pausa da
+  recepção pelo eco do app e "#bot". **"Falar com a recepção" pronto, mas desligado até a F8**
+  (cliente, 07/out): o item só aparece quando o Suporte marca a conexão como **coexistência**
+  (hoje ninguém responderia: o número de testes só está na API e o painel não tem caixa de
+  conversas); até lá os textos dizem "fale com a clínica". Textos do piloto aprovados pelo
+  cliente (07/out), sem citar a Dra.
+- **F6.4 — implementada em 07/out (aguarda a validação do cliente no staging).** `bot/manage.ts`
+  (cancelar, remarcar, lembrete, encaixe, oferta de vaga, recepção), ligado aos menus e à entrada
+  do bot; os toques do lembrete e da oferta valem em qualquer ponto da conversa (Confirmar e a
+  oferta até com o bot pausado). Oferta aceita manda o aviso de remarcação pelo template; quem
+  recusa passaria a vaga ao próximo, mas o envio da oferta é da F7 (até lá não sai). O eco da
+  recepção pausa o bot (com o item "Bot de WhatsApp"); "#bot" devolve. Na conexão (Suporte), a
+  marca **Coexistência**. Saiu o bot antigo do piloto (fica só o que as rotinas antigas ainda usam,
+  até a F7). Migração `20261007140000`. 10 testes de banco novos.
 - **F6.5 — Cancelamento pela clínica automático:** aviso a todos com o link; sai a tela "Avisar".
 - **F6.6 — Aba "Mensagens":** prévia no balão e edição com "Mensagens personalizadas".
 - **F6.7 — Métricas do bot:** abas Funil do bot e Retomar contato.

@@ -1,6 +1,8 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 import type { DbClient } from "../clients";
 import type { WaMessage } from "./meta";
+import { hasFeature } from "../features";
+import { handleAgentEcho } from "./conversations";
 import { recordAgentEcho, recordInboundMessage, updateDeliveryStatus, type RecordResult } from "./messages";
 import { sendPreparationAfterDelivery } from "./preparation";
 import { preparationSender, type ClinicSender } from "./send";
@@ -15,7 +17,8 @@ import { handleIncomingMessage } from "./bot/router";
 // entrega e ecos da recepção; F6.2: envia o preparo do exame quando a
 // confirmação chega ao celular e guarda a situação dos templates (evento da
 // conta, WABA, não do número). F6.3: o bot responde cada mensagem recebida
-// (repetida pela Meta não é respondida de novo). A pausa pelo eco, na F6.4.
+// (repetida pela Meta não é respondida de novo). F6.4: o eco da recepção
+// pausa o bot naquela conversa ("#bot" devolve).
 
 /** Confere o X-Hub-Signature-256 ("sha256=<hex>") contra o HMAC do corpo cru, em tempo constante. */
 export function isValidMetaSignature(appSecret: string, rawBody: string, header: string | null): boolean {
@@ -169,7 +172,12 @@ export async function processWebhook(payload: unknown, deps: WebhookDeps, now: D
       });
     }
     for (const echo of change.message_echoes ?? []) {
-      await attempt("eco da recepção", async () => count(await recordAgentEcho(db, clinicId, echo, now), "echoes"));
+      await attempt("eco da recepção", async () => {
+        const result = await recordAgentEcho(db, clinicId, echo, now);
+        count(result, "echoes");
+        // A recepção respondeu pelo app (coexistência): pausa o bot naquela conversa; "#bot" devolve (F6.4).
+        if (result.recorded && (await hasFeature(db, clinicId, "whatsapp_bot"))) await handleAgentEcho(db, clinicId, echo, result.contactId, now);
+      });
     }
   }
 

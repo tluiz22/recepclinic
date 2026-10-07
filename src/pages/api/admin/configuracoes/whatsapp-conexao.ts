@@ -3,7 +3,7 @@ import { createUserClient } from "../../../../lib/data/clients";
 import { DataError } from "../../../../lib/data/errors";
 import { runFormAction } from "../../../../lib/data/formAction";
 import { saveWhatsappConnection, setWhatsappAccessToken, type ConnectionStatus } from "../../../../lib/data/whatsapp/connection";
-import { formOptionalText, formText } from "../../../../lib/forms";
+import { formChecked, formOptionalText, formText } from "../../../../lib/forms";
 
 // Suporte cadastra a conexão do WhatsApp da clínica (F6.1; o Administrador
 // conecta sozinho pelo Embedded Signup na F8). O token só é gravado (vai para
@@ -22,6 +22,7 @@ export const POST: APIRoute = async (context) => {
         wabaId: formText(form, "waba_id"),
         displayPhone: formOptionalText(form, "display_phone"),
         status: formText(form, "status") as ConnectionStatus,
+        coexistence: formChecked(form, "coexistence"),
       });
       const token = formOptionalText(form, "access_token");
       if (token) await setWhatsappAccessToken(db, clinic.clinicId, token);
