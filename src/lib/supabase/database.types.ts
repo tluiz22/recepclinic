@@ -1103,6 +1103,9 @@ isOneToOne: false
               "email": string,"user_id": string
             }[]
                            },
+"list_clinics_with_idle_conversations":
+{ Args: { "p_before": string }; Returns: string[]
+                           },
 "log_platform_access":
 { Args: { "p_clinic_id": string,"p_method": string,"p_path": string }; Returns: undefined
                            },
@@ -1137,6 +1140,9 @@ isOneToOne: false
                            },
 "set_clinic_professional_limit":
 { Args: { "p_clinic_id": string,"p_limit": number }; Returns: undefined
+                           },
+"set_scheduler_settings":
+{ Args: { "p_base_url": string,"p_cron_secret": string }; Returns: undefined
                            },
 "set_whatsapp_access_token":
 { Args: { "p_clinic_id": string,"p_token": string }; Returns: undefined

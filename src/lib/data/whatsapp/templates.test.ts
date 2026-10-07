@@ -104,6 +104,8 @@ describe("quem envia (F6.2)", () => {
       baseUrl: "https://app.exemplo.test",
       template: async (...args) => (calls.push(["template", ...args]), { sent: true, messageId: "w1" }),
       text: async (...args) => (calls.push(["text", ...args]), { sent: true, messageId: "w2" }),
+      list: async () => ({ sent: true, messageId: "w3" }),
+      buttons: async () => ({ sent: true, messageId: "w4" }),
     };
     return { sender, calls };
   };

@@ -27,7 +27,20 @@ export type ClinicSender = {
     buttonPayloads?: string[],
   ): Promise<SendOutcome>;
   text(to: string, body: string): Promise<SendOutcome>;
+  /** Lista interativa (até 10 linhas no total). Só na janela de 24h, como o texto. */
+  list(to: string, body: string, button: string, sections: ListSection[]): Promise<SendOutcome>;
+  /** Botões de resposta (até 3, título com até 20 caracteres). */
+  buttons(to: string, body: string, buttons: ReplyButton[]): Promise<SendOutcome>;
 };
+
+export type ListRow = { id: string; title: string; description?: string };
+export type ListSection = { title?: string; rows: ListRow[] };
+export type ReplyButton = { id: string; title: string };
+
+/** Texto registrado de uma lista ou dos botões: o corpo e as opções, como o paciente vê. */
+export function interactiveBody(body: string, options: { title: string; description?: string }[]): string {
+  return `${body}\n\n${options.map((o) => (o.description ? `${o.title} (${o.description})` : o.title)).join("\n")}`;
+}
 
 const failure = (error: unknown): SendOutcome => ({
   sent: false,
@@ -89,6 +102,22 @@ export async function createClinicSender(
     },
     text(to, body) {
       return post({ to: toWaNumber(to), type: "text", text: { body, preview_url: true } }, body);
+    },
+    list(to, body, button, sections) {
+      return post(
+        { to: toWaNumber(to), type: "interactive", interactive: { type: "list", body: { text: body }, action: { button, sections } } },
+        interactiveBody(body, sections.flatMap((section) => section.rows)),
+      );
+    },
+    buttons(to, body, buttons) {
+      return post(
+        {
+          to: toWaNumber(to),
+          type: "interactive",
+          interactive: { type: "button", body: { text: body }, action: { buttons: buttons.map((reply) => ({ type: "reply", reply })) } },
+        },
+        interactiveBody(body, buttons),
+      );
     },
   };
 }

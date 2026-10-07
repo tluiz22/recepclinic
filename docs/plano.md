@@ -919,6 +919,40 @@ de remarcação (texto da F4.6), e enviam sozinhos; sai a tela "Avisar" da F4.6.
   unitários e 6 de banco novos.
 - **F6.3 — Bot I (marcar):** menu pelo catálogo de serviços, textos pelo perfil, "com quem?" com
   "primeiro horário disponível", link de agendar, retorno e exame.
+  **Detalhada com o cliente em 07/out** (começada enquanto a Meta analisa os templates da F6.2):
+  (1) **menu só com o que funciona**, na estrutura do piloto: Consultas › Marcar consulta /
+  Marcar retorno; Exames › Marcar exame; Informações (a F6.4 acrescenta Cancelar, Remarcar,
+  Encaixe e Falar com a recepção); (2) marcar: qual serviço (só com mais de um da categoria, com o
+  valor) → **"com quem?"** (só com mais de um profissional; "Primeiro horário disponível" em
+  primeiro) → local (só se o serviço tem consultório e domiciliar, com o valor) → endereço do
+  domiciliar → identificação do paciente como no piloto → link de 30 minutos; retorno pela lista
+  de quem tem direito, com o mesmo profissional da consulta de origem; exame só com horário
+  cadastrado; (3) **"É para você ou para outra pessoa?" pelo perfil**: Pediátrica só no exame;
+  Adultos e Mista na consulta e no exame; retorno nunca pergunta; (4) **retorno sem trava de
+  idade** (o direito vem da consulta de origem; no piloto era só para menores de 18); (5)
+  **Informações com os itens que têm conteúdo**: Valores (serviços e preços, com as formas de
+  pagamento), Convênios, Endereço (com o mapa), Preparo para exames e Outras informações
+  (observações do bot); (6) **conversa parada por 15 minutos** no meio de um atendimento recebe
+  "Como não tivemos resposta nos últimos minutos, encerramos este atendimento. Quando quiser, é só
+  mandar uma mensagem que começamos de novo. 😊", volta ao começo e o funil registra a desistência
+  por tempo; quem confere é o agendador do Supabase (`pg_cron`, a cada minuto; L34), porque a
+  Vercel gratuita só roda rotina uma vez por dia; (7) textos pelo perfil e pelo nome da clínica,
+  aprovados pelo cliente (boas-vindas "Olá! 👋 Aqui é da Clínica Sorriso.", demais como no piloto
+  sem citar a Dra.; link "O link vale por 30 minutos."; já marcado: "Para mudar o dia ou horário,
+  fale com a clínica." até a F6.4).
+- **F6.3 — implementada em 07/out (aguarda a validação do cliente no staging).** Bot novo em
+  `src/lib/data/whatsapp/bot/` (entrada `router.ts`, menus e Informações `menus.ts`, marcar e
+  retorno `booking.ts`, catálogo `catalog.ts`, textos `texts.ts`), com a credencial da clínica e
+  as regras da camada nova (links, retorno, duplicidade, cadastro, funil). O webhook passa cada
+  mensagem recebida ao bot (repetida pela Meta não é respondida de novo). Só com o item "Bot de
+  WhatsApp" e o WhatsApp conectado; conversa pausada fica em silêncio. Listas e botões nos limites
+  da Meta: o "Primeiro horário disponível" virou "Primeiro horário" com "Disponível, com qualquer
+  profissional" na descrição (o título da linha tem 24 caracteres). Itens desligados na matriz
+  somem do bot (exames, domiciliar). Conversa parada: rota `/api/cron/conversas-paradas`, chamada
+  a cada minuto pelo `pg_cron` do Supabase com o CRON_SECRET (endereço e segredo no cofre,
+  gravados por `scripts/agendador.mjs`). Saiu o roteador antigo do piloto; o resto do bot antigo
+  (cancelar, remarcar, lista de espera) sai na F6.4. Migração `20261007130000`. Roteiro na parte G
+  do [`staging.md`](staging.md). 7 testes unitários e 10 de banco novos.
 - **F6.4 — Bot II:** cancelar, remarcar, resposta ao lembrete, lista de espera, sessões de série,
   "falar com a recepção" e pausa do bot.
 - **F6.5 — Cancelamento pela clínica automático:** aviso a todos com o link; sai a tela "Avisar".

@@ -52,6 +52,13 @@ export async function resolveClinicsByWabaId(wabaId: string, env: ServiceEnv = p
   return (result.data ?? []) as string[];
 }
 
+/** Rotina da conversa parada (F6.3): clínicas com conversa parada desde antes de `before`. */
+export async function listClinicsWithIdleConversations(before: Date, env: ServiceEnv = platformEnv()): Promise<string[]> {
+  const result = await platformClient(env).rpc("list_clinics_with_idle_conversations", { p_before: before.toISOString() });
+  if (result.error) throw new PlatformLookupError("conversas paradas", result.error);
+  return (result.data ?? []) as string[];
+}
+
 /** /agendar/[token]: clínica do link de agendamento (vencido ou usado também resolve). */
 export async function resolveClinicByBookingLink(
   linkId: string,

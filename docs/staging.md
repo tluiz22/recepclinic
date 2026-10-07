@@ -156,3 +156,19 @@ do celular; cliente, 06/out/2026). Nada do app ou do número do piloto.
    - marcar ou remarcar pelo `/agendar` (link gerado na tela "Avisar" ou pelo bot, a partir da
      F6.3): chega a confirmação ou a remarcação.
    Cada envio aparece em *Últimas mensagens* e na trilha do atendimento.
+
+## G. Bot I: marcar (F6.3)
+
+1. **Banco**: migração `20261007130000_conversa_parada` (agendador `pg_cron` da conversa parada).
+2. **Agendador**: `node --env-file=.env.staging scripts/agendador.mjs` grava no cofre o endereço
+   do sistema (`SITE_URL`) e o `CRON_SECRET` (o mesmo da Vercel); a partir daí o Supabase chama
+   `/api/cron/conversas-paradas` a cada minuto. Rodar de novo se o endereço ou o segredo mudarem.
+3. **Matriz de acesso** da clínica de teste com o item **Bot de WhatsApp** (e, para testar tudo,
+   Exames e Atendimento domiciliar); serviços com agenda e horários cadastrados.
+4. **Conferir** pelo celular, escrevendo para o número de testes:
+   - boas-vindas com o nome da clínica e o menu (Consultas, Exames, Informações);
+   - Marcar consulta: "com quem?" (com mais de um profissional), local, para quem, cadastro,
+     link do `/agendar` que abre com o serviço e o profissional escolhidos;
+   - Marcar retorno (depois de uma consulta marcada como realizada) e Marcar exame;
+   - Informações (valores, endereço, preparo, outras informações);
+   - "0" no meio volta ao menu; parado por 15 minutos, chega o aviso de encerramento.

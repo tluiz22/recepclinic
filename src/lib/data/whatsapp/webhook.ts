@@ -5,6 +5,7 @@ import { recordAgentEcho, recordInboundMessage, updateDeliveryStatus, type Recor
 import { sendPreparationAfterDelivery } from "./preparation";
 import { preparationSender, type ClinicSender } from "./send";
 import { applyTemplateStatusEvent, type TemplateStatusEvent } from "./templateSync";
+import { handleIncomingMessage } from "./bot/router";
 
 // Webhook do WhatsApp por clínica (F6.1, D3a). Cada evento traz o número que
 // recebeu (`metadata.phone_number_id`); a plataforma descobre a clínica dele
@@ -13,8 +14,8 @@ import { applyTemplateStatusEvent, type TemplateStatusEvent } from "./templateSy
 // senão reenvia). O webhook registra mensagens recebidas, situações de
 // entrega e ecos da recepção; F6.2: envia o preparo do exame quando a
 // confirmação chega ao celular e guarda a situação dos templates (evento da
-// conta, WABA, não do número). O bot volta a responder na F6.3; a pausa pelo
-// eco, na F6.4.
+// conta, WABA, não do número). F6.3: o bot responde cada mensagem recebida
+// (repetida pela Meta não é respondida de novo). A pausa pelo eco, na F6.4.
 
 /** Confere o X-Hub-Signature-256 ("sha256=<hex>") contra o HMAC do corpo cru, em tempo constante. */
 export function isValidMetaSignature(appSecret: string, rawBody: string, header: string | null): boolean {
@@ -99,12 +100,14 @@ export type WebhookSummary = {
   preparations: number;
   /** Templates com a situação atualizada. */
   templates: number;
+  /** Mensagens respondidas pelo bot. */
+  botReplies: number;
   errors: number;
 };
 
 /** Registra os eventos. Erro num evento não para os outros (vai para o log). */
 export async function processWebhook(payload: unknown, deps: WebhookDeps, now: Date = new Date()): Promise<WebhookSummary> {
-  const summary: WebhookSummary = { inbound: 0, echoes: 0, statuses: 0, duplicates: 0, unknownNumbers: 0, preparations: 0, templates: 0, errors: 0 };
+  const summary: WebhookSummary = { inbound: 0, echoes: 0, statuses: 0, duplicates: 0, unknownNumbers: 0, preparations: 0, templates: 0, botReplies: 0, errors: 0 };
   const count = (result: RecordResult, kind: "inbound" | "echoes") => {
     if (result.recorded) summary[kind] += 1;
     else if (result.reason === "duplicate") summary.duplicates += 1;
@@ -131,7 +134,17 @@ export async function processWebhook(payload: unknown, deps: WebhookDeps, now: D
     const db = deps.clientFor(clinicId);
 
     for (const message of change.messages ?? []) {
-      await attempt("mensagem recebida", async () => count(await recordInboundMessage(db, clinicId, message, now), "inbound"));
+      let recorded = false;
+      await attempt("mensagem recebida", async () => {
+        const result = await recordInboundMessage(db, clinicId, message, now);
+        count(result, "inbound");
+        recorded = result.recorded;
+      });
+      if (!recorded || !deps.senderFor) continue;
+      await attempt("bot", async () => {
+        const sender = await deps.senderFor!(clinicId);
+        if (sender && (await handleIncomingMessage({ db, clinicId, sender, now }, message)) === "handled") summary.botReplies += 1;
+      });
     }
     for (const status of change.statuses ?? []) {
       if (status.status === "failed" && status.errors?.length) {
