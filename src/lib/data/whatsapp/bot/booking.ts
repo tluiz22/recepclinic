@@ -115,9 +115,8 @@ export async function startBooking(b: Bot, category: "consultation" | "exam"): P
     await say(b, "bot_nothing_to_book", t.NOTHING_TO_BOOK);
     return end(b, "blocked", { reason: "no_service" });
   }
-  const ctx: BookingContext = { category };
-  if (services.length === 1) return chooseService(b, ctx, services[0]);
-  await askService(b, ctx, services);
+  // Sempre mostra a lista, mesmo com um serviço só: o paciente vê e confirma o que está marcando (cliente, 07/out).
+  await askService(b, { category }, services);
 }
 
 const minPrice = (s: BotService) => {

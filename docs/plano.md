@@ -922,8 +922,8 @@ de remarcação (texto da F4.6), e enviam sozinhos; sai a tela "Avisar" da F4.6.
   **Detalhada com o cliente em 07/out** (começada enquanto a Meta analisa os templates da F6.2):
   (1) **menu só com o que funciona**, na estrutura do piloto: Consultas › Marcar consulta /
   Marcar retorno; Exames › Marcar exame; Informações (a F6.4 acrescenta Cancelar, Remarcar,
-  Encaixe e Falar com a recepção); (2) marcar: qual serviço (só com mais de um da categoria, com o
-  valor) → **"com quem?"** (só com mais de um profissional; "Primeiro horário disponível" em
+  Encaixe e Falar com a recepção); (2) marcar: qual serviço (sempre, com o valor; revisto na
+  validação) → **"com quem?"** (só com mais de um profissional; "Primeiro horário disponível" em
   primeiro) → local (só se o serviço tem consultório e domiciliar, com o valor) → endereço do
   domiciliar → identificação do paciente como no piloto → link de 30 minutos; retorno pela lista
   de quem tem direito, com o mesmo profissional da consulta de origem; exame só com horário
@@ -956,6 +956,9 @@ de remarcação (texto da F4.6), e enviam sozinhos; sai a tela "Avisar" da F4.6.
   **Regra confirmada na validação (cliente, 07/out):** no meio de uma jornada, qualquer mensagem
   fora das opções responde "não entendi" (um cumprimento também); a conversa só volta às
   boas-vindas e ao menu quando a jornada terminou (link enviado, bloqueio) ou parou por 15 minutos.
+  **"Qual exame" e "Qual consulta" sempre aparecem** (cliente, 07/out), mesmo com um serviço só,
+  para o paciente ver e confirmar o que está marcando; o "com quem?" continua pulado com um
+  profissional só (D2).
 - **F6.3b — Jornada de configuração** (cliente, 07/out, depois de a Espirometria sumir do bot por
   estar sem horário; feita antes da F6.4): as Configurações mostram a dependência entre os
   cadastros, na ordem Clínica → Profissionais → Locais → Agendas → Serviços → Horários (o

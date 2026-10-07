@@ -106,8 +106,11 @@ describe("bot: marcar consulta (número novo)", () => {
     expect(titles(await say(phone, "1"))).toEqual(["1. Marcar consulta", "2. Marcar retorno", "3. Voltar ao menu"]);
   });
 
-  it("com quem? (dois profissionais), local, para quem, cadastro do contato e do paciente, link", async () => {
+  it("qual consulta (mesmo com uma só), com quem? (dois profissionais), local, para quem, cadastro, link", async () => {
     let reply = await say(phone, "1");
+    expect(reply.at(-1)!.body).toBe("Qual consulta você quer marcar?");
+    expect(titles(reply)).toEqual(["1. Consulta", "2. Voltar ao menu"]);
+    reply = await say(phone, "1");
     expect(reply.at(-1)!.body).toBe("Com qual profissional?");
     expect(titles(reply)).toEqual(["1. Primeiro horário", "2. Dr. Segundo", "3. Dra. Agenda", "4. Voltar ao menu"]);
 
@@ -146,6 +149,7 @@ describe("bot: marcar consulta (número novo)", () => {
       .order("occurred_at");
     expect(steps!.map((s) => s.step)).toEqual([
       "started",
+      "BOOK_SERVICE",
       "BOOK_AGENDA",
       "BOOK_LOCATION",
       "BOOK_FOR_WHOM",
@@ -172,6 +176,7 @@ describe("bot: marcar consulta (número novo)", () => {
 
   it("domiciliar: pede o endereço, confirma e guarda como padrão do contato", async () => {
     await say(phone, "oi");
+    await say(phone, "1");
     await say(phone, "1");
     let reply = await say(phone, "1");
     reply = await say(phone, { id: optionId(reply, "Dra. Agenda") });
@@ -265,6 +270,7 @@ describe("bot: retorno e idade limite", () => {
     const phone = "+5584991226303"; // contato do Paciente Três (2020)
     await say(phone, "oi");
     await say(phone, "1");
+    await say(phone, "1");
     let reply = await say(phone, "1");
     reply = await say(phone, { id: optionId(reply, "Dr. Segundo") });
     reply = await say(phone, { id: "for_other" });
@@ -298,6 +304,7 @@ describe("conversa parada há 15 minutos", () => {
     const phone = "+5584991226305";
     await say(phone, "oi");
     await say(phone, "1");
+    await say(phone, "1"); // Qual consulta?
     await say(phone, "1"); // Com qual profissional?
     const db = createClinicServiceClient(f.clinicId, env());
 
