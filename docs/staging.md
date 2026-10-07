@@ -76,6 +76,8 @@
    node --env-file=.env.staging scripts/criar-suporte.mjs <seu e-mail> "<seu nome>"
    ```
 2. Abrir o link, escolher a senha e entrar em `https://app.recepclinic.com.br/admin/login`.
+   Convidado que não recebeu o e-mail (sem provedor de e-mail ainda) ou quem esqueceu a senha:
+   `node --env-file=.env.staging scripts/link-de-senha.mjs <e-mail>` (link de 1 hora).
    E-mail digitado errado no passo 1? `node --env-file=.env.staging scripts/trocar-email.mjs
    <e-mail errado> <e-mail certo>` (a senha continua a mesma).
 3. Criar uma clínica de teste em **Nova clínica**, cadastrar um exame com preparo e abrir
