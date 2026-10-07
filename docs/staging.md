@@ -124,4 +124,6 @@ do celular; cliente, 06/out/2026). Nada do app ou do número do piloto.
 8. **Conferir**: mandar uma mensagem de outro celular para o número de testes; ela aparece em
    *Últimas mensagens* (o bot só responde a partir da F6.3). Número recém-registrado pode levar
    de minutos a horas até o app do celular encontrá-lo ("convidar para o WhatsApp"); nesse caso,
-   o número de testes manda o `hello_world` e a resposta do celular fecha o teste.
+   o número de testes manda o `hello_world` e a resposta do celular fecha o teste (o WhatsApp
+   Web reconheceu o número antes do app do celular). **Nunca verificar o número de testes em
+   app nenhum** (WhatsApp ou Business): isso o tiraria da Cloud API.

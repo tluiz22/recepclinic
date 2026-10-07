@@ -855,7 +855,7 @@ de remarcação (texto da F4.6), e enviam sozinhos; sai a tela "Avisar" da F4.6.
   para a F8); conexão cadastrada pelo Suporte na tela WhatsApp da clínica; webhook novo que
   identifica a clínica pelo `phone_number_id`, confere a assinatura da Meta e registra mensagens e
   situações de entrega.
-- **F6.1 — em andamento (06/out): código pronto, falta a configuração na Meta.** Webhook novo
+- **F6.1 — feita em 06/out (aguardando a validação do cliente).** Conferido de ponta a ponta no staging: mensagem do celular do cliente recebida pelo webhook, gravada na clínica de teste e ligada ao contato. Webhook novo
   (`/api/whatsapp/webhook`): confere a assinatura com o App Secret do app RecepClinic, descobre a
   clínica pelo `phone_number_id` e grava com a credencial dela (mensagens recebidas, situações de
   entrega, ecos da recepção); número sem clínica ou desconectado é ignorado (200 para a Meta);
@@ -865,6 +865,11 @@ de remarcação (texto da F4.6), e enviam sozinhos; sai a tela "Avisar" da F4.6.
   conta) e **Últimas mensagens**. Variáveis da plataforma `WHATSAPP_APP_SECRET` e
   `WHATSAPP_WEBHOOK_VERIFY_TOKEN`. API da Meta na versão v24.0 (a v21.0 do piloto vence em 2026).
   Roteiro da Meta em [`staging.md`](staging.md) (parte E). 4 testes unitários e 6 de banco novos.
+  Número de testes `+55 61 9903-3143` ("RecepcClinic - Teste", nome em revisão na Meta), na Cloud
+  API do app RecepClinic, que está em modo Ao vivo; forma de pagamento cadastrada na conta do
+  WhatsApp do RecepClinic. Lição: o número não pode ser verificado em app nenhum depois de ir para
+  a API (sairia dela); o celular que já conversou com o número antigo pode levar horas para
+  reconhecê-lo (o WhatsApp Web atualizou antes).
 - **F6.2 — Envio e templates padrão:** envio pela conexão de cada clínica; templates padrão do
   RecepClinic criados pela API na conta (WABA) do RecepClinic; envios do painel (lembrete, preparo)
   e a confirmação depois de marcar pela página `/agendar`.
