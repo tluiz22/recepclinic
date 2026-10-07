@@ -91,8 +91,13 @@ do celular; cliente, 06/out/2026). Nada do app ou do número do piloto.
 
 1. **Número** (business.facebook.com › portfólio RecepClinic › WhatsApp Manager › *Números de
    telefone* › *Adicionar número*): nome de exibição, categoria e o código por SMS ou ligação
-   no chip. Anotar o **Phone number ID** e o **WhatsApp Business Account ID** (WABA), que
-   aparecem também no app, em *WhatsApp › Configuração da API*.
+   no chip. No painel novo dos apps, o caminho é *Casos de uso › Personalizar › Configuração
+   básica › Número de telefone › Gerenciar*. Se a Meta disser que o número **já está registrado
+   numa conta do WhatsApp**, apagar essa conta no app do celular (*Configurações › Conta › Apagar
+   conta*; número reciclado: ativar o WhatsApp no chip e apagar em seguida), esperar uns minutos
+   e tentar de novo. Depois, **Registrar** o número ali mesmo, com um PIN de 6 números (guardar;
+   é a verificação em duas etapas). Anotar o **Phone number ID** e o **WhatsApp Business Account
+   ID** (WABA), em *WhatsApp › Configuração da API*.
 2. **Token permanente** (*Configurações do negócio › Usuários › Usuários do sistema*): criar um
    usuário do sistema **Administrador**, dar a ele o app RecepClinic e a conta do WhatsApp
    (controle total) e gerar o token do app RecepClinic, **sem expiração**, com
@@ -110,7 +115,8 @@ do celular; cliente, 06/out/2026). Nada do app ou do número do piloto.
    ao webhook os eventos de números reais.
 6. **Painel** (logado como Suporte, na clínica de teste › *Configurações › WhatsApp*): no cartão
    *Cadastro da conexão*, o Phone number ID, o WABA ID, o número exibido, a situação
-   **Conectado** e o token; *Salvar conexão*. Depois *Registrar o número* com um PIN de 6
-   números (guardar) e *Testar conexão* (a Meta responde e o app é inscrito na conta).
+   **Conectado** e o token; *Salvar conexão*. Se o número não foi registrado no passo 1,
+   *Registrar o número* com um PIN de 6 números. Depois *Testar conexão* (a Meta responde e o app
+   é inscrito na conta).
 7. **Conferir**: mandar uma mensagem de outro celular para o número de testes; ela aparece em
    *Últimas mensagens* (o bot só responde a partir da F6.3).

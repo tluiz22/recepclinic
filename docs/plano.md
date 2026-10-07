@@ -891,6 +891,19 @@ revisadas pelo Suporte** (D3b revista); acompanhamento da aprovação (webhook d
 template: aprovado vira o usado, recusado mostra o motivo). **Depende** da
 aprovação do RecepClinic como Tech Provider (pendente do cliente).
 
+**Pré-condições para conectar o número de uma clínica (cliente, 06/out):** o número da clínica
+**não passa pela API direto** (como o chip de testes): entra por **coexistência**, sem apagar a
+conta nem trocar de chip; a secretária segue no app WhatsApp Business no mesmo número e o bot
+atende pela API (eco da recepção pausa o bot, `#bot` devolve, como no piloto; F6.4). Para isso:
+1. **Tech Provider aprovado** (análise do app com acesso avançado a `whatsapp_business_management`
+   e `whatsapp_business_messaging`, e a configuração do Embedded Signup): começar a análise já,
+   em paralelo com a F6 e a F7 (a verificação da empresa saiu em 06/out);
+2. o número da clínica **no app WhatsApp Business** (quem usa o WhatsApp comum migra antes, no
+   mesmo celular);
+3. **conferir as regras atuais da Meta para a coexistência** antes de conectar (o que fica
+   limitado no app: aparelhos conectados, listas de transmissão etc.) e testar com um número de
+   app Business antes da primeira clínica.
+
 ## F9 — Operação e segurança
 
 **Escopo:** ferramenta de erros com a clínica em cada erro e monitor externo (painel e webhook);
@@ -902,6 +915,9 @@ anonimização de paciente/contato a pedido (LGPD); contadores de uso visíveis 
 **Escopo:** produção (Supabase Pro + Vercel Pro, backup conferido); criação da 1ª clínica pelo
 Suporte (pela tela "Nova clínica", F4.4) e configuração pelo Administrador; no cenário B, script de importação do banco do piloto
 para o modelo novo; acompanhamento das primeiras semanas.
+
+**Depende da F8** (cliente, 06/out): o número da primeira clínica só é conectado por coexistência,
+então o Tech Provider precisa estar aprovado antes da F10.
 
 ## Depois do 1º piloto (já previsto no banco)
 
