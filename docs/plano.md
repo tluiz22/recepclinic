@@ -953,6 +953,11 @@ de remarcação (texto da F4.6), e enviam sozinhos; sai a tela "Avisar" da F4.6.
   gravados por `scripts/agendador.mjs`). Saiu o roteador antigo do piloto; o resto do bot antigo
   (cancelar, remarcar, lista de espera) sai na F6.4. Migração `20261007130000`. Roteiro na parte G
   do [`staging.md`](staging.md). 7 testes unitários e 10 de banco novos.
+  **Ajuste na validação (cliente, 07/out):** um cumprimento sozinho ("oi", "olá", "bom dia",
+  "boa tarde", "boa noite") recomeça a conversa em qualquer ponto, com as boas-vindas e o menu
+  atualizado (antes, fora do começo, respondia "não entendi"); a tentativa em andamento conta como
+  desistência no funil (motivo `greeting`). Motivo: a lista do WhatsApp é uma foto do momento em
+  que foi enviada; um serviço cadastrado depois só aparece num menu novo.
 - **F6.3b — Jornada de configuração** (cliente, 07/out, depois de a Espirometria sumir do bot por
   estar sem horário; feita antes da F6.4): as Configurações mostram a dependência entre os
   cadastros, na ordem Clínica → Profissionais → Locais → Agendas → Serviços → Horários (o

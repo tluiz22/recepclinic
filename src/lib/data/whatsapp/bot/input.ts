@@ -21,6 +21,23 @@ export function isBackToMenu(selection: Selection): boolean {
   return text === "0" || text === "menu" || text === "menu principal";
 }
 
+const GREETING = /^(oi+|ol[aá]+|opa|e a[ií]|bom dia|boa tarde|boa noite|hello|hi)$/;
+
+/**
+ * Mensagem que é só um cumprimento ("oi", "Olá!", "bom dia 😊"): recomeça a
+ * conversa com as boas-vindas e o menu atualizado (cliente, 07/out). Nome que
+ * começa igual (ex.: "Olavo") não conta.
+ */
+export function isGreeting(selection: Selection): boolean {
+  if (selection.id) return false;
+  const text = selection.text
+    .toLowerCase()
+    .replace(/[\p{Extended_Pictographic}\uFE0F]/gu, "")
+    .replace(/[!.,?;:\s]+/g, " ")
+    .trim();
+  return GREETING.test(text);
+}
+
 /**
  * Item escolhido de uma lista numerada: pelo id do toque ou pelo número
  * digitado ("2", "2." ou "2 algo").
