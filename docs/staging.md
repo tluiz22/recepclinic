@@ -118,5 +118,10 @@ do celular; cliente, 06/out/2026). Nada do app ou do número do piloto.
    **Conectado** e o token; *Salvar conexão*. Se o número não foi registrado no passo 1,
    *Registrar o número* com um PIN de 6 números. Depois *Testar conexão* (a Meta responde e o app
    é inscrito na conta).
-7. **Conferir**: mandar uma mensagem de outro celular para o número de testes; ela aparece em
-   *Últimas mensagens* (o bot só responde a partir da F6.3).
+7. **Forma de pagamento** na conta do WhatsApp do RecepClinic (WhatsApp Manager › Faturamento;
+   cartão, BRL, fuso de Brasília): necessária para qualquer template (inclusive o `hello_world`
+   de exemplo da Meta); mensagens iniciadas pelo paciente não precisam.
+8. **Conferir**: mandar uma mensagem de outro celular para o número de testes; ela aparece em
+   *Últimas mensagens* (o bot só responde a partir da F6.3). Número recém-registrado pode levar
+   de minutos a horas até o app do celular encontrá-lo ("convidar para o WhatsApp"); nesse caso,
+   o número de testes manda o `hello_world` e a resposta do celular fecha o teste.

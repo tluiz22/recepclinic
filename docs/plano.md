@@ -903,6 +903,14 @@ atende pela API (eco da recepção pausa o bot, `#bot` devolve, como no piloto; 
 3. **conferir as regras atuais da Meta para a coexistência** antes de conectar (o que fica
    limitado no app: aparelhos conectados, listas de transmissão etc.) e testar com um número de
    app Business antes da primeira clínica.
+4. **forma de pagamento da própria clínica** na conta do WhatsApp Business dela (cliente, 06/out):
+   no Embedded Signup a clínica conecta com o próprio portfólio e a própria conta; a Meta cobra
+   a clínica direto pelos templates que o RecepClinic envia em nome dela (o RecepClinic, como Tech
+   Provider, não paga nem repassa; a linha de crédito compartilhada é só de Solution Partner).
+   Na conexão, o **Suporte confere se a forma de pagamento está ativa** (sem ela, lembretes e
+   confirmações não saem; o bot responde quando o paciente escreve primeiro). A proposta e o
+   contrato deixam claro que as mensagens da Meta são cobradas da clínica, à parte. Conferir
+   essas regras da Meta junto com as da coexistência.
 
 ## F9 — Operação e segurança
 
@@ -943,4 +951,4 @@ então o Tech Provider precisa estar aprovado antes da F10.
 | Site `www.recepclinic.com.br` com política de privacidade e termos (projeto separado) | F8 (Meta) e F5 |
 | Chip novo de testes do RecepClinic (WhatsApp) | F6 |
 | CNPJ, contrato com as clínicas, termo de tratamento de dados | F10 |
-| Custo da Meta por mensagem | definição de preço (fora do código) |
+| Custo da Meta por mensagem (cobrado da clínica, direto pela Meta; F8) | definição de preço e contrato (fora do código) |
