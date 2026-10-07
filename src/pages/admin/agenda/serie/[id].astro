@@ -72,7 +72,7 @@ const locationName = locations.find((l) => l.id === series.locationId)?.name ?? 
             type="submit"
             class={`${SECONDARY_BUTTON} js-confirm-delete text-red-700`}
             data-confirm-title="Encerrar a série?"
-            data-confirm-message={`A próxima sessão (${formatInstant(next.scheduledAt, clinic.timezone, "dd/MM 'às' HH:mm")}) e as seguintes são canceladas. As que já passaram ficam como estão.`}
+            data-confirm-message={`A próxima sessão (${formatInstant(next.scheduledAt, clinic.timezone, "dd/MM 'às' HH:mm")}) e as seguintes são canceladas. As que já passaram ficam como estão. O paciente é avisado pelo WhatsApp do cancelamento da primeira.`}
             data-confirm-label="Encerrar a série"
           >
             Encerrar a série

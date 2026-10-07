@@ -135,7 +135,7 @@ if (a.seriesId !== null && isActive && !isPast) {
     icon: "x-mark",
     danger: true,
     title: "Encerrar a série a partir desta sessão?",
-    message: `${who}. Esta sessão e as próximas são canceladas; as que já passaram ficam como estão.`,
+    message: `${who}. Esta sessão e as próximas são canceladas; as que já passaram ficam como estão. O paciente é avisado pelo WhatsApp do cancelamento da primeira.`,
     confirm: "Encerrar a série",
   });
 }
@@ -241,7 +241,7 @@ const tone = (danger?: boolean) => (danger ? "border-red-300 text-red-700 hover:
                   type="submit"
                   class={`${BUTTON} ${tone(true)} js-confirm-delete`}
                   data-confirm-title={a.seriesId ? "Cancelar só esta sessão?" : "Cancelar o atendimento?"}
-                  data-confirm-message={`${who}. O horário fica livre de novo.${a.seriesId ? " A série continua nas próximas." : ""}`}
+                  data-confirm-message={`${who}. O horário fica livre de novo.${a.seriesId ? " A série continua nas próximas." : ""} O paciente é avisado pelo WhatsApp.`}
                   data-confirm-label={a.seriesId ? "Cancelar só esta" : "Cancelar atendimento"}
                 >
                   <Icon name="x-mark" class="h-3.5 w-3.5" />

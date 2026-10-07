@@ -133,7 +133,7 @@ const chip = (active: boolean) =>
         class={`${PRIMARY_BUTTON} js-confirm-delete self-start`}
         disabled={options.length === 0}
         data-confirm-title="Remarcar o atendimento?"
-        data-confirm-message={`${appointment.patientName} vai para o horário escolhido. O lembrete e a presença confirmada recomeçam.${appointment.seriesId ? " Na opção 'esta e as próximas', a série inteira muda dali em diante." : ""}`}
+        data-confirm-message={`${appointment.patientName} vai para o horário escolhido. O lembrete e a presença confirmada recomeçam.${appointment.seriesId ? " Na opção 'esta e as próximas', a série inteira muda dali em diante." : ""} O paciente é avisado pelo WhatsApp.`}
         data-confirm-label="Remarcar"
         data-confirm-tone="primary"
       >

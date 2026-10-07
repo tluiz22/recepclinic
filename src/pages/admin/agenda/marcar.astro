@@ -333,7 +333,7 @@ const chip = (active: boolean) =>
               class={`${PRIMARY_BUTTON} js-confirm-delete self-start`}
               disabled={!patient || slotOptions.length === 0}
               data-confirm-title="Marcar o atendimento?"
-              data-confirm-message={`${patient?.fullName ?? ""}: ${service.name}, no horário escolhido.`}
+              data-confirm-message={`${patient?.fullName ?? ""}: ${service.name}, no horário escolhido. O paciente é avisado pelo WhatsApp.`}
               data-confirm-label="Marcar"
               data-confirm-tone="primary"
             >

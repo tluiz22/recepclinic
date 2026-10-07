@@ -175,6 +175,11 @@ describe("configuração da clínica", () => {
   it("idade limite pode ser desligada (null)", () => {
     expect(validateClinicSettingsPatch({ consultationAgeLimitYears: null })).toEqual({ consultationAgeLimitYears: null });
   });
+
+  it("nas mensagens, só \"da\" ou \"do\" antes do nome (F6.2)", () => {
+    expect(validateClinicSettingsPatch({ messageArticle: "do" })).toEqual({ messageArticle: "do" });
+    expect(fieldsOf(() => validateClinicSettingsPatch({ messageArticle: "a" as never }))).toEqual({ messageArticle: 'Escolha "da" ou "do"' });
+  });
 });
 
 describe("cadastros simples", () => {

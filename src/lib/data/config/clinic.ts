@@ -2,6 +2,7 @@ import { isValidTimeZone } from "../../clinicTime";
 import type { Enums, TablesUpdate } from "../../supabase/database.types";
 import type { DbClient } from "../clients";
 import { cleanText, unwrapOne, Validation } from "../errors";
+import { MESSAGE_ARTICLES, type MessageArticle } from "../whatsapp/templates";
 
 // Perfil e identidade da clínica (D4b): `clinics` + `clinic_settings`.
 // Leitura: qualquer membro. Alteração: Administrador (RLS).
@@ -11,6 +12,8 @@ export type ClinicProfile = Enums<"clinic_profile">;
 export type ClinicSettings = {
   clinicId: string;
   name: string;
+  /** "da" ou "do" antes do nome nas mensagens do WhatsApp ("Aqui é da Clínica Sorriso"), F6.2. */
+  messageArticle: MessageArticle;
   profile: ClinicProfile;
   timezone: string;
   /** Idade a partir da qual não marca Consulta (só Retorno/Exame); null = desligada. */
@@ -46,7 +49,7 @@ export function normalizeWebsiteUrl(value: string | null | undefined): string | 
 }
 
 const SETTINGS_COLUMNS =
-  "clinic_id, profile, timezone, consultation_age_limit_years, reminder_hour, bot_payment_info, bot_insurance_info, bot_notes, logo_url, brand_color, website_url, require_insurance_details";
+  "clinic_id, profile, timezone, consultation_age_limit_years, reminder_hour, bot_payment_info, bot_insurance_info, bot_notes, logo_url, brand_color, website_url, require_insurance_details, message_article";
 
 export async function getClinicSettings(db: DbClient, clinicId: string): Promise<ClinicSettings> {
   const [clinic, settings] = await Promise.all([
@@ -61,6 +64,7 @@ export async function getClinicSettings(db: DbClient, clinicId: string): Promise
   return {
     clinicId,
     name: clinic.name,
+    messageArticle: settings.message_article as MessageArticle,
     profile: settings.profile,
     timezone: settings.timezone,
     consultationAgeLimitYears: settings.consultation_age_limit_years,
@@ -84,6 +88,7 @@ export function validateClinicSettingsPatch(patch: ClinicSettingsPatch): ClinicS
     out.name = cleanText(patch.name) ?? "";
     v.check(out.name.length > 0, "name", "Informe o nome da clínica");
   }
+  if ("messageArticle" in patch) v.check(MESSAGE_ARTICLES.includes(patch.messageArticle!), "messageArticle", "Escolha \"da\" ou \"do\"");
   if ("profile" in patch) v.check(CLINIC_PROFILES.includes(patch.profile!), "profile", "Perfil inválido");
   if ("timezone" in patch) v.check(isValidTimeZone(patch.timezone ?? ""), "timezone", "Fuso horário inválido");
   if ("consultationAgeLimitYears" in patch && patch.consultationAgeLimitYears !== null) {
@@ -135,6 +140,7 @@ export async function updateClinicSettings(
 
   const row: Record<string, unknown> = {};
   const map: [keyof ClinicSettingsPatch, keyof TablesUpdate<"clinic_settings">][] = [
+    ["messageArticle", "message_article"],
     ["profile", "profile"],
     ["timezone", "timezone"],
     ["consultationAgeLimitYears", "consultation_age_limit_years"],

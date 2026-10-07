@@ -1,5 +1,6 @@
 ---
-// Configurações › Clínica (F4.3, D4b): nome, perfil (vocabulário e regras de
+// Configurações › Clínica (F4.3, D4b): nome ("da" ou "do" nas mensagens do
+// WhatsApp, F6.2), perfil (vocabulário e regras de
 // idade), fuso, idade limite da consulta, cor e, com o bot liberado, as
 // informações que o bot responde. Marca das páginas públicas (F5.1): logo,
 // cor e site da clínica, com "Ver como fica".
@@ -11,6 +12,7 @@ import { HINT, INPUT, LABEL, PRIMARY_BUTTON } from "../../../components/admin/fi
 import { createUserClient } from "../../../lib/data/clients";
 import { BRAND_COLOR_OPTIONS, DEFAULT_BRAND_COLOR, LOGO_TYPES } from "../../../lib/data/config/brand";
 import { CLINIC_PROFILES, getClinicSettings } from "../../../lib/data/config/clinic";
+import { MESSAGE_ARTICLES } from "../../../lib/data/whatsapp/templates";
 import { BRAZIL_TIME_ZONES } from "../../../lib/timeZones";
 import { PROFILE_LABELS, vocabularyFor } from "../../../lib/vocabulary";
 
@@ -38,6 +40,19 @@ const profileHint = (profile: (typeof CLINIC_PROFILES)[number]) => {
         <label for="name" class={LABEL}>Nome da clínica</label>
         <input id="name" name="name" required value={settings.name} class={INPUT} />
       </div>
+
+      <fieldset>
+        <legend class={LABEL}>Nas mensagens do WhatsApp</legend>
+        <div class="mt-1 flex flex-wrap gap-4 text-sm text-slate-700">
+          {MESSAGE_ARTICLES.map((article) => (
+            <label class="flex items-center gap-2">
+              <input type="radio" name="message_article" value={article} checked={settings.messageArticle === article} class="h-4 w-4 border-slate-300" />
+              "Aqui é {article} {settings.name}"
+            </label>
+          ))}
+        </div>
+        <p class={HINT}>Como a clínica se apresenta no começo das mensagens ao paciente.</p>
+      </fieldset>
 
       <div>
         <label for="profile" class={LABEL}>Perfil</label>

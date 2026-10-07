@@ -1,6 +1,7 @@
 // Chamadas à API da Meta (Graph) para a conexão da clínica (F6.1): conferir
 // o número com o token e inscrever a conta (WABA) no app RecepClinic, para os
-// eventos chegarem ao webhook. O envio de mensagens entra na F6.2.
+// eventos chegarem ao webhook. F6.2: envio de mensagens pelo número da
+// clínica e criação e situação dos templates na conta.
 
 /** Versão da API da Meta (cada versão vale cerca de 2 anos; a v21.0 do piloto vence em 2026). */
 export const GRAPH_API_VERSION = "v24.0";
@@ -78,4 +79,66 @@ export async function registerPhoneNumber(phoneNumberId: string, pin: string, to
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ messaging_product: "whatsapp", pin }),
   });
+}
+
+/** Envia uma mensagem pelo número (corpo da Cloud API sem `messaging_product`); devolve o id da Meta. */
+export async function sendMessage(
+  phoneNumberId: string,
+  token: string,
+  message: Record<string, unknown>,
+  fetcher: Fetcher = fetch,
+): Promise<string> {
+  const body = await call<{ messages?: { id?: string }[] }>(
+    fetcher,
+    "Envio pelo WhatsApp",
+    `${GRAPH}/${encodeURIComponent(phoneNumberId)}/messages`,
+    token,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ messaging_product: "whatsapp", ...message }),
+    },
+  );
+  const id = body.messages?.[0]?.id;
+  if (!id) throw new GraphRequestError("Envio pelo WhatsApp", { code: null, message: "a Meta não devolveu o id da mensagem" });
+  return id;
+}
+
+export type MetaTemplate = { id: string; name: string; language: string; status: string; rejectedReason: string | null };
+
+/** Templates da conta com este nome (um por idioma). */
+export async function fetchTemplatesByName(wabaId: string, name: string, token: string, fetcher: Fetcher = fetch): Promise<MetaTemplate[]> {
+  const params = new URLSearchParams({ name, fields: "id,name,language,status,rejected_reason", limit: "50" });
+  const body = await call<{ data?: Record<string, string | undefined>[] }>(
+    fetcher,
+    "Templates da conta",
+    `${GRAPH}/${encodeURIComponent(wabaId)}/message_templates?${params}`,
+    token,
+  );
+  return (body.data ?? [])
+    .filter((t) => t.name === name)
+    .map((t) => ({
+      id: t.id ?? "",
+      name: t.name ?? name,
+      language: t.language ?? "",
+      status: t.status ?? "",
+      rejectedReason: t.rejected_reason ?? null,
+    }));
+}
+
+/** Cria o template na conta, para a análise da Meta; devolve o id e a situação inicial. */
+export async function createTemplate(
+  wabaId: string,
+  payload: Record<string, unknown>,
+  token: string,
+  fetcher: Fetcher = fetch,
+): Promise<{ id: string; status: string }> {
+  const body = await call<{ id?: string; status?: string }>(
+    fetcher,
+    "Criação do template",
+    `${GRAPH}/${encodeURIComponent(wabaId)}/message_templates`,
+    token,
+    { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) },
+  );
+  return { id: body.id ?? "", status: body.status ?? "PENDING" };
 }

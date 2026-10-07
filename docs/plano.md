@@ -873,6 +873,50 @@ de remarcação (texto da F4.6), e enviam sozinhos; sai a tela "Avisar" da F4.6.
 - **F6.2 — Envio e templates padrão:** envio pela conexão de cada clínica; templates padrão do
   RecepClinic criados pela API na conta (WABA) do RecepClinic; envios do painel (lembrete, preparo)
   e a confirmação depois de marcar pela página `/agendar`.
+  **Detalhada com o cliente em 07/out:** (1) envio pela conexão de cada clínica (número e token
+  dela, API v24.0), registrado em `whatsapp_messages` com o texto que o paciente vê; (2) os textos
+  dos templates ficam no código, uma versão para todas as clínicas (D3b), e o Suporte, em
+  Configurações › WhatsApp, cria pela API na conta da clínica os que faltam (categoria Utilidade,
+  `pt_BR`) e atualiza a situação (em análise, aprovado, recusado com o motivo); o webhook também
+  recebe a mudança de situação; (3) **cinco templates nesta parte**: confirmação, remarcação,
+  cancelamento, lembrete (botões Confirmar presença · Remarcar · Cancelar) e preparo do exame.
+  Oferta da lista de espera, resumo do dia e cancelamento pela clínica com link entram nas fases
+  em que são usados; a "confirmação de retorno" do piloto deixa de existir (só diferia pela frase
+  de pagamento, que sai dos templates); (4) enviam: os botões de lembrete e de preparo da Agenda;
+  a confirmação e a remarcação feitas pela página `/agendar`; o preparo, sozinho, quando a
+  confirmação do exame chega ao celular; e **os avisos ao paciente quando a equipe marca, remarca
+  ou cancela pela Agenda**, como no piloto (cliente, 07/out). **Nome da clínica nas mensagens**
+  (cliente, 07/out): em Configurações › Clínica, "da" ou "do" (padrão "da"), e o texto sai "Aqui é
+  da Clínica Sorriso". **Textos aprovados pelo cliente (07/out)**, com 👤 em vez do 👶 do piloto e o
+  profissional só quando o atendimento tem um:
+  - *Confirmação:* "Olá, {contato}! Aqui é {da clínica}. Seu atendimento está marcado:" + lista
+    (📋 serviço com o profissional · 👤 Paciente · 📅 data e hora · 📍 local e endereço) +
+    "Qualquer dúvida, é só responder esta mensagem."
+  - *Remarcação:* igual, com "O atendimento foi remarcado:" e "📅 Nova data".
+  - *Cancelamento:* "O atendimento abaixo foi cancelado:", sem o local, terminando em "Se quiser
+    marcar outro horário, é só responder esta mensagem."
+  - *Lembrete:* "Passando para lembrar do seu atendimento:" + lista + "Pode confirmar a presença?"
+    e os três botões.
+  - *Preparo:* "O exame {nome} precisa de preparo. As orientações estão neste link: {link}" +
+    "Qualquer dúvida, é só responder esta mensagem."
+  **Séries pela Agenda** (cliente, 07/out): um aviso só. Criar ou remarcar a série ("esta e as
+  próximas") confirma a primeira sessão nova; encerrar avisa o cancelamento da primeira sessão
+  cancelada. As outras contam com o lembrete da véspera. "Cancelar selecionados" e o bloqueio
+  seguem com a tela "Avisar" até a F6.5.
+- **F6.2 — implementada em 07/out (aguarda a validação do cliente no staging).** Textos dos
+  templates em `whatsapp/templates.ts`; criação e situação na conta em `templateSync.ts` (cartão
+  *Templates* do Suporte em Configurações › WhatsApp, com o texto de cada um e o motivo da recusa);
+  envio pelo número e token da clínica em `send.ts` (lido com a credencial da clínica; registro e
+  trilha com a de quem chamou); avisos em `notices.ts`. Os botões de lembrete e preparo da Agenda
+  passaram a enviar; Marcar, Remarcar, Cancelar e Encerrar a série avisam o paciente (só
+  atendimento futuro) e o aviso de salvo diz se a mensagem saiu; as confirmações dessas ações
+  dizem que o paciente é avisado. A série remarcada usa o template de remarcação na primeira
+  sessão nova. `/agendar` envia a confirmação ou a remarcação. Webhook: preparo do exame quando a
+  confirmação chega ao celular e situação dos templates pela conta (`resolve_whatsapp_clinics_by_waba`).
+  Configurações › Clínica: "da/do" nas mensagens. Sem template aprovado, o aviso fica registrado
+  como "não enviado" (sem chamar a Meta); sem conexão, nada é registrado. Migração
+  `20261007120000`. Roteiro do staging na parte F de [`staging.md`](staging.md). 10 testes
+  unitários e 6 de banco novos.
 - **F6.3 — Bot I (marcar):** menu pelo catálogo de serviços, textos pelo perfil, "com quem?" com
   "primeiro horário disponível", link de agendar, retorno e exame.
 - **F6.4 — Bot II:** cancelar, remarcar, resposta ao lembrete, lista de espera, sessões de série,

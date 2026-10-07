@@ -187,6 +187,8 @@ export type WhatsappTemplate = {
   language: string;
   status: TemplateStatus;
   metaTemplateId: string | null;
+  /** Motivo da recusa pela Meta (F6.2). */
+  rejectionReason: string | null;
 };
 
 export type WhatsappTemplateInput = {
@@ -198,7 +200,7 @@ export type WhatsappTemplateInput = {
 };
 
 const TEMPLATE_STATUSES: TemplateStatus[] = ["pending", "approved", "rejected", "disabled"];
-const TEMPLATE_COLUMNS = "id, template_key, name, language, status, meta_template_id";
+const TEMPLATE_COLUMNS = "id, template_key, name, language, status, meta_template_id, rejection_reason";
 
 type TemplateRow = {
   id: string;
@@ -207,6 +209,7 @@ type TemplateRow = {
   language: string;
   status: string;
   meta_template_id: string | null;
+  rejection_reason: string | null;
 };
 
 const toTemplate = (row: TemplateRow): WhatsappTemplate => ({
@@ -216,6 +219,7 @@ const toTemplate = (row: TemplateRow): WhatsappTemplate => ({
   language: row.language,
   status: row.status as TemplateStatus,
   metaTemplateId: row.meta_template_id,
+  rejectionReason: row.rejection_reason,
 });
 
 export async function listWhatsappTemplates(db: DbClient, clinicId: string): Promise<WhatsappTemplate[]> {

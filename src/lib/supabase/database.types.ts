@@ -403,13 +403,13 @@ isOneToOne: false
                   ]
                 },"clinic_settings": {
                   Row: {
-                    "bot_insurance_info": string | null,"bot_notes": string | null,"bot_payment_info": string | null,"brand_color": string | null,"clinic_id": string,"consultation_age_limit_years": number | null,"logo_url": string | null,"profile": Database["public"]['Enums']["clinic_profile"],"reminder_hour": number,"require_insurance_details": boolean,"timezone": string,"updated_at": string,"website_url": string | null
+                    "bot_insurance_info": string | null,"bot_notes": string | null,"bot_payment_info": string | null,"brand_color": string | null,"clinic_id": string,"consultation_age_limit_years": number | null,"logo_url": string | null,"message_article": string,"profile": Database["public"]['Enums']["clinic_profile"],"reminder_hour": number,"require_insurance_details": boolean,"timezone": string,"updated_at": string,"website_url": string | null
                   }
                   Insert: {
-                    "bot_insurance_info"?: string | null,"bot_notes"?: string | null,"bot_payment_info"?: string | null,"brand_color"?: string | null,"clinic_id": string,"consultation_age_limit_years"?: number | null,"logo_url"?: string | null,"profile"?: Database["public"]['Enums']["clinic_profile"],"reminder_hour"?: number,"require_insurance_details"?: boolean,"timezone"?: string,"updated_at"?: string,"website_url"?: string | null
+                    "bot_insurance_info"?: string | null,"bot_notes"?: string | null,"bot_payment_info"?: string | null,"brand_color"?: string | null,"clinic_id": string,"consultation_age_limit_years"?: number | null,"logo_url"?: string | null,"message_article"?: string,"profile"?: Database["public"]['Enums']["clinic_profile"],"reminder_hour"?: number,"require_insurance_details"?: boolean,"timezone"?: string,"updated_at"?: string,"website_url"?: string | null
                   }
                   Update: {
-                    "bot_insurance_info"?: string | null,"bot_notes"?: string | null,"bot_payment_info"?: string | null,"brand_color"?: string | null,"clinic_id"?: string,"consultation_age_limit_years"?: number | null,"logo_url"?: string | null,"profile"?: Database["public"]['Enums']["clinic_profile"],"reminder_hour"?: number,"require_insurance_details"?: boolean,"timezone"?: string,"updated_at"?: string,"website_url"?: string | null
+                    "bot_insurance_info"?: string | null,"bot_notes"?: string | null,"bot_payment_info"?: string | null,"brand_color"?: string | null,"clinic_id"?: string,"consultation_age_limit_years"?: number | null,"logo_url"?: string | null,"message_article"?: string,"profile"?: Database["public"]['Enums']["clinic_profile"],"reminder_hour"?: number,"require_insurance_details"?: boolean,"timezone"?: string,"updated_at"?: string,"website_url"?: string | null
                   }
                   Relationships: [
                     {
@@ -1061,13 +1061,13 @@ isOneToOne: false
                   ]
                 },"whatsapp_templates": {
                   Row: {
-                    "clinic_id": string,"created_at": string,"id": string,"language": string,"meta_template_id": string | null,"name": string,"status": string,"template_key": string,"updated_at": string
+                    "clinic_id": string,"created_at": string,"id": string,"language": string,"meta_template_id": string | null,"name": string,"rejection_reason": string | null,"status": string,"template_key": string,"updated_at": string
                   }
                   Insert: {
-                    "clinic_id": string,"created_at"?: string,"id"?: string,"language"?: string,"meta_template_id"?: string | null,"name": string,"status"?: string,"template_key": string,"updated_at"?: string
+                    "clinic_id": string,"created_at"?: string,"id"?: string,"language"?: string,"meta_template_id"?: string | null,"name": string,"rejection_reason"?: string | null,"status"?: string,"template_key": string,"updated_at"?: string
                   }
                   Update: {
-                    "clinic_id"?: string,"created_at"?: string,"id"?: string,"language"?: string,"meta_template_id"?: string | null,"name"?: string,"status"?: string,"template_key"?: string,"updated_at"?: string
+                    "clinic_id"?: string,"created_at"?: string,"id"?: string,"language"?: string,"meta_template_id"?: string | null,"name"?: string,"rejection_reason"?: string | null,"status"?: string,"template_key"?: string,"updated_at"?: string
                   }
                   Relationships: [
                     {
@@ -1123,6 +1123,9 @@ isOneToOne: false
                            },
 "resolve_whatsapp_clinic":
 { Args: { "p_phone_number_id": string }; Returns: string
+                           },
+"resolve_whatsapp_clinics_by_waba":
+{ Args: { "p_waba_id": string }; Returns: string[]
                            },
 "search_insurance_plans":
 { Args: { "p_clinic_id": string,"p_query": string }; Returns: {

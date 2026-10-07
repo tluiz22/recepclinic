@@ -110,7 +110,8 @@ do celular; cliente, 06/out/2026). Nada do app ou do número do piloto.
    Depois, *Deployments › Redeploy* para valerem.
 4. **Webhook** (app RecepClinic › *WhatsApp › Configuração*): URL de retorno
    `https://app.recepclinic.com.br/api/whatsapp/webhook`, o mesmo token de verificação; *Verificar
-   e salvar*; em *Campos do webhook*, assinar **messages**.
+   e salvar*; em *Campos do webhook*, assinar **messages** (e, a partir da F6.2,
+   **message_template_status_update**; parte F).
 5. **App em modo Ao vivo** (*Configurações do app › Básico*: URL da política de privacidade
    `https://www.recepclinic.com.br/privacidade`, dos termos `https://www.recepclinic.com.br/termos`,
    ícone e categoria; depois a chave **Ao vivo** no topo). Em desenvolvimento, a Meta não manda
@@ -129,3 +130,29 @@ do celular; cliente, 06/out/2026). Nada do app ou do número do piloto.
    o número de testes manda o `hello_world` e a resposta do celular fecha o teste (o WhatsApp
    Web reconheceu o número antes do app do celular). **Nunca verificar o número de testes em
    app nenhum** (WhatsApp ou Business): isso o tiraria da Cloud API.
+
+## F. Envio e templates (F6.2)
+
+1. **Banco**: `npx supabase db push` (migração `20261007120000_envio_whatsapp`: "da/do" da clínica,
+   motivo da recusa do template e a conta do webhook dos templates).
+2. **Webhook** (app RecepClinic › *WhatsApp › Configuração › Campos do webhook*): assinar também
+   **message_template_status_update**, para a aprovação dos templates chegar sozinha.
+3. **Painel** (Suporte, clínica de teste › *Configurações › WhatsApp*, cartão *Templates*):
+   **Criar na Meta**. Os cinco templates (`rc_confirmacao_v1`, `rc_remarcacao_v1`,
+   `rc_cancelamento_v1`, `rc_lembrete_v1`, `rc_preparo_exame_v1`) vão para a análise da Meta na
+   conta do RecepClinic (categoria Utilidade); a aprovação leva de minutos a algumas horas. A
+   situação aparece no cartão (pelo webhook ou por **Atualizar situação**); recusado mostra o
+   motivo. O token do passo E.2 já tem `whatsapp_business_management`, que a criação exige.
+4. **Configurações › Clínica**: escolher "da" ou "do" ("Aqui é do Consultorio Tluiz22").
+5. **Conferir**, com os templates aprovados e o celular do cliente como contato de um paciente
+   da clínica de teste:
+   - marcar pela Agenda: chega a confirmação; remarcar: a remarcação; cancelar: o cancelamento
+     (o aviso de salvo da tela diz se a mensagem saiu);
+   - "Enviar lembrete" num atendimento depois da hora do lembrete da véspera: chega o lembrete
+     com os três botões (a resposta aos botões é da F6.4);
+   - marcar um exame com preparo cadastrado no serviço: depois que a confirmação chega ao
+     celular, chega o preparo (texto com as orientações se o celular escreveu para o número nas
+     últimas 24h; senão, o template com o link);
+   - marcar ou remarcar pelo `/agendar` (link gerado na tela "Avisar" ou pelo bot, a partir da
+     F6.3): chega a confirmação ou a remarcação.
+   Cada envio aparece em *Últimas mensagens* e na trilha do atendimento.

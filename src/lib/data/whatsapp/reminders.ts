@@ -30,8 +30,8 @@ import { recordOutboundMessage, type SendOutcome } from "./messages";
 //   botão.
 //
 // O envio de verdade (template com os botões Confirmar presença · Remarcar ·
-// Cancelar) é de quem chama (bot na F6, agendador na F7): a camada recebe a
-// função que envia, registra a mensagem e a trilha.
+// Cancelar) é de quem chama (reminderSender em send.ts, F6.2; agendador na
+// F7): a camada recebe a função que envia, registra a mensagem e a trilha.
 
 export const REMINDER_MESSAGE_TYPE = "appointment_reminder";
 export const UNANSWERED_BUTTON_MS = 2 * 60 * 60_000;
@@ -171,6 +171,8 @@ export type ReminderToSend = {
   patientName: string;
   serviceName: string;
   serviceCategory: Enums<"service_category">;
+  /** Profissional da agenda (null = agenda de recurso, ex.: sala de exames). */
+  professionalName: string | null;
   scheduledAt: Date;
   locationName: string;
   isHomeVisit: boolean;
@@ -188,7 +190,7 @@ export type ReminderSender = (reminder: ReminderToSend) => Promise<SendOutcome>;
 // ---------------------------------------------------------------------------
 
 const APPOINTMENT_COLUMNS =
-  "id, status, scheduled_at, reminder_sent_at, rescheduled_at, reminder_response, patient_confirmed_at, home_visit_address, services ( name, category ), locations ( name, type, address ), patients ( full_name, contacts ( id, full_name, phone ) )";
+  "id, status, scheduled_at, reminder_sent_at, rescheduled_at, reminder_response, patient_confirmed_at, home_visit_address, services ( name, category ), agendas ( professionals ( display_name ) ), locations ( name, type, address ), patients ( full_name, contacts ( id, full_name, phone ) )";
 
 type AppointmentRow = {
   id: string;
@@ -200,6 +202,7 @@ type AppointmentRow = {
   patient_confirmed_at: string | null;
   home_visit_address: string | null;
   services: { name: string; category: Enums<"service_category"> };
+  agendas: { professionals: { display_name: string } | null };
   locations: { name: string; type: Enums<"location_type">; address: string | null };
   patients: { full_name: string; contacts: { id: string; full_name: string; phone: string } };
 };
@@ -328,6 +331,7 @@ async function deliverReminder(
     patientName: row.patients.full_name,
     serviceName: row.services.name,
     serviceCategory: row.services.category,
+    professionalName: row.agendas.professionals?.display_name ?? null,
     scheduledAt: new Date(row.scheduled_at),
     locationName: row.locations.name,
     isHomeVisit: row.locations.type === "home_visit",

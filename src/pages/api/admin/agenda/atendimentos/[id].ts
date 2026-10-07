@@ -15,17 +15,20 @@ import { dismissRebooking } from "../../../../../lib/data/daily";
 import { DataError } from "../../../../../lib/data/errors";
 import { runFormAction } from "../../../../../lib/data/formAction";
 import { joinWaitlist, leaveWaitlist } from "../../../../../lib/data/waitlist/entries";
-import { panelPreparationSender, panelReminderSender, SENDING_NOT_READY } from "../../../../../lib/data/whatsapp/panelSender";
+import { clinicSenderFor } from "../../../../../lib/data/whatsapp/clinicSender";
+import { firstByDate, NOTICE_RESULT_TEXT, sendAppointmentNotice, type NoticeKind } from "../../../../../lib/data/whatsapp/notices";
 import { PREPARATION_RESEND_MESSAGES, resendPreparation } from "../../../../../lib/data/whatsapp/preparation";
 import { RESEND_MESSAGES, sendReminderFromPanel } from "../../../../../lib/data/whatsapp/reminders";
+import { preparationSender, reminderSender } from "../../../../../lib/data/whatsapp/send";
 import { formChecked, formInt, formOptionalText, formText } from "../../../../../lib/forms";
 import { changeSeriesFrom, createSeries, endSeriesFrom } from "../../../../../lib/data/agenda/series";
 
 // Ações da Agenda (F4.5) num atendimento: marcar (`novo`), remarcar,
 // cancelar, presença confirmada, comparecimento, lembrete, preparo e lista
-// de espera. Volta para a tela de onde saiu (só telas da Agenda). Os avisos
-// ao paciente pelo WhatsApp (marcado, remarcado, cancelado) entram com o bot
-// (F6), como no plano.
+// de espera. Volta para a tela de onde saiu (só telas da Agenda). F6.2: o
+// paciente recebe pelo WhatsApp o aviso de marcado, remarcado e cancelado
+// (como no piloto); em série, só o da primeira sessão (cliente, 07/out). O
+// aviso que não sai não desfaz a ação: a tela diz o que houve.
 
 const safeReturn = safeReturnPath;
 
@@ -39,6 +42,12 @@ export const POST: APIRoute = async (context) => {
   const returnTo = safeReturn(formOptionalText(form, "return_to"), "/admin/agenda");
   const failTo = safeReturn(formOptionalText(form, "back"), returnTo);
   const acao = formText(form, "acao");
+  // Aviso ao paciente depois da ação (só atendimento futuro); a frase vai para o aviso de salvo.
+  const notify = async (kind: NoticeKind, appointment: { id: string; scheduledAt: Date } | null): Promise<string> => {
+    if (!appointment || appointment.scheduledAt.getTime() <= Date.now()) return "";
+    const sender = await clinicSenderFor(clinic.clinicId, request.url);
+    return ` ${NOTICE_RESULT_TEXT[await sendAppointmentNotice(db, clinic.clinicId, appointment.id, kind, sender)]}`;
+  };
 
   return runFormAction(
     context,
@@ -65,7 +74,8 @@ export const POST: APIRoute = async (context) => {
               actorId,
             });
             const skipped = created.skipped.length ? ` ${created.skipped.length} data(s) pulada(s): veja abaixo.` : "";
-            return done(`Série criada: ${created.created.length} sessão(ões) marcada(s).${skipped}`, `/admin/agenda/serie/${created.series.id}`);
+            const notice = await notify("confirmation", firstByDate(created.created));
+            return done(`Série criada: ${created.created.length} sessão(ões) marcada(s).${skipped}${notice}`, `/admin/agenda/serie/${created.series.id}`);
           }
           const result = await bookAppointment(db, clinic.clinicId, {
             patientId: formText(form, "patient_id"),
@@ -78,7 +88,8 @@ export const POST: APIRoute = async (context) => {
             actorId,
           });
           const date = localDateOf(result.appointment.scheduledAt, clinic.timezone);
-          return done(["Atendimento marcado.", ...result.returnWarnings].join(" "), `/admin/agenda?date=${date}`);
+          const notice = await notify("confirmation", result.appointment);
+          return done(["Atendimento marcado.", ...result.returnWarnings].join(" ") + notice, `/admin/agenda?date=${date}`);
         }
         case "remarcar": {
           const slot = parseSlot(formText(form, "slot"));
@@ -94,21 +105,28 @@ export const POST: APIRoute = async (context) => {
             );
             if (!changed.next) return done("Série encerrada: não faltavam sessões.");
             const skipped = changed.next.skipped.length ? ` ${changed.next.skipped.length} data(s) pulada(s): veja abaixo.` : "";
-            return done(`Série remarcada: ${changed.next.created.length} sessão(ões) no novo dia e horário.${skipped}`, `/admin/agenda/serie/${changed.next.series.id}`);
+            const notice = await notify("reschedule", firstByDate(changed.next.created));
+            return done(
+              `Série remarcada: ${changed.next.created.length} sessão(ões) no novo dia e horário.${skipped}${notice}`,
+              `/admin/agenda/serie/${changed.next.series.id}`,
+            );
           }
           const moved = await rescheduleAppointment(db, clinic.clinicId, id, { start: slot.start, locationId: slot.locationId, channel: "admin", actorId });
-          return done("Atendimento remarcado.", `/admin/agenda?date=${localDateOf(moved.scheduledAt, clinic.timezone)}`);
+          const notice = await notify("reschedule", moved);
+          return done(`Atendimento remarcado.${notice}`, `/admin/agenda?date=${localDateOf(moved.scheduledAt, clinic.timezone)}`);
         }
         case "cancelar": {
           const canceled = await cancelAppointment(db, clinic.clinicId, id, { channel: "admin", actorId });
-          return done(canceled ? "Atendimento cancelado." : "Este atendimento já estava cancelado.");
+          if (!canceled) return done("Este atendimento já estava cancelado.");
+          return done(`Atendimento cancelado.${await notify("cancellation", canceled)}`);
         }
         case "desistiu":
           await dismissRebooking(db, clinic.clinicId, id, actorId);
           return done("Fora da lista de aguardando remarcação.");
         case "encerrar_serie": {
           const ended = await endSeriesFrom(db, clinic.clinicId, id, actorId);
-          return done(`Série encerrada: ${ended.canceled.length} sessão(ões) cancelada(s) a partir desta.`);
+          const notice = await notify("cancellation", firstByDate(ended.canceled));
+          return done(`Série encerrada: ${ended.canceled.length} sessão(ões) cancelada(s) a partir desta.${notice}`);
         }
         case "confirmar_presenca":
         case "desfazer_presenca":
@@ -119,16 +137,14 @@ export const POST: APIRoute = async (context) => {
           await recordAttendance(db, clinic.clinicId, id, acao === "compareceu" ? "completed" : "no_show", actorId);
           return done(acao === "compareceu" ? "Registrado: compareceu." : "Registrado: faltou.");
         case "lembrete": {
-          const sender = panelReminderSender();
-          if (!sender) throw new DataError("invalid", SENDING_NOT_READY, { sender: SENDING_NOT_READY });
-          const outcome = await sendReminderFromPanel(db, clinic.clinicId, id, actorId, sender);
+          const sender = await clinicSenderFor(clinic.clinicId, request.url);
+          const outcome = sender ? await sendReminderFromPanel(db, clinic.clinicId, id, actorId, reminderSender(sender)) : "not_connected";
           if (!RESEND_MESSAGES[outcome].ok) throw new DataError("invalid", RESEND_MESSAGES[outcome].text, { outcome: RESEND_MESSAGES[outcome].text });
           return done(RESEND_MESSAGES[outcome].text);
         }
         case "preparo": {
-          const sender = panelPreparationSender();
-          if (!sender) throw new DataError("invalid", SENDING_NOT_READY, { sender: SENDING_NOT_READY });
-          const outcome = await resendPreparation(db, clinic.clinicId, id, actorId, sender);
+          const sender = await clinicSenderFor(clinic.clinicId, request.url);
+          const outcome = sender ? await resendPreparation(db, clinic.clinicId, id, actorId, preparationSender(sender)) : "not_connected";
           const message = PREPARATION_RESEND_MESSAGES[outcome];
           if (!message.ok) throw new DataError("invalid", message.text, { outcome: message.text });
           return done(message.text);

@@ -44,6 +44,14 @@ export async function resolveClinicByPhoneNumberId(
   );
 }
 
+/** Webhook do WhatsApp: clínicas conectadas da conta (WABA), para a situação dos templates (F6.2). */
+export async function resolveClinicsByWabaId(wabaId: string, env: ServiceEnv = platformEnv()): Promise<string[]> {
+  if (!wabaId.trim()) return [];
+  const result = await platformClient(env).rpc("resolve_whatsapp_clinics_by_waba", { p_waba_id: wabaId });
+  if (result.error) throw new PlatformLookupError("conta do WhatsApp", result.error);
+  return (result.data ?? []) as string[];
+}
+
 /** /agendar/[token]: clínica do link de agendamento (vencido ou usado também resolve). */
 export async function resolveClinicByBookingLink(
   linkId: string,

@@ -17,6 +17,7 @@ export const POST: APIRoute = async (context) => {
     async () => {
       const patch: ClinicSettingsPatch = {
         name: formText(form, "name"),
+        messageArticle: (formOptionalText(form, "message_article") ?? "da") as ClinicSettingsPatch["messageArticle"],
         profile: formText(form, "profile") as ClinicProfile,
         timezone: formText(form, "timezone"),
         consultationAgeLimitYears: formChecked(form, "age_limit_on") ? formOptionalInt(form, "age_limit") : null,

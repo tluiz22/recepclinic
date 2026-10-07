@@ -3,7 +3,8 @@
 // cadastra é o Suporte até a F8), hora do lembrete (item "Lembrete
 // automático") e quem recebe o resumo do dia (item "Envio do resumo do dia").
 // F6.1: o Suporte vê o cadastro da conexão (com o token só para gravar), o
-// "Testar conexão" e as últimas mensagens da clínica.
+// "Testar conexão" e as últimas mensagens da clínica. F6.2: o Suporte cria
+// os templates padrão na conta da clínica e acompanha a situação.
 import AdminLayout from "../../../layouts/AdminLayout.astro";
 import Badge from "../../../components/admin/Badge.astro";
 import Card from "../../../components/admin/Card.astro";
@@ -15,7 +16,8 @@ import { createUserClient } from "../../../lib/data/clients";
 import { getClinicSettings, REMINDER_HOUR_MAX, REMINDER_HOUR_MIN } from "../../../lib/data/config/clinic";
 import { listNotificationRecipients } from "../../../lib/data/config/notificationRecipients";
 import { listProfessionals } from "../../../lib/data/config/professionals";
-import { getWhatsappConnection } from "../../../lib/data/whatsapp/connection";
+import { getWhatsappConnection, listWhatsappTemplates } from "../../../lib/data/whatsapp/connection";
+import { DEFAULT_TEMPLATES } from "../../../lib/data/whatsapp/templates";
 import { listWhatsappMessages } from "../../../lib/data/whatsapp/messages";
 import { formatPhoneBR } from "../../../lib/phone";
 
@@ -25,13 +27,28 @@ const remindersOn = clinic.features.includes("reminders");
 const summaryOn = clinic.features.includes("daily_summary");
 const examsOn = clinic.features.includes("exams");
 const isSupport = clinic.isPlatformStaff;
-const [connection, settings, recipients, professionals, latest] = await Promise.all([
+const [connection, settings, recipients, professionals, latest, templates] = await Promise.all([
   getWhatsappConnection(db, clinic.clinicId),
   getClinicSettings(db, clinic.clinicId),
   summaryOn ? listNotificationRecipients(db, clinic.clinicId, { includeInactive: true }) : Promise.resolve([]),
   summaryOn ? listProfessionals(db, clinic.clinicId) : Promise.resolve([]),
   isSupport ? listWhatsappMessages(db, clinic.clinicId, { latest: true }, 10) : Promise.resolve([]),
+  isSupport ? listWhatsappTemplates(db, clinic.clinicId) : Promise.resolve([]),
 ]);
+const templateStatus = {
+  approved: { label: "Aprovado", variant: "success" },
+  pending: { label: "Em análise", variant: "warning" },
+  rejected: { label: "Recusado", variant: "danger" },
+  disabled: { label: "Desativado", variant: "danger" },
+} as const;
+const TEMPLATE_LABELS: Record<string, string> = {
+  confirmation: "Confirmação",
+  reschedule: "Remarcação",
+  cancellation: "Cancelamento",
+  reminder: "Lembrete",
+  exam_preparation: "Preparo do exame",
+};
+const templateRows = DEFAULT_TEMPLATES.map((template) => ({ template, saved: templates.find((t) => t.key === template.key) ?? null }));
 const hours = Array.from({ length: REMINDER_HOUR_MAX - REMINDER_HOUR_MIN + 1 }, (_, i) => REMINDER_HOUR_MIN + i);
 const summaryProfessionals = professionals.filter((p) => p.receivesDailySummary && p.phone);
 const status = {
@@ -95,7 +112,7 @@ const receives = (r: { receivesConsultations: boolean; receivesExams: boolean })
                   </option>
                 ))}
               </select>
-              <p class={HINT}>Só "Conectado" recebe as mensagens no webhook e (a partir da F6.2) envia.</p>
+              <p class={HINT}>Só "Conectado" recebe as mensagens no webhook e envia.</p>
             </div>
             <div>
               <label for="access_token" class={LABEL}>Token da Meta</label>
@@ -122,6 +139,52 @@ const receives = (r: { receivesConsultations: boolean; receivesExams: boolean })
             </button>
             <p class={HINT}>Pergunta à Meta pelo número com o token gravado e inscreve o app na conta, para as mensagens chegarem.</p>
           </form>
+        </Card>
+      )
+    }
+
+    {
+      isSupport && (
+        <Card>
+          <h2 class="font-semibold text-slate-900">Templates (Suporte)</h2>
+          <p class="mt-1 text-sm text-slate-600">
+            Textos padrão do RecepClinic. Só o aprovado pela Meta é enviado; sem ele, o envio fica registrado como "não enviado".
+          </p>
+          <ul class="mt-3 divide-y divide-slate-100 text-sm">
+            {templateRows.map(({ template, saved }) => (
+              <li class="py-2">
+                <div class="flex flex-wrap items-center gap-2">
+                  <span class="font-medium text-slate-900">{TEMPLATE_LABELS[template.key] ?? template.key}</span>
+                  <span class="text-slate-500">{saved?.name ?? template.name}</span>
+                  {saved ? <Badge variant={templateStatus[saved.status].variant}>{templateStatus[saved.status].label}</Badge> : <Badge>Não criado</Badge>}
+                </div>
+                {saved?.rejectionReason && <p class="mt-0.5 text-red-700">Motivo da recusa: {saved.rejectionReason}</p>}
+                <details class="mt-1">
+                  <summary class="cursor-pointer text-slate-500">Ver o texto</summary>
+                  <p class="mt-1 whitespace-pre-line rounded bg-slate-50 p-2 text-slate-700">{template.body}</p>
+                  {template.quickReplies && <p class="mt-1 text-slate-500">Botões: {template.quickReplies.join(" · ")}</p>}
+                </details>
+              </li>
+            ))}
+          </ul>
+          <div class="mt-3 flex flex-wrap gap-3 border-t border-slate-200 pt-3">
+            <form method="POST" action="/api/admin/configuracoes/whatsapp-templates">
+              <input type="hidden" name="acao" value="criar" />
+              <button type="submit" class={SECONDARY_BUTTON} disabled={!connection}>
+                Criar na Meta
+              </button>
+            </form>
+            <form method="POST" action="/api/admin/configuracoes/whatsapp-templates">
+              <input type="hidden" name="acao" value="atualizar" />
+              <button type="submit" class={SECONDARY_BUTTON} disabled={!connection}>
+                Atualizar situação
+              </button>
+            </form>
+          </div>
+          <p class={HINT}>
+            "Criar na Meta" cria na conta da clínica os que faltam (categoria Utilidade, português). A análise da Meta leva de minutos a algumas horas; a
+            situação chega sozinha pelo webhook ou pelo "Atualizar situação".
+          </p>
         </Card>
       )
     }

@@ -2,9 +2,12 @@ import type { APIRoute } from "astro";
 import { createClinicServiceClient } from "../../../../lib/data/clinicService";
 import { confirmBookingLink, loadBookingPage, logBookingPageStep, parseSlotChoice } from "../../../../lib/data/agenda/publicBooking";
 import { resolveClinicByBookingLink } from "../../../../lib/data/platform";
+import { clinicSenderFor } from "../../../../lib/data/whatsapp/clinicSender";
+import { sendAppointmentNotice } from "../../../../lib/data/whatsapp/notices";
 
 // Confirma o horário escolhido em /agendar (F5.2). Toda volta com erro é uma
-// tentativa que falhou, registrada no funil do bot com o motivo.
+// tentativa que falhou, registrada no funil do bot com o motivo. F6.2: o
+// paciente recebe pelo WhatsApp a confirmação (ou a remarcação).
 export const POST: APIRoute = async ({ params, request, redirect }) => {
   const token = params.token ?? "";
   const form = await request.formData().catch(() => null);
@@ -30,5 +33,7 @@ export const POST: APIRoute = async ({ params, request, redirect }) => {
 
   const page = await loadBookingPage(db, clinicId, token);
   await logBookingPageStep(db, clinicId, page, "confirmed", { appointment_id: result.appointmentId });
+  const sender = await clinicSenderFor(clinicId, request.url);
+  await sendAppointmentNotice(db, clinicId, result.appointmentId, page.link.mode === "reschedule" ? "reschedule" : "confirmation", sender);
   return redirect(pageUrl, 303);
 };
