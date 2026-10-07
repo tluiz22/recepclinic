@@ -7,7 +7,7 @@ import { toE164, type WaMessage } from "../meta";
 import type { ClinicSender } from "../send";
 import { BOOKING_STATES, handleBookingState } from "./booking";
 import { createBot, type BotEnv } from "./engine";
-import { extractSelection, isBackToMenu, isGreeting } from "./input";
+import { extractSelection, isBackToMenu } from "./input";
 import { handleInfo, handleMenu, handlePreparationChoice, handleSubmenu, showMenu } from "./menus";
 import { IDLE_CLOSED } from "./texts";
 
@@ -35,13 +35,6 @@ export async function handleIncomingMessage(env: BotEnv, message: WaMessage): Pr
 
   const b = await createBot(env, convo);
   const selection = extractSelection(message);
-
-  // Cumprimento em qualquer ponto: boas-vindas e menu atualizado (cliente, 07/out).
-  if (isGreeting(selection)) {
-    if (convo.state !== WELCOME) await logAbandonment(env.db, env.clinicId, convo, "greeting", env.now);
-    await showMenu(b, { withWelcome: true });
-    return "handled";
-  }
 
   // "Voltar ao menu" vale no meio de qualquer fluxo.
   if (convo.state !== WELCOME && convo.state !== "MENU" && isBackToMenu(selection)) {

@@ -244,8 +244,7 @@ export async function logFunnelStep(
   );
 }
 
-/** `greeting`: o paciente mandou um cumprimento no meio e a conversa recomeçou (F6.3). */
-export type AbandonReason = "timeout" | "back_to_menu" | "greeting" | "secretary_took_over";
+export type AbandonReason = "timeout" | "back_to_menu" | "secretary_took_over";
 
 /** Tentativa interrompida (sem resultado): grava "abandoned" com o motivo e o último estado. */
 export async function logAbandonment(

@@ -212,24 +212,6 @@ describe("bot: exame para o contato já cadastrado", () => {
     expect(await lastLink(phone)).toMatchObject({ service_id: f.ids.exame, agenda_id: f.ids.agendaExams });
   });
 
-  it("cumprimento no meio da marcação recomeça com as boas-vindas e o menu atualizado", async () => {
-    const phone = "+5584991226306";
-    await say(phone, "oi");
-    await say(phone, "1");
-    await say(phone, "1"); // Com qual profissional?
-    const reply = await say(phone, "Bom dia!");
-    expect(reply[0].body).toBe("Olá! 👋 Aqui é da Clínica Bot F63.");
-    expect(titles(reply)).toEqual(["1. Consultas", "2. Exames", "3. Informações"]);
-    const { data: abandoned } = await adminClient()
-      .from("bot_funnel_events")
-      .select("metadata")
-      .eq("clinic_id", f.clinicId)
-      .eq("contact_phone", phone)
-      .eq("step", "abandoned")
-      .single();
-    expect(abandoned!.metadata).toEqual({ reason: "greeting", last_step: "BOOK_AGENDA" });
-  });
-
   it("\"0\" no meio do fluxo volta ao menu", async () => {
     const phone = "+5584991226302";
     await say(phone, "oi");

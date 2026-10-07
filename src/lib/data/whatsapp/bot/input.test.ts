@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { extractSelection, formatBirthdate, isBackToMenu, isGreeting, parseBirthdate, pick, yesNo } from "./input";
+import { extractSelection, formatBirthdate, isBackToMenu, parseBirthdate, pick, yesNo } from "./input";
 import { ageLimit, askBirthdate, confirmPatient, numberedList, otherPatientLabel, row, wordsFor } from "./texts";
 
 const typed = (text: string) => ({ id: null, text });
@@ -25,12 +25,6 @@ describe("leitura da resposta (F6.3)", () => {
     expect(["sim", "S", "Sim, é isso", "1"].map((t) => yesNo(typed(t)))).toEqual([true, true, true, true]);
     expect(["não", "nao", "N", "2"].map((t) => yesNo(typed(t)))).toEqual([false, false, false, false]);
     expect(["sei lá", "talvez"].map((t) => yesNo(typed(t)))).toEqual([null, null]);
-  });
-
-  it("cumprimento sozinho recomeça; nome ou frase maior, não", () => {
-    expect(["oi", "Oi!", "Olá", "ola 😊", "Bom dia", "boa noite!!", "oiii", "E aí"].every((t) => isGreeting(typed(t)))).toBe(true);
-    expect(["Olavo Bilac", "oi, quero marcar", "10/03/2020", "sim"].some((t) => isGreeting(typed(t)))).toBe(false);
-    expect(isGreeting({ id: "menu_exams", text: "oi" })).toBe(false);
   });
 
   it("voltar ao menu", () => {
