@@ -1,6 +1,6 @@
 # RecepClinic
 
-> **Estado atual (retomar daqui), 06/out/2026**
+> **Estado atual (retomar daqui), 07/out/2026 (fim da sessão)**
 >
 > - **Etapas 0 a 4 concluídas**: cópia isolada, [diagnóstico](diagnostico.md), [limites](limites.md),
 >   [arquitetura](arquitetura.md) (decisões D1–D11) e [plano](plano.md) (fases F0–F10).
@@ -22,7 +22,7 @@
 >     pública usa mais a service role); link de remarcação na mensagem da tela "Avisar";
 >     **staging no ar em `https://app.recepclinic.com.br`** (roteiro em [`staging.md`](staging.md)).
 >   - **Em curso: F6** — WhatsApp por clínica e bot, detalhada e aprovada em 06/out em sete
->     partes (F6.1 conexão e webhook … F6.7 métricas do bot). **F6.1 (conexão e webhook) feita, aguardando a validação do cliente**; depois, F6.2 (envio e templates). O número
+>     partes (F6.1 conexão e webhook … F6.7 métricas do bot). **F6.1 (conexão e webhook) concluída e validada em 07/out. Próxima etapa: F6.2** (envio pela conexão da clínica e templates padrão; a forma de pagamento já está na conta do WhatsApp do RecepClinic). O número
 >     de testes do RecepClinic vai direto na Cloud API (sem o app do celular).
 >   - **Já combinado para as próximas fases:** F6 — envio pelo WhatsApp (lembrete, preparo,
 >     avisos), cancelamento pela clínica com aviso automático e link (sai a tela "Avisar"), abas
@@ -32,10 +32,13 @@
 >     balão do WhatsApp; com o item "Mensagens personalizadas", o Administrador edita as mensagens de
 >     conversa e propõe os templates; D3b revista); envio dos templates personalizados pela API na
 >     F8.
+>   - **WhatsApp de testes:** `+55 61 9903-3143`, na Cloud API do app RecepClinic, ligado à
+>     clínica de teste "Consultorio Tluiz22" no staging. **Nunca verificar esse número em app
+>     nenhum** (sairia da API). Roteiro na parte E do [`staging.md`](staging.md).
 >   - **Staging:** `https://app.recepclinic.com.br` (Vercel publica a cada push na `main`);
 >     migrações novas vão com `npx supabase db push` (repositório ligado ao projeto
 >     `recepclinic-staging`); variáveis no `.env.staging` (fora do git). "Esqueci minha senha" só
->     funciona lá depois do provedor de e-mail.
+>     funciona lá depois do provedor de e-mail; até lá, `scripts/link-de-senha.mjs` gera o link.
 >   - **Para rodar:** abrir o OrbStack, `npm run db:start`, `npm run db:reset` (dados de teste) e
 >     `npm run dev` com o `.env` local (ver "Painel local" no README da raiz); testes com `npm test`
 >     e `npm run test:db`.

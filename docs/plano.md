@@ -855,7 +855,7 @@ de remarcação (texto da F4.6), e enviam sozinhos; sai a tela "Avisar" da F4.6.
   para a F8); conexão cadastrada pelo Suporte na tela WhatsApp da clínica; webhook novo que
   identifica a clínica pelo `phone_number_id`, confere a assinatura da Meta e registra mensagens e
   situações de entrega.
-- **F6.1 — feita em 06/out (aguardando a validação do cliente).** Conferido de ponta a ponta no staging: mensagem do celular do cliente recebida pelo webhook, gravada na clínica de teste e ligada ao contato. Webhook novo
+- **F6.1 — concluída e validada pelo cliente em 07/out.** Conferido de ponta a ponta no staging: mensagem do celular do cliente recebida pelo webhook, gravada na clínica de teste e ligada ao contato. Webhook novo
   (`/api/whatsapp/webhook`): confere a assinatura com o App Secret do app RecepClinic, descobre a
   clínica pelo `phone_number_id` e grava com a credencial dela (mensagens recebidas, situações de
   entrega, ecos da recepção); número sem clínica ou desconectado é ignorado (200 para a Meta);
