@@ -14,6 +14,8 @@ import { HINT, INPUT, LABEL, PRIMARY_BUTTON, SECONDARY_BUTTON } from "../../../c
 import { addDays, formatInstant, isCalendarDate, isClockTime, todayIn, toInstant } from "../../../lib/clinicTime";
 import { createUserClient } from "../../../lib/data/clients";
 import { createBlock, findBlockConflicts } from "../../../lib/data/agenda/blocks";
+import { clinicSenderFor } from "../../../lib/data/whatsapp/clinicSender";
+import { clinicCancellationSummary, notifyClinicCancellations } from "../../../lib/data/whatsapp/notices";
 import { listAgendaAppointmentsByIds, type AgendaAppointment } from "../../../lib/data/agenda/view";
 import { listAgendas } from "../../../lib/data/config/agendas";
 import { DataError } from "../../../lib/data/errors";
@@ -82,7 +84,7 @@ if (Astro.request.method === "POST") {
     if (total > 0 && decision !== "cancelar" && decision !== "manter") {
       conflicts = await listAgendaAppointmentsByIds(db, clinic.clinicId, found.flatMap((item) => item.appointments.map((a) => a.id)));
     } else {
-      const canceledIds: string[] = [];
+      const canceled: { appointmentId: string; rebookingLinkId: string | null }[] = [];
       for (const item of found) {
         const result = await createBlock(db, clinic.clinicId, {
           agendaId: item.agendaId,
@@ -91,13 +93,17 @@ if (Astro.request.method === "POST") {
           cancelAppointmentIds: decision === "cancelar" ? item.appointments.map((a) => a.id) : [],
           actorId: Astro.locals.userId ?? null,
         });
-        canceledIds.push(...result.canceled.map((c) => c.appointment.id));
+        canceled.push(...result.canceled.map((c) => ({ appointmentId: c.appointment.id, rebookingLinkId: c.rebookingLink?.id ?? null })));
       }
       const agendaWord = found.length > 1 ? `${found.length} agendas bloqueadas` : "Agenda bloqueada";
       const backTo = `/admin/agenda?date=${values.startDate}`;
-      if (canceledIds.length) {
-        setFlash(Astro.cookies, { tone: "success", text: `${agendaWord}. ${canceledIds.length} atendimento(s) cancelado(s): avise cada um abaixo.` });
-        return Astro.redirect(`/admin/agenda/avisar?ids=${canceledIds.join(",")}&volta=${encodeURIComponent(backTo)}`, 303);
+      if (canceled.length) {
+        // Cada paciente recebe o aviso com o link pelo WhatsApp (F6.5); quem não recebeu vai para a tela Avisar.
+        const notices = await notifyClinicCancellations(db, clinic.clinicId, canceled, await clinicSenderFor(clinic.clinicId, Astro.url));
+        const missed = notices.filter((n) => n.status !== "sent").map((n) => n.appointmentId);
+        setFlash(Astro.cookies, { tone: missed.length ? "error" : "success", text: `${agendaWord}. ${clinicCancellationSummary(notices)}` });
+        if (missed.length) return Astro.redirect(`/admin/agenda/avisar?ids=${missed.join(",")}&volta=${encodeURIComponent(backTo)}`, 303);
+        return Astro.redirect(backTo, 303);
       }
       setFlash(Astro.cookies, { tone: "success", text: `${agendaWord}.${decision === "manter" ? " Os atendimentos do período foram mantidos." : ""}` });
       return Astro.redirect(backTo, 303);
@@ -194,7 +200,7 @@ const agendaName = new Map(agendas.map((a) => [a.id, a.name]));
               value="cancelar"
               class="js-confirm-delete rounded-md bg-red-600 px-3 py-2 text-sm font-medium text-white hover:bg-red-700"
               data-confirm-title="Bloquear e cancelar os atendimentos?"
-              data-confirm-message={`${conflicts.length} atendimento(s) serão cancelados. Depois, a tela mostra cada um com a mensagem pronta para avisar pelo WhatsApp.`}
+              data-confirm-message={`${conflicts.length} atendimento(s) serão cancelados. Cada paciente recebe a mensagem pelo WhatsApp da clínica, com o link para remarcar.`}
               data-confirm-label="Bloquear e cancelar"
             >
               Bloquear e cancelar estes atendimentos

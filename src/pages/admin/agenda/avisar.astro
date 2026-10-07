@@ -1,10 +1,9 @@
 ---
-// Agenda › avisar os pacientes de atendimentos cancelados pela clínica
-// (F4.6: bloqueio e cancelamento em massa). Cada um com o botão que abre a
-// conversa no WhatsApp de quem está no painel, com a mensagem já escrita
-// (cliente, 05/out/2026). O envio automático vem com o WhatsApp por clínica
-// (F6). A mensagem leva o link de remarcação ainda válido (F5.4), no mesmo
-// endereço em que a equipe usa o painel.
+// Agenda › avisar à mão os pacientes de atendimentos cancelados pela clínica
+// que não receberam o aviso automático (F6.5; cliente, 07/out/2026): cada um
+// com o motivo e o botão que abre a conversa no WhatsApp de quem está no
+// painel, com a mensagem já escrita (F4.6) e o link de remarcação ainda
+// válido (F5.4).
 import { safeReturnPath } from "../../../lib/returnPath";
 import AdminLayout from "../../../layouts/AdminLayout.astro";
 import Card from "../../../components/admin/Card.astro";
@@ -17,6 +16,8 @@ import { createUserClient } from "../../../lib/data/clients";
 import { listValidRebookingLinks } from "../../../lib/data/agenda/links";
 import { listAgendaAppointmentsByIds } from "../../../lib/data/agenda/view";
 import { formatPhoneBR } from "../../../lib/phone";
+import { getClinicSettings } from "../../../lib/data/config/clinic";
+import { clinicLabel } from "../../../lib/data/whatsapp/templates";
 import { capitalize, vocabularyFor } from "../../../lib/vocabulary";
 
 const clinic = Astro.locals.clinic!;
@@ -26,7 +27,27 @@ const back = Astro.url.searchParams.get("volta") ?? "";
 const backTo = safeReturnPath(back, "/admin/agenda");
 const db = createUserClient(Astro.request, Astro.cookies);
 const appointments = (await listAgendaAppointmentsByIds(db, clinic.clinicId, ids)).filter((a) => a.status === "canceled");
+const settings = await getClinicSettings(db, clinic.clinicId);
 const links = await listValidRebookingLinks(db, clinic.clinicId, appointments.map((a) => a.id));
+// Por que o aviso automático não saiu: a última tentativa registrada (nenhuma = WhatsApp não conectado).
+const attempts = appointments.length
+  ? (
+      await db
+        .from("whatsapp_messages")
+        .select("appointment_id, status, created_at")
+        .eq("clinic_id", clinic.clinicId)
+        .in("appointment_id", appointments.map((a) => a.id))
+        .in("message_type", ["appointment_mass_cancellation", "appointment_cancellation"])
+        .order("created_at")
+    ).data ?? []
+  : [];
+const lastStatus = new Map(attempts.map((m) => [m.appointment_id, m.status]));
+const REASONS: Record<string, string> = {
+  skipped_no_template: "o template do aviso ainda não está aprovado",
+  failed: "o WhatsApp recusou o envio",
+  sent: "o aviso saiu pelo WhatsApp",
+};
+const reasonFor = (id: string) => REASONS[lastStatus.get(id) ?? ""] ?? "o WhatsApp da clínica não está conectado";
 const rebookingFor = (appointmentId: string) => {
   const link = links.get(appointmentId);
   return link ? { url: new URL(`/agendar/${link.id}`, Astro.url.origin).toString(), expiresAt: link.expiresAt } : null;
@@ -40,15 +61,15 @@ const rebookingFor = (appointmentId: string) => {
   <h1 class="mt-3 text-2xl font-bold text-slate-900">Avisar {vocabulary.patients}</h1>
   <FlashMessage />
   <p class="mt-2 max-w-2xl text-sm text-slate-600">
-    Toque em "Enviar pelo WhatsApp" para abrir a conversa com a mensagem pronta, com o link para remarcar quando houver. O aviso automático pelo
-    WhatsApp da clínica entra nas próximas fases.
+    Estes {vocabulary.patients} não receberam o aviso automático. Toque em "Enviar pelo WhatsApp" para abrir a conversa com a mensagem pronta, com o
+    link para remarcar quando houver.
   </p>
 
   <div class="mt-4 flex max-w-2xl flex-col gap-3">
     {
       appointments.map((a) => {
         const text = cancelNoticeText({
-          clinicName: clinic.clinicName,
+          clinicLabel: clinicLabel(clinic.clinicName, settings.messageArticle),
           contactName: a.contactName,
           patientName: a.patientName,
           isContactSelf: a.isContactSelf,
@@ -67,6 +88,7 @@ const rebookingFor = (appointmentId: string) => {
               {!a.isContactSelf && `${capitalize(vocabulary.contact)}: ${a.contactName} · `}
               {formatPhoneBR(a.contactPhone)}
             </p>
+            <p class="text-sm text-amber-700">Não recebeu o aviso: {reasonFor(a.id)}.</p>
             <details class="mt-2 text-sm text-slate-600">
               <summary class="cursor-pointer text-xs text-slate-500">Ver a mensagem</summary>
               <p class="mt-1 whitespace-pre-line rounded-md bg-slate-50 p-2">{text}</p>

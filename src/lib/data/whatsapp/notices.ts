@@ -5,7 +5,7 @@ import { getApprovedTemplate } from "./connection";
 import { resetConversationAfterNotice } from "./conversations";
 import { recordOutboundMessage, type SendOutcome } from "./messages";
 import type { ClinicSender } from "./send";
-import { appointmentParams, defaultTemplate, fillTemplate, paramCount } from "./templates";
+import { appointmentParams, cleanParam, defaultTemplate, fillTemplate, firstName, formatAppointmentWhen, paramCount } from "./templates";
 
 // Avisos ao paciente (F6.2), como no piloto: marcado, remarcado e cancelado,
 // pela Agenda do painel e pela página /agendar. Sempre por template (podem
@@ -13,12 +13,14 @@ import { appointmentParams, defaultTemplate, fillTemplate, paramCount } from "./
 // que não sai fica registrado e nunca desfaz nem trava a ação. Sem o
 // WhatsApp conectado, nada é registrado (como no lembrete).
 
-export type NoticeKind = "confirmation" | "reschedule" | "cancellation";
+/** `clinic_cancellation`: cancelamento pela clínica com o link de remarcação (F6.5). */
+export type NoticeKind = "confirmation" | "reschedule" | "cancellation" | "clinic_cancellation";
 
 export const NOTICE_MESSAGE_TYPES: Record<NoticeKind, string> = {
   confirmation: "appointment_confirmation",
   reschedule: "appointment_reschedule",
   cancellation: "appointment_cancellation",
+  clinic_cancellation: "appointment_mass_cancellation",
 };
 
 export type NoticeStatus = "sent" | "failed" | "skipped_no_template" | "not_connected";
@@ -52,6 +54,8 @@ export async function sendAppointmentNotice(
   kind: NoticeKind,
   sender: ClinicSender | null,
   now: Date = new Date(),
+  /** Só no `clinic_cancellation`: o endereço do link de remarcação. */
+  rebookingUrl?: string,
 ): Promise<NoticeStatus> {
   if (!sender) return "not_connected";
   try {
@@ -72,7 +76,7 @@ export async function sendAppointmentNotice(
         .then((r) => unwrapOne(r, "Configuração da clínica")),
     ]);
     const contact = row.patients.contacts;
-    const params = appointmentParams(sender.clinicLabel, {
+    const appointmentData = {
       contactName: contact.full_name,
       patientName: row.patients.full_name,
       serviceName: row.services.name,
@@ -82,7 +86,19 @@ export async function sendAppointmentNotice(
       locationName: row.locations.name,
       isHomeVisit: row.locations.type === "home_visit",
       address: row.home_visit_address ?? row.locations.address,
-    });
+    };
+    // Cancelamento pela clínica: {{3}} paciente, {{4}} serviço, {{5}} data, {{6}} link.
+    const params =
+      kind === "clinic_cancellation"
+        ? [
+            firstName(contact.full_name),
+            sender.clinicLabel,
+            firstName(row.patients.full_name),
+            row.services.name,
+            formatAppointmentWhen(appointmentData.scheduledAt, appointmentData.timeZone),
+            rebookingUrl ?? "",
+          ].map(cleanParam)
+        : appointmentParams(sender.clinicLabel, appointmentData);
 
     let outcome: SendOutcome | null = null;
     if (template) {
@@ -123,3 +139,37 @@ export function firstByDate<T extends { id: string; scheduledAt: Date }>(appoint
   return appointments.reduce<T | null>((first, a) => (!first || a.scheduledAt < first.scheduledAt ? a : first), null);
 }
 
+export type ClinicCancellationNotice = { appointmentId: string; status: NoticeStatus };
+
+/**
+ * Cancelamento pela clínica (F6.5): cada paciente recebe o aviso com o link de
+ * remarcação; sem link (clínica sem o bot, D11), o aviso de cancelamento da
+ * F6.2. Devolve a situação de cada um (a tela mostra quem não recebeu).
+ */
+export async function notifyClinicCancellations(
+  db: DbClient,
+  clinicId: string,
+  canceled: { appointmentId: string; rebookingLinkId: string | null }[],
+  sender: ClinicSender | null,
+  now: Date = new Date(),
+): Promise<ClinicCancellationNotice[]> {
+  const result: ClinicCancellationNotice[] = [];
+  for (const { appointmentId, rebookingLinkId } of canceled) {
+    const status = rebookingLinkId
+      ? await sendAppointmentNotice(db, clinicId, appointmentId, "clinic_cancellation", sender, now, `${sender?.baseUrl ?? ""}/agendar/${rebookingLinkId}`)
+      : await sendAppointmentNotice(db, clinicId, appointmentId, "cancellation", sender, now);
+    result.push({ appointmentId, status });
+  }
+  return result;
+}
+
+/** Aviso de salvo do cancelamento pela clínica: quantos foram e quantos avisos saíram. */
+export function clinicCancellationSummary(notices: ClinicCancellationNotice[]): string {
+  const sent = notices.filter((n) => n.status === "sent").length;
+  const missed = notices.length - sent;
+  const head = notices.length === 1 ? "1 atendimento cancelado." : `${notices.length} atendimentos cancelados.`;
+  if (!missed) return `${head} ${notices.length === 1 ? "O paciente recebeu" : "Todos receberam"} o aviso pelo WhatsApp.`;
+  const sentText = sent === 1 ? "1 aviso enviado pelo WhatsApp" : `${sent} avisos enviados pelo WhatsApp`;
+  const missedText = missed === 1 ? "1 não saiu" : `${missed} não saíram`;
+  return `${head} ${sentText}; ${missedText}: avise abaixo.`;
+}

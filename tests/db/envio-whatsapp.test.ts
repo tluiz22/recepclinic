@@ -5,11 +5,12 @@ import type { DbClient } from "../../src/lib/data/clients";
 import { resolveClinicByPhoneNumberId, resolveClinicsByWabaId } from "../../src/lib/data/platform";
 import { setWhatsappAccessToken } from "../../src/lib/data/whatsapp/connection";
 import { recordOutboundMessage } from "../../src/lib/data/whatsapp/messages";
-import { sendAppointmentNotice } from "../../src/lib/data/whatsapp/notices";
+import { clinicCancellationSummary, notifyClinicCancellations, sendAppointmentNotice } from "../../src/lib/data/whatsapp/notices";
+import { cancelByClinic } from "../../src/lib/data/agenda/blocks";
 import { createClinicSender } from "../../src/lib/data/whatsapp/send";
 import { createDefaultTemplates, refreshTemplateStatuses } from "../../src/lib/data/whatsapp/templateSync";
 import { processWebhook, type WebhookDeps } from "../../src/lib/data/whatsapp/webhook";
-import { asDb, at, MON1, NOW, setupAgendaClinic, type AgendaFixture } from "./agendaFixture";
+import { asDb, at, MON1, MON2, NOW, setupAgendaClinic, type AgendaFixture } from "./agendaFixture";
 import { adminClient, createUser, deleteUsers, makePlatformStaff, type TestUser } from "./helpers";
 
 // F6.2 — Envio pela conexão da clínica: templates padrão criados na conta,
@@ -93,11 +94,12 @@ describe("templates padrão na conta da clínica (Suporte)", () => {
       ["confirmation", "pending", null],
       ["reschedule", "pending", null],
       ["cancellation", "pending", null],
+      ["clinic_cancellation", "pending", null],
       ["reminder", "approved", null],
       ["exam_preparation", "pending", null],
     ]);
     const created = meta.calls.filter((c) => c.method === "POST");
-    expect(created.map((c) => c.path)).toEqual(Array(4).fill(`/${WABA}/message_templates`));
+    expect(created.map((c) => c.path)).toEqual(Array(5).fill(`/${WABA}/message_templates`));
     expect(created[0].body).toMatchObject({ name: "rc_confirmacao_v1", language: "pt_BR", category: "UTILITY" });
     // Exemplo de cada variável, exigido pela Meta.
     const body = (created[0].body!.components as { type: string; example?: { body_text: string[][] } }[])[0];
@@ -110,6 +112,7 @@ describe("templates padrão na conta da clínica (Suporte)", () => {
       rc_confirmacao_v1: { status: "APPROVED" },
       rc_remarcacao_v1: { status: "APPROVED" },
       rc_cancelamento_v1: { status: "APPROVED" },
+      rc_cancelamento_clinica_v1: { status: "PENDING" },
       rc_lembrete_v1: { status: "APPROVED" },
       rc_preparo_exame_v1: { status: "REJECTED", reason: "INVALID_FORMAT" },
     });
@@ -119,6 +122,7 @@ describe("templates padrão na conta da clínica (Suporte)", () => {
       confirmation: ["approved", null],
       reschedule: ["approved", null],
       cancellation: ["approved", null],
+      clinic_cancellation: ["pending", null],
       reminder: ["approved", null],
       exam_preparation: ["rejected", "INVALID_FORMAT"],
     });
@@ -261,5 +265,49 @@ describe("preparo do exame depois da entrega (webhook)", () => {
       ["appointment_confirmation", "read"],
       ["exam_preparation", "sent"],
     ]);
+  });
+});
+
+describe("cancelamento pela clínica (F6.5)", () => {
+  it("cada paciente recebe o aviso com o link de remarcação; sem template aprovado, fica para a tela Avisar", async () => {
+    const book = async (patientId: string, agendaId: string) =>
+      (
+        await bookAppointment(
+          asDb(f.reception),
+          f.clinicId,
+          { patientId, serviceId: f.ids.consulta, agendaId, start: at(MON2, "08:00"), locationId: f.ids.office, channel: "admin", actorId: null },
+          NOW,
+        )
+      ).appointment.id;
+    const a1 = await book(f.ids.p1, f.ids.agendaDra);
+    const a2 = await book(f.ids.p3, f.ids.agendaDra2);
+    const canceled = await cancelByClinic(asDb(f.reception), f.clinicId, [a1, a2], f.reception.id, NOW);
+    expect(canceled.every((c) => c.rebookingLink)).toBe(true);
+    const items = canceled.map((c) => ({ appointmentId: c.appointment.id, rebookingLinkId: c.rebookingLink!.id }));
+
+    // Template ainda em análise: nenhum sai, os dois vão para a tela Avisar.
+    const meta = fakeMeta();
+    const s = await sender(meta.fetcher);
+    let notices = await notifyClinicCancellations(asDb(f.reception), f.clinicId, items, s, NOW);
+    expect(notices.map((n) => n.status)).toEqual(["skipped_no_template", "skipped_no_template"]);
+    expect(clinicCancellationSummary(notices)).toBe("2 atendimentos cancelados. 0 avisos enviados pelo WhatsApp; 2 não saíram: avise abaixo.");
+    expect(meta.calls).toEqual([]);
+
+    await adminClient().from("whatsapp_templates").update({ status: "approved" }).eq("clinic_id", f.clinicId).eq("template_key", "clinic_cancellation");
+    notices = await notifyClinicCancellations(asDb(f.reception), f.clinicId, items, s, NOW);
+    expect(clinicCancellationSummary(notices)).toBe("2 atendimentos cancelados. Todos receberam o aviso pelo WhatsApp.");
+    const sent = meta.calls[0].body as { template: { name: string; components: { parameters: { text: string }[] }[] } };
+    expect(sent.template.name).toBe("rc_cancelamento_clinica_v1");
+    expect(sent.template.components[0].parameters.map((p) => p.text)).toEqual([
+      "Resp.",
+      "da Clínica Envio F62",
+      "Paciente",
+      "Consulta",
+      "segunda, 17/03 às 08:00",
+      `${BASE_URL}/agendar/${items[0].rebookingLinkId}`,
+    ]);
+    const messages = await outbound(a1);
+    expect(messages.at(-1)).toMatchObject({ message_type: "appointment_mass_cancellation", status: "sent" });
+    expect(messages.at(-1)!.body).toContain("Precisamos cancelar o atendimento de Paciente (Consulta) de segunda, 17/03 às 08:00.");
   });
 });

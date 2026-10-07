@@ -53,6 +53,15 @@ export const DEFAULT_TEMPLATES: DefaultTemplate[] = [
     examples: APPOINTMENT_EXAMPLES.slice(0, 5),
   },
   {
+    // Cancelamento pela clínica com o link de remarcação (F6.5; texto do cliente, 05 e 07/out).
+    key: "clinic_cancellation",
+    name: "rc_cancelamento_clinica_v1",
+    body:
+      `${GREETING}\nPrecisamos cancelar o atendimento de {{3}} ({{4}}) de {{5}}. Pedimos desculpas pelo transtorno.\n\n` +
+      "Para escolher um novo horário, use o link (vale por 2 dias):\n{{6}}\n\nSe preferir, responda esta mensagem.",
+    examples: ["Maria", "da Clínica Sorriso", "João", "Consulta", "segunda, 12/10 às 08:00", "https://app.recepclinic.com.br/agendar/exemplo"],
+  },
+  {
     key: "reminder",
     name: "rc_lembrete_v1",
     body: `${GREETING}\nPassando para lembrar do seu atendimento:\n\n📋 {{3}}\n👤 Paciente: {{4}}\n📅 {{5}}\n📍 {{6}}\n\nPode confirmar a presença?`,

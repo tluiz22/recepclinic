@@ -173,6 +173,7 @@ export const TEMPLATE_KEYS = [
   "confirmation_return",
   "reschedule",
   "cancellation",
+  "clinic_cancellation",
   "reminder",
   "exam_preparation",
   "waitlist_offer",

@@ -3,7 +3,7 @@ import { cancelNoticeText, whatsappMessageHref } from "./cancelNotice";
 
 describe("aviso de cancelamento pelo WhatsApp (F4.6)", () => {
   const base = {
-    clinicName: "Clínica Exemplo",
+    clinicLabel: "da Clínica Exemplo",
     contactName: "Maria Souza",
     patientName: "João Souza",
     isContactSelf: false,

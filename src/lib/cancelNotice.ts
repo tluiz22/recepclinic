@@ -8,7 +8,8 @@ import { whatsappHref } from "./phone";
 // sem link (bot não liberado, link vencido ou usado), pede para responder.
 
 export type CancelNoticeInput = {
-  clinicName: string;
+  /** "da Clínica Sorriso" (com o "da/do" da clínica, F6.2). */
+  clinicLabel: string;
   contactName: string;
   patientName: string;
   /** O paciente fala por si (sem responsável). */
@@ -32,7 +33,7 @@ export function cancelNoticeText(input: CancelNoticeInput): string {
       ]
     : ["Responda esta mensagem para combinarmos um novo horário."];
   return [
-    `Olá, ${firstName(input.contactName)}! Aqui é da ${input.clinicName}.`,
+    `Olá, ${firstName(input.contactName)}! Aqui é ${input.clinicLabel}.`,
     `Precisamos cancelar ${whose} (${input.serviceName}) de ${when}. Pedimos desculpas pelo transtorno.`,
     ...next,
   ].join("\n\n");

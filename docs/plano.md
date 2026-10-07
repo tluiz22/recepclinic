@@ -999,6 +999,18 @@ de remarcação (texto da F4.6), e enviam sozinhos; sai a tela "Avisar" da F4.6.
   marca **Coexistência**. Saiu o bot antigo do piloto (fica só o que as rotinas antigas ainda usam,
   até a F7). Migração `20261007140000`. 10 testes de banco novos.
 - **F6.5 — Cancelamento pela clínica automático:** aviso a todos com o link; sai a tela "Avisar".
+  **Detalhada e implementada em 07/out (aguarda a validação do cliente).** Depois de "Cancelar
+  selecionados" ou "Bloquear e cancelar", cada paciente recebe o aviso pelo WhatsApp da clínica,
+  com o link de remarcação (2 dias), pelo template novo `rc_cancelamento_clinica_v1` (texto do
+  cliente de 05/out, aprovado em 07/out: "Olá, {contato}! Aqui é {da clínica}. Precisamos cancelar
+  o atendimento de {paciente} ({serviço}) de {data}. Pedimos desculpas pelo transtorno. Para
+  escolher um novo horário, use o link (vale por 2 dias): {link}. Se preferir, responda esta
+  mensagem."); sem link (clínica sem o bot), o template de cancelamento da F6.2. O aviso de salvo
+  diz quantos saíram. **A tela "Avisar" fica só para quem não recebeu** (cliente, 07/out), com o
+  motivo (WhatsApp não conectado, template não aprovado, recusa da Meta) e a mensagem pronta para
+  enviar à mão; se todos receberam, volta para a Agenda. As confirmações das duas ações dizem que
+  todos recebem a mensagem com o link. Migração `20261007150000` (chave do template novo); o
+  Suporte cria o template pelo "Criar na Meta". 1 teste de banco novo.
 - **F6.6 — Aba "Mensagens":** prévia no balão e edição com "Mensagens personalizadas".
 - **F6.7 — Métricas do bot:** abas Funil do bot e Retomar contato.
 O código antigo do bot e do webhook sai conforme cada parte o substitui.
