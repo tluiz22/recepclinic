@@ -42,6 +42,8 @@ const byWeekday = WEEKDAY_NAMES.map((name, weekday) => ({ name, windows: windows
   (day) => day.windows.length,
 );
 const action = "/api/admin/configuracoes/horarios";
+// Vinda do "próximo passo" do serviço (F6.3b): o serviço já escolhido no formulário.
+const preselectedService = Astro.url.searchParams.get("servico");
 const agendaQuery = (extra = "") => `?agenda=${agenda?.id ?? ""}${extra}`;
 // Segunda a sábado primeiro, domingo no fim (como a semana da clínica).
 const weekdayOrder = [1, 2, 3, 4, 5, 6, 0];
@@ -196,7 +198,7 @@ const weekdayOrder = [1, 2, 3, 4, 5, 6, 0];
                 <select id="service_id" name="service_id" class={INPUT}>
                   <option value="">Qualquer serviço desta agenda</option>
                   {agendaServices.map((s) => (
-                    <option value={s.id} data-group={s.schedulingMode === "group" ? "1" : undefined}>
+                    <option value={s.id} data-group={s.schedulingMode === "group" ? "1" : undefined} selected={s.id === preselectedService}>
                       {s.name}
                       {s.schedulingMode === "group" ? " (turma)" : ""}
                     </option>

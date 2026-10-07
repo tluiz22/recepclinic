@@ -7,6 +7,8 @@ import AdminLayout from "../../../../layouts/AdminLayout.astro";
 import ActiveToggle from "../../../../components/admin/ActiveToggle.astro";
 import Card from "../../../../components/admin/Card.astro";
 import FlashMessage from "../../../../components/admin/FlashMessage.astro";
+import NextStep from "../../../../components/admin/setup/NextStep.astro";
+import { loadSetupStatus } from "../../../../lib/data/config/setup";
 import Icon from "../../../../components/admin/Icon.astro";
 import PreparationField from "../../../../components/admin/PreparationField.astro";
 import { HINT, INPUT, LABEL, PRIMARY_BUTTON } from "../../../../components/admin/fieldStyles";
@@ -39,6 +41,10 @@ const homeVisitOn = clinic.features.includes("home_visit");
 const locationOptions = locations.filter((l) => (l.isActive || offered.has(l.id)) && (homeVisitOn || l.type !== "home_visit"));
 const hiddenHomeVisit = !homeVisitOn && locations.some((l) => l.type === "home_visit" && offered.has(l.id));
 const action = `/api/admin/configuracoes/servicos/${id}`;
+// Próximo passo da jornada de configuração (F6.3b).
+const setup = isNew ? null : await loadSetupStatus(createUserClient(Astro.request, Astro.cookies), clinic.clinicId, clinic.features);
+const serviceIssues = setup?.issues.services.get(id!) ?? [];
+const hoursAgenda = service?.agendaIds.find((agendaId) => agendas.some((a) => a.id === agendaId && a.isActive)) ?? null;
 ---
 
 <AdminLayout title={isNew ? "Novo serviço" : service!.name}>
@@ -47,6 +53,20 @@ const action = `/api/admin/configuracoes/servicos/${id}`;
   </a>
   <h1 class="mt-2 text-2xl font-bold text-slate-900">{isNew ? "Novo serviço" : "Editar serviço"}</h1>
   <FlashMessage />
+  {
+    serviceIssues.includes("no_agenda") || serviceIssues.includes("no_location") ? (
+      <NextStep text="Marque abaixo a agenda e o local deste serviço e salve. Depois, cadastre os horários." />
+    ) : (
+      serviceIssues.includes("no_hours") &&
+      hoursAgenda && (
+        <NextStep
+          text={`${service!.name} ainda não tem horário de atendimento: não aparece no bot nem no link de agendar.`}
+          href={`/admin/configuracoes/horarios?agenda=${hoursAgenda}&servico=${service!.id}`}
+          label="Cadastrar os horários"
+        />
+      )
+    )
+  }
 
   <Card class="mt-4 max-w-4xl">
     <form method="POST" action={action} class="flex flex-col gap-5" data-service-form data-category={service?.category ?? ""}>

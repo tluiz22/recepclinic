@@ -3,6 +3,8 @@
 // (ex.: "Exames", quando a recepção faz o exame).
 import AdminLayout from "../../../layouts/AdminLayout.astro";
 import Badge from "../../../components/admin/Badge.astro";
+import IssueBadges from "../../../components/admin/setup/IssueBadges.astro";
+import { AGENDA_HINTS, loadSetupStatus } from "../../../lib/data/config/setup";
 import Card from "../../../components/admin/Card.astro";
 import ConfiguracoesTabs from "../../../components/admin/ConfiguracoesTabs.astro";
 import FlashMessage from "../../../components/admin/FlashMessage.astro";
@@ -22,6 +24,8 @@ const [agendas, professionals, services] = await Promise.all([
 ]);
 const professionalName = new Map(professionals.map((p) => [p.id, p.displayName]));
 const servicesOf = (agendaId: string) => services.filter((s) => s.agendaIds.includes(agendaId)).map((s) => s.name);
+// Pendências da jornada de configuração (F6.3b), nos selos.
+const setup = await loadSetupStatus(createUserClient(Astro.request, Astro.cookies), clinic.clinicId, clinic.features);
 ---
 
 <AdminLayout title="Agendas">
@@ -43,7 +47,7 @@ const servicesOf = (agendaId: string) => services.filter((s) => s.agendaIds.incl
           <a href={`/admin/configuracoes/agendas/${agenda.id}`}>
             <Card class="h-full hover:border-sky-300 hover:bg-sky-50" muted={!agenda.isActive}>
               <p class="font-medium text-slate-900">
-                {agenda.name} {!agenda.isActive && <Badge>desativada</Badge>}
+                {agenda.name} {!agenda.isActive && <Badge>desativada</Badge>} <IssueBadges issues={setup.issues.agendas.get(agenda.id)} hints={AGENDA_HINTS} />
               </p>
               <p class="mt-1 text-sm text-slate-600">
                 {agenda.kind === "professional" ? `Profissional: ${professionalName.get(agenda.professionalId!) ?? "—"}` : "Recurso (sem profissional)"}

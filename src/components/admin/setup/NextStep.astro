@@ -1,0 +1,25 @@
+---
+// Próximo passo da jornada de configuração (F6.3b), na tela do cadastro:
+// aparece enquanto a pendência existe (logo depois de salvar, inclusive).
+import { PRIMARY_BUTTON } from "../fieldStyles";
+
+interface Props {
+  text: string;
+  href?: string;
+  label?: string;
+}
+
+const { text, href, label } = Astro.props;
+---
+
+<div class="mt-4 max-w-2xl rounded-lg border border-sky-200 bg-sky-50 p-4">
+  <p class="text-sm font-semibold text-sky-900">Próximo passo</p>
+  <p class="mt-1 text-sm text-sky-900">{text}</p>
+  {
+    href && label && (
+      <a href={href} class={`${PRIMARY_BUTTON} mt-3 inline-flex`}>
+        {label}
+      </a>
+    )
+  }
+</div>

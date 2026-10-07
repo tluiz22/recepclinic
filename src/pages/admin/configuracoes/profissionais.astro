@@ -2,6 +2,8 @@
 // Configurações › Profissionais (F4.3).
 import AdminLayout from "../../../layouts/AdminLayout.astro";
 import Badge from "../../../components/admin/Badge.astro";
+import IssueBadges from "../../../components/admin/setup/IssueBadges.astro";
+import { loadSetupStatus } from "../../../lib/data/config/setup";
 import Card from "../../../components/admin/Card.astro";
 import ConfiguracoesTabs from "../../../components/admin/ConfiguracoesTabs.astro";
 import FlashMessage from "../../../components/admin/FlashMessage.astro";
@@ -20,6 +22,8 @@ const [professionals, limit] = await Promise.all([
 ]);
 // Limite de profissionais ativos (D11): definido pelo Suporte.
 const atLimit = limit.active >= limit.max;
+// Pendências da jornada de configuração (F6.3b), nos selos.
+const setup = await loadSetupStatus(createUserClient(Astro.request, Astro.cookies), clinic.clinicId, clinic.features);
 ---
 
 <AdminLayout title="Profissionais">
@@ -62,7 +66,7 @@ const atLimit = limit.active >= limit.max;
           <a href={`/admin/configuracoes/profissionais/${p.id}`}>
             <Card class="h-full hover:border-sky-300 hover:bg-sky-50" muted={!p.isActive}>
               <p class="font-medium text-slate-900">
-                {p.displayName} {!p.isActive && <Badge>desativado</Badge>}
+                {p.displayName} {!p.isActive && <Badge>desativado</Badge>} <IssueBadges issues={setup.issues.professionals.get(p.id)} />
               </p>
               <p class="mt-1 text-sm text-slate-600">{[p.profession, p.specialty].filter(Boolean).join(" · ")}</p>
               {professionalRegistry(p) && <p class="text-sm text-slate-500">{professionalRegistry(p)}</p>}

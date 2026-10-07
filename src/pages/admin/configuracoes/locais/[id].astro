@@ -5,6 +5,8 @@ import AdminLayout from "../../../../layouts/AdminLayout.astro";
 import ActiveToggle from "../../../../components/admin/ActiveToggle.astro";
 import Card from "../../../../components/admin/Card.astro";
 import FlashMessage from "../../../../components/admin/FlashMessage.astro";
+import NextStep from "../../../../components/admin/setup/NextStep.astro";
+import { loadSetupStatus } from "../../../../lib/data/config/setup";
 import Icon from "../../../../components/admin/Icon.astro";
 import { HINT, INPUT, LABEL, PRIMARY_BUTTON } from "../../../../components/admin/fieldStyles";
 import { createUserClient } from "../../../../lib/data/clients";
@@ -19,6 +21,9 @@ const location = isNew
 if (!isNew && !location) return Astro.redirect("/admin/configuracoes/locais");
 const homeVisitOn = clinic.features.includes("home_visit");
 const action = `/api/admin/configuracoes/locais/${id}`;
+// Próximo passo da jornada de configuração (F6.3b).
+const setup = isNew ? null : await loadSetupStatus(createUserClient(Astro.request, Astro.cookies), clinic.clinicId, clinic.features);
+const locationIssues = setup?.issues.locations.get(id!) ?? [];
 ---
 
 <AdminLayout title={isNew ? "Novo local" : location!.name}>
@@ -27,6 +32,12 @@ const action = `/api/admin/configuracoes/locais/${id}`;
   </a>
   <h1 class="mt-2 text-2xl font-bold text-slate-900">{isNew ? "Novo local" : "Editar local"}</h1>
   <FlashMessage />
+  {locationIssues.includes("no_address") && <NextStep text="Preencha o endereço abaixo: o bot e as mensagens mostram ao paciente onde é o atendimento." />}
+  {
+    locationIssues.includes("no_service") && (
+      <NextStep text="Nenhum serviço é atendido neste local ainda. Em Serviços, marque este local nos serviços atendidos aqui." href="/admin/configuracoes/servicos" label="Ir para Serviços" />
+    )
+  }
 
   <Card class="mt-4 max-w-2xl">
     <form method="POST" action={action} class="flex flex-col gap-4">

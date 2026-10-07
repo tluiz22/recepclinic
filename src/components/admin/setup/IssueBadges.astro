@@ -1,0 +1,21 @@
+---
+// Selos das pendências de um cadastro nas listas de Configurações (F6.3b).
+import Badge from "../Badge.astro";
+import { ISSUE_HINTS, ISSUE_LABELS, type Issue } from "../../../lib/data/config/setup";
+
+interface Props {
+  issues?: Issue[];
+  /** Explicação própria (ex.: agenda sem horário). */
+  hints?: Partial<Record<Issue, string>>;
+}
+
+const { issues = [], hints = {} } = Astro.props;
+---
+
+{
+  issues.map((issue) => (
+    <span title={hints[issue] ?? ISSUE_HINTS[issue]}>
+      <Badge variant="warning">{ISSUE_LABELS[issue]}</Badge>
+    </span>
+  ))
+}

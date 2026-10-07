@@ -953,6 +953,21 @@ de remarcação (texto da F4.6), e enviam sozinhos; sai a tela "Avisar" da F4.6.
   gravados por `scripts/agendador.mjs`). Saiu o roteador antigo do piloto; o resto do bot antigo
   (cancelar, remarcar, lista de espera) sai na F6.4. Migração `20261007130000`. Roteiro na parte G
   do [`staging.md`](staging.md). 7 testes unitários e 10 de banco novos.
+- **F6.3b — Jornada de configuração** (cliente, 07/out, depois de a Espirometria sumir do bot por
+  estar sem horário; feita antes da F6.4): as Configurações mostram a dependência entre os
+  cadastros, na ordem Clínica → Profissionais → Locais → Agendas → Serviços → Horários (o
+  WhatsApp continua só na aba dele, decisão do cliente). (A) **Guia de configuração** no topo da
+  aba Clínica, com cada passo "Feito", "Atenção" ou "Falta" e cada pendência levando direto à
+  correção; completo, vira uma linha; nas outras abas, só o aviso "N pendências · Ver o guia".
+  (B) **Próximo passo** na tela do cadastro enquanto a pendência existir (logo depois de salvar,
+  inclusive): profissional sem agenda → "Criar a agenda" (já com o profissional); agenda sem
+  serviço ou sem horário → Serviços ou "Cadastrar os horários"; local sem serviço ou sem
+  endereço; serviço sem agenda, local ou horário → "Cadastrar os horários" (já com a agenda e o
+  serviço). (C) **Selos nas listas**: "sem horário", "sem agenda", "sem local", "sem serviço",
+  "sem endereço". "Sem horário" segue a regra do bot (horário ativo da agenda e do local do
+  serviço, "qualquer serviço" ou o próprio). Itens desligados na matriz e desativados não contam.
+  **Implementada em 07/out (aguarda a validação do cliente).** Regra em
+  `src/lib/data/config/setup.ts`; sem migração. 7 testes unitários novos.
 - **F6.4 — Bot II:** cancelar, remarcar, resposta ao lembrete, lista de espera, sessões de série,
   "falar com a recepção" e pausa do bot.
 - **F6.5 — Cancelamento pela clínica automático:** aviso a todos com o link; sai a tela "Avisar".

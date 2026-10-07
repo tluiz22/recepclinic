@@ -6,6 +6,8 @@ import AdminLayout from "../../../../layouts/AdminLayout.astro";
 import ActiveToggle from "../../../../components/admin/ActiveToggle.astro";
 import Card from "../../../../components/admin/Card.astro";
 import FlashMessage from "../../../../components/admin/FlashMessage.astro";
+import NextStep from "../../../../components/admin/setup/NextStep.astro";
+import { loadSetupStatus } from "../../../../lib/data/config/setup";
 import Icon from "../../../../components/admin/Icon.astro";
 import { HINT, INPUT, LABEL, PRIMARY_BUTTON } from "../../../../components/admin/fieldStyles";
 import { BRAZIL_STATES, COUNCIL_SUGGESTIONS } from "../../../../lib/brazilStates";
@@ -22,6 +24,9 @@ const professional = isNew
 if (!isNew && !professional) return Astro.redirect("/admin/configuracoes/profissionais");
 const summaryOn = clinic.features.includes("daily_summary");
 const action = `/api/admin/configuracoes/profissionais/${id}`;
+// Próximo passo da jornada de configuração (F6.3b).
+const setup = isNew ? null : await loadSetupStatus(createUserClient(Astro.request, Astro.cookies), clinic.clinicId, clinic.features);
+const professionalIssues = setup?.issues.professionals.get(id!) ?? [];
 ---
 
 <AdminLayout title={isNew ? "Novo profissional" : professional!.displayName}>
@@ -30,6 +35,15 @@ const action = `/api/admin/configuracoes/profissionais/${id}`;
   </a>
   <h1 class="mt-2 text-2xl font-bold text-slate-900">{isNew ? "Novo profissional" : "Editar profissional"}</h1>
   <FlashMessage />
+  {
+    professionalIssues.includes("no_agenda") && (
+      <NextStep
+        text={`${professional!.displayName} ainda não tem agenda: sem ela, não recebe atendimentos.`}
+        href={`/admin/configuracoes/agendas/novo?profissional=${id}`}
+        label="Criar a agenda"
+      />
+    )
+  }
 
   <Card class="mt-4 max-w-2xl">
     <form method="POST" action={action} class="flex flex-col gap-4">

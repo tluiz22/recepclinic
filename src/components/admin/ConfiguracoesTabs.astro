@@ -1,7 +1,12 @@
 ---
 import TabBar from "./TabBar.astro";
+import SetupGuide from "./setup/SetupGuide.astro";
+import { createUserClient } from "../../lib/data/clients";
+import { loadSetupStatus } from "../../lib/data/config/setup";
 
 // Abas de Configurações (F4.3 e F4.4b). Convênios só com o item liberado (D11).
+// Jornada de configuração (F6.3b): o guia completo na aba Clínica; nas
+// outras, só o aviso de que há pendências.
 type TabId = "clinica" | "profissionais" | "locais" | "agendas" | "servicos" | "horarios" | "feriados" | "convenios" | "equipe" | "whatsapp";
 
 interface Props {
@@ -10,6 +15,8 @@ interface Props {
 
 const { current } = Astro.props;
 const features = Astro.locals.clinic?.features ?? [];
+const clinicId = Astro.locals.clinic?.clinicId;
+const setup = clinicId ? await loadSetupStatus(createUserClient(Astro.request, Astro.cookies), clinicId, features) : null;
 
 const tabs: { id: TabId; label: string; href: string; show?: boolean }[] = [
   { id: "clinica", label: "Clínica", href: "/admin/configuracoes" },
@@ -30,3 +37,4 @@ const tabs: { id: TabId; label: string; href: string; show?: boolean }[] = [
   class="mt-4"
   tabs={tabs.filter((tab) => tab.show !== false).map((tab) => ({ label: tab.label, href: tab.href, active: tab.id === current }))}
 />
+{setup && <SetupGuide status={setup} compact={current !== "clinica"} />}

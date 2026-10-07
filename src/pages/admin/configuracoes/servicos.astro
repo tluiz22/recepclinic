@@ -3,6 +3,8 @@
 // agendas que atendem e os locais em que são oferecidos.
 import AdminLayout from "../../../layouts/AdminLayout.astro";
 import Badge from "../../../components/admin/Badge.astro";
+import IssueBadges from "../../../components/admin/setup/IssueBadges.astro";
+import { loadSetupStatus } from "../../../lib/data/config/setup";
 import Card from "../../../components/admin/Card.astro";
 import ConfiguracoesTabs from "../../../components/admin/ConfiguracoesTabs.astro";
 import FlashMessage from "../../../components/admin/FlashMessage.astro";
@@ -21,6 +23,8 @@ const [services, agendas] = await Promise.all([
   listAgendas(db, clinic.clinicId, { includeInactive: true }),
 ]);
 const agendaName = new Map(agendas.map((a) => [a.id, a.name]));
+// Pendências da jornada de configuração (F6.3b), nos selos.
+const setup = await loadSetupStatus(createUserClient(Astro.request, Astro.cookies), clinic.clinicId, clinic.features);
 ---
 
 <AdminLayout title="Serviços">
@@ -43,7 +47,7 @@ const agendaName = new Map(agendas.map((a) => [a.id, a.name]));
             <Card class="h-full hover:border-sky-300 hover:bg-sky-50" muted={!service.isActive}>
               <p class="font-medium text-slate-900">
                 {service.name} <Badge variant={service.category === "exam" ? "accent" : "info"}>{CATEGORY_LABELS[service.category]}</Badge>{" "}
-                {service.schedulingMode === "group" && <Badge variant="warning">turma</Badge>} {!service.isActive && <Badge>desativado</Badge>}
+                {service.schedulingMode === "group" && <Badge variant="warning">turma</Badge>} {!service.isActive && <Badge>desativado</Badge>} <IssueBadges issues={setup.issues.services.get(service.id)} />
               </p>
               <p class="mt-1 text-sm text-slate-600">
                 {service.durationMinutes} min · {formatCentsBRL(service.priceCents)}

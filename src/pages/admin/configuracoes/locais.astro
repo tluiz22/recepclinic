@@ -2,6 +2,8 @@
 // Configurações › Locais (F4.3): consultório (com endereço) ou domiciliar.
 import AdminLayout from "../../../layouts/AdminLayout.astro";
 import Badge from "../../../components/admin/Badge.astro";
+import IssueBadges from "../../../components/admin/setup/IssueBadges.astro";
+import { loadSetupStatus } from "../../../lib/data/config/setup";
 import Card from "../../../components/admin/Card.astro";
 import ConfiguracoesTabs from "../../../components/admin/ConfiguracoesTabs.astro";
 import FlashMessage from "../../../components/admin/FlashMessage.astro";
@@ -13,6 +15,8 @@ const clinic = Astro.locals.clinic!;
 const showInactive = Astro.url.searchParams.get("todos") === "1";
 const homeVisitOn = clinic.features.includes("home_visit");
 const locations = await listLocations(createUserClient(Astro.request, Astro.cookies), clinic.clinicId, { includeInactive: showInactive });
+// Pendências da jornada de configuração (F6.3b), nos selos.
+const setup = await loadSetupStatus(createUserClient(Astro.request, Astro.cookies), clinic.clinicId, clinic.features);
 ---
 
 <AdminLayout title="Locais">
@@ -35,7 +39,7 @@ const locations = await listLocations(createUserClient(Astro.request, Astro.cook
             <Card class="h-full hover:border-sky-300 hover:bg-sky-50" muted={!location.isActive}>
               <p class="font-medium text-slate-900">
                 {location.name} <Badge variant={location.type === "home_visit" ? "accent" : "info"}>{location.type === "home_visit" ? "Domiciliar" : "Consultório"}</Badge>{" "}
-                {!location.isActive && <Badge>desativado</Badge>}{" "}
+                {!location.isActive && <Badge>desativado</Badge>} <IssueBadges issues={setup.issues.locations.get(location.id)} />{" "}
                 {location.isActive && location.type === "home_visit" && !homeVisitOn && <Badge variant="warning">não liberado</Badge>}
               </p>
               <p class="mt-1 text-sm text-slate-600">{location.type === "home_visit" ? "Endereço de cada paciente" : (location.address ?? "Sem endereço")}</p>
