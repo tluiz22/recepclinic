@@ -139,7 +139,7 @@ do celular; cliente, 06/out/2026). Nada do app ou do número do piloto.
    **message_template_status_update**, para a aprovação dos templates chegar sozinha.
 3. **Painel** (Suporte, clínica de teste › *Configurações › WhatsApp*, cartão *Templates*):
    **Criar na Meta**. Os cinco templates (`rc_confirmacao_v1`, `rc_remarcacao_v1`,
-   `rc_cancelamento_v1`, `rc_lembrete_v1`, `rc_preparo_exame_v1`) vão para a análise da Meta na
+   `rc_cancelamento_v1`, `rc_lembrete_v1`, `rc_preparo_exame_v2`) vão para a análise da Meta na
    conta do RecepClinic (categoria Utilidade); a aprovação leva de minutos a algumas horas. A
    situação aparece no cartão (pelo webhook ou por **Atualizar situação**); recusado mostra o
    motivo. O token do passo E.2 já tem `whatsapp_business_management`, que a criação exige.

@@ -120,7 +120,7 @@ describe("templates padrão na conta da clínica (Suporte)", () => {
       rc_cancelamento_v1: { status: "APPROVED" },
       rc_cancelamento_clinica_v1: { status: "PENDING" },
       rc_lembrete_v1: { status: "APPROVED" },
-      rc_preparo_exame_v1: { status: "REJECTED", reason: "INVALID_FORMAT" },
+      rc_preparo_exame_v2: { status: "REJECTED", reason: "INVALID_FORMAT" },
     });
     expect(await refreshTemplateStatuses(service, f.clinicId, meta.fetcher)).toMatchObject({ ok: true });
     const { data } = await adminClient()
@@ -185,7 +185,7 @@ describe("templates padrão na conta da clínica (Suporte)", () => {
           changes: [
             {
               field: "message_template_status_update",
-              value: { event: "APPROVED", message_template_id: 99, message_template_name: "rc_preparo_exame_v1", message_template_language: "pt_BR", reason: "NONE" },
+              value: { event: "APPROVED", message_template_id: 99, message_template_name: "rc_preparo_exame_v2", message_template_language: "pt_BR", reason: "NONE" },
             },
           ],
         },
@@ -298,7 +298,7 @@ describe("preparo do exame depois da entrega (webhook)", () => {
 
     expect(meta.calls).toHaveLength(1);
     const sent = meta.calls[0].body as { template: { name: string; components: { parameters: { text: string }[] }[] } };
-    expect(sent.template.name).toBe("rc_preparo_exame_v1");
+    expect(sent.template.name).toBe("rc_preparo_exame_v2");
     expect(sent.template.components[0].parameters.map((p) => p.text)).toEqual([
       "Resp.",
       "da Clínica Envio F62",

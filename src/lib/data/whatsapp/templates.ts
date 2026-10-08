@@ -70,20 +70,23 @@ export const DEFAULT_TEMPLATES: DefaultTemplate[] = [
     quickReplies: ["Confirmar presença", "Remarcar", "Cancelar"],
   },
   {
+    // v2: a Meta classificou a v1 como marketing (07/out); o texto deixa claro que é o exame marcado.
     key: "exam_preparation",
-    name: "rc_preparo_exame_v1",
-    body: `${GREETING}\nO exame {{3}} precisa de preparo. As orientações estão neste link: {{4}}\n\n${ANY_QUESTION}`,
+    name: "rc_preparo_exame_v2",
+    body: `${GREETING}\nPara o exame {{3}} que você marcou, siga as orientações de preparo neste link: {{4}}\n\n${ANY_QUESTION}`,
     examples: ["Maria", "da Clínica Sorriso", "Espirometria", "https://app.recepclinic.com.br/preparo/exemplo"],
   },
   // Resumo do dia para a equipe (F7; texto aprovado pelo cliente em 07/out/2026).
   ...(["consultations", "exams"] as const).flatMap((kind) =>
     (["", "_today"] as const).map((suffix) => {
       const noun = kind === "exams" ? "Exames" : "Consultas";
-      const when = suffix ? "hoje" : "amanhã";
+      // O de hoje tem texto próprio (v2): quase igual ao de amanhã, a Meta recusou (INVALID_FORMAT, 07/out).
       return {
         key: `daily_summary_${kind}${suffix}` as TemplateKey,
-        name: `rc_resumo_${kind === "exams" ? "exames" : "consultas"}_${suffix ? "hoje" : "amanha"}_v1`,
-        body: `Olá, {{1}}! ${noun} {{2}} para ${when}, {{3}}:\n\n{{4}}\n\nMensagem automática do RecepClinic.`,
+        name: `rc_resumo_${kind === "exams" ? "exames" : "consultas"}_${suffix ? "hoje_v2" : "amanha_v1"}`,
+        body: suffix
+          ? `Oi, {{1}}, tudo bem? A agenda de ${noun.toLowerCase()} {{2}} para hoje, {{3}}, é esta:\n\n{{4}}\n\nBom trabalho! Esta é uma mensagem automática do RecepClinic.`
+          : `Olá, {{1}}! ${noun} {{2}} para amanhã, {{3}}:\n\n{{4}}\n\nMensagem automática do RecepClinic.`,
         examples: ["Ana", "da Clínica Sorriso", "terça, 08/10", "▪️ 09h00 - João Silva (✅ confirmado) ▪️ 10h30 - Maria Souza (sem confirmação)"],
       };
     }),

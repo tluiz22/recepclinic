@@ -1091,6 +1091,15 @@ dia, com o horário de cada dia da semana já com as horas escolhidas) e os 5 te
 antigos e `supabase/service.ts`): a lista do código herdado com a service role ficou vazia (D1).
 Ficam os testes das regras do piloto da F1 (`src/lib/scheduling`, `patientRegistration`), sem uso
 no sistema, como rede de segurança. 1 teste unitário e 5 de banco novos.
+**Na criação dos templates (cliente, 07/out):** os dois resumos "de hoje" foram recusados na hora
+pela Meta (`INVALID_FORMAT`; provavelmente por serem quase iguais aos "de amanhã") e o preparo do
+exame foi classificado como **marketing**. Textos novos aprovados pelo cliente, como versão 2:
+resumo de hoje "Oi, {nome}, tudo bem? A agenda de consultas {da clínica} para hoje, {data}, é
+esta: {lista} Bom trabalho! Esta é uma mensagem automática do RecepClinic." (exames igual) e
+preparo "Olá, {nome}! Aqui é {da clínica}. Para o exame {exame} que você marcou, siga as
+orientações de preparo neste link: {link} Qualquer dúvida, é só responder esta mensagem." Também:
+quando a Meta responde que o template já existe (criado antes, com a resposta perdida), o sistema
+guarda a situação dele, e os erros da Meta aparecem com a explicação em português.
 
 ## F8 — Conexão self-service na Meta
 
