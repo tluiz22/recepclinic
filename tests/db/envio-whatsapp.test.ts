@@ -306,8 +306,9 @@ describe("cancelamento pela clínica (F6.5)", () => {
       "segunda, 17/03 às 08:00",
       `${BASE_URL}/agendar/${items[0].rebookingLinkId}`,
     ]);
-    const messages = await outbound(a1);
-    expect(messages.at(-1)).toMatchObject({ message_type: "appointment_mass_cancellation", status: "sent" });
-    expect(messages.at(-1)!.body).toContain("Precisamos cancelar o atendimento de Paciente (Consulta) de segunda, 17/03 às 08:00.");
+    // As duas tentativas têm o mesmo horário (relógio do teste): procura a enviada pela situação.
+    const sentMessage = (await outbound(a1)).find((m) => m.status === "sent");
+    expect(sentMessage).toMatchObject({ message_type: "appointment_mass_cancellation" });
+    expect(sentMessage!.body).toContain("Precisamos cancelar o atendimento de Paciente (Consulta) de segunda, 17/03 às 08:00.");
   });
 });
