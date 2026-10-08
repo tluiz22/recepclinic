@@ -172,7 +172,8 @@ describe("avisos ao paciente", () => {
     );
     expect(await sendAppointmentNotice(asDb(f.reception), f.clinicId, appointment.id, "confirmation", s, NOW)).toBe("sent");
     await cancelAppointment(asDb(f.reception), f.clinicId, appointment.id, { channel: "admin", actorId: f.reception.id }, NOW);
-    expect(await sendAppointmentNotice(asDb(f.reception), f.clinicId, appointment.id, "cancellation", s, NOW)).toBe("sent");
+    // Um minuto depois: a ordem das mensagens sai do horário de cada uma.
+    expect(await sendAppointmentNotice(asDb(f.reception), f.clinicId, appointment.id, "cancellation", s, new Date(NOW.getTime() + 60_000))).toBe("sent");
 
     const [confirmation, cancellation] = meta.calls.map((c) => c.body as { to: string; template: { name: string; components: { parameters: { text: string }[] }[] } });
     expect(meta.calls[0].path).toBe(`/${NUMBER}/messages`);
