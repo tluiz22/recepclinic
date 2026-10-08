@@ -139,6 +139,38 @@ describe("templates padrão na conta da clínica (Suporte)", () => {
     });
   });
 
+  it("Meta diz que já existe (criado antes, resposta perdida): guarda a situação dele e a mensagem sai em português", async () => {
+    await adminClient().from("whatsapp_templates").delete().eq("clinic_id", f.clinicId).eq("template_key", "daily_summary_exams");
+    let created = false;
+    const meta: typeof fetch = async (input, init) => {
+      const url = new URL(String(input));
+      const name = url.searchParams.get("name");
+      if (init?.method === "POST") {
+        const body = JSON.parse(String(init.body)) as { name: string };
+        if (body.name === "rc_resumo_exames_amanha_v1") {
+          created = true;
+          return new Response(
+            JSON.stringify({
+              error: { message: "Invalid parameter", code: 100, error_subcode: 2388024, error_user_title: "Já existe conteúdo nesse idioma", error_user_msg: "Já existe conteúdo em Portuguese (BR) para esse modelo." },
+            }),
+            { status: 400 },
+          );
+        }
+        return new Response(JSON.stringify({ error: { message: "Invalid parameter", code: 100, error_user_msg: "Texto recusado." } }), { status: 400 });
+      }
+      // A listagem só "enxerga" o template depois da tentativa de criação (atraso da Meta).
+      // Só este template é "encontrado"; os outros dão erro na criação e ficam como estão no banco.
+      const visible = name === "rc_resumo_exames_amanha_v1" && created;
+      const data = visible ? [{ id: "tpl-x", name, language: "pt_BR", status: "PENDING" }] : [];
+      return new Response(JSON.stringify({ data }));
+    };
+    const result = await createDefaultTemplates(service, f.clinicId, meta);
+    const line = result.ok ? result.lines.find((l) => l.key === "daily_summary_exams") : null;
+    expect(line).toMatchObject({ status: "pending", problem: null });
+    // O erro de outro template sai com a explicação da Meta, não "Invalid parameter".
+    expect(result.ok && result.lines.find((l) => l.key === "confirmation")!.problem).toBe("Texto recusado.");
+  });
+
   it("o webhook guarda a situação avisada pela Meta, só nas clínicas daquela conta", async () => {
     const deps: WebhookDeps = {
       resolveClinic: (id) => resolveClinicByPhoneNumberId(id, env()),

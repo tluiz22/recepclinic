@@ -9,7 +9,8 @@ const GRAPH = `https://graph.facebook.com/${GRAPH_API_VERSION}`;
 
 export type Fetcher = typeof fetch;
 
-export type GraphError = { code: number | null; message: string };
+/** `subcode`: detalhe da Meta (ex.: 2388024 = já existe conteúdo nesse idioma). */
+export type GraphError = { code: number | null; message: string; subcode?: number | null };
 
 export class GraphRequestError extends Error {
   constructor(
@@ -23,9 +24,17 @@ export class GraphRequestError extends Error {
 
 async function call<T>(fetcher: Fetcher, what: string, url: string, token: string, init: RequestInit = {}): Promise<T> {
   const response = await fetcher(url, { ...init, headers: { Authorization: `Bearer ${token}`, ...(init.headers ?? {}) } });
-  const body = (await response.json().catch(() => ({}))) as { error?: { code?: number; message?: string } } & T;
+  const body = (await response.json().catch(() => ({}))) as {
+    error?: { code?: number; message?: string; error_subcode?: number; error_user_title?: string; error_user_msg?: string };
+  } & T;
   if (!response.ok || body.error) {
-    throw new GraphRequestError(what, { code: body.error?.code ?? null, message: body.error?.message ?? `HTTP ${response.status}` });
+    // A mensagem para pessoas (em português, quando a Meta manda) vem antes da técnica ("Invalid parameter").
+    const human = [body.error?.error_user_title, body.error?.error_user_msg].filter(Boolean).join(": ");
+    throw new GraphRequestError(what, {
+      code: body.error?.code ?? null,
+      subcode: body.error?.error_subcode ?? null,
+      message: human || body.error?.message || `HTTP ${response.status}`,
+    });
   }
   return body;
 }

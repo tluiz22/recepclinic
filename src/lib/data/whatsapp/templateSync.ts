@@ -66,6 +66,22 @@ async function setup(db: DbClient, clinicId: string): Promise<{ wabaId: string; 
 
 const inLanguage = (templates: MetaTemplate[]) => templates.find((t) => t.language === TEMPLATE_LANGUAGE) ?? null;
 
+/** Já existe conteúdo nesse idioma: a Meta criou o template antes (resposta perdida, clique duplo). */
+const ALREADY_EXISTS = 2388024;
+
+/** Cria; se a Meta disser que já existe, lê a situação dele (achado na validação da F7). */
+async function createOrFind(wabaId: string, template: (typeof DEFAULT_TEMPLATES)[number], token: string, fetcher: Fetcher): Promise<MetaTemplate> {
+  try {
+    const created = await createTemplate(wabaId, templateCreationPayload(template), token, fetcher);
+    return { ...created, name: template.name, language: TEMPLATE_LANGUAGE, rejectedReason: null };
+  } catch (error) {
+    if (!(error instanceof GraphRequestError) || error.graph.subcode !== ALREADY_EXISTS) throw error;
+    const found = inLanguage(await fetchTemplatesByName(wabaId, template.name, token, fetcher));
+    if (!found) throw error;
+    return found;
+  }
+}
+
 /** "Criar na Meta": cria os templates padrão que a conta ainda não tem. */
 export async function createDefaultTemplates(db: DbClient, clinicId: string, fetcher: Fetcher = fetch): Promise<TemplateSyncResult> {
   const ready = await setup(db, clinicId);
@@ -74,7 +90,7 @@ export async function createDefaultTemplates(db: DbClient, clinicId: string, fet
   for (const template of DEFAULT_TEMPLATES) {
     try {
       const existing = inLanguage(await fetchTemplatesByName(ready.wabaId, template.name, ready.token, fetcher));
-      const meta = existing ?? { ...(await createTemplate(ready.wabaId, templateCreationPayload(template), ready.token, fetcher)), rejectedReason: null };
+      const meta = existing ?? (await createOrFind(ready.wabaId, template, ready.token, fetcher));
       const status = await saveTemplateRow(db, clinicId, template.key, template.name, meta);
       lines.push({ key: template.key, name: template.name, status, problem: null });
     } catch (error) {
