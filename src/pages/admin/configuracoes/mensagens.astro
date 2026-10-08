@@ -28,8 +28,7 @@ import {
   templateToMarkers,
 } from "../../../lib/data/whatsapp/customMessages";
 import * as bot from "../../../lib/data/whatsapp/bot/texts";
-import { appointmentPlace, clinicLabel, DEFAULT_TEMPLATES, fillTemplate, formatAppointmentWhen, paramCount, serviceLine } from "../../../lib/data/whatsapp/templates";
-import { REMINDER_BUTTONS } from "../../../lib/data/whatsapp/reminders";
+import { appointmentPlace, clinicLabel, DEFAULT_TEMPLATES, fillTemplate, formatAppointmentWhen, formatSummaryDate, paramCount, serviceLine } from "../../../lib/data/whatsapp/templates";
 
 const clinic = Astro.locals.clinic!;
 const db = createUserClient(Astro.request, Astro.cookies);
@@ -74,8 +73,18 @@ const example: Record<string, string> = {
 };
 
 // Como no envio: o cancelamento pela clínica leva só o nome do serviço; o preparo, o link da página do preparo.
+const summaryDay = formatSummaryDate(monday);
 const exampleFor = (key: TemplateKey): Record<string, string> =>
-  key === "clinic_cancellation"
+  key.startsWith("daily_summary")
+    ? {
+        ...example,
+        nome: "Ana",
+        data: summaryDay,
+        lista: `▪️ 08h00 - João Silva (✅ confirmado) ▪️ 09h00 - Maria Souza (sem confirmação)`,
+      }
+    : key === "waitlist_offer"
+      ? { ...example, tipo: "consulta", vaga: `${when} (${office?.name ?? "Consultório"})`, atual: "sexta, 18/10 às 09:00" }
+      : key === "clinic_cancellation"
     ? { ...example, servico: consultation?.name ?? "Consulta", paciente: "João" }
     : key === "exam_preparation"
       ? { ...example, link: `${Astro.url.origin}/preparo/${exam?.id ?? "exemplo"}` }
@@ -88,6 +97,11 @@ const TEMPLATE_LABELS: Record<string, string> = {
   clinic_cancellation: "Cancelamento pela clínica (com link)",
   reminder: "Lembrete",
   exam_preparation: "Preparo do exame",
+  daily_summary_consultations: "Resumo para a equipe: consultas de amanhã",
+  daily_summary_exams: "Resumo para a equipe: exames de amanhã",
+  daily_summary_consultations_today: "Resumo para a equipe: consultas de hoje",
+  daily_summary_exams_today: "Resumo para a equipe: exames de hoje",
+  waitlist_offer: "Oferta de vaga (lista de espera)",
 };
 const STATUS = {
   approved: { label: "Aprovado", variant: "success" },
@@ -95,9 +109,15 @@ const STATUS = {
   rejected: { label: "Recusado pela Meta", variant: "danger" },
   disabled: { label: "Desativado", variant: "neutral" },
 } as const;
-const REMINDER_BUTTON_LABELS = { confirm: "Confirmar presença", reschedule: "Remarcar", cancel: "Cancelar" } as const;
 
-const visibleTemplates = DEFAULT_TEMPLATES.filter((t) => t.key !== "exam_preparation" || clinic.features.includes("exams"));
+const has = (key: (typeof clinic.features)[number]) => clinic.features.includes(key);
+const visibleTemplates = DEFAULT_TEMPLATES.filter(
+  (t) =>
+    (t.key !== "exam_preparation" || has("exams")) &&
+    (!t.key.startsWith("daily_summary") || has("daily_summary")) &&
+    (!t.key.startsWith("daily_summary_exams") || has("exams")) &&
+    (t.key !== "waitlist_offer" || has("waitlist")),
+);
 const rows = visibleTemplates.map((standard) => {
   const versions = templates.filter((t) => t.key === standard.key);
   const approved = versions.filter((t) => t.stage === "meta" && t.status === "approved").sort((a, b) => b.version - a.version)[0] ?? null;
@@ -115,7 +135,7 @@ const rows = visibleTemplates.map((standard) => {
     preview: fillTemplate(inUseBody, params.slice(0, paramCount(inUseBody))),
     editText: templateToMarkers(standard.key as TemplateKey, inUseBody),
     markers,
-    buttons: standard.key === "reminder" ? REMINDER_BUTTONS.map((b) => REMINDER_BUTTON_LABELS[b]) : [],
+    buttons: standard.quickReplies ?? [],
   };
 });
 

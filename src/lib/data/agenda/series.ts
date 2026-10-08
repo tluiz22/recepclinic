@@ -5,6 +5,7 @@ import type { DbClient } from "../clients";
 import { DataError, fromDbError, unwrap, unwrapOne, Validation } from "../errors";
 import { cancelAppointment, getAppointment, logTrail, type Appointment, type TrailChannel } from "./appointments";
 import { loadClinicHolidays, loadSchedulingPlan } from "./slots";
+import { hasFeature } from "../features";
 
 // Séries recorrentes (D9), criadas no painel. Decisões do cliente (04/out/2026):
 //   - séries sem fim mantêm as sessões criadas **até 3 meses à frente**; o
@@ -312,6 +313,31 @@ export async function extendSeries(
   now: Date = new Date(),
 ): Promise<GenerationResult> {
   return generateSessions(db, clinicId, await getSeries(db, clinicId, seriesId), { actorId: null, trailChannel: "cron" }, now);
+}
+
+export type SeriesRunTotals = { series: number; created: number; skipped: number; errors: number };
+
+/**
+ * Rotina diária (F7, pendência da F4.6): estende as séries ainda abertas até
+ * o horizonte de 3 meses. Só com o item "Séries recorrentes" (D11). Erro numa
+ * série não para as outras.
+ */
+export async function extendOpenSeries(db: DbClient, clinicId: string, now: Date = new Date()): Promise<SeriesRunTotals> {
+  const totals: SeriesRunTotals = { series: 0, created: 0, skipped: 0, errors: 0 };
+  if (!(await hasFeature(db, clinicId, "series"))) return totals;
+  const rows = unwrap(await db.from("appointment_series").select("id").eq("clinic_id", clinicId).is("ended_at", null), "Séries");
+  for (const { id } of rows) {
+    try {
+      const result = await extendSeries(db, clinicId, id, now);
+      totals.series++;
+      totals.created += result.created.length;
+      totals.skipped += result.skipped.length;
+    } catch (error) {
+      totals.errors++;
+      console.error("[séries] não estendeu", id, error instanceof Error ? error.message : String(error));
+    }
+  }
+  return totals;
 }
 
 /** Sessões ativas a partir desta (inclusive), nunca as que já passaram. */

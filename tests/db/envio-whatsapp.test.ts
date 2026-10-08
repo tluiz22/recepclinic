@@ -97,9 +97,15 @@ describe("templates padrão na conta da clínica (Suporte)", () => {
       ["clinic_cancellation", "pending", null],
       ["reminder", "approved", null],
       ["exam_preparation", "pending", null],
+      // F7: resumo do dia e oferta de vaga.
+      ["daily_summary_consultations", "pending", null],
+      ["daily_summary_consultations_today", "pending", null],
+      ["daily_summary_exams", "pending", null],
+      ["daily_summary_exams_today", "pending", null],
+      ["waitlist_offer", "pending", null],
     ]);
     const created = meta.calls.filter((c) => c.method === "POST");
-    expect(created.map((c) => c.path)).toEqual(Array(5).fill(`/${WABA}/message_templates`));
+    expect(created.map((c) => c.path)).toEqual(Array(10).fill(`/${WABA}/message_templates`));
     expect(created[0].body).toMatchObject({ name: "rc_confirmacao_v1", language: "pt_BR", category: "UTILITY" });
     // Exemplo de cada variável, exigido pela Meta.
     const body = (created[0].body!.components as { type: string; example?: { body_text: string[][] } }[])[0];
@@ -117,7 +123,12 @@ describe("templates padrão na conta da clínica (Suporte)", () => {
       rc_preparo_exame_v1: { status: "REJECTED", reason: "INVALID_FORMAT" },
     });
     expect(await refreshTemplateStatuses(service, f.clinicId, meta.fetcher)).toMatchObject({ ok: true });
-    const { data } = await adminClient().from("whatsapp_templates").select("template_key, status, rejection_reason").eq("clinic_id", f.clinicId);
+    const { data } = await adminClient()
+      .from("whatsapp_templates")
+      .select("template_key, status, rejection_reason")
+      .eq("clinic_id", f.clinicId)
+      .not("template_key", "like", "daily_summary%")
+      .neq("template_key", "waitlist_offer");
     expect(Object.fromEntries((data ?? []).map((t) => [t.template_key, [t.status, t.rejection_reason]]))).toEqual({
       confirmation: ["approved", null],
       reschedule: ["approved", null],

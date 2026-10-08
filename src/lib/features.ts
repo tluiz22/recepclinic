@@ -113,6 +113,7 @@ const PATH_RULES: PathRule[] = [
   { prefix: "/admin/configuracoes/contatos", feature: "daily_summary" },
   { prefix: "/api/admin/configuracoes/contatos", feature: "daily_summary" },
   { prefix: "/api/admin/configuracoes/lembrete", feature: "reminders" },
+  { prefix: "/api/admin/configuracoes/resumo", feature: "daily_summary" },
 ];
 
 const matchesPrefix = (pathname: string, prefix: string) => pathname === prefix || pathname.startsWith(`${prefix}/`);

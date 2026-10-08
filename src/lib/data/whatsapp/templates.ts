@@ -1,5 +1,6 @@
 import { formatInstant } from "../../clinicTime";
 import type { TemplateKey, TemplateStatus } from "./connection";
+import { formatCalendarDate } from "../../clinicTime";
 
 // Templates padrão do RecepClinic (D3b, F6.2): um texto só para todas as
 // clínicas, aprovado pelo cliente em 07/out/2026. O que muda por clínica entra
@@ -73,6 +74,27 @@ export const DEFAULT_TEMPLATES: DefaultTemplate[] = [
     name: "rc_preparo_exame_v1",
     body: `${GREETING}\nO exame {{3}} precisa de preparo. As orientações estão neste link: {{4}}\n\n${ANY_QUESTION}`,
     examples: ["Maria", "da Clínica Sorriso", "Espirometria", "https://app.recepclinic.com.br/preparo/exemplo"],
+  },
+  // Resumo do dia para a equipe (F7; texto aprovado pelo cliente em 07/out/2026).
+  ...(["consultations", "exams"] as const).flatMap((kind) =>
+    (["", "_today"] as const).map((suffix) => {
+      const noun = kind === "exams" ? "Exames" : "Consultas";
+      const when = suffix ? "hoje" : "amanhã";
+      return {
+        key: `daily_summary_${kind}${suffix}` as TemplateKey,
+        name: `rc_resumo_${kind === "exams" ? "exames" : "consultas"}_${suffix ? "hoje" : "amanha"}_v1`,
+        body: `Olá, {{1}}! ${noun} {{2}} para ${when}, {{3}}:\n\n{{4}}\n\nMensagem automática do RecepClinic.`,
+        examples: ["Ana", "da Clínica Sorriso", "terça, 08/10", "▪️ 09h00 - João Silva (✅ confirmado) ▪️ 10h30 - Maria Souza (sem confirmação)"],
+      };
+    }),
+  ),
+  {
+    // Oferta de vaga da lista de espera (F7; texto do piloto com a clínica, aprovado em 07/out).
+    key: "waitlist_offer",
+    name: "rc_oferta_vaga_v1",
+    body: `${GREETING}\nAbriu uma vaga de {{3}} para {{4}}: {{5}}. É antes do horário marcado ({{6}}).\n\nQuer antecipar? Responda em até 60 minutos.`,
+    examples: ["Maria", "da Clínica Sorriso", "consulta", "João Silva", "terça, 08/10 às 14:00 (Consultório Centro)", "sexta, 18/10 às 09:00"],
+    quickReplies: ["Sim, quero antecipar", "Não, manter horário"],
   },
 ];
 
@@ -194,4 +216,16 @@ export function templateStatusFromMeta(status: string | null | undefined): Templ
 export function rejectionReason(reason: string | null | undefined): string | null {
   const text = reason?.trim();
   return text && text.toUpperCase() !== "NONE" ? text : null;
+}
+
+// ---------------------------------------------------------------------------
+// Variáveis do resumo do dia e da oferta de vaga (F7)
+// ---------------------------------------------------------------------------
+
+/** "terça, 08/10" (data do calendário da clínica). */
+export const formatSummaryDate = (date: string) => formatCalendarDate(date, "EEE, dd/MM");
+
+/** {{3}} da oferta: "consulta", "retorno", "exame Espirometria". */
+export function offerTypeWord(category: "consultation" | "return_visit" | "exam", serviceName: string): string {
+  return category === "exam" ? `exame ${serviceName}` : category === "return_visit" ? "retorno" : "consulta";
 }

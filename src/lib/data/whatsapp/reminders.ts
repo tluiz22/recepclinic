@@ -215,14 +215,14 @@ const toState = (row: AppointmentRow): ReminderState => ({
   patientConfirmedAt: row.patient_confirmed_at ? new Date(row.patient_confirmed_at) : null,
 });
 
-type ReminderSettings = { timeZone: string; reminderHour: number };
+type ReminderSettings = { timeZone: string; reminderHour: number; enabled: boolean };
 
 async function loadSettings(db: DbClient, clinicId: string): Promise<ReminderSettings> {
   const row = unwrapOne(
-    await db.from("clinic_settings").select("timezone, reminder_hour").eq("clinic_id", clinicId).maybeSingle(),
+    await db.from("clinic_settings").select("timezone, reminder_hour, reminder_enabled").eq("clinic_id", clinicId).maybeSingle(),
     "Configuração da clínica",
   );
-  return { timeZone: row.timezone, reminderHour: row.reminder_hour };
+  return { timeZone: row.timezone, reminderHour: row.reminder_hour, enabled: row.reminder_enabled };
 }
 
 async function reminderAttempts(db: DbClient, clinicId: string, appointmentIds: string[]): Promise<Map<string, ReminderAttempt[]>> {
@@ -419,7 +419,8 @@ export async function autoResendUnanswered(
 ): Promise<number> {
   if (!(await hasFeature(db, clinicId, "reminders"))) return 0;
   const setup = await sendContext(db, clinicId);
-  if ("blocked" in setup) return 0;
+  // Sem o lembrete automático da véspera (opção da clínica, F7), também não há o reenvio automático.
+  if ("blocked" in setup || !setup.context.settings.enabled) return 0;
   const { timeZone } = setup.context.settings;
   const hour = localHourOf(now, timeZone);
   if (hour < AUTO_RESEND_HOURS.first || hour > AUTO_RESEND_HOURS.last) return 0;
@@ -466,7 +467,7 @@ export type ReminderRunTotals = {
 };
 
 export type ReminderRunResult =
-  | { skipped: "not_enabled" }
+  | { skipped: "not_enabled" | "disabled" }
   | { skipped: "outside_hour"; autoResent: number }
   | { runId: number; totals: ReminderRunTotals; autoResent: number };
 
@@ -482,8 +483,10 @@ export async function runAppointmentReminders(
   now: Date = new Date(),
 ): Promise<ReminderRunResult> {
   if (!(await hasFeature(db, clinicId, "reminders"))) return { skipped: "not_enabled" };
-  const autoResent = await autoResendUnanswered(db, clinicId, sender, now);
   const settings = await loadSettings(db, clinicId);
+  // A clínica desligou o lembrete automático da véspera (F7; os botões da Agenda continuam).
+  if (!settings.enabled) return { skipped: "disabled" };
+  const autoResent = await autoResendUnanswered(db, clinicId, sender, now);
   if (trigger === "scheduled" && localHourOf(now, settings.timeZone) !== settings.reminderHour) {
     return { skipped: "outside_hour", autoResent };
   }

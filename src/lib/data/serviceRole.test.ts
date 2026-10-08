@@ -18,13 +18,9 @@ const ALLOWED = new Set([
   "src/lib/data/serviceRole.test.ts",
 ]);
 
-// Herdado do piloto, com a etapa em que sai.
-const LEGACY = new Map([
-  ["src/lib/supabase/service.ts", "sai com o último caminho abaixo"],
-  ["src/pages/api/cron/appointment-reminders.ts", "F7 (envios automáticos)"],
-  ["src/pages/api/cron/daily-summary.ts", "F7 (envios automáticos)"],
-  ["src/pages/api/cron/waitlist-offers.ts", "F7 (envios automáticos)"],
-]);
+// Herdado do piloto, com a etapa em que sai. Vazia desde a F7: a service role
+// só fica na plataforma (D1).
+const LEGACY = new Map<string, string>([]);
 
 function sourceFiles(dir: string): string[] {
   return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {

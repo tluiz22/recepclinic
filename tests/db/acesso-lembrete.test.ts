@@ -98,6 +98,8 @@ beforeAll(async () => {
   fixture = await setupAgendaClinic("Clínica do teste do lembrete", "849777300");
   ({ clinicId, reception, ids } = fixture);
   bot = clinicServiceClient(clinicId) as unknown as DbClient;
+  // Os horários destes testes contam com o lembrete às 14h (o padrão era esse até a F7).
+  await adminClient().from("clinic_settings").update({ reminder_hour: 14 }).eq("clinic_id", clinicId);
   await adminClient()
     .from("whatsapp_connections")
     .insert({ clinic_id: clinicId, phone_number_id: `pn-lembrete-${Date.now()}`, waba_id: "waba", status: "connected" });

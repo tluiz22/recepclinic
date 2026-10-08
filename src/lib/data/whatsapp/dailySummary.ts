@@ -69,8 +69,9 @@ export function computeSummarySendAt(
   firstAppointmentAt: Date,
   timeZone: string,
   offDay: boolean,
+  leadMinutes: number = SUMMARY_LEAD_MINUTES,
 ): Date {
-  const leadMs = SUMMARY_LEAD_MINUTES * 60_000;
+  const leadMs = leadMinutes * 60_000;
   const base =
     windowStart && !offDay
       ? toInstant(date, windowStart, timeZone).getTime() - leadMs
@@ -80,18 +81,18 @@ export function computeSummarySendAt(
 }
 
 /** "13:00" → "12h"; "13:30" → "12h30"; antes de 1h → "0h" (nunca na véspera). */
-function formatLeadTime(windowStart: string): string {
+function formatLeadTime(windowStart: string, leadMinutes: number): string {
   const [hours, minutes] = windowStart.split(":").map(Number);
-  const total = Math.max(0, hours * 60 + minutes - SUMMARY_LEAD_MINUTES);
+  const total = Math.max(0, hours * 60 + minutes - leadMinutes);
   const h = Math.floor(total / 60);
   const m = total % 60;
   return m === 0 ? `${h}h` : `${h}h${String(m).padStart(2, "0")}`;
 }
 
 /** "seg 7h · ter 12h · qui 7h" — dias sem janela ficam de fora. */
-export function describeSummarySchedule(starts: (string | null)[]): string {
+export function describeSummarySchedule(starts: (string | null)[], leadMinutes: number = SUMMARY_LEAD_MINUTES): string {
   const parts = starts
-    .map((start, weekday) => (start ? `${WEEKDAY_LABELS[weekday]} ${formatLeadTime(start)}` : null))
+    .map((start, weekday) => (start ? `${WEEKDAY_LABELS[weekday]} ${formatLeadTime(start, leadMinutes)}` : null))
     .filter((part): part is string => part !== null);
   return parts.length ? parts.join(" · ") : "nenhuma janela cadastrada";
 }
@@ -136,7 +137,7 @@ export type DailySummaryToSend = {
   /** Dia dos atendimentos (calendário da clínica). */
   date: string;
   listText: string;
-  template: { name: string; language: string };
+  template: { name: string; language: string; body?: string | null };
 };
 
 export type DailySummarySender = (summary: DailySummaryToSend) => Promise<SendOutcome>;
@@ -292,15 +293,22 @@ export async function getSummarySchedule(
   clinicId: string,
   professionalId: string | null = null,
 ): Promise<Record<SummaryKind, string>> {
-  const [windows, agendas] = await Promise.all([
+  const [windows, agendas, settings] = await Promise.all([
     loadWindows(db, clinicId),
     professionalId
       ? unwrap(await db.from("agendas").select("id").eq("clinic_id", clinicId).eq("professional_id", professionalId), "Agendas").map((a) => a.id)
       : null,
+    db
+      .from("clinic_settings")
+      .select("summary_today_lead_hours")
+      .eq("clinic_id", clinicId)
+      .maybeSingle()
+      .then((r) => unwrapOne(r, "Configuração da clínica")),
   ]);
   const describe = (kind: SummaryKind) =>
     describeSummarySchedule(
       earliestByWeekday(windows.filter((w) => w.kind === kind && (agendas === null || agendas.includes(w.agendaId)))),
+      settings.summary_today_lead_hours * 60,
     );
   return { consultas: describe("consultas"), exames: describe("exames") };
 }
@@ -320,7 +328,7 @@ export type DailySummaryTotals = {
 };
 
 export type DailySummaryResult =
-  | { skipped: "not_enabled" | "not_connected" | "not_due" }
+  | { skipped: "not_enabled" | "not_connected" | "not_due" | "disabled" }
   | { runId: number; date: string; totals: DailySummaryTotals };
 
 /**
@@ -339,12 +347,23 @@ export async function runDailySummary(
   const connection = await getWhatsappConnection(db, clinicId);
   if (connection?.status !== "connected") return { skipped: "not_connected" };
 
-  const settings = unwrapOne(await db.from("clinic_settings").select("timezone").eq("clinic_id", clinicId).maybeSingle(), "Configuração da clínica");
+  const settings = unwrapOne(
+    await db
+      .from("clinic_settings")
+      .select("timezone, summary_preview_enabled, summary_preview_hour, summary_today_enabled, summary_today_lead_hours")
+      .eq("clinic_id", clinicId)
+      .maybeSingle(),
+    "Configuração da clínica",
+  );
   const timeZone = settings.timezone;
   const today = todayIn(timeZone, now);
   const date = variant === "preview" ? addDays(today, 1) : today;
   const scheduled = trigger === "scheduled";
-  if (scheduled && variant === "preview" && localTimeOf(now, timeZone) < SUMMARY_PREVIEW_TIME) return { skipped: "not_due" };
+  // Opções da clínica (F7; cliente, 07/out/2026): cada envio pode ser desligado; a véspera tem a hora, o do dia as horas antes.
+  if (scheduled && !(variant === "preview" ? settings.summary_preview_enabled : settings.summary_today_enabled)) return { skipped: "disabled" };
+  const previewTime = `${String(settings.summary_preview_hour).padStart(2, "0")}:00`;
+  if (scheduled && variant === "preview" && localTimeOf(now, timeZone) < previewTime) return { skipped: "not_due" };
+  const leadMinutes = settings.summary_today_lead_hours * 60;
 
   const [appointments, audiences, sends] = await Promise.all([
     loadDayAppointments(db, clinicId, date, timeZone),
@@ -376,7 +395,7 @@ export async function runDailySummary(
       } else if (last) {
         // A equipe não pode chegar depois de um paciente que não sabia que existia.
         if (items[0].start.getTime() < last.firstScheduledAt.getTime()) due.push({ audience, kind, items, resent: true });
-      } else if (now.getTime() >= computeSummarySendAt(date, windowStarts(audience.agendaIds, kind), items[0].start, timeZone, offDay).getTime()) {
+      } else if (now.getTime() >= computeSummarySendAt(date, windowStarts(audience.agendaIds, kind), items[0].start, timeZone, offDay, leadMinutes).getTime()) {
         due.push({ audience, kind, items, resent: false });
       }
     }
@@ -410,6 +429,7 @@ export async function runDailySummary(
       for (const recipient of recipients) {
         let status: string;
         let messageId: string | null = null;
+        let bodyText: string | undefined;
         if (!template) {
           status = "skipped_no_template";
           totals.not_sent_no_template++;
@@ -422,6 +442,7 @@ export async function runDailySummary(
           }
           status = outcome.sent ? "sent" : "failed";
           messageId = outcome.sent ? outcome.messageId : null;
+          bodyText = outcome.body;
           if (outcome.sent) totals.sent++;
           else totals.failed++;
         }
@@ -433,7 +454,7 @@ export async function runDailySummary(
             contactId: null,
             messageType: MESSAGE_TYPES[kind],
             templateName: template?.name ?? null,
-            body: listText,
+            body: bodyText ?? listText,
             status,
             waMessageId: messageId,
           },

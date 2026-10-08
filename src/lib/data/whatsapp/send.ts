@@ -6,7 +6,11 @@ import type { SendOutcome } from "./messages";
 import { toWaNumber } from "./meta";
 import type { PreparationSender } from "./preparation";
 import type { ReminderSender } from "./reminders";
-import { appointmentParams, cleanParam, clinicLabel, defaultTemplate, fillTemplate, firstName, paramCount, type MessageArticle } from "./templates";
+import type { DailySummarySender } from "./dailySummary";
+import type { OfferSender } from "../waitlist/offers";
+import { getApprovedTemplate } from "./connection";
+import { isCustomerServiceWindowOpen, recordOutboundMessage } from "./messages";
+import { appointmentParams, cleanParam, clinicLabel, defaultTemplate, fillTemplate, firstName, formatAppointmentWhen, formatSummaryDate, offerTypeWord, paramCount, type MessageArticle } from "./templates";
 
 // Envio pelo WhatsApp da clínica (F6.2): o número e o token dela (D3a), com a
 // credencial limitada à clínica, a única que lê o token. As camadas de
@@ -146,5 +150,61 @@ export function preparationSender(sender: ClinicSender): PreparationSender {
       preparation.examName,
       link,
     ]);
+  };
+}
+
+/** Resumo do dia para a equipe (F7): template com a lista numa linha só. */
+export function dailySummarySender(sender: ClinicSender): DailySummarySender {
+  return (summary) => {
+    const kind = summary.kind === "exames" ? "exams" : "consultations";
+    const key = `daily_summary_${kind}${summary.variant === "final" ? "_today" : ""}` as TemplateKey;
+    return sender.template(summary.phone, key, summary.template, [firstName(summary.recipientName), sender.clinicLabel, formatSummaryDate(summary.date), summary.listText]);
+  };
+}
+
+export const OFFER_BUTTONS = { yes: "Sim, quero antecipar", no: "Não, manter horário" } as const;
+
+/**
+ * Oferta de vaga da lista de espera (F7), como no piloto: quem escreveu nas
+ * últimas 24h recebe texto com os botões; os demais, o template aprovado (sem
+ * ele, a pessoa é pulada nessa vaga). A mensagem fica registrada no atendimento.
+ */
+export function waitlistOfferSender(sender: ClinicSender, db: DbClient): OfferSender {
+  return async (offer) => {
+    const when = (at: Date) => formatAppointmentWhen(at, offer.timeZone);
+    const params = [
+      firstName(offer.contact.fullName),
+      sender.clinicLabel,
+      offerTypeWord(offer.serviceCategory, offer.serviceName),
+      offer.patientName,
+      `${when(offer.slotStart)} (${offer.slotIsHomeVisit ? "Atendimento domiciliar" : offer.slotLocationName})`,
+      when(offer.currentStart),
+    ].map(cleanParam);
+    const yes = `waitlist:yes:${offer.offerId}`;
+    const no = `waitlist:no:${offer.offerId}`;
+    const template = await getApprovedTemplate(db, offer.clinicId, "waitlist_offer");
+    let outcome: SendOutcome;
+    if (await isCustomerServiceWindowOpen(db, offer.clinicId, offer.contact.phone)) {
+      const body = fillTemplate(template?.body ?? defaultTemplate("waitlist_offer")!.body, params);
+      outcome = await sender.buttons(offer.contact.phone, body, [
+        { id: yes, title: OFFER_BUTTONS.yes },
+        { id: no, title: OFFER_BUTTONS.no },
+      ]);
+    } else if (template) {
+      outcome = await sender.template(offer.contact.phone, "waitlist_offer", template, params, [yes, no]);
+    } else {
+      return { sent: false, reason: "no_template" };
+    }
+    await recordOutboundMessage(db, offer.clinicId, {
+      phone: offer.contact.phone,
+      contactId: offer.contact.id,
+      appointmentId: offer.appointmentId,
+      messageType: "waitlist_offer",
+      templateName: template?.name ?? null,
+      body: outcome.body ?? null,
+      status: outcome.sent ? "sent" : "failed",
+      waMessageId: outcome.sent ? outcome.messageId : null,
+    });
+    return outcome;
   };
 }

@@ -422,13 +422,13 @@ isOneToOne: false
                   ]
                 },"clinic_settings": {
                   Row: {
-                    "bot_insurance_info": string | null,"bot_notes": string | null,"bot_payment_info": string | null,"brand_color": string | null,"clinic_id": string,"consultation_age_limit_years": number | null,"logo_url": string | null,"message_article": string,"profile": Database["public"]['Enums']["clinic_profile"],"reminder_hour": number,"require_insurance_details": boolean,"timezone": string,"updated_at": string,"website_url": string | null
+                    "bot_insurance_info": string | null,"bot_notes": string | null,"bot_payment_info": string | null,"brand_color": string | null,"clinic_id": string,"consultation_age_limit_years": number | null,"logo_url": string | null,"message_article": string,"profile": Database["public"]['Enums']["clinic_profile"],"reminder_enabled": boolean,"reminder_hour": number,"require_insurance_details": boolean,"summary_preview_enabled": boolean,"summary_preview_hour": number,"summary_today_enabled": boolean,"summary_today_lead_hours": number,"timezone": string,"updated_at": string,"website_url": string | null
                   }
                   Insert: {
-                    "bot_insurance_info"?: string | null,"bot_notes"?: string | null,"bot_payment_info"?: string | null,"brand_color"?: string | null,"clinic_id": string,"consultation_age_limit_years"?: number | null,"logo_url"?: string | null,"message_article"?: string,"profile"?: Database["public"]['Enums']["clinic_profile"],"reminder_hour"?: number,"require_insurance_details"?: boolean,"timezone"?: string,"updated_at"?: string,"website_url"?: string | null
+                    "bot_insurance_info"?: string | null,"bot_notes"?: string | null,"bot_payment_info"?: string | null,"brand_color"?: string | null,"clinic_id": string,"consultation_age_limit_years"?: number | null,"logo_url"?: string | null,"message_article"?: string,"profile"?: Database["public"]['Enums']["clinic_profile"],"reminder_enabled"?: boolean,"reminder_hour"?: number,"require_insurance_details"?: boolean,"summary_preview_enabled"?: boolean,"summary_preview_hour"?: number,"summary_today_enabled"?: boolean,"summary_today_lead_hours"?: number,"timezone"?: string,"updated_at"?: string,"website_url"?: string | null
                   }
                   Update: {
-                    "bot_insurance_info"?: string | null,"bot_notes"?: string | null,"bot_payment_info"?: string | null,"brand_color"?: string | null,"clinic_id"?: string,"consultation_age_limit_years"?: number | null,"logo_url"?: string | null,"message_article"?: string,"profile"?: Database["public"]['Enums']["clinic_profile"],"reminder_hour"?: number,"require_insurance_details"?: boolean,"timezone"?: string,"updated_at"?: string,"website_url"?: string | null
+                    "bot_insurance_info"?: string | null,"bot_notes"?: string | null,"bot_payment_info"?: string | null,"brand_color"?: string | null,"clinic_id"?: string,"consultation_age_limit_years"?: number | null,"logo_url"?: string | null,"message_article"?: string,"profile"?: Database["public"]['Enums']["clinic_profile"],"reminder_enabled"?: boolean,"reminder_hour"?: number,"require_insurance_details"?: boolean,"summary_preview_enabled"?: boolean,"summary_preview_hour"?: number,"summary_today_enabled"?: boolean,"summary_today_lead_hours"?: number,"timezone"?: string,"updated_at"?: string,"website_url"?: string | null
                   }
                   Relationships: [
                     {
@@ -1116,6 +1116,9 @@ isOneToOne: false
                            },
 "get_whatsapp_access_token":
 { Args: Record<PropertyKey, never>; Returns: string
+                           },
+"list_active_clinics":
+{ Args: Record<PropertyKey, never>; Returns: string[]
                            },
 "list_clinic_member_emails":
 { Args: { "p_clinic_id": string }; Returns: {

@@ -4,9 +4,9 @@ import { updateClinicSettings } from "../../../../lib/data/config/clinic";
 import { runFormAction } from "../../../../lib/data/formAction";
 import { formChecked, formInt } from "../../../../lib/forms";
 
-// Lembrete ao paciente na véspera (F4.4b; item "Lembrete automático", D11):
-// enviar ou não (F7) e a hora, em horas cheias das 7h às 20h, no fuso da
-// clínica (cliente, 05 e 07/out/2026).
+// Resumo do dia para a equipe (F7; item "Envio do resumo do dia", D11;
+// cliente, 07/out/2026): na véspera (enviar ou não e a hora, 7h às 20h) e no
+// dia (enviar ou não e quantas horas antes da primeira agenda, 1 a 4).
 export const POST: APIRoute = async (context) => {
   const { request, cookies, locals } = context;
   const form = await request.formData().catch(() => null);
@@ -17,10 +17,12 @@ export const POST: APIRoute = async (context) => {
     context,
     async () => {
       await updateClinicSettings(db, locals.clinic!.clinicId, {
-        reminderEnabled: formChecked(form, "reminder_enabled"),
-        reminderHour: formInt(form, "reminder_hour"),
+        summaryPreviewEnabled: formChecked(form, "summary_preview_enabled"),
+        summaryPreviewHour: formInt(form, "summary_preview_hour"),
+        summaryTodayEnabled: formChecked(form, "summary_today_enabled"),
+        summaryTodayLeadHours: formInt(form, "summary_today_lead_hours"),
       });
-      return { redirectTo: page, message: "Lembrete salvo." };
+      return { redirectTo: page, message: "Envios do resumo salvos." };
     },
     page,
   );

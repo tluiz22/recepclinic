@@ -202,3 +202,16 @@ do celular; cliente, 06/out/2026). Nada do app ou do número do piloto.
    Administrador da clínica): mudar as boas-vindas e mandar "oi" para o número de testes; propor um
    texto para a Confirmação. Como Suporte, na mesma aba, **Aprovar e enviar à Meta** (ou Recusar
    com o motivo); aprovada pela Meta, a Confirmação passa a sair com o texto novo.
+
+## K. Envios automáticos (F7)
+
+1. **Banco**: migração `20261007170000_envios_automaticos` (opções da clínica e as rotinas no
+   agendador). O endereço e o CRON_SECRET já estão no cofre (parte G).
+2. **Templates**: Configurações › WhatsApp › *Templates* › **Criar na Meta** cria os 5 novos
+   (resumo do dia e oferta de vaga).
+3. **Opções** (Configurações › WhatsApp): *Lembrete ao paciente* (enviar ou não e o horário da
+   véspera) e *Resumo do dia* (véspera e no dia). Para testar o lembrete, ponha um horário logo à
+   frente e tenha um atendimento amanhã para o seu número; para o resumo, cadastre o seu número em
+   "Outros contatos" (item "Envio do resumo do dia").
+4. **Conferir**: no Resumo do Dia › *Envios*, as execuções do lembrete e do resumo; as mensagens
+   chegam quando os templates estiverem aprovados.

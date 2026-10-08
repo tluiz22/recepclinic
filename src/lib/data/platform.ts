@@ -59,6 +59,13 @@ export async function listClinicsWithIdleConversations(before: Date, env: Servic
   return (result.data ?? []) as string[];
 }
 
+/** Rotinas do agendador (F7): clínicas ativas; cada uma roda depois com a própria credencial. */
+export async function listActiveClinics(env: ServiceEnv = platformEnv()): Promise<string[]> {
+  const result = await platformClient(env).rpc("list_active_clinics");
+  if (result.error) throw new PlatformLookupError("clínicas ativas", result.error);
+  return (result.data ?? []) as string[];
+}
+
 /** /agendar/[token]: clínica do link de agendamento (vencido ou usado também resolve). */
 export async function resolveClinicByBookingLink(
   linkId: string,

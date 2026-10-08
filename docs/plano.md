@@ -1061,6 +1061,37 @@ O código antigo do bot e do webhook sai conforme cada parte o substitui.
 ativas, cada uma com seu fuso, horário e contatos; falha de uma clínica não para as outras;
 registro por clínica.
 
+**Detalhada com o cliente em 07/out:** rotinas pelo agendador do Supabase (`pg_cron`, o mesmo da
+F6.3), cada clínica com a própria credencial: **lembrete** de hora em hora (o da véspera na hora
+da clínica; o reenvio automático das 7h às 20h), **resumo do dia** e **lista de espera** a cada 5
+minutos, **séries sem fim** uma vez por dia (pendência da F4.6). **Templates novos aprovados
+(07/out):** 4 do resumo do dia ("Olá, {nome}! Consultas {da clínica} para amanhã, {data}: {lista}
+Mensagem automática do RecepClinic."; exames igual; "para hoje" no do dia) e o da oferta de vaga
+("Olá, {nome}! Aqui é {da clínica}. Abriu uma vaga de {consulta} para {paciente}: {data e local}. É
+antes do horário marcado ({horário atual}). Quer antecipar? Responda em até 60 minutos." com os
+botões Sim, quero antecipar · Não, manter horário; texto com botões na janela de 24h, como no
+piloto). Sai o código antigo das rotinas do piloto.
+**Mudança nos envios (cliente, 07/out), em Configurações › WhatsApp:**
+(1) **Lembrete ao paciente na véspera** com a opção de enviar ou não e o horário, explicando que é
+o lembrete do dia anterior ao atendimento (horas cheias das 7h às 20h, **padrão 18:00**; sem
+enviar, também não há o reenvio automático; os botões da Agenda continuam);
+(2) **Resumo da equipe na véspera**: enviar ou não e o horário (7h às 20h, padrão 18:00);
+(3) **Resumo da equipe no dia**: enviar ou não e quantas horas antes da primeira agenda do dia
+(1 a 4 h, padrão 1 h; nunca antes da 0h do próprio dia; dia sem agenda, 6h30, como hoje).
+**Implementada em 07/out (aguarda a validação do cliente).** Rotas `/api/cron/lembretes`,
+`resumo-do-dia`, `lista-de-espera` e `series` (ajudante `src/lib/cron/route.ts`: o CRON_SECRET,
+as clínicas ativas pela plataforma e, em cada uma, a credencial e o WhatsApp dela; erro numa não
+para as outras), agendadas no `pg_cron` pela migração `20261007170000` (com as opções novas em
+`clinic_settings`; o padrão antigo de 14h passou para 18h). Quem envia em `whatsapp/send.ts`
+(resumo do dia; oferta de vaga com texto e botões na janela de 24h, senão o template, registrada
+no atendimento). As opções nas telas Configurações › WhatsApp (Lembrete ao paciente; Resumo do
+dia, com o horário de cada dia da semana já com as horas escolhidas) e os 5 templates novos no
+"Criar na Meta" e na aba Mensagens. **Saiu o código antigo do piloto** das rotinas e do bot
+(`src/lib/whatsapp`, as três rotas antigas de `/api/cron`, a lista de espera, os envios e a trilha
+antigos e `supabase/service.ts`): a lista do código herdado com a service role ficou vazia (D1).
+Ficam os testes das regras do piloto da F1 (`src/lib/scheduling`, `patientRegistration`), sem uso
+no sistema, como rede de segurança. 1 teste unitário e 5 de banco novos.
+
 ## F8 — Conexão self-service na Meta
 
 **Escopo:** Embedded Signup com coexistência (o Administrador conecta o número pela tela); criação

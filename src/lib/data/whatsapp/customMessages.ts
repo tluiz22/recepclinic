@@ -27,6 +27,11 @@ export const TEMPLATE_MARKERS: Partial<Record<TemplateKey, string[]>> = {
   cancellation: APPOINTMENT_MARKERS.slice(0, 5),
   clinic_cancellation: ["nome", "clinica", "paciente", "servico", "data", "link"],
   exam_preparation: ["nome", "clinica", "exame", "link"],
+  daily_summary_consultations: ["nome", "clinica", "data", "lista"],
+  daily_summary_exams: ["nome", "clinica", "data", "lista"],
+  daily_summary_consultations_today: ["nome", "clinica", "data", "lista"],
+  daily_summary_exams_today: ["nome", "clinica", "data", "lista"],
+  waitlist_offer: ["nome", "clinica", "tipo", "paciente", "vaga", "atual"],
 };
 
 export const MARKER_LABELS: Record<string, string> = {
@@ -39,6 +44,10 @@ export const MARKER_LABELS: Record<string, string> = {
   link: "link",
   exame: "nome do exame",
   atendimento: '"a consulta", "o retorno", "o exame…"',
+  lista: "lista dos atendimentos (uma linha)",
+  tipo: '"consulta", "retorno" ou "exame…"',
+  vaga: "dia, hora e local da vaga",
+  atual: "dia e hora marcados hoje",
 };
 
 /** Texto do template com marcadores ({nome}…) para editar. */

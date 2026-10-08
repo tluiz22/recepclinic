@@ -133,7 +133,7 @@ describe("configuração geral (clinic_settings)", () => {
     expect(data).toMatchObject({
       profile: "mixed",
       timezone: "America/Fortaleza",
-      reminder_hour: 14,
+      reminder_hour: 18,
       consultation_age_limit_years: null,
       require_insurance_details: false,
     });

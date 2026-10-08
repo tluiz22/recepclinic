@@ -41,6 +41,8 @@ const appt = {} as Record<string, string>;
 
 beforeAll(async () => {
   fixture = await setupAgendaClinic("Clínica do teste do resumo", "849777500");
+  // O alerta de lembrete que não rodou conta com o lembrete às 14h (o padrão era esse até a F7).
+  await adminClient().from("clinic_settings").update({ reminder_hour: 14 }).eq("clinic_id", fixture.clinicId);
   ({ clinicId, admin, reception, ids } = fixture);
   bot = clinicServiceClient(clinicId) as unknown as DbClient;
   await adminClient().from("whatsapp_connections").insert({ clinic_id: clinicId, phone_number_id: `pn-resumo-${Date.now()}`, waba_id: "waba", status: "connected" });
