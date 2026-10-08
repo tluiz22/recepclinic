@@ -1,0 +1,27 @@
+---
+// Prévia de uma mensagem como o paciente vê no WhatsApp (F6.6): balão verde,
+// quebras de linha, *negrito* e os botões ou as opções da lista embaixo.
+interface Props {
+  text: string;
+  /** Botões de resposta (ex.: lembrete) ou opções da lista (ex.: menu). */
+  buttons?: string[];
+}
+
+const { text, buttons = [] } = Astro.props;
+const escape = (value: string) => value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+// *negrito* do WhatsApp; o resto é texto puro.
+const html = escape(text).replace(/\*([^*\n]+)\*/g, "<strong>$1</strong>");
+---
+
+<div class="max-w-md">
+  <div class="whitespace-pre-line rounded-lg rounded-tl-none bg-[#dcf8c6] px-3 py-2 text-sm text-slate-900 shadow-sm" set:html={html} />
+  {
+    buttons.length > 0 && (
+      <div class="mt-1 flex flex-col gap-1">
+        {buttons.map((label) => (
+          <span class="rounded-lg bg-white px-3 py-1.5 text-center text-sm font-medium text-sky-700 shadow-sm">{label}</span>
+        ))}
+      </div>
+    )
+  }
+</div>

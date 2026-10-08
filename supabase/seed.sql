@@ -293,6 +293,10 @@ begin
     (c_a, 'cancellation', 'recepclinic_cancelamento', 'approved'),
     (c_a, 'waitlist_offer', 'recepclinic_oferta_vaga', 'pending');
 
+  -- Mensagem do bot com texto próprio (F6.6; só vale com o item "Mensagens personalizadas").
+  insert into public.bot_messages (clinic_id, message_key, body)
+    values (c_a, 'welcome', 'Olá! 👋 Aqui é {clinica}. Que bom falar com você!');
+
   insert into public.conversation_state (clinic_id, contact_phone, contact_id, state, context)
     values (c_a, '+5584988880001', ct_maria, 'MENU', '{}');
   insert into public.conversation_state (clinic_id, contact_phone, contact_id, state, human_handoff)

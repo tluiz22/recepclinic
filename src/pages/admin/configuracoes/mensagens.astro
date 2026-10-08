@@ -1,0 +1,286 @@
+---
+// Configurações › Mensagens (F6.6; D3b revista, cliente 05 e 07/out/2026):
+// cada mensagem num balão do WhatsApp, preenchida com os dados da clínica.
+// Com o item "Mensagens personalizadas", o Administrador da clínica edita a
+// conversa do bot (vale na hora) e propõe o texto dos avisos (templates); o
+// Suporte revisa e envia à Meta como versão nova.
+import AdminLayout from "../../../layouts/AdminLayout.astro";
+import Badge from "../../../components/admin/Badge.astro";
+import Card from "../../../components/admin/Card.astro";
+import ConfiguracoesTabs from "../../../components/admin/ConfiguracoesTabs.astro";
+import FlashMessage from "../../../components/admin/FlashMessage.astro";
+import WhatsAppBubble from "../../../components/admin/WhatsAppBubble.astro";
+import { HINT, INPUT, PRIMARY_BUTTON, SECONDARY_BUTTON } from "../../../components/admin/fieldStyles";
+import { addDays, todayIn, toInstant, weekdayOf } from "../../../lib/clinicTime";
+import { createUserClient } from "../../../lib/data/clients";
+import { listAgendas } from "../../../lib/data/config/agendas";
+import { getClinicSettings } from "../../../lib/data/config/clinic";
+import { listLocations } from "../../../lib/data/config/locations";
+import { listProfessionals } from "../../../lib/data/config/professionals";
+import { listServices } from "../../../lib/data/config/services";
+import { listWhatsappTemplates, type TemplateKey, type WhatsappTemplate } from "../../../lib/data/whatsapp/connection";
+import {
+  BOT_MESSAGES,
+  listBotMessages,
+  MARKER_LABELS,
+  renderMarkers,
+  TEMPLATE_MARKERS,
+  templateToMarkers,
+} from "../../../lib/data/whatsapp/customMessages";
+import * as bot from "../../../lib/data/whatsapp/bot/texts";
+import { appointmentPlace, clinicLabel, DEFAULT_TEMPLATES, fillTemplate, formatAppointmentWhen, paramCount, serviceLine } from "../../../lib/data/whatsapp/templates";
+import { REMINDER_BUTTONS } from "../../../lib/data/whatsapp/reminders";
+
+const clinic = Astro.locals.clinic!;
+const db = createUserClient(Astro.request, Astro.cookies);
+const botOn = clinic.features.includes("whatsapp_bot");
+const customOn = clinic.features.includes("custom_messages");
+const isAdmin = clinic.roles.includes("admin");
+const canEdit = customOn && isAdmin;
+const isSupport = clinic.isPlatformStaff;
+
+const [settings, templates, customTexts, services, agendas, professionals, locations] = await Promise.all([
+  getClinicSettings(db, clinic.clinicId),
+  listWhatsappTemplates(db, clinic.clinicId),
+  listBotMessages(db, clinic.clinicId),
+  listServices(db, clinic.clinicId),
+  listAgendas(db, clinic.clinicId),
+  listProfessionals(db, clinic.clinicId),
+  listLocations(db, clinic.clinicId),
+]);
+
+// Exemplo com os dados da clínica: o primeiro serviço de consulta, o
+// profissional da agenda dele, o primeiro consultório e a próxima segunda às 08:00.
+const label = clinicLabel(settings.name, settings.messageArticle);
+const consultation = services.find((s) => s.category === "consultation") ?? null;
+const exam = services.find((s) => s.category === "exam") ?? null;
+const agenda = agendas.find((a) => consultation?.agendaIds.includes(a.id)) ?? null;
+const professional = professionals.find((p) => p.id === agenda?.professionalId)?.displayName ?? null;
+const office = locations.find((l) => l.type === "clinic") ?? null;
+let monday = addDays(todayIn(settings.timezone), 1);
+while (weekdayOf(monday) !== 1) monday = addDays(monday, 1);
+const when = formatAppointmentWhen(toInstant(monday, "08:00", settings.timezone), settings.timezone);
+const link = `${Astro.url.origin}/agendar/exemplo`;
+const example: Record<string, string> = {
+  nome: "Maria",
+  clinica: label,
+  servico: serviceLine(consultation?.name ?? "Consulta", professional),
+  paciente: "João Silva",
+  data: when,
+  local: appointmentPlace({ locationName: office?.name ?? "Consultório", isHomeVisit: false, address: office?.address ?? null }),
+  link,
+  exame: exam?.name ?? "Espirometria",
+  atendimento: "a consulta",
+};
+
+// Como no envio: o cancelamento pela clínica leva só o nome do serviço; o preparo, o link da página do preparo.
+const exampleFor = (key: TemplateKey): Record<string, string> =>
+  key === "clinic_cancellation"
+    ? { ...example, servico: consultation?.name ?? "Consulta", paciente: "João" }
+    : key === "exam_preparation"
+      ? { ...example, link: `${Astro.url.origin}/preparo/${exam?.id ?? "exemplo"}` }
+      : example;
+
+const TEMPLATE_LABELS: Record<string, string> = {
+  confirmation: "Confirmação",
+  reschedule: "Remarcação",
+  cancellation: "Cancelamento",
+  clinic_cancellation: "Cancelamento pela clínica (com link)",
+  reminder: "Lembrete",
+  exam_preparation: "Preparo do exame",
+};
+const STATUS = {
+  approved: { label: "Aprovado", variant: "success" },
+  pending: { label: "Em análise na Meta", variant: "warning" },
+  rejected: { label: "Recusado pela Meta", variant: "danger" },
+  disabled: { label: "Desativado", variant: "neutral" },
+} as const;
+const REMINDER_BUTTON_LABELS = { confirm: "Confirmar presença", reschedule: "Remarcar", cancel: "Cancelar" } as const;
+
+const visibleTemplates = DEFAULT_TEMPLATES.filter((t) => t.key !== "exam_preparation" || clinic.features.includes("exams"));
+const rows = visibleTemplates.map((standard) => {
+  const versions = templates.filter((t) => t.key === standard.key);
+  const approved = versions.filter((t) => t.stage === "meta" && t.status === "approved").sort((a, b) => b.version - a.version)[0] ?? null;
+  const latest: WhatsappTemplate | null = [...versions].sort((a, b) => b.version - a.version)[0] ?? null;
+  const inUseBody = approved?.body ?? standard.body;
+  const markers = TEMPLATE_MARKERS[standard.key as TemplateKey] ?? [];
+  const params = markers.map((m) => exampleFor(standard.key as TemplateKey)[m]);
+  return {
+    key: standard.key as TemplateKey,
+    label: TEMPLATE_LABELS[standard.key] ?? standard.key,
+    approved,
+    custom: !!approved && approved.version > 1,
+    // Proposta ou versão nova ainda não em uso (aguardando o Suporte, recusada ou na Meta).
+    pendingVersion: latest && latest.version > 1 && latest !== approved && latest.status !== "disabled" ? latest : null,
+    preview: fillTemplate(inUseBody, params.slice(0, paramCount(inUseBody))),
+    editText: templateToMarkers(standard.key as TemplateKey, inUseBody),
+    markers,
+    buttons: standard.key === "reminder" ? REMINDER_BUTTONS.map((b) => REMINDER_BUTTON_LABELS[b]) : [],
+  };
+});
+
+const botDefaults: Record<string, string> = {
+  welcome: bot.welcome(label),
+  menu: bot.MENU_BODY,
+  not_understood: bot.notUnderstood(),
+  handoff: bot.HANDOFF,
+  booking_link: bot.bookingLink(example.servico, example.paciente, link),
+  cancel_done: bot.cancelDone("a consulta", "a", example.paciente, when, "consultation"),
+  presence_confirmed: bot.presenceConfirmed(example.paciente, when, false),
+  idle_closed: bot.IDLE_CLOSED,
+};
+const botRows = BOT_MESSAGES.map((def) => {
+  const custom = customTexts.get(def.key) ?? null;
+  return {
+    ...def,
+    custom,
+    preview: custom ? renderMarkers(custom, example) : botDefaults[def.key],
+    buttons: def.key === "menu" ? ["1. Consultas", "2. Exames", "3. Informações"] : [],
+  };
+});
+const action = "/api/admin/configuracoes/mensagens";
+const markerHint = (markers: string[]) => markers.map((m) => `{${m}} = ${MARKER_LABELS[m]}`).join(" · ");
+---
+
+<AdminLayout title="Mensagens">
+  <h1 class="text-2xl font-bold text-slate-900">Configurações</h1>
+  <ConfiguracoesTabs current="mensagens" />
+  <FlashMessage />
+
+  <p class="mt-4 max-w-3xl text-sm text-slate-600">
+    Como o paciente recebe cada mensagem, com os dados da clínica (paciente e data de exemplo).
+    {
+      customOn
+        ? isAdmin
+          ? " Você pode personalizar os textos: a conversa do bot vale na hora; os avisos passam pela revisão do Suporte e pela aprovação da Meta."
+          : ""
+        : " Para usar textos próprios, fale com o suporte sobre o item \"Mensagens personalizadas\"."
+    }
+  </p>
+
+  <h2 class="mt-6 text-lg font-semibold text-slate-900">Avisos (aprovados pela Meta)</h2>
+  <div class="mt-2 flex max-w-3xl flex-col gap-4">
+    {
+      rows.map((row) => (
+        <Card>
+          <div class="flex flex-wrap items-center gap-2">
+            <h3 class="font-semibold text-slate-900">{row.label}</h3>
+            {row.approved ? <Badge variant="success">Em uso</Badge> : <Badge variant="warning">Ainda não aprovado</Badge>}
+            {row.custom && <Badge variant="accent">Texto próprio</Badge>}
+          </div>
+          <div class="mt-3">
+            <WhatsAppBubble text={row.preview} buttons={row.buttons} />
+          </div>
+
+          {row.pendingVersion && (
+            <div class="mt-3 rounded-md border border-slate-200 bg-slate-50 p-3 text-sm">
+              {row.pendingVersion.stage === "proposed" && <p class="font-medium text-slate-800">Proposta aguardando a revisão do Suporte</p>}
+              {row.pendingVersion.stage === "declined" && (
+                <p class="font-medium text-red-700">Proposta recusada{row.pendingVersion.supportNote ? `: ${row.pendingVersion.supportNote}` : ""}</p>
+              )}
+              {row.pendingVersion.stage === "meta" && (
+                <p class="font-medium text-slate-800">
+                  Versão nova: <Badge variant={STATUS[row.pendingVersion.status].variant}>{STATUS[row.pendingVersion.status].label}</Badge>
+                  {row.pendingVersion.status === "pending" && <span class="text-slate-600"> · segue o texto atual até a aprovação</span>}
+                  {row.pendingVersion.rejectionReason && <span class="text-red-700"> · motivo: {row.pendingVersion.rejectionReason}</span>}
+                </p>
+              )}
+              {row.pendingVersion.body && row.pendingVersion.stage !== "meta" && (
+                <div class="mt-2">
+                  <WhatsAppBubble text={fillTemplate(row.pendingVersion.body, row.markers.map((m) => exampleFor(row.key)[m]))} buttons={row.buttons} />
+                </div>
+              )}
+              {isSupport && row.pendingVersion.stage === "proposed" && (
+                <div class="mt-3 flex flex-wrap items-end gap-3">
+                  <form method="POST" action={action}>
+                    <input type="hidden" name="acao" value="suporte_aprovar" />
+                    <input type="hidden" name="id" value={row.pendingVersion.id} />
+                    <button type="submit" class={PRIMARY_BUTTON}>Aprovar e enviar à Meta</button>
+                  </form>
+                  <form method="POST" action={action} class="flex flex-wrap items-end gap-2">
+                    <input type="hidden" name="acao" value="suporte_recusar" />
+                    <input type="hidden" name="id" value={row.pendingVersion.id} />
+                    <input name="note" placeholder="Motivo para a clínica" required class={`${INPUT} w-64`} />
+                    <button type="submit" class={SECONDARY_BUTTON}>Recusar</button>
+                  </form>
+                </div>
+              )}
+              {canEdit && row.pendingVersion.stage === "proposed" && (
+                <form method="POST" action={action} class="mt-2">
+                  <input type="hidden" name="acao" value="template_retirar" />
+                  <input type="hidden" name="key" value={row.key} />
+                  <button type="submit" class="text-sm text-sky-700 hover:underline">Retirar a proposta</button>
+                </form>
+              )}
+            </div>
+          )}
+
+          {canEdit && (
+            <details class="mt-3">
+              <summary class="cursor-pointer text-sm font-medium text-sky-700">Personalizar o texto</summary>
+              <form method="POST" action={action} class="mt-2 flex flex-col gap-2">
+                <input type="hidden" name="acao" value="template_propor" />
+                <input type="hidden" name="key" value={row.key} />
+                <textarea name="text" rows="9" class={INPUT}>{row.editText}</textarea>
+                <p class={HINT}>Use todos estes marcadores, uma vez cada, nesta ordem: {markerHint(row.markers)}. *texto* fica em negrito.</p>
+                <button type="submit" class={`${PRIMARY_BUTTON} self-start`}>Enviar para revisão</button>
+              </form>
+              {row.custom && (
+                <form method="POST" action={action} class="mt-2">
+                  <input type="hidden" name="acao" value="template_padrao" />
+                  <input type="hidden" name="key" value={row.key} />
+                  <button type="submit" class="text-sm text-sky-700 hover:underline">Voltar ao texto padrão</button>
+                </form>
+              )}
+            </details>
+          )}
+        </Card>
+      ))
+    }
+  </div>
+
+  {
+    botOn && (
+      <>
+        <h2 class="mt-8 text-lg font-semibold text-slate-900">Conversa do bot</h2>
+        <div class="mt-2 flex max-w-3xl flex-col gap-4">
+          {botRows.map((row) => (
+            <Card>
+              <div class="flex flex-wrap items-center gap-2">
+                <h3 class="font-semibold text-slate-900">{row.label}</h3>
+                {row.custom && <Badge variant="accent">Texto próprio</Badge>}
+              </div>
+              <div class="mt-3">
+                <WhatsAppBubble text={row.preview} buttons={row.buttons} />
+              </div>
+              {canEdit && (
+                <details class="mt-3">
+                  <summary class="cursor-pointer text-sm font-medium text-sky-700">Personalizar o texto</summary>
+                  <form method="POST" action={action} class="mt-2 flex flex-col gap-2">
+                    <input type="hidden" name="acao" value="conversa_salvar" />
+                    <input type="hidden" name="key" value={row.key} />
+                    <textarea name="text" rows="5" class={INPUT}>{row.custom ?? row.defaultText}</textarea>
+                    {row.markers.length > 0 && (
+                      <p class={HINT}>
+                        Marcadores: {markerHint(row.markers)}
+                        {row.required.length > 0 && ` (obrigatório: ${row.required.map((m) => `{${m}}`).join(", ")})`}.
+                      </p>
+                    )}
+                    <button type="submit" class={`${PRIMARY_BUTTON} self-start`}>Salvar</button>
+                  </form>
+                  {row.custom && (
+                    <form method="POST" action={action} class="mt-2">
+                      <input type="hidden" name="acao" value="conversa_padrao" />
+                      <input type="hidden" name="key" value={row.key} />
+                      <button type="submit" class="text-sm text-sky-700 hover:underline">Voltar ao texto padrão</button>
+                    </form>
+                  )}
+                </details>
+              )}
+            </Card>
+          ))}
+        </div>
+      </>
+    )
+  }
+</AdminLayout>

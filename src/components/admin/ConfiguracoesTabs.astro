@@ -7,7 +7,7 @@ import { loadSetupStatus } from "../../lib/data/config/setup";
 // Abas de Configurações (F4.3 e F4.4b). Convênios só com o item liberado (D11).
 // Jornada de configuração (F6.3b): o guia completo na aba Clínica; nas
 // outras, só o aviso de que há pendências.
-type TabId = "clinica" | "profissionais" | "locais" | "agendas" | "servicos" | "horarios" | "feriados" | "convenios" | "equipe" | "whatsapp";
+type TabId = "clinica" | "profissionais" | "locais" | "agendas" | "servicos" | "horarios" | "feriados" | "convenios" | "equipe" | "whatsapp" | "mensagens";
 
 interface Props {
   current: TabId;
@@ -29,6 +29,7 @@ const tabs: { id: TabId; label: string; href: string; show?: boolean }[] = [
   { id: "convenios", label: "Convênios", href: "/admin/configuracoes/convenios", show: features.includes("insurance") },
   { id: "equipe", label: "Equipe", href: "/admin/configuracoes/equipe" },
   { id: "whatsapp", label: "WhatsApp", href: "/admin/configuracoes/whatsapp" },
+  { id: "mensagens", label: "Mensagens", href: "/admin/configuracoes/mensagens" },
 ];
 ---
 

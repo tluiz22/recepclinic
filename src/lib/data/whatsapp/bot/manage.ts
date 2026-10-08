@@ -11,7 +11,7 @@ import { parseReminderTap, recordReminderTap } from "../reminders";
 import { formatAppointmentWhen } from "../templates";
 import { startBooking, startReturn } from "./booking";
 import { servicesOf } from "./catalog";
-import { end, go, say, sendButtons, sendList, step, type Bot } from "./engine";
+import { end, go, say, sendButtons, sendList, step, textFor, type Bot } from "./engine";
 import { formatBirthdate, parseBirthdate, pick, yesNo, type Selection } from "./input";
 import { showMenu } from "./menus";
 import * as t from "./texts";
@@ -212,7 +212,7 @@ async function handleSelect(b: Bot, selection: Selection): Promise<void> {
 
   const choice = pick(selection, candidates, (c) => `appointment_${c.id}`);
   if (!choice) {
-    await say(b, "bot_not_understood", t.notUnderstood());
+    await say(b, "bot_not_understood", textFor(b, "not_understood", t.notUnderstood()));
     return sendChoice(b, ctx, candidates);
   }
   await proceed(b, ctx, choice.id);
@@ -268,7 +268,15 @@ async function handleCancelConfirm(b: Bot, selection: Selection): Promise<void> 
       await say(b, "bot_appointment_inactive", t.APPOINTMENT_INACTIVE);
       return end(b, "blocked", { reason: "inactive" });
     }
-    await say(b, "bot_cancel_done", t.cancelDone(phrase, ending, appointment.patientName, when(b, appointment), groupOf(appointment)));
+    await say(
+      b,
+      "bot_cancel_done",
+      textFor(b, "cancel_done", t.cancelDone(phrase, ending, appointment.patientName, when(b, appointment), groupOf(appointment)), {
+        atendimento: phrase,
+        paciente: appointment.patientName,
+        data: when(b, appointment),
+      }),
+    );
     return end(b, "canceled", { appointment_id: appointment.id });
   }
   // "Não" pelo lembrete, sem presença confirmada: pergunta se confirma (presença é um ato explícito).
@@ -306,7 +314,13 @@ async function confirmPresence(b: Bot, appointmentId: string): Promise<void> {
   const { appointment } = result;
   const whenLabel = formatAppointmentWhen(appointment.scheduledAt, b.clinic.timeZone);
   if (!result.confirmedNow) return say(b, "bot_presence_already_confirmed", t.presenceAlreadyConfirmed(appointment.patientName, whenLabel));
-  await say(b, "bot_presence_confirmed", t.presenceConfirmed(appointment.patientName, whenLabel, appointment.serviceCategory === "exam"));
+  const isExam = appointment.serviceCategory === "exam";
+  const custom = textFor(b, "presence_confirmed", "", { paciente: appointment.patientName, data: whenLabel });
+  // Texto próprio: o lembrete do preparo do exame continua indo junto.
+  const body = custom
+    ? `${custom}${isExam ? "\n\nLembre-se de seguir as orientações de preparo do exame que enviamos anteriormente." : ""}`
+    : t.presenceConfirmed(appointment.patientName, whenLabel, isExam);
+  await say(b, "bot_presence_confirmed", body);
 }
 
 // ---------------------------------------------------------------------------
@@ -457,7 +471,7 @@ async function handleWaitlistLeave(b: Bot, selection: Selection): Promise<void> 
   const leave = selection.id === t.WAITLIST_IDS.leave || text === "1" || text.startsWith("sair");
   const stay = selection.id === t.WAITLIST_IDS.stay || text === "2" || text.startsWith("continuar");
   if (!leave && !stay) {
-    await say(b, "bot_not_understood", t.notUnderstood());
+    await say(b, "bot_not_understood", textFor(b, "not_understood", t.notUnderstood()));
     return;
   }
   const appointment = ctx.pendingId ? await loadActive(b, ctx.pendingId) : null;
@@ -488,7 +502,7 @@ async function handleBookChoice(b: Bot, selection: Selection): Promise<void> {
   if (selection.id === t.WAITLIST_IDS.bookConsultation) return startBooking(b, "consultation", { joinWaitlist: true });
   if (selection.id === t.WAITLIST_IDS.bookReturn) return startReturn(b, { joinWaitlist: true });
   if (selection.id === t.WAITLIST_IDS.bookExam) return startBooking(b, "exam", { joinWaitlist: true });
-  await say(b, "bot_not_understood", t.notUnderstood());
+  await say(b, "bot_not_understood", textFor(b, "not_understood", t.notUnderstood()));
   await offerBooking(b, ctx);
 }
 
@@ -541,7 +555,7 @@ export async function handleOfferTap(b: Bot, tap: NonNullable<ReturnType<typeof 
 // ---------------------------------------------------------------------------
 
 export async function handoff(b: Bot): Promise<void> {
-  await say(b, "bot_handoff", t.HANDOFF);
+  await say(b, "bot_handoff", textFor(b, "handoff", t.HANDOFF));
   await pauseForHuman(b.db, b.clinicId, b.phone, { contactId: b.convo.contactId, reason: "requested" }, b.now);
 }
 

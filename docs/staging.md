@@ -192,3 +192,13 @@ do celular; cliente, 06/out/2026). Nada do app ou do número do piloto.
 3. **Conferir**: com um atendimento futuro para o seu número, "Cancelar selecionados" na Agenda (ou
    "Bloquear e cancelar"): com o template aprovado, chega a mensagem com o link e a tela volta para
    a Agenda; sem ele, a tela "Avisar" mostra o paciente com o motivo e o botão do WhatsApp.
+
+## J. Aba Mensagens (F6.6)
+
+1. **Banco**: migração `20261007160000_mensagens` (item "Mensagens personalizadas", versões dos
+   templates e textos do bot).
+2. **Prévia**: Configurações › **Mensagens** mostra cada aviso e as mensagens do bot no balão.
+3. **Personalizar** (libere "Mensagens personalizadas" na matriz da clínica de teste; entrar como
+   Administrador da clínica): mudar as boas-vindas e mandar "oi" para o número de testes; propor um
+   texto para a Confirmação. Como Suporte, na mesma aba, **Aprovar e enviar à Meta** (ou Recusar
+   com o motivo); aprovada pela Meta, a Confirmação passa a sair com o texto novo.

@@ -195,6 +195,14 @@ export type WhatsappTemplate = {
   metaTemplateId: string | null;
   /** Motivo da recusa pela Meta (F6.2). */
   rejectionReason: string | null;
+  /** 1 = a padrão do RecepClinic; maior = texto próprio da clínica (F6.6). */
+  version: number;
+  /** Texto próprio da versão ({{1}}, {{2}}…); null = o padrão. */
+  body: string | null;
+  /** proposed: aguardando o Suporte; declined: o Suporte recusou; meta: enviada (situação em `status`). */
+  stage: "proposed" | "declined" | "meta";
+  proposedAt: Date | null;
+  supportNote: string | null;
 };
 
 export type WhatsappTemplateInput = {
@@ -206,7 +214,7 @@ export type WhatsappTemplateInput = {
 };
 
 const TEMPLATE_STATUSES: TemplateStatus[] = ["pending", "approved", "rejected", "disabled"];
-const TEMPLATE_COLUMNS = "id, template_key, name, language, status, meta_template_id, rejection_reason";
+const TEMPLATE_COLUMNS = "id, template_key, name, language, status, meta_template_id, rejection_reason, version, body, stage, proposed_at, support_note";
 
 type TemplateRow = {
   id: string;
@@ -216,6 +224,11 @@ type TemplateRow = {
   status: string;
   meta_template_id: string | null;
   rejection_reason: string | null;
+  version: number;
+  body: string | null;
+  stage: string;
+  proposed_at: string | null;
+  support_note: string | null;
 };
 
 const toTemplate = (row: TemplateRow): WhatsappTemplate => ({
@@ -226,11 +239,16 @@ const toTemplate = (row: TemplateRow): WhatsappTemplate => ({
   status: row.status as TemplateStatus,
   metaTemplateId: row.meta_template_id,
   rejectionReason: row.rejection_reason,
+  version: row.version,
+  body: row.body,
+  stage: row.stage as WhatsappTemplate["stage"],
+  proposedAt: row.proposed_at ? new Date(row.proposed_at) : null,
+  supportNote: row.support_note,
 });
 
 export async function listWhatsappTemplates(db: DbClient, clinicId: string): Promise<WhatsappTemplate[]> {
   const rows = unwrap(
-    await db.from("whatsapp_templates").select(TEMPLATE_COLUMNS).eq("clinic_id", clinicId).order("template_key"),
+    await db.from("whatsapp_templates").select(TEMPLATE_COLUMNS).eq("clinic_id", clinicId).order("template_key").order("version"),
     "Templates do WhatsApp",
   );
   return rows.map(toTemplate);
@@ -255,28 +273,35 @@ export async function saveWhatsappTemplate(db: DbClient, clinicId: string, input
         language,
         status: input.status,
         meta_template_id: cleanText(input.metaTemplateId),
+        version: 1,
       },
-      { onConflict: "clinic_id,template_key" },
+      { onConflict: "clinic_id,template_key,version" },
     ),
     "Template do WhatsApp",
   );
 }
 
-/** Template pronto para envio (aprovado na Meta); null = não enviar por template. */
-export async function getApprovedTemplate(
-  db: DbClient,
-  clinicId: string,
-  key: TemplateKey,
-): Promise<{ name: string; language: string } | null> {
+/** Template em uso: nome, idioma e o texto próprio (null = o padrão). */
+export type ApprovedTemplate = { name: string; language: string; body: string | null };
+
+/**
+ * Template pronto para envio: a versão aprovada mais nova (a personalizada,
+ * quando aprovada, troca sozinha; recusada, segue a anterior; F6.6). null =
+ * não enviar por template.
+ */
+export async function getApprovedTemplate(db: DbClient, clinicId: string, key: TemplateKey): Promise<ApprovedTemplate | null> {
   const row = unwrap(
     await db
       .from("whatsapp_templates")
-      .select("name, language")
+      .select("name, language, body")
       .eq("clinic_id", clinicId)
       .eq("template_key", key)
+      .eq("stage", "meta")
       .eq("status", "approved")
+      .order("version", { ascending: false })
+      .limit(1)
       .maybeSingle(),
     "Template do WhatsApp",
   );
-  return row ? { name: row.name, language: row.language } : null;
+  return row ? { name: row.name, language: row.language, body: row.body } : null;
 }

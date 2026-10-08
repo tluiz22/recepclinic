@@ -116,7 +116,7 @@ describe("resumo da véspera (18h)", () => {
       { to: RECEPTION_PHONE, kind: "exames", variant: "preview", date: MON1, list: "▪️ 08h00 - Paciente Três (sem confirmação)" },
       { to: DRA_PHONE, kind: "consultas", variant: "preview", date: MON1, list: "▪️ 09h00 - Paciente Um (✅ confirmado)" },
     ]);
-    expect(summaries.at(-1)!.template).toEqual({ name: "rc_daily_summary_consultations", language: "pt_BR" });
+    expect(summaries.at(-1)!.template).toEqual({ name: "rc_daily_summary_consultations", language: "pt_BR", body: null });
 
     expect(await runDailySummary(bot, clinicId, { variant: "preview", trigger: "scheduled", sender }, at(SUN, "18:05"))).toEqual({ skipped: "not_due" });
     const { data: messages } = await adminClient()

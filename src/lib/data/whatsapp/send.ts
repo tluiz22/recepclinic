@@ -22,7 +22,8 @@ export type ClinicSender = {
   template(
     to: string,
     key: TemplateKey,
-    template: { name: string; language: string },
+    /** `body`: texto próprio da versão personalizada (F6.6); sem ele, o padrão. */
+    template: { name: string; language: string; body?: string | null },
     params: string[],
     buttonPayloads?: string[],
   ): Promise<SendOutcome>;
@@ -82,15 +83,15 @@ export async function createClinicSender(
     clinicLabel: clinicLabel(clinic.name, settings.message_article as MessageArticle),
     baseUrl: baseUrl.replace(/\/$/, ""),
     template(to, key, template, params, buttonPayloads = []) {
-      const known = defaultTemplate(key);
+      const text = template.body ?? defaultTemplate(key)?.body ?? null;
       // Só as variáveis que o corpo usa (o cancelamento não leva o local).
-      const used = known ? params.slice(0, paramCount(known.body)) : params;
+      const used = text ? params.slice(0, paramCount(text)) : params;
       const components: Record<string, unknown>[] = [];
       if (used.length) components.push({ type: "body", parameters: used.map((text) => ({ type: "text", text: cleanParam(text) })) });
       buttonPayloads.forEach((payload, index) => {
         components.push({ type: "button", sub_type: "quick_reply", index: String(index), parameters: [{ type: "payload", payload }] });
       });
-      const body = known ? fillTemplate(known.body, used) : `[${template.name}] ${used.join(" · ")}`;
+      const body = text ? fillTemplate(text, used) : `[${template.name}] ${used.join(" · ")}`;
       return post(
         {
           to: toWaNumber(to),

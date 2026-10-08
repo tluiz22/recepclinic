@@ -319,6 +319,25 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"bot_messages": {
+                  Row: {
+                    "body": string,"clinic_id": string,"message_key": string,"updated_at": string,"updated_by": string | null
+                  }
+                  Insert: {
+                    "body": string,"clinic_id": string,"message_key": string,"updated_at"?: string,"updated_by"?: string | null
+                  }
+                  Update: {
+                    "body"?: string,"clinic_id"?: string,"message_key"?: string,"updated_at"?: string,"updated_by"?: string | null
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "bot_messages_clinic_id_fkey"
+      columns: ["clinic_id"]
+isOneToOne: false
+      referencedRelation: "clinics"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"clinic_features": {
                   Row: {
                     "clinic_id": string,"enabled_at": string,"enabled_by": string | null,"feature_key": string
@@ -1061,13 +1080,13 @@ isOneToOne: false
                   ]
                 },"whatsapp_templates": {
                   Row: {
-                    "clinic_id": string,"created_at": string,"id": string,"language": string,"meta_template_id": string | null,"name": string,"rejection_reason": string | null,"status": string,"template_key": string,"updated_at": string
+                    "body": string | null,"clinic_id": string,"created_at": string,"id": string,"language": string,"meta_template_id": string | null,"name": string,"proposed_at": string | null,"proposed_by": string | null,"rejection_reason": string | null,"stage": string,"status": string,"support_note": string | null,"template_key": string,"updated_at": string,"version": number
                   }
                   Insert: {
-                    "clinic_id": string,"created_at"?: string,"id"?: string,"language"?: string,"meta_template_id"?: string | null,"name": string,"rejection_reason"?: string | null,"status"?: string,"template_key": string,"updated_at"?: string
+                    "body"?: string | null,"clinic_id": string,"created_at"?: string,"id"?: string,"language"?: string,"meta_template_id"?: string | null,"name": string,"proposed_at"?: string | null,"proposed_by"?: string | null,"rejection_reason"?: string | null,"stage"?: string,"status"?: string,"support_note"?: string | null,"template_key": string,"updated_at"?: string,"version"?: number
                   }
                   Update: {
-                    "clinic_id"?: string,"created_at"?: string,"id"?: string,"language"?: string,"meta_template_id"?: string | null,"name"?: string,"rejection_reason"?: string | null,"status"?: string,"template_key"?: string,"updated_at"?: string
+                    "body"?: string | null,"clinic_id"?: string,"created_at"?: string,"id"?: string,"language"?: string,"meta_template_id"?: string | null,"name"?: string,"proposed_at"?: string | null,"proposed_by"?: string | null,"rejection_reason"?: string | null,"stage"?: string,"status"?: string,"support_note"?: string | null,"template_key"?: string,"updated_at"?: string,"version"?: number
                   }
                   Relationships: [
                     {

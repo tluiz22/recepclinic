@@ -33,9 +33,24 @@ async function saveTemplateRow(
         status,
         meta_template_id: meta.id || null,
         rejection_reason: status === "rejected" ? rejectionReason(meta.rejectedReason) : null,
+        version: 1,
       },
-      { onConflict: "clinic_id,template_key" },
+      { onConflict: "clinic_id,template_key,version" },
     ),
+    "Template do WhatsApp",
+  );
+  return status;
+}
+
+/** Situação de uma versão personalizada (F6.6). */
+async function saveVersionStatus(db: DbClient, clinicId: string, id: string, meta: { id: string; status: string; rejectedReason: string | null }): Promise<TemplateStatus> {
+  const status = templateStatusFromMeta(meta.status);
+  unwrap(
+    await db
+      .from("whatsapp_templates")
+      .update({ status, meta_template_id: meta.id || null, rejection_reason: status === "rejected" ? rejectionReason(meta.rejectedReason) : null })
+      .eq("clinic_id", clinicId)
+      .eq("id", id),
     "Template do WhatsApp",
   );
   return status;
@@ -75,14 +90,14 @@ export async function refreshTemplateStatuses(db: DbClient, clinicId: string, fe
   const ready = await setup(db, clinicId);
   if ("message" in ready) return { ok: false, message: ready.message };
   const lines: TemplateSyncLine[] = [];
-  for (const row of await listWhatsappTemplates(db, clinicId)) {
+  for (const row of (await listWhatsappTemplates(db, clinicId)).filter((t) => t.stage === "meta")) {
     try {
       const meta = (await fetchTemplatesByName(ready.wabaId, row.name, ready.token, fetcher)).find((t) => t.language === row.language);
       if (!meta) {
         lines.push({ key: row.key, name: row.name, status: row.status, problem: "não existe na conta da Meta" });
         continue;
       }
-      const status = await saveTemplateRow(db, clinicId, row.key, row.name, meta);
+      const status = row.version === 1 ? await saveTemplateRow(db, clinicId, row.key, row.name, meta) : await saveVersionStatus(db, clinicId, row.id, meta);
       lines.push({ key: row.key, name: row.name, status, problem: null });
     } catch (error) {
       if (!(error instanceof GraphRequestError)) throw error;

@@ -178,7 +178,7 @@ export type ReminderToSend = {
   isHomeVisit: boolean;
   /** Endereço do atendimento domiciliar, ou do local. */
   address: string | null;
-  template: { name: string; language: string };
+  template: { name: string; language: string; body?: string | null };
   /** Payloads dos três botões, na ordem do template. */
   buttonPayloads: string[];
 };
@@ -310,7 +310,7 @@ export async function listReminderActions(
 // Envio e registro
 // ---------------------------------------------------------------------------
 
-type SendContext = { settings: ReminderSettings; template: { name: string; language: string } };
+type SendContext = { settings: ReminderSettings; template: { name: string; language: string; body?: string | null } };
 
 /** Envia um lembrete e registra a mensagem; devolve se saiu. */
 async function deliverReminder(

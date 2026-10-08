@@ -141,6 +141,9 @@ passam pela Meta, **também só são editáveis com esse item**; sem ele, a clí
 padrão. **Só o Administrador da clínica altera as mensagens** (cliente, 05/out/2026). O limite de templates é por conta de WhatsApp da
 clínica (250 sem verificação da empresa, até 6.000 verificada), longe do uso previsto. Criar o
 template pela API depende da F8 (Tech Provider); antes disso, o Suporte envia à Meta à mão.
+**Revisão (cliente, 07/out/2026):** como o sistema já cria templates pela API na conta da clínica
+desde a F6.2, a proposta revisada vai à Meta pelo botão do Suporte ("Aprovar e enviar à Meta"),
+sem passo manual. A lista de mensagens de conversa editáveis ganhou o aviso de conversa parada.
 
 **Resolve:** L18, L19, L20 (encaminha), L21, L22, L25 (parte das mensagens).
 

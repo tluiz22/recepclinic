@@ -1,5 +1,5 @@
 import { servicesOf, type BotService } from "./catalog";
-import { go, say, sendList, type Bot } from "./engine";
+import { go, say, sendList, textFor, type Bot } from "./engine";
 import { pick, type Selection } from "./input";
 import * as t from "./texts";
 import { startBooking, startReturn } from "./booking";
@@ -42,15 +42,15 @@ const examItems = (b: Bot): Item[] => [{ id: "book_exam", label: "Marcar exame" 
 
 /** Menu principal; clínica sem nada para mostrar recebe o aviso e a conversa fica no começo. */
 export async function showMenu(b: Bot, { withWelcome = false, notUnderstood = false } = {}): Promise<void> {
-  if (withWelcome) await say(b, "bot_welcome", t.welcome(b.clinic.label));
+  if (withWelcome) await say(b, "bot_welcome", textFor(b, "welcome", t.welcome(b.clinic.label), { clinica: b.clinic.label }));
   const items = await mainItems(b);
   if (!items.length) {
     await say(b, "bot_nothing_to_book", t.NOTHING_TO_BOOK);
     await go(b, "WELCOME");
     return;
   }
-  if (notUnderstood) await say(b, "bot_not_understood", t.notUnderstood(true));
-  await sendList(b, "bot_menu", t.MENU_BODY, t.numberedList(items, false));
+  if (notUnderstood) await say(b, "bot_not_understood", textFor(b, "not_understood", t.notUnderstood(true)));
+  await sendList(b, "bot_menu", textFor(b, "menu", t.MENU_BODY), t.numberedList(items, false));
   await go(b, "MENU");
 }
 
@@ -64,7 +64,7 @@ export async function handleMenu(b: Bot, selection: Selection): Promise<void> {
 }
 
 async function showSubmenu(b: Bot, state: "CONSULTAS_MENU" | "EXAMES_MENU", notUnderstood = false): Promise<void> {
-  if (notUnderstood) await say(b, "bot_not_understood", t.notUnderstood());
+  if (notUnderstood) await say(b, "bot_not_understood", textFor(b, "not_understood", t.notUnderstood()));
   const consultations = state === "CONSULTAS_MENU";
   await sendList(
     b,
@@ -111,7 +111,7 @@ const addressLocations = (_b: Bot, locations: { name: string; type: string; addr
 const preparationExams = (services: BotService[]) => services.filter((s) => s.category === "exam" && s.preparation).slice(0, t.MAX_LIST_ROWS - 1);
 
 async function showInfo(b: Bot, notUnderstood = false): Promise<void> {
-  if (notUnderstood) await say(b, "bot_not_understood", t.notUnderstood());
+  if (notUnderstood) await say(b, "bot_not_understood", textFor(b, "not_understood", t.notUnderstood()));
   const items = (await infoItems(b)).map((key) => ({ id: `info_${key}`, label: t.INFO_ITEMS[key] }));
   await sendList(b, "bot_info_menu", t.INFO_BODY, t.numberedList(items));
   await go(b, "INFO_MENU");
@@ -157,7 +157,7 @@ export async function handlePreparationChoice(b: Bot, selection: Selection): Pro
   const exams = preparationExams((await b.catalog()).services);
   const exam = pick(selection, exams, (s) => `prep_${s.id}`);
   if (!exam) {
-    await say(b, "bot_not_understood", t.notUnderstood());
+    await say(b, "bot_not_understood", textFor(b, "not_understood", t.notUnderstood()));
     await sendList(b, "bot_info_preparation_choice", t.PREPARATION_QUESTION, t.numberedList(exams.map((s) => ({ id: `prep_${s.id}`, label: s.name }))));
     return;
   }

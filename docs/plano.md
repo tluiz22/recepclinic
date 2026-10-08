@@ -1012,6 +1012,29 @@ de remarcação (texto da F4.6), e enviam sozinhos; sai a tela "Avisar" da F4.6.
   todos recebem a mensagem com o link. Migração `20261007150000` (chave do template novo); o
   Suporte cria o template pelo "Criar na Meta". 1 teste de banco novo.
 - **F6.6 — Aba "Mensagens":** prévia no balão e edição com "Mensagens personalizadas".
+  **Detalhada com o cliente em 07/out:** aba **Mensagens** em Configurações com cada mensagem num
+  balão do WhatsApp, preenchida com os dados da clínica: os avisos (templates: confirmação,
+  remarcação, cancelamento, cancelamento pela clínica, lembrete com os botões, preparo, com a
+  situação na Meta) e, com o bot liberado, as mensagens de conversa. Item novo da matriz
+  **"Mensagens personalizadas"** (D11): só o Administrador da clínica edita. **Conversa do bot**
+  (lista da D3b + o aviso de conversa parada, cliente 07/out): boas-vindas, menu, não entendi,
+  falar com a recepção, link enviado, cancelamento confirmado, presença confirmada e conversa
+  parada; texto com marcadores ({nome}, {clinica}, {paciente}, {servico}, {data}, {link}…), vale
+  na hora, com "Voltar ao padrão"; sem o item, os textos padrão. **Templates:** o Administrador
+  propõe o texto com as mesmas variáveis, na mesma ordem (marcadores); o **Suporte revisa no
+  painel e clica em "Aprovar e enviar à Meta"** (ou "Recusar" com o motivo), e o sistema cria a
+  **versão nova** pela API na conta da clínica (cliente, 07/out: muda o "à mão até a F8" da D3b);
+  enquanto a Meta analisa, segue a versão em uso; aprovada, passa a ser usada sozinha; recusada, o
+  motivo aparece e nada muda; "Voltar ao padrão" volta à versão padrão aprovada.
+  `whatsapp_templates` passa a guardar versões.
+  **Implementada em 07/out (aguarda a validação do cliente).** Tela `configuracoes/mensagens`
+  (balão do WhatsApp com os dados da clínica: o primeiro serviço de consulta, o profissional da
+  agenda dele, o primeiro consultório e a próxima segunda às 08:00), regras em
+  `whatsapp/customMessages.ts` (marcadores, validação da ordem e das regras da Meta, propostas,
+  revisão do Suporte), o envio usa a versão aprovada mais nova (`getApprovedTemplate`) e o texto
+  dela, e o bot usa o texto próprio (`textFor`); na presença confirmada de exame, o lembrete do
+  preparo continua indo junto. O banco confere o papel e o item (RLS). Migração `20261007160000`
+  (item novo, versões, `bot_messages`). 5 testes unitários e 4 de banco novos.
 - **F6.7 — Métricas do bot:** abas Funil do bot e Retomar contato.
 O código antigo do bot e do webhook sai conforme cada parte o substitui.
 

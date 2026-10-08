@@ -11,6 +11,7 @@ import { extractSelection, isBackToMenu } from "./input";
 import { handleInfo, handleMenu, handlePreparationChoice, handleSubmenu, showMenu } from "./menus";
 import { handleManageState, handleOfferTap, handleReminderTap, MANAGE_STATES, offerTapOf, reminderTapOf } from "./manage";
 import { IDLE_CLOSED } from "./texts";
+import { listBotMessages } from "../customMessages";
 
 // Entrada do bot (F6.3): chamado pelo webhook para cada mensagem recebida, já
 // registrada. Só com o item "Bot de WhatsApp" liberado (D11) e o WhatsApp da
@@ -100,6 +101,8 @@ const AT_REST = [WELCOME, "HUMAN_HANDOFF"];
  */
 export async function closeIdleConversations(db: DbClient, clinicId: string, sender: ClinicSender | null, now: Date = new Date()): Promise<number> {
   if (!sender || !(await hasFeature(db, clinicId, "whatsapp_bot"))) return 0;
+  // Texto próprio da clínica (F6.6), com o item liberado.
+  const idleText = (await hasFeature(db, clinicId, "custom_messages")) ? ((await listBotMessages(db, clinicId)).get("idle_closed") ?? IDLE_CLOSED) : IDLE_CLOSED;
   const before = new Date(now.getTime() - IDLE_TIMEOUT_MINUTES * 60_000);
   const rows = unwrap(
     await db
@@ -118,7 +121,7 @@ export async function closeIdleConversations(db: DbClient, clinicId: string, sen
       const convo = await openConversation(db, clinicId, phone, await contactIdByPhone(db, clinicId, phone));
       // Respondeu enquanto a rotina rodava.
       if (AT_REST.includes(convo.state) || !isPastIdleTimeout(convo.updatedAt, now)) continue;
-      const outcome = await sender.text(phone, IDLE_CLOSED);
+      const outcome = await sender.text(phone, idleText);
       await recordOutboundMessage(
         db,
         clinicId,
@@ -126,7 +129,7 @@ export async function closeIdleConversations(db: DbClient, clinicId: string, sen
           phone,
           contactId: convo.contactId,
           messageType: "bot_idle_closed",
-          body: IDLE_CLOSED,
+          body: idleText,
           status: outcome.sent ? "sent" : "failed",
           waMessageId: outcome.sent ? outcome.messageId : null,
         },

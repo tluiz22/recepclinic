@@ -5,6 +5,7 @@ import type { DbClient } from "../../clients";
 import { unwrap, unwrapOne } from "../../errors";
 import { getClinicFeatures } from "../../features";
 import { getWhatsappConnection } from "../connection";
+import { listBotMessages, renderMarkers, type BotMessageKey } from "../customMessages";
 import { logFunnelStep, setConversationState, WELCOME, type Conversation } from "../conversations";
 import { recordOutboundMessage, type SendOutcome } from "../messages";
 import type { ClinicSender, ListSection, ReplyButton } from "../send";
@@ -40,6 +41,8 @@ export type Bot = BotEnv & {
   receptionAvailable: boolean;
   /** Id da Meta da mensagem que está sendo respondida (registro do toque no lembrete). */
   incomingId: string | null;
+  /** Textos próprios da clínica (item "Mensagens personalizadas", F6.6). */
+  custom: Map<BotMessageKey, string>;
   /** Catálogo, lido na primeira vez que o fluxo precisa. */
   catalog(): Promise<BotCatalog>;
 };
@@ -73,6 +76,7 @@ export async function createBot(env: BotEnv, convo: Conversation, incomingId: st
     getClinicFeatures(env.db, env.clinicId),
     getWhatsappConnection(env.db, env.clinicId),
   ]);
+  const custom = features.includes("custom_messages") ? await listBotMessages(env.db, env.clinicId) : new Map<BotMessageKey, string>();
   let catalog: Promise<BotCatalog> | null = null;
   return {
     ...env,
@@ -83,6 +87,7 @@ export async function createBot(env: BotEnv, convo: Conversation, incomingId: st
     features,
     receptionAvailable: connection?.coexistence ?? false,
     incomingId,
+    custom,
     catalog: () => (catalog ??= loadCatalog(env.db, env.clinicId, features)),
   };
 }
@@ -142,4 +147,10 @@ export async function end(b: Bot, outcome: string, metadata: Record<string, unkn
 export async function attachContact(b: Bot, contactId: string): Promise<void> {
   unwrap(await b.db.from("conversation_state").update({ contact_id: contactId }).eq("id", b.convo.id), "Conversa do WhatsApp");
   b.convo = { ...b.convo, contactId };
+}
+
+/** Texto da mensagem: o próprio da clínica (com os valores nos marcadores) ou o padrão. */
+export function textFor(b: Bot, key: BotMessageKey, fallback: string, values: Record<string, string> = {}): string {
+  const custom = b.custom.get(key);
+  return custom ? renderMarkers(custom, values) : fallback;
 }

@@ -141,7 +141,7 @@ describe("conexão e templates", () => {
     await saveWhatsappTemplate(asDb(support.client), clinicA, { key: "reminder", name: "rc_lembrete", status: "pending" });
     expect(await getApprovedTemplate(botA, clinicA, "reminder")).toBeNull();
     await saveWhatsappTemplate(asDb(support.client), clinicA, { key: "reminder", name: "rc_lembrete_v2", status: "approved" });
-    expect(await getApprovedTemplate(botA, clinicA, "reminder")).toEqual({ name: "rc_lembrete_v2", language: "pt_BR" });
+    expect(await getApprovedTemplate(botA, clinicA, "reminder")).toEqual({ name: "rc_lembrete_v2", language: "pt_BR", body: null });
     expect(await listWhatsappTemplates(asDb(reception.client), clinicA)).toEqual([
       expect.objectContaining({ key: "reminder", name: "rc_lembrete_v2", status: "approved" }),
     ]);

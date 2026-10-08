@@ -49,7 +49,7 @@ const TEMPLATE_LABELS: Record<string, string> = {
   reminder: "Lembrete",
   exam_preparation: "Preparo do exame",
 };
-const templateRows = DEFAULT_TEMPLATES.map((template) => ({ template, saved: templates.find((t) => t.key === template.key) ?? null }));
+const templateRows = DEFAULT_TEMPLATES.map((template) => ({ template, saved: templates.find((t) => t.key === template.key && t.version === 1) ?? null }));
 const hours = Array.from({ length: REMINDER_HOUR_MAX - REMINDER_HOUR_MIN + 1 }, (_, i) => REMINDER_HOUR_MIN + i);
 const summaryProfessionals = professionals.filter((p) => p.receivesDailySummary && p.phone);
 const status = {

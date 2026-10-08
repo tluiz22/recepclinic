@@ -108,7 +108,7 @@ export async function sendAppointmentNotice(
         outcome = { sent: false, reason: error instanceof Error ? error.message : String(error) };
       }
     }
-    const known = defaultTemplate(kind)!;
+    const known = { body: template?.body ?? defaultTemplate(kind)!.body };
     const status: NoticeStatus = !outcome ? "skipped_no_template" : outcome.sent ? "sent" : "failed";
     await recordOutboundMessage(
       db,

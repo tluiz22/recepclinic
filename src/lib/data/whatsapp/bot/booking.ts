@@ -7,7 +7,7 @@ import { getContact, listContactPatients, registerPatient, type ContactChoice, t
 import { startFunnel } from "../conversations";
 import { formatAppointmentWhen } from "../templates";
 import { servicesOf, type BotService } from "./catalog";
-import { attachContact, end, go, say, sendButtons, sendList, step, type Bot } from "./engine";
+import { attachContact, end, go, say, sendButtons, sendList, step, textFor, type Bot } from "./engine";
 import { formatBirthdate, parseBirthdate, pick, yesNo, type Selection } from "./input";
 import { showMenu } from "./menus";
 import * as t from "./texts";
@@ -142,7 +142,7 @@ async function handleService(b: Bot, selection: Selection): Promise<void> {
   const services = servicesOf(await b.catalog(), ctx.category);
   const service = pick(selection, services, (s) => `service_${s.id}`);
   if (!service) {
-    await say(b, "bot_not_understood", t.notUnderstood());
+    await say(b, "bot_not_understood", textFor(b, "not_understood", t.notUnderstood()));
     return askService(b, ctx, services);
   }
   await chooseService(b, ctx, service);
@@ -170,7 +170,7 @@ async function handleAgenda(b: Bot, selection: Selection): Promise<void> {
   if (!service) return restart(b);
   const choice = pick(selection, agendaItems(service), (i) => i.id);
   if (!choice) {
-    await say(b, "bot_not_understood", t.notUnderstood());
+    await say(b, "bot_not_understood", textFor(b, "not_understood", t.notUnderstood()));
     return askAgenda(b, ctx, service);
   }
   await afterAgenda(b, { ...ctx, agendaId: choice.id === "agenda_any" ? null : choice.id.slice("agenda_".length) }, service);
@@ -207,7 +207,7 @@ async function handleLocation(b: Bot, selection: Selection): Promise<void> {
   const types = locationTypes(service, ctx.agendaId);
   const type = pick(selection, types, (type) => `location_${type}`);
   if (!type) {
-    await say(b, "bot_not_understood", t.notUnderstood());
+    await say(b, "bot_not_understood", textFor(b, "not_understood", t.notUnderstood()));
     return askLocation(b, ctx, service, types);
   }
   await afterLocation(b, { ...ctx, locationCategory: type });
@@ -283,7 +283,7 @@ async function handleForWhom(b: Bot, selection: Selection): Promise<void> {
   const self = selection.id === t.FOR_WHOM_IDS.self || text === "1" || text.startsWith("para mim") || text === "eu";
   const other = selection.id === t.FOR_WHOM_IDS.other || text === "2" || text.startsWith("outra");
   if (!self && !other) {
-    await say(b, "bot_not_understood", t.notUnderstood());
+    await say(b, "bot_not_understood", textFor(b, "not_understood", t.notUnderstood()));
     await sendButtons(b, "bot_book_for_whom", t.FOR_WHOM_QUESTION, t.FOR_WHOM_BUTTONS);
     return;
   }
@@ -349,7 +349,7 @@ async function handlePatientSelect(b: Bot, selection: Selection): Promise<void> 
     }
     const chosen = pick(selection, candidates, (c) => `patient_${c.id}`);
     if (!chosen) {
-      await say(b, "bot_not_understood", t.notUnderstood());
+      await say(b, "bot_not_understood", textFor(b, "not_understood", t.notUnderstood()));
       return sendPatientChoice(b, candidates, ctx.knownBirthdate ? t.birthdateMatches(b.words) : t.patientChoice(b.words));
     }
     return finish(b, ctx, chosen);
@@ -594,7 +594,8 @@ async function finish(b: Bot, ctx: BookingContext, patient: Candidate): Promise<
       },
       b.now,
     );
-    await say(b, "bot_booking_link", t.bookingLink(service.name, patient.name, `${b.sender.baseUrl}/agendar/${link.id}`));
+    const url = `${b.sender.baseUrl}/agendar/${link.id}`;
+    await say(b, "bot_booking_link", textFor(b, "booking_link", t.bookingLink(service.name, patient.name, url), { servico: service.name, paciente: patient.name, link: url }));
     await end(b, "link_sent", { booking_link_id: link.id });
   } catch (error) {
     console.error("[bot] link de agendamento", error instanceof Error ? error.message : String(error));
@@ -690,7 +691,7 @@ async function handleReturn(b: Bot, selection: Selection): Promise<void> {
   const candidates = ctx.returnCandidates ?? [];
   const chosen = pick(selection, candidates, (c) => `return_${c.id}`);
   if (!chosen) {
-    await say(b, "bot_not_understood", t.notUnderstood());
+    await say(b, "bot_not_understood", textFor(b, "not_understood", t.notUnderstood()));
     await sendList(b, "bot_book_return_patient_choice", t.patientChoice(b.words), t.numberedList(candidates.map((c) => ({ id: `return_${c.id}`, label: c.name }))));
     return;
   }

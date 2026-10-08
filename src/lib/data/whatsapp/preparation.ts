@@ -37,7 +37,7 @@ export type PreparationToSend = {
   pagePath: string;
   /** Texto livre (janela aberta) ou template (fechada). */
   mode: "text" | "template";
-  template: { name: string; language: string } | null;
+  template: { name: string; language: string; body?: string | null } | null;
 };
 
 export type PreparationSender = (preparation: PreparationToSend) => Promise<SendOutcome>;
