@@ -1003,6 +1003,8 @@ de remarcação (texto da F4.6), e enviam sozinhos; sai a tela "Avisar" da F4.6.
   de 2h de agora) e mostra até 3, mais "Nenhum desses". Escolhido e confirmado, remarca na hora
   (aviso de remarcação pelo template); ocupado no meio, procura de novo. "Nenhum desses" pergunta
   se quer entrar na lista. Sem horário livre antes, entra direto. Textos aprovados em 08/out.
+  Quem já está na lista também vê antes os horários livres; antecipando, sai da lista; sem
+  escolha ("Nenhum desses" ou nenhum horário), pergunta se continua na lista ou sai.
 - **F6.5 — Cancelamento pela clínica automático:** aviso a todos com o link; sai a tela "Avisar".
   **Detalhada e implementada em 07/out (aguarda a validação do cliente).** Depois de "Cancelar
   selecionados" ou "Bloquear e cancelar", cada paciente recebe o aviso pelo WhatsApp da clínica,

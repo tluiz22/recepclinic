@@ -87,6 +87,24 @@ export async function leaveWaitlist(
   return true;
 }
 
+/**
+ * Antecipado fora de uma oferta (bot, horário livre antes): a inscrição
+ * termina como "antecipado". Devolve false se não estava na fila.
+ */
+export async function endAsAdvanced(db: DbClient, clinicId: string, appointmentId: string, now: Date = new Date()): Promise<boolean> {
+  const rows = unwrap(
+    await db
+      .from("waitlist_entries")
+      .update({ status: "advanced", ended_at: now.toISOString(), ended_reason: "advanced" })
+      .eq("clinic_id", clinicId)
+      .eq("appointment_id", appointmentId)
+      .eq("status", "active")
+      .select("id"),
+    "Lista de espera",
+  );
+  return rows.length > 0;
+}
+
 /** Quais destes atendimentos estão na fila agora (selo da agenda, bot). */
 export async function activeWaitlistAppointmentIds(db: DbClient, clinicId: string, appointmentIds: string[]): Promise<Set<string>> {
   if (!appointmentIds.length) return new Set();

@@ -3,7 +3,7 @@ import { cancelAppointment, findReturnOrigin, rescheduleAppointment } from "../.
 import { BOT_LINK_TTL_MS, createBookingLink } from "../../agenda/links";
 import { getFreeSlotsBefore } from "../../agenda/slots";
 import { DataError, unwrap } from "../../errors";
-import { activeWaitlistAppointmentIds, joinBlockReason, joinWaitlist, leaveWaitlist } from "../../waitlist/entries";
+import { activeWaitlistAppointmentIds, endAsAdvanced, joinBlockReason, joinWaitlist, leaveWaitlist } from "../../waitlist/entries";
 import { acceptOffer, declineOffer, MIN_LEAD_MS, type OfferReplyResult, type OfferSender } from "../../waitlist/offers";
 import { pauseForHuman, startFunnel } from "../conversations";
 import type { WaMessage } from "../meta";
@@ -462,20 +462,24 @@ export async function handleReminderTap(b: Bot, tap: NonNullable<ReturnType<type
 async function handleWaitlistAppointment(b: Bot, appointment: ManagedAppointment): Promise<void> {
   const { phrase, end: ending } = words(appointment);
   try {
+    // Sempre oferece antes o horário livre, mesmo para quem já está na lista;
+    // a lista (entrar, ou continuar/sair) é só sem escolha (cliente, 08/out).
     const inList = (await activeWaitlistAppointmentIds(b.db, b.clinicId, [appointment.id])).has(appointment.id);
-    if (inList) {
-      await sendButtons(b, "bot_waitlist_already_in", t.waitlistAlreadyIn(appointment.patientName, phrase, ending, when(b, appointment)), t.WAITLIST_ALREADY_BUTTONS);
-      return go(b, "WAITLIST_LEAVE_CONFIRM", { action: "waitlist", group: groupOf(appointment), pendingId: appointment.id } satisfies ManageContext);
-    }
-    // Horário livre antes: oferece antecipar; a lista é só para quando não há (cliente, 08/out).
     const slots = await earlierSlots(b, appointment);
-    if (slots.length) return showEarlier(b, appointment, slots);
+    if (slots.length) return showEarlier(b, appointment, slots, inList);
+    if (inList) return askLeave(b, appointment);
     await joinAndSay(b, appointment);
   } catch (error) {
     console.error("[bot] lista de espera", error instanceof Error ? error.message : String(error));
     await say(b, "bot_waitlist_error", t.WAITLIST_ERROR);
   }
   await go(b, "WELCOME");
+}
+
+async function askLeave(b: Bot, appointment: ManagedAppointment): Promise<void> {
+  const { phrase, end: ending } = words(appointment);
+  await sendButtons(b, "bot_waitlist_already_in", t.waitlistAlreadyIn(appointment.patientName, phrase, ending, when(b, appointment)), t.WAITLIST_ALREADY_BUTTONS);
+  await go(b, "WAITLIST_LEAVE_CONFIRM", { action: "waitlist", group: groupOf(appointment), pendingId: appointment.id } satisfies ManageContext);
 }
 
 async function joinAndSay(b: Bot, appointment: ManagedAppointment): Promise<void> {
@@ -493,7 +497,13 @@ const EARLIER_SLOTS = 3;
 /** Horário livre oferecido; `place` só quando há mais de um local do mesmo tipo. */
 type EarlierSlot = { start: string; locationId: string; place: string | null };
 
-type EarlierContext = ManageContext & { slots: EarlierSlot[]; chosen?: EarlierSlot; step: "slot_choice" | "slot_confirm" | "join_confirm" };
+type EarlierContext = ManageContext & {
+  slots: EarlierSlot[];
+  /** Já estava na lista: sem escolha, pergunta se continua ou sai. */
+  inList: boolean;
+  chosen?: EarlierSlot;
+  step: "slot_choice" | "slot_confirm" | "join_confirm";
+};
 
 /**
  * Até 3 horários livres antes do atendimento, do mais cedo: mesma agenda,
@@ -525,7 +535,7 @@ const slotWhen = (b: Bot, slot: EarlierSlot) => formatAppointmentWhen(new Date(s
 const slotLabel = (b: Bot, slot: EarlierSlot) => slotWhen(b, slot).replace(/^([^,]{3})[^,]*,/u, "$1,");
 const slotId = (slot: EarlierSlot) => `slot_${slot.start}_${slot.locationId}`;
 
-async function showEarlier(b: Bot, appointment: ManagedAppointment, slots: EarlierSlot[]): Promise<void> {
+async function showEarlier(b: Bot, appointment: ManagedAppointment, slots: EarlierSlot[], inList: boolean): Promise<void> {
   const { phrase, end: ending } = words(appointment);
   await sendList(
     b,
@@ -536,7 +546,7 @@ async function showEarlier(b: Bot, appointment: ManagedAppointment, slots: Earli
       { id: t.WAITLIST_IDS.noneOfThese, label: t.NONE_OF_THESE },
     ]),
   );
-  await go(b, "WAITLIST_EARLIER", { action: "waitlist", group: groupOf(appointment), pendingId: appointment.id, slots, step: "slot_choice" } satisfies EarlierContext);
+  await go(b, "WAITLIST_EARLIER", { action: "waitlist", group: groupOf(appointment), pendingId: appointment.id, slots, inList, step: "slot_choice" } satisfies EarlierContext);
 }
 
 async function askJoin(b: Bot, ctx: EarlierContext, appointment: ManagedAppointment): Promise<void> {
@@ -560,9 +570,9 @@ async function handleEarlier(b: Bot, selection: Selection): Promise<void> {
     const choice = pick<EarlierSlot | typeof none>(selection, [...ctx.slots, none], (item) => ("start" in item ? slotId(item) : item.id));
     if (!choice) {
       await say(b, "bot_not_understood", textFor(b, "not_understood", t.notUnderstood()));
-      return showEarlier(b, appointment, ctx.slots);
+      return showEarlier(b, appointment, ctx.slots, ctx.inList);
     }
-    if (!("start" in choice)) return askJoin(b, ctx, appointment);
+    if (!("start" in choice)) return ctx.inList ? askLeave(b, appointment) : askJoin(b, ctx, appointment);
     await askAdvance(b, appointment, choice);
     return go(b, "WAITLIST_EARLIER", { ...ctx, chosen: choice, step: "slot_confirm" } satisfies EarlierContext);
   }
@@ -571,7 +581,7 @@ async function handleEarlier(b: Bot, selection: Selection): Promise<void> {
   if (answer === null) {
     await say(b, "bot_not_understood", t.NOT_UNDERSTOOD_YES_NO);
     if (ctx.step === "join_confirm") return askJoin(b, ctx, appointment);
-    return ctx.chosen ? askAdvance(b, appointment, ctx.chosen) : showEarlier(b, appointment, ctx.slots);
+    return ctx.chosen ? askAdvance(b, appointment, ctx.chosen) : showEarlier(b, appointment, ctx.slots, ctx.inList);
   }
 
   if (ctx.step === "join_confirm") {
@@ -586,17 +596,26 @@ async function handleEarlier(b: Bot, selection: Selection): Promise<void> {
     return;
   }
 
-  if (!answer || !ctx.chosen) return showEarlier(b, appointment, ctx.slots);
+  if (!answer || !ctx.chosen) return showEarlier(b, appointment, ctx.slots, ctx.inList);
   const to = new Date(ctx.chosen.start);
   try {
-    await rescheduleAppointment(b.db, b.clinicId, appointment.id, { start: to, locationId: ctx.chosen.locationId, channel: "whatsapp_bot", actorId: null }, b.now);
+    await rescheduleAppointment(
+      b.db,
+      b.clinicId,
+      appointment.id,
+      { start: to, locationId: ctx.chosen.locationId, channel: "whatsapp_bot", trailEvent: ctx.inList ? "waitlist_advanced" : undefined, actorId: null },
+      b.now,
+    );
   } catch (error) {
     if (!(error instanceof DataError) || error.code === "unexpected") throw error;
     // Ocupado entre a escolha e o "Sim": procura de novo (cliente, 08/out).
     await say(b, "bot_waitlist_slot_taken", t.SLOT_TAKEN);
     const slots = await earlierSlots(b, appointment);
-    return slots.length ? showEarlier(b, appointment, slots) : askJoin(b, { ...ctx, slots: [] }, appointment);
+    if (slots.length) return showEarlier(b, appointment, slots, ctx.inList);
+    return ctx.inList ? askLeave(b, appointment) : askJoin(b, { ...ctx, slots: [] }, appointment);
   }
+  // Antecipou: sai da lista (cliente, 08/out).
+  if (ctx.inList) await endAsAdvanced(b.db, b.clinicId, appointment.id, b.now);
   await go(b, "WELCOME");
   await say(b, "bot_waitlist_advanced", t.offerAccepted(appointment.patientName, formatAppointmentWhen(to, b.clinic.timeZone)));
   // Como na resposta à oferta de vaga: o aviso de remarcação sai pelo template.

@@ -181,7 +181,8 @@ do celular; cliente, 06/out/2026). Nada do app ou do número do piloto.
    - **Encaixe ou antecipar** (só com o item "Lista de espera" na matriz): com horário livre antes
      do atendimento, mostra até 3 e "Nenhum desses"; escolher um e "Sim" antecipa (a Agenda muda);
      "Não" volta à lista; "Nenhum desses" pergunta se quer entrar na lista de espera. Sem horário
-     livre antes (ex.: bloqueio na agenda até o atendimento), entra direto. Já na lista: sair dela;
+     livre antes (ex.: bloqueio na agenda até o atendimento), entra direto. Já na lista: os horários
+     livres aparecem antes; antecipar tira da lista; "Nenhum desses" pergunta se continua ou sai;
    - com os templates aprovados, os botões do lembrete ("Enviar lembrete" na Agenda): Confirmar
      presença, Remarcar, Cancelar.
 3. **Falar com a recepção** só aparece com a conexão marcada como **Coexistência** (Suporte, em

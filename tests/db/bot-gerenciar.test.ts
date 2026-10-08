@@ -183,7 +183,7 @@ describe("botões do lembrete", () => {
 });
 
 describe("encaixe ou antecipar", () => {
-  it("com horário livre antes: mostra até 3; \"Nenhum desses\" pergunta da lista; de novo oferece sair", async () => {
+  it("com horário livre antes: mostra até 3; \"Nenhum desses\" pergunta da lista; já na lista, pergunta se continua ou sai", async () => {
     await say(P1, "oi");
     await say(P1, "1");
     let reply = await say(P1, { id: "manage_waitlist" });
@@ -212,16 +212,20 @@ describe("encaixe ou antecipar", () => {
     reply = await say(P1, { id: "yes" });
     expect(reply[0].body).toBe("Pronto! *Paciente Um* está na lista de espera para antecipar a consulta marcada para segunda, 10/03 às 08:00.");
 
+    // Já na lista: os horários livres vêm antes; sem escolha, continua ou sai.
     await say(P1, "oi");
     await say(P1, "1");
     reply = await say(P1, { id: "manage_waitlist" });
+    expect(reply[0].kind).toBe("list");
+    reply = await say(P1, { id: "waitlist_none" });
     expect(reply[0].kind).toBe("buttons");
     expect(titles(reply)).toEqual(["Sair da lista", "Continuar na lista"]);
     reply = await say(P1, { id: "waitlist_leave" });
     expect(reply[0].body).toBe("Pronto, *Paciente Um* saiu da lista de espera. A consulta continua marcada para segunda, 10/03 às 08:00.");
   });
 
-  it("escolhe um horário: \"Não\" volta à lista; ocupado no meio procura de novo; \"Sim\" antecipa", async () => {
+  it("escolhe um horário: \"Não\" volta à lista; ocupado no meio procura de novo; \"Sim\" antecipa e tira da fila", async () => {
+    await adminClient().from("waitlist_entries").insert({ clinic_id: f.clinicId, appointment_id: consultP1, created_via: "whatsapp_bot" });
     await say(P1, "oi");
     await say(P1, "1");
     let reply = await say(P1, { id: "manage_waitlist" });
@@ -254,6 +258,8 @@ describe("encaixe ou antecipar", () => {
     const { data } = await adminClient().from("appointments").select("scheduled_at, rescheduled_via").eq("id", consultP1).single();
     expect(new Date(data!.scheduled_at).toISOString()).toBe(new Date(next.id.split("_")[1]).toISOString());
     expect(data!.rescheduled_via).toBe("whatsapp_bot");
+    const { data: entries } = await adminClient().from("waitlist_entries").select("status").eq("appointment_id", consultP1).order("created_at");
+    expect(entries!.at(-1)!.status).toBe("advanced");
   });
 
   it("sem horário livre antes: entra direto na lista", async () => {
