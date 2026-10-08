@@ -15,6 +15,7 @@ import { createUserClient } from "../../lib/data/clients";
 import { loadAgendaScope } from "../../lib/data/agenda/scope";
 import { buildDayItems, itemAgendaId, listAgendaAppointments, listAgendaBlocks, listNoShowStats, listOrigins } from "../../lib/data/agenda/view";
 import { activeWaitlistAppointmentIds } from "../../lib/data/waitlist/entries";
+import { listGuidanceResendable } from "../../lib/data/whatsapp/guidance";
 import { listPreparationResendable } from "../../lib/data/whatsapp/preparation";
 import { listReminderActions } from "../../lib/data/whatsapp/reminders";
 import { vocabularyFor } from "../../lib/vocabulary";
@@ -37,9 +38,11 @@ const items = buildDayItems(appointments, blocks);
 const activeFuture = appointments.filter((a) => (a.status === "scheduled" || a.status === "confirmed") && a.scheduledAt > now).map((a) => a.id);
 const examsFuture = appointments.filter((a) => a.category === "exam" && activeFuture.includes(a.id)).map((a) => a.id);
 const waitlistOn = clinic.features.includes("waitlist");
-const [reminderActions, preparationResendable, onWaitlist, noShows, origins] = await Promise.all([
+const consultationsFuture = appointments.filter((a) => a.category === "consultation" && activeFuture.includes(a.id)).map((a) => a.id);
+const [reminderActions, preparationResendable, guidanceResendable, onWaitlist, noShows, origins] = await Promise.all([
   listReminderActions(db, clinic.clinicId, activeFuture, now),
   clinic.features.includes("exams") ? listPreparationResendable(db, clinic.clinicId, examsFuture) : Promise.resolve(new Set<string>()),
+  listGuidanceResendable(db, clinic.clinicId, consultationsFuture),
   waitlistOn ? activeWaitlistAppointmentIds(db, clinic.clinicId, activeFuture) : Promise.resolve(new Set<string>()),
   listNoShowStats(db, clinic.clinicId, appointments.map((a) => a.patientId)),
   listOrigins(db, clinic.clinicId, appointments),
@@ -65,6 +68,7 @@ const cardProps = (a: (typeof appointments)[number]) => ({
   returnTo,
   reminderAction: reminderActions.get(a.id),
   preparationResendable: preparationResendable.has(a.id),
+  guidanceResendable: guidanceResendable.has(a.id),
   waitlistOn,
   onWaitlist: onWaitlist.has(a.id),
   noShow: noShows.get(a.patientId),

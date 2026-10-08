@@ -138,7 +138,12 @@ personalizado é só outra linha (versão) dessa tabela, então envio, bot e age
 item da matriz libera só a tela de edição. **As mensagens de conversa do bot** (saudação, menu,
 "não entendi", falar com a recepção, link enviado, cancelamento e presença confirmados), que não
 passam pela Meta, **também só são editáveis com esse item**; sem ele, a clínica usa os textos
-padrão. **Só o Administrador da clínica altera as mensagens** (cliente, 05/out/2026). O limite de templates é por conta de WhatsApp da
+padrão. **Só o Administrador da clínica altera as mensagens** (cliente, 05/out/2026).
+**Revisão (cliente, 08/out/2026):** o item virou **dois** na matriz, para o Suporte liberar um sem
+o outro: **"Mensagens do bot"** (a conversa) e **"Mensagens da Meta (templates)"** (as propostas);
+quem já tinha o item ficou com os dois. Fora da matriz, as **orientações gerais da consulta** (um
+texto da clínica, sempre editável pelo Administrador, com o envio ligado em Configurações ›
+WhatsApp). O limite de templates é por conta de WhatsApp da
 clínica (250 sem verificação da empresa, até 6.000 verificada), longe do uso previsto. Criar o
 template pela API depende da F8 (Tech Provider); antes disso, o Suporte envia à Meta à mão.
 **Revisão (cliente, 07/out/2026):** como o sistema já cria templates pela API na conta da clínica

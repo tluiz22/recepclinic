@@ -28,6 +28,8 @@ export type ClinicSettings = {
   /** Resumo da equipe no dia: ligado e quantas horas antes da primeira agenda (1–4). */
   summaryTodayEnabled: boolean;
   summaryTodayLeadHours: number;
+  /** Orientações gerais depois da marcação de uma consulta (cliente, 08/out/2026). */
+  guidanceEnabled: boolean;
   botPaymentInfo: string | null;
   botInsuranceInfo: string | null;
   botNotes: string | null;
@@ -60,7 +62,7 @@ export function normalizeWebsiteUrl(value: string | null | undefined): string | 
 }
 
 const SETTINGS_COLUMNS =
-  "clinic_id, profile, timezone, consultation_age_limit_years, reminder_hour, bot_payment_info, bot_insurance_info, bot_notes, logo_url, brand_color, website_url, require_insurance_details, message_article, reminder_enabled, summary_preview_enabled, summary_preview_hour, summary_today_enabled, summary_today_lead_hours";
+  "clinic_id, profile, timezone, consultation_age_limit_years, reminder_hour, bot_payment_info, bot_insurance_info, bot_notes, logo_url, brand_color, website_url, require_insurance_details, message_article, reminder_enabled, summary_preview_enabled, summary_preview_hour, summary_today_enabled, summary_today_lead_hours, guidance_enabled";
 
 export async function getClinicSettings(db: DbClient, clinicId: string): Promise<ClinicSettings> {
   const [clinic, settings] = await Promise.all([
@@ -85,6 +87,7 @@ export async function getClinicSettings(db: DbClient, clinicId: string): Promise
     summaryPreviewHour: settings.summary_preview_hour,
     summaryTodayEnabled: settings.summary_today_enabled,
     summaryTodayLeadHours: settings.summary_today_lead_hours,
+    guidanceEnabled: settings.guidance_enabled,
     botPaymentInfo: settings.bot_payment_info,
     botInsuranceInfo: settings.bot_insurance_info,
     botNotes: settings.bot_notes,
@@ -178,6 +181,7 @@ export async function updateClinicSettings(
     ["summaryPreviewHour", "summary_preview_hour"],
     ["summaryTodayEnabled", "summary_today_enabled"],
     ["summaryTodayLeadHours", "summary_today_lead_hours"],
+    ["guidanceEnabled", "guidance_enabled"],
     ["botPaymentInfo", "bot_payment_info"],
     ["botInsuranceInfo", "bot_insurance_info"],
     ["botNotes", "bot_notes"],

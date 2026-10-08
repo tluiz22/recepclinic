@@ -7,7 +7,8 @@ import { setWhatsappAccessToken } from "../../src/lib/data/whatsapp/connection";
 import { recordOutboundMessage } from "../../src/lib/data/whatsapp/messages";
 import { clinicCancellationSummary, notifyClinicCancellations, sendAppointmentNotice } from "../../src/lib/data/whatsapp/notices";
 import { cancelByClinic } from "../../src/lib/data/agenda/blocks";
-import { createClinicSender } from "../../src/lib/data/whatsapp/send";
+import { listGuidanceResendable, resendGuidance } from "../../src/lib/data/whatsapp/guidance";
+import { createClinicSender, guidanceSender } from "../../src/lib/data/whatsapp/send";
 import { createDefaultTemplates, refreshTemplateStatuses } from "../../src/lib/data/whatsapp/templateSync";
 import { processWebhook, type WebhookDeps } from "../../src/lib/data/whatsapp/webhook";
 import { asDb, at, MON1, MON2, NOW, setupAgendaClinic, type AgendaFixture } from "./agendaFixture";
@@ -97,6 +98,8 @@ describe("templates padrão na conta da clínica (Suporte)", () => {
       ["clinic_cancellation", "pending", null],
       ["reminder", "approved", null],
       ["exam_preparation", "pending", null],
+      // Orientações gerais da consulta (08/out).
+      ["consultation_guidance", "pending", null],
       // F7: resumo do dia e oferta de vaga.
       ["daily_summary_consultations", "pending", null],
       ["daily_summary_consultations_today", "pending", null],
@@ -105,7 +108,7 @@ describe("templates padrão na conta da clínica (Suporte)", () => {
       ["waitlist_offer", "pending", null],
     ]);
     const created = meta.calls.filter((c) => c.method === "POST");
-    expect(created.map((c) => c.path)).toEqual(Array(10).fill(`/${WABA}/message_templates`));
+    expect(created.map((c) => c.path)).toEqual(Array(11).fill(`/${WABA}/message_templates`));
     expect(created[0].body).toMatchObject({ name: "rc_confirmacao_v1", language: "pt_BR", category: "UTILITY" });
     // Exemplo de cada variável, exigido pela Meta.
     const body = (created[0].body!.components as { type: string; example?: { body_text: string[][] } }[])[0];
@@ -136,6 +139,7 @@ describe("templates padrão na conta da clínica (Suporte)", () => {
       clinic_cancellation: ["pending", null],
       reminder: ["approved", null],
       exam_preparation: ["rejected", "INVALID_FORMAT"],
+      consultation_guidance: ["pending", null],
     });
   });
 
@@ -309,6 +313,72 @@ describe("preparo do exame depois da entrega (webhook)", () => {
       ["appointment_confirmation", "read"],
       ["exam_preparation", "sent"],
     ]);
+  });
+});
+
+describe("orientações gerais da consulta depois da entrega (08/out)", () => {
+  it("com o envio ligado: sai uma vez pelo template com o link; desligado, nada; sem template, reenviar", async () => {
+    await adminClient().from("bot_messages").insert({ clinic_id: f.clinicId, message_key: "consultation_guidance", body: "Chegue 15 minutos antes." });
+    await adminClient().from("whatsapp_templates").update({ status: "approved" }).eq("clinic_id", f.clinicId).eq("template_key", "consultation_guidance");
+    const book = async (time: string) =>
+      (
+        await bookAppointment(
+          asDb(f.reception),
+          f.clinicId,
+          { patientId: f.ids.p1, serviceId: f.ids.consulta, agendaId: f.ids.agendaDra, start: at(MON2, time), locationId: f.ids.office, channel: "admin", actorId: null },
+          NOW,
+        )
+      ).appointment.id;
+    const cancel = (id: string) => cancelAppointment(service, f.clinicId, id, { channel: "admin", actorId: null }, NOW);
+    const meta = fakeMeta();
+    const deps: WebhookDeps = {
+      resolveClinic: (id) => resolveClinicByPhoneNumberId(id, env()),
+      clientFor: (clinicId) => createClinicServiceClient(clinicId, env()),
+      senderFor: (clinicId) => createClinicSender(createClinicServiceClient(clinicId, env()), clinicId, { baseUrl: BASE_URL, fetcher: meta.fetcher }),
+    };
+    const status = (wamid: string, value: string) =>
+      processWebhook({ entry: [{ changes: [{ field: "messages", value: { metadata: { phone_number_id: NUMBER }, statuses: [{ id: wamid, status: value }] } }] }] }, deps, NOW);
+    const confirmationDelivered = async (appointmentId: string, wamid: string) => {
+      await recordOutboundMessage(service, f.clinicId, { phone: "+5584991226001", appointmentId, messageType: "appointment_confirmation", status: "sent", waMessageId: wamid });
+      return status(wamid, "delivered");
+    };
+
+    // Envio desligado (padrão): nada sai.
+    const first = await book("10:00");
+    expect(await confirmationDelivered(first, "wamid.f62.conf-guia-1")).toMatchObject({ errors: 0 });
+    expect(meta.calls).toEqual([]);
+    await cancel(first);
+
+    await adminClient().from("clinic_settings").update({ guidance_enabled: true }).eq("clinic_id", f.clinicId);
+    const consult = await book("10:30");
+    expect(await confirmationDelivered(consult, "wamid.f62.conf-guia-2")).toMatchObject({ errors: 0 });
+    await status("wamid.f62.conf-guia-2", "read");
+    expect(meta.calls).toHaveLength(1);
+    const sent = meta.calls[0].body as { template: { name: string; components: { parameters: { text: string }[] }[] } };
+    expect(sent.template.name).toBe("rc_orientacoes_consulta_v1");
+    expect(sent.template.components[0].parameters.map((p) => p.text)).toEqual(["Resp.", "da Clínica Envio F62", "Paciente Um", `${BASE_URL}/orientacoes/${f.clinicId}`]);
+    expect((await outbound(consult)).map((m) => [m.message_type, m.status])).toEqual([
+      ["appointment_confirmation", "read"],
+      ["consultation_guidance", "sent"],
+    ]);
+    await cancel(consult);
+
+    // Sem o template aprovado: fica com "Reenviar orientações".
+    await adminClient().from("whatsapp_templates").update({ status: "pending" }).eq("clinic_id", f.clinicId).eq("template_key", "consultation_guidance");
+    const pending = await book("11:30");
+    await confirmationDelivered(pending, "wamid.f62.conf-guia-3");
+    expect((await outbound(pending)).at(-1)).toMatchObject({ message_type: "consultation_guidance", status: "skipped_no_template" });
+    expect(await listGuidanceResendable(asDb(f.reception), f.clinicId, [pending])).toEqual(new Set([pending]));
+
+    await adminClient().from("whatsapp_templates").update({ status: "approved" }).eq("clinic_id", f.clinicId).eq("template_key", "consultation_guidance");
+    // Um minuto depois: a tentativa nova é a mais recente.
+    const later = new Date(NOW.getTime() + 60_000);
+    const resend = async () => resendGuidance(asDb(f.reception), f.clinicId, pending, f.reception.id, guidanceSender((await sender(meta.fetcher))!), later);
+    expect(await resend()).toBe("sent");
+    expect(await listGuidanceResendable(asDb(f.reception), f.clinicId, [pending])).toEqual(new Set());
+    expect(await resend()).toBe("not_eligible");
+    await cancel(pending);
+    await adminClient().from("clinic_settings").update({ guidance_enabled: false }).eq("clinic_id", f.clinicId);
   });
 });
 

@@ -1,0 +1,67 @@
+---
+// Orientações gerais da consulta (cliente, 08/out/2026) — página pública, sem
+// login, com o texto da clínica formatado e a marca dela, no modelo da página
+// do preparo do exame. É o link do template enviado fora da janela de 24h da
+// Meta (dentro dela, o texto vai na conversa).
+//
+// O endereço leva o id da clínica; a leitura usa a credencial limitada a ela
+// (D1). Não mostra nenhum dado de paciente. Com o envio desligado depois, o
+// texto continua aparecendo: quem já recebeu o link ainda pode precisar dele.
+import "../../styles/global.css";
+import PublicFooter from "../../components/PublicFooter.astro";
+import PublicHeader from "../../components/public/PublicHeader.astro";
+import { isUuid } from "../../lib/clinicAccess";
+import { createClinicServiceClient } from "../../lib/data/clinicService";
+import { getPublicClinicBrand, type PublicClinicBrand } from "../../lib/data/config/brand";
+import { getGuidance } from "../../lib/data/whatsapp/customMessages";
+import { DataError } from "../../lib/data/errors";
+import { whatsAppTextToHtml } from "../../lib/whatsappFormat";
+
+const id = Astro.params.id ?? "";
+
+let guidance: string | null = null;
+let brand: PublicClinicBrand | null = null;
+if (isUuid(id)) {
+  const db = createClinicServiceClient(id);
+  brand = await getPublicClinicBrand(db, id).catch((error) => {
+    if (error instanceof DataError && error.code === "not_found") return null;
+    throw error;
+  });
+  if (brand) guidance = (await getGuidance(db, id))?.trim() || null;
+}
+
+if (!guidance) Astro.response.status = 404;
+const pageTitle = guidance ? "Orientações gerais para a consulta" : "Orientações não encontradas";
+---
+
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="robots" content="noindex, nofollow" />
+    <title>{pageTitle} | {brand?.name ?? "RecepClinic"}</title>
+  </head>
+  <body class="flex min-h-screen flex-col bg-slate-50 text-slate-900">
+    {brand && <PublicHeader brand={brand} />}
+    <main class="mx-auto w-full max-w-xl flex-1 px-4 py-10">
+      {
+        brand && guidance ? (
+          <>
+            <p class="text-sm font-medium text-slate-500">{brand.name}</p>
+            <h1 class="mt-1 text-2xl font-bold text-slate-900">Orientações gerais para a consulta</h1>
+            <div
+              class="mt-6 whitespace-pre-line break-words rounded-md border border-slate-200 bg-white p-5 text-base leading-relaxed text-slate-800"
+              set:html={whatsAppTextToHtml(guidance)}
+            />
+          </>
+        ) : (
+          <div class="rounded-md border border-slate-200 bg-white p-6 text-center">
+            <h1 class="text-lg font-bold text-slate-900">Orientações não encontradas</h1>
+            <p class="mt-2 text-sm text-slate-600">Em caso de dúvida, fale com a clínica pelo WhatsApp.</p>
+          </div>
+        )
+      }
+    </main>
+    <PublicFooter />
+  </body>
+</html>

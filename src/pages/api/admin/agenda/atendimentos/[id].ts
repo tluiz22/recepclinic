@@ -19,7 +19,8 @@ import { clinicSenderFor } from "../../../../../lib/data/whatsapp/clinicSender";
 import { firstByDate, NOTICE_RESULT_TEXT, sendAppointmentNotice, type NoticeKind } from "../../../../../lib/data/whatsapp/notices";
 import { PREPARATION_RESEND_MESSAGES, resendPreparation } from "../../../../../lib/data/whatsapp/preparation";
 import { RESEND_MESSAGES, sendReminderFromPanel } from "../../../../../lib/data/whatsapp/reminders";
-import { preparationSender, reminderSender } from "../../../../../lib/data/whatsapp/send";
+import { GUIDANCE_RESEND_MESSAGES, resendGuidance } from "../../../../../lib/data/whatsapp/guidance";
+import { guidanceSender, preparationSender, reminderSender } from "../../../../../lib/data/whatsapp/send";
 import { formChecked, formInt, formOptionalText, formText } from "../../../../../lib/forms";
 import { changeSeriesFrom, createSeries, endSeriesFrom } from "../../../../../lib/data/agenda/series";
 
@@ -146,6 +147,13 @@ export const POST: APIRoute = async (context) => {
           const sender = await clinicSenderFor(clinic.clinicId, request.url);
           const outcome = sender ? await resendPreparation(db, clinic.clinicId, id, actorId, preparationSender(sender)) : "not_connected";
           const message = PREPARATION_RESEND_MESSAGES[outcome];
+          if (!message.ok) throw new DataError("invalid", message.text, { outcome: message.text });
+          return done(message.text);
+        }
+        case "orientacoes": {
+          const sender = await clinicSenderFor(clinic.clinicId, request.url);
+          const outcome = sender ? await resendGuidance(db, clinic.clinicId, id, actorId, guidanceSender(sender)) : "not_connected";
+          const message = GUIDANCE_RESEND_MESSAGES[outcome];
           if (!message.ok) throw new DataError("invalid", message.text, { outcome: message.text });
           return done(message.text);
         }

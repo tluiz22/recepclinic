@@ -1042,6 +1042,17 @@ de remarcação (texto da F4.6), e enviam sozinhos; sai a tela "Avisar" da F4.6.
   dela, e o bot usa o texto próprio (`textFor`); na presença confirmada de exame, o lembrete do
   preparo continua indo junto. O banco confere o papel e o item (RLS). Migração `20261007160000`
   (item novo, versões, `bot_messages`). 5 testes unitários e 4 de banco novos.
+  **Ajustes da validação (cliente, 08/out):** (1) a aba ganha um combo **"Mensagens do bot"**
+  (padrão) / **"Mensagens aprovadas pela Meta"**; (2) o item da matriz vira dois, **"Mensagens do
+  bot"** e **"Mensagens da Meta (templates)"** (quem tinha o item fica com os dois); as mensagens
+  de cada grupo só aparecem com o item dele; (3) **orientações gerais da consulta**: um texto da
+  clínica (fora da matriz; sempre aparece em "Mensagens do bot" e o Administrador sempre edita),
+  enviado **uma vez** depois que a confirmação da marcação de uma **consulta** (não retorno nem
+  exame) chega ao celular, como o preparo do exame; envio ligado em Configurações › WhatsApp
+  (desligado por padrão; só liga com o texto escrito). Dentro das 24h vai "Orientações gerais para
+  a consulta:" e o texto; fora delas, o template `rc_orientacoes_consulta_v1` com o link da página
+  `/orientacoes/{clínica}` (textos aprovados em 08/out). Falhou: selo e "Reenviar orientações" na
+  Agenda. Migração `20261008120000`. 1 teste unitário e 3 de banco novos.
 - **F6.7 — Métricas do bot:** abas Funil do bot e Retomar contato.
   **Detalhada, aprovada e implementada em 07/out (aguarda a validação do cliente).** Como no
   piloto (Fases 15 e 23): **Funil do bot** com um cartão por fluxo (Marcar consulta: Iniciaram →

@@ -176,6 +176,7 @@ export const TEMPLATE_KEYS = [
   "clinic_cancellation",
   "reminder",
   "exam_preparation",
+  "consultation_guidance",
   "waitlist_offer",
   "daily_summary_consultations",
   "daily_summary_exams",

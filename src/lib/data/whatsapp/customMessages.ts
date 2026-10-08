@@ -27,6 +27,7 @@ export const TEMPLATE_MARKERS: Partial<Record<TemplateKey, string[]>> = {
   cancellation: APPOINTMENT_MARKERS.slice(0, 5),
   clinic_cancellation: ["nome", "clinica", "paciente", "servico", "data", "link"],
   exam_preparation: ["nome", "clinica", "exame", "link"],
+  consultation_guidance: ["nome", "clinica", "paciente", "link"],
   daily_summary_consultations: ["nome", "clinica", "data", "lista"],
   daily_summary_exams: ["nome", "clinica", "data", "lista"],
   daily_summary_consultations_today: ["nome", "clinica", "data", "lista"],
@@ -186,6 +187,46 @@ export async function saveBotMessage(db: DbClient, clinicId: string, key: BotMes
 
 export async function resetBotMessage(db: DbClient, clinicId: string, key: BotMessageKey): Promise<void> {
   unwrap(await db.from("bot_messages").delete().eq("clinic_id", clinicId).eq("message_key", key), "Mensagem do bot");
+}
+
+// ---------------------------------------------------------------------------
+// Orientações gerais da consulta (cliente, 08/out/2026): texto da clínica,
+// fora da matriz e sempre editável pelo Administrador; guardado com as falas
+// do bot. O envio é ligado em Configurações › WhatsApp (guidance.ts envia).
+// ---------------------------------------------------------------------------
+
+export const GUIDANCE_KEY = "consultation_guidance";
+export const GUIDANCE_MAX_LENGTH = 3500;
+
+export async function getGuidance(db: DbClient, clinicId: string): Promise<string | null> {
+  const row = unwrap(
+    await db.from("bot_messages").select("body").eq("clinic_id", clinicId).eq("message_key", GUIDANCE_KEY).maybeSingle(),
+    "Orientações gerais",
+  );
+  return row?.body ?? null;
+}
+
+export async function saveGuidance(db: DbClient, clinicId: string, text: string, actorId: string | null): Promise<void> {
+  const body = text.replace(/\r\n/g, "\n").trim();
+  const v = new Validation();
+  v.check(body.length > 0, "text", "Escreva as orientações");
+  v.check(body.length <= GUIDANCE_MAX_LENGTH, "text", `As orientações vão até ${GUIDANCE_MAX_LENGTH} caracteres`);
+  v.throwIfInvalid("Orientações gerais");
+  unwrap(
+    await db.from("bot_messages").upsert({ clinic_id: clinicId, message_key: GUIDANCE_KEY, body, updated_by: actorId }, { onConflict: "clinic_id,message_key" }),
+    "Orientações gerais",
+  );
+}
+
+/** Apaga o texto; com o envio ligado, não deixa (o envio ficaria sem texto). */
+export async function clearGuidance(db: DbClient, clinicId: string): Promise<void> {
+  const settings = unwrapOne(await db.from("clinic_settings").select("guidance_enabled").eq("clinic_id", clinicId).maybeSingle(), "Configuração da clínica");
+  if (settings.guidance_enabled) {
+    throw new DataError("invalid", "Orientações gerais: desligue o envio em Configurações › WhatsApp antes de apagar o texto", {
+      text: "Desligue o envio em Configurações › WhatsApp antes de apagar o texto.",
+    });
+  }
+  unwrap(await db.from("bot_messages").delete().eq("clinic_id", clinicId).eq("message_key", GUIDANCE_KEY), "Orientações gerais");
 }
 
 // ---------------------------------------------------------------------------

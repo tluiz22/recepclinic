@@ -76,6 +76,13 @@ export const DEFAULT_TEMPLATES: DefaultTemplate[] = [
     body: `${GREETING}\nPara o exame {{3}} que você marcou, siga as orientações de preparo neste link: {{4}}\n\n${ANY_QUESTION}`,
     examples: ["Maria", "da Clínica Sorriso", "Espirometria", "https://app.recepclinic.com.br/preparo/exemplo"],
   },
+  {
+    // Orientações gerais da consulta, fora da janela de 24h (texto aprovado pelo cliente em 08/out).
+    key: "consultation_guidance",
+    name: "rc_orientacoes_consulta_v1",
+    body: `${GREETING}\nPara a consulta de {{3}} que você marcou, veja as orientações gerais neste link: {{4}}\n\n${ANY_QUESTION}`,
+    examples: ["Maria", "da Clínica Sorriso", "João Silva", "https://app.recepclinic.com.br/orientacoes/exemplo"],
+  },
   // Resumo do dia para a equipe (F7; texto aprovado pelo cliente em 07/out/2026).
   ...(["consultations", "exams"] as const).flatMap((kind) =>
     (["", "_today"] as const).map((suffix) => {

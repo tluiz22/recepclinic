@@ -5,11 +5,14 @@ import { resolveClinicByPhoneNumberId } from "../../src/lib/data/platform";
 import { getApprovedTemplate, setWhatsappAccessToken } from "../../src/lib/data/whatsapp/connection";
 import {
   approveAndSendProposal,
+  clearGuidance,
   declineProposal,
+  getGuidance,
   listBotMessages,
   proposeTemplate,
   resetTemplateToDefault,
   saveBotMessage,
+  saveGuidance,
   templateVersions,
 } from "../../src/lib/data/whatsapp/customMessages";
 import type { ClinicSender } from "../../src/lib/data/whatsapp/send";
@@ -150,5 +153,33 @@ describe("conversa do bot", () => {
     await adminClient().from("conversation_state").update({ state: "WELCOME" }).eq("clinic_id", clinicId);
     await hello("wamid.f66.in.2");
     expect(sent[0]).toBe("Olá! 👋 Aqui é da Clínica Mensagens F66.");
+  });
+});
+
+describe("itens separados e orientações gerais (08/out)", () => {
+  const setFeatures = async (without: string[]) => {
+    const { data: all } = await adminClient().from("features").select("key");
+    await adminClient().rpc("set_clinic_features", { p_clinic_id: clinicId, p_features: all!.map((f) => f.key).filter((k) => !without.includes(k)) });
+  };
+
+  it("só \"Mensagens do bot\": edita a conversa, mas não propõe aviso", async () => {
+    await setFeatures(["custom_templates"]);
+    await saveBotMessage(asDb(admin), clinicId, "menu", "Escolha uma opção:", admin.id);
+    expect((await listBotMessages(asDb(admin), clinicId)).get("menu")).toBe("Escolha uma opção:");
+    await expect(proposeTemplate(asDb(admin), clinicId, "reschedule", PROPOSAL.replace("confirma", "remarcou"), admin.id)).rejects.toThrow();
+  });
+
+  it("orientações gerais: o Administrador sempre escreve (sem os itens); com o envio ligado, não apaga", async () => {
+    await setFeatures(["custom_messages", "custom_templates"]);
+    await expect(saveBotMessage(asDb(admin), clinicId, "menu", "Outro menu", admin.id)).rejects.toThrow();
+    await saveGuidance(asDb(admin), clinicId, "Traga *documento* e exames anteriores.", admin.id);
+    expect(await getGuidance(asDb(reception), clinicId)).toBe("Traga *documento* e exames anteriores.");
+    await expect(saveGuidance(asDb(reception), clinicId, "Outro texto", reception.id)).rejects.toThrow();
+
+    await adminClient().from("clinic_settings").update({ guidance_enabled: true }).eq("clinic_id", clinicId);
+    await expect(clearGuidance(asDb(admin), clinicId)).rejects.toThrow(/desligue o envio/i);
+    await adminClient().from("clinic_settings").update({ guidance_enabled: false }).eq("clinic_id", clinicId);
+    await clearGuidance(asDb(admin), clinicId);
+    expect(await getGuidance(asDb(admin), clinicId)).toBeNull();
   });
 });

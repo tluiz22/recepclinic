@@ -206,6 +206,18 @@ do celular; cliente, 06/out/2026). Nada do app ou do número do piloto.
    Administrador da clínica): mudar as boas-vindas e mandar "oi" para o número de testes; propor um
    texto para a Confirmação. Como Suporte, na mesma aba, **Aprovar e enviar à Meta** (ou Recusar
    com o motivo); aprovada pela Meta, a Confirmação passa a sair com o texto novo.
+4. **Ajustes de 08/out** (migração `20261008120000_orientacoes_gerais`):
+   - **Combo**: a aba abre em "Mensagens do bot"; "Mensagens aprovadas pela Meta" só aparece com o
+     item "Mensagens da Meta (templates)". Na matriz, desmarcar um dos dois itens esconde só o grupo
+     dele (as orientações gerais continuam).
+   - **Template**: Configurações › WhatsApp › *Templates* › **Criar na Meta** cria o
+     `rc_orientacoes_consulta_v1`.
+   - **Orientações gerais**: escrever o texto em Mensagens (como Administrador); ligar "Enviar as
+     orientações gerais depois da marcação" em Configurações › WhatsApp; marcar uma consulta para o
+     seu número: depois da confirmação chegam as orientações (com conversa nas últimas 24h, o
+     texto; sem, o template com o link, que abre a página com o texto formatado). Retorno e exame
+     não recebem. Envio que falhou: selo "Orientações não entregues" e "Reenviar orientações" na
+     Agenda.
 
 ## K. Envios automáticos (F7)
 

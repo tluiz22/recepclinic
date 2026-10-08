@@ -1,3 +1,4 @@
+import type { GuidanceSender } from "./guidance";
 import type { DbClient } from "../clients";
 import { unwrapOne } from "../errors";
 import { getSendingSetup, type TemplateKey } from "./connection";
@@ -149,6 +150,21 @@ export function preparationSender(sender: ClinicSender): PreparationSender {
       sender.clinicLabel,
       preparation.examName,
       link,
+    ]);
+  };
+}
+
+/** Orientações gerais da consulta (cliente, 08/out): o texto (janela aberta) ou o template com o link (fechada). */
+export function guidanceSender(sender: ClinicSender): GuidanceSender {
+  return (guidance) => {
+    if (guidance.mode === "text" || !guidance.template) {
+      return sender.text(guidance.phone, `Orientações gerais para a consulta:\n\n${guidance.text}`);
+    }
+    return sender.template(guidance.phone, "consultation_guidance", guidance.template, [
+      firstName(guidance.contactName),
+      sender.clinicLabel,
+      guidance.patientName,
+      `${sender.baseUrl}${guidance.pagePath}`,
     ]);
   };
 }

@@ -5,7 +5,8 @@ import { hasFeature } from "../features";
 import { handleAgentEcho } from "./conversations";
 import { recordAgentEcho, recordInboundMessage, updateDeliveryStatus, type RecordResult } from "./messages";
 import { sendPreparationAfterDelivery } from "./preparation";
-import { preparationSender, type ClinicSender } from "./send";
+import { sendGuidanceAfterDelivery } from "./guidance";
+import { guidanceSender, preparationSender, type ClinicSender } from "./send";
 import { applyTemplateStatusEvent, type TemplateStatusEvent } from "./templateSync";
 import { handleIncomingMessage } from "./bot/router";
 
@@ -168,6 +169,11 @@ export async function processWebhook(payload: unknown, deps: WebhookDeps, now: D
           if (!sender) return;
           const sent = await sendPreparationAfterDelivery(db, clinicId, result, preparationSender(sender), now);
           if (sent) summary.preparations += 1;
+        });
+        // Confirmação de consulta entregue: as orientações gerais saem uma vez (cliente, 08/out).
+        await attempt("orientações gerais", async () => {
+          const sender = await deps.senderFor!(clinicId);
+          if (sender) await sendGuidanceAfterDelivery(db, clinicId, result, guidanceSender(sender), now);
         });
       });
     }

@@ -98,6 +98,8 @@ export function describeTrail(row: TrailEntryRow, actors: Map<string, ActorLabel
       return make(`${d.first ? "Lembrete enviado à mão" : "Lembrete reenviado"}${by}`);
     case "preparation_resent":
       return make(`Preparo do exame reenviado${by}`);
+    case "guidance_resent":
+      return make(`Orientações gerais reenviadas${by}`);
     case "waitlist_joined":
       return make(`Entrou na lista de espera ${via}${by}`);
     case "waitlist_left":

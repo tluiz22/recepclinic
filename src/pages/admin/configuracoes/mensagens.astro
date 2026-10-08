@@ -1,9 +1,12 @@
 ---
-// Configurações › Mensagens (F6.6; D3b revista, cliente 05 e 07/out/2026):
-// cada mensagem num balão do WhatsApp, preenchida com os dados da clínica.
-// Com o item "Mensagens personalizadas", o Administrador da clínica edita a
-// conversa do bot (vale na hora) e propõe o texto dos avisos (templates); o
-// Suporte revisa e envia à Meta como versão nova.
+// Configurações › Mensagens (F6.6; D3b revista, cliente 05 e 07/out/2026;
+// validação de 08/out): cada mensagem num balão do WhatsApp, preenchida com os
+// dados da clínica, num combo "Mensagens do bot" (padrão) / "Mensagens
+// aprovadas pela Meta". As orientações gerais da consulta aparecem sempre e o
+// Administrador da clínica sempre as edita; a conversa do bot só com o item
+// "Mensagens do bot" (edita e vale na hora); os avisos (templates) só com o
+// item "Mensagens da Meta" (propõe; o Suporte revisa e envia à Meta como
+// versão nova).
 import AdminLayout from "../../../layouts/AdminLayout.astro";
 import Badge from "../../../components/admin/Badge.astro";
 import Card from "../../../components/admin/Card.astro";
@@ -21,6 +24,8 @@ import { listServices } from "../../../lib/data/config/services";
 import { listWhatsappTemplates, type TemplateKey, type WhatsappTemplate } from "../../../lib/data/whatsapp/connection";
 import {
   BOT_MESSAGES,
+  GUIDANCE_KEY,
+  GUIDANCE_MAX_LENGTH,
   listBotMessages,
   MARKER_LABELS,
   renderMarkers,
@@ -33,10 +38,14 @@ import { appointmentPlace, clinicLabel, DEFAULT_TEMPLATES, fillTemplate, formatA
 const clinic = Astro.locals.clinic!;
 const db = createUserClient(Astro.request, Astro.cookies);
 const botOn = clinic.features.includes("whatsapp_bot");
-const customOn = clinic.features.includes("custom_messages");
+const botMessagesOn = clinic.features.includes("custom_messages");
+const metaOn = clinic.features.includes("custom_templates");
 const isAdmin = clinic.roles.includes("admin");
-const canEdit = customOn && isAdmin;
+const canEditBot = botMessagesOn && isAdmin;
+const canEdit = metaOn && isAdmin;
 const isSupport = clinic.isPlatformStaff;
+// Combo: "Mensagens do bot" por padrão; as da Meta só com o item.
+const grupo = metaOn && Astro.url.searchParams.get("grupo") === "meta" ? "meta" : "bot";
 
 const [settings, templates, customTexts, services, agendas, professionals, locations] = await Promise.all([
   getClinicSettings(db, clinic.clinicId),
@@ -88,7 +97,9 @@ const exampleFor = (key: TemplateKey): Record<string, string> =>
     ? { ...example, servico: consultation?.name ?? "Consulta", paciente: "João" }
     : key === "exam_preparation"
       ? { ...example, link: `${Astro.url.origin}/preparo/${exam?.id ?? "exemplo"}` }
-      : example;
+      : key === "consultation_guidance"
+        ? { ...example, link: `${Astro.url.origin}/orientacoes/${clinic.clinicId}` }
+        : example;
 
 const TEMPLATE_LABELS: Record<string, string> = {
   confirmation: "Confirmação",
@@ -97,6 +108,7 @@ const TEMPLATE_LABELS: Record<string, string> = {
   clinic_cancellation: "Cancelamento pela clínica (com link)",
   reminder: "Lembrete",
   exam_preparation: "Preparo do exame",
+  consultation_guidance: "Orientações gerais (fora das 24h, com o link)",
   daily_summary_consultations: "Resumo para a equipe: consultas de amanhã",
   daily_summary_exams: "Resumo para a equipe: exames de amanhã",
   daily_summary_consultations_today: "Resumo para a equipe: consultas de hoje",
@@ -158,6 +170,7 @@ const botRows = BOT_MESSAGES.map((def) => {
     buttons: def.key === "menu" ? ["1. Consultas", "2. Exames", "3. Informações"] : [],
   };
 });
+const guidance = customTexts.get(GUIDANCE_KEY as never) ?? null;
 const action = "/api/admin/configuracoes/mensagens";
 const markerHint = (markers: string[]) => markers.map((m) => `{${m}} = ${MARKER_LABELS[m]}`).join(" · ");
 ---
@@ -167,139 +180,195 @@ const markerHint = (markers: string[]) => markers.map((m) => `{${m}} = ${MARKER_
   <ConfiguracoesTabs current="mensagens" />
   <FlashMessage />
 
-  <p class="mt-4 max-w-3xl text-sm text-slate-600">
-    Como o paciente recebe cada mensagem, com os dados da clínica (paciente e data de exemplo).
-    {
-      customOn
-        ? isAdmin
-          ? " Você pode personalizar os textos: a conversa do bot vale na hora; os avisos passam pela revisão do Suporte e pela aprovação da Meta."
-          : ""
-        : " Para usar textos próprios, fale com o suporte sobre o item \"Mensagens personalizadas\"."
-    }
-  </p>
-
-  <h2 class="mt-6 text-lg font-semibold text-slate-900">Avisos (aprovados pela Meta)</h2>
-  <div class="mt-2 flex max-w-3xl flex-col gap-4">
-    {
-      rows.map((row) => (
-        <Card>
-          <div class="flex flex-wrap items-center gap-2">
-            <h3 class="font-semibold text-slate-900">{row.label}</h3>
-            {row.approved ? <Badge variant="success">Em uso</Badge> : <Badge variant="warning">Ainda não aprovado</Badge>}
-            {row.custom && <Badge variant="accent">Texto próprio</Badge>}
-          </div>
-          <div class="mt-3">
-            <WhatsAppBubble text={row.preview} buttons={row.buttons} />
-          </div>
-
-          {row.pendingVersion && (
-            <div class="mt-3 rounded-md border border-slate-200 bg-slate-50 p-3 text-sm">
-              {row.pendingVersion.stage === "proposed" && <p class="font-medium text-slate-800">Proposta aguardando a revisão do Suporte</p>}
-              {row.pendingVersion.stage === "declined" && (
-                <p class="font-medium text-red-700">Proposta recusada{row.pendingVersion.supportNote ? `: ${row.pendingVersion.supportNote}` : ""}</p>
-              )}
-              {row.pendingVersion.stage === "meta" && (
-                <p class="font-medium text-slate-800">
-                  Versão nova: <Badge variant={STATUS[row.pendingVersion.status].variant}>{STATUS[row.pendingVersion.status].label}</Badge>
-                  {row.pendingVersion.status === "pending" && <span class="text-slate-600"> · segue o texto atual até a aprovação</span>}
-                  {row.pendingVersion.rejectionReason && <span class="text-red-700"> · motivo: {row.pendingVersion.rejectionReason}</span>}
-                </p>
-              )}
-              {row.pendingVersion.body && row.pendingVersion.stage !== "meta" && (
-                <div class="mt-2">
-                  <WhatsAppBubble text={fillTemplate(row.pendingVersion.body, row.markers.map((m) => exampleFor(row.key)[m]))} buttons={row.buttons} />
-                </div>
-              )}
-              {isSupport && row.pendingVersion.stage === "proposed" && (
-                <div class="mt-3 flex flex-wrap items-end gap-3">
-                  <form method="POST" action={action}>
-                    <input type="hidden" name="acao" value="suporte_aprovar" />
-                    <input type="hidden" name="id" value={row.pendingVersion.id} />
-                    <button type="submit" class={PRIMARY_BUTTON}>Aprovar e enviar à Meta</button>
-                  </form>
-                  <form method="POST" action={action} class="flex flex-wrap items-end gap-2">
-                    <input type="hidden" name="acao" value="suporte_recusar" />
-                    <input type="hidden" name="id" value={row.pendingVersion.id} />
-                    <input name="note" placeholder="Motivo para a clínica" required class={`${INPUT} w-64`} />
-                    <button type="submit" class={SECONDARY_BUTTON}>Recusar</button>
-                  </form>
-                </div>
-              )}
-              {canEdit && row.pendingVersion.stage === "proposed" && (
-                <form method="POST" action={action} class="mt-2">
-                  <input type="hidden" name="acao" value="template_retirar" />
-                  <input type="hidden" name="key" value={row.key} />
-                  <button type="submit" class="text-sm text-sky-700 hover:underline">Retirar a proposta</button>
-                </form>
-              )}
-            </div>
-          )}
-
-          {canEdit && (
-            <details class="mt-3">
-              <summary class="cursor-pointer text-sm font-medium text-sky-700">Personalizar o texto</summary>
-              <form method="POST" action={action} class="mt-2 flex flex-col gap-2">
-                <input type="hidden" name="acao" value="template_propor" />
-                <input type="hidden" name="key" value={row.key} />
-                <textarea name="text" rows="9" class={INPUT}>{row.editText}</textarea>
-                <p class={HINT}>Use todos estes marcadores, uma vez cada, nesta ordem: {markerHint(row.markers)}. *texto* fica em negrito.</p>
-                <button type="submit" class={`${PRIMARY_BUTTON} self-start`}>Enviar para revisão</button>
-              </form>
-              {row.custom && (
-                <form method="POST" action={action} class="mt-2">
-                  <input type="hidden" name="acao" value="template_padrao" />
-                  <input type="hidden" name="key" value={row.key} />
-                  <button type="submit" class="text-sm text-sky-700 hover:underline">Voltar ao texto padrão</button>
-                </form>
-              )}
-            </details>
-          )}
-        </Card>
-      ))
-    }
-  </div>
+  <form method="GET" class="mt-4 flex flex-wrap items-center gap-2">
+    <label for="grupo" class="text-sm font-medium text-slate-700">Mostrar</label>
+    <select id="grupo" name="grupo" class={`${INPUT} mt-0 w-72`} onchange="this.form.submit()">
+      <option value="bot" selected={grupo === "bot"}>Mensagens do bot</option>
+      {metaOn && <option value="meta" selected={grupo === "meta"}>Mensagens aprovadas pela Meta</option>}
+    </select>
+    <noscript><button type="submit" class={SECONDARY_BUTTON}>Mostrar</button></noscript>
+  </form>
 
   {
-    botOn && (
+    grupo === "meta" ? (
       <>
-        <h2 class="mt-8 text-lg font-semibold text-slate-900">Conversa do bot</h2>
-        <div class="mt-2 flex max-w-3xl flex-col gap-4">
-          {botRows.map((row) => (
-            <Card>
-              <div class="flex flex-wrap items-center gap-2">
-                <h3 class="font-semibold text-slate-900">{row.label}</h3>
-                {row.custom && <Badge variant="accent">Texto próprio</Badge>}
-              </div>
-              <div class="mt-3">
-                <WhatsAppBubble text={row.preview} buttons={row.buttons} />
-              </div>
-              {canEdit && (
-                <details class="mt-3">
-                  <summary class="cursor-pointer text-sm font-medium text-sky-700">Personalizar o texto</summary>
-                  <form method="POST" action={action} class="mt-2 flex flex-col gap-2">
-                    <input type="hidden" name="acao" value="conversa_salvar" />
-                    <input type="hidden" name="key" value={row.key} />
-                    <textarea name="text" rows="5" class={INPUT}>{row.custom ?? row.defaultText}</textarea>
-                    {row.markers.length > 0 && (
-                      <p class={HINT}>
-                        Marcadores: {markerHint(row.markers)}
-                        {row.required.length > 0 && ` (obrigatório: ${row.required.map((m) => `{${m}}`).join(", ")})`}.
+        <p class="mt-4 max-w-3xl text-sm text-slate-600">
+          Avisos enviados pelos templates aprovados pela Meta, com os dados da clínica (paciente e data de exemplo).
+          {isAdmin && " Um texto novo passa pela revisão do Suporte e pela aprovação da Meta."}
+        </p>
+        <div class="mt-4 flex max-w-3xl flex-col gap-4">
+          {
+            rows.map((row) => (
+              <Card>
+                <div class="flex flex-wrap items-center gap-2">
+                  <h3 class="font-semibold text-slate-900">{row.label}</h3>
+                  {row.approved ? <Badge variant="success">Em uso</Badge> : <Badge variant="warning">Ainda não aprovado</Badge>}
+                  {row.custom && <Badge variant="accent">Texto próprio</Badge>}
+                </div>
+                <div class="mt-3">
+                  <WhatsAppBubble text={row.preview} buttons={row.buttons} />
+                </div>
+
+                {row.pendingVersion && (
+                  <div class="mt-3 rounded-md border border-slate-200 bg-slate-50 p-3 text-sm">
+                    {row.pendingVersion.stage === "proposed" && <p class="font-medium text-slate-800">Proposta aguardando a revisão do Suporte</p>}
+                    {row.pendingVersion.stage === "declined" && (
+                      <p class="font-medium text-red-700">Proposta recusada{row.pendingVersion.supportNote ? `: ${row.pendingVersion.supportNote}` : ""}</p>
+                    )}
+                    {row.pendingVersion.stage === "meta" && (
+                      <p class="font-medium text-slate-800">
+                        Versão nova: <Badge variant={STATUS[row.pendingVersion.status].variant}>{STATUS[row.pendingVersion.status].label}</Badge>
+                        {row.pendingVersion.status === "pending" && <span class="text-slate-600"> · segue o texto atual até a aprovação</span>}
+                        {row.pendingVersion.rejectionReason && <span class="text-red-700"> · motivo: {row.pendingVersion.rejectionReason}</span>}
                       </p>
                     )}
-                    <button type="submit" class={`${PRIMARY_BUTTON} self-start`}>Salvar</button>
-                  </form>
-                  {row.custom && (
-                    <form method="POST" action={action} class="mt-2">
-                      <input type="hidden" name="acao" value="conversa_padrao" />
+                    {row.pendingVersion.body && row.pendingVersion.stage !== "meta" && (
+                      <div class="mt-2">
+                        <WhatsAppBubble text={fillTemplate(row.pendingVersion.body, row.markers.map((m) => exampleFor(row.key)[m]))} buttons={row.buttons} />
+                      </div>
+                    )}
+                    {isSupport && row.pendingVersion.stage === "proposed" && (
+                      <div class="mt-3 flex flex-wrap items-end gap-3">
+                        <form method="POST" action={action}>
+                          <input type="hidden" name="grupo" value="meta" />
+                          <input type="hidden" name="acao" value="suporte_aprovar" />
+                          <input type="hidden" name="id" value={row.pendingVersion.id} />
+                          <button type="submit" class={PRIMARY_BUTTON}>Aprovar e enviar à Meta</button>
+                        </form>
+                        <form method="POST" action={action} class="flex flex-wrap items-end gap-2">
+                          <input type="hidden" name="grupo" value="meta" />
+                          <input type="hidden" name="acao" value="suporte_recusar" />
+                          <input type="hidden" name="id" value={row.pendingVersion.id} />
+                          <input name="note" placeholder="Motivo para a clínica" required class={`${INPUT} w-64`} />
+                          <button type="submit" class={SECONDARY_BUTTON}>Recusar</button>
+                        </form>
+                      </div>
+                    )}
+                    {canEdit && row.pendingVersion.stage === "proposed" && (
+                      <form method="POST" action={action} class="mt-2">
+                        <input type="hidden" name="grupo" value="meta" />
+                          <input type="hidden" name="acao" value="template_retirar" />
+                        <input type="hidden" name="key" value={row.key} />
+                        <button type="submit" class="text-sm text-sky-700 hover:underline">Retirar a proposta</button>
+                      </form>
+                    )}
+                  </div>
+                )}
+
+                {canEdit && (
+                  <details class="mt-3">
+                    <summary class="cursor-pointer text-sm font-medium text-sky-700">Personalizar o texto</summary>
+                    <form method="POST" action={action} class="mt-2 flex flex-col gap-2">
+                      <input type="hidden" name="grupo" value="meta" />
+                          <input type="hidden" name="acao" value="template_propor" />
                       <input type="hidden" name="key" value={row.key} />
-                      <button type="submit" class="text-sm text-sky-700 hover:underline">Voltar ao texto padrão</button>
+                      <textarea name="text" rows="9" class={INPUT}>{row.editText}</textarea>
+                      <p class={HINT}>Use todos estes marcadores, uma vez cada, nesta ordem: {markerHint(row.markers)}. *texto* fica em negrito.</p>
+                      <button type="submit" class={`${PRIMARY_BUTTON} self-start`}>Enviar para revisão</button>
                     </form>
-                  )}
-                </details>
-              )}
-            </Card>
-          ))}
+                    {row.custom && (
+                      <form method="POST" action={action} class="mt-2">
+                        <input type="hidden" name="grupo" value="meta" />
+                          <input type="hidden" name="acao" value="template_padrao" />
+                        <input type="hidden" name="key" value={row.key} />
+                        <button type="submit" class="text-sm text-sky-700 hover:underline">Voltar ao texto padrão</button>
+                      </form>
+                    )}
+                  </details>
+                )}
+              </Card>
+            ))
+          }
         </div>
+
+      </>
+    ) : (
+      <>
+        <p class="mt-4 max-w-3xl text-sm text-slate-600">
+          Mensagens que vão na conversa, com os dados da clínica (paciente e data de exemplo). Alteradas aqui, valem na hora.
+        </p>
+        <div class="mt-4 flex max-w-3xl flex-col gap-4">
+          <Card>
+            <div class="flex flex-wrap items-center gap-2">
+              <h3 class="font-semibold text-slate-900">Orientações gerais da consulta</h3>
+              {settings.guidanceEnabled ? <Badge variant="success">Envio ligado</Badge> : <Badge variant="neutral">Envio desligado</Badge>}
+            </div>
+            <p class="mt-1 text-sm text-slate-600">
+              Vão uma vez, depois que a confirmação da marcação de uma consulta chega ao celular. O envio é ligado em
+              <a href="/admin/configuracoes/whatsapp" class="text-sky-700 hover:underline">Configurações › WhatsApp</a>. Para quem não escreveu para a
+              clínica nas últimas 24 horas, vai o aviso "Orientações gerais (fora das 24h)" com o link destas orientações.
+            </p>
+            {guidance ? (
+              <div class="mt-3">
+                <WhatsAppBubble text={`Orientações gerais para a consulta:\n\n${guidance}`} buttons={[]} />
+              </div>
+            ) : (
+              <p class="mt-3 text-sm text-slate-600">Ainda sem texto.</p>
+            )}
+            {isAdmin && (
+              <details class="mt-3" open={!guidance}>
+                <summary class="cursor-pointer text-sm font-medium text-sky-700">{guidance ? "Alterar o texto" : "Escrever o texto"}</summary>
+                <form method="POST" action={action} class="mt-2 flex flex-col gap-2">
+                  <input type="hidden" name="acao" value="orientacoes_salvar" />
+                  <textarea name="text" rows="9" maxlength={GUIDANCE_MAX_LENGTH} class={INPUT}>{guidance ?? ""}</textarea>
+                  <p class={HINT}>*texto* fica em negrito, _texto_ em itálico. Até {GUIDANCE_MAX_LENGTH} caracteres.</p>
+                  <button type="submit" class={`${PRIMARY_BUTTON} self-start`}>Salvar</button>
+                </form>
+                {guidance && !settings.guidanceEnabled && (
+                  <form method="POST" action={action} class="mt-2">
+                    <input type="hidden" name="acao" value="orientacoes_apagar" />
+                    <button type="submit" class="text-sm text-sky-700 hover:underline">Apagar o texto</button>
+                  </form>
+                )}
+              </details>
+            )}
+          </Card>
+        </div>
+
+        {
+          botOn && botMessagesOn && (
+            <>
+              <h2 class="mt-8 text-lg font-semibold text-slate-900">Conversa do bot</h2>
+              <div class="mt-2 flex max-w-3xl flex-col gap-4">
+                {botRows.map((row) => (
+                  <Card>
+                    <div class="flex flex-wrap items-center gap-2">
+                      <h3 class="font-semibold text-slate-900">{row.label}</h3>
+                      {row.custom && <Badge variant="accent">Texto próprio</Badge>}
+                    </div>
+                    <div class="mt-3">
+                      <WhatsAppBubble text={row.preview} buttons={row.buttons} />
+                    </div>
+                    {canEditBot && (
+                      <details class="mt-3">
+                        <summary class="cursor-pointer text-sm font-medium text-sky-700">Personalizar o texto</summary>
+                        <form method="POST" action={action} class="mt-2 flex flex-col gap-2">
+                          <input type="hidden" name="acao" value="conversa_salvar" />
+                          <input type="hidden" name="key" value={row.key} />
+                          <textarea name="text" rows="5" class={INPUT}>{row.custom ?? row.defaultText}</textarea>
+                          {row.markers.length > 0 && (
+                            <p class={HINT}>
+                              Marcadores: {markerHint(row.markers)}
+                              {row.required.length > 0 && ` (obrigatório: ${row.required.map((m) => `{${m}}`).join(", ")})`}.
+                            </p>
+                          )}
+                          <button type="submit" class={`${PRIMARY_BUTTON} self-start`}>Salvar</button>
+                        </form>
+                        {row.custom && (
+                          <form method="POST" action={action} class="mt-2">
+                            <input type="hidden" name="acao" value="conversa_padrao" />
+                            <input type="hidden" name="key" value={row.key} />
+                            <button type="submit" class="text-sm text-sky-700 hover:underline">Voltar ao texto padrão</button>
+                          </form>
+                        )}
+                      </details>
+                    )}
+                  </Card>
+                ))}
+              </div>
+      </>
+    )
+  }
       </>
     )
   }

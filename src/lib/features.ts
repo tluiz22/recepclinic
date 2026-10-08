@@ -20,6 +20,7 @@ export type FeatureKey =
   | "waitlist"
   | "daily_summary"
   | "custom_messages"
+  | "custom_templates"
   | "metrics_overview"
   | "metrics_appointments"
   | "metrics_no_shows"
@@ -39,7 +40,9 @@ export const FEATURES: readonly Feature[] = [
   { key: "reminders", area: "whatsapp", label: "Lembrete automático", dependsOn: [] },
   { key: "waitlist", area: "whatsapp", label: "Lista de espera", dependsOn: ["whatsapp_bot"] },
   { key: "daily_summary", area: "whatsapp", label: "Envio do resumo do dia", dependsOn: [] },
-  { key: "custom_messages", area: "whatsapp", label: "Mensagens personalizadas", dependsOn: [] },
+  // Validação da F6.6 (cliente, 08/out/2026): o item virou dois.
+  { key: "custom_messages", area: "whatsapp", label: "Mensagens do bot", dependsOn: [] },
+  { key: "custom_templates", area: "whatsapp", label: "Mensagens da Meta (templates)", dependsOn: [] },
   { key: "metrics_overview", area: "metrics", label: "Métricas: Visão geral", dependsOn: [] },
   { key: "metrics_appointments", area: "metrics", label: "Métricas: Atendimentos", dependsOn: [] },
   { key: "metrics_no_shows", area: "metrics", label: "Métricas: Faltosos", dependsOn: [] },

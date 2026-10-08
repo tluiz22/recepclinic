@@ -24,6 +24,8 @@ interface Props {
   returnTo: string;
   reminderAction?: ReminderAction;
   preparationResendable: boolean;
+  /** Orientações gerais da consulta não entregues (cliente, 08/out/2026). */
+  guidanceResendable?: boolean;
   waitlistOn: boolean;
   onWaitlist: boolean;
   noShow?: NoShowStats;
@@ -35,7 +37,7 @@ interface Props {
   massCancelForm?: string;
 }
 
-const { appointment: a, timeZone, now, showAgenda, vocabulary, returnTo, reminderAction, preparationResendable, waitlistOn, onWaitlist, noShow, compact = false, massCancelForm, origin } =
+const { appointment: a, timeZone, now, showAgenda, vocabulary, returnTo, reminderAction, preparationResendable, guidanceResendable = false, waitlistOn, onWaitlist, noShow, compact = false, massCancelForm, origin } =
   Astro.props;
 const action = `/api/admin/agenda/atendimentos/${a.id}`;
 const time = (d: Date) => formatInstant(d, timeZone, "HH:mm");
@@ -63,6 +65,7 @@ if (isActive && !isPast && a.patientConfirmedAt) situation.push({ label: "Presen
 else if (isActive && !isPast && a.reminderResponse === "confirm") situation.push({ label: "Confirmou pelo lembrete", variant: "success" });
 if (reminderAction) situation.push(reminderBadge[reminderAction]);
 if (preparationResendable) situation.push({ label: "Preparo não entregue", variant: "warning" });
+if (guidanceResendable) situation.push({ label: "Orientações não entregues", variant: "warning" });
 if (onWaitlist) situation.push({ label: "Na lista de espera", variant: "accent" });
 if (isActive && isPast) situation.push({ label: "Já passou: registre o comparecimento", variant: "warning" });
 
@@ -95,6 +98,16 @@ if (preparationResendable) {
     title: "Reenviar o preparo do exame?",
     message: `${who}. O preparo vai pelo WhatsApp.`,
     confirm: "Reenviar preparo",
+  });
+}
+if (guidanceResendable) {
+  buttons.push({
+    acao: "orientacoes",
+    label: "Reenviar orientações",
+    icon: "paper-airplane",
+    title: "Reenviar as orientações gerais?",
+    message: `${who}. As orientações vão pelo WhatsApp.`,
+    confirm: "Reenviar orientações",
   });
 }
 if (waitlistOn && isActive && !isPast && a.seriesId === null) {

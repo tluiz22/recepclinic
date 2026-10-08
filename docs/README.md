@@ -14,7 +14,8 @@
 >     padrão) validada em 08/out, menos o preparo do exame (template em análise).
 >     **Aguardam a validação do cliente no staging:**
 >     F6.5 (cancelamento pela clínica com aviso e link; "Avisar" só para quem não recebeu), F6.6
->     (aba Mensagens e mensagens personalizadas com revisão do Suporte) e F6.7 (Funil do bot e
+>     (aba Mensagens e mensagens personalizadas com revisão do Suporte; em 08/out: combo bot/Meta,
+>     item da matriz dividido em dois e as orientações gerais da consulta) e F6.7 (Funil do bot e
 >     Retomar contato; corrigido o acesso a Métricas sem a Visão geral).
 >   - **F7 (envios automáticos) implementada, aguardando a validação:** rotinas no `pg_cron`
 >     (lembrete, resumo do dia, lista de espera, séries sem fim) e as opções em Configurações ›

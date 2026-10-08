@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { preparationSender, reminderSender, type ClinicSender } from "./send";
+import { guidanceSender, preparationSender, reminderSender, type ClinicSender } from "./send";
 import {
   appointmentParams,
   appointmentPlace,
@@ -155,6 +155,29 @@ describe("quem envia (F6.2)", () => {
       "exam_preparation",
       { name: "rc_preparo_exame_v1", language: "pt_BR" },
       ["Maria", "da Clínica Sorriso", "Espirometria", "https://app.exemplo.test/preparo/s1"],
+    ]);
+  });
+
+  it("orientações gerais: só o texto da clínica (janela aberta) ou template com o link (fechada)", async () => {
+    const { sender, calls } = fakeSender();
+    const base = {
+      clinicId: "c1",
+      appointmentId: "a1",
+      phone: "+5584999990000",
+      contactName: "Maria Silva",
+      patientName: "João Silva",
+      text: "Chegue 15 minutos antes.\nTraga os exames.",
+      pagePath: "/orientacoes/c1",
+    };
+    await guidanceSender(sender)({ ...base, mode: "text", template: null });
+    await guidanceSender(sender)({ ...base, mode: "template", template: { name: "rc_orientacoes_consulta_v1", language: "pt_BR" } });
+    expect(calls[0]).toEqual(["text", "+5584999990000", "Orientações gerais para a consulta:\n\nChegue 15 minutos antes.\nTraga os exames."]);
+    expect(calls[1]).toEqual([
+      "template",
+      "+5584999990000",
+      "consultation_guidance",
+      { name: "rc_orientacoes_consulta_v1", language: "pt_BR" },
+      ["Maria", "da Clínica Sorriso", "João Silva", "https://app.exemplo.test/orientacoes/c1"],
     ]);
   });
 });
