@@ -7,11 +7,9 @@
 > - **Produto:**
 >   - **F0 a F5 concluídas e validadas** (base, testes das regras do piloto, schema multi-clínica,
 >     camada de dados, painel completo, páginas públicas e staging). Detalhes no [plano](plano.md).
->   - **F6 (WhatsApp por clínica e bot) toda implementada.** F6.1 validada em 07/out. **Aguardam a
->     validação do cliente no staging:** F6.2 (envio e templates padrão), F6.3 (bot I: marcar, com
->     os ajustes da validação: "Qual exame/consulta" sempre aparece; mensagem fora das opções no
->     meio da jornada responde "não entendi"), F6.3b (jornada de configuração: guia, próximo passo
->     e selos), F6.4 (bot II: cancelar, remarcar, lembrete, encaixe, recepção só com coexistência),
+>   - **F6 (WhatsApp por clínica e bot) toda implementada.** F6.1 validada em 07/out; F6.3 (bot I:
+>     marcar) e F6.3b (jornada de configuração) validadas em 08/out. **Aguardam a validação do
+>     cliente no staging:** F6.2 (envio e templates padrão), F6.4 (bot II: cancelar, remarcar, lembrete, encaixe, recepção só com coexistência),
 >     F6.5 (cancelamento pela clínica com aviso e link; "Avisar" só para quem não recebeu), F6.6
 >     (aba Mensagens e mensagens personalizadas com revisão do Suporte) e F6.7 (Funil do bot e
 >     Retomar contato; corrigido o acesso a Métricas sem a Visão geral).
