@@ -166,10 +166,20 @@ const receives = (r: { receivesConsultations: boolean; receivesExams: boolean })
               <li class="py-2">
                 <div class="flex flex-wrap items-center gap-2">
                   <span class="font-medium text-slate-900">{TEMPLATE_LABELS[template.key] ?? template.key}</span>
-                  <span class="text-slate-500">{saved?.name ?? template.name}</span>
-                  {saved ? <Badge variant={templateStatus[saved.status].variant}>{templateStatus[saved.status].label}</Badge> : <Badge>Não criado</Badge>}
+                  <span class="text-slate-500">{template.name}</span>
+                  {/* Texto novo do RecepClinic (outro nome) ainda não criado na Meta: o gravado é a versão anterior. */}
+                  {saved && saved.name === template.name ? (
+                    <Badge variant={templateStatus[saved.status].variant}>{templateStatus[saved.status].label}</Badge>
+                  ) : (
+                    <Badge>Não criado</Badge>
+                  )}
                 </div>
-                {saved?.rejectionReason && <p class="mt-0.5 text-red-700">Motivo da recusa: {saved.rejectionReason}</p>}
+                {saved && saved.name !== template.name && (
+                  <p class="mt-0.5 text-amber-700">
+                    Versão nova do texto: falta "Criar na Meta". Até lá, vale a anterior ({saved.name}: {templateStatus[saved.status].label.toLowerCase()}).
+                  </p>
+                )}
+                {saved?.name === template.name && saved.rejectionReason && <p class="mt-0.5 text-red-700">Motivo da recusa: {saved.rejectionReason}</p>}
                 <details class="mt-1">
                   <summary class="cursor-pointer text-slate-500">Ver o texto</summary>
                   <p class="mt-1 whitespace-pre-line rounded bg-slate-50 p-2 text-slate-700">{template.body}</p>
