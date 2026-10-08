@@ -1,43 +1,39 @@
 # RecepClinic
 
-> **Estado atual (retomar daqui), 07/out/2026 (fim da sessão)**
+> **Estado atual (retomar daqui), 07/out/2026, fim da sessão (noite)**
 >
 > - **Etapas 0 a 4 concluídas**: cópia isolada, [diagnóstico](diagnostico.md), [limites](limites.md),
 >   [arquitetura](arquitetura.md) (decisões D1–D11) e [plano](plano.md) (fases F0–F10).
 > - **Produto:**
->   - **F0 a F3 concluídas**: base de trabalho; 197 testes das regras do piloto; schema
->     multi-clínica; camada de acesso ao banco por domínio (configuração, pacientes, agenda, séries,
->     lista de espera, WhatsApp, lembrete e reenvios, resumo do dia e rotinas), com a matriz de
->     acesso (D11) e os achados 1–5 da F1 resolvidos. Detalhes de cada etapa no [plano](plano.md).
->   - **F4 concluída e validada pelo cliente em 05/out** (painel no banco novo, nove partes):
->     login e escolha de clínica; matriz de acesso; Configurações (clínica, profissionais, locais,
->     agendas, serviços, horários, feriados, convênios, equipe com nome, WhatsApp); Nova clínica e
->     pedido de informações; Agenda (Dia com colunas por agenda, Semana, Mês, Marcar pelo serviço,
->     Remarcar, bloqueios, cancelar selecionados com "Avisar", séries); Pacientes; Resumo do Dia
->     (com Aguardando remarcação e Envios) e trilha; Métricas. Detalhes e decisões de cada parte
->     no [plano](plano.md).
->   - **F5 concluída e validada pelo cliente em 06/out** (páginas públicas e domínio, cinco
->     partes): marca da clínica (logo, cor com cores prontas, site) nas páginas públicas;
->     `/agendar` e `/preparo` no banco novo com a credencial limitada à clínica (nenhuma página
->     pública usa mais a service role); link de remarcação na mensagem da tela "Avisar";
->     **staging no ar em `https://app.recepclinic.com.br`** (roteiro em [`staging.md`](staging.md)).
->   - **Em curso: F6** — WhatsApp por clínica e bot, detalhada e aprovada em 06/out em sete
->     partes (F6.1 conexão e webhook … F6.7 métricas do bot). **F6.1 (conexão e webhook) concluída e validada em 07/out. F6.2** (envio pela conexão da clínica e templates padrão) **implementada em 07/out, aguardando a validação do cliente no staging** (roteiro na parte F do [`staging.md`](staging.md); templates em análise na Meta). **F6.3** (bot I: marcar) **implementada em 07/out, aguardando a validação** (parte G do `staging.md`). **F6.3b** (jornada de configuração: guia, próximo passo e selos) **implementada em 07/out, aguardando a validação**. **F6.4** (bot II: cancelar, remarcar, lembrete, encaixe, recepção) **implementada em 07/out, aguardando a validação**; **F6.5** (cancelamento pela clínica com aviso automático e link) **implementada em 07/out, aguardando a validação** (o Suporte cria o template novo em "Criar na Meta"); **F6.6** (aba "Mensagens": prévia e mensagens personalizadas) **implementada em 07/out, aguardando a validação**; **F6.7** (métricas do bot: Funil e Retomar contato) **implementada em 07/out, aguardando a validação**. Com isso a F6 está toda implementada. **F7** (envios automáticos por clínica: lembrete com a opção de enviar e o horário, padrão 18h; resumo da equipe na véspera e no dia com as opções; ofertas da lista de espera; séries sem fim; saiu o código antigo do piloto) **implementada em 07/out, aguardando a validação** (parte K do `staging.md`); depois, F8 (Embedded Signup com coexistência, depende do Tech Provider). O número
->     de testes do RecepClinic vai direto na Cloud API (sem o app do celular).
->   - **Já combinado para as próximas fases:** F6 — envio pelo WhatsApp (lembrete, preparo,
->     avisos), cancelamento pela clínica com aviso automático e link (sai a tela "Avisar"), abas
->     Funil do bot e Retomar contato, aba "Mensagens"; F7 — rotinas automáticas (lembrete, resumo
->     do dia, ofertas da lista de espera, extensão das séries sem fim).
->   - **Decidido em 05/out para depois:** aba **"Mensagens"** em Configurações na **F6** (prévia no
->     balão do WhatsApp; com o item "Mensagens personalizadas", o Administrador edita as mensagens de
->     conversa e propõe os templates; D3b revista); envio dos templates personalizados pela API na
->     F8.
+>   - **F0 a F5 concluídas e validadas** (base, testes das regras do piloto, schema multi-clínica,
+>     camada de dados, painel completo, páginas públicas e staging). Detalhes no [plano](plano.md).
+>   - **F6 (WhatsApp por clínica e bot) toda implementada.** F6.1 validada em 07/out. **Aguardam a
+>     validação do cliente no staging:** F6.2 (envio e templates padrão), F6.3 (bot I: marcar, com
+>     os ajustes da validação: "Qual exame/consulta" sempre aparece; mensagem fora das opções no
+>     meio da jornada responde "não entendi"), F6.3b (jornada de configuração: guia, próximo passo
+>     e selos), F6.4 (bot II: cancelar, remarcar, lembrete, encaixe, recepção só com coexistência),
+>     F6.5 (cancelamento pela clínica com aviso e link; "Avisar" só para quem não recebeu), F6.6
+>     (aba Mensagens e mensagens personalizadas com revisão do Suporte) e F6.7 (Funil do bot e
+>     Retomar contato; corrigido o acesso a Métricas sem a Visão geral).
+>   - **F7 (envios automáticos) implementada, aguardando a validação:** rotinas no `pg_cron`
+>     (lembrete, resumo do dia, lista de espera, séries sem fim) e as opções em Configurações ›
+>     WhatsApp (lembrete da véspera com enviar/horário, padrão 18h; resumo na véspera e no dia).
+>     Saiu o código antigo do piloto; a service role só fica na plataforma (D1).
+>   - **Templates na Meta (07/out):** os 11 do RecepClinic criados na conta do RecepClinic e **em
+>     análise** (incluindo as versões 2 do resumo de hoje, recusado como formato inválido, e do
+>     preparo, classificado como marketing). O cliente exclui na Meta os 3 antigos sem uso
+>     (`rc_resumo_consultas_hoje_v1`, `rc_resumo_exames_hoje_v1`, `rc_preparo_exame_v1`). Quando
+>     forem aprovados: conferir se o `rc_preparo_exame_v2` ficou como Utilidade e validar os envios
+>     (partes F a K do [`staging.md`](staging.md)).
+>   - **Próximo passo:** validação do cliente (F6.2 a F7). Depois, **F8** (Embedded Signup com
+>     coexistência), que depende da aprovação do RecepClinic como Tech Provider na Meta.
 >   - **WhatsApp de testes:** `+55 61 9903-3143`, na Cloud API do app RecepClinic, ligado à
 >     clínica de teste "Consultorio Tluiz22" no staging. **Nunca verificar esse número em app
 >     nenhum** (sairia da API). Roteiro na parte E do [`staging.md`](staging.md).
 >   - **Staging:** `https://app.recepclinic.com.br` (Vercel publica a cada push na `main`);
->     migrações novas vão com `npx supabase db push` (repositório ligado ao projeto
->     `recepclinic-staging`); variáveis no `.env.staging` (fora do git). "Esqueci minha senha" só
+>     migrações novas vão com `supabase db push` antes do push (repositório ligado ao projeto
+>     `recepclinic-staging`; a senha do banco está em `SUPABASE_DB_PASSWORD` no `.env.staging`);
+>     agendador ligado (`scripts/agendador.mjs`); variáveis no `.env.staging` (fora do git). "Esqueci minha senha" só
 >     funciona lá depois do provedor de e-mail; até lá, `scripts/link-de-senha.mjs` gera o link.
 >   - **Para rodar:** abrir o OrbStack, `npm run db:start`, `npm run db:reset` (dados de teste) e
 >     `npm run dev` com o `.env` local (ver "Painel local" no README da raiz); testes com `npm test`
