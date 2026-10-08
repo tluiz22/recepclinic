@@ -39,10 +39,10 @@ const TABS: { id: string; label: string; feature: FeatureKey }[] = [
   { id: "faltosos", label: "Faltosos", feature: "metrics_no_shows" },
   { id: "financeiro", label: "Financeiro", feature: "metrics_financial" },
   { id: "funil", label: "Funil do bot", feature: "metrics_funnel" },
-  { id: "retomar", label: "Retomar contato", feature: "metrics_recall" },
+  { id: "retomar_contato", label: "Retomar contato", feature: "metrics_recall" },
 ];
 // Funil e Retomar contato são da clínica toda: o Profissional (só a própria agenda) não vê.
-const BOT_TABS = ["funil", "retomar"];
+const BOT_TABS = ["funil", "retomar_contato"];
 const visible = TABS.filter((t) => clinic.features.includes(t.feature) && (!BOT_TABS.includes(t.id) || metricsScope(clinic) === "clinic"));
 const tab = visible.find((t) => t.id === params.get("tab"))?.id ?? visible[0]?.id ?? null;
 
@@ -77,7 +77,7 @@ const filterPhone = filterPatient
   : (filterContact?.phone ?? null);
 const funnel = botTab ? buildFunnelReport(await listFunnelEvents(db, clinic.clinicId, period.start, period.end, filterPhone), period.start, period.end, now) : null;
 const RECALL_LIMIT = 50;
-const recall = tab === "retomar" && funnel ? funnel.incomplete.slice(0, RECALL_LIMIT) : [];
+const recall = tab === "retomar_contato" && funnel ? funnel.incomplete.slice(0, RECALL_LIMIT) : [];
 const recallContacts =
   recall.length > 0
     ? new Map(
@@ -306,7 +306,7 @@ const fin = tab === "financeiro" ? financial(rows) : null;
           </>
         )}
 
-        {funnel && tab === "retomar" && (
+        {funnel && tab === "retomar_contato" && (
           <>
             <p class="mt-4 text-sm text-slate-500">
               Quem começou pelo WhatsApp e não concluiu no período (abandono ou erro), para retomar o contato. Sai da lista quem concluiu o mesmo fluxo

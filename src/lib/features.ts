@@ -93,12 +93,13 @@ type PathRule = { prefix: string; tab?: string | null; feature: FeatureKey };
 
 // `tab: null` = a rota sem `?tab=` (aba padrão da tela).
 const PATH_RULES: PathRule[] = [
-  // Métricas, aba a aba (a aba padrão é a Visão geral).
-  { prefix: "/admin/metricas", tab: null, feature: "metrics_overview" },
+  // Métricas, aba a aba. Sem aba, a tela abre na primeira aba liberada (basta
+  // ter alguma, conferido pela área; achado na validação da F6.7, 07/out).
   { prefix: "/admin/metricas", tab: "visao_geral", feature: "metrics_overview" },
   { prefix: "/admin/metricas", tab: "funil", feature: "metrics_funnel" },
   { prefix: "/admin/metricas", tab: "atendimentos", feature: "metrics_appointments" },
   { prefix: "/admin/metricas", tab: "retomar_contato", feature: "metrics_recall" },
+  // Aba desconhecida: a tela cai na primeira liberada; nenhuma regra própria.
   { prefix: "/admin/metricas", tab: "faltosos", feature: "metrics_no_shows" },
   { prefix: "/admin/metricas", tab: "financeiro", feature: "metrics_financial" },
   // Resumo do Dia: abas do lembrete e da lista de espera.

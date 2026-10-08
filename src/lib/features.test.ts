@@ -49,8 +49,9 @@ describe("item que cada rota exige", () => {
     }
   });
 
-  it("Métricas aba a aba; sem aba é a Visão geral; Relatórios", () => {
-    expect(route("/admin/metricas")).toBe("metrics_overview");
+  it("Métricas aba a aba; sem aba, basta ter alguma liberada (a tela abre nela)", () => {
+    expect(route("/admin/metricas")).toBeNull();
+    expect(route("/admin/metricas?tab=retomar_contato")).toBe("metrics_recall");
     expect(route("/admin/metricas?tab=visao_geral")).toBe("metrics_overview");
     expect(route("/admin/metricas?tab=financeiro&periodo=mes")).toBe("metrics_financial");
     expect(route("/admin/metricas?tab=funil")).toBe("metrics_funnel");
@@ -91,6 +92,14 @@ describe("acesso à rota: papel (D6) e item liberado (D11)", () => {
   it("item liberado não passa por cima do papel", () => {
     expect(can(ctx(["reception"], ["exams"]), "/admin/configuracoes/servicos")).toBe(false);
     expect(can(ctx(["reception"], ["metrics_financial"]), "/admin/metricas?tab=financeiro")).toBe(false);
+  });
+
+  it("métricas sem aba: a clínica só com o Funil e o Retomar contato entra (achado da F6.7)", () => {
+    const funnelOnly: FeatureKey[] = ["metrics_funnel", "metrics_recall", "whatsapp_bot"];
+    expect(can(ctx(["admin"], funnelOnly), "/admin/metricas")).toBe(true);
+    expect(can({ roles: [], isPlatformStaff: true, features: funnelOnly }, "/admin/metricas")).toBe(true);
+    expect(can(ctx(["admin"], funnelOnly), "/admin/metricas?tab=retomar_contato")).toBe(true);
+    expect(can(ctx(["admin"], ["whatsapp_bot"]), "/admin/metricas")).toBe(false);
   });
 
   it("métricas: aba liberada e escopo do papel", () => {

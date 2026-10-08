@@ -1047,6 +1047,10 @@ de remarcação (texto da F4.6), e enviam sozinhos; sai a tela "Avisar" da F4.6.
   guardam a agenda: as duas abas valem para a clínica toda (sem o seletor de agenda; o filtro por
   paciente ou responsável vale) e o Profissional com "Métricas pessoais" não as vê. Regra em
   `src/lib/data/botFunnel.ts`; sem migração. 4 testes unitários novos.
+  **Achado na validação (cliente, 07/out):** com só o Funil e o Retomar contato liberados,
+  Métricas dizia "Essa tela não está disponível para o seu acesso": a regra de acesso exigia a
+  "Visão geral" quando a tela abre sem aba, e a aba Retomar contato tinha outro nome na regra.
+  Corrigido: sem aba, basta ter alguma liberada (a tela abre nela).
 **F6 concluída na implementação em 07/out** (F6.1 validada; F6.2 a F6.7 aguardam a validação do
 cliente no staging).
 O código antigo do bot e do webhook sai conforme cada parte o substitui.
