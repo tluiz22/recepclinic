@@ -2,14 +2,16 @@
 // Métricas (F4.9), no banco novo: período (abre em Hoje), seletor de agenda
 // para o Administrador (cliente, 05/out/2026; o Profissional vê só as
 // próprias, D11), filtro por paciente ou responsável e uma aba por item da
-// matriz: Visão geral, Atendimentos, Faltosos e Financeiro. Funil do bot e
-// Retomar contato entram na F6, com o bot (cliente, 05/out); Envios foi para
-// o Resumo do Dia (F4.8).
+// matriz: Visão geral, Atendimentos, Faltosos e Financeiro; Funil do bot e
+// Retomar contato (F6.7, como no piloto; a clínica toda, sem o seletor de
+// agenda, porque os passos do bot não guardam a agenda). Envios foi para o
+// Resumo do Dia (F4.8).
 import AdminLayout from "../../layouts/AdminLayout.astro";
 import Card from "../../components/admin/Card.astro";
 import TabBar from "../../components/admin/TabBar.astro";
 import Badge from "../../components/admin/Badge.astro";
 import Stat from "../../components/admin/metricas/Stat.astro";
+import PhoneLinks from "../../components/admin/PhoneLinks.astro";
 import Table from "../../components/admin/metricas/Table.astro";
 import { INPUT, SECONDARY_BUTTON } from "../../components/admin/fieldStyles";
 import { isUuid } from "../../lib/clinicAccess";
@@ -19,6 +21,7 @@ import { listAgendas } from "../../lib/data/config/agendas";
 import { byOrigin, financial, listFrequentNoShows, listMetricsRows, noShowByCategory, overview, ownAgendaIds, volumeByService } from "../../lib/data/metrics";
 import { getContact, getPatient, listContactPatients, searchContacts, searchPatients } from "../../lib/data/patients";
 import { metricsScope, type FeatureKey } from "../../lib/features";
+import { buildFunnelReport, listFunnelEvents } from "../../lib/data/botFunnel";
 import { PERIOD_PRESETS, parsePeriod } from "../../lib/metricsPeriod";
 import { formatCentsBRL } from "../../lib/money";
 import { formatPhoneBR } from "../../lib/phone";
@@ -35,8 +38,12 @@ const TABS: { id: string; label: string; feature: FeatureKey }[] = [
   { id: "atendimentos", label: "Atendimentos", feature: "metrics_appointments" },
   { id: "faltosos", label: "Faltosos", feature: "metrics_no_shows" },
   { id: "financeiro", label: "Financeiro", feature: "metrics_financial" },
+  { id: "funil", label: "Funil do bot", feature: "metrics_funnel" },
+  { id: "retomar", label: "Retomar contato", feature: "metrics_recall" },
 ];
-const visible = TABS.filter((t) => clinic.features.includes(t.feature));
+// Funil e Retomar contato são da clínica toda: o Profissional (só a própria agenda) não vê.
+const BOT_TABS = ["funil", "retomar"];
+const visible = TABS.filter((t) => clinic.features.includes(t.feature) && (!BOT_TABS.includes(t.id) || metricsScope(clinic) === "clinic"));
 const tab = visible.find((t) => t.id === params.get("tab"))?.id ?? visible[0]?.id ?? null;
 
 // Escopo: a clínica toda (Administrador, com o seletor) ou só as agendas do próprio Profissional.
@@ -64,7 +71,26 @@ const [foundPatients, foundContacts] =
 
 const period = parsePeriod(params, clinic.timezone, now);
 const usesPeriod = tab !== "faltosos";
-const rows = tab && usesPeriod ? await listMetricsRows(db, clinic.clinicId, { start: period.start, end: period.end, agendaIds, patientIds }) : [];
+const botTab = !!tab && BOT_TABS.includes(tab);
+const filterPhone = filterPatient
+  ? (await getContact(db, clinic.clinicId, filterPatient.contactId).catch(() => null))?.phone ?? null
+  : (filterContact?.phone ?? null);
+const funnel = botTab ? buildFunnelReport(await listFunnelEvents(db, clinic.clinicId, period.start, period.end, filterPhone), period.start, period.end, now) : null;
+const RECALL_LIMIT = 50;
+const recall = tab === "retomar" && funnel ? funnel.incomplete.slice(0, RECALL_LIMIT) : [];
+const recallContacts =
+  recall.length > 0
+    ? new Map(
+        (
+          (await db
+            .from("contacts")
+            .select("id, full_name")
+            .eq("clinic_id", clinic.clinicId)
+            .in("id", [...new Set(recall.map((r) => r.contactId).filter((id): id is string => !!id))])).data ?? []
+        ).map((c) => [c.id, c.full_name]),
+      )
+    : new Map<string, string>();
+const rows = tab && usesPeriod && !botTab ? await listMetricsRows(db, clinic.clinicId, { start: period.start, end: period.end, agendaIds, patientIds }) : [];
 const frequent = tab === "faltosos" ? await listFrequentNoShows(db, clinic.clinicId, agendaIds) : [];
 
 const keep = { tab: tab ?? "", periodo: period.preset === "hoje" ? "" : period.preset, de: period.preset === "personalizado" ? period.from : "", ate: period.preset === "personalizado" ? period.to : "", agenda: selectedAgenda?.id ?? "", paciente: filterPatient?.id ?? "", responsavel: filterContact?.id ?? "" };
@@ -121,7 +147,7 @@ const fin = tab === "financeiro" ? financial(rows) : null;
           )}
 
           <div class="flex flex-wrap items-center gap-2">
-            {selectable.length > 1 && (
+            {selectable.length > 1 && !botTab && (
               <form method="GET" action="/admin/metricas">
                 {Object.entries({ ...keep, agenda: "" }).map(([name, value]) => value && <input type="hidden" name={name} value={value} />)}
                 <select name="agenda" class={`${INPUT} mt-0 sm:w-64`} onchange="this.form.submit()">
@@ -194,6 +220,120 @@ const fin = tab === "financeiro" ? financial(rows) : null;
                 ["Link de agendamento", ov.byChannel.link],
               ]}
             />
+          </>
+        )}
+
+        {funnel && tab === "funil" && (
+          <>
+            <p class="mt-4 text-sm text-slate-500">
+              Tentativas iniciadas no período, da clínica toda. Cada barra é proporcional a quem iniciou; a porcentagem é a conversão em relação à etapa
+              anterior. Sem resposta há mais de 30 minutos conta como abandono na última etapa alcançada.
+            </p>
+            <div class="mt-3 grid gap-4 lg:grid-cols-2">
+              {funnel.flows.map((flow) => {
+                const first = flow.stages[0]?.count ?? 0;
+                return (
+                  <Card>
+                    <h3 class="font-semibold text-slate-900">{flow.label}</h3>
+                    {first === 0 ? (
+                      <p class="mt-3 text-sm text-slate-500">Nenhuma tentativa no período.</p>
+                    ) : (
+                      <>
+                        <div class="mt-3 space-y-2">
+                          {flow.stages.map((stage) => (
+                            <div class="grid grid-cols-[8.5rem_1fr_4.5rem] items-center gap-2 text-xs sm:text-sm">
+                              <span class="truncate text-slate-600">{stage.label}</span>
+                              <div class="h-5 rounded bg-slate-100">
+                                <div class="h-5 rounded bg-sky-500" style={`width: ${Math.max((stage.count / first) * 100, stage.count > 0 ? 2 : 0)}%`} />
+                              </div>
+                              <span class="text-right tabular-nums text-slate-900">
+                                <span class="font-semibold">{stage.count}</span>
+                                {stage.conversion !== null && <span class="ml-1 text-slate-500">{pct(stage.conversion)}</span>}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                        <div class="mt-4 flex flex-wrap gap-1.5">
+                          <Badge variant="success">Concluídas: {flow.outcomes.concluded}</Badge>
+                          <Badge variant="warning">Abandonaram: {flow.outcomes.abandoned}</Badge>
+                          {flow.outcomes.blocked > 0 && <Badge variant="neutral">Barradas: {flow.outcomes.blocked}</Badge>}
+                          {flow.outcomes.declined > 0 && <Badge variant="neutral">Desistiram: {flow.outcomes.declined}</Badge>}
+                          {flow.outcomes.error > 0 && <Badge variant="danger">Erro: {flow.outcomes.error}</Badge>}
+                          {flow.outcomes.in_progress > 0 && <Badge variant="info">Em andamento: {flow.outcomes.in_progress}</Badge>}
+                        </div>
+                        {flow.notes.length > 0 && (
+                          <ul class="mt-3 space-y-0.5 text-xs text-slate-600">
+                            {flow.notes.map((note) => (
+                              <li>
+                                {note.label}: <span class="font-semibold">{note.count}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                        {flow.blockedReasons.length > 0 && (
+                          <ul class="mt-3 space-y-0.5 text-xs text-slate-500">
+                            {flow.blockedReasons.map((reason) => (
+                              <li>
+                                Barradas: {reason.label}: {reason.count}
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                      </>
+                    )}
+                  </Card>
+                );
+              })}
+              <Card>
+                <h3 class="font-semibold text-slate-900">Atendimento humano</h3>
+                <dl class="mt-3 space-y-2 text-sm">
+                  <div class="flex items-baseline justify-between gap-3">
+                    <dt class="text-slate-600">Pediram a recepção pelo menu</dt>
+                    <dd class="font-semibold tabular-nums text-slate-900">{funnel.handoffRequests}</dd>
+                  </div>
+                  <div class="flex items-baseline justify-between gap-3">
+                    <dt class="text-slate-600">
+                      Recepção assumiu pelo app
+                      {funnel.agentTookOver.total > 0 && (
+                        <span class="block text-xs text-slate-500">{funnel.agentTookOver.midJourney} no meio de uma marcação, remarcação ou cancelamento</span>
+                      )}
+                    </dt>
+                    <dd class="font-semibold tabular-nums text-slate-900">{funnel.agentTookOver.total}</dd>
+                  </div>
+                </dl>
+              </Card>
+            </div>
+          </>
+        )}
+
+        {funnel && tab === "retomar" && (
+          <>
+            <p class="mt-4 text-sm text-slate-500">
+              Quem começou pelo WhatsApp e não concluiu no período (abandono ou erro), para retomar o contato. Sai da lista quem concluiu o mesmo fluxo
+              depois.{funnel.incomplete.length > RECALL_LIMIT && ` Mostrando os ${RECALL_LIMIT} mais recentes.`}
+            </p>
+            {recall.length === 0 ? (
+              <p class="mt-3 text-sm text-slate-500">Ninguém nessa situação no período.</p>
+            ) : (
+              <div class="mt-3 grid gap-3 sm:grid-cols-2">
+                {recall.map((row) => (
+                  <Card>
+                    <div class="flex items-start justify-between gap-2">
+                      <div>
+                        <p class="font-medium text-slate-900">{(row.contactId && recallContacts.get(row.contactId)) || `${capitalize(vocabulary.contact)} sem cadastro`}</p>
+                        <PhoneLinks phone={row.phone} class="text-sm" />
+                      </div>
+                      <Badge variant="info">{row.flowLabel}</Badge>
+                    </div>
+                    <p class="mt-2 text-sm text-slate-600">
+                      Última etapa: <span class="font-medium text-slate-800">{row.lastStage}</span>
+                    </p>
+                    <p class="text-sm text-slate-600">{row.detail}</p>
+                    <p class="mt-1 text-xs text-slate-400">Iniciou em {formatInstant(row.startedAt, clinic.timezone, "dd/MM/yyyy 'às' HH:mm")}</p>
+                  </Card>
+                ))}
+              </div>
+            )}
           </>
         )}
 

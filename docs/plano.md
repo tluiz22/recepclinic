@@ -1036,6 +1036,19 @@ de remarcação (texto da F4.6), e enviam sozinhos; sai a tela "Avisar" da F4.6.
   preparo continua indo junto. O banco confere o papel e o item (RLS). Migração `20261007160000`
   (item novo, versões, `bot_messages`). 5 testes unitários e 4 de banco novos.
 - **F6.7 — Métricas do bot:** abas Funil do bot e Retomar contato.
+  **Detalhada, aprovada e implementada em 07/out (aguarda a validação do cliente).** Como no
+  piloto (Fases 15 e 23): **Funil do bot** com um cartão por fluxo (Marcar consulta: Iniciaram →
+  Escolheram o serviço → Identificaram o paciente → Receberam o link → Abriram o link →
+  Confirmaram; Marcar retorno; Marcar exame com "Disseram para quem"; Remarcar e Cancelar
+  separados por menu e lembrete), barras com a conversão, resultados (concluídas, abandonaram,
+  barradas com o motivo, desistiram, erro, em andamento), notas (idade limite, já marcado) e o
+  cartão Atendimento humano; **Retomar contato** com quem não concluiu (abandono ou erro), sem
+  quem concluiu o mesmo fluxo depois, com o telefone e o botão do WhatsApp. Os passos do bot não
+  guardam a agenda: as duas abas valem para a clínica toda (sem o seletor de agenda; o filtro por
+  paciente ou responsável vale) e o Profissional com "Métricas pessoais" não as vê. Regra em
+  `src/lib/data/botFunnel.ts`; sem migração. 4 testes unitários novos.
+**F6 concluída na implementação em 07/out** (F6.1 validada; F6.2 a F6.7 aguardam a validação do
+cliente no staging).
 O código antigo do bot e do webhook sai conforme cada parte o substitui.
 
 ## F7 — Envios automáticos por clínica
