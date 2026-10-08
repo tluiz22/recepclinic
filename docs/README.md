@@ -10,8 +10,9 @@
 >   - **F6 (WhatsApp por clínica e bot) toda implementada.** F6.1 validada em 07/out; F6.3 (bot I:
 >     marcar) e F6.3b (jornada de configuração) validadas em 08/out; F6.4 (bot II: cancelar,
 >     remarcar, encaixe) validada em 08/out, com o ajuste do encaixe (até 3 horários livres antes
->     da lista, também para quem já está nela); falta só conferir os botões do lembrete.
->     **Aguardam a validação do cliente no staging:** F6.2 (envio e templates padrão),
+>     da lista, também para quem já está nela), com os botões do lembrete; F6.2 (envio e templates
+>     padrão) validada em 08/out, menos o preparo do exame (template em análise).
+>     **Aguardam a validação do cliente no staging:**
 >     F6.5 (cancelamento pela clínica com aviso e link; "Avisar" só para quem não recebeu), F6.6
 >     (aba Mensagens e mensagens personalizadas com revisão do Suporte) e F6.7 (Funil do bot e
 >     Retomar contato; corrigido o acesso a Métricas sem a Visão geral).
