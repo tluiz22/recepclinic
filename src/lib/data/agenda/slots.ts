@@ -1,4 +1,4 @@
-import { addDays, dayBounds, localTimeOf, todayIn, toInstant, weekdayOf } from "../../clinicTime";
+import { addDays, dayBounds, localDateOf, localTimeOf, todayIn, toInstant, weekdayOf } from "../../clinicTime";
 import { isNationalHoliday } from "../../holidays";
 import type { Enums } from "../../supabase/database.types";
 import type { DbClient } from "../clients";
@@ -347,4 +347,40 @@ export async function getGroupSessions(
     }
   }
   return sessions;
+}
+
+/**
+ * Horários livres antes de um instante, do mais cedo: os primeiros `limit`
+ * entre `from` e `before` que passam em `accept` (turma: sessões com vaga).
+ * Usado no "Encaixe ou antecipar" do bot (cliente, 08/out/2026).
+ */
+export async function getFreeSlotsBefore(
+  db: DbClient,
+  clinicId: string,
+  query: SlotQuery & { from: Date; before: Date; limit: number; accept?: (slot: FreeSlot) => boolean },
+  now: Date = new Date(),
+): Promise<FreeSlot[]> {
+  const plan = await loadSchedulingPlan(db, clinicId, query);
+  if (!plan || plan.windowsByWeekday.size === 0 || query.before <= query.from) return [];
+  const { from, before, limit, accept = () => true } = query;
+  const useful = (slot: FreeSlot) => slot.start >= from && slot.start < before && accept(slot);
+
+  if (plan.isGroup) {
+    // Dias até o atendimento (inclusive), com folga para o fuso.
+    const maxDaysAhead = Math.ceil((before.getTime() - now.getTime()) / 86_400_000) + 2;
+    const sessions = await getGroupSessions(db, clinicId, { ...query, count: Number.MAX_SAFE_INTEGER, maxDaysAhead }, now);
+    return sessions.map(({ start, time, locationId }) => ({ start, time, locationId })).filter(useful).slice(0, limit);
+  }
+
+  const firstDate = localDateOf(from, plan.timeZone);
+  const lastDate = localDateOf(before, plan.timeZone);
+  const [busy, holidays] = await Promise.all([
+    loadBusy(db, clinicId, query.agendaId, dayBounds(firstDate, plan.timeZone).start, dayBounds(lastDate, plan.timeZone).end, query.ignoreAppointmentId),
+    loadClinicHolidays(db, clinicId, firstDate, lastDate),
+  ]);
+  const result: FreeSlot[] = [];
+  for (let date = firstDate; date <= lastDate && result.length < limit; date = addDays(date, 1)) {
+    result.push(...slotsOn(plan, date, busy, holidays, now).filter(useful).slice(0, limit - result.length));
+  }
+  return result;
 }

@@ -264,7 +264,18 @@ export const WAITLIST_IDS = {
   bookConsultation: "waitlist_book_consultation",
   bookReturn: "waitlist_book_return",
   bookExam: "waitlist_book_exam",
+  noneOfThese: "waitlist_none",
 } as const;
+
+// Antes de entrar na lista, os horários livres antes do atendimento (cliente,
+// textos aprovados em 08/out/2026).
+export const waitlistEarlier = (patientName: string, phrase: string, end: "a" | "o", when: string) =>
+  `Encontramos horários livres antes d${phrase} de *${patientName}*, marcad${end} para ${when}. Quer antecipar para um destes?`;
+export const NONE_OF_THESE = "Nenhum desses";
+export const confirmAdvance = (phrase: string, patientName: string, from: string, to: string) =>
+  `Confirma antecipar ${phrase} de *${patientName}* de ${from} para ${to}?`;
+export const SLOT_TAKEN = "Que pena, esse horário acabou de ser ocupado.";
+export const askJoinWaitlist = (when: string) => `Quer entrar na lista de espera? Se abrir outra vaga antes de ${when}, eu aviso por aqui.`;
 
 export const waitlistJoined = (patientName: string, phrase: string, end: "a" | "o", when: string) =>
   `Pronto! *${patientName}* está na lista de espera para antecipar ${phrase} marcad${end} para ${when}.`;

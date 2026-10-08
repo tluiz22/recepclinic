@@ -178,7 +178,10 @@ do celular; cliente, 06/out/2026). Nada do app ou do número do piloto.
 1. **Banco**: migração `20261007140000_coexistencia` (marca de coexistência na conexão).
 2. **Conferir** pelo celular, com um atendimento futuro marcado para o seu número:
    - Consultas ou Exames › **Cancelar** (Sim/Não) e **Remarcar** (link de remarcação);
-   - **Encaixe ou antecipar** (só com o item "Lista de espera" na matriz): entrar e sair da lista;
+   - **Encaixe ou antecipar** (só com o item "Lista de espera" na matriz): com horário livre antes
+     do atendimento, mostra até 3 e "Nenhum desses"; escolher um e "Sim" antecipa (a Agenda muda);
+     "Não" volta à lista; "Nenhum desses" pergunta se quer entrar na lista de espera. Sem horário
+     livre antes (ex.: bloqueio na agenda até o atendimento), entra direto. Já na lista: sair dela;
    - com os templates aprovados, os botões do lembrete ("Enviar lembrete" na Agenda): Confirmar
      presença, Remarcar, Cancelar.
 3. **Falar com a recepção** só aparece com a conexão marcada como **Coexistência** (Suporte, em

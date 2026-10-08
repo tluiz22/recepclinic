@@ -998,6 +998,11 @@ de remarcação (texto da F4.6), e enviam sozinhos; sai a tela "Avisar" da F4.6.
   recepção pausa o bot (com o item "Bot de WhatsApp"); "#bot" devolve. Na conexão (Suporte), a
   marca **Coexistência**. Saiu o bot antigo do piloto (fica só o que as rotinas antigas ainda usam,
   até a F7). Migração `20261007140000`. 10 testes de banco novos.
+  **Ajuste da validação (08/out, cliente):** no "Encaixe ou antecipar", antes de entrar na lista,
+  o bot procura horário livre antes do atendimento (mesma agenda, serviço e tipo de local, a mais
+  de 2h de agora) e mostra até 3, mais "Nenhum desses". Escolhido e confirmado, remarca na hora
+  (aviso de remarcação pelo template); ocupado no meio, procura de novo. "Nenhum desses" pergunta
+  se quer entrar na lista. Sem horário livre antes, entra direto. Textos aprovados em 08/out.
 - **F6.5 — Cancelamento pela clínica automático:** aviso a todos com o link; sai a tela "Avisar".
   **Detalhada e implementada em 07/out (aguarda a validação do cliente).** Depois de "Cancelar
   selecionados" ou "Bloquear e cancelar", cada paciente recebe o aviso pelo WhatsApp da clínica,

@@ -69,6 +69,8 @@ async function say(phone: string, input: string | { id: string } | { payload: st
 }
 
 const titles = (reply: Sent[]) => reply.at(-1)!.options.map((o) => o.title);
+/** "1. seg, 10/03 às 08:00" (linha da lista) → "segunda, 10/03 às 08:00" (texto). */
+const full = (title: string) => title.slice(3).replace(/^seg,/, "segunda,");
 
 async function appointment(id: string) {
   const { data } = await adminClient().from("appointments").select("status, canceled_via, patient_confirmed_at, reminder_response").eq("id", id).single();
@@ -181,10 +183,33 @@ describe("botões do lembrete", () => {
 });
 
 describe("encaixe ou antecipar", () => {
-  it("entra na lista; de novo oferece sair; sair tira da lista", async () => {
+  it("com horário livre antes: mostra até 3; \"Nenhum desses\" pergunta da lista; de novo oferece sair", async () => {
     await say(P1, "oi");
     await say(P1, "1");
     let reply = await say(P1, { id: "manage_waitlist" });
+    expect(reply[0]).toMatchObject({
+      kind: "list",
+      body: "Encontramos horários livres antes da consulta de *Paciente Um*, marcada para segunda, 10/03 às 08:00. Quer antecipar para um destes?",
+    });
+    // Horários da agenda da Dra. às segundas, no consultório, a partir de hoje.
+    expect(titles(reply)).toEqual([
+      expect.stringMatching(/^1\. seg, \d\d\/\d\d às \d\d:\d\d$/),
+      expect.stringMatching(/^2\. seg, /),
+      expect.stringMatching(/^3\. seg, /),
+      "4. Nenhum desses",
+      "5. Voltar ao menu",
+    ]);
+
+    reply = await say(P1, { id: "waitlist_none" });
+    expect(reply[0]).toMatchObject({ kind: "buttons", body: "Quer entrar na lista de espera? Se abrir outra vaga antes de segunda, 10/03 às 08:00, eu aviso por aqui." });
+    reply = await say(P1, "não");
+    expect(reply[0].body).toBe("Ok, mantivemos o horário de *Paciente Um* (segunda, 10/03 às 08:00).");
+
+    await say(P1, "oi");
+    await say(P1, "1");
+    await say(P1, { id: "manage_waitlist" });
+    await say(P1, "4");
+    reply = await say(P1, { id: "yes" });
     expect(reply[0].body).toBe("Pronto! *Paciente Um* está na lista de espera para antecipar a consulta marcada para segunda, 10/03 às 08:00.");
 
     await say(P1, "oi");
@@ -194,6 +219,51 @@ describe("encaixe ou antecipar", () => {
     expect(titles(reply)).toEqual(["Sair da lista", "Continuar na lista"]);
     reply = await say(P1, { id: "waitlist_leave" });
     expect(reply[0].body).toBe("Pronto, *Paciente Um* saiu da lista de espera. A consulta continua marcada para segunda, 10/03 às 08:00.");
+  });
+
+  it("escolhe um horário: \"Não\" volta à lista; ocupado no meio procura de novo; \"Sim\" antecipa", async () => {
+    await say(P1, "oi");
+    await say(P1, "1");
+    let reply = await say(P1, { id: "manage_waitlist" });
+    const [first] = reply[0].options;
+    reply = await say(P1, { id: first.id });
+    expect(reply[0]).toMatchObject({ kind: "buttons" });
+    expect(reply[0].body).toBe(`Confirma antecipar a consulta de *Paciente Um* de segunda, 10/03 às 08:00 para ${full(first.title)}?`);
+    reply = await say(P1, "não");
+    expect(reply[0].kind).toBe("list");
+    expect(reply[0].options[0].id).toBe(first.id);
+
+    // Outra pessoa marca o horário antes do "Sim".
+    await say(P1, { id: first.id });
+    const start = new Date(first.id.split("_")[1]);
+    await bookAppointment(
+      asDb(f.reception),
+      f.clinicId,
+      { patientId: f.ids.p3, serviceId: f.ids.consulta, agendaId: f.ids.agendaDra, start, locationId: f.ids.office, channel: "admin", actorId: null },
+      new Date(),
+    );
+    reply = await say(P1, "sim");
+    expect(reply[0].body).toBe("Que pena, esse horário acabou de ser ocupado.");
+    expect(reply[1].kind).toBe("list");
+    const next = reply[1].options[0];
+    expect(next.id).not.toBe(first.id);
+
+    reply = await say(P1, "1");
+    reply = await say(P1, { id: "yes" });
+    expect(reply[0].body).toBe(`Pronto! ✓ O atendimento de *Paciente Um* foi antecipado para ${full(next.title)}. Os detalhes seguem na mensagem de remarcação.`);
+    const { data } = await adminClient().from("appointments").select("scheduled_at, rescheduled_via").eq("id", consultP1).single();
+    expect(new Date(data!.scheduled_at).toISOString()).toBe(new Date(next.id.split("_")[1]).toISOString());
+    expect(data!.rescheduled_via).toBe("whatsapp_bot");
+  });
+
+  it("sem horário livre antes: entra direto na lista", async () => {
+    await adminClient()
+      .from("schedule_blocks")
+      .insert({ clinic_id: f.clinicId, agenda_id: f.ids.agendaExams, starts_at: new Date().toISOString(), ends_at: at(MON2, "08:00").toISOString(), reason: "Teste" });
+    await say(P3, "oi");
+    await say(P3, "2");
+    const reply = await say(P3, { id: "manage_waitlist" });
+    expect(reply[0].body).toBe("Pronto! *Paciente Três* está na lista de espera para antecipar o exame Exame marcado para segunda, 17/03 às 08:00.");
   });
 
   it("sem nada marcado: oferece marcar; o link leva o pedido de entrar na lista", async () => {
@@ -227,7 +297,8 @@ describe("recepção e pausa", () => {
   it("a recepção responde pelo app: o bot fica em silêncio, mas o Confirmar do lembrete responde", async () => {
     await webhook({ message_echoes: [{ id: `wamid.f64.echo.${++seq}`, from: "5584000000000", to: P1.slice(1), type: "text", text: { body: "Oi, aqui é a recepção" } }] });
     expect(await say(P1, "oi")).toEqual([]);
-    await adminClient().from("appointments").update({ patient_confirmed_at: null }).eq("id", consultP1);
+    // Antecipado no encaixe: o lembrete da data nova também foi enviado.
+    await adminClient().from("appointments").update({ patient_confirmed_at: null, reminder_sent_at: new Date().toISOString() }).eq("id", consultP1);
     const reply = await say(P1, { payload: reminderButtonPayload("confirm", consultP1) });
     expect(reply[0].body).toContain("Presença confirmada ✓");
     expect(await say(P1, { payload: reminderButtonPayload("cancel", consultP1) })).toEqual([]);
