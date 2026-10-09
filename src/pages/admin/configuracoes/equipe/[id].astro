@@ -103,7 +103,7 @@ const roleHints: Record<string, string> = {
         {isSelf && <p class={HINT}>Você não pode tirar o seu próprio papel de Administrador.</p>}
       </fieldset>
 
-      <div data-professional>
+      <div data-professional data-is-new={isNew ? "true" : "false"}>
         <label for="professional_id" class={LABEL}>Cadastro de profissional</label>
         <select id="professional_id" name="professional_id" class={INPUT}>
           <option value="">Escolha…</option>
@@ -170,26 +170,26 @@ const roleHints: Record<string, string> = {
   </Card>
   <ConfirmDeleteDialog />
 
-  <script define:vars={{ isNew }}>
+  <script>
     // Profissional: escolhe o cadastro. Acesso restrito: escolhe as agendas.
     // Num convite novo, o acesso segue o papel (D6) até a pessoa mudar à mão.
-    const form = document.querySelector("form input[name='role']")?.form;
-    const professional = document.querySelector("[data-professional]");
-    const agendaList = document.querySelector("[data-agendas]");
-    let scopeTouched = !isNew;
-    const checkedRoles = () => [...form.querySelectorAll("input[name='role']:checked")].map((input) => input.value);
-    const setScope = (value) => {
-      const radio = form.querySelector(`input[name='agenda_scope'][value='${value}']`);
+    const form = document.querySelector<HTMLInputElement>("form input[name='role']")!.form!;
+    const professional = document.querySelector<HTMLElement>("[data-professional]")!;
+    const agendaList = document.querySelector<HTMLElement>("[data-agendas]")!;
+    let scopeTouched = professional.dataset.isNew !== "true";
+    const checkedRoles = () => [...form.querySelectorAll<HTMLInputElement>("input[name='role']:checked")].map((input) => input.value);
+    const setScope = (value: string) => {
+      const radio = form.querySelector<HTMLInputElement>(`input[name='agenda_scope'][value='${value}']`);
       if (radio) radio.checked = true;
     };
     const sync = () => {
       const roles = checkedRoles();
       professional.hidden = !roles.includes("professional");
       if (!scopeTouched) setScope(roles.includes("admin") || roles.includes("reception") || !roles.length ? "all" : "restricted");
-      agendaList.hidden = form.querySelector("input[name='agenda_scope']:checked")?.value !== "restricted";
+      agendaList.hidden = form.querySelector<HTMLInputElement>("input[name='agenda_scope']:checked")?.value !== "restricted";
     };
     form.addEventListener("change", (event) => {
-      if (event.target.name === "agenda_scope") scopeTouched = true;
+      if ((event.target as HTMLInputElement).name === "agenda_scope") scopeTouched = true;
       sync();
     });
     sync();

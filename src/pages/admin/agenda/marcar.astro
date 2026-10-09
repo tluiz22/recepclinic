@@ -212,7 +212,7 @@ const chip = (active: boolean) =>
       <h2 class="font-semibold text-slate-900">2. Serviço</h2>
       <form method="GET" class="mt-2">
         {Object.entries(state).map(([key, value]) => value && key !== "service_id" && key !== "date" && <input type="hidden" name={key} value={value} />)}
-        <select name="service_id" class={`${INPUT} mt-0`} onchange="this.form.submit()">
+        <select name="service_id" class={`${INPUT} mt-0`} data-autosubmit>
           <option value="">Escolha…</option>
           {
             serviceOptions.map((s) => (

@@ -83,7 +83,7 @@ const cardProps = (a: (typeof appointments)[number]) => ({
     <a href={`/admin/agenda?date=${addDays(date, -1)}`} aria-label="Dia anterior" class="rounded-md p-2 text-slate-500 hover:bg-slate-100 hover:text-sky-700">
       <Icon name="chevron-left" class="h-5 w-5" />
     </a>
-    <input type="date" name="date" value={date} onchange="this.form.submit()" class="min-w-0 flex-1 rounded-md border border-slate-300 px-3 py-2 text-sm sm:flex-none" />
+    <input type="date" name="date" value={date} data-autosubmit class="min-w-0 flex-1 rounded-md border border-slate-300 px-3 py-2 text-sm sm:flex-none" />
     <a href={`/admin/agenda?date=${addDays(date, 1)}`} aria-label="Próximo dia" class="rounded-md p-2 text-slate-500 hover:bg-slate-100 hover:text-sky-700">
       <Icon name="chevron-right" class="h-5 w-5" />
     </a>

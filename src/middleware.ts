@@ -1,9 +1,10 @@
-import { defineMiddleware } from "astro:middleware";
+import { defineMiddleware, sequence } from "astro:middleware";
 import { ACTIVE_CLINIC_COOKIE, activeClinicCookieOptions, canAccessPath, expectsPage } from "./lib/clinicAccess";
 import { createUserClient } from "./lib/data/clients";
 import { isPlatformStaff } from "./lib/data/clinicChoice";
 import { loadClinicContext, logPlatformAccess } from "./lib/data/clinicContext";
 import { platformEnv } from "./lib/env";
+import { withSecurityHeaders } from "./lib/securityHeaders";
 
 // Painel (/admin e /api/admin): login, clínica ativa, papéis e agendas da
 // pessoa (F3.2, D6). O banco (RLS) confere de novo cada leitura e escrita.
@@ -35,7 +36,7 @@ const isPlatformPath = (pathname: string) => PLATFORM_PREFIXES.some((prefix) => 
 const json = (status: number, body: Record<string, string>) =>
   new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } });
 
-export const onRequest = defineMiddleware(async (context, next) => {
+const access = defineMiddleware(async (context, next) => {
   const { url, request, cookies, redirect } = context;
 
   // Páginas geradas no build (a 404, inclusive de /admin e /api/admin
@@ -127,3 +128,9 @@ export const onRequest = defineMiddleware(async (context, next) => {
   context.locals.clinic = clinic;
   return next();
 });
+
+// Cabeçalhos de segurança em toda resposta do servidor, inclusive nos
+// redirecionamentos e erros do controle de acesso (F9.1).
+const securityHeaders = defineMiddleware(async (_context, next) => withSecurityHeaders(await next()));
+
+export const onRequest = sequence(securityHeaders, access);

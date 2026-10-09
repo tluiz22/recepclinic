@@ -1177,6 +1177,27 @@ atende pela API (eco da recepção pausa o bot, `#bot` devolve, como no piloto; 
 cabeçalhos de segurança e `robots.txt`; proteção de origem explícita; logs sem dados pessoais;
 anonimização de paciente/contato a pedido (LGPD); contadores de uso visíveis para o Suporte.
 
+Subetapas (cliente, 09/out/2026), cada uma validada antes da próxima:
+
+| | Subetapa | Situação |
+|---|---|---|
+| F9.1 | Cabeçalhos de segurança, `robots.txt` e proteção de origem explícita (L44, L46) | implementada em 09/out, a validar |
+| F9.2 | Logs sem dados pessoais: só ids e a clínica (L43) | |
+| F9.3 | Ferramenta de erros com a clínica em cada erro e monitor externo do painel e do webhook (L45); ferramentas a escolher com o cliente | |
+| F9.4 | Anonimização de paciente e contato a pedido (LGPD, L42); regras com o cliente | |
+| F9.5 | Contadores de uso por clínica para o Suporte (L49) | |
+
+**F9.1:** CSP do Astro como cabeçalho nas páginas do servidor (`astro.config.mjs`): scripts e
+estilos só do próprio domínio, com o hash dos embutidos; estilo em atributo liberado (cor da marca,
+barras do funil); imagens também de `https:` (logos no Storage); sem moldura, `object` nem envio de
+formulário para outro site. Por causa do CSP, saíram os `onchange` do HTML (os filtros usam
+`data-autosubmit`, tratado no layout do painel) e os scripts com `define:vars` (valores em
+atributos `data-*`). Demais cabeçalhos em toda resposta (`src/lib/securityHeaders.ts`):
+`X-Frame-Options`, `nosniff`, HSTS, `Referrer-Policy`, `Permissions-Policy` e
+`X-Robots-Tag: noindex`. `robots.txt` bloqueia tudo (o domínio `app.` é só painel e links de
+pacientes). `checkOrigin` ligado explicitamente. **Na F8**, o Embedded Signup vai pedir no CSP o
+script e a moldura do Facebook (`connect.facebook.net`, `www.facebook.com`).
+
 ## F10 — Primeiro piloto
 
 **Escopo:** produção (Supabase Pro + Vercel Pro, backup conferido); criação da 1ª clínica pelo

@@ -182,7 +182,7 @@ const markerHint = (markers: string[]) => markers.map((m) => `{${m}} = ${MARKER_
 
   <form method="GET" class="mt-4 flex flex-wrap items-center gap-2">
     <label for="grupo" class="text-sm font-medium text-slate-700">Mostrar</label>
-    <select id="grupo" name="grupo" class={`${INPUT} mt-0 w-72`} onchange="this.form.submit()">
+    <select id="grupo" name="grupo" class={`${INPUT} mt-0 w-72`} data-autosubmit>
       <option value="bot" selected={grupo === "bot"}>Mensagens do bot</option>
       {metaOn && <option value="meta" selected={grupo === "meta"}>Mensagens aprovadas pela Meta</option>}
     </select>

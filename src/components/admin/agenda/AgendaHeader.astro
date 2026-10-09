@@ -55,7 +55,7 @@ const current = views.find((v) => v.id === view)!;
       <label for="agenda_choice" class="sr-only">
         Agenda
       </label>
-      <select id="agenda_choice" name="agenda" class={`${INPUT} mt-0 sm:w-72`} onchange="this.form.submit()">
+      <select id="agenda_choice" name="agenda" class={`${INPUT} mt-0 sm:w-72`} data-autosubmit>
         <option value={ALL_AGENDAS} selected={!selectedAgendaId}>
           Todas as agendas
         </option>

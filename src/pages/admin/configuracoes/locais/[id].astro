@@ -60,7 +60,7 @@ const locationIssues = setup?.issues.locations.get(id!) ?? [];
         }
         {isNew && <p class={HINT}>O tipo não muda depois de criado.</p>}
       </div>
-      <div data-address>
+      <div data-address data-fixed-type={location?.type ?? ""}>
         <label for="address" class={LABEL}>Endereço</label>
         <input id="address" name="address" placeholder="Rua, número – bairro, cidade" value={location?.address ?? ""} class={INPUT} />
         <p class={HINT}>Vai no lembrete e na confirmação, com o link do mapa.</p>
@@ -70,12 +70,12 @@ const locationIssues = setup?.issues.locations.get(id!) ?? [];
     {!isNew && <ActiveToggle action={action} isActive={location!.isActive} what="o local" />}
   </Card>
 
-  <script define:vars={{ fixedType: location?.type ?? null }}>
+  <script>
     // Domiciliar não tem endereço fixo: o campo some.
-    const select = document.getElementById("type");
-    const address = document.querySelector("[data-address]");
+    const select = document.getElementById("type") as HTMLSelectElement | null;
+    const address = document.querySelector<HTMLElement>("[data-address]")!;
     const sync = () => {
-      const type = select ? select.value : fixedType;
+      const type = select ? select.value : address.dataset.fixedType;
       address.hidden = type === "home_visit";
     };
     select?.addEventListener("change", sync);

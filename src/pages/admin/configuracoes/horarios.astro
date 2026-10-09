@@ -70,7 +70,7 @@ const weekdayOrder = [1, 2, 3, 4, 5, 6, 0];
             <label for="agenda" class={LABEL}>
               Agenda
             </label>
-            <select id="agenda" name="agenda" class={`${INPUT} min-w-56`} onchange="this.form.submit()">
+            <select id="agenda" name="agenda" class={`${INPUT} min-w-56`} data-autosubmit>
               {agendas.map((a) => (
                 <option value={a.id} selected={a.id === agenda.id}>
                   {a.name}

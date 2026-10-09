@@ -251,6 +251,15 @@ const isMoreActive = moreNavItems.some((item) => isActive(item.href));
         });
       });
 
+      // Filtros que recarregam a página ao mudar (data, agenda, serviço). Sem
+      // onchange no HTML: o CSP (F9.1) não deixa rodar script em atributo.
+      document.addEventListener("change", (event) => {
+        const field = event.target as HTMLInputElement | HTMLSelectElement | null;
+        if (!field?.form || !field.hasAttribute("data-autosubmit")) return;
+        show();
+        field.form.submit();
+      });
+
       // Voltar pelo navegador pode reabrir a página do cache com a barra ligada.
       window.addEventListener("pageshow", () => loading?.removeAttribute("data-active"));
     </script>

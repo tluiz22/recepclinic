@@ -150,7 +150,7 @@ const fin = tab === "financeiro" ? financial(rows) : null;
             {selectable.length > 1 && !botTab && (
               <form method="GET" action="/admin/metricas">
                 {Object.entries({ ...keep, agenda: "" }).map(([name, value]) => value && <input type="hidden" name={name} value={value} />)}
-                <select name="agenda" class={`${INPUT} mt-0 sm:w-64`} onchange="this.form.submit()">
+                <select name="agenda" class={`${INPUT} mt-0 sm:w-64`} data-autosubmit>
                   <option value="">Todas as agendas</option>
                   {selectable.map((a) => (
                     <option value={a.id} selected={a.id === selectedAgenda?.id}>
