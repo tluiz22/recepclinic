@@ -28,9 +28,8 @@
 >   - **Templates na Meta (09/out):** aprovados confirmação, remarcação, cancelamento, lembrete e
 >     cancelamento pela clínica. **Em análise:** preparo do exame (`rc_preparo_exame_v2`; conferir
 >     se ficou como Utilidade), orientações gerais (`rc_orientacoes_consulta_v1`), os 4 do resumo do
->     dia, a oferta de vaga e as versões próprias da Confirmação/Remarcação da clínica de teste. O
->     cliente exclui na Meta os 3 antigos sem uso (`rc_resumo_consultas_hoje_v1`,
->     `rc_resumo_exames_hoje_v1`, `rc_preparo_exame_v1`).
+>     dia, a oferta de vaga e as versões próprias da Confirmação/Remarcação da clínica de teste. Os 3
+>     antigos sem uso a excluir estão nas pendências do cliente, abaixo.
 >   - **Próximo passo (retomar daqui):** validar a **parte K** do [`staging.md`](staging.md) (F7,
 >     envios automáticos, com os lembretes reestruturados em 09/out): lembrete ao paciente "no dia"
 >     num horário logo à frente; resumo ao profissional e à equipe (chegam quando a Meta aprovar os
@@ -63,6 +62,8 @@
 >   - provedor de e-mail (ex.: Resend) com o domínio `recepclinic.com.br` (antes do 1º piloto;
 >     convites, pedido de informações e "Esqueci minha senha" na nuvem; também vira o SMTP do
 >     Supabase, para os modelos de e-mail).
+>   - excluir na Meta (conta do RecepClinic) os 3 templates antigos sem uso:
+>     `rc_resumo_consultas_hoje_v1`, `rc_resumo_exames_hoje_v1` e `rc_preparo_exame_v1`.
 > - **Triagem do piloto**: nenhum commit novo do piloto desde `aad94dd` até 06/out/2026 (início da F6).
 
 > **RecepClinic — a recepção inteligente da sua clínica.**
