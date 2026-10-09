@@ -12,6 +12,7 @@ import { handleInfo, handleMenu, handlePreparationChoice, handleSubmenu, showMen
 import { handleManageState, handleOfferTap, handleReminderTap, MANAGE_STATES, offerTapOf, reminderTapOf } from "./manage";
 import { IDLE_CLOSED } from "./texts";
 import { listBotMessages } from "../customMessages";
+import { logError } from "../../../log";
 
 // Entrada do bot (F6.3): chamado pelo webhook para cada mensagem recebida, já
 // registrada. Só com o item "Bot de WhatsApp" liberado (D11) e o WhatsApp da
@@ -139,7 +140,7 @@ export async function closeIdleConversations(db: DbClient, clinicId: string, sen
       await setConversationState(db, clinicId, phone, WELCOME, { context: {} }, now);
       closed++;
     } catch (error) {
-      console.error("[bot] conversa parada", phone, error instanceof Error ? error.message : String(error));
+      logError("bot: conversa parada", error, { clinica: clinicId });
     }
   }
   return closed;

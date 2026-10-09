@@ -7,6 +7,7 @@ import { logWebFunnelEvent, type FunnelLink } from "../whatsapp/funnel";
 import { bookAppointment, findReturnOrigin, getAppointment, rescheduleAppointment, type AppointmentStatus } from "./appointments";
 import { bookingLinkLastDate, claimBookingLink, getBookingLink, linkState, type BookingLink } from "./links";
 import { agendasForService, DEFAULT_DATE_COUNT, getFreeSlots, getGroupSessions, getNextAvailableDates, type DateWithSlots } from "./slots";
+import { logError } from "../../log";
 
 // Página pública /agendar/[token] (F5.2): o paciente (ou o contato) escolhe
 // data e horário pelo link do bot ou da clínica. Tudo com a credencial
@@ -314,13 +315,13 @@ export async function logBookingPageStep(
     await logWebFunnelEvent(db, clinicId, funnelLink(page.link, page.service.category), step, metadata);
   } catch (error) {
     // O funil é medição: falhar nele nunca impede marcar.
-    console.error("[agendar] funil não registrado", error);
+    logError("agendar: funil não registrado", error, { clinica: clinicId });
   }
 }
 
 async function releaseLink(db: DbClient, clinicId: string, linkId: string): Promise<void> {
   const { error } = await db.from("booking_links").update({ used_at: null }).eq("clinic_id", clinicId).eq("id", linkId);
-  if (error) console.error("[agendar] link não devolvido", linkId, error.message);
+  if (error) logError("agendar: link não devolvido", error, { clinica: clinicId, link: linkId });
 }
 
 /**
@@ -409,7 +410,7 @@ export async function confirmBookingLink(
     await releaseLink(db, clinicId, linkId);
     if (error instanceof DataError && error.code === "conflict") return { status: "slot_taken" };
     if (error instanceof DataError && error.code === "duplicate") return { status: "duplicate" };
-    console.error("[agendar] não confirmou", error);
+    logError("agendar: não confirmou", error, { clinica: clinicId, link: linkId });
     return { status: "failed" };
   }
 
@@ -418,7 +419,7 @@ export async function confirmBookingLink(
     try {
       await joinWaitlist(db, clinicId, appointmentId, { via: "booking_link", actorId: null }, now);
     } catch (error) {
-      console.error("[agendar] não entrou na lista de espera", error);
+      logError("agendar: não entrou na lista de espera", error, { clinica: clinicId });
     }
   }
   return { status: "confirmed", appointmentId };

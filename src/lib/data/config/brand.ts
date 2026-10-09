@@ -1,6 +1,7 @@
 import type { DbClient } from "../clients";
 import { DataError, fromDbError, unwrapOne } from "../errors";
 import { updateClinicSettings } from "./clinic";
+import { logError } from "../../log";
 
 // Marca da clínica nas páginas públicas (F5.1, cliente, 05/out/2026): nome,
 // logo, cor e site. O logo fica no Storage, bucket público "clinic-logos",
@@ -84,7 +85,7 @@ async function removeStoredLogo(db: DbClient, url: string | null): Promise<void>
   if (!path) return;
   // Sobrar um arquivo antigo não atrapalha a clínica: só registra.
   const { error } = await db.storage.from(LOGO_BUCKET).remove([path]);
-  if (error) console.error("Logo antigo não removido", path, error);
+  if (error) logError("logo: antigo não removido", error, { arquivo: path });
 }
 
 /** Envia o logo novo, salva o endereço e apaga o anterior. Devolve o endereço público. */

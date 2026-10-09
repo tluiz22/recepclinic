@@ -12,6 +12,7 @@ import type { OfferSender } from "../waitlist/offers";
 import { getApprovedTemplate } from "./connection";
 import { isCustomerServiceWindowOpen, recordOutboundMessage } from "./messages";
 import { appointmentParams, cleanParam, clinicLabel, defaultTemplate, fillTemplate, firstName, formatAppointmentWhen, formatSummaryDate, offerTypeWord, paramCount, type MessageArticle } from "./templates";
+import { logError } from "../../log";
 
 // Envio pelo WhatsApp da clínica (F6.2): o número e o token dela (D3a), com a
 // credencial limitada à clínica, a única que lê o token. As camadas de
@@ -78,7 +79,7 @@ export async function createClinicSender(
       const messageId = await sendMessage(setup.phoneNumberId, setup.accessToken, message, fetcher);
       return { sent: true, messageId, body };
     } catch (error) {
-      console.error("[whatsapp envio]", error instanceof Error ? error.message : String(error));
+      logError("whatsapp envio", error, { clinica: clinicId });
       return { ...failure(error), body };
     }
   };

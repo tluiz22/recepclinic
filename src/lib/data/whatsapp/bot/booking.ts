@@ -11,6 +11,7 @@ import { attachContact, end, go, say, sendButtons, sendList, step, textFor, type
 import { formatBirthdate, parseBirthdate, pick, yesNo, type Selection } from "./input";
 import { showMenu } from "./menus";
 import * as t from "./texts";
+import { logError } from "../../../log";
 
 // Marcar pelo bot (F6.3), com as regras do piloto (Fases 3b, 6, 16, 17, 21)
 // no modelo novo: serviço → "com quem?" (D2) → local → endereço do
@@ -505,7 +506,7 @@ async function registerAndFinish(b: Bot, ctx: BookingContext, name: string, birt
       const self = (await activePatients(b)).find((p) => p.isContactSelf);
       if (self) return finish(b, ctx, { id: self.id, name: self.fullName, birthdate: self.birthdate });
     }
-    console.error("[bot] cadastro do paciente", error instanceof Error ? error.message : String(error));
+    logError("bot: cadastro do paciente", error, { clinica: b.clinicId });
     await say(b, "bot_book_link_error", t.LINK_ERROR);
     await end(b, "error", { reason: "register_failed" });
   }
@@ -598,7 +599,7 @@ async function finish(b: Bot, ctx: BookingContext, patient: Candidate): Promise<
     await say(b, "bot_booking_link", textFor(b, "booking_link", t.bookingLink(service.name, patient.name, url), { servico: service.name, paciente: patient.name, link: url }));
     await end(b, "link_sent", { booking_link_id: link.id });
   } catch (error) {
-    console.error("[bot] link de agendamento", error instanceof Error ? error.message : String(error));
+    logError("bot: link de agendamento", error, { clinica: b.clinicId });
     await say(b, "bot_book_link_error", t.LINK_ERROR);
     await end(b, "error", { reason: "link_error" });
   }

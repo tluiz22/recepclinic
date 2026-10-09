@@ -6,6 +6,7 @@ import { resetConversationAfterNotice } from "./conversations";
 import { recordOutboundMessage, type SendOutcome } from "./messages";
 import type { ClinicSender } from "./send";
 import { appointmentParams, cleanParam, defaultTemplate, fillTemplate, firstName, formatAppointmentWhen, paramCount } from "./templates";
+import { logError } from "../../log";
 
 // Avisos ao paciente (F6.2), como no piloto: marcado, remarcado e cancelado,
 // pela Agenda do painel e pela página /agendar. Sempre por template (podem
@@ -129,7 +130,7 @@ export async function sendAppointmentNotice(
     await resetConversationAfterNotice(db, clinicId, contact.phone);
     return status;
   } catch (error) {
-    console.error(`[whatsapp aviso] ${kind} de ${appointmentId}:`, error instanceof Error ? error.message : String(error));
+    logError("whatsapp aviso", error, { clinica: clinicId, aviso: kind, atendimento: appointmentId });
     return "failed";
   }
 }

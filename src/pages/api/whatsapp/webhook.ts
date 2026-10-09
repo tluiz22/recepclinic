@@ -4,6 +4,7 @@ import { resolveClinicByPhoneNumberId, resolveClinicsByWabaId } from "../../../l
 import { clinicSenderFor } from "../../../lib/data/whatsapp/clinicSender";
 import { isValidMetaSignature, processWebhook } from "../../../lib/data/whatsapp/webhook";
 import { platformEnv } from "../../../lib/env";
+import { logError, logWarn } from "../../../lib/log";
 
 // Webhook do app RecepClinic na Meta (F6.1): um endereço para todas as
 // clínicas; a clínica vem do número que recebeu cada evento (ou da conta, na
@@ -27,7 +28,7 @@ export const GET: APIRoute = async ({ url }) => {
 export const POST: APIRoute = async ({ request, url }) => {
   const whatsapp = platformEnv().whatsapp;
   if (!whatsapp) {
-    console.error("[whatsapp webhook] WHATSAPP_APP_SECRET não configurada: evento recusado.");
+    logError("whatsapp webhook: WHATSAPP_APP_SECRET não configurada, evento recusado");
     return new Response("webhook não configurado", { status: 500 });
   }
   const rawBody = await request.text();
@@ -48,6 +49,6 @@ export const POST: APIRoute = async ({ request, url }) => {
     resolveClinicsByWaba: (wabaId) => resolveClinicsByWabaId(wabaId),
     senderFor: (clinicId) => clinicSenderFor(clinicId, url),
   });
-  if (summary.errors || summary.unknownNumbers) console.warn("[whatsapp webhook]", JSON.stringify(summary));
+  if (summary.errors || summary.unknownNumbers) logWarn("whatsapp webhook", { ...summary });
   return new Response(null, { status: 200 });
 };

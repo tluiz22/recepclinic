@@ -1,6 +1,7 @@
 import type { Json } from "../supabase/database.types";
 import type { DbClient } from "./clients";
 import { unwrap } from "./errors";
+import { logError } from "../log";
 
 // Execuções das rotinas automáticas por clínica (`job_runs`, L33): a falha de
 // uma clínica fica registrada com ela. Só o agendador grava (credencial da
@@ -43,5 +44,5 @@ export async function finishJobRun(
       totals: totals as NonNullable<Json>,
     })
     .eq("id", runId);
-  if (dbError) console.error("[rotinas] não fechou a execução", runId, dbError.message);
+  if (dbError) logError("rotinas: não fechou a execução", dbError, { execucao: runId });
 }

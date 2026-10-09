@@ -5,6 +5,7 @@ import { normalizeAnswers, submitProblem, type OnboardingAnswers } from "../onbo
 import type { Json } from "../supabase/database.types";
 import type { DbClient } from "./clients";
 import { cleanText, DataError, fromDbError, unwrap, unwrapOne, Validation } from "./errors";
+import { logError } from "../log";
 
 // Nova clínica, convites e pedido de informações (F4.4a, L47; cliente,
 // 05/out/2026). O Suporte cria a clínica com o próprio login (fica no
@@ -56,7 +57,7 @@ async function trySend(send: () => Promise<void>): Promise<EmailOutcome> {
     await send();
     return { sent: true };
   } catch (error) {
-    if (!(error instanceof EmailNotConfiguredError)) console.error("[e-mail] envio falhou:", error);
+    if (!(error instanceof EmailNotConfiguredError)) logError("e-mail: envio falhou", error);
     return { sent: false, reason: error instanceof EmailNotConfiguredError ? "envio de e-mail não configurado" : "o envio falhou" };
   }
 }
@@ -185,7 +186,7 @@ export async function resendInvitation(
 /** Quem acabou de criar a senha: os convites dele ficam aceitos. */
 export async function markMyInvitationsAccepted(db: DbClient): Promise<void> {
   const { error } = await db.rpc("mark_my_invitations_accepted");
-  if (error) console.error("[convite] não marcou como aceito:", error.message);
+  if (error) logError("convite: não marcou como aceito", error);
 }
 
 // ---------------------------------------------------------------------------

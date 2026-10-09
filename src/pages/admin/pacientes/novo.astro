@@ -1,4 +1,5 @@
 ---
+import { logError } from "../../../lib/log";
 // Pacientes › cadastrar (F4.7; antes, o cadastro rápido do Marcar, F4.5):
 // nome, nascimento, observações, plano de saúde (com o item "Convênios") e
 // quem fala com a clínica pelo WhatsApp: o próprio paciente (maior de 18), um
@@ -90,7 +91,7 @@ if (Astro.request.method === "POST") {
       notice = `Este ${vocabulary.contact} já tem ${result.existingNames.join(", ")} com a mesma data de nascimento. Se for outra pessoa, marque a confirmação abaixo.`;
     }
   } catch (caught) {
-    if (!(caught instanceof DataError)) console.error(caught);
+    if (!(caught instanceof DataError)) logError("paciente novo", caught);
     error = caught instanceof DataError ? describeDataError(caught) : "Não foi possível cadastrar. Tente de novo.";
   }
 }

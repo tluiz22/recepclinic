@@ -1,5 +1,6 @@
 import type { Json } from "../../supabase/database.types";
 import type { DbClient } from "../clients";
+import { logError } from "../../log";
 
 // Funil do bot (Fase 15 do piloto), F3.9a: cada tentativa (agendar, retorno,
 // exame, cancelar, remarcar) é uma sessão com os passos que alcançou; o
@@ -32,7 +33,7 @@ export async function logFunnelEvent(db: DbClient, clinicId: string, event: Funn
     metadata: (event.metadata ?? {}) as NonNullable<Json>,
     occurred_at: now.toISOString(),
   });
-  if (error) console.error("[funil] erro ao gravar evento:", event.flow, event.step, error.message);
+  if (error) logError("funil: erro ao gravar evento", error, { clinica: clinicId, fluxo: event.flow, etapa: event.step });
 }
 
 /** Dados gravados no início da tentativa (ex.: veio do "Encaixe ou antecipar", Fase 25 do piloto). */

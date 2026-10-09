@@ -5,6 +5,7 @@ import { isPlatformStaff } from "./lib/data/clinicChoice";
 import { loadClinicContext, logPlatformAccess } from "./lib/data/clinicContext";
 import { platformEnv } from "./lib/env";
 import { withSecurityHeaders } from "./lib/securityHeaders";
+import { logError } from "./lib/log";
 
 // Painel (/admin e /api/admin): login, clínica ativa, papéis e agendas da
 // pessoa (F3.2, D6). O banco (RLS) confere de novo cada leitura e escrita.
@@ -46,7 +47,7 @@ const access = defineMiddleware(async (context, next) => {
   try {
     platformEnv();
   } catch (error) {
-    console.error(error);
+    logError("configuração", error);
     return new Response("Sistema mal configurado. Avise o suporte.", { status: 500 });
   }
 
@@ -80,7 +81,7 @@ const access = defineMiddleware(async (context, next) => {
     try {
       staff = await isPlatformStaff(db, user.id);
     } catch (error) {
-      console.error(error);
+      logError("painel", error, { caminho: url.pathname });
       return isApi ? json(500, { error: "context_unavailable" }) : new Response("Erro ao abrir o painel.", { status: 500 });
     }
     if (!staff) return isApi ? json(403, { error: "forbidden" }) : redirect("/admin/dashboard?aviso=acesso_negado");
@@ -91,7 +92,7 @@ const access = defineMiddleware(async (context, next) => {
   try {
     result = await loadClinicContext(db, user.id, cookies.get(ACTIVE_CLINIC_COOKIE)?.value);
   } catch (error) {
-    console.error(error);
+    logError("painel", error, { caminho: url.pathname });
     return isApi ? json(500, { error: "context_unavailable" }) : new Response("Erro ao abrir o painel.", { status: 500 });
   }
 
@@ -120,7 +121,7 @@ const access = defineMiddleware(async (context, next) => {
     try {
       await logPlatformAccess(db, clinic.clinicId, request.method, `${url.pathname}${url.search}`.slice(0, 2048));
     } catch (error) {
-      console.error(error);
+      logError("painel", error, { caminho: url.pathname });
       return isApi ? json(500, { error: "access_log_failed" }) : new Response("Erro ao registrar o acesso.", { status: 500 });
     }
   }

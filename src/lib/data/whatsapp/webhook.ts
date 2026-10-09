@@ -9,6 +9,7 @@ import { sendGuidanceAfterDelivery } from "./guidance";
 import { guidanceSender, preparationSender, type ClinicSender } from "./send";
 import { applyTemplateStatusEvent, type TemplateStatusEvent } from "./templateSync";
 import { handleIncomingMessage } from "./bot/router";
+import { logError, logWarn } from "../../log";
 
 // Webhook do WhatsApp por clínica (F6.1, D3a). Cada evento traz o número que
 // recebeu (`metadata.phone_number_id`); a plataforma descobre a clínica dele
@@ -121,7 +122,7 @@ export async function processWebhook(payload: unknown, deps: WebhookDeps, now: D
       await run();
     } catch (error) {
       summary.errors += 1;
-      console.error(`[whatsapp webhook] ${what}:`, error instanceof Error ? error.message : String(error));
+      logError(`whatsapp webhook: ${what}`, error);
     }
   };
 
@@ -132,7 +133,7 @@ export async function processWebhook(payload: unknown, deps: WebhookDeps, now: D
     const clinicId = phoneNumberId ? await deps.resolveClinic(phoneNumberId) : null;
     if (!clinicId) {
       summary.unknownNumbers += events;
-      console.warn(`[whatsapp webhook] número sem clínica conectada: ${phoneNumberId || "(sem phone_number_id)"}`);
+      logWarn("whatsapp webhook: número sem clínica conectada", { phone_number_id: phoneNumberId || "(vazio)" });
       continue;
     }
     const db = deps.clientFor(clinicId);
@@ -152,10 +153,10 @@ export async function processWebhook(payload: unknown, deps: WebhookDeps, now: D
     }
     for (const status of change.statuses ?? []) {
       if (status.status === "failed" && status.errors?.length) {
-        console.error(
-          `[whatsapp webhook] entrega falhou (${status.id}):`,
-          status.errors.map((e) => `${e.code} ${e.title ?? e.message}`).join("; "),
-        );
+        logError("whatsapp webhook: entrega falhou", status.errors.map((e) => `${e.code} ${e.title ?? e.message}`).join("; "), {
+          clinica: clinicId,
+          mensagem: status.id,
+        });
       }
       await attempt("situação de entrega", async () => {
         if (!status.id || !status.status) return;

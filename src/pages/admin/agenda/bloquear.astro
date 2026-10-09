@@ -1,4 +1,5 @@
 ---
+import { logError } from "../../../lib/log";
 // Agenda › Bloquear (F4.6): período (dia todo ou horário), motivo e uma ou
 // várias agendas (cliente, 05/out/2026: um bloqueio para cada agenda
 // marcada). Se houver atendimentos no período, a tela lista e pergunta se
@@ -109,7 +110,7 @@ if (Astro.request.method === "POST") {
       return Astro.redirect(backTo, 303);
     }
   } catch (caught) {
-    if (!(caught instanceof DataError)) console.error(caught);
+    if (!(caught instanceof DataError)) logError("bloquear", caught);
     error = caught instanceof DataError ? describeDataError(caught) : "Não foi possível bloquear. Tente de novo.";
   }
 }

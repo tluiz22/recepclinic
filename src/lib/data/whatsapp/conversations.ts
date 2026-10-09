@@ -6,6 +6,7 @@ import { unwrap, unwrapOne } from "../errors";
 import { loadClinicHolidays } from "../agenda/slots";
 import { logFunnelEvent, type FunnelFlow } from "./funnel";
 import { isReturnToBotKeyword, messageBody, toE164, type WaMessage } from "./meta";
+import { logError } from "../../log";
 
 // Estado da conversa do bot e pausa da recepção (F3.9a), com a credencial da
 // clínica. Uma conversa por número na clínica; o bot (F6) lê e troca o estado
@@ -304,7 +305,7 @@ export async function resetConversationAfterNotice(db: DbClient, clinicId: strin
     .update({ state: WELCOME, context: {}, funnel_session_id: null, funnel_flow: null })
     .eq("clinic_id", clinicId)
     .eq("contact_phone", phone);
-  if (error) console.error("[conversa] não recomeçou depois do aviso", error.message);
+  if (error) logError("conversa: não recomeçou depois do aviso", error, { clinica: clinicId });
 }
 
 /**

@@ -3,6 +3,7 @@ import type { Enums } from "../../supabase/database.types";
 import type { DbClient } from "../clients";
 import { DataError, fromDbError, unwrap, unwrapOne } from "../errors";
 import { getFreeSlots, loadSchedulingPlan } from "./slots";
+import { logError } from "../../log";
 
 // Marcar, remarcar, cancelar, presença e comparecimento (F3.6a), para a tela
 // e para o bot. Regras herdadas do piloto, com as decisões de 04/out/2026:
@@ -145,7 +146,7 @@ export async function logTrail(
   const { error } = await db
     .from("appointment_events")
     .insert({ clinic_id: clinicId, appointment_id: appointmentId, event_type: event, channel, actor_id: actorId, details });
-  if (error) console.error("[trilha] não gravou", event, appointmentId, error.message);
+  if (error) logError("trilha: não gravou", error, { clinica: clinicId, evento: event, atendimento: appointmentId });
 }
 
 // ---------------------------------------------------------------------------
@@ -479,7 +480,7 @@ export async function bookAppointment(db: DbClient, clinicId: string, input: Boo
     .eq("service_id", input.serviceId)
     .eq("mode", "create")
     .is("used_at", null);
-  if (linkError) console.error("[agenda] não invalidou links pendentes", linkError.message);
+  if (linkError) logError("agenda: não invalidou links pendentes", linkError, { clinica: clinicId });
 
   return {
     appointment: await getAppointment(db, clinicId, id),

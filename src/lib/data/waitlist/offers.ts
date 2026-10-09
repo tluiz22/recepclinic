@@ -8,6 +8,7 @@ import type { SendOutcome } from "../whatsapp/messages";
 export type { SendOutcome };
 import { rescheduleAppointment } from "../agenda/appointments";
 import { getFreeSlots, getGroupSessions, getNextAvailableDates, loadSchedulingPlan, type SchedulingPlan } from "../agenda/slots";
+import { logError } from "../../log";
 
 // Motor de ofertas da lista de espera (Fase 25 do piloto, etapa 3), F3.7b.
 // Roda com a credencial da clínica (clinic_service): vagas e ofertas só são
@@ -419,7 +420,7 @@ async function sendOffer(
   });
   if (error) {
     // 23505: a pessoa já tem outra vaga oferecida, aguardando resposta.
-    if ((error as { code?: string }).code !== "23505") console.error("[lista de espera] não registrou a oferta", error.message);
+    if ((error as { code?: string }).code !== "23505") logError("lista de espera: não registrou a oferta", error, { clinica: clinicId });
     return false;
   }
 
@@ -441,7 +442,7 @@ async function sendOffer(
       expiresAt,
     });
   } catch (err) {
-    console.error("[lista de espera] falha ao enviar a oferta", err instanceof Error ? err.message : String(err));
+    logError("lista de espera: falha ao enviar a oferta", err, { clinica: clinicId });
     outcome = { sent: false, reason: "send_failed" };
   }
 
@@ -616,7 +617,7 @@ export async function acceptOffer(
     );
   } catch (error) {
     if (!(error instanceof DataError) || error.code === "unexpected") {
-      console.error("[lista de espera] erro ao antecipar", error instanceof Error ? error.message : String(error));
+      logError("lista de espera: erro ao antecipar", error, { clinica: clinicId });
     }
     return giveUp("slot_taken");
   }

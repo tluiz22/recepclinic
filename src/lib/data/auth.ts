@@ -1,5 +1,6 @@
 import type { DbClient } from "./clients";
 import { DataError } from "./errors";
+import { logError } from "../log";
 
 // Login do painel (F4.1): entrar, sair, recuperar a senha e aceitar o convite.
 // Sem cadastro público: a equipe entra por convite (Administrador da clínica,
@@ -63,7 +64,7 @@ export async function requestPasswordReset(db: DbClient, email: string): Promise
   const clean = email.trim();
   if (!clean) return;
   const { error } = await db.auth.resetPasswordForEmail(clean);
-  if (error) console.error("[login] pedido de recuperação de senha falhou:", error.message);
+  if (error) logError("login: pedido de recuperação de senha falhou", error);
 }
 
 /** Confere o link do e-mail e abre a sessão (cookies). false = link vencido ou inválido. */
@@ -80,7 +81,7 @@ export async function setNewPassword(db: DbClient, password: string, confirmatio
   const { error } = await db.auth.updateUser({ password });
   if (error) {
     const problem = passwordRejection(error);
-    if (problem === "rejected") console.error("[login] senha recusada pelo Auth:", error.code, error.message);
+    if (problem === "rejected") logError("login: senha recusada pelo Auth", error);
     throw new DataError("invalid", `Senha: ${error.message}`, { password: problem }, { cause: error });
   }
 }

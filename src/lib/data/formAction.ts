@@ -1,6 +1,7 @@
 import type { APIContext } from "astro";
 import { setFlash } from "../flash";
 import { DataError } from "./errors";
+import { logError } from "../log";
 
 // Rotas de formulário do painel (F4.3): roda a ação, guarda o aviso e volta
 // para a tela. Erro da camada de acesso vira o aviso com a mensagem dos campos;
@@ -37,7 +38,7 @@ export async function runFormAction(
     setFlash(cookies, { tone: "success", text: message });
     return redirect(redirectTo, 303);
   } catch (error) {
-    if (!(error instanceof DataError)) console.error(error);
+    if (!(error instanceof DataError)) logError("formulário", error);
     setFlash(cookies, { tone: "error", text: error instanceof DataError ? describeDataError(error) : GENERIC.unexpected });
     return redirect(typeof failureTo === "function" ? failureTo() : failureTo, 303);
   }

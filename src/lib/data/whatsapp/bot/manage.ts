@@ -16,6 +16,7 @@ import { end, go, say, sendButtons, sendList, step, textFor, type Bot } from "./
 import { formatBirthdate, parseBirthdate, pick, yesNo, type Selection } from "./input";
 import { showMenu } from "./menus";
 import * as t from "./texts";
+import { logError } from "../../../log";
 
 // Bot II (F6.4), com as regras do piloto (Fases 3b, 16, 17, 19, 25):
 // cancelar e remarcar pelo menu, botões do lembrete, Encaixe ou antecipar
@@ -387,7 +388,7 @@ async function rescheduleLink(b: Bot, ctx: ManageContext, appointment: ManagedAp
     await say(b, "bot_reschedule_link", t.rescheduleLink(words(appointment).phrase, appointment.patientName, `${b.sender.baseUrl}/agendar/${link.id}`));
     await end(b, "link_sent", { booking_link_id: link.id });
   } catch (error) {
-    console.error("[bot] link de remarcação", error instanceof Error ? error.message : String(error));
+    logError("bot: link de remarcação", error, { clinica: b.clinicId });
     await say(b, "bot_reschedule_link_error", t.LINK_ERROR);
     await end(b, "error", { reason: "link_error" });
   }
@@ -470,7 +471,7 @@ async function handleWaitlistAppointment(b: Bot, appointment: ManagedAppointment
     if (inList) return askLeave(b, appointment);
     await joinAndSay(b, appointment);
   } catch (error) {
-    console.error("[bot] lista de espera", error instanceof Error ? error.message : String(error));
+    logError("bot: lista de espera", error, { clinica: b.clinicId });
     await say(b, "bot_waitlist_error", t.WAITLIST_ERROR);
   }
   await go(b, "WELCOME");
@@ -590,7 +591,7 @@ async function handleEarlier(b: Bot, selection: Selection): Promise<void> {
     try {
       await joinAndSay(b, appointment);
     } catch (error) {
-      console.error("[bot] lista de espera", error instanceof Error ? error.message : String(error));
+      logError("bot: lista de espera", error, { clinica: b.clinicId });
       await say(b, "bot_waitlist_error", t.WAITLIST_ERROR);
     }
     return;

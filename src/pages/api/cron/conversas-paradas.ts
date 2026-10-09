@@ -5,6 +5,7 @@ import { closeIdleConversations } from "../../../lib/data/whatsapp/bot/router";
 import { clinicSenderFor } from "../../../lib/data/whatsapp/clinicSender";
 import { IDLE_TIMEOUT_MINUTES } from "../../../lib/data/whatsapp/conversations";
 import { platformEnv } from "../../../lib/env";
+import { logError } from "../../../lib/log";
 
 // Conversa parada há 15 minutos (F6.3, cliente 07/out): chamada a cada minuto
 // pelo agendador do Supabase (pg_cron, migração 20261007130000), com
@@ -23,7 +24,7 @@ const run: APIRoute = async ({ request, url }) => {
       closed += await closeIdleConversations(createClinicServiceClient(clinicId), clinicId, await clinicSenderFor(clinicId, url), now);
     } catch (error) {
       errors++;
-      console.error("[conversas paradas]", clinicId, error instanceof Error ? error.message : String(error));
+      logError("conversas paradas", error, { clinica: clinicId });
     }
   }
   return new Response(JSON.stringify({ clinics: clinics.length, closed, errors }), { headers: { "Content-Type": "application/json" } });

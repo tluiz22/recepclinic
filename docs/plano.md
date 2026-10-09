@@ -1181,8 +1181,8 @@ Subetapas (cliente, 09/out/2026), cada uma validada antes da próxima:
 
 | | Subetapa | Situação |
 |---|---|---|
-| F9.1 | Cabeçalhos de segurança, `robots.txt` e proteção de origem explícita (L44, L46) | implementada em 09/out, a validar |
-| F9.2 | Logs sem dados pessoais: só ids e a clínica (L43) | |
+| F9.1 | Cabeçalhos de segurança, `robots.txt` e proteção de origem explícita (L44, L46) | validada em 09/out |
+| F9.2 | Logs sem dados pessoais: só ids e a clínica (L43) | implementada em 09/out, a validar |
 | F9.3 | Ferramenta de erros com a clínica em cada erro e monitor externo do painel e do webhook (L45); ferramentas a escolher com o cliente | |
 | F9.4 | Anonimização de paciente e contato a pedido (LGPD, L42); regras com o cliente | |
 | F9.5 | Contadores de uso por clínica para o Suporte (L49) | |
@@ -1197,6 +1197,14 @@ atributos `data-*`). Demais cabeçalhos em toda resposta (`src/lib/securityHeade
 `X-Robots-Tag: noindex`. `robots.txt` bloqueia tudo (o domínio `app.` é só painel e links de
 pacientes). `checkOrigin` ligado explicitamente. **Na F8**, o Embedded Signup vai pedir no CSP o
 script e a moldura do Facebook (`connect.facebook.net`, `www.facebook.com`).
+
+**F9.2:** todo log do servidor passa por `src/lib/log.ts` (`logError` e `logWarn`), e um teste
+recusa `console.*` em qualquer outro arquivo de `src`. A linha leva o escopo, os ids (clínica,
+atendimento, mensagem na Meta, link, série) e o tipo e a mensagem do erro, com a causa. Nunca vai o
+objeto do erro inteiro (o do Postgres traz os valores da linha em `details`; o do e-mail, o
+endereço). A mensagem passa por uma máscara de telefone (10 dígitos ou mais) e e-mail, porque pode
+vir da Meta, do banco ou do SMTP, e é cortada em 500 caracteres. Saiu o telefone do log das
+conversas paradas.
 
 ## F10 — Primeiro piloto
 

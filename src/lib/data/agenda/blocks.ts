@@ -3,6 +3,7 @@ import { hasFeature } from "../features";
 import { cleanText, unwrap, unwrapOne, Validation } from "../errors";
 import { cancelAppointments, listAppointmentsBetween, type Appointment } from "./appointments";
 import { createRebookingLink, type BookingLink } from "./links";
+import { logError } from "../../log";
 
 // Bloqueios por agenda e cancelamento do dia pela clínica (Fases 12 e 13 do
 // piloto). O bloqueio é criado em duas etapas na tela: primeiro a lista dos
@@ -100,7 +101,7 @@ async function cancelWithLinks(
         rebookingLink = await createRebookingLink(db, clinicId, appointment, now);
       } catch (error) {
         // Melhor esforço, como no piloto: falha num link não desfaz os cancelamentos.
-        console.error("[bloqueio] não gerou link de remarcação", appointment.id, error);
+        logError("bloqueio: não gerou link de remarcação", error, { clinica: clinicId, atendimento: appointment.id });
       }
     }
     result.push({ appointment, rebookingLink });

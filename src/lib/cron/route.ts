@@ -5,6 +5,7 @@ import { listActiveClinics } from "../data/platform";
 import { clinicSenderFor } from "../data/whatsapp/clinicSender";
 import type { ClinicSender } from "../data/whatsapp/send";
 import { platformEnv } from "../env";
+import { logError } from "../log";
 
 // Rotinas do agendador do Supabase (pg_cron, F7): `Authorization: Bearer
 // <CRON_SECRET>`; percorre as clínicas ativas, cada uma com a própria
@@ -27,7 +28,7 @@ export function cronRoute(name: string, job: ClinicJob): APIRoute {
         results[clinicId] = await job({ clinicId, db: createClinicServiceClient(clinicId), sender: await clinicSenderFor(clinicId, url), now });
       } catch (error) {
         errors++;
-        console.error(`[${name}]`, clinicId, error instanceof Error ? error.message : String(error));
+        logError(name, error, { clinica: clinicId });
       }
     }
     return new Response(JSON.stringify({ clinics: clinics.length, errors, results }), { headers: { "Content-Type": "application/json" } });

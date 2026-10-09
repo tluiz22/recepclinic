@@ -6,6 +6,7 @@ import { DataError, fromDbError, unwrap, unwrapOne, Validation } from "../errors
 import { cancelAppointment, getAppointment, logTrail, type Appointment, type TrailChannel } from "./appointments";
 import { loadClinicHolidays, loadSchedulingPlan } from "./slots";
 import { hasFeature } from "../features";
+import { logError } from "../../log";
 
 // Séries recorrentes (D9), criadas no painel. Decisões do cliente (04/out/2026):
 //   - séries sem fim mantêm as sessões criadas **até 3 meses à frente**; o
@@ -334,7 +335,7 @@ export async function extendOpenSeries(db: DbClient, clinicId: string, now: Date
       totals.skipped += result.skipped.length;
     } catch (error) {
       totals.errors++;
-      console.error("[séries] não estendeu", id, error instanceof Error ? error.message : String(error));
+      logError("séries: não estendeu", error, { clinica: clinicId, serie: id });
     }
   }
   return totals;
