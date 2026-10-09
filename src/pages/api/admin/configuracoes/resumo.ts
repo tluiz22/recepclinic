@@ -11,7 +11,7 @@ export const POST: APIRoute = async (context) => {
   const { request, cookies, locals } = context;
   const form = await request.formData().catch(() => null);
   const db = createUserClient(request, cookies);
-  const page = "/admin/configuracoes/whatsapp";
+  const page = "/admin/configuracoes/lembretes";
 
   return runFormAction(
     context,

@@ -1,22 +1,18 @@
 ---
-// Configurações › WhatsApp (F4.4b): situação da conexão (só leitura; quem
-// cadastra é o Suporte até a F8), hora do lembrete (item "Lembrete
-// automático") e quem recebe o resumo do dia (item "Envio do resumo do dia").
-// F6.1: o Suporte vê o cadastro da conexão (com o token só para gravar), o
-// "Testar conexão" e as últimas mensagens da clínica. F6.2: o Suporte cria
-// os templates padrão na conta da clínica e acompanha a situação.
+// Configurações › WhatsApp, só do Suporte (cliente, 08/out/2026; o lembrete,
+// o resumo do dia e a situação da conexão para a clínica ficam na aba
+// Lembretes). F6.1: o cadastro da conexão (com o token só para gravar), o
+// "Testar conexão" e as últimas mensagens da clínica. F6.2: os templates
+// padrão na conta da clínica e a situação deles.
 import AdminLayout from "../../../layouts/AdminLayout.astro";
 import Badge from "../../../components/admin/Badge.astro";
 import Card from "../../../components/admin/Card.astro";
 import ConfiguracoesTabs from "../../../components/admin/ConfiguracoesTabs.astro";
 import FlashMessage from "../../../components/admin/FlashMessage.astro";
+import WhatsappConnectionCard from "../../../components/admin/WhatsappConnectionCard.astro";
 import { HINT, INPUT, LABEL, PRIMARY_BUTTON, SECONDARY_BUTTON } from "../../../components/admin/fieldStyles";
 import { formatInstant } from "../../../lib/clinicTime";
 import { createUserClient } from "../../../lib/data/clients";
-import { getClinicSettings, REMINDER_HOUR_MAX, REMINDER_HOUR_MIN, SUMMARY_LEAD_MAX, SUMMARY_LEAD_MIN } from "../../../lib/data/config/clinic";
-import { getSummarySchedule } from "../../../lib/data/whatsapp/dailySummary";
-import { listNotificationRecipients } from "../../../lib/data/config/notificationRecipients";
-import { listProfessionals } from "../../../lib/data/config/professionals";
 import { getWhatsappConnection, listWhatsappTemplates } from "../../../lib/data/whatsapp/connection";
 import { DEFAULT_TEMPLATES } from "../../../lib/data/whatsapp/templates";
 import { listWhatsappMessages } from "../../../lib/data/whatsapp/messages";
@@ -24,18 +20,14 @@ import { formatPhoneBR } from "../../../lib/phone";
 
 const clinic = Astro.locals.clinic!;
 const db = createUserClient(Astro.request, Astro.cookies);
-const remindersOn = clinic.features.includes("reminders");
-const summaryOn = clinic.features.includes("daily_summary");
-const examsOn = clinic.features.includes("exams");
 const isSupport = clinic.isPlatformStaff;
-const [connection, settings, recipients, professionals, latest, templates] = await Promise.all([
+if (!isSupport) return Astro.redirect("/admin/configuracoes/lembretes");
+const [connection, latest, templates] = await Promise.all([
   getWhatsappConnection(db, clinic.clinicId),
-  getClinicSettings(db, clinic.clinicId),
-  summaryOn ? listNotificationRecipients(db, clinic.clinicId, { includeInactive: true }) : Promise.resolve([]),
-  summaryOn ? listProfessionals(db, clinic.clinicId) : Promise.resolve([]),
-  isSupport ? listWhatsappMessages(db, clinic.clinicId, { latest: true }, 10) : Promise.resolve([]),
-  isSupport ? listWhatsappTemplates(db, clinic.clinicId) : Promise.resolve([]),
+  listWhatsappMessages(db, clinic.clinicId, { latest: true }, 10),
+  listWhatsappTemplates(db, clinic.clinicId),
 ]);
+const CONNECTION_STATUS = { pending: "Em configuração", connected: "Conectado", disconnected: "Desconectado" } as const;
 const templateStatus = {
   approved: { label: "Aprovado", variant: "success" },
   pending: { label: "Em análise", variant: "warning" },
@@ -49,19 +41,9 @@ const TEMPLATE_LABELS: Record<string, string> = {
   clinic_cancellation: "Cancelamento pela clínica (com link)",
   reminder: "Lembrete",
   exam_preparation: "Preparo do exame",
+  consultation_guidance: "Orientações gerais da consulta",
 };
 const templateRows = DEFAULT_TEMPLATES.map((template) => ({ template, saved: templates.find((t) => t.key === template.key && t.version === 1) ?? null }));
-const hours = Array.from({ length: REMINDER_HOUR_MAX - REMINDER_HOUR_MIN + 1 }, (_, i) => REMINDER_HOUR_MIN + i);
-const leadHours = Array.from({ length: SUMMARY_LEAD_MAX - SUMMARY_LEAD_MIN + 1 }, (_, i) => SUMMARY_LEAD_MIN + i);
-const summarySchedule = summaryOn ? await getSummarySchedule(db, clinic.clinicId) : { consultas: "", exames: "" };
-const summaryProfessionals = professionals.filter((p) => p.receivesDailySummary && p.phone);
-const status = {
-  connected: { label: "Conectado", variant: "success" },
-  pending: { label: "Em configuração", variant: "warning" },
-  disconnected: { label: "Desconectado", variant: "danger" },
-} as const;
-const receives = (r: { receivesConsultations: boolean; receivesExams: boolean }) =>
-  [r.receivesConsultations && "consultas", examsOn && r.receivesExams && "exames"].filter(Boolean).join(" e ") || "nada marcado";
 ---
 
 <AdminLayout title="WhatsApp">
@@ -70,25 +52,7 @@ const receives = (r: { receivesConsultations: boolean; receivesExams: boolean })
   <FlashMessage />
 
   <div class="mt-4 flex max-w-2xl flex-col gap-4">
-    <Card>
-      <h2 class="font-semibold text-slate-900">Conexão</h2>
-      {
-        connection ? (
-          <p class="mt-2 text-sm text-slate-700">
-            <Badge variant={status[connection.status].variant}>{status[connection.status].label}</Badge>
-            {connection.displayPhone && <span class="ml-1 font-medium">{connection.displayPhone}</span>}
-            {connection.status === "connected" && connection.connectedAt && (
-              <span class="text-slate-500"> · desde {formatInstant(connection.connectedAt, clinic.timezone, "dd/MM/yyyy")}</span>
-            )}
-          </p>
-        ) : (
-          <p class="mt-2 text-sm text-slate-700">
-            <Badge>Não conectado</Badge>
-          </p>
-        )
-      }
-      <p class={HINT}>Quem conecta o número da clínica é o Suporte RecepClinic. Para conectar ou trocar o número, fale com o suporte.</p>
-    </Card>
+    <WhatsappConnectionCard connection={connection} timeZone={clinic.timezone} />
 
     {
       isSupport && (
@@ -112,7 +76,7 @@ const receives = (r: { receivesConsultations: boolean; receivesExams: boolean })
               <select id="status" name="status" class={INPUT}>
                 {(["pending", "connected", "disconnected"] as const).map((value) => (
                   <option value={value} selected={(connection?.status ?? "pending") === value}>
-                    {status[value].label}
+                    {CONNECTION_STATUS[value]}
                   </option>
                 ))}
               </select>
@@ -233,149 +197,5 @@ const receives = (r: { receivesConsultations: boolean; receivesExams: boolean })
       )
     }
 
-    {
-      remindersOn && (
-        <Card>
-          <h2 class="font-semibold text-slate-900">Lembrete ao paciente</h2>
-          <p class="mt-1 text-sm text-slate-600">
-            No dia anterior ao atendimento, o paciente recebe o lembrete e pode confirmar a presença, remarcar ou cancelar.
-          </p>
-          <form method="POST" action="/api/admin/configuracoes/lembrete" class="mt-3 flex flex-col gap-3">
-            <label class="flex items-center gap-2 text-sm font-medium text-slate-700">
-              <input type="checkbox" name="reminder_enabled" checked={settings.reminderEnabled} class="h-4 w-4 rounded border-slate-300" />
-              Enviar o lembrete na véspera
-            </label>
-            <div class="flex flex-wrap items-end gap-3">
-              <div>
-                <label for="reminder_hour" class={LABEL}>
-                  Horário do lembrete (no dia anterior ao atendimento)
-                </label>
-                <select id="reminder_hour" name="reminder_hour" class={`${INPUT} w-32`}>
-                  {hours.map((hour) => (
-                    <option value={hour} selected={hour === settings.reminderHour}>
-                      {String(hour).padStart(2, "0")}:00
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <button type="submit" class={SECONDARY_BUTTON}>
-                Salvar
-              </button>
-            </div>
-          </form>
-          <p class={HINT}>
-            No fuso da clínica, das {REMINDER_HOUR_MIN}h às {REMINDER_HOUR_MAX}h. Quem não responder em 4 horas recebe o lembrete de novo, uma vez (das 7h às
-            20h). Sem o envio na véspera, os botões de lembrete da Agenda continuam.
-          </p>
-        </Card>
-      )
-    }
-
-    <Card>
-      <h2 class="font-semibold text-slate-900">Orientações gerais da consulta</h2>
-      <p class="mt-1 text-sm text-slate-600">
-        Depois da marcação de uma consulta, o paciente recebe as orientações gerais da clínica, uma vez. O texto fica em
-        <a href="/admin/configuracoes/mensagens" class="text-sky-700 hover:underline">Configurações › Mensagens</a>.
-      </p>
-      <form method="POST" action="/api/admin/configuracoes/orientacoes" class="mt-3 flex flex-wrap items-center gap-3">
-        <label class="flex items-center gap-2 text-sm font-medium text-slate-700">
-          <input type="checkbox" name="guidance_enabled" checked={settings.guidanceEnabled} class="h-4 w-4 rounded border-slate-300" />
-          Enviar as orientações gerais depois da marcação
-        </label>
-        <button type="submit" class={SECONDARY_BUTTON}>Salvar</button>
-      </form>
-    </Card>
-
-    {
-      summaryOn && (
-        <Card>
-          <h2 class="font-semibold text-slate-900">Resumo do dia</h2>
-          <p class="mt-1 text-sm text-slate-600">Os atendimentos do dia, pelo WhatsApp, para a equipe.</p>
-
-          <form method="POST" action="/api/admin/configuracoes/resumo" class="mt-3 flex flex-col gap-3">
-            <div class="flex flex-wrap items-center gap-3">
-              <label class="flex items-center gap-2 text-sm font-medium text-slate-700">
-                <input type="checkbox" name="summary_preview_enabled" checked={settings.summaryPreviewEnabled} class="h-4 w-4 rounded border-slate-300" />
-                Resumo na véspera às
-              </label>
-              <select name="summary_preview_hour" aria-label="Horário do resumo na véspera" class={`${INPUT} mt-0 w-28`}>
-                {hours.map((hour) => (
-                  <option value={hour} selected={hour === settings.summaryPreviewHour}>
-                    {String(hour).padStart(2, "0")}:00
-                  </option>
-                ))}
-              </select>
-              <span class="text-sm text-slate-600">(atendimentos do dia seguinte)</span>
-            </div>
-            <div class="flex flex-wrap items-center gap-3">
-              <label class="flex items-center gap-2 text-sm font-medium text-slate-700">
-                <input type="checkbox" name="summary_today_enabled" checked={settings.summaryTodayEnabled} class="h-4 w-4 rounded border-slate-300" />
-                Resumo no dia,
-              </label>
-              <select name="summary_today_lead_hours" aria-label="Horas antes da primeira agenda" class={`${INPUT} mt-0 w-24`}>
-                {leadHours.map((lead) => (
-                  <option value={lead} selected={lead === settings.summaryTodayLeadHours}>
-                    {lead} h
-                  </option>
-                ))}
-              </select>
-              <span class="text-sm text-slate-600">antes do início da primeira agenda</span>
-            </div>
-            <button type="submit" class={`${SECONDARY_BUTTON} self-start`}>Salvar</button>
-          </form>
-          <p class={HINT}>
-            Horário do resumo no dia para os contatos abaixo: consultas {summarySchedule.consultas}; exames {summarySchedule.exames}. Dia sem agenda: 6h30.
-          </p>
-
-          <h3 class="mt-4 text-sm font-semibold text-slate-800">Profissionais</h3>
-          {summaryProfessionals.length ? (
-            <ul class="mt-1 text-sm text-slate-700">
-              {summaryProfessionals.map((p) => (
-                <li>
-                  {p.displayName} · {formatPhoneBR(p.phone!)} <span class="text-slate-500">(os próprios atendimentos)</span>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p class="mt-1 text-sm text-slate-600">Nenhum.</p>
-          )}
-          <p class={HINT}>
-            Cada profissional escolhe em{" "}
-            <a href="/admin/configuracoes/profissionais" class="text-sky-700 hover:underline">
-              Profissionais
-            </a>{" "}
-            ("Recebe o resumo do dia").
-          </p>
-
-          <div class="mt-4 flex flex-wrap items-center justify-between gap-2">
-            <h3 class="text-sm font-semibold text-slate-800">Outros contatos</h3>
-            <a href="/admin/configuracoes/contatos/novo" class={PRIMARY_BUTTON}>
-              Novo contato
-            </a>
-          </div>
-          <ul class="mt-2 divide-y divide-slate-100">
-            {recipients.map((r) => (
-              <li class={r.isActive ? "" : "opacity-60"}>
-                <a href={`/admin/configuracoes/contatos/${r.id}`} class="flex flex-wrap items-center justify-between gap-2 py-2 text-sm hover:bg-sky-50">
-                  <span class="font-medium text-slate-900">
-                    {r.label} {!r.isActive && <Badge>desativado</Badge>}
-                  </span>
-                  <span class="text-slate-600">
-                    {formatPhoneBR(r.phone)} · {receives(r)}
-                  </span>
-                </a>
-              </li>
-            ))}
-          </ul>
-          {recipients.length === 0 && <p class="mt-1 text-sm text-slate-600">Nenhum contato cadastrado.</p>}
-        </Card>
-      )
-    }
-
-    {
-      !remindersOn && !summaryOn && (
-        <p class="text-sm text-slate-600">O lembrete automático e o resumo do dia não estão liberados para a clínica. Fale com o suporte.</p>
-      )
-    }
   </div>
 </AdminLayout>

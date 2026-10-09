@@ -192,7 +192,7 @@ export async function resetBotMessage(db: DbClient, clinicId: string, key: BotMe
 // ---------------------------------------------------------------------------
 // Orientações gerais da consulta (cliente, 08/out/2026): texto da clínica,
 // fora da matriz e sempre editável pelo Administrador; guardado com as falas
-// do bot. O envio é ligado em Configurações › WhatsApp (guidance.ts envia).
+// do bot. O envio é ligado na própria aba Mensagens (guidance.ts envia).
 // ---------------------------------------------------------------------------
 
 export const GUIDANCE_KEY = "consultation_guidance";
@@ -222,8 +222,8 @@ export async function saveGuidance(db: DbClient, clinicId: string, text: string,
 export async function clearGuidance(db: DbClient, clinicId: string): Promise<void> {
   const settings = unwrapOne(await db.from("clinic_settings").select("guidance_enabled").eq("clinic_id", clinicId).maybeSingle(), "Configuração da clínica");
   if (settings.guidance_enabled) {
-    throw new DataError("invalid", "Orientações gerais: desligue o envio em Configurações › WhatsApp antes de apagar o texto", {
-      text: "Desligue o envio em Configurações › WhatsApp antes de apagar o texto.",
+    throw new DataError("invalid", "Orientações gerais: desligue o envio antes de apagar o texto", {
+      text: "Desligue o envio antes de apagar o texto.",
     });
   }
   unwrap(await db.from("bot_messages").delete().eq("clinic_id", clinicId).eq("message_key", GUIDANCE_KEY), "Orientações gerais");

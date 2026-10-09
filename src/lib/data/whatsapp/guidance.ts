@@ -11,8 +11,8 @@ import { PREPARATION_TRIGGER_TYPES } from "./preparation";
 // confirmação da marcação de uma consulta (não retorno nem exame) chega ao
 // celular; nunca na remarcação nem no lembrete. O botão "Reenviar
 // orientações" vale para consulta ativa e futura cuja última tentativa não
-// chegou. Só com o envio ligado em Configurações › WhatsApp e o texto escrito
-// na aba Mensagens; fora da matriz de acesso.
+// chegou. Só com o envio ligado e o texto escrito, os dois na aba Mensagens;
+// fora da matriz de acesso.
 //
 // Janela de 24h aberta → "Orientações gerais para a consulta:" e o texto;
 // fechada → template com o link da página das orientações.
@@ -192,7 +192,7 @@ export const GUIDANCE_RESEND_MESSAGES: Record<GuidanceResendOutcome, { text: str
   failed: { text: "As orientações não foram enviadas: o WhatsApp recusou o envio. Veja a trilha do atendimento.", ok: false },
   no_template: { text: "As orientações não foram enviadas: o template das orientações gerais não está aprovado.", ok: false },
   not_connected: { text: "As orientações não foram enviadas: o WhatsApp da clínica não está conectado.", ok: false },
-  not_enabled: { text: "O envio das orientações gerais está desligado em Configurações › WhatsApp.", ok: false },
+  not_enabled: { text: "O envio das orientações gerais está desligado (Configurações › Mensagens).", ok: false },
   not_eligible: { text: "Nada a reenviar: as orientações já foram entregues, a consulta foi cancelada ou já passou.", ok: false },
 };
 

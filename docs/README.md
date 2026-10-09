@@ -20,7 +20,9 @@
 >     dependem de templates em análise (preparo do exame e orientações gerais fora das 24h).
 >   - **F7 (envios automáticos) implementada, aguardando a validação:** rotinas no `pg_cron`
 >     (lembrete, resumo do dia, lista de espera, séries sem fim) e as opções em Configurações ›
->     WhatsApp (lembrete da véspera com enviar/horário, padrão 18h; resumo na véspera e no dia).
+>     **Lembretes** (aba nova de 08/out; a aba WhatsApp ficou só do Suporte): lembrete da véspera
+>     com enviar/horário, padrão 18h; resumo na véspera e no dia. Teste combinado para 09/out de
+>     manhã (lembrete às 7h de um atendimento de 10/out).
 >     Saiu o código antigo do piloto; a service role só fica na plataforma (D1).
 >   - **Templates na Meta (07/out):** os 11 do RecepClinic criados na conta do RecepClinic e **em
 >     análise** (incluindo as versões 2 do resumo de hoje, recusado como formato inválido, e do

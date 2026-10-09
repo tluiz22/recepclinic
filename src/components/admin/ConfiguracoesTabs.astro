@@ -7,7 +7,7 @@ import { loadSetupStatus } from "../../lib/data/config/setup";
 // Abas de Configurações (F4.3 e F4.4b). Convênios só com o item liberado (D11).
 // Jornada de configuração (F6.3b): o guia completo na aba Clínica; nas
 // outras, só o aviso de que há pendências.
-type TabId = "clinica" | "profissionais" | "locais" | "agendas" | "servicos" | "horarios" | "feriados" | "convenios" | "equipe" | "whatsapp" | "mensagens";
+type TabId = "clinica" | "profissionais" | "locais" | "agendas" | "servicos" | "horarios" | "feriados" | "convenios" | "equipe" | "lembretes" | "whatsapp" | "mensagens";
 
 interface Props {
   current: TabId;
@@ -15,6 +15,7 @@ interface Props {
 
 const { current } = Astro.props;
 const features = Astro.locals.clinic?.features ?? [];
+const isSupport = Astro.locals.clinic?.isPlatformStaff ?? false;
 const clinicId = Astro.locals.clinic?.clinicId;
 const setup = clinicId ? await loadSetupStatus(createUserClient(Astro.request, Astro.cookies), clinicId, features) : null;
 
@@ -28,7 +29,9 @@ const tabs: { id: TabId; label: string; href: string; show?: boolean }[] = [
   { id: "feriados", label: "Feriados", href: "/admin/configuracoes/feriados" },
   { id: "convenios", label: "Convênios", href: "/admin/configuracoes/convenios", show: features.includes("insurance") },
   { id: "equipe", label: "Equipe", href: "/admin/configuracoes/equipe" },
-  { id: "whatsapp", label: "WhatsApp", href: "/admin/configuracoes/whatsapp" },
+  { id: "lembretes", label: "Lembretes", href: "/admin/configuracoes/lembretes" },
+  // Conexão, templates e últimas mensagens: só o Suporte (cliente, 08/out/2026).
+  { id: "whatsapp", label: "WhatsApp", href: "/admin/configuracoes/whatsapp", show: isSupport },
   { id: "mensagens", label: "Mensagens", href: "/admin/configuracoes/mensagens" },
 ];
 ---

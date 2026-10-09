@@ -38,10 +38,10 @@ export const POST: APIRoute = async (context) => {
       };
       if (!current) {
         await createNotificationRecipient(db, clinic.clinicId, input);
-        return { redirectTo: "/admin/configuracoes/whatsapp", message: "Contato cadastrado." };
+        return { redirectTo: "/admin/configuracoes/lembretes", message: "Contato cadastrado." };
       }
       await updateNotificationRecipient(db, clinic.clinicId, id, input);
-      return { redirectTo: "/admin/configuracoes/whatsapp", message: "Contato salvo." };
+      return { redirectTo: "/admin/configuracoes/lembretes", message: "Contato salvo." };
     },
     page(id),
   );

@@ -213,7 +213,7 @@ do celular; cliente, 06/out/2026). Nada do app ou do número do piloto.
    - **Template**: Configurações › WhatsApp › *Templates* › **Criar na Meta** cria o
      `rc_orientacoes_consulta_v1`.
    - **Orientações gerais**: escrever o texto em Mensagens (como Administrador); ligar "Enviar as
-     orientações gerais depois da marcação" em Configurações › WhatsApp; marcar uma consulta para o
+     orientações gerais depois da marcação" logo abaixo do título, na própria aba; marcar uma consulta para o
      seu número: depois da confirmação chegam as orientações (com conversa nas últimas 24h, o
      texto; sem, o template com o link, que abre a página com o texto formatado). Retorno e exame
      não recebem. Envio que falhou: selo "Orientações não entregues" e "Reenviar orientações" na
@@ -225,7 +225,7 @@ do celular; cliente, 06/out/2026). Nada do app ou do número do piloto.
    agendador). O endereço e o CRON_SECRET já estão no cofre (parte G).
 2. **Templates**: Configurações › WhatsApp › *Templates* › **Criar na Meta** cria os 5 novos
    (resumo do dia e oferta de vaga).
-3. **Opções** (Configurações › WhatsApp): *Lembrete ao paciente* (enviar ou não e o horário da
+3. **Opções** (Configurações › **Lembretes**, desde 08/out): *Lembrete ao paciente* (enviar ou não e o horário da
    véspera) e *Resumo do dia* (véspera e no dia). Para testar o lembrete, ponha um horário logo à
    frente e tenha um atendimento amanhã para o seu número; para o resumo, cadastre o seu número em
    "Outros contatos" (item "Envio do resumo do dia").

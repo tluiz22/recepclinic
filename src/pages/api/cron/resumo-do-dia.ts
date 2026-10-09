@@ -4,7 +4,7 @@ import { dailySummarySender } from "../../../lib/data/whatsapp/send";
 
 // Resumo do dia para a equipe (F7), a cada 5 minutos pelo agendador: o da
 // véspera na hora da clínica e o do dia as horas escolhidas antes da primeira
-// agenda (Configurações › WhatsApp); cada um sai uma vez.
+// agenda (Configurações › Lembretes); cada um sai uma vez.
 const route = cronRoute("resumo-do-dia", async ({ clinicId, db, sender, now }) => {
   const send = sender ? dailySummarySender(sender) : async () => ({ sent: false as const, reason: "not_connected" });
   return {

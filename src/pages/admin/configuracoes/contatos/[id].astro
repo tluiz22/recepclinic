@@ -1,5 +1,5 @@
 ---
-// Configurações › WhatsApp › contato do resumo do dia, novo ou editar
+// Configurações › Lembretes › contato do resumo do dia, novo ou editar
 // (F4.4b; só com o item "Envio do resumo do dia", D11). Exames só com o item.
 import AdminLayout from "../../../../layouts/AdminLayout.astro";
 import ActiveToggle from "../../../../components/admin/ActiveToggle.astro";
@@ -18,14 +18,14 @@ const recipient = isNew
   ? null
   : ((await listNotificationRecipients(createUserClient(Astro.request, Astro.cookies), clinic.clinicId, { includeInactive: true })).find((r) => r.id === id) ??
     null);
-if (!isNew && !recipient) return Astro.redirect("/admin/configuracoes/whatsapp");
+if (!isNew && !recipient) return Astro.redirect("/admin/configuracoes/lembretes");
 const examsOn = clinic.features.includes("exams");
 const action = `/api/admin/configuracoes/contatos/${id}`;
 ---
 
 <AdminLayout title={isNew ? "Novo contato" : recipient!.label}>
-  <a href="/admin/configuracoes/whatsapp" class="inline-flex items-center gap-1 text-sm text-sky-700 hover:underline">
-    <Icon name="chevron-left" class="h-4 w-4" /> WhatsApp
+  <a href="/admin/configuracoes/lembretes" class="inline-flex items-center gap-1 text-sm text-sky-700 hover:underline">
+    <Icon name="chevron-left" class="h-4 w-4" /> Lembretes
   </a>
   <h1 class="mt-2 text-2xl font-bold text-slate-900">{isNew ? "Novo contato do resumo do dia" : "Editar contato"}</h1>
   <FlashMessage />

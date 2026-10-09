@@ -1,0 +1,41 @@
+---
+// Situação da conexão do WhatsApp da clínica (só leitura; quem cadastra é o
+// Suporte até a F8): abas Lembretes e WhatsApp.
+import Badge from "./Badge.astro";
+import Card from "./Card.astro";
+import { HINT } from "./fieldStyles";
+import { formatInstant } from "../../lib/clinicTime";
+import type { WhatsappConnection } from "../../lib/data/whatsapp/connection";
+
+interface Props {
+  connection: WhatsappConnection | null;
+  timeZone: string;
+}
+
+const { connection, timeZone } = Astro.props;
+const status = {
+  connected: { label: "Conectado", variant: "success" },
+  pending: { label: "Em configuração", variant: "warning" },
+  disconnected: { label: "Desconectado", variant: "danger" },
+} as const;
+---
+
+<Card>
+  <h2 class="font-semibold text-slate-900">Conexão</h2>
+  {
+    connection ? (
+      <p class="mt-2 text-sm text-slate-700">
+        <Badge variant={status[connection.status].variant}>{status[connection.status].label}</Badge>
+        {connection.displayPhone && <span class="ml-1 font-medium">{connection.displayPhone}</span>}
+        {connection.status === "connected" && connection.connectedAt && (
+          <span class="text-slate-500"> · desde {formatInstant(connection.connectedAt, timeZone, "dd/MM/yyyy")}</span>
+        )}
+      </p>
+    ) : (
+      <p class="mt-2 text-sm text-slate-700">
+        <Badge>Não conectado</Badge>
+      </p>
+    )
+  }
+  <p class={HINT}>Quem conecta o número da clínica é o Suporte RecepClinic. Para conectar ou trocar o número, fale com o suporte.</p>
+</Card>

@@ -293,10 +293,18 @@ const markerHint = (markers: string[]) => markers.map((m) => `{${m}} = ${MARKER_
               <h3 class="font-semibold text-slate-900">Orientações gerais da consulta</h3>
               {settings.guidanceEnabled ? <Badge variant="success">Envio ligado</Badge> : <Badge variant="neutral">Envio desligado</Badge>}
             </div>
-            <p class="mt-1 text-sm text-slate-600">
-              Vão uma vez, depois que a confirmação da marcação de uma consulta chega ao celular. O envio é ligado em
-              <a href="/admin/configuracoes/whatsapp" class="text-sky-700 hover:underline">Configurações › WhatsApp</a>. Para quem não escreveu para a
-              clínica nas últimas 24 horas, vai o aviso "Orientações gerais (fora das 24h)" com o link destas orientações.
+            {isAdmin ? (
+              <form method="POST" action="/api/admin/configuracoes/orientacoes" class="mt-2 flex flex-wrap items-center gap-3">
+                <label class="flex items-center gap-2 text-sm font-medium text-slate-700">
+                  <input type="checkbox" name="guidance_enabled" checked={settings.guidanceEnabled} class="h-4 w-4 rounded border-slate-300" />
+                  Enviar as orientações gerais depois da marcação
+                </label>
+                <button type="submit" class={SECONDARY_BUTTON}>Salvar</button>
+              </form>
+            ) : null}
+            <p class="mt-2 text-sm text-slate-600">
+              Vão uma vez, depois que a confirmação da marcação de uma consulta chega ao celular. Para quem não escreveu para a clínica nas
+              últimas 24 horas, vai o aviso "Orientações gerais (fora das 24h)" com o link destas orientações.
             </p>
             {guidance ? (
               <div class="mt-3">

@@ -1052,7 +1052,7 @@ de remarcação (texto da F4.6), e enviam sozinhos; sai a tela "Avisar" da F4.6.
   de cada grupo só aparecem com o item dele; (3) **orientações gerais da consulta**: um texto da
   clínica (fora da matriz; sempre aparece em "Mensagens do bot" e o Administrador sempre edita),
   enviado **uma vez** depois que a confirmação da marcação de uma **consulta** (não retorno nem
-  exame) chega ao celular, como o preparo do exame; envio ligado em Configurações › WhatsApp
+  exame) chega ao celular, como o preparo do exame; envio ligado na própria aba, abaixo do título
   (desligado por padrão; só liga com o texto escrito). Dentro das 24h vai "Orientações gerais para
   a consulta:" e o texto; fora delas, o template `rc_orientacoes_consulta_v1` com o link da página
   `/orientacoes/{clínica}` (textos aprovados em 08/out). Falhou: selo e "Reenviar orientações" na
@@ -1122,6 +1122,11 @@ preparo "Olá, {nome}! Aqui é {da clínica}. Para o exame {exame} que você mar
 orientações de preparo neste link: {link} Qualquer dúvida, é só responder esta mensagem." Também:
 quando a Meta responde que o template já existe (criado antes, com a resposta perdida), o sistema
 guarda a situação dele, e os erros da Meta aparecem com a explicação em português.
+**Ajuste de 08/out (cliente):** a aba "WhatsApp" de Configurações confundia. Virou **"Lembretes"**,
+com a situação da conexão, o *Lembrete ao paciente* e o *Resumo do dia* (e os contatos dele); a
+aba **"WhatsApp"** ficou **só para o Suporte** (cadastro da conexão, templates e últimas
+mensagens), e a opção de envio das orientações gerais foi para a aba Mensagens, logo abaixo do
+título delas.
 
 ## F8 — Conexão self-service na Meta
 
