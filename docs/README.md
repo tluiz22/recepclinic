@@ -35,12 +35,14 @@
 >     `business_management` feita no Explorador da Graph API (`me/businesses`; o contador leva até
 >     24 h); Tratamento de dados respondido (Supabase e Vercel, armazenamento/hospedagem, Brasil e
 >     EUA; pedidos de autoridades: as 4 opções, [política](politica-pedidos-de-autoridades.md)).
->     **Parou em:** Solicitação de análise › *Instruções para o analista*, que pede antes uma
->     plataforma no app (Configurações do app › Básico › **Adicionar plataforma** › Site, com
->     `https://app.recepclinic.com.br`). Depois: as instruções (decidir com o cliente se o analista
->     ganha um login de teste), enviar a análise e responder a **Verificação do acesso** (textos
->     prontos; o cliente vai pôr os dados da empresa no rodapé do site antes). Em seguida, escolher
->     a próxima fase: F9 (recomendada, não depende da Meta) ou preparar a F8.
+>     Plataforma Site adicionada ao app; clínica demo do analista criada no staging ("Clínica
+>     Demonstração RecepClinic", `analista.meta@recepclinic.com.br`, dados fictícios) e texto das
+>     *Instruções da análise* pronto no [roteiro](meta-tech-provider.md).
+>     **Parou em:** *Uso permitido* da `business_management` sem ✓ ("ligações de teste de API
+>     exigidas"): a chamada `me/businesses` de 09/out ainda não entrou no contador (até 24 h).
+>     Depois: colar as instruções com a senha, enviar a análise e responder a **Verificação do
+>     acesso** (textos prontos; o cliente vai pôr os dados da empresa no rodapé do site antes). Em
+>     seguida, escolher a próxima fase: F9 (recomendada, não depende da Meta) ou preparar a F8.
 >   - **Migrações no staging:** o Claude aplica com `supabase db push` (permissão liberada em
 >     09/out), sempre na ordem simulação → aplicar → conferir no banco → só então o push do código.
 >   - **WhatsApp de testes:** `+55 61 9903-3143`, na Cloud API do app RecepClinic, ligado à
