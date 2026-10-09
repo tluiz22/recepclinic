@@ -3,6 +3,7 @@ import { isUuid } from "../clinicAccess";
 import { platformEnv, type PlatformEnv } from "../env";
 import type { Database } from "../supabase/database.types";
 import type { DbClient } from "./clients";
+import type { ErrorRecord } from "../log";
 
 // Único ponto do código novo com a service role (D1, F3.3), que ignora o RLS.
 // O cliente não sai deste arquivo: só funções estreitas da plataforma.
@@ -134,4 +135,46 @@ export async function createPasswordLink(
   const { data, error } = await platformClient(env).auth.admin.generateLink({ type, email });
   if (error || !data.user) throw new PlatformAuthError(kind === "invite" ? "convite" : "novo link do convite", error);
   return { userId: data.user.id, tokenHash: data.properties.hashed_token, type };
+}
+
+// ---------------------------------------------------------------------------
+// Erros e saúde do sistema (F9.3): gravados e lidos só pela plataforma
+// ---------------------------------------------------------------------------
+
+/** Destino do logError (src/lib/log.ts): o registro já vem sem dados pessoais. */
+export async function recordSystemError(record: ErrorRecord, env: ServiceEnv = platformEnv()): Promise<void> {
+  const { error } = await platformClient(env)
+    .from("system_errors")
+    .insert({ scope: record.scope, clinic_id: record.clinicId, ids: record.ids, message: record.message });
+  if (error) throw new PlatformLookupError("gravar o erro", error);
+}
+
+/** Fim de uma execução da rotina do agendador (cronRoute e conversas paradas). */
+export async function recordCronHeartbeat(
+  job: string,
+  { clinics, errors }: { clinics: number; errors: number },
+  now: Date = new Date(),
+  env: ServiceEnv = platformEnv(),
+): Promise<void> {
+  const { error } = await platformClient(env)
+    .from("cron_heartbeats")
+    .upsert({ job, last_finished_at: now.toISOString(), clinics, errors });
+  if (error) throw new PlatformLookupError("registrar a execução da rotina", error);
+}
+
+/** Para a /api/saude: o banco responde e a última execução de cada rotina. */
+export async function loadCronHeartbeats(env: ServiceEnv = platformEnv()): Promise<{ job: string; lastFinishedAt: Date }[]> {
+  const { data, error } = await platformClient(env).from("cron_heartbeats").select("job, last_finished_at");
+  if (error) throw new PlatformLookupError("execuções das rotinas", error);
+  return data.map((row) => ({ job: row.job, lastFinishedAt: new Date(row.last_finished_at) }));
+}
+
+/** Para a /api/saude/erros: quantos erros desde `since`. */
+export async function countSystemErrorsSince(since: Date, env: ServiceEnv = platformEnv()): Promise<number> {
+  const { count, error } = await platformClient(env)
+    .from("system_errors")
+    .select("id", { count: "exact", head: true })
+    .gte("occurred_at", since.toISOString());
+  if (error) throw new PlatformLookupError("erros recentes", error);
+  return count ?? 0;
 }

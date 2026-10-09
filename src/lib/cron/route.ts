@@ -1,7 +1,7 @@
 import type { APIRoute } from "astro";
 import { createClinicServiceClient } from "../data/clinicService";
 import type { DbClient } from "../data/clients";
-import { listActiveClinics } from "../data/platform";
+import { listActiveClinics, recordCronHeartbeat } from "../data/platform";
 import { clinicSenderFor } from "../data/whatsapp/clinicSender";
 import type { ClinicSender } from "../data/whatsapp/send";
 import { platformEnv } from "../env";
@@ -31,6 +31,16 @@ export function cronRoute(name: string, job: ClinicJob): APIRoute {
         logError(name, error, { clinica: clinicId });
       }
     }
+    await heartbeat(name, clinics.length, errors);
     return new Response(JSON.stringify({ clinics: clinics.length, errors, results }), { headers: { "Content-Type": "application/json" } });
   };
+}
+
+/** Fim da execução, para a /api/saude (F9.3). Falhar aqui não derruba a rotina. */
+export async function heartbeat(job: string, clinics: number, errors: number): Promise<void> {
+  try {
+    await recordCronHeartbeat(job, { clinics, errors });
+  } catch (error) {
+    logError("rotinas: não registrou a execução", error, { rotina: job });
+  }
 }

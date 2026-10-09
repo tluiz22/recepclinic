@@ -1,11 +1,18 @@
+import { waitUntil } from "@vercel/functions";
 import { defineMiddleware, sequence } from "astro:middleware";
 import { ACTIVE_CLINIC_COOKIE, activeClinicCookieOptions, canAccessPath, expectsPage } from "./lib/clinicAccess";
 import { createUserClient } from "./lib/data/clients";
 import { isPlatformStaff } from "./lib/data/clinicChoice";
 import { loadClinicContext, logPlatformAccess } from "./lib/data/clinicContext";
+import { recordSystemError } from "./lib/data/platform";
 import { platformEnv } from "./lib/env";
+import { logError, setErrorSink } from "./lib/log";
 import { withSecurityHeaders } from "./lib/securityHeaders";
-import { logError } from "./lib/log";
+
+// Erros do servidor também vão para a tabela system_errors (F9.3), que o
+// Suporte vê em Administração do sistema › Erros; na Vercel, a função espera a
+// gravação terminar (waitUntil).
+setErrorSink((record) => recordSystemError(record), waitUntil);
 
 // Painel (/admin e /api/admin): login, clínica ativa, papéis e agendas da
 // pessoa (F3.2, D6). O banco (RLS) confere de novo cada leitura e escrita.

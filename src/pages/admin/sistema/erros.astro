@@ -1,0 +1,101 @@
+---
+// Erros (F9.3, L45): o Suporte vê as rotinas do agendador (última execução) e
+// os erros gravados pelo servidor, com a clínica de cada um. Tudo já sem dados
+// pessoais (src/lib/log.ts); os erros ficam 90 dias. O aviso por e-mail vem do
+// monitor externo (Better Stack), que olha /api/saude e /api/saude/erros.
+import AdminLayout from "../../../layouts/AdminLayout.astro";
+import Badge from "../../../components/admin/Badge.astro";
+import Card from "../../../components/admin/Card.astro";
+import { INPUT } from "../../../components/admin/fieldStyles";
+import { DEFAULT_TIMEZONE, formatInstant } from "../../../lib/clinicTime";
+import { isUuid } from "../../../lib/clinicAccess";
+import { createUserClient } from "../../../lib/data/clients";
+import { listClinicsOverview } from "../../../lib/data/onboarding";
+import { listCronHeartbeats, listSystemErrors } from "../../../lib/data/systemErrors";
+import { CRON_JOBS, checkCronJobs } from "../../../lib/health";
+
+const db = createUserClient(Astro.request, Astro.cookies);
+const chosen = Astro.url.searchParams.get("clinica");
+const clinicId = chosen && isUuid(chosen) ? chosen : null;
+const [clinics, beats, errors] = await Promise.all([listClinicsOverview(db), listCronHeartbeats(db), listSystemErrors(db, { clinicId })]);
+const checks = checkCronJobs(beats, new Date());
+const beatOf = new Map(beats.map((beat) => [beat.job, beat]));
+const when = (date: Date) => formatInstant(date, DEFAULT_TIMEZONE, "dd/MM/yyyy 'às' HH:mm:ss");
+---
+
+<AdminLayout title="Erros" platform>
+  <h1 class="text-2xl font-bold text-slate-900">Erros</h1>
+  <p class="mt-1 text-sm text-slate-600">
+    Rotinas automáticas e erros do servidor, sem dados de pacientes. Os erros ficam 90 dias. Horários de Brasília.
+  </p>
+
+  <Card class="mt-4">
+    <h2 class="font-semibold text-slate-900">Rotinas</h2>
+    <ul class="mt-3 divide-y divide-slate-100">
+      {
+        checks.map((check) => {
+          const beat = beatOf.get(check.job);
+          return (
+            <li class="flex flex-wrap items-center justify-between gap-2 py-2 text-sm">
+              <span>
+                <span class="font-medium text-slate-900">{check.job}</span>
+                <span class="text-slate-500"> · {CRON_JOBS[check.job].every}</span>
+              </span>
+              <span class="flex flex-wrap items-center gap-2">
+                {beat && (
+                  <span class="text-slate-600">
+                    {when(beat.lastFinishedAt)} · {beat.clinics} {beat.clinics === 1 ? "clínica" : "clínicas"}
+                    {beat.errors > 0 && `, ${beat.errors} com erro`}
+                  </span>
+                )}
+                {check.ok ? (
+                  <Badge variant="success">em dia</Badge>
+                ) : (
+                  <Badge variant="danger">{check.lastFinishedAt ? `atrasada ${check.minutesLate} min` : "sem execução"}</Badge>
+                )}
+              </span>
+            </li>
+          );
+        })
+      }
+    </ul>
+  </Card>
+
+  <Card class="mt-4">
+    <div class="flex flex-wrap items-center justify-between gap-3">
+      <h2 class="font-semibold text-slate-900">Erros recentes</h2>
+      <form method="get" class="flex items-center gap-2">
+        <label for="clinica" class="text-sm text-slate-600">Clínica</label>
+        <select id="clinica" name="clinica" class={`${INPUT} mt-0 sm:w-72`} data-autosubmit>
+          <option value="">Todas</option>
+          {clinics.map((clinic) => <option value={clinic.id} selected={clinic.id === clinicId}>{clinic.name}</option>)}
+        </select>
+      </form>
+    </div>
+    {
+      errors.length === 0 ? (
+        <p class="mt-3 text-sm text-slate-600">Nenhum erro registrado{clinicId ? " para esta clínica" : ""}.</p>
+      ) : (
+        <ul class="mt-3 divide-y divide-slate-100">
+          {errors.map((error) => (
+            <li class="py-3 text-sm">
+              <p class="flex flex-wrap items-center gap-2">
+                <span class="text-slate-500">{when(error.occurredAt)}</span>
+                <span class="font-medium text-slate-900">{error.scope}</span>
+                {error.clinicName ? <Badge variant="info">{error.clinicName}</Badge> : <Badge>sem clínica</Badge>}
+              </p>
+              {error.message && <p class="mt-1 break-words font-mono text-xs text-slate-700">{error.message}</p>}
+              {Object.keys(error.ids).length > 0 && (
+                <p class="mt-1 break-all font-mono text-xs text-slate-500">
+                  {Object.entries(error.ids)
+                    .map(([key, value]) => `${key}=${value}`)
+                    .join(" · ")}
+                </p>
+              )}
+            </li>
+          ))}
+        </ul>
+      )
+    }
+  </Card>
+</AdminLayout>

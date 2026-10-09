@@ -1182,8 +1182,8 @@ Subetapas (cliente, 09/out/2026), cada uma validada antes da próxima:
 | | Subetapa | Situação |
 |---|---|---|
 | F9.1 | Cabeçalhos de segurança, `robots.txt` e proteção de origem explícita (L44, L46) | validada em 09/out |
-| F9.2 | Logs sem dados pessoais: só ids e a clínica (L43) | implementada em 09/out, a validar |
-| F9.3 | Ferramenta de erros com a clínica em cada erro e monitor externo do painel e do webhook (L45); ferramentas a escolher com o cliente | |
+| F9.2 | Logs sem dados pessoais: só ids e a clínica (L43) | validada em 09/out |
+| F9.3 | Ferramenta de erros com a clínica em cada erro e monitor externo do painel e do webhook (L45) | implementada em 09/out, a validar |
 | F9.4 | Anonimização de paciente e contato a pedido (LGPD, L42); regras com o cliente | |
 | F9.5 | Contadores de uso por clínica para o Suporte (L49) | |
 
@@ -1205,6 +1205,21 @@ objeto do erro inteiro (o do Postgres traz os valores da linha em `details`; o d
 endereço). A mensagem passa por uma máscara de telefone (10 dígitos ou mais) e e-mail, porque pode
 vir da Meta, do banco ou do SMTP, e é cortada em 500 caracteres. Saiu o telefone do log das
 conversas paradas.
+
+**F9.3** (cliente, 09/out): **sem ferramenta externa de erros**, para não entrar um operador novo
+nos dados (o Tratamento de dados na Meta declara só Supabase e Vercel). O `logError` também grava
+cada erro em `system_errors` (migração `20261009130000`; só a service role grava, só o Suporte lê;
+90 dias, apagados pela rotina `limpar-erros`), e o Suporte vê a lista, com a clínica, em
+**Administração do sistema › Erros**, junto com a última execução de cada rotina. Cada rotina do
+agendador registra o fim da execução em `cron_heartbeats`. **Monitor externo: Better Stack**
+(gratuito, uso comercial, a cada 3 minutos, aviso por e-mail), com 4 monitores:
+
+| Monitor | Endereço | Fica vermelho quando |
+|---|---|---|
+| Painel | `https://app.recepclinic.com.br/admin/login` | não responde 200 |
+| Webhook | `https://app.recepclinic.com.br/api/whatsapp/webhook` | não responde 403 (o GET sem o token da Meta é recusado; 403 prova que a rota está no ar) |
+| Saúde | `https://app.recepclinic.com.br/api/saude` | 503: banco fora ou rotina atrasada (minuto: 10 min; 5 min: 20; hora: 90; diária: 26 h) |
+| Erros | `https://app.recepclinic.com.br/api/saude/erros` | 503: algum erro gravado nos últimos 15 minutos (volta sozinho) |
 
 ## F10 — Primeiro piloto
 

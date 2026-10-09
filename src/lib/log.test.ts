@@ -2,7 +2,7 @@ import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { DataError } from "./data/errors";
-import { describeError, formatLogLine, maskPersonalData } from "./log";
+import { describeError, formatLogLine, logError, maskPersonalData, setErrorSink, toErrorRecord } from "./log";
 
 describe("máscara de dados pessoais (F9.2)", () => {
   it("telefones com e sem +55, com separadores", () => {
@@ -65,5 +65,37 @@ describe("todo log do servidor passa por src/lib/log.ts", () => {
       .filter((path) => /\.(ts|astro)$/.test(path) && !path.endsWith(".test.ts") && !path.endsWith(join("lib", "log.ts")))
       .filter((path) => /console\.(log|error|warn|info|debug)\(/.test(readFileSync(path, "utf8")));
     expect(offenders).toEqual([]);
+  });
+});
+
+describe("registro do erro para o banco (F9.3)", () => {
+  it("separa a clínica e mascara o resto", () => {
+    const clinic = "4dbeccc6-61da-4e7f-84d7-e42f5a95b071";
+    expect(toErrorRecord("whatsapp envio", { clinica: clinic, atendimento: "a1", vazio: undefined }, new Error("falhou para 5561999031234"))).toEqual({
+      scope: "whatsapp envio",
+      clinicId: clinic,
+      ids: { atendimento: "a1" },
+      message: "Error: falhou para [telefone]",
+    });
+  });
+
+  it("clínica que não é id fica nos ids", () => {
+    expect(toErrorRecord("x", { clinica: "abc" })).toEqual({ scope: "x", clinicId: null, ids: { clinica: "abc" }, message: "" });
+  });
+
+  it("logError entrega ao destino e não quebra se a gravação falhar", async () => {
+    const received: unknown[] = [];
+    const pending: Promise<unknown>[] = [];
+    setErrorSink(async (record) => {
+      received.push(record);
+      throw new Error("banco fora");
+    }, (work) => pending.push(work));
+    try {
+      logError("teste", new Error("boom"), { evento: "e1" });
+      await Promise.all(pending);
+      expect(received).toEqual([{ scope: "teste", clinicId: null, ids: { evento: "e1" }, message: "Error: boom" }]);
+    } finally {
+      setErrorSink(null);
+    }
   });
 });

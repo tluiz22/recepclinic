@@ -4,7 +4,8 @@
 // valores da linha, e o do e-mail, o endereço. Mesmo a mensagem passa por uma
 // máscara de telefone e e-mail, porque pode vir da Meta, do banco ou do SMTP.
 // Todo log do servidor passa por aqui (um teste confere que não há
-// `console.*` fora deste arquivo).
+// `console.*` fora deste arquivo). Cada erro também vai para o destino
+// registrado (F9.3: a tabela system_errors, ligada no middleware).
 
 /** Ids e contagens; nunca nome, telefone, e-mail ou texto de mensagem. */
 export type LogIds = Record<string, string | number | boolean | null | undefined>;
@@ -61,8 +62,42 @@ export function formatLogLine(scope: string, ids: LogIds = {}, error?: unknown):
   return [`[${scope}]`, idText, errorText && `— ${errorText}`].filter(Boolean).join(" ");
 }
 
+/** O que o destino recebe: tudo já sem dados pessoais. */
+export type ErrorRecord = { scope: string; clinicId: string | null; ids: Record<string, string>; message: string };
+
+type ErrorSink = (record: ErrorRecord) => Promise<void>;
+/** Mantém a função viva até o fim da gravação (na Vercel, waitUntil). */
+type Defer = (work: Promise<unknown>) => void;
+
+let sink: { record: ErrorSink; defer: Defer } | null = null;
+
+/** Liga (ou desliga, com null) o destino dos erros. */
+export function setErrorSink(record: ErrorSink | null, defer: Defer = () => {}): void {
+  sink = record ? { record, defer } : null;
+}
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** Registro do erro: a clínica (de `ids.clinica`, se for um id) à parte; os demais ids em texto. */
+export function toErrorRecord(scope: string, ids: LogIds = {}, error?: unknown): ErrorRecord {
+  const clinic = typeof ids.clinica === "string" && UUID.test(ids.clinica) ? ids.clinica : null;
+  const rest = Object.entries(ids)
+    .filter(([key, value]) => !(key === "clinica" && clinic) && value !== undefined && value !== null && value !== "")
+    .map(([key, value]) => [key, maskPersonalData(String(value)).slice(0, 200)] as const);
+  return {
+    scope: maskPersonalData(scope).slice(0, 200),
+    clinicId: clinic,
+    ids: Object.fromEntries(rest),
+    message: error === undefined ? "" : describeError(error),
+  };
+}
+
 export function logError(scope: string, error?: unknown, ids: LogIds = {}): void {
   console.error(formatLogLine(scope, ids, error));
+  if (!sink) return;
+  const { record, defer } = sink;
+  // Falha ao gravar o erro só vai para o log (sem gravar de novo, sem laço).
+  defer(record(toErrorRecord(scope, ids, error)).catch((failure) => console.error(formatLogLine("erros: não gravou no banco", {}, failure))));
 }
 
 export function logWarn(scope: string, ids: LogIds = {}): void {

@@ -15,9 +15,14 @@ const CLINIC_B = "0b000000-0000-4000-8000-000000000001"; // Odonto Exemplo
 //   alterações, sobrevive à exclusão da clínica e só a função grava.
 // - features: lista dos itens da matriz de acesso (D11), igual para todas as
 //   clínicas (sem clinic_id); só a migração grava.
-const NO_DIRECT_FK = new Set(["platform_audit_log", "platform_access_log"]);
-const NO_AUDIT_TRIGGER = new Set(["platform_audit_log", "platform_access_log", "clinic_usage_monthly"]);
-const NOT_IN_DATA_SWEEP = new Set(["platform_audit_log"]);
+// - system_errors: erros do servidor (F9.3), sem dados pessoais; só a
+//   plataforma grava e só o Suporte lê. O erro sobrevive à exclusão da
+//   clínica (clinic_id fica nulo) e a clínica de exemplo não tem erros.
+// - cron_heartbeats: última execução de cada rotina (F9.3), da plataforma
+//   (sem clinic_id); só a plataforma grava.
+const NO_DIRECT_FK = new Set(["platform_audit_log", "platform_access_log", "system_errors"]);
+const NO_AUDIT_TRIGGER = new Set(["platform_audit_log", "platform_access_log", "clinic_usage_monthly", "system_errors"]);
+const NOT_IN_DATA_SWEEP = new Set(["platform_audit_log", "system_errors"]);
 
 let clinicTables: string[] = [];
 let allTables: string[] = [];
@@ -173,7 +178,7 @@ describe("varredura de isolamento (dados de teste)", () => {
   });
 
   it("todas as tabelas do banco entraram na varredura ou têm exceção registrada", () => {
-    const covered = new Set([...dataTables, ...NOT_IN_DATA_SWEEP, "platform_staff", "features"]);
+    const covered = new Set([...dataTables, ...NOT_IN_DATA_SWEEP, "platform_staff", "features", "cron_heartbeats"]);
     expect(allTables.filter((name) => !covered.has(name))).toEqual([]);
   });
 });

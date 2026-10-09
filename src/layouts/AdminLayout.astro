@@ -38,11 +38,12 @@ const moreNavItems: { label: string; href: string; icon: IconName }[] = [
   ...(canAccessArea(access, "metrics")
     ? [{ label: "Métricas", href: "/admin/metricas", icon: "funnel" as IconName }]
     : []),
-  // Administração do sistema (F4.2 e F4.4a): só o Suporte.
+  // Administração do sistema (F4.2, F4.4a e F9.3): só o Suporte.
   ...(platform || clinic?.isPlatformStaff
     ? [
         { label: "Clínicas", href: "/admin/sistema/clinicas", icon: "shield" as IconName },
         { label: "Matriz de acesso", href: "/admin/sistema/matriz", icon: "shield" as IconName },
+        { label: "Erros", href: "/admin/sistema/erros", icon: "shield" as IconName },
       ]
     : []),
 ];
