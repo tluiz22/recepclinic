@@ -18,25 +18,29 @@
 >     aprovado) validadas em 08/out; saiu o "Cancelar selecionados" da Agenda (cliente: cancelar
 >     vários é pelo "Bloquear e cancelar"). **F6 toda validada**, menos as conferências que
 >     dependem de templates em análise (preparo do exame e orientações gerais fora das 24h).
->   - **F7 (envios automáticos) implementada, aguardando a validação:** rotinas no `pg_cron`
->     (lembrete, resumo do dia, lista de espera, séries sem fim) e as opções em Configurações ›
->     **Lembretes** (aba nova de 08/out; a aba WhatsApp ficou só do Suporte), **reestruturados em
->     09/out**: um lembrete só por público (paciente, profissional e equipe), cada um na véspera ou
->     no dia, no horário escolhido (6h às 20h); quem recebe o resumo do profissional é marcado ali;
->     WhatsApp do profissional obrigatório; item novo da matriz "Lembrete à equipe".
->     Saiu o código antigo do piloto; a service role só fica na plataforma (D1).
+>   - **F7 (envios automáticos) validada em 09/out** com os templates aprovados: rotinas no
+>     `pg_cron` e Configurações › **Lembretes** (um lembrete por público: paciente, profissional e
+>     equipe, na véspera ou no dia, das 6h às 20h). O cliente segue testando em paralelo e traz os
+>     ajustes; resumo do dia e oferta de vaga a conferir quando a Meta aprovar os templates.
 >   - **Templates na Meta (09/out):** aprovados confirmação, remarcação, cancelamento, lembrete e
 >     cancelamento pela clínica. **Em análise:** preparo do exame (`rc_preparo_exame_v2`; conferir
 >     se ficou como Utilidade), orientações gerais (`rc_orientacoes_consulta_v1`), os 4 do resumo do
 >     dia, a oferta de vaga e as versões próprias da Confirmação/Remarcação da clínica de teste. Os 3
 >     antigos sem uso a excluir estão nas pendências do cliente, abaixo.
->   - **Próximo passo (retomar daqui):** validar a **parte K** do [`staging.md`](staging.md) (F7,
->     envios automáticos, com os lembretes reestruturados em 09/out): lembrete ao paciente "no dia"
->     num horário logo à frente; resumo ao profissional e à equipe (chegam quando a Meta aprovar os
->     templates; a execução aparece em Resumo do Dia › Envios). Quando os templates em análise
->     forem aprovados: conferir o preparo do exame, as orientações fora das 24h, o resumo e a oferta
->     de vaga. Depois, **F8** (Embedded Signup com coexistência), que depende da aprovação do
->     RecepClinic como Tech Provider na Meta.
+>   - **Próximo passo (retomar daqui): Análise do App e Tech Provider na Meta** (destravam a F8),
+>     roteiro e textos em [`meta-tech-provider.md`](meta-tech-provider.md).
+>     Em 09/out: vídeos gravados e legendados (`Meta_Video01/02-legendado.mp4`, fora do git, na
+>     pasta `docs/` do cliente); textos das 4 permissões (`whatsapp_business_messaging`,
+>     `whatsapp_business_management`, `business_management`, `public_profile`) prontos; chamada de
+>     `business_management` feita no Explorador da Graph API (`me/businesses`; o contador leva até
+>     24 h); Tratamento de dados respondido (Supabase e Vercel, armazenamento/hospedagem, Brasil e
+>     EUA; pedidos de autoridades: as 4 opções, [política](politica-pedidos-de-autoridades.md)).
+>     **Parou em:** Solicitação de análise › *Instruções para o analista*, que pede antes uma
+>     plataforma no app (Configurações do app › Básico › **Adicionar plataforma** › Site, com
+>     `https://app.recepclinic.com.br`). Depois: as instruções (decidir com o cliente se o analista
+>     ganha um login de teste), enviar a análise e responder a **Verificação do acesso** (textos
+>     prontos; o cliente vai pôr os dados da empresa no rodapé do site antes). Em seguida, escolher
+>     a próxima fase: F9 (recomendada, não depende da Meta) ou preparar a F8.
 >   - **Migrações no staging:** o Claude aplica com `supabase db push` (permissão liberada em
 >     09/out), sempre na ordem simulação → aplicar → conferir no banco → só então o push do código.
 >   - **WhatsApp de testes:** `+55 61 9903-3143`, na Cloud API do app RecepClinic, ligado à
@@ -58,7 +62,8 @@
 >   do app e o Tech Provider (destravam a F8). Ver "Frentes paralelas" no plano.
 > - **Pendências do cliente**:
 >   - abrir o CNPJ (SLU, ME, Simples Nacional);
->   - advogado para revisar as páginas legais (antes do 1º piloto).
+>   - advogado para revisar as páginas legais e a [política de pedidos de autoridades](politica-pedidos-de-autoridades.md)
+    (antes do 1º piloto).
 >   - provedor de e-mail (ex.: Resend) com o domínio `recepclinic.com.br` (antes do 1º piloto;
 >     convites, pedido de informações e "Esqueci minha senha" na nuvem; também vira o SMTP do
 >     Supabase, para os modelos de e-mail).
@@ -126,3 +131,6 @@ credenciais do piloto (banco, agendador e Vault do Supabase, número e app da Me
 - [`plano.md`](plano.md): plano de evolução em fases (etapa 4).
 - [`site-plano.md`](site-plano.md): plano do site `www.recepclinic.com.br` (frente paralela).
 - [`staging.md`](staging.md): roteiro do staging na nuvem (F5.5).
+- [`meta-tech-provider.md`](meta-tech-provider.md): Análise do App e Tech Provider na Meta (textos e respostas).
+- [`politica-pedidos-de-autoridades.md`](politica-pedidos-de-autoridades.md): pedidos de autoridades
+  sobre dados (adotada na verificação da Meta; a revisar pelo advogado).

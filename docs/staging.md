@@ -221,15 +221,22 @@ do celular; cliente, 06/out/2026). Nada do app ou do número do piloto.
 
 ## K. Envios automáticos (F7)
 
-1. **Banco**: migração `20261007170000_envios_automaticos` (opções da clínica e as rotinas no
-   agendador). O endereço e o CRON_SECRET já estão no cofre (parte G).
-2. **Templates**: Configurações › WhatsApp › *Templates* › **Criar na Meta** cria os 5 novos
-   (resumo do dia e oferta de vaga).
-3. **Opções** (Configurações › **Lembretes**; reestruturadas em 09/out, migração
-   `20261009120000_lembretes`: cada lembrete com enviar, véspera ou no dia e o horário das 6h às
-   20h; ao paciente, ao profissional com quem recebe e à equipe com os contatos): *Lembrete ao paciente* (enviar ou não e o horário da
-   véspera) e *Resumo do dia* (véspera e no dia). Para testar o lembrete, ponha um horário logo à
-   frente e tenha um atendimento amanhã para o seu número; para o resumo, cadastre o seu número em
-   "Outros contatos" (item "Envio do resumo do dia").
-4. **Conferir**: no Resumo do Dia › *Envios*, as execuções do lembrete e do resumo; as mensagens
-   chegam quando os templates estiverem aprovados.
+1. **Banco**: migrações `20261007170000_envios_automaticos` (rotinas no agendador) e
+   `20261009120000_lembretes` (opções da aba Lembretes). O endereço e o CRON_SECRET já estão no
+   cofre (parte G).
+2. **Templates**: Configurações › WhatsApp › *Templates* › **Criar na Meta** cria os do resumo do
+   dia e o da oferta de vaga.
+3. **Opções** (Configurações › **Lembretes**): cada lembrete com enviar ou não, **na véspera** ou
+   **no dia do atendimento** e o horário (horas cheias das 6h às 20h).
+   - *Lembrete ao paciente*: para testar, marque um atendimento hoje para o seu número e escolha
+     "No dia" com a próxima hora cheia (a rotina roda no início de cada hora; no dia, recebem os
+     atendimentos que começam depois do horário).
+   - *Lembrete ao profissional (resumo do dia)*: marque quem recebe (WhatsApp do profissional
+     obrigatório).
+   - *Lembrete à equipe (resumo do dia)*: cadastre o seu número nos contatos da equipe. Os
+     resumos rodam a cada 5 minutos, dentro da hora escolhida.
+4. **Conferir**: no Resumo do Dia › *Envios*, as execuções do lembrete e dos resumos; as mensagens
+   chegam quando os templates estiverem aprovados (antes disso, "não enviado" com o motivo).
+
+**Validada em 09/out** com os templates aprovados; resumo e oferta de vaga a conferir quando a
+Meta aprovar os templates deles.

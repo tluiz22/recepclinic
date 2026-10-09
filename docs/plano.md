@@ -24,8 +24,8 @@
 | F3 | Acesso ao banco e contexto da clínica | concluída (05/out) |
 | F4 | Painel | concluída (05/out; validada pelo cliente) |
 | F5 | Páginas públicas e domínio | concluída (06/out; validada pelo cliente) |
-| F6 | WhatsApp por clínica e bot | **em curso** (detalhada em 06/out) |
-| F7 | Envios automáticos por clínica | a detalhar |
+| F6 | WhatsApp por clínica e bot | concluída (08/out; validada pelo cliente, menos o que depende de templates em análise) |
+| F7 | Envios automáticos por clínica | concluída (09/out; validada pelo cliente com os templates aprovados) |
 | F8 | Conexão self-service na Meta | a detalhar (depende da Meta) |
 | F9 | Operação e segurança | a detalhar |
 | F10 | Primeiro piloto | a detalhar |
@@ -1138,6 +1138,9 @@ passa a ser obrigatório** no cadastro. Na matriz, o item do resumo vira o do pr
 o da equipe (quem tinha fica com os dois). Migração `20261009120000` (opções novas em
 `clinic_settings`, as antigas do resumo saem; trava dos outros contatos pelo item da equipe).
 Corrigido junto: o alerta "o lembrete de hoje ainda não rodou" não aparece com o envio desligado.
+**Validada pelo cliente em 09/out** com os templates aprovados (lembrete ao paciente). O resumo do
+dia e a oferta de vaga ficam para conferir quando a Meta aprovar os templates deles; o cliente segue
+testando em paralelo e traz os ajustes.
 
 ## F8 — Conexão self-service na Meta
 
