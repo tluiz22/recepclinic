@@ -73,13 +73,7 @@ const cardProps = (a: (typeof appointments)[number]) => ({
   onWaitlist: onWaitlist.has(a.id),
   noShow: noShows.get(a.patientId),
   origin: a.originAppointmentId ? origins.get(a.originAppointmentId) : undefined,
-  massCancelForm: MASS_CANCEL,
 });
-// Cancelamento em massa (F4.6): caixinhas nos cartões, ligadas a este formulário.
-const MASS_CANCEL = "cancelar_selecionados";
-const hasMassCancel = activeFuture.length > 0;
-const groupActiveIds = (group: { appointments: typeof appointments }) =>
-  group.appointments.filter((a) => activeFuture.includes(a.id)).map((a) => a.id);
 ---
 
 <AdminLayout title="Agenda">
@@ -105,33 +99,6 @@ const groupActiveIds = (group: { appointments: typeof appointments }) =>
   <FlashMessage />
 
   {
-    hasMassCancel && (
-      <form id={MASS_CANCEL} method="POST" action="/api/admin/agenda/cancelar-selecionados" class="mt-4 flex flex-wrap items-center justify-between gap-3">
-        <input type="hidden" name="return_to" value={returnTo} />
-        <div class="flex gap-3 text-sm">
-          <button type="button" data-select="all" class="text-sky-700 hover:underline">
-            Selecionar todos
-          </button>
-          <button type="button" data-select="none" class="text-sky-700 hover:underline">
-            Selecionar nenhum
-          </button>
-        </div>
-        <button
-          type="submit"
-          data-mass-cancel-submit
-          disabled
-          class="js-confirm-delete rounded-md border border-red-300 bg-white px-3 py-2 text-sm font-semibold text-red-700 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
-          data-confirm-title="Cancelar os atendimentos selecionados?"
-          data-confirm-message="Os selecionados serão cancelados pela clínica. Cada paciente recebe a mensagem pelo WhatsApp da clínica, com o link para remarcar."
-          data-confirm-label="Cancelar atendimentos"
-        >
-          Cancelar selecionados (<span data-mass-cancel-count>0</span>)
-        </button>
-      </form>
-    )
-  }
-
-  {
     byColumn && (
       <div data-columns-top class="-mx-4 mt-4 overflow-x-auto px-4" aria-hidden="true">
         <div data-columns-top-inner class="h-px" />
@@ -150,21 +117,9 @@ const groupActiveIds = (group: { appointments: typeof appointments }) =>
         ) : item.kind === "group" ? (
           <Card>
             <div class="flex flex-wrap items-center justify-between gap-2">
-              <label class="flex items-center gap-2">
-                {groupActiveIds(item).length > 0 && (
-                  <input
-                    type="checkbox"
-                    form={MASS_CANCEL}
-                    name="ids"
-                    value={groupActiveIds(item).join(",")}
-                    class="js-mass-cancel h-4 w-4 rounded border-slate-300"
-                    aria-label="Selecionar a turma inteira para cancelar"
-                  />
-                )}
-                <span class="text-base font-semibold text-slate-900">
-                  {time(item.start)} – {time(item.end)}
-                </span>
-              </label>
+              <span class="text-base font-semibold text-slate-900">
+                {time(item.start)} – {time(item.end)}
+              </span>
               <Badge variant="warning">Turma</Badge>
             </div>
             <p class="mt-2 text-sm font-medium text-slate-900">
@@ -175,7 +130,7 @@ const groupActiveIds = (group: { appointments: typeof appointments }) =>
             </p>
             <div class="mt-3 flex flex-col gap-2">
               {item.appointments.map((a) => (
-                <AppointmentCard {...cardProps(a)} massCancelForm={undefined} compact />
+                <AppointmentCard {...cardProps(a)} compact />
               ))}
             </div>
           </Card>
@@ -216,26 +171,6 @@ const groupActiveIds = (group: { appointments: typeof appointments }) =>
     }
   </div>
   <ConfirmDeleteDialog />
-
-  <script>
-    // Cancelamento em massa: conta os selecionados e liga o botão.
-    const massBoxes = [...document.querySelectorAll<HTMLInputElement>(".js-mass-cancel")];
-    const massSubmit = document.querySelector<HTMLButtonElement>("[data-mass-cancel-submit]");
-    const massCount = document.querySelector<HTMLElement>("[data-mass-cancel-count]");
-    const countSelected = () => {
-      const total = massBoxes.filter((b) => b.checked).reduce((sum, b) => sum + b.value.split(",").length, 0);
-      if (massCount) massCount.textContent = String(total);
-      if (massSubmit) massSubmit.disabled = total === 0;
-    };
-    massBoxes.forEach((b) => b.addEventListener("change", countSelected));
-    document.querySelectorAll<HTMLButtonElement>("[data-select]").forEach((button) =>
-      button.addEventListener("click", () => {
-        massBoxes.forEach((b) => (b.checked = button.dataset.select === "all"));
-        countSelected();
-      }),
-    );
-    countSelected();
-  </script>
 
   <script>
     // Colunas por agenda: uma barra de rolagem também acima dos nomes

@@ -193,8 +193,8 @@ do celular; cliente, 06/out/2026). Nada do app ou do número do piloto.
 1. **Banco**: migração `20261007150000_cancelamento_pela_clinica` (chave do template novo).
 2. **Template**: Configurações › WhatsApp › *Templates* › **Criar na Meta** cria o
    `rc_cancelamento_clinica_v1` (os outros já existentes ficam como estão).
-3. **Conferir**: com um atendimento futuro para o seu número, "Cancelar selecionados" na Agenda (ou
-   "Bloquear e cancelar"): com o template aprovado, chega a mensagem com o link e a tela volta para
+3. **Conferir**: com um atendimento futuro para o seu número, "Bloquear e cancelar" na Agenda
+   ("Cancelar selecionados" saiu em 08/out): com o template aprovado, chega a mensagem com o link e a tela volta para
    a Agenda; sem ele, a tela "Avisar" mostra o paciente com o motivo e o botão do WhatsApp.
 
 ## J. Aba Mensagens (F6.6)

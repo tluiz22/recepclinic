@@ -1018,6 +1018,10 @@ de remarcação (texto da F4.6), e enviam sozinhos; sai a tela "Avisar" da F4.6.
   enviar à mão; se todos receberam, volta para a Agenda. As confirmações das duas ações dizem que
   todos recebem a mensagem com o link. Migração `20261007150000` (chave do template novo); o
   Suporte cria o template pelo "Criar na Meta". 1 teste de banco novo.
+  **Validada em 08/out**, com um ajuste do cliente: **sai o "Cancelar selecionados"** da Agenda
+  (as caixinhas nos cartões e a rota `cancelar-selecionados`), porque confundia a recepção com o
+  "Cancelar" de cada atendimento. Para cancelar vários, bloqueia-se a agenda e usa-se "Bloquear e
+  cancelar", que já avisa todos com o link.
 - **F6.6 — Aba "Mensagens":** prévia no balão e edição com "Mensagens personalizadas".
   **Detalhada com o cliente em 07/out:** aba **Mensagens** em Configurações com cada mensagem num
   balão do WhatsApp, preenchida com os dados da clínica: os avisos (templates: confirmação,

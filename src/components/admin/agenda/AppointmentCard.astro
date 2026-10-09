@@ -33,11 +33,9 @@ interface Props {
   compact?: boolean;
   /** Retorno: a consulta de origem (data e situação). */
   origin?: OriginInfo;
-  /** Caixinha do cancelamento em massa (F4.6), ligada ao formulário da tela. */
-  massCancelForm?: string;
 }
 
-const { appointment: a, timeZone, now, showAgenda, vocabulary, returnTo, reminderAction, preparationResendable, guidanceResendable = false, waitlistOn, onWaitlist, noShow, compact = false, massCancelForm, origin } =
+const { appointment: a, timeZone, now, showAgenda, vocabulary, returnTo, reminderAction, preparationResendable, guidanceResendable = false, waitlistOn, onWaitlist, noShow, compact = false, origin } =
   Astro.props;
 const action = `/api/admin/agenda/atendimentos/${a.id}`;
 const time = (d: Date) => formatInstant(d, timeZone, "HH:mm");
@@ -161,21 +159,9 @@ const tone = (danger?: boolean) => (danger ? "border-red-300 text-red-700 hover:
   {
     !compact && (
       <div class="flex flex-wrap items-center justify-between gap-2">
-        <label class="flex items-center gap-2">
-          {massCancelForm && isActive && !isPast && (
-            <input
-              type="checkbox"
-              form={massCancelForm}
-              name="ids"
-              value={a.id}
-              class="js-mass-cancel h-4 w-4 rounded border-slate-300"
-              aria-label={`Selecionar ${a.patientName} para cancelar`}
-            />
-          )}
-          <span class={`text-base font-semibold ${isCanceled ? CANCELED_TEXT : "text-slate-900"}`}>
-            {time(a.scheduledAt)} – {time(a.endsAt)}
-          </span>
-        </label>
+        <span class={`text-base font-semibold ${isCanceled ? CANCELED_TEXT : "text-slate-900"}`}>
+          {time(a.scheduledAt)} – {time(a.endsAt)}
+        </span>
         {status && <Badge variant={status.variant}>{status.label}</Badge>}
       </div>
     )
