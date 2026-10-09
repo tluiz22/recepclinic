@@ -19,6 +19,7 @@ export type FeatureKey =
   | "reminders"
   | "waitlist"
   | "daily_summary"
+  | "team_summary"
   | "custom_messages"
   | "custom_templates"
   | "metrics_overview"
@@ -39,7 +40,9 @@ export const FEATURES: readonly Feature[] = [
   { key: "whatsapp_bot", area: "whatsapp", label: "Bot de WhatsApp", dependsOn: [] },
   { key: "reminders", area: "whatsapp", label: "Lembrete automático", dependsOn: [] },
   { key: "waitlist", area: "whatsapp", label: "Lista de espera", dependsOn: ["whatsapp_bot"] },
-  { key: "daily_summary", area: "whatsapp", label: "Envio do resumo do dia", dependsOn: [] },
+  // Lembretes (cliente, 09/out/2026): o resumo do dia por público.
+  { key: "daily_summary", area: "whatsapp", label: "Lembrete ao profissional (resumo do dia)", dependsOn: [] },
+  { key: "team_summary", area: "whatsapp", label: "Lembrete à equipe (resumo do dia)", dependsOn: [] },
   // Validação da F6.6 (cliente, 08/out/2026): o item virou dois.
   { key: "custom_messages", area: "whatsapp", label: "Mensagens do bot", dependsOn: [] },
   { key: "custom_templates", area: "whatsapp", label: "Mensagens da Meta (templates)", dependsOn: [] },
@@ -113,10 +116,10 @@ const PATH_RULES: PathRule[] = [
   // Configurações (F4.4b): convênios, contatos do resumo do dia e hora do lembrete.
   { prefix: "/admin/configuracoes/convenios", feature: "insurance" },
   { prefix: "/api/admin/configuracoes/convenios", feature: "insurance" },
-  { prefix: "/admin/configuracoes/contatos", feature: "daily_summary" },
-  { prefix: "/api/admin/configuracoes/contatos", feature: "daily_summary" },
+  { prefix: "/admin/configuracoes/contatos", feature: "team_summary" },
+  { prefix: "/api/admin/configuracoes/contatos", feature: "team_summary" },
   { prefix: "/api/admin/configuracoes/lembrete", feature: "reminders" },
-  { prefix: "/api/admin/configuracoes/resumo", feature: "daily_summary" },
+  // Resumo do dia: o item do público (profissional ou equipe) é conferido na rota.
 ];
 
 const matchesPrefix = (pathname: string, prefix: string) => pathname === prefix || pathname.startsWith(`${prefix}/`);

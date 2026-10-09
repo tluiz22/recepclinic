@@ -96,9 +96,10 @@ it("convênio: quem não atende, visto pelo plano, é a mesma exceção do profi
   expect(await listPlanExclusions(db(admin), clinicId, plan.id)).toEqual([]);
 });
 
-it("hora do lembrete: só das 7h às 20h, também no banco", async () => {
+it("hora do lembrete: só das 6h às 20h (cliente, 09/out), também no banco", async () => {
   expect((await updateClinicSettings(db(admin), clinicId, { reminderHour: 20 })).reminderHour).toBe(20);
-  expect(await codeOf(() => updateClinicSettings(db(admin), clinicId, { reminderHour: 6 }))).toBe("invalid");
+  expect((await updateClinicSettings(db(admin), clinicId, { reminderHour: 6 })).reminderHour).toBe(6);
+  expect(await codeOf(() => updateClinicSettings(db(admin), clinicId, { reminderHour: 5 }))).toBe("invalid");
   const { error } = await admin.client.from("clinic_settings").update({ reminder_hour: 21 }).eq("clinic_id", clinicId);
   expect(error?.code).toBe("23514");
 });

@@ -1,20 +1,24 @@
 ---
-// Configurações › Lembretes (cliente, 08/out/2026; antes, parte da aba
-// WhatsApp): a situação da conexão (só leitura; quem cadastra é o Suporte),
-// o lembrete ao paciente na véspera (item "Lembrete automático") e o resumo
-// do dia para a equipe (item "Envio do resumo do dia"). O cadastro da
-// conexão, os templates e as últimas mensagens ficam na aba WhatsApp, só do
-// Suporte.
+// Configurações › Lembretes (cliente, 08 e 09/out/2026): a situação da
+// conexão (só leitura; quem cadastra é o Suporte) e um lembrete por público,
+// cada um com o próprio item da matriz, a opção de enviar, véspera ou no dia
+// e o horário (6h às 20h):
+// - ao paciente (item "Lembrete automático");
+// - ao profissional, o resumo do dia dos atendimentos dele (item "Lembrete
+//   ao profissional"), com quem recebe (antes, no cadastro do profissional);
+// - à equipe, o resumo do dia da clínica para os outros contatos (item
+//   "Lembrete à equipe").
+// O cadastro da conexão, os templates e as últimas mensagens ficam na aba
+// WhatsApp, só do Suporte.
 import AdminLayout from "../../../layouts/AdminLayout.astro";
 import Badge from "../../../components/admin/Badge.astro";
 import Card from "../../../components/admin/Card.astro";
 import ConfiguracoesTabs from "../../../components/admin/ConfiguracoesTabs.astro";
 import FlashMessage from "../../../components/admin/FlashMessage.astro";
-import { HINT, INPUT, LABEL, PRIMARY_BUTTON, SECONDARY_BUTTON } from "../../../components/admin/fieldStyles";
+import { HINT, INPUT, PRIMARY_BUTTON, SECONDARY_BUTTON } from "../../../components/admin/fieldStyles";
 import WhatsappConnectionCard from "../../../components/admin/WhatsappConnectionCard.astro";
 import { createUserClient } from "../../../lib/data/clients";
-import { getClinicSettings, REMINDER_HOUR_MAX, REMINDER_HOUR_MIN, SUMMARY_LEAD_MAX, SUMMARY_LEAD_MIN } from "../../../lib/data/config/clinic";
-import { getSummarySchedule } from "../../../lib/data/whatsapp/dailySummary";
+import { getClinicSettings, REMINDER_HOUR_MAX, REMINDER_HOUR_MIN, type ReminderTiming } from "../../../lib/data/config/clinic";
 import { listNotificationRecipients } from "../../../lib/data/config/notificationRecipients";
 import { listProfessionals } from "../../../lib/data/config/professionals";
 import { getWhatsappConnection } from "../../../lib/data/whatsapp/connection";
@@ -22,21 +26,30 @@ import { formatPhoneBR } from "../../../lib/phone";
 
 const clinic = Astro.locals.clinic!;
 const db = createUserClient(Astro.request, Astro.cookies);
-const remindersOn = clinic.features.includes("reminders");
-const summaryOn = clinic.features.includes("daily_summary");
+const patientOn = clinic.features.includes("reminders");
+const professionalOn = clinic.features.includes("daily_summary");
+const teamOn = clinic.features.includes("team_summary");
 const examsOn = clinic.features.includes("exams");
 const [connection, settings, recipients, professionals] = await Promise.all([
   getWhatsappConnection(db, clinic.clinicId),
   getClinicSettings(db, clinic.clinicId),
-  summaryOn ? listNotificationRecipients(db, clinic.clinicId, { includeInactive: true }) : Promise.resolve([]),
-  summaryOn ? listProfessionals(db, clinic.clinicId) : Promise.resolve([]),
+  teamOn ? listNotificationRecipients(db, clinic.clinicId, { includeInactive: true }) : Promise.resolve([]),
+  professionalOn ? listProfessionals(db, clinic.clinicId) : Promise.resolve([]),
 ]);
 const hours = Array.from({ length: REMINDER_HOUR_MAX - REMINDER_HOUR_MIN + 1 }, (_, i) => REMINDER_HOUR_MIN + i);
-const leadHours = Array.from({ length: SUMMARY_LEAD_MAX - SUMMARY_LEAD_MIN + 1 }, (_, i) => SUMMARY_LEAD_MIN + i);
-const summarySchedule = summaryOn ? await getSummarySchedule(db, clinic.clinicId) : { consultas: "", exames: "" };
-const summaryProfessionals = professionals.filter((p) => p.receivesDailySummary && p.phone);
+const TIMINGS: { value: ReminderTiming; label: string }[] = [
+  { value: "eve", label: "Na véspera" },
+  { value: "same_day", label: "No dia do atendimento" },
+];
 const receives = (r: { receivesConsultations: boolean; receivesExams: boolean }) =>
   [r.receivesConsultations && "consultas", examsOn && r.receivesExams && "exames"].filter(Boolean).join(" e ") || "nada marcado";
+
+// Os três cartões têm a mesma linha de opções.
+const cards = {
+  patient: { enabled: settings.reminderEnabled, timing: settings.reminderTiming, hour: settings.reminderHour },
+  professional: { enabled: settings.professionalSummaryEnabled, timing: settings.professionalSummaryTiming, hour: settings.professionalSummaryHour },
+  team: { enabled: settings.teamSummaryEnabled, timing: settings.teamSummaryTiming, hour: settings.teamSummaryHour },
+};
 ---
 
 <AdminLayout title="Lembretes">
@@ -48,106 +61,140 @@ const receives = (r: { receivesConsultations: boolean; receivesExams: boolean })
     <WhatsappConnectionCard connection={connection} timeZone={clinic.timezone} />
 
     {
-      remindersOn && (
+      patientOn && (
         <Card>
           <h2 class="font-semibold text-slate-900">Lembrete ao paciente</h2>
-          <p class="mt-1 text-sm text-slate-600">
-            No dia anterior ao atendimento, o paciente recebe o lembrete e pode confirmar a presença, remarcar ou cancelar.
-          </p>
+          <p class="mt-1 text-sm text-slate-600">O paciente recebe um lembrete e pode confirmar a presença, remarcar ou cancelar.</p>
           <form method="POST" action="/api/admin/configuracoes/lembrete" class="mt-3 flex flex-col gap-3">
             <label class="flex items-center gap-2 text-sm font-medium text-slate-700">
-              <input type="checkbox" name="reminder_enabled" checked={settings.reminderEnabled} class="h-4 w-4 rounded border-slate-300" />
-              Enviar o lembrete na véspera
+              <input type="checkbox" name="reminder_enabled" checked={cards.patient.enabled} class="h-4 w-4 rounded border-slate-300" />
+              Enviar o lembrete
             </label>
-            <div class="flex flex-wrap items-end gap-3">
-              <div>
-                <label for="reminder_hour" class={LABEL}>
-                  Horário do lembrete (no dia anterior ao atendimento)
-                </label>
-                <select id="reminder_hour" name="reminder_hour" class={`${INPUT} w-32`}>
-                  {hours.map((hour) => (
-                    <option value={hour} selected={hour === settings.reminderHour}>
-                      {String(hour).padStart(2, "0")}:00
-                    </option>
-                  ))}
-                </select>
-              </div>
+            <div class="flex flex-wrap items-center gap-3">
+              <select name="reminder_timing" aria-label="Quando enviar o lembrete ao paciente" class={`${INPUT} mt-0 w-56`}>
+                {TIMINGS.map((t) => (
+                  <option value={t.value} selected={t.value === cards.patient.timing}>
+                    {t.label}
+                  </option>
+                ))}
+              </select>
+              <span class="text-sm text-slate-600">às</span>
+              <select name="reminder_hour" aria-label="Horário do lembrete ao paciente" class={`${INPUT} mt-0 w-28`}>
+                {hours.map((hour) => (
+                  <option value={hour} selected={hour === cards.patient.hour}>
+                    {String(hour).padStart(2, "0")}:00
+                  </option>
+                ))}
+              </select>
               <button type="submit" class={SECONDARY_BUTTON}>
                 Salvar
               </button>
             </div>
           </form>
           <p class={HINT}>
-            No fuso da clínica, das {REMINDER_HOUR_MIN}h às {REMINDER_HOUR_MAX}h. Quem não responder em 4 horas recebe o lembrete de novo, uma vez (das 7h às
-            20h). Sem o envio na véspera, os botões de lembrete da Agenda continuam.
+            No fuso da clínica. Na véspera: os atendimentos do dia seguinte. No dia: os atendimentos do dia que começam depois do horário. Os que ficam de
+            fora (marcados depois do envio ou antes do horário) têm o botão "Enviar lembrete" na Agenda.
           </p>
         </Card>
       )
     }
 
     {
-      summaryOn && (
+      professionalOn && (
         <Card>
-          <h2 class="font-semibold text-slate-900">Resumo do dia</h2>
-          <p class="mt-1 text-sm text-slate-600">Os atendimentos do dia, pelo WhatsApp, para a equipe.</p>
-
+          <h2 class="font-semibold text-slate-900">Lembrete ao profissional (resumo do dia)</h2>
+          <p class="mt-1 text-sm text-slate-600">Cada profissional marcado recebe, pelo WhatsApp, a lista dos atendimentos das agendas dele.</p>
           <form method="POST" action="/api/admin/configuracoes/resumo" class="mt-3 flex flex-col gap-3">
+            <input type="hidden" name="publico" value="profissional" />
+            <label class="flex items-center gap-2 text-sm font-medium text-slate-700">
+              <input type="checkbox" name="enabled" checked={cards.professional.enabled} class="h-4 w-4 rounded border-slate-300" />
+              Enviar o resumo do dia
+            </label>
             <div class="flex flex-wrap items-center gap-3">
-              <label class="flex items-center gap-2 text-sm font-medium text-slate-700">
-                <input type="checkbox" name="summary_preview_enabled" checked={settings.summaryPreviewEnabled} class="h-4 w-4 rounded border-slate-300" />
-                Resumo na véspera às
-              </label>
-              <select name="summary_preview_hour" aria-label="Horário do resumo na véspera" class={`${INPUT} mt-0 w-28`}>
+              <select name="timing" aria-label="Quando enviar o resumo ao profissional" class={`${INPUT} mt-0 w-56`}>
+                {TIMINGS.map((t) => (
+                  <option value={t.value} selected={t.value === cards.professional.timing}>
+                    {t.label}
+                  </option>
+                ))}
+              </select>
+              <span class="text-sm text-slate-600">às</span>
+              <select name="hour" aria-label="Horário do resumo ao profissional" class={`${INPUT} mt-0 w-28`}>
                 {hours.map((hour) => (
-                  <option value={hour} selected={hour === settings.summaryPreviewHour}>
+                  <option value={hour} selected={hour === cards.professional.hour}>
                     {String(hour).padStart(2, "0")}:00
                   </option>
                 ))}
               </select>
-              <span class="text-sm text-slate-600">(atendimentos do dia seguinte)</span>
             </div>
+            <fieldset>
+              <legend class="text-sm font-semibold text-slate-800">Quem recebe</legend>
+              {professionals.length ? (
+                <ul class="mt-1 flex flex-col gap-1">
+                  {professionals.map((p) => (
+                    <li>
+                      <label class="flex items-center gap-2 text-sm text-slate-700">
+                        <input
+                          type="checkbox"
+                          name="professional_ids"
+                          value={p.id}
+                          checked={p.receivesDailySummary}
+                          disabled={!p.phone}
+                          class="h-4 w-4 rounded border-slate-300"
+                        />
+                        {p.displayName}
+                        <span class="text-slate-500">{p.phone ? formatPhoneBR(p.phone) : "sem WhatsApp no cadastro"}</span>
+                      </label>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p class="mt-1 text-sm text-slate-600">Nenhum profissional ativo.</p>
+              )}
+            </fieldset>
+            <button type="submit" class={`${SECONDARY_BUTTON} self-start`}>Salvar</button>
+          </form>
+          <p class={HINT}>No fuso da clínica. Na véspera: os atendimentos do dia seguinte. No dia: os atendimentos do dia. Um envio só por dia.</p>
+        </Card>
+      )
+    }
+
+    {
+      teamOn && (
+        <Card>
+          <h2 class="font-semibold text-slate-900">Lembrete à equipe (resumo do dia)</h2>
+          <p class="mt-1 text-sm text-slate-600">Os contatos abaixo recebem, pelo WhatsApp, a lista dos atendimentos da clínica.</p>
+          <form method="POST" action="/api/admin/configuracoes/resumo" class="mt-3 flex flex-col gap-3">
+            <input type="hidden" name="publico" value="equipe" />
+            <label class="flex items-center gap-2 text-sm font-medium text-slate-700">
+              <input type="checkbox" name="enabled" checked={cards.team.enabled} class="h-4 w-4 rounded border-slate-300" />
+              Enviar o resumo do dia
+            </label>
             <div class="flex flex-wrap items-center gap-3">
-              <label class="flex items-center gap-2 text-sm font-medium text-slate-700">
-                <input type="checkbox" name="summary_today_enabled" checked={settings.summaryTodayEnabled} class="h-4 w-4 rounded border-slate-300" />
-                Resumo no dia,
-              </label>
-              <select name="summary_today_lead_hours" aria-label="Horas antes da primeira agenda" class={`${INPUT} mt-0 w-24`}>
-                {leadHours.map((lead) => (
-                  <option value={lead} selected={lead === settings.summaryTodayLeadHours}>
-                    {lead} h
+              <select name="timing" aria-label="Quando enviar o resumo à equipe" class={`${INPUT} mt-0 w-56`}>
+                {TIMINGS.map((t) => (
+                  <option value={t.value} selected={t.value === cards.team.timing}>
+                    {t.label}
                   </option>
                 ))}
               </select>
-              <span class="text-sm text-slate-600">antes do início da primeira agenda</span>
+              <span class="text-sm text-slate-600">às</span>
+              <select name="hour" aria-label="Horário do resumo à equipe" class={`${INPUT} mt-0 w-28`}>
+                {hours.map((hour) => (
+                  <option value={hour} selected={hour === cards.team.hour}>
+                    {String(hour).padStart(2, "0")}:00
+                  </option>
+                ))}
+              </select>
+              <button type="submit" class={SECONDARY_BUTTON}>
+                Salvar
+              </button>
             </div>
-            <button type="submit" class={`${SECONDARY_BUTTON} self-start`}>Salvar</button>
           </form>
-          <p class={HINT}>
-            Horário do resumo no dia para os contatos abaixo: consultas {summarySchedule.consultas}; exames {summarySchedule.exames}. Dia sem agenda: 6h30.
-          </p>
-
-          <h3 class="mt-4 text-sm font-semibold text-slate-800">Profissionais</h3>
-          {summaryProfessionals.length ? (
-            <ul class="mt-1 text-sm text-slate-700">
-              {summaryProfessionals.map((p) => (
-                <li>
-                  {p.displayName} · {formatPhoneBR(p.phone!)} <span class="text-slate-500">(os próprios atendimentos)</span>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p class="mt-1 text-sm text-slate-600">Nenhum.</p>
-          )}
-          <p class={HINT}>
-            Cada profissional escolhe em{" "}
-            <a href="/admin/configuracoes/profissionais" class="text-sky-700 hover:underline">
-              Profissionais
-            </a>{" "}
-            ("Recebe o resumo do dia").
-          </p>
+          <p class={HINT}>No fuso da clínica. Na véspera: os atendimentos do dia seguinte. No dia: os atendimentos do dia. Um envio só por dia.</p>
 
           <div class="mt-4 flex flex-wrap items-center justify-between gap-2">
-            <h3 class="text-sm font-semibold text-slate-800">Outros contatos</h3>
+            <h3 class="text-sm font-semibold text-slate-800">Contatos da equipe</h3>
             <a href="/admin/configuracoes/contatos/novo" class={PRIMARY_BUTTON}>
               Novo contato
             </a>
@@ -172,8 +219,8 @@ const receives = (r: { receivesConsultations: boolean; receivesExams: boolean })
     }
 
     {
-      !remindersOn && !summaryOn && (
-        <p class="text-sm text-slate-600">O lembrete automático e o resumo do dia não estão liberados para a clínica. Fale com o suporte.</p>
+      !patientOn && !professionalOn && !teamOn && (
+        <p class="text-sm text-slate-600">Os lembretes não estão liberados para a clínica. Fale com o suporte.</p>
       )
     }
   </div>

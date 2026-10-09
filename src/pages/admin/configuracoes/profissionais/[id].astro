@@ -22,7 +22,6 @@ const professional = isNew
   ? null
   : ((await listProfessionals(createUserClient(Astro.request, Astro.cookies), clinic.clinicId, { includeInactive: true })).find((p) => p.id === id) ?? null);
 if (!isNew && !professional) return Astro.redirect("/admin/configuracoes/profissionais");
-const summaryOn = clinic.features.includes("daily_summary");
 const action = `/api/admin/configuracoes/profissionais/${id}`;
 // Próximo passo da jornada de configuração (F6.3b).
 const setup = isNew ? null : await loadSetupStatus(createUserClient(Astro.request, Astro.cookies), clinic.clinicId, clinic.features);
@@ -86,27 +85,17 @@ const professionalIssues = setup?.issues.professionals.get(id!) ?? [];
       </div>
       <p class={`${HINT} -mt-2`}>Mais de um RQE: separe por vírgula (ex.: 6271, 8890).</p>
       <div>
-        <label for="phone" class={LABEL}>WhatsApp (opcional)</label>
+        <label for="phone" class={LABEL}>WhatsApp</label>
         <input
           id="phone"
           name="phone"
           type="tel"
+          required
           placeholder="(84) 99999-9999"
           value={professional?.phone ? formatPhoneBR(professional.phone) : ""}
           class={INPUT}
         />
       </div>
-      {
-        summaryOn && (
-          <label class="flex items-start gap-2 text-sm text-slate-700">
-            <input type="checkbox" name="receives_daily_summary" checked={professional?.receivesDailySummary ?? false} class="mt-0.5 h-4 w-4 rounded border-slate-300" />
-            <span>
-              Recebe o resumo do dia dos seus atendimentos
-              <span class={HINT}>Na véspera às 18h e no dia, 1h antes do início da agenda dele. Precisa do WhatsApp acima.</span>
-            </span>
-          </label>
-        )
-      }
       <button type="submit" class={`${PRIMARY_BUTTON} self-start`}>{isNew ? "Cadastrar" : "Salvar"}</button>
     </form>
     {!isNew && <ActiveToggle action={action} isActive={professional!.isActive} what="o profissional" />}

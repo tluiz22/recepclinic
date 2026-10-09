@@ -9,11 +9,12 @@ import {
 } from "../../../../../lib/data/config/professionals";
 import { DataError } from "../../../../../lib/data/errors";
 import { runFormAction } from "../../../../../lib/data/formAction";
-import { formChecked, formOptionalText, formText } from "../../../../../lib/forms";
+import { formOptionalText, formText } from "../../../../../lib/forms";
 
 // Profissional (F4.3): criar (`novo`), salvar, desativar e reativar. O login
-// ligado ao profissional fica como está (é definido na equipe, F4.4). A opção
-// do resumo do dia só vem com o item liberado.
+// ligado ao profissional fica como está (é definido na equipe, F4.4). O
+// WhatsApp é obrigatório; quem recebe o resumo do dia é marcado em
+// Configurações › Lembretes (cliente, 09/out/2026).
 export const POST: APIRoute = async (context) => {
   const { request, cookies, locals, params } = context;
   const id = params.id!;
@@ -42,7 +43,6 @@ export const POST: APIRoute = async (context) => {
         councilState: formOptionalText(form, "council_state"),
         rqe: formOptionalText(form, "rqe"),
         phone: formOptionalText(form, "phone"),
-        ...(clinic.features.includes("daily_summary") ? { receivesDailySummary: formChecked(form, "receives_daily_summary") } : {}),
       };
       if (!current) {
         const created = await createProfessional(db, clinic.clinicId, input);

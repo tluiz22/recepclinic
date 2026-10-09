@@ -153,7 +153,9 @@ describe("profissionais, locais e agendas", () => {
   });
 
   it("RQE opcional, um ou vários; sem o campo, fica como está", async () => {
-    const { id, isActive: _active, ...base } = professional;
+    // O WhatsApp é obrigatório no cadastro (cliente, 09/out/2026).
+    const { id, isActive: _active, ...rest } = professional;
+    const base = { ...rest, phone: "(84) 99999-0000" };
     expect(await updateProfessional(db(admin), clinicId, id, { ...base, rqe: "6271 / 8890" })).toMatchObject({ rqe: "6271, 8890" });
     expect(await codeOf(() => updateProfessional(db(admin), clinicId, id, { ...base, rqe: "RQE 6271" }))).toBe("invalid");
     const { rqe: _rqe, ...withoutRqe } = base;

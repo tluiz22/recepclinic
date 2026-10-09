@@ -10,8 +10,8 @@ import { dailySummarySender, waitlistOfferSender, type ClinicSender } from "../.
 import { asDb, at, MON1, NOW, setupAgendaClinic, type AgendaFixture } from "./agendaFixture";
 import { adminClient } from "./helpers";
 
-// F7 — Envios automáticos: as opções da clínica (lembrete e resumo, cliente
-// 07/out/2026), quem envia o resumo e a oferta de vaga, e a extensão das
+// F7 — Envios automáticos: as opções da clínica (lembretes, cliente 07 e
+// 09/out/2026), quem envia o resumo e a oferta de vaga, e a extensão das
 // séries sem fim.
 
 const env = () => ({
@@ -50,23 +50,28 @@ beforeAll(async () => {
 afterAll(async () => f.cleanup());
 
 describe("opções da clínica (F7)", () => {
-  it("padrões: lembrete e resumos ligados, véspera às 18h, no dia 1h antes", async () => {
+  it("padrões: os três lembretes ligados, na véspera às 18h (cliente, 09/out)", async () => {
     const { data } = await adminClient()
       .from("clinic_settings")
-      .select("reminder_enabled, reminder_hour, summary_preview_enabled, summary_preview_hour, summary_today_enabled, summary_today_lead_hours")
+      .select(
+        "reminder_enabled, reminder_timing, reminder_hour, professional_summary_enabled, professional_summary_timing, professional_summary_hour, team_summary_enabled, team_summary_timing, team_summary_hour",
+      )
       .eq("clinic_id", f.clinicId)
       .single();
     expect(data).toEqual({
       reminder_enabled: true,
+      reminder_timing: "eve",
       reminder_hour: 18,
-      summary_preview_enabled: true,
-      summary_preview_hour: 18,
-      summary_today_enabled: true,
-      summary_today_lead_hours: 1,
+      professional_summary_enabled: true,
+      professional_summary_timing: "eve",
+      professional_summary_hour: 18,
+      team_summary_enabled: true,
+      team_summary_timing: "eve",
+      team_summary_hour: 18,
     });
   });
 
-  it("lembrete da véspera desligado: a rotina não envia nem reenvia", async () => {
+  it("lembrete ao paciente desligado: a rotina não envia", async () => {
     await set({ reminder_enabled: false });
     expect(await runAppointmentReminders(db, f.clinicId, { trigger: "manual", sender: async () => ({ sent: true, messageId: "x" }) }, NOW)).toEqual({
       skipped: "disabled",
@@ -74,7 +79,7 @@ describe("opções da clínica (F7)", () => {
     await set({ reminder_enabled: true });
   });
 
-  it("resumo da véspera: desligado não sai; ligado sai na hora escolhida", async () => {
+  it("resumo da equipe na véspera: desligado não sai; ligado sai na hora escolhida", async () => {
     await bookAppointment(
       asDb(f.reception),
       f.clinicId,
@@ -85,18 +90,30 @@ describe("opções da clínica (F7)", () => {
     const send = dailySummarySender(sender);
     const sunday = (time: string) => at("2031-03-09", time);
 
-    await set({ summary_preview_enabled: false });
-    expect(await runDailySummary(db, f.clinicId, { variant: "preview", trigger: "scheduled", sender: send }, sunday("19:00"))).toEqual({ skipped: "disabled" });
+    await set({ team_summary_enabled: false });
+    expect(await runDailySummary(db, f.clinicId, { audience: "team", trigger: "scheduled", sender: send }, sunday("19:00"))).toEqual({ skipped: "disabled" });
 
-    await set({ summary_preview_enabled: true, summary_preview_hour: 19 });
-    expect(await runDailySummary(db, f.clinicId, { variant: "preview", trigger: "scheduled", sender: send }, sunday("18:30"))).toEqual({ skipped: "not_due" });
+    await set({ team_summary_enabled: true, team_summary_hour: 19 });
+    expect(await runDailySummary(db, f.clinicId, { audience: "team", trigger: "scheduled", sender: send }, sunday("18:30"))).toEqual({ skipped: "not_due" });
     calls = [];
-    const result = await runDailySummary(db, f.clinicId, { variant: "preview", trigger: "scheduled", sender: send }, sunday("19:05"));
+    const result = await runDailySummary(db, f.clinicId, { audience: "team", trigger: "scheduled", sender: send }, sunday("19:05"));
     expect(result).toMatchObject({ totals: { sent: 1 } });
     expect(calls[0]).toMatchObject({ kind: "template", to: "+5584977770099" });
     expect(calls[0].args.slice(0, 1)).toEqual(["daily_summary_consultations"]);
     // {{1}} primeiro nome, {{2}} a clínica, {{3}} a data, {{4}} a lista.
     expect(calls[0].args[2]).toEqual(["Recepção", "da Clínica F7", "segunda, 10/03", "▪️ 08h00 - Paciente Um (sem confirmação)"]);
+  });
+
+  it("lembrete ao paciente no dia: na hora escolhida, os atendimentos de hoje depois do horário", async () => {
+    await set({ reminder_timing: "same_day", reminder_hour: 7 });
+    const reminder = async () => ({ sent: true as const, messageId: `wamid.f7.dia.${++seq}` });
+    expect(await runAppointmentReminders(db, f.clinicId, { trigger: "scheduled", sender: reminder }, at(MON1, "06:00"))).toEqual({ skipped: "outside_hour" });
+    // Na véspera, às 18h, não há mais lembrete.
+    expect(await runAppointmentReminders(db, f.clinicId, { trigger: "scheduled", sender: reminder }, at("2031-03-09", "18:00"))).toEqual({ skipped: "outside_hour" });
+    expect(await runAppointmentReminders(db, f.clinicId, { trigger: "scheduled", sender: reminder }, at(MON1, "07:00"))).toMatchObject({
+      totals: { candidates: 1, sent: 1 },
+    });
+    await set({ reminder_timing: "eve", reminder_hour: 18 });
   });
 });
 

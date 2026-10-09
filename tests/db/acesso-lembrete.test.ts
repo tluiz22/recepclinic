@@ -10,7 +10,6 @@ import {
   type PreparationToSend,
 } from "../../src/lib/data/whatsapp/preparation";
 import {
-  autoResendUnanswered,
   listReminderActions,
   recordReminderTap,
   runAppointmentReminders,
@@ -119,8 +118,8 @@ afterAll(async () => {
 const appt = {} as Record<string, string>;
 
 describe("lembrete da véspera (agendador)", () => {
-  it("fora da hora do lembrete só faz o reenvio automático", async () => {
-    expect(await runAppointmentReminders(bot, clinicId, { trigger: "scheduled", sender }, at(SUN, "13:00"))).toEqual({ skipped: "outside_hour", autoResent: 0 });
+  it("fora da hora do lembrete, nada", async () => {
+    expect(await runAppointmentReminders(bot, clinicId, { trigger: "scheduled", sender }, at(SUN, "13:00"))).toEqual({ skipped: "outside_hour" });
   });
 
   it("na hora, lembra os atendimentos ativos de amanhã; quem falhou não conta como lembrado", async () => {
@@ -132,7 +131,7 @@ describe("lembrete da véspera (agendador)", () => {
     failFor.add(appt.a4);
 
     const result = await runAppointmentReminders(bot, clinicId, { trigger: "scheduled", sender }, at(SUN, "14:00"));
-    expect(result).toMatchObject({ totals: { candidates: 2, sent: 1, failed: 1, not_sent_no_template: 0, not_sent_not_connected: 0 }, autoResent: 0 });
+    expect(result).toMatchObject({ totals: { candidates: 2, sent: 1, failed: 1, not_sent_no_template: 0, not_sent_not_connected: 0 } });
 
     const toA1 = reminders.find((r) => r.appointmentId === appt.a1)!;
     expect(toA1).toMatchObject({
@@ -174,20 +173,6 @@ describe("botões da tela", () => {
     expect((await listReminderActions(db(reception), clinicId, [appt.a5], at(SUN, "15:00"))).get(appt.a5)).toBe("send");
     expect(await sendReminderFromPanel(db(reception), clinicId, appt.a5, reception.id, sender, at(SUN, "15:00"))).toBe("sent");
     expect(await trailOf(appt.a5, "reminder_resent")).toEqual([{ channel: "admin", actor_id: reception.id, details: { first: true } }]);
-  });
-});
-
-describe("reenvio automático", () => {
-  it("4h depois do lembrete entregue e sem resposta, uma vez só", async () => {
-    const [message] = await messagesOf(appt.a1, "appointment_reminder");
-    await updateDeliveryStatus(bot, clinicId, message.wa_message_id!, "delivered");
-
-    expect(await autoResendUnanswered(bot, clinicId, sender, at(SUN, "17:59"))).toBe(0);
-    // a4 e a5 tiveram o botão: não entram.
-    expect(await autoResendUnanswered(bot, clinicId, sender, at(SUN, "18:00"))).toBe(1);
-    expect(await trailOf(appt.a1, "reminder_resent")).toEqual([{ channel: "cron", actor_id: null, details: { automatic: true } }]);
-    expect(await messagesOf(appt.a1, "appointment_reminder")).toHaveLength(2);
-    expect(await autoResendUnanswered(bot, clinicId, sender, at("2031-03-10", "07:00"))).toBe(0);
   });
 });
 

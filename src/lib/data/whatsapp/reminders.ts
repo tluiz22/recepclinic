@@ -9,25 +9,24 @@ import { getApprovedTemplate, getWhatsappConnection } from "./connection";
 import { resetConversationAfterNotice } from "./conversations";
 import { recordOutboundMessage, type SendOutcome } from "./messages";
 
-// Lembrete da véspera e reenvios (Fases 19, 22 e 23 do piloto), F3.9b. Só
-// com o item "Lembrete automático" liberado (D11: lembrete, botões de envio
-// e reenvio, reenvio automático e hora) e com o WhatsApp da clínica conectado.
+// Lembrete ao paciente (Fases 19, 22 e 23 do piloto), F3.9b; reestruturado
+// pelo cliente em 09/out/2026. Só com o item "Lembrete automático" liberado
+// (D11: lembrete, botões de envio e reenvio e horário) e com o WhatsApp da
+// clínica conectado.
 //
-// - **Lembrete da véspera** (agendador, de hora em hora): na hora do lembrete
-//   da clínica, todo atendimento ativo do dia seguinte (calendário da
-//   clínica) que ainda não recebeu lembrete. Marcado depois do envio ou para o
-//   próprio dia fica sem lembrete automático; o botão "Enviar lembrete"
-//   resolve. Sem template aprovado ou sem conexão: não envia, não conta como
-//   lembrado e registra "não enviado" na trilha uma vez por data.
+// - **Um lembrete só** (agendador, de hora em hora), na hora escolhida pela
+//   clínica (6h às 20h): na **véspera**, todo atendimento ativo do dia
+//   seguinte (calendário da clínica); **no dia**, todo atendimento ativo de
+//   hoje que começa depois do horário. Os que ainda não receberam lembrete.
+//   Marcado depois do envio (ou, no dia, antes do horário) fica sem lembrete
+//   automático; o botão "Enviar lembrete" resolve. Sem template aprovado ou
+//   sem conexão: não envia, não conta como lembrado e registra "não enviado"
+//   na trilha uma vez por data. Saiu o reenvio automático de 4h.
 // - **Botões da tela**, para atendimento ativo e futuro: "Reenviar lembrete"
 //   quando a última tentativa não chegou, ou quando chegou e ficou sem
 //   resposta por 2h; "Enviar lembrete" quando não houve tentativa e o envio
-//   automático da véspera já passou. Só contam as tentativas depois da última
-//   remarcação (remarcar zera o lembrete).
-// - **Reenvio automático**: 4h depois do lembrete automático entregue, para
-//   quem não respondeu, uma vez só, entre 7h e 20h da clínica, e não para
-//   atendimento que começa em menos de 2h. Não sai se a equipe já usou o
-//   botão.
+//   automático já passou (ou não vai cobrir o atendimento). Só contam as
+//   tentativas depois da última remarcação (remarcar zera o lembrete).
 //
 // O envio de verdade (template com os botões Confirmar presença · Remarcar ·
 // Cancelar) é de quem chama (reminderSender em send.ts, F6.2; agendador na
@@ -35,11 +34,6 @@ import { recordOutboundMessage, type SendOutcome } from "./messages";
 
 export const REMINDER_MESSAGE_TYPE = "appointment_reminder";
 export const UNANSWERED_BUTTON_MS = 2 * 60 * 60_000;
-export const AUTO_RESEND_AFTER_MS = 4 * 60 * 60_000;
-export const AUTO_RESEND_HOURS = { first: 7, last: 20 } as const;
-export const AUTO_RESEND_MIN_LEAD_MS = 2 * 60 * 60_000;
-/** Lembretes mais antigos que isso não são reenviados (o atendimento é do dia seguinte). */
-const AUTO_RESEND_LOOKBACK_MS = 3 * 24 * 60 * 60_000;
 
 /** Tentativa que não chegou ao paciente: o botão "Reenviar" aparece. */
 export const NOT_DELIVERED = new Set(["failed", "skipped_no_template"]);
@@ -50,15 +44,25 @@ const ACTIVE = ["scheduled", "confirmed"] as const;
 // Regras puras
 // ---------------------------------------------------------------------------
 
-/** Envio automático que cobriria o atendimento: véspera, na hora do lembrete, no calendário da clínica. */
-export function reminderCutoff(scheduledAt: Date, reminderHour: number, timeZone: string): Date {
-  const eve = addDays(localDateOf(scheduledAt, timeZone), -1);
-  return toInstant(eve, `${String(reminderHour).padStart(2, "0")}:00`, timeZone);
+export type ReminderTiming = "eve" | "same_day";
+
+/**
+ * Envio automático que cobriria o atendimento, na hora do lembrete, no
+ * calendário da clínica: a véspera ou o próprio dia. No dia, atendimento que
+ * começa até o horário não é coberto: devolve o início da época (o botão
+ * "Enviar lembrete" vale desde já).
+ */
+export function reminderCutoff(scheduledAt: Date, reminderHour: number, timeZone: string, timing: ReminderTiming = "eve"): Date {
+  const day = localDateOf(scheduledAt, timeZone);
+  const sendAt = toInstant(timing === "eve" ? addDays(day, -1) : day, `${String(reminderHour).padStart(2, "0")}:00`, timeZone);
+  return timing === "same_day" && scheduledAt.getTime() <= sendAt.getTime() ? new Date(0) : sendAt;
 }
 
-/** Atendimentos que o lembrete de agora cobre: o dia seguinte inteiro da clínica. */
-export function reminderWindow(now: Date, timeZone: string): { start: Date; end: Date } {
-  return dayBounds(addDays(todayIn(timeZone, now), 1), timeZone);
+/** Atendimentos que o lembrete de agora cobre: o dia seguinte inteiro, ou o resto de hoje. */
+export function reminderWindow(now: Date, timeZone: string, timing: ReminderTiming = "eve"): { start: Date; end: Date } {
+  const today = todayIn(timeZone, now);
+  if (timing === "same_day") return { start: now, end: dayBounds(today, timeZone).end };
+  return dayBounds(addDays(today, 1), timeZone);
 }
 
 export type ReminderAction = "send" | "resend" | "resend_unanswered";
@@ -88,6 +92,7 @@ export function reminderAction(
   reminderHour: number,
   timeZone: string,
   now: Date,
+  timing: ReminderTiming = "eve",
 ): ReminderAction | null {
   const last = attemptsSinceReschedule(appointment, attempts).at(-1);
   if (last) {
@@ -96,28 +101,10 @@ export function reminderAction(
     if (!answered(appointment) && now.getTime() - last.createdAt.getTime() >= UNANSWERED_BUTTON_MS) return "resend_unanswered";
     return null;
   }
-  if (!appointment.reminderSentAt && now.getTime() >= reminderCutoff(appointment.scheduledAt, reminderHour, timeZone).getTime()) {
+  if (!appointment.reminderSentAt && now.getTime() >= reminderCutoff(appointment.scheduledAt, reminderHour, timeZone, timing).getTime()) {
     return "send";
   }
   return null;
-}
-
-/** O reenvio automático cabe agora? `resendsSinceReschedule` = usos do botão ou reenvios depois da última remarcação. */
-export function isAutoResendDue(
-  appointment: ReminderState,
-  attempts: ReminderAttempt[],
-  resendsSinceReschedule: number,
-  timeZone: string,
-  now: Date,
-): boolean {
-  const hour = localHourOf(now, timeZone);
-  if (hour < AUTO_RESEND_HOURS.first || hour > AUTO_RESEND_HOURS.last) return false;
-  if (appointment.scheduledAt.getTime() <= now.getTime() + AUTO_RESEND_MIN_LEAD_MS) return false;
-  if (!appointment.reminderSentAt || answered(appointment) || resendsSinceReschedule > 0) return false;
-  const counted = attemptsSinceReschedule(appointment, attempts);
-  // Só o lembrete automático, uma vez entregue e nunca reenviado.
-  if (counted.length !== 1 || NOT_DELIVERED.has(counted[0].status ?? "")) return false;
-  return now.getTime() - counted[0].createdAt.getTime() >= AUTO_RESEND_AFTER_MS;
 }
 
 // Botões do template: Confirmar presença · Remarcar · Cancelar. O payload diz
@@ -215,14 +202,14 @@ const toState = (row: AppointmentRow): ReminderState => ({
   patientConfirmedAt: row.patient_confirmed_at ? new Date(row.patient_confirmed_at) : null,
 });
 
-type ReminderSettings = { timeZone: string; reminderHour: number; enabled: boolean };
+type ReminderSettings = { timeZone: string; reminderHour: number; enabled: boolean; timing: ReminderTiming };
 
 async function loadSettings(db: DbClient, clinicId: string): Promise<ReminderSettings> {
   const row = unwrapOne(
-    await db.from("clinic_settings").select("timezone, reminder_hour, reminder_enabled").eq("clinic_id", clinicId).maybeSingle(),
+    await db.from("clinic_settings").select("timezone, reminder_hour, reminder_enabled, reminder_timing").eq("clinic_id", clinicId).maybeSingle(),
     "Configuração da clínica",
   );
-  return { timeZone: row.timezone, reminderHour: row.reminder_hour, enabled: row.reminder_enabled };
+  return { timeZone: row.timezone, reminderHour: row.reminder_hour, enabled: row.reminder_enabled, timing: row.reminder_timing as ReminderTiming };
 }
 
 async function reminderAttempts(db: DbClient, clinicId: string, appointmentIds: string[]): Promise<Map<string, ReminderAttempt[]>> {
@@ -245,30 +232,6 @@ async function reminderAttempts(db: DbClient, clinicId: string, appointmentIds: 
     byAppointment.set(row.appointment_id!, list);
   }
   return byAppointment;
-}
-
-/** Quantos usos do botão (ou reenvios automáticos) cada atendimento teve depois da última remarcação. */
-async function resendCounts(db: DbClient, clinicId: string, rows: AppointmentRow[]): Promise<Map<string, number>> {
-  const counts = new Map<string, number>();
-  if (rows.length === 0) return counts;
-  const events = unwrap(
-    await db
-      .from("appointment_events")
-      .select("appointment_id, occurred_at")
-      .eq("clinic_id", clinicId)
-      .eq("event_type", "reminder_resent")
-      .in(
-        "appointment_id",
-        rows.map((r) => r.id),
-      ),
-    "Trilha",
-  );
-  const since = new Map(rows.map((r) => [r.id, r.rescheduled_at ? Date.parse(r.rescheduled_at) : -Infinity]));
-  for (const event of events) {
-    if (Date.parse(event.occurred_at) < (since.get(event.appointment_id) ?? -Infinity)) continue;
-    counts.set(event.appointment_id, (counts.get(event.appointment_id) ?? 0) + 1);
-  }
-  return counts;
 }
 
 /**
@@ -300,7 +263,7 @@ export async function listReminderActions(
     rows.map((r) => r.id),
   );
   for (const row of rows) {
-    const action = reminderAction(toState(row), attempts.get(row.id) ?? [], settings.reminderHour, settings.timeZone, now);
+    const action = reminderAction(toState(row), attempts.get(row.id) ?? [], settings.reminderHour, settings.timeZone, now, settings.timing);
     if (action) actions.set(row.id, action);
   }
   return actions;
@@ -410,54 +373,6 @@ export async function sendReminderFromPanel(
   return sent ? "sent" : "failed";
 }
 
-/** Reenvio automático do lembrete sem resposta (ver o cabeçalho). Devolve quantos saíram. */
-export async function autoResendUnanswered(
-  db: DbClient,
-  clinicId: string,
-  sender: ReminderSender,
-  now: Date = new Date(),
-): Promise<number> {
-  if (!(await hasFeature(db, clinicId, "reminders"))) return 0;
-  const setup = await sendContext(db, clinicId);
-  // Sem o lembrete automático da véspera (opção da clínica, F7), também não há o reenvio automático.
-  if ("blocked" in setup || !setup.context.settings.enabled) return 0;
-  const { timeZone } = setup.context.settings;
-  const hour = localHourOf(now, timeZone);
-  if (hour < AUTO_RESEND_HOURS.first || hour > AUTO_RESEND_HOURS.last) return 0;
-
-  const candidates = unwrap(
-    await db
-      .from("appointments")
-      .select(APPOINTMENT_COLUMNS)
-      .eq("clinic_id", clinicId)
-      .in("status", [...ACTIVE])
-      .gt("scheduled_at", new Date(now.getTime() + AUTO_RESEND_MIN_LEAD_MS).toISOString())
-      .lte("reminder_sent_at", new Date(now.getTime() - AUTO_RESEND_AFTER_MS).toISOString())
-      .gte("reminder_sent_at", new Date(now.getTime() - AUTO_RESEND_LOOKBACK_MS).toISOString())
-      .is("reminder_response", null)
-      .is("patient_confirmed_at", null),
-    "Atendimentos",
-  ) as unknown as AppointmentRow[];
-  if (candidates.length === 0) return 0;
-
-  const [attempts, resends] = await Promise.all([
-    reminderAttempts(
-      db,
-      clinicId,
-      candidates.map((r) => r.id),
-    ),
-    resendCounts(db, clinicId, candidates),
-  ]);
-  let resent = 0;
-  for (const row of candidates) {
-    if (!isAutoResendDue(toState(row), attempts.get(row.id) ?? [], resends.get(row.id) ?? 0, timeZone, now)) continue;
-    const sent = await deliverReminder(db, clinicId, row, setup.context, sender, now);
-    await logTrail(db, clinicId, row.id, "reminder_resent", "cron", null, { automatic: true });
-    if (sent) resent++;
-  }
-  return resent;
-}
-
 export type ReminderRunTotals = {
   candidates: number;
   sent: number;
@@ -466,15 +381,12 @@ export type ReminderRunTotals = {
   not_sent_not_connected: number;
 };
 
-export type ReminderRunResult =
-  | { skipped: "not_enabled" | "disabled" }
-  | { skipped: "outside_hour"; autoResent: number }
-  | { runId: number; totals: ReminderRunTotals; autoResent: number };
+export type ReminderRunResult = { skipped: "not_enabled" | "disabled" | "outside_hour" } | { runId: number; totals: ReminderRunTotals };
 
 /**
- * Rodada do agendador (de hora em hora) para a clínica: reenvio automático e,
- * na hora do lembrete da clínica (ou chamada manual), o lembrete da véspera.
- * Cada lembrete da véspera vira uma execução em `job_runs`.
+ * Rodada do agendador (de hora em hora) para a clínica: na hora do lembrete
+ * da clínica (ou chamada manual), o lembrete da véspera ou do dia. Cada
+ * rodada que envia vira uma execução em `job_runs`.
  */
 export async function runAppointmentReminders(
   db: DbClient,
@@ -484,17 +396,14 @@ export async function runAppointmentReminders(
 ): Promise<ReminderRunResult> {
   if (!(await hasFeature(db, clinicId, "reminders"))) return { skipped: "not_enabled" };
   const settings = await loadSettings(db, clinicId);
-  // A clínica desligou o lembrete automático da véspera (F7; os botões da Agenda continuam).
+  // A clínica desligou o lembrete automático (F7; os botões da Agenda continuam).
   if (!settings.enabled) return { skipped: "disabled" };
-  const autoResent = await autoResendUnanswered(db, clinicId, sender, now);
-  if (trigger === "scheduled" && localHourOf(now, settings.timeZone) !== settings.reminderHour) {
-    return { skipped: "outside_hour", autoResent };
-  }
+  if (trigger === "scheduled" && localHourOf(now, settings.timeZone) !== settings.reminderHour) return { skipped: "outside_hour" };
 
   const runId = await startJobRun(db, clinicId, "appointment_reminders", { trigger }, now);
   const totals: ReminderRunTotals = { candidates: 0, sent: 0, failed: 0, not_sent_no_template: 0, not_sent_not_connected: 0 };
   try {
-    const window = reminderWindow(now, settings.timeZone);
+    const window = reminderWindow(now, settings.timeZone, settings.timing);
     const candidates = unwrap(
       await db
         .from("appointments")
@@ -535,7 +444,7 @@ export async function runAppointmentReminders(
     throw error;
   }
   await finishJobRun(db, runId, { totals }, now);
-  return { runId, totals, autoResent };
+  return { runId, totals };
 }
 
 const notSentKey = (appointmentId: string, scheduledAt: string, reason: string) => `${appointmentId}|${Date.parse(scheduledAt)}|${reason}`;

@@ -1127,6 +1127,17 @@ com a situação da conexão, o *Lembrete ao paciente* e o *Resumo do dia* (e os
 aba **"WhatsApp"** ficou **só para o Suporte** (cadastro da conexão, templates e últimas
 mensagens), e a opção de envio das orientações gerais foi para a aba Mensagens, logo abaixo do
 título delas.
+**Reestruturação dos lembretes (cliente, 09/out):** **um lembrete só por público**, cada um com
+enviar ou não, **na véspera ou no dia** e o horário (horas cheias das **6h às 20h**), na aba
+Lembretes: (1) **ao paciente** (sai o reenvio automático de 4h; o "Reenviar lembrete" da Agenda
+continua; no dia, recebem os atendimentos do dia que começam depois do horário); (2) **ao
+profissional (resumo do dia)**, com a lista de quem recebe (saiu do cadastro do profissional); (3)
+**à equipe (resumo do dia)**, com os outros contatos. O resumo deixa de ter o par véspera + dia
+(1h antes da agenda) e o reenvio quando entra atendimento mais cedo. O **WhatsApp do profissional
+passa a ser obrigatório** no cadastro. Na matriz, o item do resumo vira o do profissional e entra
+o da equipe (quem tinha fica com os dois). Migração `20261009120000` (opções novas em
+`clinic_settings`, as antigas do resumo saem; trava dos outros contatos pelo item da equipe).
+Corrigido junto: o alerta "o lembrete de hoje ainda não rodou" não aparece com o envio desligado.
 
 ## F8 — Conexão self-service na Meta
 

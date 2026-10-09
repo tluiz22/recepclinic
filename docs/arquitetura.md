@@ -143,7 +143,10 @@ padrão. **Só o Administrador da clínica altera as mensagens** (cliente, 05/ou
 o outro: **"Mensagens do bot"** (a conversa) e **"Mensagens da Meta (templates)"** (as propostas);
 quem já tinha o item ficou com os dois. Fora da matriz, as **orientações gerais da consulta** (um
 texto da clínica, sempre editável pelo Administrador, com o envio ligado em Configurações ›
-WhatsApp). O limite de templates é por conta de WhatsApp da
+WhatsApp).
+**Revisão (cliente, 09/out/2026), lembretes:** o item "Envio do resumo do dia" virou **"Lembrete ao
+profissional (resumo do dia)"** e entrou **"Lembrete à equipe (resumo do dia)"** (os outros
+contatos); quem tinha o item ficou com os dois. O limite de templates é por conta de WhatsApp da
 clínica (250 sem verificação da empresa, até 6.000 verificada), longe do uso previsto. Criar o
 template pela API depende da F8 (Tech Provider); antes disso, o Suporte envia à Meta à mão.
 **Revisão (cliente, 07/out/2026):** como o sistema já cria templates pela API na conta da clínica

@@ -167,7 +167,7 @@ describe("configuração da clínica", () => {
       name: "Informe o nome da clínica",
       timezone: "Fuso horário inválido",
       consultationAgeLimitYears: "Idade limite em anos inteiros, maior que 0",
-      reminderHour: "Hora do lembrete das 7h às 20h",
+      reminderHour: "Horário do lembrete das 6h às 20h",
       brandColor: "Cor no formato #RRGGBB",
     });
   });

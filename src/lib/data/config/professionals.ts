@@ -1,6 +1,6 @@
 import { normalizePhone } from "../../phone";
 import type { DbClient } from "../clients";
-import { cleanText, unwrap, unwrapOne, Validation } from "../errors";
+import { cleanText, DataError, unwrap, unwrapOne, Validation } from "../errors";
 
 // Profissionais (D4b: genérico — médico, dentista, psicólogo…). Saem por
 // desativação, nunca apagados: têm agenda e atendimentos ligados. Com
@@ -96,8 +96,10 @@ export function validateProfessional(input: ProfessionalInput) {
     v.check(raw === null || contact.rqe !== null, "rqe", "RQE: só números, separados por vírgula");
   }
   if (input.phone !== undefined) {
+    // Obrigatório no cadastro (cliente, 09/out/2026).
     const raw = cleanText(input.phone);
     contact.phone = raw === null ? null : normalizePhone(raw);
+    v.check(raw !== null, "phone", "Informe o WhatsApp");
     v.check(raw === null || contact.phone !== null, "phone", "Telefone inválido");
   }
   if (input.receivesDailySummary !== undefined) {
@@ -139,6 +141,29 @@ export async function updateProfessional(
       "Profissional",
     ),
   );
+}
+
+/**
+ * Quem recebe o resumo do dia (Configurações › Lembretes, cliente, 09/out/2026):
+ * os marcados passam a receber, os outros deixam. Só profissional com WhatsApp.
+ */
+export async function setSummaryProfessionals(db: DbClient, clinicId: string, ids: string[]): Promise<void> {
+  const professionals = await listProfessionals(db, clinicId, { includeInactive: true });
+  const chosen = new Set(ids);
+  const withoutPhone = professionals.filter((p) => chosen.has(p.id) && !p.phone);
+  if (withoutPhone.length) {
+    throw new DataError("invalid", "Profissional: informe o WhatsApp antes de marcar para receber o resumo", {
+      phone: `Sem WhatsApp no cadastro: ${withoutPhone.map((p) => p.displayName).join(", ")}.`,
+    });
+  }
+  for (const p of professionals) {
+    const receives = chosen.has(p.id);
+    if (p.receivesDailySummary === receives) continue;
+    unwrapOne(
+      await db.from("professionals").update({ receives_daily_summary: receives }).eq("clinic_id", clinicId).eq("id", p.id).select("id").maybeSingle(),
+      "Profissional",
+    );
+  }
 }
 
 export async function setProfessionalActive(db: DbClient, clinicId: string, id: string, isActive: boolean): Promise<void> {

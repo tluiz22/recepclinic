@@ -1,6 +1,6 @@
 ---
 // Configurações › Lembretes › contato do resumo do dia, novo ou editar
-// (F4.4b; só com o item "Envio do resumo do dia", D11). Exames só com o item.
+// (F4.4b; só com o item "Lembrete à equipe (resumo do dia)", D11). Exames só com o item.
 import AdminLayout from "../../../../layouts/AdminLayout.astro";
 import ActiveToggle from "../../../../components/admin/ActiveToggle.astro";
 import Card from "../../../../components/admin/Card.astro";
@@ -27,7 +27,7 @@ const action = `/api/admin/configuracoes/contatos/${id}`;
   <a href="/admin/configuracoes/lembretes" class="inline-flex items-center gap-1 text-sm text-sky-700 hover:underline">
     <Icon name="chevron-left" class="h-4 w-4" /> Lembretes
   </a>
-  <h1 class="mt-2 text-2xl font-bold text-slate-900">{isNew ? "Novo contato do resumo do dia" : "Editar contato"}</h1>
+  <h1 class="mt-2 text-2xl font-bold text-slate-900">{isNew ? "Novo contato da equipe" : "Editar contato"}</h1>
   <FlashMessage />
 
   <Card class="mt-4 max-w-2xl">

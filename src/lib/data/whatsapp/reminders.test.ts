@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { parsePreparationResendOutcome } from "./preparation";
 import {
-  isAutoResendDue,
   parseReminderTap,
   parseResendOutcome,
   reminderAction,
@@ -38,6 +37,16 @@ describe("hora e dia do lembrete, no calendário da clínica", () => {
     expect(reminderCutoff(new Date("2026-10-15T14:00:00Z"), 14, "America/Manaus")).toEqual(new Date("2026-10-14T18:00:00Z"));
   });
 
+  it("no dia (cliente, 09/out): a hora do próprio dia; antes dela, nenhum envio automático cobre", () => {
+    expect(reminderCutoff(at("2026-10-15T10:00:00"), 7, TZ, "same_day")).toEqual(at("2026-10-15T07:00:00"));
+    expect(reminderCutoff(at("2026-10-15T07:00:00"), 7, TZ, "same_day")).toEqual(new Date(0));
+    expect(reminderCutoff(at("2026-10-15T06:30:00"), 7, TZ, "same_day")).toEqual(new Date(0));
+  });
+
+  it("no dia, cobre o resto de hoje, mesmo o que começa logo depois do horário", () => {
+    expect(reminderWindow(at("2026-10-15T07:00:00"), TZ, "same_day")).toEqual({ start: at("2026-10-15T07:00:00"), end: at("2026-10-16T00:00:00") });
+  });
+
   it("cobre o dia seguinte inteiro", () => {
     expect(reminderWindow(at("2026-10-14T14:05:00"), TZ)).toEqual({ start: at("2026-10-15T00:00:00"), end: at("2026-10-16T00:00:00") });
     expect(reminderWindow(at("2026-10-14T23:30:00"), TZ)).toEqual({ start: at("2026-10-15T00:00:00"), end: at("2026-10-16T00:00:00") });
@@ -70,37 +79,16 @@ describe("botão do lembrete na tela", () => {
     expect(reminderAction({ ...sent, patientConfirmedAt: at("2026-10-14T15:00:00") }, attempts, hour, TZ, at("2026-10-14T16:00:00"))).toBeNull();
   });
 
+  it("Enviar no dia: antes do horário do envio, só para quem o envio não cobre", () => {
+    expect(reminderAction(appointment(), [], 7, TZ, at("2026-10-15T06:00:00"), "same_day")).toBeNull();
+    expect(reminderAction(appointment(), [], 7, TZ, at("2026-10-15T07:00:00"), "same_day")).toBe("send");
+    expect(reminderAction(appointment({ scheduledAt: at("2026-10-15T06:45:00") }), [], 7, TZ, at("2026-10-15T06:00:00"), "same_day")).toBe("send");
+  });
+
   it("tentativas da data antiga não contam depois da remarcação", () => {
     const rescheduled = appointment({ rescheduledAt: at("2026-10-14T15:00:00") });
     const old = [{ status: "failed", createdAt: at("2026-10-14T14:00:00") }];
     expect(reminderAction(rescheduled, old, hour, TZ, at("2026-10-14T16:00:00"))).toBe("send");
-  });
-});
-
-describe("reenvio automático", () => {
-  const sent = appointment({ scheduledAt: at("2026-10-15T16:00:00"), reminderSentAt: at("2026-10-14T14:00:00") });
-  const delivered = [{ status: "delivered", createdAt: at("2026-10-14T14:00:00") }];
-
-  it("4h depois do lembrete entregue, sem resposta", () => {
-    expect(isAutoResendDue(sent, delivered, 0, TZ, at("2026-10-14T17:59:00"))).toBe(false);
-    expect(isAutoResendDue(sent, delivered, 0, TZ, at("2026-10-14T18:00:00"))).toBe(true);
-  });
-
-  it("só entre 7h e 20h da clínica", () => {
-    expect(isAutoResendDue(sent, delivered, 0, TZ, at("2026-10-14T20:59:00"))).toBe(true);
-    expect(isAutoResendDue(sent, delivered, 0, TZ, at("2026-10-14T21:00:00"))).toBe(false);
-    expect(isAutoResendDue(sent, delivered, 0, TZ, at("2026-10-15T06:59:00"))).toBe(false);
-    expect(isAutoResendDue(sent, delivered, 0, TZ, at("2026-10-15T07:00:00"))).toBe(true);
-  });
-
-  it("não para atendimento a menos de 2h, nem com resposta, nem depois do botão ou de outro reenvio", () => {
-    expect(isAutoResendDue(sent, delivered, 0, TZ, at("2026-10-15T14:00:00"))).toBe(false);
-    expect(isAutoResendDue(sent, delivered, 0, TZ, at("2026-10-15T13:59:00"))).toBe(true);
-    expect(isAutoResendDue({ ...sent, reminderResponse: "confirmed" }, delivered, 0, TZ, at("2026-10-14T18:00:00"))).toBe(false);
-    expect(isAutoResendDue(sent, delivered, 1, TZ, at("2026-10-14T18:00:00"))).toBe(false);
-    const twice = [...delivered, { status: "delivered", createdAt: at("2026-10-14T15:00:00") }];
-    expect(isAutoResendDue(sent, twice, 0, TZ, at("2026-10-14T19:00:00"))).toBe(false);
-    expect(isAutoResendDue(sent, [{ status: "failed", createdAt: at("2026-10-14T14:00:00") }], 0, TZ, at("2026-10-14T18:00:00"))).toBe(false);
   });
 });
 

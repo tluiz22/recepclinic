@@ -1,15 +1,16 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { bookAppointment, setPresenceConfirmed } from "../../src/lib/data/agenda/appointments";
 import type { DbClient } from "../../src/lib/data/clients";
-import { listProfessionals, updateProfessional, type Professional } from "../../src/lib/data/config/professionals";
+import { listProfessionals, setSummaryProfessionals, updateProfessional, type Professional } from "../../src/lib/data/config/professionals";
 import { getSendsAlert, listAppointmentsWithFailedSends, listJobRuns } from "../../src/lib/data/sends";
-import { getSummarySchedule, runDailySummary, type DailySummarySender, type DailySummaryToSend } from "../../src/lib/data/whatsapp/dailySummary";
+import { runDailySummary, type DailySummarySender, type DailySummaryToSend } from "../../src/lib/data/whatsapp/dailySummary";
 import { recordOutboundMessage } from "../../src/lib/data/whatsapp/messages";
 import { adminClient, clinicServiceClient, createClinic, deleteClinics, type TestUser } from "./helpers";
 import { asDb, at, codeOf, MON1, NOW, setupAgendaClinic, type AgendaFixture, type AgendaIds } from "./agendaFixture";
 
-// F3.9c — resumo do dia (contatos do resumo e cada profissional, D2 revista
-// em 05/out/2026), execuções das rotinas e alerta de envios, na clínica de
+// F3.9c — resumo do dia, reestruturado em 09/out/2026 como lembrete ao
+// profissional e à equipe (um envio por público, na véspera ou no dia, no
+// horário escolhido), execuções das rotinas e alerta de envios, na clínica de
 // teste da agenda (atendimentos na segunda, 10/03/2031; "agora" é o domingo).
 
 let fixture: AgendaFixture;
@@ -72,19 +73,21 @@ afterAll(async () => {
   await fixture.cleanup();
 });
 
-describe("cadastro do profissional", () => {
-  it("recebe o resumo só com telefone", async () => {
+describe("cadastro do profissional e quem recebe", () => {
+  it("WhatsApp obrigatório no cadastro; quem recebe é marcado em Lembretes, só com WhatsApp", async () => {
     const base = { ...dra };
-    expect(await codeOf(() => updateProfessional(db(admin), clinicId, dra.id, { ...base, phone: null, receivesDailySummary: true }))).toBe("invalid");
+    expect(await codeOf(() => updateProfessional(db(admin), clinicId, dra.id, { ...base, phone: null }))).toBe("invalid");
     expect(await codeOf(() => updateProfessional(db(admin), clinicId, dra.id, { ...base, phone: "123" }))).toBe("invalid");
-    dra = await updateProfessional(db(admin), clinicId, dra.id, { ...base, phone: "(84) 97774-0002", receivesDailySummary: true });
-    expect(dra).toMatchObject({ phone: DRA_PHONE, receivesDailySummary: true });
-    // Sem os campos, ficam como estão.
-    const { phone: _phone, receivesDailySummary: _receives, ...withoutContact } = dra;
-    expect(await updateProfessional(db(admin), clinicId, dra.id, withoutContact)).toMatchObject({ phone: DRA_PHONE, receivesDailySummary: true });
+    dra = await updateProfessional(db(admin), clinicId, dra.id, { ...base, phone: "(84) 97774-0002" });
+    expect(dra.phone).toBe(DRA_PHONE);
+
+    const segundo = (await listProfessionals(db(admin), clinicId)).find((p) => p.displayName === "Dr. Segundo")!;
+    expect(await codeOf(() => setSummaryProfessionals(db(admin), clinicId, [dra.id, segundo.id]))).toBe("invalid");
+    await setSummaryProfessionals(db(admin), clinicId, [dra.id]);
+    expect((await listProfessionals(db(admin), clinicId)).filter((p) => p.receivesDailySummary).map((p) => p.id)).toEqual([dra.id]);
   });
 
-  it("sem o item do resumo liberado, ninguém marca a opção", async () => {
+  it("cada público com o próprio item: profissional (\"Lembrete ao profissional\") e contatos (\"Lembrete à equipe\")", async () => {
     const { data } = await adminClient()
       .from("professionals")
       .insert({ clinic_id: clinicNoSummary, display_name: "Dr. Sem", profession: "Médico", phone: DRA_PHONE })
@@ -92,21 +95,23 @@ describe("cadastro do profissional", () => {
       .single();
     const { error } = await adminClient().from("professionals").update({ receives_daily_summary: true }).eq("id", data!.id);
     expect(error?.hint).toBe("feature_disabled:daily_summary");
-  });
-
-  it("horário do resumo pela agenda de cada público", async () => {
-    expect(await getSummarySchedule(db(reception), clinicId)).toEqual({ consultas: "seg 7h", exames: "seg 7h" });
-    expect(await getSummarySchedule(db(reception), clinicId, dra.id)).toEqual({ consultas: "seg 7h", exames: "nenhuma janela cadastrada" });
+    const contact = await adminClient().from("notification_recipients").insert({ clinic_id: clinicNoSummary, label: "Recepção", phone: RECEPTION_PHONE });
+    expect(contact.error?.hint).toBe("feature_disabled:team_summary");
   });
 });
 
-describe("resumo da véspera (18h)", () => {
-  it("antes das 18h não sai; às 18h, a lista geral e a da Dra., cada uma uma vez", async () => {
-    expect(await runDailySummary(bot, clinicId, { variant: "preview", trigger: "scheduled", sender }, at(SUN, "17:59"))).toEqual({ skipped: "not_due" });
+describe("na véspera (padrão: 18h)", () => {
+  it("antes do horário não sai; no horário, uma vez para cada público", async () => {
+    expect(await runDailySummary(bot, clinicId, { audience: "professional", trigger: "scheduled", sender }, at(SUN, "17:59"))).toEqual({ skipped: "not_due" });
 
-    const from = summaries.length;
-    const result = await runDailySummary(bot, clinicId, { variant: "preview", trigger: "scheduled", sender }, at(SUN, "18:00"));
-    expect(result).toMatchObject({ date: MON1, totals: { lists: 3, professional_lists: 1, sent: 3, failed: 0, not_sent_no_template: 0, lists_without_recipient: 0 } });
+    let from = summaries.length;
+    const professional = await runDailySummary(bot, clinicId, { audience: "professional", trigger: "scheduled", sender }, at(SUN, "18:00"));
+    expect(professional).toMatchObject({ date: MON1, totals: { lists: 1, professional_lists: 1, sent: 1, failed: 0 } });
+    expect(sentSince(from)).toEqual([{ to: DRA_PHONE, kind: "consultas", variant: "preview", date: MON1, list: "▪️ 09h00 - Paciente Um (✅ confirmado)" }]);
+
+    from = summaries.length;
+    const team = await runDailySummary(bot, clinicId, { audience: "team", trigger: "scheduled", sender }, at(SUN, "18:00"));
+    expect(team).toMatchObject({ date: MON1, totals: { lists: 2, professional_lists: 0, sent: 2, not_sent_no_template: 0, lists_without_recipient: 0 } });
     expect(sentSince(from)).toEqual([
       {
         to: RECEPTION_PHONE,
@@ -116,11 +121,12 @@ describe("resumo da véspera (18h)", () => {
         list: "▪️ 08h00 - Paciente Dois (Dr. Segundo) (sem confirmação) ▪️ 09h00 - Paciente Um (Dra. Agenda) (✅ confirmado)",
       },
       { to: RECEPTION_PHONE, kind: "exames", variant: "preview", date: MON1, list: "▪️ 08h00 - Paciente Três (sem confirmação)" },
-      { to: DRA_PHONE, kind: "consultas", variant: "preview", date: MON1, list: "▪️ 09h00 - Paciente Um (✅ confirmado)" },
     ]);
-    expect(summaries.at(-1)!.template).toEqual({ name: "rc_daily_summary_consultations", language: "pt_BR", body: null });
+    expect(summaries.at(-1)!.template).toEqual({ name: "rc_daily_summary_exams", language: "pt_BR", body: null });
 
-    expect(await runDailySummary(bot, clinicId, { variant: "preview", trigger: "scheduled", sender }, at(SUN, "18:05"))).toEqual({ skipped: "not_due" });
+    for (const audience of ["professional", "team"] as const) {
+      expect(await runDailySummary(bot, clinicId, { audience, trigger: "scheduled", sender }, at(SUN, "18:05"))).toEqual({ skipped: "not_due" });
+    }
     const { data: messages } = await adminClient()
       .from("whatsapp_messages")
       .select("contact_phone, message_type, status, template_name")
@@ -129,36 +135,31 @@ describe("resumo da véspera (18h)", () => {
     expect(messages).toHaveLength(3);
     expect(messages).toContainEqual({ contact_phone: DRA_PHONE, message_type: "daily_summary_consultas", status: "sent", template_name: "rc_daily_summary_consultations" });
   });
+
+  it("desligado, não sai", async () => {
+    await adminClient().from("clinic_settings").update({ professional_summary_enabled: false }).eq("clinic_id", clinicId);
+    expect(await runDailySummary(bot, clinicId, { audience: "professional", trigger: "scheduled", sender }, at(SUN, "19:00"))).toEqual({ skipped: "disabled" });
+    await adminClient().from("clinic_settings").update({ professional_summary_enabled: true }).eq("clinic_id", clinicId);
+  });
 });
 
-describe("resumo do dia (1h antes do início)", () => {
-  it("sai às 7h (janelas às 8h); sem template aprovado fica como não enviado", async () => {
-    expect(await runDailySummary(bot, clinicId, { variant: "final", trigger: "scheduled", sender }, at(MON1, "06:59"))).toEqual({ skipped: "not_due" });
+describe("no dia (equipe às 7h)", () => {
+  it("sai às 7h, uma vez só (nem com atendimento novo); sem template aprovado fica como não enviado", async () => {
+    await adminClient().from("clinic_settings").update({ team_summary_timing: "same_day", team_summary_hour: 7 }).eq("clinic_id", clinicId);
+    expect(await runDailySummary(bot, clinicId, { audience: "team", trigger: "scheduled", sender }, at(MON1, "06:59"))).toEqual({ skipped: "not_due" });
     const from = summaries.length;
-    const result = await runDailySummary(bot, clinicId, { variant: "final", trigger: "scheduled", sender }, at(MON1, "07:00"));
+    const result = await runDailySummary(bot, clinicId, { audience: "team", trigger: "scheduled", sender }, at(MON1, "07:00"));
     // O template de exames de hoje não está aprovado.
-    expect(result).toMatchObject({ totals: { lists: 3, professional_lists: 1, sent: 2, not_sent_no_template: 1, resent_earlier_start: 0 } });
-    expect(sentSince(from).map((s) => [s.to, s.kind])).toEqual([
-      [RECEPTION_PHONE, "consultas"],
-      [DRA_PHONE, "consultas"],
-    ]);
-    expect(await runDailySummary(bot, clinicId, { variant: "final", trigger: "scheduled", sender }, at(MON1, "07:05"))).toEqual({ skipped: "not_due" });
-  });
+    expect(result).toMatchObject({ date: MON1, totals: { lists: 2, sent: 1, not_sent_no_template: 1 } });
+    expect(sentSince(from).map((s) => [s.to, s.kind, s.variant])).toEqual([[RECEPTION_PHONE, "consultas", "final"]]);
 
-  it("atendimento novo antes do horário já avisado: sai de novo só para quem foi afetado", async () => {
     appt.c3 = await book(ids.p3, ids.consulta, ids.agendaDra, at(MON1, "08:00"), at(MON1, "07:10"));
-    const from = summaries.length;
-    const result = await runDailySummary(bot, clinicId, { variant: "final", trigger: "scheduled", sender }, at(MON1, "07:15"));
-    // A lista geral já começava às 8h; a da Dra. começava às 9h.
-    expect(result).toMatchObject({ totals: { lists: 1, professional_lists: 1, resent_earlier_start: 1, sent: 1 } });
-    expect(sentSince(from)).toEqual([
-      { to: DRA_PHONE, kind: "consultas", variant: "final", date: MON1, list: "▪️ 08h00 - Paciente Três (sem confirmação) ▪️ 09h00 - Paciente Um (✅ confirmado)" },
-    ]);
+    expect(await runDailySummary(bot, clinicId, { audience: "team", trigger: "scheduled", sender }, at(MON1, "07:15"))).toEqual({ skipped: "not_due" });
   });
 
   it("manual envia na hora, tudo", async () => {
-    const result = await runDailySummary(bot, clinicId, { variant: "final", trigger: "manual", sender }, at(MON1, "05:00"));
-    expect(result).toMatchObject({ totals: { lists: 3 } });
+    const result = await runDailySummary(bot, clinicId, { audience: "team", trigger: "manual", sender }, at(MON1, "05:00"));
+    expect(result).toMatchObject({ totals: { lists: 2 } });
   });
 });
 
@@ -168,11 +169,11 @@ describe("execuções e alerta de envios", () => {
     expect(runs.map((r) => [r.variant, r.trigger, r.status])).toEqual([
       // Mais novas primeiro (a manual foi às 5h de segunda).
       ["final", "scheduled", "ok"],
-      ["final", "scheduled", "ok"],
       ["final", "manual", "ok"],
       ["preview", "scheduled", "ok"],
+      ["preview", "scheduled", "ok"],
     ]);
-    expect(runs[3].totals).toMatchObject({ sent: 3 });
+    expect(runs[0].totals).toMatchObject({ sent: 1, not_sent_no_template: 1 });
     expect(await listJobRuns(clinicServiceClient(clinicNoSummary) as unknown as DbClient, clinicId)).toEqual([]);
   });
 
@@ -190,9 +191,11 @@ describe("execuções e alerta de envios", () => {
 describe("sem o item ou sem conexão", () => {
   it("não roda", async () => {
     const off = clinicServiceClient(clinicNoSummary) as unknown as DbClient;
-    expect(await runDailySummary(off, clinicNoSummary, { variant: "final", trigger: "manual", sender })).toEqual({ skipped: "not_enabled" });
+    for (const audience of ["professional", "team"] as const) {
+      expect(await runDailySummary(off, clinicNoSummary, { audience, trigger: "manual", sender })).toEqual({ skipped: "not_enabled" });
+    }
     await adminClient().from("whatsapp_connections").update({ status: "disconnected" }).eq("clinic_id", clinicId);
-    expect(await runDailySummary(bot, clinicId, { variant: "final", trigger: "manual", sender })).toEqual({ skipped: "not_connected" });
+    expect(await runDailySummary(bot, clinicId, { audience: "team", trigger: "manual", sender })).toEqual({ skipped: "not_connected" });
     await adminClient().from("whatsapp_connections").update({ status: "connected" }).eq("clinic_id", clinicId);
   });
 });

@@ -225,7 +225,9 @@ do celular; cliente, 06/out/2026). Nada do app ou do número do piloto.
    agendador). O endereço e o CRON_SECRET já estão no cofre (parte G).
 2. **Templates**: Configurações › WhatsApp › *Templates* › **Criar na Meta** cria os 5 novos
    (resumo do dia e oferta de vaga).
-3. **Opções** (Configurações › **Lembretes**, desde 08/out): *Lembrete ao paciente* (enviar ou não e o horário da
+3. **Opções** (Configurações › **Lembretes**; reestruturadas em 09/out, migração
+   `20261009120000_lembretes`: cada lembrete com enviar, véspera ou no dia e o horário das 6h às
+   20h; ao paciente, ao profissional com quem recebe e à equipe com os contatos): *Lembrete ao paciente* (enviar ou não e o horário da
    véspera) e *Resumo do dia* (véspera e no dia). Para testar o lembrete, ponha um horário logo à
    frente e tenha um atendimento amanhã para o seu número; para o resumo, cadastre o seu número em
    "Outros contatos" (item "Envio do resumo do dia").

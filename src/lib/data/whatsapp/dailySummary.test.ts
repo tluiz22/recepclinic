@@ -1,51 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { countFailedSends, describeSendsAlert, isRunProblem, jobRunState } from "../sends";
-import { buildSummaryList, computeSummarySendAt, describeSummarySchedule, earliestByWeekday, kindOf } from "./dailySummary";
+import { buildSummaryList, kindOf } from "./dailySummary";
 
 const TZ = "America/Fortaleza";
 const at = (iso: string) => new Date(`${iso}-03:00`);
 const DAY = "2026-10-14"; // quarta
 
-describe("horário do resumo do dia", () => {
-  it("1h antes da primeira janela, ou do primeiro atendimento se for antes", () => {
-    expect(computeSummarySendAt(DAY, "07:00", at(`${DAY}T10:00:00`), TZ, false)).toEqual(at(`${DAY}T06:00:00`));
-    expect(computeSummarySendAt(DAY, "07:00", at(`${DAY}T06:30:00`), TZ, false)).toEqual(at(`${DAY}T05:30:00`));
-  });
-
-  it("sem janela ou em dia de folga: 6h30 (ou antes, pelo primeiro atendimento)", () => {
-    expect(computeSummarySendAt(DAY, null, at(`${DAY}T10:00:00`), TZ, false)).toEqual(at(`${DAY}T06:30:00`));
-    expect(computeSummarySendAt(DAY, "08:00", at(`${DAY}T14:00:00`), TZ, true)).toEqual(at(`${DAY}T06:30:00`));
-    expect(computeSummarySendAt(DAY, null, at(`${DAY}T07:00:00`), TZ, false)).toEqual(at(`${DAY}T06:00:00`));
-  });
-
-  it("achado 5: nunca antes da 0h do próprio dia", () => {
-    expect(computeSummarySendAt(DAY, "00:30", at(`${DAY}T00:30:00`), TZ, false)).toEqual(at(`${DAY}T00:00:00`));
-    expect(describeSummarySchedule([null, "00:30", "01:15", null, null, null, null])).toBe("seg 0h · ter 0h15");
-  });
-
-  it("horas antes escolhidas pela clínica (F7): 3 h antes da primeira agenda; nunca antes da 0h", () => {
-    const threeHours = 3 * 60;
-    expect(computeSummarySendAt(DAY, "07:00", at(`${DAY}T10:00:00`), TZ, false, threeHours)).toEqual(at(`${DAY}T04:00:00`));
-    expect(computeSummarySendAt(DAY, "02:00", at(`${DAY}T10:00:00`), TZ, false, threeHours)).toEqual(at(`${DAY}T00:00:00`));
-    expect(describeSummarySchedule([null, "08:00", "13:30", null, null, null, null], 2 * 60)).toBe("seg 6h · ter 11h30");
-  });
-
-  it("no fuso da clínica", () => {
-    // 8h em Manaus (UTC-4) = 12h UTC; o resumo sai às 7h de Manaus.
-    expect(computeSummarySendAt(DAY, "08:00", new Date(`${DAY}T13:00:00Z`), "America/Manaus", false)).toEqual(new Date(`${DAY}T11:00:00Z`));
-  });
-
-  it("primeira janela de cada dia e rótulos", () => {
-    const starts = earliestByWeekday([
-      { weekday: 1, startTime: "13:00:00" },
-      { weekday: 1, startTime: "07:30:00" },
-      { weekday: 6, startTime: "10:15:00" },
-    ]);
-    expect(starts).toEqual([null, "07:30", null, null, null, null, "10:15"]);
-    expect(describeSummarySchedule(starts)).toBe("seg 6h30 · sáb 9h15");
-    expect(describeSummarySchedule(Array(7).fill(null))).toBe("nenhuma janela cadastrada");
-  });
-
+describe("resumo do dia", () => {
   it("consulta e retorno são consultas; exame é exames", () => {
     expect([kindOf("consultation"), kindOf("return_visit"), kindOf("exam")]).toEqual(["consultas", "consultas", "exames"]);
   });

@@ -222,7 +222,7 @@ export type SendsAlert = {
 
 export async function getSendsAlert(db: DbClient, clinicId: string, now: Date = new Date()): Promise<SendsAlert> {
   const settings = unwrapOne(
-    await db.from("clinic_settings").select("timezone, reminder_hour").eq("clinic_id", clinicId).maybeSingle(),
+    await db.from("clinic_settings").select("timezone, reminder_hour, reminder_enabled").eq("clinic_id", clinicId).maybeSingle(),
     "Configuração da clínica",
   );
   const today = todayIn(settings.timezone, now);
@@ -245,7 +245,8 @@ export async function getSendsAlert(db: DbClient, clinicId: string, now: Date = 
   // Só o agendador conta: um teste manual não esconde que o automático não rodou ou falhou.
   const latest = runs.map(toRun).find((run) => run.trigger !== "manual");
   return {
-    reminderNotRun: remindersOn && !latest && localHourOf(now, settings.timezone) >= settings.reminder_hour + REMINDER_ALERT_GRACE_HOURS,
+    // Com o envio desligado pela clínica, não há rodada para cobrar.
+    reminderNotRun: remindersOn && settings.reminder_enabled && !latest && localHourOf(now, settings.timezone) >= settings.reminder_hour + REMINDER_ALERT_GRACE_HOURS,
     reminderRunFailed: latest ? isRunProblem(latest, now) : false,
     failedAppointments: failed.length,
   };

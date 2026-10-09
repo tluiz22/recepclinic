@@ -18,16 +18,22 @@ export type ClinicSettings = {
   timezone: string;
   /** Idade a partir da qual não marca Consulta (só Retorno/Exame); null = desligada. */
   consultationAgeLimitYears: number | null;
-  /** Hora do lembrete da véspera (7–20, no fuso da clínica). */
-  reminderHour: number;
-  /** Lembrete automático da véspera ligado (F7; cliente, 07/out/2026). */
+  /**
+   * Lembretes (cliente, 09/out/2026): um envio só por público, na véspera
+   * ("eve") ou no dia ("same_day"), em hora cheia das 6h às 20h, no fuso da
+   * clínica. Ao paciente (item "Lembrete automático").
+   */
   reminderEnabled: boolean;
-  /** Resumo da equipe na véspera: ligado e a hora (7–20). */
-  summaryPreviewEnabled: boolean;
-  summaryPreviewHour: number;
-  /** Resumo da equipe no dia: ligado e quantas horas antes da primeira agenda (1–4). */
-  summaryTodayEnabled: boolean;
-  summaryTodayLeadHours: number;
+  reminderTiming: ReminderTiming;
+  reminderHour: number;
+  /** Resumo do dia de cada profissional (item "Lembrete ao profissional"). */
+  professionalSummaryEnabled: boolean;
+  professionalSummaryTiming: ReminderTiming;
+  professionalSummaryHour: number;
+  /** Resumo do dia dos outros contatos (item "Lembrete à equipe"). */
+  teamSummaryEnabled: boolean;
+  teamSummaryTiming: ReminderTiming;
+  teamSummaryHour: number;
   /** Orientações gerais depois da marcação de uma consulta (cliente, 08/out/2026). */
   guidanceEnabled: boolean;
   botPaymentInfo: string | null;
@@ -41,16 +47,16 @@ export type ClinicSettings = {
   requireInsuranceDetails: boolean;
 };
 
+export type ReminderTiming = "eve" | "same_day";
+export const REMINDER_TIMINGS: ReminderTiming[] = ["eve", "same_day"];
+
 export type ClinicSettingsPatch = Partial<Omit<ClinicSettings, "clinicId">>;
 
 export const CLINIC_PROFILES: ClinicProfile[] = ["pediatric", "adult", "mixed"];
 
-/** Hora do lembrete: horas cheias das 7h às 20h, como no piloto (cliente, 05/out/2026). */
-export const REMINDER_HOUR_MIN = 7;
+/** Hora dos lembretes: horas cheias das 6h às 20h (cliente, 09/out/2026; antes, 7h). */
+export const REMINDER_HOUR_MIN = 6;
 export const REMINDER_HOUR_MAX = 20;
-/** Resumo da equipe no dia: de 1 a 4 horas antes da primeira agenda (cliente, 07/out/2026). */
-export const SUMMARY_LEAD_MIN = 1;
-export const SUMMARY_LEAD_MAX = 4;
 
 const WEBSITE_URL_PATTERN = /^https?:\/\/[^\s/]+\.[^\s]+$/i;
 
@@ -62,7 +68,7 @@ export function normalizeWebsiteUrl(value: string | null | undefined): string | 
 }
 
 const SETTINGS_COLUMNS =
-  "clinic_id, profile, timezone, consultation_age_limit_years, reminder_hour, bot_payment_info, bot_insurance_info, bot_notes, logo_url, brand_color, website_url, require_insurance_details, message_article, reminder_enabled, summary_preview_enabled, summary_preview_hour, summary_today_enabled, summary_today_lead_hours, guidance_enabled";
+  "clinic_id, profile, timezone, consultation_age_limit_years, reminder_hour, bot_payment_info, bot_insurance_info, bot_notes, logo_url, brand_color, website_url, require_insurance_details, message_article, reminder_enabled, reminder_timing, professional_summary_enabled, professional_summary_timing, professional_summary_hour, team_summary_enabled, team_summary_timing, team_summary_hour, guidance_enabled";
 
 export async function getClinicSettings(db: DbClient, clinicId: string): Promise<ClinicSettings> {
   const [clinic, settings] = await Promise.all([
@@ -81,12 +87,15 @@ export async function getClinicSettings(db: DbClient, clinicId: string): Promise
     profile: settings.profile,
     timezone: settings.timezone,
     consultationAgeLimitYears: settings.consultation_age_limit_years,
-    reminderHour: settings.reminder_hour,
     reminderEnabled: settings.reminder_enabled,
-    summaryPreviewEnabled: settings.summary_preview_enabled,
-    summaryPreviewHour: settings.summary_preview_hour,
-    summaryTodayEnabled: settings.summary_today_enabled,
-    summaryTodayLeadHours: settings.summary_today_lead_hours,
+    reminderTiming: settings.reminder_timing as ReminderTiming,
+    reminderHour: settings.reminder_hour,
+    professionalSummaryEnabled: settings.professional_summary_enabled,
+    professionalSummaryTiming: settings.professional_summary_timing as ReminderTiming,
+    professionalSummaryHour: settings.professional_summary_hour,
+    teamSummaryEnabled: settings.team_summary_enabled,
+    teamSummaryTiming: settings.team_summary_timing as ReminderTiming,
+    teamSummaryHour: settings.team_summary_hour,
     guidanceEnabled: settings.guidance_enabled,
     botPaymentInfo: settings.bot_payment_info,
     botInsuranceInfo: settings.bot_insurance_info,
@@ -114,25 +123,17 @@ export function validateClinicSettingsPatch(patch: ClinicSettingsPatch): ClinicS
     const age = patch.consultationAgeLimitYears!;
     v.check(Number.isInteger(age) && age > 0, "consultationAgeLimitYears", "Idade limite em anos inteiros, maior que 0");
   }
-  if ("reminderHour" in patch) {
-    const hour = patch.reminderHour!;
+  for (const field of ["reminderHour", "professionalSummaryHour", "teamSummaryHour"] as const) {
+    if (!(field in patch)) continue;
+    const hour = patch[field]!;
     v.check(
       Number.isInteger(hour) && hour >= REMINDER_HOUR_MIN && hour <= REMINDER_HOUR_MAX,
-      "reminderHour",
-      `Hora do lembrete das ${REMINDER_HOUR_MIN}h às ${REMINDER_HOUR_MAX}h`,
+      field,
+      `Horário do lembrete das ${REMINDER_HOUR_MIN}h às ${REMINDER_HOUR_MAX}h`,
     );
   }
-  if ("summaryPreviewHour" in patch) {
-    const hour = patch.summaryPreviewHour!;
-    v.check(
-      Number.isInteger(hour) && hour >= REMINDER_HOUR_MIN && hour <= REMINDER_HOUR_MAX,
-      "summaryPreviewHour",
-      `Hora do resumo da véspera das ${REMINDER_HOUR_MIN}h às ${REMINDER_HOUR_MAX}h`,
-    );
-  }
-  if ("summaryTodayLeadHours" in patch) {
-    const lead = patch.summaryTodayLeadHours!;
-    v.check(Number.isInteger(lead) && lead >= SUMMARY_LEAD_MIN && lead <= SUMMARY_LEAD_MAX, "summaryTodayLeadHours", `De ${SUMMARY_LEAD_MIN} a ${SUMMARY_LEAD_MAX} horas antes`);
+  for (const field of ["reminderTiming", "professionalSummaryTiming", "teamSummaryTiming"] as const) {
+    if (field in patch) v.check(REMINDER_TIMINGS.includes(patch[field]!), field, "Escolha véspera ou no dia");
   }
   for (const field of ["botPaymentInfo", "botInsuranceInfo", "botNotes"] as const) {
     if (field in patch) out[field] = cleanText(patch[field]);
@@ -177,10 +178,13 @@ export async function updateClinicSettings(
     ["consultationAgeLimitYears", "consultation_age_limit_years"],
     ["reminderHour", "reminder_hour"],
     ["reminderEnabled", "reminder_enabled"],
-    ["summaryPreviewEnabled", "summary_preview_enabled"],
-    ["summaryPreviewHour", "summary_preview_hour"],
-    ["summaryTodayEnabled", "summary_today_enabled"],
-    ["summaryTodayLeadHours", "summary_today_lead_hours"],
+    ["reminderTiming", "reminder_timing"],
+    ["professionalSummaryEnabled", "professional_summary_enabled"],
+    ["professionalSummaryTiming", "professional_summary_timing"],
+    ["professionalSummaryHour", "professional_summary_hour"],
+    ["teamSummaryEnabled", "team_summary_enabled"],
+    ["teamSummaryTiming", "team_summary_timing"],
+    ["teamSummaryHour", "team_summary_hour"],
     ["guidanceEnabled", "guidance_enabled"],
     ["botPaymentInfo", "bot_payment_info"],
     ["botInsuranceInfo", "bot_insurance_info"],

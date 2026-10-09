@@ -60,9 +60,9 @@ describe("item que cada rota exige", () => {
   it("abas do Resumo do Dia e Configurações pelos itens", () => {
     expect(route("/admin/consultas?tab=lembretes")).toBe("reminders");
     expect(route("/admin/consultas?tab=lista_espera")).toBe("waitlist");
-    expect(route("/admin/configuracoes/contatos")).toBe("daily_summary");
+    expect(route("/admin/configuracoes/contatos")).toBe("team_summary");
     expect(route("/api/admin/configuracoes/lembrete")).toBe("reminders");
-    expect(route("/api/admin/configuracoes/contatos/novo")).toBe("daily_summary");
+    expect(route("/api/admin/configuracoes/contatos/novo")).toBe("team_summary");
     expect(route("/admin/configuracoes/convenios/novo")).toBe("insurance");
     expect(route("/api/admin/configuracoes/convenios/opcoes")).toBe("insurance");
     expect(route("/admin/configuracoes/equipe")).toBe(null);
