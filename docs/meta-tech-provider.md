@@ -114,8 +114,42 @@ We use public_profile only within Embedded Signup (Facebook Login for Business),
 ### Instruções da análise (pendente)
 
 Antes, adicionar uma plataforma ao app: Configurações do app › Básico › **Adicionar plataforma** ›
-Site, com `https://app.recepclinic.com.br`. Decidir com o cliente se o analista recebe um login de
-teste no staging.
+Site, com `https://app.recepclinic.com.br`.
+
+Login do analista (decidido com o cliente em 09/out): clínica de demonstração no staging,
+**"Clínica Demonstração RecepClinic"**, administrador `analista.meta@recepclinic.com.br`. Não tem
+dados reais e não fica ligada ao número de testes. A senha é criada pelo link de
+`scripts/link-de-senha.mjs`, e o login é desativado quando a análise terminar.
+Clínica e login criados e conferidos em 09/out. Itens liberados na matriz: Bot de WhatsApp,
+Lembrete automático, Lista de espera, os 2 resumos do dia, Mensagens do bot, Mensagens da Meta
+(templates), Exames e procedimentos e Métricas: Funil do bot. Dados fictícios conferidos: Dra.
+Exemplo, Exame Exemplo (com preparo) e 4 exames marcados de Paciente Exemplo 1 a 4.
+
+Texto (trocar `<SENHA>` pela senha criada pelo cliente):
+
+```
+RecepClinic is a web dashboard for healthcare clinics in Brazil. The interface is in Portuguese (Brazil).
+
+TEST LOGIN
+- URL: https://app.recepclinic.com.br/admin/login
+- Email: analista.meta@recepclinic.com.br
+- Password: <SENHA>
+This user is the administrator of a demo clinic ("Clínica Demonstração RecepClinic") with fictitious data only (one professional, one exam and a few appointments with fictitious patients).
+
+The demo clinic has no WhatsApp number connected, so nothing you do there sends a WhatsApp message. Each clinic's own WhatsApp Business Account is connected by our support team; the attached screencasts show the full messaging flow with our own test number.
+
+WHAT TO SEE IN THE DASHBOARD
+1. Agenda (menu "Agenda"): the clinic's appointments. These appointments trigger the WhatsApp utility templates (confirmation, rescheduling, cancellation and reminder with the buttons Confirm / Reschedule / Cancel).
+2. Configurações > Lembretes: the clinic chooses which automatic reminders are sent and when (to the patient, to the professional and to the staff).
+3. Configurações > Mensagens: the messages and templates the clinic sends on WhatsApp, including the exam preparation instructions.
+4. Exam preparation page sent to patients: https://app.recepclinic.com.br/preparo/08902715-5eb2-4e0c-9357-9809df787bb8
+
+SCREENCASTS
+- whatsapp_business_messaging: a reminder template is sent to the patient, the patient taps "Confirm", RecepClinic replies automatically and records the confirmation in the dashboard.
+- whatsapp_business_management (also business_management and public_profile): a clinic's own message template is created in the clinic's WhatsApp Business Account through the API and its approval status is updated in the dashboard.
+
+We send only utility messages related to the patient's own appointments. No marketing messages.
+```
 
 ## Verificação do acesso (pendente)
 
