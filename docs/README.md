@@ -1,6 +1,6 @@
 # RecepClinic
 
-> **Estado atual (retomar daqui), 07/out/2026, fim da sessão (noite)**
+> **Estado atual (retomar daqui), 09/out/2026, fim da sessão**
 >
 > - **Etapas 0 a 4 concluídas**: cópia isolada, [diagnóstico](diagnostico.md), [limites](limites.md),
 >   [arquitetura](arquitetura.md) (decisões D1–D11) e [plano](plano.md) (fases F0–F10).
@@ -25,14 +25,21 @@
 >     no dia, no horário escolhido (6h às 20h); quem recebe o resumo do profissional é marcado ali;
 >     WhatsApp do profissional obrigatório; item novo da matriz "Lembrete à equipe".
 >     Saiu o código antigo do piloto; a service role só fica na plataforma (D1).
->   - **Templates na Meta (07/out):** os 11 do RecepClinic criados na conta do RecepClinic e **em
->     análise** (incluindo as versões 2 do resumo de hoje, recusado como formato inválido, e do
->     preparo, classificado como marketing). O cliente exclui na Meta os 3 antigos sem uso
->     (`rc_resumo_consultas_hoje_v1`, `rc_resumo_exames_hoje_v1`, `rc_preparo_exame_v1`). Quando
->     forem aprovados: conferir se o `rc_preparo_exame_v2` ficou como Utilidade e validar os envios
->     (partes F a K do [`staging.md`](staging.md)).
->   - **Próximo passo:** validação do cliente (F6.2 a F7). Depois, **F8** (Embedded Signup com
->     coexistência), que depende da aprovação do RecepClinic como Tech Provider na Meta.
+>   - **Templates na Meta (09/out):** aprovados confirmação, remarcação, cancelamento, lembrete e
+>     cancelamento pela clínica. **Em análise:** preparo do exame (`rc_preparo_exame_v2`; conferir
+>     se ficou como Utilidade), orientações gerais (`rc_orientacoes_consulta_v1`), os 4 do resumo do
+>     dia, a oferta de vaga e as versões próprias da Confirmação/Remarcação da clínica de teste. O
+>     cliente exclui na Meta os 3 antigos sem uso (`rc_resumo_consultas_hoje_v1`,
+>     `rc_resumo_exames_hoje_v1`, `rc_preparo_exame_v1`).
+>   - **Próximo passo (retomar daqui):** validar a **parte K** do [`staging.md`](staging.md) (F7,
+>     envios automáticos, com os lembretes reestruturados em 09/out): lembrete ao paciente "no dia"
+>     num horário logo à frente; resumo ao profissional e à equipe (chegam quando a Meta aprovar os
+>     templates; a execução aparece em Resumo do Dia › Envios). Quando os templates em análise
+>     forem aprovados: conferir o preparo do exame, as orientações fora das 24h, o resumo e a oferta
+>     de vaga. Depois, **F8** (Embedded Signup com coexistência), que depende da aprovação do
+>     RecepClinic como Tech Provider na Meta.
+>   - **Migrações no staging:** o Claude aplica com `supabase db push` (permissão liberada em
+>     09/out), sempre na ordem simulação → aplicar → conferir no banco → só então o push do código.
 >   - **WhatsApp de testes:** `+55 61 9903-3143`, na Cloud API do app RecepClinic, ligado à
 >     clínica de teste "Consultorio Tluiz22" no staging. **Nunca verificar esse número em app
 >     nenhum** (sairia da API). Roteiro na parte E do [`staging.md`](staging.md).
