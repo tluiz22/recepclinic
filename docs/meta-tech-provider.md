@@ -125,7 +125,18 @@ Lembrete automático, Lista de espera, os 2 resumos do dia, Mensagens do bot, Me
 (templates), Exames e procedimentos e Métricas: Funil do bot. Dados fictícios conferidos: Dra.
 Exemplo, Exame Exemplo (com preparo) e 4 exames marcados de Paciente Exemplo 1 a 4.
 
-Texto (trocar `<SENHA>` pela senha criada pelo cliente):
+Campos da tela *Instruções para o analista*:
+
+- **URL do site** (Edite o URL de login): `https://app.recepclinic.com.br/admin/login`
+- **instructions-web-2**: o texto abaixo, trocando `<SENHA>` pela senha criada pelo cliente.
+- **fblogin-web-1** (Facebook Login integrado?): **Não**. O Embedded Signup só chega na F8, e o
+  texto avisa que ele está em construção.
+- **accesscode-web-1**: `No payment or subscription is required to review the app. The test login is in the instructions above.`
+- **accesscode-web-2**: em branco (não há app em loja).
+- **geo-web-5**: `There is no geographic restriction or geo-blocking. The app is offered to clinics in Brazil and its interface is in Portuguese (Brazil), but it can be accessed from any country.`
+- **documents-web-1**: os 2 vídeos legendados (opcional; os mesmos do Uso permitido).
+
+Texto:
 
 ```
 RecepClinic is a web dashboard for healthcare clinics in Brazil. The interface is in Portuguese (Brazil).
@@ -136,7 +147,7 @@ TEST LOGIN
 - Password: <SENHA>
 This user is the administrator of a demo clinic ("Clínica Demonstração RecepClinic") with fictitious data only (one professional, one exam and a few appointments with fictitious patients).
 
-The demo clinic has no WhatsApp number connected, so nothing you do there sends a WhatsApp message. Each clinic's own WhatsApp Business Account is connected by our support team; the attached screencasts show the full messaging flow with our own test number.
+The demo clinic has no WhatsApp number connected, so nothing you do there sends a WhatsApp message. Today each clinic's own WhatsApp Business Account is connected by our support team; the self-service connection through Embedded Signup (Facebook Login for Business) is being built and depends on this review. The attached screencasts show the full messaging flow with our own test number.
 
 WHAT TO SEE IN THE DASHBOARD
 1. Agenda (menu "Agenda"): the clinic's appointments. These appointments trigger the WhatsApp utility templates (confirmation, rescheduling, cancellation and reminder with the buttons Confirm / Reschedule / Cancel).
