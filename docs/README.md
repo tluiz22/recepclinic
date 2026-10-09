@@ -11,12 +11,12 @@
 >     marcar) e F6.3b (jornada de configuração) validadas em 08/out; F6.4 (bot II: cancelar,
 >     remarcar, encaixe) validada em 08/out, com o ajuste do encaixe (até 3 horários livres antes
 >     da lista, também para quem já está nela), com os botões do lembrete; F6.2 (envio e templates
->     padrão) validada em 08/out, menos o preparo do exame (template em análise).
->     **Aguardam a validação do cliente no staging:**
->     F6.5 (cancelamento pela clínica com aviso e link; "Avisar" só para quem não recebeu), F6.6
->     (aba Mensagens e mensagens personalizadas com revisão do Suporte; em 08/out: combo bot/Meta,
->     item da matriz dividido em dois e as orientações gerais da consulta) e F6.7 (Funil do bot e
->     Retomar contato; corrigido o acesso a Métricas sem a Visão geral).
+>     padrão) validada em 08/out, menos o preparo do exame (template em análise); F6.6 (aba
+>     Mensagens) validada em 08/out, com os ajustes do dia (combo bot/Meta, item da matriz dividido
+>     em dois e as orientações gerais da consulta, template `rc_orientacoes_consulta_v1`).
+>     **Aguardam a validação do cliente no staging:** F6.5 (cancelamento pela clínica; o cliente
+>     prefere testar com o `rc_cancelamento_clinica_v1` aprovado) e F6.7 (Funil do bot e Retomar
+>     contato; corrigido o acesso a Métricas sem a Visão geral).
 >   - **F7 (envios automáticos) implementada, aguardando a validação:** rotinas no `pg_cron`
 >     (lembrete, resumo do dia, lista de espera, séries sem fim) e as opções em Configurações ›
 >     WhatsApp (lembrete da véspera com enviar/horário, padrão 18h; resumo na véspera e no dia).
