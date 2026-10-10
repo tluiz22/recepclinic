@@ -5,9 +5,9 @@ import { updateClinicSettings, type ClinicProfile, type ClinicSettingsPatch } fr
 import { runFormAction } from "../../../../lib/data/formAction";
 import { formChecked, formOptionalInt, formOptionalText, formText } from "../../../../lib/forms";
 
-// Perfil e identidade da clínica (F4.3). As informações do bot só vêm no
-// formulário com o bot liberado. Marca das páginas públicas (F5.1): site,
-// logo novo (arquivo) ou "remover o logo".
+// Perfil e identidade da clínica (F4.3). As informações e os limites do bot
+// (F9.6a) só vêm no formulário com o bot liberado. Marca das páginas públicas
+// (F5.1): site, logo novo (arquivo) ou "remover o logo".
 export const POST: APIRoute = async (context) => {
   const { request, cookies, locals } = context;
   const form = await request.formData().catch(() => null);
@@ -28,6 +28,10 @@ export const POST: APIRoute = async (context) => {
         patch.botPaymentInfo = formOptionalText(form, "bot_payment_info");
         patch.botInsuranceInfo = formOptionalText(form, "bot_insurance_info");
         patch.botNotes = formOptionalText(form, "bot_notes");
+        // Campo vazio vira NaN e cai na validação.
+        patch.botMaxFutureAppointments = formOptionalInt(form, "bot_max_future_appointments") ?? Number.NaN;
+        patch.botMaxNewPatients = formOptionalInt(form, "bot_max_new_patients") ?? Number.NaN;
+        patch.botMaxNoShows = formOptionalInt(form, "bot_max_no_shows") ?? Number.NaN;
       }
       if (patch.consultationAgeLimitYears === null && formChecked(form, "age_limit_on")) patch.consultationAgeLimitYears = Number.NaN;
       const db = createUserClient(request, cookies);

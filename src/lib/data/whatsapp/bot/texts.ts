@@ -306,3 +306,8 @@ export const OFFER_NOT_FOUND = "Essa oferta não está mais ativa.";
 
 export const HANDOFF =
   "Combinado! Vou te transferir para a recepção, que responde por aqui assim que possível. O atendimento automático fica pausado até lá.";
+
+// Limite do contato atingido (F9.6a): neutro, sem revelar a regra (cliente, 10/out).
+export const LIMIT_HANDOFF = "Para esse agendamento, vou passar sua conversa para a recepção, que responde por aqui assim que possível.";
+/** Número sem coexistência: ninguém responderia por aqui. */
+export const LIMIT_RECEPTION_WILL_CONTACT = "Para esse agendamento, a recepção vai entrar em contato com você.";

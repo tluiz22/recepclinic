@@ -4,7 +4,8 @@ import { BOT_LINK_TTL_MS, createBookingLink } from "../../agenda/links";
 import type { LocationType } from "../../config/locations";
 import { DataError, unwrap } from "../../errors";
 import { getContact, listContactPatients, registerPatient, type ContactChoice, type Patient } from "../../patients";
-import { startFunnel } from "../conversations";
+import { pauseForHuman, startFunnel } from "../conversations";
+import { checkBookingLimits, checkNewPatientLimit, recordBotLimitEvent } from "../botLimits";
 import { formatAppointmentWhen } from "../templates";
 import { servicesOf, type BotService } from "./catalog";
 import { attachContact, end, go, say, sendButtons, sendList, step, textFor, type Bot } from "./engine";
@@ -18,7 +19,9 @@ import { logError } from "../../../log";
 // domiciliar → para quem → identificação do paciente → link de /agendar.
 // A data e o horário são escolhidos na página (F5.2). Retorno: só quem tem
 // direito, com o profissional da consulta de origem; sem trava de idade
-// (cliente, 07/out).
+// (cliente, 07/out). Limites do contato (F9.6a): atendimentos futuros e
+// faltas logo ao escolher marcar; cadastros ao pedir para cadastrar outra
+// pessoa.
 
 type Category = "consultation" | "exam" | "return_visit";
 
@@ -114,6 +117,7 @@ const keepPath = (ctx: BookingContext): BookingContext => ({
 
 export async function startBooking(b: Bot, category: "consultation" | "exam", { joinWaitlist = false } = {}): Promise<void> {
   await open(b, category === "exam" ? "exam" : "booking", joinWaitlist ? { waitlist: true } : {});
+  if (await stoppedByBotLimit(b, "booking")) return;
   const services = servicesOf(await b.catalog(), category);
   if (!services.length) {
     await say(b, "bot_nothing_to_book", t.NOTHING_TO_BOOK);
@@ -337,6 +341,7 @@ async function beginNew(b: Bot, ctx: BookingContext): Promise<void> {
 }
 
 async function askPatientName(b: Bot, ctx: BookingContext, knownBirthdate?: string): Promise<void> {
+  if (await stoppedByBotLimit(b, "new_patient")) return;
   await say(b, "bot_book_ask_patient_name", t.askPatientName(b.words));
   await go(b, "BOOK_PATIENT_NEW", { ...keepPath(ctx), awaiting: "patient_name", knownBirthdate });
 }
@@ -476,6 +481,7 @@ async function startSelf(b: Bot, ctx: BookingContext): Promise<void> {
 }
 
 async function askSelfBirthdate(b: Bot, ctx: BookingContext): Promise<void> {
+  if (await stoppedByBotLimit(b, "new_patient")) return;
   await say(b, "bot_book_ask_self_birthdate", t.SELF_BIRTHDATE);
   await go(b, "BOOK_PATIENT_NEW", { ...keepPath(ctx), awaiting: "self_birthdate", selfAskName: ctx.selfAskName });
 }
@@ -488,12 +494,12 @@ async function askSelfConfirm(b: Bot, ctx: BookingContext, name: string, birthda
 /** Cadastra o paciente (e o contato, se o número é novo) e segue para o link. */
 async function registerAndFinish(b: Bot, ctx: BookingContext, name: string, birthdate: string, contact: ContactChoice): Promise<void> {
   try {
-    let result = await registerPatient(b.db, b.clinicId, { fullName: name, birthdate, contact, confirmDuplicate: true }, b.clinic.today);
+    let result = await registerPatient(b.db, b.clinicId, { fullName: name, birthdate, contact, confirmDuplicate: true, createdVia: "whatsapp" }, b.clinic.today);
     if (result.status === "confirm_same_person") {
       result = await registerPatient(
         b.db,
         b.clinicId,
-        { fullName: name, birthdate, contact: { mode: "self", phone: b.phone, confirmedContactId: result.contact.id }, confirmDuplicate: true },
+        { fullName: name, birthdate, contact: { mode: "self", phone: b.phone, confirmedContactId: result.contact.id }, confirmDuplicate: true, createdVia: "whatsapp" },
         b.clinic.today,
       );
     }
@@ -510,6 +516,31 @@ async function registerAndFinish(b: Bot, ctx: BookingContext, name: string, birt
     await say(b, "bot_book_link_error", t.LINK_ERROR);
     await end(b, "error", { reason: "register_failed" });
   }
+}
+
+// ---------------------------------------------------------------------------
+// Limites do contato (F9.6a)
+// ---------------------------------------------------------------------------
+
+/**
+ * Limite atingido: o bot não marca e responde neutro, sem revelar a regra.
+ * Com coexistência, passa a conversa para a recepção (pausa); sem ela, ninguém
+ * responderia pelo app: avisa que a recepção entra em contato e volta ao menu
+ * (cliente, 10/out). Número sem contato ainda não tem o que contar.
+ */
+async function stoppedByBotLimit(b: Bot, check: "booking" | "new_patient"): Promise<boolean> {
+  const contactId = b.convo.contactId;
+  if (!contactId) return false;
+  const hit =
+    check === "booking" ? await checkBookingLimits(b.db, b.clinicId, contactId, b.now) : await checkNewPatientLimit(b.db, b.clinicId, contactId, b.now);
+  if (!hit) return false;
+  const pause = b.receptionAvailable;
+  await recordBotLimitEvent(b.db, b.clinicId, contactId, hit, pause, b.now);
+  await say(b, "bot_limit_reached", pause ? t.LIMIT_HANDOFF : t.LIMIT_RECEPTION_WILL_CONTACT);
+  await end(b, "blocked", { reason: `limit_${hit.reason}` });
+  if (pause) await pauseForHuman(b.db, b.clinicId, b.phone, { contactId, reason: "bot_limit" }, b.now);
+  else await showMenu(b);
+  return true;
 }
 
 // ---------------------------------------------------------------------------
@@ -617,6 +648,7 @@ async function restart(b: Bot): Promise<void> {
 
 export async function startReturn(b: Bot, { joinWaitlist = false } = {}): Promise<void> {
   await open(b, "return_booking", joinWaitlist ? { waitlist: true } : {});
+  if (await stoppedByBotLimit(b, "booking")) return;
   const services = servicesOf(await b.catalog(), "return_visit");
   const deadline = services[0]?.returnDeadlineDays ?? null;
   const patients = await activePatients(b);

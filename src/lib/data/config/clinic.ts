@@ -2,6 +2,7 @@ import { isValidTimeZone } from "../../clinicTime";
 import type { Enums, TablesUpdate } from "../../supabase/database.types";
 import type { DbClient } from "../clients";
 import { cleanText, unwrapOne, Validation } from "../errors";
+import { BOT_LIMIT_RANGES } from "../whatsapp/botLimits";
 import { MESSAGE_ARTICLES, type MessageArticle } from "../whatsapp/templates";
 
 // Perfil e identidade da clínica (D4b): `clinics` + `clinic_settings`.
@@ -39,6 +40,10 @@ export type ClinicSettings = {
   botPaymentInfo: string | null;
   botInsuranceInfo: string | null;
   botNotes: string | null;
+  /** Limites do contato no bot (F9.6a): atendimentos futuros (1 a 10), cadastros em 30 dias (1 a 10), faltas em 90 dias (0 desliga). */
+  botMaxFutureAppointments: number;
+  botMaxNewPatients: number;
+  botMaxNoShows: number;
   logoUrl: string | null;
   brandColor: string | null;
   /** Site da clínica: o botão "Voltar para o site" das páginas públicas (F5). */
@@ -68,7 +73,7 @@ export function normalizeWebsiteUrl(value: string | null | undefined): string | 
 }
 
 const SETTINGS_COLUMNS =
-  "clinic_id, profile, timezone, consultation_age_limit_years, reminder_hour, bot_payment_info, bot_insurance_info, bot_notes, logo_url, brand_color, website_url, require_insurance_details, message_article, reminder_enabled, reminder_timing, professional_summary_enabled, professional_summary_timing, professional_summary_hour, team_summary_enabled, team_summary_timing, team_summary_hour, guidance_enabled";
+  "clinic_id, profile, timezone, consultation_age_limit_years, reminder_hour, bot_payment_info, bot_insurance_info, bot_notes, logo_url, brand_color, website_url, require_insurance_details, message_article, reminder_enabled, reminder_timing, professional_summary_enabled, professional_summary_timing, professional_summary_hour, team_summary_enabled, team_summary_timing, team_summary_hour, guidance_enabled, bot_max_future_appointments, bot_max_new_patients, bot_max_no_shows";
 
 export async function getClinicSettings(db: DbClient, clinicId: string): Promise<ClinicSettings> {
   const [clinic, settings] = await Promise.all([
@@ -100,6 +105,9 @@ export async function getClinicSettings(db: DbClient, clinicId: string): Promise
     botPaymentInfo: settings.bot_payment_info,
     botInsuranceInfo: settings.bot_insurance_info,
     botNotes: settings.bot_notes,
+    botMaxFutureAppointments: settings.bot_max_future_appointments,
+    botMaxNewPatients: settings.bot_max_new_patients,
+    botMaxNoShows: settings.bot_max_no_shows,
     logoUrl: settings.logo_url,
     brandColor: settings.brand_color,
     websiteUrl: settings.website_url,
@@ -134,6 +142,17 @@ export function validateClinicSettingsPatch(patch: ClinicSettingsPatch): ClinicS
   }
   for (const field of ["reminderTiming", "professionalSummaryTiming", "teamSummaryTiming"] as const) {
     if (field in patch) v.check(REMINDER_TIMINGS.includes(patch[field]!), field, "Escolha véspera ou no dia");
+  }
+  const limitFields = [
+    ["botMaxFutureAppointments", "maxFutureAppointments", "Atendimentos futuros por contato"],
+    ["botMaxNewPatients", "maxNewPatients", "Cadastros pelo bot por contato"],
+    ["botMaxNoShows", "maxNoShows", "Faltas por contato"],
+  ] as const;
+  for (const [field, range, label] of limitFields) {
+    if (!(field in patch)) continue;
+    const value = patch[field]!;
+    const { min, max } = BOT_LIMIT_RANGES[range];
+    v.check(Number.isInteger(value) && value >= min && value <= max, field, `${label}: de ${min} a ${max}`);
   }
   for (const field of ["botPaymentInfo", "botInsuranceInfo", "botNotes"] as const) {
     if (field in patch) out[field] = cleanText(patch[field]);
@@ -189,6 +208,9 @@ export async function updateClinicSettings(
     ["botPaymentInfo", "bot_payment_info"],
     ["botInsuranceInfo", "bot_insurance_info"],
     ["botNotes", "bot_notes"],
+    ["botMaxFutureAppointments", "bot_max_future_appointments"],
+    ["botMaxNewPatients", "bot_max_new_patients"],
+    ["botMaxNoShows", "bot_max_no_shows"],
     ["logoUrl", "logo_url"],
     ["brandColor", "brand_color"],
     ["websiteUrl", "website_url"],

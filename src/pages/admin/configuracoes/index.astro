@@ -2,8 +2,8 @@
 // Configurações › Clínica (F4.3, D4b): nome ("da" ou "do" nas mensagens do
 // WhatsApp, F6.2), perfil (vocabulário e regras de
 // idade), fuso, idade limite da consulta, cor e, com o bot liberado, as
-// informações que o bot responde. Marca das páginas públicas (F5.1): logo,
-// cor e site da clínica, com "Ver como fica".
+// informações que o bot responde e os limites por contato (F9.6a). Marca das
+// páginas públicas (F5.1): logo, cor e site da clínica, com "Ver como fica".
 import AdminLayout from "../../../layouts/AdminLayout.astro";
 import Card from "../../../components/admin/Card.astro";
 import ConfiguracoesTabs from "../../../components/admin/ConfiguracoesTabs.astro";
@@ -12,6 +12,7 @@ import { HINT, INPUT, LABEL, PRIMARY_BUTTON } from "../../../components/admin/fi
 import { createUserClient } from "../../../lib/data/clients";
 import { BRAND_COLOR_OPTIONS, DEFAULT_BRAND_COLOR, LOGO_TYPES } from "../../../lib/data/config/brand";
 import { CLINIC_PROFILES, getClinicSettings } from "../../../lib/data/config/clinic";
+import { BOT_LIMIT_RANGES, DEFAULT_BOT_LIMITS, NEW_PATIENTS_WINDOW_DAYS, NO_SHOWS_WINDOW_DAYS } from "../../../lib/data/whatsapp/botLimits";
 import { MESSAGE_ARTICLES } from "../../../lib/data/whatsapp/templates";
 import { BRAZIL_TIME_ZONES } from "../../../lib/timeZones";
 import { PROFILE_LABELS, vocabularyFor } from "../../../lib/vocabulary";
@@ -23,6 +24,29 @@ const zones = BRAZIL_TIME_ZONES.some((zone) => zone.value === settings.timezone)
   ? BRAZIL_TIME_ZONES
   : [{ value: settings.timezone, label: settings.timezone }, ...BRAZIL_TIME_ZONES];
 const currentColor = settings.brandColor ?? DEFAULT_BRAND_COLOR;
+const limitFields = [
+  {
+    name: "bot_max_future_appointments",
+    label: "Atendimentos futuros",
+    value: settings.botMaxFutureAppointments,
+    ...BOT_LIMIT_RANGES.maxFutureAppointments,
+    hint: `Marcados pelo bot ou pela equipe. De ${BOT_LIMIT_RANGES.maxFutureAppointments.min} a ${BOT_LIMIT_RANGES.maxFutureAppointments.max}; padrão ${DEFAULT_BOT_LIMITS.maxFutureAppointments}.`,
+  },
+  {
+    name: "bot_max_new_patients",
+    label: `Pacientes novos cadastrados pelo bot em ${NEW_PATIENTS_WINDOW_DAYS} dias`,
+    value: settings.botMaxNewPatients,
+    ...BOT_LIMIT_RANGES.maxNewPatients,
+    hint: `Cadastros da equipe não contam. De ${BOT_LIMIT_RANGES.maxNewPatients.min} a ${BOT_LIMIT_RANGES.maxNewPatients.max}; padrão ${DEFAULT_BOT_LIMITS.maxNewPatients}.`,
+  },
+  {
+    name: "bot_max_no_shows",
+    label: `Faltas em ${NO_SHOWS_WINDOW_DAYS} dias`,
+    value: settings.botMaxNoShows,
+    ...BOT_LIMIT_RANGES.maxNoShows,
+    hint: `0 desliga. Até ${BOT_LIMIT_RANGES.maxNoShows.max}; padrão ${DEFAULT_BOT_LIMITS.maxNoShows}.`,
+  },
+];
 const profileHint = (profile: (typeof CLINIC_PROFILES)[number]) => {
   const words = vocabularyFor(profile);
   return `${PROFILE_LABELS[profile]}: "${words.patient}" e "${words.contact}"`;
@@ -181,6 +205,36 @@ const profileHint = (profile: (typeof CLINIC_PROFILES)[number]) => {
               </label>
               <textarea id="bot_notes" name="bot_notes" rows="3" class={INPUT}>{settings.botNotes ?? ""}</textarea>
             </div>
+          </fieldset>
+        )
+      }
+
+      {
+        hasBot && (
+          <fieldset class="flex flex-col gap-4 border-t border-slate-200 pt-4">
+            <legend class="text-sm font-semibold uppercase tracking-wide text-slate-500">Limites do bot por contato</legend>
+            <p class={HINT}>
+              Contra abuso no agendamento pelo WhatsApp. Cada número soma todos os pacientes dele. Atingido um limite, o bot não marca e passa a conversa
+              para a recepção; cancelar e remarcar continuam pelo bot. A equipe marca sem limite pelo painel.
+            </p>
+            {limitFields.map((field) => (
+              <div>
+                <label for={field.name} class={LABEL}>
+                  {field.label}
+                </label>
+                <input
+                  id={field.name}
+                  name={field.name}
+                  type="number"
+                  required
+                  min={field.min}
+                  max={field.max}
+                  value={field.value}
+                  class={`${INPUT} w-24`}
+                />
+                <p class={HINT}>{field.hint}</p>
+              </div>
+            ))}
           </fieldset>
         )
       }

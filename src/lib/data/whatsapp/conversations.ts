@@ -327,16 +327,16 @@ export async function checkHandoff(
 }
 
 /**
- * Pausa o bot: a recepção assumiu (eco do app) ou o paciente pediu atendimento
- * humano. Mensagens seguintes da recepção só renovam o prazo; o funil conta
- * o início de cada pausa, e a tentativa em andamento fica como abandono
+ * Pausa o bot: a recepção assumiu (eco do app), o paciente pediu atendimento
+ * humano ou um limite do contato barrou a marcação (F9.6a). Mensagens
+ * seguintes da recepção só renovam o prazo; o funil conta o início de cada pausa, e a tentativa em andamento fica como abandono
  * ("secretária assumiu"). Número que nunca falou com o bot já nasce pausado.
  */
 export async function pauseForHuman(
   db: DbClient,
   clinicId: string,
   phone: string,
-  { contactId, reason }: { contactId: string | null; reason: "agent_took_over" | "requested" },
+  { contactId, reason }: { contactId: string | null; reason: "agent_took_over" | "requested" | "bot_limit" },
   now: Date = new Date(),
 ): Promise<void> {
   const current = await getConversation(db, clinicId, phone);

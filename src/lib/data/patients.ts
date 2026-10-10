@@ -361,6 +361,8 @@ export type RegisterPatientInput = {
   contact: ContactChoice;
   /** A equipe viu o aviso de possível duplicado e confirmou. */
   confirmDuplicate?: boolean;
+  /** Cadastro pelo bot: conta no limite de cadastros do contato (F9.6a). Padrão: a equipe. */
+  createdVia?: "admin" | "whatsapp";
 };
 
 export type RegisterPatientResult =
@@ -438,6 +440,7 @@ export async function registerPatient(
       birthdate: input.birthdate,
       is_contact_self: isContactSelf,
       notes: cleanText(input.notes),
+      created_via: input.createdVia ?? "admin",
       ...insurance,
     })
     .select(PATIENT_COLUMNS)

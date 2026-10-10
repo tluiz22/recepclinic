@@ -1,7 +1,8 @@
 ---
 // Tela inicial (Fase 9 do piloto; banco novo na F4.1): números de hoje no dia
 // da clínica, alerta de envios automáticos e atalhos. Cartões e atalhos seguem
-// os itens liberados para a clínica (D11).
+// os itens liberados para a clínica (D11). Com o bot, "Contatos para revisar"
+// (F9.6a): quem bateu um limite do bot nos últimos 7 dias.
 import AdminLayout from "../../layouts/AdminLayout.astro";
 import Card from "../../components/admin/Card.astro";
 import FormMessage from "../../components/admin/FormMessage.astro";
@@ -10,12 +11,18 @@ import type { IconName } from "../../components/admin/Icon.astro";
 import { createUserClient } from "../../lib/data/clients";
 import { getDashboardCounts } from "../../lib/data/dashboard";
 import { describeSendsAlert, getSendsAlert } from "../../lib/data/sends";
+import { BOT_LIMIT_LABELS, listContactsToReview, REVIEW_WINDOW_DAYS } from "../../lib/data/whatsapp/botLimits";
+import { formatInstant } from "../../lib/clinicTime";
 
 const clinic = Astro.locals.clinic!;
 const db = createUserClient(Astro.request, Astro.cookies);
 const has = (feature: (typeof clinic.features)[number]) => clinic.features.includes(feature);
 
-const [counts, sendsAlert] = await Promise.all([getDashboardCounts(db, clinic.clinicId, clinic.timezone), getSendsAlert(db, clinic.clinicId)]);
+const [counts, sendsAlert, toReview] = await Promise.all([
+  getDashboardCounts(db, clinic.clinicId, clinic.timezone),
+  getSendsAlert(db, clinic.clinicId),
+  has("whatsapp_bot") ? listContactsToReview(db, clinic.clinicId) : Promise.resolve(null),
+]);
 const sendsAlertLines = describeSendsAlert(sendsAlert);
 // A aba Envios fica no Resumo do Dia, para toda a equipe (cliente, 05/out/2026).
 
@@ -82,6 +89,34 @@ const shortcuts: { label: string; href: string; icon: IconName }[] = [
       )
     }
   </div>
+
+  {
+    toReview && (
+      <Card class="mt-6">
+        <h2 class="font-semibold text-slate-900">Contatos para revisar</h2>
+        <p class="mt-1 text-sm text-slate-600">
+          Nos últimos {REVIEW_WINDOW_DAYS} dias, o bot deixou de marcar para estes números por um limite do contato.
+        </p>
+        {toReview.length === 0 ? (
+          <p class="mt-2 text-sm text-slate-500">Nenhum.</p>
+        ) : (
+          <ul class="mt-2 divide-y divide-slate-100 text-sm">
+            {toReview.map((item) => (
+              <li>
+                <a href={`/admin/pacientes/contato/${item.contactId}`} class="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 py-2 hover:text-sky-700">
+                  <span class="font-medium text-slate-900">{item.name}</span>
+                  <span class="text-slate-600">
+                    {BOT_LIMIT_LABELS[item.last.reason]} · {formatInstant(item.last.at, clinic.timezone, "dd/MM HH:mm")}
+                    {item.hits > 1 && ` · ${item.hits} vezes`}
+                  </span>
+                </a>
+              </li>
+            ))}
+          </ul>
+        )}
+      </Card>
+    )
+  }
 
   <h2 class="mt-8 text-sm font-semibold uppercase tracking-wide text-slate-500">Atalhos</h2>
   <div class="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">

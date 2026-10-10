@@ -1186,7 +1186,7 @@ Subetapas (cliente, 09/out/2026), cada uma validada antes da próxima:
 | F9.3 | Ferramenta de erros com a clínica em cada erro e monitor externo do painel e do webhook (L45) | validada em 09/out |
 | F9.4 | Anonimização de paciente e contato a pedido (LGPD, L42) | validada em 09/out |
 | F9.5 | Contadores de uso por clínica para o Suporte (L49) | validada em 09/out |
-| F9.6 | Proteção contra abuso no agendamento pelo bot | decidida em 09/out, a implementar |
+| F9.6 | Proteção contra abuso no agendamento pelo bot | F9.6a implementada em 10/out (aguarda a validação); F9.6b a implementar |
 
 **F9.1:** CSP do Astro como cabeçalho nas páginas do servidor (`astro.config.mjs`): scripts e
 estilos só do próprio domínio, com o hash dos embutidos; estilo em atributo liberado (cor da marca,
@@ -1267,6 +1267,41 @@ de um atendimento futuro por paciente em cada agenda. Decisões:
    7 dias, com atalho para a tela do contato); o Suporte vê a contagem na tela Uso.
 
 Os 3 números ficam em Configurações › Clínica.
+
+Detalhes da F9.6a (cliente, 10/out):
+- o limite de atendimentos futuros conta **todos** os atendimentos dos pacientes do contato,
+  marcados pelo bot ou pela equipe;
+- o limite **só trava marcar** (e cadastrar): cancelar, remarcar, confirmar e responder ao lembrete
+  seguem pelo bot;
+- a resposta ao paciente é **neutra**, sem revelar a regra ("vou passar sua conversa para a
+  recepção, que responde em breve");
+- a verificação é **logo no início**: atendimentos e faltas quando o contato escolhe marcar;
+  cadastros quando ele pede para cadastrar outra pessoa;
+- o **motivo** aparece num aviso na **tela do contato** (com os últimos limites atingidos) e no
+  cartão "Contatos para revisar" do Painel (não há caixa de conversas no painel; no app da
+  recepção só aparece a mensagem neutra);
+- conexão **sem coexistência** (hoje só o chip de testes; toda clínica real entra por
+  coexistência, F8): o bot **não pausa** (ninguém responderia pelo app); avisa, neutro, que a
+  recepção vai entrar em contato e volta ao menu. O contato entra em "Contatos para revisar" do
+  mesmo jeito.
+
+**F9.6a — implementada em 10/out (aguarda a validação do cliente no staging).** Migração
+`20261010120000_limites_do_bot`: os 3 limites em `clinic_settings` (padrão 3, 3 e 2), a origem do
+cadastro em `patients.created_via` (`admin` ou `whatsapp`; os antigos ficam como da equipe) e a
+tabela `bot_limit_events` (motivo, limite, valor na hora e se pausou; só o contato, sem telefone;
+a equipe lê, só o bot grava), contada em `clinic_usage_monthly.bot_limit_hits`. Regras em
+`src/lib/data/whatsapp/botLimits.ts`. **Os links de marcar ainda válidos contam como atendimento**
+(um por paciente): sem isso, quem pedisse vários links antes de usar o primeiro passaria do
+limite. Verificação em `bot/booking.ts`: atendimentos e faltas no início de Marcar consulta, Marcar
+exame, Marcar retorno e do Encaixe sem nada marcado; cadastros antes de pedir o nome do paciente
+novo (ou a data de nascimento do "para mim"). No funil, a tentativa fica como bloqueada
+("Limite de … do contato") e a pausa entra como `handoff` com o passo `bot_limit`. Telas:
+Configurações › Clínica (bloco "Limites do bot por contato", com o bot liberado), tela do contato
+(aviso, se dos últimos 7 dias, e os últimos 5 limites), Painel (cartão "Contatos para revisar", com
+o bot liberado) e Administração › Uso (coluna "Limites do bot"). Com a pausa (coexistência), o
+contato fica como em "Falar com a recepção": durante as 24h o bot não responde, nem para cancelar
+ou remarcar (só o Confirmar do lembrete). 11 testes de banco novos (`bot-limites.test.ts`) e 4
+unitários.
 
 ## F10 — Primeiro piloto
 

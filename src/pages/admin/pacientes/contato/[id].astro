@@ -2,20 +2,23 @@
 // Pacientes › responsável/contato (F4.7): quem fala com a clínica pelo
 // WhatsApp. Nome, telefone (único na clínica) e o endereço padrão do
 // atendimento domiciliar (com o item); os pacientes dele, com "cadastrar
-// outro" já ligado a este contato; desativar/reativar.
+// outro" já ligado a este contato; desativar/reativar. Com o bot, os limites
+// do contato atingidos (F9.6a): aviso no topo, se recente, e os últimos.
 import AdminLayout from "../../../../layouts/AdminLayout.astro";
 import ActiveToggle from "../../../../components/admin/ActiveToggle.astro";
 import Badge from "../../../../components/admin/Badge.astro";
 import Card from "../../../../components/admin/Card.astro";
 import FlashMessage from "../../../../components/admin/FlashMessage.astro";
+import FormMessage from "../../../../components/admin/FormMessage.astro";
 import Icon from "../../../../components/admin/Icon.astro";
 import PhoneLinks from "../../../../components/admin/PhoneLinks.astro";
 import { HINT, INPUT, LABEL, PRIMARY_BUTTON, SECONDARY_BUTTON } from "../../../../components/admin/fieldStyles";
 import { formatAge } from "../../../../lib/age";
 import { isUuid } from "../../../../lib/clinicAccess";
-import { todayIn } from "../../../../lib/clinicTime";
+import { formatInstant, todayIn } from "../../../../lib/clinicTime";
 import { createUserClient } from "../../../../lib/data/clients";
 import { getContact, listContactPatients } from "../../../../lib/data/patients";
+import { BOT_LIMIT_LABELS, describeBotLimitHit, listContactLimitEvents, REVIEW_WINDOW_DAYS, type BotLimitEvent } from "../../../../lib/data/whatsapp/botLimits";
 import { formatPhoneBR } from "../../../../lib/phone";
 import { capitalize, vocabularyFor } from "../../../../lib/vocabulary";
 
@@ -29,6 +32,10 @@ const patients = await listContactPatients(db, clinic.clinicId, contact.id, { in
 const today = todayIn(clinic.timezone);
 const homeVisitOn = clinic.features.includes("home_visit");
 const action = `/api/admin/pacientes/contato/${contact.id}`;
+const limitEvents = clinic.features.includes("whatsapp_bot") ? await listContactLimitEvents(db, clinic.clinicId, contact.id) : [];
+const recentLimit = limitEvents.find((event) => Date.now() - event.at.getTime() < REVIEW_WINDOW_DAYS * 24 * 60 * 60_000);
+const when = (event: BotLimitEvent) => formatInstant(event.at, clinic.timezone, "dd/MM 'às' HH:mm");
+const limitLine = (event: BotLimitEvent) => `${BOT_LIMIT_LABELS[event.reason]}: ${describeBotLimitHit(event)}`;
 ---
 
 <AdminLayout title={contact.fullName}>
@@ -42,6 +49,14 @@ const action = `/api/admin/pacientes/contato/${contact.id}`;
   </h1>
   <p class="mt-1 text-sm"><PhoneLinks phone={contact.phone} plain class="text-slate-700" /></p>
   <FlashMessage />
+  {
+    recentLimit && (
+      <FormMessage tone="warning">
+        {recentLimit.paused ? "Bot pausado" : "O bot não marcou"} em {when(recentLimit)}. {limitLine(recentLimit)}.
+        {recentLimit.paused ? " A conversa está com a recepção." : " A recepção precisa entrar em contato."}
+      </FormMessage>
+    )
+  }
 
   <div class="mt-4 grid gap-4 lg:grid-cols-2">
     <div class="flex flex-col gap-4">
@@ -80,6 +95,20 @@ const action = `/api/admin/pacientes/contato/${contact.id}`;
           <button type="submit" class={`${SECONDARY_BUTTON} self-start`}>Salvar</button>
         </form>
       </Card>
+      {limitEvents.length > 0 && (
+        <Card>
+          <h2 class="font-semibold text-slate-900">Limites do bot</h2>
+          <p class={HINT}>Quando o bot deixou de marcar por um limite do contato (Configurações › Clínica).</p>
+          <ul class="mt-2 divide-y divide-slate-100 text-sm">
+            {limitEvents.map((event) => (
+              <li class="py-2">
+                <span class="tabular-nums text-slate-500">{when(event)}</span> · <span class="text-slate-900">{limitLine(event)}</span>
+                <span class="text-slate-500">{event.paused ? " · conversa passada à recepção" : " · sem pausa (número sem coexistência)"}</span>
+              </li>
+            ))}
+          </ul>
+        </Card>
+      )}
       {!contact.anonymizedAt && (
         <Card>
           <ActiveToggle action={action} isActive={contact.isActive} what={`o ${vocabulary.contact}`} />

@@ -311,6 +311,11 @@ begin
     (c_a, '0a0f0000-0000-4000-8000-000000000001', 'booking', 'started', '+5584988880001', ct_maria),
     (c_a, '0a0f0000-0000-4000-8000-000000000001', 'booking', 'confirmed', '+5584988880001', ct_maria);
 
+  -- Limite do bot atingido (F9.6a): a conversa do Carlos foi para a recepção
+  -- (aparece em "Contatos para revisar" no Painel e na tela do contato).
+  insert into public.bot_limit_events (clinic_id, contact_id, reason, limit_value, current_value, paused, created_at)
+    values (c_a, ct_carlos, 'future_appointments', 3, 3, true, now() - interval '2 hours');
+
   insert into public.job_runs (clinic_id, job, variant, trigger, started_at, finished_at, status, totals) values
     (c_a, 'appointment_reminders', null, 'scheduled', now() - interval '1 day', now() - interval '1 day' + interval '20 seconds', 'ok', '{"sent": 3}'),
     (c_a, 'daily_summary', 'final', 'scheduled', now() - interval '1 day', now() - interval '1 day' + interval '5 seconds', 'ok', '{"sent": 2}');

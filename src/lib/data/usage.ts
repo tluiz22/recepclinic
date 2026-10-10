@@ -14,6 +14,8 @@ export type MonthlyUsage = {
   messagesSent: number;
   /** Dessas, os templates: a Meta cobra da clínica. */
   templatesSent: number;
+  /** Vezes que um limite do contato barrou o bot (F9.6a). */
+  botLimitHits: number;
 };
 
 /** Meses desde `fromMonth` ("YYYY-MM-01"), de todas as clínicas que o login vê. */
@@ -21,7 +23,7 @@ export async function listMonthlyUsage(db: DbClient, fromMonth: string): Promise
   const rows = unwrap(
     await db
       .from("clinic_usage_monthly")
-      .select("clinic_id, month, appointments_created, messages_sent, templates_sent")
+      .select("clinic_id, month, appointments_created, messages_sent, templates_sent, bot_limit_hits")
       .gte("month", fromMonth)
       .order("month", { ascending: false }),
     "Uso por clínica",
@@ -32,6 +34,7 @@ export async function listMonthlyUsage(db: DbClient, fromMonth: string): Promise
     appointmentsCreated: row.appointments_created,
     messagesSent: row.messages_sent,
     templatesSent: row.templates_sent,
+    botLimitHits: row.bot_limit_hits,
   }));
 }
 
