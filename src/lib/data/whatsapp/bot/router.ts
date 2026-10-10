@@ -6,11 +6,12 @@ import { contactIdByPhone, recordOutboundMessage } from "../messages";
 import { toE164, type WaMessage } from "../meta";
 import type { ClinicSender } from "../send";
 import { BOOKING_STATES, handleBookingState } from "./booking";
-import { createBot, type BotEnv } from "./engine";
+import { createBot, say, type Bot, type BotEnv } from "./engine";
 import { extractSelection, isBackToMenu } from "./input";
 import { handleInfo, handleMenu, handlePreparationChoice, handleSubmenu, showMenu } from "./menus";
 import { handleManageState, handleOfferTap, handleReminderTap, MANAGE_STATES, offerTapOf, reminderTapOf } from "./manage";
-import { IDLE_CLOSED } from "./texts";
+import { BLOCKED_HANDOFF, BLOCKED_RECEPTION_WILL_CONTACT, IDLE_CLOSED } from "./texts";
+import { blockedContactByPhone, blockedNoticeDue, markBlockedNotice } from "../contactBlock";
 import { listBotMessages } from "../customMessages";
 import { logError } from "../../../log";
 
@@ -18,8 +19,10 @@ import { logError } from "../../../log";
 // registrada. Só com o item "Bot de WhatsApp" liberado (D11) e o WhatsApp da
 // clínica conectado. Conversa pausada pela recepção fica em silêncio, menos
 // para os toques no lembrete (Confirmar) e na oferta de vaga, que respondem a
-// uma pergunta do sistema (F6.4). Nunca lança: o erro vai para o log e a Meta
-// recebe 200 do mesmo jeito.
+// uma pergunta do sistema (F6.4). Número bloqueado pela clínica (F9.6b): só
+// os toques no lembrete e o fluxo que eles abrem (cancelar, remarcar); o resto
+// recebe a resposta neutra, uma vez por dia. Nunca lança: o erro vai para o
+// log e a Meta recebe 200 do mesmo jeito.
 
 export async function handleIncomingMessage(env: BotEnv, message: WaMessage): Promise<"handled" | "skipped"> {
   const phone = toE164(message.from);
@@ -50,6 +53,12 @@ export async function handleIncomingMessage(env: BotEnv, message: WaMessage): Pr
 
   const b = await createBot(env, convo, message.id ?? null);
   const selection = extractSelection(message);
+
+  const blocked = await blockedContactByPhone(env.db, env.clinicId, phone);
+  if (blocked && (!MANAGE_STATES.has(convo.state) || isBackToMenu(selection))) {
+    await answerBlocked(b, blocked);
+    return "handled";
+  }
 
   // "Voltar ao menu" vale no meio de qualquer fluxo.
   if (convo.state !== WELCOME && convo.state !== "MENU" && isBackToMenu(selection)) {
@@ -85,6 +94,17 @@ export async function handleIncomingMessage(env: BotEnv, message: WaMessage): Pr
       await showMenu(b, { withWelcome: true });
   }
   return "handled";
+}
+
+/** Número bloqueado: a resposta neutra na primeira mensagem do dia; a conversa fica no começo. */
+async function answerBlocked(b: Bot, blocked: { id: string; lastNoticeAt: Date | null }): Promise<void> {
+  if (b.convo.state !== WELCOME) {
+    await logAbandonment(b.db, b.clinicId, b.convo, "back_to_menu", b.now);
+    b.convo = await setConversationState(b.db, b.clinicId, b.phone, WELCOME, { context: {} }, b.now);
+  }
+  if (!blockedNoticeDue(blocked.lastNoticeAt, b.now, b.clinic.timeZone)) return;
+  await say(b, "bot_contact_blocked", b.receptionAvailable ? BLOCKED_HANDOFF : BLOCKED_RECEPTION_WILL_CONTACT);
+  await markBlockedNotice(b.db, b.clinicId, blocked.id, b.now);
 }
 
 // ---------------------------------------------------------------------------

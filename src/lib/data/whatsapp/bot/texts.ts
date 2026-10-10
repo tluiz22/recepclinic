@@ -311,3 +311,8 @@ export const HANDOFF =
 export const LIMIT_HANDOFF = "Para esse agendamento, vou passar sua conversa para a recepção, que responde por aqui assim que possível.";
 /** Número sem coexistência: ninguém responderia por aqui. */
 export const LIMIT_RECEPTION_WILL_CONTACT = "Para esse agendamento, a recepção vai entrar em contato com você.";
+
+// Número bloqueado pela clínica (F9.6b): neutro, uma vez por dia, sem revelar o bloqueio.
+export const BLOCKED_HANDOFF = "Sua conversa está com a recepção, que responde por aqui assim que possível.";
+/** Número sem coexistência. */
+export const BLOCKED_RECEPTION_WILL_CONTACT = "Sua conversa está com a recepção, que vai entrar em contato com você.";

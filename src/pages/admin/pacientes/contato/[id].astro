@@ -5,7 +5,8 @@
 // outro" já ligado a este contato; desativar/reativar. Com o bot, os limites
 // do contato (F9.6a): aviso no topo enquanto está para revisar, os últimos
 // limites atingidos, "Revisado" (Recepção e Administrador) e liberar dos
-// limites (só o Administrador).
+// limites (só o Administrador). Bloquear no bot (F9.6b, só o Administrador),
+// com a opção de cancelar sem aviso os atendimentos futuros; desbloquear.
 import AdminLayout from "../../../../layouts/AdminLayout.astro";
 import ActiveToggle from "../../../../components/admin/ActiveToggle.astro";
 import ConfirmDeleteDialog from "../../../../components/admin/ConfirmDeleteDialog.astro";
@@ -21,6 +22,7 @@ import { isUuid } from "../../../../lib/clinicAccess";
 import { formatInstant, todayIn } from "../../../../lib/clinicTime";
 import { createUserClient } from "../../../../lib/data/clients";
 import { getContact, listContactPatients } from "../../../../lib/data/patients";
+import { getContactBlock, listContactFutureAppointmentIds } from "../../../../lib/data/whatsapp/contactBlock";
 import {
   BOT_LIMIT_LABELS,
   describeBotLimitHit,
@@ -50,6 +52,11 @@ const [limitEvents, limitsStatus] = hasBot
 const pendingLimit = limitEvents[0] && limitsStatus && isPendingReview(limitEvents[0], limitsStatus.reviewedAt) ? limitEvents[0] : null;
 const canReview = clinic.isPlatformStaff || clinic.roles.includes("admin") || clinic.roles.includes("reception");
 const canExempt = clinic.isPlatformStaff || clinic.roles.includes("admin");
+const canBlock = canExempt;
+const [block, futureCount] = hasBot
+  ? await Promise.all([getContactBlock(db, clinic.clinicId, contact.id), listContactFutureAppointmentIds(db, clinic.clinicId, contact.id).then((ids) => ids.length)])
+  : [null, 0];
+const blockedBy = block?.blockedBy ? await exemptByLabel(db, clinic.clinicId, block.blockedBy) : null;
 const exemptBy = limitsStatus?.exemptAt && limitsStatus.exemptBy ? await exemptByLabel(db, clinic.clinicId, limitsStatus.exemptBy) : null;
 const when = (event: BotLimitEvent) => formatInstant(event.at, clinic.timezone, "dd/MM 'às' HH:mm");
 const limitLine = (event: BotLimitEvent) => `${BOT_LIMIT_LABELS[event.reason]}: ${describeBotLimitHit(event)}`;
@@ -63,6 +70,7 @@ const limitLine = (event: BotLimitEvent) => `${BOT_LIMIT_LABELS[event.reason]}: 
   <h1 class="mt-3 flex flex-wrap items-center gap-2 text-2xl font-bold text-slate-900">
     {contact.fullName}
     {contact.anonymizedAt ? <Badge variant="warning">anonimizado</Badge> : !contact.isActive && <Badge>desativado</Badge>}
+    {contact.botBlockedAt && <Badge variant="danger">bloqueado</Badge>}
   </h1>
   <p class="mt-1 text-sm"><PhoneLinks phone={contact.phone} plain class="text-slate-700" /></p>
   <FlashMessage />
@@ -173,6 +181,63 @@ const limitLine = (event: BotLimitEvent) => `${BOT_LIMIT_LABELS[event.reason]}: 
           </div>
           {/* Com o contato ativo, o diálogo já vem do "Desativar". */}
           {!contact.isActive && <ConfirmDeleteDialog />}
+        </Card>
+      )}
+      {hasBot && (block || canBlock) && (
+        <Card>
+          <h2 class="font-semibold text-slate-900">Bloqueio no bot</h2>
+          {block ? (
+            <>
+              <p class="mt-1 text-sm text-red-800">
+                Bloqueado por {blockedBy ?? "—"} em {formatInstant(block.blockedAt, clinic.timezone, "dd/MM/yyyy 'às' HH:mm")}. O bot não atende este número
+                (responde, uma vez por dia, que a conversa está com a recepção); só os botões do lembrete funcionam.
+              </p>
+              {block.reason && <p class="mt-1 text-sm text-slate-700">Motivo: {block.reason}</p>}
+              {canBlock && (
+                <form method="POST" action={action} class="mt-3">
+                  <input type="hidden" name="acao" value="desbloquear" />
+                  <button
+                    type="submit"
+                    class={`${SECONDARY_BUTTON} js-confirm-delete`}
+                    data-confirm-title="Desbloquear o contato?"
+                    data-confirm-message="O bot volta a atender este número. Atendimentos cancelados no bloqueio não voltam."
+                    data-confirm-label="Desbloquear"
+                  >
+                    Desbloquear
+                  </button>
+                </form>
+              )}
+            </>
+          ) : (
+            <form method="POST" action={action} class="mt-2 flex flex-col gap-3">
+              <input type="hidden" name="acao" value="bloquear" />
+              <p class={HINT}>
+                O bot deixa de atender este número: não marca, não cadastra e responde, uma vez por dia, que a conversa está com a recepção. A equipe
+                continua marcando pelo painel. Os pacientes dele saem da lista de espera.
+              </p>
+              <div>
+                <label for="motivo" class={LABEL}>Motivo (opcional)</label>
+                <input id="motivo" name="motivo" maxlength="300" class={INPUT} />
+              </div>
+              {futureCount > 0 && (
+                <label class="flex items-start gap-2 text-sm text-slate-700">
+                  <input type="checkbox" name="cancelar_futuros" checked class="mt-0.5 h-4 w-4 rounded border-slate-300" />
+                  <span>
+                    Cancelar {futureCount === 1 ? "o atendimento futuro" : `os ${futureCount} atendimentos futuros`} ligados a este contato, sem aviso (não gasta template; a vaga volta para a lista de espera). Séries terminam.
+                  </span>
+                </label>
+              )}
+              <button
+                type="submit"
+                class={`${SECONDARY_BUTTON} js-confirm-delete self-start text-red-700`}
+                data-confirm-title="Bloquear o contato?"
+                data-confirm-message="O bot deixa de atender este número. Se a opção de cancelar estiver marcada, os atendimentos futuros são cancelados sem aviso e as séries terminam; desbloquear não desfaz isso."
+                data-confirm-label="Bloquear"
+              >
+                Bloquear contato
+              </button>
+            </form>
+          )}
         </Card>
       )}
       {!contact.anonymizedAt && (

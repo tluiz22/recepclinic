@@ -5,12 +5,14 @@ import { DataError } from "../../../../../lib/data/errors";
 import { runFormAction } from "../../../../../lib/data/formAction";
 import { setContactActive, updateContact } from "../../../../../lib/data/patients";
 import { markContactReviewed, setContactBotLimitsExempt } from "../../../../../lib/data/whatsapp/botLimits";
-import { formOptionalText, formText } from "../../../../../lib/forms";
+import { blockContact, unblockContact } from "../../../../../lib/data/whatsapp/contactBlock";
+import { formChecked, formOptionalText, formText } from "../../../../../lib/forms";
 
 // Responsável/contato (F4.7): salvar nome, telefone e endereço padrão do
 // domiciliar (só com o item); desativar e reativar. Limites do bot (F9.6a):
 // "Revisado" (também pelo cartão do Painel, que volta para lá) e liberar ou
-// voltar a aplicar os limites; o banco confere o papel.
+// voltar a aplicar os limites; bloquear (com ou sem cancelar os atendimentos
+// futuros, F9.6b) e desbloquear. O banco confere o papel.
 export const POST: APIRoute = async (context) => {
   const { request, cookies, locals, params } = context;
   const id = params.id!;
@@ -55,6 +57,25 @@ export const POST: APIRoute = async (context) => {
           const exempt = formText(form, "acao") === "liberar_limites";
           await setContactBotLimitsExempt(db, clinic.clinicId, id, exempt);
           return { redirectTo: page, message: exempt ? "Liberado dos limites do bot." : "Os limites do bot voltaram a valer." };
+        }
+        case "bloquear": {
+          const result = await blockContact(
+            db,
+            clinic.clinicId,
+            id,
+            { reason: formOptionalText(form, "motivo"), cancelFuture: formChecked(form, "cancelar_futuros") },
+            locals.userId ?? null,
+          );
+          const parts = [
+            result.canceled ? `${result.canceled} atendimento(s) cancelado(s) sem aviso` : null,
+            result.seriesEnded ? `${result.seriesEnded} série(s) encerrada(s)` : null,
+            result.leftWaitlist ? `${result.leftWaitlist} saída(s) da lista de espera` : null,
+          ].filter(Boolean);
+          return { redirectTo: page, message: `Contato bloqueado no bot.${parts.length ? ` ${parts.join("; ")}.` : ""}` };
+        }
+        case "desbloquear": {
+          await unblockContact(db, clinic.clinicId, id);
+          return { redirectTo: page, message: "Contato desbloqueado: o bot volta a atender o número." };
         }
         default:
           throw new DataError("invalid", "Ação desconhecida", { acao: "Ação desconhecida." });

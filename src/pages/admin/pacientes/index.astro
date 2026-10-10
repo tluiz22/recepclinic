@@ -83,6 +83,7 @@ const link = (changes: Record<string, string>) => {
                 <p class="flex flex-wrap items-center gap-2 font-medium text-slate-900">
                   {p.fullName}
                   {!p.isActive && <Badge>desativado</Badge>}
+                  {p.contact.botBlockedAt && <Badge variant="danger">{vocabulary.contact} bloqueado</Badge>}
                   {stats && <Badge variant="danger">Faltou {stats.noShows} de {stats.total}</Badge>}
                 </p>
                 <p class="mt-0.5 text-sm text-slate-600">
@@ -106,6 +107,7 @@ const link = (changes: Record<string, string>) => {
             <Card class="h-full hover:border-sky-300 hover:bg-sky-50" muted={!c.isActive}>
               <p class="flex flex-wrap items-center gap-2 font-medium text-slate-900">
                 {c.fullName} {!c.isActive && <Badge>desativado</Badge>}
+                {c.botBlockedAt && <Badge variant="danger">bloqueado</Badge>}
               </p>
               <p class="mt-0.5 text-sm text-slate-600">{formatPhoneBR(c.phone)}</p>
               <p class="text-sm text-slate-500">{c.patientNames.length ? c.patientNames.join(", ") : `Sem ${vocabulary.patients} ativos`}</p>

@@ -515,14 +515,14 @@ isOneToOne: false
                   ]
                 },"contacts": {
                   Row: {
-                    "anonymized_at": string | null,"bot_limits_exempt_at": string | null,"bot_limits_exempt_by": string | null,"bot_limits_reviewed_at": string | null,"bot_limits_reviewed_by": string | null,"clinic_id": string,"created_at": string,"default_home_address": string | null,"full_name": string,"id": string,"is_active": boolean,"phone": string,"updated_at": string
+                    "anonymized_at": string | null,"bot_blocked_at": string | null,"bot_blocked_by": string | null,"bot_blocked_notified_at": string | null,"bot_blocked_reason": string | null,"bot_limits_exempt_at": string | null,"bot_limits_exempt_by": string | null,"bot_limits_reviewed_at": string | null,"bot_limits_reviewed_by": string | null,"clinic_id": string,"created_at": string,"default_home_address": string | null,"full_name": string,"id": string,"is_active": boolean,"phone": string,"updated_at": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "anonymized_at"?: string | null,"bot_limits_exempt_at"?: string | null,"bot_limits_exempt_by"?: string | null,"bot_limits_reviewed_at"?: string | null,"bot_limits_reviewed_by"?: string | null,"clinic_id": string,"created_at"?: string,"default_home_address"?: string | null,"full_name": string,"id"?: string,"is_active"?: boolean,"phone": string,"updated_at"?: string
+                    "anonymized_at"?: string | null,"bot_blocked_at"?: string | null,"bot_blocked_by"?: string | null,"bot_blocked_notified_at"?: string | null,"bot_blocked_reason"?: string | null,"bot_limits_exempt_at"?: string | null,"bot_limits_exempt_by"?: string | null,"bot_limits_reviewed_at"?: string | null,"bot_limits_reviewed_by"?: string | null,"clinic_id": string,"created_at"?: string,"default_home_address"?: string | null,"full_name": string,"id"?: string,"is_active"?: boolean,"phone": string,"updated_at"?: string
                   }
                   Update: {
-                    "anonymized_at"?: string | null,"bot_limits_exempt_at"?: string | null,"bot_limits_exempt_by"?: string | null,"bot_limits_reviewed_at"?: string | null,"bot_limits_reviewed_by"?: string | null,"clinic_id"?: string,"created_at"?: string,"default_home_address"?: string | null,"full_name"?: string,"id"?: string,"is_active"?: boolean,"phone"?: string,"updated_at"?: string
+                    "anonymized_at"?: string | null,"bot_blocked_at"?: string | null,"bot_blocked_by"?: string | null,"bot_blocked_notified_at"?: string | null,"bot_blocked_reason"?: string | null,"bot_limits_exempt_at"?: string | null,"bot_limits_exempt_by"?: string | null,"bot_limits_reviewed_at"?: string | null,"bot_limits_reviewed_by"?: string | null,"clinic_id"?: string,"created_at"?: string,"default_home_address"?: string | null,"full_name"?: string,"id"?: string,"is_active"?: boolean,"phone"?: string,"updated_at"?: string
                   }
                   Relationships: [
                     {
@@ -1270,6 +1270,9 @@ isOneToOne: false
                            },
 "set_clinic_professional_limit":
 { Args: { "p_clinic_id": string,"p_limit": number }; Returns: undefined
+                           },
+"set_contact_bot_blocked":
+{ Args: { "p_blocked": boolean,"p_clinic_id": string,"p_contact_id": string,"p_reason"?: string }; Returns: undefined
                            },
 "set_contact_bot_limits_exempt":
 { Args: { "p_clinic_id": string,"p_contact_id": string,"p_exempt": boolean }; Returns: undefined

@@ -31,6 +31,8 @@ export type Contact = {
   isActive: boolean;
   /** Anonimizado a pedido (F9.4): sem nome, telefone e endereço de verdade. */
   anonymizedAt: Date | null;
+  /** Bloqueado no bot pelo Administrador (F9.6b). */
+  botBlockedAt: Date | null;
 };
 
 export type PatientInsurance = {
@@ -57,7 +59,7 @@ export type Patient = {
 
 export type PatientWithContact = Patient & { contact: Contact };
 
-const CONTACT_COLUMNS = "id, full_name, phone, default_home_address, is_active, anonymized_at";
+const CONTACT_COLUMNS = "id, full_name, phone, default_home_address, is_active, anonymized_at, bot_blocked_at";
 const PATIENT_COLUMNS =
   "id, contact_id, full_name, birthdate, is_contact_self, notes, insurance_plan_id, insurance_card_number, insurance_card_valid_until, is_active, anonymized_at";
 
@@ -68,6 +70,7 @@ type ContactRow = {
   default_home_address: string | null;
   is_active: boolean;
   anonymized_at: string | null;
+  bot_blocked_at: string | null;
 };
 type PatientRow = {
   id: string;
@@ -90,6 +93,7 @@ const toContact = (row: ContactRow): Contact => ({
   defaultHomeAddress: row.default_home_address,
   isActive: row.is_active,
   anonymizedAt: row.anonymized_at ? new Date(row.anonymized_at) : null,
+  botBlockedAt: row.bot_blocked_at ? new Date(row.bot_blocked_at) : null,
 });
 
 const toPatient = (row: PatientRow): Patient => ({

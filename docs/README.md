@@ -35,10 +35,11 @@
 >     Demonstração RecepClinic", `analista.meta@recepclinic.com.br`, dados fictícios; desativar o
 >     login quando a análise terminar). Falta a **Verificação do acesso** (textos prontos em
 >     [`meta-tech-provider.md`](meta-tech-provider.md); antes, os dados da empresa no rodapé do site).
->   - **F9.6a (limites do bot por contato) implementada em 10/out, aguarda a validação do cliente
->     no staging** (migração `20261010120000` aplicada lá; detalhes e decisões de 10/out no
->     [plano](plano.md)). **Próximo passo (retomar daqui): validação da F9.6a**; depois a F9.6b
->     (bloquear contato). Depois: F8 (quando a Meta aprovar) e F10.
+>   - **F9.6a (limites do bot por contato) validada em 10/out**, com os ajustes do dia ("Revisado",
+>     liberar contato dos limites, contato desativado conta). **F9.6b (bloquear contato)
+>     implementada em 10/out, aguarda a validação do cliente no staging** (migrações até
+>     `20261010140000` aplicadas lá; detalhes no [plano](plano.md)). **Próximo passo (retomar
+>     daqui): validação da F9.6b.** Depois: F8 (quando a Meta aprovar) e F10.
 >   - **Migrações no staging:** o Claude aplica com `supabase db push` (permissão liberada em
 >     09/out), sempre na ordem simulação → aplicar → conferir no banco → só então o push do código.
 >   - **WhatsApp de testes:** `+55 61 9903-3143`, na Cloud API do app RecepClinic, ligado à

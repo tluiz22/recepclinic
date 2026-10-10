@@ -84,6 +84,7 @@ const ageWarning =
       {patient.fullName}
       {anonymized ? <Badge variant="warning">anonimizado</Badge> : !patient.isActive && <Badge>desativado</Badge>}
       {stats && <Badge variant="danger">Faltou {stats.noShows} de {stats.total}</Badge>}
+      {contact.botBlockedAt && <Badge variant="danger">{vocabulary.contact} bloqueado</Badge>}
     </h1>
     {patient.isActive && !anonymized && <a href={`/admin/agenda/marcar?patient_id=${patient.id}`} class={PRIMARY_BUTTON}>Marcar</a>}
   </div>

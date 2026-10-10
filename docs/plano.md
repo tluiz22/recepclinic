@@ -1186,7 +1186,7 @@ Subetapas (cliente, 09/out/2026), cada uma validada antes da próxima:
 | F9.3 | Ferramenta de erros com a clínica em cada erro e monitor externo do painel e do webhook (L45) | validada em 09/out |
 | F9.4 | Anonimização de paciente e contato a pedido (LGPD, L42) | validada em 09/out |
 | F9.5 | Contadores de uso por clínica para o Suporte (L49) | validada em 09/out |
-| F9.6 | Proteção contra abuso no agendamento pelo bot | F9.6a implementada em 10/out (aguarda a validação); F9.6b a implementar |
+| F9.6 | Proteção contra abuso no agendamento pelo bot | F9.6a validada em 10/out; F9.6b implementada em 10/out (aguarda a validação) |
 
 **F9.1:** CSP do Astro como cabeçalho nas páginas do servidor (`astro.config.mjs`): scripts e
 estilos só do próprio domínio, com o hash dos embutidos; estilo em atributo liberado (cor da marca,
@@ -1285,7 +1285,7 @@ Detalhes da F9.6a (cliente, 10/out):
   recepção vai entrar em contato, sem repetir o menu (cliente, 10/out, na validação); a próxima
   mensagem recomeça. O contato entra em "Contatos para revisar" do mesmo jeito.
 
-**F9.6a — implementada em 10/out (aguarda a validação do cliente no staging).** Migração
+**F9.6a — validada pelo cliente em 10/out**, com os ajustes abaixo. Migração
 `20261010120000_limites_do_bot`: os 3 limites em `clinic_settings` (padrão 3, 3 e 2), a origem do
 cadastro em `patients.created_via` (`admin` ou `whatsapp`; os antigos ficam como da equipe) e a
 tabela `bot_limit_events` (motivo, limite, valor na hora e se pausou; só o contato, sem telefone;
@@ -1318,6 +1318,33 @@ unitários.
 Migração `20261010130000_revisar_e_liberar_contato`: colunas em `contacts`, gravadas só pelas
 funções `mark_contact_bot_limits_reviewed` e `set_contact_bot_limits_exempt` (o banco confere o
 papel; a edição comum do contato não mexe nelas). 3 testes de banco novos.
+
+**F9.6b — Bloquear contato: decisões (cliente, 10/out):**
+- número bloqueado que escreve recebe uma resposta **neutra, uma vez por dia** ("Sua conversa
+  está com a recepção, que responde por aqui assim que possível"; sem coexistência, "a recepção
+  vai entrar em contato com você"); as outras mensagens do dia ficam sem resposta; sem menu, sem
+  revelar o bloqueio;
+- bloqueado **sem** cancelar: os atendimentos que ficaram seguem normais (lembrete, preparo,
+  avisos da clínica) e os botões do lembrete funcionam (confirmar, cancelar, remarcar);
+- ao bloquear, os pacientes do contato **saem da lista de espera** (a oferta aberta volta para a
+  fila); desbloquear não devolve ninguém à lista;
+- etiqueta **"bloqueado"** na tela do contato (quem, quando e o motivo, se informado), na ficha de
+  cada paciente dele e nas listas de Pacientes e Contatos; a Agenda não muda;
+- "cancelar todos os atendimentos futuros" também **encerra as séries** dos pacientes do contato
+  (senão o agendador criaria sessões novas); o bloqueio vale mais que a liberação dos limites.
+
+**F9.6b — implementada em 10/out (aguarda a validação do cliente no staging).** Migração
+`20261010140000_bloquear_contato`: `contacts.bot_blocked_at/by/reason`, gravados só pela função
+`set_contact_bot_blocked` (só o Administrador e o Suporte; desbloquear apaga o motivo), e
+`bot_blocked_notified_at` (a resposta do dia, gravada pelo bot). Regras em
+`src/lib/data/whatsapp/contactBlock.ts`: ao bloquear, sai da lista de espera; com a opção,
+encerra as séries e cancela os atendimentos futuros pela tela (trilha de cada um, cancelamento em
+massa, sem aviso). No bot (`router.ts`), o número bloqueado (mesmo com o contato desativado) só
+passa nos toques do lembrete e no fluxo que eles abrem; o resto recebe a resposta neutra uma vez
+por dia e a conversa volta ao começo. Telas: cartão "Bloqueio no bot" na tela do contato (motivo
+opcional; a opção de cancelar vem marcada e mostra quantos atendimentos; confirmação), etiqueta
+"bloqueado" no contato, na ficha do paciente e nas listas. 5 testes de banco novos
+(`bot-bloqueio.test.ts`) e 1 unitário.
 
 ## F10 — Primeiro piloto
 
