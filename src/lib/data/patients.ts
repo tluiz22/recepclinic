@@ -1,4 +1,5 @@
 import { isAdult, isOverConsultationAgeLimit } from "../age";
+import { isAnonymizedPhone } from "../anonymization";
 import { isCalendarDate } from "../clinicTime";
 import { normalizePhone } from "../phone";
 import type { DbClient } from "./clients";
@@ -28,6 +29,8 @@ export type Contact = {
   phone: string;
   defaultHomeAddress: string | null;
   isActive: boolean;
+  /** Anonimizado a pedido (F9.4): sem nome, telefone e endereço de verdade. */
+  anonymizedAt: Date | null;
 };
 
 export type PatientInsurance = {
@@ -48,15 +51,24 @@ export type Patient = {
   /** null = particular (D10). */
   insurance: PatientInsurance | null;
   isActive: boolean;
+  /** Anonimizado a pedido (F9.4): não volta nem muda. */
+  anonymizedAt: Date | null;
 };
 
 export type PatientWithContact = Patient & { contact: Contact };
 
-const CONTACT_COLUMNS = "id, full_name, phone, default_home_address, is_active";
+const CONTACT_COLUMNS = "id, full_name, phone, default_home_address, is_active, anonymized_at";
 const PATIENT_COLUMNS =
-  "id, contact_id, full_name, birthdate, is_contact_self, notes, insurance_plan_id, insurance_card_number, insurance_card_valid_until, is_active";
+  "id, contact_id, full_name, birthdate, is_contact_self, notes, insurance_plan_id, insurance_card_number, insurance_card_valid_until, is_active, anonymized_at";
 
-type ContactRow = { id: string; full_name: string; phone: string; default_home_address: string | null; is_active: boolean };
+type ContactRow = {
+  id: string;
+  full_name: string;
+  phone: string;
+  default_home_address: string | null;
+  is_active: boolean;
+  anonymized_at: string | null;
+};
 type PatientRow = {
   id: string;
   contact_id: string;
@@ -68,6 +80,7 @@ type PatientRow = {
   insurance_card_number: string | null;
   insurance_card_valid_until: string | null;
   is_active: boolean;
+  anonymized_at: string | null;
 };
 
 const toContact = (row: ContactRow): Contact => ({
@@ -76,6 +89,7 @@ const toContact = (row: ContactRow): Contact => ({
   phone: row.phone,
   defaultHomeAddress: row.default_home_address,
   isActive: row.is_active,
+  anonymizedAt: row.anonymized_at ? new Date(row.anonymized_at) : null,
 });
 
 const toPatient = (row: PatientRow): Patient => ({
@@ -89,6 +103,7 @@ const toPatient = (row: PatientRow): Patient => ({
     ? { planId: row.insurance_plan_id, cardNumber: row.insurance_card_number, cardValidUntil: row.insurance_card_valid_until }
     : null,
   isActive: row.is_active,
+  anonymizedAt: row.anonymized_at ? new Date(row.anonymized_at) : null,
 });
 
 // ---------------------------------------------------------------------------
@@ -180,10 +195,16 @@ export async function updateContact(
   const fullName = cleanText(input.fullName) ?? "";
   const phone = normalizePhone(input.phone ?? "");
   v.check(fullName.length > 0, "fullName", "Informe o nome do contato");
-  v.check(phone !== null, "phone", PATIENT_MESSAGES.invalidPhone);
+  v.check(phone !== null && !isAnonymizedPhone(phone), "phone", PATIENT_MESSAGES.invalidPhone);
   v.throwIfInvalid("Contato");
-  const row: { full_name: string; phone: string; default_home_address?: string | null } = { full_name: fullName, phone: phone! };
+  const row: { full_name: string; phone: string; default_home_address?: string | null; anonymized_at?: null; is_active?: boolean } = {
+    full_name: fullName,
+    phone: phone!,
+  };
   if ("defaultHomeAddress" in input) row.default_home_address = cleanText(input.defaultHomeAddress);
+  // Contato anonimizado (F9.4) com telefone novo: volta a ser um contato ativo
+  // para os outros pacientes dele (os dados antigos já foram apagados).
+  if ((await getContact(db, clinicId, id)).anonymizedAt) Object.assign(row, { anonymized_at: null, is_active: true });
   return toContact(
     unwrapOne(await db.from("contacts").update(row).eq("clinic_id", clinicId).eq("id", id).select(CONTACT_COLUMNS).maybeSingle(), "Contato"),
   );
@@ -502,3 +523,48 @@ export async function setPatientActive(db: DbClient, clinicId: string, id: strin
 function escapeLike(text: string): string {
   return text.replace(/[\\%_]/g, (char) => `\\${char}`);
 }
+
+// ---------------------------------------------------------------------------
+// Anonimização a pedido (F9.4, LGPD)
+// ---------------------------------------------------------------------------
+
+export type AnonymizationPreview = {
+  /** Atendimentos futuros (marcados ou confirmados) que serão cancelados, sem aviso. */
+  futureAppointments: number;
+  /** Outros pacientes do mesmo contato: ficam sem telefone até a clínica cadastrar outro. */
+  otherPatients: { id: string; fullName: string }[];
+};
+
+/** O que a anonimização vai fazer, para a tela mostrar antes de confirmar. */
+export async function previewAnonymization(db: DbClient, clinicId: string, patientId: string, now: Date = new Date()): Promise<AnonymizationPreview> {
+  const patient = await getPatient(db, clinicId, patientId);
+  const [{ count, error }, others] = await Promise.all([
+    db
+      .from("appointments")
+      .select("id", { count: "exact", head: true })
+      .eq("clinic_id", clinicId)
+      .eq("patient_id", patientId)
+      .in("status", ["scheduled", "confirmed"])
+      .gt("scheduled_at", now.toISOString()),
+    listContactPatients(db, clinicId, patient.contactId, { includeInactive: true }),
+  ]);
+  if (error) throw fromDbError(error, "Atendimentos futuros");
+  return {
+    futureAppointments: count ?? 0,
+    otherPatients: others.filter((p) => p.id !== patientId && !p.anonymizedAt).map((p) => ({ id: p.id, fullName: p.fullName })),
+  };
+}
+
+/** Anonimiza o paciente e o contato dele (função do banco; só Administrador e Suporte). Irreversível. */
+export async function anonymizePatient(db: DbClient, clinicId: string, patientId: string): Promise<{ canceled: number; otherPatients: number }> {
+  const { data, error } = await db.rpc("anonymize_patient", { p_clinic_id: clinicId, p_patient_id: patientId });
+  if (error) {
+    if (error.code === "42501") throw new DataError("forbidden", "Anonimizar: só o Administrador da clínica ou o Suporte", {}, { cause: error });
+    if (error.code === "P0002") throw new DataError("not_found", "Paciente não encontrado", {}, { cause: error });
+    if (error.hint === "already_anonymized") throw new DataError("invalid", "Paciente já anonimizado", {}, { cause: error });
+    throw fromDbError(error, "Anonimizar paciente");
+  }
+  const result = (data ?? {}) as { canceled?: number; other_patients?: number };
+  return { canceled: result.canceled ?? 0, otherPatients: result.other_patients ?? 0 };
+}
+

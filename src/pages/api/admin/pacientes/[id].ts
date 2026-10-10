@@ -4,10 +4,11 @@ import { todayIn } from "../../../../lib/clinicTime";
 import { createUserClient } from "../../../../lib/data/clients";
 import { DataError } from "../../../../lib/data/errors";
 import { runFormAction } from "../../../../lib/data/formAction";
-import { setPatientActive, setPatientInsurance, updatePatient } from "../../../../lib/data/patients";
+import { anonymizePatient, setPatientActive, setPatientInsurance, updatePatient } from "../../../../lib/data/patients";
 import { formOptionalText, formText } from "../../../../lib/forms";
 
-// Paciente (F4.7): salvar dados, plano de saúde (com o item), desativar e reativar.
+// Paciente (F4.7): salvar dados, plano de saúde (com o item), desativar e reativar;
+// anonimizar a pedido (F9.4, LGPD: só Administrador e Suporte; o banco confere de novo).
 export const POST: APIRoute = async (context) => {
   const { request, cookies, locals, params } = context;
   const id = params.id!;
@@ -46,6 +47,14 @@ export const POST: APIRoute = async (context) => {
           const active = formText(form, "acao") === "reativar";
           await setPatientActive(db, clinic.clinicId, id, active);
           return { redirectTo: page, message: active ? "Reativado." : "Desativado: sai das buscas do Marcar; o histórico fica." };
+        }
+        case "anonimizar": {
+          if (!clinic.isPlatformStaff && !clinic.roles.includes("admin")) {
+            throw new DataError("forbidden", "Anonimizar: só o Administrador da clínica ou o Suporte");
+          }
+          const { canceled } = await anonymizePatient(db, clinic.clinicId, id);
+          const futures = canceled > 0 ? ` ${canceled} ${canceled === 1 ? "atendimento futuro cancelado" : "atendimentos futuros cancelados"}.` : "";
+          return { redirectTo: page, message: `Anonimizado.${futures}` };
         }
         default:
           throw new DataError("invalid", "Ação desconhecida", { acao: "Ação desconhecida." });

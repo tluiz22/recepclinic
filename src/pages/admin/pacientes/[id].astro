@@ -2,11 +2,13 @@
 // Pacientes › paciente (F4.7): dados (nome, nascimento, observações), quem
 // fala com a clínica, plano de saúde (com o item "Convênios", D10), marcar,
 // desativar/reativar e o histórico (próximos e anteriores) das agendas que a
-// pessoa vê.
+// pessoa vê. Anonimizar a pedido (F9.4, LGPD): só o Administrador e o
+// Suporte; depois disso a página só mostra o histórico.
 import AdminLayout from "../../../layouts/AdminLayout.astro";
 import ActiveToggle from "../../../components/admin/ActiveToggle.astro";
 import Badge, { type BadgeVariant } from "../../../components/admin/Badge.astro";
 import Card from "../../../components/admin/Card.astro";
+import ConfirmDeleteDialog from "../../../components/admin/ConfirmDeleteDialog.astro";
 import FlashMessage from "../../../components/admin/FlashMessage.astro";
 import Icon from "../../../components/admin/Icon.astro";
 import PhoneLinks from "../../../components/admin/PhoneLinks.astro";
@@ -18,7 +20,7 @@ import { createUserClient } from "../../../lib/data/clients";
 import { listNoShowStats, listPatientAppointments } from "../../../lib/data/agenda/view";
 import { getClinicSettings } from "../../../lib/data/config/clinic";
 import { listInsurancePlans } from "../../../lib/data/config/insurance";
-import { getContact, getPatient } from "../../../lib/data/patients";
+import { getContact, getPatient, previewAnonymization } from "../../../lib/data/patients";
 import { capitalize, vocabularyFor } from "../../../lib/vocabulary";
 
 const clinic = Astro.locals.clinic!;
@@ -49,6 +51,23 @@ const statusBadge: Record<string, { label: string; variant: BadgeVariant }> = {
 };
 const pending = (a: (typeof history)[number]) => (a.status === "scheduled" || a.status === "confirmed") && a.scheduledAt <= now;
 const action = `/api/admin/pacientes/${patient.id}`;
+const anonymized = patient.anonymizedAt !== null;
+const canAnonymize = !anonymized && (clinic.isPlatformStaff || clinic.roles.includes("admin"));
+const preview = canAnonymize ? await previewAnonymization(db, clinic.clinicId, patient.id, now) : null;
+const anonymizeMessage = preview
+  ? [
+      `Nome, nascimento, observações e carteirinha de ${patient.fullName} serão apagados, e o ${vocabulary.contact} (${contact.fullName}) perde nome, telefone, endereço e as mensagens do WhatsApp. O histórico de atendimentos fica, sem identificação.`,
+      preview.futureAppointments > 0
+        ? `${preview.futureAppointments} ${preview.futureAppointments === 1 ? "atendimento futuro será cancelado" : "atendimentos futuros serão cancelados"}, sem aviso ao paciente.`
+        : "",
+      preview.otherPatients.length > 0
+        ? `Também ficam sem telefone: ${preview.otherPatients.map((p) => p.fullName).join(", ")} (cadastre um telefone novo no ${vocabulary.contact} depois).`
+        : "",
+      "Não dá para desfazer.",
+    ]
+      .filter(Boolean)
+      .join(" ")
+  : "";
 const ageWarning =
   settings.consultationAgeLimitYears !== null && isOverConsultationAgeLimit(patient.birthdate, today, settings.consultationAgeLimitYears)
     ? `Passou da idade limite da Consulta (${settings.consultationAgeLimitYears} anos): só Retorno e Exame.`
@@ -63,15 +82,25 @@ const ageWarning =
   <div class="mt-3 flex flex-wrap items-center justify-between gap-3">
     <h1 class="flex flex-wrap items-center gap-2 text-2xl font-bold text-slate-900">
       {patient.fullName}
-      {!patient.isActive && <Badge>desativado</Badge>}
+      {anonymized ? <Badge variant="warning">anonimizado</Badge> : !patient.isActive && <Badge>desativado</Badge>}
       {stats && <Badge variant="danger">Faltou {stats.noShows} de {stats.total}</Badge>}
     </h1>
-    {patient.isActive && <a href={`/admin/agenda/marcar?patient_id=${patient.id}`} class={PRIMARY_BUTTON}>Marcar</a>}
+    {patient.isActive && !anonymized && <a href={`/admin/agenda/marcar?patient_id=${patient.id}`} class={PRIMARY_BUTTON}>Marcar</a>}
   </div>
   <FlashMessage />
 
   <div class="mt-4 grid gap-4 lg:grid-cols-2">
     <div class="flex flex-col gap-4">
+      {anonymized && (
+        <Card>
+          <h2 class="font-semibold text-slate-900">Anonimizado</h2>
+          <p class="mt-1 text-sm text-slate-600">
+            Em {formatInstant(patient.anonymizedAt!, clinic.timezone, "dd/MM/yyyy 'às' HH:mm")}, a pedido (LGPD). Nome, nascimento, observações, telefone e
+            mensagens foram apagados; o histórico de atendimentos fica, sem identificação.
+          </p>
+        </Card>
+      )}
+      {!anonymized && (
       <Card>
         <h2 class="font-semibold text-slate-900">Dados</h2>
         <p class="mt-1 text-sm text-slate-600">{formatAge(patient.birthdate, today)}</p>
@@ -94,6 +123,7 @@ const ageWarning =
           <button type="submit" class={`${SECONDARY_BUTTON} self-start`}>Salvar</button>
         </form>
       </Card>
+      )}
 
       <Card>
         <h2 class="font-semibold text-slate-900">{patient.isContactSelf ? "WhatsApp" : capitalize(vocabulary.contact)}</h2>
@@ -106,7 +136,7 @@ const ageWarning =
       </Card>
 
       {
-        insuranceOn && (
+        insuranceOn && !anonymized && (
           <Card>
             <h2 class="font-semibold text-slate-900">Plano de saúde</h2>
             <form method="POST" action={action} class="mt-2 flex flex-col gap-3">
@@ -138,9 +168,35 @@ const ageWarning =
         )
       }
 
-      <Card>
-        <ActiveToggle action={action} isActive={patient.isActive} what={`o ${vocabulary.patient}`} />
-      </Card>
+      {!anonymized && (
+        <Card>
+          <ActiveToggle action={action} isActive={patient.isActive} what={`o ${vocabulary.patient}`} />
+        </Card>
+      )}
+
+      {
+        canAnonymize && (
+          <Card>
+            <h2 class="font-semibold text-slate-900">Anonimizar (LGPD)</h2>
+            <p class="mt-1 text-sm text-slate-600">
+              Quando o {vocabulary.patient} pede a exclusão dos dados. O histórico fica sem identificação; o {vocabulary.contact}, o telefone e as mensagens
+              são apagados junto. Não dá para desfazer.
+            </p>
+            <form method="POST" action={action} class="mt-3">
+              <input type="hidden" name="acao" value="anonimizar" />
+              <button
+                type="submit"
+                class={`${SECONDARY_BUTTON} js-confirm-delete text-red-700`}
+                data-confirm-title={`Anonimizar ${patient.fullName}?`}
+                data-confirm-message={anonymizeMessage}
+                data-confirm-label="Anonimizar"
+              >
+                Anonimizar {vocabulary.patient}
+              </button>
+            </form>
+          </Card>
+        )
+      }
     </div>
 
     <div class="flex flex-col gap-4">
@@ -178,4 +234,5 @@ const ageWarning =
       }
     </div>
   </div>
+  {canAnonymize && <ConfirmDeleteDialog />}
 </AdminLayout>

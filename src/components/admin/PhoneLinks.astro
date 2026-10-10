@@ -4,6 +4,7 @@
 // usando o painel. O número é texto simples, sem link de ligação (cliente,
 // 05/out/2026: tudo se resolve pelo WhatsApp; no computador o `tel:` abria
 // outro aplicativo e atrapalhava copiar o número).
+import { isAnonymizedPhone } from "../../lib/anonymization";
 import { formatPhoneBR, whatsappHref } from "../../lib/phone";
 
 interface Props {
@@ -14,8 +15,12 @@ interface Props {
 }
 
 const { phone, plain = false, class: className = "" } = Astro.props;
+// Contato anonimizado (F9.4): o número não existe; sem o botão do WhatsApp.
+const anonymized = isAnonymizedPhone(phone);
 ---
 
+{anonymized && <span class={`text-slate-500 ${className}`}>telefone anonimizado</span>}
+{!anonymized && (
 <span class={`inline-flex flex-wrap items-center gap-x-2 gap-y-1 ${className}`}>
   <span class={plain ? "" : "font-semibold text-slate-900"}>{formatPhoneBR(phone)}</span>
   <a
@@ -28,3 +33,4 @@ const { phone, plain = false, class: className = "" } = Astro.props;
     WhatsApp
   </a>
 </span>
+)}

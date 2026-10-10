@@ -1183,8 +1183,8 @@ Subetapas (cliente, 09/out/2026), cada uma validada antes da próxima:
 |---|---|---|
 | F9.1 | Cabeçalhos de segurança, `robots.txt` e proteção de origem explícita (L44, L46) | validada em 09/out |
 | F9.2 | Logs sem dados pessoais: só ids e a clínica (L43) | validada em 09/out |
-| F9.3 | Ferramenta de erros com a clínica em cada erro e monitor externo do painel e do webhook (L45) | implementada em 09/out, a validar |
-| F9.4 | Anonimização de paciente e contato a pedido (LGPD, L42); regras com o cliente | |
+| F9.3 | Ferramenta de erros com a clínica em cada erro e monitor externo do painel e do webhook (L45) | validada em 09/out |
+| F9.4 | Anonimização de paciente e contato a pedido (LGPD, L42) | implementada em 09/out, a validar |
 | F9.5 | Contadores de uso por clínica para o Suporte (L49) | |
 
 **F9.1:** CSP do Astro como cabeçalho nas páginas do servidor (`astro.config.mjs`): scripts e
@@ -1220,6 +1220,24 @@ agendador registra o fim da execução em `cron_heartbeats`. **Monitor externo: 
 | Webhook | `https://app.recepclinic.com.br/api/saude/webhook` | 503: falta o App Secret ou o token de verificação do app da Meta (o próprio webhook responde 403 a quem não é a Meta, e o Better Stack não tem como aceitar 403) |
 | Saúde | `https://app.recepclinic.com.br/api/saude` | 503: banco fora ou rotina atrasada (minuto: 10 min; 5 min: 20; hora: 90; diária: 26 h) |
 | Erros | `https://app.recepclinic.com.br/api/saude/erros` | 503: algum erro gravado nos últimos 15 minutos (volta sozinho) |
+
+**F9.4** (regras do cliente, 09/out): a clínica (controladora) atende o pedido do paciente e
+anonimiza em *Pacientes › paciente › Anonimizar (LGPD)*, com confirmação que mostra o que vai
+acontecer. Função `anonymize_patient` (migração `20261009140000`), irreversível:
+1. **histórico fica, sem identificação**: o paciente vira "Paciente anonimizado" (nascimento
+   neutro 01/01/1900, sem observações nem carteirinha, inativo); atendimentos passados mantêm
+   data, serviço, profissional, valor e situação, sem o endereço domiciliar;
+2. **o contato vai sempre junto**, mesmo que responda por outros pacientes: nome, telefone (vira
+   `+00…`, número que não existe e que o envio recusa antes da Meta), endereço, textos das
+   mensagens, conversa do bot, funil e links. Os outros pacientes ficam sem telefone até a clínica
+   editar o contato com o nome e o WhatsApp de quem fala por eles (aí ele volta a ser ativo);
+3. **só o Administrador da clínica e o Suporte** (o banco confere);
+4. **futuros cancelados junto, sem aviso** (a trilha registra "anonymized"; a lista de espera pode
+   oferecer as vagas); séries encerradas;
+5. **registro do Suporte**: os campos pessoais das cópias viram "anonimizado".
+
+O paciente anonimizado não pode ser editado nem reativado (gatilho e restrição no banco). As
+telas mostram "telefone anonimizado" e "idade anonimizada".
 
 ## F10 — Primeiro piloto
 

@@ -1,3 +1,5 @@
+import { isAnonymizedPhone } from "./anonymization";
+
 const E164_REGEX = /^\+\d{10,15}$/;
 
 export function normalizePhone(rawPhone: string): string | null {
@@ -12,6 +14,8 @@ export function normalizePhone(rawPhone: string): string | null {
 // cadastro). Números fora desse formato voltam como vieram, sem quebrar a
 // tela.
 export function formatPhoneBR(e164: string): string {
+  // Contato anonimizado (F9.4): o número não existe.
+  if (isAnonymizedPhone(e164)) return "telefone anonimizado";
   const match = e164.match(/^\+55(\d{2})(\d{5})(\d{4})$/);
   if (!match) return e164;
   const [, ddd, prefix, suffix] = match;

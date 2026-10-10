@@ -489,14 +489,14 @@ isOneToOne: false
                   ]
                 },"contacts": {
                   Row: {
-                    "clinic_id": string,"created_at": string,"default_home_address": string | null,"full_name": string,"id": string,"is_active": boolean,"phone": string,"updated_at": string
+                    "anonymized_at": string | null,"clinic_id": string,"created_at": string,"default_home_address": string | null,"full_name": string,"id": string,"is_active": boolean,"phone": string,"updated_at": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "clinic_id": string,"created_at"?: string,"default_home_address"?: string | null,"full_name": string,"id"?: string,"is_active"?: boolean,"phone": string,"updated_at"?: string
+                    "anonymized_at"?: string | null,"clinic_id": string,"created_at"?: string,"default_home_address"?: string | null,"full_name": string,"id"?: string,"is_active"?: boolean,"phone": string,"updated_at"?: string
                   }
                   Update: {
-                    "clinic_id"?: string,"created_at"?: string,"default_home_address"?: string | null,"full_name"?: string,"id"?: string,"is_active"?: boolean,"phone"?: string,"updated_at"?: string
+                    "anonymized_at"?: string | null,"clinic_id"?: string,"created_at"?: string,"default_home_address"?: string | null,"full_name"?: string,"id"?: string,"is_active"?: boolean,"phone"?: string,"updated_at"?: string
                   }
                   Relationships: [
                     {
@@ -721,14 +721,14 @@ isOneToOne: false
                   ]
                 },"patients": {
                   Row: {
-                    "birthdate": string,"clinic_id": string,"contact_id": string,"created_at": string,"full_name": string,"id": string,"insurance_card_number": string | null,"insurance_card_valid_until": string | null,"insurance_plan_id": string | null,"is_active": boolean,"is_contact_self": boolean,"notes": string | null,"updated_at": string
+                    "anonymized_at": string | null,"birthdate": string,"clinic_id": string,"contact_id": string,"created_at": string,"full_name": string,"id": string,"insurance_card_number": string | null,"insurance_card_valid_until": string | null,"insurance_plan_id": string | null,"is_active": boolean,"is_contact_self": boolean,"notes": string | null,"updated_at": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "birthdate": string,"clinic_id": string,"contact_id": string,"created_at"?: string,"full_name": string,"id"?: string,"insurance_card_number"?: string | null,"insurance_card_valid_until"?: string | null,"insurance_plan_id"?: string | null,"is_active"?: boolean,"is_contact_self"?: boolean,"notes"?: string | null,"updated_at"?: string
+                    "anonymized_at"?: string | null,"birthdate": string,"clinic_id": string,"contact_id": string,"created_at"?: string,"full_name": string,"id"?: string,"insurance_card_number"?: string | null,"insurance_card_valid_until"?: string | null,"insurance_plan_id"?: string | null,"is_active"?: boolean,"is_contact_self"?: boolean,"notes"?: string | null,"updated_at"?: string
                   }
                   Update: {
-                    "birthdate"?: string,"clinic_id"?: string,"contact_id"?: string,"created_at"?: string,"full_name"?: string,"id"?: string,"insurance_card_number"?: string | null,"insurance_card_valid_until"?: string | null,"insurance_plan_id"?: string | null,"is_active"?: boolean,"is_contact_self"?: boolean,"notes"?: string | null,"updated_at"?: string
+                    "anonymized_at"?: string | null,"birthdate"?: string,"clinic_id"?: string,"contact_id"?: string,"created_at"?: string,"full_name"?: string,"id"?: string,"insurance_card_number"?: string | null,"insurance_card_valid_until"?: string | null,"insurance_plan_id"?: string | null,"is_active"?: boolean,"is_contact_self"?: boolean,"notes"?: string | null,"updated_at"?: string
                   }
                   Relationships: [
                     {
@@ -1179,7 +1179,10 @@ isOneToOne: false
             [_ in never]: never
           }
           Functions: {
-            "book_group_session":
+            "anonymize_patient":
+{ Args: { "p_clinic_id": string,"p_patient_id": string }; Returns: Json
+                           },
+"book_group_session":
 { Args: { "p_agenda_id": string,"p_booking_channel": Database["public"]['Enums']["action_channel"],"p_location_id": string,"p_patient_id": string,"p_scheduled_at": string,"p_service_id": string }; Returns: string
                            },
 "clinic_actor_labels":

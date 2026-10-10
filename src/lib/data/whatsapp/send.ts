@@ -12,6 +12,7 @@ import type { OfferSender } from "../waitlist/offers";
 import { getApprovedTemplate } from "./connection";
 import { isCustomerServiceWindowOpen, recordOutboundMessage } from "./messages";
 import { appointmentParams, cleanParam, clinicLabel, defaultTemplate, fillTemplate, firstName, formatAppointmentWhen, formatSummaryDate, offerTypeWord, paramCount, type MessageArticle } from "./templates";
+import { isAnonymizedPhone } from "../../anonymization";
 import { logError } from "../../log";
 
 // Envio pelo WhatsApp da clínica (F6.2): o número e o token dela (D3a), com a
@@ -75,6 +76,8 @@ export async function createClinicSender(
       .then((r) => unwrapOne(r, "Configuração da clínica")),
   ]);
   const post = async (message: Record<string, unknown>, body: string): Promise<SendOutcome> => {
+    // Contato anonimizado (F9.4): o número não existe; nem chega à Meta.
+    if (typeof message.to === "string" && isAnonymizedPhone(message.to)) return { sent: false, reason: "contato anonimizado", body };
     try {
       const messageId = await sendMessage(setup.phoneNumberId, setup.accessToken, message, fetcher);
       return { sent: true, messageId, body };

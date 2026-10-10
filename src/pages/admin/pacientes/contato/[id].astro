@@ -38,7 +38,7 @@ const action = `/api/admin/pacientes/contato/${contact.id}`;
   </a>
   <h1 class="mt-3 flex flex-wrap items-center gap-2 text-2xl font-bold text-slate-900">
     {contact.fullName}
-    {!contact.isActive && <Badge>desativado</Badge>}
+    {contact.anonymizedAt ? <Badge variant="warning">anonimizado</Badge> : !contact.isActive && <Badge>desativado</Badge>}
   </h1>
   <p class="mt-1 text-sm"><PhoneLinks phone={contact.phone} plain class="text-slate-700" /></p>
   <FlashMessage />
@@ -47,15 +47,23 @@ const action = `/api/admin/pacientes/contato/${contact.id}`;
     <div class="flex flex-col gap-4">
       <Card>
         <h2 class="font-semibold text-slate-900">Dados</h2>
+        {
+          contact.anonymizedAt && (
+            <p class="mt-1 text-sm text-amber-700">
+              Anonimizado a pedido (LGPD): nome, telefone e mensagens foram apagados. Para os outros pacientes dele voltarem a receber mensagens,
+              informe o nome e o WhatsApp de quem fala por eles agora.
+            </p>
+          )
+        }
         <form method="POST" action={action} class="mt-3 flex flex-col gap-3">
           <input type="hidden" name="acao" value="salvar" />
           <div>
             <label for="full_name" class={LABEL}>Nome</label>
-            <input id="full_name" name="full_name" required value={contact.fullName} class={INPUT} />
+            <input id="full_name" name="full_name" required value={contact.anonymizedAt ? "" : contact.fullName} class={INPUT} />
           </div>
           <div>
             <label for="phone" class={LABEL}>WhatsApp</label>
-            <input id="phone" name="phone" type="tel" required value={formatPhoneBR(contact.phone)} class={INPUT} />
+            <input id="phone" name="phone" type="tel" required value={contact.anonymizedAt ? "" : formatPhoneBR(contact.phone)} class={INPUT} />
             <p class={HINT}>É por este número que a clínica conversa com ele e envia lembretes.</p>
           </div>
           {
@@ -72,9 +80,11 @@ const action = `/api/admin/pacientes/contato/${contact.id}`;
           <button type="submit" class={`${SECONDARY_BUTTON} self-start`}>Salvar</button>
         </form>
       </Card>
-      <Card>
-        <ActiveToggle action={action} isActive={contact.isActive} what={`o ${vocabulary.contact}`} />
-      </Card>
+      {!contact.anonymizedAt && (
+        <Card>
+          <ActiveToggle action={action} isActive={contact.isActive} what={`o ${vocabulary.contact}`} />
+        </Card>
+      )}
     </div>
 
     <Card>

@@ -1,3 +1,4 @@
+import { ANONYMIZED_BIRTHDATE } from "./anonymization";
 // Maioridade (Fase 21): 18+ pode ser o próprio responsável e marcar exame
 // para si.
 export const ADULT_AGE_YEARS = 18;
@@ -34,6 +35,8 @@ export function isOverConsultationAgeLimit(
 // crianças pequenas (contexto pediátrico, onde meses importam), simples a
 // partir de 3 anos.
 export function formatAge(birthdateIso: string, referenceDateIso: string): string {
+  // Paciente anonimizado (F9.4): o nascimento é só um valor neutro.
+  if (birthdateIso === ANONYMIZED_BIRTHDATE) return "idade anonimizada";
   // Nascimento depois da data de referência só vem de dado errado (o banco
   // recusa): aparece como tal (achado 3 da F1, decisão do cliente na F3.5).
   if (birthdateIso > referenceDateIso) return "nascimento inválido";
