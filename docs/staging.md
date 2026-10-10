@@ -25,7 +25,7 @@
      senha com no mínimo 8 caracteres.
    - *URL Configuration*: **Site URL** `https://app.recepclinic.com.br`; **Redirect URLs**
      `https://app.recepclinic.com.br/**`.
-   - *Emails › Templates*: **fica para quando houver o provedor de e-mail** (cliente, 06/out/2026:
+   - *Emails › Templates* e SMTP: ver a **parte L** (Resend, 10/out). Antes dela: **ficava para quando houver o provedor de e-mail** (cliente, 06/out/2026:
      o Supabase só deixa editar os modelos com SMTP próprio). Nessa hora, o mesmo provedor vira
      o SMTP do painel e do Supabase, e os modelos **Invite user** e **Reset password** recebem o
      assunto e o texto de `supabase/templates/convite.html` e `recuperar-senha.html` (assuntos em
@@ -240,3 +240,30 @@ do celular; cliente, 06/out/2026). Nada do app ou do número do piloto.
 
 **Validada em 09/out** com os templates aprovados; resumo e oferta de vaga a conferir quando a
 Meta aprovar os templates deles.
+
+## L. E-mail de verdade (Resend)
+
+Decisões no [plano](plano.md) ("E-mail de verdade"): Resend, remetente
+`RecepClinic <nao-responda@recepclinic.com.br>`, o mesmo SMTP no painel e no Supabase.
+
+1. **Resend** (cliente, 10/out): conta criada; *Domains* › `recepclinic.com.br` verificado (registros
+   na Cloudflare: DKIM `resend._domainkey` e o subdomínio `send`, com a nuvem cinza; os registros do
+   site e o MX da raiz, que é o roteamento de e-mail da Cloudflare, não mudam); *API Keys* ›
+   `staging-smtp`, só envio, só o domínio. A chave fica só no `.env.staging` e na Vercel.
+2. **`.env.staging`** (já gravado): `SMTP_HOST=smtp.resend.com`, `SMTP_PORT=465`,
+   `SMTP_USER=resend`, `SMTP_PASSWORD=<chave>`, `EMAIL_FROM=RecepClinic <nao-responda@recepclinic.com.br>`.
+3. **Vercel** (*Settings › Environment Variables*, Production): as mesmas 5 variáveis; depois,
+   *Deployments › Redeploy*. Para copiar a chave sem exibir:
+   `grep '^SMTP_PASSWORD=' .env.staging | cut -d= -f2- | pbcopy`.
+4. **Supabase** (*Authentication › Emails*):
+   - *SMTP Settings*: **Enable custom SMTP**; Sender email `nao-responda@recepclinic.com.br`;
+     Sender name `RecepClinic`; Host `smtp.resend.com`; Port `465`; Username `resend`; Password: a
+     chave; *Save*.
+   - *Templates* › **Invite user**: assunto `Convite para o painel RecepClinic`, corpo de
+     `supabase/templates/convite.html`; **Reset password**: assunto
+     `Redefinir a senha do painel RecepClinic`, corpo de `supabase/templates/recuperar-senha.html`.
+     Para copiar o corpo: `pbcopy < supabase/templates/convite.html` (e o outro).
+5. **Conferir**: "Esqueci minha senha" em `https://app.recepclinic.com.br/admin/esqueci-senha`
+   com um login de verdade (o e-mail leva à tela de nova senha); um convite ou pedido de
+   informações pelo Suporte chega sem o aviso de "e-mail não saiu". A partir daqui,
+   `scripts/link-de-senha.mjs` fica só de reserva.
