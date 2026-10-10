@@ -27,7 +27,7 @@
 | F6 | WhatsApp por clínica e bot | concluída (08/out; validada pelo cliente, menos o que depende de templates em análise) |
 | F7 | Envios automáticos por clínica | concluída (09/out; validada pelo cliente com os templates aprovados) |
 | F8 | Conexão self-service na Meta | a detalhar (depende da Meta) |
-| F9 | Operação e segurança | a detalhar |
+| F9 | Operação e segurança | concluída (10/out; validada pelo cliente) |
 | F10 | Primeiro piloto | a detalhar |
 
 ---
@@ -1186,7 +1186,7 @@ Subetapas (cliente, 09/out/2026), cada uma validada antes da próxima:
 | F9.3 | Ferramenta de erros com a clínica em cada erro e monitor externo do painel e do webhook (L45) | validada em 09/out |
 | F9.4 | Anonimização de paciente e contato a pedido (LGPD, L42) | validada em 09/out |
 | F9.5 | Contadores de uso por clínica para o Suporte (L49) | validada em 09/out |
-| F9.6 | Proteção contra abuso no agendamento pelo bot | F9.6a validada em 10/out; F9.6b implementada em 10/out (aguarda a validação) |
+| F9.6 | Proteção contra abuso no agendamento pelo bot | validada em 10/out (F9.6a e F9.6b) |
 
 **F9.1:** CSP do Astro como cabeçalho nas páginas do servidor (`astro.config.mjs`): scripts e
 estilos só do próprio domínio, com o hash dos embutidos; estilo em atributo liberado (cor da marca,
@@ -1333,7 +1333,7 @@ papel; a edição comum do contato não mexe nelas). 3 testes de banco novos.
 - "cancelar todos os atendimentos futuros" também **encerra as séries** dos pacientes do contato
   (senão o agendador criaria sessões novas); o bloqueio vale mais que a liberação dos limites.
 
-**F9.6b — implementada em 10/out (aguarda a validação do cliente no staging).** Migração
+**F9.6b — validada pelo cliente em 10/out.** Migração
 `20261010140000_bloquear_contato`: `contacts.bot_blocked_at/by/reason`, gravados só pela função
 `set_contact_bot_blocked` (só o Administrador e o Suporte; desbloquear apaga o motivo), e
 `bot_blocked_notified_at` (a resposta do dia, gravada pelo bot). Regras em
