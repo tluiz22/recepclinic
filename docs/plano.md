@@ -1217,7 +1217,7 @@ agendador registra o fim da execução em `cron_heartbeats`. **Monitor externo: 
 | Monitor | Endereço | Fica vermelho quando |
 |---|---|---|
 | Painel | `https://app.recepclinic.com.br/admin/login` | não responde 200 |
-| Webhook | `https://app.recepclinic.com.br/api/whatsapp/webhook` | não responde 403 (o GET sem o token da Meta é recusado; 403 prova que a rota está no ar) |
+| Webhook | `https://app.recepclinic.com.br/api/saude/webhook` | 503: falta o App Secret ou o token de verificação do app da Meta (o próprio webhook responde 403 a quem não é a Meta, e o Better Stack não tem como aceitar 403) |
 | Saúde | `https://app.recepclinic.com.br/api/saude` | 503: banco fora ou rotina atrasada (minuto: 10 min; 5 min: 20; hora: 90; diária: 26 h) |
 | Erros | `https://app.recepclinic.com.br/api/saude/erros` | 503: algum erro gravado nos últimos 15 minutos (volta sozinho) |
 
