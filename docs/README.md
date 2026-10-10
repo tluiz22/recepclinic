@@ -1,6 +1,6 @@
 # RecepClinic
 
-> **Estado atual (retomar daqui), 09/out/2026, fim da sessão**
+> **Estado atual (retomar daqui), 09/out/2026, noite**
 >
 > - **Etapas 0 a 4 concluídas**: cópia isolada, [diagnóstico](diagnostico.md), [limites](limites.md),
 >   [arquitetura](arquitetura.md) (decisões D1–D11) e [plano](plano.md) (fases F0–F10).
@@ -27,22 +27,17 @@
 >     se ficou como Utilidade), orientações gerais (`rc_orientacoes_consulta_v1`), os 4 do resumo do
 >     dia, a oferta de vaga e as versões próprias da Confirmação/Remarcação da clínica de teste. Os 3
 >     antigos sem uso a excluir estão nas pendências do cliente, abaixo.
->   - **Próximo passo (retomar daqui): Análise do App e Tech Provider na Meta** (destravam a F8),
->     roteiro e textos em [`meta-tech-provider.md`](meta-tech-provider.md).
->     Em 09/out: vídeos gravados e legendados (`Meta_Video01/02-legendado.mp4`, fora do git, na
->     pasta `docs/` do cliente); textos das 4 permissões (`whatsapp_business_messaging`,
->     `whatsapp_business_management`, `business_management`, `public_profile`) prontos; chamada de
->     `business_management` feita no Explorador da Graph API (`me/businesses`; o contador leva até
->     24 h); Tratamento de dados respondido (Supabase e Vercel, armazenamento/hospedagem, Brasil e
->     EUA; pedidos de autoridades: as 4 opções, [política](politica-pedidos-de-autoridades.md)).
->     Plataforma Site adicionada ao app; clínica demo do analista criada no staging ("Clínica
->     Demonstração RecepClinic", `analista.meta@recepclinic.com.br`, dados fictícios) e texto das
->     *Instruções da análise* pronto no [roteiro](meta-tech-provider.md).
->     **Parou em:** *Uso permitido* da `business_management` sem ✓ ("ligações de teste de API
->     exigidas"): a chamada `me/businesses` de 09/out ainda não entrou no contador (até 24 h).
->     Depois: colar as instruções com a senha, enviar a análise e responder a **Verificação do
->     acesso** (textos prontos; o cliente vai pôr os dados da empresa no rodapé do site antes). Em
->     seguida, escolher a próxima fase: F9 (recomendada, não depende da Meta) ou preparar a F8.
+>   - **F9 (operação e segurança) validada em 09/out**, em 5 subetapas (detalhes no [plano](plano.md)):
+>     cabeçalhos de segurança, CSP e `robots.txt`; logs sem dados pessoais; erros em tabela própria
+>     (Administração › Erros) e monitor externo **Better Stack** (4 monitores, alerta por e-mail);
+>     anonimização de paciente a pedido (LGPD); contadores de uso (Administração › Uso).
+>   - **Meta:** análise do app **enviada em 09/out** (clínica demo do analista no staging: "Clínica
+>     Demonstração RecepClinic", `analista.meta@recepclinic.com.br`, dados fictícios; desativar o
+>     login quando a análise terminar). Falta a **Verificação do acesso** (textos prontos em
+>     [`meta-tech-provider.md`](meta-tech-provider.md); antes, os dados da empresa no rodapé do site).
+>   - **Próximo passo (retomar daqui): F9.6, proteção contra abuso no agendamento pelo bot**,
+>     decidida com o cliente em 09/out (limites por contato, bloqueio, faltas e alerta; regras no
+>     [plano](plano.md)), a implementar. Depois: F8 (quando a Meta aprovar) e F10.
 >   - **Migrações no staging:** o Claude aplica com `supabase db push` (permissão liberada em
 >     09/out), sempre na ordem simulação → aplicar → conferir no banco → só então o push do código.
 >   - **WhatsApp de testes:** `+55 61 9903-3143`, na Cloud API do app RecepClinic, ligado à

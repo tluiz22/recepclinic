@@ -1185,7 +1185,8 @@ Subetapas (cliente, 09/out/2026), cada uma validada antes da próxima:
 | F9.2 | Logs sem dados pessoais: só ids e a clínica (L43) | validada em 09/out |
 | F9.3 | Ferramenta de erros com a clínica em cada erro e monitor externo do painel e do webhook (L45) | validada em 09/out |
 | F9.4 | Anonimização de paciente e contato a pedido (LGPD, L42) | validada em 09/out |
-| F9.5 | Contadores de uso por clínica para o Suporte (L49) | implementada em 09/out, a validar |
+| F9.5 | Contadores de uso por clínica para o Suporte (L49) | validada em 09/out |
+| F9.6 | Proteção contra abuso no agendamento pelo bot | decidida em 09/out, a implementar |
 
 **F9.1:** CSP do Astro como cabeçalho nas páginas do servidor (`astro.config.mjs`): scripts e
 estilos só do próprio domínio, com o hash dos embutidos; estilo em atributo liberado (cor da marca,
@@ -1244,6 +1245,28 @@ meses: atendimentos criados, **templates** (a Meta cobra da clínica) e **respos
 conversa** (sem custo na janela de 24 h). Só contam as mensagens que saíram: antes o contador
 somava também as puladas por falta de template e as que falharam (migração `20261009150000`, que
 recalculou os meses a partir do histórico). Sem cobrança: só para acompanhar.
+
+**F9.6, proteção contra abuso no agendamento** (cliente, 09/out). Risco: um número de WhatsApp
+cadastra pelo bot muitos pacientes ("para outra pessoa") e marca um atendimento para cada um,
+ocupando a agenda e gastando templates da clínica (confirmação e lembrete). Hoje só existe a regra
+de um atendimento futuro por paciente em cada agenda. Decisões:
+
+1. **Limite de atendimentos futuros por contato no bot**, somando todos os pacientes dele:
+   padrão **3**, ajustável por clínica (1 a 10). Acima disso, o bot não marca: passa a conversa
+   para a recepção (pausa, como "falar com a recepção"). A equipe marca sem limite pelo painel.
+2. **Limite de pacientes novos cadastrados pelo bot por contato**: **3 em 30 dias**, ajustável.
+   Acima disso, vai para a recepção. Cadastros da equipe não contam.
+3. **Bloquear contato** (tela do contato, com confirmação; só Administrador e Suporte): o bot para
+   de marcar para o número e responde que a conversa está com a recepção. Na mesma confirmação,
+   uma opção marcada **cancela todos os atendimentos futuros dos pacientes dele, sem aviso** (não
+   gasta template; a lista de espera pode oferecer as vagas). Dá para desbloquear.
+4. **Faltas**: com **2 faltas nos últimos 90 dias**, somando os pacientes do contato, o bot não
+   marca e passa para a recepção. Ajustável; 0 desliga.
+5. **Alerta**: a conversa pausada mostra o motivo (limite de atendimentos, de cadastros ou
+   faltas); o **Painel** ganha o cartão **"Contatos para revisar"** (quem bateu limite nos últimos
+   7 dias, com atalho para a tela do contato); o Suporte vê a contagem na tela Uso.
+
+Os 3 números ficam em Configurações › Clínica.
 
 ## F10 — Primeiro piloto
 
