@@ -525,8 +525,9 @@ async function registerAndFinish(b: Bot, ctx: BookingContext, name: string, birt
 /**
  * Limite atingido: o bot não marca e responde neutro, sem revelar a regra.
  * Com coexistência, passa a conversa para a recepção (pausa); sem ela, ninguém
- * responderia pelo app: avisa que a recepção entra em contato e volta ao menu
- * (cliente, 10/out). Número sem contato ainda não tem o que contar.
+ * responderia pelo app: só avisa que a recepção entra em contato, sem repetir
+ * o menu (a próxima mensagem recomeça; cliente, 10/out). Número sem contato
+ * ainda não tem o que contar.
  */
 async function stoppedByBotLimit(b: Bot, check: "booking" | "new_patient"): Promise<boolean> {
   const contactId = b.convo.contactId;
@@ -539,7 +540,6 @@ async function stoppedByBotLimit(b: Bot, check: "booking" | "new_patient"): Prom
   await say(b, "bot_limit_reached", pause ? t.LIMIT_HANDOFF : t.LIMIT_RECEPTION_WILL_CONTACT);
   await end(b, "blocked", { reason: `limit_${hit.reason}` });
   if (pause) await pauseForHuman(b.db, b.clinicId, b.phone, { contactId, reason: "bot_limit" }, b.now);
-  else await showMenu(b);
   return true;
 }
 

@@ -142,12 +142,12 @@ describe("bot: limites do contato, sem coexistência", () => {
     ]);
   });
 
-  it("limite de atendimentos: avisa neutro, não pausa e volta ao menu", async () => {
+  it("limite de atendimentos: só o aviso neutro, sem pausa nem menu; a próxima mensagem recomeça", async () => {
     const reply = await startConsultation();
-    expect(reply[0]).toMatchObject({ kind: "text", body: NEUTRAL_NO_RECEPTION });
-    expect(titles(reply)).toEqual(MAIN_MENU);
+    expect(reply).toEqual([{ to: PHONE, kind: "text", body: NEUTRAL_NO_RECEPTION, options: [] }]);
     const { data: convo } = await adminClient().from("conversation_state").select("state, human_handoff").eq("clinic_id", f.clinicId).eq("contact_phone", PHONE).single();
-    expect(convo).toEqual({ state: "MENU", human_handoff: false });
+    expect(convo).toEqual({ state: "WELCOME", human_handoff: false });
+    expect(titles(await say("oi"))).toEqual(MAIN_MENU);
     expect(await events()).toEqual([{ reason: "future_appointments", limit_value: 2, current_value: 2, paused: false }]);
 
     const { data: blocked } = await adminClient()

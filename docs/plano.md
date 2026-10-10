@@ -1282,8 +1282,8 @@ Detalhes da F9.6a (cliente, 10/out):
   recepção só aparece a mensagem neutra);
 - conexão **sem coexistência** (hoje só o chip de testes; toda clínica real entra por
   coexistência, F8): o bot **não pausa** (ninguém responderia pelo app); avisa, neutro, que a
-  recepção vai entrar em contato e volta ao menu. O contato entra em "Contatos para revisar" do
-  mesmo jeito.
+  recepção vai entrar em contato, sem repetir o menu (cliente, 10/out, na validação); a próxima
+  mensagem recomeça. O contato entra em "Contatos para revisar" do mesmo jeito.
 
 **F9.6a — implementada em 10/out (aguarda a validação do cliente no staging).** Migração
 `20261010120000_limites_do_bot`: os 3 limites em `clinic_settings` (padrão 3, 3 e 2), a origem do
