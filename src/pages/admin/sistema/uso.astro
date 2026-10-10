@@ -1,0 +1,62 @@
+---
+// Uso (F9.5, L49): por clínica, nos últimos 6 meses, os atendimentos criados e
+// as mensagens que saíram pelo WhatsApp, separando os templates (a Meta cobra
+// da clínica) das respostas do bot e da conversa (sem custo na janela de 24h).
+// Sem cobrança: só para acompanhar.
+import AdminLayout from "../../../layouts/AdminLayout.astro";
+import Card from "../../../components/admin/Card.astro";
+import { DEFAULT_TIMEZONE, formatInstant, todayIn } from "../../../lib/clinicTime";
+import { createUserClient } from "../../../lib/data/clients";
+import { listClinicsOverview } from "../../../lib/data/onboarding";
+import { lastMonths, listMonthlyUsage } from "../../../lib/data/usage";
+
+const db = createUserClient(Astro.request, Astro.cookies);
+const months = lastMonths(todayIn(DEFAULT_TIMEZONE), 6);
+const [clinics, usage] = await Promise.all([listClinicsOverview(db), listMonthlyUsage(db, months[months.length - 1])]);
+const byClinicMonth = new Map(usage.map((row) => [`${row.clinicId}|${row.month}`, row]));
+const monthLabel = (month: string) => formatInstant(new Date(`${month}T12:00:00Z`), DEFAULT_TIMEZONE, "MMM/yyyy");
+const number = (value: number) => value.toLocaleString("pt-BR");
+---
+
+<AdminLayout title="Uso" platform>
+  <h1 class="text-2xl font-bold text-slate-900">Uso</h1>
+  <p class="mt-1 text-sm text-slate-600">
+    Por clínica, nos últimos 6 meses. Mensagens: só as que saíram pelo WhatsApp. Os templates são cobrados pela Meta direto da clínica; as respostas do
+    bot e da conversa não têm custo dentro da janela de 24 horas.
+  </p>
+
+  <div class="mt-4 flex flex-col gap-4">
+    {
+      clinics.map((clinic) => (
+        <Card>
+          <h2 class="font-semibold text-slate-900">{clinic.name}</h2>
+          <div class="mt-2 overflow-x-auto">
+            <table class="w-full min-w-[28rem] text-sm">
+              <thead>
+                <tr class="text-left text-slate-500">
+                  <th class="py-1 pr-3 font-medium">Mês</th>
+                  <th class="py-1 pr-3 text-right font-medium">Atendimentos</th>
+                  <th class="py-1 pr-3 text-right font-medium">Templates</th>
+                  <th class="py-1 text-right font-medium">Bot e conversa</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-100">
+                {months.map((month) => {
+                  const row = byClinicMonth.get(`${clinic.id}|${month}`);
+                  return (
+                    <tr>
+                      <td class="py-1.5 pr-3 capitalize text-slate-700">{monthLabel(month)}</td>
+                      <td class="py-1.5 pr-3 text-right tabular-nums">{number(row?.appointmentsCreated ?? 0)}</td>
+                      <td class="py-1.5 pr-3 text-right tabular-nums">{number(row?.templatesSent ?? 0)}</td>
+                      <td class="py-1.5 text-right tabular-nums">{number((row?.messagesSent ?? 0) - (row?.templatesSent ?? 0))}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </Card>
+      ))
+    }
+  </div>
+</AdminLayout>

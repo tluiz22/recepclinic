@@ -455,14 +455,14 @@ isOneToOne: true
                   ]
                 },"clinic_usage_monthly": {
                   Row: {
-                    "appointments_created": number,"clinic_id": string,"messages_sent": number,"month": string
+                    "appointments_created": number,"clinic_id": string,"messages_sent": number,"month": string,"templates_sent": number
                   }
                   ComputedFields: never
                   Insert: {
-                    "appointments_created"?: number,"clinic_id": string,"messages_sent"?: number,"month": string
+                    "appointments_created"?: number,"clinic_id": string,"messages_sent"?: number,"month": string,"templates_sent"?: number
                   }
                   Update: {
-                    "appointments_created"?: number,"clinic_id"?: string,"messages_sent"?: number,"month"?: string
+                    "appointments_created"?: number,"clinic_id"?: string,"messages_sent"?: number,"month"?: string,"templates_sent"?: number
                   }
                   Relationships: [
                     {

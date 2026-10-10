@@ -1184,8 +1184,8 @@ Subetapas (cliente, 09/out/2026), cada uma validada antes da próxima:
 | F9.1 | Cabeçalhos de segurança, `robots.txt` e proteção de origem explícita (L44, L46) | validada em 09/out |
 | F9.2 | Logs sem dados pessoais: só ids e a clínica (L43) | validada em 09/out |
 | F9.3 | Ferramenta de erros com a clínica em cada erro e monitor externo do painel e do webhook (L45) | validada em 09/out |
-| F9.4 | Anonimização de paciente e contato a pedido (LGPD, L42) | implementada em 09/out, a validar |
-| F9.5 | Contadores de uso por clínica para o Suporte (L49) | |
+| F9.4 | Anonimização de paciente e contato a pedido (LGPD, L42) | validada em 09/out |
+| F9.5 | Contadores de uso por clínica para o Suporte (L49) | implementada em 09/out, a validar |
 
 **F9.1:** CSP do Astro como cabeçalho nas páginas do servidor (`astro.config.mjs`): scripts e
 estilos só do próprio domínio, com o hash dos embutidos; estilo em atributo liberado (cor da marca,
@@ -1238,6 +1238,12 @@ acontecer. Função `anonymize_patient` (migração `20261009140000`), irrevers�
 
 O paciente anonimizado não pode ser editado nem reativado (gatilho e restrição no banco). As
 telas mostram "telefone anonimizado" e "idade anonimizada".
+
+**F9.5** (cliente, 09/out): **Administração do sistema › Uso** mostra, por clínica, nos últimos 6
+meses: atendimentos criados, **templates** (a Meta cobra da clínica) e **respostas do bot e da
+conversa** (sem custo na janela de 24 h). Só contam as mensagens que saíram: antes o contador
+somava também as puladas por falta de template e as que falharam (migração `20261009150000`, que
+recalculou os meses a partir do histórico). Sem cobrança: só para acompanhar.
 
 ## F10 — Primeiro piloto
 

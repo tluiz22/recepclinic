@@ -241,10 +241,11 @@ describe("funil, rotinas e resumos (gravados pelo bot/agendador)", () => {
 });
 
 describe("contadores de uso (L49)", () => {
-  it("sobem sozinhos com mensagens enviadas e atendimentos criados", async () => {
-    const before = (await adminClient().from("clinic_usage_monthly").select("messages_sent, appointments_created").eq("clinic_id", clinicA)).data!;
+  it("sobem sozinhos com mensagens que saíram (templates à parte) e atendimentos criados", async () => {
+    const before = (await adminClient().from("clinic_usage_monthly").select("messages_sent, templates_sent, appointments_created").eq("clinic_id", clinicA)).data!;
     const sentBefore = before.reduce((sum, row) => sum + row.messages_sent, 0);
     const createdBefore = before.reduce((sum, row) => sum + row.appointments_created, 0);
+    const templatesBefore = before.reduce((sum, row) => sum + row.templates_sent, 0);
 
     await clinicServiceClient(clinicA)
       .from("whatsapp_messages")
@@ -252,13 +253,20 @@ describe("contadores de uso (L49)", () => {
     await clinicServiceClient(clinicA)
       .from("whatsapp_messages")
       .insert({ clinic_id: clinicA, direction: "inbound", message_type: "text", body: "oi", wa_message_id: "wamid.2" });
+    // F9.5: template conta também como template; pulada e com falha não contam.
+    await clinicServiceClient(clinicA).from("whatsapp_messages").insert([
+      { clinic_id: clinicA, direction: "outbound", message_type: "appointment_reminder", template_name: "rc_lembrete_v1", status: "sent" },
+      { clinic_id: clinicA, direction: "outbound", message_type: "appointment_confirmation", template_name: "rc_confirmacao_v1", status: "skipped_no_template" },
+      { clinic_id: clinicA, direction: "outbound", message_type: "text", body: "falhou", status: "failed" },
+    ]);
     await adminClient().from("appointments").insert({
       clinic_id: clinicA, patient_id: a.patient, service_id: a.service, agenda_id: a.agenda, location_id: a.location,
       scheduled_at: "2027-03-01T13:00:00Z", duration_minutes: 30, booking_channel: "whatsapp_bot",
     });
 
-    const after = (await adminClient().from("clinic_usage_monthly").select("messages_sent, appointments_created").eq("clinic_id", clinicA)).data!;
-    expect(after.reduce((sum, row) => sum + row.messages_sent, 0)).toBe(sentBefore + 1);
+    const after = (await adminClient().from("clinic_usage_monthly").select("messages_sent, templates_sent, appointments_created").eq("clinic_id", clinicA)).data!;
+    expect(after.reduce((sum, row) => sum + row.messages_sent, 0)).toBe(sentBefore + 2);
+    expect(after.reduce((sum, row) => sum + row.templates_sent, 0)).toBe(templatesBefore + 1);
     expect(after.reduce((sum, row) => sum + row.appointments_created, 0)).toBe(createdBefore + 1);
   });
 
