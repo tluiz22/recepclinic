@@ -37,7 +37,9 @@
 >     [`meta-tech-provider.md`](meta-tech-provider.md); antes, os dados da empresa no rodapé do site).
 >   - **Próximo passo (retomar daqui): F9.6, proteção contra abuso no agendamento pelo bot**,
 >     decidida com o cliente em 09/out (limites por contato, bloqueio, faltas e alerta; regras no
->     [plano](plano.md)), a implementar. Depois: F8 (quando a Meta aprovar) e F10.
+>     [plano](plano.md)), a implementar em 2 partes: **começar pela F9.6a** (limites no bot, travas
+>     de atendimentos, cadastros e faltas, motivo na conversa e cartão "Contatos para revisar"),
+>     depois a F9.6b (bloquear contato). Depois: F8 (quando a Meta aprovar) e F10.
 >   - **Migrações no staging:** o Claude aplica com `supabase db push` (permissão liberada em
 >     09/out), sempre na ordem simulação → aplicar → conferir no banco → só então o push do código.
 >   - **WhatsApp de testes:** `+55 61 9903-3143`, na Cloud API do app RecepClinic, ligado à
