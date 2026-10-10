@@ -37,8 +37,11 @@
 >     [`meta-tech-provider.md`](meta-tech-provider.md); antes, os dados da empresa no rodapé do site).
 >   - **F9.6 (proteção contra abuso no bot) validada em 10/out**: F9.6a (limites por contato,
 >     "Revisado", liberar contato dos limites) e F9.6b (bloquear contato). **F9 concluída.**
->   - **Próximo passo (retomar daqui):** a F8 depende da Meta (análise do app e Tech Provider) e a
->     F10 depende da F8; ver a lista de próximas etapas apresentada em 10/out no fim deste bloco.
+>   - **Próximo passo (retomar daqui): e-mail de verdade** (escolhido pelo cliente em 10/out,
+>     enquanto a Meta não responde): provedor com o domínio `recepclinic.com.br` como SMTP do painel
+>     (convites, pedido de informações) e do Supabase ("Esqueci minha senha", modelos de e-mail).
+>     A F8 depende da Meta (análise do app e Tech Provider) e a F10 depende da F8. Também dá para
+>     adiantar a F8a (templates pela API na conta do RecepClinic) e preparar a produção (F10).
 >   - **Migrações no staging:** o Claude aplica com `supabase db push` (permissão liberada em
 >     09/out), sempre na ordem simulação → aplicar → conferir no banco → só então o push do código.
 >   - **WhatsApp de testes:** `+55 61 9903-3143`, na Cloud API do app RecepClinic, ligado à
