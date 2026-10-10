@@ -1346,6 +1346,19 @@ opcional; a opção de cancelar vem marcada e mostra quantos atendimentos; confi
 "bloqueado" no contato, na ficha do paciente e nas listas. 5 testes de banco novos
 (`bot-bloqueio.test.ts`) e 1 unitário.
 
+## E-mail de verdade (antes do 1º piloto)
+
+Escolhido pelo cliente em 10/out, enquanto a Meta não responde. O código já envia por SMTP desde a
+F4.4a (convite, aviso de acesso, pedido de informações); falta o provedor. Decisões (cliente,
+10/out):
+- provedor **Resend** (SMTP; plano grátis de 3.000 e-mails por mês e 100 por dia), região de São
+  Paulo se oferecida;
+- remetente **`RecepClinic <nao-responda@recepclinic.com.br>`**, sem caixa de entrada;
+- o mesmo provedor vira o SMTP do Supabase ("Esqueci minha senha" e os modelos em
+  `supabase/templates/`);
+- **LGPD:** o Resend é um operador novo (e-mail e nome da equipe e de quem pede informações; nada
+  de pacientes): incluir na política de privacidade do site (sessão do site).
+
 ## F10 — Primeiro piloto
 
 **Escopo:** produção (Supabase Pro + Vercel Pro, backup conferido); criação da 1ª clínica pelo
