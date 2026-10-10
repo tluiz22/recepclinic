@@ -3,7 +3,8 @@ import { bookAppointment } from "../../src/lib/data/agenda/appointments";
 import { createClinicServiceClient } from "../../src/lib/data/clinicService";
 import { updateClinicSettings } from "../../src/lib/data/config/clinic";
 import { resolveClinicByPhoneNumberId } from "../../src/lib/data/platform";
-import { listContactLimitEvents, listContactsToReview } from "../../src/lib/data/whatsapp/botLimits";
+import { listContactLimitEvents, listContactsToReview, markContactReviewed, setContactBotLimitsExempt } from "../../src/lib/data/whatsapp/botLimits";
+import { setContactActive } from "../../src/lib/data/patients";
 import type { ClinicSender, ListSection, ReplyButton } from "../../src/lib/data/whatsapp/send";
 import { processWebhook, type WebhookDeps } from "../../src/lib/data/whatsapp/webhook";
 import { asDb, at, codeOf, NOW, setupAgendaClinic, type AgendaFixture } from "./agendaFixture";
@@ -270,5 +271,55 @@ describe("limites: telas, Uso e acesso", () => {
     expect(saved).toMatchObject({ botMaxFutureAppointments: 10, botMaxNewPatients: 1, botMaxNoShows: 0 });
     // A recepção não altera a configuração (RLS).
     expect(await codeOf(() => updateClinicSettings(asDb(f.reception), f.clinicId, { botMaxNoShows: 3 }))).not.toBe("ok");
+  });
+});
+
+describe("limites: Revisado, liberar e contato desativado (validação, 10/out)", () => {
+  const NEW_BIRTHDATE = "13/06/2018";
+
+  beforeAll(async () => {
+    // Volta ao bot sem coexistência (a conversa ficou pausada acima). Limites agora: 10 / 1 / 0.
+    await adminClient().from("whatsapp_connections").update({ coexistence: false }).eq("clinic_id", f.clinicId);
+    await adminClient().from("conversation_state").update({ human_handoff: false, state: "WELCOME", context: {} }).eq("clinic_id", f.clinicId).eq("contact_phone", PHONE);
+  });
+
+  it("Revisado (Recepção): sai do Painel e volta no próximo limite", async () => {
+    const id = await contactId();
+    await markContactReviewed(asDb(f.reception), f.clinicId, id);
+    expect(await listContactsToReview(asDb(f.reception), f.clinicId)).toEqual([]);
+
+    await upToForOther();
+    expect((await say(NEW_BIRTHDATE))[0].body).toBe(NEUTRAL_NO_RECEPTION);
+    expect(await listContactsToReview(asDb(f.reception), f.clinicId)).toEqual([expect.objectContaining({ contactId: id, hits: 1 })]);
+  });
+
+  it("liberar: só o Administrador, e o bot deixa de aplicar os limites ao número", async () => {
+    const id = await contactId();
+    expect(await codeOf(() => setContactBotLimitsExempt(asDb(f.reception), f.clinicId, id, true))).not.toBe("ok");
+    const { error } = await f.reception.client.from("contacts").update({ bot_limits_exempt_at: new Date().toISOString() }).eq("id", id);
+    expect(error).not.toBeNull();
+
+    await setContactBotLimitsExempt(asDb(f.admin), f.clinicId, id, true);
+    const { data: contact } = await adminClient().from("contacts").select("bot_limits_exempt_at, bot_limits_exempt_by").eq("id", id).single();
+    expect(contact!.bot_limits_exempt_at).not.toBeNull();
+    expect(contact!.bot_limits_exempt_by).toBe(f.admin.id);
+
+    const before = (await events()).length;
+    await upToForOther();
+    expect((await say(NEW_BIRTHDATE))[0].body).toBe("Qual é o nome completo do paciente?");
+    await say("0");
+    expect(await events()).toHaveLength(before);
+
+    await setContactBotLimitsExempt(asDb(f.admin), f.clinicId, id, false);
+    await upToForOther();
+    expect((await say(NEW_BIRTHDATE))[0].body).toBe(NEUTRAL_NO_RECEPTION);
+  });
+
+  it("contato desativado continua contando (a conversa o trata como número novo)", async () => {
+    await setContactActive(asDb(f.reception), f.clinicId, await contactId(), false);
+    await adminClient().from("conversation_state").update({ contact_id: null }).eq("clinic_id", f.clinicId).eq("contact_phone", PHONE);
+    await setLimits({ bot_max_future_appointments: 1 }); // o link da Ana ainda vale
+    expect((await startConsultation())[0].body).toBe(NEUTRAL_NO_RECEPTION);
+    expect((await events()).at(-1)).toMatchObject({ reason: "future_appointments", limit_value: 1, current_value: 1 });
   });
 });

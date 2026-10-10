@@ -1303,6 +1303,22 @@ contato fica como em "Falar com a recepção": durante as 24h o bot não respond
 ou remarcar (só o Confirmar do lembrete). 11 testes de banco novos (`bot-limites.test.ts`) e 4
 unitários.
 
+**Ajustes da validação (cliente, 10/out):**
+- sem coexistência, o aviso neutro vai sozinho, **sem repetir o menu**; a próxima mensagem recomeça;
+- **"Revisado"** (tela do contato e cartão do Painel, com confirmação; Recepção e Administrador):
+  tira o contato de "Contatos para revisar" até ele atingir um limite de novo. Sem a ação, sai
+  sozinho em 7 dias;
+- **"Liberar dos limites do bot"** (tela do contato, com confirmação; só o Administrador): o bot
+  não aplica nenhum dos três limites ao número até alguém desfazer ("Voltar a aplicar os
+  limites"); a tela mostra quem liberou (pelo papel) e quando. Caso típico: empresa com acordo
+  que marca vários pacientes;
+- **contato desativado continua contando**: o bot procura o número mesmo desativado (antes, o
+  número virava "novo" e a primeira marcação passava sem verificar). Desativar um paciente não
+  muda nada nos limites (os atendimentos futuros e o cadastro dele continuam contando).
+Migração `20261010130000_revisar_e_liberar_contato`: colunas em `contacts`, gravadas só pelas
+funções `mark_contact_bot_limits_reviewed` e `set_contact_bot_limits_exempt` (o banco confere o
+papel; a edição comum do contato não mexe nelas). 3 testes de banco novos.
+
 ## F10 — Primeiro piloto
 
 **Escopo:** produção (Supabase Pro + Vercel Pro, backup conferido); criação da 1ª clínica pelo

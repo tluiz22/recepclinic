@@ -5,7 +5,7 @@ import type { LocationType } from "../../config/locations";
 import { DataError, unwrap } from "../../errors";
 import { getContact, listContactPatients, registerPatient, type ContactChoice, type Patient } from "../../patients";
 import { pauseForHuman, startFunnel } from "../conversations";
-import { checkBookingLimits, checkNewPatientLimit, recordBotLimitEvent } from "../botLimits";
+import { checkBookingLimits, checkNewPatientLimit, contactForLimits, recordBotLimitEvent } from "../botLimits";
 import { formatAppointmentWhen } from "../templates";
 import { servicesOf, type BotService } from "./catalog";
 import { attachContact, end, go, say, sendButtons, sendList, step, textFor, type Bot } from "./engine";
@@ -527,11 +527,13 @@ async function registerAndFinish(b: Bot, ctx: BookingContext, name: string, birt
  * Com coexistência, passa a conversa para a recepção (pausa); sem ela, ninguém
  * responderia pelo app: só avisa que a recepção entra em contato, sem repetir
  * o menu (a próxima mensagem recomeça; cliente, 10/out). Número sem contato
- * ainda não tem o que contar.
+ * ainda não tem o que contar; contato liberado pelo Administrador não entra.
+ * O contato desativado conta (a conversa o trata como número novo).
  */
 async function stoppedByBotLimit(b: Bot, check: "booking" | "new_patient"): Promise<boolean> {
-  const contactId = b.convo.contactId;
-  if (!contactId) return false;
+  const contact = await contactForLimits(b.db, b.clinicId, b.phone);
+  if (!contact || contact.exempt) return false;
+  const contactId = contact.id;
   const hit =
     check === "booking" ? await checkBookingLimits(b.db, b.clinicId, contactId, b.now) : await checkNewPatientLimit(b.db, b.clinicId, contactId, b.now);
   if (!hit) return false;

@@ -2,10 +2,14 @@
 // Tela inicial (Fase 9 do piloto; banco novo na F4.1): números de hoje no dia
 // da clínica, alerta de envios automáticos e atalhos. Cartões e atalhos seguem
 // os itens liberados para a clínica (D11). Com o bot, "Contatos para revisar"
-// (F9.6a): quem bateu um limite do bot nos últimos 7 dias.
+// (F9.6a): quem bateu um limite do bot nos últimos 7 dias e ainda não foi
+// marcado como revisado (Recepção e Administrador marcam aqui ou no contato).
 import AdminLayout from "../../layouts/AdminLayout.astro";
 import Card from "../../components/admin/Card.astro";
+import ConfirmDeleteDialog from "../../components/admin/ConfirmDeleteDialog.astro";
+import FlashMessage from "../../components/admin/FlashMessage.astro";
 import FormMessage from "../../components/admin/FormMessage.astro";
+import { SECONDARY_BUTTON } from "../../components/admin/fieldStyles";
 import Icon from "../../components/admin/Icon.astro";
 import type { IconName } from "../../components/admin/Icon.astro";
 import { createUserClient } from "../../lib/data/clients";
@@ -24,6 +28,7 @@ const [counts, sendsAlert, toReview] = await Promise.all([
   has("whatsapp_bot") ? listContactsToReview(db, clinic.clinicId) : Promise.resolve(null),
 ]);
 const sendsAlertLines = describeSendsAlert(sendsAlert);
+const canReview = clinic.isPlatformStaff || clinic.roles.includes("admin") || clinic.roles.includes("reception");
 // A aba Envios fica no Resumo do Dia, para toda a equipe (cliente, 05/out/2026).
 
 const aviso = Astro.url.searchParams.get("aviso");
@@ -46,6 +51,7 @@ const shortcuts: { label: string; href: string; icon: IconName }[] = [
   <p class="mt-2 text-slate-600">Resumo de hoje.</p>
 
   {notice && <FormMessage tone={notice.tone}>{notice.text}</FormMessage>}
+  <FlashMessage />
 
   {
     sendsAlertLines.length > 0 && (
@@ -102,18 +108,34 @@ const shortcuts: { label: string; href: string; icon: IconName }[] = [
         ) : (
           <ul class="mt-2 divide-y divide-slate-100 text-sm">
             {toReview.map((item) => (
-              <li>
-                <a href={`/admin/pacientes/contato/${item.contactId}`} class="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 py-2 hover:text-sky-700">
+              <li class="flex flex-wrap items-center gap-x-3 gap-y-1 py-2">
+                <a href={`/admin/pacientes/contato/${item.contactId}`} class="flex flex-1 flex-wrap items-center justify-between gap-x-3 gap-y-1 hover:text-sky-700">
                   <span class="font-medium text-slate-900">{item.name}</span>
                   <span class="text-slate-600">
                     {BOT_LIMIT_LABELS[item.last.reason]} · {formatInstant(item.last.at, clinic.timezone, "dd/MM HH:mm")}
                     {item.hits > 1 && ` · ${item.hits} vezes`}
                   </span>
                 </a>
+                {canReview && (
+                  <form method="POST" action={`/api/admin/pacientes/contato/${item.contactId}`}>
+                    <input type="hidden" name="acao" value="revisado" />
+                    <input type="hidden" name="voltar" value="painel" />
+                    <button
+                      type="submit"
+                      class={`${SECONDARY_BUTTON} js-confirm-delete py-1`}
+                      data-confirm-title="Marcar como revisado?"
+                      data-confirm-message={`${item.name} sai desta lista. Se atingir um limite de novo, volta.`}
+                      data-confirm-label="Revisado"
+                    >
+                      Revisado
+                    </button>
+                  </form>
+                )}
               </li>
             ))}
           </ul>
         )}
+        {canReview && toReview.length > 0 && <ConfirmDeleteDialog />}
       </Card>
     )
   }

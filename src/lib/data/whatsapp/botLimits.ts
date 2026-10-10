@@ -1,4 +1,5 @@
 import type { DbClient } from "../clients";
+import { roleLabel } from "../../clinicAccess";
 import { unwrap, unwrapOne } from "../errors";
 
 // Proteção contra abuso no agendamento pelo bot (F9.6a; cliente, 09 e
@@ -12,6 +13,10 @@ import { unwrap, unwrapOne } from "../errors";
 // Atingido o limite, o bot não marca (cancelar, remarcar e confirmar seguem):
 // passa a conversa para a recepção e o caso fica registrado em
 // `bot_limit_events`, para a tela do contato, o Painel e a tela Uso.
+// Na tela do contato (cliente, 10/out, na validação): "Revisado" tira o
+// contato do Painel até o próximo limite (Recepção e Administrador); "Liberar
+// dos limites do bot" desliga os três para o número (só o Administrador, ex.:
+// empresa com acordo). O contato desativado continua contando.
 
 export type BotLimitReason = "future_appointments" | "new_patients" | "no_shows";
 
@@ -171,6 +176,65 @@ export async function checkNewPatientLimit(db: DbClient, clinicId: string, conta
   return evaluateNewPatientLimit(limits, await countBotNewPatients(db, clinicId, contactId, now));
 }
 
+/**
+ * Contato do número para os limites, mesmo desativado (o bot trata o número
+ * desativado como novo, e a primeira marcação passaria sem verificar).
+ */
+export async function contactForLimits(db: DbClient, clinicId: string, phone: string): Promise<{ id: string; exempt: boolean } | null> {
+  const row = unwrap(
+    await db.from("contacts").select("id, bot_limits_exempt_at").eq("clinic_id", clinicId).eq("phone", phone).maybeSingle(),
+    "Contato",
+  );
+  return row ? { id: row.id, exempt: row.bot_limits_exempt_at !== null } : null;
+}
+
+// ---------------------------------------------------------------------------
+// Revisado e liberação (tela do contato)
+// ---------------------------------------------------------------------------
+
+export type ContactBotLimitsStatus = {
+  reviewedAt: Date | null;
+  exemptAt: Date | null;
+  exemptBy: string | null;
+};
+
+export async function getContactBotLimitsStatus(db: DbClient, clinicId: string, contactId: string): Promise<ContactBotLimitsStatus> {
+  const row = unwrapOne(
+    await db
+      .from("contacts")
+      .select("bot_limits_reviewed_at, bot_limits_exempt_at, bot_limits_exempt_by")
+      .eq("clinic_id", clinicId)
+      .eq("id", contactId)
+      .maybeSingle(),
+    "Contato",
+  );
+  return {
+    reviewedAt: row.bot_limits_reviewed_at ? new Date(row.bot_limits_reviewed_at) : null,
+    exemptAt: row.bot_limits_exempt_at ? new Date(row.bot_limits_exempt_at) : null,
+    exemptBy: row.bot_limits_exempt_by,
+  };
+}
+
+/** Quem liberou, pelo papel na clínica (D6); fora da equipe, o Suporte. */
+export async function exemptByLabel(db: DbClient, clinicId: string, userId: string): Promise<string> {
+  const { data } = await db.from("clinic_members").select("roles").eq("clinic_id", clinicId).eq("user_id", userId).maybeSingle();
+  return data ? roleLabel({ roles: data.roles, isPlatformStaff: false }) : "Suporte RecepClinic";
+}
+
+/** Recepção e Administrador (o banco confere). */
+export async function markContactReviewed(db: DbClient, clinicId: string, contactId: string): Promise<void> {
+  unwrap(await db.rpc("mark_contact_bot_limits_reviewed", { p_clinic_id: clinicId, p_contact_id: contactId }), "Revisar contato");
+}
+
+/** Só o Administrador (o banco confere). */
+export async function setContactBotLimitsExempt(db: DbClient, clinicId: string, contactId: string, exempt: boolean): Promise<void> {
+  unwrap(await db.rpc("set_contact_bot_limits_exempt", { p_clinic_id: clinicId, p_contact_id: contactId, p_exempt: exempt }), "Liberar contato");
+}
+
+/** Limite atingido depois da última revisão: o contato está "para revisar". */
+export const isPendingReview = (event: Pick<BotLimitEvent, "at">, reviewedAt: Date | null, now: Date = new Date()) =>
+  now.getTime() - event.at.getTime() < REVIEW_WINDOW_DAYS * 24 * 60 * 60_000 && (!reviewedAt || event.at > reviewedAt);
+
 // ---------------------------------------------------------------------------
 // Registro e leitura
 // ---------------------------------------------------------------------------
@@ -224,12 +288,12 @@ export async function listContactLimitEvents(db: DbClient, clinicId: string, con
 
 export type ContactToReview = { contactId: string; name: string; last: BotLimitEvent; hits: number };
 
-/** Painel: contatos que bateram limite nos últimos 7 dias, do mais recente ao mais antigo. */
+/** Painel: contatos que bateram limite nos últimos 7 dias e ainda não foram revisados, do mais recente ao mais antigo. */
 export async function listContactsToReview(db: DbClient, clinicId: string, now: Date = new Date()): Promise<ContactToReview[]> {
   const rows = unwrap(
     await db
       .from("bot_limit_events")
-      .select("contact_id, reason, limit_value, current_value, paused, created_at, contacts ( full_name )")
+      .select("contact_id, reason, limit_value, current_value, paused, created_at, contacts ( full_name, bot_limits_reviewed_at )")
       .eq("clinic_id", clinicId)
       .gte("created_at", daysAgo(now, REVIEW_WINDOW_DAYS))
       .order("created_at", { ascending: false }),
@@ -241,10 +305,12 @@ export async function listContactsToReview(db: DbClient, clinicId: string, now: 
     current_value: number;
     paused: boolean;
     created_at: string;
-    contacts: { full_name: string } | null;
+    contacts: { full_name: string; bot_limits_reviewed_at: string | null } | null;
   }[];
   const byContact = new Map<string, ContactToReview>();
   for (const row of rows) {
+    const reviewedAt = row.contacts?.bot_limits_reviewed_at;
+    if (reviewedAt && new Date(row.created_at) <= new Date(reviewedAt)) continue;
     const current = byContact.get(row.contact_id);
     if (current) current.hits++;
     else byContact.set(row.contact_id, { contactId: row.contact_id, name: row.contacts?.full_name ?? "Contato", last: toEvent(row), hits: 1 });
