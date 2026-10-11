@@ -2,7 +2,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { bookAppointment, recordAttendance } from "../../src/lib/data/agenda/appointments";
 import { cancelByClinic } from "../../src/lib/data/agenda/blocks";
 import { createSeries } from "../../src/lib/data/agenda/series";
-import { buildDayItems, listAgendaAppointments, listAgendaAppointmentsByIds, listNoShowStats, listSeriesAppointments } from "../../src/lib/data/agenda/view";
+import { buildDayItems, listAgendaAppointments, listAgendaAppointmentsByIds, listNoShowStats, listSeriesAppointments, listUpcomingByPatient } from "../../src/lib/data/agenda/view";
 import { asDb, at, MON1, MON2, MON3, NOW, setupAgendaClinic, type AgendaFixture } from "./agendaFixture";
 import { addMember, adminClient, createUser, deleteUsers, type TestUser } from "./helpers";
 
@@ -93,5 +93,24 @@ describe("F4.6: série e avisos", () => {
     const read = await listAgendaAppointmentsByIds(asDb(admin), clinicId, canceled.map((c) => c.appointment.id));
     expect(read.map((a) => a.status)).toEqual(["canceled", "canceled"]);
     expect(read[0]).toMatchObject({ contactName: "Resp. Paciente Três", serviceName: "Consulta" });
+  });
+});
+
+describe("busca de paciente da Agenda", () => {
+  it("próximos atendimentos de cada paciente, em ordem; o Profissional só os da própria agenda", async () => {
+    const { clinicId, ids, reception } = fixture;
+    const all = await listUpcomingByPatient(asDb(reception), clinicId, [ids.p1, ids.p2], NOW);
+    expect(all.get(ids.p1)?.map((a) => a.agendaId)).toEqual([ids.agendaDra, ids.agendaExams]);
+    expect(all.get(ids.p2)?.map((a) => a.agendaId)).toEqual([ids.agendaDra2, ids.agendaExams]);
+
+    const seen = await listUpcomingByPatient(asDb(doctor), clinicId, [ids.p1, ids.p2], NOW);
+    expect(seen.get(ids.p1)?.map((a) => a.agendaId)).toEqual([ids.agendaDra]);
+    expect(seen.has(ids.p2)).toBe(false);
+  });
+
+  it("o que já passou não entra", async () => {
+    const { clinicId, ids, reception } = fixture;
+    const later = await listUpcomingByPatient(asDb(reception), clinicId, [ids.p1], at(MON1, "09:00"));
+    expect(later.get(ids.p1)?.map((a) => a.agendaId)).toEqual([ids.agendaExams]);
   });
 });

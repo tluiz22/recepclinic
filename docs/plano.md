@@ -1371,7 +1371,8 @@ Pontos que o cliente encontrou testando o staging, um por vez, cada um validado 
 
 | | Ajuste | Situação |
 |---|---|---|
-| 1 | Cores da situação na Agenda | implementado (10/out), aguardando validação |
+| 1 | Cores da situação na Agenda | validado em 10/out |
+| 2 | Buscar paciente na Agenda, com os próximos atendimentos | implementado (10/out), aguardando validação |
 
 **1. Cores da situação** (cliente, 10/out/2026): no Dia, na Semana e no Resumo do dia, cada
 atendimento tem faixa à esquerda e fundo claro conforme a situação, com uma legenda acima:
@@ -1380,6 +1381,13 @@ pelo lembrete), compareceu **azul**, faltou **laranja**, cancelado **vermelho** 
 horário riscado) e bloqueio **cinza**. Verde só para o que está garantido (sugestão aceita pelo
 cliente no lugar de dois tons de verde). Os selos continuam; "já passou: registre o
 comparecimento" mantém a cor da situação. Código em `components/admin/agenda/situationStyle.ts`.
+
+**2. Buscar paciente na Agenda** (cliente, 10/out/2026): campo "Buscar paciente" no topo da
+Agenda (Dia, Semana e Mês), pelo nome ou pelo telefone (4+ dígitos), como em Pacientes, inclusive
+desativados. A tela (`/admin/agenda/buscar`) mostra cada paciente encontrado com os **próximos
+atendimentos** (data, hora, serviço, agenda e local, na cor da situação; o clique abre o dia na
+Agenda) e o link para a ficha, com o histórico completo. **Só as agendas que a pessoa vê** (D6
+mantida: o Profissional, só as próprias; garantido pelo RLS).
 
 ## F10 — Primeiro piloto
 

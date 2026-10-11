@@ -170,6 +170,32 @@ export async function listPatientAppointments(db: DbClient, clinicId: string, pa
   return rows.map(toAgendaAppointment);
 }
 
+/**
+ * Próximos atendimentos (marcados, ainda por vir) de cada paciente, em ordem
+ * de horário: a busca de paciente da Agenda (cliente, 10/out/2026). Só das
+ * agendas que a pessoa vê (RLS: o Profissional, só as próprias).
+ */
+export async function listUpcomingByPatient(db: DbClient, clinicId: string, patientIds: string[], now: Date): Promise<Map<string, AgendaAppointment[]>> {
+  const result = new Map<string, AgendaAppointment[]>();
+  if (patientIds.length === 0) return result;
+  const rows = unwrap(
+    await db
+      .from("appointments")
+      .select(AGENDA_COLUMNS)
+      .eq("clinic_id", clinicId)
+      .in("patient_id", patientIds)
+      .in("status", ["scheduled", "confirmed"])
+      .gt("scheduled_at", now.toISOString())
+      .order("scheduled_at")
+      .limit(500),
+    "Próximos atendimentos dos pacientes",
+  ) as unknown as AgendaRow[];
+  for (const appointment of rows.map(toAgendaAppointment)) {
+    result.set(appointment.patientId, [...(result.get(appointment.patientId) ?? []), appointment]);
+  }
+  return result;
+}
+
 /** Sessões de uma série (todas, as passadas inclusive), em ordem de horário. */
 export async function listSeriesAppointments(db: DbClient, clinicId: string, seriesId: string): Promise<AgendaAppointment[]> {
   const rows = unwrap(

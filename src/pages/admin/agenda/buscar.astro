@@ -1,0 +1,89 @@
+---
+// Agenda › Buscar paciente (cliente, 10/out/2026): pelo nome ou pelo telefone
+// (4+ dígitos), como em Pacientes, e já com os próximos atendimentos de cada
+// um, na cor da situação. Só das agendas que a pessoa vê (o Profissional, só
+// as próprias; D6). O histórico completo fica na ficha do paciente.
+import AdminLayout from "../../../layouts/AdminLayout.astro";
+import AgendaHeader from "../../../components/admin/agenda/AgendaHeader.astro";
+import SituationLegend from "../../../components/admin/agenda/SituationLegend.astro";
+import { SITUATIONS, appointmentSituation } from "../../../components/admin/agenda/situationStyle";
+import Badge from "../../../components/admin/Badge.astro";
+import Card from "../../../components/admin/Card.astro";
+import PhoneLinks from "../../../components/admin/PhoneLinks.astro";
+import { formatAge } from "../../../lib/age";
+import { formatInstant, localDateOf, todayIn } from "../../../lib/clinicTime";
+import { createUserClient } from "../../../lib/data/clients";
+import { listUpcomingByPatient, type AgendaAppointment } from "../../../lib/data/agenda/view";
+import { listPatientsPage } from "../../../lib/data/patients";
+import { capitalize, vocabularyFor } from "../../../lib/vocabulary";
+
+const clinic = Astro.locals.clinic!;
+const db = createUserClient(Astro.request, Astro.cookies);
+const vocabulary = vocabularyFor(clinic.clinicProfile);
+const now = new Date();
+const today = todayIn(clinic.timezone, now);
+const q = (Astro.url.searchParams.get("q") ?? "").trim();
+
+// Desativados também: podem ter algo marcado.
+const patients = q ? await listPatientsPage(db, clinic.clinicId, { query: q, includeInactive: true }) : null;
+const upcoming = patients ? await listUpcomingByPatient(db, clinic.clinicId, patients.items.map((p) => p.id), now) : new Map<string, AgendaAppointment[]>();
+---
+
+<AdminLayout title="Agenda · Buscar paciente">
+  <AgendaHeader view="busca" date={today} agendas={[]} selectedAgendaId={null} query={q} />
+
+  {!q && <p class="mt-4 text-sm text-slate-600">Digite o nome ou o telefone para ver os próximos atendimentos marcados.</p>}
+  {
+    patients && (
+      <>
+        <p class="mt-4 text-sm text-slate-600">
+          {patients.total === 0
+            ? `Nenhum ${vocabulary.patient} encontrado.`
+            : patients.total > patients.items.length
+              ? `Mostrando ${patients.items.length} de ${patients.total}. Refine a busca para achar os outros.`
+              : `${patients.total} ${patients.total === 1 ? "encontrado" : "encontrados"}.`}
+        </p>
+        {patients.total > 0 && <SituationLegend />}
+        <div class="mt-3 flex flex-col gap-3">
+          {patients.items.map((p) => {
+            const rows = upcoming.get(p.id) ?? [];
+            return (
+              <Card>
+                <div class="flex flex-wrap items-start justify-between gap-2">
+                  <div class="text-sm">
+                    <a href={`/admin/pacientes/${p.id}`} class="text-base font-semibold text-slate-900 hover:text-sky-700 hover:underline">
+                      {p.fullName}
+                    </a>{" "}
+                    <span class="text-slate-500">{formatAge(p.birthdate, today)}</span>
+                    <p class="text-slate-500">
+                      {!p.isContactSelf && `${capitalize(vocabulary.contact)}: ${p.contact.fullName} · `}
+                      <PhoneLinks phone={p.contact.phone} plain class="text-slate-600" />
+                    </p>
+                  </div>
+                  {!p.isActive && <Badge variant="neutral">Desativado</Badge>}
+                </div>
+                <h2 class="mt-3 text-sm font-semibold text-slate-900">Próximos atendimentos ({rows.length})</h2>
+                <ul class="mt-2 flex flex-col gap-1.5">
+                  {rows.map((a) => (
+                    <li class={`rounded border-l-4 px-2.5 py-1.5 text-sm ${SITUATIONS[appointmentSituation(a)].swatch}`}>
+                      <a href={`/admin/agenda?date=${localDateOf(a.scheduledAt, clinic.timezone)}`} class="hover:text-sky-700">
+                        <span class="font-medium capitalize text-slate-900">{formatInstant(a.scheduledAt, clinic.timezone, "EEE dd/MM/yyyy 'às' HH:mm")}</span>
+                        <span class="block text-slate-600">
+                          {a.serviceName} · {a.agendaName} · {a.locationName}
+                        </span>
+                      </a>
+                    </li>
+                  ))}
+                  {rows.length === 0 && <li class="text-sm text-slate-500">Nenhum atendimento marcado.</li>}
+                </ul>
+                <a href={`/admin/pacientes/${p.id}`} class="mt-3 inline-block text-xs font-medium text-sky-700 hover:underline">
+                  Ver a ficha (histórico completo)
+                </a>
+              </Card>
+            );
+          })}
+        </div>
+      </>
+    )
+  }
+</AdminLayout>
