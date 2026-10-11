@@ -1379,7 +1379,7 @@ Pontos que o cliente encontrou testando o staging, um por vez, cada um validado 
 | 6 | Avisos de marcação, remarcação e cancelamento por template | mantido como está (11/out) |
 | 7 | Explicação dos campos "Informações que o bot responde" | implementado (11/out); o cliente valida no fim dos ajustes |
 | 8 | Página de tecnologia para o Suporte | implementado (11/out); o cliente valida no fim dos ajustes |
-| 9 | Comercial no Suporte: 9a planos e aplicar plano; 9b clínicas de demonstração; 9c roteiro de vendas | 9a implementado (11/out), aguardando validação; 9b e 9c a fazer |
+| 9 | Comercial no Suporte: 9a planos e aplicar plano; 9b clínicas de demonstração; 9c roteiro de vendas | 9a implementado (11/out), com a simulação da negociação; 9b criado no staging (11/out), aguardando validação; 9c a fazer |
 
 **1. Cores da situação** (cliente, 10/out/2026): no Dia, na Semana e no Resumo do dia, cada
 atendimento tem faixa à esquerda e fundo claro conforme a situação, com uma legenda acima:
@@ -1489,9 +1489,23 @@ para as demais.
   tabela. **Nada é gravado.** Pendência antes da 1ª clínica pagante: **manutenção das clínicas
   contratadas** (valor negociado, vencimento, implantação, histórico de reajustes), desenhada com o
   contrato do advogado.
-- **9b. Clínicas de demonstração** no staging, nomes fictícios: Básico (pediatra, 1 profissional),
-  Básico + Exames e procedimentos + Lista de espera (dentista, 1 profissional) e Completo (clínica
-  médica com 3 profissionais, com o chip de testes).
+- **9b. Clínicas de demonstração** no staging, nomes e dados fictícios, montadas por
+  `scripts/demo-clinicas.mjs` (só mexe nelas; rodar de novo antes de uma demonstração refaz tudo
+  com os atendimentos a partir de hoje e mantém os logins):
+  - **Pediatria Sol Nascente** (Básico): Dra. Laura Mendes; `demo.basico@recepclinic.com.br`.
+  - **Odonto Sorriso Leve** (Básico + Exames e procedimentos + Lista de espera): Dr. Felipe Andrade,
+    avaliação, retorno e os procedimentos (limpeza, restauração, clareamento); chamada de "o
+    consultório"; `demo.odonto@recepclinic.com.br`.
+  - **Clínica Vida Plena** (Completo, 3 profissionais): clínico geral, pediatra e cardiologista,
+    eletrocardiograma com preparo, consulta domiciliar, 3 convênios, bloqueio, lista de espera,
+    um "Aguardando remarcação" e as últimas semanas para as métricas (com o funil do bot);
+    `demo.completo@recepclinic.com.br`.
+  - Logins de Administrador (+ Profissional), senha por `scripts/link-de-senha.mjs`. Telefones
+    fictícios (+55 11 9000x-xxxx); sem conexão de WhatsApp, nada é enviado.
+  - **Chip de testes** (cliente: só com pedido): `--chip-para-demo` passa a conexão da Consultorio
+    Tluiz22 para a Vida Plena (copia os templates e desliga os envios automáticos dela, porque os
+    telefones são fictícios); `--chip-devolver` desfaz. Com o chip na Vida Plena, o script não
+    remonta as clínicas.
 - **9c. Roteiro de vendas** no Suporte (vem do artifact de 11/out), com os ajustes da lista "Antes de
   abordar": preço definido; sem o item da liberação da Meta; demonstração pelas 3 clínicas; imagens
   tiradas das demos; clínicas-alvo nos novos nichos; contrato e LGPD com a resposta pronta. Sai a
