@@ -9,7 +9,7 @@ import Badge, { type BadgeVariant } from "../Badge.astro";
 import Card from "../Card.astro";
 import Icon, { type IconName } from "../Icon.astro";
 import PhoneLinks from "../PhoneLinks.astro";
-import { CANCELED_CARD, CANCELED_TEXT } from "./canceledStyle";
+import { CANCELED_TEXT, situationCard } from "./situationStyle";
 import { formatInstant } from "../../../lib/clinicTime";
 import type { AgendaAppointment, NoShowStats, OriginInfo } from "../../../lib/data/agenda/view";
 import type { ReminderAction } from "../../../lib/data/whatsapp/reminders";
@@ -155,7 +155,7 @@ const BUTTON = "inline-flex items-center gap-1 rounded-md border bg-white px-2.5
 const tone = (danger?: boolean) => (danger ? "border-red-300 text-red-700 hover:bg-red-50" : "border-slate-300 text-slate-700 hover:bg-slate-50");
 ---
 
-<Card class={`${compact ? "p-3 shadow-none" : ""} ${isCanceled ? CANCELED_CARD : ""}`}>
+<Card class={`${compact ? "p-3 shadow-none" : ""} ${situationCard(a)}`}>
   {
     !compact && (
       <div class="flex flex-wrap items-center justify-between gap-2">

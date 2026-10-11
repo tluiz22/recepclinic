@@ -8,6 +8,8 @@ import AppointmentCard from "../../components/admin/agenda/AppointmentCard.astro
 import Badge from "../../components/admin/Badge.astro";
 import Card from "../../components/admin/Card.astro";
 import ConfirmDeleteDialog from "../../components/admin/ConfirmDeleteDialog.astro";
+import SituationLegend from "../../components/admin/agenda/SituationLegend.astro";
+import { SITUATIONS } from "../../components/admin/agenda/situationStyle";
 import FlashMessage from "../../components/admin/FlashMessage.astro";
 import Icon from "../../components/admin/Icon.astro";
 import { addDays, formatCalendarDate, formatInstant, isCalendarDate, todayIn } from "../../lib/clinicTime";
@@ -96,6 +98,7 @@ const cardProps = (a: (typeof appointments)[number]) => ({
     }
   </form>
   <p class="mt-2 text-sm capitalize text-slate-600">{formatCalendarDate(date, "EEEE, d 'de' MMMM 'de' yyyy")}</p>
+  <SituationLegend />
   <FlashMessage />
 
   {
@@ -135,7 +138,7 @@ const cardProps = (a: (typeof appointments)[number]) => ({
             </div>
           </Card>
         ) : (
-          <Card>
+          <Card class={SITUATIONS.block.card}>
             <div class="flex flex-wrap items-center justify-between gap-2">
               <span class="text-base font-semibold text-slate-900">
                 {formatInstant(item.start, clinic.timezone, "dd/MM HH:mm")} – {formatInstant(item.end, clinic.timezone, "dd/MM HH:mm")}

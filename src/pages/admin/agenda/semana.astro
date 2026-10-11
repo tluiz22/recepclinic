@@ -4,6 +4,8 @@
 import AdminLayout from "../../../layouts/AdminLayout.astro";
 import AgendaHeader from "../../../components/admin/agenda/AgendaHeader.astro";
 import Icon from "../../../components/admin/Icon.astro";
+import SituationLegend from "../../../components/admin/agenda/SituationLegend.astro";
+import { SITUATIONS, appointmentSituation } from "../../../components/admin/agenda/situationStyle";
 import { addDays, formatCalendarDate, formatInstant, isCalendarDate, localDateOf, todayIn } from "../../../lib/clinicTime";
 import { createUserClient } from "../../../lib/data/clients";
 import { loadAgendaScope } from "../../../lib/data/agenda/scope";
@@ -52,6 +54,8 @@ const statusMark: Record<string, string> = { completed: "✓", no_show: "✗" };
     }
   </div>
 
+  <SituationLegend />
+
   <div class="mt-4 grid gap-3 md:grid-cols-7">
     {
       days.map((day) => (
@@ -62,10 +66,10 @@ const statusMark: Record<string, string> = { completed: "✓", no_show: "✗" };
           <p class={`text-sm font-semibold capitalize ${day === today ? "text-sky-700" : "text-slate-900"}`}>{formatCalendarDate(day, "EEE dd/MM")}</p>
           <ul class="mt-2 flex flex-col gap-1.5 text-xs text-slate-700">
             {blocksOf(day).map((b) => (
-              <li class="rounded bg-slate-100 px-1.5 py-1 text-slate-500">Bloqueio: {b.reason}</li>
+              <li class={`rounded border-l-4 px-1.5 py-1 text-slate-600 ${SITUATIONS.block.swatch}`}>Bloqueio: {b.reason}</li>
             ))}
             {ofDay(day).map((a) => (
-              <li>
+              <li class={`rounded border-l-4 px-1.5 py-1 ${SITUATIONS[appointmentSituation(a)].swatch}`}>
                 <span class="font-semibold">{formatInstant(a.scheduledAt, clinic.timezone, "HH:mm")}</span> {a.patientName}
                 {statusMark[a.status] && <span class="ml-1">{statusMark[a.status]}</span>}
                 <span class="block text-slate-500">

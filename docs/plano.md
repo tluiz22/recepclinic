@@ -1365,6 +1365,22 @@ F4.4a (convite, aviso de acesso, pedido de informações); falta o provedor. Dec
 redeploy, SMTP e modelos no Supabase). O formulário respondido fica só no painel do Suporte
 (Administração › Clínicas › a clínica), **sem e-mail de aviso** (cliente, 10/out).
 
+## Ajustes dos testes do cliente (antes da F8a)
+
+Pontos que o cliente encontrou testando o staging, um por vez, cada um validado antes do próximo.
+
+| | Ajuste | Situação |
+|---|---|---|
+| 1 | Cores da situação na Agenda | implementado (10/out), aguardando validação |
+
+**1. Cores da situação** (cliente, 10/out/2026): no Dia, na Semana e no Resumo do dia, cada
+atendimento tem faixa à esquerda e fundo claro conforme a situação, com uma legenda acima:
+não confirmado **amarelo** (o que falta confirmar), confirmado **verde** (presença confirmada ou
+pelo lembrete), compareceu **azul**, faltou **laranja**, cancelado **vermelho** (como já era, com o
+horário riscado) e bloqueio **cinza**. Verde só para o que está garantido (sugestão aceita pelo
+cliente no lugar de dois tons de verde). Os selos continuam; "já passou: registre o
+comparecimento" mantém a cor da situação. Código em `components/admin/agenda/situationStyle.ts`.
+
 ## F10 — Primeiro piloto
 
 **Escopo:** produção (Supabase Pro + Vercel Pro, backup conferido); criação da 1ª clínica pelo
