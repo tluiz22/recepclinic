@@ -1375,7 +1375,9 @@ Pontos que o cliente encontrou testando o staging, um por vez, cada um validado 
 | 2 | Atendimentos marcados de um paciente (busca na Agenda) | validado em 10/out |
 | 3 | "Voltar" leva à tela de onde a pessoa veio (3a: ficha do paciente e contato; 3b: telas da Agenda e Configurações) | validado em 10/out |
 | 4 | "Aguardando remarcação" com o mesmo paciente repetido | implementado (11/out), aguardando validação |
-| 5 | Mensagens com "fale com a clínica", caso a caso (5a: clínica sem serviço, serviço sem horário, como a clínica é chamada e prazo para oferecer horários; 5b: os demais casos) | 5a validado em 11/out; 5b implementado (11/out), aguardando validação |
+| 5 | Mensagens com "fale com a clínica", caso a caso (5a: clínica sem serviço, serviço sem horário, como a clínica é chamada e prazo para oferecer horários; 5b: os demais casos) | 5a validado em 11/out; 5b implementado (11/out); o cliente valida tudo no fim dos ajustes |
+| 6 | Avisos de marcação, remarcação e cancelamento por template | mantido como está (11/out) |
+| 7 | Explicação dos campos "Informações que o bot responde" | implementado (11/out); o cliente valida no fim dos ajustes |
 
 **1. Cores da situação** (cliente, 10/out/2026): no Dia, na Semana e no Resumo do dia, cada
 atendimento tem faixa à esquerda e fundo claro conforme a situação, com uma legenda acima:
@@ -1446,6 +1448,15 @@ Fica no máximo uma linha por paciente e jornada, a do último cancelamento (`wa
 - **Data de nascimento sem atendimento:** pede de novo uma vez; na segunda, como o anterior.
 - **Páginas do link** (marcar, preparo, orientações): "…fale com o consultório pelo WhatsApp.",
   com a forma de chamar a clínica.
+
+**6. Avisos por template** (discussão, 11/out/2026): ficam como estão (sempre template). Pela
+página oficial de preços da Meta, texto livre e template de utilidade dentro da janela de 24h
+(paciente que acabou de falar com o bot) são grátis; fora da janela (ações da clínica pelo
+painel) só o template é aceito, e ele é cobrado. Se o custo com a Meta pesar, voltar ao assunto
+(opções levantadas: texto livre dentro da janela; a clínica escolher se avisa nas ações do painel).
+
+**7. "Informações que o bot responde"** (Configurações › Clínica): cada campo ganhou a explicação de
+onde aparece no bot (Informações › Valores, Convênios e Outras informações) e o que acontece vazio.
 
 ## F10 — Primeiro piloto
 

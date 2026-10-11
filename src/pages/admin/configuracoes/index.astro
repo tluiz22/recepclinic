@@ -241,23 +241,27 @@ const profileHint = (profile: (typeof CLINIC_PROFILES)[number]) => {
         hasBot && (
           <fieldset class="flex flex-col gap-4 border-t border-slate-200 pt-4">
             <legend class="text-sm font-semibold uppercase tracking-wide text-slate-500">Informações que o bot responde</legend>
+            <p class={HINT}>No WhatsApp, o paciente escolhe <strong>Informações</strong> no menu e vê as opções preenchidas aqui (o endereço vem dos locais, e o preparo, dos exames).</p>
             <div>
               <label for="bot_payment_info" class={LABEL}>
                 Formas de pagamento
               </label>
               <textarea id="bot_payment_info" name="bot_payment_info" rows="3" class={INPUT}>{settings.botPaymentInfo ?? ""}</textarea>
+              <p class={HINT}>Aparece no fim de <strong>Informações › Valores</strong>, depois dos preços dos serviços. Ex.: "PIX, cartão de débito e crédito em até 3x". Vazio: os valores aparecem sem as formas de pagamento.</p>
             </div>
             <div>
               <label for="bot_insurance_info" class={LABEL}>
                 Convênios
               </label>
               <textarea id="bot_insurance_info" name="bot_insurance_info" rows="3" class={INPUT}>{settings.botInsuranceInfo ?? ""}</textarea>
+              <p class={HINT}>É a resposta de <strong>Informações › Convênios</strong>, do jeito que estiver escrito. Ex.: "Atendemos Unimed e Hapvida. Demais planos: reembolso com nota fiscal." Vazio: a opção não aparece.</p>
             </div>
             <div>
               <label for="bot_notes" class={LABEL}>
                 Observações
               </label>
               <textarea id="bot_notes" name="bot_notes" rows="3" class={INPUT}>{settings.botNotes ?? ""}</textarea>
+              <p class={HINT}>É a resposta de <strong>Informações › Outras informações</strong>, do jeito que estiver escrito. Ex.: "Chegue 10 minutos antes. Estacionamento no local." Vazio: a opção não aparece.</p>
             </div>
           </fieldset>
         )
