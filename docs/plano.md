@@ -1472,6 +1472,13 @@ todas as idades e dentistas (sem psicologia e sem agendamento recorrente por ora
 pediatra e, depois, uma psicóloga) são de graça, combinados pelo cliente; **sem oferta de entrada**
 para as demais.
 
+**Página Vendas** (Suporte › Vendas, `admin/sistema/vendas`; cliente, 11/out): reúne a apresentação e
+a venda do RecepClinic em abas, e os próximos assuntos de venda entram como abas novas. Hoje:
+**Planos** (a antiga tela Planos; `/admin/sistema/planos` redireciona) e **Demonstração** (as 3
+clínicas e os logins, com a hora em que cada uma foi montada e onde está o chip; os comandos para
+criar ou atualizar as demos, criar a senha dos logins e mover o chip; o roteiro da apresentação de
+20 minutos). O roteiro de vendas (9c) entra como aba.
+
 - **9a. Planos** (`lib/plans.ts`, tela `admin/sistema/planos`): mensalidade por clínica + R$ 47 por
   profissional além do primeiro (pelo limite contratado). **Básico R$ 147** (o que é sempre ligado,
   mais Bot, Lembrete automático e Lembrete ao profissional); **Completo R$ 297** (Básico e todos os
