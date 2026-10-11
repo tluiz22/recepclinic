@@ -1,0 +1,470 @@
+---
+// Vendas › Roteiro de vendas (cliente, 11/out/2026): o que o RecepClinic
+// resolve, onde ele entra ao lado do que a clínica já usa, o passo a passo da
+// abordagem, as imagens e as mensagens prontas para o WhatsApp e as objeções.
+// Veio do material de 11/out, com os ajustes da lista "Antes de abordar".
+// As imagens saem das clínicas de demonstração (dados fictícios); o modelo das
+// conversas fica em scripts/vendas-imagens/conversas.html.
+import Card from "../Card.astro";
+import { formatCentsBRL } from "../../../lib/money";
+import { PRICES } from "../../../lib/plans";
+import agenda from "../../../assets/vendas/agenda.png";
+import conversa from "../../../assets/vendas/conversa.png";
+import lembrete from "../../../assets/vendas/lembrete.png";
+import resumo from "../../../assets/vendas/resumo.png";
+
+const basic = formatCentsBRL(PRICES.basicCents);
+const complete = formatCentsBRL(PRICES.completeCents);
+const extra = formatCentsBRL(PRICES.extraProfessionalCents);
+const setup = formatCentsBRL(PRICES.setupCents);
+
+const H2 = "font-semibold text-slate-900";
+const EYEBROW = "text-xs font-semibold uppercase tracking-wide text-sky-700";
+const MUTED = "mt-1 text-sm text-slate-600";
+const TH = "py-2 pr-4 text-left font-medium text-slate-500";
+const TD = "py-2 pr-4 align-top";
+
+const checklist = [
+  { id: "preco", title: "Preço definido.", text: `Básico ${basic} e Completo ${complete} com 1 profissional, ${extra} por profissional a mais, adicionais e implantação de ${setup}. Para negociar, simule na aba Planos. As mensagens da Meta são cobradas da clínica, à parte.` },
+  { id: "demos", title: "Demonstrações em dia.", text: "Atualize as 3 clínicas de demonstração na véspera (aba Demonstração) e confira o login da que vai mostrar." },
+  { id: "imagens", title: "Imagens no celular.", text: "Baixe as quatro imagens abaixo (lembrete, conversa de marcação, agenda do dia e resumo do dia) para mandar junto das mensagens." },
+  { id: "lista", title: "Lista de 20 clínicas-alvo.", text: "Pediatras, médicos que atendem todas as idades e dentistas, consultórios com 1 a 5 profissionais que marcam pelo WhatsApp. Anote quem decide e quem cuida da agenda." },
+  { id: "legal", title: "Contrato e termo de tratamento de dados revisados.", text: "Com o advogado, antes da primeira clínica pagante. A clínica vai perguntar sobre LGPD; a resposta pronta está em Objeções." },
+];
+
+const pains = [
+  { title: "Secretária presa no celular", text: "Boa parte do dia vai em perguntar nome, data de nascimento e horário, uma conversa de cada vez." },
+  { title: "Faltas e horários vazios", text: "O paciente esquece, o horário fica vazio e quem esperava vaga não fica sabendo." },
+  { title: "Pedidos fora de hora", text: "Mensagens chegam à noite e no fim de semana. Quem não recebe resposta procura outro lugar." },
+];
+
+const layers = [
+  { tag: "1 · conversa", title: "WhatsApp da clínica", items: ["Marca consulta, retorno e exame, 24 horas", "Remarca e cancela sozinho", "Informações: valores, convênios, endereço, preparo", "\"Falar com a recepção\" a qualquer momento"] },
+  { tag: "2 · agenda", title: "Painel da equipe", items: ["Agenda por profissional, com cores da situação", "Bloqueio de dias com aviso e link de remarcação", "Retorno com prazo, exames, domiciliar", "Ficha do paciente com histórico e trilha"] },
+  { tag: "3 · automação", title: "Rotinas que rodam sozinhas", items: ["Lembrete com Confirmar, Remarcar, Cancelar", "Vaga aberta oferecida para a lista de espera", "Resumo do dia ao profissional e à equipe", "Preparo do exame e orientações enviados"] },
+  { tag: "4 · gestão", title: "Números da operação", items: ["Comparecimento e faltas por mês", "Funil: quantos marcaram sozinhos pelo bot", "Quem marcou, remarcou e cancelou, e quando", "Acessos por papel: administrador, recepção, profissional"] },
+];
+
+const complements = [
+  {
+    uses: "Prontuário e gestão",
+    examples: "iClinic, Feegow, Amplimed e similares",
+    good: "Prontuário, prescrição, financeiro, faturamento de convênio. Muitos têm agenda e lembrete.",
+    adds: "A conversa inteira no WhatsApp da clínica: o paciente marca, remarca e cancela sem a secretária; lista de espera que preenche vaga; cancelamento de um dia com link de remarcação para cada paciente.",
+    say: "O prontuário continua com vocês. O RecepClinic cuida da recepção: a conversa, a agenda e o que roda em volta dela.",
+  },
+  {
+    uses: "Marketplace de médicos",
+    examples: "Doctoralia e similares",
+    good: "Traz paciente novo pela busca, com perfil e avaliações.",
+    adds: "Cuida de quem já é paciente e fala com a clínica pelo WhatsApp: retorno no prazo, remarcação, lembrete com botões, encaixe. No número da própria clínica, com a marca dela.",
+    say: "A Doctoralia traz o paciente novo. O RecepClinic cuida de quem já é seu e escreve no seu WhatsApp. Dá para usar os dois.",
+  },
+  {
+    uses: "Chatbot ou \"secretária virtual\"",
+    examples: "robôs de atendimento genéricos",
+    good: "Responde perguntas e encaminha a conversa.",
+    adds: "A agenda de verdade por trás da conversa: horários livres reais, regras de retorno, idade limite, turmas com vagas, bloqueios, faltas e o painel da equipe.",
+    say: "Não é um robô que responde mensagem. Ele marca na agenda, avisa, confirma, preenche vaga e mostra os números.",
+  },
+  {
+    uses: "Só o WhatsApp Business e uma agenda em papel ou planilha",
+    examples: "",
+    good: "É grátis e todo mundo sabe usar.",
+    adds: "Tudo acima, sem trocar de número: a secretária continua no mesmo aplicativo e o bot atende junto (coexistência).",
+    say: "Vocês continuam no mesmo WhatsApp. A diferença é que a maior parte das conversas de agenda se resolve sozinha.",
+  },
+];
+
+const fields = [
+  { id: "consultas", label: "Atendimentos por mês", value: 300, step: 10 },
+  { id: "valor", label: "Valor médio do atendimento (R$)", value: 250, step: 10 },
+  { id: "faltas", label: "Faltas hoje (%)", value: 15, step: 1, max: 100 },
+  { id: "reducao", label: "Redução das faltas (%), hipótese", value: 30, step: 5, max: 100 },
+  { id: "conversas", label: "Conversas de agenda por dia", value: 25, step: 1 },
+  { id: "minutos", label: "Minutos por conversa", value: 5, step: 1 },
+  { id: "bot", label: "Resolvidas pelo bot (%), hipótese", value: 60, step: 5, max: 100 },
+  { id: "dias", label: "Dias de atendimento por mês", value: 22, step: 1, max: 31 },
+];
+
+const results = [
+  { id: "faltas", label: "Faltas por mês hoje" },
+  { id: "perda", label: "Receita parada nas faltas, por mês" },
+  { id: "recuperados", label: "Atendimentos recuperados por mês" },
+  { id: "receita", label: "Receita recuperada por mês" },
+  { id: "horas", label: "Horas da recepção liberadas por mês" },
+];
+
+const steps = [
+  { title: "Pesquisar a clínica", when: "antes de escrever", text: "Veja no Instagram, no Google e na Doctoralia: quantos profissionais, se atende convênio, se divulga o WhatsApp para marcar. Escreva o tempo que ela demora para responder; isso já é argumento." },
+  { title: "Primeiro contato no WhatsApp da clínica", when: "dia 1", text: "Quem responde costuma ser a secretária. Seja breve, pergunte quem cuida da agenda e peça permissão para explicar. Mensagem 1." },
+  { title: "Explicar em uma mensagem e oferecer a demonstração", when: "quando responderem", text: "Uma dor, o que muda, um convite de 20 minutos. Mande a imagem do lembrete. Mensagens 2 e 3." },
+  { title: "Retomar sem insistir", when: "3 dias sem resposta", text: "Uma retomada só. Sem resposta depois disso, encerre com educação e volte em alguns meses. Mensagens 4 e 8." },
+  { title: "Demonstração de 20 minutos", when: "combinada", text: "Escolha a demo pelo perfil da clínica e siga o roteiro da aba Demonstração. Mensagem 5." },
+  { title: "Proposta por escrito no mesmo dia", when: "depois da demonstração", text: "Resuma o que ela viu, o plano e o valor (simule na aba Planos), a implantação, o custo da Meta à parte e a data de início. Mensagem 6." },
+  { title: "Implantação", when: "após o aceite", text: "Configuração com o Suporte (Nova clínica e o plano na Matriz de acesso), conexão do número, templates aprovados, treinamento de 1 hora e acompanhamento nas primeiras semanas." },
+  { title: "Resultado e indicação", when: "30 dias depois", text: "Mostre os números do mês (faltas, marcações pelo bot) e peça uma indicação. Mensagem 7." },
+];
+
+const images = [
+  { src: lembrete.src, file: "recepclinic-lembrete.png", title: "Lembrete com os botões", use: "Vai junto da mensagem 2: o paciente confirma com um toque." },
+  { src: conversa.src, file: "recepclinic-conversa.png", title: "Conversa de marcação", use: "O paciente marca às 22h, sem ninguém da equipe." },
+  { src: agenda.src, file: "recepclinic-agenda.png", title: "Agenda do dia", use: "As cores da situação: confirmado, não confirmado, cancelado." },
+  { src: resumo.src, file: "recepclinic-resumo-do-dia.png", title: "Resumo do dia do profissional", use: "Chega antes do expediente, com quem confirmou." },
+];
+
+const messages = [
+  { title: "1. Primeiro contato (secretária ou recepção)", when: "dia 1", text: "Olá, tudo bem? Meu nome é [seu nome], sou do RecepClinic. Trabalho com consultórios que atendem pelo WhatsApp e queria falar rapidinho com quem cuida da agenda aí da [nome da clínica]. Posso te fazer uma pergunta?" },
+  {
+    title: "2. Explicação curta (quando responderem)",
+    when: "em seguida",
+    tip: "Mande junto a imagem do lembrete com os botões.",
+    text: "Obrigado! Hoje vocês marcam as consultas pelo WhatsApp conversa por conversa?\n\nPergunto porque o RecepClinic funciona como uma recepção no WhatsApp de vocês: o paciente marca, confirma, remarca e cancela sozinho, no mesmo número, e a equipe continua no mesmo aplicativo para o que precisa de gente.\n\nEle também manda o lembrete na véspera com botões de confirmar, oferece a vaga que abriu para quem está esperando e manda o resumo do dia para o profissional.\n\nPosso mostrar em 20 minutos?",
+  },
+  {
+    title: "3. Direto para o médico, dentista ou dono (indicação)",
+    when: "quando tiver o contato",
+    text: "[Dr./Dra.] [nome], tudo bem? Sou [seu nome], do RecepClinic. [Quem indicou] me passou seu contato.\n\nO RecepClinic nasceu num consultório pediátrico para resolver três coisas: secretária presa no celular, faltas sem aviso e pedidos que chegam fora do horário.\n\nEle não substitui o seu prontuário. Cuida da recepção: a conversa no WhatsApp da clínica, a agenda, o lembrete com confirmação, a lista de espera que preenche vaga e o resumo do dia para você.\n\nTopa ver em 20 minutos?",
+  },
+  { title: "4. Retomada (sem resposta)", when: "3 dias depois", text: "Oi, [nome]! Passando para saber se você conseguiu ver minha mensagem. Se agora não for o momento, sem problema, é só me dizer.\n\nSe fizer sentido, a demonstração leva 20 minutos e pode ser no horário que for melhor para vocês." },
+  { title: "5. Confirmar a demonstração", when: "quando aceitarem", text: "Combinado, [nome]! Demonstração [dia] às [hora], [por vídeo / aí na clínica], 20 minutos.\n\nSe quiser, já me conta quantos profissionais atendem e os tipos de atendimento (consulta, retorno, exame ou procedimento): assim eu mostro o que mais se parece com a rotina de vocês." },
+  {
+    title: "6. Proposta depois da demonstração",
+    when: "no mesmo dia",
+    tip: "Calcule o valor na aba Planos (plano, adicionais e profissionais).",
+    text: `[nome], obrigado pelo tempo hoje! Resumindo o que vimos:\n\n• o paciente marca, remarca e cancela sozinho pelo WhatsApp de vocês, a qualquer hora\n• lembrete na véspera com Confirmar, Remarcar e Cancelar\n• vaga que abre é oferecida para quem está na lista de espera\n• resumo do dia para cada profissional e painel para a equipe\n\nProposta: plano [Básico / Completo], [valor] por mês para [número] profissionais, e implantação de ${setup} (configuração, conexão do número e treinamento), com acompanhamento nas primeiras semanas. As mensagens oficiais do WhatsApp (lembretes e avisos) são cobradas pela Meta direto na conta da clínica, poucos centavos cada; respostas dentro de uma conversa que o paciente começou não têm custo.\n\nPara começar: [próximo passo]. Posso reservar a implantação para [data]?`,
+  },
+  {
+    title: "7. Resultado do mês e pedido de indicação",
+    when: "30 dias depois",
+    tip: "Os números saem de Métricas e do Resumo do Dia no painel.",
+    text: "Oi, [nome]! Fechamos o primeiro mês do RecepClinic aí na [nome da clínica]:\n• [número] atendimentos marcados pelo próprio paciente no WhatsApp\n• faltas: [antes]% antes, [agora]% neste mês\n• [número] vagas preenchidas pela lista de espera\n\nObrigado pela confiança! Se você conhece outro consultório que sofre com a agenda no WhatsApp, eu adoraria uma indicação.",
+  },
+  { title: "8. Encerrar com educação", when: "quando disserem não", text: "Entendo, [nome], obrigado pelo retorno! Se em algum momento a agenda no WhatsApp começar a pesar, fico à disposição. Bom trabalho para vocês!" },
+];
+
+const objections = [
+  {
+    q: "\"Já uso o iClinic (ou outro sistema), ele já manda lembrete.\"",
+    a: ["Ótimo, o prontuário continua lá. O lembrete é só uma parte. O RecepClinic cuida da conversa inteira no WhatsApp: o paciente marca, remarca e cancela sem a secretária, a vaga que abre vai para a lista de espera e um dia bloqueado avisa todo mundo com o link para remarcar."],
+    note: "Seja claro: hoje não há sincronização com a agenda de outros sistemas. A agenda de marcação passa a ser a do RecepClinic.",
+  },
+  { q: "\"Já estou na Doctoralia.\"", a: ["A Doctoralia é boa para trazer paciente novo. O RecepClinic cuida de quem já é seu paciente e fala com a clínica pelo WhatsApp, no seu número e com a sua marca. Muitas clínicas usam os dois."] },
+  {
+    q: "\"Tem coisa mais barata.\"",
+    a: [`Vamos comparar o que está no preço: conversa completa no WhatsApp 24 horas, lembrete com botões, resumo do dia e a agenda, a partir de ${basic} por mês. Agora, o custo de uma falta: [valor do atendimento]. Pela calculadora, quantos atendimentos por mês vocês recuperariam?`],
+  },
+  { q: "\"Meus pacientes não gostam de falar com robô.\"", a: ["Ninguém fica preso no bot: \"Falar com a recepção\" aparece no menu, a secretária responde no mesmo número e o bot pausa naquela conversa. E muita gente prefere marcar às 22h sem esperar o dia seguinte."] },
+  { q: "\"Vou perder meu número ou o WhatsApp do celular?\"", a: ["Não. O número continua no aplicativo WhatsApp Business do celular da clínica (coexistência) e o bot atende junto, pela API oficial da Meta. Não troca chip nem apaga conversa."] },
+  {
+    q: "\"Quanto custa cada mensagem do WhatsApp?\"",
+    a: ["Respostas dentro de uma conversa que o paciente começou não têm custo. Lembretes e avisos enviados fora dessa conversa usam mensagens oficiais, cobradas pela Meta direto na conta da clínica, poucos centavos cada. A clínica vê o uso no painel da Meta."],
+    note: "Antes de citar um valor, confira a tabela da Meta em reais.",
+  },
+  {
+    q: "\"E a LGPD?\"",
+    a: [
+      "Os dados ficam no Brasil, em servidores em São Paulo, separados por clínica: uma clínica nunca vê os dados de outra. Dentro da clínica, cada pessoa só vê o que o papel dela permite (administrador, recepção, profissional), e a trilha mostra quem marcou, remarcou ou cancelou, e quando.",
+      "Os registros do sistema não guardam dados pessoais, o paciente pode pedir a anonimização e a clínica é a controladora dos dados, com o termo de tratamento no contrato, revisado por advogado.",
+    ],
+  },
+  { q: "\"Não tenho tempo para implantar.\"", a: ["A implantação é com a gente: configuramos agenda, serviços e mensagens; a clínica só confere. O treinamento leva uma hora e acompanhamos as primeiras semanas."] },
+  { q: "\"Vou pensar.\"", a: ["Claro. Para ajudar: o que pesaria mais na decisão, o preço, a implantação ou a reação dos pacientes? Posso responder isso agora ou combinar uma conversa curta na [dia]."] },
+];
+
+const sources = [
+  { label: "Preços da plataforma WhatsApp Business (Meta)", href: "https://developers.facebook.com/documentation/business-messaging/whatsapp/pricing" },
+  { label: "Doctoralia for Specialists (Capterra)", href: "https://www.capterra.com/p/253301/Doctoralia-Pro/" },
+  { label: "iClinic (B2B Stack)", href: "https://www.b2bstack.com.br/product/iclinic" },
+  { label: "Feegow (GetApp)", href: "https://www.getapp.com/healthcare-pharmaceuticals-software/a/feegow/" },
+  { label: "Amplimed (GetApp)", href: "https://www.getapp.com/all-software/a/amplimed/" },
+  { label: "Digisac: como reduzir faltas (fornecedor)", href: "https://digisac.com.br/blog/como-reduzir-faltas-de-pacientes" },
+  { label: "Clint: automações que reduzem faltas (fornecedor)", href: "https://www.clint.digital/blog/5-automacoes-que-mais-reduzem-faltas-2026/" },
+];
+
+const escape = (value: string) => value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+// Campos [entre colchetes] em destaque.
+const highlight = (text: string) => escape(text).replace(/\[([^\]]+)\]/g, '<mark class="rounded bg-amber-100 px-0.5 text-amber-900">[$1]</mark>');
+
+const SECTIONS = [
+  { id: "antes", label: "Antes de abordar" },
+  { id: "resolve", label: "O que resolve" },
+  { id: "complemento", label: "Ao lado de quem" },
+  { id: "ganhos", label: "Ganhos" },
+  { id: "passos", label: "Passo a passo" },
+  { id: "imagens", label: "Imagens" },
+  { id: "mensagens", label: "Mensagens" },
+  { id: "objecoes", label: "Objeções" },
+];
+---
+
+<div class="mt-4 flex flex-col gap-4" id="roteiro">
+  <Card class="border-sky-200 bg-sky-50">
+    <p class={EYEBROW}>A frase de 15 segundos</p>
+    <p class="mt-1 text-base text-slate-900">
+      O RecepClinic é a recepção da clínica funcionando no WhatsApp que ela já usa: o paciente marca, confirma, remarca e
+      cancela sozinho, a vaga que abre é oferecida para quem espera, e a equipe só entra quando precisa. O prontuário continua
+      onde está.
+    </p>
+    <nav class="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-sm" aria-label="Seções do roteiro">
+      {SECTIONS.map((section) => <a href={`#${section.id}`} class="text-sky-700 hover:underline">{section.label}</a>)}
+    </nav>
+  </Card>
+
+  <Card id="antes" class="scroll-mt-16">
+    <p class={EYEBROW}>Antes de abordar</p>
+    <h2 class={H2}>O que precisa estar pronto antes da primeira mensagem.</h2>
+    <p class={MUTED}>Marque conforme for resolvendo. A marcação fica salva só neste navegador.</p>
+    <ul class="mt-3 flex flex-col gap-3">
+      {checklist.map((item) => (
+        <li>
+          <label class="flex items-start gap-3 text-sm text-slate-700">
+            <input type="checkbox" data-check={item.id} class="mt-0.5 h-4 w-4 rounded border-slate-300" />
+            <span><strong class="text-slate-900">{item.title}</strong> {item.text}</span>
+          </label>
+        </li>
+      ))}
+    </ul>
+  </Card>
+
+  <Card id="resolve" class="scroll-mt-16">
+    <p class={EYEBROW}>O que o RecepClinic resolve</p>
+    <h2 class={H2}>Não é só um bot de WhatsApp. É a recepção inteira, em quatro camadas.</h2>
+    <p class={MUTED}>
+      Um bot sozinho responde mensagem. O RecepClinic junta a conversa, a agenda, as rotinas automáticas e os números da
+      operação.
+    </p>
+    <div class="mt-3 grid gap-3 sm:grid-cols-3">
+      {pains.map((pain) => (
+        <div class="rounded-lg border border-amber-200 bg-amber-50 p-3">
+          <h3 class="text-sm font-semibold text-slate-900">{pain.title}</h3>
+          <p class="mt-1 text-sm text-slate-700">{pain.text}</p>
+        </div>
+      ))}
+    </div>
+    <div class="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      {layers.map((layer) => (
+        <div class="rounded-lg border border-slate-200 p-3">
+          <span class="text-xs font-semibold uppercase tracking-wide text-sky-700">{layer.tag}</span>
+          <h3 class="mt-1 text-sm font-semibold text-slate-900">{layer.title}</h3>
+          <ul class="mt-2 flex list-disc flex-col gap-1 pl-4 text-sm text-slate-700">
+            {layer.items.map((item) => <li>{item}</li>)}
+          </ul>
+        </div>
+      ))}
+    </div>
+  </Card>
+
+  <Card id="complemento" class="scroll-mt-16">
+    <p class={EYEBROW}>Ao lado do que a clínica já usa</p>
+    <h2 class={H2}>Concorre com a secretária sobrecarregada, não com o prontuário.</h2>
+    <p class={MUTED}>
+      Ferramentas como iClinic e Doctoralia são fortes no que fazem. O argumento não é "o meu é melhor": é mostrar o pedaço
+      que elas não cobrem bem e que pesa na rotina. Antes de comparar, pergunte o que a clínica usa e quanto paga.
+    </p>
+    <div class="mt-2 overflow-x-auto">
+      <table class="w-full min-w-[52rem] text-sm">
+        <thead><tr><th class={TH}>A clínica já usa</th><th class={TH}>O que essa ferramenta faz bem</th><th class={TH}>O que o RecepClinic acrescenta</th><th class={TH}>Como dizer</th></tr></thead>
+        <tbody class="divide-y divide-slate-100">
+          {complements.map((row) => (
+            <tr>
+              <td class={`${TD} font-medium text-slate-900`}>{row.uses}{row.examples && <span class="block text-xs font-normal text-slate-500">{row.examples}</span>}</td>
+              <td class={`${TD} text-slate-600`}>{row.good}</td>
+              <td class={`${TD} text-slate-700`}>{row.adds}</td>
+              <td class={`${TD} italic text-slate-700`}>"{row.say}"</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+    <div class="mt-3 rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700">
+      <strong class="text-slate-900">Seja claro sobre o limite.</strong> Hoje o RecepClinic não sincroniza com a agenda de outros
+      sistemas. Se a clínica marca no iClinic (ou similar), a agenda de marcação passa a ser a do RecepClinic, e o prontuário
+      segue no sistema dela. Dizer isso na primeira conversa evita frustração.
+    </div>
+  </Card>
+
+  <Card id="ganhos" class="scroll-mt-16">
+    <p class={EYEBROW}>Ganhos para a clínica</p>
+    <h2 class={H2}>Mostre o ganho em reais e em horas, com os números dela.</h2>
+    <p class={MUTED}>
+      Preencha com a clínica na conversa. Os valores iniciais são um exemplo; a redução de faltas e o quanto o bot resolve
+      sozinho são hipóteses para ajustar, não promessas.
+    </p>
+    <div class="mt-3 grid gap-4 md:grid-cols-2">
+      <div class="grid gap-3 sm:grid-cols-2" id="ganho-campos">
+        {fields.map((field) => (
+          <label class="text-sm text-slate-700">
+            {field.label}
+            <input type="number" min="0" max={field.max} step={field.step} value={field.value} data-field={field.id} class="mt-1 block w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm" />
+          </label>
+        ))}
+      </div>
+      <div>
+        <ul class="flex flex-col divide-y divide-slate-100 text-sm" aria-live="polite">
+          {results.map((result) => (
+            <li class="flex items-center justify-between py-2">
+              <span class="text-slate-600">{result.label}</span>
+              <strong class="text-slate-900" data-result={result.id}>—</strong>
+            </li>
+          ))}
+        </ul>
+        <p class="mt-2 text-xs text-slate-500">
+          Compare a receita recuperada com a mensalidade (Básico a partir de {basic}) e o custo das mensagens da Meta. Em geral,
+          um ou dois atendimentos recuperados por mês já pagam a conta.
+        </p>
+      </div>
+    </div>
+  </Card>
+
+  <Card id="passos" class="scroll-mt-16">
+    <p class={EYEBROW}>Passo a passo</p>
+    <h2 class={H2}>Da lista de clínicas à clínica funcionando.</h2>
+    <ol class="mt-3 flex flex-col gap-3">
+      {steps.map((step, i) => (
+        <li class="flex gap-3">
+          <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-sky-700 text-sm font-semibold text-white">{i + 1}</span>
+          <div class="text-sm">
+            <p class="font-semibold text-slate-900">{step.title} <span class="font-normal text-slate-500">· {step.when}</span></p>
+            <p class="mt-0.5 text-slate-700">{step.text}</p>
+          </div>
+        </li>
+      ))}
+    </ol>
+  </Card>
+
+  <Card id="imagens" class="scroll-mt-16">
+    <p class={EYEBROW}>Imagens</p>
+    <h2 class={H2}>Para mandar junto das mensagens.</h2>
+    <p class={MUTED}>Tiradas das clínicas de demonstração, com dados fictícios. Toque em "Baixar" para salvar no celular ou no computador.</p>
+    <div class="mt-3 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      {images.map((image) => (
+        <figure class="flex flex-col gap-2">
+          <a href={image.src} target="_blank" rel="noopener" class="block overflow-hidden rounded-lg border border-slate-200 bg-slate-50">
+            <img src={image.src} alt={image.title} loading="lazy" class="h-64 w-full object-cover object-top" />
+          </a>
+          <figcaption class="text-sm">
+            <span class="font-semibold text-slate-900">{image.title}</span>
+            <span class="block text-xs text-slate-500">{image.use}</span>
+          </figcaption>
+          <a href={image.src} download={image.file} class="self-start rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-50">Baixar</a>
+        </figure>
+      ))}
+    </div>
+  </Card>
+
+  <Card id="mensagens" class="scroll-mt-16">
+    <p class={EYEBROW}>Mensagens prontas</p>
+    <h2 class={H2}>Para copiar, trocar os campos em destaque e enviar.</h2>
+    <p class={MUTED}>
+      Mande uma por vez, de um número seu (nunca em massa) e só para o WhatsApp comercial da clínica. Um "não tenho interesse"
+      encerra a conversa.
+    </p>
+    <div class="mt-3 grid gap-4 lg:grid-cols-2">
+      {messages.map((message, i) => (
+        <article class="flex flex-col gap-2 rounded-lg border border-slate-200 p-3">
+          <div class="flex flex-wrap items-baseline justify-between gap-2">
+            <h3 class="text-sm font-semibold text-slate-900">{message.title}</h3>
+            <span class="text-xs text-slate-500">{message.when}</span>
+          </div>
+          <div class="whitespace-pre-line rounded-lg rounded-tl-none bg-[#dcf8c6] px-3 py-2 text-sm text-slate-900" id={`msg-${i + 1}`} data-text={message.text} set:html={highlight(message.text)} />
+          <div class="flex flex-wrap items-center gap-3">
+            <button type="button" data-copy={`msg-${i + 1}`} class="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-50">Copiar mensagem</button>
+            <span class="text-xs text-emerald-700" role="status" data-copied={`msg-${i + 1}`}></span>
+            {message.tip && <span class="text-xs text-slate-500">{message.tip}</span>}
+          </div>
+        </article>
+      ))}
+    </div>
+  </Card>
+
+  <Card id="objecoes" class="scroll-mt-16">
+    <p class={EYEBROW}>Objeções</p>
+    <h2 class={H2}>O que a clínica costuma dizer, e como responder.</h2>
+    <div class="mt-2 flex flex-col divide-y divide-slate-100">
+      {objections.map((objection) => (
+        <details class="py-2">
+          <summary class="cursor-pointer text-sm font-medium text-slate-900">{objection.q}</summary>
+          <div class="mt-2 flex flex-col gap-2 text-sm text-slate-700">
+            {objection.a.map((paragraph) => <p set:html={highlight(paragraph)} />)}
+            {objection.note && <p class="text-xs text-slate-500">{objection.note}</p>}
+          </div>
+        </details>
+      ))}
+    </div>
+  </Card>
+
+  <Card>
+    <p class={EYEBROW}>Notas</p>
+    <h2 class={H2}>De onde vêm os números e o que conferir.</h2>
+    <ul class="mt-2 flex list-disc flex-col gap-1 pl-5 text-sm text-slate-700">
+      <li>Preços de iClinic, Doctoralia, Feegow, Amplimed e de secretárias virtuais não estão aqui de propósito: não há tabela oficial e atual pública. Pergunte ao cliente quanto ele paga.</li>
+      <li>Redução de faltas com lembrete: os "30 a 40%" que circulam vêm de fornecedores, sem metodologia. Use a calculadora como hipótese, nunca como promessa.</li>
+      <li>Custo das mensagens: dentro da janela de 24h, respostas e templates de utilidade não são cobrados; fora dela, só template, cobrado.</li>
+      {sources.map((source) => <li><a href={source.href} target="_blank" rel="noopener" class="text-sky-700 hover:underline">{source.label}</a></li>)}
+    </ul>
+  </Card>
+</div>
+
+<script>
+  // Lista "Antes de abordar": lembrada só neste navegador.
+  document.querySelectorAll<HTMLInputElement>("#roteiro [data-check]").forEach((box) => {
+    const key = `vendas-roteiro-${box.dataset.check}`;
+    try {
+      box.checked = localStorage.getItem(key) === "1";
+    } catch {
+      /* sem armazenamento: a lista começa desmarcada */
+    }
+    box.addEventListener("change", () => {
+      try {
+        localStorage.setItem(key, box.checked ? "1" : "0");
+      } catch {
+        /* sem armazenamento */
+      }
+    });
+  });
+
+  // Copiar mensagem: área de transferência; se recusar, seleciona o texto.
+  document.querySelectorAll<HTMLButtonElement>("#roteiro [data-copy]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const id = button.dataset.copy!;
+      const bubble = document.getElementById(id)!;
+      const status = document.querySelector<HTMLElement>(`[data-copied="${id}"]`)!;
+      const selectText = () => {
+        const range = document.createRange();
+        range.selectNodeContents(bubble);
+        const selection = window.getSelection();
+        selection?.removeAllRanges();
+        selection?.addRange(range);
+        status.textContent = "Texto selecionado: use Copiar do seu aparelho.";
+      };
+      if (!navigator.clipboard) return selectText();
+      navigator.clipboard.writeText(bubble.dataset.text ?? bubble.innerText).then(() => {
+        status.textContent = "Copiada.";
+        setTimeout(() => (status.textContent = ""), 2500);
+      }, selectText);
+    });
+  });
+
+  // Calculadora de ganho.
+  const value = (id: string, max = Infinity) =>
+    Math.min(max, Math.max(0, Number(document.querySelector<HTMLInputElement>(`[data-field="${id}"]`)?.value) || 0));
+  const show = (id: string, text: string) => {
+    const el = document.querySelector<HTMLElement>(`[data-result="${id}"]`);
+    if (el) el.textContent = text;
+  };
+  const money = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
+  function calc() {
+    const missed = value("consultas") * (value("faltas", 100) / 100);
+    const recovered = missed * (value("reducao", 100) / 100);
+    const price = value("valor");
+    show("faltas", Math.round(missed).toLocaleString("pt-BR"));
+    show("perda", money(missed * price));
+    show("recuperados", Math.round(recovered).toLocaleString("pt-BR"));
+    show("receita", money(recovered * price));
+    const hours = (value("conversas") * value("minutos") * (value("bot", 100) / 100) * value("dias", 31)) / 60;
+    show("horas", `${hours.toLocaleString("pt-BR", { maximumFractionDigits: 0 })} h`);
+  }
+  document.querySelectorAll("#ganho-campos input").forEach((input) => input.addEventListener("input", calc));
+  calc();
+</script>

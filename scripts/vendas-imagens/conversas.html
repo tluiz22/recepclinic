@@ -1,0 +1,93 @@
+<!doctype html><html lang="pt-BR"><head><meta charset="utf-8">
+<!-- Modelo das imagens da aba Vendas › Roteiro (src/assets/vendas): conversas no formato do
+     WhatsApp com os textos do bot e dos templates e os dados fictícios da Clínica Vida Plena.
+     Para refazer: abrir no Chrome, recortar cada bloco (#lembrete, #conversa, #resumo) com zoom 2x e
+     salvar em src/assets/vendas. A agenda é uma captura da Agenda da Vida Plena. --><style>
+body{margin:0;padding:24px;background:#f1f5f9;font-family:-apple-system,"Segoe UI",Roboto,sans-serif;display:flex;gap:24px;align-items:flex-start;flex-wrap:wrap}
+.phone{width:390px;background:#efeae2;border-radius:18px;overflow:hidden;box-shadow:0 2px 10px rgba(0,0,0,.12)}
+.bar{background:#075e54;color:#fff;padding:12px 16px;display:flex;align-items:center;gap:10px}
+.avatar{width:34px;height:34px;border-radius:50%;background:#4f46e5;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px}
+.bar b{font-size:15px;display:block}.bar small{font-size:12px;opacity:.8}
+.chat{padding:14px 12px 18px;display:flex;flex-direction:column;gap:6px}
+.in,.out{max-width:82%;padding:7px 10px 18px;border-radius:8px;font-size:14px;line-height:1.35;white-space:pre-line;position:relative;box-shadow:0 1px 1px rgba(0,0,0,.08);color:#111b21}
+.in{background:#fff;align-self:flex-start;border-top-left-radius:0}
+.out{background:#d9fdd3;align-self:flex-end;border-top-right-radius:0}
+.t{position:absolute;right:8px;bottom:3px;font-size:10.5px;color:#667781}
+.btns{display:flex;flex-direction:column;gap:3px;align-self:flex-start;width:82%}
+.btns span{background:#fff;border-radius:8px;text-align:center;padding:8px;color:#027eb5;font-size:14px;box-shadow:0 1px 1px rgba(0,0,0,.08)}
+.list{background:#fff;align-self:flex-start;width:82%;border-radius:8px;text-align:center;padding:8px;color:#027eb5;font-size:14px;box-shadow:0 1px 1px rgba(0,0,0,.08);margin-top:-3px}
+.day{align-self:center;background:#fff;color:#54656f;font-size:12px;padding:4px 10px;border-radius:7px;margin:4px 0}
+a{color:#027eb5;text-decoration:none}
+</style></head><body>
+
+<div class="phone" id="lembrete">
+  <div class="bar"><div class="avatar">VP</div><div><b>Clínica Vida Plena</b><small>conta comercial</small></div></div>
+  <div class="chat">
+    <div class="day">HOJE</div>
+    <div class="in">Olá, Beatriz! Aqui é da Clínica Vida Plena.
+Passando para lembrar do seu atendimento:
+
+📋 Consulta cardiológica
+👤 Paciente: Beatriz Monteiro
+📅 terça, 13/10 às 09:00
+📍 Rua Harmonia, 300 · Vila Mariana
+
+Pode confirmar a presença?<span class="t">14:00</span></div>
+    <div class="btns"><span>Confirmar presença</span><span>Remarcar</span><span>Cancelar</span></div>
+    <div class="out">Confirmar presença<span class="t">14:02 ✓✓</span></div>
+    <div class="in">Presença confirmada ✓
+
+👤 Paciente: Beatriz Monteiro
+📅 terça, 13/10 às 09:00
+
+Obrigado! Qualquer dúvida, é só chamar por aqui.<span class="t">14:02</span></div>
+  </div>
+</div>
+
+<div class="phone" id="conversa">
+  <div class="bar"><div class="avatar">VP</div><div><b>Clínica Vida Plena</b><small>conta comercial</small></div></div>
+  <div class="chat">
+    <div class="day">HOJE</div>
+    <div class="out">Oi, quero marcar uma consulta<span class="t">22:14 ✓✓</span></div>
+    <div class="in">Olá! 👋 Aqui é da Clínica Vida Plena.<span class="t">22:14</span></div>
+    <div class="in">Como podemos ajudar? Escolha uma opção abaixo (ou digite o número).<span class="t">22:14</span></div>
+    <div class="list">☰ Ver opções</div>
+    <div class="out">Consultas<span class="t">22:14 ✓✓</span></div>
+    <div class="in">O que você precisa sobre consultas?<span class="t">22:14</span></div>
+    <div class="out">Marcar consulta<span class="t">22:14 ✓✓</span></div>
+    <div class="in">Qual consulta você quer marcar?<span class="t">22:15</span></div>
+    <div class="out">Consulta pediátrica<span class="t">22:15 ✓✓</span></div>
+    <div class="in">Para qual paciente é o agendamento?<span class="t">22:15</span></div>
+    <div class="list">☰ Ver opções</div>
+    <div class="out">Pedro Monteiro<span class="t">22:15 ✓✓</span></div>
+    <div class="in">Prontinho! Escolha o melhor dia e horário para <b>Consulta pediátrica</b> de Pedro Monteiro neste link:
+<a>app.recepclinic.com.br/agendar/…</a>
+
+O link vale por 30 minutos.<span class="t">22:16</span></div>
+    <div class="in">Olá, Beatriz! Aqui é da Clínica Vida Plena.
+Seu atendimento está marcado:
+
+📋 Consulta pediátrica
+👤 Paciente: Pedro Monteiro
+📅 quarta, 14/10 às 08:30
+📍 Rua Harmonia, 300 · Vila Mariana
+
+Qualquer dúvida, é só responder esta mensagem.<span class="t">22:17</span></div>
+  </div>
+</div>
+
+<div class="phone" id="resumo">
+  <div class="bar"><div class="avatar">VP</div><div><b>RecepClinic</b><small>conta comercial</small></div></div>
+  <div class="chat">
+    <div class="day">HOJE</div>
+    <div class="in">Oi, Dr. Marcos, tudo bem? A agenda de consultas da Clínica Vida Plena para hoje, segunda, 12/10, é esta:
+
+▪️ 08h00 - Antônio Carvalho (✅ confirmado)
+▪️ 08h30 - Eduardo Pires (sem confirmação)
+▪️ 10h00 - Beatriz Monteiro (✅ confirmado)
+▪️ 11h00 - Nathália Rezende (sem confirmação)
+
+Bom trabalho! Esta é uma mensagem automática do RecepClinic.<span class="t">07:00</span></div>
+  </div>
+</div>
+</body></html>

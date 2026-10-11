@@ -5,13 +5,15 @@
 interface Props {
   class?: string;
   muted?: boolean;
+  /** Âncora (ex.: seções do roteiro de vendas). */
+  id?: string;
 }
 
-const { class: className = "", muted = false } = Astro.props;
+const { class: className = "", muted = false, id } = Astro.props;
 // Fundo próprio (ex.: cor da situação na Agenda) no lugar do branco; `hover:bg-` não conta.
 const ownBackground = /(^|\s)bg-/.test(className);
 ---
 
-<div class={`rounded-lg border border-slate-200 ${ownBackground ? "" : "bg-white"} p-4 shadow-sm ${muted ? "opacity-60" : ""} ${className}`}>
+<div id={id} class={`rounded-lg border border-slate-200 ${ownBackground ? "" : "bg-white"} p-4 shadow-sm ${muted ? "opacity-60" : ""} ${className}`}>
   <slot />
 </div>

@@ -62,10 +62,10 @@
 >   **sessão separada, na pasta `~/Documents/Desenvolvimento/recepclinic-site`** (nunca nesta pasta).
 >   **No ar** (conferido em 05/out), com `/privacidade` e `/termos`; DNS de `recepclinic.com.br` já
 >   na Cloudflare.
-> - **Comercial (11/out)**: roteiro de abordagem e venda das primeiras clínicas, com mensagens prontas
->   de WhatsApp, objeções, roteiro da demonstração e calculadora de ganho:
->   `https://claude.ai/artifact/R3VCJ9t1ebygPzjJhyvdJf`. Antes de usar: preço e oferta do piloto
->   (cliente) e a conexão do número da clínica liberada pela Meta (F8).
+> - **Comercial (11/out)**: tudo no Suporte › **Vendas** (nunca no site público): **Planos** (tabela e
+>   simulação da negociação), **Demonstração** (3 clínicas fictícias por plano, logins e o script
+>   `scripts/demo-clinicas.mjs`) e **Roteiro de vendas** (mensagens prontas, imagens, objeções e
+>   calculadora de ganho). Item 9 dos ajustes no [plano](plano.md).
 > - **Meta**: verificação da empresa aprovada e app RecepClinic criado (06/out); faltam a análise
 >   do app e o Tech Provider (destravam a F8). Ver "Frentes paralelas" no plano.
 > - **Pendências do cliente**:

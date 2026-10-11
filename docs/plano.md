@@ -1379,7 +1379,7 @@ Pontos que o cliente encontrou testando o staging, um por vez, cada um validado 
 | 6 | Avisos de marcação, remarcação e cancelamento por template | mantido como está (11/out) |
 | 7 | Explicação dos campos "Informações que o bot responde" | implementado (11/out); o cliente valida no fim dos ajustes |
 | 8 | Página de tecnologia para o Suporte | implementado (11/out); o cliente valida no fim dos ajustes |
-| 9 | Comercial no Suporte: 9a planos e aplicar plano; 9b clínicas de demonstração; 9c roteiro de vendas | 9a implementado (11/out), com a simulação da negociação; 9b criado no staging (11/out), aguardando validação; 9c a fazer |
+| 9 | Comercial no Suporte: 9a planos e aplicar plano; 9b clínicas de demonstração; 9c roteiro de vendas | 9a implementado (11/out), com a simulação da negociação; 9b criado no staging (11/out); 9c implementado (11/out), aguardando validação |
 
 **1. Cores da situação** (cliente, 10/out/2026): no Dia, na Semana e no Resumo do dia, cada
 atendimento tem faixa à esquerda e fundo claro conforme a situação, com uma legenda acima:
@@ -1477,7 +1477,7 @@ a venda do RecepClinic em abas, e os próximos assuntos de venda entram como aba
 **Planos** (a antiga tela Planos; `/admin/sistema/planos` redireciona) e **Demonstração** (as 3
 clínicas e os logins, com a hora em que cada uma foi montada e onde está o chip; os comandos para
 criar ou atualizar as demos, criar a senha dos logins e mover o chip; o roteiro da apresentação de
-20 minutos). O roteiro de vendas (9c) entra como aba.
+20 minutos) e **Roteiro de vendas** (9c).
 
 - **9a. Planos** (`lib/plans.ts`, tela `admin/sistema/planos`): mensalidade por clínica + R$ 47 por
   profissional além do primeiro (pelo limite contratado). **Básico R$ 147** (o que é sempre ligado,
@@ -1516,7 +1516,16 @@ criar ou atualizar as demos, criar a senha dos logins e mover o chip; o roteiro 
 - **9c. Roteiro de vendas** no Suporte (vem do artifact de 11/out), com os ajustes da lista "Antes de
   abordar": preço definido; sem o item da liberação da Meta; demonstração pelas 3 clínicas; imagens
   tiradas das demos; clínicas-alvo nos novos nichos; contrato e LGPD com a resposta pronta. Sai a
-  mensagem 7 (convite às primeiras clínicas).
+  mensagem 7 (convite às primeiras clínicas). **Feito** (aba Vendas › Roteiro de vendas,
+  `components/admin/vendas/RoteiroTab.astro`): a frase de 15 segundos, a lista "Antes de abordar"
+  (marcação salva no navegador), as 4 camadas, a tabela de complemento com o limite (sem sincronia
+  com outras agendas), a calculadora de ganho, o passo a passo em 8 etapas (a demonstração aponta
+  para a aba Demonstração), **4 imagens para baixar** (lembrete, conversa de marcação, agenda do
+  dia e resumo do dia, tiradas da Vida Plena; modelo em `scripts/vendas-imagens/conversas.html`,
+  arquivos em `src/assets/vendas`), 8 mensagens com "Copiar" (a proposta com o plano e a
+  implantação) e as objeções (LGPD com a resposta pronta). As imagens ficam em endereços com nome
+  aleatório (`/_astro/…`), sem login, mas com dados fictícios. O material antigo no claude.ai
+  (`R3VCJ9t1ebygPzjJhyvdJf`) foi substituído por esta aba.
 
 ## F10 — Primeiro piloto
 

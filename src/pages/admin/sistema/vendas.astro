@@ -6,10 +6,12 @@ import AdminLayout from "../../../layouts/AdminLayout.astro";
 import TabBar from "../../../components/admin/TabBar.astro";
 import PlanosTab from "../../../components/admin/vendas/PlanosTab.astro";
 import DemonstracaoTab from "../../../components/admin/vendas/DemonstracaoTab.astro";
+import RoteiroTab from "../../../components/admin/vendas/RoteiroTab.astro";
 
 const TABS = [
   { key: "planos", label: "Planos" },
   { key: "demonstracao", label: "Demonstração" },
+  { key: "roteiro", label: "Roteiro de vendas" },
 ] as const;
 type TabKey = (typeof TABS)[number]["key"];
 
@@ -23,4 +25,5 @@ const tab: TabKey = TABS.find((t) => t.key === requested)?.key ?? "planos";
   <TabBar class="mt-4" label="Abas de Vendas" tabs={TABS.map((t) => ({ label: t.label, href: `/admin/sistema/vendas?tab=${t.key}`, active: t.key === tab }))} />
   {tab === "planos" && <PlanosTab />}
   {tab === "demonstracao" && <DemonstracaoTab />}
+  {tab === "roteiro" && <RoteiroTab />}
 </AdminLayout>
