@@ -1,4 +1,5 @@
 import type { ClinicProfile } from "../../../vocabulary";
+import { designationTitle, type Designation } from "../../../designation";
 import { formatCentsBRL } from "../../../money";
 import type { ListRow, ListSection, ReplyButton } from "../send";
 import { BACK_TO_MENU_ID } from "./input";
@@ -78,7 +79,12 @@ export const NOT_UNDERSTOOD_YES_NO = "Não entendi 🙏 Responda apenas Sim ou N
 export const IDLE_CLOSED =
   "Como não tivemos resposta nos últimos minutos, encerramos este atendimento. Quando quiser, é só mandar uma mensagem que começamos de novo. 😊";
 
-export const NOTHING_TO_BOOK = "No momento não há horários para marcar por aqui. Por favor, fale com a clínica.";
+/**
+ * Nada para o bot marcar (clínica sem serviço ou serviço sem horário livre no
+ * prazo): a recepção assume a conversa (cliente, 11/out/2026).
+ */
+export const willReply = (d: Designation) => `${designationTitle(d)} responderá sua mensagem em breve.`;
+export const noFreeTimes = (serviceName: string, d: Designation) => `No momento não há horários livres para *${serviceName}*. ${willReply(d)}`;
 export const LINK_ERROR = "Tivemos um problema para gerar o link de agendamento. Por favor, tente de novo em alguns minutos ou fale com a clínica.";
 
 // ---------------------------------------------------------------------------

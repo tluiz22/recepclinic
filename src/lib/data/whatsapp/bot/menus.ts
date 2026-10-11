@@ -2,7 +2,7 @@ import { servicesOf, type BotService } from "./catalog";
 import { go, say, sendList, textFor, type Bot } from "./engine";
 import { pick, type Selection } from "./input";
 import * as t from "./texts";
-import { startBooking, startReturn } from "./booking";
+import { handOver, startBooking, startReturn } from "./booking";
 import { handoff, startManage } from "./manage";
 
 // Menus do bot, na estrutura do piloto: Consultas › Marcar consulta / Marcar
@@ -40,15 +40,12 @@ const manageItems = (b: Bot): Item[] => [
 
 const examItems = (b: Bot): Item[] => [{ id: "book_exam", label: "Marcar exame" }, ...manageItems(b)];
 
-/** Menu principal; clínica sem nada para mostrar recebe o aviso e a conversa fica no começo. */
+/** Menu principal; clínica sem nada para mostrar recebe o aviso e a recepção assume. */
 export async function showMenu(b: Bot, { withWelcome = false, notUnderstood = false } = {}): Promise<void> {
   if (withWelcome) await say(b, "bot_welcome", textFor(b, "welcome", t.welcome(b.clinic.label), { clinica: b.clinic.label }));
   const items = await mainItems(b);
-  if (!items.length) {
-    await say(b, "bot_nothing_to_book", t.NOTHING_TO_BOOK);
-    await go(b, "WELCOME");
-    return;
-  }
+  // Clínica sem nada para o bot marcar: depois das boas-vindas, a recepção assume (cliente, 11/out/2026).
+  if (!items.length) return handOver(b, "bot_nothing_to_book", t.willReply(b.clinic.designation), "no_service");
   if (notUnderstood) await say(b, "bot_not_understood", textFor(b, "not_understood", t.notUnderstood(true)));
   await sendList(b, "bot_menu", textFor(b, "menu", t.MENU_BODY), t.numberedList(items, false));
   await go(b, "MENU");

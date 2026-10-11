@@ -336,7 +336,7 @@ export async function pauseForHuman(
   db: DbClient,
   clinicId: string,
   phone: string,
-  { contactId, reason }: { contactId: string | null; reason: "agent_took_over" | "requested" | "bot_limit" },
+  { contactId, reason }: { contactId: string | null; reason: "agent_took_over" | "requested" | "bot_limit" | "no_availability" },
   now: Date = new Date(),
 ): Promise<void> {
   const current = await getConversation(db, clinicId, phone);

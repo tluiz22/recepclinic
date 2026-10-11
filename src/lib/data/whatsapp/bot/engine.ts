@@ -1,4 +1,5 @@
 import { todayIn } from "../../../clinicTime";
+import type { Designation, NounArticle } from "../../../designation";
 import type { FeatureKey } from "../../../features";
 import type { ClinicProfile } from "../../../vocabulary";
 import type { DbClient } from "../../clients";
@@ -29,6 +30,10 @@ export type BotClinic = {
   paymentInfo: string | null;
   insuranceInfo: string | null;
   notes: string | null;
+  /** Como a clínica é chamada nos textos genéricos (cliente, 11/out/2026). */
+  designation: Designation;
+  /** Prazo para oferecer horários, em dias. */
+  horizonDays: number;
 };
 
 export type Bot = BotEnv & {
@@ -52,7 +57,7 @@ export async function loadBotClinic(env: BotEnv): Promise<BotClinic> {
     env.db.from("clinics").select("name").eq("id", env.clinicId).maybeSingle().then((r) => unwrapOne(r, "Clínica")),
     env.db
       .from("clinic_settings")
-      .select("profile, timezone, consultation_age_limit_years, bot_payment_info, bot_insurance_info, bot_notes")
+      .select("profile, timezone, consultation_age_limit_years, bot_payment_info, bot_insurance_info, bot_notes, message_noun, message_noun_article, booking_horizon_days")
       .eq("clinic_id", env.clinicId)
       .maybeSingle()
       .then((r) => unwrapOne(r, "Configuração da clínica")),
@@ -67,6 +72,8 @@ export async function loadBotClinic(env: BotEnv): Promise<BotClinic> {
     paymentInfo: settings.bot_payment_info?.trim() || null,
     insuranceInfo: settings.bot_insurance_info?.trim() || null,
     notes: settings.bot_notes?.trim() || null,
+    designation: { noun: settings.message_noun, article: settings.message_noun_article as NounArticle },
+    horizonDays: settings.booking_horizon_days,
   };
 }
 

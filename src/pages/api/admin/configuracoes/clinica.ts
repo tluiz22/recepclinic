@@ -4,6 +4,7 @@ import { removeClinicLogo, uploadClinicLogo, validateLogoFile } from "../../../.
 import { updateClinicSettings, type ClinicProfile, type ClinicSettingsPatch } from "../../../../lib/data/config/clinic";
 import { runFormAction } from "../../../../lib/data/formAction";
 import { formChecked, formOptionalInt, formOptionalText, formText } from "../../../../lib/forms";
+import { DESIGNATION_PRESETS, type NounArticle } from "../../../../lib/designation";
 
 // Perfil e identidade da clínica (F4.3). As informações e os limites do bot
 // (F9.6a) só vêm no formulário com o bot liberado. Marca das páginas públicas
@@ -23,7 +24,14 @@ export const POST: APIRoute = async (context) => {
         consultationAgeLimitYears: formChecked(form, "age_limit_on") ? formOptionalInt(form, "age_limit") : null,
         brandColor: formOptionalText(form, "brand_color"),
         websiteUrl: formOptionalText(form, "website_url"),
+        // Campo vazio vira NaN e cai na validação.
+        bookingHorizonDays: formOptionalInt(form, "booking_horizon_days") ?? Number.NaN,
       };
+      // Como a clínica é chamada: uma das opções prontas ou "Outro" (nome e artigo).
+      const choice = formText(form, "designation");
+      const preset = DESIGNATION_PRESETS.find((d) => d.noun === choice);
+      patch.messageNoun = preset ? preset.noun : formText(form, "designation_noun");
+      patch.messageNounArticle = preset ? preset.article : (formText(form, "designation_article") as NounArticle);
       if (clinic.features.includes("whatsapp_bot")) {
         patch.botPaymentInfo = formOptionalText(form, "bot_payment_info");
         patch.botInsuranceInfo = formOptionalText(form, "bot_insurance_info");

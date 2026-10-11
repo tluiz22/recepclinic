@@ -1,4 +1,4 @@
-import { localDateOf } from "../../clinicTime";
+import { localDateOf, todayIn } from "../../clinicTime";
 import type { ClinicProfile } from "../../vocabulary";
 import type { DbClient } from "../clients";
 import { DataError, unwrap, unwrapOne } from "../errors";
@@ -6,7 +6,17 @@ import { joinWaitlist } from "../waitlist/entries";
 import { logWebFunnelEvent, type FunnelLink } from "../whatsapp/funnel";
 import { bookAppointment, findReturnOrigin, getAppointment, rescheduleAppointment, type AppointmentStatus } from "./appointments";
 import { bookingLinkLastDate, claimBookingLink, getBookingLink, linkState, type BookingLink } from "./links";
-import { agendasForService, DEFAULT_DATE_COUNT, getFreeSlots, getGroupSessions, getNextAvailableDates, type DateWithSlots } from "./slots";
+import {
+  agendasForService,
+  DEFAULT_DATE_COUNT,
+  earliestDate,
+  getFreeSlots,
+  getGroupSessions,
+  getNextAvailableDates,
+  horizonLastDate,
+  type DateWithSlots,
+} from "./slots";
+import type { LocationType } from "../config/locations";
 import { logError } from "../../log";
 
 // Página pública /agendar/[token] (F5.2): o paciente (ou o contato) escolhe
@@ -131,7 +141,7 @@ export async function linkCandidates(db: DbClient, clinicId: string, link: Booki
 export async function loadBookingPage(db: DbClient, clinicId: string, linkId: string, now: Date = new Date()): Promise<BookingPage> {
   const link = await getBookingLink(db, clinicId, linkId);
   const [settings, service, patient] = await Promise.all([
-    db.from("clinic_settings").select("timezone, profile").eq("clinic_id", clinicId).maybeSingle().then((r) => unwrapOne(r, "Configuração da clínica")),
+    db.from("clinic_settings").select("timezone, profile, booking_horizon_days").eq("clinic_id", clinicId).maybeSingle().then((r) => unwrapOne(r, "Configuração da clínica")),
     db
       .from("services")
       .select("id, name, category, scheduling_mode, preparation_instructions")
@@ -150,11 +160,13 @@ export async function loadBookingPage(db: DbClient, clinicId: string, linkId: st
   const contact = (patient as unknown as { contacts: { full_name: string; phone: string } | null }).contacts;
   const state = linkState(link, now) === "valid" ? "form" : linkState(link, now) === "used" ? "used" : "expired";
 
-  const [candidates, appointment, lastDate] = await Promise.all([
+  const [candidates, appointment, returnLastDate] = await Promise.all([
     state === "form" ? linkCandidates(db, clinicId, link) : Promise.resolve({ agendas: [], locations: [] }),
     link.appointmentId ? loadAppointmentView(db, clinicId, link.appointmentId) : Promise.resolve(null),
     state === "form" ? bookingLinkLastDate(db, clinicId, link, now) : Promise.resolve(null),
   ]);
+  // Só datas dentro do prazo da clínica para oferecer horários (cliente, 11/out/2026) e, no retorno, do prazo dele.
+  const lastDate = earliestDate(returnLastDate, horizonLastDate(todayIn(settings.timezone, now), settings.booking_horizon_days));
 
   return {
     clinicId,
@@ -175,6 +187,55 @@ export async function loadBookingPage(db: DbClient, clinicId: string, linkId: st
     appointment,
     lastDate,
   };
+}
+
+/**
+ * Onde o serviço tem horário livre até o último dia (o bot confere logo depois
+ * da escolha do serviço, cliente 11/out/2026): por agenda, os tipos de local
+ * com alguma data livre (ou sessão de turma com vaga). Agenda sem nada fica de fora.
+ */
+export async function bookableAgendaLocations(
+  db: DbClient,
+  clinicId: string,
+  query: { serviceId: string; agendaIds: string[]; lastDate: string | null },
+  now: Date = new Date(),
+): Promise<Map<string, Set<LocationType>>> {
+  const [service, offered] = await Promise.all([
+    db.from("services").select("scheduling_mode").eq("clinic_id", clinicId).eq("id", query.serviceId).maybeSingle().then((r) => unwrapOne(r, "Serviço")),
+    db
+      .from("service_locations")
+      .select("locations!inner ( id, type, is_active )")
+      .eq("clinic_id", clinicId)
+      .eq("service_id", query.serviceId)
+      .eq("locations.is_active", true)
+      .then((r) => unwrap(r, "Locais do serviço")),
+  ]);
+  const locations = (offered as unknown as { locations: { id: string; type: LocationType } }[]).map((row) => row.locations);
+  const typeOf = new Map(locations.map((location) => [location.id, location.type]));
+  const result = new Map<string, Set<LocationType>>();
+  await Promise.all(
+    query.agendaIds.map(async (agendaId) => {
+      const types = new Set<LocationType>();
+      if (service.scheduling_mode === "group") {
+        const sessions = await getGroupSessions(db, clinicId, { serviceId: query.serviceId, agendaId, lastDate: query.lastDate }, now);
+        for (const session of sessions) if (typeOf.has(session.locationId)) types.add(typeOf.get(session.locationId)!);
+      } else {
+        await Promise.all(
+          locations.map(async (location) => {
+            const dates = await getNextAvailableDates(
+              db,
+              clinicId,
+              { serviceId: query.serviceId, agendaId, locationId: location.id, count: 1, lastDate: query.lastDate },
+              now,
+            );
+            if (dates.length) types.add(location.type);
+          }),
+        );
+      }
+      if (types.size) result.set(agendaId, types);
+    }),
+  );
+  return result;
 }
 
 /** Pares agenda × local a consultar (local nulo = qualquer um do serviço). */
@@ -271,13 +332,13 @@ export async function listLinkSlots(
 export async function listLinkGroupSessions(
   db: DbClient,
   clinicId: string,
-  page: Pick<BookingPage, "link" | "candidates">,
+  page: Pick<BookingPage, "link" | "candidates" | "lastDate">,
   now: Date = new Date(),
 ): Promise<PublicSlot[]> {
   const locationIds = new Set(page.candidates.locations.map((location) => location.id));
   const perAgenda = await Promise.all(
     page.candidates.agendas.map(async (agenda) =>
-      (await getGroupSessions(db, clinicId, { serviceId: page.link.serviceId, agendaId: agenda.id }, now))
+      (await getGroupSessions(db, clinicId, { serviceId: page.link.serviceId, agendaId: agenda.id, lastDate: page.lastDate }, now))
         .filter((session) => locationIds.has(session.locationId))
         .map((session) => ({
           start: session.start,
@@ -343,9 +404,8 @@ export async function confirmBookingLink(
     return { status: "slot_taken" };
   }
 
+  if (page.lastDate && localDateOf(choice.start, timeZone) > page.lastDate) return { status: "slot_taken" };
   if (page.service.category === "return_visit" && link.originAppointmentId) {
-    const day = localDateOf(choice.start, timeZone);
-    if (page.lastDate && day > page.lastDate) return { status: "slot_taken" };
     const origin = await findReturnOrigin(
       db,
       clinicId,

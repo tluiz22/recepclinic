@@ -4,6 +4,7 @@ import type { DbClient } from "../clients";
 import { cleanText, unwrapOne, Validation } from "../errors";
 import { BOT_LIMIT_RANGES } from "../whatsapp/botLimits";
 import { MESSAGE_ARTICLES, type MessageArticle } from "../whatsapp/templates";
+import { cleanDesignationNoun, DESIGNATION_NOUN_MAX, NOUN_ARTICLES, type NounArticle } from "../../designation";
 
 // Perfil e identidade da clínica (D4b): `clinics` + `clinic_settings`.
 // Leitura: qualquer membro. Alteração: Administrador (RLS).
@@ -15,6 +16,11 @@ export type ClinicSettings = {
   name: string;
   /** "da" ou "do" antes do nome nas mensagens do WhatsApp ("Aqui é da Clínica Sorriso"), F6.2. */
   messageArticle: MessageArticle;
+  /** Como a clínica é chamada nos textos genéricos ("a clínica", "o consultório"; cliente, 11/out/2026). */
+  messageNoun: string;
+  messageNounArticle: NounArticle;
+  /** Prazo para oferecer horários, em dias (bot e página de marcar; 7 a 365, padrão 60). */
+  bookingHorizonDays: number;
   profile: ClinicProfile;
   timezone: string;
   /** Idade a partir da qual não marca Consulta (só Retorno/Exame); null = desligada. */
@@ -63,6 +69,11 @@ export const CLINIC_PROFILES: ClinicProfile[] = ["pediatric", "adult", "mixed"];
 export const REMINDER_HOUR_MIN = 6;
 export const REMINDER_HOUR_MAX = 20;
 
+/** Prazo para oferecer horários (cliente, 11/out/2026). */
+export const BOOKING_HORIZON_MIN = 7;
+export const BOOKING_HORIZON_MAX = 365;
+export const BOOKING_HORIZON_DEFAULT = 60;
+
 const WEBSITE_URL_PATTERN = /^https?:\/\/[^\s/]+\.[^\s]+$/i;
 
 /** Site digitado sem "https://" ganha o prefixo; vazio = null. */
@@ -73,7 +84,7 @@ export function normalizeWebsiteUrl(value: string | null | undefined): string | 
 }
 
 const SETTINGS_COLUMNS =
-  "clinic_id, profile, timezone, consultation_age_limit_years, reminder_hour, bot_payment_info, bot_insurance_info, bot_notes, logo_url, brand_color, website_url, require_insurance_details, message_article, reminder_enabled, reminder_timing, professional_summary_enabled, professional_summary_timing, professional_summary_hour, team_summary_enabled, team_summary_timing, team_summary_hour, guidance_enabled, bot_max_future_appointments, bot_max_new_patients, bot_max_no_shows";
+  "clinic_id, profile, timezone, consultation_age_limit_years, reminder_hour, bot_payment_info, bot_insurance_info, bot_notes, logo_url, brand_color, website_url, require_insurance_details, message_article, reminder_enabled, reminder_timing, professional_summary_enabled, professional_summary_timing, professional_summary_hour, team_summary_enabled, team_summary_timing, team_summary_hour, guidance_enabled, bot_max_future_appointments, bot_max_new_patients, bot_max_no_shows, message_noun, message_noun_article, booking_horizon_days";
 
 export async function getClinicSettings(db: DbClient, clinicId: string): Promise<ClinicSettings> {
   const [clinic, settings] = await Promise.all([
@@ -89,6 +100,9 @@ export async function getClinicSettings(db: DbClient, clinicId: string): Promise
     clinicId,
     name: clinic.name,
     messageArticle: settings.message_article as MessageArticle,
+    messageNoun: settings.message_noun,
+    messageNounArticle: settings.message_noun_article as NounArticle,
+    bookingHorizonDays: settings.booking_horizon_days,
     profile: settings.profile,
     timezone: settings.timezone,
     consultationAgeLimitYears: settings.consultation_age_limit_years,
@@ -125,6 +139,15 @@ export function validateClinicSettingsPatch(patch: ClinicSettingsPatch): ClinicS
     v.check(out.name.length > 0, "name", "Informe o nome da clínica");
   }
   if ("messageArticle" in patch) v.check(MESSAGE_ARTICLES.includes(patch.messageArticle!), "messageArticle", "Escolha \"da\" ou \"do\"");
+  if ("messageNoun" in patch) {
+    out.messageNoun = cleanDesignationNoun(patch.messageNoun ?? "");
+    v.check(out.messageNoun.length > 0 && out.messageNoun.length <= DESIGNATION_NOUN_MAX, "messageNoun", `Informe como a clínica é chamada (até ${DESIGNATION_NOUN_MAX} letras)`);
+  }
+  if ("messageNounArticle" in patch) v.check(NOUN_ARTICLES.includes(patch.messageNounArticle!), "messageNounArticle", "Escolha \"a\" ou \"o\"");
+  if ("bookingHorizonDays" in patch) {
+    const days = patch.bookingHorizonDays!;
+    v.check(Number.isInteger(days) && days >= BOOKING_HORIZON_MIN && days <= BOOKING_HORIZON_MAX, "bookingHorizonDays", `Prazo para oferecer horários: de ${BOOKING_HORIZON_MIN} a ${BOOKING_HORIZON_MAX} dias`);
+  }
   if ("profile" in patch) v.check(CLINIC_PROFILES.includes(patch.profile!), "profile", "Perfil inválido");
   if ("timezone" in patch) v.check(isValidTimeZone(patch.timezone ?? ""), "timezone", "Fuso horário inválido");
   if ("consultationAgeLimitYears" in patch && patch.consultationAgeLimitYears !== null) {
@@ -192,6 +215,9 @@ export async function updateClinicSettings(
   const row: Record<string, unknown> = {};
   const map: [keyof ClinicSettingsPatch, keyof TablesUpdate<"clinic_settings">][] = [
     ["messageArticle", "message_article"],
+    ["messageNoun", "message_noun"],
+    ["messageNounArticle", "message_noun_article"],
+    ["bookingHorizonDays", "booking_horizon_days"],
     ["profile", "profile"],
     ["timezone", "timezone"],
     ["consultationAgeLimitYears", "consultation_age_limit_years"],

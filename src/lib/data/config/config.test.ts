@@ -158,6 +158,20 @@ describe("configuração da clínica", () => {
     expect(validateClinicSettingsPatch({})).toEqual({});
   });
 
+  it("como a clínica é chamada e prazo para oferecer horários (cliente, 11/out/2026)", () => {
+    expect(validateClinicSettingsPatch({ messageNoun: "  espaço   de  saúde ", messageNounArticle: "o", bookingHorizonDays: 90 })).toEqual({
+      messageNoun: "espaço de saúde",
+      messageNounArticle: "o",
+      bookingHorizonDays: 90,
+    });
+    expect(Object.keys(fieldsOf(() => validateClinicSettingsPatch({ messageNoun: " ", messageNounArticle: "os" as never, bookingHorizonDays: 6 }))).sort()).toEqual([
+      "bookingHorizonDays",
+      "messageNoun",
+      "messageNounArticle",
+    ]);
+    expect(Object.keys(fieldsOf(() => validateClinicSettingsPatch({ messageNoun: "x".repeat(41), bookingHorizonDays: 366 }))).sort()).toEqual(["bookingHorizonDays", "messageNoun"]);
+  });
+
   it("recusa fuso, hora, idade e cor inválidos", () => {
     expect(
       fieldsOf(() =>

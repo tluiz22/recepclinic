@@ -144,13 +144,17 @@ describe("conversa do bot", () => {
       );
     await hello("wamid.f66.in.1");
     expect(sent[0]).toBe("Oi! Aqui é da Clínica Mensagens F66 😊");
+    // Clínica sem serviço para o bot: depois das boas-vindas, a recepção assume (cliente, 11/out/2026).
+    expect(sent[1]).toBe("A clínica responderá sua mensagem em breve.");
+    const { data: paused } = await adminClient().from("conversation_state").select("human_handoff").eq("clinic_id", clinicId).single();
+    expect(paused!.human_handoff).toBe(true);
 
     // Sem o item: o padrão volta, e o Administrador não grava.
     const { data: all } = await adminClient().from("features").select("key");
     await adminClient().rpc("set_clinic_features", { p_clinic_id: clinicId, p_features: all!.map((f) => f.key).filter((k) => k !== "custom_messages") });
     await expect(saveBotMessage(asDb(admin), clinicId, "menu", "Escolha:", admin.id)).rejects.toThrow();
     sent.length = 0;
-    await adminClient().from("conversation_state").update({ state: "WELCOME" }).eq("clinic_id", clinicId);
+    await adminClient().from("conversation_state").update({ state: "WELCOME", human_handoff: false }).eq("clinic_id", clinicId);
     await hello("wamid.f66.in.2");
     expect(sent[0]).toBe("Olá! 👋 Aqui é da Clínica Mensagens F66.");
   });

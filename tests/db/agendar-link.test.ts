@@ -86,6 +86,20 @@ describe("link de agendamento na página pública", () => {
     expect(slots.find((s) => s.start.getTime() === at(MON1, "09:00").getTime())?.agendaName).toBe("Dra. Agenda");
   });
 
+  it("prazo da clínica para oferecer horários: só datas até o último dia do prazo (cliente, 11/out/2026)", async () => {
+    await adminClient().from("clinic_settings").update({ booking_horizon_days: 7 }).eq("clinic_id", fixture.clinicId);
+    try {
+      const created = await link("p1", { serviceId: fixture.ids.consulta });
+      const page = await loadBookingPage(bot, fixture.clinicId, created.id, NOW);
+      // NOW é domingo, 09/03: 7 dias vão até sábado, 15/03; só a segunda MON1 entra.
+      expect(page.lastDate).toBe("2031-03-15");
+      expect((await listLinkDates(bot, fixture.clinicId, page, NOW)).map((d) => d.date)).toEqual([MON1]);
+      expect(await listLinkSlots(bot, fixture.clinicId, page, MON2, NOW)).toEqual([]);
+    } finally {
+      await adminClient().from("clinic_settings").update({ booking_horizon_days: 60 }).eq("clinic_id", fixture.clinicId);
+    }
+  });
+
   it("confirmar marca, usa o link e mostra o atendimento; de novo, o link já não vale", async () => {
     const created = await link("p1", { serviceId: fixture.ids.consulta });
     const result = await confirmBookingLink(

@@ -1,6 +1,8 @@
 import { isAdult, isOverConsultationAgeLimit } from "../../../age";
 import { evaluateReturnEligibility, findBlockingAppointment, findReturnOrigin, listUpcomingAppointments, type ReturnEligibility } from "../../agenda/appointments";
 import { BOT_LINK_TTL_MS, createBookingLink } from "../../agenda/links";
+import { bookableAgendaLocations } from "../../agenda/publicBooking";
+import { earliestDate, horizonLastDate } from "../../agenda/slots";
 import type { LocationType } from "../../config/locations";
 import { DataError, unwrap } from "../../errors";
 import { getContact, listContactPatients, registerPatient, type ContactChoice, type Patient } from "../../patients";
@@ -70,6 +72,8 @@ export type BookingContext = {
   returnCandidates?: ReturnCandidate[];
   /** Veio do "Encaixe ou antecipar" sem nada marcado: ao confirmar pela página, entra na lista de espera (F6.4). */
   joinWaitlist?: boolean;
+  /** Agendas do serviço com horário livre no prazo e os tipos de local de cada uma (cliente, 11/out/2026). */
+  bookable?: Record<string, LocationType[]>;
 };
 
 /** Estados dos fluxos de marcar (cada um vira passo do funil). */
@@ -119,10 +123,7 @@ export async function startBooking(b: Bot, category: "consultation" | "exam", { 
   await open(b, category === "exam" ? "exam" : "booking", joinWaitlist ? { waitlist: true } : {});
   if (await stoppedByBotLimit(b, "booking")) return;
   const services = servicesOf(await b.catalog(), category);
-  if (!services.length) {
-    await say(b, "bot_nothing_to_book", t.NOTHING_TO_BOOK);
-    return end(b, "blocked", { reason: "no_service" });
-  }
+  if (!services.length) return handOver(b, "bot_nothing_to_book", t.willReply(b.clinic.designation), "no_service");
   // Sempre mostra a lista, mesmo com um serviço só: o paciente vê e confirma o que está marcando (cliente, 07/out).
   await askService(b, { category, ...(joinWaitlist ? { joinWaitlist } : {}) }, services);
 }
@@ -153,19 +154,32 @@ async function handleService(b: Bot, selection: Selection): Promise<void> {
   await chooseService(b, ctx, service);
 }
 
+/**
+ * Logo depois da escolha do serviço, antes de qualquer cadastro (cliente,
+ * 11/out/2026): só segue com as agendas (e os locais) que têm horário livre no
+ * prazo da clínica; sem nenhum, avisa e a recepção assume.
+ */
 async function chooseService(b: Bot, ctx: BookingContext, service: BotService): Promise<void> {
-  const next: BookingContext = { ...ctx, serviceId: service.id, serviceName: service.name };
-  if (service.agendas.length > 1) return askAgenda(b, next, service);
-  await afterAgenda(b, { ...next, agendaId: service.agendas[0].id }, service);
+  const lastDate = horizonLastDate(b.clinic.today, b.clinic.horizonDays);
+  const found = await bookableAgendaLocations(b.db, b.clinicId, { serviceId: service.id, agendaIds: service.agendas.map((a) => a.id), lastDate }, b.now);
+  const agendas = service.agendas.filter((a) => found.has(a.id));
+  if (!agendas.length) return handOver(b, "bot_book_no_free_times", t.noFreeTimes(service.name, b.clinic.designation), "no_free_times");
+  const bookable = Object.fromEntries([...found].map(([id, types]) => [id, [...types]]));
+  const next: BookingContext = { ...ctx, serviceId: service.id, serviceName: service.name, bookable };
+  if (agendas.length > 1) return askAgenda(b, next, service);
+  await afterAgenda(b, { ...next, agendaId: agendas[0].id }, service);
 }
 
-const agendaItems = (service: BotService) => [
+/** Agendas do serviço que têm horário (sem a conferência, todas). */
+const bookableAgendas = (service: BotService, ctx: BookingContext) => (ctx.bookable ? service.agendas.filter((a) => ctx.bookable![a.id]) : service.agendas);
+
+const agendaItems = (service: BotService, ctx: BookingContext) => [
   { id: "agenda_any", label: t.FIRST_AVAILABLE, description: t.FIRST_AVAILABLE_DESCRIPTION },
-  ...service.agendas.map((a) => ({ id: `agenda_${a.id}`, label: a.professionalName ?? a.name, description: a.specialty })),
+  ...bookableAgendas(service, ctx).map((a) => ({ id: `agenda_${a.id}`, label: a.professionalName ?? a.name, description: a.specialty })),
 ];
 
 async function askAgenda(b: Bot, ctx: BookingContext, service: BotService): Promise<void> {
-  await sendList(b, "bot_book_agenda", t.AGENDA_QUESTION, t.numberedList(agendaItems(service)));
+  await sendList(b, "bot_book_agenda", t.AGENDA_QUESTION, t.numberedList(agendaItems(service, ctx)));
   await go(b, "BOOK_AGENDA", ctx);
 }
 
@@ -173,7 +187,7 @@ async function handleAgenda(b: Bot, selection: Selection): Promise<void> {
   const ctx = ctxOf(b);
   const service = await serviceOf(b, ctx);
   if (!service) return restart(b);
-  const choice = pick(selection, agendaItems(service), (i) => i.id);
+  const choice = pick(selection, agendaItems(service, ctx), (i) => i.id);
   if (!choice) {
     await say(b, "bot_not_understood", textFor(b, "not_understood", t.notUnderstood()));
     return askAgenda(b, ctx, service);
@@ -181,16 +195,21 @@ async function handleAgenda(b: Bot, selection: Selection): Promise<void> {
   await afterAgenda(b, { ...ctx, agendaId: choice.id === "agenda_any" ? null : choice.id.slice("agenda_".length) }, service);
 }
 
-function locationTypes(service: BotService, agendaId: string | null | undefined): LocationType[] {
-  const types = agendaId
+function locationTypes(service: BotService, agendaId: string | null | undefined, ctx: BookingContext): LocationType[] {
+  let types = agendaId
     ? (service.agendas.find((a) => a.id === agendaId)?.locationTypes ?? [])
     : (Object.keys(service.locationPrices) as LocationType[]);
+  // Só os locais com horário livre no prazo (na agenda escolhida ou em qualquer uma).
+  if (ctx.bookable) {
+    const free = new Set(agendaId ? (ctx.bookable[agendaId] ?? []) : Object.values(ctx.bookable).flat());
+    types = types.filter((type) => free.has(type));
+  }
   // Consultório antes do domiciliar, como no piloto.
   return (["clinic", "home_visit"] as const).filter((type) => types.includes(type));
 }
 
 async function afterAgenda(b: Bot, ctx: BookingContext, service: BotService): Promise<void> {
-  const types = locationTypes(service, ctx.agendaId);
+  const types = locationTypes(service, ctx.agendaId, ctx);
   if (types.length > 1) return askLocation(b, ctx, service, types);
   await afterLocation(b, { ...ctx, locationCategory: types[0] ?? null });
 }
@@ -209,7 +228,7 @@ async function handleLocation(b: Bot, selection: Selection): Promise<void> {
   const ctx = ctxOf(b);
   const service = await serviceOf(b, ctx);
   if (!service) return restart(b);
-  const types = locationTypes(service, ctx.agendaId);
+  const types = locationTypes(service, ctx.agendaId, ctx);
   const type = pick(selection, types, (type) => `location_${type}`);
   if (!type) {
     await say(b, "bot_not_understood", textFor(b, "not_understood", t.notUnderstood()));
@@ -545,6 +564,17 @@ async function stoppedByBotLimit(b: Bot, check: "booking" | "new_patient"): Prom
   return true;
 }
 
+/**
+ * Nada para o bot marcar (clínica sem serviço, serviço sem horário livre no
+ * prazo): avisa que a clínica responde em breve e a recepção assume, com a
+ * pausa padrão (cliente, 11/out/2026).
+ */
+export async function handOver(b: Bot, kind: string, text: string, reason: string): Promise<void> {
+  await say(b, kind, text);
+  await end(b, "blocked", { reason });
+  await pauseForHuman(b.db, b.clinicId, b.phone, { contactId: b.convo.contactId, reason: "no_availability" }, b.now);
+}
+
 // ---------------------------------------------------------------------------
 // Idade limite (Fase 21)
 // ---------------------------------------------------------------------------
@@ -733,8 +763,19 @@ async function handleReturn(b: Bot, selection: Selection): Promise<void> {
   const service = (await b.catalog()).services.find((s) => s.id === chosen.serviceId);
   if (!service) return restart(b);
   const agenda = service.agendas.find((a) => a.id === chosen.agendaId);
+  // Horário livre até o fim do prazo do retorno e do prazo da clínica (cliente, 11/out/2026).
+  const origin = await findReturnOrigin(
+    b.db,
+    b.clinicId,
+    { patientId: chosen.id, agendaId: chosen.agendaId, returnServiceId: service.id, originAppointmentId: chosen.originId },
+    b.now,
+  );
+  const lastDate = earliestDate(origin?.lastDate ?? null, horizonLastDate(b.clinic.today, b.clinic.horizonDays));
+  const free = (await bookableAgendaLocations(b.db, b.clinicId, { serviceId: service.id, agendaIds: [chosen.agendaId], lastDate }, b.now)).get(chosen.agendaId);
+  if (!free) return handOver(b, "bot_book_no_free_times", t.noFreeTimes(service.name, b.clinic.designation), "no_free_times");
   // Retorno no consultório, como no piloto (o domiciliar não dá direito a retorno).
-  const locationCategory = agenda?.locationTypes.includes("clinic") ? "clinic" : (agenda?.locationTypes[0] ?? null);
+  const types = (agenda?.locationTypes ?? []).filter((type) => free.has(type));
+  const locationCategory = types.includes("clinic") ? "clinic" : (types[0] ?? null);
   await finish(
     b,
     {

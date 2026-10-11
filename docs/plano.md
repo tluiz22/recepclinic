@@ -1375,6 +1375,7 @@ Pontos que o cliente encontrou testando o staging, um por vez, cada um validado 
 | 2 | Atendimentos marcados de um paciente (busca na Agenda) | validado em 10/out |
 | 3 | "Voltar" leva à tela de onde a pessoa veio (3a: ficha do paciente e contato; 3b: telas da Agenda e Configurações) | validado em 10/out |
 | 4 | "Aguardando remarcação" com o mesmo paciente repetido | implementado (11/out), aguardando validação |
+| 5 | Mensagens com "fale com a clínica", caso a caso (5a: clínica sem serviço, serviço sem horário, como a clínica é chamada e prazo para oferecer horários; 5b: os demais casos) | 5a implementado (11/out), aguardando validação |
 
 **1. Cores da situação** (cliente, 10/out/2026): no Dia, na Semana e no Resumo do dia, cada
 atendimento tem faixa à esquerda e fundo claro conforme a situação, com uma legenda acima:
@@ -1416,6 +1417,25 @@ compareceu, faltou ou cancelado de novo); jornada como no "já tem marcado" (Con
 mesma agenda; o mesmo exame). Continua saindo com atendimento futuro da jornada e com "Desistiu".
 Fica no máximo uma linha por paciente e jornada, a do último cancelamento (`wasRebooked` em
 `lib/data/daily.ts`).
+
+**5. "Fale com a clínica" nas mensagens** (cliente, 11/out/2026), revisado caso a caso.
+**5a:**
+- **Como a clínica é chamada** nos textos genéricos (Configurações › Clínica): "a clínica", "o
+  consultório" ou outro nome com o artigo (`message_noun`, `message_noun_article`; migração
+  `20261011120000`). O nome próprio continua com "Aqui é da/do …".
+- **Prazo para oferecer horários** (mesma tela, `booking_horizon_days`, 7 a 365, padrão 60): o
+  bot e a página de marcar usam o mesmo prazo (na página, entra no último dia, junto com o prazo
+  do retorno).
+- **Clínica sem serviço para o bot:** depois das boas-vindas, "A clínica responderá sua mensagem
+  em breve." e a recepção assume (pausa padrão de 24 horas úteis).
+- **Serviço sem horário livre no prazo** (tudo marcado ou bloqueado): conferido logo depois da
+  escolha do serviço, antes de qualquer cadastro; "No momento não há horários livres para
+  *Consulta*. A clínica responderá sua mensagem em breve." e a recepção assume. Com vários
+  profissionais, a lista mostra só os que têm horário (sobrando um, segue direto); os locais
+  também. No retorno, conferido logo depois de escolher o paciente (até o fim do prazo dele).
+**5b (a decidir com o cliente):** os demais textos com "fale com a clínica" (erro ao gerar o
+link, já tem atendimento marcado, sem cadastro, sem atendimento futuro, data de nascimento sem
+atendimento, atendimento não confirmado, prazo do retorno vencido e as páginas do link).
 
 ## F10 — Primeiro piloto
 

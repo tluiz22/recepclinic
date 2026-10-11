@@ -333,3 +333,49 @@ describe("conversa parada há 15 minutos", () => {
     expect(await closeIdleConversations(db, f.clinicId, sender, new Date(now.getTime() + 20 * 60_000))).toBe(0);
   });
 });
+
+describe("bot: serviço sem horário livre no prazo (cliente, 11/out/2026)", () => {
+  const phone = "+5584991226398";
+  const blockAll = (agendaId: string) =>
+    adminClient()
+      .from("schedule_blocks")
+      .insert({
+        clinic_id: f.clinicId,
+        agenda_id: agendaId,
+        starts_at: new Date(Date.now() - 60 * 60_000).toISOString(),
+        ends_at: new Date(Date.now() + 400 * 24 * 60 * 60_000).toISOString(),
+        reason: "Teste sem horário",
+      })
+      .select("id")
+      .single();
+
+  it("profissional sem horário sai da lista; nenhum com horário: avisa logo depois do serviço e a recepção assume", async () => {
+    await adminClient().from("clinic_settings").update({ message_noun: "consultório", message_noun_article: "o" }).eq("clinic_id", f.clinicId);
+    const blocks: string[] = [];
+    try {
+      // Dr. Segundo todo bloqueado: só a Dra. Agenda tem horário, e o bot segue direto com ela.
+      blocks.push((await blockAll(f.ids.agendaDra2)).data!.id);
+      await say(phone, "Oi");
+      await say(phone, "1");
+      let reply = await say(phone, "1"); // Marcar consulta
+      reply = await say(phone, "1"); // Consulta
+      expect(reply.at(-1)!.body).toBe("Prefere consultório ou atendimento domiciliar?");
+
+      // As duas bloqueadas: aviso logo depois de escolher o serviço, sem cadastro, e a conversa fica com a recepção.
+      blocks.push((await blockAll(f.ids.agendaDra)).data!.id);
+      await adminClient().from("conversation_state").update({ state: "WELCOME", context: {} }).eq("clinic_id", f.clinicId).eq("contact_phone", phone);
+      await say(phone, "Oi");
+      await say(phone, "1");
+      await say(phone, "1");
+      reply = await say(phone, "1");
+      expect(reply.map((m) => m.body)).toEqual(["No momento não há horários livres para *Consulta*. O consultório responderá sua mensagem em breve."]);
+      const { data: convo } = await adminClient().from("conversation_state").select("human_handoff").eq("clinic_id", f.clinicId).eq("contact_phone", phone).single();
+      expect(convo!.human_handoff).toBe(true);
+      // Pausado: o bot não responde.
+      expect(await say(phone, "Oi")).toEqual([]);
+    } finally {
+      await adminClient().from("schedule_blocks").delete().in("id", blocks);
+      await adminClient().from("clinic_settings").update({ message_noun: "clínica", message_noun_article: "a" }).eq("clinic_id", f.clinicId);
+    }
+  });
+});

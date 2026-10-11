@@ -14,12 +14,16 @@ import { BRAND_COLOR_OPTIONS, DEFAULT_BRAND_COLOR, LOGO_TYPES } from "../../../l
 import { CLINIC_PROFILES, getClinicSettings } from "../../../lib/data/config/clinic";
 import { BOT_LIMIT_RANGES, DEFAULT_BOT_LIMITS, NEW_PATIENTS_WINDOW_DAYS, NO_SHOWS_WINDOW_DAYS } from "../../../lib/data/whatsapp/botLimits";
 import { MESSAGE_ARTICLES } from "../../../lib/data/whatsapp/templates";
+import { DESIGNATION_NOUN_MAX, DESIGNATION_PRESETS, designationText, designationTitle, NOUN_ARTICLES } from "../../../lib/designation";
+import { BOOKING_HORIZON_MAX, BOOKING_HORIZON_MIN } from "../../../lib/data/config/clinic";
 import { BRAZIL_TIME_ZONES } from "../../../lib/timeZones";
 import { PROFILE_LABELS, vocabularyFor } from "../../../lib/vocabulary";
 
 const clinic = Astro.locals.clinic!;
 const settings = await getClinicSettings(createUserClient(Astro.request, Astro.cookies), clinic.clinicId);
 const hasBot = clinic.features.includes("whatsapp_bot");
+const designation = { noun: settings.messageNoun, article: settings.messageNounArticle };
+const isPreset = DESIGNATION_PRESETS.some((d) => d.noun === designation.noun && d.article === designation.article);
 const zones = BRAZIL_TIME_ZONES.some((zone) => zone.value === settings.timezone)
   ? BRAZIL_TIME_ZONES
   : [{ value: settings.timezone, label: settings.timezone }, ...BRAZIL_TIME_ZONES];
@@ -77,6 +81,56 @@ const profileHint = (profile: (typeof CLINIC_PROFILES)[number]) => {
         </div>
         <p class={HINT}>Como a clínica se apresenta no começo das mensagens ao paciente.</p>
       </fieldset>
+
+      <fieldset>
+        <legend class={LABEL}>Como a clínica é chamada nas mensagens</legend>
+        <div class="mt-1 flex flex-col gap-2 text-sm text-slate-700">
+          {DESIGNATION_PRESETS.map((d) => (
+            <label class="flex items-center gap-2">
+              <input type="radio" name="designation" value={d.noun} checked={isPreset && designation.noun === d.noun} class="h-4 w-4 border-slate-300" />
+              "{designationText(d)}"
+            </label>
+          ))}
+          <div class="flex flex-wrap items-center gap-2">
+            <label class="flex items-center gap-2">
+              <input type="radio" name="designation" value="outro" checked={!isPreset} class="h-4 w-4 border-slate-300" />
+              Outro:
+            </label>
+            <select name="designation_article" aria-label="Artigo" class={`${INPUT} mt-0 w-20`}>
+              {NOUN_ARTICLES.map((article) => <option value={article} selected={!isPreset && designation.article === article}>{article}</option>)}
+            </select>
+            <input
+              name="designation_noun"
+              aria-label="Como a clínica é chamada"
+              maxlength={DESIGNATION_NOUN_MAX}
+              value={isPreset ? "" : designation.noun}
+              placeholder="ex.: espaço"
+              class={`${INPUT} mt-0 w-48`}
+            />
+          </div>
+        </div>
+        <p class={HINT}>Nos textos que falam da clínica sem o nome, como "{designationTitle(designation)} responderá sua mensagem em breve."</p>
+      </fieldset>
+
+      <div>
+        <label for="booking_horizon_days" class={LABEL}>Prazo para oferecer horários</label>
+        <div class="mt-1 flex items-center gap-2">
+          <input
+            id="booking_horizon_days"
+            type="number"
+            name="booking_horizon_days"
+            min={BOOKING_HORIZON_MIN}
+            max={BOOKING_HORIZON_MAX}
+            required
+            value={settings.bookingHorizonDays}
+            class={`${INPUT} mt-0 w-24`}
+          />
+          <span class="text-sm text-slate-600">dias a partir de hoje</span>
+        </div>
+        <p class={HINT}>
+          O bot só segue com um serviço que tenha horário livre nesse prazo, e a página de marcar só oferece datas dentro dele. De {BOOKING_HORIZON_MIN} a {BOOKING_HORIZON_MAX} dias.
+        </p>
+      </div>
 
       <div>
         <label for="profile" class={LABEL}>Perfil</label>

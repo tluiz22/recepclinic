@@ -17,6 +17,11 @@ import { computeFreeSlots, type BusyInterval, type FreeSlot, type SlotWindow } f
 
 export const DEFAULT_DATE_COUNT = 10;
 export const MAX_DAYS_AHEAD = 60;
+
+/** Último dia do prazo da clínica para oferecer horários (hoje conta como o 1º). */
+export const horizonLastDate = (today: string, horizonDays: number) => addDays(today, horizonDays - 1);
+/** O mais cedo de dois últimos dias (null = sem limite). */
+export const earliestDate = (a: string | null, b: string | null) => (a === null ? b : b === null ? a : a < b ? a : b);
 /** Nenhum atendimento dura um dia: buscar desde 24h antes pega o que ainda está em andamento. */
 const MAX_APPOINTMENT_SPAN_MS = 24 * 60 * 60_000;
 
@@ -214,9 +219,9 @@ export async function getNextAvailableDates(
 ): Promise<DateWithSlots[]> {
   const plan = await loadSchedulingPlan(db, clinicId, query);
   if (!plan || plan.isGroup || plan.windowsByWeekday.size === 0) return [];
-  const { count = DEFAULT_DATE_COUNT, maxDaysAhead = MAX_DAYS_AHEAD, lastDate } = query;
+  const { count = DEFAULT_DATE_COUNT, lastDate } = query;
   const firstDate = todayIn(plan.timeZone, now);
-  const finalDate = addDays(firstDate, maxDaysAhead - 1);
+  const finalDate = searchEnd(firstDate, query);
   const [busy, holidays] = await Promise.all([
     loadBusy(db, clinicId, query.agendaId, dayBounds(firstDate, plan.timeZone).start, dayBounds(finalDate, plan.timeZone).end, query.ignoreAppointmentId),
     loadClinicHolidays(db, clinicId, firstDate, finalDate),
@@ -226,6 +231,16 @@ export async function getNextAvailableDates(
     if (slotsOn(plan, date, busy, holidays, now).length) result.push({ date, weekday: weekdayOf(date) });
   }
   return result;
+}
+
+/**
+ * Último dia da busca: o alcance pedido (`maxDaysAhead`); sem ele, o último
+ * dia permitido (`lastDate`: prazo do retorno ou prazo da clínica para
+ * oferecer horários, cliente 11/out/2026); sem os dois, 60 dias.
+ */
+function searchEnd(firstDate: string, query: { maxDaysAhead?: number; lastDate?: string | null }): string {
+  if (query.maxDaysAhead !== undefined) return addDays(firstDate, query.maxDaysAhead - 1);
+  return query.lastDate ?? addDays(firstDate, MAX_DAYS_AHEAD - 1);
 }
 
 /** Agendas ativas que atendem o serviço e que quem pergunta pode ver, em ordem de nome. */
@@ -291,14 +306,14 @@ export async function getNextAvailableDatesAnyAgenda(
 export async function getGroupSessions(
   db: DbClient,
   clinicId: string,
-  query: { serviceId: string; agendaId: string; count?: number; maxDaysAhead?: number },
+  query: { serviceId: string; agendaId: string; count?: number; maxDaysAhead?: number; lastDate?: string | null },
   now: Date = new Date(),
 ): Promise<GroupSession[]> {
   const plan = await loadSchedulingPlan(db, clinicId, query);
   if (!plan || !plan.isGroup || plan.windowsByWeekday.size === 0) return [];
-  const { count = DEFAULT_DATE_COUNT, maxDaysAhead = MAX_DAYS_AHEAD } = query;
+  const { count = DEFAULT_DATE_COUNT } = query;
   const firstDate = todayIn(plan.timeZone, now);
-  const finalDate = addDays(firstDate, maxDaysAhead - 1);
+  const finalDate = searchEnd(firstDate, query);
   const from = dayBounds(firstDate, plan.timeZone).start;
   const to = dayBounds(finalDate, plan.timeZone).end;
 
