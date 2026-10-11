@@ -1372,7 +1372,7 @@ Pontos que o cliente encontrou testando o staging, um por vez, cada um validado 
 | | Ajuste | Situação |
 |---|---|---|
 | 1 | Cores da situação na Agenda | validado em 10/out |
-| 2 | Buscar paciente na Agenda, com os próximos atendimentos | implementado (10/out), aguardando validação |
+| 2 | Atendimentos marcados de um paciente (busca na Agenda) | refeito (10/out), aguardando validação |
 
 **1. Cores da situação** (cliente, 10/out/2026): no Dia, na Semana e no Resumo do dia, cada
 atendimento tem faixa à esquerda e fundo claro conforme a situação, com uma legenda acima:
@@ -1382,12 +1382,14 @@ horário riscado) e bloqueio **cinza**. Verde só para o que está garantido (su
 cliente no lugar de dois tons de verde). Os selos continuam; "já passou: registre o
 comparecimento" mantém a cor da situação. Código em `components/admin/agenda/situationStyle.ts`.
 
-**2. Buscar paciente na Agenda** (cliente, 10/out/2026): campo "Buscar paciente" no topo da
-Agenda (Dia, Semana e Mês), pelo nome ou pelo telefone (4+ dígitos), como em Pacientes, inclusive
-desativados. A tela (`/admin/agenda/buscar`) mostra cada paciente encontrado com os **próximos
-atendimentos** (data, hora, serviço, agenda e local, na cor da situação; o clique abre o dia na
-Agenda) e o link para a ficha, com o histórico completo. **Só as agendas que a pessoa vê** (D6
-mantida: o Profissional, só as próprias; garantido pelo RLS).
+**2. Atendimentos marcados de um paciente** (cliente, 10/out/2026): campo com esse nome no topo
+da Agenda (Dia, Semana e Mês), pelo nome ou pelo telefone (4+ dígitos), como em Pacientes, inclusive
+desativados. **O resultado é sempre de um paciente só:** um encontrado, a tela já mostra os
+atendimentos marcados dele; mais de um, a pessoa escolhe na lista (nome, idade, responsável,
+telefone e quantos atendimentos marcados cada um tem). Na tela do paciente: os próximos
+atendimentos (data, hora, serviço, agenda e local, na cor da situação; o clique abre o dia na
+Agenda), a ficha (histórico completo), voltar à lista e buscar outro (`/admin/agenda/buscar`).
+**Só as agendas que a pessoa vê** (D6 mantida: o Profissional, só as próprias; garantido pelo RLS).
 
 ## F10 — Primeiro piloto
 

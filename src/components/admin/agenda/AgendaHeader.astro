@@ -1,7 +1,7 @@
 ---
 // Cabeçalho da Agenda (F4.5): Dia, Semana e Mês, a escolha da agenda (todas
 // ou uma; cliente, 05/out/2026), marcar e, desde a F4.6, bloquear e a
-// lista de bloqueios. Busca de paciente com os próximos atendimentos
+// lista de bloqueios. Busca dos atendimentos marcados de um paciente
 // (cliente, 10/out/2026).
 import Icon from "../Icon.astro";
 import { INPUT, PRIMARY_BUTTON, SECONDARY_BUTTON } from "../fieldStyles";
@@ -52,12 +52,14 @@ const current = views.find((v) => v.id === view) ?? views[0];
   </div>
 </div>
 
-<form method="GET" action="/admin/agenda/buscar" role="search" class="mt-4 flex gap-2 sm:max-w-md">
-  <label for="patient_search" class="sr-only">Buscar paciente</label>
-  <input id="patient_search" type="search" name="q" value={query} placeholder="Buscar paciente (nome ou telefone)" class={`${INPUT} mt-0`} />
-  <button type="submit" class={`${SECONDARY_BUTTON} inline-flex shrink-0 items-center gap-1.5`}>
-    <Icon name="magnifying-glass" class="h-4 w-4" /> Buscar
-  </button>
+<form method="GET" action="/admin/agenda/buscar" role="search" class="mt-4 sm:max-w-md">
+  <label for="patient_search" class="block text-sm font-medium text-slate-700">Atendimentos marcados de um paciente</label>
+  <div class="mt-1 flex gap-2">
+    <input id="patient_search" type="search" name="q" value={query} placeholder="Nome ou telefone do paciente" class={`${INPUT} mt-0`} />
+    <button type="submit" class={`${SECONDARY_BUTTON} inline-flex shrink-0 items-center gap-1.5`}>
+      <Icon name="magnifying-glass" class="h-4 w-4" /> Buscar
+    </button>
+  </div>
 </form>
 
 {
