@@ -3,6 +3,7 @@
 // vocabulário da clínica), busca pelo nome ou pelo telefone (4+ dígitos), 20
 // por página e "Mostrar desativados", como no piloto. Toda a equipe vê todos
 // os pacientes (D6, revisão de 04/out).
+import { currentPath, withReturn } from "../../../lib/returnPath";
 import AdminLayout from "../../../layouts/AdminLayout.astro";
 import Badge from "../../../components/admin/Badge.astro";
 import Card from "../../../components/admin/Card.astro";
@@ -78,7 +79,7 @@ const link = (changes: Record<string, string>) => {
         const stats = noShows.get(p.id);
         return (
           <li>
-            <a href={`/admin/pacientes/${p.id}`}>
+            <a href={withReturn(`/admin/pacientes/${p.id}`, currentPath(Astro.url))}>
               <Card class="h-full hover:border-sky-300 hover:bg-sky-50" muted={!p.isActive}>
                 <p class="flex flex-wrap items-center gap-2 font-medium text-slate-900">
                   {p.fullName}
@@ -103,7 +104,7 @@ const link = (changes: Record<string, string>) => {
     {
       contacts?.items.map((c) => (
         <li>
-          <a href={`/admin/pacientes/contato/${c.id}`}>
+          <a href={withReturn(`/admin/pacientes/contato/${c.id}`, currentPath(Astro.url))}>
             <Card class="h-full hover:border-sky-300 hover:bg-sky-50" muted={!c.isActive}>
               <p class="flex flex-wrap items-center gap-2 font-medium text-slate-900">
                 {c.fullName} {!c.isActive && <Badge>desativado</Badge>}

@@ -1,5 +1,6 @@
 import type { APIRoute } from "astro";
 import { isUuid } from "../../../../lib/clinicAccess";
+import { receivedReturn, withReturn } from "../../../../lib/returnPath";
 import { todayIn } from "../../../../lib/clinicTime";
 import { createUserClient } from "../../../../lib/data/clients";
 import { DataError } from "../../../../lib/data/errors";
@@ -15,7 +16,8 @@ export const POST: APIRoute = async (context) => {
   const form = await request.formData().catch(() => null);
   const clinic = locals.clinic!;
   const db = createUserClient(request, cookies);
-  const page = `/admin/pacientes/${id}`;
+  // A origem da tela (`?volta=`) segue depois da ação (cliente, 10/out/2026).
+  const page = withReturn(`/admin/pacientes/${id}`, receivedReturn(new URL(request.url)));
 
   return runFormAction(
     context,

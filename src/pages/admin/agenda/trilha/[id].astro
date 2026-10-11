@@ -6,7 +6,7 @@ import AdminLayout from "../../../../layouts/AdminLayout.astro";
 import Card from "../../../../components/admin/Card.astro";
 import Icon from "../../../../components/admin/Icon.astro";
 import { isUuid } from "../../../../lib/clinicAccess";
-import { safeReturnPath } from "../../../../lib/returnPath";
+import { currentPath, safeReturnPath, withReturn } from "../../../../lib/returnPath";
 import { formatInstant, localDateOf } from "../../../../lib/clinicTime";
 import { createUserClient } from "../../../../lib/data/clients";
 import { listTrail } from "../../../../lib/data/agenda/trail";
@@ -30,7 +30,7 @@ const tone = { neutral: "text-slate-700", success: "text-emerald-700", danger: "
   <h1 class="mt-3 text-2xl font-bold text-slate-900">Trilha do atendimento</h1>
   <Card class="mt-4 max-w-2xl">
     <p class="font-medium text-slate-900">
-      <a href={`/admin/pacientes/${appointment.patientId}`} class="hover:text-sky-700 hover:underline">{appointment.patientName}</a>
+      <a href={withReturn(`/admin/pacientes/${appointment.patientId}`, currentPath(Astro.url))} class="hover:text-sky-700 hover:underline">{appointment.patientName}</a>
     </p>
     <p class="text-sm capitalize text-slate-600">{formatInstant(appointment.scheduledAt, clinic.timezone, "EEEE, dd/MM/yyyy 'às' HH:mm")}</p>
     <p class="text-sm text-slate-600">{appointment.serviceName} · {appointment.agendaName} · {appointment.locationName}</p>

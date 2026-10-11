@@ -4,6 +4,7 @@
 // desativados. Um encontrado: já mostra os próximos atendimentos dele; mais de
 // um: a pessoa escolhe qual. Só das agendas que a pessoa vê (o Profissional,
 // só as próprias; D6). O histórico completo fica na ficha do paciente.
+import { currentPath, withReturn } from "../../../lib/returnPath";
 import AdminLayout from "../../../layouts/AdminLayout.astro";
 import AgendaHeader from "../../../components/admin/agenda/AgendaHeader.astro";
 import SituationLegend from "../../../components/admin/agenda/SituationLegend.astro";
@@ -93,7 +94,7 @@ const plural = (n: number) => `${n} ${n === 1 ? "atendimento marcado" : "atendim
         <div class="flex flex-wrap items-start justify-between gap-2">
           <div class="text-sm">
             <p class="text-xs font-medium uppercase tracking-wide text-slate-500">Atendimentos marcados de</p>
-            <a href={`/admin/pacientes/${chosen.id}`} class="text-lg font-semibold text-slate-900 hover:text-sky-700 hover:underline">
+            <a href={withReturn(`/admin/pacientes/${chosen.id}`, currentPath(Astro.url))} class="text-lg font-semibold text-slate-900 hover:text-sky-700 hover:underline">
               {chosen.fullName}
             </a>{" "}
             <span class="text-slate-500">{formatAge(chosen.birthdate, today)}</span>
@@ -119,7 +120,7 @@ const plural = (n: number) => `${n} ${n === 1 ? "atendimento marcado" : "atendim
           ))}
         </ul>
         <div class="mt-4 flex flex-wrap gap-2 border-t border-slate-100 pt-3">
-          <a href={`/admin/pacientes/${chosen.id}`} class={SECONDARY_BUTTON}>Ver a ficha (histórico completo)</a>
+          <a href={withReturn(`/admin/pacientes/${chosen.id}`, currentPath(Astro.url))} class={SECONDARY_BUTTON}>Ver a ficha (histórico completo)</a>
           {q && fromList && <a href={`/admin/agenda/buscar?q=${encodeURIComponent(q)}`} class={SECONDARY_BUTTON}>Voltar à lista</a>}
           <a href="/admin/agenda/buscar" class={SECONDARY_BUTTON}>Buscar outro {vocabulary.patient}</a>
         </div>

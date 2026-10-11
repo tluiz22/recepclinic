@@ -3,6 +3,7 @@
 // piloto): cancelados pela clínica (em massa ou pelo bloqueio) que ainda não
 // remarcaram. "Remarcar" abre o Marcar com o paciente, o serviço e a agenda;
 // "Desistiu" tira da lista (com confirmação; fica na trilha).
+import { currentPath, withReturn } from "../../../lib/returnPath";
 import Card from "../Card.astro";
 import PhoneLinks from "../PhoneLinks.astro";
 import { formatInstant } from "../../../lib/clinicTime";
@@ -31,7 +32,7 @@ const BUTTON = "inline-flex items-center gap-1 rounded-md border bg-white px-2.5
       return (
         <Card>
           <p class="font-medium text-slate-900">
-            <a href={`/admin/pacientes/${a.patientId}`} class="hover:text-sky-700 hover:underline">
+            <a href={withReturn(`/admin/pacientes/${a.patientId}`, currentPath(Astro.url))} class="hover:text-sky-700 hover:underline">
               {a.patientName}
             </a>
           </p>

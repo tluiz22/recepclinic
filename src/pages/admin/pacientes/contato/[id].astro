@@ -19,6 +19,7 @@ import PhoneLinks from "../../../../components/admin/PhoneLinks.astro";
 import { HINT, INPUT, LABEL, PRIMARY_BUTTON, SECONDARY_BUTTON } from "../../../../components/admin/fieldStyles";
 import { formatAge } from "../../../../lib/age";
 import { isUuid } from "../../../../lib/clinicAccess";
+import { currentPath, receivedReturn, withReturn } from "../../../../lib/returnPath";
 import { formatInstant, todayIn } from "../../../../lib/clinicTime";
 import { createUserClient } from "../../../../lib/data/clients";
 import { getContact, listContactPatients } from "../../../../lib/data/patients";
@@ -44,7 +45,10 @@ if (!contact) return Astro.redirect("/admin/pacientes?tab=contatos");
 const patients = await listContactPatients(db, clinic.clinicId, contact.id, { includeInactive: true });
 const today = todayIn(clinic.timezone);
 const homeVisitOn = clinic.features.includes("home_visit");
-const action = `/api/admin/pacientes/contato/${contact.id}`;
+// Voltar: para a tela de onde veio (cliente, 10/out/2026); sem origem, a lista.
+const volta = receivedReturn(Astro.url);
+const here = currentPath(Astro.url);
+const action = withReturn(`/api/admin/pacientes/contato/${contact.id}`, volta);
 const hasBot = clinic.features.includes("whatsapp_bot") && !contact.anonymizedAt;
 const [limitEvents, limitsStatus] = hasBot
   ? await Promise.all([listContactLimitEvents(db, clinic.clinicId, contact.id), getContactBotLimitsStatus(db, clinic.clinicId, contact.id)])
@@ -63,9 +67,9 @@ const limitLine = (event: BotLimitEvent) => `${BOT_LIMIT_LABELS[event.reason]}: 
 ---
 
 <AdminLayout title={contact.fullName}>
-  <a href="/admin/pacientes?tab=contatos" class="inline-flex items-center gap-1 text-sm font-medium text-sky-700 hover:underline">
+  <a href={volta ?? "/admin/pacientes?tab=contatos"} class="inline-flex items-center gap-1 text-sm font-medium text-sky-700 hover:underline">
     <Icon name="chevron-left" class="h-4 w-4" />
-    {capitalize(vocabulary.contacts)}
+    {volta ? "Voltar" : capitalize(vocabulary.contacts)}
   </a>
   <h1 class="mt-3 flex flex-wrap items-center gap-2 text-2xl font-bold text-slate-900">
     {contact.fullName}
@@ -256,7 +260,7 @@ const limitLine = (event: BotLimitEvent) => `${BOT_LIMIT_LABELS[event.reason]}: 
         {
           patients.map((p) => (
             <li class={p.isActive ? "" : "opacity-60"}>
-              <a href={`/admin/pacientes/${p.id}`} class="flex flex-wrap items-center justify-between gap-2 py-2 text-sm hover:text-sky-700">
+              <a href={withReturn(`/admin/pacientes/${p.id}`, here)} class="flex flex-wrap items-center justify-between gap-2 py-2 text-sm hover:text-sky-700">
                 <span class="font-medium text-slate-900">
                   {p.fullName} {p.isContactSelf && <span class="font-normal text-slate-500">(ele mesmo)</span>}
                 </span>

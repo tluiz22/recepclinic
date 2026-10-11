@@ -1373,6 +1373,7 @@ Pontos que o cliente encontrou testando o staging, um por vez, cada um validado 
 |---|---|---|
 | 1 | Cores da situação na Agenda | validado em 10/out |
 | 2 | Atendimentos marcados de um paciente (busca na Agenda) | refeito (10/out), aguardando validação |
+| 3 | "Voltar" leva à tela de onde a pessoa veio (3a: ficha do paciente e contato; 3b: telas da Agenda e Configurações) | 3a implementado (10/out), aguardando validação |
 
 **1. Cores da situação** (cliente, 10/out/2026): no Dia, na Semana e no Resumo do dia, cada
 atendimento tem faixa à esquerda e fundo claro conforme a situação, com uma legenda acima:
@@ -1390,6 +1391,16 @@ telefone e quantos atendimentos marcados cada um tem). Na tela do paciente: os p
 atendimentos (data, hora, serviço, agenda e local, na cor da situação; o clique abre o dia na
 Agenda), a ficha (histórico completo), voltar à lista e buscar outro (`/admin/agenda/buscar`).
 **Só as agendas que a pessoa vê** (D6 mantida: o Profissional, só as próprias; garantido pelo RLS).
+
+**3. Voltar para a tela anterior** (cliente, 10/out/2026, regra para o sistema todo): "toda tela
+deve voltar para a tela anterior que levou o usuário até a tela atual, para o usuário não se
+perder". O link de saída leva a origem em `?volta=` (`withReturn` em `lib/returnPath.ts`); a tela
+de destino mostra "Voltar" para essa origem e a mantém depois das próprias ações (salvar,
+desativar etc.); sem origem, o padrão de antes (ex.: Pacientes). Origem só de telas do Início, da
+Agenda, do Resumo do Dia e de Pacientes (`safeReturnPath`). **3a:** ficha do paciente e
+responsável/contato, abertas da busca da Agenda, de Pacientes (volta à busca feita), dos cartões
+da Agenda, do Resumo do Dia, da Trilha e do Início. **3b (próximo):** Marcar, Bloquear,
+Bloqueios, Série e Configurações.
 
 ## F10 — Primeiro piloto
 

@@ -2,6 +2,7 @@
 // Resumo do Dia › Resumo do dia (F4.8): só informação, como no piloto desde
 // 03/out/2026 (as ações ficam na Agenda): hora, paciente, idade, responsável,
 // telefone, serviço, local, agenda, presença confirmada e quem marcou.
+import { currentPath, withReturn } from "../../../lib/returnPath";
 import Badge from "../Badge.astro";
 import Card from "../Card.astro";
 import PhoneLinks from "../PhoneLinks.astro";
@@ -47,7 +48,7 @@ const canceled = appointments.filter((a) => a.status === "canceled");
             <div class="text-sm">
               <p class="text-base font-semibold text-slate-900">
                 <span class={a.status === "canceled" ? CANCELED_TEXT : ""}>{formatInstant(a.scheduledAt, timeZone, "HH:mm")}</span> ·{" "}
-                <a href={`/admin/pacientes/${a.patientId}`} class="hover:text-sky-700 hover:underline">
+                <a href={withReturn(`/admin/pacientes/${a.patientId}`, currentPath(Astro.url))} class="hover:text-sky-700 hover:underline">
                   {a.patientName}
                 </a>{" "}
                 <span class="text-sm font-normal text-slate-500">{formatAge(a.patientBirthdate, date)}</span>

@@ -5,6 +5,7 @@
 // pede confirmação antes (cliente, 05/out: cliques sem querer); Remarcar só
 // abre a tela, e a confirmação fica no botão final de lá. Todas as ações vão
 // para a mesma rota, com `acao`, e voltam para a tela de onde saíram.
+import { withReturn } from "../../../lib/returnPath";
 import Badge, { type BadgeVariant } from "../Badge.astro";
 import Card from "../Card.astro";
 import Icon, { type IconName } from "../Icon.astro";
@@ -168,7 +169,7 @@ const tone = (danger?: boolean) => (danger ? "border-red-300 text-red-700 hover:
   }
   <div class={`${compact ? "" : "mt-2"} text-sm text-slate-700`}>
     <p class="flex flex-wrap items-center gap-x-2 gap-y-1 font-medium text-slate-900">
-      <a href={`/admin/pacientes/${a.patientId}`} class="hover:text-sky-700 hover:underline">{a.patientName}</a>
+      <a href={withReturn(`/admin/pacientes/${a.patientId}`, returnTo)} class="hover:text-sky-700 hover:underline">{a.patientName}</a>
       {noShow && <Badge variant="danger">Faltou {noShow.noShows} de {noShow.total}</Badge>}
       {compact && status && <Badge variant={status.variant}>{status.label}</Badge>}
     </p>

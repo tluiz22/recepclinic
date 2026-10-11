@@ -3,6 +3,7 @@
 // espera para antecipar, por agenda e serviço, na ordem em que a vaga é
 // oferecida (ordem de entrada), com a oferta em andamento e "Tirar da lista"
 // (com confirmação); abaixo, as últimas ofertas.
+import { currentPath, withReturn } from "../../../lib/returnPath";
 import Badge, { type BadgeVariant } from "../Badge.astro";
 import Card from "../Card.astro";
 import PhoneLinks from "../PhoneLinks.astro";
@@ -44,7 +45,7 @@ const returnTo = "/admin/consultas?tab=lista_espera";
               <div class="flex flex-wrap items-start justify-between gap-2">
                 <div>
                   <p class="font-medium text-slate-900">
-                    {index + 1}º · <a href={`/admin/pacientes/${entry.patient.id}`} class="hover:text-sky-700 hover:underline">{entry.patient.fullName}</a>
+                    {index + 1}º · <a href={withReturn(`/admin/pacientes/${entry.patient.id}`, currentPath(Astro.url))} class="hover:text-sky-700 hover:underline">{entry.patient.fullName}</a>
                   </p>
                   <p class="text-slate-500">
                     Marcado para {when(entry.appointment.scheduledAt)} · {entry.appointment.locationName}

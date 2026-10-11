@@ -4,6 +4,7 @@
 // os itens liberados para a clínica (D11). Com o bot, "Contatos para revisar"
 // (F9.6a): quem bateu um limite do bot nos últimos 7 dias e ainda não foi
 // marcado como revisado (Recepção e Administrador marcam aqui ou no contato).
+import { currentPath, withReturn } from "../../lib/returnPath";
 import AdminLayout from "../../layouts/AdminLayout.astro";
 import Card from "../../components/admin/Card.astro";
 import ConfirmDeleteDialog from "../../components/admin/ConfirmDeleteDialog.astro";
@@ -109,7 +110,7 @@ const shortcuts: { label: string; href: string; icon: IconName }[] = [
           <ul class="mt-2 divide-y divide-slate-100 text-sm">
             {toReview.map((item) => (
               <li class="flex flex-wrap items-center gap-x-3 gap-y-1 py-2">
-                <a href={`/admin/pacientes/contato/${item.contactId}`} class="flex flex-1 flex-wrap items-center justify-between gap-x-3 gap-y-1 hover:text-sky-700">
+                <a href={withReturn(`/admin/pacientes/contato/${item.contactId}`, currentPath(Astro.url))} class="flex flex-1 flex-wrap items-center justify-between gap-x-3 gap-y-1 hover:text-sky-700">
                   <span class="font-medium text-slate-900">{item.name}</span>
                   <span class="text-slate-600">
                     {BOT_LIMIT_LABELS[item.last.reason]} · {formatInstant(item.last.at, clinic.timezone, "dd/MM HH:mm")}
