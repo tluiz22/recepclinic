@@ -1,0 +1,338 @@
+---
+// Tecnologia (cliente, 11/out/2026): para o Suporte, o que o RecepClinic usa,
+// onde cada parte está hospedada, as integrações, as rotinas, onde ficam os
+// segredos (só os nomes, nunca os valores) e o desenho da arquitetura.
+// Conteúdo fixo: atualizar aqui quando mudar a hospedagem, um plano ou uma
+// integração (as decisões ficam em docs/arquitetura.md).
+import AdminLayout from "../../../layouts/AdminLayout.astro";
+import Card from "../../../components/admin/Card.astro";
+import { GRAPH_API_VERSION } from "../../../lib/data/whatsapp/graph";
+
+const UPDATED = "11/10/2026";
+
+const stack = [
+  { layer: "Aplicação", tech: "Astro 7 (renderização no servidor) e TypeScript 6", use: "Painel da clínica, administração do sistema, páginas públicas (marcar, preparo, orientações, formulário) e as rotas de API" },
+  { layer: "Visual", tech: "Tailwind CSS 4", use: "Estilo das telas" },
+  { layer: "Banco de dados", tech: "PostgreSQL no Supabase", use: "Todos os dados, com RLS por clínica (D1): o código filtra e o banco barra" },
+  { layer: "Acesso ao banco", tech: "supabase-js 2 e @supabase/ssr", use: "Login da equipe por cookie; credencial limitada à clínica para o bot, as rotinas e as páginas públicas" },
+  { layer: "Login", tech: "Supabase Auth", use: "Logins da equipe e do Suporte, convites e recuperação de senha (sem cadastro aberto)" },
+  { layer: "Arquivos", tech: "Supabase Storage", use: "Logos das clínicas (bucket público clinic-logos, até 1 MB)" },
+  { layer: "Agendador", tech: "pg_cron e pg_net no Supabase", use: "Rotinas que chamam o sistema (lembretes, resumo do dia, lista de espera, séries, conversas paradas)" },
+  { layer: "Segredos no banco", tech: "Supabase Vault", use: "Token da Meta de cada clínica, endereço do sistema e o segredo das rotinas" },
+  { layer: "Datas e fusos", tech: "date-fns 4 e @date-fns/tz", use: "Horários no fuso de cada clínica" },
+  { layer: "E-mail", tech: "Nodemailer (SMTP)", use: "Convites e avisos do painel" },
+  { layer: "Testes", tech: "Vitest 5", use: "Testes de unidade e testes contra o banco local (RLS, regras da agenda, bot)" },
+];
+
+const hosting = [
+  { service: "Vercel", runs: "A aplicação (app.recepclinic.com.br): painel, páginas públicas, webhook do WhatsApp e rotas das rotinas", where: "São Paulo (gru1)", plan: "Hobby no staging; Pro na produção (a contratar)" },
+  { service: "Supabase", runs: "Banco, login, arquivos, agendador e cofre de segredos (projeto recepclinic-staging)", where: "South America (São Paulo)", plan: "Free no staging; Pro na produção, com backup diário (a contratar)" },
+  { service: "Cloudflare", runs: "DNS de recepclinic.com.br (app. aponta para a Vercel, sem proxy) e o site do produto (www.) no Cloudflare Pages", where: "Rede global", plan: "Gratuito" },
+  { service: "GitHub", runs: "Código: tluiz22/recepclinic (este sistema); o site fica em repositório próprio", where: "—", plan: "Cada push na main publica o staging" },
+  { service: "Meta", runs: "App RecepClinic e a conta de WhatsApp Business (número de testes no staging)", where: "—", plan: "Mensagens cobradas da clínica (templates fora da janela de 24h)" },
+  { service: "Resend", runs: "Envio de e-mails (SMTP) do painel e do Supabase Auth, remetente nao-responda@recepclinic.com.br", where: "—", plan: "Gratuito" },
+  { service: "Better Stack", runs: "Monitor externo dos endereços de saúde, com aviso por e-mail", where: "—", plan: "Gratuito" },
+];
+
+const integrations = [
+  {
+    name: "WhatsApp Cloud API (Meta)",
+    how: `Graph API ${GRAPH_API_VERSION}, chamada direto pelo sistema (D3). Recebe as mensagens no webhook /api/whatsapp/webhook (conferido com o App Secret); envia texto, listas, botões e templates pelo número de cada clínica; cria os templates na conta da clínica e acompanha a aprovação.`,
+    identifies: "A clínica pelo phone_number_id de cada evento; o token de cada clínica fica no Vault.",
+  },
+  {
+    name: "Supabase",
+    how: "Banco, login, arquivos e agendador. O agendador (pg_cron) chama as rotas /api/cron/… do sistema com o segredo das rotinas.",
+    identifies: "Cada requisição usa o login da pessoa ou uma credencial limitada à clínica; a service role fica só para rotinas da plataforma (D1).",
+  },
+  {
+    name: "Resend (SMTP)",
+    how: "smtp.resend.com, porta 465. O painel envia convites e avisos; o Supabase Auth envia o convite e a recuperação de senha com os modelos do RecepClinic.",
+    identifies: "Domínio recepclinic.com.br verificado (registros DKIM e send. na Cloudflare).",
+  },
+  {
+    name: "Better Stack",
+    how: "4 monitores a cada 3 minutos: Painel (/admin/login), Webhook (/api/saude/webhook), Saúde (/api/saude: banco e rotinas em dia) e Erros (/api/saude/erros: erro gravado nos últimos 15 minutos).",
+    identifies: "Só lê os endereços de saúde; não recebe dados de pacientes (F9.3).",
+  },
+  {
+    name: "Cloudflare",
+    how: "DNS do domínio (app. → Vercel, nuvem cinza: o certificado é da Vercel) e hospedagem do site www. com as páginas de privacidade e termos.",
+    identifies: "—",
+  },
+  {
+    name: "Google Maps",
+    how: "Só um link de busca no texto do endereço que o bot envia (sem chave nem chamada de API).",
+    identifies: "—",
+  },
+];
+
+const routines = [
+  { name: "conversas-paradas", when: "a cada minuto", what: "Encerra a conversa do bot parada há 15 minutos, com o aviso ao paciente" },
+  { name: "lista-de-espera", when: "a cada 5 minutos", what: "Oferece as vagas abertas a quem está na lista de espera" },
+  { name: "resumo-do-dia", when: "a cada 5 minutos", what: "Envia o resumo do dia aos profissionais e à equipe, no horário de cada clínica" },
+  { name: "lembretes", when: "a cada hora", what: "Envia os lembretes aos pacientes, no horário de cada clínica" },
+  { name: "series", when: "todo dia às 6h (UTC)", what: "Estende os atendimentos recorrentes (séries) até o horizonte" },
+  { name: "limpar-erros", when: "todo dia às 3h15 (UTC)", what: "Apaga os erros gravados há mais de 90 dias (só no banco)" },
+];
+
+const secrets = [
+  { where: "Vercel (Settings › Environment Variables) e .env.staging (fora do git)", names: "PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY, SUPABASE_JWT_SECRET, CRON_SECRET, SITE_URL, WHATSAPP_APP_SECRET, WHATSAPP_WEBHOOK_VERIFY_TOKEN, SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASSWORD, EMAIL_FROM" },
+  { where: "Supabase Vault", names: "Token da Meta de cada clínica (whatsapp_token_…), system_base_url e cron_secret (gravados por scripts/agendador.mjs)" },
+  { where: "Supabase Auth (Emails › SMTP Settings)", names: "A mesma chave do Resend" },
+];
+
+const environments = [
+  { env: "Local", where: "Supabase na máquina (CLI + Docker/OrbStack) e npm run dev", data: "Dados de exemplo (seed)" },
+  { env: "Staging", where: "app.recepclinic.com.br (Vercel Hobby + Supabase Free)", data: "Só números e clínicas de teste" },
+  { env: "Produção", where: "A partir do 1º piloto (F10): Vercel Pro + Supabase Pro, ~US$ 45/mês", data: "Clínicas reais" },
+];
+
+const security = [
+  "Dados isolados por clínica com RLS no banco (D1); bot, rotinas e páginas públicas também rodam sob RLS, com credencial limitada à clínica.",
+  "Cabeçalhos de segurança e CSP em todas as páginas; robots.txt bloqueia a indexação do app.; formulários só do próprio domínio (F9.1).",
+  "Logs sem dados pessoais: só ids e a clínica, com telefone e e-mail mascarados (F9.2).",
+  "Erros gravados no próprio banco (Administração do sistema › Erros), sem ferramenta externa (F9.3).",
+  "Anonimização de paciente a pedido (LGPD, F9.4) e proteção contra abuso no bot (F9.6).",
+];
+
+const TH = "py-2 pr-4 text-left font-medium text-slate-500";
+const TD = "py-2 pr-4 align-top";
+---
+
+<AdminLayout title="Tecnologia" platform>
+  <h1 class="text-2xl font-bold text-slate-900">Tecnologia</h1>
+  <p class="mt-1 text-sm text-slate-600">
+    O que o RecepClinic usa, onde cada parte está hospedada e como as partes conversam. Segredos aparecem só pelo nome, nunca pelo valor. Atualizado em {UPDATED}.
+  </p>
+
+  <div class="mt-4 flex flex-col gap-4">
+    <Card>
+      <h2 class="font-semibold text-slate-900">Tecnologias</h2>
+      <div class="mt-2 overflow-x-auto">
+        <table class="w-full min-w-[40rem] text-sm">
+          <thead><tr><th class={TH}>Camada</th><th class={TH}>Tecnologia</th><th class={TH}>Para quê</th></tr></thead>
+          <tbody class="divide-y divide-slate-100">
+            {stack.map((row) => <tr><td class={`${TD} font-medium text-slate-900`}>{row.layer}</td><td class={TD}>{row.tech}</td><td class={`${TD} text-slate-600`}>{row.use}</td></tr>)}
+          </tbody>
+        </table>
+      </div>
+    </Card>
+
+    <Card>
+      <h2 class="font-semibold text-slate-900">Onde está hospedado</h2>
+      <div class="mt-2 overflow-x-auto">
+        <table class="w-full min-w-[44rem] text-sm">
+          <thead><tr><th class={TH}>Serviço</th><th class={TH}>O que roda lá</th><th class={TH}>Região</th><th class={TH}>Plano</th></tr></thead>
+          <tbody class="divide-y divide-slate-100">
+            {
+              hosting.map((row) => (
+                <tr>
+                  <td class={`${TD} font-medium text-slate-900`}>{row.service}</td>
+                  <td class={TD}>{row.runs}</td>
+                  <td class={`${TD} text-slate-600`}>{row.where}</td>
+                  <td class={`${TD} text-slate-600`}>{row.plan}</td>
+                </tr>
+              ))
+            }
+          </tbody>
+        </table>
+      </div>
+    </Card>
+
+    <Card>
+      <h2 class="font-semibold text-slate-900">Integrações</h2>
+      <ul class="mt-2 divide-y divide-slate-100 text-sm">
+        {
+          integrations.map((item) => (
+            <li class="py-2">
+              <p class="font-medium text-slate-900">{item.name}</p>
+              <p class="mt-0.5 text-slate-700">{item.how}</p>
+              {item.identifies !== "—" && <p class="mt-0.5 text-slate-500">{item.identifies}</p>}
+            </li>
+          ))
+        }
+      </ul>
+    </Card>
+
+    <Card>
+      <h2 class="font-semibold text-slate-900">Rotinas automáticas</h2>
+      <p class="mt-1 text-sm text-slate-600">
+        O agendador do Supabase chama <code>/api/cron/…</code> no sistema. A última execução de cada uma aparece em Administração do sistema › Erros.
+      </p>
+      <div class="mt-2 overflow-x-auto">
+        <table class="w-full min-w-[36rem] text-sm">
+          <thead><tr><th class={TH}>Rotina</th><th class={TH}>Quando</th><th class={TH}>O que faz</th></tr></thead>
+          <tbody class="divide-y divide-slate-100">
+            {routines.map((row) => <tr><td class={`${TD} font-mono text-xs text-slate-900`}>{row.name}</td><td class={`${TD} whitespace-nowrap text-slate-600`}>{row.when}</td><td class={TD}>{row.what}</td></tr>)}
+          </tbody>
+        </table>
+      </div>
+    </Card>
+
+    <Card>
+      <h2 class="font-semibold text-slate-900">Onde ficam os segredos</h2>
+      <ul class="mt-2 divide-y divide-slate-100 text-sm">
+        {
+          secrets.map((item) => (
+            <li class="py-2">
+              <p class="font-medium text-slate-900">{item.where}</p>
+              <p class="mt-0.5 break-words font-mono text-xs text-slate-600">{item.names}</p>
+            </li>
+          ))
+        }
+      </ul>
+      <p class="mt-2 text-xs text-slate-500">Variável nova na Vercel só vale depois de um Redeploy. Nunca revogar o Legacy JWT Secret do Supabase: a credencial limitada à clínica depende dele.</p>
+    </Card>
+
+    <Card>
+      <h2 class="font-semibold text-slate-900">Ambientes</h2>
+      <div class="mt-2 overflow-x-auto">
+        <table class="w-full min-w-[36rem] text-sm">
+          <thead><tr><th class={TH}>Ambiente</th><th class={TH}>Onde</th><th class={TH}>Dados</th></tr></thead>
+          <tbody class="divide-y divide-slate-100">
+            {environments.map((row) => <tr><td class={`${TD} font-medium text-slate-900`}>{row.env}</td><td class={TD}>{row.where}</td><td class={`${TD} text-slate-600`}>{row.data}</td></tr>)}
+          </tbody>
+        </table>
+      </div>
+    </Card>
+
+    <Card>
+      <h2 class="font-semibold text-slate-900">Segurança</h2>
+      <ul class="mt-2 list-disc space-y-1 pl-5 text-sm text-slate-700">
+        {security.map((line) => <li>{line}</li>)}
+      </ul>
+    </Card>
+
+    <Card>
+      <h2 class="font-semibold text-slate-900">Arquitetura</h2>
+      <p class="mt-1 text-sm text-slate-600">Quem usa o sistema (à esquerda), os serviços do meio e onde ficam os dados (à direita). Setas: quem chama quem.</p>
+      <div class="mt-3 overflow-x-auto">
+        <svg viewBox="0 0 1040 640" class="h-auto w-full min-w-[760px]" role="img" aria-label="Desenho da arquitetura do RecepClinic">
+          <defs>
+            <marker id="seta" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <path d="M0,0 L10,5 L0,10 z" class="fill-slate-500"></path>
+            </marker>
+          </defs>
+
+          <!-- Quem usa -->
+          <g class="text-[13px]">
+            <rect x="20" y="50" width="170" height="56" rx="10" class="fill-emerald-50 stroke-emerald-600"></rect>
+            <text x="105" y="74" text-anchor="middle" class="fill-slate-900 font-semibold">Paciente</text>
+            <text x="105" y="93" text-anchor="middle" class="fill-slate-600">no WhatsApp</text>
+
+            <rect x="20" y="250" width="170" height="56" rx="10" class="fill-emerald-50 stroke-emerald-600"></rect>
+            <text x="105" y="274" text-anchor="middle" class="fill-slate-900 font-semibold">Paciente</text>
+            <text x="105" y="293" text-anchor="middle" class="fill-slate-600">links (marcar, preparo)</text>
+
+            <rect x="20" y="330" width="170" height="56" rx="10" class="fill-emerald-50 stroke-emerald-600"></rect>
+            <text x="105" y="354" text-anchor="middle" class="fill-slate-900 font-semibold">Equipe e Suporte</text>
+            <text x="105" y="373" text-anchor="middle" class="fill-slate-600">painel no navegador</text>
+
+            <rect x="20" y="556" width="170" height="56" rx="10" class="fill-emerald-50 stroke-emerald-600"></rect>
+            <text x="105" y="580" text-anchor="middle" class="fill-slate-900 font-semibold">Visitante</text>
+            <text x="105" y="599" text-anchor="middle" class="fill-slate-600">site do produto</text>
+          </g>
+
+          <!-- Serviços de fora -->
+          <g class="text-[13px]">
+            <rect x="250" y="40" width="200" height="76" rx="10" class="fill-white stroke-slate-400"></rect>
+            <text x="350" y="68" text-anchor="middle" class="fill-slate-900 font-semibold">Meta</text>
+            <text x="350" y="88" text-anchor="middle" class="fill-slate-600">WhatsApp Cloud API</text>
+            <text x="350" y="105" text-anchor="middle" class="fill-slate-500 text-[11px]">Graph API {GRAPH_API_VERSION}</text>
+
+            <rect x="250" y="270" width="200" height="96" rx="10" class="fill-white stroke-slate-400"></rect>
+            <text x="350" y="298" text-anchor="middle" class="fill-slate-900 font-semibold">Cloudflare</text>
+            <text x="350" y="318" text-anchor="middle" class="fill-slate-600">DNS recepclinic.com.br</text>
+            <text x="350" y="338" text-anchor="middle" class="fill-slate-500 text-[11px]">app. → Vercel (sem proxy)</text>
+
+            <rect x="250" y="440" width="200" height="70" rx="10" class="fill-white stroke-slate-400"></rect>
+            <text x="350" y="468" text-anchor="middle" class="fill-slate-900 font-semibold">Better Stack</text>
+            <text x="350" y="488" text-anchor="middle" class="fill-slate-600">monitores a cada 3 min</text>
+
+            <rect x="250" y="548" width="200" height="72" rx="10" class="fill-white stroke-slate-400"></rect>
+            <text x="350" y="576" text-anchor="middle" class="fill-slate-900 font-semibold">Cloudflare Pages</text>
+            <text x="350" y="596" text-anchor="middle" class="fill-slate-600">www.recepclinic.com.br</text>
+
+            <rect x="520" y="20" width="230" height="56" rx="10" class="fill-white stroke-slate-400"></rect>
+            <text x="635" y="44" text-anchor="middle" class="fill-slate-900 font-semibold">GitHub</text>
+            <text x="635" y="63" text-anchor="middle" class="fill-slate-600">tluiz22/recepclinic</text>
+
+            <rect x="520" y="520" width="230" height="70" rx="10" class="fill-white stroke-slate-400"></rect>
+            <text x="635" y="548" text-anchor="middle" class="fill-slate-900 font-semibold">Resend</text>
+            <text x="635" y="568" text-anchor="middle" class="fill-slate-600">e-mails (SMTP)</text>
+          </g>
+
+          <!-- Vercel -->
+          <g class="text-[13px]">
+            <rect x="520" y="110" width="230" height="360" rx="12" class="fill-sky-50 stroke-sky-600"></rect>
+            <text x="635" y="136" text-anchor="middle" class="fill-slate-900 font-semibold">Vercel · São Paulo</text>
+            <text x="635" y="155" text-anchor="middle" class="fill-slate-600 text-[11px]">app.recepclinic.com.br (Astro)</text>
+            <rect x="535" y="170" width="200" height="54" rx="8" class="fill-white stroke-sky-300"></rect>
+            <text x="635" y="192" text-anchor="middle" class="fill-slate-900">Painel e páginas públicas</text>
+            <text x="635" y="210" text-anchor="middle" class="fill-slate-500 text-[11px]">renderizadas no servidor</text>
+            <rect x="535" y="236" width="200" height="54" rx="8" class="fill-white stroke-sky-300"></rect>
+            <text x="635" y="258" text-anchor="middle" class="fill-slate-900">/api/whatsapp/webhook</text>
+            <text x="635" y="276" text-anchor="middle" class="fill-slate-500 text-[11px]">bot e conversas</text>
+            <rect x="535" y="302" width="200" height="54" rx="8" class="fill-white stroke-sky-300"></rect>
+            <text x="635" y="324" text-anchor="middle" class="fill-slate-900">/api/cron/…</text>
+            <text x="635" y="342" text-anchor="middle" class="fill-slate-500 text-[11px]">lembretes, resumos, lista de espera</text>
+            <rect x="535" y="368" width="200" height="54" rx="8" class="fill-white stroke-sky-300"></rect>
+            <text x="635" y="390" text-anchor="middle" class="fill-slate-900">/api/saude…</text>
+            <text x="635" y="408" text-anchor="middle" class="fill-slate-500 text-[11px]">saúde do sistema</text>
+          </g>
+
+          <!-- Supabase -->
+          <g class="text-[13px]">
+            <rect x="820" y="110" width="200" height="360" rx="12" class="fill-amber-50 stroke-amber-600"></rect>
+            <text x="920" y="136" text-anchor="middle" class="fill-slate-900 font-semibold">Supabase · São Paulo</text>
+            <text x="920" y="155" text-anchor="middle" class="fill-slate-600 text-[11px]">dados de todas as clínicas</text>
+            <rect x="835" y="170" width="170" height="54" rx="8" class="fill-white stroke-amber-300"></rect>
+            <text x="920" y="192" text-anchor="middle" class="fill-slate-900">PostgreSQL + RLS</text>
+            <text x="920" y="210" text-anchor="middle" class="fill-slate-500 text-[11px]">isolado por clínica</text>
+            <rect x="835" y="236" width="170" height="54" rx="8" class="fill-white stroke-amber-300"></rect>
+            <text x="920" y="258" text-anchor="middle" class="fill-slate-900">Auth</text>
+            <text x="920" y="276" text-anchor="middle" class="fill-slate-500 text-[11px]">logins da equipe</text>
+            <rect x="835" y="302" width="170" height="54" rx="8" class="fill-white stroke-amber-300"></rect>
+            <text x="920" y="324" text-anchor="middle" class="fill-slate-900">Storage</text>
+            <text x="920" y="342" text-anchor="middle" class="fill-slate-500 text-[11px]">logos das clínicas</text>
+            <rect x="835" y="368" width="170" height="54" rx="8" class="fill-white stroke-amber-300"></rect>
+            <text x="920" y="390" text-anchor="middle" class="fill-slate-900">pg_cron + Vault</text>
+            <text x="920" y="408" text-anchor="middle" class="fill-slate-500 text-[11px]">agendador e segredos</text>
+          </g>
+
+          <!-- Setas -->
+          <g class="fill-none stroke-slate-500" stroke-width="1.5">
+            <line x1="190" y1="78" x2="248" y2="78" marker-start="url(#seta)" marker-end="url(#seta)"></line>
+            <polyline points="450,100 490,100 490,263 533,263" marker-start="url(#seta)" marker-end="url(#seta)"></polyline>
+            <line x1="190" y1="285" x2="248" y2="305" marker-end="url(#seta)"></line>
+            <line x1="190" y1="352" x2="248" y2="335" marker-end="url(#seta)"></line>
+            <line x1="450" y1="318" x2="518" y2="318" marker-end="url(#seta)"></line>
+            <polyline points="450,475 490,475 490,395 533,395" marker-end="url(#seta)"></polyline>
+            <line x1="190" y1="584" x2="248" y2="584" marker-end="url(#seta)"></line>
+            <line x1="635" y1="76" x2="635" y2="108" marker-end="url(#seta)"></line>
+            <line x1="750" y1="230" x2="818" y2="230" marker-start="url(#seta)" marker-end="url(#seta)"></line>
+            <polyline points="835,395 790,395 790,329 737,329" marker-end="url(#seta)"></polyline>
+            <line x1="635" y1="470" x2="635" y2="518" marker-end="url(#seta)"></line>
+            <polyline points="920,470 920,555 752,555" marker-end="url(#seta)"></polyline>
+          </g>
+
+          <!-- Rótulos das setas -->
+          <g class="fill-slate-600 text-[11px]">
+            <text x="484" y="150" text-anchor="end">mensagens,</text>
+            <text x="484" y="164" text-anchor="end">templates</text>
+            <text x="484" y="178" text-anchor="end">e webhook</text>
+            <text x="456" y="310">HTTPS</text>
+            <text x="456" y="470">checagens</text>
+            <text x="645" y="100">deploy a cada push</text>
+            <text x="760" y="222">dados</text>
+            <text x="796" y="360">a cada</text>
+            <text x="796" y="374">minuto</text>
+            <text x="645" y="500">convites</text>
+            <text x="800" y="548">login</text>
+          </g>
+        </svg>
+      </div>
+    </Card>
+  </div>
+</AdminLayout>

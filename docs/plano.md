@@ -1378,6 +1378,7 @@ Pontos que o cliente encontrou testando o staging, um por vez, cada um validado 
 | 5 | Mensagens com "fale com a clínica", caso a caso (5a: clínica sem serviço, serviço sem horário, como a clínica é chamada e prazo para oferecer horários; 5b: os demais casos) | 5a validado em 11/out; 5b implementado (11/out); o cliente valida tudo no fim dos ajustes |
 | 6 | Avisos de marcação, remarcação e cancelamento por template | mantido como está (11/out) |
 | 7 | Explicação dos campos "Informações que o bot responde" | implementado (11/out); o cliente valida no fim dos ajustes |
+| 8 | Página de tecnologia para o Suporte | implementado (11/out); o cliente valida no fim dos ajustes |
 
 **1. Cores da situação** (cliente, 10/out/2026): no Dia, na Semana e no Resumo do dia, cada
 atendimento tem faixa à esquerda e fundo claro conforme a situação, com uma legenda acima:
@@ -1457,6 +1458,12 @@ painel) só o template é aceito, e ele é cobrado. Se o custo com a Meta pesar,
 
 **7. "Informações que o bot responde"** (Configurações › Clínica): cada campo ganhou a explicação de
 onde aparece no bot (Informações › Valores, Convênios e Outras informações) e o que acontece vazio.
+
+**8. Tecnologia** (Administração do sistema › Tecnologia, só o Suporte; `admin/sistema/tecnologia.astro`):
+tecnologias, onde cada parte está hospedada (Vercel e Supabase em São Paulo, Cloudflare, GitHub,
+Meta, Resend, Better Stack), integrações, rotinas do agendador, onde ficam os segredos (só os
+nomes), ambientes, segurança e o desenho da arquitetura (SVG). Conteúdo fixo: **atualizar a página
+quando mudar hospedagem, plano ou integração** (ex.: na F10, os planos pagos da produção).
 
 ## F10 — Primeiro piloto
 
