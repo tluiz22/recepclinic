@@ -254,7 +254,7 @@ const limitLine = (event: BotLimitEvent) => `${BOT_LIMIT_LABELS[event.reason]}: 
     <Card>
       <div class="flex flex-wrap items-center justify-between gap-2">
         <h2 class="font-semibold text-slate-900">{capitalize(vocabulary.patients)}</h2>
-        {contact.isActive && <a href={`/admin/pacientes/novo?contato=${contact.id}`} class={PRIMARY_BUTTON}>Cadastrar outro</a>}
+        {contact.isActive && <a href={withReturn(`/admin/pacientes/novo?contato=${contact.id}`, here)} class={PRIMARY_BUTTON}>Cadastrar outro</a>}
       </div>
       <ul class="mt-2 divide-y divide-slate-100">
         {

@@ -56,7 +56,7 @@ const rebookingFor = (appointmentId: string) => {
 
 <AdminLayout title="Avisar pacientes">
   <a href={backTo} class="inline-flex items-center gap-1 text-sm font-medium text-sky-700 hover:underline">
-    <Icon name="chevron-left" class="h-4 w-4" /> Agenda
+    <Icon name="chevron-left" class="h-4 w-4" /> {backTo !== "/admin/agenda" ? "Voltar" : "Agenda"}
   </a>
   <h1 class="mt-3 text-2xl font-bold text-slate-900">Avisar {vocabulary.patients}</h1>
   <FlashMessage />

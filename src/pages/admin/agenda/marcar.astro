@@ -3,6 +3,7 @@
 // agenda ou "Primeiro horário disponível", D2 revista; cliente, 05/out/2026),
 // data e horário. Turma: escolhe a sessão com vaga. Cada escolha recarrega a
 // tela (sem estado escondido no navegador); a marcação confere tudo de novo.
+import { receivedReturn } from "../../../lib/returnPath";
 import AdminLayout from "../../../layouts/AdminLayout.astro";
 import Badge from "../../../components/admin/Badge.astro";
 import Card from "../../../components/admin/Card.astro";
@@ -37,6 +38,8 @@ const clinic = Astro.locals.clinic!;
 const db = createUserClient(Astro.request, Astro.cookies);
 const vocabulary = vocabularyFor(clinic.clinicProfile);
 const params = Astro.url.searchParams;
+// Voltar: para a tela de onde veio (cliente, 10/out/2026), guardado no estado.
+const volta = receivedReturn(Astro.url);
 const today = todayIn(clinic.timezone);
 const ANY = "primeiro";
 
@@ -46,6 +49,7 @@ const state = {
   service_id: isUuid(params.get("service_id")) ? params.get("service_id")! : "",
   agenda_id: params.get("agenda_id") ?? "",
   date: isCalendarDate(params.get("date") ?? "") ? params.get("date")! : "",
+  volta: volta ?? "",
 };
 const link = (changes: Partial<typeof state> & { busca?: string }) => {
   const next = new URLSearchParams();
@@ -150,8 +154,8 @@ const chip = (active: boolean) =>
 ---
 
 <AdminLayout title="Marcar">
-  <a href={`/admin/agenda${state.date ? `?date=${state.date}` : ""}`} class="inline-flex items-center gap-1 text-sm font-medium text-sky-700 hover:underline">
-    <Icon name="chevron-left" class="h-4 w-4" /> Agenda
+  <a href={volta ?? `/admin/agenda${state.date ? `?date=${state.date}` : ""}`} class="inline-flex items-center gap-1 text-sm font-medium text-sky-700 hover:underline">
+    <Icon name="chevron-left" class="h-4 w-4" /> {volta ? "Voltar" : "Agenda"}
   </a>
   <h1 class="mt-3 text-2xl font-bold text-slate-900">Marcar</h1>
   <FlashMessage />

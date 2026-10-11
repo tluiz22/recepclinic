@@ -1372,8 +1372,8 @@ Pontos que o cliente encontrou testando o staging, um por vez, cada um validado 
 | | Ajuste | Situação |
 |---|---|---|
 | 1 | Cores da situação na Agenda | validado em 10/out |
-| 2 | Atendimentos marcados de um paciente (busca na Agenda) | refeito (10/out), aguardando validação |
-| 3 | "Voltar" leva à tela de onde a pessoa veio (3a: ficha do paciente e contato; 3b: telas da Agenda e Configurações) | 3a implementado (10/out), aguardando validação |
+| 2 | Atendimentos marcados de um paciente (busca na Agenda) | validado em 10/out |
+| 3 | "Voltar" leva à tela de onde a pessoa veio (3a: ficha do paciente e contato; 3b: telas da Agenda e Configurações) | 3a validado em 10/out; 3b implementado (10/out), aguardando validação |
 
 **1. Cores da situação** (cliente, 10/out/2026): no Dia, na Semana e no Resumo do dia, cada
 atendimento tem faixa à esquerda e fundo claro conforme a situação, com uma legenda acima:
@@ -1399,8 +1399,13 @@ de destino mostra "Voltar" para essa origem e a mantém depois das próprias aç
 desativar etc.); sem origem, o padrão de antes (ex.: Pacientes). Origem só de telas do Início, da
 Agenda, do Resumo do Dia e de Pacientes (`safeReturnPath`). **3a:** ficha do paciente e
 responsável/contato, abertas da busca da Agenda, de Pacientes (volta à busca feita), dos cartões
-da Agenda, do Resumo do Dia, da Trilha e do Início. **3b (próximo):** Marcar, Bloquear,
-Bloqueios, Série e Configurações.
+da Agenda, do Resumo do Dia, da Trilha e do Início. **3b:** Marcar (a origem fica no estado da
+tela, entre os passos), Bloquear, Bloqueios e a edição do bloqueio (salvar volta à origem), Série,
+Remarcar e Avisar (rótulo "Voltar"), abertas do cabeçalho e dos cartões da Agenda; Cadastrar
+paciente (de Pacientes ou do contato; depois de cadastrar, a ficha volta à origem). Nas
+Configurações, cada tela já volta à lista de onde veio; a "Nova agenda" aberta pelo profissional
+volta a ele. O resultado de uma ação que cria algo (marcar, bloquear) continua levando ao dia na
+Agenda, para mostrar o que foi feito.
 
 ## F10 — Primeiro piloto
 

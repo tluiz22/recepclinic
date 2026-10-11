@@ -251,7 +251,7 @@ const tone = (danger?: boolean) => (danger ? "border-red-300 text-red-700 hover:
             </>
           )}
           {a.seriesId && (
-            <a href={`/admin/agenda/serie/${a.seriesId}`} class={`${BUTTON} ${tone()}`}>
+            <a href={withReturn(`/admin/agenda/serie/${a.seriesId}`, returnTo)} class={`${BUTTON} ${tone()}`}>
               Ver série
             </a>
           )}

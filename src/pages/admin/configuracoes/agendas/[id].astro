@@ -22,7 +22,8 @@ const [agendas, professionals] = await Promise.all([
 ]);
 const agenda = isNew ? null : (agendas.find((a) => a.id === id) ?? null);
 if (!isNew && !agenda) return Astro.redirect("/admin/configuracoes/agendas");
-// Vinda do "próximo passo" do profissional (F6.3b): já escolhido, com o nome dele.
+// Vinda do "próximo passo" do profissional (F6.3b): já escolhido, com o nome
+// dele; "Voltar" leva ao profissional (cliente, 10/out/2026).
 const prefill = isNew ? (professionals.find((p) => p.isActive && p.id === Astro.url.searchParams.get("profissional")) ?? null) : null;
 const professionalName = agenda?.professionalId ? professionals.find((p) => p.id === agenda.professionalId)?.displayName : null;
 const action = `/api/admin/configuracoes/agendas/${id}`;
@@ -32,8 +33,8 @@ const agendaIssues = setup?.issues.agendas.get(id!) ?? [];
 ---
 
 <AdminLayout title={isNew ? "Nova agenda" : agenda!.name}>
-  <a href="/admin/configuracoes/agendas" class="inline-flex items-center gap-1 text-sm text-sky-700 hover:underline">
-    <Icon name="chevron-left" class="h-4 w-4" /> Agendas
+  <a href={prefill ? `/admin/configuracoes/profissionais/${prefill.id}` : "/admin/configuracoes/agendas"} class="inline-flex items-center gap-1 text-sm text-sky-700 hover:underline">
+    <Icon name="chevron-left" class="h-4 w-4" /> {prefill ? "Voltar" : "Agendas"}
   </a>
   <h1 class="mt-2 text-2xl font-bold text-slate-900">{isNew ? "Nova agenda" : "Editar agenda"}</h1>
   <FlashMessage />

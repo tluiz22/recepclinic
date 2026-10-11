@@ -3,6 +3,7 @@
 // frequência, dia, horário e fim), as sessões (passadas e próximas) e as
 // datas puladas com o motivo, para remarcar à mão se quiser. Encerrar fica
 // no cartão de uma sessão ("esta e as próximas") e aqui, a partir da próxima.
+import { receivedReturn } from "../../../../lib/returnPath";
 import AdminLayout from "../../../../layouts/AdminLayout.astro";
 import Badge, { type BadgeVariant } from "../../../../components/admin/Badge.astro";
 import Card from "../../../../components/admin/Card.astro";
@@ -29,6 +30,8 @@ const [sessions, skips, locations] = await Promise.all([
   listSeriesSkips(db, clinic.clinicId, series.id),
   listLocations(db, clinic.clinicId, { includeInactive: true }),
 ]);
+// Voltar: para a tela de onde veio (cliente, 10/out/2026).
+const volta = receivedReturn(Astro.url);
 const now = new Date();
 const first = sessions[0];
 const next = sessions.find((s) => (s.status === "scheduled" || s.status === "confirmed") && s.scheduledAt > now);
@@ -43,8 +46,8 @@ const locationName = locations.find((l) => l.id === series.locationId)?.name ?? 
 ---
 
 <AdminLayout title="Série">
-  <a href={next ? `/admin/agenda?date=${formatInstant(next.scheduledAt, clinic.timezone, "yyyy-MM-dd")}` : "/admin/agenda"} class="inline-flex items-center gap-1 text-sm font-medium text-sky-700 hover:underline">
-    <Icon name="chevron-left" class="h-4 w-4" /> Agenda
+  <a href={volta ?? (next ? `/admin/agenda?date=${formatInstant(next.scheduledAt, clinic.timezone, "yyyy-MM-dd")}` : "/admin/agenda")} class="inline-flex items-center gap-1 text-sm font-medium text-sky-700 hover:underline">
+    <Icon name="chevron-left" class="h-4 w-4" /> {volta ? "Voltar" : "Agenda"}
   </a>
   <h1 class="mt-3 text-2xl font-bold text-slate-900">Série {series.endedAt && <Badge>encerrada</Badge>}</h1>
   <FlashMessage />
@@ -67,7 +70,7 @@ const locationName = locations.find((l) => l.id === series.locationId)?.name ?? 
       !series.endedAt && next && (
         <form method="POST" action={`/api/admin/agenda/atendimentos/${next.id}`} class="mt-3 border-t border-slate-100 pt-3">
           <input type="hidden" name="acao" value="encerrar_serie" />
-          <input type="hidden" name="return_to" value="/admin/agenda" />
+          <input type="hidden" name="return_to" value={volta ?? "/admin/agenda"} />
           <button
             type="submit"
             class={`${SECONDARY_BUTTON} js-confirm-delete text-red-700`}

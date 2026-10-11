@@ -2,6 +2,7 @@
 // Agenda › Bloqueios › editar (F4.6): período e motivo. A agenda não muda
 // (para outra agenda, remova e bloqueie de novo). Mudar o período não
 // cancela atendimentos: para isso, use Bloquear ou cancele pela Agenda.
+import { receivedReturn } from "../../../../lib/returnPath";
 import AdminLayout from "../../../../layouts/AdminLayout.astro";
 import Card from "../../../../components/admin/Card.astro";
 import ConfirmDeleteDialog from "../../../../components/admin/ConfirmDeleteDialog.astro";
@@ -21,12 +22,14 @@ const block = isUuid(id) ? await getBlock(db, clinic.clinicId, id) : null;
 if (!block) return Astro.redirect("/admin/agenda/bloqueios");
 const agendaName = (await listAgendas(db, clinic.clinicId, { includeInactive: true })).find((a) => a.id === block.agendaId)?.name ?? "Agenda";
 const tz = clinic.timezone;
+// Voltar (e depois de salvar ou remover): para a tela de onde veio (cliente, 10/out/2026).
+const volta = receivedReturn(Astro.url);
 const lastMinute = new Date(block.endsAt.getTime() - 1);
 ---
 
 <AdminLayout title="Editar bloqueio">
-  <a href="/admin/agenda/bloqueios" class="inline-flex items-center gap-1 text-sm font-medium text-sky-700 hover:underline">
-    <Icon name="chevron-left" class="h-4 w-4" /> Bloqueios
+  <a href={volta ?? "/admin/agenda/bloqueios"} class="inline-flex items-center gap-1 text-sm font-medium text-sky-700 hover:underline">
+    <Icon name="chevron-left" class="h-4 w-4" /> {volta ? "Voltar" : "Bloqueios"}
   </a>
   <h1 class="mt-3 text-2xl font-bold text-slate-900">Editar bloqueio</h1>
   <FlashMessage />
@@ -34,6 +37,7 @@ const lastMinute = new Date(block.endsAt.getTime() - 1);
   <Card class="mt-4 max-w-2xl">
     <p class="text-sm text-slate-700">Agenda: <span class="font-medium">{agendaName}</span></p>
     <form method="POST" action={`/api/admin/agenda/bloqueios/${block.id}`} class="mt-3 flex flex-col gap-4">
+      {volta && <input type="hidden" name="return_to" value={volta} />}
       <input type="hidden" name="acao" value="salvar" />
       <div class="grid grid-cols-2 gap-3">
         <div>

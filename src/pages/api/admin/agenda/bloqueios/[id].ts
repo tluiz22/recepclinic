@@ -1,4 +1,4 @@
-import { safeReturnPath } from "../../../../../lib/returnPath";
+import { safeReturnPath, withReturn } from "../../../../../lib/returnPath";
 import type { APIRoute } from "astro";
 import { isUuid } from "../../../../../lib/clinicAccess";
 import { toInstant } from "../../../../../lib/clinicTime";
@@ -38,8 +38,8 @@ export const POST: APIRoute = async (context) => {
         reason: formText(form, "reason"),
         actorId: locals.userId ?? null,
       });
-      return { redirectTo: "/admin/agenda/bloqueios", message: "Bloqueio salvo." };
+      return { redirectTo: back, message: "Bloqueio salvo." };
     },
-    `/admin/agenda/bloqueios/${id}`,
+    withReturn(`/admin/agenda/bloqueios/${id}`, returnTo && safeReturnPath(returnTo, "") ? returnTo : null),
   );
 };

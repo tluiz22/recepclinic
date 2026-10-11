@@ -3,6 +3,7 @@
 // ou uma; cliente, 05/out/2026), marcar e, desde a F4.6, bloquear e a
 // lista de bloqueios. Busca dos atendimentos marcados de um paciente
 // (cliente, 10/out/2026).
+import { currentPath, withReturn } from "../../../lib/returnPath";
 import Icon from "../Icon.astro";
 import { INPUT, PRIMARY_BUTTON, SECONDARY_BUTTON } from "../fieldStyles";
 import { ALL_AGENDAS } from "../../../lib/agendaChoice";
@@ -24,6 +25,8 @@ const views = [
   { id: "mes", label: "Mês", href: "/admin/agenda/mes" },
 ] as const;
 const current = views.find((v) => v.id === view) ?? views[0];
+// Marcar, Bloquear e Bloqueios voltam para esta tela (cliente, 10/out/2026).
+const here = currentPath(Astro.url);
 ---
 
 <div class="flex flex-wrap items-start justify-between gap-4">
@@ -44,11 +47,11 @@ const current = views.find((v) => v.id === view) ?? views[0];
     </nav>
   </div>
   <div class="flex flex-wrap gap-2">
-    <a href={`/admin/agenda/marcar?date=${date}${selectedAgendaId ? `&agenda_id=${selectedAgendaId}` : ""}`} class={`${PRIMARY_BUTTON} inline-flex items-center gap-1.5`}>
+    <a href={withReturn(`/admin/agenda/marcar?date=${date}${selectedAgendaId ? `&agenda_id=${selectedAgendaId}` : ""}`, here)} class={`${PRIMARY_BUTTON} inline-flex items-center gap-1.5`}>
       <Icon name="plus" class="h-4 w-4" /> Marcar
     </a>
-    <a href={`/admin/agenda/bloquear?date=${date}${selectedAgendaId ? `&agenda=${selectedAgendaId}` : ""}`} class={SECONDARY_BUTTON}>Bloquear</a>
-    <a href="/admin/agenda/bloqueios" class={SECONDARY_BUTTON}>Bloqueios</a>
+    <a href={withReturn(`/admin/agenda/bloquear?date=${date}${selectedAgendaId ? `&agenda=${selectedAgendaId}` : ""}`, here)} class={SECONDARY_BUTTON}>Bloquear</a>
+    <a href={withReturn("/admin/agenda/bloqueios", here)} class={SECONDARY_BUTTON}>Bloqueios</a>
   </div>
 </div>
 

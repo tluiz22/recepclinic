@@ -1,6 +1,7 @@
 ---
 // Agenda › Bloqueios (F4.6): os que ainda não terminaram, das agendas que a
 // pessoa vê, com editar e remover (com confirmação).
+import { currentPath, receivedReturn, withReturn } from "../../../../lib/returnPath";
 import AdminLayout from "../../../../layouts/AdminLayout.astro";
 import Card from "../../../../components/admin/Card.astro";
 import ConfirmDeleteDialog from "../../../../components/admin/ConfirmDeleteDialog.astro";
@@ -15,6 +16,9 @@ import { listAgendas } from "../../../../lib/data/config/agendas";
 const clinic = Astro.locals.clinic!;
 const db = createUserClient(Astro.request, Astro.cookies);
 const now = new Date();
+// Voltar: para a tela de onde veio (cliente, 10/out/2026).
+const volta = receivedReturn(Astro.url);
+const here = currentPath(Astro.url);
 const [agendas, blocks] = await Promise.all([
   listAgendas(db, clinic.clinicId, { includeInactive: true }),
   listBlocks(db, clinic.clinicId, { from: now, to: new Date(now.getTime() + 5 * 365 * 24 * 60 * 60_000) }),
@@ -24,12 +28,12 @@ const when = (d: Date) => formatInstant(d, clinic.timezone, "EEE dd/MM/yyyy HH:m
 ---
 
 <AdminLayout title="Bloqueios">
-  <a href="/admin/agenda" class="inline-flex items-center gap-1 text-sm font-medium text-sky-700 hover:underline">
-    <Icon name="chevron-left" class="h-4 w-4" /> Agenda
+  <a href={volta ?? "/admin/agenda"} class="inline-flex items-center gap-1 text-sm font-medium text-sky-700 hover:underline">
+    <Icon name="chevron-left" class="h-4 w-4" /> {volta ? "Voltar" : "Agenda"}
   </a>
   <div class="mt-3 flex flex-wrap items-center justify-between gap-3">
     <h1 class="text-2xl font-bold text-slate-900">Bloqueios</h1>
-    <a href="/admin/agenda/bloquear" class={PRIMARY_BUTTON}>Bloquear agenda</a>
+    <a href={withReturn("/admin/agenda/bloquear", here)} class={PRIMARY_BUTTON}>Bloquear agenda</a>
   </div>
   <FlashMessage />
 
@@ -43,12 +47,12 @@ const when = (d: Date) => formatInstant(d, clinic.timezone, "EEE dd/MM/yyyy HH:m
           </p>
           <p class="text-sm text-slate-600">{block.reason}</p>
           <div class="mt-3 flex flex-wrap gap-2 border-t border-slate-100 pt-3">
-            <a href={`/admin/agenda/bloqueios/${block.id}`} class={SECONDARY_BUTTON}>
+            <a href={withReturn(`/admin/agenda/bloqueios/${block.id}`, here)} class={SECONDARY_BUTTON}>
               Editar
             </a>
             <form method="POST" action={`/api/admin/agenda/bloqueios/${block.id}`}>
               <input type="hidden" name="acao" value="remover" />
-              <input type="hidden" name="return_to" value="/admin/agenda/bloqueios" />
+              <input type="hidden" name="return_to" value={here} />
               <button
                 type="submit"
                 class={`${SECONDARY_BUTTON} js-confirm-delete text-red-700`}

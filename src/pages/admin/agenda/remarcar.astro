@@ -68,7 +68,7 @@ const chip = (active: boolean) =>
 
 <AdminLayout title="Remarcar">
   <a href={returnTo} class="inline-flex items-center gap-1 text-sm font-medium text-sky-700 hover:underline">
-    <Icon name="chevron-left" class="h-4 w-4" /> Agenda
+    <Icon name="chevron-left" class="h-4 w-4" /> {returnTo !== "/admin/agenda" ? "Voltar" : "Agenda"}
   </a>
   <h1 class="mt-3 text-2xl font-bold text-slate-900">Remarcar</h1>
   <FlashMessage />
