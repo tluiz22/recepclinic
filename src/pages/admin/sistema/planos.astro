@@ -1,0 +1,138 @@
+---
+// Planos (cliente, 11/out/2026): a tabela comercial para o Suporte (só aqui,
+// nunca no site público) e o plano de cada clínica, deduzido da matriz de
+// acesso. Os valores ficam em src/lib/plans.ts.
+import AdminLayout from "../../../layouts/AdminLayout.astro";
+import Card from "../../../components/admin/Card.astro";
+import { createUserClient } from "../../../lib/data/clients";
+import { listClinicsAccess } from "../../../lib/data/features";
+import { featureLabel } from "../../../lib/features";
+import { formatCentsBRL } from "../../../lib/money";
+import { ADDONS, OFF_TABLE, PLAN_ITEM_IDS, PLAN_LABELS, PRICES, clinicPlan, featuresOfItems } from "../../../lib/plans";
+
+const db = createUserClient(Astro.request, Astro.cookies);
+const clinics = (await listClinicsAccess(db)).map((clinic) => ({
+  ...clinic,
+  plan: clinicPlan(
+    clinic.features.map((grant) => grant.key),
+    clinic.maxProfessionals,
+  ),
+}));
+
+const brl = formatCentsBRL;
+const addonsSum = ADDONS.reduce((sum, item) => sum + (item.priceCents ?? 0), 0);
+const saving = Math.round((1 - PRICES.completeCents / (PRICES.basicCents + addonsSum)) * 100);
+const extra = (professionals: number) => (professionals - 1) * PRICES.extraProfessionalCents;
+const priceOf = (ids: string[]) => ADDONS.filter((item) => ids.includes(item.id)).reduce((sum, item) => sum + (item.priceCents ?? 0), 0);
+const examples = [
+  { label: "Básico, 1 profissional", cents: PRICES.basicCents },
+  { label: "Básico, 3 profissionais", cents: PRICES.basicCents + extra(3) },
+  { label: "Básico + Exames + Lista de espera, 3 profissionais", cents: PRICES.basicCents + priceOf(["exams", "waitlist"]) + extra(3) },
+  { label: "Completo, 3 profissionais", cents: PRICES.completeCents + extra(3) },
+];
+const basicFeatures = featuresOfItems(PLAN_ITEM_IDS.basic).map(featureLabel);
+
+const TH = "py-2 pr-4 text-left font-medium text-slate-500";
+const TD = "py-2 pr-4 align-top";
+---
+
+<AdminLayout title="Planos" platform>
+  <h1 class="text-2xl font-bold text-slate-900">Planos</h1>
+  <p class="mt-1 text-sm text-slate-600">
+    Tabela comercial do RecepClinic, só para o Suporte (não vai para o site). A mensalidade é por clínica, mais
+    {" "}{brl(PRICES.extraProfessionalCents)} por profissional além do primeiro; os adicionais têm valor fixo por clínica.
+    O plano de cada clínica é aplicado na <a href="/admin/sistema/matriz" class="text-sky-700 hover:underline">Matriz de acesso</a>.
+  </p>
+
+  <div class="mt-4 flex flex-col gap-4">
+    <div class="grid gap-4 sm:grid-cols-2">
+      <Card>
+        <p class="text-sm font-semibold uppercase tracking-wide text-slate-500">Básico</p>
+        <p class="mt-1 text-2xl font-bold text-slate-900">{brl(PRICES.basicCents)}<span class="text-sm font-normal text-slate-500">/mês com 1 profissional</span></p>
+        <p class="mt-2 text-sm text-slate-700">
+          Agenda e painel (dia, semana, mês, bloqueios, pacientes, Resumo do dia, comparecimento), marcar, remarcar e
+          cancelar consulta e retorno, e mais: {basicFeatures.join(", ")}.
+        </p>
+      </Card>
+      <Card>
+        <p class="text-sm font-semibold uppercase tracking-wide text-slate-500">Completo</p>
+        <p class="mt-1 text-2xl font-bold text-slate-900">{brl(PRICES.completeCents)}<span class="text-sm font-normal text-slate-500">/mês com 1 profissional</span></p>
+        <p class="mt-2 text-sm text-slate-700">
+          O Básico e todos os adicionais. Avulso daria {brl(PRICES.basicCents + addonsSum)}: o pacote sai uns {saving}% mais barato.
+        </p>
+      </Card>
+    </div>
+
+    <Card>
+      <h2 class="font-semibold text-slate-900">Adicionais</h2>
+      <p class="mt-1 text-sm text-slate-600">Sobre o Básico, valor fixo por clínica. Se a soma passar do Completo, ofereça o Completo.</p>
+      <div class="mt-2 overflow-x-auto">
+        <table class="w-full min-w-[32rem] text-sm">
+          <thead><tr><th class={TH}>Adicional</th><th class={TH}>Itens da matriz</th><th class={`${TH} text-right`}>Valor/mês</th></tr></thead>
+          <tbody class="divide-y divide-slate-100">
+            {ADDONS.map((item) => (
+              <tr>
+                <td class={`${TD} font-medium text-slate-900`}>{item.label}</td>
+                <td class={`${TD} text-slate-600`}>{item.features.map(featureLabel).join(", ")}</td>
+                <td class={`${TD} text-right`}>{brl(item.priceCents ?? 0)}</td>
+              </tr>
+            ))}
+            <tr>
+              <td class={`${TD} font-medium text-slate-900`}>Soma dos adicionais</td>
+              <td class={TD}></td>
+              <td class={`${TD} text-right font-medium`}>{brl(addonsSum)}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="mt-2 text-xs text-slate-500">
+        Fora da tabela por ora: {OFF_TABLE.map((item) => item.label).join(", ")} (o Suporte ainda pode ligar na matriz, sem valor).
+      </p>
+    </Card>
+
+    <Card>
+      <h2 class="font-semibold text-slate-900">Outros valores e regras</h2>
+      <ul class="mt-2 flex list-disc flex-col gap-1 pl-5 text-sm text-slate-700">
+        <li>Profissional a mais (Básico e Completo): {brl(PRICES.extraProfessionalCents)}/mês cada, pelo limite de profissionais da clínica.</li>
+        <li>Implantação: {brl(PRICES.setupCents)}, valor único (configuração, conexão do número e treinamento). Isenta só nos pilotos.</li>
+        <li>Mensagens da Meta: à parte, cobradas direto da clínica pela Meta, no cartão dela.</li>
+        <li>Sem oferta de entrada para as primeiras clínicas.</li>
+      </ul>
+      <h3 class="mt-4 text-sm font-semibold uppercase tracking-wide text-slate-500">Exemplos</h3>
+      <ul class="mt-2 flex flex-col gap-1 text-sm text-slate-700">
+        {examples.map((example) => <li>{example.label}: <strong>{brl(example.cents)}/mês</strong></li>)}
+      </ul>
+    </Card>
+
+    <Card>
+      <h2 class="font-semibold text-slate-900">Plano de cada clínica</h2>
+      <p class="mt-1 text-sm text-slate-600">Deduzido do que está ligado na matriz; mensalidade de referência pelo limite de profissionais.</p>
+      <div class="mt-2 overflow-x-auto">
+        <table class="w-full min-w-[36rem] text-sm">
+          <thead><tr><th class={TH}>Clínica</th><th class={TH}>Plano</th><th class={TH}>Profissionais</th><th class={`${TH} text-right`}>Mensalidade</th></tr></thead>
+          <tbody class="divide-y divide-slate-100">
+            {clinics.map((clinic) => (
+              <tr>
+                <td class={TD}>
+                  <a href={`/admin/sistema/matriz?clinica=${clinic.id}`} class="font-medium text-sky-700 hover:underline">{clinic.name}</a>
+                  {clinic.status === "suspended" && <span class="text-xs text-slate-500"> · suspensa</span>}
+                </td>
+                <td class={TD}>
+                  {PLAN_LABELS[clinic.plan.kind]}
+                  {clinic.plan.kind !== "none" && clinic.plan.kind !== "complete" && clinic.plan.addons.length > 0 && (
+                    <span class="block text-xs text-slate-500">{clinic.plan.addons.map((item) => item.label).join(", ")}</span>
+                  )}
+                  {clinic.plan.kind !== "none" && clinic.plan.offTable.length > 0 && (
+                    <span class="block text-xs text-slate-500">Fora da tabela: {clinic.plan.offTable.map((item) => item.label).join(", ")}</span>
+                  )}
+                </td>
+                <td class={TD}>{clinic.maxProfessionals}</td>
+                <td class={`${TD} text-right`}>{clinic.plan.kind === "none" ? "—" : brl(clinic.plan.monthlyCents)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </Card>
+  </div>
+</AdminLayout>

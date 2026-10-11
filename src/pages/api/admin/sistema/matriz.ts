@@ -3,7 +3,7 @@ import { isUuid } from "../../../../lib/clinicAccess";
 import { createUserClient } from "../../../../lib/data/clients";
 import { DataError } from "../../../../lib/data/errors";
 import { setClinicFeatures, setClinicProfessionalLimit } from "../../../../lib/data/features";
-import { parseFeatureSelection } from "../../../../lib/features";
+import { featuresOfItems } from "../../../../lib/plans";
 import { formInt } from "../../../../lib/forms";
 
 // Grava a matriz de acesso de uma clínica (F4.2, D11) e o limite de
@@ -13,7 +13,8 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
   const formData = await request.formData().catch(() => null);
   const clinicId = formData?.get("clinicId")?.toString() ?? "";
   if (!isUuid(clinicId)) return redirect("/admin/sistema/matriz?erro=clinica", 303);
-  const keys = parseFeatureSelection((formData?.getAll("feature") ?? []).map(String));
+  // Itens como são vendidos (as métricas e as mensagens personalizadas ligam juntas).
+  const keys = featuresOfItems((formData?.getAll("item") ?? []).map(String));
   const limit = formInt(formData, "max_professionals");
   if (!Number.isInteger(limit) || limit < 1) return redirect(`/admin/sistema/matriz?clinica=${clinicId}&erro=limite`, 303);
   try {

@@ -9,7 +9,9 @@ import FormMessage from "../../../components/admin/FormMessage.astro";
 import { formatInstant, DEFAULT_TIMEZONE } from "../../../lib/clinicTime";
 import { createUserClient } from "../../../lib/data/clients";
 import { listClinicsAccess, listFeatureChanges, listPlatformStaffNames, listProfessionalLimitChanges } from "../../../lib/data/features";
-import { AREA_LABELS, FEATURES, featureLabel, type FeatureArea } from "../../../lib/features";
+import { featureLabel } from "../../../lib/features";
+import { formatCentsBRL } from "../../../lib/money";
+import { ADDONS, ALL_ITEMS, BASIC_ITEMS, OFF_TABLE, PLAN_ITEM_IDS, PLAN_LABELS, PRICES, clinicPlan, itemDependsOn, itemIsOn } from "../../../lib/plans";
 
 const db = createUserClient(Astro.request, Astro.cookies);
 const [clinics, staffNames] = await Promise.all([listClinicsAccess(db), listPlatformStaffNames(db)]);
@@ -40,11 +42,20 @@ const who = (userId: string) => staffNames.get(userId) ?? "ex-integrante do Supo
 // Sem pessoa: liberado pela plataforma (ex.: dados de teste).
 const grantedBy = (userId: string | null) => (userId ? `por ${who(userId)}` : "pela plataforma");
 
-const areas = (Object.keys(AREA_LABELS) as FeatureArea[]).map((area) => ({
-  area,
-  label: AREA_LABELS[area],
-  items: FEATURES.filter((feature) => feature.area === area),
-}));
+// Itens agrupados como são vendidos (planos, cliente, 11/out/2026): as
+// métricas e as mensagens personalizadas ligam juntas.
+const groups = [
+  { label: "Incluído no Básico", items: BASIC_ITEMS },
+  { label: "Adicionais", items: ADDONS },
+  { label: "Fora da tabela de preços", items: OFF_TABLE },
+];
+const enabledKeys = (selected?.features ?? []).map((grant) => grant.key);
+const plan = selected ? clinicPlan(enabledKeys, selected.maxProfessionals) : null;
+const PLAN_OPTIONS = [
+  { value: "basic", label: "Básico", hint: `${formatCentsBRL(PRICES.basicCents)} com 1 profissional` },
+  { value: "complete", label: "Completo", hint: `${formatCentsBRL(PRICES.completeCents)} com 1 profissional` },
+  { value: "custom", label: "Básico + adicionais", hint: "marque os adicionais abaixo" },
+];
 
 const erro = Astro.url.searchParams.get("erro");
 const ERRORS: Record<string, string> = {
@@ -118,29 +129,60 @@ const saved = Astro.url.searchParams.get("salvo") === "1";
             )}
             <p class="mt-2 text-xs text-slate-500">Desativar um profissional libera a vaga.</p>
           </Card>
-          {areas.map(({ label, items }) => (
+          <Card>
+            <h3 class="text-sm font-semibold uppercase tracking-wide text-slate-500">Plano</h3>
+            <p class="mt-1 text-xs text-slate-500">
+              Escolher o Básico ou o Completo marca os itens abaixo; nada é salvo até "Salvar matriz". Valores na tela{" "}
+              <a href="/admin/sistema/planos" class="text-sky-700 hover:underline">Planos</a>.
+            </p>
+            <div class="mt-3 flex flex-col gap-2 sm:flex-row sm:gap-6">
+              {PLAN_OPTIONS.map((option) => (
+                <label class="flex items-start gap-2">
+                  <input type="radio" name="plan" value={option.value} checked={plan?.kind === option.value} class="mt-1 h-4 w-4" />
+                  <span>
+                    <span class="block text-sm font-medium text-slate-900">{option.label}</span>
+                    <span class="block text-xs text-slate-500">{option.hint}</span>
+                  </span>
+                </label>
+              ))}
+            </div>
+            <p class="mt-3 text-sm text-slate-700" id="plan-summary" data-basic={PRICES.basicCents} data-complete={PRICES.completeCents} data-extra={PRICES.extraProfessionalCents}>
+              {plan?.kind === "none" || !plan
+                ? "Fora dos planos: falta algum item do Básico."
+                : `${PLAN_LABELS[plan.kind]} · mensalidade de referência ${formatCentsBRL(plan.monthlyCents)} com ${selected.maxProfessionals} ${selected.maxProfessionals === 1 ? "profissional" : "profissionais"}`}
+            </p>
+            <p class="mt-1 text-xs text-amber-700" id="plan-cheaper" hidden={!(plan && plan.kind !== "none" && plan.completeIsCheaper)}>
+              A soma passou do Completo: ofereça o Completo.
+            </p>
+            <p class="mt-1 text-xs text-slate-500">Mensagens da Meta à parte, cobradas direto da clínica. Profissionais pelo limite contratado.</p>
+          </Card>
+          {groups.map(({ label, items }) => (
             <Card>
               <h3 class="text-sm font-semibold uppercase tracking-wide text-slate-500">{label}</h3>
               <ul class="mt-3 flex flex-col gap-3">
-                {items.map((feature) => {
-                  const grant = grants.get(feature.key);
+                {items.map((item) => {
+                  const grant = item.features.map((key) => grants.get(key)).find(Boolean);
+                  const deps = itemDependsOn(item);
                   return (
                     <li>
                       <label class="flex items-start gap-3">
                         <input
                           type="checkbox"
-                          name="feature"
-                          value={feature.key}
-                          checked={!!grant}
-                          data-depends={feature.dependsOn.join(" ")}
+                          name="item"
+                          value={item.id}
+                          checked={itemIsOn(item, enabledKeys)}
+                          data-depends={deps.join(" ")}
+                          data-price={item.priceCents ?? ""}
+                          data-addon={ADDONS.includes(item) ? "1" : ""}
                           class="mt-1 h-4 w-4 rounded border-slate-300"
                         />
                         <span>
-                          <span class="block text-sm font-medium text-slate-900">{feature.label}</span>
-                          {feature.dependsOn.length > 0 && (
-                            <span class="block text-xs text-slate-500">
-                              Depende de: {feature.dependsOn.map(featureLabel).join(", ")}
-                            </span>
+                          <span class="block text-sm font-medium text-slate-900">
+                            {item.label}
+                            {item.priceCents !== null && <span class="font-normal text-slate-500"> · {formatCentsBRL(item.priceCents)}/mês</span>}
+                          </span>
+                          {deps.length > 0 && (
+                            <span class="block text-xs text-slate-500">Depende de: {deps.map((id) => ALL_ITEMS.find((other) => other.id === id)?.label ?? id).join(", ")}</span>
                           )}
                           {grant && (
                             <span class="block text-xs text-slate-500">
@@ -176,23 +218,68 @@ const saved = Astro.url.searchParams.get("salvo") === "1";
     )
   }
 
-  <script>
+  <script is:inline define:vars={{ planIds: PLAN_ITEM_IDS }}>
     // Marcar um item marca o de que ele depende; desmarcar desmarca os que
-    // dependem dele (o servidor confere de novo).
-    const boxes = [...document.querySelectorAll<HTMLInputElement>("#matriz input[name=feature]")];
+    // dependem dele (o servidor confere de novo). O plano marca os itens e a
+    // mensalidade de referência acompanha (a tela Planos tem a regra).
+    const boxes = [...document.querySelectorAll("#matriz input[name=item]")];
+    const radios = [...document.querySelectorAll("#matriz input[name=plan]")];
+    const limit = document.querySelector("#max_professionals");
+    const summary = document.querySelector("#plan-summary");
+    const cheaper = document.querySelector("#plan-cheaper");
     const byKey = new Map(boxes.map((box) => [box.value, box]));
-    const dependsOn = (box: HTMLInputElement) => (box.dataset.depends ?? "").split(" ").filter(Boolean);
-    const check = (box: HTMLInputElement) => {
+    const dependsOn = (box) => (box.dataset.depends ?? "").split(" ").filter(Boolean);
+    const check = (box) => {
       box.checked = true;
       dependsOn(box).forEach((key) => {
         const dep = byKey.get(key);
         if (dep && !dep.checked) check(dep);
       });
     };
-    const uncheck = (box: HTMLInputElement) => {
+    const uncheck = (box) => {
       box.checked = false;
       boxes.filter((other) => other.checked && dependsOn(other).includes(box.value)).forEach(uncheck);
     };
-    boxes.forEach((box) => box.addEventListener("change", () => (box.checked ? check(box) : uncheck(box))));
+    const brl = (cents) => (cents / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+    const refresh = () => {
+      const on = new Set(boxes.filter((box) => box.checked).map((box) => box.value));
+      const addons = boxes.filter((box) => box.dataset.addon);
+      const professionals = Math.max(1, Number(limit?.value) || 1);
+      const extra = (professionals - 1) * Number(summary.dataset.extra);
+      let kind = "none";
+      if (planIds.basic.every((id) => on.has(id))) {
+        const chosen = addons.filter((box) => box.checked);
+        const offTable = boxes.filter((box) => box.checked && !box.dataset.addon && !planIds.basic.includes(box.value));
+        kind = chosen.length === addons.length ? "complete" : chosen.length || offTable.length ? "custom" : "basic";
+        const sum = Number(summary.dataset.basic) + chosen.reduce((total, box) => total + Number(box.dataset.price || 0), 0);
+        const monthly = (kind === "complete" ? Number(summary.dataset.complete) : sum) + extra;
+        const label = { basic: "Básico", complete: "Completo", custom: "Básico + adicionais" }[kind];
+        summary.textContent = `${label} · mensalidade de referência ${brl(monthly)} com ${professionals} ${professionals === 1 ? "profissional" : "profissionais"}`;
+        cheaper.hidden = !(kind !== "complete" && sum > Number(summary.dataset.complete));
+      } else {
+        summary.textContent = "Fora dos planos: falta algum item do Básico.";
+        cheaper.hidden = true;
+      }
+      radios.forEach((radio) => (radio.checked = radio.value === kind));
+    };
+    boxes.forEach((box) =>
+      box.addEventListener("change", () => {
+        box.checked ? check(box) : uncheck(box);
+        refresh();
+      }),
+    );
+    radios.forEach((radio) =>
+      radio.addEventListener("change", () => {
+        if (radio.value === "custom") {
+          planIds.basic.forEach((id) => byKey.get(id) && check(byKey.get(id)));
+        } else {
+          const ids = radio.value === "basic" ? planIds.basic : planIds.complete;
+          boxes.forEach((box) => (box.checked = ids.includes(box.value)));
+        }
+        refresh();
+        if (radio.value === "custom") radio.checked = true;
+      }),
+    );
+    limit?.addEventListener("input", refresh);
   </script>
 </AdminLayout>

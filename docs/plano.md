@@ -1379,6 +1379,7 @@ Pontos que o cliente encontrou testando o staging, um por vez, cada um validado 
 | 6 | Avisos de marcação, remarcação e cancelamento por template | mantido como está (11/out) |
 | 7 | Explicação dos campos "Informações que o bot responde" | implementado (11/out); o cliente valida no fim dos ajustes |
 | 8 | Página de tecnologia para o Suporte | implementado (11/out); o cliente valida no fim dos ajustes |
+| 9 | Comercial no Suporte: 9a planos e aplicar plano; 9b clínicas de demonstração; 9c roteiro de vendas | 9a implementado (11/out), aguardando validação; 9b e 9c a fazer |
 
 **1. Cores da situação** (cliente, 10/out/2026): no Dia, na Semana e no Resumo do dia, cada
 atendimento tem faixa à esquerda e fundo claro conforme a situação, com uma legenda acima:
@@ -1464,6 +1465,31 @@ tecnologias, onde cada parte está hospedada (Vercel e Supabase em São Paulo, C
 Meta, Resend, Better Stack), integrações, rotinas do agendador, onde ficam os segredos (só os
 nomes), ambientes, segurança e o desenho da arquitetura (SVG). Conteúdo fixo: **atualizar a página
 quando mudar hospedagem, plano ou integração** (ex.: na F10, os planos pagos da produção).
+
+**9. Comercial no Suporte** (cliente, 11/out/2026): os planos e o roteiro de vendas ficam **só no
+Suporte**, nunca no site público. Os nichos das primeiras clínicas: pediatras, médicos que atendem
+todas as idades e dentistas (sem psicologia e sem agendamento recorrente por ora). Pilotos (a
+pediatra e, depois, uma psicóloga) são de graça, combinados pelo cliente; **sem oferta de entrada**
+para as demais.
+
+- **9a. Planos** (`lib/plans.ts`, tela `admin/sistema/planos`): mensalidade por clínica + R$ 47 por
+  profissional além do primeiro (pelo limite contratado). **Básico R$ 147** (o que é sempre ligado,
+  mais Bot, Lembrete automático e Lembrete ao profissional); **Completo R$ 297** (Básico e todos os
+  adicionais). **Adicionais** com valor fixo por clínica: Exames R$ 35, Lista de espera R$ 35,
+  Métricas R$ 45 (as 7 sempre juntas), Mensagens personalizadas R$ 29 (bot e templates juntos),
+  Domiciliar R$ 19, Convênios R$ 19, Lembrete à equipe R$ 15. **Implantação R$ 297** (isenta só nos
+  pilotos). Séries recorrentes fora da tabela (o Suporte ainda pode ligar, sem valor). Mensagens da
+  Meta à parte. Na **Matriz de acesso**, os itens aparecem como são vendidos (Básico, Adicionais,
+  Fora da tabela); escolher Básico ou Completo marca os itens, e a tela mostra o plano e a
+  mensalidade de referência. A tela Planos tem a tabela, exemplos e o plano de cada clínica,
+  deduzido da matriz (sem coluna nova no banco).
+- **9b. Clínicas de demonstração** no staging, nomes fictícios: Básico (pediatra, 1 profissional),
+  Básico + Exames e procedimentos + Lista de espera (dentista, 1 profissional) e Completo (clínica
+  médica com 3 profissionais, com o chip de testes).
+- **9c. Roteiro de vendas** no Suporte (vem do artifact de 11/out), com os ajustes da lista "Antes de
+  abordar": preço definido; sem o item da liberação da Meta; demonstração pelas 3 clínicas; imagens
+  tiradas das demos; clínicas-alvo nos novos nichos; contrato e LGPD com a resposta pronta. Sai a
+  mensagem 7 (convite às primeiras clínicas).
 
 ## F10 — Primeiro piloto
 
