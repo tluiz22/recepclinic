@@ -1373,7 +1373,8 @@ Pontos que o cliente encontrou testando o staging, um por vez, cada um validado 
 |---|---|---|
 | 1 | Cores da situação na Agenda | validado em 10/out |
 | 2 | Atendimentos marcados de um paciente (busca na Agenda) | validado em 10/out |
-| 3 | "Voltar" leva à tela de onde a pessoa veio (3a: ficha do paciente e contato; 3b: telas da Agenda e Configurações) | 3a validado em 10/out; 3b implementado (10/out), aguardando validação |
+| 3 | "Voltar" leva à tela de onde a pessoa veio (3a: ficha do paciente e contato; 3b: telas da Agenda e Configurações) | validado em 10/out |
+| 4 | "Aguardando remarcação" com o mesmo paciente repetido | implementado (11/out), aguardando validação |
 
 **1. Cores da situação** (cliente, 10/out/2026): no Dia, na Semana e no Resumo do dia, cada
 atendimento tem faixa à esquerda e fundo claro conforme a situação, com uma legenda acima:
@@ -1406,6 +1407,15 @@ paciente (de Pacientes ou do contato; depois de cadastrar, a ficha volta à orig
 Configurações, cada tela já volta à lista de onde veio; a "Nova agenda" aberta pelo profissional
 volta a ele. O resultado de uma ação que cria algo (marcar, bloquear) continua levando ao dia na
 Agenda, para mostrar o que foi feito.
+
+**4. Aguardando remarcação sem repetição** (cliente, 11/out/2026): a lista mostrava o mesmo
+paciente duas vezes quando a clínica cancelava, o paciente remarcava e a clínica cancelava de novo
+(dois cancelamentos da mesma jornada). Regra nova: o cancelamento sai da lista também quando o
+paciente foi **marcado de novo para a mesma jornada depois dele**, em qualquer situação (marcado,
+compareceu, faltou ou cancelado de novo); jornada como no "já tem marcado" (Consulta/Retorno na
+mesma agenda; o mesmo exame). Continua saindo com atendimento futuro da jornada e com "Desistiu".
+Fica no máximo uma linha por paciente e jornada, a do último cancelamento (`wasRebooked` em
+`lib/data/daily.ts`).
 
 ## F10 — Primeiro piloto
 

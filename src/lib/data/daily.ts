@@ -68,9 +68,13 @@ export async function listRemindersOfDay(db: DbClient, clinicId: string, date: s
 
 /**
  * Cancelados pela clínica (em massa ou pelo bloqueio, como no piloto) que a
- * equipe ainda acompanha: sai sozinho quando o paciente remarca a mesma
- * jornada (Consulta/Retorno na mesma agenda; o mesmo exame) ou com "Desistiu".
- * Cancelamento avulso pela Agenda não entra (é uma ação pontual da equipe).
+ * equipe ainda acompanha. Sai sozinho quando o paciente tem atendimento
+ * futuro da mesma jornada (Consulta/Retorno na mesma agenda; o mesmo exame),
+ * quando foi marcado de novo para ela depois do cancelamento, em qualquer
+ * situação (marcado, compareceu, faltou ou cancelado de novo; cliente,
+ * 11/out/2026: assim fica no máximo uma linha por paciente e jornada), ou com
+ * "Desistiu". Cancelamento avulso pela Agenda
+ * não entra (é uma ação pontual da equipe).
  */
 export async function listAwaitingRebooking(db: DbClient, clinicId: string, now: Date = new Date()): Promise<AgendaAppointment[]> {
   const rows = unwrap(
@@ -86,9 +90,47 @@ export async function listAwaitingRebooking(db: DbClient, clinicId: string, now:
     "Aguardando remarcação",
   ) as unknown as AgendaRow[];
   const canceled = rows.map(toAgendaAppointment);
+  if (canceled.length === 0) return [];
+  const since = new Date(Math.min(...canceled.map((a) => (a.canceledAt ?? new Date(0)).getTime())));
+  const later = unwrap(
+    await db
+      .from("appointments")
+      .select("id, patient_id, service_id, agenda_id, created_at, services ( category )")
+      .eq("clinic_id", clinicId)
+      .in("patient_id", [...new Set(canceled.map((a) => a.patientId))])
+      .gt("created_at", since.toISOString()),
+    "Aguardando remarcação: marcados depois",
+  ) as unknown as { id: string; patient_id: string; service_id: string; agenda_id: string; created_at: string; services: { category: ServiceCategory } }[];
+  const bookedAfter = later.map((row) => ({
+    id: row.id,
+    patientId: row.patient_id,
+    serviceId: row.service_id,
+    agendaId: row.agenda_id,
+    category: row.services.category,
+    createdAt: new Date(row.created_at),
+  }));
   const upcoming = await listUpcomingAppointments(db, clinicId, [...new Set(canceled.map((a) => a.patientId))], now);
   return canceled.filter(
-    (a) => !findBlockingAppointment(upcoming.get(a.patientId) ?? [], { serviceId: a.serviceId, agendaId: a.agendaId, category: a.category }),
+    (a) =>
+      !findBlockingAppointment(upcoming.get(a.patientId) ?? [], { serviceId: a.serviceId, agendaId: a.agendaId, category: a.category }) &&
+      !wasRebooked(a, bookedAfter),
+  );
+}
+
+type ServiceCategory = AgendaAppointment["category"];
+type Journey = { patientId: string; serviceId: string; agendaId: string; category: ServiceCategory };
+
+/** Marcado de novo para a mesma jornada depois do cancelamento (qualquer situação). */
+export function wasRebooked(canceled: Journey & { id: string; canceledAt: Date | null }, others: (Journey & { id: string; createdAt: Date })[]): boolean {
+  const canceledAt = canceled.canceledAt?.getTime() ?? 0;
+  return others.some(
+    (o) =>
+      o.id !== canceled.id &&
+      o.patientId === canceled.patientId &&
+      o.createdAt.getTime() > canceledAt &&
+      (canceled.category === "exam"
+        ? o.serviceId === canceled.serviceId
+        : o.agendaId === canceled.agendaId && o.category !== "exam"),
   );
 }
 
