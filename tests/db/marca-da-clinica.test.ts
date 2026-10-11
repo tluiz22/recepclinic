@@ -100,6 +100,7 @@ describe("marca da clínica", () => {
       logoUrl: null,
       brandColor: "#0369A1",
       websiteUrl: "https://clinicab.com.br",
+      designation: { noun: "clínica", article: "a" },
     });
   });
 });

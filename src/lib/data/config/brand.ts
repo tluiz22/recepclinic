@@ -1,4 +1,5 @@
 import type { DbClient } from "../clients";
+import type { Designation, NounArticle } from "../../designation";
 import { DataError, fromDbError, unwrapOne } from "../errors";
 import { updateClinicSettings } from "./clinic";
 import { logError } from "../../log";
@@ -34,6 +35,8 @@ export type PublicClinicBrand = {
   logoUrl: string | null;
   brandColor: string;
   websiteUrl: string | null;
+  /** Como a clínica é chamada nos textos ("fale com o consultório"; cliente, 11/out/2026). */
+  designation: Designation;
 };
 
 /** Marca para as páginas públicas (cliente de serviço, depois de achar a clínica pelo link). */
@@ -42,7 +45,7 @@ export async function getPublicClinicBrand(db: DbClient, clinicId: string): Prom
     db.from("clinics").select("name").eq("id", clinicId).maybeSingle().then((r) => unwrapOne(r, "Clínica")),
     db
       .from("clinic_settings")
-      .select("logo_url, brand_color, website_url")
+      .select("logo_url, brand_color, website_url, message_noun, message_noun_article")
       .eq("clinic_id", clinicId)
       .maybeSingle()
       .then((r) => unwrapOne(r, "Configuração da clínica")),
@@ -52,6 +55,7 @@ export async function getPublicClinicBrand(db: DbClient, clinicId: string): Prom
     logoUrl: settings.logo_url,
     brandColor: settings.brand_color ?? DEFAULT_BRAND_COLOR,
     websiteUrl: settings.website_url,
+    designation: { noun: settings.message_noun, article: settings.message_noun_article as NounArticle },
   };
 }
 

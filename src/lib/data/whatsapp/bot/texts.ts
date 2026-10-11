@@ -1,5 +1,5 @@
 import type { ClinicProfile } from "../../../vocabulary";
-import { designationTitle, type Designation } from "../../../designation";
+import { designationText, designationTitle, type Designation } from "../../../designation";
 import { formatCentsBRL } from "../../../money";
 import type { ListRow, ListSection, ReplyButton } from "../send";
 import { BACK_TO_MENU_ID } from "./input";
@@ -85,7 +85,8 @@ export const IDLE_CLOSED =
  */
 export const willReply = (d: Designation) => `${designationTitle(d)} responderá sua mensagem em breve.`;
 export const noFreeTimes = (serviceName: string, d: Designation) => `No momento não há horários livres para *${serviceName}*. ${willReply(d)}`;
-export const LINK_ERROR = "Tivemos um problema para gerar o link de agendamento. Por favor, tente de novo em alguns minutos ou fale com a clínica.";
+export const linkError = (d: Designation) =>
+  `Tivemos um problema para gerar o link de agendamento. Por favor, tente de novo em alguns minutos ou fale com ${designationText(d)}.`;
 
 // ---------------------------------------------------------------------------
 // Marcar
@@ -141,8 +142,9 @@ export const bookingLink = (serviceName: string, patientName: string, url: strin
 export const ageLimit = (serviceName: string, limitYears: number, w: Words) =>
   `${serviceName} é para pacientes até ${limitYears - 1} anos.\n\nDeseja agendar para ${w.feminine ? "outra criança" : "outra pessoa"}?`;
 
-export const alreadyScheduled = (patientName: string, serviceName: string, when: string) =>
-  `*${patientName}* já tem ${serviceName} marcado(a) para ${when}. Para mudar o dia ou horário, fale com a clínica.`;
+/** Já tem marcado: aponta o Remarcar do próprio bot, com o caminho (cliente, 11/out/2026). */
+export const alreadyScheduled = (patientName: string, serviceName: string, when: string, group: "consultation" | "exam") =>
+  `*${patientName}* já tem ${serviceName} marcado(a) para ${when}. Para mudar o dia ou horário, escolha *${group === "exam" ? "Exames" : "Consultas"} › Remarcar*.`;
 
 // ---------------------------------------------------------------------------
 // Retorno
@@ -195,8 +197,9 @@ export const preparationText = (instructions: string, url: string) => `${instruc
 
 // ---------------------------------------------------------------------------
 // Cancelar, remarcar, lembrete, encaixe e recepção (F6.4), aprovados pelo
-// cliente em 07/out: os do piloto, com "fale com a clínica" no lugar de
-// "Falar com a secretária" enquanto a recepção não atende pelo bot (F8).
+// cliente em 07/out: os do piloto. Revisão de 11/out/2026: o que o bot não
+// acha neste número aponta o "Falar com a recepção" do menu inicial (sem
+// recepção no número, escrever pelo outro número) e mostra o menu de novo.
 // ---------------------------------------------------------------------------
 
 export type Group = "consultation" | "exam";
@@ -214,21 +217,41 @@ export function appointmentWords(category: "consultation" | "return_visit" | "ex
 
 const capital = (text: string) => text.charAt(0).toUpperCase() + text.slice(1);
 
-export const NO_REGISTRATION = "Não encontramos nenhum cadastro associado a este número. Se você já é paciente, fale com a clínica.";
+/** Final dos textos de "não achamos neste número" (cliente, 11/out/2026). */
+export const otherNumber = (receptionAvailable: boolean) =>
+  receptionAvailable
+    ? "Se o agendamento foi feito por outro número, escolha a opção *Falar com a recepção* no menu inicial."
+    : "Se o agendamento foi feito por outro número, escreva por aquele número.";
+
+export const noRegistration = (receptionAvailable: boolean) =>
+  `Não encontramos agendamento marcado para esse número de telefone. ${otherNumber(receptionAvailable)}`;
 
 export const chooseAppointment = (action: "cancelar" | "remarcar" | "antecipar", group: Group) => `Qual ${groupWords(group).noun} você quer ${action}?`;
 
-export function noAppointments(action: "cancelar" | "remarcar", group: Group): string {
+export function noAppointments(action: "cancelar" | "remarcar", group: Group, receptionAvailable: boolean): string {
   const w = groupWords(group);
-  return `Não encontramos ${w.none} ${w.noun} ${w.future} para ${action} neste número. Se precisar de ajuda, fale com a clínica.`;
+  return `Não encontramos ${w.none} ${w.noun} ${w.future} para ${action} neste número. ${otherNumber(receptionAvailable)}`;
 }
 
-export function noMatchingAppointment(group: Group): string {
+/** Data de nascimento sem atendimento: pede de novo (cliente, 11/out/2026). */
+export function noMatchingAppointmentRetry(group: Group): string {
   const w = groupWords(group);
-  return `Não encontramos ${w.noun} ${w.future} para essa data de nascimento. Se precisar de ajuda, fale com a clínica.`;
+  return `Não encontramos ${w.noun} ${w.future} para essa data de nascimento. Confira a data e envie de novo (ex.: 15/03/2018).`;
 }
 
-export const couldNotIdentify = (group: Group) => `Não conseguimos confirmar qual ${groupWords(group).noun} é. Se precisar de ajuda, fale com a clínica.`;
+/** Na 2ª tentativa sem acerto. */
+export function noMatchingAppointment(group: Group, receptionAvailable: boolean): string {
+  const w = groupWords(group);
+  return `Não encontramos ${w.noun} ${w.future} para essa data de nascimento. ${otherNumber(receptionAvailable)}`;
+}
+
+/** "Não" em "é essa que você quer remarcar?" com um atendimento só no número. */
+export const onlyThisOne = (group: Group, receptionAvailable: boolean) => {
+  const w = groupWords(group);
+  return `Neste número só encontramos ${w.noun === "exame" ? "esse exame" : "essa consulta"}. Se o agendamento que você quer remarcar foi feito por outro número, ${
+    receptionAvailable ? "escolha a opção *Falar com a recepção* no menu inicial." : "escreva por aquele número."
+  }`;
+};
 
 export const askAppointmentBirthdate = (w: Words) => askBirthdate(w);
 
@@ -248,8 +271,10 @@ export const confirmReschedule = (phrase: string, patientName: string, when: str
   `Encontramos ${phrase} de *${patientName}* em ${when}: é ${phrase.startsWith("a ") ? "essa" : "esse"} que você quer remarcar? Responda Sim ou Não.`;
 export const rescheduleLink = (phrase: string, patientName: string, url: string) =>
   `Prontinho! Escolha o novo dia e horário para ${phrase} de ${patientName} neste link:\n${url}\n\nO link vale por 30 minutos.`;
-export const returnDeadlinePassed = (patientName: string, lastDate: string) =>
-  `O prazo para o retorno de *${patientName}* terminou em ${lastDate}, então não é possível remarcar por aqui. Por favor, fale com a clínica.`;
+export const returnDeadlinePassed = (patientName: string, lastDate: string, receptionAvailable: boolean, d: Designation) =>
+  `O prazo para o retorno de *${patientName}* terminou em ${lastDate}, então não é possível remarcar por aqui. ${
+    receptionAvailable ? `Para falar com ${designationText(d)}, escolha a opção *Falar com a recepção* no menu inicial.` : `Por favor, fale com ${designationText(d)}.`
+  }`;
 export const homeAddressConfirmCurrent = (address: string) =>
   `O endereço gravado para esse atendimento domiciliar é: *${address}*. Ainda é esse? Responda Sim ou Não.`;
 

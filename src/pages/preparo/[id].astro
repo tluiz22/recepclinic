@@ -8,6 +8,7 @@
 // ela (D1). Não mostra nenhum dado de paciente, só o nome do exame e o
 // preparo. Exame inativo continua mostrando o preparo: quem já tem um marcado
 // ainda pode precisar dele.
+import { DEFAULT_DESIGNATION, designationText } from "../../lib/designation";
 import "../../styles/global.css";
 import PublicFooter from "../../components/PublicFooter.astro";
 import PublicHeader from "../../components/public/PublicHeader.astro";
@@ -38,6 +39,8 @@ const preparation = exam?.category === "exam" ? exam.preparationInstructions?.tr
 if (!preparation) Astro.response.status = 404;
 
 const pageTitle = exam && preparation ? `Preparo: ${exam.name}` : "Preparo não encontrado";
+// "fale com o consultório": como a clínica é chamada (cliente, 11/out/2026).
+const clinicWord = designationText(brand?.designation ?? DEFAULT_DESIGNATION);
 ---
 
 <html lang="pt-BR">
@@ -64,7 +67,7 @@ const pageTitle = exam && preparation ? `Preparo: ${exam.name}` : "Preparo não 
           <div class="rounded-md border border-slate-200 bg-white p-6 text-center">
             <h1 class="text-lg font-bold text-slate-900">Preparo não encontrado</h1>
             <p class="mt-2 text-sm text-slate-600">
-              Não há instruções de preparo para este exame. Em caso de dúvida, fale com a clínica pelo WhatsApp.
+              Não há instruções de preparo para este exame. Em caso de dúvida, fale com {clinicWord} pelo WhatsApp.
             </p>
           </div>
         )

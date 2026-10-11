@@ -127,6 +127,8 @@ type Candidate = { id: string; patientName: string; birthdate: string; scheduled
 export type ManageContext = {
   action: Action;
   group: t.Group;
+  /** Datas de nascimento sem atendimento já enviadas (pede de novo uma vez; cliente, 11/out/2026). */
+  birthdateTries?: number;
   awaiting?: "appointment_choice" | "birthdate_search" | "confirm_appointment" | "address_current" | "address_input" | "address_new" | "book_choice";
   candidates?: Candidate[];
   pendingId?: string;
@@ -170,16 +172,18 @@ async function sendChoice(b: Bot, ctx: ManageContext, candidates: Candidate[]): 
 export async function startManage(b: Bot, action: Action, group: t.Group): Promise<void> {
   if (action !== "waitlist") await openFunnel(b, action, { category: group });
   if (!b.convo.contactId && action !== "waitlist") {
-    await say(b, `bot_${action}_no_contact`, t.NO_REGISTRATION);
-    return end(b, "blocked", { reason: "no_contact" });
+    await say(b, `bot_${action}_no_contact`, t.noRegistration(b.receptionAvailable));
+    await end(b, "blocked", { reason: "no_contact" });
+    return showMenu(b);
   }
   let appointments = await loadUpcoming(b, group);
   if (action === "waitlist") appointments = appointments.filter((a) => joinBlockReason(a, b.now) === null);
   const ctx: ManageContext = { action, group };
   if (!appointments.length) {
     if (action === "waitlist") return offerBooking(b, ctx);
-    await say(b, `bot_${action}_no_appointments`, t.noAppointments(VERB[action] as "cancelar" | "remarcar", group));
-    return end(b, "blocked", { reason: "no_appointments" });
+    await say(b, `bot_${action}_no_appointments`, t.noAppointments(VERB[action] as "cancelar" | "remarcar", group, b.receptionAvailable));
+    await end(b, "blocked", { reason: "no_appointments" });
+    return showMenu(b);
   }
   if (appointments.length === 1) return chosen(b, ctx, appointments[0], { single: true });
   if (appointments.length > 3) {
@@ -200,8 +204,9 @@ async function handleSelect(b: Bot, selection: Selection): Promise<void> {
     const answer = yesNo(selection);
     if (answer === true && ctx.pendingId) return proceed(b, ctx, ctx.pendingId);
     if (answer === false) {
-      await say(b, "bot_reschedule_not_identified", t.couldNotIdentify(ctx.group));
-      return end(b, "blocked", { reason: "appointment_not_identified" });
+      await say(b, "bot_reschedule_not_identified", t.onlyThisOne(ctx.group, b.receptionAvailable));
+      await end(b, "blocked", { reason: "appointment_not_identified" });
+      return showMenu(b);
     }
     await say(b, "bot_not_understood", t.NOT_UNDERSTOOD_YES_NO);
     const pending = ctx.pendingId ? await loadActive(b, ctx.pendingId) : null;
@@ -214,8 +219,14 @@ async function handleSelect(b: Bot, selection: Selection): Promise<void> {
     if (!birthdate) return say(b, "bot_invalid_birthdate", t.INVALID_BIRTHDATE);
     const matches = candidates.filter((c) => c.birthdate === birthdate);
     if (!matches.length) {
-      await say(b, "bot_no_matching_appointment", t.noMatchingAppointment(ctx.group));
-      return ctx.action === "waitlist" ? go(b, "WELCOME") : end(b, "blocked", { reason: "no_match" });
+      const tries = (ctx.birthdateTries ?? 0) + 1;
+      if (tries < 2) {
+        await say(b, "bot_no_matching_appointment_retry", t.noMatchingAppointmentRetry(ctx.group));
+        return go(b, SELECT_STATE[ctx.action], { ...ctx, birthdateTries: tries });
+      }
+      await say(b, "bot_no_matching_appointment", t.noMatchingAppointment(ctx.group, b.receptionAvailable));
+      if (ctx.action !== "waitlist") await end(b, "blocked", { reason: "no_match" });
+      return showMenu(b);
     }
     if (matches.length === 1) return proceed(b, ctx, matches[0].id);
     await sendChoice(b, ctx, matches);
@@ -349,8 +360,13 @@ async function rescheduleLink(b: Bot, ctx: ManageContext, appointment: ManagedAp
       b.now,
     );
     if (origin?.lastDate && b.clinic.today > origin.lastDate) {
-      await say(b, "bot_reschedule_return_deadline_passed", t.returnDeadlinePassed(appointment.patientName, formatBirthdate(origin.lastDate)));
-      return end(b, "blocked", { reason: "return_deadline_passed" });
+      await say(
+        b,
+        "bot_reschedule_return_deadline_passed",
+        t.returnDeadlinePassed(appointment.patientName, formatBirthdate(origin.lastDate), b.receptionAvailable, b.clinic.designation),
+      );
+      await end(b, "blocked", { reason: "return_deadline_passed" });
+      return showMenu(b);
     }
   }
   // Domiciliar: sempre reconfirma o endereço (piloto, Fase 16).
@@ -389,7 +405,7 @@ async function rescheduleLink(b: Bot, ctx: ManageContext, appointment: ManagedAp
     await end(b, "link_sent", { booking_link_id: link.id });
   } catch (error) {
     logError("bot: link de remarcação", error, { clinica: b.clinicId });
-    await say(b, "bot_reschedule_link_error", t.LINK_ERROR);
+    await say(b, "bot_reschedule_link_error", t.linkError(b.clinic.designation));
     await end(b, "error", { reason: "link_error" });
   }
 }

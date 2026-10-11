@@ -12,7 +12,7 @@ import { formatAppointmentWhen } from "../templates";
 import { servicesOf, type BotService } from "./catalog";
 import { attachContact, end, go, say, sendButtons, sendList, step, textFor, type Bot } from "./engine";
 import { formatBirthdate, parseBirthdate, pick, yesNo, type Selection } from "./input";
-import { showMenu } from "./menus";
+import { showMenu, showSubmenu } from "./menus";
 import * as t from "./texts";
 import { logError } from "../../../log";
 
@@ -532,7 +532,7 @@ async function registerAndFinish(b: Bot, ctx: BookingContext, name: string, birt
       if (self) return finish(b, ctx, { id: self.id, name: self.fullName, birthdate: self.birthdate });
     }
     logError("bot: cadastro do paciente", error, { clinica: b.clinicId });
-    await say(b, "bot_book_link_error", t.LINK_ERROR);
+    await say(b, "bot_book_link_error", t.linkError(b.clinic.designation));
     await end(b, "error", { reason: "register_failed" });
   }
 }
@@ -622,10 +622,11 @@ async function finish(b: Bot, ctx: BookingContext, patient: Candidate): Promise<
   if (blocking.every(Boolean)) {
     const first = blocking[0]!;
     const blockingName = (await b.catalog()).services.find((s) => s.id === first.serviceId)?.name ?? "atendimento";
-    await say(b, "bot_book_already_scheduled", t.alreadyScheduled(patient.name, blockingName, formatAppointmentWhen(first.scheduledAt, b.clinic.timeZone)));
-    await step(b, "already_scheduled");
-    if (ctx.category === "return_visit") return end(b, "blocked", { reason: "already_scheduled" });
-    return enterPatientSelect(b, ctx);
+    const group = ctx.category === "exam" ? "exam" : "consultation";
+    await say(b, "bot_book_already_scheduled", t.alreadyScheduled(patient.name, blockingName, formatAppointmentWhen(first.scheduledAt, b.clinic.timeZone), group));
+    // Já mostra o menu com o Remarcar (cliente, 11/out/2026).
+    await end(b, "blocked", { reason: "already_scheduled" });
+    return showSubmenu(b, group === "exam" ? "EXAMES_MENU" : "CONSULTAS_MENU");
   }
 
   const contactId = b.convo.contactId;
@@ -663,7 +664,7 @@ async function finish(b: Bot, ctx: BookingContext, patient: Candidate): Promise<
     await end(b, "link_sent", { booking_link_id: link.id });
   } catch (error) {
     logError("bot: link de agendamento", error, { clinica: b.clinicId });
-    await say(b, "bot_book_link_error", t.LINK_ERROR);
+    await say(b, "bot_book_link_error", t.linkError(b.clinic.designation));
     await end(b, "error", { reason: "link_error" });
   }
 }
@@ -744,8 +745,13 @@ async function refuseReturn(b: Bot, reasons: { patient: Patient; result: ReturnE
     return end(b, "blocked", { reason: "return_already_used" });
   }
   if (future && future.result.status === "future_appointment") {
-    await say(b, "bot_book_already_scheduled", t.alreadyScheduled(future.patient.fullName, "atendimento", formatAppointmentWhen(future.result.futureScheduledAt, b.clinic.timeZone)));
-    return end(b, "blocked", { reason: "already_scheduled" });
+    await say(
+      b,
+      "bot_book_already_scheduled",
+      t.alreadyScheduled(future.patient.fullName, "atendimento", formatAppointmentWhen(future.result.futureScheduledAt, b.clinic.timeZone), "consultation"),
+    );
+    await end(b, "blocked", { reason: "already_scheduled" });
+    return showSubmenu(b, "CONSULTAS_MENU");
   }
   await say(b, "bot_book_return_no_recent_consultation", t.returnNoRecent(deadline));
   await end(b, "blocked", { reason: "return_no_recent_consultation" });

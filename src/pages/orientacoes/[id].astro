@@ -7,6 +7,7 @@
 // O endereço leva o id da clínica; a leitura usa a credencial limitada a ela
 // (D1). Não mostra nenhum dado de paciente. Com o envio desligado depois, o
 // texto continua aparecendo: quem já recebeu o link ainda pode precisar dele.
+import { DEFAULT_DESIGNATION, designationText } from "../../lib/designation";
 import "../../styles/global.css";
 import PublicFooter from "../../components/PublicFooter.astro";
 import PublicHeader from "../../components/public/PublicHeader.astro";
@@ -32,6 +33,8 @@ if (isUuid(id)) {
 
 if (!guidance) Astro.response.status = 404;
 const pageTitle = guidance ? "Orientações gerais para a consulta" : "Orientações não encontradas";
+// "fale com o consultório": como a clínica é chamada (cliente, 11/out/2026).
+const clinicWord = designationText(brand?.designation ?? DEFAULT_DESIGNATION);
 ---
 
 <html lang="pt-BR">
@@ -57,7 +60,7 @@ const pageTitle = guidance ? "Orientações gerais para a consulta" : "Orientaç
         ) : (
           <div class="rounded-md border border-slate-200 bg-white p-6 text-center">
             <h1 class="text-lg font-bold text-slate-900">Orientações não encontradas</h1>
-            <p class="mt-2 text-sm text-slate-600">Em caso de dúvida, fale com a clínica pelo WhatsApp.</p>
+            <p class="mt-2 text-sm text-slate-600">Em caso de dúvida, fale com {clinicWord} pelo WhatsApp.</p>
           </div>
         )
       }

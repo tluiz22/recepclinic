@@ -4,6 +4,7 @@
 // credencial limitada a ela (D1). Cada horário mostra o profissional e o
 // local quando houver mais de um (cliente, 05/out/2026). A confirmação pelo
 // WhatsApp vem na F6.
+import { DEFAULT_DESIGNATION, designationText } from "../../lib/designation";
 import "../../styles/global.css";
 import PublicFooter from "../../components/PublicFooter.astro";
 import PublicHeader from "../../components/public/PublicHeader.astro";
@@ -69,14 +70,16 @@ if (page && db && clinicId && !Astro.url.searchParams.has("error")) {
 }
 
 const words = vocabularyFor(page?.profile ?? "mixed");
+// "fale com o consultório": como a clínica é chamada (cliente, 11/out/2026).
+const clinicWord = designationText(brand?.designation ?? DEFAULT_DESIGNATION);
 const timeZone = page?.timeZone ?? "America/Fortaleza";
 const isReschedule = page?.link.mode === "reschedule";
 const serviceName = page?.service.name ?? "";
 
 const errorMessages: Record<string, string> = {
   slot_taken: "Esse horário acabou de deixar de estar livre. Escolha outro.",
-  return_used: "O retorno dessa consulta já foi marcado. Para um novo atendimento, fale com a clínica pelo WhatsApp.",
-  duplicate: `${capitalize(words.patient)} já tem um atendimento marcado. Para mudar, fale com a clínica pelo WhatsApp.`,
+  return_used: `O retorno dessa consulta já foi marcado. Para um novo atendimento, fale com ${clinicWord} pelo WhatsApp.`,
+  duplicate: `${capitalize(words.patient)} já tem um atendimento marcado. Para mudar, fale com ${clinicWord} pelo WhatsApp.`,
   failed: "Não foi possível confirmar. Tente de novo.",
 };
 const errorParam = Astro.url.searchParams.get("error");
@@ -156,8 +159,8 @@ const SLOT_LABEL = "cursor-pointer rounded-md border border-slate-300 bg-white p
             <h1 class="text-lg font-bold text-slate-900">{confirmed ? "Atendimento cancelado" : "Link já usado"}</h1>
             <p class="mt-2 text-sm text-slate-600">
               {confirmed
-                ? "Este atendimento foi cancelado. Para marcar de novo, fale com a clínica pelo WhatsApp."
-                : "Este link já foi usado. Para marcar ou mudar um atendimento, fale com a clínica pelo WhatsApp."}
+                ? `Este atendimento foi cancelado. Para marcar de novo, fale com ${clinicWord} pelo WhatsApp.`
+                : `Este link já foi usado. Para marcar ou mudar um atendimento, fale com ${clinicWord} pelo WhatsApp.`}
             </p>
           </div>
         )
@@ -222,7 +225,7 @@ const SLOT_LABEL = "cursor-pointer rounded-md border border-slate-300 bg-white p
                         ))}
                       </div>
                     ) : (
-                      <p class="mt-1 text-sm text-slate-500">Não encontramos vaga nos próximos dias. Fale com a clínica pelo WhatsApp.</p>
+                      <p class="mt-1 text-sm text-slate-500">Não encontramos vaga nos próximos dias. Fale com {clinicWord} pelo WhatsApp.</p>
                     )}
                   </div>
                 ) : (
@@ -241,7 +244,7 @@ const SLOT_LABEL = "cursor-pointer rounded-md border border-slate-300 bg-white p
                         </select>
                       ) : (
                         <p class="mt-1 text-sm text-slate-500">
-                          Não encontramos horários livres nos próximos dias. Fale com a clínica pelo WhatsApp.
+                          Não encontramos horários livres nos próximos dias. Fale com {clinicWord} pelo WhatsApp.
                         </p>
                       )}
                     </div>

@@ -60,7 +60,7 @@ export async function handleMenu(b: Bot, selection: Selection): Promise<void> {
   await showMenu(b, { notUnderstood: true });
 }
 
-async function showSubmenu(b: Bot, state: "CONSULTAS_MENU" | "EXAMES_MENU", notUnderstood = false): Promise<void> {
+export async function showSubmenu(b: Bot, state: "CONSULTAS_MENU" | "EXAMES_MENU", notUnderstood = false): Promise<void> {
   if (notUnderstood) await say(b, "bot_not_understood", textFor(b, "not_understood", t.notUnderstood()));
   const consultations = state === "CONSULTAS_MENU";
   await sendList(

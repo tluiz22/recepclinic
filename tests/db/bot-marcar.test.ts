@@ -379,3 +379,32 @@ describe("bot: serviço sem horário livre no prazo (cliente, 11/out/2026)", () 
     }
   });
 });
+
+describe("bot: já tem atendimento marcado (cliente, 11/out/2026)", () => {
+  it("aponta Exames › Remarcar e já mostra o menu de Exames", async () => {
+    const phone = "+5584991226301"; // contato do Paciente Um
+    const booked = await bookAppointment(
+      asDb(f.reception),
+      f.clinicId,
+      { patientId: f.ids.p1, serviceId: f.ids.exame, agendaId: f.ids.agendaExams, start: at("2031-03-10", "08:00"), locationId: f.ids.office, channel: "admin", actorId: null },
+      NOW,
+    );
+    try {
+      await adminClient().from("conversation_state").update({ state: "WELCOME", context: {}, human_handoff: false }).eq("clinic_id", f.clinicId).eq("contact_phone", phone);
+      for (const input of ["oi", "2", "1", "1"]) await say(phone, input); // Exames › Marcar exame › Exame
+      let reply = await say(phone, "2"); // Para outra pessoa
+      // Com pacientes no número, a lista; senão, a data de nascimento.
+      if (reply.at(-1)!.body === "Para qual paciente é o agendamento?") reply = await say(phone, { id: optionId(reply, "Paciente Um") });
+      else {
+        await say(phone, "01/01/2020");
+        reply = await say(phone, "s");
+      }
+      expect(reply[0].body).toMatch(/^\*Paciente Um\* já tem Exame marcado\(a\) para .+\. Para mudar o dia ou horário, escolha \*Exames › Remarcar\*\.$/);
+      expect(reply[1].body).toBe("O que você precisa sobre exames?");
+      expect(titles(reply)).toContain("2. Remarcar");
+      expect((await conversation(phone)).state).toBe("EXAMES_MENU");
+    } finally {
+      await adminClient().from("appointments").delete().eq("id", booked.appointment.id);
+    }
+  });
+});

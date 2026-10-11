@@ -130,14 +130,20 @@ describe("cancelar pelo menu", () => {
     await say(P3, "oi");
     await say(P3, "1");
     const reply = await say(P3, { id: "manage_cancel" });
-    expect(reply[0].body).toBe("Não encontramos nenhuma consulta futura para cancelar neste número. Se precisar de ajuda, fale com a clínica.");
+    // Sem recepção no número (sem coexistência): escrever pelo outro número; e o menu inicial de novo (cliente, 11/out/2026).
+    expect(reply[0].body).toBe(
+      "Não encontramos nenhuma consulta futura para cancelar neste número. Se o agendamento foi feito por outro número, escreva por aquele número.",
+    );
+    expect(reply[1].body).toBe("Como podemos ajudar? Escolha uma opção abaixo (ou digite o número).");
 
     const stranger = "+5584991226499";
     await say(stranger, "oi");
     await say(stranger, "2");
-    expect((await say(stranger, { id: "manage_cancel" }))[0].body).toBe(
-      "Não encontramos nenhum cadastro associado a este número. Se você já é paciente, fale com a clínica.",
+    const strangerReply = await say(stranger, { id: "manage_cancel" });
+    expect(strangerReply[0].body).toBe(
+      "Não encontramos agendamento marcado para esse número de telefone. Se o agendamento foi feito por outro número, escreva por aquele número.",
     );
+    expect(strangerReply[1].body).toBe("Como podemos ajudar? Escolha uma opção abaixo (ou digite o número).");
   });
 });
 
@@ -308,5 +314,60 @@ describe("recepção e pausa", () => {
     const reply = await say(P1, { payload: reminderButtonPayload("confirm", consultP1) });
     expect(reply[0].body).toContain("Presença confirmada ✓");
     expect(await say(P1, { payload: reminderButtonPayload("cancel", consultP1) })).toEqual([]);
+  });
+});
+
+describe("não achou neste número (cliente, 11/out/2026)", () => {
+  const MENU = "Como podemos ajudar? Escolha uma opção abaixo (ou digite o número).";
+  const fresh = (phone: string) =>
+    adminClient().from("conversation_state").update({ state: "WELCOME", context: {}, human_handoff: false }).eq("clinic_id", f.clinicId).eq("contact_phone", phone);
+
+  it("data de nascimento sem atendimento: pede de novo uma vez; na segunda, aponta o outro número e mostra o menu", async () => {
+    // Mais de 3 consultas futuras no número: o bot pede a data de nascimento.
+    const { data: extra } = await adminClient()
+      .from("appointments")
+      .insert(
+        ["2031-03-24", "2031-03-31", "2031-04-07"].map((date) => ({
+          clinic_id: f.clinicId,
+          patient_id: f.ids.p1,
+          service_id: f.ids.consulta,
+          agenda_id: f.ids.agendaDra2,
+          location_id: f.ids.office,
+          scheduled_at: at(date, "08:00").toISOString(),
+          duration_minutes: 30,
+          booking_channel: "admin" as const,
+        })),
+      )
+      .select("id");
+    try {
+      await fresh(P1);
+      await say(P1, "oi");
+      await say(P1, "1");
+      let reply = await say(P1, { id: "manage_reschedule" });
+      expect(reply.at(-1)!.body).toContain("data de nascimento");
+      reply = await say(P1, "02/02/2002");
+      expect(reply.map((m) => m.body)).toEqual(["Não encontramos consulta futura para essa data de nascimento. Confira a data e envie de novo (ex.: 15/03/2018)."]);
+      reply = await say(P1, "03/03/2003");
+      expect(reply[0].body).toBe(
+        "Não encontramos consulta futura para essa data de nascimento. Se o agendamento foi feito por outro número, escreva por aquele número.",
+      );
+      expect(reply[1].body).toBe(MENU);
+    } finally {
+      await adminClient().from("appointments").delete().in("id", extra!.map((a) => a.id));
+    }
+  });
+
+  it("remarcar com um atendimento só e \"não\": aponta o outro número e mostra o menu", async () => {
+    // Paciente Três: só o exame no número.
+    await fresh(P3);
+    await say(P3, "oi");
+    await say(P3, "2");
+    let reply = await say(P3, { id: "manage_reschedule" });
+    expect(reply[0].body).toContain("é esse que você quer remarcar?");
+    reply = await say(P3, "não");
+    expect(reply[0].body).toBe(
+      "Neste número só encontramos esse exame. Se o agendamento que você quer remarcar foi feito por outro número, escreva por aquele número.",
+    );
+    expect(reply[1].body).toBe(MENU);
   });
 });

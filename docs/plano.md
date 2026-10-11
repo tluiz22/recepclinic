@@ -1375,7 +1375,7 @@ Pontos que o cliente encontrou testando o staging, um por vez, cada um validado 
 | 2 | Atendimentos marcados de um paciente (busca na Agenda) | validado em 10/out |
 | 3 | "Voltar" leva à tela de onde a pessoa veio (3a: ficha do paciente e contato; 3b: telas da Agenda e Configurações) | validado em 10/out |
 | 4 | "Aguardando remarcação" com o mesmo paciente repetido | implementado (11/out), aguardando validação |
-| 5 | Mensagens com "fale com a clínica", caso a caso (5a: clínica sem serviço, serviço sem horário, como a clínica é chamada e prazo para oferecer horários; 5b: os demais casos) | 5a implementado (11/out), aguardando validação |
+| 5 | Mensagens com "fale com a clínica", caso a caso (5a: clínica sem serviço, serviço sem horário, como a clínica é chamada e prazo para oferecer horários; 5b: os demais casos) | 5a validado em 11/out; 5b implementado (11/out), aguardando validação |
 
 **1. Cores da situação** (cliente, 10/out/2026): no Dia, na Semana e no Resumo do dia, cada
 atendimento tem faixa à esquerda e fundo claro conforme a situação, com uma legenda acima:
@@ -1433,9 +1433,19 @@ Fica no máximo uma linha por paciente e jornada, a do último cancelamento (`wa
   *Consulta*. A clínica responderá sua mensagem em breve." e a recepção assume. Com vários
   profissionais, a lista mostra só os que têm horário (sobrando um, segue direto); os locais
   também. No retorno, conferido logo depois de escolher o paciente (até o fim do prazo dele).
-**5b (a decidir com o cliente):** os demais textos com "fale com a clínica" (erro ao gerar o
-link, já tem atendimento marcado, sem cadastro, sem atendimento futuro, data de nascimento sem
-atendimento, atendimento não confirmado, prazo do retorno vencido e as páginas do link).
+**5b** (decidido caso a caso com o cliente, 11/out/2026):
+- **Erro ao gerar o link:** fica como era, com a forma de chamar a clínica ("…ou fale com o
+  consultório.").
+- **Já tem atendimento marcado:** "…Para mudar o dia ou horário, escolha *Consultas › Remarcar*."
+  (ou *Exames › Remarcar*) e o bot já mostra esse menu.
+- **Não achou neste número** (sem cadastro; sem atendimento futuro; "Não" em "é essa que você
+  quer remarcar?" com um só; prazo do retorno vencido): o texto aponta a opção *Falar com a
+  recepção* do menu inicial ("Se o agendamento foi feito por outro número, escolha a opção…"; sem
+  recepção no número, "…escreva por aquele número.") e o bot mostra o menu inicial de novo. A
+  opção do menu continua "Falar com a recepção".
+- **Data de nascimento sem atendimento:** pede de novo uma vez; na segunda, como o anterior.
+- **Páginas do link** (marcar, preparo, orientações): "…fale com o consultório pelo WhatsApp.",
+  com a forma de chamar a clínica.
 
 ## F10 — Primeiro piloto
 
