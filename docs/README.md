@@ -37,11 +37,11 @@
 >     [`meta-tech-provider.md`](meta-tech-provider.md); antes, os dados da empresa no rodapé do site).
 >   - **F9.6 (proteção contra abuso no bot) validada em 10/out**: F9.6a (limites por contato,
 >     "Revisado", liberar contato dos limites) e F9.6b (bloquear contato). **F9 concluída.**
->   - **Próximo passo (retomar daqui): e-mail de verdade** (escolhido pelo cliente em 10/out,
->     enquanto a Meta não responde): provedor com o domínio `recepclinic.com.br` como SMTP do painel
->     (convites, pedido de informações) e do Supabase ("Esqueci minha senha", modelos de e-mail).
->     A F8 depende da Meta (análise do app e Tech Provider) e a F10 depende da F8. Também dá para
->     adiantar a F8a (templates pela API na conta do RecepClinic) e preparar a produção (F10).
+>   - **E-mail de verdade validado em 10/out**: Resend como SMTP do painel e do Supabase, remetente
+>     `nao-responda@recepclinic.com.br` (parte L do [`staging.md`](staging.md)).
+>   - **Próximo passo (retomar daqui): escolher com o cliente** entre F8a (templates pela API na
+>     conta do RecepClinic, sem depender do Tech Provider), preparar a produção (F10, com custo
+>     mensal) ou aguardar a Meta. A F8 depende da Meta (análise do app e Tech Provider) e a F10 da F8.
 >   - **Migrações no staging:** o Claude aplica com `supabase db push` (permissão liberada em
 >     09/out), sempre na ordem simulação → aplicar → conferir no banco → só então o push do código.
 >   - **WhatsApp de testes:** `+55 61 9903-3143`, na Cloud API do app RecepClinic, ligado à
@@ -50,8 +50,9 @@
 >   - **Staging:** `https://app.recepclinic.com.br` (Vercel publica a cada push na `main`);
 >     migrações novas vão com `supabase db push` antes do push (repositório ligado ao projeto
 >     `recepclinic-staging`; a senha do banco está em `SUPABASE_DB_PASSWORD` no `.env.staging`);
->     agendador ligado (`scripts/agendador.mjs`); variáveis no `.env.staging` (fora do git). "Esqueci minha senha" só
->     funciona lá depois do provedor de e-mail; até lá, `scripts/link-de-senha.mjs` gera o link.
+>     agendador ligado (`scripts/agendador.mjs`); variáveis no `.env.staging` (fora do git). E-mail pelo
+>     Resend (10/out); `scripts/link-de-senha.mjs` fica de reserva. Variável nova na Vercel só vale
+>     depois de um **Redeploy**.
 >   - **Para rodar:** abrir o OrbStack, `npm run db:start`, `npm run db:reset` (dados de teste) e
 >     `npm run dev` com o `.env` local (ver "Painel local" no README da raiz); testes com `npm test`
 >     e `npm run test:db`.
@@ -65,9 +66,8 @@
 >   - abrir o CNPJ (SLU, ME, Simples Nacional);
 >   - advogado para revisar as páginas legais e a [política de pedidos de autoridades](politica-pedidos-de-autoridades.md)
     (antes do 1º piloto).
->   - provedor de e-mail (ex.: Resend) com o domínio `recepclinic.com.br` (antes do 1º piloto;
->     convites, pedido de informações e "Esqueci minha senha" na nuvem; também vira o SMTP do
->     Supabase, para os modelos de e-mail).
+>   - incluir o **Resend** (operador novo: e-mails da equipe) na política de privacidade do site
+>     (sessão do site).
 >   - excluir na Meta (conta do RecepClinic) os 3 templates antigos sem uso:
 >     `rc_resumo_consultas_hoje_v1`, `rc_resumo_exames_hoje_v1` e `rc_preparo_exame_v1`.
 > - **Triagem do piloto**: nenhum commit novo do piloto desde `aad94dd` até 06/out/2026 (início da F6).

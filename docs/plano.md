@@ -1359,6 +1359,12 @@ F4.4a (convite, aviso de acesso, pedido de informações); falta o provedor. Dec
 - **LGPD:** o Resend é um operador novo (e-mail e nome da equipe e de quem pede informações; nada
   de pacientes): incluir na política de privacidade do site (sessão do site).
 
+**Validado pelo cliente em 10/out** no staging (roteiro na parte L do [`staging.md`](staging.md)):
+"Esqueci minha senha", convite de nova clínica e pedido de informações chegando de
+`nao-responda@recepclinic.com.br`. Sem código novo: só a configuração (Resend, Vercel com
+redeploy, SMTP e modelos no Supabase). O formulário respondido fica só no painel do Suporte
+(Administração › Clínicas › a clínica), **sem e-mail de aviso** (cliente, 10/out).
+
 ## F10 — Primeiro piloto
 
 **Escopo:** produção (Supabase Pro + Vercel Pro, backup conferido); criação da 1ª clínica pelo
