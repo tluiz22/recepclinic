@@ -88,12 +88,14 @@ export const DEFAULT_TEMPLATES: DefaultTemplate[] = [
     (["", "_today"] as const).map((suffix) => {
       const noun = kind === "exams" ? "Exames" : "Consultas";
       // O de hoje tem texto próprio (v2): quase igual ao de amanhã, a Meta recusou (INVALID_FORMAT, 07/out).
+      // O de amanhã também foi recusado (texto fixo curto para 4 variáveis); o cliente editou o recusado
+      // na Meta com o texto abaixo, mesmo nome (10/out).
       return {
         key: `daily_summary_${kind}${suffix}` as TemplateKey,
         name: `rc_resumo_${kind === "exams" ? "exames" : "consultas"}_${suffix ? "hoje_v2" : "amanha_v1"}`,
         body: suffix
           ? `Oi, {{1}}, tudo bem? A agenda de ${noun.toLowerCase()} {{2}} para hoje, {{3}}, é esta:\n\n{{4}}\n\nBom trabalho! Esta é uma mensagem automática do RecepClinic.`
-          : `Olá, {{1}}! ${noun} {{2}} para amanhã, {{3}}:\n\n{{4}}\n\nMensagem automática do RecepClinic.`,
+          : `Olá, {{1}}! Para a equipe se preparar, a agenda de ${noun.toLowerCase()} {{2}} de amanhã, {{3}}, ficou assim:\n\n{{4}}\n\nAté amanhã! Esta é uma mensagem automática do RecepClinic.`,
         examples: ["Ana", "da Clínica Sorriso", "terça, 08/10", "▪️ 09h00 - João Silva (✅ confirmado) ▪️ 10h30 - Maria Souza (sem confirmação)"],
       };
     }),

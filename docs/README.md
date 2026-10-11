@@ -22,11 +22,13 @@
 >     `pg_cron` e Configurações › **Lembretes** (um lembrete por público: paciente, profissional e
 >     equipe, na véspera ou no dia, das 6h às 20h). O cliente segue testando em paralelo e traz os
 >     ajustes; resumo do dia e oferta de vaga a conferir quando a Meta aprovar os templates.
->   - **Templates na Meta (09/out):** aprovados confirmação, remarcação, cancelamento, lembrete e
->     cancelamento pela clínica. **Em análise:** preparo do exame (`rc_preparo_exame_v2`; conferir
->     se ficou como Utilidade), orientações gerais (`rc_orientacoes_consulta_v1`), os 4 do resumo do
->     dia, a oferta de vaga e as versões próprias da Confirmação/Remarcação da clínica de teste. Os 3
->     antigos sem uso a excluir estão nas pendências do cliente, abaixo.
+>   - **Templates na Meta (10/out):** todos aprovados (confirmação, remarcação, cancelamento,
+>     lembrete, cancelamento pela clínica, preparo do exame, orientações gerais, resumo de hoje,
+>     oferta de vaga e as versões próprias da clínica de teste), **menos os 2 resumos de amanhã**
+>     (`rc_resumo_consultas_amanha_v1` e `rc_resumo_exames_amanha_v1`): recusados por
+>     INVALID_FORMAT (texto fixo curto para 4 variáveis), o cliente editou o texto na Meta e
+>     reenviou (10/out), **em análise**. Os 3 antigos sem uso a excluir estão nas pendências do
+>     cliente, abaixo.
 >   - **F9 (operação e segurança) validada em 09/out**, em 5 subetapas (detalhes no [plano](plano.md)):
 >     cabeçalhos de segurança, CSP e `robots.txt`; logs sem dados pessoais; erros em tabela própria
 >     (Administração › Erros) e monitor externo **Better Stack** (4 monitores, alerta por e-mail);
