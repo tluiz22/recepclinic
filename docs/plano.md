@@ -1397,5 +1397,5 @@ então o Tech Provider precisa estar aprovado antes da F10.
 | Verificação da empresa e Tech Provider na Meta (CNPJ, site) | F8 (começar já, por causa do prazo) |
 | Site `www.recepclinic.com.br` com política de privacidade e termos (projeto separado) | F8 (Meta) e F5 |
 | Chip novo de testes do RecepClinic (WhatsApp) | F6 |
-| CNPJ, contrato com as clínicas, termo de tratamento de dados | F10 |
+| ~~CNPJ~~ (aberto, cliente, 10/out), contrato com as clínicas, termo de tratamento de dados | F10 |
 | Custo da Meta por mensagem (cobrado da clínica, direto pela Meta; F8) | definição de preço e contrato (fora do código) |

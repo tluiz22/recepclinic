@@ -63,11 +63,13 @@
 > - **Meta**: verificação da empresa aprovada e app RecepClinic criado (06/out); faltam a análise
 >   do app e o Tech Provider (destravam a F8). Ver "Frentes paralelas" no plano.
 > - **Pendências do cliente**:
->   - abrir o CNPJ (SLU, ME, Simples Nacional);
+>   - ~~abrir o CNPJ~~ **aberto** (cliente, 10/out); ~~Resend na política de privacidade do site~~
+>     **incluído** (cliente, 10/out);
 >   - advogado para revisar as páginas legais e a [política de pedidos de autoridades](politica-pedidos-de-autoridades.md)
-    (antes do 1º piloto).
->   - incluir o **Resend** (operador novo: e-mails da equipe) na política de privacidade do site
->     (sessão do site).
+>     (antes do 1º piloto);
+>   - dados da empresa (com o CNPJ) no rodapé do site (sessão do site) e, depois, a **Verificação
+>     do acesso** na Meta (textos em [`meta-tech-provider.md`](meta-tech-provider.md));
+>   - contrato com as clínicas e termo de tratamento de dados (antes da F10).
 >   - excluir na Meta (conta do RecepClinic) os 3 templates antigos sem uso:
 >     `rc_resumo_consultas_hoje_v1`, `rc_resumo_exames_hoje_v1` e `rc_preparo_exame_v1`.
 > - **Triagem do piloto**: nenhum commit novo do piloto desde `aad94dd` até 06/out/2026 (início da F6).
