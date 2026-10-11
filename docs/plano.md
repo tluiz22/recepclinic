@@ -1483,6 +1483,12 @@ para as demais.
   Fora da tabela); escolher Básico ou Completo marca os itens, e a tela mostra o plano e a
   mensalidade de referência. A tela Planos tem a tabela, exemplos e o plano de cada clínica,
   deduzido da matriz (sem coluna nova no banco).
+  **Simulação da negociação** (cliente, 11/out): ao lado de cada valor da tela Planos há um campo;
+  o Suporte escolhe Básico ou Completo, os adicionais, os profissionais e se a implantação é isenta,
+  clica em Calcular e vê a mensalidade, a implantação e o primeiro pagamento, comparados com a
+  tabela. **Nada é gravado.** Pendência antes da 1ª clínica pagante: **manutenção das clínicas
+  contratadas** (valor negociado, vencimento, implantação, histórico de reajustes), desenhada com o
+  contrato do advogado.
 - **9b. Clínicas de demonstração** no staging, nomes fictícios: Básico (pediatra, 1 profissional),
   Básico + Exames e procedimentos + Lista de espera (dentista, 1 profissional) e Completo (clínica
   médica com 3 profissionais, com o chip de testes).

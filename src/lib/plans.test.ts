@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { FEATURES, missingDependencies } from "./features";
-import { ADDONS, ALL_ITEMS, BASIC_ITEMS, PLAN_ITEM_IDS, clinicPlan, featuresOfItems, itemDependsOn } from "./plans";
+import { ADDONS, ALL_ITEMS, BASIC_ITEMS, PLAN_ITEM_IDS, TABLE_PRICES, clinicPlan, featuresOfItems, itemDependsOn, simulate } from "./plans";
 
 const BASIC = featuresOfItems(PLAN_ITEM_IDS.basic);
 const COMPLETE = featuresOfItems(PLAN_ITEM_IDS.complete);
@@ -52,5 +52,25 @@ describe("planos", () => {
     expect(itemDependsOn(ADDONS.find((a) => a.id === "metrics")!)).toEqual(["whatsapp_bot"]);
     expect(itemDependsOn(ADDONS.find((a) => a.id === "waitlist")!)).toEqual(["whatsapp_bot"]);
     expect(BASIC_ITEMS.flatMap(itemDependsOn)).toEqual([]);
+  });
+});
+
+describe("simulação da negociação", () => {
+  it("pela tabela: Básico + adicionais, profissionais a mais e implantação", () => {
+    const result = simulate(TABLE_PRICES, { plan: "basic", addonIds: ["exams", "waitlist"], professionals: 3, setupWaived: false });
+    expect(result.monthlyCents).toBe(14_700 + 3_500 + 3_500 + 2 * 4_700);
+    expect(result.setupCents).toBe(29_700);
+    expect(result.firstPaymentCents).toBe(result.monthlyCents + 29_700);
+    expect(result.lines.map((line) => line.label)).toEqual(["Básico (1 profissional)", "Exames e procedimentos", "Lista de espera", "2 profissionais a mais"]);
+  });
+
+  it("com valores negociados; o Completo ignora os adicionais marcados", () => {
+    const prices = { ...TABLE_PRICES, completeCents: 25_000, extraProfessionalCents: 3_000, addons: { ...TABLE_PRICES.addons, exams: 0 } };
+    expect(simulate(prices, { plan: "complete", addonIds: ["exams"], professionals: 2, setupWaived: true })).toMatchObject({
+      monthlyCents: 28_000,
+      setupCents: 0,
+      firstPaymentCents: 28_000,
+    });
+    expect(simulate(prices, { plan: "basic", addonIds: ["exams"], professionals: 0, setupWaived: true }).monthlyCents).toBe(14_700);
   });
 });

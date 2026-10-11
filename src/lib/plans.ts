@@ -101,3 +101,49 @@ export const PLAN_LABELS: Record<ClinicPlan["kind"], string> = {
   complete: "Completo",
   custom: "Básico + adicionais",
 };
+
+// ---------------------------------------------------------------------------
+// Simulação da negociação (cliente, 11/out/2026): o Suporte troca os valores
+// na tela Planos e calcula; nada é gravado (a manutenção das clínicas
+// contratadas, com o valor negociado, fica para antes da 1ª clínica pagante).
+// ---------------------------------------------------------------------------
+
+export type PriceTable = {
+  basicCents: number;
+  completeCents: number;
+  extraProfessionalCents: number;
+  setupCents: number;
+  addons: Record<string, number>;
+};
+
+export const TABLE_PRICES: PriceTable = {
+  ...PRICES,
+  addons: Object.fromEntries(ADDONS.map((item) => [item.id, item.priceCents ?? 0])),
+};
+
+export type Simulation = { plan: "basic" | "complete"; addonIds: string[]; professionals: number; setupWaived: boolean };
+
+export type SimulationResult = {
+  /** Plano (Básico ou Completo), adicionais e profissionais a mais, por mês. */
+  lines: { label: string; cents: number }[];
+  monthlyCents: number;
+  setupCents: number;
+  /** Primeiro pagamento: mensalidade e implantação. */
+  firstPaymentCents: number;
+};
+
+/** Mensalidade e implantação com os valores dados (os de tabela ou os negociados). */
+export function simulate(prices: PriceTable, simulation: Simulation): SimulationResult {
+  const complete = simulation.plan === "complete";
+  const professionals = Math.max(1, Math.floor(simulation.professionals) || 1);
+  const lines = [
+    { label: complete ? "Completo (1 profissional)" : "Básico (1 profissional)", cents: complete ? prices.completeCents : prices.basicCents },
+    ...(complete ? [] : ADDONS.filter((item) => simulation.addonIds.includes(item.id)).map((item) => ({ label: item.label, cents: prices.addons[item.id] ?? 0 }))),
+    ...(professionals > 1
+      ? [{ label: `${professionals - 1} ${professionals === 2 ? "profissional" : "profissionais"} a mais`, cents: (professionals - 1) * prices.extraProfessionalCents }]
+      : []),
+  ];
+  const monthlyCents = lines.reduce((sum, line) => sum + line.cents, 0);
+  const setupCents = simulation.setupWaived ? 0 : prices.setupCents;
+  return { lines, monthlyCents, setupCents, firstPaymentCents: monthlyCents + setupCents };
+}
