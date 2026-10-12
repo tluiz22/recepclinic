@@ -30,6 +30,7 @@
 | F8 | Conexão self-service na Meta | a detalhar (depende da Meta) |
 | F9 | Operação e segurança | concluída (10/out; validada pelo cliente) |
 | F10 | Primeiro piloto | a detalhar |
+| F11 | Nota fiscal no CPF do responsável (NFS-e nacional e DMED) | em andamento (12/out; antecipada pelo cliente) |
 
 ---
 
@@ -1577,40 +1578,83 @@ para o modelo novo; acompanhamento das primeiras semanas.
 **Depende da F8** (cliente, 06/out): o número da primeira clínica só é conectado por coexistência,
 então o Tech Provider precisa estar aprovado antes da F10.
 
+## F11 — Nota fiscal no CPF do responsável (NFS-e nacional e DMED)
+
+**Pedida pelo cliente em 12/out/2026** para as clínicas piloto de **Mossoró (RN)**. Primeiro foi
+registrada para depois do 1º piloto e, no mesmo dia, **antecipada pelo cliente** ("podemos iniciar
+a implementação"). A clínica, com **CNPJ**, emite a **NFS-e** do atendimento no CPF de quem pagou.
+A despesa chega à declaração pré-preenchida do IR do responsável pela **DMED**, que o RecepClinic
+gera.
+
+**Decisões do cliente (12/out):**
+- **Nota municipal, padrão nacional:** a NFS-e é do município (ISS), não do estado. Mossoró
+  instituiu a NFS-e de padrão nacional (Decreto 7.497, de 13/jan/2026, obrigatória para pessoa
+  jurídica desde 01/jan/2026).
+- **Integração direta na API nacional** (Sefin Nacional), sem intermediário pago. Cada clínica
+  envia o **certificado digital A1** (e-CNPJ) dela; o RecepClinic o guarda criptografado (fora do
+  alcance da equipe da clínica) e assina as notas. Cidade fora do padrão nacional fica sem a
+  funcionalidade. O RecepClinic acompanha as mudanças do layout (ex.: IBS e CBS da reforma
+  tributária).
+- **Emissão ao registrar o pagamento:** no atendimento, a recepção registra o pagamento (valor,
+  forma, data e quem pagou) e confirma "Emitir nota"; a nota sai na hora. Também cancelar a nota
+  (CPF ou valor errado) e emitir de novo.
+- **Responsável no cadastro:** o paciente ganha CPF e um **responsável financeiro** opcional
+  (nome e CPF), sugerido no pagamento. A nota sai no CPF de quem pagou e o paciente é o
+  beneficiário. CPF é dado pessoal: logs sem CPF, anonimização a pedido (F9) cuidando da guarda
+  fiscal das notas.
+- **DMED:** o sistema gera, para o ano escolhido, o **arquivo da DMED** no formato da Receita
+  (responsável e beneficiário, valores do ano); o contador confere e entrega até o fim de
+  fevereiro.
+- **Entrega:** o PDF da nota vai pelo **WhatsApp** da clínica (template novo, aprovado na Meta) e
+  fica no histórico do paciente para baixar e reenviar.
+- **Matriz (D11): um item "Nota fiscal"**, desligado por padrão, que libera tudo acima.
+- **Fora:** recibo do Receita Saúde (profissional pessoa física, sem API oficial) e outras cidades,
+  até alguma clínica pedir.
+
+**Subetapas** (uma por vez, cada uma validada pelo cliente):
+
+| | Subetapa | Depende de | Situação |
+|---|---|---|---|
+| F11.1 | Item "Nota fiscal" na matriz; CPF do paciente e responsável financeiro no cadastro | — | a fazer |
+| F11.2 | Registro do pagamento no atendimento (sem nota ainda) | F11.1 | a fazer |
+| F11.3 | Dados fiscais da clínica e certificado A1 | F11.1 | a fazer |
+| F11.4 | Emissão e cancelamento na API nacional (ambiente de testes da Receita) | F11.2, F11.3 e os itens do cliente abaixo | a fazer |
+| F11.5 | PDF da nota no histórico e envio pelo WhatsApp (template novo) | F11.4 e a Meta | a fazer |
+| F11.6 | Arquivo da DMED do ano | F11.2 | a fazer |
+
+- **F11.1:** item `invoices` ("Nota fiscal", área Agenda) na matriz. No cadastro do paciente (painel),
+  **CPF** opcional com validação dos dígitos e **responsável financeiro** opcional (nome e CPF).
+  Sem o item liberado, os campos não aparecem. O CPF não vai para logs nem para o bot. A
+  anonimização (F9) apaga o CPF do cadastro.
+- **F11.2:** tabela de pagamentos por atendimento: valor (sugerido pelo preço do atendimento),
+  forma (Pix, dinheiro, cartão), data e **quem pagou** (o paciente ou o responsável), com a
+  confirmação das ações da Agenda. Um atendimento pode ter mais de um pagamento? (a perguntar.)
+- **F11.3:** em Configurações (Administrador da clínica): CNPJ, inscrição municipal, município
+  (código IBGE), regime tributário, código do serviço na lista nacional (ex.: 04.01 Medicina) e
+  alíquota do ISS. **Envio do certificado A1** (arquivo .pfx e senha), guardado no cofre
+  (Vault) do banco; a tela mostra só o titular e a validade, com aviso antes de vencer.
+- **F11.4:** montar a DPS (XML do padrão nacional), assinar com o certificado, enviar à Sefin
+  Nacional (conexão com o certificado) e guardar a chave de acesso, o número e o XML da nota.
+  Cancelamento pelo evento da API. Testes primeiro no ambiente de **Produção Restrita** da
+  Receita (sem valor fiscal). Erros da API em português na tela e na Administração › Erros.
+- **F11.5:** PDF da nota (DANFSe) no histórico do paciente, com baixar e reenviar; envio pelo
+  WhatsApp com um template novo de documento (`rc_nota_fiscal_v1`, a aprovar na Meta).
+- **F11.6:** em Métricas › Financeiro ou Configurações (a perguntar): escolher o ano e baixar o
+  arquivo da DMED no layout da Receita, com responsável, beneficiário e valores; avisos de
+  pagamento sem CPF.
+
+**Antes da F11.4 (cliente):**
+- confirmar com o contador das clínicas de Mossoró se a NFS-e já sai pelo portal nacional
+  (`nfse.gov.br`), e não por sistema próprio da prefeitura;
+- uma clínica piloto disposta a testar, com o **certificado A1** dela (e-CNPJ), a inscrição
+  municipal, o regime tributário e o código de serviço que o contador usa hoje.
+
 ## Depois do 1º piloto (já previsto no banco)
 
 - **Convênios (D10):** telas de planos atendidos e exceções por profissional; plano no cadastro do
   paciente e no atendimento; no bot, convênio pedido junto com o nome, busca por semelhança,
   confirmação única de nome, idade e convênio, e "particular, outro nome ou recepção" quando não
   atendido; dados do convênio na página de data e horário, se a clínica exigir.
-- **Nota fiscal no CPF do responsável (cliente, 12/out/2026; não está no banco ainda):** logo
-  depois do 1º piloto, para as clínicas piloto de **Mossoró (RN)**. A clínica (com **CNPJ**) emite
-  a **NFS-e** do atendimento no CPF de quem pagou, e a despesa chega à declaração pré-preenchida do
-  IR do responsável pela **DMED**, que o RecepClinic gera. Decisões do cliente:
-  - **Nota municipal, padrão nacional:** a NFS-e é do município (ISS), não do estado. Mossoró
-    instituiu a NFS-e de padrão nacional (Decreto 7.497, de 13/jan/2026, obrigatória para pessoa
-    jurídica desde 01/jan/2026). **A confirmar com o contador da clínica:** se a emissão já é pelo
-    portal nacional (`nfse.gov.br`) e não por sistema próprio da prefeitura.
-  - **Integração direta na API nacional** (Sefin Nacional), sem intermediário pago. Cada clínica
-    envia o **certificado digital A1** (e-CNPJ) dela; o RecepClinic o guarda criptografado (fora do
-    alcance da equipe) e assina as notas. Cidade fora do padrão nacional fica sem a funcionalidade.
-    O RecepClinic acompanha as mudanças do layout (ex.: IBS e CBS da reforma tributária).
-  - **Emissão ao registrar o pagamento:** no atendimento, a recepção registra o pagamento (valor,
-    forma, data e quem pagou) e confirma "Emitir nota"; a nota sai na hora. Também cancelar a nota
-    (CPF ou valor errado) e emitir de novo.
-  - **Responsável no cadastro:** o paciente ganha CPF e data de nascimento e um **responsável
-    financeiro** opcional (nome e CPF), sugerido no pagamento. A nota sai no CPF de quem pagou e o
-    paciente é o beneficiário. CPF é dado pessoal: mesmas regras de LGPD (logs sem CPF, anonimização
-    a pedido da F9, cuidando da guarda fiscal das notas).
-  - **DMED:** o sistema gera, para o ano escolhido, o **arquivo da DMED** no formato da Receita
-    (responsável e beneficiário, valores do ano); o contador confere e entrega até o fim de
-    fevereiro.
-  - **Entrega:** o PDF da nota vai pelo **WhatsApp** da clínica (template novo, aprovado na Meta) e
-    fica no histórico do paciente para baixar e reenviar.
-  - **Matriz (D11): um item "Nota fiscal"**, desligado por padrão, que libera tudo acima (registro
-    do pagamento com nota, CPF e responsável no cadastro, certificado, envio e DMED).
-  - **Fora:** recibo do Receita Saúde (profissional pessoa física, sem API oficial) e outras
-    cidades, até alguma clínica pedir.
 
 ---
 
