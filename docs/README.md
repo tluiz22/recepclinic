@@ -83,7 +83,8 @@
 >     (textos e onde fica em [`meta-tech-provider.md`](meta-tech-provider.md));
 >   - contrato com as clínicas e termo de tratamento de dados (antes da F10).
 >   - antes da F11.4: confirmar com o contador das clínicas de Mossoró se a NFS-e já sai pelo
->     portal nacional (`nfse.gov.br`), e uma clínica piloto com certificado A1 para os testes.
+>     portal nacional (`nfse.gov.br`), e uma clínica piloto com certificado A1 para os testes;
+>     com o advogado e o contador, o prazo de guarda fiscal e o texto do termo de autorização da F11.
 >   - ~~excluir na Meta os 3 templates antigos sem uso~~ **feito** (conferido em 12/out).
 > - **Triagem do piloto**: nenhum commit novo do piloto desde `aad94dd` até 06/out/2026 (início da F6).
 

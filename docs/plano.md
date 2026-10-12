@@ -1643,11 +1643,48 @@ gera.
   arquivo da DMED no layout da Receita, com responsável, beneficiário e valores; avisos de
   pagamento sem CPF.
 
+**Segurança da F11 (requisitos do cliente, 12/out/2026)**, obrigatórios em todas as subetapas:
+
+1. **Isolamento por clínica:** tabelas novas (pagamentos, notas, trilha da nota, dados fiscais)
+   com RLS e chaves amarradas à clínica (D1); as rotas conferem clínica, papel e o item "Nota
+   fiscal"; testes de banco de isolamento entre duas clínicas.
+2. **Segredos:** certificado A1 e senha dele no **Vault**; lidos só no servidor, na hora de
+   assinar; nunca voltam para a tela (só titular e validade), nem vão para o Storage, o navegador
+   ou o repositório. (F11.3)
+3. **Privilégio mínimo (cliente, 12/out):** o **Administrador** envia e revoga o certificado,
+   aceita o termo, **cancela** nota e baixa a **DMED**; a **Recepção** (e o Administrador)
+   registra o pagamento e **emite**; o **Profissional** só consulta as notas dos atendimentos dele
+   (acesso por agenda, D6); o **Suporte** só consulta e nunca vê o certificado. No banco (RLS) e
+   nas rotas.
+4. **Auditoria:** trilha da nota, só de inclusão: quem pediu emissão ou cancelamento, quando e o
+   resultado (número da nota ou código de erro da Receita); também envio, troca e revogação do
+   certificado e aceite do termo. (F11.3 e F11.4)
+5. **Duplicidade:** uma nota ativa por pagamento (único no banco); número da DPS sequencial por
+   clínica, com trava; estado "emitindo" durante o pedido; se a resposta se perder, **consultar a
+   Receita antes de repetir**; rotina diária que reconcilia as pendentes. (F11.4)
+6. **Armazenamento:** XML e PDF num **bucket privado**, pasta por clínica com RLS; baixar por
+   **link temporário** (minutos); no WhatsApp, o PDF sobe direto para a Meta. (F11.4 e F11.5)
+7. **Logs:** máscara de **CPF e CNPJ** no `src/lib/log.ts` (como telefone e e-mail, F9.2), com
+   teste; nunca XML, certificado, senha ou dado clínico (a nota descreve só "consulta" ou
+   "exame"). (F11.1)
+8. **Retenção e exclusão:** a anonimização (F9.4) apaga o CPF do cadastro, mas notas,
+   pagamentos e DMED ficam pelo prazo fiscal (LGPD: cumprimento de obrigação legal). **Prazo a
+   definir com o contador e o advogado.**
+9. **Webhooks:** não se aplica à emissão (a API nacional responde na hora); conexão com a Receita
+   por TLS mútuo com o certificado. O webhook do WhatsApp já confere a assinatura e descarta
+   repetidos (F6).
+10. **Autorização formal e revogável:** ao enviar o certificado, o Administrador aceita um **termo
+    de autorização** (grava quem, quando e a versão do texto); **"Revogar"** apaga o certificado do
+    Vault e desliga a emissão na hora. Nenhuma senha de portal (gov.br, prefeitura) é pedida.
+    **Texto do termo com o advogado.** (F11.3)
+
 **Antes da F11.4 (cliente):**
 - confirmar com o contador das clínicas de Mossoró se a NFS-e já sai pelo portal nacional
   (`nfse.gov.br`), e não por sistema próprio da prefeitura;
 - uma clínica piloto disposta a testar, com o **certificado A1** dela (e-CNPJ), a inscrição
-  municipal, o regime tributário e o código de serviço que o contador usa hoje.
+  municipal, o regime tributário e o código de serviço que o contador usa hoje;
+- com o advogado e o contador: o **prazo de guarda** das notas, pagamentos e DMED, e o **texto do
+  termo de autorização** (antes da F11.3 ir para uma clínica real).
 
 ## Depois do 1º piloto (já previsto no banco)
 
