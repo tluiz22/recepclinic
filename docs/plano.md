@@ -1368,6 +1368,7 @@ redeploy, SMTP e modelos no Supabase). O formulário respondido fica só no pain
 ## Ajustes dos testes do cliente (antes da F8a)
 
 Pontos que o cliente encontrou testando o staging, um por vez, cada um validado antes do próximo.
+**Rodada encerrada e toda validada em 11/out/2026.**
 
 | | Ajuste | Situação |
 |---|---|---|
@@ -1379,7 +1380,7 @@ Pontos que o cliente encontrou testando o staging, um por vez, cada um validado 
 | 6 | Avisos de marcação, remarcação e cancelamento por template | mantido como está (11/out) |
 | 7 | Explicação dos campos "Informações que o bot responde" | validado em 11/out |
 | 8 | Página de tecnologia para o Suporte | validado em 11/out |
-| 9 | Comercial no Suporte: 9a planos e aplicar plano; 9b clínicas de demonstração; 9c roteiro de vendas | 9a implementado (11/out), com a simulação da negociação; 9b criado no staging (11/out); 9c implementado (11/out), aguardando validação |
+| 9 | Comercial no Suporte: 9a planos e aplicar plano; 9b clínicas de demonstração; 9c roteiro de vendas | validado em 11/out (9a, 9b e 9c) |
 
 **1. Cores da situação** (cliente, 10/out/2026): no Dia, na Semana e no Resumo do dia, cada
 atendimento tem faixa à esquerda e fundo claro conforme a situação, com uma legenda acima:

@@ -41,13 +41,10 @@
 >     "Revisado", liberar contato dos limites) e F9.6b (bloquear contato). **F9 concluída.**
 >   - **E-mail de verdade validado em 10/out**: Resend como SMTP do painel e do Supabase, remetente
 >     `nao-responda@recepclinic.com.br` (parte L do [`staging.md`](staging.md)).
->   - **Rodada de ajustes dos testes do cliente (antes da F8a), em andamento:** itens 1 a 9 na seção
->     "Ajustes dos testes do cliente" do [plano](plano.md). O item 9 (comercial no Suporte › Vendas:
->     planos com a simulação, 3 clínicas de demonstração e roteiro de vendas) foi implementado em
->     11/out e **aguarda a validação do cliente**, que valida todos os ajustes no fim da rodada.
->     **Rodada encerrada pelo cliente em 11/out; validação dos itens 4, 5b, 7, 8 e 9 em
->     andamento, um por vez.** A página antiga do roteiro no claude.ai (`R3VCJ9t1ebygPzjJhyvdJf`)
->     **fica** (cliente, 11/out).
+>   - **Rodada de ajustes dos testes do cliente (antes da F8a) concluída e validada em 11/out**:
+>     itens 1 a 9 na seção "Ajustes dos testes do cliente" do [plano](plano.md). A página antiga do
+>     roteiro no claude.ai (`R3VCJ9t1ebygPzjJhyvdJf`) **fica** (cliente, 11/out).
+>     **Retomar daqui:** escolher com o cliente o próximo passo (abaixo).
 >   - **Depois da rodada: escolher com o cliente** entre F8a (templates pela API na
 >     conta do RecepClinic, sem depender do Tech Provider), preparar a produção (F10, com custo
 >     mensal) ou aguardar a Meta. A F8 depende da Meta (análise do app e Tech Provider) e a F10 da F8.
