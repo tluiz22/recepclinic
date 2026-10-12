@@ -1,6 +1,6 @@
 # RecepClinic
 
-> **Estado atual (retomar daqui), 10/out/2026**
+> **Estado atual (retomar daqui), 11/out/2026**
 >
 > - **Etapas 0 a 4 concluídas**: cópia isolada, [diagnóstico](diagnostico.md), [limites](limites.md),
 >   [arquitetura](arquitetura.md) (decisões D1–D11) e [plano](plano.md) (fases F0–F10).
@@ -41,7 +41,14 @@
 >     "Revisado", liberar contato dos limites) e F9.6b (bloquear contato). **F9 concluída.**
 >   - **E-mail de verdade validado em 10/out**: Resend como SMTP do painel e do Supabase, remetente
 >     `nao-responda@recepclinic.com.br` (parte L do [`staging.md`](staging.md)).
->   - **Próximo passo (retomar daqui): escolher com o cliente** entre F8a (templates pela API na
+>   - **Rodada de ajustes dos testes do cliente (antes da F8a), em andamento:** itens 1 a 9 na seção
+>     "Ajustes dos testes do cliente" do [plano](plano.md). O item 9 (comercial no Suporte › Vendas:
+>     planos com a simulação, 3 clínicas de demonstração e roteiro de vendas) foi implementado em
+>     11/out e **aguarda a validação do cliente**, que valida todos os ajustes no fim da rodada.
+>     **Retomar daqui:** perguntar ao cliente o próximo ponto da rodada. Pendente: apagar a página
+>     antiga do roteiro no claude.ai (`R3VCJ9t1ebygPzjJhyvdJf`), autorizado pelo cliente, mas a
+>     sessão encerrou antes; confirmar antes de apagar.
+>   - **Depois da rodada: escolher com o cliente** entre F8a (templates pela API na
 >     conta do RecepClinic, sem depender do Tech Provider), preparar a produção (F10, com custo
 >     mensal) ou aguardar a Meta. A F8 depende da Meta (análise do app e Tech Provider) e a F10 da F8.
 >   - **Migrações no staging:** o Claude aplica com `supabase db push` (permissão liberada em
