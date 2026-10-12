@@ -45,9 +45,9 @@
 >     "Ajustes dos testes do cliente" do [plano](plano.md). O item 9 (comercial no Suporte › Vendas:
 >     planos com a simulação, 3 clínicas de demonstração e roteiro de vendas) foi implementado em
 >     11/out e **aguarda a validação do cliente**, que valida todos os ajustes no fim da rodada.
->     **Retomar daqui:** perguntar ao cliente o próximo ponto da rodada. Pendente: apagar a página
->     antiga do roteiro no claude.ai (`R3VCJ9t1ebygPzjJhyvdJf`), autorizado pelo cliente, mas a
->     sessão encerrou antes; confirmar antes de apagar.
+>     **Rodada encerrada pelo cliente em 11/out; validação dos itens 4, 5b, 7, 8 e 9 em
+>     andamento, um por vez.** A página antiga do roteiro no claude.ai (`R3VCJ9t1ebygPzjJhyvdJf`)
+>     **fica** (cliente, 11/out).
 >   - **Depois da rodada: escolher com o cliente** entre F8a (templates pela API na
 >     conta do RecepClinic, sem depender do Tech Provider), preparar a produção (F10, com custo
 >     mensal) ou aguardar a Meta. A F8 depende da Meta (análise do app e Tech Provider) e a F10 da F8.
