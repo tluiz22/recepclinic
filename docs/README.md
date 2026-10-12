@@ -49,9 +49,13 @@
 >     módulo; migração aplicada no staging). O cliente pediu para seguir e **validar tudo no fim**
 >     (12/out). **F11.2 implementada em 12/out** (pagamentos do atendimento: botão "Pagamento" na
 >     Agenda, tela própria, selos "Pago" e "Pago em parte", cartão "Pagamentos" do paciente;
->     decisões no [plano](plano.md)); migração aplicada no staging e código publicado (12/out). **Retomar daqui:** validação da
->     F11.1 e da F11.2 pelo cliente (no fim, como ele pediu); depois a próxima subetapa (F11.3 dados fiscais e certificado, ou F11.6 DMED, a escolher com
->     o cliente). **Prioridade (cliente, 12/out):
+>     decisões no [plano](plano.md)); migração aplicada no staging e código publicado (12/out). **F11.3 implementada em 12/out**
+>     (Configurações › Nota fiscal: dados fiscais, código por serviço e certificado A1 no Vault,
+>     com termo **provisório** e "Revogar"; aviso de vencimento no Início); migração aplicada no
+>     staging e código publicado. **Retomar daqui:** validação da F11.1, F11.2 e F11.3 pelo
+>     cliente (no fim, como ele pediu); depois a F11.6 (DMED), que já pode ser feita, ou a F11.4
+>     (emissão), que depende dos itens do cliente "antes da F11.4" (contador e clínica piloto com
+>     o A1). **Prioridade (cliente, 12/out):
 >     quando a Meta aprovar** (Análise do App, Verificação do acesso, Tech Provider), a F11
 >     **pausa** e o trabalho **volta às fases anteriores** (F8 e F10) para terminar e iniciar o
 >     piloto; a F11 continua depois. Em paralelo, aguardar a

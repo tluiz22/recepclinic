@@ -140,6 +140,15 @@ describe("papéis e áreas do painel (D6)", () => {
     expect(canAccessPath({ ...as("reception"), features: [] }, "/api/admin/financeiro/contato/1", new URLSearchParams())).toBe(false);
   });
 
+  it("Nota fiscal (F11.3): só o Administrador (e o Suporte), com o Módulo financeiro", () => {
+    const on: FeatureKey[] = ["finance"];
+    const none = new URLSearchParams();
+    expect(canAccessPath({ ...as("admin"), features: on }, "/admin/configuracoes/nota-fiscal", none)).toBe(true);
+    expect(canAccessPath({ ...support, features: on }, "/api/admin/configuracoes/nota-fiscal", none)).toBe(true);
+    expect(canAccessPath({ ...as("reception"), features: on }, "/admin/configuracoes/nota-fiscal", none)).toBe(false);
+    expect(canAccessPath({ ...as("admin"), features: [] }, "/admin/configuracoes/nota-fiscal", none)).toBe(false);
+  });
+
   it("o resto é de todos os papéis; prefixo parecido não conta", () => {
     for (const path of ["/admin/dashboard", "/admin/agenda", "/api/admin/pacientes", "/admin/metricas-extra"]) {
       expect(areaOfPath(path)).toBe("shared");

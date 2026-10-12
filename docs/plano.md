@@ -1628,8 +1628,8 @@ gera.
 | | Subetapa | Depende de | Situação |
 |---|---|---|---|
 | F11.1 | Item "Módulo financeiro" na matriz e menu "Financeiro"; área Financeiro do paciente e do contato (CPF e responsável) | — | implementada (12/out), validação no fim (cliente, 12/out) |
-| F11.2 | Registro do pagamento no atendimento (sem nota ainda) | F11.1 | implementada (12/out), aguardando validação do cliente |
-| F11.3 | Dados fiscais da clínica e certificado A1 | F11.1 | a fazer |
+| F11.2 | Registro do pagamento no atendimento (sem nota ainda) | F11.1 | implementada (12/out), validação no fim (cliente, 12/out) |
+| F11.3 | Dados fiscais da clínica e certificado A1 | F11.1 | implementada (12/out), aguardando validação do cliente |
 | F11.4 | Emissão e cancelamento na API nacional (ambiente de testes da Receita) | F11.2, F11.3 e os itens do cliente abaixo | a fazer |
 | F11.5 | PDF da nota no histórico e envio pelo WhatsApp (template novo) | F11.4 e a Meta | a fazer |
 | F11.6 | Arquivo da DMED do ano | F11.2 | a fazer |
@@ -1689,6 +1689,36 @@ gera.
   (código IBGE), regime tributário, código do serviço na lista nacional (ex.: 04.01 Medicina) e
   alíquota do ISS. **Envio do certificado A1** (arquivo .pfx e senha), guardado no cofre
   (Vault) do banco; a tela mostra só o titular e a validade, com aviso antes de vencer.
+  **Decisões do cliente (12/out):**
+  - **Dados fiscais:** o Administrador preenche e muda; o Suporte também pode preencher (ajuda na
+    implantação, com o registro de alterações do Suporte), mas nunca mexe no certificado nem
+    aceita o termo.
+  - **Código do serviço:** um padrão da clínica (com a alíquota do ISS) e, quando for diferente,
+    um código próprio por serviço (ex.: clínica com médico e psicólogo).
+  - **Município:** lista fixa dos municípios liberados, por ora só **Mossoró/RN** (IBGE
+    2408003); cidade nova entra quando uma clínica pedir e o padrão nacional for conferido lá.
+  - **Regime:** os dois campos da nota, com o aviso "confirme com o contador": situação no
+    **Simples Nacional** (não optante, MEI, ME/EPP optante) e **regime especial** (nenhum,
+    sociedade de profissionais, profissional autônomo, ato cooperado, estimativa, microempresa
+    municipal).
+  - **Vencimento do A1:** aviso a partir de **30 dias** antes, na tela da nota e no Início do
+    Administrador; vencido, a emissão fica desligada até enviar o novo.
+  - **CNPJ do A1:** o certificado só é aceito se for do **mesmo CNPJ** dos dados fiscais (a tela
+    mostra o CNPJ do certificado para conferir); o CNPJ vem antes do certificado.
+  **Como ficou (12/out):** migração `20261012140000_dados_fiscais.sql`: tabelas
+  `clinic_fiscal_settings` (CNPJ conferido no banco por `app.is_valid_cnpj`, já no formato
+  alfanumérico da Receita; município pela lista `app.is_supported_fiscal_municipality`; código no
+  formato 04.01.01; ISS de 0 a 5%), `service_fiscal_codes`, `clinic_fiscal_certificates` (só
+  titular, CNPJ, validade, versão do termo e os ponteiros do Vault) e `fiscal_audit_log` (só
+  inclusão). Certificado só pelas funções `set_fiscal_certificate` e `revoke_fiscal_certificate`
+  (Administrador da clínica de verdade; o Suporte não): o servidor abre o .pfx com a senha
+  (`node-forge`) para conferir a senha e ler titular, CNPJ e validade; o banco confere o CNPJ e a
+  validade e guarda arquivo e senha no Vault; revogar (ou excluir a clínica) apaga os segredos.
+  Tela **Configurações › Nota fiscal** (aba só com o módulo), aviso no Início do Administrador a
+  partir de 30 dias. Termo **provisório** (`src/lib/fiscalTerms.ts`, versão
+  `provisorio-2026-10-12`), a revisar com o advogado antes de uma clínica real. Testes: unidade
+  (CNPJ, leitura do .pfx com um certificado gerado no teste, vencimento, acesso) e banco
+  (`tests/db/dados-fiscais.test.ts`, mais a varredura de isolamento com as tabelas novas).
 - **F11.4:** montar a DPS (XML do padrão nacional), assinar com o certificado, enviar à Sefin
   Nacional (conexão com o certificado) e guardar a chave de acesso, o número e o XML da nota.
   Cancelamento pelo evento da API. Testes primeiro no ambiente de **Produção Restrita** da

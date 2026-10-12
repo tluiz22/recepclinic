@@ -7,7 +7,7 @@ import { loadSetupStatus } from "../../lib/data/config/setup";
 // Abas de Configurações (F4.3 e F4.4b). Convênios só com o item liberado (D11).
 // Jornada de configuração (F6.3b): o guia completo na aba Clínica; nas
 // outras, só o aviso de que há pendências.
-type TabId = "clinica" | "profissionais" | "locais" | "agendas" | "servicos" | "horarios" | "feriados" | "convenios" | "equipe" | "lembretes" | "whatsapp" | "mensagens";
+type TabId = "clinica" | "profissionais" | "locais" | "agendas" | "servicos" | "horarios" | "feriados" | "convenios" | "equipe" | "lembretes" | "whatsapp" | "mensagens" | "nota_fiscal";
 
 interface Props {
   current: TabId;
@@ -33,6 +33,8 @@ const tabs: { id: TabId; label: string; href: string; show?: boolean }[] = [
   // Conexão, templates e últimas mensagens: só o Suporte (cliente, 08/out/2026).
   { id: "whatsapp", label: "WhatsApp", href: "/admin/configuracoes/whatsapp", show: isSupport },
   { id: "mensagens", label: "Mensagens", href: "/admin/configuracoes/mensagens" },
+  // Dados fiscais e certificado A1 (F11.3): com o Módulo financeiro.
+  { id: "nota_fiscal", label: "Nota fiscal", href: "/admin/configuracoes/nota-fiscal", show: features.includes("finance") },
 ];
 ---
 

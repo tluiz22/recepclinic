@@ -126,6 +126,9 @@ const PATH_RULES: PathRule[] = [
   // Módulo financeiro (F11): menu Financeiro e as gravações dele.
   { prefix: "/admin/financeiro", feature: "finance" },
   { prefix: "/api/admin/financeiro", feature: "finance" },
+  // Dados fiscais e certificado A1 (F11.3), em Configurações (só o Administrador).
+  { prefix: "/admin/configuracoes/nota-fiscal", feature: "finance" },
+  { prefix: "/api/admin/configuracoes/nota-fiscal", feature: "finance" },
 ];
 
 const matchesPrefix = (pathname: string, prefix: string) => pathname === prefix || pathname.startsWith(`${prefix}/`);

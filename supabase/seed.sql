@@ -213,6 +213,19 @@ begin
   insert into public.patient_finance (clinic_id, patient_id, payer, payer_name, payer_cpf)
     values (c_a, pt_ana, 'other', 'Pedro Souza', '12345678909');
 
+  -- Dados fiscais (F11.3): CNPJ fictício com dígitos válidos, Mossoró, Simples
+  -- Nacional; a psicoterapia com código próprio. Certificado de mentira (o
+  -- "arquivo" no Vault não é um .pfx de verdade): só para as telas e a
+  -- varredura de isolamento, nunca para emitir.
+  insert into public.clinic_fiscal_settings (clinic_id, cnpj, legal_name, municipal_registration, municipality_ibge, simples_nacional, special_regime, service_code, iss_rate)
+    values (c_a, '11222333000181', 'Clínica Exemplo Saúde Ltda', '123456', '2408003', 'me_epp', 'none', '04.01.01', 2.00);
+  insert into public.service_fiscal_codes (clinic_id, service_id, service_code) values (c_a, s_psi, '04.16.01');
+  insert into public.clinic_fiscal_certificates (clinic_id, pfx_secret_id, password_secret_id, subject_name, subject_cnpj, valid_from, valid_until, terms_version)
+    values (c_a, vault.create_secret('seed-nao-e-um-pfx', 'fiscal_pfx_' || c_a::text), vault.create_secret('seed', 'fiscal_pfx_password_' || c_a::text),
+      'CLINICA EXEMPLO SAUDE LTDA', '11222333000181', now() - interval '11 months', now() + interval '20 days', 'seed');
+  insert into public.fiscal_audit_log (clinic_id, event, details)
+    values (c_a, 'certificate_uploaded', '{"subject_name": "CLINICA EXEMPLO SAUDE LTDA", "cnpj": "11222333000181"}');
+
   -- Atendimentos da próxima semana.
   insert into public.appointments (clinic_id, patient_id, service_id, agenda_id, location_id, scheduled_at, duration_minutes, booking_channel, status)
     values (c_a, pt_joao, s_consulta, ag_ped, l_office, (monday + time '08:00') at time zone tz, 30, 'whatsapp_bot', 'confirmed')

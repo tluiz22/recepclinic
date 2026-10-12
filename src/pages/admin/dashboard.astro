@@ -18,16 +18,29 @@ import { getDashboardCounts } from "../../lib/data/dashboard";
 import { describeSendsAlert, getSendsAlert } from "../../lib/data/sends";
 import { BOT_LIMIT_LABELS, listContactsToReview, REVIEW_WINDOW_DAYS } from "../../lib/data/whatsapp/botLimits";
 import { formatInstant } from "../../lib/clinicTime";
+import { certificateStatus } from "../../lib/certificate";
+import { getFiscalCertificate } from "../../lib/data/fiscal";
 
 const clinic = Astro.locals.clinic!;
 const db = createUserClient(Astro.request, Astro.cookies);
 const has = (feature: (typeof clinic.features)[number]) => clinic.features.includes(feature);
 
-const [counts, sendsAlert, toReview] = await Promise.all([
+// Certificado A1 (F11.3): aviso ao Administrador a partir de 30 dias do vencimento.
+const certificateOn = has("finance") && (clinic.roles.includes("admin") || clinic.isPlatformStaff);
+const [counts, sendsAlert, toReview, certificate] = await Promise.all([
   getDashboardCounts(db, clinic.clinicId, clinic.timezone),
   getSendsAlert(db, clinic.clinicId),
   has("whatsapp_bot") ? listContactsToReview(db, clinic.clinicId) : Promise.resolve(null),
+  certificateOn ? getFiscalCertificate(db, clinic.clinicId) : Promise.resolve(null),
 ]);
+const certificateAlert = (() => {
+  if (!certificate) return null;
+  const status = certificateStatus(certificate.validUntil);
+  if (status.state === "expired") return "O certificado digital A1 venceu: a clínica não emite nota fiscal até enviar o novo.";
+  if (status.state === "expiring")
+    return `O certificado digital A1 vence em ${status.daysLeft} ${status.daysLeft === 1 ? "dia" : "dias"} (${formatInstant(certificate.validUntil, clinic.timezone, "dd/MM/yyyy")}): renove e envie o novo.`;
+  return null;
+})();
 const sendsAlertLines = describeSendsAlert(sendsAlert);
 const canReview = clinic.isPlatformStaff || clinic.roles.includes("admin") || clinic.roles.includes("reception");
 // A aba Envios fica no Resumo do Dia, para toda a equipe (cliente, 05/out/2026).
@@ -62,6 +75,18 @@ const shortcuts: { label: string; href: string; icon: IconName }[] = [
       >
         {sendsAlertLines.map((line) => <p>⚠ {line}</p>)}
         <p class="mt-1 font-medium underline">Ver os envios</p>
+      </a>
+    )
+  }
+
+  {
+    certificateAlert && (
+      <a
+        href="/admin/configuracoes/nota-fiscal"
+        class="mt-4 block rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900 hover:bg-amber-100"
+      >
+        <p>⚠ {certificateAlert}</p>
+        <p class="mt-1 font-medium underline">Abrir Nota fiscal</p>
       </a>
     )
   }
