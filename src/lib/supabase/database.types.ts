@@ -441,14 +441,14 @@ isOneToOne: true
                   ]
                 },"clinic_fiscal_settings": {
                   Row: {
-                    "clinic_id": string,"cnpj": string,"created_at": string,"iss_rate": number,"legal_name": string,"municipal_registration": string | null,"municipality_ibge": string,"service_code": string,"simples_nacional": string,"special_regime": string,"updated_at": string,"updated_by": string | null
+                    "clinic_id": string,"cnpj": string,"created_at": string,"environment": string,"iss_rate": number,"legal_name": string,"municipal_registration": string | null,"municipality_ibge": string,"service_code": string,"simples_nacional": string,"simples_regime": string | null,"simples_total_rate": number | null,"special_regime": string,"updated_at": string,"updated_by": string | null
                   }
                   ComputedFields: never
                   Insert: {
-                    "clinic_id": string,"cnpj": string,"created_at"?: string,"iss_rate": number,"legal_name": string,"municipal_registration"?: string | null,"municipality_ibge": string,"service_code": string,"simples_nacional": string,"special_regime"?: string,"updated_at"?: string,"updated_by"?: string | null
+                    "clinic_id": string,"cnpj": string,"created_at"?: string,"environment"?: string,"iss_rate": number,"legal_name": string,"municipal_registration"?: string | null,"municipality_ibge": string,"service_code": string,"simples_nacional": string,"simples_regime"?: string | null,"simples_total_rate"?: number | null,"special_regime"?: string,"updated_at"?: string,"updated_by"?: string | null
                   }
                   Update: {
-                    "clinic_id"?: string,"cnpj"?: string,"created_at"?: string,"iss_rate"?: number,"legal_name"?: string,"municipal_registration"?: string | null,"municipality_ibge"?: string,"service_code"?: string,"simples_nacional"?: string,"special_regime"?: string,"updated_at"?: string,"updated_by"?: string | null
+                    "clinic_id"?: string,"cnpj"?: string,"created_at"?: string,"environment"?: string,"iss_rate"?: number,"legal_name"?: string,"municipal_registration"?: string | null,"municipality_ibge"?: string,"service_code"?: string,"simples_nacional"?: string,"simples_regime"?: string | null,"simples_total_rate"?: number | null,"special_regime"?: string,"updated_at"?: string,"updated_by"?: string | null
                   }
                   Relationships: [
                     {
@@ -809,6 +809,52 @@ isOneToOne: false
 isOneToOne: false
       referencedRelation: "clinic_members"
       referencedColumns: ["clinic_id","user_id"]
+    }
+                  ]
+                },"nfse_dps_counters": {
+                  Row: {
+                    "clinic_id": string,"environment": string,"last_number": number
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "clinic_id": string,"environment": string,"last_number": number
+                  }
+                  Update: {
+                    "clinic_id"?: string,"environment"?: string,"last_number"?: number
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "nfse_dps_counters_clinic_id_fkey"
+      columns: ["clinic_id"]
+isOneToOne: false
+      referencedRelation: "clinics"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"nfse_invoices": {
+                  Row: {
+                    "access_key": string | null,"cancel_reason_code": number | null,"cancel_reason_text": string | null,"cancel_requested_by": string | null,"canceled_at": string | null,"checked_at": string | null,"clinic_id": string,"dps_id": string,"dps_number": number,"environment": string,"error_code": string | null,"error_message": string | null,"id": string,"issued_at": string | null,"nfse_number": string | null,"payment_id": string,"requested_at": string,"requested_by": string | null,"series": string,"status": string,"xml_path": string | null
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "access_key"?: string | null,"cancel_reason_code"?: number | null,"cancel_reason_text"?: string | null,"cancel_requested_by"?: string | null,"canceled_at"?: string | null,"checked_at"?: string | null,"clinic_id": string,"dps_id": string,"dps_number": number,"environment": string,"error_code"?: string | null,"error_message"?: string | null,"id"?: string,"issued_at"?: string | null,"nfse_number"?: string | null,"payment_id": string,"requested_at"?: string,"requested_by"?: string | null,"series": string,"status"?: string,"xml_path"?: string | null
+                  }
+                  Update: {
+                    "access_key"?: string | null,"cancel_reason_code"?: number | null,"cancel_reason_text"?: string | null,"cancel_requested_by"?: string | null,"canceled_at"?: string | null,"checked_at"?: string | null,"clinic_id"?: string,"dps_id"?: string,"dps_number"?: number,"environment"?: string,"error_code"?: string | null,"error_message"?: string | null,"id"?: string,"issued_at"?: string | null,"nfse_number"?: string | null,"payment_id"?: string,"requested_at"?: string,"requested_by"?: string | null,"series"?: string,"status"?: string,"xml_path"?: string | null
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "nfse_invoices_clinic_id_fkey"
+      columns: ["clinic_id"]
+isOneToOne: false
+      referencedRelation: "clinics"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "nfse_invoices_clinic_id_payment_id_fkey"
+      columns: ["clinic_id","payment_id"]
+isOneToOne: false
+      referencedRelation: "payments"
+      referencedColumns: ["clinic_id","id"]
     }
                   ]
                 },"notification_recipients": {
@@ -1398,6 +1444,12 @@ isOneToOne: false
             "anonymize_patient":
 { Args: { "p_clinic_id": string,"p_patient_id": string }; Returns: Json
                            },
+"begin_nfse_cancel":
+{ Args: { "p_invoice_id": string,"p_reason_code": number,"p_reason_text": string }; Returns: Json
+                           },
+"begin_nfse_issue":
+{ Args: { "p_payment_id": string }; Returns: Json
+                           },
 "book_group_session":
 { Args: { "p_agenda_id": string,"p_booking_channel": Database["public"]['Enums']["action_channel"],"p_location_id": string,"p_patient_id": string,"p_scheduled_at": string,"p_service_id": string }; Returns: string
                            },
@@ -1408,6 +1460,17 @@ isOneToOne: false
                            },
 "find_user_id_by_email":
 { Args: { "p_email": string }; Returns: string
+                           },
+"finish_nfse_cancel":
+{ Args: { "p_error_code"?: string,"p_error_message"?: string,"p_invoice_id": string,"p_outcome": string }; Returns: undefined
+                           },
+"finish_nfse_issue":
+{ Args: { "p_access_key"?: string,"p_error_code"?: string,"p_error_message"?: string,"p_invoice_id": string,"p_nfse_number"?: string,"p_outcome": string,"p_xml_path"?: string }; Returns: undefined
+                           },
+"get_fiscal_certificate_secret":
+{ Args: { "p_clinic_id": string }; Returns: {
+              "password": string,"pfx_base64": string
+            }[]
                            },
 "get_whatsapp_access_token":
 { Args: Record<PropertyKey, never>; Returns: string
@@ -1422,6 +1485,11 @@ isOneToOne: false
                            },
 "list_clinics_with_idle_conversations":
 { Args: { "p_before": string }; Returns: string[]
+                           },
+"list_pending_nfse_invoices":
+{ Args: { "p_before": string }; Returns: {
+              "access_key": string,"clinic_id": string,"dps_id": string,"environment": string,"invoice_id": string,"status": string
+            }[]
                            },
 "log_dmed_generated":
 { Args: { "p_clinic_id": string,"p_left_out": number,"p_responsibles": number,"p_total_cents": number,"p_year": number }; Returns: undefined

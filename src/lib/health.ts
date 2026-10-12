@@ -2,7 +2,8 @@
 // banco é src/lib/data/health.ts.
 
 /**
- * Rotinas do agendador (pg_cron, migrações 20261007130000 e 20261007170000) e
+ * Rotinas do agendador (pg_cron, migrações 20261007130000, 20261007170000 e
+ * 20261012160000, a das notas fiscais) e
  * o atraso tolerado desde a última execução terminada: a frequência com folga
  * para uma ou duas falhas seguidas e para a demora da própria execução.
  */
@@ -12,6 +13,7 @@ export const CRON_JOBS: Readonly<Record<string, { every: string; maxDelayMinutes
   "lista-de-espera": { every: "a cada 5 minutos", maxDelayMinutes: 20 },
   lembretes: { every: "a cada hora", maxDelayMinutes: 90 },
   series: { every: "uma vez por dia", maxDelayMinutes: 26 * 60 },
+  "notas-fiscais": { every: "uma vez por dia", maxDelayMinutes: 26 * 60 },
 };
 
 /** Janela da /api/saude/erros: erro mais novo que isso deixa o monitor vermelho. */

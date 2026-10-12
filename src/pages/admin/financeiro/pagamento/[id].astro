@@ -29,6 +29,7 @@ import {
   summarizePayments,
 } from "../../../../lib/data/payments";
 import { centsToInput } from "../../../../lib/forms";
+import { ACTIVE_INVOICE, CANCEL_REASONS, listPaymentInvoices, nfseReadiness, type Invoice, type InvoiceStatus } from "../../../../lib/data/nfse";
 import { formatCentsBRL } from "../../../../lib/money";
 import { receivedReturn, withReturn } from "../../../../lib/returnPath";
 import { capitalize, vocabularyFor } from "../../../../lib/vocabulary";
@@ -53,6 +54,21 @@ const [contact, finance, contactCpf] = await Promise.all([
   getContactCpf(db, clinic.clinicId, patient.contactId),
 ]);
 const summary = summarizePayments(price, payments);
+// Nota fiscal (F11.4): a situação de cada pagamento e se a clínica já emite.
+const [invoices, financeReady] = await Promise.all([
+  listPaymentInvoices(db, clinic.clinicId, payments.map((p) => p.id)),
+  nfseReadiness(db, clinic.clinicId),
+]);
+const activeInvoice = (paymentId: string) => (invoices.get(paymentId) ?? []).find((n) => ACTIVE_INVOICE.includes(n.status));
+const isClinicAdmin = clinic.roles.includes("admin");
+const INVOICE_BADGE: Record<InvoiceStatus, { variant: BadgeVariant; label: (n: Invoice) => string }> = {
+  issuing: { variant: "warning", label: () => "Emitindo…" },
+  issued: { variant: "success", label: (n) => (n.nfseNumber ? `Nota nº ${n.nfseNumber}` : "Nota emitida") },
+  // Certificado que não abre ou DPS que a Receita não recebeu: não chegou a ser recusada.
+  rejected: { variant: "danger", label: (n) => (n.errorCode === "CERTIFICADO" || n.errorCode === "SEM-NOTA" ? "Não emitida" : "Recusada pela Receita") },
+  canceling: { variant: "warning", label: () => "Cancelando…" },
+  canceled: { variant: "neutral", label: (n) => (n.nfseNumber ? `Nota nº ${n.nfseNumber} cancelada` : "Nota cancelada") },
+};
 const today = todayIn(clinic.timezone);
 const canEdit = clinic.roles.includes("admin") || clinic.roles.includes("reception");
 const receives = canReceivePayment(appointment.status) && !patient.anonymizedAt;
@@ -119,38 +135,115 @@ const otherDefault = defaultPayer === "other" ? { name: finance.payerName ?? "",
     <ul class="mt-2 divide-y divide-slate-100">
       {
         payments.map((p) => (
-          <li class="flex flex-wrap items-center justify-between gap-2 py-2 text-sm">
-            <span class={p.deletedAt ? "text-slate-400 line-through" : ""}>
-              <span class="font-medium text-slate-900">{formatCentsBRL(p.amountCents)}</span> · {PAYMENT_METHOD_LABEL[p.method]} · {formatCalendarDate(p.paidOn, "dd/MM/yyyy")}
-              <span class="block text-slate-500">
-                Pagou: {p.payerName}
-                {p.payerCpf ? ` · CPF ${maskCpf(p.payerCpf)}` : ""}
+          <li class="py-2 text-sm">
+            <div class="flex flex-wrap items-center justify-between gap-2">
+              <span class={p.deletedAt ? "text-slate-400 line-through" : ""}>
+                <span class="font-medium text-slate-900">{formatCentsBRL(p.amountCents)}</span> · {PAYMENT_METHOD_LABEL[p.method]} · {formatCalendarDate(p.paidOn, "dd/MM/yyyy")}
+                <span class="block text-slate-500">
+                  Pagou: {p.payerName}
+                  {p.payerCpf ? ` · CPF ${maskCpf(p.payerCpf)}` : ""}
+                </span>
               </span>
-            </span>
-            <span class="flex items-center gap-2">
-              {p.deletedAt ? (
-                <Badge>excluído em {formatInstant(p.deletedAt, clinic.timezone, "dd/MM 'às' HH:mm")}</Badge>
-              ) : (
-                <>
-                  {!p.payerCpf && <Badge variant="warning">falta CPF</Badge>}
-                  {canEdit && (
-                    <form method="POST" action={action}>
-                      <input type="hidden" name="acao" value="excluir" />
-                      <input type="hidden" name="payment_id" value={p.id} />
-                      <button
-                        type="submit"
-                        class="js-confirm-delete text-xs font-medium text-red-700 hover:underline"
-                        data-confirm-title="Excluir o pagamento?"
-                        data-confirm-message={`${formatCentsBRL(p.amountCents)} (${PAYMENT_METHOD_LABEL[p.method]}), de ${p.payerName}. Sai das somas e fica guardado como excluído; registre de novo o certo.`}
-                        data-confirm-label="Excluir pagamento"
-                      >
-                        Excluir
-                      </button>
-                    </form>
+              <span class="flex items-center gap-2">
+                {p.deletedAt ? (
+                  <Badge>excluído em {formatInstant(p.deletedAt, clinic.timezone, "dd/MM 'às' HH:mm")}</Badge>
+                ) : (
+                  <>
+                    {!p.payerCpf && <Badge variant="warning">falta CPF</Badge>}
+                    {canEdit && !activeInvoice(p.id) && (
+                      <form method="POST" action={action}>
+                        <input type="hidden" name="acao" value="excluir" />
+                        <input type="hidden" name="payment_id" value={p.id} />
+                        <button
+                          type="submit"
+                          class="js-confirm-delete text-xs font-medium text-red-700 hover:underline"
+                          data-confirm-title="Excluir o pagamento?"
+                          data-confirm-message={`${formatCentsBRL(p.amountCents)} (${PAYMENT_METHOD_LABEL[p.method]}), de ${p.payerName}. Sai das somas e fica guardado como excluído; registre de novo o certo.`}
+                          data-confirm-label="Excluir pagamento"
+                        >
+                          Excluir
+                        </button>
+                      </form>
+                    )}
+                  </>
+                )}
+              </span>
+            </div>
+            {
+              !p.deletedAt && (
+                <div class="mt-2 rounded-md bg-slate-50 px-3 py-2">
+                  {(invoices.get(p.id) ?? []).map((n) => (
+                    <div class="flex flex-wrap items-center gap-2 py-0.5">
+                      <Badge variant={INVOICE_BADGE[n.status].variant}>{INVOICE_BADGE[n.status].label(n)}</Badge>
+                      {n.environment === "restricted" && <Badge>teste</Badge>}
+                      <span class="text-xs text-slate-500">pedida em {formatInstant(n.requestedAt, clinic.timezone, "dd/MM 'às' HH:mm")}</span>
+                      {n.hasXml && (
+                        <a href={`/api/admin/financeiro/notas/${n.id}`} class="text-xs font-medium text-sky-700 hover:underline">
+                          Baixar XML
+                        </a>
+                      )}
+                      {canEdit && (n.status === "issuing" || n.status === "canceling") && (
+                        <form method="POST" action={action}>
+                          <input type="hidden" name="acao" value="conferir_nota" />
+                          <input type="hidden" name="invoice_id" value={n.id} />
+                          <button type="submit" class="text-xs font-medium text-sky-700 hover:underline">
+                            Conferir na Receita
+                          </button>
+                        </form>
+                      )}
+                      {n.errorMessage && n.status !== "canceled" && <p class="w-full text-xs text-red-700">{n.errorMessage}</p>}
+                      {isClinicAdmin && n.status === "issued" && (
+                        <details class="w-full">
+                          <summary class="cursor-pointer text-xs font-medium text-red-700">Cancelar nota</summary>
+                          <form method="POST" action={action} class="mt-2 flex flex-col gap-2">
+                            <input type="hidden" name="acao" value="cancelar_nota" />
+                            <input type="hidden" name="invoice_id" value={n.id} />
+                            <select name="motivo" required class={`${INPUT} mt-0 text-xs`}>
+                              {CANCEL_REASONS.map((r) => (
+                                <option value={r.code}>{r.label}</option>
+                              ))}
+                            </select>
+                            <input name="motivo_texto" required minlength="15" maxlength="255" placeholder="Explique (15 a 255 caracteres)" class={`${INPUT} mt-0 text-xs`} />
+                            <button
+                              type="submit"
+                              class="js-confirm-delete self-start text-xs font-medium text-red-700 hover:underline"
+                              data-confirm-title="Cancelar a nota fiscal?"
+                              data-confirm-message={`Nota ${n.nfseNumber ? `nº ${n.nfseNumber}` : ""} de ${formatCentsBRL(p.amountCents)}, de ${p.payerName}. O cancelamento vai para a Receita e não dá para desfazer; depois, dá para emitir de novo.`}
+                              data-confirm-label="Cancelar nota"
+                            >
+                              Cancelar nota
+                            </button>
+                          </form>
+                        </details>
+                      )}
+                    </div>
+                  ))}
+                  {!activeInvoice(p.id) && (
+                    <div class="flex flex-wrap items-center gap-2 py-0.5">
+                      {(invoices.get(p.id) ?? []).length === 0 && <span class="text-xs text-slate-500">Sem nota fiscal.</span>}
+                      {canEdit && p.payerCpf && financeReady.ready && (
+                        <form method="POST" action={action}>
+                          <input type="hidden" name="acao" value="emitir_nota" />
+                          <input type="hidden" name="payment_id" value={p.id} />
+                          <button
+                            type="submit"
+                            class="js-confirm-delete text-xs font-medium text-sky-700 hover:underline"
+                            data-confirm-title="Emitir a nota fiscal?"
+                            data-confirm-message={`${formatCentsBRL(p.amountCents)}, no CPF de ${p.payerName}. ${financeReady.environment === "restricted" ? "Ambiente de testes (sem valor fiscal)." : "A nota vai para a Receita."}`}
+                            data-confirm-label="Emitir nota"
+                            data-confirm-tone="primary"
+                          >
+                            Emitir nota
+                          </button>
+                        </form>
+                      )}
+                      {canEdit && !p.payerCpf && <span class="text-xs text-slate-500">Sem o CPF de quem pagou, a nota não sai.</span>}
+                      {canEdit && p.payerCpf && !financeReady.ready && <span class="text-xs text-slate-500">{financeReady.reason}</span>}
+                    </div>
                   )}
-                </>
-              )}
-            </span>
+                </div>
+              )
+            }
           </li>
         ))
       }
@@ -245,6 +338,17 @@ const otherDefault = defaultPayer === "other" ? { name: finance.payerName ?? "",
             </div>
             <p class={`${HINT} sm:col-span-2`}>Vale só para este pagamento; para mudar o responsável de sempre, use o cartão "Financeiro" do {vocabulary.patient}.</p>
           </div>
+          {
+            financeReady.ready && (
+              <label class="flex items-start gap-2 text-sm text-slate-700">
+                <input type="checkbox" name="emitir_nota" value="1" checked class="mt-0.5 h-4 w-4" />
+                <span>
+                  Emitir a nota fiscal agora, no CPF de quem pagou
+                  {financeReady.environment === "restricted" && <span class="text-xs text-slate-500"> (ambiente de testes, sem valor fiscal)</span>}
+                </span>
+              </label>
+            )
+          }
           <button
             type="submit"
             class={`${PRIMARY_BUTTON} js-confirm-delete self-start`}

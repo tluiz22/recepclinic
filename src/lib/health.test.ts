@@ -6,7 +6,7 @@ const ago = (minutes: number) => new Date(NOW.getTime() - minutes * 60_000);
 
 describe("rotinas em dia (F9.3)", () => {
   it("as 5 rotinas do agendador", () => {
-    expect(Object.keys(CRON_JOBS).sort()).toEqual(["conversas-paradas", "lembretes", "lista-de-espera", "resumo-do-dia", "series"]);
+    expect(Object.keys(CRON_JOBS).sort()).toEqual(["conversas-paradas", "lembretes", "lista-de-espera", "notas-fiscais", "resumo-do-dia", "series"]);
   });
 
   it("todas em dia", () => {
@@ -16,6 +16,7 @@ describe("rotinas em dia (F9.3)", () => {
       { job: "lista-de-espera", lastFinishedAt: ago(20) },
       { job: "lembretes", lastFinishedAt: ago(61) },
       { job: "series", lastFinishedAt: ago(23 * 60) },
+      { job: "notas-fiscais", lastFinishedAt: ago(20 * 60) },
     ];
     expect(checkCronJobs(beats, NOW).every((check) => check.ok)).toBe(true);
   });

@@ -53,6 +53,8 @@ beforeAll(async () => {
     legalName: "Clínica da DMED Ltda",
     municipalityIbge: "2408003",
     simplesNacional: "me_epp",
+    simplesRegime: "1",
+    simplesTotalRate: "6",
     specialRegime: "none",
     serviceCode: "04.01.01",
     issRate: "2",

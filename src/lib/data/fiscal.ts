@@ -29,7 +29,18 @@ export const SPECIAL_REGIME_OPTIONS = [
   { value: "municipal_micro", label: "Microempresa municipal" },
 ] as const;
 
+/** Regime de apuração do Simples (ME/EPP), exigido pela nota nacional (F11.4). */
+export const SIMPLES_REGIME_OPTIONS = [
+  { value: "1", label: "Tributos federais e ISS pelo Simples Nacional" },
+  { value: "2", label: "Federais pelo Simples; ISS fora dele (sublimite ultrapassado)" },
+  { value: "3", label: "Federais e ISS fora do Simples (limite ultrapassado)" },
+] as const;
+
+export const ENVIRONMENT_LABEL = { restricted: "Produção Restrita (testes, sem valor fiscal)", production: "Produção (notas de verdade)" } as const;
+
 export type SimplesNacional = (typeof SIMPLES_NACIONAL_OPTIONS)[number]["value"];
+export type SimplesRegime = (typeof SIMPLES_REGIME_OPTIONS)[number]["value"];
+export type FiscalEnvironment = keyof typeof ENVIRONMENT_LABEL;
 export type SpecialRegime = (typeof SPECIAL_REGIME_OPTIONS)[number]["value"];
 
 export type FiscalSettings = {
@@ -38,7 +49,12 @@ export type FiscalSettings = {
   municipalRegistration: string | null;
   municipalityIbge: string;
   simplesNacional: SimplesNacional;
+  /** Só ME/EPP: regime de apuração e percentual aproximado de tributos do Simples. */
+  simplesRegime: SimplesRegime | null;
+  simplesTotalRate: number | null;
   specialRegime: SpecialRegime;
+  /** Produção Restrita (testes) até o Suporte passar para Produção (F11.4). */
+  environment: FiscalEnvironment;
   /** Código de tributação nacional, "04.01.01". */
   serviceCode: string;
   /** Percentual, 0 a 5. */
@@ -54,6 +70,8 @@ export const FISCAL_MESSAGES = {
   specialRegime: "Escolha o regime especial.",
   serviceCode: "Código do serviço no formato 04.01.01 (item, subitem e desdobro da lista nacional).",
   issRate: "Alíquota do ISS: de 0 a 5%, com até duas casas (ex.: 2 ou 2,5).",
+  simplesRegime: "ME/EPP: escolha o regime de apuração do Simples.",
+  simplesTotalRate: "ME/EPP: informe o percentual aproximado de tributos do Simples (ex.: 6 ou 11,2).",
   terms: "Para enviar o certificado, leia e aceite o termo de autorização.",
   file: "Escolha o arquivo do certificado (.pfx ou .p12).",
   fileSize: "O arquivo é grande demais para um certificado A1.",
@@ -79,12 +97,30 @@ export function parseIssRate(input: string | null | undefined): number {
   return rate >= 0 && rate <= 5 ? rate : Number.NaN;
 }
 
+/** "6", "11,2" ou "11.20" → 11.2; inválido ou fora de 0 a 99,99 = NaN. */
+export function parsePercent(input: string | null | undefined): number {
+  const text = (input ?? "").trim().replace("%", "").replace(",", ".");
+  if (!/^\d{1,2}(\.\d{1,2})?$/.test(text)) return Number.NaN;
+  return Number(text);
+}
+
+/** Troca o ambiente da nota (só o Suporte; o banco confere e põe na trilha). */
+export async function setFiscalEnvironment(db: DbClient, clinicId: string, environment: string): Promise<void> {
+  if (!(environment in ENVIRONMENT_LABEL)) throw new DataError("invalid", "Ambiente: escolha um válido", { environment: "Ambiente inválido." });
+  const { data, error } = await db.from("clinic_fiscal_settings").update({ environment }).eq("clinic_id", clinicId).select("clinic_id");
+  if (error) throw fromDbError(error, "Ambiente");
+  if (!data?.length) throw new DataError("invalid", "Ambiente: salve antes os dados fiscais", { environment: "Salve antes os dados fiscais." });
+}
+
 type SettingsRow = {
   cnpj: string;
   legal_name: string;
   municipal_registration: string | null;
   municipality_ibge: string;
   simples_nacional: string;
+  simples_regime: string | null;
+  simples_total_rate: number | null;
+  environment: string;
   special_regime: string;
   service_code: string;
   iss_rate: number;
@@ -94,7 +130,7 @@ export async function getFiscalSettings(db: DbClient, clinicId: string): Promise
   const row = unwrap(
     await db
       .from("clinic_fiscal_settings")
-      .select("cnpj, legal_name, municipal_registration, municipality_ibge, simples_nacional, special_regime, service_code, iss_rate")
+      .select("cnpj, legal_name, municipal_registration, municipality_ibge, simples_nacional, simples_regime, simples_total_rate, environment, special_regime, service_code, iss_rate")
       .eq("clinic_id", clinicId)
       .maybeSingle(),
     "Dados fiscais",
@@ -106,7 +142,10 @@ export async function getFiscalSettings(db: DbClient, clinicId: string): Promise
     municipalRegistration: row.municipal_registration,
     municipalityIbge: row.municipality_ibge,
     simplesNacional: row.simples_nacional as SimplesNacional,
+    simplesRegime: row.simples_regime as SimplesRegime | null,
+    simplesTotalRate: row.simples_total_rate === null ? null : Number(row.simples_total_rate),
     specialRegime: row.special_regime as SpecialRegime,
+    environment: row.environment as FiscalEnvironment,
     serviceCode: row.service_code,
     issRate: Number(row.iss_rate),
   };
@@ -118,6 +157,8 @@ export type FiscalSettingsInput = {
   municipalRegistration?: string | null;
   municipalityIbge: string;
   simplesNacional: string;
+  simplesRegime?: string | null;
+  simplesTotalRate?: string | null;
   specialRegime: string;
   serviceCode: string;
   issRate: string;
@@ -138,6 +179,11 @@ export async function saveFiscalSettings(db: DbClient, clinicId: string, input: 
   v.check(serviceCode !== null, "service_code", FISCAL_MESSAGES.serviceCode);
   const issRate = parseIssRate(input.issRate);
   v.check(Number.isFinite(issRate), "iss_rate", FISCAL_MESSAGES.issRate);
+  const meEpp = input.simplesNacional === "me_epp";
+  const simplesRegime = meEpp ? (SIMPLES_REGIME_OPTIONS.find((o) => o.value === input.simplesRegime)?.value ?? null) : null;
+  v.check(!meEpp || simplesRegime !== null, "simples_regime", FISCAL_MESSAGES.simplesRegime);
+  const simplesTotalRate = meEpp ? parsePercent(input.simplesTotalRate) : null;
+  v.check(!meEpp || Number.isFinite(simplesTotalRate), "simples_total_rate", FISCAL_MESSAGES.simplesTotalRate);
   v.throwIfInvalid("Dados fiscais");
 
   unwrap(
@@ -149,6 +195,8 @@ export async function saveFiscalSettings(db: DbClient, clinicId: string, input: 
         municipal_registration: registration,
         municipality_ibge: input.municipalityIbge,
         simples_nacional: input.simplesNacional,
+        simples_regime: simplesRegime,
+        simples_total_rate: simplesTotalRate,
         special_regime: input.specialRegime,
         service_code: serviceCode!,
         iss_rate: issRate,
@@ -274,13 +322,33 @@ export async function revokeFiscalCertificate(db: DbClient, clinicId: string): P
   if (error) throw fromDbError(error, "Certificado");
 }
 
-export type FiscalAuditEvent = "terms_accepted" | "certificate_uploaded" | "certificate_replaced" | "certificate_revoked";
+export type FiscalAuditEvent =
+  | "terms_accepted"
+  | "certificate_uploaded"
+  | "certificate_replaced"
+  | "certificate_revoked"
+  | "dmed_generated"
+  | "environment_changed"
+  | "nfse_issue_requested"
+  | "nfse_issued"
+  | "nfse_rejected"
+  | "nfse_cancel_requested"
+  | "nfse_canceled"
+  | "nfse_cancel_rejected";
 
 export const FISCAL_AUDIT_LABEL: Record<FiscalAuditEvent, string> = {
   terms_accepted: "Termo de autorização aceito",
   certificate_uploaded: "Certificado enviado",
   certificate_replaced: "Certificado trocado",
   certificate_revoked: "Certificado revogado",
+  dmed_generated: "Arquivo da DMED gerado",
+  environment_changed: "Ambiente da Receita trocado",
+  nfse_issue_requested: "Emissão de nota pedida",
+  nfse_issued: "Nota emitida",
+  nfse_rejected: "Nota recusada pela Receita",
+  nfse_cancel_requested: "Cancelamento de nota pedido",
+  nfse_canceled: "Nota cancelada",
+  nfse_cancel_rejected: "Cancelamento recusado pela Receita",
 };
 
 export type FiscalAuditEntry = { event: FiscalAuditEvent; actorId: string | null; createdAt: Date; details: Record<string, unknown> };

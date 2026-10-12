@@ -178,3 +178,67 @@ export async function countSystemErrorsSince(since: Date, env: ServiceEnv = plat
   if (error) throw new PlatformLookupError("erros recentes", error);
   return count ?? 0;
 }
+
+// ---------------------------------------------------------------------------
+// Nota fiscal (F11.4): o certificado A1 só sai do Vault aqui, na hora de
+// assinar; a rotina diária confere as notas pendentes sem login de ninguém.
+// ---------------------------------------------------------------------------
+
+/** Arquivo .pfx e senha do certificado da clínica (null = sem certificado em dia). */
+export async function readFiscalCertificate(
+  clinicId: string,
+  env: ServiceEnv = platformEnv(),
+): Promise<{ pfx: Uint8Array; password: string } | null> {
+  const { data, error } = await platformClient(env).rpc("get_fiscal_certificate_secret", { p_clinic_id: clinicId });
+  if (error) throw new PlatformLookupError("certificado da clínica", error);
+  const row = data?.[0];
+  return row ? { pfx: new Uint8Array(Buffer.from(row.pfx_base64, "base64")), password: row.password } : null;
+}
+
+export type PendingNfse = { invoiceId: string; clinicId: string; status: "issuing" | "canceling"; environment: "restricted" | "production"; dpsId: string; accessKey: string | null };
+
+/** Notas "emitindo" ou "cancelando" pedidas antes de `before`. */
+export async function listPendingNfse(before: Date, env: ServiceEnv = platformEnv()): Promise<PendingNfse[]> {
+  const { data, error } = await platformClient(env).rpc("list_pending_nfse_invoices", { p_before: before.toISOString() });
+  if (error) throw new PlatformLookupError("notas pendentes", error);
+  return data.map((row) => ({
+    invoiceId: row.invoice_id,
+    clinicId: row.clinic_id,
+    status: row.status as PendingNfse["status"],
+    environment: row.environment as PendingNfse["environment"],
+    dpsId: row.dps_id,
+    accessKey: row.access_key,
+  }));
+}
+
+/** O que a rotina grava ao conferir uma nota pendente (as mesmas funções do painel). */
+export function platformNfseRecorder(env: ServiceEnv = platformEnv()) {
+  const db = platformClient(env);
+  return {
+    async finishIssue(args: { invoiceId: string; outcome: "issued" | "rejected" | "pending"; accessKey?: string; nfseNumber?: string | null; xmlPath?: string | null; errorCode?: string; errorMessage?: string }) {
+      const { error } = await db.rpc("finish_nfse_issue", {
+        p_invoice_id: args.invoiceId,
+        p_outcome: args.outcome,
+        p_access_key: args.accessKey,
+        p_nfse_number: args.nfseNumber ?? undefined,
+        p_xml_path: args.xmlPath ?? undefined,
+        p_error_code: args.errorCode,
+        p_error_message: args.errorMessage,
+      });
+      if (error) throw new PlatformLookupError("gravar a nota", error);
+    },
+    async finishCancel(args: { invoiceId: string; outcome: "canceled" | "rejected" | "pending"; errorCode?: string; errorMessage?: string }) {
+      const { error } = await db.rpc("finish_nfse_cancel", {
+        p_invoice_id: args.invoiceId,
+        p_outcome: args.outcome,
+        p_error_code: args.errorCode,
+        p_error_message: args.errorMessage,
+      });
+      if (error) throw new PlatformLookupError("gravar o cancelamento", error);
+    },
+    async uploadXml(path: string, xml: string) {
+      const { error } = await db.storage.from("nfse-xml").upload(path, new Blob([xml], { type: "application/xml" }), { contentType: "application/xml", upsert: true });
+      if (error) throw new PlatformLookupError("guardar o XML da nota", error);
+    },
+  };
+}

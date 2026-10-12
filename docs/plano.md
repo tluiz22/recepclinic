@@ -1630,9 +1630,9 @@ gera.
 | F11.1 | Item "Módulo financeiro" na matriz e menu "Financeiro"; área Financeiro do paciente e do contato (CPF e responsável) | — | implementada (12/out), validação no fim (cliente, 12/out) |
 | F11.2 | Registro do pagamento no atendimento (sem nota ainda) | F11.1 | implementada (12/out), validação no fim (cliente, 12/out) |
 | F11.3 | Dados fiscais da clínica e certificado A1 | F11.1 | implementada (12/out), validação no fim (cliente, 12/out) |
-| F11.4 | Emissão e cancelamento na API nacional (ambiente de testes da Receita) | F11.2, F11.3 e os itens do cliente abaixo | a fazer |
+| F11.4 | Emissão e cancelamento na API nacional (ambiente de testes da Receita) | F11.2, F11.3 e os itens do cliente abaixo | implementada (12/out), falta o teste real na Produção Restrita |
 | F11.5 | PDF da nota no histórico e envio pelo WhatsApp (template novo) | F11.4 e a Meta | a fazer |
-| F11.6 | Arquivo da DMED do ano | F11.2 | implementada (12/out), aguardando validação do cliente |
+| F11.6 | Arquivo da DMED do ano | F11.2 | implementada (12/out), validação no fim (cliente, 12/out) |
 
 - **F11.1:** item `finance` ("Módulo financeiro (pagamentos e nota fiscal)", área nova
   **Financeiro**) na matriz e o menu "Financeiro" (por ora, a lista de pacientes com e sem dados
@@ -1723,6 +1723,38 @@ gera.
   Nacional (conexão com o certificado) e guardar a chave de acesso, o número e o XML da nota.
   Cancelamento pelo evento da API. Testes primeiro no ambiente de **Produção Restrita** da
   Receita (sem valor fiscal). Erros da API em português na tela e na Administração › Erros.
+  **Decisões do cliente (12/out):**
+  - **Quando:** ao registrar o pagamento (ou depois, pelo botão "Emitir nota"), com a
+    **competência na data do pagamento** (serve também para o sinal pago antes do atendimento).
+  - **Descrição:** o tipo, o paciente e a data, nunca dado clínico (ex.: "Consulta. Paciente:
+    João Souza. Atendimento em 05/10/2026."); o nome do paciente ajuda quem paga por um
+    dependente a comprovar a despesa no IR.
+  - **Ambiente:** toda clínica começa em **Produção Restrita** (testes, sem valor fiscal); só o
+    **Suporte** passa a clínica para **Produção**, com confirmação e registro na trilha, depois
+    que a clínica testou e o contador conferiu uma nota de teste. Em Produção Restrita a nota
+    leva o selo "teste".
+  - **ME/EPP do Simples:** a nota nacional exige o regime de apuração do Simples e o percentual
+    aproximado de tributos do Simples (sem eles, a Receita recusa: E0712). Os dois entram em
+    Configurações › Nota fiscal, com o aviso "confirme com o contador".
+  **Como ficou (12/out), sem o teste real na Receita:** migração `20261012160000_emissao_nfse.sql`
+  (campos do Simples e o ambiente nos dados fiscais, troca só pelo Suporte e na trilha; tabelas
+  `nfse_dps_counters` e `nfse_invoices`; funções `begin_nfse_issue`/`finish_nfse_issue` e
+  `begin_nfse_cancel`/`finish_nfse_cancel`, que conferem papel, item, pagamento, CPF, dados
+  fiscais e certificado em dia, reservam o número com trava e gravam a trilha; uma nota ativa por
+  pagamento, no banco; pagamento com nota não se exclui; o certificado só sai do Vault para a
+  plataforma, `get_fiscal_certificate_secret`; bucket privado `nfse-xml`; rotina diária
+  `notas-fiscais` às 3h30, que confere as pendentes). Código em `src/lib/nfse/` (DPS e pedido de
+  cancelamento no leiaute 1.01, **validados contra o XSD oficial**; assinatura RSA-SHA256 com
+  `xml-crypto`, conferida nos testes; HTTPS com TLS mútuo, testado contra um servidor local) e
+  `src/lib/data/nfse.ts`. Tela do pagamento: a situação da nota de cada pagamento ("Emitindo…",
+  "Nota nº", "teste", "Recusada pela Receita" com o código, "Cancelada"), "Emitir nota",
+  "Conferir na Receita", "Baixar XML" (link de 2 minutos) e "Cancelar nota" (motivo e texto); no
+  registro, "Emitir a nota fiscal agora" já marcado. Testes: `src/lib/nfse/nfse.test.ts` e
+  `tests/db/emissao-nfse.test.ts` (com uma Receita simulada).
+  **Falta (cliente):** o teste de verdade na Produção Restrita, com o e-CNPJ A1 de uma clínica
+  de Mossoró; os pontos a conferir nesse teste são a alíquota (hoje só a ME/EPP a informa) e as
+  mensagens de erro da Receita. O Profissional ainda não vê as notas dos atendimentos dele (fica
+  para a F11.5, com o histórico).
 - **F11.5:** PDF da nota (DANFSe) no histórico do paciente, com baixar e reenviar; envio pelo
   WhatsApp com um template novo de documento (`rc_nota_fiscal_v1`, a aprovar na Meta).
 - **F11.6:** no menu Financeiro (só o Administrador): escolher o ano e baixar o

@@ -1,7 +1,7 @@
 import type { APIRoute } from "astro";
 import { createUserClient } from "../../../../lib/data/clients";
 import { DataError } from "../../../../lib/data/errors";
-import { revokeFiscalCertificate, saveFiscalSettings, saveServiceFiscalCodes, uploadFiscalCertificate } from "../../../../lib/data/fiscal";
+import { revokeFiscalCertificate, saveFiscalSettings, saveServiceFiscalCodes, setFiscalEnvironment, uploadFiscalCertificate } from "../../../../lib/data/fiscal";
 import { runFormAction } from "../../../../lib/data/formAction";
 import { formChecked, formOptionalText, formText } from "../../../../lib/forms";
 import { formatInstant } from "../../../../lib/clinicTime";
@@ -28,6 +28,8 @@ export const POST: APIRoute = async (context) => {
             municipalRegistration: formOptionalText(form, "municipal_registration"),
             municipalityIbge: formText(form, "municipality_ibge"),
             simplesNacional: formText(form, "simples_nacional"),
+            simplesRegime: formOptionalText(form, "simples_regime"),
+            simplesTotalRate: formOptionalText(form, "simples_total_rate"),
             specialRegime: formText(form, "special_regime"),
             serviceCode: formText(form, "service_code"),
             issRate: formText(form, "iss_rate"),
@@ -51,6 +53,11 @@ export const POST: APIRoute = async (context) => {
             acceptedTerms: formChecked(form, "terms"),
           });
           return { redirectTo: page, message: `Certificado guardado: ${saved.subjectName}, válido até ${formatInstant(saved.validUntil, clinic.timezone, "dd/MM/yyyy")}.` };
+        }
+        case "ambiente": {
+          const environment = formText(form, "environment");
+          await setFiscalEnvironment(db, clinic.clinicId, environment);
+          return { redirectTo: page, message: environment === "production" ? "Ambiente trocado: as próximas notas saem em Produção." : "Ambiente trocado: as próximas notas saem em Produção Restrita (testes)." };
         }
         case "revogar":
           await revokeFiscalCertificate(db, clinic.clinicId);

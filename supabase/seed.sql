@@ -47,7 +47,7 @@ declare
   pt_joao uuid; pt_ana uuid; pt_carlos uuid; pt_julia uuid;
   ser_psi uuid;
   ap_first uuid; ap_past uuid; ap_waiting uuid; ap_canceled uuid; ap_session uuid;
-  e_waiting uuid; op_id uuid;
+  e_waiting uuid; op_id uuid; pay_past uuid;
   v_secret uuid;
   -- Clínica B
   p_dent uuid; l_b uuid; ag_b uuid; s_b uuid; ct_b uuid; pt_b uuid;
@@ -217,8 +217,8 @@ begin
   -- Nacional; a psicoterapia com código próprio. Certificado de mentira (o
   -- "arquivo" no Vault não é um .pfx de verdade): só para as telas e a
   -- varredura de isolamento, nunca para emitir.
-  insert into public.clinic_fiscal_settings (clinic_id, cnpj, legal_name, municipal_registration, municipality_ibge, simples_nacional, special_regime, service_code, iss_rate)
-    values (c_a, '11222333000181', 'Clínica Exemplo Saúde Ltda', '123456', '2408003', 'me_epp', 'none', '04.01.01', 2.00);
+  insert into public.clinic_fiscal_settings (clinic_id, cnpj, legal_name, municipal_registration, municipality_ibge, simples_nacional, simples_regime, simples_total_rate, special_regime, service_code, iss_rate)
+    values (c_a, '11222333000181', 'Clínica Exemplo Saúde Ltda', '123456', '2408003', 'me_epp', '1', 6.00, 'none', '04.01.01', 2.00);
   insert into public.service_fiscal_codes (clinic_id, service_id, service_code) values (c_a, s_psi, '04.16.01');
   insert into public.clinic_fiscal_certificates (clinic_id, pfx_secret_id, password_secret_id, subject_name, subject_cnpj, valid_from, valid_until, terms_version)
     values (c_a, vault.create_secret('seed-nao-e-um-pfx', 'fiscal_pfx_' || c_a::text), vault.create_secret('seed', 'fiscal_pfx_password_' || c_a::text),
@@ -240,7 +240,13 @@ begin
     returning id into ap_past;
   -- Pagamento da consulta que já aconteceu (F11.2), feito por Maria no Pix.
   insert into public.payments (clinic_id, appointment_id, patient_id, amount_cents, method, paid_on, payer, payer_name, payer_cpf)
-    values (c_a, ap_past, pt_joao, 30000, 'pix', monday - 14, 'contact', 'Maria Souza', '52998224725');
+    values (c_a, ap_past, pt_joao, 30000, 'pix', monday - 14, 'contact', 'Maria Souza', '52998224725')
+    returning id into pay_past;
+  -- Nota de teste (F11.4) desse pagamento, na Produção Restrita; chave fictícia.
+  insert into public.nfse_dps_counters (clinic_id, environment, last_number) values (c_a, 'restricted', 1);
+  insert into public.nfse_invoices (clinic_id, payment_id, environment, series, dps_number, dps_id, status, access_key, nfse_number, issued_at)
+    values (c_a, pay_past, 'restricted', '1', 1, 'DPS240800321122233300018100001000000000000001', 'issued',
+      '24080032112223330001812610000000000000000000000000', '1', now() - interval '14 days');
   insert into public.appointments (clinic_id, patient_id, service_id, agenda_id, location_id, scheduled_at, duration_minutes, booking_channel, origin_appointment_id)
     values (c_a, pt_joao, s_retorno, ag_ped, l_office, (monday + 14 + time '10:00') at time zone tz, 20, 'admin', ap_past);
   insert into public.appointments (clinic_id, patient_id, service_id, agenda_id, location_id, scheduled_at, duration_minutes, booking_channel, home_visit_address)

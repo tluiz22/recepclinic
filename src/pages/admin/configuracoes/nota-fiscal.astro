@@ -26,7 +26,9 @@ import {
   getFiscalSettings,
   listFiscalAudit,
   listServiceFiscalCodes,
+  ENVIRONMENT_LABEL,
   SIMPLES_NACIONAL_OPTIONS,
+  SIMPLES_REGIME_OPTIONS,
   SPECIAL_REGIME_OPTIONS,
 } from "../../../lib/data/fiscal";
 import { FISCAL_TERMS, FISCAL_TERMS_VERSION } from "../../../lib/fiscalTerms";
@@ -96,6 +98,31 @@ const issValue = settings ? String(settings.issRate).replace(".", ",") : "";
               ))}
             </select>
           </div>
+          <div data-me-epp class="grid gap-3 rounded-lg border border-slate-200 p-3 sm:grid-cols-2">
+            <p class="text-sm text-slate-600 sm:col-span-2">ME/EPP do Simples: a nota nacional pede mais estes dois dados.</p>
+            <div class="sm:col-span-2">
+              <label for="simples_regime" class={LABEL}>Regime de apuração do Simples</label>
+              <select id="simples_regime" name="simples_regime" class={INPUT}>
+                {SIMPLES_REGIME_OPTIONS.map((o) => (
+                  <option value={o.value} selected={(settings?.simplesRegime ?? "1") === o.value}>
+                    {o.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label for="simples_total_rate" class={LABEL}>Tributos aproximados do Simples (%)</label>
+              <input
+                id="simples_total_rate"
+                name="simples_total_rate"
+                inputmode="decimal"
+                placeholder="6"
+                value={settings?.simplesTotalRate !== null && settings?.simplesTotalRate !== undefined ? String(settings.simplesTotalRate).replace(".", ",") : ""}
+                class={INPUT}
+              />
+              <p class={HINT}>A alíquota efetiva da faixa do Simples da clínica: o contador informa.</p>
+            </div>
+          </div>
           <div>
             <label for="special_regime" class={LABEL}>Regime especial de tributação</label>
             <select id="special_regime" name="special_regime" required class={INPUT}>
@@ -120,6 +147,38 @@ const issValue = settings ? String(settings.issRate).replace(".", ",") : "";
           </div>
           <button type="submit" class={`${PRIMARY_BUTTON} self-start`}>Salvar dados fiscais</button>
         </form>
+      </Card>
+
+      <Card>
+        <h2 class="flex flex-wrap items-center gap-2 font-semibold text-slate-900">
+          Ambiente da Receita
+          {settings && <Badge variant={settings.environment === "production" ? "success" : "warning"}>{settings.environment === "production" ? "Produção" : "testes"}</Badge>}
+        </h2>
+        <p class="mt-1 text-sm text-slate-600">
+          {settings ? ENVIRONMENT_LABEL[settings.environment] : ENVIRONMENT_LABEL.restricted}. Toda clínica começa em testes; o suporte passa para Produção depois que
+          a clínica testou e o contador conferiu uma nota de teste.
+        </p>
+        {
+          clinic.isPlatformStaff && settings && (
+            <form method="POST" action={action} class="mt-3 flex flex-wrap items-end gap-2">
+              <input type="hidden" name="acao" value="ambiente" />
+              <input type="hidden" name="environment" value={settings.environment === "production" ? "restricted" : "production"} />
+              <button
+                type="submit"
+                class={`${SECONDARY_BUTTON} js-confirm-delete`}
+                data-confirm-title={settings.environment === "production" ? "Voltar para Produção Restrita?" : "Passar para Produção?"}
+                data-confirm-message={
+                  settings.environment === "production"
+                    ? "As próximas notas saem no ambiente de testes, sem valor fiscal."
+                    : "As próximas notas saem de verdade, com valor fiscal. Confirme que a clínica testou e que o contador conferiu uma nota de teste."
+                }
+                data-confirm-label={settings.environment === "production" ? "Voltar para testes" : "Passar para Produção"}
+              >
+                {settings.environment === "production" ? "Voltar para Produção Restrita" : "Passar para Produção"}
+              </button>
+            </form>
+          )
+        }
       </Card>
 
       <Card>
@@ -227,7 +286,7 @@ const issValue = settings ? String(settings.issRate).replace(".", ",") : "";
       </Card>
 
       <Card>
-        <h2 class="font-semibold text-slate-900">Histórico do certificado</h2>
+        <h2 class="font-semibold text-slate-900">Histórico fiscal</h2>
         <ul class="mt-2 divide-y divide-slate-100">
           {audit.map((entry) => (
             <li class="py-2 text-sm">
@@ -236,6 +295,9 @@ const issValue = settings ? String(settings.issRate).replace(".", ",") : "";
                 {formatInstant(entry.createdAt, clinic.timezone, "dd/MM/yyyy 'às' HH:mm")}
                 {entry.actorId ? ` · ${actors.get(entry.actorId)?.name ?? "alguém da equipe"}` : ""}
                 {typeof entry.details.terms_version === "string" ? ` · versão ${entry.details.terms_version}` : ""}
+                {entry.details.nfse_number ? ` · nº ${entry.details.nfse_number}` : ""}
+                {typeof entry.details.error_code === "string" ? ` · ${entry.details.error_code}` : ""}
+                {entry.event === "environment_changed" ? ` · para ${entry.details.to === "production" ? "Produção" : "Produção Restrita"}` : ""}
               </span>
             </li>
           ))}
@@ -246,3 +308,21 @@ const issValue = settings ? String(settings.issRate).replace(".", ",") : "";
   </div>
   <ConfirmDeleteDialog />
 </AdminLayout>
+
+<script>
+  // Os campos do Simples só aparecem (e só vão) para ME/EPP.
+  const select = document.getElementById("simples_nacional") as HTMLSelectElement | null;
+  const box = document.querySelector<HTMLElement>("[data-me-epp]");
+  if (select && box) {
+    const sync = () => {
+      const on = select.value === "me_epp";
+      box.hidden = !on;
+      box.querySelectorAll<HTMLInputElement | HTMLSelectElement>("input, select").forEach((field) => {
+        field.disabled = !on;
+        field.required = on;
+      });
+    };
+    select.addEventListener("change", sync);
+    sync();
+  }
+</script>
