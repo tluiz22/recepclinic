@@ -30,7 +30,7 @@
 | F8 | Conexão self-service na Meta | a detalhar (depende da Meta) |
 | F9 | Operação e segurança | concluída (10/out; validada pelo cliente) |
 | F10 | Primeiro piloto | a detalhar |
-| F11 | Nota fiscal no CPF do responsável (NFS-e nacional e DMED) | em andamento (12/out; antecipada pelo cliente) |
+| F11 | Módulo financeiro: pagamentos e nota fiscal no CPF do responsável (NFS-e nacional e DMED) | em andamento (12/out; antecipada pelo cliente) |
 
 ---
 
@@ -1578,7 +1578,7 @@ para o modelo novo; acompanhamento das primeiras semanas.
 **Depende da F8** (cliente, 06/out): o número da primeira clínica só é conectado por coexistência,
 então o Tech Provider precisa estar aprovado antes da F10.
 
-## F11 — Nota fiscal no CPF do responsável (NFS-e nacional e DMED)
+## F11 — Módulo financeiro: pagamentos e nota fiscal no CPF do responsável
 
 **Pedida pelo cliente em 12/out/2026** para as clínicas piloto de **Mossoró (RN)**. Primeiro foi
 registrada para depois do 1º piloto e, no mesmo dia, **antecipada pelo cliente** ("podemos iniciar
@@ -1598,16 +1598,25 @@ gera.
 - **Emissão ao registrar o pagamento:** no atendimento, a recepção registra o pagamento (valor,
   forma, data e quem pagou) e confirma "Emitir nota"; a nota sai na hora. Também cancelar a nota
   (CPF ou valor errado) e emitir de novo.
-- **Responsável no cadastro:** o paciente ganha CPF e um **responsável financeiro** opcional
-  (nome e CPF), sugerido no pagamento. A nota sai no CPF de quem pagou e o paciente é o
-  beneficiário. CPF é dado pessoal: logs sem CPF, anonimização a pedido (F9) cuidando da guarda
-  fiscal das notas.
+- **Responsável financeiro (cliente, 12/out):** por padrão, o **contato do WhatsApp** do
+  paciente (ou o próprio paciente, quando ele é o contato); pode ser trocado por **outra pessoa**
+  (nome e CPF) quando quem paga não é quem conversa com a clínica. A nota sai no CPF de quem pagou
+  e o paciente é o beneficiário. CPF é dado pessoal: logs sem CPF, anonimização a pedido (F9)
+  cuidando da guarda fiscal das notas.
+- **Só dentro do Módulo financeiro (cliente, 12/out):** CPF, responsável financeiro e os demais
+  dados da nota são pedidos e guardados **só no módulo novo**, que passa a tratar das questões
+  financeiras (pagamentos e notas). O cadastro do paciente, o bot e a página de agendamento **não
+  mudam** e não pedem CPF. Paciente e contato ganham uma área **"Financeiro"** (só com o módulo
+  liberado) com o CPF e o responsável; ao registrar um pagamento, o que faltar é pedido ali mesmo.
 - **DMED:** o sistema gera, para o ano escolhido, o **arquivo da DMED** no formato da Receita
   (responsável e beneficiário, valores do ano); o contador confere e entrega até o fim de
   fevereiro.
 - **Entrega:** o PDF da nota vai pelo **WhatsApp** da clínica (template novo, aprovado na Meta) e
   fica no histórico do paciente para baixar e reenviar.
-- **Matriz (D11): um item "Nota fiscal"**, desligado por padrão, que libera tudo acima.
+- **Matriz (D11) e menu (cliente, 12/out):** um item **"Módulo financeiro (pagamentos e nota
+  fiscal)"**, desligado por padrão, que libera tudo acima e um **menu novo "Financeiro"**
+  (pagamentos, notas e DMED). A aba **Métricas › Financeiro** continua como está (só os
+  gráficos).
 - **Fora:** recibo do Receita Saúde (profissional pessoa física, sem API oficial) e outras cidades,
   até alguma clínica pedir.
 
@@ -1615,17 +1624,20 @@ gera.
 
 | | Subetapa | Depende de | Situação |
 |---|---|---|---|
-| F11.1 | Item "Nota fiscal" na matriz; CPF do paciente e responsável financeiro no cadastro | — | a fazer |
+| F11.1 | Item "Módulo financeiro" na matriz e menu "Financeiro"; área Financeiro do paciente e do contato (CPF e responsável) | — | a fazer |
 | F11.2 | Registro do pagamento no atendimento (sem nota ainda) | F11.1 | a fazer |
 | F11.3 | Dados fiscais da clínica e certificado A1 | F11.1 | a fazer |
 | F11.4 | Emissão e cancelamento na API nacional (ambiente de testes da Receita) | F11.2, F11.3 e os itens do cliente abaixo | a fazer |
 | F11.5 | PDF da nota no histórico e envio pelo WhatsApp (template novo) | F11.4 e a Meta | a fazer |
 | F11.6 | Arquivo da DMED do ano | F11.2 | a fazer |
 
-- **F11.1:** item `invoices` ("Nota fiscal", área Agenda) na matriz. No cadastro do paciente (painel),
-  **CPF** opcional com validação dos dígitos e **responsável financeiro** opcional (nome e CPF).
-  Sem o item liberado, os campos não aparecem. O CPF não vai para logs nem para o bot. A
-  anonimização (F9) apaga o CPF do cadastro.
+- **F11.1:** item `finance` ("Módulo financeiro (pagamentos e nota fiscal)", área nova
+  **Financeiro**) na matriz e o menu "Financeiro" (por ora, a lista de pacientes com e sem dados
+  financeiros). Tabelas do módulo, separadas do cadastro: dados financeiros do **contato** e do
+  **paciente** (CPF com validação dos dígitos) e o **responsável financeiro** do paciente (o
+  contato, por padrão, ou outra pessoa com nome e CPF). Área "Financeiro" na tela do paciente e
+  do contato, só com o item. O CPF não vai para logs, bot nem páginas públicas (máscara de CPF e
+  CNPJ no log). A anonimização (F9) apaga esses dados.
 - **F11.2:** tabela de pagamentos por atendimento: valor (sugerido pelo preço do atendimento),
   forma (Pix, dinheiro, cartão), data e **quem pagou** (o paciente ou o responsável), com a
   confirmação das ações da Agenda. Um atendimento pode ter mais de um pagamento? (a perguntar.)
@@ -1639,15 +1651,15 @@ gera.
   Receita (sem valor fiscal). Erros da API em português na tela e na Administração › Erros.
 - **F11.5:** PDF da nota (DANFSe) no histórico do paciente, com baixar e reenviar; envio pelo
   WhatsApp com um template novo de documento (`rc_nota_fiscal_v1`, a aprovar na Meta).
-- **F11.6:** em Métricas › Financeiro ou Configurações (a perguntar): escolher o ano e baixar o
+- **F11.6:** no menu Financeiro (só o Administrador): escolher o ano e baixar o
   arquivo da DMED no layout da Receita, com responsável, beneficiário e valores; avisos de
   pagamento sem CPF.
 
 **Segurança da F11 (requisitos do cliente, 12/out/2026)**, obrigatórios em todas as subetapas:
 
 1. **Isolamento por clínica:** tabelas novas (pagamentos, notas, trilha da nota, dados fiscais)
-   com RLS e chaves amarradas à clínica (D1); as rotas conferem clínica, papel e o item "Nota
-   fiscal"; testes de banco de isolamento entre duas clínicas.
+   com RLS e chaves amarradas à clínica (D1); as rotas conferem clínica, papel e o item "Módulo
+   financeiro"; testes de banco de isolamento entre duas clínicas.
 2. **Segredos:** certificado A1 e senha dele no **Vault**; lidos só no servidor, na hora de
    assinar; nunca voltam para a tela (só titular e validade), nem vão para o Storage, o navegador
    ou o repositório. (F11.3)

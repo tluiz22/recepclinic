@@ -42,10 +42,11 @@
 >     roteiro no claude.ai (`R3VCJ9t1ebygPzjJhyvdJf`) **fica** (cliente, 11/out).
 >   - **F8a (templates pela API) validada em 12/out**: F8a.1 "Reenviar à Meta" do padrão recusado
 >     e F8a.2 "Excluir da Meta" dos templates do RecepClinic sem uso (detalhes no [plano](plano.md)).
->     **F11 (nota fiscal no CPF do responsável: NFS-e nacional da clínica com CNPJ, em
->     Mossoró/RN, e arquivo da DMED para o IR)** pedida e **antecipada pelo cliente em 12/out**;
->     plano em 6 subetapas no [plano](plano.md). **Retomar daqui:** F11.1 (item "Nota fiscal" na
->     matriz; CPF e responsável financeiro no cadastro). Em paralelo, aguardar a
+>     **F11 (Módulo financeiro: pagamentos e nota fiscal no CPF do responsável, NFS-e nacional
+>     da clínica com CNPJ, em Mossoró/RN, e arquivo da DMED para o IR)** pedida e **antecipada
+>     pelo cliente em 12/out**; plano, segurança e decisões no [plano](plano.md). **Retomar
+>     daqui:** F11.1 (item "Módulo financeiro" na matriz, menu "Financeiro", CPF e responsável só
+>     dentro do módulo). Em paralelo, aguardar a
 >     Meta (Análise do App; depois, a Verificação do acesso); a F10 (produção, com custo mensal)
 >     segue como opção. A F8 completa depende da Meta (análise do app e Tech
 >     Provider) e a F10 depende da F8.
