@@ -1377,7 +1377,7 @@ Pontos que o cliente encontrou testando o staging, um por vez, cada um validado 
 | 4 | "Aguardando remarcação" com o mesmo paciente repetido | validado em 11/out |
 | 5 | Mensagens com "fale com a clínica", caso a caso (5a: clínica sem serviço, serviço sem horário, como a clínica é chamada e prazo para oferecer horários; 5b: os demais casos) | validado em 11/out (5a e 5b) |
 | 6 | Avisos de marcação, remarcação e cancelamento por template | mantido como está (11/out) |
-| 7 | Explicação dos campos "Informações que o bot responde" | implementado (11/out); o cliente valida no fim dos ajustes |
+| 7 | Explicação dos campos "Informações que o bot responde" | validado em 11/out |
 | 8 | Página de tecnologia para o Suporte | implementado (11/out); o cliente valida no fim dos ajustes |
 | 9 | Comercial no Suporte: 9a planos e aplicar plano; 9b clínicas de demonstração; 9c roteiro de vendas | 9a implementado (11/out), com a simulação da negociação; 9b criado no staging (11/out); 9c implementado (11/out), aguardando validação |
 
