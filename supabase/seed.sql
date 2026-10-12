@@ -223,6 +223,9 @@ begin
   insert into public.clinic_fiscal_certificates (clinic_id, pfx_secret_id, password_secret_id, subject_name, subject_cnpj, valid_from, valid_until, terms_version)
     values (c_a, vault.create_secret('seed-nao-e-um-pfx', 'fiscal_pfx_' || c_a::text), vault.create_secret('seed', 'fiscal_pfx_password_' || c_a::text),
       'CLINICA EXEMPLO SAUDE LTDA', '11222333000181', now() - interval '11 months', now() + interval '20 days', 'seed');
+  -- DMED (F11.6): contador fictício e o sócio responsável perante o CNPJ.
+  insert into public.clinic_dmed_settings (clinic_id, filler_cpf, filler_name, filler_ddd, filler_phone, filler_email, legal_responsible_cpf)
+    values (c_a, '12345678909', 'Contador Exemplo', '84', '988880099', 'contador@exemplo-saude.local', '52998224725');
   insert into public.fiscal_audit_log (clinic_id, event, details)
     values (c_a, 'certificate_uploaded', '{"subject_name": "CLINICA EXEMPLO SAUDE LTDA", "cnpj": "11222333000181"}');
 

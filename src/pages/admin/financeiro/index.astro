@@ -38,6 +38,13 @@ const PAYER_LABEL = { contact: capitalize(vocabulary.contact), patient: "Própri
     Quem paga por cada {vocabulary.patient} e em nome de quem sai a nota fiscal. Para mudar, abra o cadastro e use o cartão "Financeiro".
   </p>
   <FlashMessage />
+  {
+    clinic.roles.includes("admin") && (
+      <a href="/admin/financeiro/dmed" class={`${SECONDARY_BUTTON} mt-4 inline-block`}>
+        DMED do ano (arquivo para o contador)
+      </a>
+    )
+  }
 
   <form method="GET" class="mt-4 flex flex-wrap items-center gap-2">
     <input name="q" value={q} placeholder="Nome ou telefone" class={`${INPUT} mt-0 sm:w-80`} />

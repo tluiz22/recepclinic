@@ -1,0 +1,220 @@
+---
+// Financeiro › DMED (F11.6, cliente, 12/out/2026): escolher o ano, conferir o
+// resumo (quem pagou, total) e os pagamentos que ficam de fora (sem CPF de
+// quem pagou ou de paciente anonimizado), e baixar o arquivo para o contador
+// importar no programa da Receita. Os responsáveis (preenchimento, perante o
+// CNPJ) e o CNES ficam guardados. Só o Administrador da clínica gera; o
+// Suporte vê o resumo.
+import AdminLayout from "../../../layouts/AdminLayout.astro";
+import Badge from "../../../components/admin/Badge.astro";
+import Card from "../../../components/admin/Card.astro";
+import FlashMessage from "../../../components/admin/FlashMessage.astro";
+import Icon from "../../../components/admin/Icon.astro";
+import { HINT, INPUT, LABEL, PRIMARY_BUTTON, SECONDARY_BUTTON } from "../../../components/admin/fieldStyles";
+import { formatCalendarDate, todayIn } from "../../../lib/clinicTime";
+import { formatCnpj } from "../../../lib/cnpj";
+import { formatCpf, maskCpf } from "../../../lib/cpf";
+import { createUserClient } from "../../../lib/data/clients";
+import { dmedYears, getDmedSettings, loadDmedYear } from "../../../lib/data/dmed";
+import { getFiscalSettings } from "../../../lib/data/fiscal";
+import { setFlash } from "../../../lib/flash";
+import { formatCentsBRL } from "../../../lib/money";
+import { currentPath, withReturn } from "../../../lib/returnPath";
+
+const clinic = Astro.locals.clinic!;
+const isClinicAdmin = clinic.roles.includes("admin");
+if (!isClinicAdmin && !clinic.isPlatformStaff) {
+  setFlash(Astro.cookies, { tone: "error", text: "A DMED é só do Administrador da clínica." });
+  return Astro.redirect("/admin/financeiro");
+}
+const db = createUserClient(Astro.request, Astro.cookies);
+const currentYear = Number(todayIn(clinic.timezone).slice(0, 4));
+const years = dmedYears(currentYear);
+const wanted = Number(Astro.url.searchParams.get("ano"));
+// Padrão: o ano passado (o da entrega até fevereiro).
+const year = years.includes(wanted) ? wanted : currentYear - 1;
+const [fiscal, settings, data] = await Promise.all([getFiscalSettings(db, clinic.clinicId), getDmedSettings(db, clinic.clinicId), loadDmedYear(db, clinic.clinicId, year)]);
+const action = "/api/admin/financeiro/dmed";
+const here = currentPath(Astro.url);
+const beneficiaries = data.responsibles.reduce((sum, r) => sum + r.beneficiaries.length, 0);
+const canGenerate = isClinicAdmin && fiscal !== null && settings !== null;
+const cpfValue = (cpf: string | null | undefined) => (cpf ? formatCpf(cpf) : "");
+const REASON = { no_cpf: "falta o CPF de quem pagou", anonymized: "paciente anonimizado" } as const;
+---
+
+<AdminLayout title="DMED">
+  <a href="/admin/financeiro" class="inline-flex items-center gap-1 text-sm font-medium text-sky-700 hover:underline">
+    <Icon name="chevron-left" class="h-4 w-4" /> Financeiro
+  </a>
+  <h1 class="mt-3 text-2xl font-bold text-slate-900">DMED</h1>
+  <p class="mt-2 max-w-3xl text-slate-600">
+    Declaração de serviços de saúde que a clínica entrega à Receita até o fim de fevereiro, com o que cada pessoa pagou no ano. Baixe o arquivo e
+    envie ao contador: ele importa no programa da Receita (PGD Dmed), que confere tudo antes de transmitir.
+  </p>
+  <FlashMessage />
+
+  <div class="mt-4 grid gap-4 lg:grid-cols-2">
+    <div class="flex flex-col gap-4">
+      <Card>
+        <form method="GET" class="flex flex-wrap items-end gap-3">
+          <div>
+            <label for="ano" class={LABEL}>Ano dos pagamentos</label>
+            <select id="ano" name="ano" class={`${INPUT} w-32`} data-auto-submit>
+              {years.map((y) => (
+                <option value={y} selected={y === year}>
+                  {y}
+                </option>
+              ))}
+            </select>
+          </div>
+          <noscript><button type="submit" class={SECONDARY_BUTTON}>Ver</button></noscript>
+        </form>
+        <dl class="mt-4 grid grid-cols-3 gap-3 text-sm">
+          <div>
+            <dt class="text-slate-500">Quem pagou</dt>
+            <dd class="font-semibold text-slate-900">{data.responsibles.length}</dd>
+          </div>
+          <div>
+            <dt class="text-slate-500">Beneficiários</dt>
+            <dd class="font-semibold text-slate-900">{beneficiaries}</dd>
+          </div>
+          <div>
+            <dt class="text-slate-500">Total</dt>
+            <dd class="font-semibold text-slate-900">{formatCentsBRL(data.totalCents)}</dd>
+          </div>
+        </dl>
+        {year === currentYear && <p class="mt-2 text-sm text-amber-700">O ano de {year} ainda não terminou: o arquivo fica parcial.</p>}
+        {!fiscal && (
+          <p class="mt-2 text-sm text-amber-700">
+            Faltam os dados fiscais da clínica: <a href="/admin/configuracoes/nota-fiscal" class="underline">Configurações › Nota fiscal</a>.
+          </p>
+        )}
+        {fiscal && <p class="mt-2 text-sm text-slate-600">Declarante: {fiscal.legalName} · CNPJ {formatCnpj(fiscal.cnpj)}</p>}
+        {!settings && <p class="mt-2 text-sm text-amber-700">Preencha e salve os responsáveis ao lado.</p>}
+        {
+          isClinicAdmin && (
+            <form method="POST" action={action} class="mt-4">
+              <input type="hidden" name="acao" value="gerar" />
+              <input type="hidden" name="ano" value={year} />
+              <button type="submit" class={PRIMARY_BUTTON} disabled={!canGenerate}>
+                Baixar o arquivo da DMED de {year}
+              </button>
+            </form>
+          )
+        }
+        {!isClinicAdmin && <p class="mt-4 text-sm text-slate-600">Só o Administrador da clínica baixa o arquivo.</p>}
+      </Card>
+
+      <Card>
+        <h2 class="flex flex-wrap items-center gap-2 font-semibold text-slate-900">
+          Ficam de fora ({data.leftOut.length})
+          {data.leftOut.length > 0 && <Badge variant="warning">confira</Badge>}
+        </h2>
+        <p class="mt-1 text-sm text-slate-600">
+          Sem o CPF de quem pagou, o pagamento não entra na DMED. Para incluir, abra o pagamento, exclua e registre de novo com o CPF.
+        </p>
+        <ul class="mt-2 divide-y divide-slate-100">
+          {data.leftOut.map((p) => (
+            <li class="flex flex-wrap items-center justify-between gap-2 py-2 text-sm">
+              <span>
+                <span class="font-medium text-slate-900">{formatCentsBRL(p.amountCents)}</span> · {formatCalendarDate(p.paidOn, "dd/MM/yyyy")}
+                <span class="block text-slate-500">
+                  Pagou: {p.payerName} · {p.patientName} · {REASON[p.reason]}
+                </span>
+              </span>
+              <a href={withReturn(`/admin/financeiro/pagamento/${p.appointmentId}`, here)} class="text-xs font-medium text-sky-700 hover:underline">
+                Abrir
+              </a>
+            </li>
+          ))}
+          {data.leftOut.length === 0 && <li class="py-2 text-sm text-slate-500">Nenhum.</li>}
+        </ul>
+      </Card>
+
+      <Card>
+        <h2 class="font-semibold text-slate-900">Quem pagou em {year}</h2>
+        <ul class="mt-2 divide-y divide-slate-100">
+          {data.responsibles.map((r) => (
+            <li class="py-2 text-sm">
+              <span class="font-medium text-slate-900">{r.name}</span> · CPF {maskCpf(r.cpf)}
+              <span class="block text-slate-500">
+                {[
+                  r.ownCents > 0 ? `próprio: ${formatCentsBRL(r.ownCents)}` : "",
+                  ...r.beneficiaries.map((b) => `${b.name}: ${formatCentsBRL(b.cents)}${b.cpf ? "" : " (sem CPF, vai a data de nascimento)"}`),
+                ]
+                  .filter(Boolean)
+                  .join(" · ")}
+              </span>
+            </li>
+          ))}
+          {data.responsibles.length === 0 && <li class="py-2 text-sm text-slate-500">Nenhum pagamento com CPF neste ano.</li>}
+        </ul>
+      </Card>
+    </div>
+
+    <Card>
+      <h2 class="font-semibold text-slate-900">Responsáveis da declaração</h2>
+      <p class="mt-1 text-sm text-slate-600">Ficam guardados para o ano que vem.</p>
+      <form method="POST" action={action} class="mt-3 flex flex-col gap-3">
+        <input type="hidden" name="acao" value="salvar" />
+        <input type="hidden" name="ano" value={year} />
+        <fieldset disabled={!isClinicAdmin} class="flex flex-col gap-3">
+          <p class="text-sm font-medium text-slate-900">Responsável pelo preenchimento (em geral, o contador)</p>
+          <div class="grid gap-3 sm:grid-cols-2">
+            <div>
+              <label for="filler_name" class={LABEL}>Nome</label>
+              <input id="filler_name" name="filler_name" required value={settings?.fillerName ?? ""} class={INPUT} />
+            </div>
+            <div>
+              <label for="filler_cpf" class={LABEL}>CPF</label>
+              <input id="filler_cpf" name="filler_cpf" required inputmode="numeric" placeholder="000.000.000-00" value={cpfValue(settings?.fillerCpf)} class={INPUT} />
+            </div>
+          </div>
+          <div class="grid grid-cols-[5rem_1fr_6rem] gap-3">
+            <div>
+              <label for="filler_ddd" class={LABEL}>DDD</label>
+              <input id="filler_ddd" name="filler_ddd" required inputmode="numeric" maxlength="2" value={settings?.fillerDdd ?? ""} class={INPUT} />
+            </div>
+            <div>
+              <label for="filler_phone" class={LABEL}>Telefone</label>
+              <input id="filler_phone" name="filler_phone" required inputmode="numeric" value={settings?.fillerPhone ?? ""} class={INPUT} />
+            </div>
+            <div>
+              <label for="filler_extension" class={LABEL}>Ramal</label>
+              <input id="filler_extension" name="filler_extension" inputmode="numeric" value={settings?.fillerExtension ?? ""} class={INPUT} />
+            </div>
+          </div>
+          <div>
+            <label for="filler_email" class={LABEL}>E-mail (opcional)</label>
+            <input id="filler_email" name="filler_email" type="email" value={settings?.fillerEmail ?? ""} class={INPUT} />
+          </div>
+          <div class="border-t border-slate-100 pt-3">
+            <label for="legal_responsible_cpf" class={LABEL}>CPF do responsável perante o CNPJ</label>
+            <input
+              id="legal_responsible_cpf"
+              name="legal_responsible_cpf"
+              required
+              inputmode="numeric"
+              placeholder="000.000.000-00"
+              value={cpfValue(settings?.legalResponsibleCpf)}
+              class={`${INPUT} sm:w-56`}
+            />
+            <p class={HINT}>O sócio ou administrador que responde pela clínica na Receita.</p>
+          </div>
+          <div>
+            <label for="cnes" class={LABEL}>CNES (opcional)</label>
+            <input id="cnes" name="cnes" inputmode="numeric" maxlength="7" value={settings?.cnes ?? ""} class={`${INPUT} sm:w-40`} />
+          </div>
+          {isClinicAdmin && <button type="submit" class={`${SECONDARY_BUTTON} self-start`}>Salvar responsáveis</button>}
+        </fieldset>
+      </form>
+    </Card>
+  </div>
+</AdminLayout>
+
+<script>
+  // Trocar o ano já mostra o resumo dele.
+  document.querySelector<HTMLSelectElement>("[data-auto-submit]")?.addEventListener("change", (event) => {
+    (event.currentTarget as HTMLSelectElement).form?.submit();
+  });
+</script>

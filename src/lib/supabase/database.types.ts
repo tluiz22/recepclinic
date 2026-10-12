@@ -373,6 +373,26 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"clinic_dmed_settings": {
+                  Row: {
+                    "clinic_id": string,"cnes": string | null,"filler_cpf": string,"filler_ddd": string,"filler_email": string | null,"filler_extension": string | null,"filler_name": string,"filler_phone": string,"legal_responsible_cpf": string,"updated_at": string,"updated_by": string | null
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "clinic_id": string,"cnes"?: string | null,"filler_cpf": string,"filler_ddd": string,"filler_email"?: string | null,"filler_extension"?: string | null,"filler_name": string,"filler_phone": string,"legal_responsible_cpf": string,"updated_at"?: string,"updated_by"?: string | null
+                  }
+                  Update: {
+                    "clinic_id"?: string,"cnes"?: string | null,"filler_cpf"?: string,"filler_ddd"?: string,"filler_email"?: string | null,"filler_extension"?: string | null,"filler_name"?: string,"filler_phone"?: string,"legal_responsible_cpf"?: string,"updated_at"?: string,"updated_by"?: string | null
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "clinic_dmed_settings_clinic_id_fkey"
+      columns: ["clinic_id"]
+isOneToOne: true
+      referencedRelation: "clinics"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"clinic_features": {
                   Row: {
                     "clinic_id": string,"enabled_at": string,"enabled_by": string | null,"feature_key": string
@@ -1402,6 +1422,9 @@ isOneToOne: false
                            },
 "list_clinics_with_idle_conversations":
 { Args: { "p_before": string }; Returns: string[]
+                           },
+"log_dmed_generated":
+{ Args: { "p_clinic_id": string,"p_left_out": number,"p_responsibles": number,"p_total_cents": number,"p_year": number }; Returns: undefined
                            },
 "log_platform_access":
 { Args: { "p_clinic_id": string,"p_method": string,"p_path": string }; Returns: undefined

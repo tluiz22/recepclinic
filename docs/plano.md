@@ -1629,10 +1629,10 @@ gera.
 |---|---|---|---|
 | F11.1 | Item "Módulo financeiro" na matriz e menu "Financeiro"; área Financeiro do paciente e do contato (CPF e responsável) | — | implementada (12/out), validação no fim (cliente, 12/out) |
 | F11.2 | Registro do pagamento no atendimento (sem nota ainda) | F11.1 | implementada (12/out), validação no fim (cliente, 12/out) |
-| F11.3 | Dados fiscais da clínica e certificado A1 | F11.1 | implementada (12/out), aguardando validação do cliente |
+| F11.3 | Dados fiscais da clínica e certificado A1 | F11.1 | implementada (12/out), validação no fim (cliente, 12/out) |
 | F11.4 | Emissão e cancelamento na API nacional (ambiente de testes da Receita) | F11.2, F11.3 e os itens do cliente abaixo | a fazer |
 | F11.5 | PDF da nota no histórico e envio pelo WhatsApp (template novo) | F11.4 e a Meta | a fazer |
-| F11.6 | Arquivo da DMED do ano | F11.2 | a fazer |
+| F11.6 | Arquivo da DMED do ano | F11.2 | implementada (12/out), aguardando validação do cliente |
 
 - **F11.1:** item `finance` ("Módulo financeiro (pagamentos e nota fiscal)", área nova
   **Financeiro**) na matriz e o menu "Financeiro" (por ora, a lista de pacientes com e sem dados
@@ -1728,6 +1728,28 @@ gera.
 - **F11.6:** no menu Financeiro (só o Administrador): escolher o ano e baixar o
   arquivo da DMED no layout da Receita, com responsável, beneficiário e valores; avisos de
   pagamento sem CPF.
+  **Decisões do cliente (12/out):**
+  - **Responsáveis:** o responsável pelo preenchimento (CPF, nome, DDD, telefone, e-mail; em
+    geral o contador), o CPF do responsável perante o CNPJ e o CNES (opcional) são preenchidos na
+    tela da DMED e ficam guardados para o ano seguinte.
+  - **Pagamento sem CPF de quem pagou:** o arquivo sai sem ele, e a tela lista os que ficaram de
+    fora (data, valor, quem pagou, paciente), com o link para o pagamento.
+  - **Leiaute:** o do Ato Declaratório Executivo Cofis nº 34/2024 (arquivo texto com `|`;
+    registros Dmed, RESPO, DECPJ, PSS, RPPSS, BRPPSS e FIMDmed). Declaração original (a
+    retificadora, se precisar, o contador faz no programa da Receita, que também valida o
+    arquivo antes de transmitir).
+  **Como ficou (12/out):** migração `20261012150000_dmed.sql` (tabela `clinic_dmed_settings`,
+  gravada só pelo Administrador da clínica; função `log_dmed_generated`, que põe cada arquivo na
+  trilha fiscal com ano e totais, sem CPF). Tela **Financeiro › DMED** (botão no menu Financeiro,
+  só para o Administrador; o Suporte vê o resumo): ano (padrão, o passado), resumo, "Ficam de
+  fora" (sem CPF de quem pagou ou beneficiário anonimizado) com o link para o pagamento, quem
+  pagou e os beneficiários, e "Baixar o arquivo" (`DMED_<ano>_<CNPJ>.txt`, ISO-8859-1, CRLF).
+  Regras do arquivo: quem pagou agrupado por CPF, em ordem crescente; o que o paciente pagou
+  para si (ou com o mesmo CPF) vai no valor do RPPSS; cada outro paciente vira um BRPPSS (CPF,
+  se houver, e sempre a data de nascimento); PSS sempre (prestador). Testes: unidade
+  (`src/lib/dmed.test.ts`) e banco (`tests/db/dmed.test.ts`, mais a varredura de isolamento).
+  **A conferir com o contador:** importar um arquivo no PGD Dmed do ano antes da primeira
+  entrega real (codificação e ordem de beneficiários sem CPF são os pontos de dúvida).
 
 **Segurança da F11 (requisitos do cliente, 12/out/2026)**, obrigatórios em todas as subetapas:
 

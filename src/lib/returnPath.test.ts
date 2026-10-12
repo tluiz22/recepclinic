@@ -4,6 +4,7 @@ import { currentPath, receivedReturn, safeReturnPath, withReturn } from "./retur
 it("volta só para telas do dia a dia dentro do painel", () => {
   expect(safeReturnPath("/admin/agenda?date=2026-10-12", "/x")).toBe("/admin/agenda?date=2026-10-12");
   expect(safeReturnPath("/admin/consultas?tab=pendentes", "/x")).toBe("/admin/consultas?tab=pendentes");
+  expect(safeReturnPath("/admin/financeiro/dmed?ano=2025", "/x")).toBe("/admin/financeiro/dmed?ano=2025");
   expect(safeReturnPath("/admin/pacientes/8a64cd4f-aa75-430c-8e41-b58e9d20fe1d", "/x")).toBe("/admin/pacientes/8a64cd4f-aa75-430c-8e41-b58e9d20fe1d");
   expect(safeReturnPath("/admin/dashboard", "/x")).toBe("/admin/dashboard");
   expect(safeReturnPath("https://outro.site/admin/agenda", "/x")).toBe("/x");

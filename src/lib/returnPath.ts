@@ -1,13 +1,13 @@
 // Para onde uma ação do dia a dia volta (F4.5–F4.8): só telas do Início, da
-// Agenda, do Resumo do Dia (`/admin/consultas`) e de Pacientes, dentro do
-// painel. Um endereço de fora (ou montado para enganar) vira o padrão.
+// Agenda, do Resumo do Dia (`/admin/consultas`), de Pacientes e do Financeiro
+// (F11), dentro do painel. Um endereço de fora (ou montado para enganar) vira o padrão.
 //
 // "Voltar" leva à tela de onde a pessoa veio (cliente, 10/out/2026: "toda tela
 // deve voltar para a tela anterior que levou o usuário até a tela atual"): o
 // link de saída leva a origem em `?volta=`, e a tela de destino usa essa
 // origem no "Voltar" e nas próprias ações, com a tela fixa só como padrão.
 
-const PANEL_RETURN = /^\/admin\/(dashboard|agenda|consultas|pacientes)(\/[a-z0-9-]+)*(\?[^\s#]*)?$/;
+const PANEL_RETURN = /^\/admin\/(dashboard|agenda|consultas|pacientes|financeiro)(\/[a-z0-9-]+)*(\?[^\s#]*)?$/;
 
 /** Origem muito longa (voltas dentro de voltas) não vai adiante. */
 const MAX_RETURN_LENGTH = 1500;
