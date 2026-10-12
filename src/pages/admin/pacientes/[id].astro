@@ -19,8 +19,10 @@ import { formatAge, isOverConsultationAgeLimit } from "../../../lib/age";
 import { canAccessArea, isUuid } from "../../../lib/clinicAccess";
 import { formatCpf } from "../../../lib/cpf";
 import { getContactCpf, getPatientFinance, resolvePayer } from "../../../lib/data/finance";
+import { listPatientPayments, PAYMENT_METHOD_LABEL } from "../../../lib/data/payments";
+import { formatCentsBRL } from "../../../lib/money";
 import { currentPath, receivedReturn, withReturn } from "../../../lib/returnPath";
-import { formatInstant, localDateOf, todayIn } from "../../../lib/clinicTime";
+import { formatCalendarDate, formatInstant, localDateOf, todayIn } from "../../../lib/clinicTime";
 import { createUserClient } from "../../../lib/data/clients";
 import { listNoShowStats, listPatientAppointments } from "../../../lib/data/agenda/view";
 import { getClinicSettings } from "../../../lib/data/config/clinic";
@@ -77,12 +79,15 @@ const anonymizeMessage = preview
       .join(" ")
   : "";
 // Módulo financeiro (F11.1): o Suporte vê, mas só a equipe da clínica grava.
-const financeOn = canAccessArea(clinic, "finance") && !anonymized;
+// Os pagamentos (F11.2) ficam visíveis também depois da anonimização (prazo fiscal).
+const paymentsOn = canAccessArea(clinic, "finance");
+const financeOn = paymentsOn && !anonymized;
 const canEditFinance = financeOn && (clinic.roles.includes("admin") || clinic.roles.includes("reception"));
 const [finance, contactCpf] = financeOn
   ? await Promise.all([getPatientFinance(db, clinic.clinicId, patient.id), getContactCpf(db, clinic.clinicId, contact.id)])
   : [null, null];
 const responsible = finance ? resolvePayer(patient, contact, finance, contactCpf) : null;
+const payments = paymentsOn ? await listPatientPayments(db, clinic.clinicId, patient.id) : [];
 const financeAction = withReturn(`/api/admin/financeiro/paciente/${patient.id}`, volta);
 const cpfValue = (cpf: string | null) => (cpf ? formatCpf(cpf) : "");
 const ageWarning =
@@ -215,6 +220,34 @@ const ageWarning =
               </fieldset>
             </form>
             <p class={HINT}>Só a Recepção e o Administrador veem estes dados; o bot e as páginas públicas não.</p>
+          </Card>
+        )
+      }
+
+      {
+        paymentsOn && (
+          <Card>
+            <h2 class="font-semibold text-slate-900">Pagamentos</h2>
+            <ul class="mt-2 divide-y divide-slate-100">
+              {payments.map((p) => (
+                <li class="flex flex-wrap items-center justify-between gap-2 py-2 text-sm">
+                  <span class={p.deletedAt ? "text-slate-400 line-through" : ""}>
+                    <span class="font-medium text-slate-900">{formatCentsBRL(p.amountCents)}</span> · {PAYMENT_METHOD_LABEL[p.method]} ·{" "}
+                    {formatCalendarDate(p.paidOn, "dd/MM/yyyy")}
+                    <span class="block text-slate-500">
+                      {p.serviceName} de {formatInstant(p.appointmentAt, clinic.timezone, "dd/MM/yyyy")} · pagou: {p.payerName}
+                    </span>
+                  </span>
+                  <span class="flex items-center gap-2">
+                    {p.deletedAt ? <Badge>excluído</Badge> : !p.payerCpf && <Badge variant="warning">falta CPF</Badge>}
+                    <a href={withReturn(`/admin/financeiro/pagamento/${p.appointmentId}`, here)} class="text-xs font-medium text-sky-700 hover:underline">
+                      Abrir
+                    </a>
+                  </span>
+                </li>
+              ))}
+              {payments.length === 0 && <li class="py-2 text-sm text-slate-500">Nenhum pagamento ainda. Registre pelo botão "Pagamento" na Agenda.</li>}
+            </ul>
           </Card>
         )
       }

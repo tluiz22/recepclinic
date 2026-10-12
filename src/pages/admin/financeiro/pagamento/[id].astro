@@ -1,0 +1,302 @@
+---
+// Financeiro › Pagamento do atendimento (F11.2, cliente, 12/out/2026): aberto
+// pelo botão "Pagamento" da Agenda (ou pelo cartão Financeiro do paciente).
+// Mostra o preço, o que já foi pago e o que falta, os pagamentos (os
+// excluídos também, riscados) e o formulário: valor (sugerido o que falta),
+// forma, data e quem pagou (o responsável financeiro já marcado, trocável só
+// neste pagamento). A confirmação fica no botão final, com o aviso "acima do
+// preço". Só o Administrador e a Recepção gravam; o Suporte só vê.
+import AdminLayout from "../../../../layouts/AdminLayout.astro";
+import Badge, { type BadgeVariant } from "../../../../components/admin/Badge.astro";
+import Card from "../../../../components/admin/Card.astro";
+import ConfirmDeleteDialog from "../../../../components/admin/ConfirmDeleteDialog.astro";
+import FlashMessage from "../../../../components/admin/FlashMessage.astro";
+import Icon from "../../../../components/admin/Icon.astro";
+import { HINT, INPUT, LABEL, PRIMARY_BUTTON } from "../../../../components/admin/fieldStyles";
+import { isUuid } from "../../../../lib/clinicAccess";
+import { formatCalendarDate, formatInstant, localDateOf, todayIn } from "../../../../lib/clinicTime";
+import { formatCpf, maskCpf } from "../../../../lib/cpf";
+import { getAgendaAppointment } from "../../../../lib/data/agenda/view";
+import { createUserClient } from "../../../../lib/data/clients";
+import { effectivePayer, getContactCpf, getPatientFinance } from "../../../../lib/data/finance";
+import { getContact, getPatient } from "../../../../lib/data/patients";
+import {
+  canReceivePayment,
+  getAppointmentPrice,
+  listAppointmentPayments,
+  PAYMENT_METHOD_LABEL,
+  PAYMENT_METHODS,
+  summarizePayments,
+} from "../../../../lib/data/payments";
+import { centsToInput } from "../../../../lib/forms";
+import { formatCentsBRL } from "../../../../lib/money";
+import { receivedReturn, withReturn } from "../../../../lib/returnPath";
+import { capitalize, vocabularyFor } from "../../../../lib/vocabulary";
+
+const clinic = Astro.locals.clinic!;
+const db = createUserClient(Astro.request, Astro.cookies);
+const vocabulary = vocabularyFor(clinic.clinicProfile);
+const id = Astro.params.id!;
+const appointment = isUuid(id) ? await getAgendaAppointment(db, clinic.clinicId, id).catch(() => null) : null;
+if (!appointment) return Astro.redirect("/admin/agenda");
+
+const volta = receivedReturn(Astro.url);
+const back = volta ?? `/admin/agenda?date=${localDateOf(appointment.scheduledAt, clinic.timezone)}`;
+const [patient, price, payments] = await Promise.all([
+  getPatient(db, clinic.clinicId, appointment.patientId),
+  getAppointmentPrice(db, clinic.clinicId, appointment.id),
+  listAppointmentPayments(db, clinic.clinicId, appointment.id),
+]);
+const [contact, finance, contactCpf] = await Promise.all([
+  getContact(db, clinic.clinicId, patient.contactId),
+  getPatientFinance(db, clinic.clinicId, patient.id),
+  getContactCpf(db, clinic.clinicId, patient.contactId),
+]);
+const summary = summarizePayments(price, payments);
+const today = todayIn(clinic.timezone);
+const canEdit = clinic.roles.includes("admin") || clinic.roles.includes("reception");
+const receives = canReceivePayment(appointment.status) && !patient.anonymizedAt;
+const defaultPayer = effectivePayer(patient, finance.payer);
+const suggested = summary.remainingCents !== null && summary.remainingCents > 0 ? summary.remainingCents : null;
+const action = withReturn(`/api/admin/financeiro/pagamentos/${appointment.id}`, volta);
+const when = formatInstant(appointment.scheduledAt, clinic.timezone, "EEE dd/MM/yyyy 'às' HH:mm");
+
+const statusBadge: Record<string, { label: string; variant: BadgeVariant }> = {
+  scheduled: { label: "Marcado", variant: "info" },
+  confirmed: { label: "Marcado", variant: "info" },
+  completed: { label: "Compareceu", variant: "success" },
+  canceled: { label: "Cancelado", variant: "danger" },
+  no_show: { label: "Faltou", variant: "danger" },
+};
+const status = statusBadge[appointment.status];
+
+// Quem pagou: o contato (ou o próprio paciente, quando ele fala por si), o
+// paciente e outra pessoa; o CPF do cadastro aparece, e o que falta é pedido.
+const payerOptions = [
+  {
+    value: "contact",
+    label: patient.isContactSelf ? patient.fullName : `${contact.fullName} (${vocabulary.contact})`,
+    cpf: contactCpf,
+  },
+  ...(patient.isContactSelf ? [] : [{ value: "patient", label: patient.fullName, cpf: finance.cpf }]),
+] as { value: "contact" | "patient"; label: string; cpf: string | null }[];
+const otherDefault = defaultPayer === "other" ? { name: finance.payerName ?? "", cpf: finance.payerCpf } : { name: "", cpf: null };
+---
+
+<AdminLayout title="Pagamento">
+  <a href={back} class="inline-flex items-center gap-1 text-sm font-medium text-sky-700 hover:underline">
+    <Icon name="chevron-left" class="h-4 w-4" /> Voltar
+  </a>
+  <h1 class="mt-3 text-2xl font-bold text-slate-900">Pagamento</h1>
+  <FlashMessage />
+
+  <Card class="mt-4 max-w-2xl">
+    <p class="flex flex-wrap items-center gap-2 font-medium text-slate-900">
+      {appointment.patientName}
+      {status && <Badge variant={status.variant}>{status.label}</Badge>}
+    </p>
+    <p class="text-sm text-slate-600">{appointment.serviceName} · {appointment.agendaName} · {when}</p>
+    <dl class="mt-3 grid grid-cols-3 gap-3 text-sm">
+      <div>
+        <dt class="text-slate-500">Preço</dt>
+        <dd class="font-semibold text-slate-900">{summary.priceCents === null ? "Sem preço" : formatCentsBRL(summary.priceCents)}</dd>
+      </div>
+      <div>
+        <dt class="text-slate-500">Pago</dt>
+        <dd class="font-semibold text-slate-900">{formatCentsBRL(summary.paidCents)}</dd>
+      </div>
+      <div>
+        <dt class="text-slate-500">{summary.overPrice ? "Acima do preço" : "Falta"}</dt>
+        <dd class={`font-semibold ${summary.overPrice ? "text-amber-700" : "text-slate-900"}`}>
+          {summary.overPrice ? formatCentsBRL(summary.paidCents - summary.priceCents!) : summary.remainingCents === null ? "—" : formatCentsBRL(summary.remainingCents)}
+        </dd>
+      </div>
+    </dl>
+  </Card>
+
+  <Card class="mt-4 max-w-2xl">
+    <h2 class="font-semibold text-slate-900">Pagamentos ({payments.filter((p) => !p.deletedAt).length})</h2>
+    <ul class="mt-2 divide-y divide-slate-100">
+      {
+        payments.map((p) => (
+          <li class="flex flex-wrap items-center justify-between gap-2 py-2 text-sm">
+            <span class={p.deletedAt ? "text-slate-400 line-through" : ""}>
+              <span class="font-medium text-slate-900">{formatCentsBRL(p.amountCents)}</span> · {PAYMENT_METHOD_LABEL[p.method]} · {formatCalendarDate(p.paidOn, "dd/MM/yyyy")}
+              <span class="block text-slate-500">
+                Pagou: {p.payerName}
+                {p.payerCpf ? ` · CPF ${maskCpf(p.payerCpf)}` : ""}
+              </span>
+            </span>
+            <span class="flex items-center gap-2">
+              {p.deletedAt ? (
+                <Badge>excluído em {formatInstant(p.deletedAt, clinic.timezone, "dd/MM 'às' HH:mm")}</Badge>
+              ) : (
+                <>
+                  {!p.payerCpf && <Badge variant="warning">falta CPF</Badge>}
+                  {canEdit && (
+                    <form method="POST" action={action}>
+                      <input type="hidden" name="acao" value="excluir" />
+                      <input type="hidden" name="payment_id" value={p.id} />
+                      <button
+                        type="submit"
+                        class="js-confirm-delete text-xs font-medium text-red-700 hover:underline"
+                        data-confirm-title="Excluir o pagamento?"
+                        data-confirm-message={`${formatCentsBRL(p.amountCents)} (${PAYMENT_METHOD_LABEL[p.method]}), de ${p.payerName}. Sai das somas e fica guardado como excluído; registre de novo o certo.`}
+                        data-confirm-label="Excluir pagamento"
+                      >
+                        Excluir
+                      </button>
+                    </form>
+                  )}
+                </>
+              )}
+            </span>
+          </li>
+        ))
+      }
+      {payments.length === 0 && <li class="py-2 text-sm text-slate-500">Nenhum pagamento ainda.</li>}
+    </ul>
+  </Card>
+
+  {
+    !receives && (
+      <p class="mt-4 max-w-2xl text-sm text-slate-600">
+        {patient.anonymizedAt ? "Cadastro anonimizado: não recebe pagamento novo." : "Atendimento cancelado ou com falta: não recebe pagamento novo."}
+      </p>
+    )
+  }
+  {receives && !canEdit && <p class="mt-4 max-w-2xl text-sm text-slate-600">Só a Recepção e o Administrador da clínica registram pagamentos.</p>}
+
+  {
+    receives && canEdit && (
+      <Card class="mt-4 max-w-2xl">
+        <h2 class="font-semibold text-slate-900">Registrar pagamento</h2>
+        <form method="POST" action={action} class="mt-3 flex flex-col gap-4" id="pagamento" data-patient={appointment.patientName} data-remaining={summary.remainingCents ?? ""}>
+          <input type="hidden" name="acao" value="registrar" />
+          <div class="grid gap-3 sm:grid-cols-2">
+            <div>
+              <label for="amount" class={LABEL}>Valor (R$)</label>
+              <input id="amount" name="amount" required inputmode="decimal" placeholder="0,00" value={centsToInput(suggested)} class={INPUT} />
+              <p class={HINT}>{suggested !== null ? "Sugerido: o que falta." : summary.priceCents === null ? "Atendimento sem preço." : "Já pago por inteiro."}</p>
+            </div>
+            <div>
+              <label for="paid_on" class={LABEL}>Data do pagamento</label>
+              <input id="paid_on" name="paid_on" type="date" required max={today} value={today} class={INPUT} />
+            </div>
+          </div>
+          <fieldset>
+            <legend class={LABEL}>Forma</legend>
+            <div class="mt-1 flex flex-wrap gap-2">
+              {PAYMENT_METHODS.map((m, i) => (
+                <label class="cursor-pointer rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm has-[:checked]:border-sky-700 has-[:checked]:bg-sky-50">
+                  <input type="radio" name="method" value={m.value} required checked={i === 0} class="mr-1" />
+                  {m.label}
+                </label>
+              ))}
+            </div>
+          </fieldset>
+          <fieldset>
+            <legend class={LABEL}>Quem pagou (a nota sai no CPF dele)</legend>
+            <div class="mt-1 flex flex-col gap-1 text-sm">
+              {payerOptions.map((o) => (
+                <label class="flex items-center gap-2">
+                  <input type="radio" name="payer" value={o.value} checked={defaultPayer === o.value} class="h-4 w-4" />
+                  {o.label}
+                  {defaultPayer === o.value && <span class="text-xs text-slate-500">(responsável financeiro)</span>}
+                </label>
+              ))}
+              <label class="flex items-center gap-2">
+                <input type="radio" name="payer" value="other" checked={defaultPayer === "other"} class="h-4 w-4" />
+                Outra pessoa
+                {defaultPayer === "other" && <span class="text-xs text-slate-500">(responsável financeiro)</span>}
+              </label>
+            </div>
+          </fieldset>
+          {payerOptions.map((o) => (
+            <div data-payer-only={o.value}>
+              {o.cpf ? (
+                <p class="text-sm text-slate-700">CPF de {o.label}: {formatCpf(o.cpf)}</p>
+              ) : (
+                <>
+                  <label for={`payer_cpf_${o.value}`} class={LABEL}>
+                    CPF de {o.label} (opcional)
+                  </label>
+                  <input id={`payer_cpf_${o.value}`} name="payer_cpf" inputmode="numeric" placeholder="000.000.000-00" class={`${INPUT} w-48`} />
+                  <p class={HINT}>Sem o CPF, o pagamento é registrado, mas a nota fiscal não sai. Digitado aqui, fica também no cadastro financeiro.</p>
+                </>
+              )}
+            </div>
+          ))}
+          <div data-payer-only="other" class="grid gap-3 sm:grid-cols-2">
+            <div>
+              <label for="payer_name" class={LABEL}>Nome de quem pagou</label>
+              <input id="payer_name" name="payer_name" value={otherDefault.name} class={INPUT} />
+            </div>
+            <div>
+              <label for="payer_cpf_other" class={LABEL}>CPF de quem pagou (opcional)</label>
+              <input
+                id="payer_cpf_other"
+                name="payer_cpf"
+                inputmode="numeric"
+                placeholder="000.000.000-00"
+                value={otherDefault.cpf ? formatCpf(otherDefault.cpf) : ""}
+                class={INPUT}
+              />
+            </div>
+            <p class={`${HINT} sm:col-span-2`}>Vale só para este pagamento; para mudar o responsável de sempre, use o cartão "Financeiro" do {vocabulary.patient}.</p>
+          </div>
+          <button
+            type="submit"
+            class={`${PRIMARY_BUTTON} js-confirm-delete self-start`}
+            data-confirm-title="Registrar o pagamento?"
+            data-confirm-message={appointment.patientName}
+            data-confirm-label="Registrar pagamento"
+            data-confirm-tone="primary"
+          >
+            Registrar pagamento
+          </button>
+        </form>
+      </Card>
+    )
+  }
+  <p class="mt-4 max-w-2xl text-xs text-slate-500">
+    <a href={withReturn(`/admin/pacientes/${patient.id}`, volta)} class="text-sky-700 hover:underline">{capitalize(vocabulary.patient)}: {patient.fullName}</a>
+  </p>
+  <ConfirmDeleteDialog />
+</AdminLayout>
+
+<script>
+  import { parseMoneyCents } from "../../../../lib/forms";
+
+  // Mostra só os campos de quem pagou (e só eles vão no envio) e monta o
+  // texto da confirmação, com o aviso "acima do preço".
+  const form = document.getElementById("pagamento") as HTMLFormElement | null;
+  if (form) {
+    const brl = (cents: number) => (cents / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+    const submit = form.querySelector<HTMLButtonElement>("button[type=submit]")!;
+    const sync = () => {
+      const payer = form.querySelector<HTMLInputElement>('input[name="payer"]:checked')?.value ?? "contact";
+      form.querySelectorAll<HTMLElement>("[data-payer-only]").forEach((block) => {
+        const on = block.dataset.payerOnly === payer;
+        block.hidden = !on;
+        block.querySelectorAll<HTMLInputElement>("input").forEach((input) => (input.disabled = !on));
+      });
+      const nameInput = form.querySelector<HTMLInputElement>("#payer_name");
+      if (nameInput) nameInput.required = payer === "other";
+
+      const cents = parseMoneyCents(form.querySelector<HTMLInputElement>("#amount")?.value ?? "");
+      const method = form.querySelector<HTMLInputElement>('input[name="method"]:checked')?.parentElement?.textContent?.trim() ?? "";
+      const remaining = form.dataset.remaining === "" ? null : Number(form.dataset.remaining);
+      const over = remaining !== null && Number.isFinite(cents) && cents > remaining;
+      submit.dataset.confirmMessage = [
+        `${form.dataset.patient}: ${Number.isFinite(cents) ? brl(cents) : "valor a conferir"}${method ? ` (${method})` : ""}.`,
+        over ? `Atenção: fica acima do preço do atendimento (${remaining === 0 ? "já estava pago por inteiro" : `faltavam ${brl(remaining)}`}).` : "",
+      ]
+        .filter(Boolean)
+        .join(" ");
+    };
+    form.addEventListener("input", sync);
+    form.addEventListener("change", sync);
+    sync();
+  }
+</script>

@@ -17,12 +17,14 @@ import LembretesTab from "../../../components/admin/resumo/LembretesTab.astro";
 import ListaEsperaTab from "../../../components/admin/resumo/ListaEsperaTab.astro";
 import ResumoDia from "../../../components/admin/resumo/ResumoDia.astro";
 import { isCalendarDate, todayIn } from "../../../lib/clinicTime";
+import { canAccessArea } from "../../../lib/clinicAccess";
 import { createUserClient } from "../../../lib/data/clients";
 import { loadActorLabels } from "../../../lib/data/agenda/trail";
 import { listAgendaAppointments, listNoShowStats, listOrigins, type AgendaAppointment } from "../../../lib/data/agenda/view";
 import { listAgendas } from "../../../lib/data/config/agendas";
 import { listAwaitingRebooking, listPendingAttendance, listRecordedPage, listRemindersOfDay } from "../../../lib/data/daily";
 import { describeSendsAlert, getSendsAlert, listAppointmentsWithFailedSends, listJobRuns } from "../../../lib/data/sends";
+import { listPaymentStates } from "../../../lib/data/payments";
 import { listRecentOffers, listWaitlist } from "../../../lib/data/waitlist/entries";
 import { vocabularyFor } from "../../../lib/vocabulary";
 
@@ -93,9 +95,15 @@ switch (tab) {
   }
 }
 const actors = await loadActorLabels(db, clinic.clinicId, [...dayAppointments.map((a) => a.createdBy), ...awaiting.map((a) => a.canceledBy)]);
-const [noShows, origins] = cards.length
-  ? await Promise.all([listNoShowStats(db, clinic.clinicId, cards.map((a) => a.patientId)), listOrigins(db, clinic.clinicId, cards)])
-  : [new Map(), new Map()];
+// Módulo financeiro (F11.2): selo e botão "Pagamento", para quem tem a área.
+const financeOn = canAccessArea(clinic, "finance");
+const [noShows, origins, paymentStates] = cards.length
+  ? await Promise.all([
+      listNoShowStats(db, clinic.clinicId, cards.map((a) => a.patientId)),
+      listOrigins(db, clinic.clinicId, cards),
+      financeOn ? listPaymentStates(db, clinic.clinicId, cards.map((a) => a.id)) : Promise.resolve(null),
+    ])
+  : [new Map(), new Map(), null];
 ---
 
 <AdminLayout title="Resumo do Dia">
@@ -136,6 +144,7 @@ const [noShows, origins] = cards.length
               onWaitlist={false}
               noShow={noShows.get(a.patientId)}
               origin={a.originAppointmentId ? origins.get(a.originAppointmentId) : undefined}
+              payment={paymentStates ? (paymentStates.get(a.id) ?? "none") : undefined}
             />
           ))}
         </div>

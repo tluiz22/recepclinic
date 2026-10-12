@@ -1627,8 +1627,8 @@ gera.
 
 | | Subetapa | Depende de | Situação |
 |---|---|---|---|
-| F11.1 | Item "Módulo financeiro" na matriz e menu "Financeiro"; área Financeiro do paciente e do contato (CPF e responsável) | — | implementada (12/out), aguardando validação do cliente |
-| F11.2 | Registro do pagamento no atendimento (sem nota ainda) | F11.1 | a fazer |
+| F11.1 | Item "Módulo financeiro" na matriz e menu "Financeiro"; área Financeiro do paciente e do contato (CPF e responsável) | — | implementada (12/out), validação no fim (cliente, 12/out) |
+| F11.2 | Registro do pagamento no atendimento (sem nota ainda) | F11.1 | implementada (12/out), aguardando validação do cliente |
 | F11.3 | Dados fiscais da clínica e certificado A1 | F11.1 | a fazer |
 | F11.4 | Emissão e cancelamento na API nacional (ambiente de testes da Receita) | F11.2, F11.3 e os itens do cliente abaixo | a fazer |
 | F11.5 | PDF da nota no histórico e envio pelo WhatsApp (template novo) | F11.4 e a Meta | a fazer |
@@ -1653,7 +1653,38 @@ gera.
   (`tests/db/modulo-financeiro.test.ts`, mais a varredura de isolamento com as tabelas novas).
 - **F11.2:** tabela de pagamentos por atendimento: valor (sugerido pelo preço do atendimento),
   forma (Pix, dinheiro, cartão), data e **quem pagou** (o paciente ou o responsável), com a
-  confirmação das ações da Agenda. Um atendimento pode ter mais de um pagamento? (a perguntar.)
+  confirmação das ações da Agenda.
+  **Decisões do cliente (12/out):**
+  - **Vários pagamentos** por atendimento (ex.: parte no Pix e parte no cartão, ou sinal antes e
+    o restante no dia); cada um terá a sua nota (F11.4) e a DMED soma tudo no ano.
+  - **Onde:** botão **"Pagamento"** no cartão do atendimento na Agenda (só com o módulo), que abre
+    uma tela própria com o preço, o que já foi pago, o que falta e o formulário; a confirmação fica
+    no botão final (como no Remarcar) e o "Voltar" leva de volta à Agenda. Os pagamentos também
+    aparecem no cartão "Financeiro" do paciente.
+  - **Quando:** atendimento marcado, confirmado ou que compareceu (permite o sinal antes do dia).
+    Cancelado e falta não recebem pagamento novo, mas os já feitos continuam visíveis.
+  - **Formas:** Pix, dinheiro, crédito e débito (fixas, iguais para todas as clínicas).
+  - **Quem pagou:** vem marcado o responsável financeiro do paciente; pode ser trocado, só naquele
+    pagamento, para o contato, o próprio paciente ou outra pessoa (nome e CPF). Nome e CPF ficam
+    gravados no pagamento (a nota e a DMED não mudam se o cadastro mudar depois).
+  - **CPF não é obrigatório para registrar** (o caixa não trava): aviso "falta CPF"; o CPF passa a
+    ser exigido só na emissão da nota (F11.4). Digitado na tela para o contato ou o paciente, vai
+    também para o cadastro financeiro dele.
+  - **Corrigir:** "Excluir" (Administrador ou Recepção), com confirmação; o pagamento sai das somas
+    mas fica guardado como excluído (quem e quando), e registra-se de novo o certo. Pagamento com
+    nota (F11.4) só se exclui depois de cancelar a nota.
+  - **Valor:** vem sugerido o que falta; pode ser mudado e a soma pode passar do preço, com o aviso
+    "acima do preço" antes de confirmar.
+  - **Guarda:** a anonimização (F9.4) não apaga pagamentos (prazo fiscal, regra 8 da segurança).
+  **Como ficou (12/out):** migração `20261012130000_pagamentos.sql` (tabela `payments`: valor,
+  forma, data, quem pagou com nome e CPF gravados; o banco confere o item, a situação do
+  atendimento, a data até hoje no fuso da clínica e o CPF; não se altera nem se apaga, só se
+  marca excluído com quem e quando; RLS como a F11.1). Tela **Financeiro › Pagamento** do
+  atendimento (`/admin/financeiro/pagamento/<id>`), botão "Pagamento" e selos **"Pago"** e
+  **"Pago em parte"** nos cartões da Agenda e do Resumo do dia (A registrar e Registradas), e o
+  cartão **"Pagamentos"** na tela do paciente (fica visível depois da anonimização). Testes:
+  unidade (`payments.test.ts`) e banco (`tests/db/pagamentos.test.ts`, mais a varredura de
+  isolamento com a tabela nova).
 - **F11.3:** em Configurações (Administrador da clínica): CNPJ, inscrição municipal, município
   (código IBGE), regime tributário, código do serviço na lista nacional (ex.: 04.01 Medicina) e
   alíquota do ISS. **Envio do certificado A1** (arquivo .pfx e senha), guardado no cofre

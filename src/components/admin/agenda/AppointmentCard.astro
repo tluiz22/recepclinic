@@ -13,6 +13,7 @@ import PhoneLinks from "../PhoneLinks.astro";
 import { CANCELED_TEXT, situationCard } from "./situationStyle";
 import { formatInstant } from "../../../lib/clinicTime";
 import type { AgendaAppointment, NoShowStats, OriginInfo } from "../../../lib/data/agenda/view";
+import { canReceivePayment, type PaymentState } from "../../../lib/data/payments";
 import type { ReminderAction } from "../../../lib/data/whatsapp/reminders";
 import { capitalize, type Vocabulary } from "../../../lib/vocabulary";
 
@@ -34,10 +35,30 @@ interface Props {
   compact?: boolean;
   /** Retorno: a consulta de origem (data e situação). */
   origin?: OriginInfo;
+  /**
+   * Módulo financeiro (F11.2): situação dos pagamentos; sem ela (item
+   * desligado ou papel sem acesso), nem o selo nem o botão "Pagamento".
+   */
+  payment?: PaymentState;
 }
 
-const { appointment: a, timeZone, now, showAgenda, vocabulary, returnTo, reminderAction, preparationResendable, guidanceResendable = false, waitlistOn, onWaitlist, noShow, compact = false, origin } =
-  Astro.props;
+const {
+  appointment: a,
+  timeZone,
+  now,
+  showAgenda,
+  vocabulary,
+  returnTo,
+  reminderAction,
+  preparationResendable,
+  guidanceResendable = false,
+  waitlistOn,
+  onWaitlist,
+  noShow,
+  compact = false,
+  origin,
+  payment,
+} = Astro.props;
 const action = `/api/admin/agenda/atendimentos/${a.id}`;
 const time = (d: Date) => formatInstant(d, timeZone, "HH:mm");
 const isActive = a.status === "scheduled" || a.status === "confirmed";
@@ -67,6 +88,8 @@ if (preparationResendable) situation.push({ label: "Preparo não entregue", vari
 if (guidanceResendable) situation.push({ label: "Orientações não entregues", variant: "warning" });
 if (onWaitlist) situation.push({ label: "Na lista de espera", variant: "accent" });
 if (isActive && isPast) situation.push({ label: "Já passou: registre o comparecimento", variant: "warning" });
+if (payment === "paid") situation.push({ label: "Pago", variant: "success" });
+else if (payment === "partial") situation.push({ label: "Pago em parte", variant: "warning" });
 
 // Botões (todos no mesmo formato; vermelho para o que desfaz).
 type Button = { acao: string; label: string; icon: IconName; danger?: boolean; title: string; message: string; confirm: string };
@@ -152,6 +175,8 @@ if (a.seriesId !== null && isActive && !isPast) {
   });
 }
 const canReschedule = isActive && !isPast;
+// Pagamento (F11.2): abre a tela própria, como o Remarcar; a confirmação fica lá.
+const showPayment = payment !== undefined && canReceivePayment(a.status);
 const BUTTON = "inline-flex items-center gap-1 rounded-md border bg-white px-2.5 py-1.5 text-xs font-semibold";
 const tone = (danger?: boolean) => (danger ? "border-red-300 text-red-700 hover:bg-red-50" : "border-slate-300 text-slate-700 hover:bg-slate-50");
 ---
@@ -249,6 +274,12 @@ const tone = (danger?: boolean) => (danger ? "border-red-300 text-red-700 hover:
                 </button>
               </form>
             </>
+          )}
+          {showPayment && (
+            <a href={withReturn(`/admin/financeiro/pagamento/${a.id}`, returnTo)} class={`${BUTTON} ${tone()}`}>
+              <Icon name="banknotes" class="h-3.5 w-3.5" />
+              Pagamento
+            </a>
           )}
           {a.seriesId && (
             <a href={withReturn(`/admin/agenda/serie/${a.seriesId}`, returnTo)} class={`${BUTTON} ${tone()}`}>

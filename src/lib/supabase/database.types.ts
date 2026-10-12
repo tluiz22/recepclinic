@@ -798,6 +798,37 @@ isOneToOne: false
       referencedColumns: ["clinic_id","id"]
     }
                   ]
+                },"payments": {
+                  Row: {
+                    "amount_cents": number,"appointment_id": string,"clinic_id": string,"created_at": string,"created_by": string | null,"deleted_at": string | null,"deleted_by": string | null,"id": string,"method": string,"paid_on": string,"patient_id": string,"payer": string,"payer_cpf": string | null,"payer_name": string
+                  }
+                  Insert: {
+                    "amount_cents": number,"appointment_id": string,"clinic_id": string,"created_at"?: string,"created_by"?: string | null,"deleted_at"?: string | null,"deleted_by"?: string | null,"id"?: string,"method": string,"paid_on": string,"patient_id": string,"payer": string,"payer_cpf"?: string | null,"payer_name": string
+                  }
+                  Update: {
+                    "amount_cents"?: number,"appointment_id"?: string,"clinic_id"?: string,"created_at"?: string,"created_by"?: string | null,"deleted_at"?: string | null,"deleted_by"?: string | null,"id"?: string,"method"?: string,"paid_on"?: string,"patient_id"?: string,"payer"?: string,"payer_cpf"?: string | null,"payer_name"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "payments_clinic_id_appointment_id_fkey"
+      columns: ["clinic_id","appointment_id"]
+isOneToOne: false
+      referencedRelation: "appointments"
+      referencedColumns: ["clinic_id","id"]
+    },{
+      foreignKeyName: "payments_clinic_id_fkey"
+      columns: ["clinic_id"]
+isOneToOne: false
+      referencedRelation: "clinics"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "payments_clinic_id_patient_id_fkey"
+      columns: ["clinic_id","patient_id"]
+isOneToOne: false
+      referencedRelation: "patients"
+      referencedColumns: ["clinic_id","id"]
+    }
+                  ]
                 },"platform_access_log": {
                   Row: {
                     "actor_user_id": string,"clinic_id": string,"id": number,"method": string,"occurred_at": string,"path": string

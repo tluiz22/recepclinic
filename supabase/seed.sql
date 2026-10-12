@@ -222,6 +222,9 @@ begin
   insert into public.appointments (clinic_id, patient_id, service_id, agenda_id, location_id, scheduled_at, duration_minutes, booking_channel, status)
     values (c_a, pt_joao, s_consulta, ag_ped, l_office, (monday - 14 + time '09:00') at time zone tz, 30, 'admin', 'completed')
     returning id into ap_past;
+  -- Pagamento da consulta que já aconteceu (F11.2), feito por Maria no Pix.
+  insert into public.payments (clinic_id, appointment_id, patient_id, amount_cents, method, paid_on, payer, payer_name, payer_cpf)
+    values (c_a, ap_past, pt_joao, 30000, 'pix', monday - 14, 'contact', 'Maria Souza', '52998224725');
   insert into public.appointments (clinic_id, patient_id, service_id, agenda_id, location_id, scheduled_at, duration_minutes, booking_channel, origin_appointment_id)
     values (c_a, pt_joao, s_retorno, ag_ped, l_office, (monday + 14 + time '10:00') at time zone tz, 20, 'admin', ap_past);
   insert into public.appointments (clinic_id, patient_id, service_id, agenda_id, location_id, scheduled_at, duration_minutes, booking_channel, home_visit_address)

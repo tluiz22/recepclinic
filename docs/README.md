@@ -1,6 +1,6 @@
 # RecepClinic
 
-> **Estado atual (retomar daqui), 12/out/2026 (fim da sessão)**
+> **Estado atual (retomar daqui), 12/out/2026**
 >
 > - **Etapas 0 a 4 concluídas**: cópia isolada, [diagnóstico](diagnostico.md), [limites](limites.md),
 >   [arquitetura](arquitetura.md) (decisões D1–D11) e [plano](plano.md) (fases F0–F10).
@@ -46,9 +46,14 @@
 >     da clínica com CNPJ, em Mossoró/RN, e arquivo da DMED para o IR)** pedida e **antecipada
 >     pelo cliente em 12/out**; plano, segurança e decisões no [plano](plano.md). **F11.1
 >     implementada em 12/out** (item na matriz, menu "Financeiro", CPF e responsável só dentro do
->     módulo; migração aplicada no staging). **Retomar daqui (sessão encerrada em 12/out):**
->     validação da F11.1 pelo cliente; depois, F11.2 (registro do pagamento), começando pela
->     pergunta "um atendimento pode ter mais de um pagamento?". **Prioridade (cliente, 12/out):
+>     módulo; migração aplicada no staging). O cliente pediu para seguir e **validar tudo no fim**
+>     (12/out). **F11.2 implementada em 12/out** (pagamentos do atendimento: botão "Pagamento" na
+>     Agenda, tela própria, selos "Pago" e "Pago em parte", cartão "Pagamentos" do paciente;
+>     decisões no [plano](plano.md)); commit local, **migração ainda não aplicada no staging**
+>     (o `db push` do Claude foi bloqueado pelo modo automático em 12/out). **Retomar daqui:**
+>     aplicar `20261012130000_pagamentos.sql` no staging (simulação já feita), conferir, dar push;
+>     depois a próxima subetapa (F11.3 dados fiscais e certificado, ou F11.6 DMED, a escolher com
+>     o cliente). **Prioridade (cliente, 12/out):
 >     quando a Meta aprovar** (Análise do App, Verificação do acesso, Tech Provider), a F11
 >     **pausa** e o trabalho **volta às fases anteriores** (F8 e F10) para terminar e iniciar o
 >     piloto; a F11 continua depois. Em paralelo, aguardar a

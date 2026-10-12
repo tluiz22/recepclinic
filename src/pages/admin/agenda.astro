@@ -14,9 +14,11 @@ import { SITUATIONS } from "../../components/admin/agenda/situationStyle";
 import FlashMessage from "../../components/admin/FlashMessage.astro";
 import Icon from "../../components/admin/Icon.astro";
 import { addDays, formatCalendarDate, formatInstant, isCalendarDate, todayIn } from "../../lib/clinicTime";
+import { canAccessArea } from "../../lib/clinicAccess";
 import { createUserClient } from "../../lib/data/clients";
 import { loadAgendaScope } from "../../lib/data/agenda/scope";
 import { buildDayItems, itemAgendaId, listAgendaAppointments, listAgendaBlocks, listNoShowStats, listOrigins } from "../../lib/data/agenda/view";
+import { listPaymentStates } from "../../lib/data/payments";
 import { activeWaitlistAppointmentIds } from "../../lib/data/waitlist/entries";
 import { listGuidanceResendable } from "../../lib/data/whatsapp/guidance";
 import { listPreparationResendable } from "../../lib/data/whatsapp/preparation";
@@ -42,13 +44,16 @@ const activeFuture = appointments.filter((a) => (a.status === "scheduled" || a.s
 const examsFuture = appointments.filter((a) => a.category === "exam" && activeFuture.includes(a.id)).map((a) => a.id);
 const waitlistOn = clinic.features.includes("waitlist");
 const consultationsFuture = appointments.filter((a) => a.category === "consultation" && activeFuture.includes(a.id)).map((a) => a.id);
-const [reminderActions, preparationResendable, guidanceResendable, onWaitlist, noShows, origins] = await Promise.all([
+// Módulo financeiro (F11.2): selo e botão "Pagamento", para quem tem a área.
+const financeOn = canAccessArea(clinic, "finance");
+const [reminderActions, preparationResendable, guidanceResendable, onWaitlist, noShows, origins, paymentStates] = await Promise.all([
   listReminderActions(db, clinic.clinicId, activeFuture, now),
   clinic.features.includes("exams") ? listPreparationResendable(db, clinic.clinicId, examsFuture) : Promise.resolve(new Set<string>()),
   listGuidanceResendable(db, clinic.clinicId, consultationsFuture),
   waitlistOn ? activeWaitlistAppointmentIds(db, clinic.clinicId, activeFuture) : Promise.resolve(new Set<string>()),
   listNoShowStats(db, clinic.clinicId, appointments.map((a) => a.patientId)),
   listOrigins(db, clinic.clinicId, appointments),
+  financeOn ? listPaymentStates(db, clinic.clinicId, appointments.map((a) => a.id)) : Promise.resolve(null),
 ]);
 
 const vocabulary = vocabularyFor(clinic.clinicProfile);
@@ -76,6 +81,7 @@ const cardProps = (a: (typeof appointments)[number]) => ({
   onWaitlist: onWaitlist.has(a.id),
   noShow: noShows.get(a.patientId),
   origin: a.originAppointmentId ? origins.get(a.originAppointmentId) : undefined,
+  payment: paymentStates ? (paymentStates.get(a.id) ?? "none") : undefined,
 });
 ---
 
