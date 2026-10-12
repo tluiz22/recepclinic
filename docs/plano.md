@@ -26,7 +26,7 @@
 | F5 | Páginas públicas e domínio | concluída (06/out; validada pelo cliente) |
 | F6 | WhatsApp por clínica e bot | concluída (08/out; validada pelo cliente, menos o que depende de templates em análise) |
 | F7 | Envios automáticos por clínica | concluída (09/out; validada pelo cliente com os templates aprovados) |
-| F8a | Templates pela API: reenviar recusado e excluir sem uso | em andamento (F8a.1 aceita e F8a.2 implementada em 12/out) |
+| F8a | Templates pela API: reenviar recusado e excluir sem uso | concluída (12/out; validada pelo cliente) |
 | F8 | Conexão self-service na Meta | a detalhar (depende da Meta) |
 | F9 | Operação e segurança | concluída (10/out; validada pelo cliente) |
 | F10 | Primeiro piloto | a detalhar |
@@ -1153,7 +1153,7 @@ Meta o que ainda era feito à mão. Tudo em Configurações › WhatsApp, só pa
 | | Subetapa | Situação |
 |---|---|---|
 | F8a.1 | Reenviar template padrão recusado | aceita pelo cliente em 12/out, sem teste real (nenhum padrão recusado no staging) |
-| F8a.2 | Excluir template do RecepClinic sem uso | implementada (12/out); aguarda a validação do cliente |
+| F8a.2 | Excluir template do RecepClinic sem uso | validada em 12/out (a busca no staging achou nenhum sem uso, o que está certo: os 3 antigos já tinham sido excluídos na Meta; a exclusão real fica conferida no primeiro uso) |
 
 **F8a.1:** o template padrão recusado mostra o motivo da Meta e o botão **"Reenviar à Meta"**, que
 edita o template na conta da clínica **com o mesmo nome** (sem `_v2`) e com o texto atual do

@@ -1,6 +1,6 @@
 # RecepClinic
 
-> **Estado atual (retomar daqui), 12/out/2026**
+> **Estado atual (retomar daqui), 12/out/2026 (F8a validada)**
 >
 > - **Etapas 0 a 4 concluídas**: cópia isolada, [diagnóstico](diagnostico.md), [limites](limites.md),
 >   [arquitetura](arquitetura.md) (decisões D1–D11) e [plano](plano.md) (fases F0–F10).
@@ -22,13 +22,9 @@
 >     `pg_cron` e Configurações › **Lembretes** (um lembrete por público: paciente, profissional e
 >     equipe, na véspera ou no dia, das 6h às 20h). O cliente segue testando em paralelo e traz os
 >     ajustes; resumo do dia e oferta de vaga a conferir quando a Meta aprovar os templates.
->   - **Templates na Meta (10/out):** todos aprovados (confirmação, remarcação, cancelamento,
->     lembrete, cancelamento pela clínica, preparo do exame, orientações gerais, resumo de hoje,
->     oferta de vaga e as versões próprias da clínica de teste), **menos os 2 resumos de amanhã**
->     (`rc_resumo_consultas_amanha_v1` e `rc_resumo_exames_amanha_v1`): recusados por
->     INVALID_FORMAT (texto fixo curto para 4 variáveis), o cliente editou o texto na Meta e
->     reenviou (10/out), **em análise**. Os 3 antigos sem uso a excluir estão nas pendências do
->     cliente, abaixo.
+>   - **Templates na Meta (conferido em 12/out): todos aprovados**, inclusive os 2 resumos de
+>     amanhã (`rc_resumo_consultas_amanha_v1` e `rc_resumo_exames_amanha_v1`), reenviados pelo
+>     cliente em 10/out. Os 3 antigos sem uso já não existem na conta.
 >   - **F9 (operação e segurança) validada em 09/out**, em 5 subetapas (detalhes no [plano](plano.md)):
 >     cabeçalhos de segurança, CSP e `robots.txt`; logs sem dados pessoais; erros em tabela própria
 >     (Administração › Erros) e monitor externo **Better Stack** (4 monitores, alerta por e-mail);
@@ -44,15 +40,15 @@
 >   - **Rodada de ajustes dos testes do cliente (antes da F8a) concluída e validada em 11/out**:
 >     itens 1 a 9 na seção "Ajustes dos testes do cliente" do [plano](plano.md). A página antiga do
 >     roteiro no claude.ai (`R3VCJ9t1ebygPzjJhyvdJf`) **fica** (cliente, 11/out).
->   - **F8a escolhida pelo cliente em 12/out** (templates pela API: reenviar recusado e excluir
->     sem uso; detalhes no [plano](plano.md)). F8a.1 (reenviar recusado) aceita em 12/out.
->     **Retomar daqui:** F8a.2 (excluir sem uso) implementada em 12/out, aguardando a validação
->     do cliente (excluir pelo painel os 3 templates antigos das pendências). A F8 completa depende da Meta (análise do app e Tech
+>   - **F8a (templates pela API) validada em 12/out**: F8a.1 "Reenviar à Meta" do padrão recusado
+>     e F8a.2 "Excluir da Meta" dos templates do RecepClinic sem uso (detalhes no [plano](plano.md)).
+>     **Retomar daqui:** escolher com o cliente o próximo passo: preparar a produção (F10, com
+>     custo mensal) ou aguardar a Meta. A F8 completa depende da Meta (análise do app e Tech
 >     Provider) e a F10 depende da F8.
 >   - **Migrações no staging:** o Claude aplica com `supabase db push` (permissão liberada em
 >     09/out), sempre na ordem simulação → aplicar → conferir no banco → só então o push do código.
 >   - **WhatsApp de testes:** `+55 61 9903-3143`, na Cloud API do app RecepClinic, ligado à
->     clínica de teste "Consultorio Tluiz22" no staging. **Nunca verificar esse número em app
+>     clínica de teste "Consultorio de Teste" no staging (nome conferido em 12/out). **Nunca verificar esse número em app
 >     nenhum** (sairia da API). Roteiro na parte E do [`staging.md`](staging.md).
 >   - **Staging:** `https://app.recepclinic.com.br` (Vercel publica a cada push na `main`);
 >     migrações novas vão com `supabase db push` antes do push (repositório ligado ao projeto
@@ -81,8 +77,7 @@
 >   - dados da empresa (com o CNPJ) no rodapé do site (sessão do site) e, depois, a **Verificação
 >     do acesso** na Meta (textos em [`meta-tech-provider.md`](meta-tech-provider.md));
 >   - contrato com as clínicas e termo de tratamento de dados (antes da F10).
->   - excluir na Meta (conta do RecepClinic) os 3 templates antigos sem uso:
->     `rc_resumo_consultas_hoje_v1`, `rc_resumo_exames_hoje_v1` e `rc_preparo_exame_v1`.
+>   - ~~excluir na Meta os 3 templates antigos sem uso~~ **feito** (conferido em 12/out).
 > - **Triagem do piloto**: nenhum commit novo do piloto desde `aad94dd` até 06/out/2026 (início da F6).
 
 > **RecepClinic — a recepção inteligente da sua clínica.**
