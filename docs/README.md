@@ -42,9 +42,9 @@
 >     roteiro no claude.ai (`R3VCJ9t1ebygPzjJhyvdJf`) **fica** (cliente, 11/out).
 >   - **F8a (templates pela API) validada em 12/out**: F8a.1 "Reenviar à Meta" do padrão recusado
 >     e F8a.2 "Excluir da Meta" dos templates do RecepClinic sem uso (detalhes no [plano](plano.md)).
->     **Retomar daqui (próxima sessão):** o cliente quer **discutir uma melhoria futura**, para
->     depois da implantação e do início do piloto: começar perguntando qual é e registrar no
->     [plano](plano.md) (seção "Depois do 1º piloto"), sem implementar. Enquanto isso, aguardar a
+>     **Melhoria futura registrada em 12/out:** **nota fiscal no CPF do responsável** (NFS-e
+>     nacional da clínica com CNPJ, em Mossoró/RN, e arquivo da DMED para o IR), na seção "Depois
+>     do 1º piloto" do [plano](plano.md), sem implementar. **Retomar daqui:** aguardar a
 >     Meta (Análise do App; depois, a Verificação do acesso); a F10 (produção, com custo mensal)
 >     segue como opção. A F8 completa depende da Meta (análise do app e Tech
 >     Provider) e a F10 depende da F8.
@@ -81,6 +81,8 @@
 >     **Verificação do acesso** na Meta, que só aparece depois da aprovação da Análise do App
 >     (textos e onde fica em [`meta-tech-provider.md`](meta-tech-provider.md));
 >   - contrato com as clínicas e termo de tratamento de dados (antes da F10).
+>   - confirmar com o contador das clínicas de Mossoró se a NFS-e já sai pelo portal nacional
+>     (`nfse.gov.br`), antes de começar a nota fiscal (depois do 1º piloto).
 >   - ~~excluir na Meta os 3 templates antigos sem uso~~ **feito** (conferido em 12/out).
 > - **Triagem do piloto**: nenhum commit novo do piloto desde `aad94dd` até 06/out/2026 (início da F6).
 

@@ -1583,6 +1583,34 @@ então o Tech Provider precisa estar aprovado antes da F10.
   paciente e no atendimento; no bot, convênio pedido junto com o nome, busca por semelhança,
   confirmação única de nome, idade e convênio, e "particular, outro nome ou recepção" quando não
   atendido; dados do convênio na página de data e horário, se a clínica exigir.
+- **Nota fiscal no CPF do responsável (cliente, 12/out/2026; não está no banco ainda):** logo
+  depois do 1º piloto, para as clínicas piloto de **Mossoró (RN)**. A clínica (com **CNPJ**) emite
+  a **NFS-e** do atendimento no CPF de quem pagou, e a despesa chega à declaração pré-preenchida do
+  IR do responsável pela **DMED**, que o RecepClinic gera. Decisões do cliente:
+  - **Nota municipal, padrão nacional:** a NFS-e é do município (ISS), não do estado. Mossoró
+    instituiu a NFS-e de padrão nacional (Decreto 7.497, de 13/jan/2026, obrigatória para pessoa
+    jurídica desde 01/jan/2026). **A confirmar com o contador da clínica:** se a emissão já é pelo
+    portal nacional (`nfse.gov.br`) e não por sistema próprio da prefeitura.
+  - **Integração direta na API nacional** (Sefin Nacional), sem intermediário pago. Cada clínica
+    envia o **certificado digital A1** (e-CNPJ) dela; o RecepClinic o guarda criptografado (fora do
+    alcance da equipe) e assina as notas. Cidade fora do padrão nacional fica sem a funcionalidade.
+    O RecepClinic acompanha as mudanças do layout (ex.: IBS e CBS da reforma tributária).
+  - **Emissão ao registrar o pagamento:** no atendimento, a recepção registra o pagamento (valor,
+    forma, data e quem pagou) e confirma "Emitir nota"; a nota sai na hora. Também cancelar a nota
+    (CPF ou valor errado) e emitir de novo.
+  - **Responsável no cadastro:** o paciente ganha CPF e data de nascimento e um **responsável
+    financeiro** opcional (nome e CPF), sugerido no pagamento. A nota sai no CPF de quem pagou e o
+    paciente é o beneficiário. CPF é dado pessoal: mesmas regras de LGPD (logs sem CPF, anonimização
+    a pedido da F9, cuidando da guarda fiscal das notas).
+  - **DMED:** o sistema gera, para o ano escolhido, o **arquivo da DMED** no formato da Receita
+    (responsável e beneficiário, valores do ano); o contador confere e entrega até o fim de
+    fevereiro.
+  - **Entrega:** o PDF da nota vai pelo **WhatsApp** da clínica (template novo, aprovado na Meta) e
+    fica no histórico do paciente para baixar e reenviar.
+  - **Matriz (D11): um item "Nota fiscal"**, desligado por padrão, que libera tudo acima (registro
+    do pagamento com nota, CPF e responsável no cadastro, certificado, envio e DMED).
+  - **Fora:** recibo do Receita Saúde (profissional pessoa física, sem API oficial) e outras
+    cidades, até alguma clínica pedir.
 
 ---
 
