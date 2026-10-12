@@ -165,7 +165,8 @@ We send only utility messages related to the patient's own appointments. No mark
 ## Verificação do acesso (pendente)
 
 Antes de enviar: dados da empresa (nome jurídico e documento usados na verificação da Meta) no
-rodapé do site `www.recepclinic.com.br` (sessão separada do site).
+rodapé do site `www.recepclinic.com.br` (sessão separada do site). **No ar, conferido em 12/out:**
+"RecepClinic é uma marca de 69.503.530 THIAGO LUIZ DE SOUSA, CNPJ 69.503.530/0001-59".
 
 1. **Como a empresa usará os Dados da Plataforma:**
 

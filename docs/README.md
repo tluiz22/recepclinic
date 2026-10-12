@@ -74,8 +74,8 @@
 >     **incluído** (cliente, 10/out);
 >   - advogado para revisar as páginas legais e a [política de pedidos de autoridades](politica-pedidos-de-autoridades.md)
 >     (antes do 1º piloto);
->   - dados da empresa (com o CNPJ) no rodapé do site (sessão do site) e, depois, a **Verificação
->     do acesso** na Meta (textos em [`meta-tech-provider.md`](meta-tech-provider.md));
+>   - ~~dados da empresa no rodapé do site~~ **no ar** (conferido em 12/out); falta a
+>     **Verificação do acesso** na Meta (textos em [`meta-tech-provider.md`](meta-tech-provider.md));
 >   - contrato com as clínicas e termo de tratamento de dados (antes da F10).
 >   - ~~excluir na Meta os 3 templates antigos sem uso~~ **feito** (conferido em 12/out).
 > - **Triagem do piloto**: nenhum commit novo do piloto desde `aad94dd` até 06/out/2026 (início da F6).
