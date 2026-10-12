@@ -2,7 +2,7 @@ import type { GuidanceSender } from "./guidance";
 import type { DbClient } from "../clients";
 import { unwrapOne } from "../errors";
 import { getSendingSetup, type TemplateKey } from "./connection";
-import { GraphRequestError, sendMessage, type Fetcher } from "./graph";
+import { GraphRequestError, sendMessage, uploadMedia, type Fetcher } from "./graph";
 import type { SendOutcome } from "./messages";
 import { toWaNumber } from "./meta";
 import type { PreparationSender } from "./preparation";
@@ -39,6 +39,18 @@ export type ClinicSender = {
   list(to: string, body: string, button: string, sections: ListSection[]): Promise<SendOutcome>;
   /** Botões de resposta (até 3, título com até 20 caracteres). */
   buttons(to: string, body: string, buttons: ReplyButton[]): Promise<SendOutcome>;
+  /** Sobe um arquivo (ex.: o PDF da nota, F11.5) e devolve o id da mídia na Meta. */
+  uploadDocument?(file: { bytes: Uint8Array; filename: string }): Promise<string>;
+  /** Template com o documento no topo (rc_nota_fiscal_v1). */
+  documentTemplate?(
+    to: string,
+    key: TemplateKey,
+    template: { name: string; language: string; body?: string | null },
+    params: string[],
+    document: { mediaId: string; filename: string },
+  ): Promise<SendOutcome>;
+  /** Documento com legenda, só na janela de 24h (como o texto). */
+  document?(to: string, document: { mediaId: string; filename: string }, caption: string): Promise<SendOutcome>;
 };
 
 export type ListRow = { id: string; title: string; description?: string };
@@ -127,6 +139,25 @@ export async function createClinicSender(
           interactive: { type: "button", body: { text: body }, action: { buttons: buttons.map((reply) => ({ type: "reply", reply })) } },
         },
         interactiveBody(body, buttons),
+      );
+    },
+    uploadDocument(file) {
+      return uploadMedia(setup.phoneNumberId, setup.accessToken, { ...file, mimeType: "application/pdf" }, fetcher);
+    },
+    documentTemplate(to, key, template, params, document) {
+      const text = template.body ?? defaultTemplate(key)?.body ?? null;
+      const used = text ? params.slice(0, paramCount(text)) : params;
+      const components = [
+        { type: "header", parameters: [{ type: "document", document: { id: document.mediaId, filename: document.filename } }] },
+        ...(used.length ? [{ type: "body", parameters: used.map((value) => ({ type: "text", text: cleanParam(value) })) }] : []),
+      ];
+      const body = `[${document.filename}] ${text ? fillTemplate(text, used) : used.join(" · ")}`;
+      return post({ to: toWaNumber(to), type: "template", template: { name: template.name, language: { code: template.language }, components } }, body);
+    },
+    document(to, document, caption) {
+      return post(
+        { to: toWaNumber(to), type: "document", document: { id: document.mediaId, filename: document.filename, caption } },
+        `[${document.filename}] ${caption}`,
       );
     },
   };

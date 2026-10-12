@@ -57,10 +57,13 @@
 >     migração aplicada no staging e código publicado. **F11.4 implementada em 12/out** (emissão e
 >     cancelamento da NFS-e nacional pela tela do pagamento, na Produção Restrita até o Suporte
 >     trocar; DPS validada contra o XSD oficial, Receita simulada nos testes), **sem o teste real**:
->     falta o e-CNPJ A1 de uma clínica de Mossoró. **Retomar daqui:** validação da F11.1, F11.2,
->     F11.3, F11.4 e F11.6 pelo cliente (no fim, como ele pediu): a F11.4 com o teste real na
->     Produção Restrita e a DMED com um teste de importação no PGD Dmed pelo contador. Da F11 só
->     falta a F11.5 (PDF e WhatsApp), que depende da Meta. **Prioridade (cliente, 12/out):
+>     falta o e-CNPJ A1 de uma clínica de Mossoró. **F11.5 implementada em 12/out** (PDF da nota no modelo da NT 008, porque a API oficial do
+>     DANFSe foi suspensa; envio pelo WhatsApp do contato, outro número e e-mail; destinos
+>     guardados no Financeiro; automático ao emitir em Produção). **Toda a F11 implementada.**
+>     **Retomar daqui:** validação da F11 inteira pelo cliente (no fim, como ele pediu): a F11.4
+>     com o teste real na Produção Restrita (e-CNPJ A1 de uma clínica de Mossoró), a DMED com um
+>     teste de importação no PGD Dmed pelo contador e, para o WhatsApp da nota, pôr
+>     `WHATSAPP_APP_ID` na Vercel (Redeploy) e usar "Criar na Meta" para o `rc_nota_fiscal_v1`. **Prioridade (cliente, 12/out):
 >     quando a Meta aprovar** (Análise do App, Verificação do acesso, Tech Provider), a F11
 >     **pausa** e o trabalho **volta às fases anteriores** (F8 e F10) para terminar e iniciar o
 >     piloto; a F11 continua depois. Em paralelo, aguardar a

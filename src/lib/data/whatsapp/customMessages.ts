@@ -33,7 +33,14 @@ export const TEMPLATE_MARKERS: Partial<Record<TemplateKey, string[]>> = {
   daily_summary_consultations_today: ["nome", "clinica", "data", "lista"],
   daily_summary_exams_today: ["nome", "clinica", "data", "lista"],
   waitlist_offer: ["nome", "clinica", "tipo", "paciente", "vaga", "atual"],
+  nfse_document: ["nome", "clinica", "numero", "valor", "paciente", "dia"],
 };
+
+/**
+ * Templates sem texto próprio: o da nota fiscal leva o PDF no topo, que a
+ * versão personalizada (criada sem o documento) perderia (F11.5).
+ */
+export const NOT_CUSTOMIZABLE: TemplateKey[] = ["nfse_document"];
 
 export const MARKER_LABELS: Record<string, string> = {
   nome: "primeiro nome de quem recebe",
@@ -49,6 +56,9 @@ export const MARKER_LABELS: Record<string, string> = {
   tipo: '"consulta", "retorno" ou "exame…"',
   vaga: "dia, hora e local da vaga",
   atual: "dia e hora marcados hoje",
+  numero: "número da nota fiscal",
+  valor: "valor pago",
+  dia: "data do atendimento",
 };
 
 /** Texto do template com marcadores ({nome}…) para editar. */
@@ -240,6 +250,7 @@ export async function templateVersions(db: DbClient, clinicId: string, key: Temp
 
 /** Administrador: propõe um texto (versão nova "aguardando o Suporte"); uma proposta aberta por vez. */
 export async function proposeTemplate(db: DbClient, clinicId: string, key: TemplateKey, text: string, actorId: string | null, now: Date = new Date()): Promise<void> {
+  if (NOT_CUSTOMIZABLE.includes(key)) throw new DataError("invalid", "Mensagem: este template não tem texto próprio", { text: "Este template não tem texto próprio." });
   const body = markersToTemplate(key, text);
   const versions = await templateVersions(db, clinicId, key);
   if (versions.some((t) => t.stage === "proposed")) {

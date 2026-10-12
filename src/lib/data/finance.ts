@@ -1,4 +1,5 @@
 import { normalizeCpf } from "../cpf";
+import { normalizePhone } from "../phone";
 import type { DbClient } from "./clients";
 import { cleanText, unwrap, Validation } from "./errors";
 import { listPatientsPage, type Contact, type Page, type Patient, type PatientWithContact } from "./patients";
@@ -35,6 +36,8 @@ export const FINANCE_MESSAGES = {
   invalidCpf: "CPF inválido: confira os 11 dígitos.",
   payerName: "Informe o nome do responsável financeiro.",
   payerCpf: "Informe o CPF do responsável financeiro.",
+  invoicePhone: "WhatsApp das notas: confira o DDD e o número.",
+  invoiceEmail: "E-mail das notas inválido.",
 } as const;
 
 type PatientFinanceRow = { patient_id: string; cpf: string | null; payer: string; payer_name: string | null; payer_cpf: string | null };
@@ -109,6 +112,13 @@ export type PatientFinanceInput = {
    * o contato, ou o do contato responsável.
    */
   contactCpf?: string | null;
+  /**
+   * Envio da nota (F11.5): outro WhatsApp e e-mail para as notas, e "enviar
+   * sempre" junto com o contato. Ausentes = não mexe.
+   */
+  invoicePhone?: string | null;
+  invoiceEmail?: string | null;
+  invoiceAutoSend?: boolean;
 };
 
 /**
@@ -132,12 +142,21 @@ export async function savePatientFinance(
   }
   const editsContact = input.contactCpf !== undefined;
   const contactCpf = editsContact ? optionalCpf(v, "contact_cpf", input.contactCpf) : null;
+  const editsDelivery = input.invoicePhone !== undefined || input.invoiceEmail !== undefined;
+  const phoneText = cleanText(input.invoicePhone);
+  const invoicePhone = phoneText ? normalizePhone(phoneText) : null;
+  v.check(!phoneText || invoicePhone !== null, "invoice_phone", FINANCE_MESSAGES.invoicePhone);
+  const invoiceEmail = cleanText(input.invoiceEmail)?.toLowerCase() ?? null;
+  v.check(!invoiceEmail || (/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(invoiceEmail) && invoiceEmail.length <= 200), "invoice_email", FINANCE_MESSAGES.invoiceEmail);
   v.throwIfInvalid("Dados financeiros");
+  const delivery = editsDelivery
+    ? { invoice_phone: invoicePhone, invoice_email: invoiceEmail, invoice_auto_send: !!input.invoiceAutoSend && (!!invoicePhone || !!invoiceEmail) }
+    : {};
 
   unwrap(
     await db
       .from("patient_finance")
-      .upsert({ clinic_id: clinicId, patient_id: patient.id, cpf, payer, payer_name: payerName, payer_cpf: payerCpf }, { onConflict: "patient_id" }),
+      .upsert({ clinic_id: clinicId, patient_id: patient.id, cpf, payer, payer_name: payerName, payer_cpf: payerCpf, ...delivery }, { onConflict: "patient_id" }),
     "Dados financeiros do paciente",
   );
   if (editsContact) {

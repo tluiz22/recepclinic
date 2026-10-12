@@ -192,3 +192,57 @@ export async function deleteTemplate(wabaId: string, name: string, token: string
   const params = new URLSearchParams({ name });
   await call(fetcher, "Exclusão do template", `${GRAPH}/${encodeURIComponent(wabaId)}/message_templates?${params}`, token, { method: "DELETE" });
 }
+
+// ---------------------------------------------------------------------------
+// Documentos (F11.5): o PDF da nota sobe para a Meta na hora do envio; o PDF
+// de exemplo do template da nota sobe pelo envio retomável do app.
+// ---------------------------------------------------------------------------
+
+/** Sobe o arquivo para o número da clínica (POST /{phone}/media) e devolve o id da mídia. */
+export async function uploadMedia(
+  phoneNumberId: string,
+  token: string,
+  file: { bytes: Uint8Array; filename: string; mimeType: string },
+  fetcher: Fetcher = fetch,
+): Promise<string> {
+  const form = new FormData();
+  form.append("messaging_product", "whatsapp");
+  form.append("type", file.mimeType);
+  form.append("file", new Blob([new Uint8Array(file.bytes)], { type: file.mimeType }), file.filename);
+  const body = await call<{ id?: string }>(fetcher, "Envio do arquivo ao WhatsApp", `${GRAPH}/${encodeURIComponent(phoneNumberId)}/media`, token, {
+    method: "POST",
+    body: form,
+  });
+  if (!body.id) throw new GraphRequestError("Envio do arquivo ao WhatsApp", { code: null, message: "sem o id da mídia" });
+  return body.id;
+}
+
+/**
+ * Exemplo de cabeçalho com documento para criar um template (envio retomável
+ * do app: POST /{app}/uploads e POST /{upload}), devolve o "handle" (h).
+ */
+export async function uploadTemplateExample(
+  appId: string,
+  token: string,
+  file: { bytes: Uint8Array; filename: string; mimeType: string },
+  fetcher: Fetcher = fetch,
+): Promise<string> {
+  const session = await call<{ id?: string }>(
+    fetcher,
+    "Exemplo do template",
+    `${GRAPH}/${encodeURIComponent(appId)}/uploads?file_name=${encodeURIComponent(file.filename)}&file_length=${file.bytes.length}&file_type=${encodeURIComponent(file.mimeType)}`,
+    token,
+    { method: "POST" },
+  );
+  if (!session.id) throw new GraphRequestError("Exemplo do template", { code: null, message: "sem a sessão de envio" });
+  const response = await fetcher(`${GRAPH}/${session.id}`, {
+    method: "POST",
+    headers: { Authorization: `OAuth ${token}`, file_offset: "0" },
+    body: new Uint8Array(file.bytes),
+  });
+  const body = (await response.json().catch(() => ({}))) as { h?: string; error?: { message?: string; code?: number } };
+  if (!response.ok || !body.h) {
+    throw new GraphRequestError("Exemplo do template", { code: body.error?.code ?? null, message: body.error?.message ?? `HTTP ${response.status}` });
+  }
+  return body.h;
+}

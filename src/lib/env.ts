@@ -22,6 +22,11 @@ export type PlatformEnv = {
   email: EmailEnv | null;
   /** App RecepClinic na Meta (F6.1); null = webhook desligado (recusa os eventos). */
   whatsapp: WhatsappAppEnv | null;
+  /**
+   * ID do app RecepClinic na Meta (F11.5): só para mandar o PDF de exemplo do
+   * template da nota fiscal (documento no topo). null = esse template não é criado.
+   */
+  whatsappAppId: string | null;
 };
 
 export type WhatsappAppEnv = { appSecret: string; webhookVerifyToken: string };
@@ -103,8 +108,11 @@ export function parsePlatformEnv(source: EnvSource): PlatformEnv {
     if (appSecret && webhookVerifyToken) whatsapp = { appSecret, webhookVerifyToken };
   }
 
+  const whatsappAppId = text(source, "WHATSAPP_APP_ID");
+  if (whatsappAppId && !/^\d{5,20}$/.test(whatsappAppId)) problems.push("WHATSAPP_APP_ID inválida (só os números do ID do app na Meta)");
+
   if (problems.length) throw new PlatformEnvError(problems);
-  return { supabaseUrl, supabaseAnonKey, supabaseServiceRoleKey, supabaseJwtSecret, cronSecret, siteUrl, email, whatsapp };
+  return { supabaseUrl, supabaseAnonKey, supabaseServiceRoleKey, supabaseJwtSecret, cronSecret, siteUrl, email, whatsapp, whatsappAppId: whatsappAppId ?? null };
 }
 
 let cached: PlatformEnv | undefined;
@@ -126,6 +134,7 @@ export function platformEnv(): PlatformEnv {
     EMAIL_FROM: import.meta.env.EMAIL_FROM,
     WHATSAPP_APP_SECRET: import.meta.env.WHATSAPP_APP_SECRET,
     WHATSAPP_WEBHOOK_VERIFY_TOKEN: import.meta.env.WHATSAPP_WEBHOOK_VERIFY_TOKEN,
+    WHATSAPP_APP_ID: import.meta.env.WHATSAPP_APP_ID,
   });
   return cached;
 }

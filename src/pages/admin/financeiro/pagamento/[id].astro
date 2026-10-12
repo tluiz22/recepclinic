@@ -30,6 +30,8 @@ import {
 } from "../../../../lib/data/payments";
 import { centsToInput } from "../../../../lib/forms";
 import { ACTIVE_INVOICE, CANCEL_REASONS, listPaymentInvoices, nfseReadiness, type Invoice, type InvoiceStatus } from "../../../../lib/data/nfse";
+import { getSavedDestinations, listInvoiceDeliveries } from "../../../../lib/data/nfseDelivery";
+import { formatPhoneBR } from "../../../../lib/phone";
 import { formatCentsBRL } from "../../../../lib/money";
 import { receivedReturn, withReturn } from "../../../../lib/returnPath";
 import { capitalize, vocabularyFor } from "../../../../lib/vocabulary";
@@ -59,6 +61,13 @@ const [invoices, financeReady] = await Promise.all([
   listPaymentInvoices(db, clinic.clinicId, payments.map((p) => p.id)),
   nfseReadiness(db, clinic.clinicId),
 ]);
+// Envio da nota (F11.5): os envios de cada nota e os destinos guardados no Financeiro.
+const allInvoiceIds = [...invoices.values()].flat().map((n) => n.id);
+const [deliveries, saved] = await Promise.all([
+  listInvoiceDeliveries(db, clinic.clinicId, allInvoiceIds),
+  getSavedDestinations(db, clinic.clinicId, patient.id),
+]);
+const DELIVERY_STATUS = { sent: "enviado", delivered: "entregue", read: "lido", failed: "não saiu" } as const;
 const activeInvoice = (paymentId: string) => (invoices.get(paymentId) ?? []).find((n) => ACTIVE_INVOICE.includes(n.status));
 const isClinicAdmin = clinic.roles.includes("admin");
 const INVOICE_BADGE: Record<InvoiceStatus, { variant: BadgeVariant; label: (n: Invoice) => string }> = {
@@ -178,20 +187,75 @@ const otherDefault = defaultPayer === "other" ? { name: finance.payerName ?? "",
                       {n.environment === "restricted" && <Badge>teste</Badge>}
                       <span class="text-xs text-slate-500">pedida em {formatInstant(n.requestedAt, clinic.timezone, "dd/MM 'às' HH:mm")}</span>
                       {n.hasXml && (
-                        <a href={`/api/admin/financeiro/notas/${n.id}`} class="text-xs font-medium text-sky-700 hover:underline">
-                          Baixar XML
-                        </a>
+                        <>
+                          <a href={`/api/admin/financeiro/notas/${n.id}?formato=pdf`} target="_blank" rel="noopener" class="text-xs font-medium text-sky-700 hover:underline">
+                            Baixar PDF
+                          </a>
+                          <a href={`/api/admin/financeiro/notas/${n.id}`} class="text-xs font-medium text-sky-700 hover:underline">
+                            Baixar XML
+                          </a>
+                        </>
                       )}
                       {canEdit && (n.status === "issuing" || n.status === "canceling") && (
                         <form method="POST" action={action}>
                           <input type="hidden" name="acao" value="conferir_nota" />
                           <input type="hidden" name="invoice_id" value={n.id} />
+                          <input type="hidden" name="payment_id" value={p.id} />
                           <button type="submit" class="text-xs font-medium text-sky-700 hover:underline">
                             Conferir na Receita
                           </button>
                         </form>
                       )}
                       {n.errorMessage && n.status !== "canceled" && <p class="w-full text-xs text-red-700">{n.errorMessage}</p>}
+                      {(deliveries.get(n.id) ?? []).map((e) => (
+                        <p class="w-full text-xs text-slate-600">
+                          {e.channel === "email" ? "E-mail" : "WhatsApp"} {e.channel === "whatsapp" && e.destination.startsWith("+") ? formatPhoneBR(e.destination) : e.destination}
+                          {e.target === "contact" ? " (contato)" : ""}: <span class={e.status === "failed" ? "text-red-700" : ""}>{DELIVERY_STATUS[e.status]}</span>
+                          {e.error ? ` (${e.error})` : ""} · {formatInstant(e.createdAt, clinic.timezone, "dd/MM 'às' HH:mm")}
+                          {e.automatic ? " · automático" : ""}
+                        </p>
+                      ))}
+                      {canEdit && n.status === "issued" && n.hasXml && (
+                        <details class="w-full">
+                          <summary class="cursor-pointer text-xs font-medium text-sky-700">Enviar nota</summary>
+                          <form method="POST" action={action} class="mt-2 flex flex-col gap-2 text-xs text-slate-700">
+                            <input type="hidden" name="acao" value="enviar_nota" />
+                            <input type="hidden" name="invoice_id" value={n.id} />
+                            <label class="flex items-center gap-2">
+                              <input type="checkbox" name="para_contato" value="1" checked class="h-4 w-4" />
+                              WhatsApp do {vocabulary.contact}: {contact.fullName} · {formatPhoneBR(contact.phone)}
+                            </label>
+                            <label class="flex flex-wrap items-center gap-2">
+                              <input type="checkbox" name="para_numero" value="1" checked={!!saved.phone} class="h-4 w-4" />
+                              Outro WhatsApp
+                              <input name="numero" inputmode="tel" placeholder="(84) 98888-0000" value={saved.phone ? formatPhoneBR(saved.phone) : ""} class={`${INPUT} mt-0 w-44 text-xs`} />
+                            </label>
+                            <label class="flex flex-wrap items-center gap-2">
+                              <input type="checkbox" name="para_email" value="1" checked={!!saved.email} class="h-4 w-4" />
+                              E-mail
+                              <input name="email" type="email" placeholder="nome@exemplo.com" value={saved.email ?? ""} class={`${INPUT} mt-0 w-60 text-xs`} />
+                            </label>
+                            <label class="flex items-center gap-2">
+                              <input type="checkbox" name="guardar" value="1" checked class="h-4 w-4" />
+                              Guardar o número e o e-mail no Financeiro do {vocabulary.patient}
+                            </label>
+                            <label class="flex items-center gap-2">
+                              <input type="checkbox" name="enviar_sempre" value="1" checked={saved.autoSend} class="h-4 w-4" />
+                              Enviar sempre para eles, junto com o {vocabulary.contact}
+                            </label>
+                            <button
+                              type="submit"
+                              class="js-confirm-delete self-start text-xs font-medium text-sky-700 hover:underline"
+                              data-confirm-title="Enviar a nota fiscal?"
+                              data-confirm-message={`Nota nº ${n.nfseNumber} (PDF${" e XML no e-mail"}) para os destinos marcados.${n.environment === "restricted" ? " Nota de teste, sem valor fiscal." : ""}`}
+                              data-confirm-label="Enviar nota"
+                              data-confirm-tone="primary"
+                            >
+                              Enviar
+                            </button>
+                          </form>
+                        </details>
+                      )}
                       {isClinicAdmin && n.status === "issued" && (
                         <details class="w-full">
                           <summary class="cursor-pointer text-xs font-medium text-red-700">Cancelar nota</summary>

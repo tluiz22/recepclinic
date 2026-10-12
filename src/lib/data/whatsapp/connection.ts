@@ -182,6 +182,7 @@ export const TEMPLATE_KEYS = [
   "daily_summary_exams",
   "daily_summary_consultations_today",
   "daily_summary_exams_today",
+  "nfse_document",
 ] as const;
 
 export type TemplateKey = (typeof TEMPLATE_KEYS)[number];

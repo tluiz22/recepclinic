@@ -1631,7 +1631,7 @@ gera.
 | F11.2 | Registro do pagamento no atendimento (sem nota ainda) | F11.1 | implementada (12/out), validação no fim (cliente, 12/out) |
 | F11.3 | Dados fiscais da clínica e certificado A1 | F11.1 | implementada (12/out), validação no fim (cliente, 12/out) |
 | F11.4 | Emissão e cancelamento na API nacional (ambiente de testes da Receita) | F11.2, F11.3 e os itens do cliente abaixo | implementada (12/out), falta o teste real na Produção Restrita |
-| F11.5 | PDF da nota no histórico e envio pelo WhatsApp (template novo) | F11.4 e a Meta | a fazer |
+| F11.5 | PDF da nota no histórico e envio pelo WhatsApp (template novo) | F11.4 e a Meta | implementada (12/out), falta o template aprovado na Meta |
 | F11.6 | Arquivo da DMED do ano | F11.2 | implementada (12/out), validação no fim (cliente, 12/out) |
 
 - **F11.1:** item `finance` ("Módulo financeiro (pagamentos e nota fiscal)", área nova
@@ -1757,6 +1757,42 @@ gera.
   para a F11.5, com o histórico).
 - **F11.5:** PDF da nota (DANFSe) no histórico do paciente, com baixar e reenviar; envio pelo
   WhatsApp com um template novo de documento (`rc_nota_fiscal_v1`, a aprovar na Meta).
+  **Descoberta (12/out):** a Nota Técnica 008 v1.02 (SE/CGNFS-e, 14/07/2026) suspendeu a API
+  oficial do DANFSe em 03/08/2026: o PDF passa a ser gerado pelo RecepClinic, no modelo do
+  Anexo I da NT (A4, uma página, QR Code da consulta pública, "NFS-e SEM VALIDADE JURÍDICA" em
+  vermelho na Produção Restrita, marca d'água "CANCELADA", linha obrigatória dos totais
+  aproximados de tributos, só dados do XML da nota). As fontes da NT (Arial e Microsoft Sans
+  Serif) não podem ser embutidas por licença: usa-se a Helvetica, de mesmas medidas.
+  **Decisões do cliente (12/out):**
+  - **Destinos:** além do WhatsApp do contato, **outro número de WhatsApp** e **e-mail** (pelo
+    Resend, com o PDF e o XML anexados).
+  - **Quando:** ao emitir, o PDF vai **sozinho para o WhatsApp do contato**; na tela do pagamento,
+    "Enviar nota" escolhe os destinos (contato, outro número, e-mail; mais de um). Nota de teste
+    não vai sozinha.
+  - **Guardar:** o outro número e o e-mail ficam no cartão Financeiro do paciente (só
+    Administrador e Recepção veem; o bot não), já marcados nas próximas notas, com "enviar
+    sempre" opcional para irem sozinhos junto com o contato; a anonimização apaga.
+  - **Template** `rc_nota_fiscal_v1` (Utilidade, com o PDF no topo), texto aprovado: "Olá, {{1}}!
+    Aqui é {{2}}. Segue a nota fiscal nº {{3}}, de {{4}}, referente ao atendimento de {{5}} em
+    {{6}}. Qualquer dúvida, é só responder esta mensagem." O e-mail usa o mesmo texto, com o
+    assunto "Nota fiscal nº {{3}} – {{clínica}}".
+  **Como ficou (12/out):** PDF gerado do XML guardado (`src/lib/nfse/danfse.ts`, `pdf-lib` e
+  `qrcode`), no download "Baixar PDF" da nota (com "CANCELADA" na cancelada) e nos envios.
+  Migração `20261012170000_envio_nfse.sql`: no Financeiro do paciente, outro WhatsApp, e-mail e
+  "enviar sempre"; tabela `nfse_deliveries` (canal, destino, resultado, automático, quem pediu;
+  a anonimização troca o destino por "anonimizado"); template `nfse_document` (`rc_nota_fiscal_v1`)
+  na lista dos padrões, sem "Personalizar" (a versão própria perderia o PDF). WhatsApp: o PDF
+  sobe para a Meta e vai pelo template aprovado; sem ele, só dentro da janela de 24h, como
+  documento com legenda. E-mail pelo Resend, com o PDF e o XML; a frase "é só responder" virou
+  "fale com a clínica", porque o remetente não recebe resposta. Na tela do pagamento: "Enviar
+  nota" (contato, outro WhatsApp, e-mail, guardar, enviar sempre) e a lista de envios com a
+  entrega do WhatsApp; ao emitir em Produção, vai sozinha para o contato (e os guardados com
+  "enviar sempre"). O template da nota exige um PDF de exemplo, que sobe pelo app: a variável
+  **`WHATSAPP_APP_ID`** (ID do app RecepClinic na Meta) precisa estar na Vercel antes de "Criar
+  na Meta". Testes: `src/lib/nfse/danfse.test.ts` e `tests/db/envio-nfse.test.ts`.
+  **Fica para depois:** a rotina diária, quando acha na Receita uma nota que estava "emitindo",
+  não manda a nota sozinha (a recepção usa "Enviar nota"); o Profissional ainda não vê as notas
+  dos atendimentos dele.
 - **F11.6:** no menu Financeiro (só o Administrador): escolher o ano e baixar o
   arquivo da DMED no layout da Receita, com responsável, beneficiário e valores; avisos de
   pagamento sem CPF.

@@ -20,6 +20,8 @@ import { canAccessArea, isUuid } from "../../../lib/clinicAccess";
 import { formatCpf } from "../../../lib/cpf";
 import { getContactCpf, getPatientFinance, resolvePayer } from "../../../lib/data/finance";
 import { listPatientPayments, PAYMENT_METHOD_LABEL } from "../../../lib/data/payments";
+import { getSavedDestinations } from "../../../lib/data/nfseDelivery";
+import { formatPhoneBR } from "../../../lib/phone";
 import { formatCentsBRL } from "../../../lib/money";
 import { currentPath, receivedReturn, withReturn } from "../../../lib/returnPath";
 import { formatCalendarDate, formatInstant, localDateOf, todayIn } from "../../../lib/clinicTime";
@@ -88,6 +90,8 @@ const [finance, contactCpf] = financeOn
   : [null, null];
 const responsible = finance ? resolvePayer(patient, contact, finance, contactCpf) : null;
 const payments = paymentsOn ? await listPatientPayments(db, clinic.clinicId, patient.id) : [];
+// Envio das notas (F11.5): outro WhatsApp e e-mail guardados no Financeiro.
+const savedDelivery = financeOn ? await getSavedDestinations(db, clinic.clinicId, patient.id) : null;
 const financeAction = withReturn(`/api/admin/financeiro/paciente/${patient.id}`, volta);
 const cpfValue = (cpf: string | null) => (cpf ? formatCpf(cpf) : "");
 const ageWarning =
@@ -215,6 +219,24 @@ const ageWarning =
                     <label for="fin_payer_cpf" class={LABEL}>CPF de quem paga</label>
                     <input id="fin_payer_cpf" name="payer_cpf" inputmode="numeric" placeholder="000.000.000-00" value={cpfValue(finance.payerCpf)} class={INPUT} />
                   </div>
+                </div>
+                <div class="border-t border-slate-100 pt-3">
+                  <p class={LABEL}>Envio das notas fiscais</p>
+                  <p class={HINT}>A nota vai sempre para o WhatsApp do {vocabulary.contact}. Aqui, outro número e um e-mail (ex.: de quem paga).</p>
+                  <div class="mt-2 grid gap-3 sm:grid-cols-2">
+                    <div>
+                      <label for="fin_invoice_phone" class={LABEL}>Outro WhatsApp</label>
+                      <input id="fin_invoice_phone" name="invoice_phone" inputmode="tel" placeholder="(84) 98888-0000" value={savedDelivery?.phone ? formatPhoneBR(savedDelivery.phone) : ""} class={INPUT} />
+                    </div>
+                    <div>
+                      <label for="fin_invoice_email" class={LABEL}>E-mail</label>
+                      <input id="fin_invoice_email" name="invoice_email" type="email" value={savedDelivery?.email ?? ""} class={INPUT} />
+                    </div>
+                  </div>
+                  <label class="mt-2 flex items-center gap-2 text-sm text-slate-700">
+                    <input type="checkbox" name="invoice_auto_send" value="1" checked={savedDelivery?.autoSend ?? false} class="h-4 w-4" />
+                    Enviar sempre para eles, junto com o {vocabulary.contact}
+                  </label>
                 </div>
                 {canEditFinance && <button type="submit" class={`${SECONDARY_BUTTON} self-start`}>Salvar dados financeiros</button>}
               </fieldset>

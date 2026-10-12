@@ -6,7 +6,7 @@ import { DataError } from "../../../../../lib/data/errors";
 import { savePatientFinance } from "../../../../../lib/data/finance";
 import { runFormAction } from "../../../../../lib/data/formAction";
 import { getPatient } from "../../../../../lib/data/patients";
-import { formOptionalText, formText } from "../../../../../lib/forms";
+import { formChecked, formOptionalText, formText } from "../../../../../lib/forms";
 
 // Módulo financeiro (F11.1): CPF e responsável financeiro do paciente, pelo
 // cartão "Financeiro" da tela do paciente. Só o Administrador e a Recepção,
@@ -31,6 +31,9 @@ export const POST: APIRoute = async (context) => {
         payerName: formOptionalText(form, "payer_name"),
         payerCpf: formOptionalText(form, "payer_cpf"),
         contactCpf: formOptionalText(form, "contact_cpf"),
+        invoicePhone: formOptionalText(form, "invoice_phone"),
+        invoiceEmail: formOptionalText(form, "invoice_email"),
+        invoiceAutoSend: formChecked(form, "invoice_auto_send"),
       });
       return { redirectTo: page, message: "Dados financeiros salvos." };
     },

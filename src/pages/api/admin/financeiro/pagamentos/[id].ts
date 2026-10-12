@@ -7,7 +7,11 @@ import { DataError } from "../../../../../lib/data/errors";
 import { describeDataError, runFormAction } from "../../../../../lib/data/formAction";
 import { logError } from "../../../../../lib/log";
 import { getContact, getPatient } from "../../../../../lib/data/patients";
-import { cancelNfse, checkNfse, issueNfse } from "../../../../../lib/data/nfse";
+import { cancelNfse, checkNfse, issueNfse, listPaymentInvoices } from "../../../../../lib/data/nfse";
+import { deliverAfterIssue, deliverInvoice, describeDelivery, type DeliveryDeps } from "../../../../../lib/data/nfseDelivery";
+import { clinicSenderFor } from "../../../../../lib/data/whatsapp/clinicSender";
+import { smtpSender } from "../../../../../lib/email";
+import { platformEnv } from "../../../../../lib/env";
 import { deletePayment, registerPayment } from "../../../../../lib/data/payments";
 import { formChecked, formInt, formMoneyCents, formOptionalText, formText } from "../../../../../lib/forms";
 import { formatCentsBRL } from "../../../../../lib/money";
@@ -28,6 +32,21 @@ export const POST: APIRoute = async (context) => {
   const volta = receivedReturn(new URL(request.url));
   const page = withReturn(`/admin/financeiro/pagamento/${id}`, volta);
   const acao = formText(form, "acao");
+  // Envio da nota (F11.5): WhatsApp da clínica e e-mail do sistema.
+  const deliveryDeps = async (): Promise<DeliveryDeps> => ({ sender: await clinicSenderFor(clinic.clinicId, request.url), sendEmail: smtpSender(platformEnv().email) });
+  /** Nota emitida: em Produção, vai sozinha para o contato (e os destinos com "enviar sempre"). */
+  const afterIssue = async (paymentId: string, status: string): Promise<string> => {
+    if (status !== "issued") return "";
+    try {
+      const [invoice] = (await listPaymentInvoices(db, clinic.clinicId, [paymentId])).get(paymentId) ?? [];
+      if (!invoice || invoice.status !== "issued") return "";
+      const lines = await deliverAfterIssue(db, clinic.clinicId, invoice.id, await deliveryDeps());
+      return lines.length ? ` ${describeDelivery(lines)}.` : "";
+    } catch (error) {
+      logError("nota fiscal: envio automático", error, { clinica: clinic.clinicId, pagamento: paymentId });
+      return " A nota não foi enviada sozinha: use \"Enviar nota\".";
+    }
+  };
 
   return runFormAction(
     context,
@@ -38,7 +57,26 @@ export const POST: APIRoute = async (context) => {
       if (acao === "emitir_nota") {
         const paymentId = formText(form, "payment_id");
         if (!isUuid(paymentId)) throw new DataError("not_found", "Pagamento: não encontrado");
-        return { redirectTo: page, message: (await issueNfse(db, clinic.clinicId, paymentId)).message };
+        const result = await issueNfse(db, clinic.clinicId, paymentId);
+        return { redirectTo: page, message: `${result.message}${await afterIssue(paymentId, result.status)}` };
+      }
+      if (acao === "enviar_nota") {
+        const invoiceId = formText(form, "invoice_id");
+        if (!isUuid(invoiceId)) throw new DataError("not_found", "Nota fiscal: não encontrada");
+        const lines = await deliverInvoice(
+          db,
+          clinic.clinicId,
+          invoiceId,
+          {
+            contact: formChecked(form, "para_contato"),
+            phone: formChecked(form, "para_numero") ? formOptionalText(form, "numero") : null,
+            email: formChecked(form, "para_email") ? formOptionalText(form, "email") : null,
+            save: formChecked(form, "guardar"),
+            autoSend: formChecked(form, "enviar_sempre"),
+          },
+          await deliveryDeps(),
+        );
+        return { redirectTo: page, message: `${describeDelivery(lines)}.` };
       }
       if (acao === "conferir_nota" || acao === "cancelar_nota") {
         const invoiceId = formText(form, "invoice_id");
@@ -47,7 +85,9 @@ export const POST: APIRoute = async (context) => {
           acao === "conferir_nota"
             ? await checkNfse(db, clinic.clinicId, invoiceId)
             : await cancelNfse(db, clinic.clinicId, invoiceId, { code: formInt(form, "motivo"), text: formText(form, "motivo_texto") }, clinic.timezone);
-        return { redirectTo: page, message: result.message };
+        const paymentId = formText(form, "payment_id");
+        const sent = acao === "conferir_nota" && isUuid(paymentId) ? await afterIssue(paymentId, result.status) : "";
+        return { redirectTo: page, message: `${result.message}${sent}` };
       }
       if (acao === "excluir") {
         const paymentId = formText(form, "payment_id");
@@ -80,7 +120,7 @@ export const POST: APIRoute = async (context) => {
       // A nota sai na hora; qualquer problema fica na tela do pagamento, com o motivo.
       try {
         const result = await issueNfse(db, clinic.clinicId, payment.id);
-        return { redirectTo: result.status === "issued" ? (volta ?? page) : page, message: `${registered} ${result.message}` };
+        return { redirectTo: result.status === "issued" ? (volta ?? page) : page, message: `${registered} ${result.message}${await afterIssue(payment.id, result.status)}` };
       } catch (error) {
         const reason = error instanceof DataError ? describeDataError(error) : "não foi possível falar com a Receita agora.";
         if (!(error instanceof DataError)) logError("nota fiscal", error, { clinica: clinic.clinicId, pagamento: payment.id });

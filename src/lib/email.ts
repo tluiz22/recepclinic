@@ -6,7 +6,8 @@ import type { EmailEnv } from "./env";
 // localmente os e-mails caem no Mailpit. Quem envia é recebido como função,
 // para os testes trocarem por uma que só guarda.
 
-export type Email = { to: string; subject: string; html: string; text: string };
+export type EmailAttachment = { filename: string; content: Uint8Array | string; contentType: string };
+export type Email = { to: string; subject: string; html: string; text: string; attachments?: EmailAttachment[] };
 export type EmailSender = (email: Email) => Promise<void>;
 
 export class EmailNotConfiguredError extends Error {
@@ -29,7 +30,14 @@ export function smtpSender(config: EmailEnv | null): EmailSender {
     auth: config.user ? { user: config.user, pass: config.password ?? "" } : undefined,
   });
   return async (email) => {
-    await transport.sendMail({ from: config.from, to: email.to, subject: email.subject, html: email.html, text: email.text });
+    await transport.sendMail({
+      from: config.from,
+      to: email.to,
+      subject: email.subject,
+      html: email.html,
+      text: email.text,
+      attachments: email.attachments?.map((a) => ({ filename: a.filename, content: typeof a.content === "string" ? a.content : Buffer.from(a.content), contentType: a.contentType })),
+    });
   };
 }
 
@@ -87,4 +95,44 @@ export function infoRequestEmail(to: string, { clinicName, link, expiresOn }: { 
     { label: "Preencher o formulário", href: link },
   );
   return { to, subject: `Informações para configurar a ${clinicName} no RecepClinic`, ...body };
+}
+
+/**
+ * Nota fiscal do pagamento (F11.5), com o PDF e o XML anexados. Mesmo texto do
+ * template do WhatsApp (aprovado pelo cliente em 12/out/2026), menos o "é só
+ * responder": o e-mail sai de um endereço que não recebe resposta.
+ */
+export function nfseEmail(
+  to: string,
+  { recipient, clinicLabel, clinicName, number, amount, patientName, appointmentDate, pdf, xml }: {
+    recipient: string;
+    /** "da Clínica Sorriso". */
+    clinicLabel: string;
+    clinicName: string;
+    number: string;
+    amount: string;
+    patientName: string;
+    appointmentDate: string;
+    pdf: Uint8Array;
+    xml: string;
+  },
+): Email {
+  const body = layout(
+    `Nota fiscal nº ${number}`,
+    [
+      `Olá, ${recipient}! Aqui é ${clinicLabel}.`,
+      `Segue a nota fiscal nº ${number}, de ${amount}, referente ao atendimento de ${patientName} em ${appointmentDate}.`,
+      "Qualquer dúvida, fale com a clínica.",
+    ],
+    null,
+  );
+  return {
+    to,
+    subject: `Nota fiscal nº ${number} – ${clinicName}`,
+    ...body,
+    attachments: [
+      { filename: `NFSe_${number}.pdf`, content: pdf, contentType: "application/pdf" },
+      { filename: `NFSe_${number}.xml`, content: xml, contentType: "application/xml" },
+    ],
+  };
 }

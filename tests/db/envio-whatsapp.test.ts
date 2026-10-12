@@ -108,6 +108,8 @@ describe("templates padrão na conta da clínica (Suporte)", () => {
       ["daily_summary_exams", "pending", null],
       ["daily_summary_exams_today", "pending", null],
       ["waitlist_offer", "pending", null],
+      // F11.5: a nota fiscal leva um PDF de exemplo, que sobe pelo app (sem o ID dele, fica para depois).
+      ["nfse_document", null, "falta a variável WHATSAPP_APP_ID (ID do app RecepClinic na Meta) para enviar o PDF de exemplo"],
     ]);
     const created = meta.calls.filter((c) => c.method === "POST");
     expect(created.map((c) => c.path)).toEqual(Array(11).fill(`/${WABA}/message_templates`));

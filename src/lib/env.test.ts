@@ -30,6 +30,7 @@ describe("variáveis da plataforma", () => {
       siteUrl: null,
       email: null,
       whatsapp: null,
+      whatsappAppId: null,
     });
     expect(parsePlatformEnv({ ...valid, SITE_URL: "https://app.recepclinic.com.br" }).siteUrl).toBe(
       "https://app.recepclinic.com.br",
@@ -57,6 +58,12 @@ describe("variáveis da plataforma", () => {
     });
     expect(() => parsePlatformEnv({ ...valid, WHATSAPP_APP_SECRET: "segredo" })).toThrow(/WHATSAPP_WEBHOOK_VERIFY_TOKEN não definida/);
     expect(() => parsePlatformEnv({ ...valid, WHATSAPP_WEBHOOK_VERIFY_TOKEN: "verifica" })).toThrow(/WHATSAPP_APP_SECRET não definida/);
+  });
+
+  it("ID do app na Meta: opcional, só números (F11.5)", () => {
+    expect(parsePlatformEnv(valid).whatsappAppId).toBeNull();
+    expect(parsePlatformEnv({ ...valid, WHATSAPP_APP_ID: "1234567890" }).whatsappAppId).toBe("1234567890");
+    expect(() => parsePlatformEnv({ ...valid, WHATSAPP_APP_ID: "app-x" })).toThrow(/WHATSAPP_APP_ID inválida/);
   });
 
   it("tira espaços das pontas", () => {

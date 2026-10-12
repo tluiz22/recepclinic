@@ -47,7 +47,7 @@ declare
   pt_joao uuid; pt_ana uuid; pt_carlos uuid; pt_julia uuid;
   ser_psi uuid;
   ap_first uuid; ap_past uuid; ap_waiting uuid; ap_canceled uuid; ap_session uuid;
-  e_waiting uuid; op_id uuid; pay_past uuid;
+  e_waiting uuid; op_id uuid; pay_past uuid; inv_past uuid;
   v_secret uuid;
   -- Clínica B
   p_dent uuid; l_b uuid; ag_b uuid; s_b uuid; ct_b uuid; pt_b uuid;
@@ -246,7 +246,11 @@ begin
   insert into public.nfse_dps_counters (clinic_id, environment, last_number) values (c_a, 'restricted', 1);
   insert into public.nfse_invoices (clinic_id, payment_id, environment, series, dps_number, dps_id, status, access_key, nfse_number, issued_at)
     values (c_a, pay_past, 'restricted', '1', 1, 'DPS240800321122233300018100001000000000000001', 'issued',
-      '24080032112223330001812610000000000000000000000000', '1', now() - interval '14 days');
+      '24080032112223330001812610000000000000000000000000', '1', now() - interval '14 days')
+    returning id into inv_past;
+  -- Envio da nota (F11.5) por e-mail ao contador fictício.
+  insert into public.nfse_deliveries (clinic_id, invoice_id, channel, destination, target, status)
+    values (c_a, inv_past, 'email', 'maria@exemplo-saude.local', 'other', 'sent');
   insert into public.appointments (clinic_id, patient_id, service_id, agenda_id, location_id, scheduled_at, duration_minutes, booking_channel, origin_appointment_id)
     values (c_a, pt_joao, s_retorno, ag_ped, l_office, (monday + 14 + time '10:00') at time zone tz, 20, 'admin', ap_past);
   insert into public.appointments (clinic_id, patient_id, service_id, agenda_id, location_id, scheduled_at, duration_minutes, booking_channel, home_visit_address)

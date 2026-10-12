@@ -18,6 +18,8 @@ export type DefaultTemplate = {
   examples: string[];
   /** Botões de resposta rápida, na ordem (payload definido no envio). */
   quickReplies?: string[];
+  /** Documento (PDF) no topo da mensagem (F11.5): a Meta pede um PDF de exemplo na criação. */
+  documentHeader?: boolean;
 };
 
 export const TEMPLATE_LANGUAGE = "pt_BR";
@@ -108,6 +110,14 @@ export const DEFAULT_TEMPLATES: DefaultTemplate[] = [
     examples: ["Maria", "da Clínica Sorriso", "consulta", "João Silva", "terça, 08/10 às 14:00 (Consultório Centro)", "sexta, 18/10 às 09:00"],
     quickReplies: ["Sim, quero antecipar", "Não, manter horário"],
   },
+  {
+    // Nota fiscal do pagamento, com o PDF (DANFSe) no topo (F11.5; texto aprovado pelo cliente em 12/out).
+    key: "nfse_document",
+    name: "rc_nota_fiscal_v1",
+    body: `${GREETING}\nSegue a nota fiscal nº {{3}}, de {{4}}, referente ao atendimento de {{5}} em {{6}}.\n\n${ANY_QUESTION}`,
+    examples: ["Maria", "da Clínica Sorriso", "123", "R$ 300,00", "João Souza", "05/10/2026"],
+    documentHeader: true,
+  },
 ];
 
 export function defaultTemplate(key: TemplateKey): DefaultTemplate | null {
@@ -195,11 +205,14 @@ export function appointmentParams(clinic: string, a: AppointmentForMessage): str
 // Meta: criação e situação
 // ---------------------------------------------------------------------------
 
-/** Corpo do pedido de criação do template na conta (POST /{waba}/message_templates). */
-export function templateCreationPayload(template: DefaultTemplate): Record<string, unknown> {
-  const components: Record<string, unknown>[] = [
-    { type: "BODY", text: template.body, example: { body_text: [template.examples] } },
-  ];
+/**
+ * Corpo do pedido de criação do template na conta (POST /{waba}/message_templates).
+ * `headerHandle`: o PDF de exemplo já enviado à Meta (template com documento).
+ */
+export function templateCreationPayload(template: DefaultTemplate, headerHandle?: string): Record<string, unknown> {
+  const components: Record<string, unknown>[] = [];
+  if (template.documentHeader) components.push({ type: "HEADER", format: "DOCUMENT", example: { header_handle: [headerHandle ?? ""] } });
+  components.push({ type: "BODY", text: template.body, example: { body_text: [template.examples] } });
   if (template.quickReplies?.length) {
     components.push({ type: "BUTTONS", buttons: template.quickReplies.map((text) => ({ type: "QUICK_REPLY", text })) });
   }
@@ -207,8 +220,8 @@ export function templateCreationPayload(template: DefaultTemplate): Record<strin
 }
 
 /** Corpo da edição do template recusado (POST /{id}; F8a.1): sem nome nem idioma, que não mudam. */
-export function templateEditPayload(template: DefaultTemplate): Record<string, unknown> {
-  const { category, components } = templateCreationPayload(template);
+export function templateEditPayload(template: DefaultTemplate, headerHandle?: string): Record<string, unknown> {
+  const { category, components } = templateCreationPayload(template, headerHandle);
   return { category, components };
 }
 

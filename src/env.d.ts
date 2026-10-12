@@ -14,6 +14,7 @@ interface ImportMetaEnv {
   readonly EMAIL_FROM?: string;
   readonly WHATSAPP_APP_SECRET?: string;
   readonly WHATSAPP_WEBHOOK_VERIFY_TOKEN?: string;
+  readonly WHATSAPP_APP_ID?: string;
 }
 
 interface ImportMeta {

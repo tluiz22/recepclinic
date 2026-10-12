@@ -14,7 +14,7 @@ import ConfiguracoesTabs from "../../../components/admin/ConfiguracoesTabs.astro
 import FlashMessage from "../../../components/admin/FlashMessage.astro";
 import WhatsAppBubble from "../../../components/admin/WhatsAppBubble.astro";
 import { HINT, INPUT, PRIMARY_BUTTON, SECONDARY_BUTTON } from "../../../components/admin/fieldStyles";
-import { addDays, todayIn, toInstant, weekdayOf } from "../../../lib/clinicTime";
+import { addDays, formatCalendarDate, todayIn, toInstant, weekdayOf } from "../../../lib/clinicTime";
 import { createUserClient } from "../../../lib/data/clients";
 import { listAgendas } from "../../../lib/data/config/agendas";
 import { getClinicSettings } from "../../../lib/data/config/clinic";
@@ -29,6 +29,7 @@ import {
   listBotMessages,
   MARKER_LABELS,
   renderMarkers,
+  NOT_CUSTOMIZABLE,
   TEMPLATE_MARKERS,
   templateToMarkers,
 } from "../../../lib/data/whatsapp/customMessages";
@@ -91,6 +92,8 @@ const exampleFor = (key: TemplateKey): Record<string, string> =>
         data: summaryDay,
         lista: `▪️ 08h00 - João Silva (✅ confirmado) ▪️ 09h00 - Maria Souza (sem confirmação)`,
       }
+    : key === "nfse_document"
+      ? { ...example, numero: "123", valor: "R$ 300,00", dia: formatCalendarDate(monday, "dd/MM/yyyy") }
     : key === "waitlist_offer"
       ? { ...example, tipo: "consulta", vaga: `${when} (${office?.name ?? "Consultório"})`, atual: "sexta, 18/10 às 09:00" }
       : key === "clinic_cancellation"
@@ -114,6 +117,7 @@ const TEMPLATE_LABELS: Record<string, string> = {
   daily_summary_consultations_today: "Resumo para a equipe: consultas de hoje",
   daily_summary_exams_today: "Resumo para a equipe: exames de hoje",
   waitlist_offer: "Oferta de vaga (lista de espera)",
+  nfse_document: "Nota fiscal (com o PDF no topo)",
 };
 const STATUS = {
   approved: { label: "Aprovado", variant: "success" },
@@ -128,7 +132,8 @@ const visibleTemplates = DEFAULT_TEMPLATES.filter(
     (t.key !== "exam_preparation" || has("exams")) &&
     (!t.key.startsWith("daily_summary") || has("daily_summary")) &&
     (!t.key.startsWith("daily_summary_exams") || has("exams")) &&
-    (t.key !== "waitlist_offer" || has("waitlist")),
+    (t.key !== "waitlist_offer" || has("waitlist")) &&
+    (t.key !== "nfse_document" || has("finance")),
 );
 const rows = visibleTemplates.map((standard) => {
   const versions = templates.filter((t) => t.key === standard.key);
@@ -255,7 +260,7 @@ const markerHint = (markers: string[]) => markers.map((m) => `{${m}} = ${MARKER_
                   </div>
                 )}
 
-                {canEdit && (
+                {canEdit && !NOT_CUSTOMIZABLE.includes(row.key) && (
                   <details class="mt-3">
                     <summary class="cursor-pointer text-sm font-medium text-sky-700">Personalizar o texto</summary>
                     <form method="POST" action={action} class="mt-2 flex flex-col gap-2">

@@ -3,7 +3,10 @@ import { createClinicServiceClient } from "../clinicService";
 import { resolveClinicsByWabaId } from "../platform";
 import { unwrap } from "../errors";
 import { getWhatsappAccessToken, getWhatsappConnection, listWhatsappTemplates, type TemplateKey, type TemplateStatus } from "./connection";
-import { createTemplate, deleteTemplate, editTemplate, fetchAllTemplates, fetchTemplatesByName, GraphRequestError, type Fetcher, type MetaTemplate } from "./graph";
+import { createTemplate, deleteTemplate, editTemplate, fetchAllTemplates, fetchTemplatesByName, GraphRequestError, uploadTemplateExample, type Fetcher, type MetaTemplate } from "./graph";
+import { buildDanfse } from "../../nfse/danfse";
+import sampleNfseXml from "../../nfse/fixtures/nfse-exemplo.xml?raw";
+import { platformEnv } from "../../env";
 import { DEFAULT_TEMPLATES, defaultTemplate, rejectionReason, TEMPLATE_LANGUAGE, templateCreationPayload, templateEditPayload, templateStatusFromMeta } from "./templates";
 
 // Templates padrão na conta da clínica (F6.2), pelo Suporte em Configurações ›
@@ -75,10 +78,38 @@ const inLanguage = (templates: MetaTemplate[]) => templates.find((t) => t.langua
 /** Já existe conteúdo nesse idioma: a Meta criou o template antes (resposta perdida, clique duplo). */
 const ALREADY_EXISTS = 2388024;
 
-/** Cria; se a Meta disser que já existe, lê a situação dele (achado na validação da F7). */
-async function createOrFind(wabaId: string, template: (typeof DEFAULT_TEMPLATES)[number], token: string, fetcher: Fetcher): Promise<MetaTemplate> {
+/** ID do app na Meta (só para o PDF de exemplo do template da nota); null se não configurado. */
+export function configuredAppId(): string | null {
   try {
-    const created = await createTemplate(wabaId, templateCreationPayload(template), token, fetcher);
+    return platformEnv().whatsappAppId;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Template com documento no topo (F11.5): a Meta exige um PDF de exemplo, que
+ * sobe pelo app (WHATSAPP_APP_ID). O exemplo é um DANFSe de dados fictícios.
+ */
+async function documentHandle(template: (typeof DEFAULT_TEMPLATES)[number], token: string, fetcher: Fetcher, appId: string | null): Promise<string | undefined> {
+  if (!template.documentHeader) return undefined;
+  if (!appId) {
+    throw new GraphRequestError("PDF de exemplo", { code: null, message: "falta a variável WHATSAPP_APP_ID (ID do app RecepClinic na Meta) para enviar o PDF de exemplo" });
+  }
+  const bytes = await buildDanfse(sampleNfseXml);
+  return uploadTemplateExample(appId, token, { bytes, filename: "nota-fiscal-exemplo.pdf", mimeType: "application/pdf" }, fetcher);
+}
+
+/** Cria; se a Meta disser que já existe, lê a situação dele (achado na validação da F7). */
+async function createOrFind(
+  wabaId: string,
+  template: (typeof DEFAULT_TEMPLATES)[number],
+  token: string,
+  fetcher: Fetcher,
+  appId: string | null,
+): Promise<MetaTemplate> {
+  try {
+    const created = await createTemplate(wabaId, templateCreationPayload(template, await documentHandle(template, token, fetcher, appId)), token, fetcher);
     return { ...created, name: template.name, language: TEMPLATE_LANGUAGE, rejectedReason: null };
   } catch (error) {
     if (!(error instanceof GraphRequestError) || error.graph.subcode !== ALREADY_EXISTS) throw error;
@@ -89,14 +120,19 @@ async function createOrFind(wabaId: string, template: (typeof DEFAULT_TEMPLATES)
 }
 
 /** "Criar na Meta": cria os templates padrão que a conta ainda não tem. */
-export async function createDefaultTemplates(db: DbClient, clinicId: string, fetcher: Fetcher = fetch): Promise<TemplateSyncResult> {
+export async function createDefaultTemplates(
+  db: DbClient,
+  clinicId: string,
+  fetcher: Fetcher = fetch,
+  appId: string | null = configuredAppId(),
+): Promise<TemplateSyncResult> {
   const ready = await setup(db, clinicId);
   if ("message" in ready) return { ok: false, message: ready.message };
   const lines: TemplateSyncLine[] = [];
   for (const template of DEFAULT_TEMPLATES) {
     try {
       const existing = inLanguage(await fetchTemplatesByName(ready.wabaId, template.name, ready.token, fetcher));
-      const meta = existing ?? (await createOrFind(ready.wabaId, template, ready.token, fetcher));
+      const meta = existing ?? (await createOrFind(ready.wabaId, template, ready.token, fetcher, appId));
       const status = await saveTemplateRow(db, clinicId, template.key, template.name, meta);
       lines.push({ key: template.key, name: template.name, status, problem: null });
     } catch (error) {
@@ -136,7 +172,13 @@ export type ResendResult = { ok: true; name: string } | { ok: false; message: st
  * clínica com o texto atual do código (mesmo nome, sem `_v2`). Quem muda o
  * texto é o código (cliente, 12/out): ele segue um só para todas as clínicas.
  */
-export async function resendRejectedTemplate(db: DbClient, clinicId: string, key: TemplateKey, fetcher: Fetcher = fetch): Promise<ResendResult> {
+export async function resendRejectedTemplate(
+  db: DbClient,
+  clinicId: string,
+  key: TemplateKey,
+  fetcher: Fetcher = fetch,
+  appId: string | null = configuredAppId(),
+): Promise<ResendResult> {
   const template = defaultTemplate(key);
   if (!template) return { ok: false, message: "Template desconhecido." };
   const saved = (await listWhatsappTemplates(db, clinicId)).find((t) => t.key === key && t.version === 1);
@@ -149,7 +191,7 @@ export async function resendRejectedTemplate(db: DbClient, clinicId: string, key
   try {
     const id = saved.metaTemplateId ?? inLanguage(await fetchTemplatesByName(ready.wabaId, template.name, ready.token, fetcher))?.id;
     if (!id) return { ok: false, message: `${template.name} não existe na conta da Meta: use "Criar na Meta".` };
-    await editTemplate(id, templateEditPayload(template), ready.token, fetcher);
+    await editTemplate(id, templateEditPayload(template, await documentHandle(template, ready.token, fetcher, appId)), ready.token, fetcher);
     await saveTemplateRow(db, clinicId, key, template.name, { id, status: "PENDING", rejectedReason: null });
     return { ok: true, name: template.name };
   } catch (error) {

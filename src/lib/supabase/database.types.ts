@@ -811,6 +811,32 @@ isOneToOne: false
       referencedColumns: ["clinic_id","user_id"]
     }
                   ]
+                },"nfse_deliveries": {
+                  Row: {
+                    "automatic": boolean,"channel": string,"clinic_id": string,"created_at": string,"destination": string,"error": string | null,"id": string,"invoice_id": string,"sent_by": string | null,"status": string,"target": string,"whatsapp_message_id": string | null
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "automatic"?: boolean,"channel": string,"clinic_id": string,"created_at"?: string,"destination": string,"error"?: string | null,"id"?: string,"invoice_id": string,"sent_by"?: string | null,"status": string,"target": string,"whatsapp_message_id"?: string | null
+                  }
+                  Update: {
+                    "automatic"?: boolean,"channel"?: string,"clinic_id"?: string,"created_at"?: string,"destination"?: string,"error"?: string | null,"id"?: string,"invoice_id"?: string,"sent_by"?: string | null,"status"?: string,"target"?: string,"whatsapp_message_id"?: string | null
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "nfse_deliveries_clinic_id_fkey"
+      columns: ["clinic_id"]
+isOneToOne: false
+      referencedRelation: "clinics"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "nfse_deliveries_clinic_id_invoice_id_fkey"
+      columns: ["clinic_id","invoice_id"]
+isOneToOne: false
+      referencedRelation: "nfse_invoices"
+      referencedColumns: ["clinic_id","id"]
+    }
+                  ]
                 },"nfse_dps_counters": {
                   Row: {
                     "clinic_id": string,"environment": string,"last_number": number
@@ -899,14 +925,14 @@ isOneToOne: false
                   ]
                 },"patient_finance": {
                   Row: {
-                    "clinic_id": string,"cpf": string | null,"created_at": string,"patient_id": string,"payer": string,"payer_cpf": string | null,"payer_name": string | null,"updated_at": string,"updated_by": string | null
+                    "clinic_id": string,"cpf": string | null,"created_at": string,"invoice_auto_send": boolean,"invoice_email": string | null,"invoice_phone": string | null,"patient_id": string,"payer": string,"payer_cpf": string | null,"payer_name": string | null,"updated_at": string,"updated_by": string | null
                   }
                   ComputedFields: never
                   Insert: {
-                    "clinic_id": string,"cpf"?: string | null,"created_at"?: string,"patient_id": string,"payer"?: string,"payer_cpf"?: string | null,"payer_name"?: string | null,"updated_at"?: string,"updated_by"?: string | null
+                    "clinic_id": string,"cpf"?: string | null,"created_at"?: string,"invoice_auto_send"?: boolean,"invoice_email"?: string | null,"invoice_phone"?: string | null,"patient_id": string,"payer"?: string,"payer_cpf"?: string | null,"payer_name"?: string | null,"updated_at"?: string,"updated_by"?: string | null
                   }
                   Update: {
-                    "clinic_id"?: string,"cpf"?: string | null,"created_at"?: string,"patient_id"?: string,"payer"?: string,"payer_cpf"?: string | null,"payer_name"?: string | null,"updated_at"?: string,"updated_by"?: string | null
+                    "clinic_id"?: string,"cpf"?: string | null,"created_at"?: string,"invoice_auto_send"?: boolean,"invoice_email"?: string | null,"invoice_phone"?: string | null,"patient_id"?: string,"payer"?: string,"payer_cpf"?: string | null,"payer_name"?: string | null,"updated_at"?: string,"updated_by"?: string | null
                   }
                   Relationships: [
                     {
