@@ -3,7 +3,9 @@
 // fala com a clínica, plano de saúde (com o item "Convênios", D10), marcar,
 // desativar/reativar e o histórico (próximos e anteriores) das agendas que a
 // pessoa vê. Anonimizar a pedido (F9.4, LGPD): só o Administrador e o
-// Suporte; depois disso a página só mostra o histórico.
+// Suporte; depois disso a página só mostra o histórico. Com o Módulo
+// financeiro (F11.1), o cartão "Financeiro": CPF e responsável financeiro (só o
+// Administrador e a Recepção; o Suporte só vê).
 import AdminLayout from "../../../layouts/AdminLayout.astro";
 import ActiveToggle from "../../../components/admin/ActiveToggle.astro";
 import Badge, { type BadgeVariant } from "../../../components/admin/Badge.astro";
@@ -14,7 +16,9 @@ import Icon from "../../../components/admin/Icon.astro";
 import PhoneLinks from "../../../components/admin/PhoneLinks.astro";
 import { HINT, INPUT, LABEL, PRIMARY_BUTTON, SECONDARY_BUTTON } from "../../../components/admin/fieldStyles";
 import { formatAge, isOverConsultationAgeLimit } from "../../../lib/age";
-import { isUuid } from "../../../lib/clinicAccess";
+import { canAccessArea, isUuid } from "../../../lib/clinicAccess";
+import { formatCpf } from "../../../lib/cpf";
+import { getContactCpf, getPatientFinance, resolvePayer } from "../../../lib/data/finance";
 import { currentPath, receivedReturn, withReturn } from "../../../lib/returnPath";
 import { formatInstant, localDateOf, todayIn } from "../../../lib/clinicTime";
 import { createUserClient } from "../../../lib/data/clients";
@@ -72,6 +76,15 @@ const anonymizeMessage = preview
       .filter(Boolean)
       .join(" ")
   : "";
+// Módulo financeiro (F11.1): o Suporte vê, mas só a equipe da clínica grava.
+const financeOn = canAccessArea(clinic, "finance") && !anonymized;
+const canEditFinance = financeOn && (clinic.roles.includes("admin") || clinic.roles.includes("reception"));
+const [finance, contactCpf] = financeOn
+  ? await Promise.all([getPatientFinance(db, clinic.clinicId, patient.id), getContactCpf(db, clinic.clinicId, contact.id)])
+  : [null, null];
+const responsible = finance ? resolvePayer(patient, contact, finance, contactCpf) : null;
+const financeAction = withReturn(`/api/admin/financeiro/paciente/${patient.id}`, volta);
+const cpfValue = (cpf: string | null) => (cpf ? formatCpf(cpf) : "");
 const ageWarning =
   settings.consultationAgeLimitYears !== null && isOverConsultationAgeLimit(patient.birthdate, today, settings.consultationAgeLimitYears)
     ? `Passou da idade limite da Consulta (${settings.consultationAgeLimitYears} anos): só Retorno e Exame.`
@@ -139,6 +152,72 @@ const ageWarning =
         </p>
         {patient.isContactSelf && <a href={withReturn(`/admin/pacientes/contato/${contact.id}`, here)} class="mt-1 inline-block text-sm text-sky-700 hover:underline">Editar o telefone</a>}
       </Card>
+
+      {
+        finance && responsible && (
+          <Card>
+            <h2 class="font-semibold text-slate-900">Financeiro</h2>
+            <p class="mt-1 text-sm text-slate-700">
+              Responsável financeiro: <span class="font-medium">{responsible.name}</span>
+              {responsible.cpf ? ` · CPF ${formatCpf(responsible.cpf)}` : ""}
+            </p>
+            {!responsible.cpf && <p class="mt-1 text-sm text-amber-700">Falta o CPF do responsável financeiro: sem ele, a nota fiscal não sai.</p>}
+            <form method="POST" action={financeAction} class="mt-3 flex flex-col gap-3" id="financeiro">
+              <fieldset disabled={!canEditFinance} class="flex flex-col gap-3">
+                <div>
+                  <label for="fin_cpf" class={LABEL}>CPF de {patient.fullName}{patient.isContactSelf ? "" : " (opcional)"}</label>
+                  <input
+                    id="fin_cpf"
+                    name={patient.isContactSelf ? "contact_cpf" : "cpf"}
+                    inputmode="numeric"
+                    placeholder="000.000.000-00"
+                    value={cpfValue(patient.isContactSelf ? contactCpf : finance.cpf)}
+                    class={`${INPUT} w-48`}
+                  />
+                </div>
+                <div>
+                  <p class={LABEL}>Quem paga (a nota sai no CPF dele)</p>
+                  <div class="mt-1 flex flex-col gap-1 text-sm">
+                    <label class="flex items-center gap-2">
+                      <input type="radio" name="payer" value="contact" checked={responsible.payer === "contact"} class="h-4 w-4" />
+                      {patient.isContactSelf ? patient.fullName : `${contact.fullName} (${vocabulary.contact})`}
+                    </label>
+                    {!patient.isContactSelf && (
+                      <label class="flex items-center gap-2">
+                        <input type="radio" name="payer" value="patient" checked={responsible.payer === "patient"} class="h-4 w-4" />
+                        {patient.fullName}
+                      </label>
+                    )}
+                    <label class="flex items-center gap-2">
+                      <input type="radio" name="payer" value="other" checked={responsible.payer === "other"} class="h-4 w-4" />
+                      Outra pessoa
+                    </label>
+                  </div>
+                </div>
+                {!patient.isContactSelf && (
+                  <div data-payer-only="contact">
+                    <label for="fin_contact_cpf" class={LABEL}>CPF de {contact.fullName}</label>
+                    <input id="fin_contact_cpf" name="contact_cpf" inputmode="numeric" placeholder="000.000.000-00" value={cpfValue(contactCpf)} class={`${INPUT} w-48`} />
+                    <p class={HINT}>Vale também para os outros cadastros deste WhatsApp.</p>
+                  </div>
+                )}
+                <div data-payer-only="other" class="grid gap-3 sm:grid-cols-2">
+                  <div>
+                    <label for="fin_payer_name" class={LABEL}>Nome de quem paga</label>
+                    <input id="fin_payer_name" name="payer_name" value={finance.payerName ?? ""} class={INPUT} />
+                  </div>
+                  <div>
+                    <label for="fin_payer_cpf" class={LABEL}>CPF de quem paga</label>
+                    <input id="fin_payer_cpf" name="payer_cpf" inputmode="numeric" placeholder="000.000.000-00" value={cpfValue(finance.payerCpf)} class={INPUT} />
+                  </div>
+                </div>
+                {canEditFinance && <button type="submit" class={`${SECONDARY_BUTTON} self-start`}>Salvar dados financeiros</button>}
+              </fieldset>
+            </form>
+            <p class={HINT}>Só a Recepção e o Administrador veem estes dados; o bot e as páginas públicas não.</p>
+          </Card>
+        )
+      }
 
       {
         insuranceOn && !anonymized && (
@@ -241,3 +320,18 @@ const ageWarning =
   </div>
   {canAnonymize && <ConfirmDeleteDialog />}
 </AdminLayout>
+
+<script>
+  // Financeiro: mostra só os campos do responsável escolhido.
+  const form = document.getElementById("financeiro");
+  if (form) {
+    const sync = () => {
+      const payer = form.querySelector<HTMLInputElement>('input[name="payer"]:checked')?.value ?? "contact";
+      form.querySelectorAll<HTMLElement>("[data-payer-only]").forEach((block) => {
+        block.hidden = block.dataset.payerOnly !== payer;
+      });
+    };
+    form.addEventListener("change", sync);
+    sync();
+  }
+</script>

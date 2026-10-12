@@ -110,18 +110,23 @@ export function hasRole(context: RoleHolder, ...roles: ClinicRole[]): boolean {
 //   - Métricas e relatórios (D11, muda a D6): o Administrador, com alguma aba
 //     liberada; o Profissional, só com as "Métricas pessoais do profissional"
 //     (e só a própria agenda, `metricsScope`).
-export type PanelArea = "settings" | "metrics" | "shared";
+//   - Financeiro (F11, cliente, 12/out/2026): o Administrador e a Recepção,
+//     com o "Módulo financeiro" liberado; o Profissional não entra.
+export type PanelArea = "settings" | "metrics" | "finance" | "shared";
 
 const AREA_PREFIXES: [string, PanelArea][] = [
   ["/admin/configuracoes", "settings"],
   ["/api/admin/configuracoes", "settings"],
   ["/admin/metricas", "metrics"],
   ["/admin/relatorios", "metrics"],
+  ["/admin/financeiro", "finance"],
+  ["/api/admin/financeiro", "finance"],
 ];
 
 const AREA_ROLES: Record<PanelArea, ClinicRole[]> = {
   settings: ["admin"],
   metrics: ["admin", "professional"],
+  finance: ["admin", "reception"],
   shared: ["admin", "professional", "reception"],
 };
 
@@ -133,6 +138,7 @@ export function areaOfPath(pathname: string): PanelArea {
 const METRICS_TABS = FEATURES.filter((feature) => feature.area === "metrics" && feature.key !== "metrics_personal").map((f) => f.key);
 
 export function canAccessArea(context: AccessHolder, area: PanelArea): boolean {
+  if (area === "finance") return hasRole(context, ...AREA_ROLES.finance) && (context.features ?? []).includes("finance");
   if (area !== "metrics") return hasRole(context, ...AREA_ROLES[area]);
   const features = context.features ?? [];
   return metricsScope({ ...context, features }) !== "none" && METRICS_TABS.some((key) => features.includes(key));

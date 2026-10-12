@@ -5,8 +5,8 @@ import { FEATURES, featureLabel, type FeatureKey } from "./features";
 // (tela Planos e matriz da clínica); nada disso vai para o site público. A
 // mensalidade é por clínica, mais um valor por profissional além do primeiro;
 // os adicionais têm valor fixo por clínica. As mensagens da Meta ficam à parte
-// (cobradas direto da clínica). Séries recorrentes ficam fora da tabela por
-// ora (o Suporte ainda pode ligar).
+// (cobradas direto da clínica). Séries recorrentes e o Módulo financeiro
+// (cliente, 12/out/2026) ficam fora da tabela por ora (o Suporte ainda pode ligar).
 
 export const PRICES = {
   basicCents: 14_700,
@@ -41,7 +41,7 @@ export const ADDONS: PlanItem[] = [
 ];
 
 /** Fora da tabela de preços por ora. */
-export const OFF_TABLE: PlanItem[] = [single("series")];
+export const OFF_TABLE: PlanItem[] = [single("series"), single("finance")];
 
 export const ALL_ITEMS: PlanItem[] = [...BASIC_ITEMS, ...ADDONS, ...OFF_TABLE];
 

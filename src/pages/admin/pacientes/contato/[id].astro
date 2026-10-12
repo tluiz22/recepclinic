@@ -7,6 +7,8 @@
 // limites atingidos, "Revisado" (Recepção e Administrador) e liberar dos
 // limites (só o Administrador). Bloquear no bot (F9.6b, só o Administrador),
 // com a opção de cancelar sem aviso os atendimentos futuros; desbloquear.
+// Com o Módulo financeiro (F11.1), o CPF do contato (Administrador e Recepção
+// gravam; o Suporte só vê).
 import AdminLayout from "../../../../layouts/AdminLayout.astro";
 import ActiveToggle from "../../../../components/admin/ActiveToggle.astro";
 import ConfirmDeleteDialog from "../../../../components/admin/ConfirmDeleteDialog.astro";
@@ -18,7 +20,9 @@ import Icon from "../../../../components/admin/Icon.astro";
 import PhoneLinks from "../../../../components/admin/PhoneLinks.astro";
 import { HINT, INPUT, LABEL, PRIMARY_BUTTON, SECONDARY_BUTTON } from "../../../../components/admin/fieldStyles";
 import { formatAge } from "../../../../lib/age";
-import { isUuid } from "../../../../lib/clinicAccess";
+import { canAccessArea, isUuid } from "../../../../lib/clinicAccess";
+import { formatCpf } from "../../../../lib/cpf";
+import { getContactCpf } from "../../../../lib/data/finance";
 import { currentPath, receivedReturn, withReturn } from "../../../../lib/returnPath";
 import { formatInstant, todayIn } from "../../../../lib/clinicTime";
 import { createUserClient } from "../../../../lib/data/clients";
@@ -62,6 +66,10 @@ const [block, futureCount] = hasBot
   : [null, 0];
 const blockedBy = block?.blockedBy ? await exemptByLabel(db, clinic.clinicId, block.blockedBy) : null;
 const exemptBy = limitsStatus?.exemptAt && limitsStatus.exemptBy ? await exemptByLabel(db, clinic.clinicId, limitsStatus.exemptBy) : null;
+const financeOn = canAccessArea(clinic, "finance") && !contact.anonymizedAt;
+const canEditFinance = financeOn && (clinic.roles.includes("admin") || clinic.roles.includes("reception"));
+const contactCpf = financeOn ? await getContactCpf(db, clinic.clinicId, contact.id) : null;
+const financeAction = withReturn(`/api/admin/financeiro/contato/${contact.id}`, volta);
 const when = (event: BotLimitEvent) => formatInstant(event.at, clinic.timezone, "dd/MM 'às' HH:mm");
 const limitLine = (event: BotLimitEvent) => `${BOT_LIMIT_LABELS[event.reason]}: ${describeBotLimitHit(event)}`;
 ---
@@ -124,6 +132,23 @@ const limitLine = (event: BotLimitEvent) => `${BOT_LIMIT_LABELS[event.reason]}: 
           <button type="submit" class={`${SECONDARY_BUTTON} self-start`}>Salvar</button>
         </form>
       </Card>
+      {financeOn && (
+        <Card>
+          <h2 class="font-semibold text-slate-900">Financeiro</h2>
+          <form method="POST" action={financeAction} class="mt-3 flex flex-col gap-3">
+            <fieldset disabled={!canEditFinance} class="flex flex-col gap-3">
+              <div>
+                <label for="fin_cpf" class={LABEL}>CPF</label>
+                <input id="fin_cpf" name="cpf" inputmode="numeric" placeholder="000.000.000-00" value={contactCpf ? formatCpf(contactCpf) : ""} class={`${INPUT} w-48`} />
+                <p class={HINT}>
+                  Usado na nota fiscal quando {contact.fullName} é quem paga, o padrão para os cadastros deste WhatsApp.
+                </p>
+              </div>
+              {canEditFinance && <button type="submit" class={`${SECONDARY_BUTTON} self-start`}>Salvar CPF</button>}
+            </fieldset>
+          </form>
+        </Card>
+      )}
       {hasBot && limitsStatus && (
         <Card>
           <h2 class="font-semibold text-slate-900">Limites do bot</h2>

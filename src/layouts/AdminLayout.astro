@@ -38,6 +38,10 @@ const moreNavItems: { label: string; href: string; icon: IconName }[] = [
   ...(canAccessArea(access, "metrics")
     ? [{ label: "Métricas", href: "/admin/metricas", icon: "funnel" as IconName }]
     : []),
+  // Módulo financeiro (F11): Administrador e Recepção, com o item liberado.
+  ...(canAccessArea(access, "finance")
+    ? [{ label: "Financeiro", href: "/admin/financeiro", icon: "banknotes" as IconName }]
+    : []),
   // Administração do sistema (F4.2, F4.4a, F9.3 e F9.5): só o Suporte.
   ...(platform || clinic?.isPlatformStaff
     ? [

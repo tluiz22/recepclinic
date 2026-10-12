@@ -1,0 +1,91 @@
+---
+// Financeiro (F11.1, Módulo financeiro): por ora, os pacientes ativos com o
+// responsável financeiro de cada um e se o CPF dele já está cadastrado (sem
+// ele, a nota fiscal não sai). Busca e páginas como em Pacientes. Pagamentos,
+// notas e DMED entram nas próximas subetapas. Só o Administrador e a Recepção,
+// com o item liberado (o Suporte vê).
+import { currentPath, withReturn } from "../../../lib/returnPath";
+import AdminLayout from "../../../layouts/AdminLayout.astro";
+import Badge from "../../../components/admin/Badge.astro";
+import Card from "../../../components/admin/Card.astro";
+import FlashMessage from "../../../components/admin/FlashMessage.astro";
+import { INPUT, SECONDARY_BUTTON } from "../../../components/admin/fieldStyles";
+import { maskCpf } from "../../../lib/cpf";
+import { createUserClient } from "../../../lib/data/clients";
+import { listFinancePatientsPage } from "../../../lib/data/finance";
+import { capitalize, vocabularyFor } from "../../../lib/vocabulary";
+
+const clinic = Astro.locals.clinic!;
+const db = createUserClient(Astro.request, Astro.cookies);
+const vocabulary = vocabularyFor(clinic.clinicProfile);
+const params = Astro.url.searchParams;
+const q = (params.get("q") ?? "").trim();
+const page = Number(params.get("pagina")) || 1;
+const result = await listFinancePatientsPage(db, clinic.clinicId, { query: q, page });
+const here = currentPath(Astro.url);
+
+const link = (changes: Record<string, string>) => {
+  const next = new URLSearchParams({ ...(q ? { q } : {}), ...changes });
+  for (const [key, value] of [...next]) if (!value) next.delete(key);
+  return `/admin/financeiro?${next}`;
+};
+const PAYER_LABEL = { contact: capitalize(vocabulary.contact), patient: "Próprio cadastro", other: "Outra pessoa" } as const;
+---
+
+<AdminLayout title="Financeiro">
+  <h1 class="text-2xl font-bold text-slate-900">Financeiro</h1>
+  <p class="mt-2 text-slate-600">
+    Quem paga por cada {vocabulary.patient} e em nome de quem sai a nota fiscal. Para mudar, abra o cadastro e use o cartão "Financeiro".
+  </p>
+  <FlashMessage />
+
+  <form method="GET" class="mt-4 flex flex-wrap items-center gap-2">
+    <input name="q" value={q} placeholder="Nome ou telefone" class={`${INPUT} mt-0 sm:w-80`} />
+    <button type="submit" class={SECONDARY_BUTTON}>Buscar</button>
+    {q && <a href={link({ q: "" })} class="text-sm text-sky-700 hover:underline">Limpar</a>}
+  </form>
+
+  <p class="mt-3 text-sm text-slate-500">{result.total} {result.total === 1 ? "encontrado" : "encontrados"}</p>
+  <ul class="mt-2 grid gap-3 sm:grid-cols-2">
+    {
+      result.items.map((p) => (
+        <li>
+          <a href={withReturn(`/admin/pacientes/${p.id}`, here)}>
+            <Card class="h-full hover:border-sky-300 hover:bg-sky-50">
+              <p class="flex flex-wrap items-center gap-2 font-medium text-slate-900">
+                {p.fullName}
+                {p.responsible.cpf ? <Badge variant="success">CPF ok</Badge> : <Badge variant="warning">falta CPF</Badge>}
+              </p>
+              <p class="mt-0.5 text-sm text-slate-600">
+                Responsável financeiro: {p.responsible.name}
+                {p.responsible.cpf ? ` · ${maskCpf(p.responsible.cpf)}` : ""}
+              </p>
+              <p class="text-sm text-slate-500">{p.isContactSelf && p.responsible.payer === "contact" ? "Próprio cadastro" : PAYER_LABEL[p.responsible.payer]}</p>
+            </Card>
+          </a>
+        </li>
+      ))
+    }
+  </ul>
+  {result.total === 0 && <p class="mt-2 text-sm text-slate-600">{q ? "Ninguém encontrado." : "Ninguém cadastrado ainda."}</p>}
+
+  {
+    result.pageCount > 1 && (
+      <nav class="mt-4 flex items-center gap-3 text-sm">
+        {result.page > 1 && (
+          <a href={link({ pagina: String(result.page - 1) })} class="text-sky-700 hover:underline">
+            Anterior
+          </a>
+        )}
+        <span class="text-slate-500">
+          Página {result.page} de {result.pageCount}
+        </span>
+        {result.page < result.pageCount && (
+          <a href={link({ pagina: String(result.page + 1) })} class="text-sky-700 hover:underline">
+            Próxima
+          </a>
+        )}
+      </nav>
+    )
+  }
+</AdminLayout>

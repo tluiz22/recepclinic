@@ -3,6 +3,7 @@ import type { FeatureKey } from "./features";
 import {
   areaOfPath,
   canAccessArea,
+  canAccessPath,
   chooseActiveClinic,
   expectsPage,
   hasRole,
@@ -124,6 +125,19 @@ describe("papéis e áreas do painel (D6)", () => {
     expect(canAccessArea({ ...as("professional"), features: ["metrics_personal"] }, "metrics")).toBe(false);
     expect(canAccessArea({ ...as("reception"), features: personal }, "metrics")).toBe(false);
     expect(canAccessArea({ ...support, features: tabs }, "metrics")).toBe(true);
+  });
+
+  it("Financeiro (F11): Administrador e Recepção, com o Módulo financeiro; o Profissional não", () => {
+    expect(areaOfPath("/admin/financeiro")).toBe("finance");
+    expect(areaOfPath("/api/admin/financeiro/paciente/1")).toBe("finance");
+    const on: FeatureKey[] = ["finance"];
+    expect(canAccessArea({ ...as("admin"), features: on }, "finance")).toBe(true);
+    expect(canAccessArea({ ...as("reception"), features: on }, "finance")).toBe(true);
+    expect(canAccessArea({ ...as("professional"), features: on }, "finance")).toBe(false);
+    expect(canAccessArea({ ...as("admin"), features: [] }, "finance")).toBe(false);
+    expect(canAccessArea({ ...support, features: on }, "finance")).toBe(true);
+    expect(canAccessPath({ ...as("reception"), features: on }, "/admin/financeiro", new URLSearchParams())).toBe(true);
+    expect(canAccessPath({ ...as("reception"), features: [] }, "/api/admin/financeiro/contato/1", new URLSearchParams())).toBe(false);
   });
 
   it("o resto é de todos os papéis; prefixo parecido não conta", () => {

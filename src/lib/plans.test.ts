@@ -37,9 +37,10 @@ describe("planos", () => {
     expect(clinicPlan([...BASIC, "metrics_overview"], 1)).toMatchObject({ kind: "custom", monthlyCents: 14_700 + 4_500 });
   });
 
-  it("séries ficam fora da tabela, sem valor", () => {
-    const plan = clinicPlan([...BASIC, "series"], 1);
-    expect(plan).toMatchObject({ kind: "custom", monthlyCents: 14_700 });
+  it("séries e o Módulo financeiro ficam fora da tabela, sem valor", () => {
+    expect(clinicPlan([...BASIC, "series"], 1)).toMatchObject({ kind: "custom", monthlyCents: 14_700 });
+    expect(clinicPlan([...BASIC, "finance"], 1)).toMatchObject({ kind: "custom", monthlyCents: 14_700 });
+    expect(COMPLETE).not.toContain("finance");
   });
 
   it("sem tudo do Básico, fica fora dos planos", () => {

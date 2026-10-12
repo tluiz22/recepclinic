@@ -8,7 +8,7 @@
 // pacientes e contatos; a tela do Resumo do dia e o comparecimento;
 // configurações básicas.
 
-export type FeatureArea = "agenda" | "whatsapp" | "metrics";
+export type FeatureArea = "agenda" | "whatsapp" | "metrics" | "finance";
 
 export type FeatureKey =
   | "exams"
@@ -28,7 +28,8 @@ export type FeatureKey =
   | "metrics_recall"
   | "metrics_funnel"
   | "metrics_financial"
-  | "metrics_personal";
+  | "metrics_personal"
+  | "finance";
 
 export type Feature = { key: FeatureKey; area: FeatureArea; label: string; dependsOn: FeatureKey[] };
 
@@ -53,11 +54,13 @@ export const FEATURES: readonly Feature[] = [
   { key: "metrics_funnel", area: "metrics", label: "Métricas: Funil do bot", dependsOn: ["whatsapp_bot"] },
   { key: "metrics_financial", area: "metrics", label: "Métricas: Financeiro", dependsOn: [] },
   { key: "metrics_personal", area: "metrics", label: "Métricas pessoais do profissional", dependsOn: [] },
+  // Módulo financeiro (F11, cliente, 12/out/2026): pagamentos e nota fiscal.
+  { key: "finance", area: "finance", label: "Módulo financeiro (pagamentos e nota fiscal)", dependsOn: [] },
 ];
 
 const BY_KEY = new Map(FEATURES.map((feature) => [feature.key, feature]));
 
-export const AREA_LABELS: Record<FeatureArea, string> = { agenda: "Agenda", whatsapp: "WhatsApp", metrics: "Métricas" };
+export const AREA_LABELS: Record<FeatureArea, string> = { agenda: "Agenda", whatsapp: "WhatsApp", metrics: "Métricas", finance: "Financeiro" };
 
 export function featureLabel(key: FeatureKey): string {
   return BY_KEY.get(key)?.label ?? key;
@@ -120,6 +123,9 @@ const PATH_RULES: PathRule[] = [
   { prefix: "/api/admin/configuracoes/contatos", feature: "team_summary" },
   { prefix: "/api/admin/configuracoes/lembrete", feature: "reminders" },
   // Resumo do dia: o item do público (profissional ou equipe) é conferido na rota.
+  // Módulo financeiro (F11): menu Financeiro e as gravações dele.
+  { prefix: "/admin/financeiro", feature: "finance" },
+  { prefix: "/api/admin/financeiro", feature: "finance" },
 ];
 
 const matchesPrefix = (pathname: string, prefix: string) => pathname === prefix || pathname.startsWith(`${prefix}/`);

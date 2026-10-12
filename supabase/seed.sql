@@ -207,6 +207,12 @@ begin
   insert into public.patients (clinic_id, contact_id, full_name, birthdate, is_contact_self)
     values (c_a, ct_julia, 'Júlia Ramos', '1992-09-30', true) returning id into pt_julia;
 
+  -- Módulo financeiro (F11.1): o CPF de Maria (paga pelos filhos, o padrão) e,
+  -- para Ana, o pai como outra pessoa. CPFs fictícios, com dígitos válidos.
+  insert into public.contact_finance (clinic_id, contact_id, cpf) values (c_a, ct_maria, '52998224725');
+  insert into public.patient_finance (clinic_id, patient_id, payer, payer_name, payer_cpf)
+    values (c_a, pt_ana, 'other', 'Pedro Souza', '12345678909');
+
   -- Atendimentos da próxima semana.
   insert into public.appointments (clinic_id, patient_id, service_id, agenda_id, location_id, scheduled_at, duration_minutes, booking_channel, status)
     values (c_a, pt_joao, s_consulta, ag_ped, l_office, (monday + time '08:00') at time zone tz, 30, 'whatsapp_bot', 'confirmed')

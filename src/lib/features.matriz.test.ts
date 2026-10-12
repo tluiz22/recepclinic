@@ -8,7 +8,7 @@ describe("formulário da matriz de acesso", () => {
   });
 
   it("rótulos das áreas e dos itens", () => {
-    expect(AREA_LABELS).toEqual({ agenda: "Agenda", whatsapp: "WhatsApp", metrics: "Métricas" });
+    expect(AREA_LABELS).toEqual({ agenda: "Agenda", whatsapp: "WhatsApp", metrics: "Métricas", finance: "Financeiro" });
     expect(featureLabel("whatsapp_bot")).toBe("Bot de WhatsApp");
   });
 });

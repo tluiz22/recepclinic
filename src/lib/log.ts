@@ -7,7 +7,7 @@
 // `console.*` fora deste arquivo). Cada erro também vai para o destino
 // registrado (F9.3: a tabela system_errors, ligada no middleware).
 
-/** Ids e contagens; nunca nome, telefone, e-mail ou texto de mensagem. */
+/** Ids e contagens; nunca nome, telefone, e-mail, CPF ou texto de mensagem. */
 export type LogIds = Record<string, string | number | boolean | null | undefined>;
 
 const MAX_MESSAGE = 500;
@@ -15,10 +15,14 @@ const EMAIL = /[\w.+-]+@[\w-]+(?:\.[\w-]+)+/g;
 // 10 dígitos ou mais (DDD + número, com ou sem +55), com separadores comuns;
 // fora de palavras e ids (uuid, hash), que não são telefone.
 const PHONE = /(?<![\w-])\+?\d(?:[\s().-]{0,2}\d){9,}(?![\w-])/g;
+// CPF e CNPJ com máscara (Módulo financeiro, F11). Sem máscara, os 11 ou 14
+// dígitos já caem na regra do telefone.
+const CNPJ = /(?<![\w-])\d{2}\.\d{3}\.\d{3}\/\d{4}-\d{2}(?![\w-])/g;
+const CPF = /(?<![\w-])\d{3}\.\d{3}\.\d{3}-\d{2}(?![\w-])/g;
 
-/** Troca telefones e e-mails do texto por marcadores. */
+/** Troca CPF, CNPJ, telefones e e-mails do texto por marcadores. */
 export function maskPersonalData(text: string): string {
-  return text.replace(EMAIL, "[e-mail]").replace(PHONE, "[telefone]");
+  return text.replace(EMAIL, "[e-mail]").replace(CNPJ, "[CNPJ]").replace(CPF, "[CPF]").replace(PHONE, "[telefone]");
 }
 
 function oneError(error: unknown): { label: string; cause?: unknown } {

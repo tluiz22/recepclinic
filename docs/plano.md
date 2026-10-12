@@ -1624,7 +1624,7 @@ gera.
 
 | | Subetapa | Depende de | Situação |
 |---|---|---|---|
-| F11.1 | Item "Módulo financeiro" na matriz e menu "Financeiro"; área Financeiro do paciente e do contato (CPF e responsável) | — | a fazer |
+| F11.1 | Item "Módulo financeiro" na matriz e menu "Financeiro"; área Financeiro do paciente e do contato (CPF e responsável) | — | implementada (12/out), aguardando validação do cliente |
 | F11.2 | Registro do pagamento no atendimento (sem nota ainda) | F11.1 | a fazer |
 | F11.3 | Dados fiscais da clínica e certificado A1 | F11.1 | a fazer |
 | F11.4 | Emissão e cancelamento na API nacional (ambiente de testes da Receita) | F11.2, F11.3 e os itens do cliente abaixo | a fazer |
@@ -1638,6 +1638,16 @@ gera.
   contato, por padrão, ou outra pessoa com nome e CPF). Área "Financeiro" na tela do paciente e
   do contato, só com o item. O CPF não vai para logs, bot nem páginas públicas (máscara de CPF e
   CNPJ no log). A anonimização (F9) apaga esses dados.
+  **Como ficou (12/out):** migração `20261012120000_modulo_financeiro.sql` (tabelas
+  `contact_finance` e `patient_finance`, CPF conferido no banco por `app.is_valid_cpf`, gravação só
+  com o item, RLS: Administrador e Recepção gravam, o Suporte só lê, Profissional, bot e outras
+  clínicas não veem; anonimizar apaga). Só o CPF do responsável será exigido para a nota; o do
+  paciente é opcional (cliente, 12/out). Quem fala por si é o próprio contato: o CPF dele fica uma
+  vez só, no contato. O módulo fica **fora da tabela de planos** por ora (cliente, 12/out). Menu
+  "Financeiro" (lista com o responsável de cada paciente e "falta CPF"), cartão "Financeiro" na tela
+  do paciente (CPF, quem paga: o contato, o próprio paciente ou outra pessoa) e na do contato (CPF).
+  Testes: unidade (CPF, responsável, acesso, planos, máscara de CPF e CNPJ no log) e banco
+  (`tests/db/modulo-financeiro.test.ts`, mais a varredura de isolamento com as tabelas novas).
 - **F11.2:** tabela de pagamentos por atendimento: valor (sugerido pelo preço do atendimento),
   forma (Pix, dinheiro, cartão), data e **quem pagou** (o paciente ou o responsável), com a
   confirmação das ações da Agenda. Um atendimento pode ter mais de um pagamento? (a perguntar.)

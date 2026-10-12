@@ -15,6 +15,13 @@ describe("máscara de dados pessoais (F9.2)", () => {
     expect(maskPersonalData("550 <ana.k+teste@clinica.com.br> recusado")).toBe("550 <[e-mail]> recusado");
   });
 
+  it("CPF e CNPJ, com e sem máscara (F11)", () => {
+    expect(maskPersonalData("CPF 529.982.247-25 inválido")).toBe("CPF [CPF] inválido");
+    expect(maskPersonalData("tomador 52998224725")).toBe("tomador [telefone]");
+    expect(maskPersonalData("prestador 11.222.333/0001-81")).toBe("prestador [CNPJ]");
+    expect(maskPersonalData("prestador 11222333000181")).toBe("prestador [telefone]");
+  });
+
   it("mantém ids, datas e códigos", () => {
     const id = "08902715-5eb2-4e0c-9357-9809df787bb8";
     expect(maskPersonalData(`atendimento ${id}`)).toBe(`atendimento ${id}`);
