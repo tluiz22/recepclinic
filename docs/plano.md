@@ -1620,6 +1620,9 @@ gera.
 - **Fora:** recibo do Receita Saúde (profissional pessoa física, sem API oficial) e outras cidades,
   até alguma clínica pedir.
 
+**Prioridade (cliente, 12/out):** quando a Meta aprovar, a F11 pausa e o trabalho volta à F8 e
+à F10 para terminar e iniciar o piloto; a F11 continua depois.
+
 **Subetapas** (uma por vez, cada uma validada pelo cliente):
 
 | | Subetapa | Depende de | Situação |

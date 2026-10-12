@@ -46,8 +46,12 @@
 >     da clínica com CNPJ, em Mossoró/RN, e arquivo da DMED para o IR)** pedida e **antecipada
 >     pelo cliente em 12/out**; plano, segurança e decisões no [plano](plano.md). **F11.1
 >     implementada em 12/out** (item na matriz, menu "Financeiro", CPF e responsável só dentro do
->     módulo; migração aplicada no staging). **Retomar daqui:** validação da F11.1 pelo cliente;
->     depois, F11.2 (registro do pagamento). Em paralelo, aguardar a
+>     módulo; migração aplicada no staging). **Retomar daqui (sessão encerrada em 12/out):**
+>     validação da F11.1 pelo cliente; depois, F11.2 (registro do pagamento), começando pela
+>     pergunta "um atendimento pode ter mais de um pagamento?". **Prioridade (cliente, 12/out):
+>     quando a Meta aprovar** (Análise do App, Verificação do acesso, Tech Provider), a F11
+>     **pausa** e o trabalho **volta às fases anteriores** (F8 e F10) para terminar e iniciar o
+>     piloto; a F11 continua depois. Em paralelo, aguardar a
 >     Meta (Análise do App; depois, a Verificação do acesso); a F10 (produção, com custo mensal)
 >     segue como opção. A F8 completa depende da Meta (análise do app e Tech
 >     Provider) e a F10 depende da F8.
