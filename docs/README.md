@@ -1,6 +1,6 @@
 # RecepClinic
 
-> **Estado atual (retomar daqui), 12/out/2026 (F8a validada)**
+> **Estado atual (retomar daqui), 12/out/2026 (fim da sessão)**
 >
 > - **Etapas 0 a 4 concluídas**: cópia isolada, [diagnóstico](diagnostico.md), [limites](limites.md),
 >   [arquitetura](arquitetura.md) (decisões D1–D11) e [plano](plano.md) (fases F0–F10).
@@ -42,8 +42,11 @@
 >     roteiro no claude.ai (`R3VCJ9t1ebygPzjJhyvdJf`) **fica** (cliente, 11/out).
 >   - **F8a (templates pela API) validada em 12/out**: F8a.1 "Reenviar à Meta" do padrão recusado
 >     e F8a.2 "Excluir da Meta" dos templates do RecepClinic sem uso (detalhes no [plano](plano.md)).
->     **Retomar daqui:** escolher com o cliente o próximo passo: preparar a produção (F10, com
->     custo mensal) ou aguardar a Meta. A F8 completa depende da Meta (análise do app e Tech
+>     **Retomar daqui (próxima sessão):** o cliente quer **discutir uma melhoria futura**, para
+>     depois da implantação e do início do piloto: começar perguntando qual é e registrar no
+>     [plano](plano.md) (seção "Depois do 1º piloto"), sem implementar. Enquanto isso, aguardar a
+>     Meta (Análise do App; depois, a Verificação do acesso); a F10 (produção, com custo mensal)
+>     segue como opção. A F8 completa depende da Meta (análise do app e Tech
 >     Provider) e a F10 depende da F8.
 >   - **Migrações no staging:** o Claude aplica com `supabase db push` (permissão liberada em
 >     09/out), sempre na ordem simulação → aplicar → conferir no banco → só então o push do código.
