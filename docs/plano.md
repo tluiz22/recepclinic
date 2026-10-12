@@ -1374,7 +1374,7 @@ Pontos que o cliente encontrou testando o staging, um por vez, cada um validado 
 | 1 | Cores da situação na Agenda | validado em 10/out |
 | 2 | Atendimentos marcados de um paciente (busca na Agenda) | validado em 10/out |
 | 3 | "Voltar" leva à tela de onde a pessoa veio (3a: ficha do paciente e contato; 3b: telas da Agenda e Configurações) | validado em 10/out |
-| 4 | "Aguardando remarcação" com o mesmo paciente repetido | implementado (11/out), aguardando validação |
+| 4 | "Aguardando remarcação" com o mesmo paciente repetido | validado em 11/out |
 | 5 | Mensagens com "fale com a clínica", caso a caso (5a: clínica sem serviço, serviço sem horário, como a clínica é chamada e prazo para oferecer horários; 5b: os demais casos) | 5a validado em 11/out; 5b implementado (11/out); o cliente valida tudo no fim dos ajustes |
 | 6 | Avisos de marcação, remarcação e cancelamento por template | mantido como está (11/out) |
 | 7 | Explicação dos campos "Informações que o bot responde" | implementado (11/out); o cliente valida no fim dos ajustes |
