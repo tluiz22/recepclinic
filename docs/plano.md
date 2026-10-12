@@ -26,6 +26,7 @@
 | F5 | Páginas públicas e domínio | concluída (06/out; validada pelo cliente) |
 | F6 | WhatsApp por clínica e bot | concluída (08/out; validada pelo cliente, menos o que depende de templates em análise) |
 | F7 | Envios automáticos por clínica | concluída (09/out; validada pelo cliente com os templates aprovados) |
+| F8a | Templates pela API: reenviar recusado e excluir sem uso | detalhada (12/out); aguarda o "pode seguir" do cliente |
 | F8 | Conexão self-service na Meta | a detalhar (depende da Meta) |
 | F9 | Operação e segurança | concluída (10/out; validada pelo cliente) |
 | F10 | Primeiro piloto | a detalhar |
@@ -1141,6 +1142,33 @@ Corrigido junto: o alerta "o lembrete de hoje ainda não rodou" não aparece com
 **Validada pelo cliente em 09/out** com os templates aprovados (lembrete ao paciente). O resumo do
 dia e a oferta de vaga ficam para conferir quando a Meta aprovar os templates deles; o cliente segue
 testando em paralelo e traz os ajustes.
+
+## F8a — Templates pela API: reenviar recusado e excluir sem uso
+
+**Escolhida pelo cliente em 12/out/2026**, enquanto a Meta analisa o app. Não depende do Tech
+Provider nem gera custo novo. Já existiam (F6.2 e F6.6): "Criar na Meta", "Atualizar situação",
+situação pelo webhook e as versões personalizadas revisadas pelo Suporte. A F8a tira do site da
+Meta o que ainda era feito à mão. Tudo em Configurações › WhatsApp, só para o Suporte.
+
+| | Subetapa | Situação |
+|---|---|---|
+| F8a.1 | Reenviar template padrão recusado | a fazer |
+| F8a.2 | Excluir template do RecepClinic sem uso | a fazer |
+
+**F8a.1:** o template padrão recusado mostra o motivo da Meta e o botão **"Reenviar à Meta"**, que
+edita o template na conta da clínica **com o mesmo nome** (sem `_v2`) e com o texto atual do
+código, e ele volta para a análise. O resultado chega pelo webhook, como hoje. **Quem muda o texto
+é o Claude, no código** (cliente, 12/out): o texto padrão segue um só para todas as clínicas (D3b).
+O cliente aprova o texto novo, o código é atualizado e o Suporte reenvia em cada clínica.
+
+**F8a.2:** lista dos templates da conta da Meta da clínica com nome começando por `rc_` que o
+RecepClinic não usa mais (versões antigas), cada um com **"Excluir da Meta"** e confirmação.
+**Só os do RecepClinic** (cliente, 12/out): os templates criados pela própria clínica (contas
+conectadas por coexistência na F8) nunca aparecem.
+
+**A conferir na documentação da Meta antes de implementar:** limites de edição (recusado sem
+limite, aprovado com limite), o que a exclusão faz com o nome (bloqueio para reuso) e o que
+acontece com mensagens já enviadas.
 
 ## F8 — Conexão self-service na Meta
 

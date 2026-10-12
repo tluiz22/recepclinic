@@ -1,6 +1,6 @@
 # RecepClinic
 
-> **Estado atual (retomar daqui), 11/out/2026 (fim da sessão)**
+> **Estado atual (retomar daqui), 12/out/2026**
 >
 > - **Etapas 0 a 4 concluídas**: cópia isolada, [diagnóstico](diagnostico.md), [limites](limites.md),
 >   [arquitetura](arquitetura.md) (decisões D1–D11) e [plano](plano.md) (fases F0–F10).
@@ -44,12 +44,10 @@
 >   - **Rodada de ajustes dos testes do cliente (antes da F8a) concluída e validada em 11/out**:
 >     itens 1 a 9 na seção "Ajustes dos testes do cliente" do [plano](plano.md). A página antiga do
 >     roteiro no claude.ai (`R3VCJ9t1ebygPzjJhyvdJf`) **fica** (cliente, 11/out).
->     **Retomar daqui:** escolher com o cliente o próximo passo (abaixo). Em 11/out o Claude
->     recomendou a F8a (sem custo novo, sem depender da Meta), e o cliente quis esclarecer dúvidas
->     antes de escolher: começar perguntando o que ele quer esclarecer.
->   - **Depois da rodada: escolher com o cliente** entre F8a (templates pela API na
->     conta do RecepClinic, sem depender do Tech Provider), preparar a produção (F10, com custo
->     mensal) ou aguardar a Meta. A F8 depende da Meta (análise do app e Tech Provider) e a F10 da F8.
+>   - **F8a escolhida pelo cliente em 12/out** (templates pela API: reenviar recusado e excluir
+>     sem uso; detalhes no [plano](plano.md)). **Retomar daqui:** F8a detalhada, aguardando o
+>     "pode seguir" do cliente para a F8a.1. A F8 completa depende da Meta (análise do app e Tech
+>     Provider) e a F10 depende da F8.
 >   - **Migrações no staging:** o Claude aplica com `supabase db push` (permissão liberada em
 >     09/out), sempre na ordem simulação → aplicar → conferir no banco → só então o push do código.
 >   - **WhatsApp de testes:** `+55 61 9903-3143`, na Cloud API do app RecepClinic, ligado à
