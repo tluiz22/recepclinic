@@ -49,10 +49,8 @@
 >     módulo; migração aplicada no staging). O cliente pediu para seguir e **validar tudo no fim**
 >     (12/out). **F11.2 implementada em 12/out** (pagamentos do atendimento: botão "Pagamento" na
 >     Agenda, tela própria, selos "Pago" e "Pago em parte", cartão "Pagamentos" do paciente;
->     decisões no [plano](plano.md)); commit local, **migração ainda não aplicada no staging**
->     (o `db push` do Claude foi bloqueado pelo modo automático em 12/out). **Retomar daqui:**
->     aplicar `20261012130000_pagamentos.sql` no staging (simulação já feita), conferir, dar push;
->     depois a próxima subetapa (F11.3 dados fiscais e certificado, ou F11.6 DMED, a escolher com
+>     decisões no [plano](plano.md)); migração aplicada no staging e código publicado (12/out). **Retomar daqui:** validação da
+>     F11.1 e da F11.2 pelo cliente (no fim, como ele pediu); depois a próxima subetapa (F11.3 dados fiscais e certificado, ou F11.6 DMED, a escolher com
 >     o cliente). **Prioridade (cliente, 12/out):
 >     quando a Meta aprovar** (Análise do App, Verificação do acesso, Tech Provider), a F11
 >     **pausa** e o trabalho **volta às fases anteriores** (F8 e F10) para terminar e iniciar o
