@@ -26,7 +26,7 @@
 | F5 | Páginas públicas e domínio | concluída (06/out; validada pelo cliente) |
 | F6 | WhatsApp por clínica e bot | concluída (08/out; validada pelo cliente, menos o que depende de templates em análise) |
 | F7 | Envios automáticos por clínica | concluída (09/out; validada pelo cliente com os templates aprovados) |
-| F8a | Templates pela API: reenviar recusado e excluir sem uso | detalhada (12/out); aguarda o "pode seguir" do cliente |
+| F8a | Templates pela API: reenviar recusado e excluir sem uso | em andamento (F8a.1 implementada em 12/out) |
 | F8 | Conexão self-service na Meta | a detalhar (depende da Meta) |
 | F9 | Operação e segurança | concluída (10/out; validada pelo cliente) |
 | F10 | Primeiro piloto | a detalhar |
@@ -1152,7 +1152,7 @@ Meta o que ainda era feito à mão. Tudo em Configurações › WhatsApp, só pa
 
 | | Subetapa | Situação |
 |---|---|---|
-| F8a.1 | Reenviar template padrão recusado | a fazer |
+| F8a.1 | Reenviar template padrão recusado | implementada (12/out); aguarda a validação do cliente |
 | F8a.2 | Excluir template do RecepClinic sem uso | a fazer |
 
 **F8a.1:** o template padrão recusado mostra o motivo da Meta e o botão **"Reenviar à Meta"**, que
@@ -1160,6 +1160,13 @@ edita o template na conta da clínica **com o mesmo nome** (sem `_v2`) e com o t
 código, e ele volta para a análise. O resultado chega pelo webhook, como hoje. **Quem muda o texto
 é o Claude, no código** (cliente, 12/out): o texto padrão segue um só para todas as clínicas (D3b).
 O cliente aprova o texto novo, o código é atualizado e o Suporte reenvia em cada clínica.
+
+Regras da Meta conferidas (12/out): a edição é `POST /{id do template}` e troca todos os
+componentes (texto, exemplos e botões vão de novo); recusado pode ser editado sem limite; aprovado,
+1 vez por dia e 10 por mês, sem mudar a categoria. **Implementada em 12/out:** `editTemplate`
+(`graph.ts`), `resendRejectedTemplate` (`templateSync.ts`) e o botão na tela, só no padrão recusado
+com o nome atual do código (nome diferente segue no "Criar na Meta"); erro da Meta aparece em
+português e nada muda no banco.
 
 **F8a.2:** lista dos templates da conta da Meta da clínica com nome começando por `rc_` que o
 RecepClinic não usa mais (versões antigas), cada um com **"Excluir da Meta"** e confirmação.

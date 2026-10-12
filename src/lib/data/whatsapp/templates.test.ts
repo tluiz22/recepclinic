@@ -9,6 +9,7 @@ import {
   fillTemplate,
   paramCount,
   templateCreationPayload,
+  templateEditPayload,
   templateStatusFromMeta,
 } from "./templates";
 import { templateStatusChanges } from "./webhook";
@@ -80,6 +81,13 @@ describe("templates padrão (F6.2)", () => {
       ],
     });
     expect(templateCreationPayload(defaultTemplate("confirmation")!).components).toHaveLength(1);
+  });
+
+  it("pedido de edição do recusado (F8a.1): os mesmos componentes, sem nome nem idioma", () => {
+    const reminder = defaultTemplate("reminder")!;
+    const { name, language, ...rest } = templateCreationPayload(reminder);
+    expect([name, language]).toEqual(["rc_lembrete_v1", "pt_BR"]);
+    expect(templateEditPayload(reminder)).toEqual(rest);
   });
 
   it("situação da Meta na nossa", () => {

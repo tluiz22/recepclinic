@@ -1,11 +1,13 @@
 import type { APIRoute } from "astro";
 import { createClinicServiceClient } from "../../../../lib/data/clinicService";
-import { createDefaultTemplates, refreshTemplateStatuses, type TemplateSyncLine } from "../../../../lib/data/whatsapp/templateSync";
+import { TEMPLATE_KEYS, type TemplateKey } from "../../../../lib/data/whatsapp/connection";
+import { createDefaultTemplates, refreshTemplateStatuses, resendRejectedTemplate, type TemplateSyncLine } from "../../../../lib/data/whatsapp/templateSync";
 import { setFlash } from "../../../../lib/flash";
 import { formText } from "../../../../lib/forms";
 
 // Suporte, templates padrão na conta da clínica (F6.2): "Criar na Meta" e
-// "Atualizar situação". Usa a credencial da clínica porque só ela lê o token.
+// "Atualizar situação"; F8a.1: "Reenviar à Meta" do recusado. Usa a
+// credencial da clínica porque só ela lê o token.
 
 const STATUS_TEXT = { pending: "em análise", approved: "aprovado", rejected: "recusado", disabled: "desativado" } as const;
 
@@ -20,7 +22,21 @@ export const POST: APIRoute = async ({ request, cookies, locals, redirect }) => 
   }
   const form = await request.formData().catch(() => null);
   const db = createClinicServiceClient(clinic.clinicId);
-  const create = formText(form, "acao") === "criar";
+  const action = formText(form, "acao");
+  if (action === "reenviar") {
+    const key = formText(form, "chave");
+    const result = TEMPLATE_KEYS.includes(key as TemplateKey)
+      ? await resendRejectedTemplate(db, clinic.clinicId, key as TemplateKey)
+      : { ok: false as const, message: "Template desconhecido." };
+    setFlash(
+      cookies,
+      result.ok
+        ? { tone: "success", text: `${result.name} reenviado à Meta: está em análise. A situação chega sozinha pelo webhook.` }
+        : { tone: "error", text: result.message },
+    );
+    return redirect(back, 303);
+  }
+  const create = action === "criar";
   const result = create ? await createDefaultTemplates(db, clinic.clinicId) : await refreshTemplateStatuses(db, clinic.clinicId);
   if (!result.ok) {
     setFlash(cookies, { tone: "error", text: result.message });

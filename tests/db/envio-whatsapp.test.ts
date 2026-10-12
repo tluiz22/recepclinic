@@ -9,7 +9,7 @@ import { clinicCancellationSummary, notifyClinicCancellations, sendAppointmentNo
 import { cancelByClinic } from "../../src/lib/data/agenda/blocks";
 import { listGuidanceResendable, resendGuidance } from "../../src/lib/data/whatsapp/guidance";
 import { createClinicSender, guidanceSender } from "../../src/lib/data/whatsapp/send";
-import { createDefaultTemplates, refreshTemplateStatuses } from "../../src/lib/data/whatsapp/templateSync";
+import { createDefaultTemplates, refreshTemplateStatuses, resendRejectedTemplate } from "../../src/lib/data/whatsapp/templateSync";
 import { processWebhook, type WebhookDeps } from "../../src/lib/data/whatsapp/webhook";
 import { asDb, at, MON1, MON2, NOW, setupAgendaClinic, type AgendaFixture } from "./agendaFixture";
 import { adminClient, createUser, deleteUsers, makePlatformStaff, type TestUser } from "./helpers";
@@ -45,6 +45,8 @@ function fakeMeta(metaStatus: Record<string, { status: string; reason?: string }
     if (path.endsWith("/message_templates") && init?.method === "POST") {
       return new Response(JSON.stringify({ id: `tpl-${++next}`, status: "PENDING", category: "UTILITY" }));
     }
+    // Edição do template (F8a.1): POST /{id do template}.
+    if (path.startsWith("/tpl-") && init?.method === "POST") return new Response(JSON.stringify({ success: true }));
     if (path.endsWith("/message_templates")) {
       const name = url.searchParams.get("name") ?? "";
       const known = metaStatus[name];
@@ -141,6 +143,38 @@ describe("templates padrão na conta da clínica (Suporte)", () => {
       exam_preparation: ["rejected", "INVALID_FORMAT"],
       consultation_guidance: ["pending", null],
     });
+  });
+
+  it("Reenviar à Meta (F8a.1): edita o recusado com o texto atual, mesmo nome, e ele volta para a análise", async () => {
+    const meta = fakeMeta({ rc_preparo_exame_v2: { status: "REJECTED", reason: "INVALID_FORMAT" } });
+    // Só o recusado é reenviado; o aprovado não muda.
+    expect(await resendRejectedTemplate(service, f.clinicId, "confirmation", meta.fetcher)).toMatchObject({ ok: false });
+    expect(meta.calls).toHaveLength(0);
+
+    expect(await resendRejectedTemplate(service, f.clinicId, "exam_preparation", meta.fetcher)).toEqual({ ok: true, name: "rc_preparo_exame_v2" });
+    const edits = meta.calls.filter((c) => c.method === "POST");
+    expect(edits.map((c) => c.path)).toEqual(["/tpl-rc_preparo_exame_v2"]);
+    // Sem nome nem idioma (não mudam); texto, exemplos e categoria vão de novo.
+    expect(Object.keys(edits[0].body!).sort()).toEqual(["category", "components"]);
+    const { data } = await adminClient()
+      .from("whatsapp_templates")
+      .select("name, status, rejection_reason, meta_template_id")
+      .eq("clinic_id", f.clinicId)
+      .eq("template_key", "exam_preparation")
+      .single();
+    expect(data).toEqual({ name: "rc_preparo_exame_v2", status: "pending", rejection_reason: null, meta_template_id: "tpl-rc_preparo_exame_v2" });
+
+    // Em análise: não há o que reenviar.
+    expect(await resendRejectedTemplate(service, f.clinicId, "exam_preparation", meta.fetcher)).toMatchObject({ ok: false });
+  });
+
+  it("Reenviar à Meta: erro da Meta volta com a explicação e nada muda no banco", async () => {
+    await adminClient().from("whatsapp_templates").update({ status: "rejected", rejection_reason: "INVALID_FORMAT" }).eq("clinic_id", f.clinicId).eq("template_key", "exam_preparation");
+    const meta: typeof fetch = async () =>
+      new Response(JSON.stringify({ error: { message: "Invalid parameter", code: 100, error_user_msg: "Texto com formato inválido." } }), { status: 400 });
+    expect(await resendRejectedTemplate(service, f.clinicId, "exam_preparation", meta)).toEqual({ ok: false, message: "rc_preparo_exame_v2: Texto com formato inválido." });
+    const { data } = await adminClient().from("whatsapp_templates").select("status").eq("clinic_id", f.clinicId).eq("template_key", "exam_preparation").single();
+    expect(data!.status).toBe("rejected");
   });
 
   it("Meta diz que já existe (criado antes, resposta perdida): guarda a situação dele e a mensagem sai em português", async () => {

@@ -1,7 +1,8 @@
 // Chamadas à API da Meta (Graph) para a conexão da clínica (F6.1): conferir
 // o número com o token e inscrever a conta (WABA) no app RecepClinic, para os
 // eventos chegarem ao webhook. F6.2: envio de mensagens pelo número da
-// clínica e criação e situação dos templates na conta.
+// clínica e criação e situação dos templates na conta. F8a.1: edição do
+// template recusado (mesmo nome, volta para a análise).
 
 /** Versão da API da Meta (cada versão vale cerca de 2 anos; a v21.0 do piloto vence em 2026). */
 export const GRAPH_API_VERSION = "v24.0";
@@ -150,4 +151,17 @@ export async function createTemplate(
     { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) },
   );
   return { id: body.id ?? "", status: body.status ?? "PENDING" };
+}
+
+/**
+ * Edita o template (POST /{id}), que volta para a análise da Meta. A edição
+ * troca todos os componentes (texto, exemplos e botões vão de novo). Recusado
+ * pode ser editado sem limite; aprovado, 1 vez por dia e 10 por mês (F8a.1).
+ */
+export async function editTemplate(templateId: string, payload: Record<string, unknown>, token: string, fetcher: Fetcher = fetch): Promise<void> {
+  await call(fetcher, "Edição do template", `${GRAPH}/${encodeURIComponent(templateId)}`, token, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
 }

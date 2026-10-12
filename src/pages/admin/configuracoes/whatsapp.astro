@@ -3,7 +3,8 @@
 // o resumo do dia e a situação da conexão para a clínica ficam na aba
 // Lembretes). F6.1: o cadastro da conexão (com o token só para gravar), o
 // "Testar conexão" e as últimas mensagens da clínica. F6.2: os templates
-// padrão na conta da clínica e a situação deles.
+// padrão na conta da clínica e a situação deles. F8a.1: "Reenviar à Meta" do
+// padrão recusado.
 import AdminLayout from "../../../layouts/AdminLayout.astro";
 import Badge from "../../../components/admin/Badge.astro";
 import Card from "../../../components/admin/Card.astro";
@@ -144,6 +145,16 @@ const templateRows = DEFAULT_TEMPLATES.map((template) => ({ template, saved: tem
                   </p>
                 )}
                 {saved?.name === template.name && saved.rejectionReason && <p class="mt-0.5 text-red-700">Motivo da recusa: {saved.rejectionReason}</p>}
+                {saved?.name === template.name && saved.status === "rejected" && (
+                  <form method="POST" action="/api/admin/configuracoes/whatsapp-templates" class="mt-1">
+                    <input type="hidden" name="acao" value="reenviar" />
+                    <input type="hidden" name="chave" value={template.key} />
+                    <button type="submit" class={SECONDARY_BUTTON} disabled={!connection}>
+                      Reenviar à Meta
+                    </button>
+                    <p class={HINT}>Reenvia com o texto atual do RecepClinic (o de "Ver o texto"), com o mesmo nome. Ele volta para a análise da Meta.</p>
+                  </form>
+                )}
                 <details class="mt-1">
                   <summary class="cursor-pointer text-slate-500">Ver o texto</summary>
                   <p class="mt-1 whitespace-pre-line rounded bg-slate-50 p-2 text-slate-700">{template.body}</p>

@@ -1,8 +1,8 @@
 import type { DbClient } from "../clients";
 import { unwrap } from "../errors";
 import { getWhatsappAccessToken, getWhatsappConnection, listWhatsappTemplates, type TemplateKey, type TemplateStatus } from "./connection";
-import { createTemplate, fetchTemplatesByName, GraphRequestError, type Fetcher, type MetaTemplate } from "./graph";
-import { DEFAULT_TEMPLATES, rejectionReason, TEMPLATE_LANGUAGE, templateCreationPayload, templateStatusFromMeta } from "./templates";
+import { createTemplate, editTemplate, fetchTemplatesByName, GraphRequestError, type Fetcher, type MetaTemplate } from "./graph";
+import { DEFAULT_TEMPLATES, defaultTemplate, rejectionReason, TEMPLATE_LANGUAGE, templateCreationPayload, templateEditPayload, templateStatusFromMeta } from "./templates";
 
 // Templates padrão na conta da clínica (F6.2), pelo Suporte em Configurações ›
 // WhatsApp, com a credencial da clínica (só ela lê o token):
@@ -10,6 +10,8 @@ import { DEFAULT_TEMPLATES, rejectionReason, TEMPLATE_LANGUAGE, templateCreation
 //   nome, só guarda a situação; senão, cria (vai para a análise da Meta).
 // - "Atualizar situação": pergunta à Meta a situação de cada um.
 // - Webhook (`message_template_status_update`): a Meta avisa a mudança.
+// - "Reenviar à Meta" (F8a.1): o padrão recusado é editado com o texto atual
+//   do código, com o mesmo nome, e volta para a análise.
 
 export type TemplateSyncLine = { key: TemplateKey; name: string; status: TemplateStatus | null; problem: string | null };
 
@@ -121,6 +123,35 @@ export async function refreshTemplateStatuses(db: DbClient, clinicId: string, fe
     }
   }
   return { ok: true, lines };
+}
+
+export type ResendResult = { ok: true; name: string } | { ok: false; message: string };
+
+/**
+ * "Reenviar à Meta" (F8a.1): edita o template padrão recusado na conta da
+ * clínica com o texto atual do código (mesmo nome, sem `_v2`). Quem muda o
+ * texto é o código (cliente, 12/out): ele segue um só para todas as clínicas.
+ */
+export async function resendRejectedTemplate(db: DbClient, clinicId: string, key: TemplateKey, fetcher: Fetcher = fetch): Promise<ResendResult> {
+  const template = defaultTemplate(key);
+  if (!template) return { ok: false, message: "Template desconhecido." };
+  const saved = (await listWhatsappTemplates(db, clinicId)).find((t) => t.key === key && t.version === 1);
+  // Nome diferente = texto novo com outro nome: o caminho é "Criar na Meta".
+  if (!saved || saved.name !== template.name || saved.status !== "rejected") {
+    return { ok: false, message: `${template.name} não está recusado: nada a reenviar.` };
+  }
+  const ready = await setup(db, clinicId);
+  if ("message" in ready) return { ok: false, message: ready.message };
+  try {
+    const id = saved.metaTemplateId ?? inLanguage(await fetchTemplatesByName(ready.wabaId, template.name, ready.token, fetcher))?.id;
+    if (!id) return { ok: false, message: `${template.name} não existe na conta da Meta: use "Criar na Meta".` };
+    await editTemplate(id, templateEditPayload(template), ready.token, fetcher);
+    await saveTemplateRow(db, clinicId, key, template.name, { id, status: "PENDING", rejectedReason: null });
+    return { ok: true, name: template.name };
+  } catch (error) {
+    if (!(error instanceof GraphRequestError)) throw error;
+    return { ok: false, message: `${template.name}: ${error.graph.message}` };
+  }
 }
 
 export type TemplateStatusEvent = { name: string; language: string; event: string; reason: string | null; metaTemplateId: string | null };

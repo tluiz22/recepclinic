@@ -206,6 +206,12 @@ export function templateCreationPayload(template: DefaultTemplate): Record<strin
   return { name: template.name, language: TEMPLATE_LANGUAGE, category: TEMPLATE_CATEGORY, components };
 }
 
+/** Corpo da edição do template recusado (POST /{id}; F8a.1): sem nome nem idioma, que não mudam. */
+export function templateEditPayload(template: DefaultTemplate): Record<string, unknown> {
+  const { category, components } = templateCreationPayload(template);
+  return { category, components };
+}
+
 /** Situação da Meta (APPROVED, PENDING, REJECTED, PAUSED…) na nossa. */
 export function templateStatusFromMeta(status: string | null | undefined): TemplateStatus {
   switch ((status ?? "").toUpperCase()) {
