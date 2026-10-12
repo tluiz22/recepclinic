@@ -168,6 +168,12 @@ Antes de enviar: dados da empresa (nome jurídico e documento usados na verifica
 rodapé do site `www.recepclinic.com.br` (sessão separada do site). **No ar, conferido em 12/out:**
 "RecepClinic é uma marca de 69.503.530 THIAGO LUIZ DE SOUSA, CNPJ 69.503.530/0001-59".
 
+**Onde fica (12/out):** a opção **só aparece depois que a Análise do App é aprovada** (não estava em
+"Torne-se um provedor de tecnologia" com a análise pendente). Depois da aprovação, procurar em
+*Início rápido › Integração* ("Concluir a verificação do acesso" › "Iniciar verificação") ou em
+*Configurações do app › Básico*. O resultado da análise chega em *Alertas › Caixa de entrada*. A
+Meta leva cerca de 5 dias úteis para a Verificação do acesso.
+
 1. **Como a empresa usará os Dados da Plataforma:**
 
 ```
