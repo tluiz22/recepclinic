@@ -9,7 +9,7 @@ import { clinicCancellationSummary, notifyClinicCancellations, sendAppointmentNo
 import { cancelByClinic } from "../../src/lib/data/agenda/blocks";
 import { listGuidanceResendable, resendGuidance } from "../../src/lib/data/whatsapp/guidance";
 import { createClinicSender, guidanceSender } from "../../src/lib/data/whatsapp/send";
-import { createDefaultTemplates, refreshTemplateStatuses, resendRejectedTemplate } from "../../src/lib/data/whatsapp/templateSync";
+import { createDefaultTemplates, deleteUnusedTemplate, listUnusedTemplates, namesInWaba, refreshTemplateStatuses, resendRejectedTemplate } from "../../src/lib/data/whatsapp/templateSync";
 import { processWebhook, type WebhookDeps } from "../../src/lib/data/whatsapp/webhook";
 import { asDb, at, MON1, MON2, NOW, setupAgendaClinic, type AgendaFixture } from "./agendaFixture";
 import { adminClient, createUser, deleteUsers, makePlatformStaff, type TestUser } from "./helpers";
@@ -175,6 +175,61 @@ describe("templates padrão na conta da clínica (Suporte)", () => {
     expect(await resendRejectedTemplate(service, f.clinicId, "exam_preparation", meta)).toEqual({ ok: false, message: "rc_preparo_exame_v2: Texto com formato inválido." });
     const { data } = await adminClient().from("whatsapp_templates").select("status").eq("clinic_id", f.clinicId).eq("template_key", "exam_preparation").single();
     expect(data!.status).toBe("rejected");
+  });
+
+  describe("templates sem uso (F8a.2)", () => {
+    /** Conta da Meta com estes nomes (duas páginas), aceita a exclusão. */
+    function accountMeta(names: string[]) {
+      const calls: Call[] = [];
+      const fetcher: typeof fetch = async (input, init) => {
+        const url = new URL(String(input));
+        calls.push({ method: init?.method ?? "GET", path: `${url.pathname.replace(/^\/v[\d.]+/, "")}${url.search}`, body: null });
+        if (init?.method === "DELETE") return new Response(JSON.stringify({ success: true }));
+        const page = url.searchParams.get("after") === "p2" ? names.slice(2) : names.slice(0, 2);
+        const data = page.map((name) => ({ id: `id-${name}`, name, language: "pt_BR", status: "APPROVED" }));
+        const paging = url.searchParams.get("after") ? {} : { next: `https://graph.facebook.com/v24.0/${WABA}/message_templates?after=p2` };
+        return new Response(JSON.stringify({ data, paging }));
+      };
+      return { calls, fetcher };
+    }
+    const account = ["rc_confirmacao_v1", "rc_preparo_exame_v1", "promocao_da_clinica", "rc_resumo_exames_hoje_v1", "rc_outra_clinica_v2"];
+    const otherClinic = async () => ["rc_outra_clinica_v2"];
+
+    it("lista só os do RecepClinic que nenhuma clínica da conta usa, seguindo as páginas", async () => {
+      const meta = accountMeta(account);
+      const result = await listUnusedTemplates(service, f.clinicId, otherClinic, meta.fetcher);
+      // Padrão atual, o da outra clínica e o da própria clínica (sem "rc_") ficam de fora.
+      expect(result.ok && result.templates.map((t) => t.name)).toEqual(["rc_preparo_exame_v1", "rc_resumo_exames_hoje_v1"]);
+      expect(meta.calls).toHaveLength(2);
+    });
+
+    it("exclui o sem uso pelo nome; o em uso ou da clínica não é excluído", async () => {
+      const meta = accountMeta(account);
+      for (const name of ["rc_confirmacao_v1", "promocao_da_clinica", "rc_outra_clinica_v2"]) {
+        expect(await deleteUnusedTemplate(service, f.clinicId, name, otherClinic, meta.fetcher)).toMatchObject({ ok: false });
+      }
+      expect(meta.calls.some((c) => c.method === "DELETE")).toBe(false);
+      expect(await deleteUnusedTemplate(service, f.clinicId, "rc_preparo_exame_v1", otherClinic, meta.fetcher)).toEqual({ ok: true, name: "rc_preparo_exame_v1" });
+      expect(meta.calls.filter((c) => c.method === "DELETE").map((c) => c.path)).toEqual([`/${WABA}/message_templates?name=rc_preparo_exame_v1`]);
+    });
+
+    it("erro da Meta na exclusão volta com a explicação", async () => {
+      const meta = accountMeta(account);
+      const failing: typeof fetch = async (input, init) =>
+        init?.method === "DELETE"
+          ? new Response(JSON.stringify({ error: { message: "Invalid parameter", code: 100, error_user_msg: "Não foi possível excluir." } }), { status: 400 })
+          : meta.fetcher(input, init);
+      expect(await deleteUnusedTemplate(service, f.clinicId, "rc_preparo_exame_v1", otherClinic, failing)).toEqual({
+        ok: false,
+        message: "rc_preparo_exame_v1: Não foi possível excluir.",
+      });
+    });
+
+    it("nomes em uso na conta: os gravados nas clínicas ligadas a ela", async () => {
+      const names = await namesInWaba(env())(WABA);
+      expect(names).toContain("rc_confirmacao_v1");
+      expect(await namesInWaba(env())("conta-sem-clinica")).toEqual([]);
+    });
   });
 
   it("Meta diz que já existe (criado antes, resposta perdida): guarda a situação dele e a mensagem sai em português", async () => {

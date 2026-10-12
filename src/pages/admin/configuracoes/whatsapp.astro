@@ -4,18 +4,22 @@
 // Lembretes). F6.1: o cadastro da conexão (com o token só para gravar), o
 // "Testar conexão" e as últimas mensagens da clínica. F6.2: os templates
 // padrão na conta da clínica e a situação deles. F8a.1: "Reenviar à Meta" do
-// padrão recusado.
+// padrão recusado. F8a.2: templates do RecepClinic sem uso na conta, para
+// excluir (a busca na Meta só roda com "Procurar", para a tela não esperar).
 import AdminLayout from "../../../layouts/AdminLayout.astro";
 import Badge from "../../../components/admin/Badge.astro";
 import Card from "../../../components/admin/Card.astro";
+import ConfirmDeleteDialog from "../../../components/admin/ConfirmDeleteDialog.astro";
 import ConfiguracoesTabs from "../../../components/admin/ConfiguracoesTabs.astro";
 import FlashMessage from "../../../components/admin/FlashMessage.astro";
 import WhatsappConnectionCard from "../../../components/admin/WhatsappConnectionCard.astro";
 import { HINT, INPUT, LABEL, PRIMARY_BUTTON, SECONDARY_BUTTON } from "../../../components/admin/fieldStyles";
 import { formatInstant } from "../../../lib/clinicTime";
+import { createClinicServiceClient } from "../../../lib/data/clinicService";
 import { createUserClient } from "../../../lib/data/clients";
 import { getWhatsappConnection, listWhatsappTemplates } from "../../../lib/data/whatsapp/connection";
-import { DEFAULT_TEMPLATES } from "../../../lib/data/whatsapp/templates";
+import { DEFAULT_TEMPLATES, templateStatusFromMeta } from "../../../lib/data/whatsapp/templates";
+import { listUnusedTemplates, namesInWaba } from "../../../lib/data/whatsapp/templateSync";
 import { listWhatsappMessages } from "../../../lib/data/whatsapp/messages";
 import { formatPhoneBR } from "../../../lib/phone";
 
@@ -44,6 +48,10 @@ const TEMPLATE_LABELS: Record<string, string> = {
   exam_preparation: "Preparo do exame",
   consultation_guidance: "Orientações gerais da consulta",
 };
+// Só o token pela credencial da clínica (como na rota dos templates).
+const unused = connection && Astro.url.searchParams.has("sem-uso")
+  ? await listUnusedTemplates(createClinicServiceClient(clinic.clinicId), clinic.clinicId, namesInWaba())
+  : null;
 const templateRows = DEFAULT_TEMPLATES.map((template) => ({ template, saved: templates.find((t) => t.key === template.key && t.version === 1) ?? null }));
 ---
 
@@ -181,6 +189,54 @@ const templateRows = DEFAULT_TEMPLATES.map((template) => ({ template, saved: tem
             "Criar na Meta" cria na conta da clínica os que faltam (categoria Utilidade, português). A análise da Meta leva de minutos a algumas horas; a
             situação chega sozinha pelo webhook ou pelo "Atualizar situação".
           </p>
+        </Card>
+      )
+    }
+
+    {
+      isSupport && (
+        <Card>
+          <h2 id="sem-uso" class="font-semibold text-slate-900">Templates sem uso na Meta (Suporte)</h2>
+          <p class="mt-1 text-sm text-slate-600">
+            Templates do RecepClinic (nome começando por "rc_") na conta da Meta que nenhuma clínica da conta usa, como versões antigas. Os templates
+            criados pela própria clínica nunca aparecem aqui.
+          </p>
+          {!connection ? (
+            <p class="mt-3 text-sm text-slate-600">Cadastre a conexão antes.</p>
+          ) : unused === null ? (
+            <a href="?sem-uso=1#sem-uso" class={`${SECONDARY_BUTTON} mt-3 inline-block`}>
+              Procurar templates sem uso
+            </a>
+          ) : !unused.ok ? (
+            <p class="mt-3 text-sm text-red-700">{unused.message}</p>
+          ) : unused.templates.length === 0 ? (
+            <p class="mt-3 text-sm text-slate-600">Nenhum template sem uso na conta.</p>
+          ) : (
+            <ul class="mt-3 divide-y divide-slate-100 text-sm">
+              {unused.templates.map((t) => (
+                <li class="flex flex-wrap items-center justify-between gap-2 py-2">
+                  <span class="flex flex-wrap items-center gap-2">
+                    <span class="font-medium text-slate-900">{t.name}</span>
+                    <Badge variant={templateStatus[templateStatusFromMeta(t.status)].variant}>{templateStatus[templateStatusFromMeta(t.status)].label}</Badge>
+                  </span>
+                  <form method="POST" action="/api/admin/configuracoes/whatsapp-templates">
+                    <input type="hidden" name="acao" value="excluir" />
+                    <input type="hidden" name="nome" value={t.name} />
+                    <button
+                      type="submit"
+                      class={`${SECONDARY_BUTTON} js-confirm-delete text-red-700`}
+                      data-confirm-title="Excluir da Meta?"
+                      data-confirm-message={`${t.name} sai da conta da Meta. Não dá para desfazer, e o nome fica bloqueado por 30 dias.`}
+                      data-confirm-label="Excluir"
+                    >
+                      Excluir da Meta
+                    </button>
+                  </form>
+                </li>
+              ))}
+            </ul>
+          )}
+          {unused?.ok && unused.templates.length > 0 && <ConfirmDeleteDialog />}
         </Card>
       )
     }

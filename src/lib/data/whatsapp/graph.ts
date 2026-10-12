@@ -2,7 +2,8 @@
 // o número com o token e inscrever a conta (WABA) no app RecepClinic, para os
 // eventos chegarem ao webhook. F6.2: envio de mensagens pelo número da
 // clínica e criação e situação dos templates na conta. F8a.1: edição do
-// template recusado (mesmo nome, volta para a análise).
+// template recusado (mesmo nome, volta para a análise). F8a.2: lista da
+// conta e exclusão do template sem uso.
 
 /** Versão da API da Meta (cada versão vale cerca de 2 anos; a v21.0 do piloto vence em 2026). */
 export const GRAPH_API_VERSION = "v24.0";
@@ -164,4 +165,30 @@ export async function editTemplate(templateId: string, payload: Record<string, u
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   });
+}
+
+/** Todos os templates da conta (segue as páginas da Meta; F8a.2). */
+export async function fetchAllTemplates(wabaId: string, token: string, fetcher: Fetcher = fetch): Promise<MetaTemplate[]> {
+  const params = new URLSearchParams({ fields: "id,name,language,status,rejected_reason", limit: "100" });
+  let url: string | null = `${GRAPH}/${encodeURIComponent(wabaId)}/message_templates?${params}`;
+  const all: MetaTemplate[] = [];
+  // Limite de páginas por segurança (100 por página).
+  for (let page = 0; url && page < 20; page += 1) {
+    const body: { data?: Record<string, string | undefined>[]; paging?: { next?: string } } = await call(fetcher, "Templates da conta", url, token);
+    for (const t of body.data ?? []) {
+      all.push({ id: t.id ?? "", name: t.name ?? "", language: t.language ?? "", status: t.status ?? "", rejectedReason: t.rejected_reason ?? null });
+    }
+    url = body.paging?.next ?? null;
+  }
+  return all;
+}
+
+/**
+ * Exclui o template da conta pelo nome (todos os idiomas; F8a.2). Não dá para
+ * desfazer: o nome fica bloqueado por 30 dias e o que já saiu e não foi
+ * entregue ainda é tentado.
+ */
+export async function deleteTemplate(wabaId: string, name: string, token: string, fetcher: Fetcher = fetch): Promise<void> {
+  const params = new URLSearchParams({ name });
+  await call(fetcher, "Exclusão do template", `${GRAPH}/${encodeURIComponent(wabaId)}/message_templates?${params}`, token, { method: "DELETE" });
 }

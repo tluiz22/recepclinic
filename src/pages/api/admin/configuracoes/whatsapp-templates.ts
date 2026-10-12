@@ -1,12 +1,13 @@
 import type { APIRoute } from "astro";
 import { createClinicServiceClient } from "../../../../lib/data/clinicService";
 import { TEMPLATE_KEYS, type TemplateKey } from "../../../../lib/data/whatsapp/connection";
-import { createDefaultTemplates, refreshTemplateStatuses, resendRejectedTemplate, type TemplateSyncLine } from "../../../../lib/data/whatsapp/templateSync";
+import { createDefaultTemplates, refreshTemplateStatuses, deleteUnusedTemplate, namesInWaba, resendRejectedTemplate, type TemplateSyncLine } from "../../../../lib/data/whatsapp/templateSync";
 import { setFlash } from "../../../../lib/flash";
 import { formText } from "../../../../lib/forms";
 
 // Suporte, templates padrão na conta da clínica (F6.2): "Criar na Meta" e
-// "Atualizar situação"; F8a.1: "Reenviar à Meta" do recusado. Usa a
+// "Atualizar situação"; F8a.1: "Reenviar à Meta" do recusado; F8a.2: "Excluir
+// da Meta" o template do RecepClinic sem uso. Usa a
 // credencial da clínica porque só ela lê o token.
 
 const STATUS_TEXT = { pending: "em análise", approved: "aprovado", rejected: "recusado", disabled: "desativado" } as const;
@@ -35,6 +36,11 @@ export const POST: APIRoute = async ({ request, cookies, locals, redirect }) => 
         : { tone: "error", text: result.message },
     );
     return redirect(back, 303);
+  }
+  if (action === "excluir") {
+    const result = await deleteUnusedTemplate(db, clinic.clinicId, formText(form, "nome"), namesInWaba());
+    setFlash(cookies, result.ok ? { tone: "success", text: `${result.name} excluído da conta da Meta.` } : { tone: "error", text: result.message });
+    return redirect(`${back}?sem-uso=1#sem-uso`, 303);
   }
   const create = action === "criar";
   const result = create ? await createDefaultTemplates(db, clinic.clinicId) : await refreshTemplateStatuses(db, clinic.clinicId);

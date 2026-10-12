@@ -26,7 +26,7 @@
 | F5 | Páginas públicas e domínio | concluída (06/out; validada pelo cliente) |
 | F6 | WhatsApp por clínica e bot | concluída (08/out; validada pelo cliente, menos o que depende de templates em análise) |
 | F7 | Envios automáticos por clínica | concluída (09/out; validada pelo cliente com os templates aprovados) |
-| F8a | Templates pela API: reenviar recusado e excluir sem uso | em andamento (F8a.1 implementada em 12/out) |
+| F8a | Templates pela API: reenviar recusado e excluir sem uso | em andamento (F8a.1 aceita e F8a.2 implementada em 12/out) |
 | F8 | Conexão self-service na Meta | a detalhar (depende da Meta) |
 | F9 | Operação e segurança | concluída (10/out; validada pelo cliente) |
 | F10 | Primeiro piloto | a detalhar |
@@ -1152,8 +1152,8 @@ Meta o que ainda era feito à mão. Tudo em Configurações › WhatsApp, só pa
 
 | | Subetapa | Situação |
 |---|---|---|
-| F8a.1 | Reenviar template padrão recusado | implementada (12/out); aguarda a validação do cliente |
-| F8a.2 | Excluir template do RecepClinic sem uso | a fazer |
+| F8a.1 | Reenviar template padrão recusado | aceita pelo cliente em 12/out, sem teste real (nenhum padrão recusado no staging) |
+| F8a.2 | Excluir template do RecepClinic sem uso | implementada (12/out); aguarda a validação do cliente |
 
 **F8a.1:** o template padrão recusado mostra o motivo da Meta e o botão **"Reenviar à Meta"**, que
 edita o template na conta da clínica **com o mesmo nome** (sem `_v2`) e com o texto atual do
@@ -1173,9 +1173,14 @@ RecepClinic não usa mais (versões antigas), cada um com **"Excluir da Meta"** 
 **Só os do RecepClinic** (cliente, 12/out): os templates criados pela própria clínica (contas
 conectadas por coexistência na F8) nunca aparecem.
 
-**A conferir na documentação da Meta antes de implementar:** limites de edição (recusado sem
-limite, aprovado com limite), o que a exclusão faz com o nome (bloqueio para reuso) e o que
-acontece com mensagens já enviadas.
+Regras da exclusão conferidas (12/out): pelo nome, apaga todos os idiomas; o nome fica bloqueado por
+30 dias; o que já saiu e não foi entregue ainda é tentado por 30 dias, e o que sair depois falha.
+**Implementada em 12/out:** "Procurar templates sem uso" (a busca na Meta só roda com o clique,
+seguindo as páginas da conta), "Excluir da Meta" com confirmação e nova conferência na hora de
+excluir (`listUnusedTemplates` e `deleteUnusedTemplate` em `templateSync.ts`). **Em uso** = os
+nomes padrão atuais do código e todo nome gravado em `whatsapp_templates` da própria clínica e das
+**outras clínicas ligadas à mesma conta** (uma conta pode atender várias clínicas, como a do
+RecepClinic no staging); clínica com a conexão desligada não entra nessa conta, só a própria.
 
 ## F8 — Conexão self-service na Meta
 

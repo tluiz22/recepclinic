@@ -1,7 +1,9 @@
 import type { DbClient } from "../clients";
+import { createClinicServiceClient } from "../clinicService";
+import { resolveClinicsByWabaId } from "../platform";
 import { unwrap } from "../errors";
 import { getWhatsappAccessToken, getWhatsappConnection, listWhatsappTemplates, type TemplateKey, type TemplateStatus } from "./connection";
-import { createTemplate, editTemplate, fetchTemplatesByName, GraphRequestError, type Fetcher, type MetaTemplate } from "./graph";
+import { createTemplate, deleteTemplate, editTemplate, fetchAllTemplates, fetchTemplatesByName, GraphRequestError, type Fetcher, type MetaTemplate } from "./graph";
 import { DEFAULT_TEMPLATES, defaultTemplate, rejectionReason, TEMPLATE_LANGUAGE, templateCreationPayload, templateEditPayload, templateStatusFromMeta } from "./templates";
 
 // Templates padrão na conta da clínica (F6.2), pelo Suporte em Configurações ›
@@ -12,6 +14,8 @@ import { DEFAULT_TEMPLATES, defaultTemplate, rejectionReason, TEMPLATE_LANGUAGE,
 // - Webhook (`message_template_status_update`): a Meta avisa a mudança.
 // - "Reenviar à Meta" (F8a.1): o padrão recusado é editado com o texto atual
 //   do código, com o mesmo nome, e volta para a análise.
+// - "Excluir da Meta" (F8a.2): templates do RecepClinic (`rc_`) da conta que
+//   nenhuma clínica dela usa.
 
 export type TemplateSyncLine = { key: TemplateKey; name: string; status: TemplateStatus | null; problem: string | null };
 
@@ -151,6 +155,66 @@ export async function resendRejectedTemplate(db: DbClient, clinicId: string, key
   } catch (error) {
     if (!(error instanceof GraphRequestError)) throw error;
     return { ok: false, message: `${template.name}: ${error.graph.message}` };
+  }
+}
+
+/** Templates do RecepClinic na conta: os da própria clínica nunca aparecem (cliente, 12/out). */
+export const RECEPCLINIC_PREFIX = "rc_";
+
+/**
+ * Nomes em uso nas clínicas da conta (WABA): uma conta pode atender várias
+ * clínicas (no staging, a do RecepClinic), e cada uma lê só os próprios.
+ */
+export type NamesInUse = (wabaId: string) => Promise<string[]>;
+
+/** Nomes gravados nas clínicas da conta, cada uma lida com a própria credencial. */
+export function namesInWaba(env?: Parameters<typeof resolveClinicsByWabaId>[1] & Parameters<typeof createClinicServiceClient>[1]): NamesInUse {
+  return async (wabaId) => {
+    const clinics = await resolveClinicsByWabaId(wabaId, env);
+    const lists = await Promise.all(clinics.map((id) => listWhatsappTemplates(createClinicServiceClient(id, env), id)));
+    return lists.flat().map((t) => t.name);
+  };
+}
+
+export type UnusedTemplatesResult = { ok: true; templates: MetaTemplate[] } | { ok: false; message: string };
+
+/**
+ * Templates `rc_` da conta da clínica que nenhuma clínica da conta usa
+ * (F8a.2). Em uso: os nomes padrão atuais do código e qualquer nome gravado
+ * em `whatsapp_templates` (padrão e versões personalizadas, de todas as
+ * clínicas da conta).
+ */
+export async function listUnusedTemplates(db: DbClient, clinicId: string, namesInUse: NamesInUse, fetcher: Fetcher = fetch): Promise<UnusedTemplatesResult> {
+  const ready = await setup(db, clinicId);
+  if ("message" in ready) return { ok: false, message: ready.message };
+  try {
+    // A própria clínica conta mesmo com a conexão desligada (o resolvedor só traz as ligadas).
+    const own = (await listWhatsappTemplates(db, clinicId)).map((t) => t.name);
+    const used = new Set([...DEFAULT_TEMPLATES.map((t) => t.name), ...own, ...(await namesInUse(ready.wabaId))]);
+    const all = await fetchAllTemplates(ready.wabaId, ready.token, fetcher);
+    const unused = all.filter((t) => t.name.startsWith(RECEPCLINIC_PREFIX) && !used.has(t.name));
+    return { ok: true, templates: unused.sort((a, b) => a.name.localeCompare(b.name)) };
+  } catch (error) {
+    if (!(error instanceof GraphRequestError)) throw error;
+    return { ok: false, message: error.graph.message };
+  }
+}
+
+export type DeleteResult = { ok: true; name: string } | { ok: false; message: string };
+
+/** "Excluir da Meta" (F8a.2): só se ainda estiver na lista dos sem uso (conferido de novo na hora). */
+export async function deleteUnusedTemplate(db: DbClient, clinicId: string, name: string, namesInUse: NamesInUse, fetcher: Fetcher = fetch): Promise<DeleteResult> {
+  const unused = await listUnusedTemplates(db, clinicId, namesInUse, fetcher);
+  if (!unused.ok) return unused;
+  if (!unused.templates.some((t) => t.name === name)) return { ok: false, message: `${name} não está entre os templates sem uso: nada foi excluído.` };
+  const ready = await setup(db, clinicId);
+  if ("message" in ready) return { ok: false, message: ready.message };
+  try {
+    await deleteTemplate(ready.wabaId, name, ready.token, fetcher);
+    return { ok: true, name };
+  } catch (error) {
+    if (!(error instanceof GraphRequestError)) throw error;
+    return { ok: false, message: `${name}: ${error.graph.message}` };
   }
 }
 

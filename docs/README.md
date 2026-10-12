@@ -45,8 +45,9 @@
 >     itens 1 a 9 na seção "Ajustes dos testes do cliente" do [plano](plano.md). A página antiga do
 >     roteiro no claude.ai (`R3VCJ9t1ebygPzjJhyvdJf`) **fica** (cliente, 11/out).
 >   - **F8a escolhida pelo cliente em 12/out** (templates pela API: reenviar recusado e excluir
->     sem uso; detalhes no [plano](plano.md)). **Retomar daqui:** F8a.1 (reenviar recusado)
->     implementada em 12/out, aguardando a validação do cliente; depois, a F8a.2. A F8 completa depende da Meta (análise do app e Tech
+>     sem uso; detalhes no [plano](plano.md)). F8a.1 (reenviar recusado) aceita em 12/out.
+>     **Retomar daqui:** F8a.2 (excluir sem uso) implementada em 12/out, aguardando a validação
+>     do cliente (excluir pelo painel os 3 templates antigos das pendências). A F8 completa depende da Meta (análise do app e Tech
 >     Provider) e a F10 depende da F8.
 >   - **Migrações no staging:** o Claude aplica com `supabase db push` (permissão liberada em
 >     09/out), sempre na ordem simulação → aplicar → conferir no banco → só então o push do código.
