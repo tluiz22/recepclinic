@@ -1631,6 +1631,7 @@ gera.
 | F11.2 | Registro do pagamento no atendimento (sem nota ainda) | F11.1 | implementada (12/out), validação no fim (cliente, 12/out) |
 | F11.3 | Dados fiscais da clínica e certificado A1 | F11.1 | implementada (12/out), validação no fim (cliente, 12/out) |
 | F11.4 | Emissão e cancelamento na API nacional (ambiente de testes da Receita) | F11.2, F11.3 e os itens do cliente abaixo | implementada (12/out), falta o teste real na Produção Restrita |
+| F11.4b | Ambiente "Simulação" da nota (testar sem e-CNPJ, só no staging) | F11.4 | implementada (13/out), validação no fim |
 | F11.5 | PDF da nota no histórico e envio pelo WhatsApp (template novo) | F11.4 e a Meta | implementada (12/out), falta o template aprovado na Meta |
 | F11.6 | Arquivo da DMED do ano | F11.2 | implementada (12/out), validação no fim (cliente, 12/out) |
 
@@ -1755,6 +1756,21 @@ gera.
   de Mossoró; os pontos a conferir nesse teste são a alíquota (hoje só a ME/EPP a informa) e as
   mensagens de erro da Receita. O Profissional ainda não vê as notas dos atendimentos dele (fica
   para a F11.5, com o histórico).
+- **F11.4b (cliente, 13/out):** sem o e-CNPJ de uma clínica, os Testes 4 e 5 do roteiro não
+  rodam (a Receita só aceita certificado da ICP-Brasil). O cliente escolheu uma **Receita
+  simulada**: um terceiro ambiente, **"Simulação"**, que só o Suporte liga (Configurações › Nota
+  fiscal, ao lado de "Passar para Produção") e só onde a variável **`NFSE_SIMULATION=1`** estiver
+  na Vercel (o staging; nunca na produção). Nele, o servidor monta a nota a partir da DPS
+  assinada, no formato da Sefin (número = número da DPS, chave de acesso de 50 dígitos), sem
+  falar com a Receita: PDF, envio, cancelamento, histórico e DMED funcionam como na Produção
+  Restrita. A nota leva o selo "simulada", "SEM VALIDADE JURÍDICA" e o aviso "NOTA SIMULADA PELO
+  RECEPCLINIC" nas informações complementares; numeração própria. Sem a variável, a clínica
+  que ficou na simulação não emite (aviso para voltar à Produção Restrita). Migração
+  `20261013120000_nfse_simulacao.sql` (só o valor novo `simulation`); código em
+  `src/lib/nfse/simulator.ts`. Testes: `src/lib/nfse/simulator.test.ts` e
+  `tests/db/emissao-nfse.test.ts`. Para o Teste 3 sem e-CNPJ, três certificados fictícios
+  (CNPJ 11.222.333/0001-81 e 44.555.666/0001-81, senha `teste123`) foram gerados na Área de
+  Trabalho do cliente; o sistema aceita qualquer A1 com CNPJ, e a Receita recusa os fictícios.
 - **F11.5:** PDF da nota (DANFSe) no histórico do paciente, com baixar e reenviar; envio pelo
   WhatsApp com um template novo de documento (`rc_nota_fiscal_v1`, a aprovar na Meta).
   **Descoberta (12/out):** a Nota Técnica 008 v1.02 (SE/CGNFS-e, 14/07/2026) suspendeu a API

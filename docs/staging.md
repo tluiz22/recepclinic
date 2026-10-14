@@ -267,3 +267,15 @@ Decisões no [plano](plano.md) ("E-mail de verdade"): Resend, remetente
    com um login de verdade (o e-mail leva à tela de nova senha); um convite ou pedido de
    informações pelo Suporte chega sem o aviso de "e-mail não saiu". A partir daqui,
    `scripts/link-de-senha.mjs` fica só de reserva.
+
+## M. Nota fiscal: variáveis do Módulo financeiro (F11.5 e F11.4b)
+
+Na **Vercel** (*Settings › Environment Variables*, Production), depois *Deployments › Redeploy*:
+
+| Variável | Valor | Para quê |
+|---|---|---|
+| `WHATSAPP_APP_ID` | o App ID do app RecepClinic (painel da Meta para desenvolvedores; só números) | "Criar na Meta" do template da nota (`rc_nota_fiscal_v1`), que sobe um PDF de exemplo |
+| `NFSE_SIMULATION` | `1` | libera o ambiente **Simulação** da nota fiscal (a nota sai do próprio RecepClinic, sem a Receita). **Só no staging**: nunca na produção |
+
+Com `NFSE_SIMULATION=1`, o Suporte vê "Passar para Simulação" em Configurações › Nota fiscal da
+clínica (enquanto ela estiver em Produção Restrita); para sair, "Voltar para Produção Restrita".

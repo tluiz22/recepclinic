@@ -32,6 +32,7 @@ import {
   SPECIAL_REGIME_OPTIONS,
 } from "../../../lib/data/fiscal";
 import { FISCAL_TERMS, FISCAL_TERMS_VERSION } from "../../../lib/fiscalTerms";
+import { platformEnv } from "../../../lib/env";
 
 const clinic = Astro.locals.clinic!;
 const db = createUserClient(Astro.request, Astro.cookies);
@@ -49,6 +50,28 @@ const status = certificate ? certificateStatus(certificate.validUntil) : null;
 const action = "/api/admin/configuracoes/nota-fiscal";
 const date = (d: Date) => formatInstant(d, clinic.timezone, "dd/MM/yyyy");
 const issValue = settings ? String(settings.issRate).replace(".", ",") : "";
+
+// Ambientes para onde o Suporte pode trocar (F11.4b: a Simulação só no staging).
+const ENVIRONMENT_SHORT = { production: "Produção", restricted: "Produção Restrita", simulation: "Simulação" } as const;
+const ENVIRONMENT_BADGE = { production: "Produção", restricted: "testes", simulation: "simulação" } as const;
+const SWITCHES = {
+  production: {
+    title: "Passar para Produção?",
+    message: "As próximas notas saem de verdade, com valor fiscal. Confirme que a clínica testou e que o contador conferiu uma nota de teste.",
+    label: "Passar para Produção",
+  },
+  restricted: { title: "Voltar para Produção Restrita?", message: "As próximas notas saem no ambiente de testes da Receita, sem valor fiscal.", label: "Voltar para Produção Restrita" },
+  simulation: {
+    title: "Passar para Simulação?",
+    message: "As próximas notas saem do próprio RecepClinic, sem falar com a Receita, só para testar PDF, envio e cancelamento. Não valem nada e não existem no portal nacional.",
+    label: "Passar para Simulação",
+  },
+} as const;
+const switchTargets = !settings
+  ? []
+  : settings.environment === "restricted"
+    ? (["production", ...(platformEnv().nfseSimulation ? ["simulation" as const] : [])] as const)
+    : (["restricted"] as const);
 ---
 
 <AdminLayout title="Nota fiscal">
@@ -152,31 +175,31 @@ const issValue = settings ? String(settings.issRate).replace(".", ",") : "";
       <Card>
         <h2 class="flex flex-wrap items-center gap-2 font-semibold text-slate-900">
           Ambiente da Receita
-          {settings && <Badge variant={settings.environment === "production" ? "success" : "warning"}>{settings.environment === "production" ? "Produção" : "testes"}</Badge>}
+          {settings && <Badge variant={settings.environment === "production" ? "success" : "warning"}>{ENVIRONMENT_BADGE[settings.environment]}</Badge>}
         </h2>
         <p class="mt-1 text-sm text-slate-600">
           {settings ? ENVIRONMENT_LABEL[settings.environment] : ENVIRONMENT_LABEL.restricted}. Toda clínica começa em testes; o suporte passa para Produção depois que
           a clínica testou e o contador conferiu uma nota de teste.
         </p>
         {
-          clinic.isPlatformStaff && settings && (
-            <form method="POST" action={action} class="mt-3 flex flex-wrap items-end gap-2">
-              <input type="hidden" name="acao" value="ambiente" />
-              <input type="hidden" name="environment" value={settings.environment === "production" ? "restricted" : "production"} />
-              <button
-                type="submit"
-                class={`${SECONDARY_BUTTON} js-confirm-delete`}
-                data-confirm-title={settings.environment === "production" ? "Voltar para Produção Restrita?" : "Passar para Produção?"}
-                data-confirm-message={
-                  settings.environment === "production"
-                    ? "As próximas notas saem no ambiente de testes, sem valor fiscal."
-                    : "As próximas notas saem de verdade, com valor fiscal. Confirme que a clínica testou e que o contador conferiu uma nota de teste."
-                }
-                data-confirm-label={settings.environment === "production" ? "Voltar para testes" : "Passar para Produção"}
-              >
-                {settings.environment === "production" ? "Voltar para Produção Restrita" : "Passar para Produção"}
-              </button>
-            </form>
+          clinic.isPlatformStaff && switchTargets.length > 0 && (
+            <div class="mt-3 flex flex-wrap items-end gap-2">
+              {switchTargets.map((target) => (
+                <form method="POST" action={action}>
+                  <input type="hidden" name="acao" value="ambiente" />
+                  <input type="hidden" name="environment" value={target} />
+                  <button
+                    type="submit"
+                    class={`${SECONDARY_BUTTON} js-confirm-delete`}
+                    data-confirm-title={SWITCHES[target].title}
+                    data-confirm-message={SWITCHES[target].message}
+                    data-confirm-label={SWITCHES[target].label}
+                  >
+                    {SWITCHES[target].label}
+                  </button>
+                </form>
+              ))}
+            </div>
           )
         }
       </Card>
@@ -297,7 +320,7 @@ const issValue = settings ? String(settings.issRate).replace(".", ",") : "";
                 {typeof entry.details.terms_version === "string" ? ` · versão ${entry.details.terms_version}` : ""}
                 {entry.details.nfse_number ? ` · nº ${entry.details.nfse_number}` : ""}
                 {typeof entry.details.error_code === "string" ? ` · ${entry.details.error_code}` : ""}
-                {entry.event === "environment_changed" ? ` · para ${entry.details.to === "production" ? "Produção" : "Produção Restrita"}` : ""}
+                {entry.event === "environment_changed" ? ` · para ${ENVIRONMENT_SHORT[entry.details.to as keyof typeof ENVIRONMENT_SHORT] ?? "Produção Restrita"}` : ""}
               </span>
             </li>
           ))}

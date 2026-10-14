@@ -1,6 +1,6 @@
 # RecepClinic
 
-> **Estado atual (retomar daqui), 12/out/2026 (fim da sessão)**
+> **Estado atual (retomar daqui), 13/out/2026**
 >
 > - **Etapas 0 a 4 concluídas**: cópia isolada, [diagnóstico](diagnostico.md), [limites](limites.md),
 >   [arquitetura](arquitetura.md) (decisões D1–D11) e [plano](plano.md) (fases F0–F10).
@@ -60,12 +60,20 @@
 >     falta o e-CNPJ A1 de uma clínica de Mossoró. **F11.5 implementada em 12/out** (PDF da nota no modelo da NT 008, porque a API oficial do
 >     DANFSe foi suspensa; envio pelo WhatsApp do contato, outro número e e-mail; destinos
 >     guardados no Financeiro; automático ao emitir em Produção). **Toda a F11 implementada.**
+>     **F11.4b implementada em 13/out** (cliente: sem e-CNPJ para os Testes 4 e 5): ambiente
+>     **"Simulação"** da nota, só o Suporte liga e só com `NFSE_SIMULATION=1` na Vercel (staging);
+>     a nota sai do próprio servidor, sem a Receita, com o selo "simulada". Para o Teste 3, três
+>     certificados fictícios (senha `teste123`) na Área de Trabalho do cliente, pasta
+>     `certificados-teste-recepclinic`; no T3.1, CNPJ fictício 11.222.333/0001-81. Detalhes no
+>     [plano](plano.md) e na parte M do [`staging.md`](staging.md).
 >     **Retomar daqui:** o cliente está testando a F11 inteira pelo roteiro no claude.ai
 >     ([Roteiro de testes do Módulo financeiro](https://claude.ai/code/artifact/f7a032e3-c6f4-4e13-8fa1-f6d6e61afbcb),
 >     passos T0.1 a T7.3 e folha de anotações) e traz os pontos para correção. Pelo roteiro: a F11.4
 >     com o teste real na Produção Restrita (e-CNPJ A1 de uma clínica de Mossoró), a DMED com um
 >     teste de importação no PGD Dmed pelo contador e, para o WhatsApp da nota, pôr
->     `WHATSAPP_APP_ID` na Vercel (Redeploy) e usar "Criar na Meta" para o `rc_nota_fiscal_v1`. **Prioridade (cliente, 12/out):
+>     `WHATSAPP_APP_ID` na Vercel (Redeploy) e usar "Criar na Meta" para o `rc_nota_fiscal_v1`; para
+>     os Testes 4 e 5 sem e-CNPJ, `NFSE_SIMULATION=1` na Vercel (mesmo Redeploy) e o Suporte passa
+>     a clínica de teste para Simulação. **Prioridade (cliente, 12/out):
 >     quando a Meta aprovar** (Análise do App, Verificação do acesso, Tech Provider), a F11
 >     **pausa** e o trabalho **volta às fases anteriores** (F8 e F10) para terminar e iniciar o
 >     piloto; a F11 continua depois. Em paralelo, aguardar a

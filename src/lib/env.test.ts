@@ -31,6 +31,7 @@ describe("variáveis da plataforma", () => {
       email: null,
       whatsapp: null,
       whatsappAppId: null,
+      nfseSimulation: false,
     });
     expect(parsePlatformEnv({ ...valid, SITE_URL: "https://app.recepclinic.com.br" }).siteUrl).toBe(
       "https://app.recepclinic.com.br",
@@ -64,6 +65,13 @@ describe("variáveis da plataforma", () => {
     expect(parsePlatformEnv(valid).whatsappAppId).toBeNull();
     expect(parsePlatformEnv({ ...valid, WHATSAPP_APP_ID: "1234567890" }).whatsappAppId).toBe("1234567890");
     expect(() => parsePlatformEnv({ ...valid, WHATSAPP_APP_ID: "app-x" })).toThrow(/WHATSAPP_APP_ID inválida/);
+  });
+
+  it("simulação da nota fiscal: só com NFSE_SIMULATION=1 (F11.4b)", () => {
+    expect(parsePlatformEnv(valid).nfseSimulation).toBe(false);
+    expect(parsePlatformEnv({ ...valid, NFSE_SIMULATION: "0" }).nfseSimulation).toBe(false);
+    expect(parsePlatformEnv({ ...valid, NFSE_SIMULATION: "1" }).nfseSimulation).toBe(true);
+    expect(() => parsePlatformEnv({ ...valid, NFSE_SIMULATION: "sim" })).toThrow(/NFSE_SIMULATION inválida/);
   });
 
   it("tira espaços das pontas", () => {

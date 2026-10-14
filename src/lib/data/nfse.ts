@@ -1,11 +1,13 @@
 import { findNfseByDps, hasCancelEvent, httpsTransport, sendCancel, sendDps, describeSefinErrors, type SefinTransport } from "../nfse/client";
 import { buildCancelRequest, buildDps, nfseNumberOf, type DpsInput, type NfseEnvironment } from "../nfse/dps";
 import { keysFromPfx, signXml, type CertificateKeys } from "../nfse/sign";
+import { simulatedTransport, type SimulatedPrestador } from "../nfse/simulator";
+import { platformEnv } from "../env";
 import { logError } from "../log";
 import type { DbClient } from "./clients";
 import { DataError, fromDbError, unwrap } from "./errors";
-import { getFiscalCertificate, getFiscalSettings } from "./fiscal";
-import { platformNfseRecorder, readFiscalCertificate } from "./platform";
+import { FISCAL_MUNICIPALITIES, getFiscalCertificate, getFiscalSettings } from "./fiscal";
+import { platformNfseRecorder, readFiscalCertificate, readFiscalPrestador } from "./platform";
 
 // Nota fiscal do pagamento (F11.4, cliente, 12/out/2026). O banco confere e
 // reserva (begin_*), o servidor assina e conversa com a Receita, e o banco
@@ -45,9 +47,34 @@ export type NfseDeps = {
   transport: SefinTransport;
   loadCertificate: (clinicId: string) => Promise<{ pfx: Uint8Array; password: string } | null>;
   now: () => Date;
+  /** O ambiente "Simulação" vale aqui? (F11.4b: só com NFSE_SIMULATION=1, no staging) */
+  simulationEnabled?: () => boolean;
+  /** Razão social, município e ISS da clínica, para a nota simulada. */
+  loadPrestador?: (clinicId: string) => Promise<{ legalName: string; municipalityIbge: string; issRate: number } | null>;
 };
 
-export const defaultNfseDeps: NfseDeps = { transport: httpsTransport, loadCertificate: (clinicId) => readFiscalCertificate(clinicId), now: () => new Date() };
+export const defaultNfseDeps: NfseDeps = {
+  transport: httpsTransport,
+  loadCertificate: (clinicId) => readFiscalCertificate(clinicId),
+  now: () => new Date(),
+  simulationEnabled: () => platformEnv().nfseSimulation,
+  loadPrestador: (clinicId) => readFiscalPrestador(clinicId),
+};
+
+export const SIMULATION_OFF = "A simulação da nota fiscal só funciona no staging: peça ao Suporte para voltar a clínica para Produção Restrita.";
+
+/** Quem responde no lugar da Receita: a Sefin de verdade ou, na simulação, o próprio servidor. */
+function transportFor(deps: NfseDeps, environment: NfseEnvironment, timeZone: string, prestador: SimulatedPrestador | null = null): SefinTransport {
+  return environment === "simulation" ? simulatedTransport(prestador, deps.now, timeZone) : deps.transport;
+}
+
+/** Os dados do prestador que a Receita tiraria do cadastro dela (só a simulação precisa). */
+async function simulatedPrestador(deps: NfseDeps, clinicId: string): Promise<SimulatedPrestador | null> {
+  const settings = await (deps.loadPrestador ?? readFiscalPrestador)(clinicId);
+  if (!settings) return null;
+  const municipality = FISCAL_MUNICIPALITIES.find((m) => m.ibge === settings.municipalityIbge);
+  return { legalName: settings.legalName, municipalityName: municipality?.name ?? settings.municipalityIbge, uf: municipality?.state ?? "", issRate: settings.issRate };
+}
 
 /** Onde o resultado é gravado: com o login de quem usa o painel ou pela plataforma (rotina). */
 type Recorder = ReturnType<typeof platformNfseRecorder>;
@@ -195,6 +222,11 @@ export async function issueNfse(db: DbClient, clinicId: string, paymentId: strin
   const recorder = userRecorder(db);
   const invoiceId = begin.invoice_id;
 
+  if (begin.environment === "simulation" && !deps.simulationEnabled?.()) {
+    await recorder.finishIssue({ invoiceId, outcome: "rejected", errorCode: "SIMULACAO", errorMessage: SIMULATION_OFF });
+    return { status: "rejected", message: SIMULATION_OFF };
+  }
+
   const keys = await certificateKeys(deps, clinicId);
   if (!keys) {
     await recorder.finishIssue({ invoiceId, outcome: "rejected", errorCode: "CERTIFICADO", errorMessage: "Não foi possível abrir o certificado A1: envie o certificado de novo." });
@@ -223,7 +255,8 @@ export async function issueNfse(db: DbClient, clinicId: string, paymentId: strin
     issRate: Number(begin.iss_rate),
   };
   const signed = signXml(buildDps(input, deps.now(), begin.timezone), "infDPS", "DPS", keys);
-  const outcome = await sendDps(deps.transport, begin.environment, keys, signed);
+  const transport = transportFor(deps, begin.environment, begin.timezone, begin.environment === "simulation" ? await simulatedPrestador(deps, clinicId) : null);
+  const outcome = await sendDps(transport, begin.environment, keys, signed);
   return recordIssueOutcome(recorder, clinicId, invoiceId, outcome.kind === "issued" ? { kind: "found", accessKey: outcome.accessKey, nfseXml: outcome.nfseXml } : outcome);
 }
 
@@ -286,10 +319,12 @@ async function checkPending(
   if (invoice.status !== "issuing" && invoice.status !== "canceling") throw new DataError("invalid", "Nota fiscal: não está pendente");
   const keys = await certificateKeys(deps, invoice.clinicId);
   if (!keys) throw new DataError("invalid", "Nota fiscal: sem certificado A1 em dia para consultar a Receita");
+  if (invoice.environment === "simulation" && !deps.simulationEnabled?.()) throw new DataError("invalid", `Nota fiscal: ${SIMULATION_OFF}`);
+  const transport = transportFor(deps, invoice.environment, "America/Sao_Paulo");
   if (invoice.status === "issuing") {
-    return recordIssueOutcome(recorder, invoice.clinicId, invoice.invoiceId, await findNfseByDps(deps.transport, invoice.environment, keys, invoice.dpsId));
+    return recordIssueOutcome(recorder, invoice.clinicId, invoice.invoiceId, await findNfseByDps(transport, invoice.environment, keys, invoice.dpsId));
   }
-  const canceled = await hasCancelEvent(deps.transport, invoice.environment, keys, invoice.accessKey!);
+  const canceled = await hasCancelEvent(transport, invoice.environment, keys, invoice.accessKey!);
   if (canceled === true) {
     await recorder.finishCancel({ invoiceId: invoice.invoiceId, outcome: "canceled" });
     return { status: "canceled", message: "Nota cancelada na Receita." };
@@ -318,6 +353,10 @@ export async function cancelNfse(
   if (error) throw fromDbError(error, "Cancelamento");
   const begin = data as unknown as BeginCancel;
   const recorder = userRecorder(db);
+  if (begin.environment === "simulation" && !deps.simulationEnabled?.()) {
+    await recorder.finishCancel({ invoiceId, outcome: "rejected", errorCode: "SIMULACAO", errorMessage: SIMULATION_OFF });
+    return { status: "issued", message: SIMULATION_OFF };
+  }
   const keys = await certificateKeys(deps, clinicId);
   if (!keys) {
     await recorder.finishCancel({ invoiceId, outcome: "rejected", errorCode: "CERTIFICADO", errorMessage: "Não foi possível abrir o certificado A1." });
@@ -329,7 +368,7 @@ export async function cancelNfse(
     "pedRegEvento",
     keys,
   );
-  const outcome = await sendCancel(deps.transport, begin.environment, keys, begin.access_key, signed);
+  const outcome = await sendCancel(transportFor(deps, begin.environment, timeZone), begin.environment, keys, begin.access_key, signed);
   if (outcome.kind === "canceled") {
     await recorder.finishCancel({ invoiceId, outcome: "canceled" });
     return { status: "canceled", message: "Nota fiscal cancelada." };

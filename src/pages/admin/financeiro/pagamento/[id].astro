@@ -185,6 +185,7 @@ const otherDefault = defaultPayer === "other" ? { name: finance.payerName ?? "",
                     <div class="flex flex-wrap items-center gap-2 py-0.5">
                       <Badge variant={INVOICE_BADGE[n.status].variant}>{INVOICE_BADGE[n.status].label(n)}</Badge>
                       {n.environment === "restricted" && <Badge>teste</Badge>}
+                      {n.environment === "simulation" && <Badge>simulada</Badge>}
                       <span class="text-xs text-slate-500">pedida em {formatInstant(n.requestedAt, clinic.timezone, "dd/MM 'às' HH:mm")}</span>
                       {n.hasXml && (
                         <>
@@ -247,7 +248,7 @@ const otherDefault = defaultPayer === "other" ? { name: finance.payerName ?? "",
                               type="submit"
                               class="js-confirm-delete self-start text-xs font-medium text-sky-700 hover:underline"
                               data-confirm-title="Enviar a nota fiscal?"
-                              data-confirm-message={`Nota nº ${n.nfseNumber} (PDF${" e XML no e-mail"}) para os destinos marcados.${n.environment === "restricted" ? " Nota de teste, sem valor fiscal." : ""}`}
+                              data-confirm-message={`Nota nº ${n.nfseNumber} (PDF${" e XML no e-mail"}) para os destinos marcados.${n.environment === "restricted" ? " Nota de teste, sem valor fiscal." : n.environment === "simulation" ? " Nota simulada, sem valor fiscal." : ""}`}
                               data-confirm-label="Enviar nota"
                               data-confirm-tone="primary"
                             >
@@ -293,7 +294,7 @@ const otherDefault = defaultPayer === "other" ? { name: finance.payerName ?? "",
                             type="submit"
                             class="js-confirm-delete text-xs font-medium text-sky-700 hover:underline"
                             data-confirm-title="Emitir a nota fiscal?"
-                            data-confirm-message={`${formatCentsBRL(p.amountCents)}, no CPF de ${p.payerName}. ${financeReady.environment === "restricted" ? "Ambiente de testes (sem valor fiscal)." : "A nota vai para a Receita."}`}
+                            data-confirm-message={`${formatCentsBRL(p.amountCents)}, no CPF de ${p.payerName}. ${financeReady.environment === "restricted" ? "Ambiente de testes (sem valor fiscal)." : financeReady.environment === "simulation" ? "Simulação: a nota não vai para a Receita." : "A nota vai para a Receita."}`}
                             data-confirm-label="Emitir nota"
                             data-confirm-tone="primary"
                           >
@@ -409,6 +410,7 @@ const otherDefault = defaultPayer === "other" ? { name: finance.payerName ?? "",
                 <span>
                   Emitir a nota fiscal agora, no CPF de quem pagou
                   {financeReady.environment === "restricted" && <span class="text-xs text-slate-500"> (ambiente de testes, sem valor fiscal)</span>}
+                  {financeReady.environment === "simulation" && <span class="text-xs text-slate-500"> (simulação, sem a Receita e sem valor fiscal)</span>}
                 </span>
               </label>
             )

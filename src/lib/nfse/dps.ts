@@ -12,7 +12,8 @@ export const NFSE_NS = "http://www.sped.fazenda.gov.br/nfse";
 export const NFSE_LAYOUT = "1.01";
 export const APP_VERSION = "RecepClinic-1.0";
 
-export type NfseEnvironment = "restricted" | "production";
+/** "simulation": nota feita pelo próprio servidor, sem a Receita (F11.4b, só no staging). */
+export type NfseEnvironment = "restricted" | "production" | "simulation";
 
 /** O que o banco devolve em begin_nfse_issue. */
 export type DpsInput = {
@@ -43,7 +44,8 @@ export type DpsInput = {
   issRate: number;
 };
 
-const AMBIENTE: Record<NfseEnvironment, string> = { production: "1", restricted: "2" };
+// A simulada sai como de testes (tpAmb 2): o DANFSe mostra "SEM VALIDADE JURÍDICA".
+const AMBIENTE: Record<NfseEnvironment, string> = { production: "1", restricted: "2", simulation: "2" };
 const OP_SIMP_NAC = { not_optant: "1", mei: "2", me_epp: "3" } as const;
 const REG_ESP_TRIB = {
   none: "0",

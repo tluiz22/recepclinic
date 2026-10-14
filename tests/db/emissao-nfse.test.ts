@@ -2,7 +2,9 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { todayIn } from "../../src/lib/clinicTime";
 import { saveContactCpf } from "../../src/lib/data/finance";
 import { listFiscalAudit, saveFiscalSettings, setFiscalEnvironment, uploadFiscalCertificate } from "../../src/lib/data/fiscal";
-import { cancelNfse, checkNfse, issueNfse, listPaymentInvoices, type NfseDeps } from "../../src/lib/data/nfse";
+import { cancelNfse, checkNfse, issueNfse, listPaymentInvoices, SIMULATION_OFF, type NfseDeps } from "../../src/lib/data/nfse";
+import { readFiscalPrestador } from "../../src/lib/data/platform";
+import { SIMULATED_NOTICE } from "../../src/lib/nfse/simulator";
 import { getContact, getPatient } from "../../src/lib/data/patients";
 import { deletePayment, registerPayment } from "../../src/lib/data/payments";
 import { gunzipBase64, gzipBase64, type SefinTransport } from "../../src/lib/nfse/client";
@@ -211,6 +213,39 @@ describe("Emissão da NFS-e (F11.4)", () => {
     expect(seen[0].xml).toContain("<tpAmb>1</tpAmb>");
     expect(seen[0].xml).toContain("<nDPS>1</nDPS>");
     await setFiscalEnvironment(asDb(support), clinicId, "restricted");
+  });
+
+  it("simulação (F11.4b): só o Suporte, só com a variável; a nota sai sem a Receita e cancela", async () => {
+    expect(await codeOf(() => setFiscalEnvironment(asDb(support), clinicId, "simulation"))).toBe("invalid");
+    expect(await codeOf(() => setFiscalEnvironment(asDb(fixture.admin), clinicId, "simulation", { simulationEnabled: true }))).toBe("forbidden");
+    await setFiscalEnvironment(asDb(support), clinicId, "simulation", { simulationEnabled: true });
+    try {
+      const payment = await newPayment();
+      const seen: Seen[] = [];
+      const env = {
+        supabaseUrl: process.env.SUPABASE_LOCAL_API_URL!,
+        supabaseAnonKey: process.env.SUPABASE_LOCAL_ANON_KEY!,
+        supabaseJwtSecret: process.env.SUPABASE_LOCAL_JWT_SECRET!,
+        supabaseServiceRoleKey: process.env.SUPABASE_LOCAL_SERVICE_ROLE_KEY!,
+      };
+      const on: NfseDeps = { ...sefin(() => issued(99), seen), simulationEnabled: () => true, loadPrestador: (id) => readFiscalPrestador(id, env) };
+      expect(await issueNfse(asDb(fixture.reception), clinicId, payment.id, on)).toEqual({ status: "issued", message: "Nota fiscal nº 1 emitida." });
+      const [invoice] = (await listPaymentInvoices(asDb(fixture.admin), clinicId, [payment.id])).get(payment.id)!;
+      expect(invoice).toMatchObject({ status: "issued", environment: "simulation", nfseNumber: "1", hasXml: true });
+      expect(invoice.accessKey).toMatch(/^\d{50}$/);
+      const { data: xml } = await fixture.reception.client.storage.from("nfse-xml").download(`${clinicId}/${invoice.id}.xml`);
+      expect(await xml?.text()).toContain(SIMULATED_NOTICE);
+      const reason = { code: 1, text: "Teste do cancelamento simulado" };
+      expect((await cancelNfse(asDb(fixture.admin), clinicId, invoice.id, reason, "America/Fortaleza", on)).status).toBe("canceled");
+      expect(seen).toEqual([]);
+
+      // Sem a variável (fora do staging), a clínica que ficou na simulação não emite.
+      const other = await newPayment();
+      expect(await issueNfse(asDb(fixture.reception), clinicId, other.id, sefin(() => issued(99), seen))).toEqual({ status: "rejected", message: SIMULATION_OFF });
+      expect(seen).toEqual([]);
+    } finally {
+      await setFiscalEnvironment(asDb(support), clinicId, "restricted");
+    }
   });
 
   it("sem certificado ou sem o item, nada sai", async () => {

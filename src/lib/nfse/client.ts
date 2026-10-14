@@ -12,7 +12,7 @@ import type { CertificateKeys } from "./sign";
 // Sem resposta (rede, tempo, erro 5xx) o resultado é "unknown": quem chama
 // consulta a Receita antes de repetir (segurança da F11, item 5).
 
-export const SEFIN_BASE: Record<NfseEnvironment, string> = {
+export const SEFIN_BASE: Record<Exclude<NfseEnvironment, "simulation">, string> = {
   restricted: "https://sefin.producaorestrita.nfse.gov.br/SefinNacional",
   production: "https://sefin.nfse.gov.br/SefinNacional",
 };
@@ -27,7 +27,10 @@ export const gzipBase64 = (xml: string) => gzipSync(Buffer.from(xml, "utf8")).to
 export const gunzipBase64 = (value: string) => gunzipSync(Buffer.from(value, "base64")).toString("utf8");
 
 /** HTTPS de verdade, com o certificado da clínica. */
-export const httpsTransport: SefinTransport = (environment, keys, req) => callSefin(new URL(`${SEFIN_BASE[environment]}${req.path}`), keys, req);
+export const httpsTransport: SefinTransport = (environment, keys, req) => {
+  if (environment === "simulation") return Promise.reject(new Error("Nota simulada não vai para a Receita"));
+  return callSefin(new URL(`${SEFIN_BASE[environment]}${req.path}`), keys, req);
+};
 
 /** Uma chamada HTTPS com TLS mútuo (`tls` extra só nos testes, para confiar num servidor local). */
 export function callSefin(url: URL, keys: CertificateKeys, req: SefinRequest, tls: { ca?: string } = {}): Promise<SefinResponse> {

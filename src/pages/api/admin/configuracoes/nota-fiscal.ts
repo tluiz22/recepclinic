@@ -5,6 +5,7 @@ import { revokeFiscalCertificate, saveFiscalSettings, saveServiceFiscalCodes, se
 import { runFormAction } from "../../../../lib/data/formAction";
 import { formChecked, formOptionalText, formText } from "../../../../lib/forms";
 import { formatInstant } from "../../../../lib/clinicTime";
+import { platformEnv } from "../../../../lib/env";
 
 // Configurações › Nota fiscal (F11.3, Módulo financeiro): dados fiscais e
 // códigos por serviço (Administrador e Suporte) e o certificado A1 (só o
@@ -56,8 +57,9 @@ export const POST: APIRoute = async (context) => {
         }
         case "ambiente": {
           const environment = formText(form, "environment");
-          await setFiscalEnvironment(db, clinic.clinicId, environment);
-          return { redirectTo: page, message: environment === "production" ? "Ambiente trocado: as próximas notas saem em Produção." : "Ambiente trocado: as próximas notas saem em Produção Restrita (testes)." };
+          await setFiscalEnvironment(db, clinic.clinicId, environment, { simulationEnabled: platformEnv().nfseSimulation });
+          const where = { production: "em Produção", simulation: "na Simulação (sem a Receita)" }[environment] ?? "em Produção Restrita (testes)";
+          return { redirectTo: page, message: `Ambiente trocado: as próximas notas saem ${where}.` };
         }
         case "revogar":
           await revokeFiscalCertificate(db, clinic.clinicId);

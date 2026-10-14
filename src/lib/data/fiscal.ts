@@ -36,7 +36,11 @@ export const SIMPLES_REGIME_OPTIONS = [
   { value: "3", label: "Federais e ISS fora do Simples (limite ultrapassado)" },
 ] as const;
 
-export const ENVIRONMENT_LABEL = { restricted: "Produção Restrita (testes, sem valor fiscal)", production: "Produção (notas de verdade)" } as const;
+export const ENVIRONMENT_LABEL = {
+  restricted: "Produção Restrita (testes, sem valor fiscal)",
+  production: "Produção (notas de verdade)",
+  simulation: "Simulação (a nota sai do próprio RecepClinic, sem a Receita; só no staging)",
+} as const;
 
 export type SimplesNacional = (typeof SIMPLES_NACIONAL_OPTIONS)[number]["value"];
 export type SimplesRegime = (typeof SIMPLES_REGIME_OPTIONS)[number]["value"];
@@ -105,8 +109,11 @@ export function parsePercent(input: string | null | undefined): number {
 }
 
 /** Troca o ambiente da nota (só o Suporte; o banco confere e põe na trilha). */
-export async function setFiscalEnvironment(db: DbClient, clinicId: string, environment: string): Promise<void> {
+export async function setFiscalEnvironment(db: DbClient, clinicId: string, environment: string, { simulationEnabled = false }: { simulationEnabled?: boolean } = {}): Promise<void> {
   if (!(environment in ENVIRONMENT_LABEL)) throw new DataError("invalid", "Ambiente: escolha um válido", { environment: "Ambiente inválido." });
+  if (environment === "simulation" && !simulationEnabled) {
+    throw new DataError("invalid", "Ambiente: a simulação só existe no staging", { environment: "A simulação só existe no staging (NFSE_SIMULATION=1)." });
+  }
   const { data, error } = await db.from("clinic_fiscal_settings").update({ environment }).eq("clinic_id", clinicId).select("clinic_id");
   if (error) throw fromDbError(error, "Ambiente");
   if (!data?.length) throw new DataError("invalid", "Ambiente: salve antes os dados fiscais", { environment: "Salve antes os dados fiscais." });

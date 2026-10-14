@@ -195,7 +195,21 @@ export async function readFiscalCertificate(
   return row ? { pfx: new Uint8Array(Buffer.from(row.pfx_base64, "base64")), password: row.password } : null;
 }
 
-export type PendingNfse = { invoiceId: string; clinicId: string; status: "issuing" | "canceling"; environment: "restricted" | "production"; dpsId: string; accessKey: string | null };
+/**
+ * Razão social, município e ISS da clínica, para a nota simulada (F11.4b): a
+ * Recepção emite, mas não lê os dados fiscais; a Receita de verdade tira esses
+ * dados do cadastro dela.
+ */
+export async function readFiscalPrestador(
+  clinicId: string,
+  env: ServiceEnv = platformEnv(),
+): Promise<{ legalName: string; municipalityIbge: string; issRate: number } | null> {
+  const { data, error } = await platformClient(env).from("clinic_fiscal_settings").select("legal_name, municipality_ibge, iss_rate").eq("clinic_id", clinicId).maybeSingle();
+  if (error) throw new PlatformLookupError("dados fiscais da clínica", error);
+  return data ? { legalName: data.legal_name, municipalityIbge: data.municipality_ibge, issRate: Number(data.iss_rate) } : null;
+}
+
+export type PendingNfse = { invoiceId: string; clinicId: string; status: "issuing" | "canceling"; environment: "restricted" | "production" | "simulation"; dpsId: string; accessKey: string | null };
 
 /** Notas "emitindo" ou "cancelando" pedidas antes de `before`. */
 export async function listPendingNfse(before: Date, env: ServiceEnv = platformEnv()): Promise<PendingNfse[]> {
