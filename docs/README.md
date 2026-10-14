@@ -65,7 +65,10 @@
 >     a nota sai do próprio servidor, sem a Receita, com o selo "simulada". Para o Teste 3, três
 >     certificados fictícios (senha `teste123`) na Área de Trabalho do cliente, pasta
 >     `certificados-teste-recepclinic`; no T3.1, CNPJ fictício 11.222.333/0001-81. Detalhes no
->     [plano](plano.md) e na parte M do [`staging.md`](staging.md).
+>     [plano](plano.md) e na parte M do [`staging.md`](staging.md). Migração aplicada no staging
+>     e código publicado (13/out). **Fim da sessão de 13/out:** o cliente segue o roteiro **a
+>     partir do T3.1** na próxima sessão (T0 a T2 já feitos); antes, pôr `NFSE_SIMULATION=1` (e
+>     `WHATSAPP_APP_ID`) na Vercel e fazer um Redeploy.
 >     **Retomar daqui:** o cliente está testando a F11 inteira pelo roteiro no claude.ai
 >     ([Roteiro de testes do Módulo financeiro](https://claude.ai/code/artifact/f7a032e3-c6f4-4e13-8fa1-f6d6e61afbcb),
 >     passos T0.1 a T7.3 e folha de anotações) e traz os pontos para correção. Pelo roteiro: a F11.4
