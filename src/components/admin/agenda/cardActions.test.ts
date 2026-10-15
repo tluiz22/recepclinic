@@ -53,7 +53,7 @@ describe("cardActions", () => {
   });
 
   it("confirmado pelo lembrete: Confirmar presença continua, mas no Mais", () => {
-    const r = layout(input({}, { reminderResponse: "confirm" }));
+    const r = layout(input({}, { reminderResponse: "confirmed" }));
     expect(r.primary).toBeUndefined();
     expect(r.more).toContain("Confirmar presença");
     expect(r.visible).toEqual(["Remarcar", "Pagamento"]);
@@ -136,7 +136,7 @@ describe("countSituations", () => {
   it("conta cada situação do dia e os bloqueios", () => {
     const base = { status: "scheduled" as const, patientConfirmedAt: null, reminderResponse: null };
     const counts = countSituations(
-      [base, base, { ...base, reminderResponse: "confirm" }, { ...base, status: "completed" }, { ...base, status: "no_show" }, { ...base, status: "canceled" }],
+      [base, base, { ...base, reminderResponse: "confirmed" }, { ...base, status: "completed" }, { ...base, status: "no_show" }, { ...base, status: "canceled" }],
       2,
     );
     expect(counts).toEqual({ pending: 2, confirmed: 1, attended: 1, no_show: 1, canceled: 1, block: 2 });

@@ -5,6 +5,7 @@
 // o selo sempre com ícone e texto.
 import type { IconName } from "../Icon.astro";
 import type { AgendaAppointment } from "../../../lib/data/agenda/view";
+import { confirmedByReminder } from "../../../lib/reminderResponse";
 
 export type Situation = "pending" | "confirmed" | "attended" | "no_show" | "canceled" | "block";
 
@@ -13,7 +14,7 @@ export function appointmentSituation(a: Pick<AgendaAppointment, "status" | "pati
   if (a.status === "canceled") return "canceled";
   if (a.status === "completed") return "attended";
   if (a.status === "no_show") return "no_show";
-  return a.patientConfirmedAt || a.reminderResponse === "confirm" ? "confirmed" : "pending";
+  return a.patientConfirmedAt || confirmedByReminder(a.reminderResponse) ? "confirmed" : "pending";
 }
 
 type SituationStyle = {

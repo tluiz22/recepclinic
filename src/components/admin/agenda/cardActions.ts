@@ -12,6 +12,7 @@ import type { IconName } from "../Icon.astro";
 import type { AgendaAppointment } from "../../../lib/data/agenda/view";
 import { canReceivePayment, type PaymentState } from "../../../lib/data/payments";
 import type { ReminderAction } from "../../../lib/data/whatsapp/reminders";
+import { confirmedByReminder } from "../../../lib/reminderResponse";
 import { withReturn } from "../../../lib/returnPath";
 
 export type CardAction =
@@ -74,7 +75,7 @@ export function cardActions(input: CardActionInput): CardActions {
         confirm: "Confirmar presença",
       };
       // O lembrete respondido com "confirmo" já garante o atendimento (10/out).
-      if (a.reminderResponse === "confirm") result.more.push(confirmPresence);
+      if (confirmedByReminder(a.reminderResponse)) result.more.push(confirmPresence);
       else result.primary = confirmPresence;
     }
   }

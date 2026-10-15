@@ -12,6 +12,7 @@ import { formatAge } from "../../../lib/age";
 import { formatInstant } from "../../../lib/clinicTime";
 import type { AgendaAppointment } from "../../../lib/data/agenda/view";
 import { actorText, type ActorLabel } from "../../../lib/data/agenda/trail";
+import { confirmedByReminder } from "../../../lib/reminderResponse";
 import { capitalize, type Vocabulary } from "../../../lib/vocabulary";
 
 interface Props {
@@ -70,8 +71,8 @@ const canceled = appointments.filter((a) => a.status === "canceled");
               {a.status === "completed" && <Badge variant="success">Compareceu</Badge>}
               {a.status === "no_show" && <Badge variant="danger">Faltou</Badge>}
               {isActive && a.patientConfirmedAt && <Badge variant="success">Presença confirmada ✓</Badge>}
-              {isActive && !a.patientConfirmedAt && a.reminderResponse === "confirm" && <Badge variant="success">Confirmou pelo lembrete</Badge>}
-              {isActive && !a.patientConfirmedAt && a.reminderResponse !== "confirm" && a.scheduledAt > now && <Badge variant="warning">Presença não confirmada</Badge>}
+              {isActive && !a.patientConfirmedAt && confirmedByReminder(a.reminderResponse) && <Badge variant="success">Confirmou pelo lembrete</Badge>}
+              {isActive && !a.patientConfirmedAt && !confirmedByReminder(a.reminderResponse) && a.scheduledAt > now && <Badge variant="warning">Presença não confirmada</Badge>}
             </div>
           </div>
         </Card>

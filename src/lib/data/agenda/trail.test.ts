@@ -42,7 +42,9 @@ describe("trilha do atendimento (F4.8)", () => {
 });
 
 it("grupo do lembrete: botão tocado; sem toque, entregue ou não", () => {
-  expect(reminderGroup("confirm", "read")).toBe("confirm");
+  expect(reminderGroup("confirmed", "read")).toBe("confirm");
+  // O valor do botão não é o que o banco guarda (15/out/2026).
+  expect(reminderGroup("confirm", "read")).toBe("no_answer");
   expect(reminderGroup("cancel", null)).toBe("cancel");
   expect(reminderGroup(null, "delivered")).toBe("no_answer");
   expect(reminderGroup(null, "failed")).toBe("not_delivered");

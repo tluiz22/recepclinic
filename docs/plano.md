@@ -1917,8 +1917,10 @@ Métricas · R8 Financeiro e DMED · R9 Configurações · R10 Sistema e Acesso 
   sombra na borda, lista única por horário no celular), cartão novo (`cardActions.ts`, tabela do
   canvas, testada) e Semana/Mês/busca com o cabeçalho e as cores novas. As outras telas mantêm o azul
   até a etapa delas (cliente, 15/out). O Resumo do Dia herda o cartão e as cores de situação.
-- Encontrado e **não corrigido** (fora do redesign): o toque em "confirmo" no lembrete grava
-  `reminder_response = 'confirmed'`, mas a Agenda, o Resumo e `daily.ts` comparam com `"confirm"`.
+- **Corrigido em 15/out** (antes da R3, cliente): o toque em "confirmo" no lembrete grava
+  `reminder_response = 'confirmed'`, mas a Agenda, o Resumo e `daily.ts` comparavam com `"confirm"`
+  (Lembretes punha quem confirmou em "Não responderam"). Regra única em `src/lib/reminderResponse.ts`,
+  com teste de banco em `painel-base.test.ts`.
 
 ## Depois do 1º piloto (já previsto no banco)
 

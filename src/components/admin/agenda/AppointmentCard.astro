@@ -20,6 +20,7 @@ import { formatInstant } from "../../../lib/clinicTime";
 import type { AgendaAppointment, NoShowStats, OriginInfo } from "../../../lib/data/agenda/view";
 import type { PaymentState } from "../../../lib/data/payments";
 import type { ReminderAction } from "../../../lib/data/whatsapp/reminders";
+import { confirmedByReminder } from "../../../lib/reminderResponse";
 import { capitalize, type Vocabulary } from "../../../lib/vocabulary";
 
 interface Props {
@@ -86,7 +87,7 @@ const reminderSignal: Record<ReminderAction, { label: string; tone: SignalTone }
 };
 const signals: { label: string; tone: SignalTone; icon: IconName }[] = [];
 if (isActive && !isPast && a.patientConfirmedAt) signals.push({ label: "Presença confirmada pela recepção", tone: "success", icon: "check" });
-else if (isActive && !isPast && a.reminderResponse === "confirm") signals.push({ label: "Confirmou pelo lembrete", tone: "success", icon: "check" });
+else if (isActive && !isPast && confirmedByReminder(a.reminderResponse)) signals.push({ label: "Confirmou pelo lembrete", tone: "success", icon: "check" });
 if (reminderAction) signals.push({ ...reminderSignal[reminderAction], icon: "paper-airplane" });
 if (preparationResendable) signals.push({ label: "Preparo não entregue", tone: "warning", icon: "paper-airplane" });
 if (guidanceResendable) signals.push({ label: "Orientações não entregues", tone: "warning", icon: "paper-airplane" });

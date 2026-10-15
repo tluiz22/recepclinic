@@ -4,6 +4,7 @@ import { unwrap, unwrapOne } from "./errors";
 import { findBlockingAppointment, listUpcomingAppointments, logTrail } from "./agenda/appointments";
 import { AGENDA_COLUMNS, toAgendaAppointment, type AgendaAppointment, type AgendaRow } from "./agenda/view";
 import { REMINDER_MESSAGE_TYPE } from "./whatsapp/reminders";
+import { confirmedByReminder } from "../reminderResponse";
 
 // Resumo do Dia (F4.8): as abas do dia a dia, como no piloto, no banco novo.
 // Tudo das agendas que o login vê (RLS).
@@ -24,9 +25,13 @@ export const REMINDER_GROUP_LABELS: Record<ReminderGroup, string> = {
 
 const NOT_DELIVERED = new Set(["failed", "skipped_no_template"]);
 
-/** Em que grupo fica o atendimento: o botão tocado; sem toque, se a última tentativa não chegou. */
+/**
+ * Em que grupo fica o atendimento: o botão tocado (o banco guarda "confirmed"
+ * para o "confirm"); sem toque, se a última tentativa não chegou.
+ */
 export function reminderGroup(response: string | null, lastStatus: string | null): ReminderGroup {
-  if (response === "confirm" || response === "reschedule" || response === "cancel") return response;
+  if (confirmedByReminder(response)) return "confirm";
+  if (response === "reschedule" || response === "cancel") return response;
   return NOT_DELIVERED.has(lastStatus ?? "") ? "not_delivered" : "no_answer";
 }
 

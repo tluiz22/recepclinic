@@ -10,7 +10,7 @@ describe("appointmentSituation", () => {
   });
   it("presença confirmada ou confirmada pelo lembrete é confirmado", () => {
     expect(appointmentSituation({ ...base, patientConfirmedAt: new Date() })).toBe("confirmed");
-    expect(appointmentSituation({ ...base, reminderResponse: "confirm" })).toBe("confirmed");
+    expect(appointmentSituation({ ...base, reminderResponse: "confirmed" })).toBe("confirmed");
   });
   it("cancelado, compareceu e faltou vêm da situação do atendimento", () => {
     expect(appointmentSituation({ ...base, status: "canceled", patientConfirmedAt: new Date() })).toBe("canceled");

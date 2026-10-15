@@ -6,6 +6,7 @@ import type { DbClient } from "../../src/lib/data/clients";
 import { listSelectableClinics } from "../../src/lib/data/clinicChoice";
 import { loadClinicContext } from "../../src/lib/data/clinicContext";
 import { getDashboardCounts } from "../../src/lib/data/dashboard";
+import { listRemindersOfDay } from "../../src/lib/data/daily";
 import { recordOutboundMessage } from "../../src/lib/data/whatsapp/messages";
 import { addMember, adminClient, anonClient, createClinic, createUser, deleteClinics, deleteUsers, makePlatformStaff, type TestUser } from "./helpers";
 import { asDb, at, codeOf, MON1, NOW, setupAgendaClinic, type AgendaFixture } from "./agendaFixture";
@@ -125,5 +126,8 @@ describe("tela inicial", () => {
     });
     await adminClient().from("appointments").update({ reminder_response: "confirmed", reminder_response_at: at(MON1, "07:30").toISOString() }).eq("id", c1);
     expect((await getDashboardCounts(asDb(reception), clinicId, "America/Fortaleza", at(MON1, "12:00"))).unansweredReminders).toBe(0);
+    // Resumo › Lembretes: quem tocou em "confirmo" fica em "Confirmaram" (o banco guarda "confirmed"; 15/out/2026).
+    const reminders = await listRemindersOfDay(asDb(reception), clinicId, MON1, "America/Fortaleza");
+    expect(reminders.map((r) => [r.appointment.id, r.group])).toEqual([[c1, "confirm"]]);
   });
 });
