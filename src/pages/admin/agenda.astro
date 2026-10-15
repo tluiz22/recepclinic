@@ -6,14 +6,16 @@ import { withReturn } from "../../lib/returnPath";
 import AdminLayout from "../../layouts/AdminLayout.astro";
 import AgendaHeader from "../../components/admin/agenda/AgendaHeader.astro";
 import AppointmentCard from "../../components/admin/agenda/AppointmentCard.astro";
-import Badge from "../../components/admin/Badge.astro";
-import Card from "../../components/admin/Card.astro";
 import ConfirmDeleteDialog from "../../components/admin/ConfirmDeleteDialog.astro";
 import SituationLegend from "../../components/admin/agenda/SituationLegend.astro";
-import { SITUATIONS } from "../../components/admin/agenda/situationStyle";
+import { countSituations } from "../../components/admin/agenda/situationStyle";
 import FlashMessage from "../../components/admin/FlashMessage.astro";
 import Icon from "../../components/admin/Icon.astro";
-import { addDays, formatCalendarDate, formatInstant, isCalendarDate, todayIn } from "../../lib/clinicTime";
+import Button from "../../components/admin/ui/Button.astro";
+import StatusPill from "../../components/admin/ui/StatusPill.astro";
+import Tag from "../../components/admin/ui/Tag.astro";
+import { CONTROL } from "../../components/admin/ui/styles";
+import { addDays, formatCalendarDate, formatInstant, isCalendarDate, localDateOf, todayIn } from "../../lib/clinicTime";
 import { canAccessArea } from "../../lib/clinicAccess";
 import { createUserClient } from "../../lib/data/clients";
 import { loadAgendaScope } from "../../lib/data/agenda/scope";
@@ -66,12 +68,25 @@ const columns = byColumn
       .filter((column) => column.isActive || column.items.length > 0)
   : [{ id: scope.selectedAgendaId ?? "", name: "", isActive: true, items }];
 const returnTo = `/admin/agenda?date=${date}`;
+// Celular com "Todas as agendas": lista única por horário, com o nome da agenda
+// em cada cartão (cliente, 15/out/2026). As colunas viram uma lista só e cada
+// item leva a posição dele no dia (a lista `items` já vem por horário).
+const orderOf = (item: (typeof items)[number]) => (byColumn ? items.indexOf(item) : undefined);
+const counts = countSituations(appointments, blocks.length);
+const activeCount = appointments.filter((a) => a.status !== "canceled").length;
+const subtitle = [
+  formatCalendarDate(date, "EEEE, d 'de' MMMM 'de' yyyy"),
+  `${activeCount} ${activeCount === 1 ? "atendimento" : "atendimentos"}${byColumn ? ` em ${columns.length} agendas` : ""}`,
+].join(" · ");
+// Bloqueio de vários dias: data junto do horário quando não é o dia aberto.
+const blockTime = (d: Date) => formatInstant(d, clinic.timezone, localDateOf(d, clinic.timezone) === date ? "HH:mm" : "dd/MM HH:mm");
 const time = (d: Date) => formatInstant(d, clinic.timezone, "HH:mm");
 const cardProps = (a: (typeof appointments)[number]) => ({
   appointment: a,
   timeZone: clinic.timezone,
   now,
   showAgenda: false,
+  agendaOnPhone: byColumn,
   vocabulary,
   returnTo,
   reminderAction: reminderActions.get(a.id),
@@ -85,113 +100,152 @@ const cardProps = (a: (typeof appointments)[number]) => ({
 });
 ---
 
-<AdminLayout title="Agenda">
-  <AgendaHeader view="dia" date={date} agendas={scope.selectable} selectedAgendaId={scope.selectedAgendaId} />
-
-  <form method="GET" action="/admin/agenda" class="mt-4 flex items-center gap-1 rounded-lg border border-slate-200 bg-white p-2 sm:inline-flex">
-    <a href={`/admin/agenda?date=${addDays(date, -1)}`} aria-label="Dia anterior" class="rounded-md p-2 text-slate-500 hover:bg-slate-100 hover:text-sky-700">
-      <Icon name="chevron-left" class="h-5 w-5" />
-    </a>
-    <input type="date" name="date" value={date} aria-label="Data" data-autosubmit class="min-w-0 flex-1 rounded-md border border-slate-300 px-3 py-2 text-sm sm:flex-none" />
-    <a href={`/admin/agenda?date=${addDays(date, 1)}`} aria-label="Próximo dia" class="rounded-md p-2 text-slate-500 hover:bg-slate-100 hover:text-sky-700">
-      <Icon name="chevron-right" class="h-5 w-5" />
-    </a>
-    {
-      date !== today && (
-        <a href="/admin/agenda" class="ml-1 shrink-0 rounded-md border border-slate-300 px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50">
+<AdminLayout title="Agenda" wide>
+  <AgendaHeader view="dia" date={date} agendas={scope.selectable} selectedAgendaId={scope.selectedAgendaId} subtitle={subtitle}>
+    <form slot="nav" method="GET" action="/admin/agenda" class="flex items-center gap-1.5 sm:gap-1">
+      <Button href={`/admin/agenda?date=${addDays(date, -1)}`} aria-label="Dia anterior" class="w-11 px-0 sm:w-10">
+        <Icon name="chevron-left" class="h-5 w-5 shrink-0" strokeWidth={2.2} />
+      </Button>
+      <input type="date" name="date" value={date} aria-label="Data" data-autosubmit class={`${CONTROL} min-w-0 flex-1 sm:w-40 sm:flex-none`} />
+      <Button href={`/admin/agenda?date=${addDays(date, 1)}`} aria-label="Próximo dia" class="w-11 px-0 sm:w-10">
+        <Icon name="chevron-right" class="h-5 w-5 shrink-0" strokeWidth={2.2} />
+      </Button>
+      {date !== today && (
+        <Button variant="quiet" href="/admin/agenda">
           Hoje
-        </a>
-      )
-    }
-  </form>
-  <p class="mt-2 text-sm text-slate-600 first-letter:uppercase">{formatCalendarDate(date, "EEEE, d 'de' MMMM 'de' yyyy")}</p>
-  <SituationLegend />
+        </Button>
+      )}
+    </form>
+  </AgendaHeader>
+
   <FlashMessage />
+  <SituationLegend counts={counts} class="mt-4" />
 
   {
     byColumn && (
-      <div data-columns-top class="-mx-4 mt-4 overflow-x-auto px-4" aria-hidden="true">
+      <div data-columns-top class="mt-4 hidden overflow-x-auto sm:block" aria-hidden="true">
         <div data-columns-top-inner class="h-px" />
       </div>
     )
   }
-  <div data-columns class={byColumn ? "-mx-4 mt-1 flex gap-3 overflow-x-auto px-4 pb-2" : "mt-4"}>
-    {
-      columns.map((column) => (
-        <section class={byColumn ? "flex w-80 shrink-0 flex-col gap-3" : "flex flex-col gap-3"}>
-          {byColumn && <h2 class="rounded-md bg-slate-100 px-3 py-2 text-sm font-semibold text-slate-800">{column.name}</h2>}
-    {
-      column.items.map((item) =>
-        item.kind === "appointment" ? (
-          <AppointmentCard {...cardProps(item.appointment)} />
-        ) : item.kind === "group" ? (
-          <Card>
-            <div class="flex flex-wrap items-center justify-between gap-2">
-              <span class="text-base font-semibold text-slate-900">
-                {time(item.start)} – {time(item.end)}
-              </span>
-              <Badge variant="warning">Turma</Badge>
-            </div>
-            <p class="mt-2 text-sm font-medium text-slate-900">
-              {item.serviceName} · {item.appointments.filter((a) => a.status !== "canceled").length} {vocabulary.patients}
-            </p>
-            <p class="text-sm text-slate-500">
-              {item.locationName}
-            </p>
-            <div class="mt-3 flex flex-col gap-2">
-              {item.appointments.map((a) => (
-                <AppointmentCard {...cardProps(a)} compact />
-              ))}
-            </div>
-          </Card>
-        ) : (
-          <Card class={SITUATIONS.block.card}>
-            <div class="flex flex-wrap items-center justify-between gap-2">
-              <span class="text-base font-semibold text-slate-900">
-                {formatInstant(item.start, clinic.timezone, "dd/MM HH:mm")} – {formatInstant(item.end, clinic.timezone, "dd/MM HH:mm")}
-              </span>
-              <Badge variant="strong">Bloqueio</Badge>
-            </div>
-            <p class="mt-2 text-sm text-slate-600">{item.block.reason}</p>
-            <div class="mt-3 flex flex-wrap gap-2 border-t border-slate-100 pt-3">
-              <a href={withReturn(`/admin/agenda/bloqueios/${item.block.id}`, returnTo)} class="inline-flex items-center gap-1 rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50">
-                Editar
-              </a>
-              <form method="POST" action={`/api/admin/agenda/bloqueios/${item.block.id}`}>
-                <input type="hidden" name="acao" value="remover" />
-                <input type="hidden" name="return_to" value={returnTo} />
-                <button
-                  type="submit"
-                  class="js-confirm-delete inline-flex items-center gap-1 rounded-md border border-red-300 bg-white px-2.5 py-1.5 text-xs font-semibold text-red-700 hover:bg-red-50"
-                  data-confirm-title="Remover o bloqueio?"
-                  data-confirm-message={`${item.block.reason}. Os horários voltam a ser oferecidos.`}
-                  data-confirm-label="Remover"
-                >
-                  Remover
-                </button>
-              </form>
-            </div>
-          </Card>
-        ),
-      )
-    }
-          {column.items.length === 0 && <Card class="text-center text-sm text-slate-500">{byColumn ? "Nenhum atendimento." : "Nenhum atendimento neste dia."}</Card>}
-        </section>
-      ))
-    }
+  <div data-columns-frame class={`relative ${byColumn ? "mt-1 sm:mt-1" : "mt-4"}`}>
+    <div
+      data-columns
+      class={byColumn
+        ? "flex flex-col gap-2.5 pb-2 sm:grid sm:auto-cols-[minmax(270px,1fr)] sm:grid-flow-col sm:items-start sm:gap-4 sm:overflow-x-auto"
+        : "flex max-w-3xl flex-col gap-2.5 pb-2"}
+    >
+      {
+        columns.map((column) => (
+          <section class={byColumn ? "flex min-w-0 flex-col gap-2.5 max-sm:contents" : "contents"} aria-label={byColumn ? column.name : undefined}>
+            {byColumn && (
+              <div class="hidden items-baseline justify-between gap-2 border-b-2 border-line px-0.5 pt-1 pb-1.5 sm:flex">
+                <h2 class="truncate text-base leading-snug font-bold text-ink">{column.name}</h2>
+                <span class="text-[13px] whitespace-nowrap text-ink-soft">
+                  {(() => {
+                    // Como no título do dia: o cancelado não conta.
+                    const live = (a: { status: string }) => (a.status === "canceled" ? 0 : 1);
+                    const n = column.items.reduce((sum, item) => sum + (item.kind === "appointment" ? live(item.appointment) : item.kind === "group" ? item.appointments.reduce((t, a) => t + live(a), 0) : 0), 0);
+                    const b = column.items.filter((item) => item.kind === "block").length;
+                    return [n > 0 || b === 0 ? `${n} ${n === 1 ? "atendimento" : "atendimentos"}` : "", b > 0 ? `${b} ${b === 1 ? "bloqueio" : "bloqueios"}` : ""].filter(Boolean).join(" · ");
+                  })()}
+                </span>
+              </div>
+            )}
+            {column.items.map((item) =>
+              item.kind === "appointment" ? (
+                <AppointmentCard {...cardProps(item.appointment)} order={orderOf(item)} />
+              ) : item.kind === "group" ? (
+                <article class="flex min-w-0 flex-col gap-1.5 rounded-xl border border-line bg-white px-3 pt-3 pb-2.5" style={orderOf(item) !== undefined ? `order: ${orderOf(item)}` : undefined}>
+                  <div class="flex items-center justify-between gap-2">
+                    <span class="text-base leading-tight font-bold whitespace-nowrap text-ink tabular-nums">
+                      {time(item.start)} – {time(item.end)}
+                    </span>
+                    <span class="inline-flex items-center rounded-md bg-[#f6e6da] px-1.5 text-[13px] leading-normal font-semibold text-[#7a3d12]">Turma</span>
+                  </div>
+                  <p class="text-[15px] font-semibold text-ink">
+                    {item.serviceName} · {item.appointments.filter((a) => a.status !== "canceled").length} {vocabulary.patients}
+                  </p>
+                  <div class="flex flex-wrap gap-1.5">
+                    {byColumn && <Tag strong class="sm:hidden">{item.agendaName}</Tag>}
+                    <Tag>{item.locationName}</Tag>
+                  </div>
+                  <div class="mt-1 flex flex-col gap-1.5">
+                    {item.appointments.map((a) => (
+                      <AppointmentCard {...cardProps(a)} compact />
+                    ))}
+                  </div>
+                </article>
+              ) : (
+                <article class="flex min-w-0 flex-col gap-1.5 rounded-xl border border-blk-200 border-l-[5px] border-l-blk-500 bg-blk-50 px-3 pt-3 pb-2.5" style={orderOf(item) !== undefined ? `order: ${orderOf(item)}` : undefined}>
+                  <div class="flex items-center justify-between gap-2">
+                    <span class="text-base leading-tight font-bold whitespace-nowrap text-ink tabular-nums">
+                      {blockTime(item.start)} – {blockTime(item.end)}
+                    </span>
+                    <StatusPill situation="block" />
+                  </div>
+                  <p class="text-[15px] text-blk-800">{item.block.reason}</p>
+                  {byColumn && (
+                    <div class="flex flex-wrap gap-1.5 sm:hidden">
+                      <Tag strong>{item.agendaName}</Tag>
+                    </div>
+                  )}
+                  <div class="mt-0.5 flex items-center justify-between gap-1.5 border-t border-ink/10 pt-2.5 sm:pt-2">
+                    <Button size="sm" href={withReturn(`/admin/agenda/bloqueios/${item.block.id}`, returnTo)}>
+                      Editar
+                    </Button>
+                    <form method="POST" action={`/api/admin/agenda/bloqueios/${item.block.id}`} class="contents">
+                      <input type="hidden" name="acao" value="remover" />
+                      <input type="hidden" name="return_to" value={returnTo} />
+                      <Button
+                        type="submit"
+                        size="sm"
+                        variant="danger-quiet"
+                        class="js-confirm-delete"
+                        data-confirm-title="Remover o bloqueio?"
+                        data-confirm-message={`${item.block.reason}. Os horários voltam a ser oferecidos.`}
+                        data-confirm-label="Remover"
+                      >
+                        Remover
+                      </Button>
+                    </form>
+                  </div>
+                </article>
+              ),
+            )}
+            {column.items.length === 0 && (
+              <p class={`rounded-xl border border-dashed border-line-strong px-3 py-5 text-center text-[15px] text-ink-soft ${byColumn ? "hidden sm:block" : ""}`}>
+                {byColumn ? "Nenhum atendimento." : "Nenhum atendimento neste dia."}
+              </p>
+            )}
+          </section>
+        ))
+      }
+      {byColumn && items.length === 0 && (
+        <p class="rounded-xl border border-dashed border-line-strong px-3 py-5 text-center text-[15px] text-ink-soft sm:hidden">Nenhum atendimento neste dia.</p>
+      )}
+    </div>
   </div>
   <ConfirmDeleteDialog />
 
   <script>
     // Colunas por agenda: uma barra de rolagem também acima dos nomes
-    // (cliente, 05/out/2026), andando junto com a de baixo.
+    // (cliente, 05/out/2026), andando junto com a de baixo, e uma sombra na
+    // borda quando há mais agendas de lado (redesign, 15/out/2026).
     const top = document.querySelector<HTMLElement>("[data-columns-top]");
     const inner = document.querySelector<HTMLElement>("[data-columns-top-inner]");
     const columns = document.querySelector<HTMLElement>("[data-columns]");
-    if (top && inner && columns) {
+    const frame = document.querySelector<HTMLElement>("[data-columns-frame]");
+    if (top && inner && columns && frame) {
+      const edges = () => {
+        const max = columns.scrollWidth - columns.clientWidth;
+        frame.toggleAttribute("data-more-left", columns.scrollLeft > 1);
+        frame.toggleAttribute("data-more-right", columns.scrollLeft < max - 1);
+      };
       const size = () => {
         inner.style.width = `${columns.scrollWidth}px`;
         top.hidden = columns.scrollWidth <= columns.clientWidth;
+        edges();
       };
       let syncing = false;
       const follow = (from: HTMLElement, to: HTMLElement) => () => {
@@ -202,8 +256,36 @@ const cardProps = (a: (typeof appointments)[number]) => ({
       };
       top.addEventListener("scroll", follow(top, columns));
       columns.addEventListener("scroll", follow(columns, top));
+      columns.addEventListener("scroll", edges, { passive: true });
       new ResizeObserver(size).observe(columns);
       size();
     }
   </script>
+
+  <style>
+    [data-columns-frame]::before,
+    [data-columns-frame]::after {
+      content: "";
+      position: absolute;
+      top: 0;
+      bottom: 0.5rem;
+      width: 24px;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 150ms;
+      z-index: 1;
+    }
+    [data-columns-frame]::before {
+      left: 0;
+      background: linear-gradient(to right, rgb(18 48 42 / 0.12), transparent);
+    }
+    [data-columns-frame]::after {
+      right: 0;
+      background: linear-gradient(to left, rgb(18 48 42 / 0.12), transparent);
+    }
+    [data-columns-frame][data-more-left]::before,
+    [data-columns-frame][data-more-right]::after {
+      opacity: 1;
+    }
+  </style>
 </AdminLayout>

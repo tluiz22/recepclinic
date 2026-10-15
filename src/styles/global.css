@@ -1,1 +1,64 @@
 @import "tailwindcss";
+
+/*
+ * Redesign do painel, R0 (cliente, 15/out/2026): a marca do site no painel.
+ * Verde #0B7A62, Bricolage Grotesque nos títulos e números e Source Sans 3 no
+ * texto (fontes do próprio servidor, por causa da CSP). As cores de situação
+ * da Agenda (10/out) seguem as do canvas aprovado e sempre vêm com ícone e
+ * texto. As telas ainda não redesenhadas continuam nas cores do Tailwind.
+ */
+@theme {
+  --font-body: "Source Sans 3 Variable", "Source Sans 3", system-ui, sans-serif;
+  --font-display: "Bricolage Grotesque Variable", "Bricolage Grotesque", system-ui, sans-serif;
+
+  /* Marca e interface */
+  --color-brand: #0b7a62;
+  --color-brand-strong: #08634f;
+  --color-brand-soft: #dcefe8;
+  --color-brand-ink: #0a5c4a;
+  --color-ink: #12302a;
+  --color-ink-mid: #34504a;
+  --color-ink-soft: #4e635d;
+  --color-line: #d6e0dc;
+  --color-line-strong: #c5d3ce;
+  --color-canvas: #f3f6f5;
+  --color-canvas-deep: #e7eeeb;
+  --color-danger: #a3261c;
+  --color-danger-line: #e7b7b2;
+  --color-danger-solid: #b42d22;
+  --color-danger-solid-strong: #93241b;
+  --color-whatsapp: #1e8a4a;
+  --color-whatsapp-ink: #135530;
+
+  /* Situação: fundo do cartão (50), borda (200), faixa (500), selo (100) e texto (800) */
+  --color-pend-50: #fffaf0;
+  --color-pend-100: #fdf0cc;
+  --color-pend-200: #f1dfae;
+  --color-pend-500: #e0a106;
+  --color-pend-800: #6e4500;
+  --color-conf-50: #f3fbf6;
+  --color-conf-100: #d9f0e1;
+  --color-conf-200: #bfe3cc;
+  --color-conf-500: #1e8a4a;
+  --color-conf-800: #135530;
+  --color-att-50: #f4f8fd;
+  --color-att-100: #dde9f7;
+  --color-att-200: #c7daf0;
+  --color-att-500: #3a7bc8;
+  --color-att-800: #1a477c;
+  --color-ns-50: #fff7f0;
+  --color-ns-100: #fbe0cb;
+  --color-ns-200: #f3cfb2;
+  --color-ns-500: #d0620f;
+  --color-ns-800: #7f3505;
+  --color-can-50: #fdf3f2;
+  --color-can-100: #f8dcd9;
+  --color-can-200: #efc6c2;
+  --color-can-500: #c8382c;
+  --color-can-800: #861d15;
+  --color-blk-50: #f1f4f3;
+  --color-blk-100: #e3e8e6;
+  --color-blk-200: #d3dbd8;
+  --color-blk-500: #7d8b87;
+  --color-blk-800: #3a4744;
+}

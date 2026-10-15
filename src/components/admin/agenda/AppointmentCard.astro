@@ -1,19 +1,24 @@
 ---
-// Cartão de um atendimento na Agenda (F4.5). Formato escolhido pelo cliente
-// (05/out/2026): em cima, a informação e os selos da situação (nunca
-// clicáveis); embaixo, uma fileira de botões iguais, com ícone. Toda ação
-// pede confirmação antes (cliente, 05/out: cliques sem querer); Remarcar só
-// abre a tela, e a confirmação fica no botão final de lá. Todas as ações vão
-// para a mesma rota, com `acao`, e voltam para a tela de onde saíram.
+// Cartão de um atendimento na Agenda (F4.5), redesenhado na R2 (cliente,
+// 15/out/2026): horário e selo da situação, paciente, contato, etiquetas
+// neutras e sinais (nunca clicáveis); embaixo, uma ação principal cheia, as
+// frequentes com borda, as raras no "Mais" e o cancelamento à parte, à
+// direita (ver cardActions.ts). Toda ação pede confirmação (05/out); Remarcar
+// e Pagamento só abrem a tela, e a confirmação fica lá. As ações vão para a
+// mesma rota, com `acao`, e voltam para a tela de onde saíram.
 import { withReturn } from "../../../lib/returnPath";
-import Badge, { type BadgeVariant } from "../Badge.astro";
-import Card from "../Card.astro";
-import Icon, { type IconName } from "../Icon.astro";
 import PhoneLinks from "../PhoneLinks.astro";
-import { CANCELED_TEXT, situationCard } from "./situationStyle";
+import MoreMenu from "../ui/MoreMenu.astro";
+import Signal, { type SignalTone } from "../ui/Signal.astro";
+import StatusPill from "../ui/StatusPill.astro";
+import Tag from "../ui/Tag.astro";
+import type { IconName } from "../Icon.astro";
+import CardActionButton from "./CardActionButton.astro";
+import { cardActions } from "./cardActions";
+import { CANCELED_TEXT, SITUATIONS, appointmentSituation } from "./situationStyle";
 import { formatInstant } from "../../../lib/clinicTime";
 import type { AgendaAppointment, NoShowStats, OriginInfo } from "../../../lib/data/agenda/view";
-import { canReceivePayment, type PaymentState } from "../../../lib/data/payments";
+import type { PaymentState } from "../../../lib/data/payments";
 import type { ReminderAction } from "../../../lib/data/whatsapp/reminders";
 import { capitalize, type Vocabulary } from "../../../lib/vocabulary";
 
@@ -22,6 +27,8 @@ interface Props {
   timeZone: string;
   now: Date;
   showAgenda: boolean;
+  /** Nome da agenda só no celular (lista única do dia; cliente, 15/out/2026). */
+  agendaOnPhone?: boolean;
   vocabulary: Vocabulary;
   returnTo: string;
   reminderAction?: ReminderAction;
@@ -40,6 +47,8 @@ interface Props {
    * desligado ou papel sem acesso), nem o selo nem o botão "Pagamento".
    */
   payment?: PaymentState;
+  /** Posição na lista única do celular (ordem por horário). */
+  order?: number;
 }
 
 const {
@@ -47,6 +56,7 @@ const {
   timeZone,
   now,
   showAgenda,
+  agendaOnPhone = false,
   vocabulary,
   returnTo,
   reminderAction,
@@ -58,237 +68,184 @@ const {
   compact = false,
   origin,
   payment,
+  order,
 } = Astro.props;
-const action = `/api/admin/agenda/atendimentos/${a.id}`;
+const endpoint = `/api/admin/agenda/atendimentos/${a.id}`;
 const time = (d: Date) => formatInstant(d, timeZone, "HH:mm");
 const isActive = a.status === "scheduled" || a.status === "confirmed";
 const isPast = a.scheduledAt.getTime() <= now.getTime();
+const isCanceled = a.status === "canceled";
+const situation = appointmentSituation(a);
 const who = `${a.patientName}, ${formatInstant(a.scheduledAt, timeZone, "dd/MM 'às' HH:mm")}`;
 
-const categoryVariant: Record<string, BadgeVariant> = { consultation: "info", return_visit: "accent", exam: "warning" };
-const statusBadge: Record<string, { label: string; variant: BadgeVariant } | undefined> = {
-  canceled: { label: "Cancelado", variant: "danger" },
-  completed: { label: "Compareceu", variant: "success" },
-  no_show: { label: "Faltou", variant: "danger" },
+// Sinais (só informação): cor quando pedem ação.
+const reminderSignal: Record<ReminderAction, { label: string; tone: SignalTone }> = {
+  send: { label: "Sem lembrete automático", tone: "neutral" },
+  resend: { label: "Lembrete não entregue", tone: "warning" },
+  resend_unanswered: { label: "Lembrete sem resposta", tone: "warning" },
 };
-const status = statusBadge[a.status];
-const isCanceled = a.status === "canceled";
+const signals: { label: string; tone: SignalTone; icon: IconName }[] = [];
+if (isActive && !isPast && a.patientConfirmedAt) signals.push({ label: "Presença confirmada pela recepção", tone: "success", icon: "check" });
+else if (isActive && !isPast && a.reminderResponse === "confirm") signals.push({ label: "Confirmou pelo lembrete", tone: "success", icon: "check" });
+if (reminderAction) signals.push({ ...reminderSignal[reminderAction], icon: "paper-airplane" });
+if (preparationResendable) signals.push({ label: "Preparo não entregue", tone: "warning", icon: "paper-airplane" });
+if (guidanceResendable) signals.push({ label: "Orientações não entregues", tone: "warning", icon: "paper-airplane" });
+if (onWaitlist) signals.push({ label: "Na lista de espera", tone: "info", icon: "clock" });
+if (isActive && isPast) signals.push({ label: "Já passou: registre o comparecimento", tone: "warning", icon: "clock" });
+if (payment === "paid") signals.push({ label: "Pago", tone: "success", icon: "banknotes" });
+else if (payment === "partial") signals.push({ label: "Pago em parte", tone: "warning", icon: "banknotes" });
 
-// Selos da situação (só informação).
-const reminderBadge: Record<ReminderAction, { label: string; variant: BadgeVariant }> = {
-  send: { label: "Sem lembrete automático", variant: "neutral" },
-  resend: { label: "Lembrete não entregue", variant: "warning" },
-  resend_unanswered: { label: "Lembrete sem resposta", variant: "warning" },
-};
-const situation: { label: string; variant: BadgeVariant }[] = [];
-if (isActive && !isPast && a.patientConfirmedAt) situation.push({ label: "Presença confirmada ✓", variant: "success" });
-else if (isActive && !isPast && a.reminderResponse === "confirm") situation.push({ label: "Confirmou pelo lembrete", variant: "success" });
-if (reminderAction) situation.push(reminderBadge[reminderAction]);
-if (preparationResendable) situation.push({ label: "Preparo não entregue", variant: "warning" });
-if (guidanceResendable) situation.push({ label: "Orientações não entregues", variant: "warning" });
-if (onWaitlist) situation.push({ label: "Na lista de espera", variant: "accent" });
-if (isActive && isPast) situation.push({ label: "Já passou: registre o comparecimento", variant: "warning" });
-if (payment === "paid") situation.push({ label: "Pago", variant: "success" });
-else if (payment === "partial") situation.push({ label: "Pago em parte", variant: "warning" });
-
-// Botões (todos no mesmo formato; vermelho para o que desfaz).
-type Button = { acao: string; label: string; icon: IconName; danger?: boolean; title: string; message: string; confirm: string };
-const buttons: Button[] = [];
-if (isActive && !isPast) {
-  buttons.push(
-    a.patientConfirmedAt
-      ? { acao: "desfazer_presenca", label: "Desfazer presença", icon: "x-mark", title: "Desfazer a presença confirmada?", message: who, confirm: "Desfazer" }
-      : {
-          acao: "confirmar_presenca",
-          label: "Confirmar presença",
-          icon: "check",
-          title: "Confirmar a presença?",
-          message: `${who}. Use quando o ${vocabulary.contact} confirmou por mensagem ou ligação.`,
-          confirm: "Confirmar presença",
-        },
-  );
+const actions = cardActions({
+  appointment: a,
+  now,
+  who,
+  contact: vocabulary.contact,
+  returnTo,
+  reminderAction,
+  preparationResendable,
+  guidanceResendable,
+  waitlistOn,
+  onWaitlist,
+  payment,
+});
+// Na turma, o cartão é menor: Remarcar e Pagamento também vão para o "Mais"
+// e as ações ficam numa linha só.
+if (compact) {
+  const links = actions.visible.filter((x) => x.kind === "link");
+  actions.visible = actions.visible.filter((x) => x.kind !== "link");
+  actions.more = [...links, ...actions.more];
 }
-if (reminderAction) {
-  const label = reminderAction === "send" ? "Enviar lembrete" : "Reenviar lembrete";
-  buttons.push({ acao: "lembrete", label, icon: "paper-airplane", title: `${label}?`, message: `${who}. O lembrete vai pelo WhatsApp.`, confirm: label });
-}
-if (preparationResendable) {
-  buttons.push({
-    acao: "preparo",
-    label: "Reenviar preparo",
-    icon: "paper-airplane",
-    title: "Reenviar o preparo do exame?",
-    message: `${who}. O preparo vai pelo WhatsApp.`,
-    confirm: "Reenviar preparo",
-  });
-}
-if (guidanceResendable) {
-  buttons.push({
-    acao: "orientacoes",
-    label: "Reenviar orientações",
-    icon: "paper-airplane",
-    title: "Reenviar as orientações gerais?",
-    message: `${who}. As orientações vão pelo WhatsApp.`,
-    confirm: "Reenviar orientações",
-  });
-}
-if (waitlistOn && isActive && !isPast && a.seriesId === null) {
-  buttons.push(
-    onWaitlist
-      ? {
-          acao: "sair_lista_espera",
-          label: "Tirar da lista de espera",
-          icon: "clock",
-          danger: true,
-          title: "Tirar da lista de espera?",
-          message: `${who}. Deixa de receber oferta de horário antes.`,
-          confirm: "Tirar da lista",
-        }
-      : {
-          acao: "entrar_lista_espera",
-          label: "Lista de espera",
-          icon: "clock",
-          title: "Pôr na lista de espera?",
-          message: `${who}. Se abrir um horário antes, o ${vocabulary.contact} recebe a oferta para antecipar.`,
-          confirm: "Pôr na lista",
-        },
-  );
-}
-if (isPast && (isActive || a.status === "completed" || a.status === "no_show")) {
-  if (a.status !== "completed") {
-    buttons.push({ acao: "compareceu", label: isActive ? "Compareceu" : "Corrigir: compareceu", icon: "check", title: "Registrar que compareceu?", message: who, confirm: "Compareceu" });
-  }
-  if (a.status !== "no_show") {
-    buttons.push({ acao: "faltou", label: isActive ? "Faltou" : "Corrigir: faltou", icon: "x-mark", danger: true, title: "Registrar a falta?", message: who, confirm: "Faltou" });
-  }
-}
-// Sessão de série: "esta e as próximas" (D9).
-if (a.seriesId !== null && isActive && !isPast) {
-  buttons.push({
-    acao: "encerrar_serie",
-    label: "Encerrar a série",
-    icon: "x-mark",
-    danger: true,
-    title: "Encerrar a série a partir desta sessão?",
-    message: `${who}. Esta sessão e as próximas são canceladas; as que já passaram ficam como estão. O paciente é avisado pelo WhatsApp do cancelamento da primeira.`,
-    confirm: "Encerrar a série",
-  });
-}
-const canReschedule = isActive && !isPast;
-// Pagamento (F11.2): abre a tela própria, como o Remarcar; a confirmação fica lá.
-const showPayment = payment !== undefined && canReceivePayment(a.status);
-const BUTTON = "inline-flex items-center gap-1 rounded-md border bg-white px-2.5 py-1.5 text-xs font-semibold";
-const tone = (danger?: boolean) => (danger ? "border-red-300 text-red-700 hover:bg-red-50" : "border-slate-300 text-slate-700 hover:bg-slate-50");
+const hasActions = Boolean(actions.primary || actions.visible.length || actions.more.length || actions.aside);
+const moreLabel = `Mais ações de ${a.patientName}, ${time(a.scheduledAt)}`;
+const variantOf = (x: (typeof actions.visible)[number]) => (x.kind === "form" && x.danger ? "danger" : "secondary");
 ---
 
-<Card class={`${compact ? "p-3 shadow-none" : ""} ${situationCard(a)}`}>
+<article
+  class={`flex min-w-0 flex-col gap-1.5 rounded-xl border ${SITUATIONS[situation].edge} ${SITUATIONS[situation].card} ${compact ? "rounded-lg px-2.5 py-2" : "px-3 pb-2.5 pt-3"}`}
+  style={order !== undefined ? `order: ${order}` : undefined}
+>
+  {
+    compact ? (
+      <div class="flex items-center justify-between gap-2">
+        <a href={withReturn(`/admin/pacientes/${a.patientId}`, returnTo)} class="min-w-0 text-[15px] font-semibold text-ink no-underline hover:text-brand hover:underline">
+          {a.patientName}
+        </a>
+        <StatusPill situation={situation} />
+      </div>
+    ) : (
+      <>
+        <div class="flex items-center justify-between gap-2">
+          <span class={`whitespace-nowrap text-base leading-tight font-bold tabular-nums sm:text-base ${isCanceled ? CANCELED_TEXT : "text-ink"}`}>
+            {time(a.scheduledAt)} – {time(a.endsAt)}
+          </span>
+          <StatusPill situation={situation} />
+        </div>
+        <div class="flex flex-wrap items-center gap-x-2.5 gap-y-1">
+          <a href={withReturn(`/admin/pacientes/${a.patientId}`, returnTo)} class="text-[17px] leading-snug font-semibold text-ink no-underline hover:text-brand hover:underline sm:text-base">
+            {a.patientName}
+          </a>
+          {noShow && (
+            <Signal tone="alert" icon="warning">
+              Faltou {noShow.noShows} de {noShow.total}
+            </Signal>
+          )}
+        </div>
+      </>
+    )
+  }
+
+  <p class={`flex flex-wrap items-center gap-x-1.5 gap-y-1 leading-snug text-ink-soft ${compact ? "text-[13px]" : "text-[15px] sm:text-sm"}`}>
+    {!a.isContactSelf && `${capitalize(vocabulary.contact)}: ${a.contactName} · `}
+    <PhoneLinks phone={a.contactPhone} plain />
+  </p>
+
+  {compact && noShow && (
+    <Signal tone="alert" icon="warning">
+      Faltou {noShow.noShows} de {noShow.total}
+    </Signal>
+  )}
+
   {
     !compact && (
-      <div class="flex flex-wrap items-center justify-between gap-2">
-        <span class={`text-base font-semibold ${isCanceled ? CANCELED_TEXT : "text-slate-900"}`}>
-          {time(a.scheduledAt)} – {time(a.endsAt)}
-        </span>
-        {status && <Badge variant={status.variant}>{status.label}</Badge>}
+      <div class="flex flex-wrap gap-1.5">
+        {(showAgenda || agendaOnPhone) && (
+          <Tag strong class={showAgenda ? "" : "sm:hidden"}>
+            {a.agendaName}
+          </Tag>
+        )}
+        <Tag>{a.serviceName}</Tag>
+        <Tag>{a.locationName}</Tag>
+        {a.seriesId && <Tag>Série</Tag>}
       </div>
     )
   }
-  <div class={`${compact ? "" : "mt-2"} text-sm text-slate-700`}>
-    <p class="flex flex-wrap items-center gap-x-2 gap-y-1 font-medium text-slate-900">
-      <a href={withReturn(`/admin/pacientes/${a.patientId}`, returnTo)} class="hover:text-sky-700 hover:underline">{a.patientName}</a>
-      {noShow && <Badge variant="danger">Faltou {noShow.noShows} de {noShow.total}</Badge>}
-      {compact && status && <Badge variant={status.variant}>{status.label}</Badge>}
-    </p>
-    <p class="mt-0.5 text-slate-500">
-      {!a.isContactSelf && `${capitalize(vocabulary.contact)}: ${a.contactName} · `}
-      <PhoneLinks phone={a.contactPhone} plain class="text-slate-600" />
-    </p>
-    {
-      !compact && (
-        <div class="mt-2 flex flex-wrap items-center gap-1.5">
-          <Badge variant={categoryVariant[a.category] ?? "info"}>{a.serviceName}</Badge>
-          <Badge variant="neutral">{a.locationName}</Badge>
-          {showAgenda && <Badge variant="neutral">{a.agendaName}</Badge>}
-          {a.seriesId && <Badge variant="accent">Série</Badge>}
-        </div>
-      )
-    }
-    {a.homeVisitAddress && <p class="mt-1.5 text-slate-500">Endereço: {a.homeVisitAddress}</p>}
-    {
-      a.category === "return_visit" && (
-        <p class="mt-1.5 text-slate-500">
-          {origin
-            ? `Retorno da consulta de ${formatInstant(origin.scheduledAt, timeZone, "dd/MM/yyyy")}${origin.status === "canceled" ? " (cancelada)" : ""}`
-            : a.originAppointmentId
-              ? "Retorno ligado a uma consulta"
-              : "Retorno sem consulta de origem"}
-        </p>
-      )
-    }
+  {a.homeVisitAddress && <p class="text-sm leading-snug text-ink-soft sm:text-[13px]">Endereço: {a.homeVisitAddress}</p>}
+  {
+    a.category === "return_visit" && (
+      <p class="text-sm leading-snug text-ink-soft sm:text-[13px]">
+        {origin
+          ? `Retorno da consulta de ${formatInstant(origin.scheduledAt, timeZone, "dd/MM/yyyy")}${origin.status === "canceled" ? " (cancelada)" : ""}`
+          : a.originAppointmentId
+            ? "Retorno ligado a uma consulta"
+            : "Retorno sem consulta de origem"}
+      </p>
+    )
+  }
 
-    {
-      situation.length > 0 && (
-        <div class="mt-2 flex flex-wrap items-center gap-1.5">
-          {situation.map((s) => (
-            <Badge variant={s.variant}>{s.label}</Badge>
-          ))}
-        </div>
-      )
-    }
+  {
+    signals.length > 0 && (
+      <div class="flex flex-wrap gap-x-3.5 gap-y-1">
+        {signals.map((s) => (
+          <Signal tone={s.tone} icon={s.icon}>
+            {s.label}
+          </Signal>
+        ))}
+      </div>
+    )
+  }
 
-    <div class="mt-3 flex flex-wrap gap-2 border-t border-slate-100 pt-3">
-          {buttons.map((b) => (
-            <form method="POST" action={action}>
-              <input type="hidden" name="acao" value={b.acao} />
-              <input type="hidden" name="return_to" value={returnTo} />
-              <button
-                type="submit"
-                class={`${BUTTON} ${tone(b.danger)} js-confirm-delete`}
-                data-confirm-title={b.title}
-                data-confirm-message={b.message}
-                data-confirm-label={b.confirm}
-                data-confirm-tone={b.danger ? undefined : "primary"}
-              >
-                <Icon name={b.icon} class="h-3.5 w-3.5" />
-                {b.label}
-              </button>
-            </form>
-          ))}
-          {canReschedule && (
-            <>
-              <a href={`/admin/agenda/remarcar?id=${a.id}&return_to=${encodeURIComponent(returnTo)}`} class={`${BUTTON} ${tone()}`}>
-                <Icon name="arrow-path" class="h-3.5 w-3.5" />
-                Remarcar
-              </a>
-              <form method="POST" action={action}>
-                <input type="hidden" name="acao" value="cancelar" />
-                <input type="hidden" name="return_to" value={returnTo} />
-                <button
-                  type="submit"
-                  class={`${BUTTON} ${tone(true)} js-confirm-delete`}
-                  data-confirm-title={a.seriesId ? "Cancelar só esta sessão?" : "Cancelar o atendimento?"}
-                  data-confirm-message={`${who}. O horário fica livre de novo.${a.seriesId ? " A série continua nas próximas." : ""} O paciente é avisado pelo WhatsApp.`}
-                  data-confirm-label={a.seriesId ? "Cancelar só esta" : "Cancelar atendimento"}
-                >
-                  <Icon name="x-mark" class="h-3.5 w-3.5" />
-                  {a.seriesId ? "Cancelar só esta" : "Cancelar"}
-                </button>
-              </form>
-            </>
+  {
+    hasActions &&
+      (actions.primary && !compact ? (
+        <>
+          <div class="mt-0.5 flex flex-wrap gap-2 border-t border-ink/10 pt-2.5 sm:gap-1.5 sm:pt-2">
+            <CardActionButton action={actions.primary} endpoint={endpoint} returnTo={returnTo} variant="primary" />
+            {actions.visible.map((x) => (
+              <CardActionButton action={x} endpoint={endpoint} returnTo={returnTo} variant={variantOf(x)} />
+            ))}
+          </div>
+          {(actions.more.length > 0 || actions.aside) && (
+            <div class="flex items-center justify-between gap-1.5">
+              {actions.more.length > 0 ? (
+                <MoreMenu id={`mais-${a.id}`} label={moreLabel}>
+                  {actions.more.map((x) => (
+                    <CardActionButton action={x} endpoint={endpoint} returnTo={returnTo} inMenu />
+                  ))}
+                </MoreMenu>
+              ) : (
+                <span />
+              )}
+              {actions.aside && <CardActionButton action={actions.aside} endpoint={endpoint} returnTo={returnTo} variant="danger-quiet" />}
+            </div>
           )}
-          {showPayment && (
-            <a href={withReturn(`/admin/financeiro/pagamento/${a.id}`, returnTo)} class={`${BUTTON} ${tone()}`}>
-              <Icon name="banknotes" class="h-3.5 w-3.5" />
-              Pagamento
-            </a>
-          )}
-          {a.seriesId && (
-            <a href={withReturn(`/admin/agenda/serie/${a.seriesId}`, returnTo)} class={`${BUTTON} ${tone()}`}>
-              Ver série
-            </a>
-          )}
-          <a href={`/admin/agenda/trilha/${a.id}?volta=${encodeURIComponent(returnTo)}`} class={`${BUTTON} ${tone()}`}>
-            Trilha
-          </a>
-    </div>
-  </div>
-</Card>
+        </>
+      ) : (
+        <div class="mt-0.5 flex items-center justify-between gap-1.5 border-t border-ink/10 pt-2.5 sm:pt-2">
+          <div class="flex flex-wrap gap-2 sm:gap-1.5">
+            {actions.primary && <CardActionButton action={actions.primary} endpoint={endpoint} returnTo={returnTo} variant="primary" />}
+            {actions.visible.map((x) => (
+              <CardActionButton action={x} endpoint={endpoint} returnTo={returnTo} variant={variantOf(x)} />
+            ))}
+            {actions.more.length > 0 && (
+              <MoreMenu id={`mais-${a.id}`} label={moreLabel}>
+                {actions.more.map((x) => (
+                  <CardActionButton action={x} endpoint={endpoint} returnTo={returnTo} inMenu />
+                ))}
+              </MoreMenu>
+            )}
+          </div>
+          {actions.aside && <CardActionButton action={actions.aside} endpoint={endpoint} returnTo={returnTo} variant="danger-quiet" />}
+        </div>
+      ))
+  }
+</article>

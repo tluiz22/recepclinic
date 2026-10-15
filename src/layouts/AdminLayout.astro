@@ -1,4 +1,7 @@
 ---
+// Fontes da marca no próprio servidor (redesign R0; a CSP não carrega fontes de fora).
+import "@fontsource-variable/bricolage-grotesque/opsz.css";
+import "@fontsource-variable/source-sans-3";
 import "../styles/global.css";
 import Icon from "../components/admin/Icon.astro";
 import type { IconName } from "../components/admin/Icon.astro";
@@ -8,9 +11,12 @@ interface Props {
   title: string;
   /** Tela da administração do sistema (só o Suporte, sem clínica ativa). */
   platform?: boolean;
+  /** Largura útil de até 1600px (redesign R1: a Agenda; as outras telas seguem em 1152px até a etapa delas). */
+  wide?: boolean;
 }
 
-const { title, platform = false } = Astro.props;
+const { title, platform = false, wide = false } = Astro.props;
+const frame = wide ? "max-w-[1600px] sm:px-6" : "max-w-6xl";
 
 // Os 4 primeiros são a barra inferior de abas no celular (uso frequente,
 // toque de um dedo só); Configurações/Relatórios ficam dentro de "Mais" —
@@ -74,7 +80,7 @@ const isMoreActive = moreNavItems.some((item) => isActive(item.href));
          Ver plano, "Etapa seguinte, planejada — PWA instalável". -->
     <link rel="manifest" href="/manifest.json" />
     <link rel="icon" type="image/png" href="/admin-icon-192.png" />
-    <meta name="theme-color" content="#0369a1" />
+    <meta name="theme-color" content="#0b7a62" />
     <!-- Safari não segue o manifest sozinho, precisa destas tags à parte. -->
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <!-- O Chrome pede a versão sem "apple" (auditoria de frontend, A-05). -->
@@ -112,45 +118,51 @@ const isMoreActive = moreNavItems.some((item) => isActive(item.href));
       }
     </style>
   </head>
-  <body class="flex min-h-screen flex-col bg-slate-50 text-slate-900">
+  <body class="flex min-h-screen flex-col bg-canvas font-body text-ink antialiased">
     <!-- Pular o menu pelo teclado (auditoria de frontend, A-03): aparece só com o foco. -->
     <a
       href="#conteudo"
-      class="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-md focus:bg-white focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:text-sky-700 focus:shadow-lg focus:ring-2 focus:ring-sky-600"
+      class="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-md focus:bg-white focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:text-brand focus:shadow-lg focus:ring-2 focus:ring-brand"
     >
       Pular para o conteúdo
     </a>
     <div
       id="page-loading"
-      class="fixed inset-x-0 top-0 z-50 hidden h-1 overflow-hidden bg-sky-100"
+      class="fixed inset-x-0 top-0 z-50 hidden h-1 overflow-hidden bg-brand-soft"
       role="progressbar"
       aria-label="Carregando"
     >
-      <div class="h-full w-2/5 bg-sky-600"></div>
+      <div class="h-full w-2/5 bg-brand"></div>
     </div>
-    <header class="border-b border-slate-200 bg-white pt-[env(safe-area-inset-top)]">
-      <div class="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-4">
-        <div class="min-w-[9.5rem] max-w-56">
+    <header class="border-b border-line bg-white pt-[env(safe-area-inset-top)]">
+      <div class={`mx-auto flex min-h-16 items-center justify-between gap-4 px-4 py-2.5 sm:gap-6 ${frame}`}>
+        <div class="flex min-w-[9.5rem] max-w-64 shrink-0 items-center gap-2.5">
+          <span aria-hidden="true" class="flex h-8 w-8 shrink-0 items-center justify-center rounded-[9px] bg-brand font-display text-[17px] font-bold text-white">R</span>
+          <div class="min-w-0">
           {/* O link fica na linha de cima, fora do nome cortado (truncate): ali dentro, sumia com nome longo. */}
           <span class="flex flex-wrap items-baseline gap-x-2">
-            <span class="text-xs font-semibold uppercase tracking-wide text-sky-700">RecepClinic</span>
+            <span class="text-[11px] leading-tight font-bold tracking-[.09em] text-brand uppercase">RecepClinic</span>
             {
               (platform || clinic?.canSwitchClinic) && (
-                <a href="/admin/escolher-clinica" class="whitespace-nowrap text-xs font-normal text-sky-700 hover:underline">
+                <a href="/admin/escolher-clinica" class="whitespace-nowrap text-xs font-normal text-brand hover:underline">
                   {platform ? "Abrir uma clínica" : "Trocar"}
                 </a>
               )
             }
           </span>
-          <span class="block truncate text-sm font-medium text-slate-900">{platform ? "Administração do sistema" : clinic?.clinicName}</span>
+          <span class="block truncate text-[15px] leading-tight font-semibold text-ink">{platform ? "Administração do sistema" : clinic?.clinicName}</span>
+          </div>
         </div>
 
-        <nav class="hidden flex-wrap gap-x-6 gap-y-2 text-sm font-medium sm:flex">
+        <nav aria-label="Menu principal" class="hidden min-w-0 flex-1 flex-wrap gap-0.5 text-[15px] font-semibold sm:flex">
           {
             desktopNavItems.map((item) => (
               <a
                 href={item.href}
-                class={isActive(item.href) ? "text-sky-700" : "text-slate-600 hover:text-sky-700"}
+                aria-current={isActive(item.href) ? "page" : undefined}
+                class={`rounded-lg px-3 py-2 whitespace-nowrap no-underline ${
+                  isActive(item.href) ? "bg-brand-soft text-brand-ink" : "text-ink-soft hover:bg-canvas hover:text-ink"
+                }`}
               >
                 {item.label}
               </a>
@@ -158,14 +170,14 @@ const isMoreActive = moreNavItems.some((item) => isActive(item.href));
           }
         </nav>
 
-        <div class="flex items-center gap-3">
-          <span class="rounded-full bg-sky-50 px-2.5 py-1 text-xs font-medium text-sky-700">
+        <div class="flex shrink-0 items-center gap-3">
+          <span class="text-sm text-ink-soft">
             {platform ? "Suporte RecepClinic" : roleLabel}
           </span>
           <form method="POST" action="/api/admin/auth/logout">
             <button
               type="submit"
-              class="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-100"
+              class="h-9 rounded-[7px] border border-line-strong bg-white px-3 text-sm font-semibold text-ink hover:bg-canvas sm:h-8"
             >
               Sair
             </button>
@@ -182,21 +194,22 @@ const isMoreActive = moreNavItems.some((item) => isActive(item.href));
       )
     }
 
-    <main id="conteudo" tabindex="-1" class="mx-auto w-full max-w-6xl flex-1 px-4 py-8 pb-28 outline-none sm:pb-8">
+    <main id="conteudo" tabindex="-1" class={`mx-auto w-full flex-1 px-4 pt-6 pb-28 outline-none sm:pb-12 ${frame} ${wide ? "" : "sm:pt-8"}`}>
       <slot />
     </main>
 
     <!-- Barra inferior de abas — só no celular (escondida a partir de `sm`). -->
     <nav
-      class="fixed inset-x-0 bottom-0 z-20 flex border-t border-slate-200 bg-white pb-[env(safe-area-inset-bottom)] sm:hidden"
+      class="fixed inset-x-0 bottom-0 z-20 flex border-t border-line bg-white pb-[env(safe-area-inset-bottom)] sm:hidden"
       aria-label="Navegação principal"
     >
       {
         primaryNavItems.map((item) => (
           <a
             href={item.href}
-            class={`flex min-w-0 flex-1 flex-col items-center gap-0.5 py-2 text-center text-[11px] font-medium leading-tight ${
-              isActive(item.href) ? "text-sky-700" : "text-slate-500"
+            aria-current={isActive(item.href) ? "page" : undefined}
+            class={`flex min-w-0 flex-1 flex-col items-center gap-0.5 py-2 text-center text-[11.5px] font-semibold leading-tight no-underline ${
+              isActive(item.href) ? "text-brand" : "text-ink-soft"
             }`}
           >
             <Icon name={item.icon} class="h-6 w-6 shrink-0" />
@@ -208,20 +221,20 @@ const isMoreActive = moreNavItems.some((item) => isActive(item.href));
       <details class="more-menu relative flex flex-1 flex-col items-center justify-center">
         <summary
           class={`flex cursor-pointer list-none flex-col items-center gap-0.5 py-2 text-[11px] font-medium ${
-            isMoreActive ? "text-sky-700" : "text-slate-500"
+            isMoreActive ? "text-brand" : "text-ink-soft"
           }`}
         >
           <Icon name="more" class="h-6 w-6" />
           Mais
         </summary>
 
-        <div class="absolute bottom-full right-2 mb-2 w-48 rounded-lg border border-slate-200 bg-white p-2 text-sm shadow-lg">
+        <div class="absolute bottom-full right-2 mb-2 w-52 rounded-[10px] border border-line bg-white p-1.5 text-[15px] shadow-[0_10px_30px_rgba(18,48,42,.16)]">
           {
             moreNavItems.map((item) => (
               <a
                 href={item.href}
                 class={`flex items-center gap-2 rounded-md px-3 py-2 font-medium ${
-                  isActive(item.href) ? "text-sky-700" : "text-slate-600 hover:bg-slate-50"
+                  isActive(item.href) ? "bg-brand-soft text-brand-ink" : "text-ink hover:bg-canvas"
                 }`}
               >
                 <Icon name={item.icon} class="h-5 w-5" />
@@ -232,7 +245,7 @@ const isMoreActive = moreNavItems.some((item) => isActive(item.href));
           <form method="POST" action="/api/admin/auth/logout">
             <button
               type="submit"
-              class="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left font-medium text-slate-600 hover:bg-slate-50"
+              class="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left font-medium text-ink hover:bg-canvas"
             >
               <Icon name="logout" class="h-5 w-5" />
               Sair

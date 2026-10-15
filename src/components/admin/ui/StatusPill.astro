@@ -1,0 +1,20 @@
+---
+// Selo da situação (R0): cor, ícone e texto, nunca só a cor (cliente,
+// 15/out/2026). Com `count`, vira o contador da legenda da Agenda.
+import Icon from "../Icon.astro";
+import { SITUATIONS, type Situation } from "../agenda/situationStyle";
+
+interface Props {
+  situation: Situation;
+  count?: number;
+  class?: string;
+}
+
+const { situation, count, class: className = "" } = Astro.props;
+const s = SITUATIONS[situation];
+---
+
+<span class={`inline-flex items-center gap-1 whitespace-nowrap rounded-full py-0.5 pl-1.5 pr-2.5 text-[13px] leading-snug font-semibold ${s.pill} ${className}`}>
+  <Icon name={s.icon} class="h-3.5 w-3.5 shrink-0" strokeWidth={2.2} />
+  {s.label}{count !== undefined && <span class="tabular-nums">· {count}</span>}
+</span>

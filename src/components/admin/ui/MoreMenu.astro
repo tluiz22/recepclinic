@@ -1,0 +1,82 @@
+---
+// Menu "Mais" (R0; cliente, 15/out/2026): as ações raras do cartão. Usa o
+// `popover` do navegador, que fica por cima de tudo (as colunas da Agenda
+// rolam de lado e cortariam um menu comum), fecha com Esc ou clique fora e
+// devolve o foco ao botão. A posição, junto ao botão, vem do script abaixo.
+// Os itens são <a> ou <form> com <button> e usam MENU_ITEM; os que mudam o
+// atendimento continuam pedindo confirmação (`js-confirm-delete`).
+import Icon from "../Icon.astro";
+import { buttonClass, type ButtonSize } from "./styles";
+
+interface Props {
+  /** Único na página. */
+  id: string;
+  /** Nome acessível do botão, ex.: "Mais ações de Ana Souza, 14:00". */
+  label: string;
+  size?: ButtonSize;
+}
+
+const { id, label, size = "sm" } = Astro.props;
+---
+
+<button type="button" popovertarget={id} aria-label={label} class={`${buttonClass("secondary", size)} rc-more-trigger`}>
+  Mais
+  <Icon name="chevron-down" class="h-3.5 w-3.5" strokeWidth={2.4} />
+</button>
+<div
+  id={id}
+  popover
+  data-more-menu
+  class="m-0 w-60 rounded-[10px] border border-line bg-white p-1.5 text-ink shadow-[0_10px_30px_rgba(18,48,42,.16)]"
+>
+  <div role="group" aria-label={label} class="flex flex-col">
+    <slot />
+  </div>
+</div>
+
+<script>
+  // Abre o menu junto ao botão (embaixo; em cima, se não couber) e põe o foco
+  // no primeiro item, para quem usa o teclado seguir com as setas.
+  const place = (menu: HTMLElement) => {
+    const trigger = document.querySelector<HTMLElement>(`[popovertarget="${menu.id}"]`);
+    if (!trigger) return;
+    const r = trigger.getBoundingClientRect();
+    const gap = 4;
+    const width = menu.offsetWidth;
+    const height = menu.offsetHeight;
+    const left = Math.max(8, Math.min(r.left, window.innerWidth - width - 8));
+    const below = r.bottom + gap + height <= window.innerHeight - 8;
+    const top = below ? r.bottom + gap : Math.max(8, r.top - gap - height);
+    menu.style.left = `${left}px`;
+    menu.style.top = `${top}px`;
+  };
+  const items = (menu: HTMLElement) => [...menu.querySelectorAll<HTMLElement>("a[href], button:not([disabled])")];
+
+  document.querySelectorAll<HTMLElement>("[data-more-menu]").forEach((menu) => {
+    menu.addEventListener("toggle", (event) => {
+      if ((event as ToggleEvent).newState !== "open") return;
+      place(menu);
+      items(menu)[0]?.focus();
+    });
+    menu.addEventListener("keydown", (event) => {
+      if (event.key !== "ArrowDown" && event.key !== "ArrowUp") return;
+      event.preventDefault();
+      const list = items(menu);
+      const at = list.indexOf(document.activeElement as HTMLElement);
+      const next = event.key === "ArrowDown" ? (at + 1) % list.length : (at - 1 + list.length) % list.length;
+      list[next]?.focus();
+    });
+  });
+
+  // Rolagem (da página ou das colunas) e mudança de tamanho: acompanha o botão.
+  const follow = () => document.querySelectorAll<HTMLElement>("[data-more-menu]:popover-open").forEach(place);
+  window.addEventListener("scroll", follow, { capture: true, passive: true });
+  window.addEventListener("resize", follow);
+</script>
+
+<style>
+  [data-more-menu] {
+    position: fixed;
+    inset: auto;
+  }
+</style>

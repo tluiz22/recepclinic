@@ -10,23 +10,25 @@
 
 <dialog
   id="delete_dialog"
-  class="w-[calc(100%-2rem)] max-w-sm rounded-lg border border-slate-200 bg-white p-0 shadow-xl backdrop:bg-slate-900/40"
+  aria-labelledby="delete_dialog_title"
+  aria-describedby="delete_dialog_message"
+  class="m-auto w-[calc(100%-2rem)] max-w-[400px] rounded-[14px] border border-line bg-white p-0 text-ink shadow-[0_20px_50px_rgba(18,48,42,.22)] backdrop:bg-ink/40"
 >
-  <div class="p-5">
-    <h2 id="delete_dialog_title" class="text-base font-semibold text-slate-900">Excluir?</h2>
-    <p id="delete_dialog_message" class="mt-2 text-sm text-slate-600"></p>
-    <div class="mt-5 flex justify-end gap-2">
+  <div class="flex flex-col gap-3 p-[22px]">
+    <h2 id="delete_dialog_title" class="font-display text-xl leading-tight font-bold text-ink">Excluir?</h2>
+    <p id="delete_dialog_message" class="text-[15px] leading-normal text-ink-mid"></p>
+    <div class="mt-1 flex flex-wrap justify-end gap-2">
       <button
         type="button"
         id="delete_dialog_dismiss"
-        class="rounded-md border border-slate-300 px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50"
+        class="h-11 rounded-lg border border-line-strong bg-white px-4 text-[15px] font-semibold text-ink hover:bg-canvas sm:h-10"
       >
         Voltar
       </button>
       <button
         type="button"
         id="delete_dialog_accept"
-        class="rounded-md bg-red-600 px-3 py-2 text-sm font-medium text-white hover:bg-red-700"
+        class="h-11 rounded-lg bg-danger-solid px-4 text-[15px] font-semibold text-white hover:bg-danger-solid-strong sm:h-10"
       >
         Excluir
       </button>

@@ -1,0 +1,35 @@
+---
+// Seletor segmentado (R0): para alternar a visualização (Dia, Semana e Mês).
+// Abas de seção usam outro componente (sublinhadas); ver o canvas aprovado.
+interface Props {
+  label: string;
+  items: { id: string; label: string; href: string }[];
+  current?: string;
+  class?: string;
+}
+
+const { label, items, current, class: className = "" } = Astro.props;
+---
+
+<nav aria-label={label} class={`grid auto-cols-fr grid-flow-col gap-0.5 rounded-[10px] bg-canvas-deep p-[3px] sm:inline-grid ${className}`}>
+  {
+    items.map((item) =>
+      item.id === current ? (
+        <a
+          href={item.href}
+          aria-current="page"
+          class="flex h-[38px] items-center justify-center rounded-lg bg-white px-3.5 font-bold text-ink no-underline shadow-[0_1px_2px_rgba(18,48,42,.12)] sm:h-[34px]"
+        >
+          {item.label}
+        </a>
+      ) : (
+        <a
+          href={item.href}
+          class="flex h-[38px] items-center justify-center rounded-lg px-3.5 font-semibold text-ink-soft no-underline hover:bg-white/60 hover:text-ink sm:h-[34px]"
+        >
+          {item.label}
+        </a>
+      ),
+    )
+  }
+</nav>

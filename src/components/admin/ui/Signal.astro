@@ -1,0 +1,27 @@
+---
+// Sinal do atendimento (R0): ícone e texto para o que pede atenção (lembrete,
+// preparo, pagamento, faltas). Cor só quando pede ação; nunca é clicável.
+import Icon, { type IconName } from "../Icon.astro";
+
+export type SignalTone = "warning" | "success" | "alert" | "info" | "neutral";
+
+interface Props {
+  tone?: SignalTone;
+  icon: IconName;
+  class?: string;
+}
+
+const { tone = "neutral", icon, class: className = "" } = Astro.props;
+const tones: Record<SignalTone, string> = {
+  warning: "text-pend-800",
+  success: "text-conf-800",
+  alert: "text-ns-800",
+  info: "text-att-800",
+  neutral: "text-ink-soft",
+};
+---
+
+<span class={`inline-flex items-center gap-1 text-sm leading-snug font-semibold sm:text-[13px] ${tones[tone]} ${className}`}>
+  <Icon name={icon} class="h-3.5 w-3.5 shrink-0" strokeWidth={2.2} />
+  <slot />
+</span>

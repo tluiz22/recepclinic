@@ -1,0 +1,46 @@
+---
+// Uma ação do cartão (R2): link ou formulário com confirmação (cliente,
+// 05/out/2026). Mesma rota, `acao` e `return_to` de antes.
+import Icon from "../Icon.astro";
+import { buttonClass, menuItemClass, type ButtonVariant } from "../ui/styles";
+import type { CardAction } from "./cardActions";
+
+interface Props {
+  action: CardAction;
+  /** Rota das ações do atendimento. */
+  endpoint: string;
+  returnTo: string;
+  variant?: ButtonVariant;
+  /** Dentro do menu "Mais". */
+  inMenu?: boolean;
+}
+
+const { action, endpoint, returnTo, variant = "secondary", inMenu = false } = Astro.props;
+const classes = inMenu ? menuItemClass(action.kind === "form" && action.danger) : buttonClass(variant, "sm");
+const showIcon = inMenu || variant === "primary";
+---
+
+{
+  action.kind === "link" ? (
+    <a href={action.href} class={classes}>
+      {showIcon && <Icon name={action.icon} class="h-4 w-4 shrink-0" strokeWidth={2} />}
+      {action.label}
+    </a>
+  ) : (
+    <form method="POST" action={endpoint} class="contents">
+      <input type="hidden" name="acao" value={action.acao} />
+      <input type="hidden" name="return_to" value={returnTo} />
+      <button
+        type="submit"
+        class={`${classes} js-confirm-delete`}
+        data-confirm-title={action.title}
+        data-confirm-message={action.message}
+        data-confirm-label={action.confirm}
+        data-confirm-tone={action.danger ? undefined : "primary"}
+      >
+        {showIcon && <Icon name={action.icon} class="h-4 w-4 shrink-0" strokeWidth={variant === "primary" ? 2.6 : 2} />}
+        {action.label}
+      </button>
+    </form>
+  )
+}

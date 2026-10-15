@@ -8,10 +8,11 @@ let pendingForm: HTMLFormElement | null = null;
 let pendingButton: HTMLButtonElement | null = null;
 
 // Tom do botão de confirmar (F4.5): vermelho para o que desfaz algo
-// (padrão), azul para confirmar uma ação comum (`data-confirm-tone="primary"`).
+// (padrão), verde da marca para confirmar uma ação comum
+// (`data-confirm-tone="primary"`; redesign, 15/out/2026).
 const TONES = {
-  danger: ["bg-red-600", "hover:bg-red-700"],
-  primary: ["bg-sky-700", "hover:bg-sky-800"],
+  danger: ["bg-danger-solid", "hover:bg-danger-solid-strong"],
+  primary: ["bg-brand", "hover:bg-brand-strong"],
 };
 
 document.querySelectorAll<HTMLButtonElement>(".js-confirm-delete").forEach((btn) => {

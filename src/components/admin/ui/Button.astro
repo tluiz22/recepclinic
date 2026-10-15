@@ -1,0 +1,29 @@
+---
+// Botão base do redesign (R0): com `href` vira link, sem ele é <button>.
+// Os demais atributos (name, value, data-confirm-*, aria-*) passam direto.
+import { buttonClass, type ButtonSize, type ButtonVariant } from "./styles";
+
+interface Props {
+  variant?: ButtonVariant;
+  size?: ButtonSize;
+  href?: string;
+  type?: "button" | "submit";
+  class?: string;
+  [attribute: string]: unknown;
+}
+
+const { variant = "secondary", size = "md", href, type = "button", class: className = "", ...rest } = Astro.props;
+const classes = `${buttonClass(variant, size)} ${className}`;
+---
+
+{
+  href ? (
+    <a href={href} class={classes} {...rest}>
+      <slot />
+    </a>
+  ) : (
+    <button type={type} class={classes} {...rest}>
+      <slot />
+    </button>
+  )
+}

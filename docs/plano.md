@@ -1906,6 +1906,20 @@ Métricas · R8 Financeiro e DMED · R9 Configurações · R10 Sistema e Acesso 
    Source Sans 3 no texto (fontes no próprio servidor, por causa da CSP), no lugar do azul. As
    cores de situação de 10/out continuam, sempre com ícone e texto.
 
+**R0, R1 (parcial) e R2 implementadas em 15/out/2026** (a validar pelo cliente; ainda não publicadas):
+- **R0:** tokens de cor e fontes em `src/styles/global.css` (`@fontsource-variable`, no próprio
+  servidor); componentes base em `src/components/admin/ui/` (`Button`, `StatusPill`, `Signal`, `Tag`,
+  `SegmentedControl`, `MoreMenu` com `popover` e `styles.ts`); ícones novos no `Icon`.
+- **R1 (só o necessário para a Agenda):** cabeçalho, menu e barra do celular com a marca; fonte do
+  painel todo em Source Sans 3; largura de 1600px só nas telas da Agenda (`wide`); diálogo de
+  confirmação no padrão do canvas. **Fica para depois:** o menu do Suporte agrupado (U-07).
+- **R2:** Dia (barra única, legenda com contadores, colunas em grade com rolagem só na área delas e
+  sombra na borda, lista única por horário no celular), cartão novo (`cardActions.ts`, tabela do
+  canvas, testada) e Semana/Mês/busca com o cabeçalho e as cores novas. As outras telas mantêm o azul
+  até a etapa delas (cliente, 15/out). O Resumo do Dia herda o cartão e as cores de situação.
+- Encontrado e **não corrigido** (fora do redesign): o toque em "confirmo" no lembrete grava
+  `reminder_response = 'confirmed'`, mas a Agenda, o Resumo e `daily.ts` comparam com `"confirm"`.
+
 ## Depois do 1º piloto (já previsto no banco)
 
 - **Convênios (D10):** telas de planos atendidos e exceções por profissional; plano no cadastro do

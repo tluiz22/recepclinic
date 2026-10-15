@@ -4,6 +4,7 @@
 import AdminLayout from "../../../layouts/AdminLayout.astro";
 import AgendaHeader from "../../../components/admin/agenda/AgendaHeader.astro";
 import Icon from "../../../components/admin/Icon.astro";
+import Button from "../../../components/admin/ui/Button.astro";
 import SituationLegend from "../../../components/admin/agenda/SituationLegend.astro";
 import { SITUATIONS, appointmentSituation } from "../../../components/admin/agenda/situationStyle";
 import { addDays, formatCalendarDate, formatInstant, isCalendarDate, localDateOf, todayIn } from "../../../lib/clinicTime";
@@ -32,53 +33,57 @@ const blocksOf = (day: string) =>
 const statusMark: Record<string, string> = { completed: "✓", no_show: "✗" };
 ---
 
-<AdminLayout title="Agenda · Semana">
-  <AgendaHeader view="semana" date={date} agendas={scope.selectable} selectedAgendaId={scope.selectedAgendaId} />
-
-  <div class="mt-4 flex flex-wrap items-center gap-2">
-    <a href={`?date=${addDays(monday, -7)}`} aria-label="Semana anterior" class="rounded-md border border-slate-200 bg-white p-2 text-slate-500 hover:text-sky-700">
-      <Icon name="chevron-left" class="h-5 w-5" />
-    </a>
-    <span class="text-sm font-medium text-slate-700">
-      {formatCalendarDate(days[0], "dd/MM")} a {formatCalendarDate(days[6], "dd/MM/yyyy")}
-    </span>
-    <a href={`?date=${addDays(monday, 7)}`} aria-label="Próxima semana" class="rounded-md border border-slate-200 bg-white p-2 text-slate-500 hover:text-sky-700">
-      <Icon name="chevron-right" class="h-5 w-5" />
-    </a>
-    {
-      !days.includes(today) && (
-        <a href="?" class="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50">
+<AdminLayout title="Agenda · Semana" wide>
+  <AgendaHeader
+    view="semana"
+    date={date}
+    agendas={scope.selectable}
+    selectedAgendaId={scope.selectedAgendaId}
+    subtitle={`${formatCalendarDate(days[0], "d 'de' MMMM")} a ${formatCalendarDate(days[6], "d 'de' MMMM 'de' yyyy")}`}
+  >
+    <div slot="nav" class="flex items-center gap-1.5 sm:gap-1">
+      <Button href={`?date=${addDays(monday, -7)}`} aria-label="Semana anterior" class="w-11 px-0 sm:w-10">
+        <Icon name="chevron-left" class="h-5 w-5 shrink-0" strokeWidth={2.2} />
+      </Button>
+      <span class="min-w-0 flex-1 px-1 text-center text-[15px] font-semibold text-ink tabular-nums sm:flex-none">
+        {formatCalendarDate(days[0], "dd/MM")} a {formatCalendarDate(days[6], "dd/MM/yyyy")}
+      </span>
+      <Button href={`?date=${addDays(monday, 7)}`} aria-label="Próxima semana" class="w-11 px-0 sm:w-10">
+        <Icon name="chevron-right" class="h-5 w-5 shrink-0" strokeWidth={2.2} />
+      </Button>
+      {!days.includes(today) && (
+        <Button variant="quiet" href="?">
           Esta semana
-        </a>
-      )
-    }
-  </div>
+        </Button>
+      )}
+    </div>
+  </AgendaHeader>
 
-  <SituationLegend />
+  <SituationLegend class="mt-4" />
 
   <div class="mt-4 grid gap-3 md:grid-cols-7">
     {
       days.map((day) => (
         <a
           href={`/admin/agenda?date=${day}`}
-          class={`block rounded-lg border bg-white p-3 hover:border-sky-300 hover:bg-sky-50 ${day === today ? "border-sky-600" : "border-slate-200"}`}
+          class={`block rounded-xl border bg-white p-3 no-underline hover:border-brand/40 hover:bg-brand-soft/40 ${day === today ? "border-brand ring-1 ring-brand" : "border-line"}`}
         >
-          <p class={`text-sm font-semibold capitalize ${day === today ? "text-sky-700" : "text-slate-900"}`}>{formatCalendarDate(day, "EEE dd/MM")}</p>
-          <ul class="mt-2 flex flex-col gap-1.5 text-xs text-slate-700">
+          <p class={`text-sm font-bold capitalize ${day === today ? "text-brand" : "text-ink"}`}>{formatCalendarDate(day, "EEE dd/MM")}</p>
+          <ul class="mt-2 flex flex-col gap-1.5 text-[13px] text-ink">
             {blocksOf(day).map((b) => (
-              <li class={`rounded border-l-4 px-1.5 py-1 text-slate-600 ${SITUATIONS.block.swatch}`}>Bloqueio: {b.reason}</li>
+              <li class={`rounded border-l-4 px-1.5 py-1 text-blk-800 ${SITUATIONS.block.swatch}`}>Bloqueio: {b.reason}</li>
             ))}
             {ofDay(day).map((a) => (
               <li class={`rounded border-l-4 px-1.5 py-1 ${SITUATIONS[appointmentSituation(a)].swatch}`}>
-                <span class="font-semibold">{formatInstant(a.scheduledAt, clinic.timezone, "HH:mm")}</span> {a.patientName}
+                <span class="font-semibold tabular-nums">{formatInstant(a.scheduledAt, clinic.timezone, "HH:mm")}</span> {a.patientName}
                 {statusMark[a.status] && <span class="ml-1">{statusMark[a.status]}</span>}
-                <span class="block text-slate-500">
+                <span class="block text-ink-soft">
                   {a.serviceName}
                   {showAgenda ? ` · ${a.agendaName}` : ""}
                 </span>
               </li>
             ))}
-            {ofDay(day).length === 0 && blocksOf(day).length === 0 && <li class="text-slate-400">Livre</li>}
+            {ofDay(day).length === 0 && blocksOf(day).length === 0 && <li class="text-ink-soft">Livre</li>}
           </ul>
         </a>
       ))
