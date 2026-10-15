@@ -4,7 +4,8 @@
 // formulário enviado e, se a tela seguinte for a mesma e mostrar aviso de erro,
 // devolve os valores. Guardado só na aba (sessionStorage), lido e apagado na
 // carga seguinte, com erro ou não. Senha, arquivo e campos escondidos ficam de
-// fora (os escondidos são do servidor, como a `acao`).
+// fora (os escondidos são do servidor, como a `acao`). No fim, aponta o campo
+// que falhou (ver `pointToError`).
 
 const KEY = "rc_form_enviado";
 
@@ -51,21 +52,21 @@ function rememberForm(form: HTMLFormElement): void {
   }
 }
 
-function restore(): void {
+function restore(): HTMLFormElement | null {
   let saved: Saved | null = null;
   try {
     const raw = sessionStorage.getItem(KEY);
     sessionStorage.removeItem(KEY);
     saved = raw ? (JSON.parse(raw) as Saved) : null;
   } catch {
-    return;
+    return null;
   }
-  if (!saved || saved.path !== location.pathname) return;
-  if (!document.querySelector("[data-flash='error']")) return;
+  if (!saved || saved.path !== location.pathname) return null;
+  if (!document.querySelector("[data-flash='error']")) return null;
   const form = [...document.querySelectorAll<HTMLFormElement>("form[method='POST' i]")].filter(
     (f) => (f.getAttribute("action") ?? "") === saved!.action,
   )[saved.index];
-  if (!form) return;
+  if (!form) return null;
   const byKey = new Map(saved.fields.map((f) => [f.key, f]));
   const changed: Element[] = [];
   for (const [key, el] of namedFields(form)) {
@@ -89,9 +90,37 @@ function restore(): void {
     el.dispatchEvent(new Event("input", { bubbles: true }));
     el.dispatchEvent(new Event("change", { bubbles: true }));
   }
+  return form;
 }
 
-restore();
+// Erro de validação (auditoria, A-02): liga a mensagem aos campos que falharam
+// (`aria-invalid` e `aria-describedby`) e põe o foco no primeiro; sem campo
+// achado, o foco vai para a própria mensagem. O servidor manda os nomes da
+// camada de dados ("displayName", "priceCents"); o formulário usa "display_name"
+// e "price".
+function pointToError(form: HTMLFormElement | null): void {
+  const message = document.querySelector<HTMLElement>("main [data-form-error]");
+  if (!message) return;
+  message.id ||= "erro-do-formulario";
+  const names = (document.querySelector<HTMLElement>("[data-flash='error']")?.dataset.fields ?? "").split(" ").filter(Boolean);
+  const scope = form ?? document.querySelector("main");
+  const invalid: HTMLElement[] = [];
+  for (const name of names) {
+    const snake = name.replace(/[A-Z]/g, (c) => `_${c.toLowerCase()}`);
+    for (const candidate of [name, snake, snake.replace(/_cents$/, "")]) {
+      const el = scope?.querySelector<HTMLInputElement>(`[name='${candidate}']:not([type=hidden]):not(:disabled)`);
+      if (!el || el.closest("[hidden]")) continue;
+      el.setAttribute("aria-invalid", "true");
+      el.setAttribute("aria-describedby", [el.getAttribute("aria-describedby"), message.id].filter(Boolean).join(" "));
+      el.addEventListener("input", () => el.removeAttribute("aria-invalid"), { once: true });
+      invalid.push(el);
+      break;
+    }
+  }
+  (invalid[0] ?? message).focus();
+}
+
+pointToError(restore());
 
 document.addEventListener("submit", (event) => {
   const form = event.target;

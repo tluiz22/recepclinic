@@ -69,7 +69,7 @@ const profileHint = (profile: (typeof CLINIC_PROFILES)[number]) => {
         <input id="name" name="name" required value={settings.name} class={INPUT} />
       </div>
 
-      <fieldset>
+      <fieldset class="min-w-0">
         <legend class={LABEL}>Nas mensagens do WhatsApp</legend>
         <div class="mt-1 flex flex-wrap gap-4 text-sm text-slate-700">
           {MESSAGE_ARTICLES.map((article) => (
@@ -82,7 +82,7 @@ const profileHint = (profile: (typeof CLINIC_PROFILES)[number]) => {
         <p class={HINT}>Como a clínica se apresenta no começo das mensagens ao paciente.</p>
       </fieldset>
 
-      <fieldset>
+      <fieldset class="min-w-0">
         <legend class={LABEL}>Como a clínica é chamada nas mensagens</legend>
         <div class="mt-1 flex flex-col gap-2 text-sm text-slate-700">
           {DESIGNATION_PRESETS.map((d) => (
@@ -167,7 +167,8 @@ const profileHint = (profile: (typeof CLINIC_PROFILES)[number]) => {
         <p class={HINT}>A partir desta idade, o bot não marca Consulta (só Retorno e Exame) e a tela avisa.</p>
       </div>
 
-      <fieldset class="flex flex-col gap-4 border-t border-slate-200 pt-4">
+      {/* min-w-0 nos fieldsets: sem ele, o fieldset não encolhe abaixo do conteúdo (campo de arquivo) e a tela rola para o lado no celular. */}
+      <fieldset class="flex min-w-0 flex-col gap-4 border-t border-slate-200 pt-4">
         <legend class="text-sm font-semibold uppercase tracking-wide text-slate-500">Páginas públicas</legend>
         <p class={HINT}>
           Topo das páginas de agendamento e de preparo que o paciente abre pelo link.
@@ -184,14 +185,14 @@ const profileHint = (profile: (typeof CLINIC_PROFILES)[number]) => {
                 <span class="flex h-16 w-16 items-center justify-center rounded-md border border-dashed border-slate-300 text-xs text-slate-400">Sem logo</span>
               )
             }
-            <div class="flex flex-col gap-2">
+            <div class="flex min-w-0 flex-1 flex-col gap-2">
               <input
                 type="file"
                 id="logo"
                 name="logo"
                 accept={Object.keys(LOGO_TYPES).join(",")}
                 aria-label={settings.logoUrl ? "Trocar o logo" : "Enviar o logo"}
-                class="text-sm text-slate-700 file:mr-3 file:rounded-md file:border file:border-slate-300 file:bg-white file:px-3 file:py-1.5 file:text-sm file:font-medium"
+                class="w-full min-w-0 text-sm text-slate-700 file:mr-3 file:rounded-md file:border file:border-slate-300 file:bg-white file:px-3 file:py-1.5 file:text-sm file:font-medium"
               />
               {
                 settings.logoUrl && (
@@ -239,7 +240,7 @@ const profileHint = (profile: (typeof CLINIC_PROFILES)[number]) => {
 
       {
         hasBot && (
-          <fieldset class="flex flex-col gap-4 border-t border-slate-200 pt-4">
+          <fieldset class="flex min-w-0 flex-col gap-4 border-t border-slate-200 pt-4">
             <legend class="text-sm font-semibold uppercase tracking-wide text-slate-500">Informações que o bot responde</legend>
             <p class={HINT}>No WhatsApp, o paciente escolhe <strong>Informações</strong> no menu e vê as opções preenchidas aqui (o endereço vem dos locais, e o preparo, dos exames).</p>
             <div>
@@ -269,7 +270,7 @@ const profileHint = (profile: (typeof CLINIC_PROFILES)[number]) => {
 
       {
         hasBot && (
-          <fieldset class="flex flex-col gap-4 border-t border-slate-200 pt-4">
+          <fieldset class="flex min-w-0 flex-col gap-4 border-t border-slate-200 pt-4">
             <legend class="text-sm font-semibold uppercase tracking-wide text-slate-500">Limites do bot por contato</legend>
             <p class={HINT}>
               Contra abuso no agendamento pelo WhatsApp. Cada número soma todos os pacientes dele. Atingido um limite, o bot não marca e passa a conversa

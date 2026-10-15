@@ -4,8 +4,8 @@
 > ambiente **local** (`npm run dev` em `http://localhost:4321` + Supabase local com o `seed.sql`).
 > Só auditoria: **nenhum código da aplicação foi alterado.**
 >
-> **Atualização (14/10/2026):** os 3 defeitos de severidade Alta (F-01, F-02, F-03) foram corrigidos
-> e revalidados no navegador. Status de cada achado na [seção 12](#12-status-das-correções).
+> **Atualização (14/10/2026):** os 3 defeitos de severidade Alta (F-01, F-02, F-03) e os 3 de
+> severidade Média (F-04, F-05, A-02) foram corrigidos e revalidados no navegador. Status de cada achado na [seção 12](#12-status-das-correções).
 
 ## 1. Resumo executivo
 
@@ -235,6 +235,8 @@ redirecionamento só com a mensagem.
 
 ### F-04 · Configurações › Clínica com rolagem lateral no celular · **Média**
 
+> **Status:** corrigido e validado em 14/10/2026 (seção 12.5).
+
 - **Tela:** `/admin/configuracoes` em 390px.
 - **Observado:** a página fica com 424px de largura (rolagem horizontal). Passam da tela a linha do
   logo ("Escolher arquivo / Nenhum arquivo escolhido"), a fileira de cores e o campo "Site da clínica".
@@ -243,6 +245,8 @@ redirecionamento só com a mensagem.
   de 100%.
 
 ### F-05 · Suporte: o link "Trocar" (de clínica) fica invisível · **Média**
+
+> **Status:** corrigido e validado em 14/10/2026 (seção 12.5).
 
 - **Tela:** cabeçalho do painel com o Suporte dentro de uma clínica.
 - **Observado:** o link existe, mas fica fora do bloco do nome da clínica, que tem 140px e
@@ -393,7 +397,9 @@ do envio, com um único campo inválido por cenário.
 | F-02 (Profissionais novo/editar, Contato da equipe novo, Serviços novo/editar, Convênio novo, Local novo) | Alta | **Corrigido e validado** |
 | F-02 (Agendas, Horários, Feriados, Lembretes, Mensagens, Nota fiscal, Equipe/convite, Clínica e as edições de Contato, Convênio e Local) | Alta | **Corrigido mas não validado**: usam o mesmo caminho e recebem a mesma correção pelo layout, mas não foram exercitados (gravariam dados ou enviariam convite) |
 | F-03 | Alta | **Corrigido e validado** |
-| F-04, F-05, A-02 | Média | Pendente (fora do escopo desta rodada) |
+| F-04 | Média | **Corrigido e validado** (12.5) |
+| F-05 | Média | **Corrigido e validado** (12.5) |
+| A-02 | Média | **Corrigido e validado** nos 6 formulários testados e no Cadastrar paciente (12.5); nas demais telas, **corrigido mas não validado** |
 | F-06, F-07, F-08, F-09, A-01, A-03, A-05 | Baixa | Pendente (fora do escopo) |
 | A-04 (indício), envio duplo (suspeita), U-01 a U-12 | — | Pendente (fora do escopo) |
 
@@ -406,3 +412,39 @@ do envio, com um único campo inválido por cenário.
   processado pelo Astro como os demais do layout).
 - Os valores enviados (inclusive CPF, no Pagamento) ficam na `sessionStorage` da aba só entre o envio
   e a carga da tela seguinte.
+
+### 12.5 Segunda rodada: severidade Média (F-04, F-05, A-02)
+
+> 14/10/2026, mesmo ambiente local. Logins `admin@exemplo-saude.local` e `suporte@recepclinic.local`.
+> Banco: contagem das mesmas 17 tabelas igual antes e depois. Como na auditoria, a navegação do
+> Suporte dentro da clínica grava o registro de acesso que o sistema mantém.
+
+**O que mudou no código**
+
+| Achado | Correção | Arquivos |
+| --- | --- | --- |
+| F-04 | Os `fieldset` da tela ganharam `min-w-0` (por padrão o navegador não deixa um `fieldset` encolher abaixo do conteúdo; o campo de arquivo, com 312px, esticava "Páginas públicas" até 392px). O campo do logo passou a ocupar a largura disponível | `src/pages/admin/configuracoes/index.astro` |
+| F-05 | "Trocar" (e "Abrir uma clínica", nas telas do Sistema) saiu de dentro do nome cortado e foi para a linha de "RecepClinic", que quebra se faltar espaço; o bloco do nome tem largura mínima de 152px | `src/layouts/AdminLayout.astro` |
+| A-02 | A mensagem de erro ganhou `role="alert"` (sucesso: `role="status"`) e pode receber foco. O aviso de erro das rotas `/api/admin/...` leva os nomes dos campos que falharam; a tela marca o campo com `aria-invalid="true"` e `aria-describedby` apontando para a mensagem e põe o foco nele (a marca sai ao digitar). Sem campo identificado (ou nas telas que enviam para a própria página, como Cadastrar paciente), o foco vai para a mensagem | `src/components/admin/FormMessage.astro`, `src/components/admin/FlashMessage.astro`, `src/lib/flash.ts`, `src/lib/data/formAction.ts`, `src/scripts/keepFormValues.ts`, teste em `src/lib/forms.test.ts` |
+
+**Revalidação**
+
+| Cenário | Antes | Depois | Evidência |
+| --- | --- | --- | --- |
+| F-04 · Configurações › Clínica | Página com 424px em 390px | Largura da página igual à da janela em 360, 390, 768 e 1280px; cores quebram linha; campo "Site" dentro da tela | [`CORR-F-04-depois-390.jpg`](evidencias/CORR-F-04-depois-390.jpg) |
+| F-05 · Suporte dentro da clínica | "Trocar" fora da área visível (x=230, bloco de 140px) | "Trocar" visível e clicável (teste de clique no ponto central) em 390, 640, 768, 1024 e 1280px, sem sobrepor o menu; o clique leva a `/admin/escolher-clinica`; o nome "Clínica Exemplo Saúde" aparece inteiro | [`-1280`](evidencias/CORR-F-05-depois-1280.jpg), [`-768`](evidencias/CORR-F-05-depois-768.jpg), [`-390`](evidencias/CORR-F-05-depois-390.jpg) |
+| F-05 · Suporte nas telas do Sistema | (não medido) | "Abrir uma clínica" visível e clicável nas mesmas larguras, sem sobrepor o menu | [`CORR-F-05-depois-sistema-768.jpg`](evidencias/CORR-F-05-depois-sistema-768.jpg) |
+| A-02 · FORM-03, 04, 05, 07, 08, 12 | Foco no `body`; sem `aria-invalid`, `aria-describedby` nem `role="alert"` | Foco no campo que falhou (`phone`, `phone`, `price`, `amount`, `name`, `name`), com `aria-invalid="true"` e `aria-describedby="erro-do-formulario"`; mensagem com `role="alert"`; digitar no campo tira o `aria-invalid` | [`CORR-A-02-depois-FORM-03.jpg`](evidencias/CORR-A-02-depois-FORM-03.jpg) |
+| A-02 · FORM-01 Cadastrar paciente | Foco no `body` | Foco na mensagem de erro (`role="alert"`) | — |
+
+**Regressão:** tela sem erro não muda o foco; perfil Administrador sem o link "Trocar" e com o nome
+inteiro em 390, 768 e 1280px; Marcar com "Sair" no cabeçalho (F-01); FORM-03 e FORM-07 de novo com
+0 campos perdidos (F-02, F-03); `npm test` 474 de 474 (1 teste novo: campos no aviso de erro e filtro
+de nomes estranhos); `astro check` 0 erros; `npm run build` concluído; console sem erros.
+
+**Efeito colateral:** com o bloco do nome mais largo, o menu do Suporte em 768px passa de 3 para 4
+linhas (cabeçalho de 137px). O peso do menu do Suporte já está registrado em U-07.
+
+**Limites:** o leitor de tela não foi usado (verificados os atributos e o foco, não a fala); a
+ligação campo↔mensagem depende do nome que a camada de dados dá ao erro, e nas telas não testadas
+pode cair no foco da mensagem.

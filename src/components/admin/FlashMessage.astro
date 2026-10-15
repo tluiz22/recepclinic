@@ -3,13 +3,14 @@ import { takeFlash } from "../../lib/flash";
 import FormMessage from "./FormMessage.astro";
 
 // Aviso deixado pela rota de formulário (salvo ou erro), mostrado uma vez.
-// `data-flash` diz ao src/scripts/keepFormValues.ts se a tela voltou com erro.
+// `data-flash` diz ao src/scripts/keepFormValues.ts se a tela voltou com erro;
+// `data-fields`, quais campos falharam.
 const flash = takeFlash(Astro.cookies);
 ---
 
 {
   flash && (
-    <div data-flash={flash.tone}>
+    <div data-flash={flash.tone} data-fields={flash.fields?.join(" ")}>
       <FormMessage tone={flash.tone}>{flash.text}</FormMessage>
     </div>
   )

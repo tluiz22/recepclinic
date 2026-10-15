@@ -39,7 +39,12 @@ export async function runFormAction(
     return redirect(redirectTo, 303);
   } catch (error) {
     if (!(error instanceof DataError)) logError("formulário", error);
-    setFlash(cookies, { tone: "error", text: error instanceof DataError ? describeDataError(error) : GENERIC.unexpected });
+    const fields = error instanceof DataError && error.code === "invalid" ? Object.keys(error.fields) : [];
+    setFlash(cookies, {
+      tone: "error",
+      text: error instanceof DataError ? describeDataError(error) : GENERIC.unexpected,
+      ...(fields.length ? { fields } : {}),
+    });
     return redirect(typeof failureTo === "function" ? failureTo() : failureTo, 303);
   }
 }

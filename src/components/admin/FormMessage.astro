@@ -12,4 +12,12 @@ const classes = {
 }[tone];
 ---
 
-<p class={`mt-4 rounded-md px-3 py-2 text-sm ${classes}`}><slot /></p>
+{/* Erro: anunciado ao leitor de tela e focável (src/scripts/keepFormValues.ts põe o foco nele quando não acha o campo). */}
+<p
+  class={`mt-4 rounded-md px-3 py-2 text-sm ${classes}`}
+  role={tone === "error" ? "alert" : tone === "success" ? "status" : undefined}
+  tabindex={tone === "error" ? -1 : undefined}
+  data-form-error={tone === "error" ? "" : undefined}
+>
+  <slot />
+</p>

@@ -1,7 +1,7 @@
 # Cobertura da auditoria de frontend
 
-> 14/10/2026, ambiente local. Atualizado no mesmo dia com a revalidação das correções de F-01, F-02
-> e F-03 (ver a seção 12 do [relatório](frontend-audit-report.md)). Cobertura de **testes executados no navegador**. Ter lido o código de
+> 14/10/2026, ambiente local. Atualizado no mesmo dia com a revalidação das correções de F-01, F-02,
+> F-03, F-04, F-05 e A-02 (ver a seção 12 do [relatório](frontend-audit-report.md)). Cobertura de **testes executados no navegador**. Ter lido o código de
 > uma tela **não** conta como teste.
 
 ## Legenda
@@ -41,7 +41,7 @@
 | Rota | Varredura | Cenários | Situação | Observação |
 | --- | --- | --- | --- | --- |
 | `/admin/pacientes` | adm-16, adm-17 | NAV-09, NAV-10 | Aprovada | Lista e busca sem resultado; A-01 (busca sem rótulo) |
-| `/admin/pacientes/novo` | adm-20 | NAV-10, FORM-01, FORM-02 | Parcial | Preservação passou; cadastro não enviado; A-01, A-02 |
+| `/admin/pacientes/novo` | adm-20 | NAV-10, FORM-01, FORM-02 | Parcial | Preservação passou; cadastro não enviado; A-01 pendente; A-02 corrigido (foco na mensagem) |
 | `/admin/pacientes/[id]` | adm-18 | NAV-05, 09, 11, 13, 14, 19 | Parcial | Edições da ficha não enviadas; A-01 |
 | `/admin/pacientes/contato/[id]` | adm-19 | NAV-12 | Parcial | Edição e "Revisado" não enviados |
 
@@ -61,7 +61,7 @@
 
 | Rota | Varredura | Cenários | Situação | Observação |
 | --- | --- | --- | --- | --- |
-| `/admin/configuracoes` (Clínica) | adm-36 | | **Reprovada** | F-04 (rolagem lateral em 390px); salvar não testado |
+| `/admin/configuracoes` (Clínica) | adm-36 | | Parcial | F-04 **corrigido e validado** em 14/10 (sem rolagem lateral em 360, 390, 768 e 1280px); salvar não testado |
 | `/admin/configuracoes/profissionais` | adm-37 | NAV-16 | Aprovada | |
 | `/admin/configuracoes/profissionais/[id]` (novo) | adm-38 | NAV-16, FORM-03, FORM-11 | Parcial | F-02 **corrigido e validado** em 14/10 (FORM-03 de novo: 0 perdidos); cadastro não enviado |
 | `/admin/configuracoes/profissionais/[id]` (editar) | adm-39 | FORM-09 | Parcial | F-02 **corrigido e validado** em 14/10 (FORM-09 de novo: 0 perdidos); edição não salva |
@@ -100,7 +100,7 @@
 | `/admin/sistema/uso` | sup-08 | | Aprovada | |
 | `/admin/sistema/erros` | sup-09 | | Aprovada | |
 | `/admin/sistema/tecnologia` | sup-10 | | Aprovada | |
-| Cabeçalho do painel (layout) | sup-13 (768/1024/1280), todas | KB-01 | **Reprovada** | F-05 ("Trocar" invisível), F-07 (barra do celular), A-03 |
+| Cabeçalho do painel (layout) | sup-13 (768/1024/1280), todas | KB-01 | **Reprovada** | F-07 (barra do celular) e A-03 pendentes; F-05 **corrigido e validado** em 14/10 |
 | `/admin/login` | pub-10 | Logins dos 6 perfis | Aprovada | |
 | `/admin/esqueci-senha` | pub-11 | | Parcial | Pedido não enviado |
 | `/admin/nova-senha` | pub-12 | | **Bloqueada** | Sem link de recuperação: só o redirecionamento ao login foi visto |
@@ -122,16 +122,16 @@
 | --- | --- | --- |
 | Entrar e cair no Início | 6 perfis | Aprovada |
 | Ver o dia na Agenda e trocar de visão (dia/semana/mês) | Admin | Aprovada |
-| Marcar atendimento | Recepção, Admin | **Reprovada** (F-01); envio não feito |
+| Marcar atendimento | Recepção, Admin | Parcial (F-01 corrigido e validado em 14/10); envio não feito |
 | Remarcar, cancelar, confirmar presença | Admin | Parcial (telas e diálogos abertos, nada enviado) |
 | Bloquear agenda | Admin | Parcial (validação ok, nada criado) |
 | Cadastrar paciente | Admin | Parcial (validação e preservação ok, nada criado) |
 | Consultar ficha e voltar à origem | Admin | Aprovada (6 origens) |
-| Registrar pagamento | Admin, Recepção | **Reprovada** (F-03); nada registrado |
+| Registrar pagamento | Admin, Recepção | Parcial (F-03 corrigido e validado em 14/10); nada registrado |
 | Rotina do Resumo do Dia | Admin | Parcial |
-| Configurar a clínica | Admin | **Reprovada** (F-02, F-04) |
+| Configurar a clínica | Admin | Parcial (F-02 e F-04 corrigidos e validados em 14/10; salvar não testado) |
 | Respeitar permissões e isolamento entre clínicas | 6 perfis | Aprovada |
-| Suporte: entrar em uma clínica e trocar | Suporte | **Reprovada** (F-05) |
+| Suporte: entrar em uma clínica e trocar | Suporte | Aprovada (F-05 corrigido e validado em 14/10; "Trocar" leva a Escolher clínica) |
 | Paciente agenda pelo link | Público | Parcial (nada confirmado) |
 | Recuperar senha | Público | Bloqueada |
 

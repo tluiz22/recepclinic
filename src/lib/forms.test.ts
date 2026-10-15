@@ -67,4 +67,17 @@ describe("avisos depois de salvar", () => {
     store.set("rc_aviso", Buffer.from(JSON.stringify({ tone: "alerta", text: "x" })).toString("base64url"));
     expect(takeFlash(cookies)).toBeNull();
   });
+
+  it("o aviso de erro leva os campos que falharam; nome estranho fica de fora", () => {
+    const store = new Map<string, string>();
+    const cookies = {
+      set: (name: string, value: string) => store.set(name, value),
+      get: (name: string) => (store.has(name) ? { value: store.get(name)! } : undefined),
+      delete: (name: string) => store.delete(name),
+    } as unknown as Parameters<typeof setFlash>[0];
+    setFlash(cookies, { tone: "error", text: "Telefone inválido", fields: ["phone", "displayName"] });
+    expect(takeFlash(cookies)).toEqual({ tone: "error", text: "Telefone inválido", fields: ["phone", "displayName"] });
+    store.set("rc_aviso", Buffer.from(JSON.stringify({ tone: "error", text: "x", fields: ["a b", "<x>", 3, "ok"] })).toString("base64url"));
+    expect(takeFlash(cookies)).toEqual({ tone: "error", text: "x", fields: ["ok"] });
+  });
 });

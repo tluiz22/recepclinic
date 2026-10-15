@@ -121,18 +121,19 @@ const isMoreActive = moreNavItems.some((item) => isActive(item.href));
     </div>
     <header class="border-b border-slate-200 bg-white pt-[env(safe-area-inset-top)]">
       <div class="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-4">
-        <div class="min-w-0">
-          <span class="block text-xs font-semibold uppercase tracking-wide text-sky-700">RecepClinic</span>
-          <span class="block truncate text-sm font-medium text-slate-900">
-            {platform ? "Administração do sistema" : clinic?.clinicName}
+        <div class="min-w-[9.5rem] max-w-56">
+          {/* O link fica na linha de cima, fora do nome cortado (truncate): ali dentro, sumia com nome longo. */}
+          <span class="flex flex-wrap items-baseline gap-x-2">
+            <span class="text-xs font-semibold uppercase tracking-wide text-sky-700">RecepClinic</span>
             {
               (platform || clinic?.canSwitchClinic) && (
-                <a href="/admin/escolher-clinica" class="ml-2 text-xs font-normal text-sky-700 hover:underline">
+                <a href="/admin/escolher-clinica" class="whitespace-nowrap text-xs font-normal text-sky-700 hover:underline">
                   {platform ? "Abrir uma clínica" : "Trocar"}
                 </a>
               )
             }
           </span>
+          <span class="block truncate text-sm font-medium text-slate-900">{platform ? "Administração do sistema" : clinic?.clinicName}</span>
         </div>
 
         <nav class="hidden flex-wrap gap-x-6 gap-y-2 text-sm font-medium sm:flex">
