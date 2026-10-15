@@ -93,9 +93,8 @@
 >   - **Redesign do painel (15/out):** avaliação global, identidade visual e proposta da Agenda no
 >     [canvas](https://claude.ai/artifact/AUajFVHWJNscFp5w5Pvqn4); plano R0 a R11 e as 4 decisões
 >     do cliente na seção "Redesign do painel" do [plano](plano.md). **R0, R1 (parcial) e R2
->     implementadas em 15/out**, testadas no navegador e **ainda não publicadas**: falta a
->     validação do cliente; depois, commit e push (staging). Próximo, com a confirmação: R3 (Resumo
->     do Dia). Pendente da R1: o menu do Suporte agrupado.
+>     implementadas em 15/out**, testadas no navegador, aprovadas pelo cliente e **publicadas no
+>     staging** (commit `a1066ca`). Próximo, com a confirmação do cliente: R3 (Resumo do Dia). Pendente da R1: o menu do Suporte agrupado.
 >   - **Migrações no staging:** o Claude aplica com `supabase db push` (permissão liberada em
 >     09/out), sempre na ordem simulação → aplicar → conferir no banco → só então o push do código.
 >   - **WhatsApp de testes:** `+55 61 9903-3143`, na Cloud API do app RecepClinic, ligado à

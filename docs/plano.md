@@ -1906,7 +1906,7 @@ Métricas · R8 Financeiro e DMED · R9 Configurações · R10 Sistema e Acesso 
    Source Sans 3 no texto (fontes no próprio servidor, por causa da CSP), no lugar do azul. As
    cores de situação de 10/out continuam, sempre com ícone e texto.
 
-**R0, R1 (parcial) e R2 implementadas em 15/out/2026** (a validar pelo cliente; ainda não publicadas):
+**R0, R1 (parcial) e R2 implementadas em 15/out/2026** (aprovadas pelo cliente e publicadas no staging em 15/out):
 - **R0:** tokens de cor e fontes em `src/styles/global.css` (`@fontsource-variable`, no próprio
   servidor); componentes base em `src/components/admin/ui/` (`Button`, `StatusPill`, `Signal`, `Tag`,
   `SegmentedControl`, `MoreMenu` com `popover` e `styles.ts`); ícones novos no `Icon`.
