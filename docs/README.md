@@ -83,6 +83,13 @@
 >     Meta (Análise do App; depois, a Verificação do acesso); a F10 (produção, com custo mensal)
 >     segue como opção. A F8 completa depende da Meta (análise do app e Tech
 >     Provider) e a F10 depende da F8.
+>   - **Auditoria de frontend (14/out):** [relatório](auditoria-frontend/frontend-audit-report.md)
+>     e [cobertura](auditoria-frontend/frontend-test-coverage.md). Todos os defeitos confirmados
+>     foram corrigidos, revalidados no navegador e publicados: Alta (F-01 a F-03), Média (F-04,
+>     F-05, A-02) e Baixa (F-06, F-08, F-09, A-01, A-03, A-05); F-07 não se reproduziu (era a barra
+>     do Astro no `npm run dev`). Status de cada achado na seção 12 do relatório. Ícone da aba nas
+>     páginas do paciente: o logo da clínica, sem logo nenhum (cliente, 14/out). **Ficam abertos:**
+>     a suspeita de envio duplo e as recomendações de UX (U-01 a U-12, a avaliar com o cliente).
 >   - **Migrações no staging:** o Claude aplica com `supabase db push` (permissão liberada em
 >     09/out), sempre na ordem simulação → aplicar → conferir no banco → só então o push do código.
 >   - **WhatsApp de testes:** `+55 61 9903-3143`, na Cloud API do app RecepClinic, ligado à

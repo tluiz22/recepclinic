@@ -4,8 +4,9 @@
 > ambiente **local** (`npm run dev` em `http://localhost:4321` + Supabase local com o `seed.sql`).
 > Só auditoria: **nenhum código da aplicação foi alterado.**
 >
-> **Atualização (14/10/2026):** os 3 defeitos de severidade Alta (F-01, F-02, F-03) e os 3 de
-> severidade Média (F-04, F-05, A-02) foram corrigidos e revalidados no navegador. Status de cada achado na [seção 12](#12-status-das-correções).
+> **Atualização (14/10/2026):** os defeitos de severidade Alta (F-01, F-02, F-03), Média (F-04, F-05,
+> A-02) e Baixa (F-06, F-08, F-09, A-01, A-03, A-05) foram corrigidos e revalidados no navegador;
+> F-07 não se reproduziu fora do servidor de desenvolvimento. Status de cada achado na [seção 12](#12-status-das-correções).
 
 ## 1. Resumo executivo
 
@@ -257,21 +258,29 @@ redirecionamento só com a mensagem.
 
 ### F-06 · Marcar › Cadastrar paciente novo › "‹ Marcar" perde a busca · **Baixa**
 
+> **Status:** corrigido e validado em 14/10/2026 (seção 12.6).
+
 - NAV-15. O retorno leva a `/admin/agenda/marcar?date=…` sem `busca=Ana`: o campo volta vazio e a
   pessoa precisa digitar de novo. A cadeia de retorno até a Agenda se mantém.
 
 ### F-07 · "Resumo do Dia" cortado na barra inferior do celular · **Baixa**
+
+> **Status:** não reproduzido (seção 12.6): o corte era a barra de ferramentas do Astro, que só aparece no `npm run dev`.
 
 - Em 390px o rótulo quebra em duas linhas e "Dia" fica cortado.
   Evidência: [`adm-03-agenda-dia-com-dados-390.jpg`](evidencias/adm-03-agenda-dia-com-dados-390.jpg).
 
 ### F-08 · Data por extenso com maiúsculas erradas · **Baixa**
 
+> **Status:** corrigido e validado em 14/10/2026 (seção 12.6).
+
 - Agenda (Dia): "Sexta-Feira, 23 **De** Outubro **De** 2026". Causa: classe CSS `capitalize` em
   `src/pages/admin/agenda.astro:107`.
   Evidência: [`adm-03-agenda-dia-com-dados-desktop.jpg`](evidencias/adm-03-agenda-dia-com-dados-desktop.jpg).
 
 ### F-09 · Status HTTP diferentes para link público inválido · **Baixa**
+
+> **Status:** corrigido e validado em 14/10/2026 (seção 12.6).
 
 - `/agendar/<inválido>` responde **404** e `/formulario/<inválido>` responde **200**, ambos com
   "Link inválido". Afeta monitoramento e indexação, não o paciente.
@@ -400,7 +409,9 @@ do envio, com um único campo inválido por cenário.
 | F-04 | Média | **Corrigido e validado** (12.5) |
 | F-05 | Média | **Corrigido e validado** (12.5) |
 | A-02 | Média | **Corrigido e validado** nos 6 formulários testados e no Cadastrar paciente (12.5); nas demais telas, **corrigido mas não validado** |
-| F-06, F-07, F-08, F-09, A-01, A-03, A-05 | Baixa | Pendente (fora do escopo) |
+| F-06, F-08, F-09, A-01, A-03 | Baixa | **Corrigido e validado** (12.6) |
+| A-05 | Baixa | **Corrigido e validado** (12.6), menos o ícone com o logo da clínica: nenhuma clínica do seed tem logo, então só o caso "sem logo" foi visto |
+| F-07 | Baixa | **Não reproduzido** (12.6) |
 | A-04 (indício), envio duplo (suspeita), U-01 a U-12 | — | Pendente (fora do escopo) |
 
 ### 12.4 Limites desta revalidação
@@ -448,3 +459,40 @@ linhas (cabeçalho de 137px). O peso do menu do Suporte já está registrado em 
 **Limites:** o leitor de tela não foi usado (verificados os atributos e o foco, não a fala); a
 ligação campo↔mensagem depende do nome que a camada de dados dá ao erro, e nas telas não testadas
 pode cair no foco da mensagem.
+
+### 12.6 Terceira rodada: severidade Baixa (F-06 a F-09, A-01, A-03, A-05)
+
+> 14/10/2026, mesmo ambiente local, login `admin@exemplo-saude.local` (e uma sessão sem login para as
+> telas de acesso). Banco: contagem das mesmas 17 tabelas igual antes e depois.
+
+**O que mudou no código**
+
+| Achado | Correção | Arquivos |
+| --- | --- | --- |
+| F-06 | O link "Cadastrar paciente novo" do Marcar leva a busca no endereço de volta | `src/pages/admin/agenda/marcar.astro` |
+| F-07 | Nenhuma: não reproduzido (abaixo) | — |
+| F-08 | `capitalize` (maiúscula em cada palavra) trocado por maiúscula só na primeira letra (`first-letter:uppercase`) na data da Agenda (Dia) e, com o mesmo defeito, no mês da Agenda (Mês: "Outubro De 2026") e nos horários do Remarcar ("Seg 19/10 Às 08:00") | `src/pages/admin/agenda.astro`, `agenda/mes.astro`, `agenda/remarcar.astro` |
+| F-09 | `/formulario/<inválido>` responde 404, como o `/agendar` | `src/pages/formulario/[token].astro` |
+| A-01 | `aria-label` nos campos sem rótulo: "Data" (Agenda e Resumo do Dia), "Buscar paciente" e "Serviço" (Marcar), "Buscar por nome ou telefone" (Pacientes e Financeiro), "Plano de saúde" (cadastro e ficha), "Agenda" e "Filtrar por paciente ou responsável" (Métricas) e "Texto: <nome da mensagem>" nos 9 textos de Configurações › Mensagens (a auditoria contou 6) | `agenda.astro`, `resumo/DateNav.astro`, `agenda/marcar.astro`, `pacientes/index.astro`, `financeiro/index.astro`, `pacientes/novo.astro`, `pacientes/[id].astro`, `metricas.astro`, `configuracoes/mensagens.astro` |
+| A-03 | Link "Pular para o conteúdo" no início do painel, visível só com o foco; o `main` recebe o foco | `src/layouts/AdminLayout.astro` |
+| A-05 | Ícone da aba: o do painel no login, na recuperação de senha e no formulário de cadastro; nas páginas do paciente (agendar, preparo, orientações e a prévia), o **logo da clínica** e, sem logo, nenhum ícone (decisão do cliente, 14/10); a 404 sem ícone. No painel, a tag `mobile-web-app-capable` junto da `apple-…` (o Chrome pedia) | `AuthLayout.astro`, `PublicLayout.astro`, `AdminLayout.astro`, `404.astro`, `agendar/[token].astro`, `preparo/[id].astro`, `orientacoes/[id].astro`, `configuracoes/previa.astro` |
+
+**Revalidação**
+
+| Cenário | Resultado | Evidência |
+| --- | --- | --- |
+| F-06 · Agenda (23/10) › Marcar › busca "Ana" › Cadastrar paciente novo › "‹ Marcar" | PASSOU: volta a `/admin/agenda/marcar?date=2026-10-23&volta=…&busca=Ana`, com "Ana" no campo e o resultado na lista; o "Voltar" seguinte leva a `/admin/agenda?date=2026-10-23` | — |
+| F-07 · Barra inferior em 320, 360 e 390px | NÃO REPRODUZIDO: sem a barra de ferramentas do Astro (só existe no `npm run dev`; a pílula preta cobre o centro da barra), "Resumo do Dia" aparece inteiro em duas linhas, dentro da barra | [`CORR-F-07-sem-toolbar-390.jpg`](evidencias/CORR-F-07-sem-toolbar-390.jpg), [`-320`](evidencias/CORR-F-07-sem-toolbar-320.jpg) |
+| F-08 · Agenda (Dia), Mês, Remarcar | PASSOU: "Sexta-feira, 23 de outubro de 2026" e "Outubro de 2026"; no Remarcar, a regra vale para o rótulo do horário | [`CORR-F-08-depois-dia.jpg`](evidencias/CORR-F-08-depois-dia.jpg), [`-mes`](evidencias/CORR-F-08-depois-mes.jpg) |
+| F-09 · `/formulario/<inválido>`, `/agendar/<inválido>`, `/admin/nao-existe` | PASSOU: 404 nos três ("Link inválido", "Link inválido", "Página não encontrada") | — |
+| A-01 · Nova varredura nas 15 telas | PASSOU: nenhum campo sem rótulo acessível | — |
+| A-03 · Agenda pelo teclado | PASSOU: o 1º Tab mostra "Pular para o conteúdo" no canto superior; Enter leva a `#conteudo` e o Tab seguinte já cai no conteúdo ("Semana") | [`CORR-A-03-depois.jpg`](evidencias/CORR-A-03-depois.jpg) |
+| A-05 · Console no login, recuperar senha, `/agendar` e `/formulario` inválidos, 404, prévia e Agenda | PASSOU: sem 404 do ícone e sem o aviso do Chrome; ficam só os 404 das próprias páginas inexistentes | — |
+
+**Regressão:** Marcar com "Sair" (F-01); Novo profissional mantém os campos, foco no WhatsApp e
+mensagem com `role="alert"` (F-02, A-02); Pagamento mantém "Outra pessoa" e o nome, foco no valor
+(F-03); Configurações › Clínica sem rolagem lateral em 390px (F-04); `npm test` 474 de 474;
+`astro check` 0 erros; `npm run build` concluído.
+
+**Limites:** o ícone com o logo da clínica não foi visto (nenhuma clínica do seed tem logo);
+leitor de tela não usado.

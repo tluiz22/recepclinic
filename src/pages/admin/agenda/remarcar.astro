@@ -121,7 +121,7 @@ const chip = (active: boolean) =>
           options.map((o) => (
             <label class="cursor-pointer rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm has-[:checked]:border-sky-700 has-[:checked]:bg-sky-50">
               <input type="radio" name="slot" value={o.value} required class="mr-1" />
-              <span class="font-medium capitalize">{o.label}</span>
+              <span class="inline-block font-medium first-letter:uppercase">{o.label}</span>
               <span class="block text-xs text-slate-500">{o.detail}</span>
             </label>
           ))

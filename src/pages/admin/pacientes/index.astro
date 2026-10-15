@@ -64,7 +64,7 @@ const link = (changes: Record<string, string>) => {
   <form method="GET" class="mt-4 flex flex-wrap items-center gap-2">
     {tab === "contatos" && <input type="hidden" name="tab" value="contatos" />}
     {showInactive && <input type="hidden" name="todos" value="1" />}
-    <input name="q" value={q} placeholder="Nome ou telefone" class={`${INPUT} mt-0 sm:w-80`} />
+    <input name="q" value={q} aria-label="Buscar por nome ou telefone" placeholder="Nome ou telefone" class={`${INPUT} mt-0 sm:w-80`} />
     <button type="submit" class={SECONDARY_BUTTON}>Buscar</button>
     {q && <a href={link({ q: "" })} class="text-sm text-sky-700 hover:underline">Limpar</a>}
     <a href={link({ todos: showInactive ? "" : "1" })} class="ml-auto text-sm text-sky-700 hover:underline">

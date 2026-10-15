@@ -267,7 +267,7 @@ const markerHint = (markers: string[]) => markers.map((m) => `{${m}} = ${MARKER_
                       <input type="hidden" name="grupo" value="meta" />
                           <input type="hidden" name="acao" value="template_propor" />
                       <input type="hidden" name="key" value={row.key} />
-                      <textarea name="text" rows="9" class={INPUT}>{row.editText}</textarea>
+                      <textarea name="text" rows="9" aria-label={`Texto: ${row.label}`} class={INPUT}>{row.editText}</textarea>
                       <p class={HINT}>Use todos estes marcadores, uma vez cada, nesta ordem: {markerHint(row.markers)}. *texto* fica em negrito.</p>
                       <button type="submit" class={`${PRIMARY_BUTTON} self-start`}>Enviar para revisão</button>
                     </form>
@@ -323,7 +323,7 @@ const markerHint = (markers: string[]) => markers.map((m) => `{${m}} = ${MARKER_
                 <summary class="cursor-pointer text-sm font-medium text-sky-700">{guidance ? "Alterar o texto" : "Escrever o texto"}</summary>
                 <form method="POST" action={action} class="mt-2 flex flex-col gap-2">
                   <input type="hidden" name="acao" value="orientacoes_salvar" />
-                  <textarea name="text" rows="9" maxlength={GUIDANCE_MAX_LENGTH} class={INPUT}>{guidance ?? ""}</textarea>
+                  <textarea name="text" rows="9" maxlength={GUIDANCE_MAX_LENGTH} aria-label="Texto: Orientações gerais da consulta" class={INPUT}>{guidance ?? ""}</textarea>
                   <p class={HINT}>*texto* fica em negrito, _texto_ em itálico. Até {GUIDANCE_MAX_LENGTH} caracteres.</p>
                   <button type="submit" class={`${PRIMARY_BUTTON} self-start`}>Salvar</button>
                 </form>
@@ -358,7 +358,7 @@ const markerHint = (markers: string[]) => markers.map((m) => `{${m}} = ${MARKER_
                         <form method="POST" action={action} class="mt-2 flex flex-col gap-2">
                           <input type="hidden" name="acao" value="conversa_salvar" />
                           <input type="hidden" name="key" value={row.key} />
-                          <textarea name="text" rows="5" class={INPUT}>{row.custom ?? row.defaultText}</textarea>
+                          <textarea name="text" rows="5" aria-label={`Texto: ${row.label}`} class={INPUT}>{row.custom ?? row.defaultText}</textarea>
                           {row.markers.length > 0 && (
                             <p class={HINT}>
                               Marcadores: {markerHint(row.markers)}

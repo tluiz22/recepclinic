@@ -280,7 +280,7 @@ const ageWarning =
             <h2 class="font-semibold text-slate-900">Plano de saúde</h2>
             <form method="POST" action={action} class="mt-2 flex flex-col gap-3">
               <input type="hidden" name="acao" value="plano" />
-              <select name="plan_id" class={`${INPUT} mt-0`}>
+              <select name="plan_id" aria-label="Plano de saúde" class={`${INPUT} mt-0`}>
                 <option value="">Particular</option>
                 {plans
                   .filter((plan) => plan.isActive || plan.id === patient.insurance?.planId)

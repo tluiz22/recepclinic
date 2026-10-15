@@ -107,6 +107,8 @@ const SLOT_LABEL = "cursor-pointer rounded-md border border-slate-300 bg-white p
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="robots" content="noindex, nofollow" />
+    <!-- Ícone da aba: o logo da clínica; sem logo, nenhum (cliente, 14/out/2026; auditoria A-05). -->
+    <link rel="icon" href={brand?.logoUrl ?? "data:,"} />
     <title>{pageTitle} | {brand?.name ?? "RecepClinic"}</title>
   </head>
   <body class="flex min-h-screen flex-col bg-slate-50 text-slate-900">

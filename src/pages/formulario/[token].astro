@@ -38,6 +38,8 @@ const answers = request?.answers;
 const closed = request ? request.status === "submitted" || request.status === "reviewed" : true;
 const expired = request ? !closed && request.expiresAt.getTime() < Date.now() : false;
 const editable = !!request && !closed && !expired;
+// Link inválido: 404, como o /agendar (auditoria de frontend, F-09).
+if (!request) Astro.response.status = 404;
 
 // Uma linha vazia no fim de cada lista, para começar a preencher.
 const blankLocation: OnboardingLocation = { name: "", type: "clinic", address: "" };

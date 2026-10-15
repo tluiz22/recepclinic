@@ -77,6 +77,8 @@ const isMoreActive = moreNavItems.some((item) => isActive(item.href));
     <meta name="theme-color" content="#0369a1" />
     <!-- Safari não segue o manifest sozinho, precisa destas tags à parte. -->
     <meta name="apple-mobile-web-app-capable" content="yes" />
+    <!-- O Chrome pede a versão sem "apple" (auditoria de frontend, A-05). -->
+    <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="RecepClinic" />
     <link rel="apple-touch-icon" href="/admin-apple-touch-icon.png" />
@@ -111,6 +113,13 @@ const isMoreActive = moreNavItems.some((item) => isActive(item.href));
     </style>
   </head>
   <body class="flex min-h-screen flex-col bg-slate-50 text-slate-900">
+    <!-- Pular o menu pelo teclado (auditoria de frontend, A-03): aparece só com o foco. -->
+    <a
+      href="#conteudo"
+      class="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-md focus:bg-white focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:text-sky-700 focus:shadow-lg focus:ring-2 focus:ring-sky-600"
+    >
+      Pular para o conteúdo
+    </a>
     <div
       id="page-loading"
       class="fixed inset-x-0 top-0 z-50 hidden h-1 overflow-hidden bg-sky-100"
@@ -173,7 +182,7 @@ const isMoreActive = moreNavItems.some((item) => isActive(item.href));
       )
     }
 
-    <main class="mx-auto w-full max-w-6xl flex-1 px-4 py-8 pb-28 sm:pb-8">
+    <main id="conteudo" tabindex="-1" class="mx-auto w-full max-w-6xl flex-1 px-4 py-8 pb-28 outline-none sm:pb-8">
       <slot />
     </main>
 

@@ -181,7 +181,7 @@ const chip = (active: boolean) =>
           <>
             <form method="GET" class="mt-2 flex gap-2">
               {Object.entries(state).map(([key, value]) => value && key !== "patient_id" && <input type="hidden" name={key} value={value} />)}
-              <input name="busca" value={busca} placeholder={`Nome do ${vocabulary.patient} ou telefone`} class={`${INPUT} mt-0`} autofocus />
+              <input name="busca" value={busca} aria-label={`Buscar ${vocabulary.patient}`} placeholder={`Nome do ${vocabulary.patient} ou telefone`} class={`${INPUT} mt-0`} autofocus />
               <button type="submit" class={SECONDARY_BUTTON}>
                 Buscar
               </button>
@@ -203,7 +203,7 @@ const chip = (active: boolean) =>
             )}
             <p class={HINT}>
               Não encontrou?{" "}
-              <a href={`/admin/pacientes/novo?volta=${encodeURIComponent(link({}))}`} class="text-sky-700 hover:underline">
+              <a href={`/admin/pacientes/novo?volta=${encodeURIComponent(link({ busca }))}`} class="text-sky-700 hover:underline">
                 Cadastrar {vocabulary.patient} novo
               </a>
             </p>
@@ -216,7 +216,7 @@ const chip = (active: boolean) =>
       <h2 class="font-semibold text-slate-900">2. Serviço</h2>
       <form method="GET" class="mt-2">
         {Object.entries(state).map(([key, value]) => value && key !== "service_id" && key !== "date" && <input type="hidden" name={key} value={value} />)}
-        <select name="service_id" class={`${INPUT} mt-0`} data-autosubmit>
+        <select name="service_id" aria-label="Serviço" class={`${INPUT} mt-0`} data-autosubmit>
           <option value="">Escolha…</option>
           {
             serviceOptions.map((s) => (

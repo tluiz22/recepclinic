@@ -47,7 +47,7 @@ const PAYER_LABEL = { contact: capitalize(vocabulary.contact), patient: "Própri
   }
 
   <form method="GET" class="mt-4 flex flex-wrap items-center gap-2">
-    <input name="q" value={q} placeholder="Nome ou telefone" class={`${INPUT} mt-0 sm:w-80`} />
+    <input name="q" value={q} aria-label="Buscar por nome ou telefone" placeholder="Nome ou telefone" class={`${INPUT} mt-0 sm:w-80`} />
     <button type="submit" class={SECONDARY_BUTTON}>Buscar</button>
     {q && <a href={link({ q: "" })} class="text-sm text-sky-700 hover:underline">Limpar</a>}
   </form>

@@ -17,6 +17,7 @@ const brand = await getPublicClinicBrand(createUserClient(Astro.request, Astro.c
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="robots" content="noindex, nofollow" />
+    <link rel="icon" href={brand.logoUrl ?? "data:,"} />
     <title>Prévia | {brand.name}</title>
   </head>
   <body class="flex min-h-screen flex-col bg-slate-50 text-slate-900">

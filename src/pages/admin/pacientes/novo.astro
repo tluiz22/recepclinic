@@ -165,7 +165,7 @@ if (Astro.request.method === "POST") {
         <Card>
           <h2 class="font-semibold text-slate-900">Plano de saúde</h2>
           <div class="mt-2 flex flex-col gap-3">
-            <select name="plan_id" class={`${INPUT} mt-0`}>
+            <select name="plan_id" aria-label="Plano de saúde" class={`${INPUT} mt-0`}>
               <option value="">Particular</option>
               {plans.map((plan) => (
                 <option value={plan.id} selected={plan.id === values.plan_id}>
