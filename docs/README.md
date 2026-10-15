@@ -90,6 +90,11 @@
 >     do Astro no `npm run dev`). Status de cada achado na seção 12 do relatório. Ícone da aba nas
 >     páginas do paciente: o logo da clínica, sem logo nenhum (cliente, 14/out). **Ficam abertos:**
 >     a suspeita de envio duplo e as recomendações de UX (U-01 a U-12, a avaliar com o cliente).
+>   - **Redesign do painel (15/out):** avaliação global, identidade visual e proposta da Agenda no
+>     [canvas](https://claude.ai/artifact/AUajFVHWJNscFp5w5Pvqn4); plano R0 a R11 e as 4 decisões
+>     do cliente na seção "Redesign do painel" do [plano](plano.md). **Próximo passo:** com a
+>     proposta da Agenda aprovada, implementar R0 (fundação), R1 (moldura) e R2 (Agenda), sem
+>     mudar regras nem rotas.
 >   - **Migrações no staging:** o Claude aplica com `supabase db push` (permissão liberada em
 >     09/out), sempre na ordem simulação → aplicar → conferir no banco → só então o push do código.
 >   - **WhatsApp de testes:** `+55 61 9903-3143`, na Cloud API do app RecepClinic, ligado à

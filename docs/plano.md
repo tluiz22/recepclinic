@@ -1878,6 +1878,34 @@ gera.
 - com o advogado e o contador: o **prazo de guarda** das notas, pagamentos e DMED, e o **texto do
   termo de autorização** (antes da F11.3 ir para uma clínica real).
 
+## Redesign do painel (a partir da auditoria de frontend)
+
+Pedido pelo cliente em 15/out/2026, a partir da [auditoria](auditoria-frontend/frontend-audit-report.md)
+e do [brief](auditoria-frontend/frontend-redesign-brief.md). Só muda a forma: rotas, permissões,
+regras e textos de negócio ficam como estão. Avaliação global, identidade visual e proposta da
+Agenda no canvas
+[Redesign RecepClinic: avaliação global e Agenda](https://claude.ai/artifact/AUajFVHWJNscFp5w5Pvqn4).
+
+**Ordem (cada etapa: proposta no canvas → aprovação → implementação → validação → staging):**
+R0 fundação (cores, fontes e componentes base) · R1 moldura do painel (largura útil até 1600px,
+cabeçalho, menu do Suporte agrupado) · R2 Agenda (Dia, Semana, Mês e o cartão de atendimento) ·
+R3 Resumo do Dia · R4 Marcar e Remarcar · R5 Pagamento · R6 Pacientes e Ficha · R7 Início e
+Métricas · R8 Financeiro e DMED · R9 Configurações · R10 Sistema e Acesso · R11 páginas do paciente.
+
+**Decisões do cliente (15/out/2026), proposta da Agenda:**
+1. **Cartão de atendimento:** ficam à vista só a ação do momento (cheia: Confirmar presença ou
+   Compareceu) e as frequentes (Remarcar, Pagamento, a ação que resolve um sinal, como "Reenviar
+   lembrete"). As raras vão para um botão **"Mais"** (Lista de espera, Trilha, Ver série, correções,
+   Encerrar a série). **Cancelar** fica separado, à direita, em vermelho. Toda ação continua pedindo
+   confirmação. Substitui a "fileira de botões iguais" de 05/out.
+2. **Celular:** com "Todas as agendas", a Agenda do dia vira **uma lista única por horário**, com o
+   nome da agenda em cada cartão. No computador continuam as colunas por agenda (05/out).
+3. **Legenda das cores com contadores:** quantos atendimentos do dia há em cada situação, com
+   ícone. Só contagem, sem filtro.
+4. **Marca do site no painel:** verde `#0B7A62`, Bricolage Grotesque nos títulos e números e
+   Source Sans 3 no texto (fontes no próprio servidor, por causa da CSP), no lugar do azul. As
+   cores de situação de 10/out continuam, sempre com ícone e texto.
+
 ## Depois do 1º piloto (já previsto no banco)
 
 - **Convênios (D10):** telas de planos atendidos e exceções por profissional; plano no cadastro do
