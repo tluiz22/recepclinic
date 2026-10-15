@@ -55,6 +55,8 @@ acceptBtn.addEventListener("click", () => {
     field.dataset.submitter = "";
     pendingForm.append(field);
   }
+  // Guarda os campos para o caso de voltar com erro (src/scripts/keepFormValues.ts).
+  pendingForm?.dispatchEvent(new CustomEvent("rc:enviar", { bubbles: true }));
   pendingForm?.submit();
   dialog.close();
 });

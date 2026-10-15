@@ -365,7 +365,7 @@ const chip = (active: boolean) =>
     // Série: mostra as opções e muda o texto da confirmação.
     const repeat = document.querySelector<HTMLInputElement>("[data-repeat]");
     const repeatFields = document.querySelector<HTMLElement>("[data-repeat-fields]");
-    const submit = document.querySelector<HTMLButtonElement>("form[method='POST'] button[type='submit']");
+    const submit = document.querySelector<HTMLButtonElement>("form[action='/api/admin/agenda/atendimentos/novo'] button[type='submit']");
     const firstTitle = submit?.dataset.confirmTitle;
     const syncRepeat = () => {
       if (repeatFields) repeatFields.hidden = !repeat?.checked;
