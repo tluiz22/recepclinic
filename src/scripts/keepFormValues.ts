@@ -122,7 +122,11 @@ function pointToError(form: HTMLFormElement | null): void {
       break;
     }
   }
-  (invalid[0] ?? message).focus();
+  // No meio da tela: no celular, as barras fixas de baixo cobririam um campo
+  // perto da borda que o navegador acha que já está à vista (teste da R6, QA-02).
+  const target = invalid[0] ?? message;
+  target.scrollIntoView({ block: "center" });
+  target.focus({ preventScroll: true });
 }
 
 // Aponta o erro depois dos scripts da tela, que mostram ou escondem blocos a

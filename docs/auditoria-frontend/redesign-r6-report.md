@@ -270,3 +270,14 @@ Ver a seção 6.
    fique à vista. Vale também para o Pagamento.
 2. **QA-06:** tirar os títulos dos cartões da tabulação no computador.
 3. **QA-03:** mostrar os erros do Cadastrar junto do campo, como no resto da R6.
+
+## 10. Correções (16/out, a pedido do cliente)
+
+As 3 falhas foram corrigidas e retestadas no navegador local, sem gravar dados (os dois envios do
+Cadastrar foram recusados pelo servidor, como esperado).
+
+| Achado | O que mudou | Arquivos | Reteste |
+| --- | --- | --- | --- |
+| QA-02 | O campo com erro rola até o meio da tela antes de receber o foco. No celular, a rolagem (Tab, foco, âncora) reserva 150px embaixo para as barras fixas (`scroll-padding-bottom`). | `src/scripts/keepFormValues.ts`, `src/styles/global.css` | PASSOU: CPF com erro entre 325px e 369px numa tela de 844px, com o foco nele ([`R6-QA-02-depois.png`](evidencias/R6-QA-02-depois.png)); no Cadastrar pelo celular, o WhatsApp ficou entre 318px e 362px. |
+| QA-06 | No computador, o título do cartão sai da tabulação (`tabindex="-1"`, posto pelo script do `EditCard` e tirado de novo abaixo de 1024px). | `src/components/admin/ui/EditCard.astro` | PASSOU: Tab depois de "Marcar": Próximos, Anteriores e cancelados, Abrir na Agenda, Trilha… No celular, o título continua no Tab (é o botão de abrir). |
+| QA-03 | O Cadastrar mostra cada erro do servidor embaixo do campo dele (`aria-invalid`, `aria-describedby`, borda vermelha), e o primeiro campo com erro recebe o foco (`autofocus`). O aviso do alto fica só para o erro sem campo. "Menor de 18 como o próprio paciente" aparece embaixo da escolha "Quem fala". | `src/pages/admin/pacientes/novo.astro` | PASSOU: WhatsApp "123" com o erro embaixo e o foco no campo, sem aviso no alto ([`R6-QA-03-depois.png`](evidencias/R6-QA-03-depois.png)); o menor como o próprio paciente com o erro embaixo da escolha e o foco no botão marcado. Os valores continuam preservados. |

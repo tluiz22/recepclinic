@@ -2034,6 +2034,9 @@ com gravação autorizada só no banco local (desfeita no fim e conferida com um
 (QA-02); no computador, os títulos dos cartões entram na tabulação (QA-06); no Cadastrar, o erro do
 servidor não marca o campo (QA-03, já existia). 4 bloqueados (Anonimizar, Bloquear no bot e os
 casos sem dado no seed).
+As 3 falhas foram **corrigidas e retestadas** no mesmo dia (seção 10 do relatório): o campo com erro
+rola até o meio da tela antes do foco, e o celular reserva espaço para as barras fixas; o título do
+cartão sai do Tab no computador; o Cadastrar mostra cada erro embaixo do campo, com o foco nele.
 
 ## Depois do 1º piloto (já previsto no banco)
 

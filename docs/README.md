@@ -111,7 +111,7 @@
 >     envio único em todo o painel; detalhes no [plano](plano.md)). **R6 (Pacientes e Ficha): proposta
 >     aprovada (7 decisões no [plano](plano.md)) e implementada em 16/out**, testada no navegador local
 >     (computador e celular, sem gravar dados); [teste de interface](auditoria-frontend/redesign-r6-report.md)
->     com 3 falhas Baixas (QA-02, QA-03, QA-06) a corrigir se o cliente pedir; **falta a validação do
+>     com 3 falhas Baixas (QA-02, QA-03, QA-06), já corrigidas e retestadas; **falta a validação do
 >     cliente** e a publicação no staging. A decidir com o cliente: o texto da confirmação da série (S-01).
 >   - **Migrações no staging:** o Claude aplica com `supabase db push` (permissão liberada em
 >     09/out), sempre na ordem simulação → aplicar → conferir no banco → só então o push do código.

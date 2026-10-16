@@ -54,6 +54,17 @@ const optional = "font-normal text-ink-soft";
 const hint = "text-sm text-ink-soft";
 const choice =
   "relative flex flex-1 cursor-pointer items-start gap-3 rounded-[10px] border border-line-strong bg-white px-3.5 py-3 text-left has-[:checked]:border-brand has-[:checked]:bg-brand-soft/60 has-[:checked]:shadow-[0_0_0_1px_var(--color-brand)] has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-brand";
+const fieldError = "flex items-start gap-1.5 text-sm font-semibold text-danger";
+const invalidControl = "border-danger focus:border-danger focus:ring-danger";
+const firstInvalid = (name: string) => Object.keys(fieldErrors).sort((a, b) => FIELD_ORDER.indexOf(a) - FIELD_ORDER.indexOf(b))[0] === name;
+const FIELD_ORDER = ["full_name", "birthdate", "mode", "contact_name", "phone", "card_valid_until"];
+/** Atributos do campo com erro: marcado, ligado à mensagem e, o primeiro, com o foco. */
+const invalidAttrs = (name: string, describedBy?: string): { "aria-invalid"?: "true"; "aria-describedby"?: string; autofocus?: boolean } =>
+  fieldErrors[name]
+    ? { "aria-invalid": "true", "aria-describedby": [`${name}-erro`, describedBy].filter(Boolean).join(" "), autofocus: firstInvalid(name) }
+    : describedBy
+      ? { "aria-describedby": describedBy }
+      : {};
 const alertBox = "flex items-start gap-2.5 rounded-[10px] border border-pend-200 bg-pend-50 px-3.5 py-3 text-[15px] leading-snug text-pend-800";
 
 const values = {
@@ -69,6 +80,17 @@ const values = {
   confirmed_contact_id: "",
 };
 let error: string | null = null;
+// Erro de validação junto do campo (teste da R6, QA-03): o nome na camada de
+// dados vira o nome do campo do formulário; o primeiro recebe o foco.
+const FIELD_OF: Record<string, string> = {
+  fullName: "full_name",
+  birthdate: "birthdate",
+  isContactSelf: "mode",
+  contactFullName: "contact_name",
+  phone: "phone",
+  cardValidUntil: "card_valid_until",
+};
+let fieldErrors: Record<string, string> = {};
 let notice: string | null = null;
 let askDuplicate = false;
 /** O aviso do número já cadastrado fica junto do WhatsApp; o do repetido, junto da confirmação. */
@@ -114,7 +136,17 @@ if (Astro.request.method === "POST") {
     }
   } catch (caught) {
     if (!(caught instanceof DataError)) logError("paciente novo", caught);
-    error = caught instanceof DataError ? describeDataError(caught) : "Não foi possível cadastrar. Tente de novo.";
+    if (caught instanceof DataError && caught.code === "invalid") {
+      fieldErrors = Object.fromEntries(
+        Object.entries(caught.fields)
+          .filter(([key]) => FIELD_OF[key])
+          .map(([key, text]) => [FIELD_OF[key], text]),
+      );
+    }
+    // Só o que não tem campo na tela fica no aviso do alto.
+    if (Object.keys(fieldErrors).length === 0) {
+      error = caught instanceof DataError ? describeDataError(caught) : "Não foi possível cadastrar. Tente de novo.";
+    }
   }
 }
 ---
@@ -133,11 +165,32 @@ if (Astro.request.method === "POST") {
       <h2 id="bloco-paciente" class={blockTitle}><span class={number} aria-hidden="true">1</span>{capitalize(vocabulary.patient)}</h2>
       <div class={field}>
         <label for="full_name" class={fieldLabel}>Nome do {vocabulary.patient}</label>
-        <input id="full_name" name="full_name" required value={values.full_name} class={CONTROL} />
+        <input id="full_name" name="full_name" required value={values.full_name} {...invalidAttrs("full_name")} class={`${CONTROL} ${fieldErrors.full_name ? invalidControl : ""}`} />
+        {fieldErrors.full_name && (
+                <p id="full_name-erro" class={fieldError}>
+                  <Icon name="warning" class="mt-0.5 h-4 w-4 shrink-0" strokeWidth={2.2} />
+                  {fieldErrors.full_name}
+                </p>
+              )}
       </div>
       <div class={field}>
         <label for="birthdate" class={fieldLabel}>Data de nascimento</label>
-        <input id="birthdate" name="birthdate" type="date" required max={today} value={values.birthdate} class={`${CONTROL} w-52`} />
+        <input
+          id="birthdate"
+          name="birthdate"
+          type="date"
+          required
+          max={today}
+          value={values.birthdate}
+          {...invalidAttrs("birthdate")}
+          class={`${CONTROL} w-52 ${fieldErrors.birthdate ? invalidControl : ""}`}
+        />
+        {fieldErrors.birthdate && (
+                <p id="birthdate-erro" class={fieldError}>
+                  <Icon name="warning" class="mt-0.5 h-4 w-4 shrink-0" strokeWidth={2.2} />
+                  {fieldErrors.birthdate}
+                </p>
+              )}
       </div>
       <div class={field}>
         <label for="notes" class={fieldLabel}>Observações <span class={optional}>(opcional)</span></label>
@@ -155,28 +208,48 @@ if (Astro.request.method === "POST") {
           </p>
         ) : (
           <>
-            <fieldset>
+            <fieldset aria-describedby={fieldErrors.mode ? "mode-erro" : undefined}>
               <legend class="sr-only">Quem fala com a clínica pelo WhatsApp</legend>
               <div class="flex flex-col gap-2.5 sm:flex-row">
                 <label class={choice}>
-                  <input type="radio" name="mode" value="self" checked={values.mode === "self"} class="mt-0.5 h-[18px] w-[18px] shrink-0 accent-brand" />
+                  <input type="radio" name="mode" value="self" checked={values.mode === "self"} autofocus={firstInvalid("mode") && values.mode === "self"} class="mt-0.5 h-[18px] w-[18px] shrink-0 accent-brand" />
                   <span class="flex flex-col gap-0.5">
                     <span class="text-[15.5px] leading-snug font-semibold text-ink">O próprio {vocabulary.patient}</span>
                     <span class={hint}>Maior de 18 anos</span>
                   </span>
                 </label>
                 <label class={choice}>
-                  <input type="radio" name="mode" value="new" checked={values.mode === "new"} class="mt-0.5 h-[18px] w-[18px] shrink-0 accent-brand" />
+                  <input type="radio" name="mode" value="new" checked={values.mode === "new"} autofocus={firstInvalid("mode") && values.mode === "new"} class="mt-0.5 h-[18px] w-[18px] shrink-0 accent-brand" />
                   <span class="flex flex-col gap-0.5">
                     <span class="text-[15.5px] leading-snug font-semibold text-ink">Um {vocabulary.contact}</span>
                     <span class={hint}>Outra pessoa fala por ele</span>
                   </span>
                 </label>
               </div>
+              <div class="mt-2">
+              {fieldErrors.mode && (
+                <p id="mode-erro" class={fieldError}>
+                  <Icon name="warning" class="mt-0.5 h-4 w-4 shrink-0" strokeWidth={2.2} />
+                  {fieldErrors.mode}
+                </p>
+              )}
+              </div>
             </fieldset>
             <div data-contact-name class={field}>
               <label for="contact_name" class={fieldLabel}>Nome do {vocabulary.contact}</label>
-              <input id="contact_name" name="contact_name" value={values.contact_name} class={CONTROL} />
+              <input
+                id="contact_name"
+                name="contact_name"
+                value={values.contact_name}
+                {...invalidAttrs("contact_name")}
+                class={`${CONTROL} ${fieldErrors.contact_name ? invalidControl : ""}`}
+              />
+              {fieldErrors.contact_name && (
+                <p id="contact_name-erro" class={fieldError}>
+                  <Icon name="warning" class="mt-0.5 h-4 w-4 shrink-0" strokeWidth={2.2} />
+                  {fieldErrors.contact_name}
+                </p>
+              )}
             </div>
             <div class={field}>
               <label for="phone" class={fieldLabel}>WhatsApp</label>
@@ -187,9 +260,15 @@ if (Astro.request.method === "POST") {
                 required
                 placeholder="(84) 99999-9999"
                 value={values.phone}
-                aria-describedby={samePerson ? "phone-aviso phone-hint" : "phone-hint"}
-                class={`${CONTROL} w-full sm:w-64 ${samePerson ? "border-pend-500" : ""}`}
+                {...invalidAttrs("phone", samePerson ? "phone-aviso phone-hint" : "phone-hint")}
+                class={`${CONTROL} w-full sm:w-64 ${fieldErrors.phone ? invalidControl : samePerson ? "border-pend-500" : ""}`}
               />
+              {fieldErrors.phone && (
+                <p id="phone-erro" class={fieldError}>
+                  <Icon name="warning" class="mt-0.5 h-4 w-4 shrink-0" strokeWidth={2.2} />
+                  {fieldErrors.phone}
+                </p>
+              )}
               {samePerson && notice && (
                 <p id="phone-aviso" role="alert" tabindex="-1" data-form-error class={alertBox}>
                   <Icon name="warning" class="mt-0.5 h-[18px] w-[18px] shrink-0" strokeWidth={2} />
@@ -225,7 +304,20 @@ if (Astro.request.method === "POST") {
             </div>
             <div class={field}>
               <label for="card_valid_until" class={fieldLabel}>Validade <span class={optional}>(opcional)</span></label>
-              <input id="card_valid_until" name="card_valid_until" type="date" value={values.card_valid_until} class={CONTROL} />
+              <input
+                id="card_valid_until"
+                name="card_valid_until"
+                type="date"
+                value={values.card_valid_until}
+                {...invalidAttrs("card_valid_until")}
+                class={`${CONTROL} ${fieldErrors.card_valid_until ? invalidControl : ""}`}
+              />
+              {fieldErrors.card_valid_until && (
+                <p id="card_valid_until-erro" class={fieldError}>
+                  <Icon name="warning" class="mt-0.5 h-4 w-4 shrink-0" strokeWidth={2.2} />
+                  {fieldErrors.card_valid_until}
+                </p>
+              )}
             </div>
           </div>
         </section>

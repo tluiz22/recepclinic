@@ -67,3 +67,11 @@
 button[aria-busy="true"] {
   cursor: progress;
 }
+
+/* Celular (R6, QA-02): a rolagem para um campo (Tab, foco, âncora) deixa à vista o
+   espaço da barra de baixo e da barra fixa de ação (Marcar, Registrar). */
+@media (max-width: 639px) {
+  html {
+    scroll-padding-bottom: 150px;
+  }
+}

@@ -59,13 +59,22 @@ const hasEdit = editable && Astro.slots.has("edit");
 </details>
 
 <script>
-  // Computador: o cartão não recolhe (o título não é um botão).
+  // Computador: o cartão não recolhe; o título não é um botão nem recebe o
+  // foco do Tab (teste da R6, QA-06). No celular, volta a ser o botão de abrir.
   const desktop = window.matchMedia("(min-width: 1024px)");
-  document.querySelectorAll<HTMLElement>("[data-edit-card] > summary[data-collapse]").forEach((summary) => {
+  const titles = document.querySelectorAll<HTMLElement>("[data-edit-card] > summary[data-collapse]");
+  const syncTitles = () =>
+    titles.forEach((summary) => {
+      if (desktop.matches) summary.setAttribute("tabindex", "-1");
+      else summary.removeAttribute("tabindex");
+    });
+  titles.forEach((summary) => {
     summary.addEventListener("click", (event) => {
       if (desktop.matches) event.preventDefault();
     });
   });
+  syncTitles();
+  desktop.addEventListener("change", syncTitles);
   // Celular: os cartões começam recolhidos (sem JavaScript, ficam abertos);
   // o que voltou com erro é aberto de novo pelo keepFormValues.
   if (!desktop.matches) {
