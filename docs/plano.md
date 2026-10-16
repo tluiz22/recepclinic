@@ -2028,6 +2028,12 @@ cartão `EditCard` em `ui/` (dados em leitura, "Editar" com `<details>`, recolhi
 `keepFormValues` abre o cartão do formulário que voltou com erro); `Tabs` com `inCard` e contador
 neutro; `Pill` com o tom `alert` (faltas). No responsável, "Bloquear no bot…" abre o cartão do
 bloqueio por `?bloquear=1`.
+**Teste de interface da R6 (16/out, a pedido do cliente)**: [relatório](auditoria-frontend/redesign-r6-report.md),
+com gravação autorizada só no banco local (desfeita no fim e conferida com um snapshot). 31 cenários:
+28 passaram e 3 falharam, todos Baixos: no celular, o campo com erro fica atrás das barras fixas
+(QA-02); no computador, os títulos dos cartões entram na tabulação (QA-06); no Cadastrar, o erro do
+servidor não marca o campo (QA-03, já existia). 4 bloqueados (Anonimizar, Bloquear no bot e os
+casos sem dado no seed).
 
 ## Depois do 1º piloto (já previsto no banco)
 
