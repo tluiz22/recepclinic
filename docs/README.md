@@ -98,9 +98,10 @@
 >     implementadas em 15/out**, aprovadas pelo cliente e publicadas no staging. Depois, a correção
 >     de "Não responderam" para quem remarcou pelo lembrete (commit `317dd72`, publicada e
 >     conferida pelo cliente no staging).
->     **Retomar daqui (próxima sessão, combinado em 15/out):** R4 (Marcar e Remarcar): proposta no
->     canvas → aprovação → implementação. U-09 decidida (15/out): vindo de um dia da Agenda, os
->     horários do Marcar começam nesse dia (detalhes no [plano](plano.md)). Pendente da R1: o menu
+>     **R4 (Marcar e Remarcar) implementada e publicada no staging em 15/out** (proposta aprovada
+>     no canvas; U-09: vindo de um dia da Agenda, os horários começam nesse dia; detalhes no
+>     [plano](plano.md)). **Retomar daqui:** trazer os ajustes do teste da R4 pelo cliente e seguir
+>     para a R5 (Pagamento): proposta no canvas → aprovação → implementação. Pendente da R1: o menu
 >     do Suporte agrupado.
 >   - **Migrações no staging:** o Claude aplica com `supabase db push` (permissão liberada em
 >     09/out), sempre na ordem simulação → aplicar → conferir no banco → só então o push do código.

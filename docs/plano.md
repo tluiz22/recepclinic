@@ -1946,7 +1946,7 @@ dele. As setas continuam levando a outros dias.
 passos numerados com um resumo e o botão à direita (no celular, uma barra fixa embaixo); faixa de
 7 dias livres com setas e "Outra data"; horários por turno (Manhã, Tarde, Noite); Remarcar com o
 atendimento atual no alto e o resumo "De → Para" com a escolha da série. **Implementada em
-15/out** e testada no navegador (computador e celular), **aguardando a validação do cliente**:
+15/out** e testada no navegador (computador e celular), **publicada no staging em 15/out a pedido do cliente, que testa depois**:
 regra da faixa em `src/lib/dayStrip.ts` (com teste), componentes `DayStrip`, `SlotPicker` e
 `StepCard` em `ui/`; o diálogo de confirmação aceita o botão ligado ao formulário por `form="…"`.
 
