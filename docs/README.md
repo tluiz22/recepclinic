@@ -96,8 +96,8 @@
 >     implementadas em 15/out**, testadas no navegador, aprovadas pelo cliente e **publicadas no
 >     staging** (commit `a1066ca`). Correção do "confirmo" do lembrete e **R3 (Resumo do Dia)
 >     implementadas em 15/out**, aprovadas pelo cliente e publicadas no staging. Depois, a correção
->     de "Não responderam" para quem remarcou pelo lembrete (commit `317dd72`, publicada; falta a
->     conferência do cliente no staging).
+>     de "Não responderam" para quem remarcou pelo lembrete (commit `317dd72`, publicada e
+>     conferida pelo cliente no staging).
 >     **Retomar daqui (próxima sessão, combinado em 15/out):** R4 (Marcar e Remarcar): proposta no
 >     canvas → aprovação → implementação. Antes de desenhar, perguntar ao cliente a U-09 da
 >     auditoria (vindo de um dia da Agenda, os horários do Marcar começam nesse dia ou no primeiro
