@@ -112,7 +112,8 @@
 >     aprovada (7 decisões no [plano](plano.md)) e implementada em 16/out**, testada no navegador local
 >     (computador e celular, sem gravar dados); [teste de interface](auditoria-frontend/redesign-r6-report.md)
 >     com 3 falhas Baixas (QA-02, QA-03, QA-06), já corrigidas e retestadas; **publicada no staging em 16/out** (commit `06dbf90`, a
->     pedido do cliente), aguardando a conferência dele lá. **Próxima: R7 (Início e Métricas).** A decidir com o cliente: o texto da confirmação da série (S-01).
+>     pedido do cliente), **R6 validada pelo cliente em 16/out.** **Próxima sessão: R7 (Início e Métricas)
+>     pela proposta no canvas.** A decidir com o cliente: o texto da confirmação da série (S-01).
 >   - **Migrações no staging:** o Claude aplica com `supabase db push` (permissão liberada em
 >     09/out), sempre na ordem simulação → aplicar → conferir no banco → só então o push do código.
 >   - **WhatsApp de testes:** `+55 61 9903-3143`, na Cloud API do app RecepClinic, ligado à
