@@ -1921,6 +1921,12 @@ Métricas · R8 Financeiro e DMED · R9 Configurações · R10 Sistema e Acesso 
   `reminder_response = 'confirmed'`, mas a Agenda, o Resumo e `daily.ts` comparavam com `"confirm"`
   (Lembretes punha quem confirmou em "Não responderam"). Regra única em `src/lib/reminderResponse.ts`,
   com teste de banco em `painel-base.test.ts`.
+- **Corrigido em 15/out** (depois da R3, relato do cliente): quem tocou em "Remarcar" no lembrete e
+  remarcou pelo WhatsApp aparecia em "Não responderam" no dia original, porque o gatilho
+  `app.reset_reminder_on_reschedule` zera `reminder_response` (para a data nova receber outro
+  lembrete). Lembretes e o contador "Lembretes sem resposta" da tela inicial passam a ler o botão
+  tocado na mensagem recebida (`reminder_confirm`, `reminder_reschedule`, `reminder_cancel`), com o
+  campo do atendimento como reserva. O gatilho não mudou. Teste de banco em `acesso-lembrete.test.ts`.
 
 **R3 (Resumo do Dia), decisões do cliente (15/out/2026):** as 7 abas continuam, no estilo
 sublinhado da Agenda, com contador onde há pendência (Lembretes: sem resposta ou não entregues
