@@ -2,12 +2,15 @@
 // Resumo do Dia › Resumo do dia (F4.8): só informação, como no piloto desde
 // 03/out/2026 (as ações ficam na Agenda): hora, paciente, idade, responsável,
 // telefone, serviço, local, agenda, presença confirmada e quem marcou.
+// Redesign R3 (cliente, 15/out/2026): legenda com contadores e, no
+// computador, uma linha por atendimento; no celular, um cartão por atendimento.
 import { currentPath, withReturn } from "../../../lib/returnPath";
-import Badge from "../Badge.astro";
-import Card from "../Card.astro";
 import PhoneLinks from "../PhoneLinks.astro";
-import { CANCELED_TEXT, situationCard } from "../agenda/situationStyle";
+import { CANCELED_TEXT, SITUATIONS, appointmentSituation, countSituations } from "../agenda/situationStyle";
 import SituationLegend from "../agenda/SituationLegend.astro";
+import Signal from "../ui/Signal.astro";
+import StatusPill from "../ui/StatusPill.astro";
+import Tag from "../ui/Tag.astro";
 import { formatAge } from "../../../lib/age";
 import { formatInstant } from "../../../lib/clinicTime";
 import type { AgendaAppointment } from "../../../lib/data/agenda/view";
@@ -33,51 +36,87 @@ const bookedBy = (a: AgendaAppointment) => {
 };
 const active = appointments.filter((a) => a.status !== "canceled");
 const canceled = appointments.filter((a) => a.status === "canceled");
+// Presença: o "confirmo" do lembrete também grava a presença, por isso vem primeiro.
+const presence = (a: AgendaAppointment) => {
+  const isActive = a.status === "scheduled" || a.status === "confirmed";
+  if (!isActive) return null;
+  if (confirmedByReminder(a.reminderResponse)) return { label: "Confirmou pelo lembrete", tone: "success" as const, icon: "check" as const };
+  if (a.patientConfirmedAt) return { label: "Presença confirmada", tone: "success" as const, icon: "check" as const };
+  if (a.scheduledAt > now) return { label: "Presença não confirmada", tone: "warning" as const, icon: "clock" as const };
+  return null;
+};
+const here = currentPath(Astro.url);
+const COLUMNS = "lg:grid lg:grid-cols-[150px_minmax(0,1.3fr)_minmax(0,1.2fr)_200px_210px] lg:gap-4";
 ---
 
-<p class="mt-3 text-sm text-slate-600">
-  {active.length} {active.length === 1 ? "atendimento" : "atendimentos"}{canceled.length ? ` · ${canceled.length} cancelado(s)` : ""}
-</p>
-<SituationLegend />
-<div class="mt-3 flex flex-col gap-3">
-  {
-    [...active, ...canceled].map((a) => {
-      const isActive = a.status === "scheduled" || a.status === "confirmed";
-      return (
-        <Card class={situationCard(a)}>
-          <div class="flex flex-wrap items-start justify-between gap-2">
-            <div class="text-sm">
-              <p class="text-base font-semibold text-slate-900">
-                <span class={a.status === "canceled" ? CANCELED_TEXT : ""}>{formatInstant(a.scheduledAt, timeZone, "HH:mm")}</span> ·{" "}
-                <a href={withReturn(`/admin/pacientes/${a.patientId}`, currentPath(Astro.url))} class="hover:text-sky-700 hover:underline">
-                  {a.patientName}
-                </a>{" "}
-                <span class="text-sm font-normal text-slate-500">{formatAge(a.patientBirthdate, date)}</span>
-              </p>
-              <p class="text-slate-500">
-                {!a.isContactSelf && `${capitalize(vocabulary.contact)}: ${a.contactName} · `}
-                <PhoneLinks phone={a.contactPhone} plain class="text-slate-600" />
-              </p>
-              <div class="mt-1.5 flex flex-wrap gap-1.5">
-                <Badge variant={a.category === "exam" ? "warning" : a.category === "return_visit" ? "accent" : "info"}>{a.serviceName}</Badge>
-                <Badge variant="neutral">{a.locationName}</Badge>
-                {showAgenda && <Badge variant="neutral">{a.agendaName}</Badge>}
+<SituationLegend counts={countSituations(appointments, 0)} withBlock={false} class="mt-4" />
+{
+  appointments.length > 0 && (
+    <div class="mt-4 lg:overflow-hidden lg:rounded-xl lg:border lg:border-line lg:bg-white">
+      <div aria-hidden="true" class={`hidden border-b border-line border-l-[5px] border-l-transparent bg-[#f8faf9] px-4 py-2.5 text-[13px] font-semibold text-ink-soft ${COLUMNS}`}>
+        <span>Horário</span>
+        <span>{capitalize(vocabulary.patient)} e contato</span>
+        <span>Atendimento</span>
+        <span>Presença</span>
+        <span>Quem marcou</span>
+      </div>
+      <ul aria-label="Atendimentos do dia" class="flex flex-col gap-2.5 lg:gap-0">
+        {[...active, ...canceled].map((a) => {
+          const situation = appointmentSituation(a);
+          const p = presence(a);
+          return (
+            <li
+              class={`flex min-w-0 flex-col gap-1.5 rounded-xl border border-l-[5px] px-3 py-3 lg:items-start lg:rounded-none lg:border-0 lg:border-b lg:border-l-[5px] lg:border-b-[#e6ecea] lg:px-4 lg:last:border-b-0 ${SITUATIONS[situation].edge} ${SITUATIONS[situation].card} ${situation === "canceled" ? "" : "lg:bg-transparent"} ${COLUMNS}`}
+            >
+              <div class="flex items-center justify-between gap-2 lg:flex-col lg:items-start lg:gap-1.5">
+                <span class={`text-[17px] leading-tight font-bold tabular-nums lg:text-base ${a.status === "canceled" ? CANCELED_TEXT : "text-ink"}`}>
+                  {formatInstant(a.scheduledAt, timeZone, "HH:mm")}
+                </span>
+                <StatusPill situation={situation} />
               </div>
-              {a.homeVisitAddress && <p class="mt-1 text-slate-500">Endereço: {a.homeVisitAddress}</p>}
-              <p class="mt-1 text-xs text-slate-400">{bookedBy(a)}</p>
-            </div>
-            <div class="flex flex-col items-end gap-1">
-              {a.status === "canceled" && <Badge variant="danger">Cancelado</Badge>}
-              {a.status === "completed" && <Badge variant="success">Compareceu</Badge>}
-              {a.status === "no_show" && <Badge variant="danger">Faltou</Badge>}
-              {isActive && a.patientConfirmedAt && <Badge variant="success">Presença confirmada ✓</Badge>}
-              {isActive && !a.patientConfirmedAt && confirmedByReminder(a.reminderResponse) && <Badge variant="success">Confirmou pelo lembrete</Badge>}
-              {isActive && !a.patientConfirmedAt && !confirmedByReminder(a.reminderResponse) && a.scheduledAt > now && <Badge variant="warning">Presença não confirmada</Badge>}
-            </div>
-          </div>
-        </Card>
-      );
-    })
-  }
-  {appointments.length === 0 && <Card class="text-center text-slate-500">Nenhum atendimento neste dia.</Card>}
-</div>
+              <div class="flex min-w-0 flex-col gap-0.5">
+                <span>
+                  <a href={withReturn(`/admin/pacientes/${a.patientId}`, here)} class="text-[17px] leading-snug font-semibold text-ink no-underline hover:text-brand hover:underline lg:text-base">
+                    {a.patientName}
+                  </a>{" "}
+                  <span class="text-sm text-ink-soft">{formatAge(a.patientBirthdate, date)}</span>
+                </span>
+                <span class="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-[15px] leading-snug text-ink-soft lg:text-sm">
+                  {!a.isContactSelf && `${capitalize(vocabulary.contact)}: ${a.contactName} · `}
+                  <PhoneLinks phone={a.contactPhone} plain />
+                </span>
+                {a.homeVisitAddress && <span class="text-sm text-ink-soft">Endereço: {a.homeVisitAddress}</span>}
+              </div>
+              <div class="flex flex-wrap gap-1.5">
+                {showAgenda && (
+                  <Tag strong class="lg:bg-ink/[0.07] lg:text-ink-mid">
+                    {a.agendaName}
+                  </Tag>
+                )}
+                <Tag>{a.serviceName}</Tag>
+                <Tag>{a.locationName}</Tag>
+              </div>
+              <div>
+                {p ? (
+                  <Signal tone={p.tone} icon={p.icon}>
+                    {p.label}
+                  </Signal>
+                ) : (
+                  <span class="hidden text-sm text-ink-soft lg:inline" aria-hidden="true">
+                    —
+                  </span>
+                )}
+              </div>
+              <span class="text-[13.5px] leading-snug text-ink-soft lg:text-[13px]">{bookedBy(a)}</span>
+            </li>
+          );
+        })}
+      </ul>
+    </div>
+  )
+}
+{
+  appointments.length === 0 && (
+    <p class="mt-4 rounded-xl border border-dashed border-line-strong px-3 py-5 text-center text-[15px] text-ink-soft">Nenhum atendimento neste dia.</p>
+  )
+}

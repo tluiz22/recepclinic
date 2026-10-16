@@ -6,23 +6,24 @@
 // agendas que a pessoa vê (o Profissional, só as próprias).
 import AdminLayout from "../../../layouts/AdminLayout.astro";
 import AppointmentCard from "../../../components/admin/agenda/AppointmentCard.astro";
-import Card from "../../../components/admin/Card.astro";
 import ConfirmDeleteDialog from "../../../components/admin/ConfirmDeleteDialog.astro";
 import FlashMessage from "../../../components/admin/FlashMessage.astro";
-import TabBar from "../../../components/admin/TabBar.astro";
 import AguardandoTab from "../../../components/admin/resumo/AguardandoTab.astro";
-import DateNav from "../../../components/admin/resumo/DateNav.astro";
 import EnviosTab from "../../../components/admin/resumo/EnviosTab.astro";
 import LembretesTab from "../../../components/admin/resumo/LembretesTab.astro";
 import ListaEsperaTab from "../../../components/admin/resumo/ListaEsperaTab.astro";
 import ResumoDia from "../../../components/admin/resumo/ResumoDia.astro";
-import { isCalendarDate, todayIn } from "../../../lib/clinicTime";
+import Button from "../../../components/admin/ui/Button.astro";
+import DateStepper from "../../../components/admin/ui/DateStepper.astro";
+import PageHeader from "../../../components/admin/ui/PageHeader.astro";
+import Tabs, { type TabItem } from "../../../components/admin/ui/Tabs.astro";
+import { addDays, formatCalendarDate, isCalendarDate, todayIn } from "../../../lib/clinicTime";
 import { canAccessArea } from "../../../lib/clinicAccess";
 import { createUserClient } from "../../../lib/data/clients";
 import { loadActorLabels } from "../../../lib/data/agenda/trail";
 import { listAgendaAppointments, listNoShowStats, listOrigins, type AgendaAppointment } from "../../../lib/data/agenda/view";
 import { listAgendas } from "../../../lib/data/config/agendas";
-import { listAwaitingRebooking, listPendingAttendance, listRecordedPage, listRemindersOfDay } from "../../../lib/data/daily";
+import { getResumoTabCounts, listAwaitingRebooking, listPendingAttendance, listRecordedPage, listRemindersOfDay } from "../../../lib/data/daily";
 import { describeSendsAlert, getSendsAlert, listAppointmentsWithFailedSends, listJobRuns } from "../../../lib/data/sends";
 import { listPaymentStates } from "../../../lib/data/payments";
 import { listRecentOffers, listWaitlist } from "../../../lib/data/waitlist/entries";
@@ -104,18 +105,53 @@ const [noShows, origins, paymentStates] = cards.length
       financeOn ? listPaymentStates(db, clinic.clinicId, cards.map((a) => a.id)) : Promise.resolve(null),
     ])
   : [new Map(), new Map(), null];
+// Contadores das abas (R3; cliente, 15/out/2026): onde há pendência.
+const counts = await getResumoTabCounts(db, clinic.clinicId, { timeZone: clinic.timezone, reminders: has("reminders"), waitlist: has("waitlist"), sends: sendsOn }, now);
+const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
+const tabCount: Partial<Record<Tab, Pick<TabItem, "count" | "countTone" | "alert" | "countLabel">>> = {
+  lembretes: { count: counts.reminders, countLabel: `${counts.reminders ?? 0} sem resposta ou não entregue(s) hoje` },
+  lista_espera: { count: counts.waitlist, countTone: "info", countLabel: `${plural(counts.waitlist ?? 0, "pessoa", "pessoas")} na lista` },
+  aguardando_remarcacao: { count: counts.awaitingRebooking, countLabel: `${counts.awaitingRebooking} aguardando` },
+  pendentes: { count: counts.pendingAttendance, countLabel: `${counts.pendingAttendance} a registrar` },
+  envios: { alert: counts.sendsAlert, countLabel: "Há envios que pedem atenção" },
+};
+const dated = tab === "resumo" || tab === "lembretes";
+const dayHref = (d: string) => `/admin/consultas?tab=${tab}&date=${d}`;
+const activeOfDay = dayAppointments.filter((a) => a.status !== "canceled").length;
+const canceledOfDay = dayAppointments.length - activeOfDay;
+const subtitle = !dated
+  ? undefined
+  : [
+      formatCalendarDate(date, "EEEE, d 'de' MMMM 'de' yyyy"),
+      ...(tab === "resumo" ? [plural(activeOfDay, "atendimento", "atendimentos"), ...(canceledOfDay ? [plural(canceledOfDay, "cancelado", "cancelados")] : [])] : []),
+    ].join(" · ");
 ---
-
-<AdminLayout title="Resumo do Dia">
-  <h1 class="text-2xl font-bold text-slate-900">Resumo do Dia</h1>
-  <TabBar
+<AdminLayout title="Resumo do Dia" wide>
+  <PageHeader title="Resumo do Dia" subtitle={subtitle}>
+    {tab === "resumo" && (
+      <Button slot="actions" href={`/admin/agenda?date=${date}`}>
+        Abrir na Agenda
+      </Button>
+    )}
+  </PageHeader>
+  <Tabs
     label="Abas do Resumo do Dia"
     class="mt-4"
-    tabs={visible.map((t) => ({ label: t.label, href: `/admin/consultas?tab=${t.id}`, active: t.id === tab }))}
+    tabs={visible.map((t) => ({ label: t.label, href: `/admin/consultas?tab=${t.id}`, active: t.id === tab, ...tabCount[t.id] }))}
   />
   <FlashMessage />
 
-  {(tab === "resumo" || tab === "lembretes") && <DateNav tab={tab} date={date} today={today} />}
+  {dated && (
+    <DateStepper
+      class="mt-4"
+      action="/admin/consultas"
+      date={date}
+      hidden={{ tab }}
+      prevHref={dayHref(addDays(date, -1))}
+      nextHref={dayHref(addDays(date, 1))}
+      todayHref={date !== today ? dayHref(today) : undefined}
+    />
+  )}
   {tab === "resumo" && <ResumoDia appointments={dayAppointments} actors={actors} date={date} timeZone={clinic.timezone} vocabulary={vocabulary} showAgenda={showAgenda} />}
   {tab === "lembretes" && <LembretesTab reminders={reminders} timeZone={clinic.timezone} vocabulary={vocabulary} openGroup={params.get("grupo")} />}
   {tab === "lista_espera" && <ListaEsperaTab entries={waitlist} offers={offers} timeZone={clinic.timezone} />}
@@ -125,12 +161,12 @@ const [noShows, origins, paymentStates] = cards.length
   {
     (tab === "pendentes" || tab === "confirmadas") && (
       <>
-        <p class="mt-3 text-sm text-slate-600">
+        <p class="mt-4 text-[15px] text-ink-soft">
           {tab === "pendentes"
             ? `Atendimentos dos últimos 60 dias que já passaram sem registro (${cards.length}).`
             : `Comparecimento já registrado (${recorded?.total ?? 0}). Dá para corrigir.`}
         </p>
-        <div class="mt-3 grid gap-3 lg:grid-cols-2">
+        <div class="mt-3 grid items-start gap-3 lg:grid-cols-2 2xl:grid-cols-3">
           {cards.map((a) => (
             <AppointmentCard
               appointment={a}
@@ -145,24 +181,29 @@ const [noShows, origins, paymentStates] = cards.length
               noShow={noShows.get(a.patientId)}
               origin={a.originAppointmentId ? origins.get(a.originAppointmentId) : undefined}
               payment={paymentStates ? (paymentStates.get(a.id) ?? "none") : undefined}
+              withDate
             />
           ))}
         </div>
-        {cards.length === 0 && <Card class="mt-3 text-center text-slate-500">{tab === "pendentes" ? "Nada a registrar." : "Nenhum registro ainda."}</Card>}
+        {cards.length === 0 && (
+          <p class="mt-3 rounded-xl border border-dashed border-line-strong px-3 py-5 text-center text-[15px] text-ink-soft">
+            {tab === "pendentes" ? "Nada a registrar." : "Nenhum registro ainda."}
+          </p>
+        )}
         {recorded && recorded.pageCount > 1 && (
-          <nav class="mt-4 flex items-center gap-3 text-sm">
+          <nav aria-label="Páginas" class="mt-4 flex items-center gap-2 text-[15px]">
             {recorded.page > 1 && (
-              <a href={`/admin/consultas?tab=confirmadas&pagina=${recorded.page - 1}`} class="text-sky-700 hover:underline">
+              <Button size="sm" href={`/admin/consultas?tab=confirmadas&pagina=${recorded.page - 1}`}>
                 Anterior
-              </a>
+              </Button>
             )}
-            <span class="text-slate-500">
+            <span class="px-1 text-ink-soft">
               Página {recorded.page} de {recorded.pageCount}
             </span>
             {recorded.page < recorded.pageCount && (
-              <a href={`/admin/consultas?tab=confirmadas&pagina=${recorded.page + 1}`} class="text-sky-700 hover:underline">
+              <Button size="sm" href={`/admin/consultas?tab=confirmadas&pagina=${recorded.page + 1}`}>
                 Próxima
-              </a>
+              </Button>
             )}
           </nav>
         )}

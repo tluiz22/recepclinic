@@ -1,0 +1,28 @@
+---
+// Selo genérico (R3): mesmo formato do selo de situação, para o que não é a
+// situação do atendimento (resposta ao lembrete, oferta, execução de envio).
+// A cor vem sempre com o texto; o ícone é opcional.
+import Icon, { type IconName } from "../Icon.astro";
+
+export type PillTone = "warning" | "success" | "info" | "danger" | "neutral";
+
+interface Props {
+  tone?: PillTone;
+  icon?: IconName;
+  class?: string;
+}
+
+const { tone = "neutral", icon, class: className = "" } = Astro.props;
+const tones: Record<PillTone, string> = {
+  warning: "bg-pend-100 text-pend-800",
+  success: "bg-conf-100 text-conf-800",
+  info: "bg-att-100 text-att-800",
+  danger: "bg-can-100 text-can-800",
+  neutral: "bg-blk-100 text-blk-800",
+};
+---
+
+<span class={`inline-flex items-center gap-1 rounded-full py-0.5 text-[13px] leading-snug font-semibold whitespace-nowrap ${icon ? "pr-2.5 pl-1.5" : "px-2.5"} ${tones[tone]} ${className}`}>
+  {icon && <Icon name={icon} class="h-3.5 w-3.5 shrink-0" strokeWidth={2.2} />}
+  <slot />
+</span>

@@ -2,11 +2,12 @@
 // Resumo do Dia › Lista de espera (F4.8; item "Lista de espera"): quem
 // espera para antecipar, por agenda e serviço, na ordem em que a vaga é
 // oferecida (ordem de entrada), com a oferta em andamento e "Tirar da lista"
-// (com confirmação); abaixo, as últimas ofertas.
+// (com confirmação); abaixo, as últimas ofertas. Redesign R3 (15/out/2026).
 import { currentPath, withReturn } from "../../../lib/returnPath";
-import Badge, { type BadgeVariant } from "../Badge.astro";
-import Card from "../Card.astro";
 import PhoneLinks from "../PhoneLinks.astro";
+import Button from "../ui/Button.astro";
+import Pill, { type PillTone } from "../ui/Pill.astro";
+import Signal from "../ui/Signal.astro";
 import { formatInstant } from "../../../lib/clinicTime";
 import type { OfferHistoryItem, OfferStatus, WaitlistEntry } from "../../../lib/data/waitlist/entries";
 
@@ -23,84 +24,92 @@ for (const entry of entries) {
   const key = `${entry.appointment.agendaName} · ${entry.appointment.serviceName}`;
   groups.set(key, [...(groups.get(key) ?? []), entry]);
 }
-const offerStatus: Record<OfferStatus, { label: string; variant: BadgeVariant }> = {
-  pending: { label: "Aguardando resposta", variant: "warning" },
-  accepted: { label: "Aceitou", variant: "success" },
-  declined: { label: "Recusou", variant: "neutral" },
-  expired: { label: "Venceu", variant: "neutral" },
-  withdrawn: { label: "Retirada", variant: "neutral" },
-  skipped: { label: "Pulada", variant: "neutral" },
+const offerStatus: Record<OfferStatus, { label: string; tone: PillTone }> = {
+  pending: { label: "Aguardando resposta", tone: "warning" },
+  accepted: { label: "Aceitou", tone: "success" },
+  declined: { label: "Recusou", tone: "neutral" },
+  expired: { label: "Venceu", tone: "neutral" },
+  withdrawn: { label: "Retirada", tone: "neutral" },
+  skipped: { label: "Pulada", tone: "neutral" },
 };
 const returnTo = "/admin/consultas?tab=lista_espera";
+const BOX = "overflow-hidden rounded-xl border border-line bg-white";
+const BOX_TITLE = "flex flex-wrap items-center justify-between gap-2 border-b border-line bg-[#f8faf9] px-4 py-3 text-[15px] font-bold text-ink";
 ---
 
-<div class="mt-4 flex flex-col gap-4">
-  {
-    [...groups].map(([title, list]) => (
-      <Card>
-        <h2 class="font-semibold text-slate-900">{title}</h2>
-        <ol class="mt-2 divide-y divide-slate-100">
-          {list.map((entry, index) => (
-            <li class="py-2 text-sm">
-              <div class="flex flex-wrap items-start justify-between gap-2">
-                <div>
-                  <p class="font-medium text-slate-900">
-                    {index + 1}º · <a href={withReturn(`/admin/pacientes/${entry.patient.id}`, currentPath(Astro.url))} class="hover:text-sky-700 hover:underline">{entry.patient.fullName}</a>
-                  </p>
-                  <p class="text-slate-500">
-                    Marcado para {when(entry.appointment.scheduledAt)} · {entry.appointment.locationName}
-                  </p>
-                  <p class="text-slate-500">
-                    <PhoneLinks phone={entry.contact.phone} plain class="text-slate-600" />
-                  </p>
-                  {entry.pendingOffer && (
-                    <p class="mt-1">
-                      <Badge variant="warning">
+<div class="mt-4 grid items-start gap-4 xl:grid-cols-2">
+  <div class="flex min-w-0 flex-col gap-4">
+    {
+      [...groups].map(([title, list]) => (
+        <section class={BOX} aria-label={title}>
+          <h2 class={BOX_TITLE}>
+            {title}
+            <span class="text-[13px] font-medium text-ink-soft">{list.length} na lista</span>
+          </h2>
+          <ol class="divide-y divide-[#e6ecea] px-4">
+            {list.map((entry, index) => (
+              <li class="flex flex-wrap items-start justify-between gap-3 py-3">
+                <div class="flex min-w-0 gap-3">
+                  <span class="w-7 shrink-0 font-display text-lg leading-tight font-bold text-brand">{index + 1}º</span>
+                  <div class="flex min-w-0 flex-col gap-0.5">
+                    <a href={withReturn(`/admin/pacientes/${entry.patient.id}`, currentPath(Astro.url))} class="text-base font-semibold text-ink no-underline hover:text-brand hover:underline">
+                      {entry.patient.fullName}
+                    </a>
+                    <span class="text-sm text-ink-soft">
+                      Marcado para {when(entry.appointment.scheduledAt)} · {entry.appointment.locationName}
+                    </span>
+                    <span class="text-sm text-ink-soft">
+                      <PhoneLinks phone={entry.contact.phone} plain />
+                    </span>
+                    {entry.pendingOffer && (
+                      <Signal tone="warning" icon="clock">
                         Oferta: {when(entry.pendingOffer.slotStart)} (vence {formatInstant(entry.pendingOffer.expiresAt, timeZone, "dd/MM HH:mm")})
-                      </Badge>
-                    </p>
-                  )}
+                      </Signal>
+                    )}
+                  </div>
                 </div>
-                <form method="POST" action={`/api/admin/agenda/atendimentos/${entry.appointment.id}`}>
+                <form method="POST" action={`/api/admin/agenda/atendimentos/${entry.appointment.id}`} class="contents">
                   <input type="hidden" name="acao" value="sair_lista_espera" />
                   <input type="hidden" name="return_to" value={returnTo} />
-                  <button
+                  <Button
                     type="submit"
-                    class="js-confirm-delete inline-flex items-center rounded-md border border-red-300 bg-white px-2.5 py-1.5 text-xs font-semibold text-red-700 hover:bg-red-50"
+                    size="sm"
+                    variant="danger-quiet"
+                    class="js-confirm-delete"
                     data-confirm-title="Tirar da lista de espera?"
                     data-confirm-message={`${entry.patient.fullName}: deixa de receber oferta de horário antes.`}
                     data-confirm-label="Tirar da lista"
                   >
                     Tirar da lista
-                  </button>
+                  </Button>
                 </form>
-              </div>
-            </li>
-          ))}
-        </ol>
-      </Card>
-    ))
-  }
-  {entries.length === 0 && <Card class="text-center text-slate-500">Ninguém na lista de espera.</Card>}
+              </li>
+            ))}
+          </ol>
+        </section>
+      ))
+    }
+    {entries.length === 0 && <p class="rounded-xl border border-dashed border-line-strong px-3 py-5 text-center text-[15px] text-ink-soft">Ninguém na lista de espera.</p>}
+  </div>
 
-  <Card>
-    <h2 class="font-semibold text-slate-900">Últimas ofertas</h2>
-    <ul class="mt-2 divide-y divide-slate-100">
+  <section class={BOX} aria-labelledby="ultimas-ofertas">
+    <h2 id="ultimas-ofertas" class={BOX_TITLE}>Últimas ofertas</h2>
+    <ul class="divide-y divide-[#e6ecea] px-4">
       {
         offers.map((offer) => (
-          <li class="flex flex-wrap items-center justify-between gap-2 py-2 text-sm">
-            <span>
-              <span class="font-medium text-slate-900">{offer.patientName}</span>
-              <span class="block text-slate-500">
+          <li class="flex flex-wrap items-center justify-between gap-2 py-3">
+            <span class="flex min-w-0 flex-col gap-0.5">
+              <span class="text-[15px] font-semibold text-ink">{offer.patientName}</span>
+              <span class="text-sm text-ink-soft">
                 Vaga de {when(offer.slotStart)} · oferecida {formatInstant(offer.offeredAt, timeZone, "dd/MM HH:mm")}
                 {offer.reason ? ` · ${offer.reason}` : ""}
               </span>
             </span>
-            <Badge variant={offerStatus[offer.status].variant}>{offerStatus[offer.status].label}</Badge>
+            <Pill tone={offerStatus[offer.status].tone}>{offerStatus[offer.status].label}</Pill>
           </li>
         ))
       }
-      {offers.length === 0 && <li class="py-2 text-sm text-slate-500">Nenhuma oferta ainda.</li>}
+      {offers.length === 0 && <li class="py-3 text-sm text-ink-soft">Nenhuma oferta ainda.</li>}
     </ul>
-  </Card>
+  </section>
 </div>

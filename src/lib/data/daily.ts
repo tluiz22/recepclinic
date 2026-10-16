@@ -1,8 +1,10 @@
-import { dayBounds } from "../clinicTime";
+import { dayBounds, todayIn } from "../clinicTime";
 import type { DbClient } from "./clients";
 import { unwrap, unwrapOne } from "./errors";
 import { findBlockingAppointment, listUpcomingAppointments, logTrail } from "./agenda/appointments";
 import { AGENDA_COLUMNS, toAgendaAppointment, type AgendaAppointment, type AgendaRow } from "./agenda/view";
+import { describeSendsAlert, getSendsAlert } from "./sends";
+import { listWaitlist } from "./waitlist/entries";
 import { REMINDER_MESSAGE_TYPE } from "./whatsapp/reminders";
 import { confirmedByReminder } from "../reminderResponse";
 
@@ -199,4 +201,56 @@ export async function listRecordedPage(
   const rows = unwrap({ data, error }, "Comparecimento registrado") as unknown as AgendaRow[];
   const total = count ?? 0;
   return { items: rows.map(toAgendaAppointment), total, page: current, pageCount: Math.max(1, Math.ceil(total / RECORDED_PAGE_SIZE)) };
+}
+
+// ---------------------------------------------------------------------------
+// Contadores das abas (redesign R3; cliente, 15/out/2026)
+// ---------------------------------------------------------------------------
+
+/** Pendências por aba; `undefined` quando a aba não aparece para a clínica. */
+export type ResumoTabCounts = {
+  /** Lembretes de hoje sem resposta ou não entregues. */
+  reminders?: number;
+  /** Quem está na lista de espera. */
+  waitlist?: number;
+  awaitingRebooking: number;
+  pendingAttendance: number;
+  /** Algo dos envios automáticos pede atenção (o mesmo alerta da aba Envios). */
+  sendsAlert?: boolean;
+};
+
+/**
+ * Contadores das abas do Resumo do Dia, com as mesmas regras das abas (e o
+ * mesmo RLS): A registrar e Aguardando remarcação, o total; Lembretes, os de
+ * hoje que pedem ação; Lista de espera, quem espera; Envios, se há alerta.
+ */
+export async function getResumoTabCounts(
+  db: DbClient,
+  clinicId: string,
+  { timeZone, reminders, waitlist, sends }: { timeZone: string; reminders: boolean; waitlist: boolean; sends: boolean },
+  now: Date = new Date(),
+): Promise<ResumoTabCounts> {
+  const since = new Date(now.getTime() - PENDING_DAYS * 24 * 60 * 60_000);
+  const [pending, awaiting, ofDay, waiting, alert] = await Promise.all([
+    db
+      .from("appointments")
+      .select("id", { count: "exact", head: true })
+      .eq("clinic_id", clinicId)
+      .in("status", ["scheduled", "confirmed"])
+      .lt("scheduled_at", now.toISOString())
+      .gte("scheduled_at", since.toISOString()),
+    listAwaitingRebooking(db, clinicId, now),
+    reminders ? listRemindersOfDay(db, clinicId, todayIn(timeZone, now), timeZone) : Promise.resolve(null),
+    // A mesma consulta da aba: o login de agendas restritas conta só o que vê nela.
+    waitlist ? listWaitlist(db, clinicId) : Promise.resolve(null),
+    sends ? getSendsAlert(db, clinicId, now) : Promise.resolve(null),
+  ]);
+  if (pending.error) unwrap(pending, "Comparecimento a registrar");
+  return {
+    pendingAttendance: pending.count ?? 0,
+    awaitingRebooking: awaiting.length,
+    reminders: ofDay ? ofDay.filter((r) => r.group === "no_answer" || r.group === "not_delivered").length : undefined,
+    waitlist: waiting ? waiting.length : undefined,
+    sendsAlert: alert ? describeSendsAlert(alert).length > 0 : undefined,
+  };
 }

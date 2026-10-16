@@ -1,0 +1,94 @@
+---
+// Abas de seção (R3; cliente, 15/out/2026): sublinhadas, com contador quando
+// há pendência, numa linha só que rola de lado no celular e fica fixa no topo
+// ao rolar a página, com a aba ativa à vista ao abrir (como a TabBar, Fase 23).
+// Cada aba é um link: a troca recarrega a página, sem estado no cliente.
+// Para alternar a visualização (Dia, Semana, Mês), use o SegmentedControl.
+export type TabCountTone = "warning" | "info" | "alert";
+
+export interface TabItem {
+  label: string;
+  href: string;
+  active: boolean;
+  /** Número de pendências (0 ou ausente: sem contador). */
+  count?: number;
+  countTone?: TabCountTone;
+  /** Alerta sem número (ex.: Envios com falha). */
+  alert?: boolean;
+  /** Texto do contador para leitor de tela, ex.: "2 sem resposta". */
+  countLabel?: string;
+}
+
+interface Props {
+  tabs: TabItem[];
+  label: string;
+  class?: string;
+}
+
+const { tabs, label, class: className = "" } = Astro.props;
+const tones: Record<TabCountTone, string> = {
+  warning: "bg-pend-100 text-pend-800",
+  info: "bg-att-100 text-att-800",
+  alert: "bg-can-100 text-can-800",
+};
+---
+
+<nav data-section-tabs aria-label={label} class={`sticky top-0 z-10 -mx-4 bg-canvas/95 px-4 backdrop-blur sm:-mx-6 sm:px-6 ${className}`}>
+  <div class="rc-tabs-scroll flex gap-0.5 overflow-x-auto border-b border-line sm:gap-1">
+    {
+      tabs.map((tab) => (
+        <a
+          href={tab.href}
+          aria-current={tab.active ? "page" : undefined}
+          data-active={tab.active ? "true" : undefined}
+          class={`relative -mb-px inline-flex shrink-0 items-center gap-1.5 border-b-[3px] px-2.5 pt-3 pb-[11px] text-[15px] leading-none whitespace-nowrap no-underline sm:px-3.5 ${
+            tab.active ? "border-brand font-bold text-brand-ink" : "border-transparent font-semibold text-ink-soft hover:border-line-strong hover:text-ink"
+          }`}
+        >
+          {tab.label}
+          {tab.alert ? (
+            <span role="img" aria-label={tab.countLabel ?? "Pede atenção"} class={`inline-flex h-[22px] min-w-[22px] items-center justify-center rounded-full px-1.5 text-[12.5px] font-bold ${tones.alert}`}>
+              !
+            </span>
+          ) : (
+            tab.count !== undefined &&
+            tab.count > 0 && (
+              <span class={`inline-flex h-[22px] min-w-[22px] items-center justify-center rounded-full px-[7px] text-[12.5px] font-bold tabular-nums ${tones[tab.countTone ?? "warning"]}`}>
+                <span aria-hidden="true">{tab.count}</span>
+                <span class="sr-only">{tab.countLabel ?? `${tab.count} pendente(s)`}</span>
+              </span>
+            )
+          )}
+        </a>
+      ))
+    }
+  </div>
+</nav>
+
+<style>
+  .rc-tabs-scroll {
+    scrollbar-width: none;
+  }
+  .rc-tabs-scroll::-webkit-scrollbar {
+    display: none;
+  }
+</style>
+
+<script>
+  // Aba ativa à vista ao abrir (no celular, a última aba ficaria fora da tela).
+  function centerActive() {
+    for (const bar of document.querySelectorAll<HTMLElement>("[data-section-tabs] .rc-tabs-scroll")) {
+      const active = bar.querySelector<HTMLElement>("[data-active]");
+      if (!active) continue;
+      const barBox = bar.getBoundingClientRect();
+      const tabBox = active.getBoundingClientRect();
+      const offset = tabBox.left - barBox.left - (barBox.width - tabBox.width) / 2;
+      bar.scrollLeft = Math.max(0, bar.scrollLeft + offset);
+    }
+  }
+  requestAnimationFrame(centerActive);
+  window.addEventListener("load", centerActive);
+  window.addEventListener("pageshow", (event) => {
+    if (event.persisted) centerActive();
+  });
+</script>

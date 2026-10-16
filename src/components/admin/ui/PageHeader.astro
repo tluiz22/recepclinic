@@ -1,0 +1,24 @@
+---
+// Cabeçalho da tela (R3): título na fonte da marca, linha de apoio opcional e,
+// à direita, as ações da tela (slot "actions").
+interface Props {
+  title: string;
+  /** Ex.: a data por extenso e quantos atendimentos. */
+  subtitle?: string;
+  class?: string;
+}
+
+const { title, subtitle, class: className = "" } = Astro.props;
+---
+
+<div class={`flex flex-wrap items-end justify-between gap-x-4 gap-y-3 ${className}`}>
+  <div class="min-w-0">
+    <h1 class="font-display text-[28px] leading-[1.1] font-bold text-ink sm:text-[30px]">{title}</h1>
+    {subtitle && <p class="mt-1 text-[15px] text-ink-soft first-letter:uppercase sm:text-base">{subtitle}</p>}
+  </div>
+  {Astro.slots.has("actions") && (
+    <div class="flex flex-wrap gap-2">
+      <slot name="actions" />
+    </div>
+  )}
+</div>

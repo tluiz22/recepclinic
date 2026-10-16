@@ -10,11 +10,10 @@ import ConfirmDeleteDialog from "../../components/admin/ConfirmDeleteDialog.astr
 import SituationLegend from "../../components/admin/agenda/SituationLegend.astro";
 import { countSituations } from "../../components/admin/agenda/situationStyle";
 import FlashMessage from "../../components/admin/FlashMessage.astro";
-import Icon from "../../components/admin/Icon.astro";
 import Button from "../../components/admin/ui/Button.astro";
 import StatusPill from "../../components/admin/ui/StatusPill.astro";
 import Tag from "../../components/admin/ui/Tag.astro";
-import { CONTROL } from "../../components/admin/ui/styles";
+import DateStepper from "../../components/admin/ui/DateStepper.astro";
 import { addDays, formatCalendarDate, formatInstant, isCalendarDate, localDateOf, todayIn } from "../../lib/clinicTime";
 import { canAccessArea } from "../../lib/clinicAccess";
 import { createUserClient } from "../../lib/data/clients";
@@ -102,20 +101,14 @@ const cardProps = (a: (typeof appointments)[number]) => ({
 
 <AdminLayout title="Agenda" wide>
   <AgendaHeader view="dia" date={date} agendas={scope.selectable} selectedAgendaId={scope.selectedAgendaId} subtitle={subtitle}>
-    <form slot="nav" method="GET" action="/admin/agenda" class="flex items-center gap-1.5 sm:gap-1">
-      <Button href={`/admin/agenda?date=${addDays(date, -1)}`} aria-label="Dia anterior" class="w-11 px-0 sm:w-10">
-        <Icon name="chevron-left" class="h-5 w-5 shrink-0" strokeWidth={2.2} />
-      </Button>
-      <input type="date" name="date" value={date} aria-label="Data" data-autosubmit class={`${CONTROL} min-w-0 flex-1 sm:w-40 sm:flex-none`} />
-      <Button href={`/admin/agenda?date=${addDays(date, 1)}`} aria-label="Próximo dia" class="w-11 px-0 sm:w-10">
-        <Icon name="chevron-right" class="h-5 w-5 shrink-0" strokeWidth={2.2} />
-      </Button>
-      {date !== today && (
-        <Button variant="quiet" href="/admin/agenda">
-          Hoje
-        </Button>
-      )}
-    </form>
+    <DateStepper
+      slot="nav"
+      action="/admin/agenda"
+      date={date}
+      prevHref={`/admin/agenda?date=${addDays(date, -1)}`}
+      nextHref={`/admin/agenda?date=${addDays(date, 1)}`}
+      todayHref={date !== today ? "/admin/agenda" : undefined}
+    />
   </AgendaHeader>
 
   <FlashMessage />

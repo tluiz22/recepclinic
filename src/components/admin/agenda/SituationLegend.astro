@@ -6,11 +6,13 @@ import { SITUATIONS, type Situation } from "./situationStyle";
 
 interface Props {
   counts?: Record<Situation, number>;
+  /** Sem "Bloqueio" onde não há bloqueios (Resumo do Dia). */
+  withBlock?: boolean;
   class?: string;
 }
 
-const { counts, class: className = "mt-3" } = Astro.props;
-const situations = Object.keys(SITUATIONS) as Situation[];
+const { counts, withBlock = true, class: className = "mt-3" } = Astro.props;
+const situations = (Object.keys(SITUATIONS) as Situation[]).filter((s) => withBlock || s !== "block");
 ---
 
 <ul

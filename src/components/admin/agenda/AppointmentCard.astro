@@ -50,6 +50,8 @@ interface Props {
   payment?: PaymentState;
   /** Posição na lista única do celular (ordem por horário). */
   order?: number;
+  /** Listas de vários dias (Resumo › A registrar e Registradas): o dia antes do horário. */
+  withDate?: boolean;
 }
 
 const {
@@ -70,6 +72,7 @@ const {
   origin,
   payment,
   order,
+  withDate = false,
 } = Astro.props;
 const endpoint = `/api/admin/agenda/atendimentos/${a.id}`;
 const time = (d: Date) => formatInstant(d, timeZone, "HH:mm");
@@ -86,8 +89,9 @@ const reminderSignal: Record<ReminderAction, { label: string; tone: SignalTone }
   resend_unanswered: { label: "Lembrete sem resposta", tone: "warning" },
 };
 const signals: { label: string; tone: SignalTone; icon: IconName }[] = [];
-if (isActive && !isPast && a.patientConfirmedAt) signals.push({ label: "Presença confirmada pela recepção", tone: "success", icon: "check" });
-else if (isActive && !isPast && confirmedByReminder(a.reminderResponse)) signals.push({ label: "Confirmou pelo lembrete", tone: "success", icon: "check" });
+// O "confirmo" do lembrete também grava a presença: ele vem primeiro.
+if (isActive && !isPast && confirmedByReminder(a.reminderResponse)) signals.push({ label: "Confirmou pelo lembrete", tone: "success", icon: "check" });
+else if (isActive && !isPast && a.patientConfirmedAt) signals.push({ label: "Presença confirmada", tone: "success", icon: "check" });
 if (reminderAction) signals.push({ ...reminderSignal[reminderAction], icon: "paper-airplane" });
 if (preparationResendable) signals.push({ label: "Preparo não entregue", tone: "warning", icon: "paper-airplane" });
 if (guidanceResendable) signals.push({ label: "Orientações não entregues", tone: "warning", icon: "paper-airplane" });
@@ -137,6 +141,7 @@ const variantOf = (x: (typeof actions.visible)[number]) => (x.kind === "form" &&
       <>
         <div class="flex items-center justify-between gap-2">
           <span class={`whitespace-nowrap text-base leading-tight font-bold tabular-nums sm:text-base ${isCanceled ? CANCELED_TEXT : "text-ink"}`}>
+            {withDate && <span class="capitalize">{formatInstant(a.scheduledAt, timeZone, "EEE dd/MM")} · </span>}
             {time(a.scheduledAt)} – {time(a.endsAt)}
           </span>
           <StatusPill situation={situation} />

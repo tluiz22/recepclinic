@@ -1,9 +1,12 @@
 ---
 // Resumo do Dia › Lembretes (F4.8; item "Lembrete automático"): os lembretes
 // enviados no dia e o que cada um respondeu, em grupos (como no piloto).
-// Abrir o grupo mostra os pacientes, com o WhatsApp do contato.
-import Card from "../Card.astro";
+// Abrir o grupo mostra os pacientes, com o WhatsApp do contato. Redesign R3
+// (cliente, 15/out/2026): a contagem de cada grupo no topo e os grupos que
+// pedem ação (sem resposta, não entregue) já abertos quando têm alguém.
 import PhoneLinks from "../PhoneLinks.astro";
+import Icon from "../Icon.astro";
+import Pill, { type PillTone } from "../ui/Pill.astro";
 import { formatInstant, localDateOf } from "../../../lib/clinicTime";
 import { REMINDER_GROUP_LABELS, type ReminderGroup, type ReminderOfDay } from "../../../lib/data/daily";
 import { capitalize, type Vocabulary } from "../../../lib/vocabulary";
@@ -17,45 +20,64 @@ interface Props {
 
 const { reminders, timeZone, vocabulary, openGroup } = Astro.props;
 const order: ReminderGroup[] = ["no_answer", "not_delivered", "reschedule", "cancel", "confirm"];
-const tone: Record<ReminderGroup, string> = {
-  confirm: "border-emerald-200",
-  reschedule: "border-amber-200",
-  cancel: "border-red-200",
-  no_answer: "border-amber-200",
-  not_delivered: "border-red-200",
+const tone: Record<ReminderGroup, PillTone> = {
+  confirm: "success",
+  reschedule: "warning",
+  cancel: "danger",
+  no_answer: "warning",
+  not_delivered: "danger",
 };
+const needsAction = new Set<ReminderGroup>(["no_answer", "not_delivered"]);
+const groups = order.map((group) => ({ group, items: reminders.filter((r) => r.group === group) }));
+const isOpen = (group: ReminderGroup, count: number) => (openGroup ? openGroup === group : needsAction.has(group) && count > 0);
 ---
 
-<p class="mt-3 text-sm text-slate-600">{reminders.length} lembrete(s) enviado(s) neste dia.</p>
-<div class="mt-3 flex flex-col gap-3">
-  {
-    order.map((group) => {
-      const items = reminders.filter((r) => r.group === group);
-      return (
-        <details class={`rounded-lg border bg-white p-4 shadow-sm ${tone[group]}`} open={openGroup === group || undefined}>
-          <summary class="cursor-pointer font-semibold text-slate-900">
-            {REMINDER_GROUP_LABELS[group]} ({items.length})
-          </summary>
-          <ul class="mt-2 divide-y divide-slate-100">
-            {items.map(({ appointment: a }) => (
-              <li class="py-2 text-sm">
-                <a href={`/admin/agenda?date=${localDateOf(a.scheduledAt, timeZone)}`} class="font-medium text-slate-900 hover:text-sky-700">
-                  {formatInstant(a.scheduledAt, timeZone, "EEE dd/MM HH:mm")} · {a.patientName}
-                </a>
-                <p class="text-slate-500">
-                  {a.serviceName} · {a.agendaName}
-                </p>
-                <p class="text-slate-500">
-                  {!a.isContactSelf && `${capitalize(vocabulary.contact)}: ${a.contactName} · `}
-                  <PhoneLinks phone={a.contactPhone} plain class="text-slate-600" />
-                </p>
-              </li>
-            ))}
-            {items.length === 0 && <li class="py-2 text-sm text-slate-500">Ninguém.</li>}
-          </ul>
-        </details>
-      );
-    })
-  }
-</div>
-{reminders.length === 0 && <Card class="mt-3 text-center text-slate-500">Nenhum lembrete enviado neste dia.</Card>}
+<p class="mt-4 text-[15px] text-ink-soft">
+  {reminders.length} {reminders.length === 1 ? "lembrete enviado" : "lembretes enviados"} neste dia.
+</p>
+{
+  reminders.length > 0 && (
+    <>
+      <ul aria-label="Respostas aos lembretes" class="mt-3 flex flex-wrap gap-2">
+        {groups.map(({ group, items }) => (
+          <li>
+            <Pill tone={tone[group]}>
+              {REMINDER_GROUP_LABELS[group]} <span class="tabular-nums">· {items.length}</span>
+            </Pill>
+          </li>
+        ))}
+      </ul>
+      <div class="mt-4 flex max-w-4xl flex-col gap-3">
+        {groups.map(({ group, items }) => (
+          <details class="group overflow-hidden rounded-xl border border-line bg-white" open={isOpen(group, items.length) || undefined}>
+            <summary class="flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 bg-[#f8faf9] px-4 py-3 text-[15px] font-bold text-ink [&::-webkit-details-marker]:hidden">
+              <span>
+                {REMINDER_GROUP_LABELS[group]} ({items.length})
+              </span>
+              <Icon name="chevron-down" class="h-4 w-4 shrink-0 transition-transform group-open:rotate-180" strokeWidth={2.4} />
+            </summary>
+            <ul class="divide-y divide-[#e6ecea] border-t border-line px-4">
+              {items.map(({ appointment: a }) => (
+                <li class="flex flex-col gap-0.5 py-3">
+                  <a href={`/admin/agenda?date=${localDateOf(a.scheduledAt, timeZone)}`} class="text-base font-semibold text-ink no-underline hover:text-brand hover:underline">
+                    <span class="capitalize">{formatInstant(a.scheduledAt, timeZone, "EEE dd/MM HH:mm")}</span> · {a.patientName}
+                  </a>
+                  <span class="text-sm text-ink-soft">
+                    {a.serviceName} · {a.agendaName}
+                  </span>
+                  <span class="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-sm text-ink-soft">
+                    {!a.isContactSelf && `${capitalize(vocabulary.contact)}: ${a.contactName} · `}
+                    <PhoneLinks phone={a.contactPhone} plain />
+                  </span>
+                </li>
+              ))}
+              {items.length === 0 && <li class="py-3 text-sm text-ink-soft">Ninguém.</li>}
+            </ul>
+          </details>
+        ))}
+      </div>
+      <p class="mt-3 text-sm text-ink-soft">O horário e o nome levam ao dia na Agenda, onde ficam "Reenviar lembrete" e "Confirmar presença".</p>
+    </>
+  )
+}
+{reminders.length === 0 && <p class="mt-3 rounded-xl border border-dashed border-line-strong px-3 py-5 text-center text-[15px] text-ink-soft">Nenhum lembrete enviado neste dia.</p>}

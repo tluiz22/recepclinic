@@ -1,0 +1,41 @@
+---
+// Navegação de um dia (R3): anterior, data, próximo e "Hoje" (só quando o dia
+// aberto não é hoje). A data recarrega a tela ao mudar (`data-autosubmit`, no
+// AdminLayout). Usada na Agenda › Dia e no Resumo do Dia.
+import Icon from "../Icon.astro";
+import Button from "./Button.astro";
+import { CONTROL } from "./styles";
+
+interface Props {
+  /** Rota do formulário da data. */
+  action: string;
+  date: string;
+  prevHref: string;
+  nextHref: string;
+  /** Sem ele, o "Hoje" não aparece (o dia aberto já é hoje). */
+  todayHref?: string;
+  /** Campos que a troca de data mantém (ex.: a aba). */
+  hidden?: Record<string, string>;
+  class?: string;
+}
+
+const { action, date, prevHref, nextHref, todayHref, hidden = {}, class: className = "" } = Astro.props;
+---
+
+<form method="GET" action={action} class={`flex items-center gap-1.5 sm:gap-1 ${className}`}>
+  {Object.entries(hidden).map(([name, value]) => <input type="hidden" name={name} value={value} />)}
+  <Button href={prevHref} aria-label="Dia anterior" class="w-11 px-0 sm:w-10">
+    <Icon name="chevron-left" class="h-5 w-5 shrink-0" strokeWidth={2.2} />
+  </Button>
+  <input type="date" name="date" value={date} aria-label="Data" data-autosubmit class={`${CONTROL} min-w-0 flex-1 sm:w-40 sm:flex-none`} />
+  <Button href={nextHref} aria-label="Próximo dia" class="w-11 px-0 sm:w-10">
+    <Icon name="chevron-right" class="h-5 w-5 shrink-0" strokeWidth={2.2} />
+  </Button>
+  {
+    todayHref && (
+      <Button variant="quiet" href={todayHref}>
+        Hoje
+      </Button>
+    )
+  }
+</form>

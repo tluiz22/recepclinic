@@ -1922,6 +1922,15 @@ Métricas · R8 Financeiro e DMED · R9 Configurações · R10 Sistema e Acesso 
   (Lembretes punha quem confirmou em "Não responderam"). Regra única em `src/lib/reminderResponse.ts`,
   com teste de banco em `painel-base.test.ts`.
 
+**R3 (Resumo do Dia), decisões do cliente (15/out/2026):** as 7 abas continuam, no estilo
+sublinhado da Agenda, com contador onde há pendência (Lembretes: sem resposta ou não entregues
+hoje; Lista de espera: quem espera; Aguardando remarcação e A registrar: o total; Envios: alerta);
+a aba Resumo do dia em linhas no computador (cartões no celular), só informação, com "Abrir na
+Agenda". **Implementada em 15/out** (a validar): `getResumoTabCounts` em `daily.ts` (com teste de
+banco), componentes `Tabs`, `DateStepper`, `PageHeader` e `Pill` em `ui/`, as 7 abas redesenhadas e
+o dia antes do horário nos cartões de A registrar e Registradas. O sinal "Confirmou pelo lembrete"
+vem antes de "Presença confirmada" (o toque no lembrete grava os dois).
+
 ## Depois do 1º piloto (já previsto no banco)
 
 - **Convênios (D10):** telas de planos atendidos e exceções por profissional; plano no cadastro do

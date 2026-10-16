@@ -4,8 +4,9 @@
 // automáticos rodaram e quais atendimentos por vir têm envio com falha. Sem
 // botão de reenvio aqui: cada atendimento leva à Agenda do dia, onde ficam
 // "Enviar/Reenviar lembrete" e "Reenviar preparo" (como no piloto).
-import Badge, { type BadgeVariant } from "../Badge.astro";
-import Card from "../Card.astro";
+// Redesign R3 (15/out/2026): aviso no topo e selos no padrão novo.
+import Icon from "../Icon.astro";
+import Pill, { type PillTone } from "../ui/Pill.astro";
 import { formatInstant, localDateOf } from "../../../lib/clinicTime";
 import { jobRunState, type JobRun, type AppointmentWithFailedSends, type JobRunState } from "../../../lib/data/sends";
 
@@ -23,66 +24,73 @@ const JOB_LABELS: Record<string, string> = {
   daily_summary: "Resumo do dia",
   waitlist_offers: "Ofertas da lista de espera",
 };
-const STATE: Record<JobRunState, { label: string; variant: BadgeVariant }> = {
-  ok: { label: "Rodou", variant: "success" },
-  error: { label: "Erro", variant: "danger" },
-  running: { label: "Rodando", variant: "info" },
-  stuck: { label: "Travou", variant: "danger" },
+const STATE: Record<JobRunState, { label: string; tone: PillTone }> = {
+  ok: { label: "Rodou", tone: "success" },
+  error: { label: "Erro", tone: "danger" },
+  running: { label: "Rodando", tone: "info" },
+  stuck: { label: "Travou", tone: "danger" },
 };
+const BOX = "overflow-hidden rounded-xl border border-line bg-white";
+const BOX_TITLE = "border-b border-line bg-[#f8faf9] px-4 py-3 text-[15px] font-bold text-ink";
 ---
 
-<div class="mt-4 flex max-w-3xl flex-col gap-4">
+<div class="mt-4 flex flex-col gap-4">
   {
     alerts.length > 0 && (
-      <Card class="border-red-200 bg-red-50">
-        <ul class="list-inside list-disc text-sm text-red-800">
+      <div role="status" class="flex max-w-4xl items-start gap-2.5 rounded-[10px] border border-can-200 bg-can-50 px-3.5 py-3 text-[15px] text-can-800">
+        <Icon name="warning" class="mt-0.5 h-[18px] w-[18px] shrink-0" strokeWidth={2} />
+        <ul class="flex flex-col gap-0.5">
           {alerts.map((line) => (
             <li>{line}</li>
           ))}
         </ul>
-      </Card>
+      </div>
     )
   }
 
-  <Card>
-    <h2 class="font-semibold text-slate-900">Atendimentos com envio com falha ({failed.length})</h2>
-    <ul class="mt-2 divide-y divide-slate-100">
-      {
-        failed.map((a) => (
-          <li class="flex flex-wrap items-center justify-between gap-2 py-2 text-sm">
-            <a href={`/admin/agenda?date=${localDateOf(a.scheduledAt, timeZone)}`} class="hover:text-sky-700">
-              <span class="font-medium capitalize text-slate-900">{formatInstant(a.scheduledAt, timeZone, "EEE dd/MM HH:mm")}</span> · {a.patientName}
-              <span class="block text-slate-500">{a.serviceName}</span>
-            </a>
-            <Badge variant="danger">{a.failedSends} envio(s) com falha</Badge>
-          </li>
-        ))
-      }
-      {failed.length === 0 && <li class="py-2 text-sm text-slate-500">Nenhum.</li>}
-    </ul>
-  </Card>
-
-  <Card>
-    <h2 class="font-semibold text-slate-900">Últimas execuções dos envios automáticos</h2>
-    <ul class="mt-2 divide-y divide-slate-100">
-      {
-        runs.map((run) => {
-          const state = STATE[jobRunState(run, now)];
-          return (
-            <li class="flex flex-wrap items-center justify-between gap-2 py-2 text-sm">
-              <span>
-                <span class="font-medium text-slate-900">{JOB_LABELS[run.job] ?? run.job}</span>
-                <span class="block text-slate-500">
-                  {formatInstant(run.startedAt, timeZone, "dd/MM/yyyy HH:mm")}
-                  {run.trigger === "manual" ? " · manual" : ""}
+  <div class="grid items-start gap-4 xl:grid-cols-2">
+    <section class={BOX} aria-labelledby="envios-falha">
+      <h2 id="envios-falha" class={BOX_TITLE}>Atendimentos com envio com falha ({failed.length})</h2>
+      <ul class="divide-y divide-[#e6ecea] px-4">
+        {
+          failed.map((a) => (
+            <li class="flex flex-wrap items-center justify-between gap-2 py-3">
+              <a href={`/admin/agenda?date=${localDateOf(a.scheduledAt, timeZone)}`} class="flex min-w-0 flex-col gap-0.5 no-underline">
+                <span class="text-[15px] font-semibold text-ink hover:text-brand hover:underline">
+                  <span class="capitalize">{formatInstant(a.scheduledAt, timeZone, "EEE dd/MM HH:mm")}</span> · {a.patientName}
                 </span>
-              </span>
-              <Badge variant={state.variant}>{state.label}</Badge>
+                <span class="text-sm text-ink-soft">{a.serviceName}</span>
+              </a>
+              <Pill tone="danger">{`${a.failedSends} ${a.failedSends === 1 ? "envio com falha" : "envios com falha"}`}</Pill>
             </li>
-          );
-        })
-      }
-      {runs.length === 0 && <li class="py-2 text-sm text-slate-500">Nenhuma execução registrada ainda.</li>}
-    </ul>
-  </Card>
+          ))
+        }
+        {failed.length === 0 && <li class="py-3 text-sm text-ink-soft">Nenhum.</li>}
+      </ul>
+    </section>
+
+    <section class={BOX} aria-labelledby="envios-execucoes">
+      <h2 id="envios-execucoes" class={BOX_TITLE}>Últimas execuções dos envios automáticos</h2>
+      <ul class="divide-y divide-[#e6ecea] px-4">
+        {
+          runs.map((run) => {
+            const state = STATE[jobRunState(run, now)];
+            return (
+              <li class="flex flex-wrap items-center justify-between gap-2 py-3">
+                <span class="flex flex-col gap-0.5">
+                  <span class="text-[15px] font-semibold text-ink">{JOB_LABELS[run.job] ?? run.job}</span>
+                  <span class="text-sm text-ink-soft">
+                    {formatInstant(run.startedAt, timeZone, "dd/MM/yyyy HH:mm")}
+                    {run.trigger === "manual" ? " · manual" : ""}
+                  </span>
+                </span>
+                <Pill tone={state.tone}>{state.label}</Pill>
+              </li>
+            );
+          })
+        }
+        {runs.length === 0 && <li class="py-3 text-sm text-ink-soft">Nenhuma execução registrada ainda.</li>}
+      </ul>
+    </section>
+  </div>
 </div>
