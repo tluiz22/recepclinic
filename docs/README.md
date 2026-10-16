@@ -96,7 +96,10 @@
 >     implementadas em 15/out**, testadas no navegador, aprovadas pelo cliente e **publicadas no
 >     staging** (commit `a1066ca`). Correção do "confirmo" do lembrete e **R3 (Resumo do Dia)
 >     implementadas em 15/out**, aprovadas pelo cliente e publicadas no staging.
->     Próximo, com a confirmação: R4 (Marcar e Remarcar). Pendente da R1: o menu do Suporte agrupado.
+>     **Retomar daqui (próxima sessão, combinado em 15/out):** R4 (Marcar e Remarcar): proposta no
+>     canvas → aprovação → implementação. Antes de desenhar, perguntar ao cliente a U-09 da
+>     auditoria (vindo de um dia da Agenda, os horários do Marcar começam nesse dia ou no primeiro
+>     livre?). Pendente da R1: o menu do Suporte agrupado.
 >   - **Migrações no staging:** o Claude aplica com `supabase db push` (permissão liberada em
 >     09/out), sempre na ordem simulação → aplicar → conferir no banco → só então o push do código.
 >   - **WhatsApp de testes:** `+55 61 9903-3143`, na Cloud API do app RecepClinic, ligado à
