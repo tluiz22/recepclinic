@@ -1950,6 +1950,12 @@ atendimento atual no alto e o resumo "De → Para" com a escolha da série. **Im
 regra da faixa em `src/lib/dayStrip.ts` (com teste), componentes `DayStrip`, `SlotPicker` e
 `StepCard` em `ui/`; o diálogo de confirmação aceita o botão ligado ao formulário por `form="…"`.
 
+**Ajustes do teste da R4 (cliente, 16/out/2026):** no Remarcar, o "De" do resumo sem risco. No
+Marcar, a busca mostrava os pacientes sem deixar claro que era preciso escolher um, e a tela seguia
+para o serviço e as datas sem paciente: agora cada resultado tem o botão "Escolher" e o aviso
+"Toque no paciente para escolher", e Serviço e Data e horário ficam travados ("Escolha o paciente
+primeiro") até o paciente ser escolhido (serviço e dia já escolhidos continuam valendo).
+
 ## Depois do 1º piloto (já previsto no banco)
 
 - **Convênios (D10):** telas de planos atendidos e exceções por profissional; plano no cadastro do

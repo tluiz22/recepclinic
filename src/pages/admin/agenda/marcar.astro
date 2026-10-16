@@ -101,7 +101,7 @@ let strip = buildDayStrip([], null, null);
 let slotOptions: SlotOption[] = [];
 const isGroup = service?.schedulingMode === "group";
 const dayLabel = (d: string) => capitalize(formatCalendarDate(d, "EEEE, dd/MM"));
-if (service && searchAgendas.length) {
+if (patient && service && searchAgendas.length) {
   const describe = (agendaId: string, locationId: string) =>
     [location.get(locationId)?.name ?? "Local", serviceAgendaIds.length > 1 ? agendaName.get(agendaId) : null].filter(Boolean).join(" · ");
   if (isGroup) {
@@ -174,9 +174,12 @@ const ageWarning =
 const back = `${Astro.url.pathname}${Astro.url.search}`;
 // Série recorrente (D9; cliente, 05/out/2026: criada no próprio Marcar), só
 // com o item "Séries" e fora de turma.
-const canRepeat = clinic.features.includes("series") && !!service && !isGroup;
-const showAgendaStep = !!service && serviceAgendaIds.length > 1;
-const canBook = !!service && searchAgendas.length > 0;
+const canRepeat = clinic.features.includes("series") && !!patient && !!service && !isGroup;
+// O paciente vem primeiro (cliente, 16/out/2026): sem ele, Serviço e Data e
+// horário ficam travados, com o aviso de escolher o paciente.
+const locked = !patient;
+const showAgendaStep = !locked && !!service && serviceAgendaIds.length > 1;
+const canBook = !locked && !!service && searchAgendas.length > 0;
 const stepOf = (done: boolean, isCurrent: boolean) => (done ? "done" : isCurrent ? "current" : "todo") as "done" | "current" | "todo";
 const timeStep = showAgendaStep ? 4 : 3;
 const chip = (active: boolean) =>
@@ -227,16 +230,22 @@ const okNote = `${note} border-conf-200 bg-conf-100/60 text-conf-800`;
                 />
                 <Button type="submit">Buscar</Button>
               </form>
+              {busca && results.length > 0 && (
+                <p class="text-[15px] font-semibold text-ink">Toque no {vocabulary.patient} para escolher:</p>
+              )}
               {busca && (
                 <ul class="divide-y divide-line overflow-hidden rounded-[10px] border border-line">
                   {results.map((r) => (
                     <li>
-                      <a href={link({ patient_id: r.id })} class="block px-3 py-2.5 no-underline hover:bg-brand-soft/50">
-                        <span class="text-[15px] font-semibold text-ink">{r.fullName}</span>
-                        <span class="block text-sm text-ink-soft">
-                          {formatAge(r.birthdate, today)} · {!r.isContactSelf && `${r.contact.fullName} · `}
-                          {formatPhoneBR(r.contact.phone)}
+                      <a href={link({ patient_id: r.id })} class="flex items-center justify-between gap-3 px-3 py-2.5 no-underline hover:bg-brand-soft/50">
+                        <span class="min-w-0">
+                          <span class="text-[15px] font-semibold text-ink">{r.fullName}</span>
+                          <span class="block text-sm text-ink-soft">
+                            {formatAge(r.birthdate, today)} · {!r.isContactSelf && `${r.contact.fullName} · `}
+                            {formatPhoneBR(r.contact.phone)}
+                          </span>
                         </span>
+                        <span class={buttonClass("secondary", "sm")} aria-hidden="true">Escolher</span>
                       </a>
                     </li>
                   ))}
@@ -254,7 +263,10 @@ const okNote = `${note} border-conf-200 bg-conf-100/60 text-conf-800`;
         }
       </StepCard>
 
-      <StepCard number={2} title="Serviço" state={stepOf(!!service, !!patient && !service)} id="passo-servico">
+      <StepCard number={2} title="Serviço" state={stepOf(!locked && !!service, !locked && !service)} id="passo-servico">
+        {locked ? (
+          <p class="text-[15px] text-ink-soft">Escolha o {vocabulary.patient} primeiro.</p>
+        ) : (
         <div class="flex flex-col gap-2.5">
           <form method="GET">
             {/* U-09: o dia pedido continua valendo depois do serviço; só a faixa recomeça. */}
@@ -295,6 +307,7 @@ const okNote = `${note} border-conf-200 bg-conf-100/60 text-conf-800`;
             </div>
           ))}
         </div>
+        )}
       </StepCard>
 
       {
@@ -314,10 +327,12 @@ const okNote = `${note} border-conf-200 bg-conf-100/60 text-conf-800`;
         )
       }
 
-      <StepCard number={timeStep} title={isGroup ? "Turma" : "Data e horário"} state={stepOf(false, !!patient && !!service)} id="passo-horario">
+      <StepCard number={timeStep} title={isGroup ? "Turma" : "Data e horário"} state={stepOf(false, !locked && !!service)} id="passo-horario">
         {
           !canBook ? (
-            <p class="text-[15px] text-ink-soft">{service ? "Sem agenda para este serviço." : "Escolha o serviço primeiro."}</p>
+            <p class="text-[15px] text-ink-soft">
+              {locked ? `Escolha o ${vocabulary.patient} primeiro.` : service ? "Sem agenda para este serviço." : "Escolha o serviço primeiro."}
+            </p>
           ) : (
             <div class="flex flex-col gap-4">
               {unavailableNote && (
@@ -367,9 +382,9 @@ const okNote = `${note} border-conf-200 bg-conf-100/60 text-conf-800`;
           <dt class="font-medium text-ink-soft">{capitalize(vocabulary.patient)}</dt>
           <dd class="font-semibold text-ink">{patient?.fullName ?? "—"}</dd>
           <dt class="font-medium text-ink-soft">Serviço</dt>
-          <dd class="font-semibold text-ink">{service ? `${service.name} · ${service.durationMinutes} min` : "—"}</dd>
+          <dd class="font-semibold text-ink">{service && !locked ? `${service.name} · ${service.durationMinutes} min` : "—"}</dd>
           {
-            service && withName && (
+            !locked && service && withName && (
               <>
                 <dt class="font-medium text-ink-soft">Com quem</dt>
                 <dd class="font-semibold text-ink">{withName}</dd>
