@@ -67,6 +67,8 @@ function restore(): HTMLFormElement | null {
     (f) => (f.getAttribute("action") ?? "") === saved!.action,
   )[saved.index];
   if (!form) return null;
+  // Formulário dentro de um cartão recolhido (R6, "Editar"): abre para o erro aparecer.
+  for (let box = form.closest("details"); box; box = box.parentElement?.closest("details") ?? null) box.open = true;
   const byKey = new Map(saved.fields.map((f) => [f.key, f]));
   const changed: Element[] = [];
   for (const [key, el] of namedFields(form)) {

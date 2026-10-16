@@ -8,12 +8,17 @@ import { logError } from "../../../lib/log";
 // outra tela, "Voltar" leva a ela (cliente, 10/out/2026). A página
 // mesma recebe o envio: as confirmações (mesma pessoa, possível repetido)
 // voltam na tela com os dados, nunca no endereço.
+//
+// Redesign R6 (proposta aprovada pelo cliente em 16/out/2026): 3 blocos
+// numerados (paciente, quem fala pelo WhatsApp, plano de saúde), "quem fala"
+// em cartões de escolha e cada aviso junto do campo dele.
 import { receivedReturn, withReturn } from "../../../lib/returnPath";
 import AdminLayout from "../../../layouts/AdminLayout.astro";
-import Card from "../../../components/admin/Card.astro";
 import FormMessage from "../../../components/admin/FormMessage.astro";
 import Icon from "../../../components/admin/Icon.astro";
-import { HINT, INPUT, LABEL, PRIMARY_BUTTON } from "../../../components/admin/fieldStyles";
+import Button from "../../../components/admin/ui/Button.astro";
+import PageHeader from "../../../components/admin/ui/PageHeader.astro";
+import { CONTROL } from "../../../components/admin/ui/styles";
 import { isUuid } from "../../../lib/clinicAccess";
 import { todayIn } from "../../../lib/clinicTime";
 import { createUserClient } from "../../../lib/data/clients";
@@ -40,6 +45,17 @@ const plans = insuranceOn ? await listInsurancePlans(db, clinic.clinicId) : [];
 const origin = backToBooking ? null : receivedReturn(Astro.url);
 const backHref = backToBooking ?? origin ?? (fixedContact ? `/admin/pacientes/contato/${fixedContact.id}` : "/admin/pacientes");
 
+const card = "flex flex-col gap-4 rounded-xl border border-line bg-white p-3.5 sm:px-5 sm:py-[18px]";
+const blockTitle = "flex items-center gap-2.5 font-display text-[17px] leading-tight font-bold text-ink sm:text-lg";
+const number = "flex h-[26px] w-[26px] shrink-0 items-center justify-center rounded-full bg-brand font-sans text-sm font-bold text-white";
+const field = "flex flex-col gap-1.5";
+const fieldLabel = "text-[14.5px] font-semibold text-ink";
+const optional = "font-normal text-ink-soft";
+const hint = "text-sm text-ink-soft";
+const choice =
+  "relative flex flex-1 cursor-pointer items-start gap-3 rounded-[10px] border border-line-strong bg-white px-3.5 py-3 text-left has-[:checked]:border-brand has-[:checked]:bg-brand-soft/60 has-[:checked]:shadow-[0_0_0_1px_var(--color-brand)] has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-brand";
+const alertBox = "flex items-start gap-2.5 rounded-[10px] border border-pend-200 bg-pend-50 px-3.5 py-3 text-[15px] leading-snug text-pend-800";
+
 const values = {
   full_name: "",
   birthdate: "",
@@ -55,6 +71,8 @@ const values = {
 let error: string | null = null;
 let notice: string | null = null;
 let askDuplicate = false;
+/** O aviso do número já cadastrado fica junto do WhatsApp; o do repetido, junto da confirmação. */
+let samePerson = false;
 
 if (Astro.request.method === "POST") {
   const form = await Astro.request.formData().catch(() => null);
@@ -88,6 +106,7 @@ if (Astro.request.method === "POST") {
     }
     if (result.status === "confirm_same_person") {
       values.confirmed_contact_id = result.contact.id;
+      samePerson = true;
       notice = `Este WhatsApp já é de ${result.contact.fullName}. Se for a mesma pessoa, confirme abaixo.`;
     } else {
       askDuplicate = true;
@@ -101,71 +120,96 @@ if (Astro.request.method === "POST") {
 ---
 
 <AdminLayout title={`Cadastrar ${vocabulary.patient}`}>
-  <a href={backHref} class="inline-flex items-center gap-1 text-sm font-medium text-sky-700 hover:underline">
-    <Icon name="chevron-left" class="h-4 w-4" />
+  <a href={backHref} class="inline-flex min-h-8 items-center gap-1 text-[15px] font-semibold text-brand no-underline hover:underline">
+    <Icon name="chevron-left" class="h-[18px] w-[18px]" strokeWidth={2.2} />
     {backToBooking ? "Marcar" : origin ? "Voltar" : fixedContact ? fixedContact.fullName : capitalize(vocabulary.patients)}
   </a>
-  <h1 class="mt-3 text-2xl font-bold text-slate-900">Cadastrar {vocabulary.patient}</h1>
+  <PageHeader title={`Cadastrar ${vocabulary.patient}`} class="mt-2" />
   {error && <FormMessage tone="error">{error}</FormMessage>}
-  {notice && <FormMessage tone="error">{notice}</FormMessage>}
 
-  <form method="POST" class="mt-4 flex max-w-2xl flex-col gap-4">
+  <form method="POST" class="mt-4 flex max-w-[680px] flex-col gap-4">
     <input type="hidden" name="confirmed_contact_id" value={values.confirmed_contact_id} />
-    <Card>
-      <div class="flex flex-col gap-4">
-        <div>
-          <label for="full_name" class={LABEL}>Nome do {vocabulary.patient}</label>
-          <input id="full_name" name="full_name" required value={values.full_name} class={INPUT} />
-        </div>
-        <div>
-          <label for="birthdate" class={LABEL}>Data de nascimento</label>
-          <input id="birthdate" name="birthdate" type="date" required max={today} value={values.birthdate} class={`${INPUT} w-48`} />
-        </div>
-        <div>
-          <label for="notes" class={LABEL}>Observações (opcional)</label>
-          <textarea id="notes" name="notes" rows="2" class={INPUT}>{values.notes}</textarea>
-          <p class={HINT}>Só a equipe vê.</p>
-        </div>
+    <section aria-labelledby="bloco-paciente" class={card}>
+      <h2 id="bloco-paciente" class={blockTitle}><span class={number} aria-hidden="true">1</span>{capitalize(vocabulary.patient)}</h2>
+      <div class={field}>
+        <label for="full_name" class={fieldLabel}>Nome do {vocabulary.patient}</label>
+        <input id="full_name" name="full_name" required value={values.full_name} class={CONTROL} />
       </div>
-    </Card>
+      <div class={field}>
+        <label for="birthdate" class={fieldLabel}>Data de nascimento</label>
+        <input id="birthdate" name="birthdate" type="date" required max={today} value={values.birthdate} class={`${CONTROL} w-52`} />
+      </div>
+      <div class={field}>
+        <label for="notes" class={fieldLabel}>Observações <span class={optional}>(opcional)</span></label>
+        <textarea id="notes" name="notes" rows="2" aria-describedby="notes-hint" class={`${CONTROL} h-auto! py-2.5`}>{values.notes}</textarea>
+        <p id="notes-hint" class={hint}>Só a equipe vê.</p>
+      </div>
+    </section>
 
-    <Card>
-      <h2 class="font-semibold text-slate-900">Quem fala com a clínica pelo WhatsApp</h2>
+    <section aria-labelledby="bloco-contato" class={card}>
+      <h2 id="bloco-contato" class={blockTitle}><span class={number} aria-hidden="true">2</span>Quem fala com a clínica pelo WhatsApp</h2>
       {
         fixedContact ? (
-          <p class="mt-2 text-sm text-slate-700">
-            {fixedContact.fullName} · {formatPhoneBR(fixedContact.phone)}
+          <p class="text-[15px] text-ink">
+            <span class="font-semibold">{fixedContact.fullName}</span> · {formatPhoneBR(fixedContact.phone)}
           </p>
         ) : (
-          <div class="mt-2 flex flex-col gap-4">
-            <div class="flex flex-col gap-2 text-sm text-slate-700">
-              <label class="flex items-center gap-2">
-                <input type="radio" name="mode" value="self" checked={values.mode === "self"} class="h-4 w-4" /> O próprio {vocabulary.patient} (maior de 18 anos)
-              </label>
-              <label class="flex items-center gap-2">
-                <input type="radio" name="mode" value="new" checked={values.mode === "new"} class="h-4 w-4" /> Um {vocabulary.contact}
-              </label>
+          <>
+            <fieldset>
+              <legend class="sr-only">Quem fala com a clínica pelo WhatsApp</legend>
+              <div class="flex flex-col gap-2.5 sm:flex-row">
+                <label class={choice}>
+                  <input type="radio" name="mode" value="self" checked={values.mode === "self"} class="mt-0.5 h-[18px] w-[18px] shrink-0 accent-brand" />
+                  <span class="flex flex-col gap-0.5">
+                    <span class="text-[15.5px] leading-snug font-semibold text-ink">O próprio {vocabulary.patient}</span>
+                    <span class={hint}>Maior de 18 anos</span>
+                  </span>
+                </label>
+                <label class={choice}>
+                  <input type="radio" name="mode" value="new" checked={values.mode === "new"} class="mt-0.5 h-[18px] w-[18px] shrink-0 accent-brand" />
+                  <span class="flex flex-col gap-0.5">
+                    <span class="text-[15.5px] leading-snug font-semibold text-ink">Um {vocabulary.contact}</span>
+                    <span class={hint}>Outra pessoa fala por ele</span>
+                  </span>
+                </label>
+              </div>
+            </fieldset>
+            <div data-contact-name class={field}>
+              <label for="contact_name" class={fieldLabel}>Nome do {vocabulary.contact}</label>
+              <input id="contact_name" name="contact_name" value={values.contact_name} class={CONTROL} />
             </div>
-            <div data-contact-name>
-              <label for="contact_name" class={LABEL}>Nome do {vocabulary.contact}</label>
-              <input id="contact_name" name="contact_name" value={values.contact_name} class={INPUT} />
+            <div class={field}>
+              <label for="phone" class={fieldLabel}>WhatsApp</label>
+              <input
+                id="phone"
+                name="phone"
+                type="tel"
+                required
+                placeholder="(84) 99999-9999"
+                value={values.phone}
+                aria-describedby={samePerson ? "phone-aviso phone-hint" : "phone-hint"}
+                class={`${CONTROL} w-full sm:w-64 ${samePerson ? "border-pend-500" : ""}`}
+              />
+              {samePerson && notice && (
+                <p id="phone-aviso" role="alert" tabindex="-1" data-form-error class={alertBox}>
+                  <Icon name="warning" class="mt-0.5 h-[18px] w-[18px] shrink-0" strokeWidth={2} />
+                  {notice}
+                </p>
+              )}
+              <p id="phone-hint" class={hint}>Se o número já for de um {vocabulary.contact} cadastrado, o {vocabulary.patient} entra junto dele.</p>
             </div>
-            <div>
-              <label for="phone" class={LABEL}>WhatsApp</label>
-              <input id="phone" name="phone" type="tel" required placeholder="(84) 99999-9999" value={values.phone} class={INPUT} />
-              <p class={HINT}>Se o número já for de um {vocabulary.contact} cadastrado, o {vocabulary.patient} entra junto dele.</p>
-            </div>
-          </div>
+          </>
         )
       }
-    </Card>
+    </section>
 
     {
       insuranceOn && (
-        <Card>
-          <h2 class="font-semibold text-slate-900">Plano de saúde</h2>
-          <div class="mt-2 flex flex-col gap-3">
-            <select name="plan_id" aria-label="Plano de saúde" class={`${INPUT} mt-0`}>
+        <section aria-labelledby="bloco-plano" class={card}>
+          <h2 id="bloco-plano" class={blockTitle}><span class={number} aria-hidden="true">3</span>Plano de saúde</h2>
+          <div class={field}>
+            <label for="plan_id" class={fieldLabel}>Plano</label>
+            <select id="plan_id" name="plan_id" class={`${CONTROL} w-full sm:w-80`}>
               <option value="">Particular</option>
               {plans.map((plan) => (
                 <option value={plan.id} selected={plan.id === values.plan_id}>
@@ -173,29 +217,39 @@ if (Astro.request.method === "POST") {
                 </option>
               ))}
             </select>
-            <div class="grid gap-3 sm:grid-cols-2">
-              <div>
-                <label for="card_number" class={LABEL}>Carteirinha (opcional)</label>
-                <input id="card_number" name="card_number" value={values.card_number} class={INPUT} />
-              </div>
-              <div>
-                <label for="card_valid_until" class={LABEL}>Validade (opcional)</label>
-                <input id="card_valid_until" name="card_valid_until" type="date" value={values.card_valid_until} class={INPUT} />
-              </div>
+          </div>
+          <div class="grid gap-4 sm:grid-cols-2">
+            <div class={field}>
+              <label for="card_number" class={fieldLabel}>Carteirinha <span class={optional}>(opcional)</span></label>
+              <input id="card_number" name="card_number" value={values.card_number} class={CONTROL} />
+            </div>
+            <div class={field}>
+              <label for="card_valid_until" class={fieldLabel}>Validade <span class={optional}>(opcional)</span></label>
+              <input id="card_valid_until" name="card_valid_until" type="date" value={values.card_valid_until} class={CONTROL} />
             </div>
           </div>
-        </Card>
+        </section>
       )
     }
 
     {
-      askDuplicate && (
-        <label class="flex items-center gap-2 text-sm text-slate-700">
-          <input type="checkbox" name="confirm_duplicate" class="h-4 w-4 rounded border-slate-300" /> Confirmo que é outra pessoa
-        </label>
+      askDuplicate && notice && (
+        <div class="flex flex-col gap-2.5">
+          <p role="alert" tabindex="-1" data-form-error class={alertBox}>
+            <Icon name="warning" class="mt-0.5 h-[18px] w-[18px] shrink-0" strokeWidth={2} />
+            {notice}
+          </p>
+          <label class="flex min-h-11 items-center gap-2.5 text-[15px] text-ink">
+            <input type="checkbox" name="confirm_duplicate" class="h-[18px] w-[18px] accent-brand" /> Confirmo que é outra pessoa
+          </label>
+        </div>
       )
     }
-    <button type="submit" class={`${PRIMARY_BUTTON} self-start`}>{notice ? "Confirmar e cadastrar" : "Cadastrar"}</button>
+    <div>
+      <Button type="submit" variant="primary" class="h-12 px-[22px] text-base sm:h-12" data-sending-label="Cadastrando…">
+        {notice ? "Confirmar e cadastrar" : `Cadastrar ${vocabulary.patient}`}
+      </Button>
+    </div>
   </form>
 
   <script>

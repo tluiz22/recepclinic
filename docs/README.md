@@ -108,8 +108,10 @@
 >     as 6 falhas foram corrigidas, validadas e publicadas. **R5 (Pagamento): proposta aprovada, implementada, testada
 >     ([relatório](auditoria-frontend/redesign-r5-report.md), 3 falhas e 1 suspeita corrigidas),
 >     validada pelo cliente e publicada no staging em 16/out** ("Emitir a nota agora" desmarcado e
->     envio único em todo o painel; detalhes no [plano](plano.md)). **Próxima sessão: R6 (Pacientes
->     e Ficha) pela proposta no canvas.** A decidir com o cliente: o texto da confirmação da série (S-01).
+>     envio único em todo o painel; detalhes no [plano](plano.md)). **R6 (Pacientes e Ficha): proposta
+>     aprovada (7 decisões no [plano](plano.md)) e implementada em 16/out**, testada no navegador local
+>     (computador e celular, sem gravar dados); **falta a validação do cliente** e a publicação no
+>     staging. A decidir com o cliente: o texto da confirmação da série (S-01).
 >   - **Migrações no staging:** o Claude aplica com `supabase db push` (permissão liberada em
 >     09/out), sempre na ordem simulação → aplicar → conferir no banco → só então o push do código.
 >   - **WhatsApp de testes:** `+55 61 9903-3143`, na Cloud API do app RecepClinic, ligado à

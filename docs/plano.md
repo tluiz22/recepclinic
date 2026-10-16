@@ -2003,6 +2003,32 @@ local (apagada no fim); 3 falhas (o erro de CPF de "Outra pessoa" marcado num ca
 nota) e 1 suspeita (o aceite do diálogo sem conferir a trava), **todas corrigidas e retestadas**.
 **R5 validada pelo cliente e publicada no staging em 16/out/2026.**
 
+**R6 (Pacientes e Ficha), proposta aprovada pelo cliente em 16/out/2026** (página "6 · Pacientes e
+Ficha" do canvas). Decisões, uma a uma:
+1. **Lista em linhas** no computador (nome e selos, idade, plano, responsável com o número e o botão
+   do WhatsApp); no celular, cartões. Busca com rótulo e "Mostrar desativados" na mesma barra; sem
+   resultado, "Limpar a busca" e "Cadastrar".
+2. **Ficha com os atendimentos em destaque:** à esquerda, em abas (Próximos | Anteriores e
+   cancelados); à direita, os cartões Dados, Plano de saúde, Financeiro e Pagamentos.
+3. **Dados em modo leitura com "Editar"** (ficha e responsável): "Editar" abre o formulário no
+   próprio cartão, com Salvar e Cancelar, sem JavaScript.
+4. **Atendimentos da ficha só informação**, com "Abrir na Agenda" e "Trilha" (as ações continuam na
+   Agenda).
+5. **Ações raras no "Mais" do cabeçalho:** na ficha, Desativar/Reativar e Anonimizar (LGPD); no
+   responsável, Liberar dos limites, Desativar/Reativar e Bloquear no bot. As confirmações não mudam.
+6. **Selos novos na ficha** (só para quem vê o Financeiro): "Pago" ou "Pago em parte" nos
+   atendimentos anteriores e o selo da nota ("Nota nº" ou "Sem nota") nos pagamentos; "falta CPF"
+   continua.
+7. **Cadastrar em 3 blocos numerados** (Paciente, Quem fala pelo WhatsApp, Plano de saúde), "Quem
+   fala" em cartões de escolha e o aviso do número já cadastrado junto do campo.
+No celular, a ficha mostra o paciente e os atendimentos primeiro, os outros cartões recolhidos e
+"Marcar" na barra fixa.
+**Implementada em 16/out** e testada no navegador local (computador e celular, sem gravar dados):
+cartão `EditCard` em `ui/` (dados em leitura, "Editar" com `<details>`, recolhido no celular; o
+`keepFormValues` abre o cartão do formulário que voltou com erro); `Tabs` com `inCard` e contador
+neutro; `Pill` com o tom `alert` (faltas). No responsável, "Bloquear no bot…" abre o cartão do
+bloqueio por `?bloquear=1`.
+
 ## Depois do 1º piloto (já previsto no banco)
 
 - **Convênios (D10):** telas de planos atendidos e exceções por profissional; plano no cadastro do

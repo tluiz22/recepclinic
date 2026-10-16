@@ -3,20 +3,28 @@
 // vocabulário da clínica), busca pelo nome ou pelo telefone (4+ dígitos), 20
 // por página e "Mostrar desativados", como no piloto. Toda a equipe vê todos
 // os pacientes (D6, revisão de 04/out).
+//
+// Redesign R6 (proposta aprovada pelo cliente em 16/out/2026): no computador,
+// uma linha por paciente (nome e selos, idade, plano, responsável com o número
+// e o WhatsApp); no celular, cartões. Sem resultado, "Limpar a busca" e
+// "Cadastrar".
 import { currentPath, withReturn } from "../../../lib/returnPath";
 import AdminLayout from "../../../layouts/AdminLayout.astro";
-import Badge from "../../../components/admin/Badge.astro";
-import Card from "../../../components/admin/Card.astro";
 import FlashMessage from "../../../components/admin/FlashMessage.astro";
-import TabBar from "../../../components/admin/TabBar.astro";
-import { INPUT, PRIMARY_BUTTON, SECONDARY_BUTTON } from "../../../components/admin/fieldStyles";
+import Icon from "../../../components/admin/Icon.astro";
+import PhoneLinks from "../../../components/admin/PhoneLinks.astro";
+import Button from "../../../components/admin/ui/Button.astro";
+import PageHeader from "../../../components/admin/ui/PageHeader.astro";
+import Pill from "../../../components/admin/ui/Pill.astro";
+import Tabs from "../../../components/admin/ui/Tabs.astro";
+import Tag from "../../../components/admin/ui/Tag.astro";
+import { buttonClass } from "../../../components/admin/ui/styles";
 import { formatAge } from "../../../lib/age";
 import { todayIn } from "../../../lib/clinicTime";
 import { createUserClient } from "../../../lib/data/clients";
 import { listNoShowStats } from "../../../lib/data/agenda/view";
 import { listInsurancePlans } from "../../../lib/data/config/insurance";
 import { listContactsPage, listPatientsPage } from "../../../lib/data/patients";
-import { formatPhoneBR } from "../../../lib/phone";
 import { capitalize, vocabularyFor } from "../../../lib/vocabulary";
 
 const clinic = Astro.locals.clinic!;
@@ -38,20 +46,28 @@ const [plans, noShows] = await Promise.all([
 ]);
 const planName = new Map(plans.map((p) => [p.id, p.name]));
 const result = patients ?? contacts!;
+const here = currentPath(Astro.url);
 
 const link = (changes: Record<string, string>) => {
   const next = new URLSearchParams({ ...(tab === "contatos" ? { tab } : {}), ...(q ? { q } : {}), ...(showInactive ? { todos: "1" } : {}), ...changes });
   for (const [key, value] of [...next]) if (!value) next.delete(key);
   return `/admin/pacientes?${next}`;
 };
+const found = `${result.total} ${result.total === 1 ? "encontrado" : "encontrados"}${q ? ` para "${q}"` : ""}`;
+const card = "rounded-xl border border-line bg-white";
+// Classes inteiras (o Tailwind não lê classe montada em pedaços).
+const cols = insuranceOn ? "lg:grid-cols-[minmax(0,2.2fr)_140px_140px_minmax(0,2fr)_36px]" : "lg:grid-cols-[minmax(0,2.2fr)_140px_minmax(0,2fr)_36px]";
+const name = "text-[16.5px] leading-snug font-bold text-ink no-underline hover:underline";
+const pageLink = `${buttonClass("secondary", "sm")}`;
 ---
 
 <AdminLayout title={capitalize(vocabulary.patients)}>
-  <div class="flex flex-wrap items-center justify-between gap-3">
-    <h1 class="text-2xl font-bold text-slate-900">{capitalize(vocabulary.patients)}</h1>
-    <a href={withReturn("/admin/pacientes/novo", currentPath(Astro.url))} class={PRIMARY_BUTTON}>Cadastrar {vocabulary.patient}</a>
-  </div>
-  <TabBar
+  <PageHeader title={capitalize(vocabulary.patients)}>
+    <Button slot="actions" href={withReturn("/admin/pacientes/novo", here)} variant="primary">
+      <Icon name="plus" class="h-[18px] w-[18px]" strokeWidth={2.2} /> Cadastrar {vocabulary.patient}
+    </Button>
+  </PageHeader>
+  <Tabs
     label="Listas"
     class="mt-4"
     tabs={[
@@ -61,82 +77,167 @@ const link = (changes: Record<string, string>) => {
   />
   <FlashMessage />
 
-  <form method="GET" class="mt-4 flex flex-wrap items-center gap-2">
+  <form method="GET" role="search" class={`${card} mt-4 flex flex-wrap items-end gap-x-3 gap-y-2 p-3.5 sm:px-4`}>
     {tab === "contatos" && <input type="hidden" name="tab" value="contatos" />}
-    {showInactive && <input type="hidden" name="todos" value="1" />}
-    <input name="q" value={q} aria-label="Buscar por nome ou telefone" placeholder="Nome ou telefone" class={`${INPUT} mt-0 sm:w-80`} />
-    <button type="submit" class={SECONDARY_BUTTON}>Buscar</button>
-    {q && <a href={link({ q: "" })} class="text-sm text-sky-700 hover:underline">Limpar</a>}
-    <a href={link({ todos: showInactive ? "" : "1" })} class="ml-auto text-sm text-sky-700 hover:underline">
-      {showInactive ? "Esconder desativados" : "Mostrar desativados"}
-    </a>
+    <div class="flex min-w-0 flex-[1_1_320px] flex-col gap-1.5 sm:max-w-[480px]">
+      <label for="busca-pacientes" class="text-[14.5px] font-semibold text-ink">Buscar por nome ou telefone</label>
+      <div class="flex h-11 items-center gap-2 rounded-lg border border-line-strong bg-white px-3 focus-within:border-brand focus-within:ring-1 focus-within:ring-brand">
+        <Icon name="magnifying-glass" class="h-[18px] w-[18px] shrink-0 text-ink-soft" strokeWidth={2} />
+        <input id="busca-pacientes" name="q" value={q} type="search" class="min-w-0 flex-1 border-0 bg-transparent p-0 text-base text-ink outline-none focus:ring-0" />
+      </div>
+    </div>
+    <Button type="submit" class="h-11 sm:h-11">Buscar</Button>
+    {q && <a href={link({ q: "" })} class="inline-flex h-11 items-center px-1 text-[15px] font-semibold text-brand no-underline hover:underline">Limpar</a>}
+    <label class="inline-flex min-h-11 items-center gap-2 text-[15px] text-ink sm:ml-auto">
+      <input type="checkbox" name="todos" value="1" checked={showInactive} data-autosubmit class="h-[18px] w-[18px] accent-brand" />
+      Mostrar desativados
+    </label>
   </form>
 
-  <p class="mt-3 text-sm text-slate-500">{result.total} {result.total === 1 ? "encontrado" : "encontrados"}</p>
-  <ul class="mt-2 grid gap-3 sm:grid-cols-2">
-    {
-      patients?.items.map((p) => {
-        const stats = noShows.get(p.id);
-        return (
-          <li>
-            <a href={withReturn(`/admin/pacientes/${p.id}`, currentPath(Astro.url))}>
-              <Card class="h-full hover:border-sky-300 hover:bg-sky-50" muted={!p.isActive}>
-                <p class="flex flex-wrap items-center gap-2 font-medium text-slate-900">
-                  {p.fullName}
-                  {!p.isActive && <Badge>desativado</Badge>}
-                  {p.contact.botBlockedAt && <Badge variant="danger">{vocabulary.contact} bloqueado</Badge>}
-                  {stats && <Badge variant="danger">Faltou {stats.noShows} de {stats.total}</Badge>}
-                </p>
-                <p class="mt-0.5 text-sm text-slate-600">
-                  {formatAge(p.birthdate, today)}
-                  {insuranceOn && ` · ${p.insurance ? (planName.get(p.insurance.planId) ?? "Plano") : "Particular"}`}
-                </p>
-                <p class="text-sm text-slate-500">
-                  {!p.isContactSelf && `${capitalize(vocabulary.contact)}: ${p.contact.fullName} · `}
-                  {formatPhoneBR(p.contact.phone)}
-                </p>
-              </Card>
-            </a>
-          </li>
-        );
-      })
-    }
-    {
-      contacts?.items.map((c) => (
-        <li>
-          <a href={withReturn(`/admin/pacientes/contato/${c.id}`, currentPath(Astro.url))}>
-            <Card class="h-full hover:border-sky-300 hover:bg-sky-50" muted={!c.isActive}>
-              <p class="flex flex-wrap items-center gap-2 font-medium text-slate-900">
-                {c.fullName} {!c.isActive && <Badge>desativado</Badge>}
-                {c.botBlockedAt && <Badge variant="danger">bloqueado</Badge>}
-              </p>
-              <p class="mt-0.5 text-sm text-slate-600">{formatPhoneBR(c.phone)}</p>
-              <p class="text-sm text-slate-500">{c.patientNames.length ? c.patientNames.join(", ") : `Sem ${vocabulary.patients} ativos`}</p>
-            </Card>
-          </a>
-        </li>
-      ))
-    }
-  </ul>
-  {result.total === 0 && <p class="mt-2 text-sm text-slate-600">{q ? "Ninguém encontrado." : "Ninguém cadastrado ainda."}</p>}
+  <p class="mt-3 text-sm text-ink-soft" role="status">{found}</p>
+
+  {
+    patients && patients.items.length > 0 && (
+      <section aria-label={`${capitalize(vocabulary.patients)} encontrados`} class={`${card} mt-2 overflow-hidden`}>
+        <div aria-hidden="true" class={`hidden gap-4 px-5 py-3 text-[12.5px] font-semibold tracking-[.05em] text-ink-soft uppercase lg:grid ${cols}`}>
+          <span>{capitalize(vocabulary.patient)}</span>
+          <span>Idade</span>
+          {insuranceOn && <span>Plano</span>}
+          <span>{capitalize(vocabulary.contact)} e WhatsApp</span>
+          <span />
+        </div>
+        <ul>
+          {patients.items.map((p) => {
+            const stats = noShows.get(p.id);
+            const href = withReturn(`/admin/pacientes/${p.id}`, here);
+            return (
+              <li class={`grid grid-cols-[minmax(0,1fr)_auto] gap-x-3 gap-y-1.5 border-t border-line first:border-t-0 lg:first:border-t px-3.5 py-3.5 lg:items-center lg:gap-4 lg:px-5 ${cols} ${p.isActive ? "" : "opacity-60"}`}>
+                <div class="flex min-w-0 flex-col gap-1.5 lg:order-1">
+                  <a href={href} class={name}>
+                    {p.fullName}
+                  </a>
+                  {(!p.isActive || p.contact.botBlockedAt || stats) && (
+                    <span class="flex flex-wrap gap-1.5">
+                      {!p.isActive && <Pill tone="neutral">Desativado</Pill>}
+                      {stats && (
+                        <Pill tone="alert" icon="user-x">
+                          Faltou {stats.noShows} de {stats.total}
+                        </Pill>
+                      )}
+                      {p.contact.botBlockedAt && (
+                        <Pill tone="danger" icon="lock">
+                          {capitalize(vocabulary.contact)} bloqueado
+                        </Pill>
+                      )}
+                    </span>
+                  )}
+                </div>
+                {insuranceOn && (
+                  <span class="justify-self-end lg:order-3 lg:justify-self-start">
+                    <Tag>{p.insurance ? (planName.get(p.insurance.planId) ?? "Plano") : "Particular"}</Tag>
+                  </span>
+                )}
+                <span class="col-span-2 text-[15px] text-ink-soft lg:order-2 lg:col-span-1 lg:text-ink">{formatAge(p.birthdate, today)}</span>
+                <div class="col-span-2 flex min-w-0 flex-col gap-1 lg:order-4 lg:col-span-1">
+                  <span class="text-[15px] text-ink">{p.isContactSelf ? "Ele mesmo" : `${capitalize(vocabulary.contact)}: ${p.contact.fullName}`}</span>
+                  <PhoneLinks phone={p.contact.phone} plain class="text-[15px] text-ink" />
+                </div>
+                <a
+                  href={href}
+                  aria-label={`Abrir a ficha de ${p.fullName}`}
+                  class="hidden h-9 w-9 items-center justify-center rounded-lg text-ink-soft hover:bg-canvas hover:text-ink lg:order-5 lg:flex"
+                >
+                  <Icon name="chevron-right" class="h-5 w-5" strokeWidth={2.2} />
+                </a>
+              </li>
+            );
+          })}
+        </ul>
+      </section>
+    )
+  }
+
+  {
+    contacts && contacts.items.length > 0 && (
+      <section aria-label={`${capitalize(vocabulary.contacts)} encontrados`} class={`${card} mt-2 overflow-hidden`}>
+        <ul>
+          {contacts.items.map((c) => {
+            const href = withReturn(`/admin/pacientes/contato/${c.id}`, here);
+            return (
+              <li class={`grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 border-t border-line px-3.5 py-3.5 first:border-t-0 lg:px-5 ${c.isActive ? "" : "opacity-60"}`}>
+                <div class="flex min-w-0 flex-col gap-1">
+                  <span class="flex flex-wrap items-center gap-2">
+                    <a href={href} class={name}>
+                      {c.fullName}
+                    </a>
+                    {!c.isActive && <Pill tone="neutral">Desativado</Pill>}
+                    {c.botBlockedAt && (
+                      <Pill tone="danger" icon="lock">
+                        Bloqueado
+                      </Pill>
+                    )}
+                  </span>
+                  <span class="text-sm text-ink-soft">
+                    {c.patientNames.length ? `${capitalize(vocabulary.patients)}: ${c.patientNames.join(", ")}` : `Sem ${vocabulary.patients} ativos`}
+                  </span>
+                  <PhoneLinks phone={c.phone} plain class="text-[15px] text-ink" />
+                </div>
+                <a href={href} aria-label={`Abrir ${c.fullName}`} class="flex h-9 w-9 items-center justify-center rounded-lg text-ink-soft hover:bg-canvas hover:text-ink">
+                  <Icon name="chevron-right" class="h-5 w-5" strokeWidth={2.2} />
+                </a>
+              </li>
+            );
+          })}
+        </ul>
+      </section>
+    )
+  }
+
+  {
+    result.total === 0 && (
+      <section class={`${card} mt-2 flex flex-col items-center gap-2.5 px-6 py-7 text-center`}>
+        <p class="text-[17px] font-bold text-ink">{q ? `Ninguém encontrado para "${q}"` : "Ninguém cadastrado ainda"}</p>
+        {q && <p class="text-sm text-ink-soft">Confira a grafia ou busque pelos 4 últimos dígitos do telefone.</p>}
+        <div class="mt-1 flex flex-wrap justify-center gap-2">
+          {q && <Button href={link({ q: "" })}>Limpar a busca</Button>}
+          {tab === "pacientes" && (
+            <Button href={withReturn("/admin/pacientes/novo", here)} variant="primary">
+              Cadastrar {vocabulary.patient}
+            </Button>
+          )}
+        </div>
+      </section>
+    )
+  }
 
   {
     result.pageCount > 1 && (
-      <nav class="mt-4 flex items-center gap-3 text-sm">
-        {result.page > 1 && (
-          <a href={link({ pagina: String(result.page - 1) })} class="text-sky-700 hover:underline">
-            Anterior
+      <nav aria-label="Páginas" class="mt-4 flex items-center justify-center gap-3">
+        {result.page > 1 ? (
+          <a href={link({ pagina: String(result.page - 1) })} class={pageLink}>
+            ‹ Anterior
           </a>
+        ) : (
+          <span class={`${pageLink} opacity-50`} aria-hidden="true">‹ Anterior</span>
         )}
-        <span class="text-slate-500">
+        <span class="text-sm text-ink-soft">
           Página {result.page} de {result.pageCount}
         </span>
-        {result.page < result.pageCount && (
-          <a href={link({ pagina: String(result.page + 1) })} class="text-sky-700 hover:underline">
-            Próxima
+        {result.page < result.pageCount ? (
+          <a href={link({ pagina: String(result.page + 1) })} class={pageLink}>
+            Próxima ›
           </a>
+        ) : (
+          <span class={`${pageLink} opacity-50`} aria-hidden="true">Próxima ›</span>
         )}
       </nav>
     )
   }
 </AdminLayout>
+
+<script>
+  // "Mostrar desativados" vale na hora (sem JavaScript, vale no "Buscar").
+  document.querySelectorAll<HTMLInputElement>("input[data-autosubmit]").forEach((input) => {
+    input.addEventListener("change", () => input.form?.requestSubmit());
+  });
+</script>

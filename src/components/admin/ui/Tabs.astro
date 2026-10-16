@@ -4,7 +4,7 @@
 // ao rolar a página, com a aba ativa à vista ao abrir (como a TabBar, Fase 23).
 // Cada aba é um link: a troca recarrega a página, sem estado no cliente.
 // Para alternar a visualização (Dia, Semana, Mês), use o SegmentedControl.
-export type TabCountTone = "warning" | "info" | "alert";
+export type TabCountTone = "warning" | "info" | "alert" | "neutral";
 
 export interface TabItem {
   label: string;
@@ -22,18 +22,22 @@ export interface TabItem {
 interface Props {
   tabs: TabItem[];
   label: string;
+  /** Dentro de um cartão (R6, ficha): sem ficar fixa no topo nem sair das margens. */
+  inCard?: boolean;
   class?: string;
 }
 
-const { tabs, label, class: className = "" } = Astro.props;
+const { tabs, label, inCard = false, class: className = "" } = Astro.props;
 const tones: Record<TabCountTone, string> = {
   warning: "bg-pend-100 text-pend-800",
   info: "bg-att-100 text-att-800",
   alert: "bg-can-100 text-can-800",
+  neutral: "bg-blk-100 text-blk-800",
 };
+const frame = inCard ? "" : "sticky top-0 z-10 -mx-4 bg-canvas/95 px-4 backdrop-blur sm:-mx-6 sm:px-6";
 ---
 
-<nav data-section-tabs aria-label={label} class={`sticky top-0 z-10 -mx-4 bg-canvas/95 px-4 backdrop-blur sm:-mx-6 sm:px-6 ${className}`}>
+<nav data-section-tabs aria-label={label} class={`${frame} ${className}`}>
   <div class="rc-tabs-scroll flex gap-0.5 overflow-x-auto border-b border-line sm:gap-1">
     {
       tabs.map((tab) => (

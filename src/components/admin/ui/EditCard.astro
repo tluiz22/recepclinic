@@ -1,0 +1,95 @@
+---
+// Cartão de dados com "Editar" (R6; cliente, 16/out/2026): os dados aparecem
+// como texto (slot padrão) e "Editar" abre o formulário (slot "edit") no
+// próprio cartão, sem JavaScript (<details>). "Cancelar" é um link para a
+// mesma tela (sem JavaScript, recarrega); com ele, só fecha. No celular, o
+// cartão fica recolhido no título e no resumo (`summary`); no computador,
+// sempre aberto. Um formulário que volta com erro abre o cartão
+// (src/scripts/keepFormValues.ts).
+import Icon from "../Icon.astro";
+import { buttonClass } from "./styles";
+
+interface Props {
+  /** Único na página (o título do cartão é `${id}-titulo`). */
+  id: string;
+  title: string;
+  /** Resumo do cartão recolhido no celular, ex.: "Nasc. 12/07/2022". */
+  summary?: string;
+  /** Sem permissão para gravar: só os dados, sem "Editar". */
+  editable?: boolean;
+  class?: string;
+}
+
+const { id, title, summary, editable = true, class: className = "" } = Astro.props;
+const hasEdit = editable && Astro.slots.has("edit");
+---
+
+<details
+  open
+  id={id}
+  data-edit-card
+  aria-labelledby={`${id}-titulo`}
+  class={`group/card relative flex flex-col rounded-xl border border-line bg-white has-[>details[data-edit][open]]:border-brand has-[>details[data-edit][open]]:shadow-[0_0_0_1px_var(--color-brand)] ${className}`}
+>
+  <summary data-collapse class="flex min-h-[52px] cursor-pointer list-none items-center justify-between gap-3 px-3.5 lg:min-h-0 lg:cursor-default lg:px-5 lg:pt-[18px] lg:pb-3 [&::-webkit-details-marker]:hidden">
+    <h2 id={`${id}-titulo`} class="font-display text-[17px] leading-tight font-bold text-ink sm:text-lg">{title}</h2>
+    <span class="flex min-w-0 items-center gap-1.5 text-sm text-ink-soft lg:hidden">
+      {summary && <span class="truncate group-open/card:hidden">{summary}</span>}
+      <Icon name="chevron-down" class="h-4 w-4 shrink-0 transition-transform group-open/card:rotate-180" strokeWidth={2.2} />
+    </span>
+  </summary>
+  <div data-read class="flex flex-col gap-3 px-3.5 pb-3.5 lg:px-5 lg:pb-[18px]">
+    <slot />
+  </div>
+  {
+    hasEdit && (
+      <details data-edit class="px-3.5 pb-3.5 lg:p-0">
+        <summary
+          class={`${buttonClass("secondary", "sm")} cursor-pointer list-none lg:absolute lg:top-4 lg:right-5 [&::-webkit-details-marker]:hidden`}
+          aria-label={`Editar: ${title}`}
+        >
+          Editar
+        </summary>
+        <div class="flex flex-col gap-3 lg:px-5 lg:pb-[18px]">
+          <slot name="edit" />
+        </div>
+      </details>
+    )
+  }
+</details>
+
+<script>
+  // Computador: o cartão não recolhe (o título não é um botão).
+  const desktop = window.matchMedia("(min-width: 1024px)");
+  document.querySelectorAll<HTMLElement>("[data-edit-card] > summary[data-collapse]").forEach((summary) => {
+    summary.addEventListener("click", (event) => {
+      if (desktop.matches) event.preventDefault();
+    });
+  });
+  // Celular: os cartões começam recolhidos (sem JavaScript, ficam abertos);
+  // o que voltou com erro é aberto de novo pelo keepFormValues.
+  if (!desktop.matches) {
+    document.querySelectorAll<HTMLDetailsElement>("details[data-edit-card]").forEach((card) => {
+      if (!card.querySelector("details[data-edit][open]")) card.open = false;
+    });
+  }
+  // "Cancelar" só fecha o formulário e desfaz o que foi digitado.
+  document.addEventListener("click", (event) => {
+    const cancel = (event.target as HTMLElement).closest<HTMLElement>("[data-edit-cancel]");
+    const edit = cancel?.closest<HTMLDetailsElement>("details[data-edit]");
+    if (!cancel || !edit) return;
+    event.preventDefault();
+    edit.querySelector("form")?.reset();
+    edit.querySelectorAll("form [name]").forEach((el) => el.dispatchEvent(new Event("change", { bubbles: true })));
+    edit.open = false;
+    edit.querySelector("summary")?.focus();
+  });
+</script>
+
+<style>
+  /* Editando: some o texto dos dados e o próprio "Editar". */
+  [data-edit-card]:has(> details[data-edit][open]) > [data-read],
+  details[data-edit][open] > summary {
+    display: none;
+  }
+</style>

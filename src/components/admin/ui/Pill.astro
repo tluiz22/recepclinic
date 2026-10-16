@@ -4,7 +4,7 @@
 // A cor vem sempre com o texto; o ícone é opcional.
 import Icon, { type IconName } from "../Icon.astro";
 
-export type PillTone = "warning" | "success" | "info" | "danger" | "neutral";
+export type PillTone = "warning" | "success" | "info" | "danger" | "alert" | "neutral";
 
 interface Props {
   tone?: PillTone;
@@ -18,6 +18,8 @@ const tones: Record<PillTone, string> = {
   success: "bg-conf-100 text-conf-800",
   info: "bg-att-100 text-att-800",
   danger: "bg-can-100 text-can-800",
+  // Faltas (o mesmo tom da situação "Faltou").
+  alert: "bg-ns-100 text-ns-800",
   neutral: "bg-blk-100 text-blk-800",
 };
 ---

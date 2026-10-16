@@ -6,20 +6,34 @@
 // Suporte; depois disso a página só mostra o histórico. Com o Módulo
 // financeiro (F11.1), o cartão "Financeiro": CPF e responsável financeiro (só o
 // Administrador e a Recepção; o Suporte só vê).
+//
+// Redesign R6 (proposta aprovada pelo cliente em 16/out/2026): no alto, o
+// paciente com os selos, o contato e as ações (Marcar e o "Mais" com
+// Desativar e Anonimizar); à esquerda, os atendimentos em abas, só informação,
+// com "Abrir na Agenda" e "Trilha"; à direita, os cartões em modo leitura com
+// "Editar". Quem vê o Financeiro vê também "Pago"/"Pago em parte" nos
+// atendimentos e a nota de cada pagamento. No celular, os cartões recolhidos e
+// "Marcar" na barra fixa.
 import AdminLayout from "../../../layouts/AdminLayout.astro";
-import ActiveToggle from "../../../components/admin/ActiveToggle.astro";
-import Badge, { type BadgeVariant } from "../../../components/admin/Badge.astro";
-import Card from "../../../components/admin/Card.astro";
 import ConfirmDeleteDialog from "../../../components/admin/ConfirmDeleteDialog.astro";
 import FlashMessage from "../../../components/admin/FlashMessage.astro";
 import Icon from "../../../components/admin/Icon.astro";
 import PhoneLinks from "../../../components/admin/PhoneLinks.astro";
-import { HINT, INPUT, LABEL, PRIMARY_BUTTON, SECONDARY_BUTTON } from "../../../components/admin/fieldStyles";
+import { appointmentSituation } from "../../../components/admin/agenda/situationStyle";
+import Button from "../../../components/admin/ui/Button.astro";
+import EditCard from "../../../components/admin/ui/EditCard.astro";
+import MoreMenu from "../../../components/admin/ui/MoreMenu.astro";
+import Pill, { type PillTone } from "../../../components/admin/ui/Pill.astro";
+import StatusPill from "../../../components/admin/ui/StatusPill.astro";
+import Tabs from "../../../components/admin/ui/Tabs.astro";
+import Tag from "../../../components/admin/ui/Tag.astro";
+import { CONTROL, menuItemClass } from "../../../components/admin/ui/styles";
 import { formatAge, isOverConsultationAgeLimit } from "../../../lib/age";
 import { canAccessArea, isUuid } from "../../../lib/clinicAccess";
 import { formatCpf } from "../../../lib/cpf";
 import { getContactCpf, getPatientFinance, resolvePayer } from "../../../lib/data/finance";
-import { listPatientPayments, PAYMENT_METHOD_LABEL } from "../../../lib/data/payments";
+import { listPatientPayments, listPaymentStates, PAYMENT_METHOD_LABEL } from "../../../lib/data/payments";
+import { ACTIVE_INVOICE, listPaymentInvoices, type InvoiceStatus } from "../../../lib/data/nfse";
 import { getSavedDestinations } from "../../../lib/data/nfseDelivery";
 import { formatPhoneBR } from "../../../lib/phone";
 import { formatCentsBRL } from "../../../lib/money";
@@ -51,13 +65,6 @@ const today = todayIn(clinic.timezone);
 const upcoming = history.filter((a) => (a.status === "scheduled" || a.status === "confirmed") && a.scheduledAt > now).reverse();
 const previous = history.filter((a) => !upcoming.includes(a));
 const stats = noShows.get(patient.id);
-const statusBadge: Record<string, { label: string; variant: BadgeVariant }> = {
-  scheduled: { label: "Marcado", variant: "info" },
-  confirmed: { label: "Marcado", variant: "info" },
-  canceled: { label: "Cancelado", variant: "danger" },
-  completed: { label: "Compareceu", variant: "success" },
-  no_show: { label: "Faltou", variant: "danger" },
-};
 const pending = (a: (typeof history)[number]) => (a.status === "scheduled" || a.status === "confirmed") && a.scheduledAt <= now;
 // Voltar: para a tela de onde veio (cliente, 10/out/2026); sem origem, Pacientes.
 const volta = receivedReturn(Astro.url);
@@ -90,295 +97,515 @@ const [finance, contactCpf] = financeOn
   : [null, null];
 const responsible = finance ? resolvePayer(patient, contact, finance, contactCpf) : null;
 const payments = paymentsOn ? await listPatientPayments(db, clinic.clinicId, patient.id) : [];
+// Selos da R6 (cliente, 16/out/2026): pago em cada atendimento e a nota de cada pagamento.
+const [paymentStates, invoices] = paymentsOn
+  ? await Promise.all([
+      listPaymentStates(db, clinic.clinicId, history.map((a) => a.id)),
+      listPaymentInvoices(db, clinic.clinicId, payments.map((p) => p.id)),
+    ])
+  : [null, null];
 // Envio das notas (F11.5): outro WhatsApp e e-mail guardados no Financeiro.
 const savedDelivery = financeOn ? await getSavedDestinations(db, clinic.clinicId, patient.id) : null;
 const financeAction = withReturn(`/api/admin/financeiro/paciente/${patient.id}`, volta);
 const cpfValue = (cpf: string | null) => (cpf ? formatCpf(cpf) : "");
 const ageWarning =
-  settings.consultationAgeLimitYears !== null && isOverConsultationAgeLimit(patient.birthdate, today, settings.consultationAgeLimitYears)
+  !anonymized && settings.consultationAgeLimitYears !== null && isOverConsultationAgeLimit(patient.birthdate, today, settings.consultationAgeLimitYears)
     ? `Passou da idade limite da Consulta (${settings.consultationAgeLimitYears} anos): só Retorno e Exame.`
     : null;
+const planName = (planId: string) => plans.find((plan) => plan.id === planId)?.name ?? "Plano";
+const planLabel = patient.insurance ? planName(patient.insurance.planId) : "Particular";
+
+// Abas dos atendimentos: links que mantêm a origem do "Voltar".
+const tab = Astro.url.searchParams.get("atendimentos") === "anteriores" ? "anteriores" : "proximos";
+const tabHref = (value: string) => withReturn(`/admin/pacientes/${patient.id}${value === "anteriores" ? "?atendimentos=anteriores" : ""}`, volta);
+const plural = (n: number) => `${n} ${n === 1 ? "atendimento" : "atendimentos"}`;
+const rows = tab === "anteriores" ? previous : upcoming;
+
+// Nota de cada pagamento: a ativa (emitida, emitindo ou cancelando); sem ela, "Sem nota".
+const INVOICE_PILL: Partial<Record<InvoiceStatus, { tone: PillTone; text: (n: string | null) => string }>> = {
+  issued: { tone: "success", text: (n) => (n ? `Nota nº ${n}` : "Nota emitida") },
+  issuing: { tone: "warning", text: () => "Emitindo…" },
+  canceling: { tone: "warning", text: () => "Cancelando…" },
+};
+const activeInvoice = (paymentId: string) => (invoices?.get(paymentId) ?? []).find((n) => ACTIVE_INVOICE.includes(n.status));
+
+const deliveryText = () => {
+  const base = `WhatsApp do ${vocabulary.contact}`;
+  const extras = [savedDelivery?.phone ? formatPhoneBR(savedDelivery.phone) : null, savedDelivery?.email].filter(Boolean);
+  if (!extras.length) return `${base}.`;
+  return `${base}; também ${extras.join(" e ")}${savedDelivery?.autoSend ? ", sempre" : ", quando escolhido no envio"}.`;
+};
+const payerRole = (payer: string) => (payer === "other" ? "outra pessoa" : payer === "patient" ? vocabulary.patient : patient.isContactSelf ? vocabulary.patient : vocabulary.contact);
+
+const card = "flex flex-col rounded-xl border border-line bg-white p-3.5 sm:px-5 sm:py-[18px]";
+const sectionTitle = "font-display text-[17px] leading-tight font-bold text-ink sm:text-lg";
+const notice = "flex items-start gap-2.5 rounded-[10px] border px-3.5 py-3 text-[15px] leading-snug";
+const field = "flex flex-col gap-1.5";
+const fieldLabel = "text-[14.5px] font-semibold text-ink";
+const hint = "text-sm text-ink-soft";
+const kv = "grid grid-cols-[120px_minmax(0,1fr)] gap-x-3 gap-y-2 text-[15px]";
+const dt = "text-ink-soft";
+const dd = "font-semibold text-ink";
+const radio = "flex items-center gap-2.5 text-[15px] text-ink";
+const canBook = patient.isActive && !anonymized;
 ---
 
 <AdminLayout title={patient.fullName}>
-  <a href={volta ?? "/admin/pacientes"} class="inline-flex items-center gap-1 text-sm font-medium text-sky-700 hover:underline">
-    <Icon name="chevron-left" class="h-4 w-4" />
+  <a href={volta ?? "/admin/pacientes"} class="inline-flex min-h-8 items-center gap-1 text-[15px] font-semibold text-brand no-underline hover:underline">
+    <Icon name="chevron-left" class="h-[18px] w-[18px]" strokeWidth={2.2} />
     {volta ? "Voltar" : capitalize(vocabulary.patients)}
   </a>
-  <div class="mt-3 flex flex-wrap items-center justify-between gap-3">
-    <h1 class="flex flex-wrap items-center gap-2 text-2xl font-bold text-slate-900">
-      {patient.fullName}
-      {anonymized ? <Badge variant="warning">anonimizado</Badge> : !patient.isActive && <Badge>desativado</Badge>}
-      {stats && <Badge variant="danger">Faltou {stats.noShows} de {stats.total}</Badge>}
-      {contact.botBlockedAt && <Badge variant="danger">{vocabulary.contact} bloqueado</Badge>}
-    </h1>
-    {patient.isActive && !anonymized && <a href={withReturn(`/admin/agenda/marcar?patient_id=${patient.id}`, here)} class={PRIMARY_BUTTON}>Marcar</a>}
-  </div>
   <FlashMessage />
 
-  <div class="mt-4 grid gap-4 lg:grid-cols-2">
-    <div class="flex flex-col gap-4">
-      {anonymized && (
-        <Card>
-          <h2 class="font-semibold text-slate-900">Anonimizado</h2>
-          <p class="mt-1 text-sm text-slate-600">
-            Em {formatInstant(patient.anonymizedAt!, clinic.timezone, "dd/MM/yyyy 'às' HH:mm")}, a pedido (LGPD). Nome, nascimento, observações, telefone e
-            mensagens foram apagados; o histórico de atendimentos fica, sem identificação.
-          </p>
-        </Card>
-      )}
-      {!anonymized && (
-      <Card>
-        <h2 class="font-semibold text-slate-900">Dados</h2>
-        <p class="mt-1 text-sm text-slate-600">{formatAge(patient.birthdate, today)}</p>
-        {ageWarning && <p class="mt-1 text-sm text-amber-700">{ageWarning}</p>}
-        <form method="POST" action={action} class="mt-3 flex flex-col gap-3">
-          <input type="hidden" name="acao" value="salvar" />
-          <div>
-            <label for="full_name" class={LABEL}>Nome</label>
-            <input id="full_name" name="full_name" required value={patient.fullName} class={INPUT} />
-          </div>
-          <div>
-            <label for="birthdate" class={LABEL}>Data de nascimento</label>
-            <input id="birthdate" name="birthdate" type="date" required max={today} value={patient.birthdate} class={`${INPUT} w-48`} />
-          </div>
-          <div>
-            <label for="notes" class={LABEL}>Observações</label>
-            <textarea id="notes" name="notes" rows="3" class={INPUT}>{patient.notes ?? ""}</textarea>
-            <p class={HINT}>Só a equipe vê.</p>
-          </div>
-          <button type="submit" class={`${SECONDARY_BUTTON} self-start`}>Salvar</button>
-        </form>
-      </Card>
-      )}
-
-      <Card>
-        <h2 class="font-semibold text-slate-900">{patient.isContactSelf ? "WhatsApp" : capitalize(vocabulary.contact)}</h2>
-        <p class="mt-1 text-sm text-slate-700">
-          {!patient.isContactSelf && <a href={withReturn(`/admin/pacientes/contato/${contact.id}`, here)} class="font-medium text-sky-700 hover:underline">{contact.fullName}</a>}
-          {!patient.isContactSelf && " · "}
-          <PhoneLinks phone={contact.phone} plain class="text-slate-700" />
-        </p>
-        {patient.isContactSelf && <a href={withReturn(`/admin/pacientes/contato/${contact.id}`, here)} class="mt-1 inline-block text-sm text-sky-700 hover:underline">Editar o telefone</a>}
-      </Card>
-
+  <section aria-label={capitalize(vocabulary.patient)} class={`${card} mt-3 gap-3 sm:px-6 sm:py-5`}>
+    <div class="flex flex-wrap items-start justify-between gap-4">
+      <div class="flex min-w-0 flex-col gap-2">
+        <div class="flex flex-wrap items-center gap-2.5">
+          <h1 class="font-display text-[26px] leading-[1.1] font-bold text-ink sm:text-[30px]">{patient.fullName}</h1>
+          {anonymized ? <Pill tone="warning">Anonimizado</Pill> : !patient.isActive && <Pill tone="neutral">Desativado</Pill>}
+          {stats && <Pill tone="alert" icon="user-x">Faltou {stats.noShows} de {stats.total}</Pill>}
+          {contact.botBlockedAt && <Pill tone="danger" icon="lock">{capitalize(vocabulary.contact)} bloqueado</Pill>}
+        </div>
+        <div class="flex flex-wrap items-center gap-x-3.5 gap-y-1.5 text-[15.5px] text-ink">
+          {!anonymized && <span>{formatAge(patient.birthdate, today)}</span>}
+          {insuranceOn && !anonymized && <Tag>{planLabel}</Tag>}
+          <span class="inline-flex flex-wrap items-center gap-x-1.5 gap-y-1">
+            {patient.isContactSelf ? (
+              "WhatsApp:"
+            ) : (
+              <>
+                {capitalize(vocabulary.contact)}:
+                <a href={withReturn(`/admin/pacientes/contato/${contact.id}`, here)} class="font-semibold text-brand no-underline hover:underline">{contact.fullName}</a>·
+              </>
+            )}
+            <PhoneLinks phone={contact.phone} plain />
+          </span>
+          {
+            patient.isContactSelf && (
+              <a href={withReturn(`/admin/pacientes/contato/${contact.id}`, here)} class="text-[15px] font-semibold text-brand no-underline hover:underline">
+                Editar o telefone
+              </a>
+            )
+          }
+        </div>
+      </div>
       {
-        finance && responsible && (
-          <Card>
-            <h2 class="font-semibold text-slate-900">Financeiro</h2>
-            <p class="mt-1 text-sm text-slate-700">
-              Responsável financeiro: <span class="font-medium">{responsible.name}</span>
-              {responsible.cpf ? ` · CPF ${formatCpf(responsible.cpf)}` : ""}
-            </p>
-            {!responsible.cpf && <p class="mt-1 text-sm text-amber-700">Falta o CPF do responsável financeiro: sem ele, a nota fiscal não sai.</p>}
-            <form method="POST" action={financeAction} class="mt-3 flex flex-col gap-3" id="financeiro">
-              <fieldset disabled={!canEditFinance} class="flex flex-col gap-3">
-                <div>
-                  <label for="fin_cpf" class={LABEL}>CPF de {patient.fullName}{patient.isContactSelf ? "" : " (opcional)"}</label>
-                  <input
-                    id="fin_cpf"
-                    name={patient.isContactSelf ? "contact_cpf" : "cpf"}
-                    inputmode="numeric"
-                    placeholder="000.000.000-00"
-                    value={cpfValue(patient.isContactSelf ? contactCpf : finance.cpf)}
-                    class={`${INPUT} w-48`}
-                  />
-                </div>
-                <div>
-                  <p class={LABEL}>Quem paga (a nota sai no CPF dele)</p>
-                  <div class="mt-1 flex flex-col gap-1 text-sm">
-                    <label class="flex items-center gap-2">
-                      <input type="radio" name="payer" value="contact" checked={responsible.payer === "contact"} class="h-4 w-4" />
-                      {patient.isContactSelf ? patient.fullName : `${contact.fullName} (${vocabulary.contact})`}
-                    </label>
-                    {!patient.isContactSelf && (
-                      <label class="flex items-center gap-2">
-                        <input type="radio" name="payer" value="patient" checked={responsible.payer === "patient"} class="h-4 w-4" />
-                        {patient.fullName}
-                      </label>
-                    )}
-                    <label class="flex items-center gap-2">
-                      <input type="radio" name="payer" value="other" checked={responsible.payer === "other"} class="h-4 w-4" />
-                      Outra pessoa
-                    </label>
-                  </div>
-                </div>
-                {!patient.isContactSelf && (
-                  <div data-payer-only="contact">
-                    <label for="fin_contact_cpf" class={LABEL}>CPF de {contact.fullName}</label>
-                    <input id="fin_contact_cpf" name="contact_cpf" inputmode="numeric" placeholder="000.000.000-00" value={cpfValue(contactCpf)} class={`${INPUT} w-48`} />
-                    <p class={HINT}>Vale também para os outros cadastros deste WhatsApp.</p>
-                  </div>
-                )}
-                <div data-payer-only="other" class="grid gap-3 sm:grid-cols-2">
-                  <div>
-                    <label for="fin_payer_name" class={LABEL}>Nome de quem paga</label>
-                    <input id="fin_payer_name" name="payer_name" value={finance.payerName ?? ""} class={INPUT} />
-                  </div>
-                  <div>
-                    <label for="fin_payer_cpf" class={LABEL}>CPF de quem paga</label>
-                    <input id="fin_payer_cpf" name="payer_cpf" inputmode="numeric" placeholder="000.000.000-00" value={cpfValue(finance.payerCpf)} class={INPUT} />
-                  </div>
-                </div>
-                <div class="border-t border-slate-100 pt-3">
-                  <p class={LABEL}>Envio das notas fiscais</p>
-                  <p class={HINT}>A nota vai sempre para o WhatsApp do {vocabulary.contact}. Aqui, outro número e um e-mail (ex.: de quem paga).</p>
-                  <div class="mt-2 grid gap-3 sm:grid-cols-2">
-                    <div>
-                      <label for="fin_invoice_phone" class={LABEL}>Outro WhatsApp</label>
-                      <input id="fin_invoice_phone" name="invoice_phone" inputmode="tel" placeholder="(84) 98888-0000" value={savedDelivery?.phone ? formatPhoneBR(savedDelivery.phone) : ""} class={INPUT} />
-                    </div>
-                    <div>
-                      <label for="fin_invoice_email" class={LABEL}>E-mail</label>
-                      <input id="fin_invoice_email" name="invoice_email" type="email" value={savedDelivery?.email ?? ""} class={INPUT} />
-                    </div>
-                  </div>
-                  <label class="mt-2 flex items-center gap-2 text-sm text-slate-700">
-                    <input type="checkbox" name="invoice_auto_send" value="1" checked={savedDelivery?.autoSend ?? false} class="h-4 w-4" />
-                    Enviar sempre para eles, junto com o {vocabulary.contact}
-                  </label>
-                </div>
-                {canEditFinance && <button type="submit" class={`${SECONDARY_BUTTON} self-start`}>Salvar dados financeiros</button>}
-              </fieldset>
-            </form>
-            <p class={HINT}>Só a Recepção e o Administrador veem estes dados; o bot e as páginas públicas não.</p>
-          </Card>
+        !anonymized && (
+          <div class="flex gap-2">
+            <MoreMenu id="mais-paciente" label={`Mais ações: ${patient.fullName}`} size="md">
+              <form method="POST" action={action}>
+                <input type="hidden" name="acao" value={patient.isActive ? "desativar" : "reativar"} />
+                <button
+                  type="submit"
+                  class={`${menuItemClass()} ${patient.isActive ? "js-confirm-delete" : ""}`}
+                  data-confirm-title={`Desativar o ${vocabulary.patient}?`}
+                  data-confirm-message="Sai das telas de marcação; o histórico fica. Dá para reativar depois."
+                  data-confirm-label="Desativar"
+                >
+                  {patient.isActive ? `Desativar o ${vocabulary.patient}` : `Reativar o ${vocabulary.patient}`}
+                </button>
+              </form>
+              {
+                canAnonymize && (
+                  <form method="POST" action={action} class="mt-1 border-t border-line pt-1">
+                    <input type="hidden" name="acao" value="anonimizar" />
+                    <button
+                      type="submit"
+                      class={`${menuItemClass(true)} js-confirm-delete`}
+                      data-confirm-title={`Anonimizar ${patient.fullName}?`}
+                      data-confirm-message={anonymizeMessage}
+                      data-confirm-label="Anonimizar"
+                    >
+                      Anonimizar (LGPD)…
+                    </button>
+                  </form>
+                )
+              }
+            </MoreMenu>
+            {
+              canBook && (
+                <Button href={withReturn(`/admin/agenda/marcar?patient_id=${patient.id}`, here)} variant="primary" class="max-sm:hidden">
+                  <Icon name="plus" class="h-[18px] w-[18px]" strokeWidth={2.2} /> Marcar
+                </Button>
+              )
+            }
+          </div>
         )
       }
+    </div>
+    {
+      ageWarning && (
+        <p class={`${notice} border-pend-200 bg-pend-50 text-pend-800`}>
+          <Icon name="warning" class="mt-0.5 h-[18px] w-[18px] shrink-0" strokeWidth={2} />
+          {ageWarning}
+        </p>
+      )
+    }
+    {
+      anonymized && (
+        <p class={`${notice} border-line bg-canvas text-ink`}>
+          <Icon name="information-circle" class="mt-0.5 h-[18px] w-[18px] shrink-0 text-ink-soft" strokeWidth={2} />
+          <span>
+            Anonimizado em {formatInstant(patient.anonymizedAt!, clinic.timezone, "dd/MM/yyyy 'às' HH:mm")}, a pedido (LGPD). Nome, nascimento, observações,
+            telefone e mensagens foram apagados; o histórico de atendimentos fica, sem identificação.
+          </span>
+        </p>
+      )
+    }
+  </section>
 
+  <div class="mt-4 grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_400px] lg:gap-5">
+    <section aria-labelledby="atendimentos-titulo" class={`${card} gap-1`}>
+      <h2 id="atendimentos-titulo" class={sectionTitle}>Atendimentos</h2>
+      <Tabs
+        inCard
+        label="Atendimentos"
+        class="mt-1"
+        tabs={[
+          { label: "Próximos", href: tabHref("proximos"), active: tab === "proximos", count: upcoming.length, countTone: "neutral", countLabel: plural(upcoming.length) },
+          {
+            label: "Anteriores e cancelados",
+            href: tabHref("anteriores"),
+            active: tab === "anteriores",
+            count: previous.length,
+            countTone: "neutral",
+            countLabel: plural(previous.length),
+          },
+        ]}
+      />
+      <ul>
+        {rows.map((a) => {
+          const paid = paymentStates?.get(a.id);
+          return (
+            <li class="grid grid-cols-[112px_minmax(0,1fr)] gap-x-3 gap-y-2.5 border-t border-line py-3.5 first:border-t-0 sm:grid-cols-[124px_minmax(0,1fr)_auto] sm:items-center sm:gap-x-4">
+              <div class="flex flex-col">
+                <span class="text-[13.5px] font-semibold text-ink-soft first-letter:uppercase">{formatInstant(a.scheduledAt, clinic.timezone, "EEE, dd/MM/yyyy")}</span>
+                <span class="font-display text-[22px] leading-tight font-bold text-ink tabular-nums">{formatInstant(a.scheduledAt, clinic.timezone, "HH:mm")}</span>
+              </div>
+              <div class="flex min-w-0 flex-col gap-1.5">
+                <span class={`text-[15.5px] leading-snug font-semibold ${a.status === "canceled" ? "text-ink-soft" : "text-ink"}`}>
+                  {a.serviceName} · {a.agendaName}
+                </span>
+                <span class="flex flex-wrap items-center gap-1.5">
+                  {pending(a) ? (
+                    <Pill tone="warning" icon="clock">
+                      Registrar comparecimento
+                    </Pill>
+                  ) : (
+                    <StatusPill situation={appointmentSituation(a)} />
+                  )}
+                  {a.seriesId && <Tag>série</Tag>}
+                  {paid === "paid" && (
+                    <Pill tone="success" icon="banknotes">
+                      Pago
+                    </Pill>
+                  )}
+                  {paid === "partial" && (
+                    <Pill tone="warning" icon="banknotes">
+                      Pago em parte
+                    </Pill>
+                  )}
+                </span>
+              </div>
+              <div class="col-span-2 flex flex-wrap gap-1.5 sm:col-span-1 sm:justify-end">
+                <Button href={`/admin/agenda?date=${localDateOf(a.scheduledAt, clinic.timezone)}`} size="sm">
+                  Abrir na Agenda
+                </Button>
+                <Button href={withReturn(`/admin/agenda/trilha/${a.id}`, here)} size="sm" variant="quiet">
+                  Trilha
+                </Button>
+              </div>
+            </li>
+          );
+        })}
+      </ul>
       {
-        paymentsOn && (
-          <Card>
-            <h2 class="font-semibold text-slate-900">Pagamentos</h2>
-            <ul class="mt-2 divide-y divide-slate-100">
-              {payments.map((p) => (
-                <li class="flex flex-wrap items-center justify-between gap-2 py-2 text-sm">
-                  <span class={p.deletedAt ? "text-slate-400 line-through" : ""}>
-                    <span class="font-medium text-slate-900">{formatCentsBRL(p.amountCents)}</span> · {PAYMENT_METHOD_LABEL[p.method]} ·{" "}
-                    {formatCalendarDate(p.paidOn, "dd/MM/yyyy")}
-                    <span class="block text-slate-500">
-                      {p.serviceName} de {formatInstant(p.appointmentAt, clinic.timezone, "dd/MM/yyyy")} · pagou: {p.payerName}
-                    </span>
-                  </span>
-                  <span class="flex items-center gap-2">
-                    {p.deletedAt ? <Badge>excluído</Badge> : !p.payerCpf && <Badge variant="warning">falta CPF</Badge>}
-                    <a href={withReturn(`/admin/financeiro/pagamento/${p.appointmentId}`, here)} class="text-xs font-medium text-sky-700 hover:underline">
-                      Abrir
-                    </a>
-                  </span>
-                </li>
-              ))}
-              {payments.length === 0 && <li class="py-2 text-sm text-slate-500">Nenhum pagamento ainda. Registre pelo botão "Pagamento" na Agenda.</li>}
-            </ul>
-          </Card>
+        rows.length === 0 && (
+          <p class="py-3 text-[15px] text-ink-soft">{tab === "anteriores" ? "Nenhum atendimento anterior." : "Nenhum atendimento marcado."}</p>
+        )
+      }
+    </section>
+
+    <div class="flex flex-col gap-4">
+      {
+        !anonymized && (
+          <EditCard id="dados" title="Dados" summary={`Nasc. ${formatCalendarDate(patient.birthdate, "dd/MM/yyyy")}`}>
+            <dl class={kv}>
+              <dt class={dt}>Nascimento</dt>
+              <dd class={dd}>{formatCalendarDate(patient.birthdate, "dd/MM/yyyy")}</dd>
+              <dt class={dt}>Observações</dt>
+              <dd class={patient.notes ? "font-medium whitespace-pre-line text-ink" : "text-ink-soft"}>{patient.notes ?? "Nenhuma"}</dd>
+            </dl>
+            <p class={hint}>Observações: só a equipe vê.</p>
+            <form slot="edit" method="POST" action={action} class="flex flex-col gap-4">
+              <input type="hidden" name="acao" value="salvar" />
+              <div class={field}>
+                <label for="full_name" class={fieldLabel}>Nome</label>
+                <input id="full_name" name="full_name" required value={patient.fullName} class={CONTROL} />
+              </div>
+              <div class={field}>
+                <label for="birthdate" class={fieldLabel}>Data de nascimento</label>
+                <input id="birthdate" name="birthdate" type="date" required max={today} value={patient.birthdate} class={`${CONTROL} w-48`} />
+              </div>
+              <div class={field}>
+                <label for="notes" class={fieldLabel}>Observações</label>
+                <textarea id="notes" name="notes" rows="3" aria-describedby="notes-hint" class={`${CONTROL} h-auto! py-2.5`}>{patient.notes ?? ""}</textarea>
+                <p id="notes-hint" class={hint}>Só a equipe vê.</p>
+              </div>
+              <div class="flex gap-2">
+                <Button type="submit" variant="primary" data-sending-label="Salvando…">Salvar</Button>
+                <Button href={here} data-edit-cancel>Cancelar</Button>
+              </div>
+            </form>
+          </EditCard>
         )
       }
 
       {
         insuranceOn && !anonymized && (
-          <Card>
-            <h2 class="font-semibold text-slate-900">Plano de saúde</h2>
-            <form method="POST" action={action} class="mt-2 flex flex-col gap-3">
+          <EditCard id="plano" title="Plano de saúde" summary={planLabel}>
+            <dl class={kv}>
+              <dt class={dt}>Plano</dt>
+              <dd class={dd}>{planLabel}</dd>
+              {patient.insurance?.cardNumber && (
+                <>
+                  <dt class={dt}>Carteirinha</dt>
+                  <dd class={`${dd} tabular-nums`}>{patient.insurance.cardNumber}</dd>
+                </>
+              )}
+              {patient.insurance?.cardValidUntil && (
+                <>
+                  <dt class={dt}>Validade</dt>
+                  <dd class={dd}>{formatCalendarDate(patient.insurance.cardValidUntil, "dd/MM/yyyy")}</dd>
+                </>
+              )}
+            </dl>
+            <form slot="edit" method="POST" action={action} class="flex flex-col gap-4">
               <input type="hidden" name="acao" value="plano" />
-              <select name="plan_id" aria-label="Plano de saúde" class={`${INPUT} mt-0`}>
-                <option value="">Particular</option>
-                {plans
-                  .filter((plan) => plan.isActive || plan.id === patient.insurance?.planId)
-                  .map((plan) => (
-                    <option value={plan.id} selected={plan.id === patient.insurance?.planId}>
-                      {plan.name}
-                      {!plan.isActive && " (desativado)"}
-                    </option>
-                  ))}
-              </select>
-              <div class="grid gap-3 sm:grid-cols-2">
-                <div>
-                  <label for="card_number" class={LABEL}>Carteirinha</label>
-                  <input id="card_number" name="card_number" value={patient.insurance?.cardNumber ?? ""} class={INPUT} />
+              <div class={field}>
+                <label for="plan_id" class={fieldLabel}>Plano</label>
+                <select id="plan_id" name="plan_id" class={CONTROL}>
+                  <option value="">Particular</option>
+                  {plans
+                    .filter((plan) => plan.isActive || plan.id === patient.insurance?.planId)
+                    .map((plan) => (
+                      <option value={plan.id} selected={plan.id === patient.insurance?.planId}>
+                        {plan.name}
+                        {!plan.isActive && " (desativado)"}
+                      </option>
+                    ))}
+                </select>
+              </div>
+              <div class="grid gap-4 sm:grid-cols-2">
+                <div class={field}>
+                  <label for="card_number" class={fieldLabel}>Carteirinha</label>
+                  <input id="card_number" name="card_number" value={patient.insurance?.cardNumber ?? ""} class={CONTROL} />
                 </div>
-                <div>
-                  <label for="card_valid_until" class={LABEL}>Validade</label>
-                  <input id="card_valid_until" name="card_valid_until" type="date" value={patient.insurance?.cardValidUntil ?? ""} class={INPUT} />
+                <div class={field}>
+                  <label for="card_valid_until" class={fieldLabel}>Validade</label>
+                  <input id="card_valid_until" name="card_valid_until" type="date" value={patient.insurance?.cardValidUntil ?? ""} class={CONTROL} />
                 </div>
               </div>
-              <button type="submit" class={`${SECONDARY_BUTTON} self-start`}>Salvar plano</button>
+              <div class="flex gap-2">
+                <Button type="submit" variant="primary" data-sending-label="Salvando…">Salvar plano</Button>
+                <Button href={here} data-edit-cancel>Cancelar</Button>
+              </div>
             </form>
-          </Card>
+          </EditCard>
         )
       }
 
-      {!anonymized && (
-        <Card>
-          <ActiveToggle action={action} isActive={patient.isActive} what={`o ${vocabulary.patient}`} />
-        </Card>
-      )}
-
       {
-        canAnonymize && (
-          <Card>
-            <h2 class="font-semibold text-slate-900">Anonimizar (LGPD)</h2>
-            <p class="mt-1 text-sm text-slate-600">
-              Quando o {vocabulary.patient} pede a exclusão dos dados. O histórico fica sem identificação; o {vocabulary.contact}, o telefone e as mensagens
-              são apagados junto. Não dá para desfazer.
-            </p>
-            <form method="POST" action={action} class="mt-3">
-              <input type="hidden" name="acao" value="anonimizar" />
-              <button
-                type="submit"
-                class={`${SECONDARY_BUTTON} js-confirm-delete text-red-700`}
-                data-confirm-title={`Anonimizar ${patient.fullName}?`}
-                data-confirm-message={anonymizeMessage}
-                data-confirm-label="Anonimizar"
-              >
-                Anonimizar {vocabulary.patient}
-              </button>
+        finance && responsible && (
+          <EditCard id="financeiro" title="Financeiro" summary={responsible.name || "Outra pessoa"} editable={canEditFinance}>
+            <dl class={kv}>
+              <dt class={dt}>Quem paga</dt>
+              <dd class={dd}>
+                {responsible.name || "—"} <span class="font-normal text-ink-soft">({payerRole(responsible.payer)})</span>
+              </dd>
+              <dt class={dt}>CPF</dt>
+              <dd class={responsible.cpf ? `${dd} tabular-nums` : "text-ink-soft"}>{responsible.cpf ? formatCpf(responsible.cpf) : "não informado"}</dd>
+              {!patient.isContactSelf && responsible.payer !== "patient" && (
+                <>
+                  <dt class={dt}>CPF de {patient.fullName.split(" ")[0]}</dt>
+                  <dd class={finance.cpf ? `${dd} tabular-nums` : "text-ink-soft"}>{finance.cpf ? formatCpf(finance.cpf) : "não informado (opcional)"}</dd>
+                </>
+              )}
+              <dt class={dt}>Envio das notas</dt>
+              <dd class="font-medium text-ink">{deliveryText()}</dd>
+            </dl>
+            {
+              !responsible.cpf && (
+                <p class={`${notice} border-pend-200 bg-pend-50 text-pend-800`}>
+                  <Icon name="warning" class="mt-0.5 h-[18px] w-[18px] shrink-0" strokeWidth={2} />
+                  Falta o CPF do responsável financeiro: sem ele, a nota fiscal não sai.
+                </p>
+              )
+            }
+            <p class={hint}>Só a Recepção e o Administrador veem estes dados; o bot e as páginas públicas não.</p>
+            <form slot="edit" method="POST" action={financeAction} class="flex flex-col gap-4" id="financeiro-form">
+              <div class={field}>
+                <label for="fin_cpf" class={fieldLabel}>
+                  CPF de {patient.fullName}
+                  {patient.isContactSelf ? "" : <span class="font-normal text-ink-soft"> (opcional)</span>}
+                </label>
+                <input
+                  id="fin_cpf"
+                  name={patient.isContactSelf ? "contact_cpf" : "cpf"}
+                  inputmode="numeric"
+                  placeholder="000.000.000-00"
+                  value={cpfValue(patient.isContactSelf ? contactCpf : finance.cpf)}
+                  class={`${CONTROL} w-full sm:w-56`}
+                />
+              </div>
+              <fieldset class="flex flex-col gap-2">
+                <legend class={`${fieldLabel} mb-2`}>
+                  Quem paga <span class="font-normal text-ink-soft">(a nota sai no CPF dele)</span>
+                </legend>
+                <label class={radio}>
+                  <input type="radio" name="payer" value="contact" checked={responsible.payer === "contact"} class="h-[18px] w-[18px] shrink-0 accent-brand" />
+                  {patient.isContactSelf ? patient.fullName : `${contact.fullName} (${vocabulary.contact})`}
+                </label>
+                {!patient.isContactSelf && (
+                  <label class={radio}>
+                    <input type="radio" name="payer" value="patient" checked={responsible.payer === "patient"} class="h-[18px] w-[18px] shrink-0 accent-brand" />
+                    {patient.fullName}
+                  </label>
+                )}
+                <label class={radio}>
+                  <input type="radio" name="payer" value="other" checked={responsible.payer === "other"} class="h-[18px] w-[18px] shrink-0 accent-brand" />
+                  Outra pessoa
+                </label>
+              </fieldset>
+              {!patient.isContactSelf && (
+                <div data-payer-only="contact" class={field}>
+                  <label for="fin_contact_cpf" class={fieldLabel}>CPF de {contact.fullName}</label>
+                  <input
+                    id="fin_contact_cpf"
+                    name="contact_cpf"
+                    inputmode="numeric"
+                    placeholder="000.000.000-00"
+                    value={cpfValue(contactCpf)}
+                    aria-describedby="fin_contact_cpf-hint"
+                    class={`${CONTROL} w-full sm:w-56`}
+                  />
+                  <p id="fin_contact_cpf-hint" class={hint}>Vale também para os outros cadastros deste WhatsApp.</p>
+                </div>
+              )}
+              <div data-payer-only="other" class="grid gap-4 sm:grid-cols-2">
+                <div class={field}>
+                  <label for="fin_payer_name" class={fieldLabel}>Nome de quem paga</label>
+                  <input id="fin_payer_name" name="payer_name" value={finance.payerName ?? ""} class={CONTROL} />
+                </div>
+                <div class={field}>
+                  <label for="fin_payer_cpf" class={fieldLabel}>CPF de quem paga</label>
+                  <input id="fin_payer_cpf" name="payer_cpf" inputmode="numeric" placeholder="000.000.000-00" value={cpfValue(finance.payerCpf)} class={CONTROL} />
+                </div>
+              </div>
+              <fieldset class="flex flex-col gap-3 border-t border-line pt-4">
+                <legend class="sr-only">Envio das notas fiscais</legend>
+                <p class={fieldLabel} aria-hidden="true">Envio das notas fiscais</p>
+                <p class={hint}>A nota vai sempre para o WhatsApp do {vocabulary.contact}. Aqui, outro número e um e-mail (ex.: de quem paga).</p>
+                <div class="grid gap-4 sm:grid-cols-2">
+                  <div class={field}>
+                    <label for="fin_invoice_phone" class={fieldLabel}>Outro WhatsApp</label>
+                    <input
+                      id="fin_invoice_phone"
+                      name="invoice_phone"
+                      inputmode="tel"
+                      placeholder="(84) 98888-0000"
+                      value={savedDelivery?.phone ? formatPhoneBR(savedDelivery.phone) : ""}
+                      class={CONTROL}
+                    />
+                  </div>
+                  <div class={field}>
+                    <label for="fin_invoice_email" class={fieldLabel}>E-mail</label>
+                    <input id="fin_invoice_email" name="invoice_email" type="email" value={savedDelivery?.email ?? ""} class={CONTROL} />
+                  </div>
+                </div>
+                <label class="flex items-start gap-2.5 text-[15px] leading-snug text-ink">
+                  <input type="checkbox" name="invoice_auto_send" value="1" checked={savedDelivery?.autoSend ?? false} class="mt-0.5 h-[18px] w-[18px] shrink-0 accent-brand" />
+                  Enviar sempre para eles, junto com o {vocabulary.contact}
+                </label>
+              </fieldset>
+              <div class="flex gap-2">
+                <Button type="submit" variant="primary" data-sending-label="Salvando…">Salvar dados financeiros</Button>
+                <Button href={here} data-edit-cancel>Cancelar</Button>
+              </div>
             </form>
-          </Card>
+          </EditCard>
         )
       }
-    </div>
 
-    <div class="flex flex-col gap-4">
       {
-        [
-          { title: "Próximos", rows: upcoming },
-          { title: "Anteriores e cancelados", rows: previous },
-        ].map((section) => (
-          <Card>
-            <h2 class="font-semibold text-slate-900">
-              {section.title} ({section.rows.length})
-            </h2>
-            <ul class="mt-2 divide-y divide-slate-100">
-              {section.rows.map((a) => (
-                <li class="flex flex-wrap items-center justify-between gap-2 py-2 text-sm">
-                  <a href={`/admin/agenda?date=${localDateOf(a.scheduledAt, clinic.timezone)}`} class="hover:text-sky-700">
-                    <span class="font-medium capitalize text-slate-900">{formatInstant(a.scheduledAt, clinic.timezone, "EEE dd/MM/yyyy 'às' HH:mm")}</span>
-                    <span class="block text-slate-500">
-                      {a.serviceName} · {a.agendaName}
-                      {a.seriesId ? " · série" : ""}
-                    </span>
-                  </a>
-                  <span class="flex items-center gap-2">
-                    {pending(a) ? <Badge variant="warning">Registrar comparecimento</Badge> : <Badge variant={statusBadge[a.status].variant}>{statusBadge[a.status].label}</Badge>}
-                    <a href={withReturn(`/admin/agenda/trilha/${a.id}`, here)} class="text-xs font-medium text-sky-700 hover:underline">
-                      Trilha
+        paymentsOn && (
+          <EditCard id="pagamentos" title={`Pagamentos (${payments.filter((p) => !p.deletedAt).length})`} editable={false}>
+            <ul class="-mt-1">
+              {payments.map((p) => {
+                const invoice = activeInvoice(p.id);
+                const pill = invoice ? INVOICE_PILL[invoice.status] : undefined;
+                return (
+                  <li class="border-t border-line first:border-t-0">
+                    <a
+                      href={withReturn(`/admin/financeiro/pagamento/${p.appointmentId}`, here)}
+                      class="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 py-2.5 text-ink no-underline hover:bg-canvas/60"
+                    >
+                      <span class={`flex min-w-0 flex-col ${p.deletedAt ? "text-ink-soft line-through" : ""}`}>
+                        <span>
+                          <span class="font-display text-[17px] font-bold tabular-nums">{formatCentsBRL(p.amountCents)}</span>
+                          <span class={hint}>
+                            {" "}
+                            · {PAYMENT_METHOD_LABEL[p.method]} · {formatCalendarDate(p.paidOn, "dd/MM/yyyy")}
+                          </span>
+                        </span>
+                        <span class={hint}>
+                          {p.serviceName} de {formatInstant(p.appointmentAt, clinic.timezone, "dd/MM/yyyy")} · pagou: {p.payerName}
+                        </span>
+                      </span>
+                      <span class="flex flex-col items-end gap-1">
+                        {p.deletedAt ? (
+                          <Pill tone="neutral">Excluído</Pill>
+                        ) : !p.payerCpf ? (
+                          <Pill tone="warning">Falta CPF</Pill>
+                        ) : pill && invoice ? (
+                          <Pill tone={pill.tone} icon="document-check">
+                            {pill.text(invoice.nfseNumber)}
+                          </Pill>
+                        ) : (
+                          <Pill tone="warning">Sem nota</Pill>
+                        )}
+                      </span>
                     </a>
-                  </span>
-                </li>
-              ))}
-              {section.rows.length === 0 && <li class="py-2 text-sm text-slate-500">Nenhum.</li>}
+                  </li>
+                );
+              })}
             </ul>
-          </Card>
-        ))
+            {payments.length === 0 && <p class={hint}>Nenhum pagamento ainda. Registre pelo botão "Pagamento" na Agenda.</p>}
+          </EditCard>
+        )
       }
     </div>
   </div>
-  {canAnonymize && <ConfirmDeleteDialog />}
+
+  {
+    canBook && (
+      <>
+        <div class="h-20 sm:hidden" aria-hidden="true" />
+        <div class="fixed inset-x-0 bottom-[calc(61px+env(safe-area-inset-bottom))] z-10 flex items-center gap-3 border-t border-line bg-white px-4 py-2.5 shadow-[0_-4px_14px_rgba(18,48,42,.08)] sm:hidden">
+          <span class="min-w-0 flex-1 truncate text-base font-semibold text-ink">{patient.fullName}</span>
+          <Button href={withReturn(`/admin/agenda/marcar?patient_id=${patient.id}`, here)} variant="primary" class="h-12 px-6 text-base">
+            Marcar
+          </Button>
+        </div>
+      </>
+    )
+  }
+  {!anonymized && <ConfirmDeleteDialog />}
 </AdminLayout>
 
 <script>
   // Financeiro: mostra só os campos do responsável escolhido.
-  const form = document.getElementById("financeiro");
+  const form = document.getElementById("financeiro-form");
   if (form) {
     const sync = () => {
       const payer = form.querySelector<HTMLInputElement>('input[name="payer"]:checked')?.value ?? "contact";
