@@ -2037,6 +2037,7 @@ casos sem dado no seed).
 As 3 falhas foram **corrigidas e retestadas** no mesmo dia (seção 10 do relatório): o campo com erro
 rola até o meio da tela antes do foco, e o celular reserva espaço para as barras fixas; o título do
 cartão sai do Tab no computador; o Cadastrar mostra cada erro embaixo do campo, com o foco nele.
+**R6 publicada no staging em 16/out/2026** (a pedido do cliente; sem migração).
 
 ## Depois do 1º piloto (já previsto no banco)
 
