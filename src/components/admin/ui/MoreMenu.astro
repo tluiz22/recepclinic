@@ -14,13 +14,17 @@ interface Props {
   /** Nome acessível do botão, ex.: "Mais ações de Ana Souza, 14:00". */
   label: string;
   size?: ButtonSize;
+  /** Texto do botão (padrão "Mais"; o menu "Sistema" do Suporte usa outro). */
+  text?: string;
+  /** Classes do botão no lugar do botão secundário (ex.: o item do menu do cabeçalho). */
+  triggerClass?: string;
 }
 
-const { id, label, size = "sm" } = Astro.props;
+const { id, label, size = "sm", text = "Mais", triggerClass } = Astro.props;
 ---
 
-<button type="button" popovertarget={id} aria-label={label} class={`${buttonClass("secondary", size)} rc-more-trigger`}>
-  Mais
+<button type="button" popovertarget={id} aria-label={label} class={`${triggerClass ?? buttonClass("secondary", size)} rc-more-trigger`}>
+  {text}
   <Icon name="chevron-down" class="h-3.5 w-3.5" strokeWidth={2.4} />
 </button>
 <div

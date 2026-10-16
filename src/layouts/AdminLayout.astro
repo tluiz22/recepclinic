@@ -5,6 +5,8 @@ import "@fontsource-variable/source-sans-3";
 import "../styles/global.css";
 import Icon from "../components/admin/Icon.astro";
 import type { IconName } from "../components/admin/Icon.astro";
+import MoreMenu from "../components/admin/ui/MoreMenu.astro";
+import { menuItemClass } from "../components/admin/ui/styles";
 import { canAccessArea, roleLabel as describeRoles } from "../lib/clinicAccess";
 
 interface Props {
@@ -36,7 +38,9 @@ const clinic = Astro.locals.clinic;
 const access = clinic ?? { roles: [], isPlatformStaff: false };
 const roleLabel = describeRoles(access);
 
-const moreNavItems: { label: string; href: string; icon: IconName }[] = [
+type NavItem = { label: string; href: string; icon: IconName };
+
+const clinicMoreItems: NavItem[] = [
   // Envios automáticos virou aba de Métricas (Fase 23 · etapa 5).
   ...(canAccessArea(access, "settings")
     ? [{ label: "Configurações", href: "/admin/configuracoes", icon: "settings" as IconName }]
@@ -48,24 +52,49 @@ const moreNavItems: { label: string; href: string; icon: IconName }[] = [
   ...(canAccessArea(access, "finance")
     ? [{ label: "Financeiro", href: "/admin/financeiro", icon: "banknotes" as IconName }]
     : []),
-  // Administração do sistema (F4.2, F4.4a, F9.3 e F9.5): só o Suporte.
-  ...(platform || clinic?.isPlatformStaff
-    ? [
-        { label: "Clínicas", href: "/admin/sistema/clinicas", icon: "shield" as IconName },
-        { label: "Matriz de acesso", href: "/admin/sistema/matriz", icon: "shield" as IconName },
-        { label: "Vendas", href: "/admin/sistema/vendas", icon: "check-circle" as IconName },
-        { label: "Uso", href: "/admin/sistema/uso", icon: "chart-bar" as IconName },
-        { label: "Erros", href: "/admin/sistema/erros", icon: "shield" as IconName },
-        { label: "Tecnologia", href: "/admin/sistema/tecnologia", icon: "settings" as IconName },
-      ]
-    : []),
 ];
 
-const desktopNavItems = [...primaryNavItems, ...moreNavItems];
+// Administração do sistema (F4.2, F4.4a, F9.3 e F9.5): só o Suporte.
+const systemNavItems: NavItem[] =
+  platform || clinic?.isPlatformStaff
+    ? [
+        { label: "Clínicas", href: "/admin/sistema/clinicas", icon: "building" },
+        { label: "Matriz de acesso", href: "/admin/sistema/matriz", icon: "squares" },
+        { label: "Vendas", href: "/admin/sistema/vendas", icon: "tag" },
+        { label: "Uso", href: "/admin/sistema/uso", icon: "chart-bar" },
+        { label: "Erros", href: "/admin/sistema/erros", icon: "warning" },
+        { label: "Tecnologia", href: "/admin/sistema/tecnologia", icon: "cpu" },
+      ]
+    : [];
+
+// Menu do Suporte agrupado (pendência da R1, U-07; cliente, 16/out/2026):
+// dentro de uma clínica, os itens dela ficam no cabeçalho e os do sistema vão
+// para o botão "Sistema"; na Administração do sistema (sem clínica aberta),
+// só os do sistema. No celular, o "Mais" separa os grupos Clínica e Sistema.
+const headerNavItems = platform ? systemNavItems : [...primaryNavItems, ...clinicMoreItems];
+const headerSystemItems = platform ? [] : systemNavItems;
+const tabBarItems = platform ? systemNavItems.slice(0, 4) : primaryNavItems;
+const moreGroups: { title?: string; items: NavItem[] }[] = platform
+  ? [{ items: systemNavItems.slice(4) }]
+  : systemNavItems.length > 0
+    ? [
+        { title: "Clínica", items: clinicMoreItems },
+        { title: "Sistema · só o Suporte", items: systemNavItems },
+      ].filter((group) => group.items.length > 0)
+    : [{ items: clinicMoreItems }];
+const moreNavItems = moreGroups.flatMap((group) => group.items);
+
+// Dentro da clínica, a faixa amarela já diz que é o Suporte: o canto direito fica só com o "Sair".
+const showRoleLabel = platform || !clinic?.isPlatformStaff;
 
 const currentPath = Astro.url.pathname;
 const isActive = (href: string) => currentPath.startsWith(href);
 const isMoreActive = moreNavItems.some((item) => isActive(item.href));
+const isSystemActive = headerSystemItems.some((item) => isActive(item.href));
+const navLinkClass = (active: boolean) =>
+  `rounded-lg px-3 py-2 whitespace-nowrap no-underline ${
+    active ? "bg-brand-soft text-brand-ink" : "text-ink-soft hover:bg-canvas hover:text-ink"
+  }`;
 ---
 
 <html lang="pt-BR">
@@ -156,24 +185,46 @@ const isMoreActive = moreNavItems.some((item) => isActive(item.href));
 
         <nav aria-label="Menu principal" class="hidden min-w-0 flex-1 flex-wrap gap-0.5 text-[15px] font-semibold sm:flex">
           {
-            desktopNavItems.map((item) => (
-              <a
-                href={item.href}
-                aria-current={isActive(item.href) ? "page" : undefined}
-                class={`rounded-lg px-3 py-2 whitespace-nowrap no-underline ${
-                  isActive(item.href) ? "bg-brand-soft text-brand-ink" : "text-ink-soft hover:bg-canvas hover:text-ink"
-                }`}
-              >
+            headerNavItems.map((item) => (
+              <a href={item.href} aria-current={isActive(item.href) ? "page" : undefined} class={navLinkClass(isActive(item.href))}>
                 {item.label}
               </a>
             ))
           }
+          {
+            headerSystemItems.length > 0 && (
+              <MoreMenu
+                id="menu-sistema"
+                label="Sistema"
+                text="Sistema"
+                triggerClass={`inline-flex cursor-pointer items-center gap-1 border-0 font-semibold focus-visible:outline-2 focus-visible:outline-brand ${navLinkClass(isSystemActive)}`}
+              >
+                <span class="px-2.5 pt-2 pb-1 text-[11.5px] font-bold tracking-[.08em] text-ink-soft uppercase">Sistema · só o Suporte</span>
+                {
+                  headerSystemItems.map((item) => (
+                    <a
+                      href={item.href}
+                      aria-current={isActive(item.href) ? "page" : undefined}
+                      class={`${menuItemClass()} ${isActive(item.href) ? "bg-brand-soft text-brand-ink" : ""}`}
+                    >
+                      <Icon name={item.icon} class="h-[18px] w-[18px] shrink-0" strokeWidth={1.8} />
+                      {item.label}
+                    </a>
+                  ))
+                }
+              </MoreMenu>
+            )
+          }
         </nav>
 
         <div class="flex shrink-0 items-center gap-3">
-          <span class="text-sm text-ink-soft">
-            {platform ? "Suporte RecepClinic" : roleLabel}
-          </span>
+          {
+            showRoleLabel && (
+              <span class="text-sm text-ink-soft">
+                {platform ? "Suporte RecepClinic" : roleLabel}
+              </span>
+            )
+          }
           <form method="POST" action="/api/admin/auth/logout">
             <button
               type="submit"
@@ -204,7 +255,7 @@ const isMoreActive = moreNavItems.some((item) => isActive(item.href));
       aria-label="Navegação principal"
     >
       {
-        primaryNavItems.map((item) => (
+        tabBarItems.map((item) => (
           <a
             href={item.href}
             aria-current={isActive(item.href) ? "page" : undefined}
@@ -230,16 +281,24 @@ const isMoreActive = moreNavItems.some((item) => isActive(item.href));
 
         <div class="absolute bottom-full right-2 mb-2 w-52 rounded-[10px] border border-line bg-white p-1.5 text-[15px] shadow-[0_10px_30px_rgba(18,48,42,.16)]">
           {
-            moreNavItems.map((item) => (
-              <a
-                href={item.href}
-                class={`flex items-center gap-2 rounded-md px-3 py-2 font-medium ${
-                  isActive(item.href) ? "bg-brand-soft text-brand-ink" : "text-ink hover:bg-canvas"
-                }`}
-              >
-                <Icon name={item.icon} class="h-5 w-5" />
-                {item.label}
-              </a>
+            moreGroups.map((group, index) => (
+              <div class={index > 0 ? "mt-1.5 border-t border-line pt-1.5" : ""}>
+                {group.title && (
+                  <span class="block px-3 pt-1.5 pb-1 text-[11.5px] font-bold tracking-[.08em] text-ink-soft uppercase">{group.title}</span>
+                )}
+                {group.items.map((item) => (
+                  <a
+                    href={item.href}
+                    aria-current={isActive(item.href) ? "page" : undefined}
+                    class={`flex items-center gap-2 rounded-md px-3 py-2 font-medium ${
+                      isActive(item.href) ? "bg-brand-soft text-brand-ink" : "text-ink hover:bg-canvas"
+                    }`}
+                  >
+                    <Icon name={item.icon} class="h-5 w-5" />
+                    {item.label}
+                  </a>
+                ))}
+              </div>
             ))
           }
           <form method="POST" action="/api/admin/auth/logout">

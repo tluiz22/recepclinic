@@ -1,6 +1,6 @@
 # RecepClinic
 
-> **Estado atual (retomar daqui), 13/out/2026**
+> **Estado atual (retomar daqui), 16/out/2026**
 >
 > - **Etapas 0 a 4 concluídas**: cópia isolada, [diagnóstico](diagnostico.md), [limites](limites.md),
 >   [arquitetura](arquitetura.md) (decisões D1–D11) e [plano](plano.md) (fases F0–F10).
@@ -102,8 +102,8 @@
 >     no canvas; U-09: vindo de um dia da Agenda, os horários começam nesse dia; detalhes no
 >     [plano](plano.md)). Ajustes do teste (o "De" sem risco no Remarcar; no Marcar, o
 >     paciente primeiro) publicados e **R4 validada pelo cliente em 16/out**. **Retomar daqui:** R5
->     (Pagamento): proposta no canvas → aprovação → implementação. Pendente da R1: o menu
->     do Suporte agrupado.
+>     (Pagamento): proposta no canvas → aprovação → implementação. **Menu do Suporte agrupado
+>     (pendência da R1, U-07) validado e publicado no staging em 16/out: R1 concluída.**
 >   - **Migrações no staging:** o Claude aplica com `supabase db push` (permissão liberada em
 >     09/out), sempre na ordem simulação → aplicar → conferir no banco → só então o push do código.
 >   - **WhatsApp de testes:** `+55 61 9903-3143`, na Cloud API do app RecepClinic, ligado à

@@ -1912,7 +1912,8 @@ Métricas · R8 Financeiro e DMED · R9 Configurações · R10 Sistema e Acesso 
   `SegmentedControl`, `MoreMenu` com `popover` e `styles.ts`); ícones novos no `Icon`.
 - **R1 (só o necessário para a Agenda):** cabeçalho, menu e barra do celular com a marca; fonte do
   painel todo em Source Sans 3; largura de 1600px só nas telas da Agenda (`wide`); diálogo de
-  confirmação no padrão do canvas. **Fica para depois:** o menu do Suporte agrupado (U-07).
+  confirmação no padrão do canvas. O menu do Suporte agrupado (U-07) ficou para depois e foi
+  feito em 16/out (ver abaixo, depois da R4).
 - **R2:** Dia (barra única, legenda com contadores, colunas em grade com rolagem só na área delas e
   sombra na borda, lista única por horário no celular), cartão novo (`cardActions.ts`, tabela do
   canvas, testada) e Semana/Mês/busca com o cabeçalho e as cores novas. As outras telas mantêm o azul
@@ -1955,6 +1956,18 @@ Marcar, a busca mostrava os pacientes sem deixar claro que era preciso escolher 
 para o serviço e as datas sem paciente: agora cada resultado tem o botão "Escolher" e o aviso
 "Toque no paciente para escolher", e Serviço e Data e horário ficam travados ("Escolha o paciente
 primeiro") até o paciente ser escolhido (serviço e dia já escolhidos continuam valendo). **R4 validada pelo cliente em 16/out/2026.**
+
+**Pendência da R1: menu do Suporte agrupado (U-07), proposta aprovada pelo cliente em 16/out/2026**
+(página "R1 · Menu do Suporte" do canvas). Dentro de uma clínica, os 7 itens dela ficam no
+cabeçalho e os 6 do sistema (Clínicas, Matriz de acesso, Vendas, Uso, Erros e Tecnologia) vão para
+o botão **"Sistema"** (`MoreMenu`, que passou a aceitar outro texto e outro estilo de botão);
+"Suporte RecepClinic" sai do canto direito, porque a faixa amarela já diz isso. Na Administração do
+sistema (sem clínica aberta), só os 6 itens do sistema (saem Início, Agenda, Pacientes e Resumo do
+Dia); no celular, a barra de baixo dessa tela fica com Clínicas, Matriz de acesso, Vendas e Uso, e
+o "Mais" com Erros e Tecnologia. No celular, dentro da clínica, o "Mais" separa os grupos
+**Clínica** e **Sistema · só o Suporte**. Ícones novos no `Icon` (`building`, `squares`, `tag`,
+`cpu`). Em 1280px o cabeçalho cabe numa linha (eram 2); em 1024px, 2 linhas (eram 3). O menu dos
+outros perfis não mudou. **Validado pelo cliente e publicado no staging em 16/out/2026. R1 concluída.**
 
 ## Depois do 1º piloto (já previsto no banco)
 

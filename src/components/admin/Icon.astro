@@ -29,7 +29,11 @@ export type IconName =
   | "chevron-down"
   | "adjustments"
   | "queue-list"
-  | "pencil";
+  | "pencil"
+  | "building"
+  | "squares"
+  | "tag"
+  | "cpu";
 
 interface Props {
   name: IconName;
@@ -82,6 +86,11 @@ const paths: Record<IconName, string> = {
   "queue-list": "M4 6h16M4 12h10M4 18h7",
   pencil:
     "m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125",
+  // Menu "Sistema" do Suporte (pendência da R1, cliente, 16/out/2026).
+  building: "M4 21V5a1 1 0 0 1 1-1h9a1 1 0 0 1 1 1v16m0-12h4a1 1 0 0 1 1 1v11M3 21h18M8 8h3m-3 4h3m-3 4h3",
+  squares: "M4 5a1 1 0 0 1 1-1h5a1 1 0 0 1 1 1v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V5Zm9 0a1 1 0 0 1 1-1h5a1 1 0 0 1 1 1v5a1 1 0 0 1-1 1h-5a1 1 0 0 1-1-1V5Zm-9 9a1 1 0 0 1 1-1h5a1 1 0 0 1 1 1v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-5Zm9 0a1 1 0 0 1 1-1h5a1 1 0 0 1 1 1v5a1 1 0 0 1-1 1h-5a1 1 0 0 1-1-1v-5Z",
+  tag: "M3 12V4h8l10 10-8 8L3 12Zm5.25-4.5a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0Z",
+  cpu: "M9 2v3m6-3v3M9 19v3m6-3v3M2 9h3m-3 6h3m14-6h3m-3 6h3M7 5h10a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2Zm2 4h6v6H9V9Z",
 };
 ---
 
