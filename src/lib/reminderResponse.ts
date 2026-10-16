@@ -9,3 +9,15 @@ export const REMINDER_CONFIRMED = "confirmed";
 export function confirmedByReminder(response: string | null): boolean {
   return response === REMINDER_CONFIRMED;
 }
+
+/** Mensagem recebida do toque no lembrete (`reminder_<botão>`) → a resposta, como o banco guarda. */
+const RESPONSE_BY_TAP_MESSAGE: Record<string, string> = {
+  reminder_confirm: REMINDER_CONFIRMED,
+  reminder_reschedule: "reschedule",
+  reminder_cancel: "cancel",
+};
+export const REMINDER_TAP_MESSAGE_TYPES = Object.keys(RESPONSE_BY_TAP_MESSAGE);
+
+export function responseFromTapMessage(messageType: string): string | null {
+  return RESPONSE_BY_TAP_MESSAGE[messageType] ?? null;
+}

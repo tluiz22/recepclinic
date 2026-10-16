@@ -1,6 +1,8 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { bookAppointment, cancelAppointment, rescheduleAppointment } from "../../src/lib/data/agenda/appointments";
 import type { DbClient } from "../../src/lib/data/clients";
+import { getDashboardCounts } from "../../src/lib/data/dashboard";
+import { listRemindersOfDay } from "../../src/lib/data/daily";
 import { recordInboundMessage, recordOutboundMessage, updateDeliveryStatus } from "../../src/lib/data/whatsapp/messages";
 import {
   listPreparationResendable,
@@ -198,6 +200,12 @@ describe("resposta aos botões do lembrete", () => {
   it("remarcar zera o lembrete e a resposta; o toque no lembrete antigo não vale mais", async () => {
     await rescheduleAppointment(db(reception), clinicId, appt.a5, { start: at(MON1, "11:00"), channel: "admin", actorId: reception.id }, at(SUN, "16:20"));
     expect(await appointmentRow(appt.a5)).toMatchObject({ reminder_sent_at: null, reminder_response: null, patient_confirmed_at: null });
+    // Resumo › Lembretes do dia e a tela inicial: o toque continua valendo, pela mensagem recebida
+    // (cliente, 15/out/2026: quem remarcou pelo lembrete aparecia em "Não responderam").
+    const ofDay = await listRemindersOfDay(db(reception), clinicId, SUN, "America/Fortaleza");
+    expect(ofDay.find((r) => r.appointment.id === appt.a5)?.group).toBe("confirm");
+    const unanswered = ofDay.filter((r) => r.group === "no_answer").map((r) => r.appointment.id);
+    expect((await getDashboardCounts(db(reception), clinicId, "America/Fortaleza", at(SUN, "16:20"))).unansweredReminders).toBe(unanswered.length);
     const phone = await phoneOfPatient(ids.p2);
     expect(await recordReminderTap(bot, clinicId, { button: "cancel", appointmentId: appt.a5, phone, waMessageId: null }, at(SUN, "16:30"))).toEqual({ result: "inactive" });
   });

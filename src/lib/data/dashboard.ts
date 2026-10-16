@@ -2,6 +2,7 @@ import { dayBounds, todayIn } from "../clinicTime";
 import type { Enums } from "../supabase/database.types";
 import type { DbClient } from "./clients";
 import { unwrap } from "./errors";
+import { listReminderTaps } from "./daily";
 
 // Números da tela inicial do painel (Fase 9 do piloto, F4.1), no dia da
 // clínica e só das agendas que o login vê (RLS).
@@ -43,30 +44,38 @@ export async function getDashboardCounts(db: DbClient, clinicId: string, timeZon
     unwrap(
       await db
         .from("whatsapp_messages")
-        .select("appointment_id")
+        .select("appointment_id, created_at")
         .eq("clinic_id", clinicId)
         .eq("direction", "outbound")
         .eq("message_type", "appointment_reminder")
         .not("appointment_id", "is", null)
         .gte("created_at", today.start.toISOString())
-        .lt("created_at", today.end.toISOString()),
+        .lt("created_at", today.end.toISOString())
+        .order("created_at"),
       "Lembretes de hoje",
     ),
   ]);
   if (pending.error) unwrap(pending, "Comparecimento a registrar");
 
-  const remindedIds = [...new Set(reminders.map((r) => r.appointment_id!))];
-  const unanswered = remindedIds.length
-    ? unwrap(
-        await db
-          .from("appointments")
-          .select("id")
-          .eq("clinic_id", clinicId)
-          .in("id", remindedIds)
-          .is("reminder_response", null),
-        "Lembretes sem resposta",
-      ).length
-    : 0;
+  const sentAt = new Map<string, { at: Date }>();
+  for (const r of reminders) sentAt.set(r.appointment_id!, { at: new Date(r.created_at) });
+  const remindedIds = [...sentAt.keys()];
+  // Quem tocou num botão e depois remarcou continua respondido (a remarcação zera a resposta no atendimento).
+  const [withoutResponse, taps] = remindedIds.length
+    ? await Promise.all([
+        unwrap(
+          await db
+            .from("appointments")
+            .select("id")
+            .eq("clinic_id", clinicId)
+            .in("id", remindedIds)
+            .is("reminder_response", null),
+          "Lembretes sem resposta",
+        ),
+        listReminderTaps(db, clinicId, sentAt),
+      ])
+    : [[], new Map<string, string>()];
+  const unanswered = withoutResponse.filter((row) => !taps.has(row.id)).length;
 
   const examsToday = todayRows.filter((row) => row.services.category === "exam").length;
   return {

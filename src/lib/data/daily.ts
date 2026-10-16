@@ -6,7 +6,7 @@ import { AGENDA_COLUMNS, toAgendaAppointment, type AgendaAppointment, type Agend
 import { describeSendsAlert, getSendsAlert } from "./sends";
 import { listWaitlist } from "./waitlist/entries";
 import { REMINDER_MESSAGE_TYPE } from "./whatsapp/reminders";
-import { confirmedByReminder } from "../reminderResponse";
+import { confirmedByReminder, REMINDER_TAP_MESSAGE_TYPES, responseFromTapMessage } from "../reminderResponse";
 
 // Resumo do Dia (F4.8): as abas do dia a dia, como no piloto, no banco novo.
 // Tudo das agendas que o login vê (RLS).
@@ -58,15 +58,51 @@ export async function listRemindersOfDay(db: DbClient, clinicId: string, date: s
   const last = new Map<string, { status: string | null; at: Date }>();
   for (const m of messages) last.set(m.appointment_id!, { status: m.status, at: new Date(m.created_at) });
   if (!last.size) return [];
-  const rows = unwrap(
-    await db.from("appointments").select(AGENDA_COLUMNS).eq("clinic_id", clinicId).in("id", [...last.keys()]).order("scheduled_at"),
-    "Atendimentos",
-  ) as unknown as AgendaRow[];
+  const [rows, taps] = await Promise.all([
+    unwrap(
+      await db.from("appointments").select(AGENDA_COLUMNS).eq("clinic_id", clinicId).in("id", [...last.keys()]).order("scheduled_at"),
+      "Atendimentos",
+    ) as unknown as AgendaRow[],
+    listReminderTaps(db, clinicId, last),
+  ]);
   return rows.map((row) => {
     const appointment = toAgendaAppointment(row);
     const sent = last.get(appointment.id)!;
-    return { appointment, group: reminderGroup(appointment.reminderResponse, sent.status), sentAt: sent.at };
+    // O toque gravado nas mensagens vale mesmo depois de remarcar (que zera a resposta no atendimento).
+    const response = taps.get(appointment.id) ?? appointment.reminderResponse;
+    return { appointment, group: reminderGroup(response, sent.status), sentAt: sent.at };
   });
+}
+
+/**
+ * Botão tocado em cada lembrete, pelas mensagens recebidas depois do envio
+ * (`reminder_confirm`, `reminder_reschedule`, `reminder_cancel`), como o
+ * banco guarda a resposta. Remarcar zera `reminder_response` no atendimento
+ * (a data nova pede outro lembrete); a mensagem fica (cliente, 15/out/2026:
+ * quem remarcou pelo lembrete aparecia em "Não responderam").
+ */
+export async function listReminderTaps(db: DbClient, clinicId: string, sentAt: Map<string, { at: Date }>): Promise<Map<string, string>> {
+  const taps = new Map<string, string>();
+  if (!sentAt.size) return taps;
+  const since = new Date(Math.min(...[...sentAt.values()].map((s) => s.at.getTime())));
+  const messages = unwrap(
+    await db
+      .from("whatsapp_messages")
+      .select("appointment_id, message_type, created_at")
+      .eq("clinic_id", clinicId)
+      .eq("direction", "inbound")
+      .in("message_type", REMINDER_TAP_MESSAGE_TYPES)
+      .in("appointment_id", [...sentAt.keys()])
+      .gte("created_at", since.toISOString())
+      .order("created_at"),
+    "Respostas aos lembretes",
+  );
+  for (const m of messages) {
+    const sent = sentAt.get(m.appointment_id!);
+    const response = responseFromTapMessage(m.message_type);
+    if (sent && response && new Date(m.created_at) >= sent.at) taps.set(m.appointment_id!, response);
+  }
+  return taps;
 }
 
 // ---------------------------------------------------------------------------
