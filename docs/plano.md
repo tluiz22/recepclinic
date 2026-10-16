@@ -1954,7 +1954,7 @@ regra da faixa em `src/lib/dayStrip.ts` (com teste), componentes `DayStrip`, `Sl
 Marcar, a busca mostrava os pacientes sem deixar claro que era preciso escolher um, e a tela seguia
 para o serviço e as datas sem paciente: agora cada resultado tem o botão "Escolher" e o aviso
 "Toque no paciente para escolher", e Serviço e Data e horário ficam travados ("Escolha o paciente
-primeiro") até o paciente ser escolhido (serviço e dia já escolhidos continuam valendo).
+primeiro") até o paciente ser escolhido (serviço e dia já escolhidos continuam valendo). **R4 validada pelo cliente em 16/out/2026.**
 
 ## Depois do 1º piloto (já previsto no banco)
 

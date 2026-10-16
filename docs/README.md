@@ -100,8 +100,9 @@
 >     conferida pelo cliente no staging).
 >     **R4 (Marcar e Remarcar) implementada e publicada no staging em 15/out** (proposta aprovada
 >     no canvas; U-09: vindo de um dia da Agenda, os horários começam nesse dia; detalhes no
->     [plano](plano.md)). **Retomar daqui:** trazer os ajustes do teste da R4 pelo cliente e seguir
->     para a R5 (Pagamento): proposta no canvas → aprovação → implementação. Pendente da R1: o menu
+>     [plano](plano.md)). Ajustes do teste (o "De" sem risco no Remarcar; no Marcar, o
+>     paciente primeiro) publicados e **R4 validada pelo cliente em 16/out**. **Retomar daqui:** R5
+>     (Pagamento): proposta no canvas → aprovação → implementação. Pendente da R1: o menu
 >     do Suporte agrupado.
 >   - **Migrações no staging:** o Claude aplica com `supabase db push` (permissão liberada em
 >     09/out), sempre na ordem simulação → aplicar → conferir no banco → só então o push do código.
