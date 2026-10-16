@@ -5,6 +5,7 @@ import AdminLayout from "../../../layouts/AdminLayout.astro";
 import AgendaHeader from "../../../components/admin/agenda/AgendaHeader.astro";
 import Icon from "../../../components/admin/Icon.astro";
 import Button from "../../../components/admin/ui/Button.astro";
+import StatusPill from "../../../components/admin/ui/StatusPill.astro";
 import SituationLegend from "../../../components/admin/agenda/SituationLegend.astro";
 import { SITUATIONS, appointmentSituation } from "../../../components/admin/agenda/situationStyle";
 import { addDays, formatCalendarDate, formatInstant, isCalendarDate, localDateOf, todayIn } from "../../../lib/clinicTime";
@@ -30,7 +31,6 @@ const showAgenda = !scope.selectedAgendaId && scope.agendas.length > 1;
 const ofDay = (day: string) => appointments.filter((a) => a.status !== "canceled" && localDateOf(a.scheduledAt, clinic.timezone) === day);
 const blocksOf = (day: string) =>
   blocks.filter((b) => localDateOf(b.startsAt, clinic.timezone) <= day && localDateOf(new Date(b.endsAt.getTime() - 1), clinic.timezone) >= day);
-const statusMark: Record<string, string> = { completed: "✓", no_show: "✗" };
 ---
 
 <AdminLayout title="Agenda · Semana" wide>
@@ -76,11 +76,12 @@ const statusMark: Record<string, string> = { completed: "✓", no_show: "✗" };
             {ofDay(day).map((a) => (
               <li class={`rounded border-l-4 px-1.5 py-1 ${SITUATIONS[appointmentSituation(a)].swatch}`}>
                 <span class="font-semibold tabular-nums">{formatInstant(a.scheduledAt, clinic.timezone, "HH:mm")}</span> {a.patientName}
-                {statusMark[a.status] && <span class="ml-1">{statusMark[a.status]}</span>}
                 <span class="block text-ink-soft">
                   {a.serviceName}
                   {showAgenda ? ` · ${a.agendaName}` : ""}
                 </span>
+                {/* A situação também em texto, não só na cor (decisão 4 da Agenda; QA-09, 16/out/2026). */}
+                <StatusPill situation={appointmentSituation(a)} class="mt-1" />
               </li>
             ))}
             {ofDay(day).length === 0 && blocksOf(day).length === 0 && <li class="text-ink-soft">Livre</li>}

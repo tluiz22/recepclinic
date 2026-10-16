@@ -1969,6 +1969,21 @@ o "Mais" com Erros e Tecnologia. No celular, dentro da clínica, o "Mais" separa
 `cpu`). Em 1280px o cabeçalho cabe numa linha (eram 2); em 1024px, 2 linhas (eram 3). O menu dos
 outros perfis não mudou. **Validado pelo cliente e publicado no staging em 16/out/2026. R1 concluída.**
 
+**Teste de interface da R0 a R4 (16/out/2026, a pedido do cliente)** com a skill
+`playwright-ui-form-best-practices`, no ambiente local e sem gravar dados:
+[relatório](auditoria-frontend/redesign-r0-r4-report.md). 27 cenários: 19 passaram, 6 falharam (2
+Médias e 4 Baixas) e 2 ficaram bloqueados (envio válido e envio duplo, que gravariam). As 6 foram
+corrigidas, retestadas, validadas pelo cliente e publicadas no staging no mesmo dia:
+- **NAV-07:** a busca de paciente da Agenda leva a tela de origem (`volta`), mostra "Voltar" para ela
+  e usa o dia dela nos links Dia, Semana e Mês.
+- **NAV-08:** as abas Resumo do dia e Lembretes do Resumo do Dia mantêm a data escolhida.
+- **QA-07:** Marcar e Remarcar ficam desabilitados até haver horário (`data-needs-slot`), como na proposta
+  aprovada.
+- **QA-08 a QA-10:** nome acessível nas células do Mês; selo da situação (ícone e texto) na Semana e
+  na busca; "às" minúsculo na data da busca.
+- **Fica com o cliente:** o texto da confirmação da série ("no horário escolhido", sem dia,
+  frequência nem número de sessões; S-01 do relatório) e o envio duplo, que entra na R5.
+
 ## Depois do 1º piloto (já previsto no banco)
 
 - **Convênios (D10):** telas de planos atendidos e exceções por profissional; plano no cadastro do

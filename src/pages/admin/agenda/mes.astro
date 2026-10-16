@@ -66,9 +66,20 @@ const nextMonth = addDays(grid.last, 1);
       grid.days.map((day) => {
         const inMonth = day.slice(0, 7) === grid.first.slice(0, 7);
         const count = counts.get(day) ?? 0;
+        // Nome lido pelo leitor de tela, sem emendar o dia e a contagem (QA-08, 16/out/2026).
+        const cellLabel = [
+          formatCalendarDate(day, "d 'de' MMMM"),
+          count > 0 ? `${count} ${count === 1 ? "atendimento" : "atendimentos"}` : "nenhum atendimento",
+          isHoliday(day) ? "feriado" : null,
+          blocked(day) ? "bloqueio" : null,
+        ]
+          .filter(Boolean)
+          .join(", ");
         return (
           <a
             href={`/admin/agenda?date=${day}`}
+            aria-label={cellLabel}
+            aria-current={day === today ? "date" : undefined}
             class={`flex min-h-16 flex-col rounded-lg border p-1.5 text-left no-underline hover:border-brand/40 hover:bg-brand-soft/40 ${day === today ? "border-brand ring-1 ring-brand" : "border-line"} ${inMonth ? "bg-white" : "bg-canvas opacity-60"}`}
           >
             <span class={`font-display text-sm font-bold tabular-nums ${day === today ? "text-brand" : "text-ink"}`}>{Number(day.slice(8))}</span>

@@ -4,18 +4,20 @@
 // desativados. Um encontrado: já mostra os próximos atendimentos dele; mais de
 // um: a pessoa escolhe qual. Só das agendas que a pessoa vê (o Profissional,
 // só as próprias; D6). O histórico completo fica na ficha do paciente.
-import { currentPath, withReturn } from "../../../lib/returnPath";
+import { currentPath, receivedReturn, withReturn } from "../../../lib/returnPath";
 import AdminLayout from "../../../layouts/AdminLayout.astro";
 import AgendaHeader from "../../../components/admin/agenda/AgendaHeader.astro";
 import SituationLegend from "../../../components/admin/agenda/SituationLegend.astro";
 import { SITUATIONS, appointmentSituation } from "../../../components/admin/agenda/situationStyle";
 import Badge from "../../../components/admin/Badge.astro";
+import Icon from "../../../components/admin/Icon.astro";
+import StatusPill from "../../../components/admin/ui/StatusPill.astro";
 import Card from "../../../components/admin/Card.astro";
 import PhoneLinks from "../../../components/admin/PhoneLinks.astro";
 import { SECONDARY_BUTTON } from "../../../components/admin/fieldStyles";
 import { formatAge } from "../../../lib/age";
 import { isUuid } from "../../../lib/clinicAccess";
-import { formatInstant, localDateOf, todayIn } from "../../../lib/clinicTime";
+import { formatInstant, isCalendarDate, localDateOf, todayIn } from "../../../lib/clinicTime";
 import { createUserClient } from "../../../lib/data/clients";
 import { listUpcomingByPatient, type AgendaAppointment } from "../../../lib/data/agenda/view";
 import { getContact, getPatient, listPatientsPage } from "../../../lib/data/patients";
@@ -31,7 +33,14 @@ const params = Astro.url.searchParams;
 const q = (params.get("q") ?? "").trim();
 const chosenId = params.get("paciente");
 const fromList = params.get("lista") === "1";
-const searchHref = (patientId: string, list = false) => `/admin/agenda/buscar?q=${encodeURIComponent(q)}&paciente=${patientId}${list ? "&lista=1" : ""}`;
+// Voltar: para a tela da Agenda de onde a busca saiu, e os links Dia, Semana e
+// Mês no dia dela (teste do redesign, NAV-07, 16/out/2026). A origem segue nos
+// links internos da busca.
+const volta = receivedReturn(Astro.url);
+const voltaDate = volta?.startsWith("/admin/agenda") ? new URL(volta, Astro.url).searchParams.get("date") : null;
+const headerDate = voltaDate && isCalendarDate(voltaDate) ? voltaDate : today;
+const keep = (href: string) => withReturn(href, volta);
+const searchHref = (patientId: string, list = false) => keep(`/admin/agenda/buscar?q=${encodeURIComponent(q)}&paciente=${patientId}${list ? "&lista=1" : ""}`);
 
 // Paciente escolhido (ou o único encontrado).
 let chosen = isUuid(chosenId) ? await getPatient(db, clinic.clinicId, chosenId).catch(() => null) : null;
@@ -50,7 +59,13 @@ const plural = (n: number) => `${n} ${n === 1 ? "atendimento marcado" : "atendim
 ---
 
 <AdminLayout title="Agenda · Atendimentos de um paciente" wide>
-  <AgendaHeader view="busca" date={today} agendas={[]} selectedAgendaId={null} query={q} />
+  <a href={volta ?? `/admin/agenda?date=${headerDate}`} class="inline-flex min-h-8 items-center gap-1 text-[15px] font-semibold text-brand no-underline hover:underline">
+    <Icon name="chevron-left" class="h-[18px] w-[18px]" strokeWidth={2.2} />
+    {volta ? "Voltar" : "Agenda"}
+  </a>
+  <div class="mt-2">
+    <AgendaHeader view="busca" date={headerDate} agendas={[]} selectedAgendaId={null} query={q} returnTo={volta} />
+  </div>
 
   {!q && !chosen && <p class="mt-4 text-sm text-slate-600">Digite o nome ou o telefone do {vocabulary.patient} para ver os atendimentos marcados dele.</p>}
 
@@ -110,19 +125,24 @@ const plural = (n: number) => `${n} ${n === 1 ? "atendimento marcado" : "atendim
         <ul class="mt-3 flex flex-col gap-1.5">
           {rows.map((a) => (
             <li class={`rounded border-l-4 px-2.5 py-1.5 text-sm ${SITUATIONS[appointmentSituation(a)].swatch}`}>
-              <a href={`/admin/agenda?date=${localDateOf(a.scheduledAt, clinic.timezone)}`} class="hover:text-brand">
-                <span class="font-medium capitalize text-slate-900">{formatInstant(a.scheduledAt, clinic.timezone, "EEE dd/MM/yyyy 'às' HH:mm")}</span>
-                <span class="block text-slate-600">
-                  {a.serviceName} · {a.agendaName} · {a.locationName}
+              <a href={`/admin/agenda?date=${localDateOf(a.scheduledAt, clinic.timezone)}`} class="flex flex-wrap items-start justify-between gap-x-3 gap-y-1 hover:text-brand">
+                <span>
+                  {/* Maiúscula só na primeira letra ("Segunda … às"; QA-10, 16/out/2026). */}
+                  <span class="inline-block font-medium text-slate-900 first-letter:uppercase">{formatInstant(a.scheduledAt, clinic.timezone, "EEE dd/MM/yyyy 'às' HH:mm")}</span>
+                  <span class="block text-slate-600">
+                    {a.serviceName} · {a.agendaName} · {a.locationName}
+                  </span>
                 </span>
+                {/* A situação também em texto, não só na cor (decisão 4 da Agenda; QA-09). */}
+                <StatusPill situation={appointmentSituation(a)} />
               </a>
             </li>
           ))}
         </ul>
         <div class="mt-4 flex flex-wrap gap-2 border-t border-slate-100 pt-3">
           <a href={withReturn(`/admin/pacientes/${chosen.id}`, currentPath(Astro.url))} class={SECONDARY_BUTTON}>Ver a ficha (histórico completo)</a>
-          {q && fromList && <a href={`/admin/agenda/buscar?q=${encodeURIComponent(q)}`} class={SECONDARY_BUTTON}>Voltar à lista</a>}
-          <a href="/admin/agenda/buscar" class={SECONDARY_BUTTON}>Buscar outro {vocabulary.patient}</a>
+          {q && fromList && <a href={keep(`/admin/agenda/buscar?q=${encodeURIComponent(q)}`)} class={SECONDARY_BUTTON}>Voltar à lista</a>}
+          <a href={keep("/admin/agenda/buscar")} class={SECONDARY_BUTTON}>Buscar outro {vocabulary.patient}</a>
         </div>
       </Card>
     )

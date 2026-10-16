@@ -54,7 +54,11 @@ const today = todayIn(clinic.timezone, now);
 const date = isCalendarDate(params.get("date") ?? "") ? params.get("date")! : today;
 const agendas = await listAgendas(db, clinic.clinicId, { includeInactive: true });
 const showAgenda = agendas.length > 1;
-const returnTo = `/admin/consultas?tab=${tab}`;
+// Resumo do dia e Lembretes são de um dia: as abas e a volta das ações levam
+// a data escolhida (teste do redesign, NAV-08, 16/out/2026).
+const isDatedTab = (id: Tab) => id === "resumo" || id === "lembretes";
+const tabHref = (id: Tab) => `/admin/consultas?tab=${id}${isDatedTab(id) && date !== today ? `&date=${date}` : ""}`;
+const returnTo = tabHref(tab);
 
 let dayAppointments: AgendaAppointment[] = [];
 let cards: AgendaAppointment[] = [];
@@ -115,7 +119,7 @@ const tabCount: Partial<Record<Tab, Pick<TabItem, "count" | "countTone" | "alert
   pendentes: { count: counts.pendingAttendance, countLabel: `${counts.pendingAttendance} a registrar` },
   envios: { alert: counts.sendsAlert, countLabel: "Há envios que pedem atenção" },
 };
-const dated = tab === "resumo" || tab === "lembretes";
+const dated = isDatedTab(tab);
 const dayHref = (d: string) => `/admin/consultas?tab=${tab}&date=${d}`;
 const activeOfDay = dayAppointments.filter((a) => a.status !== "canceled").length;
 const canceledOfDay = dayAppointments.length - activeOfDay;
@@ -137,7 +141,7 @@ const subtitle = !dated
   <Tabs
     label="Abas do Resumo do Dia"
     class="mt-4"
-    tabs={visible.map((t) => ({ label: t.label, href: `/admin/consultas?tab=${t.id}`, active: t.id === tab, ...tabCount[t.id] }))}
+    tabs={visible.map((t) => ({ label: t.label, href: tabHref(t.id), active: t.id === tab, ...tabCount[t.id] }))}
   />
   <FlashMessage />
 

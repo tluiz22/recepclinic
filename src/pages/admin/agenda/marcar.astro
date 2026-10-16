@@ -447,6 +447,7 @@ const okNote = `${note} border-conf-200 bg-conf-100/60 text-conf-800`;
           variant="primary"
           class="js-confirm-delete h-[46px] w-full text-base"
           disabled={!patient || slotOptions.length === 0}
+          data-needs-slot
           data-marcar
           data-confirm-title="Marcar o atendimento?"
           data-confirm-message={confirmMessage}
@@ -475,6 +476,7 @@ const okNote = `${note} border-conf-200 bg-conf-100/60 text-conf-800`;
             form={FORM}
             class="js-confirm-delete h-12 px-[22px] text-base"
             disabled={!patient || slotOptions.length === 0}
+            data-needs-slot
             data-marcar
             data-confirm-title="Marcar o atendimento?"
             data-confirm-message={confirmMessage}
@@ -491,8 +493,12 @@ const okNote = `${note} border-conf-200 bg-conf-100/60 text-conf-800`;
   <script>
     // Resumo: o horário escolhido (quando e onde) e o endereço, só para local domiciliar.
     const box = document.querySelector<HTMLElement>("[data-home-address]");
+    // O botão só se habilita com o horário escolhido (proposta aprovada da R4;
+    // teste do redesign, QA-07, 16/out/2026). Sem JavaScript, o navegador barra o envio.
+    const needSlot = [...document.querySelectorAll<HTMLButtonElement>("button[data-needs-slot]")].filter((button) => !button.disabled);
     const sync = () => {
       const chosen = document.querySelector<HTMLInputElement>("input[name='slot']:checked");
+      needSlot.forEach((button) => (button.disabled = !chosen));
       document.querySelectorAll<HTMLElement>("[data-summary-when]").forEach((el) => (el.textContent = chosen?.dataset.summary ?? "Escolha um horário"));
       document.querySelectorAll<HTMLElement>("[data-summary-where]").forEach((el) => (el.textContent = chosen?.dataset.where ?? "—"));
       const isHome = chosen?.dataset.home === "1";

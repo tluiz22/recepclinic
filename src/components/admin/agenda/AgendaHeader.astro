@@ -22,9 +22,11 @@ interface Props {
   selectedAgendaId: string | null;
   /** Linha abaixo do título (ex.: a data por extenso e quantos atendimentos). */
   subtitle?: string;
+  /** Na tela da busca: a tela da Agenda de onde a busca saiu (o "Voltar" dela). */
+  returnTo?: string | null;
 }
 
-const { view, date, agendas, selectedAgendaId, query = "", subtitle } = Astro.props;
+const { view, date, agendas, selectedAgendaId, query = "", subtitle, returnTo = null } = Astro.props;
 const views = [
   { id: "dia", label: "Dia", href: "/admin/agenda" },
   { id: "semana", label: "Semana", href: "/admin/agenda/semana" },
@@ -33,6 +35,9 @@ const views = [
 const current = views.find((v) => v.id === view) ?? views[0];
 // Marcar, Bloquear e Bloqueios voltam para esta tela (cliente, 10/out/2026).
 const here = currentPath(Astro.url);
+// A busca volta para a tela de onde saiu (teste do redesign, NAV-07, 16/out/2026);
+// uma busca nova feita na própria tela da busca mantém essa origem.
+const searchReturn = view === "busca" ? returnTo : here;
 const selectedName = agendas.find((agenda) => agenda.id === selectedAgendaId)?.name;
 const filtersLabel = agendas.length > 1 ? `${selectedName ?? "Todas as agendas"} · buscar paciente` : "Buscar paciente";
 ---
@@ -94,6 +99,7 @@ const filtersLabel = agendas.length > 1 ? `${selectedName ?? "Todas as agendas"}
         )
       }
       <form method="GET" action="/admin/agenda/buscar" role="search" class="flex min-w-0 gap-2 sm:ml-auto sm:min-w-72 sm:max-w-md sm:flex-1 sm:gap-1.5">
+        {searchReturn && <input type="hidden" name="volta" value={searchReturn} />}
         <label for="patient_search" class="sr-only">Atendimentos marcados de um paciente</label>
         <div class="relative min-w-0 flex-1">
           <Icon name="magnifying-glass" class="pointer-events-none absolute top-1/2 left-3 h-[17px] w-[17px] -translate-y-1/2 text-ink-soft" strokeWidth={2.2} />
