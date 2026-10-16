@@ -62,3 +62,8 @@
   --color-blk-500: #7d8b87;
   --color-blk-800: #3a4744;
 }
+
+/* Envio único (R5): o botão que enviou mostra que está trabalhando (src/scripts/sendOnce.ts). */
+button[aria-busy="true"] {
+  cursor: progress;
+}

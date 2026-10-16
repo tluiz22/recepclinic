@@ -93,7 +93,7 @@ const REASON = { no_cpf: "falta o CPF de quem pagou", anonymized: "paciente anon
         {!settings && <p class="mt-2 text-sm text-amber-700">Preencha e salve os responsáveis ao lado.</p>}
         {
           isClinicAdmin && (
-            <form method="POST" action={action} class="mt-4">
+            <form method="POST" action={action} class="mt-4" data-envio-livre>
               <input type="hidden" name="acao" value="gerar" />
               <input type="hidden" name="ano" value={year} />
               <button type="submit" class={PRIMARY_BUTTON} disabled={!canGenerate}>

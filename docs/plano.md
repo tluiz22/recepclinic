@@ -1984,6 +1984,25 @@ corrigidas, retestadas, validadas pelo cliente e publicadas no staging no mesmo 
 - **Fica com o cliente:** o texto da confirmação da série ("no horário escolhido", sem dia,
   frequência nem número de sessões; S-01 do relatório) e o envio duplo, que entra na R5.
 
+**R5 (Pagamento), proposta aprovada pelo cliente em 16/out/2026** (página "5 · Pagamento" do canvas):
+contas no alto (Preço, Pago e Falta em números grandes, barra do quanto já foi pago e o selo "Pago"
+ou "Pago em parte"); "Registrar pagamento" à esquerda (valor em destaque, forma em botões com ícone,
+quem pagou em cartões com o CPF) e os pagamentos à direita, cada um com a sua nota (PDF, XML,
+"Enviar nota" e "Conferir na Receita" à vista); Cancelar nota e Excluir pagamento no "Mais"; os
+excluídos recolhidos; no celular, o botão Registrar na barra fixa, com o valor e quem pagou.
+**Decisões do cliente (16/out/2026):** "Emitir a nota fiscal agora" vem **desmarcado** (U-10); a
+proteção contra **envio duplo** vale para **todo o painel**: um formulário enviado trava os botões
+até a tela seguinte abrir (`src/scripts/sendOnce.ts`, no `AdminLayout`; o botão com
+`data-sending-label` troca o texto, ex.: "Registrando…"; o "Baixar o arquivo da DMED" fica de fora,
+com `data-envio-livre`, porque não sai da tela). **Implementada em 16/out** e testada no navegador
+local (computador e celular, sem gravar dados; o envio duplo com um formulário de teste para um
+endereço inexistente: 1 envio, 2 barrados). **Teste de interface da R5 (16/out, a pedido do
+cliente)**: [relatório](auditoria-frontend/redesign-r5-report.md), com gravação autorizada só no banco
+local (apagada no fim); 3 falhas (o erro de CPF de "Outra pessoa" marcado num campo escondido, o
+"Voltar" da ficha aberta pelo Pagamento pulando o Pagamento e o foco perdido ao fechar um painel da
+nota) e 1 suspeita (o aceite do diálogo sem conferir a trava), **todas corrigidas e retestadas**.
+**R5 validada pelo cliente e publicada no staging em 16/out/2026.**
+
 ## Depois do 1º piloto (já previsto no banco)
 
 - **Convênios (D10):** telas de planos atendidos e exceções por profissional; plano no cadastro do

@@ -6,13 +6,22 @@
 // forma, data e quem pagou (o responsável financeiro já marcado, trocável só
 // neste pagamento). A confirmação fica no botão final, com o aviso "acima do
 // preço". Só o Administrador e a Recepção gravam; o Suporte só vê.
+//
+// Redesign R5 (proposta aprovada pelo cliente em 16/out/2026): contas no alto;
+// registrar à esquerda e os pagamentos, cada um com a sua nota, à direita; as
+// ações raras (Cancelar nota, Excluir pagamento) no "Mais"; no celular, o botão
+// Registrar na barra fixa. "Emitir a nota fiscal agora" vem desmarcado (U-10).
 import AdminLayout from "../../../../layouts/AdminLayout.astro";
-import Badge, { type BadgeVariant } from "../../../../components/admin/Badge.astro";
-import Card from "../../../../components/admin/Card.astro";
 import ConfirmDeleteDialog from "../../../../components/admin/ConfirmDeleteDialog.astro";
 import FlashMessage from "../../../../components/admin/FlashMessage.astro";
-import Icon from "../../../../components/admin/Icon.astro";
-import { HINT, INPUT, LABEL, PRIMARY_BUTTON } from "../../../../components/admin/fieldStyles";
+import Icon, { type IconName } from "../../../../components/admin/Icon.astro";
+import { appointmentSituation } from "../../../../components/admin/agenda/situationStyle";
+import Button from "../../../../components/admin/ui/Button.astro";
+import MoreMenu from "../../../../components/admin/ui/MoreMenu.astro";
+import PageHeader from "../../../../components/admin/ui/PageHeader.astro";
+import Pill, { type PillTone } from "../../../../components/admin/ui/Pill.astro";
+import StatusPill from "../../../../components/admin/ui/StatusPill.astro";
+import { buttonClass, CONTROL, menuItemClass } from "../../../../components/admin/ui/styles";
 import { isUuid } from "../../../../lib/clinicAccess";
 import { formatCalendarDate, formatInstant, localDateOf, todayIn } from "../../../../lib/clinicTime";
 import { formatCpf, maskCpf } from "../../../../lib/cpf";
@@ -26,7 +35,9 @@ import {
   listAppointmentPayments,
   PAYMENT_METHOD_LABEL,
   PAYMENT_METHODS,
+  paymentState,
   summarizePayments,
+  type PaymentMethod,
 } from "../../../../lib/data/payments";
 import { centsToInput } from "../../../../lib/forms";
 import { ACTIVE_INVOICE, CANCEL_REASONS, listPaymentInvoices, nfseReadiness, type Invoice, type InvoiceStatus } from "../../../../lib/data/nfse";
@@ -56,6 +67,7 @@ const [contact, finance, contactCpf] = await Promise.all([
   getContactCpf(db, clinic.clinicId, patient.contactId),
 ]);
 const summary = summarizePayments(price, payments);
+const state = paymentState(summary.priceCents, summary.paidCents);
 // Nota fiscal (F11.4): a situação de cada pagamento e se a clínica já emite.
 const [invoices, financeReady] = await Promise.all([
   listPaymentInvoices(db, clinic.clinicId, payments.map((p) => p.id)),
@@ -70,13 +82,17 @@ const [deliveries, saved] = await Promise.all([
 const DELIVERY_STATUS = { sent: "enviado", delivered: "entregue", read: "lido", failed: "não saiu" } as const;
 const activeInvoice = (paymentId: string) => (invoices.get(paymentId) ?? []).find((n) => ACTIVE_INVOICE.includes(n.status));
 const isClinicAdmin = clinic.roles.includes("admin");
-const INVOICE_BADGE: Record<InvoiceStatus, { variant: BadgeVariant; label: (n: Invoice) => string }> = {
-  issuing: { variant: "warning", label: () => "Emitindo…" },
-  issued: { variant: "success", label: (n) => (n.nfseNumber ? `Nota nº ${n.nfseNumber}` : "Nota emitida") },
+const INVOICE_PILL: Record<InvoiceStatus, { tone: PillTone; icon: IconName; label: (n: Invoice) => string }> = {
+  issuing: { tone: "warning", icon: "clock", label: () => "Emitindo…" },
+  issued: { tone: "success", icon: "document-check", label: (n) => (n.nfseNumber ? `Nota nº ${n.nfseNumber}` : "Nota emitida") },
   // Certificado que não abre ou DPS que a Receita não recebeu: não chegou a ser recusada.
-  rejected: { variant: "danger", label: (n) => (n.errorCode === "CERTIFICADO" || n.errorCode === "SEM-NOTA" ? "Não emitida" : "Recusada pela Receita") },
-  canceling: { variant: "warning", label: () => "Cancelando…" },
-  canceled: { variant: "neutral", label: (n) => (n.nfseNumber ? `Nota nº ${n.nfseNumber} cancelada` : "Nota cancelada") },
+  rejected: {
+    tone: "danger",
+    icon: "x-mark",
+    label: (n) => (n.errorCode === "CERTIFICADO" || n.errorCode === "SEM-NOTA" ? "Não emitida" : "Recusada pela Receita"),
+  },
+  canceling: { tone: "warning", icon: "clock", label: () => "Cancelando…" },
+  canceled: { tone: "neutral", icon: "x-mark", label: (n) => (n.nfseNumber ? `Nota nº ${n.nfseNumber} cancelada` : "Nota cancelada") },
 };
 const today = todayIn(clinic.timezone);
 const canEdit = clinic.roles.includes("admin") || clinic.roles.includes("reception");
@@ -84,368 +100,571 @@ const receives = canReceivePayment(appointment.status) && !patient.anonymizedAt;
 const defaultPayer = effectivePayer(patient, finance.payer);
 const suggested = summary.remainingCents !== null && summary.remainingCents > 0 ? summary.remainingCents : null;
 const action = withReturn(`/api/admin/financeiro/pagamentos/${appointment.id}`, volta);
-const when = formatInstant(appointment.scheduledAt, clinic.timezone, "EEE dd/MM/yyyy 'às' HH:mm");
+const when = formatInstant(appointment.scheduledAt, clinic.timezone, "EEEE, dd/MM/yyyy 'às' HH:mm");
+// A ficha volta para este Pagamento (que mantém a volta dele): teste da R5, NAV-03.
+const patientLink = withReturn(`/admin/pacientes/${patient.id}`, `${Astro.url.pathname}${Astro.url.search}`);
 
-const statusBadge: Record<string, { label: string; variant: BadgeVariant }> = {
-  scheduled: { label: "Marcado", variant: "info" },
-  confirmed: { label: "Marcado", variant: "info" },
-  completed: { label: "Compareceu", variant: "success" },
-  canceled: { label: "Cancelado", variant: "danger" },
-  no_show: { label: "Faltou", variant: "danger" },
-};
-const status = statusBadge[appointment.status];
+// Barra do quanto já foi pago (só com preço).
+const paidShare = summary.priceCents ? Math.min(summary.paidCents / summary.priceCents, 1) : null;
 
 // Quem pagou: o contato (ou o próprio paciente, quando ele fala por si), o
 // paciente e outra pessoa; o CPF do cadastro aparece, e o que falta é pedido.
 const payerOptions = [
   {
     value: "contact",
+    name: patient.isContactSelf ? patient.fullName : contact.fullName,
     label: patient.isContactSelf ? patient.fullName : `${contact.fullName} (${vocabulary.contact})`,
     cpf: contactCpf,
   },
-  ...(patient.isContactSelf ? [] : [{ value: "patient", label: patient.fullName, cpf: finance.cpf }]),
-] as { value: "contact" | "patient"; label: string; cpf: string | null }[];
+  ...(patient.isContactSelf ? [] : [{ value: "patient", name: patient.fullName, label: patient.fullName, cpf: finance.cpf }]),
+] as { value: "contact" | "patient"; name: string; label: string; cpf: string | null }[];
 const otherDefault = defaultPayer === "other" ? { name: finance.payerName ?? "", cpf: finance.payerCpf } : { name: "", cpf: null };
+const METHOD_ICON: Record<PaymentMethod, IconName> = { pix: "qr-code", cash: "banknotes", credit_card: "credit-card", debit_card: "credit-card" };
+
+const activePayments = payments.filter((p) => !p.deletedAt);
+const deletedPayments = payments.filter((p) => p.deletedAt);
+const card = "flex flex-col rounded-xl border border-line bg-white p-3.5 sm:px-5 sm:py-[18px]";
+const sectionTitle = "font-display text-[17px] leading-tight font-bold text-ink sm:text-lg";
+const notice = "flex items-start gap-2.5 rounded-[10px] border border-line bg-canvas px-3.5 py-3 text-[15px] leading-snug text-ink";
+const field = "flex flex-col gap-1.5";
+const fieldLabel = "text-[14.5px] font-semibold text-ink";
+const hint = "text-sm text-ink-soft";
+const choice =
+  "relative flex cursor-pointer items-center justify-center gap-2 rounded-[9px] border border-line-strong bg-white text-[15px] text-ink has-[:checked]:border-brand has-[:checked]:bg-brand-soft/60 has-[:checked]:text-brand-ink has-[:checked]:shadow-[0_0_0_1px_var(--color-brand)] has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-brand";
+const check = "flex items-start gap-2.5 text-[15px] leading-snug text-ink";
 ---
 
 <AdminLayout title="Pagamento">
-  <a href={back} class="inline-flex items-center gap-1 text-sm font-medium text-sky-700 hover:underline">
-    <Icon name="chevron-left" class="h-4 w-4" /> Voltar
+  <a href={back} class="inline-flex min-h-8 items-center gap-1 text-[15px] font-semibold text-brand no-underline hover:underline">
+    <Icon name="chevron-left" class="h-[18px] w-[18px]" strokeWidth={2.2} /> Voltar
   </a>
-  <h1 class="mt-3 text-2xl font-bold text-slate-900">Pagamento</h1>
+  <PageHeader title="Pagamento" class="mt-2" />
   <FlashMessage />
 
-  <Card class="mt-4 max-w-2xl">
-    <p class="flex flex-wrap items-center gap-2 font-medium text-slate-900">
-      {appointment.patientName}
-      {status && <Badge variant={status.variant}>{status.label}</Badge>}
-    </p>
-    <p class="text-sm text-slate-600">{appointment.serviceName} · {appointment.agendaName} · {when}</p>
-    <dl class="mt-3 grid grid-cols-3 gap-3 text-sm">
+  <section aria-label="Atendimento e contas" class={`${card} mt-4 gap-3.5 sm:gap-4`}>
+    <div class="flex flex-wrap items-start justify-between gap-3">
+      <div class="flex min-w-0 flex-col gap-1">
+        <p class="flex flex-wrap items-center gap-2">
+          <a href={patientLink} class="text-lg leading-tight font-bold text-ink no-underline hover:underline sm:text-xl">{appointment.patientName}</a>
+          <StatusPill situation={appointmentSituation(appointment)} />
+        </p>
+        <p class="text-[15px] text-ink-soft">{appointment.serviceName} · {appointment.agendaName} · {when}</p>
+      </div>
+      {state === "paid" && <Pill tone="success" icon="banknotes">Pago</Pill>}
+      {state === "partial" && <Pill tone="warning" icon="banknotes">Pago em parte</Pill>}
+    </div>
+    <dl class="grid grid-cols-3 gap-2 border-t border-line pt-3.5 sm:gap-4 sm:pt-4">
       <div>
-        <dt class="text-slate-500">Preço</dt>
-        <dd class="font-semibold text-slate-900">{summary.priceCents === null ? "Sem preço" : formatCentsBRL(summary.priceCents)}</dd>
+        <dt class="text-xs font-semibold tracking-[.05em] text-ink-soft uppercase sm:text-[13px]">Preço</dt>
+        <dd class={`mt-1 font-display leading-tight font-bold tabular-nums ${summary.priceCents === null ? "text-lg text-ink-soft sm:text-xl" : "text-xl text-ink sm:text-[30px]"}`}>
+          {summary.priceCents === null ? "Sem preço" : formatCentsBRL(summary.priceCents)}
+        </dd>
       </div>
       <div>
-        <dt class="text-slate-500">Pago</dt>
-        <dd class="font-semibold text-slate-900">{formatCentsBRL(summary.paidCents)}</dd>
+        <dt class="text-xs font-semibold tracking-[.05em] text-ink-soft uppercase sm:text-[13px]">Pago</dt>
+        <dd class="mt-1 font-display text-xl leading-tight font-bold text-conf-800 tabular-nums sm:text-[30px]">{formatCentsBRL(summary.paidCents)}</dd>
       </div>
       <div>
-        <dt class="text-slate-500">{summary.overPrice ? "Acima do preço" : "Falta"}</dt>
-        <dd class={`font-semibold ${summary.overPrice ? "text-amber-700" : "text-slate-900"}`}>
+        <dt class={`text-xs font-semibold tracking-[.05em] uppercase sm:text-[13px] ${summary.overPrice ? "text-pend-800" : "text-ink-soft"}`}>
+          {summary.overPrice ? "Acima do preço" : "Falta"}
+        </dt>
+        <dd
+          class={`mt-1 font-display text-xl leading-tight font-bold tabular-nums sm:text-[30px] ${
+            summary.overPrice || (summary.remainingCents ?? 0) > 0 ? "text-pend-800" : summary.remainingCents === null ? "text-ink-soft" : "text-ink"
+          }`}
+        >
           {summary.overPrice ? formatCentsBRL(summary.paidCents - summary.priceCents!) : summary.remainingCents === null ? "—" : formatCentsBRL(summary.remainingCents)}
         </dd>
       </div>
     </dl>
-  </Card>
+    {
+      paidShare !== null && (
+        <div role="img" aria-label={summary.overPrice ? "Acima do preço" : `${Math.round(paidShare * 100)}% pago`} class="h-2 overflow-hidden rounded-full bg-canvas-deep">
+          <div class={`h-full rounded-full ${summary.overPrice ? "bg-pend-500" : "bg-conf-500"}`} style={`width: ${paidShare * 100}%`} />
+        </div>
+      )
+    }
+  </section>
 
-  <Card class="mt-4 max-w-2xl">
-    <h2 class="font-semibold text-slate-900">Pagamentos ({payments.filter((p) => !p.deletedAt).length})</h2>
-    <ul class="mt-2 divide-y divide-slate-100">
+  <div class="mt-4 flex flex-wrap items-start gap-5">
+    <div class="flex min-w-0 flex-[999_1_560px] flex-col gap-3">
       {
-        payments.map((p) => (
-          <li class="py-2 text-sm">
-            <div class="flex flex-wrap items-center justify-between gap-2">
-              <span class={p.deletedAt ? "text-slate-400 line-through" : ""}>
-                <span class="font-medium text-slate-900">{formatCentsBRL(p.amountCents)}</span> · {PAYMENT_METHOD_LABEL[p.method]} · {formatCalendarDate(p.paidOn, "dd/MM/yyyy")}
-                <span class="block text-slate-500">
-                  Pagou: {p.payerName}
-                  {p.payerCpf ? ` · CPF ${maskCpf(p.payerCpf)}` : ""}
-                </span>
-              </span>
-              <span class="flex items-center gap-2">
-                {p.deletedAt ? (
-                  <Badge>excluído em {formatInstant(p.deletedAt, clinic.timezone, "dd/MM 'às' HH:mm")}</Badge>
-                ) : (
-                  <>
-                    {!p.payerCpf && <Badge variant="warning">falta CPF</Badge>}
-                    {canEdit && !activeInvoice(p.id) && (
-                      <form method="POST" action={action}>
-                        <input type="hidden" name="acao" value="excluir" />
-                        <input type="hidden" name="payment_id" value={p.id} />
-                        <button
-                          type="submit"
-                          class="js-confirm-delete text-xs font-medium text-red-700 hover:underline"
-                          data-confirm-title="Excluir o pagamento?"
-                          data-confirm-message={`${formatCentsBRL(p.amountCents)} (${PAYMENT_METHOD_LABEL[p.method]}), de ${p.payerName}. Sai das somas e fica guardado como excluído; registre de novo o certo.`}
-                          data-confirm-label="Excluir pagamento"
-                        >
-                          Excluir
-                        </button>
-                      </form>
-                    )}
-                  </>
-                )}
-              </span>
+        !receives && (
+          <p class={notice}>
+            <Icon name="information-circle" class="mt-0.5 h-[18px] w-[18px] shrink-0 text-ink-soft" strokeWidth={2} />
+            {patient.anonymizedAt ? "Cadastro anonimizado: não recebe pagamento novo." : "Atendimento cancelado ou com falta: não recebe pagamento novo."}
+          </p>
+        )
+      }
+      {
+        receives && !canEdit && (
+          <p class={notice}>
+            <Icon name="lock" class="mt-0.5 h-[18px] w-[18px] shrink-0 text-ink-soft" strokeWidth={2} />
+            Só a Recepção e o Administrador da clínica registram pagamentos.
+          </p>
+        )
+      }
+      {
+        receives && canEdit && (
+          <form
+            method="POST"
+            action={action}
+            id="pagamento"
+            aria-labelledby="registrar"
+            class={`${card} gap-[18px]`}
+            data-patient={appointment.patientName}
+            data-remaining={summary.remainingCents ?? ""}
+          >
+            <input type="hidden" name="acao" value="registrar" />
+            <h2 id="registrar" class={sectionTitle}>Registrar pagamento</h2>
+            <div class="grid gap-4 sm:grid-cols-[minmax(0,1fr)_220px]">
+              <div class={field}>
+                <label for="amount" class={fieldLabel}>Valor</label>
+                <div class="flex h-[52px] items-center gap-2 rounded-lg border border-line-strong bg-white px-3.5 focus-within:border-brand focus-within:ring-1 focus-within:ring-brand">
+                  <span class="text-lg font-semibold text-ink-soft" aria-hidden="true">R$</span>
+                  <input
+                    id="amount"
+                    name="amount"
+                    required
+                    inputmode="decimal"
+                    placeholder="0,00"
+                    value={centsToInput(suggested)}
+                    aria-describedby="amount-hint"
+                    class="min-w-0 flex-1 border-0 bg-transparent p-0 font-display text-2xl font-bold text-ink tabular-nums outline-none focus:ring-0"
+                  />
+                </div>
+                <p id="amount-hint" class={hint}>{suggested !== null ? "Sugerido: o que falta." : summary.priceCents === null ? "Atendimento sem preço." : "Já pago por inteiro."}</p>
+              </div>
+              <div class={field}>
+                <label for="paid_on" class={fieldLabel}>Data do pagamento</label>
+                <input id="paid_on" name="paid_on" type="date" required max={today} value={today} class={`${CONTROL} h-[52px] sm:h-[52px]`} />
+              </div>
             </div>
-            {
-              !p.deletedAt && (
-                <div class="mt-2 rounded-md bg-slate-50 px-3 py-2">
-                  {(invoices.get(p.id) ?? []).map((n) => (
-                    <div class="flex flex-wrap items-center gap-2 py-0.5">
-                      <Badge variant={INVOICE_BADGE[n.status].variant}>{INVOICE_BADGE[n.status].label(n)}</Badge>
-                      {n.environment === "restricted" && <Badge>teste</Badge>}
-                      {n.environment === "simulation" && <Badge>simulada</Badge>}
-                      <span class="text-xs text-slate-500">pedida em {formatInstant(n.requestedAt, clinic.timezone, "dd/MM 'às' HH:mm")}</span>
-                      {n.hasXml && (
-                        <>
-                          <a href={`/api/admin/financeiro/notas/${n.id}?formato=pdf`} target="_blank" rel="noopener" class="text-xs font-medium text-sky-700 hover:underline">
-                            Baixar PDF
-                          </a>
-                          <a href={`/api/admin/financeiro/notas/${n.id}`} class="text-xs font-medium text-sky-700 hover:underline">
-                            Baixar XML
-                          </a>
-                        </>
+
+            <fieldset class="flex flex-col gap-2">
+              <legend class={`${fieldLabel} mb-2`}>Forma</legend>
+              <div class="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                {PAYMENT_METHODS.map((m, i) => (
+                  <label class={`${choice} h-12 font-semibold`}>
+                    <input type="radio" name="method" value={m.value} required checked={i === 0} class="sr-only" />
+                    <Icon name={METHOD_ICON[m.value]} class="h-[18px] w-[18px]" strokeWidth={1.8} />
+                    <span data-method-label>{m.label}</span>
+                  </label>
+                ))}
+              </div>
+            </fieldset>
+
+            <fieldset class="flex flex-col gap-2">
+              <legend class={`${fieldLabel} mb-2`}>
+                Quem pagou <span class="font-normal text-ink-soft">(a nota sai no CPF dele)</span>
+              </legend>
+              {payerOptions.map((o) => (
+                <label class={`${choice} justify-start gap-3 px-3.5 py-3 text-left`}>
+                  <input type="radio" name="payer" value={o.value} checked={defaultPayer === o.value} data-payer-name={o.name} class="h-[18px] w-[18px] shrink-0 accent-brand" />
+                  <span class="flex min-w-0 flex-1 flex-col gap-0.5">
+                    <span class="text-[15.5px] leading-snug font-semibold text-ink">{o.label}</span>
+                    <span class={hint}>{o.cpf ? `CPF ${formatCpf(o.cpf)}` : "Sem CPF no cadastro"}</span>
+                  </span>
+                  {defaultPayer === o.value && <Pill tone="neutral" class="hidden sm:inline-flex">Responsável financeiro</Pill>}
+                </label>
+              ))}
+              <label class={`${choice} justify-start gap-3 px-3.5 py-3 text-left`}>
+                <input type="radio" name="payer" value="other" checked={defaultPayer === "other"} class="h-[18px] w-[18px] shrink-0 accent-brand" />
+                <span class="flex min-w-0 flex-1 flex-col gap-0.5">
+                  <span class="text-[15.5px] leading-snug font-semibold text-ink">Outra pessoa</span>
+                  <span class={hint}>Nome e CPF só para este pagamento</span>
+                </span>
+                {defaultPayer === "other" && <Pill tone="neutral" class="hidden sm:inline-flex">Responsável financeiro</Pill>}
+              </label>
+            </fieldset>
+
+            {payerOptions.map((o) =>
+              o.cpf ? null : (
+                <div data-payer-only={o.value} class={field}>
+                  <label for={`payer_cpf_${o.value}`} class={fieldLabel}>
+                    CPF de {o.label} (opcional)
+                  </label>
+                  <input id={`payer_cpf_${o.value}`} name="payer_cpf" inputmode="numeric" placeholder="000.000.000-00" class={`${CONTROL} w-full sm:w-56`} />
+                  <p class={hint}>Sem o CPF, o pagamento é registrado, mas a nota fiscal não sai. Digitado aqui, fica também no cadastro financeiro.</p>
+                </div>
+              ),
+            )}
+            <div data-payer-only="other" class="grid gap-4 sm:grid-cols-2">
+              <div class={field}>
+                <label for="payer_name" class={fieldLabel}>Nome de quem pagou</label>
+                <input id="payer_name" name="payer_name" value={otherDefault.name} class={CONTROL} />
+              </div>
+              <div class={field}>
+                <label for="payer_cpf_other" class={fieldLabel}>CPF de quem pagou (opcional)</label>
+                <input
+                  id="payer_cpf_other"
+                  name="payer_cpf"
+                  inputmode="numeric"
+                  placeholder="000.000.000-00"
+                  value={otherDefault.cpf ? formatCpf(otherDefault.cpf) : ""}
+                  class={CONTROL}
+                />
+              </div>
+              <p class={`${hint} sm:col-span-2`}>Vale só para este pagamento; para mudar o responsável de sempre, use o cartão "Financeiro" do {vocabulary.patient}.</p>
+            </div>
+
+            <div class="flex flex-col gap-3.5 border-t border-line pt-4">
+              {
+                financeReady.ready && (
+                  <label class={check}>
+                    <input type="checkbox" name="emitir_nota" value="1" data-emit class="mt-0.5 h-[18px] w-[18px] shrink-0 accent-brand" />
+                    <span>
+                      Emitir a nota fiscal agora, no CPF de quem pagou
+                      {financeReady.environment === "restricted" && <span class="text-sm text-ink-soft"> (ambiente de testes, sem valor fiscal)</span>}
+                      {financeReady.environment === "simulation" && <span class="text-sm text-ink-soft"> (simulação, sem a Receita e sem valor fiscal)</span>}
+                    </span>
+                  </label>
+                )
+              }
+              <div class="hidden flex-wrap items-center gap-3.5 sm:flex">
+                <Button
+                  type="submit"
+                  variant="primary"
+                  class="js-confirm-delete h-12 px-[22px] text-base sm:h-12"
+                  data-register
+                  data-sending-label="Registrando…"
+                  data-confirm-title="Registrar o pagamento?"
+                  data-confirm-message={appointment.patientName}
+                  data-confirm-label="Registrar pagamento"
+                  data-confirm-tone="primary"
+                >
+                  <span data-register-label>Registrar pagamento</span>
+                </Button>
+                <span class={hint}>Antes de gravar, uma confirmação com o valor, a forma e quem pagou.</span>
+              </div>
+            </div>
+          </form>
+        )
+      }
+    </div>
+
+    <section aria-labelledby="pagamentos" class={`${card} w-full min-w-0 flex-[1_1_340px] gap-3.5 sm:max-w-[420px]`}>
+      <h2 id="pagamentos" class={sectionTitle}>
+        Pagamentos <span class="font-medium text-ink-soft">({activePayments.length})</span>
+      </h2>
+      {activePayments.length === 0 && <p class={hint}>Nenhum pagamento ainda.</p>}
+      {
+        activePayments.map((p) => {
+          const amount = formatCentsBRL(p.amountCents);
+          const list = invoices.get(p.id) ?? [];
+          const active = activeInvoice(p.id);
+          const issued = list.find((n) => n.status === "issued");
+          const canDelete = canEdit && !active;
+          const canCancel = isClinicAdmin && !!issued;
+          return (
+            <article class="flex flex-col gap-2.5 rounded-[10px] border border-line p-3.5" aria-label={`Pagamento de ${amount}`}>
+              <div class="flex items-start justify-between gap-2">
+                <div class="flex min-w-0 flex-col gap-0.5">
+                  <p class="font-display text-xl leading-tight font-bold text-ink tabular-nums">{amount}</p>
+                  <p class={hint}>
+                    {PAYMENT_METHOD_LABEL[p.method]} · {formatCalendarDate(p.paidOn, "dd/MM/yyyy")}
+                  </p>
+                  <p class={hint}>
+                    Pagou: {p.payerName}
+                    {p.payerCpf ? ` · CPF ${maskCpf(p.payerCpf)}` : ""}
+                  </p>
+                </div>
+                <div class="flex shrink-0 items-center gap-2">
+                  {!p.payerCpf && <Pill tone="warning">Falta CPF</Pill>}
+                  {(canDelete || canCancel) && (
+                    <MoreMenu id={`mais-${p.id}`} label={`Mais ações do pagamento de ${amount}`}>
+                      {canCancel && (
+                        <button type="button" class={menuItemClass(true)} aria-controls={`cancelar-${issued!.id}`} data-open-panel={`cancelar-${issued!.id}`}>
+                          <Icon name="x-mark" class="h-[18px] w-[18px]" strokeWidth={2} />
+                          Cancelar nota
+                        </button>
                       )}
-                      {canEdit && (n.status === "issuing" || n.status === "canceling") && (
+                      {canDelete && (
                         <form method="POST" action={action}>
-                          <input type="hidden" name="acao" value="conferir_nota" />
-                          <input type="hidden" name="invoice_id" value={n.id} />
-                          <input type="hidden" name="payment_id" value={p.id} />
-                          <button type="submit" class="text-xs font-medium text-sky-700 hover:underline">
-                            Conferir na Receita
-                          </button>
-                        </form>
-                      )}
-                      {n.errorMessage && n.status !== "canceled" && <p class="w-full text-xs text-red-700">{n.errorMessage}</p>}
-                      {(deliveries.get(n.id) ?? []).map((e) => (
-                        <p class="w-full text-xs text-slate-600">
-                          {e.channel === "email" ? "E-mail" : "WhatsApp"} {e.channel === "whatsapp" && e.destination.startsWith("+") ? formatPhoneBR(e.destination) : e.destination}
-                          {e.target === "contact" ? " (contato)" : ""}: <span class={e.status === "failed" ? "text-red-700" : ""}>{DELIVERY_STATUS[e.status]}</span>
-                          {e.error ? ` (${e.error})` : ""} · {formatInstant(e.createdAt, clinic.timezone, "dd/MM 'às' HH:mm")}
-                          {e.automatic ? " · automático" : ""}
-                        </p>
-                      ))}
-                      {canEdit && n.status === "issued" && n.hasXml && (
-                        <details class="w-full">
-                          <summary class="cursor-pointer text-xs font-medium text-sky-700">Enviar nota</summary>
-                          <form method="POST" action={action} class="mt-2 flex flex-col gap-2 text-xs text-slate-700">
-                            <input type="hidden" name="acao" value="enviar_nota" />
-                            <input type="hidden" name="invoice_id" value={n.id} />
-                            <label class="flex items-center gap-2">
-                              <input type="checkbox" name="para_contato" value="1" checked class="h-4 w-4" />
-                              WhatsApp do {vocabulary.contact}: {contact.fullName} · {formatPhoneBR(contact.phone)}
-                            </label>
-                            <label class="flex flex-wrap items-center gap-2">
-                              <input type="checkbox" name="para_numero" value="1" checked={!!saved.phone} class="h-4 w-4" />
-                              Outro WhatsApp
-                              <input name="numero" inputmode="tel" placeholder="(84) 98888-0000" value={saved.phone ? formatPhoneBR(saved.phone) : ""} class={`${INPUT} mt-0 w-44 text-xs`} />
-                            </label>
-                            <label class="flex flex-wrap items-center gap-2">
-                              <input type="checkbox" name="para_email" value="1" checked={!!saved.email} class="h-4 w-4" />
-                              E-mail
-                              <input name="email" type="email" placeholder="nome@exemplo.com" value={saved.email ?? ""} class={`${INPUT} mt-0 w-60 text-xs`} />
-                            </label>
-                            <label class="flex items-center gap-2">
-                              <input type="checkbox" name="guardar" value="1" checked class="h-4 w-4" />
-                              Guardar o número e o e-mail no Financeiro do {vocabulary.patient}
-                            </label>
-                            <label class="flex items-center gap-2">
-                              <input type="checkbox" name="enviar_sempre" value="1" checked={saved.autoSend} class="h-4 w-4" />
-                              Enviar sempre para eles, junto com o {vocabulary.contact}
-                            </label>
-                            <button
-                              type="submit"
-                              class="js-confirm-delete self-start text-xs font-medium text-sky-700 hover:underline"
-                              data-confirm-title="Enviar a nota fiscal?"
-                              data-confirm-message={`Nota nº ${n.nfseNumber} (PDF${" e XML no e-mail"}) para os destinos marcados.${n.environment === "restricted" ? " Nota de teste, sem valor fiscal." : n.environment === "simulation" ? " Nota simulada, sem valor fiscal." : ""}`}
-                              data-confirm-label="Enviar nota"
-                              data-confirm-tone="primary"
-                            >
-                              Enviar
-                            </button>
-                          </form>
-                        </details>
-                      )}
-                      {isClinicAdmin && n.status === "issued" && (
-                        <details class="w-full">
-                          <summary class="cursor-pointer text-xs font-medium text-red-700">Cancelar nota</summary>
-                          <form method="POST" action={action} class="mt-2 flex flex-col gap-2">
-                            <input type="hidden" name="acao" value="cancelar_nota" />
-                            <input type="hidden" name="invoice_id" value={n.id} />
-                            <select name="motivo" required class={`${INPUT} mt-0 text-xs`}>
-                              {CANCEL_REASONS.map((r) => (
-                                <option value={r.code}>{r.label}</option>
-                              ))}
-                            </select>
-                            <input name="motivo_texto" required minlength="15" maxlength="255" placeholder="Explique (15 a 255 caracteres)" class={`${INPUT} mt-0 text-xs`} />
-                            <button
-                              type="submit"
-                              class="js-confirm-delete self-start text-xs font-medium text-red-700 hover:underline"
-                              data-confirm-title="Cancelar a nota fiscal?"
-                              data-confirm-message={`Nota ${n.nfseNumber ? `nº ${n.nfseNumber}` : ""} de ${formatCentsBRL(p.amountCents)}, de ${p.payerName}. O cancelamento vai para a Receita e não dá para desfazer; depois, dá para emitir de novo.`}
-                              data-confirm-label="Cancelar nota"
-                            >
-                              Cancelar nota
-                            </button>
-                          </form>
-                        </details>
-                      )}
-                    </div>
-                  ))}
-                  {!activeInvoice(p.id) && (
-                    <div class="flex flex-wrap items-center gap-2 py-0.5">
-                      {(invoices.get(p.id) ?? []).length === 0 && <span class="text-xs text-slate-500">Sem nota fiscal.</span>}
-                      {canEdit && p.payerCpf && financeReady.ready && (
-                        <form method="POST" action={action}>
-                          <input type="hidden" name="acao" value="emitir_nota" />
+                          <input type="hidden" name="acao" value="excluir" />
                           <input type="hidden" name="payment_id" value={p.id} />
                           <button
                             type="submit"
-                            class="js-confirm-delete text-xs font-medium text-sky-700 hover:underline"
-                            data-confirm-title="Emitir a nota fiscal?"
-                            data-confirm-message={`${formatCentsBRL(p.amountCents)}, no CPF de ${p.payerName}. ${financeReady.environment === "restricted" ? "Ambiente de testes (sem valor fiscal)." : financeReady.environment === "simulation" ? "Simulação: a nota não vai para a Receita." : "A nota vai para a Receita."}`}
-                            data-confirm-label="Emitir nota"
-                            data-confirm-tone="primary"
+                            class={`js-confirm-delete ${menuItemClass(true)}`}
+                            data-confirm-title="Excluir o pagamento?"
+                            data-confirm-message={`${amount} (${PAYMENT_METHOD_LABEL[p.method]}), de ${p.payerName}. Sai das somas e fica guardado como excluído; registre de novo o certo.`}
+                            data-confirm-label="Excluir pagamento"
                           >
-                            Emitir nota
+                            <Icon name="trash" class="h-[18px] w-[18px]" strokeWidth={2} />
+                            Excluir pagamento
                           </button>
                         </form>
                       )}
-                      {canEdit && !p.payerCpf && <span class="text-xs text-slate-500">Sem o CPF de quem pagou, a nota não sai.</span>}
-                      {canEdit && p.payerCpf && !financeReady.ready && <span class="text-xs text-slate-500">{financeReady.reason}</span>}
-                    </div>
+                    </MoreMenu>
                   )}
                 </div>
-              )
-            }
-          </li>
-        ))
-      }
-      {payments.length === 0 && <li class="py-2 text-sm text-slate-500">Nenhum pagamento ainda.</li>}
-    </ul>
-  </Card>
+              </div>
 
-  {
-    !receives && (
-      <p class="mt-4 max-w-2xl text-sm text-slate-600">
-        {patient.anonymizedAt ? "Cadastro anonimizado: não recebe pagamento novo." : "Atendimento cancelado ou com falta: não recebe pagamento novo."}
-      </p>
-    )
-  }
-  {receives && !canEdit && <p class="mt-4 max-w-2xl text-sm text-slate-600">Só a Recepção e o Administrador da clínica registram pagamentos.</p>}
+              <div class="flex flex-col gap-2 rounded-lg bg-canvas px-3 py-2.5">
+                {list.map((n) => (
+                  <div class="flex flex-col gap-2">
+                    <div class="flex flex-wrap items-center gap-2">
+                      <Pill tone={INVOICE_PILL[n.status].tone} icon={INVOICE_PILL[n.status].icon}>
+                        {INVOICE_PILL[n.status].label(n)}
+                      </Pill>
+                      {n.environment === "restricted" && <Pill>teste</Pill>}
+                      {n.environment === "simulation" && <Pill>simulada</Pill>}
+                      <span class="text-[13px] text-ink-soft">pedida em {formatInstant(n.requestedAt, clinic.timezone, "dd/MM 'às' HH:mm")}</span>
+                    </div>
+                    {n.errorMessage && n.status !== "canceled" && <p class="text-sm leading-snug text-danger">{n.errorMessage}</p>}
+                    {(deliveries.get(n.id) ?? []).map((e) => (
+                      <p class="text-[13.5px] leading-snug text-ink-soft">
+                        {e.channel === "email" ? "E-mail" : "WhatsApp"} {e.channel === "whatsapp" && e.destination.startsWith("+") ? formatPhoneBR(e.destination) : e.destination}
+                        {e.target === "contact" ? " (contato)" : ""}: <span class={e.status === "failed" ? "font-semibold text-danger" : ""}>{DELIVERY_STATUS[e.status]}</span>
+                        {e.error ? ` (${e.error})` : ""} · {formatInstant(e.createdAt, clinic.timezone, "dd/MM 'às' HH:mm")}
+                        {e.automatic ? " · automático" : ""}
+                      </p>
+                    ))}
+                    {(n.hasXml || (canEdit && (n.status === "issuing" || n.status === "canceling"))) && (
+                      <div class="flex flex-wrap gap-2">
+                        {canEdit && (n.status === "issuing" || n.status === "canceling") && (
+                          <form method="POST" action={action}>
+                            <input type="hidden" name="acao" value="conferir_nota" />
+                            <input type="hidden" name="invoice_id" value={n.id} />
+                            <input type="hidden" name="payment_id" value={p.id} />
+                            <Button type="submit" size="sm" data-sending-label="Conferindo…">
+                              <Icon name="arrow-path" class="h-4 w-4" strokeWidth={2} />
+                              Conferir na Receita
+                            </Button>
+                          </form>
+                        )}
+                        {n.hasXml && (
+                          <>
+                            <Button size="sm" href={`/api/admin/financeiro/notas/${n.id}?formato=pdf`} target="_blank" rel="noopener" aria-label={`Baixar o PDF da ${INVOICE_PILL[n.status].label(n)}`}>
+                              <Icon name="arrow-down-tray" class="h-4 w-4" strokeWidth={2} />
+                              PDF
+                            </Button>
+                            <Button size="sm" href={`/api/admin/financeiro/notas/${n.id}`} aria-label={`Baixar o XML da ${INVOICE_PILL[n.status].label(n)}`}>
+                              <Icon name="arrow-down-tray" class="h-4 w-4" strokeWidth={2} />
+                              XML
+                            </Button>
+                          </>
+                        )}
+                        {canEdit && n.status === "issued" && n.hasXml && (
+                          <Button size="sm" aria-expanded="false" aria-controls={`enviar-${n.id}`} data-open-panel={`enviar-${n.id}`}>
+                            <Icon name="paper-airplane" class="h-4 w-4" strokeWidth={2} />
+                            Enviar nota
+                          </Button>
+                        )}
+                      </div>
+                    )}
+                    {canEdit && n.status === "issued" && n.hasXml && (
+                      <form id={`enviar-${n.id}`} hidden method="POST" action={action} class="flex flex-col gap-2.5 rounded-lg border border-line bg-white p-3 text-[14.5px] text-ink" data-panel>
+                        <input type="hidden" name="acao" value="enviar_nota" />
+                        <input type="hidden" name="invoice_id" value={n.id} />
+                        <p class="font-semibold">Enviar a nota para</p>
+                        <label class={check}>
+                          <input type="checkbox" name="para_contato" value="1" checked class="mt-0.5 h-[18px] w-[18px] shrink-0 accent-brand" />
+                          <span>WhatsApp do {vocabulary.contact}: {contact.fullName} · {formatPhoneBR(contact.phone)}</span>
+                        </label>
+                        <div class="flex flex-col gap-1.5">
+                          <label class={check}>
+                            <input type="checkbox" name="para_numero" value="1" checked={!!saved.phone} class="mt-0.5 h-[18px] w-[18px] shrink-0 accent-brand" />
+                            Outro WhatsApp
+                          </label>
+                          <input name="numero" inputmode="tel" aria-label="Outro WhatsApp" placeholder="(84) 98888-0000" value={saved.phone ? formatPhoneBR(saved.phone) : ""} class={`${CONTROL} ml-7 w-auto max-w-56`} />
+                        </div>
+                        <div class="flex flex-col gap-1.5">
+                          <label class={check}>
+                            <input type="checkbox" name="para_email" value="1" checked={!!saved.email} class="mt-0.5 h-[18px] w-[18px] shrink-0 accent-brand" />
+                            E-mail
+                          </label>
+                          <input name="email" type="email" aria-label="E-mail" placeholder="nome@exemplo.com" value={saved.email ?? ""} class={`${CONTROL} ml-7 w-auto`} />
+                        </div>
+                        <label class={check}>
+                          <input type="checkbox" name="guardar" value="1" checked class="mt-0.5 h-[18px] w-[18px] shrink-0 accent-brand" />
+                          <span>Guardar o número e o e-mail no Financeiro do {vocabulary.patient}</span>
+                        </label>
+                        <label class={check}>
+                          <input type="checkbox" name="enviar_sempre" value="1" checked={saved.autoSend} class="mt-0.5 h-[18px] w-[18px] shrink-0 accent-brand" />
+                          <span>Enviar sempre para eles, junto com o {vocabulary.contact}</span>
+                        </label>
+                        <div class="flex flex-wrap gap-2">
+                          <Button
+                            type="submit"
+                            variant="primary"
+                            size="sm"
+                            class="js-confirm-delete"
+                            data-sending-label="Enviando…"
+                            data-confirm-title="Enviar a nota fiscal?"
+                            data-confirm-message={`Nota nº ${n.nfseNumber} (PDF${" e XML no e-mail"}) para os destinos marcados.${n.environment === "restricted" ? " Nota de teste, sem valor fiscal." : n.environment === "simulation" ? " Nota simulada, sem valor fiscal." : ""}`}
+                            data-confirm-label="Enviar nota"
+                            data-confirm-tone="primary"
+                          >
+                            Enviar nota
+                          </Button>
+                          <Button size="sm" data-close-panel>Fechar</Button>
+                        </div>
+                      </form>
+                    )}
+                    {isClinicAdmin && n.status === "issued" && (
+                      <form id={`cancelar-${n.id}`} hidden method="POST" action={action} class="flex flex-col gap-2.5 rounded-lg border border-danger-line bg-white p-3" data-panel>
+                        <input type="hidden" name="acao" value="cancelar_nota" />
+                        <input type="hidden" name="invoice_id" value={n.id} />
+                        <p class="text-[14.5px] font-semibold text-ink">Cancelar a {INVOICE_PILL[n.status].label(n)}</p>
+                        <div class={field}>
+                          <label for={`motivo-${n.id}`} class={fieldLabel}>Motivo</label>
+                          <select id={`motivo-${n.id}`} name="motivo" required class={CONTROL}>
+                            {CANCEL_REASONS.map((r) => (
+                              <option value={r.code}>{r.label}</option>
+                            ))}
+                          </select>
+                        </div>
+                        <div class={field}>
+                          <label for={`motivo-texto-${n.id}`} class={fieldLabel}>Explique (15 a 255 caracteres)</label>
+                          <input id={`motivo-texto-${n.id}`} name="motivo_texto" required minlength="15" maxlength="255" class={CONTROL} />
+                        </div>
+                        <div class="flex flex-wrap gap-2">
+                          <Button
+                            type="submit"
+                            variant="danger"
+                            size="sm"
+                            class="js-confirm-delete"
+                            data-sending-label="Cancelando…"
+                            data-confirm-title="Cancelar a nota fiscal?"
+                            data-confirm-message={`Nota ${n.nfseNumber ? `nº ${n.nfseNumber}` : ""} de ${amount}, de ${p.payerName}. O cancelamento vai para a Receita e não dá para desfazer; depois, dá para emitir de novo.`}
+                            data-confirm-label="Cancelar nota"
+                          >
+                            Cancelar nota
+                          </Button>
+                          <Button size="sm" data-close-panel>Fechar</Button>
+                        </div>
+                      </form>
+                    )}
+                  </div>
+                ))}
+                {!active && (
+                  <div class="flex flex-wrap items-center gap-2">
+                    {list.length === 0 && <span class={hint}>Sem nota fiscal.</span>}
+                    {canEdit && p.payerCpf && financeReady.ready && (
+                      <form method="POST" action={action}>
+                        <input type="hidden" name="acao" value="emitir_nota" />
+                        <input type="hidden" name="payment_id" value={p.id} />
+                        <Button
+                          type="submit"
+                          size="sm"
+                          class="js-confirm-delete"
+                          data-sending-label="Emitindo…"
+                          data-confirm-title="Emitir a nota fiscal?"
+                          data-confirm-message={`${amount}, no CPF de ${p.payerName}. ${financeReady.environment === "restricted" ? "Ambiente de testes (sem valor fiscal)." : financeReady.environment === "simulation" ? "Simulação: a nota não vai para a Receita." : "A nota vai para a Receita."}`}
+                          data-confirm-label="Emitir nota"
+                          data-confirm-tone="primary"
+                        >
+                          <Icon name="document-check" class="h-4 w-4" strokeWidth={2} />
+                          Emitir nota
+                        </Button>
+                      </form>
+                    )}
+                    {canEdit && !p.payerCpf && <span class={hint}>Sem o CPF de quem pagou, a nota não sai.</span>}
+                    {canEdit && p.payerCpf && !financeReady.ready && <span class={hint}>{financeReady.reason}</span>}
+                  </div>
+                )}
+              </div>
+            </article>
+          );
+        })
+      }
+      {
+        deletedPayments.length > 0 && (
+          <details class="border-t border-line pt-3">
+            <summary class="flex min-h-9 cursor-pointer items-center text-[14.5px] font-semibold text-brand">
+              {deletedPayments.length === 1 ? "1 pagamento excluído" : `${deletedPayments.length} pagamentos excluídos`}
+            </summary>
+            <ul class="mt-2 flex flex-col gap-2">
+              {deletedPayments.map((p) => (
+                <li class="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-canvas px-3 py-2 text-sm">
+                  <span class="text-ink-soft line-through">
+                    {formatCentsBRL(p.amountCents)} · {PAYMENT_METHOD_LABEL[p.method]} · {formatCalendarDate(p.paidOn, "dd/MM/yyyy")} · {p.payerName}
+                  </span>
+                  <Pill>excluído em {formatInstant(p.deletedAt!, clinic.timezone, "dd/MM 'às' HH:mm")}</Pill>
+                </li>
+              ))}
+            </ul>
+          </details>
+        )
+      }
+      <a href={patientLink} class="border-t border-line pt-3 text-[14.5px] font-semibold text-brand no-underline hover:underline">
+        {capitalize(vocabulary.patient)}: {patient.fullName} ›
+      </a>
+    </section>
+  </div>
 
   {
     receives && canEdit && (
-      <Card class="mt-4 max-w-2xl">
-        <h2 class="font-semibold text-slate-900">Registrar pagamento</h2>
-        <form method="POST" action={action} class="mt-3 flex flex-col gap-4" id="pagamento" data-patient={appointment.patientName} data-remaining={summary.remainingCents ?? ""}>
-          <input type="hidden" name="acao" value="registrar" />
-          <div class="grid gap-3 sm:grid-cols-2">
-            <div>
-              <label for="amount" class={LABEL}>Valor (R$)</label>
-              <input id="amount" name="amount" required inputmode="decimal" placeholder="0,00" value={centsToInput(suggested)} class={INPUT} />
-              <p class={HINT}>{suggested !== null ? "Sugerido: o que falta." : summary.priceCents === null ? "Atendimento sem preço." : "Já pago por inteiro."}</p>
-            </div>
-            <div>
-              <label for="paid_on" class={LABEL}>Data do pagamento</label>
-              <input id="paid_on" name="paid_on" type="date" required max={today} value={today} class={INPUT} />
-            </div>
+      <>
+        <div class="h-20 sm:hidden" aria-hidden="true" />
+        <div class="fixed inset-x-0 bottom-[calc(61px+env(safe-area-inset-bottom))] z-10 flex items-center gap-3 border-t border-line bg-white px-4 py-2.5 shadow-[0_-4px_14px_rgba(18,48,42,.08)] sm:hidden">
+          <div class="flex min-w-0 flex-1 flex-col">
+            <span class="text-base leading-tight font-bold text-ink" data-bar-amount>—</span>
+            <span class="truncate text-sm text-ink-soft" data-bar-payer></span>
           </div>
-          <fieldset>
-            <legend class={LABEL}>Forma</legend>
-            <div class="mt-1 flex flex-wrap gap-2">
-              {PAYMENT_METHODS.map((m, i) => (
-                <label class="cursor-pointer rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm has-[:checked]:border-sky-700 has-[:checked]:bg-sky-50">
-                  <input type="radio" name="method" value={m.value} required checked={i === 0} class="mr-1" />
-                  {m.label}
-                </label>
-              ))}
-            </div>
-          </fieldset>
-          <fieldset>
-            <legend class={LABEL}>Quem pagou (a nota sai no CPF dele)</legend>
-            <div class="mt-1 flex flex-col gap-1 text-sm">
-              {payerOptions.map((o) => (
-                <label class="flex items-center gap-2">
-                  <input type="radio" name="payer" value={o.value} checked={defaultPayer === o.value} class="h-4 w-4" />
-                  {o.label}
-                  {defaultPayer === o.value && <span class="text-xs text-slate-500">(responsável financeiro)</span>}
-                </label>
-              ))}
-              <label class="flex items-center gap-2">
-                <input type="radio" name="payer" value="other" checked={defaultPayer === "other"} class="h-4 w-4" />
-                Outra pessoa
-                {defaultPayer === "other" && <span class="text-xs text-slate-500">(responsável financeiro)</span>}
-              </label>
-            </div>
-          </fieldset>
-          {payerOptions.map((o) => (
-            <div data-payer-only={o.value}>
-              {o.cpf ? (
-                <p class="text-sm text-slate-700">CPF de {o.label}: {formatCpf(o.cpf)}</p>
-              ) : (
-                <>
-                  <label for={`payer_cpf_${o.value}`} class={LABEL}>
-                    CPF de {o.label} (opcional)
-                  </label>
-                  <input id={`payer_cpf_${o.value}`} name="payer_cpf" inputmode="numeric" placeholder="000.000.000-00" class={`${INPUT} w-48`} />
-                  <p class={HINT}>Sem o CPF, o pagamento é registrado, mas a nota fiscal não sai. Digitado aqui, fica também no cadastro financeiro.</p>
-                </>
-              )}
-            </div>
-          ))}
-          <div data-payer-only="other" class="grid gap-3 sm:grid-cols-2">
-            <div>
-              <label for="payer_name" class={LABEL}>Nome de quem pagou</label>
-              <input id="payer_name" name="payer_name" value={otherDefault.name} class={INPUT} />
-            </div>
-            <div>
-              <label for="payer_cpf_other" class={LABEL}>CPF de quem pagou (opcional)</label>
-              <input
-                id="payer_cpf_other"
-                name="payer_cpf"
-                inputmode="numeric"
-                placeholder="000.000.000-00"
-                value={otherDefault.cpf ? formatCpf(otherDefault.cpf) : ""}
-                class={INPUT}
-              />
-            </div>
-            <p class={`${HINT} sm:col-span-2`}>Vale só para este pagamento; para mudar o responsável de sempre, use o cartão "Financeiro" do {vocabulary.patient}.</p>
-          </div>
-          {
-            financeReady.ready && (
-              <label class="flex items-start gap-2 text-sm text-slate-700">
-                <input type="checkbox" name="emitir_nota" value="1" checked class="mt-0.5 h-4 w-4" />
-                <span>
-                  Emitir a nota fiscal agora, no CPF de quem pagou
-                  {financeReady.environment === "restricted" && <span class="text-xs text-slate-500"> (ambiente de testes, sem valor fiscal)</span>}
-                  {financeReady.environment === "simulation" && <span class="text-xs text-slate-500"> (simulação, sem a Receita e sem valor fiscal)</span>}
-                </span>
-              </label>
-            )
-          }
-          <button
+          <Button
             type="submit"
-            class={`${PRIMARY_BUTTON} js-confirm-delete self-start`}
+            variant="primary"
+            form="pagamento"
+            class="js-confirm-delete h-12 px-[22px] text-base"
+            data-register
+            data-sending-label="Registrando…"
             data-confirm-title="Registrar o pagamento?"
             data-confirm-message={appointment.patientName}
             data-confirm-label="Registrar pagamento"
             data-confirm-tone="primary"
           >
-            Registrar pagamento
-          </button>
-        </form>
-      </Card>
+            Registrar
+          </Button>
+        </div>
+      </>
     )
   }
-  <p class="mt-4 max-w-2xl text-xs text-slate-500">
-    <a href={withReturn(`/admin/pacientes/${patient.id}`, volta)} class="text-sky-700 hover:underline">{capitalize(vocabulary.patient)}: {patient.fullName}</a>
-  </p>
   <ConfirmDeleteDialog />
 </AdminLayout>
 
 <script>
   import { parseMoneyCents } from "../../../../lib/forms";
 
-  // Mostra só os campos de quem pagou (e só eles vão no envio) e monta o
-  // texto da confirmação, com o aviso "acima do preço".
+  // Painéis de "Enviar nota" e "Cancelar nota": abrem no próprio pagamento (o
+  // de cancelar, pelo "Mais", que fecha) e põem o foco no primeiro campo. Ao
+  // fechar, o foco volta a quem abriu (o "Mais", quando foi por ele; teste da R5, QA-07).
+  const openers = new Map<HTMLElement, HTMLElement>();
+  document.querySelectorAll<HTMLElement>("[data-open-panel]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const panel = document.getElementById(button.dataset.openPanel!);
+      if (!panel) return;
+      const menu = button.closest<HTMLElement>("[popover]");
+      menu?.hidePopover();
+      openers.set(panel, (menu && document.querySelector<HTMLElement>(`[popovertarget="${menu.id}"]`)) || button);
+      panel.hidden = !panel.hidden;
+      document.querySelectorAll(`[aria-controls="${panel.id}"]`).forEach((b) => b.setAttribute("aria-expanded", String(!panel.hidden)));
+      if (!panel.hidden) panel.querySelector<HTMLElement>("input:not([type=hidden]), select")?.focus();
+    });
+  });
+  document.querySelectorAll<HTMLElement>("[data-close-panel]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const panel = button.closest<HTMLElement>("[data-panel]");
+      if (!panel) return;
+      panel.hidden = true;
+      document.querySelectorAll(`[aria-controls="${panel.id}"]`).forEach((b) => b.setAttribute("aria-expanded", "false"));
+      openers.get(panel)?.focus();
+    });
+  });
+
+  // Mostra só os campos de quem pagou (e só eles vão no envio), atualiza o
+  // botão, a barra do celular e o texto da confirmação, com o aviso "acima do preço".
   const form = document.getElementById("pagamento") as HTMLFormElement | null;
   if (form) {
     const brl = (cents: number) => (cents / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-    const submit = form.querySelector<HTMLButtonElement>("button[type=submit]")!;
+    const buttons = [...document.querySelectorAll<HTMLButtonElement>("button[data-register]")];
+    const registerLabel = document.querySelector<HTMLElement>("[data-register-label]");
+    const barAmount = document.querySelector<HTMLElement>("[data-bar-amount]");
+    const barPayer = document.querySelector<HTMLElement>("[data-bar-payer]");
     const sync = () => {
-      const payer = form.querySelector<HTMLInputElement>('input[name="payer"]:checked')?.value ?? "contact";
+      const checkedPayer = form.querySelector<HTMLInputElement>('input[name="payer"]:checked');
+      const payer = checkedPayer?.value ?? "contact";
       form.querySelectorAll<HTMLElement>("[data-payer-only]").forEach((block) => {
         const on = block.dataset.payerOnly === payer;
         block.hidden = !on;
@@ -453,17 +672,26 @@ const otherDefault = defaultPayer === "other" ? { name: finance.payerName ?? "",
       });
       const nameInput = form.querySelector<HTMLInputElement>("#payer_name");
       if (nameInput) nameInput.required = payer === "other";
+      const payerName = payer === "other" ? nameInput?.value.trim() || "outra pessoa" : (checkedPayer?.dataset.payerName ?? "");
 
       const cents = parseMoneyCents(form.querySelector<HTMLInputElement>("#amount")?.value ?? "");
-      const method = form.querySelector<HTMLInputElement>('input[name="method"]:checked')?.parentElement?.textContent?.trim() ?? "";
+      const valid = Number.isFinite(cents) && cents > 0;
+      const method = form.querySelector<HTMLInputElement>('input[name="method"]:checked')?.parentElement?.querySelector("[data-method-label]")?.textContent?.trim() ?? "";
       const remaining = form.dataset.remaining === "" ? null : Number(form.dataset.remaining);
-      const over = remaining !== null && Number.isFinite(cents) && cents > remaining;
-      submit.dataset.confirmMessage = [
-        `${form.dataset.patient}: ${Number.isFinite(cents) ? brl(cents) : "valor a conferir"}${method ? ` (${method})` : ""}.`,
+      const over = remaining !== null && valid && cents > remaining;
+      const emit = form.querySelector<HTMLInputElement>("[data-emit]")?.checked ?? false;
+
+      if (registerLabel) registerLabel.textContent = valid ? `Registrar ${brl(cents)}` : "Registrar pagamento";
+      if (barAmount) barAmount.textContent = valid ? `${brl(cents)}${method ? ` · ${method}` : ""}` : "Informe o valor";
+      if (barPayer) barPayer.textContent = payerName ? `Pagou: ${payerName}` : "";
+      const message = [
+        `${form.dataset.patient}: ${valid ? brl(cents) : "valor a conferir"}${method ? ` (${method})` : ""}${payerName ? `, pago por ${payerName}` : ""}.`,
+        emit ? "A nota fiscal sai agora, no CPF de quem pagou." : "",
         over ? `Atenção: fica acima do preço do atendimento (${remaining === 0 ? "já estava pago por inteiro" : `faltavam ${brl(remaining)}`}).` : "",
       ]
         .filter(Boolean)
         .join(" ");
+      buttons.forEach((button) => (button.dataset.confirmMessage = message));
     };
     form.addEventListener("input", sync);
     form.addEventListener("change", sync);

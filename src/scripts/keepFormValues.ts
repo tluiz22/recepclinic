@@ -108,8 +108,11 @@ function pointToError(form: HTMLFormElement | null): void {
   for (const name of names) {
     const snake = name.replace(/[A-Z]/g, (c) => `_${c.toLowerCase()}`);
     for (const candidate of [name, snake, snake.replace(/_cents$/, "")]) {
-      const el = scope?.querySelector<HTMLInputElement>(`[name='${candidate}']:not([type=hidden]):not(:disabled)`);
-      if (!el || el.closest("[hidden]")) continue;
+      // Nome repetido (ex.: os "payer_cpf" do Pagamento): o que está à vista.
+      const el = [...(scope?.querySelectorAll<HTMLInputElement>(`[name='${candidate}']:not([type=hidden]):not(:disabled)`) ?? [])].find(
+        (input) => !input.closest("[hidden]"),
+      );
+      if (!el) continue;
       el.setAttribute("aria-invalid", "true");
       el.setAttribute("aria-describedby", [el.getAttribute("aria-describedby"), message.id].filter(Boolean).join(" "));
       el.addEventListener("input", () => el.removeAttribute("aria-invalid"), { once: true });
@@ -120,7 +123,13 @@ function pointToError(form: HTMLFormElement | null): void {
   (invalid[0] ?? message).focus();
 }
 
-pointToError(restore());
+// Aponta o erro depois dos scripts da tela, que mostram ou escondem blocos a
+// partir dos valores devolvidos (ex.: os campos de quem pagou no Pagamento;
+// teste da R5, QA-01). Os scripts de módulo rodam antes do DOMContentLoaded.
+const restored = restore();
+const point = () => setTimeout(() => pointToError(restored));
+if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", point, { once: true });
+else point();
 
 document.addEventListener("submit", (event) => {
   const form = event.target;

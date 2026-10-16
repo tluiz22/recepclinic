@@ -42,6 +42,11 @@ dialog.addEventListener("click", (event) => {
 });
 
 acceptBtn.addEventListener("click", () => {
+  // Já enviado (src/scripts/sendOnce.ts): um segundo aceite não envia de novo.
+  if (pendingForm?.dataset.sending !== undefined) {
+    dialog.close();
+    return;
+  }
   // Envia antes de fechar o <dialog> — em alguns navegadores, fechar o
   // modal primeiro consome o gesto do usuário e o envio seguinte não sai.
   // `submit()` (em vez de `requestSubmit()`) porque esses formulários não
@@ -58,7 +63,8 @@ acceptBtn.addEventListener("click", () => {
     pendingForm.append(field);
   }
   // Guarda os campos para o caso de voltar com erro (src/scripts/keepFormValues.ts).
-  pendingForm?.dispatchEvent(new CustomEvent("rc:enviar", { bubbles: true }));
+  // Leva o botão que pediu a confirmação: ele mostra o "Enviando…" (src/scripts/sendOnce.ts).
+  pendingForm?.dispatchEvent(new CustomEvent("rc:enviar", { bubbles: true, detail: { submitter: pendingButton } }));
   pendingForm?.submit();
   dialog.close();
 });
