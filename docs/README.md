@@ -95,7 +95,7 @@
 >     do cliente na seção "Redesign do painel" do [plano](plano.md). **R0, R1 (parcial) e R2
 >     implementadas em 15/out**, testadas no navegador, aprovadas pelo cliente e **publicadas no
 >     staging** (commit `a1066ca`). Correção do "confirmo" do lembrete e **R3 (Resumo do Dia)
->     implementadas em 15/out**, em commits locais, a validar pelo cliente antes do push.
+>     implementadas em 15/out**, aprovadas pelo cliente e publicadas no staging.
 >     Próximo, com a confirmação: R4 (Marcar e Remarcar). Pendente da R1: o menu do Suporte agrupado.
 >   - **Migrações no staging:** o Claude aplica com `supabase db push` (permissão liberada em
 >     09/out), sempre na ordem simulação → aplicar → conferir no banco → só então o push do código.
