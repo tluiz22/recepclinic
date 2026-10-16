@@ -1,0 +1,67 @@
+---
+// Horários para escolher (R4): botões de rádio em grade, separados por turno
+// (Manhã, Tarde, Noite) quando são horários de um dia, ou numa lista só
+// (turmas). Os rádios pertencem ao formulário `form` (o resumo da tela), e
+// `data-summary` leva o texto do horário para o resumo.
+import { periodOf } from "../../../lib/dayStrip";
+
+export interface SlotOption {
+  value: string;
+  /** Ex.: "10:30" ou "Qui 22/10 às 09:00". */
+  label: string;
+  /** Local (e agenda, quando há mais de uma). */
+  detail: string;
+  /** Texto do resumo: "Sexta, 23/10 às 10:30". */
+  summary: string;
+  isHome?: boolean;
+}
+
+interface Props {
+  options: SlotOption[];
+  form: string;
+  /** Separar por turno (horários de um dia). */
+  byPeriod?: boolean;
+  /** Valor marcado de início (volta com erro). */
+  checked?: string;
+}
+
+const { options, form, byPeriod = false, checked } = Astro.props;
+const groups = byPeriod
+  ? (["Manhã", "Tarde", "Noite"] as const)
+      .map((period) => ({ title: period as string, items: options.filter((o) => periodOf(o.label) === period) }))
+      .filter((g) => g.items.length)
+  : [{ title: "", items: options }];
+const grid = byPeriod ? "grid-cols-3 sm:grid-cols-4 lg:grid-cols-5" : "grid-cols-1 sm:grid-cols-2";
+---
+
+{
+  groups.map((group) => (
+    <fieldset class="flex min-w-0 flex-col gap-2">
+      {group.title ? (
+        <legend class="mb-2 text-[13px] leading-tight font-bold tracking-[.06em] text-ink-soft uppercase">{group.title}</legend>
+      ) : (
+        <legend class="sr-only">Turmas com vaga</legend>
+      )}
+      <div class={`grid gap-2 ${grid}`}>
+        {group.items.map((slot) => (
+          <label class="relative flex min-h-11 cursor-pointer flex-col items-center gap-px rounded-[9px] border border-line-strong bg-white px-1 py-2 hover:border-brand has-[:checked]:border-2 has-[:checked]:border-brand has-[:checked]:bg-[#e7f4ef] has-[:checked]:px-[3px] has-[:checked]:py-[7px] has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-brand sm:items-start sm:px-3 sm:has-[:checked]:px-[11px]">
+            <input
+              type="radio"
+              name="slot"
+              form={form}
+              value={slot.value}
+              required
+              checked={slot.value === checked}
+              data-home={slot.isHome ? "1" : undefined}
+              data-summary={slot.summary}
+              data-where={slot.detail}
+              class="sr-only"
+            />
+            <span class="text-[17px] leading-tight font-bold text-ink tabular-nums first-letter:uppercase">{slot.label}</span>
+            <span class="text-center text-[12.5px] leading-tight font-medium text-ink-soft sm:text-left sm:text-[13px]">{slot.detail}</span>
+          </label>
+        ))}
+      </div>
+    </fieldset>
+  ))
+}

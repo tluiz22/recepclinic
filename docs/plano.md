@@ -1942,6 +1942,14 @@ da Agenda, os horários do Marcar **começam no dia escolhido**, que continua va
 escolha do serviço. Se esse dia não tiver vaga, aparece um aviso e o primeiro dia livre depois
 dele. As setas continuam levando a outros dias.
 
+**R4, proposta aprovada pelo cliente em 15/out/2026** (página "4 · Marcar e Remarcar" do canvas):
+passos numerados com um resumo e o botão à direita (no celular, uma barra fixa embaixo); faixa de
+7 dias livres com setas e "Outra data"; horários por turno (Manhã, Tarde, Noite); Remarcar com o
+atendimento atual no alto e o resumo "De → Para" com a escolha da série. **Implementada em
+15/out** e testada no navegador (computador e celular), **aguardando a validação do cliente**:
+regra da faixa em `src/lib/dayStrip.ts` (com teste), componentes `DayStrip`, `SlotPicker` e
+`StepCard` em `ui/`; o diálogo de confirmação aceita o botão ligado ao formulário por `form="…"`.
+
 ## Depois do 1º piloto (já previsto no banco)
 
 - **Convênios (D10):** telas de planos atendidos e exceções por profissional; plano no cadastro do

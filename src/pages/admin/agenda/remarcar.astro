@@ -3,21 +3,32 @@
 // horário (ou outra turma). Sessão de série (F4.6, D9): "só esta sessão" ou
 // "esta e as próximas" (a série muda de dia e horário daqui em diante). Remarcar zera o lembrete e a presença confirmada
 // (a data nova pede outros); o horário atual não conta como ocupado.
+//
+// Redesign R4 (cliente, 15/out/2026): o atendimento atual no alto, a faixa de
+// 7 dias livres com setas, os horários por turno e o resumo "De → Para" com a
+// escolha da série e o botão (no celular, uma barra fixa embaixo).
 import { safeReturnPath } from "../../../lib/returnPath";
 import AdminLayout from "../../../layouts/AdminLayout.astro";
-import Card from "../../../components/admin/Card.astro";
 import ConfirmDeleteDialog from "../../../components/admin/ConfirmDeleteDialog.astro";
 import FlashMessage from "../../../components/admin/FlashMessage.astro";
 import Icon from "../../../components/admin/Icon.astro";
-import { PRIMARY_BUTTON } from "../../../components/admin/fieldStyles";
+import Button from "../../../components/admin/ui/Button.astro";
+import DayStrip from "../../../components/admin/ui/DayStrip.astro";
+import PageHeader from "../../../components/admin/ui/PageHeader.astro";
+import SlotPicker, { type SlotOption } from "../../../components/admin/ui/SlotPicker.astro";
+import StatusPill from "../../../components/admin/ui/StatusPill.astro";
+import Tag from "../../../components/admin/ui/Tag.astro";
+import { appointmentSituation, SITUATIONS } from "../../../components/admin/agenda/situationStyle";
 import { slotValue } from "../../../lib/agendaSlot";
-import { formatCalendarDate, formatInstant, isCalendarDate } from "../../../lib/clinicTime";
+import { formatCalendarDate, formatInstant, isCalendarDate, todayIn } from "../../../lib/clinicTime";
+import { buildDayStrip } from "../../../lib/dayStrip";
 import { createUserClient } from "../../../lib/data/clients";
 import { getFreeSlots, getGroupSessions, getNextAvailableDates } from "../../../lib/data/agenda/slots";
 import { getAgendaAppointment } from "../../../lib/data/agenda/view";
 import { listLocations } from "../../../lib/data/config/locations";
 import { listServices } from "../../../lib/data/config/services";
 import { setFlash } from "../../../lib/flash";
+import { capitalize } from "../../../lib/vocabulary";
 
 const clinic = Astro.locals.clinic!;
 const db = createUserClient(Astro.request, Astro.cookies);
@@ -31,26 +42,35 @@ if (!appointment || !(appointment.status === "scheduled" || appointment.status =
   return Astro.redirect(returnTo);
 }
 
+const FORM = "remarcar-form";
+const today = todayIn(clinic.timezone, now);
 const [services, locations] = await Promise.all([listServices(db, clinic.clinicId, { includeInactive: true }), listLocations(db, clinic.clinicId, { includeInactive: true })]);
 const isGroup = services.find((s) => s.id === appointment.serviceId)?.schedulingMode === "group";
 const locationName = new Map(locations.map((l) => [l.id, l.name]));
 const query = { serviceId: appointment.serviceId, agendaId: appointment.agendaId };
+const dayLabel = (d: string) => capitalize(formatCalendarDate(d, "EEEE, dd/MM"));
 
-let dates: string[] = [];
-let date = "";
-let options: { value: string; label: string; detail: string }[] = [];
+let strip = buildDayStrip([], null, null);
+let options: SlotOption[] = [];
 if (isGroup) {
   options = (await getGroupSessions(db, clinic.clinicId, query))
     .filter((s) => s.start.getTime() !== appointment.scheduledAt.getTime())
-    .map((s) => ({
-      value: slotValue({ agendaId: appointment.agendaId, start: s.start, locationId: s.locationId }),
-      label: formatInstant(s.start, clinic.timezone, "EEE dd/MM 'às' HH:mm"),
-      detail: `${locationName.get(s.locationId) ?? "Local"} · ${s.remaining} de ${s.capacity} vagas`,
-    }));
+    .map((s) => {
+      const label = formatInstant(s.start, clinic.timezone, "EEE dd/MM 'às' HH:mm");
+      return {
+        value: slotValue({ agendaId: appointment.agendaId, start: s.start, locationId: s.locationId }),
+        label,
+        detail: `${locationName.get(s.locationId) ?? "Local"} · ${s.remaining} de ${s.capacity} vagas`,
+        summary: capitalize(label),
+      };
+    });
 } else {
-  dates = (await getNextAvailableDates(db, clinic.clinicId, { ...query, ignoreAppointmentId: appointment.id })).map((d) => d.date);
+  // Todos os dias livres da janela de busca (a faixa mostra 7 por vez).
+  const dates = (await getNextAvailableDates(db, clinic.clinicId, { ...query, ignoreAppointmentId: appointment.id, count: 1000 })).map((d) => d.date);
   const wanted = params.get("date");
-  date = wanted && isCalendarDate(wanted) && dates.includes(wanted) ? wanted : (dates[0] ?? "");
+  const de = params.get("de");
+  strip = buildDayStrip(dates, wanted && isCalendarDate(wanted) && wanted >= today ? wanted : null, de && isCalendarDate(de) ? de : null);
+  const date = strip.selected;
   if (date) {
     options = (await getFreeSlots(db, clinic.clinicId, { ...query, date, ignoreAppointmentId: appointment.id }))
       .filter((s) => s.start.getTime() !== appointment.scheduledAt.getTime())
@@ -58,88 +78,170 @@ if (isGroup) {
         value: slotValue({ agendaId: appointment.agendaId, start: s.start, locationId: s.locationId }),
         label: s.time,
         detail: locationName.get(s.locationId) ?? "Local",
+        summary: `${dayLabel(date)} às ${s.time}`,
       }));
   }
 }
-const link = (d: string) => `/admin/agenda/remarcar?id=${appointment.id}&date=${d}&return_to=${encodeURIComponent(returnTo)}`;
-const chip = (active: boolean) =>
-  `rounded-lg border px-3 py-2 text-sm font-medium ${active ? "border-sky-700 bg-sky-700 text-white" : "border-slate-300 bg-white text-slate-700 hover:border-sky-600"}`;
+const link = (d: string, start: string) => `/admin/agenda/remarcar?id=${appointment.id}&date=${d}&de=${start}&return_to=${encodeURIComponent(returnTo)}`;
+const current = capitalize(formatInstant(appointment.scheduledAt, clinic.timezone, "EEEE, dd/MM 'às' HH:mm"));
+const confirmMessage = `${appointment.patientName} vai para o horário escolhido. O lembrete e a presença confirmada recomeçam.${appointment.seriesId ? " Na opção 'esta e as próximas', a série inteira muda dali em diante." : ""} O paciente é avisado pelo WhatsApp.`;
+const situation = appointmentSituation(appointment);
+const option =
+  "flex cursor-pointer items-start gap-2.5 rounded-[9px] border border-line-strong px-3 py-2.5 text-[15px] leading-snug has-[:checked]:border-2 has-[:checked]:border-brand has-[:checked]:bg-[#e7f4ef] has-[:checked]:px-[11px] has-[:checked]:py-[9px]";
 ---
 
 <AdminLayout title="Remarcar">
-  <a href={returnTo} class="inline-flex items-center gap-1 text-sm font-medium text-sky-700 hover:underline">
-    <Icon name="chevron-left" class="h-4 w-4" /> {returnTo !== "/admin/agenda" ? "Voltar" : "Agenda"}
+  <a href={returnTo} class="inline-flex min-h-8 items-center gap-1 text-[15px] font-semibold text-brand no-underline hover:underline">
+    <Icon name="chevron-left" class="h-[18px] w-[18px]" strokeWidth={2.2} />
+    {returnTo !== "/admin/agenda" ? "Voltar" : "Agenda"}
   </a>
-  <h1 class="mt-3 text-2xl font-bold text-slate-900">Remarcar</h1>
+  <PageHeader title="Remarcar" class="mt-2" />
   <FlashMessage />
 
-  <Card class="mt-4 max-w-2xl">
-    <p class="font-medium text-slate-900">{appointment.patientName}</p>
-    <p class="text-sm text-slate-600">
-      {appointment.serviceName} · {appointment.agendaName} · hoje marcado para {formatInstant(appointment.scheduledAt, clinic.timezone, "EEE dd/MM 'às' HH:mm")}
-    </p>
-    <p class="mt-1 text-xs text-slate-500">Remarcar zera o lembrete e a presença confirmada.</p>
-  </Card>
-
-  <Card class="mt-4 max-w-2xl">
-    <h2 class="font-semibold text-slate-900">{isGroup ? "Outra turma" : "Nova data e horário"}</h2>
-    {
-      !isGroup && (
-        <div class="mt-2 flex flex-wrap gap-2">
-          {dates.map((d) => (
-            <a href={link(d)} class={chip(d === date)}>
-              <span class="capitalize">{formatCalendarDate(d, "EEE dd/MM")}</span>
-            </a>
-          ))}
-          {dates.length === 0 && <p class="text-sm text-slate-500">Sem horários livres nos próximos 60 dias.</p>}
+  <div class="mt-4 flex flex-wrap items-start gap-5">
+    <div class="flex min-w-0 flex-[999_1_560px] flex-col gap-3">
+      <section aria-labelledby="atual" class={`flex flex-col gap-3 rounded-xl border ${SITUATIONS[situation].edge} ${SITUATIONS[situation].card} p-3.5 sm:px-5 sm:py-[18px]`}>
+        <div class="flex flex-wrap items-start justify-between gap-3">
+          <div class="flex flex-col gap-1">
+            <h2 id="atual" class="text-[13px] leading-tight font-semibold tracking-[.06em] text-ink-soft uppercase">Atendimento atual</h2>
+            <p class="text-lg leading-snug font-semibold text-ink">{appointment.patientName}</p>
+            <p class="text-base leading-snug font-bold text-ink">{current}</p>
+          </div>
+          <StatusPill situation={situation} />
         </div>
-      )
-    }
-    <form method="POST" action={`/api/admin/agenda/atendimentos/${appointment.id}`} class="mt-4 flex flex-col gap-4">
-      <input type="hidden" name="acao" value="remarcar" />
-      {
-        appointment.seriesId && (
-          <fieldset class="rounded-lg border border-slate-200 p-3">
-            <legend class="px-1 text-sm font-medium text-slate-700">Esta sessão é de uma série</legend>
-            <div class="flex flex-col gap-2 text-sm text-slate-700">
-              <label class="flex items-start gap-2">
-                <input type="radio" name="modo" value="sessao" checked class="mt-0.5 h-4 w-4" />
-                <span>Só esta sessão (a série continua no dia e horário de sempre)</span>
-              </label>
-              <label class="flex items-start gap-2">
-                <input type="radio" name="modo" value="serie" class="mt-0.5 h-4 w-4" />
-                <span>Esta e as próximas: a série passa para o dia da semana e o horário escolhidos (as sessões passadas não mudam)</span>
-              </label>
-            </div>
-          </fieldset>
-        )
-      }
-      <input type="hidden" name="return_to" value={returnTo} />
-      <input type="hidden" name="back" value={`${Astro.url.pathname}${Astro.url.search}`} />
-      <div class="flex flex-wrap gap-2">
+        <div class="flex flex-wrap gap-1.5">
+          <Tag>{appointment.serviceName}</Tag>
+          <Tag>{appointment.agendaName}</Tag>
+          {appointment.seriesId && <Tag>Série</Tag>}
+        </div>
+        <p class="text-sm text-ink-soft">Mesma agenda e mesmo serviço. Remarcar zera o lembrete e a presença confirmada.</p>
+      </section>
+
+      <section aria-labelledby="nova" class="flex flex-col gap-4 rounded-xl border border-brand bg-white p-3.5 shadow-[0_0_0_1px_var(--color-brand)] sm:px-5 sm:py-[18px]">
+        <h2 id="nova" class="font-display text-lg leading-tight font-bold text-ink">{isGroup ? "Outra turma" : "Nova data e horário"}</h2>
         {
-          options.map((o) => (
-            <label class="cursor-pointer rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm has-[:checked]:border-sky-700 has-[:checked]:bg-sky-50">
-              <input type="radio" name="slot" value={o.value} required class="mr-1" />
-              <span class="inline-block font-medium first-letter:uppercase">{o.label}</span>
-              <span class="block text-xs text-slate-500">{o.detail}</span>
-            </label>
-          ))
+          strip.unavailable && (
+            <p class="flex items-start gap-2 rounded-[10px] border border-pend-200 bg-pend-100 px-3 py-2.5 text-[15px] leading-snug text-pend-800" role="status">
+              <Icon name="warning" class="mt-0.5 h-[18px] w-[18px] shrink-0" />
+              <span>
+                <strong class="font-semibold">{dayLabel(strip.unavailable)} não tem horário livre.</strong>{" "}
+                {strip.selected
+                  ? `Mostrando a partir de ${formatCalendarDate(strip.selected, "EEEE, dd/MM")}, o primeiro dia livre depois dele.`
+                  : "Não há dia livre depois dele no período em que a clínica oferece horários."}
+              </span>
+            </p>
+          )
         }
-        {(isGroup || date) && options.length === 0 && <p class="text-sm text-slate-500">{isGroup ? "Nenhuma outra turma com vaga." : "Nenhum horário livre nesta data."}</p>}
-      </div>
-      <button
-        type="submit"
-        class={`${PRIMARY_BUTTON} js-confirm-delete self-start`}
-        disabled={options.length === 0}
-        data-confirm-title="Remarcar o atendimento?"
-        data-confirm-message={`${appointment.patientName} vai para o horário escolhido. O lembrete e a presença confirmada recomeçam.${appointment.seriesId ? " Na opção 'esta e as próximas', a série inteira muda dali em diante." : ""} O paciente é avisado pelo WhatsApp.`}
-        data-confirm-label="Remarcar"
-        data-confirm-tone="primary"
+        {
+          !isGroup && strip.days.length > 0 && (
+            <DayStrip
+              strip={strip}
+              href={link}
+              action="/admin/agenda/remarcar"
+              hidden={{ id: appointment.id, return_to: returnTo }}
+              min={today}
+            />
+          )
+        }
+        {!isGroup && !strip.selected && !strip.unavailable && <p class="text-[15px] text-ink-soft">Sem horários livres nos próximos 60 dias.</p>}
+        {options.length > 0 && <SlotPicker options={options} form={FORM} byPeriod={!isGroup} />}
+        {
+          (isGroup || strip.selected) && options.length === 0 && (
+            <p class="text-[15px] text-ink-soft">{isGroup ? "Nenhuma outra turma com vaga." : "Nenhum horário livre nesta data."}</p>
+          )
+        }
+      </section>
+    </div>
+
+    <aside class="w-full min-w-0 flex-[1_1_320px] sm:sticky sm:top-6 sm:max-w-[380px]" aria-label="Resumo da remarcação">
+      <form
+        id={FORM}
+        method="POST"
+        action={`/api/admin/agenda/atendimentos/${appointment.id}`}
+        class="flex flex-col gap-3.5 rounded-xl border border-line bg-white p-3.5 sm:px-5 sm:py-[18px]"
       >
-        Remarcar
-      </button>
-    </form>
-  </Card>
+        <input type="hidden" name="acao" value="remarcar" />
+        <input type="hidden" name="return_to" value={returnTo} />
+        <input type="hidden" name="back" value={`${Astro.url.pathname}${Astro.url.search}`} />
+        <h2 class="font-display text-lg leading-tight font-bold text-ink">Resumo</h2>
+        <dl class="grid grid-cols-[48px_minmax(0,1fr)] items-baseline gap-x-2.5 gap-y-1.5 text-[15px] leading-snug">
+          <dt class="font-medium text-ink-soft">De</dt>
+          <dd class="font-semibold text-ink-soft line-through decoration-2">{current}</dd>
+          <dt class="font-medium text-ink-soft">Para</dt>
+          <dd class="font-semibold text-brand-ink" data-summary-when>Escolha um horário</dd>
+          <dt class="font-medium text-ink-soft">Onde</dt>
+          <dd class="font-semibold text-ink"><span data-summary-where>—</span> · {appointment.agendaName}</dd>
+        </dl>
+        {
+          appointment.seriesId && (
+            <fieldset class="flex flex-col gap-2 border-t border-line pt-3.5">
+              <legend class="float-left mb-2 w-full text-[15px] font-semibold text-ink">Esta sessão é de uma série</legend>
+              <label class={option}>
+                <input type="radio" name="modo" value="sessao" checked class="mt-0.5 h-[18px] w-[18px] shrink-0 accent-brand" />
+                <span>
+                  Só esta sessão
+                  <span class="block text-sm text-ink-soft">A série continua no dia e horário de sempre.</span>
+                </span>
+              </label>
+              <label class={option}>
+                <input type="radio" name="modo" value="serie" class="mt-0.5 h-[18px] w-[18px] shrink-0 accent-brand" />
+                <span>
+                  Esta e as próximas
+                  <span class="block text-sm text-ink-soft">A série passa para o dia da semana e o horário escolhidos. As sessões passadas não mudam.</span>
+                </span>
+              </label>
+            </fieldset>
+          )
+        }
+        <p class="text-sm text-ink-soft">O paciente é avisado pelo WhatsApp. Antes, uma confirmação.</p>
+        <div class="hidden sm:block">
+          <Button
+            type="submit"
+            variant="primary"
+            class="js-confirm-delete h-[46px] w-full text-base"
+            disabled={options.length === 0}
+            data-confirm-title="Remarcar o atendimento?"
+            data-confirm-message={confirmMessage}
+            data-confirm-label="Remarcar"
+            data-confirm-tone="primary"
+          >
+            Remarcar
+          </Button>
+        </div>
+      </form>
+    </aside>
+  </div>
+
+  <div class="h-20 sm:hidden" aria-hidden="true"></div>
+  <div class="fixed inset-x-0 bottom-[calc(61px+env(safe-area-inset-bottom))] z-10 flex items-center gap-3 border-t border-line bg-white px-4 py-2.5 shadow-[0_-4px_14px_rgba(18,48,42,.08)] sm:hidden">
+    <div class="flex min-w-0 flex-1 flex-col">
+      <span class="text-base leading-tight font-bold text-ink" data-summary-when>Escolha um horário</span>
+      <span class="truncate text-sm text-ink-soft">{appointment.patientName} · antes: {current}</span>
+    </div>
+    <Button
+      type="submit"
+      variant="primary"
+      form={FORM}
+      class="js-confirm-delete h-12 px-[22px] text-base"
+      disabled={options.length === 0}
+      data-confirm-title="Remarcar o atendimento?"
+      data-confirm-message={confirmMessage}
+      data-confirm-label="Remarcar"
+      data-confirm-tone="primary"
+    >
+      Remarcar
+    </Button>
+  </div>
+
+  <script>
+    // Resumo: o horário escolhido ("Para" e "Onde").
+    const sync = () => {
+      const chosen = document.querySelector<HTMLInputElement>("input[name='slot']:checked");
+      document.querySelectorAll<HTMLElement>("[data-summary-when]").forEach((el) => (el.textContent = chosen?.dataset.summary ?? "Escolha um horário"));
+      document.querySelectorAll<HTMLElement>("[data-summary-where]").forEach((el) => (el.textContent = chosen?.dataset.where ?? "—"));
+    };
+    document.querySelectorAll("input[name='slot']").forEach((input) => input.addEventListener("change", sync));
+    sync();
+  </script>
   <ConfirmDeleteDialog />
 </AdminLayout>

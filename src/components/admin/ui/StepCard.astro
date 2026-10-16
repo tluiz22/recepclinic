@@ -1,0 +1,48 @@
+---
+// Passo numerado do Marcar (R4): já escolhido (círculo verde com o ✓), o passo
+// em aberto (destacado, com o número) ou ainda por vir. "Trocar" no slot
+// "action".
+import Icon from "../Icon.astro";
+
+interface Props {
+  number: number;
+  title: string;
+  state: "done" | "current" | "todo";
+  id: string;
+}
+
+const { number, title, state, id } = Astro.props;
+---
+
+<section
+  aria-labelledby={id}
+  class={`flex flex-col gap-2.5 rounded-xl border bg-white p-3.5 sm:gap-3 sm:px-5 sm:py-[18px] ${state === "current" ? "border-brand shadow-[0_0_0_1px_var(--color-brand)]" : "border-line"}`}
+>
+  <div class="flex items-center justify-between gap-2">
+    <div class="flex items-center gap-2.5">
+      {
+        state === "done" ? (
+          <span class="flex h-[26px] w-[26px] shrink-0 items-center justify-center rounded-full bg-brand text-white sm:h-7 sm:w-7" aria-hidden="true">
+            <Icon name="check" class="h-4 w-4" strokeWidth={3} />
+          </span>
+        ) : (
+          <span
+            class={`flex h-[26px] w-[26px] shrink-0 items-center justify-center rounded-full border-2 text-[13px] font-bold sm:h-7 sm:w-7 sm:text-sm ${
+              state === "current" ? "border-brand bg-white text-brand" : "border-line-strong bg-white text-ink-soft"
+            }`}
+            aria-hidden="true"
+          >
+            {number}
+          </span>
+        )
+      }
+      <h2 id={id} class="font-display text-[17px] leading-tight font-bold text-ink sm:text-lg">
+        <span class="sr-only">Passo {number}{state === "done" ? ", escolhido" : ""}: </span>{title}
+      </h2>
+    </div>
+    <slot name="action" />
+  </div>
+  <div class="sm:pl-[38px]">
+    <slot />
+  </div>
+</section>

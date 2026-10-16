@@ -18,7 +18,8 @@ const TONES = {
 document.querySelectorAll<HTMLButtonElement>(".js-confirm-delete").forEach((btn) => {
   btn.addEventListener("click", (event) => {
     event.preventDefault();
-    pendingForm = btn.closest("form");
+    // `btn.form`: também o botão fora do formulário, ligado por `form="…"` (R4).
+    pendingForm = btn.form ?? btn.closest("form");
     pendingButton = btn;
     // Campo obrigatório vazio (ex.: nenhum horário escolhido): avisa no campo.
     if (pendingForm && !pendingForm.checkValidity()) {
