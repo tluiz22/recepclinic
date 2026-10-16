@@ -1937,6 +1937,11 @@ banco), componentes `Tabs`, `DateStepper`, `PageHeader` e `Pill` em `ui/`, as 7 
 o dia antes do horário nos cartões de A registrar e Registradas. O sinal "Confirmou pelo lembrete"
 vem antes de "Presença confirmada" (o toque no lembrete grava os dois).
 
+**R4 (Marcar e Remarcar), decisão do cliente (15/out/2026), U-09 da auditoria:** vindo de um dia
+da Agenda, os horários do Marcar **começam no dia escolhido**, que continua valendo depois da
+escolha do serviço. Se esse dia não tiver vaga, aparece um aviso e o primeiro dia livre depois
+dele. As setas continuam levando a outros dias.
+
 ## Depois do 1º piloto (já previsto no banco)
 
 - **Convênios (D10):** telas de planos atendidos e exceções por profissional; plano no cadastro do

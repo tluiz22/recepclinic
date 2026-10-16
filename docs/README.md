@@ -99,9 +99,9 @@
 >     de "Não responderam" para quem remarcou pelo lembrete (commit `317dd72`, publicada e
 >     conferida pelo cliente no staging).
 >     **Retomar daqui (próxima sessão, combinado em 15/out):** R4 (Marcar e Remarcar): proposta no
->     canvas → aprovação → implementação. Antes de desenhar, perguntar ao cliente a U-09 da
->     auditoria (vindo de um dia da Agenda, os horários do Marcar começam nesse dia ou no primeiro
->     livre?). Pendente da R1: o menu do Suporte agrupado.
+>     canvas → aprovação → implementação. U-09 decidida (15/out): vindo de um dia da Agenda, os
+>     horários do Marcar começam nesse dia (detalhes no [plano](plano.md)). Pendente da R1: o menu
+>     do Suporte agrupado.
 >   - **Migrações no staging:** o Claude aplica com `supabase db push` (permissão liberada em
 >     09/out), sempre na ordem simulação → aplicar → conferir no banco → só então o push do código.
 >   - **WhatsApp de testes:** `+55 61 9903-3143`, na Cloud API do app RecepClinic, ligado à
