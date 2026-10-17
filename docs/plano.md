@@ -2263,6 +2263,19 @@ paciente" do canvas). Decisões, uma a uma:
 Sem mudança de regra: os textos dos avisos, nenhum dado de paciente no preparo e nas orientações, o aviso de
 emergência, o "Feito com RecepClinic", o ícone da aba (logo da clínica), o 404 dos links inválidos, o funil do bot e
 as regras de retorno, duplicado e horário tomado.
+**Implementada em 17/out** e testada no navegador local (390px e 1280px, sem gravar dados; os estados do link vistos
+mudando 3 links do seed por alguns minutos, desfeito em seguida): moldura `src/layouts/PatientLayout.astro` (topo,
+rodapé, fontes e as variáveis da cor da clínica de `clinicColorStyle` em `src/lib/brandColor.ts`: `--clinic`, o texto
+sobre ela, a cor para texto sobre o branco, escurecida até 4,5:1, e o fundo claro; classes `bg-clinic`,
+`text-clinic-ink` etc. pelo `@theme inline` do `global.css`). Componentes em `src/components/public/`: `LinkNotice`
+(avisos, com o botão do WhatsApp pelo `whatsappPhone` da marca pública, só com a conexão ligada), `PatientDayStrip`
+(a faixa do Marcar, `buildDayStrip`, com links `?date=&start=`) e `PatientSlots` (turnos ou turma). No `/agendar`, um
+dia ou uma seta busca a mesma página e troca só a escolha (sem JavaScript, o link abre a página no dia); no funil, o
+`?date=`/`?start=` conta como `date_changed`, não como página aberta. A rota `/api/agendar/[token]/slots` deixou de ser
+usada pela página (fica para quem já está com a página antiga aberta). O `/formulario` com o `PublicLayout` na marca
+RecepClinic e os campos de `formStyles`; cada campo dentro do rótulo. Cor padrão `#0B7A62` também como a primeira cor
+pronta em Configurações › Clínica ("Verde RecepClinic"). Não visto com dados: as orientações com texto (o seed não
+tem) e a prévia de Configurações (mesma moldura). `astro check` sem erros, `npm test` (508) e o teste de banco da marca.
 
 ## Depois do 1º piloto (já previsto no banco)
 
