@@ -170,7 +170,7 @@ const navLinkClass = (active: boolean) =>
     </div>
     <header class="border-b border-line bg-white pt-[env(safe-area-inset-top)]">
       <div class={`mx-auto flex min-h-16 items-center justify-between gap-4 px-4 py-2.5 sm:gap-6 ${frame}`}>
-        <div class="flex min-w-[9.5rem] max-w-64 shrink-0 items-center gap-2.5">
+        <div class="flex min-w-[9.5rem] max-w-64 shrink-0 items-center gap-2.5 max-sm:shrink">
           <span aria-hidden="true" class="flex h-8 w-8 shrink-0 items-center justify-center rounded-[9px] bg-brand font-display text-[17px] font-bold text-white">R</span>
           <div class="min-w-0">
           {/* O link fica na linha de cima, fora do nome cortado (truncate): ali dentro, sumia com nome longo. */}
@@ -227,7 +227,8 @@ const navLinkClass = (active: boolean) =>
             showRoleLabel && (
               // No celular, "Suporte RecepClinic" empurrava o "Sair" para fora da tela
               // (teste da R10); o nome "Administração do sistema" já diz onde se está.
-              <span class={`text-sm text-ink-soft ${platform ? "max-sm:hidden" : ""}`}>
+              // Abaixo de 380px, o papel também sai (QA-01 do teste da S-01 e S-02).
+              <span class={`text-sm text-ink-soft ${platform ? "max-sm:hidden" : "max-[380px]:hidden"}`}>
                 {platform ? "Suporte RecepClinic" : roleLabel}
               </span>
             )

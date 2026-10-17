@@ -14,6 +14,7 @@ import {
   getGroupSessions,
   getNextAvailableDates,
   horizonLastDate,
+  isAgendaOpenOn,
   type DateWithSlots,
 } from "./slots";
 import type { LocationType } from "../config/locations";
@@ -326,6 +327,26 @@ export async function listLinkSlots(
     .sort((a, b) => a.start.getTime() - b.start.getTime() || a.agendaName.localeCompare(b.agendaName, "pt-BR"))
     .filter((slot) => (seen.has(slot.start.getTime()) ? false : (seen.add(slot.start.getTime()), true)))
     .map((slot) => ({ ...slot, locationName: nameOf(page.candidates.locations, slot.locationId) }));
+}
+
+/**
+ * Algum profissional ou local do link tem agenda aberta no dia (S-02 do teste
+ * da R11): escolhe o aviso do dia pedido sem horário livre.
+ */
+export async function isLinkDayOpen(
+  db: DbClient,
+  clinicId: string,
+  page: Pick<BookingPage, "link" | "candidates" | "lastDate">,
+  date: string,
+  now: Date = new Date(),
+): Promise<boolean> {
+  if (page.lastDate && date > page.lastDate) return false;
+  const perCombination = await Promise.all(
+    combinations(page.candidates).map(({ agenda, locationId }) =>
+      isAgendaOpenOn(db, clinicId, { serviceId: page.link.serviceId, agendaId: agenda.id, locationId, date }, now),
+    ),
+  );
+  return perCombination.some(Boolean);
 }
 
 /** Turma: próximas sessões com vaga nas agendas e locais do link. */

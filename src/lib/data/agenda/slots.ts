@@ -147,23 +147,31 @@ export async function loadBusy(
   if (ignoreAppointmentId) appointmentsQuery = appointmentsQuery.neq("id", ignoreAppointmentId);
   const [appointments, blocks] = await Promise.all([
     appointmentsQuery.then((r) => unwrap(r, "Atendimentos da agenda")),
-    db
-      .from("schedule_blocks")
-      .select("starts_at, ends_at")
-      .eq("clinic_id", clinicId)
-      .eq("agenda_id", agendaId)
-      .is("removed_at", null)
-      .lt("starts_at", to.toISOString())
-      .gt("ends_at", from.toISOString())
-      .then((r) => unwrap(r, "Bloqueios da agenda")),
+    loadBlocks(db, clinicId, agendaId, from, to),
   ]);
   return [
     ...appointments.map((a) => {
       const start = new Date(a.scheduled_at);
       return { start, end: new Date(start.getTime() + a.duration_minutes * 60_000) };
     }),
-    ...blocks.map((b) => ({ start: new Date(b.starts_at), end: new Date(b.ends_at) })),
+    ...blocks,
   ].filter((interval) => interval.end > from);
+}
+
+/** Bloqueios da agenda entre dois instantes. */
+async function loadBlocks(db: DbClient, clinicId: string, agendaId: string, from: Date, to: Date): Promise<BusyInterval[]> {
+  const blocks = unwrap(
+    await db
+      .from("schedule_blocks")
+      .select("starts_at, ends_at")
+      .eq("clinic_id", clinicId)
+      .eq("agenda_id", agendaId)
+      .is("removed_at", null)
+      .lt("starts_at", to.toISOString())
+      .gt("ends_at", from.toISOString()),
+    "Bloqueios da agenda",
+  );
+  return blocks.map((b) => ({ start: new Date(b.starts_at), end: new Date(b.ends_at) }));
 }
 
 /** Feriados extras da clínica no período (os nacionais vêm de isNationalHoliday). */
@@ -208,6 +216,28 @@ export async function getFreeSlots(
     loadClinicHolidays(db, clinicId, query.date, query.date),
   ]);
   return slotsOn(plan, query.date, busy, holidays, now);
+}
+
+/**
+ * Agenda aberta no dia (S-02 do teste da R11, cliente, 17/out/2026): de hoje
+ * em diante, com janela de atendimento, fora de feriado e não bloqueado por
+ * inteiro. Os atendimentos e as horas que já passaram não contam: um dia
+ * aberto e cheio é "sem horário livre", não "sem agenda".
+ */
+export async function isAgendaOpenOn(
+  db: DbClient,
+  clinicId: string,
+  query: SlotQuery & { date: string },
+  now: Date = new Date(),
+): Promise<boolean> {
+  const plan = await loadSchedulingPlan(db, clinicId, query);
+  if (!plan || query.date < todayIn(plan.timeZone, now)) return false;
+  const { start, end } = dayBounds(query.date, plan.timeZone);
+  const [blocks, holidays] = await Promise.all([
+    loadBlocks(db, clinicId, query.agendaId, start, end),
+    loadClinicHolidays(db, clinicId, query.date, query.date),
+  ]);
+  return slotsOn(plan, query.date, blocks, holidays, start).length > 0;
 }
 
 /** Próximas datas com pelo menos um horário livre, a partir de hoje (fuso da clínica). */

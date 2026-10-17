@@ -18,6 +18,7 @@ import PatientLayout from "../../layouts/PatientLayout.astro";
 import { formatCalendarDate, formatInstant, isCalendarDate } from "../../lib/clinicTime";
 import { createClinicServiceClient } from "../../lib/data/clinicService";
 import {
+  isLinkDayOpen,
   listLinkDates,
   listLinkGroupSessions,
   listLinkSlots,
@@ -32,6 +33,7 @@ import { getPublicClinicBrand, type PublicClinicBrand } from "../../lib/data/con
 import { DataError } from "../../lib/data/errors";
 import { resolveClinicByBookingLink } from "../../lib/data/platform";
 import { buildDayStrip, type DayStrip } from "../../lib/dayStrip";
+import Icon from "../../components/admin/Icon.astro";
 import { formatPhoneBR } from "../../lib/phone";
 import { capitalize, vocabularyFor } from "../../lib/vocabulary";
 
@@ -60,6 +62,7 @@ let strip: DayStrip | null = null;
 let slots: PublicSlot[] = [];
 let sessions: PublicSlot[] = [];
 let availableDays = 0;
+let unavailableOpen = false;
 if (page?.state === "form" && db && clinicId) {
   if (page.service.isGroup) {
     sessions = await listLinkGroupSessions(db, clinicId, page);
@@ -67,7 +70,15 @@ if (page?.state === "form" && db && clinicId) {
     const dates = (await listLinkDates(db, clinicId, page)).map((d) => d.date);
     availableDays = dates.length;
     strip = buildDayStrip(dates, param("date"), param("start"));
-    if (strip.selected) slots = await listLinkSlots(db, clinicId, page, strip.selected);
+    // Dia pedido depois do último dia livre (S02-08 do teste da S-01 e S-02,
+    // cliente, 17/out/2026): o aviso continua e a faixa abre no primeiro dia livre.
+    if (strip.unavailable && !strip.selected && dates.length) {
+      strip = { ...buildDayStrip(dates, null, null), unavailable: strip.unavailable };
+    }
+    [slots, unavailableOpen] = await Promise.all([
+      strip.selected ? listLinkSlots(db, clinicId, page, strip.selected) : [],
+      strip.unavailable ? isLinkDayOpen(db, clinicId, page, strip.unavailable) : false,
+    ]);
   }
 }
 
@@ -142,6 +153,13 @@ const pageTitle = !page
 const submitLabel = isReschedule ? "Confirmar remarcação" : "Confirmar";
 const showContact = !!page && !!page.contact.fullName && page.contact.fullName !== page.patient.fullName;
 const notice = "rounded-[10px] border px-3.5 py-3 text-base leading-snug";
+// Dia pedido sem horário livre (S-02 do teste da R11, cliente, 17/out/2026): o
+// aviso diz se o dia tem agenda e está cheio ou se não tem agenda aberta.
+const unavailableNote = !strip?.unavailable
+  ? null
+  : unavailableOpen
+    ? `${capitalize(formatCalendarDate(strip.unavailable, "EEEE, dd/MM"))} não tem mais horário livre.${strip.selected > strip.unavailable ? " Mostramos o próximo dia com horário." : ""}`
+    : "Não existe agenda aberta para esse dia.";
 ---
 
 <PatientLayout title={pageTitle} brand={brand} width={page?.state === "form" ? "wide" : "reading"}>
@@ -271,6 +289,12 @@ const notice = "rounded-[10px] border px-3.5 py-3 text-base leading-snug";
         <form id="agendar" method="POST" action={`/api/agendar/${page.link.id}/confirmar`} class="flex flex-col gap-6">
           <div class="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_300px]">
             <div id="agendar-escolha" class="flex min-w-0 flex-col gap-6" aria-live="polite">
+              {unavailableNote && (
+                <p class={`${notice} flex items-start gap-2.5 border-amber-200 bg-amber-50 text-amber-900`} role="status">
+                  <Icon name="warning" class="mt-0.5 h-[18px] w-[18px] shrink-0" />
+                  <span>{unavailableNote}</span>
+                </p>
+              )}
               {
                 page.service.isGroup ? (
                   <div class="flex flex-col gap-3">
@@ -285,8 +309,7 @@ const notice = "rounded-[10px] border px-3.5 py-3 text-base leading-snug";
                   <>
                     <input type="hidden" name="date" value={strip.selected} />
                     <div class="flex flex-col gap-2.5">
-                      <h2 class={PATIENT_STEP}>Escolha o dia</h2>
-                      <PatientDayStrip strip={strip} href={dayHref} />
+                      <PatientDayStrip strip={strip} title="Escolha o dia" href={dayHref} />
                       <p class="text-[15.5px] font-semibold text-gray-700">{formatDay(strip.selected)}</p>
                     </div>
                     <div class="flex flex-col gap-3.5">

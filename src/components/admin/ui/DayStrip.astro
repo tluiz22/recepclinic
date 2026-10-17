@@ -1,11 +1,12 @@
 ---
 // Faixa de dias livres (R4): 7 por vez, setas para os 7 antes e os 7 depois e
-// "Outra data" (calendário). No celular os dias rolam de lado e as setas vão
-// para a linha de baixo. A regra da faixa fica em src/lib/dayStrip.ts.
+// "Outra data" (calendário). No celular (S-01 do teste da R11, cliente,
+// 17/out/2026) as setas ficam na linha do título "Escolha o dia" e os 7 dias
+// cabem sem arrastar. A regra da faixa fica em src/lib/dayStrip.ts.
 import type { DayStrip } from "../../../lib/dayStrip";
 import { formatCalendarDate } from "../../../lib/clinicTime";
 import Icon from "../Icon.astro";
-import { buttonClass, CONTROL } from "./styles";
+import { CONTROL } from "./styles";
 
 interface Props {
   strip: DayStrip;
@@ -31,6 +32,33 @@ const arrowOff = "flex w-11 shrink-0 items-center justify-center rounded-[10px] 
 ---
 
 <div class="flex flex-col gap-2">
+  <div class="flex items-center justify-between gap-3 sm:hidden">
+    <span class="text-[15px] font-semibold text-ink">Escolha o dia</span>
+    <div class="flex gap-2">
+      {
+        strip.prevStart ? (
+          <a href={href(strip.prevStart, strip.prevStart)} class={`h-11 ${arrow}`} aria-label="7 dias livres antes">
+            <Icon name="chevron-left" class="h-5 w-5" strokeWidth={2.2} />
+          </a>
+        ) : (
+          <span class={`h-11 ${arrowOff}`} aria-hidden="true">
+            <Icon name="chevron-left" class="h-5 w-5" strokeWidth={2.2} />
+          </span>
+        )
+      }
+      {
+        strip.nextStart ? (
+          <a href={href(strip.nextStart, strip.nextStart)} class={`h-11 ${arrow}`} aria-label="7 dias livres depois">
+            <Icon name="chevron-right" class="h-5 w-5" strokeWidth={2.2} />
+          </a>
+        ) : (
+          <span class={`h-11 ${arrowOff}`} aria-hidden="true">
+            <Icon name="chevron-right" class="h-5 w-5" strokeWidth={2.2} />
+          </span>
+        )
+      }
+    </div>
+  </div>
   <div class="flex items-stretch gap-2">
     {
       strip.prevStart ? (
@@ -43,18 +71,18 @@ const arrowOff = "flex w-11 shrink-0 items-center justify-center rounded-[10px] 
         </span>
       )
     }
-    <ul class="-mx-3.5 flex flex-1 gap-2 overflow-x-auto px-3.5 pb-0.5 [scrollbar-width:none] sm:mx-0 sm:px-0" aria-label="Dias com horário livre">
+    <ul class="flex min-w-0 flex-1 gap-1 overflow-x-auto pb-0.5 [scrollbar-width:none] sm:gap-2" aria-label="Dias com horário livre">
       {
         strip.days.map((date) => {
           const d = day(date);
           const active = date === strip.selected;
           return (
-            <li class="flex shrink-0 basis-[58px] sm:min-w-0 sm:flex-1 sm:basis-0">
+            <li class="flex max-w-[calc((100%_-_1.5rem)/7)] min-w-0 flex-1 basis-0 sm:max-w-[calc((100%_-_3rem)/7)]">
               <a
                 href={href(date, start)}
                 aria-current={active ? "date" : undefined}
                 aria-label={d.label}
-                class={`flex w-full flex-col items-center gap-0.5 rounded-[10px] border px-1 py-2 no-underline ${
+                class={`flex w-full flex-col items-center gap-0.5 rounded-[10px] border px-0 py-2 no-underline sm:px-1 ${
                   active ? "border-brand bg-brand text-white" : "border-line-strong bg-white text-ink hover:border-brand"
                 }`}
               >
@@ -80,27 +108,11 @@ const arrowOff = "flex w-11 shrink-0 items-center justify-center rounded-[10px] 
     }
   </div>
   <div class="flex flex-wrap items-center gap-2 sm:justify-between">
-    {
-      strip.prevStart ? (
-        <a href={href(strip.prevStart, strip.prevStart)} class={`flex-1 sm:hidden ${buttonClass("secondary")}`} aria-label="7 dias livres antes">
-          <Icon name="chevron-left" class="h-5 w-5" strokeWidth={2.2} />
-          Antes
-        </a>
-      ) : null
-    }
     <span class="hidden text-sm text-ink-soft sm:inline">Só aparecem os dias com horário livre.</span>
-    <form method="GET" action={action} class="flex flex-[1.4] items-center gap-2 sm:flex-none">
+    <form method="GET" action={action} class="flex flex-1 items-center gap-2 sm:flex-none">
       {Object.entries(hidden).map(([name, value]) => value && <input type="hidden" name={name} value={value} />)}
       <label for="outra-data" class="text-[15px] font-semibold whitespace-nowrap text-ink sm:text-sm">Outra data</label>
       <input id="outra-data" type="date" name="date" min={min} value="" data-autosubmit class={`${CONTROL} min-w-0 flex-1 sm:h-8 sm:w-40 sm:flex-none sm:text-sm`} />
     </form>
-    {
-      strip.nextStart ? (
-        <a href={href(strip.nextStart, strip.nextStart)} class={`flex-1 sm:hidden ${buttonClass("secondary")}`} aria-label="7 dias livres depois">
-          Depois
-          <Icon name="chevron-right" class="h-5 w-5" strokeWidth={2.2} />
-        </a>
-      ) : null
-    }
   </div>
 </div>

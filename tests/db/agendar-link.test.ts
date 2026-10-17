@@ -5,6 +5,7 @@ import { createBlock } from "../../src/lib/data/agenda/blocks";
 import { createBookingLink, listValidRebookingLinks, type BookingLinkInput } from "../../src/lib/data/agenda/links";
 import {
   confirmBookingLink,
+  isLinkDayOpen,
   listLinkDates,
   listLinkGroupSessions,
   listLinkSlots,
@@ -230,6 +231,41 @@ describe("link de agendamento na página pública", () => {
     const other = clinicServiceClient(otherClinic) as unknown as DbClient;
     expect(await codeOf(() => loadBookingPage(other, otherClinic, created.id, NOW))).toBe("not_found");
     expect(await codeOf(() => loadBookingPage(other, fixture.clinicId, created.id, NOW))).toBe("not_found");
+  });
+
+  it("dia pedido sem horário: agenda aberta e cheia × sem agenda aberta (S-02 do teste da R11)", async () => {
+    const full = "2031-04-07";
+    const blocked = "2031-04-14";
+    const created = await link("p1", { serviceId: fixture.ids.consulta, agendaId: fixture.ids.agendaDra2 });
+    const page = await loadBookingPage(bot, fixture.clinicId, created.id, NOW);
+    // A agenda só atende às segundas.
+    expect(await isLinkDayOpen(bot, fixture.clinicId, page, full, NOW)).toBe(true);
+    expect(await isLinkDayOpen(bot, fixture.clinicId, page, "2031-04-08", NOW)).toBe(false);
+    expect(await isLinkDayOpen(bot, fixture.clinicId, page, "2031-03-03", NOW)).toBe(false);
+
+    // Todos os horários ocupados (um atendimento na janela inteira, 08:00 às 09:00): continua aberta.
+    const { data: model, error } = await adminClient()
+      .from("appointments")
+      .select("*")
+      .eq("clinic_id", fixture.clinicId)
+      .eq("agenda_id", fixture.ids.agendaDra2)
+      .in("status", ["scheduled", "confirmed"])
+      .limit(1)
+      .single();
+    if (error) throw error;
+    const filled = await adminClient()
+      .from("appointments")
+      .insert({ ...model, id: crypto.randomUUID(), scheduled_at: at(full, "08:00").toISOString(), duration_minutes: 60 });
+    if (filled.error) throw filled.error;
+    expect(await listLinkSlots(bot, fixture.clinicId, page, full, NOW)).toEqual([]);
+    expect((await listLinkDates(bot, fixture.clinicId, page, NOW)).map((d) => d.date)).not.toContain(full);
+    expect(await isLinkDayOpen(bot, fixture.clinicId, page, full, NOW)).toBe(true);
+
+    // Bloqueado por inteiro: sem agenda aberta (cliente, 17/out/2026).
+    await createBlock(asDb(fixture.admin), fixture.clinicId, {
+      agendaId: fixture.ids.agendaDra2, startsAt: at(blocked, "00:00"), endsAt: at(blocked, "23:59"), reason: "Férias", cancelAppointmentIds: [], actorId: fixture.admin.id,
+    }, NOW);
+    expect(await isLinkDayOpen(bot, fixture.clinicId, page, blocked, NOW)).toBe(false);
   });
 });
 

@@ -3,19 +3,24 @@
 // do painel (R4, src/lib/dayStrip.ts) na cor da clínica, sem o "Outra data"
 // (o link só mostra os dias que a clínica liberou). Cada dia e cada seta é um
 // link (?date=&start=); com JavaScript, o /agendar troca os horários sem
-// recarregar a página (data-agendar-nav).
+// recarregar a página (data-agendar-nav). No celular (S-01 do teste da R11,
+// cliente, 17/out/2026) as setas ficam na linha do título e os 7 dias cabem
+// sem arrastar; no computador, as setas ficam dos lados da faixa.
 import type { DayStrip } from "../../lib/dayStrip";
 import { capitalize } from "../../lib/vocabulary";
 import { formatCalendarDate } from "../../lib/clinicTime";
 import Icon from "../admin/Icon.astro";
+import { PATIENT_STEP } from "./styles";
 
 interface Props {
   strip: DayStrip;
+  /** Título do passo ("Escolha o dia"). */
+  title: string;
   /** Endereço de um dia, com o começo da faixa. */
   href: (date: string, start: string) => string;
 }
 
-const { strip, href } = Astro.props;
+const { strip, title, href } = Astro.props;
 const start = strip.days[0] ?? "";
 const day = (date: string) => ({
   weekday: formatCalendarDate(date, "EEE").slice(0, 3),
@@ -23,35 +28,63 @@ const day = (date: string) => ({
   month: formatCalendarDate(date, "MMM").slice(0, 3),
   label: capitalize(formatCalendarDate(date, "EEEE, dd/MM")),
 });
-const arrow = "flex w-11 shrink-0 items-center justify-center rounded-[10px] border border-gray-300 bg-white text-gray-700 no-underline hover:bg-gray-50";
-const arrowOff = "flex w-11 shrink-0 items-center justify-center rounded-[10px] border border-gray-200 bg-gray-50 text-gray-300";
+const arrow = "w-11 shrink-0 items-center justify-center rounded-[10px] border border-gray-300 bg-white text-gray-700 no-underline hover:bg-gray-50";
+const arrowOff = "w-11 shrink-0 items-center justify-center rounded-[10px] border border-gray-200 bg-gray-50 text-gray-300";
 ---
 
+{/* Setas: as do celular (h-11, na linha do título) e as do computador (dos lados da faixa). */}
+<div class="flex items-center justify-between gap-3">
+  <h2 class={PATIENT_STEP}>{title}</h2>
+  <div class="flex gap-2 sm:hidden">
+    {
+      strip.prevStart ? (
+        <a href={href(strip.prevStart, strip.prevStart)} class={`flex h-11 ${arrow}`} aria-label="Dias anteriores" data-agendar-nav>
+          <Icon name="chevron-left" class="h-5 w-5" strokeWidth={2.2} />
+        </a>
+      ) : (
+        <span class={`flex h-11 ${arrowOff}`} aria-hidden="true">
+          <Icon name="chevron-left" class="h-5 w-5" strokeWidth={2.2} />
+        </span>
+      )
+    }
+    {
+      strip.nextStart ? (
+        <a href={href(strip.nextStart, strip.nextStart)} class={`flex h-11 ${arrow}`} aria-label="Próximos dias" data-agendar-nav>
+          <Icon name="chevron-right" class="h-5 w-5" strokeWidth={2.2} />
+        </a>
+      ) : (
+        <span class={`flex h-11 ${arrowOff}`} aria-hidden="true">
+          <Icon name="chevron-right" class="h-5 w-5" strokeWidth={2.2} />
+        </span>
+      )
+    }
+  </div>
+</div>
 <div class="flex items-stretch gap-1.5 sm:gap-2">
   {
     strip.prevStart ? (
-      <a href={href(strip.prevStart, strip.prevStart)} class={arrow} aria-label="Dias anteriores" data-agendar-nav>
+      <a href={href(strip.prevStart, strip.prevStart)} class={`hidden sm:flex ${arrow}`} aria-label="Dias anteriores" data-agendar-nav>
         <Icon name="chevron-left" class="h-5 w-5" strokeWidth={2.2} />
       </a>
     ) : (
-      <span class={arrowOff} aria-hidden="true">
+      <span class={`hidden sm:flex ${arrowOff}`} aria-hidden="true">
         <Icon name="chevron-left" class="h-5 w-5" strokeWidth={2.2} />
       </span>
     )
   }
-  <ul class="flex min-w-0 flex-1 gap-1.5 overflow-x-auto [scrollbar-width:none] sm:gap-2" aria-label="Dias com horário livre">
+  <ul class="flex min-w-0 flex-1 gap-1 overflow-x-auto [scrollbar-width:none] sm:gap-2" aria-label="Dias com horário livre">
     {
       strip.days.map((date) => {
         const d = day(date);
         const active = date === strip.selected;
         return (
-          <li class="flex min-w-[52px] flex-1 basis-0">
+          <li class="flex max-w-[calc((100%_-_1.5rem)/7)] min-w-0 flex-1 basis-0 sm:max-w-[calc((100%_-_3rem)/7)] sm:min-w-[52px]">
             <a
               href={href(date, start)}
               aria-current={active ? "date" : undefined}
               aria-label={d.label}
               data-agendar-nav
-              class={`flex w-full flex-col items-center gap-0.5 rounded-[10px] border px-0.5 py-2 no-underline ${
+              class={`flex w-full flex-col items-center gap-0.5 rounded-[10px] border px-0 py-2 no-underline sm:px-0.5 ${
                 active ? "border-clinic bg-clinic text-clinic-text" : "border-gray-300 bg-white text-gray-900 hover:border-clinic-ink"
               }`}
             >
@@ -66,11 +99,11 @@ const arrowOff = "flex w-11 shrink-0 items-center justify-center rounded-[10px] 
   </ul>
   {
     strip.nextStart ? (
-      <a href={href(strip.nextStart, strip.nextStart)} class={arrow} aria-label="Próximos dias" data-agendar-nav>
+      <a href={href(strip.nextStart, strip.nextStart)} class={`hidden sm:flex ${arrow}`} aria-label="Próximos dias" data-agendar-nav>
         <Icon name="chevron-right" class="h-5 w-5" strokeWidth={2.2} />
       </a>
     ) : (
-      <span class={arrowOff} aria-hidden="true">
+      <span class={`hidden sm:flex ${arrowOff}`} aria-hidden="true">
         <Icon name="chevron-right" class="h-5 w-5" strokeWidth={2.2} />
       </span>
     )

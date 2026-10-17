@@ -23,7 +23,7 @@ import { slotValue } from "../../../lib/agendaSlot";
 import { formatCalendarDate, formatInstant, isCalendarDate, todayIn } from "../../../lib/clinicTime";
 import { buildDayStrip } from "../../../lib/dayStrip";
 import { createUserClient } from "../../../lib/data/clients";
-import { getFreeSlots, getGroupSessions, getNextAvailableDates } from "../../../lib/data/agenda/slots";
+import { getFreeSlots, getGroupSessions, getNextAvailableDates, isAgendaOpenOn } from "../../../lib/data/agenda/slots";
 import { getAgendaAppointment } from "../../../lib/data/agenda/view";
 import { listLocations } from "../../../lib/data/config/locations";
 import { listServices } from "../../../lib/data/config/services";
@@ -82,6 +82,8 @@ if (isGroup) {
       }));
   }
 }
+// Dia pedido sem horário (S-02 do teste da R11, cliente, 17/out/2026): sem agenda aberta ou aberta e cheia.
+const unavailableOpen = strip.unavailable ? await isAgendaOpenOn(db, clinic.clinicId, { ...query, date: strip.unavailable }) : false;
 const link = (d: string, start: string) => `/admin/agenda/remarcar?id=${appointment.id}&date=${d}&de=${start}&return_to=${encodeURIComponent(returnTo)}`;
 const current = capitalize(formatInstant(appointment.scheduledAt, clinic.timezone, "EEEE, dd/MM 'às' HH:mm"));
 const confirmMessage = `${appointment.patientName} vai para o horário escolhido. O lembrete e a presença confirmada recomeçam.${appointment.seriesId ? " Na opção 'esta e as próximas', a série inteira muda dali em diante." : ""} O paciente é avisado pelo WhatsApp.`;
@@ -124,7 +126,7 @@ const option =
             <p class="flex items-start gap-2 rounded-[10px] border border-pend-200 bg-pend-100 px-3 py-2.5 text-[15px] leading-snug text-pend-800" role="status">
               <Icon name="warning" class="mt-0.5 h-[18px] w-[18px] shrink-0" />
               <span>
-                <strong class="font-semibold">{dayLabel(strip.unavailable)} não tem horário livre.</strong>{" "}
+                <strong class="font-semibold">{unavailableOpen ? `${dayLabel(strip.unavailable)} não tem mais horário livre.` : "Não existe agenda aberta para esse dia."}</strong>{" "}
                 {strip.selected
                   ? `Mostrando a partir de ${formatCalendarDate(strip.selected, "EEEE, dd/MM")}, o primeiro dia livre depois dele.`
                   : "Não há dia livre depois dele no período em que a clínica oferece horários."}

@@ -33,6 +33,7 @@ import {
   getGroupSessions,
   getNextAvailableDates,
   getNextAvailableDatesAnyAgenda,
+  isAgendaOpenOn,
 } from "../../../lib/data/agenda/slots";
 import { findReturnOrigin, returnWarnings } from "../../../lib/data/agenda/appointments";
 import { listAgendas } from "../../../lib/data/config/agendas";
@@ -146,9 +147,17 @@ if (patient && service && searchAgendas.length) {
     }
   }
 }
+// Dia pedido sem horário (S-02 do teste da R11, cliente, 17/out/2026): sem
+// agenda aberta (não atende, feriado, bloqueado por inteiro) ou aberta e cheia.
+const unavailableOpen =
+  service && strip.unavailable
+    ? (await Promise.all(searchAgendas.map((agendaId) => isAgendaOpenOn(db, clinic.clinicId, { serviceId: service.id, agendaId, date: strip.unavailable! })))).some(Boolean)
+    : false;
 const unavailableNote =
   service && strip.unavailable
-    ? `${dayLabel(strip.unavailable)} não tem horário livre${agendaChoice !== ANY && serviceAgendaIds.length > 1 ? ` com ${agendaName.get(agendaChoice)}` : ""} para ${service.name}.`
+    ? unavailableOpen
+      ? `${dayLabel(strip.unavailable)} não tem mais horário livre${agendaChoice !== ANY && serviceAgendaIds.length > 1 ? ` com ${agendaName.get(agendaChoice)}` : ""} para ${service.name}.`
+      : "Não existe agenda aberta para esse dia."
     : null;
 
 // Retorno (Fase 17; cliente, 05/out/2026): a consulta de origem é a última já

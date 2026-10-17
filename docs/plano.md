@@ -2289,6 +2289,10 @@ por inteiro, este último decidido pelo cliente): "Não existe agenda aberta par
 horas que já passaram) e `isLinkDayOpen` (`publicBooking.ts`, qualquer profissional ou local do link). Também no
 Marcar e no Remarcar do painel (cliente, 17/out): a primeira frase do aviso segue a mesma regra e o "Mostrando a partir
 de …" continua.
+**Teste de interface da S-01 e da S-02 (17/out),** [relatório](auditoria-frontend/redesign-r11-s01-s02-report.md); decisões do
+cliente: no `/agendar`, dia pedido depois do último dia livre mostra o aviso e a faixa a partir do primeiro dia livre
+(S02-08); cada dia da faixa com no máximo 1/7 da largura, alinhado à esquerda (dia sozinho não estica); abaixo de 380px o
+papel sai do cabeçalho do painel (QA-01).
 
 ## Depois do 1º piloto (já previsto no banco)
 
