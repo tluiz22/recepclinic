@@ -2067,6 +2067,13 @@ telefone com o WhatsApp (`listContactsToReview` traz o `phone`; teste de banco a
 Início leva o `volta`. No celular, o período quebra a linha e os filtros abrem recolhidos (abertos
 com o período personalizado ou uma busca; sem JavaScript, abertos). Faltosos e Retomar contato com
 linhas não foram vistos com dados (o seed não tem faltosos nem conversas interrompidas).
+**Teste de interface da R7 (16/out, a pedido do cliente)**: [relatório](auditoria-frontend/redesign-r7-report.md),
+sem gravar dados. 30 cenários: 22 passaram, 4 falharam (3 defeitos) e 4 ficaram bloqueados (Faltosos e
+Retomar contato sem dados no seed, o envio do "Revisado" e os itens desligados na matriz). Defeitos:
+no Personalizado inválido, De e Até voltam para hoje e o digitado se perde (FORM-01/02, Média, já
+existia); a mensagem do período inválido é genérica e solta dos campos (QA-04, Baixa); a caixa da
+tabela entra no Tab sem precisar rolar (QA-06, Baixa). Suspeita: abas e período com menos de 44px de
+toque no celular (componentes já aprovados).
 
 ## Depois do 1º piloto (já previsto no banco)
 
