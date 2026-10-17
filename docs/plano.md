@@ -2128,6 +2128,33 @@ função pelo `contact_id`). Migração aplicada no staging e registrada no hist
 ano passado, o da entrega até fevereiro. A decidir: "Voltar" nas abas de Configurações abertas de
 outra tela (S-01 do relatório da R8).
 
+**R9 (Configurações), proposta aprovada pelo cliente em 17/out/2026** (página "9 · Configurações" do
+canvas). Decisões, uma a uma:
+1. **Menu lateral agrupado** no lugar das 13 pílulas: A clínica (Clínica, Equipe), Atendimento
+   (Profissionais, Locais, Agendas, Serviços, Horários, Feriados, Convênios), Mensagens (Lembretes,
+   Mensagens, WhatsApp só do Suporte, com o selo "Suporte") e Financeiro (Nota fiscal). No celular, o
+   botão "Seção: <nome>" abre a mesma lista (sem JavaScript). Os formulários também mostram o menu.
+2. **Título da seção** (U-06): o título grande é o nome da seção ("Serviços"), com "Configurações"
+   pequeno acima e uma linha de apoio; a ação principal ("Novo serviço") à direita do título.
+3. **Clínica em 5 blocos com salvar por bloco** (U-11, decisão à parte do cliente): Identificação,
+   Atendimento, Páginas públicas, Informações que o bot responde e Limites do bot por contato, cada
+   um em modo leitura com "Editar" e o seu "Salvar" (`EditCard`, R6). Um erro num bloco não mexe nos
+   outros. Os campos e as regras são os de hoje; a gravação da Clínica passa a aceitar um bloco por vez.
+4. **Guia com progresso:** na Clínica, "4 de 6 passos prontos", barra e os 6 passos com link; nas
+   outras seções sai a faixa "A configuração tem n pendências" e o número de pendências aparece ao
+   lado do item no menu.
+5. **Listas em linhas** (Profissionais, Locais, Agendas, Serviços, Convênios e Equipe), como em
+   Pacientes; "Mostrar desativados" vira "Ativos | Todos"; os selos do guia continuam na linha; no
+   celular, cartões.
+6. **Formulários em blocos:** título com o nome do cadastro e "‹ <lista>" acima; blocos com título;
+   "Salvar" e "Cancelar" no fim; desativar numa área separada, com confirmação.
+7. **"Voltar" para a origem** (S-01 da R8, decisão à parte do cliente): uma seção aberta de outra
+   tela (DMED, aviso do Início, Pagamento) mostra "‹ Voltar para <tela>" acima do título, também
+   depois de salvar (a DMED volta no mesmo ano). Aberta pelo menu, não aparece.
+Sem mudança de regra: quem vê Configurações (Administrador e Suporte), o WhatsApp só do Suporte,
+Convênios e Nota fiscal só com o item liberado, o limite de profissionais, os campos, as validações,
+os passos do guia e o que cada seção grava.
+
 ## Depois do 1º piloto (já previsto no banco)
 
 - **Convênios (D10):** telas de planos atendidos e exceções por profissional; plano no cadastro do
