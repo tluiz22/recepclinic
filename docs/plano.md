@@ -2235,6 +2235,16 @@ depois de salvar e do erro); o "n de m" dos grupos com o espaço; a Matriz que v
 limite (anterior à R10). **Decisão do cliente (17/out, S-01):** "Abrir a clínica para configurar" entra na clínica e
 abre **Configurações** (campo `destino=configuracoes`, único destino aceito; "Abrir" da lista e Escolher a clínica
 continuam no Início).
+**R10 publicada no staging e validada pelo cliente em 17/out** (ajustes dos testes dele entram depois).
+
+**R11 (páginas do paciente), proposta no canvas em 17/out/2026** (página "11 · Páginas do paciente"), a aprovar
+uma decisão por vez: 1. marca da clínica (cor no topo, no botão e no escolhido) com a letra do painel; 2. dia em faixa
+com setas e horários por turno no `/agendar`, como no Marcar, e a turma em cartões com as vagas; 3. barra fixa no
+celular com o escolhido e o "Confirmar" (no computador, o resumo ao lado); 4. confirmação em linhas e o "Ver o preparo
+do exame" como botão; 5. os 4 avisos do link num padrão, com a novidade a decidir do botão "Falar com a clínica no
+WhatsApp"; 6. preparo e orientações em letra maior; 7. o `/formulario` da clínica com a marca RecepClinic, em blocos
+numerados e com a barra fixa; 8. a cor padrão da clínica sem cor (hoje azul `#0369A1`; proposta: `#0B7A62`) e a 404
+sem o azul.
 
 ## Depois do 1º piloto (já previsto no banco)
 
