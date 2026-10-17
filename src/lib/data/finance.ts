@@ -176,9 +176,9 @@ export type FinancePatientRow = PatientWithContact & { finance: PatientFinance; 
 export async function listFinancePatientsPage(
   db: DbClient,
   clinicId: string,
-  options: { query?: string; page?: number } = {},
+  options: { query?: string; page?: number; missingCpf?: boolean } = {},
 ): Promise<Page<FinancePatientRow>> {
-  const page = await listPatientsPage(db, clinicId, options);
+  const page = await listPatientsPage(db, clinicId, { query: options.query, page: options.page, missingPayerCpf: options.missingCpf });
   const patientIds = page.items.map((p) => p.id);
   const contactIds = [...new Set(page.items.map((p) => p.contactId))];
   const [financeRows, contactRows] = patientIds.length
@@ -196,4 +196,14 @@ export async function listFinancePatientsPage(
       return { ...patient, finance: data, responsible: resolvePayer(patient, patient.contact, data, contactCpf.get(patient.contactId) ?? null) };
     }),
   };
+}
+
+/** Quantos pacientes ativos ainda não têm o CPF de quem paga (filtro "Falta CPF", R8). */
+export async function countPatientsMissingPayerCpf(db: DbClient, clinicId: string): Promise<number> {
+  const { error, count } = await db
+    .rpc("finance_patients_missing_payer_cpf", { p_clinic_id: clinicId }, { count: "exact", head: true })
+    .eq("clinic_id", clinicId)
+    .eq("is_active", true);
+  unwrap({ data: null, error }, "Dados financeiros");
+  return count ?? 0;
 }

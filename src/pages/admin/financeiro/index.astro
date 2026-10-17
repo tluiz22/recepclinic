@@ -1,18 +1,25 @@
 ---
-// Financeiro (F11.1, Módulo financeiro): por ora, os pacientes ativos com o
+// Financeiro › Quem paga (F11.1, Módulo financeiro): os pacientes ativos com o
 // responsável financeiro de cada um e se o CPF dele já está cadastrado (sem
-// ele, a nota fiscal não sai). Busca e páginas como em Pacientes. Pagamentos,
-// notas e DMED entram nas próximas subetapas. Só o Administrador e a Recepção,
-// com o item liberado (o Suporte vê).
+// ele, a nota fiscal não sai). Busca e páginas como em Pacientes. Só o
+// Administrador e a Recepção, com o item liberado (o Suporte vê).
+//
+// Redesign R8 (proposta aprovada pelo cliente em 17/out/2026): abas "Quem
+// paga" e "DMED"; no computador, uma linha por paciente (quem paga com o tipo
+// e o CPF mascarado com o selo); no celular, cartões. Filtro "Falta CPF" (a
+// única novidade da etapa, decisão do cliente), junto com a busca.
 import { currentPath, withReturn } from "../../../lib/returnPath";
 import AdminLayout from "../../../layouts/AdminLayout.astro";
-import Badge from "../../../components/admin/Badge.astro";
-import Card from "../../../components/admin/Card.astro";
 import FlashMessage from "../../../components/admin/FlashMessage.astro";
-import { INPUT, SECONDARY_BUTTON } from "../../../components/admin/fieldStyles";
+import Icon from "../../../components/admin/Icon.astro";
+import FinanceHeader from "../../../components/admin/financeiro/FinanceHeader.astro";
+import Button from "../../../components/admin/ui/Button.astro";
+import Pill from "../../../components/admin/ui/Pill.astro";
+import Tag from "../../../components/admin/ui/Tag.astro";
+import { buttonClass } from "../../../components/admin/ui/styles";
 import { maskCpf } from "../../../lib/cpf";
 import { createUserClient } from "../../../lib/data/clients";
-import { listFinancePatientsPage } from "../../../lib/data/finance";
+import { countPatientsMissingPayerCpf, listFinancePatientsPage } from "../../../lib/data/finance";
 import { capitalize, vocabularyFor } from "../../../lib/vocabulary";
 
 const clinic = Astro.locals.clinic!;
@@ -20,77 +27,156 @@ const db = createUserClient(Astro.request, Astro.cookies);
 const vocabulary = vocabularyFor(clinic.clinicProfile);
 const params = Astro.url.searchParams;
 const q = (params.get("q") ?? "").trim();
+const missingCpf = params.get("falta") === "1";
 const page = Number(params.get("pagina")) || 1;
-const result = await listFinancePatientsPage(db, clinic.clinicId, { query: q, page });
+const [result, missingCount] = await Promise.all([
+  listFinancePatientsPage(db, clinic.clinicId, { query: q, page, missingCpf }),
+  countPatientsMissingPayerCpf(db, clinic.clinicId),
+]);
 const here = currentPath(Astro.url);
 
 const link = (changes: Record<string, string>) => {
-  const next = new URLSearchParams({ ...(q ? { q } : {}), ...changes });
+  const next = new URLSearchParams({ ...(q ? { q } : {}), ...(missingCpf ? { falta: "1" } : {}), ...changes });
   for (const [key, value] of [...next]) if (!value) next.delete(key);
-  return `/admin/financeiro?${next}`;
+  const query = next.toString();
+  return query ? `/admin/financeiro?${query}` : "/admin/financeiro";
 };
 const PAYER_LABEL = { contact: capitalize(vocabulary.contact), patient: "Próprio cadastro", other: "Outra pessoa" } as const;
+const payerLabel = (p: (typeof result.items)[number]) => (p.isContactSelf && p.responsible.payer === "contact" ? "Próprio cadastro" : PAYER_LABEL[p.responsible.payer]);
+const found = `${result.total} ${missingCpf ? "sem o CPF de quem paga" : result.total === 1 ? "encontrado" : "encontrados"}${q ? ` para "${q}"` : ""}`;
+const card = "rounded-xl border border-line bg-white";
+const cols = "lg:grid-cols-[minmax(0,2fr)_minmax(0,2.2fr)_180px_36px]";
+const name = "text-[16.5px] leading-snug font-bold text-ink no-underline hover:underline";
+const pageLink = buttonClass("secondary", "sm");
+const segItem = "flex h-[38px] items-center justify-center gap-1.5 rounded-lg px-3.5 no-underline sm:h-[34px]";
+const segOn = `${segItem} bg-white font-bold text-ink shadow-[0_1px_2px_rgba(18,48,42,.12)]`;
+const segOff = `${segItem} font-semibold text-ink-soft hover:bg-white/60 hover:text-ink`;
 ---
 
 <AdminLayout title="Financeiro">
-  <h1 class="text-2xl font-bold text-slate-900">Financeiro</h1>
-  <p class="mt-2 text-slate-600">
-    Quem paga por cada {vocabulary.patient} e em nome de quem sai a nota fiscal. Para mudar, abra o cadastro e use o cartão "Financeiro".
-  </p>
+  <FinanceHeader active="quem-paga" />
   <FlashMessage />
+
+  <div class={`${card} mt-4 flex flex-wrap items-end gap-x-4 gap-y-3 p-3.5 sm:px-4`}>
+    <form method="GET" role="search" class="flex min-w-0 flex-[1_1_420px] flex-wrap items-end gap-x-3 gap-y-2">
+      {missingCpf && <input type="hidden" name="falta" value="1" />}
+      <div class="flex min-w-0 flex-[1_1_200px] flex-col gap-1.5 sm:max-w-[440px]">
+        <label for="busca-financeiro" class="text-[14.5px] font-semibold text-ink">Buscar por nome ou telefone</label>
+        <div class="flex h-11 items-center gap-2 rounded-lg border border-line-strong bg-white px-3 focus-within:border-brand focus-within:ring-1 focus-within:ring-brand">
+          <Icon name="magnifying-glass" class="h-[18px] w-[18px] shrink-0 text-ink-soft" strokeWidth={2} />
+          <input id="busca-financeiro" name="q" value={q} type="search" class="min-w-0 flex-1 border-0 bg-transparent p-0 text-base text-ink outline-none focus:ring-0" />
+        </div>
+      </div>
+      <Button type="submit" class="h-11 sm:h-11">Buscar</Button>
+      {q && <a href={link({ q: "" })} class="inline-flex h-11 items-center px-1 text-[15px] font-semibold text-brand no-underline hover:underline">Limpar</a>}
+    </form>
+    <div class="flex flex-col gap-1.5 max-sm:w-full sm:ml-auto">
+      <span id="mostrar-financeiro" class="text-[14.5px] font-semibold text-ink">Mostrar</span>
+      <nav aria-labelledby="mostrar-financeiro" class="grid auto-cols-fr grid-flow-col gap-0.5 rounded-[10px] bg-canvas-deep p-[3px] sm:inline-grid">
+        <a href={link({ falta: "", pagina: "" })} aria-current={missingCpf ? undefined : "page"} class={missingCpf ? segOff : segOn}>Todos</a>
+        <a href={link({ falta: "1", pagina: "" })} aria-current={missingCpf ? "page" : undefined} class={missingCpf ? segOn : segOff}>
+          <Icon name="warning" class="h-3.5 w-3.5 shrink-0" strokeWidth={2.2} />
+          Falta CPF
+          {missingCount > 0 && <span class="inline-flex h-[22px] min-w-[22px] items-center justify-center rounded-full bg-pend-100 px-[7px] text-[12.5px] font-bold text-pend-800 tabular-nums">{missingCount}</span>}
+        </a>
+      </nav>
+    </div>
+  </div>
+
+  <p class="mt-3 text-sm text-ink-soft" role="status">{found}</p>
+
   {
-    clinic.roles.includes("admin") && (
-      <a href="/admin/financeiro/dmed" class={`${SECONDARY_BUTTON} mt-4 inline-block`}>
-        DMED do ano (arquivo para o contador)
-      </a>
+    result.items.length > 0 && (
+      <section aria-label={`Quem paga por cada ${vocabulary.patient}`} class={`${card} mt-2 overflow-hidden`}>
+        <div aria-hidden="true" class={`hidden gap-4 px-5 py-3 text-[12.5px] font-semibold tracking-[.05em] text-ink-soft uppercase lg:grid ${cols}`}>
+          <span>{capitalize(vocabulary.patient)}</span>
+          <span>Quem paga (nota e DMED)</span>
+          <span>CPF de quem paga</span>
+          <span />
+        </div>
+        <ul>
+          {result.items.map((p) => {
+            const href = `${withReturn(`/admin/pacientes/${p.id}`, here)}#financeiro`;
+            return (
+              <li class={`grid grid-cols-[minmax(0,1fr)_auto] gap-x-3 gap-y-1.5 border-t border-line px-3.5 py-3.5 first:border-t-0 lg:items-center lg:gap-4 lg:px-5 lg:first:border-t ${cols}`}>
+                <a href={href} class={`${name} min-w-0 self-center`}>
+                  {p.fullName}
+                </a>
+                <a href={href} aria-label={`Abrir a ficha de ${p.fullName}`} class="flex h-9 w-9 items-center justify-center rounded-lg text-ink-soft hover:bg-canvas hover:text-ink lg:order-4">
+                  <Icon name="chevron-right" class="h-5 w-5" strokeWidth={2.2} />
+                </a>
+                <div class="col-span-2 flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 lg:col-span-1 lg:flex-col lg:items-start">
+                  <span class="text-[15px] text-ink">
+                    <span class="lg:hidden">Paga: </span>
+                    <span class="font-semibold">{p.responsible.name || "Outra pessoa"}</span>
+                  </span>
+                  <Tag>{payerLabel(p)}</Tag>
+                </div>
+                <span class="col-span-2 lg:col-span-1">
+                  {p.responsible.cpf ? (
+                    <Pill tone="success" icon="check">
+                      <span class="sr-only">CPF cadastrado: </span>
+                      <span class="tabular-nums">{maskCpf(p.responsible.cpf)}</span>
+                    </Pill>
+                  ) : (
+                    <Pill tone="warning" icon="warning">
+                      Falta CPF
+                    </Pill>
+                  )}
+                </span>
+              </li>
+            );
+          })}
+        </ul>
+      </section>
     )
   }
 
-  <form method="GET" class="mt-4 flex flex-wrap items-center gap-2">
-    <input name="q" value={q} aria-label="Buscar por nome ou telefone" placeholder="Nome ou telefone" class={`${INPUT} mt-0 sm:w-80`} />
-    <button type="submit" class={SECONDARY_BUTTON}>Buscar</button>
-    {q && <a href={link({ q: "" })} class="text-sm text-sky-700 hover:underline">Limpar</a>}
-  </form>
-
-  <p class="mt-3 text-sm text-slate-500">{result.total} {result.total === 1 ? "encontrado" : "encontrados"}</p>
-  <ul class="mt-2 grid gap-3 sm:grid-cols-2">
-    {
-      result.items.map((p) => (
-        <li>
-          <a href={withReturn(`/admin/pacientes/${p.id}`, here)}>
-            <Card class="h-full hover:border-sky-300 hover:bg-sky-50">
-              <p class="flex flex-wrap items-center gap-2 font-medium text-slate-900">
-                {p.fullName}
-                {p.responsible.cpf ? <Badge variant="success">CPF ok</Badge> : <Badge variant="warning">falta CPF</Badge>}
-              </p>
-              <p class="mt-0.5 text-sm text-slate-600">
-                Responsável financeiro: {p.responsible.name}
-                {p.responsible.cpf ? ` · ${maskCpf(p.responsible.cpf)}` : ""}
-              </p>
-              <p class="text-sm text-slate-500">{p.isContactSelf && p.responsible.payer === "contact" ? "Próprio cadastro" : PAYER_LABEL[p.responsible.payer]}</p>
-            </Card>
-          </a>
-        </li>
-      ))
-    }
-  </ul>
-  {result.total === 0 && <p class="mt-2 text-sm text-slate-600">{q ? "Ninguém encontrado." : "Ninguém cadastrado ainda."}</p>}
+  {
+    result.total === 0 && (
+      <section class={`${card} mt-2 flex flex-col items-center gap-2.5 px-6 py-7 text-center`}>
+        {q ? (
+          <>
+            <p class="text-[17px] font-bold text-ink">Ninguém encontrado para "{q}"</p>
+            <p class="text-sm text-ink-soft">Confira a grafia ou busque pelos 4 últimos dígitos do telefone.</p>
+            <Button href={link({ q: "" })}>Limpar a busca</Button>
+          </>
+        ) : missingCpf ? (
+          <>
+            <p class="text-[17px] font-bold text-ink">Ninguém sem o CPF de quem paga</p>
+            <p class="text-sm text-ink-soft">A nota fiscal já pode sair para todos.</p>
+            <Button href={link({ falta: "" })}>Mostrar todos</Button>
+          </>
+        ) : (
+          <p class="text-[17px] font-bold text-ink">Ninguém cadastrado ainda</p>
+        )}
+      </section>
+    )
+  }
 
   {
     result.pageCount > 1 && (
-      <nav class="mt-4 flex items-center gap-3 text-sm">
-        {result.page > 1 && (
-          <a href={link({ pagina: String(result.page - 1) })} class="text-sky-700 hover:underline">
-            Anterior
+      <nav aria-label="Páginas" class="mt-4 flex items-center justify-center gap-3">
+        {result.page > 1 ? (
+          <a href={link({ pagina: String(result.page - 1) })} class={pageLink}>
+            ‹ Anterior
           </a>
+        ) : (
+          <span class={`${pageLink} opacity-50`} aria-hidden="true">
+            ‹ Anterior
+          </span>
         )}
-        <span class="text-slate-500">
+        <span class="text-sm text-ink-soft">
           Página {result.page} de {result.pageCount}
         </span>
-        {result.page < result.pageCount && (
-          <a href={link({ pagina: String(result.page + 1) })} class="text-sky-700 hover:underline">
-            Próxima
+        {result.page < result.pageCount ? (
+          <a href={link({ pagina: String(result.page + 1) })} class={pageLink}>
+            Próxima ›
           </a>
+        ) : (
+          <span class={`${pageLink} opacity-50`} aria-hidden="true">
+            Próxima ›
+          </span>
         )}
       </nav>
     )

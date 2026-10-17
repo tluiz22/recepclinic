@@ -17,10 +17,12 @@ interface Props {
   summary?: string;
   /** Sem permissão para gravar: só os dados, sem "Editar". */
   editable?: boolean;
+  /** O formulário já vem aberto (ex.: nada salvo ainda, R8 na DMED). */
+  editOpen?: boolean;
   class?: string;
 }
 
-const { id, title, summary, editable = true, class: className = "" } = Astro.props;
+const { id, title, summary, editable = true, editOpen = false, class: className = "" } = Astro.props;
 const hasEdit = editable && Astro.slots.has("edit");
 ---
 
@@ -43,7 +45,7 @@ const hasEdit = editable && Astro.slots.has("edit");
   </div>
   {
     hasEdit && (
-      <details data-edit class="px-3.5 pb-3.5 lg:p-0">
+      <details data-edit open={editOpen} class="px-3.5 pb-3.5 lg:p-0">
         <summary
           class={`${buttonClass("secondary", "sm")} cursor-pointer list-none lg:absolute lg:top-4 lg:right-5 [&::-webkit-details-marker]:hidden`}
           aria-label={`Editar: ${title}`}

@@ -295,16 +295,29 @@ const pageRange = (page: number) => {
 export async function listPatientsPage(
   db: DbClient,
   clinicId: string,
-  { query = "", includeInactive = false, page = 1 }: { query?: string; includeInactive?: boolean; page?: number } = {},
+  {
+    query = "",
+    includeInactive = false,
+    page = 1,
+    missingPayerCpf = false,
+  }: {
+    query?: string;
+    includeInactive?: boolean;
+    page?: number;
+    /** Só quem ainda não tem o CPF de quem paga (Financeiro, R8; precisa do item "finance"). */
+    missingPayerCpf?: boolean;
+  } = {},
 ): Promise<Page<PatientWithContact>> {
   const q = query.trim();
   const digits = q.replace(/\D/g, "");
   const byPhone = digits.length >= 4;
   const { current, from, to } = pageRange(page);
-  let request = db
-    .from("patients")
-    .select(`${PATIENT_COLUMNS}, contacts!inner ( ${CONTACT_COLUMNS} )`, { count: "exact" })
-    .eq("clinic_id", clinicId);
+  const columns = `${PATIENT_COLUMNS}, contacts!inner ( ${CONTACT_COLUMNS} )`;
+  let request = (
+    missingPayerCpf
+      ? db.rpc("finance_patients_missing_payer_cpf", { p_clinic_id: clinicId }, { count: "exact" }).select(columns)
+      : db.from("patients").select(columns, { count: "exact" })
+  ).eq("clinic_id", clinicId);
   if (!includeInactive) request = request.eq("is_active", true);
   if (q) request = byPhone ? request.ilike("contacts.phone", `%${digits}%`) : request.ilike("full_name", `%${escapeLike(q)}%`);
   const { data, error, count } = await request.order("full_name").range(from, to);

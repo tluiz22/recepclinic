@@ -1,0 +1,35 @@
+---
+// Cabeçalho do Financeiro (R8; cliente, 17/out/2026): título, a linha de
+// apoio e as abas "Quem paga" e "DMED". A DMED é só do Administrador da
+// clínica (o Suporte vê); para quem tem uma aba só (a Recepção), a barra de
+// abas não aparece.
+import PageHeader from "../ui/PageHeader.astro";
+import Tabs from "../ui/Tabs.astro";
+import { vocabularyFor } from "../../../lib/vocabulary";
+
+interface Props {
+  active: "quem-paga" | "dmed";
+}
+
+const { active } = Astro.props;
+const clinic = Astro.locals.clinic!;
+const vocabulary = vocabularyFor(clinic.clinicProfile);
+const seesDmed = clinic.roles.includes("admin") || clinic.isPlatformStaff;
+---
+
+<PageHeader title="Financeiro" />
+<p class="mt-1.5 max-w-3xl text-[15px] text-ink-soft">
+  Quem paga por cada {vocabulary.patient} e em nome de quem sai a nota fiscal. Para mudar, abra a ficha e use o cartão "Financeiro".
+</p>
+{
+  seesDmed && (
+    <Tabs
+      label="Abas do Financeiro"
+      class="mt-4"
+      tabs={[
+        { label: "Quem paga", href: "/admin/financeiro", active: active === "quem-paga" },
+        { label: "DMED", href: "/admin/financeiro/dmed", active: active === "dmed" },
+      ]}
+    />
+  )
+}

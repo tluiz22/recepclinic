@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { getContactCpf, getPatientFinance, saveContactCpf, savePatientFinance } from "../../src/lib/data/finance";
+import { countPatientsMissingPayerCpf, getContactCpf, getPatientFinance, listFinancePatientsPage, saveContactCpf, savePatientFinance } from "../../src/lib/data/finance";
 import { anonymizePatient, getPatient, registerPatient } from "../../src/lib/data/patients";
 import { addMember, adminClient, clinicServiceClient, createClinic, createUser, deleteClinics, deleteUsers, makePlatformStaff, type TestUser } from "./helpers";
 import { asDb, codeOf, setupAgendaClinic, type AgendaFixture } from "./agendaFixture";
@@ -97,6 +97,28 @@ describe("Módulo financeiro (F11.1)", () => {
     );
     if (result.status !== "created") throw new Error(result.status);
     expect(await codeOf(() => saveContactCpf(asDb(offAdmin), offClinic, result.patient.contactId, CPF_A))).toBe("not_enabled");
+  });
+
+  it('filtro "Falta CPF" (R8): só quem não tem o CPF de quem paga, com busca e contagem', async () => {
+    const db = asDb(fixture.reception);
+    const missing = async (query = "") => (await listFinancePatientsPage(db, clinicId, { missingCpf: true, query })).items.map((p) => p.id).sort();
+    const { p2, p3 } = fixture.ids;
+    // p1 paga por "outra pessoa" (com CPF); p2 e p3 pelo contato, sem CPF.
+    expect(await missing()).toEqual([p2, p3].sort());
+    expect(await countPatientsMissingPayerCpf(db, clinicId)).toBe(2);
+    expect(await missing("Dois")).toEqual([p2]);
+    // O próprio paciente paga: vale o CPF dele.
+    const patient2 = await getPatient(db, clinicId, p2);
+    await savePatientFinance(db, clinicId, patient2, { payer: "patient" });
+    expect(await missing()).toContain(p2);
+    await savePatientFinance(db, clinicId, patient2, { payer: "patient", cpf: CPF_B });
+    expect(await missing()).toEqual([p3]);
+    // O contato paga: vale o CPF do contato.
+    await saveContactCpf(db, clinicId, (await getPatient(db, clinicId, p3)).contactId, CPF_A);
+    expect(await missing()).toEqual([]);
+    expect(await countPatientsMissingPayerCpf(db, clinicId)).toBe(0);
+    // Outra clínica não vê os pacientes desta.
+    expect((await listFinancePatientsPage(asDb(outsider), clinicId, { missingCpf: true })).total).toBe(0);
   });
 
   it("anonimizar o paciente apaga os dados financeiros dele e do contato", async () => {

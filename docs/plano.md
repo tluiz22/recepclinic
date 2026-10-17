@@ -2093,6 +2093,36 @@ mais rolam de lado); no cartão do paciente da turma, o nome não quebra (o selo
 direita), como no cartão aprovado; na Semana, o selo da situação fica menor e não sai do atendimento.
 Conferido em 1440px, 1280px e 390px, validado pelo cliente e publicado no staging em 17/out.
 
+**R8 (Financeiro e DMED), proposta aprovada pelo cliente em 17/out/2026** (página "8 · Financeiro e
+DMED" do canvas). Decisões, uma a uma:
+1. **DMED como aba do Financeiro:** abas sublinhadas "Quem paga" e "DMED" (sai o botão "DMED do
+   ano"). A Recepção vê só "Quem paga", sem a barra de abas; o Administrador e o Suporte veem as duas.
+2. **Quem paga em linhas** no computador (paciente, quem paga com o tipo: Responsável, Próprio
+   cadastro ou Outra pessoa, e o CPF mascarado com o selo verde ou "Falta CPF" em âmbar); no
+   celular, cartões. Busca com rótulo, como em Pacientes.
+3. **Filtro "Todos | Falta CPF (n)"** ao lado da busca (decisão à parte do cliente: é a única
+   novidade da etapa). Vale junto com a busca e fica no endereço.
+4. **DMED:** o ano em botões (os mesmos 6 anos), o declarante embaixo do título e 4 indicadores
+   (Quem pagou, Beneficiários, Total e Ficam de fora, com o sinal âmbar e "Ver ›" quando há algum).
+5. **"Antes de baixar":** lista de conferência ao lado do botão (dados fiscais, responsáveis, ano
+   encerrado, ficam de fora), cada item com ícone e o link de resolver; o botão só habilita sem
+   pendência que impeça (o ano em curso e os que ficam de fora só avisam). No celular, o botão na
+   barra fixa.
+6. **Responsáveis da declaração** em modo leitura com "Editar" (`EditCard`, R6); sem nada salvo, o
+   formulário já vem aberto. "Ficam de fora" e "Quem pagou" em tabelas, com o total em negrito.
+Sem mudança de regra: quem vê cada aba, quem baixa o arquivo (só o Administrador), o arquivo, quem
+entra e quem fica de fora, os anos, a busca, os 20 por página e o "Voltar".
+**Implementada em 17/out** e testada no navegador local (computador e celular): cabeçalho com as abas em
+`src/components/admin/financeiro/FinanceHeader.astro`; a DMED continua em `/admin/financeiro/dmed` (agora
+a aba); `EditCard` ganhou `editOpen` (formulário aberto quando nada foi salvo). O filtro "Falta CPF" usa a
+função `public.finance_patients_missing_payer_cpf` (migração `20261017120000_falta_cpf.sql`, só leitura,
+com as permissões de quem chama; mesma regra de `resolvePayer`), pela opção `missingPayerCpf` de
+`listPatientsPage`, e a contagem `countPatientsMissingPayerCpf`; teste de banco em
+`modulo-financeiro.test.ts`. O nome na lista leva à ficha já no cartão Financeiro (`#financeiro`). O
+estado "Ficam de fora" foi conferido tirando por alguns segundos o CPF de um pagamento no banco local
+(devolvido em seguida). **Migração ainda não aplicada no staging** (vai com `supabase db push` antes do
+push do código).
+
 ## Depois do 1º piloto (já previsto no banco)
 
 - **Convênios (D10):** telas de planos atendidos e exceções por profissional; plano no cadastro do
