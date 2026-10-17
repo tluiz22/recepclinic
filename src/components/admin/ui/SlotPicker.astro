@@ -13,6 +13,10 @@ export interface SlotOption {
   detail: string;
   /** Texto do resumo: "Sexta, 23/10 às 10:30". */
   summary: string;
+  /** Texto da confirmação: "terça-feira, 20/10 às 09:00, com Rafael Lima (Consultório Centro)". */
+  confirm?: string;
+  /** Começo da série (Marcar): "às terças, 09:00, com …, a partir de 20/10". */
+  series?: string;
   isHome?: boolean;
 }
 
@@ -55,6 +59,8 @@ const grid = byPeriod ? "grid-cols-3 sm:grid-cols-4 lg:grid-cols-5" : "grid-cols
               data-home={slot.isHome ? "1" : undefined}
               data-summary={slot.summary}
               data-where={slot.detail}
+              data-confirm={slot.confirm}
+              data-series={slot.series}
               class="sr-only"
             />
             <span class="text-[17px] leading-tight font-bold text-ink tabular-nums first-letter:uppercase">{slot.label}</span>

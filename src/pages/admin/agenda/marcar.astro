@@ -36,6 +36,7 @@ import {
   isAgendaOpenOn,
 } from "../../../lib/data/agenda/slots";
 import { findReturnOrigin, returnWarnings } from "../../../lib/data/agenda/appointments";
+import { SERIES_HORIZON_MONTHS } from "../../../lib/data/agenda/series";
 import { listAgendas } from "../../../lib/data/config/agendas";
 import { getClinicSettings } from "../../../lib/data/config/clinic";
 import { listLocations } from "../../../lib/data/config/locations";
@@ -44,6 +45,7 @@ import { getContact, getPatient, searchPatients } from "../../../lib/data/patien
 import { formatPhoneBR } from "../../../lib/phone";
 import { capitalize, vocabularyFor } from "../../../lib/vocabulary";
 import { frequencyLabel } from "../../../lib/seriesLabels";
+import { seriesStartText, slotConfirmText } from "../../../lib/confirmText";
 
 const clinic = Astro.locals.clinic!;
 const db = createUserClient(Astro.request, Astro.cookies);
@@ -120,6 +122,11 @@ if (patient && service && searchAgendas.length) {
         label,
         detail: `${describe(s.agendaId, s.locationId)} · ${s.remaining} de ${s.capacity} vagas`,
         summary: capitalize(label),
+        confirm: slotConfirmText(
+          formatInstant(s.start, clinic.timezone, "EEEE, dd/MM 'às' HH:mm"),
+          agendaName.get(s.agendaId) ?? "",
+          location.get(s.locationId)?.name ?? "Local",
+        ),
         isHome: location.get(s.locationId)?.type === "home_visit",
       };
     });
@@ -142,6 +149,8 @@ if (patient && service && searchAgendas.length) {
         label: s.time,
         detail: describe(s.agendaId, s.locationId),
         summary: `${dayLabel(date)} às ${s.time}`,
+        confirm: slotConfirmText(`${dayLabel(date)} às ${s.time}`, agendaName.get(s.agendaId) ?? "", location.get(s.locationId)?.name ?? "Local"),
+        series: seriesStartText(date, s.time, agendaName.get(s.agendaId) ?? "", location.get(s.locationId)?.name ?? "Local"),
         isHome: location.get(s.locationId)?.type === "home_visit",
       }));
     }
@@ -196,7 +205,10 @@ const chip = (active: boolean) =>
     active ? "border-brand bg-brand text-white" : "border-line-strong bg-white text-ink hover:border-brand"
   }`;
 const withName = agendaChoice === ANY ? (serviceAgendaIds.length > 1 ? "Primeiro horário disponível" : agendaName.get(serviceAgendaIds[0] ?? "")) : agendaName.get(agendaChoice);
-const confirmMessage = `${patient?.fullName ?? ""}: ${service?.name ?? ""}, no horário escolhido. O paciente é avisado pelo WhatsApp.`;
+// A confirmação diz o horário escolhido (cliente, 17/out/2026): o script troca
+// "no horário escolhido" pelo texto do horário e, na série, pela frequência e o fim.
+const confirmIntro = `${patient?.fullName ?? ""}: ${service?.name ?? ""}`;
+const confirmMessage = `${confirmIntro}, no horário escolhido. O paciente é avisado pelo WhatsApp.`;
 const note = "flex items-start gap-2 rounded-[10px] border px-3 py-2.5 text-[15px] leading-snug sm:text-[14.5px]";
 const warnNote = `${note} border-pend-200 bg-pend-100 text-pend-800`;
 const okNote = `${note} border-conf-200 bg-conf-100/60 text-conf-800`;
@@ -413,7 +425,7 @@ const okNote = `${note} border-conf-200 bg-conf-100/60 text-conf-800`;
           canRepeat && (
             <fieldset class="flex flex-col gap-3 border-t border-line pt-3.5">
               <label class="flex min-h-11 items-center gap-2.5 text-[15px] font-semibold text-ink sm:min-h-0">
-                <input type="checkbox" name="repetir" data-repeat class="h-[18px] w-[18px] accent-brand" />
+                <input type="checkbox" name="repetir" data-repeat data-horizon={SERIES_HORIZON_MONTHS} class="h-[18px] w-[18px] accent-brand" />
                 Repetir este atendimento (série)
               </label>
               <div data-repeat-fields hidden class="flex flex-col gap-3">
@@ -440,7 +452,7 @@ const okNote = `${note} border-conf-200 bg-conf-100/60 text-conf-800`;
                     <input type="number" name="max_sessions" min="1" max="200" aria-label="Número de sessões" class={`${CONTROL} w-24`} /> sessões
                   </label>
                   <p class="text-[13px] text-ink-soft">
-                    Sem data para terminar, ficam marcadas as sessões dos próximos 3 meses. Feriado, bloqueio ou horário ocupado: a data é pulada e
+                    Sem data para terminar, ficam marcadas as sessões dos próximos {SERIES_HORIZON_MONTHS} meses. Feriado, bloqueio ou horário ocupado: a data é pulada e
                     aparece na tela da série.
                   </p>
                 </div>
@@ -460,6 +472,7 @@ const okNote = `${note} border-conf-200 bg-conf-100/60 text-conf-800`;
           data-marcar
           data-confirm-title="Marcar o atendimento?"
           data-confirm-message={confirmMessage}
+          data-confirm-intro={confirmIntro}
           data-confirm-label="Marcar"
           data-confirm-tone="primary"
         >
@@ -489,6 +502,7 @@ const okNote = `${note} border-conf-200 bg-conf-100/60 text-conf-800`;
             data-marcar
             data-confirm-title="Marcar o atendimento?"
             data-confirm-message={confirmMessage}
+            data-confirm-intro={confirmIntro}
             data-confirm-label="Marcar"
             data-confirm-tone="primary"
           >
@@ -500,6 +514,7 @@ const okNote = `${note} border-conf-200 bg-conf-100/60 text-conf-800`;
   }
 
   <script>
+    import { seriesConfirmMessage, seriesEndText, type SeriesEnd } from "../../../lib/confirmText";
     // Resumo: o horário escolhido (quando e onde) e o endereço, só para local domiciliar.
     const box = document.querySelector<HTMLElement>("[data-home-address]");
     // O botão só se habilita com o horário escolhido (proposta aprovada da R4;
@@ -532,6 +547,33 @@ const okNote = `${note} border-conf-200 bg-conf-100/60 text-conf-800`;
     };
     repeat?.addEventListener("change", syncRepeat);
     syncRepeat();
+
+    // Texto da confirmação (cliente, 17/out/2026): o horário escolhido e, na
+    // série, a frequência, o começo e até quando, como estão no formulário.
+    const field = (name: string) => document.querySelector<HTMLInputElement | HTMLSelectElement>(`[name='${name}']`);
+    const syncMessage = () => {
+      const chosen = document.querySelector<HTMLInputElement>("input[name='slot']:checked");
+      if (!chosen?.dataset.confirm) return;
+      submits.forEach((submit) => {
+        const intro = submit.dataset.confirmIntro ?? "";
+        if (repeat?.checked && chosen.dataset.series) {
+          const startDate = chosen.value.split("|")[1]?.slice(0, 10) ?? ""; // agenda|início ISO|local
+          const fim = (document.querySelector<HTMLInputElement>("input[name='fim']:checked")?.value ?? "sem_fim") as SeriesEnd["fim"];
+          const end = seriesEndText({ fim, endsOn: field("ends_on")?.value, maxSessions: field("max_sessions")?.value }, startDate, Number(repeat.dataset.horizon) || 3);
+          submit.dataset.confirmMessage = seriesConfirmMessage({
+            intro,
+            intervalWeeks: Number(field("interval_weeks")?.value) || 1,
+            start: chosen.dataset.series,
+            end,
+          });
+        } else {
+          submit.dataset.confirmMessage = `${intro}, ${chosen.dataset.confirm}. O paciente é avisado pelo WhatsApp.`;
+        }
+      });
+    };
+    document.addEventListener("change", syncMessage);
+    document.addEventListener("input", syncMessage);
+    syncMessage();
   </script>
   <ConfirmDeleteDialog />
 </AdminLayout>

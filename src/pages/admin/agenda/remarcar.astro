@@ -29,6 +29,7 @@ import { listLocations } from "../../../lib/data/config/locations";
 import { listServices } from "../../../lib/data/config/services";
 import { setFlash } from "../../../lib/flash";
 import { capitalize } from "../../../lib/vocabulary";
+import { slotConfirmText } from "../../../lib/confirmText";
 
 const clinic = Astro.locals.clinic!;
 const db = createUserClient(Astro.request, Astro.cookies);
@@ -62,6 +63,11 @@ if (isGroup) {
         label,
         detail: `${locationName.get(s.locationId) ?? "Local"} · ${s.remaining} de ${s.capacity} vagas`,
         summary: capitalize(label),
+        confirm: slotConfirmText(
+          formatInstant(s.start, clinic.timezone, "EEEE, dd/MM 'às' HH:mm"),
+          appointment.agendaName,
+          locationName.get(s.locationId) ?? "Local",
+        ),
       };
     });
 } else {
@@ -79,6 +85,7 @@ if (isGroup) {
         label: s.time,
         detail: locationName.get(s.locationId) ?? "Local",
         summary: `${dayLabel(date)} às ${s.time}`,
+        confirm: slotConfirmText(`${dayLabel(date)} às ${s.time}`, appointment.agendaName, locationName.get(s.locationId) ?? "Local"),
       }));
   }
 }
@@ -86,7 +93,10 @@ if (isGroup) {
 const unavailableOpen = strip.unavailable ? await isAgendaOpenOn(db, clinic.clinicId, { ...query, date: strip.unavailable }) : false;
 const link = (d: string, start: string) => `/admin/agenda/remarcar?id=${appointment.id}&date=${d}&de=${start}&return_to=${encodeURIComponent(returnTo)}`;
 const current = capitalize(formatInstant(appointment.scheduledAt, clinic.timezone, "EEEE, dd/MM 'às' HH:mm"));
-const confirmMessage = `${appointment.patientName} vai para o horário escolhido. O lembrete e a presença confirmada recomeçam.${appointment.seriesId ? " Na opção 'esta e as próximas', a série inteira muda dali em diante." : ""} O paciente é avisado pelo WhatsApp.`;
+// A confirmação diz de onde sai e para onde vai (cliente, 17/out/2026): o
+// script troca "{para}" pelo texto do horário escolhido.
+const confirmTemplate = `${appointment.patientName} sai de ${current.charAt(0).toLowerCase()}${current.slice(1)} e vai para {para}. O lembrete e a presença confirmada recomeçam.${appointment.seriesId ? " Na opção 'esta e as próximas', a série inteira muda dali em diante." : ""} O paciente é avisado pelo WhatsApp.`;
+const confirmMessage = confirmTemplate.replace("{para}", "o horário escolhido");
 const situation = appointmentSituation(appointment);
 const option =
   "flex cursor-pointer items-start gap-2.5 rounded-[9px] border border-line-strong px-3 py-2.5 text-[15px] leading-snug has-[:checked]:border-2 has-[:checked]:border-brand has-[:checked]:bg-[#e7f4ef] has-[:checked]:px-[11px] has-[:checked]:py-[9px]";
@@ -205,6 +215,7 @@ const option =
             data-needs-slot
             data-confirm-title="Remarcar o atendimento?"
             data-confirm-message={confirmMessage}
+            data-confirm-template={confirmTemplate}
             data-confirm-label="Remarcar"
             data-confirm-tone="primary"
           >
@@ -230,6 +241,7 @@ const option =
       data-needs-slot
       data-confirm-title="Remarcar o atendimento?"
       data-confirm-message={confirmMessage}
+            data-confirm-template={confirmTemplate}
       data-confirm-label="Remarcar"
       data-confirm-tone="primary"
     >
@@ -247,6 +259,13 @@ const option =
       needSlot.forEach((button) => (button.disabled = !chosen));
       document.querySelectorAll<HTMLElement>("[data-summary-when]").forEach((el) => (el.textContent = chosen?.dataset.summary ?? "Escolha um horário"));
       document.querySelectorAll<HTMLElement>("[data-summary-where]").forEach((el) => (el.textContent = chosen?.dataset.where ?? "—"));
+      // Texto da confirmação com o horário escolhido (cliente, 17/out/2026).
+      if (chosen?.dataset.confirm) {
+        const para = chosen.dataset.confirm;
+        needSlot.forEach((button) => {
+          if (button.dataset.confirmTemplate) button.dataset.confirmMessage = button.dataset.confirmTemplate.replace("{para}", para);
+        });
+      }
     };
     document.querySelectorAll("input[name='slot']").forEach((input) => input.addEventListener("change", sync));
     sync();

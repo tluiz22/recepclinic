@@ -1983,6 +1983,13 @@ corrigidas, retestadas, validadas pelo cliente e publicadas no staging no mesmo 
   na busca; "às" minúsculo na data da busca.
 - **Fica com o cliente:** o texto da confirmação da série ("no horário escolhido", sem dia,
   frequência nem número de sessões; S-01 do relatório) e o envio duplo, que entra na R5.
+- **Texto das confirmações, decisão do cliente (17/out/2026, S-01):** as três confirmações dizem o horário.
+  Marcar: "Ana Souza: Consulta pediátrica, terça-feira, 20/10 às 09:00, com Rafael Lima (Consultório Centro). …";
+  série: "…, toda semana às terças, 09:00, com Rafael Lima (Consultório Centro), a partir de 20/10, com 10 sessões"
+  (ou "até 15/12", ou "sem data para terminar (ficam marcadas as sessões dos próximos 3 meses)"), mais "Feriado,
+  bloqueio ou horário ocupado: a data é pulada e aparece na tela da série."; Remarcar: "Carlos Pereira sai de
+  terça-feira, 20/10 às 09:00 e vai para …". O texto da série acompanha o formulário. Textos em
+  `src/lib/confirmText.ts` (com teste); sem JavaScript, fica o "no horário escolhido" (o diálogo depende dele).
 
 **R5 (Pagamento), proposta aprovada pelo cliente em 16/out/2026** (página "5 · Pagamento" do canvas):
 contas no alto (Preço, Pago e Falta em números grandes, barra do quanto já foi pago e o selo "Pago"
