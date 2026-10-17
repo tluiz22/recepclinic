@@ -1,7 +1,10 @@
 ---
 export const prerender = true;
 
+import "@fontsource-variable/source-sans-3";
 import "../styles/global.css";
+// Redesign R11 (cliente, 17/out/2026): cinza neutro, sem o azul, porque a
+// página pode ser de qualquer clínica; o texto é o mesmo.
 ---
 
 <html lang="pt-BR">
@@ -13,11 +16,11 @@ import "../styles/global.css";
     <link rel="icon" href="data:," />
     <title>Página não encontrada</title>
   </head>
-  <body class="flex min-h-screen flex-col bg-slate-50 text-slate-900">
+  <body class="flex min-h-screen flex-col bg-gray-50 font-body text-gray-900 antialiased">
     <main class="mx-auto flex max-w-2xl flex-1 flex-col items-center px-4 py-24 text-center">
-      <p class="text-sm font-semibold uppercase tracking-wide text-sky-700">Erro 404</p>
-      <h1 class="mt-3 text-3xl font-bold text-slate-900">Página não encontrada</h1>
-      <p class="mt-4 text-slate-600">
+      <p class="text-[13px] font-bold tracking-[.06em] text-gray-500 uppercase">Erro 404</p>
+      <h1 class="mt-3 text-3xl font-bold text-gray-900">Página não encontrada</h1>
+      <p class="mt-4 text-[17px] leading-normal text-gray-600">
         A página que você tentou acessar não existe ou foi movida. Se recebeu este link pelo
         WhatsApp, volte à conversa e peça um novo.
       </p>

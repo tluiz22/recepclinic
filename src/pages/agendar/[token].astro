@@ -4,11 +4,18 @@
 // credencial limitada a ela (D1). Cada horário mostra o profissional e o
 // local quando houver mais de um (cliente, 05/out/2026). A confirmação pelo
 // WhatsApp vem na F6.
+//
+// Redesign R11 (cliente, 17/out/2026): faixa de dias com setas e horários por
+// turno (como o Marcar do painel), barra fixa com o escolhido e o "Confirmar"
+// no celular e o resumo ao lado no computador, a confirmação em linhas e os
+// avisos do link num padrão, com "Falar com a clínica no WhatsApp".
 import { DEFAULT_DESIGNATION, designationText } from "../../lib/designation";
-import "../../styles/global.css";
-import PublicFooter from "../../components/PublicFooter.astro";
-import PublicHeader from "../../components/public/PublicHeader.astro";
-import { formatCalendarDate, formatInstant } from "../../lib/clinicTime";
+import LinkNotice from "../../components/public/LinkNotice.astro";
+import PatientDayStrip from "../../components/public/PatientDayStrip.astro";
+import PatientSlots, { type PatientSlot } from "../../components/public/PatientSlots.astro";
+import { PATIENT_BUTTON, PATIENT_CARD, PATIENT_LABEL, PATIENT_STEP } from "../../components/public/styles";
+import PatientLayout from "../../layouts/PatientLayout.astro";
+import { formatCalendarDate, formatInstant, isCalendarDate } from "../../lib/clinicTime";
 import { createClinicServiceClient } from "../../lib/data/clinicService";
 import {
   listLinkDates,
@@ -21,10 +28,10 @@ import {
   type BookingPage,
   type PublicSlot,
 } from "../../lib/data/agenda/publicBooking";
-import { DEFAULT_BRAND_COLOR, getPublicClinicBrand, type PublicClinicBrand } from "../../lib/data/config/brand";
+import { getPublicClinicBrand, type PublicClinicBrand } from "../../lib/data/config/brand";
 import { DataError } from "../../lib/data/errors";
 import { resolveClinicByBookingLink } from "../../lib/data/platform";
-import { readableTextColor } from "../../lib/brandColor";
+import { buildDayStrip, type DayStrip } from "../../lib/dayStrip";
 import { formatPhoneBR } from "../../lib/phone";
 import { capitalize, vocabularyFor } from "../../lib/vocabulary";
 
@@ -45,25 +52,33 @@ if (clinicId && db) {
 }
 if (!page) Astro.response.status = 404;
 
-let dates: { date: string }[] = [];
+const param = (name: string) => {
+  const value = Astro.url.searchParams.get(name);
+  return value && isCalendarDate(value) ? value : null;
+};
+let strip: DayStrip | null = null;
 let slots: PublicSlot[] = [];
 let sessions: PublicSlot[] = [];
-let selectedDate = "";
+let availableDays = 0;
 if (page?.state === "form" && db && clinicId) {
   if (page.service.isGroup) {
     sessions = await listLinkGroupSessions(db, clinicId, page);
   } else {
-    dates = await listLinkDates(db, clinicId, page);
-    const asked = Astro.url.searchParams.get("date");
-    selectedDate = asked && dates.some((d) => d.date === asked) ? asked : (dates[0]?.date ?? "");
-    if (selectedDate) slots = await listLinkSlots(db, clinicId, page, selectedDate);
+    const dates = (await listLinkDates(db, clinicId, page)).map((d) => d.date);
+    availableDays = dates.length;
+    strip = buildDayStrip(dates, param("date"), param("start"));
+    if (strip.selected) slots = await listLinkSlots(db, clinicId, page, strip.selected);
   }
 }
 
-// Funil do bot: a volta depois de uma confirmação que falhou (?error=) não conta de novo.
+// Funil do bot: a volta depois de uma confirmação que falhou (?error=) não conta de novo; um
+// dia ou uma seta da faixa (?date=, ?start=) conta como troca de data, não como página aberta.
+const picked = Astro.url.searchParams.has("date") || Astro.url.searchParams.has("start");
 if (page && db && clinicId && !Astro.url.searchParams.has("error")) {
-  if (page.state === "form") {
-    await logBookingPageStep(db, clinicId, page, "page_opened", { available_dates: page.service.isGroup ? sessions.length : dates.length });
+  if (page.state === "form" && picked && strip) {
+    await logBookingPageStep(db, clinicId, page, "date_changed", { date: strip.selected, slots: slots.length });
+  } else if (page.state === "form") {
+    await logBookingPageStep(db, clinicId, page, "page_opened", { available_dates: page.service.isGroup ? sessions.length : availableDays });
   } else if (page.state === "expired") {
     await logBookingPageStep(db, clinicId, page, "link_expired");
   }
@@ -72,6 +87,7 @@ if (page && db && clinicId && !Astro.url.searchParams.has("error")) {
 const words = vocabularyFor(page?.profile ?? "mixed");
 // "fale com o consultório": como a clínica é chamada (cliente, 11/out/2026).
 const clinicWord = designationText(brand?.designation ?? DEFAULT_DESIGNATION);
+const whatsappPhone = brand?.whatsappPhone ?? null;
 const timeZone = page?.timeZone ?? "America/Fortaleza";
 const isReschedule = page?.link.mode === "reschedule";
 const serviceName = page?.service.name ?? "";
@@ -85,260 +101,296 @@ const errorMessages: Record<string, string> = {
 const errorParam = Astro.url.searchParams.get("error");
 const errorMessage = errorParam ? (errorMessages[errorParam] ?? errorMessages.failed) : null;
 
+const formatDay = (date: string) => capitalize(formatCalendarDate(date, "EEEE, dd/MM/yyyy"));
+const formatWhen = (instant: Date) => formatInstant(instant, timeZone, "dd/MM/yyyy 'às' HH'h'mm");
+const formatLongWhen = (instant: Date) => capitalize(formatInstant(instant, timeZone, "EEEE, dd/MM/yyyy 'às' HH'h'mm"));
+// "Qui, 23/10 às 09:30": o escolhido na barra e no resumo.
+const summaryOf = (instant: Date) =>
+  `${capitalize(formatInstant(instant, timeZone, "EEE").slice(0, 3))}, ${formatInstant(instant, timeZone, "dd/MM 'às' HH:mm")}`;
+const slotExtra = (slot: PublicSlot) => (page ? slotDetails(page.candidates, slot) : "");
+const slotOptions: PatientSlot[] = slots.map((slot) => ({
+  value: slotChoiceValue(slot),
+  label: formatInstant(slot.start, timeZone, "HH:mm"),
+  detail: slotExtra(slot),
+  summary: summaryOf(slot.start),
+}));
+const sessionOptions: PatientSlot[] = sessions.map((session) => ({
+  value: slotChoiceValue(session),
+  label: capitalize(formatInstant(session.start, timeZone, "EEEE, dd/MM 'às' HH:mm")),
+  detail: slotExtra(session),
+  summary: summaryOf(session.start),
+  remaining: session.remaining ?? undefined,
+}));
+const hasChoice = page?.service.isGroup ? sessionOptions.length > 0 : slotOptions.length > 0;
+const dayHref = (date: string, start: string) => `?${new URLSearchParams({ date, start })}`;
+const confirmed = page?.state === "used" ? page.appointment : null;
+const confirmedActive = confirmed && (confirmed.status === "scheduled" || confirmed.status === "confirmed");
+// O título da aba é o da página (teste da R11, QA-02): confirmado, remarcado, cancelado ou já usado.
 const pageTitle = !page
   ? "Link inválido"
   : page.state === "expired"
     ? "Link expirado"
     : page.state === "used"
-      ? "Atendimento marcado"
+      ? confirmedActive
+        ? isReschedule
+          ? "Atendimento remarcado"
+          : "Atendimento confirmado"
+        : confirmed
+          ? "Atendimento cancelado"
+          : "Link já usado"
       : `${isReschedule ? "Remarcar" : "Agendar"}: ${serviceName}`;
-
-const formatDay = (date: string) => capitalize(formatCalendarDate(date, "EEEE, dd/MM/yyyy"));
-const formatWhen = (instant: Date) => formatInstant(instant, timeZone, "dd/MM/yyyy 'às' HH'h'mm");
-const slotExtra = (slot: PublicSlot) => (page ? slotDetails(page.candidates, slot) : "");
-const confirmed = page?.state === "used" ? page.appointment : null;
-const confirmedActive = confirmed && (confirmed.status === "scheduled" || confirmed.status === "confirmed");
-const buttonColor = brand?.brandColor ?? DEFAULT_BRAND_COLOR;
-const SLOT_LABEL = "cursor-pointer rounded-md border border-slate-300 bg-white px-3 py-2 text-sm has-[:checked]:border-slate-900 has-[:checked]:ring-1 has-[:checked]:ring-slate-900";
+const submitLabel = isReschedule ? "Confirmar remarcação" : "Confirmar";
+const showContact = !!page && !!page.contact.fullName && page.contact.fullName !== page.patient.fullName;
+const notice = "rounded-[10px] border px-3.5 py-3 text-base leading-snug";
 ---
 
-<html lang="pt-BR">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="robots" content="noindex, nofollow" />
-    <!-- Ícone da aba: o logo da clínica; sem logo, nenhum (cliente, 14/out/2026; auditoria A-05). -->
-    <link rel="icon" href={brand?.logoUrl ?? "data:,"} />
-    <title>{pageTitle} | {brand?.name ?? "RecepClinic"}</title>
-  </head>
-  <body class="flex min-h-screen flex-col bg-slate-50 text-slate-900">
-    {brand && <PublicHeader brand={brand} />}
-    <main class="mx-auto w-full max-w-xl flex-1 px-4 py-10">
-      {
-        !page && (
-          <div class="rounded-md border border-slate-200 bg-white p-6 text-center">
-            <h1 class="text-lg font-bold text-slate-900">Link inválido</h1>
-            <p class="mt-2 text-sm text-slate-600">Este link de agendamento não existe. Volte à conversa no WhatsApp e peça um novo.</p>
-          </div>
-        )
-      }
+<PatientLayout title={pageTitle} brand={brand} width={page?.state === "form" ? "wide" : "reading"}>
+  {
+    !page && (
+      <LinkNotice icon="warning" title="Link inválido">
+        Este link de agendamento não existe. Volte à conversa no WhatsApp e peça um novo.
+      </LinkNotice>
+    )
+  }
 
-      {
-        page?.state === "expired" && (
-          <div class="rounded-md border border-slate-200 bg-white p-6 text-center">
-            <h1 class="text-lg font-bold text-slate-900">Link expirado</h1>
-            <p class="mt-2 text-sm text-slate-600">Este link de agendamento venceu. Volte à conversa no WhatsApp e peça um novo link.</p>
-          </div>
-        )
-      }
+  {
+    page?.state === "expired" && (
+      <LinkNotice icon="clock" title="Link expirado" tone="warning" whatsappPhone={whatsappPhone} clinicWord={clinicWord}>
+        Este link de agendamento venceu. Volte à conversa no WhatsApp e peça um novo link.
+      </LinkNotice>
+    )
+  }
 
-      {
-        page?.state === "used" && confirmed && confirmedActive && (
-          <div class="rounded-md border border-emerald-200 bg-emerald-50 p-6 text-center">
-            <h1 class="text-lg font-bold text-emerald-900">{isReschedule ? "Atendimento remarcado!" : "Atendimento confirmado!"}</h1>
-            <p class="mt-2 text-sm text-emerald-800">
-              {serviceName} · {page.patient.fullName} · {formatWhen(confirmed.scheduledAt)}
+  {
+    page?.state === "used" && confirmed && confirmedActive && (
+      <section class={`${PATIENT_CARD} flex flex-col gap-4 rounded-2xl px-[18px] py-6 sm:px-7`} role="status">
+        <div class="flex items-center gap-3">
+          <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-emerald-50 text-emerald-700">
+            <svg aria-hidden="true" class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5 9-10" /></svg>
+          </span>
+          <h1 class="text-2xl leading-tight font-bold text-gray-900">{isReschedule ? "Atendimento remarcado!" : "Atendimento confirmado!"}</h1>
+        </div>
+        <dl class="flex flex-col border-t border-gray-100">
+          <div class="flex flex-col gap-px border-b border-gray-100 py-2.5">
+            <dt class={PATIENT_LABEL}>Quando</dt>
+            <dd class="text-[16.5px] font-bold text-gray-900">{formatLongWhen(confirmed.scheduledAt)}</dd>
+          </div>
+          <div class="flex flex-col gap-px border-b border-gray-100 py-2.5">
+            <dt class={PATIENT_LABEL}>{page.service.category === "exam" ? "Exame" : "Serviço"}</dt>
+            <dd class="text-[16.5px] text-gray-900">{serviceName}</dd>
+          </div>
+          <div class="flex flex-col gap-px border-b border-gray-100 py-2.5">
+            <dt class={PATIENT_LABEL}>{capitalize(words.patient)}</dt>
+            <dd class="text-[16.5px] text-gray-900">{page.patient.fullName}</dd>
+          </div>
+          {
+            confirmed.agendaName && (
+              <div class="flex flex-col gap-px border-b border-gray-100 py-2.5">
+                <dt class={PATIENT_LABEL}>Com quem</dt>
+                <dd class="text-[16.5px] text-gray-900">{confirmed.agendaName}</dd>
+              </div>
+            )
+          }
+          {
+            (confirmed.locationName || confirmed.address) && (
+              <div class="flex flex-col gap-px border-b border-gray-100 py-2.5">
+                <dt class={PATIENT_LABEL}>Onde</dt>
+                <dd class="text-[16.5px] text-gray-900">
+                  {confirmed.locationName}
+                  {confirmed.address && <span class="block text-gray-700">{confirmed.address}</span>}
+                </dd>
+              </div>
+            )
+          }
+        </dl>
+        {
+          page.service.hasPreparation && (
+            <a href={`/preparo/${page.service.id}`} class={`${PATIENT_BUTTON} w-full`}>
+              Ver o preparo do exame
+            </a>
+          )
+        }
+      </section>
+    )
+  }
+
+  {
+    page?.state === "used" && !(confirmed && confirmedActive) && (
+      <LinkNotice icon={confirmed ? "x-mark" : "check-circle"} title={confirmed ? "Atendimento cancelado" : "Link já usado"} whatsappPhone={whatsappPhone} clinicWord={clinicWord}>
+        {confirmed
+          ? `Este atendimento foi cancelado. Para marcar de novo, fale com ${clinicWord} pelo WhatsApp.`
+          : `Este link já foi usado. Para marcar ou mudar um atendimento, fale com ${clinicWord} pelo WhatsApp.`}
+      </LinkNotice>
+    )
+  }
+
+  {
+    page?.state === "form" && (
+      <>
+        <div>
+          <p class="text-[15px] font-semibold text-clinic-ink">{isReschedule ? "Remarcar" : "Agendar"}</p>
+          <h1 class="mt-0.5 text-[26px] leading-tight font-bold text-gray-900 sm:text-3xl">{serviceName}</h1>
+          {page.candidates.agendas.length === 1 && <p class="mt-1 text-base text-gray-600">{page.candidates.agendas[0].name}</p>}
+        </div>
+
+        {
+          isReschedule && page.appointment && (
+            <p class={`${PATIENT_CARD} flex flex-wrap items-baseline gap-x-3 gap-y-0.5 px-4 py-3`}>
+              <span class={PATIENT_LABEL}>Atendimento atual</span>
+              <span class="text-[16.5px] font-bold text-gray-900">{formatWhen(page.appointment.scheduledAt)}</span>
             </p>
-            <p class="mt-1 text-sm text-emerald-800">{[confirmed.agendaName, confirmed.locationName].filter(Boolean).join(" · ")}</p>
-            {confirmed.address && <p class="mt-1 text-sm text-emerald-800">{confirmed.address}</p>}
-            {
-              page.service.hasPreparation && (
-                <a
-                  href={`/preparo/${page.service.id}`}
-                  class="mt-4 inline-block rounded-md border border-emerald-300 bg-white px-4 py-2 text-sm font-medium text-emerald-800 hover:bg-emerald-100"
-                >
-                  Ver o preparo do exame
-                </a>
-              )
-            }
-          </div>
-        )
-      }
+          )
+        }
 
-      {
-        page?.state === "used" && !(confirmed && confirmedActive) && (
-          <div class="rounded-md border border-slate-200 bg-white p-6 text-center">
-            <h1 class="text-lg font-bold text-slate-900">{confirmed ? "Atendimento cancelado" : "Link já usado"}</h1>
-            <p class="mt-2 text-sm text-slate-600">
-              {confirmed
-                ? `Este atendimento foi cancelado. Para marcar de novo, fale com ${clinicWord} pelo WhatsApp.`
-                : `Este link já foi usado. Para marcar ou mudar um atendimento, fale com ${clinicWord} pelo WhatsApp.`}
-            </p>
-          </div>
-        )
-      }
+        {errorMessage && <p class={`${notice} border-red-200 bg-red-50 text-red-800`} role="alert">{errorMessage}</p>}
 
-      {
-        page?.state === "form" && (
-          <>
-            <h1 class="text-2xl font-bold text-slate-900">{isReschedule ? "Remarcar" : "Agendar"}: {serviceName}</h1>
-            {page.candidates.agendas.length === 1 && <p class="mt-1 text-sm text-slate-600">{page.candidates.agendas[0].name}</p>}
-            {
-              isReschedule && page.appointment && (
-                <p class="mt-2 text-sm text-slate-600">Atendimento atual: {formatWhen(page.appointment.scheduledAt)}</p>
-              )
-            }
-
-            {errorMessage && <p class="mt-4 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">{errorMessage}</p>}
-
-            <div class="mt-6 rounded-md border border-slate-200 bg-white p-4 text-sm text-slate-700">
-              <p class="font-medium text-slate-900">{capitalize(words.patient)}</p>
-              <p>
-                {page.patient.fullName} · nascimento em {formatCalendarDate(page.patient.birthdate, "dd/MM/yyyy")}
+        <div class={`${PATIENT_CARD} flex flex-col gap-2.5 px-4 py-3.5 lg:hidden`}>
+          <p class="flex flex-col">
+            <span class={PATIENT_LABEL}>{capitalize(words.patient)}</span>
+            <span class="text-[16.5px] text-gray-900">{page.patient.fullName} · nascimento em {formatCalendarDate(page.patient.birthdate, "dd/MM/yyyy")}</span>
+          </p>
+          {
+            showContact && (
+              <p class="flex flex-col">
+                <span class={PATIENT_LABEL}>{capitalize(words.contact)}</span>
+                <span class="text-[16.5px] text-gray-900">{page.contact.fullName} · {formatPhoneBR(page.contact.phone)}</span>
               </p>
+            )
+          }
+        </div>
+
+        {
+          page.link.homeVisitAddress && page.link.locationCategory === "home_visit" && (
+            <p class={`${PATIENT_CARD} flex flex-col px-4 py-3.5`}>
+              <span class={PATIENT_LABEL}>Endereço do atendimento</span>
+              <span class="text-[16.5px] text-gray-900">{page.link.homeVisitAddress}</span>
+            </p>
+          )
+        }
+
+        <form id="agendar" method="POST" action={`/api/agendar/${page.link.id}/confirmar`} class="flex flex-col gap-6">
+          <div class="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_300px]">
+            <div id="agendar-escolha" class="flex min-w-0 flex-col gap-6" aria-live="polite">
               {
-                page.contact.fullName && page.contact.fullName !== page.patient.fullName && (
+                page.service.isGroup ? (
+                  <div class="flex flex-col gap-3">
+                    <h2 class={PATIENT_STEP}>Escolha o dia e o horário</h2>
+                    {sessionOptions.length ? (
+                      <PatientSlots options={sessionOptions} sessions />
+                    ) : (
+                      <p class={`${notice} border-gray-200 bg-white text-gray-700`}>Não encontramos vaga nos próximos dias. Fale com {clinicWord} pelo WhatsApp.</p>
+                    )}
+                  </div>
+                ) : strip && strip.selected ? (
                   <>
-                    <p class="mt-2 font-medium text-slate-900">{capitalize(words.contact)}</p>
-                    <p>
-                      {page.contact.fullName} · {formatPhoneBR(page.contact.phone)}
-                    </p>
+                    <input type="hidden" name="date" value={strip.selected} />
+                    <div class="flex flex-col gap-2.5">
+                      <h2 class={PATIENT_STEP}>Escolha o dia</h2>
+                      <PatientDayStrip strip={strip} href={dayHref} />
+                      <p class="text-[15.5px] font-semibold text-gray-700">{formatDay(strip.selected)}</p>
+                    </div>
+                    <div class="flex flex-col gap-3.5">
+                      <h2 class={PATIENT_STEP}>Escolha o horário</h2>
+                      {slotOptions.length ? (
+                        <PatientSlots options={slotOptions} />
+                      ) : (
+                        <p class="text-base text-gray-600">Nenhum horário livre nesse dia. Escolha outra data.</p>
+                      )}
+                    </div>
                   </>
+                ) : (
+                  <p class={`${notice} border-gray-200 bg-white text-gray-700`}>
+                    Não encontramos horários livres nos próximos dias. Fale com {clinicWord} pelo WhatsApp.
+                  </p>
                 )
               }
             </div>
 
-            {
-              page.link.homeVisitAddress && page.link.locationCategory === "home_visit" && (
-                <div class="mt-3 rounded-md border border-slate-200 bg-white p-4 text-sm text-slate-700">
-                  <p class="font-medium text-slate-900">Endereço do atendimento</p>
-                  <p>{page.link.homeVisitAddress}</p>
-                </div>
-              )
-            }
-
-            <form method="POST" action={`/api/agendar/${page.link.id}/confirmar`} class="mt-6 flex flex-col gap-6">
+            <aside class={`${PATIENT_CARD} sticky top-4 hidden flex-col gap-3 px-5 py-[18px] lg:flex`} aria-label="Seu atendimento">
+              <p class="text-[13px] font-bold tracking-[.06em] text-gray-600 uppercase">Seu atendimento</p>
+              <p class="flex flex-col">
+                <span class={PATIENT_LABEL}>{capitalize(words.patient)}</span>
+                <span class="text-[16.5px] text-gray-900">{page.patient.fullName}</span>
+                <span class="text-[15px] text-gray-600">nascimento em {formatCalendarDate(page.patient.birthdate, "dd/MM/yyyy")}</span>
+              </p>
               {
-                page.service.isGroup ? (
-                  <div>
-                    <span class="block text-sm font-medium text-slate-700">Dia e horário</span>
-                    {sessions.length ? (
-                      <div class="mt-1 flex flex-col gap-2">
-                        {sessions.map((session) => (
-                          <label class={SLOT_LABEL}>
-                            <input type="radio" name="start" value={slotChoiceValue(session)} required class="mr-2" />
-                            {formatInstant(session.start, timeZone, "EEEE, dd/MM 'às' HH:mm").replace(/^./, (c) => c.toUpperCase())}
-                            {slotExtra(session) && <span class="text-slate-500"> · {slotExtra(session)}</span>}
-                            <span class="text-slate-500">
-                              {" "}
-                              · {session.remaining} {session.remaining === 1 ? "vaga" : "vagas"}
-                            </span>
-                          </label>
-                        ))}
-                      </div>
-                    ) : (
-                      <p class="mt-1 text-sm text-slate-500">Não encontramos vaga nos próximos dias. Fale com {clinicWord} pelo WhatsApp.</p>
-                    )}
-                  </div>
-                ) : (
-                  <>
-                    <div>
-                      <label for="date" class="block text-sm font-medium text-slate-700">
-                        Data
-                      </label>
-                      {dates.length ? (
-                        <select id="date" name="date" class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm">
-                          {dates.map((d) => (
-                            <option value={d.date} selected={d.date === selectedDate}>
-                              {formatDay(d.date)}
-                            </option>
-                          ))}
-                        </select>
-                      ) : (
-                        <p class="mt-1 text-sm text-slate-500">
-                          Não encontramos horários livres nos próximos dias. Fale com {clinicWord} pelo WhatsApp.
-                        </p>
-                      )}
-                    </div>
-                    <div>
-                      <span class="block text-sm font-medium text-slate-700">Horário</span>
-                      <div id="slots_container" data-slot-class={SLOT_LABEL} class="mt-1 flex flex-wrap gap-2">
-                        {slots.length ? (
-                          slots.map((slot) => (
-                            <label class={SLOT_LABEL}>
-                              <input type="radio" name="start" value={slotChoiceValue(slot)} required class="mr-1" />
-                              {formatInstant(slot.start, timeZone, "HH:mm")}
-                              {slotExtra(slot) && <span class="text-slate-500"> · {slotExtra(slot)}</span>}
-                            </label>
-                          ))
-                        ) : (
-                          dates.length > 0 && <p class="text-sm text-slate-500">Nenhum horário livre nesse dia. Escolha outra data.</p>
-                        )}
-                      </div>
-                    </div>
-                  </>
+                showContact && (
+                  <p class="flex flex-col">
+                    <span class={PATIENT_LABEL}>{capitalize(words.contact)}</span>
+                    <span class="text-[16.5px] text-gray-900">{page.contact.fullName}</span>
+                    <span class="text-[15px] text-gray-600">{formatPhoneBR(page.contact.phone)}</span>
+                  </p>
                 )
               }
-
-              <button
-                id="submit_btn"
-                type="submit"
-                disabled={page.service.isGroup ? !sessions.length : !slots.length}
-                class="w-fit rounded-md px-4 py-2 text-sm font-medium hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
-                style={`background-color: ${buttonColor}; color: ${readableTextColor(buttonColor)};`}
-              >
-                {isReschedule ? "Confirmar remarcação" : "Confirmar"}
+              <p class="flex flex-col border-t border-gray-100 pt-3">
+                <span class={PATIENT_LABEL}>Dia e horário</span>
+                <span class="text-[16.5px] font-bold text-gray-900" data-agendar-summary>Escolha um horário</span>
+              </p>
+              <button type="submit" class={`${PATIENT_BUTTON} w-full`} disabled={!hasChoice} data-agendar-submit data-sending-label="Confirmando…">
+                {submitLabel}
               </button>
-            </form>
-          </>
-        )
-      }
-    </main>
-    <PublicFooter />
-  </body>
-</html>
+            </aside>
+          </div>
+
+          <div class="sticky bottom-0 -mx-4 flex items-center justify-between gap-3 border-t border-gray-200 bg-white px-4 pt-3 pb-[max(12px,env(safe-area-inset-bottom))] shadow-[0_-2px_8px_rgba(17,24,39,.06)] sm:-mx-6 sm:px-6 lg:hidden">
+            <p class="flex min-w-0 flex-col">
+              <span class="text-[13.5px] text-gray-600">Escolhido</span>
+              <span class="truncate text-[16.5px] font-bold text-gray-900" data-agendar-summary>Escolha um horário</span>
+            </p>
+            <button type="submit" class={PATIENT_BUTTON} disabled={!hasChoice} data-agendar-submit data-sending-label="Confirmando…">
+              {submitLabel}
+            </button>
+          </div>
+        </form>
+      </>
+    )
+  }
+</PatientLayout>
 
 <script>
-  // Trocar a data busca os horários do dia sem recarregar a página.
-  const dateSelect = document.getElementById("date") as HTMLSelectElement | null;
-  const container = document.getElementById("slots_container") as HTMLDivElement | null;
-  const submit = document.getElementById("submit_btn") as HTMLButtonElement | null;
-  const form = dateSelect?.form;
+  // O escolhido vai para a barra e o resumo. Um dia ou uma seta da faixa troca
+  // os horários sem recarregar: busca a mesma página no dia novo e troca só a
+  // parte da escolha (sem JavaScript, o link abre a página nesse dia).
+  const area = document.getElementById("agendar-escolha");
+  const summaries = () => document.querySelectorAll<HTMLElement>("[data-agendar-summary]");
+  const submits = () => document.querySelectorAll<HTMLButtonElement>("[data-agendar-submit]");
+  const EMPTY = "Escolha um horário";
 
-  if (dateSelect && container && submit && form) {
-    const slotClass = container.dataset.slotClass ?? "";
-    const message = (text: string, tone = "text-slate-500") => {
-      container.replaceChildren();
-      const p = document.createElement("p");
-      p.className = `text-sm ${tone}`;
-      p.textContent = text;
-      container.append(p);
-    };
+  const refresh = () => {
+    const chosen = area?.querySelector<HTMLInputElement>('input[name="start"]:checked');
+    summaries().forEach((el) => (el.textContent = chosen?.dataset.summary ?? EMPTY));
+    const hasOptions = !!area?.querySelector('input[name="start"]');
+    submits().forEach((button) => (button.disabled = !hasOptions));
+  };
 
-    dateSelect.addEventListener("change", async () => {
-      message("Buscando horários…");
-      submit.disabled = true;
-      const confirmUrl = form.getAttribute("action") ?? "";
-      const response = await fetch(`${confirmUrl.replace(/\/confirmar$/, "/slots")}?date=${encodeURIComponent(dateSelect.value)}`);
-      if (!response.ok) {
-        message("Não foi possível buscar os horários. Tente de novo.", "text-red-700");
-        return;
-      }
-      const { slots } = (await response.json()) as { slots: { value: string; time: string; extra: string }[] };
-      if (!slots.length) {
-        message("Nenhum horário livre nesse dia. Escolha outra data.");
-        return;
-      }
-      container.replaceChildren();
-      for (const slot of slots) {
-        const label = document.createElement("label");
-        label.className = slotClass;
-        const input = document.createElement("input");
-        input.type = "radio";
-        input.name = "start";
-        input.value = slot.value;
-        input.required = true;
-        input.className = "mr-1";
-        label.append(input, slot.time);
-        if (slot.extra) {
-          const extra = document.createElement("span");
-          extra.className = "text-slate-500";
-          extra.textContent = ` · ${slot.extra}`;
-          label.append(extra);
-        }
-        container.append(label);
-      }
-      submit.disabled = false;
-    });
-  }
+  area?.addEventListener("change", (event) => {
+    if (event.target instanceof HTMLInputElement && event.target.name === "start") refresh();
+  });
+
+  area?.addEventListener("click", async (event) => {
+    const link = (event.target as Element | null)?.closest<HTMLAnchorElement>("a[data-agendar-nav]");
+    if (!link || event.metaKey || event.ctrlKey || event.shiftKey) return;
+    event.preventDefault();
+    area.setAttribute("aria-busy", "true");
+    area.classList.add("opacity-60");
+    submits().forEach((button) => (button.disabled = true));
+    try {
+      const response = await fetch(link.href, { headers: { Accept: "text/html" } });
+      if (!response.ok) throw new Error(String(response.status));
+      const next = new DOMParser().parseFromString(await response.text(), "text/html").getElementById("agendar-escolha");
+      if (!next) throw new Error("sem a escolha");
+      area.replaceChildren(...Array.from(next.childNodes));
+      history.replaceState(null, "", link.href);
+      area.querySelector<HTMLElement>('[aria-current="date"]')?.scrollIntoView({ block: "nearest", inline: "nearest" });
+    } catch {
+      window.location.href = link.href;
+      return;
+    } finally {
+      area.removeAttribute("aria-busy");
+      area.classList.remove("opacity-60");
+    }
+    refresh();
+  });
+
+  refresh();
 </script>

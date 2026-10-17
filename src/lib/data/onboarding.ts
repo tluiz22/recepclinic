@@ -350,7 +350,8 @@ export async function saveInfoRequestAnswers(
     if (problem) {
       // O que foi digitado fica salvo como rascunho.
       await saveInfoRequestAnswers(db, token, answers, false, now);
-      throw new DataError("invalid", `Formulário: ${problem}`, { form: problem });
+      // O campo é o nome da clínica (o único exigido), para a tela marcar e focar (teste da R11, FORM-04).
+      throw new DataError("invalid", `Formulário: ${problem}`, { clinic_name: problem });
     }
   }
   const { data, error } = await db

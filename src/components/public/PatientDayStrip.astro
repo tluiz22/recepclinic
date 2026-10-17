@@ -1,0 +1,78 @@
+---
+// Faixa de dias do /agendar (redesign R11, cliente, 17/out/2026): a do Marcar
+// do painel (R4, src/lib/dayStrip.ts) na cor da clínica, sem o "Outra data"
+// (o link só mostra os dias que a clínica liberou). Cada dia e cada seta é um
+// link (?date=&start=); com JavaScript, o /agendar troca os horários sem
+// recarregar a página (data-agendar-nav).
+import type { DayStrip } from "../../lib/dayStrip";
+import { capitalize } from "../../lib/vocabulary";
+import { formatCalendarDate } from "../../lib/clinicTime";
+import Icon from "../admin/Icon.astro";
+
+interface Props {
+  strip: DayStrip;
+  /** Endereço de um dia, com o começo da faixa. */
+  href: (date: string, start: string) => string;
+}
+
+const { strip, href } = Astro.props;
+const start = strip.days[0] ?? "";
+const day = (date: string) => ({
+  weekday: formatCalendarDate(date, "EEE").slice(0, 3),
+  number: formatCalendarDate(date, "dd"),
+  month: formatCalendarDate(date, "MMM").slice(0, 3),
+  label: capitalize(formatCalendarDate(date, "EEEE, dd/MM")),
+});
+const arrow = "flex w-11 shrink-0 items-center justify-center rounded-[10px] border border-gray-300 bg-white text-gray-700 no-underline hover:bg-gray-50";
+const arrowOff = "flex w-11 shrink-0 items-center justify-center rounded-[10px] border border-gray-200 bg-gray-50 text-gray-300";
+---
+
+<div class="flex items-stretch gap-1.5 sm:gap-2">
+  {
+    strip.prevStart ? (
+      <a href={href(strip.prevStart, strip.prevStart)} class={arrow} aria-label="Dias anteriores" data-agendar-nav>
+        <Icon name="chevron-left" class="h-5 w-5" strokeWidth={2.2} />
+      </a>
+    ) : (
+      <span class={arrowOff} aria-hidden="true">
+        <Icon name="chevron-left" class="h-5 w-5" strokeWidth={2.2} />
+      </span>
+    )
+  }
+  <ul class="flex min-w-0 flex-1 gap-1.5 overflow-x-auto [scrollbar-width:none] sm:gap-2" aria-label="Dias com horário livre">
+    {
+      strip.days.map((date) => {
+        const d = day(date);
+        const active = date === strip.selected;
+        return (
+          <li class="flex min-w-[52px] flex-1 basis-0">
+            <a
+              href={href(date, start)}
+              aria-current={active ? "date" : undefined}
+              aria-label={d.label}
+              data-agendar-nav
+              class={`flex w-full flex-col items-center gap-0.5 rounded-[10px] border px-0.5 py-2 no-underline ${
+                active ? "border-clinic bg-clinic text-clinic-text" : "border-gray-300 bg-white text-gray-900 hover:border-clinic-ink"
+              }`}
+            >
+              <span class={`text-[13px] leading-tight ${active ? "" : "text-gray-600"}`}>{d.weekday}</span>
+              <span class="text-[20px] leading-[1.05] font-bold tabular-nums">{d.number}</span>
+              <span class={`text-[13px] leading-tight ${active ? "" : "text-gray-600"}`}>{d.month}</span>
+            </a>
+          </li>
+        );
+      })
+    }
+  </ul>
+  {
+    strip.nextStart ? (
+      <a href={href(strip.nextStart, strip.nextStart)} class={arrow} aria-label="Próximos dias" data-agendar-nav>
+        <Icon name="chevron-right" class="h-5 w-5" strokeWidth={2.2} />
+      </a>
+    ) : (
+      <span class={arrowOff} aria-hidden="true">
+        <Icon name="chevron-right" class="h-5 w-5" strokeWidth={2.2} />
+      </span>
+    )
+  }
+</div>

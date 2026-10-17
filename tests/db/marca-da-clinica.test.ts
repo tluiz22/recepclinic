@@ -98,9 +98,26 @@ describe("marca da clínica", () => {
     expect(await getPublicClinicBrand(adminClient() as unknown as DbClient, clinicB)).toEqual({
       name: "Clínica B (marca)",
       logoUrl: null,
-      brandColor: "#0369A1",
+      brandColor: "#0B7A62",
       websiteUrl: "https://clinicab.com.br",
       designation: { noun: "clínica", article: "a" },
+      whatsappPhone: null,
     });
+  });
+
+  it("páginas públicas: o WhatsApp só com a conexão ligada (R11)", async () => {
+    const admin = adminClient();
+    const { error } = await admin.from("whatsapp_connections").insert({
+      clinic_id: clinicB,
+      phone_number_id: `marca-${clinicB}`,
+      waba_id: "waba-marca",
+      display_phone: "+55 84 99812-3456",
+      status: "pending",
+    });
+    expect(error).toBeNull();
+    const db = admin as unknown as DbClient;
+    expect((await getPublicClinicBrand(db, clinicB)).whatsappPhone).toBeNull();
+    await admin.from("whatsapp_connections").update({ status: "connected" }).eq("clinic_id", clinicB);
+    expect((await getPublicClinicBrand(db, clinicB)).whatsappPhone).toBe("5584998123456");
   });
 });

@@ -1,8 +1,13 @@
 ---
+// Fontes da marca no próprio servidor (redesign R0; a CSP não carrega fontes de fora).
+import "@fontsource-variable/bricolage-grotesque/opsz.css";
+import "@fontsource-variable/source-sans-3";
 import "../styles/global.css";
 
 // Páginas públicas do RecepClinic (F4.4a: formulário de informações). Sem
-// login e sem menu; fora dos buscadores.
+// login e sem menu; fora dos buscadores. Redesign R11 (cliente, 17/out/2026):
+// a marca do RecepClinic, como nas telas de acesso (R10): quem preenche é a
+// clínica, não o paciente.
 interface Props {
   title: string;
 }
@@ -18,10 +23,16 @@ const { title } = Astro.props;
     <meta name="robots" content="noindex, nofollow" />
     <link rel="icon" type="image/png" href="/admin-icon-192.png" />
   </head>
-  <body class="min-h-screen bg-slate-50 text-slate-900">
-    <main class="mx-auto w-full max-w-3xl px-4 py-8">
-      <p class="text-sm font-semibold uppercase tracking-wide text-sky-700">RecepClinic</p>
+  <body class="min-h-screen bg-canvas font-body text-ink antialiased">
+    <header class="border-b border-line bg-white">
+      <div class="mx-auto flex w-full max-w-[880px] items-center gap-2.5 px-4 py-3.5 sm:px-6">
+        <span aria-hidden="true" class="flex h-8 w-8 items-center justify-center rounded-[9px] bg-brand font-display text-[17px] font-bold text-white">R</span>
+        <span class="text-xs leading-none font-bold tracking-[.09em] text-brand uppercase">RecepClinic</span>
+      </div>
+    </header>
+    <main class="mx-auto flex w-full max-w-[880px] flex-col gap-5 px-4 pt-6 sm:px-6 sm:pt-8">
       <slot />
     </main>
+    <script src="../scripts/sendOnce.ts"></script>
   </body>
 </html>

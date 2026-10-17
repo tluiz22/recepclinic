@@ -1,35 +1,35 @@
 ---
 // Topo das páginas públicas (/agendar e /preparo, F5.1): logo e nome da
 // clínica na cor dela; "Voltar para o site" só quando a clínica tem site
-// (cliente, 05/out/2026).
+// (cliente, 05/out/2026). Redesign R11: as cores vêm das variáveis do
+// PatientLayout (bg-clinic, text-clinic-text).
 import type { PublicClinicBrand } from "../../lib/data/config/brand";
-import { readableTextColor } from "../../lib/brandColor";
 
 interface Props {
   brand: PublicClinicBrand;
+  /** Largura do conteúdo da página, para o topo alinhar com ele. */
+  container?: string;
 }
 
-const { brand } = Astro.props;
-const text = readableTextColor(brand.brandColor);
+const { brand, container = "max-w-2xl" } = Astro.props;
 ---
 
-<header style={`background-color: ${brand.brandColor}; color: ${text};`}>
-  <div class="mx-auto flex w-full max-w-xl items-center justify-between gap-3 px-4 py-4">
+<header class="bg-clinic text-clinic-text">
+  <div class={`mx-auto flex w-full items-center justify-between gap-3 px-4 py-3.5 sm:px-6 sm:py-4 ${container}`}>
     <div class="flex min-w-0 items-center gap-3">
       {
         brand.logoUrl && (
-          <img src={brand.logoUrl} alt="" class="h-11 w-11 shrink-0 rounded-md bg-white object-contain p-1" />
+          <img src={brand.logoUrl} alt="" class="h-10 w-10 shrink-0 rounded-lg bg-white object-contain p-1 sm:h-11 sm:w-11" />
         )
       }
-      <p class="truncate text-lg font-semibold">{brand.name}</p>
+      <p class="truncate text-[17px] leading-tight font-semibold sm:text-[19px]">{brand.name}</p>
     </div>
     {
       brand.websiteUrl && (
         <a
           href={brand.websiteUrl}
           rel="noopener"
-          class="shrink-0 rounded-md border px-3 py-1.5 text-sm font-medium hover:opacity-80"
-          style={`border-color: ${text};`}
+          class="inline-flex h-9 shrink-0 items-center rounded-lg border border-current px-3 text-sm font-semibold text-clinic-text no-underline hover:opacity-85 sm:h-[38px] sm:px-3.5 sm:text-[15px]"
         >
           Voltar para o site
         </a>

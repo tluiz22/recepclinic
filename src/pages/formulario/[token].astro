@@ -2,10 +2,12 @@
 // Formulário de informações para o Suporte configurar a clínica (F4.4a, L47;
 // cliente, 05/out/2026). Sem login: o link é a chave. Só mostra o que está
 // liberado para a clínica; dá para salvar e continuar depois; depois de
-// enviado (ou vencido), não muda mais.
+// enviado (ou vencido), não muda mais. Redesign R11 (cliente, 17/out/2026): a
+// marca do RecepClinic, as seções em blocos numerados, cada local, profissional
+// ou pessoa num cartão com o número ("Local 2") e a barra fixa com os botões.
 import PublicLayout from "../../layouts/PublicLayout.astro";
-import FormMessage from "../../components/admin/FormMessage.astro";
-import { HINT, INPUT, LABEL, PRIMARY_BUTTON, SECONDARY_BUTTON } from "../../components/admin/fieldStyles";
+import Notice from "../../components/admin/ui/Notice.astro";
+import { HINT, INPUT, INPUT_INLINE, LABEL, PANEL, PRIMARY_BUTTON, SECONDARY_BUTTON, SECTION_TITLE } from "../../components/admin/config/formStyles";
 import { BRAZIL_STATES } from "../../lib/brazilStates";
 import { formatInstant } from "../../lib/clinicTime";
 import { createClinicServiceClient } from "../../lib/data/clinicService";
@@ -58,47 +60,65 @@ const blankMember: OnboardingTeamMember = { name: "", email: "", role: "receptio
 const locations = [...(answers?.locations ?? []), blankLocation];
 const professionals = [...(answers?.professionals ?? []), blankProfessional];
 const team = [...(answers?.team ?? []), blankMember];
-const section = "mt-8 text-lg font-semibold text-slate-900";
-const row = "grid gap-3 rounded-lg border border-slate-200 bg-white p-4";
+// O nome cadastrado só preenche o formulário nunca salvo; depois, vale o salvo,
+// mesmo em branco (o erro "Informe ao menos o nome" aponta o campo vazio; teste da R11, FORM-04).
+const nameValue = request?.savedAt ? (answers?.clinic.name ?? "") : answers?.clinic.name || clinicName;
+// O campo fica dentro do rótulo (o texto digitado não herda o negrito dele).
+const field = `${INPUT} font-normal`;
+const block = `${PANEL} flex flex-col gap-4`;
+const item = "flex flex-col gap-3 rounded-[10px] border border-[#e1e8e5] bg-[#f8faf9] p-4";
+const itemTitle = "text-sm font-bold text-ink-mid";
+const add = `${SECONDARY_BUTTON} self-start border-dashed text-brand-ink`;
+const num = "flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-full bg-brand-soft text-[15px] font-bold text-brand-ink";
 ---
 
 <PublicLayout title="Informações da clínica">
   {
     !request ? (
-      <>
-        <h1 class="mt-2 text-2xl font-bold">Link inválido</h1>
-        <p class="mt-2 text-slate-600">Confira o endereço do e-mail ou peça um novo link ao Suporte RecepClinic.</p>
-      </>
+      <div class={`${PANEL} flex flex-col gap-2`}>
+        <h1 class="font-display text-2xl font-bold text-ink">Link inválido</h1>
+        <p class="text-base text-ink-soft">Confira o endereço do e-mail ou peça um novo link ao Suporte RecepClinic.</p>
+      </div>
     ) : (
       <>
-        <h1 class="mt-2 text-2xl font-bold">Informações para configurar a {clinicName}</h1>
-        {flash && <FormMessage tone={flash.tone}>{flash.text}</FormMessage>}
+        <div class="flex flex-col gap-2">
+          <p class="text-[13px] leading-tight font-bold tracking-[.06em] text-ink-soft uppercase">Informações para configurar</p>
+          <h1 class="font-display text-[28px] leading-[1.12] font-bold text-ink sm:text-[32px]">{clinicName}</h1>
+          {editable && (
+            <p class="text-base leading-normal text-ink-soft">
+              Preencha o que souber. Dá para salvar e continuar depois pelo mesmo link (vale até{" "}
+              {formatInstant(request.expiresAt, timeZone, "dd/MM/yyyy")}). Quando terminar, toque em "Enviar ao Suporte".
+            </p>
+          )}
+        </div>
+        {
+          flash && (
+            <div id="aviso-do-formulario" tabindex="-1" data-flash={flash.tone} data-fields={flash.fields?.join(" ")} class="outline-none">
+              <Notice tone={flash.tone === "error" ? "danger" : "success"}>{flash.text}</Notice>
+            </div>
+          )
+        }
         {closed && (
-          <p class="mt-4 text-slate-700">
+          <p class={`${PANEL} text-base text-ink`}>
             Recebemos as informações em {formatInstant(request.submittedAt ?? request.savedAt ?? request.requestedAt, timeZone, "dd/MM/yyyy 'às' HH:mm")}. O
             Suporte RecepClinic vai configurar a clínica e avisar quando estiver pronta.
           </p>
         )}
-        {expired && <p class="mt-4 text-slate-700">Este link venceu. Peça um novo ao Suporte RecepClinic.</p>}
+        {expired && <p class={`${PANEL} text-base text-ink`}>Este link venceu. Peça um novo ao Suporte RecepClinic.</p>}
         {editable && (
-          <>
-            <p class="mt-2 text-slate-600">
-              Preencha o que souber. Dá para salvar e continuar depois pelo mesmo link (vale até{" "}
-              {formatInstant(request.expiresAt, timeZone, "dd/MM/yyyy")}). Quando terminar, toque em "Enviar ao Suporte".
-            </p>
-
-            <form method="POST" action={`/api/formulario/${token}`} class="flex flex-col">
-              <h2 class={section}>1. Clínica</h2>
-              <div class="mt-3 grid gap-3 sm:grid-cols-2">
+          <form method="POST" action={`/api/formulario/${token}`} class="flex flex-col gap-4">
+            <section class={block} aria-labelledby="secao-1">
+              <h2 id="secao-1" class={`flex items-center gap-3 ${SECTION_TITLE}`}><span class={num} aria-hidden="true">1</span>Clínica</h2>
+              <div class="grid gap-3.5 sm:grid-cols-2">
                 <div class="sm:col-span-2">
                   <label for="clinic_name" class={LABEL}>Nome da clínica</label>
-                  <input id="clinic_name" name="clinic_name" value={answers?.clinic.name || clinicName} class={INPUT} />
+                  <input id="clinic_name" name="clinic_name" value={nameValue} class={field} />
                 </div>
                 <div>
                   <label for="clinic_profile" class={LABEL}>Atende</label>
-                  <select id="clinic_profile" name="clinic_profile" class={INPUT}>
+                  <select id="clinic_profile" name="clinic_profile" class={field}>
                     <option value="">Escolha…</option>
-                    {Object.entries(PROFILE_LABELS).map(([value, label]) => (
+                    {Object.entries(PROFILE_LABELS).map(([value]) => (
                       <option value={value} selected={value === answers?.clinic.profile}>
                         {value === "pediatric" ? "Crianças (pediátrica)" : value === "adult" ? "Adultos" : "Crianças e adultos (mista)"}
                       </option>
@@ -107,38 +127,41 @@ const row = "grid gap-3 rounded-lg border border-slate-200 bg-white p-4";
                 </div>
                 <div>
                   <label for="clinic_city" class={LABEL}>Cidade e estado</label>
-                  <input id="clinic_city" name="clinic_city" placeholder="Natal – RN" value={answers?.clinic.city ?? ""} class={INPUT} />
+                  <input id="clinic_city" name="clinic_city" placeholder="Natal – RN" value={answers?.clinic.city ?? ""} class={field} />
                 </div>
                 {sections.botInfo && (
                   <>
-                    <div class="sm:col-span-2">
+                    <div>
                       <label for="clinic_payment" class={LABEL}>Formas de pagamento</label>
-                      <textarea id="clinic_payment" name="clinic_payment" rows="2" placeholder="PIX, cartão, dinheiro" class={INPUT}>{answers?.clinic.paymentInfo ?? ""}</textarea>
+                      <textarea id="clinic_payment" name="clinic_payment" rows="2" placeholder="PIX, cartão, dinheiro" class={field}>{answers?.clinic.paymentInfo ?? ""}</textarea>
                     </div>
-                    <div class="sm:col-span-2">
+                    <div>
                       <label for="clinic_insurance" class={LABEL}>Convênios atendidos</label>
-                      <textarea id="clinic_insurance" name="clinic_insurance" rows="2" placeholder="Unimed, Amil… ou só particular" class={INPUT}>{answers?.clinic.insuranceInfo ?? ""}</textarea>
+                      <textarea id="clinic_insurance" name="clinic_insurance" rows="2" placeholder="Unimed, Amil… ou só particular" class={field}>{answers?.clinic.insuranceInfo ?? ""}</textarea>
                     </div>
                     <div class="sm:col-span-2">
                       <label for="clinic_notes" class={LABEL}>Observações para o atendimento pelo WhatsApp</label>
-                      <textarea id="clinic_notes" name="clinic_notes" rows="2" class={INPUT}>{answers?.clinic.notes ?? ""}</textarea>
+                      <textarea id="clinic_notes" name="clinic_notes" rows="2" class={field}>{answers?.clinic.notes ?? ""}</textarea>
                     </div>
                   </>
                 )}
               </div>
+            </section>
 
-              <h2 class={section}>2. Locais de atendimento</h2>
-              <div class="mt-3 flex flex-col gap-3" data-rows="locations">
-                {locations.map((location) => (
-                  <div class={row} data-row>
-                    <div class="grid gap-3 sm:grid-cols-2">
-                      <div>
-                        <label class={LABEL}>Nome</label>
-                        <input name="location_name" placeholder="Consultório Centro" value={location.name} class={INPUT} />
-                      </div>
-                      <div>
-                        <label class={LABEL}>Tipo</label>
-                        <select name="location_type" class={INPUT}>
+            <section class={block} aria-labelledby="secao-2">
+              <h2 id="secao-2" class={`flex items-center gap-3 ${SECTION_TITLE}`}><span class={num} aria-hidden="true">2</span>Locais de atendimento</h2>
+              <div class="flex flex-col gap-3" data-rows="locations">
+                {locations.map((location, index) => (
+                  <div class={item} data-row>
+                    <p class={itemTitle} data-row-title="Local">Local {index + 1}</p>
+                    <div class="grid gap-3.5 sm:grid-cols-2">
+                      <label class={LABEL}>
+                        Nome
+                        <input name="location_name" placeholder="Consultório Centro" value={location.name} class={field} />
+                      </label>
+                      <label class={LABEL}>
+                        Tipo
+                        <select name="location_type" class={field}>
                           <option value="clinic">Consultório</option>
                           {sections.homeVisit && (
                             <option value="home_visit" selected={location.type === "home_visit"}>
@@ -146,44 +169,47 @@ const row = "grid gap-3 rounded-lg border border-slate-200 bg-white p-4";
                             </option>
                           )}
                         </select>
-                      </div>
+                      </label>
                     </div>
-                    <div>
-                      <label class={LABEL}>Endereço (consultório)</label>
-                      <input name="location_address" placeholder="Rua, número – bairro, cidade" value={location.address} class={INPUT} />
-                    </div>
+                    <label class={LABEL}>
+                      Endereço (consultório)
+                      <input name="location_address" placeholder="Rua, número – bairro, cidade" value={location.address} class={field} />
+                    </label>
                   </div>
                 ))}
               </div>
-              <button type="button" class={`${SECONDARY_BUTTON} mt-2 self-start`} data-add="locations">+ Outro local</button>
+              <button type="button" class={add} data-add="locations">+ Outro local</button>
+            </section>
 
-              <h2 class={section}>3. Profissionais</h2>
-              <div class="mt-3 flex flex-col gap-3" data-rows="professionals">
-                {professionals.map((p) => (
-                  <div class={row} data-row>
-                    <div class="grid gap-3 sm:grid-cols-3">
-                      <div class="sm:col-span-2">
-                        <label class={LABEL}>Nome (como aparece para o paciente)</label>
-                        <input name="professional_name" value={p.name} class={INPUT} />
-                      </div>
+            <section class={block} aria-labelledby="secao-3">
+              <h2 id="secao-3" class={`flex items-center gap-3 ${SECTION_TITLE}`}><span class={num} aria-hidden="true">3</span>Profissionais</h2>
+              <div class="flex flex-col gap-3" data-rows="professionals">
+                {professionals.map((p, index) => (
+                  <div class={item} data-row>
+                    <p class={itemTitle} data-row-title="Profissional">Profissional {index + 1}</p>
+                    <div class="grid gap-3.5 sm:grid-cols-3">
+                      <label class={`${LABEL} sm:col-span-2`}>
+                        Nome (como aparece para o paciente)
+                        <input name="professional_name" value={p.name} class={field} />
+                      </label>
+                      <label class={LABEL}>
+                        Profissão
+                        <input name="professional_profession" placeholder="Médica, Dentista…" value={p.profession} class={field} />
+                      </label>
+                      <label class={LABEL}>
+                        Especialidade
+                        <input name="professional_specialty" value={p.specialty} class={field} />
+                      </label>
                       <div>
-                        <label class={LABEL}>Profissão</label>
-                        <input name="professional_profession" placeholder="Médica, Dentista…" value={p.profession} class={INPUT} />
-                      </div>
-                      <div>
-                        <label class={LABEL}>Especialidade</label>
-                        <input name="professional_specialty" value={p.specialty} class={INPUT} />
-                      </div>
-                      <div>
-                        <label class={LABEL}>Conselho e número</label>
-                        <div class="flex gap-2">
-                          <input name="professional_council" placeholder="CRM" value={p.council} class={`${INPUT} w-24`} />
-                          <input name="professional_council_number" placeholder="12345" value={p.councilNumber} class={INPUT} />
+                        <span class={LABEL}>Conselho e número</span>
+                        <div class="mt-1.5 flex gap-2">
+                          <input name="professional_council" placeholder="CRM" value={p.council} aria-label="Conselho" class={`${INPUT_INLINE} w-24 min-w-0 font-normal`} />
+                          <input name="professional_council_number" placeholder="12345" value={p.councilNumber} aria-label="Número no conselho" class={`${INPUT_INLINE} w-full min-w-0 font-normal`} />
                         </div>
                       </div>
-                      <div>
-                        <label class={LABEL}>UF</label>
-                        <select name="professional_council_state" class={INPUT}>
+                      <label class={LABEL}>
+                        UF
+                        <select name="professional_council_state" class={field}>
                           <option value="">—</option>
                           {BRAZIL_STATES.map((uf) => (
                             <option value={uf} selected={uf === p.councilState}>
@@ -191,113 +217,131 @@ const row = "grid gap-3 rounded-lg border border-slate-200 bg-white p-4";
                             </option>
                           ))}
                         </select>
-                      </div>
-                      <div>
-                        <label class={LABEL}>RQE (se tiver)</label>
-                        <input name="professional_rqe" inputmode="numeric" placeholder="6271, 8890" value={p.rqe} class={INPUT} />
-                      </div>
-                      <div>
-                        <label class={LABEL}>WhatsApp</label>
-                        <input name="professional_whatsapp" type="tel" placeholder="(84) 99999-9999" value={p.whatsapp} class={INPUT} />
-                      </div>
+                      </label>
+                      <label class={LABEL}>
+                        RQE (se tiver)
+                        <input name="professional_rqe" inputmode="numeric" placeholder="6271, 8890" value={p.rqe} class={field} />
+                      </label>
+                      <label class={LABEL}>
+                        WhatsApp
+                        <input name="professional_whatsapp" type="tel" placeholder="(84) 99999-9999" value={p.whatsapp} class={field} />
+                      </label>
                       {sections.dailySummary && (
-                        <div class="sm:col-span-2">
-                          <label class={LABEL}>Recebe o resumo do dia dos seus atendimentos?</label>
-                          <select name="professional_summary" class={INPUT}>
+                        <label class={`${LABEL} sm:col-span-2`}>
+                          Recebe o resumo do dia dos seus atendimentos?
+                          <select name="professional_summary" class={field}>
                             <option value="nao">Não</option>
                             <option value="sim" selected={p.receivesSummary}>
                               Sim, no WhatsApp acima
                             </option>
                           </select>
-                        </div>
+                        </label>
                       )}
                     </div>
                   </div>
                 ))}
               </div>
-              <button type="button" class={`${SECONDARY_BUTTON} mt-2 self-start`} data-add="professionals">+ Outro profissional</button>
+              <button type="button" class={add} data-add="professionals">+ Outro profissional</button>
+            </section>
 
-              <h2 class={section}>4. Serviços</h2>
-              <p class={HINT}>Um por linha: nome, duração, valor, onde é feito{sections.exams ? " e, para exames, o preparo" : ""}.</p>
-              <textarea name="services" rows="6" placeholder={ex.services} class={INPUT}>{answers?.services ?? ""}</textarea>
+            <section class={block} aria-labelledby="secao-4">
+              <h2 id="secao-4" class={`flex items-center gap-3 ${SECTION_TITLE}`}><span class={num} aria-hidden="true">4</span>Serviços</h2>
+              <div>
+                <label for="services" class={LABEL}>Um por linha</label>
+                <p class={HINT}>Nome, duração, valor, onde é feito{sections.exams ? " e, para exames, o preparo" : ""}.</p>
+                <textarea id="services" name="services" rows="6" placeholder={ex.services} class={field}>{answers?.services ?? ""}</textarea>
+              </div>
+            </section>
 
-              <h2 class={section}>5. Dias e horários de atendimento</h2>
-              <p class={HINT}>De cada profissional (ou serviço), com o local.</p>
-              <textarea name="schedule" rows="6" placeholder={ex.schedule} class={INPUT}>{answers?.schedule ?? ""}</textarea>
+            <section class={block} aria-labelledby="secao-5">
+              <h2 id="secao-5" class={`flex items-center gap-3 ${SECTION_TITLE}`}><span class={num} aria-hidden="true">5</span>Dias e horários de atendimento</h2>
+              <div>
+                <label for="schedule" class={LABEL}>De cada profissional (ou serviço), com o local</label>
+                <textarea id="schedule" name="schedule" rows="6" placeholder={ex.schedule} class={field}>{answers?.schedule ?? ""}</textarea>
+              </div>
+            </section>
 
-              <h2 class={section}>6. Feriados próprios</h2>
-              <p class={HINT}>Os feriados nacionais já estão no sistema. Informe os da cidade e os recessos da clínica.</p>
-              <textarea name="holidays" rows="4" placeholder={ex.holidays} class={INPUT}>{answers?.holidays ?? ""}</textarea>
+            <section class={block} aria-labelledby="secao-6">
+              <h2 id="secao-6" class={`flex items-center gap-3 ${SECTION_TITLE}`}><span class={num} aria-hidden="true">6</span>Feriados próprios</h2>
+              <div>
+                <label for="holidays" class={LABEL}>Feriados da cidade e recessos da clínica</label>
+                <p class={HINT}>Os feriados nacionais já estão no sistema.</p>
+                <textarea id="holidays" name="holidays" rows="4" placeholder={ex.holidays} class={field}>{answers?.holidays ?? ""}</textarea>
+              </div>
+            </section>
 
-              <h2 class={section}>7. Equipe que usa o painel</h2>
-              <p class={HINT}>Cada pessoa recebe um convite por e-mail.</p>
-              <div class="mt-3 flex flex-col gap-3" data-rows="team">
-                {team.map((member) => (
-                  <div class={row} data-row>
-                    <div class="grid gap-3 sm:grid-cols-3">
-                      <div>
-                        <label class={LABEL}>Nome</label>
-                        <input name="team_name" value={member.name} class={INPUT} />
-                      </div>
-                      <div>
-                        <label class={LABEL}>E-mail</label>
-                        <input name="team_email" type="email" value={member.email} class={INPUT} />
-                      </div>
-                      <div>
-                        <label class={LABEL}>Papel</label>
-                        <select name="team_role" class={INPUT}>
+            <section class={block} aria-labelledby="secao-7">
+              <h2 id="secao-7" class={`flex items-center gap-3 ${SECTION_TITLE}`}><span class={num} aria-hidden="true">7</span>Equipe que usa o painel</h2>
+              <p class="-mt-2 text-sm text-ink-soft">Cada pessoa recebe um convite por e-mail.</p>
+              <div class="flex flex-col gap-3" data-rows="team">
+                {team.map((member, index) => (
+                  <div class={item} data-row>
+                    <p class={itemTitle} data-row-title="Pessoa">Pessoa {index + 1}</p>
+                    <div class="grid gap-3.5 sm:grid-cols-3">
+                      <label class={LABEL}>
+                        Nome
+                        <input name="team_name" value={member.name} class={field} />
+                      </label>
+                      <label class={LABEL}>
+                        E-mail
+                        <input name="team_email" type="email" value={member.email} class={field} />
+                      </label>
+                      <label class={LABEL}>
+                        Papel
+                        <select name="team_role" class={field}>
                           {Object.entries(ROLE_NAMES).map(([value, label]) => (
                             <option value={value} selected={value === member.role}>
                               {label}
                             </option>
                           ))}
                         </select>
-                      </div>
+                      </label>
                     </div>
                   </div>
                 ))}
               </div>
-              <button type="button" class={`${SECONDARY_BUTTON} mt-2 self-start`} data-add="team">+ Outra pessoa</button>
+              <button type="button" class={add} data-add="team">+ Outra pessoa</button>
+            </section>
 
-              {sections.whatsapp && (
-                <>
-                  <h2 class={section}>8. WhatsApp e avisos</h2>
-                  <div class="mt-3 grid gap-3">
-                    <div>
-                      <label for="whatsapp_number" class={LABEL}>
-                        Número de WhatsApp da clínica
-                      </label>
-                      <input id="whatsapp_number" name="whatsapp_number" type="tel" value={answers?.whatsapp.number ?? ""} class={INPUT} />
-                    </div>
-                    {sections.dailySummary && (
-                      <div>
-                        <label for="summary_recipients" class={LABEL}>
-                          Quem mais recebe o resumo do dia (nome e WhatsApp)
-                        </label>
-                        <textarea id="summary_recipients" name="summary_recipients" rows="3" placeholder="Recepção – (84) 99999-0000" class={INPUT}>{answers?.whatsapp.summaryRecipients ?? ""}</textarea>
-                      </div>
-                    )}
+            {sections.whatsapp && (
+              <section class={block} aria-labelledby="secao-8">
+                <h2 id="secao-8" class={`flex items-center gap-3 ${SECTION_TITLE}`}><span class={num} aria-hidden="true">8</span>WhatsApp e avisos</h2>
+                <div class="grid gap-3.5">
+                  <div>
+                    <label for="whatsapp_number" class={LABEL}>
+                      Número de WhatsApp da clínica
+                    </label>
+                    <input id="whatsapp_number" name="whatsapp_number" type="tel" value={answers?.whatsapp.number ?? ""} class={field} />
                   </div>
-                </>
-              )}
+                  {sections.dailySummary && (
+                    <div>
+                      <label for="summary_recipients" class={LABEL}>
+                        Quem mais recebe o resumo do dia (nome e WhatsApp)
+                      </label>
+                      <textarea id="summary_recipients" name="summary_recipients" rows="3" placeholder="Recepção – (84) 99999-0000" class={field}>{answers?.whatsapp.summaryRecipients ?? ""}</textarea>
+                    </div>
+                  )}
+                </div>
+              </section>
+            )}
 
-              <div class="sticky bottom-0 -mx-4 mt-8 flex flex-wrap gap-3 border-t border-slate-200 bg-slate-50/95 px-4 py-3">
-                <button type="submit" name="acao" value="rascunho" class={SECONDARY_BUTTON}>
-                  Salvar e continuar depois
-                </button>
-                <button type="submit" name="acao" value="enviar" class={PRIMARY_BUTTON}>
-                  Enviar ao Suporte
-                </button>
-              </div>
-            </form>
-          </>
+            <div class="sticky bottom-0 -mx-4 mt-2 flex flex-wrap justify-end gap-3 border-t border-line bg-white/95 px-4 pt-3 pb-[max(12px,env(safe-area-inset-bottom))] sm:-mx-6 sm:px-6">
+              <button type="submit" name="acao" value="rascunho" class={`${SECONDARY_BUTTON} max-sm:flex-1`} data-sending-label="Salvando…">
+                Salvar e continuar depois
+              </button>
+              <button type="submit" name="acao" value="enviar" class={`${PRIMARY_BUTTON} max-sm:flex-1`} data-sending-label="Enviando…">
+                Enviar ao Suporte
+              </button>
+            </div>
+          </form>
         )}
+        {!editable && <div class="pb-10" />}
       </>
     )
   }
 
   <script>
-    // "+ Outro …": copia a última linha da lista, vazia.
+    // "+ Outro …": copia o último cartão da lista, vazio, e renumera ("Local 2").
     document.querySelectorAll<HTMLButtonElement>("[data-add]").forEach((button) => {
       button.addEventListener("click", () => {
         const list = document.querySelector(`[data-rows="${button.dataset.add}"]`);
@@ -307,8 +351,31 @@ const row = "grid gap-3 rounded-lg border border-slate-200 bg-white p-4";
         copy.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>("input, textarea").forEach((field) => (field.value = ""));
         copy.querySelectorAll<HTMLSelectElement>("select").forEach((field) => (field.selectedIndex = 0));
         list.appendChild(copy);
+        list.querySelectorAll<HTMLElement>("[data-row-title]").forEach((title, index) => {
+          title.textContent = `${title.dataset.rowTitle} ${index + 1}`;
+        });
         copy.querySelector<HTMLElement>("input")?.focus();
       });
     });
+
+    // Erro do envio (teste da R11, FORM-04): marca o campo que falhou, liga o
+    // aviso a ele e põe o foco nele, no meio da tela (a barra fixa de baixo
+    // não o cobre); sem campo, o foco vai para o aviso.
+    const notice = document.querySelector<HTMLElement>("#aviso-do-formulario[data-flash='error']");
+    if (notice) {
+      const invalid = (notice.dataset.fields ?? "")
+        .split(" ")
+        .filter(Boolean)
+        .map((name) => document.querySelector<HTMLInputElement>(`form [name='${name}']`))
+        .filter((el): el is HTMLInputElement => !!el);
+      for (const el of invalid) {
+        el.setAttribute("aria-invalid", "true");
+        el.setAttribute("aria-describedby", notice.id);
+        el.addEventListener("input", () => el.removeAttribute("aria-invalid"), { once: true });
+      }
+      const target = invalid[0] ?? notice;
+      target.scrollIntoView({ block: "center" });
+      target.focus({ preventScroll: true });
+    }
   </script>
 </PublicLayout>

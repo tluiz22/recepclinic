@@ -27,7 +27,12 @@ export const POST: APIRoute = async ({ params, request, cookies, redirect }) => 
     setFlash(cookies, { tone: "success", text: submit ? "Recebemos as informações. Obrigado!" : "Rascunho salvo. Dá para continuar depois pelo mesmo link." }, "/formulario");
   } catch (error) {
     if (!(error instanceof DataError)) logError("pedido de informações", error);
-    setFlash(cookies, { tone: "error", text: error instanceof DataError ? describeDataError(error) : "Não foi possível salvar. Tente de novo." }, "/formulario");
+    const fields = error instanceof DataError ? Object.keys(error.fields) : [];
+    setFlash(
+      cookies,
+      { tone: "error", text: error instanceof DataError ? describeDataError(error) : "Não foi possível salvar. Tente de novo.", ...(fields.length ? { fields } : {}) },
+      "/formulario",
+    );
   }
   return redirect(page, 303);
 };

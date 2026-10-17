@@ -1,0 +1,45 @@
+---
+// Aviso das páginas do paciente (redesign R11, cliente, 17/out/2026): link
+// inválido, expirado, já usado, atendimento cancelado e preparo ou orientações
+// não encontrados num padrão só (ícone, título e o texto de cada um). Com o
+// WhatsApp conectado da clínica, o botão "Falar com a clínica no WhatsApp"
+// (decisão 5; "o consultório" etc. pela designação); o link inválido não sabe
+// a clínica e fica sem ele.
+import Icon, { type IconName } from "../admin/Icon.astro";
+
+interface Props {
+  icon: IconName;
+  title: string;
+  /** Só os dígitos, com o país (PublicClinicBrand.whatsappPhone). */
+  whatsappPhone?: string | null;
+  /** Como a clínica é chamada ("a clínica", "o consultório"; cliente, 11/out/2026). */
+  clinicWord?: string;
+  tone?: "neutral" | "warning";
+}
+
+const { icon, title, whatsappPhone, clinicWord = "a clínica", tone = "neutral" } = Astro.props;
+const iconBox = tone === "warning" ? "bg-amber-100 text-amber-800" : "bg-gray-100 text-gray-700";
+---
+
+<section class="flex flex-col items-center gap-3 rounded-2xl border border-gray-200 bg-white px-5 py-7 text-center sm:px-8">
+  <span class={`flex h-12 w-12 items-center justify-center rounded-full ${iconBox}`}>
+    <Icon name={icon} class="h-6 w-6" strokeWidth={1.8} />
+  </span>
+  <h1 class="text-[22px] leading-tight font-bold text-gray-900 sm:text-2xl">{title}</h1>
+  <p class="max-w-md text-base leading-normal text-gray-600"><slot /></p>
+  {
+    whatsappPhone && (
+      <a
+        href={`https://wa.me/${whatsappPhone}`}
+        target="_blank"
+        rel="noopener"
+        class="mt-1 inline-flex h-12 w-full max-w-sm items-center justify-center gap-2 rounded-[10px] border border-clinic-ink bg-white px-4 text-base font-bold text-clinic-ink no-underline hover:bg-clinic-tint"
+      >
+        <svg aria-hidden="true" class="h-5 w-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M4 20l1.3-3.9A8 8 0 1 1 12 20a8 8 0 0 1-4-1.1z" />
+        </svg>
+        Falar com {clinicWord} no WhatsApp
+      </a>
+    )
+  }
+</section>

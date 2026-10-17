@@ -1,0 +1,73 @@
+---
+// Horários do /agendar (redesign R11, cliente, 17/out/2026): os de um dia em
+// Manhã, Tarde e Noite, em botões de 48px (como o SlotPicker do Marcar, R4),
+// ou as sessões da turma em cartões com as vagas. São rádios do formulário de
+// confirmação (name="start"); `data-summary` leva o escolhido para o resumo.
+import { periodOf } from "../../lib/dayStrip";
+
+export interface PatientSlot {
+  value: string;
+  /** "09:30" (dia) ou "Terça-feira, 28/10 às 07:30" (turma). */
+  label: string;
+  /** Profissional e local, quando há mais de um. */
+  detail: string;
+  /** "Qui, 23/10 às 09:30". */
+  summary: string;
+  /** Turma: vagas que sobram. */
+  remaining?: number;
+}
+
+interface Props {
+  options: PatientSlot[];
+  /** Turma: lista de sessões em vez da grade por turno. */
+  sessions?: boolean;
+}
+
+const { options, sessions = false } = Astro.props;
+const groups = sessions
+  ? [{ title: "", items: options }]
+  : (["Manhã", "Tarde", "Noite"] as const)
+      .map((period) => ({ title: period as string, items: options.filter((o) => periodOf(o.label) === period) }))
+      .filter((g) => g.items.length);
+const focus = "has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-clinic-ink";
+---
+
+{
+  groups.map((group) => (
+    <fieldset class="flex min-w-0 flex-col gap-2">
+      {group.title ? (
+        <legend class="mb-2 text-[14.5px] font-semibold text-gray-600">{group.title}</legend>
+      ) : (
+        <legend class="sr-only">Dia e horário</legend>
+      )}
+      {sessions ? (
+        <div class="flex flex-col gap-2">
+          {group.items.map((slot) => (
+            <label class={`flex min-h-16 cursor-pointer items-center gap-3.5 rounded-xl border border-gray-300 bg-white px-4 py-3 hover:border-clinic-ink has-[:checked]:border-2 has-[:checked]:border-clinic-ink has-[:checked]:bg-clinic-tint has-[:checked]:px-[15px] ${focus}`}>
+              <input type="radio" name="start" value={slot.value} required data-summary={slot.summary} class="h-5 w-5 shrink-0 accent-[var(--clinic-ink)]" />
+              <span class="min-w-0 flex-1">
+                <span class="block text-[17px] leading-snug font-bold text-gray-900">{slot.label}</span>
+                {slot.detail && <span class="block text-[15px] leading-snug text-gray-600">{slot.detail}</span>}
+              </span>
+              {slot.remaining !== undefined && (
+                <span class={`shrink-0 rounded-full px-2.5 py-0.5 text-[13.5px] font-semibold whitespace-nowrap ${slot.remaining <= 2 ? "bg-amber-100 text-amber-900" : "bg-gray-100 text-gray-700"}`}>
+                  {slot.remaining} {slot.remaining === 1 ? "vaga" : "vagas"}
+                </span>
+              )}
+            </label>
+          ))}
+        </div>
+      ) : (
+        <div class="grid grid-cols-3 gap-2 sm:grid-cols-4 lg:grid-cols-5">
+          {group.items.map((slot) => (
+            <label class={`flex min-h-12 cursor-pointer flex-col items-center justify-center gap-px rounded-[10px] border border-gray-300 bg-white px-1 py-1.5 text-center text-gray-900 hover:border-clinic-ink has-[:checked]:border-2 has-[:checked]:border-clinic-ink has-[:checked]:bg-clinic-tint has-[:checked]:px-[3px] has-[:checked]:text-clinic-ink ${focus}`}>
+              <input type="radio" name="start" value={slot.value} required data-summary={slot.summary} class="sr-only" />
+              <span class="text-[17px] leading-tight font-semibold tabular-nums">{slot.label}</span>
+              {slot.detail && <span class="text-[13px] leading-tight text-gray-600">{slot.detail}</span>}
+            </label>
+          ))}
+        </div>
+      )}
+    </fieldset>
+  ))
+}

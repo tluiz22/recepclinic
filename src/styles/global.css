@@ -63,6 +63,19 @@
   --color-blk-800: #3a4744;
 }
 
+/*
+ * Cor da clínica nas páginas do paciente (R11, cliente, 17/out/2026): vem de
+ * variáveis postas no <body> pelo PatientLayout (src/lib/brandColor.ts,
+ * clinicColorStyle). "inline" para a classe usar a variável da página, não a
+ * da raiz. Sem a variável, o verde do RecepClinic (cor padrão, decisão 8).
+ */
+@theme inline {
+  --color-clinic: var(--clinic, #0b7a62);
+  --color-clinic-text: var(--clinic-text, #ffffff);
+  --color-clinic-ink: var(--clinic-ink, #0b7a62);
+  --color-clinic-tint: var(--clinic-tint, #e7f2ef);
+}
+
 /* Envio único (R5): o botão que enviou mostra que está trabalhando (src/scripts/sendOnce.ts). */
 button[aria-busy="true"] {
   cursor: progress;

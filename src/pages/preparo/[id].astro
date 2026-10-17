@@ -7,11 +7,12 @@
 // A clínica vem do serviço (plataforma) e o resto usa a credencial limitada a
 // ela (D1). Não mostra nenhum dado de paciente, só o nome do exame e o
 // preparo. Exame inativo continua mostrando o preparo: quem já tem um marcado
-// ainda pode precisar dele.
+// ainda pode precisar dele. Redesign R11 (cliente, 17/out/2026): texto em 17px,
+// com mais espaço entre as linhas, e o aviso no padrão das páginas do paciente.
 import { DEFAULT_DESIGNATION, designationText } from "../../lib/designation";
-import "../../styles/global.css";
-import PublicFooter from "../../components/PublicFooter.astro";
-import PublicHeader from "../../components/public/PublicHeader.astro";
+import LinkNotice from "../../components/public/LinkNotice.astro";
+import PatientLayout from "../../layouts/PatientLayout.astro";
+import { PATIENT_TEXT } from "../../components/public/styles";
 import { createClinicServiceClient } from "../../lib/data/clinicService";
 import { getPublicClinicBrand, type PublicClinicBrand } from "../../lib/data/config/brand";
 import { getService, type Service } from "../../lib/data/config/services";
@@ -43,38 +44,20 @@ const pageTitle = exam && preparation ? `Preparo: ${exam.name}` : "Preparo não 
 const clinicWord = designationText(brand?.designation ?? DEFAULT_DESIGNATION);
 ---
 
-<html lang="pt-BR">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="robots" content="noindex, nofollow" />
-    <!-- Ícone da aba: o logo da clínica; sem logo, nenhum (cliente, 14/out/2026; auditoria A-05). -->
-    <link rel="icon" href={brand?.logoUrl ?? "data:,"} />
-    <title>{pageTitle} | {brand?.name ?? "RecepClinic"}</title>
-  </head>
-  <body class="flex min-h-screen flex-col bg-slate-50 text-slate-900">
-    {brand && <PublicHeader brand={brand} />}
-    <main class="mx-auto w-full max-w-xl flex-1 px-4 py-10">
-      {
-        exam && preparation ? (
-          <>
-            <p class="text-sm font-medium text-slate-500">Preparo para exame</p>
-            <h1 class="mt-1 text-2xl font-bold text-slate-900">{exam.name}</h1>
-            <div
-              class="mt-6 whitespace-pre-line break-words rounded-md border border-slate-200 bg-white p-5 text-base leading-relaxed text-slate-800"
-              set:html={whatsAppTextToHtml(preparation)}
-            />
-          </>
-        ) : (
-          <div class="rounded-md border border-slate-200 bg-white p-6 text-center">
-            <h1 class="text-lg font-bold text-slate-900">Preparo não encontrado</h1>
-            <p class="mt-2 text-sm text-slate-600">
-              Não há instruções de preparo para este exame. Em caso de dúvida, fale com {clinicWord} pelo WhatsApp.
-            </p>
-          </div>
-        )
-      }
-    </main>
-    <PublicFooter />
-  </body>
-</html>
+<PatientLayout title={pageTitle} brand={brand}>
+  {
+    exam && preparation ? (
+      <>
+        <div>
+          <p class="text-[15px] font-semibold text-clinic-ink">Preparo para exame</p>
+          <h1 class="mt-0.5 text-[26px] leading-tight font-bold text-gray-900 sm:text-3xl">{exam.name}</h1>
+        </div>
+        <div class={PATIENT_TEXT} set:html={whatsAppTextToHtml(preparation)} />
+      </>
+    ) : (
+      <LinkNotice icon="information-circle" title="Preparo não encontrado" whatsappPhone={brand?.whatsappPhone} clinicWord={clinicWord}>
+        Não há instruções de preparo para este exame. Em caso de dúvida, fale com {clinicWord} pelo WhatsApp.
+      </LinkNotice>
+    )
+  }
+</PatientLayout>

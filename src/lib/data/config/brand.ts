@@ -13,11 +13,12 @@ import { logError } from "../../log";
 export const LOGO_BUCKET = "clinic-logos";
 export const LOGO_MAX_BYTES = 1024 * 1024;
 export const LOGO_TYPES: Record<string, string> = { "image/png": "png", "image/jpeg": "jpg", "image/webp": "webp" };
-/** Cor das páginas públicas quando a clínica não escolheu uma. */
-export const DEFAULT_BRAND_COLOR = "#0369A1";
+/** Cor das páginas públicas quando a clínica não escolheu uma (o verde do RecepClinic; R11, cliente, 17/out/2026). */
+export const DEFAULT_BRAND_COLOR = "#0B7A62";
 
 /** Cores prontas em Configurações › Clínica (cliente, 05/out/2026); "Outra" escolhe qualquer cor. */
 export const BRAND_COLOR_OPTIONS: { value: string; label: string }[] = [
+  { value: "#0B7A62", label: "Verde RecepClinic" },
   { value: "#0369A1", label: "Azul" },
   { value: "#1E3A8A", label: "Azul-marinho" },
   { value: "#0F766E", label: "Verde-água" },
@@ -37,11 +38,13 @@ export type PublicClinicBrand = {
   websiteUrl: string | null;
   /** Como a clínica é chamada nos textos ("fale com o consultório"; cliente, 11/out/2026). */
   designation: Designation;
+  /** Número do WhatsApp conectado, para "Falar com a clínica no WhatsApp" (R11, cliente, 17/out/2026); null sem conexão. */
+  whatsappPhone: string | null;
 };
 
 /** Marca para as páginas públicas (cliente de serviço, depois de achar a clínica pelo link). */
 export async function getPublicClinicBrand(db: DbClient, clinicId: string): Promise<PublicClinicBrand> {
-  const [clinic, settings] = await Promise.all([
+  const [clinic, settings, whatsapp] = await Promise.all([
     db.from("clinics").select("name").eq("id", clinicId).maybeSingle().then((r) => unwrapOne(r, "Clínica")),
     db
       .from("clinic_settings")
@@ -49,13 +52,25 @@ export async function getPublicClinicBrand(db: DbClient, clinicId: string): Prom
       .eq("clinic_id", clinicId)
       .maybeSingle()
       .then((r) => unwrapOne(r, "Configuração da clínica")),
+    // Sem o número, a página só não mostra o botão: nunca deixa de abrir.
+    db
+      .from("whatsapp_connections")
+      .select("display_phone, status")
+      .eq("clinic_id", clinicId)
+      .maybeSingle()
+      .then(({ data, error }) => {
+        if (error) logError("marca: WhatsApp da clínica não lido", error, { clinica: clinicId });
+        return data;
+      }),
   ]);
+  const phoneDigits = whatsapp?.status === "connected" ? (whatsapp.display_phone ?? "").replace(/\D/g, "") : "";
   return {
     name: clinic.name,
     logoUrl: settings.logo_url,
     brandColor: settings.brand_color ?? DEFAULT_BRAND_COLOR,
     websiteUrl: settings.website_url,
     designation: { noun: settings.message_noun, article: settings.message_noun_article as NounArticle },
+    whatsappPhone: phoneDigits.length >= 10 ? phoneDigits : null,
   };
 }
 

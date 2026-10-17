@@ -1,10 +1,10 @@
 ---
 // Prévia das páginas públicas (F5.1): topo e rodapé com a marca salva da
 // clínica, em volta de um exemplo de conteúdo. Abre em outra aba a partir de
-// Configurações › Clínica.
-import "../../../styles/global.css";
-import PublicFooter from "../../../components/PublicFooter.astro";
-import PublicHeader from "../../../components/public/PublicHeader.astro";
+// Configurações › Clínica. Redesign R11: a mesma moldura das páginas do
+// paciente (PatientLayout).
+import PatientLayout from "../../../layouts/PatientLayout.astro";
+import { PATIENT_TEXT } from "../../../components/public/styles";
 import { createUserClient } from "../../../lib/data/clients";
 import { getPublicClinicBrand } from "../../../lib/data/config/brand";
 
@@ -12,26 +12,13 @@ const clinic = Astro.locals.clinic!;
 const brand = await getPublicClinicBrand(createUserClient(Astro.request, Astro.cookies), clinic.clinicId);
 ---
 
-<html lang="pt-BR">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="robots" content="noindex, nofollow" />
-    <link rel="icon" href={brand.logoUrl ?? "data:,"} />
-    <title>Prévia | {brand.name}</title>
-  </head>
-  <body class="flex min-h-screen flex-col bg-slate-50 text-slate-900">
-    <p class="bg-amber-100 px-4 py-2 text-center text-sm text-amber-900">
-      Prévia: é assim que o paciente vê o topo e o rodapé. O conteúdo do meio é só um exemplo.
-    </p>
-    <PublicHeader brand={brand} />
-    <main class="mx-auto w-full max-w-xl flex-1 px-4 py-10">
-      <p class="text-sm font-medium text-slate-500">Exemplo</p>
-      <h1 class="mt-1 text-2xl font-bold text-slate-900">Escolha o dia e o horário</h1>
-      <div class="mt-6 rounded-md border border-slate-200 bg-white p-5 text-base text-slate-700">
-        Aqui aparecem os dias e horários livres para marcar ou remarcar o atendimento.
-      </div>
-    </main>
-    <PublicFooter />
-  </body>
-</html>
+<PatientLayout title="Prévia" brand={brand}>
+  <p slot="before-header" class="bg-amber-100 px-4 py-2 text-center text-sm text-amber-900">
+    Prévia: é assim que o paciente vê o topo e o rodapé. O conteúdo do meio é só um exemplo.
+  </p>
+  <div>
+    <p class="text-[15px] font-semibold text-clinic-ink">Exemplo</p>
+    <h1 class="mt-0.5 text-[26px] leading-tight font-bold text-gray-900 sm:text-3xl">Escolha o dia e o horário</h1>
+  </div>
+  <div class={PATIENT_TEXT}>Aqui aparecem os dias e horários livres para marcar ou remarcar o atendimento.</div>
+</PatientLayout>

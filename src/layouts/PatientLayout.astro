@@ -1,0 +1,47 @@
+---
+// Fontes no próprio servidor (redesign R0; a CSP não carrega fontes de fora).
+import "@fontsource-variable/source-sans-3";
+import "../styles/global.css";
+import PublicFooter from "../components/PublicFooter.astro";
+import PublicHeader from "../components/public/PublicHeader.astro";
+import { clinicColorStyle } from "../lib/brandColor";
+import { DEFAULT_BRAND_COLOR, type PublicClinicBrand } from "../lib/data/config/brand";
+
+// Páginas do paciente (/agendar, /preparo, /orientacoes e a prévia de
+// Configurações; F5.1): topo e rodapé com a marca da clínica. Redesign R11
+// (cliente, 17/out/2026): a cor da clínica no topo, nos botões e no que foi
+// escolhido (variáveis de clinicColorStyle), a letra do painel (Source Sans 3)
+// e nada do verde do RecepClinic, que só é a cor padrão da clínica sem cor;
+// os cinzas são os neutros do Tailwind (gray), sem o tom verde do painel.
+// `width`: "reading" para os textos, "wide" para o /agendar (resumo ao lado
+// no computador).
+interface Props {
+  title: string;
+  brand: PublicClinicBrand | null;
+  width?: "reading" | "wide";
+}
+
+const { title, brand, width = "reading" } = Astro.props;
+const color = clinicColorStyle(brand?.brandColor ?? DEFAULT_BRAND_COLOR);
+const container = width === "wide" ? "max-w-[960px]" : "max-w-2xl";
+---
+
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="robots" content="noindex, nofollow" />
+    <!-- Ícone da aba: o logo da clínica; sem logo, nenhum (cliente, 14/out/2026; auditoria A-05). -->
+    <link rel="icon" href={brand?.logoUrl ?? "data:,"} />
+    <title>{title} | {brand?.name ?? "RecepClinic"}</title>
+  </head>
+  <body class="flex min-h-screen flex-col bg-gray-50 font-body text-gray-900 antialiased" style={color}>
+    <slot name="before-header" />
+    {brand && <PublicHeader brand={brand} container={container} />}
+    <main class={`mx-auto flex w-full flex-1 flex-col gap-5 px-4 py-6 sm:gap-6 sm:px-6 sm:py-9 ${container}`}>
+      <slot />
+    </main>
+    <PublicFooter container={container} />
+    <script src="../scripts/sendOnce.ts"></script>
+  </body>
+</html>
