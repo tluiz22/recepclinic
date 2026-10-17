@@ -2186,6 +2186,38 @@ tempo do staging com login fica a combinar com o cliente. O menu do computador n
 Implementado e testado no navegador local (390px): um toque, uma requisição; "Abrindo…" e a barra à
 vista; voltar pelo navegador não deixa a linha presa. `astro check` sem erros e `npm test` (502).
 
+**R10 (Sistema e Acesso), proposta aprovada pelo cliente em 17/out/2026** (página "10 · Sistema e
+Acesso" do canvas). Decisões, uma a uma:
+1. **Marca nas telas de acesso:** Entrar no painel, Esqueci minha senha, Senha nova e Escolher a
+   clínica com o logo, o verde e as fontes do painel (sai o azul), campos de 44px e o botão na largura
+   do cartão. Depois de uma senha errada, o **e-mail continua no campo** (a senha nunca é guardada). O
+   erro da senha nova vai embaixo do campo certo, com borda vermelha e o foco nele.
+2. **"Mostrar" na senha** (decisão à parte do cliente): botão dentro do campo de senha, no login e na
+   senha nova; vira "Ocultar".
+3. **Escolher a clínica em cartões** (iniciais, papel, "Aberta agora", "Suspensa" com selo) e os links
+   do sistema separados no pé, com o título "Administração do sistema". **Busca "Buscar clínica"**
+   (decisão à parte do cliente) para o Suporte quando houver **mais de 6 clínicas**, aqui e em
+   Sistema › Clínicas.
+4. **Clínicas em linhas** (nome com o plano, criada em, o que falta: convites e o pedido de
+   informações; suspensa em cinza), com **"Abrir" na linha** (decisão à parte do cliente: entra na
+   clínica direto) e a seta para a tela da clínica. Na clínica: resumo embaixo do nome (criada em,
+   plano, profissionais), "Matriz de acesso" e "Abrir a clínica para configurar" no cabeçalho,
+   convites em linhas e os pedidos num cartão. Nova clínica em 2 blocos (A clínica, Primeiro
+   Administrador), com "Cancelar".
+5. **Matriz de acesso:** lista em linhas (plano com o número de itens, profissionais "de" o limite,
+   "Fora dos planos" em âmbar); na clínica, itens à esquerda por grupo com o contador ("2 de 5") e o
+   preço, e plano, limite, mensalidade e "Salvar matriz" à direita, acompanhando a rolagem (no
+   celular, na barra fixa); histórico em tabela.
+6. **Uso:** tabela do painel com a linha **"Total em 6 meses"** e o filtro **"Clínica"** (Todas ou
+   uma; abre em Todas), decisão à parte do cliente.
+7. **Erros, Vendas e Tecnologia:** rotinas com o selo de ícone e texto e o resumo das atrasadas,
+   erros em linhas, filtro com rótulo à vista; Vendas com as abas sublinhadas; Tecnologia com atalhos
+   "Nesta página". Título com "Sistema" pequeno acima em todas as telas do sistema.
+Sem mudança de regra: quem vê cada tela (Sistema só o Suporte), sem cadastro aberto, a mesma resposta
+do "Esqueci" exista ou não o e-mail, os 8 caracteres e os textos de erro da senha, o registro de cada
+tela aberta pelo Suporte, as dependências e o cálculo da matriz, como o Uso é contado, os 90 dias dos
+erros e o conteúdo de Vendas e Tecnologia.
+
 ## Depois do 1º piloto (já previsto no banco)
 
 - **Convênios (D10):** telas de planos atendidos e exceções por profissional; plano no cadastro do
