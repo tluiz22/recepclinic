@@ -21,6 +21,10 @@ interface Props {
 
 const { strip, href, action, hidden, min } = Astro.props;
 const start = strip.days[0] ?? "";
+// "Outra data" já com o dia escolhido (cliente, 17/out/2026): no iPhone, tocar
+// num campo de data vazio põe hoje nele e dispara o "change", e o
+// data-autosubmit recarregava a tela com o calendário ainda abrindo.
+const otherDate = strip.selected || min;
 const day = (date: string) => ({
   weekday: formatCalendarDate(date, "EEE").slice(0, 3),
   number: formatCalendarDate(date, "dd"),
@@ -112,7 +116,7 @@ const arrowOff = "flex w-11 shrink-0 items-center justify-center rounded-[10px] 
     <form method="GET" action={action} class="flex flex-1 items-center gap-2 sm:flex-none">
       {Object.entries(hidden).map(([name, value]) => value && <input type="hidden" name={name} value={value} />)}
       <label for="outra-data" class="text-[15px] font-semibold whitespace-nowrap text-ink sm:text-sm">Outra data</label>
-      <input id="outra-data" type="date" name="date" min={min} value="" data-autosubmit class={`${CONTROL} min-w-0 flex-1 sm:h-8 sm:w-40 sm:flex-none sm:text-sm`} />
+      <input id="outra-data" type="date" name="date" min={min} value={otherDate} data-autosubmit class={`${CONTROL} min-w-0 flex-1 sm:h-8 sm:w-40 sm:flex-none sm:text-sm`} />
     </form>
   </div>
 </div>

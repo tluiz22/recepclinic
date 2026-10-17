@@ -2293,6 +2293,10 @@ de …" continua.
 cliente: no `/agendar`, dia pedido depois do último dia livre mostra o aviso e a faixa a partir do primeiro dia livre
 (S02-08); cada dia da faixa com no máximo 1/7 da largura, alinhado à esquerda (dia sozinho não estica); abaixo de 380px o
 papel sai do cabeçalho do painel (QA-01).
+**"Outra data" no iPhone (relato do cliente, 17/out):** no Marcar e no Remarcar, tocar no campo abria o calendário e
+fechava em seguida. Causa: o campo vazio com `data-autosubmit`; o Safari do iPhone põe hoje no campo ao abrir e dispara o
+`change`, que recarregava a tela. Decisão do cliente: o campo já vem com o dia escolhido na faixa (ou hoje, sem dia livre),
+como a data da Agenda › Dia (`DayStrip.astro`).
 
 ## Depois do 1º piloto (já previsto no banco)
 
