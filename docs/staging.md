@@ -274,7 +274,7 @@ Na **Vercel** (*Settings › Environment Variables*, Production), depois *Deploy
 
 | Variável | Valor | Para quê |
 |---|---|---|
-| `WHATSAPP_APP_ID` | o App ID do app RecepClinic (painel da Meta para desenvolvedores; só números) | "Criar na Meta" do template da nota (`rc_nota_fiscal_v1`), que sobe um PDF de exemplo |
+| `WHATSAPP_APP_ID` | `1751119452632725` (App ID do app RecepClinic, no topo de developers.facebook.com › Meus apps › RecepClinic; também no `.env.staging`) | "Criar na Meta" do template da nota (`rc_nota_fiscal_v1`), que sobe um PDF de exemplo |
 | `NFSE_SIMULATION` | `1` | libera o ambiente **Simulação** da nota fiscal (a nota sai do próprio RecepClinic, sem a Receita). **Só no staging**: nunca na produção |
 
 Com `NFSE_SIMULATION=1`, o Suporte vê "Passar para Simulação" em Configurações › Nota fiscal da

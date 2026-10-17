@@ -31,7 +31,7 @@
 >     anonimização de paciente a pedido (LGPD); contadores de uso (Administração › Uso).
 >   - **Meta:** análise do app **enviada em 09/out** (clínica demo do analista no staging: "Clínica
 >     Demonstração RecepClinic", `analista.meta@recepclinic.com.br`, dados fictícios; desativar o
->     login quando a análise terminar). Falta a **Verificação do acesso** (textos prontos em
+>     login quando a análise terminar). **Conferido em 17/out: "Análise em andamento"** (as 4 permissões; a Meta fala em até 20 dias, ou seja, até ~29/out). Falta a **Verificação do acesso** (textos prontos em
 >     [`meta-tech-provider.md`](meta-tech-provider.md); antes, os dados da empresa no rodapé do site).
 >   - **F9.6 (proteção contra abuso no bot) validada em 10/out**: F9.6a (limites por contato,
 >     "Revisado", liberar contato dos limites) e F9.6b (bloquear contato). **F9 concluída.**
