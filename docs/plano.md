@@ -2039,6 +2039,28 @@ rola até o meio da tela antes do foco, e o celular reserva espaço para as barr
 cartão sai do Tab no computador; o Cadastrar mostra cada erro embaixo do campo, com o foco nele.
 **R6 publicada no staging e validada pelo cliente em 16/out/2026** (sem migração).
 
+**R7 (Início e Métricas), proposta aprovada pelo cliente em 16/out/2026** (página "7 · Início e
+Métricas" do canvas). Decisões, uma a uma:
+1. **Um indicador só** (U-04) no Início e nas Métricas: rótulo, número grande e uma linha de
+   explicação; o que pede ação ganha o sinal âmbar e "Ver ›" e leva à aba onde se resolve.
+2. **Início:** os atalhos (Agenda do dia, Registrar comparecimento e Marcar, cheio) vão para o
+   cabeçalho da tela; os avisos (envios com falha, certificado vencendo) no padrão do painel, com
+   ícone e o link de resolver; "Contatos para revisar" em linhas. No celular, Marcar na barra fixa.
+3. **Métricas:** abas sublinhadas (U-03) na **ordem nova** (cliente): Visão geral, Atendimentos,
+   Funil do bot, Faltosos, Retomar contato e Financeiro. Período em botões, agenda e filtro de
+   paciente numa barra só; o período por extenso embaixo do título. No celular, os filtros
+   recolhíveis.
+4. **Tabela única** (cabeçalho, números à direita, total em negrito, rolagem própria no celular),
+   sem gráfico; o Funil mantém as barras, no verde da marca.
+5. **"Marcados por"** ganha a coluna **Parte** (%) e a linha **Total**.
+6. **Faltosos:** o nome abre a ficha (com "Voltar" para as Métricas) e o telefone ganha o botão do
+   WhatsApp.
+7. **Financeiro:** em cada célula, a quantidade em cima e o valor embaixo.
+8. **Retomar contato:** no computador, uma linha por contato (contato com o WhatsApp, fluxo, onde
+   parou, quando iniciou); no celular, cartões com o WhatsApp.
+Sem mudança de regra: os números e como são contados, quem vê cada aba, os itens da matriz, o
+período que abre em Hoje, as confirmações e o "Voltar".
+
 ## Depois do 1º piloto (já previsto no banco)
 
 - **Convênios (D10):** telas de planos atendidos e exceções por profissional; plano no cadastro do
