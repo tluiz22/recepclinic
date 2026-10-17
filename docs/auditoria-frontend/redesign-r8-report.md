@@ -66,6 +66,7 @@
 | NAV-06 | "Ver quais ›" e "Abrir o pagamento" › Voltar | Retorno à página anterior | Obrigatório | BLOQUEADO | — |
 | FIL-01 | Filtro "Falta CPF" | Lista e contador certos | Obrigatório | PASSOU | — |
 | FIL-02 | Busca com filtro; "Todos" e "Limpar" | Um não desfaz o outro | Obrigatório | PASSOU | — |
+| FIL-04 | "Falta CPF" + busca por telefone (staging) | Busca com o filtro | Obrigatório | FALHOU (corrigido) | Alta |
 | FIL-03 | "Falta CPF" + busca de quem já tem CPF | Mensagem do estado vazio | Adicional | FALHOU | Baixa |
 | FORM-01 | Responsáveis: CPF perante o CNPJ inválido | Preservação dos campos | Obrigatório | PASSOU | — |
 | FORM-02 | Corrigir só esse campo e salvar | Novo envio sem redigitar | Obrigatório | PASSOU | — |
@@ -220,6 +221,24 @@ Ver a seção 6.
 - **Evidência:** leitura dos valores efetivos no contexto sem JavaScript (390×844).
 - **Recomendação:** nenhuma correção agora; registrar como limitação conhecida do `EditCard`. Se o
   cliente quiser, devolver os valores pelo servidor no futuro, para todo o painel.
+
+#### FIL-04 · "Falta CPF" com busca por telefone dá erro 500 (achado do cliente no staging)
+
+- **Severidade:** Alta (a tela quebra; contorno: buscar pelo nome ou tirar o filtro)
+- **Página ou fluxo:** Financeiro › Quem paga, filtro "Falta CPF" com busca por telefone
+- **URL:** `/admin/financeiro?q=61998645490&falta=1` (staging, 17/out)
+- **Critério avaliado:** busca junto com o filtro
+- **Passos executados:** ligar "Falta CPF" e buscar um telefone (4 dígitos ou mais).
+- **Resultado esperado:** a lista de quem não tem CPF com aquele telefone.
+- **Resultado observado:** erro 500 (`DataError`). O PostgREST não filtra pelo contato embutido no
+  resultado da função `finance_patients_missing_payer_cpf` ("column pgrst_call.phone does not
+  exist"). O teste da seção 5 só buscou por nome (FIL-02), por isso não pegou.
+- **Status (17/out):** **corrigido** em `listPatientsPage` (`src/lib/data/patients.ts`), sem
+  migração: com o filtro e busca por telefone, primeiro os contatos da clínica com o telefone,
+  depois a função pelo `contact_id`. Retestado no local (Administrador e Recepção): "0003",
+  "84988880003", "(84) 98888-0003", "8888" (2), sem resultado ("9999") e quem tem CPF ("0001"),
+  pelo endereço e pelo formulário; a busca por nome e a busca por telefone sem o filtro continuam
+  iguais. `astro check` sem erros e `npm test` (497) passando.
 
 ### 6.2 Suspeitas
 

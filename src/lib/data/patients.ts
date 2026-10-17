@@ -319,7 +319,15 @@ export async function listPatientsPage(
       : db.from("patients").select(columns, { count: "exact" })
   ).eq("clinic_id", clinicId);
   if (!includeInactive) request = request.eq("is_active", true);
-  if (q) request = byPhone ? request.ilike("contacts.phone", `%${digits}%`) : request.ilike("full_name", `%${escapeLike(q)}%`);
+  if (q && byPhone && missingPayerCpf) {
+    // O PostgREST não filtra pelo contato embutido no resultado de uma função
+    // ("column pgrst_call.phone does not exist"; teste da R8 no staging):
+    // primeiro os contatos com o telefone, depois a função pelo contact_id.
+    const { data: contactRows, error: contactError } = await db.from("contacts").select("id").eq("clinic_id", clinicId).ilike("phone", `%${digits}%`);
+    const contactIds = unwrap({ data: contactRows, error: contactError }, "Pacientes").map((c) => c.id);
+    if (contactIds.length === 0) return { items: [], total: 0, page: current, pageCount: 1 };
+    request = request.in("contact_id", contactIds);
+  } else if (q) request = byPhone ? request.ilike("contacts.phone", `%${digits}%`) : request.ilike("full_name", `%${escapeLike(q)}%`);
   const { data, error, count } = await request.order("full_name").range(from, to);
   const rows = unwrap({ data, error }, "Pacientes") as unknown as (PatientRow & { contacts: ContactRow })[];
   const total = count ?? 0;
