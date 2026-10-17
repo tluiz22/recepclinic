@@ -4,20 +4,24 @@
 // os itens liberados para a clínica (D11). Com o bot, "Contatos para revisar"
 // (F9.6a): quem bateu um limite do bot nos últimos 7 dias e ainda não foi
 // marcado como revisado (Recepção e Administrador marcam aqui ou no contato).
+// R7 (cliente, 16/out/2026): indicador único, atalhos no cabeçalho, avisos no
+// padrão do painel e "Contatos para revisar" em linhas; Marcar na barra fixa
+// do celular.
 import { currentPath, withReturn } from "../../lib/returnPath";
 import AdminLayout from "../../layouts/AdminLayout.astro";
-import Card from "../../components/admin/Card.astro";
 import ConfirmDeleteDialog from "../../components/admin/ConfirmDeleteDialog.astro";
 import FlashMessage from "../../components/admin/FlashMessage.astro";
-import FormMessage from "../../components/admin/FormMessage.astro";
-import { SECONDARY_BUTTON } from "../../components/admin/fieldStyles";
 import Icon from "../../components/admin/Icon.astro";
-import type { IconName } from "../../components/admin/Icon.astro";
+import PhoneLinks from "../../components/admin/PhoneLinks.astro";
+import Button from "../../components/admin/ui/Button.astro";
+import Notice, { type NoticeTone } from "../../components/admin/ui/Notice.astro";
+import PageHeader from "../../components/admin/ui/PageHeader.astro";
+import Stat from "../../components/admin/ui/Stat.astro";
 import { createUserClient } from "../../lib/data/clients";
 import { getDashboardCounts } from "../../lib/data/dashboard";
 import { describeSendsAlert, getSendsAlert } from "../../lib/data/sends";
 import { BOT_LIMIT_LABELS, listContactsToReview, REVIEW_WINDOW_DAYS } from "../../lib/data/whatsapp/botLimits";
-import { formatInstant } from "../../lib/clinicTime";
+import { formatCalendarDate, formatInstant, todayIn } from "../../lib/clinicTime";
 import { certificateStatus } from "../../lib/certificate";
 import { getFiscalCertificate } from "../../lib/data/fiscal";
 
@@ -46,115 +50,127 @@ const canReview = clinic.isPlatformStaff || clinic.roles.includes("admin") || cl
 // A aba Envios fica no Resumo do Dia, para toda a equipe (cliente, 05/out/2026).
 
 const aviso = Astro.url.searchParams.get("aviso");
-const NOTICES: Record<string, { tone: "warning" | "success"; text: string }> = {
+const NOTICES: Record<string, { tone: NoticeTone; text: string }> = {
   // Redirecionado pelo middleware: área sem acesso para o papel ou item não liberado.
   acesso_negado: { tone: "warning", text: "Essa tela não está disponível para o seu acesso." },
   senha_definida: { tone: "success", text: "Senha salva. Use-a nos próximos logins." },
 };
 const notice = aviso ? NOTICES[aviso] : undefined;
 
-const shortcuts: { label: string; href: string; icon: IconName }[] = [
-  { label: "Agenda do dia", href: "/admin/agenda", icon: "calendar" },
-  { label: "Marcar", href: "/admin/agenda/marcar", icon: "plus" },
-  { label: "Registrar comparecimento", href: "/admin/consultas?tab=pendentes", icon: "check-circle" },
-];
+const here = currentPath(Astro.url);
+const today = formatCalendarDate(todayIn(clinic.timezone), "EEEE, d 'de' MMMM 'de' yyyy");
+const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
+const sectionTitle = "font-display text-[17px] leading-tight font-bold text-ink sm:text-lg";
 ---
 
 <AdminLayout title="Início">
-  <h1 class="text-2xl font-bold text-slate-900">Início</h1>
-  <p class="mt-2 text-slate-600">Resumo de hoje.</p>
+  <PageHeader title="Início" subtitle={today}>
+    <Fragment slot="actions">
+      <Button href="/admin/agenda" class="max-sm:hidden">
+        <Icon name="calendar" class="h-[18px] w-[18px]" /> Agenda do dia
+      </Button>
+      <Button href="/admin/consultas?tab=pendentes" class="max-sm:hidden">
+        <Icon name="check-circle" class="h-[18px] w-[18px]" /> Registrar comparecimento
+      </Button>
+      <Button href={withReturn("/admin/agenda/marcar", here)} variant="primary" class="max-sm:hidden">
+        <Icon name="plus" class="h-[18px] w-[18px]" strokeWidth={2.2} /> Marcar
+      </Button>
+    </Fragment>
+  </PageHeader>
 
-  {notice && <FormMessage tone={notice.tone}>{notice.text}</FormMessage>}
+  {
+    (notice || sendsAlertLines.length > 0 || certificateAlert) && (
+      <div class="mt-4 flex flex-col gap-2">
+        {notice && <Notice tone={notice.tone}>{notice.text}</Notice>}
+        {sendsAlertLines.length > 0 && (
+          <Notice tone="danger" href="/admin/consultas?tab=envios" linkLabel="Ver os envios">
+            {sendsAlertLines.join(" ")}
+          </Notice>
+        )}
+        {certificateAlert && (
+          <Notice tone="warning" href="/admin/configuracoes/nota-fiscal" linkLabel="Abrir Nota fiscal">
+            {certificateAlert}
+          </Notice>
+        )}
+      </div>
+    )
+  }
   <FlashMessage />
 
-  {
-    sendsAlertLines.length > 0 && (
-      <a
-        href="/admin/consultas?tab=envios"
-        class="mt-4 block rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800 hover:bg-red-100"
-      >
-        {sendsAlertLines.map((line) => <p>⚠ {line}</p>)}
-        <p class="mt-1 font-medium underline">Ver os envios</p>
-      </a>
-    )
-  }
+  <section aria-labelledby="hoje" class="mt-5 flex flex-col gap-2.5">
+    <h2 id="hoje" class={sectionTitle}>Hoje</h2>
+    <div class="grid grid-cols-2 gap-2.5 sm:gap-3 lg:grid-cols-4">
+      <Stat label="Consultas hoje" value={counts.consultationsToday} hint="sem as canceladas" />
+      {has("exams") && <Stat label="Exames hoje" value={counts.examsToday} hint="sem os cancelados" />}
+      <Stat
+        label="Comparecimento a registrar"
+        value={counts.pendingAttendance}
+        hint={counts.pendingAttendance > 0 ? "Já passaram, sem registro" : "Nada a registrar"}
+        attention={counts.pendingAttendance > 0}
+        href="/admin/consultas?tab=pendentes"
+        linkLabel="Ver em A registrar"
+      />
+      {
+        has("reminders") && (
+          <Stat
+            label="Presença não confirmada"
+            value={counts.unansweredReminders}
+            hint={counts.unansweredReminders > 0 ? "Lembretes de hoje sem resposta" : "Nenhum lembrete sem resposta"}
+            attention={counts.unansweredReminders > 0}
+            icon="paper-airplane"
+            href="/admin/consultas?tab=lembretes&grupo=no_answer"
+            linkLabel="Ver em Lembretes"
+          />
+        )
+      }
+    </div>
+  </section>
 
-  {
-    certificateAlert && (
-      <a
-        href="/admin/configuracoes/nota-fiscal"
-        class="mt-4 block rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900 hover:bg-amber-100"
-      >
-        <p>⚠ {certificateAlert}</p>
-        <p class="mt-1 font-medium underline">Abrir Nota fiscal</p>
-      </a>
-    )
-  }
-
-  <div class="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
-    <Card class="text-center">
-      <p class="text-3xl font-bold text-sky-700">{counts.consultationsToday}</p>
-      <p class="mt-1 text-sm text-slate-600">Consultas hoje</p>
-    </Card>
-    {
-      has("exams") && (
-        <Card class="text-center">
-          <p class="text-3xl font-bold text-sky-700">{counts.examsToday}</p>
-          <p class="mt-1 text-sm text-slate-600">Exames hoje</p>
-        </Card>
-      )
-    }
-    <a href="/admin/consultas?tab=pendentes">
-      <Card class="h-full text-center hover:border-sky-300 hover:bg-sky-50">
-        <p class="text-3xl font-bold text-amber-600">{counts.pendingAttendance}</p>
-        <p class="mt-1 text-sm text-slate-600">Comparecimento a registrar</p>
-      </Card>
-    </a>
-    {
-      has("reminders") && (
-        <a href="/admin/consultas?tab=lembretes&grupo=no_answer">
-          <Card class="h-full text-center hover:border-sky-300 hover:bg-sky-50">
-            <p class="text-3xl font-bold text-amber-600">{counts.unansweredReminders}</p>
-            <p class="mt-1 text-sm text-slate-600">Presença não confirmada</p>
-          </Card>
-        </a>
-      )
-    }
+  <div class="mt-3 grid grid-cols-2 gap-2.5 sm:hidden">
+    <Button href="/admin/agenda">Agenda do dia</Button>
+    <Button href="/admin/consultas?tab=pendentes" class="h-auto min-h-11 py-1.5 leading-tight whitespace-normal">Registrar comparecimento</Button>
   </div>
 
   {
     toReview && (
-      <Card class="mt-6">
-        <h2 class="font-semibold text-slate-900">Contatos para revisar</h2>
-        <p class="mt-1 text-sm text-slate-600">
-          Nos últimos {REVIEW_WINDOW_DAYS} dias, o bot deixou de marcar para estes números por um limite do contato.
-        </p>
+      <section aria-labelledby="revisar" class="mt-6 flex flex-col rounded-xl border border-line bg-white p-3.5 sm:px-5 sm:py-[18px]">
+        <div class="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+          <h2 id="revisar" class={sectionTitle}>
+            Contatos para revisar{toReview.length > 0 && <span class="font-sans text-sm font-semibold text-ink-soft"> ({toReview.length})</span>}
+          </h2>
+          <p class="text-sm text-ink-soft">Nos últimos {REVIEW_WINDOW_DAYS} dias, o bot deixou de marcar para estes números por um limite do contato.</p>
+        </div>
         {toReview.length === 0 ? (
-          <p class="mt-2 text-sm text-slate-500">Nenhum.</p>
+          <p class="mt-2 text-[15px] text-ink-soft">Nenhum contato para revisar.</p>
         ) : (
-          <ul class="mt-2 divide-y divide-slate-100 text-sm">
+          <ul class="mt-2">
             {toReview.map((item) => (
-              <li class="flex flex-wrap items-center gap-x-3 gap-y-1 py-2">
-                <a href={withReturn(`/admin/pacientes/contato/${item.contactId}`, currentPath(Astro.url))} class="flex flex-1 flex-wrap items-center justify-between gap-x-3 gap-y-1 hover:text-sky-700">
-                  <span class="font-medium text-slate-900">{item.name}</span>
-                  <span class="text-slate-600">
-                    {BOT_LIMIT_LABELS[item.last.reason]} · {formatInstant(item.last.at, clinic.timezone, "dd/MM HH:mm")}
-                    {item.hits > 1 && ` · ${item.hits} vezes`}
-                  </span>
-                </a>
+              <li class="grid gap-x-4 gap-y-1 border-t border-[#e6ecea] py-3 first:border-t-0 sm:grid-cols-[minmax(0,1fr)_260px_150px_auto] sm:items-center">
+                <span class="flex flex-wrap items-center gap-x-2 gap-y-1">
+                  <a href={withReturn(`/admin/pacientes/contato/${item.contactId}`, here)} class="text-base font-semibold text-ink no-underline hover:text-brand hover:underline">
+                    {item.name}
+                  </a>
+                  {item.phone && <PhoneLinks phone={item.phone} plain class="text-sm text-ink-soft" />}
+                </span>
+                <span class="text-[15px] text-ink">{BOT_LIMIT_LABELS[item.last.reason]}</span>
+                <span class="text-sm text-ink-soft tabular-nums">
+                  {formatInstant(item.last.at, clinic.timezone, "dd/MM HH:mm")}
+                  {item.hits > 1 && ` · ${plural(item.hits, "vez", "vezes")}`}
+                </span>
                 {canReview && (
-                  <form method="POST" action={`/api/admin/pacientes/contato/${item.contactId}`}>
+                  <form method="POST" action={`/api/admin/pacientes/contato/${item.contactId}`} class="max-sm:mt-1">
                     <input type="hidden" name="acao" value="revisado" />
                     <input type="hidden" name="voltar" value="painel" />
-                    <button
+                    <Button
                       type="submit"
-                      class={`${SECONDARY_BUTTON} js-confirm-delete py-1`}
+                      size="sm"
+                      class="js-confirm-delete"
                       data-confirm-title="Marcar como revisado?"
                       data-confirm-message={`${item.name} sai desta lista. Se atingir um limite de novo, volta.`}
                       data-confirm-label="Revisado"
                     >
                       Revisado
-                    </button>
+                    </Button>
                   </form>
                 )}
               </li>
@@ -162,21 +178,13 @@ const shortcuts: { label: string; href: string; icon: IconName }[] = [
           </ul>
         )}
         {canReview && toReview.length > 0 && <ConfirmDeleteDialog />}
-      </Card>
+      </section>
     )
   }
 
-  <h2 class="mt-8 text-sm font-semibold uppercase tracking-wide text-slate-500">Atalhos</h2>
-  <div class="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
-    {
-      shortcuts.map((shortcut) => (
-        <a href={shortcut.href}>
-          <Card class="flex h-full flex-col items-center gap-2 text-center hover:border-sky-300 hover:bg-sky-50">
-            <Icon name={shortcut.icon} class="h-6 w-6 text-sky-700" />
-            <span class="text-sm font-medium text-slate-700">{shortcut.label}</span>
-          </Card>
-        </a>
-      ))
-    }
+  <div class="h-20 sm:hidden" aria-hidden="true" />
+  <div class="fixed inset-x-0 bottom-[calc(61px+env(safe-area-inset-bottom))] z-10 flex items-center gap-3 border-t border-line bg-white px-4 py-2.5 shadow-[0_-4px_14px_rgba(18,48,42,.08)] sm:hidden">
+    <span class="min-w-0 flex-1 truncate text-base font-semibold text-ink">Início</span>
+    <Button href={withReturn("/admin/agenda/marcar", here)} variant="primary" class="h-12 px-6 text-base">Marcar</Button>
   </div>
 </AdminLayout>

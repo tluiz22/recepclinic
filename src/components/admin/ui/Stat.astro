@@ -1,0 +1,39 @@
+---
+// Indicador (R7, U-04; cliente, 16/out/2026): o mesmo no Início e nas Métricas.
+// Rótulo, número grande e uma linha de apoio. `attention`: o apoio vira o sinal
+// âmbar (pede ação). Com `href`, o cartão todo leva à tela onde se resolve,
+// com "Ver ›" (ou `linkLabel`) embaixo.
+import Icon, { type IconName } from "../Icon.astro";
+
+interface Props {
+  label: string;
+  value: string | number;
+  hint?: string;
+  attention?: boolean;
+  icon?: IconName;
+  href?: string;
+  linkLabel?: string;
+  class?: string;
+}
+
+const { label, value, hint, attention = false, icon = "warning", href, linkLabel = "Ver", class: className = "" } = Astro.props;
+const frame = `flex min-h-[112px] flex-col gap-0.5 rounded-xl border border-line bg-white px-3.5 py-3 text-ink no-underline sm:min-h-[120px] sm:gap-1 sm:px-[18px] sm:py-4 ${className}`;
+const Tag = href ? "a" : "div";
+---
+
+<Tag href={href} class={`${frame} ${href ? "hover:border-brand hover:bg-[#f7fbfa] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand" : ""}`}>
+  <span class="text-sm leading-snug font-semibold text-ink-soft sm:text-[14.5px]">{label}</span>
+  <span class="font-display text-[32px] leading-[1.1] font-bold text-ink tabular-nums sm:text-[40px]">{value}</span>
+  {
+    hint &&
+      (attention ? (
+        <span class="inline-flex items-center gap-1 self-start rounded-full bg-pend-100 py-0.5 pr-2.5 pl-1.5 text-[12.5px] leading-snug font-semibold text-pend-800 sm:text-[13px]">
+          <Icon name={icon} class="h-3.5 w-3.5 shrink-0" strokeWidth={2.2} />
+          {hint}
+        </span>
+      ) : (
+        <span class="text-[13px] leading-snug text-ink-soft sm:text-[13.5px]">{hint}</span>
+      ))
+  }
+  {href && <span class="mt-auto pt-1 text-[13.5px] font-bold text-brand sm:text-sm">{linkLabel} ›</span>}
+</Tag>

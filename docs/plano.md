@@ -2060,6 +2060,13 @@ Métricas" do canvas). Decisões, uma a uma:
    parou, quando iniciou); no celular, cartões com o WhatsApp.
 Sem mudança de regra: os números e como são contados, quem vê cada aba, os itens da matriz, o
 período que abre em Hoje, as confirmações e o "Voltar".
+**Implementada em 16/out** e testada no navegador local (computador e celular, sem gravar dados):
+componentes `Stat` (indicador), `Notice` (aviso) e `DataTable` (tabela, com as classes em `TABLE` no
+`styles.ts`) em `ui/`; saíram `metricas/Stat` e `metricas/Table`. "Contatos para revisar" ganhou o
+telefone com o WhatsApp (`listContactsToReview` traz o `phone`; teste de banco ajustado). "Marcar" do
+Início leva o `volta`. No celular, o período quebra a linha e os filtros abrem recolhidos (abertos
+com o período personalizado ou uma busca; sem JavaScript, abertos). Faltosos e Retomar contato com
+linhas não foram vistos com dados (o seed não tem faltosos nem conversas interrompidas).
 
 ## Depois do 1º piloto (já previsto no banco)
 

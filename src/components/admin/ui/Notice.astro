@@ -1,0 +1,38 @@
+---
+// Aviso da tela (R7; padrão do canvas, "Identidade visual"): ícone, texto e,
+// opcional, o link de resolver à direita. Erro é anunciado ao leitor de tela.
+import Icon, { type IconName } from "../Icon.astro";
+
+export type NoticeTone = "danger" | "warning" | "success" | "info";
+
+interface Props {
+  tone: NoticeTone;
+  href?: string;
+  linkLabel?: string;
+  class?: string;
+}
+
+const { tone, href, linkLabel, class: className = "" } = Astro.props;
+const tones: Record<NoticeTone, { box: string; icon: IconName }> = {
+  danger: { box: "border-can-200 bg-can-50 text-can-800", icon: "information-circle" },
+  warning: { box: "border-pend-200 bg-pend-50 text-pend-800", icon: "warning" },
+  success: { box: "border-conf-200 bg-conf-50 text-conf-800", icon: "check-circle" },
+  info: { box: "border-att-200 bg-att-50 text-att-800", icon: "information-circle" },
+};
+const { box, icon } = tones[tone];
+---
+
+<div
+  class={`flex flex-wrap items-start gap-x-2.5 gap-y-1 rounded-[10px] border px-3.5 py-3 text-[15px] leading-snug ${box} ${className}`}
+  role={tone === "danger" ? "alert" : tone === "success" ? "status" : undefined}
+>
+  <Icon name={icon} class="mt-0.5 h-[18px] w-[18px] shrink-0" strokeWidth={2.2} />
+  <div class="min-w-0 flex-1"><slot /></div>
+  {
+    href && linkLabel && (
+      <a href={href} class="font-bold whitespace-nowrap text-current underline-offset-2 hover:underline max-sm:basis-full max-sm:pl-7">
+        {linkLabel} ›
+      </a>
+    )
+  }
+</div>

@@ -5,15 +5,22 @@
 // matriz: Visão geral, Atendimentos, Faltosos e Financeiro; Funil do bot e
 // Retomar contato (F6.7, como no piloto; a clínica toda, sem o seletor de
 // agenda, porque os passos do bot não guardam a agenda). Envios foi para o
-// Resumo do Dia (F4.8).
+// Resumo do Dia (F4.8). R7 (cliente, 16/out/2026): abas sublinhadas na ordem
+// Visão geral, Atendimentos, Funil do bot, Faltosos, Retomar contato e
+// Financeiro; filtros numa barra (recolhível no celular); indicador e tabela
+// únicos; "Marcados por" com Parte e Total; Faltosos e Retomar contato com o
+// nome que abre a ficha (ou o contato) e o botão do WhatsApp.
 import AdminLayout from "../../layouts/AdminLayout.astro";
-import Card from "../../components/admin/Card.astro";
-import TabBar from "../../components/admin/TabBar.astro";
-import Badge from "../../components/admin/Badge.astro";
-import Stat from "../../components/admin/metricas/Stat.astro";
+import Icon from "../../components/admin/Icon.astro";
 import PhoneLinks from "../../components/admin/PhoneLinks.astro";
-import Table from "../../components/admin/metricas/Table.astro";
-import { INPUT, SECONDARY_BUTTON } from "../../components/admin/fieldStyles";
+import Button from "../../components/admin/ui/Button.astro";
+import DataTable from "../../components/admin/ui/DataTable.astro";
+import PageHeader from "../../components/admin/ui/PageHeader.astro";
+import Pill, { type PillTone } from "../../components/admin/ui/Pill.astro";
+import SegmentedControl from "../../components/admin/ui/SegmentedControl.astro";
+import Stat from "../../components/admin/ui/Stat.astro";
+import Tabs from "../../components/admin/ui/Tabs.astro";
+import { CONTROL, TABLE } from "../../components/admin/ui/styles";
 import { isUuid } from "../../lib/clinicAccess";
 import { formatInstant } from "../../lib/clinicTime";
 import { createUserClient } from "../../lib/data/clients";
@@ -25,6 +32,7 @@ import { buildFunnelReport, listFunnelEvents } from "../../lib/data/botFunnel";
 import { PERIOD_PRESETS, parsePeriod } from "../../lib/metricsPeriod";
 import { formatCentsBRL } from "../../lib/money";
 import { formatPhoneBR } from "../../lib/phone";
+import { currentPath, withReturn } from "../../lib/returnPath";
 import { capitalize, vocabularyFor } from "../../lib/vocabulary";
 
 const clinic = Astro.locals.clinic!;
@@ -36,10 +44,10 @@ const now = new Date();
 const TABS: { id: string; label: string; feature: FeatureKey }[] = [
   { id: "visao_geral", label: "Visão geral", feature: "metrics_overview" },
   { id: "atendimentos", label: "Atendimentos", feature: "metrics_appointments" },
-  { id: "faltosos", label: "Faltosos", feature: "metrics_no_shows" },
-  { id: "financeiro", label: "Financeiro", feature: "metrics_financial" },
   { id: "funil", label: "Funil do bot", feature: "metrics_funnel" },
+  { id: "faltosos", label: "Faltosos", feature: "metrics_no_shows" },
   { id: "retomar_contato", label: "Retomar contato", feature: "metrics_recall" },
+  { id: "financeiro", label: "Financeiro", feature: "metrics_financial" },
 ];
 // Funil e Retomar contato são da clínica toda: o Profissional (só a própria agenda) não vê.
 const BOT_TABS = ["funil", "retomar_contato"];
@@ -101,177 +109,241 @@ const link = (changes: Partial<Record<keyof typeof keep | "busca", string>>) => 
 };
 const pct = (rate: number | null) => (rate === null ? "—" : `${Math.round(rate * 100)}%`);
 const money = (cents: number) => formatCentsBRL(cents);
-const chip = (active: boolean) =>
-  `rounded-md border px-2.5 py-1 text-xs font-medium ${active ? "border-sky-700 bg-sky-50 text-sky-800" : "border-slate-300 bg-white text-slate-600 hover:border-sky-700 hover:text-sky-700"}`;
+const share = (count: number, total: number) => (total === 0 ? "—" : `${Math.round((count / total) * 100)}%`);
+const here = currentPath(Astro.url);
+const hasAgendaPicker = selectable.length > 1 && !botTab;
+const filtered = !!(filterPatient || filterContact);
+const showCustom = period.preset === "personalizado" || period.invalid;
+const scopeText = scope === "own_agenda" ? "só da sua agenda" : botTab ? "a clínica toda" : (selectedAgenda?.name ?? "todas as agendas");
+const subtitle = tab ? `${usesPeriod ? period.label : "Todo o histórico"} · ${scopeText}` : undefined;
+const filterSummary = [usesPeriod ? (PERIOD_PRESETS.find((p) => p.id === period.preset)?.label ?? "Personalizado") : null, hasAgendaPicker ? (selectedAgenda?.name ?? "todas as agendas") : null, filtered ? "com filtro" : null]
+  .filter(Boolean)
+  .join(" · ");
+const OUTCOME_TONES: Record<string, PillTone> = { concluded: "success", abandoned: "warning", blocked: "neutral", declined: "neutral", error: "danger", in_progress: "info" };
+const sectionTitle = "font-display text-[17px] leading-tight font-bold text-ink sm:text-lg";
+const card = "flex flex-col gap-3 rounded-xl border border-line bg-white p-3.5 sm:px-5 sm:py-[18px]";
+const label = "text-[13.5px] font-semibold text-ink-soft";
+const intro = "text-sm leading-relaxed text-ink-soft";
+const hidden = (values: Record<string, string>) => Object.entries(values).filter(([, value]) => value);
 const ov = tab === "visao_geral" ? overview(rows, now) : null;
 const fin = tab === "financeiro" ? financial(rows) : null;
 ---
 
 <AdminLayout title="Métricas">
-  <h1 class="text-2xl font-bold text-slate-900">Métricas</h1>
-  {scope === "own_agenda" && <p class="mt-1 text-sm text-slate-600">Só da sua agenda.</p>}
+  <PageHeader title="Métricas" subtitle={subtitle} />
 
   {
     !tab ? (
-      <Card class="mt-4 text-sm text-slate-600">Nenhuma aba de métricas liberada para a clínica. Fale com o suporte.</Card>
+      <p class={`${card} mt-4 text-[15px] text-ink-soft`}>Nenhuma aba de métricas liberada para a clínica. Fale com o suporte.</p>
     ) : (
       <>
-        <TabBar label="Abas de Métricas" class="mt-4" tabs={visible.map((t) => ({ label: t.label, href: link({ tab: t.id }), active: t.id === tab }))} />
+        <Tabs label="Abas de Métricas" class="mt-4" tabs={visible.map((t) => ({ label: t.label, href: link({ tab: t.id }), active: t.id === tab }))} />
 
-        <div class="mt-4 flex flex-col gap-3">
-          {usesPeriod && (
-            <div class="flex flex-wrap items-center gap-2">
-              {PERIOD_PRESETS.map((p) => (
-                <a href={link({ periodo: p.id === "hoje" ? "" : p.id, de: "", ate: "" })} class={chip(period.preset === p.id)}>
-                  {p.label}
-                </a>
-              ))}
-              <details class="group" open={period.preset === "personalizado" || period.invalid}>
-                <summary class={`cursor-pointer list-none ${chip(period.preset === "personalizado")}`}>Personalizado</summary>
-                <form method="GET" action="/admin/metricas" class="mt-2 flex flex-wrap items-end gap-2">
-                  {Object.entries({ ...keep, periodo: "personalizado", de: "", ate: "" }).map(([name, value]) => value && <input type="hidden" name={name} value={value} />)}
-                  <label class="flex flex-col gap-1 text-xs text-slate-600">
-                    De
-                    <input type="date" name="de" required value={period.from} class="rounded-md border border-slate-300 px-2 py-1.5 text-sm" />
-                  </label>
-                  <label class="flex flex-col gap-1 text-xs text-slate-600">
-                    Até
-                    <input type="date" name="ate" required value={period.to} class="rounded-md border border-slate-300 px-2 py-1.5 text-sm" />
-                  </label>
-                  <button type="submit" class={SECONDARY_BUTTON}>Ver</button>
+        <details data-metric-filters data-keep-open={showCustom || busca ? "" : undefined} open class="mt-4 rounded-xl border border-line bg-white">
+          <summary class="flex min-h-[52px] cursor-pointer list-none items-center justify-between gap-3 px-3.5 font-display text-base font-bold text-ink sm:hidden">
+            Filtros
+            <span class="font-sans text-sm font-medium text-ink-soft">{filterSummary} ›</span>
+          </summary>
+          <div class="flex flex-col gap-3 px-3.5 pb-3.5 sm:p-4">
+            <div class="flex flex-col gap-3.5 sm:flex-row sm:flex-wrap sm:items-end sm:gap-x-5">
+              {usesPeriod && (
+                <div class="flex min-w-0 flex-col gap-1.5">
+                  <span class={label} aria-hidden="true">Período</span>
+                  <div>
+                    <SegmentedControl
+                      label="Período"
+                      class="!inline-flex flex-wrap [&>a]:grow sm:[&>a]:grow-0"
+                      current={showCustom ? "personalizado" : period.preset}
+                      items={[
+                        ...PERIOD_PRESETS.map((p) => ({ id: p.id, label: p.label, href: link({ periodo: p.id === "hoje" ? "" : p.id, de: "", ate: "" }) })),
+                        { id: "personalizado", label: "Personalizado", href: link({ periodo: "personalizado", de: period.from, ate: period.to }) },
+                      ]}
+                    />
+                  </div>
+                </div>
+              )}
+              {hasAgendaPicker && (
+                <form method="GET" action="/admin/metricas" class="flex flex-col gap-1.5">
+                  {hidden({ ...keep, agenda: "" }).map(([name, value]) => <input type="hidden" name={name} value={value} />)}
+                  <label for="metricas-agenda" class={label}>Agenda</label>
+                  <select id="metricas-agenda" name="agenda" class={`${CONTROL} w-full sm:w-60`} data-autosubmit>
+                    <option value="">Todas as agendas</option>
+                    {selectable.map((a) => (
+                      <option value={a.id} selected={a.id === selectedAgenda?.id}>
+                        {a.name}
+                      </option>
+                    ))}
+                  </select>
                 </form>
-              </details>
-              <span class="text-sm font-medium text-slate-700">{period.label}</span>
-              {period.invalid && <span class="text-xs text-red-700">Período inválido (até 366 dias): mostrando hoje.</span>}
+              )}
+              {usesPeriod && !filtered && (
+                <form method="GET" action="/admin/metricas" role="search" class="flex min-w-0 flex-col gap-1.5 sm:min-w-[300px] sm:flex-1">
+                  {hidden(keep).map(([name, value]) => <input type="hidden" name={name} value={value} />)}
+                  <label for="metricas-busca" class={label}>Filtrar por {vocabulary.patient} ou {vocabulary.contact}</label>
+                  <div class="flex gap-2">
+                    <input id="metricas-busca" name="busca" value={busca} placeholder="Nome ou telefone" class={`${CONTROL} min-w-0 flex-1`} />
+                    <Button type="submit">Buscar</Button>
+                  </div>
+                </form>
+              )}
             </div>
-          )}
-
-          <div class="flex flex-wrap items-center gap-2">
-            {selectable.length > 1 && !botTab && (
-              <form method="GET" action="/admin/metricas">
-                {Object.entries({ ...keep, agenda: "" }).map(([name, value]) => value && <input type="hidden" name={name} value={value} />)}
-                <select name="agenda" aria-label="Agenda" class={`${INPUT} mt-0 sm:w-64`} data-autosubmit>
-                  <option value="">Todas as agendas</option>
-                  {selectable.map((a) => (
-                    <option value={a.id} selected={a.id === selectedAgenda?.id}>
-                      {a.name}
-                    </option>
-                  ))}
-                </select>
+            {usesPeriod && showCustom && (
+              <form method="GET" action="/admin/metricas" class="flex flex-wrap items-end gap-2.5 border-t border-[#e6ecea] pt-3">
+                {hidden({ ...keep, periodo: "personalizado", de: "", ate: "" }).map(([name, value]) => <input type="hidden" name={name} value={value} />)}
+                <label class="flex flex-col gap-1.5">
+                  <span class={label}>De</span>
+                  <input type="date" name="de" required value={period.from} class={CONTROL} />
+                </label>
+                <label class="flex flex-col gap-1.5">
+                  <span class={label}>Até</span>
+                  <input type="date" name="ate" required value={period.to} class={CONTROL} />
+                </label>
+                <Button type="submit">Ver</Button>
+                {period.invalid && <p class="basis-full text-sm font-semibold text-danger" role="alert">Período inválido (até 366 dias): mostrando hoje.</p>}
               </form>
             )}
-            {usesPeriod &&
-              (filterPatient || filterContact ? (
-                <span class="flex items-center gap-2 text-sm">
-                  <Badge variant="info">
-                    {filterPatient ? filterPatient.fullName : `${capitalize(vocabulary.contact)}: ${filterContact!.fullName}`}
-                  </Badge>
-                  <a href={link({ paciente: "", responsavel: "" })} class="text-sky-700 hover:underline">
-                    Tirar filtro
-                  </a>
-                </span>
-              ) : (
-                <form method="GET" action="/admin/metricas" class="flex items-center gap-2">
-                  {Object.entries(keep).map(([name, value]) => value && <input type="hidden" name={name} value={value} />)}
-                  <input name="busca" value={busca} aria-label={`Filtrar por ${vocabulary.patient} ou ${vocabulary.contact}`} placeholder={`Filtrar por ${vocabulary.patient} ou ${vocabulary.contact}`} class={`${INPUT} mt-0 sm:w-72`} />
-                  <button type="submit" class={SECONDARY_BUTTON}>Buscar</button>
-                </form>
-              ))}
           </div>
-          {busca && !filterPatient && !filterContact && (
-            <Card>
-              <ul class="divide-y divide-slate-100 text-sm">
-                {foundPatients.map((p) => (
-                  <li>
-                    <a href={link({ paciente: p.id, busca: "" })} class="block py-1.5 hover:text-sky-700">
-                      {p.fullName} <span class="text-slate-500">({vocabulary.patient})</span>
-                    </a>
-                  </li>
-                ))}
-                {foundContacts.map((c) => (
-                  <li>
-                    <a href={link({ responsavel: c.id, busca: "" })} class="block py-1.5 hover:text-sky-700">
-                      {c.fullName} <span class="text-slate-500">({vocabulary.contact} · {formatPhoneBR(c.phone)})</span>
-                    </a>
-                  </li>
-                ))}
-                {foundPatients.length + foundContacts.length === 0 && <li class="py-1.5 text-slate-500">Ninguém encontrado.</li>}
-              </ul>
-            </Card>
-          )}
-        </div>
+        </details>
+
+        {usesPeriod && filtered && (
+          <div class="mt-3 flex flex-wrap items-center gap-2.5 text-[15px]">
+            <span class="font-semibold text-ink-soft">Com filtro:</span>
+            <span class="inline-flex items-center gap-1 rounded-full bg-brand-soft py-0.5 pr-1 pl-3 font-semibold text-brand-ink">
+              {filterPatient ? filterPatient.fullName : `${capitalize(vocabulary.contact)}: ${filterContact!.fullName}`}
+              <a href={link({ paciente: "", responsavel: "" })} aria-label="Tirar o filtro" class="inline-flex h-8 w-8 items-center justify-center rounded-full text-brand-ink hover:bg-white/70">
+                <Icon name="x-mark" class="h-4 w-4" strokeWidth={2.4} />
+              </a>
+            </span>
+          </div>
+        )}
+        {busca && !filtered && (
+          <section aria-label="Resultado da busca" class={`${card} mt-3 gap-0 py-1 sm:py-1`}>
+            <ul>
+              {foundPatients.map((p) => (
+                <li class="border-t border-[#e6ecea] first:border-t-0">
+                  <a href={link({ paciente: p.id, busca: "" })} class="flex min-h-11 items-center gap-1.5 py-1.5 font-semibold text-ink no-underline hover:text-brand">
+                    {p.fullName} <span class="font-normal text-ink-soft">({vocabulary.patient})</span>
+                  </a>
+                </li>
+              ))}
+              {foundContacts.map((c) => (
+                <li class="border-t border-[#e6ecea] first:border-t-0">
+                  <a href={link({ responsavel: c.id, busca: "" })} class="flex min-h-11 items-center gap-1.5 py-1.5 font-semibold text-ink no-underline hover:text-brand">
+                    {c.fullName} <span class="font-normal text-ink-soft">({vocabulary.contact} · {formatPhoneBR(c.phone)})</span>
+                  </a>
+                </li>
+              ))}
+              {foundPatients.length + foundContacts.length === 0 && <li class="py-2.5 text-ink-soft">Ninguém encontrado.</li>}
+            </ul>
+          </section>
+        )}
 
         {ov && (
           <>
-            <div class="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <div class="mt-4 grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-3 xl:grid-cols-6">
               <Stat label="Atendimentos" value={ov.total} hint="sem os cancelados" />
-              <Stat label="Compareceram" value={ov.completed} />
+              <Stat label="Compareceram" value={ov.completed} hint="registrados" />
               <Stat label="Faltaram" value={ov.noShow} hint={`${pct(ov.noShowRate)} dos registrados`} />
-              <Stat label="Cancelados" value={ov.canceled} />
-              <Stat label="A registrar" value={ov.pending} hint="já passaram, sem registro" />
-              <Stat label="Por vir" value={ov.upcoming} />
+              <Stat label="Cancelados" value={ov.canceled} hint="no período" />
+              <Stat label="A registrar" value={ov.pending} hint="já passaram, sem registro" attention={ov.pending > 0} />
+              <Stat label="Por vir" value={ov.upcoming} hint="até o fim do período" />
             </div>
-            <h2 class="mt-6 text-base font-semibold text-slate-900">Marcados por</h2>
-            <Table
-              headers={["Origem", "Atendimentos"]}
-              rows={[
-                ["WhatsApp (bot)", ov.byChannel.whatsapp],
-                ["Painel (equipe)", ov.byChannel.panel],
-                ["Link de agendamento", ov.byChannel.link],
-              ]}
-            />
+            <section aria-labelledby="marcados-por" class="mt-6 flex max-w-2xl flex-col gap-2">
+              <h2 id="marcados-por" class={sectionTitle}>Marcados por</h2>
+              {(() => {
+                const channels = [
+                  ["WhatsApp (bot)", ov.byChannel.whatsapp],
+                  ["Painel (equipe)", ov.byChannel.panel],
+                  ["Link de agendamento", ov.byChannel.link],
+                ] as const;
+                const total = channels.reduce((sum, [, n]) => sum + n, 0);
+                return (
+                  <DataTable
+                    label="Marcados por"
+                    headers={["Origem", "Atendimentos", "Parte"]}
+                    rows={[...channels.map(([name, n]) => [name, n, share(n, total)]), ["Total", total, total === 0 ? "—" : "100%"]]}
+                    total
+                  />
+                );
+              })()}
+            </section>
           </>
+        )}
+
+        {tab === "atendimentos" && (
+          <div class="mt-5 grid items-start gap-6 lg:grid-cols-2">
+            <section aria-labelledby="volume" class="flex flex-col gap-2">
+              <h2 id="volume" class={sectionTitle}>Volume por serviço e local</h2>
+              <DataTable label="Volume por serviço e local" headers={["Serviço · local", "Atendimentos"]} rows={volumeByService(rows).map((r) => [r.label, r.count])} />
+            </section>
+            <div class="flex flex-col gap-6">
+              <section aria-labelledby="nao-comparecimento" class="flex flex-col gap-2">
+                <h2 id="nao-comparecimento" class={sectionTitle}>Não comparecimento</h2>
+                <p class={intro}>Só entre os já registrados (compareceu ou faltou).</p>
+                <DataTable
+                  label="Não comparecimento"
+                  headers={["Tipo", "Compareceu", "Faltou", "Faltas"]}
+                  rows={noShowByCategory(rows).map((r) => [r.label, r.completed, r.noShow, pct(r.rate)])}
+                  total
+                />
+              </section>
+              <section aria-labelledby="por-origem" class="flex flex-col gap-2">
+                <h2 id="por-origem" class={sectionTitle}>Por origem</h2>
+                <DataTable label="Por origem" headers={["Origem", "Marcados", "Cancelados"]} rows={byOrigin(rows).map((r) => [r.label, r.booked, r.canceled])} />
+              </section>
+            </div>
+          </div>
         )}
 
         {funnel && tab === "funil" && (
           <>
-            <p class="mt-4 text-sm text-slate-500">
+            <p class={`${intro} mt-4 max-w-4xl`}>
               Tentativas iniciadas no período, da clínica toda. Cada barra é proporcional a quem iniciou; a porcentagem é a conversão em relação à etapa
               anterior. Sem resposta há mais de 30 minutos conta como abandono na última etapa alcançada.
             </p>
-            <div class="mt-3 grid gap-4 lg:grid-cols-2">
+            <div class="mt-3 grid items-start gap-4 lg:grid-cols-2 lg:gap-5">
               {funnel.flows.map((flow) => {
                 const first = flow.stages[0]?.count ?? 0;
                 return (
-                  <Card>
-                    <h3 class="font-semibold text-slate-900">{flow.label}</h3>
+                  <article class={card}>
+                    <h2 class={sectionTitle}>{flow.label}</h2>
                     {first === 0 ? (
-                      <p class="mt-3 text-sm text-slate-500">Nenhuma tentativa no período.</p>
+                      <p class="text-[15px] text-ink-soft">Nenhuma tentativa no período.</p>
                     ) : (
                       <>
-                        <div class="mt-3 space-y-2">
+                        <div class="flex flex-col gap-2">
                           {flow.stages.map((stage) => (
-                            <div class="grid grid-cols-[8.5rem_1fr_4.5rem] items-center gap-2 text-xs sm:text-sm">
-                              <span class="truncate text-slate-600">{stage.label}</span>
-                              <div class="h-5 rounded bg-slate-100">
-                                <div class="h-5 rounded bg-sky-500" style={`width: ${Math.max((stage.count / first) * 100, stage.count > 0 ? 2 : 0)}%`} />
+                            <div class="grid grid-cols-[8.5rem_1fr_5rem] items-center gap-2.5 text-sm sm:grid-cols-[12rem_1fr_5.5rem] sm:text-[14.5px]">
+                              <span class="text-ink">{stage.label}</span>
+                              <div class="h-5 overflow-hidden rounded-[5px] bg-canvas-deep">
+                                <div class="h-5 rounded-[5px] bg-brand" style={`width: ${Math.max((stage.count / first) * 100, stage.count > 0 ? 2 : 0)}%`} />
                               </div>
-                              <span class="text-right tabular-nums text-slate-900">
-                                <span class="font-semibold">{stage.count}</span>
-                                {stage.conversion !== null && <span class="ml-1 text-slate-500">{pct(stage.conversion)}</span>}
+                              <span class="text-right text-ink tabular-nums">
+                                <span class="font-bold">{stage.count}</span>
+                                {stage.conversion !== null && <span class="ml-1 text-ink-soft">{pct(stage.conversion)}</span>}
                               </span>
                             </div>
                           ))}
                         </div>
-                        <div class="mt-4 flex flex-wrap gap-1.5">
-                          <Badge variant="success">Concluídas: {flow.outcomes.concluded}</Badge>
-                          <Badge variant="warning">Abandonaram: {flow.outcomes.abandoned}</Badge>
-                          {flow.outcomes.blocked > 0 && <Badge variant="neutral">Barradas: {flow.outcomes.blocked}</Badge>}
-                          {flow.outcomes.declined > 0 && <Badge variant="neutral">Desistiram: {flow.outcomes.declined}</Badge>}
-                          {flow.outcomes.error > 0 && <Badge variant="danger">Erro: {flow.outcomes.error}</Badge>}
-                          {flow.outcomes.in_progress > 0 && <Badge variant="info">Em andamento: {flow.outcomes.in_progress}</Badge>}
+                        <div class="flex flex-wrap gap-1.5">
+                          <Pill tone={OUTCOME_TONES.concluded}>Concluídas: {flow.outcomes.concluded}</Pill>
+                          <Pill tone={OUTCOME_TONES.abandoned}>Abandonaram: {flow.outcomes.abandoned}</Pill>
+                          {flow.outcomes.blocked > 0 && <Pill tone={OUTCOME_TONES.blocked}>Barradas: {flow.outcomes.blocked}</Pill>}
+                          {flow.outcomes.declined > 0 && <Pill tone={OUTCOME_TONES.declined}>Desistiram: {flow.outcomes.declined}</Pill>}
+                          {flow.outcomes.error > 0 && <Pill tone={OUTCOME_TONES.error}>Erro: {flow.outcomes.error}</Pill>}
+                          {flow.outcomes.in_progress > 0 && <Pill tone={OUTCOME_TONES.in_progress}>Em andamento: {flow.outcomes.in_progress}</Pill>}
                         </div>
                         {flow.notes.length > 0 && (
-                          <ul class="mt-3 space-y-0.5 text-xs text-slate-600">
+                          <ul class="list-disc space-y-0.5 pl-5 text-sm text-ink-soft">
                             {flow.notes.map((note) => (
                               <li>
-                                {note.label}: <span class="font-semibold">{note.count}</span>
+                                {note.label}: <span class="font-bold text-ink">{note.count}</span>
                               </li>
                             ))}
                           </ul>
                         )}
                         {flow.blockedReasons.length > 0 && (
-                          <ul class="mt-3 space-y-0.5 text-xs text-slate-500">
+                          <ul class="list-disc space-y-0.5 pl-5 text-sm text-ink-soft">
                             {flow.blockedReasons.map((reason) => (
                               <li>
                                 Barradas: {reason.label}: {reason.count}
@@ -281,106 +353,175 @@ const fin = tab === "financeiro" ? financial(rows) : null;
                         )}
                       </>
                     )}
-                  </Card>
+                  </article>
                 );
               })}
-              <Card>
-                <h3 class="font-semibold text-slate-900">Atendimento humano</h3>
-                <dl class="mt-3 space-y-2 text-sm">
-                  <div class="flex items-baseline justify-between gap-3">
-                    <dt class="text-slate-600">Pediram a recepção pelo menu</dt>
-                    <dd class="font-semibold tabular-nums text-slate-900">{funnel.handoffRequests}</dd>
-                  </div>
-                  <div class="flex items-baseline justify-between gap-3">
-                    <dt class="text-slate-600">
-                      Recepção assumiu pelo app
-                      {funnel.agentTookOver.total > 0 && (
-                        <span class="block text-xs text-slate-500">{funnel.agentTookOver.midJourney} no meio de uma marcação, remarcação ou cancelamento</span>
-                      )}
-                    </dt>
-                    <dd class="font-semibold tabular-nums text-slate-900">{funnel.agentTookOver.total}</dd>
-                  </div>
+              <article class={card}>
+                <h2 class={sectionTitle}>Atendimento humano</h2>
+                <dl class="grid grid-cols-[minmax(0,1fr)_auto] gap-x-4 gap-y-2.5 text-[15px]">
+                  <dt class="text-ink-soft">Pediram a recepção pelo menu</dt>
+                  <dd class="font-bold text-ink tabular-nums">{funnel.handoffRequests}</dd>
+                  <dt class="text-ink-soft">
+                    Recepção assumiu pelo app
+                    {funnel.agentTookOver.total > 0 && (
+                      <span class="block text-[13px]">{funnel.agentTookOver.midJourney} no meio de uma marcação, remarcação ou cancelamento</span>
+                    )}
+                  </dt>
+                  <dd class="font-bold text-ink tabular-nums">{funnel.agentTookOver.total}</dd>
                 </dl>
-              </Card>
+              </article>
             </div>
           </>
         )}
 
+        {tab === "faltosos" && (
+          <section aria-labelledby="faltosos" class="mt-5 flex flex-col gap-2">
+            <h2 id="faltosos" class={sectionTitle}>Faltam com frequência</h2>
+            <p class={intro}>2 ou mais faltas e em pelo menos metade dos atendimentos registrados, em todo o histórico. Mais faltas primeiro.</p>
+            <div role="region" aria-label="Faltam com frequência" tabindex="0" class={TABLE.box}>
+              <table class={`${TABLE.table} min-w-[560px]`}>
+                <thead>
+                  <tr>
+                    <th scope="col" class={TABLE.th}>{capitalize(vocabulary.patient)}</th>
+                    <th scope="col" class={`${TABLE.th} text-right`}>Faltas</th>
+                    <th scope="col" class={`${TABLE.th} text-right`}>Registrados</th>
+                    <th scope="col" class={`${TABLE.th} text-right`}>Última falta</th>
+                  </tr>
+                </thead>
+                <tbody class="[&>tr:last-child>td]:border-b-0">
+                  {frequent.map((f) => (
+                    <tr>
+                      <td class={TABLE.td}>
+                        <a href={withReturn(`/admin/pacientes/${f.patientId}`, here)} class="text-base font-semibold text-ink no-underline hover:text-brand hover:underline">
+                          {f.patientName}
+                        </a>
+                        <span class="mt-0.5 flex flex-wrap items-center gap-x-1.5 gap-y-1 text-sm text-ink-soft">
+                          {!f.isContactSelf && <span>{f.contactName} ·</span>}
+                          <PhoneLinks phone={f.contactPhone} plain />
+                        </span>
+                      </td>
+                      <td class={`${TABLE.td} ${TABLE.num}`}>{f.noShows}</td>
+                      <td class={`${TABLE.td} ${TABLE.num}`}>{f.total}</td>
+                      <td class={`${TABLE.td} ${TABLE.num}`}>{formatInstant(f.lastNoShow, clinic.timezone, "dd/MM/yyyy")}</td>
+                    </tr>
+                  ))}
+                  {frequent.length === 0 && (
+                    <tr>
+                      <td colspan="4" class={`${TABLE.td} text-center text-ink-soft`}>
+                        Nenhum {vocabulary.patient} com faltas frequentes.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </section>
+        )}
+
         {funnel && tab === "retomar_contato" && (
           <>
-            <p class="mt-4 text-sm text-slate-500">
+            <p class={`${intro} mt-4 max-w-4xl`}>
               Quem começou pelo WhatsApp e não concluiu no período (abandono ou erro), para retomar o contato. Sai da lista quem concluiu o mesmo fluxo
               depois.{funnel.incomplete.length > RECALL_LIMIT && ` Mostrando os ${RECALL_LIMIT} mais recentes.`}
             </p>
             {recall.length === 0 ? (
-              <p class="mt-3 text-sm text-slate-500">Ninguém nessa situação no período.</p>
+              <p class={`${card} mt-3 text-[15px] text-ink-soft`}>Ninguém nessa situação no período.</p>
             ) : (
-              <div class="mt-3 grid gap-3 sm:grid-cols-2">
-                {recall.map((row) => (
-                  <Card>
-                    <div class="flex items-start justify-between gap-2">
-                      <div>
-                        <p class="font-medium text-slate-900">{(row.contactId && recallContacts.get(row.contactId)) || `${capitalize(vocabulary.contact)} sem cadastro`}</p>
-                        <PhoneLinks phone={row.phone} class="text-sm" />
-                      </div>
-                      <Badge variant="info">{row.flowLabel}</Badge>
-                    </div>
-                    <p class="mt-2 text-sm text-slate-600">
-                      Última etapa: <span class="font-medium text-slate-800">{row.lastStage}</span>
-                    </p>
-                    <p class="text-sm text-slate-600">{row.detail}</p>
-                    <p class="mt-1 text-xs text-slate-400">Iniciou em {formatInstant(row.startedAt, clinic.timezone, "dd/MM/yyyy 'às' HH:mm")}</p>
-                  </Card>
-                ))}
-              </div>
+              <>
+                <div role="region" aria-label="Retomar contato" tabindex="0" class={`${TABLE.box} mt-3 max-sm:hidden`}>
+                  <table class={TABLE.table}>
+                    <thead>
+                      <tr>
+                        <th scope="col" class={TABLE.th}>{capitalize(vocabulary.contact)}</th>
+                        <th scope="col" class={TABLE.th}>Fluxo</th>
+                        <th scope="col" class={TABLE.th}>Onde parou</th>
+                        <th scope="col" class={`${TABLE.th} text-right`}>Iniciou em</th>
+                      </tr>
+                    </thead>
+                    <tbody class="[&>tr:last-child>td]:border-b-0">
+                      {recall.map((row) => {
+                        const name = (row.contactId && recallContacts.get(row.contactId)) || `${capitalize(vocabulary.contact)} sem cadastro`;
+                        return (
+                          <tr>
+                            <td class={TABLE.td}>
+                              {row.contactId && recallContacts.has(row.contactId) ? (
+                                <a href={withReturn(`/admin/pacientes/contato/${row.contactId}`, here)} class="text-base font-semibold text-ink no-underline hover:text-brand hover:underline">
+                                  {name}
+                                </a>
+                              ) : (
+                                <span class="text-base font-semibold text-ink">{name}</span>
+                              )}
+                              <PhoneLinks phone={row.phone} plain class="mt-0.5 flex text-sm text-ink-soft" />
+                            </td>
+                            <td class={TABLE.td}>
+                              <Pill tone="info">{row.flowLabel}</Pill>
+                            </td>
+                            <td class={TABLE.td}>
+                              {row.lastStage}
+                              <span class={TABLE.sub}>{row.detail}</span>
+                            </td>
+                            <td class={`${TABLE.td} ${TABLE.num}`}>{formatInstant(row.startedAt, clinic.timezone, "dd/MM/yyyy 'às' HH:mm")}</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+                <ul class="mt-3 flex flex-col gap-2.5 sm:hidden">
+                  {recall.map((row) => {
+                    const name = (row.contactId && recallContacts.get(row.contactId)) || `${capitalize(vocabulary.contact)} sem cadastro`;
+                    return (
+                      <li class={`${card} gap-1.5`}>
+                        <div class="flex items-start justify-between gap-2">
+                          {row.contactId && recallContacts.has(row.contactId) ? (
+                            <a href={withReturn(`/admin/pacientes/contato/${row.contactId}`, here)} class="text-base font-semibold text-ink no-underline">
+                              {name}
+                            </a>
+                          ) : (
+                            <span class="text-base font-semibold text-ink">{name}</span>
+                          )}
+                          <Pill tone="info">{row.flowLabel}</Pill>
+                        </div>
+                        <PhoneLinks phone={row.phone} plain class="text-[15px] text-ink" />
+                        <p class="text-sm text-ink-soft">
+                          Onde parou: <span class="font-semibold text-ink">{row.lastStage}</span>. {row.detail}
+                        </p>
+                        <p class="text-[13px] text-ink-soft">Iniciou em {formatInstant(row.startedAt, clinic.timezone, "dd/MM/yyyy 'às' HH:mm")}</p>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </>
             )}
           </>
         )}
 
-        {tab === "atendimentos" && (
-          <>
-            <h2 class="mt-6 text-base font-semibold text-slate-900">Volume por serviço e local</h2>
-            <Table headers={["Serviço · local", "Atendimentos"]} rows={volumeByService(rows).map((r) => [r.label, r.count])} />
-            <h2 class="mt-6 text-base font-semibold text-slate-900">Não comparecimento</h2>
-            <p class="text-xs text-slate-500">Só entre os já registrados (compareceu ou faltou).</p>
-            <Table headers={["Tipo", "Compareceu", "Faltou", "Faltas"]} rows={noShowByCategory(rows).map((r) => [r.label, r.completed, r.noShow, pct(r.rate)])} boldLast />
-            <h2 class="mt-6 text-base font-semibold text-slate-900">Por origem</h2>
-            <Table headers={["Origem", "Marcados", "Cancelados"]} rows={byOrigin(rows).map((r) => [r.label, r.booked, r.canceled])} />
-          </>
-        )}
-
-        {tab === "faltosos" && (
-          <>
-            <p class="mt-4 text-sm text-slate-600">2 ou mais faltas e em pelo menos metade dos atendimentos registrados, em todo o histórico. Mais faltas primeiro.</p>
-            <Table
-              headers={[capitalize(vocabulary.patient), "Faltas", "Registrados", "Última falta"]}
-              rows={frequent.map((f) => [
-                `${f.patientName}${f.isContactSelf ? "" : ` (${f.contactName})`} · ${formatPhoneBR(f.contactPhone)}`,
-                f.noShows,
-                f.total,
-                formatInstant(f.lastNoShow, clinic.timezone, "dd/MM/yyyy"),
-              ])}
-              empty="Nenhum paciente com faltas frequentes."
-            />
-          </>
-        )}
-
         {fin && (
-          <>
-            <p class="mt-4 text-sm text-slate-600">Valor da tabela gravado na marcação (não é o valor recebido). Retorno fica fora.</p>
-            <Table
+          <section aria-labelledby="valores" class="mt-5 flex max-w-4xl flex-col gap-2">
+            <h2 id="valores" class={sectionTitle}>Valores por serviço</h2>
+            <p class={intro}>Valor da tabela gravado na marcação (não é o valor recebido). Retorno fica fora.</p>
+            <DataTable
+              label="Valores por serviço"
               headers={["Serviço · local", "Realizado", "Previsto", "Faltas"]}
               rows={[...fin.rows, fin.total].map((r) => [
                 r.label,
-                `${r.done.count} · ${money(r.done.cents)}`,
-                `${r.expected.count} · ${money(r.expected.cents)}`,
-                `${r.lost.count} · ${money(r.lost.cents)}`,
+                { main: r.done.count, sub: money(r.done.cents) },
+                { main: r.expected.count, sub: money(r.expected.cents) },
+                { main: r.lost.count, sub: money(r.lost.cents) },
               ])}
-              boldLast={fin.rows.length > 0}
+              total={fin.rows.length > 0}
             />
-          </>
+          </section>
         )}
       </>
     )
   }
 </AdminLayout>
+
+<script>
+  // Celular: os filtros abrem recolhidos (o resumo mostra o que vale), menos
+  // com o período personalizado ou uma busca na tela. Sem JavaScript, ficam abertos.
+  for (const box of document.querySelectorAll<HTMLDetailsElement>("details[data-metric-filters]")) {
+    if (window.matchMedia("(max-width: 639px)").matches && !box.hasAttribute("data-keep-open")) box.open = false;
+  }
+</script>

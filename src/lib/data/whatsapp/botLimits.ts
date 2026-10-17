@@ -286,14 +286,14 @@ export async function listContactLimitEvents(db: DbClient, clinicId: string, con
   return rows.map(toEvent);
 }
 
-export type ContactToReview = { contactId: string; name: string; last: BotLimitEvent; hits: number };
+export type ContactToReview = { contactId: string; name: string; phone: string | null; last: BotLimitEvent; hits: number };
 
 /** Painel: contatos que bateram limite nos últimos 7 dias e ainda não foram revisados, do mais recente ao mais antigo. */
 export async function listContactsToReview(db: DbClient, clinicId: string, now: Date = new Date()): Promise<ContactToReview[]> {
   const rows = unwrap(
     await db
       .from("bot_limit_events")
-      .select("contact_id, reason, limit_value, current_value, paused, created_at, contacts ( full_name, bot_limits_reviewed_at )")
+      .select("contact_id, reason, limit_value, current_value, paused, created_at, contacts ( full_name, phone, bot_limits_reviewed_at )")
       .eq("clinic_id", clinicId)
       .gte("created_at", daysAgo(now, REVIEW_WINDOW_DAYS))
       .order("created_at", { ascending: false }),
@@ -305,7 +305,7 @@ export async function listContactsToReview(db: DbClient, clinicId: string, now: 
     current_value: number;
     paused: boolean;
     created_at: string;
-    contacts: { full_name: string; bot_limits_reviewed_at: string | null } | null;
+    contacts: { full_name: string; phone: string; bot_limits_reviewed_at: string | null } | null;
   }[];
   const byContact = new Map<string, ContactToReview>();
   for (const row of rows) {
@@ -313,7 +313,7 @@ export async function listContactsToReview(db: DbClient, clinicId: string, now: 
     if (reviewedAt && new Date(row.created_at) <= new Date(reviewedAt)) continue;
     const current = byContact.get(row.contact_id);
     if (current) current.hits++;
-    else byContact.set(row.contact_id, { contactId: row.contact_id, name: row.contacts?.full_name ?? "Contato", last: toEvent(row), hits: 1 });
+    else byContact.set(row.contact_id, { contactId: row.contact_id, name: row.contacts?.full_name ?? "Contato", phone: row.contacts?.phone ?? null, last: toEvent(row), hits: 1 });
   }
   return [...byContact.values()];
 }

@@ -240,6 +240,7 @@ describe("limites: telas, Uso e acesso", () => {
     const review = await listContactsToReview(db, f.clinicId);
     expect(review).toEqual([expect.objectContaining({ contactId: id, name: "Rita Lima", hits: 4 })]);
     expect(review[0].last.reason).toBe("no_shows");
+    expect(review[0].phone).toBe(PHONE);
   });
 
   it("Uso: conta cada limite atingido no mês", async () => {

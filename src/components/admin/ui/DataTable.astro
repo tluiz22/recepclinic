@@ -1,0 +1,57 @@
+---
+// Tabela simples (R7; Métricas e, na R8, Financeiro): cabeçalho, números à
+// direita, total em negrito e rolagem só dentro dela no celular. Sem gráfico
+// (decisão do cliente no piloto). Célula com `sub`: o número em cima e o
+// complemento embaixo (ex.: quantidade e valor).
+import { TABLE } from "./styles";
+
+export type Cell = string | number | { main: string | number; sub?: string };
+
+interface Props {
+  /** Nome da tabela para o leitor de tela (a área rola de lado no celular). */
+  label: string;
+  headers: string[];
+  rows: Cell[][];
+  /** A última linha é o total. */
+  total?: boolean;
+  empty?: string;
+  class?: string;
+}
+
+const { label, headers, rows, total = false, empty = "Nada no período.", class: className = "" } = Astro.props;
+const main = (cell: Cell) => (typeof cell === "object" ? cell.main : cell);
+const sub = (cell: Cell) => (typeof cell === "object" ? cell.sub : undefined);
+---
+
+<div role="region" aria-label={label} tabindex="0" class={`${TABLE.box} ${className}`}>
+  <table class={TABLE.table}>
+    <thead>
+      <tr>
+        {headers.map((h, i) => <th scope="col" class={`${TABLE.th} ${i > 0 ? "text-right" : ""}`}>{h}</th>)}
+      </tr>
+    </thead>
+    <tbody class="[&>tr:last-child>td]:border-b-0">
+      {
+        rows.map((row, r) => (
+          <tr class={total && r === rows.length - 1 ? TABLE.total : ""}>
+            {row.map((cell, i) => (
+              <td class={`${TABLE.td} ${i > 0 ? TABLE.num : ""}`}>
+                {main(cell)}
+                {sub(cell) && <span class={total && r === rows.length - 1 ? "block text-sm font-bold text-ink" : TABLE.sub}>{sub(cell)}</span>}
+              </td>
+            ))}
+          </tr>
+        ))
+      }
+      {
+        rows.length === 0 && (
+          <tr>
+            <td colspan={headers.length} class={`${TABLE.td} text-center text-ink-soft`}>
+              {empty}
+            </td>
+          </tr>
+        )
+      }
+    </tbody>
+  </table>
+</div>
