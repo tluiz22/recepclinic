@@ -27,6 +27,19 @@ export type MetricsPeriod = {
   label: string;
   /** Intervalo personalizado inválido caiu em "Hoje". */
   invalid: boolean;
+  /** Por que o personalizado é inválido (R7, QA-04): datas faltando, De depois de Até ou longo demais. */
+  invalidReason: InvalidPeriodReason | null;
+  /** As datas pedidas no endereço, para os campos De e Até voltarem como digitados (R7, FORM-01). */
+  requested: { from: string; to: string } | null;
+};
+
+export type InvalidPeriodReason = "missing" | "order" | "too_long";
+
+/** Texto do erro do período personalizado, para a equipe. */
+export const INVALID_PERIOD_MESSAGES: Record<InvalidPeriodReason, string> = {
+  missing: "Informe as duas datas.",
+  order: "A data De é depois da data Até.",
+  too_long: `O período passa de ${MAX_CUSTOM_DAYS} dias.`,
 };
 
 const capitalize = (text: string) => text.charAt(0).toUpperCase() + text.slice(1);
@@ -40,16 +53,18 @@ function monthOf(date: string, delta: number): { from: string; to: string } {
 
 export function parsePeriod(params: URLSearchParams, timeZone: string, now: Date = new Date()): MetricsPeriod {
   const today = todayIn(timeZone, now);
-  const build = (preset: PeriodPreset, from: string, to: string, label: string, invalid = false): MetricsPeriod => ({
+  const build = (preset: PeriodPreset, from: string, to: string, label: string, invalidReason: InvalidPeriodReason | null = null, requested: MetricsPeriod["requested"] = null): MetricsPeriod => ({
     preset,
     from,
     to,
     start: dayBounds(from, timeZone).start,
     end: dayBounds(to, timeZone).end,
     label,
-    invalid,
+    invalid: invalidReason !== null,
+    invalidReason,
+    requested,
   });
-  const todayPeriod = (invalid = false) => build("hoje", today, today, `Hoje, ${formatCalendarDate(today, "dd/MM/yyyy")}`, invalid);
+  const todayLabel = `Hoje, ${formatCalendarDate(today, "dd/MM/yyyy")}`;
   switch (params.get("periodo")) {
     case "7dias": {
       const from = addDays(today, -6);
@@ -67,11 +82,13 @@ export function parsePeriod(params: URLSearchParams, timeZone: string, now: Date
     case "personalizado": {
       const from = params.get("de") ?? "";
       const to = params.get("ate") ?? "";
-      if (!isCalendarDate(from) || !isCalendarDate(to) || from > to || addDays(from, MAX_CUSTOM_DAYS - 1) < to) return todayPeriod(true);
+      const reason: InvalidPeriodReason | null =
+        !isCalendarDate(from) || !isCalendarDate(to) ? "missing" : from > to ? "order" : addDays(from, MAX_CUSTOM_DAYS - 1) < to ? "too_long" : null;
+      if (reason) return build("hoje", today, today, todayLabel, reason, { from, to });
       const label = from === to ? formatCalendarDate(from, "dd/MM/yyyy") : `${formatCalendarDate(from, "dd/MM/yyyy")} a ${formatCalendarDate(to, "dd/MM/yyyy")}`;
-      return build("personalizado", from, to, label);
+      return build("personalizado", from, to, label, null, { from, to });
     }
     default:
-      return todayPeriod();
+      return build("hoje", today, today, todayLabel);
   }
 }

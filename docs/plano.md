@@ -2074,6 +2074,10 @@ no Personalizado inválido, De e Até voltam para hoje e o digitado se perde (FO
 existia); a mensagem do período inválido é genérica e solta dos campos (QA-04, Baixa); a caixa da
 tabela entra no Tab sem precisar rolar (QA-06, Baixa). Suspeita: abas e período com menos de 44px de
 toque no celular (componentes já aprovados).
+Os 3 defeitos foram **corrigidos e retestados** no mesmo dia (seção 10 do relatório): as datas do
+Personalizado inválido voltam como digitadas, com uma mensagem por caso, o campo marcado e o foco nele
+(`invalidReason` e `requested` em `parsePeriod`, com teste); a caixa da tabela só entra no Tab quando
+rola (`src/scripts/scrollRegion.ts`).
 
 ## Depois do 1º piloto (já previsto no banco)
 

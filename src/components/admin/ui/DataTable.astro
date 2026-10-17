@@ -2,7 +2,8 @@
 // Tabela simples (R7; Métricas e, na R8, Financeiro): cabeçalho, números à
 // direita, total em negrito e rolagem só dentro dela no celular. Sem gráfico
 // (decisão do cliente no piloto). Célula com `sub`: o número em cima e o
-// complemento embaixo (ex.: quantidade e valor).
+// complemento embaixo (ex.: quantidade e valor). A caixa só entra no Tab quando
+// rola (src/scripts/scrollRegion.ts).
 import { TABLE } from "./styles";
 
 export type Cell = string | number | { main: string | number; sub?: string };
@@ -23,7 +24,7 @@ const main = (cell: Cell) => (typeof cell === "object" ? cell.main : cell);
 const sub = (cell: Cell) => (typeof cell === "object" ? cell.sub : undefined);
 ---
 
-<div role="region" aria-label={label} tabindex="0" class={`${TABLE.box} ${className}`}>
+<div data-scroll-region={label} class={`${TABLE.box} ${className}`}>
   <table class={TABLE.table}>
     <thead>
       <tr>

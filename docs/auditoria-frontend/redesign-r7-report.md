@@ -237,3 +237,15 @@ Ver a seção 6.
 2. QA-04: mensagem por caso, ligada aos campos, com o foco no campo errado.
 3. QA-06: a caixa da tabela só como parada do Tab quando rola.
 4. Decidir, para o painel todo, os alvos de toque de 44px nas abas e no seletor segmentado.
+
+## 10. Correções e reteste (16/out, a pedido do cliente)
+
+| ID | Correção | Reteste |
+| --- | --- | --- |
+| FORM-01/02 | Com o período inválido, De e Até voltam como foram digitados (`requested` em `parsePeriod`); só os números e a linha do período mostram hoje. | De 10/10 e Até 05/10: os campos continuam 10/10 e 05/10. Corrigido só o Até para 15/10, o período 10/10 a 15/10 é aplicado. Com 01/01/2024 a 15/10/2026, os dois continuam como digitados. **PASSOU** |
+| QA-04 | Uma mensagem por caso (`INVALID_PERIOD_MESSAGES`): "Informe as duas datas.", "A data De é depois da data Até." e "O período passa de 366 dias.", seguida de "Os números mostram hoje."; o campo a corrigir fica com borda vermelha, `aria-invalid` e `aria-describedby`, e recebe o foco (no celular, os filtros abrem). | Os 3 casos mostram a mensagem certa; com só o De, a marcação e o foco vão para o Até; nos outros dois, os dois campos ficam marcados e o foco vai para o De. **PASSOU** |
+| QA-06 | A caixa da tabela só vira região com nome e parada do Tab quando a tabela rola (`src/scripts/scrollRegion.ts`, carregado no `AdminLayout`; marcação `data-scroll-region`). | Em 1280px, o Tab vai de "Buscar" direto para fora do conteúdo, sem parar nas 3 tabelas da aba Atendimentos, e não há região repetida. No celular, a tabela de Faltosos (que rola) vira região "Faltam com frequência" com `tabindex="0"`; ao alargar a janela, volta a ficar fora do Tab. **PASSOU** |
+
+Teste de unidade novo em `src/lib/metricsPeriod.test.ts` (motivo e datas pedidas). `npm run check` sem
+erros e `npm test` com 497 testes passando. Evidências: `r7-form01-corrigido-1280.png` e
+`r7-form01-corrigido-390.png`. A suspeita dos alvos de toque de 44px continua com o cliente.

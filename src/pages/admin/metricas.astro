@@ -29,7 +29,7 @@ import { byOrigin, financial, listFrequentNoShows, listMetricsRows, noShowByCate
 import { getContact, getPatient, listContactPatients, searchContacts, searchPatients } from "../../lib/data/patients";
 import { metricsScope, type FeatureKey } from "../../lib/features";
 import { buildFunnelReport, listFunnelEvents } from "../../lib/data/botFunnel";
-import { PERIOD_PRESETS, parsePeriod } from "../../lib/metricsPeriod";
+import { INVALID_PERIOD_MESSAGES, PERIOD_PRESETS, parsePeriod } from "../../lib/metricsPeriod";
 import { formatCentsBRL } from "../../lib/money";
 import { formatPhoneBR } from "../../lib/phone";
 import { currentPath, withReturn } from "../../lib/returnPath";
@@ -114,6 +114,10 @@ const here = currentPath(Astro.url);
 const hasAgendaPicker = selectable.length > 1 && !botTab;
 const filtered = !!(filterPatient || filterContact);
 const showCustom = period.preset === "personalizado" || period.invalid;
+// Período inválido (R7, QA-04): marca o campo a corrigir (os dois quando um depende do outro).
+const badFrom = period.invalidReason === "missing" ? !period.requested?.from : period.invalidReason !== null;
+const badTo = period.invalidReason === "missing" ? !period.requested?.to : period.invalidReason !== null;
+const invalidControl = "border-danger focus:border-danger focus:ring-danger";
 const scopeText = scope === "own_agenda" ? "só da sua agenda" : botTab ? "a clínica toda" : (selectedAgenda?.name ?? "todas as agendas");
 const subtitle = tab ? `${usesPeriod ? period.label : "Todo o histórico"} · ${scopeText}` : undefined;
 const filterSummary = [usesPeriod ? (PERIOD_PRESETS.find((p) => p.id === period.preset)?.label ?? "Personalizado") : null, hasAgendaPicker ? (selectedAgenda?.name ?? "todas as agendas") : null, filtered ? "com filtro" : null]
@@ -192,14 +196,34 @@ const fin = tab === "financeiro" ? financial(rows) : null;
                 {hidden({ ...keep, periodo: "personalizado", de: "", ate: "" }).map(([name, value]) => <input type="hidden" name={name} value={value} />)}
                 <label class="flex flex-col gap-1.5">
                   <span class={label}>De</span>
-                  <input type="date" name="de" required value={period.from} class={CONTROL} />
+                  <input
+                    type="date"
+                    name="de"
+                    required
+                    value={period.requested?.from ?? period.from}
+                    class={`${CONTROL} ${badFrom ? invalidControl : ""}`}
+                    aria-invalid={badFrom ? "true" : undefined}
+                    aria-describedby={badFrom ? "periodo-erro" : undefined}
+                  />
                 </label>
                 <label class="flex flex-col gap-1.5">
                   <span class={label}>Até</span>
-                  <input type="date" name="ate" required value={period.to} class={CONTROL} />
+                  <input
+                    type="date"
+                    name="ate"
+                    required
+                    value={period.requested?.to ?? period.to}
+                    class={`${CONTROL} ${badTo ? invalidControl : ""}`}
+                    aria-invalid={badTo ? "true" : undefined}
+                    aria-describedby={badTo ? "periodo-erro" : undefined}
+                  />
                 </label>
                 <Button type="submit">Ver</Button>
-                {period.invalid && <p class="basis-full text-sm font-semibold text-danger" role="alert">Período inválido (até 366 dias): mostrando hoje.</p>}
+                {period.invalidReason && (
+                  <p id="periodo-erro" class="basis-full text-sm font-semibold text-danger" role="alert" data-period-error>
+                    {INVALID_PERIOD_MESSAGES[period.invalidReason]} Os números mostram hoje.
+                  </p>
+                )}
               </form>
             )}
           </div>
@@ -378,7 +402,7 @@ const fin = tab === "financeiro" ? financial(rows) : null;
           <section aria-labelledby="faltosos" class="mt-5 flex flex-col gap-2">
             <h2 id="faltosos" class={sectionTitle}>Faltam com frequência</h2>
             <p class={intro}>2 ou mais faltas e em pelo menos metade dos atendimentos registrados, em todo o histórico. Mais faltas primeiro.</p>
-            <div role="region" aria-label="Faltam com frequência" tabindex="0" class={TABLE.box}>
+            <div data-scroll-region="Faltam com frequência" class={TABLE.box}>
               <table class={`${TABLE.table} min-w-[560px]`}>
                 <thead>
                   <tr>
@@ -428,7 +452,7 @@ const fin = tab === "financeiro" ? financial(rows) : null;
               <p class={`${card} mt-3 text-[15px] text-ink-soft`}>Ninguém nessa situação no período.</p>
             ) : (
               <>
-                <div role="region" aria-label="Retomar contato" tabindex="0" class={`${TABLE.box} mt-3 max-sm:hidden`}>
+                <div data-scroll-region="Retomar contato" class={`${TABLE.box} mt-3 max-sm:hidden`}>
                   <table class={TABLE.table}>
                     <thead>
                       <tr>
@@ -523,5 +547,11 @@ const fin = tab === "financeiro" ? financial(rows) : null;
   // com o período personalizado ou uma busca na tela. Sem JavaScript, ficam abertos.
   for (const box of document.querySelectorAll<HTMLDetailsElement>("details[data-metric-filters]")) {
     if (window.matchMedia("(max-width: 639px)").matches && !box.hasAttribute("data-keep-open")) box.open = false;
+  }
+  // Período inválido (R7, QA-04): o foco vai para o primeiro campo a corrigir.
+  if (document.querySelector("[data-period-error]")) {
+    const field = document.querySelector<HTMLInputElement>('input[aria-describedby="periodo-erro"]');
+    field?.scrollIntoView({ block: "center" });
+    field?.focus({ preventScroll: true });
   }
 </script>

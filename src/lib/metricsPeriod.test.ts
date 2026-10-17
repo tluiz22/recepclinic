@@ -20,6 +20,12 @@ describe("período das Métricas (F4.9)", () => {
   it("personalizado; inválido ou longo demais cai em Hoje", () => {
     expect(period("periodo=personalizado&de=2026-09-10&ate=2026-09-20")).toMatchObject({ preset: "personalizado", label: "10/09/2026 a 20/09/2026" });
     expect(period("periodo=personalizado&de=2026-09-20&ate=2026-09-10")).toMatchObject({ preset: "hoje", invalid: true });
-    expect(period("periodo=personalizado&de=2024-01-01&ate=2026-09-10")).toMatchObject({ preset: "hoje", invalid: true });
+    expect(period("periodo=personalizado&de=2024-01-01&ate=2026-09-10")).toMatchObject({ preset: "hoje", invalid: true });  });
+
+  it("inválido diz o motivo e guarda as datas pedidas (R7)", () => {
+    expect(period("periodo=personalizado&de=2026-09-20&ate=2026-09-10")).toMatchObject({ invalidReason: "order", requested: { from: "2026-09-20", to: "2026-09-10" }, from: "2026-10-15" });
+    expect(period("periodo=personalizado&de=2024-01-01&ate=2026-09-10")).toMatchObject({ invalidReason: "too_long", requested: { from: "2024-01-01", to: "2026-09-10" } });
+    expect(period("periodo=personalizado&de=2026-09-20")).toMatchObject({ invalidReason: "missing", requested: { from: "2026-09-20", to: "" } });
+    expect(period("periodo=mes")).toMatchObject({ invalid: false, invalidReason: null, requested: null });
   });
 });
