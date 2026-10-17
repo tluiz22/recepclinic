@@ -2078,7 +2078,7 @@ Os 3 defeitos foram **corrigidos e retestados** no mesmo dia (seção 10 do rela
 Personalizado inválido voltam como digitadas, com uma mensagem por caso, o campo marcado e o foco nele
 (`invalidReason` e `requested` em `parsePeriod`, com teste); a caixa da tabela só entra no Tab quando
 rola (`src/scripts/scrollRegion.ts`).
-**R7 publicada no staging em 16/out/2026** (commit `9e02dc5`, a pedido do cliente; sem migração).
+**R7 publicada no staging em 16/out/2026** (commit `9e02dc5`, a pedido do cliente; sem migração). **R7 validada pelo cliente em 17/out/2026.**
 
 **Largura única (cliente, 16/out/2026), muda a R1:** a Agenda (Dia, Semana, Mês e a busca) e o Resumo
 do Dia deixam a largura de 1600px e ficam na largura das outras telas (1152px), com o cabeçalho

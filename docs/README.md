@@ -1,6 +1,6 @@
 # RecepClinic
 
-> **Estado atual (retomar daqui), 16/out/2026**
+> **Estado atual (retomar daqui), 17/out/2026**
 >
 > - **Etapas 0 a 4 concluídas**: cópia isolada, [diagnóstico](diagnostico.md), [limites](limites.md),
 >   [arquitetura](arquitetura.md) (decisões D1–D11) e [plano](plano.md) (fases F0–F10).
@@ -113,7 +113,7 @@
 >     (computador e celular, sem gravar dados); [teste de interface](auditoria-frontend/redesign-r6-report.md)
 >     com 3 falhas Baixas (QA-02, QA-03, QA-06), já corrigidas e retestadas; **publicada no staging em 16/out** (commit `06dbf90`, a
 >     pedido do cliente), **R6 validada pelo cliente em 16/out.** **R7 (Início e Métricas): proposta aprovada em 16/out
->     (8 decisões no [plano](plano.md), com a nova ordem das abas das Métricas); implementada e testada no navegador local em 16/out; [teste de interface](auditoria-frontend/redesign-r7-report.md) com 3 defeitos (1 Médio, 2 Baixos), já corrigidos e retestados; **publicada no staging em 16/out** (commit `9e02dc5`, sem migração), aguarda a validação do cliente no staging.** **Largura única (16/out):** Agenda e Resumo do Dia na largura das outras telas (1152px), aprovada pelo cliente e publicada no staging (decisão no [plano](plano.md)). **Revisão da Agenda na largura única (17/out):** barra numa linha, 4 colunas sem corte, cartão da turma e selo da Semana como na proposta aprovada; validada pelo cliente e publicada no staging. A decidir com o cliente: o texto da confirmação da série (S-01).
+>     (8 decisões no [plano](plano.md), com a nova ordem das abas das Métricas); implementada e testada no navegador local em 16/out; [teste de interface](auditoria-frontend/redesign-r7-report.md) com 3 defeitos (1 Médio, 2 Baixos), já corrigidos e retestados; **publicada no staging em 16/out** (commit `9e02dc5`, sem migração), **R7 validada pelo cliente em 17/out.**** **Retomar daqui (17/out):** R8 (Financeiro e DMED) na próxima sessão: proposta no canvas → aprovação → implementação. **Largura única (16/out):** Agenda e Resumo do Dia na largura das outras telas (1152px), aprovada pelo cliente e publicada no staging (decisão no [plano](plano.md)). **Revisão da Agenda na largura única (17/out):** barra numa linha, 4 colunas sem corte, cartão da turma e selo da Semana como na proposta aprovada; validada pelo cliente e publicada no staging. A decidir com o cliente: o texto da confirmação da série (S-01).
 >   - **Migrações no staging:** o Claude aplica com `supabase db push` (permissão liberada em
 >     09/out), sempre na ordem simulação → aplicar → conferir no banco → só então o push do código.
 >   - **WhatsApp de testes:** `+55 61 9903-3143`, na Cloud API do app RecepClinic, ligado à
