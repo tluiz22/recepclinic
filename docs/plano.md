@@ -2078,6 +2078,7 @@ Os 3 defeitos foram **corrigidos e retestados** no mesmo dia (seção 10 do rela
 Personalizado inválido voltam como digitadas, com uma mensagem por caso, o campo marcado e o foco nele
 (`invalidReason` e `requested` em `parsePeriod`, com teste); a caixa da tabela só entra no Tab quando
 rola (`src/scripts/scrollRegion.ts`).
+**R7 publicada no staging em 16/out/2026** (commit `9e02dc5`, a pedido do cliente; sem migração).
 
 ## Depois do 1º piloto (já previsto no banco)
 
