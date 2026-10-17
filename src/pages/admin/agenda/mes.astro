@@ -40,7 +40,7 @@ const prevMonth = addDays(grid.first, -1);
 const nextMonth = addDays(grid.last, 1);
 ---
 
-<AdminLayout title="Agenda · Mês" wide>
+<AdminLayout title="Agenda · Mês">
   <AgendaHeader view="mes" date={date} agendas={scope.selectable} selectedAgendaId={scope.selectedAgendaId} subtitle={formatCalendarDate(grid.first, "MMMM 'de' yyyy")}>
     <div slot="nav" class="flex items-center gap-1.5 sm:gap-1">
       <Button href={`?date=${prevMonth}`} aria-label="Mês anterior" class="w-11 px-0 sm:w-10">

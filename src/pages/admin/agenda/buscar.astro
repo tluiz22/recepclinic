@@ -58,7 +58,7 @@ const rows = chosen ? (upcoming.get(chosen.id) ?? []) : [];
 const plural = (n: number) => `${n} ${n === 1 ? "atendimento marcado" : "atendimentos marcados"}`;
 ---
 
-<AdminLayout title="Agenda · Atendimentos de um paciente" wide>
+<AdminLayout title="Agenda · Atendimentos de um paciente">
   <a href={volta ?? `/admin/agenda?date=${headerDate}`} class="inline-flex min-h-8 items-center gap-1 text-[15px] font-semibold text-brand no-underline hover:underline">
     <Icon name="chevron-left" class="h-[18px] w-[18px]" strokeWidth={2.2} />
     {volta ? "Voltar" : "Agenda"}

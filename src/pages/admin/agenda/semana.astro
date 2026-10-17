@@ -33,7 +33,7 @@ const blocksOf = (day: string) =>
   blocks.filter((b) => localDateOf(b.startsAt, clinic.timezone) <= day && localDateOf(new Date(b.endsAt.getTime() - 1), clinic.timezone) >= day);
 ---
 
-<AdminLayout title="Agenda · Semana" wide>
+<AdminLayout title="Agenda · Semana">
   <AgendaHeader
     view="semana"
     date={date}

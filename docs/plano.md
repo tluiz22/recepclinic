@@ -2080,6 +2080,12 @@ Personalizado inválido voltam como digitadas, com uma mensagem por caso, o camp
 rola (`src/scripts/scrollRegion.ts`).
 **R7 publicada no staging em 16/out/2026** (commit `9e02dc5`, a pedido do cliente; sem migração).
 
+**Largura única (cliente, 16/out/2026), muda a R1:** a Agenda (Dia, Semana, Mês e a busca) e o Resumo
+do Dia deixam a largura de 1600px e ficam na largura das outras telas (1152px), com o cabeçalho
+igual. Sai a opção `wide` do `AdminLayout`. Consequência aceita pelo cliente: com 3 ou 4 agendas, as
+colunas do Dia rolam de lado dentro da área delas (U-01). Na coluna estreita, o "Cancelar" do
+paciente da turma descia para fora do cartão; agora desce para a linha de baixo, à direita.
+
 ## Depois do 1º piloto (já previsto no banco)
 
 - **Convênios (D10):** telas de planos atendidos e exceções por profissional; plano no cadastro do

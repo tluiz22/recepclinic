@@ -130,7 +130,7 @@ const subtitle = !dated
       ...(tab === "resumo" ? [plural(activeOfDay, "atendimento", "atendimentos"), ...(canceledOfDay ? [plural(canceledOfDay, "cancelado", "cancelados")] : [])] : []),
     ].join(" · ");
 ---
-<AdminLayout title="Resumo do Dia" wide>
+<AdminLayout title="Resumo do Dia">
   <PageHeader title="Resumo do Dia" subtitle={subtitle}>
     {tab === "resumo" && (
       <Button slot="actions" href={`/admin/agenda?date=${date}`}>

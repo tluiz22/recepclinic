@@ -13,12 +13,12 @@ interface Props {
   title: string;
   /** Tela da administração do sistema (só o Suporte, sem clínica ativa). */
   platform?: boolean;
-  /** Largura útil de até 1600px (redesign R1: a Agenda; as outras telas seguem em 1152px até a etapa delas). */
-  wide?: boolean;
 }
 
-const { title, platform = false, wide = false } = Astro.props;
-const frame = wide ? "max-w-[1600px] sm:px-6" : "max-w-6xl";
+// Uma largura só para todas as telas (cliente, 16/out/2026: a Agenda e o Resumo do Dia
+// deixaram a largura de 1600px da R1 para ficar como as outras).
+const { title, platform = false } = Astro.props;
+const frame = "max-w-6xl";
 
 // Os 4 primeiros são a barra inferior de abas no celular (uso frequente,
 // toque de um dedo só); Configurações/Relatórios ficam dentro de "Mais" —
@@ -245,7 +245,7 @@ const navLinkClass = (active: boolean) =>
       )
     }
 
-    <main id="conteudo" tabindex="-1" class={`mx-auto w-full flex-1 px-4 pt-6 pb-28 outline-none sm:pb-12 ${frame} ${wide ? "" : "sm:pt-8"}`}>
+    <main id="conteudo" tabindex="-1" class={`mx-auto w-full flex-1 px-4 pt-6 pb-28 outline-none sm:pb-12 ${frame} sm:pt-8`}>
       <slot />
     </main>
 
