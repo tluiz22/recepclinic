@@ -225,7 +225,9 @@ const navLinkClass = (active: boolean) =>
         <div class="flex shrink-0 items-center gap-3">
           {
             showRoleLabel && (
-              <span class="text-sm text-ink-soft">
+              // No celular, "Suporte RecepClinic" empurrava o "Sair" para fora da tela
+              // (teste da R10); o nome "Administração do sistema" já diz onde se está.
+              <span class={`text-sm text-ink-soft ${platform ? "max-sm:hidden" : ""}`}>
                 {platform ? "Suporte RecepClinic" : roleLabel}
               </span>
             )

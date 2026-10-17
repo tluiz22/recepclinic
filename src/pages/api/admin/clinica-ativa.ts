@@ -20,5 +20,8 @@ export const POST: APIRoute = async ({ request, cookies, locals, url, redirect }
   }
 
   cookies.set(ACTIVE_CLINIC_COOKIE, clinicId, activeClinicCookieOptions(url));
-  return redirect("/admin/dashboard", 303);
+  // "Abrir a clínica para configurar", no Sistema (cliente, 17/out/2026, S-01 do
+  // teste da R10): entra direto em Configurações. Só esse destino; o resto vai ao Início.
+  const destino = formData?.get("destino")?.toString();
+  return redirect(destino === "configuracoes" ? "/admin/configuracoes" : "/admin/dashboard", 303);
 };

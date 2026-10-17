@@ -5,7 +5,9 @@
 // Veio do material de 11/out, com os ajustes da lista "Antes de abordar".
 // As imagens saem das clínicas de demonstração (dados fictícios); o modelo das
 // conversas fica em scripts/vendas-imagens/conversas.html.
-import Card from "../Card.astro";
+import Card from "../config/Panel.astro";
+import { buttonClass } from "../ui/styles";
+import { INPUT_INLINE } from "../config/formStyles";
 import { formatCentsBRL } from "../../../lib/money";
 import { PRICES } from "../../../lib/plans";
 import agenda from "../../../assets/vendas/agenda.png";
@@ -18,11 +20,11 @@ const complete = formatCentsBRL(PRICES.completeCents);
 const extra = formatCentsBRL(PRICES.extraProfessionalCents);
 const setup = formatCentsBRL(PRICES.setupCents);
 
-const H2 = "font-semibold text-slate-900";
-const EYEBROW = "text-xs font-semibold uppercase tracking-wide text-sky-700";
-const MUTED = "mt-1 text-sm text-slate-600";
-const TH = "py-2 pr-4 text-left font-medium text-slate-500";
-const TD = "py-2 pr-4 align-top";
+const H2 = "font-semibold text-ink";
+const EYEBROW = "text-xs font-bold uppercase tracking-[.06em] text-brand";
+const MUTED = "mt-1 text-[15px] text-ink-soft";
+const TH = "border-b border-line bg-[#f8faf9] px-3 py-2.5 text-left text-[13px] leading-snug font-semibold text-ink-soft";
+const TD = "px-3 py-2.5 align-top";
 
 const checklist = [
   { id: "preco", title: "Preço definido.", text: `Básico ${basic} e Completo ${complete} com 1 profissional, ${extra} por profissional a mais, adicionais e implantação de ${setup}. Para negociar, simule na aba Planos. As mensagens da Meta são cobradas da clínica, à parte.` },
@@ -199,15 +201,15 @@ const SECTIONS = [
 ---
 
 <div class="mt-4 flex flex-col gap-4" id="roteiro">
-  <Card class="border-sky-200 bg-sky-50">
+  <Card class="border-conf-200 bg-[#f2faf7]">
     <p class={EYEBROW}>A frase de 15 segundos</p>
-    <p class="mt-1 text-base text-slate-900">
+    <p class="mt-1 text-base text-ink">
       O RecepClinic é a recepção da clínica funcionando no WhatsApp que ela já usa: o paciente marca, confirma, remarca e
       cancela sozinho, a vaga que abre é oferecida para quem espera, e a equipe só entra quando precisa. O prontuário continua
       onde está.
     </p>
-    <nav class="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-sm" aria-label="Seções do roteiro">
-      {SECTIONS.map((section) => <a href={`#${section.id}`} class="text-sky-700 hover:underline">{section.label}</a>)}
+    <nav class="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-[15px]" aria-label="Seções do roteiro">
+      {SECTIONS.map((section) => <a href={`#${section.id}`} class="font-semibold text-brand hover:underline">{section.label}</a>)}
     </nav>
   </Card>
 
@@ -218,9 +220,9 @@ const SECTIONS = [
     <ul class="mt-3 flex flex-col gap-3">
       {checklist.map((item) => (
         <li>
-          <label class="flex items-start gap-3 text-sm text-slate-700">
-            <input type="checkbox" data-check={item.id} class="mt-0.5 h-4 w-4 rounded border-slate-300" />
-            <span><strong class="text-slate-900">{item.title}</strong> {item.text}</span>
+          <label class="flex items-start gap-3 text-[15px] text-ink-mid">
+            <input type="checkbox" data-check={item.id} class="mt-0.5 h-[18px] w-[18px] accent-brand" />
+            <span><strong class="text-ink">{item.title}</strong> {item.text}</span>
           </label>
         </li>
       ))}
@@ -237,17 +239,17 @@ const SECTIONS = [
     <div class="mt-3 grid gap-3 sm:grid-cols-3">
       {pains.map((pain) => (
         <div class="rounded-lg border border-amber-200 bg-amber-50 p-3">
-          <h3 class="text-sm font-semibold text-slate-900">{pain.title}</h3>
-          <p class="mt-1 text-sm text-slate-700">{pain.text}</p>
+          <h3 class="text-[15px] font-semibold text-ink">{pain.title}</h3>
+          <p class="mt-1 text-[15px] text-ink-mid">{pain.text}</p>
         </div>
       ))}
     </div>
     <div class="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
       {layers.map((layer) => (
-        <div class="rounded-lg border border-slate-200 p-3">
-          <span class="text-xs font-semibold uppercase tracking-wide text-sky-700">{layer.tag}</span>
-          <h3 class="mt-1 text-sm font-semibold text-slate-900">{layer.title}</h3>
-          <ul class="mt-2 flex list-disc flex-col gap-1 pl-4 text-sm text-slate-700">
+        <div class="rounded-lg border border-line p-3">
+          <span class="text-xs font-bold uppercase tracking-[.06em] text-brand">{layer.tag}</span>
+          <h3 class="mt-1 text-[15px] font-semibold text-ink">{layer.title}</h3>
+          <ul class="mt-2 flex list-disc flex-col gap-1 pl-4 text-[15px] text-ink-mid">
             {layer.items.map((item) => <li>{item}</li>)}
           </ul>
         </div>
@@ -262,23 +264,23 @@ const SECTIONS = [
       Ferramentas como iClinic e Doctoralia são fortes no que fazem. O argumento não é "o meu é melhor": é mostrar o pedaço
       que elas não cobrem bem e que pesa na rotina. Antes de comparar, pergunte o que a clínica usa e quanto paga.
     </p>
-    <div class="mt-2 overflow-x-auto">
-      <table class="w-full min-w-[52rem] text-sm">
+    <div class="mt-3 overflow-x-auto rounded-xl border border-line">
+      <table class="w-full min-w-[52rem] text-[15px]">
         <thead><tr><th class={TH}>A clínica já usa</th><th class={TH}>O que essa ferramenta faz bem</th><th class={TH}>O que o RecepClinic acrescenta</th><th class={TH}>Como dizer</th></tr></thead>
-        <tbody class="divide-y divide-slate-100">
+        <tbody class="divide-y divide-[#e6ecea]">
           {complements.map((row) => (
             <tr>
-              <td class={`${TD} font-medium text-slate-900`}>{row.uses}{row.examples && <span class="block text-xs font-normal text-slate-500">{row.examples}</span>}</td>
-              <td class={`${TD} text-slate-600`}>{row.good}</td>
-              <td class={`${TD} text-slate-700`}>{row.adds}</td>
-              <td class={`${TD} italic text-slate-700`}>"{row.say}"</td>
+              <td class={`${TD} font-medium text-ink`}>{row.uses}{row.examples && <span class="block text-xs font-normal text-ink-soft">{row.examples}</span>}</td>
+              <td class={`${TD} text-ink-soft`}>{row.good}</td>
+              <td class={`${TD} text-ink-mid`}>{row.adds}</td>
+              <td class={`${TD} italic text-ink-mid`}>"{row.say}"</td>
             </tr>
           ))}
         </tbody>
       </table>
     </div>
-    <div class="mt-3 rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700">
-      <strong class="text-slate-900">Seja claro sobre o limite.</strong> Hoje o RecepClinic não sincroniza com a agenda de outros
+    <div class="mt-3 rounded-lg border border-line bg-canvas p-3 text-[15px] text-ink-mid">
+      <strong class="text-ink">Seja claro sobre o limite.</strong> Hoje o RecepClinic não sincroniza com a agenda de outros
       sistemas. Se a clínica marca no iClinic (ou similar), a agenda de marcação passa a ser a do RecepClinic, e o prontuário
       segue no sistema dela. Dizer isso na primeira conversa evita frustração.
     </div>
@@ -294,22 +296,22 @@ const SECTIONS = [
     <div class="mt-3 grid gap-4 md:grid-cols-2">
       <div class="grid gap-3 sm:grid-cols-2" id="ganho-campos">
         {fields.map((field) => (
-          <label class="text-sm text-slate-700">
+          <label class="text-[15px] text-ink-mid">
             {field.label}
-            <input type="number" min="0" max={field.max} step={field.step} value={field.value} data-field={field.id} class="mt-1 block w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm" />
+            <input type="number" min="0" max={field.max} step={field.step} value={field.value} data-field={field.id} class={`mt-1 block w-full ${INPUT_INLINE} py-1.5`} />
           </label>
         ))}
       </div>
       <div>
-        <ul class="flex flex-col divide-y divide-slate-100 text-sm" aria-live="polite">
+        <ul class="flex flex-col divide-y divide-[#e6ecea] text-[15px]" aria-live="polite">
           {results.map((result) => (
             <li class="flex items-center justify-between py-2">
-              <span class="text-slate-600">{result.label}</span>
-              <strong class="text-slate-900" data-result={result.id}>—</strong>
+              <span class="text-ink-soft">{result.label}</span>
+              <strong class="text-ink" data-result={result.id}>—</strong>
             </li>
           ))}
         </ul>
-        <p class="mt-2 text-xs text-slate-500">
+        <p class="mt-2 text-xs text-ink-soft">
           Compare a receita recuperada com a mensalidade (Básico a partir de {basic}) e o custo das mensagens da Meta. Em geral,
           um ou dois atendimentos recuperados por mês já pagam a conta.
         </p>
@@ -323,10 +325,10 @@ const SECTIONS = [
     <ol class="mt-3 flex flex-col gap-3">
       {steps.map((step, i) => (
         <li class="flex gap-3">
-          <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-sky-700 text-sm font-semibold text-white">{i + 1}</span>
-          <div class="text-sm">
-            <p class="font-semibold text-slate-900">{step.title} <span class="font-normal text-slate-500">· {step.when}</span></p>
-            <p class="mt-0.5 text-slate-700">{step.text}</p>
+          <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-brand text-sm font-bold text-white">{i + 1}</span>
+          <div class="text-[15px]">
+            <p class="font-semibold text-ink">{step.title} <span class="font-normal text-ink-soft">· {step.when}</span></p>
+            <p class="mt-0.5 text-ink-mid">{step.text}</p>
           </div>
         </li>
       ))}
@@ -340,14 +342,14 @@ const SECTIONS = [
     <div class="mt-3 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
       {images.map((image) => (
         <figure class="flex flex-col gap-2">
-          <a href={image.src} target="_blank" rel="noopener" class="block overflow-hidden rounded-lg border border-slate-200 bg-slate-50">
+          <a href={image.src} target="_blank" rel="noopener" class="block overflow-hidden rounded-lg border border-line bg-canvas">
             <img src={image.src} alt={image.title} loading="lazy" class="h-64 w-full object-cover object-top" />
           </a>
-          <figcaption class="text-sm">
-            <span class="font-semibold text-slate-900">{image.title}</span>
-            <span class="block text-xs text-slate-500">{image.use}</span>
+          <figcaption class="text-[15px]">
+            <span class="font-semibold text-ink">{image.title}</span>
+            <span class="block text-xs text-ink-soft">{image.use}</span>
           </figcaption>
-          <a href={image.src} download={image.file} class="self-start rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-50">Baixar</a>
+          <a href={image.src} download={image.file} class={`${buttonClass("secondary", "sm")} self-start`}>Baixar</a>
         </figure>
       ))}
     </div>
@@ -362,16 +364,16 @@ const SECTIONS = [
     </p>
     <div class="mt-3 grid gap-4 lg:grid-cols-2">
       {messages.map((message, i) => (
-        <article class="flex flex-col gap-2 rounded-lg border border-slate-200 p-3">
+        <article class="flex flex-col gap-2 rounded-lg border border-line p-3">
           <div class="flex flex-wrap items-baseline justify-between gap-2">
-            <h3 class="text-sm font-semibold text-slate-900">{message.title}</h3>
-            <span class="text-xs text-slate-500">{message.when}</span>
+            <h3 class="text-[15px] font-semibold text-ink">{message.title}</h3>
+            <span class="text-xs text-ink-soft">{message.when}</span>
           </div>
-          <div class="whitespace-pre-line rounded-lg rounded-tl-none bg-[#dcf8c6] px-3 py-2 text-sm text-slate-900" id={`msg-${i + 1}`} data-text={message.text} set:html={highlight(message.text)} />
+          <div class="whitespace-pre-line rounded-lg rounded-tl-none bg-[#dcf8c6] px-3 py-2 text-[15px] text-ink" id={`msg-${i + 1}`} data-text={message.text} set:html={highlight(message.text)} />
           <div class="flex flex-wrap items-center gap-3">
-            <button type="button" data-copy={`msg-${i + 1}`} class="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-50">Copiar mensagem</button>
-            <span class="text-xs text-emerald-700" role="status" data-copied={`msg-${i + 1}`}></span>
-            {message.tip && <span class="text-xs text-slate-500">{message.tip}</span>}
+            <button type="button" data-copy={`msg-${i + 1}`} class={buttonClass("secondary", "sm")}>Copiar mensagem</button>
+            <span class="text-xs text-conf-800" role="status" data-copied={`msg-${i + 1}`}></span>
+            {message.tip && <span class="text-xs text-ink-soft">{message.tip}</span>}
           </div>
         </article>
       ))}
@@ -381,13 +383,13 @@ const SECTIONS = [
   <Card id="objecoes" class="scroll-mt-16">
     <p class={EYEBROW}>Objeções</p>
     <h2 class={H2}>O que a clínica costuma dizer, e como responder.</h2>
-    <div class="mt-2 flex flex-col divide-y divide-slate-100">
+    <div class="mt-2 flex flex-col divide-y divide-[#e6ecea]">
       {objections.map((objection) => (
         <details class="py-2">
-          <summary class="cursor-pointer text-sm font-medium text-slate-900">{objection.q}</summary>
-          <div class="mt-2 flex flex-col gap-2 text-sm text-slate-700">
+          <summary class="cursor-pointer text-[15px] font-medium text-ink">{objection.q}</summary>
+          <div class="mt-2 flex flex-col gap-2 text-[15px] text-ink-mid">
             {objection.a.map((paragraph) => <p set:html={highlight(paragraph)} />)}
-            {objection.note && <p class="text-xs text-slate-500">{objection.note}</p>}
+            {objection.note && <p class="text-xs text-ink-soft">{objection.note}</p>}
           </div>
         </details>
       ))}
@@ -397,11 +399,11 @@ const SECTIONS = [
   <Card>
     <p class={EYEBROW}>Notas</p>
     <h2 class={H2}>De onde vêm os números e o que conferir.</h2>
-    <ul class="mt-2 flex list-disc flex-col gap-1 pl-5 text-sm text-slate-700">
+    <ul class="mt-2 flex list-disc flex-col gap-1 pl-5 text-[15px] text-ink-mid">
       <li>Preços de iClinic, Doctoralia, Feegow, Amplimed e de secretárias virtuais não estão aqui de propósito: não há tabela oficial e atual pública. Pergunte ao cliente quanto ele paga.</li>
       <li>Redução de faltas com lembrete: os "30 a 40%" que circulam vêm de fornecedores, sem metodologia. Use a calculadora como hipótese, nunca como promessa.</li>
       <li>Custo das mensagens: dentro da janela de 24h, respostas e templates de utilidade não são cobrados; fora dela, só template, cobrado.</li>
-      {sources.map((source) => <li><a href={source.href} target="_blank" rel="noopener" class="text-sky-700 hover:underline">{source.label}</a></li>)}
+      {sources.map((source) => <li><a href={source.href} target="_blank" rel="noopener" class="font-semibold text-brand hover:underline">{source.label}</a></li>)}
     </ul>
   </Card>
 </div>

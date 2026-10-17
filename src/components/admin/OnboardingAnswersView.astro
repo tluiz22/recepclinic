@@ -10,11 +10,11 @@ interface Props {
 
 const { answers } = Astro.props;
 const dash = (value: string) => value || "—";
-const section = "mt-4 text-sm font-semibold uppercase tracking-wide text-slate-500";
-const pre = "mt-1 whitespace-pre-wrap rounded-md bg-slate-50 p-3 text-sm text-slate-800";
+const section = "mt-4 text-[12.5px] font-bold uppercase tracking-[.06em] text-ink-soft";
+const pre = "mt-1 whitespace-pre-wrap rounded-lg bg-canvas p-3 text-[15px] text-ink";
 ---
 
-<div class="text-sm text-slate-800">
+<div class="text-[15px] text-ink">
   <h4 class={section}>Clínica</h4>
   <p>
     {dash(answers.clinic.name)} · {answers.clinic.profile ? PROFILE_LABELS[answers.clinic.profile] : "perfil não informado"} · {

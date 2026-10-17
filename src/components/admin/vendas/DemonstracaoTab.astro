@@ -3,7 +3,7 @@
 // (uma por plano), os logins, como criar ou atualizar pelo script, o chip de
 // testes e o roteiro da apresentação. Os dados das clínicas ficam em
 // scripts/demo-clinicas.mjs: atualizar esta aba junto com o script.
-import Card from "../Card.astro";
+import Card from "../config/Panel.astro";
 import { formatInstant, DEFAULT_TIMEZONE } from "../../../lib/clinicTime";
 import { createUserClient } from "../../../lib/data/clients";
 import { unwrap } from "../../../lib/data/errors";
@@ -45,9 +45,9 @@ const builtAt = new Map(unwrap(clinics, "Clínicas de demonstração").map((row)
 const chip = unwrap(connections, "Conexões das demos")[0] ?? null;
 const when = (date: Date) => formatInstant(date, DEFAULT_TIMEZONE, "dd/MM/yyyy 'às' HH:mm");
 
-const CMD = "mt-2 overflow-x-auto rounded-lg bg-slate-900 px-3 py-2 font-mono text-xs text-slate-100";
-const TH = "py-2 pr-4 text-left font-medium text-slate-500";
-const TD = "py-2 pr-4 align-top";
+const CMD = "mt-2 overflow-x-auto rounded-lg bg-ink px-3 py-2 font-mono text-xs text-white";
+const TH = "border-b border-line bg-[#f8faf9] px-3 py-2.5 text-left text-[13px] leading-snug font-semibold text-ink-soft";
+const TD = "px-3 py-2.5 align-top";
 
 const script = [
   { time: "2 min", what: "Pergunte como é a agenda hoje: quem responde o WhatsApp, quantas faltas, o que acontece à noite.", line: "Me conta como é um dia normal da recepção." },
@@ -61,51 +61,51 @@ const script = [
 ---
 
 <div class="mt-4 flex flex-col gap-4">
-  <p class="text-sm text-slate-600">
+  <p class="text-[15px] text-ink-soft">
     Três clínicas fictícias no staging, uma por plano, para mostrar o RecepClinic com a cara de quem está assistindo.
     Nomes, pacientes e telefones são inventados; sem WhatsApp conectado, nada é enviado.
   </p>
 
   <Card>
-    <h2 class="font-semibold text-slate-900">Clínicas e logins</h2>
-    <div class="mt-2 overflow-x-auto">
-      <table class="w-full min-w-[44rem] text-sm">
+    <h2 class="font-display text-[17px] leading-tight font-bold text-ink sm:text-lg">Clínicas e logins</h2>
+    <div class="mt-3 overflow-x-auto rounded-xl border border-line">
+      <table class="w-full min-w-[44rem] text-[15px]">
         <thead><tr><th class={TH}>Clínica</th><th class={TH}>Plano</th><th class={TH}>Equipe</th><th class={TH}>Login (Administrador)</th><th class={TH}>Situação</th></tr></thead>
-        <tbody class="divide-y divide-slate-100">
+        <tbody class="divide-y divide-[#e6ecea]">
           {DEMO_CLINICS.map((clinic) => (
             <tr>
               <td class={TD}>
-                <span class="font-medium text-slate-900">{clinic.name}</span>
-                <span class="block text-xs text-slate-500">{clinic.shows}</span>
+                <span class="font-medium text-ink">{clinic.name}</span>
+                <span class="block text-xs text-ink-soft">{clinic.shows}</span>
               </td>
               <td class={TD}>{clinic.plan}</td>
-              <td class={`${TD} text-slate-600`}>{clinic.team}</td>
+              <td class={`${TD} text-ink-soft`}>{clinic.team}</td>
               <td class={`${TD} font-mono text-xs`}>{clinic.login}</td>
               <td class={`${TD} text-xs`}>
                 {builtAt.has(clinic.id) ? (
-                  <span class="text-slate-600">Montada em {when(builtAt.get(clinic.id)!)}</span>
+                  <span class="text-ink-soft">Montada em {when(builtAt.get(clinic.id)!)}</span>
                 ) : (
-                  <span class="text-amber-700">Ainda não criada</span>
+                  <span class="text-pend-800">Ainda não criada</span>
                 )}
-                {chip?.clinic_id === clinic.id && <span class="block font-medium text-emerald-700">Com o chip de testes</span>}
+                {chip?.clinic_id === clinic.id && <span class="block font-medium text-conf-800">Com o chip de testes</span>}
               </td>
             </tr>
           ))}
         </tbody>
       </table>
     </div>
-    <p class="mt-2 text-xs text-slate-500">
+    <p class="mt-2 text-xs text-ink-soft">
       Os atendimentos começam no dia em que o script rodou: atualize as demos na véspera de cada apresentação.
     </p>
   </Card>
 
   <Card>
-    <h2 class="font-semibold text-slate-900">Criar ou atualizar as demos</h2>
-    <p class="mt-1 text-sm text-slate-600">
+    <h2 class="font-display text-[17px] leading-tight font-bold text-ink sm:text-lg">Criar ou atualizar as demos</h2>
+    <p class="mt-1 text-[15px] text-ink-soft">
       No Terminal, na pasta do projeto. O mesmo comando cria (na primeira vez) e atualiza: apaga e monta de novo só estas 3
       clínicas, com os atendimentos a partir de hoje, e mantém os logins e as senhas. Nenhuma outra clínica é tocada.
     </p>
-    <ol class="mt-3 flex list-decimal flex-col gap-3 pl-5 text-sm text-slate-700">
+    <ol class="mt-3 flex list-decimal flex-col gap-3 pl-5 text-[15px] text-ink-mid">
       <li>
         Simular (mostra o que vai fazer, sem mudar nada):
         <pre class={CMD}>node --env-file=.env.staging scripts/demo-clinicas.mjs</pre>
@@ -116,63 +116,63 @@ const script = [
       </li>
       <li>Conferir aqui: a coluna Situação mostra a hora em que cada clínica foi montada.</li>
     </ol>
-    <p class="mt-3 text-xs text-slate-500">
+    <p class="mt-3 text-xs text-ink-soft">
       Atualizar apaga o que foi feito nas demos (marcações, bloqueios, conversas da demonstração anterior). Com o chip na Vida
       Plena, o script não roda: devolva o chip antes.
     </p>
   </Card>
 
   <Card>
-    <h2 class="font-semibold text-slate-900">Senha dos logins</h2>
-    <p class="mt-1 text-sm text-slate-600">
+    <h2 class="font-display text-[17px] leading-tight font-bold text-ink sm:text-lg">Senha dos logins</h2>
+    <p class="mt-1 text-[15px] text-ink-soft">
       Só na primeira vez (a senha continua valendo depois de atualizar as demos) ou se esquecer. O comando mostra um link que
       vale 1 hora; abra, crie a senha e entre em app.recepclinic.com.br.
     </p>
     <pre class={CMD}>{DEMO_CLINICS.map((clinic) => `node --env-file=.env.staging scripts/link-de-senha.mjs ${clinic.login}`).join("\n")}</pre>
-    <p class="mt-2 text-xs text-slate-500">
+    <p class="mt-2 text-xs text-ink-soft">
       Na demonstração, entre com o login da clínica (não com o do Suporte): o cliente vê a tela como a clínica dele veria.
     </p>
   </Card>
 
   <Card>
-    <h2 class="font-semibold text-slate-900">Chip de testes (conversa ao vivo)</h2>
-    <p class="mt-1 text-sm text-slate-600">
+    <h2 class="font-display text-[17px] leading-tight font-bold text-ink sm:text-lg">Chip de testes (conversa ao vivo)</h2>
+    <p class="mt-1 text-[15px] text-ink-soft">
       O número de testes atende uma clínica de cada vez e fica na <strong>Consultorio Tluiz22</strong>. Para o cliente conversar
       com o bot da Vida Plena, passe o chip antes da apresentação e devolva depois. Com o chip, a Vida Plena fica com os envios
       automáticos desligados (os telefones dos pacientes são fictícios).
     </p>
-    <p class="mt-2 text-sm">
+    <p class="mt-2 text-[15px]">
       Agora: <strong>{chip ? `na Clínica Vida Plena (${chip.display_phone ?? "número de testes"})` : "fora das demos"}</strong>.
     </p>
-    <p class="mt-3 text-sm text-slate-700">Passar para a Vida Plena:</p>
+    <p class="mt-3 text-[15px] text-ink-mid">Passar para a Vida Plena:</p>
     <pre class={CMD}>node --env-file=.env.staging scripts/demo-clinicas.mjs --chip-para-demo --confirmar</pre>
-    <p class="mt-3 text-sm text-slate-700">Devolver para a Consultorio Tluiz22:</p>
+    <p class="mt-3 text-[15px] text-ink-mid">Devolver para a Consultorio Tluiz22:</p>
     <pre class={CMD}>node --env-file=.env.staging scripts/demo-clinicas.mjs --chip-devolver --confirmar</pre>
-    <p class="mt-2 text-xs text-slate-500">Sem o --confirmar, os dois só mostram o que fariam.</p>
+    <p class="mt-2 text-xs text-ink-soft">Sem o --confirmar, os dois só mostram o que fariam.</p>
   </Card>
 
   <Card>
-    <h2 class="font-semibold text-slate-900">Roteiro da apresentação</h2>
-    <p class="mt-1 text-sm text-slate-600">
+    <h2 class="font-display text-[17px] leading-tight font-bold text-ink sm:text-lg">Roteiro da apresentação</h2>
+    <p class="mt-1 text-[15px] text-ink-soft">
       Vinte minutos, nesta ordem, com o login da Vida Plena (ou da clínica com o perfil de quem assiste). Deixe o cliente pegar
       o próprio celular.
     </p>
-    <div class="mt-2 overflow-x-auto">
-      <table class="w-full min-w-[40rem] text-sm">
+    <div class="mt-3 overflow-x-auto rounded-xl border border-line">
+      <table class="w-full min-w-[40rem] text-[15px]">
         <thead><tr><th class={TH}>Tempo</th><th class={TH}>O que mostrar</th><th class={TH}>A frase que fica</th></tr></thead>
-        <tbody class="divide-y divide-slate-100">
+        <tbody class="divide-y divide-[#e6ecea]">
           {script.map((step) => (
             <tr>
-              <td class={`${TD} whitespace-nowrap font-medium text-slate-900`}>{step.time}</td>
-              <td class={`${TD} text-slate-700`}>{step.what}</td>
-              <td class={`${TD} italic text-slate-600`}>"{step.line}"</td>
+              <td class={`${TD} whitespace-nowrap font-medium text-ink`}>{step.time}</td>
+              <td class={`${TD} text-ink-mid`}>{step.what}</td>
+              <td class={`${TD} italic text-ink-soft`}>"{step.line}"</td>
             </tr>
           ))}
         </tbody>
       </table>
     </div>
-    <h3 class="mt-4 text-sm font-semibold uppercase tracking-wide text-slate-500">Antes de cada apresentação</h3>
-    <ul class="mt-2 flex list-disc flex-col gap-1 pl-5 text-sm text-slate-700">
+    <h3 class="mt-4 text-[12.5px] font-bold uppercase tracking-[.06em] text-ink-soft">Antes de cada apresentação</h3>
+    <ul class="mt-2 flex list-disc flex-col gap-1 pl-5 text-[15px] text-ink-mid">
       <li>Na véspera: atualizar as demos (acima).</li>
       <li>Se for mostrar a conversa ao vivo: passar o chip para a Vida Plena e testar mandando um "Oi".</li>
       <li>Escolher a demo pelo perfil do cliente: pediatra → Pediatria Sol Nascente; dentista → Odonto Sorriso Leve; clínica com vários profissionais → Vida Plena.</li>

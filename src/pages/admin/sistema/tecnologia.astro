@@ -3,9 +3,11 @@
 // onde cada parte está hospedada, as integrações, as rotinas, onde ficam os
 // segredos (só os nomes, nunca os valores) e o desenho da arquitetura.
 // Conteúdo fixo: atualizar aqui quando mudar a hospedagem, um plano ou uma
-// integração (as decisões ficam em docs/arquitetura.md).
+// integração (as decisões ficam em docs/arquitetura.md). R10 (cliente,
+// 17/out/2026): o padrão novo e os atalhos "Nesta página".
 import AdminLayout from "../../../layouts/AdminLayout.astro";
-import Card from "../../../components/admin/Card.astro";
+import Card from "../../../components/admin/config/Panel.astro";
+import SystemHeader from "../../../components/admin/sistema/SystemHeader.astro";
 import { GRAPH_API_VERSION } from "../../../lib/data/whatsapp/graph";
 
 const UPDATED = "11/10/2026";
@@ -96,42 +98,52 @@ const security = [
   "Anonimização de paciente a pedido (LGPD, F9.4) e proteção contra abuso no bot (F9.6).",
 ];
 
-const TH = "py-2 pr-4 text-left font-medium text-slate-500";
-const TD = "py-2 pr-4 align-top";
+const TH = "border-b border-line bg-[#f8faf9] px-3 py-2.5 text-left text-[13px] leading-snug font-semibold text-ink-soft";
+const TD = "px-3 py-2.5 align-top";
 ---
 
 <AdminLayout title="Tecnologia" platform>
-  <h1 class="text-2xl font-bold text-slate-900">Tecnologia</h1>
-  <p class="mt-1 text-sm text-slate-600">
-    O que o RecepClinic usa, onde cada parte está hospedada e como as partes conversam. Segredos aparecem só pelo nome, nunca pelo valor. Atualizado em {UPDATED}.
-  </p>
+  <SystemHeader
+    title="Tecnologia"
+    subtitle={`O que o RecepClinic usa, onde cada parte está hospedada e como as partes conversam. Segredos aparecem só pelo nome, nunca pelo valor. Atualizado em ${UPDATED}.`}
+  />
+  <nav aria-label="Nesta página" class="mt-4 flex flex-wrap gap-2">
+      <a href="#tecnologias" class="inline-flex min-h-8 items-center rounded-md border border-line bg-white px-2.5 text-sm font-semibold text-ink-mid no-underline hover:border-brand hover:text-brand-ink">Tecnologias</a>
+      <a href="#hospedagem" class="inline-flex min-h-8 items-center rounded-md border border-line bg-white px-2.5 text-sm font-semibold text-ink-mid no-underline hover:border-brand hover:text-brand-ink">Hospedagem</a>
+      <a href="#integracoes" class="inline-flex min-h-8 items-center rounded-md border border-line bg-white px-2.5 text-sm font-semibold text-ink-mid no-underline hover:border-brand hover:text-brand-ink">Integrações</a>
+      <a href="#rotinas" class="inline-flex min-h-8 items-center rounded-md border border-line bg-white px-2.5 text-sm font-semibold text-ink-mid no-underline hover:border-brand hover:text-brand-ink">Rotinas</a>
+      <a href="#segredos" class="inline-flex min-h-8 items-center rounded-md border border-line bg-white px-2.5 text-sm font-semibold text-ink-mid no-underline hover:border-brand hover:text-brand-ink">Segredos</a>
+      <a href="#ambientes" class="inline-flex min-h-8 items-center rounded-md border border-line bg-white px-2.5 text-sm font-semibold text-ink-mid no-underline hover:border-brand hover:text-brand-ink">Ambientes</a>
+      <a href="#seguranca" class="inline-flex min-h-8 items-center rounded-md border border-line bg-white px-2.5 text-sm font-semibold text-ink-mid no-underline hover:border-brand hover:text-brand-ink">Segurança</a>
+      <a href="#arquitetura" class="inline-flex min-h-8 items-center rounded-md border border-line bg-white px-2.5 text-sm font-semibold text-ink-mid no-underline hover:border-brand hover:text-brand-ink">Arquitetura</a>
+  </nav>
 
   <div class="mt-4 flex flex-col gap-4">
-    <Card>
-      <h2 class="font-semibold text-slate-900">Tecnologias</h2>
-      <div class="mt-2 overflow-x-auto">
-        <table class="w-full min-w-[40rem] text-sm">
+    <Card id="tecnologias" class="scroll-mt-4">
+      <h2 class="font-display text-[17px] leading-tight font-bold text-ink sm:text-lg">Tecnologias</h2>
+      <div class="mt-3 overflow-x-auto rounded-xl border border-line">
+        <table class="w-full min-w-[40rem] text-[15px]">
           <thead><tr><th class={TH}>Camada</th><th class={TH}>Tecnologia</th><th class={TH}>Para quê</th></tr></thead>
-          <tbody class="divide-y divide-slate-100">
-            {stack.map((row) => <tr><td class={`${TD} font-medium text-slate-900`}>{row.layer}</td><td class={TD}>{row.tech}</td><td class={`${TD} text-slate-600`}>{row.use}</td></tr>)}
+          <tbody class="divide-y divide-[#e6ecea]">
+            {stack.map((row) => <tr><td class={`${TD} font-medium text-ink`}>{row.layer}</td><td class={TD}>{row.tech}</td><td class={`${TD} text-ink-soft`}>{row.use}</td></tr>)}
           </tbody>
         </table>
       </div>
     </Card>
 
-    <Card>
-      <h2 class="font-semibold text-slate-900">Onde está hospedado</h2>
-      <div class="mt-2 overflow-x-auto">
-        <table class="w-full min-w-[44rem] text-sm">
+    <Card id="hospedagem" class="scroll-mt-4">
+      <h2 class="font-display text-[17px] leading-tight font-bold text-ink sm:text-lg">Onde está hospedado</h2>
+      <div class="mt-3 overflow-x-auto rounded-xl border border-line">
+        <table class="w-full min-w-[44rem] text-[15px]">
           <thead><tr><th class={TH}>Serviço</th><th class={TH}>O que roda lá</th><th class={TH}>Região</th><th class={TH}>Plano</th></tr></thead>
-          <tbody class="divide-y divide-slate-100">
+          <tbody class="divide-y divide-[#e6ecea]">
             {
               hosting.map((row) => (
                 <tr>
-                  <td class={`${TD} font-medium text-slate-900`}>{row.service}</td>
+                  <td class={`${TD} font-medium text-ink`}>{row.service}</td>
                   <td class={TD}>{row.runs}</td>
-                  <td class={`${TD} text-slate-600`}>{row.where}</td>
-                  <td class={`${TD} text-slate-600`}>{row.plan}</td>
+                  <td class={`${TD} text-ink-soft`}>{row.where}</td>
+                  <td class={`${TD} text-ink-soft`}>{row.plan}</td>
                 </tr>
               ))
             }
@@ -140,169 +152,169 @@ const TD = "py-2 pr-4 align-top";
       </div>
     </Card>
 
-    <Card>
-      <h2 class="font-semibold text-slate-900">Integrações</h2>
-      <ul class="mt-2 divide-y divide-slate-100 text-sm">
+    <Card id="integracoes" class="scroll-mt-4">
+      <h2 class="font-display text-[17px] leading-tight font-bold text-ink sm:text-lg">Integrações</h2>
+      <ul class="mt-2 divide-y divide-[#e6ecea] text-[15px]">
         {
           integrations.map((item) => (
             <li class="py-2">
-              <p class="font-medium text-slate-900">{item.name}</p>
-              <p class="mt-0.5 text-slate-700">{item.how}</p>
-              {item.identifies !== "—" && <p class="mt-0.5 text-slate-500">{item.identifies}</p>}
+              <p class="font-medium text-ink">{item.name}</p>
+              <p class="mt-0.5 text-ink-mid">{item.how}</p>
+              {item.identifies !== "—" && <p class="mt-0.5 text-ink-soft">{item.identifies}</p>}
             </li>
           ))
         }
       </ul>
     </Card>
 
-    <Card>
-      <h2 class="font-semibold text-slate-900">Rotinas automáticas</h2>
-      <p class="mt-1 text-sm text-slate-600">
+    <Card id="rotinas" class="scroll-mt-4">
+      <h2 class="font-display text-[17px] leading-tight font-bold text-ink sm:text-lg">Rotinas automáticas</h2>
+      <p class="mt-1 text-[15px] text-ink-soft">
         O agendador do Supabase chama <code>/api/cron/…</code> no sistema. A última execução de cada uma aparece em Administração do sistema › Erros.
       </p>
-      <div class="mt-2 overflow-x-auto">
-        <table class="w-full min-w-[36rem] text-sm">
+      <div class="mt-3 overflow-x-auto rounded-xl border border-line">
+        <table class="w-full min-w-[36rem] text-[15px]">
           <thead><tr><th class={TH}>Rotina</th><th class={TH}>Quando</th><th class={TH}>O que faz</th></tr></thead>
-          <tbody class="divide-y divide-slate-100">
-            {routines.map((row) => <tr><td class={`${TD} font-mono text-xs text-slate-900`}>{row.name}</td><td class={`${TD} whitespace-nowrap text-slate-600`}>{row.when}</td><td class={TD}>{row.what}</td></tr>)}
+          <tbody class="divide-y divide-[#e6ecea]">
+            {routines.map((row) => <tr><td class={`${TD} font-mono text-xs text-ink`}>{row.name}</td><td class={`${TD} whitespace-nowrap text-ink-soft`}>{row.when}</td><td class={TD}>{row.what}</td></tr>)}
           </tbody>
         </table>
       </div>
     </Card>
 
-    <Card>
-      <h2 class="font-semibold text-slate-900">Onde ficam os segredos</h2>
-      <ul class="mt-2 divide-y divide-slate-100 text-sm">
+    <Card id="segredos" class="scroll-mt-4">
+      <h2 class="font-display text-[17px] leading-tight font-bold text-ink sm:text-lg">Onde ficam os segredos</h2>
+      <ul class="mt-2 divide-y divide-[#e6ecea] text-[15px]">
         {
           secrets.map((item) => (
             <li class="py-2">
-              <p class="font-medium text-slate-900">{item.where}</p>
-              <p class="mt-0.5 break-words font-mono text-xs text-slate-600">{item.names}</p>
+              <p class="font-medium text-ink">{item.where}</p>
+              <p class="mt-0.5 break-words font-mono text-xs text-ink-soft">{item.names}</p>
             </li>
           ))
         }
       </ul>
-      <p class="mt-2 text-xs text-slate-500">Variável nova na Vercel só vale depois de um Redeploy. Nunca revogar o Legacy JWT Secret do Supabase: a credencial limitada à clínica depende dele.</p>
+      <p class="mt-2 text-xs text-ink-soft">Variável nova na Vercel só vale depois de um Redeploy. Nunca revogar o Legacy JWT Secret do Supabase: a credencial limitada à clínica depende dele.</p>
     </Card>
 
-    <Card>
-      <h2 class="font-semibold text-slate-900">Ambientes</h2>
-      <div class="mt-2 overflow-x-auto">
-        <table class="w-full min-w-[36rem] text-sm">
+    <Card id="ambientes" class="scroll-mt-4">
+      <h2 class="font-display text-[17px] leading-tight font-bold text-ink sm:text-lg">Ambientes</h2>
+      <div class="mt-3 overflow-x-auto rounded-xl border border-line">
+        <table class="w-full min-w-[36rem] text-[15px]">
           <thead><tr><th class={TH}>Ambiente</th><th class={TH}>Onde</th><th class={TH}>Dados</th></tr></thead>
-          <tbody class="divide-y divide-slate-100">
-            {environments.map((row) => <tr><td class={`${TD} font-medium text-slate-900`}>{row.env}</td><td class={TD}>{row.where}</td><td class={`${TD} text-slate-600`}>{row.data}</td></tr>)}
+          <tbody class="divide-y divide-[#e6ecea]">
+            {environments.map((row) => <tr><td class={`${TD} font-medium text-ink`}>{row.env}</td><td class={TD}>{row.where}</td><td class={`${TD} text-ink-soft`}>{row.data}</td></tr>)}
           </tbody>
         </table>
       </div>
     </Card>
 
-    <Card>
-      <h2 class="font-semibold text-slate-900">Segurança</h2>
-      <ul class="mt-2 list-disc space-y-1 pl-5 text-sm text-slate-700">
+    <Card id="seguranca" class="scroll-mt-4">
+      <h2 class="font-display text-[17px] leading-tight font-bold text-ink sm:text-lg">Segurança</h2>
+      <ul class="mt-2 list-disc space-y-1 pl-5 text-[15px] text-ink-mid">
         {security.map((line) => <li>{line}</li>)}
       </ul>
     </Card>
 
-    <Card>
-      <h2 class="font-semibold text-slate-900">Arquitetura</h2>
-      <p class="mt-1 text-sm text-slate-600">Quem usa o sistema (à esquerda), os serviços do meio e onde ficam os dados (à direita). Setas: quem chama quem.</p>
+    <Card id="arquitetura" class="scroll-mt-4">
+      <h2 class="font-display text-[17px] leading-tight font-bold text-ink sm:text-lg">Arquitetura</h2>
+      <p class="mt-1 text-[15px] text-ink-soft">Quem usa o sistema (à esquerda), os serviços do meio e onde ficam os dados (à direita). Setas: quem chama quem.</p>
       <div class="mt-3 overflow-x-auto">
         <svg viewBox="0 0 1040 640" class="h-auto w-full min-w-[760px]" role="img" aria-label="Desenho da arquitetura do RecepClinic">
           <defs>
             <marker id="seta" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
-              <path d="M0,0 L10,5 L0,10 z" class="fill-slate-500"></path>
+              <path d="M0,0 L10,5 L0,10 z" class="fill-ink-soft"></path>
             </marker>
           </defs>
 
           <!-- Quem usa -->
           <g class="text-[13px]">
             <rect x="20" y="50" width="170" height="56" rx="10" class="fill-emerald-50 stroke-emerald-600"></rect>
-            <text x="105" y="74" text-anchor="middle" class="fill-slate-900 font-semibold">Paciente</text>
-            <text x="105" y="93" text-anchor="middle" class="fill-slate-600">no WhatsApp</text>
+            <text x="105" y="74" text-anchor="middle" class="fill-ink font-semibold">Paciente</text>
+            <text x="105" y="93" text-anchor="middle" class="fill-ink-soft">no WhatsApp</text>
 
             <rect x="20" y="250" width="170" height="56" rx="10" class="fill-emerald-50 stroke-emerald-600"></rect>
-            <text x="105" y="274" text-anchor="middle" class="fill-slate-900 font-semibold">Paciente</text>
-            <text x="105" y="293" text-anchor="middle" class="fill-slate-600">links (marcar, preparo)</text>
+            <text x="105" y="274" text-anchor="middle" class="fill-ink font-semibold">Paciente</text>
+            <text x="105" y="293" text-anchor="middle" class="fill-ink-soft">links (marcar, preparo)</text>
 
             <rect x="20" y="330" width="170" height="56" rx="10" class="fill-emerald-50 stroke-emerald-600"></rect>
-            <text x="105" y="354" text-anchor="middle" class="fill-slate-900 font-semibold">Equipe e Suporte</text>
-            <text x="105" y="373" text-anchor="middle" class="fill-slate-600">painel no navegador</text>
+            <text x="105" y="354" text-anchor="middle" class="fill-ink font-semibold">Equipe e Suporte</text>
+            <text x="105" y="373" text-anchor="middle" class="fill-ink-soft">painel no navegador</text>
 
             <rect x="20" y="556" width="170" height="56" rx="10" class="fill-emerald-50 stroke-emerald-600"></rect>
-            <text x="105" y="580" text-anchor="middle" class="fill-slate-900 font-semibold">Visitante</text>
-            <text x="105" y="599" text-anchor="middle" class="fill-slate-600">site do produto</text>
+            <text x="105" y="580" text-anchor="middle" class="fill-ink font-semibold">Visitante</text>
+            <text x="105" y="599" text-anchor="middle" class="fill-ink-soft">site do produto</text>
           </g>
 
           <!-- Serviços de fora -->
           <g class="text-[13px]">
-            <rect x="250" y="40" width="200" height="76" rx="10" class="fill-white stroke-slate-400"></rect>
-            <text x="350" y="68" text-anchor="middle" class="fill-slate-900 font-semibold">Meta</text>
-            <text x="350" y="88" text-anchor="middle" class="fill-slate-600">WhatsApp Cloud API</text>
-            <text x="350" y="105" text-anchor="middle" class="fill-slate-500 text-[11px]">Graph API {GRAPH_API_VERSION}</text>
+            <rect x="250" y="40" width="200" height="76" rx="10" class="fill-white stroke-line-strong"></rect>
+            <text x="350" y="68" text-anchor="middle" class="fill-ink font-semibold">Meta</text>
+            <text x="350" y="88" text-anchor="middle" class="fill-ink-soft">WhatsApp Cloud API</text>
+            <text x="350" y="105" text-anchor="middle" class="fill-ink-soft text-[11px]">Graph API {GRAPH_API_VERSION}</text>
 
-            <rect x="250" y="270" width="200" height="96" rx="10" class="fill-white stroke-slate-400"></rect>
-            <text x="350" y="298" text-anchor="middle" class="fill-slate-900 font-semibold">Cloudflare</text>
-            <text x="350" y="318" text-anchor="middle" class="fill-slate-600">DNS recepclinic.com.br</text>
-            <text x="350" y="338" text-anchor="middle" class="fill-slate-500 text-[11px]">app. → Vercel (sem proxy)</text>
+            <rect x="250" y="270" width="200" height="96" rx="10" class="fill-white stroke-line-strong"></rect>
+            <text x="350" y="298" text-anchor="middle" class="fill-ink font-semibold">Cloudflare</text>
+            <text x="350" y="318" text-anchor="middle" class="fill-ink-soft">DNS recepclinic.com.br</text>
+            <text x="350" y="338" text-anchor="middle" class="fill-ink-soft text-[11px]">app. → Vercel (sem proxy)</text>
 
-            <rect x="250" y="440" width="200" height="70" rx="10" class="fill-white stroke-slate-400"></rect>
-            <text x="350" y="468" text-anchor="middle" class="fill-slate-900 font-semibold">Better Stack</text>
-            <text x="350" y="488" text-anchor="middle" class="fill-slate-600">monitores a cada 3 min</text>
+            <rect x="250" y="440" width="200" height="70" rx="10" class="fill-white stroke-line-strong"></rect>
+            <text x="350" y="468" text-anchor="middle" class="fill-ink font-semibold">Better Stack</text>
+            <text x="350" y="488" text-anchor="middle" class="fill-ink-soft">monitores a cada 3 min</text>
 
-            <rect x="250" y="548" width="200" height="72" rx="10" class="fill-white stroke-slate-400"></rect>
-            <text x="350" y="576" text-anchor="middle" class="fill-slate-900 font-semibold">Cloudflare Pages</text>
-            <text x="350" y="596" text-anchor="middle" class="fill-slate-600">www.recepclinic.com.br</text>
+            <rect x="250" y="548" width="200" height="72" rx="10" class="fill-white stroke-line-strong"></rect>
+            <text x="350" y="576" text-anchor="middle" class="fill-ink font-semibold">Cloudflare Pages</text>
+            <text x="350" y="596" text-anchor="middle" class="fill-ink-soft">www.recepclinic.com.br</text>
 
-            <rect x="520" y="20" width="230" height="56" rx="10" class="fill-white stroke-slate-400"></rect>
-            <text x="635" y="44" text-anchor="middle" class="fill-slate-900 font-semibold">GitHub</text>
-            <text x="635" y="63" text-anchor="middle" class="fill-slate-600">tluiz22/recepclinic</text>
+            <rect x="520" y="20" width="230" height="56" rx="10" class="fill-white stroke-line-strong"></rect>
+            <text x="635" y="44" text-anchor="middle" class="fill-ink font-semibold">GitHub</text>
+            <text x="635" y="63" text-anchor="middle" class="fill-ink-soft">tluiz22/recepclinic</text>
 
-            <rect x="520" y="520" width="230" height="70" rx="10" class="fill-white stroke-slate-400"></rect>
-            <text x="635" y="548" text-anchor="middle" class="fill-slate-900 font-semibold">Resend</text>
-            <text x="635" y="568" text-anchor="middle" class="fill-slate-600">e-mails (SMTP)</text>
+            <rect x="520" y="520" width="230" height="70" rx="10" class="fill-white stroke-line-strong"></rect>
+            <text x="635" y="548" text-anchor="middle" class="fill-ink font-semibold">Resend</text>
+            <text x="635" y="568" text-anchor="middle" class="fill-ink-soft">e-mails (SMTP)</text>
           </g>
 
           <!-- Vercel -->
           <g class="text-[13px]">
-            <rect x="520" y="110" width="230" height="360" rx="12" class="fill-sky-50 stroke-sky-600"></rect>
-            <text x="635" y="136" text-anchor="middle" class="fill-slate-900 font-semibold">Vercel · São Paulo</text>
-            <text x="635" y="155" text-anchor="middle" class="fill-slate-600 text-[11px]">app.recepclinic.com.br (Astro)</text>
-            <rect x="535" y="170" width="200" height="54" rx="8" class="fill-white stroke-sky-300"></rect>
-            <text x="635" y="192" text-anchor="middle" class="fill-slate-900">Painel e páginas públicas</text>
-            <text x="635" y="210" text-anchor="middle" class="fill-slate-500 text-[11px]">renderizadas no servidor</text>
-            <rect x="535" y="236" width="200" height="54" rx="8" class="fill-white stroke-sky-300"></rect>
-            <text x="635" y="258" text-anchor="middle" class="fill-slate-900">/api/whatsapp/webhook</text>
-            <text x="635" y="276" text-anchor="middle" class="fill-slate-500 text-[11px]">bot e conversas</text>
-            <rect x="535" y="302" width="200" height="54" rx="8" class="fill-white stroke-sky-300"></rect>
-            <text x="635" y="324" text-anchor="middle" class="fill-slate-900">/api/cron/…</text>
-            <text x="635" y="342" text-anchor="middle" class="fill-slate-500 text-[11px]">lembretes, resumos, lista de espera</text>
-            <rect x="535" y="368" width="200" height="54" rx="8" class="fill-white stroke-sky-300"></rect>
-            <text x="635" y="390" text-anchor="middle" class="fill-slate-900">/api/saude…</text>
-            <text x="635" y="408" text-anchor="middle" class="fill-slate-500 text-[11px]">saúde do sistema</text>
+            <rect x="520" y="110" width="230" height="360" rx="12" class="fill-brand-soft stroke-brand"></rect>
+            <text x="635" y="136" text-anchor="middle" class="fill-ink font-semibold">Vercel · São Paulo</text>
+            <text x="635" y="155" text-anchor="middle" class="fill-ink-soft text-[11px]">app.recepclinic.com.br (Astro)</text>
+            <rect x="535" y="170" width="200" height="54" rx="8" class="fill-white stroke-brand/40"></rect>
+            <text x="635" y="192" text-anchor="middle" class="fill-ink">Painel e páginas públicas</text>
+            <text x="635" y="210" text-anchor="middle" class="fill-ink-soft text-[11px]">renderizadas no servidor</text>
+            <rect x="535" y="236" width="200" height="54" rx="8" class="fill-white stroke-brand/40"></rect>
+            <text x="635" y="258" text-anchor="middle" class="fill-ink">/api/whatsapp/webhook</text>
+            <text x="635" y="276" text-anchor="middle" class="fill-ink-soft text-[11px]">bot e conversas</text>
+            <rect x="535" y="302" width="200" height="54" rx="8" class="fill-white stroke-brand/40"></rect>
+            <text x="635" y="324" text-anchor="middle" class="fill-ink">/api/cron/…</text>
+            <text x="635" y="342" text-anchor="middle" class="fill-ink-soft text-[11px]">lembretes, resumos, lista de espera</text>
+            <rect x="535" y="368" width="200" height="54" rx="8" class="fill-white stroke-brand/40"></rect>
+            <text x="635" y="390" text-anchor="middle" class="fill-ink">/api/saude…</text>
+            <text x="635" y="408" text-anchor="middle" class="fill-ink-soft text-[11px]">saúde do sistema</text>
           </g>
 
           <!-- Supabase -->
           <g class="text-[13px]">
             <rect x="820" y="110" width="200" height="360" rx="12" class="fill-amber-50 stroke-amber-600"></rect>
-            <text x="920" y="136" text-anchor="middle" class="fill-slate-900 font-semibold">Supabase · São Paulo</text>
-            <text x="920" y="155" text-anchor="middle" class="fill-slate-600 text-[11px]">dados de todas as clínicas</text>
+            <text x="920" y="136" text-anchor="middle" class="fill-ink font-semibold">Supabase · São Paulo</text>
+            <text x="920" y="155" text-anchor="middle" class="fill-ink-soft text-[11px]">dados de todas as clínicas</text>
             <rect x="835" y="170" width="170" height="54" rx="8" class="fill-white stroke-amber-300"></rect>
-            <text x="920" y="192" text-anchor="middle" class="fill-slate-900">PostgreSQL + RLS</text>
-            <text x="920" y="210" text-anchor="middle" class="fill-slate-500 text-[11px]">isolado por clínica</text>
+            <text x="920" y="192" text-anchor="middle" class="fill-ink">PostgreSQL + RLS</text>
+            <text x="920" y="210" text-anchor="middle" class="fill-ink-soft text-[11px]">isolado por clínica</text>
             <rect x="835" y="236" width="170" height="54" rx="8" class="fill-white stroke-amber-300"></rect>
-            <text x="920" y="258" text-anchor="middle" class="fill-slate-900">Auth</text>
-            <text x="920" y="276" text-anchor="middle" class="fill-slate-500 text-[11px]">logins da equipe</text>
+            <text x="920" y="258" text-anchor="middle" class="fill-ink">Auth</text>
+            <text x="920" y="276" text-anchor="middle" class="fill-ink-soft text-[11px]">logins da equipe</text>
             <rect x="835" y="302" width="170" height="54" rx="8" class="fill-white stroke-amber-300"></rect>
-            <text x="920" y="324" text-anchor="middle" class="fill-slate-900">Storage</text>
-            <text x="920" y="342" text-anchor="middle" class="fill-slate-500 text-[11px]">logos das clínicas</text>
+            <text x="920" y="324" text-anchor="middle" class="fill-ink">Storage</text>
+            <text x="920" y="342" text-anchor="middle" class="fill-ink-soft text-[11px]">logos das clínicas</text>
             <rect x="835" y="368" width="170" height="54" rx="8" class="fill-white stroke-amber-300"></rect>
-            <text x="920" y="390" text-anchor="middle" class="fill-slate-900">pg_cron + Vault</text>
-            <text x="920" y="408" text-anchor="middle" class="fill-slate-500 text-[11px]">agendador e segredos</text>
+            <text x="920" y="390" text-anchor="middle" class="fill-ink">pg_cron + Vault</text>
+            <text x="920" y="408" text-anchor="middle" class="fill-ink-soft text-[11px]">agendador e segredos</text>
           </g>
 
           <!-- Setas -->
-          <g class="fill-none stroke-slate-500" stroke-width="1.5">
+          <g class="fill-none stroke-ink-soft" stroke-width="1.5">
             <line x1="190" y1="78" x2="248" y2="78" marker-start="url(#seta)" marker-end="url(#seta)"></line>
             <polyline points="450,100 490,100 490,263 533,263" marker-start="url(#seta)" marker-end="url(#seta)"></polyline>
             <line x1="190" y1="285" x2="248" y2="305" marker-end="url(#seta)"></line>
@@ -318,7 +330,7 @@ const TD = "py-2 pr-4 align-top";
           </g>
 
           <!-- Rótulos das setas -->
-          <g class="fill-slate-600 text-[11px]">
+          <g class="fill-ink-soft text-[11px]">
             <text x="484" y="150" text-anchor="end">mensagens,</text>
             <text x="484" y="164" text-anchor="end">templates</text>
             <text x="484" y="178" text-anchor="end">e webhook</text>

@@ -2229,6 +2229,12 @@ Vendas com `Tabs`; Tecnologia com os atalhos. Achado no teste e corrigido: no ce
 RecepClinic" do cabeçalho do sistema empurrava o "Sair" para fora da tela (30px de rolagem lateral em
 todas as telas do sistema, desde a R1); agora some só no celular. Não visto com dados: a busca (o seed
 tem 2 clínicas; coberta pelo teste) e uma clínica suspensa. `astro check` sem erros e `npm test` (506).
+**Teste de interface da R10 em 17/out** ([relatório](auditoria-frontend/redesign-r10-report.md)): 3 falhas Baixas,
+corrigidas e retestadas a pedido do cliente: a Matriz aberta pela tela da clínica volta para ela (`de=clinica`, também
+depois de salvar e do erro); o "n de m" dos grupos com o espaço; a Matriz que volta com erro mantém as marcações e marca o
+limite (anterior à R10). **Decisão do cliente (17/out, S-01):** "Abrir a clínica para configurar" entra na clínica e
+abre **Configurações** (campo `destino=configuracoes`, único destino aceito; "Abrir" da lista e Escolher a clínica
+continuam no Início).
 
 ## Depois do 1º piloto (já previsto no banco)
 

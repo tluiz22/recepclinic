@@ -1,5 +1,7 @@
 ---
-import FormMessage from "../../components/admin/FormMessage.astro";
+import Notice from "../../components/admin/ui/Notice.astro";
+import PasswordField from "../../components/admin/auth/PasswordField.astro";
+import { buttonClass } from "../../components/admin/ui/styles";
 import AuthLayout from "../../layouts/AuthLayout.astro";
 import { isPasswordProblem, MIN_PASSWORD_LENGTH, PASSWORD_PROBLEMS } from "../../lib/data/auth";
 
@@ -8,37 +10,32 @@ import { isPasswordProblem, MIN_PASSWORD_LENGTH, PASSWORD_PROBLEMS } from "../..
 const origem = Astro.url.searchParams.get("origem") === "convite" ? "convite" : "recuperacao";
 const erro = Astro.url.searchParams.get("erro");
 const problem = isPasswordProblem(erro) ? PASSWORD_PROBLEMS[erro] : null;
+// R10: o erro vai embaixo do campo que precisa mudar; link vencido, no alto.
+const onConfirmation = erro === "mismatch" ? problem : null;
+const onPassword = problem && erro !== "mismatch" && erro !== "session" ? problem : null;
+const onTop = erro === "session" ? problem : null;
 ---
 
 <AuthLayout title={origem === "convite" ? "Bem-vindo! Crie a sua senha" : "Crie uma senha nova"}>
-  <p class="mt-1 text-sm text-slate-600">Use pelo menos {MIN_PASSWORD_LENGTH} caracteres.</p>
-  {problem && <FormMessage tone="error">{problem}</FormMessage>}
-  <form method="POST" action="/api/admin/auth/nova-senha" class="mt-6 flex flex-col gap-4">
+  <p slot="subtitle" class="text-[15px] text-ink-soft">Use pelo menos {MIN_PASSWORD_LENGTH} caracteres.</p>
+  {
+    onTop && (
+      <Notice tone="danger" href="/admin/esqueci-senha" linkLabel="Pedir outro link">
+        {onTop}
+      </Notice>
+    )
+  }
+  <form method="POST" action="/api/admin/auth/nova-senha" class="flex flex-col gap-4">
     <input type="hidden" name="origem" value={origem} />
-    <div>
-      <label for="password" class="block text-sm font-medium text-slate-700">Senha nova</label>
-      <input
-        type="password"
-        name="password"
-        id="password"
-        required
-        minlength={MIN_PASSWORD_LENGTH}
-        autocomplete="new-password"
-        class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
-      />
-    </div>
-    <div>
-      <label for="confirmation" class="block text-sm font-medium text-slate-700">Repita a senha</label>
-      <input
-        type="password"
-        name="confirmation"
-        id="confirmation"
-        required
-        minlength={MIN_PASSWORD_LENGTH}
-        autocomplete="new-password"
-        class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
-      />
-    </div>
-    <button type="submit" class="rounded-md bg-sky-700 px-4 py-2 text-sm font-medium text-white hover:bg-sky-800">Salvar senha</button>
+    <PasswordField id="password" name="password" label="Senha nova" autocomplete="new-password" minlength={MIN_PASSWORD_LENGTH} error={onPassword} />
+    <PasswordField
+      id="confirmation"
+      name="confirmation"
+      label="Repita a senha"
+      autocomplete="new-password"
+      minlength={MIN_PASSWORD_LENGTH}
+      error={onConfirmation}
+    />
+    <button type="submit" data-sending-label="Salvando…" class={`${buttonClass("primary")} mt-1 h-[46px] w-full text-base sm:h-[46px]`}>Salvar senha</button>
   </form>
 </AuthLayout>

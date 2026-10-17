@@ -1,5 +1,7 @@
 ---
-import FormMessage from "../../components/admin/FormMessage.astro";
+import Notice from "../../components/admin/ui/Notice.astro";
+import { AUTH_INPUT, AUTH_LABEL, AUTH_LINK } from "../../components/admin/auth/styles";
+import { buttonClass } from "../../components/admin/ui/styles";
 import AuthLayout from "../../layouts/AuthLayout.astro";
 
 // Recuperação de senha (F4.1). A resposta é a mesma, exista ou não o e-mail.
@@ -7,28 +9,25 @@ const sent = Astro.url.searchParams.get("enviado") === "1";
 ---
 
 <AuthLayout title="Esqueci minha senha">
+  {!sent && <p slot="subtitle" class="text-[15px] text-ink-soft">Informe o seu e-mail. Enviaremos um link para criar uma senha nova.</p>}
   {
     sent ? (
-      <FormMessage tone="success">
-        Se este e-mail tiver acesso ao painel, enviamos um link para criar uma senha nova. Confira a caixa de entrada (e o
-        spam).
-      </FormMessage>
+      <Notice tone="success">
+        Se este e-mail tiver acesso ao painel, enviamos um link para criar uma senha nova. Confira a caixa de entrada (e o spam).
+      </Notice>
     ) : (
-      <>
-        <p class="mt-1 text-sm text-slate-600">Informe o seu e-mail. Enviaremos um link para criar uma senha nova.</p>
-        <form method="POST" action="/api/admin/auth/recuperar" class="mt-6 flex flex-col gap-4">
-          <div>
-            <label for="email" class="block text-sm font-medium text-slate-700">
-              E-mail
-            </label>
-            <input type="email" name="email" id="email" required autocomplete="email" class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm" />
-          </div>
-          <button type="submit" class="rounded-md bg-sky-700 px-4 py-2 text-sm font-medium text-white hover:bg-sky-800">
-            Enviar link
-          </button>
-        </form>
-      </>
+      <form method="POST" action="/api/admin/auth/recuperar" class="flex flex-col gap-4">
+        <div>
+          <label for="email" class={AUTH_LABEL}>
+            E-mail
+          </label>
+          <input type="email" name="email" id="email" required autocomplete="email" class={AUTH_INPUT} />
+        </div>
+        <button type="submit" data-sending-label="Enviando…" class={`${buttonClass("primary")} mt-1 h-[46px] w-full text-base sm:h-[46px]`}>
+          Enviar link
+        </button>
+      </form>
     )
   }
-  <a href="/admin/login" class="mt-4 block text-center text-sm text-sky-700 hover:underline">Voltar para o login</a>
+  <a href="/admin/login" class={AUTH_LINK}>‹ Voltar para o login</a>
 </AuthLayout>

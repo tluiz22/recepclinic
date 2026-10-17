@@ -1,5 +1,8 @@
 ---
-import FormMessage from "../../components/admin/FormMessage.astro";
+import Notice from "../../components/admin/ui/Notice.astro";
+import PasswordField from "../../components/admin/auth/PasswordField.astro";
+import { AUTH_INPUT, AUTH_LABEL, AUTH_LINK } from "../../components/admin/auth/styles";
+import { buttonClass } from "../../components/admin/ui/styles";
 import AuthLayout from "../../layouts/AuthLayout.astro";
 
 const error = Astro.url.searchParams.get("error");
@@ -9,28 +12,31 @@ const ERRORS: Record<string, string> = {
   link_invalido: "O link do e-mail venceu ou já foi usado. Peça outro.",
 };
 const errorMessage = error === null ? null : (ERRORS[error] ?? "E-mail ou senha inválidos.");
+// Senha errada (R10): o e-mail volta no campo (src/scripts/keepFormValues.ts;
+// a senha nunca é guardada) e o foco vai para a senha.
+const wrongPassword = error !== null && !(error in ERRORS);
 ---
 
 <AuthLayout title="Entrar no painel">
-  <p class="mt-1 text-sm text-slate-600">Acesso restrito à equipe da clínica.</p>
-  {errorMessage && <FormMessage tone="error">{errorMessage}</FormMessage>}
-  <form method="POST" action="/api/admin/auth/login" class="mt-6 flex flex-col gap-4">
+  <p slot="subtitle" class="text-[15px] text-ink-soft">Acesso restrito à equipe da clínica.</p>
+  {
+    errorMessage && (
+      <div data-flash="error" data-fields={wrongPassword ? "password" : undefined}>
+        <div data-form-error tabindex="-1" class="outline-none">
+          <Notice tone="danger" href={error === "link_invalido" ? "/admin/esqueci-senha" : undefined} linkLabel="Pedir outro link">
+            {errorMessage}
+          </Notice>
+        </div>
+      </div>
+    )
+  }
+  <form method="POST" action="/api/admin/auth/login" class="flex flex-col gap-4">
     <div>
-      <label for="email" class="block text-sm font-medium text-slate-700">E-mail</label>
-      <input type="email" name="email" id="email" required autocomplete="email" class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm" />
+      <label for="email" class={AUTH_LABEL}>E-mail</label>
+      <input type="email" name="email" id="email" required autocomplete="email" class={AUTH_INPUT} />
     </div>
-    <div>
-      <label for="password" class="block text-sm font-medium text-slate-700">Senha</label>
-      <input
-        type="password"
-        name="password"
-        id="password"
-        required
-        autocomplete="current-password"
-        class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
-      />
-    </div>
-    <button type="submit" class="mt-2 rounded-md bg-sky-700 px-4 py-2 text-sm font-medium text-white hover:bg-sky-800">Entrar</button>
+    <PasswordField id="password" name="password" label="Senha" autocomplete="current-password" />
+    <button type="submit" data-sending-label="Entrando…" class={`${buttonClass("primary")} mt-1 h-[46px] w-full text-base sm:h-[46px]`}>Entrar</button>
   </form>
-  <a href="/admin/esqueci-senha" class="mt-4 block text-center text-sm text-sky-700 hover:underline">Esqueci minha senha</a>
+  <a href="/admin/esqueci-senha" class={AUTH_LINK}>Esqueci minha senha</a>
 </AuthLayout>

@@ -1,9 +1,11 @@
 ---
 // Vendas (cliente, 11/out/2026): tudo da apresentação e da venda do
 // RecepClinic, só para o Suporte (nunca no site público). Uma aba por
-// assunto; os novos assuntos de venda entram aqui como abas.
+// assunto; os novos assuntos de venda entram aqui como abas. R10 (cliente,
+// 17/out/2026): as abas sublinhadas do painel.
 import AdminLayout from "../../../layouts/AdminLayout.astro";
-import TabBar from "../../../components/admin/TabBar.astro";
+import SystemHeader from "../../../components/admin/sistema/SystemHeader.astro";
+import Tabs from "../../../components/admin/ui/Tabs.astro";
 import PlanosTab from "../../../components/admin/vendas/PlanosTab.astro";
 import DemonstracaoTab from "../../../components/admin/vendas/DemonstracaoTab.astro";
 import RoteiroTab from "../../../components/admin/vendas/RoteiroTab.astro";
@@ -20,9 +22,8 @@ const tab: TabKey = TABS.find((t) => t.key === requested)?.key ?? "planos";
 ---
 
 <AdminLayout title="Vendas" platform>
-  <h1 class="text-2xl font-bold text-slate-900">Vendas</h1>
-  <p class="mt-1 text-sm text-slate-600">Apresentação e venda do RecepClinic. Só o Suporte vê esta página.</p>
-  <TabBar class="mt-4" label="Abas de Vendas" tabs={TABS.map((t) => ({ label: t.label, href: `/admin/sistema/vendas?tab=${t.key}`, active: t.key === tab }))} />
+  <SystemHeader title="Vendas" subtitle="Apresentação e venda do RecepClinic. Só o Suporte vê esta página." />
+  <Tabs class="mt-4" label="Abas de Vendas" tabs={TABS.map((t) => ({ label: t.label, href: `/admin/sistema/vendas?tab=${t.key}`, active: t.key === tab }))} />
   {tab === "planos" && <PlanosTab />}
   {tab === "demonstracao" && <DemonstracaoTab />}
   {tab === "roteiro" && <RoteiroTab />}

@@ -3,9 +3,14 @@
 // as mensagens que saíram pelo WhatsApp, separando os templates (a Meta cobra
 // da clínica) das respostas do bot e da conversa (sem custo na janela de 24h).
 // Sem cobrança: só para acompanhar. Também as vezes que um limite do contato
-// barrou o bot (F9.6a).
+// barrou o bot (F9.6a). R10 (cliente, 17/out/2026): a tabela do painel, a
+// linha "Total em 6 meses" e o filtro "Clínica" (abre em Todas).
 import AdminLayout from "../../../layouts/AdminLayout.astro";
-import Card from "../../../components/admin/Card.astro";
+import SystemHeader from "../../../components/admin/sistema/SystemHeader.astro";
+import DataTable from "../../../components/admin/ui/DataTable.astro";
+import { CARD, LABEL, SECONDARY_BUTTON, SECTION_TITLE } from "../../../components/admin/config/formStyles";
+import { CONTROL } from "../../../components/admin/ui/styles";
+import { isUuid } from "../../../lib/clinicAccess";
 import { DEFAULT_TIMEZONE, formatInstant, todayIn } from "../../../lib/clinicTime";
 import { createUserClient } from "../../../lib/data/clients";
 import { listClinicsOverview } from "../../../lib/data/onboarding";
@@ -13,53 +18,64 @@ import { lastMonths, listMonthlyUsage } from "../../../lib/data/usage";
 
 const db = createUserClient(Astro.request, Astro.cookies);
 const months = lastMonths(todayIn(DEFAULT_TIMEZONE), 6);
-const [clinics, usage] = await Promise.all([listClinicsOverview(db), listMonthlyUsage(db, months[months.length - 1])]);
+const [allClinics, usage] = await Promise.all([listClinicsOverview(db), listMonthlyUsage(db, months[months.length - 1])]);
+const chosen = Astro.url.searchParams.get("clinica");
+const clinicId = chosen && isUuid(chosen) && allClinics.some((clinic) => clinic.id === chosen) ? chosen : null;
+const clinics = clinicId ? allClinics.filter((clinic) => clinic.id === clinicId) : allClinics;
 const byClinicMonth = new Map(usage.map((row) => [`${row.clinicId}|${row.month}`, row]));
-const monthLabel = (month: string) => formatInstant(new Date(`${month}T12:00:00Z`), DEFAULT_TIMEZONE, "MMM/yyyy");
+const monthLabel = (month: string) => {
+  const label = formatInstant(new Date(`${month}T12:00:00Z`), DEFAULT_TIMEZONE, "MMM/yyyy");
+  return label.charAt(0).toLocaleUpperCase("pt-BR") + label.slice(1);
+};
 const number = (value: number) => value.toLocaleString("pt-BR");
+
+function rowsOf(id: string): string[][] {
+  const lines = months.map((month) => {
+    const row = byClinicMonth.get(`${id}|${month}`);
+    return {
+      month: monthLabel(month),
+      appointments: row?.appointmentsCreated ?? 0,
+      templates: row?.templatesSent ?? 0,
+      conversation: (row?.messagesSent ?? 0) - (row?.templatesSent ?? 0),
+      limits: row?.botLimitHits ?? 0,
+    };
+  });
+  const sum = (key: "appointments" | "templates" | "conversation" | "limits") => lines.reduce((total, line) => total + line[key], 0);
+  return [
+    ...lines.map((line) => [line.month, number(line.appointments), number(line.templates), number(line.conversation), number(line.limits)]),
+    ["Total em 6 meses", number(sum("appointments")), number(sum("templates")), number(sum("conversation")), number(sum("limits"))],
+  ];
+}
 ---
 
 <AdminLayout title="Uso" platform>
-  <h1 class="text-2xl font-bold text-slate-900">Uso</h1>
-  <p class="mt-1 text-sm text-slate-600">
-    Por clínica, nos últimos 6 meses. Mensagens: só as que saíram pelo WhatsApp. Os templates são cobrados pela Meta direto da clínica; as respostas do
-    bot e da conversa não têm custo dentro da janela de 24 horas. Limites do bot: vezes que o bot deixou de marcar por um limite do contato.
-  </p>
+  <SystemHeader
+    title="Uso"
+    subtitle="Por clínica, nos últimos 6 meses. Mensagens: só as que saíram pelo WhatsApp. Os templates são cobrados pela Meta direto da clínica; as respostas do bot e da conversa não têm custo dentro da janela de 24 horas. Limites do bot: vezes que o bot deixou de marcar por um limite do contato."
+  >
+    <form slot="actions" method="get" class="flex items-end gap-2">
+      <div>
+        <label for="clinica" class={LABEL}>Clínica</label>
+        <select id="clinica" name="clinica" data-autosubmit class={`mt-1.5 w-full sm:w-72 ${CONTROL}`}>
+          <option value="">Todas</option>
+          {allClinics.map((clinic) => <option value={clinic.id} selected={clinic.id === clinicId}>{clinic.name}</option>)}
+        </select>
+      </div>
+      <noscript><button type="submit" class={SECONDARY_BUTTON}>Mostrar</button></noscript>
+    </form>
+  </SystemHeader>
 
-  <div class="mt-4 flex flex-col gap-4">
+  <div class="mt-5 flex flex-col gap-4">
     {
       clinics.map((clinic) => (
-        <Card>
-          <h2 class="font-semibold text-slate-900">{clinic.name}</h2>
-          <div class="mt-2 overflow-x-auto">
-            <table class="w-full min-w-[34rem] text-sm">
-              <thead>
-                <tr class="text-left text-slate-500">
-                  <th class="py-1 pr-3 font-medium">Mês</th>
-                  <th class="py-1 pr-3 text-right font-medium">Atendimentos</th>
-                  <th class="py-1 pr-3 text-right font-medium">Templates</th>
-                  <th class="py-1 pr-3 text-right font-medium">Bot e conversa</th>
-                  <th class="py-1 text-right font-medium">Limites do bot</th>
-                </tr>
-              </thead>
-              <tbody class="divide-y divide-slate-100">
-                {months.map((month) => {
-                  const row = byClinicMonth.get(`${clinic.id}|${month}`);
-                  return (
-                    <tr>
-                      <td class="py-1.5 pr-3 capitalize text-slate-700">{monthLabel(month)}</td>
-                      <td class="py-1.5 pr-3 text-right tabular-nums">{number(row?.appointmentsCreated ?? 0)}</td>
-                      <td class="py-1.5 pr-3 text-right tabular-nums">{number(row?.templatesSent ?? 0)}</td>
-                      <td class="py-1.5 pr-3 text-right tabular-nums">{number((row?.messagesSent ?? 0) - (row?.templatesSent ?? 0))}</td>
-                      <td class="py-1.5 text-right tabular-nums">{number(row?.botLimitHits ?? 0)}</td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </Card>
+        <section class={`${CARD} flex flex-col gap-3 p-4 sm:p-5`} aria-labelledby={`uso-${clinic.id}`}>
+          <h2 id={`uso-${clinic.id}`} class={SECTION_TITLE}>
+            {clinic.name}
+          </h2>
+          <DataTable label={`Uso da ${clinic.name}`} headers={["Mês", "Atendimentos", "Templates", "Bot e conversa", "Limites do bot"]} rows={rowsOf(clinic.id)} total />
+        </section>
       ))
     }
+    {clinics.length === 0 && <p class="text-[15px] text-ink-soft">Nenhuma clínica cadastrada.</p>}
   </div>
 </AdminLayout>

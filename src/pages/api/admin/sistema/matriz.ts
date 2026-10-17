@@ -13,10 +13,12 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
   const formData = await request.formData().catch(() => null);
   const clinicId = formData?.get("clinicId")?.toString() ?? "";
   if (!isUuid(clinicId)) return redirect("/admin/sistema/matriz?erro=clinica", 303);
+  // Aberta pela tela da clínica: a volta continua indo para ela (teste da R10, NAV-06).
+  const back = `/admin/sistema/matriz?clinica=${clinicId}${formData?.get("de") === "clinica" ? "&de=clinica" : ""}`;
   // Itens como são vendidos (as métricas e as mensagens personalizadas ligam juntas).
   const keys = featuresOfItems((formData?.getAll("item") ?? []).map(String));
   const limit = formInt(formData, "max_professionals");
-  if (!Number.isInteger(limit) || limit < 1) return redirect(`/admin/sistema/matriz?clinica=${clinicId}&erro=limite`, 303);
+  if (!Number.isInteger(limit) || limit < 1) return redirect(`${back}&erro=limite`, 303);
   try {
     const db = createUserClient(request, cookies);
     await setClinicFeatures(db, clinicId, keys);
@@ -24,7 +26,7 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
   } catch (error) {
     if (!(error instanceof DataError)) throw error;
     const code = error.code === "not_found" ? "clinica" : error.code === "invalid" ? "dependencia" : "falha";
-    return redirect(`/admin/sistema/matriz?clinica=${clinicId}&erro=${code}`, 303);
+    return redirect(`${back}&erro=${code}`, 303);
   }
-  return redirect(`/admin/sistema/matriz?clinica=${clinicId}&salvo=1`, 303);
+  return redirect(`${back}&salvo=1`, 303);
 };

@@ -1,25 +1,33 @@
 ---
 // Clínica, pelo Suporte (F4.4a): convites (com "Reenviar convite"), pedido de
 // informações por e-mail e as respostas do formulário para revisar. Para
-// configurar, o Suporte abre a clínica (escolha de clínica).
+// configurar, o Suporte abre a clínica (escolha de clínica). R10 (cliente,
+// 17/out/2026): resumo embaixo do nome, as duas ações no cabeçalho, convites em
+// linhas e os pedidos num cartão, o mais novo em cima.
 import AdminLayout from "../../../../layouts/AdminLayout.astro";
-import Badge from "../../../../components/admin/Badge.astro";
-import Card from "../../../../components/admin/Card.astro";
+import Badge from "../../../../components/admin/config/Badge.astro";
 import FlashMessage from "../../../../components/admin/FlashMessage.astro";
-import Icon from "../../../../components/admin/Icon.astro";
 import OnboardingAnswersView from "../../../../components/admin/OnboardingAnswersView.astro";
-import { INPUT, LABEL, PRIMARY_BUTTON, SECONDARY_BUTTON } from "../../../../components/admin/fieldStyles";
+import SystemHeader from "../../../../components/admin/sistema/SystemHeader.astro";
+import Button from "../../../../components/admin/ui/Button.astro";
+import { CARD, INPUT, LABEL, PANEL, PRIMARY_BUTTON, SECTION_TITLE } from "../../../../components/admin/config/formStyles";
 import { isUuid } from "../../../../lib/clinicAccess";
 import { formatInstant } from "../../../../lib/clinicTime";
 import { createUserClient } from "../../../../lib/data/clients";
 import { listInfoRequests, listInvitations } from "../../../../lib/data/onboarding";
+import { isFeatureKey } from "../../../../lib/features";
 import { REQUEST_STATUS, ROLE_NAMES } from "../../../../lib/onboardingLabels";
+import { PLAN_LABELS, clinicPlan } from "../../../../lib/plans";
 
 const { id } = Astro.params;
 if (!isUuid(id)) return Astro.redirect("/admin/sistema/clinicas");
 const db = createUserClient(Astro.request, Astro.cookies);
 const [{ data: clinic }, { data: settings }, invitations, requests] = await Promise.all([
-  db.from("clinics").select("id, name, max_professionals").eq("id", id).maybeSingle(),
+  db
+    .from("clinics")
+    .select("id, name, status, created_at, max_professionals, clinic_features ( feature_key ), professionals ( is_active )")
+    .eq("id", id)
+    .maybeSingle(),
   db.from("clinic_settings").select("timezone").eq("clinic_id", id).maybeSingle(),
   listInvitations(db, id),
   listInfoRequests(db, id),
@@ -31,100 +39,139 @@ const action = `/api/admin/sistema/clinicas/${id}`;
 const now = Date.now();
 // Vencido sem ter sido enviado ao Suporte.
 const expired = (request: (typeof requests)[number]) => (request.status === "sent" || request.status === "draft") && request.expiresAt.getTime() < now;
+const features = clinic.clinic_features.map((grant) => grant.feature_key).filter(isFeatureKey);
+const plan = PLAN_LABELS[clinicPlan(features, clinic.max_professionals).kind];
+const active = clinic.professionals.filter((p) => p.is_active).length;
+const summary = [
+  `Criada em ${formatInstant(new Date(clinic.created_at), settings.timezone, "dd/MM/yyyy")}`,
+  plan,
+  `${active} de ${clinic.max_professionals} ${clinic.max_professionals === 1 ? "profissional" : "profissionais"}`,
+  ...(clinic.status === "suspended" ? ["suspensa"] : []),
+].join(" · ");
+const ordered = [...requests].sort((a, b) => b.requestedAt.getTime() - a.requestedAt.getTime());
 ---
 
 <AdminLayout title={clinic.name} platform>
-  <a href="/admin/sistema/clinicas" class="inline-flex items-center gap-1 text-sm text-sky-700 hover:underline">
-    <Icon name="chevron-left" class="h-4 w-4" /> Clínicas
-  </a>
-  <h1 class="mt-2 text-2xl font-bold text-slate-900">{clinic.name}</h1>
+  <div class="flex flex-col">
+    <SystemHeader title={clinic.name} kicker="Clínica" subtitle={summary} back={{ href: "/admin/sistema/clinicas", label: "Clínicas" }}>
+      <Fragment slot="actions">
+        <Button href={`/admin/sistema/matriz?clinica=${clinic.id}&de=clinica`}>Matriz de acesso</Button>
+        <form method="POST" action="/api/admin/clinica-ativa">
+          <input type="hidden" name="clinicId" value={clinic.id} />
+          <input type="hidden" name="destino" value="configuracoes" />
+          <button type="submit" data-sending-label="Abrindo…" class={PRIMARY_BUTTON}>Abrir a clínica para configurar</button>
+        </form>
+      </Fragment>
+    </SystemHeader>
+  </div>
   <FlashMessage />
 
-  <div class="mt-3 flex flex-wrap gap-3">
-    <form method="POST" action="/api/admin/clinica-ativa">
-      <input type="hidden" name="clinicId" value={clinic.id} />
-      <button type="submit" class={PRIMARY_BUTTON}>Abrir a clínica para configurar</button>
-    </form>
-    <a href={`/admin/sistema/matriz?clinica=${clinic.id}`} class={SECONDARY_BUTTON}>Matriz de acesso</a>
-  </div>
+  <div class="mt-5 grid items-start gap-4 lg:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)]">
+    <div class="flex min-w-0 flex-col gap-4">
+      <section class={`${CARD} overflow-hidden`} aria-labelledby="t-convites">
+        <h2 id="t-convites" class={`${SECTION_TITLE} px-4 pt-4 pb-3 sm:px-5`}>Convites</h2>
+        <ul>
+          {
+            invitations.map((invitation) => (
+              <li class="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-t border-[#e6ecea] px-4 py-3 sm:px-5">
+                <span class="flex min-w-0 flex-col gap-1">
+                  <strong class="text-[15px] break-all text-ink">{invitation.email}</strong>
+                  <span class="flex flex-wrap items-center gap-1.5">
+                    <Badge>{invitation.roles.map((r) => ROLE_NAMES[r]).join(" + ")}</Badge>
+                    {invitation.acceptedAt ? (
+                      <Badge variant="success">Aceito em {when(invitation.acceptedAt)}</Badge>
+                    ) : (
+                      <Badge variant="warning">Sem resposta</Badge>
+                    )}
+                    {!invitation.acceptedAt && invitation.lastSentAt && <span class="text-sm text-ink-soft">último envio {when(invitation.lastSentAt)}</span>}
+                  </span>
+                </span>
+                {!invitation.acceptedAt && (
+                  <form method="POST" action={action}>
+                    <input type="hidden" name="acao" value="reenviar_convite" />
+                    <input type="hidden" name="invitation_id" value={invitation.id} />
+                    <Button type="submit" size="sm" data-sending-label="Reenviando…">
+                      Reenviar convite
+                    </Button>
+                  </form>
+                )}
+              </li>
+            ))
+          }
+          {invitations.length === 0 && <li class="border-t border-[#e6ecea] px-4 py-3 text-[15px] text-ink-soft sm:px-5">Nenhum convite registrado.</li>}
+        </ul>
+      </section>
 
-  <Card class="mt-6">
-    <h2 class="text-sm font-semibold uppercase tracking-wide text-slate-500">Convites</h2>
-    <ul class="mt-3 flex flex-col gap-3">
       {
-        invitations.map((invitation) => (
-          <li class="flex flex-wrap items-center justify-between gap-2">
-            <span class="text-sm text-slate-800">
-              {invitation.email} · {invitation.roles.map((r) => ROLE_NAMES[r]).join(" + ")}{" "}
-              {invitation.acceptedAt ? (
-                <Badge variant="success">aceito em {when(invitation.acceptedAt)}</Badge>
-              ) : (
-                <Badge variant="warning">sem resposta{invitation.lastSentAt ? ` · último envio ${when(invitation.lastSentAt)}` : ""}</Badge>
-              )}
-            </span>
-            {!invitation.acceptedAt && (
-              <form method="POST" action={action}>
-                <input type="hidden" name="acao" value="reenviar_convite" />
-                <input type="hidden" name="invitation_id" value={invitation.id} />
-                <button type="submit" class={SECONDARY_BUTTON}>
-                  Reenviar convite
-                </button>
-              </form>
-            )}
-          </li>
-        ))
+        ordered.length > 0 && (
+          <section class={`${CARD} overflow-hidden`} aria-labelledby="t-pedidos">
+            <h2 id="t-pedidos" class={`${SECTION_TITLE} px-4 pt-4 pb-3 sm:px-5`}>
+              Pedidos de informações
+            </h2>
+            {ordered.map((request, index) => (
+              <div class={`flex flex-col gap-2 border-t border-[#e6ecea] px-4 py-3.5 sm:px-5 ${index > 0 ? "bg-[#fbfcfc]" : ""}`}>
+                <div class="flex flex-wrap items-start justify-between gap-x-3 gap-y-2">
+                  <span class="flex min-w-0 flex-col gap-1">
+                    <span class="text-[15px] text-ink">
+                      Pedido de {when(request.requestedAt)} para <strong class="break-all">{request.email}</strong>
+                    </span>
+                    <span class="text-sm text-ink-soft">
+                      {request.submittedAt
+                        ? `Enviado em ${when(request.submittedAt)}`
+                        : request.savedAt
+                          ? `Rascunho salvo em ${when(request.savedAt)}`
+                          : "Ainda não aberto ou não salvo"}
+                      {` · link vale até ${when(request.expiresAt)}`}
+                      {request.reviewedAt ? ` · revisado em ${when(request.reviewedAt)}` : ""}
+                    </span>
+                  </span>
+                  <span class="flex flex-wrap items-center gap-1.5">
+                    <Badge variant={REQUEST_STATUS[request.status].variant}>{REQUEST_STATUS[request.status].label}</Badge>
+                    {expired(request) && <Badge variant="danger">Vencido</Badge>}
+                  </span>
+                </div>
+                {(request.submittedAt || request.savedAt || request.status === "submitted") && (
+                  <div class="flex flex-wrap items-start justify-between gap-3">
+                    {(request.submittedAt || request.savedAt) && (
+                      <details class="min-w-0 flex-1" open={request.status === "submitted"}>
+                        <summary class="inline-flex min-h-8 cursor-pointer items-center text-[15px] font-semibold text-brand">Ver respostas</summary>
+                        <OnboardingAnswersView answers={request.answers} />
+                      </details>
+                    )}
+                    {request.status === "submitted" && (
+                      <form method="POST" action={action}>
+                        <input type="hidden" name="acao" value="marcar_revisado" />
+                        <input type="hidden" name="request_id" value={request.id} />
+                        <Button type="submit" size="sm" data-sending-label="Salvando…">
+                          Marcar como revisado
+                        </Button>
+                      </form>
+                    )}
+                  </div>
+                )}
+              </div>
+            ))}
+          </section>
+        )
       }
-      {invitations.length === 0 && <li class="text-sm text-slate-600">Nenhum convite registrado.</li>}
-    </ul>
-  </Card>
+    </div>
 
-  <Card class="mt-4">
-    <h2 class="text-sm font-semibold uppercase tracking-wide text-slate-500">Pedir as informações ao Administrador</h2>
-    <p class="mt-1 text-sm text-slate-600">
-      Para quando o Administrador prefere que o Suporte configure: ele recebe um e-mail com o link do formulário (vale 30 dias), e as
-      respostas aparecem aqui. Nada entra sozinho na clínica.
-    </p>
-    <form method="POST" action={action} class="mt-3 flex flex-wrap items-end gap-3">
-      <input type="hidden" name="acao" value="pedir_informacoes" />
-      <div class="min-w-64 flex-1">
-        <label for="email" class={LABEL}>E-mail</label>
-        <input id="email" name="email" type="email" required value={firstAdmin} class={INPUT} />
-      </div>
-      <button type="submit" class={PRIMARY_BUTTON}>Enviar pedido</button>
-    </form>
-  </Card>
-
-  {
-    requests.map((request) => (
-      <Card class="mt-4">
-        <div class="flex flex-wrap items-center justify-between gap-2">
-          <h3 class="text-sm font-semibold text-slate-900">
-            Pedido de {when(request.requestedAt)} para {request.email}{" "}
-            <Badge variant={REQUEST_STATUS[request.status].variant}>{REQUEST_STATUS[request.status].label}</Badge>
-            {expired(request) && <Badge variant="danger">vencido</Badge>}
-          </h3>
-          {request.status === "submitted" && (
-            <form method="POST" action={action}>
-              <input type="hidden" name="acao" value="marcar_revisado" />
-              <input type="hidden" name="request_id" value={request.id} />
-              <button type="submit" class={SECONDARY_BUTTON}>
-                Marcar como revisado
-              </button>
-            </form>
-          )}
-        </div>
-        <p class="mt-1 text-xs text-slate-500">
-          {request.submittedAt ? `Enviado em ${when(request.submittedAt)}` : request.savedAt ? `Rascunho salvo em ${when(request.savedAt)}` : "Ainda não aberto ou não salvo"}
-          {` · link vale até ${when(request.expiresAt)}`}
-          {request.reviewedAt ? ` · revisado em ${when(request.reviewedAt)}` : ""}
+    <section class={`${PANEL} flex flex-col gap-4`} aria-labelledby="t-pedir">
+      <div class="flex flex-col gap-1">
+        <h2 id="t-pedir" class={SECTION_TITLE}>Pedir as informações ao Administrador</h2>
+        <p class="text-[15px] text-ink-soft">
+          Para quando o Administrador prefere que o Suporte configure: ele recebe um e-mail com o link do formulário (vale 30 dias), e as respostas aparecem
+          aqui. Nada entra sozinho na clínica.
         </p>
-        {(request.submittedAt || request.savedAt) && (
-          <details class="mt-3" open={request.status === "submitted"}>
-            <summary class="cursor-pointer text-sm text-sky-700">Ver respostas</summary>
-            <OnboardingAnswersView answers={request.answers} />
-          </details>
-        )}
-      </Card>
-    ))
-  }
+      </div>
+      <form method="POST" action={action} class="flex flex-col gap-4">
+        <input type="hidden" name="acao" value="pedir_informacoes" />
+        <div>
+          <label for="email" class={LABEL}>E-mail</label>
+          <input id="email" name="email" type="email" required value={firstAdmin} class={INPUT} />
+        </div>
+        <button type="submit" data-sending-label="Enviando…" class={`${PRIMARY_BUTTON} self-start`}>Enviar pedido</button>
+      </form>
+    </section>
+  </div>
 </AdminLayout>

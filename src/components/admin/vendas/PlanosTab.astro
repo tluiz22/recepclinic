@@ -3,7 +3,9 @@
 // (só aqui, nunca no site público) e o plano de cada clínica, deduzido da
 // matriz de acesso. Os valores ficam em src/lib/plans.ts. Cada valor tem um campo para
 // simular a negociação (só no navegador, nada é gravado).
-import Card from "../../../components/admin/Card.astro";
+import Card from "../../../components/admin/config/Panel.astro";
+import { buttonClass } from "../ui/styles";
+import { INPUT_INLINE } from "../config/formStyles";
 import { createUserClient } from "../../../lib/data/clients";
 import { listClinicsAccess } from "../../../lib/data/features";
 import { featureLabel } from "../../../lib/features";
@@ -33,66 +35,66 @@ const examples = [
 const basicFeatures = featuresOfItems(PLAN_ITEM_IDS.basic).map(featureLabel);
 
 const cents = (value: number) => (value / 100).toFixed(2).replace(".", ",");
-const INPUT = "w-24 rounded-md border border-slate-300 px-2 py-1 text-right text-sm";
+const INPUT = `${INPUT_INLINE} w-28 py-1.5 text-right`;
 
-const TH = "py-2 pr-4 text-left font-medium text-slate-500";
-const TD = "py-2 pr-4 align-top";
+const TH = "border-b border-line bg-[#f8faf9] px-3 py-2.5 text-left text-[13px] leading-snug font-semibold text-ink-soft";
+const TD = "px-3 py-2.5 align-top";
 ---
 
-<p class="mt-4 text-sm text-slate-600">
+<p class="mt-4 text-[15px] text-ink-soft">
   Tabela comercial do RecepClinic, só para o Suporte (não vai para o site). A mensalidade é por clínica, mais
   {" "}{brl(PRICES.extraProfessionalCents)} por profissional além do primeiro; os adicionais têm valor fixo por clínica.
-  O plano de cada clínica é aplicado na <a href="/admin/sistema/matriz" class="text-sky-700 hover:underline">Matriz de acesso</a>.
+  O plano de cada clínica é aplicado na <a href="/admin/sistema/matriz" class="font-semibold text-brand hover:underline">Matriz de acesso</a>.
 </p>
 
 <div class="mt-4 flex flex-col gap-4">
   <form id="simulador" class="flex flex-col gap-4" novalidate>
-  <p class="text-sm text-slate-600">
+  <p class="text-[15px] text-ink-soft">
     Para negociar: troque os valores nos campos ao lado de cada preço, escolha o plano e os adicionais e clique em{" "}
     <strong>Calcular</strong>. É só uma simulação: nada é gravado e, ao recarregar a tela, voltam os valores da tabela.
   </p>
   <div class="grid gap-4 sm:grid-cols-2">
     <Card>
       <label class="flex items-center gap-2">
-        <input type="radio" name="plan" value="basic" checked class="h-4 w-4" />
-        <span class="text-sm font-semibold uppercase tracking-wide text-slate-500">Básico</span>
+        <input type="radio" name="plan" value="basic" checked class="h-[18px] w-[18px] accent-brand" />
+        <span class="text-[12.5px] font-bold uppercase tracking-[.06em] text-ink-soft">Básico</span>
       </label>
-      <p class="mt-1 text-2xl font-bold text-slate-900">{brl(PRICES.basicCents)}<span class="text-sm font-normal text-slate-500">/mês com 1 profissional</span></p>
-      <label class="mt-2 flex items-center gap-2 text-sm text-slate-600">
+      <p class="mt-1 text-2xl font-bold text-ink">{brl(PRICES.basicCents)}<span class="text-sm font-normal text-ink-soft">/mês com 1 profissional</span></p>
+      <label class="mt-2 flex items-center gap-2 text-[15px] text-ink-soft">
         Negociar: R$ <input name="price_basic" value={cents(PRICES.basicCents)} data-table={PRICES.basicCents} inputmode="decimal" class={INPUT} />
       </label>
-      <p class="mt-2 text-sm text-slate-700">
+      <p class="mt-2 text-[15px] text-ink-mid">
         Agenda e painel (dia, semana, mês, bloqueios, pacientes, Resumo do dia, comparecimento), marcar, remarcar e
         cancelar consulta e retorno, e mais: {basicFeatures.join(", ")}. Marque os adicionais abaixo.
       </p>
     </Card>
     <Card>
       <label class="flex items-center gap-2">
-        <input type="radio" name="plan" value="complete" class="h-4 w-4" />
-        <span class="text-sm font-semibold uppercase tracking-wide text-slate-500">Completo</span>
+        <input type="radio" name="plan" value="complete" class="h-[18px] w-[18px] accent-brand" />
+        <span class="text-[12.5px] font-bold uppercase tracking-[.06em] text-ink-soft">Completo</span>
       </label>
-      <p class="mt-1 text-2xl font-bold text-slate-900">{brl(PRICES.completeCents)}<span class="text-sm font-normal text-slate-500">/mês com 1 profissional</span></p>
-      <label class="mt-2 flex items-center gap-2 text-sm text-slate-600">
+      <p class="mt-1 text-2xl font-bold text-ink">{brl(PRICES.completeCents)}<span class="text-sm font-normal text-ink-soft">/mês com 1 profissional</span></p>
+      <label class="mt-2 flex items-center gap-2 text-[15px] text-ink-soft">
         Negociar: R$ <input name="price_complete" value={cents(PRICES.completeCents)} data-table={PRICES.completeCents} inputmode="decimal" class={INPUT} />
       </label>
-      <p class="mt-2 text-sm text-slate-700">
+      <p class="mt-2 text-[15px] text-ink-mid">
         O Básico e todos os adicionais. Avulso daria {brl(PRICES.basicCents + addonsSum)}: o pacote sai uns {saving}% mais barato.
       </p>
     </Card>
   </div>
 
   <Card>
-    <h2 class="font-semibold text-slate-900">Adicionais</h2>
-    <p class="mt-1 text-sm text-slate-600">Sobre o Básico, valor fixo por clínica. Se a soma passar do Completo, ofereça o Completo.</p>
-    <div class="mt-2 overflow-x-auto">
-      <table class="w-full min-w-[40rem] text-sm">
+    <h2 class="font-display text-[17px] leading-tight font-bold text-ink sm:text-lg">Adicionais</h2>
+    <p class="mt-1 text-[15px] text-ink-soft">Sobre o Básico, valor fixo por clínica. Se a soma passar do Completo, ofereça o Completo.</p>
+    <div class="mt-3 overflow-x-auto rounded-xl border border-line">
+      <table class="w-full min-w-[40rem] text-[15px]">
         <thead><tr><th class={TH}>Incluir</th><th class={TH}>Adicional</th><th class={TH}>Itens da matriz</th><th class={`${TH} text-right`}>Valor/mês</th><th class={`${TH} text-right`}>Negociar (R$)</th></tr></thead>
-        <tbody class="divide-y divide-slate-100">
+        <tbody class="divide-y divide-[#e6ecea]">
           {ADDONS.map((item) => (
             <tr>
-              <td class={TD}><input type="checkbox" name="addon" value={item.id} aria-label={`Incluir ${item.label}`} class="h-4 w-4 rounded border-slate-300" /></td>
-              <td class={`${TD} font-medium text-slate-900`}>{item.label}</td>
-              <td class={`${TD} text-slate-600`}>{item.features.map(featureLabel).join(", ")}</td>
+              <td class={TD}><input type="checkbox" name="addon" value={item.id} aria-label={`Incluir ${item.label}`} class="h-[18px] w-[18px] accent-brand" /></td>
+              <td class={`${TD} font-medium text-ink`}>{item.label}</td>
+              <td class={`${TD} text-ink-soft`}>{item.features.map(featureLabel).join(", ")}</td>
               <td class={`${TD} text-right`}>{brl(item.priceCents ?? 0)}</td>
               <td class={`${TD} text-right`}>
                 <input name={`price_addon_${item.id}`} value={cents(item.priceCents ?? 0)} data-table={item.priceCents ?? 0} inputmode="decimal" aria-label={`Valor negociado de ${item.label}`} class={INPUT} />
@@ -101,7 +103,7 @@ const TD = "py-2 pr-4 align-top";
           ))}
           <tr>
             <td class={TD}></td>
-            <td class={`${TD} font-medium text-slate-900`}>Soma dos adicionais</td>
+            <td class={`${TD} font-medium text-ink`}>Soma dos adicionais</td>
             <td class={TD}></td>
             <td class={`${TD} text-right font-medium`}>{brl(addonsSum)}</td>
             <td class={TD}></td>
@@ -109,70 +111,70 @@ const TD = "py-2 pr-4 align-top";
         </tbody>
       </table>
     </div>
-    <p class="mt-2 text-xs text-slate-500">
+    <p class="mt-2 text-xs text-ink-soft">
       Fora da tabela por ora: {OFF_TABLE.map((item) => item.label).join(", ")} (o Suporte ainda pode ligar na matriz, sem valor).
     </p>
   </Card>
 
   <Card>
-    <h2 class="font-semibold text-slate-900">Outros valores e regras</h2>
-    <ul class="mt-2 flex flex-col gap-2 text-sm text-slate-700">
+    <h2 class="font-display text-[17px] leading-tight font-bold text-ink sm:text-lg">Outros valores e regras</h2>
+    <ul class="mt-2 flex flex-col gap-2 text-[15px] text-ink-mid">
       <li class="flex flex-wrap items-center gap-2">
         Profissional a mais (Básico e Completo): {brl(PRICES.extraProfessionalCents)}/mês cada, pelo limite de profissionais da clínica.
-        <label class="flex items-center gap-2 text-slate-600">Negociar: R$ <input name="price_extra" value={cents(PRICES.extraProfessionalCents)} data-table={PRICES.extraProfessionalCents} inputmode="decimal" class={INPUT} /></label>
+        <label class="flex items-center gap-2 text-ink-soft">Negociar: R$ <input name="price_extra" value={cents(PRICES.extraProfessionalCents)} data-table={PRICES.extraProfessionalCents} inputmode="decimal" class={INPUT} /></label>
       </li>
       <li class="flex flex-wrap items-center gap-2">
         Implantação: {brl(PRICES.setupCents)}, valor único (configuração, conexão do número e treinamento). Isenta só nos pilotos.
-        <label class="flex items-center gap-2 text-slate-600">Negociar: R$ <input name="price_setup" value={cents(PRICES.setupCents)} data-table={PRICES.setupCents} inputmode="decimal" class={INPUT} /></label>
+        <label class="flex items-center gap-2 text-ink-soft">Negociar: R$ <input name="price_setup" value={cents(PRICES.setupCents)} data-table={PRICES.setupCents} inputmode="decimal" class={INPUT} /></label>
       </li>
       <li>Mensagens da Meta: à parte, cobradas direto da clínica pela Meta, no cartão dela.</li>
       <li>Sem oferta de entrada para as primeiras clínicas.</li>
     </ul>
-    <h3 class="mt-4 text-sm font-semibold uppercase tracking-wide text-slate-500">Exemplos (valores de tabela)</h3>
-    <ul class="mt-2 flex flex-col gap-1 text-sm text-slate-700">
+    <h3 class="mt-4 text-[12.5px] font-bold uppercase tracking-[.06em] text-ink-soft">Exemplos (valores de tabela)</h3>
+    <ul class="mt-2 flex flex-col gap-1 text-[15px] text-ink-mid">
       {examples.map((example) => <li>{example.label}: <strong>{brl(example.cents)}/mês</strong></li>)}
     </ul>
   </Card>
 
-  <Card class="border-sky-200 bg-sky-50">
-    <h2 class="font-semibold text-slate-900">Simulação</h2>
-    <div class="mt-2 flex flex-wrap items-center gap-4 text-sm text-slate-700">
-      <label class="flex items-center gap-2">Profissionais <input type="number" name="professionals" min="1" value="1" class="w-20 rounded-md border border-slate-300 px-2 py-1 text-sm" /></label>
-      <label class="flex items-center gap-2"><input type="checkbox" name="setup_waived" class="h-4 w-4 rounded border-slate-300" /> Implantação isenta</label>
-      <button type="submit" class="rounded-md bg-sky-700 px-4 py-2 text-sm font-medium text-white hover:bg-sky-800">Calcular</button>
-      <button type="reset" class="rounded-md border border-slate-300 bg-white px-4 py-2 text-sm text-slate-700 hover:bg-slate-50">Voltar aos valores da tabela</button>
+  <Card class="border-conf-200 bg-[#f2faf7]">
+    <h2 class="font-display text-[17px] leading-tight font-bold text-ink sm:text-lg">Simulação</h2>
+    <div class="mt-2 flex flex-wrap items-center gap-4 text-[15px] text-ink-mid">
+      <label class="flex items-center gap-2">Profissionais <input type="number" name="professionals" min="1" value="1" class={`${INPUT_INLINE} w-24 py-1.5`} /></label>
+      <label class="flex items-center gap-2"><input type="checkbox" name="setup_waived" class="h-[18px] w-[18px] accent-brand" /> Implantação isenta</label>
+      <button type="submit" class={buttonClass("primary")}>Calcular</button>
+      <button type="reset" class={buttonClass("secondary")}>Voltar aos valores da tabela</button>
     </div>
-    <p id="sim-error" class="mt-2 text-sm text-red-700" hidden></p>
-    <div id="sim-result" class="mt-3 text-sm text-slate-700" hidden>
+    <p id="sim-error" class="mt-2 text-[15px] text-red-700" hidden></p>
+    <div id="sim-result" class="mt-3 text-[15px] text-ink-mid" hidden>
       <ul id="sim-lines" class="flex flex-col gap-1"></ul>
-      <p class="mt-2 text-base"><strong>Mensalidade: <span id="sim-monthly"></span></strong> <span id="sim-monthly-table" class="text-slate-500"></span></p>
-      <p>Implantação: <span id="sim-setup"></span> <span id="sim-setup-table" class="text-slate-500"></span></p>
+      <p class="mt-2 text-base"><strong>Mensalidade: <span id="sim-monthly"></span></strong> <span id="sim-monthly-table" class="text-ink-soft"></span></p>
+      <p>Implantação: <span id="sim-setup"></span> <span id="sim-setup-table" class="text-ink-soft"></span></p>
       <p>Primeiro pagamento (mensalidade + implantação): <strong id="sim-first"></strong></p>
-      <p class="mt-1 text-xs text-slate-500">Mensagens da Meta à parte. Simulação: nada é gravado.</p>
+      <p class="mt-1 text-xs text-ink-soft">Mensagens da Meta à parte. Simulação: nada é gravado.</p>
     </div>
   </Card>
   </form>
 
   <Card>
-    <h2 class="font-semibold text-slate-900">Plano de cada clínica</h2>
-    <p class="mt-1 text-sm text-slate-600">Deduzido do que está ligado na matriz; mensalidade de referência pelo limite de profissionais.</p>
-    <div class="mt-2 overflow-x-auto">
-      <table class="w-full min-w-[36rem] text-sm">
+    <h2 class="font-display text-[17px] leading-tight font-bold text-ink sm:text-lg">Plano de cada clínica</h2>
+    <p class="mt-1 text-[15px] text-ink-soft">Deduzido do que está ligado na matriz; mensalidade de referência pelo limite de profissionais.</p>
+    <div class="mt-3 overflow-x-auto rounded-xl border border-line">
+      <table class="w-full min-w-[36rem] text-[15px]">
         <thead><tr><th class={TH}>Clínica</th><th class={TH}>Plano</th><th class={TH}>Profissionais</th><th class={`${TH} text-right`}>Mensalidade</th></tr></thead>
-        <tbody class="divide-y divide-slate-100">
+        <tbody class="divide-y divide-[#e6ecea]">
           {clinics.map((clinic) => (
             <tr>
               <td class={TD}>
-                <a href={`/admin/sistema/matriz?clinica=${clinic.id}`} class="font-medium text-sky-700 hover:underline">{clinic.name}</a>
-                {clinic.status === "suspended" && <span class="text-xs text-slate-500"> · suspensa</span>}
+                <a href={`/admin/sistema/matriz?clinica=${clinic.id}`} class="font-medium font-semibold text-brand hover:underline">{clinic.name}</a>
+                {clinic.status === "suspended" && <span class="text-xs text-ink-soft"> · suspensa</span>}
               </td>
               <td class={TD}>
                 {PLAN_LABELS[clinic.plan.kind]}
                 {clinic.plan.kind !== "none" && clinic.plan.kind !== "complete" && clinic.plan.addons.length > 0 && (
-                  <span class="block text-xs text-slate-500">{clinic.plan.addons.map((item) => item.label).join(", ")}</span>
+                  <span class="block text-xs text-ink-soft">{clinic.plan.addons.map((item) => item.label).join(", ")}</span>
                 )}
                 {clinic.plan.kind !== "none" && clinic.plan.offTable.length > 0 && (
-                  <span class="block text-xs text-slate-500">Fora da tabela: {clinic.plan.offTable.map((item) => item.label).join(", ")}</span>
+                  <span class="block text-xs text-ink-soft">Fora da tabela: {clinic.plan.offTable.map((item) => item.label).join(", ")}</span>
                 )}
               </td>
               <td class={TD}>{clinic.maxProfessionals}</td>

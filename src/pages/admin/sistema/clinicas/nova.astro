@@ -1,25 +1,29 @@
 ---
 // Nova clínica (F4.4a, L47): nome, perfil, fuso e o e-mail do primeiro
 // Administrador, que recebe o convite na hora. Nasce com a matriz desligada e
-// limite de 1 profissional.
+// limite de 1 profissional. R10 (cliente, 17/out/2026): 2 blocos numerados e
+// "Cancelar".
 import AdminLayout from "../../../../layouts/AdminLayout.astro";
-import Card from "../../../../components/admin/Card.astro";
 import FlashMessage from "../../../../components/admin/FlashMessage.astro";
 import Icon from "../../../../components/admin/Icon.astro";
-import { HINT, INPUT, LABEL, PRIMARY_BUTTON } from "../../../../components/admin/fieldStyles";
+import SystemHeader from "../../../../components/admin/sistema/SystemHeader.astro";
+import Button from "../../../../components/admin/ui/Button.astro";
+import { HINT, INPUT, LABEL, PANEL, PRIMARY_BUTTON, SECTION_TITLE } from "../../../../components/admin/config/formStyles";
 import { BRAZIL_TIME_ZONES } from "../../../../lib/timeZones";
 import { PROFILE_LABELS } from "../../../../lib/vocabulary";
+
+const step = "inline-flex h-[26px] w-[26px] shrink-0 items-center justify-center rounded-full bg-brand-soft text-sm font-bold text-brand-ink";
 ---
 
 <AdminLayout title="Nova clínica" platform>
-  <a href="/admin/sistema/clinicas" class="inline-flex items-center gap-1 text-sm text-sky-700 hover:underline">
-    <Icon name="chevron-left" class="h-4 w-4" /> Clínicas
-  </a>
-  <h1 class="mt-2 text-2xl font-bold text-slate-900">Nova clínica</h1>
+  <div class="flex flex-col">
+    <SystemHeader title="Nova clínica" back={{ href: "/admin/sistema/clinicas", label: "Clínicas" }} />
+  </div>
   <FlashMessage />
 
-  <Card class="mt-4 max-w-2xl">
-    <form method="POST" action="/api/admin/sistema/clinicas/nova" class="flex flex-col gap-4">
+  <form method="POST" action="/api/admin/sistema/clinicas/nova" class="mt-5 flex max-w-[760px] flex-col gap-4">
+    <section class={`${PANEL} flex flex-col gap-4`} aria-labelledby="b-clinica">
+      <div class="flex items-center gap-2.5"><span class={step}>1</span><h2 id="b-clinica" class={SECTION_TITLE}>A clínica</h2></div>
       <div>
         <label for="name" class={LABEL}>Nome da clínica</label>
         <input id="name" name="name" required class={INPUT} />
@@ -38,15 +42,22 @@ import { PROFILE_LABELS } from "../../../../lib/vocabulary";
           </select>
         </div>
       </div>
+    </section>
+    <section class={`${PANEL} flex flex-col gap-4`} aria-labelledby="b-admin">
+      <div class="flex items-center gap-2.5"><span class={step}>2</span><h2 id="b-admin" class={SECTION_TITLE}>Primeiro Administrador</h2></div>
       <div>
         <label for="admin_email" class={LABEL}>E-mail do primeiro Administrador</label>
         <input id="admin_email" name="admin_email" type="email" required class={INPUT} />
         <p class={HINT}>Recebe o convite na hora para criar a senha. Se já tiver login no RecepClinic, só ganha acesso à clínica.</p>
       </div>
-      <p class="text-sm text-slate-600">
-        A clínica nasce com a matriz de acesso desligada (só o básico) e limite de 1 profissional. Depois, libere os itens na matriz.
-      </p>
-      <button type="submit" class={`${PRIMARY_BUTTON} self-start`}>Criar clínica e convidar</button>
-    </form>
-  </Card>
+    </section>
+    <p class="flex items-start gap-2.5 text-[15px] leading-snug text-ink-mid">
+      <Icon name="information-circle" class="mt-0.5 h-[18px] w-[18px] shrink-0" strokeWidth={2} />
+      A clínica nasce com a matriz de acesso desligada (só o básico) e limite de 1 profissional. Depois, libere os itens na matriz.
+    </p>
+    <div class="flex flex-wrap gap-2.5">
+      <button type="submit" data-sending-label="Criando…" class={`${PRIMARY_BUTTON} sm:h-11`}>Criar clínica e convidar</button>
+      <Button href="/admin/sistema/clinicas" class="sm:h-11">Cancelar</Button>
+    </div>
+  </form>
 </AdminLayout>
