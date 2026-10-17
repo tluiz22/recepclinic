@@ -2237,14 +2237,32 @@ abre **Configurações** (campo `destino=configuracoes`, único destino aceito; 
 continuam no Início).
 **R10 publicada no staging e validada pelo cliente em 17/out** (ajustes dos testes dele entram depois).
 
-**R11 (páginas do paciente), proposta no canvas em 17/out/2026** (página "11 · Páginas do paciente"), a aprovar
-uma decisão por vez: 1. marca da clínica (cor no topo, no botão e no escolhido) com a letra do painel; 2. dia em faixa
-com setas e horários por turno no `/agendar`, como no Marcar, e a turma em cartões com as vagas; 3. barra fixa no
-celular com o escolhido e o "Confirmar" (no computador, o resumo ao lado); 4. confirmação em linhas e o "Ver o preparo
-do exame" como botão; 5. os 4 avisos do link num padrão, com a novidade a decidir do botão "Falar com a clínica no
-WhatsApp"; 6. preparo e orientações em letra maior; 7. o `/formulario` da clínica com a marca RecepClinic, em blocos
-numerados e com a barra fixa; 8. a cor padrão da clínica sem cor (hoje azul `#0369A1`; proposta: `#0B7A62`) e a 404
-sem o azul.
+**R11 (páginas do paciente), proposta aprovada pelo cliente em 17/out/2026** (página "11 · Páginas do
+paciente" do canvas). Decisões, uma a uma:
+1. **Marca da clínica, letra do painel:** a cor da clínica no topo (como hoje), no botão, no dia e no horário
+   escolhidos e nos realces; a letra passa a ser a Source Sans 3. O verde do RecepClinic não aparece nas páginas do
+   paciente.
+2. **`/agendar` com faixa de dias e turnos:** no lugar da lista de datas, uma faixa de dias com setas; os horários em
+   Manhã, Tarde e Noite, em botões de 48px, como no Marcar do painel (com mais de um profissional ou local, o nome no
+   próprio horário). Trocar o dia busca os horários sem recarregar, como hoje. A turma de exame em cartões com as vagas.
+3. **Barra fixa no celular** com o dia e a hora escolhidos e o "Confirmar" (ou "Confirmar remarcação"), com o envio
+   único; no computador, o resumo ao lado ("Seu atendimento") com o botão.
+4. **Confirmação em linhas:** "Atendimento confirmado!" (ou "remarcado!") com Quando, Serviço, Paciente, Com quem e
+   Onde (com o endereço); "Ver o preparo do exame" vira botão na cor da clínica.
+5. **Avisos do link num padrão** (inválido, expirado, já usado, cancelado): ícone, título e o texto de hoje. **Novidade
+   aprovada:** o botão "Falar com a clínica no WhatsApp", que abre a conversa com o número conectado da clínica
+   (`display_phone`); só com o WhatsApp conectado e nunca no link inválido (não se sabe a clínica).
+6. **Preparo e orientações para ler:** texto em 17px, com mais espaço entre as linhas, na largura de leitura; o nome
+   do exame no título. As duas páginas são o link do template fora da janela de 24h (dentro dela, o texto vai na
+   conversa, como decidido em 08/out).
+7. **`/formulario` da clínica com a marca RecepClinic** (como as telas de acesso; sai o azul): as 8 seções em blocos
+   numerados, cada local, profissional ou pessoa num cartão ("Local 2"), campos de 44px e a barra fixa com "Salvar e
+   continuar depois" e "Enviar ao Suporte".
+8. **Cor padrão:** a clínica sem cor escolhida passa do azul `#0369A1` para o verde `#0B7A62`; a página 404 sai do
+   azul para o cinza neutro, com o mesmo texto.
+Sem mudança de regra: os textos dos avisos, nenhum dado de paciente no preparo e nas orientações, o aviso de
+emergência, o "Feito com RecepClinic", o ícone da aba (logo da clínica), o 404 dos links inválidos, o funil do bot e
+as regras de retorno, duplicado e horário tomado.
 
 ## Depois do 1º piloto (já previsto no banco)
 
