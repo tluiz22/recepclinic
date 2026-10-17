@@ -2276,6 +2276,19 @@ usada pela página (fica para quem já está com a página antiga aberta). O `/f
 RecepClinic e os campos de `formStyles`; cada campo dentro do rótulo. Cor padrão `#0B7A62` também como a primeira cor
 pronta em Configurações › Clínica ("Verde RecepClinic"). Não visto com dados: as orientações com texto (o seed não
 tem) e a prévia de Configurações (mesma moldura). `astro check` sem erros, `npm test` (508) e o teste de banco da marca.
+**R11 validada pelo cliente em 17/out.** **S-01 do teste da R11 (faixa de dias no celular), decisão do cliente em
+17/out:** no celular, as setas sobem para a linha do título ("Escolha o dia") e os 7 dias cabem sem arrastar (cada dia
+divide a largura, `min-w-0 flex-1`); vale no `/agendar` (`PatientDayStrip`, que passa a receber o `title`) e no Marcar e
+Remarcar do painel (`DayStrip`: saem o "Antes" e o "Depois" da linha de baixo, que fica só com o "Outra data"). No
+computador, nada muda (setas dos lados da faixa). Conferida no local em 390px e 360px.
+**S-02 (dia pedido sem horário no `/agendar`), decisão do cliente em 17/out:** aviso amarelo acima da faixa. Sem agenda
+aberta no dia (o profissional não atende nesse dia da semana, feriado, dia passado, depois do prazo do link ou bloqueado
+por inteiro, este último decidido pelo cliente): "Não existe agenda aberta para esse dia.". Com agenda, mas ocupado:
+"Terça-feira, 27/10 não tem mais horário livre. Mostramos o próximo dia com horário.". A regra fica em
+`isAgendaOpenOn` (`src/lib/data/agenda/slots.ts`: janelas, feriados e bloqueios, sem contar os atendimentos nem as
+horas que já passaram) e `isLinkDayOpen` (`publicBooking.ts`, qualquer profissional ou local do link). Também no
+Marcar e no Remarcar do painel (cliente, 17/out): a primeira frase do aviso segue a mesma regra e o "Mostrando a partir
+de …" continua.
 
 ## Depois do 1º piloto (já previsto no banco)
 

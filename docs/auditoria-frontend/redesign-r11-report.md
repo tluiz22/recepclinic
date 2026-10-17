@@ -239,6 +239,13 @@ Ver a seção 6.
   Marcar do painel (R4, aprovado). **Para confirmar:** decisão do cliente (por exemplo, menos dias
   por página no celular, ou a seta rolar a faixa antes de trocar de página).
   Evidência: `evidencias/r11-agendar-390.png`.
+- **Decisão do cliente (17/out):** no celular, as setas sobem para a linha do título ("Escolha o
+  dia") e os 7 dias cabem sem arrastar; também no Marcar e no Remarcar do painel (lá saem o
+  "Antes" e o "Depois" da linha de baixo, e o "Outra data" fica sozinho nela). No computador, nada
+  muda. **Implementada e conferida no local:** 390px e 360px com os 7 dias à vista (46px e 41px
+  por dia, sem rolagem), a seta "›" leva a 05/11 e a "‹" volta a 19/10; 1280px igual a antes.
+  Evidências: `evidencias/r11-s01-agendar-390.png`, `r11-s01-agendar-1280.png` e
+  `r11-s01-marcar-390.png`.
 
 #### S-02 · Dia sem horário pedido no endereço vira o seguinte sem aviso
 
@@ -246,6 +253,21 @@ Ver a seção 6.
   painel há o aviso (`unavailable` do `buildDayStrip`). Só acontece com endereço montado à mão ou
   quando, depois de um erro, o dia deixou de ter horário. **Para confirmar:** se vale mostrar o
   mesmo aviso do painel.
+- **Decisão do cliente (17/out):** aviso amarelo acima da faixa, conforme o dia pedido:
+  - **sem agenda aberta** (o profissional não atende nesse dia da semana, feriado, dia passado,
+    depois do prazo do link ou **bloqueado por inteiro**, decisão do cliente):
+    "Não existe agenda aberta para esse dia.";
+  - **com agenda, sem horário livre** (ocupado): "Terça-feira, 27/10 não tem mais horário livre.
+    Mostramos o próximo dia com horário." (sem a segunda frase quando não há dia livre depois).
+  **Implementada e conferida no local:** 21/10 (quarta), 10/10 (passado) e 25/10 (domingo), sem
+  agenda; 20/10 bloqueado por inteiro nos dois profissionais, sem agenda; 27/10 ocupado o dia todo
+  nos dois, sem horário livre (bloqueios e atendimentos de teste apagados em seguida); tocar noutro
+  dia tira o aviso. Teste de banco novo em `tests/db/agendar-link.test.ts`. **Também no Marcar e
+  no Remarcar do painel** (cliente, 17/out): a primeira frase do aviso amarelo segue a mesma regra
+  ("Não existe agenda aberta para esse dia." ou "… não tem mais horário livre"), e o "Mostrando a
+  partir de …" continua; conferido com 20/10 (terça, sem agenda) e 28/10 (ocupado, atendimento de
+  teste apagado em seguida). Evidências:
+  `evidencias/r11-s02-sem-agenda-390.png` e `r11-s02-sem-horario-390.png`.
 
 ### 6.3 Pontos não verificados
 
