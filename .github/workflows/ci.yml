@@ -38,8 +38,9 @@ jobs:
           version: 2.119.0
 
       - run: npm ci
-      # Só o necessário para os testes de banco: Postgres, Auth, PostgREST e o gateway.
-      - run: supabase start -x studio,imgproxy,edge-runtime,logflare,vector,realtime,storage-api,mailpit,postgres-meta,supavisor
+      # Só o necessário para os testes de banco: Postgres, Auth, PostgREST, Storage (logo da
+      # clínica e XML da nota) e o gateway.
+      - run: supabase start -x studio,imgproxy,edge-runtime,logflare,vector,realtime,mailpit,postgres-meta,supavisor
       - run: npm run test:db
       # Os tipos do banco precisam estar em dia com as migrações (`npm run db:types`).
       - run: npm run db:types && git diff --exit-code src/lib/supabase/database.types.ts
