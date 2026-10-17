@@ -2120,8 +2120,13 @@ com as permissões de quem chama; mesma regra de `resolvePayer`), pela opção `
 `listPatientsPage`, e a contagem `countPatientsMissingPayerCpf`; teste de banco em
 `modulo-financeiro.test.ts`. O nome na lista leva à ficha já no cartão Financeiro (`#financeiro`). O
 estado "Ficam de fora" foi conferido tirando por alguns segundos o CPF de um pagamento no banco local
-(devolvido em seguida). **Migração ainda não aplicada no staging** (vai com `supabase db push` antes do
-push do código).
+(devolvido em seguida). [Teste de interface](auditoria-frontend/redesign-r8-report.md) em 17/out: a mensagem do "Falta
+CPF" com busca sem resultado ganhou "Buscar em Todos" (FIL-03); no staging, o cliente achou o erro 500
+da busca por telefone com o filtro (FIL-04, Alta), corrigido sem migração (contatos primeiro, depois a
+função pelo `contact_id`). Migração aplicada no staging e registrada no histórico; código publicado
+(commit `16d5553`). **R8 validada pelo cliente em 17/out.** Mantido (cliente, 17/out): a DMED abre no
+ano passado, o da entrega até fevereiro. A decidir: "Voltar" nas abas de Configurações abertas de
+outra tela (S-01 do relatório da R8).
 
 ## Depois do 1º piloto (já previsto no banco)
 
