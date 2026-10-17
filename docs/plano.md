@@ -2217,6 +2217,18 @@ Sem mudança de regra: quem vê cada tela (Sistema só o Suporte), sem cadastro 
 do "Esqueci" exista ou não o e-mail, os 8 caracteres e os textos de erro da senha, o registro de cada
 tela aberta pelo Suporte, as dependências e o cálculo da matriz, como o Uso é contado, os 90 dias dos
 erros e o conteúdo de Vendas e Tecnologia.
+**Implementada em 17/out** e testada no navegador local (Suporte, 1280px e 390px, sem gravar dados):
+`AuthLayout` com a marca, `auth/PasswordField.astro` e `src/scripts/passwordToggle.ts` ("Mostrar"/"Ocultar";
+antes de enviar, o campo volta a ser de senha); o login com senha errada devolve o e-mail pelo
+`keepFormValues` (agora também nas telas de acesso, com o `sendOnce`) e põe o foco na senha. Busca de
+clínica em `src/lib/clinicSearch.ts` (sem acento, acima de 6; com teste). Cabeçalho das telas do sistema
+em `sistema/SystemHeader.astro`; Clínicas, a clínica e Nova clínica com os estilos da R9 (`formStyles`);
+Matriz com o resumo ao lado (e na barra fixa do celular), o "n de m" por grupo e a mensalidade em
+destaque, atualizados pelo mesmo script; Uso com `DataTable`, o total e o filtro; Erros com `Pill`;
+Vendas com `Tabs`; Tecnologia com os atalhos. Achado no teste e corrigido: no celular, o "Suporte
+RecepClinic" do cabeçalho do sistema empurrava o "Sair" para fora da tela (30px de rolagem lateral em
+todas as telas do sistema, desde a R1); agora some só no celular. Não visto com dados: a busca (o seed
+tem 2 clínicas; coberta pelo teste) e uma clínica suspensa. `astro check` sem erros e `npm test` (506).
 
 ## Depois do 1º piloto (já previsto no banco)
 
