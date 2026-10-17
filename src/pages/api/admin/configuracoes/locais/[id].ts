@@ -3,6 +3,7 @@ import { createUserClient } from "../../../../../lib/data/clients";
 import { createLocation, listLocations, setLocationActive, updateLocation, type LocationType } from "../../../../../lib/data/config/locations";
 import { DataError } from "../../../../../lib/data/errors";
 import { runFormAction } from "../../../../../lib/data/formAction";
+import { allFilterOn, withAllFilter } from "../../../../../lib/returnPath";
 import { formOptionalText, formText } from "../../../../../lib/forms";
 
 // Local (F4.3): criar (`novo`), salvar, desativar e reativar. O tipo
@@ -13,7 +14,9 @@ export const POST: APIRoute = async (context) => {
   const form = await request.formData().catch(() => null);
   const clinicId = locals.clinic!.clinicId;
   const db = createUserClient(request, cookies);
-  const page = (target: string) => `/admin/configuracoes/locais/${target}`;
+  // Cadastro aberto da lista em "Todos": volta com o filtro (teste da R9, NAV-06).
+  const all = allFilterOn(new URL(request.url));
+  const page = (target: string) => withAllFilter(`/admin/configuracoes/locais/${target}`, all);
   const acao = formText(form, "acao");
 
   return runFormAction(

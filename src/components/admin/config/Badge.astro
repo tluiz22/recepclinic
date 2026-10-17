@@ -1,0 +1,26 @@
+---
+// Selo das seções de Configurações (R9): as mesmas variantes do Badge antigo,
+// nas cores de situação do redesign (sempre com o texto).
+export type BadgeVariant = "neutral" | "info" | "accent" | "success" | "warning" | "danger" | "strong";
+
+interface Props {
+  variant?: BadgeVariant;
+  class?: string;
+}
+
+const { variant = "neutral", class: className = "" } = Astro.props;
+
+const variants: Record<BadgeVariant, string> = {
+  neutral: "bg-blk-100 text-blk-800",
+  strong: "bg-ink text-white",
+  info: "bg-att-100 text-att-800",
+  accent: "bg-brand-soft text-brand-ink",
+  success: "bg-conf-100 text-conf-800",
+  warning: "bg-pend-100 text-pend-800",
+  danger: "bg-can-100 text-can-800",
+};
+---
+
+<span class={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[13px] leading-snug font-semibold whitespace-nowrap ${variants[variant]} ${className}`}>
+  <slot />
+</span>

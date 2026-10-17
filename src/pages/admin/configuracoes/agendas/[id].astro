@@ -1,13 +1,11 @@
 ---
 // Configurações › Agendas › nova ou editar (F4.3, D2).
-import AdminLayout from "../../../../layouts/AdminLayout.astro";
+import ConfigShell from "../../../../components/admin/config/ConfigShell.astro";
+import { allFilterOn, withAllFilter } from "../../../../lib/returnPath";
 import ActiveToggle from "../../../../components/admin/ActiveToggle.astro";
-import Card from "../../../../components/admin/Card.astro";
-import FlashMessage from "../../../../components/admin/FlashMessage.astro";
 import NextStep from "../../../../components/admin/setup/NextStep.astro";
 import { loadSetupStatus } from "../../../../lib/data/config/setup";
-import Icon from "../../../../components/admin/Icon.astro";
-import { HINT, INPUT, LABEL, PRIMARY_BUTTON } from "../../../../components/admin/fieldStyles";
+import { CARD, HINT, INPUT, INPUT_INLINE, LABEL, PRIMARY_BUTTON, SECONDARY_BUTTON } from "../../../../components/admin/config/formStyles";
 import { createUserClient } from "../../../../lib/data/clients";
 import { listAgendas } from "../../../../lib/data/config/agendas";
 import { listProfessionals } from "../../../../lib/data/config/professionals";
@@ -26,18 +24,16 @@ if (!isNew && !agenda) return Astro.redirect("/admin/configuracoes/agendas");
 // dele; "Voltar" leva ao profissional (cliente, 10/out/2026).
 const prefill = isNew ? (professionals.find((p) => p.isActive && p.id === Astro.url.searchParams.get("profissional")) ?? null) : null;
 const professionalName = agenda?.professionalId ? professionals.find((p) => p.id === agenda.professionalId)?.displayName : null;
-const action = `/api/admin/configuracoes/agendas/${id}`;
+// Aberto da lista em "Todos": o filtro vai e volta (teste da R9, NAV-06).
+const all = allFilterOn(Astro.url);
+const list = withAllFilter("/admin/configuracoes/agendas", all);
+const action = withAllFilter(`/api/admin/configuracoes/agendas/${id}`, all);
 // Próximo passo da jornada de configuração (F6.3b).
 const setup = isNew ? null : await loadSetupStatus(createUserClient(Astro.request, Astro.cookies), clinic.clinicId, clinic.features);
 const agendaIssues = setup?.issues.agendas.get(id!) ?? [];
 ---
 
-<AdminLayout title={isNew ? "Nova agenda" : agenda!.name}>
-  <a href={prefill ? `/admin/configuracoes/profissionais/${prefill.id}` : "/admin/configuracoes/agendas"} class="inline-flex items-center gap-1 text-sm text-sky-700 hover:underline">
-    <Icon name="chevron-left" class="h-4 w-4" /> {prefill ? "Voltar" : "Agendas"}
-  </a>
-  <h1 class="mt-2 text-2xl font-bold text-slate-900">{isNew ? "Nova agenda" : "Editar agenda"}</h1>
-  <FlashMessage />
+<ConfigShell current="agendas" title={isNew ? "Nova agenda" : agenda!.name} back={{ href: prefill ? `/admin/configuracoes/profissionais/${prefill.id}` : list, label: prefill ? "Voltar" : "Agendas" }}>
   {
     agendaIssues.includes("no_service") ? (
       <NextStep text="Nenhum serviço usa esta agenda ainda. Em Serviços, marque esta agenda nos serviços que ela atende." href="/admin/configuracoes/servicos" label="Ir para Serviços" />
@@ -48,8 +44,8 @@ const agendaIssues = setup?.issues.agendas.get(id!) ?? [];
     )
   }
 
-  <Card class="mt-4 max-w-2xl">
-    <form method="POST" action={action} class="flex flex-col gap-4">
+  <div class="flex max-w-3xl flex-col gap-4">
+    <form method="POST" action={action} class={`${CARD} flex flex-col gap-5 p-4 sm:p-5`}>
       <input type="hidden" name="acao" value="salvar" />
       <div>
         <label for="name" class={LABEL}>Nome</label>
@@ -85,20 +81,23 @@ const agendaIssues = setup?.issues.agendas.get(id!) ?? [];
             </div>
           </>
         ) : (
-          <p class="text-sm text-slate-700">
+          <p class="text-sm text-ink-mid">
             {agenda!.kind === "professional" ? `Agenda de ${professionalName ?? "profissional"}` : "Agenda de recurso (sem profissional)"}
           </p>
         )
       }
       <div>
         <label for="buffer_minutes" class={LABEL}>Intervalo entre atendimentos (min)</label>
-        <input id="buffer_minutes" name="buffer_minutes" type="number" min="0" required value={agenda?.bufferMinutes ?? 0} class={`${INPUT} w-28`} />
+        <input id="buffer_minutes" name="buffer_minutes" type="number" min="0" required value={agenda?.bufferMinutes ?? 0} class={`${INPUT_INLINE} mt-1.5 w-28`} />
         <p class={HINT}>Tempo livre deixado depois de cada atendimento desta agenda.</p>
       </div>
-      <button type="submit" class={`${PRIMARY_BUTTON} self-start`}>{isNew ? "Cadastrar" : "Salvar"}</button>
+      <div class="flex flex-wrap gap-2 border-t border-[#e6ecea] pt-4">
+        <button type="submit" class={PRIMARY_BUTTON} data-sending-label="Salvando…">{isNew ? "Cadastrar" : "Salvar"}</button>
+        <a href={prefill ? `/admin/configuracoes/profissionais/${prefill.id}` : list} class={SECONDARY_BUTTON}>Cancelar</a>
+      </div>
     </form>
     {!isNew && <ActiveToggle action={action} isActive={agenda!.isActive} what="a agenda" />}
-  </Card>
+  </div>
 
   <script>
     // Agenda de recurso não tem profissional.
@@ -110,4 +109,4 @@ const agendaIssues = setup?.issues.agendas.get(id!) ?? [];
     kind?.addEventListener("change", sync);
     sync();
   </script>
-</AdminLayout>
+</ConfigShell>

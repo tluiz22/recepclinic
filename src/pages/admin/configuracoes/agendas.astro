@@ -1,66 +1,103 @@
 ---
 // Configurações › Agendas (F4.3, D2): de um profissional ou de um recurso
 // (ex.: "Exames", quando a recepção faz o exame).
-import AdminLayout from "../../../layouts/AdminLayout.astro";
-import Badge from "../../../components/admin/Badge.astro";
+// Redesign R9 (cliente, 17/out/2026): uma linha por agenda, "Ativas | Todos".
+import ConfigShell from "../../../components/admin/config/ConfigShell.astro";
+import { withAllFilter } from "../../../lib/returnPath";
+import ActiveFilter from "../../../components/admin/config/ActiveFilter.astro";
+import ConfigEmpty from "../../../components/admin/config/ConfigEmpty.astro";
+import { HEAD_ROW, LIST, ROW, ROW_CELL, ROW_GO, ROW_NAME, SOFT } from "../../../components/admin/config/formStyles";
+import Icon from "../../../components/admin/Icon.astro";
 import IssueBadges from "../../../components/admin/setup/IssueBadges.astro";
-import { AGENDA_HINTS, loadSetupStatus } from "../../../lib/data/config/setup";
-import Card from "../../../components/admin/Card.astro";
-import ConfiguracoesTabs from "../../../components/admin/ConfiguracoesTabs.astro";
-import FlashMessage from "../../../components/admin/FlashMessage.astro";
-import { PRIMARY_BUTTON } from "../../../components/admin/fieldStyles";
+import Button from "../../../components/admin/ui/Button.astro";
+import Pill from "../../../components/admin/ui/Pill.astro";
 import { createUserClient } from "../../../lib/data/clients";
 import { listAgendas } from "../../../lib/data/config/agendas";
 import { listProfessionals } from "../../../lib/data/config/professionals";
 import { listServices } from "../../../lib/data/config/services";
+import { AGENDA_HINTS, loadSetupStatus } from "../../../lib/data/config/setup";
 
 const clinic = Astro.locals.clinic!;
 const db = createUserClient(Astro.request, Astro.cookies);
 const showInactive = Astro.url.searchParams.get("todos") === "1";
-const [agendas, professionals, services] = await Promise.all([
-  listAgendas(db, clinic.clinicId, { includeInactive: showInactive }),
+const [all, professionals, services, setup] = await Promise.all([
+  listAgendas(db, clinic.clinicId, { includeInactive: true }),
   listProfessionals(db, clinic.clinicId, { includeInactive: true }),
   listServices(db, clinic.clinicId),
+  // Pendências da jornada de configuração (F6.3b), nos selos.
+  loadSetupStatus(db, clinic.clinicId, clinic.features),
 ]);
+const active = all.filter((a) => a.isActive);
+// Desativadas no fim, em "Todos".
+const agendas = showInactive ? [...active, ...all.filter((a) => !a.isActive)] : active;
 const professionalName = new Map(professionals.map((p) => [p.id, p.displayName]));
 const servicesOf = (agendaId: string) => services.filter((s) => s.agendaIds.includes(agendaId)).map((s) => s.name);
-// Pendências da jornada de configuração (F6.3b), nos selos.
-const setup = await loadSetupStatus(createUserClient(Astro.request, Astro.cookies), clinic.clinicId, clinic.features);
+const cols = "lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1.4fr)_minmax(0,2fr)_36px]";
 ---
 
-<AdminLayout title="Agendas">
-  <h1 class="text-2xl font-bold text-slate-900">Configurações</h1>
-  <ConfiguracoesTabs current="agendas" />
-  <FlashMessage />
+<ConfigShell current="agendas" title="Agendas" subtitle="De um profissional ou de um recurso (ex.: Exames), com os serviços que atendem." setup={setup}>
+  <Button slot="actions" href="/admin/configuracoes/agendas/novo" variant="primary">
+    <Icon name="plus" class="h-[18px] w-[18px]" strokeWidth={2.2} /> Nova agenda
+  </Button>
 
-  <div class="mt-4 flex flex-wrap items-center justify-between gap-3">
-    <a href="/admin/configuracoes/agendas/novo" class={PRIMARY_BUTTON}>Nova agenda</a>
-    <a href={showInactive ? "?" : "?todos=1"} class="text-sm text-sky-700 hover:underline">
-      {showInactive ? "Esconder desativadas" : "Mostrar desativadas"}
-    </a>
+  <div class="flex flex-wrap items-center justify-between gap-3">
+    <p class="text-sm text-ink-soft" role="status">
+      {agendas.length} {agendas.length === 1 ? "agenda" : "agendas"}{showInactive ? "" : agendas.length === 1 ? " ativa" : " ativas"}
+    </p>
+    <ActiveFilter showInactive={showInactive} active={active.length} total={all.length} activeLabel="Ativas" />
   </div>
 
-  <ul class="mt-4 grid gap-3 sm:grid-cols-2">
-    {
-      agendas.map((agenda) => (
-        <li>
-          <a href={`/admin/configuracoes/agendas/${agenda.id}`}>
-            <Card class="h-full hover:border-sky-300 hover:bg-sky-50" muted={!agenda.isActive}>
-              <p class="font-medium text-slate-900">
-                {agenda.name} {!agenda.isActive && <Badge>desativada</Badge>} <IssueBadges issues={setup.issues.agendas.get(agenda.id)} hints={AGENDA_HINTS} />
-              </p>
-              <p class="mt-1 text-sm text-slate-600">
-                {agenda.kind === "professional" ? `Profissional: ${professionalName.get(agenda.professionalId!) ?? "—"}` : "Recurso (sem profissional)"}
-                {agenda.bufferMinutes > 0 ? ` · ${agenda.bufferMinutes} min entre atendimentos` : ""}
-              </p>
-              <p class="text-sm text-slate-500">
-                {servicesOf(agenda.id).length ? servicesOf(agenda.id).join(", ") : "Nenhum serviço ligado"}
-              </p>
-            </Card>
-          </a>
-        </li>
-      ))
-    }
-  </ul>
-  {agendas.length === 0 && <p class="mt-4 text-sm text-slate-600">Nenhuma agenda cadastrada.</p>}
-</AdminLayout>
+  {
+    agendas.length > 0 ? (
+      <section aria-label="Agendas" class={LIST}>
+        <div aria-hidden="true" class={`${HEAD_ROW} ${cols}`}>
+          <span>Agenda</span>
+          <span>De quem</span>
+          <span>Serviços</span>
+          <span />
+        </div>
+        <ul>
+          {agendas.map((agenda) => {
+            const href = withAllFilter(`/admin/configuracoes/agendas/${agenda.id}`, showInactive);
+            const names = servicesOf(agenda.id);
+            return (
+              <li class={`${ROW} ${cols} ${agenda.isActive ? "" : "opacity-60"}`}>
+                <div class="flex min-w-0 flex-col gap-1.5">
+                  <span class="flex flex-wrap items-center gap-x-2 gap-y-1">
+                    <a href={href} class={ROW_NAME}>
+                      {agenda.name}
+                    </a>
+                    {!agenda.isActive && <Pill>Desativada</Pill>}
+                  </span>
+                  {agenda.isActive && (
+                    <span class="flex flex-wrap gap-1.5 empty:hidden">
+                      <IssueBadges issues={setup.issues.agendas.get(agenda.id)} hints={AGENDA_HINTS} />
+                    </span>
+                  )}
+                </div>
+                <a href={href} aria-label={`Abrir ${agenda.name}`} class={ROW_GO}>
+                  <Icon name="chevron-right" class="h-5 w-5" strokeWidth={2.2} />
+                </a>
+                <span class={ROW_CELL}>
+                  {agenda.kind === "professional" ? (professionalName.get(agenda.professionalId!) ?? "—") : <span class={SOFT}>Recurso (sem profissional)</span>}
+                  {agenda.bufferMinutes > 0 && <span class="block text-sm text-ink-soft">{agenda.bufferMinutes} min entre atendimentos</span>}
+                </span>
+                <span class={ROW_CELL}>{names.length ? names.join(", ") : <span class={SOFT}>Nenhum serviço ligado</span>}</span>
+              </li>
+            );
+          })}
+        </ul>
+      </section>
+    ) : (
+      <ConfigEmpty
+        onlyInactive={all.length > 0}
+        none="Nenhuma agenda"
+        createdWord="cadastrada"
+        activeWord="ativa"
+        text="Sem agenda, ninguém consegue marcar."
+        href="/admin/configuracoes/agendas/novo"
+        label="Criar a primeira agenda"
+      />
+    )
+  }
+</ConfigShell>

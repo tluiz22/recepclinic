@@ -32,3 +32,29 @@ export function receivedReturn(url: URL): string | null {
   const value = url.searchParams.get("volta");
   return value && safeReturnPath(value, "") !== "" ? value : null;
 }
+
+/**
+ * Lista de Configurações em "Todos" (`?todos=1`): o cadastro aberto dela leva o
+ * filtro e o devolve no "‹ lista", no "Cancelar" e depois de salvar (teste da
+ * R9, NAV-06).
+ */
+export function withAllFilter(href: string, all: boolean): string {
+  return all ? `${href}${href.includes("?") ? "&" : "?"}todos=1` : href;
+}
+
+export function allFilterOn(url: URL): boolean {
+  return url.searchParams.get("todos") === "1";
+}
+
+/**
+ * Rótulo do "Voltar" de uma tela aberta de outra (R9, S-01 da R8: as seções de
+ * Configurações): diz para onde volta quando a origem é conhecida.
+ */
+export function returnLabel(path: string): string {
+  const pathname = path.split("?")[0];
+  if (pathname === "/admin/dashboard") return "Voltar para o Início";
+  if (pathname === "/admin/financeiro/dmed") return "Voltar para a DMED";
+  if (pathname.startsWith("/admin/financeiro/pagamento/")) return "Voltar para o pagamento";
+  if (pathname === "/admin/financeiro") return "Voltar para o Financeiro";
+  return "Voltar";
+}

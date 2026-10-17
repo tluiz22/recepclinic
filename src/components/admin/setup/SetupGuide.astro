@@ -1,80 +1,93 @@
 ---
-// Guia de configuração (F6.3b): os passos em ordem, com a situação e o link
-// para corrigir. Completo, vira uma linha; `compact` (nas outras abas) só
-// avisa que há pendências e leva ao guia.
-import Badge from "../Badge.astro";
+// Guia de configuração (F6.3b), na seção Clínica: os passos em ordem, com a
+// situação e o link para corrigir. Completo, vira uma linha.
+// Redesign R9 (cliente, 17/out/2026): "n de 6 passos prontos" com a barra de
+// progresso; as pendências de cada passo logo abaixo dele. Nas outras seções,
+// o número de pendências fica no menu lateral (ConfigShell), sem a faixa.
+import Icon from "../Icon.astro";
 import type { SetupStatus, StepStatus } from "../../../lib/data/config/setup";
 
 interface Props {
   status: SetupStatus;
-  compact?: boolean;
 }
 
-const { status, compact = false } = Astro.props;
-const pending = status.steps.filter((s) => s.status !== "done");
+const { status } = Astro.props;
+const done = status.steps.filter((s) => s.status === "done").length;
 const pendingCount = status.steps.reduce((total, s) => total + (s.status === "missing" ? 1 : s.items.length), 0);
-const LABELS: Record<StepStatus, { text: string; variant: "success" | "warning" | "danger" }> = {
-  done: { text: "Feito", variant: "success" },
-  attention: { text: "Atenção", variant: "warning" },
-  missing: { text: "Falta", variant: "danger" },
+const STATES: Record<StepStatus, { text: string; icon: "check" | "warning" | "x-mark"; tone: string }> = {
+  done: { text: "Feito", icon: "check", tone: "bg-conf-100 text-conf-800" },
+  attention: { text: "Atenção", icon: "warning", tone: "bg-pend-100 text-pend-800" },
+  missing: { text: "Falta", icon: "x-mark", tone: "bg-can-100 text-can-800" },
 };
 const MAX_ITEMS = 4;
+const percent = Math.round((done / status.steps.length) * 100);
 ---
 
 {
-  compact ? (
-    pending.length > 0 && (
-      <p class="mt-4 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
-        A configuração tem {pendingCount} pendência{pendingCount === 1 ? "" : "s"}.{" "}
-        <a href="/admin/configuracoes#guia" class="font-medium underline">
-          Ver o guia
-        </a>
-      </p>
-    )
-  ) : status.complete ? (
-    <p id="guia" class="mt-4 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
+  status.complete ? (
+    <p id="guia" class="flex items-center gap-2.5 rounded-[10px] border border-conf-200 bg-conf-50 px-3.5 py-3 text-[15px] text-conf-800">
+      <Icon name="check-circle" class="h-[18px] w-[18px] shrink-0" strokeWidth={2.2} />
       Configuração completa: os serviços aparecem no bot e no link de agendar.
     </p>
   ) : (
-    <section id="guia" class="mt-4 max-w-3xl rounded-lg border border-amber-200 bg-white p-4 shadow-sm">
-      <h2 class="font-semibold text-slate-900">Guia de configuração</h2>
-      <p class="mt-1 text-sm text-slate-600">Siga os passos em ordem. Cada pendência leva direto para onde corrigir.</p>
-      <ol class="mt-3 divide-y divide-slate-100">
+    <section id="guia" aria-labelledby="guia-titulo" class="flex flex-col gap-3 rounded-xl border border-pend-200 bg-white p-4 sm:px-5">
+      <div class="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+        <h2 id="guia-titulo" class="font-display text-[17px] leading-tight font-bold text-ink sm:text-lg">
+          Guia de configuração
+        </h2>
+        <span class="text-[14.5px] font-bold text-pend-800">
+          {done} de {status.steps.length} passos prontos · {pendingCount} {pendingCount === 1 ? "pendência" : "pendências"}
+        </span>
+      </div>
+      <div
+        role="progressbar"
+        aria-label="Passos prontos"
+        aria-valuemin="0"
+        aria-valuemax={status.steps.length}
+        aria-valuenow={done}
+        class="h-2 overflow-hidden rounded-full bg-canvas-deep"
+      >
+        <div class="h-full rounded-full bg-brand" style={`width: ${percent}%`} />
+      </div>
+      <p class="text-sm text-ink-soft">Siga os passos em ordem. Cada pendência leva direto para onde corrigir.</p>
+      <ol class="divide-y divide-[#e6ecea] border-t border-[#e6ecea]">
         {status.steps.map((step, index) => (
-          <li class="py-2">
-            <div class="flex flex-wrap items-center gap-2 text-sm">
-              <span class="font-medium text-slate-900">
-                {index + 1}.{" "}
-                <a href={step.href} class="hover:underline">
-                  {step.title}
+          <li class="flex gap-3 py-2.5">
+            <span class={`mt-px flex h-6 w-6 shrink-0 items-center justify-center rounded-full ${STATES[step.status].tone}`}>
+              <Icon name={STATES[step.status].icon} class="h-3.5 w-3.5" strokeWidth={2.6} />
+              <span class="sr-only">{STATES[step.status].text}</span>
+            </span>
+            <div class="min-w-0 flex-1">
+              <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-[15px]">
+                <a href={step.href} class="font-semibold text-ink no-underline hover:underline">
+                  {index + 1}. {step.title}
                 </a>
-              </span>
-              <Badge variant={LABELS[step.status].variant}>{LABELS[step.status].text}</Badge>
-              {step.status === "missing" && (
-                <a href={step.href} class="text-sky-700 hover:underline">
-                  Cadastrar
-                </a>
+                {step.status === "missing" && (
+                  <a href={step.href} class="text-[14.5px] font-bold text-brand no-underline hover:underline">
+                    Cadastrar ›
+                  </a>
+                )}
+              </div>
+              {step.items.length > 0 && (
+                <ul class="mt-1 flex flex-col gap-0.5 text-sm text-ink-mid">
+                  {step.items.slice(0, MAX_ITEMS).map((item) => (
+                    <li>
+                      <a href={item.href} class="text-ink-mid underline-offset-2 hover:underline">
+                        {item.text}
+                      </a>
+                    </li>
+                  ))}
+                  {step.items.length > MAX_ITEMS && (
+                    <li class="text-ink-soft">
+                      e mais {step.items.length - MAX_ITEMS}.{" "}
+                      <a href={step.href} class="font-semibold text-brand no-underline hover:underline">
+                        Ver todos
+                      </a>
+                    </li>
+                  )}
+                </ul>
               )}
             </div>
-            {step.items.length > 0 && (
-              <ul class="mt-1 space-y-0.5 pl-4 text-sm text-slate-700">
-                {step.items.slice(0, MAX_ITEMS).map((item) => (
-                  <li>
-                    <a href={item.href} class="hover:underline">
-                      {item.text}
-                    </a>
-                  </li>
-                ))}
-                {step.items.length > MAX_ITEMS && (
-                  <li class="text-slate-500">
-                    e mais {step.items.length - MAX_ITEMS}.{" "}
-                    <a href={step.href} class="text-sky-700 hover:underline">
-                      Ver todos
-                    </a>
-                  </li>
-                )}
-              </ul>
-            )}
           </li>
         ))}
       </ol>

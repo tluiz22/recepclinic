@@ -1,0 +1,17 @@
+---
+// Cartão das seções de Configurações no padrão do redesign (R9). Mesmas
+// propriedades do Card antigo, que segue nas telas ainda não redesenhadas.
+interface Props {
+  class?: string;
+  muted?: boolean;
+  id?: string;
+}
+
+const { class: className = "", muted = false, id } = Astro.props;
+// Fundo próprio no lugar do branco; `hover:bg-` não conta.
+const ownBackground = /(^|\s)bg-/.test(className);
+---
+
+<div id={id} class={`rounded-xl border border-line ${ownBackground ? "" : "bg-white"} p-4 sm:px-5 sm:py-[18px] ${muted ? "opacity-60" : ""} ${className}`}>
+  <slot />
+</div>

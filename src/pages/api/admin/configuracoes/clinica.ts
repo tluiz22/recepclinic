@@ -9,48 +9,75 @@ import { DESIGNATION_PRESETS, type NounArticle } from "../../../../lib/designati
 // Perfil e identidade da clínica (F4.3). As informações e os limites do bot
 // (F9.6a) só vêm no formulário com o bot liberado. Marca das páginas públicas
 // (F5.1): site, logo novo (arquivo) ou "remover o logo".
+//
+// Redesign R9 (cliente, 17/out/2026): a tela tem um formulário por bloco, e
+// cada um grava só os próprios campos (`bloco`); um erro num bloco não mexe nos
+// outros. Sem `bloco`, grava todos, como antes.
+const BLOCKS = ["identificacao", "atendimento", "paginas", "bot_info", "bot_limites"] as const;
+type Block = (typeof BLOCKS)[number];
+
+const SAVED: Record<Block | "tudo", string> = {
+  identificacao: "Identificação salva.",
+  atendimento: "Atendimento salvo.",
+  paginas: "Páginas públicas salvas.",
+  bot_info: "Informações do bot salvas.",
+  bot_limites: "Limites do bot salvos.",
+  tudo: "Dados da clínica salvos.",
+};
+
 export const POST: APIRoute = async (context) => {
   const { request, cookies, locals } = context;
   const form = await request.formData().catch(() => null);
   const clinic = locals.clinic!;
+  const hasBot = clinic.features.includes("whatsapp_bot");
+  const chosen = formOptionalText(form, "bloco");
+  const block = BLOCKS.find((b) => b === chosen) ?? null;
+  const has = (b: Block) => block === null || block === b;
   return runFormAction(
     context,
     async () => {
-      const patch: ClinicSettingsPatch = {
-        name: formText(form, "name"),
-        messageArticle: (formOptionalText(form, "message_article") ?? "da") as ClinicSettingsPatch["messageArticle"],
-        profile: formText(form, "profile") as ClinicProfile,
-        timezone: formText(form, "timezone"),
-        consultationAgeLimitYears: formChecked(form, "age_limit_on") ? formOptionalInt(form, "age_limit") : null,
-        brandColor: formOptionalText(form, "brand_color"),
-        websiteUrl: formOptionalText(form, "website_url"),
+      const patch: ClinicSettingsPatch = {};
+      if (has("identificacao")) {
+        patch.name = formText(form, "name");
+        patch.messageArticle = (formOptionalText(form, "message_article") ?? "da") as ClinicSettingsPatch["messageArticle"];
+        // Como a clínica é chamada: uma das opções prontas ou "Outro" (nome e artigo).
+        const choice = formText(form, "designation");
+        const preset = DESIGNATION_PRESETS.find((d) => d.noun === choice);
+        patch.messageNoun = preset ? preset.noun : formText(form, "designation_noun");
+        patch.messageNounArticle = preset ? preset.article : (formText(form, "designation_article") as NounArticle);
+      }
+      if (has("atendimento")) {
+        patch.profile = formText(form, "profile") as ClinicProfile;
+        patch.timezone = formText(form, "timezone");
+        patch.consultationAgeLimitYears = formChecked(form, "age_limit_on") ? formOptionalInt(form, "age_limit") : null;
+        if (patch.consultationAgeLimitYears === null && formChecked(form, "age_limit_on")) patch.consultationAgeLimitYears = Number.NaN;
         // Campo vazio vira NaN e cai na validação.
-        bookingHorizonDays: formOptionalInt(form, "booking_horizon_days") ?? Number.NaN,
-      };
-      // Como a clínica é chamada: uma das opções prontas ou "Outro" (nome e artigo).
-      const choice = formText(form, "designation");
-      const preset = DESIGNATION_PRESETS.find((d) => d.noun === choice);
-      patch.messageNoun = preset ? preset.noun : formText(form, "designation_noun");
-      patch.messageNounArticle = preset ? preset.article : (formText(form, "designation_article") as NounArticle);
-      if (clinic.features.includes("whatsapp_bot")) {
+        patch.bookingHorizonDays = formOptionalInt(form, "booking_horizon_days") ?? Number.NaN;
+      }
+      if (has("paginas")) {
+        patch.brandColor = formOptionalText(form, "brand_color");
+        patch.websiteUrl = formOptionalText(form, "website_url");
+      }
+      if (hasBot && has("bot_info")) {
         patch.botPaymentInfo = formOptionalText(form, "bot_payment_info");
         patch.botInsuranceInfo = formOptionalText(form, "bot_insurance_info");
         patch.botNotes = formOptionalText(form, "bot_notes");
+      }
+      if (hasBot && has("bot_limites")) {
         // Campo vazio vira NaN e cai na validação.
         patch.botMaxFutureAppointments = formOptionalInt(form, "bot_max_future_appointments") ?? Number.NaN;
         patch.botMaxNewPatients = formOptionalInt(form, "bot_max_new_patients") ?? Number.NaN;
         patch.botMaxNoShows = formOptionalInt(form, "bot_max_no_shows") ?? Number.NaN;
       }
-      if (patch.consultationAgeLimitYears === null && formChecked(form, "age_limit_on")) patch.consultationAgeLimitYears = Number.NaN;
       const db = createUserClient(request, cookies);
       // Logo recusado (formato, tamanho) não salva nada, para não perder metade do formulário.
-      const file = form?.get("logo");
+      const file = has("paginas") ? form?.get("logo") : null;
       const logo = file instanceof File && file.size > 0 ? file : null;
       if (logo) validateLogoFile(logo);
-      await updateClinicSettings(db, clinic.clinicId, patch);
+      if (Object.keys(patch).length > 0) await updateClinicSettings(db, clinic.clinicId, patch);
       if (logo) await uploadClinicLogo(db, clinic.clinicId, logo);
-      else if (formChecked(form, "remove_logo")) await removeClinicLogo(db, clinic.clinicId);
-      return { redirectTo: "/admin/configuracoes", message: "Dados da clínica salvos." };
+      else if (has("paginas") && formChecked(form, "remove_logo")) await removeClinicLogo(db, clinic.clinicId);
+      return { redirectTo: "/admin/configuracoes", message: SAVED[block ?? "tudo"] };
     },
     "/admin/configuracoes",
   );

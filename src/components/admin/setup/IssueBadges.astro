@@ -1,6 +1,7 @@
 ---
-// Selos das pendências de um cadastro nas listas de Configurações (F6.3b).
-import Badge from "../Badge.astro";
+// Selos das pendências de um cadastro nas listas de Configurações (F6.3b);
+// no padrão do redesign (R9): âmbar, com ícone e a explicação ao passar o mouse.
+import Pill from "../ui/Pill.astro";
 import { ISSUE_HINTS, ISSUE_LABELS, type Issue } from "../../../lib/data/config/setup";
 
 interface Props {
@@ -15,7 +16,9 @@ const { issues = [], hints = {} } = Astro.props;
 {
   issues.map((issue) => (
     <span title={hints[issue] ?? ISSUE_HINTS[issue]}>
-      <Badge variant="warning">{ISSUE_LABELS[issue]}</Badge>
+      <Pill tone="warning" icon="warning">
+        {ISSUE_LABELS[issue]}
+      </Pill>
     </span>
   ))
 }

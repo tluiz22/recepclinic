@@ -12,6 +12,7 @@ import {
 } from "../../../../../lib/data/config/services";
 import { listLocations } from "../../../../../lib/data/config/locations";
 import { runFormAction } from "../../../../../lib/data/formAction";
+import { allFilterOn, withAllFilter } from "../../../../../lib/returnPath";
 import { formAll, formChecked, formInt, formMoneyCents, formOptionalInt, formOptionalMoneyCents, formText } from "../../../../../lib/forms";
 
 // Serviço (F4.3, D4c): criar (`novo`), salvar (dados, agendas e locais com
@@ -23,7 +24,9 @@ export const POST: APIRoute = async (context) => {
   const form = await request.formData().catch(() => null);
   const clinicId = locals.clinic!.clinicId;
   const db = createUserClient(request, cookies);
-  const page = () => `/admin/configuracoes/servicos/${id}`;
+  // Cadastro aberto da lista em "Todos": volta com o filtro (teste da R9, NAV-06).
+  const all = allFilterOn(new URL(request.url));
+  const page = () => withAllFilter(`/admin/configuracoes/servicos/${id}`, all);
   const acao = formText(form, "acao");
 
   return runFormAction(

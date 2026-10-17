@@ -3,12 +3,9 @@
 // de profissional ligado ao login (obrigatório para o papel Profissional,
 // cliente, 05/out/2026) e acesso às agendas. O convite usa o mesmo envio da
 // F4.4a; quem já tem login entra direto e recebe um aviso.
-import AdminLayout from "../../../../layouts/AdminLayout.astro";
-import Card from "../../../../components/admin/Card.astro";
+import ConfigShell from "../../../../components/admin/config/ConfigShell.astro";
 import ConfirmDeleteDialog from "../../../../components/admin/ConfirmDeleteDialog.astro";
-import FlashMessage from "../../../../components/admin/FlashMessage.astro";
-import Icon from "../../../../components/admin/Icon.astro";
-import { HINT, INPUT, LABEL, PRIMARY_BUTTON, SECONDARY_BUTTON } from "../../../../components/admin/fieldStyles";
+import { CARD, CHECK, DANGER_BUTTON, SECTION_TITLE, CHOICE, HINT, INPUT, LABEL, PRIMARY_BUTTON, SECONDARY_BUTTON } from "../../../../components/admin/config/formStyles";
 import { formatInstant } from "../../../../lib/clinicTime";
 import { createUserClient } from "../../../../lib/data/clients";
 import { listAgendas } from "../../../../lib/data/config/agendas";
@@ -41,33 +38,28 @@ const roleHints: Record<string, string> = {
 };
 ---
 
-<AdminLayout title={isNew ? "Convidar pessoa" : (member!.displayName ?? member!.email ?? "Equipe")}>
-  <a href="/admin/configuracoes/equipe" class="inline-flex items-center gap-1 text-sm text-sky-700 hover:underline">
-    <Icon name="chevron-left" class="h-4 w-4" /> Equipe
-  </a>
-  <h1 class="mt-2 break-all text-2xl font-bold text-slate-900">{isNew ? "Convidar pessoa" : (member!.displayName ?? member!.email)}</h1>
-  {!isNew && member!.displayName && <p class="text-sm text-slate-500">{member!.email}</p>}
-  <FlashMessage />
+<ConfigShell current="equipe" title={isNew ? "Convidar pessoa" : (member!.displayName ?? member!.email ?? "Equipe")} back={{ href: "/admin/configuracoes/equipe", label: "Equipe" }} subtitle={!isNew && member!.displayName ? (member!.email ?? undefined) : undefined}>
 
   {
     pending && (
-      <Card class="mt-4 max-w-2xl border-amber-200 bg-amber-50">
-        <p class="text-sm text-amber-800">
-          Convite pendente: a pessoa ainda não criou a senha.
+      <div class="flex max-w-3xl flex-wrap items-center justify-between gap-3 rounded-xl border border-pend-200 bg-pend-50 px-4 py-3 text-pend-800">
+        <p class="min-w-0 flex-1 text-[15px] leading-snug">
+          <strong>Convite pendente:</strong> a pessoa ainda não criou a senha.
           {member!.invitation!.lastSentAt && ` Último envio em ${formatInstant(member!.invitation!.lastSentAt, clinic.timezone, "dd/MM/yyyy 'às' HH:mm")}.`} O
           link vale 24 horas.
         </p>
-        <form method="POST" action={action} class="mt-2">
+        <form method="POST" action={action}>
           <input type="hidden" name="acao" value="reenviar" />
-          <button type="submit" class={SECONDARY_BUTTON}>Reenviar convite</button>
+          <button type="submit" class={SECONDARY_BUTTON} data-sending-label="Reenviando…">Reenviar convite</button>
         </form>
-      </Card>
+      </div>
     )
   }
 
-  <Card class="mt-4 max-w-2xl">
-    <form method="POST" action={action} class="flex flex-col gap-5">
+  <div class="flex max-w-3xl flex-col gap-4">
+    <form method="POST" action={action} class={`${CARD} flex flex-col gap-5 p-4 sm:p-5`}>
       <input type="hidden" name="acao" value={isNew ? "convidar" : "salvar"} />
+      <h2 class={SECTION_TITLE}>Quem é</h2>
       {
         isNew && (
           <div>
@@ -86,13 +78,14 @@ const roleHints: Record<string, string> = {
         <p class={HINT}>Como a pessoa aparece na trilha dos atendimentos ("Marcado por Maria"). Sem nome, aparece o e-mail.</p>
       </div>
 
+      <h2 class={`${SECTION_TITLE} border-t border-[#e6ecea] pt-5`}>O que faz no painel</h2>
       <fieldset>
         <legend class={LABEL}>Papéis</legend>
         <div class="mt-1 flex flex-col gap-2">
           {
             ROLES.map((role) => (
-              <label class="flex items-start gap-2 text-sm text-slate-700">
-                <input type="checkbox" name="role" value={role} checked={roles.includes(role)} class="mt-0.5 h-4 w-4 rounded border-slate-300" />
+              <label class={`${CHOICE} items-start`}>
+                <input type="checkbox" name="role" value={role} checked={roles.includes(role)} class={`${CHECK} mt-0.5`} />
                 <span>
                   <span class="font-medium">{ROLE_LABELS[role]}</span>: {roleHints[role]}
                 </span>
@@ -117,27 +110,28 @@ const roleHints: Record<string, string> = {
         </select>
         <p class={HINT}>
           Obrigatório para o papel Profissional: é o que mostra a ele a própria agenda. Não está na lista? Cadastre em{" "}
-          <a href="/admin/configuracoes/profissionais" class="text-sky-700 hover:underline">Profissionais</a>.
+          <a href="/admin/configuracoes/profissionais" class="text-brand hover:underline">Profissionais</a>.
         </p>
       </div>
 
+      <h2 class={`${SECTION_TITLE} border-t border-[#e6ecea] pt-5`}>Agendas que vê</h2>
       <fieldset>
         <legend class={LABEL}>Acesso às agendas</legend>
         <div class="mt-1 flex flex-col gap-2">
-          <label class="flex items-center gap-2 text-sm text-slate-700">
-            <input type="radio" name="agenda_scope" value="all" checked={scope === "all"} class="h-4 w-4 border-slate-300" />
+          <label class={CHOICE}>
+            <input type="radio" name="agenda_scope" value="all" checked={scope === "all"} class={CHECK} />
             Todas as agendas
           </label>
-          <label class="flex items-center gap-2 text-sm text-slate-700">
-            <input type="radio" name="agenda_scope" value="restricted" checked={scope === "restricted"} class="h-4 w-4 border-slate-300" />
+          <label class={CHOICE}>
+            <input type="radio" name="agenda_scope" value="restricted" checked={scope === "restricted"} class={CHECK} />
             Só a do profissional ligado e as marcadas abaixo
           </label>
         </div>
-        <div data-agendas class="mt-2 flex flex-col gap-2 border-l-2 border-slate-200 pl-4">
+        <div data-agendas class="mt-2 flex flex-col gap-2 border-l-2 border-line pl-4">
           {
             agendas.map((agenda) => (
-              <label class="flex items-center gap-2 text-sm text-slate-700">
-                <input type="checkbox" name="agenda_id" value={agenda.id} checked={member?.grantedAgendaIds.includes(agenda.id)} class="h-4 w-4 rounded border-slate-300" />
+              <label class={CHOICE}>
+                <input type="checkbox" name="agenda_id" value={agenda.id} checked={member?.grantedAgendaIds.includes(agenda.id)} class={CHECK} />
                 {agenda.name}
               </label>
             ))
@@ -148,26 +142,35 @@ const roleHints: Record<string, string> = {
         </p>
       </fieldset>
 
-      <button type="submit" class={`${PRIMARY_BUTTON} self-start`}>{isNew ? "Convidar" : "Salvar"}</button>
+      <div class="flex flex-wrap gap-2 border-t border-[#e6ecea] pt-4">
+        <button type="submit" class={PRIMARY_BUTTON} data-sending-label="Salvando…">{isNew ? "Convidar" : "Salvar"}</button>
+        <a href={"/admin/configuracoes/equipe"} class={SECONDARY_BUTTON}>Cancelar</a>
+      </div>
     </form>
 
     {
       !isNew && !isSelf && (
-        <form method="POST" action={action} class="mt-6 border-t border-slate-200 pt-4">
-          <input type="hidden" name="acao" value="remover" />
-          <button
-            type="submit"
-            class={`${SECONDARY_BUTTON} js-confirm-delete text-red-700`}
-            data-confirm-title="Remover da equipe?"
-            data-confirm-message="A pessoa perde o acesso a esta clínica. O histórico fica, e dá para convidar de novo depois."
-            data-confirm-label="Remover"
-          >
-            Remover da equipe
-          </button>
-        </form>
+        <section class="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-line bg-white p-4 sm:px-5" aria-labelledby="remover-titulo">
+          <div class="min-w-0">
+            <h2 id="remover-titulo" class="font-display text-base leading-tight font-bold text-ink">Remover da equipe</h2>
+            <p class="mt-1 text-sm text-ink-soft">A pessoa perde o acesso a esta clínica. O histórico fica, e dá para convidar de novo depois.</p>
+          </div>
+          <form method="POST" action={action}>
+            <input type="hidden" name="acao" value="remover" />
+            <button
+              type="submit"
+              class={`${DANGER_BUTTON} js-confirm-delete`}
+              data-confirm-title="Remover da equipe?"
+              data-confirm-message="A pessoa perde o acesso a esta clínica. O histórico fica, e dá para convidar de novo depois."
+              data-confirm-label="Remover"
+            >
+              Remover
+            </button>
+          </form>
+        </section>
       )
     }
-  </Card>
+  </div>
   <ConfirmDeleteDialog />
 
   <script>
@@ -194,4 +197,4 @@ const roleHints: Record<string, string> = {
     });
     sync();
   </script>
-</AdminLayout>
+</ConfigShell>

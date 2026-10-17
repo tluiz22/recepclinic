@@ -2,12 +2,10 @@
 // Configurações › Convênios › novo ou editar (F4.4b, D10): nome, outros nomes
 // (para a busca do bot), código ANS e quais profissionais atendem o plano
 // (por padrão, todos; desmarcar vira exceção).
-import AdminLayout from "../../../../layouts/AdminLayout.astro";
+import ConfigShell from "../../../../components/admin/config/ConfigShell.astro";
+import { allFilterOn, withAllFilter } from "../../../../lib/returnPath";
 import ActiveToggle from "../../../../components/admin/ActiveToggle.astro";
-import Card from "../../../../components/admin/Card.astro";
-import FlashMessage from "../../../../components/admin/FlashMessage.astro";
-import Icon from "../../../../components/admin/Icon.astro";
-import { HINT, INPUT, LABEL, PRIMARY_BUTTON } from "../../../../components/admin/fieldStyles";
+import { CARD, CHECK, CHOICE, HINT, INPUT, INPUT_INLINE, LABEL, PRIMARY_BUTTON, SECONDARY_BUTTON } from "../../../../components/admin/config/formStyles";
 import { createUserClient } from "../../../../lib/data/clients";
 import { listInsurancePlans, listPlanExclusions } from "../../../../lib/data/config/insurance";
 import { listProfessionals } from "../../../../lib/data/config/professionals";
@@ -23,18 +21,16 @@ const [plans, professionals, exclusions] = await Promise.all([
 ]);
 const plan = isNew ? null : (plans.find((p) => p.id === id) ?? null);
 if (!isNew && !plan) return Astro.redirect("/admin/configuracoes/convenios");
-const action = `/api/admin/configuracoes/convenios/${id}`;
+// Aberto da lista em "Todos": o filtro vai e volta (teste da R9, NAV-06).
+const all = allFilterOn(Astro.url);
+const list = withAllFilter("/admin/configuracoes/convenios", all);
+const action = withAllFilter(`/api/admin/configuracoes/convenios/${id}`, all);
 ---
 
-<AdminLayout title={isNew ? "Novo plano" : plan!.name}>
-  <a href="/admin/configuracoes/convenios" class="inline-flex items-center gap-1 text-sm text-sky-700 hover:underline">
-    <Icon name="chevron-left" class="h-4 w-4" /> Convênios
-  </a>
-  <h1 class="mt-2 text-2xl font-bold text-slate-900">{isNew ? "Novo plano" : "Editar plano"}</h1>
-  <FlashMessage />
+<ConfigShell current="convenios" title={isNew ? "Novo plano" : plan!.name} back={{ href: list, label: "Convênios" }}>
 
-  <Card class="mt-4 max-w-2xl">
-    <form method="POST" action={action} class="flex flex-col gap-4">
+  <div class="flex max-w-3xl flex-col gap-4">
+    <form method="POST" action={action} class={`${CARD} flex flex-col gap-5 p-4 sm:p-5`}>
       <input type="hidden" name="acao" value="salvar" />
       <div>
         <label for="name" class={LABEL}>Nome</label>
@@ -47,7 +43,7 @@ const action = `/api/admin/configuracoes/convenios/${id}`;
       </div>
       <div>
         <label for="ans_code" class={LABEL}>Código ANS (opcional)</label>
-        <input id="ans_code" name="ans_code" value={plan?.ansCode ?? ""} class={`${INPUT} w-40`} />
+        <input id="ans_code" name="ans_code" value={plan?.ansCode ?? ""} class={`${INPUT_INLINE} mt-1.5 w-40`} />
       </div>
       <fieldset>
         <legend class={LABEL}>Profissionais que atendem este plano</legend>
@@ -57,8 +53,8 @@ const action = `/api/admin/configuracoes/convenios/${id}`;
           ) : (
             <div class="mt-1 flex flex-col gap-2">
               {professionals.map((p) => (
-                <label class="flex items-center gap-2 text-sm text-slate-700">
-                  <input type="checkbox" name="accepts" value={p.id} checked={!exclusions.includes(p.id)} class="h-4 w-4 rounded border-slate-300" />
+                <label class={CHOICE}>
+                  <input type="checkbox" name="accepts" value={p.id} checked={!exclusions.includes(p.id)} class={CHECK} />
                   {p.displayName}
                 </label>
               ))}
@@ -67,8 +63,11 @@ const action = `/api/admin/configuracoes/convenios/${id}`;
         }
         <p class={HINT}>Desmarque quem não atende este plano.</p>
       </fieldset>
-      <button type="submit" class={`${PRIMARY_BUTTON} self-start`}>{isNew ? "Cadastrar" : "Salvar"}</button>
+      <div class="flex flex-wrap gap-2 border-t border-[#e6ecea] pt-4">
+        <button type="submit" class={PRIMARY_BUTTON} data-sending-label="Salvando…">{isNew ? "Cadastrar" : "Salvar"}</button>
+        <a href={list} class={SECONDARY_BUTTON}>Cancelar</a>
+      </div>
     </form>
     {!isNew && <ActiveToggle action={action} isActive={plan!.isActive} what="o plano" />}
-  </Card>
-</AdminLayout>
+  </div>
+</ConfigShell>

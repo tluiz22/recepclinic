@@ -59,11 +59,12 @@ const totalShort = formatCentsBRL(Math.round(data.totalCents / 100) * 100).repla
 const phoneText = (ddd: string, phone: string, extension: string | null) =>
   `(${ddd}) ${phone.length > 4 ? `${phone.slice(0, -4)}-${phone.slice(-4)}` : phone}${extension ? ` r. ${extension}` : ""}`;
 
+// Nota fiscal volta para a DMED no mesmo ano (R9, S-01 do relatório da R8).
 type Check = { state: "ok" | "warn" | "bad"; title: string; text?: string; href?: string; linkLabel?: string };
 const checks: Check[] = [
   fiscal
     ? { state: "ok", title: "Dados fiscais da clínica", text: `${fiscal.legalName} · CNPJ ${formatCnpj(fiscal.cnpj)}` }
-    : { state: "bad", title: "Faltam os dados fiscais da clínica", href: "/admin/configuracoes/nota-fiscal", linkLabel: "Configurações › Nota fiscal" },
+    : { state: "bad", title: "Faltam os dados fiscais da clínica", href: withReturn("/admin/configuracoes/nota-fiscal", `/admin/financeiro/dmed?ano=${year}`), linkLabel: "Configurações › Nota fiscal" },
   settings
     ? { state: "ok", title: "Responsáveis da declaração", text: "Salvos." }
     : { state: "bad", title: "Faltam os responsáveis da declaração", text: "Preencha e salve no cartão \"Responsáveis da declaração\"." },

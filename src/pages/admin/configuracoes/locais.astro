@@ -1,53 +1,99 @@
 ---
 // Configurações › Locais (F4.3): consultório (com endereço) ou domiciliar.
-import AdminLayout from "../../../layouts/AdminLayout.astro";
-import Badge from "../../../components/admin/Badge.astro";
+// Redesign R9 (cliente, 17/out/2026): uma linha por local, "Ativos | Todos".
+import ConfigShell from "../../../components/admin/config/ConfigShell.astro";
+import { withAllFilter } from "../../../lib/returnPath";
+import ActiveFilter from "../../../components/admin/config/ActiveFilter.astro";
+import ConfigEmpty from "../../../components/admin/config/ConfigEmpty.astro";
+import { HEAD_ROW, LIST, ROW, ROW_CELL, ROW_GO, ROW_NAME, SOFT } from "../../../components/admin/config/formStyles";
+import Icon from "../../../components/admin/Icon.astro";
 import IssueBadges from "../../../components/admin/setup/IssueBadges.astro";
-import { loadSetupStatus } from "../../../lib/data/config/setup";
-import Card from "../../../components/admin/Card.astro";
-import ConfiguracoesTabs from "../../../components/admin/ConfiguracoesTabs.astro";
-import FlashMessage from "../../../components/admin/FlashMessage.astro";
-import { PRIMARY_BUTTON } from "../../../components/admin/fieldStyles";
+import Button from "../../../components/admin/ui/Button.astro";
+import Pill from "../../../components/admin/ui/Pill.astro";
+import Tag from "../../../components/admin/ui/Tag.astro";
 import { createUserClient } from "../../../lib/data/clients";
 import { listLocations } from "../../../lib/data/config/locations";
+import { loadSetupStatus } from "../../../lib/data/config/setup";
 
 const clinic = Astro.locals.clinic!;
 const showInactive = Astro.url.searchParams.get("todos") === "1";
 const homeVisitOn = clinic.features.includes("home_visit");
-const locations = await listLocations(createUserClient(Astro.request, Astro.cookies), clinic.clinicId, { includeInactive: showInactive });
-// Pendências da jornada de configuração (F6.3b), nos selos.
-const setup = await loadSetupStatus(createUserClient(Astro.request, Astro.cookies), clinic.clinicId, clinic.features);
+const db = createUserClient(Astro.request, Astro.cookies);
+const [all, setup] = await Promise.all([
+  listLocations(db, clinic.clinicId, { includeInactive: true }),
+  // Pendências da jornada de configuração (F6.3b), nos selos.
+  loadSetupStatus(db, clinic.clinicId, clinic.features),
+]);
+const active = all.filter((l) => l.isActive);
+// Desativados no fim, em "Todos".
+const locations = showInactive ? [...active, ...all.filter((l) => !l.isActive)] : active;
+const cols = "lg:grid-cols-[minmax(0,1.6fr)_minmax(0,2.4fr)_36px]";
 ---
 
-<AdminLayout title="Locais">
-  <h1 class="text-2xl font-bold text-slate-900">Configurações</h1>
-  <ConfiguracoesTabs current="locais" />
-  <FlashMessage />
+<ConfigShell current="locais" title="Locais" subtitle="Onde a clínica atende: consultórios, com o endereço, e o atendimento domiciliar." setup={setup}>
+  <Button slot="actions" href="/admin/configuracoes/locais/novo" variant="primary">
+    <Icon name="plus" class="h-[18px] w-[18px]" strokeWidth={2.2} /> Novo local
+  </Button>
 
-  <div class="mt-4 flex flex-wrap items-center justify-between gap-3">
-    <a href="/admin/configuracoes/locais/novo" class={PRIMARY_BUTTON}>Novo local</a>
-    <a href={showInactive ? "?" : "?todos=1"} class="text-sm text-sky-700 hover:underline">
-      {showInactive ? "Esconder desativados" : "Mostrar desativados"}
-    </a>
+  <div class="flex flex-wrap items-center justify-between gap-3">
+    <p class="text-sm text-ink-soft" role="status">
+      {locations.length} {locations.length === 1 ? "local" : "locais"}{showInactive ? "" : locations.length === 1 ? " ativo" : " ativos"}
+    </p>
+    <ActiveFilter showInactive={showInactive} active={active.length} total={all.length} />
   </div>
 
-  <ul class="mt-4 grid gap-3 sm:grid-cols-2">
-    {
-      locations.map((location) => (
-        <li>
-          <a href={`/admin/configuracoes/locais/${location.id}`}>
-            <Card class="h-full hover:border-sky-300 hover:bg-sky-50" muted={!location.isActive}>
-              <p class="font-medium text-slate-900">
-                {location.name} <Badge variant={location.type === "home_visit" ? "accent" : "info"}>{location.type === "home_visit" ? "Domiciliar" : "Consultório"}</Badge>{" "}
-                {!location.isActive && <Badge>desativado</Badge>} <IssueBadges issues={setup.issues.locations.get(location.id)} />{" "}
-                {location.isActive && location.type === "home_visit" && !homeVisitOn && <Badge variant="warning">não liberado</Badge>}
-              </p>
-              <p class="mt-1 text-sm text-slate-600">{location.type === "home_visit" ? "Endereço de cada paciente" : (location.address ?? "Sem endereço")}</p>
-            </Card>
-          </a>
-        </li>
-      ))
-    }
-  </ul>
-  {locations.length === 0 && <p class="mt-4 text-sm text-slate-600">Nenhum local cadastrado.</p>}
-</AdminLayout>
+  {
+    locations.length > 0 ? (
+      <section aria-label="Locais" class={LIST}>
+        <div aria-hidden="true" class={`${HEAD_ROW} ${cols}`}>
+          <span>Local</span>
+          <span>Endereço</span>
+          <span />
+        </div>
+        <ul>
+          {locations.map((location) => {
+            const href = withAllFilter(`/admin/configuracoes/locais/${location.id}`, showInactive);
+            const home = location.type === "home_visit";
+            return (
+              <li class={`${ROW} ${cols} ${location.isActive ? "" : "opacity-60"}`}>
+                <div class="flex min-w-0 flex-col gap-1.5">
+                  <span class="flex flex-wrap items-center gap-x-2 gap-y-1">
+                    <a href={href} class={ROW_NAME}>
+                      {location.name}
+                    </a>
+                    <Tag>{home ? "Domiciliar" : "Consultório"}</Tag>
+                    {!location.isActive && <Pill>Desativado</Pill>}
+                  </span>
+                  {location.isActive && (
+                    <span class="flex flex-wrap gap-1.5 empty:hidden">
+                      <IssueBadges issues={setup.issues.locations.get(location.id)} />
+                      {home && !homeVisitOn && (
+                        <Pill tone="warning" icon="warning">
+                          não liberado
+                        </Pill>
+                      )}
+                    </span>
+                  )}
+                </div>
+                <a href={href} aria-label={`Abrir ${location.name}`} class={ROW_GO}>
+                  <Icon name="chevron-right" class="h-5 w-5" strokeWidth={2.2} />
+                </a>
+                <span class={ROW_CELL}>
+                  {home ? <span class={SOFT}>Endereço de cada paciente</span> : (location.address ?? <span class={SOFT}>Sem endereço</span>)}
+                </span>
+              </li>
+            );
+          })}
+        </ul>
+      </section>
+    ) : (
+      <ConfigEmpty
+        onlyInactive={all.length > 0}
+        none="Nenhum local"
+        text="Sem local, os serviços não aparecem para marcar."
+        href="/admin/configuracoes/locais/novo"
+        label="Cadastrar o primeiro local"
+      />
+    )
+  }
+</ConfigShell>

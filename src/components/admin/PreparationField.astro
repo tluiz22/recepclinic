@@ -17,15 +17,15 @@ const { value } = Astro.props;
 const initial = value ?? "";
 
 const tabClass =
-  "js-preparation-tab flex-1 rounded-md px-3 py-2 text-sm font-medium aria-selected:bg-white aria-selected:text-slate-900 aria-selected:shadow-sm text-slate-600";
+  "js-preparation-tab flex-1 rounded-md px-3 py-2 text-sm font-medium aria-selected:bg-white aria-selected:text-ink aria-selected:shadow-sm text-ink-soft";
 ---
 
 <div class="js-preparation-field">
-  <label for="preparation_instructions" class="block text-sm font-medium text-slate-700">
+  <label for="preparation_instructions" class="block text-sm font-medium text-ink-mid">
     Instruções de preparo
   </label>
 
-  <div class="mt-1 flex gap-1 rounded-lg bg-slate-100 p-1 lg:hidden" role="tablist">
+  <div class="mt-1 flex gap-1 rounded-lg bg-canvas-deep p-1 lg:hidden" role="tablist">
     <button type="button" role="tab" aria-selected="true" data-panel="edit" class={tabClass}>Editar</button>
     <button type="button" role="tab" aria-selected="false" data-panel="preview" class={tabClass}>Prévia</button>
   </div>
@@ -38,23 +38,23 @@ const tabClass =
         rows={14}
         maxlength={MAX_PREPARATION_LENGTH}
         placeholder={"📋 *Orientações para o exame*\n\n*No dia do exame:*\n✅ Venha em jejum de 8 horas"}
-        class="js-preparation-input w-full rounded-lg border border-slate-300 px-3 py-2.5 font-mono text-sm focus:border-sky-600 focus:outline-none focus:ring-1 focus:ring-sky-600"
+        class="js-preparation-input w-full rounded-lg border border-line-strong px-3 py-2.5 font-mono text-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
       >{initial}</textarea>
-      <p class="mt-1 text-xs text-slate-500">
+      <p class="mt-1 text-xs text-ink-soft">
         Mesma formatação do WhatsApp: <code>*negrito*</code>, <code>_itálico_</code>,
         <code>~riscado~</code> e emojis. Deixe em branco se o exame não tem preparo. Máximo de
         {MAX_PREPARATION_LENGTH.toLocaleString("pt-BR")} caracteres.
       </p>
     </div>
     <div class="js-preparation-panel max-lg:hidden" data-panel="preview">
-      <p class="hidden text-sm font-medium text-slate-700 lg:block">Prévia</p>
+      <p class="hidden text-sm font-medium text-ink-mid lg:block">Prévia</p>
       <div class="rounded-lg bg-[#e5ddd5] p-3 lg:mt-1">
         <div
-          class="js-preparation-preview max-w-md whitespace-pre-line break-words rounded-lg bg-white px-3 py-2 text-sm text-slate-800 shadow-sm"
+          class="js-preparation-preview max-w-md whitespace-pre-line break-words rounded-lg bg-white px-3 py-2 text-sm text-ink shadow-sm"
           hidden={!initial}
           set:html={initial ? whatsAppTextToHtml(initial) : ""}
         />
-        <p class="js-preparation-empty text-xs text-slate-600" hidden={!!initial}>
+        <p class="js-preparation-empty text-xs text-ink-soft" hidden={!!initial}>
           Sem preparo cadastrado.
         </p>
       </div>

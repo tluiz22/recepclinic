@@ -101,6 +101,14 @@ function restore(): HTMLFormElement | null {
 // camada de dados ("displayName", "priceCents"); o formulário usa "display_name"
 // e "price".
 function pointToError(form: HTMLFormElement | null): void {
+  // Formulário num cartão "Editar" (vários por tela, como os blocos da Clínica):
+  // a mensagem vai para dentro dele, senão fica no topo, fora da vista (teste da
+  // R9, QA-01).
+  const flash = document.querySelector<HTMLElement>("main [data-flash='error']");
+  if (form && flash && form.closest("[data-edit-card]") && !form.contains(flash)) {
+    flash.querySelector("[data-form-error]")?.classList.remove("mt-4");
+    form.prepend(flash);
+  }
   const message = document.querySelector<HTMLElement>("main [data-form-error]");
   if (!message) return;
   message.id ||= "erro-do-formulario";
@@ -126,6 +134,13 @@ function pointToError(form: HTMLFormElement | null): void {
   // perto da borda que o navegador acha que já está à vista (teste da R6, QA-02).
   const target = invalid[0] ?? message;
   target.scrollIntoView({ block: "center" });
+  // Mensagem dentro do cartão, acima do campo (QA-01 da R9): se os dois cabem
+  // juntos, sobe até a mensagem, com folga para as barras de cima e de baixo.
+  if (invalid[0] && form?.contains(message)) {
+    const top = message.getBoundingClientRect().top;
+    const span = invalid[0].getBoundingClientRect().bottom - top;
+    if (top < 80 && span < innerHeight - 180) scrollBy({ top: top - 80 });
+  }
   target.focus({ preventScroll: true });
 }
 

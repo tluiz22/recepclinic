@@ -1,12 +1,9 @@
 ---
 // Configurações › Lembretes › contato do resumo do dia, novo ou editar
 // (F4.4b; só com o item "Lembrete à equipe (resumo do dia)", D11). Exames só com o item.
-import AdminLayout from "../../../../layouts/AdminLayout.astro";
+import ConfigShell from "../../../../components/admin/config/ConfigShell.astro";
 import ActiveToggle from "../../../../components/admin/ActiveToggle.astro";
-import Card from "../../../../components/admin/Card.astro";
-import FlashMessage from "../../../../components/admin/FlashMessage.astro";
-import Icon from "../../../../components/admin/Icon.astro";
-import { HINT, INPUT, LABEL, PRIMARY_BUTTON } from "../../../../components/admin/fieldStyles";
+import { CARD, CHECK, CHOICE, HINT, INPUT, LABEL, PRIMARY_BUTTON, SECONDARY_BUTTON } from "../../../../components/admin/config/formStyles";
 import { createUserClient } from "../../../../lib/data/clients";
 import { listNotificationRecipients } from "../../../../lib/data/config/notificationRecipients";
 import { formatPhoneBR } from "../../../../lib/phone";
@@ -23,15 +20,10 @@ const examsOn = clinic.features.includes("exams");
 const action = `/api/admin/configuracoes/contatos/${id}`;
 ---
 
-<AdminLayout title={isNew ? "Novo contato" : recipient!.label}>
-  <a href="/admin/configuracoes/lembretes" class="inline-flex items-center gap-1 text-sm text-sky-700 hover:underline">
-    <Icon name="chevron-left" class="h-4 w-4" /> Lembretes
-  </a>
-  <h1 class="mt-2 text-2xl font-bold text-slate-900">{isNew ? "Novo contato da equipe" : "Editar contato"}</h1>
-  <FlashMessage />
+<ConfigShell current="lembretes" title={isNew ? "Novo contato da equipe" : recipient!.label} pageTitle={isNew ? "Novo contato" : recipient!.label} back={{ href: "/admin/configuracoes/lembretes", label: "Lembretes" }}>
 
-  <Card class="mt-4 max-w-2xl">
-    <form method="POST" action={action} class="flex flex-col gap-4">
+  <div class="flex max-w-3xl flex-col gap-4">
+    <form method="POST" action={action} class={`${CARD} flex flex-col gap-5 p-4 sm:p-5`}>
       <input type="hidden" name="acao" value="salvar" />
       <div>
         <label for="label" class={LABEL}>Nome</label>
@@ -44,14 +36,14 @@ const action = `/api/admin/configuracoes/contatos/${id}`;
       <fieldset>
         <legend class={LABEL}>Recebe</legend>
         <div class="mt-1 flex flex-col gap-2">
-          <label class="flex items-center gap-2 text-sm text-slate-700">
-            <input type="checkbox" name="receives_consultations" checked={recipient?.receivesConsultations ?? true} class="h-4 w-4 rounded border-slate-300" />
+          <label class={CHOICE}>
+            <input type="checkbox" name="receives_consultations" checked={recipient?.receivesConsultations ?? true} class={CHECK} />
             Consultas e retornos (de todas as agendas)
           </label>
           {
             examsOn && (
-              <label class="flex items-center gap-2 text-sm text-slate-700">
-                <input type="checkbox" name="receives_exams" checked={recipient?.receivesExams ?? false} class="h-4 w-4 rounded border-slate-300" />
+              <label class={CHOICE}>
+                <input type="checkbox" name="receives_exams" checked={recipient?.receivesExams ?? false} class={CHECK} />
                 Exames e procedimentos
               </label>
             )
@@ -59,8 +51,11 @@ const action = `/api/admin/configuracoes/contatos/${id}`;
         </div>
         <p class={HINT}>Para quem não é profissional (ex.: recepção, gerente). Cada profissional recebe os próprios pelo cadastro dele.</p>
       </fieldset>
-      <button type="submit" class={`${PRIMARY_BUTTON} self-start`}>{isNew ? "Cadastrar" : "Salvar"}</button>
+      <div class="flex flex-wrap gap-2 border-t border-[#e6ecea] pt-4">
+        <button type="submit" class={PRIMARY_BUTTON} data-sending-label="Salvando…">{isNew ? "Cadastrar" : "Salvar"}</button>
+        <a href={"/admin/configuracoes/lembretes"} class={SECONDARY_BUTTON}>Cancelar</a>
+      </div>
     </form>
     {!isNew && <ActiveToggle action={action} isActive={recipient!.isActive} what="o contato" />}
-  </Card>
-</AdminLayout>
+  </div>
+</ConfigShell>

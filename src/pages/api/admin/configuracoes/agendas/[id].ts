@@ -2,6 +2,7 @@ import type { APIRoute } from "astro";
 import { createUserClient } from "../../../../../lib/data/clients";
 import { createAgenda, setAgendaActive, updateAgenda, type AgendaKind } from "../../../../../lib/data/config/agendas";
 import { runFormAction } from "../../../../../lib/data/formAction";
+import { allFilterOn, withAllFilter } from "../../../../../lib/returnPath";
 import { formInt, formOptionalText, formText } from "../../../../../lib/forms";
 
 // Agenda (F4.3, D2): criar (`novo`), salvar, desativar e reativar. O tipo e o
@@ -12,7 +13,9 @@ export const POST: APIRoute = async (context) => {
   const form = await request.formData().catch(() => null);
   const clinicId = locals.clinic!.clinicId;
   const db = createUserClient(request, cookies);
-  const page = (target: string) => `/admin/configuracoes/agendas/${target}`;
+  // Cadastro aberto da lista em "Todos": volta com o filtro (teste da R9, NAV-06).
+  const all = allFilterOn(new URL(request.url));
+  const page = (target: string) => withAllFilter(`/admin/configuracoes/agendas/${target}`, all);
   const acao = formText(form, "acao");
 
   return runFormAction(

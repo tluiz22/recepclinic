@@ -2,12 +2,13 @@
 // Configurações › Equipe (F4.4b, D6): quem entra no painel, com os papéis, o
 // acesso às agendas e o convite. Quem tem o papel Profissional precisa estar
 // ligado a um cadastro de profissional (cliente, 05/out/2026).
-import AdminLayout from "../../../layouts/AdminLayout.astro";
-import Badge from "../../../components/admin/Badge.astro";
-import Card from "../../../components/admin/Card.astro";
-import ConfiguracoesTabs from "../../../components/admin/ConfiguracoesTabs.astro";
-import FlashMessage from "../../../components/admin/FlashMessage.astro";
-import { PRIMARY_BUTTON } from "../../../components/admin/fieldStyles";
+// Redesign R9 (cliente, 17/out/2026): uma linha por pessoa.
+import ConfigShell from "../../../components/admin/config/ConfigShell.astro";
+import { HEAD_ROW, LIST, ROW, ROW_CELL, ROW_GO, ROW_NAME } from "../../../components/admin/config/formStyles";
+import Icon from "../../../components/admin/Icon.astro";
+import Button from "../../../components/admin/ui/Button.astro";
+import Pill from "../../../components/admin/ui/Pill.astro";
+import Tag from "../../../components/admin/ui/Tag.astro";
 import { createUserClient } from "../../../lib/data/clients";
 import { listProfessionals } from "../../../lib/data/config/professionals";
 import { listTeam, ROLE_LABELS } from "../../../lib/data/config/team";
@@ -16,49 +17,67 @@ const clinic = Astro.locals.clinic!;
 const db = createUserClient(Astro.request, Astro.cookies);
 const [team, professionals] = await Promise.all([listTeam(db, clinic.clinicId), listProfessionals(db, clinic.clinicId, { includeInactive: true })]);
 const professionalName = new Map(professionals.map((p) => [p.id, p.displayName]));
+const cols = "lg:grid-cols-[minmax(0,2fr)_minmax(0,1.4fr)_minmax(0,1.6fr)_36px]";
 ---
 
-<AdminLayout title="Equipe">
-  <h1 class="text-2xl font-bold text-slate-900">Configurações</h1>
-  <ConfiguracoesTabs current="equipe" />
-  <FlashMessage />
+<ConfigShell current="equipe" title="Equipe" subtitle="Quem entra no painel, com os papéis e as agendas que cada pessoa vê.">
+  <Button slot="actions" href="/admin/configuracoes/equipe/novo" variant="primary">
+    <Icon name="plus" class="h-[18px] w-[18px]" strokeWidth={2.2} /> Convidar pessoa
+  </Button>
 
-  <div class="mt-4">
-    <a href="/admin/configuracoes/equipe/novo" class={PRIMARY_BUTTON}>Convidar pessoa</a>
-  </div>
+  <p class="text-sm text-ink-soft" role="status">{team.length} {team.length === 1 ? "pessoa" : "pessoas"}</p>
 
-  <ul class="mt-4 grid gap-3 sm:grid-cols-2">
-    {
-      team.map((member) => {
-        const pending = member.invitation && !member.invitation.acceptedAt;
-        const missingLink = member.roles.includes("professional") && !member.professionalId;
-        return (
-          <li>
-            <a href={`/admin/configuracoes/equipe/${member.userId}`}>
-              <Card class="h-full hover:border-sky-300 hover:bg-sky-50">
-                <p class="break-all font-medium text-slate-900">
-                  {member.displayName ?? member.email ?? "Sem e-mail"}{" "}
-                  {member.userId === Astro.locals.userId && <span class="text-sm font-normal text-slate-500">(você)</span>}
-                </p>
-                {member.displayName && <p class="break-all text-sm text-slate-500">{member.email}</p>}
-                <p class="mt-1 flex flex-wrap gap-1">
-                  {member.roles.map((role) => (
-                    <Badge variant={role === "admin" ? "accent" : "info"}>{ROLE_LABELS[role]}</Badge>
-                  ))}
-                  {pending && <Badge variant="warning">convite pendente</Badge>}
-                  {missingLink && <Badge variant="danger">falta ligar ao profissional</Badge>}
-                </p>
-                <p class="mt-1 text-sm text-slate-600">
-                  {member.professionalId ? `${professionalName.get(member.professionalId) ?? "Profissional"} · ` : ""}
+  <section aria-label="Equipe" class={LIST}>
+    <div aria-hidden="true" class={`${HEAD_ROW} ${cols}`}>
+      <span>Pessoa</span>
+      <span>Papéis</span>
+      <span>Acesso</span>
+      <span />
+    </div>
+    <ul>
+      {
+        team.map((member) => {
+          const pending = member.invitation && !member.invitation.acceptedAt;
+          const missingLink = member.roles.includes("professional") && !member.professionalId;
+          const href = `/admin/configuracoes/equipe/${member.userId}`;
+          const label = member.displayName ?? member.email ?? "Sem e-mail";
+          return (
+            <li class={`${ROW} ${cols}`}>
+              <div class="flex min-w-0 flex-col gap-0.5">
+                <span class="flex flex-wrap items-center gap-x-2 gap-y-1">
+                  <a href={href} class={`${ROW_NAME} break-all`}>
+                    {label}
+                  </a>
+                  {member.userId === Astro.locals.userId && <span class="text-sm text-ink-soft">(você)</span>}
+                </span>
+                {member.displayName && <span class="text-sm break-all text-ink-soft">{member.email}</span>}
+              </div>
+              <a href={href} aria-label={`Abrir ${label}`} class={ROW_GO}>
+                <Icon name="chevron-right" class="h-5 w-5" strokeWidth={2.2} />
+              </a>
+              <span class={`${ROW_CELL} flex flex-wrap gap-1.5`}>
+                {member.roles.map((role) => (
+                  <Tag>{ROLE_LABELS[role]}</Tag>
+                ))}
+                {pending && <Pill tone="warning">Convite pendente</Pill>}
+                {missingLink && (
+                  <Pill tone="danger" icon="warning">
+                    Falta ligar ao profissional
+                  </Pill>
+                )}
+              </span>
+              <span class={ROW_CELL}>
+                {member.professionalId && <span class="block">{professionalName.get(member.professionalId) ?? "Profissional"}</span>}
+                <span class="text-ink-soft">
                   {member.roles.includes("admin") || member.agendaScope === "all"
                     ? "Todas as agendas"
                     : `Agendas selecionadas${member.grantedAgendaIds.length ? ` (${member.grantedAgendaIds.length} liberadas)` : ""}`}
-                </p>
-              </Card>
-            </a>
-          </li>
-        );
-      })
-    }
-  </ul>
-</AdminLayout>
+                </span>
+              </span>
+            </li>
+          );
+        })
+      }
+    </ul>
+  </section>
+</ConfigShell>

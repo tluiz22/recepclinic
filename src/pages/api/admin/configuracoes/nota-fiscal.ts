@@ -6,6 +6,7 @@ import { runFormAction } from "../../../../lib/data/formAction";
 import { formChecked, formOptionalText, formText } from "../../../../lib/forms";
 import { formatInstant } from "../../../../lib/clinicTime";
 import { platformEnv } from "../../../../lib/env";
+import { receivedReturn, withReturn } from "../../../../lib/returnPath";
 
 // Configurações › Nota fiscal (F11.3, Módulo financeiro): dados fiscais e
 // códigos por serviço (Administrador e Suporte) e o certificado A1 (só o
@@ -16,7 +17,8 @@ export const POST: APIRoute = async (context) => {
   const form = await request.formData().catch(() => null);
   const clinic = locals.clinic!;
   const db = createUserClient(request, cookies);
-  const page = "/admin/configuracoes/nota-fiscal";
+  // Aberta de outra tela (DMED, aviso do Início), volta para lá com a origem (R9, S-01).
+  const page = withReturn("/admin/configuracoes/nota-fiscal", receivedReturn(new URL(request.url)));
 
   return runFormAction(
     context,

@@ -2,17 +2,15 @@
 // Configurações › Profissionais › novo ou editar (F4.3, D4b): nome,
 // profissão, especialidade, conselho (número e UF) e o WhatsApp para o resumo
 // do dia dos próprios atendimentos (D2 revista, 05/out/2026).
-import AdminLayout from "../../../../layouts/AdminLayout.astro";
+import ConfigShell from "../../../../components/admin/config/ConfigShell.astro";
+import { allFilterOn, withAllFilter } from "../../../../lib/returnPath";
 import ActiveToggle from "../../../../components/admin/ActiveToggle.astro";
-import Card from "../../../../components/admin/Card.astro";
-import FlashMessage from "../../../../components/admin/FlashMessage.astro";
 import NextStep from "../../../../components/admin/setup/NextStep.astro";
 import { loadSetupStatus } from "../../../../lib/data/config/setup";
-import Icon from "../../../../components/admin/Icon.astro";
-import { HINT, INPUT, LABEL, PRIMARY_BUTTON } from "../../../../components/admin/fieldStyles";
+import { CARD, HINT, SECTION_TITLE, INPUT, LABEL, PRIMARY_BUTTON, SECONDARY_BUTTON } from "../../../../components/admin/config/formStyles";
 import { BRAZIL_STATES, COUNCIL_SUGGESTIONS } from "../../../../lib/brazilStates";
 import { createUserClient } from "../../../../lib/data/clients";
-import { listProfessionals } from "../../../../lib/data/config/professionals";
+import { listProfessionals, professionalRegistry } from "../../../../lib/data/config/professionals";
 import { formatPhoneBR } from "../../../../lib/phone";
 
 const clinic = Astro.locals.clinic!;
@@ -22,18 +20,18 @@ const professional = isNew
   ? null
   : ((await listProfessionals(createUserClient(Astro.request, Astro.cookies), clinic.clinicId, { includeInactive: true })).find((p) => p.id === id) ?? null);
 if (!isNew && !professional) return Astro.redirect("/admin/configuracoes/profissionais");
-const action = `/api/admin/configuracoes/profissionais/${id}`;
+// Aberto da lista em "Todos": o filtro vai e volta (teste da R9, NAV-06).
+const all = allFilterOn(Astro.url);
+const list = withAllFilter("/admin/configuracoes/profissionais", all);
+const action = withAllFilter(`/api/admin/configuracoes/profissionais/${id}`, all);
 // Próximo passo da jornada de configuração (F6.3b).
 const setup = isNew ? null : await loadSetupStatus(createUserClient(Astro.request, Astro.cookies), clinic.clinicId, clinic.features);
+// Profissão, especialidade e registro embaixo do nome (R9).
+const subtitle = professional ? [professional.profession, professional.specialty, professionalRegistry(professional)].filter(Boolean).join(" · ") || undefined : undefined;
 const professionalIssues = setup?.issues.professionals.get(id!) ?? [];
 ---
 
-<AdminLayout title={isNew ? "Novo profissional" : professional!.displayName}>
-  <a href="/admin/configuracoes/profissionais" class="inline-flex items-center gap-1 text-sm text-sky-700 hover:underline">
-    <Icon name="chevron-left" class="h-4 w-4" /> Profissionais
-  </a>
-  <h1 class="mt-2 text-2xl font-bold text-slate-900">{isNew ? "Novo profissional" : "Editar profissional"}</h1>
-  <FlashMessage />
+<ConfigShell current="profissionais" title={isNew ? "Novo profissional" : professional!.displayName} back={{ href: list, label: "Profissionais" }} subtitle={subtitle}>
   {
     professionalIssues.includes("no_agenda") && (
       <NextStep
@@ -44,9 +42,10 @@ const professionalIssues = setup?.issues.professionals.get(id!) ?? [];
     )
   }
 
-  <Card class="mt-4 max-w-2xl">
-    <form method="POST" action={action} class="flex flex-col gap-4">
+  <div class="flex max-w-3xl flex-col gap-4">
+    <form method="POST" action={action} class={`${CARD} flex flex-col gap-5 p-4 sm:p-5`}>
       <input type="hidden" name="acao" value="salvar" />
+      <h2 class={SECTION_TITLE}>Quem é</h2>
       <div>
         <label for="display_name" class={LABEL}>Nome (como aparece para o paciente)</label>
         <input id="display_name" name="display_name" required value={professional?.displayName ?? ""} class={INPUT} />
@@ -61,6 +60,7 @@ const professionalIssues = setup?.issues.professionals.get(id!) ?? [];
           <input id="specialty" name="specialty" value={professional?.specialty ?? ""} class={INPUT} />
         </div>
       </div>
+      <h2 class={`${SECTION_TITLE} border-t border-[#e6ecea] pt-5`}>Registro profissional</h2>
       <div class="grid gap-4 sm:grid-cols-4">
         <div>
           <label for="council" class={LABEL}>Conselho</label>
@@ -84,6 +84,7 @@ const professionalIssues = setup?.issues.professionals.get(id!) ?? [];
         </div>
       </div>
       <p class={`${HINT} -mt-2`}>Mais de um RQE: separe por vírgula (ex.: 6271, 8890).</p>
+      <h2 class={`${SECTION_TITLE} border-t border-[#e6ecea] pt-5`}>Contato</h2>
       <div>
         <label for="phone" class={LABEL}>WhatsApp</label>
         <input
@@ -96,8 +97,11 @@ const professionalIssues = setup?.issues.professionals.get(id!) ?? [];
           class={INPUT}
         />
       </div>
-      <button type="submit" class={`${PRIMARY_BUTTON} self-start`}>{isNew ? "Cadastrar" : "Salvar"}</button>
+      <div class="flex flex-wrap gap-2 border-t border-[#e6ecea] pt-4">
+        <button type="submit" class={PRIMARY_BUTTON} data-sending-label="Salvando…">{isNew ? "Cadastrar" : "Salvar"}</button>
+        <a href={list} class={SECONDARY_BUTTON}>Cancelar</a>
+      </div>
     </form>
     {!isNew && <ActiveToggle action={action} isActive={professional!.isActive} what="o profissional" />}
-  </Card>
-</AdminLayout>
+  </div>
+</ConfigShell>

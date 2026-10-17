@@ -3,13 +3,11 @@
 // agenda, por local. Um horário pode valer só para um serviço (ex.: exame só
 // na terça) e, se o serviço for em turma, define as vagas. A sobreposição
 // segue a regra de 04/out (por agenda; ver src/lib/data/config/availability.ts).
-import AdminLayout from "../../../layouts/AdminLayout.astro";
-import Badge from "../../../components/admin/Badge.astro";
-import Card from "../../../components/admin/Card.astro";
-import ConfiguracoesTabs from "../../../components/admin/ConfiguracoesTabs.astro";
+import ConfigShell from "../../../components/admin/config/ConfigShell.astro";
+import Badge from "../../../components/admin/config/Badge.astro";
+import Card from "../../../components/admin/config/Panel.astro";
 import ConfirmDeleteDialog from "../../../components/admin/ConfirmDeleteDialog.astro";
-import FlashMessage from "../../../components/admin/FlashMessage.astro";
-import { HINT, INPUT, LABEL, PRIMARY_BUTTON, SECONDARY_BUTTON } from "../../../components/admin/fieldStyles";
+import { HINT, INPUT, INPUT_INLINE, LABEL, PRIMARY_BUTTON, SECONDARY_BUTTON } from "../../../components/admin/config/formStyles";
 import { createUserClient } from "../../../lib/data/clients";
 import { listAgendas } from "../../../lib/data/config/agendas";
 import { listAvailability, WEEKDAY_NAMES } from "../../../lib/data/config/availability";
@@ -49,16 +47,13 @@ const agendaQuery = (extra = "") => `?agenda=${agenda?.id ?? ""}${extra}`;
 const weekdayOrder = [1, 2, 3, 4, 5, 6, 0];
 ---
 
-<AdminLayout title="Horários">
-  <h1 class="text-2xl font-bold text-slate-900">Configurações</h1>
-  <ConfiguracoesTabs current="horarios" />
-  <FlashMessage />
+<ConfigShell current="horarios" title="Horários" subtitle="Quando cada agenda atende, em que local e com quais serviços.">
 
   {
     !agenda ? (
-      <p class="mt-4 text-sm text-slate-600">
+      <p class="mt-4 text-sm text-ink-soft">
         Nenhuma agenda ativa. Cadastre uma em{" "}
-        <a href="/admin/configuracoes/agendas" class="text-sky-700 hover:underline">
+        <a href="/admin/configuracoes/agendas" class="text-brand hover:underline">
           Agendas
         </a>
         .
@@ -83,7 +78,7 @@ const weekdayOrder = [1, 2, 3, 4, 5, 6, 0];
               Ver
             </button>
           </noscript>
-          <a href={showInactive ? agendaQuery() : agendaQuery("&todos=1")} class="pb-2.5 text-sm text-sky-700 hover:underline">
+          <a href={showInactive ? agendaQuery() : agendaQuery("&todos=1")} class="pb-2.5 text-sm text-brand hover:underline">
             {showInactive ? "Esconder desativados" : "Mostrar desativados"}
           </a>
         </form>
@@ -91,18 +86,18 @@ const weekdayOrder = [1, 2, 3, 4, 5, 6, 0];
         <div class="mt-4 grid gap-3 sm:grid-cols-2">
           {byWeekday.map((day) => (
             <Card>
-              <h2 class="font-semibold text-slate-900">{day.name}</h2>
-              <ul class="mt-2 divide-y divide-slate-100">
+              <h2 class="font-display text-[17px] leading-tight font-bold text-ink sm:text-lg">{day.name}</h2>
+              <ul class="mt-2 divide-y divide-[#e6ecea]">
                 {day.windows.map((w) => {
                   const service = w.serviceId ? serviceById.get(w.serviceId) : null;
                   return (
                     <li class={`flex flex-wrap items-center justify-between gap-2 py-2 ${w.isActive ? "" : "opacity-60"}`}>
                       <div class="text-sm">
-                        <p class="font-medium text-slate-900">
+                        <p class="font-medium text-ink">
                           {w.startTime}–{w.endTime} {!w.isActive && <Badge>desativado</Badge>}{" "}
                           {notEnabled(w) && <Badge variant="warning">não liberado</Badge>}
                         </p>
-                        <p class="text-slate-600">
+                        <p class="text-ink-soft">
                           {locationName.get(w.locationId) ?? "Local"}
                           {service ? ` · só ${service.name}` : ""}
                           {w.capacity !== null ? ` · ${w.capacity} vagas` : ""}
@@ -123,7 +118,7 @@ const weekdayOrder = [1, 2, 3, 4, 5, 6, 0];
                           <input type="hidden" name="acao" value="remover" />
                           <button
                             type="submit"
-                            class={`${SECONDARY_BUTTON} js-confirm-delete text-red-700`}
+                            class={`${SECONDARY_BUTTON} js-confirm-delete text-danger`}
                             data-confirm-title="Remover o horário?"
                             data-confirm-message={`${day.name}, ${w.startTime}–${w.endTime}. Os atendimentos já marcados continuam.`}
                             data-confirm-label="Remover"
@@ -139,14 +134,14 @@ const weekdayOrder = [1, 2, 3, 4, 5, 6, 0];
             </Card>
           ))}
         </div>
-        {byWeekday.length === 0 && <p class="mt-4 text-sm text-slate-600">Nenhum horário cadastrado nesta agenda.</p>}
+        {byWeekday.length === 0 && <p class="mt-4 text-sm text-ink-soft">Nenhum horário cadastrado nesta agenda.</p>}
 
         <Card class="mt-6 max-w-2xl">
-          <h2 class="font-semibold text-slate-900">Novo horário em {agenda.name}</h2>
+          <h2 class="font-display text-[17px] leading-tight font-bold text-ink sm:text-lg">Novo horário em {agenda.name}</h2>
           {activeLocations.length === 0 ? (
-            <p class="mt-2 text-sm text-slate-600">
+            <p class="mt-2 text-sm text-ink-soft">
               Cadastre um local em{" "}
-              <a href="/admin/configuracoes/locais" class="text-sky-700 hover:underline">
+              <a href="/admin/configuracoes/locais" class="text-brand hover:underline">
                 Locais
               </a>{" "}
               antes.
@@ -159,8 +154,8 @@ const weekdayOrder = [1, 2, 3, 4, 5, 6, 0];
                 <legend class={LABEL}>Dias da semana</legend>
                 <div class="mt-1 flex flex-wrap gap-x-4 gap-y-2">
                   {weekdayOrder.map((weekday) => (
-                    <label class="flex items-center gap-2 text-sm text-slate-700">
-                      <input type="checkbox" name="weekday" value={weekday} class="h-4 w-4 rounded border-slate-300" />
+                    <label class="flex items-center gap-2 text-sm text-ink-mid">
+                      <input type="checkbox" name="weekday" value={weekday} class="h-[18px] w-[18px] shrink-0 accent-brand" />
                       {WEEKDAY_NAMES[weekday]}
                     </label>
                   ))}
@@ -172,13 +167,13 @@ const weekdayOrder = [1, 2, 3, 4, 5, 6, 0];
                   <label for="start_time" class={LABEL}>
                     Início
                   </label>
-                  <input id="start_time" name="start_time" type="time" required class={`${INPUT} w-32`} />
+                  <input id="start_time" name="start_time" type="time" required class={`${INPUT_INLINE} mt-1.5 w-32`} />
                 </div>
                 <div>
                   <label for="end_time" class={LABEL}>
                     Fim
                   </label>
-                  <input id="end_time" name="end_time" type="time" required class={`${INPUT} w-32`} />
+                  <input id="end_time" name="end_time" type="time" required class={`${INPUT_INLINE} mt-1.5 w-32`} />
                 </div>
               </div>
               <div>
@@ -210,7 +205,7 @@ const weekdayOrder = [1, 2, 3, 4, 5, 6, 0];
                 <label for="capacity" class={LABEL}>
                   Vagas da turma
                 </label>
-                <input id="capacity" name="capacity" type="number" min="1" class={`${INPUT} w-28`} />
+                <input id="capacity" name="capacity" type="number" min="1" class={`${INPUT_INLINE} mt-1.5 w-28`} />
               </div>
               <button type="submit" class={`${PRIMARY_BUTTON} self-start`}>
                 Adicionar
@@ -240,4 +235,4 @@ const weekdayOrder = [1, 2, 3, 4, 5, 6, 0];
     service?.addEventListener("change", sync);
     sync();
   </script>
-</AdminLayout>
+</ConfigShell>

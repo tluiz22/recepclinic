@@ -4,14 +4,19 @@
 // idade), fuso, idade limite da consulta, cor e, com o bot liberado, as
 // informações que o bot responde e os limites por contato (F9.6a). Marca das
 // páginas públicas (F5.1): logo, cor e site da clínica, com "Ver como fica".
-import AdminLayout from "../../../layouts/AdminLayout.astro";
-import Card from "../../../components/admin/Card.astro";
-import ConfiguracoesTabs from "../../../components/admin/ConfiguracoesTabs.astro";
-import FlashMessage from "../../../components/admin/FlashMessage.astro";
-import { HINT, INPUT, LABEL, PRIMARY_BUTTON } from "../../../components/admin/fieldStyles";
+//
+// Redesign R9 (cliente, 17/out/2026; U-11): o guia com o progresso e 5 blocos
+// em modo leitura com "Editar" (EditCard, R6), cada um com o próprio "Salvar"
+// (`bloco` na gravação). Os campos e as regras são os de antes.
+import ConfigShell from "../../../components/admin/config/ConfigShell.astro";
+import { CHECK, CHOICE, DD, DT, HINT, INPUT, INPUT_INLINE, KV, LABEL, LEGEND, SOFT } from "../../../components/admin/config/formStyles";
+import SetupGuide from "../../../components/admin/setup/SetupGuide.astro";
+import Button from "../../../components/admin/ui/Button.astro";
+import EditCard from "../../../components/admin/ui/EditCard.astro";
 import { createUserClient } from "../../../lib/data/clients";
 import { BRAND_COLOR_OPTIONS, DEFAULT_BRAND_COLOR, LOGO_TYPES } from "../../../lib/data/config/brand";
 import { CLINIC_PROFILES, getClinicSettings } from "../../../lib/data/config/clinic";
+import { loadSetupStatus } from "../../../lib/data/config/setup";
 import { BOT_LIMIT_RANGES, DEFAULT_BOT_LIMITS, NEW_PATIENTS_WINDOW_DAYS, NO_SHOWS_WINDOW_DAYS } from "../../../lib/data/whatsapp/botLimits";
 import { MESSAGE_ARTICLES } from "../../../lib/data/whatsapp/templates";
 import { DESIGNATION_NOUN_MAX, DESIGNATION_PRESETS, designationText, designationTitle, NOUN_ARTICLES } from "../../../lib/designation";
@@ -20,14 +25,17 @@ import { BRAZIL_TIME_ZONES } from "../../../lib/timeZones";
 import { PROFILE_LABELS, vocabularyFor } from "../../../lib/vocabulary";
 
 const clinic = Astro.locals.clinic!;
-const settings = await getClinicSettings(createUserClient(Astro.request, Astro.cookies), clinic.clinicId);
+const db = createUserClient(Astro.request, Astro.cookies);
+const [settings, setup] = await Promise.all([getClinicSettings(db, clinic.clinicId), loadSetupStatus(db, clinic.clinicId, clinic.features)]);
 const hasBot = clinic.features.includes("whatsapp_bot");
 const designation = { noun: settings.messageNoun, article: settings.messageNounArticle };
 const isPreset = DESIGNATION_PRESETS.some((d) => d.noun === designation.noun && d.article === designation.article);
 const zones = BRAZIL_TIME_ZONES.some((zone) => zone.value === settings.timezone)
   ? BRAZIL_TIME_ZONES
   : [{ value: settings.timezone, label: settings.timezone }, ...BRAZIL_TIME_ZONES];
+const zoneLabel = zones.find((zone) => zone.value === settings.timezone)?.label ?? settings.timezone;
 const currentColor = settings.brandColor ?? DEFAULT_BRAND_COLOR;
+const colorLabel = BRAND_COLOR_OPTIONS.find((option) => option.value.toLowerCase() === currentColor.toLowerCase())?.label ?? currentColor.toUpperCase();
 const limitFields = [
   {
     name: "bot_max_future_appointments",
@@ -55,26 +63,46 @@ const profileHint = (profile: (typeof CLINIC_PROFILES)[number]) => {
   const words = vocabularyFor(profile);
   return `${PROFILE_LABELS[profile]}: "${words.patient}" e "${words.contact}"`;
 };
+const words = vocabularyFor(settings.profile);
+const botInfo = [
+  { label: "Formas de pagamento", value: settings.botPaymentInfo, empty: "Vazio: os valores aparecem sem as formas de pagamento" },
+  { label: "Convênios", value: settings.botInsuranceInfo, empty: "Vazio: a opção não aparece no bot" },
+  { label: "Observações", value: settings.botNotes, empty: "Vazio: a opção não aparece no bot" },
+];
+const botInfoFilled = botInfo.filter((info) => info.value).length;
+const action = "/api/admin/configuracoes/clinica";
+const here = "/admin/configuracoes";
+const field = "flex flex-col";
+const actions = "flex flex-wrap gap-2 border-t border-[#e6ecea] pt-4";
 ---
 
-<AdminLayout title="Configurações">
-  <h1 class="text-2xl font-bold text-slate-900">Configurações</h1>
-  <ConfiguracoesTabs current="clinica" />
-  <FlashMessage />
+<ConfigShell current="clinica" title="Clínica" subtitle="Como a clínica se apresenta ao paciente, nas mensagens e nas páginas de agendar." setup={setup}>
+  <SetupGuide status={setup} />
 
-  <Card class="mt-4 max-w-3xl">
-    <form method="POST" action="/api/admin/configuracoes/clinica" enctype="multipart/form-data" class="flex flex-col gap-5">
-      <div>
+  <EditCard id="identificacao" title="Identificação" summary={settings.name}>
+    <dl class={KV}>
+      <dt class={DT}>Nome da clínica</dt>
+      <dd class={DD}>{settings.name}</dd>
+      <dt class={DT}>Começo das mensagens</dt>
+      <dd class={DD}>"Aqui é {settings.messageArticle} {settings.name}"</dd>
+      <dt class={DT}>Sem o nome, é chamada de</dt>
+      <dd class={DD}>
+        "{designationText(designation)}" <span class={SOFT}>(ex.: "{designationTitle(designation)} responderá sua mensagem em breve.")</span>
+      </dd>
+    </dl>
+    <form slot="edit" method="POST" action={action} class="flex flex-col gap-5">
+      <input type="hidden" name="bloco" value="identificacao" />
+      <div class={field}>
         <label for="name" class={LABEL}>Nome da clínica</label>
         <input id="name" name="name" required value={settings.name} class={INPUT} />
       </div>
 
       <fieldset class="min-w-0">
-        <legend class={LABEL}>Nas mensagens do WhatsApp</legend>
-        <div class="mt-1 flex flex-wrap gap-4 text-sm text-slate-700">
+        <legend class={LEGEND}>Nas mensagens do WhatsApp</legend>
+        <div class="mt-1.5 flex flex-wrap gap-x-5 gap-y-1">
           {MESSAGE_ARTICLES.map((article) => (
-            <label class="flex items-center gap-2">
-              <input type="radio" name="message_article" value={article} checked={settings.messageArticle === article} class="h-4 w-4 border-slate-300" />
+            <label class={CHOICE}>
+              <input type="radio" name="message_article" value={article} checked={settings.messageArticle === article} class={CHECK} />
               "Aqui é {article} {settings.name}"
             </label>
           ))}
@@ -83,20 +111,20 @@ const profileHint = (profile: (typeof CLINIC_PROFILES)[number]) => {
       </fieldset>
 
       <fieldset class="min-w-0">
-        <legend class={LABEL}>Como a clínica é chamada nas mensagens</legend>
-        <div class="mt-1 flex flex-col gap-2 text-sm text-slate-700">
+        <legend class={LEGEND}>Como a clínica é chamada nas mensagens</legend>
+        <div class="mt-1.5 flex flex-col gap-1">
           {DESIGNATION_PRESETS.map((d) => (
-            <label class="flex items-center gap-2">
-              <input type="radio" name="designation" value={d.noun} checked={isPreset && designation.noun === d.noun} class="h-4 w-4 border-slate-300" />
+            <label class={CHOICE}>
+              <input type="radio" name="designation" value={d.noun} checked={isPreset && designation.noun === d.noun} class={CHECK} />
               "{designationText(d)}"
             </label>
           ))}
           <div class="flex flex-wrap items-center gap-2">
-            <label class="flex items-center gap-2">
-              <input type="radio" name="designation" value="outro" checked={!isPreset} class="h-4 w-4 border-slate-300" />
+            <label class={CHOICE}>
+              <input type="radio" name="designation" value="outro" checked={!isPreset} class={CHECK} />
               Outro:
             </label>
-            <select name="designation_article" aria-label="Artigo" class={`${INPUT} mt-0 w-20`}>
+            <select name="designation_article" aria-label="Artigo" class={`${INPUT_INLINE} w-20`}>
               {NOUN_ARTICLES.map((article) => <option value={article} selected={!isPreset && designation.article === article}>{article}</option>)}
             </select>
             <input
@@ -105,16 +133,63 @@ const profileHint = (profile: (typeof CLINIC_PROFILES)[number]) => {
               maxlength={DESIGNATION_NOUN_MAX}
               value={isPreset ? "" : designation.noun}
               placeholder="ex.: espaço"
-              class={`${INPUT} mt-0 w-48`}
+              class={`${INPUT_INLINE} w-48`}
             />
           </div>
         </div>
         <p class={HINT}>Nos textos que falam da clínica sem o nome, como "{designationTitle(designation)} responderá sua mensagem em breve."</p>
       </fieldset>
+      <div class={actions}>
+        <Button type="submit" variant="primary" data-sending-label="Salvando…">Salvar identificação</Button>
+        <Button href={here} data-edit-cancel>Cancelar</Button>
+      </div>
+    </form>
+  </EditCard>
 
-      <div>
+  <EditCard id="atendimento" title="Atendimento" summary={`${PROFILE_LABELS[settings.profile]} · ${settings.bookingHorizonDays} dias`}>
+    <dl class={KV}>
+      <dt class={DT}>Perfil</dt>
+      <dd class={DD}>
+        {PROFILE_LABELS[settings.profile]} <span class={SOFT}>("{words.patient}" e "{words.contact}")</span>
+      </dd>
+      <dt class={DT}>Fuso horário</dt>
+      <dd class={DD}>{zoneLabel}</dd>
+      <dt class={DT}>Prazo para oferecer horários</dt>
+      <dd class={DD}>{settings.bookingHorizonDays} dias a partir de hoje</dd>
+      <dt class={DT}>Idade limite para consulta</dt>
+      <dd class={DD}>
+        {
+          settings.consultationAgeLimitYears === null ? (
+            <span class={SOFT}>Sem limite</span>
+          ) : (
+            <>
+              {settings.consultationAgeLimitYears} anos <span class={SOFT}>(a partir dela, o bot só marca Retorno e Exame)</span>
+            </>
+          )
+        }
+      </dd>
+    </dl>
+    <form slot="edit" method="POST" action={action} class="flex flex-col gap-5">
+      <input type="hidden" name="bloco" value="atendimento" />
+      <div class={field}>
+        <label for="profile" class={LABEL}>Perfil</label>
+        <select id="profile" name="profile" class={INPUT}>
+          {CLINIC_PROFILES.map((profile) => <option value={profile} selected={profile === settings.profile}>{PROFILE_LABELS[profile]}</option>)}
+        </select>
+        <p class={HINT}>Define as palavras das telas e do bot: {CLINIC_PROFILES.map(profileHint).join("; ")}.</p>
+      </div>
+
+      <div class={field}>
+        <label for="timezone" class={LABEL}>Fuso horário</label>
+        <select id="timezone" name="timezone" class={INPUT}>
+          {zones.map((zone) => <option value={zone.value} selected={zone.value === settings.timezone}>{zone.label}</option>)}
+        </select>
+        <p class={HINT}>Horários da agenda, lembretes e resumos seguem este fuso.</p>
+      </div>
+
+      <div class={field}>
         <label for="booking_horizon_days" class={LABEL}>Prazo para oferecer horários</label>
-        <div class="mt-1 flex items-center gap-2">
+        <div class="mt-1.5 flex items-center gap-2">
           <input
             id="booking_horizon_days"
             type="number"
@@ -123,185 +198,233 @@ const profileHint = (profile: (typeof CLINIC_PROFILES)[number]) => {
             max={BOOKING_HORIZON_MAX}
             required
             value={settings.bookingHorizonDays}
-            class={`${INPUT} mt-0 w-24`}
+            class={`${INPUT_INLINE} w-24`}
           />
-          <span class="text-sm text-slate-600">dias a partir de hoje</span>
+          <span class="text-[15px] text-ink-soft">dias a partir de hoje</span>
         </div>
         <p class={HINT}>
           O bot só segue com um serviço que tenha horário livre nesse prazo, e a página de marcar só oferece datas dentro dele. De {BOOKING_HORIZON_MIN} a {BOOKING_HORIZON_MAX} dias.
         </p>
       </div>
 
-      <div>
-        <label for="profile" class={LABEL}>Perfil</label>
-        <select id="profile" name="profile" class={INPUT}>
-          {CLINIC_PROFILES.map((profile) => <option value={profile} selected={profile === settings.profile}>{PROFILE_LABELS[profile]}</option>)}
-        </select>
-        <p class={HINT}>Define as palavras das telas e do bot: {CLINIC_PROFILES.map(profileHint).join("; ")}.</p>
-      </div>
-
-      <div>
-        <label for="timezone" class={LABEL}>Fuso horário</label>
-        <select id="timezone" name="timezone" class={INPUT}>
-          {zones.map((zone) => <option value={zone.value} selected={zone.value === settings.timezone}>{zone.label}</option>)}
-        </select>
-        <p class={HINT}>Horários da agenda, lembretes e resumos seguem este fuso.</p>
-      </div>
-
-      <div>
-        <label class="flex items-center gap-2 text-sm font-medium text-slate-700">
-          <input type="checkbox" name="age_limit_on" checked={settings.consultationAgeLimitYears !== null} class="h-4 w-4 rounded border-slate-300" />
+      <div class={field}>
+        <label class={`${CHOICE} font-semibold`}>
+          <input type="checkbox" name="age_limit_on" checked={settings.consultationAgeLimitYears !== null} class={CHECK} />
           Idade limite para consulta
         </label>
-        <div class="mt-1 flex items-center gap-2">
+        <div class="mt-1.5 flex items-center gap-2">
           <input
             type="number"
             min="1"
             name="age_limit"
             aria-label="Idade limite em anos"
             value={settings.consultationAgeLimitYears ?? ""}
-            class={`${INPUT} mt-0 w-24`}
+            class={`${INPUT_INLINE} w-24`}
           />
-          <span class="text-sm text-slate-600">anos</span>
+          <span class="text-[15px] text-ink-soft">anos</span>
         </div>
         <p class={HINT}>A partir desta idade, o bot não marca Consulta (só Retorno e Exame) e a tela avisa.</p>
       </div>
+      <div class={actions}>
+        <Button type="submit" variant="primary" data-sending-label="Salvando…">Salvar atendimento</Button>
+        <Button href={here} data-edit-cancel>Cancelar</Button>
+      </div>
+    </form>
+  </EditCard>
 
-      {/* min-w-0 nos fieldsets: sem ele, o fieldset não encolhe abaixo do conteúdo (campo de arquivo) e a tela rola para o lado no celular. */}
-      <fieldset class="flex min-w-0 flex-col gap-4 border-t border-slate-200 pt-4">
-        <legend class="text-sm font-semibold uppercase tracking-wide text-slate-500">Páginas públicas</legend>
-        <p class={HINT}>
-          Topo das páginas de agendamento e de preparo que o paciente abre pelo link.
-          <a href="/admin/configuracoes/previa" target="_blank" class="font-medium text-sky-700 underline">Ver como fica</a>
-        </p>
-
-        <div>
-          <span class={LABEL}>Logo</span>
-          <div class="mt-1 flex items-center gap-4">
+  <EditCard id="paginas" title="Páginas públicas" summary={settings.logoUrl ? "Com logo" : "Sem logo"}>
+    <p class="text-sm text-ink-soft">
+      Topo das páginas de agendamento e de preparo que o paciente abre pelo link.{" "}
+      <a href="/admin/configuracoes/previa" target="_blank" class="font-bold text-brand no-underline hover:underline">Ver como fica ›</a>
+    </p>
+    <dl class={KV}>
+      <dt class={DT}>Logo</dt>
+      <dd class={DD}>
+        {
+          settings.logoUrl ? (
+            <img src={settings.logoUrl} alt="Logo atual" class="h-14 w-14 rounded-lg border border-line bg-white object-contain p-1" />
+          ) : (
+            <span class={SOFT}>Sem logo: aparece só o nome da clínica</span>
+          )
+        }
+      </dd>
+      <dt class={DT}>Cor da clínica</dt>
+      <dd class={`${DD} flex items-center gap-2`}>
+        <span aria-hidden="true" class="h-5 w-5 shrink-0 rounded-full border border-line" style={`background-color: ${currentColor};`}></span>
+        {colorLabel}
+      </dd>
+      <dt class={DT}>Site da clínica</dt>
+      <dd class={DD}>{settings.websiteUrl ?? <span class={SOFT}>Sem site</span>}</dd>
+    </dl>
+    {/* min-w-0: sem ele, o campo de arquivo estica a tela no celular (F-04). */}
+    <form slot="edit" method="POST" action={action} enctype="multipart/form-data" class="flex min-w-0 flex-col gap-5">
+      <input type="hidden" name="bloco" value="paginas" />
+      <p class="text-sm text-ink-soft">
+        Topo das páginas de agendamento e de preparo que o paciente abre pelo link.{" "}
+        <a href="/admin/configuracoes/previa" target="_blank" class="font-bold text-brand no-underline hover:underline">Ver como fica ›</a>
+      </p>
+      <div class="min-w-0">
+        <span class={LABEL}>Logo</span>
+        <div class="mt-1.5 flex items-center gap-4">
+          {
+            settings.logoUrl ? (
+              <img src={settings.logoUrl} alt="Logo atual" class="h-16 w-16 shrink-0 rounded-lg border border-line bg-white object-contain p-1" />
+            ) : (
+              <span class="flex h-16 w-16 shrink-0 items-center justify-center rounded-lg border border-dashed border-line-strong text-xs text-ink-soft">Sem logo</span>
+            )
+          }
+          <div class="flex min-w-0 flex-1 flex-col gap-2">
+            <input
+              type="file"
+              id="logo"
+              name="logo"
+              accept={Object.keys(LOGO_TYPES).join(",")}
+              aria-label={settings.logoUrl ? "Trocar o logo" : "Enviar o logo"}
+              class="w-full min-w-0 text-[15px] text-ink file:mr-3 file:h-10 file:rounded-lg file:border file:border-line-strong file:bg-white file:px-3 file:text-[15px] file:font-semibold file:text-ink"
+            />
             {
-              settings.logoUrl ? (
-                <img src={settings.logoUrl} alt="Logo atual" class="h-16 w-16 rounded-md border border-slate-200 bg-white object-contain p-1" />
-              ) : (
-                <span class="flex h-16 w-16 items-center justify-center rounded-md border border-dashed border-slate-300 text-xs text-slate-400">Sem logo</span>
+              settings.logoUrl && (
+                <label class={CHOICE}>
+                  <input type="checkbox" name="remove_logo" class={CHECK} />
+                  Remover o logo
+                </label>
               )
             }
-            <div class="flex min-w-0 flex-1 flex-col gap-2">
-              <input
-                type="file"
-                id="logo"
-                name="logo"
-                accept={Object.keys(LOGO_TYPES).join(",")}
-                aria-label={settings.logoUrl ? "Trocar o logo" : "Enviar o logo"}
-                class="w-full min-w-0 text-sm text-slate-700 file:mr-3 file:rounded-md file:border file:border-slate-300 file:bg-white file:px-3 file:py-1.5 file:text-sm file:font-medium"
+          </div>
+        </div>
+        <p class={HINT}>PNG, JPG ou WebP, até 1 MB. De preferência quadrado. Sem logo, aparece só o nome da clínica.</p>
+      </div>
+
+      <div>
+        <label for="brand_color" class={LABEL}>Cor da clínica</label>
+        <div class="mt-1.5 flex flex-wrap items-center gap-2" data-brand-swatches>
+          {
+            BRAND_COLOR_OPTIONS.map((option) => (
+              <button
+                type="button"
+                data-color={option.value}
+                title={option.label}
+                aria-label={option.label}
+                aria-pressed={option.value === currentColor ? "true" : "false"}
+                class="h-9 w-9 rounded-full border-2 border-white shadow ring-1 ring-line-strong aria-pressed:ring-2 aria-pressed:ring-ink"
+                style={`background-color: ${option.value};`}
               />
-              {
-                settings.logoUrl && (
-                  <label class="flex items-center gap-2 text-sm text-slate-700">
-                    <input type="checkbox" name="remove_logo" class="h-4 w-4 rounded border-slate-300" />
-                    Remover o logo
-                  </label>
-                )
-              }
-            </div>
-          </div>
-          <p class={HINT}>PNG, JPG ou WebP, até 1 MB. De preferência quadrado. Sem logo, aparece só o nome da clínica.</p>
+            ))
+          }
+          <label class="ml-1 flex items-center gap-2 text-[15px] text-ink-soft">
+            Outra:
+            <input type="color" id="brand_color" name="brand_color" value={currentColor} class="h-9 w-14 rounded border border-line-strong" />
+          </label>
         </div>
+        <p class={HINT}>Fundo do topo, com o nome e o logo. Escolha uma das cores ou outra em "Outra".</p>
+      </div>
 
-        <div>
-          <label for="brand_color" class={LABEL}>Cor da clínica</label>
-          <div class="mt-1 flex flex-wrap items-center gap-2" data-brand-swatches>
-            {
-              BRAND_COLOR_OPTIONS.map((option) => (
-                <button
-                  type="button"
-                  data-color={option.value}
-                  title={option.label}
-                  aria-label={option.label}
-                  aria-pressed={option.value === currentColor ? "true" : "false"}
-                  class="h-9 w-9 rounded-full border-2 border-white shadow ring-1 ring-slate-300 aria-pressed:ring-2 aria-pressed:ring-slate-900"
-                  style={`background-color: ${option.value};`}
-                />
-              ))
-            }
-            <label class="ml-1 flex items-center gap-2 text-sm text-slate-600">
-              Outra:
-              <input type="color" id="brand_color" name="brand_color" value={currentColor} class="h-9 w-14 rounded border border-slate-300" />
-            </label>
-          </div>
-          <p class={HINT}>Fundo do topo, com o nome e o logo. Escolha uma das cores ou outra em "Outra".</p>
-        </div>
-
-        <div>
-          <label for="website_url" class={LABEL}>Site da clínica</label>
-          <input id="website_url" name="website_url" inputmode="url" placeholder="www.suaclinica.com.br" value={settings.websiteUrl ?? ""} class={INPUT} />
-          <p class={HINT}>Opcional. Com site, as páginas mostram o botão "Voltar para o site".</p>
-        </div>
-      </fieldset>
-
-      {
-        hasBot && (
-          <fieldset class="flex min-w-0 flex-col gap-4 border-t border-slate-200 pt-4">
-            <legend class="text-sm font-semibold uppercase tracking-wide text-slate-500">Informações que o bot responde</legend>
-            <p class={HINT}>No WhatsApp, o paciente escolhe <strong>Informações</strong> no menu e vê as opções preenchidas aqui (o endereço vem dos locais, e o preparo, dos exames).</p>
-            <div>
-              <label for="bot_payment_info" class={LABEL}>
-                Formas de pagamento
-              </label>
-              <textarea id="bot_payment_info" name="bot_payment_info" rows="3" class={INPUT}>{settings.botPaymentInfo ?? ""}</textarea>
-              <p class={HINT}>Aparece no fim de <strong>Informações › Valores</strong>, depois dos preços dos serviços. Ex.: "PIX, cartão de débito e crédito em até 3x". Vazio: os valores aparecem sem as formas de pagamento.</p>
-            </div>
-            <div>
-              <label for="bot_insurance_info" class={LABEL}>
-                Convênios
-              </label>
-              <textarea id="bot_insurance_info" name="bot_insurance_info" rows="3" class={INPUT}>{settings.botInsuranceInfo ?? ""}</textarea>
-              <p class={HINT}>É a resposta de <strong>Informações › Convênios</strong>, do jeito que estiver escrito. Ex.: "Atendemos Unimed e Hapvida. Demais planos: reembolso com nota fiscal." Vazio: a opção não aparece.</p>
-            </div>
-            <div>
-              <label for="bot_notes" class={LABEL}>
-                Observações
-              </label>
-              <textarea id="bot_notes" name="bot_notes" rows="3" class={INPUT}>{settings.botNotes ?? ""}</textarea>
-              <p class={HINT}>É a resposta de <strong>Informações › Outras informações</strong>, do jeito que estiver escrito. Ex.: "Chegue 10 minutos antes. Estacionamento no local." Vazio: a opção não aparece.</p>
-            </div>
-          </fieldset>
-        )
-      }
-
-      {
-        hasBot && (
-          <fieldset class="flex min-w-0 flex-col gap-4 border-t border-slate-200 pt-4">
-            <legend class="text-sm font-semibold uppercase tracking-wide text-slate-500">Limites do bot por contato</legend>
-            <p class={HINT}>
-              Contra abuso no agendamento pelo WhatsApp. Cada número soma todos os pacientes dele. Atingido um limite, o bot não marca e passa a conversa
-              para a recepção; cancelar e remarcar continuam pelo bot. A equipe marca sem limite pelo painel.
-            </p>
-            {limitFields.map((field) => (
-              <div>
-                <label for={field.name} class={LABEL}>
-                  {field.label}
-                </label>
-                <input
-                  id={field.name}
-                  name={field.name}
-                  type="number"
-                  required
-                  min={field.min}
-                  max={field.max}
-                  value={field.value}
-                  class={`${INPUT} w-24`}
-                />
-                <p class={HINT}>{field.hint}</p>
-              </div>
-            ))}
-          </fieldset>
-        )
-      }
-
-      <button type="submit" class={`${PRIMARY_BUTTON} self-start`}>Salvar</button>
+      <div class={field}>
+        <label for="website_url" class={LABEL}>Site da clínica <span class={SOFT}>(opcional)</span></label>
+        <input id="website_url" name="website_url" inputmode="url" placeholder="www.suaclinica.com.br" value={settings.websiteUrl ?? ""} class={`${INPUT} sm:max-w-md`} />
+        <p class={HINT}>Com site, as páginas mostram o botão "Voltar para o site".</p>
+      </div>
+      <div class={actions}>
+        <Button type="submit" variant="primary" data-sending-label="Salvando…">Salvar páginas públicas</Button>
+        <Button href={here} data-edit-cancel>Cancelar</Button>
+      </div>
     </form>
-  </Card>
-</AdminLayout>
+  </EditCard>
+
+  {
+    hasBot && (
+      <EditCard id="bot-info" title="Informações que o bot responde" summary={`${botInfoFilled} de ${botInfo.length} preenchidas`}>
+        <p class="text-sm text-ink-soft">
+          No WhatsApp, o paciente escolhe <strong>Informações</strong> no menu e vê as opções preenchidas aqui (o endereço vem dos locais, e o preparo, dos exames).
+        </p>
+        <dl class={KV}>
+          {botInfo.map((info) => (
+            <>
+              <dt class={DT}>{info.label}</dt>
+              <dd class={`${DD} whitespace-pre-line`}>{info.value ?? <span class={`${SOFT} italic`}>{info.empty}</span>}</dd>
+            </>
+          ))}
+        </dl>
+        <form slot="edit" method="POST" action={action} class="flex flex-col gap-5">
+          <input type="hidden" name="bloco" value="bot_info" />
+          <p class="text-sm text-ink-soft">
+            No WhatsApp, o paciente escolhe <strong>Informações</strong> no menu e vê as opções preenchidas aqui (o endereço vem dos locais, e o preparo, dos exames).
+          </p>
+          <div class={field}>
+            <label for="bot_payment_info" class={LABEL}>
+              Formas de pagamento
+            </label>
+            <textarea id="bot_payment_info" name="bot_payment_info" rows="3" class={INPUT}>{settings.botPaymentInfo ?? ""}</textarea>
+            <p class={HINT}>
+              Aparece no fim de <strong>Informações › Valores</strong>, depois dos preços dos serviços. Ex.: "PIX, cartão de débito e crédito em até 3x". Vazio: os valores aparecem sem as formas de pagamento.
+            </p>
+          </div>
+          <div class={field}>
+            <label for="bot_insurance_info" class={LABEL}>
+              Convênios
+            </label>
+            <textarea id="bot_insurance_info" name="bot_insurance_info" rows="3" class={INPUT}>{settings.botInsuranceInfo ?? ""}</textarea>
+            <p class={HINT}>
+              É a resposta de <strong>Informações › Convênios</strong>, do jeito que estiver escrito. Ex.: "Atendemos Unimed e Hapvida. Demais planos: reembolso com nota fiscal." Vazio: a opção não aparece.
+            </p>
+          </div>
+          <div class={field}>
+            <label for="bot_notes" class={LABEL}>
+              Observações
+            </label>
+            <textarea id="bot_notes" name="bot_notes" rows="3" class={INPUT}>{settings.botNotes ?? ""}</textarea>
+            <p class={HINT}>
+              É a resposta de <strong>Informações › Outras informações</strong>, do jeito que estiver escrito. Ex.: "Chegue 10 minutos antes. Estacionamento no local." Vazio: a opção não aparece.
+            </p>
+          </div>
+          <div class={actions}>
+            <Button type="submit" variant="primary" data-sending-label="Salvando…">Salvar informações</Button>
+            <Button href={here} data-edit-cancel>Cancelar</Button>
+          </div>
+        </form>
+      </EditCard>
+    )
+  }
+
+  {
+    hasBot && (
+      <EditCard
+        id="bot-limites"
+        title="Limites do bot por contato"
+        summary={`${settings.botMaxFutureAppointments} · ${settings.botMaxNewPatients} · ${settings.botMaxNoShows}`}
+      >
+        <p class="text-sm text-ink-soft">
+          Contra abuso no agendamento pelo WhatsApp. Cada número soma todos os pacientes dele. Atingido um limite, o bot não marca e passa a conversa para a recepção;
+          cancelar e remarcar continuam pelo bot. A equipe marca sem limite pelo painel.
+        </p>
+        <dl class={KV}>
+          {limitFields.map((limit) => (
+            <>
+              <dt class={DT}>{limit.label}</dt>
+              <dd class={DD}>{limit.name === "bot_max_no_shows" && limit.value === 0 ? <span class={SOFT}>Desligado</span> : limit.value}</dd>
+            </>
+          ))}
+        </dl>
+        <form slot="edit" method="POST" action={action} class="flex flex-col gap-5">
+          <input type="hidden" name="bloco" value="bot_limites" />
+          {limitFields.map((limit) => (
+            <div class={field}>
+              <label for={limit.name} class={LABEL}>
+                {limit.label}
+              </label>
+              <input id={limit.name} name={limit.name} type="number" required min={limit.min} max={limit.max} value={limit.value} class={`${INPUT_INLINE} mt-1.5 w-24`} />
+              <p class={HINT}>{limit.hint}</p>
+            </div>
+          ))}
+          <div class={actions}>
+            <Button type="submit" variant="primary" data-sending-label="Salvando…">Salvar limites</Button>
+            <Button href={here} data-edit-cancel>Cancelar</Button>
+          </div>
+        </form>
+      </EditCard>
+    )
+  }
+</ConfigShell>
 
 <script>
   // Cores prontas: clicar marca a bolinha e passa a cor para o campo "Outra",
@@ -320,5 +443,7 @@ const profileHint = (profile: (typeof CLINIC_PROFILES)[number]) => {
       }),
     );
     input.addEventListener("input", mark);
+    // "Cancelar" do bloco desfaz o formulário: as bolinhas acompanham.
+    input.addEventListener("change", mark);
   });
 </script>

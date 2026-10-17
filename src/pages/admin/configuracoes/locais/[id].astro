@@ -1,14 +1,12 @@
 ---
 // Configurações › Locais › novo ou editar (F4.3). Domiciliar só com o item
 // "Atendimento domiciliar" liberado (D11); o tipo não muda depois de criado.
-import AdminLayout from "../../../../layouts/AdminLayout.astro";
+import ConfigShell from "../../../../components/admin/config/ConfigShell.astro";
+import { allFilterOn, withAllFilter } from "../../../../lib/returnPath";
 import ActiveToggle from "../../../../components/admin/ActiveToggle.astro";
-import Card from "../../../../components/admin/Card.astro";
-import FlashMessage from "../../../../components/admin/FlashMessage.astro";
 import NextStep from "../../../../components/admin/setup/NextStep.astro";
 import { loadSetupStatus } from "../../../../lib/data/config/setup";
-import Icon from "../../../../components/admin/Icon.astro";
-import { HINT, INPUT, LABEL, PRIMARY_BUTTON } from "../../../../components/admin/fieldStyles";
+import { CARD, HINT, INPUT, LABEL, PRIMARY_BUTTON, SECONDARY_BUTTON } from "../../../../components/admin/config/formStyles";
 import { createUserClient } from "../../../../lib/data/clients";
 import { listLocations } from "../../../../lib/data/config/locations";
 
@@ -20,18 +18,16 @@ const location = isNew
   : ((await listLocations(createUserClient(Astro.request, Astro.cookies), clinic.clinicId, { includeInactive: true })).find((l) => l.id === id) ?? null);
 if (!isNew && !location) return Astro.redirect("/admin/configuracoes/locais");
 const homeVisitOn = clinic.features.includes("home_visit");
-const action = `/api/admin/configuracoes/locais/${id}`;
+// Aberto da lista em "Todos": o filtro vai e volta (teste da R9, NAV-06).
+const all = allFilterOn(Astro.url);
+const list = withAllFilter("/admin/configuracoes/locais", all);
+const action = withAllFilter(`/api/admin/configuracoes/locais/${id}`, all);
 // Próximo passo da jornada de configuração (F6.3b).
 const setup = isNew ? null : await loadSetupStatus(createUserClient(Astro.request, Astro.cookies), clinic.clinicId, clinic.features);
 const locationIssues = setup?.issues.locations.get(id!) ?? [];
 ---
 
-<AdminLayout title={isNew ? "Novo local" : location!.name}>
-  <a href="/admin/configuracoes/locais" class="inline-flex items-center gap-1 text-sm text-sky-700 hover:underline">
-    <Icon name="chevron-left" class="h-4 w-4" /> Locais
-  </a>
-  <h1 class="mt-2 text-2xl font-bold text-slate-900">{isNew ? "Novo local" : "Editar local"}</h1>
-  <FlashMessage />
+<ConfigShell current="locais" title={isNew ? "Novo local" : location!.name} back={{ href: list, label: "Locais" }}>
   {locationIssues.includes("no_address") && <NextStep text="Preencha o endereço abaixo: o bot e as mensagens mostram ao paciente onde é o atendimento." />}
   {
     locationIssues.includes("no_service") && (
@@ -39,8 +35,8 @@ const locationIssues = setup?.issues.locations.get(id!) ?? [];
     )
   }
 
-  <Card class="mt-4 max-w-2xl">
-    <form method="POST" action={action} class="flex flex-col gap-4">
+  <div class="flex max-w-3xl flex-col gap-4">
+    <form method="POST" action={action} class={`${CARD} flex flex-col gap-5 p-4 sm:p-5`}>
       <input type="hidden" name="acao" value="salvar" />
       <div>
         <label for="name" class={LABEL}>Nome</label>
@@ -55,7 +51,7 @@ const locationIssues = setup?.issues.locations.get(id!) ?? [];
               {homeVisitOn && <option value="home_visit">Domiciliar (a equipe vai até o paciente)</option>}
             </select>
           ) : (
-            <p class="mt-1 text-sm text-slate-900">{location!.type === "home_visit" ? "Domiciliar" : "Consultório"}</p>
+            <p class="mt-1 text-sm text-ink">{location!.type === "home_visit" ? "Domiciliar" : "Consultório"}</p>
           )
         }
         {isNew && <p class={HINT}>O tipo não muda depois de criado.</p>}
@@ -65,10 +61,13 @@ const locationIssues = setup?.issues.locations.get(id!) ?? [];
         <input id="address" name="address" placeholder="Rua, número – bairro, cidade" value={location?.address ?? ""} class={INPUT} />
         <p class={HINT}>Vai no lembrete e na confirmação, com o link do mapa.</p>
       </div>
-      <button type="submit" class={`${PRIMARY_BUTTON} self-start`}>{isNew ? "Cadastrar" : "Salvar"}</button>
+      <div class="flex flex-wrap gap-2 border-t border-[#e6ecea] pt-4">
+        <button type="submit" class={PRIMARY_BUTTON} data-sending-label="Salvando…">{isNew ? "Cadastrar" : "Salvar"}</button>
+        <a href={list} class={SECONDARY_BUTTON}>Cancelar</a>
+      </div>
     </form>
     {!isNew && <ActiveToggle action={action} isActive={location!.isActive} what="o local" />}
-  </Card>
+  </div>
 
   <script>
     // Domiciliar não tem endereço fixo: o campo some.
@@ -81,4 +80,4 @@ const locationIssues = setup?.issues.locations.get(id!) ?? [];
     select?.addEventListener("change", sync);
     sync();
   </script>
-</AdminLayout>
+</ConfigShell>

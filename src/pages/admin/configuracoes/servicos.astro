@@ -1,66 +1,111 @@
 ---
 // Configurações › Serviços (F4.3, D4c): consulta, retorno e exame, com as
 // agendas que atendem e os locais em que são oferecidos.
-import AdminLayout from "../../../layouts/AdminLayout.astro";
-import Badge from "../../../components/admin/Badge.astro";
+// Redesign R9 (cliente, 17/out/2026): uma linha por serviço, "Ativos | Todos".
+import ConfigShell from "../../../components/admin/config/ConfigShell.astro";
+import { withAllFilter } from "../../../lib/returnPath";
+import ConfigEmpty from "../../../components/admin/config/ConfigEmpty.astro";
+import ActiveFilter from "../../../components/admin/config/ActiveFilter.astro";
+import { HEAD_ROW, LIST, ROW, ROW_CELL, ROW_GO, ROW_NAME, SOFT } from "../../../components/admin/config/formStyles";
+import Icon from "../../../components/admin/Icon.astro";
 import IssueBadges from "../../../components/admin/setup/IssueBadges.astro";
-import { loadSetupStatus } from "../../../lib/data/config/setup";
-import Card from "../../../components/admin/Card.astro";
-import ConfiguracoesTabs from "../../../components/admin/ConfiguracoesTabs.astro";
-import FlashMessage from "../../../components/admin/FlashMessage.astro";
-import { PRIMARY_BUTTON } from "../../../components/admin/fieldStyles";
+import Button from "../../../components/admin/ui/Button.astro";
+import Pill from "../../../components/admin/ui/Pill.astro";
+import Tag from "../../../components/admin/ui/Tag.astro";
 import { createUserClient } from "../../../lib/data/clients";
 import { listAgendas } from "../../../lib/data/config/agendas";
 import { listServices } from "../../../lib/data/config/services";
+import { loadSetupStatus } from "../../../lib/data/config/setup";
 import { formatCentsBRL } from "../../../lib/money";
 import { CATEGORY_LABELS } from "../../../lib/serviceLabels";
 
 const clinic = Astro.locals.clinic!;
 const db = createUserClient(Astro.request, Astro.cookies);
 const showInactive = Astro.url.searchParams.get("todos") === "1";
-const [services, agendas] = await Promise.all([
-  listServices(db, clinic.clinicId, { includeInactive: showInactive }),
+const [all, agendas, setup] = await Promise.all([
+  listServices(db, clinic.clinicId, { includeInactive: true }),
   listAgendas(db, clinic.clinicId, { includeInactive: true }),
+  // Pendências da jornada de configuração (F6.3b), nos selos.
+  loadSetupStatus(db, clinic.clinicId, clinic.features),
 ]);
+const active = all.filter((s) => s.isActive);
+// Desativados no fim, em "Todos".
+const services = showInactive ? [...active, ...all.filter((s) => !s.isActive)] : active;
 const agendaName = new Map(agendas.map((a) => [a.id, a.name]));
-// Pendências da jornada de configuração (F6.3b), nos selos.
-const setup = await loadSetupStatus(createUserClient(Astro.request, Astro.cookies), clinic.clinicId, clinic.features);
+const cols = "lg:grid-cols-[minmax(0,2fr)_200px_minmax(0,2fr)_36px]";
 ---
 
-<AdminLayout title="Serviços">
-  <h1 class="text-2xl font-bold text-slate-900">Configurações</h1>
-  <ConfiguracoesTabs current="servicos" />
-  <FlashMessage />
+<ConfigShell current="servicos" title="Serviços" subtitle="O que a clínica oferece para marcar, com duração, preço e as agendas que atendem." setup={setup}>
+  <Button slot="actions" href="/admin/configuracoes/servicos/novo" variant="primary">
+    <Icon name="plus" class="h-[18px] w-[18px]" strokeWidth={2.2} /> Novo serviço
+  </Button>
 
-  <div class="mt-4 flex flex-wrap items-center justify-between gap-3">
-    <a href="/admin/configuracoes/servicos/novo" class={PRIMARY_BUTTON}>Novo serviço</a>
-    <a href={showInactive ? "?" : "?todos=1"} class="text-sm text-sky-700 hover:underline">
-      {showInactive ? "Esconder desativados" : "Mostrar desativados"}
-    </a>
+  <div class="flex flex-wrap items-center justify-between gap-3">
+    <p class="text-sm text-ink-soft" role="status">
+      {services.length} {services.length === 1 ? "serviço" : "serviços"}{showInactive ? "" : active.length === 1 ? " ativo" : " ativos"}
+    </p>
+    <ActiveFilter showInactive={showInactive} active={active.length} total={all.length} />
   </div>
 
-  <ul class="mt-4 grid gap-3 sm:grid-cols-2">
-    {
-      services.map((service) => (
-        <li>
-          <a href={`/admin/configuracoes/servicos/${service.id}`}>
-            <Card class="h-full hover:border-sky-300 hover:bg-sky-50" muted={!service.isActive}>
-              <p class="font-medium text-slate-900">
-                {service.name} <Badge variant={service.category === "exam" ? "accent" : "info"}>{CATEGORY_LABELS[service.category]}</Badge>{" "}
-                {service.schedulingMode === "group" && <Badge variant="warning">turma</Badge>} {!service.isActive && <Badge>desativado</Badge>} <IssueBadges issues={setup.issues.services.get(service.id)} />
-              </p>
-              <p class="mt-1 text-sm text-slate-600">
-                {service.durationMinutes} min · {formatCentsBRL(service.priceCents)}
-                {service.returnDeadlineDays ? ` · retorno em até ${service.returnDeadlineDays} dias` : ""}
-              </p>
-              <p class="text-sm text-slate-500">
-                {service.agendaIds.length ? service.agendaIds.map((id) => agendaName.get(id)).join(", ") : "Nenhuma agenda: não aparece para marcar"}
-              </p>
-            </Card>
-          </a>
-        </li>
-      ))
-    }
-  </ul>
-  {services.length === 0 && <p class="mt-4 text-sm text-slate-600">Nenhum serviço cadastrado.</p>}
-</AdminLayout>
+  {
+    services.length > 0 ? (
+      <section aria-label="Serviços" class={LIST}>
+        <div aria-hidden="true" class={`${HEAD_ROW} ${cols}`}>
+          <span>Serviço</span>
+          <span>Duração e preço</span>
+          <span>Agendas que atendem</span>
+          <span />
+        </div>
+        <ul>
+          {services.map((service) => {
+            const href = withAllFilter(`/admin/configuracoes/servicos/${service.id}`, showInactive);
+            return (
+              <li class={`${ROW} ${cols} ${service.isActive ? "" : "opacity-60"}`}>
+                <div class="flex min-w-0 flex-col gap-1.5">
+                  <span class="flex flex-wrap items-center gap-x-2 gap-y-1">
+                    <a href={href} class={ROW_NAME}>
+                      {service.name}
+                    </a>
+                    <Tag>{CATEGORY_LABELS[service.category]}</Tag>
+                    {service.schedulingMode === "group" && <Tag>Turma</Tag>}
+                    {!service.isActive && <Pill>Desativado</Pill>}
+                  </span>
+                  {service.isActive && (
+                    <span class="flex flex-wrap gap-1.5 empty:hidden">
+                      <IssueBadges issues={setup.issues.services.get(service.id)} />
+                    </span>
+                  )}
+                </div>
+                <a href={href} aria-label={`Abrir ${service.name}`} class={ROW_GO}>
+                  <Icon name="chevron-right" class="h-5 w-5" strokeWidth={2.2} />
+                </a>
+                <span class={`${ROW_CELL} tabular-nums`}>
+                  {service.durationMinutes} min
+                  <span class="text-ink-soft max-lg:before:content-['_·_'] lg:block">
+                    {formatCentsBRL(service.priceCents)}
+                    {service.returnDeadlineDays ? ` · retorno em até ${service.returnDeadlineDays} dias` : ""}
+                  </span>
+                </span>
+                <span class={ROW_CELL}>
+                  {service.agendaIds.length ? (
+                    service.agendaIds.map((id) => agendaName.get(id)).join(", ")
+                  ) : (
+                    <span class={SOFT}>Nenhuma agenda: não aparece para marcar</span>
+                  )}
+                </span>
+              </li>
+            );
+          })}
+        </ul>
+      </section>
+    ) : (
+      <ConfigEmpty
+        onlyInactive={all.length > 0}
+        none="Nenhum serviço"
+        text="Sem serviço, nada aparece para marcar."
+        href="/admin/configuracoes/servicos/novo"
+        label="Cadastrar o primeiro serviço"
+      />
+    )
+  }
+</ConfigShell>

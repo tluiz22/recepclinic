@@ -1,0 +1,35 @@
+---
+// "Ativos | Todos" das listas de Configurações (R9; no lugar de "Mostrar
+// desativados"), com quantos há em cada um. `?todos=1` como antes.
+interface Props {
+  showInactive: boolean;
+  active: number;
+  total: number;
+  /** "Ativos" ou "Ativas" (agendas). */
+  activeLabel?: string;
+  class?: string;
+}
+
+const { showInactive, active, total, activeLabel = "Ativos", class: className = "" } = Astro.props;
+const items = [
+  { label: activeLabel, href: "?", count: active, current: !showInactive },
+  { label: "Todos", href: "?todos=1", count: total, current: showInactive },
+];
+---
+
+<nav aria-label="Mostrar" class={`inline-grid auto-cols-fr grid-flow-col gap-0.5 rounded-[10px] bg-canvas-deep p-[3px] ${className}`}>
+  {
+    items.map((item) => (
+      <a
+        href={item.href}
+        aria-current={item.current ? "page" : undefined}
+        class={`flex h-[38px] items-center justify-center gap-1.5 rounded-lg px-3.5 no-underline sm:h-[34px] ${
+          item.current ? "bg-white font-bold text-ink shadow-[0_1px_2px_rgba(18,48,42,.12)]" : "font-semibold text-ink-soft hover:bg-white/60 hover:text-ink"
+        }`}
+      >
+        {item.label}
+        <span class="rounded-full bg-blk-100 px-2 text-[12.5px] leading-normal font-semibold text-blk-800">{item.count}</span>
+      </a>
+    ))
+  }
+</nav>

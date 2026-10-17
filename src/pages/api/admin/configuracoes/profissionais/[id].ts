@@ -9,6 +9,7 @@ import {
 } from "../../../../../lib/data/config/professionals";
 import { DataError } from "../../../../../lib/data/errors";
 import { runFormAction } from "../../../../../lib/data/formAction";
+import { allFilterOn, withAllFilter } from "../../../../../lib/returnPath";
 import { formOptionalText, formText } from "../../../../../lib/forms";
 
 // Profissional (F4.3): criar (`novo`), salvar, desativar e reativar. O login
@@ -21,7 +22,9 @@ export const POST: APIRoute = async (context) => {
   const form = await request.formData().catch(() => null);
   const clinic = locals.clinic!;
   const db = createUserClient(request, cookies);
-  const page = (target: string) => `/admin/configuracoes/profissionais/${target}`;
+  // Cadastro aberto da lista em "Todos": volta com o filtro (teste da R9, NAV-06).
+  const all = allFilterOn(new URL(request.url));
+  const page = (target: string) => withAllFilter(`/admin/configuracoes/profissionais/${target}`, all);
   const acao = formText(form, "acao");
 
   return runFormAction(

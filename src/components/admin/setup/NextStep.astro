@@ -1,7 +1,9 @@
 ---
 // Próximo passo da jornada de configuração (F6.3b), na tela do cadastro:
 // aparece enquanto a pendência existe (logo depois de salvar, inclusive).
-import { PRIMARY_BUTTON } from "../fieldStyles";
+// Redesign R9: aviso âmbar com o botão de resolver à direita.
+import Icon from "../Icon.astro";
+import { buttonClass } from "../ui/styles";
 
 interface Props {
   text: string;
@@ -12,12 +14,14 @@ interface Props {
 const { text, href, label } = Astro.props;
 ---
 
-<div class="mt-4 max-w-2xl rounded-lg border border-sky-200 bg-sky-50 p-4">
-  <p class="text-sm font-semibold text-sky-900">Próximo passo</p>
-  <p class="mt-1 text-sm text-sky-900">{text}</p>
+<div class="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-pend-200 bg-pend-50 px-4 py-3 text-pend-800">
+  <p class="flex min-w-0 flex-1 items-start gap-2.5 text-[15px] leading-snug font-semibold">
+    <Icon name="warning" class="mt-0.5 h-[18px] w-[18px] shrink-0" strokeWidth={2.2} />
+    <span><span class="sr-only">Próximo passo: </span>{text}</span>
+  </p>
   {
     href && label && (
-      <a href={href} class={`${PRIMARY_BUTTON} mt-3 inline-flex`}>
+      <a href={href} class={buttonClass("primary", "sm")}>
         {label}
       </a>
     )

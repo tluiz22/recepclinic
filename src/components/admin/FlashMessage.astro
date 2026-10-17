@@ -5,7 +5,15 @@ import FormMessage from "./FormMessage.astro";
 // Aviso deixado pela rota de formulário (salvo ou erro), mostrado uma vez.
 // `data-flash` diz ao src/scripts/keepFormValues.ts se a tela voltou com erro;
 // `data-fields`, quais campos falharam.
-const flash = takeFlash(Astro.cookies);
+// `flash`: já lido pela moldura antes de uma espera (depois dela, a resposta
+// já saiu e o cookie não é mais apagado: QA-02 da R9).
+import type { Flash } from "../../lib/flash";
+
+interface Props {
+  flash?: Flash | null;
+}
+
+const flash = Astro.props.flash !== undefined ? Astro.props.flash : takeFlash(Astro.cookies);
 ---
 
 {

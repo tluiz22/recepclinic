@@ -6,13 +6,11 @@
 // Administrador e o Suporte. Certificado: só o Administrador da clínica
 // (enviar ou trocar com o termo, e revogar); a tela mostra só titular, CNPJ e
 // validade, com aviso a partir de 30 dias do vencimento.
-import AdminLayout from "../../../layouts/AdminLayout.astro";
-import Badge from "../../../components/admin/Badge.astro";
-import Card from "../../../components/admin/Card.astro";
-import ConfiguracoesTabs from "../../../components/admin/ConfiguracoesTabs.astro";
+import ConfigShell from "../../../components/admin/config/ConfigShell.astro";
+import Badge from "../../../components/admin/config/Badge.astro";
+import Card from "../../../components/admin/config/Panel.astro";
 import ConfirmDeleteDialog from "../../../components/admin/ConfirmDeleteDialog.astro";
-import FlashMessage from "../../../components/admin/FlashMessage.astro";
-import { HINT, INPUT, LABEL, PRIMARY_BUTTON, SECONDARY_BUTTON } from "../../../components/admin/fieldStyles";
+import { HINT, INPUT, INPUT_INLINE, LABEL, PRIMARY_BUTTON, SECONDARY_BUTTON } from "../../../components/admin/config/formStyles";
 import { certificateStatus } from "../../../lib/certificate";
 import { formatInstant } from "../../../lib/clinicTime";
 import { formatCnpj } from "../../../lib/cnpj";
@@ -33,6 +31,7 @@ import {
 } from "../../../lib/data/fiscal";
 import { FISCAL_TERMS, FISCAL_TERMS_VERSION } from "../../../lib/fiscalTerms";
 import { platformEnv } from "../../../lib/env";
+import { receivedReturn, returnLabel, withReturn } from "../../../lib/returnPath";
 
 const clinic = Astro.locals.clinic!;
 const db = createUserClient(Astro.request, Astro.cookies);
@@ -47,7 +46,10 @@ const actors = await loadActorLabels(db, clinic.clinicId, audit.map((a) => a.act
 // O certificado é só do Administrador da clínica (o Suporte nunca mexe).
 const isClinicAdmin = clinic.roles.includes("admin");
 const status = certificate ? certificateStatus(certificate.validUntil) : null;
-const action = "/api/admin/configuracoes/nota-fiscal";
+// Aberta de outra tela (DMED, aviso do Início): "Voltar" para lá, também depois
+// de salvar (R9; S-01 do relatório da R8). Aberta pelo menu, sem "Voltar".
+const volta = receivedReturn(Astro.url);
+const action = withReturn("/api/admin/configuracoes/nota-fiscal", volta);
 const date = (d: Date) => formatInstant(d, clinic.timezone, "dd/MM/yyyy");
 const issValue = settings ? String(settings.issRate).replace(".", ",") : "";
 
@@ -74,16 +76,13 @@ const switchTargets = !settings
     : (["restricted"] as const);
 ---
 
-<AdminLayout title="Nota fiscal">
-  <h1 class="text-2xl font-bold text-slate-900">Configurações</h1>
-  <ConfiguracoesTabs current="nota_fiscal" />
-  <FlashMessage />
+<ConfigShell current="nota_fiscal" title="Nota fiscal" subtitle="Dados fiscais, certificado A1 e o código de cada serviço para emitir a NFS-e." back={volta ? { href: volta, label: returnLabel(volta) } : undefined}>
 
-  <div class="mt-4 grid gap-4 lg:grid-cols-2">
+  <div class="grid gap-4 lg:grid-cols-2">
     <div class="flex flex-col gap-4">
       <Card>
-        <h2 class="font-semibold text-slate-900">Dados fiscais da clínica</h2>
-        <p class="mt-1 text-sm text-slate-600">Vão em todas as notas. Confira com o contador da clínica, principalmente o regime e o código do serviço.</p>
+        <h2 class="font-display text-[17px] leading-tight font-bold text-ink sm:text-lg">Dados fiscais da clínica</h2>
+        <p class="mt-1 text-sm text-ink-soft">Vão em todas as notas. Confira com o contador da clínica, principalmente o regime e o código do serviço.</p>
         <form method="POST" action={action} class="mt-3 flex flex-col gap-3">
           <input type="hidden" name="acao" value="dados" />
           <div class="grid gap-3 sm:grid-cols-2">
@@ -121,8 +120,8 @@ const switchTargets = !settings
               ))}
             </select>
           </div>
-          <div data-me-epp class="grid gap-3 rounded-lg border border-slate-200 p-3 sm:grid-cols-2">
-            <p class="text-sm text-slate-600 sm:col-span-2">ME/EPP do Simples: a nota nacional pede mais estes dois dados.</p>
+          <div data-me-epp class="grid gap-3 rounded-lg border border-line p-3 sm:grid-cols-2">
+            <p class="text-sm text-ink-soft sm:col-span-2">ME/EPP do Simples: a nota nacional pede mais estes dois dados.</p>
             <div class="sm:col-span-2">
               <label for="simples_regime" class={LABEL}>Regime de apuração do Simples</label>
               <select id="simples_regime" name="simples_regime" class={INPUT}>
@@ -173,11 +172,11 @@ const switchTargets = !settings
       </Card>
 
       <Card>
-        <h2 class="flex flex-wrap items-center gap-2 font-semibold text-slate-900">
+        <h2 class="flex flex-wrap items-center gap-2 font-display text-[17px] leading-tight font-bold text-ink sm:text-lg">
           Ambiente da Receita
           {settings && <Badge variant={settings.environment === "production" ? "success" : "warning"}>{ENVIRONMENT_BADGE[settings.environment]}</Badge>}
         </h2>
-        <p class="mt-1 text-sm text-slate-600">
+        <p class="mt-1 text-sm text-ink-soft">
           {settings ? ENVIRONMENT_LABEL[settings.environment] : ENVIRONMENT_LABEL.restricted}. Toda clínica começa em testes; o suporte passa para Produção depois que
           a clínica testou e o contador conferiu uma nota de teste.
         </p>
@@ -205,20 +204,20 @@ const switchTargets = !settings
       </Card>
 
       <Card>
-        <h2 class="font-semibold text-slate-900">Código por serviço</h2>
-        <p class="mt-1 text-sm text-slate-600">Só quando o serviço tem código diferente do padrão (ex.: 04.16.01 Psicologia). Vazio: vale o padrão.</p>
+        <h2 class="font-display text-[17px] leading-tight font-bold text-ink sm:text-lg">Código por serviço</h2>
+        <p class="mt-1 text-sm text-ink-soft">Só quando o serviço tem código diferente do padrão (ex.: 04.16.01 Psicologia). Vazio: vale o padrão.</p>
         <form method="POST" action={action} class="mt-3 flex flex-col gap-2">
           <input type="hidden" name="acao" value="codigos" />
           {services.map((s) => (
             <div class="flex flex-wrap items-center justify-between gap-2">
               <input type="hidden" name="service_id" value={s.id} />
-              <label for={`code_${s.id}`} class="text-sm text-slate-700">
+              <label for={`code_${s.id}`} class="text-sm text-ink-mid">
                 {s.name}
               </label>
-              <input id={`code_${s.id}`} name={`code_${s.id}`} placeholder={settings?.serviceCode ?? "04.01.01"} value={codes.get(s.id) ?? ""} class={`${INPUT} mt-0 w-32`} />
+              <input id={`code_${s.id}`} name={`code_${s.id}`} placeholder={settings?.serviceCode ?? "04.01.01"} value={codes.get(s.id) ?? ""} class={`${INPUT_INLINE} w-32`} />
             </div>
           ))}
-          {services.length === 0 && <p class="text-sm text-slate-500">Nenhum serviço ativo.</p>}
+          {services.length === 0 && <p class="text-sm text-ink-soft">Nenhum serviço ativo.</p>}
           {services.length > 0 && <button type="submit" class={`${SECONDARY_BUTTON} mt-2 self-start`}>Salvar códigos</button>}
         </form>
       </Card>
@@ -226,7 +225,7 @@ const switchTargets = !settings
 
     <div class="flex flex-col gap-4">
       <Card>
-        <h2 class="flex flex-wrap items-center gap-2 font-semibold text-slate-900">
+        <h2 class="flex flex-wrap items-center gap-2 font-display text-[17px] leading-tight font-bold text-ink sm:text-lg">
           Certificado digital A1
           {status?.state === "ok" && <Badge variant="success">em dia</Badge>}
           {status?.state === "expiring" && <Badge variant="warning">{`vence em ${status.daysLeft} ${status.daysLeft === 1 ? "dia" : "dias"}`}</Badge>}
@@ -235,52 +234,52 @@ const switchTargets = !settings
         </h2>
         {
           certificate ? (
-            <dl class="mt-2 grid gap-1 text-sm text-slate-700">
+            <dl class="mt-2 grid gap-1 text-sm text-ink-mid">
               <div>
-                <dt class="inline text-slate-500">Titular:</dt> <dd class="inline">{certificate.subjectName}</dd>
+                <dt class="inline text-ink-soft">Titular:</dt> <dd class="inline">{certificate.subjectName}</dd>
               </div>
               <div>
-                <dt class="inline text-slate-500">CNPJ:</dt> <dd class="inline">{formatCnpj(certificate.subjectCnpj)}</dd>
+                <dt class="inline text-ink-soft">CNPJ:</dt> <dd class="inline">{formatCnpj(certificate.subjectCnpj)}</dd>
               </div>
               <div>
-                <dt class="inline text-slate-500">Validade:</dt>{" "}
+                <dt class="inline text-ink-soft">Validade:</dt>{" "}
                 <dd class="inline">
                   {date(certificate.validFrom)} a {date(certificate.validUntil)}
                 </dd>
               </div>
             </dl>
           ) : (
-            <p class="mt-1 text-sm text-slate-600">Sem o certificado, a clínica não emite nota fiscal.</p>
+            <p class="mt-1 text-sm text-ink-soft">Sem o certificado, a clínica não emite nota fiscal.</p>
           )
         }
-        {status?.state === "expired" && <p class="mt-2 text-sm text-red-700">Vencido: a emissão está desligada até enviar o certificado novo.</p>}
-        {status?.state === "expiring" && <p class="mt-2 text-sm text-amber-700">Renove o certificado com a certificadora e envie o novo aqui antes de vencer.</p>}
+        {status?.state === "expired" && <p class="mt-2 text-sm text-danger">Vencido: a emissão está desligada até enviar o certificado novo.</p>}
+        {status?.state === "expiring" && <p class="mt-2 text-sm text-pend-800">Renove o certificado com a certificadora e envie o novo aqui antes de vencer.</p>}
         <p class={HINT}>O arquivo e a senha ficam criptografados no cofre do sistema e nunca aparecem na tela, nem para o suporte.</p>
 
         {
           isClinicAdmin ? (
             <>
-              <form method="POST" action={action} enctype="multipart/form-data" class="mt-4 flex flex-col gap-3 border-t border-slate-100 pt-4">
+              <form method="POST" action={action} enctype="multipart/form-data" class="mt-4 flex flex-col gap-3 border-t border-[#e6ecea] pt-4">
                 <input type="hidden" name="acao" value="certificado" />
-                <p class="text-sm font-medium text-slate-900">{certificate ? "Trocar o certificado" : "Enviar o certificado"}</p>
-                {!settings && <p class="text-sm text-amber-700">Salve primeiro os dados fiscais: o certificado precisa ser do mesmo CNPJ.</p>}
+                <p class="text-sm font-medium text-ink">{certificate ? "Trocar o certificado" : "Enviar o certificado"}</p>
+                {!settings && <p class="text-sm text-pend-800">Salve primeiro os dados fiscais: o certificado precisa ser do mesmo CNPJ.</p>}
                 <div>
                   <label for="pfx" class={LABEL}>Arquivo (.pfx ou .p12)</label>
                   <input id="pfx" name="pfx" type="file" required accept=".pfx,.p12,application/x-pkcs12" class="mt-1 block text-sm" />
                 </div>
                 <div>
                   <label for="password" class={LABEL}>Senha do certificado</label>
-                  <input id="password" name="password" type="password" required autocomplete="off" class={`${INPUT} sm:w-64`} />
+                  <input id="password" name="password" type="password" required autocomplete="off" class={`${INPUT_INLINE} mt-1.5 w-full sm:w-64`} />
                 </div>
-                <details class="rounded-lg border border-slate-200 p-3 text-sm text-slate-700" open={!certificate}>
+                <details class="rounded-lg border border-line p-3 text-sm text-ink-mid" open={!certificate}>
                   <summary class="cursor-pointer font-medium">Termo de autorização</summary>
                   {FISCAL_TERMS.map((paragraph) => (
                     <p class="mt-2">{paragraph}</p>
                   ))}
-                  <p class="mt-2 text-xs text-slate-500">Versão {FISCAL_TERMS_VERSION}.</p>
+                  <p class="mt-2 text-xs text-ink-soft">Versão {FISCAL_TERMS_VERSION}.</p>
                 </details>
-                <label class="flex items-start gap-2 text-sm text-slate-700">
-                  <input type="checkbox" name="terms" value="1" required class="mt-0.5 h-4 w-4" />
+                <label class="flex items-start gap-2 text-sm text-ink-mid">
+                  <input type="checkbox" name="terms" value="1" required class="mt-0.5 h-[18px] w-[18px] shrink-0 accent-brand" />
                   <span>Li e aceito o termo de autorização, em nome da clínica.</span>
                 </label>
                 <button type="submit" class={`${PRIMARY_BUTTON} self-start`} disabled={!settings}>
@@ -288,11 +287,11 @@ const switchTargets = !settings
                 </button>
               </form>
               {certificate && (
-                <form method="POST" action={action} class="mt-4 border-t border-slate-100 pt-4">
+                <form method="POST" action={action} class="mt-4 border-t border-[#e6ecea] pt-4">
                   <input type="hidden" name="acao" value="revogar" />
                   <button
                     type="submit"
-                    class={`${SECONDARY_BUTTON} js-confirm-delete text-red-700`}
+                    class={`${SECONDARY_BUTTON} js-confirm-delete text-danger`}
                     data-confirm-title="Revogar o certificado?"
                     data-confirm-message="O certificado e a senha são apagados do cofre na hora e a clínica deixa de emitir notas até enviar um certificado de novo. As notas já emitidas não mudam."
                     data-confirm-label="Revogar"
@@ -303,18 +302,18 @@ const switchTargets = !settings
               )}
             </>
           ) : (
-            <p class="mt-4 border-t border-slate-100 pt-4 text-sm text-slate-600">Só o Administrador da clínica envia, troca ou revoga o certificado.</p>
+            <p class="mt-4 border-t border-[#e6ecea] pt-4 text-sm text-ink-soft">Só o Administrador da clínica envia, troca ou revoga o certificado.</p>
           )
         }
       </Card>
 
       <Card>
-        <h2 class="font-semibold text-slate-900">Histórico fiscal</h2>
-        <ul class="mt-2 divide-y divide-slate-100">
+        <h2 class="font-display text-[17px] leading-tight font-bold text-ink sm:text-lg">Histórico fiscal</h2>
+        <ul class="mt-2 divide-y divide-[#e6ecea]">
           {audit.map((entry) => (
             <li class="py-2 text-sm">
-              <span class="font-medium text-slate-900">{FISCAL_AUDIT_LABEL[entry.event]}</span>
-              <span class="block text-slate-500">
+              <span class="font-medium text-ink">{FISCAL_AUDIT_LABEL[entry.event]}</span>
+              <span class="block text-ink-soft">
                 {formatInstant(entry.createdAt, clinic.timezone, "dd/MM/yyyy 'às' HH:mm")}
                 {entry.actorId ? ` · ${actors.get(entry.actorId)?.name ?? "alguém da equipe"}` : ""}
                 {typeof entry.details.terms_version === "string" ? ` · versão ${entry.details.terms_version}` : ""}
@@ -324,13 +323,13 @@ const switchTargets = !settings
               </span>
             </li>
           ))}
-          {audit.length === 0 && <li class="py-2 text-sm text-slate-500">Nada ainda.</li>}
+          {audit.length === 0 && <li class="py-2 text-sm text-ink-soft">Nada ainda.</li>}
         </ul>
       </Card>
     </div>
   </div>
   <ConfirmDeleteDialog />
-</AdminLayout>
+</ConfigShell>
 
 <script>
   // Os campos do Simples só aparecem (e só vão) para ME/EPP.

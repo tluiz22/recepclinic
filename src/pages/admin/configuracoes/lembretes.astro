@@ -10,12 +10,10 @@
 //   "Lembrete à equipe").
 // O cadastro da conexão, os templates e as últimas mensagens ficam na aba
 // WhatsApp, só do Suporte.
-import AdminLayout from "../../../layouts/AdminLayout.astro";
-import Badge from "../../../components/admin/Badge.astro";
-import Card from "../../../components/admin/Card.astro";
-import ConfiguracoesTabs from "../../../components/admin/ConfiguracoesTabs.astro";
-import FlashMessage from "../../../components/admin/FlashMessage.astro";
-import { HINT, INPUT, PRIMARY_BUTTON, SECONDARY_BUTTON } from "../../../components/admin/fieldStyles";
+import ConfigShell from "../../../components/admin/config/ConfigShell.astro";
+import Badge from "../../../components/admin/config/Badge.astro";
+import Card from "../../../components/admin/config/Panel.astro";
+import { HINT, INPUT_INLINE, PRIMARY_BUTTON, SECONDARY_BUTTON } from "../../../components/admin/config/formStyles";
 import WhatsappConnectionCard from "../../../components/admin/WhatsappConnectionCard.astro";
 import { createUserClient } from "../../../lib/data/clients";
 import { getClinicSettings, REMINDER_HOUR_MAX, REMINDER_HOUR_MIN, type ReminderTiming } from "../../../lib/data/config/clinic";
@@ -52,34 +50,31 @@ const cards = {
 };
 ---
 
-<AdminLayout title="Lembretes">
-  <h1 class="text-2xl font-bold text-slate-900">Configurações</h1>
-  <ConfiguracoesTabs current="lembretes" />
-  <FlashMessage />
+<ConfigShell current="lembretes" title="Lembretes" subtitle="Os lembretes pelo WhatsApp ao paciente, ao profissional e à equipe.">
 
-  <div class="mt-4 flex max-w-2xl flex-col gap-4">
+  <div class="flex max-w-2xl flex-col gap-4">
     <WhatsappConnectionCard connection={connection} timeZone={clinic.timezone} />
 
     {
       patientOn && (
         <Card>
-          <h2 class="font-semibold text-slate-900">Lembrete ao paciente</h2>
-          <p class="mt-1 text-sm text-slate-600">O paciente recebe um lembrete e pode confirmar a presença, remarcar ou cancelar.</p>
+          <h2 class="font-display text-[17px] leading-tight font-bold text-ink sm:text-lg">Lembrete ao paciente</h2>
+          <p class="mt-1 text-sm text-ink-soft">O paciente recebe um lembrete e pode confirmar a presença, remarcar ou cancelar.</p>
           <form method="POST" action="/api/admin/configuracoes/lembrete" class="mt-3 flex flex-col gap-3">
-            <label class="flex items-center gap-2 text-sm font-medium text-slate-700">
-              <input type="checkbox" name="reminder_enabled" checked={cards.patient.enabled} class="h-4 w-4 rounded border-slate-300" />
+            <label class="flex items-center gap-2 text-sm font-medium text-ink-mid">
+              <input type="checkbox" name="reminder_enabled" checked={cards.patient.enabled} class="h-[18px] w-[18px] shrink-0 accent-brand" />
               Enviar o lembrete
             </label>
             <div class="flex flex-wrap items-center gap-3">
-              <select name="reminder_timing" aria-label="Quando enviar o lembrete ao paciente" class={`${INPUT} mt-0 w-56`}>
+              <select name="reminder_timing" aria-label="Quando enviar o lembrete ao paciente" class={`${INPUT_INLINE} w-56`}>
                 {TIMINGS.map((t) => (
                   <option value={t.value} selected={t.value === cards.patient.timing}>
                     {t.label}
                   </option>
                 ))}
               </select>
-              <span class="text-sm text-slate-600">às</span>
-              <select name="reminder_hour" aria-label="Horário do lembrete ao paciente" class={`${INPUT} mt-0 w-28`}>
+              <span class="text-sm text-ink-soft">às</span>
+              <select name="reminder_hour" aria-label="Horário do lembrete ao paciente" class={`${INPUT_INLINE} w-28`}>
                 {hours.map((hour) => (
                   <option value={hour} selected={hour === cards.patient.hour}>
                     {String(hour).padStart(2, "0")}:00
@@ -102,24 +97,24 @@ const cards = {
     {
       professionalOn && (
         <Card>
-          <h2 class="font-semibold text-slate-900">Lembrete ao profissional (resumo do dia)</h2>
-          <p class="mt-1 text-sm text-slate-600">Cada profissional marcado recebe, pelo WhatsApp, a lista dos atendimentos das agendas dele.</p>
+          <h2 class="font-display text-[17px] leading-tight font-bold text-ink sm:text-lg">Lembrete ao profissional (resumo do dia)</h2>
+          <p class="mt-1 text-sm text-ink-soft">Cada profissional marcado recebe, pelo WhatsApp, a lista dos atendimentos das agendas dele.</p>
           <form method="POST" action="/api/admin/configuracoes/resumo" class="mt-3 flex flex-col gap-3">
             <input type="hidden" name="publico" value="profissional" />
-            <label class="flex items-center gap-2 text-sm font-medium text-slate-700">
-              <input type="checkbox" name="enabled" checked={cards.professional.enabled} class="h-4 w-4 rounded border-slate-300" />
+            <label class="flex items-center gap-2 text-sm font-medium text-ink-mid">
+              <input type="checkbox" name="enabled" checked={cards.professional.enabled} class="h-[18px] w-[18px] shrink-0 accent-brand" />
               Enviar o resumo do dia
             </label>
             <div class="flex flex-wrap items-center gap-3">
-              <select name="timing" aria-label="Quando enviar o resumo ao profissional" class={`${INPUT} mt-0 w-56`}>
+              <select name="timing" aria-label="Quando enviar o resumo ao profissional" class={`${INPUT_INLINE} w-56`}>
                 {TIMINGS.map((t) => (
                   <option value={t.value} selected={t.value === cards.professional.timing}>
                     {t.label}
                   </option>
                 ))}
               </select>
-              <span class="text-sm text-slate-600">às</span>
-              <select name="hour" aria-label="Horário do resumo ao profissional" class={`${INPUT} mt-0 w-28`}>
+              <span class="text-sm text-ink-soft">às</span>
+              <select name="hour" aria-label="Horário do resumo ao profissional" class={`${INPUT_INLINE} w-28`}>
                 {hours.map((hour) => (
                   <option value={hour} selected={hour === cards.professional.hour}>
                     {String(hour).padStart(2, "0")}:00
@@ -128,28 +123,28 @@ const cards = {
               </select>
             </div>
             <fieldset>
-              <legend class="text-sm font-semibold text-slate-800">Quem recebe</legend>
+              <legend class="text-sm font-semibold text-ink">Quem recebe</legend>
               {professionals.length ? (
                 <ul class="mt-1 flex flex-col gap-1">
                   {professionals.map((p) => (
                     <li>
-                      <label class="flex items-center gap-2 text-sm text-slate-700">
+                      <label class="flex items-center gap-2 text-sm text-ink-mid">
                         <input
                           type="checkbox"
                           name="professional_ids"
                           value={p.id}
                           checked={p.receivesDailySummary}
                           disabled={!p.phone}
-                          class="h-4 w-4 rounded border-slate-300"
+                          class="h-[18px] w-[18px] shrink-0 accent-brand"
                         />
                         {p.displayName}
-                        <span class="text-slate-500">{p.phone ? formatPhoneBR(p.phone) : "sem WhatsApp no cadastro"}</span>
+                        <span class="text-ink-soft">{p.phone ? formatPhoneBR(p.phone) : "sem WhatsApp no cadastro"}</span>
                       </label>
                     </li>
                   ))}
                 </ul>
               ) : (
-                <p class="mt-1 text-sm text-slate-600">Nenhum profissional ativo.</p>
+                <p class="mt-1 text-sm text-ink-soft">Nenhum profissional ativo.</p>
               )}
             </fieldset>
             <button type="submit" class={`${SECONDARY_BUTTON} self-start`}>Salvar</button>
@@ -162,24 +157,24 @@ const cards = {
     {
       teamOn && (
         <Card>
-          <h2 class="font-semibold text-slate-900">Lembrete à equipe (resumo do dia)</h2>
-          <p class="mt-1 text-sm text-slate-600">Os contatos abaixo recebem, pelo WhatsApp, a lista dos atendimentos da clínica.</p>
+          <h2 class="font-display text-[17px] leading-tight font-bold text-ink sm:text-lg">Lembrete à equipe (resumo do dia)</h2>
+          <p class="mt-1 text-sm text-ink-soft">Os contatos abaixo recebem, pelo WhatsApp, a lista dos atendimentos da clínica.</p>
           <form method="POST" action="/api/admin/configuracoes/resumo" class="mt-3 flex flex-col gap-3">
             <input type="hidden" name="publico" value="equipe" />
-            <label class="flex items-center gap-2 text-sm font-medium text-slate-700">
-              <input type="checkbox" name="enabled" checked={cards.team.enabled} class="h-4 w-4 rounded border-slate-300" />
+            <label class="flex items-center gap-2 text-sm font-medium text-ink-mid">
+              <input type="checkbox" name="enabled" checked={cards.team.enabled} class="h-[18px] w-[18px] shrink-0 accent-brand" />
               Enviar o resumo do dia
             </label>
             <div class="flex flex-wrap items-center gap-3">
-              <select name="timing" aria-label="Quando enviar o resumo à equipe" class={`${INPUT} mt-0 w-56`}>
+              <select name="timing" aria-label="Quando enviar o resumo à equipe" class={`${INPUT_INLINE} w-56`}>
                 {TIMINGS.map((t) => (
                   <option value={t.value} selected={t.value === cards.team.timing}>
                     {t.label}
                   </option>
                 ))}
               </select>
-              <span class="text-sm text-slate-600">às</span>
-              <select name="hour" aria-label="Horário do resumo à equipe" class={`${INPUT} mt-0 w-28`}>
+              <span class="text-sm text-ink-soft">às</span>
+              <select name="hour" aria-label="Horário do resumo à equipe" class={`${INPUT_INLINE} w-28`}>
                 {hours.map((hour) => (
                   <option value={hour} selected={hour === cards.team.hour}>
                     {String(hour).padStart(2, "0")}:00
@@ -194,34 +189,34 @@ const cards = {
           <p class={HINT}>No fuso da clínica. Na véspera: os atendimentos do dia seguinte. No dia: os atendimentos do dia. Um envio só por dia.</p>
 
           <div class="mt-4 flex flex-wrap items-center justify-between gap-2">
-            <h3 class="text-sm font-semibold text-slate-800">Contatos da equipe</h3>
+            <h3 class="text-sm font-semibold text-ink">Contatos da equipe</h3>
             <a href="/admin/configuracoes/contatos/novo" class={PRIMARY_BUTTON}>
               Novo contato
             </a>
           </div>
-          <ul class="mt-2 divide-y divide-slate-100">
+          <ul class="mt-2 divide-y divide-[#e6ecea]">
             {recipients.map((r) => (
               <li class={r.isActive ? "" : "opacity-60"}>
-                <a href={`/admin/configuracoes/contatos/${r.id}`} class="flex flex-wrap items-center justify-between gap-2 py-2 text-sm hover:bg-sky-50">
-                  <span class="font-medium text-slate-900">
+                <a href={`/admin/configuracoes/contatos/${r.id}`} class="flex flex-wrap items-center justify-between gap-2 py-2 text-sm hover:bg-canvas">
+                  <span class="font-medium text-ink">
                     {r.label} {!r.isActive && <Badge>desativado</Badge>}
                   </span>
-                  <span class="text-slate-600">
+                  <span class="text-ink-soft">
                     {formatPhoneBR(r.phone)} · {receives(r)}
                   </span>
                 </a>
               </li>
             ))}
           </ul>
-          {recipients.length === 0 && <p class="mt-1 text-sm text-slate-600">Nenhum contato cadastrado.</p>}
+          {recipients.length === 0 && <p class="mt-1 text-sm text-ink-soft">Nenhum contato cadastrado.</p>}
         </Card>
       )
     }
 
     {
       !patientOn && !professionalOn && !teamOn && (
-        <p class="text-sm text-slate-600">Os lembretes não estão liberados para a clínica. Fale com o suporte.</p>
+        <p class="text-sm text-ink-soft">Os lembretes não estão liberados para a clínica. Fale com o suporte.</p>
       )
     }
   </div>
-</AdminLayout>
+</ConfigShell>

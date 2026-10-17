@@ -9,6 +9,7 @@ import {
 } from "../../../../../lib/data/config/insurance";
 import { listProfessionals } from "../../../../../lib/data/config/professionals";
 import { runFormAction } from "../../../../../lib/data/formAction";
+import { allFilterOn, withAllFilter } from "../../../../../lib/returnPath";
 import { formAll, formOptionalText, formText } from "../../../../../lib/forms";
 
 // Plano de saúde (F4.4b): criar (`novo`), salvar, desativar e reativar. Os
@@ -20,7 +21,9 @@ export const POST: APIRoute = async (context) => {
   const form = await request.formData().catch(() => null);
   const clinicId = locals.clinic!.clinicId;
   const db = createUserClient(request, cookies);
-  const page = (target: string) => `/admin/configuracoes/convenios/${target}`;
+  // Cadastro aberto da lista em "Todos": volta com o filtro (teste da R9, NAV-06).
+  const all = allFilterOn(new URL(request.url));
+  const page = (target: string) => withAllFilter(`/admin/configuracoes/convenios/${target}`, all);
   const acao = formText(form, "acao");
   let createdId: string | null = null;
 

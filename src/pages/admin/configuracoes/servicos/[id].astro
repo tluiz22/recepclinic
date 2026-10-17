@@ -3,15 +3,13 @@
 // agendas que atendem (D2) e locais em que é oferecido, com preço próprio
 // opcional por local. Exame só com o item "Exames e procedimentos" (D11); a
 // categoria não muda depois de criado. Os dias e horários entram na F4.4.
-import AdminLayout from "../../../../layouts/AdminLayout.astro";
+import ConfigShell from "../../../../components/admin/config/ConfigShell.astro";
+import { allFilterOn, withAllFilter } from "../../../../lib/returnPath";
 import ActiveToggle from "../../../../components/admin/ActiveToggle.astro";
-import Card from "../../../../components/admin/Card.astro";
-import FlashMessage from "../../../../components/admin/FlashMessage.astro";
 import NextStep from "../../../../components/admin/setup/NextStep.astro";
 import { loadSetupStatus } from "../../../../lib/data/config/setup";
-import Icon from "../../../../components/admin/Icon.astro";
 import PreparationField from "../../../../components/admin/PreparationField.astro";
-import { HINT, INPUT, LABEL, PRIMARY_BUTTON } from "../../../../components/admin/fieldStyles";
+import { CARD, CHECK, CHOICE, HINT, INPUT, INPUT_INLINE, LABEL, PRIMARY_BUTTON, SECONDARY_BUTTON, SECTION_TITLE } from "../../../../components/admin/config/formStyles";
 import { createUserClient } from "../../../../lib/data/clients";
 import { listAgendas } from "../../../../lib/data/config/agendas";
 import { listLocations } from "../../../../lib/data/config/locations";
@@ -40,19 +38,17 @@ const offered = new Map((service?.locations ?? []).map((l) => [l.locationId, l.p
 const homeVisitOn = clinic.features.includes("home_visit");
 const locationOptions = locations.filter((l) => (l.isActive || offered.has(l.id)) && (homeVisitOn || l.type !== "home_visit"));
 const hiddenHomeVisit = !homeVisitOn && locations.some((l) => l.type === "home_visit" && offered.has(l.id));
-const action = `/api/admin/configuracoes/servicos/${id}`;
+// Aberto da lista em "Todos": o filtro vai e volta (teste da R9, NAV-06).
+const all = allFilterOn(Astro.url);
+const list = withAllFilter("/admin/configuracoes/servicos", all);
+const action = withAllFilter(`/api/admin/configuracoes/servicos/${id}`, all);
 // Próximo passo da jornada de configuração (F6.3b).
 const setup = isNew ? null : await loadSetupStatus(createUserClient(Astro.request, Astro.cookies), clinic.clinicId, clinic.features);
 const serviceIssues = setup?.issues.services.get(id!) ?? [];
 const hoursAgenda = service?.agendaIds.find((agendaId) => agendas.some((a) => a.id === agendaId && a.isActive)) ?? null;
 ---
 
-<AdminLayout title={isNew ? "Novo serviço" : service!.name}>
-  <a href="/admin/configuracoes/servicos" class="inline-flex items-center gap-1 text-sm text-sky-700 hover:underline">
-    <Icon name="chevron-left" class="h-4 w-4" /> Serviços
-  </a>
-  <h1 class="mt-2 text-2xl font-bold text-slate-900">{isNew ? "Novo serviço" : "Editar serviço"}</h1>
-  <FlashMessage />
+<ConfigShell current="servicos" title={isNew ? "Novo serviço" : service!.name} back={{ href: list, label: "Serviços" }}>
   {
     serviceIssues.includes("no_agenda") || serviceIssues.includes("no_location") ? (
       <NextStep text="Marque abaixo a agenda e o local deste serviço e salve. Depois, cadastre os horários." />
@@ -68,9 +64,10 @@ const hoursAgenda = service?.agendaIds.find((agendaId) => agendas.some((a) => a.
     )
   }
 
-  <Card class="mt-4 max-w-4xl">
-    <form method="POST" action={action} class="flex flex-col gap-5" data-service-form data-category={service?.category ?? ""}>
+  <div class="flex max-w-3xl flex-col gap-4">
+    <form method="POST" action={action} class={`${CARD} flex flex-col gap-5 p-4 sm:p-5`} data-service-form data-category={service?.category ?? ""}>
       <input type="hidden" name="acao" value="salvar" />
+      <h2 class={SECTION_TITLE}>O serviço</h2>
       <div>
         <label for="category" class={LABEL}>Tipo</label>
         {
@@ -81,7 +78,7 @@ const hoursAgenda = service?.agendaIds.find((agendaId) => agendas.some((a) => a.
               ))}
             </select>
           ) : (
-            <p class="mt-1 text-sm text-slate-900">{CATEGORY_LABELS[service!.category]}</p>
+            <p class="mt-1 text-sm text-ink">{CATEGORY_LABELS[service!.category]}</p>
           )
         }
         {isNew && <p class={HINT}>O tipo não muda depois de criado.</p>}
@@ -108,12 +105,12 @@ const hoursAgenda = service?.agendaIds.find((agendaId) => agendas.some((a) => a.
 
       <div data-only="exam">
         <span class={LABEL}>Como é marcado</span>
-        <div class="mt-1 flex flex-wrap gap-4 text-sm text-slate-700">
+        <div class="mt-1 flex flex-wrap gap-4 text-sm text-ink-mid">
           <label class="flex items-center gap-2">
-            <input type="radio" name="scheduling_mode" value="individual" checked={service?.schedulingMode !== "group"} /> Individual
+            <input type="radio" name="scheduling_mode" value="individual" checked={service?.schedulingMode !== "group"} class="h-[18px] w-[18px] accent-brand" /> Individual
           </label>
           <label class="flex items-center gap-2">
-            <input type="radio" name="scheduling_mode" value="group" checked={service?.schedulingMode === "group"} /> Em turma (vagas por horário)
+            <input type="radio" name="scheduling_mode" value="group" checked={service?.schedulingMode === "group"} class="h-[18px] w-[18px] accent-brand" /> Em turma (vagas por horário)
           </label>
         </div>
       </div>
@@ -121,40 +118,40 @@ const hoursAgenda = service?.agendaIds.find((agendaId) => agendas.some((a) => a.
         <PreparationField value={service?.preparationInstructions} />
       </div>
 
-      <fieldset class="border-t border-slate-200 pt-4">
-        <legend class="text-sm font-semibold uppercase tracking-wide text-slate-500">Agendas que atendem</legend>
+      <fieldset class="min-w-0 border-t border-[#e6ecea] pt-5">
+        <legend class={`${SECTION_TITLE} float-left w-full`}>Agendas que atendem</legend>
         <p class={HINT}>O serviço só aparece para marcar nas agendas marcadas aqui.</p>
         <div class="mt-2 flex flex-col gap-2">
           {
             agendaOptions.map((agenda) => (
-              <label class="flex items-center gap-2 text-sm text-slate-700">
-                <input type="checkbox" name="agenda_id" value={agenda.id} checked={service?.agendaIds.includes(agenda.id)} class="h-4 w-4 rounded border-slate-300" />
+              <label class={CHOICE}>
+                <input type="checkbox" name="agenda_id" value={agenda.id} checked={service?.agendaIds.includes(agenda.id)} class={CHECK} />
                 {agenda.name}
                 {!agenda.isActive && " (desativada)"}
               </label>
             ))
           }
-          {agendaOptions.length === 0 && <p class="text-sm text-slate-600">Cadastre uma agenda antes.</p>}
+          {agendaOptions.length === 0 && <p class="text-sm text-ink-soft">Cadastre uma agenda antes.</p>}
         </div>
       </fieldset>
 
-      <fieldset class="border-t border-slate-200 pt-4">
-        <legend class="text-sm font-semibold uppercase tracking-wide text-slate-500">Locais em que é oferecido</legend>
+      <fieldset class="min-w-0 border-t border-[#e6ecea] pt-5">
+        <legend class={`${SECTION_TITLE} float-left w-full`}>Locais em que é oferecido</legend>
         <p class={HINT}>Sem valor próprio, vale o valor do serviço.</p>
         <div class="mt-2 flex flex-col gap-3">
           {
             locationOptions.map((location) => {
               const own = offered.get(location.id) ?? null;
               return (
-                <div class="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-slate-700">
+                <div class="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-ink-mid">
                   <label class="flex min-w-48 items-center gap-2">
-                    <input type="checkbox" name="location_id" value={location.id} checked={offered.has(location.id)} class="h-4 w-4 rounded border-slate-300" />
+                    <input type="checkbox" name="location_id" value={location.id} checked={offered.has(location.id)} class={CHECK} />
                     {location.name}
                     {location.type === "home_visit" && " (domiciliar)"}
                     {!location.isActive && " (desativado)"}
                   </label>
                   <label class="flex items-center gap-2">
-                    <input type="checkbox" name={`own_price_${location.id}`} checked={own !== null} class="h-4 w-4 rounded border-slate-300" />
+                    <input type="checkbox" name={`own_price_${location.id}`} checked={own !== null} class={CHECK} />
                     valor próprio
                   </label>
                   <input
@@ -163,23 +160,26 @@ const hoursAgenda = service?.agendaIds.find((agendaId) => agendas.some((a) => a.
                     aria-label={`Valor em ${location.name}`}
                     placeholder="0,00"
                     value={centsToInput(own)}
-                    class={`${INPUT} mt-0 w-28`}
+                    class={`${INPUT_INLINE} w-28`}
                   />
                 </div>
               );
             })
           }
-          {locationOptions.length === 0 && <p class="text-sm text-slate-600">Cadastre um local antes.</p>}
+          {locationOptions.length === 0 && <p class="text-sm text-ink-soft">Cadastre um local antes.</p>}
           {hiddenHomeVisit && (
             <p class={HINT}>O atendimento domiciliar não está liberado para a clínica. A ligação deste serviço com ele fica guardada e volta se o item for liberado.</p>
           )}
         </div>
       </fieldset>
 
-      <button type="submit" class={`${PRIMARY_BUTTON} self-start`}>{isNew ? "Cadastrar" : "Salvar"}</button>
+      <div class="flex flex-wrap gap-2 border-t border-[#e6ecea] pt-4">
+        <button type="submit" class={PRIMARY_BUTTON} data-sending-label="Salvando…">{isNew ? "Cadastrar" : "Salvar"}</button>
+        <a href={list} class={SECONDARY_BUTTON}>Cancelar</a>
+      </div>
     </form>
     {!isNew && <ActiveToggle action={action} isActive={service!.isActive} what="o serviço" />}
-  </Card>
+  </div>
 
   <script>
     // Mostra só os campos do tipo escolhido (prazo do retorno; turma e preparo do exame).
@@ -194,4 +194,4 @@ const hoursAgenda = service?.agendaIds.find((agendaId) => agendas.some((a) => a.
     select?.addEventListener("change", sync);
     sync();
   </script>
-</AdminLayout>
+</ConfigShell>

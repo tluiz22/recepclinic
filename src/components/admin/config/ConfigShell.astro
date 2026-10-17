@@ -1,0 +1,143 @@
+---
+// Moldura de Configurações (redesign R9, proposta aprovada pelo cliente em
+// 17/out/2026): no computador, o menu lateral em 4 grupos, com o número de
+// pendências do guia ao lado da seção; no celular, o botão "Seção: <nome>"
+// abre a mesma lista (sem JavaScript, <details>). O título é o da seção ou do
+// cadastro (U-06), com "Configurações" pequeno acima; nos formulários, o link
+// para a lista (`back`). Aberta de outra tela (S-01 da R8), `back` é a origem.
+// Substitui as abas em pílulas (ConfiguracoesTabs, F4.3).
+import AdminLayout from "../../../layouts/AdminLayout.astro";
+import FlashMessage from "../FlashMessage.astro";
+import Icon from "../Icon.astro";
+import { createUserClient } from "../../../lib/data/clients";
+import { takeFlash } from "../../../lib/flash";
+import { loadSetupStatus, type SetupStatus } from "../../../lib/data/config/setup";
+import { configSections, type SectionId } from "./sections";
+
+interface Props {
+  current: SectionId;
+  title: string;
+  subtitle?: string;
+  /** Título da aba do navegador (padrão: o título). */
+  pageTitle?: string;
+  /** "‹ Profissionais" nos formulários; a origem quando veio de outra tela. */
+  back?: { href: string; label: string };
+  /** Já carregado pela tela (evita buscar duas vezes). */
+  setup?: SetupStatus;
+}
+
+const { current, title, subtitle, pageTitle, back, setup: given } = Astro.props;
+// O aviso é lido (e o cookie apagado) antes de esperar o guia: depois da espera
+// a resposta já começou a sair e o cookie ficava, repetindo o aviso nas telas
+// seguintes (QA-02 do teste da R9).
+const flash = takeFlash(Astro.cookies);
+const clinic = Astro.locals.clinic!;
+const setup = given ?? (await loadSetupStatus(createUserClient(Astro.request, Astro.cookies), clinic.clinicId, clinic.features));
+const groups = configSections(clinic.features, clinic.isPlatformStaff, setup);
+const all = groups.flatMap((g) => g.items);
+const active = all.find((s) => s.id === current);
+const totalPending = all.reduce((sum, s) => sum + s.pending, 0);
+const pendingLabel = (n: number) => `${n} ${n === 1 ? "pendência" : "pendências"}`;
+const count = "rounded-full bg-pend-100 px-2 text-[12.5px] leading-normal font-semibold text-pend-800";
+const support = "rounded-md bg-blk-100 px-1.5 text-[11.5px] leading-normal font-semibold text-blk-800";
+---
+
+<AdminLayout title={pageTitle ?? title}>
+  <div class="lg:grid lg:grid-cols-[208px_minmax(0,1fr)] lg:items-start lg:gap-8">
+    <nav aria-label="Seções de Configurações" class="hidden lg:flex lg:flex-col lg:gap-[18px]">
+      {
+        groups.map((group) => (
+          <div class="flex flex-col gap-0.5">
+            <span class="px-3 pb-1.5 text-xs leading-none font-bold tracking-[.07em] text-ink-soft uppercase">{group.title}</span>
+            {group.items.map((s) => (
+              <a
+                href={s.href}
+                aria-current={s.id === current ? "page" : undefined}
+                class={`flex h-[38px] items-center justify-between gap-2 rounded-lg px-3 text-[15px] no-underline ${
+                  s.id === current ? "bg-brand-soft font-bold text-brand-ink" : "font-semibold text-ink-mid hover:bg-canvas-deep hover:text-ink"
+                }`}
+              >
+                {s.label}
+                {s.pending > 0 ? (
+                  <span class={count} aria-label={pendingLabel(s.pending)}>
+                    {s.pending}
+                  </span>
+                ) : (
+                  s.supportOnly && <span class={support}>Suporte</span>
+                )}
+              </a>
+            ))}
+          </div>
+        ))
+      }
+    </nav>
+
+    <div class="flex min-w-0 flex-col">
+      {
+        back && (
+          <a href={back.href} class="mb-2 inline-flex min-h-8 items-center gap-1 self-start text-[15px] font-semibold text-brand no-underline hover:underline">
+            <Icon name="chevron-left" class="h-[18px] w-[18px]" strokeWidth={2.2} /> {back.label}
+          </a>
+        )
+      }
+      <div class="flex flex-wrap items-end justify-between gap-x-4 gap-y-3">
+        <div class="min-w-0">
+          <span class="text-[12.5px] font-bold tracking-[.06em] text-ink-soft uppercase">Configurações</span>
+          <h1 class="mt-1 font-display text-[26px] leading-[1.1] font-bold break-words text-ink sm:text-[30px]">{title}</h1>
+          {subtitle && <p class="mt-1.5 text-[15px] text-ink-soft">{subtitle}</p>}
+        </div>
+        {
+          Astro.slots.has("actions") && (
+            <div class="flex flex-wrap gap-2">
+              <slot name="actions" />
+            </div>
+          )
+        }
+      </div>
+
+      <details data-config-sections class="group/sec mt-3 lg:hidden">
+        <summary class="flex h-12 cursor-pointer list-none items-center justify-between gap-2 rounded-[10px] border border-line-strong bg-white px-3.5 text-base text-ink [&::-webkit-details-marker]:hidden">
+          <span>
+            Seção: <strong>{active?.label ?? title}</strong>
+          </span>
+          <span class="flex items-center gap-2">
+            {totalPending > 0 && <span class={count}>{pendingLabel(totalPending)}</span>}
+            <Icon name="chevron-down" class="h-[18px] w-[18px] transition-transform group-open/sec:rotate-180" strokeWidth={2.2} />
+          </span>
+        </summary>
+        <nav aria-label="Seções de Configurações" class="mt-2 overflow-hidden rounded-xl border border-line bg-white pb-1.5">
+          {
+            groups.map((group) => (
+              <>
+                <span class="block px-3.5 pt-2.5 pb-1 text-[11.5px] leading-none font-bold tracking-[.07em] text-ink-soft uppercase">{group.title}</span>
+                {group.items.map((s) => (
+                  <a
+                    href={s.href}
+                    aria-current={s.id === current ? "page" : undefined}
+                    class={`flex min-h-11 items-center justify-between gap-2 px-3.5 text-base no-underline ${
+                      s.id === current ? "bg-brand-soft font-bold text-brand-ink" : "font-semibold text-ink-mid"
+                    }`}
+                  >
+                    {s.label}
+                    {s.pending > 0 ? (
+                      <span class={count} aria-label={pendingLabel(s.pending)}>
+                        {s.pending}
+                      </span>
+                    ) : (
+                      s.supportOnly && <span class={support}>Suporte</span>
+                    )}
+                  </a>
+                ))}
+              </>
+            ))
+          }
+        </nav>
+      </details>
+
+      <FlashMessage flash={flash} />
+      <div class="mt-4 flex min-w-0 flex-col gap-4">
+        <slot />
+      </div>
+    </div>
+  </div>
+</AdminLayout>

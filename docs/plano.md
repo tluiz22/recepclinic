@@ -2154,6 +2154,25 @@ canvas). Decisões, uma a uma:
 Sem mudança de regra: quem vê Configurações (Administrador e Suporte), o WhatsApp só do Suporte,
 Convênios e Nota fiscal só com o item liberado, o limite de profissionais, os campos, as validações,
 os passos do guia e o que cada seção grava.
+**Implementada em 17/out** e testada no navegador local (computador e celular, Administrador e Suporte,
+nas duas clínicas do seed): moldura em `src/components/admin/config/ConfigShell.astro` (menu, botão
+"Seção", título e "Voltar"; sai o `ConfiguracoesTabs`), seções e pendências em `config/sections.ts`
+(teste em `sections.test.ts`), campos, linhas e cartões no padrão novo em `config/formStyles.ts`,
+`Panel.astro`, `Badge.astro`, `ActiveFilter.astro` e `ConfigEmpty.astro` (o `fieldStyles` antigo segue
+no Sistema e na página do paciente, R10 e R11). A gravação da Clínica aceita `bloco` (sem ele, grava
+tudo, como antes). "Voltar" para a origem: `returnLabel` em `returnPath.ts`; a DMED e o aviso do Início
+mandam a origem para a Nota fiscal, que a mantém nos formulários e depois de salvar. Conferido: erro num
+bloco da Clínica mantém o que foi digitado e não grava nada; salvar um bloco não mexe nos outros; a
+Nota fiscal volta para a DMED no mesmo ano depois de salvar; as 13 seções e os 7 formulários abrem sem
+erro; sem rolagem lateral em 390px. Não visto com dados: o guia com pendências (as duas clínicas do seed
+estão completas; coberto pelo teste das contagens). `astro check` sem erros e `npm test` (501) passando.
+[Teste de interface](auditoria-frontend/redesign-r9-report.md) em 17/out: 3 falhas, as 3 corrigidas e
+retestadas a pedido do cliente: o aviso não era apagado em 14 telas de Configurações e reaparecia nas
+seguintes (QA-02; o `ConfigShell` lê o aviso antes de esperar o guia); o erro de um bloco de baixo da
+Clínica ficava fora da tela (QA-01; a mensagem vai para dentro do cartão "Editar", à vista com o campo,
+e o campo ganha borda vermelha); "‹ lista", "Cancelar" e salvar perdiam o filtro "Todos" (NAV-06,
+anterior à R9; `withAllFilter` em `returnPath.ts`). O guia com pendências foi visto com dados (serviço
+de teste no banco local). `npm test` (502) passando.
 
 ## Depois do 1º piloto (já previsto no banco)
 

@@ -2,12 +2,10 @@
 // Configurações › Feriados (F4.4b): os nacionais (fixos, só leitura) e os
 // extras da clínica (municipais, estaduais, recesso), um por data. Em feriado
 // a agenda não oferece horário.
-import AdminLayout from "../../../layouts/AdminLayout.astro";
-import Card from "../../../components/admin/Card.astro";
-import ConfiguracoesTabs from "../../../components/admin/ConfiguracoesTabs.astro";
+import ConfigShell from "../../../components/admin/config/ConfigShell.astro";
+import Card from "../../../components/admin/config/Panel.astro";
 import ConfirmDeleteDialog from "../../../components/admin/ConfirmDeleteDialog.astro";
-import FlashMessage from "../../../components/admin/FlashMessage.astro";
-import { HINT, INPUT, LABEL, PRIMARY_BUTTON, SECONDARY_BUTTON } from "../../../components/admin/fieldStyles";
+import { HINT, INPUT, INPUT_INLINE, LABEL, PRIMARY_BUTTON, SECONDARY_BUTTON } from "../../../components/admin/config/formStyles";
 import { addDays, formatCalendarDate, todayIn } from "../../../lib/clinicTime";
 import { createUserClient } from "../../../lib/data/clients";
 import { listClinicHolidays } from "../../../lib/data/config/holidays";
@@ -25,27 +23,24 @@ const action = "/api/admin/configuracoes/feriados";
 const show = (date: string) => formatCalendarDate(date, "EEE, dd/MM/yyyy");
 ---
 
-<AdminLayout title="Feriados">
-  <h1 class="text-2xl font-bold text-slate-900">Configurações</h1>
-  <ConfiguracoesTabs current="feriados" />
-  <FlashMessage />
+<ConfigShell current="feriados" title="Feriados" subtitle="Dias em que a clínica não atende: os feriados nacionais e os da clínica.">
 
-  <div class="mt-4 grid gap-4 lg:grid-cols-2">
+  <div class="grid gap-4 lg:grid-cols-2">
     <section>
       <div class="flex flex-wrap items-center justify-between gap-3">
-        <h2 class="text-lg font-semibold text-slate-900">Feriados da clínica</h2>
-        <a href={showPast ? "?" : "?todos=1"} class="text-sm text-sky-700 hover:underline">
+        <h2 class="font-display text-[17px] leading-tight font-bold text-ink sm:text-lg">Feriados da clínica</h2>
+        <a href={showPast ? "?" : "?todos=1"} class="text-sm text-brand hover:underline">
           {showPast ? "Esconder os que já passaram" : "Mostrar os que já passaram"}
         </a>
       </div>
-      <p class="mt-1 text-sm text-slate-600">Municipais, estaduais, recesso ou qualquer dia sem atendimento.</p>
+      <p class="mt-1 text-sm text-ink-soft">Municipais, estaduais, recesso ou qualquer dia sem atendimento.</p>
 
       <Card class="mt-3">
         <form method="POST" action={action} class="flex flex-wrap items-end gap-3">
           <input type="hidden" name="acao" value="adicionar" />
           <div>
             <label for="date" class={LABEL}>Data</label>
-            <input id="date" name="date" type="date" required min={showPast ? undefined : today} class={`${INPUT} w-44`} />
+            <input id="date" name="date" type="date" required min={showPast ? undefined : today} class={`${INPUT_INLINE} mt-1.5 w-44`} />
           </div>
           <div class="min-w-48 flex-1">
             <label for="description" class={LABEL}>Descrição</label>
@@ -56,20 +51,20 @@ const show = (date: string) => formatCalendarDate(date, "EEE, dd/MM/yyyy");
         <p class={HINT}>Os atendimentos já marcados nesse dia continuam; remarque pela Agenda.</p>
       </Card>
 
-      <ul class="mt-3 divide-y divide-slate-100 rounded-lg border border-slate-200 bg-white">
+      <ul class="mt-3 divide-y divide-[#e6ecea] rounded-lg border border-line bg-white">
         {
           holidays.map((holiday) => (
             <li class={`flex items-center justify-between gap-3 px-4 py-2 ${holiday.date < today ? "opacity-60" : ""}`}>
               <div class="text-sm">
-                <p class="font-medium text-slate-900">{show(holiday.date)}</p>
-                <p class="text-slate-600">{holiday.description}</p>
+                <p class="font-medium text-ink">{show(holiday.date)}</p>
+                <p class="text-ink-soft">{holiday.description}</p>
               </div>
               <form method="POST" action={action}>
                 <input type="hidden" name="acao" value="remover" />
                 <input type="hidden" name="holiday_id" value={holiday.id} />
                 <button
                   type="submit"
-                  class={`${SECONDARY_BUTTON} js-confirm-delete text-red-700`}
+                  class={`${SECONDARY_BUTTON} js-confirm-delete text-danger`}
                   data-confirm-title="Remover o feriado?"
                   data-confirm-message={`${show(holiday.date)}: ${holiday.description}. A agenda volta a oferecer horários nesse dia.`}
                   data-confirm-label="Remover"
@@ -80,19 +75,19 @@ const show = (date: string) => formatCalendarDate(date, "EEE, dd/MM/yyyy");
             </li>
           ))
         }
-        {holidays.length === 0 && <li class="px-4 py-3 text-sm text-slate-600">Nenhum feriado da clínica cadastrado.</li>}
+        {holidays.length === 0 && <li class="px-4 py-3 text-sm text-ink-soft">Nenhum feriado da clínica cadastrado.</li>}
       </ul>
     </section>
 
     <section>
-      <h2 class="text-lg font-semibold text-slate-900">Feriados nacionais</h2>
-      <p class="mt-1 text-sm text-slate-600">Já contam sozinhos, todo ano (com Carnaval, Quarta-feira de Cinzas e Corpus Christi). Os dos próximos 12 meses:</p>
-      <ul class="mt-3 divide-y divide-slate-100 rounded-lg border border-slate-200 bg-white">
+      <h2 class="font-display text-[17px] leading-tight font-bold text-ink sm:text-lg">Feriados nacionais</h2>
+      <p class="mt-1 text-sm text-ink-soft">Já contam sozinhos, todo ano (com Carnaval, Quarta-feira de Cinzas e Corpus Christi). Os dos próximos 12 meses:</p>
+      <ul class="mt-3 divide-y divide-[#e6ecea] rounded-lg border border-line bg-white">
         {
           national.map((holiday) => (
             <li class="flex items-center justify-between gap-3 px-4 py-2 text-sm">
-              <span class="font-medium text-slate-900">{show(holiday.date)}</span>
-              <span class="text-right text-slate-600">{holiday.name}</span>
+              <span class="font-medium text-ink">{show(holiday.date)}</span>
+              <span class="text-right text-ink-soft">{holiday.name}</span>
             </li>
           ))
         }
@@ -100,4 +95,4 @@ const show = (date: string) => formatCalendarDate(date, "EEE, dd/MM/yyyy");
     </section>
   </div>
   <ConfirmDeleteDialog />
-</AdminLayout>
+</ConfigShell>

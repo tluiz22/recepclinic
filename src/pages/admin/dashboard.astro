@@ -88,7 +88,7 @@ const sectionTitle = "font-display text-[17px] leading-tight font-bold text-ink 
           </Notice>
         )}
         {certificateAlert && (
-          <Notice tone="warning" href="/admin/configuracoes/nota-fiscal" linkLabel="Abrir Nota fiscal">
+          <Notice tone="warning" href={withReturn("/admin/configuracoes/nota-fiscal", here)} linkLabel="Abrir Nota fiscal">
             {certificateAlert}
           </Notice>
         )}

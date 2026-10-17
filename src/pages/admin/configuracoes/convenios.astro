@@ -2,12 +2,16 @@
 // Configurações › Convênios (F4.4b, D10; só com o item "Convênios", D11):
 // planos atendidos, com os outros nomes que o paciente usa (busca do bot), e
 // a opção de pedir carteirinha e validade na marcação.
-import AdminLayout from "../../../layouts/AdminLayout.astro";
-import Badge from "../../../components/admin/Badge.astro";
-import Card from "../../../components/admin/Card.astro";
-import ConfiguracoesTabs from "../../../components/admin/ConfiguracoesTabs.astro";
-import FlashMessage from "../../../components/admin/FlashMessage.astro";
-import { HINT, PRIMARY_BUTTON, SECONDARY_BUTTON } from "../../../components/admin/fieldStyles";
+// Redesign R9 (cliente, 17/out/2026): a opção num cartão, uma linha por plano,
+// "Ativos | Todos".
+import ConfigShell from "../../../components/admin/config/ConfigShell.astro";
+import { withAllFilter } from "../../../lib/returnPath";
+import ActiveFilter from "../../../components/admin/config/ActiveFilter.astro";
+import ConfigEmpty from "../../../components/admin/config/ConfigEmpty.astro";
+import { CHECK, HEAD_ROW, LIST, PANEL, ROW, ROW_CELL, ROW_GO, ROW_NAME, SOFT } from "../../../components/admin/config/formStyles";
+import Icon from "../../../components/admin/Icon.astro";
+import Button from "../../../components/admin/ui/Button.astro";
+import Pill from "../../../components/admin/ui/Pill.astro";
 import { createUserClient } from "../../../lib/data/clients";
 import { getClinicSettings } from "../../../lib/data/config/clinic";
 import { listInsurancePlans } from "../../../lib/data/config/insurance";
@@ -15,55 +19,73 @@ import { listInsurancePlans } from "../../../lib/data/config/insurance";
 const clinic = Astro.locals.clinic!;
 const db = createUserClient(Astro.request, Astro.cookies);
 const showInactive = Astro.url.searchParams.get("todos") === "1";
-const [plans, settings] = await Promise.all([
-  listInsurancePlans(db, clinic.clinicId, { includeInactive: showInactive }),
-  getClinicSettings(db, clinic.clinicId),
-]);
+const [all, settings] = await Promise.all([listInsurancePlans(db, clinic.clinicId, { includeInactive: true }), getClinicSettings(db, clinic.clinicId)]);
+const active = all.filter((p) => p.isActive);
+// Desativados no fim, em "Todos".
+const plans = showInactive ? [...active, ...all.filter((p) => !p.isActive)] : active;
+const cols = "lg:grid-cols-[minmax(0,1.6fr)_minmax(0,2fr)_120px_36px]";
 ---
 
-<AdminLayout title="Convênios">
-  <h1 class="text-2xl font-bold text-slate-900">Configurações</h1>
-  <ConfiguracoesTabs current="convenios" />
-  <FlashMessage />
+<ConfigShell current="convenios" title="Convênios" subtitle="Os planos atendidos, com os outros nomes que o paciente usa no WhatsApp.">
+  <Button slot="actions" href="/admin/configuracoes/convenios/novo" variant="primary">
+    <Icon name="plus" class="h-[18px] w-[18px]" strokeWidth={2.2} /> Novo plano
+  </Button>
 
-  <Card class="mt-4 max-w-2xl">
-    <form method="POST" action="/api/admin/configuracoes/convenios/opcoes" class="flex flex-wrap items-center justify-between gap-3">
-      <label class="flex items-start gap-2 text-sm text-slate-700">
-        <input type="checkbox" name="require_insurance_details" checked={settings.requireInsuranceDetails} class="mt-0.5 h-4 w-4 rounded border-slate-300" />
-        <span>
-          Pedir o número da carteirinha e a validade na marcação por plano
-          <span class={`${HINT} block`}>Na página de data e horário e no painel.</span>
-        </span>
-      </label>
-      <button type="submit" class={SECONDARY_BUTTON}>Salvar</button>
-    </form>
-  </Card>
+  <form method="POST" action="/api/admin/configuracoes/convenios/opcoes" class={`${PANEL} flex flex-wrap items-center justify-between gap-3`}>
+    <label class="flex items-start gap-2.5 text-[15px] text-ink">
+      <input type="checkbox" name="require_insurance_details" checked={settings.requireInsuranceDetails} class={`${CHECK} mt-0.5`} />
+      <span>
+        Pedir o número da carteirinha e a validade na marcação por plano
+        <span class="mt-0.5 block text-sm text-ink-soft">Na página de data e horário e no painel.</span>
+      </span>
+    </label>
+    <Button type="submit" size="sm" data-sending-label="Salvando…">Salvar</Button>
+  </form>
 
-  <div class="mt-4 flex flex-wrap items-center justify-between gap-3">
-    <a href="/admin/configuracoes/convenios/novo" class={PRIMARY_BUTTON}>Novo plano</a>
-    <a href={showInactive ? "?" : "?todos=1"} class="text-sm text-sky-700 hover:underline">
-      {showInactive ? "Esconder desativados" : "Mostrar desativados"}
-    </a>
+  <div class="flex flex-wrap items-center justify-between gap-3">
+    <p class="text-sm text-ink-soft" role="status">
+      {plans.length} {plans.length === 1 ? "plano" : "planos"}{showInactive ? "" : plans.length === 1 ? " ativo" : " ativos"}
+    </p>
+    <ActiveFilter showInactive={showInactive} active={active.length} total={all.length} />
   </div>
 
-  <ul class="mt-4 grid gap-3 sm:grid-cols-2">
-    {
-      plans.map((plan) => (
-        <li>
-          <a href={`/admin/configuracoes/convenios/${plan.id}`}>
-            <Card class="h-full hover:border-sky-300 hover:bg-sky-50" muted={!plan.isActive}>
-              <p class="font-medium text-slate-900">
-                {plan.name} {!plan.isActive && <Badge>desativado</Badge>}
-              </p>
-              <p class="mt-1 text-sm text-slate-600">
-                {plan.alternativeNames.length ? `Também: ${plan.alternativeNames.join(", ")}` : "Sem outros nomes"}
-                {plan.ansCode ? ` · ANS ${plan.ansCode}` : ""}
-              </p>
-            </Card>
-          </a>
-        </li>
-      ))
-    }
-  </ul>
-  {plans.length === 0 && <p class="mt-4 text-sm text-slate-600">Nenhum plano cadastrado.</p>}
-</AdminLayout>
+  {
+    plans.length > 0 ? (
+      <section aria-label="Planos" class={LIST}>
+        <div aria-hidden="true" class={`${HEAD_ROW} ${cols}`}>
+          <span>Plano</span>
+          <span>Outros nomes</span>
+          <span>ANS</span>
+          <span />
+        </div>
+        <ul>
+          {plans.map((plan) => {
+            const href = withAllFilter(`/admin/configuracoes/convenios/${plan.id}`, showInactive);
+            return (
+              <li class={`${ROW} ${cols} ${plan.isActive ? "" : "opacity-60"}`}>
+                <span class="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+                  <a href={href} class={ROW_NAME}>
+                    {plan.name}
+                  </a>
+                  {!plan.isActive && <Pill>Desativado</Pill>}
+                </span>
+                <a href={href} aria-label={`Abrir ${plan.name}`} class={ROW_GO}>
+                  <Icon name="chevron-right" class="h-5 w-5" strokeWidth={2.2} />
+                </a>
+                <span class={ROW_CELL}>{plan.alternativeNames.length ? plan.alternativeNames.join(", ") : <span class={SOFT}>Sem outros nomes</span>}</span>
+                <span class={`${ROW_CELL} tabular-nums`}>{plan.ansCode ? <><span class="lg:hidden">ANS </span>{plan.ansCode}</> : <span class={`${SOFT} max-lg:hidden`}>—</span>}</span>
+              </li>
+            );
+          })}
+        </ul>
+      </section>
+    ) : (
+      <ConfigEmpty
+        onlyInactive={all.length > 0}
+        none="Nenhum plano"
+        href="/admin/configuracoes/convenios/novo"
+        label="Cadastrar o primeiro plano"
+      />
+    )
+  }
+</ConfigShell>

@@ -1,5 +1,5 @@
 import { expect, it } from "vitest";
-import { currentPath, receivedReturn, safeReturnPath, withReturn } from "./returnPath";
+import { allFilterOn, currentPath, receivedReturn, returnLabel, safeReturnPath, withAllFilter, withReturn } from "./returnPath";
 
 it("volta só para telas do dia a dia dentro do painel", () => {
   expect(safeReturnPath("/admin/agenda?date=2026-10-12", "/x")).toBe("/admin/agenda?date=2026-10-12");
@@ -25,4 +25,19 @@ it("leva a origem adiante e a recebe de volta, inclusive a origem da origem", ()
 
   expect(withReturn("/admin/pacientes/1", "https://outro.site")).toBe("/admin/pacientes/1");
   expect(receivedReturn(new URL("https://app.exemplo/admin/pacientes/1?volta=%2Fadmin%2Fconfiguracoes"))).toBeNull();
+});
+
+it("diz para onde o Voltar leva (R9, Configurações abertas de outra tela)", () => {
+  expect(returnLabel("/admin/financeiro/dmed?ano=2025")).toBe("Voltar para a DMED");
+  expect(returnLabel("/admin/dashboard")).toBe("Voltar para o Início");
+  expect(returnLabel("/admin/financeiro/pagamento/1?volta=%2Fadmin%2Fagenda")).toBe("Voltar para o pagamento");
+  expect(returnLabel("/admin/agenda?date=2026-10-17")).toBe("Voltar");
+});
+
+it("leva o filtro \"Todos\" da lista ao cadastro e de volta (teste da R9, NAV-06)", () => {
+  expect(withAllFilter("/admin/configuracoes/servicos", true)).toBe("/admin/configuracoes/servicos?todos=1");
+  expect(withAllFilter("/admin/configuracoes/servicos", false)).toBe("/admin/configuracoes/servicos");
+  expect(withAllFilter("/api/admin/configuracoes/servicos/1?x=1", true)).toBe("/api/admin/configuracoes/servicos/1?x=1&todos=1");
+  expect(allFilterOn(new URL("https://app.exemplo/admin/configuracoes/servicos/1?todos=1"))).toBe(true);
+  expect(allFilterOn(new URL("https://app.exemplo/admin/configuracoes/servicos/1?todos=0"))).toBe(false);
 });

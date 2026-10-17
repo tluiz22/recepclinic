@@ -1,9 +1,9 @@
 ---
 // Situação da conexão do WhatsApp da clínica (só leitura; quem cadastra é o
 // Suporte até a F8): abas Lembretes e WhatsApp.
-import Badge from "./Badge.astro";
-import Card from "./Card.astro";
-import { HINT } from "./fieldStyles";
+import Badge from "./config/Badge.astro";
+import Card from "./config/Panel.astro";
+import { HINT } from "./config/formStyles";
 import { formatInstant } from "../../lib/clinicTime";
 import type { WhatsappConnection } from "../../lib/data/whatsapp/connection";
 
@@ -21,18 +21,18 @@ const status = {
 ---
 
 <Card>
-  <h2 class="font-semibold text-slate-900">Conexão</h2>
+  <h2 class="font-display text-[17px] leading-tight font-bold text-ink sm:text-lg">Conexão</h2>
   {
     connection ? (
-      <p class="mt-2 text-sm text-slate-700">
+      <p class="mt-2 text-sm text-ink-mid">
         <Badge variant={status[connection.status].variant}>{status[connection.status].label}</Badge>
         {connection.displayPhone && <span class="ml-1 font-medium">{connection.displayPhone}</span>}
         {connection.status === "connected" && connection.connectedAt && (
-          <span class="text-slate-500"> · desde {formatInstant(connection.connectedAt, timeZone, "dd/MM/yyyy")}</span>
+          <span class="text-ink-soft"> · desde {formatInstant(connection.connectedAt, timeZone, "dd/MM/yyyy")}</span>
         )}
       </p>
     ) : (
-      <p class="mt-2 text-sm text-slate-700">
+      <p class="mt-2 text-sm text-ink-mid">
         <Badge>Não conectado</Badge>
       </p>
     )
