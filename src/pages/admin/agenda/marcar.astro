@@ -20,7 +20,7 @@ import PageHeader from "../../../components/admin/ui/PageHeader.astro";
 import SlotPicker, { type SlotOption } from "../../../components/admin/ui/SlotPicker.astro";
 import StepCard from "../../../components/admin/ui/StepCard.astro";
 import { buttonClass, CONTROL } from "../../../components/admin/ui/styles";
-import { isOverConsultationAgeLimit, formatAge } from "../../../lib/age";
+import { isOverConsultationAgeLimit, formatAge, formatAgeAndBirth } from "../../../lib/age";
 import { slotValue } from "../../../lib/agendaSlot";
 import { isUuid } from "../../../lib/clinicAccess";
 import { formatCalendarDate, formatInstant, isCalendarDate, todayIn } from "../../../lib/clinicTime";
@@ -35,7 +35,7 @@ import {
   getNextAvailableDatesAnyAgenda,
   isAgendaOpenOn,
 } from "../../../lib/data/agenda/slots";
-import { findReturnOrigin, returnWarnings } from "../../../lib/data/agenda/appointments";
+import { findBlockingAppointment, findReturnOrigin, listUpcomingAppointments, returnWarnings, type UpcomingAppointment } from "../../../lib/data/agenda/appointments";
 import { SERIES_HORIZON_MONTHS } from "../../../lib/data/agenda/series";
 import { listAgendas } from "../../../lib/data/config/agendas";
 import { getClinicSettings } from "../../../lib/data/config/clinic";
@@ -91,12 +91,35 @@ const patient = state.patient_id ? await getPatient(db, clinic.clinicId, state.p
 const contact = patient ? await getContact(db, clinic.clinicId, patient.contactId) : null;
 const results = !patient && busca ? await searchPatients(db, clinic.clinicId, busca) : [];
 
+// Já marcado (cliente, 17/out/2026): o selo na busca, os atendimentos futuros
+// no cartão do paciente e, com o serviço escolhido, a trava da regra de 04/out
+// (Consulta/Retorno na mesma agenda; Exame, o mesmo exame; série não trava),
+// antes da confirmação, como no bot.
+const upcomingByPatient = await listUpcomingAppointments(db, clinic.clinicId, patient ? [patient.id] : results.map((r) => r.id));
+const patientUpcoming = patient ? (upcomingByPatient.get(patient.id) ?? []) : [];
+const serviceName = new Map(services.map((s) => [s.id, s.name]));
+const describeUpcoming = (a: UpcomingAppointment) =>
+  `${serviceName.get(a.serviceId) ?? "Atendimento"}, ${formatInstant(a.scheduledAt, clinic.timezone, "EEEE, dd/MM 'às' HH:mm")}, com ${agendaName.get(a.agendaId) ?? "outra agenda"}`;
+
 // Com quem: as agendas que atendem o serviço e que a pessoa vê.
 const serviceAgendaIds = service ? await agendasForService(db, clinic.clinicId, service.id) : [];
 let agendaChoice = state.agenda_id;
 if (serviceAgendaIds.length === 1) agendaChoice = serviceAgendaIds[0];
 else if (!(agendaChoice === ANY || serviceAgendaIds.includes(agendaChoice))) agendaChoice = ANY;
-const searchAgendas = agendaChoice === ANY ? serviceAgendaIds : [agendaChoice];
+const blockedBy = new Map<string, UpcomingAppointment>();
+if (patient && service) {
+  for (const agendaId of serviceAgendaIds) {
+    const blocking = findBlockingAppointment(patientUpcoming, { serviceId: service.id, agendaId, category: service.category });
+    if (blocking) blockedBy.set(agendaId, blocking);
+  }
+}
+const searchAgendas = (agendaChoice === ANY ? serviceAgendaIds : [agendaChoice]).filter((id) => !blockedBy.has(id));
+// Todas as agendas da escolha travadas: aviso vermelho com o Remarcar; só
+// algumas (no "Primeiro horário disponível"): os horários delas saem, com aviso.
+const blockedChoice = (agendaChoice === ANY ? serviceAgendaIds : [agendaChoice]).map((id) => blockedBy.get(id)).filter(Boolean) as UpcomingAppointment[];
+const fullBlock = patient && service && searchAgendas.length === 0 && blockedChoice.length > 0 ? blockedChoice[0] : null;
+const freeElsewhere = fullBlock ? serviceAgendaIds.some((id) => !blockedBy.has(id)) : false;
+const partialBlocks = !fullBlock && agendaChoice === ANY ? blockedChoice : [];
 
 // Todos os dias livres da janela de busca (a faixa mostra 7 por vez).
 const ALL_DATES = 1000;
@@ -212,6 +235,9 @@ const confirmMessage = `${confirmIntro}, no horário escolhido. O paciente é av
 const note = "flex items-start gap-2 rounded-[10px] border px-3 py-2.5 text-[15px] leading-snug sm:text-[14.5px]";
 const warnNote = `${note} border-pend-200 bg-pend-100 text-pend-800`;
 const okNote = `${note} border-conf-200 bg-conf-100/60 text-conf-800`;
+const blockNote = `${note} border-can-200 bg-can-50 text-can-800`;
+const visits = (list: UpcomingAppointment[]) => list.filter((a) => a.seriesId === null);
+const remarcarHref = (a: UpcomingAppointment) => `/admin/agenda/remarcar?id=${a.id}&return_to=${encodeURIComponent(link({}))}`;
 ---
 
 <AdminLayout title="Marcar">
@@ -230,12 +256,26 @@ const okNote = `${note} border-conf-200 bg-conf-100/60 text-conf-800`;
           patient && contact ? (
             <div>
               <p class="text-base leading-snug font-semibold text-ink">
-                {patient.fullName} <span class="text-[15px] font-normal text-ink-soft">{formatAge(patient.birthdate, today)}</span>
+                {patient.fullName} <span class="text-[15px] font-normal text-ink-soft">{formatAgeAndBirth(patient.birthdate, today)}</span>
               </p>
               <p class="text-sm leading-normal text-ink-soft">
                 {!patient.isContactSelf && `${capitalize(vocabulary.contact)}: ${contact.fullName} · `}
                 {formatPhoneBR(contact.phone)}
               </p>
+              {patientUpcoming.length > 0 && (
+                <div class="mt-2 rounded-[10px] border border-line bg-canvas px-3 py-2 text-sm text-ink">
+                  <p class="font-semibold">Já marcado</p>
+                  <ul class="mt-0.5 flex flex-col gap-0.5">
+                    {visits(patientUpcoming).slice(0, 3).map((a) => <li>{describeUpcoming(a)}</li>)}
+                    {visits(patientUpcoming).length > 3 && <li class="text-ink-soft">e mais {visits(patientUpcoming).length - 3}</li>}
+                    {patientUpcoming.length > visits(patientUpcoming).length && (
+                      <li class="text-ink-soft">
+                        {patientUpcoming.length - visits(patientUpcoming).length === 1 ? "1 sessão de série" : `${patientUpcoming.length - visits(patientUpcoming).length} sessões de série`}
+                      </li>
+                    )}
+                  </ul>
+                </div>
+              )}
             </div>
           ) : (
             <div class="flex flex-col gap-2">
@@ -245,7 +285,7 @@ const okNote = `${note} border-conf-200 bg-conf-100/60 text-conf-800`;
                   name="busca"
                   value={busca}
                   aria-label={`Buscar ${vocabulary.patient}`}
-                  placeholder={`Nome do ${vocabulary.patient} ou telefone`}
+                  placeholder="Nome, telefone ou nascimento (dd/mm/aaaa)"
                   class={`${CONTROL} min-w-0 flex-1`}
                   autofocus
                 />
@@ -261,8 +301,11 @@ const okNote = `${note} border-conf-200 bg-conf-100/60 text-conf-800`;
                       <a href={link({ patient_id: r.id })} class="flex items-center justify-between gap-3 px-3 py-2.5 no-underline hover:bg-brand-soft/50">
                         <span class="min-w-0">
                           <span class="text-[15px] font-semibold text-ink">{r.fullName}</span>
+                          {visits(upcomingByPatient.get(r.id) ?? []).length > 0 && (
+                            <span class="ml-1.5 inline-flex rounded-full bg-att-100 px-2 py-px align-[1px] text-[12.5px] font-semibold text-att-800">Já marcado</span>
+                          )}
                           <span class="block text-sm text-ink-soft">
-                            {formatAge(r.birthdate, today)} · {!r.isContactSelf && `${r.contact.fullName} · `}
+                            {formatAgeAndBirth(r.birthdate, today)} · {!r.isContactSelf && `${r.contact.fullName} · `}
                             {formatPhoneBR(r.contact.phone)}
                           </span>
                         </span>
@@ -350,12 +393,31 @@ const okNote = `${note} border-conf-200 bg-conf-100/60 text-conf-800`;
 
       <StepCard number={timeStep} title={isGroup ? "Turma" : "Data e horário"} state={stepOf(false, !locked && !!service)} id="passo-horario">
         {
-          !canBook ? (
+          fullBlock ? (
+            <div class={blockNote} role="alert">
+              <Icon name="warning" class="mt-0.5 h-[18px] w-[18px] shrink-0" />
+              <div class="flex flex-col gap-2">
+                <p>
+                  <strong class="font-semibold">{patient?.fullName} já tem atendimento marcado: {describeUpcoming(fullBlock)}.</strong>{" "}
+                  {freeElsewhere ? "Escolha outro profissional ou remarque esse atendimento." : "Para mudar o horário, remarque esse atendimento."}
+                </p>
+                <a href={remarcarHref(fullBlock)} class={`${buttonClass("secondary", "sm")} self-start`}>Remarcar esse atendimento</a>
+              </div>
+            </div>
+          ) : !canBook ? (
             <p class="text-[15px] text-ink-soft">
               {locked ? `Escolha o ${vocabulary.patient} primeiro.` : service ? "Sem agenda para este serviço." : "Escolha o serviço primeiro."}
             </p>
           ) : (
             <div class="flex flex-col gap-4">
+              {partialBlocks.map((a) => (
+                <p class={warnNote}>
+                  <Icon name="warning" class="mt-0.5 h-[18px] w-[18px] shrink-0" />
+                  <span>
+                    Com {agendaName.get(a.agendaId)} não: {patient?.fullName} já tem atendimento marcado ({describeUpcoming(a)}). Os horários mostrados são dos outros profissionais.
+                  </span>
+                </p>
+              ))}
               {unavailableNote && (
                 <p class={warnNote} role="status">
                   <Icon name="warning" class="mt-0.5 h-[18px] w-[18px] shrink-0" />

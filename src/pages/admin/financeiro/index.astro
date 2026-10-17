@@ -61,7 +61,7 @@ const segOff = `${segItem} font-semibold text-ink-soft hover:bg-white/60 hover:t
     <form method="GET" role="search" class="flex min-w-0 flex-[1_1_420px] flex-wrap items-end gap-x-3 gap-y-2">
       {missingCpf && <input type="hidden" name="falta" value="1" />}
       <div class="flex min-w-0 flex-[1_1_200px] flex-col gap-1.5 sm:max-w-[440px]">
-        <label for="busca-financeiro" class="text-[14.5px] font-semibold text-ink">Buscar por nome ou telefone</label>
+        <label for="busca-financeiro" class="text-[14.5px] font-semibold text-ink">Buscar por nome, telefone ou nascimento (dd/mm/aaaa)</label>
         <div class="flex h-11 items-center gap-2 rounded-lg border border-line-strong bg-white px-3 focus-within:border-brand focus-within:ring-1 focus-within:ring-brand">
           <Icon name="magnifying-glass" class="h-[18px] w-[18px] shrink-0 text-ink-soft" strokeWidth={2} />
           <input id="busca-financeiro" name="q" value={q} type="search" class="min-w-0 flex-1 border-0 bg-transparent p-0 text-base text-ink outline-none focus:ring-0" />

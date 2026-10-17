@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ADULT_AGE_YEARS, ageInYears, formatAge, isAdult, isOverConsultationAgeLimit } from "./age";
+import { ADULT_AGE_YEARS, ageInYears, formatAge, formatAgeAndBirth, isAdult, isOverConsultationAgeLimit } from "./age";
 
 describe("ageInYears", () => {
   it("conta anos completos", () => {
@@ -90,5 +90,14 @@ describe("formatAge", () => {
     expect(formatAge("2026-10-10", "2026-10-04")).toBe("nascimento inválido");
     expect(formatAge("2026-10-05", "2026-10-04")).toBe("nascimento inválido");
     expect(formatAge("2026-10-04", "2026-10-04")).toBe("0 dias");
+  });
+});
+
+describe("formatAgeAndBirth", () => {
+  it("idade e nascimento", () => {
+    expect(formatAgeAndBirth("1992-09-30", "2026-10-17")).toBe("34 anos · nasc. 30/09/1992");
+  });
+  it("nascimento inválido: só o aviso", () => {
+    expect(formatAgeAndBirth("2030-01-01", "2026-10-17")).toBe("nascimento inválido");
   });
 });

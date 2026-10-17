@@ -69,3 +69,13 @@ export function formatAge(birthdateIso: string, referenceDateIso: string): strin
 
   return years === 1 ? "1 ano" : `${years} anos`;
 }
+
+/**
+ * Idade com o nascimento, para separar nomes parecidos nas buscas (cliente,
+ * 17/out/2026): "34 anos · nasc. 30/09/1992". Anonimizado ou inválido: só o aviso.
+ */
+export function formatAgeAndBirth(birthdateIso: string, referenceDateIso: string): string {
+  const age = formatAge(birthdateIso, referenceDateIso);
+  if (birthdateIso === ANONYMIZED_BIRTHDATE || birthdateIso > referenceDateIso) return age;
+  return `${age} · nasc. ${birthdateIso.split("-").reverse().join("/")}`;
+}

@@ -15,7 +15,7 @@ import StatusPill from "../../../components/admin/ui/StatusPill.astro";
 import Card from "../../../components/admin/Card.astro";
 import PhoneLinks from "../../../components/admin/PhoneLinks.astro";
 import { SECONDARY_BUTTON } from "../../../components/admin/fieldStyles";
-import { formatAge } from "../../../lib/age";
+import { formatAgeAndBirth } from "../../../lib/age";
 import { isUuid } from "../../../lib/clinicAccess";
 import { formatInstant, isCalendarDate, localDateOf, todayIn } from "../../../lib/clinicTime";
 import { createUserClient } from "../../../lib/data/clients";
@@ -84,7 +84,7 @@ const plural = (n: number) => `${n} ${n === 1 ? "atendimento marcado" : "atendim
               <li>
                 <a href={searchHref(p.id, true)} class="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-slate-200 bg-white p-3 text-sm shadow-sm hover:border-brand/40 hover:bg-brand-soft/40">
                   <span>
-                    <span class="font-semibold text-slate-900">{p.fullName}</span> <span class="text-slate-500">{formatAge(p.birthdate, today)}</span>
+                    <span class="font-semibold text-slate-900">{p.fullName}</span> <span class="text-slate-500">{formatAgeAndBirth(p.birthdate, today)}</span>
                     <span class="block text-slate-500">
                       {!p.isContactSelf && `${capitalize(vocabulary.contact)}: ${p.contact.fullName} · `}
                       {formatPhoneBR(p.contact.phone)}
@@ -112,7 +112,7 @@ const plural = (n: number) => `${n} ${n === 1 ? "atendimento marcado" : "atendim
             <a href={withReturn(`/admin/pacientes/${chosen.id}`, currentPath(Astro.url))} class="text-lg font-semibold text-slate-900 hover:text-brand hover:underline">
               {chosen.fullName}
             </a>{" "}
-            <span class="text-slate-500">{formatAge(chosen.birthdate, today)}</span>
+            <span class="text-slate-500">{formatAgeAndBirth(chosen.birthdate, today)}</span>
             <p class="text-slate-500">
               {!chosen.isContactSelf && `${capitalize(vocabulary.contact)}: ${contact.fullName} · `}
               <PhoneLinks phone={contact.phone} plain class="text-slate-600" />

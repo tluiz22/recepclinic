@@ -185,7 +185,7 @@ const fin = tab === "financeiro" ? financial(rows) : null;
                   {hidden(keep).map(([name, value]) => <input type="hidden" name={name} value={value} />)}
                   <label for="metricas-busca" class={label}>Filtrar por {vocabulary.patient} ou {vocabulary.contact}</label>
                   <div class="flex gap-2">
-                    <input id="metricas-busca" name="busca" value={busca} placeholder="Nome ou telefone" class={`${CONTROL} min-w-0 flex-1`} />
+                    <input id="metricas-busca" name="busca" value={busca} placeholder="Nome, telefone ou nascimento" class={`${CONTROL} min-w-0 flex-1`} />
                     <Button type="submit">Buscar</Button>
                   </div>
                 </form>

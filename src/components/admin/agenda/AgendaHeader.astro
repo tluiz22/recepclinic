@@ -103,7 +103,7 @@ const filtersLabel = agendas.length > 1 ? `${selectedName ?? "Todas as agendas"}
         <label for="patient_search" class="sr-only">Atendimentos marcados de um paciente</label>
         <div class="relative min-w-0 flex-1">
           <Icon name="magnifying-glass" class="pointer-events-none absolute top-1/2 left-3 h-[17px] w-[17px] -translate-y-1/2 text-ink-soft" strokeWidth={2.2} />
-          <input id="patient_search" type="search" name="q" value={query} placeholder="Nome ou telefone" class={`${CONTROL} w-full pl-9`} />
+          <input id="patient_search" type="search" name="q" value={query} placeholder="Nome, telefone ou nascimento" class={`${CONTROL} w-full pl-9`} />
         </div>
         <Button type="submit">Buscar</Button>
       </form>

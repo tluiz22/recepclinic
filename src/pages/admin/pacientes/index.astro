@@ -1,6 +1,6 @@
 ---
 // Pacientes (F4.7): abas Pacientes e Responsáveis/Contatos (pelo
-// vocabulário da clínica), busca pelo nome ou pelo telefone (4+ dígitos), 20
+// vocabulário da clínica), busca pelo nome, pelo telefone (só números, 4+) ou pelo nascimento (dd/mm/aaaa), 20
 // por página e "Mostrar desativados", como no piloto. Toda a equipe vê todos
 // os pacientes (D6, revisão de 04/out).
 //
@@ -19,7 +19,7 @@ import Pill from "../../../components/admin/ui/Pill.astro";
 import Tabs from "../../../components/admin/ui/Tabs.astro";
 import Tag from "../../../components/admin/ui/Tag.astro";
 import { buttonClass } from "../../../components/admin/ui/styles";
-import { formatAge } from "../../../lib/age";
+import { formatAgeAndBirth } from "../../../lib/age";
 import { todayIn } from "../../../lib/clinicTime";
 import { createUserClient } from "../../../lib/data/clients";
 import { listNoShowStats } from "../../../lib/data/agenda/view";
@@ -80,7 +80,7 @@ const pageLink = `${buttonClass("secondary", "sm")}`;
   <form method="GET" role="search" class={`${card} mt-4 flex flex-wrap items-end gap-x-3 gap-y-2 p-3.5 sm:px-4`}>
     {tab === "contatos" && <input type="hidden" name="tab" value="contatos" />}
     <div class="flex min-w-0 flex-[1_1_320px] flex-col gap-1.5 sm:max-w-[480px]">
-      <label for="busca-pacientes" class="text-[14.5px] font-semibold text-ink">Buscar por nome ou telefone</label>
+      <label for="busca-pacientes" class="text-[14.5px] font-semibold text-ink">Buscar por nome, telefone ou nascimento (dd/mm/aaaa)</label>
       <div class="flex h-11 items-center gap-2 rounded-lg border border-line-strong bg-white px-3 focus-within:border-brand focus-within:ring-1 focus-within:ring-brand">
         <Icon name="magnifying-glass" class="h-[18px] w-[18px] shrink-0 text-ink-soft" strokeWidth={2} />
         <input id="busca-pacientes" name="q" value={q} type="search" class="min-w-0 flex-1 border-0 bg-transparent p-0 text-base text-ink outline-none focus:ring-0" />
@@ -137,7 +137,7 @@ const pageLink = `${buttonClass("secondary", "sm")}`;
                     <Tag>{p.insurance ? (planName.get(p.insurance.planId) ?? "Plano") : "Particular"}</Tag>
                   </span>
                 )}
-                <span class="col-span-2 text-[15px] text-ink-soft lg:order-2 lg:col-span-1 lg:text-ink">{formatAge(p.birthdate, today)}</span>
+                <span class="col-span-2 text-[15px] text-ink-soft lg:order-2 lg:col-span-1 lg:text-ink">{formatAgeAndBirth(p.birthdate, today)}</span>
                 <div class="col-span-2 flex min-w-0 flex-col gap-1 lg:order-4 lg:col-span-1">
                   <span class="text-[15px] text-ink">{p.isContactSelf ? "Ele mesmo" : `${capitalize(vocabulary.contact)}: ${p.contact.fullName}`}</span>
                   <PhoneLinks phone={p.contact.phone} plain class="text-[15px] text-ink" />
@@ -197,7 +197,7 @@ const pageLink = `${buttonClass("secondary", "sm")}`;
     result.total === 0 && (
       <section class={`${card} mt-2 flex flex-col items-center gap-2.5 px-6 py-7 text-center`}>
         <p class="text-[17px] font-bold text-ink">{q ? `Ninguém encontrado para "${q}"` : "Ninguém cadastrado ainda"}</p>
-        {q && <p class="text-sm text-ink-soft">Confira a grafia ou busque pelos 4 últimos dígitos do telefone.</p>}
+        {q && <p class="text-sm text-ink-soft">Confira a grafia, busque pelos 4 últimos dígitos do telefone ou pela data de nascimento (dd/mm/aaaa).</p>}
         <div class="mt-1 flex flex-wrap justify-center gap-2">
           {q && <Button href={link({ q: "" })}>Limpar a busca</Button>}
           {tab === "pacientes" && (

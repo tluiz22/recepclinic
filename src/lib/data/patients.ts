@@ -2,6 +2,7 @@ import { isAdult, isOverConsultationAgeLimit } from "../age";
 import { isAnonymizedPhone } from "../anonymization";
 import { isCalendarDate } from "../clinicTime";
 import { normalizePhone } from "../phone";
+import { parseSearch, type SearchTerm } from "../patientSearch";
 import type { DbClient } from "./clients";
 import { cleanText, DataError, fromDbError, unwrap, unwrapOne, Validation } from "./errors";
 
@@ -179,14 +180,23 @@ export async function getContact(db: DbClient, clinicId: string, id: string): Pr
   );
 }
 
-/** Busca de contatos ativos por nome ou telefone (4+ dígitos), como no piloto. */
+/** Busca de contatos ativos por nome, telefone ou nascimento de um paciente deles (src/lib/patientSearch.ts). */
 export async function searchContacts(db: DbClient, clinicId: string, query: string): Promise<Contact[]> {
-  const q = query.trim();
-  if (q.length < 2) return [];
-  const digits = q.replace(/\D/g, "");
+  const term = parseSearch(query);
+  if (!term || query.trim().length < 2) return [];
   let request = db.from("contacts").select(CONTACT_COLUMNS).eq("clinic_id", clinicId).eq("is_active", true);
-  request = digits.length >= 4 ? request.ilike("phone", `%${digits}%`) : request.ilike("full_name", `%${escapeLike(q)}%`);
+  if (term.kind === "birthdate") {
+    const ids = await contactIdsBornOn(db, clinicId, term.date);
+    if (ids.length === 0) return [];
+    request = request.in("id", ids);
+  } else request = term.kind === "phone" ? request.ilike("phone", `%${term.digits}%`) : request.ilike("full_name", `%${escapeLike(term.text)}%`);
   return unwrap(await request.order("full_name").limit(10), "Busca de contatos").map(toContact);
+}
+
+/** Contatos com um paciente nascido no dia (busca pela data de nascimento). */
+async function contactIdsBornOn(db: DbClient, clinicId: string, date: string): Promise<string[]> {
+  const rows = unwrap(await db.from("patients").select("contact_id").eq("clinic_id", clinicId).eq("birthdate", date), "Busca de contatos");
+  return [...new Set(rows.map((row) => row.contact_id))];
 }
 
 export async function updateContact(
@@ -261,18 +271,17 @@ export async function listContactPatients(
   return unwrap(await query, "Pacientes do contato").map(toPatient);
 }
 
-/** Pacientes ativos por nome, ou pelo telefone do contato (4+ dígitos), como no piloto. */
+/** Pacientes ativos por nome, telefone do contato ou data de nascimento (src/lib/patientSearch.ts). */
 export async function searchPatients(db: DbClient, clinicId: string, query: string): Promise<PatientWithContact[]> {
-  const q = query.trim();
-  if (q.length < 2) return [];
-  const digits = q.replace(/\D/g, "");
-  const byPhone = digits.length >= 4;
+  const term = parseSearch(query);
+  if (!term || query.trim().length < 2) return [];
+  const byPhone = term.kind === "phone";
   let request = db
     .from("patients")
     .select(`${PATIENT_COLUMNS}, contacts!${byPhone ? "inner" : "left"} ( ${CONTACT_COLUMNS} )`)
     .eq("clinic_id", clinicId)
     .eq("is_active", true);
-  request = byPhone ? request.ilike("contacts.phone", `%${digits}%`) : request.ilike("full_name", `%${escapeLike(q)}%`);
+  request = filterPatients(request, term);
   const rows = unwrap(await request.order("full_name").limit(10), "Busca de pacientes") as unknown as (PatientRow & {
     contacts: ContactRow;
   })[];
@@ -308,9 +317,7 @@ export async function listPatientsPage(
     missingPayerCpf?: boolean;
   } = {},
 ): Promise<Page<PatientWithContact>> {
-  const q = query.trim();
-  const digits = q.replace(/\D/g, "");
-  const byPhone = digits.length >= 4;
+  const term = parseSearch(query);
   const { current, from, to } = pageRange(page);
   const columns = `${PATIENT_COLUMNS}, contacts!inner ( ${CONTACT_COLUMNS} )`;
   let request = (
@@ -319,15 +326,15 @@ export async function listPatientsPage(
       : db.from("patients").select(columns, { count: "exact" })
   ).eq("clinic_id", clinicId);
   if (!includeInactive) request = request.eq("is_active", true);
-  if (q && byPhone && missingPayerCpf) {
+  if (term?.kind === "phone" && missingPayerCpf) {
     // O PostgREST não filtra pelo contato embutido no resultado de uma função
     // ("column pgrst_call.phone does not exist"; teste da R8 no staging):
     // primeiro os contatos com o telefone, depois a função pelo contact_id.
-    const { data: contactRows, error: contactError } = await db.from("contacts").select("id").eq("clinic_id", clinicId).ilike("phone", `%${digits}%`);
+    const { data: contactRows, error: contactError } = await db.from("contacts").select("id").eq("clinic_id", clinicId).ilike("phone", `%${term.digits}%`);
     const contactIds = unwrap({ data: contactRows, error: contactError }, "Pacientes").map((c) => c.id);
     if (contactIds.length === 0) return { items: [], total: 0, page: current, pageCount: 1 };
     request = request.in("contact_id", contactIds);
-  } else if (q) request = byPhone ? request.ilike("contacts.phone", `%${digits}%`) : request.ilike("full_name", `%${escapeLike(q)}%`);
+  } else if (term) request = filterPatients(request, term);
   const { data, error, count } = await request.order("full_name").range(from, to);
   const rows = unwrap({ data, error }, "Pacientes") as unknown as (PatientRow & { contacts: ContactRow })[];
   const total = count ?? 0;
@@ -347,15 +354,18 @@ export async function listContactsPage(
   clinicId: string,
   { query = "", includeInactive = false, page = 1 }: { query?: string; includeInactive?: boolean; page?: number } = {},
 ): Promise<Page<ContactWithPatients>> {
-  const q = query.trim();
-  const digits = q.replace(/\D/g, "");
+  const term = parseSearch(query);
   const { current, from, to } = pageRange(page);
   let request = db
     .from("contacts")
     .select(`${CONTACT_COLUMNS}, patients ( full_name, is_active )`, { count: "exact" })
     .eq("clinic_id", clinicId);
   if (!includeInactive) request = request.eq("is_active", true);
-  if (q) request = digits.length >= 4 ? request.ilike("phone", `%${digits}%`) : request.ilike("full_name", `%${escapeLike(q)}%`);
+  if (term?.kind === "birthdate") {
+    const ids = await contactIdsBornOn(db, clinicId, term.date);
+    if (ids.length === 0) return { items: [], total: 0, page: current, pageCount: 1 };
+    request = request.in("id", ids);
+  } else if (term) request = term.kind === "phone" ? request.ilike("phone", `%${term.digits}%`) : request.ilike("full_name", `%${escapeLike(term.text)}%`);
   const { data, error, count } = await request.order("full_name").range(from, to);
   const rows = unwrap({ data, error }, "Contatos") as unknown as (ContactRow & { patients: { full_name: string; is_active: boolean }[] })[];
   const total = count ?? 0;
@@ -548,6 +558,13 @@ export async function setPatientActive(db: DbClient, clinicId: string, id: strin
 }
 
 /** `%` e `_` digitados viram texto, não curinga, na busca por nome. */
+/** Filtro da busca de pacientes: nome, telefone do contato (embutido) ou data de nascimento. */
+function filterPatients<Q extends { ilike(column: string, pattern: string): Q; eq(column: string, value: string): Q }>(request: Q, term: SearchTerm): Q {
+  if (term.kind === "phone") return request.ilike("contacts.phone", `%${term.digits}%`);
+  if (term.kind === "birthdate") return request.eq("birthdate", term.date);
+  return request.ilike("full_name", `%${escapeLike(term.text)}%`);
+}
+
 function escapeLike(text: string): string {
   return text.replace(/[\\%_]/g, (char) => `\\${char}`);
 }

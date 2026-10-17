@@ -1990,6 +1990,15 @@ corrigidas, retestadas, validadas pelo cliente e publicadas no staging no mesmo 
   bloqueio ou horário ocupado: a data é pulada e aparece na tela da série."; Remarcar: "Carlos Pereira sai de
   terça-feira, 20/10 às 09:00 e vai para …". O texto da série acompanha o formulário. Textos em
   `src/lib/confirmText.ts` (com teste); sem JavaScript, fica o "no horário escolhido" (o diálogo depende dele).
+- **Busca de paciente, decisão do cliente (17/out/2026):** com letras, busca pelo nome (que pode ter números: "Paciente 2001";
+  antes, 4 dígitos viravam busca por telefone); só números (4+), pelo telefone; dd/mm/aaaa, pela data de nascimento (nos
+  Responsáveis, o contato com um paciente nascido no dia). Os resultados mostram "34 anos · nasc. 30/09/1992". Vale em todas
+  as buscas de paciente (Marcar, Pacientes, Agenda, Financeiro, Métricas). Regra em `src/lib/patientSearch.ts` (com teste).
+- **"Já marcado" no Marcar, decisão do cliente (17/out/2026):** selo "Já marcado" na busca; os atendimentos futuros no
+  cartão do paciente (até 3, mais as sessões de série); com o serviço escolhido, a regra de 04/out é conferida na hora: todas
+  as agendas da escolha travadas → aviso vermelho ("… já tem atendimento marcado: …") com "Remarcar esse atendimento" (volta
+  para o Marcar) e sem horários; só algumas, no "Primeiro horário disponível" → os horários delas saem, com aviso amarelo.
+  A trava ao gravar continua.
 
 **R5 (Pagamento), proposta aprovada pelo cliente em 16/out/2026** (página "5 · Pagamento" do canvas):
 contas no alto (Preço, Pago e Falta em números grandes, barra do quanto já foi pago e o selo "Pago"
