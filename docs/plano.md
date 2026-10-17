@@ -2173,6 +2173,18 @@ Clínica ficava fora da tela (QA-01; a mensagem vai para dentro do cartão "Edit
 e o campo ganha borda vermelha); "‹ lista", "Cancelar" e salvar perdiam o filtro "Todos" (NAV-06,
 anterior à R9; `withAllFilter` em `returnPath.ts`). O guia com pendências foi visto com dados (serviço
 de teste no banco local). `npm test` (502) passando.
+**Ajustes da validação no celular (cliente, 17/out), proposta aprovada no canvas** (quadro "Revisão
+aprovada", página 9): (1) na lista de seções do celular não dava para saber o que é grupo
+("Atendimento") e o que é seção tocável ("Profissionais"): o nome do grupo sai do cartão, cada grupo é
+um cartão com uma seção por linha, a seta › e um fio entre as linhas; a seção aberta fica em verde
+com "Aqui" e tocar nela só fecha a lista. (2) Lentidão sem retorno ao tocar, e o usuário tocava de
+novo: a linha tocada mostra "Abrindo…" e ignora os toques seguintes até a tela nova chegar; a barra
+de carregamento do topo (que já existia) ficava escondida atrás da barra de status do iPhone
+(`viewport-fit=cover`) e agora fica abaixo dela (`env(safe-area-inset-top)`), em todo o painel. O
+servidor faz o mesmo trabalho de antes da R9 (o guia já era carregado nas abas antigas); medir o
+tempo do staging com login fica a combinar com o cliente. O menu do computador não muda.
+Implementado e testado no navegador local (390px): um toque, uma requisição; "Abrindo…" e a barra à
+vista; voltar pelo navegador não deixa a linha presa. `astro check` sem erros e `npm test` (502).
 
 ## Depois do 1º piloto (já previsto no banco)
 
