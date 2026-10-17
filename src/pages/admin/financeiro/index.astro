@@ -135,7 +135,13 @@ const segOff = `${segItem} font-semibold text-ink-soft hover:bg-white/60 hover:t
   {
     result.total === 0 && (
       <section class={`${card} mt-2 flex flex-col items-center gap-2.5 px-6 py-7 text-center`}>
-        {q ? (
+        {q && missingCpf ? (
+          <>
+            <p class="text-[17px] font-bold text-ink">Ninguém sem o CPF de quem paga para "{q}"</p>
+            <p class="text-sm text-ink-soft">Quem já tem o CPF aparece em "Todos".</p>
+            <Button href={link({ falta: "" })}>Buscar em Todos</Button>
+          </>
+        ) : q ? (
           <>
             <p class="text-[17px] font-bold text-ink">Ninguém encontrado para "{q}"</p>
             <p class="text-sm text-ink-soft">Confira a grafia ou busque pelos 4 últimos dígitos do telefone.</p>
