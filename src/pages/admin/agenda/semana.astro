@@ -61,12 +61,12 @@ const blocksOf = (day: string) =>
 
   <SituationLegend class="mt-4" />
 
-  <div class="mt-4 grid gap-3 md:grid-cols-7">
+  <div class="mt-4 grid gap-3 md:grid-cols-7 md:gap-2">
     {
       days.map((day) => (
         <a
           href={`/admin/agenda?date=${day}`}
-          class={`block rounded-xl border bg-white p-3 no-underline hover:border-brand/40 hover:bg-brand-soft/40 ${day === today ? "border-brand ring-1 ring-brand" : "border-line"}`}
+          class={`block min-w-0 rounded-xl border bg-white p-3 no-underline md:p-2.5 hover:border-brand/40 hover:bg-brand-soft/40 ${day === today ? "border-brand ring-1 ring-brand" : "border-line"}`}
         >
           <p class={`text-sm font-bold capitalize ${day === today ? "text-brand" : "text-ink"}`}>{formatCalendarDate(day, "EEE dd/MM")}</p>
           <ul class="mt-2 flex flex-col gap-1.5 text-[13px] text-ink">
@@ -80,8 +80,9 @@ const blocksOf = (day: string) =>
                   {a.serviceName}
                   {showAgenda ? ` · ${a.agendaName}` : ""}
                 </span>
-                {/* A situação também em texto, não só na cor (decisão 4 da Agenda; QA-09, 16/out/2026). */}
-                <StatusPill situation={appointmentSituation(a)} class="mt-1" />
+                {/* A situação também em texto, não só na cor (decisão 4 da Agenda; QA-09, 16/out/2026).
+                    Na largura única (1152px) a coluna do dia é estreita: o selo quebra a linha sem sair do atendimento. */}
+                <StatusPill situation={appointmentSituation(a)} class="mt-1 max-w-full gap-0.5! pr-1.5! pl-1! text-xs! whitespace-normal!" />
               </li>
             ))}
             {ofDay(day).length === 0 && blocksOf(day).length === 0 && <li class="text-ink-soft">Livre</li>}

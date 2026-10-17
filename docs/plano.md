@@ -2085,6 +2085,13 @@ do Dia deixam a largura de 1600px e ficam na largura das outras telas (1152px), 
 igual. Sai a opção `wide` do `AdminLayout`. Consequência aceita pelo cliente: com 3 ou 4 agendas, as
 colunas do Dia rolam de lado dentro da área delas (U-01). Na coluna estreita, o "Cancelar" do
 paciente da turma descia para fora do cartão; agora desce para a linha de baixo, à direita.
+**Revisão da Agenda na largura única (cliente, 17/out/2026):** com 1152px, a Agenda tinha perdido o
+leiaute da proposta aprovada. Corrigido: a barra (visualização, data, "Hoje", agenda e busca) volta a
+ficar numa linha só; as colunas do Dia têm no mínimo 250px, então 4 agendas cabem sem rolagem (5 ou
+mais rolam de lado); no cartão do paciente da turma, o nome não quebra (o selo desce, se preciso) e
+"Mais" e Cancelar andam juntos, na linha de baixo quando não cabem ("Mais" à esquerda, Cancelar à
+direita), como no cartão aprovado; na Semana, o selo da situação fica menor e não sai do atendimento.
+Conferido em 1440px, 1280px e 390px, validado pelo cliente e publicado no staging em 17/out.
 
 ## Depois do 1º piloto (já previsto no banco)
 

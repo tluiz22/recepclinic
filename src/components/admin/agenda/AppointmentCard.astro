@@ -131,8 +131,8 @@ const variantOf = (x: (typeof actions.visible)[number]) => (x.kind === "form" &&
 >
   {
     compact ? (
-      <div class="flex items-center justify-between gap-2">
-        <a href={withReturn(`/admin/pacientes/${a.patientId}`, returnTo)} class="min-w-0 text-[15px] font-semibold text-ink no-underline hover:text-brand hover:underline">
+      <div class="flex flex-wrap items-center justify-between gap-x-2 gap-y-1">
+        <a href={withReturn(`/admin/pacientes/${a.patientId}`, returnTo)} class="max-w-full shrink-0 text-[15px] font-semibold text-ink no-underline hover:text-brand hover:underline">
           {a.patientName}
         </a>
         <StatusPill situation={situation} />
@@ -236,25 +236,31 @@ const variantOf = (x: (typeof actions.visible)[number]) => (x.kind === "form" &&
           )}
         </>
       ) : (
-        <div class="mt-0.5 flex flex-wrap items-center justify-between gap-1.5 border-t border-ink/10 pt-2.5 sm:pt-2">
-          <div class="flex min-w-0 flex-wrap gap-2 sm:gap-1.5">
-            {actions.primary && <CardActionButton action={actions.primary} endpoint={endpoint} returnTo={returnTo} variant="primary" />}
-            {actions.visible.map((x) => (
-              <CardActionButton action={x} endpoint={endpoint} returnTo={returnTo} variant={variantOf(x)} />
-            ))}
-            {actions.more.length > 0 && (
-              <MoreMenu id={`mais-${a.id}`} label={moreLabel}>
-                {actions.more.map((x) => (
-                  <CardActionButton action={x} endpoint={endpoint} returnTo={returnTo} inMenu />
-                ))}
-              </MoreMenu>
-            )}
-          </div>
-          {/* Coluna estreita (paciente da turma): o Cancelar desce para a linha de baixo, à direita, sem sair do cartão. */}
-          {actions.aside && (
-            <span class="ml-auto">
-              <CardActionButton action={actions.aside} endpoint={endpoint} returnTo={returnTo} variant="danger-quiet" />
-            </span>
+        <div class="mt-0.5 flex flex-wrap items-center gap-2 border-t border-ink/10 pt-2.5 sm:gap-1.5 sm:pt-2">
+          {(actions.primary || actions.visible.length > 0) && (
+            <div class="flex min-w-0 flex-wrap gap-2 sm:gap-1.5">
+              {actions.primary && <CardActionButton action={actions.primary} endpoint={endpoint} returnTo={returnTo} variant="primary" />}
+              {actions.visible.map((x) => (
+                <CardActionButton action={x} endpoint={endpoint} returnTo={returnTo} variant={variantOf(x)} />
+              ))}
+            </div>
+          )}
+          {/* "Mais" e Cancelar andam juntos: cabendo, ficam na mesma linha; na coluna estreita
+              (paciente da turma), descem para a linha de baixo, "Mais" à esquerda e Cancelar à
+              direita, como no cartão aprovado no redesign. */}
+          {(actions.more.length > 0 || actions.aside) && (
+            <div class="flex flex-1 items-center justify-between gap-1.5">
+              {actions.more.length > 0 ? (
+                <MoreMenu id={`mais-${a.id}`} label={moreLabel}>
+                  {actions.more.map((x) => (
+                    <CardActionButton action={x} endpoint={endpoint} returnTo={returnTo} inMenu />
+                  ))}
+                </MoreMenu>
+              ) : (
+                <span />
+              )}
+              {actions.aside && <CardActionButton action={actions.aside} endpoint={endpoint} returnTo={returnTo} variant="danger-quiet" />}
+            </div>
           )}
         </div>
       ))

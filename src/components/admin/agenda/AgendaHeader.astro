@@ -64,7 +64,7 @@ const filtersLabel = agendas.length > 1 ? `${selectedName ?? "Todas as agendas"}
   />
   <slot name="nav" />
 
-  <details data-agenda-filters open class="group rounded-xl border border-line bg-white sm:min-w-[min(100%,33rem)] sm:flex-1 sm:rounded-none sm:border-0 sm:bg-transparent">
+  <details data-agenda-filters open class="group rounded-xl border border-line bg-white sm:min-w-0 sm:flex-1 sm:rounded-none sm:border-0 sm:bg-transparent">
     <summary class="flex h-12 cursor-pointer list-none items-center justify-between gap-2 px-3.5 text-[15px] font-semibold text-ink sm:hidden [&::-webkit-details-marker]:hidden">
       <span class="inline-flex min-w-0 items-center gap-2">
         <Icon name="adjustments" class="h-[18px] w-[18px] shrink-0" strokeWidth={2.2} />
@@ -80,7 +80,7 @@ const filtersLabel = agendas.length > 1 ? `${selectedName ?? "Todas as agendas"}
             <label for="agenda_choice" class="sr-only">
               Agenda
             </label>
-            <select id="agenda_choice" name="agenda" class={`${CONTROL} w-full sm:w-56`} data-autosubmit>
+            <select id="agenda_choice" name="agenda" class={`${CONTROL} w-full sm:w-52`} data-autosubmit>
               <option value={ALL_AGENDAS} selected={!selectedAgendaId}>
                 Todas as agendas
               </option>
@@ -98,7 +98,7 @@ const filtersLabel = agendas.length > 1 ? `${selectedName ?? "Todas as agendas"}
           </form>
         )
       }
-      <form method="GET" action="/admin/agenda/buscar" role="search" class="flex min-w-0 gap-2 sm:ml-auto sm:min-w-72 sm:max-w-md sm:flex-1 sm:gap-1.5">
+      <form method="GET" action="/admin/agenda/buscar" role="search" class="flex min-w-0 gap-2 sm:ml-auto sm:min-w-56 sm:max-w-md sm:flex-1 sm:gap-1.5">
         {searchReturn && <input type="hidden" name="volta" value={searchReturn} />}
         <label for="patient_search" class="sr-only">Atendimentos marcados de um paciente</label>
         <div class="relative min-w-0 flex-1">
