@@ -90,7 +90,7 @@
 >     do Astro no `npm run dev`). Status de cada achado na seção 12 do relatório. Ícone da aba nas
 >     páginas do paciente: o logo da clínica, sem logo nenhum (cliente, 14/out). **Revisão com o
 >     cliente em 17/out:** envio duplo e U-01 a U-12 resolvidos ou fechados (U-08 corrigido; U-05 e U-12 sem mudança) e o
->     QA-09 da R8 corrigido; implementado, conferido no local e publicado no staging em 17/out (sem migração, commit `9d01b21`). Na validação, o cliente achou o telefone curto aceito e exibido com o +55: **regra do telefone corrigida** (celular com 9 dígitos, fixo com 8; exibição sem o +55), conferida no local e publicada no staging em 17/out (sem migração; o cliente valida) (detalhes no [plano](plano.md) e na seção 12.3
+>     QA-09 da R8 corrigido; implementado, conferido no local, publicado no staging em 17/out (sem migração, commit `9d01b21`) e validado pelo cliente. Na validação, o cliente achou o telefone curto aceito e exibido com o +55: **regra do telefone corrigida** (celular com 9 dígitos, fixo com 8; exibição sem o +55), conferida no local e publicada no staging em 17/out (sem migração, commit `dfd146b`) e **validada pelo cliente em 17/out** (detalhes no [plano](plano.md) e na seção 12.3
 >     do relatório).
 >   - **Redesign do painel (15/out):** avaliação global, identidade visual e proposta da Agenda no
 >     [canvas](https://claude.ai/artifact/AUajFVHWJNscFp5w5Pvqn4); plano R0 a R11 e as 4 decisões
