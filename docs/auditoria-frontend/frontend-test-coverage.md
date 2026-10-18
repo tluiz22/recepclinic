@@ -1,5 +1,9 @@
 # Cobertura da auditoria de frontend
 
+> **Regressão de 18/10/2026:** ver a [seção no fim](#regressão-de-18102026) e o
+> [relatório da regressão](regressao-2026-10-18-report.md). As tabelas abaixo continuam como
+> ficaram em 14/10 (histórico da auditoria inicial).
+>
 > 14/10/2026, ambiente local. Atualizado no mesmo dia com a revalidação das correções de todos os
 > defeitos (F-01 a F-09, A-01 a A-05) (ver a seção 12 do [relatório](frontend-audit-report.md)). Cobertura de **testes executados no navegador**. Ter lido o código de
 > uma tela **não** conta como teste.
@@ -148,3 +152,52 @@
 
 São 66 linhas para 65 arquivos: `profissionais/[id]` aparece duas vezes (novo e editar). Nenhuma rota ficou "não testada", mas **a maioria das ações que gravam
 dados não foi executada**: "Parcial" é a situação honesta delas.
+
+## Regressão de 18/10/2026
+
+> Ambiente local (`npm run dev` + Supabase local com o seed), commit `0fbb35a`, MCP Playwright
+> (Chromium). Detalhes, evidências e limitações no [relatório da regressão](regressao-2026-10-18-report.md).
+> Banco: contagem das tabelas de dados igual antes e depois; nenhum envio válido.
+
+### O que foi executado
+
+| O quê | Executado |
+| --- | --- |
+| Varredura (carrega, console, HTTP, rótulos, rolagem) | **105 endereços** (71 do Administrador, 15 do Suporte, 19 públicos) em 1280 e 390px |
+| Larguras intermediárias | 71 telas do Administrador em 1024, 768, 700, 640 e 360px; 9 telas com aparelho emulado (360, 390, 640×360, 768, 820, 1024) |
+| Controles de retorno | 30 cenários: 28 passaram, 1 bloqueado (NAV-20), 1 não aplicável (NAV-21: a DMED virou aba) |
+| Preservação dos campos após erro | 18 cenários: **18 passaram**, 0 campos perdidos; reenvio após correção e `/formulario` bloqueados |
+| Funções, regras e estados | 29 verificações: 24 passaram, 5 bloqueadas |
+| Acessibilidade e teclado | 9: 8 passaram, 1 falhou (REG-04) |
+| Larguras, console e HTTP | 9: 6 passaram, 3 falharam (REG-01, REG-02, REG-03) |
+| Design aprovado (decisões medíveis do plano) | 10: 10 passaram |
+| Testes automáticos | `npm test` 524 de 524; `astro check` 0 erros |
+
+### Situação por área depois da regressão
+
+| Área | Situação | Observação |
+| --- | --- | --- |
+| Agenda (Dia, Semana, Mês) | **Reprovada em tablet** | REG-01: barra de filtros passa da tela entre 640 e 820px. Em 1280 e 390px, aprovada |
+| Marcar e Remarcar | Parcial | F-01, QA-07, confirmações, "Já marcado", S-01, S-02 e "Outra data" passaram; envio não feito |
+| Bloquear, Bloqueios, busca, trilha, série | Parcial | Retornos e FORM-06 passaram; nada gravado |
+| Pacientes (lista, cadastro, ficha, contato) | **Reprovada (Baixa)** | REG-04 (borda vermelha no Cadastrar) e REG-02 (abas em telas médias); FORM-01/01b/02 e retornos passaram |
+| Resumo do Dia | **Reprovada (Baixa)** | REG-02; NAV-08 e NAV-19 passaram |
+| Métricas | **Reprovada (Baixa)** | REG-02; período (R7) e regiões de tabela passaram; Faltosos sem dados |
+| Financeiro e DMED | **Reprovada (Baixa)** | REG-02; FIL-03, FIL-04 e o QA-09 sem JavaScript passaram |
+| Pagamento | **Reprovada (Baixa)** | REG-03 (360px); FORM-07, R5-QA-01, NAV-03, QA-07 e envio único passaram |
+| Configurações (todas as seções) | Parcial | FORM-03/04/05/08/09/10/12, R9-QA-01, R9-QA-02 e R9-NAV-06 passaram; salvar não testado |
+| Sistema (Suporte) | Parcial | Matriz (NAV-06, QA-10, FORM-09), "Abrir a clínica para configurar" e "Trocar" passaram; cadastros não enviados |
+| Acesso | Parcial | Login (e-mail mantido, Mostrar/Ocultar) passou; `/nova-senha` com link bloqueado |
+| Páginas do paciente | Parcial | `/agendar` (faixa, S-02, S02-08, contraste da cor do seed), `/preparo`, 404s passaram; confirmar, link usado e `/formulario` com erro bloqueados |
+| Permissões e isolamento | Aprovada | 5 perfis + Suporte |
+
+### Defeitos
+
+| ID | Severidade | Situação |
+| --- | --- | --- |
+| Todos os da auditoria de 14/10 e dos relatórios R0 a R11 e S-01/S-02 | — | **Continuam resolvidos** (nenhuma volta) |
+| REG-01 · Agenda em tablet | Média | Novo, aberto |
+| REG-02 · Abas rolam 8px em telas médias | Baixa | Novo, aberto |
+| REG-03 · Pagamento em 360px | Baixa | Novo, aberto |
+| REG-04 · Borda vermelha do Cadastrar só com foco | Baixa | Novo, aberto |
+| S-01 · Ficha e Pagamento sem borda vermelha | Suspeita | Decisão do cliente |

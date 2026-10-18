@@ -92,6 +92,12 @@
 >     cliente em 17/out:** envio duplo e U-01 a U-12 resolvidos ou fechados (U-08 corrigido; U-05 e U-12 sem mudança) e o
 >     QA-09 da R8 corrigido; implementado, conferido no local, publicado no staging em 17/out (sem migração, commit `9d01b21`) e validado pelo cliente. Na validação, o cliente achou o telefone curto aceito e exibido com o +55: **regra do telefone corrigida** (celular com 9 dígitos, fixo com 8; exibição sem o +55), conferida no local e publicada no staging em 17/out (sem migração, commit `dfd146b`) e **validada pelo cliente em 17/out** (detalhes no [plano](plano.md) e na seção 12.3
 >     do relatório).
+>   - **Regressão do frontend (18/out):** [relatório](auditoria-frontend/regressao-2026-10-18-report.md),
+>     no local e sem gravar dados: 107 cenários (94 passaram, 4 falharam, 8 bloqueados, 1 não
+>     aplicável) e 105 endereços varridos. Nenhum defeito corrigido voltou. Defeitos novos, **abertos e
+>     aguardando o cliente**: REG-01 (Média: barra de filtros da Agenda passa da tela entre 640 e
+>     820px), REG-02 (abas rolam 8px em telas médias), REG-03 (Pagamento em 360px) e REG-04 (borda
+>     vermelha do Cadastrar só com foco); suspeita S-01 (ficha e Pagamento sem borda vermelha).
 >   - **Redesign do painel (15/out):** avaliação global, identidade visual e proposta da Agenda no
 >     [canvas](https://claude.ai/artifact/AUajFVHWJNscFp5w5Pvqn4); plano R0 a R11 e as 4 decisões
 >     do cliente na seção "Redesign do painel" do [plano](plano.md). **R0, R1 (parcial) e R2
