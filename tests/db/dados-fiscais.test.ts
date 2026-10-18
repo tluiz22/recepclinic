@@ -44,7 +44,7 @@ const vaultSecrets = (clinic: string) =>
   });
 
 beforeAll(async () => {
-  fixture = await setupAgendaClinic("Clínica do teste dos dados fiscais", "+55619888");
+  fixture = await setupAgendaClinic("Clínica do teste dos dados fiscais", "+55619888000");
   clinicId = fixture.clinicId;
   professional = await createUser("fis-prof");
   await addMember(clinicId, professional.id, ["professional"]);

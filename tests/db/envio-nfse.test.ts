@@ -94,7 +94,7 @@ async function issuedInvoice(): Promise<{ invoiceId: string; patientId: string }
 }
 
 beforeAll(async () => {
-  fixture = await setupAgendaClinic("Clínica do teste do envio da nota", "+55619911");
+  fixture = await setupAgendaClinic("Clínica do teste do envio da nota", "+55619911000");
   clinicId = fixture.clinicId;
   professional = await createUser("envio-prof");
   await addMember(clinicId, professional.id, ["professional"]);
@@ -134,7 +134,7 @@ describe("Envio da nota (F11.5)", () => {
     const { deps, sent, emails } = fakeDeps();
     const lines = await deliverInvoice(asDb(fixture.reception), clinicId, invoiceId, { contact: true, phone: "(84) 98888-0001", email: "Pai@Exemplo.com" }, deps);
     expect(lines.map((l) => [l.channel, l.destination, l.ok])).toEqual([
-      ["whatsapp", "+5561991101", false],
+      ["whatsapp", "+5561991100001", false],
       ["whatsapp", "+5584988880001", false],
       ["email", "pai@exemplo.com", true],
     ]);
@@ -158,7 +158,7 @@ describe("Envio da nota (F11.5)", () => {
     expect(lines.every((l) => l.ok)).toBe(true);
     expect(sent.filter((s) => s.kind === "upload")).toHaveLength(1);
     expect(sent.filter((s) => s.kind === "template")).toEqual([
-      { kind: "template", to: "+5561991101", template: "rc_nota_fiscal_v1", params: ["Resp.", "da Clínica do teste do envio da nota", "123", formatCentsBRL(30000), "Paciente Um", expect.any(String)], filename: "NFSe_123.pdf" },
+      { kind: "template", to: "+5561991100001", template: "rc_nota_fiscal_v1", params: ["Resp.", "da Clínica do teste do envio da nota", "123", formatCentsBRL(30000), "Paciente Um", expect.any(String)], filename: "NFSe_123.pdf" },
       { kind: "template", to: "+5584988880001", template: "rc_nota_fiscal_v1", params: ["Resp.", "da Clínica do teste do envio da nota", "123", formatCentsBRL(30000), "Paciente Um", expect.any(String)], filename: "NFSe_123.pdf" },
     ]);
   });
@@ -184,7 +184,7 @@ describe("Envio da nota (F11.5)", () => {
     try {
       const real = await issuedInvoice();
       const lines = await deliverAfterIssue(asDb(fixture.reception), clinicId, real.invoiceId, deps);
-      expect(lines.map((l) => l.destination)).toEqual(["+5561991101", "+5584988880002", "mae@exemplo.com"]);
+      expect(lines.map((l) => l.destination)).toEqual(["+5561991100001", "+5584988880002", "mae@exemplo.com"]);
       const recorded = (await listInvoiceDeliveries(asDb(fixture.admin), clinicId, [real.invoiceId])).get(real.invoiceId)!;
       expect(recorded.every((d) => d.automatic)).toBe(true);
     } finally {

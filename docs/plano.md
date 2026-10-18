@@ -2004,6 +2004,11 @@ corrigidas, retestadas, validadas pelo cliente e publicadas no staging no mesmo 
   `INVALID_PHONE_MESSAGE` em `src/lib/phone.ts`; valor que não é número: "Informe o valor em reais, ex.: 150,00.");
   U-05 fechado e U-12 aceito, sem mudança. **QA-09 da R8 corrigido:** sem JavaScript, o `EditCard` com erro volta aberto e
   com o campo marcado (`pageFlash` em `src/lib/flash.ts`, lido uma vez por pedido), com o que estava salvo.
+- **Telefone, relato do cliente na validação (17/out/2026):** um celular sem os dois últimos dígitos era aceito e aparecia
+  como "+55619986454". Causa: `normalizePhone` aceitava qualquer número de 8 a 13 dígitos. Agora, número brasileiro só
+  com DDD sem zero e celular de 9 dígitos (começando com 9) ou fixo de 8 (começando de 2 a 5); de outro país, só com o "+".
+  Exibição sempre sem o +55: "(61) 99854-5490" e "(61) 3333-4444"; um número já gravado errado aparece como "(61) 9986454",
+  para a clínica corrigir. Os prefixos fictícios de 7 testes de banco do módulo financeiro foram completados.
 
 **R5 (Pagamento), proposta aprovada pelo cliente em 16/out/2026** (página "5 · Pagamento" do canvas):
 contas no alto (Preço, Pago e Falta em números grandes, barra do quanto já foi pago e o selo "Pago"

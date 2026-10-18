@@ -1,25 +1,31 @@
 import { isAnonymizedPhone } from "./anonymization";
 
 const E164_REGEX = /^\+\d{10,15}$/;
+// Brasil (cliente, 17/out/2026): DDD sem zero e celular com 9 + 8 dígitos ou
+// fixo com 8 dígitos começando de 2 a 5. Antes, qualquer número de 8 a 13
+// dígitos passava (um celular sem os dois últimos dígitos era gravado).
+const BR_NUMBER = /^[1-9]{2}(?:9\d{8}|[2-5]\d{7})$/;
 
 export function normalizePhone(rawPhone: string): string | null {
   const cleaned = rawPhone.replace(/[^\d+]/g, "");
-  const withCountryCode = cleaned.startsWith("+") ? cleaned : `+55${cleaned}`;
-
-  return E164_REGEX.test(withCountryCode) ? withCountryCode : null;
+  // Fora do Brasil, só com o "+" e o código do país.
+  if (cleaned.startsWith("+") && !cleaned.startsWith("+55")) return E164_REGEX.test(cleaned) ? cleaned : null;
+  let digits = cleaned.replace(/\D/g, "");
+  if (cleaned.startsWith("+55") || (digits.length >= 12 && digits.startsWith("55"))) digits = digits.slice(2);
+  return BR_NUMBER.test(digits) ? `+55${digits}` : null;
 }
 
-// "+5561998645490" → "(61) 99864-5490" — formatação de exibição pro
-// telefone brasileiro armazenado em E.164 (só celular, único tipo aceito no
-// cadastro). Números fora desse formato voltam como vieram, sem quebrar a
-// tela.
+// "+5561998645490" → "(61) 99864-5490" e "+556133334444" → "(61) 3333-4444":
+// exibição do telefone brasileiro, sem o +55 (cliente, 17/out/2026). Número
+// brasileiro fora do formato (gravado antes da regra nova) aparece com o DDD
+// e o resto; de outro país, como veio.
 export function formatPhoneBR(e164: string): string {
   // Contato anonimizado (F9.4): o número não existe.
   if (isAnonymizedPhone(e164)) return "telefone anonimizado";
-  const match = e164.match(/^\+55(\d{2})(\d{5})(\d{4})$/);
-  if (!match) return e164;
-  const [, ddd, prefix, suffix] = match;
-  return `(${ddd}) ${prefix}-${suffix}`;
+  const match = e164.match(/^\+55(\d{2})(\d{4,5})(\d{4})$/);
+  if (match) return `(${match[1]}) ${match[2]}-${match[3]}`;
+  const br = e164.match(/^\+55(\d{2})(\d+)$/);
+  return br ? `(${br[1]}) ${br[2]}` : e164;
 }
 
 // Conversa no WhatsApp instalado no aparelho de quem está usando o painel

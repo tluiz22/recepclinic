@@ -69,7 +69,7 @@ async function newPayment(input: { payer?: string; payerName?: string; payerCpf?
 }
 
 beforeAll(async () => {
-  fixture = await setupAgendaClinic("Clínica do teste da emissão", "+55619900");
+  fixture = await setupAgendaClinic("Clínica do teste da emissão", "+55619900000");
   clinicId = fixture.clinicId;
   professional = await createUser("nfse-prof");
   await addMember(clinicId, professional.id, ["professional"]);

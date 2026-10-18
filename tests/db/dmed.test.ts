@@ -44,7 +44,7 @@ const payFor = async (patientId: string, time: string, input: { amountCents: num
 };
 
 beforeAll(async () => {
-  fixture = await setupAgendaClinic("Clínica do teste da DMED", "+55619899");
+  fixture = await setupAgendaClinic("Clínica do teste da DMED", "+55619899000");
   clinicId = fixture.clinicId;
   support = await createUser("dmed-suporte");
   await makePlatformStaff(support.id);

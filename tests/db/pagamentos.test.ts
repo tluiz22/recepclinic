@@ -34,7 +34,7 @@ const pay = async (user: TestUser, input: Partial<PaymentInput> = {}, appointmen
   registerPayment(asDb(user), clinicId, await target(user, appointment), { amountCents: 10000, method: "pix", paidOn: today, payer: "contact", ...input });
 
 beforeAll(async () => {
-  fixture = await setupAgendaClinic("Clínica do teste de pagamentos", "+55619877");
+  fixture = await setupAgendaClinic("Clínica do teste de pagamentos", "+55619877000");
   clinicId = fixture.clinicId;
   const book = async (agendaId: string) =>
     (

@@ -23,7 +23,7 @@ let p1: string;
 let contactId: string;
 
 beforeAll(async () => {
-  fixture = await setupAgendaClinic("Clínica do teste do Módulo financeiro", "+55619866");
+  fixture = await setupAgendaClinic("Clínica do teste do Módulo financeiro", "+55619866000");
   clinicId = fixture.clinicId;
   p1 = fixture.ids.p1;
   contactId = (await getPatient(asDb(fixture.admin), clinicId, p1)).contactId;

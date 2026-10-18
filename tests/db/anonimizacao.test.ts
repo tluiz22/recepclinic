@@ -21,7 +21,7 @@ const sql = <T = Record<string, unknown>>(text: string, params: unknown[] = []) 
   withDatabase(async (db) => (await db.query(text, params)).rows as T[]);
 
 beforeAll(async () => {
-  fixture = await setupAgendaClinic("Clínica do teste de anonimização", "+55619877");
+  fixture = await setupAgendaClinic("Clínica do teste de anonimização", "+55619877000");
   clinicId = fixture.clinicId;
   p1 = fixture.ids.p1;
   support = await createUser("suporte-anon");

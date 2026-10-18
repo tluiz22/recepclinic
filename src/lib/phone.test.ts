@@ -17,6 +17,23 @@ describe("normalizePhone", () => {
   it("recusa entrada vazia", () => {
     expect(normalizePhone("")).toBeNull();
   });
+
+  it("aceita 55 sem o + e fixo de 8 dígitos", () => {
+    expect(normalizePhone("5561998545490")).toBe("+5561998545490");
+    expect(normalizePhone("(61) 3333-4444")).toBe("+556133334444");
+  });
+
+  it("recusa celular sem dígitos, DDD com zero e fixo que não começa de 2 a 5 (cliente, 17/out/2026)", () => {
+    expect(normalizePhone("(61) 99854-54")).toBeNull();
+    expect(normalizePhone("619985454")).toBeNull();
+    expect(normalizePhone("6199854549")).toBeNull();
+    expect(normalizePhone("01998545490")).toBeNull();
+    expect(normalizePhone("+55619985454")).toBeNull();
+  });
+
+  it("de outro país, só com o +", () => {
+    expect(normalizePhone("+14155552671")).toBe("+14155552671");
+  });
 });
 
 describe("formatPhoneBR", () => {
@@ -24,7 +41,15 @@ describe("formatPhoneBR", () => {
     expect(formatPhoneBR("+5561998645490")).toBe("(61) 99864-5490");
   });
 
-  it("devolve como veio o que não é celular brasileiro", () => {
+  it("formata fixo brasileiro", () => {
+    expect(formatPhoneBR("+556133334444")).toBe("(61) 3333-4444");
+  });
+
+  it("número brasileiro fora do formato: sem o +55", () => {
+    expect(formatPhoneBR("+55619985454")).toBe("(61) 9985454");
+  });
+
+  it("devolve como veio o número de outro país", () => {
     expect(formatPhoneBR("+14155552671")).toBe("+14155552671");
   });
 });
