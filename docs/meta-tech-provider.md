@@ -123,7 +123,8 @@ dados reais e não fica ligada ao número de testes. A senha é criada pelo link
 Clínica e login criados e conferidos em 09/out. Itens liberados na matriz: Bot de WhatsApp,
 Lembrete automático, Lista de espera, os 2 resumos do dia, Mensagens do bot, Mensagens da Meta
 (templates), Exames e procedimentos e Métricas: Funil do bot. Dados fictícios conferidos: Dra.
-Exemplo, Exame Exemplo (com preparo) e 4 exames marcados de Paciente Exemplo 1 a 4.
+Exemplo, Exame Exemplo (com preparo) e 4 exames marcados de Paciente Exemplo 1 a 4. Telefones fictícios corrigidos para a regra nova em 17/out (`+55 99 99999-0001` a `-0004` e, da
+Dra. Exemplo, `+55 99 99999-9999`).
 
 Campos da tela *Instruções para o analista*:
 
