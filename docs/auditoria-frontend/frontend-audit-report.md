@@ -412,7 +412,15 @@ do envio, com um único campo inválido por cenário.
 | F-06, F-08, F-09, A-01, A-03 | Baixa | **Corrigido e validado** (12.6) |
 | A-05 | Baixa | **Corrigido e validado** (12.6), menos o ícone com o logo da clínica: nenhuma clínica do seed tem logo, então só o caso "sem logo" foi visto |
 | F-07 | Baixa | **Não reproduzido** (12.6) |
-| A-04 (indício), envio duplo (suspeita), U-01 a U-12 | — | Pendente (fora do escopo) |
+| Envio duplo (suspeita) | — | **Resolvido no redesign** (R5: envio único em todo o painel, `src/scripts/sendOnce.ts`) |
+| U-01, U-02 | — | **Resolvidos no redesign** (R2 e a revisão da Agenda na largura única, 17/out) |
+| U-03, U-04 | — | **Resolvidos no redesign** (R7: mesmas abas e mesmo padrão de indicadores) |
+| U-06, U-11 | — | **Resolvidos no redesign** (R9: título é o nome da seção; Clínica salva por bloco) |
+| U-07, U-09, U-10 | — | **Resolvidos no redesign** (R1, R4 e R5) |
+| U-05 | — | **Fechado sem mudança** (cliente, 17/out/2026): "Voltar" quando há tela de origem, senão o nome da tela-mãe, o padrão aprovado |
+| U-08 | — | **Corrigido em 17/out/2026** (cliente): telefone inválido com uma mensagem só, "Telefone inválido: informe DDD + número, ex.: (84) 98188-0777." (`INVALID_PHONE_MESSAGE`; nas notas, o mesmo modelo com "WhatsApp das notas" e "Outro número"); valor que não é número, "Informe o valor em reais, ex.: 150,00." |
+| U-12 | — | **Aceito sem mudança** (cliente, 17/out/2026): `return_to` no Remarcar, Bloqueios e Série; unificar só se mexer nessas telas |
+| A-04 (indício) | — | Pendente (fora do escopo) |
 
 ### 12.4 Limites desta revalidação
 

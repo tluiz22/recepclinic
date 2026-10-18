@@ -1,7 +1,7 @@
 import { isAdult, isOverConsultationAgeLimit } from "../age";
 import { isAnonymizedPhone } from "../anonymization";
 import { isCalendarDate } from "../clinicTime";
-import { normalizePhone } from "../phone";
+import { INVALID_PHONE_MESSAGE, normalizePhone } from "../phone";
 import { parseSearch, type SearchTerm } from "../patientSearch";
 import type { DbClient } from "./clients";
 import { cleanText, DataError, fromDbError, unwrap, unwrapOne, Validation } from "./errors";
@@ -118,7 +118,7 @@ const toPatient = (row: PatientRow): Patient => ({
 export const PATIENT_MESSAGES = {
   invalidBirthdate: "Data de nascimento inválida.",
   minorNeedsContact: "Paciente menor de 18 anos precisa de um responsável (outra pessoa).",
-  invalidPhone: "Telefone inválido: informe DDD + número.",
+  invalidPhone: INVALID_PHONE_MESSAGE,
   selfExists: "Esse contato já tem um cadastro como próprio paciente.",
   invalidCardValidUntil: "Validade da carteirinha inválida.",
 } as const;

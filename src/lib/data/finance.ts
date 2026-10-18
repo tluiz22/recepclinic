@@ -36,7 +36,7 @@ export const FINANCE_MESSAGES = {
   invalidCpf: "CPF inválido: confira os 11 dígitos.",
   payerName: "Informe o nome do responsável financeiro.",
   payerCpf: "Informe o CPF do responsável financeiro.",
-  invoicePhone: "WhatsApp das notas: confira o DDD e o número.",
+  invoicePhone: "WhatsApp das notas inválido: informe DDD + número, ex.: (84) 98188-0777.",
   invoiceEmail: "E-mail das notas inválido.",
 } as const;
 

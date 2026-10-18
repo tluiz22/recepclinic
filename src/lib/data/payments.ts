@@ -47,6 +47,8 @@ export type Payment = {
 
 export const PAYMENT_MESSAGES = {
   amount: "Informe um valor maior que zero.",
+  /** Valor que não é número (U-08 da auditoria, cliente, 17/out/2026). */
+  amountFormat: "Informe o valor em reais, ex.: 150,00.",
   method: "Escolha a forma de pagamento.",
   paidOn: "Informe a data do pagamento (hoje ou antes).",
   status: "Atendimento cancelado ou com falta não recebe pagamento novo.",
@@ -207,7 +209,7 @@ export async function registerPayment(
   const { patient } = target;
   const v = new Validation();
   v.check(canReceivePayment(target.status), "status", PAYMENT_MESSAGES.status);
-  v.check(Number.isInteger(input.amountCents) && input.amountCents > 0, "amount", PAYMENT_MESSAGES.amount);
+  v.check(Number.isInteger(input.amountCents) && input.amountCents > 0, "amount", Number.isNaN(input.amountCents) ? PAYMENT_MESSAGES.amountFormat : PAYMENT_MESSAGES.amount);
   const method = PAYMENT_METHODS.find((m) => m.value === input.method)?.value;
   v.check(method !== undefined, "method", PAYMENT_MESSAGES.method);
   v.check(isCalendarDate(input.paidOn) && input.paidOn <= target.today, "paid_on", PAYMENT_MESSAGES.paidOn);

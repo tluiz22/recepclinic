@@ -5,9 +5,12 @@
 // mesma tela (sem JavaScript, recarrega); com ele, só fecha. No celular, o
 // cartão fica recolhido no título e no resumo (`summary`); no computador,
 // sempre aberto. Um formulário que volta com erro abre o cartão
-// (src/scripts/keepFormValues.ts).
+// (src/scripts/keepFormValues.ts); sem JavaScript, o próprio cartão abre o
+// formulário e marca o campo (QA-09 da R8, cliente, 17/out/2026), com o que
+// estava salvo (o digitado não volta).
 import Icon from "../Icon.astro";
 import { buttonClass } from "./styles";
+import { formNamesFor, pageFlash } from "../../../lib/flash";
 
 interface Props {
   /** Único na página (o título do cartão é `${id}-titulo`). */
@@ -24,6 +27,23 @@ interface Props {
 
 const { id, title, summary, editable = true, editOpen = false, class: className = "" } = Astro.props;
 const hasEdit = editable && Astro.slots.has("edit");
+const flash = hasEdit ? pageFlash(Astro) : null;
+let editHtml = hasEdit ? await Astro.slots.render("edit") : "";
+let hasError = false;
+if (flash?.tone === "error") {
+  for (const field of flash.fields ?? []) {
+    const name = formNamesFor(field).find((n) => editHtml.includes(`name="${n}"`));
+    if (!name) continue;
+    hasError = true;
+    // O primeiro campo à vista com esse nome (não o oculto).
+    let marked = false;
+    editHtml = editHtml.replace(new RegExp(`<(?:input|select|textarea)\\b[^>]*?\\bname="${name}"[^>]*>`, "g"), (tag) => {
+      if (marked || /\btype="hidden"/.test(tag)) return tag;
+      marked = true;
+      return tag.replace(/^<(\w+)/, '<$1 aria-invalid="true"');
+    });
+  }
+}
 ---
 
 <details
@@ -45,7 +65,7 @@ const hasEdit = editable && Astro.slots.has("edit");
   </div>
   {
     hasEdit && (
-      <details data-edit open={editOpen} class="px-3.5 pb-3.5 lg:p-0">
+      <details data-edit open={editOpen || hasError} class="px-3.5 pb-3.5 lg:p-0">
         <summary
           class={`${buttonClass("secondary", "sm")} cursor-pointer list-none lg:absolute lg:top-4 lg:right-5 [&::-webkit-details-marker]:hidden`}
           aria-label={`Editar: ${title}`}
@@ -53,7 +73,7 @@ const hasEdit = editable && Astro.slots.has("edit");
           Editar
         </summary>
         <div class="flex flex-col gap-3 lg:px-5 lg:pb-[18px]">
-          <slot name="edit" />
+          <Fragment set:html={editHtml} />
         </div>
       </details>
     )

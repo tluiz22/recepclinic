@@ -27,3 +27,6 @@ export function formatPhoneBR(e164: string): string {
 export function whatsappHref(e164: string): string {
   return `https://wa.me/${e164.replace(/\D/g, "")}`;
 }
+
+/** Telefone inválido, igual em todas as telas (U-08 da auditoria, cliente, 17/out/2026). */
+export const INVALID_PHONE_MESSAGE = "Telefone inválido: informe DDD + número, ex.: (84) 98188-0777.";

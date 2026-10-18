@@ -287,3 +287,7 @@ Ver a seção 6.
 2. Executar NAV-06 e QA-03 com um pagamento sem CPF no banco local, antes de publicar a R8.
 3. Decidir com o cliente o "Voltar" nas abas de Configurações abertas de outra tela (S-01).
 4. Registrar QA-09 como limitação conhecida do `EditCard` (sem correção agora).
+   **Corrigido em 17/out/2026** (cliente: "só abrir o cartão"): sem JavaScript, o `EditCard` com erro volta com o
+   formulário aberto, o campo marcado (`aria-invalid`) e o aviso; os campos mostram o que estava salvo (o digitado não
+   volta, para não guardar dados pessoais num cookie). Conferido sem JavaScript no Responsável (telefone) e na DMED
+   (DDD); com JavaScript, igual a antes.

@@ -29,5 +29,7 @@ declare namespace App {
     // Clínica ativa, papéis e agendas do login (F3.2), preenchido pelo
     // middleware em /admin e /api/admin.
     clinic?: import("./lib/clinicAccess").ClinicContext;
+    // Aviso da tela já lido neste pedido (src/lib/flash.ts, pageFlash).
+    flash?: import("./lib/flash").Flash | null;
   }
 }

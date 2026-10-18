@@ -1,4 +1,4 @@
-import { normalizePhone } from "../../phone";
+import { INVALID_PHONE_MESSAGE, normalizePhone } from "../../phone";
 import type { DbClient } from "../clients";
 import { cleanText, unwrap, unwrapOne, Validation } from "../errors";
 
@@ -46,7 +46,7 @@ export function validateNotificationRecipient(input: NotificationRecipientInput)
     receives_exams: !!input.receivesExams,
   };
   v.check(row.label.length > 0, "label", "Informe o nome do contato");
-  v.check(row.phone !== null, "phone", "Telefone inválido");
+  v.check(row.phone !== null, "phone", INVALID_PHONE_MESSAGE);
   v.throwIfInvalid("Contato do resumo do dia");
   return { ...row, phone: row.phone! };
 }

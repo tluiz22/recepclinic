@@ -1,5 +1,5 @@
 ---
-import { takeFlash } from "../../lib/flash";
+import { pageFlash } from "../../lib/flash";
 import FormMessage from "./FormMessage.astro";
 
 // Aviso deixado pela rota de formulário (salvo ou erro), mostrado uma vez.
@@ -13,7 +13,7 @@ interface Props {
   flash?: Flash | null;
 }
 
-const flash = Astro.props.flash !== undefined ? Astro.props.flash : takeFlash(Astro.cookies);
+const flash = Astro.props.flash !== undefined ? Astro.props.flash : pageFlash(Astro);
 ---
 
 {

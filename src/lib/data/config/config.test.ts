@@ -240,7 +240,7 @@ describe("cadastros simples", () => {
     ).toEqual({ label: "Recepção", phone: "+5585999990000", receives_consultations: true, receives_exams: false });
     expect(
       fieldsOf(() => validateNotificationRecipient({ label: "", phone: "123", receivesConsultations: false, receivesExams: false })),
-    ).toEqual({ label: "Informe o nome do contato", phone: "Telefone inválido" });
+    ).toEqual({ label: "Informe o nome do contato", phone: "Telefone inválido: informe DDD + número, ex.: (84) 98188-0777." });
   });
 
   it("plano: nomes alternativos sem repetição e sem o próprio nome", () => {

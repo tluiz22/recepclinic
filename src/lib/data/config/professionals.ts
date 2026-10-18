@@ -1,4 +1,4 @@
-import { normalizePhone } from "../../phone";
+import { INVALID_PHONE_MESSAGE, normalizePhone } from "../../phone";
 import type { DbClient } from "../clients";
 import { cleanText, DataError, unwrap, unwrapOne, Validation } from "../errors";
 
@@ -100,7 +100,7 @@ export function validateProfessional(input: ProfessionalInput) {
     const raw = cleanText(input.phone);
     contact.phone = raw === null ? null : normalizePhone(raw);
     v.check(raw !== null, "phone", "Informe o WhatsApp");
-    v.check(raw === null || contact.phone !== null, "phone", "Telefone inválido");
+    v.check(raw === null || contact.phone !== null, "phone", INVALID_PHONE_MESSAGE);
   }
   if (input.receivesDailySummary !== undefined) {
     contact.receives_daily_summary = input.receivesDailySummary;

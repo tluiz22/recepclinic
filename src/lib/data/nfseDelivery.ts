@@ -37,7 +37,7 @@ export type DeliveryDeps = { sender: ClinicSender | null; sendEmail: EmailSender
 export type DeliveryLine = { channel: "whatsapp" | "email"; destination: string; ok: boolean; reason: string | null };
 
 export const DELIVERY_MESSAGES = {
-  phone: "Outro número: confira o DDD e o número (ex.: (84) 98888-0000).",
+  phone: "Outro número inválido: informe DDD + número, ex.: (84) 98188-0777.",
   email: "E-mail inválido.",
   nothing: "Escolha pelo menos um destino.",
   notIssued: "Só nota emitida pode ser enviada.",

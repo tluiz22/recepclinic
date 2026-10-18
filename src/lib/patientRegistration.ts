@@ -3,6 +3,7 @@
 // fonte de verdade.
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { isAdult } from "./age";
+import { INVALID_PHONE_MESSAGE } from "./phone";
 import { todayFortaleza } from "./scheduling/returnVisitDeadline";
 
 export function isValidBirthdate(birthdate: string | undefined): birthdate is string {
@@ -18,7 +19,7 @@ export function canBeGuardianSelf(birthdate: string): boolean {
 // Mensagens de erro das telas de cadastro/edição de paciente, pelo código
 // que as rotas mandam em `?error=`.
 export const PATIENT_FORM_ERRORS: Record<string, string> = {
-  invalid_phone: "Telefone inválido — informe DDD + número, ex.: 84981880777.",
+  invalid_phone: INVALID_PHONE_MESSAGE,
   invalid_birthdate: "Data de nascimento inválida.",
   minor_needs_guardian: "Paciente menor de 18 anos precisa de um responsável (outra pessoa).",
   guardian_required: "Escolha o responsável na lista de resultados ou cadastre um novo.",

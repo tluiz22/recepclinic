@@ -10,7 +10,7 @@ import AdminLayout from "../../../layouts/AdminLayout.astro";
 import FlashMessage from "../FlashMessage.astro";
 import Icon from "../Icon.astro";
 import { createUserClient } from "../../../lib/data/clients";
-import { takeFlash } from "../../../lib/flash";
+import { pageFlash } from "../../../lib/flash";
 import { loadSetupStatus, type SetupStatus } from "../../../lib/data/config/setup";
 import { configSections, type SectionId } from "./sections";
 
@@ -30,7 +30,7 @@ const { current, title, subtitle, pageTitle, back, setup: given } = Astro.props;
 // O aviso é lido (e o cookie apagado) antes de esperar o guia: depois da espera
 // a resposta já começou a sair e o cookie ficava, repetindo o aviso nas telas
 // seguintes (QA-02 do teste da R9).
-const flash = takeFlash(Astro.cookies);
+const flash = pageFlash(Astro);
 const clinic = Astro.locals.clinic!;
 const setup = given ?? (await loadSetupStatus(createUserClient(Astro.request, Astro.cookies), clinic.clinicId, clinic.features));
 const groups = configSections(clinic.features, clinic.isPlatformStaff, setup);

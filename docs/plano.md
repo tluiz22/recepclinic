@@ -1999,6 +1999,11 @@ corrigidas, retestadas, validadas pelo cliente e publicadas no staging no mesmo 
   as agendas da escolha travadas → aviso vermelho ("… já tem atendimento marcado: …") com "Remarcar esse atendimento" (volta
   para o Marcar) e sem horários; só algumas, no "Primeiro horário disponível" → os horários delas saem, com aviso amarelo.
   A trava ao gravar continua.
+- **Recomendações de UX da auditoria (U-01 a U-12), revisão com o cliente (17/out/2026):** já resolvidas pelo redesign
+  U-01 a U-04, U-06, U-07, U-09 a U-11 e o envio duplo; **U-08 corrigido** (uma mensagem de telefone inválido com exemplo,
+  `INVALID_PHONE_MESSAGE` em `src/lib/phone.ts`; valor que não é número: "Informe o valor em reais, ex.: 150,00.");
+  U-05 fechado e U-12 aceito, sem mudança. **QA-09 da R8 corrigido:** sem JavaScript, o `EditCard` com erro volta aberto e
+  com o campo marcado (`pageFlash` em `src/lib/flash.ts`, lido uma vez por pedido), com o que estava salvo.
 
 **R5 (Pagamento), proposta aprovada pelo cliente em 16/out/2026** (página "5 · Pagamento" do canvas):
 contas no alto (Preço, Pago e Falta em números grandes, barra do quanto já foi pago e o selo "Pago"
