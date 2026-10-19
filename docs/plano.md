@@ -2345,6 +2345,12 @@ cancelamento pela clínica, nota fiscal…), a situação concorda com o nome ("
 tipo sem nome sai como "Mensagem"; o "Mensagem não enviada (reminder: template_disabled)" virou "WhatsApp: Lembrete não
 enviado (template não aprovado)". Validado pelo cliente no local e publicado no staging em 18/out (sem migração).
 
+**"Marcados por" das Métricas pelo dia da marcação (relato do cliente, 18/out):** com "Hoje", os atendimentos marcados no
+dia para outras datas não apareciam (a conta usava a data do atendimento). Decisão do cliente: o "Marcados por" da Visão
+geral conta os marcados no período (`created_at`, `listMetricsRows` com `by: "booked"`), qualquer que seja a data deles,
+sem os cancelados depois, com a linha de explicação e a coluna "Marcados"; os outros números seguem pela data do
+atendimento. Validado pelo cliente no local e publicado no staging em 18/out (sem migração).
+
 ---
 
 ## Depois do 1º piloto (já previsto no banco)

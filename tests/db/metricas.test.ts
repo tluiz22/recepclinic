@@ -49,6 +49,15 @@ describe("métricas", () => {
     expect(await listMetricsRows(asDb(admin), clinicId, { ...period, agendaIds: [ids.agendaDra], patientIds: [ids.p2] })).toHaveLength(1);
   });
 
+  it("marcados no período: pelo dia da marcação, não pelo dia do atendimento (cliente, 18/out/2026)", async () => {
+    const { clinicId, ids, admin } = fixture;
+    const today = { start: new Date(Date.now() - 3_600_000), end: new Date(Date.now() + 3_600_000) };
+    const booked = await listMetricsRows(asDb(admin), clinicId, { ...today, agendaIds: [ids.agendaDra], by: "booked" });
+    expect(booked).toHaveLength(3);
+    expect(await listMetricsRows(asDb(admin), clinicId, { ...today, agendaIds: [ids.agendaDra] })).toEqual([]);
+    expect(overview([], new Date(), booked).byChannel).toEqual({ whatsapp: 0, panel: 3, link: 0 });
+  });
+
   it("faltosos: só quem passa na regra", async () => {
     const { clinicId, ids, admin } = fixture;
     const frequent = await listFrequentNoShows(asDb(admin), clinicId, [ids.agendaDra]);

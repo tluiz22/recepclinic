@@ -42,6 +42,12 @@ describe("contas das Métricas (F4.9)", () => {
     });
   });
 
+  it("marcados por: os marcados no período, qualquer que seja a data deles (cliente, 18/out)", () => {
+    const booked = [row({ bookingChannel: "whatsapp_bot" }), row({ bookingChannel: "whatsapp_bot", status: "scheduled" }), row({ status: "canceled" })];
+    expect(overview(rows, now, booked)).toMatchObject({ total: 6, byChannel: { whatsapp: 2, panel: 0, link: 0 } });
+    expect(overview([], now, booked).byChannel).toEqual({ whatsapp: 2, panel: 0, link: 0 });
+  });
+
   it("volume por serviço e local, do maior para o menor", () => {
     expect(volumeByService(rows)[0]).toEqual({ label: "Consulta · Consultório", count: 4 });
   });

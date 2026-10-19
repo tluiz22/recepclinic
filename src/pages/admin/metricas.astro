@@ -129,7 +129,11 @@ const card = "flex flex-col gap-3 rounded-xl border border-line bg-white p-3.5 s
 const label = "text-[13.5px] font-semibold text-ink-soft";
 const intro = "text-sm leading-relaxed text-ink-soft";
 const hidden = (values: Record<string, string>) => Object.entries(values).filter(([, value]) => value);
-const ov = tab === "visao_geral" ? overview(rows, now) : null;
+// "Marcados por" pelo dia da marcação, não pelo dia do atendimento (cliente, 18/out/2026).
+const ov =
+  tab === "visao_geral"
+    ? overview(rows, now, await listMetricsRows(db, clinic.clinicId, { start: period.start, end: period.end, agendaIds, patientIds, by: "booked" }))
+    : null;
 const fin = tab === "financeiro" ? financial(rows) : null;
 ---
 
@@ -274,6 +278,7 @@ const fin = tab === "financeiro" ? financial(rows) : null;
             </div>
             <section aria-labelledby="marcados-por" class="mt-6 flex max-w-2xl flex-col gap-2">
               <h2 id="marcados-por" class={sectionTitle}>Marcados por</h2>
+              <p class={intro}>Atendimentos marcados no período, qualquer que seja a data deles (sem os cancelados depois).</p>
               {(() => {
                 const channels = [
                   ["WhatsApp (bot)", ov.byChannel.whatsapp],
@@ -284,7 +289,7 @@ const fin = tab === "financeiro" ? financial(rows) : null;
                 return (
                   <DataTable
                     label="Marcados por"
-                    headers={["Origem", "Atendimentos", "Parte"]}
+                    headers={["Origem", "Marcados", "Parte"]}
                     rows={[...channels.map(([name, n]) => [name, n, share(n, total)]), ["Total", total, total === 0 ? "—" : "100%"]]}
                     total
                   />

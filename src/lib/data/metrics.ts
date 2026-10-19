@@ -27,24 +27,32 @@ export type MetricsRow = {
   priceCents: number | null;
 };
 
-export type MetricsScope = { start: Date; end: Date; agendaIds: string[]; patientIds?: string[] | null };
+export type MetricsScope = {
+  start: Date;
+  end: Date;
+  agendaIds: string[];
+  patientIds?: string[] | null;
+  /** "booked": marcados no período, qualquer que seja a data do atendimento ("Marcados por", cliente, 18/out/2026). */
+  by?: "scheduled" | "booked";
+};
 
 const PAGE = 1000;
 
-/** Atendimentos com início no período (cancelados inclusive), lidos em páginas de 1000. */
+/** Atendimentos com início (ou marcados, com `by: "booked"`) no período, cancelados inclusive, lidos em páginas de 1000. */
 export async function listMetricsRows(db: DbClient, clinicId: string, scope: MetricsScope): Promise<MetricsRow[]> {
   if (!scope.agendaIds.length || (scope.patientIds && !scope.patientIds.length)) return [];
   const rows: MetricsRow[] = [];
+  const column = scope.by === "booked" ? "created_at" : "scheduled_at";
   for (let from = 0; ; from += PAGE) {
     let query = db
       .from("appointments")
       .select("id, scheduled_at, status, agenda_id, patient_id, booking_channel, canceled_via, price_cents, services ( name, category ), locations ( name, type )")
       .eq("clinic_id", clinicId)
       .in("agenda_id", scope.agendaIds)
-      .gte("scheduled_at", scope.start.toISOString())
-      .lt("scheduled_at", scope.end.toISOString());
+      .gte(column, scope.start.toISOString())
+      .lt(column, scope.end.toISOString());
     if (scope.patientIds) query = query.in("patient_id", scope.patientIds);
-    const page = unwrap(await query.order("scheduled_at").order("id").range(from, from + PAGE - 1), "Métricas") as unknown as {
+    const page = unwrap(await query.order(column).order("id").range(from, from + PAGE - 1), "Métricas") as unknown as {
       id: string;
       scheduled_at: string;
       status: Status;
@@ -93,6 +101,7 @@ export type Overview = {
   upcoming: number;
   /** Faltas entre os registrados (compareceu + faltou); null = nenhum registrado. */
   noShowRate: number | null;
+  /** Marcados no período, por canal (sem os cancelados depois). */
   byChannel: { whatsapp: number; panel: number; link: number };
 };
 
@@ -100,8 +109,10 @@ export function noShowRate(completed: number, noShow: number): number | null {
   return completed + noShow > 0 ? noShow / (completed + noShow) : null;
 }
 
-export function overview(rows: MetricsRow[], now: Date): Overview {
+/** `booked`: os marcados no período (`by: "booked"`); sem ele, os próprios atendimentos do período. */
+export function overview(rows: MetricsRow[], now: Date, booked: MetricsRow[] = rows): Overview {
   const live = rows.filter((r) => r.status !== "canceled");
+  const liveBooked = booked.filter((r) => r.status !== "canceled");
   const completed = rows.filter((r) => r.status === "completed").length;
   const noShow = rows.filter((r) => r.status === "no_show").length;
   return {
@@ -113,9 +124,9 @@ export function overview(rows: MetricsRow[], now: Date): Overview {
     upcoming: live.filter((r) => ACTIVE.includes(r.status) && r.scheduledAt > now).length,
     noShowRate: noShowRate(completed, noShow),
     byChannel: {
-      whatsapp: live.filter((r) => r.bookingChannel === "whatsapp_bot").length,
-      panel: live.filter((r) => r.bookingChannel === "admin").length,
-      link: live.filter((r) => r.bookingChannel === "booking_link").length,
+      whatsapp: liveBooked.filter((r) => r.bookingChannel === "whatsapp_bot").length,
+      panel: liveBooked.filter((r) => r.bookingChannel === "admin").length,
+      link: liveBooked.filter((r) => r.bookingChannel === "booking_link").length,
     },
   };
 }
