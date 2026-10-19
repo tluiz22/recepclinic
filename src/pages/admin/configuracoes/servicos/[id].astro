@@ -31,6 +31,8 @@ if (!isNew && !service) return Astro.redirect("/admin/configuracoes/servicos");
 
 const examsOn = clinic.features.includes("exams");
 const categories = (["consultation", "return_visit", "exam"] as const).filter((c) => c !== "exam" || examsOn);
+// Vindo do aviso "Cadastrar o retorno" da lista, o tipo já vem como Retorno.
+const presetCategory = isNew && Astro.url.searchParams.get("tipo") === "retorno" ? "return_visit" : null;
 // Desativados só aparecem se já estão ligados ao serviço.
 const agendaOptions = agendas.filter((a) => a.isActive || service?.agendaIds.includes(a.id));
 const offered = new Map((service?.locations ?? []).map((l) => [l.locationId, l.priceCents]));
@@ -74,7 +76,9 @@ const hoursAgenda = service?.agendaIds.find((agendaId) => agendas.some((a) => a.
           isNew ? (
             <select id="category" name="category" class={INPUT}>
               {categories.map((c) => (
-                <option value={c}>{CATEGORY_LABELS[c]}</option>
+                <option value={c} selected={c === presetCategory}>
+                  {CATEGORY_LABELS[c]}
+                </option>
               ))}
             </select>
           ) : (

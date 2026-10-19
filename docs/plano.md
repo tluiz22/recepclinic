@@ -2324,6 +2324,15 @@ fechava em seguida. Causa: o campo vazio com `data-autosubmit`; o Safari do iPho
 `change`, que recarregava a tela. Decisão do cliente: o campo já vem com o dia escolhido na faixa (ou hoje, sem dia livre),
 como a data da Agenda › Dia (`DayStrip.astro`).
 
+**Aviso do Retorno em Serviços (relato do cliente, 18/out):** o bot não mostrava "Marcar retorno" na "Consultorio de
+Teste". Causa: a clínica não tinha serviço do tipo Retorno (o bot só mostra a opção com um Retorno com agenda, local e
+horário; os testes automatizados cobrem o menu com o serviço, não a configuração de cada clínica). Decisão do cliente:
+em Configurações › Serviços, um aviso quando nenhum Retorno ativo está pronto ("o bot não mostra a opção Marcar
+retorno"), com o atalho "Cadastrar o retorno", que abre o Novo serviço no tipo Retorno (`?tipo=retorno`); com Retorno
+pendente, o aviso aponta para os selos. Validado pelo cliente no local e publicado no staging em 18/out (sem migração).
+
+---
+
 ## Depois do 1º piloto (já previsto no banco)
 
 - **Convênios (D10):** telas de planos atendidos e exceções por profissional; plano no cadastro do

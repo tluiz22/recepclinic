@@ -10,6 +10,7 @@ import { HEAD_ROW, LIST, ROW, ROW_CELL, ROW_GO, ROW_NAME, SOFT } from "../../../
 import Icon from "../../../components/admin/Icon.astro";
 import IssueBadges from "../../../components/admin/setup/IssueBadges.astro";
 import Button from "../../../components/admin/ui/Button.astro";
+import Notice from "../../../components/admin/ui/Notice.astro";
 import Pill from "../../../components/admin/ui/Pill.astro";
 import Tag from "../../../components/admin/ui/Tag.astro";
 import { createUserClient } from "../../../lib/data/clients";
@@ -32,6 +33,9 @@ const active = all.filter((s) => s.isActive);
 // Desativados no fim, em "Todos".
 const services = showInactive ? [...active, ...all.filter((s) => !s.isActive)] : active;
 const agendaName = new Map(agendas.map((a) => [a.id, a.name]));
+// Sem retorno com horário, o bot não mostra "Marcar retorno" (cliente, 18/out/2026).
+const returns = active.filter((s) => s.category === "return_visit");
+const returnReady = returns.some((s) => !setup.issues.services.get(s.id)?.length);
 const cols = "lg:grid-cols-[minmax(0,2fr)_200px_minmax(0,2fr)_36px]";
 ---
 
@@ -39,6 +43,20 @@ const cols = "lg:grid-cols-[minmax(0,2fr)_200px_minmax(0,2fr)_36px]";
   <Button slot="actions" href="/admin/configuracoes/servicos/novo" variant="primary">
     <Icon name="plus" class="h-[18px] w-[18px]" strokeWidth={2.2} /> Novo serviço
   </Button>
+
+  {
+    active.length > 0 &&
+      !returnReady &&
+      (returns.length ? (
+        <Notice tone="info">
+          Nenhum serviço de Retorno está pronto para marcar (veja os selos abaixo): o bot não mostra a opção <strong>Marcar retorno</strong>.
+        </Notice>
+      ) : (
+        <Notice tone="info" href="/admin/configuracoes/servicos/novo?tipo=retorno" linkLabel="Cadastrar o retorno">
+          A clínica não tem serviço do tipo Retorno: o bot não mostra a opção <strong>Marcar retorno</strong>. Se a clínica faz retorno, cadastre um.
+        </Notice>
+      ))
+  }
 
   <div class="flex flex-wrap items-center justify-between gap-3">
     <p class="text-sm text-ink-soft" role="status">
