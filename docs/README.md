@@ -148,9 +148,9 @@
 >   Retorno de 19/10 às 11:45 foi reaberta no staging (19/out, 08:06 da clínica), mas 10:30 e 10:45 ficaram livres (uma
 >   Consulta cancelada às 07:28), então pela regra ela espera e, sem ocupar esses horários, fecha às 09:45 (2h antes);
 >   conferir com o cliente. **Questão a levar ao cliente:** o cancelamento dessa Consulta não abriu vaga porque a vaga só
->   abre e só vai para quem está na fila **do mesmo serviço** (D2); o horário serviria ao Retorno da fila. Pendências: no banco local,
->   clínicas temporárias de testes antigos fazem o `contexto.test.ts` falhar (apagar com o OK do cliente); REG-01 a
->   REG-04 e S-01 da regressão de 18/out seguem aguardando o cliente.
+>   abre e só vai para quem está na fila **do mesmo serviço** (D2); o horário serviria ao Retorno da fila. Banco local
+>   limpo em 19/out (8 clínicas e 16 logins de uma rodada de testes interrompida, com o OK do cliente): `npm run test:db`
+>   com os 516 passando. Pendências: REG-01 a REG-04 e S-01 da regressão de 18/out seguem aguardando o cliente.
 > - **Frente paralela, o site** `www.recepclinic.com.br`: [`site-plano.md`](site-plano.md), feito numa
 >   **sessão separada, na pasta `~/Documents/Desenvolvimento/recepclinic-site`** (nunca nesta pasta).
 >   **No ar** (conferido em 05/out), com `/privacidade` e `/termos`; DNS de `recepclinic.com.br` já
