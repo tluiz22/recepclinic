@@ -159,7 +159,11 @@
 >   turma com a faixa a pedido do cliente); publicada no staging em 19/out (sem migração); **1C validada pelo cliente em 19/out.** **2B implementada, testada
 >   ([teste](auditoria-frontend/redesign-2b-report.md)) e publicada no staging em 19/out** (sem migração); o cliente valida
 >   em paralelo. **3B implementada e testada no local** ([teste](auditoria-frontend/redesign-3b-report.md)), publicada
->   no staging em 19/out (sem migração); o cliente valida a 2B e a 3B em paralelo.
+>   no staging em 19/out (sem migração); **2B e 3B validadas pelo cliente em 19/out.** **Ajuste da 3B (19/out), proposta A
+>   do [canvas](https://claude.ai/artifact/J3gdVmShr3aJACVsgcr7Fe):** em Horários, o bloco ganha a faixa do tipo no alto,
+>   como na Agenda; o horário de todos os serviços leva no título os tipos da agenda ("Consulta e Retorno"). Implementado
+>   e testado no local ([teste](auditoria-frontend/redesign-3b-tipo-report.md)) e publicado no staging em 19/out a pedido do
+>   cliente (sem migração), que valida lá.
 > - **Frente paralela, o site** `www.recepclinic.com.br`: [`site-plano.md`](site-plano.md), feito numa
 >   **sessão separada, na pasta `~/Documents/Desenvolvimento/recepclinic-site`** (nunca nesta pasta).
 >   **No ar** (conferido em 05/out), com `/privacidade` e `/termos`; DNS de `recepclinic.com.br` já

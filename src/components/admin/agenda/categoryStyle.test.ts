@@ -1,9 +1,15 @@
 import { describe, expect, it } from "vitest";
-import { CATEGORY_STYLES, serviceBesideCategory } from "./categoryStyle";
+import {
+  agendaCategoriesTitle,
+  CATEGORY_STYLES,
+  serviceBesideCategory,
+} from "./categoryStyle";
 
 describe("tipo do atendimento na Agenda", () => {
   it("mostra o serviço quando ele não repete o tipo", () => {
-    expect(serviceBesideCategory("Consulta pediátrica", "consultation")).toBe("Consulta pediátrica");
+    expect(serviceBesideCategory("Consulta pediátrica", "consultation")).toBe(
+      "Consulta pediátrica",
+    );
     expect(serviceBesideCategory("Espirometria", "exam")).toBe("Espirometria");
   });
 
@@ -17,5 +23,21 @@ describe("tipo do atendimento na Agenda", () => {
     expect(CATEGORY_STYLES.return_visit.text).toBe("text-ret-700");
     expect(CATEGORY_STYLES.consultation.text).toBe("text-ink");
     expect(CATEGORY_STYLES.exam.label).toBe("Exame");
+  });
+});
+
+describe("título do horário de todos os serviços", () => {
+  it("junta os tipos da agenda na ordem Consulta, Retorno, Exame", () => {
+    expect(
+      agendaCategoriesTitle(["return_visit", "consultation", "consultation"]),
+    ).toBe("Consulta e Retorno");
+    expect(
+      agendaCategoriesTitle(["exam", "return_visit", "consultation"]),
+    ).toBe("Consulta, Retorno e Exame");
+    expect(agendaCategoriesTitle(["exam"])).toBe("Exame");
+  });
+
+  it('diz "Todos os serviços" quando a agenda não tem serviço', () => {
+    expect(agendaCategoriesTitle([])).toBe("Todos os serviços");
   });
 });

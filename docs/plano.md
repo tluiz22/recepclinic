@@ -2393,7 +2393,24 @@ migração), que valida em paralelo.
 selos à esquerda); abaixo disso, uma linha por dia. "Mostrar desativados" virou caixa de marcar e a rota volta com ele
 como estava. [Teste de interface](auditoria-frontend/redesign-3b-report.md): 4 falhas da implementação (1 Alta: o
 "Desativado" cobria o "⋯") corrigidas e retestadas na rodada. Publicada no staging em 19/out a pedido do cliente (sem
-migração), que valida em paralelo.
+migração). **2B e 3B validadas pelo cliente em 19/out.**
+
+**Ajuste da 3B: o tipo como título do horário (pedido do cliente, 19/out).** Três propostas no
+[canvas](https://claude.ai/artifact/J3gdVmShr3aJACVsgcr7Fe) (A faixa do tipo, B título com o bloco na cor do tipo, C
+etiqueta); decisões do cliente em 19/out:
+
+1. **Proposta A:** faixa no alto do bloco, como no cartão da Agenda (1C): ícone e tipo em letra de título (Retorno em
+   roxo), o serviço abaixo do tipo quando o nome é diferente; depois o horário e, abaixo, o local (e as vagas da turma).
+   Sai o contorno verde do horário só de um serviço: o tipo já diz isso.
+2. **Horário de todos os serviços (sem serviço próprio):** o título são os tipos que a agenda atende, na ordem
+   Consulta, Retorno, Exame ("Consulta e Retorno"), em faixa verde-clara. Agenda de um tipo só leva a faixa desse tipo;
+   agenda sem serviço, "Todos os serviços".
+
+**Implementado e testado no local em 19/out** (`HorarioBloco.astro`, `horarios.astro`, `agendaCategoriesTitle` em
+`categoryStyle.ts` com 2 testes). Na coluna de ~100px do computador, o ícone fica acima do tipo e o tipo não é
+hifenizado. [Teste de interface](auditoria-frontend/redesign-3b-tipo-report.md): 1 falha da implementação (o tipo partido
+no meio da palavra na coluna) corrigida e retestada. Publicado no staging em 19/out a pedido do cliente (sem
+migração), que valida lá.
 
 ---
 

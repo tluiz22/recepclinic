@@ -7,7 +7,8 @@
 // total de horas, o "⋯" de cada horário e "Adicionar" (abre o formulário com o
 // dia marcado); no celular e no tablet, uma linha por dia.
 import ConfigShell from "../../../components/admin/config/ConfigShell.astro";
-import HorarioBloco from "../../../components/admin/config/HorarioBloco.astro";
+import HorarioBloco, { type HorarioHeader } from "../../../components/admin/config/HorarioBloco.astro";
+import { agendaCategoriesTitle, CATEGORY_STYLES, serviceBesideCategory } from "../../../components/admin/agenda/categoryStyle";
 import Card from "../../../components/admin/config/Panel.astro";
 import ConfirmDeleteDialog from "../../../components/admin/ConfirmDeleteDialog.astro";
 import Icon from "../../../components/admin/Icon.astro";
@@ -76,11 +77,36 @@ const activeDays = days.filter((d) => d.minutes > 0).length;
 // "Adicionar" de um dia: o formulário abre com ele marcado.
 const preselectedDay = Number(Astro.url.searchParams.get("dia"));
 const addHref = (weekday: number) => `${agendaQuery(`${showInactive ? "&todos=1" : ""}&dia=${weekday}`)}#novo-horario`;
+// Faixa do tipo (proposta A, 19/out): o tipo do serviço do horário; no horário
+// de todos os serviços, os tipos que a agenda atende ("Consulta e Retorno").
+const agendaCategories = [...new Set(agendaServices.map((s) => s.category))];
+const generalHeader: HorarioHeader =
+  agendaCategories.length === 1
+    ? { ...CATEGORY_STYLES[agendaCategories[0]], border: "border-line-strong", service: null }
+    : {
+        label: agendaCategoriesTitle(agendaCategories),
+        icon: "queue-list",
+        band: "border-[#a9d6c6] bg-brand-soft",
+        text: "text-brand-ink",
+        detail: "text-brand-ink",
+        border: "border-[#a9d6c6]",
+        service: null,
+      };
+const headerOf = (w: (typeof windows)[number]): HorarioHeader => {
+  const service = w.serviceId ? serviceById.get(w.serviceId) : undefined;
+  if (!service) return generalHeader;
+  const style = CATEGORY_STYLES[service.category];
+  return {
+    ...style,
+    border: service.category === "return_visit" ? "border-ret-200" : "border-line-strong",
+    service: serviceBesideCategory(service.name, service.category),
+  };
+};
 const blockProps = (w: (typeof windows)[number], dayName: string) => ({
   window: w,
   dayName,
   locationName: locationName.get(w.locationId) ?? "Local",
-  serviceName: w.serviceId ? (serviceById.get(w.serviceId)?.name ?? "Serviço") : null,
+  header: headerOf(w),
   notEnabled: notEnabled(w),
   agendaId: agenda?.id ?? "",
   showInactive,

@@ -1,18 +1,36 @@
 ---
 // Um horário de atendimento em Configurações › Horários (redesign 3B, cliente,
-// 19/out/2026): o horário, o local, o serviço (quando é só dele) e as vagas da
-// turma; o "⋯" abre Desativar ou Reativar e Remover (com confirmação). Horário
-// só de um serviço com contorno verde; desativado tracejado e com listras.
+// 19/out/2026): o horário, o local e as vagas da turma; o "⋯" abre Desativar ou
+// Reativar e Remover (com confirmação). Desativado tracejado e com listras.
+// Faixa do tipo no alto, como no cartão da Agenda (proposta A, cliente,
+// 19/out/2026): o tipo do serviço (Retorno em roxo) ou, no horário de todos os
+// serviços, os tipos da agenda em verde-claro; o horário e o local logo abaixo.
 import Badge from "./Badge.astro";
 import HorarioMenu from "./HorarioMenu.astro";
+import Icon, { type IconName } from "../Icon.astro";
 import type { AvailabilityWindow } from "../../../lib/data/config/availability";
+
+export type HorarioHeader = {
+  label: string;
+  icon: IconName;
+  /** Fundo e linha de baixo da faixa. */
+  band: string;
+  /** Tipo e ícone. */
+  text: string;
+  /** Serviço abaixo do tipo. */
+  detail: string;
+  /** Contorno do bloco. */
+  border: string;
+  /** O serviço, quando o horário é só dele e o nome não repete o tipo. */
+  service: string | null;
+};
 
 interface Props {
   window: AvailabilityWindow;
   /** Nome do dia por extenso, para a confirmação e o nome do menu. */
   dayName: string;
   locationName: string;
-  serviceName: string | null;
+  header: HorarioHeader;
   notEnabled: boolean;
   agendaId: string;
   showInactive: boolean;
@@ -22,48 +40,54 @@ interface Props {
   large?: boolean;
 }
 
-const { window: w, dayName, locationName, serviceName, notEnabled, agendaId, showInactive, idPrefix, large = false } = Astro.props;
+const { window: w, dayName, locationName, header, notEnabled, agendaId, showInactive, idPrefix, large = false } = Astro.props;
 const time = `${w.startTime}–${w.endTime}`;
-const look = !w.isActive
-  ? "border-[1.5px] border-dashed border-blk-500 bg-[repeating-linear-gradient(135deg,var(--color-blk-50)_0,var(--color-blk-50)_6px,#fff_6px,#fff_12px)] text-blk-800"
-  : serviceName
-    ? "border-[1.5px] border-brand bg-white text-brand-ink"
-    : "border border-[#a9d6c6] bg-brand-soft text-brand-ink";
-const details = [locationName, serviceName ? `só ${serviceName}` : null, w.capacity !== null ? `${w.capacity} vagas` : null];
+const look = w.isActive
+  ? `border bg-white text-ink ${header.border}`
+  : "border-[1.5px] border-dashed border-blk-500 bg-[repeating-linear-gradient(135deg,var(--color-blk-50)_0,var(--color-blk-50)_6px,#fff_6px,#fff_12px)] text-blk-800";
+const band = w.isActive ? header.band : "border-dashed border-blk-500";
+const tone = (active: string) => (w.isActive ? active : "text-blk-800");
+const pad = large ? "pl-3" : "pl-2.5";
+const menu = { window: w, dayName, time, agendaId, showInactive, id: `${idPrefix}-${w.id}` };
 ---
 
-{/* Coluna estreita (computador): o horário em cima, o local e o serviço na largura toda e, embaixo,
-    os selos à esquerda e o "⋯" à direita (ao lado do local, as palavras se partiam; o "Desativado"
-    cobria o "⋯": teste da 3B). Lista do celular: o "⋯" ao lado do horário. */}
-<div class={`flex min-w-0 flex-col gap-0.5 rounded-lg py-1.5 pl-2.5 ${large ? "pr-1" : "pr-1.5"} ${look}`}>
-  {
-    large ? (
-      <div class="flex items-center justify-between gap-1">
-        <span class="text-base font-bold whitespace-nowrap tabular-nums">{time}</span>
-        <HorarioMenu large window={w} dayName={dayName} time={time} agendaId={agendaId} showInactive={showInactive} id={`${idPrefix}-${w.id}`} />
-      </div>
-    ) : (
-      <span class="text-[14.5px] font-bold whitespace-nowrap tabular-nums">{time}</span>
-    )
-  }
-  {
-    details.filter(Boolean).map((text, i) => (
-      <span class={`leading-snug hyphens-auto ${large ? "text-[14.5px]" : "text-[13.5px]"} ${i > 0 ? "font-semibold" : ""}`} lang="pt-BR">
-        {text}
-      </span>
-    ))
-  }
-  {
-    (!w.isActive || notEnabled || !large) && (
-      <div class="mt-0.5 flex flex-wrap items-center gap-1">
-        {!w.isActive && <Badge>Desativado</Badge>}
-        {notEnabled && <Badge variant="warning">Não liberado</Badge>}
-        {!large && (
-          <span class="-mr-0.5 ml-auto flex">
-            <HorarioMenu window={w} dayName={dayName} time={time} agendaId={agendaId} showInactive={showInactive} id={`${idPrefix}-${w.id}`} />
-          </span>
-        )}
-      </div>
-    )
-  }
+{/* A faixa tem cantos próprios (sem overflow-hidden no bloco): o "⋯" abre por cima de tudo. */}
+<div class={`flex min-w-0 flex-col rounded-lg ${look}`}>
+  <div class={`flex min-w-0 flex-col gap-0.5 rounded-t-[7px] border-b py-1.5 pr-2 ${pad} ${band}`} lang="pt-BR">
+    <span class={`flex min-w-0 ${large ? "items-start gap-1.5" : "flex-col items-start gap-0.5"} ${tone(header.text)}`}>
+      <Icon name={header.icon} class={`${large ? "h-[18px] w-[18px]" : "h-4 w-4"} shrink-0`} strokeWidth={2.2} />
+      {/* Coluna de 101px: o ícone em cima, o tipo na largura toda e sem hifenização (partia "Consul-ta" e "Retor-no"). */}
+      <span class={`min-w-0 font-display leading-tight font-bold break-words ${large ? "text-[16.5px]" : "text-[15px]"}`}>{header.label}</span>
+    </span>
+    {header.service && <span class={`leading-snug font-semibold hyphens-auto ${large ? "text-[14px]" : "text-[13px]"} ${tone(header.detail)}`}>{header.service}</span>}
+  </div>
+  <div class={`flex min-w-0 flex-col gap-0.5 pt-1.5 ${large ? "pr-1 pb-2" : "pr-1.5 pb-1"} ${pad}`}>
+    {
+      large ? (
+        <div class="-my-1.5 flex items-center justify-between gap-1">
+          <span class="text-base font-bold whitespace-nowrap tabular-nums">{time}</span>
+          <HorarioMenu large {...menu} />
+        </div>
+      ) : (
+        <span class="text-[14.5px] font-bold whitespace-nowrap tabular-nums">{time}</span>
+      )
+    }
+    <span class={`leading-snug hyphens-auto ${large ? "text-[14.5px]" : "text-[13.5px]"} ${tone("text-ink-mid")}`} lang="pt-BR">
+      {locationName}
+    </span>
+    {w.capacity !== null && <span class={`font-semibold ${large ? "text-[14.5px]" : "text-[13.5px]"}`}>{w.capacity} vagas</span>}
+    {
+      (!w.isActive || notEnabled || !large) && (
+        <div class="mt-0.5 flex flex-wrap items-center gap-1">
+          {!w.isActive && <Badge>Desativado</Badge>}
+          {notEnabled && <Badge variant="warning">Não liberado</Badge>}
+          {!large && (
+            <span class="-mr-0.5 ml-auto flex">
+              <HorarioMenu {...menu} />
+            </span>
+          )}
+        </div>
+      )
+    }
+  </div>
 </div>
