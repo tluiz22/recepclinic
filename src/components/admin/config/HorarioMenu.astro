@@ -1,0 +1,53 @@
+---
+// O "⋯" de um horário em Configurações › Horários (redesign 3B): Desativar ou
+// Reativar e Remover (com confirmação). Volta com "Mostrar desativados" como estava.
+import MoreMenu from "../ui/MoreMenu.astro";
+import { menuItemClass } from "../ui/styles";
+import type { AvailabilityWindow } from "../../../lib/data/config/availability";
+
+interface Props {
+  window: AvailabilityWindow;
+  /** Lista do celular: alvo de toque de 44px. */
+  large?: boolean;
+  dayName: string;
+  time: string;
+  agendaId: string;
+  showInactive: boolean;
+  id: string;
+}
+
+const { window: w, dayName, time, agendaId, showInactive, id, large = false } = Astro.props;
+const action = "/api/admin/configuracoes/horarios";
+---
+
+<MoreMenu
+  id={id}
+  label={`Ações do horário de ${dayName.toLowerCase()}, ${time}`}
+  iconOnly
+  triggerClass={`flex shrink-0 items-center justify-center rounded-md border-0 bg-transparent p-0 text-ink-mid hover:bg-white/70 ${large ? "-my-1.5 h-11 w-11" : "h-8 w-8"}`}
+>
+  <form method="POST" action={action}>
+    <input type="hidden" name="agenda_id" value={agendaId} />
+    <input type="hidden" name="window_id" value={w.id} />
+    <input type="hidden" name="acao" value={w.isActive ? "desativar" : "reativar"} />
+    {showInactive && <input type="hidden" name="todos" value="1" />}
+    <button type="submit" class={menuItemClass()}>
+      {w.isActive ? "Desativar" : "Reativar"}
+    </button>
+  </form>
+  <form method="POST" action={action}>
+    <input type="hidden" name="agenda_id" value={agendaId} />
+    <input type="hidden" name="window_id" value={w.id} />
+    <input type="hidden" name="acao" value="remover" />
+    {showInactive && <input type="hidden" name="todos" value="1" />}
+    <button
+      type="submit"
+      class={`${menuItemClass(true)} js-confirm-delete`}
+      data-confirm-title="Remover o horário?"
+      data-confirm-message={`${dayName}, ${time}. Os atendimentos já marcados continuam.`}
+      data-confirm-label="Remover"
+    >
+      Remover
+    </button>
+  </form>
+</MoreMenu>

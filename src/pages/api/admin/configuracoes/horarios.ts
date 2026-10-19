@@ -13,7 +13,8 @@ export const POST: APIRoute = async (context) => {
   const clinicId = locals.clinic!.clinicId;
   const db = createUserClient(request, cookies);
   const agendaId = formText(form, "agenda_id");
-  const page = `/admin/configuracoes/horarios?agenda=${encodeURIComponent(agendaId)}`;
+  // Volta com "Mostrar desativados" como estava (redesign 3B, 19/out/2026).
+  const page = `/admin/configuracoes/horarios?agenda=${encodeURIComponent(agendaId)}${formText(form, "todos") === "1" ? "&todos=1" : ""}`;
   const windowId = formText(form, "window_id");
 
   return runFormAction(

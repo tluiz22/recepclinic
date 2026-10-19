@@ -1,0 +1,69 @@
+---
+// Um horário de atendimento em Configurações › Horários (redesign 3B, cliente,
+// 19/out/2026): o horário, o local, o serviço (quando é só dele) e as vagas da
+// turma; o "⋯" abre Desativar ou Reativar e Remover (com confirmação). Horário
+// só de um serviço com contorno verde; desativado tracejado e com listras.
+import Badge from "./Badge.astro";
+import HorarioMenu from "./HorarioMenu.astro";
+import type { AvailabilityWindow } from "../../../lib/data/config/availability";
+
+interface Props {
+  window: AvailabilityWindow;
+  /** Nome do dia por extenso, para a confirmação e o nome do menu. */
+  dayName: string;
+  locationName: string;
+  serviceName: string | null;
+  notEnabled: boolean;
+  agendaId: string;
+  showInactive: boolean;
+  /** Prefixo do id do menu: o mesmo horário aparece nas colunas e na lista do celular. */
+  idPrefix: string;
+  /** Lista do celular: texto um pouco maior. */
+  large?: boolean;
+}
+
+const { window: w, dayName, locationName, serviceName, notEnabled, agendaId, showInactive, idPrefix, large = false } = Astro.props;
+const time = `${w.startTime}–${w.endTime}`;
+const look = !w.isActive
+  ? "border-[1.5px] border-dashed border-blk-500 bg-[repeating-linear-gradient(135deg,var(--color-blk-50)_0,var(--color-blk-50)_6px,#fff_6px,#fff_12px)] text-blk-800"
+  : serviceName
+    ? "border-[1.5px] border-brand bg-white text-brand-ink"
+    : "border border-[#a9d6c6] bg-brand-soft text-brand-ink";
+const details = [locationName, serviceName ? `só ${serviceName}` : null, w.capacity !== null ? `${w.capacity} vagas` : null];
+---
+
+{/* Coluna estreita (computador): o horário em cima, o local e o serviço na largura toda e, embaixo,
+    os selos à esquerda e o "⋯" à direita (ao lado do local, as palavras se partiam; o "Desativado"
+    cobria o "⋯": teste da 3B). Lista do celular: o "⋯" ao lado do horário. */}
+<div class={`flex min-w-0 flex-col gap-0.5 rounded-lg py-1.5 pl-2.5 ${large ? "pr-1" : "pr-1.5"} ${look}`}>
+  {
+    large ? (
+      <div class="flex items-center justify-between gap-1">
+        <span class="text-base font-bold whitespace-nowrap tabular-nums">{time}</span>
+        <HorarioMenu large window={w} dayName={dayName} time={time} agendaId={agendaId} showInactive={showInactive} id={`${idPrefix}-${w.id}`} />
+      </div>
+    ) : (
+      <span class="text-[14.5px] font-bold whitespace-nowrap tabular-nums">{time}</span>
+    )
+  }
+  {
+    details.filter(Boolean).map((text, i) => (
+      <span class={`leading-snug hyphens-auto ${large ? "text-[14.5px]" : "text-[13.5px]"} ${i > 0 ? "font-semibold" : ""}`} lang="pt-BR">
+        {text}
+      </span>
+    ))
+  }
+  {
+    (!w.isActive || notEnabled || !large) && (
+      <div class="mt-0.5 flex flex-wrap items-center gap-1">
+        {!w.isActive && <Badge>Desativado</Badge>}
+        {notEnabled && <Badge variant="warning">Não liberado</Badge>}
+        {!large && (
+          <span class="-mr-0.5 ml-auto flex">
+            <HorarioMenu window={w} dayName={dayName} time={time} agendaId={agendaId} showInactive={showInactive} id={`${idPrefix}-${w.id}`} />
+          </span>
+        )}
+      </div>
+    )
+  }
+</div>

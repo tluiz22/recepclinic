@@ -18,14 +18,24 @@ interface Props {
   text?: string;
   /** Classes do botão no lugar do botão secundário (ex.: o item do menu do cabeçalho). */
   triggerClass?: string;
+  /** Só o ícone "⋯", sem texto nem seta (ex.: cada horário em Configurações › Horários). */
+  iconOnly?: boolean;
 }
 
-const { id, label, size = "sm", text = "Mais", triggerClass } = Astro.props;
+const { id, label, size = "sm", text = "Mais", triggerClass, iconOnly = false } = Astro.props;
 ---
 
 <button type="button" popovertarget={id} aria-label={label} class={`${triggerClass ?? buttonClass("secondary", size)} rc-more-trigger`}>
-  {text}
-  <Icon name="chevron-down" class="h-3.5 w-3.5" strokeWidth={2.4} />
+  {
+    iconOnly ? (
+      <Icon name="more" class="h-5 w-5" strokeWidth={2.4} />
+    ) : (
+      <>
+        {text}
+        <Icon name="chevron-down" class="h-3.5 w-3.5" strokeWidth={2.4} />
+      </>
+    )
+  }
 </button>
 <div
   id={id}

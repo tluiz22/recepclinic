@@ -2388,6 +2388,13 @@ novos no `Icon.astro`). [Teste de interface](auditoria-frontend/redesign-2b-repo
 celular e o número de pendências não verificados no local. Publicada no staging em 19/out a pedido do cliente (sem
 migração), que valida em paralelo.
 
+**3B implementada e testada no local em 19/out** (`horarios.astro`, `HorarioBloco.astro`, `HorarioMenu.astro`; o
+`MoreMenu` ganhou `iconOnly`). Colunas a partir de 1280px (na coluna de ~100px, o "⋯" fica embaixo, à direita, com os
+selos à esquerda); abaixo disso, uma linha por dia. "Mostrar desativados" virou caixa de marcar e a rota volta com ele
+como estava. [Teste de interface](auditoria-frontend/redesign-3b-report.md): 4 falhas da implementação (1 Alta: o
+"Desativado" cobria o "⋯") corrigidas e retestadas na rodada. Publicada no staging em 19/out a pedido do cliente (sem
+migração), que valida em paralelo.
+
 ---
 
 ## Depois do 1º piloto (já previsto no banco)
