@@ -125,6 +125,12 @@ describe("cardActions", () => {
     }
   });
 
+  it("Consulta já começada e apta: Marcar retorno à vista junto do Compareceu", () => {
+    const r = layout(input({ returnReady: { serviceId: "r1" } }, { scheduledAt: past }));
+    expect(r.primary).toBe("Compareceu");
+    expect(r.visible).toEqual(["Faltou", "Marcar retorno", "Pagamento"]);
+  });
+
   it("Consulta apta a retorno: Marcar retorno à vista, antes do Pagamento, com paciente, agenda e serviço", () => {
     const done = { scheduledAt: past, status: "completed" as const };
     const r = cardActions(input({ returnReady: { serviceId: "r1" } }, done));

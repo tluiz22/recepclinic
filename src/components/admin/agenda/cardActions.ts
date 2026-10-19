@@ -120,7 +120,7 @@ export function cardActions(input: CardActionInput): CardActions {
     result.visible.push({ kind: "link", href: `/admin/agenda/remarcar?id=${a.id}&return_to=${encodeURIComponent(returnTo)}`, label: "Remarcar", icon: "arrow-path" });
   }
 
-  // Marcar retorno (cliente, 19/out/2026): só na Consulta apta, antes do Pagamento;
+  // Marcar retorno (cliente, 19/out/2026): só na Consulta apta (já começada), antes do Pagamento;
   // abre o Marcar com o paciente, a agenda e o Retorno (se só um) escolhidos.
   if (input.returnReady) {
     const query = new URLSearchParams({ patient_id: a.patientId, agenda_id: a.agendaId });

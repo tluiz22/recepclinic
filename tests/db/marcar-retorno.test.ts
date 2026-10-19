@@ -66,10 +66,15 @@ afterAll(async () => {
 });
 
 describe("Marcar retorno: Consulta apta", () => {
-  it("só a Consulta realizada, não domiciliar, numa agenda com Retorno; com o serviço de Retorno", async () => {
+  it("só a Consulta já começada (com ou sem Compareceu), sem falta, não domiciliar, numa agenda com Retorno", async () => {
     const result = await ready(Object.values(c), AFTER);
-    expect([...result.keys()]).toEqual([c.p1]);
+    expect([...result.keys()]).toEqual([c.p1, c.p5Pending]);
     expect(result.get(c.p1)).toEqual({ serviceId: fixture.ids.retorno });
+  });
+
+  it("a partir do horário de início da Consulta (cliente, 19/out/2026)", async () => {
+    expect((await ready([c.p5Pending], at(MON1, "08:59"))).has(c.p5Pending)).toBe(false);
+    expect((await ready([c.p5Pending], at(MON1, "09:00"))).has(c.p5Pending)).toBe(true);
   });
 
   it("dentro do prazo do Retorno (30 dias, inclusive)", async () => {

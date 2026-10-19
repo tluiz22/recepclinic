@@ -6,7 +6,8 @@ import type { AgendaAppointment } from "./view";
 
 // "Marcar retorno" no cartão da Consulta realizada (cliente, 19/out/2026): o
 // botão só aparece na Consulta apta, pelas mesmas regras do bot (Fase 17):
-//   1. Consulta com "Compareceu";
+//   1. Consulta que já começou (cliente, 19/out/2026: logo depois do
+//      atendimento, sem esperar o "Compareceu"); falta e cancelada, não;
 //   2. a última Consulta do paciente nessa agenda;
 //   3. não domiciliar;
 //   4. sem Retorno ligado (cancelado não conta);
@@ -27,8 +28,10 @@ export async function listReturnReady(
   now: Date = new Date(),
 ): Promise<Map<string, ReturnReady>> {
   const result = new Map<string, ReturnReady>();
-  const done = appointments.filter((a) => a.category === "consultation" && a.status === "completed" && !a.isHomeVisit && a.scheduledAt <= now);
-  if (!done.length) return result;
+  const started = appointments.filter(
+    (a) => a.category === "consultation" && (a.status === "completed" || a.status === "scheduled" || a.status === "confirmed") && !a.isHomeVisit && a.scheduledAt <= now,
+  );
+  if (!started.length) return result;
 
   const services = unwrap(
     await db
@@ -46,7 +49,7 @@ export async function listReturnReady(
       returnsByAgenda.set(agenda_id, [...(returnsByAgenda.get(agenda_id) ?? []), { id: s.id, deadlineDays: s.return_deadline_days }]);
     }
   }
-  const candidates = done.filter((a) => returnsByAgenda.has(a.agendaId));
+  const candidates = started.filter((a) => returnsByAgenda.has(a.agendaId));
   if (!candidates.length) return result;
 
   const patientIds = [...new Set(candidates.map((a) => a.patientId))];
@@ -60,7 +63,7 @@ export async function listReturnReady(
       .in("agenda_id", agendaIds)
       .eq("services.category", "consultation")
       .in("status", ["completed", "scheduled", "confirmed"])
-      .lt("scheduled_at", now.toISOString())
+      .lte("scheduled_at", now.toISOString())
       .order("scheduled_at", { ascending: false })
       .then((r) => unwrap(r, "Últimas consultas") as unknown as { id: string; patient_id: string; agenda_id: string }[]),
     db
