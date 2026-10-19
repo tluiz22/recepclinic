@@ -153,7 +153,9 @@
 >   com os 516 passando. **REG-01 a REG-04 e S-01 da regressão de 18/out decididos e corrigidos em 19/out** (barra
 >   da Agenda em duas linhas de 640 a 1279px; borda vermelha em todo campo com erro do painel), conferidos no local
 >   (seção 10 do [relatório](auditoria-frontend/regressao-2026-10-18-report.md)), **validados pelo cliente e publicados
->   no staging em 19/out** (sem migração).
+>   no staging em 19/out** (sem migração). **Redesign de 19/out:** propostas no [canvas](https://claude.ai/artifact/8x8Zi8osZZLypbMkGRiPbQ) e
+>   decisões do cliente (1C tipo como título do cartão na Agenda; 2B seções com ícone em Configurações, com ícones também
+>   no celular; 3B Horários em colunas, em lista) no [plano](plano.md); **retomar daqui: implementar.**
 > - **Frente paralela, o site** `www.recepclinic.com.br`: [`site-plano.md`](site-plano.md), feito numa
 >   **sessão separada, na pasta `~/Documents/Desenvolvimento/recepclinic-site`** (nunca nesta pasta).
 >   **No ar** (conferido em 05/out), com `/privacidade` e `/termos`; DNS de `recepclinic.com.br` já

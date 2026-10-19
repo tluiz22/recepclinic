@@ -2361,6 +2361,24 @@ horário ocupado. A rodada pega as vagas pela conferência mais antiga (`updated
 outras. Sem migração. Validado pelo cliente pelos testes e publicado no staging em 19/out; a vaga das 11:45 de 19/10 da
 "Consultorio de Teste" foi reaberta no staging a pedido do cliente.
 
+**Redesign de 19/out (pedido do cliente): tipo na Agenda, menu de Configurações e Horários em colunas.** Propostas no
+[canvas](https://claude.ai/artifact/8x8Zi8osZZLypbMkGRiPbQ), na identidade do painel; decisões do cliente em 19/out:
+
+1. **Agenda, tipo do atendimento: 1C.** Faixa no alto do cartão com o tipo (Consulta, Retorno ou Exame) em letra de
+   título; o Retorno em roxo (`#5A3E9E`, cor que nenhuma situação usa) e com "da consulta de dd/mm/aaaa" na faixa (sai do
+   pé do cartão). O nome do serviço vai para a faixa ao lado do tipo, quando é diferente do tipo. Na Semana, o tipo na
+   primeira linha de cada atendimento.
+2. **Configurações no computador: 2B.** Cada seção com um ícone; o grupo vira um título pequeno com uma linha ao lado,
+   sem maiúsculas. No celular, os grupos continuam em cartões (17/out), mas cada seção ganha o mesmo ícone e o nome do
+   grupo também sai das maiúsculas.
+3. **Configurações › Horários: 3B.** Uma coluna por dia (segunda a domingo), com os horários empilhados (sem a escala de
+   horas), o total de horas do dia no topo, o total da semana na barra (com a agenda e "Mostrar desativados"), o menu
+   "⋯" em cada horário (Desativar ou Reativar e Remover, com a confirmação de hoje) e "Adicionar" no pé de cada coluna,
+   que abre o formulário com o dia marcado. Horário só de um serviço com contorno verde; desativado tracejado e com
+   listras. No formulário, os dias viram botões. No celular, uma linha por dia, com o "+" e o "⋯".
+
+Implementação: a seguir.
+
 ---
 
 ## Depois do 1º piloto (já previsto no banco)
