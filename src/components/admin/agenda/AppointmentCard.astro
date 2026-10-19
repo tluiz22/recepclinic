@@ -5,7 +5,10 @@
 // frequentes com borda, as raras no "Mais" e o cancelamento à parte, à
 // direita (ver cardActions.ts). Toda ação pede confirmação (05/out); Remarcar
 // e Pagamento só abrem a tela, e a confirmação fica lá. As ações vão para a
-// mesma rota, com `acao`, e voltam para a tela de onde saíram.
+// mesma rota, com `acao`, e voltam para a tela de onde saíram. Redesign de
+// 19/out/2026 (proposta 1C): o tipo (Consulta, Retorno, Exame) numa faixa no
+// alto, com o serviço e, no Retorno, a consulta de origem.
+import Icon from "../Icon.astro";
 import { withReturn } from "../../../lib/returnPath";
 import PhoneLinks from "../PhoneLinks.astro";
 import MoreMenu from "../ui/MoreMenu.astro";
@@ -14,6 +17,7 @@ import StatusPill from "../ui/StatusPill.astro";
 import Tag from "../ui/Tag.astro";
 import type { IconName } from "../Icon.astro";
 import CardActionButton from "./CardActionButton.astro";
+import { CATEGORY_STYLES, serviceBesideCategory } from "./categoryStyle";
 import { cardActions } from "./cardActions";
 import { CANCELED_TEXT, SITUATIONS, appointmentSituation } from "./situationStyle";
 import { formatInstant } from "../../../lib/clinicTime";
@@ -80,6 +84,16 @@ const isActive = a.status === "scheduled" || a.status === "confirmed";
 const isPast = a.scheduledAt.getTime() <= now.getTime();
 const isCanceled = a.status === "canceled";
 const situation = appointmentSituation(a);
+const category = CATEGORY_STYLES[a.category];
+const serviceBeside = serviceBesideCategory(a.serviceName, a.category);
+const originText =
+  a.category !== "return_visit"
+    ? null
+    : origin
+      ? `da consulta de ${formatInstant(origin.scheduledAt, timeZone, "dd/MM/yyyy")}${origin.status === "canceled" ? " (cancelada)" : ""}`
+      : a.originAppointmentId
+        ? "ligado a uma consulta"
+        : "sem consulta de origem";
 const who = `${a.patientName}, ${formatInstant(a.scheduledAt, timeZone, "dd/MM 'às' HH:mm")}`;
 
 // Sinais (só informação): cor quando pedem ação.
@@ -139,6 +153,14 @@ const variantOf = (x: (typeof actions.visible)[number]) => (x.kind === "form" &&
       </div>
     ) : (
       <>
+        <div class={`-mx-3 -mt-3 mb-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 rounded-tr-[11px] border-b px-3 py-2 ${category.band}`}>
+          <span class={`inline-flex items-center gap-1.5 font-display text-[17px] leading-tight font-bold ${category.text}`}>
+            <Icon name={category.icon} class="h-[18px] w-[18px] shrink-0" strokeWidth={2.2} />
+            {category.label}
+          </span>
+          {serviceBeside && <span class={`text-[15px] leading-snug sm:text-sm ${category.detail}`}>{serviceBeside}</span>}
+          {originText && <span class={`text-[15px] leading-snug sm:text-sm ${category.detail}`}>{originText}</span>}
+        </div>
         <div class="flex items-center justify-between gap-2">
           <span class={`whitespace-nowrap text-base leading-tight font-bold tabular-nums sm:text-base ${isCanceled ? CANCELED_TEXT : "text-ink"}`}>
             {withDate && <span class="capitalize">{formatInstant(a.scheduledAt, timeZone, "EEE dd/MM")} · </span>}
@@ -165,6 +187,9 @@ const variantOf = (x: (typeof actions.visible)[number]) => (x.kind === "form" &&
     <PhoneLinks phone={a.contactPhone} plain />
   </p>
 
+  {/* Na turma não há faixa: o Retorno segue dizendo a origem numa linha. */}
+  {compact && originText && <p class="text-[13px] leading-snug text-ret-800">Retorno {originText}</p>}
+
   {compact && noShow && (
     <Signal tone="alert" icon="warning">
       Faltou {noShow.noShows} de {noShow.total}
@@ -179,24 +204,12 @@ const variantOf = (x: (typeof actions.visible)[number]) => (x.kind === "form" &&
             {a.agendaName}
           </Tag>
         )}
-        <Tag>{a.serviceName}</Tag>
         <Tag>{a.locationName}</Tag>
         {a.seriesId && <Tag>Série</Tag>}
       </div>
     )
   }
   {a.homeVisitAddress && <p class="text-sm leading-snug text-ink-soft sm:text-[13px]">Endereço: {a.homeVisitAddress}</p>}
-  {
-    a.category === "return_visit" && (
-      <p class="text-sm leading-snug text-ink-soft sm:text-[13px]">
-        {origin
-          ? `Retorno da consulta de ${formatInstant(origin.scheduledAt, timeZone, "dd/MM/yyyy")}${origin.status === "canceled" ? " (cancelada)" : ""}`
-          : a.originAppointmentId
-            ? "Retorno ligado a uma consulta"
-            : "Retorno sem consulta de origem"}
-      </p>
-    )
-  }
 
   {
     signals.length > 0 && (

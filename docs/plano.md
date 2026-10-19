@@ -2377,7 +2377,11 @@ outras. Sem migração. Validado pelo cliente pelos testes e publicado no stagin
    que abre o formulário com o dia marcado. Horário só de um serviço com contorno verde; desativado tracejado e com
    listras. No formulário, os dias viram botões. No celular, uma linha por dia, com o "+" e o "⋯".
 
-Implementação: a seguir.
+**1C implementada e testada no local em 19/out** (`categoryStyle.ts`, `AppointmentCard.astro`, a Semana e a turma;
+tom `ret` no tema; ícones `clipboard`, `arrow-uturn-left` e `beaker`). A faixa vale também no Resumo do Dia (mesmo
+cartão). [Teste de interface](auditoria-frontend/redesign-1c-report.md): nenhuma falha; S-01 (turma sem o tipo)
+decidida pelo cliente: a turma também ganha a faixa; corrigida e retestada. Publicada no staging em 19/out a pedido
+do cliente (sem migração), que valida em paralelo.
 
 ---
 

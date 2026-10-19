@@ -39,7 +39,10 @@ export type IconName =
   | "document-check"
   | "arrow-down-tray"
   | "trash"
-  | "information-circle";
+  | "information-circle"
+  | "clipboard"
+  | "arrow-uturn-left"
+  | "beaker";
 
 interface Props {
   name: IconName;
@@ -108,6 +111,10 @@ const paths: Record<IconName, string> = {
   squares: "M4 5a1 1 0 0 1 1-1h5a1 1 0 0 1 1 1v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V5Zm9 0a1 1 0 0 1 1-1h5a1 1 0 0 1 1 1v5a1 1 0 0 1-1 1h-5a1 1 0 0 1-1-1V5Zm-9 9a1 1 0 0 1 1-1h5a1 1 0 0 1 1 1v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-5Zm9 0a1 1 0 0 1 1-1h5a1 1 0 0 1 1 1v5a1 1 0 0 1-1 1h-5a1 1 0 0 1-1-1v-5Z",
   tag: "M3 12V4h8l10 10-8 8L3 12Zm5.25-4.5a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0Z",
   cpu: "M9 2v3m6-3v3M9 19v3m6-3v3M2 9h3m-3 6h3m14-6h3m-3 6h3M7 5h10a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2Zm2 4h6v6H9V9Z",
+  // Tipos do atendimento (Consulta, Retorno, Exame; redesign de 19/out/2026).
+  clipboard: "M9 4h6v3H9V4Zm0 1.5H6.5A1.5 1.5 0 0 0 5 7v12.5A1.5 1.5 0 0 0 6.5 21h11a1.5 1.5 0 0 0 1.5-1.5V7a1.5 1.5 0 0 0-1.5-1.5H15M9 13h6m-3-3v6",
+  "arrow-uturn-left": "M9 14 4 9l5-5M4 9h10.5a5.5 5.5 0 0 1 0 11H11",
+  beaker: "M9.5 3h5M10 3v6.2L4.8 18.4A1.75 1.75 0 0 0 6.3 21h11.4a1.75 1.75 0 0 0 1.5-2.6L14 9.2V3M7.5 15h9",
 };
 ---
 

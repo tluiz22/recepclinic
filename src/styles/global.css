@@ -61,6 +61,11 @@
   --color-blk-200: #d3dbd8;
   --color-blk-500: #7d8b87;
   --color-blk-800: #3a4744;
+  /* Retorno (tipo do atendimento, redesign de 19/out/2026): roxo, que nenhuma situação usa. */
+  --color-ret-50: #f1ecfa;
+  --color-ret-200: #d9cdf0;
+  --color-ret-700: #5a3e9e;
+  --color-ret-800: #4a3a73;
 }
 
 /*

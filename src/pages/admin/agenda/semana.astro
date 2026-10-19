@@ -8,6 +8,7 @@ import Button from "../../../components/admin/ui/Button.astro";
 import StatusPill from "../../../components/admin/ui/StatusPill.astro";
 import SituationLegend from "../../../components/admin/agenda/SituationLegend.astro";
 import { SITUATIONS, appointmentSituation } from "../../../components/admin/agenda/situationStyle";
+import { CATEGORY_STYLES, serviceBesideCategory } from "../../../components/admin/agenda/categoryStyle";
 import { addDays, formatCalendarDate, formatInstant, isCalendarDate, localDateOf, todayIn } from "../../../lib/clinicTime";
 import { createUserClient } from "../../../lib/data/clients";
 import { loadAgendaScope } from "../../../lib/data/agenda/scope";
@@ -75,11 +76,17 @@ const blocksOf = (day: string) =>
             ))}
             {ofDay(day).map((a) => (
               <li class={`rounded border-l-4 px-1.5 py-1 ${SITUATIONS[appointmentSituation(a)].swatch}`}>
-                <span class="font-semibold tabular-nums">{formatInstant(a.scheduledAt, clinic.timezone, "HH:mm")}</span> {a.patientName}
-                <span class="block text-ink-soft">
-                  {a.serviceName}
-                  {showAgenda ? ` · ${a.agendaName}` : ""}
+                {/* O tipo na primeira linha (redesign de 19/out/2026, proposta 1C). */}
+                <span class={`flex items-center gap-1 font-display text-[13.5px] leading-tight font-bold ${CATEGORY_STYLES[a.category].text}`}>
+                  {a.category === "return_visit" && <Icon name="arrow-uturn-left" class="h-3.5 w-3.5 shrink-0" strokeWidth={2.4} />}
+                  {CATEGORY_STYLES[a.category].label}
                 </span>
+                <span class="mt-0.5 block">
+                  <span class="font-semibold tabular-nums">{formatInstant(a.scheduledAt, clinic.timezone, "HH:mm")}</span> {a.patientName}
+                </span>
+                {(serviceBesideCategory(a.serviceName, a.category) || showAgenda) && (
+                  <span class="block text-ink-soft">{[serviceBesideCategory(a.serviceName, a.category), showAgenda ? a.agendaName : null].filter(Boolean).join(" · ")}</span>
+                )}
                 {/* A situação também em texto, não só na cor (decisão 4 da Agenda; QA-09, 16/out/2026).
                     Na largura única (1152px) a coluna do dia é estreita: o selo quebra a linha sem sair do atendimento. */}
                 <StatusPill situation={appointmentSituation(a)} class="mt-1 max-w-full gap-0.5! pr-1.5! pl-1! text-xs! whitespace-normal!" />
