@@ -51,6 +51,10 @@ todas) e protege contra o maior risco da evolução: 309 consultas espalhadas e 
   "Recebe o resumo do dia". O do profissional segue os mesmos dois envios (véspera às 18h e no
   dia 1h antes do início), com o início contado **pela agenda dele**, e também separado em
   consultas e exames. Faz parte do item "Envio do resumo do dia" da matriz (D11).
+- **Lista de espera por serviço (confirmado pelo cliente, 19/out/2026):** a vaga liberada só é
+  oferecida a quem espera **no mesmo serviço** (na mesma agenda e no mesmo tipo de local). Sem
+  ninguém na fila daquele serviço, a vaga não vai para a fila de outro serviço, mesmo que caiba.
+  Revisar com uso real.
 
 **Por quê:** mudar o modelo depois, com dados reais, custa caro. O piloto já tem o caso dos exames
 feitos pela secretária, que hoje bloqueiam a agenda da médica sem necessidade. A escolha de
