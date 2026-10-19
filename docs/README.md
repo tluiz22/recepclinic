@@ -174,9 +174,12 @@
 >   conferido no local e publicado no staging em 19/out a pedido do cliente (sem migração); ajustado para aparecer a partir
 >   do horário de início da Consulta (sem esperar o "Compareceu"), publicado de novo em 19/out (commit `39a8843`) e
 >   **validado pelo cliente em 19/out**.
->   **Retomar daqui (próxima sessão, depois de 19/out):** o cliente traz os próximos erros
->   ou ajustes dos testes. Seguem pendentes os testes da F11 pelo roteiro (T3.1) e a espera da Meta (Análise do App
->   até ~29/out).
+>   **F11 toda validada pelo cliente em 19/out** (Testes 0 a 7 do roteiro, no staging, com os certificados fictícios e
+>   a Simulação; detalhes no [plano](plano.md)). Fora do sistema seguem o teste real na Produção Restrita (e-CNPJ A1),
+>   a DMED no PGD Dmed pelo contador, o template `rc_nota_fiscal_v1` na Meta e o termo com o advogado.
+>   **Retomar daqui (próxima sessão, depois de 19/out):** **planejar melhorias no processo de geração da nota fiscal**
+>   (pedido do cliente, 19/out): levantar com o cliente o que incomoda hoje (emitir, conferir, cancelar, enviar) e
+>   propor as mudanças, uma etapa por vez. Em paralelo, aguardar a Meta (Análise do App até ~29/out).
 > - **Frente paralela, o site** `www.recepclinic.com.br`: [`site-plano.md`](site-plano.md), feito numa
 >   **sessão separada, na pasta `~/Documents/Desenvolvimento/recepclinic-site`** (nunca nesta pasta).
 >   **No ar** (conferido em 05/out), com `/privacidade` e `/termos`; DNS de `recepclinic.com.br` já

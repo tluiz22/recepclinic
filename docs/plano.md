@@ -1627,13 +1627,20 @@ gera.
 
 | | Subetapa | Depende de | Situação |
 |---|---|---|---|
-| F11.1 | Item "Módulo financeiro" na matriz e menu "Financeiro"; área Financeiro do paciente e do contato (CPF e responsável) | — | implementada (12/out), validação no fim (cliente, 12/out) |
-| F11.2 | Registro do pagamento no atendimento (sem nota ainda) | F11.1 | implementada (12/out), validação no fim (cliente, 12/out) |
-| F11.3 | Dados fiscais da clínica e certificado A1 | F11.1 | implementada (12/out), validação no fim (cliente, 12/out) |
-| F11.4 | Emissão e cancelamento na API nacional (ambiente de testes da Receita) | F11.2, F11.3 e os itens do cliente abaixo | implementada (12/out), falta o teste real na Produção Restrita |
-| F11.4b | Ambiente "Simulação" da nota (testar sem e-CNPJ, só no staging) | F11.4 | implementada (13/out), validação no fim |
-| F11.5 | PDF da nota no histórico e envio pelo WhatsApp (template novo) | F11.4 e a Meta | implementada (12/out), falta o template aprovado na Meta |
-| F11.6 | Arquivo da DMED do ano | F11.2 | implementada (12/out), validação no fim (cliente, 12/out) |
+| F11.1 | Item "Módulo financeiro" na matriz e menu "Financeiro"; área Financeiro do paciente e do contato (CPF e responsável) | — | implementada (12/out), **validada pelo cliente em 19/out** (roteiro) |
+| F11.2 | Registro do pagamento no atendimento (sem nota ainda) | F11.1 | implementada (12/out), **validada pelo cliente em 19/out** (roteiro) |
+| F11.3 | Dados fiscais da clínica e certificado A1 | F11.1 | implementada (12/out), **validada pelo cliente em 19/out** (roteiro) |
+| F11.4 | Emissão e cancelamento na API nacional (ambiente de testes da Receita) | F11.2, F11.3 e os itens do cliente abaixo | implementada (12/out), **validada na Simulação pelo cliente em 19/out**; falta o teste real na Produção Restrita (e-CNPJ A1) |
+| F11.4b | Ambiente "Simulação" da nota (testar sem e-CNPJ, só no staging) | F11.4 | implementada (13/out), **validada pelo cliente em 19/out** |
+| F11.5 | PDF da nota no histórico e envio pelo WhatsApp (template novo) | F11.4 e a Meta | implementada (12/out), **validada pelo cliente em 19/out**; falta o template `rc_nota_fiscal_v1` aprovado na Meta |
+| F11.6 | Arquivo da DMED do ano | F11.2 | implementada (12/out), **validada pelo cliente em 19/out** (roteiro) |
+
+**Testes do roteiro (19/out):** o cliente concluiu os Testes 0 a 7 do
+[roteiro](https://claude.ai/code/artifact/f7a032e3-c6f4-4e13-8fa1-f6d6e61afbcb) no staging, com os certificados
+fictícios e a Simulação, e deu **toda a F11 como validada** (19/out). Seguem fora do sistema: o teste real na
+Produção Restrita com o e-CNPJ A1 de uma clínica de Mossoró, a importação da DMED no PGD Dmed pelo contador, o
+template `rc_nota_fiscal_v1` na Meta e a revisão do termo pelo advogado. **Próximo passo (cliente, 19/out):**
+planejar melhorias no processo de geração da nota fiscal.
 
 - **F11.1:** item `finance` ("Módulo financeiro (pagamentos e nota fiscal)", área nova
   **Financeiro**) na matriz e o menu "Financeiro" (por ora, a lista de pacientes com e sem dados
