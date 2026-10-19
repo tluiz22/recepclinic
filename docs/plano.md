@@ -2381,7 +2381,12 @@ outras. Sem migração. Validado pelo cliente pelos testes e publicado no stagin
 tom `ret` no tema; ícones `clipboard`, `arrow-uturn-left` e `beaker`). A faixa vale também no Resumo do Dia (mesmo
 cartão). [Teste de interface](auditoria-frontend/redesign-1c-report.md): nenhuma falha; S-01 (turma sem o tipo)
 decidida pelo cliente: a turma também ganha a faixa; corrigida e retestada. Publicada no staging em 19/out a pedido
-do cliente (sem migração), que valida em paralelo.
+do cliente (sem migração); **1C validada pelo cliente em 19/out**.
+
+**2B implementada e testada no local em 19/out** (`ConfigShell.astro`, ícone de cada seção em `sections.ts`, 7 ícones
+novos no `Icon.astro`). [Teste de interface](auditoria-frontend/redesign-2b-report.md): nenhuma falha; o "Abrindo…" no
+celular e o número de pendências não verificados no local. Publicada no staging em 19/out a pedido do cliente (sem
+migração), que valida em paralelo.
 
 ---
 

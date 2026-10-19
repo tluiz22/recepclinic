@@ -5,7 +5,9 @@
 // abre a mesma lista (sem JavaScript, <details>). O título é o da seção ou do
 // cadastro (U-06), com "Configurações" pequeno acima; nos formulários, o link
 // para a lista (`back`). Aberta de outra tela (S-01 da R8), `back` é a origem.
-// Substitui as abas em pílulas (ConfiguracoesTabs, F4.3).
+// Substitui as abas em pílulas (ConfiguracoesTabs, F4.3). Redesign 2B (cliente,
+// 19/out/2026): cada seção com um ícone e o grupo como um título pequeno, sem
+// maiúsculas, com uma linha ao lado (computador); no celular, os mesmos ícones.
 import AdminLayout from "../../../layouts/AdminLayout.astro";
 import FlashMessage from "../FlashMessage.astro";
 import Icon from "../Icon.astro";
@@ -44,20 +46,24 @@ const support = "rounded-md bg-blk-100 px-1.5 text-[11.5px] leading-normal font-
 
 <AdminLayout title={pageTitle ?? title}>
   <div class="lg:grid lg:grid-cols-[208px_minmax(0,1fr)] lg:items-start lg:gap-8">
-    <nav aria-label="Seções de Configurações" class="hidden lg:flex lg:flex-col lg:gap-[18px]">
+    <nav aria-label="Seções de Configurações" class="hidden lg:flex lg:flex-col lg:gap-4">
       {
         groups.map((group) => (
           <div class="flex flex-col gap-0.5">
-            <span class="px-3 pb-1.5 text-xs leading-none font-bold tracking-[.07em] text-ink-soft uppercase">{group.title}</span>
+            <span class="flex items-center gap-2 px-1 pb-1">
+              <span class="text-[13px] leading-none font-semibold whitespace-nowrap text-ink-soft">{group.title}</span>
+              <span class="h-px flex-1 bg-line-strong" aria-hidden="true" />
+            </span>
             {group.items.map((s) => (
               <a
                 href={s.href}
                 aria-current={s.id === current ? "page" : undefined}
-                class={`flex h-[38px] items-center justify-between gap-2 rounded-lg px-3 text-[15px] no-underline ${
-                  s.id === current ? "bg-brand-soft font-bold text-brand-ink" : "font-semibold text-ink-mid hover:bg-canvas-deep hover:text-ink"
+                class={`group/item flex h-[38px] items-center gap-2.5 rounded-lg px-2.5 text-[15px] no-underline ${
+                  s.id === current ? "bg-brand-soft font-bold text-brand-ink" : "font-semibold text-ink hover:bg-canvas-deep"
                 }`}
               >
-                {s.label}
+                <Icon name={s.icon} class={`h-[19px] w-[19px] shrink-0 ${s.id === current ? "text-brand" : "text-ink-soft group-hover/item:text-ink"}`} strokeWidth={1.8} />
+                <span class="min-w-0 flex-1 truncate">{s.label}</span>
                 {s.pending > 0 ? (
                   <span class={count} aria-label={pendingLabel(s.pending)}>
                     {s.pending}
@@ -113,7 +119,7 @@ const support = "rounded-md bg-blk-100 px-1.5 text-[11.5px] leading-normal font-
           {
             groups.map((group) => (
               <div class="flex flex-col gap-1.5">
-                <span class="px-1 text-xs leading-none font-bold tracking-[.07em] text-ink-soft uppercase">{group.title}</span>
+                <span class="px-1 text-[13px] leading-none font-semibold text-ink-soft">{group.title}</span>
                 <div class="flex flex-col overflow-hidden rounded-xl border border-line bg-white">
                   {group.items.map((s, i) => (
                     <a
@@ -124,7 +130,10 @@ const support = "rounded-md bg-blk-100 px-1.5 text-[11.5px] leading-normal font-
                         i > 0 ? "border-t border-line" : ""
                       } ${s.id === current ? "bg-brand-soft font-bold text-brand-ink" : "font-semibold text-ink"}`}
                     >
-                      {s.label}
+                      <span class="flex min-w-0 items-center gap-2.5">
+                        <Icon name={s.icon} class={`h-5 w-5 shrink-0 ${s.id === current ? "text-brand" : "text-ink-soft"}`} strokeWidth={1.8} />
+                        {s.label}
+                      </span>
                       <span class="flex shrink-0 items-center gap-2 group-data-busy/link:hidden">
                         {s.pending > 0 ? (
                           <span class={count} aria-label={pendingLabel(s.pending)}>

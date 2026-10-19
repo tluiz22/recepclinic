@@ -1,6 +1,7 @@
 // Seções de Configurações no menu lateral (redesign R9, cliente, 17/out/2026):
 // 4 grupos, na ordem do guia de configuração. Convênios e Nota fiscal só com
 // o item liberado (D11); WhatsApp só para o Suporte (cliente, 08/out/2026).
+import type { IconName } from "../Icon.astro";
 import type { FeatureKey } from "../../../lib/features";
 import type { SetupStatus } from "../../../lib/data/config/setup";
 
@@ -22,6 +23,8 @@ export type SectionId =
 export interface SectionItem {
   id: SectionId;
   label: string;
+  /** Ícone ao lado do nome, no menu (redesign 2B, cliente, 19/out/2026). */
+  icon: IconName;
   href: string;
   /** Pendências do guia de configuração (0: sem número). */
   pending: number;
@@ -35,6 +38,22 @@ export interface SectionGroup {
 }
 
 const BASE = "/admin/configuracoes";
+
+const SECTION_ICONS: Record<SectionId, IconName> = {
+  clinica: "building",
+  equipe: "users",
+  profissionais: "user",
+  locais: "map-pin",
+  agendas: "calendar",
+  servicos: "queue-list",
+  horarios: "clock",
+  feriados: "calendar-x",
+  convenios: "credit-card",
+  lembretes: "bell",
+  mensagens: "chat-bubble",
+  whatsapp: "device-phone",
+  nota_fiscal: "receipt",
+};
 
 // Passo do guia → seção do menu.
 const STEP_SECTION: Partial<Record<SetupStatus["steps"][number]["key"], SectionId>> = {
@@ -65,6 +84,7 @@ export function configSections(
   const item = (id: SectionId, label: string, path: string, extra: Partial<SectionItem> = {}): SectionItem => ({
     id,
     label,
+    icon: SECTION_ICONS[id],
     href: `${BASE}${path}`,
     pending: pending.get(id) ?? 0,
     ...extra,

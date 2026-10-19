@@ -156,7 +156,9 @@
 >   no staging em 19/out** (sem migração). **Redesign de 19/out:** propostas no [canvas](https://claude.ai/artifact/8x8Zi8osZZLypbMkGRiPbQ) e
 >   decisões do cliente (1C tipo como título do cartão na Agenda; 2B seções com ícone em Configurações, com ícones também
 >   no celular; 3B Horários em colunas, em lista) no [plano](plano.md). **1C implementada e testada no local** ([teste](auditoria-frontend/redesign-1c-report.md),
->   turma com a faixa a pedido do cliente); publicada no staging em 19/out (sem migração); o cliente valida em paralelo; **retomar daqui: 2B e 3B.**
+>   turma com a faixa a pedido do cliente); publicada no staging em 19/out (sem migração); **1C validada pelo cliente em 19/out.** **2B implementada, testada
+>   ([teste](auditoria-frontend/redesign-2b-report.md)) e publicada no staging em 19/out** (sem migração); o cliente valida
+>   em paralelo; **retomar daqui: 3B.**
 > - **Frente paralela, o site** `www.recepclinic.com.br`: [`site-plano.md`](site-plano.md), feito numa
 >   **sessão separada, na pasta `~/Documents/Desenvolvimento/recepclinic-site`** (nunca nesta pasta).
 >   **No ar** (conferido em 05/out), com `/privacidade` e `/termos`; DNS de `recepclinic.com.br` já
