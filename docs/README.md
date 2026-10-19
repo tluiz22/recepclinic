@@ -163,7 +163,10 @@
 >   do [canvas](https://claude.ai/artifact/J3gdVmShr3aJACVsgcr7Fe):** em Horários, o bloco ganha a faixa do tipo no alto,
 >   como na Agenda; o horário de todos os serviços leva no título os tipos da agenda ("Consulta e Retorno"). Implementado
 >   e testado no local ([teste](auditoria-frontend/redesign-3b-tipo-report.md)) e publicado no staging em 19/out a pedido do
->   cliente (sem migração), que valida lá.
+>   cliente (sem migração), que valida lá. **Cor de cada serviço (19/out, decisões no [plano](plano.md)):** automática pela
+>   ordem de criação, Retorno sempre roxo, em Horários e na Agenda; implementada e testada no local
+>   ([teste](auditoria-frontend/cor-servico-report.md)) e publicada no staging em 19/out a pedido do cliente (sem
+>   migração), que valida lá.
 > - **Frente paralela, o site** `www.recepclinic.com.br`: [`site-plano.md`](site-plano.md), feito numa
 >   **sessão separada, na pasta `~/Documents/Desenvolvimento/recepclinic-site`** (nunca nesta pasta).
 >   **No ar** (conferido em 05/out), com `/privacidade` e `/termos`; DNS de `recepclinic.com.br` já

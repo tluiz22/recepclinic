@@ -9,7 +9,7 @@ import AppointmentCard from "../../components/admin/agenda/AppointmentCard.astro
 import ConfirmDeleteDialog from "../../components/admin/ConfirmDeleteDialog.astro";
 import SituationLegend from "../../components/admin/agenda/SituationLegend.astro";
 import { countSituations } from "../../components/admin/agenda/situationStyle";
-import { CATEGORY_STYLES, serviceBesideCategory } from "../../components/admin/agenda/categoryStyle";
+import { serviceBesideCategory, serviceLook, serviceTints } from "../../components/admin/agenda/categoryStyle";
 import Icon from "../../components/admin/Icon.astro";
 import FlashMessage from "../../components/admin/FlashMessage.astro";
 import Button from "../../components/admin/ui/Button.astro";
@@ -21,6 +21,7 @@ import { canAccessArea } from "../../lib/clinicAccess";
 import { createUserClient } from "../../lib/data/clients";
 import { loadAgendaScope } from "../../lib/data/agenda/scope";
 import { buildDayItems, itemAgendaId, listAgendaAppointments, listAgendaBlocks, listNoShowStats, listOrigins } from "../../lib/data/agenda/view";
+import { listServiceRefs } from "../../lib/data/config/services";
 import { listPaymentStates } from "../../lib/data/payments";
 import { activeWaitlistAppointmentIds } from "../../lib/data/waitlist/entries";
 import { listGuidanceResendable } from "../../lib/data/whatsapp/guidance";
@@ -37,10 +38,13 @@ const date = dateParam && isCalendarDate(dateParam) ? dateParam : today;
 
 const scope = await loadAgendaScope(db, clinic.clinicId, Astro.url, Astro.cookies);
 const range = { fromDate: date, toDate: date, timeZone: clinic.timezone, agendaIds: scope.agendaIds };
-const [appointments, blocks] = await Promise.all([
+const [appointments, blocks, serviceRefs] = await Promise.all([
   listAgendaAppointments(db, clinic.clinicId, range),
   listAgendaBlocks(db, clinic.clinicId, { ...range, agendaNames: scope.agendaNames }),
+  listServiceRefs(db, clinic.clinicId),
 ]);
+// Cor de cada serviço na faixa do cartão (cliente, 19/out/2026).
+const tints = serviceTints(serviceRefs);
 const items = buildDayItems(appointments, blocks);
 
 const activeFuture = appointments.filter((a) => (a.status === "scheduled" || a.status === "confirmed") && a.scheduledAt > now).map((a) => a.id);
@@ -84,6 +88,7 @@ const blockTime = (d: Date) => formatInstant(d, clinic.timezone, localDateOf(d, 
 const time = (d: Date) => formatInstant(d, clinic.timezone, "HH:mm");
 const cardProps = (a: (typeof appointments)[number]) => ({
   appointment: a,
+  tint: tints.get(a.serviceId),
   timeZone: clinic.timezone,
   now,
   showAgenda: false,
@@ -154,9 +159,10 @@ const cardProps = (a: (typeof appointments)[number]) => ({
                 <article class="flex min-w-0 flex-col gap-1.5 rounded-xl border border-line bg-white px-3 pt-3 pb-2.5" style={orderOf(item) !== undefined ? `order: ${orderOf(item)}` : undefined}>
                   {/* Faixa do tipo, como no cartão do atendimento (1C; turma decidida pelo cliente, S-01, 19/out/2026). */}
                   {(() => {
-                    const category = item.appointments[0]?.category;
-                    if (!category) return null;
-                    const style = CATEGORY_STYLES[category];
+                    const first = item.appointments[0];
+                    if (!first) return null;
+                    const category = first.category;
+                    const style = serviceLook(category, tints.get(first.serviceId));
                     const service = serviceBesideCategory(item.serviceName, category);
                     return (
                       <div class={`-mx-3 -mt-3 mb-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 rounded-t-[11px] border-b px-3 py-2 ${style.band}`}>

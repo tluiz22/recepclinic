@@ -8,7 +8,7 @@
 // dia marcado); no celular e no tablet, uma linha por dia.
 import ConfigShell from "../../../components/admin/config/ConfigShell.astro";
 import HorarioBloco, { type HorarioHeader } from "../../../components/admin/config/HorarioBloco.astro";
-import { agendaCategoriesTitle, CATEGORY_STYLES, serviceBesideCategory } from "../../../components/admin/agenda/categoryStyle";
+import { agendaCategoriesTitle, CATEGORY_STYLES, serviceBesideCategory, serviceLook, serviceTints } from "../../../components/admin/agenda/categoryStyle";
 import Card from "../../../components/admin/config/Panel.astro";
 import ConfirmDeleteDialog from "../../../components/admin/ConfirmDeleteDialog.astro";
 import Icon from "../../../components/admin/Icon.astro";
@@ -17,16 +17,19 @@ import { createUserClient } from "../../../lib/data/clients";
 import { listAgendas } from "../../../lib/data/config/agendas";
 import { listAvailability, WEEKDAY_NAMES } from "../../../lib/data/config/availability";
 import { listLocations } from "../../../lib/data/config/locations";
-import { listServices } from "../../../lib/data/config/services";
+import { listServiceRefs, listServices } from "../../../lib/data/config/services";
 
 const clinic = Astro.locals.clinic!;
 const db = createUserClient(Astro.request, Astro.cookies);
 const showInactive = Astro.url.searchParams.get("todos") === "1";
-const [agendas, locations, services] = await Promise.all([
+const [agendas, locations, services, serviceRefs] = await Promise.all([
   listAgendas(db, clinic.clinicId),
   listLocations(db, clinic.clinicId, { includeInactive: true }),
   listServices(db, clinic.clinicId, { includeInactive: true }),
+  listServiceRefs(db, clinic.clinicId),
 ]);
+// Cor de cada serviço, a mesma da Agenda (cliente, 19/out/2026).
+const tints = serviceTints(serviceRefs);
 const agenda = agendas.find((a) => a.id === Astro.url.searchParams.get("agenda")) ?? agendas[0] ?? null;
 const windows = agenda ? await listAvailability(db, clinic.clinicId, agenda.id, { includeInactive: showInactive }) : [];
 
@@ -95,12 +98,7 @@ const generalHeader: HorarioHeader =
 const headerOf = (w: (typeof windows)[number]): HorarioHeader => {
   const service = w.serviceId ? serviceById.get(w.serviceId) : undefined;
   if (!service) return generalHeader;
-  const style = CATEGORY_STYLES[service.category];
-  return {
-    ...style,
-    border: service.category === "return_visit" ? "border-ret-200" : "border-line-strong",
-    service: serviceBesideCategory(service.name, service.category),
-  };
+  return { ...serviceLook(service.category, tints.get(service.id)), service: serviceBesideCategory(service.name, service.category) };
 };
 const blockProps = (w: (typeof windows)[number], dayName: string) => ({
   window: w,

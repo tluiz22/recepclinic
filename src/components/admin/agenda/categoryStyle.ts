@@ -77,3 +77,49 @@ export function agendaCategoriesTitle(
     ? labels[0]
     : `${labels.slice(0, -1).join(", ")} e ${labels[labels.length - 1]}`;
 }
+
+/** Cor de um serviço: faixa (fundo e linha), tipo, serviço e contorno do bloco em Horários. */
+export type ServiceTint = Pick<CategoryStyle, "band" | "text" | "detail"> & { border: string };
+
+const tint = (name: string): ServiceTint => ({
+  band: `border-sv-${name}-200 bg-sv-${name}-50`,
+  text: `text-sv-${name}-700`,
+  detail: `text-sv-${name}-700`,
+  border: `border-sv-${name}-200`,
+});
+
+// As classes por extenso, para o Tailwind gerar (ele não lê nomes montados):
+// border-sv-oliva-200 bg-sv-oliva-50 text-sv-oliva-700 border-sv-rosa-200 bg-sv-rosa-50 text-sv-rosa-700
+// border-sv-sepia-200 bg-sv-sepia-50 text-sv-sepia-700 border-sv-indigo-200 bg-sv-indigo-50 text-sv-indigo-700
+// border-sv-ciano-200 bg-sv-ciano-50 text-sv-ciano-700
+export const SERVICE_TINTS: ServiceTint[] = ["oliva", "rosa", "sepia", "indigo", "ciano"].map(tint);
+
+const RETURN_TINT: ServiceTint = {
+  band: CATEGORY_STYLES.return_visit.band,
+  text: CATEGORY_STYLES.return_visit.text,
+  detail: CATEGORY_STYLES.return_visit.detail,
+  border: "border-ret-200",
+};
+
+export type ServiceRef = { id: string; category: ServiceCategory; createdAt: string };
+
+/**
+ * Cor de cada serviço (cliente, 19/out/2026): automática, sem escolha. O Retorno
+ * fica sempre roxo; Consultas e Exames recebem as cores da paleta pela ordem de
+ * criação (inclusive os desativados), então serviço novo pega a próxima cor e as
+ * dos outros não mudam. Com mais serviços que cores, a paleta recomeça.
+ */
+export function serviceTints(services: ServiceRef[]): Map<string, ServiceTint> {
+  const tints = new Map<string, ServiceTint>();
+  const others = services
+    .filter((s) => s.category !== "return_visit")
+    .sort((a, b) => a.createdAt.localeCompare(b.createdAt) || a.id.localeCompare(b.id));
+  others.forEach((s, i) => tints.set(s.id, SERVICE_TINTS[i % SERVICE_TINTS.length]));
+  for (const s of services) if (s.category === "return_visit") tints.set(s.id, RETURN_TINT);
+  return tints;
+}
+
+/** Tipo (rótulo e ícone) com a cor do serviço; sem a cor, a do tipo. */
+export function serviceLook(category: ServiceCategory, tint?: ServiceTint): CategoryStyle & { border: string } {
+  return { ...CATEGORY_STYLES[category], border: "border-line-strong", ...tint };
+}

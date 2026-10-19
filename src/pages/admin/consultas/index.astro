@@ -26,6 +26,8 @@ import { listAgendas } from "../../../lib/data/config/agendas";
 import { getResumoTabCounts, listAwaitingRebooking, listPendingAttendance, listRecordedPage, listRemindersOfDay } from "../../../lib/data/daily";
 import { describeSendsAlert, getSendsAlert, listAppointmentsWithFailedSends, listJobRuns } from "../../../lib/data/sends";
 import { listPaymentStates } from "../../../lib/data/payments";
+import { listServiceRefs } from "../../../lib/data/config/services";
+import { serviceTints } from "../../../components/admin/agenda/categoryStyle";
 import { listRecentOffers, listWaitlist } from "../../../lib/data/waitlist/entries";
 import { vocabularyFor } from "../../../lib/vocabulary";
 
@@ -102,13 +104,16 @@ switch (tab) {
 const actors = await loadActorLabels(db, clinic.clinicId, [...dayAppointments.map((a) => a.createdBy), ...awaiting.map((a) => a.canceledBy)]);
 // Módulo financeiro (F11.2): selo e botão "Pagamento", para quem tem a área.
 const financeOn = canAccessArea(clinic, "finance");
-const [noShows, origins, paymentStates] = cards.length
+const [noShows, origins, paymentStates, serviceRefs] = cards.length
   ? await Promise.all([
       listNoShowStats(db, clinic.clinicId, cards.map((a) => a.patientId)),
       listOrigins(db, clinic.clinicId, cards),
       financeOn ? listPaymentStates(db, clinic.clinicId, cards.map((a) => a.id)) : Promise.resolve(null),
+      listServiceRefs(db, clinic.clinicId),
     ])
-  : [new Map(), new Map(), null];
+  : [new Map(), new Map(), null, []];
+// Cor de cada serviço na faixa do cartão (cliente, 19/out/2026).
+const tints = serviceTints(serviceRefs);
 // Contadores das abas (R3; cliente, 15/out/2026): onde há pendência.
 const counts = await getResumoTabCounts(db, clinic.clinicId, { timeZone: clinic.timezone, reminders: has("reminders"), waitlist: has("waitlist"), sends: sendsOn }, now);
 const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
@@ -174,6 +179,7 @@ const subtitle = !dated
           {cards.map((a) => (
             <AppointmentCard
               appointment={a}
+              tint={tints.get(a.serviceId)}
               timeZone={clinic.timezone}
               now={now}
               showAgenda={showAgenda}

@@ -17,7 +17,7 @@ import StatusPill from "../ui/StatusPill.astro";
 import Tag from "../ui/Tag.astro";
 import type { IconName } from "../Icon.astro";
 import CardActionButton from "./CardActionButton.astro";
-import { CATEGORY_STYLES, serviceBesideCategory } from "./categoryStyle";
+import { serviceBesideCategory, serviceLook, type ServiceTint } from "./categoryStyle";
 import { cardActions } from "./cardActions";
 import { CANCELED_TEXT, SITUATIONS, appointmentSituation } from "./situationStyle";
 import { formatInstant } from "../../../lib/clinicTime";
@@ -56,6 +56,8 @@ interface Props {
   order?: number;
   /** Listas de vários dias (Resumo › A registrar e Registradas): o dia antes do horário. */
   withDate?: boolean;
+  /** Cor do serviço (automática; cliente, 19/out/2026). Sem ela, a do tipo. */
+  tint?: ServiceTint;
 }
 
 const {
@@ -77,6 +79,7 @@ const {
   payment,
   order,
   withDate = false,
+  tint,
 } = Astro.props;
 const endpoint = `/api/admin/agenda/atendimentos/${a.id}`;
 const time = (d: Date) => formatInstant(d, timeZone, "HH:mm");
@@ -84,7 +87,7 @@ const isActive = a.status === "scheduled" || a.status === "confirmed";
 const isPast = a.scheduledAt.getTime() <= now.getTime();
 const isCanceled = a.status === "canceled";
 const situation = appointmentSituation(a);
-const category = CATEGORY_STYLES[a.category];
+const category = serviceLook(a.category, tint);
 const serviceBeside = serviceBesideCategory(a.serviceName, a.category);
 const originText =
   a.category !== "return_visit"

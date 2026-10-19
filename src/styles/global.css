@@ -66,6 +66,23 @@
   --color-ret-200: #d9cdf0;
   --color-ret-700: #5a3e9e;
   --color-ret-800: #4a3a73;
+  /* Cor de cada serviço (cliente, 19/out/2026): automática, pela ordem de criação; o Retorno fica sempre roxo.
+     Matizes fora das situações (âmbar, verde, azul, laranja, vermelho, cinza) e do roxo do Retorno. */
+  --color-sv-oliva-50: #eef1dc;
+  --color-sv-oliva-200: #d3d9a9;
+  --color-sv-oliva-700: #4c5514;
+  --color-sv-rosa-50: #fbe9f1;
+  --color-sv-rosa-200: #efc3d7;
+  --color-sv-rosa-700: #8c2557;
+  --color-sv-sepia-50: #f4ebe2;
+  --color-sv-sepia-200: #e0cbb6;
+  --color-sv-sepia-700: #6a4220;
+  --color-sv-indigo-50: #e7eaf6;
+  --color-sv-indigo-200: #c7cdea;
+  --color-sv-indigo-700: #2f3d7c;
+  --color-sv-ciano-50: #e0f1f8;
+  --color-sv-ciano-200: #b5dbeb;
+  --color-sv-ciano-700: #0b5170;
 }
 
 /*

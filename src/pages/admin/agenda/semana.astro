@@ -8,7 +8,8 @@ import Button from "../../../components/admin/ui/Button.astro";
 import StatusPill from "../../../components/admin/ui/StatusPill.astro";
 import SituationLegend from "../../../components/admin/agenda/SituationLegend.astro";
 import { SITUATIONS, appointmentSituation } from "../../../components/admin/agenda/situationStyle";
-import { CATEGORY_STYLES, serviceBesideCategory } from "../../../components/admin/agenda/categoryStyle";
+import { CATEGORY_STYLES, serviceBesideCategory, serviceLook, serviceTints } from "../../../components/admin/agenda/categoryStyle";
+import { listServiceRefs } from "../../../lib/data/config/services";
 import { addDays, formatCalendarDate, formatInstant, isCalendarDate, localDateOf, todayIn } from "../../../lib/clinicTime";
 import { createUserClient } from "../../../lib/data/clients";
 import { loadAgendaScope } from "../../../lib/data/agenda/scope";
@@ -24,10 +25,13 @@ const days = Array.from({ length: 7 }, (_, i) => addDays(monday, i));
 
 const scope = await loadAgendaScope(db, clinic.clinicId, Astro.url, Astro.cookies);
 const range = { fromDate: days[0], toDate: days[6], timeZone: clinic.timezone, agendaIds: scope.agendaIds };
-const [appointments, blocks] = await Promise.all([
+const [appointments, blocks, serviceRefs] = await Promise.all([
   listAgendaAppointments(db, clinic.clinicId, range),
   listAgendaBlocks(db, clinic.clinicId, { ...range, agendaNames: scope.agendaNames }),
+  listServiceRefs(db, clinic.clinicId),
 ]);
+// Cor de cada serviço no tipo da primeira linha (cliente, 19/out/2026).
+const tints = serviceTints(serviceRefs);
 const showAgenda = !scope.selectedAgendaId && scope.agendas.length > 1;
 const ofDay = (day: string) => appointments.filter((a) => a.status !== "canceled" && localDateOf(a.scheduledAt, clinic.timezone) === day);
 const blocksOf = (day: string) =>
@@ -77,7 +81,8 @@ const blocksOf = (day: string) =>
             {ofDay(day).map((a) => (
               <li class={`rounded border-l-4 px-1.5 py-1 ${SITUATIONS[appointmentSituation(a)].swatch}`}>
                 {/* O tipo na primeira linha (redesign de 19/out/2026, proposta 1C). */}
-                <span class={`flex items-center gap-1 font-display text-[13.5px] leading-tight font-bold ${CATEGORY_STYLES[a.category].text}`}>
+                {/* Etiqueta na cor do serviço (cliente, 19/out/2026): só o texto colorido ficava sutil demais na coluna. */}
+                <span class={`-ml-0.5 inline-flex max-w-full items-center gap-1 rounded border px-1 py-px font-display text-[13.5px] leading-tight font-bold ${serviceLook(a.category, tints.get(a.serviceId)).band} ${serviceLook(a.category, tints.get(a.serviceId)).text}`}>
                   {a.category === "return_visit" && <Icon name="arrow-uturn-left" class="h-3.5 w-3.5 shrink-0" strokeWidth={2.4} />}
                   {CATEGORY_STYLES[a.category].label}
                 </span>

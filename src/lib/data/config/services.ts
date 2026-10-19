@@ -115,6 +115,16 @@ export async function listServices(
   return (unwrap(await query, "Serviços") as unknown as Row[]).map(toService);
 }
 
+/** Só o necessário para a cor de cada serviço (inclusive os desativados). */
+export async function listServiceRefs(db: DbClient, clinicId: string): Promise<{ id: string; category: ServiceCategory; createdAt: string }[]> {
+  const rows = unwrap(await db.from("services").select("id, category, created_at").eq("clinic_id", clinicId), "Serviços") as unknown as {
+    id: string;
+    category: ServiceCategory;
+    created_at: string;
+  }[];
+  return rows.map((r) => ({ id: r.id, category: r.category, createdAt: r.created_at }));
+}
+
 export async function getService(db: DbClient, clinicId: string, id: string): Promise<Service> {
   return toService(
     unwrapOne(await db.from("services").select(COLUMNS).eq("clinic_id", clinicId).eq("id", id).maybeSingle(), "Serviço") as unknown as Row,

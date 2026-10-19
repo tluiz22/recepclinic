@@ -2412,6 +2412,22 @@ hifenizado. [Teste de interface](auditoria-frontend/redesign-3b-tipo-report.md):
 no meio da palavra na coluna) corrigida e retestada. Publicado no staging em 19/out a pedido do cliente (sem
 migração), que valida lá.
 
+**Cor de cada serviço (pedido do cliente, 19/out).** "Consulta" e "Consulta Domiciliar" saíam com a mesma cor (a cor
+vinha do tipo). Decisões do cliente em 19/out:
+
+1. **Cor automática, sem escolha** (sem migração): Consultas e Exames recebem as cores de uma paleta de 5 (oliva,
+   rosa, sépia, índigo, ciano) pela **ordem de criação** do serviço, contando os desativados; serviço novo pega a
+   próxima cor e as dos outros não mudam (só mudam se um serviço for apagado). Com mais de 5, a paleta recomeça. As
+   cores evitam os matizes das situações e o roxo do Retorno; contraste do texto de 6,97:1 a 8,41:1.
+2. **Vale em Horários e na Agenda:** faixa do bloco em Configurações › Horários; faixa do cartão no Dia, na turma e no
+   Resumo do Dia; na Semana, o tipo vira uma etiqueta na cor do serviço (só o texto colorido ficava sutil demais).
+3. **Retorno sempre roxo**, como na 1C.
+
+O horário de todos os serviços (Horários) continua verde-claro. Implementado (`serviceTints` e `serviceLook` em
+`categoryStyle.ts`, `listServiceRefs` em `services.ts`, tokens `sv-*` no tema; 3 testes novos) e testado no local
+([teste](auditoria-frontend/cor-servico-report.md)). Publicado no staging em 19/out a pedido do cliente (sem migração),
+que valida lá.
+
 ---
 
 ## Depois do 1º piloto (já previsto no banco)
