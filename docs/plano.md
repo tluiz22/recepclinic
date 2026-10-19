@@ -2351,6 +2351,16 @@ geral conta os marcados no período (`created_at`, `listMetricsRows` com `by: "b
 sem os cancelados depois, com a linha de explicação e a coluna "Marcados"; os outros números seguem pela data do
 atendimento. Validado pelo cliente no local e publicado no staging em 18/out (sem migração).
 
+**Lista de espera: vaga de Retorno sem oferta (relato do cliente, 18/out):** com uma pessoa na fila de Consulta e outra
+na de Retorno, abriram uma vaga de cada; a de Consulta (09:00) estava em oferta quando a de Retorno (11:45) foi
+conferida, contou como "horário livre antes" e a vaga do Retorno fechou (`earlier_free`); a de Consulta foi aceita
+depois e ninguém recebeu a do Retorno. Correção: vaga ainda em andamento na fila (aberta ou em oferta, mesma agenda) não
+conta como livre (`withoutReserved` em `offers.ts`). Decisão do cliente: com horário livre de verdade antes, a vaga
+**não fecha**: fica aberta, sem oferta, e o agendador reconfere a cada rodada (5 min); fecha com menos de 2h ou com o
+horário ocupado. A rodada pega as vagas pela conferência mais antiga (`updated_at`), para as que esperam não travarem as
+outras. Sem migração. Validado pelo cliente pelos testes e publicado no staging em 19/out; a vaga das 11:45 de 19/10 da
+"Consultorio de Teste" foi reaberta no staging a pedido do cliente.
+
 ---
 
 ## Depois do 1º piloto (já previsto no banco)

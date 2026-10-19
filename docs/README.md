@@ -142,7 +142,12 @@
 >   UUID no fim do endereço): links do paciente com o id em 22 caracteres, validado e publicado no staging em 18/out
 >   (sem migração). 3) trilha com o nome interno das mensagens: todos os tipos com nome em português, validado e
 >   publicado no staging em 18/out (sem migração). 4) Métricas: "Marcados por" pelo dia da marcação, validado e
->   publicado no staging em 18/out (sem migração). O cliente segue listando os próximos erros.
+>   publicado no staging em 18/out (sem migração). 5) lista de espera: vaga em oferta não conta como "livre antes" e
+>   vaga com horário livre antes fica aberta e é reconferida, publicado no staging em 19/out (sem migração; detalhes
+>   no [plano](plano.md)). **Retomar daqui (próxima sessão):** o cliente traz os próximos erros dos testes; antes,
+>   conferir com ele se a oferta da vaga reaberta (Retorno, 19/10 às 11:45) chegou. Pendências: no banco local,
+>   clínicas temporárias de testes antigos fazem o `contexto.test.ts` falhar (apagar com o OK do cliente); REG-01 a
+>   REG-04 e S-01 da regressão de 18/out seguem aguardando o cliente.
 > - **Frente paralela, o site** `www.recepclinic.com.br`: [`site-plano.md`](site-plano.md), feito numa
 >   **sessão separada, na pasta `~/Documents/Desenvolvimento/recepclinic-site`** (nunca nesta pasta).
 >   **No ar** (conferido em 05/out), com `/privacidade` e `/termos`; DNS de `recepclinic.com.br` já

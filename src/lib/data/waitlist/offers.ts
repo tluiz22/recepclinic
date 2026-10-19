@@ -19,7 +19,8 @@ import { logError } from "../../log";
 // vez, por ordem de entrada na lista, com 60 minutos para responder. Só é
 // oferecida se (1) começa daqui a mais de 2h, (2) o horário ainda está livre e
 // não há horário livre antes dela do mesmo tipo de local (oferecer não
-// ajudaria ninguém) e (3) vai para o primeiro da fila **na mesma agenda e no
+// ajudaria ninguém; a vaga fica aberta e é reconferida a cada rodada até não
+// haver mais, cliente, 18/out/2026) e (3) vai para o primeiro da fila **na mesma agenda e no
 // mesmo serviço** (D2) cujo atendimento é depois da vaga, no mesmo tipo de
 // local (consultório com consultório, domiciliar com domiciliar). "Sim"
 // remarca na hora; o horário antigo vira outra vaga (cascata, pelo mesmo
@@ -86,6 +87,20 @@ export function checkOpeningSlot(
   return free.some((f) => f.start.getTime() === slotTime && f.locationId === slot.locationId) ? "ok" : "slot_unavailable";
 }
 
+/**
+ * Horários livres sem os que são vagas ainda em andamento na lista de espera
+ * (abertas ou em oferta): reservados para a fila, não contam como "livre
+ * antes" (cliente, 18/out/2026: a vaga do Retorno fechou porque o horário
+ * antes dela estava em oferta para a fila da Consulta, que o aceitou depois).
+ */
+export function withoutReserved<T extends { start: Date }>(free: T[], reserved: { start: Date; minutes: number }[], slotMinutes: number): T[] {
+  return free.filter((f) => {
+    const start = f.start.getTime();
+    const end = start + slotMinutes * 60_000;
+    return !reserved.some((r) => start < r.start.getTime() + r.minutes * 60_000 && end > r.start.getTime());
+  });
+}
+
 export type QueueEntry = {
   entryId: string;
   appointmentId: string;
@@ -120,10 +135,18 @@ export function pickCandidate<T extends QueueEntry>(
 // Rodada do agendador (F7 percorre as clínicas)
 // ---------------------------------------------------------------------------
 
-export type WaitlistRunTotals = { expired: number; closedEntries: number; offered: number; skipped: number; closedOpenings: number };
+export type WaitlistRunTotals = {
+  expired: number;
+  closedEntries: number;
+  offered: number;
+  skipped: number;
+  closedOpenings: number;
+  /** Vagas que seguem abertas porque há horário livre antes delas (reconferidas na próxima rodada). */
+  waitingOpenings: number;
+};
 
 export async function processWaitlist(db: DbClient, clinicId: string, send: OfferSender, now: Date = new Date()): Promise<WaitlistRunTotals> {
-  const totals: WaitlistRunTotals = { expired: 0, closedEntries: 0, offered: 0, skipped: 0, closedOpenings: 0 };
+  const totals: WaitlistRunTotals = { expired: 0, closedEntries: 0, offered: 0, skipped: 0, closedOpenings: 0, waitingOpenings: 0 };
   // Lista de espera não liberada para a clínica (D11): nada a fazer.
   if (!(await hasFeature(db, clinicId, "waitlist"))) return totals;
   totals.expired = await expireOffers(db, clinicId, now);
@@ -135,7 +158,8 @@ export async function processWaitlist(db: DbClient, clinicId: string, send: Offe
       .select("id")
       .eq("clinic_id", clinicId)
       .eq("status", "open")
-      .order("created_at")
+      // As conferidas há mais tempo primeiro: vaga à espera não trava as outras.
+      .order("updated_at")
       .limit(MAX_OPENINGS_PER_RUN),
     "Vagas da lista de espera",
   );
@@ -144,6 +168,7 @@ export async function processWaitlist(db: DbClient, clinicId: string, send: Offe
     totals.offered += result.offered ? 1 : 0;
     totals.skipped += result.skipped;
     totals.closedOpenings += result.closed ? 1 : 0;
+    totals.waitingOpenings += result.waiting ? 1 : 0;
   }
   return totals;
 }
@@ -214,7 +239,7 @@ type Opening = {
 
 type Location = { id: string; name: string; isHomeVisit: boolean };
 
-export type AdvanceResult = { offered: boolean; skipped: number; closed: boolean; closedReason?: string };
+export type AdvanceResult = { offered: boolean; skipped: number; closed: boolean; closedReason?: string; waiting?: boolean };
 
 /** Oferece a vaga ao próximo da fila, ou encerra a vaga. */
 export async function advanceOpening(
@@ -269,6 +294,13 @@ export async function advanceOpening(
   if (!plan) return close("slot_unavailable");
 
   const availability = await checkAvailability(db, clinicId, plan, opening, slotLocation, locations, now);
+  if (availability === "earlier_free") {
+    // Horário livre antes: a vaga não fecha, volta a esperar e é reconferida
+    // na próxima rodada (cliente, 18/out/2026); fecha quando faltar 2h ou o
+    // horário for ocupado.
+    await reopen(db, clinicId, [opening.id]);
+    return { ...result, waiting: true };
+  }
   if (availability !== "ok") return close(availability);
 
   const [queue, offeredBefore] = await Promise.all([
@@ -325,15 +357,34 @@ async function checkAvailability(
   }
 
   const slotDate = localDateOf(opening.slotStart, plan.timeZone);
-  const dates = await getNextAvailableDates(db, clinicId, { ...query, count: maxDaysAhead, maxDaysAhead, lastDate: slotDate }, now);
+  const [dates, reserved] = await Promise.all([
+    getNextAvailableDates(db, clinicId, { ...query, count: maxDaysAhead, maxDaysAhead, lastDate: slotDate }, now),
+    loadReservedSlots(db, clinicId, opening),
+  ]);
   const free: { start: Date; locationId: string }[] = [];
   for (const { date } of dates) {
-    const slots = await getFreeSlots(db, clinicId, { ...query, date }, now);
+    const slots = withoutReserved(await getFreeSlots(db, clinicId, { ...query, date }, now), reserved, plan.durationMinutes);
     free.push(...slots);
     // Já há horário útil antes da vaga: não precisa olhar os outros dias.
     if (date < slotDate && checkOpeningSlot(slots, slot, earliestUseful, sameKind) === "earlier_free") return "earlier_free";
   }
   return checkOpeningSlot(free, slot, earliestUseful, sameKind);
+}
+
+/** Outras vagas da mesma agenda, antes desta, ainda abertas ou em oferta. */
+async function loadReservedSlots(db: DbClient, clinicId: string, opening: Opening): Promise<{ start: Date; minutes: number }[]> {
+  const rows = unwrap(
+    await db
+      .from("waitlist_openings")
+      .select("slot_scheduled_at, slot_duration_minutes")
+      .eq("clinic_id", clinicId)
+      .eq("agenda_id", opening.agendaId)
+      .in("status", ["open", "offering"])
+      .neq("id", opening.id)
+      .lt("slot_scheduled_at", opening.slotStart.toISOString()),
+    "Vagas da lista de espera",
+  );
+  return rows.map((row) => ({ start: new Date(row.slot_scheduled_at), minutes: row.slot_duration_minutes }));
 }
 
 type Candidate = QueueEntry & {

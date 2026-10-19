@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { checkOpeningSlot, pickCandidate, type QueueEntry } from "./offers";
+import { checkOpeningSlot, pickCandidate, withoutReserved, type QueueEntry } from "./offers";
 
 const t = (hhmm: string) => new Date(`2031-03-10T${hhmm}:00-03:00`);
 const office = "office";
@@ -33,6 +33,21 @@ describe("a vaga ainda vale?", () => {
   it("o horário já foi ocupado, ou está livre só em outro local: encerra", () => {
     expect(checkOpeningSlot([{ start: t("10:30"), locationId: office }], slot, earliestUseful, clinicLike)).toBe("slot_unavailable");
     expect(checkOpeningSlot([{ start: t("10:00"), locationId: office2 }], slot, earliestUseful, clinicLike)).toBe("slot_unavailable");
+  });
+});
+
+describe("horário em oferta para a fila não conta como livre antes (cliente, 18/out)", () => {
+  it("o Retorno de 15 min dentro da Consulta de 30 min em oferta sai; o de fora fica", () => {
+    const free = [t("08:45"), t("09:00"), t("09:15"), t("09:30"), t("11:45")].map((start) => ({ start, locationId: office }));
+    const left = withoutReserved(free, [{ start: t("09:00"), minutes: 30 }], 15);
+    expect(left.map((f) => f.start)).toEqual([t("08:45"), t("09:30"), t("11:45")]);
+  });
+
+  it("só o horário em oferta antes da vaga: oferece a vaga (antes, encerrava)", () => {
+    const free = [t("09:00"), t("09:15"), t("11:45")].map((start) => ({ start, locationId: office }));
+    const slot = { start: t("11:45"), locationId: office };
+    expect(checkOpeningSlot(free, slot, t("08:00"), clinicLike)).toBe("earlier_free");
+    expect(checkOpeningSlot(withoutReserved(free, [{ start: t("09:00"), minutes: 30 }], 15), slot, t("08:00"), clinicLike)).toBe("ok");
   });
 });
 

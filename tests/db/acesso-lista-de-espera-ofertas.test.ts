@@ -209,10 +209,34 @@ describe("vagas que se encerram sem oferta", () => {
     expect(await advanceOpening(bot, clinicId, opening, send, at(day, "07:00"))).toMatchObject({ closed: true, closedReason: "too_late" });
   });
 
-  it("há horário livre antes dela", async () => {
+  it("há horário livre antes dela: não oferece, a vaga segue aberta e é reconferida (cliente, 18/out/2026)", async () => {
     const opening = await insertOpening(at(day, "08:30"));
-    expect(await advanceOpening(bot, clinicId, opening, send, at(day, "05:00"))).toMatchObject({ closed: true, closedReason: "earlier_free" });
-    expect(await openingRow(opening)).toEqual({ status: "closed", closed_reason: "earlier_free" });
+    expect(await advanceOpening(bot, clinicId, opening, send, at(day, "05:00"))).toEqual({ offered: false, skipped: 0, closed: false, waiting: true });
+    expect(await openingRow(opening)).toEqual({ status: "open", closed_reason: null });
+    // O horário de antes é ocupado: na rodada seguinte a vaga vai para a fila (aqui, sem ninguém para o dia).
+    const extra = await registerPatient(
+      db(admin),
+      clinicId,
+      { fullName: "Paciente 07", birthdate: "2020-01-01", contact: { mode: "new", fullName: "Resp. 07", phone: "85977790007" } },
+      "2031-03-09",
+    );
+    if (extra.status !== "created") throw new Error(extra.status);
+    const earlier = await book(extra.patient.id, at(day, "08:00"));
+    expect(await advanceOpening(bot, clinicId, opening, send, at(day, "05:05"))).toMatchObject({ closed: true, closedReason: "no_candidates" });
+    // Faltando menos de 2h, a vaga que espera se encerra.
+    const late = await insertOpening(at(day, "08:30"));
+    expect(await advanceOpening(bot, clinicId, late, send, at(day, "07:00"))).toMatchObject({ closed: true, closedReason: "too_late" });
+    // Sai sem abrir vaga nova (apagado direto), para os testes seguintes do dia.
+    await adminClient().from("appointments").delete().eq("id", earlier.id);
+  });
+
+  it("o horário livre antes está em oferta para a fila: não conta e a vaga segue (cliente, 18/out/2026)", async () => {
+    const inOffer = await insertOpening(at(day, "08:00"));
+    await adminClient().from("waitlist_openings").update({ status: "offering" }).eq("id", inOffer);
+    const opening = await insertOpening(at(day, "08:30"));
+    // Ninguém na fila para esse dia: encerra por falta de gente, não por "livre antes".
+    expect(await advanceOpening(bot, clinicId, opening, send, at(day, "05:00"))).toMatchObject({ closed: true, closedReason: "no_candidates" });
+    await adminClient().from("waitlist_openings").update({ status: "closed", closed_reason: "test" }).eq("id", inOffer);
   });
 
   it("o horário não está mais livre", async () => {

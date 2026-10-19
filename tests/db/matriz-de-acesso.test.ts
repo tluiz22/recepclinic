@@ -160,7 +160,7 @@ describe("travas no banco com o item desligado", () => {
     expect(await codeOf(() => joinWaitlist(db(reception), clinicId, appointment.id, { via: "admin", actorId: reception.id }, NOW))).toBe("not_enabled");
     const bot = clinicServiceClient(clinicId) as unknown as DbClient;
     expect(await processWaitlist(bot, clinicId, async () => ({ sent: true, messageId: "x" }), NOW)).toEqual({
-      expired: 0, closedEntries: 0, offered: 0, skipped: 0, closedOpenings: 0,
+      expired: 0, closedEntries: 0, offered: 0, skipped: 0, closedOpenings: 0, waitingOpenings: 0,
     });
     const [canceled] = await cancelByClinic(db(reception), clinicId, [appointment.id], reception.id, NOW);
     expect(canceled).toMatchObject({ appointment: { id: appointment.id, status: "canceled" }, rebookingLink: null });
