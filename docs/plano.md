@@ -2435,7 +2435,7 @@ do serviço, o nome do serviço quando é diferente do tipo e, abaixo, a agenda 
 abas** que mostram o serviço (Lembretes, Lista de espera, no título do grupo, Aguardando remarcação e Envios). "A
 registrar" e "Registradas" já usam o cartão da Agenda. Implementado (`ServiceTag.astro`, `serviceTags`; Envios passou a
 trazer o `serviceId`) e testado no local ([teste](auditoria-frontend/resumo-tipo-report.md)). Publicado no staging em 19/out a pedido do
-cliente (sem migração), que valida lá.
+cliente (sem migração) e **validado pelo cliente em 19/out**.
 
 ---
 
