@@ -170,7 +170,9 @@
 >   [canvas](https://claude.ai/artifact/QmFLaNUcC74FLSnaFu2nyw), também em Lembretes, Lista de espera, Aguardando
 >   remarcação e Envios): implementada e testada no local ([teste](auditoria-frontend/resumo-tipo-report.md)) e
 >   publicada no staging em 19/out a pedido do cliente (sem migração) e **validada pelo cliente em 19/out**.
->   **Retomar daqui (próxima sessão, depois de 19/out):** tudo publicado e validado; o cliente traz os próximos erros
+>   **"Marcar retorno" na Consulta realizada e apta** (cliente, 19/out; 7 regras no [plano](plano.md)): implementado e
+>   conferido no local e publicado no staging em 19/out a pedido do cliente (sem migração), que valida lá.
+>   **Retomar daqui (próxima sessão, depois de 19/out):** o cliente traz os próximos erros
 >   ou ajustes dos testes. Seguem pendentes os testes da F11 pelo roteiro (T3.1) e a espera da Meta (Análise do App
 >   até ~29/out).
 > - **Frente paralela, o site** `www.recepclinic.com.br`: [`site-plano.md`](site-plano.md), feito numa

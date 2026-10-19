@@ -7,7 +7,7 @@ const future = new Date("2026-10-23T17:00:00Z");
 const past = new Date("2026-10-23T12:00:00Z");
 
 const input = (over: Partial<CardActionInput> = {}, appointment: Partial<CardActionInput["appointment"]> = {}): CardActionInput => ({
-  appointment: { id: "a1", status: "scheduled", scheduledAt: future, patientConfirmedAt: null, reminderResponse: null, seriesId: null, ...appointment },
+  appointment: { id: "a1", status: "scheduled", scheduledAt: future, patientConfirmedAt: null, reminderResponse: null, seriesId: null, patientId: "p1", agendaId: "g1", ...appointment },
   now,
   who: "Ana Souza, 23/10 às 14:00",
   contact: "responsável",
@@ -123,6 +123,20 @@ describe("cardActions", () => {
       expect(f.message).toContain("Ana Souza");
       expect(f.confirm).toBeTruthy();
     }
+  });
+
+  it("Consulta apta a retorno: Marcar retorno à vista, antes do Pagamento, com paciente, agenda e serviço", () => {
+    const done = { scheduledAt: past, status: "completed" as const };
+    const r = cardActions(input({ returnReady: { serviceId: "r1" } }, done));
+    expect(names(r.visible)).toEqual(["Marcar retorno", "Pagamento"]);
+    const href = r.visible[0].kind === "link" ? r.visible[0].href : "";
+    expect(href).toContain("/admin/agenda/marcar?patient_id=p1&agenda_id=g1&service_id=r1");
+    expect(decodeURIComponent(href)).toContain("volta=/admin/agenda?date=2026-10-23");
+    // Mais de um Retorno na agenda: a recepção escolhe o serviço no Marcar.
+    const several = cardActions(input({ returnReady: { serviceId: null } }, done));
+    expect(several.visible[0].kind === "link" && several.visible[0].href).not.toContain("service_id");
+    // Sem aptidão, sem botão.
+    expect(names(cardActions(input({}, done)).visible)).not.toContain("Marcar retorno");
   });
 
   it("os links voltam para a tela de onde saíram", () => {

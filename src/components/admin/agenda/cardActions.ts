@@ -3,12 +3,13 @@
 // onde ficam, pela tabela "ações por situação" do canvas aprovado:
 // - principal (botão cheio): Confirmar presença no futuro sem confirmação;
 //   Compareceu no que já passou sem registro;
-// - à vista: Remarcar, Pagamento, Faltou e a ação que resolve um sinal
-//   (Reenviar lembrete, preparo ou orientações);
+// - à vista: Remarcar, Marcar retorno, Pagamento, Faltou e a ação que resolve
+//   um sinal (Reenviar lembrete, preparo ou orientações);
 // - "Mais": as raras (lista de espera, correções, série, Trilha);
 // - à parte, à direita e em vermelho: Cancelar.
 // Toda ação de formulário pede confirmação (cliente, 05/out/2026).
 import type { IconName } from "../Icon.astro";
+import type { ReturnReady } from "../../../lib/data/agenda/returnReady";
 import type { AgendaAppointment } from "../../../lib/data/agenda/view";
 import { canReceivePayment, type PaymentState } from "../../../lib/data/payments";
 import type { ReminderAction } from "../../../lib/data/whatsapp/reminders";
@@ -36,7 +37,7 @@ export type CardActions = {
 };
 
 export type CardActionInput = {
-  appointment: Pick<AgendaAppointment, "id" | "status" | "scheduledAt" | "patientConfirmedAt" | "reminderResponse" | "seriesId">;
+  appointment: Pick<AgendaAppointment, "id" | "status" | "scheduledAt" | "patientConfirmedAt" | "reminderResponse" | "seriesId" | "patientId" | "agendaId">;
   now: Date;
   /** "Ana Souza, 23/10 às 14:00", para o texto da confirmação. */
   who: string;
@@ -50,6 +51,8 @@ export type CardActionInput = {
   onWaitlist: boolean;
   /** Sem ela (módulo financeiro desligado ou sem acesso), não há "Pagamento". */
   payment?: PaymentState;
+  /** Consulta apta a retorno (`listReturnReady`): "Marcar retorno" à vista. */
+  returnReady?: ReturnReady;
 };
 
 export function cardActions(input: CardActionInput): CardActions {
@@ -115,6 +118,14 @@ export function cardActions(input: CardActionInput): CardActions {
   }
   if (isFuture) {
     result.visible.push({ kind: "link", href: `/admin/agenda/remarcar?id=${a.id}&return_to=${encodeURIComponent(returnTo)}`, label: "Remarcar", icon: "arrow-path" });
+  }
+
+  // Marcar retorno (cliente, 19/out/2026): só na Consulta apta, antes do Pagamento;
+  // abre o Marcar com o paciente, a agenda e o Retorno (se só um) escolhidos.
+  if (input.returnReady) {
+    const query = new URLSearchParams({ patient_id: a.patientId, agenda_id: a.agendaId });
+    if (input.returnReady.serviceId) query.set("service_id", input.returnReady.serviceId);
+    result.visible.push({ kind: "link", href: withReturn(`/admin/agenda/marcar?${query}`, returnTo), label: "Marcar retorno", icon: "calendar" });
   }
 
   // Pagamento (F11.2): à vista, menos quando a ação do momento é confirmar a presença.

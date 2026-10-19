@@ -2437,6 +2437,16 @@ registrar" e "Registradas" já usam o cartão da Agenda. Implementado (`ServiceT
 trazer o `serviceId`) e testado no local ([teste](auditoria-frontend/resumo-tipo-report.md)). Publicado no staging em 19/out a pedido do
 cliente (sem migração) e **validado pelo cliente em 19/out**.
 
+**"Marcar retorno" na Consulta realizada (pedido do cliente, 19/out).** Botão no cartão da Consulta (Agenda e Resumo
+do Dia › A registrar e Registradas). Decisões do cliente em 19/out: o botão aparece **só na Consulta apta**, pelas 7
+regras do bot: 1) Consulta com "Compareceu"; 2) a última Consulta do paciente nessa agenda; 3) não domiciliar; 4) sem
+Retorno ligado (cancelado não conta); 5) dentro do prazo do Retorno; 6) sem Consulta ou Retorno futuro na mesma agenda;
+7) a agenda atende algum serviço de Retorno ativo. Fica **à vista, antes do Pagamento**. Abre o Marcar com o paciente,
+a agenda e o Retorno escolhidos (com mais de um Retorno na agenda, a recepção escolhe o serviço); o "Voltar" leva à
+tela de origem. Implementado (`returnReady.ts`, `listReturnReady`; teste de banco `marcar-retorno.test.ts`) e
+conferido no navegador local em 19/out (computador e celular; banco local de volta ao seed). Publicado no staging em
+19/out a pedido do cliente (sem migração), que valida lá.
+
 ---
 
 ## Depois do 1º piloto (já previsto no banco)

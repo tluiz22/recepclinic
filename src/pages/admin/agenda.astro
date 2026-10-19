@@ -21,6 +21,7 @@ import { canAccessArea } from "../../lib/clinicAccess";
 import { createUserClient } from "../../lib/data/clients";
 import { loadAgendaScope } from "../../lib/data/agenda/scope";
 import { buildDayItems, itemAgendaId, listAgendaAppointments, listAgendaBlocks, listNoShowStats, listOrigins } from "../../lib/data/agenda/view";
+import { listReturnReady } from "../../lib/data/agenda/returnReady";
 import { listServiceRefs } from "../../lib/data/config/services";
 import { listPaymentStates } from "../../lib/data/payments";
 import { activeWaitlistAppointmentIds } from "../../lib/data/waitlist/entries";
@@ -53,7 +54,7 @@ const waitlistOn = clinic.features.includes("waitlist");
 const consultationsFuture = appointments.filter((a) => a.category === "consultation" && activeFuture.includes(a.id)).map((a) => a.id);
 // Módulo financeiro (F11.2): selo e botão "Pagamento", para quem tem a área.
 const financeOn = canAccessArea(clinic, "finance");
-const [reminderActions, preparationResendable, guidanceResendable, onWaitlist, noShows, origins, paymentStates] = await Promise.all([
+const [reminderActions, preparationResendable, guidanceResendable, onWaitlist, noShows, origins, paymentStates, returnReady] = await Promise.all([
   listReminderActions(db, clinic.clinicId, activeFuture, now),
   clinic.features.includes("exams") ? listPreparationResendable(db, clinic.clinicId, examsFuture) : Promise.resolve(new Set<string>()),
   listGuidanceResendable(db, clinic.clinicId, consultationsFuture),
@@ -61,6 +62,7 @@ const [reminderActions, preparationResendable, guidanceResendable, onWaitlist, n
   listNoShowStats(db, clinic.clinicId, appointments.map((a) => a.patientId)),
   listOrigins(db, clinic.clinicId, appointments),
   financeOn ? listPaymentStates(db, clinic.clinicId, appointments.map((a) => a.id)) : Promise.resolve(null),
+  listReturnReady(db, clinic.clinicId, appointments, clinic.timezone, now),
 ]);
 
 const vocabulary = vocabularyFor(clinic.clinicProfile);
@@ -103,6 +105,7 @@ const cardProps = (a: (typeof appointments)[number]) => ({
   noShow: noShows.get(a.patientId),
   origin: a.originAppointmentId ? origins.get(a.originAppointmentId) : undefined,
   payment: paymentStates ? (paymentStates.get(a.id) ?? "none") : undefined,
+  returnReady: returnReady.get(a.id),
 });
 ---
 

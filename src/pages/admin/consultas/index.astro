@@ -26,6 +26,7 @@ import { listAgendas } from "../../../lib/data/config/agendas";
 import { getResumoTabCounts, listAwaitingRebooking, listPendingAttendance, listRecordedPage, listRemindersOfDay } from "../../../lib/data/daily";
 import { describeSendsAlert, getSendsAlert, listAppointmentsWithFailedSends, listJobRuns } from "../../../lib/data/sends";
 import { listPaymentStates } from "../../../lib/data/payments";
+import { listReturnReady } from "../../../lib/data/agenda/returnReady";
 import { listServiceRefs } from "../../../lib/data/config/services";
 import { serviceTags, serviceTints } from "../../../components/admin/agenda/categoryStyle";
 import { listRecentOffers, listWaitlist } from "../../../lib/data/waitlist/entries";
@@ -104,11 +105,12 @@ switch (tab) {
 const actors = await loadActorLabels(db, clinic.clinicId, [...dayAppointments.map((a) => a.createdBy), ...awaiting.map((a) => a.canceledBy)]);
 // Módulo financeiro (F11.2): selo e botão "Pagamento", para quem tem a área.
 const financeOn = canAccessArea(clinic, "finance");
-const [noShows, origins, paymentStates, serviceRefs] = await Promise.all([
+const [noShows, origins, paymentStates, serviceRefs, returnReady] = await Promise.all([
   cards.length ? listNoShowStats(db, clinic.clinicId, cards.map((a) => a.patientId)) : Promise.resolve(new Map()),
   cards.length ? listOrigins(db, clinic.clinicId, cards) : Promise.resolve(new Map()),
   financeOn && cards.length ? listPaymentStates(db, clinic.clinicId, cards.map((a) => a.id)) : Promise.resolve(null),
   listServiceRefs(db, clinic.clinicId),
+  cards.length ? listReturnReady(db, clinic.clinicId, cards, clinic.timezone, now) : Promise.resolve(new Map()),
 ]);
 // Cor de cada serviço: faixa do cartão e etiqueta do tipo nas outras abas (cliente, 19/out/2026).
 const tints = serviceTints(serviceRefs);
@@ -190,6 +192,7 @@ const subtitle = !dated
               noShow={noShows.get(a.patientId)}
               origin={a.originAppointmentId ? origins.get(a.originAppointmentId) : undefined}
               payment={paymentStates ? (paymentStates.get(a.id) ?? "none") : undefined}
+              returnReady={returnReady.get(a.id)}
               withDate
             />
           ))}
