@@ -117,7 +117,6 @@ const showCustom = period.preset === "personalizado" || period.invalid;
 // Período inválido (R7, QA-04): marca o campo a corrigir (os dois quando um depende do outro).
 const badFrom = period.invalidReason === "missing" ? !period.requested?.from : period.invalidReason !== null;
 const badTo = period.invalidReason === "missing" ? !period.requested?.to : period.invalidReason !== null;
-const invalidControl = "border-danger focus:border-danger focus:ring-danger";
 const scopeText = scope === "own_agenda" ? "só da sua agenda" : botTab ? "a clínica toda" : (selectedAgenda?.name ?? "todas as agendas");
 const subtitle = tab ? `${usesPeriod ? period.label : "Todo o histórico"} · ${scopeText}` : undefined;
 const filterSummary = [usesPeriod ? (PERIOD_PRESETS.find((p) => p.id === period.preset)?.label ?? "Personalizado") : null, hasAgendaPicker ? (selectedAgenda?.name ?? "todas as agendas") : null, filtered ? "com filtro" : null]
@@ -205,7 +204,7 @@ const fin = tab === "financeiro" ? financial(rows) : null;
                     name="de"
                     required
                     value={period.requested?.from ?? period.from}
-                    class={`${CONTROL} ${badFrom ? invalidControl : ""}`}
+                    class={CONTROL}
                     aria-invalid={badFrom ? "true" : undefined}
                     aria-describedby={badFrom ? "periodo-erro" : undefined}
                   />
@@ -217,7 +216,7 @@ const fin = tab === "financeiro" ? financial(rows) : null;
                     name="ate"
                     required
                     value={period.requested?.to ?? period.to}
-                    class={`${CONTROL} ${badTo ? invalidControl : ""}`}
+                    class={CONTROL}
                     aria-invalid={badTo ? "true" : undefined}
                     aria-describedby={badTo ? "periodo-erro" : undefined}
                   />

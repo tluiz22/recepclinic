@@ -4,7 +4,9 @@
 // lista de bloqueios. Busca dos atendimentos marcados de um paciente
 // (cliente, 10/out/2026). Redesign R2 (15/out): título com o resumo do dia e
 // uma barra só com a visualização, a navegação da data (slot "nav"), a agenda
-// e a busca; no celular, a agenda e a busca ficam recolhidas.
+// e a busca; no celular, a agenda e a busca ficam recolhidas. De 640 a
+// 1279px, a agenda e a busca vão para a segunda linha da barra (regressão de
+// 18/out, REG-01; cliente, 19/out/2026); numa linha só a partir de 1280px.
 import { currentPath, withReturn } from "../../../lib/returnPath";
 import Icon from "../Icon.astro";
 import Button from "../ui/Button.astro";
@@ -64,7 +66,7 @@ const filtersLabel = agendas.length > 1 ? `${selectedName ?? "Todas as agendas"}
   />
   <slot name="nav" />
 
-  <details data-agenda-filters open class="group rounded-xl border border-line bg-white sm:min-w-0 sm:flex-1 sm:rounded-none sm:border-0 sm:bg-transparent">
+  <details data-agenda-filters open class="group rounded-xl border border-line bg-white sm:w-full sm:rounded-none sm:border-0 sm:bg-transparent xl:w-auto xl:min-w-0 xl:flex-1">
     <summary class="flex h-12 cursor-pointer list-none items-center justify-between gap-2 px-3.5 text-[15px] font-semibold text-ink sm:hidden [&::-webkit-details-marker]:hidden">
       <span class="inline-flex min-w-0 items-center gap-2">
         <Icon name="adjustments" class="h-[18px] w-[18px] shrink-0" strokeWidth={2.2} />

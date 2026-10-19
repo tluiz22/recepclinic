@@ -1,6 +1,7 @@
-// Classes comuns dos campos dos formulários do painel (F4.3).
+// Classes comuns dos campos dos formulários do painel (F4.3). Campo com erro
+// (`aria-invalid`): borda vermelha (REG-04 e S-01; cliente, 19/out/2026).
 export const INPUT =
-  "mt-1 w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-sky-600 focus:outline-none focus:ring-1 focus:ring-sky-600 disabled:bg-slate-100 disabled:text-slate-500";
+  "mt-1 w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-sky-600 focus:outline-none focus:ring-1 focus:ring-sky-600 aria-invalid:border-danger-solid aria-invalid:ring-1 aria-invalid:ring-danger-solid disabled:bg-slate-100 disabled:text-slate-500";
 export const LABEL = "block text-sm font-medium text-slate-700";
 export const HINT = "mt-1 text-xs text-slate-500";
 export const PRIMARY_BUTTON = "rounded-md bg-sky-700 px-4 py-2 text-sm font-medium text-white hover:bg-sky-800";

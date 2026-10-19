@@ -25,9 +25,13 @@ export function buttonClass(variant: ButtonVariant = "secondary", size: ButtonSi
   return `${BASE} ${SIZES[size]} ${VARIANTS[variant]}`;
 }
 
-/** Campo de formulário do redesign (seletor, data, busca). */
+/**
+ * Campo de formulário do redesign (seletor, data, busca). Campo com erro
+ * (`aria-invalid`): borda vermelha até ser corrigido, em todo o painel
+ * (regressão de 18/out, REG-04 e S-01; cliente, 19/out/2026).
+ */
 export const CONTROL =
-  "h-11 rounded-lg border border-line-strong bg-white px-3 text-base text-ink focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand sm:h-10 sm:text-[15px]";
+  "h-11 rounded-lg border border-line-strong bg-white px-3 text-base text-ink focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand aria-invalid:border-danger-solid aria-invalid:ring-1 aria-invalid:ring-danger-solid sm:h-10 sm:text-[15px]";
 
 /** Item do menu "Mais" (link ou botão de formulário). `danger`: o que desfaz algo. */
 export function menuItemClass(danger = false): string {

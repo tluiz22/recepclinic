@@ -150,7 +150,10 @@
 >   explicado ao cliente em 19/out. **Fila por serviço decidida (cliente, 19/out):** a vaga continua indo só para quem
 >   está na fila **do mesmo serviço** (registrado na D2 da [arquitetura](arquitetura.md)). Banco local
 >   limpo em 19/out (8 clínicas e 16 logins de uma rodada de testes interrompida, com o OK do cliente): `npm run test:db`
->   com os 516 passando. Pendências: REG-01 a REG-04 e S-01 da regressão de 18/out seguem aguardando o cliente.
+>   com os 516 passando. **REG-01 a REG-04 e S-01 da regressão de 18/out decididos e corrigidos em 19/out** (barra
+>   da Agenda em duas linhas de 640 a 1279px; borda vermelha em todo campo com erro do painel), conferidos no local
+>   (seção 10 do [relatório](auditoria-frontend/regressao-2026-10-18-report.md)), **validados pelo cliente e publicados
+>   no staging em 19/out** (sem migração).
 > - **Frente paralela, o site** `www.recepclinic.com.br`: [`site-plano.md`](site-plano.md), feito numa
 >   **sessão separada, na pasta `~/Documents/Desenvolvimento/recepclinic-site`** (nunca nesta pasta).
 >   **No ar** (conferido em 05/out), com `/privacidade` e `/termos`; DNS de `recepclinic.com.br` já

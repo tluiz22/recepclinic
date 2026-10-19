@@ -217,10 +217,10 @@ const check = "flex items-start gap-2.5 text-[15px] leading-snug text-ink";
           >
             <input type="hidden" name="acao" value="registrar" />
             <h2 id="registrar" class={sectionTitle}>Registrar pagamento</h2>
-            <div class="grid gap-4 sm:grid-cols-[minmax(0,1fr)_220px]">
+            <div class="grid grid-cols-[minmax(0,1fr)] gap-4 sm:grid-cols-[minmax(0,1fr)_220px]">
               <div class={field}>
                 <label for="amount" class={fieldLabel}>Valor</label>
-                <div class="flex h-[52px] items-center gap-2 rounded-lg border border-line-strong bg-white px-3.5 focus-within:border-brand focus-within:ring-1 focus-within:ring-brand">
+                <div class="flex h-[52px] items-center gap-2 rounded-lg border border-line-strong bg-white px-3.5 focus-within:border-brand focus-within:ring-1 focus-within:ring-brand has-[[aria-invalid=true]]:border-danger-solid has-[[aria-invalid=true]]:ring-1 has-[[aria-invalid=true]]:ring-danger-solid">
                   <span class="text-lg font-semibold text-ink-soft" aria-hidden="true">R$</span>
                   <input
                     id="amount"
@@ -237,7 +237,7 @@ const check = "flex items-start gap-2.5 text-[15px] leading-snug text-ink";
               </div>
               <div class={field}>
                 <label for="paid_on" class={fieldLabel}>Data do pagamento</label>
-                <input id="paid_on" name="paid_on" type="date" required max={today} value={today} class={`${CONTROL} h-[52px] sm:h-[52px]`} />
+                <input id="paid_on" name="paid_on" type="date" required max={today} value={today} class={`${CONTROL} h-[52px] w-full min-w-0 sm:h-[52px]`} />
               </div>
             </div>
 

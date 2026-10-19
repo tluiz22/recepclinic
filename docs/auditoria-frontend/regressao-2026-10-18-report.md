@@ -341,3 +341,17 @@ A barra da Agenda "numa linha só" (revisão de 17/out) foi conferida no plano s
    painel) e aplicar no Cadastrar paciente, nos cartões da ficha e no Pagamento.
 4. Antes do 1º piloto, repetir o caminho de sucesso (reenvio depois do erro, avisos de "salvo") num
    banco descartável, para fechar os BLOQUEADOS desta rodada.
+
+## 10. Correções (19/out)
+
+Decisões do cliente em 19/out: REG-01 com a barra em **duas linhas** no tablet e S-01 com a **borda
+vermelha em todo campo com erro** do painel. Conferido no navegador local (Chromium), sem gravar dados.
+
+| Achado | Correção | Conferência |
+| --- | --- | --- |
+| REG-01 | `AgendaHeader.astro`: de 640 a 1279px, a agenda e a busca vão para a 2ª linha da barra; numa linha só a partir de 1280px (em 1024 ainda não cabia) | Dia, Semana e Mês em 360, 640, 768, 820, 1024, 1180, 1280 e 1440px: sem rolagem lateral |
+| REG-02 | `Tabs.astro`: margem da barra de abas igual ao recuo do conteúdo (`-mx-4 px-4` em toda largura) | Resumo do Dia, Pacientes, Métricas e Financeiro nas mesmas larguras: sem rolagem lateral |
+| REG-03 | Pagamento: grade com `minmax(0,1fr)` e a Data com `w-full min-w-0` | 360px: Valor e Data terminam em 314px, sem rolagem |
+| REG-04 e S-01 | `CONTROL` (`ui/styles.ts`) e o `fieldStyles.ts` antigo com a borda vermelha pelo `aria-invalid`; a moldura do Valor do Pagamento também; saem as classes avulsas do Cadastrar e das Métricas | Cadastrar com WhatsApp "123": borda vermelha sem o foco; CPF da ficha e Valor do Pagamento: vermelha com `aria-invalid` |
+
+`npm test` (531) e `npm run check` sem erros. Validado pelo cliente e publicado no staging em 19/out (sem migração).
