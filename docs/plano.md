@@ -2447,8 +2447,8 @@ a agenda e o Retorno escolhidos (com mais de um Retorno na agenda, a recepção 
 tela de origem. Implementado (`returnReady.ts`, `listReturnReady`; teste de banco `marcar-retorno.test.ts`) e
 conferido no navegador local em 19/out (computador e celular; banco local de volta ao seed). Publicado no staging em
 19/out a pedido do cliente (sem migração). No staging o botão não aparecia porque as Consultas do dia ainda estavam
-sem registro; ajuste da regra 1 (a partir do início da Consulta) testado e publicado no staging em 19/out, que o cliente
-valida lá.
+sem registro; ajuste da regra 1 (a partir do início da Consulta) testado e publicado no staging em 19/out (commit
+`39a8843`) e **validado pelo cliente em 19/out**.
 
 ---
 
