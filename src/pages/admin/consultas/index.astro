@@ -27,7 +27,7 @@ import { getResumoTabCounts, listAwaitingRebooking, listPendingAttendance, listR
 import { describeSendsAlert, getSendsAlert, listAppointmentsWithFailedSends, listJobRuns } from "../../../lib/data/sends";
 import { listPaymentStates } from "../../../lib/data/payments";
 import { listServiceRefs } from "../../../lib/data/config/services";
-import { serviceTints } from "../../../components/admin/agenda/categoryStyle";
+import { serviceTags, serviceTints } from "../../../components/admin/agenda/categoryStyle";
 import { listRecentOffers, listWaitlist } from "../../../lib/data/waitlist/entries";
 import { vocabularyFor } from "../../../lib/vocabulary";
 
@@ -104,16 +104,15 @@ switch (tab) {
 const actors = await loadActorLabels(db, clinic.clinicId, [...dayAppointments.map((a) => a.createdBy), ...awaiting.map((a) => a.canceledBy)]);
 // Módulo financeiro (F11.2): selo e botão "Pagamento", para quem tem a área.
 const financeOn = canAccessArea(clinic, "finance");
-const [noShows, origins, paymentStates, serviceRefs] = cards.length
-  ? await Promise.all([
-      listNoShowStats(db, clinic.clinicId, cards.map((a) => a.patientId)),
-      listOrigins(db, clinic.clinicId, cards),
-      financeOn ? listPaymentStates(db, clinic.clinicId, cards.map((a) => a.id)) : Promise.resolve(null),
-      listServiceRefs(db, clinic.clinicId),
-    ])
-  : [new Map(), new Map(), null, []];
-// Cor de cada serviço na faixa do cartão (cliente, 19/out/2026).
+const [noShows, origins, paymentStates, serviceRefs] = await Promise.all([
+  cards.length ? listNoShowStats(db, clinic.clinicId, cards.map((a) => a.patientId)) : Promise.resolve(new Map()),
+  cards.length ? listOrigins(db, clinic.clinicId, cards) : Promise.resolve(new Map()),
+  financeOn && cards.length ? listPaymentStates(db, clinic.clinicId, cards.map((a) => a.id)) : Promise.resolve(null),
+  listServiceRefs(db, clinic.clinicId),
+]);
+// Cor de cada serviço: faixa do cartão e etiqueta do tipo nas outras abas (cliente, 19/out/2026).
 const tints = serviceTints(serviceRefs);
+const tags = serviceTags(serviceRefs);
 // Contadores das abas (R3; cliente, 15/out/2026): onde há pendência.
 const counts = await getResumoTabCounts(db, clinic.clinicId, { timeZone: clinic.timezone, reminders: has("reminders"), waitlist: has("waitlist"), sends: sendsOn }, now);
 const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
@@ -161,11 +160,11 @@ const subtitle = !dated
       todayHref={date !== today ? dayHref(today) : undefined}
     />
   )}
-  {tab === "resumo" && <ResumoDia appointments={dayAppointments} actors={actors} date={date} timeZone={clinic.timezone} vocabulary={vocabulary} showAgenda={showAgenda} />}
-  {tab === "lembretes" && <LembretesTab reminders={reminders} timeZone={clinic.timezone} vocabulary={vocabulary} openGroup={params.get("grupo")} />}
-  {tab === "lista_espera" && <ListaEsperaTab entries={waitlist} offers={offers} timeZone={clinic.timezone} />}
-  {tab === "aguardando_remarcacao" && <AguardandoTab appointments={awaiting} actors={actors} timeZone={clinic.timezone} vocabulary={vocabulary} />}
-  {tab === "envios" && sends && <EnviosTab alerts={sends.alerts} runs={sends.runs} failed={sends.failed} timeZone={clinic.timezone} />}
+  {tab === "resumo" && <ResumoDia tags={tags} appointments={dayAppointments} actors={actors} date={date} timeZone={clinic.timezone} vocabulary={vocabulary} showAgenda={showAgenda} />}
+  {tab === "lembretes" && <LembretesTab tags={tags} reminders={reminders} timeZone={clinic.timezone} vocabulary={vocabulary} openGroup={params.get("grupo")} />}
+  {tab === "lista_espera" && <ListaEsperaTab tags={tags} entries={waitlist} offers={offers} timeZone={clinic.timezone} />}
+  {tab === "aguardando_remarcacao" && <AguardandoTab tags={tags} appointments={awaiting} actors={actors} timeZone={clinic.timezone} vocabulary={vocabulary} />}
+  {tab === "envios" && sends && <EnviosTab tags={tags} alerts={sends.alerts} runs={sends.runs} failed={sends.failed} timeZone={clinic.timezone} />}
 
   {
     (tab === "pendentes" || tab === "confirmadas") && (

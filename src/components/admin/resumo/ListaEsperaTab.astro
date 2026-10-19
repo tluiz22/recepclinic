@@ -11,19 +11,24 @@ import Signal from "../ui/Signal.astro";
 import { formatInstant } from "../../../lib/clinicTime";
 import type { OfferHistoryItem, OfferStatus, WaitlistEntry } from "../../../lib/data/waitlist/entries";
 
+import ServiceTag, { type ServiceTagInfo } from "../agenda/ServiceTag.astro";
 interface Props {
   entries: WaitlistEntry[];
   offers: OfferHistoryItem[];
   timeZone: string;
+  /** Tipo e cor de cada serviço, para a etiqueta do tipo (cliente, 19/out/2026). */
+  tags: Map<string, ServiceTagInfo>;
 }
 
-const { entries, offers, timeZone } = Astro.props;
+const { entries, offers, timeZone, tags } = Astro.props;
 const when = (d: Date) => formatInstant(d, timeZone, "EEE dd/MM 'às' HH:mm");
 const groups = new Map<string, WaitlistEntry[]>();
 for (const entry of entries) {
   const key = `${entry.appointment.agendaName} · ${entry.appointment.serviceName}`;
   groups.set(key, [...(groups.get(key) ?? []), entry]);
 }
+// Serviço de cada grupo, para a etiqueta do tipo no título (cliente, 19/out/2026).
+const serviceOf = (list: WaitlistEntry[]) => list[0].appointment.serviceId;
 const offerStatus: Record<OfferStatus, { label: string; tone: PillTone }> = {
   pending: { label: "Aguardando resposta", tone: "warning" },
   accepted: { label: "Aceitou", tone: "success" },
@@ -43,7 +48,10 @@ const BOX_TITLE = "flex flex-wrap items-center justify-between gap-2 border-b bo
       [...groups].map(([title, list]) => (
         <section class={BOX} aria-label={title}>
           <h2 class={BOX_TITLE}>
-            {title}
+            <span class="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+              <ServiceTag info={tags.get(serviceOf(list))} />
+              {title}
+            </span>
             <span class="text-[13px] font-medium text-ink-soft">{list.length} na lista</span>
           </h2>
           <ol class="divide-y divide-[#e6ecea] px-4">

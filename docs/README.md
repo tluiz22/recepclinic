@@ -165,8 +165,11 @@
 >   e testado no local ([teste](auditoria-frontend/redesign-3b-tipo-report.md)) e publicado no staging em 19/out a pedido do
 >   cliente (sem migração), que valida lá. **Cor de cada serviço (19/out, decisões no [plano](plano.md)):** automática pela
 >   ordem de criação, Retorno sempre roxo, em Horários e na Agenda; implementada e testada no local
->   ([teste](auditoria-frontend/cor-servico-report.md)) e publicada no staging em 19/out a pedido do cliente (sem
->   migração), que valida lá.
+>   ([teste](auditoria-frontend/cor-servico-report.md)), publicada no staging e **validada pelo cliente em 19/out**.
+>   **Resumo do Dia com a etiqueta do tipo na cor do serviço** (proposta A do
+>   [canvas](https://claude.ai/artifact/QmFLaNUcC74FLSnaFu2nyw), também em Lembretes, Lista de espera, Aguardando
+>   remarcação e Envios): implementada e testada no local ([teste](auditoria-frontend/resumo-tipo-report.md)) e
+>   publicada no staging em 19/out a pedido do cliente (sem migração), que valida lá.
 > - **Frente paralela, o site** `www.recepclinic.com.br`: [`site-plano.md`](site-plano.md), feito numa
 >   **sessão separada, na pasta `~/Documents/Desenvolvimento/recepclinic-site`** (nunca nesta pasta).
 >   **No ar** (conferido em 05/out), com `/privacidade` e `/termos`; DNS de `recepclinic.com.br` já

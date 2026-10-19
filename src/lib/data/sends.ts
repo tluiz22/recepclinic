@@ -118,7 +118,7 @@ export function countFailedSends(messages: SentMessage[], notSent: NotSentEvent[
   return failed;
 }
 
-export type AppointmentWithFailedSends = { id: string; scheduledAt: Date; patientName: string; serviceName: string; failedSends: number };
+export type AppointmentWithFailedSends = { id: string; scheduledAt: Date; patientName: string; serviceId: string; serviceName: string; failedSends: number };
 
 /**
  * Atendimentos ativos e futuros com envio com falha ainda não resolvido. Parte
@@ -153,7 +153,7 @@ export async function listAppointmentsWithFailedSends(
 
   let query = db
     .from("appointments")
-    .select("id, scheduled_at, services ( name ), patients ( full_name )")
+    .select("id, scheduled_at, service_id, services ( name ), patients ( full_name )")
     .eq("clinic_id", clinicId)
     .in("id", candidateIds)
     .in("status", ["scheduled", "confirmed"])
@@ -163,6 +163,7 @@ export async function listAppointmentsWithFailedSends(
   const appointments = unwrap(await query, "Atendimentos") as unknown as {
     id: string;
     scheduled_at: string;
+    service_id: string;
     services: { name: string };
     patients: { full_name: string };
   }[];
@@ -202,7 +203,7 @@ export async function listAppointmentsWithFailedSends(
           return { kind: String(details.kind ?? ""), scheduledAt: details.scheduled_at ? new Date(details.scheduled_at) : null, occurredAt: new Date(e.occurred_at) };
         });
       const scheduledAt = new Date(a.scheduled_at);
-      return { id: a.id, scheduledAt, patientName: a.patients.full_name, serviceName: a.services.name, failedSends: countFailedSends(own, notSent, scheduledAt) };
+      return { id: a.id, scheduledAt, patientName: a.patients.full_name, serviceId: a.service_id, serviceName: a.services.name, failedSends: countFailedSends(own, notSent, scheduledAt) };
     })
     .filter((a) => a.failedSends > 0);
 }

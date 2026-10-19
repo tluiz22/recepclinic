@@ -11,14 +11,18 @@ import { formatInstant, localDateOf } from "../../../lib/clinicTime";
 import { REMINDER_GROUP_LABELS, type ReminderGroup, type ReminderOfDay } from "../../../lib/data/daily";
 import { capitalize, type Vocabulary } from "../../../lib/vocabulary";
 
+import ServiceTag, { type ServiceTagInfo } from "../agenda/ServiceTag.astro";
+import { serviceBesideCategory } from "../agenda/categoryStyle";
 interface Props {
   reminders: ReminderOfDay[];
   timeZone: string;
   vocabulary: Vocabulary;
   openGroup: string | null;
+  /** Tipo e cor de cada serviço, para a etiqueta do tipo (cliente, 19/out/2026). */
+  tags: Map<string, ServiceTagInfo>;
 }
 
-const { reminders, timeZone, vocabulary, openGroup } = Astro.props;
+const { reminders, timeZone, vocabulary, openGroup, tags } = Astro.props;
 const order: ReminderGroup[] = ["no_answer", "not_delivered", "reschedule", "cancel", "confirm"];
 const tone: Record<ReminderGroup, PillTone> = {
   confirm: "success",
@@ -62,8 +66,9 @@ const isOpen = (group: ReminderGroup, count: number) => (openGroup ? openGroup =
                   <a href={`/admin/agenda?date=${localDateOf(a.scheduledAt, timeZone)}`} class="text-base font-semibold text-ink no-underline hover:text-brand hover:underline">
                     <span class="capitalize">{formatInstant(a.scheduledAt, timeZone, "EEE dd/MM HH:mm")}</span> · {a.patientName}
                   </a>
-                  <span class="text-sm text-ink-soft">
-                    {a.serviceName} · {a.agendaName}
+                  <span class="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-sm text-ink-soft">
+                    <ServiceTag info={tags.get(a.serviceId)} />
+                    {[serviceBesideCategory(a.serviceName, a.category), a.agendaName].filter(Boolean).join(" · ")}
                   </span>
                   <span class="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-sm text-ink-soft">
                     {!a.isContactSelf && `${capitalize(vocabulary.contact)}: ${a.contactName} · `}

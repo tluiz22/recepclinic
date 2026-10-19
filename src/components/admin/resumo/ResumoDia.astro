@@ -11,6 +11,8 @@ import SituationLegend from "../agenda/SituationLegend.astro";
 import Signal from "../ui/Signal.astro";
 import StatusPill from "../ui/StatusPill.astro";
 import Tag from "../ui/Tag.astro";
+import ServiceTag, { type ServiceTagInfo } from "../agenda/ServiceTag.astro";
+import { serviceBesideCategory } from "../agenda/categoryStyle";
 import { formatAge } from "../../../lib/age";
 import { formatInstant } from "../../../lib/clinicTime";
 import type { AgendaAppointment } from "../../../lib/data/agenda/view";
@@ -25,9 +27,11 @@ interface Props {
   timeZone: string;
   vocabulary: Vocabulary;
   showAgenda: boolean;
+  /** Tipo e cor de cada serviço, para a etiqueta do tipo (cliente, 19/out/2026). */
+  tags: Map<string, ServiceTagInfo>;
 }
 
-const { appointments, actors, date, timeZone, vocabulary, showAgenda } = Astro.props;
+const { appointments, actors, date, timeZone, vocabulary, showAgenda, tags } = Astro.props;
 const now = new Date();
 const VIA: Record<string, string> = { admin: "pelo painel", whatsapp_bot: "pelo WhatsApp", booking_link: "pelo link" };
 const bookedBy = (a: AgendaAppointment) => {
@@ -87,14 +91,20 @@ const COLUMNS = "lg:grid lg:grid-cols-[150px_minmax(0,1.3fr)_minmax(0,1.2fr)_200
                 </span>
                 {a.homeVisitAddress && <span class="text-sm text-ink-soft">Endereço: {a.homeVisitAddress}</span>}
               </div>
-              <div class="flex flex-wrap gap-1.5">
-                {showAgenda && (
-                  <Tag strong class="lg:bg-ink/[0.07] lg:text-ink-mid">
-                    {a.agendaName}
-                  </Tag>
+              {/* Etiqueta do tipo na cor do serviço, o serviço e o local (proposta A, cliente, 19/out/2026). */}
+              <div class="flex min-w-0 flex-wrap items-center gap-1.5 lg:flex-col lg:items-start lg:gap-1">
+                <ServiceTag info={tags.get(a.serviceId)} />
+                {serviceBesideCategory(a.serviceName, a.category) && (
+                  <span class="text-[15px] leading-snug font-semibold text-ink-mid lg:text-sm">{a.serviceName}</span>
                 )}
-                <Tag>{a.serviceName}</Tag>
-                <Tag>{a.locationName}</Tag>
+                <span class="flex flex-wrap gap-1.5">
+                  {showAgenda && (
+                    <Tag strong class="lg:bg-ink/[0.07] lg:text-ink-mid">
+                      {a.agendaName}
+                    </Tag>
+                  )}
+                  <Tag>{a.locationName}</Tag>
+                </span>
               </div>
               <div>
                 {p ? (

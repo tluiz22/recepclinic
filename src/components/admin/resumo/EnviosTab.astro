@@ -10,14 +10,18 @@ import Pill, { type PillTone } from "../ui/Pill.astro";
 import { formatInstant, localDateOf } from "../../../lib/clinicTime";
 import { jobRunState, type JobRun, type AppointmentWithFailedSends, type JobRunState } from "../../../lib/data/sends";
 
+import ServiceTag, { type ServiceTagInfo } from "../agenda/ServiceTag.astro";
+import { serviceBesideCategory } from "../agenda/categoryStyle";
 interface Props {
   alerts: string[];
   runs: JobRun[];
   failed: AppointmentWithFailedSends[];
   timeZone: string;
+  /** Tipo e cor de cada serviço, para a etiqueta do tipo (cliente, 19/out/2026). */
+  tags: Map<string, ServiceTagInfo>;
 }
 
-const { alerts, runs, failed, timeZone } = Astro.props;
+const { alerts, runs, failed, timeZone, tags } = Astro.props;
 const now = new Date();
 const JOB_LABELS: Record<string, string> = {
   appointment_reminders: "Lembretes",
@@ -59,7 +63,13 @@ const BOX_TITLE = "border-b border-line bg-[#f8faf9] px-4 py-3 text-[15px] font-
                 <span class="text-[15px] font-semibold text-ink hover:text-brand hover:underline">
                   <span class="capitalize">{formatInstant(a.scheduledAt, timeZone, "EEE dd/MM HH:mm")}</span> · {a.patientName}
                 </span>
-                <span class="text-sm text-ink-soft">{a.serviceName}</span>
+                <span class="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-sm text-ink-soft">
+                  <ServiceTag info={tags.get(a.serviceId)} />
+                  {(() => {
+                    const category = tags.get(a.serviceId)?.category;
+                    return category ? serviceBesideCategory(a.serviceName, category) : a.serviceName;
+                  })()}
+                </span>
               </a>
               <Pill tone="danger">{`${a.failedSends} ${a.failedSends === 1 ? "envio com falha" : "envios com falha"}`}</Pill>
             </li>

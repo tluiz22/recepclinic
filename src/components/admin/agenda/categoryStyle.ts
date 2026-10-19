@@ -123,3 +123,9 @@ export function serviceTints(services: ServiceRef[]): Map<string, ServiceTint> {
 export function serviceLook(category: ServiceCategory, tint?: ServiceTint): CategoryStyle & { border: string } {
   return { ...CATEGORY_STYLES[category], border: "border-line-strong", ...tint };
 }
+
+/** Tipo e cor de cada serviço, para a etiqueta do tipo (Resumo do Dia, 19/out/2026). */
+export function serviceTags(services: ServiceRef[]): Map<string, { category: ServiceCategory; tint?: ServiceTint }> {
+  const tints = serviceTints(services);
+  return new Map(services.map((s) => [s.id, { category: s.category, tint: tints.get(s.id) }]));
+}

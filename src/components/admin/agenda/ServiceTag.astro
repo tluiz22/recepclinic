@@ -1,0 +1,25 @@
+---
+// Etiqueta do tipo na cor do serviço (Resumo do Dia, proposta A, cliente,
+// 19/out/2026): ícone e tipo (Consulta, Retorno, Exame), como na Semana da Agenda.
+import Icon from "../Icon.astro";
+import { serviceLook, type ServiceCategory, type ServiceTint } from "./categoryStyle";
+
+export type ServiceTagInfo = { category: ServiceCategory; tint?: ServiceTint };
+
+interface Props {
+  info: ServiceTagInfo | undefined;
+  class?: string;
+}
+
+const { info, class: className = "" } = Astro.props;
+const look = info ? serviceLook(info.category, info.tint) : null;
+---
+
+{
+  look && (
+    <span class={`inline-flex max-w-full items-center gap-1 rounded-md border px-1.5 py-px font-display text-[14px] leading-tight font-bold ${look.band} ${look.text} ${className}`}>
+      <Icon name={look.icon} class="h-3.5 w-3.5 shrink-0" strokeWidth={2.4} />
+      {look.label}
+    </span>
+  )
+}

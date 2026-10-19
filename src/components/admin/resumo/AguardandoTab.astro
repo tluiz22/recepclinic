@@ -12,14 +12,18 @@ import type { AgendaAppointment } from "../../../lib/data/agenda/view";
 import { actorText, type ActorLabel } from "../../../lib/data/agenda/trail";
 import { capitalize, type Vocabulary } from "../../../lib/vocabulary";
 
+import ServiceTag, { type ServiceTagInfo } from "../agenda/ServiceTag.astro";
+import { serviceBesideCategory } from "../agenda/categoryStyle";
 interface Props {
   appointments: AgendaAppointment[];
   actors: Map<string, ActorLabel>;
   timeZone: string;
   vocabulary: Vocabulary;
+  /** Tipo e cor de cada serviço, para a etiqueta do tipo (cliente, 19/out/2026). */
+  tags: Map<string, ServiceTagInfo>;
 }
 
-const { appointments, actors, timeZone, vocabulary } = Astro.props;
+const { appointments, actors, timeZone, vocabulary, tags } = Astro.props;
 ---
 
 <p class="mt-4 text-[15px] text-ink-soft">
@@ -36,8 +40,9 @@ const { appointments, actors, timeZone, vocabulary } = Astro.props;
               <a href={withReturn(`/admin/pacientes/${a.patientId}`, currentPath(Astro.url))} class="text-base font-semibold text-ink no-underline hover:text-brand hover:underline">
                 {a.patientName}
               </a>
-              <span class="text-[15px] text-ink-soft sm:text-sm">
-                {a.serviceName} · {a.agendaName} · era {formatInstant(a.scheduledAt, timeZone, "EEE dd/MM 'às' HH:mm")}
+              <span class="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-[15px] text-ink-soft sm:text-sm">
+                <ServiceTag info={tags.get(a.serviceId)} />
+                {[serviceBesideCategory(a.serviceName, a.category), a.agendaName, `era ${formatInstant(a.scheduledAt, timeZone, "EEE dd/MM 'às' HH:mm")}`].filter(Boolean).join(" · ")}
               </span>
               <span class="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-[15px] text-ink-soft sm:text-sm">
                 {!a.isContactSelf && `${capitalize(vocabulary.contact)}: ${a.contactName} · `}
