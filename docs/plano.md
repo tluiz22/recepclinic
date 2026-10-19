@@ -2331,6 +2331,13 @@ em Configurações › Serviços, um aviso quando nenhum Retorno ativo está pro
 retorno"), com o atalho "Cadastrar o retorno", que abre o Novo serviço no tipo Retorno (`?tipo=retorno`); com Retorno
 pendente, o aviso aponta para os selos. Validado pelo cliente no local e publicado no staging em 18/out (sem migração).
 
+**Link do WhatsApp copiado como chave Pix (relato do cliente, 18/out):** só o fim do link vinha sublinhado e o toque
+copiava em vez de abrir (a prévia com a logo abria). Causa: o id no fim do endereço era um UUID, o formato da chave Pix
+aleatória. Correção: os links do paciente (`/agendar`, `/preparo` e `/orientacoes`) levam o mesmo id em 22 caracteres
+(base64url, `src/lib/publicId.ts`); as páginas aceitam também o UUID, e os links já enviados continuam abrindo. Sem
+migração e sem mudança nos templates da Meta (o link é variável do texto). Validado pelo cliente no local e publicado no
+staging em 18/out.
+
 ---
 
 ## Depois do 1º piloto (já previsto no banco)

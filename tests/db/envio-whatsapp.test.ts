@@ -1,4 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { bookingPath, guidancePath, preparationPath } from "../../src/lib/publicId";
 import { bookAppointment, cancelAppointment } from "../../src/lib/data/agenda/appointments";
 import { createClinicServiceClient } from "../../src/lib/data/clinicService";
 import type { DbClient } from "../../src/lib/data/clients";
@@ -398,7 +399,7 @@ describe("preparo do exame depois da entrega (webhook)", () => {
       "Resp.",
       "da Clínica Envio F62",
       "Exame",
-      `${BASE_URL}/preparo/${f.ids.exame}`,
+      `${BASE_URL}${preparationPath(f.ids.exame)}`,
     ]);
     expect((await outbound(appointment.id)).map((m) => [m.message_type, m.status])).toEqual([
       ["appointment_confirmation", "read"],
@@ -447,7 +448,7 @@ describe("orientações gerais da consulta depois da entrega (08/out)", () => {
     expect(meta.calls).toHaveLength(1);
     const sent = meta.calls[0].body as { template: { name: string; components: { parameters: { text: string }[] }[] } };
     expect(sent.template.name).toBe("rc_orientacoes_consulta_v1");
-    expect(sent.template.components[0].parameters.map((p) => p.text)).toEqual(["Resp.", "da Clínica Envio F62", "Paciente Um", `${BASE_URL}/orientacoes/${f.clinicId}`]);
+    expect(sent.template.components[0].parameters.map((p) => p.text)).toEqual(["Resp.", "da Clínica Envio F62", "Paciente Um", `${BASE_URL}${guidancePath(f.clinicId)}`]);
     expect((await outbound(consult)).map((m) => [m.message_type, m.status])).toEqual([
       ["appointment_confirmation", "read"],
       ["consultation_guidance", "sent"],
@@ -509,7 +510,7 @@ describe("cancelamento pela clínica (F6.5)", () => {
       "Paciente",
       "Consulta",
       "segunda, 17/03 às 08:00",
-      `${BASE_URL}/agendar/${items[0].rebookingLinkId}`,
+      `${BASE_URL}${bookingPath(items[0].rebookingLinkId!)}`,
     ]);
     // As duas tentativas têm o mesmo horário (relógio do teste): procura a enviada pela situação.
     const sentMessage = (await outbound(a1)).find((m) => m.status === "sent");

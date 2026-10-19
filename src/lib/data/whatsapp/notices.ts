@@ -7,6 +7,7 @@ import { recordOutboundMessage, type SendOutcome } from "./messages";
 import type { ClinicSender } from "./send";
 import { appointmentParams, cleanParam, defaultTemplate, fillTemplate, firstName, formatAppointmentWhen, paramCount } from "./templates";
 import { logError } from "../../log";
+import { bookingPath } from "../../publicId";
 
 // Avisos ao paciente (F6.2), como no piloto: marcado, remarcado e cancelado,
 // pela Agenda do painel e pela página /agendar. Sempre por template (podem
@@ -157,7 +158,7 @@ export async function notifyClinicCancellations(
   const result: ClinicCancellationNotice[] = [];
   for (const { appointmentId, rebookingLinkId } of canceled) {
     const status = rebookingLinkId
-      ? await sendAppointmentNotice(db, clinicId, appointmentId, "clinic_cancellation", sender, now, `${sender?.baseUrl ?? ""}/agendar/${rebookingLinkId}`)
+      ? await sendAppointmentNotice(db, clinicId, appointmentId, "clinic_cancellation", sender, now, `${sender?.baseUrl ?? ""}${bookingPath(rebookingLinkId)}`)
       : await sendAppointmentNotice(db, clinicId, appointmentId, "cancellation", sender, now);
     result.push({ appointmentId, status });
   }

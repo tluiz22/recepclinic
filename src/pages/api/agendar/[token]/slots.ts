@@ -4,13 +4,14 @@ import { createClinicServiceClient } from "../../../../lib/data/clinicService";
 import { listLinkSlots, loadBookingPage, logBookingPageStep, slotChoiceValue, slotDetails } from "../../../../lib/data/agenda/publicBooking";
 import { DataError } from "../../../../lib/data/errors";
 import { resolveClinicByBookingLink } from "../../../../lib/data/platform";
+import { parsePublicId } from "../../../../lib/publicId";
 
 // Horários livres de um dia para a página /agendar (F5.2), ao trocar a data.
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } });
 
 export const GET: APIRoute = async ({ params, url }) => {
-  const token = params.token ?? "";
+  const token = parsePublicId(params.token) ?? "";
   const date = url.searchParams.get("date") ?? "";
   if (!isCalendarDate(date)) return json({ error: "date (YYYY-MM-DD) é obrigatório" }, 400);
 

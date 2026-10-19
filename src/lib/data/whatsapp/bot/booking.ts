@@ -1,4 +1,5 @@
 import { isAdult, isOverConsultationAgeLimit } from "../../../age";
+import { bookingPath } from "../../../publicId";
 import { evaluateReturnEligibility, findBlockingAppointment, findReturnOrigin, listUpcomingAppointments, type ReturnEligibility } from "../../agenda/appointments";
 import { BOT_LINK_TTL_MS, createBookingLink } from "../../agenda/links";
 import { bookableAgendaLocations } from "../../agenda/publicBooking";
@@ -659,7 +660,7 @@ async function finish(b: Bot, ctx: BookingContext, patient: Candidate): Promise<
       },
       b.now,
     );
-    const url = `${b.sender.baseUrl}/agendar/${link.id}`;
+    const url = `${b.sender.baseUrl}${bookingPath(link.id)}`;
     await say(b, "bot_booking_link", textFor(b, "booking_link", t.bookingLink(service.name, patient.name, url), { servico: service.name, paciente: patient.name, link: url }));
     await end(b, "link_sent", { booking_link_id: link.id });
   } catch (error) {

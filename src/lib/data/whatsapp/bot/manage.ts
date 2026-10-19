@@ -1,4 +1,5 @@
 import type { Enums } from "../../../supabase/database.types";
+import { bookingPath } from "../../../publicId";
 import { cancelAppointment, findReturnOrigin, rescheduleAppointment } from "../../agenda/appointments";
 import { BOT_LINK_TTL_MS, createBookingLink } from "../../agenda/links";
 import { getFreeSlotsBefore } from "../../agenda/slots";
@@ -401,7 +402,7 @@ async function rescheduleLink(b: Bot, ctx: ManageContext, appointment: ManagedAp
       },
       b.now,
     );
-    await say(b, "bot_reschedule_link", t.rescheduleLink(words(appointment).phrase, appointment.patientName, `${b.sender.baseUrl}/agendar/${link.id}`));
+    await say(b, "bot_reschedule_link", t.rescheduleLink(words(appointment).phrase, appointment.patientName, `${b.sender.baseUrl}${bookingPath(link.id)}`));
     await end(b, "link_sent", { booking_link_id: link.id });
   } catch (error) {
     logError("bot: link de remarcação", error, { clinica: b.clinicId });

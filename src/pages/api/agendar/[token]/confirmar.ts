@@ -4,16 +4,17 @@ import { confirmBookingLink, loadBookingPage, logBookingPageStep, parseSlotChoic
 import { resolveClinicByBookingLink } from "../../../../lib/data/platform";
 import { clinicSenderFor } from "../../../../lib/data/whatsapp/clinicSender";
 import { sendAppointmentNotice } from "../../../../lib/data/whatsapp/notices";
+import { parsePublicId } from "../../../../lib/publicId";
 
 // Confirma o horário escolhido em /agendar (F5.2). Toda volta com erro é uma
 // tentativa que falhou, registrada no funil do bot com o motivo. F6.2: o
 // paciente recebe pelo WhatsApp a confirmação (ou a remarcação).
 export const POST: APIRoute = async ({ params, request, redirect }) => {
-  const token = params.token ?? "";
+  const token = parsePublicId(params.token) ?? "";
   const form = await request.formData().catch(() => null);
   const date = form?.get("date")?.toString() ?? "";
   const choice = parseSlotChoice(form?.get("start")?.toString());
-  const pageUrl = `/agendar/${encodeURIComponent(token)}`;
+  const pageUrl = `/agendar/${encodeURIComponent(params.token ?? "")}`;
 
   const clinicId = await resolveClinicByBookingLink(token);
   if (!clinicId) return redirect(pageUrl, 303);

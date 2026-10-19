@@ -19,8 +19,10 @@ import { getService, type Service } from "../../lib/data/config/services";
 import { DataError } from "../../lib/data/errors";
 import { resolveClinicByService } from "../../lib/data/platform";
 import { whatsAppTextToHtml } from "../../lib/whatsappFormat";
+import { parsePublicId } from "../../lib/publicId";
 
-const id = Astro.params.id ?? "";
+// Link curto ou o UUID dos links antigos (cliente, 18/out/2026: chave Pix no WhatsApp).
+const id = parsePublicId(Astro.params.id) ?? "";
 const clinicId = await resolveClinicByService(id);
 
 let exam: Service | null = null;

@@ -36,8 +36,10 @@ import { buildDayStrip, type DayStrip } from "../../lib/dayStrip";
 import Icon from "../../components/admin/Icon.astro";
 import { formatPhoneBR } from "../../lib/phone";
 import { capitalize, vocabularyFor } from "../../lib/vocabulary";
+import { bookingPath, parsePublicId, preparationPath } from "../../lib/publicId";
 
-const token = Astro.params.token ?? "";
+// Link curto ou o UUID dos links antigos (cliente, 18/out/2026: chave Pix no WhatsApp).
+const token = parsePublicId(Astro.params.token) ?? "";
 const clinicId = await resolveClinicByBookingLink(token);
 const db = clinicId ? createClinicServiceClient(clinicId) : null;
 
@@ -223,7 +225,7 @@ const unavailableNote = !strip?.unavailable
         </dl>
         {
           page.service.hasPreparation && (
-            <a href={`/preparo/${page.service.id}`} class={`${PATIENT_BUTTON} w-full`}>
+            <a href={preparationPath(page.service.id)} class={`${PATIENT_BUTTON} w-full`}>
               Ver o preparo do exame
             </a>
           )
@@ -286,7 +288,7 @@ const unavailableNote = !strip?.unavailable
           )
         }
 
-        <form id="agendar" method="POST" action={`/api/agendar/${page.link.id}/confirmar`} class="flex flex-col gap-6">
+        <form id="agendar" method="POST" action={`/api${bookingPath(page.link.id)}/confirmar`} class="flex flex-col gap-6">
           <div class="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_300px]">
             <div id="agendar-escolha" class="flex min-w-0 flex-col gap-6" aria-live="polite">
               {unavailableNote && (

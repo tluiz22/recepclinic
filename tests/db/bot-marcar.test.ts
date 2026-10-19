@@ -7,6 +7,7 @@ import type { ClinicSender, ListSection, ReplyButton } from "../../src/lib/data/
 import { processWebhook, type WebhookDeps } from "../../src/lib/data/whatsapp/webhook";
 import { asDb, at, NOW, setupAgendaClinic, type AgendaFixture } from "./agendaFixture";
 import { adminClient } from "./helpers";
+import { bookingPath } from "../../src/lib/publicId";
 
 // F6.3 — Bot I (marcar): conversas inteiras pelo webhook, com a Meta simulada
 // (quem envia guarda as mensagens). Clínica da agenda (perfil Mista): duas
@@ -79,7 +80,7 @@ async function conversation(phone: string) {
 async function lastLink(phone: string) {
   const { data } = await adminClient()
     .from("booking_links")
-    .select("patient_id, service_id, agenda_id, location_category, home_visit_address, origin_appointment_id, funnel_session_id, expires_at")
+    .select("id, patient_id, service_id, agenda_id, location_category, home_visit_address, origin_appointment_id, funnel_session_id, expires_at")
     .eq("clinic_id", f.clinicId)
     .eq("contact_phone", phone)
     .order("created_at", { ascending: false })
@@ -131,11 +132,13 @@ describe("bot: marcar consulta (número novo)", () => {
     reply = await say(phone, "10/03/2015");
     expect(reply[0].body).toContain("Nome: *Joana Souza*\nData de nascimento: *10/03/2015*");
     reply = await say(phone, "Sim");
-    expect(reply[0].body).toMatch(/^Prontinho! Escolha o melhor dia e horário para \*Consulta\* de Joana Souza neste link:\nhttps:\/\/app\.exemplo\.test\/agendar\/[0-9a-f-]{36}\n\nO link vale por 30 minutos\.$/);
+    expect(reply[0].body).toMatch(/^Prontinho! Escolha o melhor dia e horário para \*Consulta\* de Joana Souza neste link:\nhttps:\/\/app\.exemplo\.test\/agendar\/[A-Za-z0-9_-]{22}\n\nO link vale por 30 minutos\.$/);
 
     const link = await lastLink(phone);
     expect(link).toMatchObject({ service_id: f.ids.consulta, agenda_id: f.ids.agendaDra, location_category: "clinic", home_visit_address: null });
     expect(link.funnel_session_id).not.toBeNull();
+    // Id curto, que o WhatsApp não lê como chave Pix (cliente, 18/out/2026).
+    expect(reply[0].body).toContain(`https://app.exemplo.test${bookingPath(link.id)}\n`);
     const convo = await conversation(phone);
     expect(convo.state).toBe("WELCOME");
     const { data: contact } = await adminClient().from("contacts").select("id, full_name").eq("clinic_id", f.clinicId).eq("phone", phone).single();

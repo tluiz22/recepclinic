@@ -32,6 +32,7 @@ import {
   templateToMarkers,
 } from "../../../lib/data/whatsapp/customMessages";
 import * as bot from "../../../lib/data/whatsapp/bot/texts";
+import { guidancePath, preparationPath } from "../../../lib/publicId";
 import { appointmentPlace, clinicLabel, DEFAULT_TEMPLATES, fillTemplate, formatAppointmentWhen, formatSummaryDate, paramCount, serviceLine } from "../../../lib/data/whatsapp/templates";
 
 const clinic = Astro.locals.clinic!;
@@ -97,9 +98,9 @@ const exampleFor = (key: TemplateKey): Record<string, string> =>
       : key === "clinic_cancellation"
     ? { ...example, servico: consultation?.name ?? "Consulta", paciente: "João" }
     : key === "exam_preparation"
-      ? { ...example, link: `${Astro.url.origin}/preparo/${exam?.id ?? "exemplo"}` }
+      ? { ...example, link: `${Astro.url.origin}${exam ? preparationPath(exam.id) : "/preparo/exemplo"}` }
       : key === "consultation_guidance"
-        ? { ...example, link: `${Astro.url.origin}/orientacoes/${clinic.clinicId}` }
+        ? { ...example, link: `${Astro.url.origin}${guidancePath(clinic.clinicId)}` }
         : example;
 
 const TEMPLATE_LABELS: Record<string, string> = {

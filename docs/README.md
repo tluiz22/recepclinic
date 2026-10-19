@@ -138,7 +138,9 @@
 >     e `npm run test:db`.
 > - **Correções dos testes do cliente (18/out):** 1) bot sem "Marcar retorno": a "Consultorio de Teste" não tinha
 >   serviço de Retorno (falta cadastrar no staging); aviso novo em Configurações › Serviços, validado e publicado no
->   staging em 18/out (sem migração; detalhes no [plano](plano.md)). O cliente segue listando os próximos erros.
+>   staging em 18/out (sem migração; detalhes no [plano](plano.md)). 2) link do WhatsApp copiado como chave Pix (o
+>   UUID no fim do endereço): links do paciente com o id em 22 caracteres, validado e publicado no staging em 18/out
+>   (sem migração). O cliente segue listando os próximos erros.
 > - **Frente paralela, o site** `www.recepclinic.com.br`: [`site-plano.md`](site-plano.md), feito numa
 >   **sessão separada, na pasta `~/Documents/Desenvolvimento/recepclinic-site`** (nunca nesta pasta).
 >   **No ar** (conferido em 05/out), com `/privacidade` e `/termos`; DNS de `recepclinic.com.br` já

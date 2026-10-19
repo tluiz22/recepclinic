@@ -19,6 +19,7 @@ import { formatPhoneBR } from "../../../lib/phone";
 import { getClinicSettings } from "../../../lib/data/config/clinic";
 import { clinicLabel } from "../../../lib/data/whatsapp/templates";
 import { capitalize, vocabularyFor } from "../../../lib/vocabulary";
+import { bookingPath } from "../../../lib/publicId";
 
 const clinic = Astro.locals.clinic!;
 const vocabulary = vocabularyFor(clinic.clinicProfile);
@@ -50,7 +51,7 @@ const REASONS: Record<string, string> = {
 const reasonFor = (id: string) => REASONS[lastStatus.get(id) ?? ""] ?? "o WhatsApp da clínica não está conectado";
 const rebookingFor = (appointmentId: string) => {
   const link = links.get(appointmentId);
-  return link ? { url: new URL(`/agendar/${link.id}`, Astro.url.origin).toString(), expiresAt: link.expiresAt } : null;
+  return link ? { url: new URL(bookingPath(link.id), Astro.url.origin).toString(), expiresAt: link.expiresAt } : null;
 };
 ---
 

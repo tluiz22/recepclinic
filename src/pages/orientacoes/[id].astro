@@ -12,18 +12,19 @@ import { DEFAULT_DESIGNATION, designationText } from "../../lib/designation";
 import LinkNotice from "../../components/public/LinkNotice.astro";
 import PatientLayout from "../../layouts/PatientLayout.astro";
 import { PATIENT_TEXT } from "../../components/public/styles";
-import { isUuid } from "../../lib/clinicAccess";
 import { createClinicServiceClient } from "../../lib/data/clinicService";
 import { getPublicClinicBrand, type PublicClinicBrand } from "../../lib/data/config/brand";
 import { getGuidance } from "../../lib/data/whatsapp/customMessages";
 import { DataError } from "../../lib/data/errors";
 import { whatsAppTextToHtml } from "../../lib/whatsappFormat";
+import { parsePublicId } from "../../lib/publicId";
 
-const id = Astro.params.id ?? "";
+// Link curto ou o UUID dos links antigos (cliente, 18/out/2026: chave Pix no WhatsApp).
+const id = parsePublicId(Astro.params.id) ?? "";
 
 let guidance: string | null = null;
 let brand: PublicClinicBrand | null = null;
-if (isUuid(id)) {
+if (id) {
   const db = createClinicServiceClient(id);
   brand = await getPublicClinicBrand(db, id).catch((error) => {
     if (error instanceof DataError && error.code === "not_found") return null;

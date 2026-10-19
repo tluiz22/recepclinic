@@ -4,7 +4,8 @@ import { DataError, unwrap, unwrapOne } from "../errors";
 import type { Appointment } from "./appointments";
 import { findReturnOrigin } from "./appointments";
 
-// Links de agendar/remarcar (página pública /agendar/[token]; o token é o id).
+// Links de agendar/remarcar (página pública /agendar/[token]; o token é o id,
+// em 22 caracteres no endereço: `bookingPath` em `src/lib/publicId.ts`).
 // Regras do piloto:
 //   - link do bot vale 30 minutos (meio de conversa); o de remarcação após
 //     cancelamento pela clínica (dia inteiro, bloqueio) vale 2 dias;

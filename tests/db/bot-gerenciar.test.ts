@@ -7,6 +7,7 @@ import type { ClinicSender, ListSection, ReplyButton } from "../../src/lib/data/
 import { processWebhook, type WebhookDeps } from "../../src/lib/data/whatsapp/webhook";
 import { asDb, at, MON1, MON2, NOW, setupAgendaClinic, type AgendaFixture } from "./agendaFixture";
 import { adminClient } from "./helpers";
+import { bookingPath } from "../../src/lib/publicId";
 
 // F6.4 — Bot II: cancelar, remarcar, botões do lembrete, encaixe (lista de
 // espera), recepção e pausa pelo eco. Conversas pelo webhook com a Meta
@@ -154,9 +155,10 @@ describe("remarcar pelo menu", () => {
     let reply = await say(P3, { id: "manage_reschedule" });
     expect(reply[0].body).toBe("Encontramos o exame Exame de *Paciente Três* em segunda, 17/03 às 08:00: é esse que você quer remarcar? Responda Sim ou Não.");
     reply = await say(P3, "sim");
-    expect(reply[0].body).toMatch(/^Prontinho! Escolha o novo dia e horário para o exame Exame de Paciente Três neste link:\nhttps:\/\/app\.exemplo\.test\/agendar\/[0-9a-f-]{36}/);
-    const { data: link } = await adminClient().from("booking_links").select("mode, appointment_id, service_id, agenda_id").eq("contact_phone", P3).eq("mode", "reschedule").single();
-    expect(link).toEqual({ mode: "reschedule", appointment_id: examP3, service_id: f.ids.exame, agenda_id: f.ids.agendaExams });
+    expect(reply[0].body).toMatch(/^Prontinho! Escolha o novo dia e horário para o exame Exame de Paciente Três neste link:\nhttps:\/\/app\.exemplo\.test\/agendar\/[A-Za-z0-9_-]{22}/);
+    const { data: link } = await adminClient().from("booking_links").select("id, mode, appointment_id, service_id, agenda_id").eq("contact_phone", P3).eq("mode", "reschedule").single();
+    expect(link).toEqual({ id: expect.any(String), mode: "reschedule", appointment_id: examP3, service_id: f.ids.exame, agenda_id: f.ids.agendaExams });
+    expect(reply[0].body).toContain(bookingPath(link!.id));
   });
 });
 

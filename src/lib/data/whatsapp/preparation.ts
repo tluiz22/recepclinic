@@ -2,6 +2,7 @@ import type { DbClient } from "../clients";
 import { unwrap } from "../errors";
 import { hasFeature } from "../features";
 import { logTrail } from "../agenda/appointments";
+import { preparationPath } from "../../publicId";
 import { getApprovedTemplate, getWhatsappConnection } from "./connection";
 import { isCustomerServiceWindowOpen, recordOutboundMessage, type DeliveryUpdate, type SendOutcome } from "./messages";
 
@@ -102,7 +103,7 @@ async function deliverPreparation(
         patientName: row.patients.full_name,
         examName: row.services.name,
         instructions,
-        pagePath: `/preparo/${row.service_id}`,
+        pagePath: preparationPath(row.service_id),
         mode: windowOpen ? "text" : "template",
         template,
       });

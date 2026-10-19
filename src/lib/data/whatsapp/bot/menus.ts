@@ -1,3 +1,4 @@
+import { preparationPath } from "../../../publicId";
 import { servicesOf, type BotService } from "./catalog";
 import { go, say, sendList, textFor, type Bot } from "./engine";
 import { pick, type Selection } from "./input";
@@ -158,6 +159,6 @@ export async function handlePreparationChoice(b: Bot, selection: Selection): Pro
     await sendList(b, "bot_info_preparation_choice", t.PREPARATION_QUESTION, t.numberedList(exams.map((s) => ({ id: `prep_${s.id}`, label: s.name }))));
     return;
   }
-  await say(b, "bot_info_preparation", t.preparationText(exam.preparation!, `${b.sender.baseUrl}/preparo/${exam.id}`));
+  await say(b, "bot_info_preparation", t.preparationText(exam.preparation!, `${b.sender.baseUrl}${preparationPath(exam.id)}`));
   await showInfo(b);
 }

@@ -1,6 +1,7 @@
 import type { DbClient } from "../clients";
 import { unwrap, unwrapOne } from "../errors";
 import { logTrail } from "../agenda/appointments";
+import { guidancePath } from "../../publicId";
 import { getApprovedTemplate, getWhatsappConnection } from "./connection";
 import { getGuidance } from "./customMessages";
 import { isCustomerServiceWindowOpen, recordOutboundMessage, type DeliveryUpdate, type SendOutcome } from "./messages";
@@ -41,8 +42,6 @@ export type GuidanceSender = (guidance: GuidanceToSend) => Promise<SendOutcome>;
 
 /** Situação registrada ("sent", "failed", "skipped_no_template") ou "not_connected" (nada registrado). */
 export type GuidanceStatus = "sent" | "failed" | "skipped_no_template" | "not_connected";
-
-export const guidancePagePath = (clinicId: string) => `/orientacoes/${clinicId}`;
 
 type ConsultationRow = {
   id: string;
@@ -100,7 +99,7 @@ async function deliverGuidance(db: DbClient, clinicId: string, row: Consultation
         contactName: contact.full_name,
         patientName: row.patients.full_name,
         text,
-        pagePath: guidancePagePath(clinicId),
+        pagePath: guidancePath(clinicId),
         mode: windowOpen ? "text" : "template",
         template,
       });

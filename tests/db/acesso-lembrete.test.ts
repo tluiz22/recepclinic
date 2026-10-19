@@ -19,6 +19,7 @@ import {
   type ReminderSender,
   type ReminderToSend,
 } from "../../src/lib/data/whatsapp/reminders";
+import { preparationPath } from "../../src/lib/publicId";
 import { adminClient, clinicServiceClient, createClinic, deleteClinics, type TestUser } from "./helpers";
 import { asDb, at, MON1, MON2, NOW, setupAgendaClinic, type AgendaFixture, type AgendaIds } from "./agendaFixture";
 
@@ -227,7 +228,7 @@ describe("preparo do exame", () => {
       appointmentId: appt.e1,
       examName: "Exame",
       instructions: "Jejum de 4 horas.",
-      pagePath: `/preparo/${ids.exame}`,
+      pagePath: preparationPath(ids.exame),
       mode: "template",
       template: { name: "rc_preparo", language: "pt_BR" },
     });
