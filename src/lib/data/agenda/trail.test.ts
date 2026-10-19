@@ -39,6 +39,23 @@ describe("trilha do atendimento (F4.8)", () => {
     expect(message("read")).toMatchObject({ text: "WhatsApp: Lembrete lido", tone: "success" });
     expect(message("failed")).toMatchObject({ text: "WhatsApp: Lembrete não entregue", tone: "danger" });
   });
+
+  it("cada mensagem pelo nome, nunca o nome interno, com a situação concordando (cliente, 18/out)", () => {
+    const text = (messageType: string, status: string | null) => describeTrail({ kind: "message", at, messageType, status }, actors, "America/Fortaleza").text;
+    expect(text("consultation_guidance", "delivered")).toBe("WhatsApp: Orientações gerais da consulta entregues");
+    expect(text("consultation_guidance", "read")).toBe("WhatsApp: Orientações gerais da consulta lidas");
+    expect(text("appointment_reschedule", "delivered")).toBe("WhatsApp: Aviso de remarcação entregue");
+    expect(text("appointment_confirmation", "sent")).toBe("WhatsApp: Confirmação do atendimento enviada");
+    expect(text("appointment_mass_cancellation", "skipped_no_template")).toBe(
+      "WhatsApp: Aviso de cancelamento pela clínica (com o link para remarcar) não enviado (template não aprovado)",
+    );
+    expect(text("nfse_document", "read")).toBe("WhatsApp: Nota fiscal lida");
+    expect(text("tipo_novo", null)).toBe("WhatsApp: Mensagem na fila");
+    expect(event("message_not_sent", { details: { kind: "reminder", reason: "template_disabled" } }).text).toBe("WhatsApp: Lembrete não enviado (template não aprovado)");
+    expect(event("message_not_sent", { details: { kind: "reminder", reason: "not_connected" } }).text).toBe(
+      "WhatsApp: Lembrete não enviado (WhatsApp da clínica não conectado)",
+    );
+  });
 });
 
 it("grupo do lembrete: botão tocado; sem toque, entregue ou não", () => {

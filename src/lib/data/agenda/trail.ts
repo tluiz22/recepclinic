@@ -46,21 +46,38 @@ const VIA: Record<TrailChannel, string> = {
   schedule_block: "pelo bloqueio da agenda",
 };
 
-const MESSAGE_LABELS: Record<string, string> = {
-  appointment_reminder: "Lembrete",
-  exam_preparation: "Preparo do exame",
-  appointment_confirmation: "Confirmação do atendimento",
-  appointment_cancellation: "Aviso de cancelamento",
-  appointment_rescheduled: "Aviso de remarcação",
-  waitlist_offer: "Oferta da lista de espera",
+// Nome de cada mensagem, com o gênero para a situação concordar (cliente,
+// 18/out/2026: a trilha mostrava o nome interno, como "consultation_guidance").
+type Gender = "m" | "f" | "fp";
+const MESSAGE_LABELS: Record<string, { label: string; gender: Gender }> = {
+  appointment_reminder: { label: "Lembrete", gender: "m" },
+  exam_preparation: { label: "Preparo do exame", gender: "m" },
+  consultation_guidance: { label: "Orientações gerais da consulta", gender: "fp" },
+  appointment_confirmation: { label: "Confirmação do atendimento", gender: "f" },
+  appointment_cancellation: { label: "Aviso de cancelamento", gender: "m" },
+  appointment_reschedule: { label: "Aviso de remarcação", gender: "m" },
+  appointment_mass_cancellation: { label: "Aviso de cancelamento pela clínica (com o link para remarcar)", gender: "m" },
+  waitlist_offer: { label: "Oferta da lista de espera", gender: "f" },
+  nfse_document: { label: "Nota fiscal", gender: "f" },
+};
+/** Tipo sem nome cadastrado: "Mensagem", nunca o nome interno. */
+const OTHER_MESSAGE = { label: "Mensagem", gender: "f" as Gender };
+
+/** Mensagem não enviada, pelo `kind` gravado na trilha. */
+const NOT_SENT_KINDS: Record<string, string> = { reminder: "appointment_reminder" };
+const NOT_SENT_REASONS: Record<string, string> = {
+  template_disabled: "template não aprovado",
+  not_connected: "WhatsApp da clínica não conectado",
 };
 
-const MESSAGE_STATUS: Record<string, { word: string; tone: TrailEntry["tone"] }> = {
-  sent: { word: "enviado", tone: "neutral" },
-  delivered: { word: "entregue", tone: "success" },
-  read: { word: "lido", tone: "success" },
-  failed: { word: "não entregue", tone: "danger" },
-  skipped_no_template: { word: "não enviado (template não aprovado)", tone: "danger" },
+const agree = (gender: Gender, m: string) => (gender === "m" ? m : gender === "f" ? `${m.slice(0, -1)}a` : `${m.slice(0, -1)}as`);
+
+const MESSAGE_STATUS: Record<string, { word: (g: Gender) => string; tone: TrailEntry["tone"] }> = {
+  sent: { word: (g) => agree(g, "enviado"), tone: "neutral" },
+  delivered: { word: (g) => (g === "fp" ? "entregues" : "entregue"), tone: "success" },
+  read: { word: (g) => agree(g, "lido"), tone: "success" },
+  failed: { word: (g) => (g === "fp" ? "não entregues" : "não entregue"), tone: "danger" },
+  skipped_no_template: { word: (g) => `não ${agree(g, "enviado")} (template não aprovado)`, tone: "danger" },
 };
 
 const ATTENDANCE: Record<string, string> = { completed: "compareceu", no_show: "faltou" };
@@ -68,8 +85,9 @@ const ATTENDANCE: Record<string, string> = { completed: "compareceu", no_show: "
 /** Frase de cada item da trilha (regra pura, testada). */
 export function describeTrail(row: TrailEntryRow, actors: Map<string, ActorLabel>, timeZone: string): TrailEntry {
   if (row.kind === "message") {
-    const status = MESSAGE_STATUS[row.status ?? ""] ?? { word: row.status ?? "na fila", tone: "neutral" as const };
-    return { at: row.at, text: `WhatsApp: ${MESSAGE_LABELS[row.messageType] ?? row.messageType} ${status.word}`, tone: status.tone };
+    const message = MESSAGE_LABELS[row.messageType] ?? OTHER_MESSAGE;
+    const status = MESSAGE_STATUS[row.status ?? ""] ?? { word: () => "na fila", tone: "neutral" as const };
+    return { at: row.at, text: `WhatsApp: ${message.label} ${status.word(message.gender)}`, tone: status.tone };
   }
   const who = actorText(row.actorId ? actors.get(row.actorId) : undefined);
   const by = who ? ` por ${who}` : "";
@@ -92,8 +110,11 @@ export function describeTrail(row: TrailEntryRow, actors: Map<string, ActorLabel
       return make(`Registrado: ${ATTENDANCE[String(d.status)] ?? String(d.status)}${by}`, d.status === "no_show" ? "danger" : "success");
     case "attendance_corrected":
       return make(`Corrigido de "${ATTENDANCE[String(d.from)] ?? d.from}" para "${ATTENDANCE[String(d.to)] ?? d.to}"${by}`);
-    case "message_not_sent":
-      return make(`Mensagem não enviada (${String(d.kind ?? "")}${d.reason ? `: ${String(d.reason)}` : ""})`, "danger");
+    case "message_not_sent": {
+      const message = MESSAGE_LABELS[NOT_SENT_KINDS[String(d.kind)] ?? ""] ?? OTHER_MESSAGE;
+      const reason = NOT_SENT_REASONS[String(d.reason)];
+      return make(`WhatsApp: ${message.label} não ${agree(message.gender, "enviado")}${reason ? ` (${reason})` : ""}`, "danger");
+    }
     case "reminder_resent":
       return make(`${d.first ? "Lembrete enviado à mão" : "Lembrete reenviado"}${by}`);
     case "preparation_resent":

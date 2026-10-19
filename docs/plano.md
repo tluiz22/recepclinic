@@ -2338,6 +2338,13 @@ aleatória. Correção: os links do paciente (`/agendar`, `/preparo` e `/orienta
 migração e sem mudança nos templates da Meta (o link é variável do texto). Validado pelo cliente no local e publicado no
 staging em 18/out.
 
+**Trilha com o nome interno das mensagens (relato do cliente, 18/out):** "consultation_guidance entregue", "WhatsApp:
+appointment_reschedule entregue". Causa: a trilha só tinha nome para 6 tipos e o da remarcação estava escrito errado
+(`appointment_rescheduled`). Agora todos os tipos têm nome (orientações gerais, aviso de remarcação, aviso de
+cancelamento pela clínica, nota fiscal…), a situação concorda com o nome ("Orientações gerais da consulta entregues") e um
+tipo sem nome sai como "Mensagem"; o "Mensagem não enviada (reminder: template_disabled)" virou "WhatsApp: Lembrete não
+enviado (template não aprovado)". Validado pelo cliente no local e publicado no staging em 18/out (sem migração).
+
 ---
 
 ## Depois do 1º piloto (já previsto no banco)
