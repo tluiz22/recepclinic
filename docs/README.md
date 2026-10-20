@@ -177,9 +177,12 @@
 >   **F11 toda validada pelo cliente em 19/out** (Testes 0 a 7 do roteiro, no staging, com os certificados fictícios e
 >   a Simulação; detalhes no [plano](plano.md)). Fora do sistema seguem o teste real na Produção Restrita (e-CNPJ A1),
 >   a DMED no PGD Dmed pelo contador, o template `rc_nota_fiscal_v1` na Meta e o termo com o advogado.
->   **Retomar daqui (próxima sessão, depois de 19/out):** **planejar melhorias no processo de geração da nota fiscal**
->   (pedido do cliente, 19/out): levantar com o cliente o que incomoda hoje (emitir, conferir, cancelar, enviar) e
->   propor as mudanças, uma etapa por vez. Em paralelo, aguardar a Meta (Análise do App até ~29/out).
+>   **F10.1 (importação da agenda na implantação) decidida em 19/out:** planilha modelo (.xlsx ou .csv) importada
+>   só pelo Suporte, com pacientes e consultas de hoje em diante, **sem o aviso de marcação** (os lembretes saem);
+>   9 decisões no [plano](plano.md). **Aguarda o OK do cliente para implementar.**
+>   **Retomar daqui (próxima sessão, depois de 19/out):** com o OK do cliente, implementar a F10.1. As **melhorias no
+>   processo da nota fiscal** ficam para uma sessão própria (cliente, 19/out: ele traz a lista do que planejar). Em
+>   paralelo, aguardar a Meta (Análise do App até ~29/out).
 > - **Frente paralela, o site** `www.recepclinic.com.br`: [`site-plano.md`](site-plano.md), feito numa
 >   **sessão separada, na pasta `~/Documents/Desenvolvimento/recepclinic-site`** (nunca nesta pasta).
 >   **No ar** (conferido em 05/out), com `/privacidade` e `/termos`; DNS de `recepclinic.com.br` já

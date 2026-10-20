@@ -1578,6 +1578,36 @@ para o modelo novo; acompanhamento das primeiras semanas.
 **Depende da F8** (cliente, 06/out): o número da primeira clínica só é conectado por coexistência,
 então o Tech Provider precisa estar aprovado antes da F10.
 
+**F10.1 — Importação da agenda na implantação (proposta, cliente, 19/out):** ao entrar em
+produção, a clínica traz os pacientes e as consultas que já estão marcadas na agenda do
+consultório, **sem o aviso de marcação** pelo WhatsApp. A origem muda de clínica para clínica
+(outro sistema, planilha, Google Agenda ou papel), por isso a carga é feita por uma **planilha
+modelo**, que serve para todos os casos.
+**Decisões do cliente (19/out):**
+- **Caminho:** tela de importação por planilha (não um "modo implantação" no Marcar nem um
+  "não avisar" por atendimento). Baixa-se o modelo, sobe-se o arquivo preenchido, o sistema
+  confere tudo e mostra erros e avisos **antes de gravar**; só então se confirma a importação.
+- **Quem:** **só o Suporte**, como parte da implantação (conferindo com a clínica).
+- **Formato:** modelo em **Excel (.xlsx)**, com as listas de serviços e profissionais da clínica
+  e exemplos; a importação aceita **.xlsx ou .csv**.
+- **Alcance:** **pacientes** (com ou sem consulta) e **consultas de hoje em diante**; o histórico
+  antigo fica no sistema anterior.
+- **Mensagens:** nenhum aviso de marcação (nem, por consequência, o preparo do exame e as
+  orientações gerais, que saem só depois da entrega desse aviso). Os **lembretes saem
+  normalmente** (Configurações › Lembretes), com os botões de confirmar e remarcar.
+- **Fora da grade:** consulta num horário que não existe em Horários (ex.: 10h10, encaixe, dia
+  sem agenda aberta) **entra como está, com aviso** na conferência; sobreposição na mesma agenda
+  continua barrada (o banco já impede).
+- **Repetidos:** mesmo telefone = mesmo contato; no contato, mesmo nome e nascimento = mesmo
+  paciente (só ganha a consulta); nome diferente = novo paciente do mesmo contato. A conferência
+  mostra "já cadastrado".
+- **Nascimento:** **obrigatório** na planilha (linha sem ele é erro; a clínica completa antes).
+- **Retornos já marcados:** entram como Retorno **sem a Consulta de origem** e sem conferir o
+  prazo, com aviso (como o painel já permite, com aviso).
+- **Desfazer:** o Suporte pode **desfazer a importação** inteira, com confirmação; ficam as
+  consultas já mexidas (remarcadas, pagas, com mensagem enviada) e os pacientes com outra
+  consulta, e a tela diz quais.
+
 ## F11 — Módulo financeiro: pagamentos e nota fiscal no CPF do responsável
 
 **Pedida pelo cliente em 12/out/2026** para as clínicas piloto de **Mossoró (RN)**. Primeiro foi
