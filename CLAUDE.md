@@ -22,5 +22,8 @@ onde o trabalho parou.
 - **Nunca usar nada do piloto**: banco, agendador/Vault, número de WhatsApp, app da Meta ou
   segredos. O número de WhatsApp do piloto não pertence ao cliente; os testes do RecepClinic usam um
   chip próprio.
+  **Revisto pelo cliente em 20/out:** o piloto está desativado e o número do app antigo "Consultório
+  Dra. Ana Karina" é do cliente; o app antigo é excluído e esse número pode entrar no portfólio
+  RecepClinic como número de testes de outra clínica do staging (o resto do piloto segue proibido).
 - As decisões de arquitetura estão em `docs/arquitetura.md` (D1–D11) e o plano em `docs/plano.md`.
   Mudança de decisão só com o cliente, e registrada lá.

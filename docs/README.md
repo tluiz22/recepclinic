@@ -196,6 +196,9 @@
 >   para a 2.121.0, commit `dde5d7e`, e voltou a passar); 2) detalhar o passo a passo do que precisa ser testado na F10 (a F10.1 inteira no
 >   staging: pedido, link, conferência, devolução, carga e desfazer), para o cliente validar. Em paralelo, aguardar a
 >   Meta (Análise do App até ~29/out). As melhorias no processo da nota fiscal continuam para uma sessão própria.
+>   **App antigo da Meta (cliente, 20/out):** o piloto está desativado e o número do app "Consultório Dra. Ana Karina" é
+>   do cliente; o app antigo será excluído pelo cliente e o número entra no portfólio RecepClinic para uma 2ª clínica de
+>   testes do staging quando o aparelho estiver com ele (precisa do SMS). Regra revista no `CLAUDE.md`.
 >   **Antes (19/out):** implementar a F10.1 (já aprovada). As **melhorias no
 >   processo da nota fiscal** ficam para uma sessão própria (cliente, 19/out: ele traz a lista do que planejar). Em
 >   paralelo, aguardar a Meta (Análise do App até ~29/out).
