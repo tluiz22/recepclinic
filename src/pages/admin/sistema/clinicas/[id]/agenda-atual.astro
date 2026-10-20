@@ -1,0 +1,236 @@
+---
+// Conferir a agenda atual (F10.1b; cliente, 19 e 20/out/2026): o que a
+// clínica enviou pelo link, conferido de novo com o cadastro de agora. Erros
+// travam a autorização (o Suporte devolve com comentário); avisos, não. A
+// autorização e a carga vêm na F10.1c.
+import AdminLayout from "../../../../../layouts/AdminLayout.astro";
+import Badge from "../../../../../components/admin/config/Badge.astro";
+import FlashMessage from "../../../../../components/admin/FlashMessage.astro";
+import SystemHeader from "../../../../../components/admin/sistema/SystemHeader.astro";
+import Notice from "../../../../../components/admin/ui/Notice.astro";
+import { CARD, HINT, INPUT, LABEL, PANEL, PRIMARY_BUTTON, SECTION_TITLE } from "../../../../../components/admin/config/formStyles";
+import type { ReviewedPatient } from "../../../../../lib/agendaImportReview";
+import { isUuid } from "../../../../../lib/clinicAccess";
+import { formatCalendarDate, formatInstant, isCalendarDate } from "../../../../../lib/clinicTime";
+import { getLatestAgendaImport, loadImportReview, MAX_RETURN_COMMENT } from "../../../../../lib/data/agendaImport";
+import { createUserClient } from "../../../../../lib/data/clients";
+import { formatPhoneBR } from "../../../../../lib/phone";
+
+const { id } = Astro.params;
+if (!isUuid(id)) return Astro.redirect("/admin/sistema/clinicas");
+const db = createUserClient(Astro.request, Astro.cookies);
+const [{ data: clinic }, request] = await Promise.all([db.from("clinics").select("id, name").eq("id", id).maybeSingle(), getLatestAgendaImport(db, id)]);
+if (!clinic) return Astro.redirect("/admin/sistema/clinicas");
+const clinicPage = `/admin/sistema/clinicas/${id}`;
+const submitted = request?.status === "submitted" ? request : null;
+const result = submitted ? await loadImportReview(db, id, submitted.entries) : null;
+const review = result?.review ?? null;
+
+const onlyPoints = Astro.url.searchParams.get("filtro") === "pontos";
+const hasPoints = (p: ReviewedPatient) => p.errors.length + p.warnings.length + p.appointments.reduce((n, a) => n + a.errors.length + a.warnings.length, 0) > 0;
+const withPoints = review?.patients.filter(hasPoints).length ?? 0;
+const listed = review ? review.patients.map((patient, index) => ({ patient, number: index + 1 })).filter(({ patient }) => !onlyPoints || hasPoints(patient)) : [];
+
+const date = (value: string, pattern: string) => (isCalendarDate(value) ? formatCalendarDate(value, pattern) : value || "sem data");
+const phone = (p: ReviewedPatient) => (p.phoneE164 ? formatPhoneBR(p.phoneE164) : p.phone || "sem WhatsApp");
+const kindBadge = {
+  new: { label: "Novo", variant: "info" },
+  existing_patient: { label: "Já cadastrado", variant: "neutral" },
+  existing_contact: { label: "Novo, de contato já cadastrado", variant: "info" },
+} as const;
+const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
+
+// Sugestão de comentário com os erros, para o Suporte editar.
+const suggestion = review
+  ? review.patients
+      .flatMap(({ name, errors, appointments }, index) => {
+        const who = `Paciente ${index + 1}${name ? ` (${name})` : ""}`;
+        return [
+          ...errors.map((e) => `${who}: ${e}`),
+          ...appointments.flatMap((a, i) => a.errors.map((e) => `${who}, consulta ${i + 1}: ${e}`)),
+        ];
+      })
+      .join("\n")
+  : "";
+const ul = "flex flex-col gap-1 text-[15px] leading-snug";
+---
+
+<AdminLayout title="Conferir a agenda atual" platform>
+  <div class="flex flex-col">
+    <SystemHeader title="Conferir a agenda atual" kicker={clinic.name} back={{ href: clinicPage, label: clinic.name }} />
+  </div>
+  <FlashMessage />
+
+  {
+    !submitted || !review ? (
+      <p class={`${PANEL} mt-5 text-[15px] text-ink`}>
+        Nenhuma agenda atual enviada para conferir. Os pedidos ficam em <a href={clinicPage} class="font-semibold text-brand">{clinic.name}</a>, no cartão
+        "Agenda atual".
+      </p>
+    ) : (
+      <div class="mt-5 flex flex-col gap-4">
+        <section class={`${PANEL} flex flex-col gap-3`} aria-labelledby="t-resumo">
+          <h2 id="t-resumo" class={SECTION_TITLE}>
+            Resumo
+          </h2>
+          <p class="text-[15px] text-ink-soft">
+            Enviada em {formatInstant(submitted.submittedAt ?? submitted.savedAt ?? submitted.requestedAt, result!.timeZone, "dd/MM/yyyy 'às' HH:mm")} pelo link
+            de <strong class="break-all text-ink">{submitted.email}</strong>. Conferida agora com o cadastro da clínica.
+          </p>
+          <dl class="grid grid-cols-2 gap-x-4 gap-y-2 text-[15px] sm:grid-cols-3">
+            <div>
+              <dt class="text-ink-soft">Pacientes novos</dt>
+              <dd class="font-display text-xl font-bold text-ink">{review.totals.newPatients}</dd>
+            </div>
+            <div>
+              <dt class="text-ink-soft">Já cadastrados</dt>
+              <dd class="font-display text-xl font-bold text-ink">{review.totals.existingPatients}</dd>
+            </div>
+            <div>
+              <dt class="text-ink-soft">Consultas que entram</dt>
+              <dd class="font-display text-xl font-bold text-ink">{review.totals.appointmentsIn}</dd>
+            </div>
+            <div>
+              <dt class="text-ink-soft">Ficam de fora (já passaram)</dt>
+              <dd class="font-display text-xl font-bold text-ink">{review.totals.appointmentsSkipped}</dd>
+            </div>
+            <div>
+              <dt class="text-ink-soft">Erros</dt>
+              <dd class={`font-display text-xl font-bold ${review.errorCount ? "text-danger" : "text-ink"}`}>{review.errorCount}</dd>
+            </div>
+            <div>
+              <dt class="text-ink-soft">Avisos</dt>
+              <dd class="font-display text-xl font-bold text-ink">{review.warningCount}</dd>
+            </div>
+          </dl>
+          {review.errorCount > 0 ? (
+            <Notice tone="danger">
+              {plural(review.errorCount, "erro trava", "erros travam")} a carga. Devolva à clínica com o que corrigir (no fim da tela).
+            </Notice>
+          ) : (
+            <Notice tone="success">Sem erros. A autorização da carga chega na próxima etapa (F10.1c); se precisar de ajuste, devolva à clínica.</Notice>
+          )}
+        </section>
+
+        <nav aria-label="Filtro dos pacientes" class="flex flex-wrap gap-2">
+          <a
+            href="?"
+            aria-current={!onlyPoints ? "page" : undefined}
+            class={`inline-flex min-h-9 items-center rounded-full border px-3.5 text-[15px] font-semibold no-underline ${!onlyPoints ? "border-ink bg-ink text-white" : "border-line-strong bg-white text-ink"}`}
+          >
+            Todos ({review.patients.length})
+          </a>
+          <a
+            href="?filtro=pontos"
+            aria-current={onlyPoints ? "page" : undefined}
+            class={`inline-flex min-h-9 items-center rounded-full border px-3.5 text-[15px] font-semibold no-underline ${onlyPoints ? "border-ink bg-ink text-white" : "border-line-strong bg-white text-ink"}`}
+          >
+            Com erro ou aviso ({withPoints})
+          </a>
+        </nav>
+
+        <ol class="flex flex-col gap-3">
+          {listed.map(({ patient, number }) => (
+            <li class={`${CARD} flex flex-col gap-3 p-4 sm:px-5`}>
+              <div class="flex flex-wrap items-center gap-x-3 gap-y-1.5">
+                <h3 class="font-display text-[17px] font-bold break-words text-ink">
+                  <span class="text-ink-soft">{number}.</span> {patient.name || "Sem nome"}
+                </h3>
+                <Badge variant={kindBadge[patient.kind].variant}>{kindBadge[patient.kind].label}</Badge>
+                {patient.errors.length + patient.appointments.reduce((n, a) => n + a.errors.length, 0) > 0 && <Badge variant="danger">Com erro</Badge>}
+              </div>
+              <p class="text-[15px] text-ink-soft">
+                {date(patient.birthdate, "dd/MM/yyyy")} · {phone(patient)}
+                {patient.guardianName ? ` · responsável: ${patient.guardianName}` : " · o próprio paciente é o contato"}
+                {` · ${patient.insuranceName || "convênio"}${patient.cardNumber ? `, carteirinha ${patient.cardNumber}` : ""}`}
+              </p>
+              {patient.errors.length > 0 && (
+                <ul class={`${ul} text-danger`}>
+                  {patient.errors.map((e) => (
+                    <li>
+                      <strong>Erro:</strong> {e}
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {patient.warnings.length > 0 && (
+                <ul class={`${ul} text-pend-800`}>
+                  {patient.warnings.map((w) => (
+                    <li>
+                      <strong>Aviso:</strong> {w}
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {patient.appointments.length === 0 ? (
+                <p class="text-sm text-ink-soft">Sem consulta: entra só no cadastro.</p>
+              ) : (
+                <ul class="flex flex-col divide-y divide-[#e6ecea] rounded-[10px] border border-[#e6ecea]">
+                  {patient.appointments.map((a) => (
+                    <li class={`flex flex-col gap-1.5 px-3.5 py-2.5 ${a.skipped ? "bg-[#fbfcfc]" : ""}`}>
+                      <span class="flex flex-wrap items-center gap-x-2 gap-y-1">
+                        <span class={`text-[15px] font-semibold ${a.skipped ? "text-ink-soft line-through" : "text-ink"}`}>
+                          {date(a.date, "EEE dd/MM/yyyy")} às {a.time || "--:--"}
+                        </span>
+                        <span class="text-[15px] text-ink">
+                          {[a.serviceName || "sem serviço", a.agendaName || "sem agenda", a.locationName].filter(Boolean).join(" · ")}
+                          {a.homeAddress ? ` · ${a.homeAddress}` : ""}
+                        </span>
+                        {a.skipped && <Badge>Fica de fora</Badge>}
+                      </span>
+                      {a.errors.length > 0 && (
+                        <ul class={`${ul} text-danger`}>
+                          {a.errors.map((e) => (
+                            <li>
+                              <strong>Erro:</strong> {e}
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                      {a.warnings.length > 0 && (
+                        <ul class={`${ul} text-pend-800`}>
+                          {a.warnings.map((w) => (
+                            <li>
+                              <strong>Aviso:</strong> {w}
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </li>
+          ))}
+          {listed.length === 0 && <li class={`${PANEL} text-[15px] text-ink-soft`}>Nenhum paciente com erro ou aviso.</li>}
+        </ol>
+
+        <section class={`${PANEL} flex flex-col gap-4`} aria-labelledby="t-devolver">
+          <div class="flex flex-col gap-1">
+            <h2 id="t-devolver" class={SECTION_TITLE}>
+              Devolver à clínica
+            </h2>
+            <p class="text-[15px] text-ink-soft">
+              A clínica recebe por e-mail ({submitted.email}) o comentário e um link novo, que vale 15 dias; o que ela já digitou continua. O link atual para de
+              funcionar.
+            </p>
+          </div>
+          <form method="POST" action={`/api/admin/sistema/clinicas/${id}`} class="flex flex-col gap-4">
+            <input type="hidden" name="acao" value="devolver_agenda" />
+            <input type="hidden" name="request_id" value={submitted.id} />
+            <div>
+              <label for="comentario" class={LABEL}>
+                O que corrigir
+              </label>
+              {suggestion && <p class={HINT}>Já vem com os erros da conferência; ajuste o texto se quiser.</p>}
+              <textarea id="comentario" name="comentario" rows="6" required maxlength={MAX_RETURN_COMMENT} class={INPUT}>{suggestion}</textarea>
+            </div>
+            <button type="submit" data-sending-label="Devolvendo…" class={`${PRIMARY_BUTTON} self-start`}>
+              Devolver à clínica
+            </button>
+          </form>
+        </section>
+      </div>
+    )
+  }
+</AdminLayout>

@@ -1,6 +1,6 @@
 import type { APIRoute } from "astro";
 import { isUuid } from "../../../../../lib/clinicAccess";
-import { requestAgendaImport } from "../../../../../lib/data/agendaImport";
+import { requestAgendaImport, returnAgendaImport } from "../../../../../lib/data/agendaImport";
 import { createUserClient } from "../../../../../lib/data/clients";
 import { DataError } from "../../../../../lib/data/errors";
 import { runFormAction } from "../../../../../lib/data/formAction";
@@ -10,12 +10,15 @@ import { formText } from "../../../../../lib/forms";
 
 // Ações do Suporte numa clínica (F4.4a): reenviar convite, pedir as
 // informações por e-mail e marcar as respostas como revisadas; pedir a agenda
-// atual para a importação ou mandar um link novo (F10.1a).
+// atual para a importação ou mandar um link novo (F10.1a) e devolver a agenda
+// enviada à clínica, com comentário (F10.1b).
 export const POST: APIRoute = async (context) => {
   const { request, cookies, locals, params, url } = context;
   const clinicId = params.id!;
   const form = await request.formData().catch(() => null);
   const page = `/admin/sistema/clinicas/${clinicId}`;
+  // Erro ao devolver: volta à conferência, com o comentário marcado.
+  const failureTo = formText(form, "acao") === "devolver_agenda" ? `${page}/agenda-atual` : page;
   const db = createUserClient(request, cookies);
 
   return runFormAction(
@@ -61,6 +64,20 @@ export const POST: APIRoute = async (context) => {
             : `${what} Mas o e-mail não saiu (${result.email.reason}). Envie este link à clínica (ele não aparece de novo): ${result.link}`;
           return { redirectTo: page, message };
         }
+        case "devolver_agenda": {
+          const result = await returnAgendaImport(
+            db,
+            locals.userId!,
+            { id: clinic.id, name: clinic.name, timezone: settings.timezone },
+            formText(form, "request_id"),
+            formText(form, "comentario"),
+            onboardingDeps(url),
+          );
+          const message = result.email.sent
+            ? "Agenda atual devolvida à clínica, com o comentário. E-mail enviado com um link novo."
+            : `Agenda atual devolvida, mas o e-mail não saiu (${result.email.reason}). Envie este link à clínica (ele não aparece de novo): ${result.link}`;
+          return { redirectTo: page, message };
+        }
         case "marcar_revisado":
           await markInfoRequestReviewed(db, locals.userId!, formText(form, "request_id"));
           return { redirectTo: page, message: "Respostas marcadas como revisadas." };
@@ -68,6 +85,6 @@ export const POST: APIRoute = async (context) => {
           throw new DataError("invalid", "Ação desconhecida", { acao: "Ação desconhecida." });
       }
     },
-    page,
+    failureTo,
   );
 };

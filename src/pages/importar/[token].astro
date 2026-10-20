@@ -109,7 +109,7 @@ const noCatalog = !!catalog && (catalog.services.length === 0 || catalog.agendas
                 </li>
               </ul>
             </div>
-            {request.status === "returned" && request.returnComment && (
+            {request.returnComment && (
               <Notice tone="warning">
                 <strong>O Suporte devolveu para corrigir:</strong> {request.returnComment}
               </Notice>

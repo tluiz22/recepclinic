@@ -9,11 +9,13 @@ import {
   type ImportPatient,
   type ImportRequestStatus,
 } from "../agendaImport";
-import { addDays, dayBounds, formatInstant, todayIn } from "../clinicTime";
-import { agendaImportEmail } from "../email";
+import { reviewImport, type ImportReview, type ReviewContext } from "../agendaImportReview";
+import { addDays, dayBounds, formatInstant, isCalendarDate, todayIn } from "../clinicTime";
+import { agendaImportEmail, agendaImportReturnedEmail } from "../email";
+import { normalizePhone } from "../phone";
 import type { Json } from "../supabase/database.types";
 import type { DbClient } from "./clients";
-import { DataError, fromDbError, unwrap } from "./errors";
+import { DataError, fromDbError, unwrap, unwrapOne } from "./errors";
 import { getClinicFeatures } from "./features";
 import { EMAIL_RE, hashToken, newToken, normalizeEmail, trySend, type EmailOutcome, type OnboardingDeps } from "./onboarding";
 
@@ -125,14 +127,14 @@ export async function getAgendaImportByToken(db: DbClient, token: string): Promi
 export async function loadImportCatalog(db: DbClient, clinicId: string): Promise<ImportCatalog> {
   const [features, services, agendas, pairs, locations, plans] = await Promise.all([
     getClinicFeatures(db, clinicId),
-    db.from("services").select("id, name, duration_minutes, scheduling_mode").eq("clinic_id", clinicId).eq("is_active", true).order("name"),
+    db.from("services").select("id, name, duration_minutes, scheduling_mode, category").eq("clinic_id", clinicId).eq("is_active", true).order("name"),
     db.from("agendas").select("id, name").eq("clinic_id", clinicId).eq("is_active", true).order("name"),
     db.from("service_agendas").select("service_id, agenda_id").eq("clinic_id", clinicId),
     db.from("locations").select("id, name, type").eq("clinic_id", clinicId).eq("is_active", true).order("name"),
     db.from("insurance_plans").select("id, name").eq("clinic_id", clinicId).eq("is_active", true).order("name"),
   ]);
   return {
-    services: unwrap(services, "Serviços").map((s) => ({ id: s.id, name: s.name, durationMinutes: s.duration_minutes, group: s.scheduling_mode === "group" })),
+    services: unwrap(services, "Serviços").map((s) => ({ id: s.id, name: s.name, durationMinutes: s.duration_minutes, group: s.scheduling_mode === "group", category: s.category })),
     agendas: unwrap(agendas, "Agendas").map((a) => ({ id: a.id, name: a.name })),
     serviceAgendas: unwrap(pairs, "Serviços das agendas").map((p) => ({ serviceId: p.service_id, agendaId: p.agenda_id })),
     locations: unwrap(locations, "Locais").map((l) => ({ id: l.id, name: l.name, homeVisit: l.type === "home_visit" })),
@@ -216,4 +218,162 @@ export async function saveAgendaImport(
   }
   if (!data) throw new DataError("not_found", "Agenda atual: não encontrada");
   return { issues, submitted: sending };
+}
+
+// ---------------------------------------------------------------------------
+// Conferência e devolução pelo Suporte (F10.1b)
+// ---------------------------------------------------------------------------
+
+/** Suporte: um pedido da clínica pelo id. */
+export async function getAgendaImport(db: DbClient, clinicId: string, requestId: string): Promise<AgendaImportRequest | null> {
+  const row = unwrap(await db.from("agenda_import_requests").select(COLUMNS).eq("clinic_id", clinicId).eq("id", requestId).maybeSingle(), "Agenda atual");
+  return row ? toRequest(row) : null;
+}
+
+/** A conferência do pedido com o cadastro de agora (Suporte). */
+export async function loadImportReview(db: DbClient, clinicId: string, patients: ImportPatient[], now: Date = new Date()): Promise<{ review: ImportReview; catalog: ImportCatalog; timeZone: string }> {
+  const settings = unwrapOne(
+    await db.from("clinic_settings").select("timezone, consultation_age_limit_years").eq("clinic_id", clinicId).maybeSingle(),
+    "Configuração da clínica",
+  );
+  const timeZone = settings.timezone;
+  const dates = patients
+    .flatMap((p) => p.appointments.map((a) => a.date))
+    .filter(isCalendarDate)
+    .sort();
+  const phones = [...new Set(patients.map((p) => (p.phone ? normalizePhone(p.phone) : null)).filter((p): p is string => !!p))];
+  const from = dates.length ? dayBounds(addDays(dates[0], -1), timeZone).start : null;
+  const to = dates.length ? dayBounds(dates[dates.length - 1], timeZone).end : null;
+
+  const [catalog, busy, windows, serviceLocations, blocks, holidays, contacts] = await Promise.all([
+    loadImportCatalog(db, clinicId),
+    loadBusyPeriods(db, clinicId, patients, timeZone),
+    db
+      .from("availability_windows")
+      .select("agenda_id, location_id, service_id, weekday, start_time, end_time")
+      .eq("clinic_id", clinicId)
+      .eq("is_active", true)
+      .then((r) => unwrap(r, "Horários de atendimento")),
+    db
+      .from("service_locations")
+      .select("service_id, location_id")
+      .eq("clinic_id", clinicId)
+      .then((r) => unwrap(r, "Locais dos serviços")),
+    from && to
+      ? db
+          .from("schedule_blocks")
+          .select("agenda_id, starts_at, ends_at")
+          .eq("clinic_id", clinicId)
+          .is("removed_at", null)
+          .lt("starts_at", to.toISOString())
+          .gt("ends_at", from.toISOString())
+          .then((r) => unwrap(r, "Bloqueios"))
+      : Promise.resolve([]),
+    dates.length
+      ? db
+          .from("clinic_holidays")
+          .select("date")
+          .eq("clinic_id", clinicId)
+          .gte("date", dates[0])
+          .lte("date", dates[dates.length - 1])
+          .then((r) => unwrap(r, "Feriados"))
+      : Promise.resolve([]),
+    phones.length
+      ? db
+          .from("contacts")
+          .select("id, phone, full_name, is_active, patients ( id, full_name, birthdate, is_active, insurance_plan_id, insurance_card_number )")
+          .eq("clinic_id", clinicId)
+          .in("phone", phones)
+          .then((r) => unwrap(r, "Contatos"))
+      : Promise.resolve([]),
+  ]);
+
+  const context: ReviewContext = {
+    timeZone,
+    today: todayIn(timeZone, now),
+    now,
+    busy,
+    windows: windows.map((w) => ({
+      agendaId: w.agenda_id,
+      locationId: w.location_id,
+      serviceId: w.service_id,
+      weekday: w.weekday,
+      startTime: w.start_time.slice(0, 5),
+      endTime: w.end_time.slice(0, 5),
+    })),
+    serviceLocations: serviceLocations.map((l) => ({ serviceId: l.service_id, locationId: l.location_id })),
+    blocks: blocks.map((b) => ({ agendaId: b.agenda_id, start: new Date(b.starts_at), end: new Date(b.ends_at) })),
+    holidays: new Set(holidays.map((h) => h.date)),
+    contacts: contacts.map((c) => ({
+      id: c.id,
+      phone: c.phone,
+      name: c.full_name,
+      isActive: c.is_active,
+      patients: c.patients.map((p) => ({
+        id: p.id,
+        name: p.full_name,
+        birthdate: p.birthdate,
+        isActive: p.is_active,
+        insurancePlanId: p.insurance_plan_id,
+        cardNumber: p.insurance_card_number,
+      })),
+    })),
+    consultationAgeLimit: settings.consultation_age_limit_years,
+  };
+  return { review: reviewImport(patients, catalog, context), catalog, timeZone };
+}
+
+export const MAX_RETURN_COMMENT = 2000;
+
+/**
+ * Suporte: devolve a agenda enviada à clínica com o que corrigir. Sai um link
+ * novo (15 dias) por e-mail, com o comentário; o rascunho continua.
+ */
+export async function returnAgendaImport(
+  db: DbClient,
+  actorId: string,
+  clinic: { id: string; name: string; timezone: string },
+  requestId: string,
+  comment: string,
+  deps: Pick<OnboardingDeps, "sendEmail" | "baseUrl">,
+  now: Date = new Date(),
+): Promise<{ email: EmailOutcome; link: string }> {
+  const text = comment.trim();
+  if (!text) throw new DataError("invalid", "Agenda atual: sem comentário", { comentario: "Escreva o que a clínica precisa corrigir." });
+  if (text.length > MAX_RETURN_COMMENT) {
+    throw new DataError("invalid", "Agenda atual: comentário longo", { comentario: `No máximo ${MAX_RETURN_COMMENT} caracteres.` });
+  }
+  const request = await getAgendaImport(db, clinic.id, requestId);
+  if (!request) throw new DataError("not_found", "Agenda atual: não encontrada");
+  if (request.status !== "submitted") {
+    throw new DataError("invalid", "Agenda atual: não está para conferir", { comentario: "Só a agenda enviada ao Suporte pode ser devolvida." });
+  }
+  const token = newToken();
+  const expiresAt = new Date(now.getTime() + AGENDA_IMPORT_DAYS * 24 * 60 * 60_000);
+  unwrapOne(
+    await db
+      .from("agenda_import_requests")
+      .update({
+        status: "returned",
+        return_comment: text,
+        returned_by: actorId,
+        returned_at: now.toISOString(),
+        token_hash: hashToken(token),
+        link_sent_at: now.toISOString(),
+        expires_at: expiresAt.toISOString(),
+      })
+      .eq("id", request.id)
+      .eq("status", "submitted")
+      .select("id")
+      .maybeSingle(),
+    "Agenda atual",
+  );
+  const url = `${deps.baseUrl}/importar/${token}`;
+  const message = agendaImportReturnedEmail(request.email, {
+    clinicName: clinic.name,
+    link: url,
+    comment: text,
+    expiresOn: formatInstant(expiresAt, clinic.timezone, "dd/MM/yyyy"),
+  });
+  return { email: await trySend(() => deps.sendEmail(message)), link: url };
 }

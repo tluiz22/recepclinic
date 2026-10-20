@@ -212,7 +212,16 @@ const importAppointments = agendaImport ? countAppointments(agendaImport.entries
                   {agendaImport.status === "submitted" ? "" : `, salvo em ${when(agendaImport.savedAt)}`}
                 </span>
               )}
-              {agendaImport.status === "submitted" && <span class="text-sm text-ink-soft">A conferência e a carga estão em construção (F10.1b e F10.1c).</span>}
+              {importOpen && agendaImport.returnComment && (
+              <span class="text-sm text-ink">
+                <strong>Devolvida com o comentário:</strong> {agendaImport.returnComment}
+              </span>
+            )}
+            {agendaImport.status === "submitted" && (
+              <Button href={`/admin/sistema/clinicas/${clinic.id}/agenda-atual`} size="sm" class="mt-1 self-start">
+                Conferir a agenda atual
+              </Button>
+            )}
             </div>
           )
         }

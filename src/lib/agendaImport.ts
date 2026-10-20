@@ -36,7 +36,7 @@ export type ImportPatient = {
 
 /** O que está ativo na clínica: os menus do link e a conferência. */
 export type ImportCatalog = {
-  services: { id: string; name: string; durationMinutes: number; group: boolean }[];
+  services: { id: string; name: string; durationMinutes: number; group: boolean; category: "consultation" | "return_visit" | "exam" }[];
   agendas: { id: string; name: string }[];
   /** Pares serviço × agenda em que o serviço é atendido. */
   serviceAgendas: { serviceId: string; agendaId: string }[];

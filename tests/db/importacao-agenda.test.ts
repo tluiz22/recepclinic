@@ -4,7 +4,9 @@ import {
   getAgendaImportByToken,
   getLatestAgendaImport,
   loadImportCatalog,
+  loadImportReview,
   requestAgendaImport,
+  returnAgendaImport,
   saveAgendaImport,
 } from "../../src/lib/data/agendaImport";
 import type { DbClient } from "../../src/lib/data/clients";
@@ -156,5 +158,86 @@ describe("agenda atual", () => {
 
     await adminClient().from("agenda_import_requests").update({ expires_at: new Date(Date.now() - 1000).toISOString() }).eq("token_hash", hashToken(current));
     expect(await codeOf(() => saveAgendaImport(page, fx.clinicId, current, [patient()], false, TZ, NOW))).toBe("invalid");
+  });
+});
+
+describe("conferência e devolução (F10.1b)", () => {
+  let token: string;
+  let requestId: string;
+
+  beforeAll(async () => {
+    // Pedido anterior encerrado: um novo, enviado com um paciente já cadastrado e um novo.
+    await adminClient().from("agenda_import_requests").update({ status: "loaded" }).eq("clinic_id", fx.clinicId);
+    const result = await requestAgendaImport(asDb(support.client), support.id, clinic, "admin@clinica.com", deps, NOW);
+    token = tokenOf(result.link);
+    const page = asDb(clinicServiceClient(fx.clinicId));
+    const entries = [
+      // Paciente Um do fixture: contato "Resp. Paciente Um", nascido em 2020-01-01.
+      patient({
+        key: "p1",
+        name: "Paciente Um",
+        birthdate: "2020-01-01",
+        phone: "(84) 96666-0001",
+        guardianName: "Outro Nome",
+        appointments: [
+          { key: "a1", date: MON1, time: "11:45", serviceId: fx.ids.consulta, agendaId: fx.ids.agendaDra, locationId: fx.ids.office, homeAddress: "" },
+          { key: "a2", date: MON1, time: "10:00", serviceId: fx.ids.retorno, agendaId: fx.ids.agendaDra, locationId: fx.ids.office, homeAddress: "" },
+        ],
+      }),
+      patient({ key: "p2" }),
+    ];
+    expect((await saveAgendaImport(page, fx.clinicId, token, entries, true, TZ, NOW)).submitted).toBe(true);
+    requestId = (await getLatestAgendaImport(asDb(support.client), fx.clinicId))!.id;
+  });
+
+  it("a conferência do Suporte acha o já cadastrado, a diferença, a grade e o retorno", async () => {
+    const request = (await getLatestAgendaImport(asDb(support.client), fx.clinicId))!;
+    const { review } = await loadImportReview(asDb(support.client), fx.clinicId, request.entries, NOW);
+    expect(review.errorCount).toBe(0);
+    expect(review.totals).toEqual({ newPatients: 1, existingPatients: 1, appointmentsIn: 2, appointmentsSkipped: 0 });
+    const [um, novo] = review.patients;
+    expect(um).toMatchObject({ kind: "existing_patient", patientId: fx.ids.p1 });
+    expect(um.warnings).toEqual(["WhatsApp já cadastrado em nome de Resp. Paciente Um (no link: Outro Nome). Fica o cadastro."]);
+    // 11h45 + 30 min passa das 12h, fim da janela da segunda.
+    expect(um.appointments[0].warnings).toEqual(["Fora da grade: fora dos Horários dessa agenda e local."]);
+    expect(um.appointments[1].warnings).toEqual(["Retorno: entra sem a Consulta de origem e sem conferir o prazo."]);
+    expect(novo.kind).toBe("new");
+
+    // Depois do envio, o horário foi ocupado: vira erro na conferência.
+    await adminClient().from("appointments").insert({
+      clinic_id: fx.clinicId,
+      patient_id: fx.ids.p2,
+      service_id: fx.ids.retorno,
+      agenda_id: fx.ids.agendaDra,
+      location_id: fx.ids.office,
+      scheduled_at: at(MON1, "10:00").toISOString(),
+      duration_minutes: 20,
+      booking_channel: "whatsapp_bot",
+    });
+    const again = await loadImportReview(asDb(support.client), fx.clinicId, request.entries, NOW);
+    expect(again.review.patients[0].appointments[1].errors).toEqual(["Esse horário já está ocupado nessa agenda."]);
+    // Uma semana depois, as consultas já passaram: ficam de fora, sem erro.
+    const later = await loadImportReview(asDb(support.client), fx.clinicId, request.entries, at("2031-03-17", "08:00"));
+    expect(later.review).toMatchObject({ errorCount: 0, totals: { appointmentsIn: 0, appointmentsSkipped: 2 } });
+  });
+
+  it("devolver: comentário obrigatório, link novo por e-mail e a clínica volta a editar", async () => {
+    expect(await codeOf(() => returnAgendaImport(asDb(support.client), support.id, clinic, requestId, "  ", deps, NOW))).toBe("invalid");
+    const result = await returnAgendaImport(asDb(support.client), support.id, clinic, requestId, "Paciente 2: confira o telefone.", deps, NOW);
+    expect(result.email).toEqual({ sent: true });
+    const email = sent.at(-1)!;
+    expect(email.subject).toBe("Agenda atual da Clínica da importação: falta corrigir");
+    expect(email.text).toContain("Paciente 2: confira o telefone.");
+    expect(email.text).toContain(result.link);
+    expect(await resolveClinicByAgendaImportToken(hashToken(token), env)).toBeNull();
+
+    const page = asDb(clinicServiceClient(fx.clinicId));
+    const returned = await getAgendaImportByToken(page, tokenOf(result.link));
+    expect(returned).toMatchObject({ status: "returned", returnComment: "Paciente 2: confira o telefone." });
+    await saveAgendaImport(page, fx.clinicId, tokenOf(result.link), returned!.entries, false, TZ, NOW);
+    expect(await getAgendaImportByToken(page, tokenOf(result.link))).toMatchObject({ status: "draft", returnComment: "Paciente 2: confira o telefone." });
+    // Só a enviada pode ser devolvida; a clínica não devolve.
+    expect(await codeOf(() => returnAgendaImport(asDb(support.client), support.id, clinic, requestId, "de novo", deps, NOW))).toBe("invalid");
+    expect(await codeOf(() => returnAgendaImport(asDb(fx.admin.client), fx.admin.id, clinic, requestId, "x", deps, NOW))).toBe("not_found");
   });
 });

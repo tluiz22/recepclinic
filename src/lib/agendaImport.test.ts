@@ -17,8 +17,9 @@ const now = toInstant(today, "08:00", TZ);
 
 const catalog: ImportCatalog = {
   services: [
-    { id: "s-cons", name: "Consulta", durationMinutes: 30, group: false },
-    { id: "s-exam", name: "Espirometria", durationMinutes: 20, group: true },
+    { id: "s-cons", name: "Consulta", durationMinutes: 30, group: false, category: "consultation" },
+    { id: "s-ret", name: "Retorno", durationMinutes: 20, group: false, category: "return_visit" },
+    { id: "s-exam", name: "Espirometria", durationMinutes: 20, group: true, category: "exam" },
   ],
   agendas: [
     { id: "ag-ana", name: "Dra. Ana" },
@@ -26,6 +27,7 @@ const catalog: ImportCatalog = {
   ],
   serviceAgendas: [
     { serviceId: "s-cons", agendaId: "ag-ana" },
+    { serviceId: "s-ret", agendaId: "ag-ana" },
     { serviceId: "s-exam", agendaId: "ag-exames" },
   ],
   locations: [

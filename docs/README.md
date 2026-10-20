@@ -183,9 +183,10 @@
 >   **F10.1 revista pelo cliente em 20/out:** no lugar da planilha, um **link de preenchimento** (sem login, 15
 >   dias) para a clínica, com o Suporte conferindo e autorizando a carga; planilha dentro do link fica para depois
 >   do 1º piloto (decisões no [plano](plano.md)). **F10.1a (pedido, e-mail e o link com rascunho e envio)
->   implementada e testada no local em 20/out**, sem commit: aguarda a validação do cliente; depois, a migração
->   `20261020120000_importacao_da_agenda.sql` no staging e a publicação. Em seguida: F10.1b (conferência e
->   "Devolver com comentário"), F10.1c (carga) e F10.1d (desfazer).
+>   implementada e publicada no staging em 20/out** (migração aplicada antes; commit `c16c69b`); o cliente valida lá.
+>   **F10.1b (conferência do Suporte e "Devolver à clínica" com comentário) decidida e implementada em 20/out**,
+>   testada no local e publicada no staging em 20/out (sem migração); o cliente valida tudo no fim (20/out). Em seguida: F10.1c (autorizar e
+>   gravar a carga) e F10.1d (desfazer).
 >   **Antes (19/out):** implementar a F10.1 (já aprovada). As **melhorias no
 >   processo da nota fiscal** ficam para uma sessão própria (cliente, 19/out: ele traz a lista do que planejar). Em
 >   paralelo, aguardar a Meta (Análise do App até ~29/out).

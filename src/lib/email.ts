@@ -111,6 +111,24 @@ export function agendaImportEmail(to: string, { clinicName, link, expiresOn }: {
   return { to, subject: `Agenda atual da ${clinicName} para o RecepClinic`, ...body };
 }
 
+/** Agenda atual devolvida pelo Suporte (F10.1b): o que corrigir e um link novo de 15 dias. */
+export function agendaImportReturnedEmail(
+  to: string,
+  { clinicName, link, comment, expiresOn }: { clinicName: string; link: string; comment: string; expiresOn: string },
+): Email {
+  const body = layout(
+    `Agenda atual da ${clinicName}: falta corrigir`,
+    [
+      "O Suporte RecepClinic conferiu a agenda atual que vocês enviaram e pede para corrigir:",
+      comment,
+      "O que vocês já digitaram continua salvo. Corrija pelo botão abaixo e toque de novo em \"Enviar ao Suporte\".",
+      `O link vale até ${expiresOn}; o link anterior não funciona mais. Ele mostra o que for digitado nele: não repasse para fora da clínica.`,
+    ],
+    { label: "Corrigir a agenda atual", href: link },
+  );
+  return { to, subject: `Agenda atual da ${clinicName}: falta corrigir`, ...body };
+}
+
 /**
  * Nota fiscal do pagamento (F11.5), com o PDF e o XML anexados. Mesmo texto do
  * template do WhatsApp (aprovado pelo cliente em 12/out/2026), menos o "é só

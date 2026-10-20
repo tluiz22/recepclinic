@@ -1648,7 +1648,27 @@ anterior para de funcionar; o rascunho continua; depois de enviada, só a confer
 Detalhes da tela: o menu da agenda mostra só as que atendem o serviço escolhido (uma só já vem
 escolhida); o endereço da visita aparece só no local domiciliar; o local some com um local só;
 convênio só com o item Convênios. No teste local, os cartões criados na tela eram descartados
-em silêncio (chave longa demais para o servidor); corrigido e coberto por teste.
+em silêncio (chave longa demais para o servidor); corrigido e coberto por teste. **Publicada no
+staging em 20/out** (migração aplicada e conferida antes; commit `c16c69b`).
+
+**F10.1b — conferência e devolução. Decisões do cliente (20/out):**
+- **Fora da grade** (aviso) é só o que cai fora do atendimento: fora das janelas de Horários
+  da agenda e do local, dia sem agenda, feriado, horário bloqueado ou serviço não oferecido no
+  local. Horário "fora do passo" dentro da janela (ex.: 10h10) **não** avisa.
+- **Já cadastrado com dado diferente:** **fica o cadastro**, com aviso mostrando a diferença
+  (nome do contato, convênio e carteirinha); a carga não muda quem já existe, só acrescenta as
+  consultas.
+- Idade-limite da Consulta: só aviso, como no painel.
+
+**F10.1b implementada, testada no local e publicada no staging em 20/out** (sem migração; o cliente valida a F10.1 inteira no fim). Tela
+"Conferir a agenda atual" (botão no cartão da clínica quando a agenda é enviada): resumo
+(novos, já cadastrados, consultas que entram, que ficam de fora, erros e avisos), filtro "Com
+erro ou aviso" e, por paciente e consulta, os erros (conferidos de novo com o cadastro de agora,
+ex.: horário que o bot ocupou depois do envio) e os avisos (já cadastrado e diferenças, fora da
+grade, Retorno sem a Consulta de origem, idade-limite, "já passou: fica de fora").
+**"Devolver à clínica"** com comentário obrigatório (já vem com os erros da conferência para
+editar): link novo de 15 dias por e-mail com o comentário, o anterior para; o comentário
+aparece no alto do link até a clínica reenviar. Regras em `src/lib/agendaImportReview.ts`.
 
 ## F11 — Módulo financeiro: pagamentos e nota fiscal no CPF do responsável
 
