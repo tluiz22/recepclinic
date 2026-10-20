@@ -226,10 +226,20 @@ const importAppointments = agendaImport ? countAppointments(agendaImport.entries
           )
         }
         {
+          agendaImport?.status === "undone" && (
+            <p class="flex flex-wrap items-center gap-1.5 text-sm text-ink-soft">
+              <Badge>Desfeita</Badge> A última carga foi desfeita. Dá para pedir a agenda atual de novo.
+            </p>
+          )
+        }
+        {
           agendaImport?.status === "loaded" && agendaImport.loadedAt && (
             <p class="flex flex-wrap items-center gap-1.5 text-sm text-ink-soft">
               <Badge variant="success">Carregada</Badge> em {when(agendaImport.loadedAt)}: {importPatients} {importPatients === 1 ? "paciente" : "pacientes"} e{" "}
               {importAppointments} {importAppointments === 1 ? "consulta" : "consultas"} no link.
+              <Button href={`/admin/sistema/clinicas/${clinic.id}/agenda-atual`} size="sm">
+                Ver a carga ou desfazer
+              </Button>
             </p>
           )
         }

@@ -3,17 +3,19 @@
 // clínica enviou pelo link, conferido de novo com o cadastro de agora. Erros
 // travam a autorização (o Suporte devolve com comentário); avisos, não.
 // "Autorizar a carga" (F10.1c) grava tudo de uma vez, sem aviso de marcação.
+// Depois da carga, a mesma tela mostra a prévia do "Desfazer" (F10.1d): o
+// que sai e o que fica (consultas já mexidas, cadastros em uso) e por quê.
 import AdminLayout from "../../../../../layouts/AdminLayout.astro";
 import ConfirmDeleteDialog from "../../../../../components/admin/ConfirmDeleteDialog.astro";
 import Badge from "../../../../../components/admin/config/Badge.astro";
 import FlashMessage from "../../../../../components/admin/FlashMessage.astro";
 import SystemHeader from "../../../../../components/admin/sistema/SystemHeader.astro";
 import Notice from "../../../../../components/admin/ui/Notice.astro";
-import { CARD, HINT, INPUT, LABEL, PANEL, PRIMARY_BUTTON, SECTION_TITLE } from "../../../../../components/admin/config/formStyles";
+import { CARD, DANGER_BUTTON, HINT, INPUT, LABEL, PANEL, PRIMARY_BUTTON, SECTION_TITLE } from "../../../../../components/admin/config/formStyles";
 import type { ReviewedPatient } from "../../../../../lib/agendaImportReview";
 import { isUuid } from "../../../../../lib/clinicAccess";
 import { formatCalendarDate, formatInstant, isCalendarDate } from "../../../../../lib/clinicTime";
-import { getLatestAgendaImport, loadImportReview, MAX_RETURN_COMMENT } from "../../../../../lib/data/agendaImport";
+import { getLatestAgendaImport, loadImportReview, MAX_RETURN_COMMENT, undoAgendaImport } from "../../../../../lib/data/agendaImport";
 import { createUserClient } from "../../../../../lib/data/clients";
 import { formatPhoneBR } from "../../../../../lib/phone";
 
@@ -26,6 +28,11 @@ const clinicPage = `/admin/sistema/clinicas/${id}`;
 const submitted = request?.status === "submitted" ? request : null;
 const result = submitted ? await loadImportReview(db, id, submitted.entries) : null;
 const review = result?.review ?? null;
+const loaded = request?.status === "loaded" ? request : null;
+const preview = loaded ? await undoAgendaImport(db, id, loaded.id, false) : null;
+const { data: settings } = await db.from("clinic_settings").select("timezone").eq("clinic_id", id).maybeSingle();
+const timeZone = settings?.timezone ?? "America/Fortaleza";
+const title = loaded ? "Carga da agenda atual" : "Conferir a agenda atual";
 
 const onlyPoints = Astro.url.searchParams.get("filtro") === "pontos";
 const hasPoints = (p: ReviewedPatient) => p.errors.length + p.warnings.length + p.appointments.reduce((n, a) => n + a.errors.length + a.warnings.length, 0) > 0;
@@ -56,14 +63,90 @@ const suggestion = review
 const ul = "flex flex-col gap-1 text-[15px] leading-snug";
 ---
 
-<AdminLayout title="Conferir a agenda atual" platform>
+<AdminLayout title={title} platform>
   <div class="flex flex-col">
-    <SystemHeader title="Conferir a agenda atual" kicker={clinic.name} back={{ href: clinicPage, label: clinic.name }} />
+    <SystemHeader title={title} kicker={clinic.name} back={{ href: clinicPage, label: clinic.name }} />
   </div>
   <FlashMessage />
 
   {
-    !submitted || !review ? (
+    loaded && preview && (
+      <div class="mt-5 flex flex-col gap-4">
+        <section class={`${PANEL} flex flex-col gap-3`} aria-labelledby="t-carga">
+          <h2 id="t-carga" class={SECTION_TITLE}>
+            Carga feita
+          </h2>
+          <p class="text-[15px] text-ink">
+            Carregada em {loaded.loadedAt ? formatInstant(loaded.loadedAt, timeZone, "dd/MM/yyyy 'às' HH:mm") : "?"}, sem aviso de marcação. Na trilha, as
+            consultas aparecem como "Importado na implantação".
+          </p>
+        </section>
+        <section class={`${PANEL} flex flex-col gap-4`} aria-labelledby="t-desfazer">
+          <div class="flex flex-col gap-1">
+            <h2 id="t-desfazer" class={SECTION_TITLE}>
+              Desfazer a carga
+            </h2>
+            <p class="text-[15px] text-ink-soft">
+              Se desfizer agora, saem: {plural(preview.appointmentsRemoved, "consulta", "consultas")},{" "}
+              {plural(preview.patientsRemoved, "paciente criado", "pacientes criados")} e {plural(preview.contactsRemoved, "contato criado", "contatos criados")}{" "}
+              pela carga. Nenhuma mensagem é enviada. Quem já existia antes da carga continua como está.
+            </p>
+          </div>
+          {preview.appointmentsKept.length > 0 && (
+            <div class="flex flex-col gap-1.5">
+              <h3 class="text-[15px] font-bold text-ink">
+                {preview.appointmentsKept.length === 1 ? "Fica" : "Ficam"} {plural(preview.appointmentsKept.length, "consulta já mexida", "consultas já mexidas")}
+              </h3>
+              <ul class={`${ul} text-ink`}>
+                {preview.appointmentsKept.map((a) => (
+                  <li>
+                    {a.patientName} · {formatInstant(a.scheduledAt, timeZone, "EEE dd/MM/yyyy 'às' HH:mm")} · {a.serviceName}:{" "}
+                    <span class="text-pend-800">{a.reasons.join(", ")}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+          {preview.patientsKept.length + preview.contactsKept.length > 0 && (
+            <div class="flex flex-col gap-1.5">
+              <h3 class="text-[15px] font-bold text-ink">
+                {preview.patientsKept.length + preview.contactsKept.length === 1 ? "Fica" : "Ficam"}{" "}
+                {plural(preview.patientsKept.length + preview.contactsKept.length, "cadastro em uso", "cadastros em uso")}
+              </h3>
+              <ul class={`${ul} text-ink`}>
+                {preview.patientsKept.map((p) => (
+                  <li>
+                    Paciente {p.name}: <span class="text-pend-800">{p.reason}</span>
+                  </li>
+                ))}
+                {preview.contactsKept.map((c) => (
+                  <li>
+                    Contato {c.name}: <span class="text-pend-800">{c.reason}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+          <form method="POST" action={`/api/admin/sistema/clinicas/${id}`}>
+            <input type="hidden" name="acao" value="desfazer_carga" />
+            <input type="hidden" name="request_id" value={loaded.id} />
+            <button
+              type="submit"
+              data-sending-label="Desfazendo…"
+              class={`${DANGER_BUTTON} js-confirm-delete`}
+              data-confirm-title="Desfazer a carga?"
+              data-confirm-label="Desfazer a carga"
+              data-confirm-message={`Saem da ${clinic.name}: ${plural(preview.appointmentsRemoved, "consulta", "consultas")}, ${plural(preview.patientsRemoved, "paciente", "pacientes")} e ${plural(preview.contactsRemoved, "contato", "contatos")}. Não dá para voltar atrás.`}
+            >
+              Desfazer a carga
+            </button>
+          </form>
+        </section>
+      </div>
+    )
+  }
+  {
+    loaded ? null : !submitted || !review ? (
       <p class={`${PANEL} mt-5 text-[15px] text-ink`}>
         Nenhuma agenda atual enviada para conferir. Os pedidos ficam em <a href={clinicPage} class="font-semibold text-brand">{clinic.name}</a>, no cartão
         "Agenda atual".

@@ -7,14 +7,14 @@ export type Database = {
           Tables: {
             "agenda_import_requests": {
                   Row: {
-                    "clinic_id": string,"email": string,"entries": NonNullable<Json>,"expires_at": string,"id": string,"link_sent_at": string,"loaded_at": string | null,"loaded_by": string | null,"requested_at": string,"requested_by": string | null,"return_comment": string | null,"returned_at": string | null,"returned_by": string | null,"saved_at": string | null,"status": string,"submitted_at": string | null,"token_hash": string
+                    "clinic_id": string,"email": string,"entries": NonNullable<Json>,"expires_at": string,"id": string,"link_sent_at": string,"loaded_at": string | null,"loaded_by": string | null,"requested_at": string,"requested_by": string | null,"return_comment": string | null,"returned_at": string | null,"returned_by": string | null,"saved_at": string | null,"status": string,"submitted_at": string | null,"token_hash": string,"undone_at": string | null,"undone_by": string | null
                   }
                   ComputedFields: never
                   Insert: {
-                    "clinic_id": string,"email": string,"entries"?: NonNullable<Json>,"expires_at": string,"id"?: string,"link_sent_at"?: string,"loaded_at"?: string | null,"loaded_by"?: string | null,"requested_at"?: string,"requested_by"?: string | null,"return_comment"?: string | null,"returned_at"?: string | null,"returned_by"?: string | null,"saved_at"?: string | null,"status"?: string,"submitted_at"?: string | null,"token_hash": string
+                    "clinic_id": string,"email": string,"entries"?: NonNullable<Json>,"expires_at": string,"id"?: string,"link_sent_at"?: string,"loaded_at"?: string | null,"loaded_by"?: string | null,"requested_at"?: string,"requested_by"?: string | null,"return_comment"?: string | null,"returned_at"?: string | null,"returned_by"?: string | null,"saved_at"?: string | null,"status"?: string,"submitted_at"?: string | null,"token_hash": string,"undone_at"?: string | null,"undone_by"?: string | null
                   }
                   Update: {
-                    "clinic_id"?: string,"email"?: string,"entries"?: NonNullable<Json>,"expires_at"?: string,"id"?: string,"link_sent_at"?: string,"loaded_at"?: string | null,"loaded_by"?: string | null,"requested_at"?: string,"requested_by"?: string | null,"return_comment"?: string | null,"returned_at"?: string | null,"returned_by"?: string | null,"saved_at"?: string | null,"status"?: string,"submitted_at"?: string | null,"token_hash"?: string
+                    "clinic_id"?: string,"email"?: string,"entries"?: NonNullable<Json>,"expires_at"?: string,"id"?: string,"link_sent_at"?: string,"loaded_at"?: string | null,"loaded_by"?: string | null,"requested_at"?: string,"requested_by"?: string | null,"return_comment"?: string | null,"returned_at"?: string | null,"returned_by"?: string | null,"saved_at"?: string | null,"status"?: string,"submitted_at"?: string | null,"token_hash"?: string,"undone_at"?: string | null,"undone_by"?: string | null
                   }
                   Relationships: [
                     {
@@ -1644,6 +1644,9 @@ isOneToOne: false
                            },
 "set_whatsapp_access_token":
 { Args: { "p_clinic_id": string,"p_token": string }; Returns: undefined
+                           },
+"undo_agenda_import":
+{ Args: { "p_apply": boolean,"p_request_id": string }; Returns: Json
                            }
           }
           Enums: {

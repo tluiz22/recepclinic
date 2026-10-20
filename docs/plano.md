@@ -1685,6 +1685,19 @@ marcação (a confirmação sai da rota do painel, não do banco; preparo e orie
 dela); lembretes normais. Contatos, pacientes e consultas criados levam `agenda_import_id`
 (para o "Desfazer", F10.1d). Quem já existe só ganha as consultas.
 
+**F10.1d — desfazer a carga: implementada, testada no local e publicada no staging em 20/out**
+(migração `20261020140000_desfazer_carga.sql`; regra decidida em 19/out). Com a carga feita, a
+tela "Carga da agenda atual" (botão "Ver a carga ou desfazer" no cartão da clínica) mostra a
+**prévia**: o que sai e o que fica, e por quê. A prévia roda a própria função
+`undo_agenda_import` e volta atrás no fim, então mostra exatamente o que vai acontecer.
+"Desfazer a carga" pede confirmação. **Ficam** as consultas já mexidas (remarcada, confirmada,
+comparecimento ou falta, cancelada, presença confirmada, mensagem enviada — lembrete inclusive
+—, pagamento, retorno marcado a partir dela, ou presa a link ou lista de espera), os pacientes
+criados pela carga com consulta ou outro registro e os contatos com paciente ou conversa no
+WhatsApp. Quem já existia antes da carga não muda (quem voltou a ficar ativo continua ativo).
+Depois de desfeita, o Suporte pode pedir a agenda atual de novo. **F10.1 toda implementada;
+o cliente valida tudo no fim (20/out).**
+
 ## F11 — Módulo financeiro: pagamentos e nota fiscal no CPF do responsável
 
 **Pedida pelo cliente em 12/out/2026** para as clínicas piloto de **Mossoró (RN)**. Primeiro foi

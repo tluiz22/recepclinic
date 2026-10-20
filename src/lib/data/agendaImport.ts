@@ -415,3 +415,32 @@ export async function authorizeAgendaImport(db: DbClient, clinicId: string, requ
   }
   return data as unknown as LoadResult;
 }
+
+// ---------------------------------------------------------------------------
+// Desfazer a carga (F10.1d)
+// ---------------------------------------------------------------------------
+
+export type UndoResult = {
+  applied: boolean;
+  appointmentsRemoved: number;
+  patientsRemoved: number;
+  contactsRemoved: number;
+  appointmentsKept: { patientName: string; serviceName: string; scheduledAt: Date; reasons: string[] }[];
+  patientsKept: { name: string; reason: string }[];
+  contactsKept: { name: string; reason: string }[];
+};
+
+/**
+ * Suporte: desfaz a carga (`apply`) ou mostra o que aconteceria (prévia, sem
+ * mudar nada). Ficam as consultas já mexidas e o que tem outro uso; o
+ * resultado diz quais e por quê.
+ */
+export async function undoAgendaImport(db: DbClient, clinicId: string, requestId: string, apply: boolean): Promise<UndoResult> {
+  const request = await getAgendaImport(db, clinicId, requestId);
+  if (!request) throw new DataError("not_found", "Agenda atual: não encontrada");
+  if (request.status !== "loaded") throw new DataError("invalid", "Agenda atual: não carregada", { carga: "Esta agenda atual não foi carregada." });
+  const { data, error } = await db.rpc("undo_agenda_import", { p_request_id: request.id, p_apply: apply });
+  if (error) throw fromDbError(error, "Desfazer a carga");
+  const raw = data as unknown as Omit<UndoResult, "appointmentsKept"> & { appointmentsKept: { patientName: string; serviceName: string; scheduledAt: string; reasons: string[] }[] };
+  return { ...raw, appointmentsKept: raw.appointmentsKept.map((a) => ({ ...a, scheduledAt: new Date(a.scheduledAt) })) };
+}

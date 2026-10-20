@@ -186,7 +186,10 @@
 >   implementada e publicada no staging em 20/out** (migração aplicada antes; commit `c16c69b`); o cliente valida lá.
 >   **F10.1b (conferência do Suporte e "Devolver à clínica" com comentário) decidida e implementada em 20/out**,
 >   testada no local e publicada no staging em 20/out (sem migração); o cliente valida tudo no fim (20/out). **F10.1c (autorizar e gravar a carga) decidida, implementada e publicada no staging
->   em 20/out** (migração `20261020130000_carga_da_agenda.sql`). Em seguida: F10.1d (desfazer).
+>   em 20/out** (migração `20261020130000_carga_da_agenda.sql`). **F10.1d (desfazer a carga, com prévia do que sai
+>   e do que fica) implementada e publicada no staging em 20/out** (migração `20261020140000_desfazer_carga.sql`).
+>   **F10.1 toda implementada e publicada; o cliente valida tudo no fim** (roteiro: pedir pelo cartão "Agenda atual"
+>   da clínica, preencher o link, conferir, devolver, autorizar a carga e desfazer).
 >   **Antes (19/out):** implementar a F10.1 (já aprovada). As **melhorias no
 >   processo da nota fiscal** ficam para uma sessão própria (cliente, 19/out: ele traz a lista do que planejar). Em
 >   paralelo, aguardar a Meta (Análise do App até ~29/out).

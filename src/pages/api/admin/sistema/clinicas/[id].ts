@@ -1,6 +1,6 @@
 import type { APIRoute } from "astro";
 import { isUuid } from "../../../../../lib/clinicAccess";
-import { authorizeAgendaImport, requestAgendaImport, returnAgendaImport } from "../../../../../lib/data/agendaImport";
+import { authorizeAgendaImport, requestAgendaImport, returnAgendaImport, undoAgendaImport } from "../../../../../lib/data/agendaImport";
 import { createUserClient } from "../../../../../lib/data/clients";
 import { DataError } from "../../../../../lib/data/errors";
 import { runFormAction } from "../../../../../lib/data/formAction";
@@ -11,14 +11,15 @@ import { formText } from "../../../../../lib/forms";
 // Ações do Suporte numa clínica (F4.4a): reenviar convite, pedir as
 // informações por e-mail e marcar as respostas como revisadas; pedir a agenda
 // atual para a importação ou mandar um link novo (F10.1a) e devolver a agenda
-// enviada à clínica, com comentário (F10.1b); autorizar a carga (F10.1c).
+// enviada à clínica, com comentário (F10.1b); autorizar a carga (F10.1c) e
+// desfazer a carga (F10.1d).
 export const POST: APIRoute = async (context) => {
   const { request, cookies, locals, params, url } = context;
   const clinicId = params.id!;
   const form = await request.formData().catch(() => null);
   const page = `/admin/sistema/clinicas/${clinicId}`;
   // Erro ao devolver: volta à conferência, com o comentário marcado.
-  const failureTo = ["devolver_agenda", "autorizar_carga"].includes(formText(form, "acao")) ? `${page}/agenda-atual` : page;
+  const failureTo = ["devolver_agenda", "autorizar_carga", "desfazer_carga"].includes(formText(form, "acao")) ? `${page}/agenda-atual` : page;
   const db = createUserClient(request, cookies);
 
   return runFormAction(
@@ -85,6 +86,15 @@ export const POST: APIRoute = async (context) => {
           return {
             redirectTo: page,
             message: `Agenda atual carregada: ${n(loaded.appointments, "consulta", "consultas")}, ${n(loaded.patients, "paciente novo", "pacientes novos")} e ${n(loaded.contacts, "contato novo", "contatos novos")}${reactivated}. Nenhum aviso de marcação foi enviado.`,
+          };
+        }
+        case "desfazer_carga": {
+          const undone = await undoAgendaImport(db, clinicId, formText(form, "request_id"), true);
+          const n = (count: number, one: string, many: string) => `${count} ${count === 1 ? one : many}`;
+          const kept = undone.appointmentsKept.length + undone.patientsKept.length + undone.contactsKept.length;
+          return {
+            redirectTo: page,
+            message: `Carga desfeita: ${n(undone.appointmentsRemoved, "consulta removida", "consultas removidas")}, ${n(undone.patientsRemoved, "paciente", "pacientes")} e ${n(undone.contactsRemoved, "contato", "contatos")}.${kept ? ` Ficou: ${n(undone.appointmentsKept.length, "consulta já mexida", "consultas já mexidas")} e ${n(undone.patientsKept.length + undone.contactsKept.length, "cadastro em uso", "cadastros em uso")}, como a prévia mostrou.` : ""}`,
           };
         }
         case "marcar_revisado":
