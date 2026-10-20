@@ -1,6 +1,6 @@
 import type { APIRoute } from "astro";
 import { isUuid } from "../../../../../lib/clinicAccess";
-import { requestAgendaImport, returnAgendaImport } from "../../../../../lib/data/agendaImport";
+import { authorizeAgendaImport, requestAgendaImport, returnAgendaImport } from "../../../../../lib/data/agendaImport";
 import { createUserClient } from "../../../../../lib/data/clients";
 import { DataError } from "../../../../../lib/data/errors";
 import { runFormAction } from "../../../../../lib/data/formAction";
@@ -11,14 +11,14 @@ import { formText } from "../../../../../lib/forms";
 // Ações do Suporte numa clínica (F4.4a): reenviar convite, pedir as
 // informações por e-mail e marcar as respostas como revisadas; pedir a agenda
 // atual para a importação ou mandar um link novo (F10.1a) e devolver a agenda
-// enviada à clínica, com comentário (F10.1b).
+// enviada à clínica, com comentário (F10.1b); autorizar a carga (F10.1c).
 export const POST: APIRoute = async (context) => {
   const { request, cookies, locals, params, url } = context;
   const clinicId = params.id!;
   const form = await request.formData().catch(() => null);
   const page = `/admin/sistema/clinicas/${clinicId}`;
   // Erro ao devolver: volta à conferência, com o comentário marcado.
-  const failureTo = formText(form, "acao") === "devolver_agenda" ? `${page}/agenda-atual` : page;
+  const failureTo = ["devolver_agenda", "autorizar_carga"].includes(formText(form, "acao")) ? `${page}/agenda-atual` : page;
   const db = createUserClient(request, cookies);
 
   return runFormAction(
@@ -77,6 +77,15 @@ export const POST: APIRoute = async (context) => {
             ? "Agenda atual devolvida à clínica, com o comentário. E-mail enviado com um link novo."
             : `Agenda atual devolvida, mas o e-mail não saiu (${result.email.reason}). Envie este link à clínica (ele não aparece de novo): ${result.link}`;
           return { redirectTo: page, message };
+        }
+        case "autorizar_carga": {
+          const loaded = await authorizeAgendaImport(db, clinicId, formText(form, "request_id"));
+          const n = (count: number, one: string, many: string) => `${count} ${count === 1 ? one : many}`;
+          const reactivated = loaded.reactivated ? `; ${n(loaded.reactivated, "cadastro inativo voltou", "cadastros inativos voltaram")} a ficar ${loaded.reactivated === 1 ? "ativo" : "ativos"}` : "";
+          return {
+            redirectTo: page,
+            message: `Agenda atual carregada: ${n(loaded.appointments, "consulta", "consultas")}, ${n(loaded.patients, "paciente novo", "pacientes novos")} e ${n(loaded.contacts, "contato novo", "contatos novos")}${reactivated}. Nenhum aviso de marcação foi enviado.`,
+          };
         }
         case "marcar_revisado":
           await markInfoRequestReviewed(db, locals.userId!, formText(form, "request_id"));

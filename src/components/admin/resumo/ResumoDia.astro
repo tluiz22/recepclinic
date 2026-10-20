@@ -35,6 +35,7 @@ const { appointments, actors, date, timeZone, vocabulary, showAgenda, tags } = A
 const now = new Date();
 const VIA: Record<string, string> = { admin: "pelo painel", whatsapp_bot: "pelo WhatsApp", booking_link: "pelo link" };
 const bookedBy = (a: AgendaAppointment) => {
+  if (a.imported) return "Importado na implantação";
   const who = a.createdBy ? actorText(actors.get(a.createdBy)) : null;
   return `Marcado ${VIA[a.bookingChannel] ?? ""}${who ? ` por ${who}` : ""}`;
 };

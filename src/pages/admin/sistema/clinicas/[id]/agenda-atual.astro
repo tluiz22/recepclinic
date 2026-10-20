@@ -1,9 +1,10 @@
 ---
 // Conferir a agenda atual (F10.1b; cliente, 19 e 20/out/2026): o que a
 // clínica enviou pelo link, conferido de novo com o cadastro de agora. Erros
-// travam a autorização (o Suporte devolve com comentário); avisos, não. A
-// autorização e a carga vêm na F10.1c.
+// travam a autorização (o Suporte devolve com comentário); avisos, não.
+// "Autorizar a carga" (F10.1c) grava tudo de uma vez, sem aviso de marcação.
 import AdminLayout from "../../../../../layouts/AdminLayout.astro";
+import ConfirmDeleteDialog from "../../../../../components/admin/ConfirmDeleteDialog.astro";
 import Badge from "../../../../../components/admin/config/Badge.astro";
 import FlashMessage from "../../../../../components/admin/FlashMessage.astro";
 import SystemHeader from "../../../../../components/admin/sistema/SystemHeader.astro";
@@ -108,7 +109,7 @@ const ul = "flex flex-col gap-1 text-[15px] leading-snug";
               {plural(review.errorCount, "erro trava", "erros travam")} a carga. Devolva à clínica com o que corrigir (no fim da tela).
             </Notice>
           ) : (
-            <Notice tone="success">Sem erros. A autorização da carga chega na próxima etapa (F10.1c); se precisar de ajuste, devolva à clínica.</Notice>
+            <Notice tone="success">Sem erros. Confira os avisos e autorize a carga (no fim da tela), ou devolva à clínica se precisar de ajuste.</Notice>
           )}
         </section>
 
@@ -205,6 +206,36 @@ const ul = "flex flex-col gap-1 text-[15px] leading-snug";
           {listed.length === 0 && <li class={`${PANEL} text-[15px] text-ink-soft`}>Nenhum paciente com erro ou aviso.</li>}
         </ol>
 
+        {review.errorCount === 0 && (
+          <section class={`${PANEL} flex flex-col gap-4`} aria-labelledby="t-autorizar">
+            <div class="flex flex-col gap-1">
+              <h2 id="t-autorizar" class={SECTION_TITLE}>
+                Autorizar a carga
+              </h2>
+              <p class="text-[15px] text-ink-soft">
+                Grava de uma vez {plural(review.totals.appointmentsIn, "consulta", "consultas")} e{" "}
+                {plural(review.totals.newPatients, "paciente novo", "pacientes novos")}; quem já está cadastrado fica como está e só ganha as consultas.
+                Nenhum aviso de marcação é enviado; os lembretes saem normalmente.
+              </p>
+            </div>
+            <form method="POST" action={`/api/admin/sistema/clinicas/${id}`}>
+              <input type="hidden" name="acao" value="autorizar_carga" />
+              <input type="hidden" name="request_id" value={submitted.id} />
+              <button
+                type="submit"
+                data-sending-label="Gravando…"
+                class={`${PRIMARY_BUTTON} js-confirm-delete`}
+                data-confirm-tone="primary"
+                data-confirm-title="Autorizar a carga?"
+                data-confirm-label="Autorizar a carga"
+                data-confirm-message={`Entram ${plural(review.totals.appointmentsIn, "consulta", "consultas")} e ${plural(review.totals.newPatients, "paciente novo", "pacientes novos")} na ${clinic.name}, sem aviso de marcação. Os lembretes saem normalmente.`}
+              >
+                Autorizar a carga
+              </button>
+            </form>
+          </section>
+        )}
+
         <section class={`${PANEL} flex flex-col gap-4`} aria-labelledby="t-devolver">
           <div class="flex flex-col gap-1">
             <h2 id="t-devolver" class={SECTION_TITLE}>
@@ -233,4 +264,5 @@ const ul = "flex flex-col gap-1 text-[15px] leading-snug";
       </div>
     )
   }
+  <ConfirmDeleteDialog />
 </AdminLayout>

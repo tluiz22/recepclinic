@@ -226,6 +226,14 @@ const importAppointments = agendaImport ? countAppointments(agendaImport.entries
           )
         }
         {
+          agendaImport?.status === "loaded" && agendaImport.loadedAt && (
+            <p class="flex flex-wrap items-center gap-1.5 text-sm text-ink-soft">
+              <Badge variant="success">Carregada</Badge> em {when(agendaImport.loadedAt)}: {importPatients} {importPatients === 1 ? "paciente" : "pacientes"} e{" "}
+              {importAppointments} {importAppointments === 1 ? "consulta" : "consultas"} no link.
+            </p>
+          )
+        }
+        {
           agendaImport?.status !== "submitted" && (
             <form method="POST" action={action} class="flex flex-col gap-4">
               <input type="hidden" name="acao" value="pedir_agenda" />

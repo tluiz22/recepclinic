@@ -1670,6 +1670,21 @@ grade, Retorno sem a Consulta de origem, idade-limite, "já passou: fica de fora
 editar): link novo de 15 dias por e-mail com o comentário, o anterior para; o comentário
 aparece no alto do link até a clínica reenviar. Regras em `src/lib/agendaImportReview.ts`.
 
+**F10.1c — carga. Decisões do cliente (20/out):**
+- As consultas importadas **não contam** no "Marcados por" das Métricas nem no contador de
+  atendimentos criados (Uso); ficam marcadas e a trilha diz **"Importado na implantação"**
+  (também no Resumo do Dia). Comparecimento, faltas e financeiro contam normalmente.
+- Contato ou paciente já cadastrado **inativo**, com consulta na carga, **volta a ficar ativo**
+  (o aviso da conferência diz isso); sem consulta, fica como está.
+
+**F10.1c implementada, testada no local e publicada no staging em 20/out** (migração
+`20261020130000_carga_da_agenda.sql`). "Autorizar a carga" na conferência, só sem erro e com
+confirmação; a conferência roda de novo na hora e a função `load_agenda_import` grava tudo numa
+transação (entra inteira ou nada; um horário ocupado no meio desfaz tudo). Sem aviso de
+marcação (a confirmação sai da rota do painel, não do banco; preparo e orientações dependem
+dela); lembretes normais. Contatos, pacientes e consultas criados levam `agenda_import_id`
+(para o "Desfazer", F10.1d). Quem já existe só ganha as consultas.
+
 ## F11 — Módulo financeiro: pagamentos e nota fiscal no CPF do responsável
 
 **Pedida pelo cliente em 12/out/2026** para as clínicas piloto de **Mossoró (RN)**. Primeiro foi

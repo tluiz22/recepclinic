@@ -29,6 +29,7 @@ const appointment = (overrides: Partial<AgendaAppointment>): AgendaAppointment =
   originAppointmentId: null,
   createdBy: null,
   bookingChannel: "admin",
+  imported: false,
   canceledBy: null,
   canceledAt: null,
   ...overrides,

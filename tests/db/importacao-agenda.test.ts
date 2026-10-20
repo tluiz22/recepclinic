@@ -1,6 +1,8 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { appointmentField, patientField, type ImportPatient } from "../../src/lib/agendaImport";
 import {
+  authorizeAgendaImport,
+  getAgendaImport,
   getAgendaImportByToken,
   getLatestAgendaImport,
   loadImportCatalog,
@@ -13,7 +15,7 @@ import type { DbClient } from "../../src/lib/data/clients";
 import { hashToken } from "../../src/lib/data/onboarding";
 import { resolveClinicByAgendaImportToken } from "../../src/lib/data/platform";
 import type { Email } from "../../src/lib/email";
-import { at, codeOf, MON1, NOW, setupAgendaClinic, type AgendaFixture } from "./agendaFixture";
+import { at, codeOf, MON1, MON2, NOW, setupAgendaClinic, type AgendaFixture } from "./agendaFixture";
 import { adminClient, clinicServiceClient, createClinic, createUser, deleteClinics, deleteUsers, makePlatformStaff, type TestUser } from "./helpers";
 
 // F10.1a — agenda atual para a importação: o Suporte pede (e-mail com o link
@@ -241,3 +243,110 @@ describe("conferência e devolução (F10.1b)", () => {
     expect(await codeOf(() => returnAgendaImport(asDb(fx.admin.client), fx.admin.id, clinic, requestId, "x", deps, NOW))).toBe("not_found");
   });
 });
+
+describe("carga (F10.1c)", () => {
+  let requestId: string;
+  const usage = async () => {
+    const { data } = await adminClient().from("clinic_usage_monthly").select("appointments_created").eq("clinic_id", fx.clinicId);
+    return (data ?? []).reduce((n, r) => n + r.appointments_created, 0);
+  };
+  const consulta = (key: string, date: string, time: string) => ({
+    key,
+    date,
+    time,
+    serviceId: fx.ids.consulta,
+    agendaId: fx.ids.agendaDra,
+    locationId: fx.ids.office,
+    homeAddress: "",
+  });
+
+  beforeAll(async () => {
+    await adminClient().from("agenda_import_requests").update({ status: "loaded" }).eq("clinic_id", fx.clinicId).neq("status", "loaded");
+    // Paciente Dois inativo: volta a ficar ativo com a consulta da carga.
+    await adminClient().from("patients").update({ is_active: false }).eq("id", fx.ids.p2);
+    const result = await requestAgendaImport(asDb(support.client), support.id, clinic, "admin@clinica.com", deps, NOW);
+    const page = asDb(clinicServiceClient(fx.clinicId));
+    const entries = [
+      patient({ key: "p1", name: "Paciente Dois", birthdate: "2020-01-01", phone: "(84) 96666-0002", guardianName: "Resp. Paciente Dois", appointments: [consulta("a1", MON2, "08:00")] }),
+      patient({ key: "p2", name: "Carla Nova", birthdate: "1985-02-02", phone: "(84) 98222-1100", appointments: [consulta("a2", MON2, "08:30")] }),
+      patient({ key: "p3", name: "Davi Novo", birthdate: "2019-03-03", phone: "(84) 98222-1100", guardianName: "Carla Nova", appointments: [consulta("a3", MON2, "09:00")] }),
+      patient({ key: "p4", name: "Sem Consulta", birthdate: "1970-04-04", phone: "(84) 98222-3300" }),
+    ];
+    expect((await saveAgendaImport(page, fx.clinicId, tokenOf(result.link), entries, true, TZ, NOW)).submitted).toBe(true);
+    requestId = (await getLatestAgendaImport(asDb(support.client), fx.clinicId))!.id;
+  });
+
+  it("só o Suporte autoriza; a equipe da clínica não chama a carga", async () => {
+    const { error } = await fx.admin.client.rpc("load_agenda_import", { p_request_id: requestId, p_plan: [] });
+    expect(error?.code).toBe("42501");
+  });
+
+  it("grava tudo, sem aviso de marcação, fora do Uso e com a trilha de importado", async () => {
+    const usageBefore = await usage();
+    const loaded = await authorizeAgendaImport(asDb(support.client), fx.clinicId, requestId, NOW);
+    expect(loaded).toEqual({ contacts: 2, patients: 3, appointments: 3, reactivated: 1 });
+
+    const { data: appointments } = await adminClient()
+      .from("appointments")
+      .select("id, patient_id, booking_channel, created_by, agenda_import_id, status, price_cents")
+      .eq("agenda_import_id", requestId);
+    expect(appointments).toHaveLength(3);
+    for (const a of appointments!) expect(a).toMatchObject({ booking_channel: "admin", created_by: support.id, status: "scheduled", price_cents: 30000 });
+    expect(appointments!.some((a) => a.patient_id === fx.ids.p2)).toBe(true);
+
+    const ids = appointments!.map((a) => a.id);
+    const { data: events } = await adminClient().from("appointment_events").select("event_type, details, actor_id").in("appointment_id", ids);
+    expect(events).toHaveLength(3);
+    for (const e of events!) expect(e).toEqual({ event_type: "created", details: { imported: true }, actor_id: support.id });
+    const { count: messages } = await adminClient().from("whatsapp_messages").select("id", { count: "exact", head: true }).in("appointment_id", ids);
+    expect(messages).toBe(0);
+    expect(await usage()).toBe(usageBefore);
+
+    // Já cadastrado: fica como está (nome do contato) e volta a ficar ativo.
+    const { data: dois } = await adminClient().from("patients").select("is_active, agenda_import_id, contacts ( full_name )").eq("id", fx.ids.p2).single();
+    expect(dois).toMatchObject({ is_active: true, agenda_import_id: null, contacts: { full_name: "Resp. Paciente Dois" } });
+
+    // Mesmo WhatsApp: um contato só; a mãe é o próprio contato e o filho é dependente.
+    const { data: carla } = await adminClient()
+      .from("contacts")
+      .select("full_name, agenda_import_id, patients ( full_name, is_contact_self, agenda_import_id )")
+      .eq("clinic_id", fx.clinicId)
+      .eq("phone", "+5584982221100")
+      .single();
+    expect(carla!.full_name).toBe("Carla Nova");
+    expect(carla!.agenda_import_id).toBe(requestId);
+    expect(carla!.patients.map((p) => [p.full_name, p.is_contact_self, p.agenda_import_id]).sort()).toEqual([
+      ["Carla Nova", true, requestId],
+      ["Davi Novo", false, requestId],
+    ]);
+    const { data: semConsulta } = await adminClient().from("contacts").select("id").eq("clinic_id", fx.clinicId).eq("phone", "+5584982223300");
+    expect(semConsulta).toHaveLength(1);
+
+    expect(await getAgendaImport(asDb(support.client), fx.clinicId, requestId)).toMatchObject({ status: "loaded", loadedAt: expect.any(Date) });
+    expect(await codeOf(() => authorizeAgendaImport(asDb(support.client), fx.clinicId, requestId, NOW))).toBe("invalid");
+  });
+
+  it("com erro na conferência da hora, não grava nada", async () => {
+    const result = await requestAgendaImport(asDb(support.client), support.id, clinic, "admin@clinica.com", deps, NOW);
+    const page = asDb(clinicServiceClient(fx.clinicId));
+    const entries = [patient({ key: "p1", name: "Erro Depois", phone: "(84) 98222-4400", appointments: [consulta("a1", MON2, "10:00")] })];
+    expect((await saveAgendaImport(page, fx.clinicId, tokenOf(result.link), entries, true, TZ, NOW)).submitted).toBe(true);
+    const id = (await getLatestAgendaImport(asDb(support.client), fx.clinicId))!.id;
+    // O horário é ocupado depois do envio.
+    await adminClient().from("appointments").insert({
+      clinic_id: fx.clinicId,
+      patient_id: fx.ids.p3,
+      service_id: fx.ids.consulta,
+      agenda_id: fx.ids.agendaDra,
+      location_id: fx.ids.office,
+      scheduled_at: at(MON2, "10:00").toISOString(),
+      duration_minutes: 30,
+      booking_channel: "whatsapp_bot",
+    });
+    expect(await codeOf(() => authorizeAgendaImport(asDb(support.client), fx.clinicId, id, NOW))).toBe("invalid");
+    const { count } = await adminClient().from("contacts").select("id", { count: "exact", head: true }).eq("phone", "+5584982224400");
+    expect(count).toBe(0);
+    expect((await getLatestAgendaImport(asDb(support.client), fx.clinicId))!.status).toBe("submitted");
+  });
+});
+

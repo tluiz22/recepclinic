@@ -52,6 +52,8 @@ export async function listMetricsRows(db: DbClient, clinicId: string, scope: Met
       .gte(column, scope.start.toISOString())
       .lt(column, scope.end.toISOString());
     if (scope.patientIds) query = query.in("patient_id", scope.patientIds);
+    // "Marcados por": a agenda importada na implantação não é marcação do período (cliente, 20/out/2026).
+    if (scope.by === "booked") query = query.is("agenda_import_id", null);
     const page = unwrap(await query.order(column).order("id").range(from, from + PAGE - 1), "Métricas") as unknown as {
       id: string;
       scheduled_at: string;

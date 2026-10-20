@@ -185,8 +185,8 @@
 >   do 1º piloto (decisões no [plano](plano.md)). **F10.1a (pedido, e-mail e o link com rascunho e envio)
 >   implementada e publicada no staging em 20/out** (migração aplicada antes; commit `c16c69b`); o cliente valida lá.
 >   **F10.1b (conferência do Suporte e "Devolver à clínica" com comentário) decidida e implementada em 20/out**,
->   testada no local e publicada no staging em 20/out (sem migração); o cliente valida tudo no fim (20/out). Em seguida: F10.1c (autorizar e
->   gravar a carga) e F10.1d (desfazer).
+>   testada no local e publicada no staging em 20/out (sem migração); o cliente valida tudo no fim (20/out). **F10.1c (autorizar e gravar a carga) decidida, implementada e publicada no staging
+>   em 20/out** (migração `20261020130000_carga_da_agenda.sql`). Em seguida: F10.1d (desfazer).
 >   **Antes (19/out):** implementar a F10.1 (já aprovada). As **melhorias no
 >   processo da nota fiscal** ficam para uma sessão própria (cliente, 19/out: ele traz a lista do que planejar). Em
 >   paralelo, aguardar a Meta (Análise do App até ~29/out).

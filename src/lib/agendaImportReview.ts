@@ -159,16 +159,20 @@ export function reviewImport(patients: ImportPatient[], catalog: ImportCatalog, 
     const linkContactName = patient.guardianName || patient.name;
     let kind: PatientKind = "new";
     let patientId: string | null = null;
+    // Com consulta na carga, o cadastro inativo volta a ficar ativo (cliente, 20/out/2026).
+    const reactivates = patient.appointments.some((a) => !isPast(a));
+    const inactive = (who: string) =>
+      reactivates ? `${who} já cadastrado está inativo: volta a ficar ativo com a carga.` : `${who} já cadastrado está inativo e fica assim (sem consulta na carga).`;
     if (contact) {
       if (!same(contact.name, linkContactName)) {
         warnings.push(`WhatsApp já cadastrado em nome de ${contact.name} (no link: ${linkContactName}). Fica o cadastro.`);
       }
-      if (!contact.isActive) warnings.push("O contato já cadastrado está inativo.");
+      if (!contact.isActive) warnings.push(inactive("O contato"));
       const existing = contact.patients.find((p) => same(p.name, patient.name) && p.birthdate === patient.birthdate);
       if (existing) {
         kind = "existing_patient";
         patientId = existing.id;
-        if (!existing.isActive) warnings.push("O paciente já cadastrado está inativo.");
+        if (!existing.isActive) warnings.push(inactive("O paciente"));
         const registeredPlan = existing.insurancePlanId ? (plans.get(existing.insurancePlanId) ?? "outro convênio") : "Particular";
         const linkPlan = patient.insurancePlanId ? (plans.get(patient.insurancePlanId) ?? "convênio") : "Particular";
         if ((existing.insurancePlanId ?? "") !== patient.insurancePlanId || (patient.cardNumber && patient.cardNumber !== (existing.cardNumber ?? ""))) {
@@ -244,4 +248,60 @@ export function reviewImport(patients: ImportPatient[], catalog: ImportCatalog, 
       appointmentsSkipped: reviewed.reduce((n, p) => n + p.appointments.filter((a) => a.skipped).length, 0),
     },
   };
+}
+
+// ---------------------------------------------------------------------------
+// Plano da carga (F10.1c): o que a função load_agenda_import grava
+// ---------------------------------------------------------------------------
+
+export type LoadPlanEntry = {
+  contactId: string | null;
+  phone: string;
+  contactName: string;
+  patientId: string | null;
+  name: string;
+  birthdate: string;
+  /** O paciente é o próprio contato (sem responsável e com o mesmo nome do contato). */
+  isContactSelf: boolean;
+  insurancePlanId: string | null;
+  cardNumber: string | null;
+  appointments: { serviceId: string; agendaId: string; locationId: string; scheduledAt: string; durationMinutes: number; homeAddress: string | null }[];
+};
+
+/** Só com a conferência sem erro; as consultas que já passaram ficam de fora. */
+export function buildLoadPlan(review: ImportReview, patients: ImportPatient[], catalog: ImportCatalog, context: Pick<ReviewContext, "timeZone" | "contacts">): LoadPlanEntry[] {
+  if (review.errorCount > 0) throw new Error("Carga com erro na conferência");
+  const byKey = new Map(patients.map((p) => [p.key, p]));
+  const services = new Map(catalog.services.map((s) => [s.id, s]));
+  const homeVisit = new Set(catalog.locations.filter((l) => l.homeVisit).map((l) => l.id));
+  const contacts = new Map(context.contacts.map((c) => [c.id, c]));
+  return review.patients.map((reviewed) => {
+    const patient = byKey.get(reviewed.key)!;
+    const contactName = patient.guardianName || patient.name;
+    const registered = reviewed.contactId ? contacts.get(reviewed.contactId) : undefined;
+    return {
+      contactId: reviewed.contactId,
+      phone: reviewed.phoneE164!,
+      contactName,
+      patientId: reviewed.patientId,
+      name: patient.name,
+      birthdate: patient.birthdate,
+      isContactSelf: !patient.guardianName && same(registered?.name ?? contactName, patient.name),
+      insurancePlanId: patient.insurancePlanId || null,
+      cardNumber: patient.insurancePlanId && patient.cardNumber ? patient.cardNumber : null,
+      appointments: patient.appointments
+        .filter((a) => !reviewed.appointments.find((r) => r.key === a.key)!.skipped)
+        .map((a) => {
+          const locationId = appointmentLocationId(a, catalog);
+          return {
+            serviceId: a.serviceId,
+            agendaId: a.agendaId,
+            locationId,
+            scheduledAt: toInstant(a.date, a.time, context.timeZone).toISOString(),
+            durationMinutes: services.get(a.serviceId)!.durationMinutes,
+            homeAddress: homeVisit.has(locationId) ? a.homeAddress : null,
+          };
+        }),
+    };
+  });
 }

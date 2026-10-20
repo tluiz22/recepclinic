@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { ImportAppointment, ImportCatalog, ImportPatient } from "./agendaImport";
-import { reviewImport, type ReviewContext } from "./agendaImportReview";
+import { buildLoadPlan, reviewImport, type ReviewContext } from "./agendaImportReview";
 import { toInstant } from "./clinicTime";
 
 const TZ = "America/Fortaleza";
@@ -133,6 +133,38 @@ describe("conferência da agenda atual", () => {
   it("contato já cadastrado com outro paciente: o novo entra no mesmo contato", () => {
     const contacts = [{ id: "c1", phone: "+5584981880777", name: "Ana Souza", isActive: false, patients: [] }];
     const review = reviewImport([patient({ name: "Pedro Souza", birthdate: "2018-01-01", guardianName: "Ana Souza" })], catalog, context({ contacts }));
-    expect(review.patients[0]).toMatchObject({ kind: "existing_contact", contactId: "c1", patientId: null, warnings: ["O contato já cadastrado está inativo."] });
+    expect(review.patients[0]).toMatchObject({ kind: "existing_contact", contactId: "c1", patientId: null, warnings: ["O contato já cadastrado está inativo: volta a ficar ativo com a carga."] });
+  });
+
+  it("plano da carga: o já cadastrado pelo id, o próprio contato e só as consultas que entram", () => {
+    const contacts = [{ id: "c1", phone: "+5584981880777", name: "Maria Souza", isActive: true, patients: [] }];
+    const patients = [
+      patient({ appointments: [appt(), appt({ key: "a2", date: "2026-10-20", time: "07:00" })], insurancePlanId: "plan-unimed", cardNumber: "9" }),
+      patient({ key: "p2", name: "Pedro", birthdate: "2018-01-01", guardianName: "Maria Souza", appointments: [] }),
+      patient({ key: "p3", name: "Lia", phone: "(84) 98111-2233", appointments: [] }),
+    ];
+    const ctx = context({ contacts });
+    const plan = buildLoadPlan(reviewImport(patients, catalog, ctx), patients, catalog, ctx);
+    expect(plan[0]).toEqual({
+      contactId: "c1",
+      phone: "+5584981880777",
+      contactName: "Maria Souza",
+      patientId: null,
+      name: "Maria Souza",
+      birthdate: "1980-05-10",
+      isContactSelf: true,
+      insurancePlanId: "plan-unimed",
+      cardNumber: "9",
+      appointments: [
+        { serviceId: "s-cons", agendaId: "ag-ana", locationId: "loc-centro", scheduledAt: toInstant("2026-10-21", "09:00", TZ).toISOString(), durationMinutes: 30, homeAddress: null },
+      ],
+    });
+    expect(plan[1]).toMatchObject({ contactId: "c1", isContactSelf: false, contactName: "Maria Souza" });
+    expect(plan[2]).toMatchObject({ contactId: null, isContactSelf: true, contactName: "Lia", insurancePlanId: null });
+  });
+
+  it("plano da carga não sai com erro", () => {
+    const patients = [patient({ phone: "" })];
+    expect(() => buildLoadPlan(reviewImport(patients, catalog, context()), patients, catalog, context())).toThrow();
   });
 });

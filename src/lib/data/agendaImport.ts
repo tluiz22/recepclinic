@@ -9,7 +9,7 @@ import {
   type ImportPatient,
   type ImportRequestStatus,
 } from "../agendaImport";
-import { reviewImport, type ImportReview, type ReviewContext } from "../agendaImportReview";
+import { buildLoadPlan, reviewImport, type ImportReview, type ReviewContext } from "../agendaImportReview";
 import { addDays, dayBounds, formatInstant, isCalendarDate, todayIn } from "../clinicTime";
 import { agendaImportEmail, agendaImportReturnedEmail } from "../email";
 import { normalizePhone } from "../phone";
@@ -36,9 +36,10 @@ export type AgendaImportRequest = {
   expiresAt: Date;
   savedAt: Date | null;
   submittedAt: Date | null;
+  loadedAt: Date | null;
 };
 
-const COLUMNS = "id, email, status, entries, return_comment, requested_at, link_sent_at, expires_at, saved_at, submitted_at";
+const COLUMNS = "id, email, status, entries, return_comment, requested_at, link_sent_at, expires_at, saved_at, submitted_at, loaded_at";
 
 type Row = {
   id: string;
@@ -51,6 +52,7 @@ type Row = {
   expires_at: string;
   saved_at: string | null;
   submitted_at: string | null;
+  loaded_at: string | null;
 };
 
 const toRequest = (row: Row): AgendaImportRequest => ({
@@ -64,15 +66,17 @@ const toRequest = (row: Row): AgendaImportRequest => ({
   expiresAt: new Date(row.expires_at),
   savedAt: row.saved_at ? new Date(row.saved_at) : null,
   submittedAt: row.submitted_at ? new Date(row.submitted_at) : null,
+  loadedAt: row.loaded_at ? new Date(row.loaded_at) : null,
 });
 
-/** Suporte: o pedido em andamento da clínica (há no máximo um) ou, sem ele, o mais recente. */
+/** Suporte: o pedido em andamento da clínica (há no máximo um) ou, sem ele, o da carga (ou pedido) mais recente. */
 export async function getLatestAgendaImport(db: DbClient, clinicId: string): Promise<AgendaImportRequest | null> {
   const rows = unwrap(
     await db.from("agenda_import_requests").select(COLUMNS).eq("clinic_id", clinicId).order("requested_at", { ascending: false }),
     "Agenda atual",
   ).map(toRequest);
-  return rows.find((r) => isImportOpen(r.status) || r.status === "submitted") ?? rows[0] ?? null;
+  const recent = (r: AgendaImportRequest) => (r.loadedAt ?? r.requestedAt).getTime();
+  return rows.find((r) => isImportOpen(r.status) || r.status === "submitted") ?? [...rows].sort((a, b) => recent(b) - recent(a))[0] ?? null;
 }
 
 /**
@@ -231,7 +235,7 @@ export async function getAgendaImport(db: DbClient, clinicId: string, requestId:
 }
 
 /** A conferência do pedido com o cadastro de agora (Suporte). */
-export async function loadImportReview(db: DbClient, clinicId: string, patients: ImportPatient[], now: Date = new Date()): Promise<{ review: ImportReview; catalog: ImportCatalog; timeZone: string }> {
+export async function loadImportReview(db: DbClient, clinicId: string, patients: ImportPatient[], now: Date = new Date()): Promise<{ review: ImportReview; catalog: ImportCatalog; timeZone: string; context: ReviewContext }> {
   const settings = unwrapOne(
     await db.from("clinic_settings").select("timezone, consultation_age_limit_years").eq("clinic_id", clinicId).maybeSingle(),
     "Configuração da clínica",
@@ -320,7 +324,7 @@ export async function loadImportReview(db: DbClient, clinicId: string, patients:
     })),
     consultationAgeLimit: settings.consultation_age_limit_years,
   };
-  return { review: reviewImport(patients, catalog, context), catalog, timeZone };
+  return { review: reviewImport(patients, catalog, context), catalog, timeZone, context };
 }
 
 export const MAX_RETURN_COMMENT = 2000;
@@ -376,4 +380,38 @@ export async function returnAgendaImport(
     expiresOn: formatInstant(expiresAt, clinic.timezone, "dd/MM/yyyy"),
   });
   return { email: await trySend(() => deps.sendEmail(message)), link: url };
+}
+
+// ---------------------------------------------------------------------------
+// Carga (F10.1c)
+// ---------------------------------------------------------------------------
+
+export type LoadResult = { contacts: number; patients: number; appointments: number; reactivated: number };
+
+/**
+ * Suporte: autoriza a carga da agenda enviada. Confere de novo na hora (com
+ * erro, não grava nada) e grava tudo numa transação (load_agenda_import), sem
+ * aviso de marcação; as consultas que já passaram ficam de fora.
+ */
+export async function authorizeAgendaImport(db: DbClient, clinicId: string, requestId: string, now: Date = new Date()): Promise<LoadResult> {
+  const request = await getAgendaImport(db, clinicId, requestId);
+  if (!request) throw new DataError("not_found", "Agenda atual: não encontrada");
+  if (request.status !== "submitted") throw new DataError("invalid", "Agenda atual: não está para autorizar", { carga: "Esta agenda atual não está para autorizar." });
+  const { review, catalog, context } = await loadImportReview(db, clinicId, request.entries, now);
+  if (review.errorCount > 0) {
+    throw new DataError("invalid", "Agenda atual: com erro", {
+      carga: `A conferência achou ${review.errorCount === 1 ? "1 erro" : `${review.errorCount} erros`}: devolva à clínica para corrigir.`,
+    });
+  }
+  const plan = buildLoadPlan(review, request.entries, catalog, context);
+  const { data, error } = await db.rpc("load_agenda_import", { p_request_id: request.id, p_plan: plan as unknown as Json });
+  if (error) {
+    const code = (error as { code?: string }).code;
+    // Um horário ocupado entre a conferência e a gravação: nada entra.
+    if (code === "23P01") {
+      throw new DataError("conflict", "Agenda atual: um horário ficou ocupado durante a gravação e nada foi gravado. Confira de novo", {}, { cause: error });
+    }
+    throw fromDbError(error, "Carga da agenda atual");
+  }
+  return data as unknown as LoadResult;
 }

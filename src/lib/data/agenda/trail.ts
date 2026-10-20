@@ -97,7 +97,8 @@ export function describeTrail(row: TrailEntryRow, actors: Map<string, ActorLabel
   const make = (text: string, tone: TrailEntry["tone"] = "neutral"): TrailEntry => ({ at: row.at, text, tone });
   switch (row.event) {
     case "created":
-      return make(`Marcado ${via}${by}`);
+      // Carga da agenda atual na implantação (F10.1c), sem aviso de marcação.
+      return make(d.imported ? `Importado na implantação${by}` : `Marcado ${via}${by}`);
     case "rescheduled":
       return make(`Remarcado de ${when(d.from)} para ${when(d.to)} ${via}${by}`);
     case "canceled":

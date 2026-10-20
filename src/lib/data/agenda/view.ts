@@ -37,6 +37,8 @@ export type AgendaAppointment = {
   patientBirthdate: string;
   /** Retorno: a consulta de origem (`listOrigins` traz a data e a situação). */
   originAppointmentId: string | null;
+  /** Importado na implantação (F10.1c): a agenda atual da clínica, carregada pelo Suporte. */
+  imported: boolean;
   /** Quem marcou pelo painel (null = WhatsApp, link ou sistema). */
   createdBy: string | null;
   bookingChannel: string;
@@ -60,7 +62,7 @@ export type AgendaItem =
 
 export const AGENDA_COLUMNS = `id, agenda_id, service_id, scheduled_at, duration_minutes, status, is_group_session, series_id, home_visit_address,
   patient_confirmed_at, reminder_response, created_by, booking_channel, canceled_by, canceled_at,
-  origin_appointment_id,
+  origin_appointment_id, agenda_import_id,
   agendas ( name ), services ( name, category ), locations ( name, type ),
   patients ( id, full_name, birthdate, is_contact_self, contacts ( full_name, phone ) )`;
 
@@ -81,6 +83,7 @@ export type AgendaRow = {
   canceled_by: string | null;
   canceled_at: string | null;
   origin_appointment_id: string | null;
+  agenda_import_id: string | null;
   agendas: { name: string };
   services: { name: string; category: ServiceCategory };
   locations: { name: string; type: string };
@@ -115,6 +118,7 @@ export const toAgendaAppointment = (row: AgendaRow): AgendaAppointment => {
     originAppointmentId: row.origin_appointment_id,
     createdBy: row.created_by,
     bookingChannel: row.booking_channel,
+    imported: row.agenda_import_id !== null,
     canceledBy: row.canceled_by,
     canceledAt: row.canceled_at ? new Date(row.canceled_at) : null,
   };
