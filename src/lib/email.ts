@@ -97,6 +97,20 @@ export function infoRequestEmail(to: string, { clinicName, link, expiresOn }: { 
   return { to, subject: `Informações para configurar a ${clinicName} no RecepClinic`, ...body };
 }
 
+/** Agenda atual para a importação na implantação (F10.1a): o link vale 15 dias. */
+export function agendaImportEmail(to: string, { clinicName, link, expiresOn }: { clinicName: string; link: string; expiresOn: string }): Email {
+  const body = layout(
+    `Agenda atual da ${clinicName}`,
+    [
+      "Para a clínica começar no RecepClinic com a agenda em dia, cadastre pelo botão abaixo os pacientes e as consultas que já estão marcadas, de hoje em diante.",
+      "Nenhum aviso de marcação é enviado aos pacientes; os lembretes saem normalmente, na véspera ou no dia, como configurado. Dá para salvar e continuar depois; quando terminar, toque em \"Enviar ao Suporte\". O Suporte RecepClinic confere e faz a carga.",
+      `O link vale até ${expiresOn}. Ele mostra o que for digitado nele: não repasse para fora da clínica.`,
+    ],
+    { label: "Cadastrar a agenda atual", href: link },
+  );
+  return { to, subject: `Agenda atual da ${clinicName} para o RecepClinic`, ...body };
+}
+
 /**
  * Nota fiscal do pagamento (F11.5), com o PDF e o XML anexados. Mesmo texto do
  * template do WhatsApp (aprovado pelo cliente em 12/out/2026), menos o "é só

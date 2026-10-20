@@ -1,6 +1,6 @@
 # RecepClinic
 
-> **Estado atual (retomar daqui), 17/out/2026**
+> **Estado atual (retomar daqui), 20/out/2026**
 >
 > - **Etapas 0 a 4 concluídas**: cópia isolada, [diagnóstico](diagnostico.md), [limites](limites.md),
 >   [arquitetura](arquitetura.md) (decisões D1–D11) e [plano](plano.md) (fases F0–F10).
@@ -180,7 +180,13 @@
 >   **F10.1 (importação da agenda na implantação) decidida em 19/out:** planilha modelo (.xlsx ou .csv) importada
 >   só pelo Suporte, com pacientes e consultas de hoje em diante, **sem o aviso de marcação** (os lembretes saem);
 >   9 decisões no [plano](plano.md). **OK do cliente para implementar na próxima sessão** (19/out).
->   **Retomar daqui (próxima sessão, depois de 19/out):** implementar a F10.1 (já aprovada). As **melhorias no
+>   **F10.1 revista pelo cliente em 20/out:** no lugar da planilha, um **link de preenchimento** (sem login, 15
+>   dias) para a clínica, com o Suporte conferindo e autorizando a carga; planilha dentro do link fica para depois
+>   do 1º piloto (decisões no [plano](plano.md)). **F10.1a (pedido, e-mail e o link com rascunho e envio)
+>   implementada e testada no local em 20/out**, sem commit: aguarda a validação do cliente; depois, a migração
+>   `20261020120000_importacao_da_agenda.sql` no staging e a publicação. Em seguida: F10.1b (conferência e
+>   "Devolver com comentário"), F10.1c (carga) e F10.1d (desfazer).
+>   **Antes (19/out):** implementar a F10.1 (já aprovada). As **melhorias no
 >   processo da nota fiscal** ficam para uma sessão própria (cliente, 19/out: ele traz a lista do que planejar). Em
 >   paralelo, aguardar a Meta (Análise do App até ~29/out).
 > - **Frente paralela, o site** `www.recepclinic.com.br`: [`site-plano.md`](site-plano.md), feito numa

@@ -103,6 +103,18 @@ export async function resolveClinicByOnboardingToken(
   );
 }
 
+/** /importar/[código]: clínica do pedido da agenda atual (F10.1a), pelo hash do código. */
+export async function resolveClinicByAgendaImportToken(
+  tokenHash: string,
+  env: ServiceEnv = platformEnv(),
+): Promise<string | null> {
+  if (!/^[0-9a-f]{64}$/.test(tokenHash)) return null;
+  return clinicIdOrNull(
+    "pedido da agenda atual",
+    await platformClient(env).rpc("resolve_agenda_import_clinic", { p_token_hash: tokenHash }),
+  );
+}
+
 // ---------------------------------------------------------------------------
 // Logins (F4.4a): convite de quem ainda não tem acesso
 // ---------------------------------------------------------------------------

@@ -1,0 +1,260 @@
+---
+// Agenda atual da clínica para a importação na implantação (F10.1a; cliente,
+// 19 e 20/out/2026). Sem login: o link é a chave e vale 15 dias. A clínica
+// cadastra paciente por paciente, com as consultas marcadas dentro de cada
+// um; salva e continua depois e, no fim, envia ao Suporte, que confere e faz
+// a carga. A página nunca mostra os pacientes que a clínica já tem: só o que
+// foi digitado nela.
+import PublicLayout from "../../layouts/PublicLayout.astro";
+import Notice from "../../components/admin/ui/Notice.astro";
+import ImportPatientCard from "../../components/public/ImportPatientCard.astro";
+import { PANEL, PRIMARY_BUTTON, SECONDARY_BUTTON } from "../../components/admin/config/formStyles";
+import { countAppointments, isImportOpen, type ImportIssues, type ImportPatient } from "../../lib/agendaImport";
+import { formatInstant, todayIn } from "../../lib/clinicTime";
+import { createClinicServiceClient } from "../../lib/data/clinicService";
+import { checkImport, getAgendaImportByToken, loadImportCatalog } from "../../lib/data/agendaImport";
+import { hashToken } from "../../lib/data/onboarding";
+import { resolveClinicByAgendaImportToken } from "../../lib/data/platform";
+import { takeFlash } from "../../lib/flash";
+
+const token = Astro.params.token ?? "";
+const clinicId = await resolveClinicByAgendaImportToken(hashToken(token));
+const db = clinicId ? createClinicServiceClient(clinicId) : null;
+const [request, clinicRow, settingsRow] = db
+  ? await Promise.all([
+      getAgendaImportByToken(db, token),
+      db.from("clinics").select("name").eq("id", clinicId!).maybeSingle(),
+      db.from("clinic_settings").select("timezone").eq("clinic_id", clinicId!).maybeSingle(),
+    ])
+  : [null, null, null];
+const flash = takeFlash(Astro.cookies, "/importar");
+
+const clinicName = clinicRow?.data?.name ?? "";
+const timeZone = settingsRow?.data?.timezone ?? "America/Fortaleza";
+const now = new Date();
+const today = todayIn(timeZone, now);
+const open = !!request && isImportOpen(request.status);
+const expired = open && request!.expiresAt.getTime() <= now.getTime();
+const editable = open && !expired;
+// Link inválido: 404, como o /formulario (auditoria de frontend, F-09).
+if (!request) Astro.response.status = 404;
+
+const catalog = editable && db ? await loadImportCatalog(db, clinicId!) : null;
+const patients = request?.entries ?? [];
+// Os erros aparecem depois do primeiro "Salvar" (o link novo abre limpo).
+const issues: ImportIssues = editable && request!.savedAt && catalog ? await checkImport(db!, clinicId!, patients, catalog, timeZone, now) : {};
+const problems = Object.keys(issues).length;
+const blankPatient = (key: string): ImportPatient => ({
+  key,
+  name: "",
+  birthdate: "",
+  phone: "",
+  guardianName: "",
+  insurancePlanId: "",
+  cardNumber: "",
+  appointments: [],
+});
+const cards = patients.length > 0 ? patients : [blankPatient("p1")];
+const appointmentCount = countAppointments(patients);
+const when = (date: Date) => formatInstant(date, timeZone, "dd/MM/yyyy 'às' HH:mm");
+const noCatalog = !!catalog && (catalog.services.length === 0 || catalog.agendas.length === 0);
+---
+
+<PublicLayout title="Agenda atual da clínica">
+  {
+    !request ? (
+      <div class={`${PANEL} flex flex-col gap-2`}>
+        <h1 class="font-display text-2xl font-bold text-ink">Link inválido</h1>
+        <p class="text-base text-ink-soft">
+          Confira o endereço no e-mail mais recente do Suporte RecepClinic: quando um link novo é enviado, o anterior deixa de funcionar.
+        </p>
+      </div>
+    ) : (
+      <>
+        <div class="flex flex-col gap-2">
+          <p class="text-[13px] leading-tight font-bold tracking-[.06em] text-ink-soft uppercase">Agenda atual para o RecepClinic</p>
+          <h1 class="font-display text-[28px] leading-[1.12] font-bold text-ink sm:text-[32px]">{clinicName}</h1>
+        </div>
+        {flash && (
+          <div id="aviso-do-link" tabindex="-1" data-flash={flash.tone} class="outline-none">
+            <Notice tone={flash.tone === "error" ? "danger" : "success"}>{flash.text}</Notice>
+          </div>
+        )}
+        {!open && (
+          <p class={`${PANEL} text-base text-ink`}>
+            {request.status === "submitted"
+              ? `Recebemos a agenda atual em ${when(request.submittedAt ?? request.savedAt ?? request.requestedAt)}. O Suporte RecepClinic vai conferir e avisar.`
+              : "A agenda atual já foi carregada no RecepClinic. Este link não é mais usado."}
+          </p>
+        )}
+        {expired && (
+          <p class={`${PANEL} text-base text-ink`}>
+            Este link venceu. Peça um novo ao Suporte RecepClinic: o que você já digitou continua salvo.
+          </p>
+        )}
+        {editable && (
+          <>
+            <div class={`${PANEL} flex flex-col gap-2 text-base leading-normal text-ink`}>
+              <p>
+                Cadastre os pacientes e as consultas que já estão marcadas na agenda da clínica, <strong>de hoje em diante</strong>. Um paciente sem consulta
+                marcada também pode entrar.
+              </p>
+              <ul class="ml-5 list-disc text-ink-soft">
+                <li>Nenhum aviso de marcação é enviado aos pacientes. Os lembretes saem normalmente, como configurado na clínica.</li>
+                <li>O mesmo WhatsApp é sempre do mesmo responsável: irmãos com a mesma mãe, por exemplo, ficam em cartões separados com o mesmo WhatsApp.</li>
+                <li>Retorno marcado entra sem a consulta de origem.</li>
+                <li>
+                  Dá para salvar e continuar depois pelo mesmo link, que vale até {formatInstant(request.expiresAt, timeZone, "dd/MM/yyyy")}. Quando terminar,
+                  toque em "Enviar ao Suporte".
+                </li>
+              </ul>
+            </div>
+            {request.status === "returned" && request.returnComment && (
+              <Notice tone="warning">
+                <strong>O Suporte devolveu para corrigir:</strong> {request.returnComment}
+              </Notice>
+            )}
+            {noCatalog && (
+              <Notice tone="warning">A clínica ainda não tem serviços e agendas configurados. Os pacientes já podem entrar; para as consultas, avise o Suporte.</Notice>
+            )}
+            {issues.form && <Notice tone="danger">{issues.form}</Notice>}
+            {request.savedAt && (
+              <p class="text-[15px] text-ink-soft" data-summary>
+                Salvo em {when(request.savedAt)}: {patients.length} {patients.length === 1 ? "paciente" : "pacientes"} e {appointmentCount}{" "}
+                {appointmentCount === 1 ? "consulta" : "consultas"}
+                {problems > 0 && <strong class="text-danger"> · {problems === 1 ? "1 ponto a corrigir" : `${problems} pontos a corrigir`}</strong>}
+              </p>
+            )}
+            <form id="agenda-atual" method="POST" action={`/api/importar/${token}`} class="flex flex-col gap-4" novalidate>
+              <div class="flex flex-col gap-4" data-patients>
+                {cards.map((patient, index) => (
+                  <ImportPatientCard patient={patient} number={index + 1} catalog={catalog!} issues={issues} today={today} />
+                ))}
+              </div>
+              <template data-patient-template>
+                <ImportPatientCard patient={blankPatient("__P__")} number="" catalog={catalog!} issues={{}} today={today} />
+              </template>
+              <button
+                type="button"
+                class="inline-flex min-h-11 items-center justify-center self-start rounded-lg border border-dashed border-line-strong bg-white px-4 text-[15px] font-semibold text-brand-ink hover:bg-canvas"
+                data-add-patient
+              >
+                + Outro paciente
+              </button>
+
+              <div class="sticky bottom-0 -mx-4 mt-2 flex flex-wrap justify-end gap-3 border-t border-line bg-white/95 px-4 pt-3 pb-[max(12px,env(safe-area-inset-bottom))] sm:-mx-6 sm:px-6">
+                <button type="submit" name="acao" value="rascunho" class={`${SECONDARY_BUTTON} max-sm:flex-1`} data-sending-label="Salvando…">
+                  Salvar e continuar depois
+                </button>
+                <button type="submit" name="acao" value="enviar" class={`${PRIMARY_BUTTON} max-sm:flex-1`} data-sending-label="Enviando…">
+                  Enviar ao Suporte
+                </button>
+              </div>
+            </form>
+          </>
+        )}
+        {!editable && <div class="pb-10" />}
+      </>
+    )
+  }
+
+  <script>
+    const list = document.querySelector<HTMLElement>("[data-patients]");
+    const patientTemplate = document.querySelector<HTMLTemplateElement>("[data-patient-template]");
+    // Chave curta do cartão novo (o servidor aceita até 20 letras e números).
+    const newKey = (prefix: string) => `${prefix}${Math.random().toString(36).slice(2, 10)}`;
+
+    function renumber() {
+      list?.querySelectorAll<HTMLElement>("[data-patient]").forEach((card, index) => {
+        card.querySelector("[data-patient-title]")!.textContent = `Paciente ${index + 1}`;
+        const rows = card.querySelectorAll<HTMLElement>("[data-appointment]");
+        rows.forEach((row, i) => (row.querySelector("[data-appointment-title]")!.textContent = `Consulta ${i + 1}`));
+        card.querySelector<HTMLElement>("[data-no-appointments]")!.hidden = rows.length > 0;
+      });
+    }
+
+    function fromTemplate(template: HTMLTemplateElement, placeholder: RegExp, key: string): HTMLElement {
+      const holder = document.createElement("div");
+      holder.innerHTML = template.innerHTML.replace(placeholder, key);
+      return holder.firstElementChild as HTMLElement;
+    }
+
+    // Serviço escolhido: só as agendas que o atendem ficam no menu.
+    function filterAgendas(row: HTMLElement) {
+      const service = row.querySelector<HTMLSelectElement>("[data-service]");
+      const agenda = row.querySelector<HTMLSelectElement>("[data-agenda]");
+      if (!service || !agenda) return;
+      const allowed = service.selectedOptions[0]?.dataset.agendas?.split(" ").filter(Boolean);
+      for (const option of agenda.options) {
+        if (!option.value) continue;
+        option.hidden = !!allowed && !allowed.includes(option.value);
+        option.disabled = option.hidden;
+      }
+      if (agenda.selectedOptions[0]?.disabled) agenda.value = "";
+      // Uma agenda só: já vem escolhida.
+      if (allowed?.length === 1 && !agenda.value) agenda.value = allowed[0];
+    }
+
+    // Endereço da visita só no local domiciliar (com um local só, ele vale).
+    function toggleHome(row: HTMLElement) {
+      const location = row.querySelector<HTMLSelectElement>("[data-location]");
+      const home = row.querySelector<HTMLElement>("[data-home-address]");
+      if (!location || !home) return;
+      home.hidden = location.selectedOptions[0]?.dataset.home !== "1";
+    }
+
+    function wire(row: HTMLElement) {
+      row.querySelector("[data-service]")?.addEventListener("change", () => filterAgendas(row));
+      row.querySelector("[data-location]")?.addEventListener("change", () => toggleHome(row));
+      filterAgendas(row);
+      toggleHome(row);
+    }
+
+    list?.addEventListener("click", (event) => {
+      const target = event.target as HTMLElement;
+      const card = target.closest<HTMLElement>("[data-patient]");
+      if (!card) return;
+      if (target.closest("[data-add-appointment]")) {
+        const template = card.querySelector<HTMLTemplateElement>("[data-appointment-template]")!;
+        const row = fromTemplate(template, /__A__/g, newKey("a"));
+        card.querySelector("[data-appointments]")!.appendChild(row);
+        wire(row);
+        renumber();
+        row.querySelector<HTMLInputElement>("input")?.focus();
+      } else if (target.closest("[data-remove-appointment]")) {
+        const row = target.closest<HTMLElement>("[data-appointment]")!;
+        const next = row.nextElementSibling ?? row.previousElementSibling;
+        row.remove();
+        renumber();
+        (next?.querySelector<HTMLElement>("[data-remove-appointment]") ?? card.querySelector<HTMLElement>("[data-add-appointment]"))?.focus();
+      } else if (target.closest("[data-remove-patient]")) {
+        const name = card.querySelector<HTMLInputElement>("input")?.value.trim();
+        const typed = [...card.querySelectorAll<HTMLInputElement | HTMLSelectElement>("input, select")].some((el) => el.value.trim() !== "");
+        if (typed && !confirm(`Remover ${name || "este paciente"} e as consultas dele? Só fica valendo quando você salvar.`)) return;
+        const next = card.nextElementSibling ?? card.previousElementSibling;
+        card.remove();
+        renumber();
+        (next?.querySelector<HTMLElement>("input") ?? document.querySelector<HTMLElement>("[data-add-patient]"))?.focus();
+      }
+    });
+
+    document.querySelector("[data-add-patient]")?.addEventListener("click", () => {
+      if (!list || !patientTemplate) return;
+      const card = fromTemplate(patientTemplate, /__P__/g, newKey("p"));
+      list.appendChild(card);
+      renumber();
+      card.querySelector<HTMLInputElement>("input")?.focus();
+    });
+
+    document.querySelectorAll<HTMLElement>("[data-patients] [data-appointment]").forEach(wire);
+
+    // Depois de salvar: o primeiro campo com erro no meio da tela (o aviso já
+    // foi anunciado), ou o aviso.
+    const notice = document.querySelector<HTMLElement>("#aviso-do-link");
+    if (notice) {
+      const target = document.querySelector<HTMLElement>("[data-patients] [aria-invalid='true']") ?? notice;
+      target.scrollIntoView({ block: "center" });
+      target.focus({ preventScroll: true });
+    }
+  </script>
+</PublicLayout>

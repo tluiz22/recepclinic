@@ -52,7 +52,7 @@ export function validateNewClinic(input: NewClinicInput): NewClinicInput {
   return clean;
 }
 
-async function trySend(send: () => Promise<void>): Promise<EmailOutcome> {
+export async function trySend(send: () => Promise<void>): Promise<EmailOutcome> {
   try {
     await send();
     return { sent: true };

@@ -1,0 +1,129 @@
+---
+// Cartão de um paciente no link da agenda atual (F10.1a): os dados dele e as
+// consultas marcadas, cada uma num bloco. Também serve de modelo (chave
+// "__P__") para o "+ Outro paciente". Os erros vêm da conferência do que
+// ficou salvo.
+import { HINT, INPUT, LABEL } from "../admin/config/formStyles";
+import ImportAppointmentRow from "./ImportAppointmentRow.astro";
+import { patientField, type ImportAppointment, type ImportCatalog, type ImportIssues, type ImportPatient } from "../../lib/agendaImport";
+
+interface Props {
+  patient: ImportPatient;
+  number: number | string;
+  catalog: ImportCatalog;
+  issues: ImportIssues;
+  today: string;
+}
+
+const { patient, number, catalog, issues, today } = Astro.props;
+type Field = Parameters<typeof patientField>[1];
+const name = (field: Field) => patientField(patient.key, field);
+const id = (field: Field) => name(field).replaceAll(".", "-");
+const error = (field: Field) => issues[name(field)];
+const invalid = (field: Field) => (error(field) ? { "aria-invalid": "true" as const, "aria-describedby": `${id(field)}-erro` } : {});
+const field = `${INPUT} font-normal`;
+const errorClass = "mt-1 text-sm font-semibold text-danger";
+const blankAppointment: ImportAppointment = { key: "__A__", date: "", time: "", serviceId: "", agendaId: "", locationId: "", homeAddress: "" };
+---
+
+<div class="flex flex-col gap-4 rounded-[12px] border border-[#e1e8e5] bg-[#f8faf9] p-4" data-patient data-key={patient.key}>
+  <div class="flex items-center justify-between gap-3">
+    <h3 class="font-display text-[17px] font-bold text-ink" data-patient-title>Paciente {number}</h3>
+    <button type="button" class="min-h-8 rounded-md px-2 text-sm font-semibold text-danger hover:bg-can-50" data-remove-patient>
+      Remover paciente
+    </button>
+  </div>
+  <div class="grid gap-3.5 sm:grid-cols-2">
+    <div class="sm:col-span-2">
+      <label for={id("name")} class={LABEL}>Nome do paciente</label>
+      <input id={id("name")} name={name("name")} value={patient.name} autocomplete="off" class={field} {...invalid("name")} />
+      {error("name") && <p id={`${id("name")}-erro`} class={errorClass}>{error("name")}</p>}
+    </div>
+    <div>
+      <label for={id("birthdate")} class={LABEL}>Nascimento</label>
+      <input id={id("birthdate")} name={name("birthdate")} type="date" max={today} value={patient.birthdate} class={field} {...invalid("birthdate")} />
+      {error("birthdate") && <p id={`${id("birthdate")}-erro`} class={errorClass}>{error("birthdate")}</p>}
+    </div>
+    <div>
+      <label for={id("phone")} class={LABEL}>WhatsApp</label>
+      <input
+        id={id("phone")}
+        name={name("phone")}
+        type="tel"
+        inputmode="tel"
+        placeholder="(84) 98188-0777"
+        value={patient.phone}
+        autocomplete="off"
+        class={field}
+        {...invalid("phone")}
+      />
+      {error("phone") && <p id={`${id("phone")}-erro`} class={errorClass}>{error("phone")}</p>}
+    </div>
+    <div class="sm:col-span-2">
+      <label for={id("guardianName")} class={LABEL}>Nome do responsável</label>
+      <p class={HINT} id={`${id("guardianName")}-dica`}>
+        Quem cuida do paciente e é dono do WhatsApp (mãe, filho…). Em branco, o próprio paciente.
+      </p>
+      <input
+        id={id("guardianName")}
+        name={name("guardianName")}
+        value={patient.guardianName}
+        autocomplete="off"
+        class={field}
+        aria-describedby={error("guardianName") ? `${id("guardianName")}-erro ${id("guardianName")}-dica` : `${id("guardianName")}-dica`}
+        aria-invalid={error("guardianName") ? "true" : undefined}
+      />
+      {error("guardianName") && <p id={`${id("guardianName")}-erro`} class={errorClass}>{error("guardianName")}</p>}
+    </div>
+    {
+      catalog.insurancePlans.length > 0 && (
+        <>
+          <div>
+            <label for={id("insurancePlanId")} class={LABEL}>
+              Convênio
+            </label>
+            <select id={id("insurancePlanId")} name={name("insurancePlanId")} class={field} {...invalid("insurancePlanId")}>
+              <option value="">Particular</option>
+              {catalog.insurancePlans.map((p) => (
+                <option value={p.id} selected={p.id === patient.insurancePlanId}>
+                  {p.name}
+                </option>
+              ))}
+            </select>
+            {error("insurancePlanId") && (
+              <p id={`${id("insurancePlanId")}-erro`} class={errorClass}>
+                {error("insurancePlanId")}
+              </p>
+            )}
+          </div>
+          <div>
+            <label for={id("cardNumber")} class={LABEL}>
+              Nº da carteirinha
+            </label>
+            <input id={id("cardNumber")} name={name("cardNumber")} value={patient.cardNumber} autocomplete="off" class={field} />
+          </div>
+        </>
+      )
+    }
+  </div>
+
+  <div class="flex flex-col gap-3 border-t border-[#e1e8e5] pt-4">
+    <p class="text-[15px] font-bold text-ink">Consultas marcadas</p>
+    <p class="-mt-2 text-sm text-ink-soft" data-no-appointments hidden={patient.appointments.length > 0}>
+      Nenhuma consulta. O paciente entra só no cadastro.
+    </p>
+    <div class="flex flex-col gap-3" data-appointments>
+      {
+        patient.appointments.map((appointment, index) => (
+          <ImportAppointmentRow patientKey={patient.key} appointment={appointment} number={index + 1} catalog={catalog} issues={issues} today={today} />
+        ))
+      }
+    </div>
+    <template data-appointment-template>
+      <ImportAppointmentRow patientKey={patient.key} appointment={blankAppointment} number="" catalog={catalog} issues={{}} today={today} />
+    </template>
+    <button type="button" class="inline-flex min-h-10 items-center self-start rounded-lg border border-dashed border-line-strong bg-white px-3.5 text-[15px] font-semibold text-brand-ink hover:bg-canvas" data-add-appointment>
+      + Consulta
+    </button>
+  </div>
+</div>

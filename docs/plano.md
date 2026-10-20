@@ -1608,6 +1608,48 @@ modelo**, que serve para todos os casos.
   consultas já mexidas (remarcadas, pagas, com mensagem enviada) e os pacientes com outra
   consulta, e a tela diz quais.
 
+**Revisão do caminho (cliente, 20/out):** no lugar da planilha, um **link de preenchimento**
+para a própria clínica, com o Suporte validando e autorizando a carga. Mudam o "Caminho", o
+"Quem" e o "Formato" de 19/out; o resto (alcance, mensagens, fora da grade, repetidos,
+nascimento, retornos e desfazer) continua valendo.
+- **Caminho:** o Suporte, em Suporte › Clínicas › (a clínica), clica em **"Pedir a agenda
+  atual"**; o e-mail leva o link. A clínica cadastra paciente por paciente, com as consultas
+  dentro do cartão de cada um, salva e continua depois e, no fim, **"Enviar ao Suporte"**. O
+  Suporte confere e autoriza a carga.
+- **Planilha:** colar ou enviar uma planilha **dentro do link** fica para **depois do 1º
+  piloto** (para clínica com muitos pacientes que já exporta do sistema antigo).
+- **Acesso:** **link sem login**, como o formulário de informações (o link é a chave). Mesmo
+  assim: o banco guarda só o hash do código, a página não é indexada, fecha depois de enviada
+  ou vencida e **nunca mostra os pacientes que a clínica já tem** (só o que foi digitado nele).
+- **Prazo:** **15 dias**. Venceu, o Suporte manda um **link novo** e o rascunho continua.
+- **Campos (aprovados):** paciente (nome, nascimento, WhatsApp, nome do responsável opcional
+  — em branco, o paciente é o próprio contato —, convênio da lista e nº da carteirinha) e, dentro
+  dele, as consultas (data, hora, serviço, agenda, local se houver mais de um e endereço da
+  visita no local domiciliar). Os menus vêm com o que está ativo na clínica. Ao salvar, cada
+  campo com erro é marcado (falta o nascimento, telefone fora da regra, menor sem responsável,
+  serviço que não é da agenda, horário ocupado); o rascunho fica salvo mesmo com erro e o envio
+  só sai sem erro.
+- **Problema achado pelo Suporte:** **devolve com comentário**; a clínica recebe o e-mail com o
+  link (15 dias de novo), corrige e reenvia. O Suporte não mexe nos dados da clínica.
+- **Autorizar:** **só sem nenhum erro**; avisos não impedem.
+- **Consulta que passou** entre o envio e a autorização: **fica de fora, com aviso**; o
+  paciente entra do mesmo jeito.
+- **Partes:** F10.1a (pedido, e-mail e o link com rascunho e envio), F10.1b (conferência do
+  Suporte e "Devolver com comentário"), F10.1c (autorizar e gravar a carga, sem o aviso de
+  marcação) e F10.1d (desfazer).
+
+**F10.1a implementada e testada no local em 20/out** (sem commit: aguarda a validação do
+cliente; depois, migração no staging e publicação). Migração `20261020120000_importacao_da_agenda.sql`
+(tabela `agenda_import_requests`, um pedido em andamento por clínica, só o hash do código, a
+página só muda o rascunho e a situação enquanto aberto e no prazo, a equipe da clínica não vê);
+regras em `src/lib/agendaImport.ts`; link em `/importar/[código]`; cartão "Agenda atual" em
+Suporte › Clínicas › (a clínica), com "Pedir a agenda atual" e "Mandar link novo" (o link
+anterior para de funcionar; o rascunho continua; depois de enviada, só a conferência devolve).
+Detalhes da tela: o menu da agenda mostra só as que atendem o serviço escolhido (uma só já vem
+escolhida); o endereço da visita aparece só no local domiciliar; o local some com um local só;
+convênio só com o item Convênios. No teste local, os cartões criados na tela eram descartados
+em silêncio (chave longa demais para o servidor); corrigido e coberto por teste.
+
 ## F11 — Módulo financeiro: pagamentos e nota fiscal no CPF do responsável
 
 **Pedida pelo cliente em 12/out/2026** para as clínicas piloto de **Mossoró (RN)**. Primeiro foi

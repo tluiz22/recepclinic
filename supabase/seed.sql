@@ -364,6 +364,9 @@ begin
     values (c_a, 'admin@exemplo-saude.local', u_a_admin, '{admin}', u_support, now());
   insert into public.onboarding_requests (clinic_id, token_hash, email, requested_by, expires_at)
     values (c_a, encode(sha256(convert_to('recepclinic-local-formulario', 'UTF8')), 'hex'), 'admin@exemplo-saude.local', u_support, now() + interval '30 days');
+  -- Agenda atual para a importação (F10.1a): /importar/recepclinic-local-agenda.
+  insert into public.agenda_import_requests (clinic_id, token_hash, email, requested_by, expires_at)
+    values (c_a, encode(sha256(convert_to('recepclinic-local-agenda', 'UTF8')), 'hex'), 'admin@exemplo-saude.local', u_support, now() + interval '15 days');
 
   -- -------------------------------------------------------------------------
   -- Clínica B: Odonto Exemplo (perfil Adultos)

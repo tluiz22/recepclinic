@@ -1,0 +1,104 @@
+---
+// Uma consulta marcada no link da agenda atual (F10.1a), dentro do cartão do
+// paciente. Também serve de modelo (chaves "__P__" e "__A__") para o
+// "+ Consulta". Os erros vêm da conferência do que ficou salvo.
+import { INPUT, LABEL } from "../admin/config/formStyles";
+import { appointmentField, type ImportAppointment, type ImportCatalog, type ImportIssues } from "../../lib/agendaImport";
+
+interface Props {
+  patientKey: string;
+  appointment: ImportAppointment;
+  number: number | string;
+  catalog: ImportCatalog;
+  issues: ImportIssues;
+  today: string;
+}
+
+const { patientKey, appointment, number, catalog, issues, today } = Astro.props;
+const name = (field: Parameters<typeof appointmentField>[2]) => appointmentField(patientKey, appointment.key, field);
+const id = (field: Parameters<typeof appointmentField>[2]) => name(field).replaceAll(".", "-");
+const error = (field: Parameters<typeof appointmentField>[2]) => issues[name(field)];
+const invalid = (field: Parameters<typeof appointmentField>[2]) =>
+  error(field) ? { "aria-invalid": "true" as const, "aria-describedby": `${id(field)}-erro` } : {};
+const field = `${INPUT} font-normal`;
+const agendasOf = (serviceId: string) => catalog.serviceAgendas.filter((p) => p.serviceId === serviceId).map((p) => p.agendaId).join(" ");
+const hasHome = catalog.locations.some((l) => l.homeVisit);
+---
+
+<div class="flex flex-col gap-3 rounded-[10px] border border-[#e1e8e5] bg-white p-3.5" data-appointment>
+  <div class="flex items-center justify-between gap-3">
+    <p class="text-sm font-bold text-ink-mid" data-appointment-title>Consulta {number}</p>
+    <button type="button" class="min-h-8 rounded-md px-2 text-sm font-semibold text-danger hover:bg-can-50" data-remove-appointment>
+      Remover consulta
+    </button>
+  </div>
+  <div class="grid gap-3.5 sm:grid-cols-2">
+    <div>
+      <label for={id("date")} class={LABEL}>Data</label>
+      <input id={id("date")} name={name("date")} type="date" min={today} value={appointment.date} class={field} {...invalid("date")} />
+      {error("date") && <p id={`${id("date")}-erro`} class="mt-1 text-sm font-semibold text-danger">{error("date")}</p>}
+    </div>
+    <div>
+      <label for={id("time")} class={LABEL}>Hora</label>
+      <input id={id("time")} name={name("time")} type="time" value={appointment.time} class={field} {...invalid("time")} />
+      {error("time") && <p id={`${id("time")}-erro`} class="mt-1 text-sm font-semibold text-danger">{error("time")}</p>}
+    </div>
+    <div>
+      <label for={id("serviceId")} class={LABEL}>Serviço</label>
+      <select id={id("serviceId")} name={name("serviceId")} class={field} data-service {...invalid("serviceId")}>
+        <option value="">Escolha…</option>
+        {
+          catalog.services.map((s) => (
+            <option value={s.id} selected={s.id === appointment.serviceId} data-agendas={agendasOf(s.id)}>
+              {s.name} ({s.durationMinutes} min)
+            </option>
+          ))
+        }
+      </select>
+      {error("serviceId") && <p id={`${id("serviceId")}-erro`} class="mt-1 text-sm font-semibold text-danger">{error("serviceId")}</p>}
+    </div>
+    <div>
+      <label for={id("agendaId")} class={LABEL}>Agenda</label>
+      <select id={id("agendaId")} name={name("agendaId")} class={field} data-agenda {...invalid("agendaId")}>
+        <option value="">Escolha…</option>
+        {
+          catalog.agendas.map((a) => (
+            <option value={a.id} selected={a.id === appointment.agendaId}>
+              {a.name}
+            </option>
+          ))
+        }
+      </select>
+      {error("agendaId") && <p id={`${id("agendaId")}-erro`} class="mt-1 text-sm font-semibold text-danger">{error("agendaId")}</p>}
+    </div>
+    {
+      catalog.locations.length > 1 && (
+        <div>
+          <label for={id("locationId")} class={LABEL}>
+            Local
+          </label>
+          <select id={id("locationId")} name={name("locationId")} class={field} data-location {...invalid("locationId")}>
+            <option value="">Escolha…</option>
+            {catalog.locations.map((l) => (
+              <option value={l.id} selected={l.id === appointment.locationId} data-home={l.homeVisit ? "1" : undefined}>
+                {l.name}
+              </option>
+            ))}
+          </select>
+          {error("locationId") && <p id={`${id("locationId")}-erro`} class="mt-1 text-sm font-semibold text-danger">{error("locationId")}</p>}
+        </div>
+      )
+    }
+    {
+      hasHome && (
+        <div class={catalog.locations.length > 1 ? "" : "sm:col-span-2"} data-home-address>
+          <label for={id("homeAddress")} class={LABEL}>
+            Endereço da visita (domiciliar)
+          </label>
+          <input id={id("homeAddress")} name={name("homeAddress")} value={appointment.homeAddress} class={field} {...invalid("homeAddress")} />
+          {error("homeAddress") && <p id={`${id("homeAddress")}-erro`} class="mt-1 text-sm font-semibold text-danger">{error("homeAddress")}</p>}
+        </div>
+      )
+    }
+  </div>
+</div>

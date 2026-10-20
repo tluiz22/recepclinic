@@ -1,5 +1,6 @@
 import type { APIRoute } from "astro";
 import { isUuid } from "../../../../../lib/clinicAccess";
+import { requestAgendaImport } from "../../../../../lib/data/agendaImport";
 import { createUserClient } from "../../../../../lib/data/clients";
 import { DataError } from "../../../../../lib/data/errors";
 import { runFormAction } from "../../../../../lib/data/formAction";
@@ -8,7 +9,8 @@ import { onboardingDeps } from "../../../../../lib/data/onboardingDeps";
 import { formText } from "../../../../../lib/forms";
 
 // Ações do Suporte numa clínica (F4.4a): reenviar convite, pedir as
-// informações por e-mail e marcar as respostas como revisadas.
+// informações por e-mail e marcar as respostas como revisadas; pedir a agenda
+// atual para a importação ou mandar um link novo (F10.1a).
 export const POST: APIRoute = async (context) => {
   const { request, cookies, locals, params, url } = context;
   const clinicId = params.id!;
@@ -43,6 +45,20 @@ export const POST: APIRoute = async (context) => {
           const message = result.email.sent
             ? "Pedido de informações criado. E-mail enviado."
             : `Pedido de informações criado, mas o e-mail não saiu (${result.email.reason}). Envie este link ao Administrador (ele não aparece de novo): ${result.link}`;
+          return { redirectTo: page, message };
+        }
+        case "pedir_agenda": {
+          const result = await requestAgendaImport(
+            db,
+            locals.userId!,
+            { id: clinic.id, name: clinic.name, timezone: settings.timezone },
+            formText(form, "email"),
+            onboardingDeps(url),
+          );
+          const what = result.renewed ? "Link novo da agenda atual criado (o anterior parou de funcionar)." : "Pedido da agenda atual criado.";
+          const message = result.email.sent
+            ? `${what} E-mail enviado.`
+            : `${what} Mas o e-mail não saiu (${result.email.reason}). Envie este link à clínica (ele não aparece de novo): ${result.link}`;
           return { redirectTo: page, message };
         }
         case "marcar_revisado":

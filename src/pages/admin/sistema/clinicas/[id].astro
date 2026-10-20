@@ -3,7 +3,8 @@
 // informações por e-mail e as respostas do formulário para revisar. Para
 // configurar, o Suporte abre a clínica (escolha de clínica). R10 (cliente,
 // 17/out/2026): resumo embaixo do nome, as duas ações no cabeçalho, convites em
-// linhas e os pedidos num cartão, o mais novo em cima.
+// linhas e os pedidos num cartão, o mais novo em cima. F10.1a (cliente,
+// 20/out/2026): "Agenda atual", o pedido do link para a importação.
 import AdminLayout from "../../../../layouts/AdminLayout.astro";
 import Badge from "../../../../components/admin/config/Badge.astro";
 import FlashMessage from "../../../../components/admin/FlashMessage.astro";
@@ -11,8 +12,10 @@ import OnboardingAnswersView from "../../../../components/admin/OnboardingAnswer
 import SystemHeader from "../../../../components/admin/sistema/SystemHeader.astro";
 import Button from "../../../../components/admin/ui/Button.astro";
 import { CARD, INPUT, LABEL, PANEL, PRIMARY_BUTTON, SECTION_TITLE } from "../../../../components/admin/config/formStyles";
+import { countAppointments, IMPORT_STATUS, isImportOpen } from "../../../../lib/agendaImport";
 import { isUuid } from "../../../../lib/clinicAccess";
 import { formatInstant } from "../../../../lib/clinicTime";
+import { getLatestAgendaImport } from "../../../../lib/data/agendaImport";
 import { createUserClient } from "../../../../lib/data/clients";
 import { listInfoRequests, listInvitations } from "../../../../lib/data/onboarding";
 import { isFeatureKey } from "../../../../lib/features";
@@ -22,7 +25,7 @@ import { PLAN_LABELS, clinicPlan } from "../../../../lib/plans";
 const { id } = Astro.params;
 if (!isUuid(id)) return Astro.redirect("/admin/sistema/clinicas");
 const db = createUserClient(Astro.request, Astro.cookies);
-const [{ data: clinic }, { data: settings }, invitations, requests] = await Promise.all([
+const [{ data: clinic }, { data: settings }, invitations, requests, agendaImport] = await Promise.all([
   db
     .from("clinics")
     .select("id, name, status, created_at, max_professionals, clinic_features ( feature_key ), professionals ( is_active )")
@@ -31,6 +34,7 @@ const [{ data: clinic }, { data: settings }, invitations, requests] = await Prom
   db.from("clinic_settings").select("timezone").eq("clinic_id", id).maybeSingle(),
   listInvitations(db, id),
   listInfoRequests(db, id),
+  getLatestAgendaImport(db, id),
 ]);
 if (!clinic || !settings) return Astro.redirect("/admin/sistema/clinicas");
 const when = (date: Date) => formatInstant(date, settings.timezone, "dd/MM/yyyy 'às' HH:mm");
@@ -49,6 +53,12 @@ const summary = [
   ...(clinic.status === "suspended" ? ["suspensa"] : []),
 ].join(" · ");
 const ordered = [...requests].sort((a, b) => b.requestedAt.getTime() - a.requestedAt.getTime());
+// Agenda atual (F10.1a): pedido em andamento, ou nenhum (pode pedir).
+const importOpen = !!agendaImport && isImportOpen(agendaImport.status);
+const importActive = importOpen || agendaImport?.status === "submitted";
+const importExpired = importOpen && agendaImport!.expiresAt.getTime() < now;
+const importPatients = agendaImport?.entries.length ?? 0;
+const importAppointments = agendaImport ? countAppointments(agendaImport.entries) : 0;
 ---
 
 <AdminLayout title={clinic.name} platform>
@@ -156,22 +166,74 @@ const ordered = [...requests].sort((a, b) => b.requestedAt.getTime() - a.request
       }
     </div>
 
-    <section class={`${PANEL} flex flex-col gap-4`} aria-labelledby="t-pedir">
-      <div class="flex flex-col gap-1">
-        <h2 id="t-pedir" class={SECTION_TITLE}>Pedir as informações ao Administrador</h2>
-        <p class="text-[15px] text-ink-soft">
-          Para quando o Administrador prefere que o Suporte configure: ele recebe um e-mail com o link do formulário (vale 30 dias), e as respostas aparecem
-          aqui. Nada entra sozinho na clínica.
-        </p>
-      </div>
-      <form method="POST" action={action} class="flex flex-col gap-4">
-        <input type="hidden" name="acao" value="pedir_informacoes" />
-        <div>
-          <label for="email" class={LABEL}>E-mail</label>
-          <input id="email" name="email" type="email" required value={firstAdmin} class={INPUT} />
+    <div class="flex min-w-0 flex-col gap-4">
+      <section class={`${PANEL} flex flex-col gap-4`} aria-labelledby="t-pedir">
+        <div class="flex flex-col gap-1">
+          <h2 id="t-pedir" class={SECTION_TITLE}>Pedir as informações ao Administrador</h2>
+          <p class="text-[15px] text-ink-soft">
+            Para quando o Administrador prefere que o Suporte configure: ele recebe um e-mail com o link do formulário (vale 30 dias), e as respostas aparecem
+            aqui. Nada entra sozinho na clínica.
+          </p>
         </div>
-        <button type="submit" data-sending-label="Enviando…" class={`${PRIMARY_BUTTON} self-start`}>Enviar pedido</button>
-      </form>
-    </section>
+        <form method="POST" action={action} class="flex flex-col gap-4">
+          <input type="hidden" name="acao" value="pedir_informacoes" />
+          <div>
+            <label for="email" class={LABEL}>E-mail</label>
+            <input id="email" name="email" type="email" required value={firstAdmin} class={INPUT} />
+          </div>
+          <button type="submit" data-sending-label="Enviando…" class={`${PRIMARY_BUTTON} self-start`}>Enviar pedido</button>
+        </form>
+      </section>
+      <section class={`${PANEL} flex flex-col gap-4`} aria-labelledby="t-agenda-atual">
+        <div class="flex flex-col gap-1">
+          <h2 id="t-agenda-atual" class={SECTION_TITLE}>Agenda atual</h2>
+          <p class="text-[15px] text-ink-soft">
+            Na implantação: a clínica recebe por e-mail um link (vale 15 dias, sem login) para cadastrar os pacientes e as consultas já marcadas, de hoje em
+            diante. O Suporte confere e faz a carga, sem o aviso de marcação.
+          </p>
+        </div>
+        {
+          agendaImport && importActive && (
+            <div class="flex flex-col gap-1.5 rounded-[10px] border border-[#e6ecea] bg-[#fbfcfc] px-3.5 py-3">
+              <span class="flex flex-wrap items-center gap-1.5">
+                <Badge variant={IMPORT_STATUS[agendaImport.status].variant}>{IMPORT_STATUS[agendaImport.status].label}</Badge>
+                {importExpired && <Badge variant="danger">Link vencido</Badge>}
+              </span>
+              <span class="text-sm text-ink-soft">
+                {agendaImport.status === "submitted"
+                  ? `Enviada em ${when(agendaImport.submittedAt ?? agendaImport.linkSentAt)}`
+                  : `Link enviado em ${when(agendaImport.linkSentAt)} para `}
+                {agendaImport.status !== "submitted" && <strong class="break-all text-ink">{agendaImport.email}</strong>}
+                {agendaImport.status !== "submitted" && ` · vale até ${when(agendaImport.expiresAt)}`}
+              </span>
+              {agendaImport.savedAt && (
+                <span class="text-sm text-ink">
+                  {importPatients} {importPatients === 1 ? "paciente" : "pacientes"} e {importAppointments} {importAppointments === 1 ? "consulta" : "consultas"}
+                  {agendaImport.status === "submitted" ? "" : `, salvo em ${when(agendaImport.savedAt)}`}
+                </span>
+              )}
+              {agendaImport.status === "submitted" && <span class="text-sm text-ink-soft">A conferência e a carga estão em construção (F10.1b e F10.1c).</span>}
+            </div>
+          )
+        }
+        {
+          agendaImport?.status !== "submitted" && (
+            <form method="POST" action={action} class="flex flex-col gap-4">
+              <input type="hidden" name="acao" value="pedir_agenda" />
+              <div>
+                <label for="agenda-email" class={LABEL}>
+                  E-mail
+                </label>
+                <input id="agenda-email" name="email" type="email" required value={importOpen ? agendaImport!.email : firstAdmin} class={INPUT} />
+                {importOpen && <p class="mt-1.5 text-sm text-ink-soft">O link anterior para de funcionar; o que a clínica já digitou continua.</p>}
+              </div>
+              <button type="submit" data-sending-label="Enviando…" class={`${PRIMARY_BUTTON} self-start`}>
+                {importOpen ? "Mandar link novo" : "Pedir a agenda atual"}
+              </button>
+            </form>
+          )
+        }
+      </section>
+    </div>
   </div>
 </AdminLayout>
