@@ -191,7 +191,9 @@
 >   **F10.1 toda implementada e publicada; o cliente valida tudo no fim** (roteiro: pedir pelo cartão "Agenda atual"
 >   da clínica, preencher o link, conferir, devolver, autorizar a carga e desfazer).
 >   **Retomar daqui (próxima sessão, depois de 20/out), pedido do cliente:** 1) verificar o erro que está dando no
->   CI do GitHub deste projeto; 2) detalhar o passo a passo do que precisa ser testado na F10 (a F10.1 inteira no
+>   CI do GitHub deste projeto (**resolvido em 20/out**: o job `db` falhava desde a F10.1a porque os tipos foram gerados
+>   com o Supabase CLI 2.121.0 do computador, que escreve `ComputedFields: never`, e o CI estava na 2.119.0; CI passado
+>   para a 2.121.0, commit `dde5d7e`, e voltou a passar); 2) detalhar o passo a passo do que precisa ser testado na F10 (a F10.1 inteira no
 >   staging: pedido, link, conferência, devolução, carga e desfazer), para o cliente validar. Em paralelo, aguardar a
 >   Meta (Análise do App até ~29/out). As melhorias no processo da nota fiscal continuam para uma sessão própria.
 >   **Antes (19/out):** implementar a F10.1 (já aprovada). As **melhorias no
