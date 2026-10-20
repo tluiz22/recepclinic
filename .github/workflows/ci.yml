@@ -35,7 +35,7 @@ jobs:
 
       - uses: supabase/setup-cli@v1
         with:
-          version: 2.119.0
+          version: 2.121.0
 
       - run: npm ci
       # Só o necessário para os testes de banco: Postgres, Auth, PostgREST, Storage (logo da
