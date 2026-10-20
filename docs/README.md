@@ -190,6 +190,10 @@
 >   e do que fica) implementada e publicada no staging em 20/out** (migração `20261020140000_desfazer_carga.sql`).
 >   **F10.1 toda implementada e publicada; o cliente valida tudo no fim** (roteiro: pedir pelo cartão "Agenda atual"
 >   da clínica, preencher o link, conferir, devolver, autorizar a carga e desfazer).
+>   **Retomar daqui (próxima sessão, depois de 20/out), pedido do cliente:** 1) verificar o erro que está dando no
+>   CI do GitHub deste projeto; 2) detalhar o passo a passo do que precisa ser testado na F10 (a F10.1 inteira no
+>   staging: pedido, link, conferência, devolução, carga e desfazer), para o cliente validar. Em paralelo, aguardar a
+>   Meta (Análise do App até ~29/out). As melhorias no processo da nota fiscal continuam para uma sessão própria.
 >   **Antes (19/out):** implementar a F10.1 (já aprovada). As **melhorias no
 >   processo da nota fiscal** ficam para uma sessão própria (cliente, 19/out: ele traz a lista do que planejar). Em
 >   paralelo, aguardar a Meta (Análise do App até ~29/out).
