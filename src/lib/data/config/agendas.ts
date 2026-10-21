@@ -2,7 +2,7 @@ import type { Enums } from "../../supabase/database.types";
 import type { DbClient } from "../clients";
 import { cleanText, DataError, unwrap, unwrapOne, Validation } from "../errors";
 
-// Agendas (D2): de um profissional ou de um recurso (ex.: "Exames"), e o
+// Agendas (D2): de um profissional ou da equipe (ex.: "Exames"), e o
 // acesso de cada membro a elas (D6 revista). A listagem já vem filtrada pelo
 // RLS: cada login só recebe as agendas que pode ver.
 
@@ -83,8 +83,27 @@ export function professionalsWithoutAgenda<P extends { id: string; isActive: boo
   return professionals.filter((p) => p.isActive && !taken.has(p.id));
 }
 
+/**
+ * Agenda da equipe (o tipo `resource`): exames que não são feitos por um dos
+ * profissionais cadastrados (cliente, 21/out/2026). Uma por clínica, só com o
+ * item "Exames e procedimentos" (D11) e só para serviços do tipo exame; o
+ * banco também confere.
+ */
+export const TEAM_AGENDA_NAME = "Exames";
+export const TEAM_AGENDA_LABEL = "Equipe";
+
 export async function createAgenda(db: DbClient, clinicId: string, input: AgendaInput): Promise<Agenda> {
   const row = validateAgenda(input);
+  if (row.kind === "resource") {
+    const existing = unwrap(await db.from("agendas").select("id, is_active").eq("clinic_id", clinicId).eq("kind", "resource").limit(1), "Agenda")[0];
+    if (existing) {
+      throw new DataError("invalid", "Agenda: a clínica já tem a agenda da equipe", {
+        kind: existing.is_active
+          ? "A clínica já tem a agenda da equipe (só pode haver uma)."
+          : "A clínica já tem a agenda da equipe, desativada: reative-a em Agendas › Todos.",
+      });
+    }
+  }
   if (row.professional_id) {
     const existing = unwrap(
       await db.from("agendas").select("id, is_active").eq("clinic_id", clinicId).eq("professional_id", row.professional_id).limit(1),

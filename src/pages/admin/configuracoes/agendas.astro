@@ -1,6 +1,6 @@
 ---
-// Configurações › Agendas (F4.3, D2): de um profissional ou de um recurso
-// (ex.: "Exames", quando a recepção faz o exame).
+// Configurações › Agendas (F4.3, D2): de um profissional ou da equipe
+// ("Exames": exames que não são feitos por um dos profissionais cadastrados).
 // Redesign R9 (cliente, 17/out/2026): uma linha por agenda, "Ativas | Todos".
 import ConfigShell from "../../../components/admin/config/ConfigShell.astro";
 import { withAllFilter } from "../../../lib/returnPath";
@@ -12,7 +12,7 @@ import IssueBadges from "../../../components/admin/setup/IssueBadges.astro";
 import Button from "../../../components/admin/ui/Button.astro";
 import Pill from "../../../components/admin/ui/Pill.astro";
 import { createUserClient } from "../../../lib/data/clients";
-import { listAgendas, professionalsWithoutAgenda } from "../../../lib/data/config/agendas";
+import { listAgendas, professionalsWithoutAgenda, TEAM_AGENDA_LABEL } from "../../../lib/data/config/agendas";
 import { listProfessionals } from "../../../lib/data/config/professionals";
 import { listServices } from "../../../lib/data/config/services";
 import { AGENDA_HINTS, loadSetupStatus } from "../../../lib/data/config/setup";
@@ -32,14 +32,15 @@ const active = all.filter((a) => a.isActive);
 const agendas = showInactive ? [...active, ...all.filter((a) => !a.isActive)] : active;
 const professionalName = new Map(professionals.map((p) => [p.id, p.displayName]));
 const servicesOf = (agendaId: string) => services.filter((s) => s.agendaIds.includes(agendaId)).map((s) => s.name);
-// Uma agenda por profissional (cliente, 21/out/2026): "Nova agenda" só quando
-// algum profissional ativo ainda não tem; a de recurso (ex.: Exames) segue
-// pelo link discreto.
+// Uma agenda por profissional e no máximo uma da equipe, só com o item
+// "Exames e procedimentos" (cliente, 21/out/2026): "Nova agenda" só quando
+// algum profissional ativo ainda não tem; senão, a da equipe pelo link discreto.
 const canCreateProfessional = professionalsWithoutAgenda(professionals, all).length > 0;
+const canCreateTeam = clinic.features.includes("exams") && !all.some((a) => a.kind === "resource");
 const cols = "lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1.4fr)_minmax(0,2fr)_36px]";
 ---
 
-<ConfigShell current="agendas" title="Agendas" subtitle="De um profissional ou de um recurso (ex.: Exames), com os serviços que atendem." setup={setup}>
+<ConfigShell current="agendas" title="Agendas" subtitle="De um profissional ou da equipe (Exames), com os serviços que atendem." setup={setup}>
   {
     canCreateProfessional && (
       <Button slot="actions" href="/admin/configuracoes/agendas/novo" variant="primary">
@@ -52,11 +53,11 @@ const cols = "lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1.4fr)_minmax(0,2fr)_36px]"
     <p class="text-sm text-ink-soft" role="status">
       {agendas.length} {agendas.length === 1 ? "agenda" : "agendas"}{showInactive ? "" : agendas.length === 1 ? " ativa" : " ativas"}
       {
-        !canCreateProfessional && all.length > 0 && (
+        !canCreateProfessional && canCreateTeam && all.length > 0 && (
           <>
             {" · "}
-            <a href="/admin/configuracoes/agendas/novo?tipo=recurso" class="font-semibold text-brand hover:underline">
-              Criar agenda de recurso
+            <a href="/admin/configuracoes/agendas/novo?tipo=equipe" class="font-semibold text-brand hover:underline">
+              Criar a agenda da equipe (exames)
             </a>
           </>
         )
@@ -97,7 +98,7 @@ const cols = "lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1.4fr)_minmax(0,2fr)_36px]"
                   <Icon name="chevron-right" class="h-5 w-5" strokeWidth={2.2} />
                 </a>
                 <span class={ROW_CELL}>
-                  {agenda.kind === "professional" ? (professionalName.get(agenda.professionalId!) ?? "—") : <span class={SOFT}>Recurso (sem profissional)</span>}
+                  {agenda.kind === "professional" ? (professionalName.get(agenda.professionalId!) ?? "—") : <span class={SOFT}>{TEAM_AGENDA_LABEL}</span>}
                   {agenda.bufferMinutes > 0 && <span class="block text-sm text-ink-soft">{agenda.bufferMinutes} min entre atendimentos</span>}
                 </span>
                 <span class={ROW_CELL}>{names.length ? names.join(", ") : <span class={SOFT}>Nenhum serviço ligado</span>}</span>

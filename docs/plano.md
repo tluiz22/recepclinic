@@ -2614,6 +2614,16 @@ guia de configuração e o próximo passo do profissional levam à agenda desati
 outra. Implementado (`professionalsWithoutAgenda` e a trava em `createAgenda`; testes em `setup.test.ts` e
 `acesso-configuracao.test.ts`) e conferido no navegador local em 21/out (com e sem profissional sem agenda); banco
 local de volta ao seed; sem migração. Aguarda a validação do cliente.
+Na validação no staging (21/out), o cliente criou uma agenda de recurso pelo link e **revisou a regra**: a agenda
+de recurso passa a ser a **agenda da equipe**: 1) só com o item "Exames e procedimentos" ligado na matriz; 2) **no
+máximo uma por clínica** (a desativada conta); 3) já vem com o nome "Exames"; 4) o "De quem" mostra **"Equipe"**; 5) só
+atende serviços do tipo exame (no serviço, ela só aparece no tipo Exame); 6) ao criar, o aviso "Esta agenda será
+usada para os exames que não são realizados por um dos profissionais cadastrados". Sem nada para criar, "Nova agenda"
+mostra o aviso no lugar do formulário. O banco também confere (migração `20261021120000_agenda_da_equipe.sql`:
+índices únicos de uma agenda por profissional e uma da equipe por clínica, item da matriz na agenda da equipe e só
+exame ligado a ela); staging conferido antes, sem dado fora da regra (a "Consultorio de Teste" tem uma agenda de
+recurso, "fasdfsdfasd", do teste do cliente, que vira a agenda da equipe dela). Testes em `acesso-configuracao.test.ts`;
+conferido no navegador local em 21/out; banco local de volta ao seed.
 
 **Vagas do exame em turma (cliente, 21/out):** o número de pacientes continua em Configurações › Horários ("Vagas
 da turma", por horário), e não no serviço; o cliente avaliou e decidiu deixar como está.

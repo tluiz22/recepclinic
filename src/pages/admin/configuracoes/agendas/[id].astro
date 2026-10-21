@@ -7,7 +7,7 @@ import NextStep from "../../../../components/admin/setup/NextStep.astro";
 import { loadSetupStatus } from "../../../../lib/data/config/setup";
 import { CARD, HINT, INPUT, INPUT_INLINE, LABEL, PRIMARY_BUTTON, SECONDARY_BUTTON } from "../../../../components/admin/config/formStyles";
 import { createUserClient } from "../../../../lib/data/clients";
-import { listAgendas, professionalsWithoutAgenda } from "../../../../lib/data/config/agendas";
+import { listAgendas, professionalsWithoutAgenda, TEAM_AGENDA_NAME } from "../../../../lib/data/config/agendas";
 import { listProfessionals } from "../../../../lib/data/config/professionals";
 import { originPage, setupOrigin, setupParam, withParams } from "../../../../lib/setupFlow";
 
@@ -23,13 +23,16 @@ const agenda = isNew ? null : (agendas.find((a) => a.id === id) ?? null);
 if (!isNew && !agenda) return Astro.redirect("/admin/configuracoes/agendas");
 // Vinda do "próximo passo" do profissional ou do local (F6.3b): já escolhido,
 // com o nome dele.
-// Uma agenda por profissional (cliente, 21/out/2026): só aparecem os que
-// ainda não têm (a desativada conta: reativa-se a antiga). Sem nenhum, só a de
-// recurso; o link "Criar agenda de recurso" da lista já vem nela.
+// Uma agenda por profissional e no máximo uma da equipe, só com o item "Exames
+// e procedimentos" (cliente, 21/out/2026; a desativada conta: reativa-se a
+// antiga). Só aparecem os profissionais sem agenda; o link "Criar a agenda da
+// equipe" da lista já vem nela, com o nome "Exames".
 const available = isNew ? professionalsWithoutAgenda(professionals, agendas) : [];
-const onlyResource = isNew && available.length === 0;
+const teamAllowed = isNew && clinic.features.includes("exams") && !agendas.some((a) => a.kind === "resource");
+const onlyTeam = isNew && available.length === 0 && teamAllowed;
+const nothingToCreate = isNew && available.length === 0 && !teamAllowed;
 const prefill = isNew ? (available.find((p) => p.id === Astro.url.searchParams.get("profissional")) ?? null) : null;
-const startResource = onlyResource || (!prefill && Astro.url.searchParams.get("tipo") === "recurso");
+const startTeam = onlyTeam || (teamAllowed && !prefill && Astro.url.searchParams.get("tipo") === "equipe");
 const professionalName = agenda?.professionalId ? professionals.find((p) => p.id === agenda.professionalId)?.displayName : null;
 // Aberto da lista em "Todos": o filtro vai e volta (teste da R9, NAV-06).
 const all = allFilterOn(Astro.url);
@@ -66,11 +69,19 @@ const agendaIssues = setup?.issues.agendas.get(id!) ?? [];
   }
 
   <div class="flex max-w-3xl flex-col gap-4">
-    <form method="POST" action={action} class={`${CARD} flex flex-col gap-5 p-4 sm:p-5`}>
+    {
+      nothingToCreate && (
+        <p class={`${CARD} p-4 text-[15px] text-ink sm:p-5`}>
+          Não há agenda para criar: cada profissional ativo já tem a sua
+          {clinic.features.includes("exams") ? " e a clínica já tem a agenda da equipe." : "."} Para um profissional novo, cadastre-o antes em Profissionais.
+        </p>
+      )
+    }
+    <form method="POST" action={action} class={`${CARD} flex flex-col gap-5 p-4 sm:p-5`} hidden={nothingToCreate}>
       <input type="hidden" name="acao" value="salvar" />
       <div>
         <label for="name" class={LABEL}>Nome</label>
-        <input id="name" name="name" required placeholder="Dra. Ana, Exames…" value={agenda?.name ?? prefill?.displayName ?? ""} class={INPUT} />
+        <input id="name" name="name" required placeholder="Dra. Ana, Exames…" value={agenda?.name ?? prefill?.displayName ?? (startTeam ? TEAM_AGENDA_NAME : "")} class={INPUT} />
       </div>
       {
         isNew ? (
@@ -80,12 +91,17 @@ const agendaIssues = setup?.issues.agendas.get(id!) ?? [];
                 De quem é
               </label>
               <select id="kind" name="kind" class={INPUT}>
-                {!onlyResource && <option value="professional">De um profissional</option>}
-                <option value="resource" selected={startResource}>
-                  De um recurso (ex.: exames feitos pela recepção)
-                </option>
+                {available.length > 0 && <option value="professional">De um profissional</option>}
+                {teamAllowed && (
+                  <option value="resource" selected={startTeam}>
+                    Da equipe (exames)
+                  </option>
+                )}
               </select>
-              {onlyResource && <p class={HINT}>Todos os profissionais ativos já têm agenda. Aqui só se cria a de um recurso.</p>}
+              <p class="mt-2 rounded-lg bg-canvas px-3 py-2.5 text-sm text-ink" data-team-note>
+                Esta agenda será usada para os <strong>exames que não são realizados por um dos profissionais cadastrados</strong>. A
+                clínica só pode ter uma agenda da equipe, e ela só atende serviços do tipo exame.
+              </p>
             </div>
             <div data-professional>
               <label for="professional_id" class={LABEL}>
@@ -104,7 +120,7 @@ const agendaIssues = setup?.issues.agendas.get(id!) ?? [];
           </>
         ) : (
           <p class="text-sm text-ink-mid">
-            {agenda!.kind === "professional" ? `Agenda de ${professionalName ?? "profissional"}` : "Agenda de recurso (sem profissional)"}
+            {agenda!.kind === "professional" ? `Agenda de ${professionalName ?? "profissional"}` : "Agenda da equipe: exames que não são realizados por um dos profissionais cadastrados"}
           </p>
         )
       }
@@ -122,11 +138,18 @@ const agendaIssues = setup?.issues.agendas.get(id!) ?? [];
   </div>
 
   <script>
-    // Agenda de recurso não tem profissional.
+    // A agenda da equipe não tem profissional e já vem com o nome "Exames".
     const kind = document.getElementById("kind") as HTMLSelectElement | null;
     const professional = document.querySelector<HTMLElement>("[data-professional]");
+    const note = document.querySelector<HTMLElement>("[data-team-note]");
+    const name = document.getElementById("name") as HTMLInputElement | null;
     const sync = () => {
-      if (kind && professional) professional.hidden = kind.value !== "professional";
+      if (!kind) return;
+      const team = kind.value === "resource";
+      if (professional) professional.hidden = team;
+      if (note) note.hidden = !team;
+      if (name && team && !name.value.trim()) name.value = "Exames";
+      if (name && !team && name.value === "Exames") name.value = "";
     };
     kind?.addEventListener("change", sync);
     sync();

@@ -180,10 +180,32 @@ describe("profissionais, locais e agendas", () => {
   it("agenda: altera nome e intervalo; desativada some da lista padrão", async () => {
     const renamed = await updateAgenda(db(admin), clinicId, examsAgenda.id, { name: "Exames e testes", bufferMinutes: 5 });
     expect(renamed).toMatchObject({ name: "Exames e testes", bufferMinutes: 5, kind: "resource" });
-    const extra = await createAgenda(db(admin), clinicId, { name: "Sala extra", kind: "resource", professionalId: null, bufferMinutes: 0 });
+    const other = await createProfessional(db(admin), clinicId, { userId: null, displayName: "Dr. Extra", profession: "Médico", specialty: null, council: null, councilNumber: null, councilState: null });
+    const extra = await createAgenda(db(admin), clinicId, { name: "Sala extra", kind: "professional", professionalId: other.id, bufferMinutes: 0 });
     await setAgendaActive(db(admin), clinicId, extra.id, false);
     expect((await listAgendas(db(admin), clinicId)).map((a) => a.name)).not.toContain("Sala extra");
     expect((await listAgendas(db(admin), clinicId, { includeInactive: true })).map((a) => a.name)).toContain("Sala extra");
+  });
+
+  it("agenda da equipe (21/out): só uma por clínica, inclusive no banco", async () => {
+    const team = { name: "Exames 2", kind: "resource" as const, professionalId: null, bufferMinutes: 0 };
+    expect(await createAgenda(db(admin), clinicId, team).catch((e: DataError) => e)).toMatchObject({
+      code: "invalid",
+      fields: { kind: "A clínica já tem a agenda da equipe (só pode haver uma)." },
+    });
+    // Direto no banco, sem a conferência da tela: o índice recusa.
+    const { error } = await db(admin).from("agendas").insert({ clinic_id: clinicId, name: "Exames 3", kind: "resource" });
+    expect(error?.code).toBe("23505");
+  });
+
+  it("agenda da equipe só com o item \"Exames e procedimentos\" (21/out)", async () => {
+    const noExams = await createClinic("Clínica sem exames", []);
+    try {
+      const { error } = await adminClient().from("agendas").insert({ clinic_id: noExams, name: "Exames", kind: "resource" });
+      expect(error?.hint).toBe("feature_disabled:exams");
+    } finally {
+      await deleteClinics([noExams]);
+    }
   });
 
   it("uma agenda por profissional (21/out): a segunda é recusada, mesmo com a primeira desativada", async () => {
@@ -286,6 +308,12 @@ describe("serviços", () => {
     await setServiceActive(db(admin), clinicId, old.id, false);
     expect((await listServices(db(reception), clinicId)).map((s) => s.name)).not.toContain("Antigo");
     expect((await listServices(db(reception), clinicId, { category: "exam" })).length).toBe(3);
+  });
+
+  it("agenda da equipe só atende serviço do tipo exame (21/out)", async () => {
+    expect(await codeOf(() => setServiceAgendas(db(admin), clinicId, consultation.id, [doctorAgenda.id, examsAgenda.id]))).toBe("invalid");
+    expect((await setServiceAgendas(db(admin), clinicId, examA.id, [examsAgenda.id])).agendaIds).toEqual([examsAgenda.id]);
+    await setServiceAgendas(db(admin), clinicId, examA.id, []);
   });
 
   it("serviço não é ligado a agenda de outra clínica", async () => {

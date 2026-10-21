@@ -33,7 +33,9 @@ if (!isNew && !service) return Astro.redirect("/admin/configuracoes/servicos");
 const examsOn = clinic.features.includes("exams");
 const categories = (["consultation", "return_visit", "exam"] as const).filter((c) => c !== "exam" || examsOn);
 // Vindo do aviso "Cadastrar o retorno" da lista, o tipo já vem como Retorno.
-const presetCategory = isNew && Astro.url.searchParams.get("tipo") === "retorno" ? "return_visit" : null;
+// Aberto pela agenda da equipe, já como Exame (ela só atende exames, cliente 21/out/2026).
+const fromTeamAgenda = isNew && examsOn && agendas.some((a) => a.kind === "resource" && a.id === setupParam(Astro.url, "agenda"));
+const presetCategory = isNew && Astro.url.searchParams.get("tipo") === "retorno" ? "return_visit" : fromTeamAgenda ? "exam" : null;
 // Desativados só aparecem se já estão ligados ao serviço.
 const agendaOptions = agendas.filter((a) => a.isActive || service?.agendaIds.includes(a.id));
 const offered = new Map((service?.locations ?? []).map((l) => [l.locationId, l.priceCents]));
@@ -142,9 +144,11 @@ const noAgenda = !agendas.some((a) => a.isActive);
         <div class="mt-2 flex flex-col gap-2">
           {
             agendaOptions.map((agenda) => (
-              <label class={CHOICE}>
+              // A agenda da equipe só atende exames (cliente, 21/out/2026): some nos outros tipos.
+              <label class={CHOICE} data-only={agenda.kind === "resource" ? "exam" : undefined}>
                 <input type="checkbox" name="agenda_id" value={agenda.id} checked={service?.agendaIds.includes(agenda.id) || markAgendas.has(agenda.id)} class={CHECK} />
                 {agenda.name}
+                {agenda.kind === "resource" && " (equipe)"}
                 {!agenda.isActive && " (desativada)"}
               </label>
             ))
@@ -207,6 +211,8 @@ const noAgenda = !agendas.some((a) => a.isActive);
       const category = select?.value ?? form?.dataset.category ?? "";
       form?.querySelectorAll<HTMLElement>("[data-only]").forEach((el) => {
         el.hidden = el.dataset.only !== category;
+        // Agenda da equipe escondida não vai junto (só atende exames).
+        if (el.hidden) el.querySelectorAll<HTMLInputElement>('input[name="agenda_id"]').forEach((box) => (box.checked = false));
       });
     };
     select?.addEventListener("change", sync);
