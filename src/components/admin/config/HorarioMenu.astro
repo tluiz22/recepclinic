@@ -1,6 +1,6 @@
 ---
-// O "⋯" de um horário em Configurações › Horários (redesign 3B): Desativar ou
-// Reativar e Remover (com confirmação). Volta com "Mostrar desativados" como estava.
+// O "⋯" de um horário em Configurações › Horários (redesign 3B): Editar
+// (cliente, 21/out/2026), Desativar ou Reativar e Remover (com confirmação). Volta com "Mostrar desativados" como estava.
 import MoreMenu from "../ui/MoreMenu.astro";
 import { menuItemClass } from "../ui/styles";
 import type { AvailabilityWindow } from "../../../lib/data/config/availability";
@@ -14,9 +14,10 @@ interface Props {
   agendaId: string;
   showInactive: boolean;
   id: string;
+  editHref: string;
 }
 
-const { window: w, dayName, time, agendaId, showInactive, id, large = false } = Astro.props;
+const { window: w, dayName, time, agendaId, showInactive, id, editHref, large = false } = Astro.props;
 const action = "/api/admin/configuracoes/horarios";
 ---
 
@@ -26,6 +27,7 @@ const action = "/api/admin/configuracoes/horarios";
   iconOnly
   triggerClass={`flex shrink-0 items-center justify-center rounded-md border-0 bg-transparent p-0 text-ink-mid hover:bg-white/70 ${large ? "-my-1.5 h-11 w-11" : "h-8 w-8"}`}
 >
+  <a href={editHref} class={`${menuItemClass()} no-underline`}>Editar</a>
   <form method="POST" action={action}>
     <input type="hidden" name="agenda_id" value={agendaId} />
     <input type="hidden" name="window_id" value={w.id} />

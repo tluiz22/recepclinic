@@ -200,6 +200,9 @@
 >   **Jornada de configuração revista (cliente, 21/out):** Profissional → Local → Agenda → Serviços → Horários, sem
 >   pular o Local (5 itens aprovados; detalhes no [plano](plano.md)). Implementada e testada no navegador local em
 >   21/out, **validada pelo cliente em 21/out** e publicada no staging (sem migração).
+>   **Horários: "Editar" no "⋯" e Local e Serviço obrigatórios, sem valor padrão (cliente, 21/out):** implementado e
+>   conferido no local (detalhes no [plano](plano.md)); sem migração; **publicado no staging em 21/out a pedido do cliente, que valida e informa na próxima sessão**.
+>   **Retomar daqui (próxima sessão):** confirmar com o cliente a validação dos Horários; depois, os novos itens que ele trouxer.
 >   **App antigo da Meta (cliente, 20/out):** o piloto está desativado e o número do app "Consultório Dra. Ana Karina" é
 >   do cliente; o app antigo foi excluído pelo cliente (20/out) e o número entra no portfólio RecepClinic para uma 2ª clínica de
 >   testes do staging quando o aparelho estiver com ele (precisa do SMS). Regra revista no `CLAUDE.md`.

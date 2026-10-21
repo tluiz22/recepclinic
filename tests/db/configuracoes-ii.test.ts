@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import type { DbClient } from "../../src/lib/data/clients";
 import { createAgenda, getMemberAgendaAccess, type Agenda } from "../../src/lib/data/config/agendas";
-import { addAvailabilityWindows, listAvailability } from "../../src/lib/data/config/availability";
+import { addAvailabilityWindows, listAvailability, setAvailabilityWindowActive, updateAvailabilityWindow } from "../../src/lib/data/config/availability";
 import { updateClinicSettings } from "../../src/lib/data/config/clinic";
 import { addClinicHoliday } from "../../src/lib/data/config/holidays";
 import { createInsurancePlan, listPlanExclusions, listProfessionalExclusions, setPlanExclusions } from "../../src/lib/data/config/insurance";
@@ -79,6 +79,19 @@ describe("horários em vários dias", () => {
     expect(await codeOf(() => addAvailabilityWindows(db(admin), clinicId, { ...window(), startTime: "11:00", endTime: "13:00" }, [2, 3]))).toBe("conflict");
     expect(await listAvailability(db(admin), clinicId, agendaA.id)).toEqual(before);
     expect(await codeOf(() => addAvailabilityWindows(db(admin), clinicId, window(), []))).toBe("invalid");
+  });
+
+  it("editar (cliente, 21/out): muda dia e horário, sem conflito consigo; conflito com outro dia não grava", async () => {
+    const [monday] = (await listAvailability(db(admin), clinicId, agendaA.id)).filter((w) => w.weekday === 1);
+    const { agendaId: _agenda, ...fields } = window();
+    const saved = await updateAvailabilityWindow(db(admin), clinicId, monday.id, { ...fields, weekday: 1, startTime: "09:00", endTime: "13:00" });
+    expect([saved.weekday, saved.startTime, saved.endTime]).toEqual([1, "09:00", "13:00"]);
+    expect(await codeOf(() => updateAvailabilityWindow(db(admin), clinicId, monday.id, { ...fields, weekday: 3 }))).toBe("conflict");
+    expect(await codeOf(() => updateAvailabilityWindow(db(admin), clinicId, monday.id, { ...fields, weekday: 1, startTime: "13:00", endTime: "12:00" }))).toBe("invalid");
+    // Desativado não conta para a sobreposição e continua desativado.
+    await setAvailabilityWindowActive(db(admin), clinicId, monday.id, false);
+    const moved = await updateAvailabilityWindow(db(admin), clinicId, monday.id, { ...fields, weekday: 3 });
+    expect([moved.weekday, moved.isActive]).toEqual([3, false]);
   });
 });
 

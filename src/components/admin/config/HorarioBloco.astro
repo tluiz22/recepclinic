@@ -38,9 +38,11 @@ interface Props {
   idPrefix: string;
   /** Lista do celular: texto um pouco maior. */
   large?: boolean;
+  /** "Editar" do "⋯" (cliente, 21/out/2026). */
+  editHref: string;
 }
 
-const { window: w, dayName, locationName, header, notEnabled, agendaId, showInactive, idPrefix, large = false } = Astro.props;
+const { window: w, dayName, locationName, header, notEnabled, agendaId, showInactive, idPrefix, large = false, editHref } = Astro.props;
 const time = `${w.startTime}–${w.endTime}`;
 const look = w.isActive
   ? `border bg-white text-ink ${header.border}`
@@ -48,7 +50,7 @@ const look = w.isActive
 const band = w.isActive ? header.band : "border-dashed border-blk-500";
 const tone = (active: string) => (w.isActive ? active : "text-blk-800");
 const pad = large ? "pl-3" : "pl-2.5";
-const menu = { window: w, dayName, time, agendaId, showInactive, id: `${idPrefix}-${w.id}` };
+const menu = { window: w, dayName, time, agendaId, showInactive, editHref, id: `${idPrefix}-${w.id}` };
 ---
 
 {/* A faixa tem cantos próprios (sem overflow-hidden no bloco): o "⋯" abre por cima de tudo. */}

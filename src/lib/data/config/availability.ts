@@ -207,6 +207,48 @@ export async function addAvailabilityWindows(
   ).map(toWindow);
 }
 
+/**
+ * Editar um horário (cliente, 21/out/2026): dia, início, fim, local, serviço e
+ * vagas, com as mesmas regras do adicionar; a sobreposição não conta o próprio
+ * horário e só vale se ele está ativo. Os atendimentos já marcados ficam como estão.
+ */
+export async function updateAvailabilityWindow(
+  db: DbClient,
+  clinicId: string,
+  id: string,
+  input: Omit<AvailabilityWindowInput, "agendaId">,
+): Promise<AvailabilityWindow> {
+  const current = toWindow(
+    unwrapOne(await db.from("availability_windows").select(COLUMNS).eq("clinic_id", clinicId).eq("id", id).maybeSingle(), "Horário de atendimento"),
+  );
+  const next = { ...input, agendaId: current.agendaId };
+  validateWindowShape(next);
+  await checkWindowService(db, clinicId, next);
+  if (current.isActive) {
+    const conflict = findWindowConflict({ ...next, id }, await windowsThatCount(db, clinicId, current.agendaId));
+    if (conflict) throw conflictError(conflict);
+  }
+  return toWindow(
+    unwrapOne(
+      await db
+        .from("availability_windows")
+        .update({
+          location_id: next.locationId,
+          service_id: next.serviceId,
+          weekday: next.weekday,
+          start_time: next.startTime,
+          end_time: next.endTime,
+          capacity: next.capacity,
+        })
+        .eq("clinic_id", clinicId)
+        .eq("id", id)
+        .select(COLUMNS)
+        .maybeSingle(),
+      "Horário de atendimento",
+    ),
+  );
+}
+
 /** Reativar confere a sobreposição de novo (pode ter entrado outro horário no lugar). */
 export async function setAvailabilityWindowActive(db: DbClient, clinicId: string, id: string, isActive: boolean): Promise<void> {
   if (isActive) {

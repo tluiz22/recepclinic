@@ -1,47 +1,65 @@
 import type { APIRoute } from "astro";
 import { createUserClient } from "../../../../lib/data/clients";
-import { addAvailabilityWindows, removeAvailabilityWindow, setAvailabilityWindowActive } from "../../../../lib/data/config/availability";
-import { DataError } from "../../../../lib/data/errors";
+import { addAvailabilityWindows, removeAvailabilityWindow, setAvailabilityWindowActive, updateAvailabilityWindow } from "../../../../lib/data/config/availability";
+import { DataError, Validation } from "../../../../lib/data/errors";
 import { runFormAction } from "../../../../lib/data/formAction";
-import { formAll, formOptionalInt, formOptionalText, formText } from "../../../../lib/forms";
+import { formAll, formOptionalInt, formText } from "../../../../lib/forms";
 
-// Horários (F4.4b): adicionar o mesmo horário em vários dias, desativar,
-// reativar e remover. Volta para a agenda que estava na tela.
+// Horários (F4.4b): adicionar o mesmo horário em vários dias, editar (cliente,
+// 21/out/2026), desativar, reativar e remover. Volta para a agenda que estava na tela.
+// Local e serviço são escolha obrigatória, sem valor padrão (cliente, 21/out/2026):
+// "Qualquer serviço desta agenda" vem como `todos`.
+const ANY_SERVICE = "todos";
+
 export const POST: APIRoute = async (context) => {
   const { request, cookies, locals } = context;
   const form = await request.formData().catch(() => null);
   const clinicId = locals.clinic!.clinicId;
   const db = createUserClient(request, cookies);
   const agendaId = formText(form, "agenda_id");
+  const acao = formText(form, "acao");
+  const windowId = formText(form, "window_id");
   // Volta com "Mostrar desativados" como estava (redesign 3B, 19/out/2026).
   const page = `/admin/configuracoes/horarios?agenda=${encodeURIComponent(agendaId)}${formText(form, "todos") === "1" ? "&todos=1" : ""}`;
-  const windowId = formText(form, "window_id");
+  // Erro ao editar: volta com o formulário de edição aberto.
+  const failure = acao === "editar" ? `${page}&editar=${encodeURIComponent(windowId)}#novo-horario` : page;
+
+  /** Local, serviço, horário e vagas do formulário; local e serviço precisam ser escolhidos. */
+  const windowFields = () => {
+    const locationId = formText(form, "location_id");
+    const service = formText(form, "service_id");
+    const v = new Validation();
+    v.check(!!locationId, "locationId", "Escolha o local.");
+    v.check(!!service, "serviceId", "Escolha o serviço.");
+    v.throwIfInvalid("Horário de atendimento");
+    const serviceId = service === ANY_SERVICE ? null : service;
+    return {
+      locationId,
+      serviceId,
+      startTime: formText(form, "start_time"),
+      endTime: formText(form, "end_time"),
+      capacity: serviceId ? formOptionalInt(form, "capacity") : null,
+    };
+  };
 
   return runFormAction(
     context,
     async () => {
-      switch (formText(form, "acao")) {
+      switch (acao) {
         case "adicionar": {
-          const serviceId = formOptionalText(form, "service_id");
           const weekdays = formAll(form, "weekday").map(Number);
-          const created = await addAvailabilityWindows(
-            db,
-            clinicId,
-            {
-              agendaId,
-              locationId: formText(form, "location_id"),
-              serviceId,
-              startTime: formText(form, "start_time"),
-              endTime: formText(form, "end_time"),
-              capacity: serviceId ? formOptionalInt(form, "capacity") : null,
-            },
-            weekdays,
-          );
+          const created = await addAvailabilityWindows(db, clinicId, { agendaId, ...windowFields() }, weekdays);
           return { redirectTo: page, message: created.length > 1 ? `${created.length} horários adicionados.` : "Horário adicionado." };
+        }
+        case "editar": {
+          const weekday = formText(form, "weekday");
+          if (!weekday) throw new DataError("invalid", "Horário de atendimento: escolha o dia", { weekday: "Escolha o dia da semana." });
+          await updateAvailabilityWindow(db, clinicId, windowId, { ...windowFields(), weekday: Number(weekday) });
+          return { redirectTo: page, message: "Horário salvo." };
         }
         case "desativar":
         case "reativar": {
-          const active = formText(form, "acao") === "reativar";
+          const active = acao === "reativar";
           await setAvailabilityWindowActive(db, clinicId, windowId, active);
           return { redirectTo: page, message: active ? "Horário reativado." : "Horário desativado." };
         }
@@ -52,6 +70,6 @@ export const POST: APIRoute = async (context) => {
           throw new DataError("invalid", "Ação desconhecida", { acao: "Ação desconhecida." });
       }
     },
-    page,
+    failure,
   );
 };

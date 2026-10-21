@@ -2592,6 +2592,18 @@ o local criado na jornada) já marcados; 4) novo serviço sem local ou sem agend
 local em 21/out (as duas jornadas, a partir do profissional e a partir do serviço, numa clínica sem local; banco local
 de volta ao seed), sem migração; **validado pelo cliente em 21/out** e publicado no staging.
 
+**Horários: editar e Local e Serviço obrigatórios (pedido do cliente, 21/out).** Decisões do cliente em 21/out:
+1) o "⋯" de cada horário ganha **"Editar"**: o formulário de baixo abre preenchido ("Editar horário: segunda-feira,
+08:00–12:00"), com o dia como escolha única, início, fim, local, serviço e vagas, e "Salvar" e "Cancelar"; mesma regra
+de sobreposição (sem contar o próprio horário; desativado não conta e continua desativado); os atendimentos já
+marcados continuam como estão (aviso na tela); 2) **Local e Serviço obrigatórios e sem valor padrão** ("Escolha o
+local…" e "Escolha o serviço…"), mesmo com um local só; "Qualquer serviço desta agenda" continua como escolha
+explícita; o servidor também confere (borda vermelha nos dois campos); 3) vindo do "Cadastrar os horários" de um
+serviço, o Serviço já vem com ele (o Local continua em branco). Implementado (`updateAvailabilityWindow`, teste de banco
+em `configuracoes-ii.test.ts`) e conferido no navegador local em 21/out (o cliente segue o teste por conta própria);
+banco local de volta ao seed; sem migração. Publicado no staging em 21/out a pedido do cliente, que valida e
+informa na próxima sessão.
+
 ---
 
 ## Depois do 1º piloto (já previsto no banco)
