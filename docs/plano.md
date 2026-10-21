@@ -2601,8 +2601,8 @@ local…" e "Escolha o serviço…"), mesmo com um local só; "Qualquer serviço
 explícita; o servidor também confere (borda vermelha nos dois campos); 3) vindo do "Cadastrar os horários" de um
 serviço, o Serviço já vem com ele (o Local continua em branco). Implementado (`updateAvailabilityWindow`, teste de banco
 em `configuracoes-ii.test.ts`) e conferido no navegador local em 21/out (o cliente segue o teste por conta própria);
-banco local de volta ao seed; sem migração. Publicado no staging em 21/out a pedido do cliente, que valida e
-informa na próxima sessão.
+banco local de volta ao seed; sem migração. Publicado no staging em 21/out a pedido do cliente e **validado pelo
+cliente em 21/out** (sem ajustes).
 
 ---
 
