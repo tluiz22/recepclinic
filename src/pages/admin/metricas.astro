@@ -282,7 +282,6 @@ const fin = tab === "financeiro" ? financial(rows) : null;
                 const channels = [
                   ["WhatsApp (bot)", ov.byChannel.whatsapp],
                   ["Painel (equipe)", ov.byChannel.panel],
-                  ["Link de agendamento", ov.byChannel.link],
                 ] as const;
                 const total = channels.reduce((sum, [, n]) => sum + n, 0);
                 return (

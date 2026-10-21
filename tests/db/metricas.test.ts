@@ -55,7 +55,7 @@ describe("métricas", () => {
     const booked = await listMetricsRows(asDb(admin), clinicId, { ...today, agendaIds: [ids.agendaDra], by: "booked" });
     expect(booked).toHaveLength(3);
     expect(await listMetricsRows(asDb(admin), clinicId, { ...today, agendaIds: [ids.agendaDra] })).toEqual([]);
-    expect(overview([], new Date(), booked).byChannel).toEqual({ whatsapp: 0, panel: 3, link: 0 });
+    expect(overview([], new Date(), booked).byChannel).toEqual({ whatsapp: 0, panel: 3 });
   });
 
   it("faltosos: só quem passa na regra", async () => {

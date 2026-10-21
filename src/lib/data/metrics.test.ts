@@ -23,7 +23,7 @@ const rows = [
   row({ status: "no_show", bookingChannel: "whatsapp_bot" }),
   row({ status: "canceled", canceledVia: "whatsapp_bot" }),
   row({ status: "scheduled", scheduledAt: new Date("2026-10-15T12:00:00Z") }), // já passou, sem registro
-  row({ status: "scheduled", scheduledAt: new Date("2026-10-20T12:00:00Z"), bookingChannel: "booking_link" }),
+  row({ status: "scheduled", scheduledAt: new Date("2026-10-20T12:00:00Z") }),
   row({ category: "return_visit", serviceName: "Retorno", priceCents: 0 }),
   row({ category: "exam", serviceName: "Exame", status: "no_show", priceCents: 15000 }),
 ];
@@ -38,14 +38,14 @@ describe("contas das Métricas (F4.9)", () => {
       pending: 1,
       upcoming: 1,
       noShowRate: 0.5,
-      byChannel: { whatsapp: 1, panel: 4, link: 1 },
+      byChannel: { whatsapp: 1, panel: 5 },
     });
   });
 
   it("marcados por: os marcados no período, qualquer que seja a data deles (cliente, 18/out)", () => {
     const booked = [row({ bookingChannel: "whatsapp_bot" }), row({ bookingChannel: "whatsapp_bot", status: "scheduled" }), row({ status: "canceled" })];
-    expect(overview(rows, now, booked)).toMatchObject({ total: 6, byChannel: { whatsapp: 2, panel: 0, link: 0 } });
-    expect(overview([], now, booked).byChannel).toEqual({ whatsapp: 2, panel: 0, link: 0 });
+    expect(overview(rows, now, booked)).toMatchObject({ total: 6, byChannel: { whatsapp: 2, panel: 0 } });
+    expect(overview([], now, booked).byChannel).toEqual({ whatsapp: 2, panel: 0 });
   });
 
   it("volume por serviço e local, do maior para o menor", () => {
@@ -63,7 +63,7 @@ describe("contas das Métricas (F4.9)", () => {
 
   it("por origem: marcados e cancelados por canal", () => {
     expect(byOrigin(rows)).toContainEqual({ label: "WhatsApp (bot)", booked: 1, canceled: 1 });
-    expect(byOrigin(rows)).toContainEqual({ label: "Painel (equipe)", booked: 5, canceled: 0 });
+    expect(byOrigin(rows)).toContainEqual({ label: "Painel (equipe)", booked: 6, canceled: 0 });
   });
 
   it("financeiro: realizado, previsto e faltas; retorno e cancelado fora", () => {

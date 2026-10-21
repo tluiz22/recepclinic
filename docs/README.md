@@ -210,7 +210,11 @@
 >   Configurações; publicados no staging em 21/out (migração aplicada antes) e **validados pelo cliente em 21/out**.
 >   **Serviço sem horário conta em Serviços** (menu e guia, cliente 21/out): publicado no staging em 21/out (sem
 >   migração); **validado pelo cliente em 21/out**.
->   **Retomar daqui (próxima sessão, depois de 21/out):** o cliente traz novos casos para avaliar. Em paralelo, aguardar a Meta (Análise do App até ~29/out).
+>   **Métricas › Visão geral › "Marcados por" sem a linha "Link de agendamento"** (cliente, 21/out): ficava sempre em
+>   0, porque quem marca pelo link do bot já conta como "WhatsApp (bot)"; publicado no staging em 21/out (sem migração);
+>   **aguarda a validação do cliente**.
+>   **Retomar daqui (próxima sessão, depois de 21/out):** confirmar a validação do "Marcados por" sem o link; o cliente
+>   traz novos casos para avaliar. Em paralelo, aguardar a Meta (Análise do App até ~29/out).
 >   **App antigo da Meta (cliente, 20/out):** o piloto está desativado e o número do app "Consultório Dra. Ana Karina" é
 >   do cliente; o app antigo foi excluído pelo cliente (20/out) e o número entra no portfólio RecepClinic para uma 2ª clínica de
 >   testes do staging quando o aparelho estiver com ele (precisa do SMS). Regra revista no `CLAUDE.md`.

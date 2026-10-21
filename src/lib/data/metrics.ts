@@ -103,8 +103,8 @@ export type Overview = {
   upcoming: number;
   /** Faltas entre os registrados (compareceu + faltou); null = nenhum registrado. */
   noShowRate: number | null;
-  /** Marcados no período, por canal (sem os cancelados depois). */
-  byChannel: { whatsapp: number; panel: number; link: number };
+  /** Marcados no período, por canal (sem os cancelados depois). Quem marca pelo link do bot conta no WhatsApp. */
+  byChannel: { whatsapp: number; panel: number };
 };
 
 export function noShowRate(completed: number, noShow: number): number | null {
@@ -128,7 +128,6 @@ export function overview(rows: MetricsRow[], now: Date, booked: MetricsRow[] = r
     byChannel: {
       whatsapp: liveBooked.filter((r) => r.bookingChannel === "whatsapp_bot").length,
       panel: liveBooked.filter((r) => r.bookingChannel === "admin").length,
-      link: liveBooked.filter((r) => r.bookingChannel === "booking_link").length,
     },
   };
 }
@@ -163,7 +162,7 @@ export function noShowByCategory(rows: MetricsRow[]): NoShowRow[] {
 
 export type OriginRow = { label: string; booked: number; canceled: number };
 
-const CHANNEL_LABELS: Record<string, string> = { admin: "Painel (equipe)", whatsapp_bot: "WhatsApp (bot)", booking_link: "Link de agendamento" };
+const CHANNEL_LABELS: Record<string, string> = { admin: "Painel (equipe)", whatsapp_bot: "WhatsApp (bot)" };
 
 /** Por onde foram marcados e cancelados os atendimentos do período. */
 export function byOrigin(rows: MetricsRow[]): OriginRow[] {
