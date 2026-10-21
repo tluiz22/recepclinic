@@ -18,14 +18,15 @@ const base = (): SetupInput => ({
 const statusOf = (input: SetupInput) => Object.fromEntries(computeSetup(input).steps.map((s) => [s.key, s.status]));
 
 describe("jornada de configuração (F6.3b)", () => {
-  it("serviço sem horário próprio nem 'qualquer serviço': atenção em Horários, com o link já com agenda e serviço", () => {
+  it("serviço sem horário próprio nem 'qualquer serviço': atenção em Serviços (21/out), com o link já para Horários com agenda e serviço", () => {
     const setup = computeSetup(base());
     expect(setup.complete).toBe(false);
     expect(setup.issues.services.get("s2")).toEqual(["no_hours"]);
     expect(setup.issues.services.get("s1")).toBeUndefined();
-    const hours = setup.steps.find((s) => s.key === "hours")!;
-    expect(hours.status).toBe("attention");
-    expect(hours.items).toEqual([
+    expect(setup.steps.find((s) => s.key === "hours")!.status).toBe("done");
+    const services = setup.steps.find((s) => s.key === "services")!;
+    expect(services.status).toBe("attention");
+    expect(services.items).toEqual([
       {
         text: "Espirometria: sem horário de atendimento: não aparece no bot nem no link de agendar.",
         href: "/admin/configuracoes/horarios?agenda=a1&servico=s2",
@@ -93,12 +94,15 @@ describe("jornada de configuração (F6.3b)", () => {
     expect(setup.steps.find((s) => s.key === "agendas")!.items[0].href).toBe("/admin/configuracoes/locais/novo?agenda=a1");
   });
 
-  it("serviço sem agenda ou sem local: atenção em Serviços (não em Horários)", () => {
+  it("serviço sem agenda ou sem local: atenção em Serviços, sem contar o \"sem horário\" à parte", () => {
     const input = base();
     input.services[0].agendaIds = [];
     const setup = computeSetup(input);
     expect(setup.issues.services.get("s1")).toEqual(["no_agenda", "no_hours"]);
-    expect(setup.steps.find((s) => s.key === "services")!.items.map((i) => i.text)).toEqual(["Consulta: sem agenda ativa: não recebe atendimentos."]);
+    expect(setup.steps.find((s) => s.key === "services")!.items.map((i) => i.text)).toEqual([
+      "Consulta: sem agenda ativa: não recebe atendimentos.",
+      "Espirometria: sem horário de atendimento: não aparece no bot nem no link de agendar.",
+    ]);
   });
 
   it("itens desligados na matriz não contam: exame sem 'Exames', domiciliar sem 'Atendimento domiciliar'", () => {

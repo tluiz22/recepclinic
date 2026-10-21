@@ -2635,6 +2635,15 @@ Conferido no navegador local em 21/out; banco local de volta ao seed.
 **Vagas do exame em turma (cliente, 21/out):** o número de pacientes continua em Configurações › Horários ("Vagas
 da turma", por horário), e não no serviço; o cliente avaliou e decidiu deixar como está.
 
+**Agenda da equipe e "Ativos | Desativados" validados pelo cliente em 21/out.**
+
+**Serviço sem horário conta em Serviços (cliente, 21/out).** O número do menu de Configurações aparecia em Horários
+para o serviço sem horário (o menu copia o guia). Decisão do cliente: no menu **e** no guia, o serviço sem horário é
+pendência do passo **Serviços** (o link continua levando a Horários, já com a agenda e o serviço); Horários só fica
+pendente quando a clínica não tem nenhum horário. O serviço sem agenda ou sem local não conta o "sem horário" à
+parte. Implementado (`computeSetup`; testes em `setup.test.ts` e `sections.test.ts`) e conferido no navegador local
+em 21/out; banco local de volta ao seed; sem migração.
+
 ---
 
 ## Depois do 1º piloto (já previsto no banco)

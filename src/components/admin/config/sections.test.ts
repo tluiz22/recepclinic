@@ -19,7 +19,9 @@ const input = (): SetupInput => ({
 describe("menu lateral de Configurações (R9)", () => {
   it("põe as pendências do guia ao lado da seção, como o guia conta", () => {
     const pending = pendingBySection(computeSetup(input()));
-    expect(pending.get("horarios")).toBe(1);
+    // Serviço sem horário conta em Serviços (cliente, 21/out/2026).
+    expect(pending.get("servicos")).toBe(1);
+    expect(pending.has("horarios")).toBe(false);
     expect(pending.get("locais")).toBe(1);
     expect(pending.has("profissionais")).toBe(false);
     expect(pending.has("clinica")).toBe(false);

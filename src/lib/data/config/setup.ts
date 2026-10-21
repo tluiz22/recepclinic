@@ -159,14 +159,22 @@ export function computeSetup(input: SetupInput): SetupStatus {
     step("professionals", "Profissionais", `${BASE}/profissionais`, professionals.length, lines(professionals, issues.professionals, (p) => p.displayName, professionalHref)),
     step("locations", "Locais", `${BASE}/locais`, locations.length, lines(locations, issues.locations, (l) => l.name, (l, issue) => (issue === "no_address" ? `${BASE}/locais/${l.id}` : `${BASE}/servicos/novo?local=${l.id}`))),
     step("agendas", "Agendas", `${BASE}/agendas`, agendas.length, lines(agendas, issues.agendas, (a) => a.name, agendaHref, undefined, AGENDA_HINTS)),
-    step("services", "Serviços", `${BASE}/servicos`, services.length, lines(services, issues.services, (s) => s.name, (s) => `${BASE}/servicos/${s.id}`, ["no_agenda", "no_location"])),
+    // O serviço sem horário é pendência do passo Serviços (cliente, 21/out/2026),
+    // com o link já para Horários; Horários só fica pendente sem nenhum horário.
     step(
-      "hours",
-      "Horários",
-      `${BASE}/horarios`,
-      windows.length,
-      lines(services, issues.services, (s) => s.name, (s) => (firstAgenda(s) ? `${BASE}/horarios?agenda=${firstAgenda(s)}&servico=${s.id}` : `${BASE}/servicos/${s.id}`), ["no_hours"]),
+      "services",
+      "Serviços",
+      `${BASE}/servicos`,
+      services.length,
+      // Sem agenda ou sem local, o "sem horário" vem junto e não conta à parte.
+      lines(
+        services,
+        new Map([...issues.services].map(([id, list]) => [id, list.some((i) => i === "no_agenda" || i === "no_location") ? list.filter((i) => i !== "no_hours") : list])),
+        (s) => s.name,
+        (s, issue) => (issue === "no_hours" && firstAgenda(s) ? `${BASE}/horarios?agenda=${firstAgenda(s)}&servico=${s.id}` : `${BASE}/servicos/${s.id}`),
+      ),
     ),
+    step("hours", "Horários", `${BASE}/horarios`, windows.length, []),
   ];
   return { steps, complete: steps.every((s) => s.status === "done"), hasLocations, inactiveAgendaOf, issues };
 }
