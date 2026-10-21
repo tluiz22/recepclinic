@@ -2615,6 +2615,9 @@ outra. Implementado (`professionalsWithoutAgenda` e a trava em `createAgenda`; t
 `acesso-configuracao.test.ts`) e conferido no navegador local em 21/out (com e sem profissional sem agenda); banco
 local de volta ao seed; sem migração. Aguarda a validação do cliente.
 
+**Vagas do exame em turma (cliente, 21/out):** o número de pacientes continua em Configurações › Horários ("Vagas
+da turma", por horário), e não no serviço; o cliente avaliou e decidiu deixar como está.
+
 ---
 
 ## Depois do 1º piloto (já previsto no banco)
