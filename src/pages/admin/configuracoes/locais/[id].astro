@@ -37,7 +37,8 @@ const [setup, professionals, agendas] = isNew
   : await Promise.all([loadSetupStatus(db, clinic.clinicId, clinic.features), listProfessionals(db, clinic.clinicId), listAgendas(db, clinic.clinicId)]);
 const locationIssues = setup?.issues.locations.get(id!) ?? [];
 // Ordem da jornada: a agenda do profissional antes dos serviços.
-const withoutAgenda = (p: { id: string }) => !!setup?.issues.professionals.get(p.id)?.includes("no_agenda");
+// Quem tem a agenda desativada reativa a antiga (uma por profissional, cliente 21/out/2026): fica de fora daqui.
+const withoutAgenda = (p: { id: string }) => !!setup?.issues.professionals.get(p.id)?.includes("no_agenda") && !setup?.inactiveAgendaOf.has(p.id);
 const nextProfessional =
   (origin?.kind === "profissional" ? professionals.find((p) => p.id === origin.id && withoutAgenda(p)) : undefined) ??
   (locationIssues.includes("no_service") && origin?.kind !== "agenda" ? professionals.find(withoutAgenda) : undefined);

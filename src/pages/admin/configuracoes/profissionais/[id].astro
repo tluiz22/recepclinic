@@ -34,7 +34,14 @@ const professionalIssues = setup?.issues.professionals.get(id!) ?? [];
 <ConfigShell current="profissionais" title={isNew ? "Novo profissional" : professional!.displayName} back={{ href: list, label: "Profissionais" }} subtitle={subtitle}>
   {
     professionalIssues.includes("no_agenda") &&
-      (setup!.hasLocations ? (
+      (setup!.inactiveAgendaOf.has(id!) ? (
+        // Uma agenda por profissional (cliente, 21/out/2026): reativa-se a antiga.
+        <NextStep
+          text={`A agenda de ${professional!.displayName} está desativada: sem ela, não recebe atendimentos.`}
+          href={`/admin/configuracoes/agendas/${setup!.inactiveAgendaOf.get(id!)}?todos=1`}
+          label="Abrir a agenda para reativar"
+        />
+      ) : setup!.hasLocations ? (
         <NextStep
           text={`${professional!.displayName} ainda não tem agenda: sem ela, não recebe atendimentos.`}
           href={`/admin/configuracoes/agendas/novo?profissional=${id}`}

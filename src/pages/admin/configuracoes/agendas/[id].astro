@@ -7,7 +7,7 @@ import NextStep from "../../../../components/admin/setup/NextStep.astro";
 import { loadSetupStatus } from "../../../../lib/data/config/setup";
 import { CARD, HINT, INPUT, INPUT_INLINE, LABEL, PRIMARY_BUTTON, SECONDARY_BUTTON } from "../../../../components/admin/config/formStyles";
 import { createUserClient } from "../../../../lib/data/clients";
-import { listAgendas } from "../../../../lib/data/config/agendas";
+import { listAgendas, professionalsWithoutAgenda } from "../../../../lib/data/config/agendas";
 import { listProfessionals } from "../../../../lib/data/config/professionals";
 import { originPage, setupOrigin, setupParam, withParams } from "../../../../lib/setupFlow";
 
@@ -23,7 +23,13 @@ const agenda = isNew ? null : (agendas.find((a) => a.id === id) ?? null);
 if (!isNew && !agenda) return Astro.redirect("/admin/configuracoes/agendas");
 // Vinda do "próximo passo" do profissional ou do local (F6.3b): já escolhido,
 // com o nome dele.
-const prefill = isNew ? (professionals.find((p) => p.isActive && p.id === Astro.url.searchParams.get("profissional")) ?? null) : null;
+// Uma agenda por profissional (cliente, 21/out/2026): só aparecem os que
+// ainda não têm (a desativada conta: reativa-se a antiga). Sem nenhum, só a de
+// recurso; o link "Criar agenda de recurso" da lista já vem nela.
+const available = isNew ? professionalsWithoutAgenda(professionals, agendas) : [];
+const onlyResource = isNew && available.length === 0;
+const prefill = isNew ? (available.find((p) => p.id === Astro.url.searchParams.get("profissional")) ?? null) : null;
+const startResource = onlyResource || (!prefill && Astro.url.searchParams.get("tipo") === "recurso");
 const professionalName = agenda?.professionalId ? professionals.find((p) => p.id === agenda.professionalId)?.displayName : null;
 // Aberto da lista em "Todos": o filtro vai e volta (teste da R9, NAV-06).
 const all = allFilterOn(Astro.url);
@@ -74,9 +80,12 @@ const agendaIssues = setup?.issues.agendas.get(id!) ?? [];
                 De quem é
               </label>
               <select id="kind" name="kind" class={INPUT}>
-                <option value="professional">De um profissional</option>
-                <option value="resource">De um recurso (ex.: exames feitos pela recepção)</option>
+                {!onlyResource && <option value="professional">De um profissional</option>}
+                <option value="resource" selected={startResource}>
+                  De um recurso (ex.: exames feitos pela recepção)
+                </option>
               </select>
+              {onlyResource && <p class={HINT}>Todos os profissionais ativos já têm agenda. Aqui só se cria a de um recurso.</p>}
             </div>
             <div data-professional>
               <label for="professional_id" class={LABEL}>
@@ -84,15 +93,13 @@ const agendaIssues = setup?.issues.agendas.get(id!) ?? [];
               </label>
               <select id="professional_id" name="professional_id" class={INPUT}>
                 <option value="">Escolha…</option>
-                {professionals
-                  .filter((p) => p.isActive)
-                  .map((p) => (
+                {available.map((p) => (
                     <option value={p.id} selected={prefill?.id === p.id}>
                       {p.displayName}
                     </option>
-                  ))}
+                ))}
               </select>
-              <p class={HINT}>O tipo e o profissional não mudam depois de criada.</p>
+              <p class={HINT}>Só aparecem os profissionais sem agenda. O tipo e o profissional não mudam depois de criada.</p>
             </div>
           </>
         ) : (

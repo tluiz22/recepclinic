@@ -71,8 +71,37 @@ export async function listAgendas(
   return unwrap(await query, "Agendas").map(toAgenda);
 }
 
+/**
+ * Uma agenda por profissional (cliente, 21/out/2026): a desativada também
+ * conta (reativa-se a antiga). Os profissionais ativos que ainda não têm.
+ */
+export function professionalsWithoutAgenda<P extends { id: string; isActive: boolean }>(
+  professionals: readonly P[],
+  agendas: readonly Pick<Agenda, "professionalId">[],
+): P[] {
+  const taken = new Set(agendas.map((a) => a.professionalId).filter(Boolean));
+  return professionals.filter((p) => p.isActive && !taken.has(p.id));
+}
+
 export async function createAgenda(db: DbClient, clinicId: string, input: AgendaInput): Promise<Agenda> {
   const row = validateAgenda(input);
+  if (row.professional_id) {
+    const existing = unwrap(
+      await db.from("agendas").select("id, is_active").eq("clinic_id", clinicId).eq("professional_id", row.professional_id).limit(1),
+      "Agenda",
+    )[0];
+    if (existing) {
+      throw new DataError(
+        "invalid",
+        "Agenda: profissional já tem agenda",
+        {
+          professionalId: existing.is_active
+            ? "Este profissional já tem agenda."
+            : "Este profissional já tem uma agenda desativada: reative-a em Agendas › Todos.",
+        },
+      );
+    }
+  }
   // Sem `.select()` no insert: a leitura das agendas passa por
   // app.can_access_agenda, que consulta a própria tabela e ainda não enxerga a
   // linha nova no mesmo comando. Por isso o id sai daqui e a leitura vem depois.

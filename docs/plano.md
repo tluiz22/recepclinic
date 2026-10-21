@@ -2604,6 +2604,17 @@ em `configuracoes-ii.test.ts`) e conferido no navegador local em 21/out (o clien
 banco local de volta ao seed; sem migração. Publicado no staging em 21/out a pedido do cliente e **validado pelo
 cliente em 21/out** (sem ajustes).
 
+**Agendas: uma por profissional e "Nova agenda" só quando houver o que criar (pedido do cliente, 21/out).** O cliente
+pediu o botão só com mais de 1 profissional; como a agenda pode ser de um profissional ou de um recurso (D2, ex.:
+Exames), decidiu: 1) **uma agenda por profissional**; a desativada também conta (reativa-se a antiga, que guarda
+histórico, serviços e horários); 2) "Nova agenda" aparece só se algum profissional ativo ainda não tem agenda, e o
+formulário lista só esses; 3) sem nenhum, a agenda de recurso segue pelo link discreto "Criar agenda de recurso"
+(o formulário vem só com o tipo recurso); 4) o servidor também recusa a segunda agenda do mesmo profissional; 5) o
+guia de configuração e o próximo passo do profissional levam à agenda desativada para reativar, em vez de criar
+outra. Implementado (`professionalsWithoutAgenda` e a trava em `createAgenda`; testes em `setup.test.ts` e
+`acesso-configuracao.test.ts`) e conferido no navegador local em 21/out (com e sem profissional sem agenda); banco
+local de volta ao seed; sem migração. Aguarda a validação do cliente.
+
 ---
 
 ## Depois do 1º piloto (já previsto no banco)

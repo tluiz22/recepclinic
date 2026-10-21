@@ -111,6 +111,15 @@ describe("jornada de configuração (F6.3b)", () => {
     expect(setup.complete).toBe(true);
   });
 
+  it("profissional com a agenda desativada: o próximo passo é reativá-la (uma agenda por profissional, 21/out)", () => {
+    const input = base();
+    input.agendas[0].isActive = false;
+    const setup = computeSetup(input);
+    expect(setup.issues.professionals.get("p1")).toEqual(["no_agenda"]);
+    expect(setup.inactiveAgendaOf.get("p1")).toBe("a1");
+    expect(setup.steps.find((s) => s.key === "professionals")!.items[0].href).toBe("/admin/configuracoes/agendas/a1?todos=1");
+  });
+
   it("desativados não contam", () => {
     const input = base();
     input.services[1].isActive = false;

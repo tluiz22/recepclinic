@@ -63,6 +63,11 @@ export type SetupStatus = {
   complete: boolean;
   /** Há local ativo? Sem ele, o próximo passo do profissional e da agenda é o Local (cliente, 21/out/2026). */
   hasLocations: boolean;
+  /**
+   * Agenda desativada de cada profissional sem agenda ativa: uma agenda por
+   * profissional (cliente, 21/out/2026), então o próximo passo é reativá-la.
+   */
+  inactiveAgendaOf: Map<string, string>;
   /** Pendências de cada cadastro, para os selos e o próximo passo. */
   issues: {
     professionals: Map<string, Issue[]>;
@@ -139,7 +144,13 @@ export function computeSetup(input: SetupInput): SetupStatus {
   // agenda vão primeiro ao Local; a agenda e o local sem serviço vão ao novo
   // serviço, já com eles marcados.
   const hasLocations = locations.length > 0;
-  const professionalHref = (p: { id: string }) => (hasLocations ? `${BASE}/agendas/novo?profissional=${p.id}` : `${BASE}/locais/novo?profissional=${p.id}`);
+  const inactiveAgendaOf = new Map<string, string>();
+  for (const a of input.agendas) if (!a.isActive && a.professionalId && issues.professionals.has(a.professionalId)) inactiveAgendaOf.set(a.professionalId, a.id);
+  const professionalHref = (p: { id: string }) => {
+    const inactive = inactiveAgendaOf.get(p.id);
+    if (inactive) return `${BASE}/agendas/${inactive}?todos=1`;
+    return hasLocations ? `${BASE}/agendas/novo?profissional=${p.id}` : `${BASE}/locais/novo?profissional=${p.id}`;
+  };
   const agendaHref = (a: { id: string }, issue: Issue) =>
     issue === "no_hours" ? `${BASE}/horarios?agenda=${a.id}` : hasLocations ? `${BASE}/servicos/novo?agenda=${a.id}` : `${BASE}/locais/novo?agenda=${a.id}`;
 
@@ -157,13 +168,14 @@ export function computeSetup(input: SetupInput): SetupStatus {
       lines(services, issues.services, (s) => s.name, (s) => (firstAgenda(s) ? `${BASE}/horarios?agenda=${firstAgenda(s)}&servico=${s.id}` : `${BASE}/servicos/${s.id}`), ["no_hours"]),
     ),
   ];
-  return { steps, complete: steps.every((s) => s.status === "done"), hasLocations, issues };
+  return { steps, complete: steps.every((s) => s.status === "done"), hasLocations, inactiveAgendaOf, issues };
 }
 
 export async function loadSetupStatus(db: DbClient, clinicId: string, features: readonly FeatureKey[]): Promise<SetupStatus> {
   const [professionals, agendas, locations, services, windows] = await Promise.all([
     listProfessionals(db, clinicId),
-    listAgendas(db, clinicId),
+    // As desativadas também, para o próximo passo do profissional (reativar).
+    listAgendas(db, clinicId, { includeInactive: true }),
     listLocations(db, clinicId),
     listServices(db, clinicId),
     db

@@ -186,6 +186,19 @@ describe("profissionais, locais e agendas", () => {
     expect((await listAgendas(db(admin), clinicId, { includeInactive: true })).map((a) => a.name)).toContain("Sala extra");
   });
 
+  it("uma agenda por profissional (21/out): a segunda é recusada, mesmo com a primeira desativada", async () => {
+    const second = { name: "Dra. Teste 2", kind: "professional" as const, professionalId: professional.id, bufferMinutes: 0 };
+    const error = await createAgenda(db(admin), clinicId, second).catch((e: DataError) => e);
+    expect(error).toMatchObject({ code: "invalid", fields: { professionalId: "Este profissional já tem agenda." } });
+    await setAgendaActive(db(admin), clinicId, doctorAgenda.id, false);
+    try {
+      const again = await createAgenda(db(admin), clinicId, second).catch((e: DataError) => e);
+      expect(again).toMatchObject({ code: "invalid", fields: { professionalId: expect.stringContaining("reative") } });
+    } finally {
+      await setAgendaActive(db(admin), clinicId, doctorAgenda.id, true);
+    }
+  });
+
   it("local desativado sai da lista padrão", async () => {
     const old = await createLocation(db(admin), clinicId, { name: "Antigo", type: "clinic", address: null });
     await setLocationActive(db(admin), clinicId, old.id, false);

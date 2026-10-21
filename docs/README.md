@@ -202,7 +202,9 @@
 >   21/out, **validada pelo cliente em 21/out** e publicada no staging (sem migração).
 >   **Horários: "Editar" no "⋯" e Local e Serviço obrigatórios, sem valor padrão (cliente, 21/out):** implementado e
 >   conferido no local (detalhes no [plano](plano.md)); sem migração; **publicado no staging em 21/out a pedido do cliente e validado pelo cliente em 21/out** (sem ajustes).
->   **Retomar daqui (próxima sessão):** o cliente traz os novos itens para corrigir ou melhorar.
+>   **Agendas: uma por profissional e "Nova agenda" só quando houver o que criar (cliente, 21/out):** implementado e
+>   conferido no local (detalhes no [plano](plano.md)); sem migração; **aguarda a validação do cliente**.
+>   **Retomar daqui (próxima sessão):** confirmar a validação das Agendas; depois, os novos itens que o cliente trouxer.
 >   **App antigo da Meta (cliente, 20/out):** o piloto está desativado e o número do app "Consultório Dra. Ana Karina" é
 >   do cliente; o app antigo foi excluído pelo cliente (20/out) e o número entra no portfólio RecepClinic para uma 2ª clínica de
 >   testes do staging quando o aparelho estiver com ele (precisa do SMS). Regra revista no `CLAUDE.md`.
