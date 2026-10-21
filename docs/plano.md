@@ -1695,8 +1695,8 @@ comparecimento ou falta, cancelada, presença confirmada, mensagem enviada — l
 —, pagamento, retorno marcado a partir dela, ou presa a link ou lista de espera), os pacientes
 criados pela carga com consulta ou outro registro e os contatos com paciente ou conversa no
 WhatsApp. Quem já existia antes da carga não muda (quem voltou a ficar ativo continua ativo).
-Depois de desfeita, o Suporte pode pedir a agenda atual de novo. **F10.1 toda implementada;
-o cliente valida tudo no fim (20/out).**
+Depois de desfeita, o Suporte pode pedir a agenda atual de novo. **F10.1 toda implementada e
+**validada pelo cliente em 21/out** (roteiro T1 a T8 no staging): etapa entregue.**
 
 ## F11 — Módulo financeiro: pagamentos e nota fiscal no CPF do responsável
 

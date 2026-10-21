@@ -190,14 +190,15 @@
 >   e do que fica) implementada e publicada no staging em 20/out** (migração `20261020140000_desfazer_carga.sql`).
 >   **F10.1 toda implementada e publicada; o cliente valida tudo no fim** (roteiro: pedir pelo cartão "Agenda atual"
 >   da clínica, preencher o link, conferir, devolver, autorizar a carga e desfazer).
->   **Retomar daqui (próxima sessão, depois de 20/out), pedido do cliente:** 1) verificar o erro que está dando no
->   CI do GitHub deste projeto (**resolvido em 20/out**: o job `db` falhava desde a F10.1a porque os tipos foram gerados
->   com o Supabase CLI 2.121.0 do computador, que escreve `ComputedFields: never`, e o CI estava na 2.119.0; CI passado
->   para a 2.121.0, commit `dde5d7e`, e voltou a passar); 2) detalhar o passo a passo do que precisa ser testado na F10 (a F10.1 inteira no
->   staging: pedido, link, conferência, devolução, carga e desfazer), para o cliente validar. Em paralelo, aguardar a
->   Meta (Análise do App até ~29/out). As melhorias no processo da nota fiscal continuam para uma sessão própria.
+>   **F10.1 toda validada pelo cliente em 21/out** (roteiro T1 a T8 no staging: pedido, link, link novo, avisos e envio,
+>   conferência, devolução, carga e desfazer); **etapa entregue**. Erro do CI resolvido em 20/out (o job `db` falhava desde
+>   a F10.1a porque os tipos foram gerados com o Supabase CLI 2.121.0 do computador, que escreve `ComputedFields: never`, e
+>   o CI estava na 2.119.0; CI passado para a 2.121.0, commit `dde5d7e`).
+>   **Retomar daqui (próxima sessão, depois de 21/out):** o cliente traz novos itens para corrigir ou melhorar. Em
+>   paralelo, aguardar a Meta (Análise do App até ~29/out). As melhorias no processo da nota fiscal continuam para uma
+>   sessão própria.
 >   **App antigo da Meta (cliente, 20/out):** o piloto está desativado e o número do app "Consultório Dra. Ana Karina" é
->   do cliente; o app antigo será excluído pelo cliente e o número entra no portfólio RecepClinic para uma 2ª clínica de
+>   do cliente; o app antigo foi excluído pelo cliente (20/out) e o número entra no portfólio RecepClinic para uma 2ª clínica de
 >   testes do staging quando o aparelho estiver com ele (precisa do SMS). Regra revista no `CLAUDE.md`.
 >   **Antes (19/out):** implementar a F10.1 (já aprovada). As **melhorias no
 >   processo da nota fiscal** ficam para uma sessão própria (cliente, 19/out: ele traz a lista do que planejar). Em
