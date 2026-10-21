@@ -9,6 +9,9 @@ import { loadSetupStatus } from "../../../../lib/data/config/setup";
 import { CARD, HINT, INPUT, LABEL, PRIMARY_BUTTON, SECONDARY_BUTTON } from "../../../../components/admin/config/formStyles";
 import { createUserClient } from "../../../../lib/data/clients";
 import { listLocations } from "../../../../lib/data/config/locations";
+import { listAgendas } from "../../../../lib/data/config/agendas";
+import { listProfessionals } from "../../../../lib/data/config/professionals";
+import { originPage, setupOrigin, withParams } from "../../../../lib/setupFlow";
 
 const clinic = Astro.locals.clinic!;
 const { id } = Astro.params;
@@ -21,17 +24,50 @@ const homeVisitOn = clinic.features.includes("home_visit");
 // Aberto da lista em "Todos": o filtro vai e volta (teste da R9, NAV-06).
 const all = allFilterOn(Astro.url);
 const list = withAllFilter("/admin/configuracoes/locais", all);
-const action = withAllFilter(`/api/admin/configuracoes/locais/${id}`, all);
+// Aberto pelo próximo passo do profissional, da agenda ou do serviço (jornada
+// revista, cliente 21/out/2026): volta para lá e o próximo passo segue dali.
+const origin = setupOrigin(Astro.url, ["profissional", "agenda", "servico"]);
+const originParams = origin ? { [origin.kind]: origin.id } : {};
+const back = origin ? { href: originPage(origin), label: "Voltar" } : { href: list, label: "Locais" };
+const action = withParams(withAllFilter(`/api/admin/configuracoes/locais/${id}`, all), originParams);
 // Próximo passo da jornada de configuração (F6.3b).
-const setup = isNew ? null : await loadSetupStatus(createUserClient(Astro.request, Astro.cookies), clinic.clinicId, clinic.features);
+const db = createUserClient(Astro.request, Astro.cookies);
+const [setup, professionals, agendas] = isNew
+  ? [null, [], []]
+  : await Promise.all([loadSetupStatus(db, clinic.clinicId, clinic.features), listProfessionals(db, clinic.clinicId), listAgendas(db, clinic.clinicId)]);
 const locationIssues = setup?.issues.locations.get(id!) ?? [];
+// Ordem da jornada: a agenda do profissional antes dos serviços.
+const withoutAgenda = (p: { id: string }) => !!setup?.issues.professionals.get(p.id)?.includes("no_agenda");
+const nextProfessional =
+  (origin?.kind === "profissional" ? professionals.find((p) => p.id === origin.id && withoutAgenda(p)) : undefined) ??
+  (locationIssues.includes("no_service") && origin?.kind !== "agenda" ? professionals.find(withoutAgenda) : undefined);
+const originAgenda =
+  origin?.kind === "agenda" ? agendas.find((a) => a.id === origin.id && setup?.issues.agendas.get(a.id)?.includes("no_service")) : undefined;
 ---
 
-<ConfigShell current="locais" title={isNew ? "Novo local" : location!.name} back={{ href: list, label: "Locais" }}>
+<ConfigShell current="locais" title={isNew ? "Novo local" : location!.name} back={back}>
   {locationIssues.includes("no_address") && <NextStep text="Preencha o endereço abaixo: o bot e as mensagens mostram ao paciente onde é o atendimento." />}
   {
-    locationIssues.includes("no_service") && (
-      <NextStep text="Nenhum serviço é atendido neste local ainda. Em Serviços, marque este local nos serviços atendidos aqui." href="/admin/configuracoes/servicos" label="Ir para Serviços" />
+    nextProfessional ? (
+      <NextStep
+        text={`Agora crie a agenda de ${nextProfessional.displayName}.`}
+        href={`/admin/configuracoes/agendas/novo?profissional=${nextProfessional.id}&local=${id}`}
+        label="Criar a agenda"
+      />
+    ) : originAgenda ? (
+      <NextStep
+        text={`Agora cadastre um serviço para a agenda ${originAgenda.name}.`}
+        href={`/admin/configuracoes/servicos/novo?local=${id}&marcar_agenda=${originAgenda.id}`}
+        label="Cadastrar um serviço"
+      />
+    ) : (
+      locationIssues.includes("no_service") && (
+        <NextStep
+          text="Nenhum serviço é atendido neste local ainda. Cadastre um serviço ou, em Serviços, marque este local nos que já existem."
+          href={`/admin/configuracoes/servicos/novo?local=${id}`}
+          label="Cadastrar um serviço"
+        />
+      )
     )
   }
 
@@ -63,7 +99,7 @@ const locationIssues = setup?.issues.locations.get(id!) ?? [];
       </div>
       <div class="flex flex-wrap gap-2 border-t border-[#e6ecea] pt-4">
         <button type="submit" class={PRIMARY_BUTTON} data-sending-label="Salvando…">{isNew ? "Cadastrar" : "Salvar"}</button>
-        <a href={list} class={SECONDARY_BUTTON}>Cancelar</a>
+        <a href={back.href} class={SECONDARY_BUTTON}>Cancelar</a>
       </div>
     </form>
     {!isNew && <ActiveToggle action={action} isActive={location!.isActive} what="o local" />}

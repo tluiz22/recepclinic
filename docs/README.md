@@ -197,6 +197,9 @@
 >   **Retomar daqui (próxima sessão, depois de 21/out):** o cliente traz novos itens para corrigir ou melhorar. Em
 >   paralelo, aguardar a Meta (Análise do App até ~29/out). As melhorias no processo da nota fiscal continuam para uma
 >   sessão própria.
+>   **Jornada de configuração revista (cliente, 21/out):** Profissional → Local → Agenda → Serviços → Horários, sem
+>   pular o Local (5 itens aprovados; detalhes no [plano](plano.md)). Implementada e testada no navegador local em
+>   21/out, **validada pelo cliente em 21/out** e publicada no staging (sem migração).
 >   **App antigo da Meta (cliente, 20/out):** o piloto está desativado e o número do app "Consultório Dra. Ana Karina" é
 >   do cliente; o app antigo foi excluído pelo cliente (20/out) e o número entra no portfólio RecepClinic para uma 2ª clínica de
 >   testes do staging quando o aparelho estiver com ele (precisa do SMS). Regra revista no `CLAUDE.md`.

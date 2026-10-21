@@ -68,6 +68,31 @@ describe("jornada de configuração (F6.3b)", () => {
     ]);
   });
 
+  it("jornada revista (21/out): agenda e local sem serviço levam ao novo serviço já marcado", () => {
+    const input = base();
+    input.locations.push({ id: "l2", name: "Sala 2", type: "clinic", address: "Rua B, 2", isActive: true });
+    input.agendas.push({ id: "a2", name: "Exames", professionalId: null, isActive: true });
+    input.windows.push({ agendaId: "a2", locationId: "l1", serviceId: null });
+    const setup = computeSetup(input);
+    expect(setup.hasLocations).toBe(true);
+    expect(setup.steps.find((s) => s.key === "agendas")!.items[0].href).toBe("/admin/configuracoes/servicos/novo?agenda=a2");
+    expect(setup.steps.find((s) => s.key === "locations")!.items[0].href).toBe("/admin/configuracoes/servicos/novo?local=l2");
+  });
+
+  it("jornada revista (21/out): sem local, o profissional e a agenda vão primeiro ao Local", () => {
+    const setup = computeSetup({
+      professionals: [{ id: "p1", displayName: "Dra. Nova", isActive: true }],
+      agendas: [{ id: "a1", name: "Dra. Nova", professionalId: null, isActive: true }],
+      locations: [{ id: "l1", name: "Antigo", type: "clinic", address: "Rua A, 1", isActive: false }],
+      services: [],
+      windows: [],
+      features: [],
+    });
+    expect(setup.hasLocations).toBe(false);
+    expect(setup.steps.find((s) => s.key === "professionals")!.items[0].href).toBe("/admin/configuracoes/locais/novo?profissional=p1");
+    expect(setup.steps.find((s) => s.key === "agendas")!.items[0].href).toBe("/admin/configuracoes/locais/novo?agenda=a1");
+  });
+
   it("serviço sem agenda ou sem local: atenção em Serviços (não em Horários)", () => {
     const input = base();
     input.services[0].agendaIds = [];

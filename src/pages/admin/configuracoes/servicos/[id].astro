@@ -16,6 +16,7 @@ import { listLocations } from "../../../../lib/data/config/locations";
 import { listServices } from "../../../../lib/data/config/services";
 import { centsToInput } from "../../../../lib/forms";
 import { CATEGORY_LABELS } from "../../../../lib/serviceLabels";
+import { originPage, setupOrigin, setupParam } from "../../../../lib/setupFlow";
 
 const clinic = Astro.locals.clinic!;
 const db = createUserClient(Astro.request, Astro.cookies);
@@ -48,11 +49,24 @@ const action = withAllFilter(`/api/admin/configuracoes/servicos/${id}`, all);
 const setup = isNew ? null : await loadSetupStatus(createUserClient(Astro.request, Astro.cookies), clinic.clinicId, clinic.features);
 const serviceIssues = setup?.issues.services.get(id!) ?? [];
 const hoursAgenda = service?.agendaIds.find((agendaId) => agendas.some((a) => a.id === agendaId && a.isActive)) ?? null;
+// Jornada revista (cliente, 21/out/2026): aberto pelo próximo passo do local
+// ou da agenda, o novo serviço já vem com eles marcados e "Voltar" leva para
+// lá; a agenda ou o local criados a partir daqui voltam já marcados.
+const origin = isNew ? setupOrigin(Astro.url, ["local", "agenda"]) : null;
+const back = origin ? { href: originPage(origin), label: "Voltar" } : { href: list, label: "Serviços" };
+const markAgendas = new Set([setupParam(Astro.url, "agenda"), setupParam(Astro.url, "marcar_agenda")].filter(Boolean));
+const markLocations = new Set([setupParam(Astro.url, "local"), setupParam(Astro.url, "marcar_local")].filter(Boolean));
+const noLocation = !locations.some((l) => l.isActive && (homeVisitOn || l.type !== "home_visit"));
+const noAgenda = !agendas.some((a) => a.isActive);
 ---
 
-<ConfigShell current="servicos" title={isNew ? "Novo serviço" : service!.name} back={{ href: list, label: "Serviços" }}>
+<ConfigShell current="servicos" title={isNew ? "Novo serviço" : service!.name} back={back}>
   {
-    serviceIssues.includes("no_agenda") || serviceIssues.includes("no_location") ? (
+    noLocation ? (
+      <NextStep text="Antes do serviço, cadastre onde a clínica atende." href={`/admin/configuracoes/locais/novo?servico=${id}`} label="Cadastrar o local" />
+    ) : noAgenda ? (
+      <NextStep text="Antes do serviço, crie a agenda que vai atendê-lo." href={`/admin/configuracoes/agendas/novo?servico=${id}`} label="Criar a agenda" />
+    ) : serviceIssues.includes("no_agenda") || serviceIssues.includes("no_location") ? (
       <NextStep text="Marque abaixo a agenda e o local deste serviço e salve. Depois, cadastre os horários." />
     ) : (
       serviceIssues.includes("no_hours") &&
@@ -129,13 +143,13 @@ const hoursAgenda = service?.agendaIds.find((agendaId) => agendas.some((a) => a.
           {
             agendaOptions.map((agenda) => (
               <label class={CHOICE}>
-                <input type="checkbox" name="agenda_id" value={agenda.id} checked={service?.agendaIds.includes(agenda.id)} class={CHECK} />
+                <input type="checkbox" name="agenda_id" value={agenda.id} checked={service?.agendaIds.includes(agenda.id) || markAgendas.has(agenda.id)} class={CHECK} />
                 {agenda.name}
                 {!agenda.isActive && " (desativada)"}
               </label>
             ))
           }
-          {agendaOptions.length === 0 && <p class="text-sm text-ink-soft">Cadastre uma agenda antes.</p>}
+          {agendaOptions.length === 0 && <p class="text-sm text-ink-soft">Nenhuma agenda cadastrada ainda.</p>}
         </div>
       </fieldset>
 
@@ -149,7 +163,7 @@ const hoursAgenda = service?.agendaIds.find((agendaId) => agendas.some((a) => a.
               return (
                 <div class="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-ink-mid">
                   <label class="flex min-w-48 items-center gap-2">
-                    <input type="checkbox" name="location_id" value={location.id} checked={offered.has(location.id)} class={CHECK} />
+                    <input type="checkbox" name="location_id" value={location.id} checked={offered.has(location.id) || markLocations.has(location.id)} class={CHECK} />
                     {location.name}
                     {location.type === "home_visit" && " (domiciliar)"}
                     {!location.isActive && " (desativado)"}
@@ -170,7 +184,7 @@ const hoursAgenda = service?.agendaIds.find((agendaId) => agendas.some((a) => a.
               );
             })
           }
-          {locationOptions.length === 0 && <p class="text-sm text-ink-soft">Cadastre um local antes.</p>}
+          {locationOptions.length === 0 && <p class="text-sm text-ink-soft">Nenhum local cadastrado ainda.</p>}
           {hiddenHomeVisit && (
             <p class={HINT}>O atendimento domiciliar não está liberado para a clínica. A ligação deste serviço com ele fica guardada e volta se o item for liberado.</p>
           )}
@@ -179,7 +193,7 @@ const hoursAgenda = service?.agendaIds.find((agendaId) => agendas.some((a) => a.
 
       <div class="flex flex-wrap gap-2 border-t border-[#e6ecea] pt-4">
         <button type="submit" class={PRIMARY_BUTTON} data-sending-label="Salvando…">{isNew ? "Cadastrar" : "Salvar"}</button>
-        <a href={list} class={SECONDARY_BUTTON}>Cancelar</a>
+        <a href={back.href} class={SECONDARY_BUTTON}>Cancelar</a>
       </div>
     </form>
     {!isNew && <ActiveToggle action={action} isActive={service!.isActive} what="o serviço" />}

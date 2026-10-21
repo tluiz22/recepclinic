@@ -9,6 +9,7 @@ import { CARD, HINT, INPUT, INPUT_INLINE, LABEL, PRIMARY_BUTTON, SECONDARY_BUTTO
 import { createUserClient } from "../../../../lib/data/clients";
 import { listAgendas } from "../../../../lib/data/config/agendas";
 import { listProfessionals } from "../../../../lib/data/config/professionals";
+import { originPage, setupOrigin, setupParam, withParams } from "../../../../lib/setupFlow";
 
 const clinic = Astro.locals.clinic!;
 const db = createUserClient(Astro.request, Astro.cookies);
@@ -20,23 +21,37 @@ const [agendas, professionals] = await Promise.all([
 ]);
 const agenda = isNew ? null : (agendas.find((a) => a.id === id) ?? null);
 if (!isNew && !agenda) return Astro.redirect("/admin/configuracoes/agendas");
-// Vinda do "próximo passo" do profissional (F6.3b): já escolhido, com o nome
-// dele; "Voltar" leva ao profissional (cliente, 10/out/2026).
+// Vinda do "próximo passo" do profissional ou do local (F6.3b): já escolhido,
+// com o nome dele.
 const prefill = isNew ? (professionals.find((p) => p.isActive && p.id === Astro.url.searchParams.get("profissional")) ?? null) : null;
 const professionalName = agenda?.professionalId ? professionals.find((p) => p.id === agenda.professionalId)?.displayName : null;
 // Aberto da lista em "Todos": o filtro vai e volta (teste da R9, NAV-06).
 const all = allFilterOn(Astro.url);
 const list = withAllFilter("/admin/configuracoes/agendas", all);
-const action = withAllFilter(`/api/admin/configuracoes/agendas/${id}`, all);
+// Aberto pelo próximo passo do serviço, do local ou do profissional (jornada
+// revista, cliente 21/out/2026): "Voltar" leva para lá; a origem vai junto no salvar.
+const origin = setupOrigin(Astro.url, ["servico", "local", "profissional"]);
+const back = origin ? { href: originPage(origin), label: "Voltar" } : { href: list, label: "Agendas" };
+const flow = { servico: setupParam(Astro.url, "servico"), local: setupParam(Astro.url, "local"), profissional: setupParam(Astro.url, "profissional") };
+const action = withParams(withAllFilter(`/api/admin/configuracoes/agendas/${id}`, all), flow);
 // Próximo passo da jornada de configuração (F6.3b).
 const setup = isNew ? null : await loadSetupStatus(createUserClient(Astro.request, Astro.cookies), clinic.clinicId, clinic.features);
 const agendaIssues = setup?.issues.agendas.get(id!) ?? [];
 ---
 
-<ConfigShell current="agendas" title={isNew ? "Nova agenda" : agenda!.name} back={{ href: prefill ? `/admin/configuracoes/profissionais/${prefill.id}` : list, label: prefill ? "Voltar" : "Agendas" }}>
+<ConfigShell current="agendas" title={isNew ? "Nova agenda" : agenda!.name} back={back}>
   {
     agendaIssues.includes("no_service") ? (
-      <NextStep text="Nenhum serviço usa esta agenda ainda. Em Serviços, marque esta agenda nos serviços que ela atende." href="/admin/configuracoes/servicos" label="Ir para Serviços" />
+      setup!.hasLocations ? (
+        <NextStep
+          text="Nenhum serviço usa esta agenda ainda. Cadastre um serviço ou, em Serviços, marque esta agenda nos que ela atende."
+          href={withParams(`/admin/configuracoes/servicos/novo?agenda=${id}`, { marcar_local: flow.local })}
+          label="Cadastrar um serviço"
+        />
+      ) : (
+        // Jornada revista (cliente, 21/out/2026): Local antes dos Serviços.
+        <NextStep text="Nenhum serviço usa esta agenda ainda. Antes dos serviços, cadastre onde a clínica atende." href={`/admin/configuracoes/locais/novo?agenda=${id}`} label="Cadastrar o local" />
+      )
     ) : (
       agendaIssues.includes("no_hours") && (
         <NextStep text="Esta agenda ainda não tem horário de atendimento." href={`/admin/configuracoes/horarios?agenda=${id}`} label="Cadastrar os horários" />
@@ -93,7 +108,7 @@ const agendaIssues = setup?.issues.agendas.get(id!) ?? [];
       </div>
       <div class="flex flex-wrap gap-2 border-t border-[#e6ecea] pt-4">
         <button type="submit" class={PRIMARY_BUTTON} data-sending-label="Salvando…">{isNew ? "Cadastrar" : "Salvar"}</button>
-        <a href={prefill ? `/admin/configuracoes/profissionais/${prefill.id}` : list} class={SECONDARY_BUTTON}>Cancelar</a>
+        <a href={back.href} class={SECONDARY_BUTTON}>Cancelar</a>
       </div>
     </form>
     {!isNew && <ActiveToggle action={action} isActive={agenda!.isActive} what="a agenda" />}

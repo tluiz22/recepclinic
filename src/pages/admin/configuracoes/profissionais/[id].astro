@@ -33,13 +33,21 @@ const professionalIssues = setup?.issues.professionals.get(id!) ?? [];
 
 <ConfigShell current="profissionais" title={isNew ? "Novo profissional" : professional!.displayName} back={{ href: list, label: "Profissionais" }} subtitle={subtitle}>
   {
-    professionalIssues.includes("no_agenda") && (
-      <NextStep
-        text={`${professional!.displayName} ainda não tem agenda: sem ela, não recebe atendimentos.`}
-        href={`/admin/configuracoes/agendas/novo?profissional=${id}`}
-        label="Criar a agenda"
-      />
-    )
+    professionalIssues.includes("no_agenda") &&
+      (setup!.hasLocations ? (
+        <NextStep
+          text={`${professional!.displayName} ainda não tem agenda: sem ela, não recebe atendimentos.`}
+          href={`/admin/configuracoes/agendas/novo?profissional=${id}`}
+          label="Criar a agenda"
+        />
+      ) : (
+        // Jornada revista (cliente, 21/out/2026): Local antes da Agenda.
+        <NextStep
+          text={`${professional!.displayName} ainda não tem agenda. Antes dela, cadastre onde a clínica atende.`}
+          href={`/admin/configuracoes/locais/novo?profissional=${id}`}
+          label="Cadastrar o local"
+        />
+      ))
   }
 
   <div class="flex max-w-3xl flex-col gap-4">

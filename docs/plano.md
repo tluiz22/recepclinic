@@ -2577,6 +2577,21 @@ conferido no navegador local em 19/out (computador e celular; banco local de vol
 sem registro; ajuste da regra 1 (a partir do início da Consulta) testado e publicado no staging em 19/out (commit
 `39a8843`) e **validado pelo cliente em 19/out**.
 
+**Jornada de configuração revista (pedido do cliente, 21/out).** No teste, a jornada sugerida depois do profissional
+levava à agenda e aos serviços **sem local cadastrado** (o profissional sugeria "Criar a agenda" direto; o novo serviço
+sem local só dizia "Cadastre um local antes.", sem botão). Ordem pedida: **Profissional → Local → Agenda → Serviços →
+Horários**. Decisão do cliente (21/out, os 5 itens da proposta): 1) profissional sem agenda e clínica sem local ativo:
+"Antes dela, cadastre onde a clínica atende." com **"Cadastrar o local"** (com local, segue "Criar a agenda"); o mesmo
+na linha do Guia; 2) o local aberto pelo profissional volta para ele no "Voltar" e, salvo, sugere **"Criar a agenda de
+[profissional]"**, já escolhido (local aberto de outro jeito e sem serviço: sugere antes a agenda de quem ainda não
+tem); 3) agenda sem serviço: sem local, **"Cadastrar o local"**; com local, **"Cadastrar um serviço"** com a agenda (e
+o local criado na jornada) já marcados; 4) novo serviço sem local ou sem agenda: aviso com **"Cadastrar o local"** ou
+**"Criar a agenda"**, que voltam ao serviço com o cadastro novo já marcado; 5) serviço salvo abre a tela dele com
+**"Cadastrar os horários"** (já era assim). A origem vai no endereço (`?profissional=`, `?local=`, `?agenda=`,
+`?servico=`; `src/lib/setupFlow.ts`) e o "Voltar" e o "Cancelar" levam a ela. Implementado e testado no navegador
+local em 21/out (as duas jornadas, a partir do profissional e a partir do serviço, numa clínica sem local; banco local
+de volta ao seed), sem migração; **validado pelo cliente em 21/out** e publicado no staging.
+
 ---
 
 ## Depois do 1º piloto (já previsto no banco)

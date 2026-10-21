@@ -61,6 +61,8 @@ export type SetupStep = {
 export type SetupStatus = {
   steps: SetupStep[];
   complete: boolean;
+  /** Há local ativo? Sem ele, o próximo passo do profissional e da agenda é o Local (cliente, 21/out/2026). */
+  hasLocations: boolean;
   /** Pendências de cada cadastro, para os selos e o próximo passo. */
   issues: {
     professionals: Map<string, Issue[]>;
@@ -133,11 +135,19 @@ export function computeSetup(input: SetupInput): SetupStatus {
     items,
   });
 
+  // Jornada revista (cliente, 21/out/2026): sem local, o profissional e a
+  // agenda vão primeiro ao Local; a agenda e o local sem serviço vão ao novo
+  // serviço, já com eles marcados.
+  const hasLocations = locations.length > 0;
+  const professionalHref = (p: { id: string }) => (hasLocations ? `${BASE}/agendas/novo?profissional=${p.id}` : `${BASE}/locais/novo?profissional=${p.id}`);
+  const agendaHref = (a: { id: string }, issue: Issue) =>
+    issue === "no_hours" ? `${BASE}/horarios?agenda=${a.id}` : hasLocations ? `${BASE}/servicos/novo?agenda=${a.id}` : `${BASE}/locais/novo?agenda=${a.id}`;
+
   const steps: SetupStep[] = [
     { key: "clinic", title: "Clínica", status: "done", items: [], href: BASE },
-    step("professionals", "Profissionais", `${BASE}/profissionais`, professionals.length, lines(professionals, issues.professionals, (p) => p.displayName, (p) => `${BASE}/agendas/novo?profissional=${p.id}`)),
-    step("locations", "Locais", `${BASE}/locais`, locations.length, lines(locations, issues.locations, (l) => l.name, (l, issue) => (issue === "no_address" ? `${BASE}/locais/${l.id}` : `${BASE}/servicos`))),
-    step("agendas", "Agendas", `${BASE}/agendas`, agendas.length, lines(agendas, issues.agendas, (a) => a.name, (a, issue) => (issue === "no_hours" ? `${BASE}/horarios?agenda=${a.id}` : `${BASE}/servicos`), undefined, AGENDA_HINTS)),
+    step("professionals", "Profissionais", `${BASE}/profissionais`, professionals.length, lines(professionals, issues.professionals, (p) => p.displayName, professionalHref)),
+    step("locations", "Locais", `${BASE}/locais`, locations.length, lines(locations, issues.locations, (l) => l.name, (l, issue) => (issue === "no_address" ? `${BASE}/locais/${l.id}` : `${BASE}/servicos/novo?local=${l.id}`))),
+    step("agendas", "Agendas", `${BASE}/agendas`, agendas.length, lines(agendas, issues.agendas, (a) => a.name, agendaHref, undefined, AGENDA_HINTS)),
     step("services", "Serviços", `${BASE}/servicos`, services.length, lines(services, issues.services, (s) => s.name, (s) => `${BASE}/servicos/${s.id}`, ["no_agenda", "no_location"])),
     step(
       "hours",
@@ -147,7 +157,7 @@ export function computeSetup(input: SetupInput): SetupStatus {
       lines(services, issues.services, (s) => s.name, (s) => (firstAgenda(s) ? `${BASE}/horarios?agenda=${firstAgenda(s)}&servico=${s.id}` : `${BASE}/servicos/${s.id}`), ["no_hours"]),
     ),
   ];
-  return { steps, complete: steps.every((s) => s.status === "done"), issues };
+  return { steps, complete: steps.every((s) => s.status === "done"), hasLocations, issues };
 }
 
 export async function loadSetupStatus(db: DbClient, clinicId: string, features: readonly FeatureKey[]): Promise<SetupStatus> {
