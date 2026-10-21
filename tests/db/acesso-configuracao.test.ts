@@ -178,8 +178,14 @@ describe("profissionais, locais e agendas", () => {
   });
 
   it("agenda: altera nome e intervalo; desativada some da lista padrão", async () => {
-    const renamed = await updateAgenda(db(admin), clinicId, examsAgenda.id, { name: "Exames e testes", bufferMinutes: 5 });
-    expect(renamed).toMatchObject({ name: "Exames e testes", bufferMinutes: 5, kind: "resource" });
+    const renamed = await updateAgenda(db(admin), clinicId, doctorAgenda.id, { name: "Dra. Teste (manhã)", bufferMinutes: 10 });
+    expect(renamed).toMatchObject({ name: "Dra. Teste (manhã)", bufferMinutes: 10, kind: "professional" });
+    // A da equipe sempre se chama "Exames" (cliente, 21/out/2026), mesmo renomeada ou reativada.
+    expect(await updateAgenda(db(admin), clinicId, examsAgenda.id, { name: "Teste", bufferMinutes: 5 })).toMatchObject({ name: "Exames", bufferMinutes: 5 });
+    await setAgendaActive(db(admin), clinicId, examsAgenda.id, false);
+    await adminClient().from("agendas").update({ name: "Outro" }).eq("id", examsAgenda.id);
+    await setAgendaActive(db(admin), clinicId, examsAgenda.id, true);
+    expect((await listAgendas(db(admin), clinicId)).find((a) => a.id === examsAgenda.id)?.name).toBe("Exames");
     const other = await createProfessional(db(admin), clinicId, { userId: null, displayName: "Dr. Extra", profession: "Médico", specialty: null, council: null, councilNumber: null, councilState: null });
     const extra = await createAgenda(db(admin), clinicId, { name: "Sala extra", kind: "professional", professionalId: other.id, bufferMinutes: 0 });
     await setAgendaActive(db(admin), clinicId, extra.id, false);

@@ -28,8 +28,8 @@ const [all, limit, setup] = await Promise.all([
   loadSetupStatus(db, clinic.clinicId, clinic.features),
 ]);
 const active = all.filter((p) => p.isActive);
-// Desativados no fim, em "Todos".
-const professionals = showInactive ? [...active, ...all.filter((p) => !p.isActive)] : active;
+// Aba "Desativados" (cliente, 21/out/2026): só os desativados.
+const professionals = showInactive ? all.filter((p) => !p.isActive) : active;
 // Limite de profissionais ativos (D11): definido pelo Suporte.
 const atLimit = limit.active >= limit.max;
 const cols = "lg:grid-cols-[minmax(0,2fr)_minmax(0,1.6fr)_minmax(0,1.4fr)_36px]";
@@ -54,7 +54,7 @@ const cols = "lg:grid-cols-[minmax(0,2fr)_minmax(0,1.6fr)_minmax(0,1.4fr)_36px]"
     <p class="text-sm text-ink-soft" role="status">
       {limit.active} de {limit.max} {limit.max === 1 ? "profissional ativo" : "profissionais ativos"}
     </p>
-    <ActiveFilter showInactive={showInactive} active={active.length} total={all.length} />
+    <ActiveFilter showInactive={showInactive} active={active.length} inactive={all.length - active.length} />
   </div>
 
   {
@@ -102,6 +102,7 @@ const cols = "lg:grid-cols-[minmax(0,2fr)_minmax(0,1.6fr)_minmax(0,1.4fr)_36px]"
     ) : (
       <ConfigEmpty
         onlyInactive={all.length > 0}
+        showingInactive={showInactive}
         none="Nenhum profissional"
         text="Sem profissional, não há agenda para marcar."
         href={atLimit ? undefined : "/admin/configuracoes/profissionais/novo"}

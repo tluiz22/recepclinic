@@ -28,8 +28,8 @@ const [all, professionals, services, setup] = await Promise.all([
   loadSetupStatus(db, clinic.clinicId, clinic.features),
 ]);
 const active = all.filter((a) => a.isActive);
-// Desativadas no fim, em "Todos".
-const agendas = showInactive ? [...active, ...all.filter((a) => !a.isActive)] : active;
+// Aba "Desativados" (cliente, 21/out/2026): só os desativados.
+const agendas = showInactive ? all.filter((a) => !a.isActive) : active;
 const professionalName = new Map(professionals.map((p) => [p.id, p.displayName]));
 const servicesOf = (agendaId: string) => services.filter((s) => s.agendaIds.includes(agendaId)).map((s) => s.name);
 // Uma agenda por profissional e no máximo uma da equipe, só com o item
@@ -51,7 +51,7 @@ const cols = "lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1.4fr)_minmax(0,2fr)_36px]"
 
   <div class="flex flex-wrap items-center justify-between gap-3">
     <p class="text-sm text-ink-soft" role="status">
-      {agendas.length} {agendas.length === 1 ? "agenda" : "agendas"}{showInactive ? "" : agendas.length === 1 ? " ativa" : " ativas"}
+      {agendas.length} {agendas.length === 1 ? "agenda" : "agendas"}{agendas.length === 1 ? (showInactive ? " desativada" : " ativa") : showInactive ? " desativadas" : " ativas"}
       {
         !canCreateProfessional && canCreateTeam && all.length > 0 && (
           <>
@@ -63,7 +63,7 @@ const cols = "lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1.4fr)_minmax(0,2fr)_36px]"
         )
       }
     </p>
-    <ActiveFilter showInactive={showInactive} active={active.length} total={all.length} activeLabel="Ativas" />
+    <ActiveFilter showInactive={showInactive} active={active.length} inactive={all.length - active.length} feminine />
   </div>
 
   {
@@ -110,6 +110,8 @@ const cols = "lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1.4fr)_minmax(0,2fr)_36px]"
     ) : (
       <ConfigEmpty
         onlyInactive={all.length > 0}
+        showingInactive={showInactive}
+        feminine
         none="Nenhuma agenda"
         createdWord="cadastrada"
         activeWord="ativa"

@@ -1,19 +1,20 @@
 ---
-// "Ativos | Todos" das listas de Configurações (R9; no lugar de "Mostrar
-// desativados"), com quantos há em cada um. `?todos=1` como antes.
+// "Ativos | Desativados" das listas de Configurações (cliente, 21/out/2026; no
+// lugar de "Ativos | Todos", da R9), com quantos há em cada um: fica fácil ver
+// que há cadastro desativado. `?todos=1` continua sendo o endereço da segunda aba.
 interface Props {
   showInactive: boolean;
   active: number;
-  total: number;
-  /** "Ativos" ou "Ativas" (agendas). */
-  activeLabel?: string;
+  inactive: number;
+  /** "Ativas | Desativadas" (agendas). */
+  feminine?: boolean;
   class?: string;
 }
 
-const { showInactive, active, total, activeLabel = "Ativos", class: className = "" } = Astro.props;
+const { showInactive, active, inactive, feminine = false, class: className = "" } = Astro.props;
 const items = [
-  { label: activeLabel, href: "?", count: active, current: !showInactive },
-  { label: "Todos", href: "?todos=1", count: total, current: showInactive },
+  { label: feminine ? "Ativas" : "Ativos", href: "?", count: active, current: !showInactive },
+  { label: feminine ? "Desativadas" : "Desativados", href: "?todos=1", count: inactive, current: showInactive },
 ];
 ---
 

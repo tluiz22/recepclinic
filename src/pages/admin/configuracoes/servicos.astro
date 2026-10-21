@@ -30,8 +30,8 @@ const [all, agendas, setup] = await Promise.all([
   loadSetupStatus(db, clinic.clinicId, clinic.features),
 ]);
 const active = all.filter((s) => s.isActive);
-// Desativados no fim, em "Todos".
-const services = showInactive ? [...active, ...all.filter((s) => !s.isActive)] : active;
+// Aba "Desativados" (cliente, 21/out/2026): só os desativados.
+const services = showInactive ? all.filter((s) => !s.isActive) : active;
 const agendaName = new Map(agendas.map((a) => [a.id, a.name]));
 // Sem retorno com horário, o bot não mostra "Marcar retorno" (cliente, 18/out/2026).
 const returns = active.filter((s) => s.category === "return_visit");
@@ -60,9 +60,9 @@ const cols = "lg:grid-cols-[minmax(0,2fr)_200px_minmax(0,2fr)_36px]";
 
   <div class="flex flex-wrap items-center justify-between gap-3">
     <p class="text-sm text-ink-soft" role="status">
-      {services.length} {services.length === 1 ? "serviço" : "serviços"}{showInactive ? "" : active.length === 1 ? " ativo" : " ativos"}
+      {services.length} {services.length === 1 ? "serviço" : "serviços"}{services.length === 1 ? (showInactive ? " desativado" : " ativo") : showInactive ? " desativados" : " ativos"}
     </p>
-    <ActiveFilter showInactive={showInactive} active={active.length} total={all.length} />
+    <ActiveFilter showInactive={showInactive} active={active.length} inactive={all.length - active.length} />
   </div>
 
   {
@@ -119,6 +119,7 @@ const cols = "lg:grid-cols-[minmax(0,2fr)_200px_minmax(0,2fr)_36px]";
     ) : (
       <ConfigEmpty
         onlyInactive={all.length > 0}
+        showingInactive={showInactive}
         none="Nenhum serviço"
         text="Sem serviço, nada aparece para marcar."
         href="/admin/configuracoes/servicos/novo"

@@ -1,11 +1,16 @@
 ---
 // Lista vazia de Configurações (R9): nada cadastrado, com o botão de cadastrar
-// o primeiro; ou só desativados (em "Ativos"), com "Ver todos".
+// o primeiro; só desativados (em "Ativos"), com "Ver desativados"; ou nenhum
+// desativado (em "Desativados", cliente 21/out/2026), com "Ver ativos".
 import Button from "../ui/Button.astro";
 
 interface Props {
   /** Há cadastros, mas todos desativados. */
   onlyInactive: boolean;
+  /** Aba "Desativados" aberta. */
+  showingInactive?: boolean;
+  /** "Nenhuma agenda desativada", "Ver ativas". */
+  feminine?: boolean;
   /** Ex.: "Nenhum serviço". */
   none: string;
   /** Ex.: "cadastrado"; "ativo". */
@@ -17,11 +22,27 @@ interface Props {
   label?: string;
 }
 
-const { onlyInactive, none, createdWord = "cadastrado", activeWord = "ativo", text, href, label } = Astro.props;
+const { onlyInactive, showingInactive = false, feminine = false, none, createdWord = "cadastrado", activeWord = "ativo", text, href, label } = Astro.props;
+const a = feminine ? "a" : "o";
 ---
 
 <section class="flex flex-col items-center gap-2.5 rounded-xl border border-line bg-white px-6 py-7 text-center">
-  <p class="text-[17px] font-bold text-ink">{none} {onlyInactive ? activeWord : createdWord}</p>
-  {onlyInactive ? <p class="text-sm text-ink-soft">Os cadastros desativados aparecem em "Todos".</p> : text && <p class="text-sm text-ink-soft">{text}</p>}
-  {onlyInactive ? <Button href="?todos=1">Ver todos</Button> : href && label && <Button href={href} variant="primary">{label}</Button>}
+  {
+    showingInactive ? (
+      <>
+        <p class="text-[17px] font-bold text-ink">
+          {none} desativad{a}
+        </p>
+        <Button href="?">Ver ativ{a}s</Button>
+      </>
+    ) : (
+      <>
+        <p class="text-[17px] font-bold text-ink">
+          {none} {onlyInactive ? activeWord : createdWord}
+        </p>
+        {onlyInactive ? <p class="text-sm text-ink-soft">Os cadastros desativados aparecem em "Desativad{a}s".</p> : text && <p class="text-sm text-ink-soft">{text}</p>}
+        {onlyInactive ? <Button href="?todos=1">Ver desativad{a}s</Button> : href && label && <Button href={href} variant="primary">{label}</Button>}
+      </>
+    )
+  }
 </section>

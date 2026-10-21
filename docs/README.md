@@ -205,7 +205,9 @@
 >   **Agendas: uma por profissional e "Nova agenda" só quando houver o que criar (cliente, 21/out):** implementado e
 >   publicado no staging em 21/out (commit `0b1a32a`). **Revisto na validação (21/out): agenda da equipe** (uma por
 >   clínica, só com Exames, "Equipe" no "De quem", só serviços de exame), com a migração
->   `20261021120000_agenda_da_equipe.sql`; implementado, conferido no local e publicado no staging em 21/out (migração aplicada antes; detalhes no [plano](plano.md)); **aguarda a validação do cliente**.
+>   `20261021120000_agenda_da_equipe.sql`; publicado no staging em 21/out. **Ajustes da validação (21/out):** nome sempre "Exames" (migração
+>   `20261021130000_agenda_da_equipe_nome.sql`), "Abrir para reativar" e "Ativos | Desativados" nas 5 listas de
+>   Configurações; publicados no staging em 21/out (migração aplicada antes); **aguarda a validação do cliente**.
 >   **Retomar daqui (próxima sessão):** confirmar a validação das Agendas; depois, os novos itens que o cliente trouxer.
 >   **App antigo da Meta (cliente, 20/out):** o piloto está desativado e o número do app "Consultório Dra. Ana Karina" é
 >   do cliente; o app antigo foi excluído pelo cliente (20/out) e o número entra no portfólio RecepClinic para uma 2ª clínica de

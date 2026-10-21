@@ -33,6 +33,10 @@ const onlyTeam = isNew && available.length === 0 && teamAllowed;
 const nothingToCreate = isNew && available.length === 0 && !teamAllowed;
 const prefill = isNew ? (available.find((p) => p.id === Astro.url.searchParams.get("profissional")) ?? null) : null;
 const startTeam = onlyTeam || (teamAllowed && !prefill && Astro.url.searchParams.get("tipo") === "equipe");
+// A agenda da equipe desativada: reativa-se a antiga (cliente, 21/out/2026).
+const inactiveTeam = isNew ? agendas.find((a) => a.kind === "resource" && !a.isActive) : undefined;
+// O nome da agenda da equipe é sempre "Exames" (cliente, 21/out/2026).
+const fixedName = agenda?.kind === "resource" || startTeam;
 const professionalName = agenda?.professionalId ? professionals.find((p) => p.id === agenda.professionalId)?.displayName : null;
 // Aberto da lista em "Todos": o filtro vai e volta (teste da R9, NAV-06).
 const all = allFilterOn(Astro.url);
@@ -70,18 +74,36 @@ const agendaIssues = setup?.issues.agendas.get(id!) ?? [];
 
   <div class="flex max-w-3xl flex-col gap-4">
     {
-      nothingToCreate && (
+      nothingToCreate && !inactiveTeam && (
         <p class={`${CARD} p-4 text-[15px] text-ink sm:p-5`}>
           Não há agenda para criar: cada profissional ativo já tem a sua
           {clinic.features.includes("exams") ? " e a clínica já tem a agenda da equipe." : "."} Para um profissional novo, cadastre-o antes em Profissionais.
         </p>
       )
     }
+    {
+      inactiveTeam && clinic.features.includes("exams") && (
+        <NextStep
+          text="A agenda da equipe (Exames) está desativada. A clínica só pode ter uma: para voltar a usá-la, reative a antiga, que guarda o histórico, os serviços e os horários."
+          href={`/admin/configuracoes/agendas/${inactiveTeam.id}?todos=1`}
+          label="Abrir para reativar"
+        />
+      )
+    }
     <form method="POST" action={action} class={`${CARD} flex flex-col gap-5 p-4 sm:p-5`} hidden={nothingToCreate}>
       <input type="hidden" name="acao" value="salvar" />
       <div>
         <label for="name" class={LABEL}>Nome</label>
-        <input id="name" name="name" required placeholder="Dra. Ana, Exames…" value={agenda?.name ?? prefill?.displayName ?? (startTeam ? TEAM_AGENDA_NAME : "")} class={INPUT} />
+        <input
+          id="name"
+          name="name"
+          required
+          placeholder="Dra. Ana…"
+          value={fixedName ? TEAM_AGENDA_NAME : (agenda?.name ?? prefill?.displayName ?? "")}
+          readonly={fixedName}
+          class={`${INPUT} read-only:bg-canvas read-only:text-ink-mid`}
+        />
+        <p class={HINT} data-team-name hidden={!fixedName}>A agenda da equipe sempre se chama "Exames".</p>
       </div>
       {
         isNew ? (
@@ -143,13 +165,18 @@ const agendaIssues = setup?.issues.agendas.get(id!) ?? [];
     const professional = document.querySelector<HTMLElement>("[data-professional]");
     const note = document.querySelector<HTMLElement>("[data-team-note]");
     const name = document.getElementById("name") as HTMLInputElement | null;
+    const nameHint = document.querySelector<HTMLElement>("[data-team-name]");
     const sync = () => {
       if (!kind) return;
       const team = kind.value === "resource";
       if (professional) professional.hidden = team;
       if (note) note.hidden = !team;
-      if (name && team && !name.value.trim()) name.value = "Exames";
-      if (name && !team && name.value === "Exames") name.value = "";
+      if (nameHint) nameHint.hidden = !team;
+      if (name) {
+        if (team) name.value = "Exames";
+        else if (name.readOnly) name.value = "";
+        name.readOnly = team;
+      }
     };
     kind?.addEventListener("change", sync);
     sync();

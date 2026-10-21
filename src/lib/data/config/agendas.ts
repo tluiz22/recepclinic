@@ -86,21 +86,21 @@ export function professionalsWithoutAgenda<P extends { id: string; isActive: boo
 /**
  * Agenda da equipe (o tipo `resource`): exames que não são feitos por um dos
  * profissionais cadastrados (cliente, 21/out/2026). Uma por clínica, só com o
- * item "Exames e procedimentos" (D11) e só para serviços do tipo exame; o
- * banco também confere.
+ * item "Exames e procedimentos" (D11), só para serviços do tipo exame e
+ * sempre com o nome "Exames"; o banco também confere.
  */
 export const TEAM_AGENDA_NAME = "Exames";
 export const TEAM_AGENDA_LABEL = "Equipe";
 
 export async function createAgenda(db: DbClient, clinicId: string, input: AgendaInput): Promise<Agenda> {
-  const row = validateAgenda(input);
+  const row = validateAgenda(input.kind === "resource" ? { ...input, name: TEAM_AGENDA_NAME } : input);
   if (row.kind === "resource") {
     const existing = unwrap(await db.from("agendas").select("id, is_active").eq("clinic_id", clinicId).eq("kind", "resource").limit(1), "Agenda")[0];
     if (existing) {
       throw new DataError("invalid", "Agenda: a clínica já tem a agenda da equipe", {
         kind: existing.is_active
           ? "A clínica já tem a agenda da equipe (só pode haver uma)."
-          : "A clínica já tem a agenda da equipe, desativada: reative-a em Agendas › Todos.",
+          : "A clínica já tem a agenda da equipe, desativada: reative-a em Agendas › Desativadas.",
       });
     }
   }
@@ -116,7 +116,7 @@ export async function createAgenda(db: DbClient, clinicId: string, input: Agenda
         {
           professionalId: existing.is_active
             ? "Este profissional já tem agenda."
-            : "Este profissional já tem uma agenda desativada: reative-a em Agendas › Todos.",
+            : "Este profissional já tem uma agenda desativada: reative-a em Agendas › Desativadas.",
         },
       );
     }

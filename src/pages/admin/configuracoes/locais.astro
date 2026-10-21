@@ -25,8 +25,8 @@ const [all, setup] = await Promise.all([
   loadSetupStatus(db, clinic.clinicId, clinic.features),
 ]);
 const active = all.filter((l) => l.isActive);
-// Desativados no fim, em "Todos".
-const locations = showInactive ? [...active, ...all.filter((l) => !l.isActive)] : active;
+// Aba "Desativados" (cliente, 21/out/2026): só os desativados.
+const locations = showInactive ? all.filter((l) => !l.isActive) : active;
 const cols = "lg:grid-cols-[minmax(0,1.6fr)_minmax(0,2.4fr)_36px]";
 ---
 
@@ -37,9 +37,9 @@ const cols = "lg:grid-cols-[minmax(0,1.6fr)_minmax(0,2.4fr)_36px]";
 
   <div class="flex flex-wrap items-center justify-between gap-3">
     <p class="text-sm text-ink-soft" role="status">
-      {locations.length} {locations.length === 1 ? "local" : "locais"}{showInactive ? "" : locations.length === 1 ? " ativo" : " ativos"}
+      {locations.length} {locations.length === 1 ? "local" : "locais"}{locations.length === 1 ? (showInactive ? " desativado" : " ativo") : showInactive ? " desativados" : " ativos"}
     </p>
-    <ActiveFilter showInactive={showInactive} active={active.length} total={all.length} />
+    <ActiveFilter showInactive={showInactive} active={active.length} inactive={all.length - active.length} />
   </div>
 
   {
@@ -89,6 +89,7 @@ const cols = "lg:grid-cols-[minmax(0,1.6fr)_minmax(0,2.4fr)_36px]";
     ) : (
       <ConfigEmpty
         onlyInactive={all.length > 0}
+        showingInactive={showInactive}
         none="Nenhum local"
         text="Sem local, os serviços não aparecem para marcar."
         href="/admin/configuracoes/locais/novo"

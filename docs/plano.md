@@ -2624,6 +2624,13 @@ mostra o aviso no lugar do formulário. O banco também confere (migração `202
 exame ligado a ela); staging conferido antes, sem dado fora da regra (a "Consultorio de Teste" tem uma agenda de
 recurso, "fasdfsdfasd", do teste do cliente, que vira a agenda da equipe dela). Testes em `acesso-configuracao.test.ts`;
 conferido no navegador local em 21/out; banco local de volta ao seed.
+Na validação (21/out), o cliente achou o nome da agenda da equipe editável e pediu: 1) o nome é **sempre
+"Exames"** (vem preenchido e não se altera, nem ao renomear nem ao reativar; o banco força, migração
+`20261021130000_agenda_da_equipe_nome.sql`, que também renomeia as que existem); 2) com a agenda da equipe
+desativada, "Nova agenda" não cria outra e mostra "Abrir para reativar" (confirmado pelo cliente); 3) **"Ativos |
+Desativados"** no lugar de "Ativos | Todos" nas 5 listas de Configurações (Profissionais, Locais, Agendas, Serviços e
+Convênios), cada aba com o número no selo e a de desativados só com eles (o endereço continua `?todos=1`).
+Conferido no navegador local em 21/out; banco local de volta ao seed.
 
 **Vagas do exame em turma (cliente, 21/out):** o número de pacientes continua em Configurações › Horários ("Vagas
 da turma", por horário), e não no serviço; o cliente avaliou e decidiu deixar como está.

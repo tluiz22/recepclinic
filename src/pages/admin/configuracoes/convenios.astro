@@ -21,8 +21,8 @@ const db = createUserClient(Astro.request, Astro.cookies);
 const showInactive = Astro.url.searchParams.get("todos") === "1";
 const [all, settings] = await Promise.all([listInsurancePlans(db, clinic.clinicId, { includeInactive: true }), getClinicSettings(db, clinic.clinicId)]);
 const active = all.filter((p) => p.isActive);
-// Desativados no fim, em "Todos".
-const plans = showInactive ? [...active, ...all.filter((p) => !p.isActive)] : active;
+// Aba "Desativados" (cliente, 21/out/2026): só os desativados.
+const plans = showInactive ? all.filter((p) => !p.isActive) : active;
 const cols = "lg:grid-cols-[minmax(0,1.6fr)_minmax(0,2fr)_120px_36px]";
 ---
 
@@ -44,9 +44,9 @@ const cols = "lg:grid-cols-[minmax(0,1.6fr)_minmax(0,2fr)_120px_36px]";
 
   <div class="flex flex-wrap items-center justify-between gap-3">
     <p class="text-sm text-ink-soft" role="status">
-      {plans.length} {plans.length === 1 ? "plano" : "planos"}{showInactive ? "" : plans.length === 1 ? " ativo" : " ativos"}
+      {plans.length} {plans.length === 1 ? "plano" : "planos"}{plans.length === 1 ? (showInactive ? " desativado" : " ativo") : showInactive ? " desativados" : " ativos"}
     </p>
-    <ActiveFilter showInactive={showInactive} active={active.length} total={all.length} />
+    <ActiveFilter showInactive={showInactive} active={active.length} inactive={all.length - active.length} />
   </div>
 
   {
@@ -82,6 +82,7 @@ const cols = "lg:grid-cols-[minmax(0,1.6fr)_minmax(0,2fr)_120px_36px]";
     ) : (
       <ConfigEmpty
         onlyInactive={all.length > 0}
+        showingInactive={showInactive}
         none="Nenhum plano"
         href="/admin/configuracoes/convenios/novo"
         label="Cadastrar o primeiro plano"
