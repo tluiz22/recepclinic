@@ -278,7 +278,11 @@ describe("pausa da recepção", () => {
     expect(conversation).toMatchObject({ state: "HUMAN_HANDOFF", humanHandoff: true, humanHandoffAt: t2, funnelSessionId: null });
     const funnel = await funnelOf(clinicA, phone);
     expect(funnel.filter((e) => e.flow === "handoff")).toEqual([
-      expect.objectContaining({ step: "agent_took_over", metadata: { mid_journey: true, journey_flow: "cancel" } }),
+      // M3 das Métricas: também a tentativa e a etapa em que a pessoa estava.
+      expect.objectContaining({
+        step: "agent_took_over",
+        metadata: { mid_journey: true, journey_flow: "cancel", journey_session_id: session, journey_state: "CANCEL_SELECT" },
+      }),
     ]);
     expect(funnel).toContainEqual(
       expect.objectContaining({ session_id: session, step: "abandoned", metadata: { reason: "secretary_took_over", last_step: "CANCEL_SELECT" } }),

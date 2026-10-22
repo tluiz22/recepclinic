@@ -329,17 +329,23 @@ isOneToOne: false
                   ]
                 },"bot_funnel_events": {
                   Row: {
-                    "clinic_id": string,"contact_id": string | null,"contact_phone": string,"flow": string,"id": number,"metadata": NonNullable<Json>,"occurred_at": string,"session_id": string,"source": string,"step": string
+                    "appointment_id": string | null,"clinic_id": string,"contact_id": string | null,"contact_phone": string,"flow": string,"id": number,"metadata": NonNullable<Json>,"occurred_at": string,"session_id": string,"source": string,"step": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "clinic_id": string,"contact_id"?: string | null,"contact_phone": string,"flow": string,"id"?: never,"metadata"?: NonNullable<Json>,"occurred_at"?: string,"session_id": string,"source"?: string,"step": string
+                    "appointment_id"?: string | null,"clinic_id": string,"contact_id"?: string | null,"contact_phone": string,"flow": string,"id"?: never,"metadata"?: NonNullable<Json>,"occurred_at"?: string,"session_id": string,"source"?: string,"step": string
                   }
                   Update: {
-                    "clinic_id"?: string,"contact_id"?: string | null,"contact_phone"?: string,"flow"?: string,"id"?: never,"metadata"?: NonNullable<Json>,"occurred_at"?: string,"session_id"?: string,"source"?: string,"step"?: string
+                    "appointment_id"?: string | null,"clinic_id"?: string,"contact_id"?: string | null,"contact_phone"?: string,"flow"?: string,"id"?: never,"metadata"?: NonNullable<Json>,"occurred_at"?: string,"session_id"?: string,"source"?: string,"step"?: string
                   }
                   Relationships: [
                     {
+      foreignKeyName: "bot_funnel_events_appointment_fk"
+      columns: ["clinic_id","appointment_id"]
+isOneToOne: false
+      referencedRelation: "appointments"
+      referencedColumns: ["clinic_id","id"]
+    },{
       foreignKeyName: "bot_funnel_events_clinic_id_contact_id_fkey"
       columns: ["clinic_id","contact_id"]
 isOneToOne: false
@@ -1594,6 +1600,34 @@ isOneToOne: false
                            },
 "mark_my_invitations_accepted":
 { Args: Record<PropertyKey, never>; Returns: undefined
+                           },
+"metrics_activity":
+{ Args: { "p_agenda_ids": (string)[],"p_clinic_id": string,"p_end": string,"p_location_ids"?: (string)[],"p_service_ids"?: (string)[],"p_start": string }; Returns: {
+              "canceled_clinic": number,"canceled_mass": number,"canceled_patient": number,"created_canceled": number,"created_panel": number,"created_whatsapp": number,"day": string,"rescheduled_patient": number,"rescheduled_team": number,"returns_panel": number,"returns_whatsapp": number,"waitlist_advanced": number
+            }[]
+                           },
+"metrics_attendance":
+{ Args: { "p_agenda_ids": (string)[],"p_clinic_id": string,"p_end": string,"p_location_ids"?: (string)[],"p_now"?: string,"p_service_ids"?: (string)[],"p_start": string }; Returns: {
+              "canceled": number,"completed": number,"day": string,"location_id": string,"location_name": string,"no_show": number,"scheduled": number,"service_category": Database["public"]['Enums']["service_category"],"service_id": string,"service_name": string,"unregistered": number,"upcoming": number
+            }[]
+                           },
+"metrics_bot_sessions":
+{ Args: { "p_clinic_id": string,"p_end": string,"p_start": string }; Returns: {
+              "appointment_id": string,"appointment_status": Database["public"]['Enums']["appointment_status"],"contact_id": string,"contact_phone": string,"flow": string,"in_period": boolean,"last_at": string,"last_failure": Json,"session_id": string,"started_at": string,"steps": Json
+            }[]
+                           },
+"metrics_funnel_write_failures":
+{ Args: { "p_clinic_id": string,"p_end": string,"p_start": string }; Returns: number
+                           },
+"metrics_reminders":
+{ Args: { "p_agenda_ids": (string)[],"p_clinic_id": string,"p_end": string,"p_location_ids"?: (string)[],"p_now"?: string,"p_service_ids"?: (string)[],"p_start": string }; Returns: {
+              "outcome": string,"status": Database["public"]['Enums']["appointment_status"],"total": number
+            }[]
+                           },
+"metrics_return_rights":
+{ Args: { "p_agenda_ids": (string)[],"p_clinic_id": string,"p_end": string,"p_location_ids"?: (string)[],"p_now"?: string,"p_start": string }; Returns: {
+              "agenda_id": string,"appointment_id": string,"has_return": boolean,"has_upcoming": boolean,"last_date": string,"patient_id": string,"scheduled_at": string,"status": string
+            }[]
                            },
 "reschedule_group_session":
 { Args: { "p_appointment_id": string,"p_channel": Database["public"]['Enums']["action_channel"],"p_scheduled_at": string,"p_trail"?: Json }; Returns: undefined

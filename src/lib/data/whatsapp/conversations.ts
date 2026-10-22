@@ -356,6 +356,9 @@ export async function pauseForHuman(
         metadata: {
           mid_journey: !!current?.funnelSessionId,
           ...(current?.funnelFlow ? { journey_flow: current.funnelFlow } : {}),
+          // M3 das Métricas: a tentativa e a etapa da conversa no momento do pedido.
+          ...(current?.funnelSessionId ? { journey_session_id: current.funnelSessionId } : {}),
+          ...(current?.state ? { journey_state: current.state } : {}),
         },
       },
       now,

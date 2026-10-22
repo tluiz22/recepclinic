@@ -229,8 +229,9 @@
 >   Métricas" do [plano](plano.md)). **Instruções novas do cliente recebidas em 22/out:** implementar o redesign
 >   inteiro, **M1 a M5 sem parar**, cada etapa publicada no staging ao terminar; o cliente **valida tudo no fim**.
 >   **M1 (trilha na mesma transação, por gatilho, e índices) implementada e publicada no staging em 22/out**
->   (migração `20261022120000_metricas_trilha.sql`; `origin_appointment_id` conferido: confiável). **Retomar daqui:**
->   M2 e M3 (contas no banco e dados novos do bot), depois M4 e M5. Em paralelo, aguardar a Meta (Análise do App até ~29/out).
+>   (migração `20261022120000_metricas_trilha.sql`; `origin_appointment_id` conferido: confiável). **M2 e M3 (contas
+>   no banco e dados novos do bot) implementadas e publicadas no staging em 22/out** (migração
+>   `20261022130000_metricas_contas.sql`). **Retomar daqui:** M4 (aba Desempenho), depois M5 (Agendamento digital). Em paralelo, aguardar a Meta (Análise do App até ~29/out).
 >   **App antigo da Meta (cliente, 20/out):** o piloto está desativado e o número do app "Consultório Dra. Ana Karina" é
 >   do cliente; o app antigo foi excluído pelo cliente (20/out) e o número entra no portfólio RecepClinic para uma 2ª clínica de
 >   testes do staging quando o aparelho estiver com ele (precisa do SMS). Regra revista no `CLAUDE.md`.

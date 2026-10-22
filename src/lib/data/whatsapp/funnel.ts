@@ -7,7 +7,8 @@ import { logError } from "../../log";
 // atendimento humano (pedido e recepção que assume) é registrado como fluxo
 // próprio. Só o bot e a página de agendar gravam (credencial da clínica), e
 // só com o bot liberado (D11). Melhor esforço, como no piloto: uma falha
-// aqui nunca trava a conversa nem a página, só fica no log.
+// aqui nunca trava a conversa nem a página; fica no log e em Administração ›
+// Erros, e as Métricas mostram quantas foram (M2, 22/out/2026).
 
 export type FunnelFlow = "booking" | "return_booking" | "exam" | "cancel" | "reschedule" | "handoff";
 
@@ -31,6 +32,8 @@ export async function logFunnelEvent(db: DbClient, clinicId: string, event: Funn
     contact_phone: event.phone,
     contact_id: event.contactId,
     metadata: (event.metadata ?? {}) as NonNullable<Json>,
+    // Coluna própria (M2 das Métricas): "marcações que seguem de pé".
+    appointment_id: typeof event.metadata?.appointment_id === "string" ? event.metadata.appointment_id : null,
     occurred_at: now.toISOString(),
   });
   if (error) logError("funil: erro ao gravar evento", error, { clinica: clinicId, fluxo: event.flow, etapa: event.step });

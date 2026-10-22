@@ -28,7 +28,7 @@ import { listAgendas } from "../../lib/data/config/agendas";
 import { byOrigin, financial, listFrequentNoShows, listMetricsRows, noShowByCategory, overview, ownAgendaIds, volumeByService } from "../../lib/data/metrics";
 import { getContact, getPatient, listContactPatients, searchContacts, searchPatients } from "../../lib/data/patients";
 import { metricsScope, type FeatureKey } from "../../lib/features";
-import { buildFunnelReport, listFunnelEvents } from "../../lib/data/botFunnel";
+import { buildFunnelReportFromSessions, listFunnelSessions } from "../../lib/data/botFunnel";
 import { INVALID_PERIOD_MESSAGES, PERIOD_PRESETS, parsePeriod } from "../../lib/metricsPeriod";
 import { formatCentsBRL } from "../../lib/money";
 import { formatPhoneBR } from "../../lib/phone";
@@ -83,7 +83,7 @@ const botTab = !!tab && BOT_TABS.includes(tab);
 const filterPhone = filterPatient
   ? (await getContact(db, clinic.clinicId, filterPatient.contactId).catch(() => null))?.phone ?? null
   : (filterContact?.phone ?? null);
-const funnel = botTab ? buildFunnelReport(await listFunnelEvents(db, clinic.clinicId, period.start, period.end, filterPhone), period.start, period.end, now) : null;
+const funnel = botTab ? buildFunnelReportFromSessions(await listFunnelSessions(db, clinic.clinicId, period.start, period.end, filterPhone), now) : null;
 const RECALL_LIMIT = 50;
 const recall = tab === "retomar_contato" && funnel ? funnel.incomplete.slice(0, RECALL_LIMIT) : [];
 const recallContacts =

@@ -165,6 +165,14 @@ describe("bot: marcar consulta (número novo)", () => {
       "patient_identified",
       "link_sent",
     ]);
+    // M3 das Métricas: o passo do link guarda o serviço e a agenda.
+    const { data: linkStep } = await adminClient()
+      .from("bot_funnel_events")
+      .select("metadata")
+      .eq("session_id", link.funnel_session_id!)
+      .eq("step", "link_sent")
+      .single();
+    expect(linkStep!.metadata).toEqual({ booking_link_id: link.id, service_id: f.ids.consulta, agenda_id: f.ids.agendaDra });
 
     // Respostas registradas com o texto que o paciente vê.
     const { data: outbound } = await adminClient()

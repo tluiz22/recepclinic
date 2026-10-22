@@ -403,7 +403,7 @@ async function rescheduleLink(b: Bot, ctx: ManageContext, appointment: ManagedAp
       b.now,
     );
     await say(b, "bot_reschedule_link", t.rescheduleLink(words(appointment).phrase, appointment.patientName, `${b.sender.baseUrl}${bookingPath(link.id)}`));
-    await end(b, "link_sent", { booking_link_id: link.id });
+    await end(b, "link_sent", { booking_link_id: link.id, service_id: appointment.serviceId, agenda_id: appointment.agendaId });
   } catch (error) {
     logError("bot: link de remarcação", error, { clinica: b.clinicId });
     await say(b, "bot_reschedule_link_error", t.linkError(b.clinic.designation));

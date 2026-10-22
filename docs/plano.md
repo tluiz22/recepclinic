@@ -2703,6 +2703,36 @@ consulta de origem (`origin_appointment_id`); a taxa de retorno no prazo depende
   remarcação com de/para, massa uma vez só, comparecimento repetido e correção, mudança recusada sem evento, turma);
   `npm run test:db` 547 passando, `npm test` 576, `astro check` sem erros.
 
+**M2 e M3 implementadas e publicadas no staging em 22/out** (migração `20261022130000_metricas_contas.sql`):
+- Funções de leitura `security invoker` (o RLS vale: clínica e, para o Profissional, só as próprias agendas), com
+  dias no fuso da clínica e filtros de agenda, serviço e local: `metrics_activity` (por dia: criados por canal e os
+  já cancelados, retornos marcados, remarcações pela trilha por paciente/equipe/lista de espera, cancelamentos pela
+  data do cancelamento por paciente/clínica/massa), `metrics_attendance` (por dia, serviço e local: com data no
+  período, cancelados, compareceu, faltou, sem registro já passados e futuros), `metrics_reminders` (um desfecho por
+  atendimento: confirmou, pediu remarcar, pediu cancelar, não entregue, aguardando, sem resposta, cancelado sem
+  toque e sem lembrete, cruzado com a situação), `metrics_return_rights` (consultas realizadas com direito a
+  retorno: prazo terminado no período ou aberto agora, com retorno ligado e com consulta/retorno futuro) e
+  `metrics_bot_sessions` (cada tentativa resumida: primeiro registro de cada passo, última falha ao confirmar e o
+  atendimento ligado com a situação). `metrics_funnel_write_failures` (security definer) devolve só a contagem das
+  falhas ao gravar o funil que já iam para Administração › Erros, e só para quem é da clínica.
+- Regras de leitura decididas na implementação (sem mudar as decisões do cliente): lembrete pela última tentativa e
+  o toque depois dela (como o Resumo do Dia); atendimento cancelado sem toque fica fora da conta dos lembretes;
+  retorno: o maior prazo dos serviços de Retorno da agenda; agenda com Retorno sem prazo fica fora (o prazo nunca
+  termina); só a última consulta do paciente na agenda conta (como o botão "Marcar retorno").
+- `bot_funnel_events.appointment_id` como coluna (FK, `on delete set null`), preenchida a partir do JSON nas linhas
+  antigas (no staging, as 28 que tinham o id) e gravada pelo funil daqui em diante.
+- M3 no bot: o passo "recebeu o link" grava `service_id` e `agenda_id`; o pedido de recepção (e a recepção que
+  assume) grava `journey_session_id` e `journey_state` (a tentativa e a etapa da conversa).
+- Código: `src/lib/data/performance.ts` (leitura e indicadores do Desempenho), `src/lib/metricsRules.ts` (base mínima
+  de 20, comparação com o mesmo período do mês anterior, dias e semanas) e `botFunnel.ts` lendo as tentativas já
+  resumidas (`listFunnelSessions`; a aba Funil do bot atual passou a usar). A tela nova vem na M4 e na M5.
+- Testes: `tests/db/metricas-contas.test.ts` (cenário com resultado conhecido: criados, remarcar não soma,
+  cancelados à parte, filtro de serviço, comparecimento sem cancelados e sem registro, lembretes com toque antes da
+  última tentativa e "sem resposta" só depois do horário, retornos no prazo e oportunidade, Profissional só na
+  própria agenda, outra clínica sem nada, tentativa resumida com o atendimento, contagem das falhas só para a
+  clínica), `metricsRules.test.ts` e `performance.test.ts`; `npm run test:db` 556, `npm test` 592, `astro check` sem
+  erros.
+
 ---
 
 ## Depois do 1º piloto (já previsto no banco)

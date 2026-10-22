@@ -662,7 +662,8 @@ async function finish(b: Bot, ctx: BookingContext, patient: Candidate): Promise<
     );
     const url = `${b.sender.baseUrl}${bookingPath(link.id)}`;
     await say(b, "bot_booking_link", textFor(b, "booking_link", t.bookingLink(service.name, patient.name, url), { servico: service.name, paciente: patient.name, link: url }));
-    await end(b, "link_sent", { booking_link_id: link.id });
+    // Serviço e agenda no passo (M3 das Métricas): o filtro por serviço e agenda no Agendamento digital.
+    await end(b, "link_sent", { booking_link_id: link.id, service_id: service.id, agenda_id: link.agendaId });
   } catch (error) {
     logError("bot: link de agendamento", error, { clinica: b.clinicId });
     await say(b, "bot_book_link_error", t.linkError(b.clinic.designation));

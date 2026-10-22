@@ -5,8 +5,9 @@ import type { FunnelFlow } from "./whatsapp/funnel";
 // Métricas › Funil do bot e Retomar contato (F6.7; Fases 15 e 23 do piloto,
 // cliente 05 e 07/out/2026), a partir de `bot_funnel_events`: cada tentativa
 // (sessão) com os passos que alcançou, no bot e na página /agendar. Etapas do
-// bot novo (F6.3/F6.4). Os passos não guardam a agenda: as abas valem para a
-// clínica toda (o filtro por paciente ou responsável vale, pelo telefone).
+// bot novo (F6.3/F6.4). Desde a M2 das Métricas (22/out/2026) o banco entrega
+// cada tentativa já resumida (`metrics_bot_sessions`: o primeiro registro de
+// cada passo e a última falha ao confirmar); as regras dos fluxos ficam aqui.
 
 export type FunnelEventRow = {
   sessionId: string;
@@ -178,7 +179,21 @@ const REASONS: Record<string, string> = {
 
 export const reasonLabel = (reason: unknown) => (typeof reason === "string" && reason ? (REASONS[reason] ?? reason) : "—");
 
-type Session = { sessionId: string; flow: FunnelFlow; phone: string; contactId: string | null; startedAt: Date; lastAt: Date; events: FunnelEventRow[] };
+/** Uma tentativa: os passos (o primeiro de cada um; a última falha ao confirmar no fim) e o atendimento ligado. */
+export type FunnelSession = {
+  sessionId: string;
+  flow: FunnelFlow;
+  phone: string;
+  contactId: string | null;
+  startedAt: Date;
+  lastAt: Date;
+  /** Iniciada dentro do período (as dos 2 dias seguintes só dizem quem concluiu depois). */
+  inPeriod: boolean;
+  events: FunnelEventRow[];
+  appointmentId: string | null;
+  appointmentStatus: string | null;
+};
+type Session = FunnelSession;
 
 export type Outcome = "concluded" | "abandoned" | "blocked" | "declined" | "error" | "in_progress";
 
@@ -208,20 +223,29 @@ export type FunnelReport = {
   incomplete: Incomplete[];
 };
 
-function group(events: FunnelEventRow[]): Session[] {
+/** Passos soltos → tentativas iniciadas em [start, end) ou depois (como o banco resume; usado nos testes). */
+export function groupEvents(events: FunnelEventRow[], start: Date, end: Date): FunnelSession[] {
   const byId = new Map<string, Session>();
-  for (const e of events) {
+  for (const e of [...events].sort((a, b) => a.occurredAt.getTime() - b.occurredAt.getTime())) {
     let s = byId.get(e.sessionId);
     if (!s) {
-      s = { sessionId: e.sessionId, flow: e.flow, phone: e.phone, contactId: e.contactId, startedAt: e.occurredAt, lastAt: e.occurredAt, events: [] };
+      s = { sessionId: e.sessionId, flow: e.flow, phone: e.phone, contactId: e.contactId, startedAt: e.occurredAt, lastAt: e.occurredAt, inPeriod: false, events: [], appointmentId: null, appointmentStatus: null };
       byId.set(e.sessionId, s);
     }
     s.events.push(e);
-    if (e.occurredAt < s.startedAt) s.startedAt = e.occurredAt;
     if (e.occurredAt > s.lastAt) s.lastAt = e.occurredAt;
     s.contactId ??= e.contactId;
+    if (typeof e.metadata.appointment_id === "string") s.appointmentId = e.metadata.appointment_id;
   }
-  return [...byId.values()];
+  const sessions: Session[] = [];
+  for (const s of byId.values()) {
+    const first = s.events.find((e) => e.step === "started") ?? (s.flow === "handoff" ? s.events[0] : undefined);
+    if (!first || first.occurredAt < start) continue;
+    s.startedAt = first.occurredAt;
+    s.inPeriod = first.occurredAt < end;
+    sessions.push(s);
+  }
+  return sessions;
 }
 
 const find = (s: Session, step: string) => s.events.find((e) => e.step === step);
@@ -258,12 +282,12 @@ function detail(s: Session, outcome: Outcome): string {
  * passos posteriores (a página aberta depois do fim do período).
  */
 export function buildFunnelReport(events: FunnelEventRow[], start: Date, end: Date, now: Date = new Date()): FunnelReport {
-  const all = group(events);
-  const inPeriod = (s: Session) => {
-    const first = find(s, "started") ?? (s.flow === "handoff" ? s.events[0] : undefined);
-    return !!first && first.occurredAt >= start && first.occurredAt < end;
-  };
-  const sessions = all.filter(inPeriod);
+  return buildFunnelReportFromSessions(groupEvents(events, start, end), now);
+}
+
+/** O mesmo relatório, a partir das tentativas já resumidas pelo banco. */
+export function buildFunnelReportFromSessions(all: FunnelSession[], now: Date = new Date()): FunnelReport {
+  const sessions = all.filter((s) => s.inPeriod);
 
   const handoff = sessions.filter((s) => s.flow === "handoff");
   const tookOver = handoff.filter((s) => find(s, "agent_took_over"));
@@ -326,25 +350,37 @@ export function buildFunnelReport(events: FunnelEventRow[], start: Date, end: Da
   };
 }
 
-/** Passos das tentativas do período (e até 2 dias depois, para a página aberta mais tarde); só de um telefone, se filtrado. */
-export async function listFunnelEvents(db: DbClient, clinicId: string, start: Date, end: Date, phone: string | null = null): Promise<FunnelEventRow[]> {
-  let query = db
-    .from("bot_funnel_events")
-    .select("session_id, flow, step, source, contact_phone, contact_id, metadata, occurred_at")
-    .eq("clinic_id", clinicId)
-    .gte("occurred_at", start.toISOString())
-    .lt("occurred_at", new Date(end.getTime() + 2 * 24 * 60 * 60_000).toISOString())
-    .order("occurred_at")
-    .limit(20_000);
-  if (phone) query = query.eq("contact_phone", phone);
-  return unwrap(await query, "Funil do bot").map((r) => ({
-    sessionId: r.session_id,
-    flow: r.flow as FunnelFlow,
-    step: r.step,
-    source: r.source as "bot" | "web",
-    phone: r.contact_phone,
-    contactId: r.contact_id,
-    metadata: (r.metadata ?? {}) as Record<string, unknown>,
-    occurredAt: new Date(r.occurred_at),
-  }));
+/**
+ * Tentativas iniciadas no período (e nos 2 dias seguintes, para saber quem
+ * concluiu depois), já resumidas pelo banco; só de um telefone, se filtrado.
+ */
+export async function listFunnelSessions(db: DbClient, clinicId: string, start: Date, end: Date, phone: string | null = null): Promise<FunnelSession[]> {
+  const rows = unwrap(
+    await db.rpc("metrics_bot_sessions", { p_clinic_id: clinicId, p_start: start.toISOString(), p_end: end.toISOString() }),
+    "Agendamento digital",
+  );
+  return rows
+    .filter((r) => !phone || r.contact_phone === phone)
+    .map((r) => {
+      const base = { sessionId: r.session_id, flow: r.flow as FunnelFlow, phone: r.contact_phone, contactId: r.contact_id };
+      const steps = (r.steps ?? []) as { step: string; metadata: Record<string, unknown> | null; source: string; at: string }[];
+      const events: FunnelEventRow[] = steps.map((e) => ({
+        ...base,
+        step: e.step,
+        source: e.source === "web" ? "web" : "bot",
+        metadata: e.metadata ?? {},
+        occurredAt: new Date(e.at),
+      }));
+      // A última falha ao confirmar (o motivo que conta), depois dos primeiros passos.
+      if (r.last_failure) events.push({ ...base, step: "confirm_failed", source: "web", metadata: r.last_failure as Record<string, unknown>, occurredAt: new Date(r.last_at) });
+      return {
+        ...base,
+        startedAt: new Date(r.started_at),
+        lastAt: new Date(r.last_at),
+        inPeriod: r.in_period,
+        events,
+        appointmentId: r.appointment_id,
+        appointmentStatus: r.appointment_status,
+      };
+    });
 }
