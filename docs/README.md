@@ -221,7 +221,11 @@
 >   (o cliente rodou o PATCH `mailer_otp_exp` da API do Supabase com o login da CLI, porque o painel estava fora por um
 >   incidente); **na produção, o mesmo ajuste**. Envio da recuperação conferido (e-mail chegou, 22/out). Para testar
 >   convites: e-mail com "+" (`nome+teste1@gmail.com`). **Validado pelo cliente em 22/out** (recuperação e convite).
->   **Retomar daqui (próxima sessão):** o cliente traz novos casos para avaliar. Em paralelo, aguardar a Meta (Análise do App até ~29/out).
+>   **Funil do bot descrito (22/out):** objetivo, dados e forma de apresentação no
+>   [documento](https://claude.ai/artifact/6Rf7vVEpV2u7tZE8jU1BZx), a pedido do cliente.
+>   **Retomar daqui (próxima sessão, depois de 22/out):** planejar com o cliente o **redesign do Funil do bot** (e da
+>   aba vizinha Retomar contato, que usa os mesmos dados), partindo do documento acima: proposta → aprovação →
+>   implementação. Em paralelo, aguardar a Meta (Análise do App até ~29/out).
 >   **App antigo da Meta (cliente, 20/out):** o piloto está desativado e o número do app "Consultório Dra. Ana Karina" é
 >   do cliente; o app antigo foi excluído pelo cliente (20/out) e o número entra no portfólio RecepClinic para uma 2ª clínica de
 >   testes do staging quando o aparelho estiver com ele (precisa do SMS). Regra revista no `CLAUDE.md`.
