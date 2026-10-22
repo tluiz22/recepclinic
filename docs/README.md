@@ -223,9 +223,12 @@
 >   convites: e-mail com "+" (`nome+teste1@gmail.com`). **Validado pelo cliente em 22/out** (recuperação e convite).
 >   **Funil do bot descrito (22/out):** objetivo, dados e forma de apresentação no
 >   [documento](https://claude.ai/artifact/6Rf7vVEpV2u7tZE8jU1BZx), a pedido do cliente.
->   **Retomar daqui (próxima sessão, depois de 22/out):** planejar com o cliente o **redesign do Funil do bot** (e da
->   aba vizinha Retomar contato, que usa os mesmos dados), partindo do documento acima: proposta → aprovação →
->   implementação. Em paralelo, aguardar a Meta (Análise do App até ~29/out).
+>   **Redesign das Métricas (22/out):** o pedido cresceu do Funil do bot para as Métricas inteiras. Proposta no
+>   [canvas](https://claude.ai/artifact/XSZcqear3D3aBb2K2EVeyS) (abas Desempenho e Agendamento digital, estados,
+>   22 indicadores, plano M1 a M5); **direção e as 10 decisões aprovadas pelo cliente em 22/out** (seção "Redesign das
+>   Métricas" do [plano](plano.md)). **Retomar daqui:** implementar a **M1** (trilha do atendimento na mesma
+>   transação e índices), depois de conferir o `origin_appointment_id` dos retornos do painel; uma etapa por vez.
+>   Em paralelo, aguardar a Meta (Análise do App até ~29/out).
 >   **App antigo da Meta (cliente, 20/out):** o piloto está desativado e o número do app "Consultório Dra. Ana Karina" é
 >   do cliente; o app antigo foi excluído pelo cliente (20/out) e o número entra no portfólio RecepClinic para uma 2ª clínica de
 >   testes do staging quando o aparelho estiver com ele (precisa do SMS). Regra revista no `CLAUDE.md`.

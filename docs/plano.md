@@ -2646,6 +2646,43 @@ em 21/out; banco local de volta ao seed; sem migração.
 
 ---
 
+## Redesign das Métricas (proposta aprovada em 22/out/2026)
+
+Proposta completa no [canvas](https://claude.ai/artifact/XSZcqear3D3aBb2K2EVeyS): telas das duas áreas no
+computador e no celular (dados fictícios), 9 estados, diagnóstico, inventário dos dados, matriz de 22 indicadores
+(classes 1 a 4), plano M1 a M5, critérios de aceite, riscos e decisões. **Direção aprovada pelo cliente em
+22/out; nada implementado ainda.**
+
+**Arquitetura:** Métricas com as abas **Desempenho** (junta Visão geral e Atendimentos), **Agendamento digital**
+(substitui o Funil do bot: funil consolidado nas 5 etapas comuns de marcar, desfechos, tabela por operação com as
+etapas na linha, motivos, erros e recepção no WhatsApp), **Retomar contato** (fica, com a quantidade na aba),
+**Faltosos** (fica) e **Financeiro** (fica, fora deste redesign). Sem tela própria para o detalhamento operacional:
+"Precisa de atenção" (até 3 itens) no topo de cada aba e motivos e erros dentro do Agendamento digital.
+
+**Decisões do cliente (22/out), uma a uma:**
+1. Nome da aba: **"Agendamento digital"**.
+2. Visão geral e Atendimentos viram **"Desempenho"**, com **um item só na matriz**; a migração mantém liberado o
+   que cada clínica tem hoje.
+3. A tela abre em **"Este mês"** (antes, "Hoje").
+4. Série: **cada ocorrência conta** como agendamento criado.
+5. Lembrete passa a **"sem resposta" no horário do atendimento** (até lá, "aguardando"); as 2h continuam só para
+   o botão "Reenviar".
+6. "Agendamentos criados" **inclui os cancelados depois**, mostrados à parte.
+7. O filtro por paciente ou responsável **sai das abas de indicadores** (continua nas listas).
+8. Comparação **ligada**, contra o **mesmo período (quantidade de dias) do mês anterior**, sempre escrito na tela
+   (ex.: "289 de 1 a 22/set (mesmos 22 dias)").
+9. Taxa em % e seta de comparação só com **base de 20 ou mais**; abaixo, "X de Y".
+10. **M3 entra agora**, junto com a M2.
+
+**Plano:** M1 (banco: trilha do atendimento na mesma transação e índices), M2 (contas em funções do banco com
+`security invoker`; `appointment_id` como coluna em `bot_funnel_events`; falha ao gravar passo vai para Erros),
+M3 (bot: serviço e agenda no passo do link; tentativa, fluxo e etapa no pedido de recepção), M4 (aba Desempenho,
+gráficos em SVG gerado no servidor, filtros de serviço e local, migração da matriz), M5 (Agendamento digital,
+estados, celular e teste de interface). **A conferir antes da M2:** se todo retorno marcado pelo painel guarda a
+consulta de origem (`origin_appointment_id`); a taxa de retorno no prazo depende disso.
+
+---
+
 ## Depois do 1º piloto (já previsto no banco)
 
 - **Convênios (D10):** telas de planos atendidos e exceções por profissional; plano no cadastro do
