@@ -1,6 +1,6 @@
 # RecepClinic
 
-> **Estado atual (retomar daqui), 20/out/2026**
+> **Estado atual (retomar daqui), 22/out/2026**
 >
 > - **Etapas 0 a 4 concluídas**: cópia isolada, [diagnóstico](diagnostico.md), [limites](limites.md),
 >   [arquitetura](arquitetura.md) (decisões D1–D11) e [plano](plano.md) (fases F0–F10).
@@ -226,10 +226,11 @@
 >   **Redesign das Métricas (22/out):** o pedido cresceu do Funil do bot para as Métricas inteiras. Proposta no
 >   [canvas](https://claude.ai/artifact/XSZcqear3D3aBb2K2EVeyS) (abas Desempenho e Agendamento digital, estados,
 >   22 indicadores, plano M1 a M5); **direção e as 10 decisões aprovadas pelo cliente em 22/out** (seção "Redesign das
->   Métricas" do [plano](plano.md)). **Retomar daqui (próxima sessão):** **antes de começar, o cliente passa novas
->   instruções para a implementação de cada etapa**; só depois implementar a **M1** (trilha do atendimento na mesma
->   transação e índices), depois de conferir o `origin_appointment_id` dos retornos do painel; uma etapa por vez.
->   Em paralelo, aguardar a Meta (Análise do App até ~29/out).
+>   Métricas" do [plano](plano.md)). **Instruções novas do cliente recebidas em 22/out:** implementar o redesign
+>   inteiro, **M1 a M5 sem parar**, cada etapa publicada no staging ao terminar; o cliente **valida tudo no fim**.
+>   **M1 (trilha na mesma transação, por gatilho, e índices) implementada e publicada no staging em 22/out**
+>   (migração `20261022120000_metricas_trilha.sql`; `origin_appointment_id` conferido: confiável). **Retomar daqui:**
+>   M2 e M3 (contas no banco e dados novos do bot), depois M4 e M5. Em paralelo, aguardar a Meta (Análise do App até ~29/out).
 >   **App antigo da Meta (cliente, 20/out):** o piloto está desativado e o número do app "Consultório Dra. Ana Karina" é
 >   do cliente; o app antigo foi excluído pelo cliente (20/out) e o número entra no portfólio RecepClinic para uma 2ª clínica de
 >   testes do staging quando o aparelho estiver com ele (precisa do SMS). Regra revista no `CLAUDE.md`.

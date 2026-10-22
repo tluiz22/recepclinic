@@ -298,7 +298,7 @@ describe("acesso pela agenda (D6 revista)", () => {
       .eq("agenda_id", a.agendaAna)
       .limit(1)
       .single();
-    await link("appointment_events", { clinic_id: clinicA, appointment_id: anaAppointment!.id, event_type: "created", channel: "admin" });
+    // O "created" já vem do gatilho da marcação (M1 das Métricas).
 
     const { data: fromJoao } = await drJoao.client.from("appointment_events").select("id").eq("appointment_id", anaAppointment!.id);
     expect(fromJoao).toEqual([]);

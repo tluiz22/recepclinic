@@ -308,12 +308,10 @@ begin
   insert into public.waitlist_offers (clinic_id, entry_id, appointment_id, opening_id, opened_by_appointment_id, slot_scheduled_at, slot_location_id, slot_duration_minutes, expires_at)
     values (c_a, e_waiting, ap_waiting, op_id, ap_canceled, (monday + 2 + time '09:00') at time zone tz, l_office, 30, now() + interval '60 minutes');
 
+  -- Marcado e cancelado já vêm do gatilho da tabela (M1 das Métricas).
   insert into public.appointment_events (clinic_id, appointment_id, event_type, actor_id, channel, details) values
-    (c_a, ap_first, 'created', null, 'whatsapp_bot', '{}'),
     (c_a, ap_first, 'presence_confirmed', null, 'whatsapp_bot', '{}'),
-    (c_a, ap_canceled, 'canceled', null, 'whatsapp_bot', '{}'),
-    (c_a, ap_waiting, 'waitlist_joined', null, 'whatsapp_bot', '{}'),
-    (c_a, ap_session, 'created', u_a_rec, 'admin', '{}');
+    (c_a, ap_waiting, 'waitlist_joined', null, 'whatsapp_bot', '{}');
 
   -- WhatsApp (conexão fictícia; o token vai para o cofre).
   insert into public.whatsapp_connections (clinic_id, phone_number_id, waba_id, display_phone, status, connected_at)

@@ -2681,6 +2681,28 @@ gráficos em SVG gerado no servidor, filtros de serviço e local, migração da 
 estados, celular e teste de interface). **A conferir antes da M2:** se todo retorno marcado pelo painel guarda a
 consulta de origem (`origin_appointment_id`); a taxa de retorno no prazo depende disso.
 
+**Andamento (cliente, 22/out):** instruções novas para a implementação do redesign inteiro; o cliente escolheu
+**seguir da M1 à M5 sem parar**, publicando cada etapa no staging ao terminar, e **validar tudo no fim**.
+
+**M1 implementada e publicada no staging em 22/out** (migração `20261022120000_metricas_trilha.sql`):
+- Marcar, remarcar, cancelar e registrar o comparecimento gravam a trilha **no gatilho da tabela**
+  (`zz_appointments_stash_trail` antes e `zz_appointments_record_trail` depois), na mesma transação da mudança: se a
+  mudança falha, não fica evento; se o evento falha, a mudança não acontece. Saiu o `logTrail` solto desses casos (o
+  da presença, da lista de espera e das mensagens continua).
+- O que a linha não diz sozinha (canal fino: link, rotina, massa, bloqueio; "antecipado pela lista de espera"; quem
+  registrou o comparecimento; o motivo da anonimização) vai na própria mudança, na coluna `trail_context`, que o
+  gatilho limpa (nunca fica gravada). As funções das turmas ganharam o parâmetro opcional `p_trail`; a carga e a
+  anonimização deixaram de gravar o próprio evento (sem repetição). Os instantes de "de/para" seguem o formato de antes.
+- Índices: `appointments (clinic_id, created_at)` e `(clinic_id, canceled_at)`, `appointment_events (clinic_id,
+  event_type, occurred_at)`, `whatsapp_messages (clinic_id, message_type, created_at)` e `bot_funnel_events
+  (clinic_id, occurred_at)`. Nenhuma tabela nova, nada removido, nenhum dado alterado.
+- **Conferido no staging (só leitura):** dos 11 retornos, 9 guardam a consulta de origem; os 2 sem origem são um da
+  carga da implantação e um marcado quando a única consulta do paciente estava cancelada (sem direito, regra certa).
+  A taxa de retorno no prazo pode usar `origin_appointment_id`.
+- Testes: `tests/db/metricas-trilha.test.ts` (7 casos: um evento por mudança, canal fino, contexto nunca gravado,
+  remarcação com de/para, massa uma vez só, comparecimento repetido e correção, mudança recusada sem evento, turma);
+  `npm run test:db` 547 passando, `npm test` 576, `astro check` sem erros.
+
 ---
 
 ## Depois do 1º piloto (já previsto no banco)

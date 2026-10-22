@@ -133,7 +133,21 @@ export type TrailEvent =
   | "guidance_resent"
   | "rebooking_dismissed";
 
-/** Grava na trilha; falha só vai para o log (não desfaz a ação já feita). */
+/**
+ * Contexto da trilha das mudanças que o próprio banco registra (M1 das
+ * Métricas, 22/out/2026): marcar, remarcar, cancelar e registrar o
+ * comparecimento gravam o evento no gatilho da tabela, na mesma transação.
+ * Aqui vai só o que a linha não diz sozinha (canal fino, evento, quem fez).
+ */
+export function trailContext(ctx: { channel?: TrailChannel; event?: TrailEvent; actor?: string | null }): { channel?: TrailChannel; event?: TrailEvent; actor?: string } | null {
+  const out: { channel?: TrailChannel; event?: TrailEvent; actor?: string } = {};
+  if (ctx.channel) out.channel = ctx.channel;
+  if (ctx.event) out.event = ctx.event;
+  if (ctx.actor) out.actor = ctx.actor;
+  return Object.keys(out).length ? out : null;
+}
+
+/** Grava na trilha os demais eventos; falha só vai para o log (não desfaz a ação já feita). */
 export async function logTrail(
   db: DbClient,
   clinicId: string,
@@ -431,6 +445,7 @@ export async function bookAppointment(db: DbClient, clinicId: string, input: Boo
       p_patient_id: input.patientId,
       p_scheduled_at: input.start.toISOString(),
       p_booking_channel: input.channel,
+      p_trail: trailContext({ channel: input.trailChannel }),
     });
     if (error) {
       const message = (error as { message?: string }).message ?? "";
@@ -460,6 +475,7 @@ export async function bookAppointment(db: DbClient, clinicId: string, input: Boo
       origin_appointment_id: origin?.id ?? null,
       home_visit_address: isHomeVisit ? homeVisitAddress : null,
       created_by: input.actorId,
+      trail_context: trailContext({ channel: input.trailChannel }),
     });
     if (error) {
       if ((error as { code?: string }).code === "23P01") {
@@ -468,8 +484,6 @@ export async function bookAppointment(db: DbClient, clinicId: string, input: Boo
       throw fromDbError(error, "Atendimento");
     }
   }
-
-  await logTrail(db, clinicId, id, "created", input.trailChannel ?? input.channel, input.actorId);
 
   // Links de agendamento pendentes do mesmo serviço perdem a validade (piloto, Fase 12).
   const { error: linkError } = await db
@@ -537,6 +551,7 @@ export async function rescheduleAppointment(
       p_appointment_id: id,
       p_scheduled_at: input.start.toISOString(),
       p_channel: input.channel,
+      p_trail: trailContext({ channel: input.trailChannel, event: input.trailEvent }),
     });
     if (error) {
       const message = (error as { message?: string }).message ?? "";
@@ -561,6 +576,7 @@ export async function rescheduleAppointment(
         rescheduled_via: input.channel,
         rescheduled_by: input.actorId,
         ...PRESENCE_RESET,
+        trail_context: trailContext({ channel: input.trailChannel, event: input.trailEvent }),
       })
       .eq("clinic_id", clinicId)
       .eq("id", id)
@@ -573,10 +589,6 @@ export async function rescheduleAppointment(
     unwrapOne({ data, error }, "Atendimento");
   }
 
-  await logTrail(db, clinicId, id, input.trailEvent ?? "rescheduled", input.trailChannel ?? input.channel, input.actorId, {
-    from: current.scheduledAt.toISOString(),
-    to: input.start.toISOString(),
-  });
   return getAppointment(db, clinicId, id);
 }
 
@@ -612,6 +624,7 @@ export async function cancelAppointment(
         canceled_via: input.channel,
         canceled_by: input.actorId,
         mass_canceled: input.massCanceled ?? false,
+        trail_context: trailContext({ channel: input.trailChannel }),
       })
       .eq("clinic_id", clinicId)
       .eq("id", id)
@@ -621,7 +634,6 @@ export async function cancelAppointment(
     "Atendimento",
   );
   if (!row) return null;
-  await logTrail(db, clinicId, id, "canceled", input.trailChannel ?? input.channel, input.actorId);
   return toAppointment(row);
 }
 
@@ -681,21 +693,16 @@ export async function recordAttendance(
   if (status !== "completed" && status !== "no_show") throw new DataError("invalid", "Atendimento: situação inválida", { status: "Situação inválida" });
   const before = await getAppointment(db, clinicId, id);
   if (before.status === "canceled") throw new DataError("invalid", "Atendimento: cancelado não recebe presença", { status: "Atendimento cancelado" });
+  // A trilha (registro ou correção) sai do gatilho do banco, só se mudou.
   const row = unwrapOne(
-    await db.from("appointments").update({ status }).eq("clinic_id", clinicId).eq("id", id).select(COLUMNS).maybeSingle(),
+    await db
+      .from("appointments")
+      .update({ status, trail_context: trailContext({ actor: actorId }) })
+      .eq("clinic_id", clinicId)
+      .eq("id", id)
+      .select(COLUMNS)
+      .maybeSingle(),
     "Atendimento",
   );
-  if (before.status !== status) {
-    const isCorrection = before.status === "completed" || before.status === "no_show";
-    await logTrail(
-      db,
-      clinicId,
-      id,
-      isCorrection ? "attendance_corrected" : "attendance_recorded",
-      "admin",
-      actorId,
-      isCorrection ? { from: before.status, to: status } : { status },
-    );
-  }
   return toAppointment(row);
 }

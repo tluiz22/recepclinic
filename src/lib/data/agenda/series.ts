@@ -3,7 +3,7 @@ import { isNationalHoliday } from "../../holidays";
 import type { Enums } from "../../supabase/database.types";
 import type { DbClient } from "../clients";
 import { DataError, fromDbError, unwrap, unwrapOne, Validation } from "../errors";
-import { cancelAppointment, getAppointment, logTrail, type Appointment, type TrailChannel } from "./appointments";
+import { cancelAppointment, getAppointment, trailContext, type Appointment, type TrailChannel } from "./appointments";
 import { loadClinicHolidays, loadSchedulingPlan } from "./slots";
 import { hasFeature } from "../features";
 import { logError } from "../../log";
@@ -226,13 +226,13 @@ async function generateSessions(
         insurance_plan_id: series.insurancePlanId,
         home_visit_address: series.homeVisitAddress,
         created_by: actorId,
+        trail_context: trailContext({ channel: trailChannel }),
       });
       if (error) {
         if ((error as { code?: string }).code !== "23P01") throw fromDbError(error, "Sessão da série");
         reason = "conflict";
       } else {
         count += 1;
-        await logTrail(db, clinicId, id, "created", trailChannel, actorId);
         result.created.push(await getAppointment(db, clinicId, id));
       }
     }
