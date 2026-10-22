@@ -2803,7 +2803,7 @@ ajustes, se houver.
 - Fora do redesign, como decidido: ocupação da agenda, "retorno indicado pelo profissional" e vagas reaproveitadas
   pela lista de espera.
 
-**Tempo das Métricas (medido e corrigido em 22/out, publicado no staging):**
+**Tempo das Métricas (medido e corrigido em 22/out, publicado no staging e validado pelo cliente em 22/out):**
 - Medição no banco local com 66.522 atendimentos no ano (`scripts/metricas-volume-local.sql`, só local, cerca de 30
   min para gerar) e `scripts/medir-metricas-local.mjs` (login do Administrador, as mesmas chamadas da tela).
 - Achados: (1) o RLS conferia o acesso em cada linha (agenda de cada atendimento, clínica de cada mensagem, o

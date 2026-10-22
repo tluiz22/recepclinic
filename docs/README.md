@@ -244,7 +244,7 @@
 >   ano no local): RLS linha a linha e o corte de 1000 linhas da API; contas com o acesso conferido na entrada (decisão
 >   do cliente), Financeiro e Faltosos também no banco; com o ano inteiro, todas as abas abaixo de 0,6 s (Desempenho
 >   era 8 s, Financeiro 107 s); migração `20261023130000_metricas_acesso_na_entrada.sql` aplicada e **publicado no
->   staging em 22/out**; o cliente confere as 5 abas lá (detalhes no [plano](plano.md)).
+>   staging em 22/out** e **validado pelo cliente em 22/out** (detalhes no [plano](plano.md)).
 >   Banco local com os dados fictícios das Métricas (`npm run db:reset` limpa). Em paralelo,
 >   aguardar a Meta (Análise do App até ~29/out).
 >   **App antigo da Meta (cliente, 20/out):** o piloto está desativado e o número do app "Consultório Dra. Ana Karina" é
