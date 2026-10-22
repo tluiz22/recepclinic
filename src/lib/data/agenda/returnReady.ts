@@ -1,6 +1,6 @@
 import { localDateOf, todayIn } from "../../clinicTime";
 import type { DbClient } from "../clients";
-import { unwrap } from "../errors";
+import { unwrap, unwrapAllIn } from "../errors";
 import { findBlockingAppointment, listUpcomingAppointments, returnLastDate } from "./appointments";
 import type { AgendaAppointment } from "./view";
 
@@ -55,24 +55,29 @@ export async function listReturnReady(
   const patientIds = [...new Set(candidates.map((a) => a.patientId))];
   const agendaIds = [...new Set(candidates.map((a) => a.agendaId))];
   const [latestRows, usedRows, upcoming] = await Promise.all([
-    db
-      .from("appointments")
-      .select("id, patient_id, agenda_id, services!inner ( category )")
-      .eq("clinic_id", clinicId)
-      .in("patient_id", patientIds)
-      .in("agenda_id", agendaIds)
-      .eq("services.category", "consultation")
-      .in("status", ["completed", "scheduled", "confirmed"])
-      .lte("scheduled_at", now.toISOString())
-      .order("scheduled_at", { ascending: false })
-      .then((r) => unwrap(r, "Últimas consultas") as unknown as { id: string; patient_id: string; agenda_id: string }[]),
-    db
-      .from("appointments")
-      .select("origin_appointment_id")
-      .eq("clinic_id", clinicId)
-      .in("origin_appointment_id", candidates.map((a) => a.id))
-      .neq("status", "canceled")
-      .then((r) => unwrap(r, "Retornos das consultas")),
+    unwrapAllIn(
+      patientIds,
+      (chunk, from, to) =>
+        db
+          .from("appointments")
+          .select("id, patient_id, agenda_id, services!inner ( category )")
+          .eq("clinic_id", clinicId)
+          .in("patient_id", chunk)
+          .in("agenda_id", agendaIds)
+          .eq("services.category", "consultation")
+          .in("status", ["completed", "scheduled", "confirmed"])
+          .lte("scheduled_at", now.toISOString())
+          .order("scheduled_at", { ascending: false })
+          .order("id")
+          .range(from, to),
+      "Últimas consultas",
+    ).then((rows) => rows as unknown as { id: string; patient_id: string; agenda_id: string }[]),
+    unwrapAllIn(
+      candidates.map((a) => a.id),
+      (chunk, from, to) =>
+        db.from("appointments").select("origin_appointment_id").eq("clinic_id", clinicId).in("origin_appointment_id", chunk).neq("status", "canceled").order("id").range(from, to),
+      "Retornos das consultas",
+    ),
     listUpcomingAppointments(db, clinicId, patientIds, now),
   ]);
 

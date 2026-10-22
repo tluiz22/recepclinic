@@ -1,7 +1,7 @@
 import { isCalendarDate } from "../clinicTime";
 import type { DbClient } from "./clients";
 import type { AppointmentStatus } from "./agenda/appointments";
-import { cleanText, unwrap, unwrapOne, Validation } from "./errors";
+import { cleanText, unwrap, unwrapAllIn, unwrapOne, Validation } from "./errors";
 import { effectivePayer, FINANCE_MESSAGES, getContactCpf, getPatientFinance, type Payer } from "./finance";
 import type { Contact, Patient } from "./patients";
 import { normalizeCpf } from "../cpf";
@@ -144,15 +144,20 @@ export async function listPaymentStates(
 ): Promise<Map<string, PaymentState>> {
   if (!appointmentIds.length) return new Map();
   const [paid, prices] = await Promise.all([
-    db.from("payments").select("appointment_id, amount_cents").eq("clinic_id", clinicId).in("appointment_id", appointmentIds).is("deleted_at", null),
-    db.from("appointments").select("id, price_cents").eq("clinic_id", clinicId).in("id", appointmentIds),
+    unwrapAllIn(
+      appointmentIds,
+      (chunk, from, to) =>
+        db.from("payments").select("appointment_id, amount_cents").eq("clinic_id", clinicId).in("appointment_id", chunk).is("deleted_at", null).order("id").range(from, to),
+      "Pagamentos",
+    ),
+    unwrapAllIn(appointmentIds, (chunk, from, to) => db.from("appointments").select("id, price_cents").eq("clinic_id", clinicId).in("id", chunk).order("id").range(from, to), "Atendimentos"),
   ]);
   const totals = new Map<string, number>();
-  for (const row of unwrap(paid, "Pagamentos") as { appointment_id: string; amount_cents: number }[]) {
+  for (const row of paid as { appointment_id: string; amount_cents: number }[]) {
     totals.set(row.appointment_id, (totals.get(row.appointment_id) ?? 0) + row.amount_cents);
   }
   const states = new Map<string, PaymentState>();
-  for (const row of unwrap(prices, "Atendimentos") as { id: string; price_cents: number | null }[]) {
+  for (const row of prices as { id: string; price_cents: number | null }[]) {
     states.set(row.id, paymentState(row.price_cents, totals.get(row.id) ?? 0));
   }
   return states;

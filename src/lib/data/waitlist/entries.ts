@@ -1,5 +1,5 @@
 import type { DbClient } from "../clients";
-import { DataError, fromDbError, unwrap } from "../errors";
+import { DataError, fromDbError, unwrap, unwrapAllIn } from "../errors";
 import { getAppointment, logTrail, type ActionChannel, type Appointment } from "../agenda/appointments";
 
 // Lista de espera para antecipar (Fase 25 do piloto), F3.7a: entrar, sair e
@@ -108,13 +108,10 @@ export async function endAsAdvanced(db: DbClient, clinicId: string, appointmentI
 /** Quais destes atendimentos estão na fila agora (selo da agenda, bot). */
 export async function activeWaitlistAppointmentIds(db: DbClient, clinicId: string, appointmentIds: string[]): Promise<Set<string>> {
   if (!appointmentIds.length) return new Set();
-  const rows = unwrap(
-    await db
-      .from("waitlist_entries")
-      .select("appointment_id")
-      .eq("clinic_id", clinicId)
-      .eq("status", "active")
-      .in("appointment_id", appointmentIds),
+  const rows = await unwrapAllIn(
+    appointmentIds,
+    (chunk, from, to) =>
+      db.from("waitlist_entries").select("appointment_id").eq("clinic_id", clinicId).eq("status", "active").in("appointment_id", chunk).order("id").range(from, to),
     "Lista de espera",
   );
   return new Set(rows.map((row) => row.appointment_id));

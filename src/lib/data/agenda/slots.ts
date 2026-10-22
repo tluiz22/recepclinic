@@ -2,7 +2,7 @@ import { addDays, dayBounds, localDateOf, localTimeOf, todayIn, toInstant, weekd
 import { isNationalHoliday } from "../../holidays";
 import type { Enums } from "../../supabase/database.types";
 import type { DbClient } from "../clients";
-import { unwrap, unwrapOne } from "../errors";
+import { unwrap, unwrapAll, unwrapOne } from "../errors";
 import { computeFreeSlots, type BusyInterval, type FreeSlot, type SlotWindow } from "./freeSlots";
 
 // Horários livres por agenda, serviço, local e dia (F3.6a), lidos com o login
@@ -135,18 +135,22 @@ export async function loadBusy(
   to: Date,
   ignoreAppointmentId?: string | null,
 ): Promise<BusyInterval[]> {
-  let appointmentsQuery = db
-    .from("appointments")
-    .select("scheduled_at, duration_minutes")
-    .eq("clinic_id", clinicId)
-    .eq("agenda_id", agendaId)
-    .in("status", ["scheduled", "confirmed"])
-    .gte("scheduled_at", new Date(from.getTime() - MAX_APPOINTMENT_SPAN_MS).toISOString())
-    .lt("scheduled_at", to.toISOString());
-  // Remarcar: o próprio atendimento não ocupa o horário que vai deixar.
-  if (ignoreAppointmentId) appointmentsQuery = appointmentsQuery.neq("id", ignoreAppointmentId);
+  // Em páginas: 60 dias de uma agenda cheia passam das 1000 linhas da API.
+  const appointmentsPage = (pageFrom: number, pageTo: number) => {
+    let query = db
+      .from("appointments")
+      .select("scheduled_at, duration_minutes")
+      .eq("clinic_id", clinicId)
+      .eq("agenda_id", agendaId)
+      .in("status", ["scheduled", "confirmed"])
+      .gte("scheduled_at", new Date(from.getTime() - MAX_APPOINTMENT_SPAN_MS).toISOString())
+      .lt("scheduled_at", to.toISOString());
+    // Remarcar: o próprio atendimento não ocupa o horário que vai deixar.
+    if (ignoreAppointmentId) query = query.neq("id", ignoreAppointmentId);
+    return query.order("scheduled_at").order("id").range(pageFrom, pageTo);
+  };
   const [appointments, blocks] = await Promise.all([
-    appointmentsQuery.then((r) => unwrap(r, "Atendimentos da agenda")),
+    unwrapAll(appointmentsPage, "Atendimentos da agenda"),
     loadBlocks(db, clinicId, agendaId, from, to),
   ]);
   return [
@@ -348,16 +352,23 @@ export async function getGroupSessions(
   const to = dayBounds(finalDate, plan.timeZone).end;
 
   const [booked, blocks, holidays] = await Promise.all([
-    db
-      .from("appointments")
-      .select("scheduled_at")
-      .eq("clinic_id", clinicId)
-      .eq("agenda_id", query.agendaId)
-      .eq("service_id", query.serviceId)
-      .in("status", ["scheduled", "confirmed"])
-      .gte("scheduled_at", from.toISOString())
-      .lt("scheduled_at", to.toISOString())
-      .then((r) => unwrap(r, "Atendimentos da turma")),
+    // Em páginas: uma linha por participante, 60 dias de turmas cheias passam das 1000 linhas da API.
+    unwrapAll(
+      (pageFrom, pageTo) =>
+        db
+          .from("appointments")
+          .select("scheduled_at")
+          .eq("clinic_id", clinicId)
+          .eq("agenda_id", query.agendaId)
+          .eq("service_id", query.serviceId)
+          .in("status", ["scheduled", "confirmed"])
+          .gte("scheduled_at", from.toISOString())
+          .lt("scheduled_at", to.toISOString())
+          .order("scheduled_at")
+          .order("id")
+          .range(pageFrom, pageTo),
+      "Atendimentos da turma",
+    ),
     db
       .from("schedule_blocks")
       .select("starts_at, ends_at")

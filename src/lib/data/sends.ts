@@ -1,6 +1,6 @@
 import { addDays, dayBounds, localHourOf, todayIn } from "../clinicTime";
 import type { DbClient } from "./clients";
-import { unwrap, unwrapOne } from "./errors";
+import { unwrap, unwrapAll, unwrapAllIn, unwrapOne } from "./errors";
 import { hasFeature } from "./features";
 import type { JobName, JobTrigger } from "./jobRuns";
 
@@ -131,36 +131,56 @@ export async function listAppointmentsWithFailedSends(
   now: Date = new Date(),
 ): Promise<AppointmentWithFailedSends[]> {
   const since = new Date(now.getTime() - lookbackDays * 24 * 60 * 60_000).toISOString();
+  // Em páginas e em lotes de ids (unwrapAllIn): com o WhatsApp fora do ar, as falhas de 30 dias passam das 1000
+  // linhas da API, e uma lista longa de ids passa do tamanho do endereço.
   const [failedMessages, notSentEvents] = await Promise.all([
-    unwrap(
-      await db
-        .from("whatsapp_messages")
-        .select("appointment_id")
-        .eq("clinic_id", clinicId)
-        .eq("direction", "outbound")
-        .in("status", [...FAILED])
-        .not("appointment_id", "is", null)
-        .gte("created_at", since),
+    unwrapAll(
+      (from, to) =>
+        db
+          .from("whatsapp_messages")
+          .select("appointment_id")
+          .eq("clinic_id", clinicId)
+          .eq("direction", "outbound")
+          .in("status", [...FAILED])
+          .not("appointment_id", "is", null)
+          .gte("created_at", since)
+          .order("id")
+          .range(from, to),
       "Mensagens do WhatsApp",
     ),
-    unwrap(
-      await db.from("appointment_events").select("appointment_id").eq("clinic_id", clinicId).eq("event_type", "message_not_sent").gte("occurred_at", since),
+    unwrapAll(
+      (from, to) =>
+        db
+          .from("appointment_events")
+          .select("appointment_id")
+          .eq("clinic_id", clinicId)
+          .eq("event_type", "message_not_sent")
+          .gte("occurred_at", since)
+          .order("id")
+          .range(from, to),
       "Trilha",
     ),
   ]);
   const candidateIds = [...new Set([...failedMessages.map((m) => m.appointment_id!), ...notSentEvents.map((e) => e.appointment_id)])];
   if (candidateIds.length === 0) return [];
 
-  let query = db
-    .from("appointments")
-    .select("id, scheduled_at, service_id, services ( name ), patients ( full_name )")
-    .eq("clinic_id", clinicId)
-    .in("id", candidateIds)
-    .in("status", ["scheduled", "confirmed"])
-    .gte("scheduled_at", now.toISOString())
-    .order("scheduled_at");
-  if (until) query = query.lt("scheduled_at", until.toISOString());
-  const appointments = unwrap(await query, "Atendimentos") as unknown as {
+  const appointments = (
+    await unwrapAllIn(
+      candidateIds,
+      (chunk, from, to) => {
+        let query = db
+          .from("appointments")
+          .select("id, scheduled_at, service_id, services ( name ), patients ( full_name )")
+          .eq("clinic_id", clinicId)
+          .in("id", chunk)
+          .in("status", ["scheduled", "confirmed"])
+          .gte("scheduled_at", now.toISOString());
+        if (until) query = query.lt("scheduled_at", until.toISOString());
+        return query.order("id").range(from, to);
+      },
+      "Atendimentos",
+    )
+  ).sort((a, b) => a.scheduled_at.localeCompare(b.scheduled_at) || a.id.localeCompare(b.id)) as unknown as {
     id: string;
     scheduled_at: string;
     service_id: string;
@@ -171,22 +191,30 @@ export async function listAppointmentsWithFailedSends(
 
   const ids = appointments.map((a) => a.id);
   const [messages, events] = await Promise.all([
-    unwrap(
-      await db
-        .from("whatsapp_messages")
-        .select("appointment_id, message_type, status, created_at")
-        .eq("clinic_id", clinicId)
-        .eq("direction", "outbound")
-        .in("appointment_id", ids),
+    unwrapAllIn(
+      ids,
+      (chunk, from, to) =>
+        db
+          .from("whatsapp_messages")
+          .select("appointment_id, message_type, status, created_at")
+          .eq("clinic_id", clinicId)
+          .eq("direction", "outbound")
+          .in("appointment_id", chunk)
+          .order("id")
+          .range(from, to),
       "Mensagens do WhatsApp",
     ),
-    unwrap(
-      await db
-        .from("appointment_events")
-        .select("appointment_id, details, occurred_at")
-        .eq("clinic_id", clinicId)
-        .eq("event_type", "message_not_sent")
-        .in("appointment_id", ids),
+    unwrapAllIn(
+      ids,
+      (chunk, from, to) =>
+        db
+          .from("appointment_events")
+          .select("appointment_id, details, occurred_at")
+          .eq("clinic_id", clinicId)
+          .eq("event_type", "message_not_sent")
+          .in("appointment_id", chunk)
+          .order("id")
+          .range(from, to),
       "Trilha",
     ),
   ]);

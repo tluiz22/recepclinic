@@ -2828,6 +2828,26 @@ ajustes, se houver.
   Faltosos; de fora da clínica, tudo zerado; sem login, barrado). `npm test` 597, `npm run test:db` 559, `astro
   check` e build sem erros. No staging: funções conferidas e barradas sem login.
 
+**Auditoria do limite de 1000 linhas no painel (cliente, 22/out; publicada no staging em 22/out, sem migração):**
+- Levantamento das leituras sem `.single()`, `.limit()` ou `.range()` (206); a maioria tem teto natural (um
+  atendimento, um dia, uma série, configuração). Corrigidas com leitura em páginas (`unwrapAll`), sem mudar regra nem
+  tela: A1 horários livres (`loadBusy`, 60 dias de uma agenda: cortava a partir de ~17 atendimentos por dia, e o
+  horário ocupado aparecia livre); A2 Agenda Dia, Semana e Mês (`listAgendaAppointments`); A3 datas de turma; M1 selo
+  "Faltou X de Y" (`listNoShowStats`); M2 Envios com falha (30 dias); M3 conferência de conflitos da carga da agenda.
+- Achado na conferência com volume: **a Agenda do Dia dava erro 500** num dia com ~200 pacientes ("URI too long": as
+  listas de ids no endereço passam do tamanho aceito), anterior a esta etapa. As 8 leituras seguintes do Dia (ações do
+  lembrete, preparo, orientações, lista de espera, faltas, origens, pagamentos e "Marcar retorno") e o Envios passam a
+  mandar os ids em lotes de 100 (`unwrapAllIn`, em `errors.ts`).
+- Sobras do piloto apagadas (decisão do cliente): os 10 arquivos de `src/lib/scheduling` que ninguém usava (o
+  agendador antigo; ficam `slots.ts` e `returnVisitDeadline.ts`).
+- Conferido com 66 mil atendimentos no ano no local: Mês 6.045 atendimentos na tela = 6.045 no banco; horários livres
+  com os 1.806 ocupados (antes 1.000) e nenhum dia cheio como livre; selo de faltas 5 = 5 no banco (dia com 212
+  atendimentos); Dia 0,4–0,5 s (era erro 500), Semana 0,85 s, Envios, Início e Resumo ~1,1 s. `npm test` 599,
+  `npm run test:db` 559, `astro check` sem erros.
+- Fica registrado: o Mês de uma clínica cheia (6 mil atendimentos) leva 3,3 s no servidor de desenvolvimento (o RLS
+  linha a linha, como nas Métricas antes da correção); baixa prioridade. Lista de clínicas do Suporte e os papéis da
+  equipe (`authorship.ts`) só cortam acima de mil clínicas ou membros.
+
 ---
 
 ## Depois do 1º piloto (já previsto no banco)

@@ -102,6 +102,27 @@ export async function unwrapAll<T>(
 }
 
 /**
+ * Leitura filtrada por uma lista de ids que pode ser longa (o Dia de uma
+ * clínica cheia tem centenas de atendimentos): os ids vão em lotes, porque um
+ * endereço com uns 200 ids passa do tamanho aceito ("URI too long"), e cada
+ * lote é lido em páginas (`unwrapAll`). Registros de um mesmo id ficam sempre
+ * no mesmo lote, então a ordem dentro do lote basta.
+ */
+export async function unwrapAllIn<T>(
+  ids: string[],
+  page: (chunk: string[], from: number, to: number) => PromiseLike<{ data: T[] | null; error: unknown }>,
+  context: string,
+  chunkSize = 100,
+): Promise<T[]> {
+  const rows: T[] = [];
+  for (let i = 0; i < ids.length; i += chunkSize) {
+    const chunk = ids.slice(i, i + chunkSize);
+    rows.push(...(await unwrapAll((from, to) => page(chunk, from, to), context)));
+  }
+  return rows;
+}
+
+/**
  * Para update/delete numa linha: o RLS esconde o que o login não pode mexer,
  * e o banco responde "0 linhas" em vez de erro. Aqui isso vira not_found.
  */

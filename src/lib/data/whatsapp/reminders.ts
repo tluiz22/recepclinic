@@ -1,7 +1,7 @@
 import { addDays, dayBounds, localDateOf, localHourOf, toInstant, todayIn } from "../../clinicTime";
 import type { Enums } from "../../supabase/database.types";
 import type { DbClient } from "../clients";
-import { unwrap, unwrapOne } from "../errors";
+import { unwrap, unwrapAllIn, unwrapOne } from "../errors";
 import { hasFeature } from "../features";
 import { finishJobRun, startJobRun, type JobTrigger } from "../jobRuns";
 import { logTrail } from "../agenda/appointments";
@@ -215,15 +215,19 @@ async function loadSettings(db: DbClient, clinicId: string): Promise<ReminderSet
 async function reminderAttempts(db: DbClient, clinicId: string, appointmentIds: string[]): Promise<Map<string, ReminderAttempt[]>> {
   const byAppointment = new Map<string, ReminderAttempt[]>();
   if (appointmentIds.length === 0) return byAppointment;
-  const rows = unwrap(
-    await db
-      .from("whatsapp_messages")
-      .select("appointment_id, status, created_at")
-      .eq("clinic_id", clinicId)
-      .eq("direction", "outbound")
-      .eq("message_type", REMINDER_MESSAGE_TYPE)
-      .in("appointment_id", appointmentIds)
-      .order("created_at"),
+  const rows = await unwrapAllIn(
+    appointmentIds,
+    (chunk, from, to) =>
+      db
+        .from("whatsapp_messages")
+        .select("appointment_id, status, created_at")
+        .eq("clinic_id", clinicId)
+        .eq("direction", "outbound")
+        .eq("message_type", REMINDER_MESSAGE_TYPE)
+        .in("appointment_id", chunk)
+        .order("created_at")
+        .order("id")
+        .range(from, to),
     "Lembretes enviados",
   );
   for (const row of rows) {
@@ -248,14 +252,20 @@ export async function listReminderActions(
   if (appointmentIds.length === 0 || !(await hasFeature(db, clinicId, "reminders"))) return actions;
   const [settings, rows] = await Promise.all([
     loadSettings(db, clinicId),
-    db
-      .from("appointments")
-      .select(APPOINTMENT_COLUMNS)
-      .eq("clinic_id", clinicId)
-      .in("id", appointmentIds)
-      .in("status", [...ACTIVE])
-      .gt("scheduled_at", now.toISOString())
-      .then((result) => unwrap(result, "Atendimentos") as unknown as AppointmentRow[]),
+    unwrapAllIn(
+      appointmentIds,
+      (chunk, from, to) =>
+        db
+          .from("appointments")
+          .select(APPOINTMENT_COLUMNS)
+          .eq("clinic_id", clinicId)
+          .in("id", chunk)
+          .in("status", [...ACTIVE])
+          .gt("scheduled_at", now.toISOString())
+          .order("id")
+          .range(from, to),
+      "Atendimentos",
+    ).then((rows) => rows as unknown as AppointmentRow[]),
   ]);
   const attempts = await reminderAttempts(
     db,

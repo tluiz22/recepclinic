@@ -1,5 +1,5 @@
 import type { DbClient } from "../clients";
-import { unwrap } from "../errors";
+import { unwrap, unwrapAllIn } from "../errors";
 import { hasFeature } from "../features";
 import { logTrail } from "../agenda/appointments";
 import { preparationPath } from "../../publicId";
@@ -170,15 +170,19 @@ export async function sendPreparationAfterDelivery(
 /** Quais destes atendimentos mostram "Reenviar preparo": a última tentativa não chegou. */
 export async function listPreparationResendable(db: DbClient, clinicId: string, appointmentIds: string[]): Promise<Set<string>> {
   if (appointmentIds.length === 0) return new Set();
-  const rows = unwrap(
-    await db
-      .from("whatsapp_messages")
-      .select("appointment_id, status")
-      .eq("clinic_id", clinicId)
-      .eq("direction", "outbound")
-      .eq("message_type", PREPARATION_MESSAGE_TYPE)
-      .in("appointment_id", appointmentIds)
-      .order("created_at"),
+  const rows = await unwrapAllIn(
+    appointmentIds,
+    (chunk, from, to) =>
+      db
+        .from("whatsapp_messages")
+        .select("appointment_id, status")
+        .eq("clinic_id", clinicId)
+        .eq("direction", "outbound")
+        .eq("message_type", PREPARATION_MESSAGE_TYPE)
+        .in("appointment_id", chunk)
+        .order("created_at")
+        .order("id")
+        .range(from, to),
     "Mensagens do WhatsApp",
   );
   const latest = new Map<string, string | null>();

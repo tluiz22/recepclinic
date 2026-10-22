@@ -1,7 +1,7 @@
 import { addDays, dayBounds } from "../../clinicTime";
 import type { Enums } from "../../supabase/database.types";
 import type { DbClient } from "../clients";
-import { unwrap } from "../errors";
+import { unwrap, unwrapAll, unwrapAllIn } from "../errors";
 import { listBlocks, type ScheduleBlock } from "./blocks";
 import type { AppointmentStatus } from "./appointments";
 
@@ -131,17 +131,21 @@ export async function listAgendaAppointments(
   { fromDate, toDate, timeZone, agendaIds }: { fromDate: string; toDate: string; timeZone: string; agendaIds: string[] },
 ): Promise<AgendaAppointment[]> {
   if (!agendaIds.length) return [];
-  const rows = unwrap(
-    await db
-      .from("appointments")
-      .select(AGENDA_COLUMNS)
-      .eq("clinic_id", clinicId)
-      .in("agenda_id", agendaIds)
-      .gte("scheduled_at", dayBounds(fromDate, timeZone).start.toISOString())
-      .lt("scheduled_at", dayBounds(toDate, timeZone).end.toISOString())
-      .order("scheduled_at"),
+  // Em páginas: o mês de uma clínica cheia passa das 1000 linhas da API.
+  const rows = (await unwrapAll(
+    (from, to) =>
+      db
+        .from("appointments")
+        .select(AGENDA_COLUMNS)
+        .eq("clinic_id", clinicId)
+        .in("agenda_id", agendaIds)
+        .gte("scheduled_at", dayBounds(fromDate, timeZone).start.toISOString())
+        .lt("scheduled_at", dayBounds(toDate, timeZone).end.toISOString())
+        .order("scheduled_at")
+        .order("id")
+        .range(from, to),
     "Agenda",
-  ) as unknown as AgendaRow[];
+  )) as unknown as AgendaRow[];
   // Mesmo horário em agendas diferentes: em ordem de agenda, sempre igual.
   return rows
     .map(toAgendaAppointment)
@@ -154,7 +158,7 @@ export type OriginInfo = { scheduledAt: Date; status: AppointmentStatus };
 export async function listOrigins(db: DbClient, clinicId: string, appointments: AgendaAppointment[]): Promise<Map<string, OriginInfo>> {
   const ids = [...new Set(appointments.map((a) => a.originAppointmentId).filter((id): id is string => !!id))];
   if (!ids.length) return new Map();
-  const rows = unwrap(await db.from("appointments").select("id, scheduled_at, status").eq("clinic_id", clinicId).in("id", ids), "Consultas de origem");
+  const rows = await unwrapAllIn(ids, (chunk, from, to) => db.from("appointments").select("id, scheduled_at, status").eq("clinic_id", clinicId).in("id", chunk).order("id").range(from, to), "Consultas de origem");
   return new Map(rows.map((row) => [row.id, { scheduledAt: new Date(row.scheduled_at), status: row.status }]));
 }
 
@@ -284,8 +288,18 @@ export async function listNoShowStats(db: DbClient, clinicId: string, patientIds
   const result = new Map<string, NoShowStats>();
   const ids = [...new Set(patientIds)];
   if (!ids.length) return result;
-  const rows = unwrap(
-    await db.from("appointments").select("patient_id, status").eq("clinic_id", clinicId).in("patient_id", ids).in("status", ["completed", "no_show"]),
+  // Em lotes e páginas: os pacientes da tela vezes o histórico de cada um passam das 1000 linhas da API.
+  const rows = await unwrapAllIn(
+    ids,
+    (chunk, from, to) =>
+      db
+        .from("appointments")
+        .select("patient_id, status")
+        .eq("clinic_id", clinicId)
+        .in("patient_id", chunk)
+        .in("status", ["completed", "no_show"])
+        .order("id")
+        .range(from, to),
     "Comparecimento",
   );
   for (const row of rows) {

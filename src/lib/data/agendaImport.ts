@@ -15,7 +15,7 @@ import { agendaImportEmail, agendaImportReturnedEmail } from "../email";
 import { normalizePhone } from "../phone";
 import type { Json } from "../supabase/database.types";
 import type { DbClient } from "./clients";
-import { DataError, fromDbError, unwrap, unwrapOne } from "./errors";
+import { DataError, fromDbError, unwrap, unwrapAll, unwrapOne } from "./errors";
 import { getClinicFeatures } from "./features";
 import { EMAIL_RE, hashToken, newToken, normalizeEmail, trySend, type EmailOutcome, type OnboardingDeps } from "./onboarding";
 
@@ -156,15 +156,19 @@ export async function loadBusyPeriods(db: DbClient, clinicId: string, patients: 
   // Um dia antes: atendimento que começa na véspera e passa da meia-noite.
   const start = dayBounds(addDays(dates[0], -1), timeZone).start;
   const end = dayBounds(dates[dates.length - 1], timeZone).end;
-  const rows = unwrap(
-    await db
-      .from("appointments")
-      .select("agenda_id, scheduled_at, duration_minutes")
-      .eq("clinic_id", clinicId)
-      .in("status", ["scheduled", "confirmed"])
-      .eq("is_group_session", false)
-      .gte("scheduled_at", start.toISOString())
-      .lt("scheduled_at", end.toISOString()),
+  // Em páginas: uma carga longa numa clínica cheia passa das 1000 linhas da API.
+  const rows = await unwrapAll(
+    (from, to) =>
+      db
+        .from("appointments")
+        .select("agenda_id, scheduled_at, duration_minutes")
+        .eq("clinic_id", clinicId)
+        .in("status", ["scheduled", "confirmed"])
+        .eq("is_group_session", false)
+        .gte("scheduled_at", start.toISOString())
+        .lt("scheduled_at", end.toISOString())
+        .order("id")
+        .range(from, to),
     "Horários ocupados",
   );
   return rows.map((r) => {

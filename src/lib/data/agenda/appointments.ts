@@ -1,7 +1,7 @@
 import { addDays, localDateOf, localTimeOf, todayIn, weekdayOf } from "../../clinicTime";
 import type { Enums } from "../../supabase/database.types";
 import type { DbClient } from "../clients";
-import { DataError, fromDbError, unwrap, unwrapOne } from "../errors";
+import { DataError, fromDbError, unwrap, unwrapAllIn, unwrapOne } from "../errors";
 import { getFreeSlots, loadSchedulingPlan } from "./slots";
 import { logError } from "../../log";
 
@@ -188,17 +188,21 @@ export async function listUpcomingAppointments(
 ): Promise<Map<string, UpcomingAppointment[]>> {
   const result = new Map<string, UpcomingAppointment[]>();
   if (!patientIds.length) return result;
-  const rows = unwrap(
-    await db
-      .from("appointments")
-      .select("id, patient_id, scheduled_at, agenda_id, service_id, series_id, services ( category )")
-      .eq("clinic_id", clinicId)
-      .in("patient_id", patientIds)
-      .in("status", ACTIVE)
-      .gt("scheduled_at", now.toISOString())
-      .order("scheduled_at"),
+  const rows = (await unwrapAllIn(
+    patientIds,
+    (chunk, from, to) =>
+      db
+        .from("appointments")
+        .select("id, patient_id, scheduled_at, agenda_id, service_id, series_id, services ( category )")
+        .eq("clinic_id", clinicId)
+        .in("patient_id", chunk)
+        .in("status", ACTIVE)
+        .gt("scheduled_at", now.toISOString())
+        .order("scheduled_at")
+        .order("id")
+        .range(from, to),
     "Próximos atendimentos",
-  ) as unknown as {
+  )) as unknown as {
     id: string;
     patient_id: string;
     scheduled_at: string;

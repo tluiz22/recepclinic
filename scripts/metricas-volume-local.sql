@@ -55,7 +55,7 @@ begin
   create temp table vol_appts on commit drop as
     select gen_random_uuid() as id, g.agenda_id, g.location_id,
            g.services[1 + (slot + extract(doy from day)::int) % array_length(g.services, 1)] as service_id,
-           ((day + time '07:00') + make_interval(mins => slot * 10)) at time zone v_tz as at,
+           ((day::date + time '07:00') + make_interval(mins => slot * 10)) at time zone v_tz as at,
            random() as r, random() as r2
       from vol_agendas g,
            generate_series((now() at time zone v_tz)::date - 365, (now() at time zone v_tz)::date + 30, interval '1 day') day,
