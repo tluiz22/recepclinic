@@ -2783,6 +2783,9 @@ consulta de origem (`origin_appointment_id`); a taxa de retorno no prazo depende
 - Testes: `botFunnel.test.ts` com o relatório digital (soma de marcações sem remarcar/cancelar, seguem de pé,
   motivos, origem, recepção, sem tentativas); `npm test` 598, `npm run test:db` 556, `astro check` e build sem erros.
 
+**Redesign das Métricas (M1 a M5) dado como validado pelo cliente em 22/out**; ele confere no staging e traz os
+ajustes, se houver.
+
 **Limitações e pendências do redesign (22/out):**
 - A comparação do Desempenho só vale quando o período anterior é depois do início da clínica (no local, a seed
   "começou" hoje); conferir no staging.
