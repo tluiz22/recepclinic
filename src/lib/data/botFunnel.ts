@@ -1,5 +1,5 @@
 import type { DbClient } from "./clients";
-import { unwrap } from "./errors";
+import { unwrapAll } from "./errors";
 import type { FunnelFlow } from "./whatsapp/funnel";
 
 // Métricas › Funil do bot e Retomar contato (F6.7; Fases 15 e 23 do piloto,
@@ -355,8 +355,13 @@ export function buildFunnelReportFromSessions(all: FunnelSession[], now: Date = 
  * concluiu depois), já resumidas pelo banco; só de um telefone, se filtrado.
  */
 export async function listFunnelSessions(db: DbClient, clinicId: string, start: Date, end: Date, phone: string | null = null): Promise<FunnelSession[]> {
-  const rows = unwrap(
-    await db.rpc("metrics_bot_sessions", { p_clinic_id: clinicId, p_start: start.toISOString(), p_end: end.toISOString() }),
+  const rows = await unwrapAll(
+    (from, to) =>
+      db
+        .rpc("metrics_bot_sessions", { p_clinic_id: clinicId, p_start: start.toISOString(), p_end: end.toISOString() })
+        .order("started_at")
+        .order("session_id")
+        .range(from, to),
     "Agendamento digital",
   );
   return rows

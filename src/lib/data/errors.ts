@@ -84,6 +84,24 @@ export function unwrap<R extends { data: unknown; error: unknown }>(result: R, c
 }
 
 /**
+ * Todas as linhas de uma leitura que pode passar do limite da API (1000 por
+ * resposta, `max_rows`), de página em página. `page(from, to)` precisa de uma
+ * ordem completa (sem empates), senão linhas se repetem ou somem entre as páginas.
+ */
+export async function unwrapAll<T>(
+  page: (from: number, to: number) => PromiseLike<{ data: T[] | null; error: unknown }>,
+  context: string,
+  size = 1000,
+): Promise<T[]> {
+  const rows: T[] = [];
+  for (let from = 0; ; from += size) {
+    const data = unwrap(await page(from, from + size - 1), context) as T[];
+    rows.push(...data);
+    if (data.length < size) return rows;
+  }
+}
+
+/**
  * Para update/delete numa linha: o RLS esconde o que o login não pode mexer,
  * e o banco responde "0 linhas" em vez de erro. Aqui isso vira not_found.
  */

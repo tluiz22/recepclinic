@@ -32,7 +32,7 @@ import { isUuid } from "../../lib/clinicAccess";
 import { dayBounds, formatCalendarDate, formatInstant, todayIn } from "../../lib/clinicTime";
 import { createUserClient } from "../../lib/data/clients";
 import { listAgendas } from "../../lib/data/config/agendas";
-import { financial, listFrequentNoShows, listMetricsRows, ownAgendaIds } from "../../lib/data/metrics";
+import { financial, listFinancialTotals, listFrequentNoShows, ownAgendaIds } from "../../lib/data/metrics";
 import { listLocations } from "../../lib/data/config/locations";
 import { listServices } from "../../lib/data/config/services";
 import PerformanceTab from "../../components/admin/metricas/PerformanceTab.astro";
@@ -142,7 +142,7 @@ const recallContacts =
         ).map((c) => [c.id, c.full_name]),
       )
     : new Map<string, string>();
-const rows = tab === "financeiro" ? await listMetricsRows(db, clinic.clinicId, { start: period.start, end: period.end, agendaIds, patientIds }) : [];
+const financialTotals = tab === "financeiro" ? await listFinancialTotals(db, clinic.clinicId, { start: period.start, end: period.end, agendaIds, patientIds }) : [];
 const frequent = tab === "faltosos" ? await listFrequentNoShows(db, clinic.clinicId, agendaIds) : [];
 
 const keep = {
@@ -204,7 +204,7 @@ const performanceLinks = {
   wholeMonth: link({ periodo: "", de: "", ate: "" }),
   retry: link({}),
 };
-const fin = tab === "financeiro" ? financial(rows) : null;
+const fin = tab === "financeiro" ? financial(financialTotals) : null;
 ---
 
 <AdminLayout title="Métricas">

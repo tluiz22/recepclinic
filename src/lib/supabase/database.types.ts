@@ -1616,8 +1616,18 @@ isOneToOne: false
               "appointment_id": string,"appointment_status": Database["public"]['Enums']["appointment_status"],"contact_id": string,"contact_phone": string,"flow": string,"in_period": boolean,"last_at": string,"last_failure": Json,"session_id": string,"started_at": string,"steps": Json
             }[]
                            },
+"metrics_financial":
+{ Args: { "p_agenda_ids": (string)[],"p_clinic_id": string,"p_end": string,"p_patient_ids"?: (string)[],"p_start": string }; Returns: {
+              "bucket": string,"cents": number,"location_name": string,"service_name": string,"total": number
+            }[]
+                           },
 "metrics_funnel_write_failures":
 { Args: { "p_clinic_id": string,"p_end": string,"p_start": string }; Returns: number
+                           },
+"metrics_no_shows":
+{ Args: { "p_agenda_ids": (string)[],"p_clinic_id": string }; Returns: {
+              "contact_name": string,"contact_phone": string,"is_contact_self": boolean,"last_no_show": string,"no_shows": number,"patient_id": string,"patient_name": string,"total": number
+            }[]
                            },
 "metrics_reminders":
 { Args: { "p_agenda_ids": (string)[],"p_clinic_id": string,"p_end": string,"p_location_ids"?: (string)[],"p_now"?: string,"p_service_ids"?: (string)[],"p_start": string }; Returns: {

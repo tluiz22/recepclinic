@@ -1,36 +1,27 @@
 import { describe, expect, it } from "vitest";
-import { financial, type MetricsRow } from "./metrics";
+import { financial, type FinancialTotal } from "./metrics";
 
-const row = (overrides: Partial<MetricsRow>): MetricsRow => ({
-  id: crypto.randomUUID(),
-  scheduledAt: new Date("2026-10-14T12:00:00Z"),
-  status: "completed",
-  category: "consultation",
-  serviceName: "Consulta",
-  locationName: "Consultório",
-  priceCents: 30000,
-  ...overrides,
-});
-
-const rows = [
-  row({}),
-  row({ status: "no_show" }),
-  row({ status: "canceled" }),
-  row({ status: "scheduled", scheduledAt: new Date("2026-10-15T12:00:00Z") }), // já passou, sem registro
-  row({ status: "scheduled", scheduledAt: new Date("2026-10-20T12:00:00Z") }),
-  row({ category: "return_visit", serviceName: "Retorno", priceCents: 0 }),
-  row({ category: "exam", serviceName: "Exame", status: "no_show", priceCents: 15000 }),
+const totals: FinancialTotal[] = [
+  { serviceName: "Exame", locationName: "Consultório", bucket: "lost", count: 1, cents: 15000 },
+  { serviceName: "Consulta", locationName: "Consultório", bucket: "done", count: 1, cents: 30000 },
+  { serviceName: "Consulta", locationName: "Consultório", bucket: "lost", count: 1, cents: 30000 },
+  { serviceName: "Consulta", locationName: "Consultório", bucket: "expected", count: 2, cents: 60000 },
 ];
 
 describe("contas das Métricas (F4.9)", () => {
-  it("financeiro: realizado, previsto e faltas; retorno e cancelado fora", () => {
-    const result = financial(rows);
+  it("financeiro: uma linha por serviço e local, em ordem, e o total", () => {
+    const result = financial(totals);
     expect(result.rows.map((r) => r.label)).toEqual(["Consulta · Consultório", "Exame · Consultório"]);
+    expect(result.rows[0]).toMatchObject({ done: { count: 1, cents: 30000 }, expected: { count: 2, cents: 60000 }, lost: { count: 1, cents: 30000 } });
     expect(result.total).toEqual({
       label: "Total",
       done: { count: 1, cents: 30000 },
       expected: { count: 2, cents: 60000 },
       lost: { count: 2, cents: 45000 },
     });
+  });
+
+  it("financeiro sem nada no período", () => {
+    expect(financial([])).toEqual({ rows: [], total: { label: "Total", done: { count: 0, cents: 0 }, expected: { count: 0, cents: 0 }, lost: { count: 0, cents: 0 } } });
   });
 });

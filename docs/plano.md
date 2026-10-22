@@ -2789,7 +2789,8 @@ ajustes, se houver.
 **Limitações e pendências do redesign (22/out):**
 - A comparação do Desempenho só vale quando o período anterior é depois do início da clínica (no local, a seed
   "começou" hoje); conferir no staging.
-- Tempo com um ano de 50 mil atendimentos (meta: menos de 1,5 s) ainda não medido com esse volume.
+- ~~Tempo com um ano de 50 mil atendimentos (meta: menos de 1,5 s) ainda não medido com esse volume.~~ **Medido e
+  corrigido em 22/out** (ver "Tempo das Métricas" abaixo).
 - O filtro por serviço e agenda no Agendamento digital (dados da M3) não entrou na tela: só as tentativas novas têm
   o serviço, e as etapas antes do link ficariam sem ele. Os dados já estão sendo gravados.
 - ~~Os itens antigos da matriz (`metrics_overview`, `metrics_appointments`) e as funções de `metrics.ts` que só a tela
@@ -2801,6 +2802,31 @@ ajustes, se houver.
   `npm run test:db` 555, `astro check` sem erros.
 - Fora do redesign, como decidido: ocupação da agenda, "retorno indicado pelo profissional" e vagas reaproveitadas
   pela lista de espera.
+
+**Tempo das Métricas (medido e corrigido em 22/out, publicado no staging):**
+- Medição no banco local com 66.522 atendimentos no ano (`scripts/metricas-volume-local.sql`, só local, cerca de 30
+  min para gerar) e `scripts/medir-metricas-local.mjs` (login do Administrador, as mesmas chamadas da tela).
+- Achados: (1) o RLS conferia o acesso em cada linha (agenda de cada atendimento, clínica de cada mensagem, o
+  atendimento de cada passo da trilha): as contas levavam de 2,7 a 33 s com o login e de 0,03 a 0,18 s sem o RLS; o
+  Desempenho de um ano dava 8 s, com o bloco de lembretes estourando o limite de 8 s do banco. (2) A API devolve no
+  máximo 1000 linhas (`max_rows`): comparecimento (1.552 linhas no ano), retornos (5.348) e tentativas do bot vinham
+  cortados sem aviso, e o Faltosos (anterior ao redesign) parava em 1000 atendimentos do histórico. (3) O Financeiro
+  (fora do redesign) lia atendimento por atendimento: 107 a 136 s num ano.
+- **Decisão do cliente (22/out): conferir o acesso uma vez, na entrada.** Migração
+  `20261023130000_metricas_acesso_na_entrada.sql`: `app.metrics_agendas` devolve as agendas pedidas que a pessoa pode
+  ver (mesma regra do RLS, `app.can_access_agenda`; o Profissional só as próprias) e as contas passam a
+  `security definer` lendo só essas agendas; os passos do bot só para quem é da clínica. **Financeiro e Faltosos
+  incluídos (cliente, 22/out)**: contas novas `metrics_financial` (totais por serviço, local e situação) e
+  `metrics_no_shows` (por paciente, 2 faltas ou mais; a regra completa segue no código). `metrics_bot_sessions` numa
+  passada por tentativa (459 ms → 12 ms, resultado idêntico nas 1.001 tentativas).
+- Código: `unwrapAll` (em `errors.ts`) lê em páginas, com ordem completa, o comparecimento, os retornos, as tentativas
+  do bot e o Faltosos.
+- Página inteira com o ano (servidor de desenvolvimento): Desempenho 0,57 s (era 8 s, com erro); Agendamento digital
+  0,06 s; Retomar contato 0,07 s; Faltosos 0,1 s (lista completa); Financeiro 0,12 s (era 107 a 136 s); Desempenho do
+  mês 0,13 s.
+- Testes: `unwrapAll` (unitário) e acesso nas contas (Profissional sem a agenda de outro, inclusive Financeiro e
+  Faltosos; de fora da clínica, tudo zerado; sem login, barrado). `npm test` 597, `npm run test:db` 559, `astro
+  check` e build sem erros. No staging: funções conferidas e barradas sem login.
 
 ---
 

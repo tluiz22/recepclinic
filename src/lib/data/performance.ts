@@ -1,7 +1,7 @@
 import type { Enums } from "../supabase/database.types";
 import { MIN_BASE, PARTIAL_SHARE, ratio, type Ratio } from "../metricsRules";
 import type { DbClient } from "./clients";
-import { unwrap } from "./errors";
+import { unwrap, unwrapAll } from "./errors";
 
 // Métricas › Desempenho (redesign de 22/out/2026, M2): as contas vêm das
 // funções do banco (`metrics_*`, security invoker: o RLS vale) e aqui viram
@@ -100,7 +100,16 @@ export async function listActivity(db: DbClient, clinicId: string, scope: Perfor
 
 export async function listAttendance(db: DbClient, clinicId: string, scope: PerformanceScope, now: Date): Promise<AttendanceRow[]> {
   if (!scope.agendaIds.length) return [];
-  const rows = unwrap(await db.rpc("metrics_attendance", { ...args(clinicId, scope), p_now: now.toISOString() }), "Métricas: comparecimento");
+  const rows = await unwrapAll(
+    (from, to) =>
+      db
+        .rpc("metrics_attendance", { ...args(clinicId, scope), p_now: now.toISOString() })
+        .order("day")
+        .order("service_id")
+        .order("location_id")
+        .range(from, to),
+    "Métricas: comparecimento",
+  );
   return rows.map((r) => ({
     day: r.day,
     serviceId: r.service_id,
@@ -131,15 +140,19 @@ export async function listReturnRights(
   now: Date,
 ): Promise<ReturnRight[]> {
   if (!scope.agendaIds.length) return [];
-  const rows = unwrap(
-    await db.rpc("metrics_return_rights", {
-      p_clinic_id: clinicId,
-      p_start: scope.start.toISOString(),
-      p_end: scope.end.toISOString(),
-      p_agenda_ids: scope.agendaIds,
-      p_location_ids: scope.locationIds?.length ? scope.locationIds : undefined,
-      p_now: now.toISOString(),
-    }),
+  const rows = await unwrapAll(
+    (from, to) =>
+      db
+        .rpc("metrics_return_rights", {
+          p_clinic_id: clinicId,
+          p_start: scope.start.toISOString(),
+          p_end: scope.end.toISOString(),
+          p_agenda_ids: scope.agendaIds,
+          p_location_ids: scope.locationIds?.length ? scope.locationIds : undefined,
+          p_now: now.toISOString(),
+        })
+        .order("appointment_id")
+        .range(from, to),
     "Métricas: retornos",
   );
   return rows.map((r) => ({
