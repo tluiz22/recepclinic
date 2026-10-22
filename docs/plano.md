@@ -2828,7 +2828,7 @@ ajustes, se houver.
   Faltosos; de fora da clínica, tudo zerado; sem login, barrado). `npm test` 597, `npm run test:db` 559, `astro
   check` e build sem erros. No staging: funções conferidas e barradas sem login.
 
-**Auditoria do limite de 1000 linhas no painel (cliente, 22/out; publicada no staging em 22/out, sem migração):**
+**Auditoria do limite de 1000 linhas no painel (cliente, 22/out; publicada no staging em 22/out, sem migração; validada pelo cliente em 22/out):**
 - Levantamento das leituras sem `.single()`, `.limit()` ou `.range()` (206); a maioria tem teto natural (um
   atendimento, um dia, uma série, configuração). Corrigidas com leitura em páginas (`unwrapAll`), sem mudar regra nem
   tela: A1 horários livres (`loadBusy`, 60 dias de uma agenda: cortava a partir de ~17 atendimentos por dia, e o

@@ -248,7 +248,7 @@
 >   **Auditoria do limite de 1000 linhas no painel (22/out):** Agenda (Dia, Semana, Mês), horários livres, turmas, selo
 >   de faltas, Envios e carga da agenda leem em páginas; achado e corrigido o erro 500 da Agenda do Dia com ~200
 >   pacientes (ids em lotes); sobras do agendador do piloto apagadas. Conferido com volume no local e **publicado no
->   staging em 22/out** (sem migração); o cliente confere lá (detalhes no [plano](plano.md)).
+>   staging em 22/out** (sem migração) e **validada pelo cliente em 22/out** (detalhes no [plano](plano.md)).
 >   Banco local com os dados fictícios das Métricas (`npm run db:reset` limpa). Em paralelo,
 >   aguardar a Meta (Análise do App até ~29/out).
 >   **App antigo da Meta (cliente, 20/out):** o piloto está desativado e o número do app "Consultório Dra. Ana Karina" é
