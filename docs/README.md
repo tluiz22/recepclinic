@@ -226,7 +226,8 @@
 >   **Redesign das Métricas (22/out):** o pedido cresceu do Funil do bot para as Métricas inteiras. Proposta no
 >   [canvas](https://claude.ai/artifact/XSZcqear3D3aBb2K2EVeyS) (abas Desempenho e Agendamento digital, estados,
 >   22 indicadores, plano M1 a M5); **direção e as 10 decisões aprovadas pelo cliente em 22/out** (seção "Redesign das
->   Métricas" do [plano](plano.md)). **Retomar daqui:** implementar a **M1** (trilha do atendimento na mesma
+>   Métricas" do [plano](plano.md)). **Retomar daqui (próxima sessão):** **antes de começar, o cliente passa novas
+>   instruções para a implementação de cada etapa**; só depois implementar a **M1** (trilha do atendimento na mesma
 >   transação e índices), depois de conferir o `origin_appointment_id` dos retornos do painel; uma etapa por vez.
 >   Em paralelo, aguardar a Meta (Análise do App até ~29/out).
 >   **App antigo da Meta (cliente, 20/out):** o piloto está desativado e o número do app "Consultório Dra. Ana Karina" é
