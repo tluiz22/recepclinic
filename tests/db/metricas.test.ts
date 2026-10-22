@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { bookAppointment, recordAttendance } from "../../src/lib/data/agenda/appointments";
-import { listFrequentNoShows, listMetricsRows, overview, ownAgendaIds } from "../../src/lib/data/metrics";
+import { listFrequentNoShows, listMetricsRows, ownAgendaIds } from "../../src/lib/data/metrics";
 import { asDb, at, MON1, MON2, MON3, NOW, setupAgendaClinic, type AgendaFixture } from "./agendaFixture";
 import { addMember, adminClient, createUser, deleteUsers, type TestUser } from "./helpers";
 
@@ -43,19 +43,10 @@ describe("métricas", () => {
     const { clinicId, ids, admin } = fixture;
     const rows = await listMetricsRows(asDb(admin), clinicId, { ...period, agendaIds: [ids.agendaDra] });
     expect(rows).toHaveLength(3);
-    expect(rows[0]).toMatchObject({ serviceName: "Consulta", locationName: "Consultório", priceCents: 30000, bookingChannel: "admin" });
-    expect(overview(rows, at("2031-04-01", "00:00"))).toMatchObject({ total: 3, completed: 1, noShow: 2, noShowRate: 2 / 3 });
+    expect(rows[0]).toMatchObject({ serviceName: "Consulta", locationName: "Consultório", priceCents: 30000 });
+    expect(rows.map((r) => r.status)).toEqual(["no_show", "no_show", "completed"]);
     expect(await listMetricsRows(asDb(admin), clinicId, { ...period, agendaIds: [ids.agendaDra2] })).toEqual([]);
     expect(await listMetricsRows(asDb(admin), clinicId, { ...period, agendaIds: [ids.agendaDra], patientIds: [ids.p2] })).toHaveLength(1);
-  });
-
-  it("marcados no período: pelo dia da marcação, não pelo dia do atendimento (cliente, 18/out/2026)", async () => {
-    const { clinicId, ids, admin } = fixture;
-    const today = { start: new Date(Date.now() - 3_600_000), end: new Date(Date.now() + 3_600_000) };
-    const booked = await listMetricsRows(asDb(admin), clinicId, { ...today, agendaIds: [ids.agendaDra], by: "booked" });
-    expect(booked).toHaveLength(3);
-    expect(await listMetricsRows(asDb(admin), clinicId, { ...today, agendaIds: [ids.agendaDra] })).toEqual([]);
-    expect(overview([], new Date(), booked).byChannel).toEqual({ whatsapp: 0, panel: 3 });
   });
 
   it("faltosos: só quem passa na regra", async () => {

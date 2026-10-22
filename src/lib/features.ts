@@ -57,13 +57,6 @@ export const FEATURES: readonly Feature[] = [
   { key: "finance", area: "finance", label: "Módulo financeiro (pagamentos e nota fiscal)", dependsOn: [] },
 ];
 
-/**
- * Itens que saíram do código mas ainda têm linhas no banco (Visão geral e
- * Atendimentos, substituídos pelo Desempenho em 22/out/2026); a limpeza vem
- * depois da validação do cliente. Quem lê a matriz ignora esses itens.
- */
-export const RETIRED_FEATURE_KEYS = ["metrics_overview", "metrics_appointments"] as const;
-
 const BY_KEY = new Map(FEATURES.map((feature) => [feature.key, feature]));
 
 export const AREA_LABELS: Record<FeatureArea, string> = { agenda: "Agenda", whatsapp: "WhatsApp", metrics: "Métricas", finance: "Financeiro" };

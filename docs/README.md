@@ -237,9 +237,11 @@
 >   ([relatório](auditoria-frontend/redesign-metricas-report.md), 2 falhas Baixas corrigidas) e publicada no staging
 >   em 22/out** (sem migração). **Redesign das Métricas todo implementado e dado como validado pelo cliente em 22/out**
 >   (ele confere no staging e traz os ajustes, se houver). **Fim da sessão de 22/out. Retomar daqui (próxima sessão):**
->   o cliente passa um novo ajuste. Pendentes do redesign: ajustes que vierem da conferência no staging e a limpeza dos
->   itens antigos da matriz e das funções antigas de `metrics.ts` (limitações no [plano](plano.md)). Banco local com
->   os dados fictícios das Métricas (`npm run db:reset` limpa). Em paralelo, aguardar a Meta (Análise do App até ~29/out). Em paralelo, aguardar a Meta (Análise do App até ~29/out).
+>   o cliente passa um novo ajuste. Pendentes do redesign: ajustes que vierem da conferência no staging (limitações no
+>   [plano](plano.md)). **Limpeza das Métricas feita e publicada no staging em 22/out** (itens antigos da matriz fora
+>   do banco, migração `20261023120000_metricas_limpeza.sql`, e as funções antigas de `metrics.ts` fora do código);
+>   o cliente valida no fim. Banco local com os dados fictícios das Métricas (`npm run db:reset` limpa). Em paralelo,
+>   aguardar a Meta (Análise do App até ~29/out).
 >   **App antigo da Meta (cliente, 20/out):** o piloto está desativado e o número do app "Consultório Dra. Ana Karina" é
 >   do cliente; o app antigo foi excluído pelo cliente (20/out) e o número entra no portfólio RecepClinic para uma 2ª clínica de
 >   testes do staging quando o aparelho estiver com ele (precisa do SMS). Regra revista no `CLAUDE.md`.

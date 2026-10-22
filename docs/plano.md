@@ -2792,8 +2792,13 @@ ajustes, se houver.
 - Tempo com um ano de 50 mil atendimentos (meta: menos de 1,5 s) ainda não medido com esse volume.
 - O filtro por serviço e agenda no Agendamento digital (dados da M3) não entrou na tela: só as tentativas novas têm
   o serviço, e as etapas antes do link ficariam sem ele. Os dados já estão sendo gravados.
-- Os itens antigos da matriz (`metrics_overview`, `metrics_appointments`) e as funções de `metrics.ts` que só a tela
-  antiga usava (`overview`, `volumeByService`, `noShowByCategory`, `byOrigin`) ficam até a validação; depois, a limpeza.
+- ~~Os itens antigos da matriz (`metrics_overview`, `metrics_appointments`) e as funções de `metrics.ts` que só a tela
+  antiga usava (`overview`, `volumeByService`, `noShowByCategory`, `byOrigin`) ficam até a validação; depois, a limpeza.~~
+  **Limpeza feita em 22/out** (cliente): migração `20261023120000_metricas_limpeza.sql` apaga os 2 itens e as
+  liberações deles (o Desempenho já tinha sido liberado na M4; conferido no staging: Consultorio de Teste, Consultório
+  da Dra. Ana Karina e Clínica Vida Plena); saíram `RETIRED_FEATURE_KEYS`, as 4 funções, `noShowRate`, a leitura por
+  dia da marcação (`by: "booked"`, hoje no banco desde a M2) e os campos da linha que só elas usavam. `npm test` 593,
+  `npm run test:db` 555, `astro check` sem erros.
 - Fora do redesign, como decidido: ocupação da agenda, "retorno indicado pelo profissional" e vagas reaproveitadas
   pela lista de espera.
 

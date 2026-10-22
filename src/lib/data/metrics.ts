@@ -3,11 +3,10 @@ import type { DbClient } from "./clients";
 import { unwrap } from "./errors";
 import { isFrequentNoShow } from "./agenda/view";
 
-// Métricas (F4.9), no banco novo: uma leitura dos atendimentos do período e
-// contas puras para cada aba (Visão geral, Atendimentos, Faltosos,
-// Financeiro), como no piloto. Escopo: as agendas escolhidas (o Profissional,
-// só as próprias, D11) e, se houver, os pacientes do filtro. Funil do bot e
-// Retomar contato entram na F6, com o bot (cliente, 05/out/2026).
+// Métricas (F4.9): a leitura dos atendimentos do período para o Financeiro, os
+// faltosos e as agendas do Profissional. Escopo: as agendas escolhidas (o
+// Profissional, só as próprias, D11) e, se houver, os pacientes do filtro. O
+// Desempenho e o Agendamento digital têm as contas no banco (redesign, 22/out/2026).
 
 type Category = Enums<"service_category">;
 type Status = Enums<"appointment_status">;
@@ -19,11 +18,6 @@ export type MetricsRow = {
   category: Category;
   serviceName: string;
   locationName: string;
-  isHomeVisit: boolean;
-  agendaId: string;
-  patientId: string;
-  bookingChannel: string;
-  canceledVia: string | null;
   priceCents: number | null;
 };
 
@@ -32,39 +26,30 @@ export type MetricsScope = {
   end: Date;
   agendaIds: string[];
   patientIds?: string[] | null;
-  /** "booked": marcados no período, qualquer que seja a data do atendimento ("Marcados por", cliente, 18/out/2026). */
-  by?: "scheduled" | "booked";
 };
 
 const PAGE = 1000;
 
-/** Atendimentos com início (ou marcados, com `by: "booked"`) no período, cancelados inclusive, lidos em páginas de 1000. */
+/** Atendimentos com início no período, cancelados inclusive, lidos em páginas de 1000. */
 export async function listMetricsRows(db: DbClient, clinicId: string, scope: MetricsScope): Promise<MetricsRow[]> {
   if (!scope.agendaIds.length || (scope.patientIds && !scope.patientIds.length)) return [];
   const rows: MetricsRow[] = [];
-  const column = scope.by === "booked" ? "created_at" : "scheduled_at";
   for (let from = 0; ; from += PAGE) {
     let query = db
       .from("appointments")
-      .select("id, scheduled_at, status, agenda_id, patient_id, booking_channel, canceled_via, price_cents, services ( name, category ), locations ( name, type )")
+      .select("id, scheduled_at, status, price_cents, services ( name, category ), locations ( name )")
       .eq("clinic_id", clinicId)
       .in("agenda_id", scope.agendaIds)
-      .gte(column, scope.start.toISOString())
-      .lt(column, scope.end.toISOString());
+      .gte("scheduled_at", scope.start.toISOString())
+      .lt("scheduled_at", scope.end.toISOString());
     if (scope.patientIds) query = query.in("patient_id", scope.patientIds);
-    // "Marcados por": a agenda importada na implantação não é marcação do período (cliente, 20/out/2026).
-    if (scope.by === "booked") query = query.is("agenda_import_id", null);
-    const page = unwrap(await query.order(column).order("id").range(from, from + PAGE - 1), "Métricas") as unknown as {
+    const page = unwrap(await query.order("scheduled_at").order("id").range(from, from + PAGE - 1), "Métricas") as unknown as {
       id: string;
       scheduled_at: string;
       status: Status;
-      agenda_id: string;
-      patient_id: string;
-      booking_channel: string;
-      canceled_via: string | null;
       price_cents: number | null;
       services: { name: string; category: Category };
-      locations: { name: string; type: string };
+      locations: { name: string };
     }[];
     rows.push(
       ...page.map((row) => ({
@@ -74,11 +59,6 @@ export async function listMetricsRows(db: DbClient, clinicId: string, scope: Met
         category: row.services.category,
         serviceName: row.services.name,
         locationName: row.locations.name,
-        isHomeVisit: row.locations.type === "home_visit",
-        agendaId: row.agenda_id,
-        patientId: row.patient_id,
-        bookingChannel: row.booking_channel,
-        canceledVia: row.canceled_via,
         priceCents: row.price_cents,
       })),
     );
@@ -89,96 +69,6 @@ export async function listMetricsRows(db: DbClient, clinicId: string, scope: Met
 // ---------------------------------------------------------------------------
 // Contas (regras puras)
 // ---------------------------------------------------------------------------
-
-const ACTIVE: Status[] = ["scheduled", "confirmed"];
-
-export type Overview = {
-  /** Sem os cancelados (o que ocupou a agenda). */
-  total: number;
-  completed: number;
-  noShow: number;
-  canceled: number;
-  /** Já passaram e ainda sem registro. */
-  pending: number;
-  upcoming: number;
-  /** Faltas entre os registrados (compareceu + faltou); null = nenhum registrado. */
-  noShowRate: number | null;
-  /** Marcados no período, por canal (sem os cancelados depois). Quem marca pelo link do bot conta no WhatsApp. */
-  byChannel: { whatsapp: number; panel: number };
-};
-
-export function noShowRate(completed: number, noShow: number): number | null {
-  return completed + noShow > 0 ? noShow / (completed + noShow) : null;
-}
-
-/** `booked`: os marcados no período (`by: "booked"`); sem ele, os próprios atendimentos do período. */
-export function overview(rows: MetricsRow[], now: Date, booked: MetricsRow[] = rows): Overview {
-  const live = rows.filter((r) => r.status !== "canceled");
-  const liveBooked = booked.filter((r) => r.status !== "canceled");
-  const completed = rows.filter((r) => r.status === "completed").length;
-  const noShow = rows.filter((r) => r.status === "no_show").length;
-  return {
-    total: live.length,
-    completed,
-    noShow,
-    canceled: rows.length - live.length,
-    pending: live.filter((r) => ACTIVE.includes(r.status) && r.scheduledAt <= now).length,
-    upcoming: live.filter((r) => ACTIVE.includes(r.status) && r.scheduledAt > now).length,
-    noShowRate: noShowRate(completed, noShow),
-    byChannel: {
-      whatsapp: liveBooked.filter((r) => r.bookingChannel === "whatsapp_bot").length,
-      panel: liveBooked.filter((r) => r.bookingChannel === "admin").length,
-    },
-  };
-}
-
-export type VolumeRow = { label: string; count: number };
-
-/** Volume por serviço e local (sem cancelados), do maior para o menor. */
-export function volumeByService(rows: MetricsRow[]): VolumeRow[] {
-  const counts = new Map<string, number>();
-  for (const r of rows) {
-    if (r.status === "canceled") continue;
-    const label = `${r.serviceName} · ${r.locationName}`;
-    counts.set(label, (counts.get(label) ?? 0) + 1);
-  }
-  return [...counts].map(([label, count]) => ({ label, count })).sort((a, b) => b.count - a.count || a.label.localeCompare(b.label));
-}
-
-export type NoShowRow = { label: string; completed: number; noShow: number; rate: number | null };
-
-const CATEGORY_LABELS: Record<Category, string> = { consultation: "Consulta", return_visit: "Retorno", exam: "Exame" };
-
-/** Não comparecimento por tipo de serviço, só entre os já registrados; com o total. */
-export function noShowByCategory(rows: MetricsRow[]): NoShowRow[] {
-  const line = (label: string, list: MetricsRow[]): NoShowRow => {
-    const completed = list.filter((r) => r.status === "completed").length;
-    const noShow = list.filter((r) => r.status === "no_show").length;
-    return { label, completed, noShow, rate: noShowRate(completed, noShow) };
-  };
-  const categories = (["consultation", "return_visit", "exam"] as Category[]).filter((c) => rows.some((r) => r.category === c));
-  return [...categories.map((c) => line(CATEGORY_LABELS[c], rows.filter((r) => r.category === c))), line("Total", rows)];
-}
-
-export type OriginRow = { label: string; booked: number; canceled: number };
-
-const CHANNEL_LABELS: Record<string, string> = { admin: "Painel (equipe)", whatsapp_bot: "WhatsApp (bot)" };
-
-/** Por onde foram marcados e cancelados os atendimentos do período. */
-export function byOrigin(rows: MetricsRow[]): OriginRow[] {
-  const result = new Map<string, OriginRow>();
-  const get = (channel: string) => {
-    const label = CHANNEL_LABELS[channel] ?? channel;
-    const row = result.get(label) ?? { label, booked: 0, canceled: 0 };
-    result.set(label, row);
-    return row;
-  };
-  for (const r of rows) {
-    get(r.bookingChannel).booked += 1;
-    if (r.status === "canceled" && r.canceledVia) get(r.canceledVia).canceled += 1;
-  }
-  return [...result.values()].sort((a, b) => b.booked - a.booked);
-}
 
 export type FinancialRow = {
   label: string;
