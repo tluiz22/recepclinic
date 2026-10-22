@@ -2,7 +2,8 @@ import { addDays, dayBounds, formatCalendarDate, isCalendarDate, todayIn } from 
 
 // Período das Métricas (F4.9; Fase 23 do piloto): atalhos e intervalo
 // personalizado, lidos do endereço (`?periodo=…&de=…&ate=…`), no fuso da
-// clínica. Abre em "Hoje" (decisão do cliente no piloto).
+// clínica. Abria em "Hoje" (decisão do cliente no piloto); as Métricas abrem
+// em "Este mês" desde o redesign (`fallback`).
 
 export type PeriodPreset = "hoje" | "7dias" | "mes" | "mes_anterior" | "personalizado";
 
@@ -51,7 +52,8 @@ function monthOf(date: string, delta: number): { from: string; to: string } {
   return { from: first.toISOString().slice(0, 10), to: last.toISOString().slice(0, 10) };
 }
 
-export function parsePeriod(params: URLSearchParams, timeZone: string, now: Date = new Date()): MetricsPeriod {
+/** `fallback`: o atalho sem `?periodo=` (as Métricas abrem em "Este mês" desde o redesign, decisão 3 de 22/out/2026). */
+export function parsePeriod(params: URLSearchParams, timeZone: string, now: Date = new Date(), fallback: "hoje" | "mes" = "hoje"): MetricsPeriod {
   const today = todayIn(timeZone, now);
   const build = (preset: PeriodPreset, from: string, to: string, label: string, invalidReason: InvalidPeriodReason | null = null, requested: MetricsPeriod["requested"] = null): MetricsPeriod => ({
     preset,
@@ -65,7 +67,7 @@ export function parsePeriod(params: URLSearchParams, timeZone: string, now: Date
     requested,
   });
   const todayLabel = `Hoje, ${formatCalendarDate(today, "dd/MM/yyyy")}`;
-  switch (params.get("periodo")) {
+  switch (params.get("periodo") ?? fallback) {
     case "7dias": {
       const from = addDays(today, -6);
       return build("7dias", from, today, `Últimos 7 dias (${formatCalendarDate(from, "dd/MM")} a ${formatCalendarDate(today, "dd/MM")})`);

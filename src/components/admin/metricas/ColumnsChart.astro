@@ -1,0 +1,124 @@
+---
+// Colunas agrupadas em SVG gerado no servidor (redesign das Métricas, M4):
+// sem biblioteca, cabe na CSP e aparece sem JavaScript. A faixa em curso
+// (semana ou dia que ainda não terminou) fica tracejada e mais clara. Para
+// leitor de tela, os mesmos números numa tabela escondida.
+
+export type ChartSeries = { label: string; color: string };
+export type ChartBucket = { label: string; partial: boolean; values: number[] };
+
+interface Props {
+  title: string;
+  series: ChartSeries[];
+  buckets: ChartBucket[];
+}
+
+const { title, series, buckets } = Astro.props;
+
+const max = Math.max(0, ...buckets.flatMap((b) => b.values));
+/** Topo do eixo num número redondo (1, 2, 2,5 ou 5 × 10ⁿ). */
+function niceTop(value: number): number {
+  if (value <= 4) return 4;
+  const power = 10 ** Math.floor(Math.log10(value));
+  for (const step of [1, 2, 2.5, 5, 10]) if (step * power >= value) return step * power;
+  return 10 * power;
+}
+const top = niceTop(max);
+const ticks = [0, 0.25, 0.5, 0.75, 1].map((f) => Math.round(top * f * 10) / 10);
+
+const BAR = 18;
+const GAP = 3;
+const groupWidth = series.length * BAR + (series.length - 1) * GAP;
+// Poucas faixas: o espaço entre elas cresce para o gráfico ocupar a largura do cartão.
+const GROUP_GAP = buckets.length > 12 ? 12 : Math.max(26, (560 - buckets.length * groupWidth) / Math.max(buckets.length, 1));
+const LEFT = 40;
+const TOP = 22;
+const HEIGHT = 190;
+const width = LEFT + buckets.length * (groupWidth + GROUP_GAP) + 8;
+const y = (v: number) => TOP + HEIGHT - (v / top) * HEIGHT;
+const showValues = buckets.length <= 12;
+const labelEvery = buckets.length > 16 ? Math.ceil(buckets.length / 12) : 1;
+// No celular, o texto fica perto do tamanho real (a área rola dentro do cartão).
+const minWidth = Math.max(320, width * 0.85);
+---
+
+<div data-scroll-region={title} class="overflow-x-auto" tabindex="0">
+  <svg viewBox={`0 0 ${width} ${TOP + HEIGHT + 44}`} width="100%" style={`min-width: ${Math.round(minWidth)}px`} aria-hidden="true" focusable="false">
+    <g stroke="#e6ecea" stroke-width="1">
+      {ticks.slice(1).map((t) => <line x1={LEFT} y1={y(t)} x2={width - 4} y2={y(t)} />)}
+    </g>
+    <line x1={LEFT} y1={y(0)} x2={width - 4} y2={y(0)} stroke="#c5d3ce" />
+    <g font-size="11" fill="#4e635d" text-anchor="end" font-family="Source Sans 3 Variable, Source Sans 3, sans-serif">
+      {ticks.map((t) => <text x={LEFT - 6} y={y(t) + 4}>{String(t).replace(".", ",")}</text>)}
+    </g>
+    {
+      buckets.map((b, i) => {
+        const x0 = LEFT + GROUP_GAP / 2 + i * (groupWidth + GROUP_GAP);
+        return (
+          <g font-family="Source Sans 3 Variable, Source Sans 3, sans-serif">
+            {b.values.map((v, s) => {
+              const x = x0 + s * (BAR + GAP);
+              const h = Math.max((v / top) * HEIGHT, v > 0 ? 2 : 0);
+              return (
+                <>
+                  <rect
+                    x={x}
+                    y={y(0) - h}
+                    width={BAR}
+                    height={h}
+                    rx="3"
+                    fill={series[s].color}
+                    fill-opacity={b.partial ? 0.5 : 1}
+                    stroke={b.partial ? series[s].color : "none"}
+                    stroke-dasharray={b.partial ? "3 2" : undefined}
+                  />
+                  {showValues && v > 0 && (
+                    <text x={x + BAR / 2} y={y(0) - h - 4} font-size="11.5" font-weight="700" fill="#12302a" text-anchor="middle">
+                      {v}
+                    </text>
+                  )}
+                </>
+              );
+            })}
+            {i % labelEvery === 0 && (
+              <text x={x0 + groupWidth / 2} y={y(0) + 18} font-size="12" fill="#34504a" text-anchor="middle">
+                {b.label}
+              </text>
+            )}
+            {b.partial && (
+              <text x={x0 + groupWidth / 2} y={y(0) + 33} font-size="11" fill="#4e635d" text-anchor="middle">
+                em curso
+              </text>
+            )}
+          </g>
+        );
+      })
+    }
+  </svg>
+</div>
+<div class="sr-only">
+<table>
+  <caption>{title}</caption>
+  <thead>
+    <tr>
+      <th scope="col">Período</th>
+      {series.map((s) => <th scope="col">{s.label}</th>)}
+    </tr>
+  </thead>
+  <tbody>
+    {
+      buckets.map((b) => (
+        <tr>
+          <th scope="row">
+            {b.label}
+            {b.partial ? " (em curso)" : ""}
+          </th>
+          {b.values.map((v) => (
+            <td>{v}</td>
+          ))}
+        </tr>
+      ))
+    }
+  </tbody>
+</table>
+</div>

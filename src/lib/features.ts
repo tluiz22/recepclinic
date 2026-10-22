@@ -22,8 +22,7 @@ export type FeatureKey =
   | "team_summary"
   | "custom_messages"
   | "custom_templates"
-  | "metrics_overview"
-  | "metrics_appointments"
+  | "metrics_performance"
   | "metrics_no_shows"
   | "metrics_recall"
   | "metrics_funnel"
@@ -47,16 +46,23 @@ export const FEATURES: readonly Feature[] = [
   // Validação da F6.6 (cliente, 08/out/2026): o item virou dois.
   { key: "custom_messages", area: "whatsapp", label: "Mensagens do bot", dependsOn: [] },
   { key: "custom_templates", area: "whatsapp", label: "Mensagens da Meta (templates)", dependsOn: [] },
-  { key: "metrics_overview", area: "metrics", label: "Métricas: Visão geral", dependsOn: [] },
-  { key: "metrics_appointments", area: "metrics", label: "Métricas: Atendimentos", dependsOn: [] },
+  // Redesign das Métricas (cliente, 22/out/2026): Visão geral e Atendimentos viraram Desempenho.
+  { key: "metrics_performance", area: "metrics", label: "Métricas: Desempenho", dependsOn: [] },
   { key: "metrics_no_shows", area: "metrics", label: "Métricas: Faltosos", dependsOn: [] },
   { key: "metrics_recall", area: "metrics", label: "Métricas: Retomar contato", dependsOn: [] },
-  { key: "metrics_funnel", area: "metrics", label: "Métricas: Funil do bot", dependsOn: ["whatsapp_bot"] },
+  { key: "metrics_funnel", area: "metrics", label: "Métricas: Agendamento digital", dependsOn: ["whatsapp_bot"] },
   { key: "metrics_financial", area: "metrics", label: "Métricas: Financeiro", dependsOn: [] },
   { key: "metrics_personal", area: "metrics", label: "Métricas pessoais do profissional", dependsOn: [] },
   // Módulo financeiro (F11, cliente, 12/out/2026): pagamentos e nota fiscal.
   { key: "finance", area: "finance", label: "Módulo financeiro (pagamentos e nota fiscal)", dependsOn: [] },
 ];
+
+/**
+ * Itens que saíram do código mas ainda têm linhas no banco (Visão geral e
+ * Atendimentos, substituídos pelo Desempenho em 22/out/2026); a limpeza vem
+ * depois da validação do cliente. Quem lê a matriz ignora esses itens.
+ */
+export const RETIRED_FEATURE_KEYS = ["metrics_overview", "metrics_appointments"] as const;
 
 const BY_KEY = new Map(FEATURES.map((feature) => [feature.key, feature]));
 
@@ -104,9 +110,8 @@ type PathRule = { prefix: string; tab?: string | null; feature: FeatureKey };
 const PATH_RULES: PathRule[] = [
   // Métricas, aba a aba. Sem aba, a tela abre na primeira aba liberada (basta
   // ter alguma, conferido pela área; achado na validação da F6.7, 07/out).
-  { prefix: "/admin/metricas", tab: "visao_geral", feature: "metrics_overview" },
-  { prefix: "/admin/metricas", tab: "funil", feature: "metrics_funnel" },
-  { prefix: "/admin/metricas", tab: "atendimentos", feature: "metrics_appointments" },
+  { prefix: "/admin/metricas", tab: "desempenho", feature: "metrics_performance" },
+  { prefix: "/admin/metricas", tab: "digital", feature: "metrics_funnel" },
   { prefix: "/admin/metricas", tab: "retomar_contato", feature: "metrics_recall" },
   // Aba desconhecida: a tela cai na primeira liberada; nenhuma regra própria.
   { prefix: "/admin/metricas", tab: "faltosos", feature: "metrics_no_shows" },

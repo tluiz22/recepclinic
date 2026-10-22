@@ -116,8 +116,8 @@ describe("papéis e áreas do painel (D6)", () => {
   it("Métricas e relatórios (D11): Administrador com aba liberada; Profissional só com as métricas pessoais", () => {
     expect(areaOfPath("/admin/metricas")).toBe("metrics");
     expect(areaOfPath("/admin/relatorios/x")).toBe("metrics");
-    const tabs: FeatureKey[] = ["metrics_overview"];
-    const personal: FeatureKey[] = ["metrics_overview", "metrics_personal"];
+    const tabs: FeatureKey[] = ["metrics_performance"];
+    const personal: FeatureKey[] = ["metrics_performance", "metrics_personal"];
     expect(canAccessArea({ ...as("admin"), features: tabs }, "metrics")).toBe(true);
     expect(canAccessArea({ ...as("admin"), features: [] }, "metrics")).toBe(false);
     expect(canAccessArea({ ...as("professional"), features: tabs }, "metrics")).toBe(false);

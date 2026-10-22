@@ -1,0 +1,37 @@
+---
+// "Precisa de atenção" (redesign das Métricas, M4/M5): até 3 itens no topo
+// da aba, do mais urgente ao menos, cada um com o caminho para resolver.
+// Sem item, o bloco não aparece.
+import Icon from "../Icon.astro";
+
+export type AttentionItem = { strong: string; rest: string; href: string; linkLabel: string };
+
+interface Props {
+  items: AttentionItem[];
+}
+
+const items = Astro.props.items.slice(0, 3);
+---
+
+{
+  items.length > 0 && (
+    <section aria-labelledby="precisa-atencao" class="mt-4 flex flex-col gap-2.5 rounded-xl border border-pend-200 bg-pend-50 px-4 py-3.5 sm:px-5">
+      <h2 id="precisa-atencao" class="flex items-center gap-2 font-display text-base font-bold text-ink">
+        <Icon name="warning" class="h-5 w-5 text-pend-800" strokeWidth={2} />
+        Precisa de atenção
+      </h2>
+      <ul class="grid gap-x-6 gap-y-2.5 text-[15px] leading-snug md:grid-cols-3">
+        {items.map((item) => (
+          <li class="flex flex-col gap-1">
+            <span>
+              <b>{item.strong}</b> {item.rest}
+            </span>
+            <a href={item.href} class="self-start py-1 text-sm font-bold text-brand-ink no-underline hover:underline">
+              {item.linkLabel} ›
+            </a>
+          </li>
+        ))}
+      </ul>
+    </section>
+  )
+}

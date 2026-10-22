@@ -52,9 +52,9 @@ describe("item que cada rota exige", () => {
   it("Métricas aba a aba; sem aba, basta ter alguma liberada (a tela abre nela)", () => {
     expect(route("/admin/metricas")).toBeNull();
     expect(route("/admin/metricas?tab=retomar_contato")).toBe("metrics_recall");
-    expect(route("/admin/metricas?tab=visao_geral")).toBe("metrics_overview");
+    expect(route("/admin/metricas?tab=desempenho")).toBe("metrics_performance");
     expect(route("/admin/metricas?tab=financeiro&periodo=mes")).toBe("metrics_financial");
-    expect(route("/admin/metricas?tab=funil")).toBe("metrics_funnel");
+    expect(route("/admin/metricas?tab=digital")).toBe("metrics_funnel");
   });
 
   it("abas do Resumo do Dia e Configurações pelos itens", () => {
@@ -103,7 +103,7 @@ describe("acesso à rota: papel (D6) e item liberado (D11)", () => {
   });
 
   it("métricas: aba liberada e escopo do papel", () => {
-    expect(can(ctx(["admin"], ["metrics_overview"]), "/admin/metricas?tab=financeiro")).toBe(false);
+    expect(can(ctx(["admin"], ["metrics_performance"]), "/admin/metricas?tab=financeiro")).toBe(false);
     expect(can(ctx(["admin"], ["metrics_financial"]), "/admin/metricas?tab=financeiro")).toBe(true);
     expect(can(ctx(["professional"], ["metrics_financial"]), "/admin/metricas?tab=financeiro")).toBe(false);
     expect(can(ctx(["professional"], ["metrics_financial", "metrics_personal"]), "/admin/metricas?tab=financeiro")).toBe(true);

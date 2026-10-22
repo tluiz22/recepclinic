@@ -51,7 +51,7 @@ const TZ = "America/Sao_Paulo";
 // Clínica de testes ligada ao chip (+55 61 9903-3143) no staging.
 const TEST_CLINIC_NAME = "Consultorio Tluiz22";
 
-const METRICS = ["metrics_overview", "metrics_appointments", "metrics_no_shows", "metrics_recall", "metrics_funnel", "metrics_financial", "metrics_personal"];
+const METRICS = ["metrics_performance", "metrics_no_shows", "metrics_recall", "metrics_funnel", "metrics_financial", "metrics_personal"];
 const BASIC = ["whatsapp_bot", "reminders", "daily_summary"];
 const COMPLETE = [...BASIC, "exams", "waitlist", ...METRICS, "custom_messages", "custom_templates", "home_visit", "insurance", "team_summary"];
 

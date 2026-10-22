@@ -1,0 +1,113 @@
+---
+// Linha de uma taxa por dia ou semana (redesign das Métricas, M4), em SVG
+// gerado no servidor, com a média do período tracejada. Ponto sem base (nada
+// registrado) não é desenhado: a linha se interrompe em vez de cair a 0%.
+// Abaixo de cada ponto, a quantidade e a base ("14 de 110").
+
+export type RatePoint = { label: string; n: number; base: number; partial: boolean };
+
+interface Props {
+  title: string;
+  points: RatePoint[];
+  average: number | null;
+  color?: string;
+}
+
+const { title, points, average, color = "#d0620f" } = Astro.props;
+const rates = points.map((p) => (p.base > 0 ? p.n / p.base : null));
+const maxRate = Math.max(0.1, ...rates.filter((r): r is number => r !== null), average ?? 0);
+const top = Math.min(1, Math.ceil((maxRate * 1.25) / 0.05) * 0.05);
+
+const LEFT = 40;
+const TOP = 26;
+const HEIGHT = 140;
+const STEP = points.length > 12 ? 44 : Math.max(110, 520 / Math.max(points.length, 1));
+const width = LEFT + points.length * STEP + 10;
+const x = (i: number) => LEFT + STEP / 2 + i * STEP;
+const y = (r: number) => TOP + HEIGHT - (r / top) * HEIGHT;
+const pct = (r: number) => `${Math.round(r * 100)}%`;
+const showSub = points.length <= 12;
+
+// Trechos contínuos (sem pontos vazios); o último trecho até a faixa em curso fica tracejado.
+const segments: { from: number; to: number; dashed: boolean }[] = [];
+for (let i = 1; i < points.length; i++) {
+  if (rates[i - 1] !== null && rates[i] !== null) segments.push({ from: i - 1, to: i, dashed: points[i].partial });
+}
+---
+
+<div data-scroll-region={title} class="overflow-x-auto" tabindex="0">
+  <svg viewBox={`0 0 ${width} ${TOP + HEIGHT + 46}`} width="100%" style={`min-width: ${Math.round(Math.max(300, width * 0.85))}px`} aria-hidden="true" focusable="false">
+    <g font-family="Source Sans 3 Variable, Source Sans 3, sans-serif">
+      <line x1={LEFT} y1={y(top)} x2={width - 4} y2={y(top)} stroke="#e6ecea" />
+      <line x1={LEFT} y1={y(top / 2)} x2={width - 4} y2={y(top / 2)} stroke="#e6ecea" />
+      <line x1={LEFT} y1={y(0)} x2={width - 4} y2={y(0)} stroke="#c5d3ce" />
+      <g font-size="11" fill="#4e635d" text-anchor="end">
+        <text x={LEFT - 6} y={y(0) + 4}>0%</text>
+        <text x={LEFT - 6} y={y(top / 2) + 4}>{pct(top / 2)}</text>
+        <text x={LEFT - 6} y={y(top) + 4}>{pct(top)}</text>
+      </g>
+      {
+        average !== null && (
+          <>
+            <line x1={LEFT} y1={y(average)} x2={width - 4} y2={y(average)} stroke="#4e635d" stroke-dasharray="5 4" />
+            <text x={LEFT + 4} y={y(average) - 5} font-size="11.5" fill="#4e635d" text-anchor="start">
+              média do período {pct(average)}
+            </text>
+          </>
+        )
+      }
+      {
+        segments.map((s) => (
+          <line x1={x(s.from)} y1={y(rates[s.from]!)} x2={x(s.to)} y2={y(rates[s.to]!)} stroke={color} stroke-width="3" stroke-dasharray={s.dashed ? "6 4" : undefined} />
+        ))
+      }
+      {
+        points.map((p, i) =>
+          rates[i] === null ? (
+            <text x={x(i)} y={y(0) - 6} font-size="11" fill="#4e635d" text-anchor="middle">
+              sem registro
+            </text>
+          ) : (
+            <>
+              <circle cx={x(i)} cy={y(rates[i]!)} r="5" fill={p.partial ? "#fff" : color} stroke={color} stroke-width="2" />
+              <text x={x(i)} y={y(rates[i]!) - 10} font-size="12" font-weight="700" fill="#12302a" text-anchor="middle">
+                {pct(rates[i]!)}
+              </text>
+            </>
+          ),
+        )
+      }
+      {
+        points.map((p, i) => (
+          <>
+            <text x={x(i)} y={y(0) + 18} font-size="12" fill="#34504a" text-anchor="middle">
+              {p.label}
+            </text>
+            {showSub && p.base > 0 && (
+              <text x={x(i)} y={y(0) + 33} font-size="11" fill="#4e635d" text-anchor="middle">
+                {p.n} de {p.base}
+              </text>
+            )}
+          </>
+        ))
+      }
+    </g>
+  </svg>
+</div>
+<div class="sr-only">
+<table>
+  <caption>{title}</caption>
+  <thead><tr><th scope="col">Período</th><th scope="col">Taxa</th><th scope="col">Quantidade e base</th></tr></thead>
+  <tbody>
+    {
+      points.map((p, i) => (
+        <tr>
+          <th scope="row">{p.label}{p.partial ? " (em curso)" : ""}</th>
+          <td>{rates[i] === null ? "sem registro" : pct(rates[i]!)}</td>
+          <td>{p.n} de {p.base}</td>
+        </tr>
+      ))
+    }
+  </tbody>
+</table>
+</div>

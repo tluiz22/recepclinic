@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { FEATURES, type FeatureKey } from "../../src/lib/features";
+import { FEATURES, RETIRED_FEATURE_KEYS, type FeatureKey } from "../../src/lib/features";
 import { bookAppointment } from "../../src/lib/data/agenda/appointments";
 import { cancelByClinic } from "../../src/lib/data/agenda/blocks";
 import { createSeries } from "../../src/lib/data/agenda/series";
@@ -52,7 +52,7 @@ afterAll(async () => {
 
 describe("itens da matriz", () => {
   it("a lista do banco é a mesma do código", async () => {
-    const { data } = await adminClient().from("features").select("key, area, label, depends_on").order("sort_order");
+    const { data } = await adminClient().from("features").select("key, area, label, depends_on").not("key", "in", `(${RETIRED_FEATURE_KEYS.join(",")})`).order("sort_order");
     expect(data).toEqual(FEATURES.map((f) => ({ key: f.key, area: f.area, label: f.label, depends_on: f.dependsOn })));
   });
 

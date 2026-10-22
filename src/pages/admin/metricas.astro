@@ -10,6 +10,14 @@
 // Financeiro; filtros numa barra (recolhível no celular); indicador e tabela
 // únicos; "Marcados por" com Parte e Total; Faltosos e Retomar contato com o
 // nome que abre a ficha (ou o contato) e o botão do WhatsApp.
+//
+// Redesign das Métricas (cliente, 22/out/2026; proposta e 10 decisões no
+// plano): abas Desempenho (junta Visão geral e Atendimentos), Agendamento
+// digital (o Funil do bot), Retomar contato (com a quantidade), Faltosos e
+// Financeiro; abre em "Este mês", com a comparação contra o mesmo período do
+// mês anterior ligada; filtros de serviço e local no Desempenho; o filtro por
+// paciente ou responsável sai das abas de indicadores e fica nas listas
+// (Retomar contato) e no Financeiro, que está fora do redesign.
 import AdminLayout from "../../layouts/AdminLayout.astro";
 import Icon from "../../components/admin/Icon.astro";
 import PhoneLinks from "../../components/admin/PhoneLinks.astro";
@@ -18,14 +26,17 @@ import DataTable from "../../components/admin/ui/DataTable.astro";
 import PageHeader from "../../components/admin/ui/PageHeader.astro";
 import Pill, { type PillTone } from "../../components/admin/ui/Pill.astro";
 import SegmentedControl from "../../components/admin/ui/SegmentedControl.astro";
-import Stat from "../../components/admin/ui/Stat.astro";
 import Tabs from "../../components/admin/ui/Tabs.astro";
 import { CONTROL, TABLE } from "../../components/admin/ui/styles";
 import { isUuid } from "../../lib/clinicAccess";
-import { formatInstant } from "../../lib/clinicTime";
+import { formatCalendarDate, formatInstant, todayIn } from "../../lib/clinicTime";
 import { createUserClient } from "../../lib/data/clients";
 import { listAgendas } from "../../lib/data/config/agendas";
-import { byOrigin, financial, listFrequentNoShows, listMetricsRows, noShowByCategory, overview, ownAgendaIds, volumeByService } from "../../lib/data/metrics";
+import { financial, listFrequentNoShows, listMetricsRows, ownAgendaIds } from "../../lib/data/metrics";
+import { listLocations } from "../../lib/data/config/locations";
+import { listServices } from "../../lib/data/config/services";
+import PerformanceTab from "../../components/admin/metricas/PerformanceTab.astro";
+import { defaultGrouping } from "../../lib/metricsRules";
 import { getContact, getPatient, listContactPatients, searchContacts, searchPatients } from "../../lib/data/patients";
 import { metricsScope, type FeatureKey } from "../../lib/features";
 import { buildFunnelReportFromSessions, listFunnelSessions } from "../../lib/data/botFunnel";
@@ -42,15 +53,14 @@ const params = Astro.url.searchParams;
 const now = new Date();
 
 const TABS: { id: string; label: string; feature: FeatureKey }[] = [
-  { id: "visao_geral", label: "Visão geral", feature: "metrics_overview" },
-  { id: "atendimentos", label: "Atendimentos", feature: "metrics_appointments" },
-  { id: "funil", label: "Funil do bot", feature: "metrics_funnel" },
-  { id: "faltosos", label: "Faltosos", feature: "metrics_no_shows" },
+  { id: "desempenho", label: "Desempenho", feature: "metrics_performance" },
+  { id: "digital", label: "Agendamento digital", feature: "metrics_funnel" },
   { id: "retomar_contato", label: "Retomar contato", feature: "metrics_recall" },
+  { id: "faltosos", label: "Faltosos", feature: "metrics_no_shows" },
   { id: "financeiro", label: "Financeiro", feature: "metrics_financial" },
 ];
-// Funil e Retomar contato são da clínica toda: o Profissional (só a própria agenda) não vê.
-const BOT_TABS = ["funil", "retomar_contato"];
+// Agendamento digital e Retomar contato são da clínica toda: o Profissional (só a própria agenda) não vê.
+const BOT_TABS = ["digital", "retomar_contato"];
 const visible = TABS.filter((t) => clinic.features.includes(t.feature) && (!BOT_TABS.includes(t.id) || metricsScope(clinic) === "clinic"));
 const tab = visible.find((t) => t.id === params.get("tab"))?.id ?? visible[0]?.id ?? null;
 
@@ -63,11 +73,13 @@ const agendaParam = params.get("agenda");
 const selectedAgenda = selectable.find((a) => a.id === agendaParam) ?? null;
 const agendaIds = selectedAgenda ? [selectedAgenda.id] : selectable.map((a) => a.id);
 
-// Filtro por paciente ou responsável.
+// Filtro por paciente ou responsável: só em Retomar contato e no Financeiro (decisão 7).
+const personFilterTabs = ["retomar_contato", "financeiro"];
+const allowsPersonFilter = !!tab && personFilterTabs.includes(tab);
 const patientParam = params.get("paciente");
 const contactParam = params.get("responsavel");
-const filterPatient = isUuid(patientParam) ? await getPatient(db, clinic.clinicId, patientParam).catch(() => null) : null;
-const filterContact = !filterPatient && isUuid(contactParam) ? await getContact(db, clinic.clinicId, contactParam).catch(() => null) : null;
+const filterPatient = allowsPersonFilter && isUuid(patientParam) ? await getPatient(db, clinic.clinicId, patientParam).catch(() => null) : null;
+const filterContact = allowsPersonFilter && !filterPatient && isUuid(contactParam) ? await getContact(db, clinic.clinicId, contactParam).catch(() => null) : null;
 const patientIds = filterPatient
   ? [filterPatient.id]
   : filterContact
@@ -75,9 +87,23 @@ const patientIds = filterPatient
     : null;
 const busca = (params.get("busca") ?? "").trim();
 const [foundPatients, foundContacts] =
-  busca && !filterPatient && !filterContact ? await Promise.all([searchPatients(db, clinic.clinicId, busca), searchContacts(db, clinic.clinicId, busca)]) : [[], []];
+  allowsPersonFilter && busca && !filterPatient && !filterContact ? await Promise.all([searchPatients(db, clinic.clinicId, busca), searchContacts(db, clinic.clinicId, busca)]) : [[], []];
 
-const period = parsePeriod(params, clinic.timezone, now);
+const period = parsePeriod(params, clinic.timezone, now, "mes");
+const today = todayIn(clinic.timezone, now);
+// Indicadores até hoje: "Este mês" mostra 1 a hoje e compara com os mesmos dias do mês anterior.
+const indicatorRange = { from: period.from, to: period.to > today && period.from <= today ? today : period.to };
+const compare = params.get("comparar") !== "0";
+const grouping = params.get("agrupar") === "dia" ? "day" : params.get("agrupar") === "semana" ? "week" : defaultGrouping(indicatorRange);
+const sortByNoShow = params.get("ordem") === "faltas";
+
+// Serviço e local (Desempenho).
+const performanceTab = tab === "desempenho";
+const [services, locations] = performanceTab
+  ? await Promise.all([listServices(db, clinic.clinicId, { includeInactive: true }), listLocations(db, clinic.clinicId, { includeInactive: true })])
+  : [[], []];
+const selectedService = services.find((s) => s.id === params.get("servico")) ?? null;
+const selectedLocation = locations.find((l) => l.id === params.get("local")) ?? null;
 const usesPeriod = tab !== "faltosos";
 const botTab = !!tab && BOT_TABS.includes(tab);
 const filterPhone = filterPatient
@@ -98,18 +124,31 @@ const recallContacts =
         ).map((c) => [c.id, c.full_name]),
       )
     : new Map<string, string>();
-const rows = tab && usesPeriod && !botTab ? await listMetricsRows(db, clinic.clinicId, { start: period.start, end: period.end, agendaIds, patientIds }) : [];
+const rows = tab === "financeiro" ? await listMetricsRows(db, clinic.clinicId, { start: period.start, end: period.end, agendaIds, patientIds }) : [];
 const frequent = tab === "faltosos" ? await listFrequentNoShows(db, clinic.clinicId, agendaIds) : [];
 
-const keep = { tab: tab ?? "", periodo: period.preset === "hoje" ? "" : period.preset, de: period.preset === "personalizado" ? period.from : "", ate: period.preset === "personalizado" ? period.to : "", agenda: selectedAgenda?.id ?? "", paciente: filterPatient?.id ?? "", responsavel: filterContact?.id ?? "" };
+const keep = {
+  tab: tab ?? "",
+  periodo: period.preset === "mes" ? "" : period.preset,
+  de: period.preset === "personalizado" ? period.from : "",
+  ate: period.preset === "personalizado" ? period.to : "",
+  agenda: selectedAgenda?.id ?? "",
+  servico: selectedService?.id ?? "",
+  local: selectedLocation?.id ?? "",
+  comparar: compare ? "" : "0",
+  agrupar: params.get("agrupar") ?? "",
+  ordem: sortByNoShow ? "faltas" : "",
+  paciente: filterPatient?.id ?? "",
+  responsavel: filterContact?.id ?? "",
+};
 const link = (changes: Partial<Record<keyof typeof keep | "busca", string>>) => {
   const next = new URLSearchParams();
   for (const [key, value] of Object.entries({ ...keep, ...changes })) if (value) next.set(key, value);
   return `/admin/metricas?${next}`;
 };
 const pct = (rate: number | null) => (rate === null ? "—" : `${Math.round(rate * 100)}%`);
+const periodTitle = indicatorRange.from === period.from && indicatorRange.to === period.to ? period.label : `${formatCalendarDate(indicatorRange.from, "d")} a ${formatCalendarDate(indicatorRange.to, "d 'de' MMMM")}`;
 const money = (cents: number) => formatCentsBRL(cents);
-const share = (count: number, total: number) => (total === 0 ? "—" : `${Math.round((count / total) * 100)}%`);
 const here = currentPath(Astro.url);
 const hasAgendaPicker = selectable.length > 1 && !botTab;
 const filtered = !!(filterPatient || filterContact);
@@ -118,8 +157,17 @@ const showCustom = period.preset === "personalizado" || period.invalid;
 const badFrom = period.invalidReason === "missing" ? !period.requested?.from : period.invalidReason !== null;
 const badTo = period.invalidReason === "missing" ? !period.requested?.to : period.invalidReason !== null;
 const scopeText = scope === "own_agenda" ? "só da sua agenda" : botTab ? "a clínica toda" : (selectedAgenda?.name ?? "todas as agendas");
-const subtitle = tab ? `${usesPeriod ? period.label : "Todo o histórico"} · ${scopeText}` : undefined;
-const filterSummary = [usesPeriod ? (PERIOD_PRESETS.find((p) => p.id === period.preset)?.label ?? "Personalizado") : null, hasAgendaPicker ? (selectedAgenda?.name ?? "todas as agendas") : null, filtered ? "com filtro" : null]
+const extraFilters = performanceTab ? [selectedService?.name, selectedLocation?.name].filter(Boolean).join(" · ") : "";
+const subtitle = tab
+  ? `${!usesPeriod ? "Todo o histórico" : performanceTab ? periodTitle : period.label} · ${scopeText}${extraFilters ? ` · ${extraFilters}` : ""}`
+  : undefined;
+const filterSummary = [
+  usesPeriod ? (PERIOD_PRESETS.find((p) => p.id === period.preset)?.label ?? "Personalizado") : null,
+  hasAgendaPicker ? (selectedAgenda?.name ?? "todas as agendas") : null,
+  selectedService?.name ?? null,
+  selectedLocation?.name ?? null,
+  filtered ? "com filtro" : null,
+]
   .filter(Boolean)
   .join(" · ");
 const OUTCOME_TONES: Record<string, PillTone> = { concluded: "success", abandoned: "warning", blocked: "neutral", declined: "neutral", error: "danger", in_progress: "info" };
@@ -128,11 +176,16 @@ const card = "flex flex-col gap-3 rounded-xl border border-line bg-white p-3.5 s
 const label = "text-[13.5px] font-semibold text-ink-soft";
 const intro = "text-sm leading-relaxed text-ink-soft";
 const hidden = (values: Record<string, string>) => Object.entries(values).filter(([, value]) => value);
-// "Marcados por" pelo dia da marcação, não pelo dia do atendimento (cliente, 18/out/2026).
-const ov =
-  tab === "visao_geral"
-    ? overview(rows, now, await listMetricsRows(db, clinic.clinicId, { start: period.start, end: period.end, agendaIds, patientIds, by: "booked" }))
-    : null;
+// Retornos só fazem sentido sem filtro de serviço ou com Consulta/Retorno escolhido.
+const returnsApply = !selectedService || selectedService.category === "consultation" || selectedService.category === "return_visit";
+const hasFilters = !!(selectedAgenda || selectedService || selectedLocation);
+const performanceLinks = {
+  grouping: (g: "day" | "week") => link({ agrupar: g === "day" ? "dia" : "semana" }),
+  sort: (byNoShow: boolean) => `${link({ ordem: byNoShow ? "faltas" : "" })}#por-servico`,
+  clearFilters: hasFilters ? link({ agenda: "", servico: "", local: "" }) : null,
+  wholeMonth: link({ periodo: "", de: "", ate: "" }),
+  retry: link({}),
+};
 const fin = tab === "financeiro" ? financial(rows) : null;
 ---
 
@@ -162,7 +215,7 @@ const fin = tab === "financeiro" ? financial(rows) : null;
                       class="!inline-flex flex-wrap [&>a]:grow sm:[&>a]:grow-0"
                       current={showCustom ? "personalizado" : period.preset}
                       items={[
-                        ...PERIOD_PRESETS.map((p) => ({ id: p.id, label: p.label, href: link({ periodo: p.id === "hoje" ? "" : p.id, de: "", ate: "" }) })),
+                        ...PERIOD_PRESETS.map((p) => ({ id: p.id, label: p.label, href: link({ periodo: p.id === "mes" ? "" : p.id, de: "", ate: "" }) })),
                         { id: "personalizado", label: "Personalizado", href: link({ periodo: "personalizado", de: period.from, ate: period.to }) },
                       ]}
                     />
@@ -183,7 +236,48 @@ const fin = tab === "financeiro" ? financial(rows) : null;
                   </select>
                 </form>
               )}
-              {usesPeriod && !filtered && (
+              {performanceTab && (
+                <form method="GET" action="/admin/metricas" class="flex flex-col gap-1.5">
+                  {hidden({ ...keep, servico: "" }).map(([name, value]) => <input type="hidden" name={name} value={value} />)}
+                  <label for="metricas-servico" class={label}>Serviço</label>
+                  <select id="metricas-servico" name="servico" class={`${CONTROL} w-full sm:w-52`} data-autosubmit>
+                    <option value="">Todos os serviços</option>
+                    {services.map((sv) => (
+                      <option value={sv.id} selected={sv.id === selectedService?.id}>
+                        {sv.name}{sv.isActive ? "" : " (desativado)"}
+                      </option>
+                    ))}
+                  </select>
+                </form>
+              )}
+              {performanceTab && locations.length > 1 && (
+                <form method="GET" action="/admin/metricas" class="flex flex-col gap-1.5">
+                  {hidden({ ...keep, local: "" }).map(([name, value]) => <input type="hidden" name={name} value={value} />)}
+                  <label for="metricas-local" class={label}>Local</label>
+                  <select id="metricas-local" name="local" class={`${CONTROL} w-full sm:w-48`} data-autosubmit>
+                    <option value="">Todos os locais</option>
+                    {locations.map((l) => (
+                      <option value={l.id} selected={l.id === selectedLocation?.id}>
+                        {l.name}{l.isActive ? "" : " (desativado)"}
+                      </option>
+                    ))}
+                  </select>
+                </form>
+              )}
+              {performanceTab && (
+                <a
+                  href={link({ comparar: compare ? "0" : "" })}
+                  role="switch"
+                  aria-checked={compare ? "true" : "false"}
+                  class="inline-flex min-h-11 items-center gap-2 self-start text-sm font-semibold text-ink-mid no-underline sm:self-end"
+                >
+                  <span class:list={["flex h-5 w-5 items-center justify-center rounded border-2", compare ? "border-brand bg-brand text-white" : "border-line-strong bg-white"]} aria-hidden="true">
+                    {compare && <Icon name="check" class="h-3.5 w-3.5" strokeWidth={3} />}
+                  </span>
+                  Comparar com o mês anterior
+                </a>
+              )}
+              {allowsPersonFilter && usesPeriod && !filtered && (
                 <form method="GET" action="/admin/metricas" role="search" class="flex min-w-0 flex-col gap-1.5 sm:min-w-[300px] sm:flex-1">
                   {hidden(keep).map(([name, value]) => <input type="hidden" name={name} value={value} />)}
                   <label for="metricas-busca" class={label}>Filtrar por {vocabulary.patient} ou {vocabulary.contact}</label>
@@ -265,64 +359,23 @@ const fin = tab === "financeiro" ? financial(rows) : null;
           </section>
         )}
 
-        {ov && (
-          <>
-            <div class="mt-4 grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-3 xl:grid-cols-6">
-              <Stat label="Atendimentos" value={ov.total} hint="sem os cancelados" />
-              <Stat label="Compareceram" value={ov.completed} hint="registrados" />
-              <Stat label="Faltaram" value={ov.noShow} hint={`${pct(ov.noShowRate)} dos registrados`} />
-              <Stat label="Cancelados" value={ov.canceled} hint="no período" />
-              <Stat label="A registrar" value={ov.pending} hint="já passaram, sem registro" attention={ov.pending > 0} />
-              <Stat label="Por vir" value={ov.upcoming} hint="até o fim do período" />
-            </div>
-            <section aria-labelledby="marcados-por" class="mt-6 flex max-w-2xl flex-col gap-2">
-              <h2 id="marcados-por" class={sectionTitle}>Marcados por</h2>
-              <p class={intro}>Atendimentos marcados no período, qualquer que seja a data deles (sem os cancelados depois).</p>
-              {(() => {
-                const channels = [
-                  ["WhatsApp (bot)", ov.byChannel.whatsapp],
-                  ["Painel (equipe)", ov.byChannel.panel],
-                ] as const;
-                const total = channels.reduce((sum, [, n]) => sum + n, 0);
-                return (
-                  <DataTable
-                    label="Marcados por"
-                    headers={["Origem", "Marcados", "Parte"]}
-                    rows={[...channels.map(([name, n]) => [name, n, share(n, total)]), ["Total", total, total === 0 ? "—" : "100%"]]}
-                    total
-                  />
-                );
-              })()}
-            </section>
-          </>
+        {performanceTab && (
+          <PerformanceTab
+            db={db}
+            clinic={clinic}
+            scope={{ agendaIds, serviceIds: selectedService ? [selectedService.id] : null, locationIds: selectedLocation ? [selectedLocation.id] : null }}
+            range={indicatorRange}
+            compare={compare}
+            grouping={grouping}
+            returnsApply={returnsApply}
+            sortByNoShow={sortByNoShow}
+            links={performanceLinks}
+            here={here}
+            now={now}
+          />
         )}
 
-        {tab === "atendimentos" && (
-          <div class="mt-5 grid items-start gap-6 lg:grid-cols-2">
-            <section aria-labelledby="volume" class="flex flex-col gap-2">
-              <h2 id="volume" class={sectionTitle}>Volume por serviço e local</h2>
-              <DataTable label="Volume por serviço e local" headers={["Serviço · local", "Atendimentos"]} rows={volumeByService(rows).map((r) => [r.label, r.count])} />
-            </section>
-            <div class="flex flex-col gap-6">
-              <section aria-labelledby="nao-comparecimento" class="flex flex-col gap-2">
-                <h2 id="nao-comparecimento" class={sectionTitle}>Não comparecimento</h2>
-                <p class={intro}>Só entre os já registrados (compareceu ou faltou).</p>
-                <DataTable
-                  label="Não comparecimento"
-                  headers={["Tipo", "Compareceu", "Faltou", "Faltas"]}
-                  rows={noShowByCategory(rows).map((r) => [r.label, r.completed, r.noShow, pct(r.rate)])}
-                  total
-                />
-              </section>
-              <section aria-labelledby="por-origem" class="flex flex-col gap-2">
-                <h2 id="por-origem" class={sectionTitle}>Por origem</h2>
-                <DataTable label="Por origem" headers={["Origem", "Marcados", "Cancelados"]} rows={byOrigin(rows).map((r) => [r.label, r.booked, r.canceled])} />
-              </section>
-            </div>
-          </div>
-        )}
-
-        {funnel && tab === "funil" && (
+        {funnel && tab === "digital" && (
           <>
             <p class={`${intro} mt-4 max-w-4xl`}>
               Tentativas iniciadas no período, da clínica toda. Cada barra é proporcional a quem iniciou; a porcentagem é a conversão em relação à etapa

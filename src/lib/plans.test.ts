@@ -34,7 +34,7 @@ describe("planos", () => {
   });
 
   it("um item das métricas ligado conta o adicional inteiro", () => {
-    expect(clinicPlan([...BASIC, "metrics_overview"], 1)).toMatchObject({ kind: "custom", monthlyCents: 14_700 + 4_500 });
+    expect(clinicPlan([...BASIC, "metrics_performance"], 1)).toMatchObject({ kind: "custom", monthlyCents: 14_700 + 4_500 });
   });
 
   it("séries e o Módulo financeiro ficam fora da tabela, sem valor", () => {

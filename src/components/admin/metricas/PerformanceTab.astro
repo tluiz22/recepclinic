@@ -1,0 +1,582 @@
+---
+// Métricas › Desempenho (redesign de 22/out/2026, M4; proposta aprovada no
+// canvas e as 10 decisões do cliente no plano). Junta a Visão geral e os
+// Atendimentos: indicadores com a comparação contra o mesmo período do mês
+// anterior, "Precisa de atenção", o que aconteceu em cada semana, de onde
+// vêm as marcações, comparecimento (por semana, pela resposta ao lembrete e
+// por serviço e local), resposta aos lembretes e retornos. As contas vêm do
+// banco (src/lib/data/performance.ts); cada bloco falha sozinho.
+import type { ClinicContext } from "../../../lib/clinicAccess";
+import { dayBounds, formatCalendarDate, formatInstant, localDateOf, todayIn } from "../../../lib/clinicTime";
+import type { DbClient } from "../../../lib/data/clients";
+import {
+  byServiceAndLocation,
+  listActivity,
+  listAttendance,
+  listReminderOutcomes,
+  listReturnOpportunities,
+  listReturnRights,
+  summarizePerformance,
+  type ActivityDay,
+  type AttendanceRow,
+  type PerformanceScope,
+  type ReminderRow,
+  type ReturnRight,
+} from "../../../lib/data/performance";
+import { logError } from "../../../lib/log";
+import {
+  buckets as makeBuckets,
+  compareCounts,
+  compareRates,
+  comparisonRange,
+  describeComparison,
+  formatRate,
+  formatRatio,
+  sumByBucket,
+  type DateRange,
+} from "../../../lib/metricsRules";
+import { withReturn } from "../../../lib/returnPath";
+import PhoneLinks from "../PhoneLinks.astro";
+import { TABLE } from "../ui/styles";
+import Attention, { type AttentionItem } from "./Attention.astro";
+import ColumnsChart from "./ColumnsChart.astro";
+import { countDelta, previousCount, previousRate, rateDelta } from "./compare";
+import Kpi from "./Kpi.astro";
+import RateLine from "./RateLine.astro";
+
+interface Props {
+  db: DbClient;
+  clinic: ClinicContext;
+  scope: Pick<PerformanceScope, "agendaIds" | "serviceIds" | "locationIds">;
+  range: DateRange;
+  compare: boolean;
+  grouping: "day" | "week";
+  /** Filtro de serviço que não é Consulta nem Retorno: o bloco de retornos não se aplica. */
+  returnsApply: boolean;
+  sortByNoShow: boolean;
+  links: { grouping: (g: "day" | "week") => string; sort: (byNoShow: boolean) => string; clearFilters: string | null; wholeMonth: string; retry: string };
+  here: string;
+  now: Date;
+}
+
+const { db, clinic, scope, range, compare, grouping, returnsApply, sortByNoShow, links, here, now } = Astro.props;
+const tz = clinic.timezone;
+const today = todayIn(tz, now);
+const bounds = (r: DateRange) => ({ start: dayBounds(r.from, tz).start, end: dayBounds(r.to, tz).end });
+const current: PerformanceScope = { ...scope, ...bounds(range) };
+const prevRange = comparisonRange(range);
+const previous: PerformanceScope = { ...scope, ...bounds(prevRange) };
+const prevText = describeComparison(prevRange);
+
+/** Cada bloco falha sozinho: o erro vai para o registro e o bloco mostra o aviso. */
+async function safe<T>(block: string, run: () => Promise<T>): Promise<T | null> {
+  try {
+    return await run();
+  } catch (error) {
+    logError(`métricas: bloco "${block}" não carregou`, error, { clinica: clinic.clinicId });
+    return null;
+  }
+}
+
+const clinicStart = await safe("clínica", async () => {
+  const { data } = await db.from("clinics").select("created_at").eq("id", clinic.clinicId).maybeSingle();
+  return data?.created_at ? localDateOf(new Date(data.created_at), tz) : null;
+});
+// Sem comparação quando o período anterior é de antes de a clínica começar (incompleto).
+const noCompareReason =
+  !compare ? null : clinicStart && clinicStart > prevRange.from ? `Sem comparação: a clínica começou a usar o RecepClinic em ${formatCalendarDate(clinicStart, "dd/MM/yyyy")}.` : null;
+const comparing = compare && !noCompareReason;
+
+const [activity, attendance, reminders, rights, opportunities, prevActivity, prevAttendance, prevReminders] = await Promise.all([
+  safe("agendamentos", () => listActivity(db, clinic.clinicId, current)),
+  safe("comparecimento", () => listAttendance(db, clinic.clinicId, current, now)),
+  safe("lembretes", () => listReminderOutcomes(db, clinic.clinicId, current, now)),
+  returnsApply ? safe("retornos", () => listReturnRights(db, clinic.clinicId, { ...current, serviceIds: null } as PerformanceScope, now)) : Promise.resolve([] as ReturnRight[]),
+  returnsApply ? safe("retornos", () => listReturnOpportunities(db, clinic.clinicId, scope, now)) : Promise.resolve([] as ReturnRight[]),
+  comparing ? safe("agendamentos", () => listActivity(db, clinic.clinicId, previous)) : Promise.resolve(null),
+  comparing ? safe("comparecimento", () => listAttendance(db, clinic.clinicId, previous, now)) : Promise.resolve(null),
+  comparing ? safe("lembretes", () => listReminderOutcomes(db, clinic.clinicId, previous, now)) : Promise.resolve(null),
+]);
+
+const summarize = (a: ActivityDay[] | null, t: AttendanceRow[] | null, r: ReminderRow[] | null, rr: ReturnRight[] | null) =>
+  summarizePerformance({ activity: a ?? [], attendance: t ?? [], reminders: r ?? [], returnRights: rr ?? [] });
+const s = summarize(activity, attendance, reminders, rights);
+const p = comparing ? summarize(prevActivity, prevAttendance, prevReminders, null) : null;
+
+const isEmpty = activity !== null && attendance !== null && s.created.total === 0 && s.rescheduled.total === 0 && s.canceled.total === 0 && (attendance ?? []).length === 0;
+const periodText = range.from === range.to ? formatCalendarDate(range.from, "dd/MM") : `${formatCalendarDate(range.from, "dd/MM")} a ${formatCalendarDate(range.to, "dd/MM")}`;
+
+// Comparações (só com o período anterior completo e as bases suficientes).
+const createdCmp = p && prevActivity ? compareCounts(s.created.total, p.created.total) : null;
+const canceledCmp = p && prevActivity ? compareCounts(s.canceled.total, p.canceled.total) : null;
+const showCmp = p && prevAttendance ? compareRates(s.attendance.showRate, p.attendance.showRate) : null;
+const remindCmp = p && prevReminders ? compareRates(s.reminders.confirmedRate, p.reminders.confirmedRate) : null;
+const noCompare = compare ? noCompareReason : null;
+
+// Semana a semana (ou dia a dia).
+const list = makeBuckets(range, grouping, today);
+const activitySeries = sumByBucket(
+  (activity ?? []).map((d) => ({ day: d.day, created: d.createdPanel + d.createdWhatsapp, rescheduled: d.rescheduledPatient + d.rescheduledTeam + d.waitlistAdvanced, canceled: d.canceledPatient + d.canceledClinic + d.canceledMass })),
+  list,
+  ["created", "rescheduled", "canceled"],
+);
+const attendanceByBucket = sumByBucket(attendance ?? [], list, ["completed", "noShow"]);
+const ratePoints = list.map((b, i) => ({ label: b.label, n: attendanceByBucket[i].noShow, base: attendanceByBucket[i].completed + attendanceByBucket[i].noShow, partial: b.partial }));
+
+const table = byServiceAndLocation(attendance ?? []);
+const tableRows = sortByNoShow ? [...table.rows].sort((a, b) => (b.noShowRate.rate ?? -1) - (a.noShowRate.rate ?? -1)) : table.rows;
+const maxRowRate = Math.max(0.05, ...table.rows.map((r) => r.noShowRate.rate ?? 0));
+
+// Precisa de atenção (até 3, do mais urgente ao menos).
+const attention: AttentionItem[] = [];
+if (s.attendance.unregistered > 0) {
+  attention.push({
+    strong: `${s.attendance.unregistered} ${s.attendance.unregistered === 1 ? "atendimento já passou" : "atendimentos já passaram"} sem registro`,
+    rest: "de comparecimento. As taxas ainda podem mudar.",
+    href: "/admin/agenda",
+    linkLabel: "Registrar na Agenda",
+  });
+}
+const hottest = [...table.rows].filter((r) => r.hot).sort((a, b) => (b.noShowRate.rate ?? 0) - (a.noShowRate.rate ?? 0))[0];
+if (hottest && table.total.noShowRate.rate) {
+  const times = hottest.noShowRate.rate! / table.total.noShowRate.rate;
+  attention.push({
+    strong: `${hottest.serviceName} · ${hottest.locationName} com ${formatRate(hottest.noShowRate.rate!)} de faltas`,
+    rest: `(${hottest.noShow} de ${hottest.registered}), ${times >= 1.95 ? `${times.toFixed(1).replace(".", ",")} vezes a taxa da clínica` : "bem acima da taxa da clínica"} (${formatRate(table.total.noShowRate.rate)}).`,
+    href: "#por-servico",
+    linkLabel: "Ver por serviço",
+  });
+}
+if ((opportunities ?? []).length > 0) {
+  const n = opportunities!.length;
+  attention.push({ strong: `${n} ${n === 1 ? "consulta com retorno" : "consultas com retorno"} ainda no prazo`, rest: "e sem retorno marcado.", href: "#retornos", linkLabel: "Ver retornos" });
+}
+if (s.reminders.notDelivered > 0) {
+  const n = s.reminders.notDelivered;
+  attention.push({ strong: `${n} ${n === 1 ? "lembrete não foi entregue" : "lembretes não foram entregues"}`, rest: "(falha no envio ou template não aprovado).", href: "#lembretes", linkLabel: "Ver os lembretes" });
+}
+
+// Lista da "Oportunidade agora": nome e WhatsApp de quem pode marcar o retorno.
+const OPPORTUNITY_LIMIT = 50;
+const opportunityPeople =
+  (opportunities ?? []).length > 0
+    ? await safe("retornos", async () => {
+        const ids = [...new Set(opportunities!.slice(0, OPPORTUNITY_LIMIT).map((o) => o.patientId))];
+        const { data, error } = await db.from("patients").select("id, full_name, contacts ( full_name, phone )").eq("clinic_id", clinic.clinicId).in("id", ids);
+        if (error) throw error;
+        return new Map((data as unknown as { id: string; full_name: string; contacts: { full_name: string; phone: string } | null }[]).map((row) => [row.id, row]));
+      })
+    : null;
+
+const card = "flex min-w-0 flex-col gap-3 rounded-xl border border-line bg-white px-4 py-4 sm:px-5";
+const h2 = "font-display text-lg leading-tight font-bold text-ink";
+const h3 = "font-display text-base leading-tight font-bold text-ink";
+const sub = "text-sm leading-relaxed text-ink-soft";
+const COLORS = { created: "#0b7a62", rescheduled: "#8fb8e6", canceled: "#d0620f" };
+const failed = (what: string) => `Não foi possível carregar "${what}".`;
+const remindersTotal = s.reminders.confirmed + s.reminders.reschedule + s.reminders.cancel + s.reminders.noAnswer;
+const segment = (n: number) => (remindersTotal ? (n / remindersTotal) * 100 : 0);
+---
+
+{
+  isEmpty ? (
+    <section class="mt-4 flex flex-col items-start gap-2.5 rounded-xl border border-dashed border-line-strong bg-white px-5 py-6" aria-labelledby="vazio">
+      <h2 id="vazio" class={h2}>Nenhum atendimento de {periodText}</h2>
+      <p class={sub}>{links.clearFilters ? "Com os filtros escolhidos. Tire os filtros ou escolha outro período." : "Escolha outro período para ver os números."}</p>
+      <div class="flex flex-wrap gap-2">
+        {links.clearFilters && (
+          <a href={links.clearFilters} class="inline-flex h-11 items-center rounded-lg bg-brand px-4 font-semibold text-white no-underline hover:bg-brand-strong">
+            Tirar os filtros
+          </a>
+        )}
+        <a href={links.wholeMonth} class="inline-flex h-11 items-center rounded-lg border border-line-strong bg-white px-4 font-semibold text-ink no-underline hover:bg-canvas">
+          Ver o mês todo
+        </a>
+      </div>
+    </section>
+  ) : (
+    <>
+      <Attention items={attention} />
+
+      {noCompare && <p class="mt-3 text-sm text-ink-soft">{noCompare}</p>}
+
+      <section aria-label="Indicadores principais" class="mt-4 grid grid-cols-1 gap-3 min-[520px]:grid-cols-2 xl:grid-cols-4">
+        {activity === null ? (
+          <p role="alert" class={`${card} border-danger-line bg-can-50 text-danger`}>{failed("Agendamentos")}</p>
+        ) : (
+          <Kpi
+            id="kpi-criados"
+            label="Agendamentos criados"
+            value={String(s.created.total)}
+            delta={createdCmp ? countDelta(createdCmp, "up") : null}
+            previous={createdCmp ? previousCount(createdCmp, prevText) : null}
+            rule="Atendimentos marcados no período, pela data da marcação (qualquer que seja a data do atendimento). Cada sessão de uma série conta. Os cancelados depois continuam contando e aparecem à parte. Remarcar não é agendamento novo. A agenda importada na implantação fica fora."
+          >
+            {s.created.canceledLater > 0 ? `${s.created.canceledLater} já ${s.created.canceledLater === 1 ? "foi cancelado" : "foram cancelados"}.` : "Nenhum cancelado depois."}
+          </Kpi>
+        )}
+        {attendance === null ? (
+          <p role="alert" class={`${card} border-danger-line bg-can-50 text-danger`}>{failed("Comparecimento")}</p>
+        ) : (
+          <Kpi
+            id="kpi-comparecimento"
+            label="Comparecimento"
+            value={formatRatio(s.attendance.showRate)}
+            delta={showCmp ? rateDelta(showCmp, "up") : null}
+            previous={showCmp ? previousRate(showCmp, prevText) : null}
+            partial={s.attendance.partial}
+            rule={`Compareceram ÷ (compareceram + faltaram), entre os atendimentos com data no período. Cancelados e os que ainda estão sem registro ficam de fora. Com menos de 20 registrados, mostramos a quantidade. Base deste período: ${s.attendance.completed + s.attendance.noShow} registrados.`}
+          >
+            {s.attendance.completed + s.attendance.noShow === 0 ? (
+              "Nenhum comparecimento registrado ainda."
+            ) : (
+              <>
+                {s.attendance.completed} de {s.attendance.completed + s.attendance.noShow} registrados compareceram. <b class="text-ns-800">{s.attendance.noShow} {s.attendance.noShow === 1 ? "falta" : "faltas"}</b>.
+                {s.attendance.partial && ` ${s.attendance.unregistered} ainda sem registro.`}
+              </>
+            )}
+          </Kpi>
+        )}
+        {activity === null ? null : (
+          <Kpi
+            id="kpi-cancelamentos"
+            label="Cancelamentos"
+            value={String(s.canceled.total)}
+            delta={canceledCmp ? countDelta(canceledCmp, "down") : null}
+            previous={canceledCmp ? previousCount(canceledCmp, prevText) : null}
+            rule="Quantidade: atendimentos cancelados no período, pela data do cancelamento. A porcentagem usa outra base: os cancelados entre os atendimentos com data no período. Pelo paciente = pelo WhatsApp; pela clínica = no painel, um a um ou em massa (dia inteiro ou bloqueio)."
+          >
+            {s.canceled.ofScheduled.base > 0 && `${formatRatio(s.canceled.ofScheduled)} dos ${s.canceled.ofScheduled.base} atendimentos do período. `}
+            {s.canceled.patient} pelo paciente, {s.canceled.clinic + s.canceled.mass} pela clínica{s.canceled.mass > 0 ? ` (${s.canceled.mass} em massa)` : ""}.
+          </Kpi>
+        )}
+        {reminders === null ? (
+          <p role="alert" class={`${card} border-danger-line bg-can-50 text-danger`}>{failed("Lembretes")}</p>
+        ) : (
+          <Kpi
+            id="kpi-lembretes"
+            label="Confirmaram pelo lembrete"
+            value={formatRatio(s.reminders.confirmedRate)}
+            delta={remindCmp ? rateDelta(remindCmp, "up") : null}
+            previous={remindCmp ? previousRate(remindCmp, prevText) : null}
+            rule="Confirmaram ÷ lembretes entregues com o prazo de resposta encerrado. O prazo é o horário do atendimento: até lá, o lembrete fica como aguardando. Vale a última tentativa de cada atendimento e o botão tocado depois dela. Os não entregues ficam fora da conta."
+          >
+            {s.reminders.confirmedRate.base === 0
+              ? "Nenhum lembrete com o prazo encerrado."
+              : `${s.reminders.confirmed} de ${s.reminders.confirmedRate.base} lembretes com o prazo de resposta encerrado.`}
+          </Kpi>
+        )}
+      </section>
+
+      <section aria-labelledby="evolucao" class="mt-4 grid gap-3 lg:grid-cols-3">
+        <div class={`${card} lg:col-span-2`}>
+          <div class="flex flex-wrap items-start justify-between gap-2">
+            <div class="flex flex-col gap-1">
+              <h2 id="evolucao" class={h2}>Agendamentos, remarcações e cancelamentos por {grouping === "week" ? "semana" : "dia"}</h2>
+              <p class={sub}>Contados no dia em que aconteceram (marcação, remarcação ou cancelamento).</p>
+            </div>
+            <div role="group" aria-label="Agrupar por" class="inline-flex overflow-hidden rounded-lg border border-line-strong bg-white text-sm font-semibold">
+              <a href={links.grouping("day")} aria-current={grouping === "day" ? "true" : undefined} class:list={["flex min-h-10 items-center px-3.5 no-underline", grouping === "day" ? "bg-brand text-white" : "text-ink-mid hover:bg-canvas"]}>Dia</a>
+              <a href={links.grouping("week")} aria-current={grouping === "week" ? "true" : undefined} class:list={["flex min-h-10 items-center border-l border-line px-3.5 no-underline", grouping === "week" ? "bg-brand text-white" : "text-ink-mid hover:bg-canvas"]}>Semana</a>
+            </div>
+          </div>
+          {activity === null ? (
+            <p role="alert" class="text-danger">{failed("Agendamentos por semana")}</p>
+          ) : (
+            <>
+              <div class="flex flex-wrap gap-x-4 gap-y-1 text-[13.5px] text-ink-mid">
+                <span class="inline-flex items-center gap-1.5"><span class="h-3 w-3 rounded-[3px]" style={`background:${COLORS.created}`} />Agendamentos criados</span>
+                <span class="inline-flex items-center gap-1.5"><span class="h-3 w-3 rounded-[3px]" style={`background:${COLORS.rescheduled}`} />Remarcações</span>
+                <span class="inline-flex items-center gap-1.5"><span class="h-3 w-3 rounded-[3px]" style={`background:${COLORS.canceled}`} />Cancelamentos</span>
+              </div>
+              <ColumnsChart
+                title={`Agendamentos, remarcações e cancelamentos por ${grouping === "week" ? "semana" : "dia"}`}
+                series={[
+                  { label: "Agendamentos criados", color: COLORS.created },
+                  { label: "Remarcações", color: COLORS.rescheduled },
+                  { label: "Cancelamentos", color: COLORS.canceled },
+                ]}
+                buckets={list.map((b, i) => ({ label: b.label, partial: b.partial, values: [activitySeries[i].created, activitySeries[i].rescheduled, activitySeries[i].canceled] }))}
+              />
+            </>
+          )}
+        </div>
+        <div class={card}>
+          <h2 class={h2}>De onde vêm as marcações</h2>
+          {activity === null ? (
+            <p role="alert" class="text-danger">{failed("Origem das marcações")}</p>
+          ) : s.created.total === 0 ? (
+            <p class={sub}>Nenhum agendamento criado no período.</p>
+          ) : (
+            <>
+              <p class={sub}>Dos {s.created.total} agendamentos criados no período.</p>
+              <div class="flex h-7 overflow-hidden rounded-md" role="img" aria-label={`WhatsApp ${s.created.whatsapp}, painel ${s.created.panel}`}>
+                <div class="bg-whatsapp" style={`width:${(s.created.whatsapp / s.created.total) * 100}%`} />
+                <div class="bg-line-strong" style={`width:${(s.created.panel / s.created.total) * 100}%`} />
+              </div>
+              <table class="w-full text-[15px]">
+                <caption class="sr-only">Origem das marcações</caption>
+                <tbody>
+                  <tr class="border-b border-[#e6ecea]">
+                    <th scope="row" class="py-2 text-left font-normal"><span class="inline-flex items-center gap-1.5"><span class="h-3 w-3 rounded-[3px] bg-whatsapp" />WhatsApp (bot)</span></th>
+                    <td class="py-2 text-right font-bold tabular-nums">{s.created.whatsapp}</td>
+                    <td class="w-14 py-2 text-right text-ink-soft tabular-nums">{formatRate(s.created.whatsapp / s.created.total)}</td>
+                  </tr>
+                  <tr>
+                    <th scope="row" class="py-2 text-left font-normal"><span class="inline-flex items-center gap-1.5"><span class="h-3 w-3 rounded-[3px] bg-line-strong" />Painel (equipe)</span></th>
+                    <td class="py-2 text-right font-bold tabular-nums">{s.created.panel}</td>
+                    <td class="w-14 py-2 text-right text-ink-soft tabular-nums">{formatRate(s.created.panel / s.created.total)}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </>
+          )}
+          {activity !== null && (
+            <div class="flex flex-col gap-1 border-t border-[#e6ecea] pt-3">
+              <span class="text-[14.5px] font-semibold text-ink-mid">
+                Remarcações: <b class="text-ink">{s.rescheduled.total}</b>
+              </span>
+              <p class={sub}>
+                {s.rescheduled.patient} pelo paciente no WhatsApp · {s.rescheduled.team} pela equipe
+                {s.rescheduled.waitlist > 0 && ` · ${s.rescheduled.waitlist} antecipados pela lista de espera`}. Remarcar muda a data do mesmo atendimento: não conta
+                como agendamento novo.
+              </p>
+            </div>
+          )}
+        </div>
+      </section>
+
+      <section aria-labelledby="comparecimento" class="mt-6 flex flex-col gap-3">
+        <div class="flex flex-col gap-1">
+          <h2 id="comparecimento" class="font-display text-xl font-bold text-ink">Comparecimento</h2>
+          <p class={sub}>
+            Atendimentos com data no período e já registrados (compareceu ou faltou). Cancelados ficam de fora
+            {s.attendance.unregistered > 0 && `; os ${s.attendance.unregistered} sem registro aparecem à parte`}.
+          </p>
+        </div>
+        {attendance === null ? (
+          <p role="alert" class={`${card} border-danger-line bg-can-50 text-danger`}>{failed("Comparecimento")}</p>
+        ) : (
+          <>
+            <div class="grid gap-3 lg:grid-cols-2">
+              <div class={card}>
+                <h3 class={h3}>Faltas por {grouping === "week" ? "semana" : "dia"}</h3>
+                <p class={sub}>Taxa de faltas, com a quantidade e a base de cada {grouping === "week" ? "semana" : "dia"}.</p>
+                <RateLine title={`Faltas por ${grouping === "week" ? "semana" : "dia"}`} points={ratePoints} average={s.attendance.noShowRate.rate} />
+              </div>
+              <div class={card}>
+                <h3 class={h3}>Faltas pela resposta ao lembrete</h3>
+                <p class={sub}>Faltas entre os registrados, pela resposta ao lembrete. Confirmar não é comparecer: serve para saber onde agir.</p>
+                {reminders === null ? (
+                  <p role="alert" class="text-danger">{failed("Lembretes")}</p>
+                ) : (
+                  <ul class="flex flex-col gap-3">
+                    {s.noShowByReminder.map((g) => (
+                      <li class="grid grid-cols-[1fr_auto] items-center gap-x-2.5 gap-y-1 text-[14.5px] sm:grid-cols-[10rem_1fr_7.5rem]">
+                        <span>{g.label}</span>
+                        <span class="order-last col-span-2 h-4 overflow-hidden rounded bg-canvas-deep sm:order-none sm:col-span-1" aria-hidden="true">
+                          <span class="block h-4 rounded bg-ns-500" style={`width:${g.noShow.rate === null ? 0 : Math.min(g.noShow.rate / 0.5, 1) * 100}%`} />
+                        </span>
+                        <span class="text-right tabular-nums">
+                          {g.noShow.base === 0 ? (
+                            <span class="text-ink-soft">sem registro</span>
+                          ) : (
+                            <>
+                              <b>{g.noShow.enough ? formatRate(g.noShow.rate!) : `${g.noShow.n} de ${g.noShow.base}`}</b>
+                              {g.noShow.enough && <span class="text-ink-soft"> · {g.noShow.n} de {g.noShow.base}</span>}
+                            </>
+                          )}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                <a href="?tab=faltosos" class="self-start py-1 text-sm font-bold text-brand-ink no-underline hover:underline">Ver quem falta com frequência ›</a>
+              </div>
+            </div>
+
+            <div id="por-servico" class={`${card} scroll-mt-4`}>
+              <div class="flex flex-wrap items-baseline justify-between gap-2">
+                <h3 class={h3}>Por serviço e local</h3>
+                <a href={links.sort(!sortByNoShow)} class="py-1 text-sm font-bold text-brand-ink no-underline hover:underline">
+                  {sortByNoShow ? "Ordenar pelo volume" : "Ordenar pelas faltas"}
+                </a>
+              </div>
+              {table.rows.length === 0 ? (
+                <p class={sub}>Nenhum atendimento com data no período.</p>
+              ) : (
+                <>
+                  <div data-scroll-region="Por serviço e local" class={TABLE.box} tabindex="0">
+                    <table class={`${TABLE.table} min-w-[600px]`}>
+                      <caption class="sr-only">Volume e faltas por serviço e local, {sortByNoShow ? "pela taxa de faltas" : "pelo volume"}</caption>
+                      <thead>
+                        <tr>
+                          <th scope="col" class={TABLE.th}>Serviço · local</th>
+                          <th scope="col" class={`${TABLE.th} text-right`}>Atendimentos</th>
+                          <th scope="col" class={`${TABLE.th} text-right`}>Registrados</th>
+                          <th scope="col" class={`${TABLE.th} text-right`}>Faltas</th>
+                          <th scope="col" class={`${TABLE.th} w-[32%]`}>Taxa de faltas</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {[...tableRows, table.total].map((r, i, all) => {
+                          const isTotal = i === all.length - 1;
+                          return (
+                            <tr class={isTotal ? TABLE.total : ""}>
+                              <th scope="row" class={`${TABLE.td} text-left ${isTotal ? "font-bold" : "font-normal"}`}>
+                                {isTotal ? "Total" : <><b>{r.serviceName}</b> <span class="text-ink-soft">· {r.locationName}</span></>}
+                              </th>
+                              <td class={`${TABLE.td} ${TABLE.num}`}>{r.total}</td>
+                              <td class={`${TABLE.td} ${TABLE.num}`}>{r.registered}</td>
+                              <td class={`${TABLE.td} ${TABLE.num}`}>{r.noShow}</td>
+                              <td class={TABLE.td}>
+                                <div class="flex items-center gap-2.5">
+                                  {isTotal && <span class="flex-1" />}
+                                  {!isTotal && (
+                                    <span class="h-3.5 flex-1 overflow-hidden rounded bg-canvas-deep" aria-hidden="true">
+                                      <span class={`block h-3.5 rounded ${r.hot ? "bg-ns-500" : "bg-ns-200"}`} style={`width:${r.noShowRate.rate === null ? 0 : (r.noShowRate.rate / maxRowRate) * 100}%`} />
+                                    </span>
+                                  )}
+                                  <b class="min-w-[4.5rem] text-right tabular-nums">
+                                    {r.registered === 0 ? "—" : formatRatio(r.noShowRate)}
+                                    {r.hot && <span class="text-ns-800"> ▲</span>}
+                                  </b>
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                  <p class={sub}>Laranja forte e ▲: a taxa passa 1,5 vez a da clínica, com pelo menos 20 registrados.</p>
+                </>
+              )}
+            </div>
+          </>
+        )}
+      </section>
+
+      <section id="lembretes" aria-labelledby="lembretes-titulo" class={`${card} mt-6 scroll-mt-4`}>
+        <div class="flex flex-col gap-1">
+          <h2 id="lembretes-titulo" class="font-display text-xl font-bold text-ink">Resposta aos lembretes</h2>
+          <p class={sub}>Um desfecho por atendimento lembrado, pela última tentativa. A resposta conta até o horário do atendimento.</p>
+        </div>
+        {reminders === null ? (
+          <p role="alert" class="text-danger">{failed("Resposta aos lembretes")}</p>
+        ) : s.reminders.sent === 0 ? (
+          <p class={sub}>Nenhum lembrete enviado para atendimentos do período.</p>
+        ) : (
+          <>
+            {remindersTotal > 0 && (
+              <div
+                class="flex h-9 overflow-hidden rounded-lg text-[13px] font-bold"
+                role="img"
+                aria-label={`${remindersTotal} lembretes com o prazo encerrado: confirmaram ${s.reminders.confirmed}, pediram para remarcar ${s.reminders.reschedule}, pediram para cancelar ${s.reminders.cancel}, não responderam ${s.reminders.noAnswer}`}
+              >
+                <div class="flex items-center overflow-hidden bg-brand pl-2.5 whitespace-nowrap text-white" style={`width:${segment(s.reminders.confirmed)}%`}>
+                  {segment(s.reminders.confirmed) > 22 && `${s.reminders.confirmed} confirmaram`}
+                </div>
+                <div class="bg-[#8fb8e6]" style={`width:${segment(s.reminders.reschedule)}%`} />
+                <div class="bg-ns-500" style={`width:${segment(s.reminders.cancel)}%`} />
+                <div class="flex items-center overflow-hidden bg-canvas-deep bg-[repeating-linear-gradient(45deg,transparent_0_6px,rgba(18,48,42,0.08)_6px_12px)] pl-2 whitespace-nowrap text-ink" style={`width:${segment(s.reminders.noAnswer)}%`}>
+                  {segment(s.reminders.noAnswer) > 14 && String(s.reminders.noAnswer)}
+                </div>
+              </div>
+            )}
+            <dl class="grid grid-cols-2 gap-3 sm:grid-cols-4">
+              {[
+                ["Confirmaram", s.reminders.confirmed, "bg-brand"],
+                ["Pediram para remarcar", s.reminders.reschedule, "bg-[#8fb8e6]"],
+                ["Pediram para cancelar", s.reminders.cancel, "bg-ns-500"],
+                ["Não responderam", s.reminders.noAnswer, "bg-canvas-deep border border-line-strong"],
+              ].map(([labelText, value, swatch]) => (
+                <div class="flex flex-col gap-0.5">
+                  <dt class="inline-flex items-center gap-1.5 text-[13.5px] text-ink-mid">
+                    <span class={`h-3 w-3 rounded-[3px] ${swatch}`} />
+                    {labelText}
+                  </dt>
+                  <dd class="font-display text-xl font-bold tabular-nums">
+                    {value}
+                    {remindersTotal >= 20 && <span class="ml-1.5 font-sans text-sm font-normal text-ink-soft">{formatRate((value as number) / remindersTotal)}</span>}
+                  </dd>
+                </div>
+              ))}
+            </dl>
+            <p class={`${sub} border-t border-[#e6ecea] pt-2.5`}>
+              Fora da conta:{" "}
+              {s.reminders.notDelivered > 0 ? <b class="text-danger">{s.reminders.notDelivered} não {s.reminders.notDelivered === 1 ? "entregue" : "entregues"}</b> : "nenhum não entregue"} (falha no
+              envio ou template não aprovado) e {s.reminders.waiting} aguardando, porque o horário do atendimento ainda não chegou. Base: {remindersTotal} de {s.reminders.sent} lembretes
+              enviados.
+            </p>
+          </>
+        )}
+      </section>
+
+      {returnsApply && (
+        <section id="retornos" aria-labelledby="retornos-titulo" class={`${card} mt-6 scroll-mt-4`}>
+          <div class="flex flex-col gap-1">
+            <h2 id="retornos-titulo" class="font-display text-xl font-bold text-ink">Retornos</h2>
+            <p class={sub}>
+              Consultas realizadas numa agenda com Retorno com prazo (não domiciliar). "Com direito" não quer dizer que o profissional indicou o retorno. Este bloco
+              vale para todos os serviços.
+            </p>
+          </div>
+          {rights === null ? (
+            <p role="alert" class="text-danger">{failed("Retornos")}</p>
+          ) : (
+            <div class="grid gap-4 sm:grid-cols-3">
+              <div class="flex flex-col gap-1">
+                <span class="text-[14.5px] font-semibold text-ink-mid">Retornos marcados no período</span>
+                <span class="font-display text-[30px] leading-none font-bold tabular-nums">{s.returns.booked}</span>
+                <span class={sub}>{s.returns.panel} pela equipe · {s.returns.whatsapp} pelo WhatsApp</span>
+              </div>
+              <div class="flex flex-col gap-1">
+                <span class="text-[14.5px] font-semibold text-ink-mid">Marcaram o retorno no prazo</span>
+                <span class="font-display text-[30px] leading-none font-bold tabular-nums">{formatRatio(s.returns.dueWithReturn)}</span>
+                <span class={sub}>
+                  {s.returns.dueWithReturn.base === 0
+                    ? "Nenhum prazo de retorno terminou no período."
+                    : `${s.returns.dueWithReturn.n} de ${s.returns.dueWithReturn.base} consultas cujo prazo de retorno terminou no período.`}
+                </span>
+              </div>
+              <div class="flex flex-col gap-1 rounded-[10px] border border-conf-200 bg-conf-50 px-3.5 py-3">
+                <span class="text-[14.5px] font-semibold text-ink-mid">Oportunidade agora</span>
+                <span class="font-display text-[30px] leading-none font-bold tabular-nums">{opportunities === null ? "—" : opportunities.length}</span>
+                <span class={sub}>consultas com o prazo ainda aberto e sem retorno marcado</span>
+              </div>
+            </div>
+          )}
+          {opportunities && opportunities.length > 0 && (
+            <details class="rounded-lg border border-line" data-opportunities>
+              <summary class="flex min-h-11 cursor-pointer items-center px-3.5 text-[15px] font-bold text-brand-ink">
+                Ver a lista para contato ({Math.min(opportunities.length, OPPORTUNITY_LIMIT)}
+                {opportunities.length > OPPORTUNITY_LIMIT ? ` de ${opportunities.length}` : ""})
+              </summary>
+              <ul class="border-t border-line">
+                {opportunities.slice(0, OPPORTUNITY_LIMIT).map((o) => {
+                  const person = opportunityPeople?.get(o.patientId);
+                  return (
+                    <li class="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 border-b border-[#e6ecea] px-3.5 py-2.5 last:border-b-0">
+                      <span class="flex min-w-0 flex-col">
+                        <a href={withReturn(`/admin/pacientes/${o.patientId}`, here)} class="font-semibold text-ink no-underline hover:text-brand hover:underline">
+                          {person?.full_name ?? "Paciente"}
+                        </a>
+                        <span class="text-sm text-ink-soft">
+                          Consulta em {formatInstant(o.scheduledAt, tz, "dd/MM")} · retorno até {formatCalendarDate(o.lastDate, "dd/MM/yyyy")}
+                        </span>
+                      </span>
+                      {person?.contacts?.phone && <PhoneLinks phone={person.contacts.phone} plain class="text-[15px]" />}
+                    </li>
+                  );
+                })}
+              </ul>
+            </details>
+          )}
+        </section>
+      )}
+
+      <p class="mt-6 text-center text-sm text-ink-soft">Cada indicador tem o "i" com a regra de contagem.</p>
+    </>
+  )
+}

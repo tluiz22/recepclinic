@@ -2733,6 +2733,35 @@ consulta de origem (`origin_appointment_id`); a taxa de retorno no prazo depende
   clínica), `metricsRules.test.ts` e `performance.test.ts`; `npm run test:db` 556, `npm test` 592, `astro check` sem
   erros.
 
+**M4 (aba Desempenho) implementada e publicada no staging em 22/out** (migração `20261022140000_metricas_matriz.sql`):
+- Abas: Desempenho, Agendamento digital, Retomar contato, Faltosos e Financeiro. A tela abre em "Este mês"; os
+  indicadores vão até hoje (1 a 22/out) e comparam com os mesmos dias do mês anterior ("Comparar com o mês anterior",
+  ligado por padrão). "Sem comparação" com o motivo quando o período anterior é de antes de a clínica começar.
+- Desempenho: "Precisa de atenção" (sem registro, serviço e local com faltas 1,5 vez acima da clínica, retornos no prazo
+  sem marcação, lembretes não entregues; até 3); 4 indicadores com "i" (agendamentos criados com os cancelados depois à
+  parte, comparecimento com o selo "Parcial", cancelamentos com a taxa sobre os atendimentos do período, confirmaram pelo
+  lembrete); colunas por dia ou semana (até 14 dias, por dia) com a faixa em curso tracejada; de onde vêm as marcações e
+  as remarcações (paciente, equipe, lista de espera); faltas por semana com a média; faltas pela resposta ao lembrete;
+  tabela por serviço e local (ordenável pelas faltas, destaque com base ≥ 20); resposta aos lembretes (barra 100%, fora
+  da conta os não entregues e os aguardando); retornos (marcados, no prazo, oportunidade agora com a lista para
+  contato, até 50). Taxas com base < 20 viram "X de Y". Cada bloco falha sozinho (aviso no lugar, erro registrado).
+- Gráficos em SVG gerado no servidor (`src/components/admin/metricas/`: `Kpi`, `Attention`, `ColumnsChart`,
+  `RateLine`, `PerformanceTab`), sem biblioteca, com tabela escondida para leitor de tela; no celular a área do gráfico
+  rola dentro do cartão e nada passa da tela em 360px.
+- Filtros: período, agenda (não para o Profissional), serviço e local. O filtro por paciente ou responsável ficou só em
+  Retomar contato e no Financeiro (decisão 7). O bloco Retornos vale para todos os serviços e some com um filtro de
+  serviço que não é Consulta nem Retorno.
+- Matriz: item novo `metrics_performance` ("Métricas: Desempenho"), liberado para quem tinha Visão geral ou Atendimentos
+  (no staging: Clínica Vida Plena, Consultório da Dra. Ana Karina e Consultorio de Teste); `metrics_funnel` passou a
+  "Métricas: Agendamento digital". Os itens antigos saíram do código (`RETIRED_FEATURE_KEYS`), mas as linhas continuam
+  no banco: **a limpeza fica para depois da validação do cliente**. As Métricas continuam vendidas juntas (sem mudança
+  de preço).
+- Dados de teste só no local: `scripts/metricas-local.sql` (dois meses fictícios na Clínica Exemplo Saúde; nunca no
+  staging).
+- Testes: `astro check` sem erros; `npm test` 592; `npm run test:db` 556; conferido no navegador local (1280px e 360px:
+  sem rolagem lateral, gráficos legíveis; período sem dados; filtro de serviço; comparação desligada; abas antigas pelo
+  endereço caem numa aba liberada). O teste de interface completo vem na M5.
+
 ---
 
 ## Depois do 1º piloto (já previsto no banco)
