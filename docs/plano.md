@@ -2787,8 +2787,15 @@ consulta de origem (`origin_appointment_id`); a taxa de retorno no prazo depende
 ajustes, se houver.
 
 **Limitações e pendências do redesign (22/out):**
-- A comparação do Desempenho só vale quando o período anterior é depois do início da clínica (no local, a seed
-  "começou" hoje); conferir no staging.
+- ~~A comparação do Desempenho só vale quando o período anterior é depois do início da clínica (no local, a seed
+  "começou" hoje); conferir no staging.~~ **Conferida em 22/out** (cliente): no staging não dá para ver ainda (todas as
+  clínicas foram criadas entre 06 e 11/out, então o período anterior de qualquer período de outubro cai em setembro e
+  a tela mostra "Sem comparação", como manda a regra; aparece a partir de meados de novembro). Conferida no local, com
+  a criação da Clínica Exemplo posta em 01/08 só para o teste: "Este mês" (01 a 22/out) contra 01 a 22/set, todos os
+  números iguais aos do banco (criados 294, cancelamentos 20, comparecimento 83% = 215 de 259, confirmaram 66% = 162
+  de 244; o período atual também: 434, 34, 88%, 68%) e as variações certas (+48%, +70%, +5 e +2 pontos). Regra do
+  início: criada em 10/09 mostra "Sem comparação: a clínica começou a usar o RecepClinic em 10/09/2026"; criada em
+  01/09 (o primeiro dia do período anterior) compara. Sem mudança de código.
 - ~~Tempo com um ano de 50 mil atendimentos (meta: menos de 1,5 s) ainda não medido com esse volume.~~ **Medido e
   corrigido em 22/out** (ver "Tempo das Métricas" abaixo).
 - O filtro por serviço e agenda no Agendamento digital (dados da M3) não entrou na tela: só as tentativas novas têm

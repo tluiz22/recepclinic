@@ -249,6 +249,9 @@
 >   de faltas, Envios e carga da agenda leem em páginas; achado e corrigido o erro 500 da Agenda do Dia com ~200
 >   pacientes (ids em lotes); sobras do agendador do piloto apagadas. Conferido com volume no local e **publicado no
 >   staging em 22/out** (sem migração) e **validada pelo cliente em 22/out** (detalhes no [plano](plano.md)).
+>   **Comparação do Desempenho conferida em 22/out** (última pendência do redesign): no staging só aparece a partir de
+>   meados de novembro (clínicas criadas em outubro); no local, os números do período anterior e as variações batem com
+>   o banco e a regra do "Sem comparação" está certa (detalhes no [plano](plano.md)). Sem mudança de código.
 >   Banco local com os dados fictícios das Métricas (`npm run db:reset` limpa). Em paralelo,
 >   aguardar a Meta (Análise do App até ~29/out).
 >   **App antigo da Meta (cliente, 20/out):** o piloto está desativado e o número do app "Consultório Dra. Ana Karina" é
