@@ -212,7 +212,7 @@
 >   migração); **validado pelo cliente em 21/out**.
 >   **Métricas › Visão geral › "Marcados por" sem a linha "Link de agendamento"** (cliente, 21/out): ficava sempre em
 >   0, porque quem marca pelo link do bot já conta como "WhatsApp (bot)"; publicado no staging em 21/out (sem migração);
->   **aguarda a validação do cliente**.
+>   **validado pelo cliente em 22/out**.
 >   **Link de criar a senha (cliente, 22/out):** o 1º link do convite dava "venceu" em menos de 24h e caía no login.
 >   Causas: o staging nunca recebeu o `otp_expiry = 86400` do `config.toml` (padrão do Supabase: 1 hora) e abrir o link já
 >   gastava o código (leitor de e-mail, antivírus, prévia do WhatsApp). Correção: o link abre `/admin/confirmar-link`, e o
@@ -220,8 +220,8 @@
 >   novo link" (no lugar do login). Publicado no staging em 22/out (sem migração). Validade do link: **86400 no staging em 22/out**
 >   (o cliente rodou o PATCH `mailer_otp_exp` da API do Supabase com o login da CLI, porque o painel estava fora por um
 >   incidente); **na produção, o mesmo ajuste**. Envio da recuperação conferido (e-mail chegou, 22/out). Para testar
->   convites: e-mail com "+" (`nome+teste1@gmail.com`). **Aguarda a validação do cliente**.
->   **Retomar daqui (próxima sessão):** confirmar a validação do "Marcados por" sem o link e do link de criar a senha; o cliente traz novos casos para avaliar. Em paralelo, aguardar a Meta (Análise do App até ~29/out).
+>   convites: e-mail com "+" (`nome+teste1@gmail.com`). **Validado pelo cliente em 22/out** (recuperação e convite).
+>   **Retomar daqui (próxima sessão):** o cliente traz novos casos para avaliar. Em paralelo, aguardar a Meta (Análise do App até ~29/out).
 >   **App antigo da Meta (cliente, 20/out):** o piloto está desativado e o número do app "Consultório Dra. Ana Karina" é
 >   do cliente; o app antigo foi excluído pelo cliente (20/out) e o número entra no portfólio RecepClinic para uma 2ª clínica de
 >   testes do staging quando o aparelho estiver com ele (precisa do SMS). Regra revista no `CLAUDE.md`.
