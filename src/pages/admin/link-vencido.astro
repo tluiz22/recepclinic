@@ -1,0 +1,43 @@
+---
+import Notice from "../../components/admin/ui/Notice.astro";
+import { AUTH_INPUT, AUTH_LABEL, AUTH_LINK } from "../../components/admin/auth/styles";
+import { buttonClass } from "../../components/admin/ui/styles";
+import AuthLayout from "../../layouts/AuthLayout.astro";
+
+// Link do e-mail vencido ou já usado (cliente, 22/out/2026): em vez do login,
+// esta tela, com o pedido de um link novo na hora (o mesmo da recuperação;
+// vale também para quem foi convidado e ainda não criou a senha).
+const sent = Astro.url.searchParams.get("enviado") === "1";
+const convite = Astro.url.searchParams.get("origem") === "convite";
+---
+
+<AuthLayout title={sent ? "Link novo enviado" : "Este link venceu ou já foi usado"}>
+  {
+    !sent && (
+      <p slot="subtitle" class="text-[15px] text-ink-soft">
+        {convite ? "Para criar a sua senha" : "Para criar uma senha nova"}, informe o seu e-mail. Enviaremos um link novo, que vale por 24 horas.
+      </p>
+    )
+  }
+  {
+    sent ? (
+      <Notice tone="success">
+        Se este e-mail tiver acesso ao painel, enviamos um link novo. Confira a caixa de entrada (e o spam) e use o link mais recente.
+      </Notice>
+    ) : (
+      <form method="POST" action="/api/admin/auth/recuperar" class="flex flex-col gap-4">
+        <input type="hidden" name="volta" value="link-vencido" />
+        <div>
+          <label for="email" class={AUTH_LABEL}>
+            E-mail
+          </label>
+          <input type="email" name="email" id="email" required autocomplete="email" class={AUTH_INPUT} />
+        </div>
+        <button type="submit" data-sending-label="Enviando…" class={`${buttonClass("primary")} mt-1 h-[46px] w-full text-base sm:h-[46px]`}>
+          Receber um novo link
+        </button>
+      </form>
+    )
+  }
+  <a href="/admin/login" class={AUTH_LINK}>Já tenho senha: entrar no painel</a>
+</AuthLayout>

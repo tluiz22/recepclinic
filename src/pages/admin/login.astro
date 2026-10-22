@@ -9,7 +9,6 @@ const error = Astro.url.searchParams.get("error");
 const ERRORS: Record<string, string> = {
   // Login certo, mas sem papel em nenhuma clínica (D6, F3.2).
   sem_acesso: "Este login não tem acesso a nenhuma clínica.",
-  link_invalido: "O link do e-mail venceu ou já foi usado. Peça outro.",
 };
 const errorMessage = error === null ? null : (ERRORS[error] ?? "E-mail ou senha inválidos.");
 // Senha errada (R10): o e-mail volta no campo (src/scripts/keepFormValues.ts;
@@ -23,7 +22,7 @@ const wrongPassword = error !== null && !(error in ERRORS);
     errorMessage && (
       <div data-flash="error" data-fields={wrongPassword ? "password" : undefined}>
         <div data-form-error tabindex="-1" class="outline-none">
-          <Notice tone="danger" href={error === "link_invalido" ? "/admin/esqueci-senha" : undefined} linkLabel="Pedir outro link">
+          <Notice tone="danger">
             {errorMessage}
           </Notice>
         </div>

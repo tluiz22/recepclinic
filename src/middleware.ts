@@ -21,6 +21,8 @@ setErrorSink((record) => recordSystemError(record), waitUntil);
 const PUBLIC_ADMIN_PATHS = new Set([
   "/admin/login",
   "/admin/esqueci-senha",
+  "/admin/confirmar-link",
+  "/admin/link-vencido",
   "/api/admin/auth/login",
   "/api/admin/auth/recuperar",
   "/api/admin/auth/confirmar",

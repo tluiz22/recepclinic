@@ -1,0 +1,27 @@
+---
+import { buttonClass } from "../../components/admin/ui/styles";
+import AuthLayout from "../../layouts/AuthLayout.astro";
+import { isEmailLinkType } from "../../lib/data/auth";
+
+// Link do e-mail de convite ou de recuperação (cliente, 22/out/2026): o código
+// só é conferido ao tocar no botão, para que a abertura automática do link
+// (leitor de e-mail, antivírus, prévia do WhatsApp) não o gaste.
+const tokenHash = Astro.url.searchParams.get("token_hash") ?? "";
+const type = Astro.url.searchParams.get("type");
+const origem = Astro.url.searchParams.get("origem") === "convite" ? "convite" : "recuperacao";
+if (!tokenHash || !isEmailLinkType(type)) return Astro.redirect(`/admin/link-vencido?origem=${origem}`, 303);
+---
+
+<AuthLayout title={origem === "convite" ? "Bem-vindo ao RecepClinic" : "Criar uma senha nova"}>
+  <p slot="subtitle" class="text-[15px] text-ink-soft">
+    {origem === "convite" ? "Toque no botão para criar a senha do seu acesso ao painel." : "Toque no botão para escolher a sua senha nova."}
+  </p>
+  <form method="POST" action="/api/admin/auth/confirmar" class="flex flex-col gap-4">
+    <input type="hidden" name="token_hash" value={tokenHash} />
+    <input type="hidden" name="type" value={type} />
+    <input type="hidden" name="origem" value={origem} />
+    <button type="submit" data-sending-label="Abrindo…" class={`${buttonClass("primary")} mt-1 h-[46px] w-full text-base sm:h-[46px]`}>
+      {origem === "convite" ? "Criar minha senha" : "Criar a senha nova"}
+    </button>
+  </form>
+</AuthLayout>
