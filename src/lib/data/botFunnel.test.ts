@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildFunnelReport, type FunnelEventRow } from "./botFunnel";
+import { buildDigitalReport, buildFunnelReport, groupEvents, type FunnelEventRow } from "./botFunnel";
 
 const T0 = new Date("2026-10-07T12:00:00Z");
 let n = 0;
@@ -95,5 +95,88 @@ describe("funil do bot (F6.7)", () => {
     const booking = buildFunnelReport(events, start, end, now).flows.find((f) => f.id === "booking")!;
     expect(booking.stages[0].count).toBe(1);
     expect(booking.outcomes.in_progress).toBe(1);
+  });
+});
+
+describe("Agendamento digital (M5 das Métricas)", () => {
+  const P = (i: number) => `+55849900001${String(i).padStart(2, "0")}`;
+  const events = [
+    // d1: marcou consulta; o atendimento depois foi cancelado.
+    ev("d1", "booking", "started", 0, {}, P(1)),
+    ev("d1", "booking", "patient_identified", 1, {}, P(1)),
+    ev("d1", "booking", "link_sent", 2, {}, P(1)),
+    ev("d1", "booking", "page_opened", 3, {}, P(1)),
+    ev("d1", "booking", "confirmed", 4, { appointment_id: "a1" }, P(1)),
+    // d2: retorno barrado na regra.
+    ev("d2", "return_booking", "started", 10, {}, P(2)),
+    ev("d2", "return_booking", "blocked", 11, { reason: "return_deadline_passed" }, P(2)),
+    // d3: exame, recebeu o link e não abriu (abandono).
+    ev("d3", "exam", "started", 20, {}, P(3)),
+    ev("d3", "exam", "patient_identified", 21, {}, P(3)),
+    ev("d3", "exam", "link_sent", 22, {}, P(3)),
+    // d4: consulta, abriu e o horário foi ocupado ao confirmar.
+    ev("d4", "booking", "started", 30, {}, P(4)),
+    ev("d4", "booking", "patient_identified", 31, {}, P(4)),
+    ev("d4", "booking", "link_sent", 32, {}, P(4)),
+    ev("d4", "booking", "page_opened", 33, {}, P(4)),
+    ev("d4", "booking", "confirm_failed", 34, { reason: "slot_taken" }, P(4)),
+    // d5: em andamento (último passo há menos de 30 min).
+    ev("d5", "booking", "started", 345, {}, P(5)),
+    // d6: remarcou pelo lembrete (não soma nas marcações).
+    ev("d6", "reschedule", "started", 40, { source: "reminder" }, P(6)),
+    ev("d6", "reschedule", "link_sent", 41, {}, P(6)),
+    ev("d6", "reschedule", "page_opened", 42, {}, P(6)),
+    ev("d6", "reschedule", "confirmed", 43, {}, P(6)),
+    // h1: pediu a recepção no meio de uma marcação (com a etapa, M3).
+    ev("h1", "handoff", "requested", 50, { mid_journey: true, journey_state: "BOOK_PATIENT_NEW" }, P(4)),
+  ];
+  const sessions = groupEvents(events, start, end).map((s) => (s.sessionId === "d1" ? { ...s, appointmentStatus: "canceled" } : s));
+
+  it("marcar soma consulta, retorno e exame, sem remarcar nem cancelar", () => {
+    const r = buildDigitalReport(sessions, now);
+    expect(r.attempts).toBe(5);
+    expect(r.outcomes).toEqual({ concluded: 1, abandoned: 2, blocked: 1, declined: 0, error: 0, in_progress: 1 });
+    expect(r.finished).toBe(4);
+    expect(r.stages.map((s) => [s.label, s.count])).toEqual([
+      ["Iniciaram", 5],
+      ["Identificaram o paciente", 3],
+      ["Receberam o link", 3],
+      ["Abriram o link", 2],
+      ["Marcaram", 1],
+    ]);
+    expect(r.stages[0]).toMatchObject({ lostToNext: 2, blockedHere: 1, biggestLoss: true });
+    expect(r.stages[3]).toMatchObject({ lostToNext: 1, slotTakenHere: 1 });
+  });
+
+  it("seguem de pé confere o atendimento, não a conversa", () => {
+    expect(buildDigitalReport(sessions, now).standing).toEqual({ standing: 0, canceledLater: 1, unlinked: 0 });
+  });
+
+  it("motivos, erros ao confirmar e quem não abriu o link", () => {
+    const r = buildDigitalReport(sessions, now);
+    expect(r.blocked).toEqual([{ label: "Prazo do retorno vencido", count: 1 }]);
+    expect(r.errors).toEqual([{ label: "Ao confirmar: Horário ocupado ao confirmar", count: 1 }]);
+    expect(r.dropped).toEqual([{ label: "Pararam de responder", count: 1 }]);
+    expect(r.slotTaken).toBe(1);
+  });
+
+  it("remarcar: operação própria, pela origem", () => {
+    const r = buildDigitalReport(sessions, now, "remarcar", "lembrete");
+    expect(r.attempts).toBe(1);
+    expect(r.outcomes.concluded).toBe(1);
+    expect(r.flows.map((f) => [f.label, f.attempts])).toEqual([["Pelo lembrete", 1]]);
+    expect(buildDigitalReport(sessions, now, "remarcar", "menu").attempts).toBe(0);
+  });
+
+  it("recepção: por contato, com a etapa do pedido", () => {
+    const r = buildDigitalReport(sessions, now);
+    expect(r.reception).toMatchObject({ requested: 1, tookOver: 0, contactsNeeding: 1, contactsTotal: 6, withoutStep: 0 });
+    expect(r.reception.byStep).toEqual([{ label: "Cadastrando o paciente", count: 1 }]);
+  });
+
+  it("sem tentativas: tudo zero, sem divisão por zero", () => {
+    const r = buildDigitalReport([], now);
+    expect(r.attempts).toBe(0);
+    expect(r.stages.every((s) => s.share === null && !s.biggestLoss)).toBe(true);
   });
 });

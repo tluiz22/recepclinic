@@ -391,14 +391,14 @@ const segment = (n: number) => (remindersTotal ? (n / remindersTotal) * 100 : 0)
                     ))}
                   </ul>
                 )}
-                <a href="?tab=faltosos" class="self-start py-1 text-sm font-bold text-brand-ink no-underline hover:underline">Ver quem falta com frequência ›</a>
+                <a href="?tab=faltosos" class="inline-flex min-h-11 items-center self-start text-sm font-bold text-brand-ink no-underline hover:underline sm:min-h-0 sm:py-1">Ver quem falta com frequência ›</a>
               </div>
             </div>
 
             <div id="por-servico" class={`${card} scroll-mt-4`}>
               <div class="flex flex-wrap items-baseline justify-between gap-2">
                 <h3 class={h3}>Por serviço e local</h3>
-                <a href={links.sort(!sortByNoShow)} class="py-1 text-sm font-bold text-brand-ink no-underline hover:underline">
+                <a href={links.sort(!sortByNoShow)} class="inline-flex min-h-11 items-center text-sm font-bold text-brand-ink no-underline hover:underline sm:min-h-0 sm:py-1">
                   {sortByNoShow ? "Ordenar pelo volume" : "Ordenar pelas faltas"}
                 </a>
               </div>

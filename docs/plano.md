@@ -2762,6 +2762,38 @@ consulta de origem (`origin_appointment_id`); a taxa de retorno no prazo depende
   sem rolagem lateral, gráficos legíveis; período sem dados; filtro de serviço; comparação desligada; abas antigas pelo
   endereço caem numa aba liberada). O teste de interface completo vem na M5.
 
+**M5 (Agendamento digital, estados, celular e teste de interface) implementada e publicada no staging em 22/out**
+(sem migração):
+- Agendamento digital no lugar do Funil do bot: filtros de operação (Marcar, que soma consulta, retorno e exame; só
+  consulta, só retorno, só exame; Remarcar; Cancelar) e origem (menu, lembrete); "Precisa de atenção" (maior perda,
+  horário ocupado ao confirmar, quem não voltou a tentar, passos do bot não gravados); 4 indicadores (tentativas com a
+  comparação, concluíram sobre as já terminadas, seguem de pé conferido no atendimento, precisaram da recepção por
+  contato); funil nas etapas comuns da operação com a perda entre as etapas e a maior destacada; "Como terminaram"
+  (um desfecho por tentativa); tabela por fluxo com as etapas abrindo na linha e "onde mais perde"; barradas, não
+  concluíram e erros técnicos (a falha ao confirmar, como horário ocupado, conta como erro do sistema); recepção no
+  WhatsApp com "Em que etapa pediram ajuda" (dados da M3; os pedidos antigos aparecem como "sem a etapa").
+- Retomar contato ganhou a quantidade na aba; as tentativas do bot são lidas uma vez por página (digital, Retomar
+  contato e a quantidade).
+- Estados: carregando ("Calculando os números…"), nada no período, poucos dados ("X de Y"), parcial, erro por bloco,
+  sem comparação (com o motivo), Profissional (só Desempenho, Faltosos e Financeiro, na própria agenda), bot sem
+  tentativas e o "i" (abre pelo teclado; Esc e toque fora fecham).
+- [Teste de interface](auditoria-frontend/redesign-metricas-report.md): 32 cenários, 2 falhas Baixas (QA-01 links de
+  28px no celular; QA-02 o "i" não fechava com Esc), **as duas corrigidas e retestadas**; 2 bloqueados (erro de bloco e
+  bot sem tentativas, sem como simular no local sem mexer no banco).
+- Testes: `botFunnel.test.ts` com o relatório digital (soma de marcações sem remarcar/cancelar, seguem de pé,
+  motivos, origem, recepção, sem tentativas); `npm test` 598, `npm run test:db` 556, `astro check` e build sem erros.
+
+**Limitações e pendências do redesign (22/out):**
+- A comparação do Desempenho só vale quando o período anterior é depois do início da clínica (no local, a seed
+  "começou" hoje); conferir no staging.
+- Tempo com um ano de 50 mil atendimentos (meta: menos de 1,5 s) ainda não medido com esse volume.
+- O filtro por serviço e agenda no Agendamento digital (dados da M3) não entrou na tela: só as tentativas novas têm
+  o serviço, e as etapas antes do link ficariam sem ele. Os dados já estão sendo gravados.
+- Os itens antigos da matriz (`metrics_overview`, `metrics_appointments`) e as funções de `metrics.ts` que só a tela
+  antiga usava (`overview`, `volumeByService`, `noShowByCategory`, `byOrigin`) ficam até a validação; depois, a limpeza.
+- Fora do redesign, como decidido: ocupação da agenda, "retorno indicado pelo profissional" e vagas reaproveitadas
+  pela lista de espera.
+
 ---
 
 ## Depois do 1º piloto (já previsto no banco)

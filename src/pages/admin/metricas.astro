@@ -24,12 +24,12 @@ import PhoneLinks from "../../components/admin/PhoneLinks.astro";
 import Button from "../../components/admin/ui/Button.astro";
 import DataTable from "../../components/admin/ui/DataTable.astro";
 import PageHeader from "../../components/admin/ui/PageHeader.astro";
-import Pill, { type PillTone } from "../../components/admin/ui/Pill.astro";
+import Pill from "../../components/admin/ui/Pill.astro";
 import SegmentedControl from "../../components/admin/ui/SegmentedControl.astro";
 import Tabs from "../../components/admin/ui/Tabs.astro";
 import { CONTROL, TABLE } from "../../components/admin/ui/styles";
 import { isUuid } from "../../lib/clinicAccess";
-import { formatCalendarDate, formatInstant, todayIn } from "../../lib/clinicTime";
+import { dayBounds, formatCalendarDate, formatInstant, todayIn } from "../../lib/clinicTime";
 import { createUserClient } from "../../lib/data/clients";
 import { listAgendas } from "../../lib/data/config/agendas";
 import { financial, listFrequentNoShows, listMetricsRows, ownAgendaIds } from "../../lib/data/metrics";
@@ -39,7 +39,9 @@ import PerformanceTab from "../../components/admin/metricas/PerformanceTab.astro
 import { defaultGrouping } from "../../lib/metricsRules";
 import { getContact, getPatient, listContactPatients, searchContacts, searchPatients } from "../../lib/data/patients";
 import { metricsScope, type FeatureKey } from "../../lib/features";
-import { buildFunnelReportFromSessions, listFunnelSessions } from "../../lib/data/botFunnel";
+import { buildFunnelReportFromSessions, DIGITAL_OPERATIONS, listFunnelSessions, type DigitalOperation, type DigitalOrigin, type FunnelSession } from "../../lib/data/botFunnel";
+import DigitalTab from "../../components/admin/metricas/DigitalTab.astro";
+import { logError } from "../../lib/log";
 import { INVALID_PERIOD_MESSAGES, PERIOD_PRESETS, parsePeriod } from "../../lib/metricsPeriod";
 import { formatCentsBRL } from "../../lib/money";
 import { formatPhoneBR } from "../../lib/phone";
@@ -109,7 +111,23 @@ const botTab = !!tab && BOT_TABS.includes(tab);
 const filterPhone = filterPatient
   ? (await getContact(db, clinic.clinicId, filterPatient.contactId).catch(() => null))?.phone ?? null
   : (filterContact?.phone ?? null);
-const funnel = botTab ? buildFunnelReportFromSessions(await listFunnelSessions(db, clinic.clinicId, period.start, period.end, filterPhone), now) : null;
+// Tentativas do bot no período (até hoje), lidas uma vez: Agendamento digital, Retomar contato e a quantidade na aba.
+const botVisible = visible.some((t) => BOT_TABS.includes(t.id));
+let botSessions: FunnelSession[] | null = null;
+if (botVisible) {
+  try {
+    botSessions = await listFunnelSessions(db, clinic.clinicId, dayBounds(indicatorRange.from, clinic.timezone).start, dayBounds(indicatorRange.to, clinic.timezone).end);
+  } catch (error) {
+    logError("métricas: tentativas do bot não carregaram", error, { clinica: clinic.clinicId });
+  }
+}
+const recallVisible = visible.some((t) => t.id === "retomar_contato");
+const recallCount = botSessions && recallVisible ? buildFunnelReportFromSessions(botSessions, now).incomplete.length : 0;
+const funnel =
+  botTab && botSessions ? buildFunnelReportFromSessions(filterPhone ? botSessions.filter((s) => s.phone === filterPhone) : botSessions, now) : null;
+const operation: DigitalOperation = DIGITAL_OPERATIONS.find((o) => o.id === params.get("operacao"))?.id ?? "marcar";
+const originParam = params.get("origem");
+const digitalOrigin: DigitalOrigin = originParam === "menu" || originParam === "lembrete" ? originParam : "todas";
 const RECALL_LIMIT = 50;
 const recall = tab === "retomar_contato" && funnel ? funnel.incomplete.slice(0, RECALL_LIMIT) : [];
 const recallContacts =
@@ -138,6 +156,8 @@ const keep = {
   comparar: compare ? "" : "0",
   agrupar: params.get("agrupar") ?? "",
   ordem: sortByNoShow ? "faltas" : "",
+  operacao: operation === "marcar" ? "" : operation,
+  origem: digitalOrigin === "todas" ? "" : digitalOrigin,
   paciente: filterPatient?.id ?? "",
   responsavel: filterContact?.id ?? "",
 };
@@ -146,7 +166,6 @@ const link = (changes: Partial<Record<keyof typeof keep | "busca", string>>) => 
   for (const [key, value] of Object.entries({ ...keep, ...changes })) if (value) next.set(key, value);
   return `/admin/metricas?${next}`;
 };
-const pct = (rate: number | null) => (rate === null ? "—" : `${Math.round(rate * 100)}%`);
 const periodTitle = indicatorRange.from === period.from && indicatorRange.to === period.to ? period.label : `${formatCalendarDate(indicatorRange.from, "d")} a ${formatCalendarDate(indicatorRange.to, "d 'de' MMMM")}`;
 const money = (cents: number) => formatCentsBRL(cents);
 const here = currentPath(Astro.url);
@@ -159,7 +178,7 @@ const badTo = period.invalidReason === "missing" ? !period.requested?.to : perio
 const scopeText = scope === "own_agenda" ? "só da sua agenda" : botTab ? "a clínica toda" : (selectedAgenda?.name ?? "todas as agendas");
 const extraFilters = performanceTab ? [selectedService?.name, selectedLocation?.name].filter(Boolean).join(" · ") : "";
 const subtitle = tab
-  ? `${!usesPeriod ? "Todo o histórico" : performanceTab ? periodTitle : period.label} · ${scopeText}${extraFilters ? ` · ${extraFilters}` : ""}`
+  ? `${!usesPeriod ? "Todo o histórico" : performanceTab || tab === "digital" ? periodTitle : period.label} · ${scopeText}${extraFilters ? ` · ${extraFilters}` : ""}`
   : undefined;
 const filterSummary = [
   usesPeriod ? (PERIOD_PRESETS.find((p) => p.id === period.preset)?.label ?? "Personalizado") : null,
@@ -170,7 +189,6 @@ const filterSummary = [
 ]
   .filter(Boolean)
   .join(" · ");
-const OUTCOME_TONES: Record<string, PillTone> = { concluded: "success", abandoned: "warning", blocked: "neutral", declined: "neutral", error: "danger", in_progress: "info" };
 const sectionTitle = "font-display text-[17px] leading-tight font-bold text-ink sm:text-lg";
 const card = "flex flex-col gap-3 rounded-xl border border-line bg-white p-3.5 sm:px-5 sm:py-[18px]";
 const label = "text-[13.5px] font-semibold text-ink-soft";
@@ -197,7 +215,12 @@ const fin = tab === "financeiro" ? financial(rows) : null;
       <p class={`${card} mt-4 text-[15px] text-ink-soft`}>Nenhuma aba de métricas liberada para a clínica. Fale com o suporte.</p>
     ) : (
       <>
-        <Tabs label="Abas de Métricas" class="mt-4" tabs={visible.map((t) => ({ label: t.label, href: link({ tab: t.id }), active: t.id === tab }))} />
+        <Tabs label="Abas de Métricas" class="mt-4" tabs={visible.map((t) => ({
+            label: t.label,
+            href: link({ tab: t.id }),
+            active: t.id === tab,
+            ...(t.id === "retomar_contato" && recallCount > 0 ? { count: recallCount, countTone: "warning" as const, countLabel: `${recallCount} para retomar` } : {}),
+          }))} />
 
         <details data-metric-filters data-keep-open={showCustom || busca ? "" : undefined} open class="mt-4 rounded-xl border border-line bg-white">
           <summary class="flex min-h-[52px] cursor-pointer list-none items-center justify-between gap-3 px-3.5 font-display text-base font-bold text-ink sm:hidden">
@@ -264,7 +287,31 @@ const fin = tab === "financeiro" ? financial(rows) : null;
                   </select>
                 </form>
               )}
-              {performanceTab && (
+              {tab === "digital" && (
+                <form method="GET" action="/admin/metricas" class="flex flex-col gap-1.5">
+                  {hidden({ ...keep, operacao: "" }).map(([name, value]) => <input type="hidden" name={name} value={value} />)}
+                  <label for="metricas-operacao" class={label}>Operação</label>
+                  <select id="metricas-operacao" name="operacao" class={`${CONTROL} w-full sm:w-64`} data-autosubmit>
+                    {DIGITAL_OPERATIONS.map((o) => (
+                      <option value={o.id === "marcar" ? "" : o.id} selected={o.id === operation}>
+                        {o.label}
+                      </option>
+                    ))}
+                  </select>
+                </form>
+              )}
+              {tab === "digital" && (
+                <form method="GET" action="/admin/metricas" class="flex flex-col gap-1.5">
+                  {hidden({ ...keep, origem: "" }).map(([name, value]) => <input type="hidden" name={name} value={value} />)}
+                  <label for="metricas-origem" class={label}>Origem</label>
+                  <select id="metricas-origem" name="origem" class={`${CONTROL} w-full sm:w-48`} data-autosubmit>
+                    <option value="">Menu e lembrete</option>
+                    <option value="menu" selected={digitalOrigin === "menu"}>Só pelo menu</option>
+                    <option value="lembrete" selected={digitalOrigin === "lembrete"}>Só pelo lembrete</option>
+                  </select>
+                </form>
+              )}
+              {(performanceTab || tab === "digital") && (
                 <a
                   href={link({ comparar: compare ? "0" : "" })}
                   role="switch"
@@ -375,83 +422,19 @@ const fin = tab === "financeiro" ? financial(rows) : null;
           />
         )}
 
-        {funnel && tab === "digital" && (
-          <>
-            <p class={`${intro} mt-4 max-w-4xl`}>
-              Tentativas iniciadas no período, da clínica toda. Cada barra é proporcional a quem iniciou; a porcentagem é a conversão em relação à etapa
-              anterior. Sem resposta há mais de 30 minutos conta como abandono na última etapa alcançada.
-            </p>
-            <div class="mt-3 grid items-start gap-4 lg:grid-cols-2 lg:gap-5">
-              {funnel.flows.map((flow) => {
-                const first = flow.stages[0]?.count ?? 0;
-                return (
-                  <article class={card}>
-                    <h2 class={sectionTitle}>{flow.label}</h2>
-                    {first === 0 ? (
-                      <p class="text-[15px] text-ink-soft">Nenhuma tentativa no período.</p>
-                    ) : (
-                      <>
-                        <div class="flex flex-col gap-2">
-                          {flow.stages.map((stage) => (
-                            <div class="grid grid-cols-[8.5rem_1fr_5rem] items-center gap-2.5 text-sm sm:grid-cols-[12rem_1fr_5.5rem] sm:text-[14.5px]">
-                              <span class="text-ink">{stage.label}</span>
-                              <div class="h-5 overflow-hidden rounded-[5px] bg-canvas-deep">
-                                <div class="h-5 rounded-[5px] bg-brand" style={`width: ${Math.max((stage.count / first) * 100, stage.count > 0 ? 2 : 0)}%`} />
-                              </div>
-                              <span class="text-right text-ink tabular-nums">
-                                <span class="font-bold">{stage.count}</span>
-                                {stage.conversion !== null && <span class="ml-1 text-ink-soft">{pct(stage.conversion)}</span>}
-                              </span>
-                            </div>
-                          ))}
-                        </div>
-                        <div class="flex flex-wrap gap-1.5">
-                          <Pill tone={OUTCOME_TONES.concluded}>Concluídas: {flow.outcomes.concluded}</Pill>
-                          <Pill tone={OUTCOME_TONES.abandoned}>Abandonaram: {flow.outcomes.abandoned}</Pill>
-                          {flow.outcomes.blocked > 0 && <Pill tone={OUTCOME_TONES.blocked}>Barradas: {flow.outcomes.blocked}</Pill>}
-                          {flow.outcomes.declined > 0 && <Pill tone={OUTCOME_TONES.declined}>Desistiram: {flow.outcomes.declined}</Pill>}
-                          {flow.outcomes.error > 0 && <Pill tone={OUTCOME_TONES.error}>Erro: {flow.outcomes.error}</Pill>}
-                          {flow.outcomes.in_progress > 0 && <Pill tone={OUTCOME_TONES.in_progress}>Em andamento: {flow.outcomes.in_progress}</Pill>}
-                        </div>
-                        {flow.notes.length > 0 && (
-                          <ul class="list-disc space-y-0.5 pl-5 text-sm text-ink-soft">
-                            {flow.notes.map((note) => (
-                              <li>
-                                {note.label}: <span class="font-bold text-ink">{note.count}</span>
-                              </li>
-                            ))}
-                          </ul>
-                        )}
-                        {flow.blockedReasons.length > 0 && (
-                          <ul class="list-disc space-y-0.5 pl-5 text-sm text-ink-soft">
-                            {flow.blockedReasons.map((reason) => (
-                              <li>
-                                Barradas: {reason.label}: {reason.count}
-                              </li>
-                            ))}
-                          </ul>
-                        )}
-                      </>
-                    )}
-                  </article>
-                );
-              })}
-              <article class={card}>
-                <h2 class={sectionTitle}>Atendimento humano</h2>
-                <dl class="grid grid-cols-[minmax(0,1fr)_auto] gap-x-4 gap-y-2.5 text-[15px]">
-                  <dt class="text-ink-soft">Pediram a recepção pelo menu</dt>
-                  <dd class="font-bold text-ink tabular-nums">{funnel.handoffRequests}</dd>
-                  <dt class="text-ink-soft">
-                    Recepção assumiu pelo app
-                    {funnel.agentTookOver.total > 0 && (
-                      <span class="block text-[13px]">{funnel.agentTookOver.midJourney} no meio de uma marcação, remarcação ou cancelamento</span>
-                    )}
-                  </dt>
-                  <dd class="font-bold text-ink tabular-nums">{funnel.agentTookOver.total}</dd>
-                </dl>
-              </article>
-            </div>
-          </>
+        {tab === "digital" && (
+          <DigitalTab
+            db={db}
+            clinic={clinic}
+            sessions={botSessions}
+            range={indicatorRange}
+            compare={compare}
+            operation={operation}
+            origin={digitalOrigin}
+            recallCount={recallCount}
+            links={{ recall: link({ tab: "retomar_contato", operacao: "", origem: "" }), retry: link({}) }}
+            now={now}
+          />
         )}
 
         {tab === "faltosos" && (
@@ -596,9 +579,47 @@ const fin = tab === "financeiro" ? financial(rows) : null;
       </>
     )
   }
+  <p
+    data-metrics-loading
+    role="status"
+    hidden
+    class="fixed bottom-24 left-1/2 z-40 -translate-x-1/2 rounded-full bg-ink px-4 py-2 text-sm font-semibold text-white shadow-lg sm:bottom-6"
+  >
+    Calculando os números…
+  </p>
 </AdminLayout>
 
 <script>
+  // Carregando (redesign das Métricas, estado 1): a troca de filtro, período ou
+  // aba recarrega a página; enquanto isso, o aviso diz o que está acontecendo.
+  const metricsLoading = document.querySelector<HTMLElement>("[data-metrics-loading]");
+  const showMetricsLoading = () => {
+    if (metricsLoading) metricsLoading.hidden = false;
+  };
+  document.addEventListener("click", (event) => {
+    const link = (event.target as Element | null)?.closest("a");
+    if (!link || event.defaultPrevented || link.target) return;
+    const url = new URL(link.href, location.href);
+    if (url.pathname === "/admin/metricas" && url.search !== location.search) showMetricsLoading();
+  });
+  document.addEventListener("submit", showMetricsLoading);
+  for (const select of document.querySelectorAll("select[data-autosubmit]")) select.addEventListener("change", showMetricsLoading);
+  // "i" dos indicadores: Esc fecha e devolve o foco; tocar fora também fecha (teste da M5, QA-02).
+  const infos = () => [...document.querySelectorAll<HTMLDetailsElement>("details[data-kpi-info][open]")];
+  document.addEventListener("keydown", (event) => {
+    if (event.key !== "Escape") return;
+    for (const box of infos()) {
+      box.open = false;
+      box.querySelector("summary")?.focus();
+    }
+  });
+  document.addEventListener("click", (event) => {
+    for (const box of infos()) if (!box.contains(event.target as Node)) box.open = false;
+  });
+  // Voltar pelo navegador com a página guardada: o aviso não fica preso.
+  window.addEventListener("pageshow", () => {
+    if (metricsLoading) metricsLoading.hidden = true;
+  });
   // Celular: os filtros abrem recolhidos (o resumo mostra o que vale), menos
   // com o período personalizado ou uma busca na tela. Sem JavaScript, ficam abertos.
   for (const box of document.querySelectorAll<HTMLDetailsElement>("details[data-metric-filters]")) {

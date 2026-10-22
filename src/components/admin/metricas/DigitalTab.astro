@@ -1,0 +1,420 @@
+---
+// Métricas › Agendamento digital (redesign de 22/out/2026, M5; substitui o
+// Funil do bot): as tentativas pelo WhatsApp, da clínica toda. Funil
+// consolidado nas etapas comuns da operação escolhida, como terminaram, a
+// tabela por fluxo (as etapas abrem na linha), motivos, erros e a recepção.
+// Tentativa não é agendamento: "seguem de pé" confere o atendimento gravado.
+import type { ClinicContext } from "../../../lib/clinicAccess";
+import { dayBounds, formatCalendarDate, localDateOf } from "../../../lib/clinicTime";
+import {
+  buildDigitalReport,
+  DIGITAL_OPERATIONS,
+  listFunnelSessions,
+  type DigitalOperation,
+  type DigitalOrigin,
+  type FunnelSession,
+  type Outcome,
+} from "../../../lib/data/botFunnel";
+import type { DbClient } from "../../../lib/data/clients";
+import { logError } from "../../../lib/log";
+import { compareCounts, compareRates, comparisonRange, describeComparison, formatRate, formatRatio, ratio, type DateRange } from "../../../lib/metricsRules";
+import Attention, { type AttentionItem } from "./Attention.astro";
+import { countDelta, previousCount, previousRate, rateDelta } from "./compare";
+import Kpi from "./Kpi.astro";
+
+interface Props {
+  db: DbClient;
+  clinic: ClinicContext;
+  /** Tentativas do período (já lidas pela página, que também conta Retomar contato); null = não carregou. */
+  sessions: FunnelSession[] | null;
+  range: DateRange;
+  compare: boolean;
+  operation: DigitalOperation;
+  origin: DigitalOrigin;
+  recallCount: number;
+  links: { recall: string; retry: string };
+  now: Date;
+}
+
+const { db, clinic, sessions, range, compare, operation, origin, recallCount, links, now } = Astro.props;
+const tz = clinic.timezone;
+const group = operation === "remarcar" ? "remarcar" : operation === "cancelar" ? "cancelar" : "marcar";
+const verb = { marcar: "marcar", remarcar: "remarcar", cancelar: "cancelar" }[group];
+
+async function safe<T>(block: string, run: () => Promise<T>): Promise<T | null> {
+  try {
+    return await run();
+  } catch (error) {
+    logError(`métricas: bloco "${block}" não carregou`, error, { clinica: clinic.clinicId });
+    return null;
+  }
+}
+
+const prevRange = comparisonRange(range);
+const prevText = describeComparison(prevRange);
+const [firstEvent, failures] = await Promise.all([
+  safe("início do bot", async () => {
+    const { data } = await db.from("bot_funnel_events").select("occurred_at").eq("clinic_id", clinic.clinicId).order("occurred_at").limit(1).maybeSingle();
+    return data ? localDateOf(new Date(data.occurred_at), tz) : null;
+  }),
+  safe("falhas do funil", async () => {
+    const { data, error } = await db.rpc("metrics_funnel_write_failures", {
+      p_clinic_id: clinic.clinicId,
+      p_start: dayBounds(range.from, tz).start.toISOString(),
+      p_end: dayBounds(range.to, tz).end.toISOString(),
+    });
+    if (error) throw error;
+    return Number(data) || 0;
+  }),
+]);
+const noCompareReason = !compare
+  ? null
+  : firstEvent && firstEvent > prevRange.from
+    ? `Sem comparação: o agendamento pelo WhatsApp da clínica começou em ${formatCalendarDate(firstEvent, "dd/MM/yyyy")}, e o período anterior está incompleto.`
+    : null;
+const comparing = compare && !noCompareReason && !!firstEvent;
+const previousSessions = comparing
+  ? await safe("período anterior", () => listFunnelSessions(db, clinic.clinicId, dayBounds(prevRange.from, tz).start, dayBounds(prevRange.to, tz).end))
+  : null;
+
+const r = sessions ? buildDigitalReport(sessions, now, operation, origin) : null;
+const p = previousSessions ? buildDigitalReport(previousSessions, now, operation, origin) : null;
+const conclusion = r ? ratio(r.outcomes.concluded, r.finished) : null;
+const attemptsCmp = r && p ? compareCounts(r.attempts, p.attempts) : null;
+const conclusionCmp = r && p && conclusion ? compareRates(conclusion, ratio(p.outcomes.concluded, p.finished)) : null;
+const reception = r ? ratio(r.reception.contactsNeeding, r.reception.contactsTotal) : null;
+const periodText = range.from === range.to ? formatCalendarDate(range.from, "dd/MM") : `${formatCalendarDate(range.from, "d/MM")} a ${formatCalendarDate(range.to, "d/MM")}`;
+
+// Precisa de atenção.
+const attention: AttentionItem[] = [];
+if (r) {
+  const worst = r.stages.find((s) => s.biggestLoss);
+  if (worst) {
+    const i = r.stages.indexOf(worst);
+    const next = r.stages[i + 1];
+    const linkStage = worst.label === "Receberam o link";
+    attention.push({
+      strong: linkStage
+        ? `Maior perda: ${worst.lostToNext} receberam o link e não abriram`
+        : `Maior perda: ${worst.lostToNext} pararam entre "${worst.label}" e "${next.label}"`,
+      rest: `(${formatRate(worst.lostToNext / Math.max(worst.count, 1))} de quem chegou a essa etapa).${linkStage && r.linkOpenedLate > 0 ? ` ${r.linkOpenedLate} abriram depois de vencer.` : ""}`,
+      href: "#etapas",
+      linkLabel: "Ver as etapas",
+    });
+  }
+  if (r.slotTaken > 0) {
+    attention.push({
+      strong: `${r.slotTaken} ${r.slotTaken === 1 ? "marcação falhou" : "marcações falharam"} com "horário ocupado ao confirmar"`,
+      rest: "(a pessoa escolheu, mas outra marcação pegou o horário antes).",
+      href: "#erros",
+      linkLabel: "Ver os erros",
+    });
+  }
+  if (recallCount > 0) {
+    attention.push({ strong: `${recallCount} ${recallCount === 1 ? "pessoa não concluiu" : "pessoas não concluíram"}`, rest: "e não voltaram a tentar.", href: links.recall, linkLabel: "Retomar contato" });
+  }
+  if (failures) {
+    attention.push({
+      strong: `${failures} ${failures === 1 ? "passo do bot não foi gravado" : "passos do bot não foram gravados"}`,
+      rest: "por falha técnica: os números podem estar um pouco abaixo do real.",
+      href: "#erros",
+      linkLabel: "Ver os erros",
+    });
+  }
+}
+
+const OUTCOMES: { key: Outcome; label: string; color: string }[] = [
+  { key: "concluded", label: group === "cancelar" ? "Cancelaram" : group === "remarcar" ? "Remarcaram" : "Marcaram", color: "#0b7a62" },
+  { key: "abandoned", label: "Abandonaram", color: "#e0a106" },
+  { key: "blocked", label: "Barradas pela regra", color: "#3a7bc8" },
+  { key: "error", label: "Erro técnico", color: "#b42d22" },
+  { key: "declined", label: "Desistiram", color: "#7d8b87" },
+  { key: "in_progress", label: "Em andamento", color: "#c5d3ce" },
+];
+const card = "flex min-w-0 flex-col gap-3 rounded-xl border border-line bg-white px-4 py-4 sm:px-5";
+const h2 = "font-display text-lg leading-tight font-bold text-ink";
+const sub = "text-sm leading-relaxed text-ink-soft";
+const total = (list: { count: number }[]) => list.reduce((t, x) => t + x.count, 0);
+const bar = (n: number, max: number) => (max ? `${Math.max((n / max) * 100, n > 0 ? 2 : 0)}%` : "0%");
+const operationLabel = DIGITAL_OPERATIONS.find((o) => o.id === operation)!.label;
+---
+
+{
+  !r ? (
+    <div role="alert" class={`${card} mt-4 border-danger-line bg-can-50`}>
+      <h2 class={`${h2} text-can-800`}>Não foi possível carregar o Agendamento digital</h2>
+      <p class={sub}>O erro já foi registrado para o suporte. Tente de novo.</p>
+      <a href={links.retry} class="inline-flex h-11 items-center self-start rounded-lg bg-danger-solid px-4 font-semibold text-white no-underline hover:bg-danger-solid-strong">
+        Tentar de novo
+      </a>
+    </div>
+  ) : !firstEvent ? (
+    <section class="mt-4 flex flex-col gap-2 rounded-xl border border-dashed border-line-strong bg-white px-5 py-6" aria-labelledby="sem-bot">
+      <h2 id="sem-bot" class={h2}>O agendamento pelo WhatsApp ainda não teve tentativas</h2>
+      <p class={sub}>Quando as pessoas começarem a marcar, remarcar ou cancelar pelo bot, esta aba mostra quantas concluem e onde param.</p>
+    </section>
+  ) : r.attempts === 0 && r.reception.contactsNeeding === 0 ? (
+    <section class="mt-4 flex flex-col gap-2 rounded-xl border border-dashed border-line-strong bg-white px-5 py-6" aria-labelledby="sem-tentativas">
+      <h2 id="sem-tentativas" class={h2}>Nenhuma tentativa de {periodText}</h2>
+      <p class={sub}>Em "{operationLabel}"{origin !== "todas" ? `, só ${origin === "menu" ? "pelo menu" : "pelo lembrete"}` : ""}. Escolha outra operação ou outro período.</p>
+    </section>
+  ) : (
+    <>
+      <Attention items={attention} />
+      {noCompareReason && <p class="mt-3 text-sm text-ink-soft">{noCompareReason}</p>}
+
+      <section aria-label="Indicadores principais" class="mt-4 grid grid-cols-1 gap-3 min-[520px]:grid-cols-2 xl:grid-cols-4">
+        <Kpi
+          id="kpi-tentativas"
+          label={`Tentativas de ${verb}`}
+          value={String(r.attempts)}
+          delta={attemptsCmp ? countDelta(attemptsCmp, "neutral") : null}
+          previous={attemptsCmp ? previousCount(attemptsCmp, prevText) : null}
+          rule="Conversas no WhatsApp que começaram a operação no período (pela data do início). Uma pessoa que tenta duas vezes conta duas. Tentativa não é agendamento: só vira agendamento quando a marcação é gravada."
+        >
+          {group === "marcar" ? "Pessoas que começaram a marcar consulta, retorno ou exame pelo WhatsApp." : group === "remarcar" ? "Pedidos de remarcação pelo menu ou pelo lembrete." : "Pedidos de cancelamento pelo menu ou pelo lembrete."}
+        </Kpi>
+        <Kpi
+          id="kpi-conclusao"
+          label={group === "cancelar" ? "Atendidos sem a recepção" : "Concluíram"}
+          value={formatRatio(conclusion!)}
+          delta={conclusionCmp ? rateDelta(conclusionCmp, "up") : null}
+          previous={conclusionCmp ? previousRate(conclusionCmp, prevText) : null}
+          rule="Concluídas ÷ tentativas já terminadas. As em andamento (última resposta há menos de 30 minutos) ficam fora até terminar. Abandono: 30 minutos sem passo novo, o mesmo tempo de validade do link."
+        >
+          {r.outcomes.concluded} de {r.finished} tentativas terminaram {group === "cancelar" ? "com o cancelamento feito" : group === "remarcar" ? "com a data nova" : "com o atendimento marcado"}.
+        </Kpi>
+        {group !== "cancelar" && (
+          <Kpi
+            id="kpi-de-pe"
+            label={group === "remarcar" ? "Remarcações que seguem de pé" : "Marcações que seguem de pé"}
+            value={String(r.standing.standing)}
+            rule="Das tentativas concluídas, quantas têm o atendimento gravado e não cancelado depois. Conferido no próprio atendimento, não só na conversa."
+          >
+            {r.outcomes.concluded === 0
+              ? "Nenhuma concluída no período."
+              : `dos ${r.outcomes.concluded} concluídos. ${r.standing.canceledLater} ${r.standing.canceledLater === 1 ? "foi cancelado" : "foram cancelados"} depois${r.standing.unlinked ? `; ${r.standing.unlinked} sem o atendimento ligado (registros antigos)` : ""}.`}
+          </Kpi>
+        )}
+        <Kpi
+          id="kpi-recepcao"
+          label="Precisaram da recepção"
+          value={formatRatio(reception!)}
+          rule="Contatos que pediram a recepção pelo menu ou que tiveram a conversa assumida pela recepção ÷ contatos com alguma tentativa ou pedido no período. É por contato (telefone), não por tentativa, e vale para todas as operações."
+        >
+          {r.reception.contactsNeeding} de {r.reception.contactsTotal} contatos.
+        </Kpi>
+      </section>
+
+      <section aria-labelledby="etapas" class="mt-4 grid gap-3 lg:grid-cols-3">
+        <div class={`${card} lg:col-span-2`}>
+          <div class="flex flex-col gap-1">
+            <h2 id="etapas" class={`${h2} scroll-mt-4`}>
+              {group === "marcar" ? "Do primeiro contato à marcação" : group === "remarcar" ? "Do pedido à data nova" : "Do pedido ao cancelamento"}
+            </h2>
+            <p class={sub}>
+              {group === "marcar" ? `${operationLabel}, nas ${r.stages.length} etapas que têm em comum.` : `Nas ${r.stages.length} etapas da operação.`} A barra é a parte de quem
+              iniciou.
+            </p>
+          </div>
+          <ol class="flex flex-col gap-1.5">
+            {r.stages.map((stage, i) => (
+              <li class="flex flex-col gap-1.5">
+                <div class="grid grid-cols-[minmax(0,7.5rem)_1fr_3.5rem] items-center gap-2.5 text-[14.5px] sm:grid-cols-[12rem_1fr_4rem] sm:text-[15px]">
+                  <span class={i === r.stages.length - 1 ? "font-bold" : ""}>{stage.label}</span>
+                  <span class="h-[30px] overflow-hidden rounded-md bg-canvas-deep">
+                    <span
+                      class={`flex h-[30px] items-center rounded-md pl-2.5 text-sm font-bold text-white ${i === r.stages.length - 1 ? "bg-brand-strong" : "bg-brand"}`}
+                      style={`width:${bar(stage.count, r.stages[0].count)}`}
+                    >
+                      {stage.count > 0 && stage.count}
+                    </span>
+                  </span>
+                  <b class="text-right tabular-nums">{stage.share === null ? "—" : formatRate(stage.share)}</b>
+                </div>
+                {i < r.stages.length - 1 && stage.lostToNext > 0 && (
+                  <p class:list={["text-[13.5px] sm:ml-[12.6rem]", stage.biggestLoss ? "self-start rounded-md bg-ns-100 px-2.5 py-1.5 font-bold text-ns-800" : "text-pend-800"]}>
+                    ↓{" "}
+                    {stage.label === "Receberam o link"
+                      ? `${stage.lostToNext} não abriram o link`
+                      : stage.label === "Abriram o link"
+                        ? `${stage.lostToNext} abriram e não concluíram`
+                        : `${stage.lostToNext} pararam aqui`}{" "}
+                    ({formatRate(stage.lostToNext / Math.max(stage.count, 1))})
+                    {stage.blockedHere > 0 && ` · ${stage.blockedHere} barradas pela regra`}
+                    {stage.slotTakenHere > 0 && ` · ${stage.slotTakenHere} por horário ocupado`}
+                    {stage.biggestLoss && ": a maior perda"}
+                  </p>
+                )}
+              </li>
+            ))}
+          </ol>
+        </div>
+        <div class={card}>
+          <h2 class={h2}>Como terminaram</h2>
+          <p class={sub}>Cada tentativa tem um só desfecho.</p>
+          <ul class="flex flex-col gap-2.5">
+            {OUTCOMES.map((o) => (
+              <li class="grid grid-cols-[1fr_auto] items-center gap-x-2.5 gap-y-1 text-[14.5px]">
+                <span class="inline-flex items-center gap-2">
+                  <span class="h-3 w-3 rounded-[3px]" style={`background:${o.color}`} />
+                  {o.label}
+                </span>
+                <b class="tabular-nums">{r.outcomes[o.key]}</b>
+                <span class="col-span-2 h-2.5 overflow-hidden rounded-[3px] bg-canvas-deep" aria-hidden="true">
+                  <span class="block h-2.5" style={`width:${bar(r.outcomes[o.key], r.attempts)};background:${o.color}`} />
+                </span>
+              </li>
+            ))}
+          </ul>
+          <p class={sub}>"Em andamento": última resposta há menos de 30 minutos.</p>
+        </div>
+      </section>
+
+      <section aria-labelledby="operacoes" class={`${card} mt-4`}>
+        <div class="flex flex-col gap-1">
+          <h2 id="operacoes" class={h2}>Por tipo de operação</h2>
+          <p class={sub}>
+            Toque numa linha para ver as etapas dela.{group === "cancelar" && " Cancelar não é conversão: mostra se o pedido foi atendido sem a recepção."}
+          </p>
+        </div>
+        <div class="flex flex-col">
+          <div class="hidden grid-cols-[minmax(0,1fr)_6rem_6rem_5rem_minmax(0,1.4fr)_1.5rem] gap-3 border-b border-line px-3 py-2 text-[13px] font-semibold text-ink-soft md:grid" aria-hidden="true">
+            <span>Operação</span>
+            <span class="text-right">Tentativas</span>
+            <span class="text-right">Concluídas</span>
+            <span class="text-right">Taxa</span>
+            <span>Onde mais perde</span>
+            <span />
+          </div>
+          {r.flows.map((f, i) => (
+            <>
+              {(i === 0 || r.flows[i - 1].group !== f.group) && (
+                <p class="mt-1 bg-canvas px-3 py-1.5 text-[13px] font-bold text-ink-mid">{f.group}</p>
+              )}
+              <details class="group border-b border-[#e6ecea] open:bg-conf-50">
+                <summary class="grid cursor-pointer list-none grid-cols-[1fr_auto] gap-x-3 gap-y-0.5 px-3 py-2.5 text-[15px] hover:bg-canvas md:grid-cols-[minmax(0,1fr)_6rem_6rem_5rem_minmax(0,1.4fr)_1.5rem] md:items-center">
+                  <span class="font-semibold">{f.label}</span>
+                  <span class="text-right tabular-nums md:order-none">
+                    <span class="text-ink-soft md:hidden">{f.concluded} de {f.attempts} concluídas</span>
+                    <span class="max-md:hidden">{f.attempts}</span>
+                  </span>
+                  <span class="text-right tabular-nums max-md:hidden">{f.concluded}</span>
+                  <b class="text-right tabular-nums max-md:hidden">{f.finished ? formatRatio(ratio(f.concluded, f.finished)) : "—"}</b>
+                  <span class="text-sm text-ink-mid max-md:col-span-2">
+                    {f.worstStep ? (
+                      <>
+                        {f.worstStep.from} → {f.worstStep.to.toLowerCase()} <span class="text-ns-800">(−{f.worstStep.lost})</span>
+                      </>
+                    ) : (
+                      "—"
+                    )}
+                  </span>
+                  <span class="text-right font-bold text-brand-ink max-md:hidden" aria-hidden="true">
+                    <span class="group-open:hidden">›</span>
+                    <span class="hidden group-open:inline">⌄</span>
+                  </span>
+                </summary>
+                <div class="flex flex-col gap-2 px-3 pb-3">
+                  {f.attempts === 0 ? (
+                    <p class={sub}>Nenhuma tentativa no período.</p>
+                  ) : (
+                    <ol class="grid grid-cols-2 gap-2.5 text-[13.5px] sm:grid-cols-[repeat(auto-fit,minmax(110px,1fr))]">
+                      {f.stages.map((st, k) => (
+                        <li class="flex flex-col gap-1">
+                          <span class="text-ink-soft">{st.label}</span>
+                          <span class="h-2 rounded-[3px] bg-brand" style={`width:${bar(st.count, f.stages[0].count)}`} aria-hidden="true" />
+                          <b>
+                            {st.count}
+                            {k > 0 && f.stages[k - 1].count - st.count > 0 && <span class="ml-1 font-semibold text-ns-800">−{f.stages[k - 1].count - st.count}</span>}
+                          </b>
+                        </li>
+                      ))}
+                    </ol>
+                  )}
+                  {f.blockedReasons.length > 0 && (
+                    <p class={sub}>
+                      Barradas: {f.blockedReasons.map((b) => `${b.count} ${b.label.toLowerCase()}`).join(", ")}.
+                    </p>
+                  )}
+                </div>
+              </details>
+            </>
+          ))}
+        </div>
+      </section>
+
+      <section aria-label="Motivos" class="mt-4 grid gap-3 md:grid-cols-3">
+        {[
+          { id: "barradas", title: `Barradas pelas regras · ${r.outcomes.blocked}`, text: "A regra funcionou. Muitas do mesmo motivo podem pedir uma mensagem mais clara.", list: r.blocked, color: "#3a7bc8", empty: "Nenhuma barrada." },
+          { id: "nao-concluiram", title: `Não concluíram · ${total(r.dropped)}`, text: `${total(r.dropped) - r.outcomes.declined} abandonos e ${r.outcomes.declined} desistências ("não quero mais").`, list: r.dropped, color: "#e0a106", empty: "Ninguém deixou de concluir." },
+          { id: "erros", title: `Erros técnicos · ${total(r.errors)}`, text: "Falhas do sistema, não da pessoa (inclui quem não conseguiu confirmar o horário).", list: r.errors, color: "#b42d22", empty: "Nenhum erro." },
+        ].map((block) => {
+          const max = Math.max(1, ...block.list.map((x) => x.count));
+          return (
+            <div id={block.id} class={`${card} scroll-mt-4`}>
+              <h2 class="font-display text-base font-bold text-ink">{block.title}</h2>
+              <p class={sub}>{block.text}</p>
+              {block.list.length === 0 ? (
+                <p class={sub}>{block.empty}</p>
+              ) : (
+                <ul class="flex flex-col gap-2.5">
+                  {block.list.map((x) => (
+                    <li class="grid grid-cols-[1fr_2.5rem] items-center gap-x-2.5 gap-y-1 text-[14px]">
+                      <span class="col-span-2">{x.label}</span>
+                      <span class="h-3 overflow-hidden rounded-[3px] bg-canvas-deep" aria-hidden="true">
+                        <span class="block h-3" style={`width:${bar(x.count, max)};background:${block.color}`} />
+                      </span>
+                      <b class="text-right tabular-nums">{x.count}</b>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {block.id === "erros" && failures !== null && failures > 0 && (
+                <p class="text-sm font-semibold text-danger">
+                  {failures} {failures === 1 ? "passo não foi gravado" : "passos não foram gravados"} no período (registrados em Administração › Erros).
+                </p>
+              )}
+            </div>
+          );
+        })}
+      </section>
+
+      <section aria-labelledby="recepcao" class={`${card} mt-4`}>
+        <div class="flex flex-col gap-1">
+          <h2 id="recepcao" class={h2}>Recepção no WhatsApp</h2>
+          <p class={sub}>Quanto a recepção precisou entrar nas conversas do bot (todas as operações).</p>
+        </div>
+        <div class="grid gap-4 sm:grid-cols-3">
+          <div class="flex flex-col gap-1">
+            <span class="text-[14.5px] font-semibold text-ink-mid">Pediram a recepção pelo menu</span>
+            <span class="font-display text-[30px] leading-none font-bold tabular-nums">{r.reception.requested}</span>
+          </div>
+          <div class="flex flex-col gap-1">
+            <span class="text-[14.5px] font-semibold text-ink-mid">Recepção assumiu a conversa</span>
+            <span class="font-display text-[30px] leading-none font-bold tabular-nums">{r.reception.tookOver}</span>
+            {r.reception.tookOver > 0 && <span class={sub}>{r.reception.midJourney} no meio de uma marcação, remarcação ou cancelamento</span>}
+          </div>
+          <div class="flex flex-col gap-1.5 rounded-[10px] border border-line px-3.5 py-3">
+            <span class="text-[14.5px] font-semibold text-ink-mid">Em que etapa pediram ajuda</span>
+            {r.reception.byStep.length === 0 ? (
+              <span class={sub}>
+                {r.reception.withoutStep > 0 ? "Os pedidos deste período são de antes do registro da etapa (22/out/2026)." : "Nenhum pedido no período."}
+              </span>
+            ) : (
+              <ul class="flex flex-col gap-0.5 text-sm">
+                {r.reception.byStep.slice(0, 5).map((x) => (
+                  <li class="flex justify-between gap-3">
+                    <span>{x.label}</span>
+                    <b class="tabular-nums">{x.count}</b>
+                  </li>
+                ))}
+                {r.reception.withoutStep > 0 && <li class="text-ink-soft">{r.reception.withoutStep} sem a etapa (registros antigos)</li>}
+              </ul>
+            )}
+          </div>
+        </div>
+      </section>
+    </>
+  )
+}

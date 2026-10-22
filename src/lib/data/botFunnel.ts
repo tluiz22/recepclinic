@@ -384,3 +384,273 @@ export async function listFunnelSessions(db: DbClient, clinicId: string, start: 
       };
     });
 }
+
+// ---------------------------------------------------------------------------
+// Agendamento digital (redesign das Métricas, M5, 22/out/2026): o funil
+// consolidado por operação, os desfechos, a tabela por fluxo, os motivos, os
+// erros e a recepção. Tentativa ≠ agendamento: aqui se contam tentativas;
+// "seguem de pé" confere o atendimento gravado. Marcar consulta, retorno e
+// exame somam (são marcações); remarcar e cancelar ficam à parte.
+// ---------------------------------------------------------------------------
+
+export type DigitalOperation = "marcar" | "consulta" | "retorno" | "exame" | "remarcar" | "cancelar";
+export type DigitalOrigin = "todas" | "menu" | "lembrete";
+
+export const DIGITAL_OPERATIONS: { id: DigitalOperation; label: string }[] = [
+  { id: "marcar", label: "Marcar (consulta, retorno e exame)" },
+  { id: "consulta", label: "Só consulta" },
+  { id: "retorno", label: "Só retorno" },
+  { id: "exame", label: "Só exame" },
+  { id: "remarcar", label: "Remarcar" },
+  { id: "cancelar", label: "Cancelar" },
+];
+
+const OPERATION_FLOWS: Record<DigitalOperation, FunnelFlow[]> = {
+  marcar: ["booking", "return_booking", "exam"],
+  consulta: ["booking"],
+  retorno: ["return_booking"],
+  exame: ["exam"],
+  remarcar: ["reschedule"],
+  cancelar: ["cancel"],
+};
+
+/** Etapas em comum de cada operação (o retorno tem "tinham direito" no lugar de "identificaram"). */
+const CONSOLIDATED: Record<"marcar" | "remarcar" | "cancelar", { label: string; steps: string[] }[]> = {
+  marcar: [
+    { label: "Iniciaram", steps: ["started"] },
+    { label: "Identificaram o paciente", steps: ["patient_identified", "RETURN_SELECT"] },
+    { label: "Receberam o link", steps: ["link_sent"] },
+    { label: "Abriram o link", steps: LINK_OPENED },
+    { label: "Marcaram", steps: ["confirmed"] },
+  ],
+  remarcar: [
+    { label: "Iniciaram", steps: ["started"] },
+    { label: "Receberam o link", steps: ["link_sent"] },
+    { label: "Abriram o link", steps: LINK_OPENED },
+    { label: "Remarcaram", steps: ["confirmed"] },
+  ],
+  cancelar: [
+    { label: "Iniciaram", steps: ["started"] },
+    { label: "Chegaram à confirmação", steps: ["CANCEL_CONFIRM"] },
+    { label: "Cancelaram", steps: ["canceled"] },
+  ],
+};
+
+const groupOf = (op: DigitalOperation): "marcar" | "remarcar" | "cancelar" => (op === "remarcar" ? "remarcar" : op === "cancelar" ? "cancelar" : "marcar");
+
+export type DigitalStage = {
+  label: string;
+  count: number;
+  /** Parte de quem iniciou. */
+  share: number | null;
+  /** Saíram entre esta etapa e a seguinte, e quantos deles barrados pela regra. */
+  lostToNext: number;
+  blockedHere: number;
+  slotTakenHere: number;
+  biggestLoss: boolean;
+};
+
+export type DigitalFlowRow = {
+  id: string;
+  group: "Marcar" | "Remarcar" | "Cancelar";
+  label: string;
+  attempts: number;
+  concluded: number;
+  /** Base: tentativas já terminadas (sem as em andamento). */
+  finished: number;
+  stages: { label: string; count: number }[];
+  worstStep: { from: string; to: string; lost: number } | null;
+  blockedReasons: { label: string; count: number }[];
+};
+
+export type DigitalReport = {
+  attempts: number;
+  outcomes: Record<Outcome, number>;
+  /** Base da taxa de conclusão: tentativas já terminadas. */
+  finished: number;
+  /** Concluídas com o atendimento ligado: de pé (não cancelado), canceladas depois e sem ligação. */
+  standing: { standing: number; canceledLater: number; unlinked: number };
+  stages: DigitalStage[];
+  flows: DigitalFlowRow[];
+  blocked: { label: string; count: number }[];
+  dropped: { label: string; count: number }[];
+  errors: { label: string; count: number }[];
+  linkOpenedLate: number;
+  slotTaken: number;
+  reception: {
+    requested: number;
+    tookOver: number;
+    midJourney: number;
+    contactsNeeding: number;
+    contactsTotal: number;
+    byStep: { label: string; count: number }[];
+    withoutStep: number;
+  };
+};
+
+/** Etapa da conversa em que a pessoa pediu ajuda (M3), em português. */
+const JOURNEY_STATES: Record<string, string> = {
+  WELCOME: "No menu inicial",
+  BOOK_SERVICE: "Escolhendo o serviço",
+  BOOK_AGENDA: "Escolhendo a agenda",
+  BOOK_LOCATION: "Escolhendo o local",
+  BOOK_HOME_ADDRESS: "Informando o endereço",
+  BOOK_FOR_WHOM: "Dizendo para quem é",
+  BOOK_PATIENT_SELECT: "Escolhendo o paciente",
+  BOOK_PATIENT_NEW: "Cadastrando o paciente",
+  RETURN_SELECT: "Escolhendo o retorno",
+  RESCHEDULE_SELECT: "Escolhendo o que remarcar",
+  CANCEL_SELECT: "Escolhendo o que cancelar",
+  CANCEL_CONFIRM: "Confirmando o cancelamento",
+};
+
+const reached = (s: Session, steps: string[]) => s.events.some((e) => steps.includes(e.step));
+const tally = (map: Map<string, number>, label: string) => map.set(label, (map.get(label) ?? 0) + 1);
+const sorted = (map: Map<string, number>) => [...map.entries()].map(([label, count]) => ({ label, count })).sort((a, b) => b.count - a.count || a.label.localeCompare(b.label, "pt-BR"));
+
+/** Relatório das tentativas iniciadas no período, pela operação e origem escolhidas. */
+export function buildDigitalReport(all: FunnelSession[], now: Date, operation: DigitalOperation = "marcar", originFilter: DigitalOrigin = "todas"): DigitalReport {
+  const flows = OPERATION_FLOWS[operation];
+  const inPeriod = all.filter((s) => s.inPeriod);
+  const sessions = inPeriod.filter(
+    (s) => flows.includes(s.flow) && (originFilter === "todas" || (originFilter === "lembrete" ? origin(s) === "reminder" : origin(s) === "menu")),
+  );
+  const defOf = (s: Session) => FLOW_DEFS.find((d) => matches(d, s))!;
+  const outcomes: Record<Outcome, number> = { concluded: 0, abandoned: 0, blocked: 0, declined: 0, error: 0, in_progress: 0 };
+  const blocked = new Map<string, number>();
+  const dropped = new Map<string, number>();
+  const errors = new Map<string, number>();
+  let linkOpenedLate = 0;
+  let slotTaken = 0;
+  const standing = { standing: 0, canceledLater: 0, unlinked: 0 };
+
+  const stagesDef = CONSOLIDATED[groupOf(operation)];
+  const stageCounts = stagesDef.map(() => 0);
+  const blockedAt = stagesDef.map(() => 0);
+  const slotTakenAt = stagesDef.map(() => 0);
+
+  for (const s of sessions) {
+    const def = defOf(s);
+    const outcome = classify(def, s, now.getTime());
+    outcomes[outcome]++;
+    let max = -1;
+    stagesDef.forEach((stage, i) => {
+      if (i === 0 ? reached(s, ["started"]) : reached(s, stage.steps)) max = i;
+    });
+    // Quem passou de uma etapa passou também pelas anteriores (o passo pode não ter sido gravado).
+    for (let i = 0; i <= max; i++) stageCounts[i]++;
+    const failure = s.events.filter((e) => e.step === "confirm_failed").at(-1);
+    if (outcome === "concluded") {
+      if (!s.appointmentId) standing.unlinked++;
+      else if (s.appointmentStatus === "canceled") standing.canceledLater++;
+      else standing.standing++;
+    } else if (outcome === "blocked") {
+      tally(blocked, reasonLabel(find(s, "blocked")?.metadata.reason));
+      if (max >= 0) blockedAt[max]++;
+    } else if (outcome === "error") {
+      tally(errors, reasonLabel(find(s, "error")?.metadata.reason));
+    } else if (outcome === "declined") {
+      tally(dropped, 'Desistiram ("não quero mais")');
+    } else if (outcome === "abandoned") {
+      const abandoned = find(s, "abandoned");
+      const reason = abandoned?.metadata.reason;
+      if (failure) {
+        // Falha do sistema ao confirmar (ex.: horário ocupado): vai para os erros.
+        tally(errors, `Ao confirmar: ${reasonLabel(failure.metadata.reason)}`);
+        if (failure.metadata.reason === "slot_taken") {
+          slotTaken++;
+          if (max >= 0) slotTakenAt[max]++;
+        }
+      } else if (find(s, "link_expired")) {
+        linkOpenedLate++;
+        tally(dropped, "Abriram o link depois de vencer");
+      } else if (reason === "back_to_menu") tally(dropped, "Voltaram ao menu");
+      else if (reason === "secretary_took_over") tally(dropped, "A recepção assumiu");
+      else if (reason === "timeout") tally(dropped, "Tempo esgotado na conversa");
+      else tally(dropped, "Pararam de responder");
+    }
+  }
+
+  const first = stageCounts[0];
+  const losses = stageCounts.map((count, i) => (i < stageCounts.length - 1 ? count - stageCounts[i + 1] : 0));
+  const biggest = losses.reduce((best, lost, i) => (lost > (losses[best] ?? 0) ? i : best), 0);
+  const stages: DigitalStage[] = stagesDef.map((stage, i) => ({
+    label: stage.label,
+    count: stageCounts[i],
+    share: first ? stageCounts[i] / first : null,
+    lostToNext: losses[i],
+    blockedHere: blockedAt[i],
+    slotTakenHere: slotTakenAt[i],
+    biggestLoss: losses[i] > 0 && i === biggest,
+  }));
+
+  // Tabela por fluxo (as linhas do grupo escolhido; sem filtro de origem nas linhas de remarcar e cancelar).
+  const rows: DigitalFlowRow[] = FLOW_DEFS.filter((d) => flows.includes(d.flow) && (originFilter === "todas" || !d.origin || d.origin === (originFilter === "lembrete" ? "reminder" : "menu"))).map((def) => {
+    const list = inPeriod.filter((s) => matches(def, s));
+    const counts = def.stages.map(() => 0);
+    const reasons = new Map<string, number>();
+    let concluded = 0;
+    let inProgress = 0;
+    for (const s of list) {
+      const max = maxStage(def, s);
+      for (let i = 0; i <= max; i++) counts[i]++;
+      const outcome = classify(def, s, now.getTime());
+      if (outcome === "concluded") concluded++;
+      if (outcome === "in_progress") inProgress++;
+      if (outcome === "blocked") tally(reasons, reasonLabel(find(s, "blocked")?.metadata.reason));
+    }
+    let worst: DigitalFlowRow["worstStep"] = null;
+    for (let i = 0; i < counts.length - 1; i++) {
+      const lost = counts[i] - counts[i + 1];
+      if (lost > 0 && (!worst || lost > worst.lost)) worst = { from: def.stages[i].label, to: def.stages[i + 1].label, lost };
+    }
+    return {
+      id: def.id,
+      group: def.flow === "reschedule" ? "Remarcar" : def.flow === "cancel" ? "Cancelar" : "Marcar",
+      label: def.flow === "reschedule" || def.flow === "cancel" ? (def.origin === "reminder" ? "Pelo lembrete" : "Pelo menu") : def.label.replace("Marcar ", "").replace(/^./, (c) => c.toUpperCase()),
+      attempts: list.length,
+      concluded,
+      finished: list.length - inProgress,
+      stages: def.stages.map((stage, i) => ({ label: stage.label, count: counts[i] })),
+      worstStep: worst,
+      blockedReasons: sorted(reasons),
+    };
+  });
+
+  // Recepção no WhatsApp: por contato (o pedido não está ligado à tentativa nos registros antigos).
+  const handoffs = inPeriod.filter((s) => s.flow === "handoff");
+  const requested = handoffs.filter((s) => find(s, "requested"));
+  const tookOver = handoffs.filter((s) => find(s, "agent_took_over"));
+  const contactsNeeding = new Set(handoffs.map((s) => s.phone));
+  const contactsTotal = new Set(inPeriod.map((s) => s.phone));
+  const steps = new Map<string, number>();
+  let withoutStep = 0;
+  for (const s of handoffs) {
+    const state = s.events[0]?.metadata.journey_state;
+    if (typeof state === "string") tally(steps, JOURNEY_STATES[state] ?? "Outra etapa");
+    else withoutStep++;
+  }
+
+  return {
+    attempts: sessions.length,
+    outcomes,
+    finished: sessions.length - outcomes.in_progress,
+    standing,
+    stages,
+    flows: rows,
+    blocked: sorted(blocked),
+    dropped: sorted(dropped),
+    errors: sorted(errors),
+    linkOpenedLate,
+    slotTaken,
+    reception: {
+      requested: requested.length,
+      tookOver: tookOver.length,
+      midJourney: tookOver.filter((s) => find(s, "agent_took_over")?.metadata.mid_journey === true).length,
+      contactsNeeding: contactsNeeding.size,
+      contactsTotal: contactsTotal.size,
+      byStep: sorted(steps),
+      withoutStep,
+    },
+  };
+}

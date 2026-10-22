@@ -26,7 +26,7 @@ const items = Astro.props.items.slice(0, 3);
             <span>
               <b>{item.strong}</b> {item.rest}
             </span>
-            <a href={item.href} class="self-start py-1 text-sm font-bold text-brand-ink no-underline hover:underline">
+            <a href={item.href} class="inline-flex min-h-11 items-center self-start text-sm font-bold text-brand-ink no-underline hover:underline sm:min-h-0 sm:py-1">
               {item.linkLabel} ›
             </a>
           </li>

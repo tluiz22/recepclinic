@@ -232,8 +232,12 @@
 >   (migração `20261022120000_metricas_trilha.sql`; `origin_appointment_id` conferido: confiável). **M2 e M3 (contas
 >   no banco e dados novos do bot) implementadas e publicadas no staging em 22/out** (migração
 >   `20261022130000_metricas_contas.sql`). **M4 (aba Desempenho, filtros de serviço e local, matriz com um item só)
->   implementada e publicada no staging em 22/out** (migração `20261022140000_metricas_matriz.sql`). **Retomar daqui:** M5
->   (Agendamento digital, estados, celular, quantidade em Retomar contato e o teste de interface). Em paralelo, aguardar a Meta (Análise do App até ~29/out).
+>   implementada e publicada no staging em 22/out** (migração `20261022140000_metricas_matriz.sql`). **M5 (Agendamento digital,
+>   estados, celular, quantidade em Retomar contato) implementada, testada
+>   ([relatório](auditoria-frontend/redesign-metricas-report.md), 2 falhas Baixas corrigidas) e publicada no staging
+>   em 22/out** (sem migração). **Redesign das Métricas todo implementado. Retomar daqui:** o cliente valida M1 a M5 no
+>   staging; depois, a limpeza dos itens antigos da matriz e das funções antigas de `metrics.ts` (limitações no
+>   [plano](plano.md)). Em paralelo, aguardar a Meta (Análise do App até ~29/out).
 >   **App antigo da Meta (cliente, 20/out):** o piloto está desativado e o número do app "Consultório Dra. Ana Karina" é
 >   do cliente; o app antigo foi excluído pelo cliente (20/out) e o número entra no portfólio RecepClinic para uma 2ª clínica de
 >   testes do staging quando o aparelho estiver com ele (precisa do SMS). Regra revista no `CLAUDE.md`.
