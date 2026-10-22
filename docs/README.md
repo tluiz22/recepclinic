@@ -217,11 +217,11 @@
 >   Causas: o staging nunca recebeu o `otp_expiry = 86400` do `config.toml` (padrão do Supabase: 1 hora) e abrir o link já
 >   gastava o código (leitor de e-mail, antivírus, prévia do WhatsApp). Correção: o link abre `/admin/confirmar-link`, e o
 >   código só é conferido no botão "Criar minha senha"; vencido ou já usado abre `/admin/link-vencido`, com "Receber um
->   novo link" (no lugar do login). Publicado no staging em 22/out (sem migração). **Falta o cliente pôr "Email OTP
->   Expiration" = 86400** em Authentication › Sign In / Providers › Email do `recepclinic-staging` (e, na produção, o
->   mesmo); **aguarda a validação do cliente**.
->   **Retomar daqui (próxima sessão):** confirmar a validação do "Marcados por" sem o link e do link de criar a senha
->   (com os 86400 no Supabase); o cliente traz novos casos para avaliar. Em paralelo, aguardar a Meta (Análise do App até ~29/out).
+>   novo link" (no lugar do login). Publicado no staging em 22/out (sem migração). Validade do link: **86400 no staging em 22/out**
+>   (o cliente rodou o PATCH `mailer_otp_exp` da API do Supabase com o login da CLI, porque o painel estava fora por um
+>   incidente); **na produção, o mesmo ajuste**. Envio da recuperação conferido (e-mail chegou, 22/out). Para testar
+>   convites: e-mail com "+" (`nome+teste1@gmail.com`). **Aguarda a validação do cliente**.
+>   **Retomar daqui (próxima sessão):** confirmar a validação do "Marcados por" sem o link e do link de criar a senha; o cliente traz novos casos para avaliar. Em paralelo, aguardar a Meta (Análise do App até ~29/out).
 >   **App antigo da Meta (cliente, 20/out):** o piloto está desativado e o número do app "Consultório Dra. Ana Karina" é
 >   do cliente; o app antigo foi excluído pelo cliente (20/out) e o número entra no portfólio RecepClinic para uma 2ª clínica de
 >   testes do staging quando o aparelho estiver com ele (precisa do SMS). Regra revista no `CLAUDE.md`.
