@@ -292,7 +292,7 @@
   **Entrada do bot com atendimento marcado (especificação do cliente, 23/out):** depois das boas-vindas, com
   atendimento marcado no número, pergunta se é sobre ele; data de nascimento antes de qualquer detalhe; ações do
   atendimento escolhido. Implementada e testada no local (sem migração; detalhes e 4 pendências na seção "Entrada do
-  bot com atendimento marcado" do [plano](plano.md)); **aguarda o cliente para publicar no staging e validar**.
+  bot com atendimento marcado" do [plano](plano.md)); **publicada no staging em 23/out** (commit `078521a`, sem migração); o cliente valida lá.
 >   Banco local com os dados fictícios das Métricas (`npm run db:reset` limpa). Em paralelo,
 >   aguardar a Meta (Análise do App até ~29/out).
 >   **App antigo da Meta (cliente, 20/out):** o piloto está desativado e o número do app "Consultório Dra. Ana Karina" é
