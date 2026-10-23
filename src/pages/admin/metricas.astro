@@ -33,6 +33,8 @@ import { dayBounds, formatCalendarDate, formatInstant, todayIn } from "../../lib
 import { createUserClient } from "../../lib/data/clients";
 import { listAgendas } from "../../lib/data/config/agendas";
 import { financial, listFinancialTotals, listFrequentNoShows, ownAgendaIds } from "../../lib/data/metrics";
+import HelpTip from "../../components/admin/ui/HelpTip.astro";
+import { metricas } from "../../lib/ajuda/metricas";
 import { listLocations } from "../../lib/data/config/locations";
 import { listServices } from "../../lib/data/config/services";
 import PerformanceTab from "../../components/admin/metricas/PerformanceTab.astro";
@@ -561,7 +563,9 @@ const fin = tab === "financeiro" ? financial(financialTotals) : null;
 
         {fin && (
           <section aria-labelledby="valores" class="mt-5 flex max-w-4xl flex-col gap-2">
-            <h2 id="valores" class={sectionTitle}>Valores por serviço</h2>
+            <HelpTip subject="Valores por serviço" text={metricas.dicas.valoresServico} id="valores-ajuda">
+              <h2 id="valores" class={sectionTitle}>Valores por serviço</h2>
+            </HelpTip>
             <p class={intro}>Valor da tabela gravado na marcação (não é o valor recebido). Retorno fica fora.</p>
             <DataTable
               label="Valores por serviço"

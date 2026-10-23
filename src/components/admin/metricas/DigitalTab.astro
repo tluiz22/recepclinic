@@ -291,7 +291,9 @@ import { metricas } from "../../../lib/ajuda/metricas";
 
       <section aria-labelledby="operacoes" class={`${card} mt-4`}>
         <div class="flex flex-col gap-1">
-          <h2 id="operacoes" class={h2}>Por tipo de operação</h2>
+          <HelpTip subject="Taxa e Onde mais perde" text={metricas.dicas.porOperacao} id="operacoes-ajuda">
+            <h2 id="operacoes" class={h2}>Por tipo de operação</h2>
+          </HelpTip>
           <p class={sub}>
             Toque numa linha para ver as etapas dela.{group === "cancelar" && " Cancelar não é conversão: mostra se o pedido foi atendido sem a recepção."}
           </p>

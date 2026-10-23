@@ -306,7 +306,9 @@ import { metricas } from "../../../lib/ajuda/metricas";
           )}
         </div>
         <div class={card}>
-          <h2 class={h2}>De onde vêm as marcações</h2>
+          <HelpTip subject="De onde vêm as marcações" text={metricas.dicas.marcadosPor} id="origem">
+            <h2 class={h2}>De onde vêm as marcações</h2>
+          </HelpTip>
           {activity === null ? (
             <p role="alert" class="text-danger">{failed("Origem das marcações")}</p>
           ) : s.created.total === 0 ? (
@@ -510,7 +512,7 @@ import { metricas } from "../../../lib/ajuda/metricas";
             <p class={`${sub} border-t border-[#e6ecea] pt-2.5`}>
               Fora da conta:{" "}
               {s.reminders.notDelivered > 0 ? <b class="text-danger">{s.reminders.notDelivered} não {s.reminders.notDelivered === 1 ? "entregue" : "entregues"}</b> : "nenhum não entregue"} (falha no
-              envio ou template não aprovado) e {s.reminders.waiting} aguardando, porque o horário do atendimento ainda não chegou. Base: {remindersTotal} de {s.reminders.sent} lembretes
+              envio ou mensagem não aprovada pela Meta) e {s.reminders.waiting} aguardando, porque o horário do atendimento ainda não chegou. Base: {remindersTotal} de {s.reminders.sent} lembretes
               enviados.
             </p>
           </>
