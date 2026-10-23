@@ -254,7 +254,8 @@
 >   o banco e a regra do "Sem comparação" está certa (detalhes no [plano](plano.md)). Sem mudança de código.
 >   **Revisão do Roteiro de vendas (cliente, 22/out):** proposta aprovada (sem o Financeiro) e implementada,
 >   conferida no local em 1280 e 360px (detalhes no item 9c do [plano](plano.md)), **validada pelo cliente e
->   publicada no staging em 23/out** (sem migração). Seguem em aberto, para quando ele escolher: a Agenda do
+>   publicada no staging em 23/out** (sem migração). **Fim da sessão de 23/out. Retomar daqui (próxima
+>   sessão):** o cliente traz novos ajustes. Seguem em aberto, para quando ele escolher: a Agenda do
 >   Mês mais rápida numa clínica muito cheia e a sessão da nota fiscal.
 >   Banco local com os dados fictícios das Métricas (`npm run db:reset` limpa). Em paralelo,
 >   aguardar a Meta (Análise do App até ~29/out).
