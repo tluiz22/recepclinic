@@ -68,7 +68,7 @@ describe("envios com falha e execuções", () => {
     expect(describeSendsAlert({ reminderNotRun: false, reminderRunFailed: false, failedAppointments: 0 })).toEqual([]);
     expect(describeSendsAlert({ reminderNotRun: true, reminderRunFailed: true, failedAppointments: 2 })).toEqual([
       "O lembrete de hoje ainda não rodou.",
-      "A execução do lembrete de hoje teve erro ou foi interrompida.",
+      "O envio dos lembretes de hoje teve erro ou foi interrompido.",
       "2 atendimentos de hoje ou amanhã com envio com falha.",
     ]);
   });

@@ -7,6 +7,8 @@
 // Redesign R3 (15/out/2026): aviso no topo e selos no padrão novo.
 import Icon from "../Icon.astro";
 import Pill, { type PillTone } from "../ui/Pill.astro";
+import HelpTip from "../ui/HelpTip.astro";
+import { resumo } from "../../../lib/ajuda/resumo";
 import { formatInstant, localDateOf } from "../../../lib/clinicTime";
 import { jobRunState, type JobRun, type AppointmentWithFailedSends, type JobRunState } from "../../../lib/data/sends";
 import { MAX_ATTEMPTS } from "../../../lib/data/whatsapp/retryRules";
@@ -36,7 +38,8 @@ const STATE: Record<JobRunState, { label: string; tone: PillTone }> = {
   stuck: { label: "Travou", tone: "danger" },
 };
 const BOX = "overflow-hidden rounded-xl border border-line bg-white";
-const BOX_TITLE = "border-b border-line bg-[#f8faf9] px-4 py-3 text-[15px] font-bold text-ink";
+const BOX_HEAD = "border-b border-line bg-[#f8faf9] px-4 py-3";
+const BOX_TITLE = "text-[15px] font-bold text-ink";
 ---
 
 <div class="mt-4 flex flex-col gap-4">
@@ -55,7 +58,11 @@ const BOX_TITLE = "border-b border-line bg-[#f8faf9] px-4 py-3 text-[15px] font-
 
   <div class="grid items-start gap-4 xl:grid-cols-2">
     <section class={BOX} aria-labelledby="envios-falha">
-      <h2 id="envios-falha" class={BOX_TITLE}>Atendimentos com envio com falha ({failed.length})</h2>
+      <div class={BOX_HEAD}>
+        <HelpTip subject="Envios com falha" text={resumo.dicas.enviosFalha} id="envios-falha-ajuda">
+          <h2 id="envios-falha" class={BOX_TITLE}>Atendimentos com envio com falha ({failed.length})</h2>
+        </HelpTip>
+      </div>
       <ul class="divide-y divide-[#e6ecea] px-4">
         {
           failed.map((a) => (
@@ -86,7 +93,11 @@ const BOX_TITLE = "border-b border-line bg-[#f8faf9] px-4 py-3 text-[15px] font-
     </section>
 
     <section class={BOX} aria-labelledby="envios-execucoes">
-      <h2 id="envios-execucoes" class={BOX_TITLE}>Últimas execuções dos envios automáticos</h2>
+      <div class={BOX_HEAD}>
+        <HelpTip subject="Envios automáticos" text={resumo.dicas.enviosRotinas} id="envios-rotinas">
+          <h2 id="envios-execucoes" class={BOX_TITLE}>Quando os envios automáticos rodaram</h2>
+        </HelpTip>
+      </div>
       <ul class="divide-y divide-[#e6ecea] px-4">
         {
           runs.map((run) => {
@@ -105,7 +116,7 @@ const BOX_TITLE = "border-b border-line bg-[#f8faf9] px-4 py-3 text-[15px] font-
             );
           })
         }
-        {runs.length === 0 && <li class="py-3 text-sm text-ink-soft">Nenhuma execução registrada ainda.</li>}
+        {runs.length === 0 && <li class="py-3 text-sm text-ink-soft">Nenhum registro ainda.</li>}
       </ul>
     </section>
   </div>

@@ -318,7 +318,7 @@ export async function getSendsAlert(db: DbClient, clinicId: string, now: Date = 
 export function describeSendsAlert(alert: SendsAlert): string[] {
   const lines: string[] = [];
   if (alert.reminderNotRun) lines.push("O lembrete de hoje ainda não rodou.");
-  if (alert.reminderRunFailed) lines.push("A execução do lembrete de hoje teve erro ou foi interrompida.");
+  if (alert.reminderRunFailed) lines.push("O envio dos lembretes de hoje teve erro ou foi interrompido.");
   if (alert.failedAppointments > 0) {
     const noun = alert.failedAppointments === 1 ? "atendimento" : "atendimentos";
     lines.push(`${alert.failedAppointments} ${noun} de hoje ou amanhã com envio com falha.`);
