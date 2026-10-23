@@ -3,11 +3,12 @@
 // pessoa vê, com editar e remover (com confirmação).
 import { currentPath, receivedReturn, withReturn } from "../../../../lib/returnPath";
 import AdminLayout from "../../../../layouts/AdminLayout.astro";
-import Card from "../../../../components/admin/Card.astro";
 import ConfirmDeleteDialog from "../../../../components/admin/ConfirmDeleteDialog.astro";
 import FlashMessage from "../../../../components/admin/FlashMessage.astro";
 import Icon from "../../../../components/admin/Icon.astro";
-import { PRIMARY_BUTTON, SECONDARY_BUTTON } from "../../../../components/admin/fieldStyles";
+import { DANGER_BUTTON, PANEL, PRIMARY_BUTTON, SECONDARY_BUTTON } from "../../../../components/admin/config/formStyles";
+import EmptyState from "../../../../components/admin/ui/EmptyState.astro";
+import PageHeader from "../../../../components/admin/ui/PageHeader.astro";
 import { formatInstant } from "../../../../lib/clinicTime";
 import { createUserClient } from "../../../../lib/data/clients";
 import { listBlocks } from "../../../../lib/data/agenda/blocks";
@@ -28,25 +29,25 @@ const when = (d: Date) => formatInstant(d, clinic.timezone, "EEE dd/MM/yyyy HH:m
 ---
 
 <AdminLayout title="Bloqueios">
-  <a href={volta ?? "/admin/agenda"} class="inline-flex items-center gap-1 text-sm font-medium text-sky-700 hover:underline">
-    <Icon name="chevron-left" class="h-4 w-4" /> {volta ? "Voltar" : "Agenda"}
+  <a href={volta ?? "/admin/agenda"} class="inline-flex min-h-8 items-center gap-1 text-[15px] font-semibold text-brand no-underline hover:underline">
+    <Icon name="chevron-left" class="h-[18px] w-[18px]" strokeWidth={2.2} />
+    {volta ? "Voltar" : "Agenda"}
   </a>
-  <div class="mt-3 flex flex-wrap items-center justify-between gap-3">
-    <h1 class="text-2xl font-bold text-slate-900">Bloqueios</h1>
-    <a href={withReturn("/admin/agenda/bloquear", here)} class={PRIMARY_BUTTON}>Bloquear agenda</a>
-  </div>
+  <PageHeader title="Bloqueios" subtitle="Os que ainda não terminaram." class="mt-2">
+    <a slot="actions" href={withReturn("/admin/agenda/bloquear", here)} class={PRIMARY_BUTTON}>Bloquear agenda</a>
+  </PageHeader>
   <FlashMessage />
 
   <div class="mt-4 flex max-w-2xl flex-col gap-3">
     {
       blocks.map((block) => (
-        <Card>
-          <p class="font-medium text-slate-900">{agendaName.get(block.agendaId) ?? "Agenda"}</p>
-          <p class="text-sm capitalize text-slate-600">
+        <div class={PANEL}>
+          <p class="text-[16.5px] leading-snug font-bold text-ink">{agendaName.get(block.agendaId) ?? "Agenda"}</p>
+          <p class="mt-0.5 text-[15px] text-ink first-letter:uppercase">
             {when(block.startsAt)} – {when(block.endsAt)}
           </p>
-          <p class="text-sm text-slate-600">{block.reason}</p>
-          <div class="mt-3 flex flex-wrap gap-2 border-t border-slate-100 pt-3">
+          <p class="text-[15px] text-ink-soft">{block.reason}</p>
+          <div class="mt-3 flex flex-wrap gap-2 border-t border-[#e6ecea] pt-3">
             <a href={withReturn(`/admin/agenda/bloqueios/${block.id}`, here)} class={SECONDARY_BUTTON}>
               Editar
             </a>
@@ -55,7 +56,7 @@ const when = (d: Date) => formatInstant(d, clinic.timezone, "EEE dd/MM/yyyy HH:m
               <input type="hidden" name="return_to" value={here} />
               <button
                 type="submit"
-                class={`${SECONDARY_BUTTON} js-confirm-delete text-red-700`}
+                class={`${DANGER_BUTTON} js-confirm-delete`}
                 data-confirm-title="Remover o bloqueio?"
                 data-confirm-message={`${agendaName.get(block.agendaId) ?? "Agenda"}: ${block.reason}. Os horários voltam a ser oferecidos.`}
                 data-confirm-label="Remover"
@@ -64,10 +65,10 @@ const when = (d: Date) => formatInstant(d, clinic.timezone, "EEE dd/MM/yyyy HH:m
               </button>
             </form>
           </div>
-        </Card>
+        </div>
       ))
     }
-    {blocks.length === 0 && <p class="text-sm text-slate-600">Nenhum bloqueio ativo.</p>}
+    {blocks.length === 0 && <EmptyState title="Nenhum bloqueio ativo." text="Os bloqueios que ainda não terminaram aparecem aqui, com editar e remover." />}
   </div>
   <ConfirmDeleteDialog />
 </AdminLayout>

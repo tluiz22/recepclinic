@@ -21,6 +21,18 @@ export const agenda = {
         "Bloqueio: período em que a agenda não recebe marcações.",
       ],
     },
+    // src/lib/data/agenda/series.ts (SERIES_HORIZON_MONTHS, generateSessions, extendOpenSeries) e a rotina
+    // diária src/pages/api/cron/series.ts; D9 em docs/arquitetura.md.
+    serie: {
+      serve: "Marcar o mesmo atendimento no mesmo dia da semana e horário, de uma vez.",
+      como: [
+        "Escolha a frequência (toda semana, a cada 2 semanas…) e até quando: um dia, um número de sessões ou sem data para terminar.",
+        "Ficam marcadas as sessões dos próximos 3 meses. Uma vez por dia, o sistema marca as que entram nesse prazo, até o fim da série.",
+        "Feriado, bloqueio ou horário ocupado: a data é pulada e aparece na tela da série, para marcar à mão se quiser. No fim por número de sessões, a data pulada não conta.",
+        "Cada sessão é um atendimento comum: dá para remarcar ou cancelar só ela, ou encerrar a série dali em diante.",
+      ],
+      exemplo: "Toda semana, às terças às 14h, 10 sessões, com um feriado numa das terças: a data do feriado é pulada e a série vai até a 11ª terça, para completar as 10.",
+    },
   },
 } satisfies ModuloDeAjuda;
 

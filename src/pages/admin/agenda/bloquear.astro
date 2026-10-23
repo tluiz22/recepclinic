@@ -8,11 +8,13 @@ import { logError } from "../../../lib/log";
 // mensagem pronta para o WhatsApp. A página mesma recebe o envio (os dados
 // voltam na tela na etapa da pergunta).
 import AdminLayout from "../../../layouts/AdminLayout.astro";
-import Card from "../../../components/admin/Card.astro";
 import ConfirmDeleteDialog from "../../../components/admin/ConfirmDeleteDialog.astro";
 import FormMessage from "../../../components/admin/FormMessage.astro";
 import Icon from "../../../components/admin/Icon.astro";
-import { HINT, INPUT, LABEL, PRIMARY_BUTTON, SECONDARY_BUTTON } from "../../../components/admin/fieldStyles";
+import { CHECK, CHOICE, DANGER_BUTTON, INPUT, PANEL, PRIMARY_BUTTON, SECONDARY_BUTTON } from "../../../components/admin/config/formStyles";
+import Field from "../../../components/admin/ui/Field.astro";
+import { describedBy } from "../../../components/admin/ui/field";
+import PageHeader from "../../../components/admin/ui/PageHeader.astro";
 import { addDays, formatInstant, isCalendarDate, isClockTime, todayIn, toInstant } from "../../../lib/clinicTime";
 import { createUserClient } from "../../../lib/data/clients";
 import { createBlock, findBlockConflicts } from "../../../lib/data/agenda/blocks";
@@ -46,6 +48,8 @@ const values = {
 };
 values.endDate = values.startDate;
 let error: string | null = null;
+// Erro de cada campo, embaixo dele (ajuda contextual, 23/out/2026).
+let fieldErrors: Record<string, string> = {};
 let conflicts: AgendaAppointment[] = [];
 
 function period() {
@@ -115,99 +119,110 @@ if (Astro.request.method === "POST") {
     }
   } catch (caught) {
     if (!(caught instanceof DataError)) logError("bloquear", caught);
-    error = caught instanceof DataError ? describeDataError(caught) : "Não foi possível bloquear. Tente de novo.";
+    fieldErrors = caught instanceof DataError && caught.code === "invalid" ? caught.fields : {};
+    const marked = Object.keys(fieldErrors).length;
+    error = marked
+      ? `Não bloqueamos: confira ${marked > 1 ? `os ${marked} campos marcados` : "o campo marcado"}.`
+      : caught instanceof DataError
+        ? describeDataError(caught)
+        : "Não foi possível bloquear. Tente de novo.";
   }
 }
 const agendaName = new Map(agendas.map((a) => [a.id, a.name]));
 ---
 
 <AdminLayout title="Bloquear agenda">
-  <a href={volta ?? `/admin/agenda?date=${values.startDate}`} class="inline-flex items-center gap-1 text-sm font-medium text-sky-700 hover:underline">
-    <Icon name="chevron-left" class="h-4 w-4" /> {volta ? "Voltar" : "Agenda"}
+  <a href={volta ?? `/admin/agenda?date=${values.startDate}`} class="inline-flex min-h-8 items-center gap-1 text-[15px] font-semibold text-brand no-underline hover:underline">
+    <Icon name="chevron-left" class="h-[18px] w-[18px]" strokeWidth={2.2} />
+    {volta ? "Voltar" : "Agenda"}
   </a>
-  <div class="mt-3 flex flex-wrap items-center justify-between gap-3">
-    <h1 class="text-2xl font-bold text-slate-900">Bloquear agenda</h1>
-    <a href="/admin/agenda/bloqueios" class="text-sm font-medium text-sky-700 hover:underline">Ver bloqueios</a>
-  </div>
-  <p class="mt-1 text-sm text-slate-600">Nenhum horário do período é oferecido enquanto o bloqueio existir.</p>
+  <PageHeader title="Bloquear agenda" subtitle="Nenhum horário do período é oferecido enquanto o bloqueio existir." class="mt-2">
+    <a slot="actions" href="/admin/agenda/bloqueios" class={SECONDARY_BUTTON}>Ver bloqueios</a>
+  </PageHeader>
   {error && <FormMessage tone="error">{error}</FormMessage>}
 
   <form method="POST" class="mt-4 flex max-w-2xl flex-col gap-4">
-    <Card>
-      <fieldset>
-        <legend class={LABEL}>Agendas</legend>
-        <div class="mt-1 flex flex-col gap-2">
+    <div class={PANEL}>
+      <Field id="agendas" label="Agendas" kind="group" error={fieldErrors.agenda}>
+        <div class="mt-1.5 flex flex-col gap-1">
           {
             agendas.length > 1 && (
-              <label class="flex items-center gap-2 text-sm font-medium text-slate-700">
-                <input type="checkbox" data-all class="h-4 w-4 rounded border-slate-300" /> Todas
+              <label class={`${CHOICE} font-semibold`}>
+                <input type="checkbox" data-all class={CHECK} /> Todas
               </label>
             )
           }
           {
             agendas.map((agenda) => (
-              <label class="flex items-center gap-2 text-sm text-slate-700">
-                <input type="checkbox" name="agenda_id" value={agenda.id} checked={values.agendaIds.includes(agenda.id) || agendas.length === 1} class="h-4 w-4 rounded border-slate-300" />
+              <label class={CHOICE}>
+                <input
+                  type="checkbox"
+                  name="agenda_id"
+                  value={agenda.id}
+                  checked={values.agendaIds.includes(agenda.id) || agendas.length === 1}
+                  aria-describedby={describedBy("agendas", { error: !!fieldErrors.agenda })}
+                  class={CHECK}
+                />
                 {agenda.name}
               </label>
             ))
           }
         </div>
-      </fieldset>
-    </Card>
+      </Field>
+    </div>
 
-    <Card>
-      <label class="flex items-center gap-2 text-sm font-medium text-slate-700">
-        <input type="checkbox" id="full_day" name="full_day" checked={values.fullDay} class="h-4 w-4 rounded border-slate-300" />
+    <div class={`${PANEL} flex flex-col gap-4`}>
+      <label class={`${CHOICE} font-semibold`}>
+        <input type="checkbox" id="full_day" name="full_day" checked={values.fullDay} class={CHECK} />
         Dia todo
       </label>
-      <div class="mt-3 grid grid-cols-2 gap-3">
-        <div>
-          <label for="start_date" class={LABEL}>Início</label>
-          <input id="start_date" name="start_date" type="date" required min={today} value={values.startDate} class={INPUT} />
-        </div>
+      <div class="grid grid-cols-2 gap-3">
+        <Field id="start_date" label="Início" error={fieldErrors.date}>
+          <input id="start_date" name="start_date" type="date" required min={today} value={values.startDate} aria-invalid={fieldErrors.date ? "true" : undefined} aria-describedby={describedBy("start_date", { error: !!fieldErrors.date })} class={INPUT} />
+        </Field>
         <div data-time>
-          <label for="start_time" class={LABEL}>Hora</label>
-          <input id="start_time" name="start_time" type="time" value={values.startTime} class={INPUT} />
+          <Field id="start_time" label="Hora" error={fieldErrors.time}>
+            <input id="start_time" name="start_time" type="time" value={values.startTime} aria-invalid={fieldErrors.time ? "true" : undefined} aria-describedby={describedBy("start_time", { error: !!fieldErrors.time })} class={INPUT} />
+          </Field>
         </div>
-        <div>
-          <label for="end_date" class={LABEL}>Fim</label>
-          <input id="end_date" name="end_date" type="date" required min={today} value={values.endDate} class={INPUT} />
-        </div>
+        <Field id="end_date" label="Fim" error={fieldErrors.end}>
+          <input id="end_date" name="end_date" type="date" required min={today} value={values.endDate} aria-invalid={fieldErrors.end ? "true" : undefined} aria-describedby={describedBy("end_date", { error: !!fieldErrors.end })} class={INPUT} />
+        </Field>
         <div data-time>
-          <label for="end_time" class={LABEL}>Hora</label>
-          <input id="end_time" name="end_time" type="time" value={values.endTime} class={INPUT} />
+          <Field id="end_time" label="Hora">
+            <input id="end_time" name="end_time" type="time" value={values.endTime} class={INPUT} />
+          </Field>
         </div>
       </div>
-      <div class="mt-3">
-        <label for="reason" class={LABEL}>Motivo</label>
-        <input id="reason" name="reason" required placeholder="Congresso, reunião, férias…" value={values.reason} class={INPUT} />
-        <p class={HINT}>Aparece na Agenda para a equipe.</p>
-      </div>
-    </Card>
+      <Field id="reason" label="Motivo" hint="Aparece na Agenda para a equipe." error={fieldErrors.reason}>
+        <input id="reason" name="reason" required placeholder="Congresso, reunião, férias…" value={values.reason} aria-invalid={fieldErrors.reason ? "true" : undefined} aria-describedby={describedBy("reason", { hint: true, error: !!fieldErrors.reason })} class={INPUT} />
+      </Field>
+    </div>
 
     {
       conflicts.length > 0 ? (
-        <Card class="border-amber-200 bg-amber-50">
+        <section aria-labelledby="conflitos" class="flex flex-col gap-3 rounded-xl border border-pend-200 bg-pend-50 p-4 text-pend-800 sm:px-5 sm:py-[18px]">
           <input type="hidden" name="vistos" value={conflicts.map((a) => a.id).join(",")} />
-          <h2 class="font-semibold text-amber-900">Há {conflicts.length} atendimento(s) marcado(s) neste período</h2>
-          <ul class="mt-2 text-sm text-amber-900">
+          <h2 id="conflitos" class="font-display text-[17px] leading-tight font-bold">
+            Há {conflicts.length} atendimento(s) marcado(s) neste período
+          </h2>
+          <ul class="flex flex-col gap-0.5 text-[15px]">
             {conflicts.map((a) => (
               <li>
                 {formatInstant(a.scheduledAt, clinic.timezone, "dd/MM HH:mm")} · {a.patientName} · {a.serviceName} · {agendaName.get(a.agendaId) ?? a.agendaName}
               </li>
             ))}
           </ul>
-          <ul class="mt-3 flex list-disc flex-col gap-1 pl-5 text-sm text-amber-900">
+          <ul class="flex list-disc flex-col gap-1 pl-5 text-[15px]">
             <li>{bloquearAjuda.cancelar}</li>
             <li>{bloquearAjuda.manter}</li>
           </ul>
-          <div class="mt-3 flex flex-wrap gap-2">
+          <div class="flex flex-wrap gap-2">
             <button
               type="submit"
               name="decisao"
               value="cancelar"
-              class="js-confirm-delete rounded-md bg-red-600 px-3 py-2 text-sm font-medium text-white hover:bg-red-700"
+              class={`${DANGER_BUTTON} js-confirm-delete`}
               data-confirm-title="Bloquear e cancelar os atendimentos?"
               data-confirm-message={`${conflicts.length} atendimento(s) serão cancelados. Cada paciente recebe a mensagem pelo WhatsApp da clínica, com o link para remarcar.`}
               data-confirm-label="Bloquear e cancelar"
@@ -227,7 +242,7 @@ const agendaName = new Map(agendas.map((a) => [a.id, a.name]));
               Bloquear e manter os atendimentos
             </button>
           </div>
-        </Card>
+        </section>
       ) : (
         <button
           type="submit"

@@ -9,12 +9,12 @@ import AdminLayout from "../../../layouts/AdminLayout.astro";
 import AgendaHeader from "../../../components/admin/agenda/AgendaHeader.astro";
 import SituationLegend from "../../../components/admin/agenda/SituationLegend.astro";
 import { SITUATIONS, appointmentSituation } from "../../../components/admin/agenda/situationStyle";
-import Badge from "../../../components/admin/Badge.astro";
 import Icon from "../../../components/admin/Icon.astro";
 import StatusPill from "../../../components/admin/ui/StatusPill.astro";
-import Card from "../../../components/admin/Card.astro";
 import PhoneLinks from "../../../components/admin/PhoneLinks.astro";
-import { SECONDARY_BUTTON } from "../../../components/admin/fieldStyles";
+import { PANEL, SECONDARY_BUTTON } from "../../../components/admin/config/formStyles";
+import EmptyState from "../../../components/admin/ui/EmptyState.astro";
+import Pill from "../../../components/admin/ui/Pill.astro";
 import { formatAgeAndBirth } from "../../../lib/age";
 import { isUuid } from "../../../lib/clinicAccess";
 import { formatInstant, isCalendarDate, localDateOf, todayIn } from "../../../lib/clinicTime";
@@ -67,32 +67,36 @@ const plural = (n: number) => `${n} ${n === 1 ? "atendimento marcado" : "atendim
     <AgendaHeader view="busca" date={headerDate} agendas={[]} selectedAgendaId={null} query={q} returnTo={volta} />
   </div>
 
-  {!q && !chosen && <p class="mt-4 text-sm text-slate-600">Digite o nome ou o telefone do {vocabulary.patient} para ver os atendimentos marcados dele.</p>}
+  {!q && !chosen && <p class="mt-4 text-[15px] text-ink-soft">Digite o nome ou o telefone do {vocabulary.patient} para ver os atendimentos marcados dele.</p>}
 
   {
     matches && (
       <>
-        <p class="mt-4 text-sm text-slate-600">
-          {matches.total === 0
-            ? `Nenhum ${vocabulary.patient} encontrado.`
-            : `Encontramos ${matches.total} ${vocabulary.patients}. Escolha um para ver os atendimentos marcados${matches.total > matches.items.length ? ` (mostrando ${matches.items.length}; refine a busca para achar os outros)` : ""}:`}
-        </p>
+        {matches.total === 0 ? (
+          <div class="mt-4">
+            <EmptyState title={`Nenhum ${vocabulary.patient} encontrado.`} text="Confira o nome ou busque pelo telefone (4 dígitos ou mais). A busca inclui os desativados." />
+          </div>
+        ) : (
+          <p class="mt-4 text-[15px] text-ink-soft">
+            {`Encontramos ${matches.total} ${vocabulary.patients}. Escolha um para ver os atendimentos marcados${matches.total > matches.items.length ? ` (mostrando ${matches.items.length}; refine a busca para achar os outros)` : ""}:`}
+          </p>
+        )}
         <ul class="mt-3 flex flex-col gap-2">
           {matches.items.map((p) => {
             const n = counts.get(p.id)?.length ?? 0;
             return (
               <li>
-                <a href={searchHref(p.id, true)} class="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-slate-200 bg-white p-3 text-sm shadow-sm hover:border-brand/40 hover:bg-brand-soft/40">
+                <a href={searchHref(p.id, true)} class="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-line bg-white px-3.5 py-3 text-[15px] no-underline hover:border-brand/40 hover:bg-brand-soft/40">
                   <span>
-                    <span class="font-semibold text-slate-900">{p.fullName}</span> <span class="text-slate-500">{formatAgeAndBirth(p.birthdate, today)}</span>
-                    <span class="block text-slate-500">
+                    <span class="font-bold text-ink">{p.fullName}</span> <span class="text-ink-soft">{formatAgeAndBirth(p.birthdate, today)}</span>
+                    <span class="block text-ink-soft">
                       {!p.isContactSelf && `${capitalize(vocabulary.contact)}: ${p.contact.fullName} · `}
                       {formatPhoneBR(p.contact.phone)}
                     </span>
                   </span>
                   <span class="flex items-center gap-2">
-                    {!p.isActive && <Badge variant="neutral">Desativado</Badge>}
-                    <Badge variant={n > 0 ? "info" : "neutral"}>{n > 0 ? plural(n) : "Nada marcado"}</Badge>
+                    {!p.isActive && <Pill>Desativado</Pill>}
+                    <Pill tone={n > 0 ? "info" : "neutral"}>{n > 0 ? plural(n) : "Nada marcado"}</Pill>
                   </span>
                 </a>
               </li>
@@ -105,31 +109,31 @@ const plural = (n: number) => `${n} ${n === 1 ? "atendimento marcado" : "atendim
 
   {
     chosen && contact && (
-      <Card class="mt-4">
+      <section class={`${PANEL} mt-4`}>
         <div class="flex flex-wrap items-start justify-between gap-2">
-          <div class="text-sm">
-            <p class="text-xs font-medium uppercase tracking-wide text-slate-500">Atendimentos marcados de</p>
-            <a href={withReturn(`/admin/pacientes/${chosen.id}`, currentPath(Astro.url))} class="text-lg font-semibold text-slate-900 hover:text-brand hover:underline">
+          <div class="text-[15px]">
+            <p class="text-[13px] leading-tight font-semibold tracking-[.06em] text-ink-soft uppercase">Atendimentos marcados de</p>
+            <a href={withReturn(`/admin/pacientes/${chosen.id}`, currentPath(Astro.url))} class="text-lg font-semibold text-ink no-underline hover:text-brand hover:underline">
               {chosen.fullName}
             </a>{" "}
-            <span class="text-slate-500">{formatAgeAndBirth(chosen.birthdate, today)}</span>
-            <p class="text-slate-500">
+            <span class="text-ink-soft">{formatAgeAndBirth(chosen.birthdate, today)}</span>
+            <p class="text-ink-soft">
               {!chosen.isContactSelf && `${capitalize(vocabulary.contact)}: ${contact.fullName} · `}
-              <PhoneLinks phone={contact.phone} plain class="text-slate-600" />
+              <PhoneLinks phone={contact.phone} plain class="text-ink-soft" />
             </p>
           </div>
-          {!chosen.isActive && <Badge variant="neutral">Desativado</Badge>}
+          {!chosen.isActive && <Pill>Desativado</Pill>}
         </div>
-        <h2 class="mt-4 text-sm font-semibold text-slate-900">{rows.length > 0 ? `${plural(rows.length)}, do mais próximo ao mais distante` : "Nenhum atendimento marcado."}</h2>
+        <h2 class="mt-4 text-[15px] font-bold text-ink">{rows.length > 0 ? `${plural(rows.length)}, do mais próximo ao mais distante` : "Nenhum atendimento marcado."}</h2>
         {rows.length > 0 && <SituationLegend />}
         <ul class="mt-3 flex flex-col gap-1.5">
           {rows.map((a) => (
-            <li class={`rounded border-l-4 px-2.5 py-1.5 text-sm ${SITUATIONS[appointmentSituation(a)].swatch}`}>
-              <a href={`/admin/agenda?date=${localDateOf(a.scheduledAt, clinic.timezone)}`} class="flex flex-wrap items-start justify-between gap-x-3 gap-y-1 hover:text-brand">
+            <li class={`rounded-lg border-l-4 px-3 py-2 text-[15px] ${SITUATIONS[appointmentSituation(a)].swatch}`}>
+              <a href={`/admin/agenda?date=${localDateOf(a.scheduledAt, clinic.timezone)}`} class="flex flex-wrap items-start justify-between gap-x-3 gap-y-1 text-ink no-underline hover:text-brand">
                 <span>
                   {/* Maiúscula só na primeira letra ("Segunda … às"; QA-10, 16/out/2026). */}
-                  <span class="inline-block font-medium text-slate-900 first-letter:uppercase">{formatInstant(a.scheduledAt, clinic.timezone, "EEE dd/MM/yyyy 'às' HH:mm")}</span>
-                  <span class="block text-slate-600">
+                  <span class="inline-block font-semibold first-letter:uppercase">{formatInstant(a.scheduledAt, clinic.timezone, "EEE dd/MM/yyyy 'às' HH:mm")}</span>
+                  <span class="block text-ink-soft">
                     {a.serviceName} · {a.agendaName} · {a.locationName}
                   </span>
                 </span>
@@ -139,12 +143,12 @@ const plural = (n: number) => `${n} ${n === 1 ? "atendimento marcado" : "atendim
             </li>
           ))}
         </ul>
-        <div class="mt-4 flex flex-wrap gap-2 border-t border-slate-100 pt-3">
+        <div class="mt-4 flex flex-wrap gap-2 border-t border-[#e6ecea] pt-3">
           <a href={withReturn(`/admin/pacientes/${chosen.id}`, currentPath(Astro.url))} class={SECONDARY_BUTTON}>Ver a ficha (histórico completo)</a>
           {q && fromList && <a href={keep(`/admin/agenda/buscar?q=${encodeURIComponent(q)}`)} class={SECONDARY_BUTTON}>Voltar à lista</a>}
           <a href={keep("/admin/agenda/buscar")} class={SECONDARY_BUTTON}>Buscar outro {vocabulary.patient}</a>
         </div>
-      </Card>
+      </section>
     )
   }
 </AdminLayout>

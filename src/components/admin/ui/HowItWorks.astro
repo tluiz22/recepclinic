@@ -11,10 +11,13 @@ interface Props {
   /** Nome curto e fixo: guarda o aberto/fechado no navegador. */
   id: string;
   topic: ComoFunciona;
+  /** Coluna estreita (ex.: o resumo do Marcar): uma coluna só, também no computador. */
+  narrow?: boolean;
   class?: string;
 }
 
-const { id, topic, class: className = "" } = Astro.props;
+const { id, topic, narrow = false, class: className = "" } = Astro.props;
+const wide = narrow ? "" : "md:grid-cols-2 md:gap-x-7";
 const panelId = `${id}-como-funciona`;
 const BLOCK_TITLE = "mb-1 block text-[15px] font-bold";
 ---
@@ -37,14 +40,14 @@ const BLOCK_TITLE = "mb-1 block text-[15px] font-bold";
       </summary>
     </details>
   </div>
-  <div id={panelId} class="how-panel mt-2 gap-4 rounded-[10px] border border-att-200 bg-att-50 px-4 py-4 text-[15px] leading-normal text-att-800 sm:px-[18px] md:grid-cols-2 md:gap-x-7">
+  <div id={panelId} class={`how-panel mt-2 gap-4 rounded-[10px] border border-att-200 bg-att-50 px-4 py-4 text-[15px] leading-normal text-att-800 sm:px-[18px] ${wide}`}>
     <div>
       <b class={BLOCK_TITLE}>Para que serve</b>
       {topic.serve}
     </div>
     {
       topic.exemplo && (
-        <div class="md:col-start-2 md:row-start-1">
+        <div class={narrow ? "" : "md:col-start-2 md:row-start-1"}>
           <b class={BLOCK_TITLE}>Exemplo</b>
           {topic.exemplo}
         </div>
@@ -64,7 +67,7 @@ const BLOCK_TITLE = "mb-1 block text-[15px] font-bold";
         </div>
       )
     }
-    <div class="flex justify-end md:col-span-2" data-how-close hidden>
+    <div class={`flex justify-end ${narrow ? "" : "md:col-span-2"}`} data-how-close hidden>
       <button
         type="button"
         class="min-h-11 rounded-lg px-2.5 text-[15px] font-bold text-brand-ink hover:bg-brand-soft focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand sm:min-h-9"

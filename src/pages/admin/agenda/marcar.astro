@@ -45,6 +45,8 @@ import { getContact, getPatient, searchPatients } from "../../../lib/data/patien
 import { formatPhoneBR } from "../../../lib/phone";
 import { capitalize, vocabularyFor } from "../../../lib/vocabulary";
 import { frequencyLabel } from "../../../lib/seriesLabels";
+import HowItWorks from "../../../components/admin/ui/HowItWorks.astro";
+import { agenda as ajudaAgenda } from "../../../lib/ajuda/agenda";
 import { seriesStartText, slotConfirmText } from "../../../lib/confirmText";
 
 const clinic = Astro.locals.clinic!;
@@ -486,10 +488,12 @@ const remarcarHref = (a: UpcomingAppointment) => `/admin/agenda/remarcar?id=${a.
         {
           canRepeat && (
             <fieldset class="flex flex-col gap-3 border-t border-line pt-3.5">
-              <label class="flex min-h-11 items-center gap-2.5 text-[15px] font-semibold text-ink sm:min-h-0">
-                <input type="checkbox" name="repetir" data-repeat data-horizon={SERIES_HORIZON_MONTHS} class="h-[18px] w-[18px] accent-brand" />
-                Repetir este atendimento (série)
-              </label>
+              <HowItWorks id="serie" topic={ajudaAgenda.comoFunciona.serie} narrow>
+                <label class="flex min-h-11 items-center gap-2.5 text-[15px] font-semibold text-ink sm:min-h-0">
+                  <input type="checkbox" name="repetir" data-repeat data-horizon={SERIES_HORIZON_MONTHS} class="h-[18px] w-[18px] accent-brand" />
+                  Repetir este atendimento (série)
+                </label>
+              </HowItWorks>
               <div data-repeat-fields hidden class="flex flex-col gap-3">
                 <div class="flex flex-col gap-1">
                   <label for="interval_weeks" class="text-sm font-semibold text-ink">Frequência</label>
@@ -513,10 +517,7 @@ const remarcarHref = (a: UpcomingAppointment) => `/admin/agenda/remarcar?id=${a.
                     <input type="radio" name="fim" value="sessoes" class="h-4 w-4 accent-brand" />
                     <input type="number" name="max_sessions" min="1" max="200" aria-label="Número de sessões" class={`${CONTROL} w-24`} /> sessões
                   </label>
-                  <p class="text-[13px] text-ink-soft">
-                    Sem data para terminar, ficam marcadas as sessões dos próximos {SERIES_HORIZON_MONTHS} meses. Feriado, bloqueio ou horário ocupado: a data é pulada e
-                    aparece na tela da série.
-                  </p>
+                  <p class="text-[13px] text-ink-soft">Feriado, bloqueio ou horário ocupado: a data é pulada e aparece na tela da série.</p>
                 </div>
               </div>
             </fieldset>
