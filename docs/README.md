@@ -264,6 +264,10 @@
   testado, migração `20261023140000_reenvio_automatico.sql` aplicada e conferida no staging, publicado e dado como
   validado pelo cliente em 23/out.** **Fim da sessão de 23/out (2ª). Retomar daqui (próxima sessão):** o cliente
   traz novos ajustes; seguem em aberto a Agenda do Mês mais rápida numa clínica muito cheia e a sessão da nota fiscal.
+  **Links na legenda do funil (cliente, 23/out):** em Métricas › Agendamento digital, "x barradas pela regra" e "x por
+  horário ocupado" sublinhados, com link para os cartões "Barradas pelas regras" e "Erros técnicos"; os destinos das
+  Métricas param abaixo da barra de abas fixa (no celular, ela cobria o título). Publicado no staging em 23/out (sem
+  migração); o cliente valida lá.
 >   Banco local com os dados fictícios das Métricas (`npm run db:reset` limpa). Em paralelo,
 >   aguardar a Meta (Análise do App até ~29/out).
 >   **App antigo da Meta (cliente, 20/out):** o piloto está desativado e o número do app "Consultório Dra. Ana Karina" é

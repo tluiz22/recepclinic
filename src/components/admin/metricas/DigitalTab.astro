@@ -209,7 +209,7 @@ const operationLabel = DIGITAL_OPERATIONS.find((o) => o.id === operation)!.label
       <section aria-labelledby="etapas" class="mt-4 grid gap-3 lg:grid-cols-3">
         <div class={`${card} lg:col-span-2`}>
           <div class="flex flex-col gap-1">
-            <h2 id="etapas" class={`${h2} scroll-mt-4`}>
+            <h2 id="etapas" class={`${h2} scroll-mt-16`}>
               {group === "marcar" ? "Do primeiro contato à marcação" : group === "remarcar" ? "Do pedido à data nova" : "Do pedido ao cancelamento"}
             </h2>
             <p class={sub}>
@@ -241,8 +241,22 @@ const operationLabel = DIGITAL_OPERATIONS.find((o) => o.id === operation)!.label
                         ? `${stage.lostToNext} abriram e não concluíram`
                         : `${stage.lostToNext} pararam aqui`}{" "}
                     ({formatRate(stage.lostToNext / Math.max(stage.count, 1))})
-                    {stage.blockedHere > 0 && ` · ${stage.blockedHere} barradas pela regra`}
-                    {stage.slotTakenHere > 0 && ` · ${stage.slotTakenHere} por horário ocupado`}
+                    {stage.blockedHere > 0 && (
+                      <>
+                        {" · "}
+                        <a href="#barradas" class="text-inherit underline underline-offset-2 hover:decoration-2">
+                          {stage.blockedHere} barradas pela regra
+                        </a>
+                      </>
+                    )}
+                    {stage.slotTakenHere > 0 && (
+                      <>
+                        {" · "}
+                        <a href="#erros" class="text-inherit underline underline-offset-2 hover:decoration-2">
+                          {stage.slotTakenHere} por horário ocupado
+                        </a>
+                      </>
+                    )}
                     {stage.biggestLoss && ": a maior perda"}
                   </p>
                 )}
@@ -352,7 +366,7 @@ const operationLabel = DIGITAL_OPERATIONS.find((o) => o.id === operation)!.label
         ].map((block) => {
           const max = Math.max(1, ...block.list.map((x) => x.count));
           return (
-            <div id={block.id} class={`${card} scroll-mt-4`}>
+            <div id={block.id} class={`${card} scroll-mt-16`}>
               <h2 class="font-display text-base font-bold text-ink">{block.title}</h2>
               <p class={sub}>{block.text}</p>
               {block.list.length === 0 ? (

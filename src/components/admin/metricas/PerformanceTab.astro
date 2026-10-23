@@ -395,7 +395,7 @@ const segment = (n: number) => (remindersTotal ? (n / remindersTotal) * 100 : 0)
               </div>
             </div>
 
-            <div id="por-servico" class={`${card} scroll-mt-4`}>
+            <div id="por-servico" class={`${card} scroll-mt-16`}>
               <div class="flex flex-wrap items-baseline justify-between gap-2">
                 <h3 class={h3}>Por serviço e local</h3>
                 <a href={links.sort(!sortByNoShow)} class="inline-flex min-h-11 items-center text-sm font-bold text-brand-ink no-underline hover:underline sm:min-h-0 sm:py-1">
@@ -457,7 +457,7 @@ const segment = (n: number) => (remindersTotal ? (n / remindersTotal) * 100 : 0)
         )}
       </section>
 
-      <section id="lembretes" aria-labelledby="lembretes-titulo" class={`${card} mt-6 scroll-mt-4`}>
+      <section id="lembretes" aria-labelledby="lembretes-titulo" class={`${card} mt-6 scroll-mt-16`}>
         <div class="flex flex-col gap-1">
           <h2 id="lembretes-titulo" class="font-display text-xl font-bold text-ink">Resposta aos lembretes</h2>
           <p class={sub}>Um desfecho por atendimento lembrado, pela última tentativa. A resposta conta até o horário do atendimento.</p>
@@ -514,7 +514,7 @@ const segment = (n: number) => (remindersTotal ? (n / remindersTotal) * 100 : 0)
       </section>
 
       {returnsApply && (
-        <section id="retornos" aria-labelledby="retornos-titulo" class={`${card} mt-6 scroll-mt-4`}>
+        <section id="retornos" aria-labelledby="retornos-titulo" class={`${card} mt-6 scroll-mt-16`}>
           <div class="flex flex-col gap-1">
             <h2 id="retornos-titulo" class="font-display text-xl font-bold text-ink">Retornos</h2>
             <p class={sub}>
