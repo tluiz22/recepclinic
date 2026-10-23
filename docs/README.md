@@ -288,6 +288,7 @@
   **Pontos de prioridade Baixa (pedido do cliente, 23/out) publicados no staging em 23/out** (sem migração); o
   inventário fica todo atendido (a tela WhatsApp do Suporte ficou sem mudança, como o inventário previa).
   **Retomar daqui:** o cliente valida a ajuda contextual inteira (Alta, Média e Baixa) no staging e traz os ajustes.
+  Na próxima sessão o cliente também traz um pedido novo (23/out).
 >   Banco local com os dados fictícios das Métricas (`npm run db:reset` limpa). Em paralelo,
 >   aguardar a Meta (Análise do App até ~29/out).
 >   **App antigo da Meta (cliente, 20/out):** o piloto está desativado e o número do app "Consultório Dra. Ana Karina" é
