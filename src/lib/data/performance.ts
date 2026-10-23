@@ -208,7 +208,7 @@ export type PerformanceSummary = {
     confirmedRate: Ratio;
   };
   /** Faltas entre os registrados, pela resposta ao lembrete (associação, não causa). */
-  noShowByReminder: { key: "confirmed" | "no_answer" | "none"; label: string; noShow: Ratio }[];
+  noShowByReminder: { key: "confirmed" | "no_answer"; label: string; noShow: Ratio }[];
   returns: { booked: number; panel: number; whatsapp: number; dueWithReturn: Ratio };
 };
 
@@ -279,7 +279,6 @@ export function summarizePerformance(data: PerformanceData): PerformanceSummary 
     noShowByReminder: [
       { key: "confirmed", label: "Confirmaram", noShow: byReminder(["confirmed"]) },
       { key: "no_answer", label: "Não responderam", noShow: byReminder(["no_answer"]) },
-      { key: "none", label: "Sem lembrete", noShow: byReminder(["none"]) },
     ],
     returns: {
       booked: sum(a, (r) => r.returnsPanel + r.returnsWhatsapp),

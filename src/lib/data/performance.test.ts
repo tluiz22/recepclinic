@@ -78,7 +78,7 @@ describe("indicadores do Desempenho", () => {
     expect(s.reminders).toMatchObject({ confirmed: 6, noAnswer: 4, waiting: 3, notDelivered: 1, sent: 14 });
     expect(s.reminders.confirmedRate).toMatchObject({ n: 6, base: 10 });
     expect(s.noShowByReminder.find((g) => g.key === "no_answer")!.noShow).toMatchObject({ n: 2, base: 4 });
-    expect(s.noShowByReminder.find((g) => g.key === "none")!.noShow).toMatchObject({ n: 1, base: 1 });
+    expect(s.noShowByReminder.map((g) => g.key)).toEqual(["confirmed", "no_answer"]);
   });
 
   it("por serviço e local: destaque só com base ≥ 20 e 1,5 vez a taxa da clínica", () => {

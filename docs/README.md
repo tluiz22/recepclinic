@@ -257,6 +257,10 @@
 >   publicada no staging em 23/out** (sem migração). **Fim da sessão de 23/out. Retomar daqui (próxima
 >   sessão):** o cliente traz novos ajustes. Seguem em aberto, para quando ele escolher: a Agenda do
 >   Mês mais rápida numa clínica muito cheia e a sessão da nota fiscal.
+  **Ajustes de 23/out:** "Sem lembrete" fora do cartão "Faltas pela resposta ao lembrete" (publicado no staging em
+  23/out, sem migração). **Reenvio automático de envios com falha técnica:** 5 decisões do cliente no
+  [plano](plano.md) (todos os automáticos, 10 e 30 minutos, falha tardia também, sem aviso extra); implementação em
+  andamento.
 >   Banco local com os dados fictícios das Métricas (`npm run db:reset` limpa). Em paralelo,
 >   aguardar a Meta (Análise do App até ~29/out).
 >   **App antigo da Meta (cliente, 20/out):** o piloto está desativado e o número do app "Consultório Dra. Ana Karina" é

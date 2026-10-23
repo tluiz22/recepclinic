@@ -2867,6 +2867,30 @@ ajustes, se houver.
   linha a linha, como nas Métricas antes da correção); baixa prioridade. Lista de clínicas do Suporte e os papéis da
   equipe (`authorship.ts`) só cortam acima de mil clínicas ou membros.
 
+**"Sem lembrete" fora do cartão de faltas (cliente, 23/out):** o cartão "Faltas pela resposta ao lembrete" mostra só
+"Confirmaram" e "Não responderam"; "Sem lembrete" (atendimento sem nenhum lembrete enviado) saiu por não ficar claro.
+A função `metrics_reminders` continua devolvendo o grupo `none` (sem migração).
+
+---
+
+## Reenvio automático de envios com falha técnica (decisões do cliente em 23/out/2026)
+
+Hoje cada envio automático tem uma só tentativa: a rotina do lembrete só age na hora escolhida, e a falha fica "Não
+entregue" até alguém reenviar pelo painel. O motivo da falha vai só para o registro de erros.
+
+Decisões:
+1. **Alcance: todos os envios automáticos** (lembrete, resumos de amanhã, oferta de vaga da lista de espera, aviso
+   de cancelamento pela clínica e nota fiscal pelo WhatsApp).
+2. **Só falha técnica reenvia** (Meta fora do ar ou instável, limite de vazão, tempo esgotado, erro de rede). Não
+   reenvia: número sem WhatsApp, template pausado ou recusado, pagamento da conta, contato bloqueado ou anonimizado,
+   WhatsApp desconectado.
+3. **Mais duas tentativas, 10 e 30 minutos depois da falha**, só se o atendimento seguir ativo e ninguém tiver
+   reenviado antes.
+4. **Falha avisada depois pela Meta (webhook) também reenvia**, com a mesma regra do motivo.
+5. **Depois da 3ª falha, só o "Não entregue" na aba Envios** (sem aviso no Início nem e-mail).
+
+Implementação: a planejar (o motivo da falha passa a ser guardado na mensagem; migração).
+
 ---
 
 ## Depois do 1º piloto (já previsto no banco)
