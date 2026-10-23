@@ -280,7 +280,11 @@
   de Serviços e na Lista de espera (detalhes em [`ajuda-contextual.md`](ajuda-contextual.md)); publicada no staging
   (sem migração). **O cliente valida a Etapa 7 inteira no fim** (23/out): 7b e 7c seguem sem parar, cada parte
   publicada no staging. **7b (mensagens do sistema e o erro embaixo de cada
-  campo) implementada e publicada no staging em 23/out** (sem migração).
+  campo) implementada e publicada no staging em 23/out** (sem migração). **7c (os 22 pontos de prioridade Alta: Agenda,
+  Configurações, Pacientes, Financeiro e Métricas) implementada, conferida no local e publicada no staging em
+  23/out** (sem migração; detalhes e as correções feitas na conferência em [`ajuda-contextual.md`](ajuda-contextual.md)).
+  **Etapa 7 toda publicada; retomar daqui:** o cliente valida a ajuda contextual inteira no staging e traz os
+  ajustes. Depois, se ele quiser, os pontos de prioridade Média e Baixa do inventário.
 >   Banco local com os dados fictícios das Métricas (`npm run db:reset` limpa). Em paralelo,
 >   aguardar a Meta (Análise do App até ~29/out).
 >   **App antigo da Meta (cliente, 20/out):** o piloto está desativado e o número do app "Consultório Dra. Ana Karina" é
