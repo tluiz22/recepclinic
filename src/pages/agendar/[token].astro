@@ -116,6 +116,10 @@ const errorMessage = errorParam ? (errorMessages[errorParam] ?? errorMessages.fa
 
 const formatDay = (date: string) => capitalize(formatCalendarDate(date, "EEEE, dd/MM/yyyy"));
 const formatWhen = (instant: Date) => formatInstant(instant, timeZone, "dd/MM/yyyy 'às' HH'h'mm");
+const linkValidUntil = (instant: Date) =>
+  formatInstant(instant, timeZone, "yyyy-MM-dd") === formatInstant(new Date(), timeZone, "yyyy-MM-dd")
+    ? `hoje às ${formatInstant(instant, timeZone, "HH'h'mm")}`
+    : formatWhen(instant);
 const formatLongWhen = (instant: Date) => capitalize(formatInstant(instant, timeZone, "EEEE, dd/MM/yyyy 'às' HH'h'mm"));
 // "Qui, 23/10 às 09:30": o escolhido na barra e no resumo.
 const summaryOf = (instant: Date) =>
@@ -251,6 +255,10 @@ const unavailableNote = !strip?.unavailable
           <p class="text-[15px] font-semibold text-clinic-ink">{isReschedule ? "Remarcar" : "Agendar"}</p>
           <h1 class="mt-0.5 text-[26px] leading-tight font-bold text-gray-900 sm:text-3xl">{serviceName}</h1>
           {page.candidates.agendas.length === 1 && <p class="mt-1 text-base text-gray-600">{page.candidates.agendas[0].name}</p>}
+          {/* Validade do link (ajuda contextual, 23/out/2026): a do bot é de 30 minutos e a de remarcação, de 2 dias (agenda/links.ts). */}
+          <p class="mt-2 text-[15px] text-gray-600">
+            Este link vale até {linkValidUntil(page.link.expiresAt)}. Depois, peça outro na conversa do WhatsApp.
+          </p>
         </div>
 
         {

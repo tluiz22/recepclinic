@@ -107,6 +107,8 @@ const noCatalog = !!catalog && (catalog.services.length === 0 || catalog.agendas
                   Dá para salvar e continuar depois pelo mesmo link, que vale até {formatInstant(request.expiresAt, timeZone, "dd/MM/yyyy")}. Quando terminar,
                   toque em "Enviar ao Suporte".
                 </li>
+                {/* F10.1b e F10.1c: conferência do Suporte, "Devolver com comentário" e a carga autorizada. */}
+                <li>Depois do envio, o Suporte confere antes de carregar na agenda. Se algo precisar de correção, ele devolve com um comentário, que aparece aqui.</li>
               </ul>
             </div>
             {request.returnComment && (

@@ -283,8 +283,10 @@
   campo) implementada e publicada no staging em 23/out** (sem migração). **7c (os 22 pontos de prioridade Alta: Agenda,
   Configurações, Pacientes, Financeiro e Métricas) implementada, conferida no local e publicada no staging em
   23/out** (sem migração; detalhes e as correções feitas na conferência em [`ajuda-contextual.md`](ajuda-contextual.md)).
-  **Etapa 7 toda publicada; retomar daqui:** o cliente valida a ajuda contextual inteira no staging e traz os
-  ajustes. Depois, se ele quiser, os pontos de prioridade Média e Baixa do inventário.
+  **Etapa 7 toda publicada. Pontos de prioridade Média (pedido do cliente, 23/out) também publicados no staging em
+  23/out** (sem migração; um commit por módulo; detalhes em [`ajuda-contextual.md`](ajuda-contextual.md)).
+  **Retomar daqui:** o cliente valida a ajuda contextual inteira (Alta e Média) no staging e traz os ajustes.
+  Depois, se ele quiser, os pontos de prioridade Baixa (6 no inventário).
 >   Banco local com os dados fictícios das Métricas (`npm run db:reset` limpa). Em paralelo,
 >   aguardar a Meta (Análise do App até ~29/out).
 >   **App antigo da Meta (cliente, 20/out):** o piloto está desativado e o número do app "Consultório Dra. Ana Karina" é

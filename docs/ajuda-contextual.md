@@ -215,3 +215,35 @@ módulo. O cliente valida cada parte antes da seguinte.
   da aba; um "i" repetiria o texto, então o ponto fica atendido como está.
 - Ajuste do `HelpTip`: o círculo não aumenta a linha do rótulo (campos lado a lado seguem alinhados, como Nome
   e CPF no Pagamento).
+
+## Pontos de prioridade Média (23/out)
+
+Pedido do cliente depois da Etapa 7 ("pode seguir com os pontos de prioridade Média"). Mesmo jeito da 7c: regra
+conferida no código antes de escrever, testado no local (1280 e 360px) e um commit por módulo no staging, sem
+migração. O cliente valida tudo no fim. Os 5 pontos de mensagens do sistema e a lista de espera vazia já tinham
+saído na 7a e na 7b.
+- **Agenda:** Bloquear, Bloqueios, Editar bloqueio, Buscar, Série e Avisar saíram do `fieldStyles` antigo (Field,
+  `PANEL`, `PageHeader`, `Pill`, `EmptyState`); no Bloquear, o erro de cada campo aparece embaixo dele. "Como
+  funciona?" do Repetir no Marcar (conferido em `series.ts` e na rotina diária `cron/series`: 3 meses à frente, uma
+  vez por dia, a data pulada não conta no número de sessões); o `HowItWorks` ganhou `narrow` (uma coluna). Avisar
+  explica para que serve, e o motivo "template" virou "mensagem aprovada pela Meta".
+- **Resumo do Dia:** "i" nos grupos da aba Lembretes (`reminderGroup`) e nos dois quadros de Envios (reenvio de 10 e
+  30 minutos; Rodou, Rodando, Travou com 15 minutos, Erro). Saiu "execução" da tela e do aviso dos envios.
+- **Configurações:** o guia de configuração fica em Configurações › Clínica (não no Início) e passou a dizer a regra
+  do bot (serviço só aparece com agenda, local e horário). "i" na Idade limite, em Como é marcado (as vagas ficam em
+  Horários), no Preparo (vai uma vez, depois que a confirmação chega; `preparation.ts`), no RQE (**conferido:** o
+  registro só aparece no painel, nenhuma página do paciente usa), no WhatsApp do profissional (o lembrete ao
+  profissional), no Tipo do local e em três campos da Nota fiscal, com o "Como funciona?" dela. A agenda da equipe
+  já estava explicada na tela.
+- **Pacientes:** "Como funciona?" de Revisado, Liberar dos limites e Bloquear no bot, no cartão "Limites do bot" do
+  contato; saiu "template" da opção do bloqueio.
+- **Financeiro:** "i" no filtro "Falta CPF" e a frase do "Emitir a nota agora" (a nota sai depois pelo "Emitir nota"
+  do pagamento). **Correção na conferência:** o filtro lista **pacientes** cujo pagador (responsável ou o próprio
+  paciente) não tem CPF (`finance_patients_missing_payer_cpf`), não pagamentos; o "i" do CPF no Pagamento (7c) dizia
+  que o pagamento entrava no filtro e foi corrigido.
+- **Métricas:** "i" em De onde vêm as marcações (`booking_channel`, pela data da marcação, sem a agenda importada), em
+  Por tipo de operação (Taxa e Onde mais perde) e em Valores por serviço (`metrics_financial`: data do atendimento,
+  valor da tabela, sem cancelados e Retorno). Comparecimento, Lembretes e Retornos já explicavam a conta na tela.
+- **Páginas do paciente:** o link de agendar mostra até quando vale (o do bot vale 30 minutos e o de remarcação, 2
+  dias: por isso a data e a hora, não um número fixo); o /importar ganhou o que acontece depois do envio.
+
