@@ -604,18 +604,6 @@ const fin = tab === "financeiro" ? financial(financialTotals) : null;
   });
   document.addEventListener("submit", showMetricsLoading);
   for (const select of document.querySelectorAll("select[data-autosubmit]")) select.addEventListener("change", showMetricsLoading);
-  // "i" dos indicadores: Esc fecha e devolve o foco; tocar fora também fecha (teste da M5, QA-02).
-  const infos = () => [...document.querySelectorAll<HTMLDetailsElement>("details[data-kpi-info][open]")];
-  document.addEventListener("keydown", (event) => {
-    if (event.key !== "Escape") return;
-    for (const box of infos()) {
-      box.open = false;
-      box.querySelector("summary")?.focus();
-    }
-  });
-  document.addEventListener("click", (event) => {
-    for (const box of infos()) if (!box.contains(event.target as Node)) box.open = false;
-  });
   // Voltar pelo navegador com a página guardada: o aviso não fica preso.
   window.addEventListener("pageshow", () => {
     if (metricsLoading) metricsLoading.hidden = true;

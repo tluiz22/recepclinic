@@ -1,0 +1,24 @@
+---
+// Lista vazia (tipo E da ajuda contextual, 23/out/2026): o que é a lista, como
+// ela se enche e, no slot, a ação (ex.: cadastrar o primeiro).
+// - card (padrão): cartão branco, como as listas de Configurações.
+// - dashed: borda tracejada, dentro de uma área que já tem moldura.
+interface Props {
+  title: string;
+  text?: string;
+  variant?: "card" | "dashed";
+}
+
+const { title, text, variant = "card" } = Astro.props;
+---
+
+<section
+  class:list={[
+    "flex flex-col items-center gap-2.5 rounded-xl border px-6 py-7 text-center",
+    variant === "card" ? "border-line bg-white" : "border-dashed border-line-strong",
+  ]}
+>
+  <p class="text-[17px] font-bold text-ink">{title}</p>
+  {text && <p class="max-w-prose text-[15px] text-ink-soft">{text}</p>}
+  <slot />
+</section>

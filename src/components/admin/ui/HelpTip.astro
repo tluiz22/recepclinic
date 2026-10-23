@@ -1,0 +1,142 @@
+---
+// Ajuda curta, o "i" (tipos A e D da ajuda contextual, 23/out/2026; padrão em
+// docs/ajuda-contextual.md): abre por toque, clique ou teclado, nunca só por
+// passar o mouse. Funciona sem JavaScript (<details>); src/scripts/helpTips.ts
+// acrescenta Esc (fecha e devolve o foco), tocar fora e um aberto por vez.
+// - inline (padrão): o "i" fica ao lado do rótulo (o slot) e o texto abre
+//   logo abaixo dele, empurrando o campo: nunca cobre nada nem é cortado.
+// - card: balão sobre o cartão (indicadores das Métricas); o cartão precisa
+//   ser `relative`. O slot vira o texto do balão.
+// No celular, o "i" tem 44px de toque; o círculo visível continua pequeno.
+import { textoDaDica, type Dica } from "../../../lib/ajuda/tipos";
+
+interface Props {
+  /** Assunto: o nome do botão é "Ajuda: {assunto}" e, no balão, o título. */
+  subject: string;
+  /** O texto. No `card`, sem ele, vale o slot. */
+  text?: Dica;
+  id: string;
+  variant?: "inline" | "card";
+}
+
+const { subject, text, id, variant = "inline" } = Astro.props;
+const textId = `${id}-ajuda`;
+const terms = typeof text === "string" || !text ? null : text;
+const plain = typeof text === "string" ? text : null;
+if (text !== undefined && !textoDaDica(text).trim()) throw new Error(`HelpTip ${id}: texto vazio`);
+---
+
+{
+  variant === "card" ? (
+    <details class="help-tip group shrink-0" data-help>
+      <summary class="help-button" aria-label={`Ajuda: ${subject}`} aria-controls={textId}>
+        <span class="help-circle" aria-hidden="true">i</span>
+      </summary>
+      <div id={textId} class="absolute top-12 right-3 left-3 z-10 rounded-[10px] border border-line-strong bg-white p-3 text-sm leading-relaxed text-ink shadow-[0_8px_24px_rgba(18,48,42,0.14)]">
+        <p class="mb-1 font-bold">{subject}</p>
+        {plain ? <p>{plain}</p> : terms ? <p>{terms.map((t) => <><b class="font-semibold">{t.termo}:</b> {t.texto} </>)}</p> : <slot />}
+      </div>
+    </details>
+  ) : (
+    <div class="help-root" data-help-root>
+      <div class="flex flex-wrap items-center gap-x-1.5">
+        <slot />
+        <details class="help-tip group shrink-0" data-help>
+          <summary class="help-button" aria-label={`Ajuda: ${subject}`} aria-controls={textId}>
+            <span class="help-circle" aria-hidden="true">i</span>
+          </summary>
+        </details>
+      </div>
+      <p id={textId} class="help-text" data-help-text>
+        {plain ?? terms?.map((t) => <><b class="font-semibold text-ink">{t.termo}:</b> {t.texto} </>)}
+      </p>
+    </div>
+  )
+}
+
+<style>
+  .help-button {
+    display: flex;
+    height: 1.75rem;
+    width: 1.75rem;
+    cursor: pointer;
+    list-style: none;
+    align-items: center;
+    justify-content: center;
+    border-radius: 9999px;
+  }
+  .help-button::-webkit-details-marker {
+    display: none;
+  }
+  .help-circle {
+    display: flex;
+    height: 1.75rem;
+    width: 1.75rem;
+    align-items: center;
+    justify-content: center;
+    border-radius: 9999px;
+    border: 1px solid var(--color-line-strong);
+    background: #fff;
+    color: var(--color-ink-soft);
+    font-size: 13px;
+    font-weight: 700;
+    line-height: 1;
+  }
+  .help-button:hover .help-circle {
+    border-color: var(--color-brand);
+    color: var(--color-brand);
+  }
+  .help-button:focus-visible {
+    outline: none;
+  }
+  .help-button:focus-visible .help-circle {
+    outline: 2px solid var(--color-brand);
+    outline-offset: 2px;
+  }
+  .help-tip[open] .help-circle {
+    border-color: var(--color-brand);
+    background: var(--color-brand-soft);
+    color: var(--color-brand-ink);
+  }
+  /* Celular: 44px de toque sem aumentar a linha do rótulo. */
+  @media (max-width: 639px) {
+    .help-button {
+      height: 2.75rem;
+      width: 2.75rem;
+      margin: -0.5rem -0.5rem -0.5rem -0.375rem;
+    }
+  }
+  .help-text {
+    display: none;
+    position: relative;
+    margin-top: 0.5rem;
+    border-radius: 10px;
+    border: 1px solid var(--color-line);
+    background: var(--color-canvas);
+    padding: 0.625rem 0.75rem;
+    font-size: 14.5px;
+    line-height: 1.45;
+    color: var(--color-ink-mid);
+  }
+  @media (max-width: 639px) {
+    .help-text {
+      font-size: 15px;
+    }
+  }
+  /* A setinha aponta para o "i" (posição medida pelo helpTips.ts; sem ele, não aparece). */
+  .help-text[data-arrow]::before {
+    content: "";
+    position: absolute;
+    top: -6px;
+    left: var(--help-arrow, 12px);
+    width: 10px;
+    height: 10px;
+    background: var(--color-canvas);
+    border-left: 1px solid var(--color-line);
+    border-top: 1px solid var(--color-line);
+    transform: rotate(45deg);
+  }
+  .help-root:has(> div > .help-tip[open]) > .help-text {
+    display: block;
+  }
+</style>

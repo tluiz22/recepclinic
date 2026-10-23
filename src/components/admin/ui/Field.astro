@@ -1,0 +1,71 @@
+---
+// Campo com ajuda (tipos A, B e E da ajuda contextual, 23/out/2026): rótulo,
+// "i" opcional, o campo (slot), a orientação visível e o erro do campo, que
+// aparece no lugar da orientação. O campo do slot liga a orientação ou o erro
+// com `aria-describedby={describedBy(id, { hint, error })}` (field.ts).
+// - kind "label" (padrão): <label for={id}>.
+// - kind "group": grupo de opções (rádios, caixas), num <fieldset> com o nome
+//   pelo rótulo (o <legend> não pode ficar ao lado do "i").
+// - kind "text": só leitura, sem campo (ex.: o Tipo de um serviço já criado).
+import type { Dica } from "../../../lib/ajuda/tipos";
+import { HINT, LABEL } from "../config/formStyles";
+import HelpTip from "./HelpTip.astro";
+import { fieldIds } from "./field";
+
+interface Props {
+  id: string;
+  label: string;
+  /** O "i" (tipo A): para entender, não para preencher. */
+  help?: Dica;
+  /** Orientação visível (tipo B): formato, limite, consequência. */
+  hint?: string;
+  /** Erro deste campo (tipo E), no lugar da orientação. */
+  error?: string;
+  kind?: "label" | "group" | "text";
+  class?: string;
+}
+
+const { id, label, help, hint, error, kind = "label", class: className = "" } = Astro.props;
+const ids = fieldIds(id);
+const Wrapper = kind === "group" ? "fieldset" : "div";
+---
+
+<Wrapper class={className} aria-labelledby={kind === "group" ? ids.label : undefined}>
+  {
+    help ? (
+      <HelpTip subject={label} text={help} id={id}>
+        {kind === "label" ? (
+          <label for={id} id={ids.label} class={LABEL}>
+            {label}
+          </label>
+        ) : (
+          <span id={ids.label} class={LABEL}>
+            {label}
+          </span>
+        )}
+      </HelpTip>
+    ) : kind === "label" ? (
+      <label for={id} id={ids.label} class={LABEL}>
+        {label}
+      </label>
+    ) : (
+      <span id={ids.label} class={LABEL}>
+        {label}
+      </span>
+    )
+  }
+  <slot />
+  {
+    error ? (
+      <p id={ids.error} class="mt-1.5 text-sm font-semibold text-danger">
+        {error}
+      </p>
+    ) : (
+      hint && (
+        <p id={ids.hint} class={HINT}>
+          {hint}
+        </p>
+      )
+    )
+  }
+</Wrapper>

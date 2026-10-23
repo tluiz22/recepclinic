@@ -1,0 +1,85 @@
+---
+// "Como funciona?" de uma funcionalidade (tipo C da ajuda contextual,
+// 23/out/2026): o link fica no cabeçalho da seção (o slot vai à esquerda) e o
+// painel abre na página, logo abaixo, com "Para que serve", "Como funciona",
+// "Exemplo" e "Se algo der errado". Fechado por padrão; funciona sem
+// JavaScript (<details>). O src/scripts/helpTips.ts mostra o "Fechar" e
+// lembra, só neste navegador, se a pessoa deixou aberto.
+import type { ComoFunciona } from "../../../lib/ajuda/tipos";
+
+interface Props {
+  /** Nome curto e fixo: guarda o aberto/fechado no navegador. */
+  id: string;
+  topic: ComoFunciona;
+  class?: string;
+}
+
+const { id, topic, class: className = "" } = Astro.props;
+const panelId = `${id}-como-funciona`;
+const BLOCK_TITLE = "mb-1 block text-[15px] font-bold";
+---
+
+<div class:list={["how-root", className]}>
+  <div class="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
+    <div class="min-w-0"><slot /></div>
+    <details class="how-toggle group shrink-0" data-how={id}>
+      <summary
+        class="-mx-2.5 flex min-h-11 cursor-pointer list-none items-center gap-1.5 rounded-lg px-2.5 text-[15px] font-bold text-brand-ink hover:bg-brand-soft focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand sm:min-h-9 [&::-webkit-details-marker]:hidden"
+        aria-controls={panelId}
+      >
+        <svg class="h-[18px] w-[18px] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <circle cx="12" cy="12" r="9"></circle>
+          <path d="M9.5 9a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6V14"></path>
+          <circle cx="12" cy="17.2" r=".6" fill="currentColor"></circle>
+        </svg>
+        <span class="group-open:hidden">Como funciona?</span>
+        <span class="hidden group-open:inline">Fechar a explicação</span>
+      </summary>
+    </details>
+  </div>
+  <div id={panelId} class="how-panel mt-2 gap-4 rounded-[10px] border border-att-200 bg-att-50 px-4 py-4 text-[15px] leading-normal text-att-800 sm:px-[18px] md:grid-cols-2 md:gap-x-7">
+    <div>
+      <b class={BLOCK_TITLE}>Para que serve</b>
+      {topic.serve}
+    </div>
+    {
+      topic.exemplo && (
+        <div class="md:col-start-2 md:row-start-1">
+          <b class={BLOCK_TITLE}>Exemplo</b>
+          {topic.exemplo}
+        </div>
+      )
+    }
+    <div>
+      <b class={BLOCK_TITLE}>Como funciona</b>
+      <ul class="flex list-disc flex-col gap-1 pl-[18px]">
+        {topic.como.map((item) => <li>{item}</li>)}
+      </ul>
+    </div>
+    {
+      topic.erro && (
+        <div>
+          <b class={BLOCK_TITLE}>Se algo der errado</b>
+          {topic.erro}
+        </div>
+      )
+    }
+    <div class="flex justify-end md:col-span-2" data-how-close hidden>
+      <button
+        type="button"
+        class="min-h-11 rounded-lg px-2.5 text-[15px] font-bold text-brand-ink hover:bg-brand-soft focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand sm:min-h-9"
+      >
+        Fechar
+      </button>
+    </div>
+  </div>
+</div>
+
+<style>
+  .how-panel {
+    display: none;
+  }
+  .how-root:has(> div > .how-toggle[open]) > .how-panel {
+    display: grid;
+  }
+</style>

@@ -9,6 +9,9 @@ import ActiveToggle from "../../../../components/admin/ActiveToggle.astro";
 import NextStep from "../../../../components/admin/setup/NextStep.astro";
 import { loadSetupStatus } from "../../../../lib/data/config/setup";
 import PreparationField from "../../../../components/admin/PreparationField.astro";
+import Field from "../../../../components/admin/ui/Field.astro";
+import { describedBy } from "../../../../components/admin/ui/field";
+import { configuracoes } from "../../../../lib/ajuda/configuracoes";
 import { CARD, CHECK, CHOICE, HINT, INPUT, INPUT_INLINE, LABEL, PRIMARY_BUTTON, SECONDARY_BUTTON, SECTION_TITLE } from "../../../../components/admin/config/formStyles";
 import { createUserClient } from "../../../../lib/data/clients";
 import { listAgendas } from "../../../../lib/data/config/agendas";
@@ -86,11 +89,16 @@ const noAgenda = !agendas.some((a) => a.isActive);
     <form method="POST" action={action} class={`${CARD} flex flex-col gap-5 p-4 sm:p-5`} data-service-form data-category={service?.category ?? ""}>
       <input type="hidden" name="acao" value="salvar" />
       <h2 class={SECTION_TITLE}>O serviço</h2>
-      <div>
-        <label for="category" class={LABEL}>Tipo</label>
+      <Field
+        id="category"
+        label="Tipo"
+        kind={isNew ? "label" : "text"}
+        help={examsOn ? configuracoes.dicas.servicoTipo : configuracoes.dicas.servicoTipoSemExame}
+        hint={isNew ? "O tipo não muda depois de criado." : undefined}
+      >
         {
           isNew ? (
-            <select id="category" name="category" class={INPUT}>
+            <select id="category" name="category" class={INPUT} aria-describedby={describedBy("category", { hint: true })}>
               {categories.map((c) => (
                 <option value={c} selected={c === presetCategory}>
                   {CATEGORY_LABELS[c]}
@@ -101,8 +109,7 @@ const noAgenda = !agendas.some((a) => a.isActive);
             <p class="mt-1 text-sm text-ink">{CATEGORY_LABELS[service!.category]}</p>
           )
         }
-        {isNew && <p class={HINT}>O tipo não muda depois de criado.</p>}
-      </div>
+      </Field>
       <div>
         <label for="name" class={LABEL}>Nome</label>
         <input id="name" name="name" required placeholder="Consulta, Retorno, Espirometria…" value={service?.name ?? ""} class={INPUT} />

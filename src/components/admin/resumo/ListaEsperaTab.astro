@@ -3,11 +3,15 @@
 // espera para antecipar, por agenda e serviço, na ordem em que a vaga é
 // oferecida (ordem de entrada), com a oferta em andamento e "Tirar da lista"
 // (com confirmação); abaixo, as últimas ofertas. Redesign R3 (15/out/2026).
+// "Como funciona?" e lista vazia explicada (ajuda contextual, 23/out/2026).
 import { currentPath, withReturn } from "../../../lib/returnPath";
 import PhoneLinks from "../PhoneLinks.astro";
 import Button from "../ui/Button.astro";
 import Pill, { type PillTone } from "../ui/Pill.astro";
 import Signal from "../ui/Signal.astro";
+import EmptyState from "../ui/EmptyState.astro";
+import HowItWorks from "../ui/HowItWorks.astro";
+import { resumo } from "../../../lib/ajuda/resumo";
 import { formatInstant } from "../../../lib/clinicTime";
 import type { OfferHistoryItem, OfferStatus, WaitlistEntry } from "../../../lib/data/waitlist/entries";
 
@@ -41,6 +45,10 @@ const returnTo = "/admin/consultas?tab=lista_espera";
 const BOX = "overflow-hidden rounded-xl border border-line bg-white";
 const BOX_TITLE = "flex flex-wrap items-center justify-between gap-2 border-b border-line bg-[#f8faf9] px-4 py-3 text-[15px] font-bold text-ink";
 ---
+
+<HowItWorks id="lista-espera" topic={resumo.comoFunciona.listaEspera} class="mt-4">
+  <p class="text-[15px] text-ink-soft">Na ordem de entrada, por agenda e serviço.</p>
+</HowItWorks>
 
 <div class="mt-4 grid items-start gap-4 xl:grid-cols-2">
   <div class="flex min-w-0 flex-col gap-4">
@@ -97,7 +105,7 @@ const BOX_TITLE = "flex flex-wrap items-center justify-between gap-2 border-b bo
         </section>
       ))
     }
-    {entries.length === 0 && <p class="rounded-xl border border-dashed border-line-strong px-3 py-5 text-center text-[15px] text-ink-soft">Ninguém na lista de espera.</p>}
+    {entries.length === 0 && <EmptyState variant="dashed" title={resumo.vazios.listaEspera.titulo} text={resumo.vazios.listaEspera.texto} />}
   </div>
 
   <section class={BOX} aria-labelledby="ultimas-ofertas">

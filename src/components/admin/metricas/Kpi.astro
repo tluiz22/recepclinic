@@ -1,9 +1,10 @@
 ---
 // Indicador das Métricas (redesign de 22/out/2026, M4): rótulo, número,
 // variação contra o mesmo período do mês anterior (com o período escrito) e
-// a base. O "i" abre a regra de contagem em português simples; funciona sem
-// JavaScript (<details>) e pelo teclado.
+// a base. O "i" abre a regra de contagem em português simples (HelpTip, o
+// padrão da ajuda contextual de 23/out/2026).
 import type { Delta } from "./compare";
+import HelpTip from "../ui/HelpTip.astro";
 
 interface Props {
   label: string;
@@ -29,22 +30,7 @@ const DELTA = {
 <div class:list={["relative flex min-w-0 flex-col gap-2 rounded-xl border bg-white px-4 py-3.5 sm:px-5 sm:py-4", partial ? "border-pend-200 bg-pend-50" : "border-line"]}>
   <div class="flex items-start justify-between gap-2">
     <span class="text-[14.5px] leading-snug font-semibold text-ink-mid">{label}</span>
-    <details class="group shrink-0" data-kpi-info>
-      <summary
-        class="flex h-7 w-7 cursor-pointer list-none items-center justify-center rounded-full border border-line-strong bg-white text-[13px] font-bold text-ink-soft hover:border-brand hover:text-brand focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand max-sm:h-9 max-sm:w-9"
-        aria-label={`Como contamos: ${label}`}
-        aria-controls={`${id}-regra`}
-      >
-        i
-      </summary>
-      <div
-        id={`${id}-regra`}
-        class="absolute top-12 right-3 left-3 z-10 rounded-lg border border-line-strong bg-white p-3 text-sm leading-relaxed text-ink shadow-[0_8px_24px_rgba(18,48,42,0.14)]"
-      >
-        <p class="mb-1 font-bold">{label}</p>
-        <p>{rule}</p>
-      </div>
-    </details>
+    <HelpTip variant="card" subject={label} text={rule} id={id} />
   </div>
   <span class="font-display text-[34px] leading-none font-bold text-ink tabular-nums sm:text-[38px]">{value}</span>
   {

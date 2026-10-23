@@ -152,3 +152,24 @@ em Tipo e Como é marcado e a orientação visível no Prazo do retorno; (3) cel
 44px de toque e o erro embaixo do campo; (4) Resumo › Lista de espera com o "Como funciona?"; (5)
 Métricas › Agendamento digital com o balão do indicador e o "i" dentro do bloco "Como terminaram".
 Os quadros 2 a 5 funcionam no Play (abrir e fechar).
+
+## Implementação (Etapa 7)
+
+Em 3 partes, aprovadas pelo cliente em 23/out: **7a** componentes e catálogo, **7b** mensagens do sistema
+(`GENERIC` de `formAction.ts` e o erro de cada campo no aviso), **7c** os pontos de prioridade Alta, módulo a
+módulo. O cliente valida cada parte antes da seguinte.
+
+**7a (23/out), implementada, testada no navegador local e publicada no staging (sem migração); o cliente valida a Etapa 7 inteira no fim:**
+- `ui/HelpTip.astro` (inline e card), `ui/Field.astro` + `ui/field.ts`, `ui/HowItWorks.astro`,
+  `ui/EmptyState.astro` e `src/scripts/helpTips.ts`, este nas 3 molduras (`AdminLayout`, `PatientLayout`,
+  `PublicLayout`). O texto do "i" inline fica fora do `<details>` e aparece por CSS (`:has`), para abrir
+  abaixo do rótulo e empurrar o campo. A setinha só aparece com JavaScript.
+- Catálogo em `src/lib/ajuda/` (`tipos.ts`, `configuracoes.ts`, `resumo.ts`), com o teste
+  `catalogo.test.ts` (dica até 280 caracteres, "Como funciona?" com até 5 itens e todo texto usado numa tela).
+- Já usam os componentes: o `Kpi` das Métricas (o "i" passou a se chamar "Ajuda: {indicador}"; o script
+  antigo saiu de `metricas.astro`) e o `ConfigEmpty`. Pilotos com a regra conferida: o "i" do **Tipo** em
+  Configurações › Serviços (sem o Exame quando o item está desligado) e, no Resumo › **Lista de espera**, o
+  "Como funciona?" (regras conferidas em `offers.ts`) e a lista vazia explicada.
+- Conferido em 1280 e 360px: Enter abre, Esc fecha e devolve o foco, clicar fora fecha, clicar no texto
+  não fecha, um aberto por vez, 44px de toque no celular, sem rolagem lateral, o "Como funciona?" lembra o
+  aberto ao recarregar e o "Fechar" devolve o foco. `npm test` (617) e `astro check` sem erros.

@@ -2,7 +2,9 @@
 // Lista vazia de Configurações (R9): nada cadastrado, com o botão de cadastrar
 // o primeiro; só desativados (em "Ativos"), com "Ver desativados"; ou nenhum
 // desativado (em "Desativados", cliente 21/out/2026), com "Ver ativos".
+// Moldura no EmptyState (ajuda contextual, 23/out/2026).
 import Button from "../ui/Button.astro";
+import EmptyState from "../ui/EmptyState.astro";
 
 interface Props {
   /** Há cadastros, mas todos desativados. */
@@ -26,23 +28,22 @@ const { onlyInactive, showingInactive = false, feminine = false, none, createdWo
 const a = feminine ? "a" : "o";
 ---
 
-<section class="flex flex-col items-center gap-2.5 rounded-xl border border-line bg-white px-6 py-7 text-center">
-  {
-    showingInactive ? (
-      <>
-        <p class="text-[17px] font-bold text-ink">
-          {none} desativad{a}
-        </p>
-        <Button href="?">Ver ativ{a}s</Button>
-      </>
-    ) : (
-      <>
-        <p class="text-[17px] font-bold text-ink">
-          {none} {onlyInactive ? activeWord : createdWord}
-        </p>
-        {onlyInactive ? <p class="text-sm text-ink-soft">Os cadastros desativados aparecem em "Desativad{a}s".</p> : text && <p class="text-sm text-ink-soft">{text}</p>}
-        {onlyInactive ? <Button href="?todos=1">Ver desativad{a}s</Button> : href && label && <Button href={href} variant="primary">{label}</Button>}
-      </>
-    )
-  }
-</section>
+{
+  showingInactive ? (
+    <EmptyState title={`${none} desativad${a}`}>
+      <Button href="?">Ver ativ{a}s</Button>
+    </EmptyState>
+  ) : onlyInactive ? (
+    <EmptyState title={`${none} ${activeWord}`} text={`Os cadastros desativados aparecem em "Desativad${a}s".`}>
+      <Button href="?todos=1">Ver desativad{a}s</Button>
+    </EmptyState>
+  ) : (
+    <EmptyState title={`${none} ${createdWord}`} text={text}>
+      {href && label && (
+        <Button href={href} variant="primary">
+          {label}
+        </Button>
+      )}
+    </EmptyState>
+  )
+}
