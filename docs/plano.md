@@ -1568,6 +1568,18 @@ criar ou atualizar as demos, criar a senha dos logins e mover o chip; o roteiro 
   implantação) e as objeções (LGPD com a resposta pronta). As imagens ficam em endereços com nome
   aleatório (`/_astro/…`), sem login, mas com dados fictícios. O material antigo no claude.ai
   (`R3VCJ9t1ebygPzjJhyvdJf`) foi substituído por esta aba.
+  **Revisão do roteiro (cliente, 22/out/2026), aprovada e implementada:** o discurso passa a ser o tempo
+  que a equipe ganha e o acompanhamento pelas Métricas do redesign. Frase de 15 segundos nova; seção **"O dia
+  a dia"** com dois perfis (clínica com secretária e profissional sem secretária), "Hoje" × "Com o
+  RecepClinic"; **"O que roda sozinho"** no lugar das 4 camadas (pelo trabalho manual que some); seção
+  **"Desempenho"** com as perguntas que as Métricas respondem (Desempenho, Agendamento digital, Retomar
+  contato, Faltosos) e o aviso de que as Métricas são adicionais (vêm no Completo); 5ª imagem
+  (`src/assets/vendas/metricas.png`, Métricas › Desempenho do banco local com a comparação ligada; a clínica
+  local teve o início recuado só para o print e voltou depois); mensagens 2, 3 e 8 reescritas e a nova **4
+  (direto para quem atende sem secretária)**, com a numeração e o passo a passo ajustados; 3 objeções novas
+  ("Atendo sozinho", "Minha secretária vai perder o emprego?", "Como vou saber se está funcionando?").
+  **O Financeiro fica fora do discurso** (fora da tabela de preços; cliente, 22/out). A Vida Plena do staging
+  só mostra a comparação a partir de meados de novembro, e o roteiro diz isso.
 
 ## F10 — Primeiro piloto
 

@@ -252,8 +252,10 @@
 >   **Comparação do Desempenho conferida em 22/out** (última pendência do redesign): no staging só aparece a partir de
 >   meados de novembro (clínicas criadas em outubro); no local, os números do período anterior e as variações batem com
 >   o banco e a regra do "Sem comparação" está certa (detalhes no [plano](plano.md)). Sem mudança de código.
->   **Próxima etapa (cliente, 22/out): o cliente traz um novo ajuste na próxima sessão.** Seguem em aberto, para
->   quando ele escolher: a Agenda do Mês mais rápida numa clínica muito cheia e a sessão da nota fiscal.
+>   **Revisão do Roteiro de vendas (cliente, 22/out):** proposta aprovada (sem o Financeiro) e implementada,
+>   conferida no local em 1280 e 360px (detalhes no item 9c do [plano](plano.md)), **validada pelo cliente e
+>   publicada no staging em 23/out** (sem migração). Seguem em aberto, para quando ele escolher: a Agenda do
+>   Mês mais rápida numa clínica muito cheia e a sessão da nota fiscal.
 >   Banco local com os dados fictícios das Métricas (`npm run db:reset` limpa). Em paralelo,
 >   aguardar a Meta (Análise do App até ~29/out).
 >   **App antigo da Meta (cliente, 20/out):** o piloto está desativado e o número do app "Consultório Dra. Ana Karina" é
