@@ -22,6 +22,7 @@ import { listAgendaAppointmentsByIds, type AgendaAppointment } from "../../../li
 import { listAgendas } from "../../../lib/data/config/agendas";
 import { DataError } from "../../../lib/data/errors";
 import { describeDataError } from "../../../lib/data/formAction";
+import { bloquear as bloquearAjuda } from "../../../lib/ajuda/agenda";
 import { setFlash } from "../../../lib/flash";
 import { formAll, formChecked, formText } from "../../../lib/forms";
 
@@ -196,6 +197,10 @@ const agendaName = new Map(agendas.map((a) => [a.id, a.name]));
                 {formatInstant(a.scheduledAt, clinic.timezone, "dd/MM HH:mm")} · {a.patientName} · {a.serviceName} · {agendaName.get(a.agendaId) ?? a.agendaName}
               </li>
             ))}
+          </ul>
+          <ul class="mt-3 flex list-disc flex-col gap-1 pl-5 text-sm text-amber-900">
+            <li>{bloquearAjuda.cancelar}</li>
+            <li>{bloquearAjuda.manter}</li>
           </ul>
           <div class="mt-3 flex flex-wrap gap-2">
             <button

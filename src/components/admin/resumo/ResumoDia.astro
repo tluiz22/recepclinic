@@ -8,6 +8,8 @@ import { currentPath, withReturn } from "../../../lib/returnPath";
 import PhoneLinks from "../PhoneLinks.astro";
 import { CANCELED_TEXT, SITUATIONS, appointmentSituation, countSituations } from "../agenda/situationStyle";
 import SituationLegend from "../agenda/SituationLegend.astro";
+import HowItWorks from "../ui/HowItWorks.astro";
+import { agenda as ajudaAgenda } from "../../../lib/ajuda/agenda";
 import Signal from "../ui/Signal.astro";
 import StatusPill from "../ui/StatusPill.astro";
 import Tag from "../ui/Tag.astro";
@@ -54,7 +56,9 @@ const here = currentPath(Astro.url);
 const COLUMNS = "lg:grid lg:grid-cols-[150px_minmax(0,1.3fr)_minmax(0,1.2fr)_200px_210px] lg:gap-4";
 ---
 
-<SituationLegend counts={countSituations(appointments, 0)} withBlock={false} class="mt-4" />
+<HowItWorks id="situacoes" topic={ajudaAgenda.comoFunciona.situacoes} class="mt-4">
+  <SituationLegend counts={countSituations(appointments, 0)} withBlock={false} class="" />
+</HowItWorks>
 {
   appointments.length > 0 && (
     <div class="mt-4 lg:overflow-hidden lg:rounded-xl lg:border lg:border-line lg:bg-white">

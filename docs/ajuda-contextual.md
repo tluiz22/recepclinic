@@ -190,3 +190,11 @@ módulo. O cliente valida cada parte antes da seguinte.
   JavaScript, nada muda. Digitar no campo tira o erro dele.
 - Conferido no Novo serviço (3 campos errados, cada um com a sua mensagem, os valores de volta e o foco no
   primeiro) e no cartão "Editar" da Clínica (aviso dentro do cartão). `npm test` (619) e `astro check`.
+
+**7c (23/out), pontos de prioridade Alta, módulo a módulo, cada um publicado no staging (sem migração):**
+- **Agenda:** "Como funciona?" da legenda das situações na Agenda do Dia e no Resumo do Dia (o "Confirmado"
+  conferido: botão "Confirmar presença" do lembrete, a mesma confirmação pelo bot, ou a recepção no cartão);
+  "i" junto do selo "Faltou X de Y" (regra de `isFrequentNoShow`), num balão novo (`HelpTip` variant `pop`)
+  que não estica o cartão e não passa da tela no celular; no Bloquear, com atendimentos no período, as duas
+  consequências escritas antes dos botões. Conferido no local em 1280 e 360px, com um paciente de teste com 2
+  faltas (criado e apagado no banco local).

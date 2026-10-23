@@ -27,6 +27,8 @@ import type { ReturnReady } from "../../../lib/data/agenda/returnReady";
 import type { ReminderAction } from "../../../lib/data/whatsapp/reminders";
 import { confirmedByReminder } from "../../../lib/reminderResponse";
 import { capitalize, type Vocabulary } from "../../../lib/vocabulary";
+import HelpTip from "../ui/HelpTip.astro";
+import { agenda as ajudaAgenda } from "../../../lib/ajuda/agenda";
 
 interface Props {
   appointment: AgendaAppointment;
@@ -181,9 +183,12 @@ const variantOf = (x: (typeof actions.visible)[number]) => (x.kind === "form" &&
             {a.patientName}
           </a>
           {noShow && (
-            <Signal tone="alert" icon="warning">
-              Faltou {noShow.noShows} de {noShow.total}
-            </Signal>
+            <span class="inline-flex items-center gap-1">
+              <Signal tone="alert" icon="warning">
+                Faltou {noShow.noShows} de {noShow.total}
+              </Signal>
+              <HelpTip variant="pop" subject={`Faltou ${noShow.noShows} de ${noShow.total}`} text={ajudaAgenda.dicas.seloFaltas} id={`faltas-${a.id}`} />
+            </span>
           )}
         </div>
       </>
@@ -199,9 +204,12 @@ const variantOf = (x: (typeof actions.visible)[number]) => (x.kind === "form" &&
   {compact && originText && <p class="text-[13px] leading-snug text-ret-800">Retorno {originText}</p>}
 
   {compact && noShow && (
-    <Signal tone="alert" icon="warning">
-      Faltou {noShow.noShows} de {noShow.total}
-    </Signal>
+    <span class="inline-flex items-center gap-1">
+      <Signal tone="alert" icon="warning">
+        Faltou {noShow.noShows} de {noShow.total}
+      </Signal>
+      <HelpTip variant="pop" subject={`Faltou ${noShow.noShows} de ${noShow.total}`} text={ajudaAgenda.dicas.seloFaltas} id={`faltas-${a.id}`} />
+    </span>
   )}
 
   {

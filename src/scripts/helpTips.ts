@@ -1,7 +1,7 @@
 // Ajuda contextual (23/out/2026), carregado nas molduras. Sem ele, o "i" e o
 // "Como funciona?" abrem e fecham pelo próprio <details>; com ele:
 // - "i" (HelpTip): Esc fecha e devolve o foco, tocar fora fecha, um aberto por
-//   vez, e a setinha do texto aponta para o "i";
+//   vez, a setinha do texto aponta para o "i" e o balão não passa da tela;
 // - "Como funciona?" (HowItWorks): o botão "Fechar" no painel e, só neste
 //   navegador, lembrar se a pessoa deixou aberto.
 
@@ -21,6 +21,17 @@ function pointArrow(tip: HTMLDetailsElement): void {
   text.setAttribute("data-arrow", "");
 }
 
+/** Balão junto do "i" (variant "pop"): não passa da borda da tela. */
+function keepInView(tip: HTMLDetailsElement): void {
+  const box = tip.querySelector<HTMLElement>(".help-pop-box");
+  if (!box) return;
+  box.style.left = "";
+  const { left, right } = box.getBoundingClientRect();
+  const margin = 12;
+  const shift = right > innerWidth - margin ? right - (innerWidth - margin) : 0;
+  box.style.left = `${-Math.min(shift, left - margin)}px`;
+}
+
 document.addEventListener(
   "toggle",
   (event) => {
@@ -28,6 +39,7 @@ document.addEventListener(
     if (!(tip instanceof HTMLDetailsElement) || !tip.matches(TIPS) || !tip.open) return;
     for (const other of openTips()) if (other !== tip) other.open = false;
     pointArrow(tip);
+    keepInView(tip);
   },
   true,
 );

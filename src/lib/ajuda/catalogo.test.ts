@@ -17,19 +17,27 @@ function sources(dir: string): string[] {
 }
 
 const code = sources(join(process.cwd(), "src")).join("\n");
-const catalog = Object.values(modules).flatMap((exports) => Object.entries(exports));
+const isModule = (value: unknown): value is ModuloDeAjuda =>
+  typeof value === "object" && value !== null && ("dicas" in value || "comoFunciona" in value || "vazios" in value);
+// O texto conta como usado se o arquivo do módulo é importado e a chave aparece (o import pode ter outro nome).
+const catalog = Object.entries(modules).flatMap(([path, exports]) =>
+  Object.entries(exports)
+    .filter((entry): entry is [string, ModuloDeAjuda] => isModule(entry[1]))
+    .map(([name, mod]) => ({ name, mod, file: path.replace(/^\.\//, "").replace(/\.ts$/, "") })),
+);
+const used = (file: string, ref: string) => code.includes(`lib/ajuda/${file}"`) && code.includes(ref);
 
 describe("catálogo da ajuda contextual", () => {
   it("tem módulos", () => {
     expect(catalog.length).toBeGreaterThan(0);
   });
 
-  for (const [name, mod] of catalog) {
+  for (const { name, mod, file } of catalog) {
     describe(name, () => {
       for (const [key, dica] of Object.entries(mod.dicas ?? {})) {
         it(`dica ${key}: até ${LIMITE_DICA} caracteres e usada numa tela`, () => {
           expect(textoDaDica(dica).length).toBeLessThanOrEqual(LIMITE_DICA);
-          expect(code).toContain(`${name}.dicas.${key}`);
+          expect(used(file, `.dicas.${key}`)).toBe(true);
         });
       }
       for (const [key, topic] of Object.entries(mod.comoFunciona ?? {})) {
@@ -39,14 +47,14 @@ describe("catálogo da ajuda contextual", () => {
           for (const text of [topic.serve, ...topic.como, topic.exemplo ?? "", topic.erro ?? ""]) {
             expect(text.length).toBeLessThanOrEqual(LIMITE_DICA);
           }
-          expect(code).toContain(`${name}.comoFunciona.${key}`);
+          expect(used(file, `.comoFunciona.${key}`)).toBe(true);
         });
       }
       for (const [key, empty] of Object.entries(mod.vazios ?? {})) {
         it(`lista vazia ${key}: título e texto, usada numa tela`, () => {
           expect(empty.titulo.length).toBeGreaterThan(0);
           expect(empty.texto.length).toBeLessThanOrEqual(LIMITE_DICA);
-          expect(code).toContain(`${name}.vazios.${key}`);
+          expect(used(file, `.vazios.${key}`)).toBe(true);
         });
       }
     });

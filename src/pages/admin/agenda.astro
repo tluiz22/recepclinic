@@ -8,6 +8,8 @@ import AgendaHeader from "../../components/admin/agenda/AgendaHeader.astro";
 import AppointmentCard from "../../components/admin/agenda/AppointmentCard.astro";
 import ConfirmDeleteDialog from "../../components/admin/ConfirmDeleteDialog.astro";
 import SituationLegend from "../../components/admin/agenda/SituationLegend.astro";
+import HowItWorks from "../../components/admin/ui/HowItWorks.astro";
+import { agenda as ajudaAgenda } from "../../lib/ajuda/agenda";
 import { countSituations } from "../../components/admin/agenda/situationStyle";
 import { serviceBesideCategory, serviceLook, serviceTints } from "../../components/admin/agenda/categoryStyle";
 import Icon from "../../components/admin/Icon.astro";
@@ -122,7 +124,9 @@ const cardProps = (a: (typeof appointments)[number]) => ({
   </AgendaHeader>
 
   <FlashMessage />
-  <SituationLegend counts={counts} class="mt-4" />
+  <HowItWorks id="situacoes" topic={ajudaAgenda.comoFunciona.situacoes} class="mt-4">
+    <SituationLegend counts={counts} class="" />
+  </HowItWorks>
 
   {
     byColumn && (
