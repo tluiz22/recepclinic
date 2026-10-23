@@ -267,7 +267,15 @@
   **Links na legenda do funil (cliente, 23/out):** em Métricas › Agendamento digital, "x barradas pela regra" e "x por
   horário ocupado" sublinhados, com link para os cartões "Barradas pelas regras" e "Erros técnicos"; os destinos das
   Métricas param abaixo da barra de abas fixa (no celular, ela cobria o título). Publicado no staging em 23/out (sem
-  migração) e **validado pelo cliente em 23/out**. Retomar daqui: o cliente traz novos ajustes.
+  migração) e **validado pelo cliente em 23/out**.
+  **Ajuda contextual em toda a aplicação (pedido do cliente, 23/out):** Etapas 1 a 6 feitas e aprovadas em 23/out
+  (diagnóstico, padrão dos 5 tipos, componentes, [inventário](https://claude.ai/artifact/SXkvcsAALCLhDeDApcyxnk) com
+  56 pontos e a [proposta visual](https://claude.ai/artifact/MjDsWH1x5HugKCcxZeUsP1)); tudo em
+  [`ajuda-contextual.md`](ajuda-contextual.md). **Fim da sessão de 23/out (3ª). Retomar daqui (próxima sessão):**
+  Etapa 7, implementação aprovada pelo cliente: primeiro os componentes compartilhados (`HelpTip`, `Field`,
+  `HowItWorks`, `EmptyState`, `scripts/helpTips.ts`) e as mensagens genéricas de `formAction.ts`; depois os pontos de
+  prioridade Alta, módulo a módulo, cada parte testada no navegador e publicada no staging. Os 21 textos marcados
+  "conferir na implementação" só vão para a tela depois de conferidos no arquivo indicado.
 >   Banco local com os dados fictícios das Métricas (`npm run db:reset` limpa). Em paralelo,
 >   aguardar a Meta (Análise do App até ~29/out).
 >   **App antigo da Meta (cliente, 20/out):** o piloto está desativado e o número do app "Consultório Dra. Ana Karina" é
