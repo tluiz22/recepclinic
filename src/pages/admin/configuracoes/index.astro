@@ -74,6 +74,9 @@ const action = "/api/admin/configuracoes/clinica";
 const here = "/admin/configuracoes";
 const field = "flex flex-col";
 const actions = "flex flex-wrap gap-2 border-t border-[#e6ecea] pt-4";
+import HelpTip from "../../../components/admin/ui/HelpTip.astro";
+import HowItWorks from "../../../components/admin/ui/HowItWorks.astro";
+import { configuracoes } from "../../../lib/ajuda/configuracoes";
 ---
 
 <ConfigShell current="clinica" title="Clínica" subtitle="Como a clínica se apresenta ao paciente, nas mensagens e nas páginas de agendar." setup={setup}>
@@ -188,7 +191,9 @@ const actions = "flex flex-wrap gap-2 border-t border-[#e6ecea] pt-4";
       </div>
 
       <div class={field}>
-        <label for="booking_horizon_days" class={LABEL}>Prazo para oferecer horários</label>
+        <HelpTip subject="Prazo para oferecer horários" text={configuracoes.dicas.clinicaPrazo} id="booking_horizon_days">
+          <label for="booking_horizon_days" class={LABEL}>Prazo para oferecer horários</label>
+        </HelpTip>
         <div class="mt-1.5 flex items-center gap-2">
           <input
             id="booking_horizon_days"
@@ -393,10 +398,9 @@ const actions = "flex flex-wrap gap-2 border-t border-[#e6ecea] pt-4";
         title="Limites do bot por contato"
         summary={`${settings.botMaxFutureAppointments} · ${settings.botMaxNewPatients} · ${settings.botMaxNoShows}`}
       >
-        <p class="text-sm text-ink-soft">
-          Contra abuso no agendamento pelo WhatsApp. Cada número soma todos os pacientes dele. Atingido um limite, o bot não marca e passa a conversa para a recepção;
-          cancelar e remarcar continuam pelo bot. A equipe marca sem limite pelo painel.
-        </p>
+        <HowItWorks id="limites-bot" topic={configuracoes.comoFunciona.limitesBot}>
+          <p class="text-sm text-ink-soft">Contra abuso no agendamento pelo WhatsApp. A equipe marca sem limite pelo painel.</p>
+        </HowItWorks>
         <dl class={KV}>
           {limitFields.map((limit) => (
             <>

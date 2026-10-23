@@ -198,3 +198,10 @@ módulo. O cliente valida cada parte antes da seguinte.
   que não estica o cartão e não passa da tela no celular; no Bloquear, com atendimentos no período, as duas
   consequências escritas antes dos botões. Conferido no local em 1280 e 360px, com um paciente de teste com 2
   faltas (criado e apagado no banco local).
+- **Configurações:** "i" do Prazo para oferecer horários (Clínica); "Como funciona?" dos limites do bot
+  (conferido em `botLimits.ts`), de Horários (divisão do bloco conferida em `freeSlots.ts`; o exemplo usa a
+  agenda sem intervalo), de Lembretes (conferido em `reminders.ts` e `retryRules.ts`) e de Mensagens (as duas
+  listas pelo nome da tela); "i" em Papéis e em Acesso às agendas (Equipe). **Correção na conferência:** o
+  Profissional não entra no Financeiro (só Administrador e Recepção, `AREA_ROLES`); os textos ao lado de cada
+  papel foram corrigidos (a Recepção ganhou o Financeiro). Sem "template" nem "marcador" na tela da clínica:
+  "mensagens aprovadas pela Meta" e "campos automáticos", inclusive nos erros de `customMessages.ts`.

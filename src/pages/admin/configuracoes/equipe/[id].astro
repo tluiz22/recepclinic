@@ -32,10 +32,12 @@ const scope = member?.agendaScope ?? "all";
 const pending = member?.invitation && !member.invitation.acceptedAt;
 const action = `/api/admin/configuracoes/equipe/${id}`;
 const roleHints: Record<string, string> = {
-  admin: "tudo, inclusive Configurações e a equipe",
-  professional: "agenda, pacientes e, se liberadas, as métricas da própria agenda",
-  reception: "agenda, pacientes, envios e lista de espera",
+  admin: "tudo, inclusive Configurações, a equipe e, se liberados, as Métricas e o Financeiro",
+  professional: "Início, Agenda, Pacientes, Resumo do Dia e, se liberadas, as métricas da própria agenda",
+  reception: "Início, Agenda, Pacientes, Resumo do Dia (lembretes, envios e lista de espera) e, se liberado, o Financeiro",
 };
+import Field from "../../../../components/admin/ui/Field.astro";
+import { configuracoes } from "../../../../lib/ajuda/configuracoes";
 ---
 
 <ConfigShell current="equipe" title={isNew ? "Convidar pessoa" : (member!.displayName ?? member!.email ?? "Equipe")} back={{ href: "/admin/configuracoes/equipe", label: "Equipe" }} subtitle={!isNew && member!.displayName ? (member!.email ?? undefined) : undefined}>
@@ -79,8 +81,7 @@ const roleHints: Record<string, string> = {
       </div>
 
       <h2 class={`${SECTION_TITLE} border-t border-[#e6ecea] pt-5`}>O que faz no painel</h2>
-      <fieldset>
-        <legend class={LABEL}>Papéis</legend>
+      <Field kind="group" id="papeis" label="Papéis" help={configuracoes.dicas.equipePapeis}>
         <div class="mt-1 flex flex-col gap-2">
           {
             ROLES.map((role) => (
@@ -94,7 +95,7 @@ const roleHints: Record<string, string> = {
           }
         </div>
         {isSelf && <p class={HINT}>Você não pode tirar o seu próprio papel de Administrador.</p>}
-      </fieldset>
+      </Field>
 
       <div data-professional data-is-new={isNew ? "true" : "false"}>
         <label for="professional_id" class={LABEL}>Cadastro de profissional</label>
@@ -115,8 +116,7 @@ const roleHints: Record<string, string> = {
       </div>
 
       <h2 class={`${SECTION_TITLE} border-t border-[#e6ecea] pt-5`}>Agendas que vê</h2>
-      <fieldset>
-        <legend class={LABEL}>Acesso às agendas</legend>
+      <Field kind="group" id="acesso-agendas" label="Acesso às agendas" help={configuracoes.dicas.equipeAgendas}>
         <div class="mt-1 flex flex-col gap-2">
           <label class={CHOICE}>
             <input type="radio" name="agenda_scope" value="all" checked={scope === "all"} class={CHECK} />
@@ -140,7 +140,7 @@ const roleHints: Record<string, string> = {
         <p class={HINT}>
           Novo convite: Administrador e Recepção começam com todas; o Profissional, só com a própria. O Administrador sempre vê todas.
         </p>
-      </fieldset>
+      </Field>
 
       <div class="flex flex-wrap gap-2 border-t border-[#e6ecea] pt-4">
         <button type="submit" class={PRIMARY_BUTTON} data-sending-label="Salvando…">{isNew ? "Convidar" : "Salvar"}</button>

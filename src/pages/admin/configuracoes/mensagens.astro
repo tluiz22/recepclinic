@@ -177,11 +177,14 @@ const botRows = BOT_MESSAGES.map((def) => {
 const guidance = customTexts.get(GUIDANCE_KEY as never) ?? null;
 const action = "/api/admin/configuracoes/mensagens";
 const markerHint = (markers: string[]) => markers.map((m) => `{${m}} = ${MARKER_LABELS[m]}`).join(" · ");
+import HowItWorks from "../../../components/admin/ui/HowItWorks.astro";
+import { configuracoes } from "../../../lib/ajuda/configuracoes";
 ---
 
 <ConfigShell current="mensagens" title="Mensagens" subtitle="Os textos que o paciente recebe pelo WhatsApp e a conversa do bot.">
 
-  <form method="GET" class="mt-4 flex flex-wrap items-center gap-2">
+  <HowItWorks id="mensagens" topic={configuracoes.comoFunciona.mensagens} class="mt-4">
+  <form method="GET" class="flex flex-wrap items-center gap-2">
     <label for="grupo" class="text-sm font-medium text-ink-mid">Mostrar</label>
     <select id="grupo" name="grupo" class={`${INPUT_INLINE} w-72`} data-autosubmit>
       <option value="bot" selected={grupo === "bot"}>Mensagens do bot</option>
@@ -189,12 +192,13 @@ const markerHint = (markers: string[]) => markers.map((m) => `{${m}} = ${MARKER_
     </select>
     <noscript><button type="submit" class={SECONDARY_BUTTON}>Mostrar</button></noscript>
   </form>
+  </HowItWorks>
 
   {
     grupo === "meta" ? (
       <>
         <p class="mt-4 max-w-3xl text-sm text-ink-soft">
-          Avisos enviados pelos templates aprovados pela Meta, com os dados da clínica (paciente e data de exemplo).
+          Avisos que a clínica manda primeiro, nas mensagens aprovadas pela Meta, com os dados da clínica (paciente e data de exemplo).
           {isAdmin && " Um texto novo passa pela revisão do Suporte e pela aprovação da Meta."}
         </p>
         <div class="mt-4 flex max-w-3xl flex-col gap-4">
@@ -264,7 +268,7 @@ const markerHint = (markers: string[]) => markers.map((m) => `{${m}} = ${MARKER_
                           <input type="hidden" name="acao" value="template_propor" />
                       <input type="hidden" name="key" value={row.key} />
                       <textarea name="text" rows="9" aria-label={`Texto: ${row.label}`} class={INPUT}>{row.editText}</textarea>
-                      <p class={HINT}>Use todos estes marcadores, uma vez cada, nesta ordem: {markerHint(row.markers)}. *texto* fica em negrito.</p>
+                      <p class={HINT}>Use todos estes campos automáticos, uma vez cada e nesta ordem; eles trocam pelo nome do paciente, a data e os outros dados: {markerHint(row.markers)}. *texto* fica em negrito.</p>
                       <button type="submit" class={`${PRIMARY_BUTTON} self-start`}>Enviar para revisão</button>
                     </form>
                     {row.custom && (
@@ -357,7 +361,7 @@ const markerHint = (markers: string[]) => markers.map((m) => `{${m}} = ${MARKER_
                           <textarea name="text" rows="5" aria-label={`Texto: ${row.label}`} class={INPUT}>{row.custom ?? row.defaultText}</textarea>
                           {row.markers.length > 0 && (
                             <p class={HINT}>
-                              Marcadores: {markerHint(row.markers)}
+                              Campos automáticos (trocam pelos dados de verdade): {markerHint(row.markers)}
                               {row.required.length > 0 && ` (obrigatório: ${row.required.map((m) => `{${m}}`).join(", ")})`}.
                             </p>
                           )}

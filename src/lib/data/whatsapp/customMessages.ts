@@ -80,17 +80,17 @@ export function markersToTemplate(key: TemplateKey, text: string): string {
   v.check(clean.length > 0 && clean.length <= 1024, "text", "Escreva o texto (até 1024 caracteres)");
   const found = [...clean.matchAll(/\{([^{}]*)\}/g)].map((m) => m[1]);
   const unknown = found.filter((m) => !markers?.includes(m));
-  v.check(unknown.length === 0, "text", `Marcador desconhecido: ${unknown.map((m) => `{${m}}`).join(", ")}`);
+  v.check(unknown.length === 0, "text", `Campo automático desconhecido: ${unknown.map((m) => `{${m}}`).join(", ")}`);
   const missing = (markers ?? []).filter((m) => !found.includes(m));
   v.check(missing.length === 0, "text", `Falta: ${missing.map((m) => `{${m}}`).join(", ")}`);
   const repeated = (markers ?? []).filter((m) => found.filter((f) => f === m).length > 1);
-  v.check(repeated.length === 0, "text", `Use cada marcador uma vez só: ${repeated.map((m) => `{${m}}`).join(", ")}`);
+  v.check(repeated.length === 0, "text", `Use cada campo automático uma vez só: ${repeated.map((m) => `{${m}}`).join(", ")}`);
   v.check(
     unknown.length > 0 || missing.length > 0 || repeated.length > 0 || found.join(",") === (markers ?? []).join(","),
     "text",
-    `Os marcadores precisam ficar nesta ordem: ${(markers ?? []).map((m) => `{${m}}`).join(", ")}`,
+    `Os campos automáticos precisam ficar nesta ordem: ${(markers ?? []).map((m) => `{${m}}`).join(", ")}`,
   );
-  v.check(!/^\{/.test(clean) && !/\}$/.test(clean), "text", "O texto não pode começar nem terminar com um marcador (regra da Meta)");
+  v.check(!/^\{/.test(clean) && !/\}$/.test(clean), "text", "O texto não pode começar nem terminar com um campo automático (regra da Meta)");
   v.throwIfInvalid("Mensagem");
   return clean.replace(/\{([^{}]*)\}/g, (_match, m: string) => `{{${markers!.indexOf(m) + 1}}}`);
 }
@@ -170,7 +170,7 @@ export function validateBotMessage(key: BotMessageKey, text: string): string {
   v.check(clean.length > 0 && clean.length <= 1024, "text", "Escreva o texto (até 1024 caracteres)");
   const found = [...clean.matchAll(/\{([^{}]*)\}/g)].map((m) => m[1]);
   const unknown = found.filter((m) => !def?.markers.includes(m));
-  v.check(unknown.length === 0, "text", `Marcador desconhecido: ${unknown.map((m) => `{${m}}`).join(", ")}`);
+  v.check(unknown.length === 0, "text", `Campo automático desconhecido: ${unknown.map((m) => `{${m}}`).join(", ")}`);
   const missing = (def?.required ?? []).filter((m) => !found.includes(m));
   v.check(missing.length === 0, "text", `Falta: ${missing.map((m) => `{${m}}`).join(", ")}`);
   v.throwIfInvalid("Mensagem");

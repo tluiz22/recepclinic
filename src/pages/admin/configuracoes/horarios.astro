@@ -121,6 +121,8 @@ const blockProps = (w: (typeof windows)[number], dayName: string) => ({
   showInactive,
   editHref: editHref(w.id),
 });
+import HowItWorks from "../../../components/admin/ui/HowItWorks.astro";
+import { configuracoes } from "../../../lib/ajuda/configuracoes";
 ---
 
 <ConfigShell current="horarios" title="Horários" subtitle="Quando cada agenda atende, em que local e com quais serviços.">
@@ -136,6 +138,9 @@ const blockProps = (w: (typeof windows)[number], dayName: string) => ({
       </p>
     ) : (
       <>
+        <HowItWorks id="horarios" topic={configuracoes.comoFunciona.horarios} class="mb-3">
+          <p class="text-[15px] text-ink-soft">Como os horários viram vagas para marcar.</p>
+        </HowItWorks>
         <form method="GET" class="flex flex-wrap items-center gap-x-4 gap-y-3 rounded-xl border border-line bg-white px-3.5 py-2.5">
           <div class="flex min-w-0 flex-1 items-center gap-3 sm:flex-none">
             <label for="agenda" class="text-[15px] font-semibold text-ink">

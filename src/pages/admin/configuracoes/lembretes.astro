@@ -48,11 +48,16 @@ const cards = {
   professional: { enabled: settings.professionalSummaryEnabled, timing: settings.professionalSummaryTiming, hour: settings.professionalSummaryHour },
   team: { enabled: settings.teamSummaryEnabled, timing: settings.teamSummaryTiming, hour: settings.teamSummaryHour },
 };
+import HowItWorks from "../../../components/admin/ui/HowItWorks.astro";
+import { configuracoes } from "../../../lib/ajuda/configuracoes";
 ---
 
 <ConfigShell current="lembretes" title="Lembretes" subtitle="Os lembretes pelo WhatsApp ao paciente, ao profissional e à equipe.">
 
   <div class="flex max-w-2xl flex-col gap-4">
+    <HowItWorks id="lembretes" topic={configuracoes.comoFunciona.lembretes}>
+      <p class="text-[15px] text-ink-soft">Quem recebe, quando e o que o paciente pode responder.</p>
+    </HowItWorks>
     <WhatsappConnectionCard connection={connection} timeZone={clinic.timezone} />
 
     {

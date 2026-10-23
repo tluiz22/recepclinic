@@ -31,14 +31,14 @@ describe("marcadores dos templates (F6.6)", () => {
   it("recusa marcador faltando, repetido, fora de ordem, desconhecido e texto que começa ou termina com marcador", () => {
     expect(fieldError(() => markersToTemplate("exam_preparation", "Oi, {nome}! {clinica}: {exame}. Até logo"))).toBe("Falta: {link}");
     expect(fieldError(() => markersToTemplate("exam_preparation", "Oi, {nome} {nome}! {clinica} {exame} {link}."))).toBe(
-      "Use cada marcador uma vez só: {nome}",
+      "Use cada campo automático uma vez só: {nome}",
     );
     expect(fieldError(() => markersToTemplate("exam_preparation", "Oi, {clinica}! {nome} {exame} {link}."))).toBe(
-      "Os marcadores precisam ficar nesta ordem: {nome}, {clinica}, {exame}, {link}",
+      "Os campos automáticos precisam ficar nesta ordem: {nome}, {clinica}, {exame}, {link}",
     );
-    expect(fieldError(() => markersToTemplate("exam_preparation", "Oi, {nome}! {clinica} {exame} {link} {cpf}."))).toBe("Marcador desconhecido: {cpf}");
+    expect(fieldError(() => markersToTemplate("exam_preparation", "Oi, {nome}! {clinica} {exame} {link} {cpf}."))).toBe("Campo automático desconhecido: {cpf}");
     expect(fieldError(() => markersToTemplate("exam_preparation", "Oi, {nome}! {clinica} {exame} {link}"))).toBe(
-      "O texto não pode começar nem terminar com um marcador (regra da Meta)",
+      "O texto não pode começar nem terminar com um campo automático (regra da Meta)",
     );
   });
 });
@@ -46,7 +46,7 @@ describe("marcadores dos templates (F6.6)", () => {
 describe("conversa do bot (F6.6)", () => {
   it("link enviado exige o {link}; marcador de outra mensagem não vale", () => {
     expect(fieldError(() => validateBotMessage("booking_link", "Marque aqui!"))).toBe("Falta: {link}");
-    expect(fieldError(() => validateBotMessage("welcome", "Oi, {paciente}!"))).toBe("Marcador desconhecido: {paciente}");
+    expect(fieldError(() => validateBotMessage("welcome", "Oi, {paciente}!"))).toBe("Campo automático desconhecido: {paciente}");
     expect(validateBotMessage("welcome", "  Oi! Aqui é {clinica} 😊  ")).toBe("Oi! Aqui é {clinica} 😊");
   });
 
