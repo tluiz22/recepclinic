@@ -279,7 +279,8 @@
   **Etapa 7a (componentes e catálogo) implementada e testada no local em 23/out**, com os pilotos no Tipo
   de Serviços e na Lista de espera (detalhes em [`ajuda-contextual.md`](ajuda-contextual.md)); publicada no staging
   (sem migração). **O cliente valida a Etapa 7 inteira no fim** (23/out): 7b e 7c seguem sem parar, cada parte
-  publicada no staging.
+  publicada no staging. **7b (mensagens do sistema e o erro embaixo de cada
+  campo) implementada e publicada no staging em 23/out** (sem migração).
 >   Banco local com os dados fictícios das Métricas (`npm run db:reset` limpa). Em paralelo,
 >   aguardar a Meta (Análise do App até ~29/out).
 >   **App antigo da Meta (cliente, 20/out):** o piloto está desativado e o número do app "Consultório Dra. Ana Karina" é

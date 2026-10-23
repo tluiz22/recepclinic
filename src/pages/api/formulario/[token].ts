@@ -1,7 +1,7 @@
 import type { APIRoute } from "astro";
 import { createClinicServiceClient } from "../../../lib/data/clinicService";
 import { DataError } from "../../../lib/data/errors";
-import { describeDataError } from "../../../lib/data/formAction";
+import { describeDataError, GENERIC_PUBLIC } from "../../../lib/data/formAction";
 import { getClinicFeatures } from "../../../lib/data/features";
 import { hashToken, saveInfoRequestAnswers } from "../../../lib/data/onboarding";
 import { resolveClinicByOnboardingToken } from "../../../lib/data/platform";
@@ -30,7 +30,7 @@ export const POST: APIRoute = async ({ params, request, cookies, redirect }) => 
     const fields = error instanceof DataError ? Object.keys(error.fields) : [];
     setFlash(
       cookies,
-      { tone: "error", text: error instanceof DataError ? describeDataError(error) : "Não foi possível salvar. Tente de novo.", ...(fields.length ? { fields } : {}) },
+      { tone: "error", text: error instanceof DataError ? describeDataError(error, GENERIC_PUBLIC) : GENERIC_PUBLIC.unexpected, ...(fields.length ? { fields } : {}) },
       "/formulario",
     );
   }

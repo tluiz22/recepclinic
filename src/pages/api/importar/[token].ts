@@ -3,7 +3,7 @@ import { parseImportForm } from "../../../lib/agendaImport";
 import { createClinicServiceClient } from "../../../lib/data/clinicService";
 import { getAgendaImportByToken, saveAgendaImport } from "../../../lib/data/agendaImport";
 import { DataError } from "../../../lib/data/errors";
-import { describeDataError } from "../../../lib/data/formAction";
+import { describeDataError, GENERIC_PUBLIC } from "../../../lib/data/formAction";
 import { hashToken } from "../../../lib/data/onboarding";
 import { resolveClinicByAgendaImportToken } from "../../../lib/data/platform";
 import { setFlash } from "../../../lib/flash";
@@ -38,7 +38,7 @@ export const POST: APIRoute = async ({ params, request, cookies, redirect }) => 
     else say("success", "Rascunho salvo. Dá para continuar depois pelo mesmo link.");
   } catch (error) {
     if (!(error instanceof DataError)) logError("agenda atual", error);
-    say("error", error instanceof DataError ? describeDataError(error) : "Não foi possível salvar. Tente de novo.");
+    say("error", error instanceof DataError ? describeDataError(error, GENERIC_PUBLIC) : GENERIC_PUBLIC.unexpected);
   }
   return redirect(page, 303);
 };

@@ -4,7 +4,8 @@ import FormMessage from "./FormMessage.astro";
 
 // Aviso deixado pela rota de formulário (salvo ou erro), mostrado uma vez.
 // `data-flash` diz ao src/scripts/keepFormValues.ts se a tela voltou com erro;
-// `data-fields`, quais campos falharam.
+// `data-fields`, quais campos falharam; `data-field-messages`, a mensagem de
+// cada um, que o keepFormValues põe embaixo do campo (ajuda contextual, 23/out/2026).
 // `flash`: já lido pela moldura antes de uma espera (depois dela, a resposta
 // já saiu e o cookie não é mais apagado: QA-02 da R9).
 import type { Flash } from "../../lib/flash";
@@ -18,7 +19,7 @@ const flash = Astro.props.flash !== undefined ? Astro.props.flash : pageFlash(As
 
 {
   flash && (
-    <div data-flash={flash.tone} data-fields={flash.fields?.join(" ")}>
+    <div data-flash={flash.tone} data-fields={flash.fields?.join(" ")} data-field-messages={flash.fieldMessages ? JSON.stringify(flash.fieldMessages) : undefined}>
       <FormMessage tone={flash.tone}>{flash.text}</FormMessage>
     </div>
   )

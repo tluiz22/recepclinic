@@ -99,7 +99,60 @@ function restore(): HTMLFormElement | null {
 // (`aria-invalid` e `aria-describedby`) e põe o foco no primeiro; sem campo
 // achado, o foco vai para a própria mensagem. O servidor manda os nomes da
 // camada de dados ("displayName", "priceCents"); o formulário usa "display_name"
-// e "price".
+// e "price". Com a mensagem de cada campo (ajuda contextual, 23/out/2026), ela
+// aparece embaixo do campo, no lugar da orientação ligada a ele, e o aviso do
+// alto fica curto; se alguma não achar o campo, o aviso do alto segue com todas.
+const FIELD_ERROR = "mt-1.5 text-sm font-semibold text-danger";
+
+function readMessages(): Record<string, string> {
+  try {
+    const raw = document.querySelector<HTMLElement>("[data-flash='error']")?.dataset.fieldMessages;
+    const parsed: unknown = raw ? JSON.parse(raw) : {};
+    return parsed && typeof parsed === "object" ? (parsed as Record<string, string>) : {};
+  } catch {
+    return {};
+  }
+}
+
+/** Onde a mensagem entra: depois do grupo (rádios, caixas) ou da linha do campo, nunca no meio de uma linha. */
+function errorAnchor(el: HTMLElement): HTMLElement {
+  if (el instanceof HTMLInputElement && (el.type === "radio" || el.type === "checkbox")) {
+    return el.closest<HTMLElement>("fieldset") ?? el.closest("label")?.parentElement ?? el;
+  }
+  const parent = el.parentElement;
+  if (parent && !(parent instanceof HTMLFormElement) && parent.tagName !== "LABEL" && /flex|grid/.test(getComputedStyle(parent).display) && parent.children.length > 1) {
+    return parent;
+  }
+  return el;
+}
+
+function showFieldError(el: HTMLElement, text: string): string {
+  const id = `${el.id || el.getAttribute("name")}-erro`;
+  let box = document.getElementById(id);
+  if (!box) {
+    box = document.createElement("p");
+    box.id = id;
+    box.className = FIELD_ERROR;
+    box.setAttribute("data-field-error", "");
+    const anchor = errorAnchor(el);
+    if (anchor.tagName === "FIELDSET") anchor.append(box);
+    else anchor.after(box);
+  }
+  box.textContent = text;
+  // A orientação ligada ao campo (Field: "{id}-orientacao") sai enquanto o erro está na tela.
+  const hint = el.id ? document.getElementById(`${el.id}-orientacao`) : null;
+  if (hint) hint.hidden = true;
+  el.addEventListener(
+    "input",
+    () => {
+      box?.remove();
+      if (hint) hint.hidden = false;
+    },
+    { once: true },
+  );
+  return id;
+}
+
 function pointToError(form: HTMLFormElement | null): void {
   // Formulário num cartão "Editar" (vários por tela, como os blocos da Clínica):
   // a mensagem vai para dentro dele, senão fica no topo, fora da vista (teste da
@@ -113,8 +166,10 @@ function pointToError(form: HTMLFormElement | null): void {
   if (!message) return;
   message.id ||= "erro-do-formulario";
   const names = (document.querySelector<HTMLElement>("[data-flash='error']")?.dataset.fields ?? "").split(" ").filter(Boolean);
+  const messages = readMessages();
   const scope = form ?? document.querySelector("main");
   const invalid: HTMLElement[] = [];
+  let placed = 0;
   for (const name of names) {
     const snake = name.replace(/[A-Z]/g, (c) => `_${c.toLowerCase()}`);
     for (const candidate of [name, snake, snake.replace(/_cents$/, "")]) {
@@ -123,12 +178,20 @@ function pointToError(form: HTMLFormElement | null): void {
         (input) => !input.closest("[hidden]"),
       );
       if (!el) continue;
+      const text = typeof messages[name] === "string" ? messages[name] : "";
+      const own = text ? showFieldError(el, text) : null;
+      if (own) placed++;
       el.setAttribute("aria-invalid", "true");
-      el.setAttribute("aria-describedby", [el.getAttribute("aria-describedby"), message.id].filter(Boolean).join(" "));
+      const described = (el.getAttribute("aria-describedby") ?? "").split(" ").filter((id) => id && !id.endsWith("-orientacao"));
+      el.setAttribute("aria-describedby", [own, ...described, message.id].filter(Boolean).join(" "));
       el.addEventListener("input", () => el.removeAttribute("aria-invalid"), { once: true });
       invalid.push(el);
       break;
     }
+  }
+  const total = Object.keys(messages).length;
+  if (total > 0 && placed === total) {
+    message.textContent = total === 1 ? "Não salvamos: confira o campo marcado." : `Não salvamos: confira os ${total} campos marcados.`;
   }
   // No meio da tela: no celular, as barras fixas de baixo cobririam um campo
   // perto da borda que o navegador acha que já está à vista (teste da R6, QA-02).

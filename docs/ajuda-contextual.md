@@ -173,3 +173,20 @@ módulo. O cliente valida cada parte antes da seguinte.
 - Conferido em 1280 e 360px: Enter abre, Esc fecha e devolve o foco, clicar fora fecha, clicar no texto
   não fecha, um aberto por vez, 44px de toque no celular, sem rolagem lateral, o "Como funciona?" lembra o
   aberto ao recarregar e o "Fechar" devolve o foco. `npm test` (617) e `astro check` sem erros.
+
+**7b (23/out), implementada, testada no navegador local e publicada no staging (sem migração):**
+- Avisos genéricos do painel (`GENERIC` em `src/lib/data/formAction.ts`) com os textos aprovados no
+  inventário: falha do sistema, sem permissão, recurso fora do plano, cadastro não encontrado e limite de
+  profissionais. O "em uso" ficou **sem** o "Desative em vez de apagar": ele só acontece ao tirar ligações
+  (agenda ou local de um serviço), horários, feriados e membros, onde não existe "Desativar" (critério do
+  inventário: "só onde existe Desativar"). Texto: "Não dá para tirar: está em uso (ex.: tem atendimentos ou
+  horários ligados)."
+- As páginas sem login (`/formulario` e `/importar`) seguem com os textos antigos (`GENERIC_PUBLIC`): lá não
+  há papel nem plano, e elas não guardam o que foi digitado.
+- O aviso (`Flash`) leva a mensagem de cada campo (`fieldMessages`). O `keepFormValues` põe cada uma
+  embaixo do campo (depois da linha do campo, nunca no meio dela; no fim do grupo de rádios ou caixas), no
+  lugar da orientação ligada ao campo pelo `Field`. Se todas acharam o campo, o aviso do alto fica curto
+  ("Não salvamos: confira o campo marcado." ou "os N campos marcados"); senão, segue com todas. Sem
+  JavaScript, nada muda. Digitar no campo tira o erro dele.
+- Conferido no Novo serviço (3 campos errados, cada um com a sua mensagem, os valores de volta e o foco no
+  primeiro) e no cartão "Editar" da Clínica (aviso dentro do cartão). `npm test` (619) e `astro check`.

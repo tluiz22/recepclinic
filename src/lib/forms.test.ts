@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { DataError } from "./data/errors";
-import { describeDataError } from "./data/formAction";
+import { describeDataError, GENERIC_PUBLIC } from "./data/formAction";
 import { takeFlash, setFlash } from "./flash";
 import { centsToInput, formChecked, formInt, formOptionalInt, formOptionalText, parseMoneyCents } from "./forms";
 
@@ -48,8 +48,37 @@ describe("avisos depois de salvar", () => {
       "Informe o nome do serviço Duração inválida",
     );
     expect(describeDataError(new DataError("duplicate", "Local: já existe um cadastro igual"))).toBe("Já existe um cadastro igual.");
-    expect(describeDataError(new DataError("not_enabled", "x"))).toBe("Isso não está liberado para a clínica.");
-    expect(describeDataError(new DataError("forbidden", "x"))).toBe("Você não tem permissão para isso.");
+    expect(describeDataError(new DataError("not_enabled", "x"))).toBe(
+      "Este recurso não faz parte do plano da clínica. Para liberar, fale com o suporte do RecepClinic.",
+    );
+    expect(describeDataError(new DataError("forbidden", "x"))).toBe("O seu papel na clínica não permite esta ação. Peça a um Administrador da clínica.");
+    expect(describeDataError(new DataError("unexpected", "x"))).toMatch(/^Não salvamos por uma falha do sistema/);
+  });
+
+  it("páginas sem login ficam com os textos de antes", () => {
+    expect(describeDataError(new DataError("forbidden", "x"), GENERIC_PUBLIC)).toBe("Você não tem permissão para isso.");
+    expect(describeDataError(new DataError("unexpected", "x"), GENERIC_PUBLIC)).toBe("Não foi possível salvar. Tente de novo.");
+  });
+
+  it("o aviso leva a mensagem de cada campo, só dos campos que falharam", () => {
+    const store = new Map<string, string>();
+    const cookies = {
+      set: (name: string, value: string) => store.set(name, value),
+      get: (name: string) => (store.has(name) ? { value: store.get(name)! } : undefined),
+      delete: (name: string) => store.delete(name),
+    } as unknown as Parameters<typeof setFlash>[0];
+    setFlash(cookies, {
+      tone: "error",
+      text: "Informe o nome. Duração inválida.",
+      fields: ["name", "durationMinutes"],
+      fieldMessages: { name: "Informe o nome.", durationMinutes: "Duração inválida.", intruso: "x" },
+    });
+    expect(takeFlash(cookies)).toEqual({
+      tone: "error",
+      text: "Informe o nome. Duração inválida.",
+      fields: ["name", "durationMinutes"],
+      fieldMessages: { name: "Informe o nome.", durationMinutes: "Duração inválida." },
+    });
   });
 
   it("o aviso é lido uma vez; cookie estragado não mostra nada", () => {

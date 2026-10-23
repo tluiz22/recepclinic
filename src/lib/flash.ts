@@ -4,8 +4,14 @@ import type { AstroCookies } from "astro";
 // seguinte mostra e apaga. O texto não vai na URL, então um link não consegue
 // fingir um aviso do sistema.
 
-/** `fields`: campos que falharam na validação, para a tela marcar e focar o primeiro. */
-export type Flash = { tone: "success" | "error"; text: string; fields?: string[] };
+/**
+ * `fields`: campos que falharam na validação, para a tela marcar e focar o primeiro.
+ * `fieldMessages`: a mensagem de cada um, para aparecer embaixo do campo (ajuda
+ * contextual, 23/out/2026); `text` continua com todas, para a tela sem JavaScript.
+ */
+export type Flash = { tone: "success" | "error"; text: string; fields?: string[]; fieldMessages?: Record<string, string> };
+
+const FIELD_NAME = /^[A-Za-z0-9_]{1,60}$/;
 
 const COOKIE = "rc_aviso";
 
@@ -26,10 +32,16 @@ export function takeFlash(cookies: AstroCookies, path = "/admin"): Flash | null 
   try {
     const flash = JSON.parse(Buffer.from(raw, "base64url").toString("utf8")) as Partial<Flash>;
     if ((flash.tone === "success" || flash.tone === "error") && typeof flash.text === "string") {
-      const fields = Array.isArray(flash.fields)
-        ? flash.fields.filter((f): f is string => typeof f === "string" && /^[A-Za-z0-9_]{1,60}$/.test(f)).slice(0, 10)
-        : [];
-      return { tone: flash.tone, text: flash.text.slice(0, 500), ...(fields.length ? { fields } : {}) };
+      const fields = Array.isArray(flash.fields) ? flash.fields.filter((f): f is string => typeof f === "string" && FIELD_NAME.test(f)).slice(0, 10) : [];
+      const messages = Object.entries(flash.fieldMessages && typeof flash.fieldMessages === "object" ? flash.fieldMessages : {})
+        .filter((entry): entry is [string, string] => fields.includes(entry[0]) && typeof entry[1] === "string" && entry[1].trim() !== "")
+        .map(([field, message]) => [field, message.slice(0, 200)]);
+      return {
+        tone: flash.tone,
+        text: flash.text.slice(0, 500),
+        ...(fields.length ? { fields } : {}),
+        ...(messages.length ? { fieldMessages: Object.fromEntries(messages) } : {}),
+      };
     }
   } catch {
     // Cookie estragado: sem aviso.
