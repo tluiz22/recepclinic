@@ -327,6 +327,8 @@ import { financeiro } from "../../../../lib/ajuda/financeiro";
                   </label>
                 )
               }
+              {/* Emissão depois: o "Emitir nota" de cada pagamento, nesta tela (com o CPF de quem pagou). */}
+              {financeReady.ready && <p class={`${hint} -mt-2 pl-7`}>Desmarcado, o pagamento é salvo sem nota; dá para emitir depois, pelo "Emitir nota" do pagamento, nesta tela.</p>}
               <div class="hidden flex-wrap items-center gap-3.5 sm:flex">
                 <Button
                   type="submit"

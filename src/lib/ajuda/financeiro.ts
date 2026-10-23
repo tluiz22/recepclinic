@@ -4,9 +4,13 @@ import type { ModuloDeAjuda } from "./tipos";
 
 export const financeiro = {
   dicas: {
-    // F11.6 ("Ficam de fora", src/pages/admin/financeiro/dmed.astro) e R8 ("Falta CPF") em docs/plano.md.
+    // F11.6 ("Ficam de fora", src/pages/admin/financeiro/dmed.astro); a nota exige o CPF (pagamento/[id].astro).
     cpfPagador:
-      "Vai na nota fiscal e na DMED (a declaração de pagamentos que a clínica entrega à Receita). Sem CPF, o pagamento fica no filtro \"Falta CPF\" e de fora da DMED.",
+      "Vai na nota fiscal e na DMED (a declaração de pagamentos que a clínica entrega à Receita). Sem CPF, a nota não sai e o pagamento fica de fora da DMED.",
+    // public.finance_patients_missing_payer_cpf (migração 20261017120000_falta_cpf.sql): pacientes, não pagamentos;
+    // quem paga = o contato ou o próprio paciente (\"Outra pessoa\" não entra).
+    faltaCpf:
+      "Pacientes em que quem paga (o responsável ou o próprio paciente) ainda não tem CPF no cadastro. Sem esse CPF, a nota não sai e os pagamentos ficam de fora da DMED, a não ser que o CPF seja digitado no próprio pagamento.",
   },
   comoFunciona: {
     // F11.6 em docs/plano.md; src/lib/dmed.ts; src/pages/admin/financeiro/dmed.astro.

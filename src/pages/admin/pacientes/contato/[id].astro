@@ -24,6 +24,8 @@ import Button from "../../../../components/admin/ui/Button.astro";
 import EditCard from "../../../../components/admin/ui/EditCard.astro";
 import MoreMenu from "../../../../components/admin/ui/MoreMenu.astro";
 import Pill from "../../../../components/admin/ui/Pill.astro";
+import HowItWorks from "../../../../components/admin/ui/HowItWorks.astro";
+import { pacientes as ajudaPacientes } from "../../../../lib/ajuda/pacientes";
 import { CONTROL, menuItemClass } from "../../../../components/admin/ui/styles";
 import { formatAge } from "../../../../lib/age";
 import { canAccessArea, isUuid } from "../../../../lib/clinicAccess";
@@ -172,7 +174,7 @@ const dd = "font-semibold text-ink";
                 size="sm"
                 class="js-confirm-delete"
                 data-confirm-title="Marcar como revisado?"
-                data-confirm-message="O contato sai de &quot;Contatos para revisar&quot; no Painel. Se atingir um limite de novo, volta para a lista."
+                data-confirm-message="O contato sai de &quot;Contatos para revisar&quot; no Início. Se atingir um limite de novo, volta para a lista."
                 data-confirm-label="Revisado"
               >
                 Revisado
@@ -248,8 +250,8 @@ const dd = "font-semibold text-ink";
                 <label class="flex items-start gap-2.5 text-[15px] leading-snug text-ink">
                   <input type="checkbox" name="cancelar_futuros" checked class="mt-0.5 h-[18px] w-[18px] shrink-0 accent-brand" />
                   <span>
-                    Cancelar {futureCount === 1 ? "o atendimento futuro" : `os ${futureCount} atendimentos futuros`} ligados a este contato, sem aviso (não gasta
-                    template; a vaga volta para a lista de espera). Séries terminam.
+                    Cancelar {futureCount === 1 ? "o atendimento futuro" : `os ${futureCount} atendimentos futuros`} ligados a este contato, sem aviso (nenhuma
+                    mensagem sai; a vaga volta para a lista de espera). Séries terminam.
                   </span>
                 </label>
               )}
@@ -382,6 +384,9 @@ const dd = "font-semibold text-ink";
       {
         hasBot && limitsStatus && (
           <EditCard id="limites" title="Limites do bot" summary={limitEvents.length ? `${limitEvents.length} atingido(s)` : "Nenhum atingido"} editable={false}>
+            <HowItWorks id="contato-bot" topic={ajudaPacientes.comoFunciona.contatoBot} narrow class="mb-1">
+              <p class="text-[15px] text-ink-soft">Revisado, liberar e bloquear.</p>
+            </HowItWorks>
             {limitsStatus.exemptAt ? (
               <p class="text-[15px] leading-snug text-conf-800">
                 Liberado dos limites do bot por {exemptBy ?? "—"} em {formatInstant(limitsStatus.exemptAt, clinic.timezone, "dd/MM/yyyy")}: o bot marca e cadastra
