@@ -2,6 +2,7 @@ import { formatInstant } from "../../clinicTime";
 import type { Enums } from "../../supabase/database.types";
 import type { DbClient } from "../clients";
 import { unwrap } from "../errors";
+import { MAX_ATTEMPTS } from "../whatsapp/retryRules";
 import type { TrailChannel, TrailEvent } from "./appointments";
 
 // Trilha de um atendimento (F4.8): tudo o que aconteceu com ele (eventos e
@@ -33,7 +34,7 @@ export async function loadActorLabels(db: DbClient, clinicId: string, userIds: (
 
 export type TrailEntryRow =
   | { kind: "event"; at: Date; event: TrailEvent; channel: TrailChannel; actorId: string | null; details: Record<string, unknown> }
-  | { kind: "message"; at: Date; messageType: string; status: string | null };
+  | { kind: "message"; at: Date; messageType: string; status: string | null; attempt?: number; retryAt?: Date | null };
 
 export type TrailEntry = { at: Date; text: string; tone: "neutral" | "success" | "danger" };
 
@@ -87,7 +88,10 @@ export function describeTrail(row: TrailEntryRow, actors: Map<string, ActorLabel
   if (row.kind === "message") {
     const message = MESSAGE_LABELS[row.messageType] ?? OTHER_MESSAGE;
     const status = MESSAGE_STATUS[row.status ?? ""] ?? { word: () => "na fila", tone: "neutral" as const };
-    return { at: row.at, text: `WhatsApp: ${message.label} ${status.word(message.gender)}`, tone: status.tone };
+    // Reenvio automático (cliente, 23/out): o número da tentativa e a próxima, se houver.
+    const attempt = row.attempt && row.attempt > 1 ? ` (tentativa ${row.attempt} de ${MAX_ATTEMPTS})` : "";
+    const next = row.retryAt ? ` · nova tentativa às ${formatInstant(row.retryAt, timeZone, "HH:mm")}` : "";
+    return { at: row.at, text: `WhatsApp: ${message.label} ${status.word(message.gender)}${attempt}${next}`, tone: row.retryAt ? "neutral" : status.tone };
   }
   const who = actorText(row.actorId ? actors.get(row.actorId) : undefined);
   const by = who ? ` por ${who}` : "";
@@ -147,7 +151,7 @@ export async function listTrail(db: DbClient, clinicId: string, appointmentId: s
       .then((r) => unwrap(r, "Trilha")),
     db
       .from("whatsapp_messages")
-      .select("message_type, status, created_at")
+      .select("message_type, status, created_at, attempt, retry_at")
       .eq("clinic_id", clinicId)
       .eq("appointment_id", appointmentId)
       .eq("direction", "outbound")
@@ -163,7 +167,14 @@ export async function listTrail(db: DbClient, clinicId: string, appointmentId: s
       actorId: e.actor_id,
       details: (e.details ?? {}) as Record<string, unknown>,
     })),
-    ...messages.map((m) => ({ kind: "message" as const, at: new Date(m.created_at), messageType: m.message_type ?? "", status: m.status })),
+    ...messages.map((m) => ({
+      kind: "message" as const,
+      at: new Date(m.created_at),
+      messageType: m.message_type ?? "",
+      status: m.status,
+      attempt: m.attempt,
+      retryAt: m.retry_at ? new Date(m.retry_at) : null,
+    })),
   ].sort((a, b) => a.at.getTime() - b.at.getTime());
   const actors = await loadActorLabels(db, clinicId, rows.map((r) => (r.kind === "event" ? r.actorId : null)));
   return rows.map((row) => describeTrail(row, actors, timeZone));

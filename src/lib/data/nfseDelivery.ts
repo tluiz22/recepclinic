@@ -217,6 +217,8 @@ export async function deliverInvoice(
       body: outcome.body ?? `[${filename}]`,
       status: outcome.sent ? "sent" : "failed",
       waMessageId: outcome.sent ? outcome.messageId : null,
+      // Só o envio automático, ao emitir (cliente, 23/out): o da tela mostra o resultado na hora.
+      ...(automatic ? { retry: { outcome, context: { invoiceId } } } : {}),
     }).catch((error) => {
       logError("nota fiscal: registro do envio", error, { clinica: clinicId, nota: invoiceId });
       return null;

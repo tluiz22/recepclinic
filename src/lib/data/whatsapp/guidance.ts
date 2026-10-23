@@ -84,13 +84,13 @@ async function deliverGuidance(db: DbClient, clinicId: string, row: Consultation
   const template = windowOpen ? null : await getApprovedTemplate(db, clinicId, "consultation_guidance");
 
   let status: GuidanceStatus;
+  let outcome: SendOutcome | null = null;
   let messageId: string | null = null;
   let body: string | null = null;
   if (!windowOpen && !template) {
     // Registrado como tentativa: o botão "Reenviar orientações" aparece.
     status = "skipped_no_template";
   } else {
-    let outcome: SendOutcome;
     try {
       outcome = await sender({
         clinicId,
@@ -123,6 +123,7 @@ async function deliverGuidance(db: DbClient, clinicId: string, row: Consultation
       body,
       status,
       waMessageId: messageId,
+      retry: { outcome, context: { scheduledAt: new Date(row.scheduled_at).toISOString() } },
     },
     now,
   );

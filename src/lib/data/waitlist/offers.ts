@@ -4,6 +4,7 @@ import type { DbClient } from "../clients";
 import { hasFeature } from "../features";
 import { DataError, unwrap } from "../errors";
 import type { SendOutcome } from "../whatsapp/messages";
+import { lastRetryWithin } from "../whatsapp/retryRules";
 
 export type { SendOutcome };
 import { rescheduleAppointment } from "../agenda/appointments";
@@ -31,6 +32,15 @@ import { logError } from "../../log";
 // envia, e quem não pôde receber é pulado nessa vaga.
 
 export const OFFER_MINUTES = 60;
+
+/**
+ * Prazo da oferta enquanto o envio é tentado de novo: a última tentativa e os
+ * 60 minutos depois dela (se a rotina dos reenvios parar, a oferta vence e a
+ * vaga segue para a fila, como sem resposta).
+ */
+export function offerExpiryWhileRetrying(failedAttempt: number, failedAt: Date): Date {
+  return new Date(failedAt.getTime() + lastRetryWithin(failedAttempt) + OFFER_MINUTES * 60_000 + 5 * 60_000);
+}
 export const MIN_LEAD_MS = 2 * 60 * 60_000;
 /** Pessoas puladas por rodada numa vaga, contra laço longo. */
 export const MAX_ATTEMPTS_PER_OPENING = 20;
@@ -180,6 +190,60 @@ async function reopen(db: DbClient, clinicId: string, openingIds: (string | null
     await db.from("waitlist_openings").update({ status: "open" }).eq("clinic_id", clinicId).in("id", ids).eq("status", "offering"),
     "Vagas da lista de espera",
   );
+}
+
+// ---------------------------------------------------------------------------
+// Reenvio da oferta (cliente, 23/out): a vaga fica com a pessoa durante as tentativas
+// ---------------------------------------------------------------------------
+
+/** A oferta ainda espera o envio (pendente): só então vale reenviar. */
+export async function isOfferAwaitingSend(db: DbClient, clinicId: string, offerId: string): Promise<boolean> {
+  const row = unwrap(
+    await db.from("waitlist_offers").select("status, waitlist_entries ( status )").eq("clinic_id", clinicId).eq("id", offerId).maybeSingle(),
+    "Oferta da lista de espera",
+  ) as { status: string; waitlist_entries: { status: string } | null } | null;
+  return row?.status === "pending" && row.waitlist_entries?.status === "active";
+}
+
+/** O reenvio saiu: os 60 minutos para responder contam de agora. */
+export async function markOfferSent(db: DbClient, clinicId: string, offerId: string, waMessageId: string, now: Date): Promise<void> {
+  unwrap(
+    await db
+      .from("waitlist_offers")
+      .update({ whatsapp_message_id: waMessageId, expires_at: new Date(now.getTime() + OFFER_MINUTES * 60_000).toISOString(), details: {} })
+      .eq("clinic_id", clinicId)
+      .eq("id", offerId)
+      .eq("status", "pending"),
+    "Oferta da lista de espera",
+  );
+}
+
+/** Falhou de novo (ou falhou depois, pelo webhook) e há outra tentativa: a vaga segue reservada até ela. */
+export async function holdOfferForRetry(db: DbClient, clinicId: string, offerId: string, failedAttempt: number, now: Date): Promise<void> {
+  unwrap(
+    await db
+      .from("waitlist_offers")
+      .update({ expires_at: offerExpiryWhileRetrying(failedAttempt, now).toISOString(), details: { retrying: true } })
+      .eq("clinic_id", clinicId)
+      .eq("id", offerId)
+      .eq("status", "pending"),
+    "Oferta da lista de espera",
+  );
+}
+
+/** As tentativas acabaram sem a oferta sair: a pessoa é pulada e a vaga volta para a fila. */
+export async function skipOfferAfterRetries(db: DbClient, clinicId: string, offerId: string, reason: string): Promise<void> {
+  const skipped = unwrap(
+    await db
+      .from("waitlist_offers")
+      .update({ status: "skipped", details: { reason: reason.slice(0, 300), retries_exhausted: true } })
+      .eq("clinic_id", clinicId)
+      .eq("id", offerId)
+      .eq("status", "pending")
+      .select("opening_id"),
+    "Oferta da lista de espera",
+  );
+  await reopen(db, clinicId, skipped.map((row) => row.opening_id));
 }
 
 /** Ofertas sem resposta no prazo vencem e a vaga volta para a fila. */
@@ -497,9 +561,16 @@ async function sendOffer(
     outcome = { sent: false, reason: "send_failed" };
   }
 
-  const update = outcome.sent ? { whatsapp_message_id: outcome.messageId } : { status: "skipped", details: { reason: outcome.reason } };
+  // Falha técnica (cliente, 23/out): a vaga fica reservada para a pessoa
+  // durante as tentativas (retries.ts); os 60 minutos contam de quando sair.
+  const retrying = !outcome.sent && !!outcome.failure?.technical && !!outcome.request;
+  const update = outcome.sent
+    ? { whatsapp_message_id: outcome.messageId }
+    : retrying
+      ? { expires_at: offerExpiryWhileRetrying(1, now).toISOString(), details: { retrying: true } }
+      : { status: "skipped", details: { reason: outcome.reason } };
   unwrap(await db.from("waitlist_offers").update(update).eq("clinic_id", clinicId).eq("id", offerId), "Oferta da lista de espera");
-  return outcome.sent;
+  return outcome.sent || retrying;
 }
 
 // ---------------------------------------------------------------------------

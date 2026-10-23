@@ -259,8 +259,10 @@
 >   Mês mais rápida numa clínica muito cheia e a sessão da nota fiscal.
   **Ajustes de 23/out:** "Sem lembrete" fora do cartão "Faltas pela resposta ao lembrete" (publicado no staging em
   23/out, sem migração). **Reenvio automático de envios com falha técnica:** 5 decisões do cliente no
-  [plano](plano.md) (todos os automáticos, 10 e 30 minutos, falha tardia também, sem aviso extra); implementação em
-  andamento.
+  [plano](plano.md) (todos os automáticos, 10 e 30 minutos, falha tardia também, sem aviso extra); mais 2 decisões em 23/out
+  (avisos, preparo e orientações também, bot fora; a vaga fica reservada durante as tentativas). **Implementado,
+  testado, migração `20261023140000_reenvio_automatico.sql` aplicada e conferida no staging, publicado e dado como
+  validado pelo cliente em 23/out.** Retomar daqui: o cliente traz novos ajustes.
 >   Banco local com os dados fictícios das Métricas (`npm run db:reset` limpa). Em paralelo,
 >   aguardar a Meta (Análise do App até ~29/out).
 >   **App antigo da Meta (cliente, 20/out):** o piloto está desativado e o número do app "Consultório Dra. Ana Karina" é

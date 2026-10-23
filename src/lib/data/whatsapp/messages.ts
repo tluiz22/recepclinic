@@ -1,6 +1,7 @@
 import type { DbClient } from "../clients";
 import { DataError, unwrap } from "../errors";
 import { deliveryRank, isDeliveryStatus, messageBody, reachedPhone, toE164, type WaMessage } from "./meta";
+import { MAX_ATTEMPTS, nextRetryAt, RETRYABLE_MESSAGE_TYPES, type RetryContext, type SendFailure } from "./retryRules";
 
 // Registro das mensagens do WhatsApp (F3.9a), com a credencial da clínica.
 //
@@ -17,9 +18,11 @@ import { deliveryRank, isDeliveryStatus, messageBody, reachedPhone, toE164, type
 export const CUSTOMER_SERVICE_WINDOW_MS = 23.5 * 60 * 60_000;
 
 /** Resultado do envio de verdade, devolvido por quem envia (bot na F6, agendador na F7). */
-export type SendOutcome = ({ sent: true; messageId: string } | { sent: false; reason: string }) & {
+export type SendOutcome = ({ sent: true; messageId: string } | { sent: false; reason: string; failure?: SendFailure }) & {
   /** Texto que o paciente vê (o do template preenchido), para o registro da mensagem. */
   body?: string;
+  /** Pedido feito à Meta: guardado nos envios automáticos, para o reenvio (cliente, 23/out). */
+  request?: Record<string, unknown>;
 };
 
 /** Contato ativo da clínica com este telefone (null = ainda não é contato). */
@@ -96,7 +99,32 @@ export type OutboundMessage = {
   /** "sent" com o id da Meta; "failed" ou "skipped_…" quando não saiu. */
   status: string;
   waMessageId?: string | null;
+  /**
+   * Envio automático que pode ser reenviado (cliente, 23/out): o resultado do
+   * envio (null = não chegou a sair) e o que conferir antes de reenviar.
+   */
+  retry?: { outcome: SendOutcome | null; context: RetryContext };
+  /** Reenvio: o número da tentativa e a primeira mensagem. */
+  attempt?: number;
+  firstAttemptId?: string | null;
 };
+
+/** Colunas do reenvio de uma mensagem enviada (ver `OutboundMessage.retry`). */
+function retryColumns(message: OutboundMessage, now: Date) {
+  const outcome = message.retry?.outcome ?? null;
+  const attempt = message.attempt ?? 1;
+  const failure = outcome && !outcome.sent ? outcome : null;
+  const request = outcome?.request ?? null;
+  const retryAt = failure?.failure?.technical && request ? nextRetryAt(attempt, now) : null;
+  return {
+    attempt,
+    first_attempt_id: message.firstAttemptId ?? null,
+    failure_code: failure?.failure?.code ?? null,
+    failure_reason: failure ? failure.reason.slice(0, 300) : null,
+    retry_payload: request && attempt <= MAX_ATTEMPTS ? { request, context: message.retry!.context } : null,
+    retry_at: retryAt?.toISOString() ?? null,
+  };
+}
 
 /** Mensagem enviada pelo sistema (bot, agendador ou botão da tela). */
 export async function recordOutboundMessage(
@@ -118,9 +146,30 @@ export async function recordOutboundMessage(
     status: message.status,
     wa_message_id: message.waMessageId ?? null,
     created_at: now.toISOString(),
+    ...(message.retry || message.attempt ? retryColumns(message, now) : {}),
   });
   if (!id) throw new DataError("duplicate", "Mensagem do WhatsApp: já registrada");
+  await cancelSupersededRetries(db, clinicId, id, message);
   return id;
+}
+
+/**
+ * Envio novo do mesmo tipo (pelo botão da tela, pela rotina ou o próprio
+ * reenvio) toma o lugar da tentativa prevista: "ninguém reenviou antes".
+ * Do atendimento; sem atendimento (resumo da equipe), do mesmo número.
+ */
+async function cancelSupersededRetries(db: DbClient, clinicId: string, id: string, message: OutboundMessage): Promise<void> {
+  if (!RETRYABLE_MESSAGE_TYPES.has(message.messageType)) return;
+  let query = db
+    .from("whatsapp_messages")
+    .update({ retry_at: null })
+    .eq("clinic_id", clinicId)
+    .eq("direction", "outbound")
+    .eq("message_type", message.messageType)
+    .not("retry_at", "is", null)
+    .neq("id", id);
+  query = message.appointmentId ? query.eq("appointment_id", message.appointmentId) : query.is("appointment_id", null).eq("contact_phone", message.phone);
+  unwrap(await query, "Mensagem do WhatsApp");
 }
 
 // ---------------------------------------------------------------------------
@@ -174,14 +223,19 @@ export async function updateDeliveryStatus(
     if (deliveryRank(status) < deliveryRank(row.status)) return { updated: false };
     if (status === row.status) return { updated: false };
 
-    let update = db.from("whatsapp_messages").update({ status }).eq("id", row.id);
+    // Chegou ao celular: o pedido guardado para o reenvio não serve mais.
+    const arrived = reachedPhone(row.status, status);
+    let update = db
+      .from("whatsapp_messages")
+      .update(arrived ? { status, retry_payload: null } : { status })
+      .eq("id", row.id);
     update = row.status === null ? update.is("status", null) : update.eq("status", row.status);
     const changed = unwrap(await update.select("id"), "Mensagem do WhatsApp");
     if (changed.length === 0) continue; // outra chamada mudou antes; relê
 
     return {
       updated: true,
-      reachedPhone: reachedPhone(row.status, status),
+      reachedPhone: arrived,
       message: {
         id: row.id,
         appointmentId: row.appointment_id,

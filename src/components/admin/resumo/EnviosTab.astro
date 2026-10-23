@@ -9,6 +9,7 @@ import Icon from "../Icon.astro";
 import Pill, { type PillTone } from "../ui/Pill.astro";
 import { formatInstant, localDateOf } from "../../../lib/clinicTime";
 import { jobRunState, type JobRun, type AppointmentWithFailedSends, type JobRunState } from "../../../lib/data/sends";
+import { MAX_ATTEMPTS } from "../../../lib/data/whatsapp/retryRules";
 
 import ServiceTag, { type ServiceTagInfo } from "../agenda/ServiceTag.astro";
 import { serviceBesideCategory } from "../agenda/categoryStyle";
@@ -71,7 +72,12 @@ const BOX_TITLE = "border-b border-line bg-[#f8faf9] px-4 py-3 text-[15px] font-
                   })()}
                 </span>
               </a>
-              <Pill tone="danger">{`${a.failedSends} ${a.failedSends === 1 ? "envio com falha" : "envios com falha"}`}</Pill>
+              <span class="flex flex-wrap gap-1.5">
+                {a.retrying.map((attempt) => (
+                  <Pill tone="info">{`Tentando de novo (${attempt} de ${MAX_ATTEMPTS})`}</Pill>
+                ))}
+                {a.failedSends > 0 && <Pill tone="danger">{`${a.failedSends} ${a.failedSends === 1 ? "envio com falha" : "envios com falha"}`}</Pill>}
+              </span>
             </li>
           ))
         }

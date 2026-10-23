@@ -5,13 +5,14 @@ const NOW = new Date("2026-10-09T15:00:00Z");
 const ago = (minutes: number) => new Date(NOW.getTime() - minutes * 60_000);
 
 describe("rotinas em dia (F9.3)", () => {
-  it("as 5 rotinas do agendador", () => {
-    expect(Object.keys(CRON_JOBS).sort()).toEqual(["conversas-paradas", "lembretes", "lista-de-espera", "notas-fiscais", "resumo-do-dia", "series"]);
+  it("as rotinas do agendador", () => {
+    expect(Object.keys(CRON_JOBS).sort()).toEqual(["conversas-paradas", "lembretes", "lista-de-espera", "notas-fiscais", "reenvios", "resumo-do-dia", "series"]);
   });
 
   it("todas em dia", () => {
     const beats = [
       { job: "conversas-paradas", lastFinishedAt: ago(1) },
+      { job: "reenvios", lastFinishedAt: ago(1) },
       { job: "resumo-do-dia", lastFinishedAt: ago(5) },
       { job: "lista-de-espera", lastFinishedAt: ago(20) },
       { job: "lembretes", lastFinishedAt: ago(61) },

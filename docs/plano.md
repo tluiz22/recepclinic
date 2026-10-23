@@ -2889,7 +2889,37 @@ Decisões:
 4. **Falha avisada depois pela Meta (webhook) também reenvia**, com a mesma regra do motivo.
 5. **Depois da 3ª falha, só o "Não entregue" na aba Envios** (sem aviso no Início nem e-mail).
 
-Implementação: a planejar (o motivo da falha passa a ser guardado na mensagem; migração).
+Decisões complementares (cliente, 23/out):
+6. **Alcance completo:** também os avisos de marcado, remarcado e cancelado, o preparo do exame e as orientações
+   da consulta; **as respostas do bot ficam de fora** (chegariam fora de contexto). A nota fiscal só no envio
+   automático ao emitir (o da tela mostra o resultado na hora).
+7. **Oferta de vaga:** a vaga fica **reservada para a pessoa** durante as tentativas; os 60 minutos para responder
+   contam de quando a oferta sai; se as 3 falharem, a pessoa é pulada e a vaga segue para a fila.
+
+**Implementado e testado no local em 23/out; migração `20261023140000_reenvio_automatico.sql` aplicada e conferida no
+staging (colunas, rotinas `reenvios` e `limpar-pedidos-de-reenvio` e as duas funções da nota), publicado e dado como
+validado pelo cliente em 23/out:**
+- `whatsapp_messages` ganha `attempt` (1 a 3), `first_attempt_id`, `failure_code`, `failure_reason`, `retry_payload`
+  (o pedido à Meta e o que conferir) e `retry_at`. O pedido some quando a mensagem chega ao celular e, por garantia,
+  depois de 2 dias (rotina `limpar-pedidos-de-reenvio`).
+- Falha técnica (`retryRules.ts`): códigos da Meta de instabilidade, manutenção e limite de vazão (1, 2, 4, 17, 341,
+  80007, 130429, 131000, 131016, 131056, 131057, 133004), HTTP 5xx ou 429 sem código, erro de rede e tempo esgotado.
+- Rotina nova `reenvios` (pg_cron de minuto em minuto, `/api/cron/reenvios`, monitorada na `/api/saude`): confere
+  antes de reenviar (atendimento ativo, futuro e na mesma data; cancelamento ainda cancelado; resumo ainda no dia;
+  oferta pendente; nota emitida), manda o mesmo pedido e grava a tentativa como mensagem nova ligada à primeira.
+  Lembrete que sai no reenvio conta como lembrado. Um envio novo do mesmo tipo (botão da tela ou rotina) cancela a
+  tentativa prevista.
+- Falha avisada depois pelo webhook: grava o código e agenda a tentativa pela mesma regra.
+- Nota fiscal: a rotina usa a credencial da clínica, que não lê o Financeiro; duas funções restritas
+  (`nfse_invoice_issued_for_retry` e `nfse_delivery_follow_retry`) conferem a nota e atualizam o envio da nota.
+- Telas: aba Envios com "Tentando de novo (2 de 3)" (não conta no alerta enquanto houver tentativa); trilha do
+  atendimento com "(tentativa 2 de 3)" e "nova tentativa às HH:MM".
+- Testes: `retryRules.test.ts` (regras, Envios e trilha) e `tests/db/reenvios.test.ts` (lembrete 1ª falha → reenvio
+  → lembrado; falha tardia; 3 falhas; não técnica; remarcado; envio novo toma o lugar; oferta reservada e sai no
+  reenvio; oferta pulada depois das 3; resumo vencido; funções da nota só para a credencial da clínica).
+  `npm test` 610, `npm run test:db` 570 (5 rodadas seguidas), `astro check` e build sem erros; aba Envios conferida
+  no navegador local. Corrigidos dois testes antigos: o das Métricas (ainda esperava o "Sem lembrete") e o das
+  ofertas (comparava pela ordem duas ofertas gravadas no mesmo instante e falhava às vezes).
 
 ---
 

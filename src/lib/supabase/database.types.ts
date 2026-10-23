@@ -1455,14 +1455,14 @@ isOneToOne: true
                   ]
                 },"whatsapp_messages": {
                   Row: {
-                    "appointment_id": string | null,"body": string | null,"clinic_id": string,"contact_id": string | null,"contact_phone": string | null,"created_at": string,"direction": string,"id": string,"message_type": string,"status": string | null,"template_name": string | null,"wa_message_id": string | null
+                    "appointment_id": string | null,"attempt": number,"body": string | null,"clinic_id": string,"contact_id": string | null,"contact_phone": string | null,"created_at": string,"direction": string,"failure_code": number | null,"failure_reason": string | null,"first_attempt_id": string | null,"id": string,"message_type": string,"retry_at": string | null,"retry_payload": Json | null,"status": string | null,"template_name": string | null,"wa_message_id": string | null
                   }
                   ComputedFields: never
                   Insert: {
-                    "appointment_id"?: string | null,"body"?: string | null,"clinic_id": string,"contact_id"?: string | null,"contact_phone"?: string | null,"created_at"?: string,"direction": string,"id"?: string,"message_type": string,"status"?: string | null,"template_name"?: string | null,"wa_message_id"?: string | null
+                    "appointment_id"?: string | null,"attempt"?: number,"body"?: string | null,"clinic_id": string,"contact_id"?: string | null,"contact_phone"?: string | null,"created_at"?: string,"direction": string,"failure_code"?: number | null,"failure_reason"?: string | null,"first_attempt_id"?: string | null,"id"?: string,"message_type": string,"retry_at"?: string | null,"retry_payload"?: Json | null,"status"?: string | null,"template_name"?: string | null,"wa_message_id"?: string | null
                   }
                   Update: {
-                    "appointment_id"?: string | null,"body"?: string | null,"clinic_id"?: string,"contact_id"?: string | null,"contact_phone"?: string | null,"created_at"?: string,"direction"?: string,"id"?: string,"message_type"?: string,"status"?: string | null,"template_name"?: string | null,"wa_message_id"?: string | null
+                    "appointment_id"?: string | null,"attempt"?: number,"body"?: string | null,"clinic_id"?: string,"contact_id"?: string | null,"contact_phone"?: string | null,"created_at"?: string,"direction"?: string,"failure_code"?: number | null,"failure_reason"?: string | null,"first_attempt_id"?: string | null,"id"?: string,"message_type"?: string,"retry_at"?: string | null,"retry_payload"?: Json | null,"status"?: string | null,"template_name"?: string | null,"wa_message_id"?: string | null
                   }
                   Relationships: [
                     {
@@ -1482,6 +1482,12 @@ isOneToOne: false
       columns: ["clinic_id"]
 isOneToOne: false
       referencedRelation: "clinics"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "whatsapp_messages_first_attempt_id_fkey"
+      columns: ["first_attempt_id"]
+isOneToOne: false
+      referencedRelation: "whatsapp_messages"
       referencedColumns: ["id"]
     }
                   ]
@@ -1638,6 +1644,12 @@ isOneToOne: false
 { Args: { "p_agenda_ids": (string)[],"p_clinic_id": string,"p_end": string,"p_location_ids"?: (string)[],"p_now"?: string,"p_start": string }; Returns: {
               "agenda_id": string,"appointment_id": string,"has_return": boolean,"has_upcoming": boolean,"last_date": string,"patient_id": string,"scheduled_at": string,"status": string
             }[]
+                           },
+"nfse_delivery_follow_retry":
+{ Args: { "p_error": string,"p_message_id": string,"p_previous_message_id": string,"p_sent": boolean }; Returns: undefined
+                           },
+"nfse_invoice_issued_for_retry":
+{ Args: { "p_invoice_id": string }; Returns: boolean
                            },
 "reschedule_group_session":
 { Args: { "p_appointment_id": string,"p_channel": Database["public"]['Enums']["action_channel"],"p_scheduled_at": string,"p_trail"?: Json }; Returns: undefined

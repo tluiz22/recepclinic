@@ -330,6 +330,7 @@ async function deliverReminder(
       body: outcome.body ?? null,
       status: outcome.sent ? "sent" : "failed",
       waMessageId: outcome.sent ? outcome.messageId : null,
+      retry: { outcome, context: { scheduledAt: new Date(row.scheduled_at).toISOString() } },
     },
     now,
   );

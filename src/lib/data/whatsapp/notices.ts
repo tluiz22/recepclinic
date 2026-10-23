@@ -124,6 +124,7 @@ export async function sendAppointmentNotice(
         body: outcome?.body ?? fillTemplate(known.body, params.slice(0, paramCount(known.body))),
         status,
         waMessageId: outcome?.sent ? outcome.messageId : null,
+        retry: { outcome, context: { scheduledAt: new Date(row.scheduled_at).toISOString() } },
       },
       now,
     );

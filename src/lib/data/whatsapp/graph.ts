@@ -11,8 +11,11 @@ const GRAPH = `https://graph.facebook.com/${GRAPH_API_VERSION}`;
 
 export type Fetcher = typeof fetch;
 
-/** `subcode`: detalhe da Meta (ex.: 2388024 = já existe conteúdo nesse idioma). */
-export type GraphError = { code: number | null; message: string; subcode?: number | null };
+/**
+ * `subcode`: detalhe da Meta (ex.: 2388024 = já existe conteúdo nesse idioma).
+ * `httpStatus`: a situação HTTP da resposta (500 sem código = Meta fora do ar).
+ */
+export type GraphError = { code: number | null; message: string; subcode?: number | null; httpStatus?: number | null };
 
 export class GraphRequestError extends Error {
   constructor(
@@ -35,6 +38,7 @@ async function call<T>(fetcher: Fetcher, what: string, url: string, token: strin
     throw new GraphRequestError(what, {
       code: body.error?.code ?? null,
       subcode: body.error?.error_subcode ?? null,
+      httpStatus: response.status,
       message: human || body.error?.message || `HTTP ${response.status}`,
     });
   }

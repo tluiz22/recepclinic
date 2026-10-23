@@ -176,7 +176,6 @@ describe("contas do Desempenho no banco (M2)", () => {
     expect(s.noShowByReminder.map((g) => [g.key, g.noShow.n, g.noShow.base])).toEqual([
       ["confirmed", 0, 1],
       ["no_answer", 1, 1],
-      ["none", 0, 1],
     ]);
   });
 

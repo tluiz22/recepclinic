@@ -6,6 +6,7 @@ import { handleAgentEcho } from "./conversations";
 import { recordAgentEcho, recordInboundMessage, updateDeliveryStatus, type RecordResult } from "./messages";
 import { sendPreparationAfterDelivery } from "./preparation";
 import { sendGuidanceAfterDelivery } from "./guidance";
+import { scheduleRetryAfterLateFailure } from "./retries";
 import { guidanceSender, preparationSender, type ClinicSender } from "./send";
 import { applyTemplateStatusEvent, type TemplateStatusEvent } from "./templateSync";
 import { handleIncomingMessage } from "./bot/router";
@@ -163,6 +164,12 @@ export async function processWebhook(payload: unknown, deps: WebhookDeps, now: D
         const result = await updateDeliveryStatus(db, clinicId, status.id, status.status);
         if (!result.updated) return;
         summary.statuses += 1;
+        if (status.status === "failed") {
+          // Falha técnica avisada depois: nova tentativa, como na falha na hora (cliente, 23/out).
+          const error = status.errors?.[0];
+          await scheduleRetryAfterLateFailure(db, clinicId, result.message.id, { code: error?.code ?? null, title: error?.title ?? error?.message ?? null }, now);
+          return;
+        }
         if (!result.reachedPhone || !deps.senderFor) return;
         // Confirmação de exame entregue: o preparo sai uma vez (F3.9b).
         await attempt("preparo do exame", async () => {

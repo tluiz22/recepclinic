@@ -162,15 +162,15 @@ describe("pular, Não e fila vazia", () => {
     const { sent, send } = fakeSender([await contactOf(more.p4)]);
     expect(await advanceOpening(bot, clinicId, opening, send, now)).toEqual({ offered: true, skipped: 1, closed: false });
     expect(sent.map((offer) => offer.appointmentId)).toEqual([second.id]);
-    const offers = await offersOf(opening);
-    expect(offers.map((o) => [o.appointment_id, o.status, o.details])).toEqual([
-      [first.id, "skipped", { reason: "outside_24h_no_template" }],
-      [second.id, "pending", {}],
-    ]);
+    // As duas saem no mesmo instante: compara por atendimento, não pela ordem.
+    const offerOf = async (appointmentId: string) => (await offersOf(opening)).find((o) => o.appointment_id === appointmentId)!;
+    expect(await offersOf(opening)).toHaveLength(2);
+    expect(await offerOf(first.id)).toMatchObject({ status: "skipped", details: { reason: "outside_24h_no_template" } });
+    expect(await offerOf(second.id)).toMatchObject({ status: "pending", details: {} });
 
-    const answer = await declineOffer(bot, clinicId, offers[1].id, await contactOf(more.p5), send, now);
+    const answer = await declineOffer(bot, clinicId, (await offerOf(second.id)).id, await contactOf(more.p5), send, now);
     expect(answer).toEqual({ kind: "declined", patientName: "Paciente 05", currentStart: at(MON4, "08:30"), stillInList: true });
-    expect((await offersOf(opening))[1].status).toBe("declined");
+    expect((await offerOf(second.id)).status).toBe("declined");
     expect(await openingRow(opening)).toEqual({ status: "closed", closed_reason: "no_candidates" });
     expect(await getAppointment(bot, clinicId, second.id)).toMatchObject({ scheduledAt: at(MON4, "08:30") });
   });

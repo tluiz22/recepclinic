@@ -285,11 +285,11 @@ export async function runDailySummary(
         let status: string;
         let messageId: string | null = null;
         let bodyText: string | undefined;
+        let outcome: SendOutcome | null = null;
         if (!template) {
           status = "skipped_no_template";
           totals.not_sent_no_template++;
         } else {
-          let outcome: SendOutcome;
           try {
             outcome = await sender({ clinicId, phone: recipient.phone, recipientName: recipient.name, kind, variant, date, listText, template });
           } catch (error) {
@@ -312,6 +312,7 @@ export async function runDailySummary(
             body: bodyText ?? listText,
             status,
             waMessageId: messageId,
+            retry: { outcome, context: { until: dayBounds(date, timeZone).end.toISOString() } },
           },
           now,
         );

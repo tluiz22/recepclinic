@@ -14,6 +14,7 @@ import { isCustomerServiceWindowOpen, recordOutboundMessage } from "./messages";
 import { appointmentParams, cleanParam, clinicLabel, defaultTemplate, fillTemplate, firstName, formatAppointmentWhen, formatSummaryDate, offerTypeWord, paramCount, type MessageArticle } from "./templates";
 import { isAnonymizedPhone } from "../../anonymization";
 import { logError } from "../../log";
+import { classifySendError } from "./retryRules";
 
 // Envio pelo WhatsApp da clínica (F6.2): o número e o token dela (D3a), com a
 // credencial limitada à clínica, a única que lê o token. As camadas de
@@ -51,6 +52,8 @@ export type ClinicSender = {
   ): Promise<SendOutcome>;
   /** Documento com legenda, só na janela de 24h (como o texto). */
   document?(to: string, document: { mediaId: string; filename: string }, caption: string): Promise<SendOutcome>;
+  /** Reenvio automático (cliente, 23/out): o mesmo pedido de uma tentativa anterior. */
+  resend?(request: Record<string, unknown>, body: string): Promise<SendOutcome>;
 };
 
 export type ListRow = { id: string; title: string; description?: string };
@@ -65,6 +68,7 @@ export function interactiveBody(body: string, options: { title: string; descript
 const failure = (error: unknown): SendOutcome => ({
   sent: false,
   reason: error instanceof GraphRequestError ? error.message : error instanceof Error ? error.message : String(error),
+  failure: classifySendError(error),
 });
 
 /**
@@ -92,10 +96,10 @@ export async function createClinicSender(
     if (typeof message.to === "string" && isAnonymizedPhone(message.to)) return { sent: false, reason: "contato anonimizado", body };
     try {
       const messageId = await sendMessage(setup.phoneNumberId, setup.accessToken, message, fetcher);
-      return { sent: true, messageId, body };
+      return { sent: true, messageId, body, request: message };
     } catch (error) {
       logError("whatsapp envio", error, { clinica: clinicId });
-      return { ...failure(error), body };
+      return { ...failure(error), body, request: message };
     }
   };
 
@@ -153,6 +157,9 @@ export async function createClinicSender(
       ];
       const body = `[${document.filename}] ${text ? fillTemplate(text, used) : used.join(" · ")}`;
       return post({ to: toWaNumber(to), type: "template", template: { name: template.name, language: { code: template.language }, components } }, body);
+    },
+    resend(request, body) {
+      return post(request, body);
     },
     document(to, document, caption) {
       return post(
@@ -255,6 +262,7 @@ export function waitlistOfferSender(sender: ClinicSender, db: DbClient): OfferSe
       body: outcome.body ?? null,
       status: outcome.sent ? "sent" : "failed",
       waMessageId: outcome.sent ? outcome.messageId : null,
+      retry: { outcome, context: { offerId: offer.offerId, scheduledAt: offer.currentStart.toISOString() } },
     });
     return outcome;
   };
