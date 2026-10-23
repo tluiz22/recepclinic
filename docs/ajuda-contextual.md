@@ -205,3 +205,13 @@ módulo. O cliente valida cada parte antes da seguinte.
   Profissional não entra no Financeiro (só Administrador e Recepção, `AREA_ROLES`); os textos ao lado de cada
   papel foram corrigidos (a Recepção ganhou o Financeiro). Sem "template" nem "marcador" na tela da clínica:
   "mensagens aprovadas pela Meta" e "campos automáticos", inclusive nos erros de `customMessages.ts`.
+- **Pacientes:** "i" em "Quem fala com a clínica pelo WhatsApp" no Cadastrar (os envios usam o telefone do
+  contato). A confirmação do Anonimizar já listava o que o banco faz e "Não dá para desfazer"; ganhou "Só a
+  pedido do paciente (LGPD)" e, com o Financeiro, "Os pagamentos continuam guardados, pelo prazo fiscal".
+- **Financeiro:** "i" no CPF de quem pagou (Pagamento) e "Como funciona?" da DMED (só pagamento sem CPF fica
+  de fora, conferido em `dmed.astro`).
+- **Métricas:** "i" no gráfico do Desempenho (conferido em `metrics_activity` e na soma da tela) e em "Como
+  terminaram" (`classify` de `botFunnel.ts`). Retomar contato: a regra do inventário já está escrita no alto
+  da aba; um "i" repetiria o texto, então o ponto fica atendido como está.
+- Ajuste do `HelpTip`: o círculo não aumenta a linha do rótulo (campos lado a lado seguem alinhados, como Nome
+  e CPF no Pagamento).

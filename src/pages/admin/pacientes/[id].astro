@@ -75,13 +75,15 @@ const canAnonymize = !anonymized && (clinic.isPlatformStaff || clinic.roles.incl
 const preview = canAnonymize ? await previewAnonymization(db, clinic.clinicId, patient.id, now) : null;
 const anonymizeMessage = preview
   ? [
-      `Nome, nascimento, observações e carteirinha de ${patient.fullName} serão apagados, e o ${vocabulary.contact} (${contact.fullName}) perde nome, telefone, endereço e as mensagens do WhatsApp. O histórico de atendimentos fica, sem identificação.`,
+      `Só a pedido do ${vocabulary.patient} (LGPD). Nome, nascimento, observações e carteirinha de ${patient.fullName} serão apagados, e o ${vocabulary.contact} (${contact.fullName}) perde nome, telefone, endereço e as mensagens do WhatsApp. O histórico de atendimentos fica, sem identificação.`,
       preview.futureAppointments > 0
         ? `${preview.futureAppointments} ${preview.futureAppointments === 1 ? "atendimento futuro será cancelado" : "atendimentos futuros serão cancelados"}, sem aviso ao paciente.`
         : "",
       preview.otherPatients.length > 0
         ? `Também ficam sem telefone: ${preview.otherPatients.map((p) => p.fullName).join(", ")} (cadastre um telefone novo no ${vocabulary.contact} depois).`
         : "",
+      // Os pagamentos ficam pelo prazo fiscal (F11.2); ajuda contextual, 23/out/2026.
+      canAccessArea(clinic, "finance") ? "Os pagamentos continuam guardados, pelo prazo fiscal." : "",
       "Não dá para desfazer.",
     ]
       .filter(Boolean)

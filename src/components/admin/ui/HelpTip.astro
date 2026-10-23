@@ -75,6 +75,8 @@ if (text !== undefined && !textoDaDica(text).trim()) throw new Error(`HelpTip ${
     align-items: center;
     justify-content: center;
     border-radius: 9999px;
+    /* O círculo não aumenta a linha do rótulo (campos lado a lado ficam alinhados). */
+    margin-block: -0.25rem;
   }
   .help-button::-webkit-details-marker {
     display: none;

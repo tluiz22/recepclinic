@@ -148,6 +148,8 @@ if (Astro.request.method === "POST") {
     }
   }
 }
+import HelpTip from "../../../components/admin/ui/HelpTip.astro";
+import { pacientes } from "../../../lib/ajuda/pacientes";
 ---
 
 <AdminLayout title={`Cadastrar ${vocabulary.patient}`}>
@@ -199,7 +201,9 @@ if (Astro.request.method === "POST") {
     </section>
 
     <section aria-labelledby="bloco-contato" class={card}>
-      <h2 id="bloco-contato" class={blockTitle}><span class={number} aria-hidden="true">2</span>Quem fala com a clínica pelo WhatsApp</h2>
+      <HelpTip subject="Quem fala com a clínica pelo WhatsApp" text={pacientes.dicas.contato} id="bloco-contato">
+        <h2 id="bloco-contato" class={blockTitle}><span class={number} aria-hidden="true">2</span>Quem fala com a clínica pelo WhatsApp</h2>
+      </HelpTip>
       {
         fixedContact ? (
           <p class="text-[15px] text-ink">

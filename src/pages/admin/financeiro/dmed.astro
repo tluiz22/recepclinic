@@ -91,6 +91,8 @@ const fieldLabel = "text-[14.5px] font-semibold text-ink";
 const hint = "text-sm text-ink-soft";
 const kv = "grid grid-cols-[minmax(120px,190px)_minmax(0,1fr)] gap-x-3 gap-y-2 text-[15px]";
 const downloadLabel = `Baixar o arquivo da DMED de ${year}`;
+import HowItWorks from "../../../components/admin/ui/HowItWorks.astro";
+import { financeiro } from "../../../lib/ajuda/financeiro";
 ---
 
 <AdminLayout title="DMED">
@@ -104,6 +106,7 @@ const downloadLabel = `Baixar o arquivo da DMED de ${year}`;
         Declaração que a clínica entrega à Receita até o fim de fevereiro, com o que cada pessoa pagou no ano. Baixe o arquivo e envie ao contador: ele importa
         no programa da Receita (PGD Dmed), que confere tudo antes de transmitir.
       </p>
+      <HowItWorks id="dmed" topic={financeiro.comoFunciona.dmed} class="mt-1" />
       {
         fiscal && (
           <p class="mt-2 text-[14.5px] text-ink">

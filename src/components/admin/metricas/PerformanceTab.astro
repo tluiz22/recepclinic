@@ -176,6 +176,8 @@ const COLORS = { created: "#0b7a62", rescheduled: "#8fb8e6", canceled: "#d0620f"
 const failed = (what: string) => `Não foi possível carregar "${what}".`;
 const remindersTotal = s.reminders.confirmed + s.reminders.reschedule + s.reminders.cancel + s.reminders.noAnswer;
 const segment = (n: number) => (remindersTotal ? (n / remindersTotal) * 100 : 0);
+import HelpTip from "../ui/HelpTip.astro";
+import { metricas } from "../../../lib/ajuda/metricas";
 ---
 
 {
@@ -272,7 +274,9 @@ const segment = (n: number) => (remindersTotal ? (n / remindersTotal) * 100 : 0)
         <div class={`${card} lg:col-span-2`}>
           <div class="flex flex-wrap items-start justify-between gap-2">
             <div class="flex flex-col gap-1">
-              <h2 id="evolucao" class={h2}>Agendamentos, remarcações e cancelamentos por {grouping === "week" ? "semana" : "dia"}</h2>
+              <HelpTip subject="O que cada coluna conta" text={metricas.dicas.graficoAtividade} id="evolucao">
+                <h2 id="evolucao" class={h2}>Agendamentos, remarcações e cancelamentos por {grouping === "week" ? "semana" : "dia"}</h2>
+              </HelpTip>
               <p class={sub}>Contados no dia em que aconteceram (marcação, remarcação ou cancelamento).</p>
             </div>
             <div role="group" aria-label="Agrupar por" class="inline-flex overflow-hidden rounded-lg border border-line-strong bg-white text-sm font-semibold">

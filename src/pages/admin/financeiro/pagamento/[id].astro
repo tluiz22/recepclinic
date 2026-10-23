@@ -132,6 +132,8 @@ const hint = "text-sm text-ink-soft";
 const choice =
   "relative flex cursor-pointer items-center justify-center gap-2 rounded-[9px] border border-line-strong bg-white text-[15px] text-ink has-[:checked]:border-brand has-[:checked]:bg-brand-soft/60 has-[:checked]:text-brand-ink has-[:checked]:shadow-[0_0_0_1px_var(--color-brand)] has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-brand";
 const check = "flex items-start gap-2.5 text-[15px] leading-snug text-ink";
+import HelpTip from "../../../../components/admin/ui/HelpTip.astro";
+import { financeiro } from "../../../../lib/ajuda/financeiro";
 ---
 
 <AdminLayout title="Pagamento">
@@ -281,9 +283,11 @@ const check = "flex items-start gap-2.5 text-[15px] leading-snug text-ink";
             {payerOptions.map((o) =>
               o.cpf ? null : (
                 <div data-payer-only={o.value} class={field}>
-                  <label for={`payer_cpf_${o.value}`} class={fieldLabel}>
-                    CPF de {o.label} (opcional)
-                  </label>
+                  <HelpTip subject="CPF de quem pagou" text={financeiro.dicas.cpfPagador} id={`payer_cpf_${o.value}`}>
+                    <label for={`payer_cpf_${o.value}`} class={fieldLabel}>
+                      CPF de {o.label} (opcional)
+                    </label>
+                  </HelpTip>
                   <input id={`payer_cpf_${o.value}`} name="payer_cpf" inputmode="numeric" placeholder="000.000.000-00" class={`${CONTROL} w-full sm:w-56`} />
                   <p class={hint}>Sem o CPF, o pagamento é registrado, mas a nota fiscal não sai. Digitado aqui, fica também no cadastro financeiro.</p>
                 </div>
@@ -295,7 +299,9 @@ const check = "flex items-start gap-2.5 text-[15px] leading-snug text-ink";
                 <input id="payer_name" name="payer_name" value={otherDefault.name} class={CONTROL} />
               </div>
               <div class={field}>
-                <label for="payer_cpf_other" class={fieldLabel}>CPF de quem pagou (opcional)</label>
+                <HelpTip subject="CPF de quem pagou" text={financeiro.dicas.cpfPagador} id="payer_cpf_other">
+                  <label for="payer_cpf_other" class={fieldLabel}>CPF de quem pagou (opcional)</label>
+                </HelpTip>
                 <input
                   id="payer_cpf_other"
                   name="payer_cpf"

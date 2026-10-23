@@ -137,6 +137,8 @@ const sub = "text-sm leading-relaxed text-ink-soft";
 const total = (list: { count: number }[]) => list.reduce((t, x) => t + x.count, 0);
 const bar = (n: number, max: number) => (max ? `${Math.max((n / max) * 100, n > 0 ? 2 : 0)}%` : "0%");
 const operationLabel = DIGITAL_OPERATIONS.find((o) => o.id === operation)!.label;
+import HelpTip from "../ui/HelpTip.astro";
+import { metricas } from "../../../lib/ajuda/metricas";
 ---
 
 {
@@ -265,7 +267,9 @@ const operationLabel = DIGITAL_OPERATIONS.find((o) => o.id === operation)!.label
           </ol>
         </div>
         <div class={card}>
-          <h2 class={h2}>Como terminaram</h2>
+          <HelpTip subject="Como terminaram" text={metricas.dicas.comoTerminaram} id="como-terminaram">
+            <h2 class={h2}>Como terminaram</h2>
+          </HelpTip>
           <p class={sub}>Cada tentativa tem um só desfecho.</p>
           <ul class="flex flex-col gap-2.5">
             {OUTCOMES.map((o) => (
