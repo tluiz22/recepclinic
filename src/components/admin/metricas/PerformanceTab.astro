@@ -153,7 +153,7 @@ if ((opportunities ?? []).length > 0) {
 }
 if (s.reminders.notDelivered > 0) {
   const n = s.reminders.notDelivered;
-  attention.push({ strong: `${n} ${n === 1 ? "lembrete não foi entregue" : "lembretes não foram entregues"}`, rest: "(falha no envio ou template não aprovado).", href: "#lembretes", linkLabel: "Ver os lembretes" });
+  attention.push({ strong: `${n} ${n === 1 ? "lembrete não foi entregue" : "lembretes não foram entregues"}`, rest: "(falha no envio ou mensagem não aprovada pela Meta).", href: "#lembretes", linkLabel: "Ver os lembretes" });
 }
 
 // Lista da "Oportunidade agora": nome e WhatsApp de quem pode marcar o retorno.

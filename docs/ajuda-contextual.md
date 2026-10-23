@@ -247,3 +247,18 @@ saído na 7a e na 7b.
 - **Páginas do paciente:** o link de agendar mostra até quando vale (o do bot vale 30 minutos e o de remarcação, 2
   dias: por isso a data e a hora, não um número fixo); o /importar ganhou o que acontece depois do envio.
 
+## Pontos de prioridade Baixa (23/out)
+
+Pedido do cliente depois dos pontos Média ("pode seguir com os pontos de prioridade Baixa"). São 5 no inventário.
+Mesmo jeito: regra conferida, testado no local e publicado no staging, sem migração; o cliente valida tudo no fim.
+- **Trilha do atendimento:** a tela saiu do visual antigo e ganhou, no alto, para que serve (os exemplos são tipos de
+  evento de `trail.ts`). Na trilha, "template não aprovado" virou "mensagem não aprovada pela Meta" (também no aviso
+  do Desempenho, nas Métricas).
+- **Convênios:** "i" no Código ANS (**conferido:** hoje só aparece em Convênios; o bot e as notas não usam).
+- **DMED:** "i" no CPF do responsável perante o CNPJ e no CNES (os dois vão na linha DECPJ do arquivo, `dmed.ts`; o
+  CNES é opcional).
+- **Matriz (Suporte):** "i" em cada item vendido, dizendo o que some da clínica com ele desligado (`itensDaMatriz` em
+  `src/lib/ajuda/sistema.ts`, conferido nas regras de rota de `features.ts` e em quem chama `hasFeature`). O teste do
+  catálogo confere que todo item de `plans.ts` tem o texto. Clicar no balão não marca nem desmarca o item.
+- **WhatsApp (só Suporte):** sem mudança, como o inventário previa ("avaliar depois do 1º piloto").
+

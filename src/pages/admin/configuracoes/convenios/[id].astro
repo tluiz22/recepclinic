@@ -9,6 +9,8 @@ import { CARD, CHECK, CHOICE, HINT, INPUT, INPUT_INLINE, LABEL, PRIMARY_BUTTON, 
 import { createUserClient } from "../../../../lib/data/clients";
 import { listInsurancePlans, listPlanExclusions } from "../../../../lib/data/config/insurance";
 import { listProfessionals } from "../../../../lib/data/config/professionals";
+import HelpTip from "../../../../components/admin/ui/HelpTip.astro";
+import { configuracoes } from "../../../../lib/ajuda/configuracoes";
 
 const clinic = Astro.locals.clinic!;
 const db = createUserClient(Astro.request, Astro.cookies);
@@ -42,7 +44,9 @@ const action = withAllFilter(`/api/admin/configuracoes/convenios/${id}`, all);
         <p class={HINT}>Um por linha. Como o paciente pode escrever o plano no WhatsApp.</p>
       </div>
       <div>
-        <label for="ans_code" class={LABEL}>Código ANS (opcional)</label>
+        <HelpTip subject="Código ANS" text={configuracoes.dicas.convenioAns} id="ans_code">
+          <label for="ans_code" class={LABEL}>Código ANS (opcional)</label>
+        </HelpTip>
         <input id="ans_code" name="ans_code" value={plan?.ansCode ?? ""} class={`${INPUT_INLINE} mt-1.5 w-40`} />
       </div>
       <fieldset>

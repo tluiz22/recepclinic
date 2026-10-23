@@ -47,11 +47,11 @@ describe("trilha do atendimento (F4.8)", () => {
     expect(text("appointment_reschedule", "delivered")).toBe("WhatsApp: Aviso de remarcação entregue");
     expect(text("appointment_confirmation", "sent")).toBe("WhatsApp: Confirmação do atendimento enviada");
     expect(text("appointment_mass_cancellation", "skipped_no_template")).toBe(
-      "WhatsApp: Aviso de cancelamento pela clínica (com o link para remarcar) não enviado (template não aprovado)",
+      "WhatsApp: Aviso de cancelamento pela clínica (com o link para remarcar) não enviado (mensagem não aprovada pela Meta)",
     );
     expect(text("nfse_document", "read")).toBe("WhatsApp: Nota fiscal lida");
     expect(text("tipo_novo", null)).toBe("WhatsApp: Mensagem na fila");
-    expect(event("message_not_sent", { details: { kind: "reminder", reason: "template_disabled" } }).text).toBe("WhatsApp: Lembrete não enviado (template não aprovado)");
+    expect(event("message_not_sent", { details: { kind: "reminder", reason: "template_disabled" } }).text).toBe("WhatsApp: Lembrete não enviado (mensagem não aprovada pela Meta)");
     expect(event("message_not_sent", { details: { kind: "reminder", reason: "not_connected" } }).text).toBe(
       "WhatsApp: Lembrete não enviado (WhatsApp da clínica não conectado)",
     );

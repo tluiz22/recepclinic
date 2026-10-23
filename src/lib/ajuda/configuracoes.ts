@@ -37,6 +37,9 @@ export const configuracoes = {
       "O número da clínica no cadastro de contribuintes do ISS da prefeitura. Costuma estar no alvará ou no comprovante de inscrição municipal; o contador também tem.",
     nfIss: "O percentual do ISS, o imposto municipal sobre o serviço, que vai na nota. Depende do município e do serviço: o contador informa.",
     nfRegime: "Tratamento diferente do ISS que a prefeitura dá a alguns tipos de empresa. Se a clínica não tem nenhum, fica \"Nenhum\".",
+    // ans_code (config/insurance.ts): só nas telas de Convênios; o bot e as notas não usam.
+    convenioAns:
+      "Número de registro do plano de saúde na ANS (Agência Nacional de Saúde Suplementar). É opcional e, por enquanto, só aparece aqui, em Convênios.",
     // booking_horizon_days: só o bot (bot/engine.ts) e o link de agendar (agenda/publicBooking.ts) usam.
     clinicaPrazo:
       "Até quantos dias à frente o bot e o link de agendamento mostram horários livres. A recepção, pelo painel, não tem esse limite. Ex.: com 30 dias, o paciente vê horários até daqui a um mês.",

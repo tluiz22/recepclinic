@@ -18,6 +18,8 @@ import { listClinicsAccess, listFeatureChanges, listPlatformStaffNames, listProf
 import { featureLabel } from "../../../lib/features";
 import { formatCentsBRL } from "../../../lib/money";
 import { ADDONS, ALL_ITEMS, BASIC_ITEMS, OFF_TABLE, PLAN_ITEM_IDS, PLAN_LABELS, PRICES, clinicPlan, itemDependsOn, itemIsOn } from "../../../lib/plans";
+import HelpTip from "../../../components/admin/ui/HelpTip.astro";
+import { itensDaMatriz } from "../../../lib/ajuda/sistema";
 
 const db = createUserClient(Astro.request, Astro.cookies);
 const [clinics, staffNames] = await Promise.all([listClinicsAccess(db), listPlatformStaffNames(db)]);
@@ -257,7 +259,10 @@ const COLS = "lg:grid-cols-[minmax(0,2fr)_minmax(0,1.3fr)_150px_36px]";
                             class={`${CHECK} mt-0.5 h-5 w-5`}
                           />
                           <span class="min-w-0 flex-1">
-                            <span class="block text-base leading-snug font-semibold text-ink">{item.label}</span>
+                            <span class="flex items-center gap-1.5 text-base leading-snug font-semibold text-ink">
+                              {item.label}
+                              {itensDaMatriz[item.id] && <HelpTip subject={item.label} text={itensDaMatriz[item.id]} id={`item-${item.id}`} variant="pop" />}
+                            </span>
                             {deps.length > 0 && (
                               <span class="block text-sm text-ink-soft">
                                 Depende de: {deps.map((id) => ALL_ITEMS.find((other) => other.id === id)?.label ?? id).join(", ")}

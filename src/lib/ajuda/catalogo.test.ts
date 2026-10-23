@@ -2,6 +2,8 @@ import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { LIMITE_DICA, LIMITE_ITENS, textoDaDica, type ModuloDeAjuda } from "./tipos";
+import { ALL_ITEMS } from "../plans";
+import { itensDaMatriz } from "./sistema";
 
 // Catálogo da ajuda contextual (23/out/2026): textos curtos, "Como funciona?"
 // com no máximo 5 itens e nenhum texto esquecido (todo texto é usado em alguma tela).
@@ -60,3 +62,11 @@ describe("catálogo da ajuda contextual", () => {
     });
   }
 });
+
+describe("itens da matriz (Suporte)", () => {
+  it("todo item vendido tem o texto, curto, e nenhum texto sobra", () => {
+    expect(Object.keys(itensDaMatriz).sort()).toEqual(ALL_ITEMS.map((item) => item.id).sort());
+    for (const text of Object.values(itensDaMatriz)) expect(text.length).toBeLessThanOrEqual(LIMITE_DICA);
+  });
+});
+

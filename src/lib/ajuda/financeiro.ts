@@ -7,6 +7,11 @@ export const financeiro = {
     // F11.6 ("Ficam de fora", src/pages/admin/financeiro/dmed.astro); a nota exige o CPF (pagamento/[id].astro).
     cpfPagador:
       "Vai na nota fiscal e na DMED (a declaração de pagamentos que a clínica entrega à Receita). Sem CPF, a nota não sai e o pagamento fica de fora da DMED.",
+    // Linha DECPJ do arquivo (src/lib/dmed.ts): o CNES é opcional; o CPF do responsável é obrigatório.
+    dmedCnes:
+      "Cadastro Nacional de Estabelecimentos de Saúde: o número da clínica no cadastro do Ministério da Saúde, se ela tiver. Vai no arquivo da DMED; sem ele, o arquivo sai do mesmo jeito.",
+    dmedResponsavel:
+      "O CPF da pessoa que responde pela clínica perante a Receita (em geral, o sócio-administrador). Vai no arquivo da DMED, junto com o CNPJ; o contador confirma quem é.",
     // public.finance_patients_missing_payer_cpf (migração 20261017120000_falta_cpf.sql): pacientes, não pagamentos;
     // quem paga = o contato ou o próprio paciente (\"Outra pessoa\" não entra).
     faltaCpf:

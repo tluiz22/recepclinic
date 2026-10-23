@@ -67,7 +67,7 @@ const OTHER_MESSAGE = { label: "Mensagem", gender: "f" as Gender };
 /** Mensagem não enviada, pelo `kind` gravado na trilha. */
 const NOT_SENT_KINDS: Record<string, string> = { reminder: "appointment_reminder" };
 const NOT_SENT_REASONS: Record<string, string> = {
-  template_disabled: "template não aprovado",
+  template_disabled: "mensagem não aprovada pela Meta",
   not_connected: "WhatsApp da clínica não conectado",
 };
 
@@ -78,7 +78,7 @@ const MESSAGE_STATUS: Record<string, { word: (g: Gender) => string; tone: TrailE
   delivered: { word: (g) => (g === "fp" ? "entregues" : "entregue"), tone: "success" },
   read: { word: (g) => agree(g, "lido"), tone: "success" },
   failed: { word: (g) => (g === "fp" ? "não entregues" : "não entregue"), tone: "danger" },
-  skipped_no_template: { word: (g) => `não ${agree(g, "enviado")} (template não aprovado)`, tone: "danger" },
+  skipped_no_template: { word: (g) => `não ${agree(g, "enviado")} (mensagem não aprovada pela Meta)`, tone: "danger" },
 };
 
 const ATTENDANCE: Record<string, string> = { completed: "compareceu", no_show: "faltou" };

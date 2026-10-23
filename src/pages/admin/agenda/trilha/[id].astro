@@ -3,7 +3,9 @@
 // mais antigo ao mais recente, com quem fez (nome na clínica, cliente,
 // 05/out/2026) e as mensagens do WhatsApp.
 import AdminLayout from "../../../../layouts/AdminLayout.astro";
-import Card from "../../../../components/admin/Card.astro";
+import { PANEL } from "../../../../components/admin/config/formStyles";
+import EmptyState from "../../../../components/admin/ui/EmptyState.astro";
+import PageHeader from "../../../../components/admin/ui/PageHeader.astro";
 import Icon from "../../../../components/admin/Icon.astro";
 import { isUuid } from "../../../../lib/clinicAccess";
 import { currentPath, safeReturnPath, withReturn } from "../../../../lib/returnPath";
@@ -20,35 +22,43 @@ if (!appointment) return Astro.redirect("/admin/agenda");
 const entries = await listTrail(db, clinic.clinicId, appointment.id, clinic.timezone);
 const back = Astro.url.searchParams.get("volta") ?? "";
 const backTo = safeReturnPath(back, `/admin/agenda?date=${localDateOf(appointment.scheduledAt, clinic.timezone)}`);
-const tone = { neutral: "text-slate-700", success: "text-emerald-700", danger: "font-medium text-red-700" };
+const tone = { neutral: "text-ink", success: "text-conf-800", danger: "font-semibold text-danger" };
 ---
 
 <AdminLayout title="Trilha do atendimento">
-  <a href={backTo} class="inline-flex items-center gap-1 text-sm font-medium text-sky-700 hover:underline">
-    <Icon name="chevron-left" class="h-4 w-4" /> Voltar
+  <a href={backTo} class="inline-flex min-h-8 items-center gap-1 text-[15px] font-semibold text-brand no-underline hover:underline">
+    <Icon name="chevron-left" class="h-[18px] w-[18px]" strokeWidth={2.2} />
+    Voltar
   </a>
-  <h1 class="mt-3 text-2xl font-bold text-slate-900">Trilha do atendimento</h1>
-  <Card class="mt-4 max-w-2xl">
-    <p class="font-medium text-slate-900">
-      <a href={withReturn(`/admin/pacientes/${appointment.patientId}`, currentPath(Astro.url))} class="hover:text-sky-700 hover:underline">{appointment.patientName}</a>
-    </p>
-    <p class="text-sm capitalize text-slate-600">{formatInstant(appointment.scheduledAt, clinic.timezone, "EEEE, dd/MM/yyyy 'às' HH:mm")}</p>
-    <p class="text-sm text-slate-600">{appointment.serviceName} · {appointment.agendaName} · {appointment.locationName}</p>
-  </Card>
-  <Card class="mt-4 max-w-2xl">
+  <PageHeader title="Trilha do atendimento" class="mt-2" />
+  {/* Para que serve (ajuda contextual, 23/out/2026): os exemplos são tipos de evento de lib/data/agenda/trail.ts. */}
+  <p class="mt-1 max-w-2xl text-[15px] text-ink-soft">
+    Tudo o que aconteceu com este atendimento, do mais antigo ao mais recente, e quem fez: marcação, remarcações e cancelamento, presença confirmada,
+    comparecimento ou falta, lista de espera e as mensagens do WhatsApp, com a situação de cada uma (enviada, entregue, lida ou não entregue).
+  </p>
+  <div class="mt-4 flex max-w-2xl flex-col gap-4">
+    <section class={PANEL}>
+      <p class="text-lg leading-snug font-semibold">
+        <a href={withReturn(`/admin/pacientes/${appointment.patientId}`, currentPath(Astro.url))} class="text-ink no-underline hover:text-brand hover:underline">{appointment.patientName}</a>
+      </p>
+      <p class="text-[15px] text-ink first-letter:uppercase">{formatInstant(appointment.scheduledAt, clinic.timezone, "EEEE, dd/MM/yyyy 'às' HH:mm")}</p>
+      <p class="text-[15px] text-ink-soft">{appointment.serviceName} · {appointment.agendaName} · {appointment.locationName}</p>
+    </section>
     {
       entries.length ? (
-        <ol class="flex flex-col gap-2">
-          {entries.map((entry) => (
-            <li class="flex flex-col text-sm sm:flex-row sm:gap-3">
-              <span class="shrink-0 tabular-nums text-xs text-slate-400 sm:w-36 sm:text-sm">{formatInstant(entry.at, clinic.timezone, "dd/MM/yyyy HH:mm")}</span>
-              <span class={tone[entry.tone]}>{entry.text}</span>
-            </li>
-          ))}
-        </ol>
+        <section class={PANEL} aria-label="Trilha">
+          <ol class="flex flex-col divide-y divide-[#e6ecea]">
+            {entries.map((entry) => (
+              <li class="flex flex-col gap-0.5 py-2 text-[15px] sm:flex-row sm:gap-3">
+                <span class="shrink-0 text-sm text-ink-soft tabular-nums sm:w-36 sm:text-[15px]">{formatInstant(entry.at, clinic.timezone, "dd/MM/yyyy HH:mm")}</span>
+                <span class={tone[entry.tone]}>{entry.text}</span>
+              </li>
+            ))}
+          </ol>
+        </section>
       ) : (
-        <p class="text-sm text-slate-500">Nada registrado ainda.</p>
+        <EmptyState title="Nada registrado ainda." text="Cada ação neste atendimento, pelo painel, pelo WhatsApp ou automática, aparece aqui." />
       )
     }
-  </Card>
+  </div>
 </AdminLayout>

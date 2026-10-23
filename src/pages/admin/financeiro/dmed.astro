@@ -93,6 +93,7 @@ const kv = "grid grid-cols-[minmax(120px,190px)_minmax(0,1fr)] gap-x-3 gap-y-2 t
 const downloadLabel = `Baixar o arquivo da DMED de ${year}`;
 import HowItWorks from "../../../components/admin/ui/HowItWorks.astro";
 import { financeiro } from "../../../lib/ajuda/financeiro";
+import HelpTip from "../../../components/admin/ui/HelpTip.astro";
 ---
 
 <AdminLayout title="DMED">
@@ -242,7 +243,9 @@ import { financeiro } from "../../../lib/ajuda/financeiro";
           </div>
         </fieldset>
         <div class={`${field} border-t border-[#e6ecea] pt-3`}>
-          <label for="legal_responsible_cpf" class={fieldLabel}>CPF do responsável perante o CNPJ</label>
+          <HelpTip subject="CPF do responsável perante o CNPJ" text={financeiro.dicas.dmedResponsavel} id="legal_responsible_cpf">
+            <label for="legal_responsible_cpf" class={fieldLabel}>CPF do responsável perante o CNPJ</label>
+          </HelpTip>
           <input
             id="legal_responsible_cpf"
             name="legal_responsible_cpf"
@@ -256,7 +259,9 @@ import { financeiro } from "../../../lib/ajuda/financeiro";
           <p id="legal-hint" class={hint}>O sócio ou administrador que responde pela clínica na Receita.</p>
         </div>
         <div class={field}>
-          <label for="cnes" class={fieldLabel}>CNES <span class="font-normal text-ink-soft">(opcional)</span></label>
+          <HelpTip subject="CNES" text={financeiro.dicas.dmedCnes} id="cnes">
+            <label for="cnes" class={fieldLabel}>CNES <span class="font-normal text-ink-soft">(opcional)</span></label>
+          </HelpTip>
           <input id="cnes" name="cnes" inputmode="numeric" maxlength="7" value={settings?.cnes ?? ""} class={`${CONTROL} sm:w-40`} />
         </div>
         <div class="flex gap-2">
