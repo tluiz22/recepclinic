@@ -131,18 +131,19 @@ const noAgenda = !agendas.some((a) => a.isActive);
       </div>
 
       <div data-only="exam">
-        <span class={LABEL}>Como é marcado</span>
-        <div class="mt-1 flex flex-wrap gap-4 text-sm text-ink-mid">
-          <label class="flex items-center gap-2">
-            <input type="radio" name="scheduling_mode" value="individual" checked={service?.schedulingMode !== "group"} class="h-[18px] w-[18px] accent-brand" /> Individual
-          </label>
-          <label class="flex items-center gap-2">
-            <input type="radio" name="scheduling_mode" value="group" checked={service?.schedulingMode === "group"} class="h-[18px] w-[18px] accent-brand" /> Em turma (vagas por horário)
-          </label>
-        </div>
+        <Field id="scheduling_mode" label="Como é marcado" kind="group" help={configuracoes.dicas.servicoModo}>
+          <div class="mt-1.5 flex flex-wrap gap-x-5 gap-y-1">
+            <label class={CHOICE}>
+              <input type="radio" name="scheduling_mode" value="individual" checked={service?.schedulingMode !== "group"} class={CHECK} /> Individual
+            </label>
+            <label class={CHOICE}>
+              <input type="radio" name="scheduling_mode" value="group" checked={service?.schedulingMode === "group"} class={CHECK} /> Em turma (vagas por horário)
+            </label>
+          </div>
+        </Field>
       </div>
       <div data-only="exam">
-        <PreparationField value={service?.preparationInstructions} />
+        <PreparationField value={service?.preparationInstructions} help={configuracoes.dicas.servicoPreparo} />
       </div>
 
       <fieldset class="min-w-0 border-t border-[#e6ecea] pt-5">

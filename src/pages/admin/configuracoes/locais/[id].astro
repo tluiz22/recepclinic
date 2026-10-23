@@ -12,6 +12,8 @@ import { listLocations } from "../../../../lib/data/config/locations";
 import { listAgendas } from "../../../../lib/data/config/agendas";
 import { listProfessionals } from "../../../../lib/data/config/professionals";
 import { originPage, setupOrigin, withParams } from "../../../../lib/setupFlow";
+import HelpTip from "../../../../components/admin/ui/HelpTip.astro";
+import { configuracoes } from "../../../../lib/ajuda/configuracoes";
 
 const clinic = Astro.locals.clinic!;
 const { id } = Astro.params;
@@ -80,7 +82,15 @@ const originAgenda =
         <input id="name" name="name" required placeholder="Consultório Centro" value={location?.name ?? ""} class={INPUT} />
       </div>
       <div>
-        <label for="type" class={LABEL}>Tipo</label>
+        {
+          homeVisitOn ? (
+            <HelpTip subject="Tipo do local" text={configuracoes.dicas.localTipo} id="type">
+              <label for="type" class={LABEL}>Tipo</label>
+            </HelpTip>
+          ) : (
+            <label for="type" class={LABEL}>Tipo</label>
+          )
+        }
         {
           isNew ? (
             <select id="type" name="type" class={INPUT}>

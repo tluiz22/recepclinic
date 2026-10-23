@@ -8,12 +8,16 @@
 // mesma área, alternadas pelas abas Editar/Prévia — com o teclado aberto a
 // prévia abaixo do campo ficaria fora da tela (decisão do cliente).
 import { MAX_PREPARATION_LENGTH, whatsAppTextToHtml } from "../../lib/whatsappFormat";
+import type { Dica } from "../../lib/ajuda/tipos";
+import HelpTip from "./ui/HelpTip.astro";
 
 interface Props {
   value?: string | null;
+  /** O "i" do rótulo (ajuda contextual): quando o preparo sai. */
+  help?: Dica;
 }
 
-const { value } = Astro.props;
+const { value, help } = Astro.props;
 const initial = value ?? "";
 
 const tabClass =
@@ -21,9 +25,19 @@ const tabClass =
 ---
 
 <div class="js-preparation-field">
-  <label for="preparation_instructions" class="block text-sm font-medium text-ink-mid">
-    Instruções de preparo
-  </label>
+  {
+    help ? (
+      <HelpTip subject="Instruções de preparo" text={help} id="preparation_instructions">
+        <label for="preparation_instructions" class="block text-[14.5px] font-semibold text-ink">
+          Instruções de preparo
+        </label>
+      </HelpTip>
+    ) : (
+      <label for="preparation_instructions" class="block text-[14.5px] font-semibold text-ink">
+        Instruções de preparo
+      </label>
+    )
+  }
 
   <div class="mt-1 flex gap-1 rounded-lg bg-canvas-deep p-1 lg:hidden" role="tablist">
     <button type="button" role="tab" aria-selected="true" data-panel="edit" class={tabClass}>Editar</button>

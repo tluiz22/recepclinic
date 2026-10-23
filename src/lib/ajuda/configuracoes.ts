@@ -10,6 +10,33 @@ export const configuracoes = {
       { termo: "Retorno", texto: "volta ligada a uma consulta anterior, com prazo e valor próprios." },
       { termo: "Exame", texto: "pode ter preparo e ser em turma, com vagas por horário." },
     ],
+    // Só exames têm o modo (data-only="exam"); as vagas ficam no horário (capacity, configuracoes/horarios.astro).
+    servicoModo: [
+      { termo: "Individual", texto: "um paciente por horário." },
+      { termo: "Em turma", texto: "vários pacientes no mesmo horário, até o número de vagas, que se define em Horários (\"Vagas da turma\")." },
+    ],
+    // src/lib/data/whatsapp/preparation.ts (cabeçalho) e "Reenviar preparo" no cartão da Agenda (cardActions.ts).
+    servicoPreparo:
+      "Vai uma vez só pelo WhatsApp, logo depois que a confirmação da marcação chega ao paciente, com o link da página do preparo. Não vai no lembrete nem de novo ao remarcar. Se não chegou, use \"Reenviar preparo\" na Agenda. Sem texto, nada é enviado.",
+    // isOverConsultationAgeLimit em src/lib/age.ts; aviso no Marcar e na ficha do paciente.
+    clinicaIdade:
+      "Para quando a clínica marca Consulta só até certa idade, como na pediatria. Ex.: com 18 anos, quem já fez 18 não marca Consulta pelo bot (Retorno e Exame seguem); no painel, o Marcar e a ficha avisam, sem impedir.",
+    // professionalRegistry (config/professionals.ts): só nas telas de Profissionais; nenhuma página do paciente usa.
+    profissionalRqe:
+      "Registro de Qualificação de Especialista: o número que o conselho dá a quem tem especialidade registrada. Preencha só se tiver. Hoje o registro (conselho, número, UF e RQE) aparece só no painel, em Profissionais.",
+    // Lembrete ao profissional (src/lib/data/whatsapp/dailySummary.ts: receives_daily_summary e phone).
+    profissionalWhatsapp:
+      "Para o profissional receber, pelo WhatsApp da clínica, a lista dos atendimentos das agendas dele (o lembrete ao profissional), na véspera ou no dia, como definido em Configurações › Lembretes.",
+    // Tipo do local: endereço do domiciliar pedido no Marcar (marcar.astro, home_visit_address).
+    localTipo: [
+      { termo: "Consultório", texto: "o paciente vai até a clínica." },
+      { termo: "Domiciliar", texto: "a equipe vai até o paciente; o endereço do atendimento é pedido ao marcar." },
+    ],
+    // Nota fiscal: definições públicas, sem regra fiscal nova (inventário de 23/out/2026).
+    nfInscricao:
+      "O número da clínica no cadastro de contribuintes do ISS da prefeitura. Costuma estar no alvará ou no comprovante de inscrição municipal; o contador também tem.",
+    nfIss: "O percentual do ISS, o imposto municipal sobre o serviço, que vai na nota. Depende do município e do serviço: o contador informa.",
+    nfRegime: "Tratamento diferente do ISS que a prefeitura dá a alguns tipos de empresa. Se a clínica não tem nenhum, fica \"Nenhum\".",
     // booking_horizon_days: só o bot (bot/engine.ts) e o link de agendar (agenda/publicBooking.ts) usam.
     clinicaPrazo:
       "Até quantos dias à frente o bot e o link de agendamento mostram horários livres. A recepção, pelo painel, não tem esse limite. Ex.: com 30 dias, o paciente vê horários até daqui a um mês.",
@@ -26,6 +53,17 @@ export const configuracoes = {
     ],
   },
   comoFunciona: {
+    // configuracoes/nota-fiscal.astro (certificado, ambiente) e "Emitir nota" em financeiro/pagamento/[id].astro; F11.3 e F11.4.
+    notaFiscal: {
+      serve: "Emitir a NFS-e nacional (a nota fiscal de serviço) pelo próprio painel.",
+      como: [
+        "Preencha os dados fiscais da clínica e, se algum serviço tiver código diferente do padrão, o código dele.",
+        "Envie o certificado A1 (arquivo .pfx ou .p12 e a senha), do mesmo CNPJ. O arquivo e a senha ficam criptografados e nunca aparecem na tela, nem para o suporte.",
+        "A nota é emitida no Financeiro, na tela do pagamento, no CPF de quem pagou.",
+        "Toda clínica começa em testes, sem valor fiscal; o suporte passa a nota a valer depois que o contador confere uma nota de teste.",
+      ],
+      erro: "Certificado vencido desliga a emissão até o novo ser enviado. Nota recusada pela Receita mostra o motivo na tela do pagamento.",
+    },
     // src/pages/admin/configuracoes/mensagens.astro (as duas listas, a revisão do Suporte e as 24 horas).
     mensagens: {
       serve: "Ajustar o que o WhatsApp da clínica diz ao paciente.",

@@ -7,6 +7,9 @@
 // (enviar ou trocar com o termo, e revogar); a tela mostra só titular, CNPJ e
 // validade, com aviso a partir de 30 dias do vencimento.
 import ConfigShell from "../../../components/admin/config/ConfigShell.astro";
+import HelpTip from "../../../components/admin/ui/HelpTip.astro";
+import HowItWorks from "../../../components/admin/ui/HowItWorks.astro";
+import { configuracoes } from "../../../lib/ajuda/configuracoes";
 import Badge from "../../../components/admin/config/Badge.astro";
 import Card from "../../../components/admin/config/Panel.astro";
 import ConfirmDeleteDialog from "../../../components/admin/ConfirmDeleteDialog.astro";
@@ -78,6 +81,9 @@ const switchTargets = !settings
 
 <ConfigShell current="nota_fiscal" title="Nota fiscal" subtitle="Dados fiscais, certificado A1 e o código de cada serviço para emitir a NFS-e." back={volta ? { href: volta, label: returnLabel(volta) } : undefined}>
 
+  <HowItWorks id="nota-fiscal" topic={configuracoes.comoFunciona.notaFiscal} class="mb-4">
+    <p class="text-[15px] text-ink-soft">O que a clínica precisa para emitir a nota.</p>
+  </HowItWorks>
   <div class="grid gap-4 lg:grid-cols-2">
     <div class="flex flex-col gap-4">
       <Card>
@@ -91,7 +97,9 @@ const switchTargets = !settings
               <input id="cnpj" name="cnpj" required placeholder="00.000.000/0000-00" value={settings ? formatCnpj(settings.cnpj) : ""} class={INPUT} />
             </div>
             <div>
-              <label for="municipal_registration" class={LABEL}>Inscrição municipal</label>
+              <HelpTip subject="Inscrição municipal" text={configuracoes.dicas.nfInscricao} id="municipal_registration">
+                <label for="municipal_registration" class={LABEL}>Inscrição municipal</label>
+              </HelpTip>
               <input id="municipal_registration" name="municipal_registration" value={settings?.municipalRegistration ?? ""} class={INPUT} />
             </div>
           </div>
@@ -146,7 +154,9 @@ const switchTargets = !settings
             </div>
           </div>
           <div>
-            <label for="special_regime" class={LABEL}>Regime especial de tributação</label>
+            <HelpTip subject="Regime especial de tributação" text={configuracoes.dicas.nfRegime} id="special_regime">
+              <label for="special_regime" class={LABEL}>Regime especial de tributação</label>
+            </HelpTip>
             <select id="special_regime" name="special_regime" required class={INPUT}>
               {SPECIAL_REGIME_OPTIONS.map((o) => (
                 <option value={o.value} selected={(settings?.specialRegime ?? "none") === o.value}>
@@ -163,7 +173,9 @@ const switchTargets = !settings
               <p class={HINT}>Lista nacional: ex.: 04.01.01 Medicina.</p>
             </div>
             <div>
-              <label for="iss_rate" class={LABEL}>Alíquota do ISS (%)</label>
+              <HelpTip subject="Alíquota do ISS" text={configuracoes.dicas.nfIss} id="iss_rate">
+                <label for="iss_rate" class={LABEL}>Alíquota do ISS (%)</label>
+              </HelpTip>
               <input id="iss_rate" name="iss_rate" required inputmode="decimal" placeholder="2" value={issValue} class={INPUT} />
             </div>
           </div>

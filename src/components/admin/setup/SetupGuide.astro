@@ -49,7 +49,11 @@ const percent = Math.round((done / status.steps.length) * 100);
       >
         <div class="h-full rounded-full bg-brand" style={`width: ${percent}%`} />
       </div>
-      <p class="text-sm text-ink-soft">Siga os passos em ordem. Cada pendência leva direto para onde corrigir.</p>
+      {/* Regra do bot e do link de agendar (catálogo, F6.3; cabeçalho de lib/data/config/setup.ts). */}
+      <p class="text-sm text-ink-soft">
+        Um serviço só aparece no bot e no link de agendar quando tem agenda, local e horário de atendimento. Siga os passos em ordem: cada pendência leva
+        direto para onde corrigir.
+      </p>
       <ol class="divide-y divide-[#e6ecea] border-t border-[#e6ecea]">
         {status.steps.map((step, index) => (
           <li class="flex gap-3 py-2.5">

@@ -213,10 +213,12 @@ import { configuracoes } from "../../../lib/ajuda/configuracoes";
       </div>
 
       <div class={field}>
-        <label class={`${CHOICE} font-semibold`}>
-          <input type="checkbox" name="age_limit_on" checked={settings.consultationAgeLimitYears !== null} class={CHECK} />
-          Idade limite para consulta
-        </label>
+        <HelpTip subject="Idade limite para consulta" text={configuracoes.dicas.clinicaIdade} id="age_limit">
+          <label class={`${CHOICE} font-semibold`}>
+            <input type="checkbox" name="age_limit_on" checked={settings.consultationAgeLimitYears !== null} class={CHECK} />
+            Idade limite para consulta
+          </label>
+        </HelpTip>
         <div class="mt-1.5 flex items-center gap-2">
           <input
             type="number"
