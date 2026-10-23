@@ -69,6 +69,12 @@ async function say(phone: string, input: string | { id: string } | { payload: st
   return sent;
 }
 
+/** "oi" até o menu: com atendimento marcado no número, responde "Não, outro assunto" à pergunta da entrada. */
+async function hello(phone: string): Promise<Sent[]> {
+  const reply = await say(phone, "oi");
+  return reply.at(-1)?.options.some((o) => o.id === "entry_no") ? say(phone, { id: "entry_no" }) : reply;
+}
+
 const titles = (reply: Sent[]) => reply.at(-1)!.options.map((o) => o.title);
 /** "1. seg, 10/03 às 08:00" (linha da lista) → "segunda, 10/03 às 08:00" (texto). */
 const full = (title: string) => title.slice(3).replace(/^seg,/, "segunda,");
@@ -109,7 +115,7 @@ afterAll(async () => f.cleanup());
 
 describe("cancelar pelo menu", () => {
   it("um atendimento só: pede confirmação, \"não\" mantém, \"sim\" cancela", async () => {
-    await say(P2, "oi");
+    await hello(P2);
     await say(P2, "1");
     let reply = await say(P2, { id: "manage_cancel" });
     expect(reply[0].body).toBe("Confirma o cancelamento da consulta de *Paciente Dois* em segunda, 10/03 às 08:00? Responda Sim ou Não.");
@@ -117,7 +123,7 @@ describe("cancelar pelo menu", () => {
     expect(reply[0].body).toBe("Ok, mantivemos sua consulta marcada.");
     expect((await appointment(consultP2)).status).toBe("scheduled");
 
-    await say(P2, "oi");
+    await hello(P2);
     await say(P2, "1");
     await say(P2, { id: "manage_cancel" });
     reply = await say(P2, "sim");
@@ -128,7 +134,7 @@ describe("cancelar pelo menu", () => {
   });
 
   it("nunca mistura consulta e exame; número sem cadastro é avisado", async () => {
-    await say(P3, "oi");
+    await hello(P3);
     await say(P3, "1");
     const reply = await say(P3, { id: "manage_cancel" });
     // Sem recepção no número (sem coexistência): escrever pelo outro número; e o menu inicial de novo (cliente, 11/out/2026).
@@ -138,7 +144,7 @@ describe("cancelar pelo menu", () => {
     expect(reply[1].body).toBe("Como podemos ajudar? Escolha uma opção abaixo (ou digite o número).");
 
     const stranger = "+5584991226499";
-    await say(stranger, "oi");
+    await hello(stranger);
     await say(stranger, "2");
     const strangerReply = await say(stranger, { id: "manage_cancel" });
     expect(strangerReply[0].body).toBe(
@@ -150,7 +156,7 @@ describe("cancelar pelo menu", () => {
 
 describe("remarcar pelo menu", () => {
   it("exame único: confirma que é ele e manda o link de remarcação com o mesmo serviço e agenda", async () => {
-    await say(P3, "oi");
+    await hello(P3);
     await say(P3, "2");
     let reply = await say(P3, { id: "manage_reschedule" });
     expect(reply[0].body).toBe("Encontramos o exame Exame de *Paciente Três* em segunda, 17/03 às 08:00: é esse que você quer remarcar? Responda Sim ou Não.");
@@ -164,7 +170,7 @@ describe("remarcar pelo menu", () => {
 
 describe("botões do lembrete", () => {
   it("Confirmar presença confirma em qualquer ponto da conversa", async () => {
-    await say(P1, "oi");
+    await hello(P1);
     const reply = await say(P1, { payload: reminderButtonPayload("confirm", consultP1) });
     expect(reply[0].body).toBe("Presença confirmada ✓\n\n👤 Paciente: Paciente Um\n📅 segunda, 10/03 às 08:00\n\nObrigado! Qualquer dúvida, é só chamar por aqui.");
     expect((await appointment(consultP1)).patient_confirmed_at).not.toBeNull();
@@ -192,7 +198,7 @@ describe("botões do lembrete", () => {
 
 describe("encaixe ou antecipar", () => {
   it("com horário livre antes: mostra até 3; \"Nenhum desses\" pergunta da lista; já na lista, pergunta se continua ou sai", async () => {
-    await say(P1, "oi");
+    await hello(P1);
     await say(P1, "1");
     let reply = await say(P1, { id: "manage_waitlist" });
     expect(reply[0]).toMatchObject({
@@ -213,7 +219,7 @@ describe("encaixe ou antecipar", () => {
     reply = await say(P1, "não");
     expect(reply[0].body).toBe("Ok, mantivemos o horário de *Paciente Um* (segunda, 10/03 às 08:00).");
 
-    await say(P1, "oi");
+    await hello(P1);
     await say(P1, "1");
     await say(P1, { id: "manage_waitlist" });
     await say(P1, "4");
@@ -221,7 +227,7 @@ describe("encaixe ou antecipar", () => {
     expect(reply[0].body).toBe("Pronto! *Paciente Um* está na lista de espera para antecipar a consulta marcada para segunda, 10/03 às 08:00.");
 
     // Já na lista: os horários livres vêm antes; sem escolha, continua ou sai.
-    await say(P1, "oi");
+    await hello(P1);
     await say(P1, "1");
     reply = await say(P1, { id: "manage_waitlist" });
     expect(reply[0].kind).toBe("list");
@@ -234,7 +240,7 @@ describe("encaixe ou antecipar", () => {
 
   it("escolhe um horário: \"Não\" volta à lista; ocupado no meio procura de novo; \"Sim\" antecipa e tira da fila", async () => {
     await adminClient().from("waitlist_entries").insert({ clinic_id: f.clinicId, appointment_id: consultP1, created_via: "whatsapp_bot" });
-    await say(P1, "oi");
+    await hello(P1);
     await say(P1, "1");
     let reply = await say(P1, { id: "manage_waitlist" });
     const [first] = reply[0].options;
@@ -274,14 +280,14 @@ describe("encaixe ou antecipar", () => {
     await adminClient()
       .from("schedule_blocks")
       .insert({ clinic_id: f.clinicId, agenda_id: f.ids.agendaExams, starts_at: new Date().toISOString(), ends_at: at(MON2, "08:00").toISOString(), reason: "Teste" });
-    await say(P3, "oi");
+    await hello(P3);
     await say(P3, "2");
     const reply = await say(P3, { id: "manage_waitlist" });
     expect(reply[0].body).toBe("Pronto! *Paciente Três* está na lista de espera para antecipar o exame Exame marcado para segunda, 17/03 às 08:00.");
   });
 
   it("sem nada marcado: oferece marcar; o link leva o pedido de entrar na lista", async () => {
-    await say(P2, "oi");
+    await hello(P2);
     await say(P2, "1");
     let reply = await say(P2, { id: "manage_waitlist" });
     expect(titles(reply)).toEqual(["Marcar consulta", "Marcar retorno", "Voltar ao menu"]);
@@ -293,10 +299,10 @@ describe("encaixe ou antecipar", () => {
 describe("recepção e pausa", () => {
   it("\"Falar com a recepção\" só com coexistência; pausa o bot até o eco \"#bot\"", async () => {
     const phone = "+5584991226404";
-    expect(titles(await say(phone, "oi"))).not.toContain("4. Falar com a recepção");
+    expect(titles(await hello(phone))).not.toContain("4. Falar com a recepção");
 
     await adminClient().from("whatsapp_connections").update({ coexistence: true }).eq("clinic_id", f.clinicId);
-    let reply = await say(phone, "oi");
+    let reply = await hello(phone);
     expect(titles(reply)).toContain("4. Falar com a recepção");
     reply = await say(phone, "4");
     expect(reply[0].body).toContain("Vou te transferir para a recepção");
@@ -304,13 +310,13 @@ describe("recepção e pausa", () => {
 
     // A recepção devolve ao bot pelo app.
     await webhook({ message_echoes: [{ id: `wamid.f64.echo.${++seq}`, from: "5584000000000", to: phone.slice(1), type: "text", text: { body: "#bot" } }] });
-    expect(titles(await say(phone, "oi"))).toContain("1. Consultas");
+    expect(titles(await hello(phone))).toContain("1. Consultas");
     await adminClient().from("whatsapp_connections").update({ coexistence: false }).eq("clinic_id", f.clinicId);
   });
 
   it("a recepção responde pelo app: o bot fica em silêncio, mas o Confirmar do lembrete responde", async () => {
     await webhook({ message_echoes: [{ id: `wamid.f64.echo.${++seq}`, from: "5584000000000", to: P1.slice(1), type: "text", text: { body: "Oi, aqui é a recepção" } }] });
-    expect(await say(P1, "oi")).toEqual([]);
+    expect(await hello(P1)).toEqual([]);
     // Antecipado no encaixe: o lembrete da data nova também foi enviado.
     await adminClient().from("appointments").update({ patient_confirmed_at: null, reminder_sent_at: new Date().toISOString() }).eq("id", consultP1);
     const reply = await say(P1, { payload: reminderButtonPayload("confirm", consultP1) });
@@ -343,7 +349,7 @@ describe("não achou neste número (cliente, 11/out/2026)", () => {
       .select("id");
     try {
       await fresh(P1);
-      await say(P1, "oi");
+      await hello(P1);
       await say(P1, "1");
       let reply = await say(P1, { id: "manage_reschedule" });
       expect(reply.at(-1)!.body).toContain("data de nascimento");
@@ -362,7 +368,7 @@ describe("não achou neste número (cliente, 11/out/2026)", () => {
   it("remarcar com um atendimento só e \"não\": aponta o outro número e mostra o menu", async () => {
     // Paciente Três: só o exame no número.
     await fresh(P3);
-    await say(P3, "oi");
+    await hello(P3);
     await say(P3, "2");
     let reply = await say(P3, { id: "manage_reschedule" });
     expect(reply[0].body).toContain("é esse que você quer remarcar?");

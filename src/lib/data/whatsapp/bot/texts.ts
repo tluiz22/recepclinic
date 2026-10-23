@@ -64,6 +64,36 @@ export const price = (cents: number | null | undefined) => (cents == null ? null
 
 export const welcome = (clinicLabel: string) => `Olá! 👋 Aqui é ${clinicLabel}.`;
 export const MENU_BODY = "Como podemos ajudar? Escolha uma opção abaixo (ou digite o número).";
+
+// Entrada com atendimento marcado no número (cliente, 23/out/2026): pergunta
+// antes do menu; os detalhes só depois da data de nascimento.
+export const ENTRY_IDS = { yes: "entry_yes", no: "entry_no" } as const;
+export const ENTRY_ONE = "Como podemos ajudar? Identificamos um agendamento associado a este número. Você deseja tratar desse agendamento?";
+export const ENTRY_MANY = "Como podemos ajudar? Encontramos mais de um agendamento associado a este número. Você deseja consultar ou alterar algum deles?";
+export const ENTRY_ONE_BUTTONS = [button(ENTRY_IDS.yes, "Sim, quero"), button(ENTRY_IDS.no, "Não, outro assunto")];
+export const ENTRY_MANY_BUTTONS = [button(ENTRY_IDS.yes, "Sim, consultar"), button(ENTRY_IDS.no, "Não, outro assunto")];
+export const ENTRY_NOT_UNDERSTOOD = "Não entendi 🙏 Toque em uma das opções abaixo.";
+export const entryAskBirthdate = (w: Words) =>
+  `Para sua segurança, antes de mostrar o agendamento precisamos confirmar a identidade.\n\nQual a data de nascimento ${of(w)}? (formato dd/mm/aaaa)`;
+export const ENTRY_IDENTITY_RETRY = "Não foi possível confirmar a identidade com essa data. Confira e envie de novo (ex.: 15/03/2018).";
+export const entryIdentityFailed = (receptionAvailable: boolean) =>
+  `Não foi possível confirmar a identidade com essa data.${receptionAvailable ? " Se precisar de ajuda, escolha a opção *Falar com a recepção* no menu." : ""}`;
+export const ENTRY_LOOKUP_ERROR = "Não conseguimos consultar os agendamentos agora. Você pode seguir pelas opções do menu.";
+export const ENTRY_CHOOSE = "Qual agendamento você quer consultar ou alterar?";
+export const ENTRY_ACTION_ITEMS = {
+  confirm: "Confirmar presença",
+  reschedule: "Remarcar",
+  cancel: "Cancelar",
+  waitlist: "Encaixe ou antecipar",
+  reception: "Falar com a recepção",
+} as const;
+export const ENTRY_WAITLIST_DESCRIPTION = "Lista de espera para um horário mais cedo";
+/** "A consulta de *Ana* está marcada para segunda, 10/03 às 08:00." */
+export function entryAppointmentDetails(phrase: string, ending: "a" | "o", patientName: string, when: string, confirmed: boolean): string {
+  const presence = confirmed ? "\nPresença confirmada ✓" : "";
+  return `${capital(phrase)} de *${patientName}* está marcad${ending} para ${when}.${presence}\n\nO que você deseja fazer?`;
+}
+
 export const CONSULTATIONS_BODY = "O que você precisa sobre consultas?";
 export const EXAMS_BODY = "O que você precisa sobre exames?";
 export const INFO_BODY = "O que você gostaria de saber?";

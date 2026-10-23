@@ -402,7 +402,9 @@ describe("bot: já tem atendimento marcado (cliente, 11/out/2026)", () => {
     );
     try {
       await adminClient().from("conversation_state").update({ state: "WELCOME", context: {}, human_handoff: false }).eq("clinic_id", f.clinicId).eq("contact_phone", phone);
-      for (const input of ["oi", "2", "1", "1"]) await say(phone, input); // Exames › Marcar exame › Exame
+      await say(phone, "oi");
+      await say(phone, { id: "entry_no" }); // Não, outro assunto
+      for (const input of ["2", "1", "1"]) await say(phone, input); // Exames › Marcar exame › Exame
       let reply = await say(phone, "2"); // Para outra pessoa
       // Com pacientes no número, a lista; senão, a data de nascimento.
       if (reply.at(-1)!.body === "Para qual paciente é o agendamento?") reply = await say(phone, { id: optionId(reply, "Paciente Um") });

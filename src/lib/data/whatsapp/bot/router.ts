@@ -7,6 +7,7 @@ import { toE164, type WaMessage } from "../meta";
 import type { ClinicSender } from "../send";
 import { BOOKING_STATES, handleBookingState } from "./booking";
 import { createBot, say, type Bot, type BotEnv } from "./engine";
+import { ENTRY_STATES, handleEntryState, startConversation } from "./entry";
 import { extractSelection, isBackToMenu } from "./input";
 import { handleInfo, handleMenu, handlePreparationChoice, handleSubmenu, showMenu } from "./menus";
 import { handleManageState, handleOfferTap, handleReminderTap, MANAGE_STATES, offerTapOf, reminderTapOf } from "./manage";
@@ -67,6 +68,10 @@ export async function handleIncomingMessage(env: BotEnv, message: WaMessage): Pr
     return "handled";
   }
 
+  if (ENTRY_STATES.has(convo.state)) {
+    await handleEntryState(b, convo.state, selection);
+    return "handled";
+  }
   if (MANAGE_STATES.has(convo.state)) {
     await handleManageState(b, convo.state, selection);
     return "handled";
@@ -90,8 +95,8 @@ export async function handleIncomingMessage(env: BotEnv, message: WaMessage): Pr
       await handlePreparationChoice(b, selection);
       break;
     default:
-      // WELCOME, ou estado de outra versão do bot: começa do zero.
-      await showMenu(b, { withWelcome: true });
+      // WELCOME, ou estado de outra versão do bot: começa do zero (com atendimento marcado, pergunta antes do menu).
+      await startConversation(b);
   }
   return "handled";
 }

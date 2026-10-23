@@ -2923,6 +2923,50 @@ validado pelo cliente em 23/out:**
 
 ---
 
+## Entrada do bot com atendimento marcado (pedido do cliente em 23/out/2026)
+
+Especificação do cliente ("Ajustar o fluxo inicial do bot de WhatsApp"), implementada em 23/out. Código em
+`src/lib/data/whatsapp/bot/entry.ts` (estados `ENTRY_ASK`, `ENTRY_BIRTHDATE`, `ENTRY_SELECT` e `ENTRY_ACTIONS`, no
+mesmo mecanismo de `conversation_state`); testes em `tests/db/bot-entrada.test.ts`. Sem migração.
+
+- **Quando aparece:** só no começo da conversa (estado `WELCOME`, depois das boas-vindas). O "Voltar ao menu" no
+  meio de um fluxo leva ao menu, sem repetir a pergunta.
+- **Atendimento relevante:** a mesma regra de Cancelar e Remarcar: status `scheduled` ou `confirmed`, depois de agora,
+  de um paciente ligado ao contato do número, só da clínica do número (RLS do cliente do bot). Passado, cancelado,
+  realizado e falta não contam. Um registro por atendimento (sem duplicidade; não há outra fonte, como agenda externa).
+- **Nenhum:** boas-vindas e o menu de sempre, sem pedir a data de nascimento.
+- **Um:** "Identificamos um agendamento associado a este número. Você deseja tratar desse agendamento?", com
+  **Sim, quero** e **Não, outro assunto**.
+- **Vários:** "Encontramos mais de um agendamento associado a este número. Você deseja consultar ou alterar algum
+  deles?", com **Sim, consultar** (o "Sim, consultar agendamentos" passa do limite de 20 letras do botão) e
+  **Não, outro assunto**.
+- **"Não, outro assunto":** o menu de sempre. **"Sim":** pede a data de nascimento do paciente; nada do atendimento
+  (nome, serviço, data) aparece antes.
+- **Data certa:** só os atendimentos dos pacientes com essa data no número (o irmão não aparece). Um: os detalhes e
+  as ações. Vários: lista com dia e hora e o serviço (o nome do paciente só se a lista tiver mais de um), até 9 linhas
+  mais "Voltar ao menu".
+- **Ações do atendimento escolhido:** Confirmar presença (só sem presença confirmada), Remarcar, Cancelar, Encaixe ou
+  antecipar (com o item Lista de espera e fora de série) e Falar com a recepção (só com coexistência, como no menu),
+  mais "Voltar ao menu". Cada ação segue o fluxo de sempre, sem perguntar de novo qual é (o Remarcar não pergunta
+  "é esse?"); cancelar e remarcar contam no funil das Métricas como "pelo menu".
+- **Data errada:** a mesma resposta para data errada e para paciente sem atendimento ("Não foi possível confirmar a
+  identidade com essa data."); pede de novo uma vez e, na segunda, vai para o menu (com coexistência, aponta o
+  "Falar com a recepção"). **4 datas erradas no número em 24h:** a pergunta deixa de aparecer até passar o prazo
+  (contado pelas mensagens `bot_entry_identity_wrong`), contra tentativa e erro.
+- **Lembrete e oferta de vaga:** os toques nos botões continuam valendo em qualquer ponto, inclusive no meio da entrada.
+- **Erro ao ler os atendimentos:** nada é mostrado; o menu de sempre (na data de nascimento, com o aviso "Não
+  conseguimos consultar os agendamentos agora").
+- **Mensagem repetida pela Meta:** não é tratada de novo (índice único do `wa_message_id`, como antes).
+
+**Pendências para o cliente decidir:**
+1. Os caminhos antigos Consultas/Exames › Remarcar, Cancelar e Encaixe continuam mostrando o nome do paciente e a data
+   **sem** a data de nascimento quando há até 3 atendimentos (regra do piloto). Pedir a data também ali?
+2. O menu principal segue com Consultas, Exames, Informações e Falar com a recepção (esta só com coexistência); a
+   especificação cita "Marcar consulta", "Marcar exame" e "Falar com a clínica" direto no menu.
+3. Os textos novos ainda não entram em Configurações › Mensagens (texto próprio da clínica).
+4. Mensagem digitada (sem tocar no botão) depois de um lembrete recomeça pela entrada; só os botões levam direto
+   ao atendimento do lembrete.
+
 ## Depois do 1º piloto (já previsto no banco)
 
 - **Convênios (D10):** telas de planos atendidos e exceções por profissional; plano no cadastro do

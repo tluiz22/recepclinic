@@ -85,6 +85,11 @@ const inGroup = (group: t.Group, category: Category) => (group === "exam" ? cate
 
 /** Atendimentos ativos e futuros dos pacientes do contato, só do grupo (nunca mistura consulta e exame). */
 async function loadUpcoming(b: Bot, group: t.Group): Promise<ManagedAppointment[]> {
+  return (await upcomingOfContact(b)).filter((a) => inGroup(group, a.category));
+}
+
+/** Atendimentos ativos (marcados ou confirmados) e futuros dos pacientes do contato, consultas e exames. */
+export async function upcomingOfContact(b: Bot): Promise<ManagedAppointment[]> {
   if (!b.convo.contactId) return [];
   const rows = unwrap(
     await b.db
@@ -97,11 +102,11 @@ async function loadUpcoming(b: Bot, group: t.Group): Promise<ManagedAppointment[
       .order("scheduled_at"),
     "Atendimentos",
   ) as unknown as Row[];
-  return rows.map(toManaged).filter((a) => inGroup(group, a.category));
+  return rows.map(toManaged);
 }
 
 /** O atendimento, se ainda é do contato, ativo e futuro (revalida a cada passo). */
-async function loadActive(b: Bot, id: string): Promise<ManagedAppointment | null> {
+export async function loadActive(b: Bot, id: string): Promise<ManagedAppointment | null> {
   if (!b.convo.contactId) return null;
   const row = unwrap(
     await b.db.from("appointments").select(COLUMNS).eq("clinic_id", b.clinicId).eq("id", id).eq("patients.contact_id", b.convo.contactId).maybeSingle(),
@@ -264,6 +269,23 @@ async function chosen(b: Bot, ctx: ManageContext, appointment: ManagedAppointmen
   await rescheduleLink(b, ctx, appointment);
 }
 
+/**
+ * Ação escolhida na entrada do bot (atendimento já identificado pela data de
+ * nascimento): segue o fluxo de sempre, sem perguntar de novo qual é.
+ */
+export async function manageIdentified(b: Bot, action: Action | "confirm", appointment: ManagedAppointment): Promise<void> {
+  const group = groupOf(appointment);
+  if (action === "confirm") {
+    await go(b, "WELCOME");
+    return confirmPresence(b, appointment.id);
+  }
+  if (action === "waitlist") return handleWaitlistAppointment(b, appointment);
+  await openFunnel(b, action, { category: group });
+  const ctx: ManageContext = { action, group };
+  if (action === "cancel") return askCancel(b, ctx, appointment);
+  await rescheduleLink(b, ctx, appointment);
+}
+
 // ---------------------------------------------------------------------------
 // Cancelar
 // ---------------------------------------------------------------------------
@@ -314,7 +336,7 @@ async function handleCancelConfirm(b: Bot, selection: Selection): Promise<void> 
   await end(b, "declined");
 }
 
-async function presenceConfirmed(b: Bot, id: string): Promise<boolean> {
+export async function presenceConfirmed(b: Bot, id: string): Promise<boolean> {
   const row = unwrap(await b.db.from("appointments").select("patient_confirmed_at").eq("clinic_id", b.clinicId).eq("id", id).maybeSingle(), "Atendimento");
   return !!row?.patient_confirmed_at;
 }
