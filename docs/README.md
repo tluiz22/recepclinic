@@ -267,7 +267,7 @@
   **Links na legenda do funil (cliente, 23/out):** em Métricas › Agendamento digital, "x barradas pela regra" e "x por
   horário ocupado" sublinhados, com link para os cartões "Barradas pelas regras" e "Erros técnicos"; os destinos das
   Métricas param abaixo da barra de abas fixa (no celular, ela cobria o título). Publicado no staging em 23/out (sem
-  migração); o cliente valida lá.
+  migração) e **validado pelo cliente em 23/out**. Retomar daqui: o cliente traz novos ajustes.
 >   Banco local com os dados fictícios das Métricas (`npm run db:reset` limpa). Em paralelo,
 >   aguardar a Meta (Análise do App até ~29/out).
 >   **App antigo da Meta (cliente, 20/out):** o piloto está desativado e o número do app "Consultório Dra. Ana Karina" é
