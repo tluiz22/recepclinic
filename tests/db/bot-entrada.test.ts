@@ -266,6 +266,22 @@ describe("vários atendimentos", () => {
     await say(P1, "0");
   });
 
+  it("confirmar presença sem lembrete enviado: confirma e não conta como resposta ao lembrete", async () => {
+    await fresh(P1);
+    await say(P1, "oi");
+    await say(P1, "sim");
+    await say(P1, "01/01/2020");
+    await say(P1, { id: `entry_appointment_${consultP1}` });
+    const reply = await say(P1, { id: "entry_confirm" });
+    expect(reply[0].body).toBe("Presença confirmada ✓\n\n👤 Paciente: Paciente Um\n📅 segunda, 10/03 às 08:00\n\nObrigado! Qualquer dúvida, é só chamar por aqui.");
+    const { data } = await adminClient().from("appointments").select("patient_confirmed_at, reminder_sent_at, reminder_response").eq("id", consultP1).single();
+    expect(data).toMatchObject({ reminder_sent_at: null, reminder_response: null });
+    expect(data!.patient_confirmed_at).not.toBeNull();
+    const { data: trail } = await adminClient().from("appointment_events").select("event_type, channel").eq("appointment_id", consultP1).eq("event_type", "presence_confirmed");
+    expect(trail).toEqual([{ event_type: "presence_confirmed", channel: "whatsapp_bot" }]);
+    await adminClient().from("appointments").update({ patient_confirmed_at: null }).eq("id", consultP1);
+  });
+
   it("cancelar pela entrada: confirma e cancela pelo fluxo de sempre", async () => {
     await fresh(P1);
     await say(P1, "oi");

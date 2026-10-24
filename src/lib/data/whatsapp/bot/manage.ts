@@ -1,6 +1,6 @@
 import type { Enums } from "../../../supabase/database.types";
 import { bookingPath } from "../../../publicId";
-import { cancelAppointment, findReturnOrigin, rescheduleAppointment } from "../../agenda/appointments";
+import { cancelAppointment, findReturnOrigin, logTrail, rescheduleAppointment } from "../../agenda/appointments";
 import { BOT_LINK_TTL_MS, createBookingLink } from "../../agenda/links";
 import { getFreeSlotsBefore } from "../../agenda/slots";
 import { DataError, unwrap } from "../../errors";
@@ -277,13 +277,46 @@ export async function manageIdentified(b: Bot, action: Action | "confirm", appoi
   const group = groupOf(appointment);
   if (action === "confirm") {
     await go(b, "WELCOME");
-    return confirmPresence(b, appointment.id);
+    return confirmFromEntry(b, appointment);
   }
   if (action === "waitlist") return handleWaitlistAppointment(b, appointment);
   await openFunnel(b, action, { category: group });
   const ctx: ManageContext = { action, group };
   if (action === "cancel") return askCancel(b, ctx, appointment);
   await rescheduleLink(b, ctx, appointment);
+}
+
+/**
+ * Confirmar presença pela entrada: vale sem lembrete enviado e não conta como
+ * resposta ao lembrete (Métricas); o mesmo texto do botão do lembrete.
+ */
+async function confirmFromEntry(b: Bot, appointment: ManagedAppointment): Promise<void> {
+  const rows = unwrap(
+    await b.db
+      .from("appointments")
+      .update({ patient_confirmed_at: b.now.toISOString(), patient_confirmed_by: null })
+      .eq("clinic_id", b.clinicId)
+      .eq("id", appointment.id)
+      .in("status", ["scheduled", "confirmed"])
+      .gt("scheduled_at", b.now.toISOString())
+      .is("patient_confirmed_at", null)
+      .select("id"),
+    "Atendimento",
+  );
+  const whenLabel = when(b, appointment);
+  if (!rows.length) {
+    // Já confirmada (ou mudou entre a lista e o toque).
+    const current = await loadActive(b, appointment.id);
+    if (!current) return say(b, "bot_appointment_inactive", t.APPOINTMENT_INACTIVE);
+    return say(b, "bot_presence_already_confirmed", t.presenceAlreadyConfirmed(appointment.patientName, whenLabel));
+  }
+  await logTrail(b.db, b.clinicId, appointment.id, "presence_confirmed", "whatsapp_bot", null);
+  const isExam = appointment.category === "exam";
+  const custom = textFor(b, "presence_confirmed", "", { paciente: appointment.patientName, data: whenLabel });
+  const body = custom
+    ? `${custom}${isExam ? "\n\nLembre-se de seguir as orientações de preparo do exame que enviamos anteriormente." : ""}`
+    : t.presenceConfirmed(appointment.patientName, whenLabel, isExam);
+  await say(b, "bot_presence_confirmed", body);
 }
 
 // ---------------------------------------------------------------------------

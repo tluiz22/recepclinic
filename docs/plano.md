@@ -2962,7 +2962,10 @@ mesmo mecanismo de `conversation_state`); testes em `tests/db/bot-entrada.test.t
 131000, genérico e passageiro) e o toque seguinte, na linha "2." da lista anterior, foi lido como a 2ª opção do passo
 atual (Remarcar), mandando o link de remarcação. Corrigido em todo o bot: (1) lista ou botões recusados pela Meta vão
 de novo em texto, com as opções numeradas e "Responda com o número da opção." (tipo `…_text`); (2) toque numa lista de
-outro passo não vale pelo número do título: "Não entendi" e as opções do passo atual.
+outro passo não vale pelo número do título: "Não entendi" e as opções do passo atual. (3) "Confirmar presença" da
+entrada respondia "Esse agendamento não está mais ativo." porque usava o registro do botão do lembrete, que só vale
+com o lembrete enviado: agora confirma direto (trilha com o canal do bot), sem marcar resposta ao lembrete (não entra
+em "Faltas pela resposta ao lembrete").
 
 **Pendências para o cliente decidir:**
 1. Os caminhos antigos Consultas/Exames › Remarcar, Cancelar e Encaixe continuam mostrando o nome do paciente e a data
