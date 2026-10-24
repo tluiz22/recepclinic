@@ -133,9 +133,7 @@ type Candidate = { id: string; patientName: string; birthdate: string; scheduled
 export type ManageContext = {
   action: Action;
   group: t.Group;
-  /** Datas de nascimento sem atendimento já enviadas (pede de novo uma vez; cliente, 11/out/2026). */
-  birthdateTries?: number;
-  awaiting?: "appointment_choice" | "birthdate_search" | "confirm_appointment" | "address_current" | "address_input" | "address_new" | "book_choice";
+  awaiting?: "appointment_choice" | "birthdate_search" | "identity_choice" | "address_current" | "address_input" | "address_new" | "book_choice";
   candidates?: Candidate[];
   pendingId?: string;
   pendingAddress?: string;
@@ -191,48 +189,50 @@ export async function startManage(b: Bot, action: Action, group: t.Group): Promi
     await end(b, "blocked", { reason: "no_appointments" });
     return showMenu(b);
   }
-  if (appointments.length === 1) return chosen(b, ctx, appointments[0], { single: true });
-  if (appointments.length > 3) {
-    await say(b, "bot_ask_birthdate", t.askAppointmentBirthdate(b.words));
-    return go(b, SELECT_STATE[action], { ...ctx, awaiting: "birthdate_search", candidates: appointments.map(toCandidate) });
-  }
-  const candidates = appointments.map(toCandidate);
-  await sendChoice(b, ctx, candidates);
-  await go(b, SELECT_STATE[action], { ...ctx, awaiting: "appointment_choice", candidates });
+  // Data de nascimento antes de qualquer detalhe, com um ou mais atendimentos, como na entrada (cliente, 24/out/2026).
+  await say(b, "bot_ask_birthdate", t.entryAskBirthdate(b.words));
+  await go(b, SELECT_STATE[action], { ...ctx, awaiting: "birthdate_search", candidates: appointments.map(toCandidate) });
 }
+
+/** Data de nascimento sem atendimento (entrada e menu): recepção (com coexistência), outra data ou o menu. */
+export async function sendIdentityNotFound(b: Bot): Promise<void> {
+  await sendButtons(b, "bot_identity_not_found", t.identityNotFound(b.receptionAvailable), t.identityNotFoundButtons(b.receptionAvailable));
+}
+
+export const identityChoiceOf = (b: Bot, selection: Selection): t.IdentityChoice | null =>
+  pick(selection, t.identityChoices(b.receptionAvailable), (k) => t.IDENTITY_IDS[k]);
 
 async function handleSelect(b: Bot, selection: Selection): Promise<void> {
   const ctx = ctxOf(b);
   if (ctx.awaiting === "book_choice") return handleBookChoice(b, selection);
   const candidates = ctx.candidates ?? [];
 
-  if (ctx.awaiting === "confirm_appointment") {
-    const answer = yesNo(selection);
-    if (answer === true && ctx.pendingId) return proceed(b, ctx, ctx.pendingId);
-    if (answer === false) {
-      await say(b, "bot_reschedule_not_identified", t.onlyThisOne(ctx.group, b.receptionAvailable));
-      await end(b, "blocked", { reason: "appointment_not_identified" });
-      return showMenu(b);
+  if (ctx.awaiting === "identity_choice") {
+    // Uma data digitada vale como nova tentativa.
+    const choice = parseBirthdate(selection.text, b.clinic.today) ? "date" : identityChoiceOf(b, selection);
+    if (choice === "retry") {
+      await say(b, "bot_ask_birthdate", t.askBirthdate(b.words));
+      return go(b, SELECT_STATE[ctx.action], { ...ctx, awaiting: "birthdate_search" });
     }
-    await say(b, "bot_not_understood", t.NOT_UNDERSTOOD_YES_NO);
-    const pending = ctx.pendingId ? await loadActive(b, ctx.pendingId) : null;
-    if (pending) await say(b, "bot_reschedule_confirm", t.confirmReschedule(words(pending).phrase, pending.patientName, when(b, pending)));
-    return;
+    if (choice === "reception" || choice === "menu") {
+      if (ctx.action !== "waitlist") await end(b, "blocked", { reason: "no_match" });
+      else await go(b, "WELCOME");
+      return choice === "reception" ? handoff(b) : showMenu(b);
+    }
+    if (!choice) {
+      await say(b, "bot_not_understood", textFor(b, "not_understood", t.notUnderstood()));
+      return sendIdentityNotFound(b);
+    }
   }
 
-  if (ctx.awaiting === "birthdate_search") {
+  if (ctx.awaiting === "birthdate_search" || ctx.awaiting === "identity_choice") {
     const birthdate = parseBirthdate(selection.text, b.clinic.today);
     if (!birthdate) return say(b, "bot_invalid_birthdate", t.INVALID_BIRTHDATE);
     const matches = candidates.filter((c) => c.birthdate === birthdate);
     if (!matches.length) {
-      const tries = (ctx.birthdateTries ?? 0) + 1;
-      if (tries < 2) {
-        await say(b, "bot_no_matching_appointment_retry", t.noMatchingAppointmentRetry(ctx.group));
-        return go(b, SELECT_STATE[ctx.action], { ...ctx, birthdateTries: tries });
-      }
-      await say(b, "bot_no_matching_appointment", t.noMatchingAppointment(ctx.group, b.receptionAvailable));
-      if (ctx.action !== "waitlist") await end(b, "blocked", { reason: "no_match" });
-      return showMenu(b);
+      // Sem bloqueio por data errada (cliente, 24/out/2026).
+      await sendIdentityNotFound(b);
+      return go(b, SELECT_STATE[ctx.action], { ...ctx, awaiting: "identity_choice" });
     }
     if (matches.length === 1) return proceed(b, ctx, matches[0].id);
     await sendChoice(b, ctx, matches);
@@ -257,15 +257,9 @@ async function proceed(b: Bot, ctx: ManageContext, id: string): Promise<void> {
   await chosen(b, ctx, appointment);
 }
 
-async function chosen(b: Bot, ctx: ManageContext, appointment: ManagedAppointment, { single = false } = {}): Promise<void> {
+async function chosen(b: Bot, ctx: ManageContext, appointment: ManagedAppointment): Promise<void> {
   if (ctx.action === "cancel") return askCancel(b, ctx, appointment);
   if (ctx.action === "waitlist") return handleWaitlistAppointment(b, appointment);
-  // Remarcar com um atendimento só: confirma que é ele (piloto).
-  if (single) {
-    const { phrase } = words(appointment);
-    await say(b, "bot_reschedule_confirm", t.confirmReschedule(phrase, appointment.patientName, when(b, appointment)));
-    return go(b, "RESCHEDULE_SELECT", { ...ctx, awaiting: "confirm_appointment", candidates: [toCandidate(appointment)], pendingId: appointment.id });
-  }
   await rescheduleLink(b, ctx, appointment);
 }
 

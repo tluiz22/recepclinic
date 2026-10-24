@@ -109,8 +109,7 @@ const MENU = "Como podemos ajudar? Escolha uma opção abaixo (ou digite o núme
 const ASK_ONE = "Como podemos ajudar? Identificamos um agendamento associado a este número. Você deseja tratar desse agendamento?";
 const ASK_MANY = "Como podemos ajudar? Encontramos mais de um agendamento associado a este número. Você deseja consultar ou alterar algum deles?";
 const ASK_BIRTHDATE = "Para sua segurança, antes de mostrar o agendamento precisamos confirmar a identidade.\n\nQual a data de nascimento do paciente? (formato dd/mm/aaaa)";
-const RETRY = "Não foi possível confirmar a identidade com essa data. Confira e envie de novo (ex.: 15/03/2018).";
-const FAILED = "Não foi possível confirmar a identidade com essa data.";
+const NOT_FOUND = "Não encontramos agendamentos para essa data de nascimento.";
 
 const P1 = "+5584991226501"; // Paciente Um e Paciente Quatro (irmão): vários atendimentos
 const P2 = "+5584991226502"; // Paciente Dois: um atendimento
@@ -208,28 +207,54 @@ describe("um atendimento", () => {
     await say(P2, "menu");
   });
 
-  it("6. data errada: não revela nada; pede de novo uma vez e, na segunda, o menu", async () => {
+  it("6. data errada: não revela nada; sem bloqueio, \"Tentar outra data\" pede de novo e \"Voltar ao menu\" leva ao menu", async () => {
     await fresh(P2);
     await say(P2, "oi");
     await say(P2, { id: "entry_yes" });
     let reply = await say(P2, "02/02/2002");
-    expect(reply.map((m) => m.body)).toEqual([RETRY]);
+    expect(reply).toEqual([expect.objectContaining({ kind: "buttons", body: NOT_FOUND })]);
+    // Sem coexistência: sem a recepção.
+    expect(titles(reply)).toEqual(["Tentar outra data", "Voltar ao menu"]);
+    reply = await say(P2, { id: "identity_retry" });
+    expect(reply.map((m) => m.body)).toEqual(["Qual a data de nascimento do paciente? (formato dd/mm/aaaa)"]);
     reply = await say(P2, "03/03/2003");
-    expect(reply.map((m) => m.body)).toEqual([FAILED, MENU]);
+    expect(reply.map((m) => m.body)).toEqual([NOT_FOUND]);
     expect(bodies(reply)).not.toMatch(/Paciente|10\/03|Consulta de/);
+    reply = await say(P2, { id: "identity_menu" });
+    expect(reply.map((m) => m.body)).toEqual([MENU]);
     expect((await conversation(P2)).state).toBe("MENU");
   });
 
-  it("6b. 4 datas erradas no número em 24h: a pergunta deixa de aparecer (contra tentativa e erro)", async () => {
-    for (let round = 0; round < 2; round++) {
+  it("6b. várias datas erradas no número: a pergunta continua; com coexistência, a recepção só se a pessoa escolher", async () => {
+    for (let round = 0; round < 3; round++) {
       await fresh(P5);
       expect((await say(P5, "oi")).at(-1)!.body).toBe(ASK_ONE);
       await say(P5, { id: "entry_yes" });
       await say(P5, "02/02/2002");
-      await say(P5, "03/03/2003");
+      expect((await say(P5, "2")).map((m) => m.body)).toEqual([MENU]);
     }
-    await fresh(P5);
-    expect((await say(P5, "oi")).map((m) => m.body)).toEqual([WELCOME, MENU]);
+    await adminClient().from("whatsapp_connections").update({ coexistence: true }).eq("clinic_id", f.clinicId);
+    try {
+      await fresh(P5);
+      expect((await say(P5, "oi")).at(-1)!.body).toBe(ASK_ONE);
+      await say(P5, { id: "entry_yes" });
+      let reply = await say(P5, "02/02/2002");
+      expect(reply[0]).toMatchObject({ kind: "buttons", body: `${NOT_FOUND} Deseja falar com a recepção?` });
+      expect(titles(reply)).toEqual(["Falar com a recepção", "Tentar outra data", "Voltar ao menu"]);
+      // A data digitada no lugar do botão vale como nova tentativa.
+      reply = await say(P5, "07/07/2015");
+      expect(reply[0].body).toBe("A consulta de *Paciente Cinco* está marcada para segunda, 10/03 às 10:00.\n\nO que você deseja fazer?");
+      await fresh(P5);
+      await say(P5, "oi");
+      await say(P5, { id: "entry_yes" });
+      await say(P5, "02/02/2002");
+      reply = await say(P5, { id: "identity_reception" });
+      expect(reply[0].body).toContain("Vou te transferir para a recepção");
+      expect((await conversation(P5)).human_handoff).toBe(true);
+    } finally {
+      await fresh(P5);
+      await adminClient().from("whatsapp_connections").update({ coexistence: false }).eq("clinic_id", f.clinicId);
+    }
   });
 });
 

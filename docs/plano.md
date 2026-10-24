@@ -2974,14 +2974,24 @@ da oferta de vaga continuam valendo sempre; o número digitado segue valendo pel
 
 **Validada pelo cliente no staging em 24/out** (entrada, opções em texto, confirmar presença e toque antigo).
 
-**Pendências para o cliente decidir:**
-1. Os caminhos antigos Consultas/Exames › Remarcar, Cancelar e Encaixe continuam mostrando o nome do paciente e a data
-   **sem** a data de nascimento quando há até 3 atendimentos (regra do piloto). Pedir a data também ali?
-2. O menu principal segue com Consultas, Exames, Informações e Falar com a recepção (esta só com coexistência); a
-   especificação cita "Marcar consulta", "Marcar exame" e "Falar com a clínica" direto no menu.
-3. Os textos novos ainda não entram em Configurações › Mensagens (texto próprio da clínica).
-4. Mensagem digitada (sem tocar no botão) depois de um lembrete recomeça pela entrada; só os botões levam direto
-   ao atendimento do lembrete.
+**Pendências decididas pelo cliente (24/out):**
+1. **Data de nascimento também nos caminhos antigos:** Consultas/Exames › Remarcar, Cancelar e Encaixe pedem a data
+   de nascimento antes de qualquer detalhe, com 1, 2, 3 ou mais atendimentos (antes, só acima de 3; regra do piloto),
+   com o mesmo texto da entrada. Com a data certa e um atendimento só, segue direto (Cancelar confirma; Remarcar manda
+   o link, sem o "é esse?", que saiu); com vários, a lista.
+2. **Menu principal fica como está** (Consultas, Exames, Informações e Falar com a recepção, com esse nome).
+3. **Textos da entrada ficam fixos** (fora de Configurações › Mensagens).
+4. **Mensagem digitada depois de um lembrete continua pela entrada** (só os botões levam direto).
+
+**Data de nascimento sem atendimento (cliente, 24/out), na entrada e nos caminhos antigos:** sem bloqueio por data
+errada (saiu o limite de 4 em 24h da entrada e o de 2 tentativas por conversa). A resposta é "Não encontramos
+agendamentos para essa data de nascimento. Deseja falar com a recepção?", com os botões **Falar com a recepção**,
+**Tentar outra data** e **Voltar ao menu**; sem coexistência, só "Não encontramos agendamentos para essa data de
+nascimento." com **Tentar outra data** e **Voltar ao menu**. A conversa só vai para a recepção se a pessoa escolher.
+Uma data digitada no lugar do botão vale como nova tentativa. No funil das Métricas, Remarcar e Cancelar que terminam
+em "Falar com a recepção" ou "Voltar ao menu" depois da data errada contam como "Data de nascimento não conferiu".
+Código em `manage.ts` (`sendIdentityNotFound`, `identityChoiceOf`) e `entry.ts`; testes em
+`tests/db/bot-gerenciar.test.ts` e `tests/db/bot-entrada.test.ts`. Sem migração.
 
 ## Depois do 1º piloto (já previsto no banco)
 

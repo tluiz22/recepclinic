@@ -5,6 +5,13 @@ import * as t from "./texts";
 const consultorio = { noun: "consultório", article: "o" as const };
 
 describe("textos do bot: não achou neste número", () => {
+  it("data de nascimento sem atendimento: pergunta da recepção só com coexistência (cliente, 24/out/2026)", () => {
+    expect(t.identityNotFound(true)).toBe("Não encontramos agendamentos para essa data de nascimento. Deseja falar com a recepção?");
+    expect(t.identityNotFound(false)).toBe("Não encontramos agendamentos para essa data de nascimento.");
+    expect(t.identityNotFoundButtons(true).map((b) => b.title)).toEqual(["Falar com a recepção", "Tentar outra data", "Voltar ao menu"]);
+    expect(t.identityNotFoundButtons(false).map((b) => b.title)).toEqual(["Tentar outra data", "Voltar ao menu"]);
+  });
+
   it("com recepção no número, aponta o \"Falar com a recepção\"; sem, escrever pelo outro número", () => {
     expect(t.noRegistration(true)).toBe(
       "Não encontramos agendamento marcado para esse número de telefone. Se o agendamento foi feito por outro número, escolha a opção *Falar com a recepção* no menu inicial.",
@@ -14,9 +21,6 @@ describe("textos do bot: não achou neste número", () => {
     );
     expect(t.noAppointments("cancelar", "exam", true)).toBe(
       "Não encontramos nenhum exame futuro para cancelar neste número. Se o agendamento foi feito por outro número, escolha a opção *Falar com a recepção* no menu inicial.",
-    );
-    expect(t.onlyThisOne("consultation", true)).toBe(
-      "Neste número só encontramos essa consulta. Se o agendamento que você quer remarcar foi feito por outro número, escolha a opção *Falar com a recepção* no menu inicial.",
     );
   });
 

@@ -298,8 +298,12 @@
   entrada dava "não está mais ativo" sem lembrete enviado: corrigido e publicado no staging em 23/out. Regra nova do
   cliente (23/out): toque numa lista ou botões de uma mensagem anterior responde "Não entendi" e o menu inicial, em
   todo o bot; publicado no staging em 23/out (commit `26e5107`). **Entrada do bot validada pelo cliente em 24/out.**
-  **Retomar daqui (24/out):** ficam para o cliente decidir as 4 pendências da entrada do bot (seção do [plano](plano.md)),
-  a validação da ajuda contextual (Alta, Média e Baixa) e a Meta (Análise do App até ~29/out).
+  **4 pendências da entrada do bot decididas pelo cliente em 24/out** (seção do [plano](plano.md)): data de nascimento
+  sempre também em Consultas/Exames › Remarcar, Cancelar e Encaixe; menu, textos e lembrete ficam como estão. E, na data
+  errada (entrada e menu), sem bloqueio: "Não encontramos agendamentos para essa data de nascimento. Deseja falar com a
+  recepção?" com Falar com a recepção, Tentar outra data e Voltar ao menu (sem coexistência, sem a recepção).
+  Implementado e testado no local em 24/out (sem migração). **Retomar daqui:** publicar no staging e o cliente valida
+  pelo WhatsApp de testes; seguem a validação da ajuda contextual (Alta, Média e Baixa) e a Meta (Análise do App até ~29/out).
 >   Banco local com os dados fictícios das Métricas (`npm run db:reset` limpa). Em paralelo,
 >   aguardar a Meta (Análise do App até ~29/out).
 >   **App antigo da Meta (cliente, 20/out):** o piloto está desativado e o número do app "Consultório Dra. Ana Karina" é

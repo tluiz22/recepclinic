@@ -75,9 +75,17 @@ export const ENTRY_MANY_BUTTONS = [button(ENTRY_IDS.yes, "Sim, consultar"), butt
 export const ENTRY_NOT_UNDERSTOOD = "Não entendi 🙏 Toque em uma das opções abaixo.";
 export const entryAskBirthdate = (w: Words) =>
   `Para sua segurança, antes de mostrar o agendamento precisamos confirmar a identidade.\n\nQual a data de nascimento ${of(w)}? (formato dd/mm/aaaa)`;
-export const ENTRY_IDENTITY_RETRY = "Não foi possível confirmar a identidade com essa data. Confira e envie de novo (ex.: 15/03/2018).";
-export const entryIdentityFailed = (receptionAvailable: boolean) =>
-  `Não foi possível confirmar a identidade com essa data.${receptionAvailable ? " Se precisar de ajuda, escolha a opção *Falar com a recepção* no menu." : ""}`;
+
+// Data de nascimento sem atendimento, na entrada e em Cancelar, Remarcar e
+// Encaixe (cliente, 24/out/2026): sem bloqueio por data errada; a pessoa
+// escolhe a recepção (só com coexistência), outra data ou o menu.
+export const IDENTITY_IDS = { reception: "identity_reception", retry: "identity_retry", menu: "identity_menu" } as const;
+export type IdentityChoice = keyof typeof IDENTITY_IDS;
+export const identityChoices = (receptionAvailable: boolean): IdentityChoice[] => [...(receptionAvailable ? (["reception"] as const) : []), "retry", "menu"];
+export const identityNotFound = (receptionAvailable: boolean) =>
+  `Não encontramos agendamentos para essa data de nascimento.${receptionAvailable ? " Deseja falar com a recepção?" : ""}`;
+const IDENTITY_TITLES: Record<IdentityChoice, string> = { reception: "Falar com a recepção", retry: "Tentar outra data", menu: "Voltar ao menu" };
+export const identityNotFoundButtons = (receptionAvailable: boolean) => identityChoices(receptionAvailable).map((k) => button(IDENTITY_IDS[k], IDENTITY_TITLES[k]));
 export const ENTRY_LOOKUP_ERROR = "Não conseguimos consultar os agendamentos agora. Você pode seguir pelas opções do menu.";
 export const ENTRY_CHOOSE = "Qual agendamento você quer consultar ou alterar?";
 export const ENTRY_ACTION_ITEMS = {
@@ -263,28 +271,6 @@ export function noAppointments(action: "cancelar" | "remarcar", group: Group, re
   return `Não encontramos ${w.none} ${w.noun} ${w.future} para ${action} neste número. ${otherNumber(receptionAvailable)}`;
 }
 
-/** Data de nascimento sem atendimento: pede de novo (cliente, 11/out/2026). */
-export function noMatchingAppointmentRetry(group: Group): string {
-  const w = groupWords(group);
-  return `Não encontramos ${w.noun} ${w.future} para essa data de nascimento. Confira a data e envie de novo (ex.: 15/03/2018).`;
-}
-
-/** Na 2ª tentativa sem acerto. */
-export function noMatchingAppointment(group: Group, receptionAvailable: boolean): string {
-  const w = groupWords(group);
-  return `Não encontramos ${w.noun} ${w.future} para essa data de nascimento. ${otherNumber(receptionAvailable)}`;
-}
-
-/** "Não" em "é essa que você quer remarcar?" com um atendimento só no número. */
-export const onlyThisOne = (group: Group, receptionAvailable: boolean) => {
-  const w = groupWords(group);
-  return `Neste número só encontramos ${w.noun === "exame" ? "esse exame" : "essa consulta"}. Se o agendamento que você quer remarcar foi feito por outro número, ${
-    receptionAvailable ? "escolha a opção *Falar com a recepção* no menu inicial." : "escreva por aquele número."
-  }`;
-};
-
-export const askAppointmentBirthdate = (w: Words) => askBirthdate(w);
-
 export const confirmCancel = (phrase: string, patientName: string, when: string) =>
   `Confirma o cancelamento ${phrase.replace(/^a /, "da ").replace(/^o /, "do ")} de *${patientName}* em ${when}? Responda Sim ou Não.`;
 
@@ -297,8 +283,6 @@ export const keptAskPresence = (phrase: string, end: "a" | "o") => `${cancelKept
 export const PRESENCE_NOT_UNDERSTOOD = "Não entendi. Deseja confirmar sua presença? Toque em Sim ou Não.";
 export const KEPT_PRESENCE_DECLINED = 'Tudo bem! Se quiser confirmar depois, é só tocar em "Confirmar presença" no lembrete.';
 
-export const confirmReschedule = (phrase: string, patientName: string, when: string) =>
-  `Encontramos ${phrase} de *${patientName}* em ${when}: é ${phrase.startsWith("a ") ? "essa" : "esse"} que você quer remarcar? Responda Sim ou Não.`;
 export const rescheduleLink = (phrase: string, patientName: string, url: string) =>
   `Prontinho! Escolha o novo dia e horário para ${phrase} de ${patientName} neste link:\n${url}\n\nO link vale por 30 minutos.`;
 export const returnDeadlinePassed = (patientName: string, lastDate: string, receptionAvailable: boolean, d: Designation) =>
