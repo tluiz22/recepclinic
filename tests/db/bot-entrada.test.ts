@@ -23,7 +23,7 @@ const env = () => ({
 
 const NUMBER = "entrada-numero";
 const NUMBER_B = "entrada-numero-b";
-type Sent = { to: string; kind: "text" | "list" | "buttons"; body: string; options: { id: string; title: string }[] };
+type Sent = { to: string; kind: "text" | "list" | "buttons"; body: string; options: { id: string; title: string }[]; messageId?: string };
 
 let f: AgendaFixture;
 let g: AgendaFixture;
@@ -42,8 +42,8 @@ const sender: ClinicSender = {
   text: async (to, body) => (sent.push({ to, kind: "text", body, options: [] }), { sent: true, messageId: `wamid.ent.out.${++seq}`, body }),
   list: async (to: string, body: string, _b: string, sections: ListSection[]) =>
     failLists ? { sent: false, reason: "(#131000) Something went wrong" } : (
-    sent.push({ to, kind: "list", body, options: sections.flatMap((s) => s.rows.map((r) => ({ id: r.id, title: r.title }))) }),
-    { sent: true, messageId: `wamid.ent.out.${++seq}` }
+    sent.push({ to, kind: "list", body, options: sections.flatMap((s) => s.rows.map((r) => ({ id: r.id, title: r.title }))), messageId: `wamid.ent.out.${++seq}` }),
+    { sent: true, messageId: `wamid.ent.out.${seq}` }
   ),
   buttons: async (to: string, body: string, buttons: ReplyButton[]) => (
     sent.push({ to, kind: "buttons", body, options: buttons }),
@@ -406,21 +406,45 @@ describe("robustez", () => {
     }
   });
 
-  it("toque numa lista antiga: não vira a opção do passo atual", async () => {
+  /** Toque numa linha de uma lista já enviada, com a referência da mensagem (como a Meta manda). */
+  const tapOld = async (phone: string, list: Sent, id: string) => {
+    sent = [];
+    const title = list.options.find((o) => o.id === id)!.title;
+    const summary = await send(NUMBER, { id: `wamid.ent.in.${++seq}`, from: phone.slice(1), type: "interactive", context: { id: list.messageId }, interactive: { list_reply: { id, title } } });
+    expect(summary.errors).toBe(0);
+    return sent;
+  };
+
+  it("toque numa lista antiga no meio do fluxo: não entendeu e o menu inicial, sem agir", async () => {
+    await fresh(P1);
+    await say(P1, "oi");
+    await say(P1, "sim");
+    const choice = (await say(P1, "01/01/2020"))[0];
+    await tapOld(P1, choice, `entry_appointment_${consultP1}`);
+    expect((await conversation(P1)).state).toBe("ENTRY_ACTIONS");
+    // A linha "2." da lista anterior (o outro atendimento), tocada nas ações.
+    const reply = await tapOld(P1, choice, `entry_appointment_${examP1}`);
+    expect(reply[0].body).toMatch(/^Não entendi sua resposta 🙏/);
+    expect(reply[1].body).toBe(MENU);
+    expect((await conversation(P1)).state).toBe("MENU");
+    const { count } = await adminClient().from("booking_links").select("id", { count: "exact", head: true }).eq("contact_phone", P1).eq("appointment_id", consultP1);
+    expect(count).toBe(0);
+  });
+
+  it("toque nas ações depois de já ter escolhido uma (conversa encerrada): não entendeu e o menu inicial", async () => {
     await fresh(P1);
     await say(P1, "oi");
     await say(P1, "sim");
     await say(P1, "01/01/2020");
-    await say(P1, { id: `entry_appointment_${consultP1}` });
-    // A linha "2." da lista anterior (o outro atendimento), tocada nas ações.
-    sent = [];
-    await send(NUMBER, { id: `wamid.ent.in.${++seq}`, from: P1.slice(1), type: "interactive", interactive: { list_reply: { id: `entry_appointment_${examP1}`, title: "2. seg, 17/03 às 08:00" } } });
-    expect(sent[0].body).toMatch(/^Não entendi sua resposta 🙏/);
-    expect(sent[1].body).toContain("O que você deseja fazer?");
-    expect((await conversation(P1)).state).toBe("ENTRY_ACTIONS");
+    const actions = (await say(P1, { id: `entry_appointment_${consultP1}` }))[0];
+    let reply = await tapOld(P1, actions, "entry_confirm");
+    expect(reply[0].body).toContain("Presença confirmada ✓");
+    reply = await tapOld(P1, actions, "entry_reschedule");
+    expect(reply.map((m) => m.body)).toEqual([expect.stringMatching(/^Não entendi sua resposta 🙏/), MENU]);
+    expect(titles(reply)).toContain("1. Consultas");
     const { count } = await adminClient().from("booking_links").select("id", { count: "exact", head: true }).eq("contact_phone", P1).eq("appointment_id", consultP1);
     expect(count).toBe(0);
-    await say(P1, "menu");
+    await adminClient().from("appointments").update({ patient_confirmed_at: null }).eq("id", consultP1);
   });
 
   it("16. isolamento entre clínicas: o mesmo telefone na outra clínica não vê estes atendimentos", async () => {

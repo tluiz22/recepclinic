@@ -2965,7 +2965,12 @@ de novo em texto, com as opções numeradas e "Responda com o número da opção
 outro passo não vale pelo número do título: "Não entendi" e as opções do passo atual. (3) "Confirmar presença" da
 entrada respondia "Esse agendamento não está mais ativo." porque usava o registro do botão do lembrete, que só vale
 com o lembrete enviado: agora confirma direto (trilha com o canal do bot), sem marcar resposta ao lembrete (não entra
-em "Faltas pela resposta ao lembrete").
+em "Faltas pela resposta ao lembrete"). (4) **Toque numa mensagem anterior (regra do cliente, 23/out, em todo o
+bot):** depois de escolher uma opção, tocar em outra opção de uma lista ou botões já respondidos (ou de um passo que já
+passou) responde "Não entendi" e mostra o **menu inicial**, sem agir. A conversa guarda no contexto (`_prompt`) o id da
+Meta da última lista ou botões enviados; o toque traz o id da mensagem de origem (`context.id`) e só vale se for o
+mesmo. Passo novo sem opções (ex.: fim do fluxo, data de nascimento) não aceita toque nenhum. Os botões do lembrete e
+da oferta de vaga continuam valendo sempre; o número digitado segue valendo pelas regras de cada passo.
 
 **Pendências para o cliente decidir:**
 1. Os caminhos antigos Consultas/Exames › Remarcar, Cancelar e Encaixe continuam mostrando o nome do paciente e a data

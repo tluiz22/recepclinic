@@ -50,7 +50,17 @@ export type Bot = BotEnv & {
   custom: Map<BotMessageKey, string>;
   /** Catálogo, lido na primeira vez que o fluxo precisa. */
   catalog(): Promise<BotCatalog>;
+  /** Lista ou botões enviados nesta mensagem (id da Meta; null = foram em texto). */
+  promptId?: string | null;
 };
+
+/**
+ * Última lista ou botões da conversa (id da Meta), no contexto: toque numa
+ * mensagem anterior não vale (cliente, 23/out/2026).
+ */
+export const PROMPT_KEY = "_prompt";
+
+export const currentPrompt = (convo: Conversation): string | null => ((convo.context ?? {}) as Record<string, unknown>)[PROMPT_KEY] as string | null ?? null;
 
 export async function loadBotClinic(env: BotEnv): Promise<BotClinic> {
   const [clinic, settings] = await Promise.all([
@@ -123,13 +133,23 @@ export async function say(b: Bot, kind: string, body: string): Promise<void> {
 export async function sendList(b: Bot, kind: string, body: string, sections: ListSection[]): Promise<void> {
   const outcome = await b.sender.list(b.phone, body, LIST_BUTTON, sections);
   await record(b, kind, outcome, body);
+  await rememberPrompt(b, outcome.sent ? outcome.messageId : null);
   if (!outcome.sent) await textFallback(b, kind, outcome, body, sections.flatMap((section) => section.rows));
 }
 
 export async function sendButtons(b: Bot, kind: string, body: string, buttons: ReplyButton[]): Promise<void> {
   const outcome = await b.sender.buttons(b.phone, body, buttons);
   await record(b, kind, outcome, body);
+  await rememberPrompt(b, outcome.sent ? outcome.messageId : null);
   if (!outcome.sent) await textFallback(b, kind, outcome, body, buttons.map((button, index) => ({ ...button, title: `${index + 1}. ${button.title}` })));
+}
+
+/** Guarda a lista ou os botões que valem agora (o passo pode continuar o mesmo, sem `go`). */
+async function rememberPrompt(b: Bot, id: string | null): Promise<void> {
+  b.promptId = id;
+  const context = { ...((b.convo.context ?? {}) as Record<string, unknown>), [PROMPT_KEY]: id };
+  unwrap(await b.db.from("conversation_state").update({ context: context as never }).eq("id", b.convo.id), "Conversa do WhatsApp");
+  b.convo = { ...b.convo, context };
 }
 
 /**
@@ -151,7 +171,9 @@ function tick(b: Bot): Date {
 
 /** Troca o estado (e o contexto) da conversa; dentro de uma tentativa, vira passo do funil. */
 export async function go(b: Bot, state: string, context: object = {}): Promise<void> {
-  b.convo = await setConversationState(b.db, b.clinicId, b.phone, state, { context: context as Record<string, unknown> }, tick(b));
+  // Opções enviadas nesta mensagem; senão, as de antes só no mesmo passo (passo novo sem opções: nenhum toque vale).
+  const prompt = b.promptId !== undefined ? b.promptId : state === b.convo.state ? currentPrompt(b.convo) : null;
+  b.convo = await setConversationState(b.db, b.clinicId, b.phone, state, { context: { ...(context as Record<string, unknown>), [PROMPT_KEY]: prompt } }, tick(b));
 }
 
 /** Passo avulso no funil da tentativa em andamento. */

@@ -6,7 +6,7 @@ import { contactIdByPhone, recordOutboundMessage } from "../messages";
 import { toE164, type WaMessage } from "../meta";
 import type { ClinicSender } from "../send";
 import { BOOKING_STATES, handleBookingState } from "./booking";
-import { createBot, say, type Bot, type BotEnv } from "./engine";
+import { createBot, currentPrompt, say, type Bot, type BotEnv } from "./engine";
 import { ENTRY_STATES, handleEntryState, startConversation } from "./entry";
 import { extractSelection, isBackToMenu } from "./input";
 import { handleInfo, handleMenu, handlePreparationChoice, handleSubmenu, showMenu } from "./menus";
@@ -58,6 +58,15 @@ export async function handleIncomingMessage(env: BotEnv, message: WaMessage): Pr
   const blocked = await blockedContactByPhone(env.db, env.clinicId, phone);
   if (blocked && (!MANAGE_STATES.has(convo.state) || isBackToMenu(selection))) {
     await answerBlocked(b, blocked);
+    return "handled";
+  }
+
+  // Toque numa lista ou botão de uma mensagem anterior (já respondida, ou de um passo que já passou):
+  // não entendeu e o menu inicial (cliente, 23/out/2026). Os botões de template já foram tratados acima.
+  const tapped = message.interactive?.list_reply ?? message.interactive?.button_reply;
+  if (tapped && message.context?.id && message.context.id !== currentPrompt(convo)) {
+    if (convo.state !== WELCOME && convo.state !== "MENU") await logAbandonment(env.db, env.clinicId, convo, "back_to_menu", env.now);
+    await showMenu(b, { notUnderstood: !isBackToMenu(selection) });
     return "handled";
   }
 

@@ -14,6 +14,8 @@ export interface WaMessage {
     list_reply?: { id?: string; title?: string };
     button_reply?: { id?: string; title?: string };
   };
+  /** Mensagem respondida: num toque de lista ou botão, a mensagem que tinha as opções. */
+  context?: { id?: string };
 }
 
 /**
