@@ -2972,6 +2972,8 @@ Meta da última lista ou botões enviados; o toque traz o id da mensagem de orig
 mesmo. Passo novo sem opções (ex.: fim do fluxo, data de nascimento) não aceita toque nenhum. Os botões do lembrete e
 da oferta de vaga continuam valendo sempre; o número digitado segue valendo pelas regras de cada passo.
 
+**Validada pelo cliente no staging em 24/out** (entrada, opções em texto, confirmar presença e toque antigo).
+
 **Pendências para o cliente decidir:**
 1. Os caminhos antigos Consultas/Exames › Remarcar, Cancelar e Encaixe continuam mostrando o nome do paciente e a data
    **sem** a data de nascimento quando há até 3 atendimentos (regra do piloto). Pedir a data também ali?

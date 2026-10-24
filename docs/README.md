@@ -297,7 +297,9 @@
   a Meta recusa; toque de outro passo não vale) e publicado no staging em 23/out. Depois, "Confirmar presença" da
   entrada dava "não está mais ativo" sem lembrete enviado: corrigido e publicado no staging em 23/out. Regra nova do
   cliente (23/out): toque numa lista ou botões de uma mensagem anterior responde "Não entendi" e o menu inicial, em
-  todo o bot; publicado no staging em 23/out.
+  todo o bot; publicado no staging em 23/out (commit `26e5107`). **Entrada do bot validada pelo cliente em 24/out.**
+  **Retomar daqui (24/out):** ficam para o cliente decidir as 4 pendências da entrada do bot (seção do [plano](plano.md)),
+  a validação da ajuda contextual (Alta, Média e Baixa) e a Meta (Análise do App até ~29/out).
 >   Banco local com os dados fictícios das Métricas (`npm run db:reset` limpa). Em paralelo,
 >   aguardar a Meta (Análise do App até ~29/out).
 >   **App antigo da Meta (cliente, 20/out):** o piloto está desativado e o número do app "Consultório Dra. Ana Karina" é
