@@ -1581,6 +1581,35 @@ criar ou atualizar as demos, criar a senha dos logins e mover o chip; o roteiro 
   **O Financeiro fica fora do discurso** (fora da tabela de preços; cliente, 22/out). A Vida Plena do staging
   só mostra a comparação a partir de meados de novembro, e o roteiro diz isso.
 
+**Meta aprovou (cliente, 24/out):** Análise do App e Verificação do acesso aprovadas; o RecepClinic é Tech
+Provider. A F11 pausa e o trabalho volta à F8 e depois à F10 (prioridade de 12/out).
+
+**Subetapas da F8 (proposta de 24/out):**
+- **F8.0 Meta (cliente, com roteiro):** configuração do *Login do Facebook para Empresas* com o Embedded Signup
+  (`config_id`), `app.recepclinic.com.br` nos domínios permitidos, campos do webhook conferidos, variável na Vercel
+  e Redeploy; desativar o login do analista da Meta.
+- **F8.1 Conectar pela tela:** botão "Conectar WhatsApp" em Configurações › WhatsApp (janela da Meta); o servidor
+  troca o código pelo token (Vault), grava número e conta, inscreve o app na conta e marca a coexistência. O
+  cadastro manual do Suporte fica de reserva.
+- **F8.2 Templates na conexão:** os padrão criados na conta da clínica pela API logo depois de conectar; situação
+  pelo webhook; aviso no painel enquanto algum não estiver aprovado.
+- **F8.3 Conferências:** forma de pagamento, regras atuais da coexistência (conferidas na documentação da Meta),
+  desconectar e trocar de número.
+- **F8.4 Teste real:** o número do app antigo (do cliente; liberado em 20/out) por coexistência numa 2ª clínica de
+  teste do staging; lembrete, bot, eco da recepção e `#bot` de ponta a ponta.
+
+**Decisões do cliente (24/out):**
+1. **Quem conecta:** o **Administrador** da clínica (login do Facebook dele, portfólio da clínica), com o
+   **Suporte junto** na implantação. O cadastro manual continua só do Suporte, de reserva.
+2. **Formas de conectar:** **coexistência** (padrão: o número segue no app WhatsApp Business da recepção e o bot
+   atende pela API) e, como opção, **número novo só na API** (sem "Falar com a recepção" no bot).
+3. **Histórico da coexistência:** o RecepClinic **não guarda** as conversas antigas nem os contatos do app; só as
+   mensagens a partir da conexão (se a Meta exigir alguma chamada de sincronização, só o mínimo, sem gravar o
+   conteúdo).
+4. **Forma de pagamento:** o **Suporte confere e marca** "Forma de pagamento conferida" na tela WhatsApp; até lá, o
+   Administrador vê um aviso no Início com o caminho no Gerenciador do WhatsApp. Não trava nada (o bot funciona; envio
+   que falhar aparece em Envios, com o reenvio automático).
+
 ## F10 — Primeiro piloto
 
 **Escopo:** produção (Supabase Pro + Vercel Pro, backup conferido); criação da 1ª clínica pelo

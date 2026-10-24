@@ -303,7 +303,12 @@
   errada (entrada e menu), sem bloqueio: "Não encontramos agendamentos para essa data de nascimento. Deseja falar com a
   recepção?" com Falar com a recepção, Tentar outra data e Voltar ao menu (sem coexistência, sem a recepção).
   Implementado, testado no local e publicado no staging em 24/out (sem migração, commit `b26f823`). **Retomar daqui:** o
-  cliente valida pelo WhatsApp de testes (e se o Remarcar com um atendimento só fica sem o "é esse?"); seguem a validação da ajuda contextual (Alta, Média e Baixa) e a Meta (Análise do App até ~29/out).
+  cliente deu o ok em 24/out (o Remarcar com um atendimento só fica sem o "é esse?").
+  **Meta aprovou a Análise do App e a Verificação do acesso (cliente, 24/out): RecepClinic é Tech Provider.** A F11
+  pausa; volta a F8 (depois a F10). Subetapas F8.0 a F8.4 e 4 decisões do cliente na F8 do [plano](plano.md)
+  (Administrador conecta com o Suporte junto; coexistência e número novo; sem guardar o histórico; Suporte marca a
+  forma de pagamento). **Retomar daqui:** F8.0 (roteiro da configuração na Meta para o cliente). Seguem também
+  a validação da ajuda contextual; seguem a validação da ajuda contextual (Alta, Média e Baixa) e a Meta (Análise do App até ~29/out).
 >   Banco local com os dados fictícios das Métricas (`npm run db:reset` limpa). Em paralelo,
 >   aguardar a Meta (Análise do App até ~29/out).
 >   **App antigo da Meta (cliente, 20/out):** o piloto está desativado e o número do app "Consultório Dra. Ana Karina" é
