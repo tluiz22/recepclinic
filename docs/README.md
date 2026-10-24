@@ -307,7 +307,9 @@
   **Meta aprovou a Análise do App e a Verificação do acesso (cliente, 24/out): RecepClinic é Tech Provider.** A F11
   pausa; volta a F8 (depois a F10). Subetapas F8.0 a F8.4 e 4 decisões do cliente na F8 do [plano](plano.md)
   (Administrador conecta com o Suporte junto; coexistência e número novo; sem guardar o histórico; Suporte marca a
-  forma de pagamento). **Retomar daqui:** F8.0 (roteiro da configuração na Meta para o cliente). Seguem também
+  forma de pagamento). **Fim da sessão de 24/out. Retomar daqui (próxima sessão):** F8.0, começando por conferir
+  na documentação atual da Meta as telas e os parâmetros do Embedded Signup com coexistência e, depois, o roteiro da
+  configuração na Meta para o cliente. Seguem também
   a validação da ajuda contextual; seguem a validação da ajuda contextual (Alta, Média e Baixa) e a Meta (Análise do App até ~29/out).
 >   Banco local com os dados fictícios das Métricas (`npm run db:reset` limpa). Em paralelo,
 >   aguardar a Meta (Análise do App até ~29/out).
