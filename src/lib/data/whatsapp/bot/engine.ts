@@ -121,11 +121,26 @@ export async function say(b: Bot, kind: string, body: string): Promise<void> {
 }
 
 export async function sendList(b: Bot, kind: string, body: string, sections: ListSection[]): Promise<void> {
-  await record(b, kind, await b.sender.list(b.phone, body, LIST_BUTTON, sections), body);
+  const outcome = await b.sender.list(b.phone, body, LIST_BUTTON, sections);
+  await record(b, kind, outcome, body);
+  if (!outcome.sent) await textFallback(b, kind, outcome, body, sections.flatMap((section) => section.rows));
 }
 
 export async function sendButtons(b: Bot, kind: string, body: string, buttons: ReplyButton[]): Promise<void> {
-  await record(b, kind, await b.sender.buttons(b.phone, body, buttons), body);
+  const outcome = await b.sender.buttons(b.phone, body, buttons);
+  await record(b, kind, outcome, body);
+  if (!outcome.sent) await textFallback(b, kind, outcome, body, buttons.map((button, index) => ({ ...button, title: `${index + 1}. ${button.title}` })));
+}
+
+/**
+ * Lista ou botões recusados pela Meta (ex.: erro 131000, passageiro): as
+ * mesmas opções em texto, para a conversa não parar (cliente, 23/out/2026).
+ * O número digitado vale como o toque.
+ */
+async function textFallback(b: Bot, kind: string, outcome: SendOutcome, body: string, options: { title: string; description?: string }[]): Promise<void> {
+  if (!outcome.sent && outcome.reason === "contato anonimizado") return;
+  const lines = options.map((o) => (o.description ? `${o.title} (${o.description})` : o.title));
+  await say(b, `${kind}_text`, `${body}\n\n${lines.join("\n")}\n\nResponda com o número da opção.`);
 }
 
 /** Horário do próximo passo do funil: 1 ms depois do anterior, para a ordem dos passos de uma mesma mensagem. */

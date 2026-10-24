@@ -26,10 +26,8 @@ export function isBackToMenu(selection: Selection): boolean {
  * digitado ("2", "2." ou "2 algo").
  */
 export function pick<T>(selection: Selection, items: T[], idOf: (item: T) => string): T | null {
-  if (selection.id) {
-    const found = items.find((item) => idOf(item) === selection.id);
-    if (found) return found;
-  }
+  // Toque numa lista de outro passo (mensagem antiga): o número da linha não vale aqui (cliente, 23/out/2026).
+  if (selection.id) return items.find((item) => idOf(item) === selection.id) ?? null;
   const match = selection.text.match(/^(\d{1,2})(?:[.\s)]|$)/);
   if (!match) return null;
   const index = Number(match[1]);

@@ -2958,6 +2958,12 @@ mesmo mecanismo de `conversation_state`); testes em `tests/db/bot-entrada.test.t
   conseguimos consultar os agendamentos agora").
 - **Mensagem repetida pela Meta:** não é tratada de novo (índice único do `wa_message_id`, como antes).
 
+**Correções do teste do cliente (23/out):** no staging, a lista das ações não chegou (a Meta recusou com o erro
+131000, genérico e passageiro) e o toque seguinte, na linha "2." da lista anterior, foi lido como a 2ª opção do passo
+atual (Remarcar), mandando o link de remarcação. Corrigido em todo o bot: (1) lista ou botões recusados pela Meta vão
+de novo em texto, com as opções numeradas e "Responda com o número da opção." (tipo `…_text`); (2) toque numa lista de
+outro passo não vale pelo número do título: "Não entendi" e as opções do passo atual.
+
 **Pendências para o cliente decidir:**
 1. Os caminhos antigos Consultas/Exames › Remarcar, Cancelar e Encaixe continuam mostrando o nome do paciente e a data
    **sem** a data de nascimento quando há até 3 atendimentos (regra do piloto). Pedir a data também ali?

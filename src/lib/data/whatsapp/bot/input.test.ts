@@ -19,6 +19,8 @@ describe("leitura da resposta (F6.3)", () => {
     expect(pick(typed("2. Exames"), items, (i) => i)).toBe("b");
     expect(pick(typed("4"), items, (i) => i)).toBeNull();
     expect(pick(typed("12345"), items, (i) => i)).toBeNull();
+    // Toque numa lista antiga: o "2." do título não escolhe a 2ª opção deste passo.
+    expect(pick({ id: "entry_appointment_x", text: "2. ter, 27/10 às 14:00" }, items, (i) => i)).toBeNull();
   });
 
   it("sim e não, com ou sem acento", () => {

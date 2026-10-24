@@ -31,6 +31,8 @@ let sent: Sent[] = [];
 let seq = 0;
 /** Simula a falha do Supabase na leitura dos atendimentos. */
 let failAppointments = false;
+/** Simula a Meta recusando listas (erro 131000). */
+let failLists = false;
 
 const sender: ClinicSender = {
   clinicId: "",
@@ -38,7 +40,8 @@ const sender: ClinicSender = {
   baseUrl: "https://app.exemplo.test",
   template: async () => ({ sent: false, reason: "sem template no teste" }),
   text: async (to, body) => (sent.push({ to, kind: "text", body, options: [] }), { sent: true, messageId: `wamid.ent.out.${++seq}`, body }),
-  list: async (to: string, body: string, _b: string, sections: ListSection[]) => (
+  list: async (to: string, body: string, _b: string, sections: ListSection[]) =>
+    failLists ? { sent: false, reason: "(#131000) Something went wrong" } : (
     sent.push({ to, kind: "list", body, options: sections.flatMap((s) => s.rows.map((r) => ({ id: r.id, title: r.title }))) }),
     { sent: true, messageId: `wamid.ent.out.${++seq}` }
   ),
@@ -363,6 +366,45 @@ describe("robustez", () => {
     expect((await send(NUMBER, message)).duplicates).toBe(1);
     expect(sent).toEqual([]);
     expect((await adminClient().from("appointments").select("status").eq("id", consultP1).single()).data!.status).toBe("scheduled");
+  });
+
+  it("lista recusada pela Meta: as opções vão em texto e o número digitado vale", async () => {
+    await fresh(P1);
+    await say(P1, "oi");
+    await say(P1, "sim");
+    await say(P1, "01/01/2020");
+    failLists = true;
+    try {
+      let reply = await say(P1, { id: `entry_appointment_${consultP1}` });
+      expect(reply.map((m) => m.kind)).toEqual(["text"]);
+      expect(reply[0].body).toBe(
+        "A consulta de *Paciente Um* está marcada para segunda, 10/03 às 08:00.\n\nO que você deseja fazer?\n\n" +
+          "1. Confirmar presença\n2. Remarcar\n3. Cancelar\n4. Encaixe ou antecipar (Lista de espera para um horário mais cedo)\n5. Voltar ao menu\n\n" +
+          "Responda com o número da opção.",
+      );
+      reply = await say(P1, "3");
+      expect(reply[0].body).toContain("Confirma o cancelamento da consulta de *Paciente Um*");
+      await say(P1, "não");
+    } finally {
+      failLists = false;
+    }
+  });
+
+  it("toque numa lista antiga: não vira a opção do passo atual", async () => {
+    await fresh(P1);
+    await say(P1, "oi");
+    await say(P1, "sim");
+    await say(P1, "01/01/2020");
+    await say(P1, { id: `entry_appointment_${consultP1}` });
+    // A linha "2." da lista anterior (o outro atendimento), tocada nas ações.
+    sent = [];
+    await send(NUMBER, { id: `wamid.ent.in.${++seq}`, from: P1.slice(1), type: "interactive", interactive: { list_reply: { id: `entry_appointment_${examP1}`, title: "2. seg, 17/03 às 08:00" } } });
+    expect(sent[0].body).toMatch(/^Não entendi sua resposta 🙏/);
+    expect(sent[1].body).toContain("O que você deseja fazer?");
+    expect((await conversation(P1)).state).toBe("ENTRY_ACTIONS");
+    const { count } = await adminClient().from("booking_links").select("id", { count: "exact", head: true }).eq("contact_phone", P1).eq("appointment_id", consultP1);
+    expect(count).toBe(0);
+    await say(P1, "menu");
   });
 
   it("16. isolamento entre clínicas: o mesmo telefone na outra clínica não vê estes atendimentos", async () => {
