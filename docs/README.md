@@ -312,7 +312,8 @@
   configuração na Meta para o cliente. **F8.0 (25/out):** documentação da Meta conferida (resumo na F8 do
   [plano](plano.md)) e roteiro do cliente na parte N do [`staging.md`](staging.md); **passos 1 a 4 feitos pelo cliente em
   25/out** (configuração com token sem validade, domínio, 4 campos novos do webhook, `WHATSAPP_ES_CONFIG_ID` na
-  Vercel e Redeploy). Falta só a decisão sobre o login do analista da Meta. Depois, a F8.1. Seguem também
+  Vercel e Redeploy). Login do analista da Meta bloqueado em 25/out (com o OK do cliente; parte N do
+  [`staging.md`](staging.md)). **F8.0 concluída.** Próxima: F8.1, com o OK do cliente. Seguem também
   a validação da ajuda contextual; seguem a validação da ajuda contextual (Alta, Média e Baixa) e a Meta (Análise do App até ~29/out).
 >   Banco local com os dados fictícios das Métricas (`npm run db:reset` limpa). Em paralelo,
 >   aguardar a Meta (Análise do App até ~29/out).

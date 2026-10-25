@@ -119,7 +119,7 @@ Site, com `https://app.recepclinic.com.br`.
 Login do analista (decidido com o cliente em 09/out): clínica de demonstração no staging,
 **"Clínica Demonstração RecepClinic"**, administrador `analista.meta@recepclinic.com.br`. Não tem
 dados reais e não fica ligada ao número de testes. A senha é criada pelo link de
-`scripts/link-de-senha.mjs`, e o login é desativado quando a análise terminar.
+`scripts/link-de-senha.mjs`, e o login é desativado quando a análise terminar (bloqueado em 25/out, depois da aprovação).
 Clínica e login criados e conferidos em 09/out. Itens liberados na matriz: Bot de WhatsApp,
 Lembrete automático, Lista de espera, os 2 resumos do dia, Mensagens do bot, Mensagens da Meta
 (templates), Exames e procedimentos e Métricas: Funil do bot. Dados fictícios conferidos: Dra.

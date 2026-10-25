@@ -304,8 +304,10 @@ developers.facebook.com (os nomes das telas podem aparecer em inglês).
    grava o conteúdo).
 4. **Vercel** (*Settings › Environment Variables*, Production): `WHATSAPP_ES_CONFIG_ID` com o ID do
    passo 1; depois *Deployments › Redeploy*.
-5. **Login do analista da Meta** (`analista.meta@recepclinic.com.br`): desativado pelo Claude com o
-   OK do cliente.
+5. **Login do analista da Meta** (`analista.meta@recepclinic.com.br`): **bloqueado em 25/out** com o OK do
+   cliente (`ban_duration` no Auth do Supabase, até 2126). Nada foi apagado: a clínica de demonstração, os dados e o
+   vínculo de Administrador continuam. Para reativar (nova análise da Meta): `auth.admin.updateUserById(<id>, {
+   ban_duration: "none" })` com a service role do `.env.staging`.
 
 Para o teste real (F8.4): o número do app antigo precisa estar no **app WhatsApp Business**
 (versão 2.24.17 ou mais nova), ativo, e com o app aberto no celular durante a conexão (a Meta
