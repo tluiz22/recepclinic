@@ -6,12 +6,16 @@ import {
   cleanParam,
   DEFAULT_TEMPLATES,
   defaultTemplate,
+  describeTemplateApproval,
   fillTemplate,
   paramCount,
   templateCreationPayload,
+  templateApproval,
   templateEditPayload,
+  templatesInUse,
   templateStatusFromMeta,
 } from "./templates";
+import type { WhatsappTemplate } from "./connection";
 import { templateStatusChanges } from "./webhook";
 
 const appointment = {
@@ -208,5 +212,36 @@ describe("situação dos templates no webhook (F6.2)", () => {
       { wabaId: "waba-1", name: "rc_lembrete_v1", language: "pt_BR", event: "REJECTED", reason: "INVALID_FORMAT", metaTemplateId: "7" },
     ]);
     expect(templateStatusChanges(null)).toEqual([]);
+  });
+});
+
+describe("situação dos templates em uso (F8.2)", () => {
+  const saved = (key: string, status: WhatsappTemplate["status"], version = 1, stage: WhatsappTemplate["stage"] = "meta") =>
+    ({ key, status, version, stage, name: `${key}_v${version}` }) as unknown as WhatsappTemplate;
+
+  it("só os templates dos itens liberados contam", () => {
+    const keys = (features: Parameters<typeof templatesInUse>[0]) => templatesInUse(features).map((t) => t.key);
+    expect(keys([])).toEqual(["confirmation", "reschedule", "cancellation", "clinic_cancellation", "reminder", "consultation_guidance"]);
+    expect(keys(["exams", "daily_summary", "waitlist", "finance"])).toHaveLength(DEFAULT_TEMPLATES.length);
+    expect(keys(["daily_summary"])).toContain("daily_summary_consultations_today");
+    expect(keys(["daily_summary"])).not.toContain("daily_summary_exams");
+  });
+
+  it("aprovado vale qualquer versão aprovada; senão em análise, recusado ou não enviado", () => {
+    const summary = templateApproval(templatesInUse([]), [
+      saved("confirmation", "approved"),
+      // Personalizada recusada com o padrão aprovado: o envio sai.
+      saved("reschedule", "approved"),
+      saved("reschedule", "rejected", 2),
+      saved("cancellation", "rejected"),
+      saved("cancellation", "pending", 2),
+      saved("clinic_cancellation", "disabled"),
+      // Proposta da clínica que ainda não foi à Meta não conta.
+      saved("reminder", "pending", 2, "proposed"),
+    ]);
+    expect(summary).toEqual({ approved: 2, pending: 1, rejected: 1, missing: 2 });
+    expect(describeTemplateApproval(summary)).toBe("2 aprovadas, 1 em análise, 1 recusada, 2 ainda não enviadas");
+    expect(describeTemplateApproval({ approved: 6, pending: 0, rejected: 0, missing: 0 })).toBeNull();
+    expect(describeTemplateApproval({ approved: 0, pending: 0, rejected: 0, missing: 1 })).toBe("1 ainda não enviada");
   });
 });

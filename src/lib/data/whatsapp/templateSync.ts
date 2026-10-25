@@ -19,6 +19,8 @@ import { DEFAULT_TEMPLATES, defaultTemplate, rejectionReason, TEMPLATE_LANGUAGE,
 //   do código, com o mesmo nome, e volta para a análise.
 // - "Excluir da Meta" (F8a.2): templates do RecepClinic (`rc_`) da conta que
 //   nenhuma clínica dela usa.
+// - Na conexão pela janela da Meta (F8.2): os padrão e as versões
+//   personalizadas em uso, sozinhos, logo depois de conectar.
 
 export type TemplateSyncLine = { key: TemplateKey; name: string; status: TemplateStatus | null; problem: string | null };
 
@@ -138,6 +140,42 @@ export async function createDefaultTemplates(
     } catch (error) {
       if (!(error instanceof GraphRequestError)) throw error;
       lines.push({ key: template.key, name: template.name, status: null, problem: error.graph.message });
+    }
+  }
+  return { ok: true, lines };
+}
+
+/**
+ * Logo depois de conectar pela janela da Meta (F8.2): os padrão que faltam e
+ * as versões personalizadas aprovadas ou em análise (numa conta nova elas
+ * ainda não existem; o nome e o texto são os mesmos). O que a conta já tem só
+ * guarda a situação. Erro num template não para os outros.
+ */
+export async function createTemplatesAfterConnect(
+  db: DbClient,
+  clinicId: string,
+  fetcher: Fetcher = fetch,
+  appId: string | null = configuredAppId(),
+): Promise<TemplateSyncResult> {
+  const defaults = await createDefaultTemplates(db, clinicId, fetcher, appId);
+  if (!defaults.ok) return defaults;
+  const ready = await setup(db, clinicId);
+  if ("message" in ready) return { ok: false, message: ready.message };
+  const lines = [...defaults.lines];
+  const custom = (await listWhatsappTemplates(db, clinicId)).filter(
+    (t) => t.stage === "meta" && t.version > 1 && t.body && (t.status === "approved" || t.status === "pending"),
+  );
+  for (const row of custom) {
+    const standard = defaultTemplate(row.key);
+    if (!standard) continue;
+    try {
+      const existing = inLanguage(await fetchTemplatesByName(ready.wabaId, row.name, ready.token, fetcher));
+      const meta = existing ?? (await createOrFind(ready.wabaId, { ...standard, name: row.name, body: row.body! }, ready.token, fetcher, appId));
+      const status = await saveVersionStatus(db, clinicId, row.id, meta);
+      lines.push({ key: row.key, name: row.name, status, problem: null });
+    } catch (error) {
+      if (!(error instanceof GraphRequestError)) throw error;
+      lines.push({ key: row.key, name: row.name, status: null, problem: error.graph.message });
     }
   }
   return { ok: true, lines };

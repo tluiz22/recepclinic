@@ -33,7 +33,7 @@ import {
 } from "../../../lib/data/whatsapp/customMessages";
 import * as bot from "../../../lib/data/whatsapp/bot/texts";
 import { guidancePath, preparationPath } from "../../../lib/publicId";
-import { appointmentPlace, clinicLabel, DEFAULT_TEMPLATES, fillTemplate, formatAppointmentWhen, formatSummaryDate, paramCount, serviceLine } from "../../../lib/data/whatsapp/templates";
+import { appointmentPlace, clinicLabel, fillTemplate, formatAppointmentWhen, formatSummaryDate, paramCount, serviceLine, templatesInUse } from "../../../lib/data/whatsapp/templates";
 
 const clinic = Astro.locals.clinic!;
 const db = createUserClient(Astro.request, Astro.cookies);
@@ -125,15 +125,7 @@ const STATUS = {
   disabled: { label: "Desativado", variant: "neutral" },
 } as const;
 
-const has = (key: (typeof clinic.features)[number]) => clinic.features.includes(key);
-const visibleTemplates = DEFAULT_TEMPLATES.filter(
-  (t) =>
-    (t.key !== "exam_preparation" || has("exams")) &&
-    (!t.key.startsWith("daily_summary") || has("daily_summary")) &&
-    (!t.key.startsWith("daily_summary_exams") || has("exams")) &&
-    (t.key !== "waitlist_offer" || has("waitlist")) &&
-    (t.key !== "nfse_document" || has("finance")),
-);
+const visibleTemplates = templatesInUse(clinic.features);
 const rows = visibleTemplates.map((standard) => {
   const versions = templates.filter((t) => t.key === standard.key);
   const approved = versions.filter((t) => t.stage === "meta" && t.status === "approved").sort((a, b) => b.version - a.version)[0] ?? null;

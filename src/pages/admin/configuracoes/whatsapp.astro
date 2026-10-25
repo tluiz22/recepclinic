@@ -7,6 +7,7 @@
 // padrão na conta da clínica e a situação deles. F8a.1: "Reenviar à Meta" do
 // padrão recusado. F8a.2: templates do RecepClinic sem uso na conta, para
 // excluir (a busca na Meta só roda com "Procurar", para a tela não esperar).
+// F8.2: no cartão Conexão, a situação dos templates em uso, para todos.
 import ConfigShell from "../../../components/admin/config/ConfigShell.astro";
 import Badge from "../../../components/admin/config/Badge.astro";
 import Card from "../../../components/admin/config/Panel.astro";
@@ -19,7 +20,7 @@ import { createUserClient } from "../../../lib/data/clients";
 import { platformEnv } from "../../../lib/env";
 import { getWhatsappConnection, listWhatsappTemplates, pendingCoexistenceSync } from "../../../lib/data/whatsapp/connection";
 import { GRAPH_API_VERSION } from "../../../lib/data/whatsapp/graph";
-import { DEFAULT_TEMPLATES, templateStatusFromMeta } from "../../../lib/data/whatsapp/templates";
+import { DEFAULT_TEMPLATES, templateApproval, templatesInUse, templateStatusFromMeta } from "../../../lib/data/whatsapp/templates";
 import { listUnusedTemplates, namesInWaba } from "../../../lib/data/whatsapp/templateSync";
 import { listWhatsappMessages } from "../../../lib/data/whatsapp/messages";
 import { formatPhoneBR } from "../../../lib/phone";
@@ -30,7 +31,7 @@ const isSupport = clinic.isPlatformStaff;
 const [connection, latest, templates] = await Promise.all([
   getWhatsappConnection(db, clinic.clinicId),
   isSupport ? listWhatsappMessages(db, clinic.clinicId, { latest: true }, 10) : Promise.resolve([]),
-  isSupport ? listWhatsappTemplates(db, clinic.clinicId) : Promise.resolve([]),
+  listWhatsappTemplates(db, clinic.clinicId),
 ]);
 // Janela da Meta (F8.1): com o App ID, o App Secret e a configuração do Embedded Signup.
 const env = platformEnv();
@@ -76,7 +77,7 @@ const templateRows = DEFAULT_TEMPLATES.map((template) => ({ template, saved: tem
 >
 
   <div class="flex max-w-2xl flex-col gap-4">
-    <WhatsappConnectionCard connection={connection} timeZone={clinic.timezone} manage={{ signup, pendingSync: pendingCoexistenceSync(connection) }} />
+    <WhatsappConnectionCard connection={connection} timeZone={clinic.timezone} manage={{ signup, pendingSync: pendingCoexistenceSync(connection), templates: templateApproval(templatesInUse(clinic.features), templates) }} />
 
     {
       isSupport && (

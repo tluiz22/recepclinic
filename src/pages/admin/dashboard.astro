@@ -24,6 +24,8 @@ import { BOT_LIMIT_LABELS, listContactsToReview, REVIEW_WINDOW_DAYS } from "../.
 import { formatCalendarDate, formatInstant, todayIn } from "../../lib/clinicTime";
 import { certificateStatus } from "../../lib/certificate";
 import { getFiscalCertificate } from "../../lib/data/fiscal";
+import { getWhatsappConnection, listWhatsappTemplates } from "../../lib/data/whatsapp/connection";
+import { describeTemplateApproval, templateApproval, templatesInUse } from "../../lib/data/whatsapp/templates";
 
 const clinic = Astro.locals.clinic!;
 const db = createUserClient(Astro.request, Astro.cookies);
@@ -31,12 +33,18 @@ const has = (feature: (typeof clinic.features)[number]) => clinic.features.inclu
 
 // Certificado A1 (F11.3): aviso ao Administrador a partir de 30 dias do vencimento.
 const certificateOn = has("finance") && (clinic.roles.includes("admin") || clinic.isPlatformStaff);
-const [counts, sendsAlert, toReview, certificate] = await Promise.all([
+// Templates na Meta (F8.2, cliente, 25/out): aviso ao Administrador enquanto algum em uso não estiver aprovado.
+const isAdmin = clinic.roles.includes("admin") || clinic.isPlatformStaff;
+const [counts, sendsAlert, toReview, certificate, connection, templates] = await Promise.all([
   getDashboardCounts(db, clinic.clinicId, clinic.timezone),
   getSendsAlert(db, clinic.clinicId),
   has("whatsapp_bot") ? listContactsToReview(db, clinic.clinicId) : Promise.resolve(null),
   certificateOn ? getFiscalCertificate(db, clinic.clinicId) : Promise.resolve(null),
+  isAdmin ? getWhatsappConnection(db, clinic.clinicId) : Promise.resolve(null),
+  isAdmin ? listWhatsappTemplates(db, clinic.clinicId) : Promise.resolve([]),
 ]);
+const templatesAlert =
+  connection?.status === "connected" ? describeTemplateApproval(templateApproval(templatesInUse(clinic.features), templates)) : null;
 const certificateAlert = (() => {
   if (!certificate) return null;
   const status = certificateStatus(certificate.validUntil);
@@ -79,12 +87,17 @@ const sectionTitle = "font-display text-[17px] leading-tight font-bold text-ink 
   </PageHeader>
 
   {
-    (notice || sendsAlertLines.length > 0 || certificateAlert) && (
+    (notice || sendsAlertLines.length > 0 || certificateAlert || templatesAlert) && (
       <div class="mt-4 flex flex-col gap-2">
         {notice && <Notice tone={notice.tone}>{notice.text}</Notice>}
         {sendsAlertLines.length > 0 && (
           <Notice tone="danger" href="/admin/consultas?tab=envios" linkLabel="Ver os envios">
             {sendsAlertLines.join(" ")}
+          </Notice>
+        )}
+        {templatesAlert && (
+          <Notice tone="warning" href={withReturn("/admin/configuracoes/whatsapp", here)} linkLabel="Abrir WhatsApp">
+            Algumas mensagens automáticas do WhatsApp ainda não estão aprovadas pela Meta ({templatesAlert}). Enquanto isso, esses envios não saem.
           </Notice>
         )}
         {certificateAlert && (

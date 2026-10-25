@@ -1667,6 +1667,31 @@ Provider. A F11 pausa e o trabalho volta à F8 e depois à F10 (prioridade de 12
   clínica, reconexão). No navegador local (computador e 360px): o botão abre a janela da Meta com o `config_id` e o
   `featureType`; a Meta só conclui em HTTPS, então o teste de ponta a ponta é no staging (F8.4).
 
+**F8.1 publicada no staging em 25/out** (migração aplicada e conferida no banco antes do push). O cliente pediu para
+seguir sem parar e validar a F8 inteira no fim.
+
+**F8.2, decisão do cliente (25/out):** os templates ficam na conta do WhatsApp Business de cada clínica (não no número):
+cada conta precisa dos seus, criados sozinhos pela API, com o mesmo texto para todas as clínicas. **Aviso** enquanto algum
+template em uso não estiver aprovado: no **Início, só para o Administrador** (e o Suporte), com o link para
+Configurações › WhatsApp, e uma linha no cartão "Conexão". Some sozinho quando todos estiverem aprovados.
+
+**F8.2 implementada, testada no local e publicada no staging em 25/out** (sem migração):
+- **Na conexão** (`createTemplatesAfterConnect` em `templateSync.ts`, chamada pela rota do "Conectar WhatsApp"): os
+  templates padrão que a conta não tem são criados (o que já existe só guarda a situação), e as versões personalizadas
+  aprovadas ou em análise vão também (numa conta nova elas ainda não existem; mesmo nome e texto). Erro num template não
+  para os outros nem desfaz a conexão; o aviso de conectado diz se foram enviados à Meta. A situação segue chegando pelo
+  webhook (`message_template_status_update`).
+- **Situação** (`templatesInUse`, `templateApproval` em `templates.ts`): contam só os templates dos itens liberados da
+  clínica (o mesmo filtro da aba Mensagens). Aprovado = alguma versão aprovada (o envio sai); senão em análise, recusado
+  (ou desativado) ou ainda não enviado. Cartão "Conexão" (conectado): "Mensagens automáticas na Meta: 10 aprovadas, 2 em
+  análise…", com a explicação da análise, "o suporte do RecepClinic ajusta" para a recusada e, se faltar algum, o botão
+  **"Enviar à Meta as que faltam"** (o "Criar na Meta" do Suporte, liberado ao Administrador, com o resumo sem a lista
+  técnica). Início: o aviso com o link "Abrir WhatsApp".
+- **Testes:** unidade (itens liberados, contagem e frase) e banco (`tests/db/whatsappTemplatesOnConnect.test.ts`: conta
+  nova com padrão e personalizada, recusada fica de fora, reconexão sem criar de novo). No navegador local (computador e
+  360px): aviso no Início, linha e botão no cartão; o botão do Administrador chega à Meta (token fictício recusado, com a
+  mensagem curta).
+
 ## F10 — Primeiro piloto
 
 **Escopo:** produção (Supabase Pro + Vercel Pro, backup conferido); criação da 1ª clínica pelo

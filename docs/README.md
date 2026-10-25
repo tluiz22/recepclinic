@@ -314,9 +314,12 @@
   25/out** (configuração com token sem validade, domínio, 4 campos novos do webhook, `WHATSAPP_ES_CONFIG_ID` na
   Vercel e Redeploy). Login do analista da Meta bloqueado em 25/out (com o OK do cliente; parte N do
   [`staging.md`](staging.md)). **F8.0 concluída.** **F8.1 (Conectar WhatsApp pela janela da Meta) decidida (2 decisões no
-  [plano](plano.md)), implementada e testada no local em 25/out**; aguarda o OK do cliente para publicar no staging
-  (migração `20261025120000_conexao_embedded_signup.sql` antes do push). Seguem também
-  a validação da ajuda contextual; seguem a validação da ajuda contextual (Alta, Média e Baixa) e a Meta (Análise do App até ~29/out).
+  [plano](plano.md)), implementada e testada no local em 25/out** e **publicada no staging em 25/out** (migração
+  `20261025120000_conexao_embedded_signup.sql` aplicada e conferida no banco antes do push, commit `472fdbf`). O cliente
+  pediu para seguir sem parar e validar a F8 inteira no fim (25/out). **F8.2 (templates na conexão) decidida (aviso no
+  Início do Administrador e no cartão Conexão; [plano](plano.md)), implementada, testada no local e publicada no staging
+  em 25/out (sem migração).** **Retomar daqui:** F8.3 (conferências: forma de pagamento, desconectar e trocar de
+  número, `account_update`). Seguem também a validação da ajuda contextual (Alta, Média e Baixa).
 >   Banco local com os dados fictícios das Métricas (`npm run db:reset` limpa). Em paralelo,
 >   aguardar a Meta (Análise do App até ~29/out).
 >   **App antigo da Meta (cliente, 20/out):** o piloto está desativado e o número do app "Consultório Dra. Ana Karina" é

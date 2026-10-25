@@ -1,5 +1,6 @@
 import { formatInstant } from "../../clinicTime";
-import type { TemplateKey, TemplateStatus } from "./connection";
+import type { TemplateKey, TemplateStatus, WhatsappTemplate } from "./connection";
+import type { FeatureKey } from "../../features";
 import { formatCalendarDate } from "../../clinicTime";
 
 // Templates padrão do RecepClinic (D3b, F6.2): um texto só para todas as
@@ -122,6 +123,52 @@ export const DEFAULT_TEMPLATES: DefaultTemplate[] = [
 
 export function defaultTemplate(key: TemplateKey): DefaultTemplate | null {
   return DEFAULT_TEMPLATES.find((t) => t.key === key) ?? null;
+}
+
+/** Templates que a clínica usa com os itens liberados (aba Mensagens e o aviso da F8.2). */
+export function templatesInUse(features: readonly FeatureKey[]): DefaultTemplate[] {
+  const has = (feature: FeatureKey) => features.includes(feature);
+  return DEFAULT_TEMPLATES.filter(
+    (t) =>
+      (t.key !== "exam_preparation" || has("exams")) &&
+      (!t.key.startsWith("daily_summary") || has("daily_summary")) &&
+      (!t.key.startsWith("daily_summary_exams") || has("exams")) &&
+      (t.key !== "waitlist_offer" || has("waitlist")) &&
+      (t.key !== "nfse_document" || has("finance")),
+  );
+}
+
+export type TemplateApproval = { approved: number; pending: number; rejected: number; missing: number };
+
+/**
+ * Situação dos templates em uso na conta da clínica (F8.2), como o envio vê:
+ * aprovado = alguma versão aprovada (o envio sai); senão, em análise,
+ * recusado (ou desativado) ou ainda não enviado à Meta.
+ */
+export function templateApproval(inUse: DefaultTemplate[], saved: WhatsappTemplate[]): TemplateApproval {
+  const summary: TemplateApproval = { approved: 0, pending: 0, rejected: 0, missing: 0 };
+  for (const template of inUse) {
+    const versions = saved.filter((t) => t.key === template.key && t.stage === "meta");
+    if (versions.some((t) => t.status === "approved")) summary.approved += 1;
+    else if (versions.some((t) => t.status === "pending")) summary.pending += 1;
+    else if (versions.length) summary.rejected += 1;
+    else summary.missing += 1;
+  }
+  return summary;
+}
+
+/** Frase da situação: "10 aprovadas, 2 em análise…"; null = todas aprovadas. */
+export function describeTemplateApproval(summary: TemplateApproval): string | null {
+  if (!summary.pending && !summary.rejected && !summary.missing) return null;
+  const n = (count: number, one: string, many: string) => `${count} ${count === 1 ? one : many}`;
+  return [
+    summary.approved && n(summary.approved, "aprovada", "aprovadas"),
+    summary.pending && `${summary.pending} em análise`,
+    summary.rejected && n(summary.rejected, "recusada", "recusadas"),
+    summary.missing && n(summary.missing, "ainda não enviada", "ainda não enviadas"),
+  ]
+    .filter(Boolean)
+    .join(", ");
 }
 
 /**
