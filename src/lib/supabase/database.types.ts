@@ -1435,14 +1435,14 @@ isOneToOne: false
                   ]
                 },"whatsapp_connections": {
                   Row: {
-                    "access_token_secret_id": string | null,"clinic_id": string,"coexistence": boolean,"connected_at": string | null,"created_at": string,"display_phone": string | null,"phone_number_id": string,"status": string,"updated_at": string,"waba_id": string
+                    "access_token_secret_id": string | null,"clinic_id": string,"coexistence": boolean,"connected_at": string | null,"connected_via": string,"contacts_synced_at": string | null,"created_at": string,"display_phone": string | null,"history_synced_at": string | null,"phone_number_id": string,"pin_secret_id": string | null,"status": string,"updated_at": string,"waba_id": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "access_token_secret_id"?: string | null,"clinic_id": string,"coexistence"?: boolean,"connected_at"?: string | null,"created_at"?: string,"display_phone"?: string | null,"phone_number_id": string,"status"?: string,"updated_at"?: string,"waba_id": string
+                    "access_token_secret_id"?: string | null,"clinic_id": string,"coexistence"?: boolean,"connected_at"?: string | null,"connected_via"?: string,"contacts_synced_at"?: string | null,"created_at"?: string,"display_phone"?: string | null,"history_synced_at"?: string | null,"phone_number_id": string,"pin_secret_id"?: string | null,"status"?: string,"updated_at"?: string,"waba_id": string
                   }
                   Update: {
-                    "access_token_secret_id"?: string | null,"clinic_id"?: string,"coexistence"?: boolean,"connected_at"?: string | null,"created_at"?: string,"display_phone"?: string | null,"phone_number_id"?: string,"status"?: string,"updated_at"?: string,"waba_id"?: string
+                    "access_token_secret_id"?: string | null,"clinic_id"?: string,"coexistence"?: boolean,"connected_at"?: string | null,"connected_via"?: string,"contacts_synced_at"?: string | null,"created_at"?: string,"display_phone"?: string | null,"history_synced_at"?: string | null,"phone_number_id"?: string,"pin_secret_id"?: string | null,"status"?: string,"updated_at"?: string,"waba_id"?: string
                   }
                   Relationships: [
                     {
@@ -1534,6 +1534,9 @@ isOneToOne: false
               "is_support": boolean,"name": string,"roles": (Database["public"]['Enums']["clinic_role"])[],"user_id": string
             }[]
                            },
+"connect_whatsapp":
+{ Args: { "p_clinic_id": string,"p_coexistence": boolean,"p_contacts_synced"?: boolean,"p_display_phone": string,"p_history_synced"?: boolean,"p_phone_number_id": string,"p_pin"?: string,"p_token": string,"p_waba_id": string }; Returns: undefined
+                           },
 "finance_patients_missing_payer_cpf":
 { Args: { "p_clinic_id": string }; Returns: {
               "agenda_import_id": string | null,
@@ -1606,6 +1609,9 @@ isOneToOne: false
                            },
 "mark_my_invitations_accepted":
 { Args: Record<PropertyKey, never>; Returns: undefined
+                           },
+"mark_whatsapp_synced":
+{ Args: { "p_clinic_id": string,"p_kind": string }; Returns: undefined
                            },
 "metrics_activity":
 { Args: { "p_agenda_ids": (string)[],"p_clinic_id": string,"p_end": string,"p_location_ids"?: (string)[],"p_service_ids"?: (string)[],"p_start": string }; Returns: {

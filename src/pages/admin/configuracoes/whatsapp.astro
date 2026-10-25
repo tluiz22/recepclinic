@@ -1,7 +1,8 @@
 ---
-// Configurações › WhatsApp, só do Suporte (cliente, 08/out/2026; o lembrete,
-// o resumo do dia e a situação da conexão para a clínica ficam na aba
-// Lembretes). F6.1: o cadastro da conexão (com o token só para gravar), o
+// Configurações › WhatsApp (cliente, 08/out/2026; o lembrete, o resumo do dia
+// e a situação da conexão para a clínica ficam na aba Lembretes). F8.1: o
+// Administrador também entra, para o "Conectar WhatsApp" (janela da Meta); o
+// resto da tela continua só do Suporte (cliente, 25/out). F6.1: o cadastro da conexão (com o token só para gravar), o
 // "Testar conexão" e as últimas mensagens da clínica. F6.2: os templates
 // padrão na conta da clínica e a situação deles. F8a.1: "Reenviar à Meta" do
 // padrão recusado. F8a.2: templates do RecepClinic sem uso na conta, para
@@ -15,7 +16,9 @@ import { HINT, INPUT, INPUT_INLINE, LABEL, PRIMARY_BUTTON, SECONDARY_BUTTON } fr
 import { formatInstant } from "../../../lib/clinicTime";
 import { createClinicServiceClient } from "../../../lib/data/clinicService";
 import { createUserClient } from "../../../lib/data/clients";
-import { getWhatsappConnection, listWhatsappTemplates } from "../../../lib/data/whatsapp/connection";
+import { platformEnv } from "../../../lib/env";
+import { getWhatsappConnection, listWhatsappTemplates, pendingCoexistenceSync } from "../../../lib/data/whatsapp/connection";
+import { GRAPH_API_VERSION } from "../../../lib/data/whatsapp/graph";
 import { DEFAULT_TEMPLATES, templateStatusFromMeta } from "../../../lib/data/whatsapp/templates";
 import { listUnusedTemplates, namesInWaba } from "../../../lib/data/whatsapp/templateSync";
 import { listWhatsappMessages } from "../../../lib/data/whatsapp/messages";
@@ -24,12 +27,25 @@ import { formatPhoneBR } from "../../../lib/phone";
 const clinic = Astro.locals.clinic!;
 const db = createUserClient(Astro.request, Astro.cookies);
 const isSupport = clinic.isPlatformStaff;
-if (!isSupport) return Astro.redirect("/admin/configuracoes/lembretes");
 const [connection, latest, templates] = await Promise.all([
   getWhatsappConnection(db, clinic.clinicId),
-  listWhatsappMessages(db, clinic.clinicId, { latest: true }, 10),
-  listWhatsappTemplates(db, clinic.clinicId),
+  isSupport ? listWhatsappMessages(db, clinic.clinicId, { latest: true }, 10) : Promise.resolve([]),
+  isSupport ? listWhatsappTemplates(db, clinic.clinicId) : Promise.resolve([]),
 ]);
+// Janela da Meta (F8.1): com o App ID, o App Secret e a configuração do Embedded Signup.
+const env = platformEnv();
+const signup =
+  env.whatsapp && env.whatsappAppId && env.whatsappSignupConfigId
+    ? { appId: env.whatsappAppId, configId: env.whatsappSignupConfigId, graphVersion: GRAPH_API_VERSION }
+    : null;
+const canConnect = !connection || connection.status === "disconnected";
+if (signup && canConnect && Astro.csp) {
+  // Só nesta tela: o SDK do Facebook e as molduras e chamadas dele (no `npm run dev` não há CSP).
+  Astro.csp.insertScriptResource("'self'");
+  Astro.csp.insertScriptResource("https://connect.facebook.net");
+  Astro.csp.insertDirective("frame-src https://*.facebook.com");
+  Astro.csp.insertDirective("connect-src 'self' https://*.facebook.com https://graph.facebook.com");
+}
 const CONNECTION_STATUS = { pending: "Em configuração", connected: "Conectado", disconnected: "Desconectado" } as const;
 const templateStatus = {
   approved: { label: "Aprovado", variant: "success" },
@@ -53,15 +69,20 @@ const unused = connection && Astro.url.searchParams.has("sem-uso")
 const templateRows = DEFAULT_TEMPLATES.map((template) => ({ template, saved: templates.find((t) => t.key === template.key && t.version === 1) ?? null }));
 ---
 
-<ConfigShell current="whatsapp" title="WhatsApp" subtitle="Conexão com a Meta, templates e as últimas mensagens. Só o Suporte vê esta seção.">
+<ConfigShell
+  current="whatsapp"
+  title="WhatsApp"
+  subtitle={isSupport ? "Conexão com a Meta, templates e as últimas mensagens." : "Conexão do número de WhatsApp da clínica com o sistema."}
+>
 
   <div class="flex max-w-2xl flex-col gap-4">
-    <WhatsappConnectionCard connection={connection} timeZone={clinic.timezone} />
+    <WhatsappConnectionCard connection={connection} timeZone={clinic.timezone} manage={{ signup, pendingSync: pendingCoexistenceSync(connection) }} />
 
     {
       isSupport && (
         <Card>
           <h2 class="font-display text-[17px] leading-tight font-bold text-ink sm:text-lg">Cadastro da conexão (Suporte)</h2>
+          <p class="mt-1 text-sm text-ink-soft">De reserva: a clínica conecta pelo "Conectar WhatsApp", acima.</p>
           <form method="POST" action="/api/admin/configuracoes/whatsapp-conexao" class="mt-3 flex flex-col gap-4">
             <div>
               <label for="phone_number_id" class={LABEL}>Identificador do número (Phone number ID)</label>

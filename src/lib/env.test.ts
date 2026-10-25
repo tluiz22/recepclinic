@@ -31,6 +31,7 @@ describe("variáveis da plataforma", () => {
       email: null,
       whatsapp: null,
       whatsappAppId: null,
+      whatsappSignupConfigId: null,
       nfseSimulation: false,
     });
     expect(parsePlatformEnv({ ...valid, SITE_URL: "https://app.recepclinic.com.br" }).siteUrl).toBe(
@@ -65,6 +66,12 @@ describe("variáveis da plataforma", () => {
     expect(parsePlatformEnv(valid).whatsappAppId).toBeNull();
     expect(parsePlatformEnv({ ...valid, WHATSAPP_APP_ID: "1234567890" }).whatsappAppId).toBe("1234567890");
     expect(() => parsePlatformEnv({ ...valid, WHATSAPP_APP_ID: "app-x" })).toThrow(/WHATSAPP_APP_ID inválida/);
+  });
+
+  it("ID da configuração do Embedded Signup: opcional, só números (F8.1)", () => {
+    expect(parsePlatformEnv(valid).whatsappSignupConfigId).toBeNull();
+    expect(parsePlatformEnv({ ...valid, WHATSAPP_ES_CONFIG_ID: "987654321012" }).whatsappSignupConfigId).toBe("987654321012");
+    expect(() => parsePlatformEnv({ ...valid, WHATSAPP_ES_CONFIG_ID: "config" })).toThrow(/WHATSAPP_ES_CONFIG_ID inválida/);
   });
 
   it("simulação da nota fiscal: só com NFSE_SIMULATION=1 (F11.4b)", () => {

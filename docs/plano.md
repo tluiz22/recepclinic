@@ -1639,6 +1639,34 @@ Provider. A F11 pausa e o trabalho volta à F8 e depois à F10 (prioridade de 12
 - **CSP:** liberar `connect.facebook.net` (script) e `www.facebook.com` (moldura e `postMessage`) só na tela de
   Configurações › WhatsApp.
 
+**F8.1, decisões do cliente (25/out):**
+1. **Onde conectar:** Configurações ganha a seção **WhatsApp** para o Administrador, com o cartão "Conexão" e o botão
+   "Conectar WhatsApp"; cadastro manual, templates e últimas mensagens continuam só do Suporte. Lembretes continua
+   mostrando a situação.
+2. **PIN do número novo (só na API):** o sistema sorteia os 6 números e guarda no cofre, sem mostrar; se um dia
+   precisar, a clínica troca o PIN no Gerenciador do WhatsApp. Na coexistência não há PIN.
+
+**F8.1 implementada e testada no local em 25/out** (migração `20261025120000_conexao_embedded_signup.sql`):
+- **Tela:** Configurações › WhatsApp aberta ao Administrador (no menu para todos); o cartão "Conexão" mostra o modo
+  (coexistência ou só no sistema) e, sem conexão ou desconectado, o botão **"Conectar WhatsApp"**
+  (`WhatsappSignupButton.astro`: SDK do Facebook carregado com a tela, `FB.login` com o `config_id` e a coexistência);
+  desistência, erro ou janela fechada ficam escritos embaixo do botão ("Nada foi gravado"). Conectado: "Para trocar o
+  número ou desconectar, fale com o suporte" (troca e desconexão são da F8.3). Lembretes mostra a situação com o link
+  para a seção. Sem `WHATSAPP_ES_CONFIG_ID` (ou App ID e App Secret), o cartão avisa que a conexão pela Meta não está
+  ligada. CSP com o SDK e as molduras do `facebook.com` só nessa tela.
+- **Servidor** (`/api/admin/configuracoes/whatsapp-conectar`, `connectWithSignup`): troca o código pelo token, lê o
+  número (`is_on_biz_app` também conta como coexistência), inscreve o app; número novo: registro com o PIN sorteado;
+  coexistência: as duas sincronizações. Erro da Meta antes do fim: nada gravado. No fim, `connect_whatsapp` (só o
+  Administrador ou o Suporte; número de outra clínica recusado) grava a conexão como "Conectado", com
+  `connected_via = 'embedded_signup'`, o token e o PIN no cofre.
+- **Sincronização recusada:** a conexão fica gravada e aparece o aviso com **"Sincronizar de novo"** nas 24 horas
+  (`mark_whatsapp_synced`). O conteúdo que chega nos webhooks `history` e `smb_app_state_sync` não é gravado (o
+  webhook só lê mensagens, entregas e ecos).
+- **Testes:** unidade (Meta simulada: coexistência, número novo, sincronização recusada, erro no meio, resposta
+  incompleta; pendência das 24 horas) e banco (`tests/db/whatsappSignup.test.ts`: papéis, cofre, PIN, número de outra
+  clínica, reconexão). No navegador local (computador e 360px): o botão abre a janela da Meta com o `config_id` e o
+  `featureType`; a Meta só conclui em HTTPS, então o teste de ponta a ponta é no staging (F8.4).
+
 ## F10 — Primeiro piloto
 
 **Escopo:** produção (Supabase Pro + Vercel Pro, backup conferido); criação da 1ª clínica pelo

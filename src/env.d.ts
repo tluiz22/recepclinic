@@ -15,6 +15,7 @@ interface ImportMetaEnv {
   readonly WHATSAPP_APP_SECRET?: string;
   readonly WHATSAPP_WEBHOOK_VERIFY_TOKEN?: string;
   readonly WHATSAPP_APP_ID?: string;
+  readonly WHATSAPP_ES_CONFIG_ID?: string;
   readonly NFSE_SIMULATION?: string;
 }
 

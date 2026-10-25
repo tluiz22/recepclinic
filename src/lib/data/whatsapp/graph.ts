@@ -3,7 +3,8 @@
 // eventos chegarem ao webhook. F6.2: envio de mensagens pelo número da
 // clínica e criação e situação dos templates na conta. F8a.1: edição do
 // template recusado (mesmo nome, volta para a análise). F8a.2: lista da
-// conta e exclusão do template sem uso.
+// conta e exclusão do template sem uso. F8.1: troca do código do Embedded
+// Signup pelo token da clínica e sincronizações da coexistência.
 
 /** Versão da API da Meta (cada versão vale cerca de 2 anos; a v21.0 do piloto vence em 2026). */
 export const GRAPH_API_VERSION = "v24.0";
@@ -55,12 +56,14 @@ export type PhoneNumberInfo = {
   platformType: string | null;
   /** Situação do número (ex.: CONNECTED). */
   status: string | null;
+  /** Coexistência: o número também está no app WhatsApp Business (F8.1). */
+  isOnBizApp: boolean;
 };
 
 /** Confere o número com o token: se responder, o token vale para ele. */
 export async function fetchPhoneNumberInfo(phoneNumberId: string, token: string, fetcher: Fetcher = fetch): Promise<PhoneNumberInfo> {
-  const fields = "display_phone_number,verified_name,name_status,quality_rating,platform_type,status";
-  const body = await call<Record<string, string | undefined>>(
+  const fields = "display_phone_number,verified_name,name_status,quality_rating,platform_type,status,is_on_biz_app";
+  const body = await call<Record<string, string | undefined> & { is_on_biz_app?: boolean }>(
     fetcher,
     "Número na Meta",
     `${GRAPH}/${encodeURIComponent(phoneNumberId)}?fields=${fields}`,
@@ -73,6 +76,7 @@ export async function fetchPhoneNumberInfo(phoneNumberId: string, token: string,
     qualityRating: body.quality_rating ?? null,
     platformType: body.platform_type ?? null,
     status: body.status ?? null,
+    isOnBizApp: body.is_on_biz_app === true,
   };
 }
 
@@ -93,6 +97,43 @@ export async function registerPhoneNumber(phoneNumberId: string, pin: string, to
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ messaging_product: "whatsapp", pin }),
+  });
+}
+
+/**
+ * Troca o código do Embedded Signup (vale 30 segundos) pelo token da clínica
+ * (usuário do sistema de integração da conta dela). Chamada do servidor, com
+ * o App Secret; o código não leva o token de ninguém.
+ */
+export async function exchangeSignupCode(appId: string, appSecret: string, code: string, fetcher: Fetcher = fetch): Promise<string> {
+  const params = new URLSearchParams({ client_id: appId, client_secret: appSecret, code });
+  const response = await fetcher(`${GRAPH}/oauth/access_token?${params}`);
+  const body = (await response.json().catch(() => ({}))) as { access_token?: string; error?: { code?: number; message?: string } };
+  if (!response.ok || body.error || !body.access_token) {
+    throw new GraphRequestError("Troca do código da Meta", {
+      code: body.error?.code ?? null,
+      httpStatus: response.status,
+      message: body.error?.message ?? `HTTP ${response.status}`,
+    });
+  }
+  return body.access_token;
+}
+
+/**
+ * Coexistência: pede à Meta a sincronização dos contatos (`smb_app_state_sync`)
+ * ou do histórico (`history`) do app. A Meta exige as duas em até 24 horas
+ * depois da conexão, uma vez cada; o que chega no webhook é descartado.
+ */
+export async function requestCoexistenceSync(
+  phoneNumberId: string,
+  syncType: "smb_app_state_sync" | "history",
+  token: string,
+  fetcher: Fetcher = fetch,
+): Promise<void> {
+  await call(fetcher, syncType === "history" ? "Sincronização do histórico" : "Sincronização dos contatos", `${GRAPH}/${encodeURIComponent(phoneNumberId)}/smb_app_data`, token, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ messaging_product: "whatsapp", sync_type: syncType }),
   });
 }
 

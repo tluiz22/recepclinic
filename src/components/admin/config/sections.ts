@@ -108,7 +108,8 @@ export function configSections(
       items: [
         item("lembretes", "Lembretes", "/lembretes"),
         item("mensagens", "Mensagens", "/mensagens"),
-        ...(isSupport ? [item("whatsapp", "WhatsApp", "/whatsapp", { supportOnly: true })] : []),
+        // F8.1: o Administrador conecta o número aqui (o resto da tela é do Suporte).
+        item("whatsapp", "WhatsApp", "/whatsapp"),
       ],
     },
     // Dados fiscais e certificado A1 (F11.3): com o Módulo financeiro.

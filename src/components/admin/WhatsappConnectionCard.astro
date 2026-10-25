@@ -1,23 +1,30 @@
 ---
-// Situação da conexão do WhatsApp da clínica (só leitura; quem cadastra é o
-// Suporte até a F8): abas Lembretes e WhatsApp.
+// Situação da conexão do WhatsApp da clínica: abas Lembretes (só leitura) e
+// WhatsApp. Na aba WhatsApp (F8.1, `manage`), o Administrador e o Suporte
+// conectam pela janela da Meta e, na coexistência, refazem a sincronização
+// que a Meta exige em até 24 horas.
 import Badge from "./config/Badge.astro";
 import Card from "./config/Panel.astro";
-import { HINT } from "./config/formStyles";
+import Notice from "./ui/Notice.astro";
+import WhatsappSignupButton from "./WhatsappSignupButton.astro";
+import { HINT, SECONDARY_BUTTON } from "./config/formStyles";
 import { formatInstant } from "../../lib/clinicTime";
 import type { WhatsappConnection } from "../../lib/data/whatsapp/connection";
 
 interface Props {
   connection: WhatsappConnection | null;
   timeZone: string;
+  /** Aba WhatsApp: botão "Conectar WhatsApp" (null = a conexão pela Meta não está ligada no sistema). */
+  manage?: { signup: { appId: string; configId: string; graphVersion: string } | null; pendingSync: boolean };
 }
 
-const { connection, timeZone } = Astro.props;
+const { connection, timeZone, manage } = Astro.props;
 const status = {
   connected: { label: "Conectado", variant: "success" },
   pending: { label: "Em configuração", variant: "warning" },
   disconnected: { label: "Desconectado", variant: "danger" },
 } as const;
+const canConnect = !connection || connection.status === "disconnected";
 ---
 
 <Card>
@@ -37,5 +44,48 @@ const status = {
       </p>
     )
   }
-  <p class={HINT}>Quem conecta o número da clínica é o Suporte RecepClinic. Para conectar ou trocar o número, fale com o suporte.</p>
+  {
+    connection?.status === "connected" && (
+      <p class="mt-2 text-sm text-ink-mid">
+        {connection.coexistence
+          ? "A recepção continua no app WhatsApp Business deste número, e o bot atende pelo sistema."
+          : "O número fica só no sistema, sem o app WhatsApp Business."}
+      </p>
+    )
+  }
+
+  {
+    !manage ? (
+      <p class={HINT}>
+        A conexão do número fica em <a href="/admin/configuracoes/whatsapp" class="font-semibold text-brand-ink underline-offset-2 hover:underline">Configurações › WhatsApp</a>.
+      </p>
+    ) : canConnect ? (
+      <div class="mt-3">
+        <p class="text-sm text-ink-mid">
+          Na janela da Meta, entre com o seu Facebook, escolha o portfólio da clínica e o número. Se a recepção já usa o número no app WhatsApp Business,
+          escolha conectar o app: ela continua atendendo por ele (tenha o celular à mão para o código). Ou cadastre um número novo, só para o sistema.
+        </p>
+        {manage.signup ? (
+          <div class="mt-3">
+            <WhatsappSignupButton {...manage.signup} />
+          </div>
+        ) : (
+          <p class="mt-3 text-sm text-pend-800">A conexão pela Meta ainda não está ligada no sistema. Fale com o suporte do RecepClinic.</p>
+        )}
+      </div>
+    ) : (
+      <p class={HINT}>Para trocar o número ou desconectar, fale com o suporte do RecepClinic.</p>
+    )
+  }
+
+  {
+    manage?.pendingSync && (
+      <Notice tone="warning" class="mt-3">
+        Falta uma etapa pedida pela Meta para o app WhatsApp Business (sincronização). Ela precisa ser feita nas primeiras 24 horas da conexão.
+        <form method="POST" action="/api/admin/configuracoes/whatsapp-sincronizar" class="mt-2">
+          <button type="submit" class={SECONDARY_BUTTON}>Sincronizar de novo</button>
+        </form>
+      </Notice>
+    )
+  }
 </Card>

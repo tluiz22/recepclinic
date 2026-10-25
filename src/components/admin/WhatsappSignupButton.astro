@@ -1,0 +1,154 @@
+---
+// "Conectar WhatsApp" (F8.1): abre a janela da Meta (Embedded Signup v4, com
+// a coexistência) pelo SDK do Facebook. A janela devolve o código (vale 30
+// segundos) e, por mensagem, o número e a conta escolhidos; a tela manda tudo
+// para o servidor, que conclui a conexão. Desistência e erro ficam escritos
+// embaixo do botão. O CSP da página libera o SDK (configuracoes/whatsapp).
+import { PRIMARY_BUTTON } from "./config/formStyles";
+
+interface Props {
+  appId: string;
+  configId: string;
+  graphVersion: string;
+  label?: string;
+}
+
+const { appId, configId, graphVersion, label = "Conectar WhatsApp" } = Astro.props;
+---
+
+<div class="wa-signup" data-app-id={appId} data-config-id={configId} data-graph-version={graphVersion}>
+  <form method="POST" action="/api/admin/configuracoes/whatsapp-conectar" class="wa-signup-form">
+    <input type="hidden" name="code" />
+    <input type="hidden" name="waba_id" />
+    <input type="hidden" name="phone_number_id" />
+    <input type="hidden" name="event" />
+  </form>
+  <button type="button" class={`${PRIMARY_BUTTON} wa-signup-button`} disabled>
+    <span class="wa-signup-label" data-label={label}>Carregando…</span>
+  </button>
+  <p class="wa-signup-status mt-2 text-sm text-ink-soft" role="status" aria-live="polite"></p>
+</div>
+
+<script>
+  type SessionInfo = { event?: string; data?: Record<string, string | undefined> };
+  type FbLoginResponse = { authResponse?: { code?: string } | null };
+  type Fb = {
+    init: (options: Record<string, unknown>) => void;
+    login: (callback: (response: FbLoginResponse) => void, options: Record<string, unknown>) => void;
+  };
+  const win = window as unknown as { FB?: Fb; fbAsyncInit?: () => void };
+
+  // Telas da janela da Meta onde a pessoa pode ter parado (CANCEL traz a última).
+  const STEP_LABELS: Record<string, string> = {
+    BUSINESS_ACCOUNT_SELECTION: "na escolha do portfólio",
+    WABA_SELECTION: "na escolha da conta do WhatsApp",
+    PHONE_NUMBER_SETUP: "no cadastro do número",
+    PHONE_NUMBER_VERIFICATION: "na confirmação do número",
+    PERMISSIONS: "nas permissões",
+  };
+
+  for (const root of document.querySelectorAll<HTMLElement>(".wa-signup")) {
+    const button = root.querySelector<HTMLButtonElement>(".wa-signup-button")!;
+    const label = root.querySelector<HTMLElement>(".wa-signup-label")!;
+    const status = root.querySelector<HTMLElement>(".wa-signup-status")!;
+    const form = root.querySelector<HTMLFormElement>(".wa-signup-form")!;
+    const { appId, configId, graphVersion } = root.dataset;
+    let session: SessionInfo | null = null;
+
+    const say = (text: string, error = false) => {
+      status.textContent = text;
+      status.classList.toggle("text-danger", error);
+      status.classList.toggle("text-ink-soft", !error);
+    };
+    const ready = () => {
+      button.disabled = false;
+      label.textContent = label.dataset.label ?? "Conectar WhatsApp";
+    };
+
+    // O resultado da janela (número, conta, desistência ou erro) chega por mensagem do facebook.com.
+    window.addEventListener("message", (event) => {
+      let host = "";
+      try {
+        host = new URL(event.origin).hostname;
+      } catch {
+        return;
+      }
+      if (host !== "facebook.com" && !host.endsWith(".facebook.com")) return;
+      try {
+        const data = typeof event.data === "string" ? JSON.parse(event.data) : event.data;
+        if (data?.type === "WA_EMBEDDED_SIGNUP") session = { event: data.event, data: data.data ?? {} };
+      } catch {
+        // Outras mensagens do SDK não são JSON.
+      }
+    });
+
+    const submit = (code: string) => {
+      const info = session;
+      if (!info?.event?.startsWith("FINISH")) {
+        say("A Meta não devolveu o número escolhido. Tente de novo.", true);
+        ready();
+        return;
+      }
+      const field = (name: string) => form.querySelector<HTMLInputElement>(`input[name="${name}"]`)!;
+      field("code").value = code;
+      field("waba_id").value = info.data?.waba_id ?? "";
+      field("phone_number_id").value = info.data?.phone_number_id ?? "";
+      field("event").value = info.event;
+      say("Concluindo a conexão…");
+      form.submit();
+    };
+
+    // A mensagem com o número pode chegar logo depois do código: espera até 3 segundos.
+    const waitForSession = (code: string, tries = 0) => {
+      if (session?.event?.startsWith("FINISH") || tries >= 15) return submit(code);
+      window.setTimeout(() => waitForSession(code, tries + 1), 200);
+    };
+
+    button.addEventListener("click", () => {
+      if (!win.FB) return;
+      session = null;
+      button.disabled = true;
+      label.textContent = "Janela da Meta aberta…";
+      say("Siga os passos na janela da Meta. Se ela não abrir, libere as janelas (pop-ups) deste site no navegador.");
+      win.FB.login(
+        (response) => {
+          const code = response.authResponse?.code;
+          if (code) return waitForSession(code);
+          const info = session;
+          if (info?.event === "CANCEL") {
+            const step = STEP_LABELS[info.data?.current_step ?? ""];
+            say(`A conexão foi interrompida${step ? ` ${step}` : ""}. Nada foi gravado: clique em "Conectar WhatsApp" para começar de novo.`, true);
+          } else if (info?.event === "ERROR") {
+            say(`A Meta mostrou um erro: ${info.data?.error_message ?? "sem detalhe"}. Nada foi gravado: tente de novo.`, true);
+          } else {
+            say('A janela da Meta foi fechada antes do fim. Nada foi gravado: clique em "Conectar WhatsApp" para começar de novo.', true);
+          }
+          ready();
+        },
+        {
+          config_id: configId,
+          response_type: "code",
+          override_default_response_type: true,
+          extras: { setup: {}, featureType: "whatsapp_business_app_onboarding", sessionInfoVersion: "3" },
+        },
+      );
+    });
+
+    // O SDK carrega com a tela: abrir a janela tem de ser direto no clique (senão o navegador bloqueia).
+    win.fbAsyncInit = () => {
+      win.FB!.init({ appId, autoLogAppEvents: true, xfbml: false, version: graphVersion });
+      ready();
+    };
+    if (win.FB) {
+      win.fbAsyncInit();
+    } else if (!document.getElementById("facebook-jssdk")) {
+      const script = document.createElement("script");
+      script.id = "facebook-jssdk";
+      script.src = "https://connect.facebook.net/en_US/sdk.js";
+      script.async = true;
+      script.crossOrigin = "anonymous";
+      script.onerror = () => say("Não foi possível carregar a janela da Meta. Confira a internet e recarregue a página.", true);
+      document.head.appendChild(script);
+    }
+  }
+</script>

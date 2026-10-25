@@ -313,7 +313,9 @@
   [plano](plano.md)) e roteiro do cliente na parte N do [`staging.md`](staging.md); **passos 1 a 4 feitos pelo cliente em
   25/out** (configuração com token sem validade, domínio, 4 campos novos do webhook, `WHATSAPP_ES_CONFIG_ID` na
   Vercel e Redeploy). Login do analista da Meta bloqueado em 25/out (com o OK do cliente; parte N do
-  [`staging.md`](staging.md)). **F8.0 concluída.** Próxima: F8.1, com o OK do cliente. Seguem também
+  [`staging.md`](staging.md)). **F8.0 concluída.** **F8.1 (Conectar WhatsApp pela janela da Meta) decidida (2 decisões no
+  [plano](plano.md)), implementada e testada no local em 25/out**; aguarda o OK do cliente para publicar no staging
+  (migração `20261025120000_conexao_embedded_signup.sql` antes do push). Seguem também
   a validação da ajuda contextual; seguem a validação da ajuda contextual (Alta, Média e Baixa) e a Meta (Análise do App até ~29/out).
 >   Banco local com os dados fictícios das Métricas (`npm run db:reset` limpa). Em paralelo,
 >   aguardar a Meta (Análise do App até ~29/out).

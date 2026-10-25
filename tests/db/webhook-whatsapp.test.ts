@@ -130,7 +130,7 @@ describe("Testar conexão (Suporte, F6.1)", () => {
         info: { verifiedName: "RecepClinic", platformType: "CLOUD_API", status: "CONNECTED" },
       });
       expect(calls).toEqual([
-        `GET /${NUMBER_A}?fields=display_phone_number,verified_name,name_status,quality_rating,platform_type,status Bearer token-f61`,
+        `GET /${NUMBER_A}?fields=display_phone_number,verified_name,name_status,quality_rating,platform_type,status,is_on_biz_app Bearer token-f61`,
         "POST /waba-a/subscribed_apps Bearer token-f61",
       ]);
 

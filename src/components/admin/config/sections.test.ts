@@ -33,18 +33,19 @@ describe("menu lateral de Configurações (R9)", () => {
     expect(pendingBySection(setup).get("horarios")).toBe(1);
   });
 
-  it("4 grupos; Convênios e Nota fiscal com o item liberado; WhatsApp só para o Suporte", () => {
+  it("4 grupos; Convênios e Nota fiscal com o item liberado; WhatsApp para todos (F8.1)", () => {
     const ids = (features: Parameters<typeof configSections>[0], support: boolean) =>
       configSections(features, support, null).map((g) => [g.title, g.items.map((s) => s.id)]);
     expect(ids([], false)).toEqual([
       ["A clínica", ["clinica", "equipe"]],
       ["Atendimento", ["profissionais", "locais", "agendas", "servicos", "horarios", "feriados"]],
-      ["Mensagens", ["lembretes", "mensagens"]],
+      ["Mensagens", ["lembretes", "mensagens", "whatsapp"]],
     ]);
     const full = configSections(["insurance", "finance"], true, null);
     expect(full.map((g) => g.title)).toEqual(["A clínica", "Atendimento", "Mensagens", "Financeiro"]);
     expect(full[1].items.at(-1)!.id).toBe("convenios");
-    expect(full[2].items.at(-1)).toMatchObject({ id: "whatsapp", supportOnly: true });
+    expect(full[2].items.at(-1)!.id).toBe("whatsapp");
+    expect(full[2].items.at(-1)!.supportOnly).toBeUndefined();
     expect(full[3].items).toMatchObject([{ id: "nota_fiscal", href: "/admin/configuracoes/nota-fiscal" }]);
   });
 });

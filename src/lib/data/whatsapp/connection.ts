@@ -1,12 +1,22 @@
+import { randomInt } from "node:crypto";
 import type { DbClient } from "../clients";
 import { cleanText, DataError, unwrap, Validation } from "../errors";
-import { fetchPhoneNumberInfo, GraphRequestError, registerPhoneNumber, subscribeAppToWaba, type Fetcher, type PhoneNumberInfo } from "./graph";
+import {
+  exchangeSignupCode,
+  fetchPhoneNumberInfo,
+  GraphRequestError,
+  registerPhoneNumber,
+  requestCoexistenceSync,
+  subscribeAppToWaba,
+  type Fetcher,
+  type PhoneNumberInfo,
+} from "./graph";
 
 // Conexão do WhatsApp e templates por clínica (D3a, D3b), F3.9a.
 //
-// Nesta fase o Suporte cadastra a conexão, o token da Meta e os templates
-// (pelo Embedded Signup, o Administrador da clínica, na F8). A equipe vê a
-// situação, sem o token. O bot (credencial da clínica) lê a conexão, o token
+// O Suporte cadastra a conexão, o token da Meta e os templates à mão (de
+// reserva); na F8.1, o Administrador da clínica conecta pela janela da Meta
+// (Embedded Signup, connectWithSignup). A equipe vê a situação, sem o token. O bot (credencial da clínica) lê a conexão, o token
 // (guardado no Vault) e os templates aprovados da própria clínica. Descobrir a
 // clínica pelo número que recebeu a mensagem é da plataforma
 // (resolveClinicByPhoneNumberId, platform.ts).
@@ -21,6 +31,11 @@ export type WhatsappConnection = {
   connectedAt: Date | null;
   /** App WhatsApp Business + API no mesmo número: a recepção responde pelo app (F6.4). */
   coexistence: boolean;
+  /** Quem conectou: o Suporte à mão ou a clínica pela janela da Meta (F8.1). */
+  connectedVia: "support" | "embedded_signup";
+  /** Coexistência: sincronizações pedidas à Meta (null = falta; a Meta dá 24 horas). */
+  contactsSyncedAt: Date | null;
+  historySyncedAt: Date | null;
 };
 
 export type WhatsappConnectionInput = {
@@ -38,7 +53,7 @@ export async function getWhatsappConnection(db: DbClient, clinicId: string): Pro
   const row = unwrap(
     await db
       .from("whatsapp_connections")
-      .select("phone_number_id, waba_id, display_phone, status, connected_at, coexistence")
+      .select("phone_number_id, waba_id, display_phone, status, connected_at, coexistence, connected_via, contacts_synced_at, history_synced_at")
       .eq("clinic_id", clinicId)
       .maybeSingle(),
     "Conexão do WhatsApp",
@@ -51,6 +66,9 @@ export async function getWhatsappConnection(db: DbClient, clinicId: string): Pro
     status: row.status as ConnectionStatus,
     connectedAt: row.connected_at ? new Date(row.connected_at) : null,
     coexistence: row.coexistence,
+    connectedVia: row.connected_via as WhatsappConnection["connectedVia"],
+    contactsSyncedAt: row.contacts_synced_at ? new Date(row.contacts_synced_at) : null,
+    historySyncedAt: row.history_synced_at ? new Date(row.history_synced_at) : null,
   };
 }
 
@@ -162,6 +180,139 @@ export async function registerWhatsappNumber(db: DbClient, clinicId: string, pin
     if (error instanceof GraphRequestError) return error.message;
     throw error;
   }
+}
+
+// ---------------------------------------------------------------------------
+// Embedded Signup (F8.1)
+// ---------------------------------------------------------------------------
+
+/** Fim da janela da Meta: número novo só na API, coexistência ou só a conta (sem número). */
+export type SignupEvent = "FINISH" | "FINISH_WHATSAPP_BUSINESS_APP_ONBOARDING" | "FINISH_ONLY_WABA";
+
+export type SignupInput = { code: string; wabaId: string; phoneNumberId: string; event: string };
+
+export type SignupDeps = {
+  appId: string;
+  appSecret: string;
+  fetcher?: Fetcher;
+  /** PIN do número novo (6 números); sorteado quando não vem. */
+  newPin?: () => string;
+};
+
+export type SignupResult = {
+  coexistence: boolean;
+  displayPhone: string | null;
+  /** Coexistência: sincronizações que a Meta recusou (dá para tentar de novo em 24 horas). */
+  syncProblems: string[];
+};
+
+const META_ID = /^\d{5,30}$/;
+const SIGNUP_EVENTS: SignupEvent[] = ["FINISH", "FINISH_WHATSAPP_BUSINESS_APP_ONBOARDING", "FINISH_ONLY_WABA"];
+
+const randomPin = () => String(randomInt(0, 1_000_000)).padStart(6, "0");
+
+/**
+ * Conecta o número escolhido na janela da Meta: troca o código pelo token
+ * (vale 30 segundos), confere o número, inscreve o app na conta e, no número
+ * novo, registra na Cloud API com o PIN sorteado; na coexistência, o número
+ * já está registrado e a Meta exige as sincronizações dos contatos e do
+ * histórico (o conteúdo que chega no webhook é descartado; cliente, 24/out).
+ * Grava tudo de uma vez (connect_whatsapp: só o Administrador ou o Suporte).
+ */
+export async function connectWithSignup(db: DbClient, clinicId: string, input: SignupInput, deps: SignupDeps): Promise<SignupResult> {
+  const fetcher = deps.fetcher ?? fetch;
+  if (input.event === "FINISH_ONLY_WABA") {
+    throw new DataError("invalid", "Conexão do WhatsApp: a conta foi conectada sem número", {
+      signup: "A Meta conectou só a conta, sem número. Abra a janela de novo e escolha o número da clínica.",
+    });
+  }
+  const code = cleanText(input.code) ?? "";
+  const wabaId = cleanText(input.wabaId) ?? "";
+  const phoneNumberId = cleanText(input.phoneNumberId) ?? "";
+  if (!code || !META_ID.test(wabaId) || !META_ID.test(phoneNumberId) || !SIGNUP_EVENTS.includes(input.event as SignupEvent)) {
+    throw new DataError("invalid", "Conexão do WhatsApp: resposta da Meta incompleta", {
+      signup: "A janela da Meta não devolveu o número e a conta. Tente de novo.",
+    });
+  }
+
+  const token = await exchangeSignupCode(deps.appId, deps.appSecret, code, fetcher);
+  const info = await fetchPhoneNumberInfo(phoneNumberId, token, fetcher);
+  const coexistence = input.event === "FINISH_WHATSAPP_BUSINESS_APP_ONBOARDING" || info.isOnBizApp;
+  await subscribeAppToWaba(wabaId, token, fetcher);
+
+  let pin: string | null = null;
+  if (!coexistence) {
+    pin = (deps.newPin ?? randomPin)();
+    await registerPhoneNumber(phoneNumberId, pin, token, fetcher);
+  }
+
+  const syncProblems: string[] = [];
+  const synced = { contacts: false, history: false };
+  if (coexistence) {
+    for (const [kind, syncType] of [["contacts", "smb_app_state_sync"], ["history", "history"]] as const) {
+      try {
+        await requestCoexistenceSync(phoneNumberId, syncType, token, fetcher);
+        synced[kind] = true;
+      } catch (error) {
+        if (!(error instanceof GraphRequestError)) throw error;
+        syncProblems.push(error.message);
+      }
+    }
+  }
+
+  unwrap(
+    await db.rpc("connect_whatsapp", {
+      p_clinic_id: clinicId,
+      p_phone_number_id: phoneNumberId,
+      p_waba_id: wabaId,
+      p_display_phone: info.displayPhoneNumber ?? "",
+      p_coexistence: coexistence,
+      p_token: token,
+      p_pin: pin ?? undefined,
+      p_contacts_synced: synced.contacts,
+      p_history_synced: synced.history,
+    }),
+    "Conexão do WhatsApp",
+  );
+  return { coexistence, displayPhone: info.displayPhoneNumber, syncProblems };
+}
+
+/** A Meta dá 24 horas, depois da conexão, para as sincronizações da coexistência. */
+export const COEXISTENCE_SYNC_WINDOW_MS = 24 * 60 * 60 * 1000;
+
+/** Coexistência com sincronização faltando e ainda dentro das 24 horas. */
+export function pendingCoexistenceSync(connection: WhatsappConnection | null, now: Date = new Date()): boolean {
+  if (!connection?.coexistence || connection.status !== "connected" || connection.connectedVia !== "embedded_signup" || !connection.connectedAt) return false;
+  if (connection.contactsSyncedAt && connection.historySyncedAt) return false;
+  return now.getTime() - connection.connectedAt.getTime() < COEXISTENCE_SYNC_WINDOW_MS;
+}
+
+/**
+ * Nova tentativa das sincronizações que faltam (dentro das 24 horas). O token
+ * só é lido pela credencial da clínica (`serviceDb`); a marca é gravada com o
+ * login de quem pediu (`db`). Devolve os problemas que restaram.
+ */
+export async function retryCoexistenceSync(db: DbClient, serviceDb: DbClient, clinicId: string, fetcher: Fetcher = fetch): Promise<string[]> {
+  const connection = await getWhatsappConnection(db, clinicId);
+  if (!pendingCoexistenceSync(connection)) return [];
+  const token = await getWhatsappAccessToken(serviceDb);
+  if (!token) return ["A conexão está sem o token da Meta."];
+  const problems: string[] = [];
+  const steps = [
+    ["contacts", "smb_app_state_sync", connection!.contactsSyncedAt],
+    ["history", "history", connection!.historySyncedAt],
+  ] as const;
+  for (const [kind, syncType, done] of steps) {
+    if (done) continue;
+    try {
+      await requestCoexistenceSync(connection!.phoneNumberId, syncType, token, fetcher);
+      unwrap(await db.rpc("mark_whatsapp_synced", { p_clinic_id: clinicId, p_kind: kind }), "Conexão do WhatsApp");
+    } catch (error) {
+      if (!(error instanceof GraphRequestError)) throw error;
+      problems.push(error.message);
+    }
+  }
+  return problems;
 }
 
 // ---------------------------------------------------------------------------

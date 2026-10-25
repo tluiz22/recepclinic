@@ -28,6 +28,12 @@ export type PlatformEnv = {
    */
   whatsappAppId: string | null;
   /**
+   * ID da configuração do Embedded Signup (Login do Facebook para Empresas;
+   * F8.1). Com ele e o WHATSAPP_APP_ID, o Administrador conecta o número pela
+   * janela da Meta; null = só o cadastro manual do Suporte.
+   */
+  whatsappSignupConfigId: string | null;
+  /**
    * Ambiente "Simulação" da nota fiscal (F11.4b): a nota sai do próprio
    * servidor, sem a Receita. Só no staging (NFSE_SIMULATION=1); fora dele o
    * Suporte não consegue ligar e a clínica que estiver nele não emite.
@@ -117,11 +123,16 @@ export function parsePlatformEnv(source: EnvSource): PlatformEnv {
   const whatsappAppId = text(source, "WHATSAPP_APP_ID");
   if (whatsappAppId && !/^\d{5,20}$/.test(whatsappAppId)) problems.push("WHATSAPP_APP_ID inválida (só os números do ID do app na Meta)");
 
+  const whatsappSignupConfigId = text(source, "WHATSAPP_ES_CONFIG_ID");
+  if (whatsappSignupConfigId && !/^\d{5,20}$/.test(whatsappSignupConfigId)) {
+    problems.push("WHATSAPP_ES_CONFIG_ID inválida (só os números do ID da configuração do Login do Facebook para Empresas)");
+  }
+
   const nfseSimulation = text(source, "NFSE_SIMULATION");
   if (nfseSimulation && nfseSimulation !== "1" && nfseSimulation !== "0") problems.push("NFSE_SIMULATION inválida (1 liga a simulação da nota fiscal; 0 ou vazia, desliga)");
 
   if (problems.length) throw new PlatformEnvError(problems);
-  return { supabaseUrl, supabaseAnonKey, supabaseServiceRoleKey, supabaseJwtSecret, cronSecret, siteUrl, email, whatsapp, whatsappAppId: whatsappAppId ?? null, nfseSimulation: nfseSimulation === "1" };
+  return { supabaseUrl, supabaseAnonKey, supabaseServiceRoleKey, supabaseJwtSecret, cronSecret, siteUrl, email, whatsapp, whatsappAppId: whatsappAppId ?? null, whatsappSignupConfigId: whatsappSignupConfigId ?? null, nfseSimulation: nfseSimulation === "1" };
 }
 
 let cached: PlatformEnv | undefined;
@@ -144,6 +155,7 @@ export function platformEnv(): PlatformEnv {
     WHATSAPP_APP_SECRET: import.meta.env.WHATSAPP_APP_SECRET,
     WHATSAPP_WEBHOOK_VERIFY_TOKEN: import.meta.env.WHATSAPP_WEBHOOK_VERIFY_TOKEN,
     WHATSAPP_APP_ID: import.meta.env.WHATSAPP_APP_ID,
+    WHATSAPP_ES_CONFIG_ID: import.meta.env.WHATSAPP_ES_CONFIG_ID,
     NFSE_SIMULATION: import.meta.env.NFSE_SIMULATION,
   });
   return cached;
