@@ -77,7 +77,7 @@ const templateRows = DEFAULT_TEMPLATES.map((template) => ({ template, saved: tem
 >
 
   <div class="flex max-w-2xl flex-col gap-4">
-    <WhatsappConnectionCard connection={connection} timeZone={clinic.timezone} manage={{ signup, pendingSync: pendingCoexistenceSync(connection), templates: templateApproval(templatesInUse(clinic.features), templates) }} />
+    <WhatsappConnectionCard connection={connection} timeZone={clinic.timezone} manage={{ signup, pendingSync: pendingCoexistenceSync(connection), templates: templateApproval(templatesInUse(clinic.features), templates), isSupport }} />
 
     {
       isSupport && (
@@ -253,7 +253,8 @@ const templateRows = DEFAULT_TEMPLATES.map((template) => ({ template, saved: tem
               ))}
             </ul>
           )}
-          {unused?.ok && unused.templates.length > 0 && <ConfirmDeleteDialog />}
+          {/* Conectado, o cartão Conexão já traz a confirmação (Desconectar). */}
+          {unused?.ok && unused.templates.length > 0 && connection?.status !== "connected" && <ConfirmDeleteDialog />}
         </Card>
       )
     }

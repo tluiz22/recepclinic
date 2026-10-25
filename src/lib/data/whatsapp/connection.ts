@@ -2,12 +2,14 @@ import { randomInt } from "node:crypto";
 import type { DbClient } from "../clients";
 import { cleanText, DataError, unwrap, Validation } from "../errors";
 import {
+  deregisterPhoneNumber,
   exchangeSignupCode,
   fetchPhoneNumberInfo,
   GraphRequestError,
   registerPhoneNumber,
   requestCoexistenceSync,
   subscribeAppToWaba,
+  unsubscribeAppFromWaba,
   type Fetcher,
   type PhoneNumberInfo,
 } from "./graph";
@@ -36,6 +38,11 @@ export type WhatsappConnection = {
   /** Coexistência: sincronizações pedidas à Meta (null = falta; a Meta dá 24 horas). */
   contactsSyncedAt: Date | null;
   historySyncedAt: Date | null;
+  /** Forma de pagamento conferida pelo Suporte na conta atual (F8.3; conta nova, confere de novo). */
+  paymentCheckedAt: Date | null;
+  /** Desconexão (F8.3): pelo painel ou avisada pela Meta (a clínica saiu pelo app, conta removida). */
+  disconnectedAt: Date | null;
+  disconnectedVia: "panel" | "meta" | null;
 };
 
 export type WhatsappConnectionInput = {
@@ -53,7 +60,9 @@ export async function getWhatsappConnection(db: DbClient, clinicId: string): Pro
   const row = unwrap(
     await db
       .from("whatsapp_connections")
-      .select("phone_number_id, waba_id, display_phone, status, connected_at, coexistence, connected_via, contacts_synced_at, history_synced_at")
+      .select(
+        "phone_number_id, waba_id, display_phone, status, connected_at, coexistence, connected_via, contacts_synced_at, history_synced_at, payment_checked_at, payment_checked_waba, disconnected_at, disconnected_via",
+      )
       .eq("clinic_id", clinicId)
       .maybeSingle(),
     "Conexão do WhatsApp",
@@ -69,6 +78,9 @@ export async function getWhatsappConnection(db: DbClient, clinicId: string): Pro
     connectedVia: row.connected_via as WhatsappConnection["connectedVia"],
     contactsSyncedAt: row.contacts_synced_at ? new Date(row.contacts_synced_at) : null,
     historySyncedAt: row.history_synced_at ? new Date(row.history_synced_at) : null,
+    paymentCheckedAt: row.payment_checked_at && row.payment_checked_waba === row.waba_id ? new Date(row.payment_checked_at) : null,
+    disconnectedAt: row.disconnected_at ? new Date(row.disconnected_at) : null,
+    disconnectedVia: (row.disconnected_via as WhatsappConnection["disconnectedVia"]) ?? null,
   };
 }
 
@@ -313,6 +325,60 @@ export async function retryCoexistenceSync(db: DbClient, serviceDb: DbClient, cl
     }
   }
   return problems;
+}
+
+export type DisconnectResult = { coexistence: boolean; problems: string[] };
+
+/**
+ * "Desconectar WhatsApp" (F8.3; Administrador ou Suporte). Na conexão feita
+ * pela janela da Meta, antes de apagar o token: tira o app RecepClinic da
+ * conta (se nenhuma outra clínica ligada usa a mesma conta) e, no número só
+ * na API, tira o número da Cloud API (na coexistência a Meta não aceita: a
+ * clínica termina pelo app). Erro da Meta não impede: a conexão sai do
+ * sistema e o problema volta para a tela. A cadastrada pelo Suporte só sai do
+ * sistema (o número e a conta são administrados à mão). `serviceDb` lê o
+ * token; `othersOnWaba` = clínicas ligadas na conta (plataforma).
+ */
+export async function disconnectWhatsapp(
+  db: DbClient,
+  serviceDb: DbClient,
+  clinicId: string,
+  othersOnWaba: (wabaId: string) => Promise<string[]>,
+  fetcher: Fetcher = fetch,
+): Promise<DisconnectResult> {
+  const connection = await getWhatsappConnection(db, clinicId);
+  if (!connection || connection.status === "disconnected") {
+    throw new DataError("invalid", "Conexão do WhatsApp: já está desconectada", { conexao: "O WhatsApp da clínica já está desconectado." });
+  }
+  const problems: string[] = [];
+  if (connection.connectedVia === "embedded_signup") {
+    const token = await getWhatsappAccessToken(serviceDb);
+    const attempt = async (step: () => Promise<void>) => {
+      try {
+        await step();
+      } catch (error) {
+        if (!(error instanceof GraphRequestError)) throw error;
+        problems.push(error.message);
+      }
+    };
+    if (token) {
+      const shared = (await othersOnWaba(connection.wabaId)).some((id) => id !== clinicId);
+      if (!shared) await attempt(() => unsubscribeAppFromWaba(connection.wabaId, token, fetcher));
+      if (!connection.coexistence) await attempt(() => deregisterPhoneNumber(connection.phoneNumberId, token, fetcher));
+    }
+  }
+  unwrap(await db.rpc("disconnect_whatsapp", { p_clinic_id: clinicId }), "Conexão do WhatsApp");
+  return { coexistence: connection.coexistence, problems };
+}
+
+/** Suporte (F8.3): "Forma de pagamento conferida" na conta atual, ou desmarca. */
+export async function setWhatsappPaymentChecked(db: DbClient, clinicId: string, checked: boolean): Promise<void> {
+  unwrap(await db.rpc("set_whatsapp_payment_checked", { p_clinic_id: clinicId, p_checked: checked }), "Conexão do WhatsApp");
+}
+
+/** Webhook (credencial da clínica): a Meta avisou que a clínica saiu. true = estava ligada. */
+export async function markWhatsappDisconnectedByMeta(serviceDb: DbClient): Promise<boolean> {
+  return unwrap(await serviceDb.rpc("mark_whatsapp_disconnected_by_meta"), "Conexão do WhatsApp") === true;
 }
 
 // ---------------------------------------------------------------------------

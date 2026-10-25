@@ -129,6 +129,9 @@ describe("sincronização pendente da coexistência", () => {
     connectedVia: "embedded_signup",
     contactsSyncedAt: null,
     historySyncedAt: null,
+    paymentCheckedAt: null,
+    disconnectedAt: null,
+    disconnectedVia: null,
     ...extra,
   });
 

@@ -1435,14 +1435,14 @@ isOneToOne: false
                   ]
                 },"whatsapp_connections": {
                   Row: {
-                    "access_token_secret_id": string | null,"clinic_id": string,"coexistence": boolean,"connected_at": string | null,"connected_via": string,"contacts_synced_at": string | null,"created_at": string,"display_phone": string | null,"history_synced_at": string | null,"phone_number_id": string,"pin_secret_id": string | null,"status": string,"updated_at": string,"waba_id": string
+                    "access_token_secret_id": string | null,"clinic_id": string,"coexistence": boolean,"connected_at": string | null,"connected_via": string,"contacts_synced_at": string | null,"created_at": string,"disconnected_at": string | null,"disconnected_via": string | null,"display_phone": string | null,"history_synced_at": string | null,"payment_checked_at": string | null,"payment_checked_waba": string | null,"phone_number_id": string,"pin_secret_id": string | null,"status": string,"updated_at": string,"waba_id": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "access_token_secret_id"?: string | null,"clinic_id": string,"coexistence"?: boolean,"connected_at"?: string | null,"connected_via"?: string,"contacts_synced_at"?: string | null,"created_at"?: string,"display_phone"?: string | null,"history_synced_at"?: string | null,"phone_number_id": string,"pin_secret_id"?: string | null,"status"?: string,"updated_at"?: string,"waba_id": string
+                    "access_token_secret_id"?: string | null,"clinic_id": string,"coexistence"?: boolean,"connected_at"?: string | null,"connected_via"?: string,"contacts_synced_at"?: string | null,"created_at"?: string,"disconnected_at"?: string | null,"disconnected_via"?: string | null,"display_phone"?: string | null,"history_synced_at"?: string | null,"payment_checked_at"?: string | null,"payment_checked_waba"?: string | null,"phone_number_id": string,"pin_secret_id"?: string | null,"status"?: string,"updated_at"?: string,"waba_id": string
                   }
                   Update: {
-                    "access_token_secret_id"?: string | null,"clinic_id"?: string,"coexistence"?: boolean,"connected_at"?: string | null,"connected_via"?: string,"contacts_synced_at"?: string | null,"created_at"?: string,"display_phone"?: string | null,"history_synced_at"?: string | null,"phone_number_id"?: string,"pin_secret_id"?: string | null,"status"?: string,"updated_at"?: string,"waba_id"?: string
+                    "access_token_secret_id"?: string | null,"clinic_id"?: string,"coexistence"?: boolean,"connected_at"?: string | null,"connected_via"?: string,"contacts_synced_at"?: string | null,"created_at"?: string,"disconnected_at"?: string | null,"disconnected_via"?: string | null,"display_phone"?: string | null,"history_synced_at"?: string | null,"payment_checked_at"?: string | null,"payment_checked_waba"?: string | null,"phone_number_id"?: string,"pin_secret_id"?: string | null,"status"?: string,"updated_at"?: string,"waba_id"?: string
                   }
                   Relationships: [
                     {
@@ -1537,6 +1537,9 @@ isOneToOne: false
 "connect_whatsapp":
 { Args: { "p_clinic_id": string,"p_coexistence": boolean,"p_contacts_synced"?: boolean,"p_display_phone": string,"p_history_synced"?: boolean,"p_phone_number_id": string,"p_pin"?: string,"p_token": string,"p_waba_id": string }; Returns: undefined
                            },
+"disconnect_whatsapp":
+{ Args: { "p_clinic_id": string }; Returns: boolean
+                           },
 "finance_patients_missing_payer_cpf":
 { Args: { "p_clinic_id": string }; Returns: {
               "agenda_import_id": string | null,
@@ -1612,6 +1615,9 @@ isOneToOne: false
                            },
 "mark_my_invitations_accepted":
 { Args: Record<PropertyKey, never>; Returns: undefined
+                           },
+"mark_whatsapp_disconnected_by_meta":
+{ Args: Record<PropertyKey, never>; Returns: boolean
                            },
 "mark_whatsapp_synced":
 { Args: { "p_clinic_id": string,"p_kind": string }; Returns: undefined
@@ -1709,6 +1715,9 @@ isOneToOne: false
                            },
 "set_whatsapp_access_token":
 { Args: { "p_clinic_id": string,"p_token": string }; Returns: undefined
+                           },
+"set_whatsapp_payment_checked":
+{ Args: { "p_checked": boolean,"p_clinic_id": string }; Returns: undefined
                            },
 "undo_agenda_import":
 { Args: { "p_apply": boolean,"p_request_id": string }; Returns: Json

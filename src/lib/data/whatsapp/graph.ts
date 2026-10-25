@@ -87,6 +87,24 @@ export async function subscribeAppToWaba(wabaId: string, token: string, fetcher:
   });
 }
 
+/** Desconectar (F8.3): tira o app RecepClinic da conta; os eventos dela param de chegar. */
+export async function unsubscribeAppFromWaba(wabaId: string, token: string, fetcher: Fetcher = fetch): Promise<void> {
+  await call(fetcher, "Saída do app da conta do WhatsApp", `${GRAPH}/${encodeURIComponent(wabaId)}/subscribed_apps`, token, {
+    method: "DELETE",
+  });
+}
+
+/**
+ * Desconectar o número só na API (F8.3): tira o número da Cloud API, para ele
+ * poder ir para outro lugar. Na coexistência a Meta não aceita (a clínica
+ * desconecta pelo app WhatsApp Business).
+ */
+export async function deregisterPhoneNumber(phoneNumberId: string, token: string, fetcher: Fetcher = fetch): Promise<void> {
+  await call(fetcher, "Saída do número da Cloud API", `${GRAPH}/${encodeURIComponent(phoneNumberId)}/deregister`, token, {
+    method: "POST",
+  });
+}
+
 /**
  * Registra o número na Cloud API com o PIN de 6 dígitos (verificação em duas
  * etapas do WhatsApp). Número posto direto na API (sem o app do celular)

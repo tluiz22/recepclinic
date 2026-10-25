@@ -45,6 +45,9 @@ const [counts, sendsAlert, toReview, certificate, connection, templates] = await
 ]);
 const templatesAlert =
   connection?.status === "connected" ? describeTemplateApproval(templateApproval(templatesInUse(clinic.features), templates)) : null;
+// F8.3 (cliente, 24 e 25/out): forma de pagamento ainda não conferida pelo Suporte; desconexão avisada pela Meta.
+const paymentAlert = connection?.status === "connected" && !connection.paymentCheckedAt;
+const disconnectedAlert = connection?.status === "disconnected" && connection.disconnectedVia === "meta" ? connection.disconnectedAt : null;
 const certificateAlert = (() => {
   if (!certificate) return null;
   const status = certificateStatus(certificate.validUntil);
@@ -87,12 +90,24 @@ const sectionTitle = "font-display text-[17px] leading-tight font-bold text-ink 
   </PageHeader>
 
   {
-    (notice || sendsAlertLines.length > 0 || certificateAlert || templatesAlert) && (
+    (notice || sendsAlertLines.length > 0 || certificateAlert || templatesAlert || paymentAlert || disconnectedAlert) && (
       <div class="mt-4 flex flex-col gap-2">
         {notice && <Notice tone={notice.tone}>{notice.text}</Notice>}
         {sendsAlertLines.length > 0 && (
           <Notice tone="danger" href="/admin/consultas?tab=envios" linkLabel="Ver os envios">
             {sendsAlertLines.join(" ")}
+          </Notice>
+        )}
+        {disconnectedAlert && (
+          <Notice tone="danger" href={withReturn("/admin/configuracoes/whatsapp", here)} linkLabel="Conectar de novo">
+            O WhatsApp da clínica foi desconectado da Meta em {formatInstant(disconnectedAlert, clinic.timezone, "dd/MM")}: o bot, os avisos e os lembretes
+            pararam. Conecte de novo em Configurações › WhatsApp.
+          </Notice>
+        )}
+        {paymentAlert && (
+          <Notice tone="warning" href={withReturn("/admin/configuracoes/whatsapp", here)} linkLabel="Abrir WhatsApp">
+            Falta conferir a forma de pagamento da conta do WhatsApp na Meta: sem ela, os lembretes e os avisos automáticos não saem. Adicione no Gerenciador
+            do WhatsApp e avise o suporte do RecepClinic para conferir.
           </Notice>
         )}
         {templatesAlert && (

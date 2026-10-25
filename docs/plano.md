@@ -1719,6 +1719,40 @@ templates aprovados, pacientes e agendas carregados) antes de a clínica falar c
   em implantação, mesmo conectada; rotinas) e a clínica nova nasce em implantação (`novas-clinicas`). No navegador local:
   voltar para implantação, faixa na clínica, ativar de novo.
 
+**F8.3, decisões do cliente (25/out):** (a forma de pagamento já estava decidida em 24/out, decisão 4 acima)
+1. **"Desconectar WhatsApp"** para o **Administrador e o Suporte**, com confirmação; **trocar de número = desconectar e
+   conectar de novo**, sem depender do Suporte.
+2. **Desconexão avisada pela Meta** (a clínica desconectou pelo app ou a conta saiu): além de "Desconectado", **aviso no
+   Início** para o Administrador até conectar de novo e **registro em Sistema › Erros** para o Suporte.
+
+**F8.3 implementada, testada no local e publicada no staging em 25/out** (migração
+`20261025160000_desconexao_e_pagamento.sql`; documentação da Meta conferida de novo em 25/out: `account_update` e a
+página da coexistência):
+- **Forma de pagamento:** o Suporte marca **"Forma de pagamento conferida (Suporte)"** no cartão Conexão (ou desmarca;
+  `set_whatsapp_payment_checked`, só o Suporte). Vale para a conta (WABA) em que foi conferida: conectou outra conta,
+  confere de novo. Até lá, o cartão explica o caminho (Gerenciador do WhatsApp › Visão geral › Adicionar forma de
+  pagamento) e o Início mostra ao Administrador "Falta conferir a forma de pagamento…". Não trava nada.
+- **Desconectar** (`disconnectWhatsapp`, `disconnect_whatsapp`): a conexão fica "Desconectado" e o token e o PIN saem do
+  cofre. Na conexão feita pela janela da Meta, antes: tira o app RecepClinic da conta (`DELETE subscribed_apps`; só se
+  nenhuma outra clínica ligada usa a mesma conta, como a conta compartilhada do staging) e, no número só na API, tira o
+  número da Cloud API (`deregister`). Na coexistência a Meta não aceita o `deregister`: o aviso de desconectado ensina
+  o passo no app (*Configurações › Conta › Plataforma comercial › Desconectar conta*). A conexão cadastrada pelo Suporte
+  só sai do sistema. Erro da Meta não impede a desconexão (vai para o aviso e para Erros). O número desconectado de uma
+  clínica pode ser conectado em outra (a conexão antiga sai).
+- **Aviso da Meta** (`account_update` com `PARTNER_REMOVED`, `ACCOUNT_OFFBOARDED` ou `ACCOUNT_DELETED`; a conta vem em
+  `waba_info.waba_id`, senão em `entry.id`): as clínicas ligadas àquela conta ficam "Desconectado" (sem o token), com o
+  registro em Sistema › Erros; o cartão e o Início avisam "O WhatsApp da clínica foi desconectado da Meta em dd/mm…" até
+  conectar de novo (que limpa a desconexão).
+- **Coexistência, o que muda no app** (no cartão, antes de conectar): grupos ficam só no app; mensagens temporárias, de
+  visualização única e localização em tempo real desligadas nas conversas individuais; listas de transmissão sem novas
+  (as existentes só leitura); aparelhos conectados desligados e religáveis (menos WhatsApp para Windows); mensagens da
+  recepção pelo app sem custo.
+- **Testes:** unidade (o aviso `account_update`: conta no `waba_info` ou no `entry.id`, outros eventos ignorados) e banco
+  (`tests/db/whatsappDesconexao.test.ts`: forma de pagamento só do Suporte e por conta; Recepção não desconecta;
+  coexistência sem `deregister`; conta compartilhada sem tirar o app; cofre conferido; número livre para outra clínica;
+  conexão do Suporte sem chamar a Meta; aviso da Meta pelo webhook; só a credencial da clínica marca). No navegador
+  local: marcar a forma de pagamento, desconectar com a confirmação e o aviso da Meta no Início.
+
 ## F10 — Primeiro piloto
 
 **Escopo:** produção (Supabase Pro + Vercel Pro, backup conferido); criação da 1ª clínica pelo

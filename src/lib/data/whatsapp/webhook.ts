@@ -9,6 +9,7 @@ import { sendGuidanceAfterDelivery } from "./guidance";
 import { scheduleRetryAfterLateFailure } from "./retries";
 import { guidanceSender, preparationSender, type ClinicSender } from "./send";
 import { applyTemplateStatusEvent, type TemplateStatusEvent } from "./templateSync";
+import { markWhatsappDisconnectedByMeta } from "./connection";
 import { handleIncomingMessage } from "./bot/router";
 import { logError, logWarn } from "../../log";
 
@@ -75,6 +76,27 @@ export function templateStatusChanges(payload: unknown): ({ wabaId: string } & T
   );
 }
 
+/**
+ * Fim da conexão avisado pela Meta (field `account_update`, F8.3): a clínica
+ * desconectou pelo app WhatsApp Business ou tirou o RecepClinic da conta
+ * (PARTNER_REMOVED), ou a conta saiu (ACCOUNT_OFFBOARDED, ACCOUNT_DELETED).
+ * A conta vem em `waba_info.waba_id` (no PARTNER_REMOVED, `entry.id` é outra
+ * coisa); sem ela, `entry.id`.
+ */
+const DISCONNECTION_EVENTS = new Set(["PARTNER_REMOVED", "ACCOUNT_OFFBOARDED", "ACCOUNT_DELETED"]);
+
+export function accountDisconnections(payload: unknown): { wabaId: string; event: string }[] {
+  type Value = { event?: string; waba_info?: { waba_id?: string | number } };
+  const entries = (payload as { entry?: { id?: string; changes?: { field?: string; value?: Value }[] }[] } | null)?.entry;
+  if (!Array.isArray(entries)) return [];
+  return entries.flatMap((entry) =>
+    (Array.isArray(entry?.changes) ? entry.changes : [])
+      .filter((change) => change?.field === "account_update" && DISCONNECTION_EVENTS.has(change.value?.event ?? ""))
+      .map((change) => ({ wabaId: String(change.value!.waba_info?.waba_id ?? entry.id ?? ""), event: change.value!.event! }))
+      .filter((item) => item.wabaId),
+  );
+}
+
 /** As mudanças do corpo do webhook (entry[].changes[].value), em ordem. */
 export function webhookChanges(payload: unknown): WebhookChange[] {
   const entries = (payload as { entry?: { changes?: { value?: WebhookChange }[] }[] } | null)?.entry;
@@ -106,6 +128,8 @@ export type WebhookSummary = {
   preparations: number;
   /** Templates com a situação atualizada. */
   templates: number;
+  /** Clínicas desconectadas pelo aviso da Meta (F8.3). */
+  disconnections: number;
   /** Mensagens respondidas pelo bot. */
   botReplies: number;
   errors: number;
@@ -113,7 +137,7 @@ export type WebhookSummary = {
 
 /** Registra os eventos. Erro num evento não para os outros (vai para o log). */
 export async function processWebhook(payload: unknown, deps: WebhookDeps, now: Date = new Date()): Promise<WebhookSummary> {
-  const summary: WebhookSummary = { inbound: 0, echoes: 0, statuses: 0, duplicates: 0, unknownNumbers: 0, preparations: 0, templates: 0, botReplies: 0, errors: 0 };
+  const summary: WebhookSummary = { inbound: 0, echoes: 0, statuses: 0, duplicates: 0, unknownNumbers: 0, preparations: 0, templates: 0, disconnections: 0, botReplies: 0, errors: 0 };
   const count = (result: RecordResult, kind: "inbound" | "echoes") => {
     if (result.recorded) summary[kind] += 1;
     else if (result.reason === "duplicate") summary.duplicates += 1;
@@ -200,6 +224,21 @@ export async function processWebhook(payload: unknown, deps: WebhookDeps, now: D
     await attempt("situação do template", async () => {
       for (const clinicId of await deps.resolveClinicsByWaba!(wabaId)) {
         if (await applyTemplateStatusEvent(deps.clientFor(clinicId), clinicId, event)) summary.templates += 1;
+      }
+    });
+  }
+
+  // A Meta avisou o fim da conexão: "Desconectado", e o Suporte fica sabendo por Sistema › Erros.
+  for (const { wabaId, event } of accountDisconnections(payload)) {
+    if (!deps.resolveClinicsByWaba) break;
+    await attempt("desconexão avisada pela Meta", async () => {
+      for (const clinicId of await deps.resolveClinicsByWaba!(wabaId)) {
+        if (!(await markWhatsappDisconnectedByMeta(deps.clientFor(clinicId)))) continue;
+        summary.disconnections += 1;
+        logError("whatsapp: desconectado pela Meta", new Error(`A Meta avisou ${event}: o WhatsApp da clínica foi marcado como desconectado.`), {
+          clinica: clinicId,
+          waba_id: wabaId,
+        });
       }
     });
   }

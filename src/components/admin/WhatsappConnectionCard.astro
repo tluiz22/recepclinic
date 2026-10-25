@@ -3,8 +3,12 @@
 // WhatsApp. Na aba WhatsApp (F8.1, `manage`), o Administrador e o Suporte
 // conectam pela janela da Meta e, na coexistência, refazem a sincronização
 // que a Meta exige em até 24 horas. F8.2: a situação das mensagens
-// automáticas (templates) na conta, com o envio das que faltam.
+// automáticas (templates) na conta, com o envio das que faltam. F8.3: forma de
+// pagamento (o Suporte confere), "Desconectar WhatsApp" (trocar de número =
+// desconectar e conectar de novo), o aviso da Meta de desconexão e o que muda
+// no app na coexistência (documentação da Meta conferida em 25/out/2026).
 import Badge from "./config/Badge.astro";
+import ConfirmDeleteDialog from "./ConfirmDeleteDialog.astro";
 import Card from "./config/Panel.astro";
 import Notice from "./ui/Notice.astro";
 import WhatsappSignupButton from "./WhatsappSignupButton.astro";
@@ -22,6 +26,8 @@ interface Props {
     pendingSync: boolean;
     /** Templates em uso na conta da clínica (F8.2). */
     templates: TemplateApproval | null;
+    /** Suporte: marca a forma de pagamento conferida (F8.3). */
+    isSupport: boolean;
   };
 }
 
@@ -34,6 +40,8 @@ const status = {
 const canConnect = !connection || connection.status === "disconnected";
 const templates = connection?.status === "connected" ? (manage?.templates ?? null) : null;
 const templatesText = templates ? describeTemplateApproval(templates) : null;
+const connected = connection?.status === "connected";
+const LINK = "font-semibold text-brand-ink underline-offset-2 hover:underline";
 ---
 
 <Card>
@@ -82,8 +90,30 @@ const templatesText = templates ? describeTemplateApproval(templates) : null;
           <p class="mt-3 text-sm text-pend-800">A conexão pela Meta ainda não está ligada no sistema. Fale com o suporte do RecepClinic.</p>
         )}
       </div>
-    ) : (
-      <p class={HINT}>Para trocar o número ou desconectar, fale com o suporte do RecepClinic.</p>
+    ) : null
+  }
+
+  {
+    manage && connection?.status === "disconnected" && connection.disconnectedVia === "meta" && connection.disconnectedAt && (
+      <Notice tone="warning" class="mt-3">
+        A Meta avisou em {formatInstant(connection.disconnectedAt, timeZone, "dd/MM/yyyy 'às' HH:mm")} que o WhatsApp da clínica foi desconectado (pelo app
+        WhatsApp Business ou na conta da Meta): o bot, os avisos e os lembretes pararam. Conecte de novo pelo botão acima.
+      </Notice>
+    )
+  }
+
+  {
+    manage && canConnect && (
+      <details class="mt-3 text-sm text-ink-mid">
+        <summary class="cursor-pointer font-medium text-ink">O que muda no app WhatsApp Business ao conectar o app</summary>
+        <ul class="mt-2 list-disc space-y-1 pl-5">
+          <li>As conversas individuais seguem no app e no sistema; os grupos continuam no app, mas não passam pelo sistema.</li>
+          <li>Mensagens temporárias, de visualização única e a localização em tempo real ficam desligadas nas conversas individuais.</li>
+          <li>Listas de transmissão: não dá para criar novas, e as que existem ficam só para leitura.</li>
+          <li>Os aparelhos conectados (WhatsApp Web, computador) são desconectados e podem ser conectados de novo, menos o WhatsApp para Windows.</li>
+          <li>As mensagens que a recepção manda pelo app continuam sem custo.</li>
+        </ul>
+      </details>
     )
   }
 
@@ -101,6 +131,61 @@ const templatesText = templates ? describeTemplateApproval(templates) : null;
             <button type="submit" class={SECONDARY_BUTTON}>Enviar à Meta as que faltam</button>
           </form>
         )}
+      </div>
+    )
+  }
+
+  {
+    manage && connected && (
+      <div class="mt-3 border-t border-line pt-3 text-sm text-ink-mid">
+        <p>
+          <span class="font-medium text-ink">Forma de pagamento na Meta:</span>{" "}
+          {connection!.paymentCheckedAt
+            ? `conferida pelo suporte do RecepClinic em ${formatInstant(connection!.paymentCheckedAt, timeZone, "dd/MM/yyyy")}.`
+            : "ainda não conferida."}
+        </p>
+        {!connection!.paymentCheckedAt && (
+          <p class={HINT}>
+            A Meta cobra da clínica, direto, as mensagens automáticas (lembretes e avisos); sem a forma de pagamento elas não saem, e o bot continua
+            respondendo quem escreve. Adicione em{" "}
+            <a href="https://business.facebook.com/wa/manage/home/" target="_blank" rel="noopener noreferrer" class={LINK}>
+              Gerenciador do WhatsApp
+            </a>{" "}
+            › Visão geral › Adicionar forma de pagamento, e avise o suporte do RecepClinic para conferir.
+          </p>
+        )}
+        {manage.isSupport && (
+          <form method="POST" action="/api/admin/configuracoes/whatsapp-pagamento" class="mt-2">
+            <input type="hidden" name="conferida" value={connection!.paymentCheckedAt ? "nao" : "sim"} />
+            <button type="submit" class={SECONDARY_BUTTON}>
+              {connection!.paymentCheckedAt ? "Desmarcar a forma de pagamento" : "Forma de pagamento conferida (Suporte)"}
+            </button>
+          </form>
+        )}
+      </div>
+    )
+  }
+
+  {
+    manage && connected && (
+      <div class="mt-3 border-t border-line pt-3">
+        <form method="POST" action="/api/admin/configuracoes/whatsapp-desconectar">
+          <button
+            type="submit"
+            class={`${SECONDARY_BUTTON} js-confirm-delete text-danger`}
+            data-confirm-title="Desconectar o WhatsApp?"
+            data-confirm-message={
+              connection!.coexistence
+                ? "O bot, os avisos e os lembretes param. A recepção continua no app WhatsApp Business; para terminar, desconecte também no app (Configurações › Conta › Plataforma comercial)."
+                : "O bot, os avisos e os lembretes param, e o número sai do sistema."
+            }
+            data-confirm-label="Desconectar"
+          >
+            Desconectar WhatsApp
+          </button>
+        </form>
+        <p class={HINT}>Para trocar de número: desconecte e conecte de novo com o número novo.</p>
+        <ConfirmDeleteDialog />
       </div>
     )
   }
