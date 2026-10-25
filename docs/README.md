@@ -326,7 +326,9 @@
   `20261025160000_desconexao_e_pagamento.sql`). **Produção e testes com o WhatsApp decididos em 25/out** (5 decisões no
   [plano](plano.md), F10: produção em `app.`, staging em `teste.`, um app da Meta com desvio da conta de testes, conta no
   portfólio da clínica numa sessão com o Suporte, e o teste da coexistência na implantação do piloto, no lugar da F8.4).
-  **Retomar daqui:** F10.0a (código do desvio), depois F10.0b (staging para `teste.`) e F10.0c (produção). Seguem também a validação da ajuda contextual (Alta, Média e Baixa).
+  **Fim da sessão de 25/out. Retomar daqui (próxima sessão):** F10.0a (código do desvio), depois F10.0b (staging para
+  `teste.`) e F10.0c (produção). **Pendente de validação do cliente no staging (no fim, como pedido):** F8.1, F8.2, F8.2b
+  e F8.3. Seguem também a validação da ajuda contextual (Alta, Média e Baixa).
 >   Banco local com os dados fictícios das Métricas (`npm run db:reset` limpa). Em paralelo,
 >   aguardar a Meta (Análise do App até ~29/out).
 >   **App antigo da Meta (cliente, 20/out):** o piloto está desativado e o número do app "Consultório Dra. Ana Karina" é
