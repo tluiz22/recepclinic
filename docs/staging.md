@@ -359,8 +359,9 @@ Fazer na ordem (o desvio do passo 8 pede o `teste.` já no ar).
    clínica **Consultorio de Teste** e, em *Configurações › WhatsApp*, **Testar conexão**. A mensagem verde deve
    terminar com *"App inscrito na conta, com o desvio para https://teste.recepclinic.com.br/api/whatsapp/webhook: as
    mensagens chegam a este ambiente."*
-9. **Conferir o desvio**: de um celular pessoal, mandar "oi" para `+55 61 9903-3143`: o bot responde e a conversa
-   aparece no painel em `teste.`.
+9. **Conferir o desvio**: de um celular pessoal, mandar "oi" para `+55 61 9903-3143`: o bot responde (quem responde
+   é o servidor que recebeu a mensagem, então a resposta confirma o desvio para o staging). Sem resposta em 1 minuto,
+   avisar o Claude, que confere os registros pelo terminal.
 10. **Better Stack**: nos 4 monitores (Painel, Webhook, Saúde e Erros), trocar `app.` por `teste.` no endereço
     (mesmo caminho). Os da produção são criados na F10.0c.
 11. **Conferir o e-mail**: "Esqueci minha senha" em `https://teste.recepclinic.com.br/admin/esqueci-senha`: o link
