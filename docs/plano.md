@@ -1610,6 +1610,35 @@ Provider. A F11 pausa e o trabalho volta à F8 e depois à F10 (prioridade de 12
    Administrador vê um aviso no Início com o caminho no Gerenciador do WhatsApp. Não trava nada (o bot funciona; envio
    que falhar aparece em Envios, com o reenvio automático).
 
+**F8.0, documentação da Meta conferida em 25/out** (roteiro do cliente na parte N do [`staging.md`](staging.md)):
+- **Versão do Embedded Signup:** v2 e v3 saíram em 15/out/2026; a **v4** é a atual e a v5 saiu em 20/out/2026 (há 5
+  dias; nela a coexistência já vem ligada). Escolha técnica: **v4**, a estável, com
+  `extras: { setup: {}, featureType: "whatsapp_business_app_onboarding", sessionInfoVersion: "3" }`; a troca para a v5
+  fica para quando ela amadurecer. SDK `connect.facebook.net/en_US/sdk.js` (`FB.init` + `FB.login` com `config_id`,
+  `response_type: "code"`, `override_default_response_type: true`); o resultado chega por `postMessage` de
+  `*.facebook.com` com `type: "WA_EMBEDDED_SIGNUP"` e `event` `FINISH` (número novo) ou
+  `FINISH_WHATSAPP_BUSINESS_APP_ONBOARDING` (coexistência), com `waba_id`, `phone_number_id` e `business_id`;
+  `CANCEL` traz `current_step`; `ERROR`, o código.
+- **No servidor (F8.1):** o código vale **30 segundos**: `GET /oauth/access_token` (`client_id`, `client_secret`,
+  `code`) devolve o token da clínica (usuário do sistema de integração), que vai para o Vault; `POST
+  /<waba_id>/subscribed_apps`; número novo: `POST /<phone_number_id>/register` com PIN de 6 dígitos; coexistência:
+  **sem o register** (o número já está registrado), conferir `is_on_biz_app = true` e `platform_type = CLOUD_API`.
+- **Coexistência:** a Meta exige, em até **24 horas**, as duas sincronizações (`POST /<phone_number_id>/smb_app_data`
+  com `sync_type` `smb_app_state_sync` e depois `history`), uma vez cada; sem elas, a clínica tem de desconectar e
+  refazer. Pela decisão 3, o RecepClinic faz as duas chamadas e **descarta** os webhooks `history` e
+  `smb_app_state_sync` (se a clínica recusar o histórico, vem o erro `2593109`, sem problema). Mensagens da recepção
+  chegam em `smb_message_echoes` (o eco que pausa o bot). Vazão fixa de 20 mensagens por segundo. No app Business ficam
+  fora: grupos, chamadas, catálogo, respostas rápidas, etiquetas, mensagens temporárias e de visualização única, e
+  listas de transmissão novas (as existentes ficam só leitura); aparelhos conectados são desligados e podem ser
+  religados (menos WhatsApp para Windows). Mensagens enviadas pelo app continuam gratuitas.
+- **Desconectar (F8.3):** na coexistência não há `deregister` pela API; a clínica desconecta no app Business
+  (*Configurações › Conta › Plataforma comercial › Desconectar conta*) e chega `account_update` com `PARTNER_REMOVED`.
+- **Forma de pagamento:** a própria clínica adiciona no Gerenciador do WhatsApp (*Visão geral › Adicionar forma de
+  pagamento*, `business.facebook.com/wa/manage/home/`); a Meta não tem API para isso (bate com a decisão 4).
+- **Brasil:** coberto pela coexistência (países de fora citados pela Meta: Nigéria e África do Sul).
+- **CSP:** liberar `connect.facebook.net` (script) e `www.facebook.com` (moldura e `postMessage`) só na tela de
+  Configurações › WhatsApp.
+
 ## F10 — Primeiro piloto
 
 **Escopo:** produção (Supabase Pro + Vercel Pro, backup conferido); criação da 1ª clínica pelo

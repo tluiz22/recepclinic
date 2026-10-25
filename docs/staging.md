@@ -279,3 +279,36 @@ Na **Vercel** (*Settings › Environment Variables*, Production), depois *Deploy
 
 Com `NFSE_SIMULATION=1`, o Suporte vê "Passar para Simulação" em Configurações › Nota fiscal da
 clínica (enquanto ela estiver em Produção Restrita); para sair, "Voltar para Produção Restrita".
+
+## N. Embedded Signup na Meta (F8.0)
+
+Conferido na documentação da Meta em 25/out/2026. Tudo no app **RecepClinic** em
+developers.facebook.com (os nomes das telas podem aparecer em inglês).
+
+1. **Configuração do login** (*Login do Facebook para Empresas › Configurações › Criar
+   configuração*): nome `RecepClinic - Conectar WhatsApp`; variação de login **Cadastro
+   incorporado do WhatsApp** (*WhatsApp Embedded Signup*); produtos **Cloud API** e **Integração de
+   usuários do app WhatsApp Business** (*WhatsApp Business app user onboarding*, a coexistência),
+   nenhum outro; token de **usuário do sistema** com validade **Nunca**, se a tela oferecer (com 60
+   dias a clínica teria de reconectar); as permissões vêm sozinhas (`whatsapp_business_management`
+   e `whatsapp_business_messaging`). Ao salvar, copiar o **ID da configuração**.
+2. **Domínios** (*Login do Facebook para Empresas › Configurações › Configurações do OAuth do
+   cliente*): **Sim** em Login no OAuth do cliente, Login do OAuth na Web, Forçar HTTPS, Login do
+   OAuth no navegador incorporado, Modo estrito para URIs de redirecionamento e Login com o SDK do
+   JavaScript; em **Domínios permitidos para o SDK do JavaScript** e em **URIs de redirecionamento do
+   OAuth válidos**, `https://app.recepclinic.com.br/`. Só HTTPS: a janela da Meta não abre no
+   `localhost`, então o teste da conexão é no staging.
+3. **Campos do webhook** (*WhatsApp › Configuração › Campos do webhook*): além de **messages** e
+   **message_template_status_update**, assinar **account_update** (fim da conexão e desconexão),
+   **smb_message_echoes** (mensagens da recepção no app, para pausar o bot), **history** e
+   **smb_app_state_sync** (a Meta exige as duas sincronizações da coexistência; o RecepClinic não
+   grava o conteúdo).
+4. **Vercel** (*Settings › Environment Variables*, Production): `WHATSAPP_ES_CONFIG_ID` com o ID do
+   passo 1; depois *Deployments › Redeploy*.
+5. **Login do analista da Meta** (`analista.meta@recepclinic.com.br`): desativado pelo Claude com o
+   OK do cliente.
+
+Para o teste real (F8.4): o número do app antigo precisa estar no **app WhatsApp Business**
+(versão 2.24.17 ou mais nova), ativo, e com o app aberto no celular durante a conexão (a Meta
+mostra um código para colar). Guias de terceiros falam em **7 dias seguidos** de uso no app
+Business antes da coexistência: vale deixar o número no app Business desde já.
