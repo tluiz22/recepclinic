@@ -288,8 +288,9 @@ developers.facebook.com (os nomes das telas podem aparecer em inglês).
 1. **Configuração do login** (*Login do Facebook para Empresas › Configurações › Criar
    configuração*): nome `RecepClinic Conectar WhatsApp` (a Meta aceita até 30 caracteres); variação de login **Cadastro
    incorporado do WhatsApp** (*WhatsApp Embedded Signup*); produto só **WhatsApp Cloud API** (a lista de 25/out não traz a coexistência: ela é ligada pelo sistema na abertura da janela, com o `featureType`; se, ao marcar a Cloud API, surgir uma opção do app WhatsApp Business, marcar também; os produtos não mudam depois); token de **usuário do sistema** com validade **Nunca**, se a tela oferecer (com 60
-   dias a clínica teria de reconectar); as permissões vêm sozinhas (`whatsapp_business_management`
-   e `whatsapp_business_messaging`). Ao salvar, copiar o **ID da configuração**.
+   dias a clínica teria de reconectar); ativos: só **Contas do WhatsApp**, com a permissão de tarefa **MANAGE** (marca as
+   outras junto); permissões: **whatsapp_business_management** e **whatsapp_business_messaging**, sem
+   `business_management` (acesso ao portfólio inteiro, sem uso na conexão). Ao salvar, copiar o **ID da configuração**.
 2. **Domínios** (*Login do Facebook para Empresas › Configurações › Configurações do OAuth do
    cliente*): **Sim** em Login no OAuth do cliente, Login do OAuth na Web, Forçar HTTPS, Login do
    OAuth no navegador incorporado, Modo estrito para URIs de redirecionamento e Login com o SDK do
