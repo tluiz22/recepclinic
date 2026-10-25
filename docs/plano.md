@@ -1799,6 +1799,11 @@ Dra. Ana Karina") e o de testes (`+55 61 9903-3143`, que pelos docs está só na
 - **F10.0b Staging para `teste.recepclinic.com.br`** (cliente, com roteiro): domínio na Vercel e na Cloudflare, `SITE_URL`,
   URLs do Auth do Supabase, endereço das rotinas (`set_scheduler_settings`), domínios do Embedded Signup na Meta, monitor
   externo; o desvio da conta de testes para o webhook do staging, conferido com uma mensagem.
+  **Decisão do cliente (25/out):** o `app.` **continua apontando para o staging até a F10.0c** (o `teste.` é
+  acrescentado em cada lugar, sem apagar o `app.`); na F10.0c o `app.` sai do projeto do staging e vai para o da
+  produção, levando junto o webhook principal do app da Meta, sem mexer nele. Recusado: tirar o `app.` já na F10.0b
+  (os avisos de templates e de conta, que não são desviados, se perderiam até a produção). Roteiro na parte O do
+  [`staging.md`](staging.md).
 - **F10.0c Produção** (cliente, com roteiro): Supabase Pro (migrações, sem dados de exemplo; segredos e rotinas; SMTP e
   modelos de e-mail; backup conferido), Vercel Pro (variáveis da produção, sem `NFSE_SIMULATION`), domínio
   `app.recepclinic.com.br`, login do Suporte; por último, o webhook principal do app da Meta para a produção.

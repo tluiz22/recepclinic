@@ -1,7 +1,8 @@
 # Staging na nuvem (F5.5)
 
 > Ambiente de testes na nuvem (D8), em `app.recepclinic.com.br` até a F10. Na F10 o endereço passa
-> para a produção e o staging vai para `teste.recepclinic.com.br` (cliente, 06/out/2026).
+> para a produção e o staging vai para `teste.recepclinic.com.br` (cliente, 06/out/2026): roteiro na
+> **parte O** (F10.0b); o `app.` continua apontando para o staging até a F10.0c (cliente, 25/out).
 > Só dados de teste: o banco tem o schema e o login do Suporte; as clínicas de teste são criadas
 > pela tela "Nova clínica". Os dados fictícios do `seed.sql` ficam só no ambiente local.
 >
@@ -313,3 +314,56 @@ Para o teste real (F8.4): o número do app antigo precisa estar no **app WhatsAp
 (versão 2.24.17 ou mais nova), ativo, e com o app aberto no celular durante a conexão (a Meta
 mostra um código para colar). Guias de terceiros falam em **7 dias seguidos** de uso no app
 Business antes da coexistência: vale deixar o número no app Business desde já.
+
+## O. Staging para `teste.recepclinic.com.br` (F10.0b)
+
+Decisões no [plano](plano.md) (F10, 25/out). O endereço oficial do staging passa a ser
+`https://teste.recepclinic.com.br`. **O `app.recepclinic.com.br` continua apontando para o staging até a F10.0c**
+(cliente, 25/out): só então ele passa para a produção, levando junto o webhook principal do app da Meta. Por isso,
+nesta parte, nada do `app.` é apagado: o `teste.` é **acrescentado** em cada lugar. O código não muda (F10.0a já
+publicada): tudo sai do `SITE_URL` e do desvio.
+
+Fazer na ordem (o desvio do passo 8 pede o `teste.` já no ar).
+
+1. **Vercel** (projeto do staging, *Settings › Domains*): **Add** `teste.recepclinic.com.br`, sem redirecionar para
+   outro domínio. **Não remover** o `app.`. A Vercel mostra o registro **CNAME** a criar.
+2. **Cloudflare** (*DNS › Records › Add record*): tipo **CNAME**, nome **teste**, destino o que a Vercel mostrou,
+   **Proxy status: DNS only** (nuvem cinza). Esperar a Vercel marcar o domínio como válido (minutos). Conferir no
+   terminal (deve mostrar `HTTP/2 200`):
+   ```
+   curl -sI https://teste.recepclinic.com.br/admin/login | head -1
+   ```
+3. **Vercel** (*Settings › Environment Variables*, Production):
+   - `SITE_URL`: trocar para `https://teste.recepclinic.com.br`;
+   - **nova** `WHATSAPP_WEBHOOK_OVERRIDE_URL`: `https://teste.recepclinic.com.br/api/whatsapp/webhook` (só no
+     staging; **nunca** na produção);
+
+   depois *Deployments › Redeploy*.
+4. **`.env.staging`**: o mesmo `SITE_URL` (o agendador e os scripts leem daqui):
+   ```
+   sed -i '' 's|^SITE_URL=.*|SITE_URL=https://teste.recepclinic.com.br|' .env.staging && grep '^SITE_URL=' .env.staging
+   ```
+5. **Agendador** (as rotinas passam a chamar o `teste.`):
+   ```
+   node --env-file=.env.staging scripts/agendador.mjs
+   ```
+   Deve responder `Agendador ligado: as rotinas chamam https://teste.recepclinic.com.br/api/cron/…`.
+6. **Supabase** (projeto `recepclinic-staging`, *Authentication › URL Configuration*): **Site URL**
+   `https://teste.recepclinic.com.br`; em **Redirect URLs**, **acrescentar** `https://teste.recepclinic.com.br/**`
+   (o `app.` fica até a F10.0c). *Save*.
+7. **Meta** (app RecepClinic, *Login do Facebook para Empresas › Configurações › Configurações do OAuth do cliente*):
+   em **Domínios permitidos para o SDK do JavaScript** e em **URIs de redirecionamento do OAuth válidos**,
+   **acrescentar** `https://teste.recepclinic.com.br/` (o `app.` fica). *Salvar alterações*. O webhook principal do
+   app (*WhatsApp › Configuração*) **não muda**.
+8. **Desvio da conta de testes**: entrar como Suporte em `https://teste.recepclinic.com.br/admin/login`, abrir a
+   clínica **Consultorio de Teste** e, em *Configurações › WhatsApp*, **Testar conexão**. A mensagem verde deve
+   terminar com *"App inscrito na conta, com o desvio para https://teste.recepclinic.com.br/api/whatsapp/webhook: as
+   mensagens chegam a este ambiente."*
+9. **Conferir o desvio**: de um celular pessoal, mandar "oi" para `+55 61 9903-3143`: o bot responde e a conversa
+   aparece no painel em `teste.`.
+10. **Better Stack**: nos 4 monitores (Painel, Webhook, Saúde e Erros), trocar `app.` por `teste.` no endereço
+    (mesmo caminho). Os da produção são criados na F10.0c.
+11. **Conferir o e-mail**: "Esqueci minha senha" em `https://teste.recepclinic.com.br/admin/esqueci-senha`: o link
+    do e-mail abre em `teste.`.
+
+Ao terminar, avisar o Claude: ele confere o `teste.`, o webhook, a saúde e as rotinas pelo terminal.

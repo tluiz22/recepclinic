@@ -328,7 +328,9 @@
   portfólio da clínica numa sessão com o Suporte, e o teste da coexistência na implantação do piloto, no lugar da F8.4).
   **F10.0a (código do desvio da conta de testes e textos `app.`/`teste.`) implementada, testada e publicada no staging
   em 25/out** (sem migração; detalhes no [plano](plano.md)); sem a variável `WHATSAPP_WEBHOOK_OVERRIDE_URL` na Vercel, nada
-  muda. **Retomar daqui:** F10.0b (staging para `teste.`, com roteiro para o cliente) e depois F10.0c (produção). **Pendente de validação do cliente no staging (no fim, como pedido):** F8.1, F8.2, F8.2b
+  muda. **F10.0b (staging para `teste.`):** `app.` fica no staging até a F10.0c (cliente, 25/out);
+  roteiro na parte O do [`staging.md`](staging.md). **Retomar daqui:** o cliente segue a parte O e avisa; o Claude
+  confere pelo terminal; depois, a F10.0c (produção). **Pendente de validação do cliente no staging (no fim, como pedido):** F8.1, F8.2, F8.2b
   e F8.3. Seguem também a validação da ajuda contextual (Alta, Média e Baixa).
 >   Banco local com os dados fictícios das Métricas (`npm run db:reset` limpa). Em paralelo,
 >   aguardar a Meta (Análise do App até ~29/out).
