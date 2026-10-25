@@ -1806,6 +1806,8 @@ Dra. Ana Karina") e o de testes (`+55 61 9903-3143`, que pelos docs está só na
   [`staging.md`](staging.md).
   **Monitores (cliente, 25/out):** os 4 do Better Stack ficam em `app.` e viram os da produção na F10.0c, sem edição;
   o staging fica **sem monitor externo** (recusados: os 4 também em `teste.`; só Saúde e Erros em `teste.`).
+  **F10.0b concluída em 25/out:** feita pelo cliente e conferida (desvio respondendo pelo bot; senha e remarcação com
+  links em `teste.`; saúde e rotinas em dia).
 - **F10.0c Produção** (cliente, com roteiro): Supabase Pro (migrações, sem dados de exemplo; segredos e rotinas; SMTP e
   modelos de e-mail; backup conferido), Vercel Pro (variáveis da produção, sem `NFSE_SIMULATION`), domínio
   `app.recepclinic.com.br`, login do Suporte; por último, o webhook principal do app da Meta para a produção.

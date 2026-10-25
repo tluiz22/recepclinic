@@ -329,8 +329,10 @@
   **F10.0a (código do desvio da conta de testes e textos `app.`/`teste.`) implementada, testada e publicada no staging
   em 25/out** (sem migração; detalhes no [plano](plano.md)); sem a variável `WHATSAPP_WEBHOOK_OVERRIDE_URL` na Vercel, nada
   muda. **F10.0b (staging para `teste.`):** `app.` fica no staging até a F10.0c (cliente, 25/out);
-  roteiro na parte O do [`staging.md`](staging.md). **Retomar daqui:** o cliente segue a parte O e avisa; o Claude
-  confere pelo terminal; depois, a F10.0c (produção). **Pendente de validação do cliente no staging (no fim, como pedido):** F8.1, F8.2, F8.2b
+  roteiro na parte O do [`staging.md`](staging.md). **F10.0b concluída em 25/out** pelo cliente (passos 1 a 9 e 11;
+  Better Stack sem mudança, staging sem monitor externo, decisão do cliente): `teste.` no ar, desvio ligado pelo
+  "Testar conexão" e conferido com o bot respondendo, e-mail de senha e link de remarcação do bot em `teste.`;
+  conferido pelo Claude (saúde, webhook, 7 rotinas em dia). **Retomar daqui:** F10.0c (produção, com roteiro). **Pendente de validação do cliente no staging (no fim, como pedido):** F8.1, F8.2, F8.2b
   e F8.3. Seguem também a validação da ajuda contextual (Alta, Média e Baixa).
 >   Banco local com os dados fictícios das Métricas (`npm run db:reset` limpa). Em paralelo,
 >   aguardar a Meta (Análise do App até ~29/out).
