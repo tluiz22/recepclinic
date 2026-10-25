@@ -282,7 +282,7 @@ clínica (enquanto ela estiver em Produção Restrita); para sair, "Voltar para 
 
 ## N. Embedded Signup na Meta (F8.0)
 
-Conferido na documentação da Meta em 25/out/2026. Tudo no app **RecepClinic** em
+Conferido na documentação da Meta em 25/out/2026; passos 1 a 4 feitos pelo cliente em 25/out. Tudo no app **RecepClinic** em
 developers.facebook.com (os nomes das telas podem aparecer em inglês).
 
 1. **Configuração do login** (*Login do Facebook para Empresas › Configurações › Criar

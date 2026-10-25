@@ -310,8 +310,9 @@
   forma de pagamento). **Fim da sessão de 24/out. Retomar daqui (próxima sessão):** F8.0, começando por conferir
   na documentação atual da Meta as telas e os parâmetros do Embedded Signup com coexistência e, depois, o roteiro da
   configuração na Meta para o cliente. **F8.0 (25/out):** documentação da Meta conferida (resumo na F8 do
-  [plano](plano.md)) e roteiro do cliente na parte N do [`staging.md`](staging.md); **aguardando o cliente** fazer os
-  passos 1 a 4 na Meta e na Vercel e dar o OK para desativar o login do analista. Depois, a F8.1. Seguem também
+  [plano](plano.md)) e roteiro do cliente na parte N do [`staging.md`](staging.md); **passos 1 a 4 feitos pelo cliente em
+  25/out** (configuração com token sem validade, domínio, 4 campos novos do webhook, `WHATSAPP_ES_CONFIG_ID` na
+  Vercel e Redeploy). Falta só a decisão sobre o login do analista da Meta. Depois, a F8.1. Seguem também
   a validação da ajuda contextual; seguem a validação da ajuda contextual (Alta, Média e Baixa) e a Meta (Análise do App até ~29/out).
 >   Banco local com os dados fictícios das Métricas (`npm run db:reset` limpa). Em paralelo,
 >   aguardar a Meta (Análise do App até ~29/out).
