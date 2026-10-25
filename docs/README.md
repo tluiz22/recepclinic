@@ -323,8 +323,10 @@
   25/out** (migração `20261025140000_clinica_em_implantacao.sql`). **F8.3 (forma de pagamento conferida pelo Suporte,
   "Desconectar WhatsApp" para o Administrador e o Suporte, aviso da Meta de desconexão no Início e em Erros) decidida,
   implementada, testada no local e publicada no staging em 25/out** (migração
-  `20261025160000_desconexao_e_pagamento.sql`). **Retomar daqui:** F8.4 (teste real com o número do app antigo, por
-  coexistência, numa 2ª clínica de teste do staging), que depende do cliente com o celular. Seguem também a validação da ajuda contextual (Alta, Média e Baixa).
+  `20261025160000_desconexao_e_pagamento.sql`). **Produção e testes com o WhatsApp decididos em 25/out** (5 decisões no
+  [plano](plano.md), F10: produção em `app.`, staging em `teste.`, um app da Meta com desvio da conta de testes, conta no
+  portfólio da clínica numa sessão com o Suporte, e o teste da coexistência na implantação do piloto, no lugar da F8.4).
+  **Retomar daqui:** F10.0a (código do desvio), depois F10.0b (staging para `teste.`) e F10.0c (produção). Seguem também a validação da ajuda contextual (Alta, Média e Baixa).
 >   Banco local com os dados fictícios das Métricas (`npm run db:reset` limpa). Em paralelo,
 >   aguardar a Meta (Análise do App até ~29/out).
 >   **App antigo da Meta (cliente, 20/out):** o piloto está desativado e o número do app "Consultório Dra. Ana Karina" é

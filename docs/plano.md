@@ -1762,6 +1762,43 @@ para o modelo novo; acompanhamento das primeiras semanas.
 **Depende da F8** (cliente, 06/out): o número da primeira clínica só é conectado por coexistência,
 então o Tech Provider precisa estar aprovado antes da F10.
 
+**Produção e testes com o WhatsApp (cliente, 25/out):** a Meta aprovou o Tech Provider e a F8 está pronta, então o
+piloto pode começar. Dois números no app WhatsApp Business do cliente: o do consultório (o do piloto antigo, "Consultório
+Dra. Ana Karina") e o de testes (`+55 61 9903-3143`, que pelos docs está só na Cloud API).
+1. **Ambientes** (como em 06/out): **produção** em `app.recepclinic.com.br` (Supabase Pro e Vercel Pro novos, só clínicas
+   reais) e **staging** em `teste.recepclinic.com.br` (o Supabase de hoje), onde cada evolução é testada antes. O código é
+   o mesmo: primeiro o staging e, validado, a produção.
+2. **Números:** o do consultório vai para a **produção**, por coexistência, na clínica da Dra. Ana Karina; o de testes
+   continua no **staging**.
+3. **Um app da Meta só (RecepClinic), com desvio da conta:** o webhook principal do app passa a ser o da produção; a conta
+   (WABA) do número de testes ganha o **desvio** (`override_callback_uri` em `POST /<waba>/subscribed_apps`) para o
+   webhook do staging. Limitação da Meta (documentação conferida em 25/out): os avisos de situação dos templates e os de
+   conta (`account_update`) não são desviados e vão sempre ao endereço principal; no staging, a situação dos templates
+   vem pelo "Atualizar situação". Alternativas recusadas: um segundo app da Meta só para testes; o repasse desses avisos
+   pela produção.
+4. **Conta do WhatsApp no portfólio da própria clínica** (decisão 4 da F8 mantida), feita numa **sessão única de uns 15
+   minutos com o Suporte**: login do Facebook, portfólio criado na janela da Meta, código no app do celular e o cartão no
+   Gerenciador do WhatsApp. Recusado: o portfólio do RecepClinic (cobrança no RecepClinic, nome do WhatsApp da clínica em
+   risco na análise da Meta, número preso ao RecepClinic).
+5. **Teste de ponta a ponta da coexistência na implantação do piloto** (substitui a F8.4 no staging): o consultório nasce
+   "Em implantação" na produção, o número é conectado e conferido com os nossos celulares (eco da recepção, sincronização,
+   templates); o bot fica calado em implantação, então o teste do bot e do `#bot` é logo depois de ativar, num horário
+   calmo. Recusado: um terceiro chip para o staging (atrasaria o piloto).
+
+**Subetapas da F10.0 (proposta de 25/out), nesta ordem para o staging não ficar sem WhatsApp:**
+- **F10.0a Código:** desvio da conta no staging (variável só no staging com o endereço e o token do webhook dele; a
+  inscrição da conta, inclusive o "Testar conexão", pede o desvio); o que ainda cita `app.recepclinic.com.br` (Sistema ›
+  Tecnologia, Vendas › Demonstração) passa a separar staging e produção.
+- **F10.0b Staging para `teste.recepclinic.com.br`** (cliente, com roteiro): domínio na Vercel e na Cloudflare, `SITE_URL`,
+  URLs do Auth do Supabase, endereço das rotinas (`set_scheduler_settings`), domínios do Embedded Signup na Meta, monitor
+  externo; o desvio da conta de testes para o webhook do staging, conferido com uma mensagem.
+- **F10.0c Produção** (cliente, com roteiro): Supabase Pro (migrações, sem dados de exemplo; segredos e rotinas; SMTP e
+  modelos de e-mail; backup conferido), Vercel Pro (variáveis da produção, sem `NFSE_SIMULATION`), domínio
+  `app.recepclinic.com.br`, login do Suporte; por último, o webhook principal do app da Meta para a produção.
+- **Depois, o piloto (F10.1 em diante):** clínica do consultório pela "Nova clínica" (nasce em implantação),
+  configuração, agenda atual, sessão de conexão com o Suporte, forma de pagamento, templates aprovados, conferência da
+  coexistência, ativação.
+
 **F10.1 — Importação da agenda na implantação (proposta, cliente, 19/out):** ao entrar em
 produção, a clínica traz os pacientes e as consultas que já estão marcadas na agenda do
 consultório, **sem o aviso de marcação** pelo WhatsApp. A origem muda de clínica para clínica
