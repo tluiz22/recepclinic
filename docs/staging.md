@@ -286,7 +286,7 @@ Conferido na documentação da Meta em 25/out/2026. Tudo no app **RecepClinic** 
 developers.facebook.com (os nomes das telas podem aparecer em inglês).
 
 1. **Configuração do login** (*Login do Facebook para Empresas › Configurações › Criar
-   configuração*): nome `RecepClinic - Conectar WhatsApp`; variação de login **Cadastro
+   configuração*): nome `RecepClinic Conectar WhatsApp` (a Meta aceita até 30 caracteres); variação de login **Cadastro
    incorporado do WhatsApp** (*WhatsApp Embedded Signup*); produtos **Cloud API** e **Integração de
    usuários do app WhatsApp Business** (*WhatsApp Business app user onboarding*, a coexistência),
    nenhum outro; token de **usuário do sistema** com validade **Nunca**, se a tela oferecer (com 60
