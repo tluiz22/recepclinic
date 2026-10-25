@@ -318,7 +318,9 @@
   `20261025120000_conexao_embedded_signup.sql` aplicada e conferida no banco antes do push, commit `472fdbf`). O cliente
   pediu para seguir sem parar e validar a F8 inteira no fim (25/out). **F8.2 (templates na conexão) decidida (aviso no
   Início do Administrador e no cartão Conexão; [plano](plano.md)), implementada, testada no local e publicada no staging
-  em 25/out (sem migração).** **Retomar daqui:** F8.3 (conferências: forma de pagamento, desconectar e trocar de
+  em 25/out (sem migração).** **F8.2b (clínica em implantação: nada sai para os pacientes até o Suporte ativar; clínica
+  nova nasce assim) decidida (3 decisões no [plano](plano.md)), implementada, testada no local e publicada no staging em
+  25/out** (migração `20261025140000_clinica_em_implantacao.sql`). **Retomar daqui:** F8.3 (conferências: forma de pagamento, desconectar e trocar de
   número, `account_update`). Seguem também a validação da ajuda contextual (Alta, Média e Baixa).
 >   Banco local com os dados fictícios das Métricas (`npm run db:reset` limpa). Em paralelo,
 >   aguardar a Meta (Análise do App até ~29/out).

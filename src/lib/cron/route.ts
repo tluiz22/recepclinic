@@ -1,7 +1,7 @@
 import type { APIRoute } from "astro";
 import { createClinicServiceClient } from "../data/clinicService";
 import type { DbClient } from "../data/clients";
-import { listActiveClinics, recordCronHeartbeat } from "../data/platform";
+import { listActiveClinics, listClinicsInService, recordCronHeartbeat } from "../data/platform";
 import { clinicSenderFor } from "../data/whatsapp/clinicSender";
 import type { ClinicSender } from "../data/whatsapp/send";
 import { platformEnv } from "../env";
@@ -10,17 +10,18 @@ import { logError } from "../log";
 // Rotinas do agendador do Supabase (pg_cron, F7): `Authorization: Bearer
 // <CRON_SECRET>`; percorre as clínicas ativas, cada uma com a própria
 // credencial e quem envia pelo WhatsApp dela (null = não conectado). Erro numa
-// clínica não para as outras (vai para o log e para a contagem).
+// clínica não para as outras (vai para o log e para a contagem). `inService`:
+// rotina da agenda, também nas clínicas em implantação (F8.2b; sem envio).
 
 export type ClinicJob = (input: { clinicId: string; db: DbClient; sender: ClinicSender | null; now: Date }) => Promise<unknown>;
 
-export function cronRoute(name: string, job: ClinicJob): APIRoute {
+export function cronRoute(name: string, job: ClinicJob, { inService = false }: { inService?: boolean } = {}): APIRoute {
   return async ({ request, url }) => {
     if (request.headers.get("authorization") !== `Bearer ${platformEnv().cronSecret}`) {
       return new Response(JSON.stringify({ error: "não autorizado" }), { status: 401 });
     }
     const now = new Date();
-    const clinics = await listActiveClinics();
+    const clinics = inService ? await listClinicsInService() : await listActiveClinics();
     const results: Record<string, unknown> = {};
     let errors = 0;
     for (const clinicId of clinics) {

@@ -86,6 +86,7 @@ const COLS = "lg:grid-cols-[minmax(0,2.2fr)_120px_minmax(0,2fr)_116px]";
                   {clinic.name}
                 </a>
                 {off ? <Badge variant="warning">Suspensa</Badge> : plan && <Badge>{plan}</Badge>}
+                {clinic.status === "onboarding" && <Badge variant="warning">Em implantação</Badge>}
               </div>
               <div class="flex items-center gap-1 justify-self-end lg:order-last">
                 <form method="POST" action="/api/admin/clinica-ativa">

@@ -1587,6 +1587,9 @@ isOneToOne: false
               "email": string,"user_id": string
             }[]
                            },
+"list_clinics_in_service":
+{ Args: Record<PropertyKey, never>; Returns: string[]
+                           },
 "list_clinics_with_idle_conversations":
 { Args: { "p_before": string }; Returns: string[]
                            },
@@ -1712,7 +1715,7 @@ isOneToOne: false
                            }
           }
           Enums: {
-            "action_channel": "admin"|"whatsapp_bot","agenda_kind": "professional"|"resource","agenda_scope": "all"|"restricted","appointment_status": "scheduled"|"confirmed"|"completed"|"canceled"|"no_show","booking_link_mode": "create"|"reschedule","clinic_profile": "pediatric"|"adult"|"mixed","clinic_role": "admin"|"professional"|"reception","clinic_status": "active"|"suspended","location_type": "clinic"|"home_visit","scheduling_mode": "individual"|"group","series_skip_reason": "holiday"|"block"|"conflict","service_category": "consultation"|"return_visit"|"exam"
+            "action_channel": "admin"|"whatsapp_bot","agenda_kind": "professional"|"resource","agenda_scope": "all"|"restricted","appointment_status": "scheduled"|"confirmed"|"completed"|"canceled"|"no_show","booking_link_mode": "create"|"reschedule","clinic_profile": "pediatric"|"adult"|"mixed","clinic_role": "admin"|"professional"|"reception","clinic_status": "active"|"suspended"|"onboarding","location_type": "clinic"|"home_visit","scheduling_mode": "individual"|"group","series_skip_reason": "holiday"|"block"|"conflict","service_category": "consultation"|"return_visit"|"exam"
           }
           CompositeTypes: {
             [_ in never]: never
@@ -1828,7 +1831,7 @@ export type CompositeTypes<
 export const Constants = {
   "public": {
           Enums: {
-            "action_channel": ["admin", "whatsapp_bot"],"agenda_kind": ["professional", "resource"],"agenda_scope": ["all", "restricted"],"appointment_status": ["scheduled", "confirmed", "completed", "canceled", "no_show"],"booking_link_mode": ["create", "reschedule"],"clinic_profile": ["pediatric", "adult", "mixed"],"clinic_role": ["admin", "professional", "reception"],"clinic_status": ["active", "suspended"],"location_type": ["clinic", "home_visit"],"scheduling_mode": ["individual", "group"],"series_skip_reason": ["holiday", "block", "conflict"],"service_category": ["consultation", "return_visit", "exam"]
+            "action_channel": ["admin", "whatsapp_bot"],"agenda_kind": ["professional", "resource"],"agenda_scope": ["all", "restricted"],"appointment_status": ["scheduled", "confirmed", "completed", "canceled", "no_show"],"booking_link_mode": ["create", "reschedule"],"clinic_profile": ["pediatric", "adult", "mixed"],"clinic_role": ["admin", "professional", "reception"],"clinic_status": ["active", "suspended", "onboarding"],"location_type": ["clinic", "home_visit"],"scheduling_mode": ["individual", "group"],"series_skip_reason": ["holiday", "block", "conflict"],"service_category": ["consultation", "return_visit", "exam"]
           }
         }
 } as const

@@ -252,6 +252,13 @@ const navLinkClass = (active: boolean) =>
         </div>
       )
     }
+    {
+      !platform && clinic?.clinicStatus === "onboarding" && (
+        <div class="border-b border-amber-200 bg-amber-50 px-4 py-2 text-center text-xs text-amber-800">
+          Clínica em implantação: nada sai para os pacientes pelo WhatsApp (bot, avisos e lembretes) até o Suporte do RecepClinic ativar.
+        </div>
+      )
+    }
 
     <main id="conteudo" tabindex="-1" class={`mx-auto w-full flex-1 px-4 pt-6 pb-28 outline-none sm:pb-12 ${frame} sm:pt-8`}>
       <slot />

@@ -4,7 +4,7 @@ import { authorizeAgendaImport, requestAgendaImport, returnAgendaImport, undoAge
 import { createUserClient } from "../../../../../lib/data/clients";
 import { DataError } from "../../../../../lib/data/errors";
 import { runFormAction } from "../../../../../lib/data/formAction";
-import { createInfoRequest, markInfoRequestReviewed, resendInvitation } from "../../../../../lib/data/onboarding";
+import { createInfoRequest, markInfoRequestReviewed, resendInvitation, setClinicStatus } from "../../../../../lib/data/onboarding";
 import { onboardingDeps } from "../../../../../lib/data/onboardingDeps";
 import { formText } from "../../../../../lib/forms";
 
@@ -12,7 +12,8 @@ import { formText } from "../../../../../lib/forms";
 // informações por e-mail e marcar as respostas como revisadas; pedir a agenda
 // atual para a importação ou mandar um link novo (F10.1a) e devolver a agenda
 // enviada à clínica, com comentário (F10.1b); autorizar a carga (F10.1c) e
-// desfazer a carga (F10.1d).
+// desfazer a carga (F10.1d); ativar a clínica em implantação ou voltar para
+// a implantação (F8.2b).
 export const POST: APIRoute = async (context) => {
   const { request, cookies, locals, params, url } = context;
   const clinicId = params.id!;
@@ -97,6 +98,12 @@ export const POST: APIRoute = async (context) => {
             message: `Carga desfeita: ${n(undone.appointmentsRemoved, "consulta removida", "consultas removidas")}, ${n(undone.patientsRemoved, "paciente", "pacientes")} e ${n(undone.contactsRemoved, "contato", "contatos")}.${kept ? ` Ficou: ${n(undone.appointmentsKept.length, "consulta já mexida", "consultas já mexidas")} e ${n(undone.patientsKept.length + undone.contactsKept.length, "cadastro em uso", "cadastros em uso")}, como a prévia mostrou.` : ""}`,
           };
         }
+        case "ativar_clinica":
+          await setClinicStatus(db, clinicId, "active");
+          return { redirectTo: page, message: `${clinic.name} ativada: o bot, os avisos e os envios automáticos pelo WhatsApp passam a sair para os pacientes.` };
+        case "voltar_implantacao":
+          await setClinicStatus(db, clinicId, "onboarding");
+          return { redirectTo: page, message: `${clinic.name} voltou para "Em implantação": nada sai para os pacientes pelo WhatsApp até ativar de novo.` };
         case "marcar_revisado":
           await markInfoRequestReviewed(db, locals.userId!, formText(form, "request_id"));
           return { redirectTo: page, message: "Respostas marcadas como revisadas." };

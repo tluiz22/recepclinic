@@ -119,7 +119,8 @@ export async function createClinicWithAdmin(
 ): Promise<{ clinicId: string; existingUser: boolean; email: EmailOutcome }> {
   const clean = validateNewClinic(input);
   const clinicId = crypto.randomUUID();
-  unwrap(await db.from("clinics").insert({ id: clinicId, name: clean.name }), "Clínica");
+  // Nasce em implantação (F8.2b): nada sai para os pacientes até o Suporte ativar.
+  unwrap(await db.from("clinics").insert({ id: clinicId, name: clean.name, status: "onboarding" }), "Clínica");
   try {
     unwrapOne(
       await db
@@ -137,6 +138,15 @@ export async function createClinicWithAdmin(
     await db.from("clinics").delete().eq("id", clinicId);
     throw error;
   }
+}
+
+/**
+ * Suporte (F8.2b): "Ativar a clínica" (ela passa a falar com os pacientes
+ * pelo WhatsApp) ou volta para "Em implantação". O banco recusa quem não é
+ * do Suporte.
+ */
+export async function setClinicStatus(db: DbClient, clinicId: string, status: "active" | "onboarding"): Promise<void> {
+  unwrapOne(await db.from("clinics").update({ status }).eq("id", clinicId).select("id").maybeSingle(), "Clínica");
 }
 
 export type Invitation = {

@@ -1692,6 +1692,33 @@ Configurações › WhatsApp, e uma linha no cartão "Conexão". Some sozinho qu
   360px): aviso no Início, linha e botão no cartão; o botão do Administrador chega à Meta (token fictício recusado, com a
   mensagem curta).
 
+**F8.2b — Clínica em implantação, decisões do cliente (25/out):** o cliente quer configurar tudo (WhatsApp conectado,
+templates aprovados, pacientes e agendas carregados) antes de a clínica falar com os pacientes.
+1. **Situação nova "Em implantação"**: tudo configurável, mas nada sai para os pacientes pelo WhatsApp (bot calado, sem
+   avisos nem envios automáticos) até o clique em **"Ativar a clínica"**. A recepção segue no app WhatsApp Business.
+2. **Só o Suporte ativa** (e só ele muda a situação).
+3. **Toda clínica nova** (tela "Nova clínica") **nasce em implantação**; as que já existem continuam ativas.
+
+**F8.2b implementada, testada no local e publicada no staging em 25/out** (migração
+`20261025140000_clinica_em_implantacao.sql`):
+- **Banco:** `clinic_status` ganha `onboarding`; gatilho `clinics_guard_status`: só o Suporte muda a situação (o
+  Administrador segue mudando o nome; o gatilho fechou essa brecha, que valia também para "suspensa").
+  `list_clinics_in_service` (ativas e em implantação) para a rotina das séries, que é da agenda e não fala com o
+  paciente; as rotinas de envio seguem só nas ativas (`list_active_clinics`).
+- **Envio:** o bloqueio fica em quem envia pela clínica (`createClinicSender`): em implantação devolve "sem envio", como
+  WhatsApp não conectado. Vale para o bot (a mensagem recebida é registrada, sem resposta), os avisos de marcar, remarcar
+  e cancelar, o preparo e as orientações, o resumo do dia, a lista de espera, a conversa parada e a nota fiscal pelo
+  WhatsApp. A criação dos templates e o "Testar conexão" não passam por ele, então funcionam na implantação. O e-mail da
+  nota fiscal não é bloqueado.
+- **Telas:** Sistema › Clínicas › clínica: cartão **"Situação"** (Em implantação ou Ativa, o WhatsApp e a situação dos
+  templates, para conferir antes) com **"Ativar a clínica"** ou "Voltar para em implantação", com confirmação. Selo "Em
+  implantação" na lista de Clínicas, na Matriz e na escolha de clínica. Dentro da clínica, faixa para toda a equipe:
+  "Clínica em implantação: nada sai para os pacientes pelo WhatsApp (bot, avisos e lembretes) até o Suporte do
+  RecepClinic ativar."
+- **Testes:** banco (`tests/db/clinicaEmImplantacao.test.ts`: só o Suporte muda a situação; ninguém envia pela clínica
+  em implantação, mesmo conectada; rotinas) e a clínica nova nasce em implantação (`novas-clinicas`). No navegador local:
+  voltar para implantação, faixa na clínica, ativar de novo.
+
 ## F10 — Primeiro piloto
 
 **Escopo:** produção (Supabase Pro + Vercel Pro, backup conferido); criação da 1ª clínica pelo

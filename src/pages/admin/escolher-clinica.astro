@@ -63,6 +63,7 @@ const clinics = filterClinicsByName(allClinics, query);
                 <span class="flex shrink-0 flex-col items-end gap-1">
                   {clinic.id === current && <Pill tone="success">Aberta agora</Pill>}
                   {clinic.status === "suspended" && <Pill tone="warning">Suspensa</Pill>}
+                  {clinic.status === "onboarding" && <Pill tone="warning">Em implantação</Pill>}
                 </span>
               </button>
             </form>

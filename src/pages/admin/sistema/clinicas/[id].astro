@@ -4,9 +4,12 @@
 // configurar, o Suporte abre a clínica (escolha de clínica). R10 (cliente,
 // 17/out/2026): resumo embaixo do nome, as duas ações no cabeçalho, convites em
 // linhas e os pedidos num cartão, o mais novo em cima. F10.1a (cliente,
-// 20/out/2026): "Agenda atual", o pedido do link para a importação.
+// 20/out/2026): "Agenda atual", o pedido do link para a importação. F8.2b
+// (cliente, 25/out/2026): "Situação", com "Ativar a clínica" em implantação
+// e o que conferir antes (WhatsApp e templates).
 import AdminLayout from "../../../../layouts/AdminLayout.astro";
 import Badge from "../../../../components/admin/config/Badge.astro";
+import ConfirmDeleteDialog from "../../../../components/admin/ConfirmDeleteDialog.astro";
 import FlashMessage from "../../../../components/admin/FlashMessage.astro";
 import OnboardingAnswersView from "../../../../components/admin/OnboardingAnswersView.astro";
 import SystemHeader from "../../../../components/admin/sistema/SystemHeader.astro";
@@ -18,6 +21,8 @@ import { formatInstant } from "../../../../lib/clinicTime";
 import { getLatestAgendaImport } from "../../../../lib/data/agendaImport";
 import { createUserClient } from "../../../../lib/data/clients";
 import { listInfoRequests, listInvitations } from "../../../../lib/data/onboarding";
+import { getWhatsappConnection, listWhatsappTemplates } from "../../../../lib/data/whatsapp/connection";
+import { describeTemplateApproval, templateApproval, templatesInUse } from "../../../../lib/data/whatsapp/templates";
 import { isFeatureKey } from "../../../../lib/features";
 import { REQUEST_STATUS, ROLE_NAMES } from "../../../../lib/onboardingLabels";
 import { PLAN_LABELS, clinicPlan } from "../../../../lib/plans";
@@ -25,7 +30,7 @@ import { PLAN_LABELS, clinicPlan } from "../../../../lib/plans";
 const { id } = Astro.params;
 if (!isUuid(id)) return Astro.redirect("/admin/sistema/clinicas");
 const db = createUserClient(Astro.request, Astro.cookies);
-const [{ data: clinic }, { data: settings }, invitations, requests, agendaImport] = await Promise.all([
+const [{ data: clinic }, { data: settings }, invitations, requests, agendaImport, connection, templates] = await Promise.all([
   db
     .from("clinics")
     .select("id, name, status, created_at, max_professionals, clinic_features ( feature_key ), professionals ( is_active )")
@@ -35,6 +40,8 @@ const [{ data: clinic }, { data: settings }, invitations, requests, agendaImport
   listInvitations(db, id),
   listInfoRequests(db, id),
   getLatestAgendaImport(db, id),
+  getWhatsappConnection(db, id),
+  listWhatsappTemplates(db, id),
 ]);
 if (!clinic || !settings) return Astro.redirect("/admin/sistema/clinicas");
 const when = (date: Date) => formatInstant(date, settings.timezone, "dd/MM/yyyy 'às' HH:mm");
@@ -50,8 +57,15 @@ const summary = [
   `Criada em ${formatInstant(new Date(clinic.created_at), settings.timezone, "dd/MM/yyyy")}`,
   plan,
   `${active} de ${clinic.max_professionals} ${clinic.max_professionals === 1 ? "profissional" : "profissionais"}`,
-  ...(clinic.status === "suspended" ? ["suspensa"] : []),
+  ...(clinic.status === "suspended" ? ["suspensa"] : clinic.status === "onboarding" ? ["em implantação"] : []),
 ].join(" · ");
+// Situação (F8.2b): o que conferir antes de ativar.
+const CONNECTION_LABEL = { connected: "conectado", pending: "em configuração", disconnected: "desconectado" } as const;
+const whatsappLine = connection ? `WhatsApp ${CONNECTION_LABEL[connection.status]}${connection.displayPhone ? ` (${connection.displayPhone})` : ""}` : "WhatsApp não conectado";
+const templatesLine =
+  connection?.status === "connected"
+    ? `Mensagens automáticas na Meta: ${describeTemplateApproval(templateApproval(templatesInUse(features), templates)) ?? "todas aprovadas"}`
+    : null;
 const ordered = [...requests].sort((a, b) => b.requestedAt.getTime() - a.requestedAt.getTime());
 // Agenda atual (F10.1a): pedido em andamento, ou nenhum (pode pedir).
 const importOpen = !!agendaImport && isImportOpen(agendaImport.status);
@@ -167,6 +181,59 @@ const importAppointments = agendaImport ? countAppointments(agendaImport.entries
     </div>
 
     <div class="flex min-w-0 flex-col gap-4">
+      {
+        clinic.status !== "suspended" && (
+          <section class={`${PANEL} flex flex-col gap-3`} aria-labelledby="t-situacao">
+            <div class="flex flex-wrap items-center gap-2">
+              <h2 id="t-situacao" class={SECTION_TITLE}>
+                Situação
+              </h2>
+              {clinic.status === "onboarding" ? <Badge variant="warning">Em implantação</Badge> : <Badge variant="success">Ativa</Badge>}
+            </div>
+            <p class="text-[15px] text-ink-soft">
+              {clinic.status === "onboarding"
+                ? "Nada sai para os pacientes pelo WhatsApp: o bot não responde e não há avisos nem envios automáticos. A recepção segue no app WhatsApp Business. Configure, carregue a agenda atual e conecte o WhatsApp; com os templates aprovados, ative."
+                : "A clínica fala com os pacientes pelo WhatsApp: bot, avisos e envios automáticos."}
+            </p>
+            <ul class="flex flex-col gap-1 text-sm text-ink">
+              <li>{whatsappLine}</li>
+              {templatesLine && <li>{templatesLine}</li>}
+            </ul>
+            <form method="POST" action={action}>
+              {clinic.status === "onboarding" ? (
+                <>
+                  <input type="hidden" name="acao" value="ativar_clinica" />
+                  <button
+                    type="submit"
+                    class={`${PRIMARY_BUTTON} js-confirm-delete`}
+                    data-confirm-title="Ativar a clínica?"
+                    data-confirm-message={`${clinic.name} passa a falar com os pacientes pelo WhatsApp: o bot responde, e os avisos e os envios automáticos (lembretes, resumo do dia) começam a sair.`}
+                    data-confirm-label="Ativar"
+                    data-confirm-tone="primary"
+                  >
+                    Ativar a clínica
+                  </button>
+                </>
+              ) : (
+                <>
+                  <input type="hidden" name="acao" value="voltar_implantacao" />
+                  <Button
+                    type="submit"
+                    size="sm"
+                    class="js-confirm-delete"
+                    data-confirm-title="Voltar para em implantação?"
+                    data-confirm-message={`Até ativar de novo, nada sai para os pacientes de ${clinic.name} pelo WhatsApp: o bot para de responder, e os avisos e os envios automáticos param.`}
+                    data-confirm-label="Voltar para em implantação"
+                  >
+                    Voltar para em implantação
+                  </Button>
+                </>
+              )}
+            </form>
+            <ConfirmDeleteDialog />
+          </section>
+        )
+      }
       <section class={`${PANEL} flex flex-col gap-4`} aria-labelledby="t-pedir">
         <div class="flex flex-col gap-1">
           <h2 id="t-pedir" class={SECTION_TITLE}>Pedir as informações ao Administrador</h2>

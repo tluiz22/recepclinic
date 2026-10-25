@@ -71,8 +71,9 @@ describe("nova clínica", () => {
     clinics.push(result.clinicId);
     expect(result).toMatchObject({ existingUser: false, email: { sent: true } });
 
-    const { data: clinic } = await adminClient().from("clinics").select("name, max_professionals, clinic_features ( feature_key ), clinic_settings ( profile, timezone )").eq("id", result.clinicId).single();
-    expect(clinic).toMatchObject({ name: "Clínica Nova", max_professionals: 1, clinic_features: [], clinic_settings: { profile: "pediatric", timezone: "America/Manaus" } });
+    const { data: clinic } = await adminClient().from("clinics").select("name, status, max_professionals, clinic_features ( feature_key ), clinic_settings ( profile, timezone )").eq("id", result.clinicId).single();
+    // Nasce em implantação (F8.2b).
+    expect(clinic).toMatchObject({ name: "Clínica Nova", status: "onboarding", max_professionals: 1, clinic_features: [], clinic_settings: { profile: "pediatric", timezone: "America/Manaus" } });
 
     const email = sent.at(-1)!;
     expect(email.to).toBe(adminEmail);

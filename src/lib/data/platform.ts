@@ -67,6 +67,13 @@ export async function listActiveClinics(env: ServiceEnv = platformEnv()): Promis
   return (result.data ?? []) as string[];
 }
 
+/** Rotinas da agenda (séries): também as clínicas em implantação (F8.2b), que não recebem envios. */
+export async function listClinicsInService(env: ServiceEnv = platformEnv()): Promise<string[]> {
+  const result = await platformClient(env).rpc("list_clinics_in_service");
+  if (result.error) throw new PlatformLookupError("clínicas em atividade", result.error);
+  return (result.data ?? []) as string[];
+}
+
 /** /agendar/[token]: clínica do link de agendamento (vencido ou usado também resolve). */
 export async function resolveClinicByBookingLink(
   linkId: string,

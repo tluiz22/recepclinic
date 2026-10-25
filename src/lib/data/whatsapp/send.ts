@@ -73,24 +73,22 @@ const failure = (error: unknown): SendOutcome => ({
 
 /**
  * Quem envia pela clínica, ou null se o WhatsApp dela não está conectado (ou
- * sem token). `serviceDb` é a credencial da clínica.
+ * sem token) ou se a clínica está em implantação (F8.2b: nada sai para os
+ * pacientes até o Suporte ativar). `serviceDb` é a credencial da clínica.
  */
 export async function createClinicSender(
   serviceDb: DbClient,
   clinicId: string,
   { baseUrl, fetcher = fetch }: { baseUrl: string; fetcher?: Fetcher },
 ): Promise<ClinicSender | null> {
+  const clinic = unwrapOne(await serviceDb.from("clinics").select("name, status").eq("id", clinicId).maybeSingle(), "Clínica");
+  if (clinic.status === "onboarding") return null;
   const setup = await getSendingSetup(serviceDb, clinicId);
   if (!setup) return null;
-  const [clinic, settings] = await Promise.all([
-    serviceDb.from("clinics").select("name").eq("id", clinicId).maybeSingle().then((r) => unwrapOne(r, "Clínica")),
-    serviceDb
-      .from("clinic_settings")
-      .select("message_article")
-      .eq("clinic_id", clinicId)
-      .maybeSingle()
-      .then((r) => unwrapOne(r, "Configuração da clínica")),
-  ]);
+  const settings = unwrapOne(
+    await serviceDb.from("clinic_settings").select("message_article").eq("clinic_id", clinicId).maybeSingle(),
+    "Configuração da clínica",
+  );
   const post = async (message: Record<string, unknown>, body: string): Promise<SendOutcome> => {
     // Contato anonimizado (F9.4): o número não existe; nem chega à Meta.
     if (typeof message.to === "string" && isAnonymizedPhone(message.to)) return { sent: false, reason: "contato anonimizado", body };
