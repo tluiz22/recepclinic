@@ -1804,9 +1804,12 @@ Dra. Ana Karina") e o de testes (`+55 61 9903-3143`, que pelos docs está só na
   produção, levando junto o webhook principal do app da Meta, sem mexer nele. Recusado: tirar o `app.` já na F10.0b
   (os avisos de templates e de conta, que não são desviados, se perderiam até a produção). Roteiro na parte O do
   [`staging.md`](staging.md).
+  **Monitores (cliente, 25/out):** os 4 do Better Stack ficam em `app.` e viram os da produção na F10.0c, sem edição;
+  o staging fica **sem monitor externo** (recusados: os 4 também em `teste.`; só Saúde e Erros em `teste.`).
 - **F10.0c Produção** (cliente, com roteiro): Supabase Pro (migrações, sem dados de exemplo; segredos e rotinas; SMTP e
   modelos de e-mail; backup conferido), Vercel Pro (variáveis da produção, sem `NFSE_SIMULATION`), domínio
   `app.recepclinic.com.br`, login do Suporte; por último, o webhook principal do app da Meta para a produção.
+  Os monitores do Better Stack não mudam (já estão em `app.`).
 - **Depois, o piloto (F10.1 em diante):** clínica do consultório pela "Nova clínica" (nasce em implantação),
   configuração, agenda atual, sessão de conexão com o Suporte, forma de pagamento, templates aprovados, conferência da
   coexistência, ativação.

@@ -362,8 +362,9 @@ Fazer na ordem (o desvio do passo 8 pede o `teste.` já no ar).
 9. **Conferir o desvio**: de um celular pessoal, mandar "oi" para `+55 61 9903-3143`: o bot responde (quem responde
    é o servidor que recebeu a mensagem, então a resposta confirma o desvio para o staging). Sem resposta em 1 minuto,
    avisar o Claude, que confere os registros pelo terminal.
-10. **Better Stack**: nos 4 monitores (Painel, Webhook, Saúde e Erros), trocar `app.` por `teste.` no endereço
-    (mesmo caminho). Os da produção são criados na F10.0c.
+10. **Better Stack: nada muda** (cliente, 25/out). Os 4 monitores ficam em `app.`: até a F10.0c vigiam o staging e,
+    quando o `app.` passar para a produção, passam a vigiar a produção sem edição. O staging (`teste.`) fica sem
+    monitor externo; problema nele aparece em Administração › Erros.
 11. **Conferir o e-mail**: "Esqueci minha senha" em `https://teste.recepclinic.com.br/admin/esqueci-senha`: o link
     do e-mail abre em `teste.`.
 
