@@ -100,6 +100,20 @@ describe("conexão pela janela da Meta", () => {
     expect(rpcs[0].args).toMatchObject({ p_contacts_synced: false, p_history_synced: false });
   });
 
+  it("inscrição sem desvio vai sem corpo; no staging, leva o desvio da conta (F10.0a)", async () => {
+    const plain = fakeMeta();
+    await connectWithSignup(fakeDb().db, "clinica", input("FINISH"), deps(plain.fetcher));
+    expect(plain.calls.find((c) => c.url.includes("subscribed_apps"))?.body).toBeNull();
+
+    const staging = fakeMeta();
+    const override = { url: "https://teste.recepclinic.com.br/api/whatsapp/webhook", verifyToken: "verifica" };
+    await connectWithSignup(fakeDb().db, "clinica", input("FINISH"), { ...deps(staging.fetcher), webhookOverride: override });
+    expect(staging.calls.find((c) => c.url.includes("subscribed_apps"))?.body).toEqual({
+      override_callback_uri: "https://teste.recepclinic.com.br/api/whatsapp/webhook",
+      verify_token: "verifica",
+    });
+  });
+
   it("erro da Meta antes do fim: nada é gravado", async () => {
     const meta = fakeMeta({}, ["subscribed_apps"]);
     const { db, rpcs } = fakeDb();

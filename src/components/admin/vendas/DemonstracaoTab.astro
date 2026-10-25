@@ -126,7 +126,7 @@ const script = [
     <h2 class="font-display text-[17px] leading-tight font-bold text-ink sm:text-lg">Senha dos logins</h2>
     <p class="mt-1 text-[15px] text-ink-soft">
       Só na primeira vez (a senha continua valendo depois de atualizar as demos) ou se esquecer. O comando mostra um link que
-      vale 1 hora; abra, crie a senha e entre em app.recepclinic.com.br.
+      vale 1 hora; abra, crie a senha e entre em teste.recepclinic.com.br (as demos ficam no staging).
     </p>
     <pre class={CMD}>{DEMO_CLINICS.map((clinic) => `node --env-file=.env.staging scripts/link-de-senha.mjs ${clinic.login}`).join("\n")}</pre>
     <p class="mt-2 text-xs text-ink-soft">

@@ -4,7 +4,8 @@
 // clínica e criação e situação dos templates na conta. F8a.1: edição do
 // template recusado (mesmo nome, volta para a análise). F8a.2: lista da
 // conta e exclusão do template sem uso. F8.1: troca do código do Embedded
-// Signup pelo token da clínica e sincronizações da coexistência.
+// Signup pelo token da clínica e sincronizações da coexistência. F10.0a:
+// desvio da conta para o webhook do staging na inscrição.
 
 /** Versão da API da Meta (cada versão vale cerca de 2 anos; a v21.0 do piloto vence em 2026). */
 export const GRAPH_API_VERSION = "v24.0";
@@ -80,10 +81,33 @@ export async function fetchPhoneNumberInfo(phoneNumberId: string, token: string,
   };
 }
 
-/** Inscreve o app RecepClinic na conta (WABA): sem isso, os eventos não chegam ao webhook. */
-export async function subscribeAppToWaba(wabaId: string, token: string, fetcher: Fetcher = fetch): Promise<void> {
+/**
+ * Desvio da conta (F10.0a): a Meta manda os eventos da conta para `url` (o
+ * webhook do staging) no lugar do webhook principal do app. Antes, confere o
+ * endereço com `verifyToken`. Os avisos de templates e de conta não são
+ * desviados (limitação da Meta).
+ */
+export type WebhookOverride = { url: string; verifyToken: string };
+
+/**
+ * Inscreve o app RecepClinic na conta (WABA): sem isso, os eventos não chegam
+ * ao webhook. Com o desvio, a inscrição o leva junto; sem ele, a Meta tira um
+ * desvio que a conta já tivesse.
+ */
+export async function subscribeAppToWaba(
+  wabaId: string,
+  token: string,
+  fetcher: Fetcher = fetch,
+  override: WebhookOverride | null = null,
+): Promise<void> {
   await call(fetcher, "Inscrição do app na conta do WhatsApp", `${GRAPH}/${encodeURIComponent(wabaId)}/subscribed_apps`, token, {
     method: "POST",
+    ...(override
+      ? {
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ override_callback_uri: override.url, verify_token: override.verifyToken }),
+        }
+      : {}),
   });
 }
 

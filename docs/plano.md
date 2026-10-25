@@ -1789,6 +1789,13 @@ Dra. Ana Karina") e o de testes (`+55 61 9903-3143`, que pelos docs está só na
 - **F10.0a Código:** desvio da conta no staging (variável só no staging com o endereço e o token do webhook dele; a
   inscrição da conta, inclusive o "Testar conexão", pede o desvio); o que ainda cita `app.recepclinic.com.br` (Sistema ›
   Tecnologia, Vendas › Demonstração) passa a separar staging e produção.
+  **Implementada em 25/out (sem migração):** variável `WHATSAPP_WEBHOOK_OVERRIDE_URL` (só na Vercel do staging, https,
+  exige o WhatsApp ligado); com ela, a inscrição da conta (`POST /<waba>/subscribed_apps`) no "Conectar WhatsApp" e no
+  "Testar conexão" leva `override_callback_uri` e `verify_token` (o `WHATSAPP_WEBHOOK_VERIFY_TOKEN` do staging), e a
+  mensagem do "Testar conexão" diz o endereço do desvio. Sem ela (produção), a inscrição vai sem corpo, o que pela Meta
+  também tira um desvio antigo da conta (documentação conferida em 25/out). Vale para toda conta conectada no staging.
+  Textos de Sistema › Tecnologia (ambientes, hospedagem, segredos, diagrama) e de Vendas › Demonstração separam `app.`
+  (produção) e `teste.` (staging); os exemplos de endereço dos templates ficam em `app.` (só amostra para a Meta).
 - **F10.0b Staging para `teste.recepclinic.com.br`** (cliente, com roteiro): domínio na Vercel e na Cloudflare, `SITE_URL`,
   URLs do Auth do Supabase, endereço das rotinas (`set_scheduler_settings`), domínios do Embedded Signup na Meta, monitor
   externo; o desvio da conta de testes para o webhook do staging, conferido com uma mensagem.

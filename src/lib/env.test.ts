@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parsePlatformEnv, PlatformEnvError } from "./env";
+import { parsePlatformEnv, PlatformEnvError, webhookOverride } from "./env";
 
 const valid = {
   PUBLIC_SUPABASE_URL: "http://127.0.0.1:54321",
@@ -57,9 +57,25 @@ describe("variáveis da plataforma", () => {
     expect(parsePlatformEnv({ ...valid, WHATSAPP_APP_SECRET: "segredo", WHATSAPP_WEBHOOK_VERIFY_TOKEN: "verifica" }).whatsapp).toEqual({
       appSecret: "segredo",
       webhookVerifyToken: "verifica",
+      webhookOverrideUrl: null,
     });
     expect(() => parsePlatformEnv({ ...valid, WHATSAPP_APP_SECRET: "segredo" })).toThrow(/WHATSAPP_WEBHOOK_VERIFY_TOKEN não definida/);
     expect(() => parsePlatformEnv({ ...valid, WHATSAPP_WEBHOOK_VERIFY_TOKEN: "verifica" })).toThrow(/WHATSAPP_APP_SECRET não definida/);
+  });
+
+  it("desvio da conta: só no staging, https e com o WhatsApp ligado (F10.0a)", () => {
+    const whatsapp = { WHATSAPP_APP_SECRET: "segredo", WHATSAPP_WEBHOOK_VERIFY_TOKEN: "verifica" };
+    const staging = parsePlatformEnv({ ...valid, ...whatsapp, WHATSAPP_WEBHOOK_OVERRIDE_URL: "https://teste.recepclinic.com.br/api/whatsapp/webhook" });
+    expect(staging.whatsapp?.webhookOverrideUrl).toBe("https://teste.recepclinic.com.br/api/whatsapp/webhook");
+    expect(webhookOverride(staging)).toEqual({ url: "https://teste.recepclinic.com.br/api/whatsapp/webhook", verifyToken: "verifica" });
+    expect(webhookOverride(parsePlatformEnv({ ...valid, ...whatsapp }))).toBeNull();
+    expect(webhookOverride(parsePlatformEnv(valid))).toBeNull();
+    expect(problemsOf({ ...valid, ...whatsapp, WHATSAPP_WEBHOOK_OVERRIDE_URL: "http://teste.recepclinic.com.br/api/whatsapp/webhook" })).toEqual([
+      "WHATSAPP_WEBHOOK_OVERRIDE_URL não é um endereço https: http://teste.recepclinic.com.br/api/whatsapp/webhook",
+    ]);
+    expect(problemsOf({ ...valid, WHATSAPP_WEBHOOK_OVERRIDE_URL: "https://teste.recepclinic.com.br/api/whatsapp/webhook" })).toEqual([
+      "WHATSAPP_WEBHOOK_OVERRIDE_URL sem o WhatsApp ligado (WHATSAPP_APP_SECRET e WHATSAPP_WEBHOOK_VERIFY_TOKEN)",
+    ]);
   });
 
   it("ID do app na Meta: opcional, só números (F11.5)", () => {

@@ -12,6 +12,7 @@ import {
   unsubscribeAppFromWaba,
   type Fetcher,
   type PhoneNumberInfo,
+  type WebhookOverride,
 } from "./graph";
 
 // Conexão do WhatsApp e templates por clínica (D3a, D3b), F3.9a.
@@ -152,9 +153,15 @@ export type ConnectionCheck =
 /**
  * Suporte, "Testar conexão" (F6.1): com a credencial da clínica (só ela lê o
  * token), pergunta à Meta pelo número e inscreve o app na conta (WABA), para
- * os eventos chegarem ao webhook. Não muda a situação da conexão.
+ * os eventos chegarem ao webhook (no staging, com o desvio da conta, F10.0a).
+ * Não muda a situação da conexão.
  */
-export async function checkWhatsappConnection(db: DbClient, clinicId: string, fetcher: Fetcher = fetch): Promise<ConnectionCheck> {
+export async function checkWhatsappConnection(
+  db: DbClient,
+  clinicId: string,
+  fetcher: Fetcher = fetch,
+  webhookOverride: WebhookOverride | null = null,
+): Promise<ConnectionCheck> {
   const connection = await getWhatsappConnection(db, clinicId);
   if (!connection) return { ok: false, problem: "no_connection", message: "Cadastre a conexão antes de testar." };
   const token = await getWhatsappAccessToken(db);
@@ -167,7 +174,7 @@ export async function checkWhatsappConnection(db: DbClient, clinicId: string, fe
     throw error;
   }
   try {
-    await subscribeAppToWaba(connection.wabaId, token, fetcher);
+    await subscribeAppToWaba(connection.wabaId, token, fetcher, webhookOverride);
     return { ok: true, info, subscribed: true, subscribeError: null };
   } catch (error) {
     if (error instanceof GraphRequestError) return { ok: true, info, subscribed: false, subscribeError: error.message };
@@ -206,6 +213,8 @@ export type SignupInput = { code: string; wabaId: string; phoneNumberId: string;
 export type SignupDeps = {
   appId: string;
   appSecret: string;
+  /** Staging (F10.0a): desvio da conta para o webhook dele. */
+  webhookOverride?: WebhookOverride | null;
   fetcher?: Fetcher;
   /** PIN do número novo (6 números); sorteado quando não vem. */
   newPin?: () => string;
@@ -250,7 +259,7 @@ export async function connectWithSignup(db: DbClient, clinicId: string, input: S
   const token = await exchangeSignupCode(deps.appId, deps.appSecret, code, fetcher);
   const info = await fetchPhoneNumberInfo(phoneNumberId, token, fetcher);
   const coexistence = input.event === "FINISH_WHATSAPP_BUSINESS_APP_ONBOARDING" || info.isOnBizApp;
-  await subscribeAppToWaba(wabaId, token, fetcher);
+  await subscribeAppToWaba(wabaId, token, fetcher, deps.webhookOverride ?? null);
 
   let pin: string | null = null;
   if (!coexistence) {

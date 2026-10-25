@@ -27,11 +27,11 @@ const stack = [
 ];
 
 const hosting = [
-  { service: "Vercel", runs: "A aplicação (app.recepclinic.com.br): painel, páginas públicas, webhook do WhatsApp e rotas das rotinas", where: "São Paulo (gru1)", plan: "Hobby no staging; Pro na produção (a contratar)" },
-  { service: "Supabase", runs: "Banco, login, arquivos, agendador e cofre de segredos (projeto recepclinic-staging)", where: "South America (São Paulo)", plan: "Free no staging; Pro na produção, com backup diário (a contratar)" },
-  { service: "Cloudflare", runs: "DNS de recepclinic.com.br (app. aponta para a Vercel, sem proxy) e o site do produto (www.) no Cloudflare Pages", where: "Rede global", plan: "Gratuito" },
-  { service: "GitHub", runs: "Código: tluiz22/recepclinic (este sistema); o site fica em repositório próprio", where: "—", plan: "Cada push na main publica o staging" },
-  { service: "Meta", runs: "App RecepClinic e a conta de WhatsApp Business (número de testes no staging)", where: "—", plan: "Mensagens cobradas da clínica (templates fora da janela de 24h)" },
+  { service: "Vercel", runs: "A aplicação (app.recepclinic.com.br na produção, teste.recepclinic.com.br no staging): painel, páginas públicas, webhook do WhatsApp e rotas das rotinas", where: "São Paulo (gru1)", plan: "Hobby no staging; Pro na produção (a contratar)" },
+  { service: "Supabase", runs: "Banco, login, arquivos, agendador e cofre de segredos (um projeto por ambiente: produção e recepclinic-staging)", where: "South America (São Paulo)", plan: "Free no staging; Pro na produção, com backup diário (a contratar)" },
+  { service: "Cloudflare", runs: "DNS de recepclinic.com.br (app. e teste. apontam para a Vercel, sem proxy) e o site do produto (www.) no Cloudflare Pages", where: "Rede global", plan: "Gratuito" },
+  { service: "GitHub", runs: "Código: tluiz22/recepclinic (este sistema); o site fica em repositório próprio", where: "—", plan: "Cada push na main publica o staging; a produção, depois de validado" },
+  { service: "Meta", runs: "App RecepClinic: o webhook principal é o da produção; a conta do número de testes tem o desvio para o webhook do staging (os avisos de templates e de conta vão sempre ao principal)", where: "—", plan: "Mensagens cobradas da clínica (templates fora da janela de 24h)" },
   { service: "Resend", runs: "Envio de e-mails (SMTP) do painel e do Supabase Auth, remetente nao-responda@recepclinic.com.br", where: "—", plan: "Gratuito" },
   { service: "Better Stack", runs: "Monitor externo dos endereços de saúde, com aviso por e-mail", where: "—", plan: "Gratuito" },
 ];
@@ -79,15 +79,15 @@ const routines = [
 ];
 
 const secrets = [
-  { where: "Vercel (Settings › Environment Variables) e .env.staging (fora do git)", names: "PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_ANON_KEY, a chave service role do Supabase, SUPABASE_JWT_SECRET, CRON_SECRET, SITE_URL, WHATSAPP_APP_SECRET, WHATSAPP_WEBHOOK_VERIFY_TOKEN, SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASSWORD, EMAIL_FROM" },
+  { where: "Vercel (Settings › Environment Variables) e .env.staging (fora do git)", names: "PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_ANON_KEY, a chave service role do Supabase, SUPABASE_JWT_SECRET, CRON_SECRET, SITE_URL, WHATSAPP_APP_SECRET, WHATSAPP_WEBHOOK_VERIFY_TOKEN, WHATSAPP_APP_ID, WHATSAPP_ES_CONFIG_ID, WHATSAPP_WEBHOOK_OVERRIDE_URL (só no staging), NFSE_SIMULATION (só no staging), SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASSWORD, EMAIL_FROM" },
   { where: "Supabase Vault", names: "Token da Meta de cada clínica (whatsapp_token_…), system_base_url e cron_secret (gravados por scripts/agendador.mjs)" },
   { where: "Supabase Auth (Emails › SMTP Settings)", names: "A mesma chave do Resend" },
 ];
 
 const environments = [
   { env: "Local", where: "Supabase na máquina (CLI + Docker/OrbStack) e npm run dev", data: "Dados de exemplo (seed)" },
-  { env: "Staging", where: "app.recepclinic.com.br (Vercel Hobby + Supabase Free)", data: "Só números e clínicas de teste" },
-  { env: "Produção", where: "A partir do 1º piloto (F10): Vercel Pro + Supabase Pro, ~US$ 45/mês", data: "Clínicas reais" },
+  { env: "Staging", where: "teste.recepclinic.com.br (Vercel Hobby + Supabase Free); cada evolução é testada aqui antes", data: "Só números e clínicas de teste" },
+  { env: "Produção", where: "app.recepclinic.com.br, a partir do 1º piloto (F10): Vercel Pro + Supabase Pro, ~US$ 45/mês", data: "Clínicas reais" },
 ];
 
 const security = [
@@ -279,7 +279,7 @@ const TD = "px-3 py-2.5 align-top";
           <g class="text-[13px]">
             <rect x="520" y="110" width="230" height="360" rx="12" class="fill-brand-soft stroke-brand"></rect>
             <text x="635" y="136" text-anchor="middle" class="fill-ink font-semibold">Vercel · São Paulo</text>
-            <text x="635" y="155" text-anchor="middle" class="fill-ink-soft text-[11px]">app.recepclinic.com.br (Astro)</text>
+            <text x="635" y="155" text-anchor="middle" class="fill-ink-soft text-[11px]">app. (produção) e teste. (staging)</text>
             <rect x="535" y="170" width="200" height="54" rx="8" class="fill-white stroke-brand/40"></rect>
             <text x="635" y="192" text-anchor="middle" class="fill-ink">Painel e páginas públicas</text>
             <text x="635" y="210" text-anchor="middle" class="fill-ink-soft text-[11px]">renderizadas no servidor</text>

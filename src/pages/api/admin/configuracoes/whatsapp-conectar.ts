@@ -1,5 +1,5 @@
 import type { APIRoute } from "astro";
-import { platformEnv } from "../../../../lib/env";
+import { platformEnv, webhookOverride } from "../../../../lib/env";
 import { createClinicServiceClient } from "../../../../lib/data/clinicService";
 import { createUserClient } from "../../../../lib/data/clients";
 import { DataError } from "../../../../lib/data/errors";
@@ -40,7 +40,7 @@ export const POST: APIRoute = async ({ request, cookies, locals, redirect }) => 
         phoneNumberId: formText(form, "phone_number_id"),
         event: formText(form, "event"),
       },
-      { appId: env.whatsappAppId, appSecret: env.whatsapp.appSecret },
+      { appId: env.whatsappAppId, appSecret: env.whatsapp.appSecret, webhookOverride: webhookOverride(env) },
     );
     const phone = result.displayPhone ? ` ${result.displayPhone}` : "";
     const mode = result.coexistence

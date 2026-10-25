@@ -41,7 +41,17 @@ export type PlatformEnv = {
   nfseSimulation: boolean;
 };
 
-export type WhatsappAppEnv = { appSecret: string; webhookVerifyToken: string };
+export type WhatsappAppEnv = {
+  appSecret: string;
+  webhookVerifyToken: string;
+  /**
+   * Desvio da conta (F10.0a): só no staging, o endereço do webhook dele
+   * (WHATSAPP_WEBHOOK_OVERRIDE_URL). Com ele, a inscrição de cada conta pede à
+   * Meta que mande os eventos para cá, e não para o webhook principal do app
+   * (o da produção). null = sem desvio (produção).
+   */
+  webhookOverrideUrl: string | null;
+};
 
 export type EmailEnv = { host: string; port: number; user: string | null; password: string | null; from: string };
 
@@ -117,7 +127,19 @@ export function parsePlatformEnv(source: EnvSource): PlatformEnv {
   if (appSecret || webhookVerifyToken) {
     if (!appSecret) problems.push("WHATSAPP_APP_SECRET não definida (App Secret do app RecepClinic na Meta)");
     if (!webhookVerifyToken) problems.push("WHATSAPP_WEBHOOK_VERIFY_TOKEN não definida (token de verificação do webhook)");
-    if (appSecret && webhookVerifyToken) whatsapp = { appSecret, webhookVerifyToken };
+    if (appSecret && webhookVerifyToken) whatsapp = { appSecret, webhookVerifyToken, webhookOverrideUrl: null };
+  }
+  const webhookOverrideUrl = text(source, "WHATSAPP_WEBHOOK_OVERRIDE_URL");
+  if (webhookOverrideUrl) {
+    let https = false;
+    try {
+      https = new URL(webhookOverrideUrl).protocol === "https:";
+    } catch {
+      https = false;
+    }
+    if (!https) problems.push(`WHATSAPP_WEBHOOK_OVERRIDE_URL não é um endereço https: ${webhookOverrideUrl}`);
+    if (!appSecret && !webhookVerifyToken) problems.push("WHATSAPP_WEBHOOK_OVERRIDE_URL sem o WhatsApp ligado (WHATSAPP_APP_SECRET e WHATSAPP_WEBHOOK_VERIFY_TOKEN)");
+    if (whatsapp && https) whatsapp.webhookOverrideUrl = webhookOverrideUrl;
   }
 
   const whatsappAppId = text(source, "WHATSAPP_APP_ID");
@@ -154,9 +176,19 @@ export function platformEnv(): PlatformEnv {
     EMAIL_FROM: import.meta.env.EMAIL_FROM,
     WHATSAPP_APP_SECRET: import.meta.env.WHATSAPP_APP_SECRET,
     WHATSAPP_WEBHOOK_VERIFY_TOKEN: import.meta.env.WHATSAPP_WEBHOOK_VERIFY_TOKEN,
+    WHATSAPP_WEBHOOK_OVERRIDE_URL: import.meta.env.WHATSAPP_WEBHOOK_OVERRIDE_URL,
     WHATSAPP_APP_ID: import.meta.env.WHATSAPP_APP_ID,
     WHATSAPP_ES_CONFIG_ID: import.meta.env.WHATSAPP_ES_CONFIG_ID,
     NFSE_SIMULATION: import.meta.env.NFSE_SIMULATION,
   });
   return cached;
+}
+
+/**
+ * Desvio da conta para a inscrição (F10.0a): o endereço do webhook deste
+ * ambiente e o token que a Meta usa para conferi-lo. null = sem desvio.
+ */
+export function webhookOverride(env: PlatformEnv): { url: string; verifyToken: string } | null {
+  const whatsapp = env.whatsapp;
+  return whatsapp?.webhookOverrideUrl ? { url: whatsapp.webhookOverrideUrl, verifyToken: whatsapp.webhookVerifyToken } : null;
 }

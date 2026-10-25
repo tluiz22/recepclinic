@@ -113,8 +113,10 @@ describe("Testar conexão (Suporte, F6.1)", () => {
     await makePlatformStaff(support.id);
     const db = createClinicServiceClient(clinicA, env());
     const calls: string[] = [];
+    const bodies: unknown[] = [];
     const meta: typeof fetch = async (input, init) => {
       const url = String(input);
+      if (url.includes("subscribed_apps")) bodies.push(init?.body ? JSON.parse(String(init.body)) : null);
       calls.push(`${init?.method ?? "GET"} ${url.replace(/^https:\/\/graph\.facebook\.com\/v[\d.]+/, "")} ${(init?.headers as Record<string, string>).Authorization}`);
       if (url.includes("subscribed_apps")) return new Response(JSON.stringify({ success: true }));
       if (url.includes("numero-errado")) return new Response(JSON.stringify({ error: { code: 100, message: "Unsupported get request" } }), { status: 400 });
@@ -133,6 +135,11 @@ describe("Testar conexão (Suporte, F6.1)", () => {
         `GET /${NUMBER_A}?fields=display_phone_number,verified_name,name_status,quality_rating,platform_type,status,is_on_biz_app Bearer token-f61`,
         "POST /waba-a/subscribed_apps Bearer token-f61",
       ]);
+
+      // Staging (F10.0a): a inscrição leva o desvio da conta para o webhook dele.
+      const override = { url: "https://teste.recepclinic.com.br/api/whatsapp/webhook", verifyToken: "verifica" };
+      expect(await checkWhatsappConnection(db, clinicA, meta, override)).toMatchObject({ ok: true, subscribed: true });
+      expect(bodies).toEqual([null, { override_callback_uri: override.url, verify_token: "verifica" }]);
 
       await adminClient().from("whatsapp_connections").update({ phone_number_id: "numero-errado" }).eq("clinic_id", clinicA);
       const failed = await checkWhatsappConnection(db, clinicA, meta);
