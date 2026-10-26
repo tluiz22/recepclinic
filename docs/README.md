@@ -335,7 +335,8 @@
   conferido pelo Claude (saúde, webhook, 7 rotinas em dia). **F10.0c (produção) decidida em 26/out** (3 decisões no
   [plano](plano.md): branch `producao`, time Pro na Vercel com os dois projetos, Supabase Pro em organização nova);
   roteiro em [`producao.md`](producao.md) (passos 1 a 11, cliente e Claude). **Retomar daqui:** o cliente segue o
-  roteiro da produção; o Claude faz os passos 4 (migrações) e 6 (branch) e confere no fim. **Pendente de validação do cliente no staging (no fim, como pedido):** F8.1, F8.2, F8.2b
+  roteiro da produção; o Claude faz os passos 4 (migrações) e 6 (branch) e confere no fim. Andamento (26/out): passo 1.1 (time Pro
+  `RecepClinic` na Vercel) e 1.2 (projeto do staging transferido para o time) feitos. **Pendente de validação do cliente no staging (no fim, como pedido):** F8.1, F8.2, F8.2b
   e F8.3. Seguem também a validação da ajuda contextual (Alta, Média e Baixa).
 >   Banco local com os dados fictícios das Métricas (`npm run db:reset` limpa). Em paralelo,
 >   aguardar a Meta (Análise do App até ~29/out).
