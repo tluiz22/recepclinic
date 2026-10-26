@@ -1812,6 +1812,15 @@ Dra. Ana Karina") e o de testes (`+55 61 9903-3143`, que pelos docs está só na
   modelos de e-mail; backup conferido), Vercel Pro (variáveis da produção, sem `NFSE_SIMULATION`), domínio
   `app.recepclinic.com.br`, login do Suporte; por último, o webhook principal do app da Meta para a produção.
   Os monitores do Better Stack não mudam (já estão em `app.`).
+  **Decisões do cliente (26/out):** 1) a produção publica pela **branch `producao`** (o staging segue na `main`; a
+  produção recebe a `main` validada, depois das migrações nela; recusados: promover à mão na Vercel, as duas juntas na
+  `main`); 2) **um time Pro na Vercel com os dois projetos** (o do staging transferido; recusado: Pro só para a
+  produção, com o staging no Hobby); 3) **Supabase numa organização nova, Pro**, só com a produção (o staging fica na
+  gratuita; recusado: o upgrade da atual, ~US$ 10/mês a mais). Roteiro em [`producao.md`](producao.md); o
+  `.env.production` (fora do git) já tem o que é igual ao staging e um `CRON_SECRET` próprio. Os scripts de teste
+  (`demo-clinicas`, `reset-test-data`) passam a recusar a produção (`RECEPCLINIC_PRODUCAO=1` ou `SITE_URL` do `app.`).
+  Ponto de parada: se o projeto novo do Supabase não tiver o Legacy JWT Secret, ajustar a assinatura da credencial
+  limitada antes de seguir.
 - **Depois, o piloto (F10.1 em diante):** clínica do consultório pela "Nova clínica" (nasce em implantação),
   configuração, agenda atual, sessão de conexão com o Suporte, forma de pagamento, templates aprovados, conferência da
   coexistência, ativação.

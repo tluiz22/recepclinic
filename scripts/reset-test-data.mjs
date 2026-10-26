@@ -16,6 +16,13 @@
 
 import { createClient } from "@supabase/supabase-js";
 
+// Nunca na produção (F10.0c): o .env.production tem RECEPCLINIC_PRODUCAO=1 e o
+// SITE_URL do app.; com qualquer um dos dois, o script para antes de tocar no banco.
+if (process.env.RECEPCLINIC_PRODUCAO === "1" || /^https:\/\/app\.recepclinic\.com\.br/.test(process.env.SITE_URL ?? "")) {
+  console.error("Este script é só de teste e não roda na produção (.env.production).");
+  process.exit(1);
+}
+
 const confirm = process.argv.includes("--confirmar");
 
 const {
