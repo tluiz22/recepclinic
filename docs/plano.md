@@ -1843,6 +1843,10 @@ Dra. Ana Karina") e o de testes (`+55 61 9903-3143`, que pelos docs está só na
    [iPhone](https://claude.ai/artifact/C8E3xDoshuXE3M91qeDDHq) e [Android](https://claude.ai/artifact/78hQ2cXQph4wvXHKPXexnm)); depois, **a coexistência no staging** com o número de
    testes que está lá hoje; só com o staging ok na coexistência, B) a clínica de testes na produção; depois, C) o piloto
    com a Dra. Ana Karina.
+6. **Coexistência no staging (cliente, 27/out):** com a Análise do App e a Verificação do acesso aprovadas (Tech
+   Provider), o `+55 61 9903-3143` sai da Cloud API pura e volta à **Consultorio de Teste** por coexistência (recusado:
+   uma clínica nova). A regra "nunca verificar esse número em app nenhum" deixa de valer. Roteiro na parte P do
+   [`staging.md`](staging.md).
 - **Depois, o piloto (F10.1 em diante):** clínica do consultório pela "Nova clínica" (nasce em implantação),
   configuração, agenda atual, sessão de conexão com o Suporte, forma de pagamento, templates aprovados, conferência da
   coexistência, ativação.

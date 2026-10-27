@@ -369,3 +369,51 @@ Fazer na ordem (o desvio do passo 8 pede o `teste.` já no ar).
     do e-mail abre em `teste.`.
 
 Ao terminar, avisar o Claude: ele confere o `teste.`, o webhook, a saúde e as rotinas pelo terminal.
+
+## P. Coexistência no staging (27/out)
+
+Decidido pelo cliente em 27/out: o número de testes `+55 61 9903-3143` sai da Cloud API pura e volta à **Consultorio
+de Teste** por **coexistência** (app WhatsApp Business no celular + RecepClinic), antes da clínica de testes na
+produção (etapa B). Análise do App e Verificação do acesso aprovadas (RecepClinic é Tech Provider, informado pelo
+cliente em 27/out). Documentação da Meta conferida em 27/out: a coexistência exige Tech Provider e app WhatsApp
+Business 2.24.17 ou mais novo; não fala em tempo mínimo de uso no app.
+
+**O que muda:** o número passa para uma **conta nova do WhatsApp**, num **portfólio próprio da clínica de teste**,
+criado na janela da Meta (o portfólio RecepClinic é dono do app e não pode ser escolhido). Os templates são criados de
+novo nessa conta (F8.2) e passam por nova aprovação; a conta precisa de forma de pagamento. A conta antiga
+(`1119120121064158`, portfólio RecepClinic) fica sem número.
+
+**Antes de começar:** o celular com o chip do número em mãos; o computador (a janela da Meta não funciona no navegador
+do celular); o login do Facebook que administra o app RecepClinic; um cartão para a forma de pagamento; um celular
+pessoal para os testes. **Do passo 1 ao 6, o staging fica sem WhatsApp** (bot e lembretes param).
+
+1. **Claude, pelo terminal:** tira o número da Cloud API (`POST /1351377221398698/deregister`), com o token ainda no
+   cofre. Tem de ser antes do passo 2, porque desconectar no painel apaga o token.
+2. **Painel** (`https://teste.recepclinic.com.br`, como Suporte): Consultorio de Teste › *Configurações › WhatsApp* ›
+   **Desconectar WhatsApp** (confirmar). Como a conexão foi cadastrada pelo Suporte, ela só sai do sistema.
+3. **Gerenciador do WhatsApp** (`business.facebook.com/wa/manage/phone-numbers/`, portfólio **RecepClinic**):
+   no número `+55 61 9903-3143`, **Excluir** (ou *Delete*). Se a Meta recusar, avisar o Claude.
+4. **Celular:** instalar o **WhatsApp Business** e entrar com o número, pelo roteiro do aparelho
+   ([iPhone](https://claude.ai/artifact/C8E3xDoshuXE3M91qeDDHq) ou
+   [Android](https://claude.ai/artifact/78hQ2cXQph4wvXHKPXexnm)); não há conversas para transferir. Código por SMS
+   ou ligação. Se o app pedir o **PIN da confirmação em duas etapas**, avisar o Claude (o PIN está no cofre do staging).
+   Nome do perfil: **Consultorio de Teste**; categoria Saúde.
+5. **Conferir o app:** trocar uma mensagem com o celular pessoal (enviar e receber).
+6. **Conectar** (computador, `https://teste.recepclinic.com.br`, como Suporte): Consultorio de Teste ›
+   *Configurações › WhatsApp* › **Conectar WhatsApp**. Na janela da Meta: entrar com o Facebook; escolher conectar o
+   **app WhatsApp Business existente**; **criar um portfólio novo** (nome sugerido: `Consultorio de Teste`); informar o
+   número; no celular, abrir a mensagem do Facebook no WhatsApp Business e tocar em **Conectar** (com o código que a
+   janela mostrar); compartilhar o histórico ou não, tanto faz (o RecepClinic não grava). O cartão "Conexão" deve
+   mostrar **Conectado, coexistência**. Erro na janela: anotar a mensagem e avisar o Claude.
+7. **Claude, pelo terminal:** confere no banco a conexão (`coexistence`, sincronizações), o desvio do webhook para o
+   `teste.` na conta nova e os templates criados.
+8. **Forma de pagamento:** no Gerenciador do WhatsApp do **portfólio novo**, *Visão geral › Adicionar forma de
+   pagamento*. Depois, no painel, o Suporte marca **"Forma de pagamento conferida (Suporte)"**.
+9. **Testes** (com os templates aprovados; a situação vem pelo **Atualizar situação**, porque os avisos de templates
+   vão à produção):
+   - do celular pessoal, "oi" para o número: o bot responde;
+   - a recepção responde pelo app WhatsApp Business: o bot pausa naquela conversa (eco);
+   - `#bot` pelo app: o bot volta;
+   - um lembrete de teste chega com os botões.
+
+Ao terminar cada bloco (1 a 3, 4 a 6, 8 e 9), avisar o Claude.

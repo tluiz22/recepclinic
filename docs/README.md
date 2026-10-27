@@ -125,8 +125,9 @@
 >   - **Migrações no staging:** o Claude aplica com `supabase db push` (permissão liberada em
 >     09/out), sempre na ordem simulação → aplicar → conferir no banco → só então o push do código.
 >   - **WhatsApp de testes:** `+55 61 9903-3143`, na Cloud API do app RecepClinic, ligado à
->     clínica de teste "Consultorio de Teste" no staging (nome conferido em 12/out). **Nunca verificar esse número em app
->     nenhum** (sairia da API). Roteiro na parte E do [`staging.md`](staging.md).
+>     clínica de teste "Consultorio de Teste" no staging (nome conferido em 12/out). ~~Nunca verificar esse número em app
+>     nenhum~~ **(revisto pelo cliente em 27/out: o número passa para o app WhatsApp Business e volta por coexistência,
+>     parte P do [`staging.md`](staging.md))**. Roteiro antigo na parte E.
 >   - **Staging:** `https://app.recepclinic.com.br` (Vercel publica a cada push na `main`);
 >     migrações novas vão com `supabase db push` antes do push (repositório ligado ao projeto
 >     `recepclinic-staging`; a senha do banco está em `SUPABASE_DB_PASSWORD` no `.env.staging`);
@@ -357,7 +358,10 @@
   [iPhone](https://claude.ai/artifact/C8E3xDoshuXE3M91qeDDHq) e [Android](https://claude.ai/artifact/78hQ2cXQph4wvXHKPXexnm);
   **aguardam a revisão do cliente.** **Ordem nova (cliente, 27/out):**
   depois da A, **coexistência no staging** com o número de testes que está lá hoje; só com o staging ok na
-  coexistência, a etapa **B**. Depois, **B** (clínica de testes na produção com o 2º número do cliente, já no WhatsApp Business; valida F8.1, F8.2b e
+  coexistência, a etapa **B**. **Meta (cliente, 27/out): Análise do App e Verificação do acesso aprovadas; o
+  RecepClinic é Tech Provider.** **Coexistência no staging (27/out):** volta para a **Consultorio de Teste** (cliente),
+  num portfólio próprio da clínica de teste; roteiro na parte P do [`staging.md`](staging.md); **aguarda o cliente
+  começar** (o passo 1 é do Claude, com o celular do chip em mãos). Depois, **B** (clínica de testes na produção com o 2º número do cliente, já no WhatsApp Business; valida F8.1, F8.2b e
   F8.3) e **C** (piloto real com a Dra. Ana Karina). Também: conferir o 1º backup da produção (27/out). **Pendente de validação do cliente no staging (no fim, como pedido):** F8.1, F8.2, F8.2b
   e F8.3. Seguem também a validação da ajuda contextual (Alta, Média e Baixa).
 >   Banco local com os dados fictícios das Métricas (`npm run db:reset` limpa). Em paralelo,
