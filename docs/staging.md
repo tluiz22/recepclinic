@@ -443,7 +443,7 @@ pessoal para os testes. **Do passo 1 ao 6, o staging fica sem WhatsApp** (bot e 
    - **"oi" de teste:** o bot respondeu "Não entendi". Causa: na conexão a Meta entregou uma imagem antiga do mesmo
      número; o bot abriu a conversa e as boas-vindas foram recusadas (`131047`, mais de 24 h). **Cliente (27/out):
      deixar como está.** As mensagens do bot aparecem no app da recepção (espelho da coexistência; a Meta não permite
-     esconder). **Melhoria a desenhar depois dos testes (cliente, 27/out):** aviso claro de "conversa precisa da
+     esconder). **Proposta do Claude (aguarda o cliente):** melhoria depois dos testes, aviso claro de "conversa precisa da
      recepção" (opções num canvas).
 7. **Claude, pelo terminal:** confere no banco a conexão (`coexistence`, sincronizações), o desvio do webhook para o
    `teste.` na conta nova e os templates criados.
