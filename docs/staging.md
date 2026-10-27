@@ -388,7 +388,8 @@ do celular); o login do Facebook que administra o app RecepClinic; um cartão pa
 pessoal para os testes. **Do passo 1 ao 6, o staging fica sem WhatsApp** (bot e lembretes param).
 
 1. **Claude, pelo terminal:** tira o número da Cloud API (`POST /1351377221398698/deregister`), com o token ainda no
-   cofre. Tem de ser antes do passo 2, porque desconectar no painel apaga o token.
+   cofre. Tem de ser antes do passo 2, porque desconectar no painel apaga o token. **Feito em 27/out** (`success:
+   true`; a Meta passou o número de `CONNECTED` para `DISCONNECTED`).
 2. **Painel** (`https://teste.recepclinic.com.br`, como Suporte): Consultorio de Teste › *Configurações › WhatsApp* ›
    **Desconectar WhatsApp** (confirmar). Como a conexão foi cadastrada pelo Suporte, ela só sai do sistema.
 3. **Gerenciador do WhatsApp** (`business.facebook.com/wa/manage/phone-numbers/`, portfólio **RecepClinic**):
