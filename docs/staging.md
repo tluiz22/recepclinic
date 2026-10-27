@@ -436,6 +436,15 @@ pessoal para os testes. **Do passo 1 ao 6, o staging fica sem WhatsApp** (bot e 
    - **Próxima tentativa (cliente, 27/out):** esperar ~1 h, desconectar no painel e conectar criando uma **conta nova** do
      WhatsApp, para a janela voltar a mostrar o QR; ler o QR no app **antes** de terminar a janela. Sem QR, chamado no
      suporte da Meta.
+   - **4ª tentativa (27/out, 15:19):** a Meta tinha desfeito sozinha a conexão incompleta (o token deixou de enxergar a
+     conta; o aviso vai à produção). Desconectado no painel e conectado de novo: **conectado, coexistência, as duas
+     sincronizações feitas**, avisos chegando ao `teste.`; 18 templates em análise. A Meta reaproveitou a mesma conta e
+     número; o cartão da 1ª tentativa vale para ela.
+   - **"oi" de teste:** o bot respondeu "Não entendi". Causa: na conexão a Meta entregou uma imagem antiga do mesmo
+     número; o bot abriu a conversa e as boas-vindas foram recusadas (`131047`, mais de 24 h). **Cliente (27/out):
+     deixar como está.** As mensagens do bot aparecem no app da recepção (espelho da coexistência; a Meta não permite
+     esconder). **Melhoria a desenhar depois dos testes (cliente, 27/out):** aviso claro de "conversa precisa da
+     recepção" (opções num canvas).
 7. **Claude, pelo terminal:** confere no banco a conexão (`coexistence`, sincronizações), o desvio do webhook para o
    `teste.` na conta nova e os templates criados.
 8. **Forma de pagamento:** no Gerenciador do WhatsApp do **portfólio novo**, *Visão geral › Adicionar forma de
