@@ -106,7 +106,7 @@ const isActive = (href: string) => currentPath.startsWith(href);
 const isMoreActive = moreNavItems.some((item) => isActive(item.href));
 const isSystemActive = headerSystemItems.some((item) => isActive(item.href));
 const navLinkClass = (active: boolean) =>
-  `rounded-lg px-3 py-2 whitespace-nowrap no-underline ${
+  `rounded-lg px-2.5 py-2 whitespace-nowrap no-underline ${
     active ? "bg-brand-soft text-brand-ink" : "text-ink-soft hover:bg-canvas hover:text-ink"
   }`;
 ---
@@ -202,7 +202,7 @@ const navLinkClass = (active: boolean) =>
           </div>
         </div>
 
-        <nav aria-label="Menu principal" class="hidden min-w-0 flex-1 flex-wrap gap-0.5 text-[15px] font-semibold sm:flex">
+        <nav aria-label="Menu principal" class="hidden min-w-0 flex-1 flex-wrap gap-0 text-[15px] font-semibold sm:flex">
           {
             headerNavItems.map((item) => (
               <a

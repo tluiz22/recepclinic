@@ -47,7 +47,9 @@ const [counts, sendsAlert, toReview, certificate, connection, templates, attenti
 ]);
 // Atendimento humano (F8.5a, cliente, 27/out/2026): faixa com as conversas que aguardam a clínica.
 const awaiting = attention.filter((item) => item.status === "waiting");
-const inAttention = attention.length - awaiting.length;
+const inProgress = attention.filter((item) => item.status === "in_progress");
+const namesOf = (names: string[]) => (names.length > 3 ? `${names.slice(0, 3).join(", ")} e mais ${names.length - 3}` : names.join(", ").replace(/, ([^,]*)$/, " e $1"));
+const inProgressNames = namesOf(inProgress.map((item) => item.name ?? "número sem cadastro"));
 const oldestWait = awaiting[0]
   ? (() => {
       const minutes = Math.max(0, Math.floor((Date.now() - awaiting[0].waitingSince!.getTime()) / 60_000));
@@ -126,11 +128,14 @@ const sectionTitle = "font-display text-[17px] leading-tight font-bold text-ink 
     )
   }
   {
-    inAttention > 0 && (
-      <p class="mt-2 text-[15px] text-ink-soft">
-        {plural(inAttention, "conversa", "conversas")} em atendimento pela clínica: ao terminar, escreva <strong class="font-mono">#bot</strong> na conversa.{" "}
-        <a href="/admin/atendimento">Ver</a>
-      </p>
+    inProgress.length > 0 && (
+      // Alerta das conversas que a clínica assumiu e ainda não devolveu ao bot (cliente, 27/out/2026).
+      <Notice tone="warning" href="/admin/atendimento" linkLabel="Ver conversas" class="mt-2">
+        {inProgress.length === 1
+          ? `A conversa com ${inProgressNames} está com a clínica e ainda não voltou ao bot.`
+          : `${inProgress.length} conversas estão com a clínica e ainda não voltaram ao bot (${inProgressNames}).`}{" "}
+        Ao terminar, escreva <strong class="font-mono">#bot</strong> na conversa ou use "Devolver ao bot" em Atendimento.
+      </Notice>
     )
   }
 

@@ -364,8 +364,8 @@
   `#bot`, forma de pagamento); falta o lembrete com botões quando a Meta aprovar os 18 templates da conta nova; depois,
   a etapa **B**. **F8.5 Atendimento humano** (cliente, 27/out: manter a coexistência e acompanhar pelo RecepClinic o que
   precisa da clínica; decisões e subetapas no [plano](plano.md), [canvas](https://claude.ai/artifact/TGSF8DVMczXShqMpCuVjDw)):
-  **F8.5a validada em 27/out**; **F8.5b (Horário da recepção) publicada no staging em 27/out**, aguarda a validação do
-  cliente; depois F8.5c (notificações) e F8.5d (bot que não entende). Depois, **B** (clínica de testes na produção com o 2º número do cliente, já no WhatsApp Business; valida F8.1, F8.2b e
+  **F8.5a validada em 27/out**; **F8.5b (Horário da recepção) validada em 27/out**; alerta no Início das conversas que não
+  voltaram ao bot publicado em 27/out (aguarda o cliente); depois F8.5c (notificações) e F8.5d (bot que não entende). Depois, **B** (clínica de testes na produção com o 2º número do cliente, já no WhatsApp Business; valida F8.1, F8.2b e
   F8.3) e **C** (piloto real com a Dra. Ana Karina). Também: conferir o 1º backup da produção (27/out). **Pendente de validação do cliente no staging (no fim, como pedido):** F8.1, F8.2, F8.2b
   e F8.3. Seguem também a validação da ajuda contextual (Alta, Média e Baixa).
 >   Banco local com os dados fictícios das Métricas (`npm run db:reset` limpa). Em paralelo,
