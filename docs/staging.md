@@ -391,13 +391,15 @@ pessoal para os testes. **Do passo 1 ao 6, o staging fica sem WhatsApp** (bot e 
    cofre. Tem de ser antes do passo 2, porque desconectar no painel apaga o token. **Feito em 27/out** (`success:
    true`; a Meta passou o número de `CONNECTED` para `DISCONNECTED`).
 2. **Painel** (`https://teste.recepclinic.com.br`, como Suporte): Consultorio de Teste › *Configurações › WhatsApp* ›
-   **Desconectar WhatsApp** (confirmar). Como a conexão foi cadastrada pelo Suporte, ela só sai do sistema.
+   **Desconectar WhatsApp** (confirmar). Como a conexão foi cadastrada pelo Suporte, ela só sai do sistema. **Feito em 27/out**
+   (conferido no banco: "Desconectado", token e PIN fora do cofre). Passo 3 feito pelo cliente em 27/out.
 3. **Gerenciador do WhatsApp** (`business.facebook.com/wa/manage/phone-numbers/`, portfólio **RecepClinic**):
    no número `+55 61 9903-3143`, **Excluir** (ou *Delete*). Se a Meta recusar, avisar o Claude.
 4. **Celular:** instalar o **WhatsApp Business** e entrar com o número, pelo roteiro do aparelho
    ([iPhone](https://claude.ai/artifact/C8E3xDoshuXE3M91qeDDHq) ou
    [Android](https://claude.ai/artifact/78hQ2cXQph4wvXHKPXexnm)); não há conversas para transferir. Código por SMS
-   ou ligação. Se o app pedir o **PIN da confirmação em duas etapas**, avisar o Claude (o PIN está no cofre do staging).
+   ou ligação. Se o app pedir o **PIN da confirmação em duas etapas**, usar o PIN de 6 números escolhido pelo cliente
+   no registro de 07/out (parte E); o do cofre saiu no Desconectar do passo 2.
    Nome do perfil: **RecepClinic - Teste** (cliente, 27/out: corrige o "RecepcClinic - Teste" da conta antiga; conferir
    a grafia antes do passo 6, porque depois da conexão a troca do nome passa por análise da Meta); categoria Saúde.
 5. **Conferir o app:** trocar uma mensagem com o celular pessoal (enviar e receber).
