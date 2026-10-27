@@ -1,6 +1,21 @@
 # RecepClinic
 
-> **Estado atual (retomar daqui), 22/out/2026**
+> **Estado atual (retomar daqui), 27/out/2026**
+>
+> **Fim da sessão de 27/out. Retomar daqui (próxima sessão):**
+> - **Feito em 27/out:** etapa A (roteiros do WhatsApp Business: único, iPhone e Android); **coexistência no staging**
+>   (o `+55 61 9903-3143` na Consultorio de Teste, portfólio próprio "Consultório de teste", eco, pausa e `#bot`
+>   validados; parte P do [`staging.md`](staging.md)); **F8.5 Atendimento humano** toda validada no staging e
+>   **publicada na produção** (`af0902d`): tela Atendimento, Horário da recepção, notificações no celular (Web Push),
+>   bot que não entende (4ª vez vai para a clínica). Detalhes no [plano](plano.md) (seção F8.5) e em
+>   [`producao.md`](producao.md) (Publicações).
+> - **Próximo, à escolha do cliente:** (1) **lembrete com botões** da coexistência no staging, último item da parte P,
+>   quando a Meta aprovar os 18 templates da conta nova (conferir pelo "Atualizar situação"); (2) **etapa B**, a clínica
+>   de testes permanente na produção com o 2º número do cliente; (3) **etapa C**, o piloto com a Dra. Ana Karina.
+> - **Pendências pequenas:** conferir o 1º backup diário da produção (*Database › Backups* do `recepclinic-producao`);
+>   investigar por que a sessão do painel caiu durante a janela da Meta (suspeita: login do Suporte em duas janelas,
+>   parte P do [`staging.md`](staging.md)); a proposta da frase de encerramento no lugar do `#bot` foi recusada (fica o
+>   `#bot` ou o "Devolver ao bot").
 >
 > - **Etapas 0 a 4 concluídas**: cópia isolada, [diagnóstico](diagnostico.md), [limites](limites.md),
 >   [arquitetura](arquitetura.md) (decisões D1–D11) e [plano](plano.md) (fases F0–F10).
