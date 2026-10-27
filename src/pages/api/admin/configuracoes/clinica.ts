@@ -2,6 +2,7 @@ import type { APIRoute } from "astro";
 import { createUserClient } from "../../../../lib/data/clients";
 import { removeClinicLogo, uploadClinicLogo, validateLogoFile } from "../../../../lib/data/config/brand";
 import { updateClinicSettings, type ClinicProfile, type ClinicSettingsPatch } from "../../../../lib/data/config/clinic";
+import { saveReceptionHours } from "../../../../lib/data/config/receptionHours";
 import { runFormAction } from "../../../../lib/data/formAction";
 import { formChecked, formOptionalInt, formOptionalText, formText } from "../../../../lib/forms";
 import { DESIGNATION_PRESETS, type NounArticle } from "../../../../lib/designation";
@@ -13,7 +14,7 @@ import { DESIGNATION_PRESETS, type NounArticle } from "../../../../lib/designati
 // Redesign R9 (cliente, 17/out/2026): a tela tem um formulário por bloco, e
 // cada um grava só os próprios campos (`bloco`); um erro num bloco não mexe nos
 // outros. Sem `bloco`, grava todos, como antes.
-const BLOCKS = ["identificacao", "atendimento", "paginas", "bot_info", "bot_limites"] as const;
+const BLOCKS = ["identificacao", "atendimento", "paginas", "bot_info", "bot_limites", "recepcao"] as const;
 type Block = (typeof BLOCKS)[number];
 
 const SAVED: Record<Block | "tudo", string> = {
@@ -22,6 +23,7 @@ const SAVED: Record<Block | "tudo", string> = {
   paginas: "Páginas públicas salvas.",
   bot_info: "Informações do bot salvas.",
   bot_limites: "Limites do bot salvos.",
+  recepcao: "Horário da recepção salvo.",
   tudo: "Dados da clínica salvos.",
 };
 
@@ -70,6 +72,14 @@ export const POST: APIRoute = async (context) => {
         patch.botMaxNoShows = formOptionalInt(form, "bot_max_no_shows") ?? Number.NaN;
       }
       const db = createUserClient(request, cookies);
+      // Horário da recepção (F8.5b): só pelo próprio bloco; dia desmarcado = fechado.
+      if (hasBot && block === "recepcao") {
+        const hours = Array.from({ length: 7 }, (_, day) =>
+          formChecked(form, `aberta_${day}`) ? { open: formText(form, `abre_${day}`), close: formText(form, `fecha_${day}`) } : null,
+        );
+        await saveReceptionHours(db, clinic.clinicId, hours);
+        return { redirectTo: "/admin/configuracoes", message: SAVED.recepcao };
+      }
       // Logo recusado (formato, tamanho) não salva nada, para não perder metade do formulário.
       const file = has("paginas") ? form?.get("logo") : null;
       const logo = file instanceof File && file.size > 0 ? file : null;

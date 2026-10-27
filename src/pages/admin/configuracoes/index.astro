@@ -16,7 +16,9 @@ import EditCard from "../../../components/admin/ui/EditCard.astro";
 import { createUserClient } from "../../../lib/data/clients";
 import { BRAND_COLOR_OPTIONS, DEFAULT_BRAND_COLOR, LOGO_TYPES } from "../../../lib/data/config/brand";
 import { CLINIC_PROFILES, getClinicSettings } from "../../../lib/data/config/clinic";
+import { getReceptionHours } from "../../../lib/data/config/receptionHours";
 import { loadSetupStatus } from "../../../lib/data/config/setup";
+import { describeReceptionHours, WEEKDAY_NAMES } from "../../../lib/receptionHours";
 import { BOT_LIMIT_RANGES, DEFAULT_BOT_LIMITS, NEW_PATIENTS_WINDOW_DAYS, NO_SHOWS_WINDOW_DAYS } from "../../../lib/data/whatsapp/botLimits";
 import { MESSAGE_ARTICLES } from "../../../lib/data/whatsapp/templates";
 import { DESIGNATION_NOUN_MAX, DESIGNATION_PRESETS, designationText, designationTitle, NOUN_ARTICLES } from "../../../lib/designation";
@@ -28,6 +30,10 @@ const clinic = Astro.locals.clinic!;
 const db = createUserClient(Astro.request, Astro.cookies);
 const [settings, setup] = await Promise.all([getClinicSettings(db, clinic.clinicId), loadSetupStatus(db, clinic.clinicId, clinic.features)]);
 const hasBot = clinic.features.includes("whatsapp_bot");
+// Horário da recepção (F8.5b): com o bot; enquanto não salvo, a sugestão das agendas.
+const reception = hasBot ? await getReceptionHours(db, clinic.clinicId) : null;
+// Segunda primeiro, domingo no fim.
+const receptionDays = [1, 2, 3, 4, 5, 6, 0];
 const designation = { noun: settings.messageNoun, article: settings.messageNounArticle };
 const isPreset = DESIGNATION_PRESETS.some((d) => d.noun === designation.noun && d.article === designation.article);
 const zones = BRAZIL_TIME_ZONES.some((zone) => zone.value === settings.timezone)
@@ -394,6 +400,65 @@ import { configuracoes } from "../../../lib/ajuda/configuracoes";
   }
 
   {
+    reception && (
+      <EditCard
+        id="recepcao"
+        title="Horário da recepção"
+        summary={reception.saved ? describeReceptionHours(reception.hours) : "Sugerido pelas agendas"}
+      >
+        <p class="text-sm text-ink-soft">
+          Quando a clínica atende pelo WhatsApp. Fora dele, as conversas que precisam da clínica entram em <strong>Atendimento</strong> sem notificação, e o
+          paciente fica sabendo quando a clínica responde. Feriados (nacionais e da clínica) contam como fechado.
+        </p>
+        {!reception.saved && (
+          <p class="rounded-lg border border-pend-200 bg-pend-50 px-3.5 py-2.5 text-sm text-pend-800">
+            Ainda não salvo: o horário abaixo foi sugerido pelos horários das agendas (o primeiro e o último de cada dia). Confira e salve.
+          </p>
+        )}
+        <dl class={KV}>
+          {receptionDays.map((day) => (
+            <>
+              <dt class={DT}>{WEEKDAY_NAMES[day]}</dt>
+              <dd class={DD}>{reception.hours[day] ? `${reception.hours[day]!.open} às ${reception.hours[day]!.close}` : <span class={SOFT}>Fechada</span>}</dd>
+            </>
+          ))}
+        </dl>
+        <form slot="edit" method="POST" action={action} class="flex flex-col gap-4">
+          <input type="hidden" name="bloco" value="recepcao" />
+          <p class="text-sm text-ink-soft">Marque os dias em que a recepção atende e o horário de cada um.</p>
+          <fieldset class="min-w-0">
+            <legend class="sr-only">Dias e horários da recepção</legend>
+            <div class="flex flex-col divide-y divide-[#e6ecea]">
+              {receptionDays.map((day) => {
+                const hours = reception.hours[day];
+                return (
+                  <div class="flex flex-wrap items-center gap-x-4 gap-y-2 py-2.5">
+                    <label class={`${CHOICE} w-32`}>
+                      <input type="checkbox" name={`aberta_${day}`} checked={!!hours} class={CHECK} data-reception-day={day} />
+                      {WEEKDAY_NAMES[day]}
+                    </label>
+                    <span class="flex flex-wrap items-center gap-2" data-reception-times={day}>
+                      <label for={`abre_${day}`} class="sr-only">{`${WEEKDAY_NAMES[day]}: abre às`}</label>
+                      <input id={`abre_${day}`} name={`abre_${day}`} type="time" value={hours?.open ?? "08:00"} class={`${INPUT_INLINE} w-32`} />
+                      <span class="text-sm text-ink-soft">às</span>
+                      <label for={`fecha_${day}`} class="sr-only">{`${WEEKDAY_NAMES[day]}: fecha às`}</label>
+                      <input id={`fecha_${day}`} name={`fecha_${day}`} type="time" value={hours?.close ?? "18:00"} class={`${INPUT_INLINE} w-32`} />
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </fieldset>
+          <div class={actions}>
+            <Button type="submit" variant="primary" data-sending-label="Salvando…">Salvar horário</Button>
+            <Button href={here} data-edit-cancel>Cancelar</Button>
+          </div>
+        </form>
+      </EditCard>
+    )
+  }
+
+  {
     hasBot && (
       <EditCard
         id="bot-limites"
@@ -433,6 +498,18 @@ import { configuracoes } from "../../../lib/ajuda/configuracoes";
 </ConfigShell>
 
 <script>
+  // Horário da recepção: dia desmarcado esconde (e desliga) os horários dele.
+  document.querySelectorAll<HTMLInputElement>("[data-reception-day]").forEach((box) => {
+    const times = document.querySelector<HTMLElement>(`[data-reception-times="${box.dataset.receptionDay}"]`)!;
+    const sync = () => {
+      times.hidden = !box.checked;
+      times.querySelectorAll("input").forEach((input) => (input.disabled = !box.checked));
+    };
+    box.addEventListener("change", sync);
+    box.form?.addEventListener("reset", () => setTimeout(sync));
+    sync();
+  });
+
   // Cores prontas: clicar marca a bolinha e passa a cor para o campo "Outra",
   // que é o que vai no formulário; escolher em "Outra" desmarca as bolinhas.
   document.querySelectorAll<HTMLElement>("[data-brand-swatches]").forEach((group) => {

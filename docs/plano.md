@@ -1797,7 +1797,18 @@ coexistência). No celular pessoal sem o número da clínica, abriria o WhatsApp
   forma de pagamento, desconexão, certificado) vão para o **fim da página**; só a faixa do atendimento humano fica no alto,
   com o texto "**N conversas aguardando atendimento humano**". O aviso de retorno de uma ação (ex.: tela sem acesso) fica
   no alto.
+  **F8.5a validada pelo cliente em 27/out.** Devolver ao bot sem o paciente ver o `#bot` (cliente, 27/out): **fica como
+  está** (`#bot` no app ou "Devolver ao bot" no RecepClinic; recusadas: frase de encerramento configurável; apagar o
+  `#bot` para todos). Etiquetas e respostas rápidas do app não existem na coexistência.
 - **F8.5b Horário da recepção:** o campo em Configurações › Clínica, preenchido a partir das agendas.
+  **F8.5b implementada, testada no local e publicada no staging em 27/out** (migração
+  `20261027140000_horario_da_recepcao.sql`, aplicada e conferida no staging antes do push): coluna
+  `clinic_settings.reception_hours` (7 dias, cada um fechado ou `{open, close}`; nula = ainda não salvo); regras em
+  `src/lib/receptionHours.ts` (sugestão pelas agendas, validação por dia, "aberta agora?", "próxima abertura" pulando
+  fins de semana fechados e feriados nacionais e da clínica, resumo "Seg a Sex 08:00–18:00 · Sáb 08:00–12:00"); bloco
+  **Horário da recepção** em Configurações › Clínica (com o bot), com o aviso "Ainda não salvo: sugerido pelas agendas"
+  até salvar; erro ao lado do dia. Testes: 6 de unidade e 4 de banco (`tests/db/horario-recepcao.test.ts`: sugestão,
+  Administrador salva, Recepção não grava, erro por dia). Conferido no navegador local.
 - **F8.5c Notificações:** o painel instalável no celular (já tem o manifesto) com notificações do navegador (Web Push):
   ligar e desligar por pessoa, o aviso de "aguardando", o lembrete de 1 hora e o resumo ao abrir o horário.
 - **F8.5d Bot que não entende (cliente, 27/out):** hoje o bot repete "Não entendi" sem fim (áudio, foto, figurinha e
