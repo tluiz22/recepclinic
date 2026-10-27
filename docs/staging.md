@@ -398,7 +398,8 @@ pessoal para os testes. **Do passo 1 ao 6, o staging fica sem WhatsApp** (bot e 
    ([iPhone](https://claude.ai/artifact/C8E3xDoshuXE3M91qeDDHq) ou
    [Android](https://claude.ai/artifact/78hQ2cXQph4wvXHKPXexnm)); não há conversas para transferir. Código por SMS
    ou ligação. Se o app pedir o **PIN da confirmação em duas etapas**, avisar o Claude (o PIN está no cofre do staging).
-   Nome do perfil: **Consultorio de Teste**; categoria Saúde.
+   Nome do perfil: **RecepClinic - Teste** (cliente, 27/out: corrige o "RecepcClinic - Teste" da conta antiga; conferir
+   a grafia antes do passo 6, porque depois da conexão a troca do nome passa por análise da Meta); categoria Saúde.
 5. **Conferir o app:** trocar uma mensagem com o celular pessoal (enviar e receber).
 6. **Conectar** (computador, `https://teste.recepclinic.com.br`, como Suporte): Consultorio de Teste ›
    *Configurações › WhatsApp* › **Conectar WhatsApp**. Na janela da Meta: entrar com o Facebook; escolher conectar o
