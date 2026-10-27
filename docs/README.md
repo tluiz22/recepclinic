@@ -16,6 +16,10 @@
 >   investigar por que a sessão do painel caiu durante a janela da Meta (suspeita: login do Suporte em duas janelas,
 >   parte P do [`staging.md`](staging.md)); a proposta da frase de encerramento no lugar do `#bot` foi recusada (fica o
 >   `#bot` ou o "Devolver ao bot").
+> - **Etapa paralela CRM (cliente, 27/out):** desenvolvida na branch **`CRM`**, separada da `main`, para poder parar a
+>   qualquer momento e voltar às etapas do piloto (B e C). O planejamento e o ponto de retomada do CRM ficam em
+>   `docs/crm.md`, **só na branch `CRM`**. Para trocar: `git switch CRM` / `git switch main`. A `main` segue sendo a
+>   única que publica no staging (e a `producao` na produção); o CRM só entra na `main` com a aprovação do cliente.
 >
 > - **Etapas 0 a 4 concluídas**: cópia isolada, [diagnóstico](diagnostico.md), [limites](limites.md),
 >   [arquitetura](arquitetura.md) (decisões D1–D11) e [plano](plano.md) (fases F0–F10).
