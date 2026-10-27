@@ -1869,6 +1869,7 @@ coexistência). No celular pessoal sem o número da clínica, abriria o WhatsApp
   seguida) e, no celular, abre o WhatsApp sozinho pelo endereço do aplicativo (`whatsapp://send?phone=`), sem a janela
   de navegador; os botões "Abrir no WhatsApp" usam o mesmo endereço no celular (no computador, o `wa.me`). Conferido no
   navegador local (computador e iPhone simulado).
+  **F8.5d e o ajuste da notificação validados pelo cliente no iPhone em 27/out: F8.5 toda validada no staging.**
 
 ## F10 — Primeiro piloto
 

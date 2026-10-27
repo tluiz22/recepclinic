@@ -368,7 +368,8 @@
   voltaram ao bot validado em 27/out; **F8.5c (notificações) validada no staging em 27/out** (iPhone, com o app na Tela de
   Início sem o "X"). **F8.5a a F8.5c publicadas na produção em 27/out** (`793587f`, 3 migrações; registro em
   [`producao.md`](producao.md)); chaves de notificação da produção na Vercel (cliente, 27/out); **F8.5d (bot que não
-  entende) publicada no staging em 27/out**, aguarda a validação do cliente; depois F8.5c (notificações) e F8.5d (bot que não entende). Depois, **B** (clínica de testes na produção com o 2º número do cliente, já no WhatsApp Business; valida F8.1, F8.2b e
+  entende) e o ajuste da notificação (abre a tela Atendimento e o WhatsApp pelo aplicativo) validados no staging em
+  27/out: F8.5 toda validada**; falta levar à produção a F8.5d (migração `20261027180000_bot_nao_entende`) e o ajuste; depois F8.5c (notificações) e F8.5d (bot que não entende). Depois, **B** (clínica de testes na produção com o 2º número do cliente, já no WhatsApp Business; valida F8.1, F8.2b e
   F8.3) e **C** (piloto real com a Dra. Ana Karina). Também: conferir o 1º backup da produção (27/out). **Pendente de validação do cliente no staging (no fim, como pedido):** F8.1, F8.2, F8.2b
   e F8.3. Seguem também a validação da ajuda contextual (Alta, Média e Baixa).
 >   Banco local com os dados fictícios das Métricas (`npm run db:reset` limpa). Em paralelo,
