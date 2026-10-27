@@ -1838,6 +1838,10 @@ Dra. Ana Karina") e o de testes (`+55 61 9903-3143`, que pelos docs está só na
    código e o "Conectar" numa mensagem do Facebook; histórico de até 6 meses, sem grupos; depois dela, sem mensagens
    temporárias, visualização única, localização em tempo real e listas de transmissão, e sem o WhatsApp para Windows;
    celular principal parado ~14 dias desconecta.
+5. **Ordem revista pelo cliente (27/out):** A) roteiro do WhatsApp Business (feito em 27/out,
+   [documento](https://claude.ai/artifact/8AXZMSLcEq8SMWFpYHaraq)); depois, **a coexistência no staging** com o número de
+   testes que está lá hoje; só com o staging ok na coexistência, B) a clínica de testes na produção; depois, C) o piloto
+   com a Dra. Ana Karina.
 - **Depois, o piloto (F10.1 em diante):** clínica do consultório pela "Nova clínica" (nasce em implantação),
   configuração, agenda atual, sessão de conexão com o Suporte, forma de pagamento, templates aprovados, conferência da
   coexistência, ativação.

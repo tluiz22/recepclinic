@@ -351,10 +351,11 @@
   → conferir) e `git push origin main:producao`. **Piloto (decisões de 26/out no [plano](plano.md)):** primeiro uma clínica de
   testes **permanente e ativa** na produção, com um 2º número de testes do cliente (já no WhatsApp Business); depois,
   a Dra. Ana Karina; e um roteiro compartilhável para as clínicas passarem o WhatsApp comum para o Business.
-  **Fim da sessão de 26/out. Retomar daqui (próxima sessão):** etapa **A** do piloto, o roteiro "Como passar o seu
-  WhatsApp para o WhatsApp Business" (documento compartilhável no claude.ai: antes de começar, passo a passo Android e
-  iPhone com a transferência das conversas, perfil da clínica, o que muda depois de conectar ao RecepClinic, cuidados).
-  Depois, **B** (clínica de testes na produção com o 2º número do cliente, já no WhatsApp Business; valida F8.1, F8.2b e
+  **Etapa A feita em 27/out:** roteiro [Como passar o seu WhatsApp para o WhatsApp Business](https://claude.ai/artifact/8AXZMSLcEq8SMWFpYHaraq)
+  (documento compartilhável no claude.ai: antes de começar, Android, iPhone, perfil da clínica, o que muda com a
+  coexistência, cuidados e perguntas frequentes); **aguarda a revisão do cliente.** **Ordem nova (cliente, 27/out):**
+  depois da A, **coexistência no staging** com o número de testes que está lá hoje; só com o staging ok na
+  coexistência, a etapa **B**. Depois, **B** (clínica de testes na produção com o 2º número do cliente, já no WhatsApp Business; valida F8.1, F8.2b e
   F8.3) e **C** (piloto real com a Dra. Ana Karina). Também: conferir o 1º backup da produção (27/out). **Pendente de validação do cliente no staging (no fim, como pedido):** F8.1, F8.2, F8.2b
   e F8.3. Seguem também a validação da ajuda contextual (Alta, Média e Baixa).
 >   Banco local com os dados fictícios das Métricas (`npm run db:reset` limpa). Em paralelo,
