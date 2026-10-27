@@ -1787,6 +1787,15 @@ coexistência). No celular pessoal sem o número da clínica, abriria o WhatsApp
 - **F8.5b Horário da recepção:** o campo em Configurações › Clínica, preenchido a partir das agendas.
 - **F8.5c Notificações:** o painel instalável no celular (já tem o manifesto) com notificações do navegador (Web Push):
   ligar e desligar por pessoa, o aviso de "aguardando", o lembrete de 1 hora e o resumo ao abrir o horário.
+- **F8.5d Bot que não entende (cliente, 27/out):** hoje o bot repete "Não entendi" sem fim (áudio, foto, figurinha e
+  documento caem no mesmo caso, porque ele só lê texto e toques). Decisões do cliente:
+  1. **4 "Não entendi" seguidos** passam a conversa para o atendimento humano: na 4ª, o bot não repete; avisa e a conversa
+     entra em "Aguardando a clínica" (motivo próprio na lista). Uma resposta entendida no meio zera a contagem.
+  2. **Áudio, foto, vídeo, figurinha e documento:** aviso próprio no lugar do "Não entendi" ("Ainda não consigo ouvir
+     áudios. Toque numa opção abaixo ou escreva."), contando como tentativa.
+  3. **Mensagem da passagem com o Horário da recepção (F8.5b):** no horário, "Vou pedir para alguém da clínica te atender
+     por aqui. Aguarde, por favor."; fora dele, com quando a clínica responde ("a partir de amanhã, às 8h").
+  Vale para a conexão com coexistência (sem ela, ninguém responderia pelo app: segue como hoje).
 
 ## F10 — Primeiro piloto
 
