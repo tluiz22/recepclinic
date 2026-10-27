@@ -1834,6 +1834,10 @@ coexistência). No celular pessoal sem o número da clínica, abriria o WhatsApp
   teste só para a pessoa, aviso uma vez, de novo depois da resposta, fora do horário, aparelho vencido, resumo, lembrete);
   o teste de isolamento ganhou a exceção dos aparelhos pessoais. No navegador local: ativar, **Enviar teste chegou de
   verdade** (serviço do Google) e desativar. Falta no staging: as chaves na Vercel (parte Q do [`staging.md`](staging.md)).
+  **Ajuste do teste do cliente (27/out):** no iPhone, o app da Tela de Início mostrava sempre um "X" no alto: o escopo
+  do manifesto era `/admin` e os formulários enviam para `/api/admin/...` (fora dele). Escopo passou a ser `/` (o site
+  inteiro), com `id` e o início em `/admin/dashboard`; as cores do manifesto passaram do azul antigo para as da marca.
+  O iPhone só lê o manifesto ao adicionar: tirar o ícone e adicionar de novo (e ativar as notificações de novo).
 - **F8.5d Bot que não entende (cliente, 27/out):** hoje o bot repete "Não entendi" sem fim (áudio, foto, figurinha e
   documento caem no mesmo caso, porque ele só lê texto e toques). Decisões do cliente:
   1. **4 "Não entendi" seguidos** passam a conversa para o atendimento humano: na 4ª, o bot não repete; avisa e a conversa
