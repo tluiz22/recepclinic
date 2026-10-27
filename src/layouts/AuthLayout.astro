@@ -1,4 +1,5 @@
 ---
+import AppInstallHead from "../components/admin/AppInstallHead.astro";
 // Fontes da marca no próprio servidor (redesign R0; a CSP não carrega fontes de fora).
 import "@fontsource-variable/bricolage-grotesque/opsz.css";
 import "@fontsource-variable/source-sans-3";
@@ -22,7 +23,7 @@ const { title, wide = false } = Astro.props;
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>{title} | RecepClinic</title>
     <meta name="robots" content="noindex, nofollow" />
-    <link rel="icon" type="image/png" href="/admin-icon-192.png" />
+    <AppInstallHead />
   </head>
   <body class="flex min-h-screen items-center justify-center bg-canvas-deep px-4 py-8 font-body text-ink antialiased">
     <main class={`flex w-full flex-col gap-[18px] rounded-[14px] border border-line bg-white px-5 py-6 shadow-[0_1px_2px_rgba(18,48,42,.06)] sm:p-8 ${wide ? "max-w-[460px]" : "max-w-[400px]"}`}>

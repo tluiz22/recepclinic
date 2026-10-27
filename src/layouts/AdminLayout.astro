@@ -3,6 +3,7 @@
 import "@fontsource-variable/bricolage-grotesque/opsz.css";
 import "@fontsource-variable/source-sans-3";
 import "../styles/global.css";
+import AppInstallHead from "../components/admin/AppInstallHead.astro";
 import Icon from "../components/admin/Icon.astro";
 import type { IconName } from "../components/admin/Icon.astro";
 import MoreMenu from "../components/admin/ui/MoreMenu.astro";
@@ -118,19 +119,7 @@ const navLinkClass = (active: boolean) =>
     <title>{title} | RecepClinic</title>
     <meta name="robots" content="noindex, nofollow" />
 
-    <!-- PWA instalável (ícone na tela inicial do celular) — escopado só ao
-         /admin, sem service worker (painel só faz sentido com internet).
-         Ver plano, "Etapa seguinte, planejada — PWA instalável". -->
-    <link rel="manifest" href="/manifest.json" />
-    <link rel="icon" type="image/png" href="/admin-icon-192.png" />
-    <meta name="theme-color" content="#0b7a62" />
-    <!-- Safari não segue o manifest sozinho, precisa destas tags à parte. -->
-    <meta name="apple-mobile-web-app-capable" content="yes" />
-    <!-- O Chrome pede a versão sem "apple" (auditoria de frontend, A-05). -->
-    <meta name="mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-    <meta name="apple-mobile-web-app-title" content="RecepClinic" />
-    <link rel="apple-touch-icon" href="/admin-apple-touch-icon.png" />
+    <AppInstallHead />
     <style>
       /* Esconde o marcador padrão do <details>/<summary> (seta/triângulo) —
          usado no botão "Mais" da barra inferior, sem precisar de JS. */

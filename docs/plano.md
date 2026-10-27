@@ -1838,6 +1838,9 @@ coexistência). No celular pessoal sem o número da clínica, abriria o WhatsApp
   do manifesto era `/admin` e os formulários enviam para `/api/admin/...` (fora dele). Escopo passou a ser `/` (o site
   inteiro), com `id` e o início em `/admin/dashboard`; as cores do manifesto passaram do azul antigo para as da marca.
   O iPhone só lê o manifesto ao adicionar: tirar o ícone e adicionar de novo (e ativar as notificações de novo).
+  O "X" continuou porque o cliente adicionou pela **tela de login**, que não tinha o manifesto nem as marcações do iPhone
+  (moldura `AuthLayout`): virava um atalho comum. As marcações foram para um componente único (`AppInstallHead.astro`),
+  usado pelo login e pelo painel.
 - **F8.5d Bot que não entende (cliente, 27/out):** hoje o bot repete "Não entendi" sem fim (áudio, foto, figurinha e
   documento caem no mesmo caso, porque ele só lê texto e toques). Decisões do cliente:
   1. **4 "Não entendi" seguidos** passam a conversa para o atendimento humano: na 4ª, o bot não repete; avisa e a conversa

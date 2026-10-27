@@ -1,0 +1,18 @@
+---
+// Painel instalável (ícone na Tela de Início do celular): o mesmo em todas as
+// telas do painel, inclusive o login, porque o iPhone instala a partir da tela
+// em que a pessoa está (cliente, 27/out/2026: adicionado pelo login, virava um
+// atalho comum, com o "X" no alto). O escopo é o site inteiro (manifesto); o
+// service worker (public/sw.js) só cuida das notificações (F8.5c).
+---
+
+<link rel="manifest" href="/manifest.json" />
+<link rel="icon" type="image/png" href="/admin-icon-192.png" />
+<meta name="theme-color" content="#0b7a62" />
+<!-- Safari não segue o manifest sozinho, precisa destas tags à parte. -->
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<!-- O Chrome pede a versão sem "apple" (auditoria de frontend, A-05). -->
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="default" />
+<meta name="apple-mobile-web-app-title" content="RecepClinic" />
+<link rel="apple-touch-icon" href="/admin-apple-touch-icon.png" />
