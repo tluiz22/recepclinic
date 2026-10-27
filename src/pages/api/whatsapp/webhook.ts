@@ -1,6 +1,7 @@
 import type { APIRoute } from "astro";
 import { createClinicServiceClient } from "../../../lib/data/clinicService";
 import { resolveClinicByPhoneNumberId, resolveClinicsByWabaId } from "../../../lib/data/platform";
+import { pushContextFrom } from "../../../lib/data/whatsapp/attentionPush";
 import { clinicSenderFor } from "../../../lib/data/whatsapp/clinicSender";
 import { isValidMetaSignature, processWebhook } from "../../../lib/data/whatsapp/webhook";
 import { platformEnv } from "../../../lib/env";
@@ -48,6 +49,7 @@ export const POST: APIRoute = async ({ request, url }) => {
     clientFor: (clinicId) => createClinicServiceClient(clinicId),
     resolveClinicsByWaba: (wabaId) => resolveClinicsByWabaId(wabaId),
     senderFor: (clinicId) => clinicSenderFor(clinicId, url),
+    push: pushContextFrom(platformEnv().webPush, platformEnv().siteUrl),
   });
   if (summary.errors || summary.unknownNumbers) logWarn("whatsapp webhook", { ...summary });
   return new Response(null, { status: 200 });

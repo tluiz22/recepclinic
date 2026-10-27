@@ -553,14 +553,14 @@ isOneToOne: false
                   ]
                 },"clinic_settings": {
                   Row: {
-                    "booking_horizon_days": number,"bot_insurance_info": string | null,"bot_max_future_appointments": number,"bot_max_new_patients": number,"bot_max_no_shows": number,"bot_notes": string | null,"bot_payment_info": string | null,"brand_color": string | null,"clinic_id": string,"consultation_age_limit_years": number | null,"guidance_enabled": boolean,"logo_url": string | null,"message_article": string,"message_noun": string,"message_noun_article": string,"professional_summary_enabled": boolean,"professional_summary_hour": number,"professional_summary_timing": string,"profile": Database["public"]['Enums']["clinic_profile"],"reception_hours": Json | null,"reminder_enabled": boolean,"reminder_hour": number,"reminder_timing": string,"require_insurance_details": boolean,"team_summary_enabled": boolean,"team_summary_hour": number,"team_summary_timing": string,"timezone": string,"updated_at": string,"website_url": string | null
+                    "booking_horizon_days": number,"bot_insurance_info": string | null,"bot_max_future_appointments": number,"bot_max_new_patients": number,"bot_max_no_shows": number,"bot_notes": string | null,"bot_payment_info": string | null,"brand_color": string | null,"clinic_id": string,"consultation_age_limit_years": number | null,"guidance_enabled": boolean,"logo_url": string | null,"message_article": string,"message_noun": string,"message_noun_article": string,"professional_summary_enabled": boolean,"professional_summary_hour": number,"professional_summary_timing": string,"profile": Database["public"]['Enums']["clinic_profile"],"reception_hours": Json | null,"reception_summary_sent_on": string | null,"reminder_enabled": boolean,"reminder_hour": number,"reminder_timing": string,"require_insurance_details": boolean,"team_summary_enabled": boolean,"team_summary_hour": number,"team_summary_timing": string,"timezone": string,"updated_at": string,"website_url": string | null
                   }
                   ComputedFields: never
                   Insert: {
-                    "booking_horizon_days"?: number,"bot_insurance_info"?: string | null,"bot_max_future_appointments"?: number,"bot_max_new_patients"?: number,"bot_max_no_shows"?: number,"bot_notes"?: string | null,"bot_payment_info"?: string | null,"brand_color"?: string | null,"clinic_id": string,"consultation_age_limit_years"?: number | null,"guidance_enabled"?: boolean,"logo_url"?: string | null,"message_article"?: string,"message_noun"?: string,"message_noun_article"?: string,"professional_summary_enabled"?: boolean,"professional_summary_hour"?: number,"professional_summary_timing"?: string,"profile"?: Database["public"]['Enums']["clinic_profile"],"reception_hours"?: Json | null,"reminder_enabled"?: boolean,"reminder_hour"?: number,"reminder_timing"?: string,"require_insurance_details"?: boolean,"team_summary_enabled"?: boolean,"team_summary_hour"?: number,"team_summary_timing"?: string,"timezone"?: string,"updated_at"?: string,"website_url"?: string | null
+                    "booking_horizon_days"?: number,"bot_insurance_info"?: string | null,"bot_max_future_appointments"?: number,"bot_max_new_patients"?: number,"bot_max_no_shows"?: number,"bot_notes"?: string | null,"bot_payment_info"?: string | null,"brand_color"?: string | null,"clinic_id": string,"consultation_age_limit_years"?: number | null,"guidance_enabled"?: boolean,"logo_url"?: string | null,"message_article"?: string,"message_noun"?: string,"message_noun_article"?: string,"professional_summary_enabled"?: boolean,"professional_summary_hour"?: number,"professional_summary_timing"?: string,"profile"?: Database["public"]['Enums']["clinic_profile"],"reception_hours"?: Json | null,"reception_summary_sent_on"?: string | null,"reminder_enabled"?: boolean,"reminder_hour"?: number,"reminder_timing"?: string,"require_insurance_details"?: boolean,"team_summary_enabled"?: boolean,"team_summary_hour"?: number,"team_summary_timing"?: string,"timezone"?: string,"updated_at"?: string,"website_url"?: string | null
                   }
                   Update: {
-                    "booking_horizon_days"?: number,"bot_insurance_info"?: string | null,"bot_max_future_appointments"?: number,"bot_max_new_patients"?: number,"bot_max_no_shows"?: number,"bot_notes"?: string | null,"bot_payment_info"?: string | null,"brand_color"?: string | null,"clinic_id"?: string,"consultation_age_limit_years"?: number | null,"guidance_enabled"?: boolean,"logo_url"?: string | null,"message_article"?: string,"message_noun"?: string,"message_noun_article"?: string,"professional_summary_enabled"?: boolean,"professional_summary_hour"?: number,"professional_summary_timing"?: string,"profile"?: Database["public"]['Enums']["clinic_profile"],"reception_hours"?: Json | null,"reminder_enabled"?: boolean,"reminder_hour"?: number,"reminder_timing"?: string,"require_insurance_details"?: boolean,"team_summary_enabled"?: boolean,"team_summary_hour"?: number,"team_summary_timing"?: string,"timezone"?: string,"updated_at"?: string,"website_url"?: string | null
+                    "booking_horizon_days"?: number,"bot_insurance_info"?: string | null,"bot_max_future_appointments"?: number,"bot_max_new_patients"?: number,"bot_max_no_shows"?: number,"bot_notes"?: string | null,"bot_payment_info"?: string | null,"brand_color"?: string | null,"clinic_id"?: string,"consultation_age_limit_years"?: number | null,"guidance_enabled"?: boolean,"logo_url"?: string | null,"message_article"?: string,"message_noun"?: string,"message_noun_article"?: string,"professional_summary_enabled"?: boolean,"professional_summary_hour"?: number,"professional_summary_timing"?: string,"profile"?: Database["public"]['Enums']["clinic_profile"],"reception_hours"?: Json | null,"reception_summary_sent_on"?: string | null,"reminder_enabled"?: boolean,"reminder_hour"?: number,"reminder_timing"?: string,"require_insurance_details"?: boolean,"team_summary_enabled"?: boolean,"team_summary_hour"?: number,"team_summary_timing"?: string,"timezone"?: string,"updated_at"?: string,"website_url"?: string | null
                   }
                   Relationships: [
                     {
@@ -659,14 +659,14 @@ isOneToOne: false
                   ]
                 },"conversation_state": {
                   Row: {
-                    "clinic_id": string,"contact_id": string | null,"contact_phone": string,"context": NonNullable<Json>,"funnel_flow": string | null,"funnel_session_id": string | null,"handoff_reason": string | null,"handoff_started_at": string | null,"human_handoff": boolean,"human_handoff_at": string | null,"id": string,"state": string,"updated_at": string
+                    "clinic_id": string,"contact_id": string | null,"contact_phone": string,"context": NonNullable<Json>,"funnel_flow": string | null,"funnel_session_id": string | null,"handoff_notified_at": string | null,"handoff_reason": string | null,"handoff_reminded_at": string | null,"handoff_started_at": string | null,"human_handoff": boolean,"human_handoff_at": string | null,"id": string,"state": string,"updated_at": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "clinic_id": string,"contact_id"?: string | null,"contact_phone": string,"context"?: NonNullable<Json>,"funnel_flow"?: string | null,"funnel_session_id"?: string | null,"handoff_reason"?: string | null,"handoff_started_at"?: string | null,"human_handoff"?: boolean,"human_handoff_at"?: string | null,"id"?: string,"state"?: string,"updated_at"?: string
+                    "clinic_id": string,"contact_id"?: string | null,"contact_phone": string,"context"?: NonNullable<Json>,"funnel_flow"?: string | null,"funnel_session_id"?: string | null,"handoff_notified_at"?: string | null,"handoff_reason"?: string | null,"handoff_reminded_at"?: string | null,"handoff_started_at"?: string | null,"human_handoff"?: boolean,"human_handoff_at"?: string | null,"id"?: string,"state"?: string,"updated_at"?: string
                   }
                   Update: {
-                    "clinic_id"?: string,"contact_id"?: string | null,"contact_phone"?: string,"context"?: NonNullable<Json>,"funnel_flow"?: string | null,"funnel_session_id"?: string | null,"handoff_reason"?: string | null,"handoff_started_at"?: string | null,"human_handoff"?: boolean,"human_handoff_at"?: string | null,"id"?: string,"state"?: string,"updated_at"?: string
+                    "clinic_id"?: string,"contact_id"?: string | null,"contact_phone"?: string,"context"?: NonNullable<Json>,"funnel_flow"?: string | null,"funnel_session_id"?: string | null,"handoff_notified_at"?: string | null,"handoff_reason"?: string | null,"handoff_reminded_at"?: string | null,"handoff_started_at"?: string | null,"human_handoff"?: boolean,"human_handoff_at"?: string | null,"id"?: string,"state"?: string,"updated_at"?: string
                   }
                   Relationships: [
                     {
@@ -1157,6 +1157,26 @@ isOneToOne: false
       referencedColumns: ["clinic_id","user_id"]
     }
                   ]
+                },"push_subscriptions": {
+                  Row: {
+                    "auth": string,"clinic_id": string,"created_at": string,"device": string | null,"endpoint": string,"id": string,"last_sent_at": string | null,"p256dh": string,"user_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "auth": string,"clinic_id": string,"created_at"?: string,"device"?: string | null,"endpoint": string,"id"?: string,"last_sent_at"?: string | null,"p256dh": string,"user_id": string
+                  }
+                  Update: {
+                    "auth"?: string,"clinic_id"?: string,"created_at"?: string,"device"?: string | null,"endpoint"?: string,"id"?: string,"last_sent_at"?: string | null,"p256dh"?: string,"user_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "push_subscriptions_clinic_id_fkey"
+      columns: ["clinic_id"]
+isOneToOne: false
+      referencedRelation: "clinics"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"schedule_blocks": {
                   Row: {
                     "agenda_id": string,"clinic_id": string,"created_at": string,"created_by": string | null,"ends_at": string,"id": string,"reason": string,"removed_at": string | null,"removed_by": string | null,"starts_at": string,"updated_at": string | null,"updated_by": string | null
@@ -1615,6 +1635,9 @@ isOneToOne: false
                            },
 "mark_my_invitations_accepted":
 { Args: Record<PropertyKey, never>; Returns: undefined
+                           },
+"mark_reception_summary_sent":
+{ Args: { "p_date": string }; Returns: undefined
                            },
 "mark_whatsapp_disconnected_by_meta":
 { Args: Record<PropertyKey, never>; Returns: boolean

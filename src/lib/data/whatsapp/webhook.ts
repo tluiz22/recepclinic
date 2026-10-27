@@ -1,6 +1,6 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 import type { DbClient } from "../clients";
-import type { WaMessage } from "./meta";
+import { toE164, type WaMessage } from "./meta";
 import { hasFeature } from "../features";
 import { handleAgentEcho } from "./conversations";
 import { recordAgentEcho, recordInboundMessage, updateDeliveryStatus, type RecordResult } from "./messages";
@@ -10,6 +10,7 @@ import { scheduleRetryAfterLateFailure } from "./retries";
 import { guidanceSender, preparationSender, type ClinicSender } from "./send";
 import { applyTemplateStatusEvent, type TemplateStatusEvent } from "./templateSync";
 import { markWhatsappDisconnectedByMeta } from "./connection";
+import { notifyWaitingConversation, type PushContext } from "./attentionPush";
 import { handleIncomingMessage } from "./bot/router";
 import { logError, logWarn } from "../../log";
 
@@ -115,6 +116,8 @@ export type WebhookDeps = {
   resolveClinicsByWaba?: (wabaId: string) => Promise<string[]>;
   /** Quem envia pela clínica (preparo depois da entrega); null = não conectado. */
   senderFor?: (clinicId: string) => Promise<ClinicSender | null>;
+  /** Notificações do atendimento humano (F8.5c); null ou ausente = desligadas. */
+  push?: PushContext | null;
 };
 
 export type WebhookSummary = {
@@ -170,11 +173,16 @@ export async function processWebhook(payload: unknown, deps: WebhookDeps, now: D
         count(result, "inbound");
         recorded = result.recorded;
       });
-      if (!recorded || !deps.senderFor) continue;
-      await attempt("bot", async () => {
-        const sender = await deps.senderFor!(clinicId);
-        if (sender && (await handleIncomingMessage({ db, clinicId, sender, now }, message)) === "handled") summary.botReplies += 1;
-      });
+      if (!recorded) continue;
+      if (deps.senderFor) {
+        await attempt("bot", async () => {
+          const sender = await deps.senderFor!(clinicId);
+          if (sender && (await handleIncomingMessage({ db, clinicId, sender, now }, message)) === "handled") summary.botReplies += 1;
+        });
+      }
+      // Conversa que passou a aguardar a clínica (pedido, sem horário, limite ou o paciente escreveu de novo): avisa (F8.5c).
+      const phone = toE164(message.from);
+      if (deps.push && phone) await notifyWaitingConversation(db, clinicId, phone, deps.push, now);
     }
     for (const status of change.statuses ?? []) {
       if (status.status === "failed" && status.errors?.length) {

@@ -18,11 +18,15 @@ const CLINIC_B = "0b000000-0000-4000-8000-000000000001"; // Odonto Exemplo
 // - system_errors: erros do servidor (F9.3), sem dados pessoais; só a
 //   plataforma grava e só o Suporte lê. O erro sobrevive à exclusão da
 //   clínica (clinic_id fica nulo) e a clínica de exemplo não tem erros.
+// - push_subscriptions: aparelhos com as notificações do atendimento humano
+//   (F8.5c), pessoais: cada login vê só os seus (nem o Suporte vê os dos
+//   outros) e a clínica de exemplo não tem aparelho. O isolamento está em
+//   tests/db/notificacoes.test.ts.
 // - cron_heartbeats: última execução de cada rotina (F9.3), da plataforma
 //   (sem clinic_id); só a plataforma grava.
 const NO_DIRECT_FK = new Set(["platform_audit_log", "platform_access_log", "system_errors"]);
 const NO_AUDIT_TRIGGER = new Set(["platform_audit_log", "platform_access_log", "clinic_usage_monthly", "system_errors"]);
-const NOT_IN_DATA_SWEEP = new Set(["platform_audit_log", "system_errors"]);
+const NOT_IN_DATA_SWEEP = new Set(["platform_audit_log", "system_errors", "push_subscriptions"]);
 
 let clinicTables: string[] = [];
 let allTables: string[] = [];

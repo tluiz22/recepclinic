@@ -1818,6 +1818,22 @@ coexistência). No celular pessoal sem o número da clínica, abriria o WhatsApp
   27/out.**
 - **F8.5c Notificações:** o painel instalável no celular (já tem o manifesto) com notificações do navegador (Web Push):
   ligar e desligar por pessoa, o aviso de "aguardando", o lembrete de 1 hora e o resumo ao abrir o horário.
+  **F8.5c implementada, testada no local e publicada no staging em 27/out** (migração
+  `20261027160000_notificacoes.sql`, aplicada e conferida no staging antes do push): Web Push do navegador (biblioteca
+  `web-push`; chaves VAPID por ambiente em `WEB_PUSH_PUBLIC_KEY` e `WEB_PUSH_PRIVATE_KEY`; sem elas, desligadas e a tela
+  avisa). Tabela `push_subscriptions` (aparelhos **pessoais**: cada login vê, ativa e desativa os seus; a credencial da
+  clínica lê para enviar e tira os vencidos, 404/410); `public/sw.js` mostra o aviso e abre o endereço no toque. Cartão
+  **Notificações neste aparelho** na tela Atendimento (Ativar, Enviar teste, Desativar; aparelhos ativos; no iPhone,
+  explica a Tela de Início). Avisos (`attentionPush.ts`): **"Fulano quer falar com a clínica"** (ou "aguarda
+  atendimento humano") quando a conversa passa a aguardar, uma vez por vez, só no horário da recepção (gancho no
+  webhook, depois de cada mensagem do paciente); rotina nova **`atendimento-humano`** a cada 5 minutos (pg_cron; também
+  na /api/saude): **lembrete do `#bot`** com 1 hora sem mensagens em atendimento (uma vez por período parado) e
+  **resumo** na primeira passada do horário aberto do dia ("N conversas aguardando atendimento humano", um por dia,
+  `reception_summary_sent_on`). Toque: a conversa no WhatsApp (`wa.me`); o resumo abre a tela Atendimento. Testes: 4 de
+  unidade, 1 nas variáveis e 9 de banco (`tests/db/notificacoes.test.ts`, com o envio simulado: aparelhos por pessoa,
+  teste só para a pessoa, aviso uma vez, de novo depois da resposta, fora do horário, aparelho vencido, resumo, lembrete);
+  o teste de isolamento ganhou a exceção dos aparelhos pessoais. No navegador local: ativar, **Enviar teste chegou de
+  verdade** (serviço do Google) e desativar. Falta no staging: as chaves na Vercel (parte Q do [`staging.md`](staging.md)).
 - **F8.5d Bot que não entende (cliente, 27/out):** hoje o bot repete "Não entendi" sem fim (áudio, foto, figurinha e
   documento caem no mesmo caso, porque ele só lê texto e toques). Decisões do cliente:
   1. **4 "Não entendi" seguidos** passam a conversa para o atendimento humano: na 4ª, o bot não repete; avisa e a conversa

@@ -466,3 +466,25 @@ Ao terminar cada bloco (1 a 3, 4 a 6, 8 e 9), avisar o Claude.
 conferido nos registros: eco da recepção pelo app (`agent_reply`), bot pausado (mensagens do paciente sem resposta do
 bot), `#bot` devolvendo a conversa e, depois, boas-vindas, menu e menu de consultas entregues. **Falta só o lembrete
 com botões**, quando a Meta aprovar os 18 templates (situação pelo **Atualizar situação**).
+
+## Q. Notificações do atendimento humano (F8.5c)
+
+As chaves das notificações (par VAPID) do staging já estão no `.env.staging` (geradas pelo Claude em 27/out;
+`WEB_PUSH_PUBLIC_KEY` e `WEB_PUSH_PRIVATE_KEY`). A produção terá um par próprio, no `.env.production`, na promoção.
+
+1. **Vercel** (projeto do staging, *Settings › Environment Variables*, Production): criar `WEB_PUSH_PUBLIC_KEY` e
+   `WEB_PUSH_PRIVATE_KEY` com os valores do `.env.staging` (para ver no terminal, sem mostrar a privada a ninguém:
+   `grep WEB_PUSH .env.staging`). Depois, *Deployments › Redeploy*.
+2. **Conferir:** em `https://teste.recepclinic.com.br/admin/atendimento`, o cartão **Notificações neste aparelho**
+   mostra o botão **Ativar notificações** (sem as chaves, diz que não estão ligadas no sistema).
+3. **Celular:**
+   - iPhone (iOS 16.4 ou mais novo): no Safari, abrir o `teste.`, *Compartilhar › Adicionar à Tela de Início*, abrir
+     pelo ícone novo, entrar, ir em Atendimento e tocar em **Ativar notificações** › *Permitir*;
+   - Android: no Chrome, abrir o `teste.`, Atendimento › **Ativar notificações** › *Permitir* (instalar na tela inicial
+     é opcional).
+
+   Depois, **Enviar teste**: o aviso chega em alguns segundos.
+4. **Teste real:** do celular pessoal, "oi" › **Falar com a recepção** (no horário da recepção): chega "Fulano quer falar
+   com a clínica"; o toque abre a conversa no WhatsApp. Responder pelo app e esperar 1 hora sem mensagens: chega o
+   lembrete do `#bot`.
+

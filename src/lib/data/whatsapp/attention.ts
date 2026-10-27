@@ -62,6 +62,11 @@ export type AttentionItem = {
   lastPatientMessage: { body: string | null; at: Date } | null;
   /** Quando o bot volta sozinho, sem "#bot". */
   deadline: Date;
+  /** Última mensagem da conversa na pausa (paciente ou recepção pelo app). */
+  lastActivityAt: Date;
+  /** Notificações (F8.5c): último aviso de "aguardando" e último lembrete do "#bot". */
+  notifiedAt: Date | null;
+  remindedAt: Date | null;
 };
 
 type PausedRow = {
@@ -70,19 +75,29 @@ type PausedRow = {
   handoff_reason: string | null;
   handoff_started_at: string | null;
   human_handoff_at: string | null;
+  handoff_notified_at: string | null;
+  handoff_reminded_at: string | null;
   contacts: { full_name: string } | null;
 };
 
-/** Conversas pausadas da clínica, "Aguardando" primeiro (a mais antiga no topo), depois "Em atendimento". */
-export async function listHumanAttention(db: DbClient, clinicId: string, timeZone: string, now: Date = new Date()): Promise<AttentionItem[]> {
-  const paused = unwrap(
-    await db
-      .from("conversation_state")
-      .select("contact_phone, contact_id, handoff_reason, handoff_started_at, human_handoff_at, contacts ( full_name )")
-      .eq("clinic_id", clinicId)
-      .eq("human_handoff", true),
-    "Atendimento humano",
-  ) as unknown as PausedRow[];
+/**
+ * Conversas pausadas da clínica, "Aguardando" primeiro (a mais antiga no topo),
+ * depois "Em atendimento". `phone`: só a conversa desse número.
+ */
+export async function listHumanAttention(
+  db: DbClient,
+  clinicId: string,
+  timeZone: string,
+  now: Date = new Date(),
+  phone?: string,
+): Promise<AttentionItem[]> {
+  let query = db
+    .from("conversation_state")
+    .select("contact_phone, contact_id, handoff_reason, handoff_started_at, human_handoff_at, handoff_notified_at, handoff_reminded_at, contacts ( full_name )")
+    .eq("clinic_id", clinicId)
+    .eq("human_handoff", true);
+  if (phone) query = query.eq("contact_phone", phone);
+  const paused = unwrap(await query, "Atendimento humano") as unknown as PausedRow[];
   const rows = paused.filter((row) => row.human_handoff_at);
   if (rows.length === 0) return [];
 
@@ -132,6 +147,7 @@ export async function listHumanAttention(db: DbClient, clinicId: string, timeZon
     );
     const last = patient[0];
     const known = byPhone.get(row.contact_phone);
+    const activity = [startedAt, situation.lastAgentAt, last ? new Date(last.created_at) : null].filter((t): t is Date => !!t);
     return {
       phone: row.contact_phone,
       contactId: row.contact_id ?? known?.id ?? null,
@@ -141,6 +157,9 @@ export async function listHumanAttention(db: DbClient, clinicId: string, timeZon
       ...situation,
       lastPatientMessage: last ? { body: last.body, at: new Date(last.created_at) } : null,
       deadline,
+      lastActivityAt: new Date(Math.max(...activity.map((t) => t.getTime()))),
+      notifiedAt: row.handoff_notified_at ? new Date(row.handoff_notified_at) : null,
+      remindedAt: row.handoff_reminded_at ? new Date(row.handoff_reminded_at) : null,
     };
   });
 

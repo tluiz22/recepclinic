@@ -9,6 +9,7 @@ import { currentPath, withReturn } from "../../lib/returnPath";
 import AdminLayout from "../../layouts/AdminLayout.astro";
 import ConfirmDeleteDialog from "../../components/admin/ConfirmDeleteDialog.astro";
 import FlashMessage from "../../components/admin/FlashMessage.astro";
+import NotificationsCard from "../../components/admin/NotificationsCard.astro";
 import Icon from "../../components/admin/Icon.astro";
 import Button from "../../components/admin/ui/Button.astro";
 import EmptyState from "../../components/admin/ui/EmptyState.astro";
@@ -18,13 +19,18 @@ import { formatInstant, localDateOf } from "../../lib/clinicTime";
 import { formatPhoneBR, whatsappHref } from "../../lib/phone";
 import { createUserClient } from "../../lib/data/clients";
 import { handoffReasonLabel, listHumanAttention } from "../../lib/data/whatsapp/attention";
+import { listMyDevices } from "../../lib/data/whatsapp/attentionPush";
+import { platformEnv } from "../../lib/env";
 
 const clinic = Astro.locals.clinic!;
 if (!clinic.features.includes("whatsapp_bot")) return Astro.redirect("/admin/dashboard?aviso=acesso_negado");
 
 const db = createUserClient(Astro.request, Astro.cookies);
 const now = new Date();
-const items = await listHumanAttention(db, clinic.clinicId, clinic.timezone, now);
+const [items, devices] = await Promise.all([
+  listHumanAttention(db, clinic.clinicId, clinic.timezone, now),
+  listMyDevices(db, clinic.clinicId, clinic.userId),
+]);
 const waiting = items.filter((item) => item.status === "waiting");
 const inProgress = items.filter((item) => item.status === "in_progress");
 const here = currentPath(Astro.url);
@@ -58,6 +64,7 @@ const whatsappButton =
 <AdminLayout title="Atendimento humano">
   <PageHeader title="Atendimento humano" subtitle="Conversas em que o bot parou e a clínica precisa responder." />
   <FlashMessage />
+  <NotificationsCard publicKey={platformEnv().webPush?.publicKey ?? null} devices={devices} timeZone={clinic.timezone} />
 
   <section aria-labelledby="aguardando" class="mt-5 flex flex-col gap-3">
     <h2 id="aguardando" class={`${sectionTitle} flex items-center gap-2.5`}>

@@ -1,0 +1,153 @@
+---
+// Notificações do atendimento humano neste aparelho (F8.5c, cliente,
+// 27/out/2026): cada pessoa ativa no próprio celular ou computador. No iPhone,
+// só com o RecepClinic aberto pelo ícone da Tela de Início (iOS 16.4 ou mais
+// novo); o cartão explica quando o navegador não recebe notificações.
+import Button from "./ui/Button.astro";
+
+interface Props {
+  /** Chave pública VAPID do ambiente; null = notificações desligadas no sistema. */
+  publicKey: string | null;
+  devices: { device: string | null; createdAt: Date }[];
+  timeZone: string;
+}
+
+const { publicKey, devices } = Astro.props;
+const deviceList = devices.map((d) => d.device ?? "Aparelho").join(", ");
+---
+
+<section aria-labelledby="notificacoes" class="mt-5 rounded-xl border border-line bg-white px-4 py-4 sm:px-5" data-push-card data-public-key={publicKey ?? ""}>
+  <div class="flex flex-wrap items-start justify-between gap-x-4 gap-y-3">
+    <div class="flex min-w-0 flex-[999_1_360px] flex-col gap-1">
+      <h2 id="notificacoes" class="font-display text-[17px] leading-tight font-bold text-ink">Notificações neste aparelho</h2>
+      <p class="text-[15px] text-ink-soft">
+        Avisa quando uma conversa passa a aguardar atendimento humano e lembra do <strong class="font-mono">#bot</strong>, no horário da recepção. Um
+        toque abre a conversa no WhatsApp.
+      </p>
+      {devices.length > 0 && <p class="text-sm text-ink-soft">Ativas para você em: {deviceList}.</p>}
+      <p class="text-[15px] font-semibold text-ink" data-push-status role="status" aria-live="polite">
+        {publicKey ? "Conferindo este aparelho…" : "As notificações ainda não estão ligadas no sistema. Fale com o suporte do RecepClinic."}
+      </p>
+      <div hidden data-push-ios class="mt-1 rounded-lg border border-att-200 bg-att-50 px-3.5 py-2.5 text-[15px] text-att-800">
+        <strong>No iPhone:</strong> abra este endereço no Safari, toque em <strong>Compartilhar</strong> › <strong>Adicionar à Tela de Início</strong> e
+        abra o RecepClinic pelo ícone novo. Ali o botão "Ativar notificações" aparece (iOS 16.4 ou mais novo).
+      </div>
+    </div>
+    <div class="flex flex-[1_1_220px] flex-col gap-2">
+      <Button type="button" variant="primary" hidden data-push-on>Ativar notificações</Button>
+      <Button type="button" hidden data-push-test>Enviar teste</Button>
+      <Button type="button" variant="quiet" hidden data-push-off>Desativar neste aparelho</Button>
+    </div>
+  </div>
+</section>
+
+<script>
+  const card = document.querySelector<HTMLElement>("[data-push-card]");
+  if (card && card.dataset.publicKey) {
+    const key = card.dataset.publicKey;
+    const status = card.querySelector<HTMLElement>("[data-push-status]")!;
+    const ios = card.querySelector<HTMLElement>("[data-push-ios]")!;
+    const on = card.querySelector<HTMLButtonElement>("[data-push-on]")!;
+    const off = card.querySelector<HTMLButtonElement>("[data-push-off]")!;
+    const test = card.querySelector<HTMLButtonElement>("[data-push-test]")!;
+    const say = (text: string) => (status.textContent = text);
+    const show = (active: boolean) => {
+      on.hidden = active;
+      off.hidden = !active;
+      test.hidden = !active;
+    };
+    const call = async (body: unknown) => {
+      const response = await fetch("/api/admin/notificacoes", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        body: JSON.stringify(body),
+      });
+      const result = (await response.json().catch(() => ({}))) as { error?: string; sent?: number };
+      if (!response.ok) throw new Error(result.error ?? "Não deu certo. Tente de novo.");
+      return result;
+    };
+    const toKey = (base64: string) => {
+      const padded = (base64 + "=".repeat((4 - (base64.length % 4)) % 4)).replace(/-/g, "+").replace(/_/g, "/");
+      return Uint8Array.from(atob(padded), (c) => c.charCodeAt(0));
+    };
+    const iPhone = /iPhone|iPad/.test(navigator.userAgent);
+    const supported = "serviceWorker" in navigator && "PushManager" in window && "Notification" in window;
+
+    if (!supported) {
+      say(iPhone ? "Este navegador do iPhone ainda não recebe notificações." : "Este navegador não recebe notificações. Use o Chrome, o Edge, o Firefox ou o Safari atualizado.");
+      ios.hidden = !iPhone;
+    } else {
+      const ready = navigator.serviceWorker.register("/sw.js").then(() => navigator.serviceWorker.ready);
+      const refresh = async () => {
+        const registration = await ready;
+        const subscription = await registration.pushManager.getSubscription();
+        if (Notification.permission === "denied") {
+          show(false);
+          on.hidden = true;
+          say("As notificações estão bloqueadas para este site. Libere nas configurações do navegador (ou do iPhone, em Ajustes › Notificações › RecepClinic) e recarregue.");
+          return;
+        }
+        if (subscription) {
+          // Confirma no sistema (o aparelho pode ter sido trocado de clínica ou apagado do banco).
+          await call({ acao: "ativar", subscription: subscription.toJSON() });
+          show(true);
+          say("Ativas neste aparelho.");
+        } else {
+          show(false);
+          say("Desativadas neste aparelho.");
+        }
+      };
+      refresh().catch((error: unknown) => say(error instanceof Error ? error.message : "Não deu certo. Recarregue a página."));
+
+      on.addEventListener("click", async () => {
+        on.disabled = true;
+        try {
+          const permission = await Notification.requestPermission();
+          if (permission !== "granted") {
+            say("Sem a permissão do navegador, as notificações não chegam. Toque em Ativar de novo e escolha Permitir.");
+            return;
+          }
+          const registration = await ready;
+          const subscription = await registration.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: toKey(key) });
+          await call({ acao: "ativar", subscription: subscription.toJSON() });
+          show(true);
+          say("Ativas neste aparelho. Toque em Enviar teste para ver como chega.");
+        } catch (error) {
+          say(error instanceof Error ? error.message : "Não deu certo. Tente de novo.");
+        } finally {
+          on.disabled = false;
+        }
+      });
+
+      off.addEventListener("click", async () => {
+        off.disabled = true;
+        try {
+          const registration = await ready;
+          const subscription = await registration.pushManager.getSubscription();
+          if (subscription) {
+            await call({ acao: "desativar", endpoint: subscription.endpoint });
+            await subscription.unsubscribe();
+          }
+          show(false);
+          say("Desativadas neste aparelho.");
+        } catch (error) {
+          say(error instanceof Error ? error.message : "Não deu certo. Tente de novo.");
+        } finally {
+          off.disabled = false;
+        }
+      });
+
+      test.addEventListener("click", async () => {
+        test.disabled = true;
+        try {
+          const { sent } = await call({ acao: "testar" });
+          say(sent ? `Teste enviado para ${sent === 1 ? "1 aparelho" : `${sent} aparelhos`}. Deve chegar em alguns segundos.` : "Nenhum aparelho recebeu. Desative e ative de novo.");
+        } catch (error) {
+          say(error instanceof Error ? error.message : "Não deu certo. Tente de novo.");
+        } finally {
+          test.disabled = false;
+        }
+      });
+    }
+  }
+</script>

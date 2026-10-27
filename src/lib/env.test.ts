@@ -33,6 +33,7 @@ describe("variáveis da plataforma", () => {
       whatsappAppId: null,
       whatsappSignupConfigId: null,
       nfseSimulation: false,
+      webPush: null,
     });
     expect(parsePlatformEnv({ ...valid, SITE_URL: "https://app.recepclinic.com.br" }).siteUrl).toBe(
       "https://app.recepclinic.com.br",
@@ -95,6 +96,12 @@ describe("variáveis da plataforma", () => {
     expect(parsePlatformEnv({ ...valid, NFSE_SIMULATION: "0" }).nfseSimulation).toBe(false);
     expect(parsePlatformEnv({ ...valid, NFSE_SIMULATION: "1" }).nfseSimulation).toBe(true);
     expect(() => parsePlatformEnv({ ...valid, NFSE_SIMULATION: "sim" })).toThrow(/NFSE_SIMULATION inválida/);
+  });
+
+  it("notificações: opcionais; com uma das chaves, a outra é obrigatória (F8.5c)", () => {
+    expect(parsePlatformEnv({ ...valid, WEB_PUSH_PUBLIC_KEY: "pub", WEB_PUSH_PRIVATE_KEY: "priv" }).webPush).toEqual({ publicKey: "pub", privateKey: "priv" });
+    expect(() => parsePlatformEnv({ ...valid, WEB_PUSH_PUBLIC_KEY: "pub" })).toThrow(/WEB_PUSH_PRIVATE_KEY não definida/);
+    expect(() => parsePlatformEnv({ ...valid, WEB_PUSH_PRIVATE_KEY: "priv" })).toThrow(/WEB_PUSH_PUBLIC_KEY não definida/);
   });
 
   it("tira espaços das pontas", () => {

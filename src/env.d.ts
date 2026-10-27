@@ -18,6 +18,8 @@ interface ImportMetaEnv {
   readonly WHATSAPP_ES_CONFIG_ID?: string;
   readonly WHATSAPP_WEBHOOK_OVERRIDE_URL?: string;
   readonly NFSE_SIMULATION?: string;
+  readonly WEB_PUSH_PUBLIC_KEY?: string;
+  readonly WEB_PUSH_PRIVATE_KEY?: string;
 }
 
 interface ImportMeta {

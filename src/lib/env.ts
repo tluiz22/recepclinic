@@ -39,7 +39,14 @@ export type PlatformEnv = {
    * Suporte não consegue ligar e a clínica que estiver nele não emite.
    */
   nfseSimulation: boolean;
+  /**
+   * Notificações no celular do atendimento humano (F8.5c, Web Push): o par de
+   * chaves VAPID do ambiente. null = desligadas (a tela avisa).
+   */
+  webPush: WebPushEnv | null;
 };
+
+export type WebPushEnv = { publicKey: string; privateKey: string };
 
 export type WhatsappAppEnv = {
   appSecret: string;
@@ -153,8 +160,18 @@ export function parsePlatformEnv(source: EnvSource): PlatformEnv {
   const nfseSimulation = text(source, "NFSE_SIMULATION");
   if (nfseSimulation && nfseSimulation !== "1" && nfseSimulation !== "0") problems.push("NFSE_SIMULATION inválida (1 liga a simulação da nota fiscal; 0 ou vazia, desliga)");
 
+  // Notificações (F8.5c): opcionais; uma chave sem a outra é configuração pela metade.
+  let webPush: WebPushEnv | null = null;
+  const pushPublic = text(source, "WEB_PUSH_PUBLIC_KEY");
+  const pushPrivate = text(source, "WEB_PUSH_PRIVATE_KEY");
+  if (pushPublic || pushPrivate) {
+    if (!pushPublic) problems.push("WEB_PUSH_PUBLIC_KEY não definida (chave pública das notificações)");
+    if (!pushPrivate) problems.push("WEB_PUSH_PRIVATE_KEY não definida (chave privada das notificações)");
+    if (pushPublic && pushPrivate) webPush = { publicKey: pushPublic, privateKey: pushPrivate };
+  }
+
   if (problems.length) throw new PlatformEnvError(problems);
-  return { supabaseUrl, supabaseAnonKey, supabaseServiceRoleKey, supabaseJwtSecret, cronSecret, siteUrl, email, whatsapp, whatsappAppId: whatsappAppId ?? null, whatsappSignupConfigId: whatsappSignupConfigId ?? null, nfseSimulation: nfseSimulation === "1" };
+  return { supabaseUrl, supabaseAnonKey, supabaseServiceRoleKey, supabaseJwtSecret, cronSecret, siteUrl, email, whatsapp, whatsappAppId: whatsappAppId ?? null, whatsappSignupConfigId: whatsappSignupConfigId ?? null, nfseSimulation: nfseSimulation === "1", webPush };
 }
 
 let cached: PlatformEnv | undefined;
@@ -180,6 +197,8 @@ export function platformEnv(): PlatformEnv {
     WHATSAPP_APP_ID: import.meta.env.WHATSAPP_APP_ID,
     WHATSAPP_ES_CONFIG_ID: import.meta.env.WHATSAPP_ES_CONFIG_ID,
     NFSE_SIMULATION: import.meta.env.NFSE_SIMULATION,
+    WEB_PUSH_PUBLIC_KEY: import.meta.env.WEB_PUSH_PUBLIC_KEY,
+    WEB_PUSH_PRIVATE_KEY: import.meta.env.WEB_PUSH_PRIVATE_KEY,
   });
   return cached;
 }
