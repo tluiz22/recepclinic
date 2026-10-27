@@ -149,6 +149,7 @@ primeiro backup diário (27/out).
 | Data | Versão (`producao`) | Migrações | Observações |
 |---|---|---|---|
 | 27/out | `793587f` | `20261027120000_atendimento_humano`, `20261027140000_horario_da_recepcao`, `20261027160000_notificacoes` | F8.5a a F8.5c (atendimento humano, horário da recepção, notificações), avisos do Início no fim da página, manifesto com escopo `/` e login instalável. Simulação → aplicação → conferência (colunas, tabela `push_subscriptions`, rotina `atendimento-humano` no `pg_cron`) antes do push. Rotina nova chamada uma vez à mão (GET com o `CRON_SECRET`) para a `/api/saude` voltar a `ok`. Chaves de notificação próprias da produção geradas no `.env.production`; **falta o cliente pô-las na Vercel da produção** (`WEB_PUSH_PUBLIC_KEY` e `WEB_PUSH_PRIVATE_KEY`, Production) e fazer o Redeploy. |
+| 27/out | `af0902d` | `20261027180000_bot_nao_entende` | F8.5d (bot que não entende: 4ª mensagem seguida vai para a clínica; aviso próprio para áudio e mídia) e o ajuste da notificação (abre a tela Atendimento e, no celular, o WhatsApp pelo aplicativo). Simulação → aplicação → conferência da coluna `not_understood_count` antes do push; saúde `ok` depois da publicação. Chaves de notificação da produção na Vercel (cliente, 27/out). |
 
 **Rotina nova numa publicação:** a `/api/saude` dá a rotina como "sem execução registrada" (503, o Better Stack
 alerta) até a primeira execução. Logo depois de a Vercel publicar, chamar uma vez:
