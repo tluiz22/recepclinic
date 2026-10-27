@@ -143,3 +143,15 @@ Passos 1 a 10 feitos e conferidos (cliente e Claude); passo 11 conferido pelo Cl
 saúde, webhook com o token da Meta, erros), `teste.` no staging, 1 login de Suporte, banco sem clínica e sem erro;
 e-mail de senha da produção conferido pelo cliente (remetente, modelo e link em `app.`). Falta só conferir o
 primeiro backup diário (27/out).
+
+## Publicações
+
+| Data | Versão (`producao`) | Migrações | Observações |
+|---|---|---|---|
+| 27/out | `793587f` | `20261027120000_atendimento_humano`, `20261027140000_horario_da_recepcao`, `20261027160000_notificacoes` | F8.5a a F8.5c (atendimento humano, horário da recepção, notificações), avisos do Início no fim da página, manifesto com escopo `/` e login instalável. Simulação → aplicação → conferência (colunas, tabela `push_subscriptions`, rotina `atendimento-humano` no `pg_cron`) antes do push. Rotina nova chamada uma vez à mão (GET com o `CRON_SECRET`) para a `/api/saude` voltar a `ok`. Chaves de notificação próprias da produção geradas no `.env.production`; **falta o cliente pô-las na Vercel da produção** (`WEB_PUSH_PUBLIC_KEY` e `WEB_PUSH_PRIVATE_KEY`, Production) e fazer o Redeploy. |
+
+**Rotina nova numa publicação:** a `/api/saude` dá a rotina como "sem execução registrada" (503, o Better Stack
+alerta) até a primeira execução. Logo depois de a Vercel publicar, chamar uma vez:
+`curl -s -H "Authorization: Bearer <CRON_SECRET da produção>" https://app.recepclinic.com.br/api/cron/<rotina>` (GET; o
+POST de fora é recusado pela proteção do Astro).
+

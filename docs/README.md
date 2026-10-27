@@ -365,8 +365,9 @@
   a etapa **B**. **F8.5 Atendimento humano** (cliente, 27/out: manter a coexistência e acompanhar pelo RecepClinic o que
   precisa da clínica; decisões e subetapas no [plano](plano.md), [canvas](https://claude.ai/artifact/TGSF8DVMczXShqMpCuVjDw)):
   **F8.5a validada em 27/out**; **F8.5b (Horário da recepção) validada em 27/out**; alerta no Início das conversas que não
-  voltaram ao bot validado em 27/out; **F8.5c (notificações) publicada no staging em 27/out**: falta o cliente pôr as
-  chaves na Vercel (parte Q do [`staging.md`](staging.md)) e validar; depois F8.5c (notificações) e F8.5d (bot que não entende). Depois, **B** (clínica de testes na produção com o 2º número do cliente, já no WhatsApp Business; valida F8.1, F8.2b e
+  voltaram ao bot validado em 27/out; **F8.5c (notificações) validada no staging em 27/out** (iPhone, com o app na Tela de
+  Início sem o "X"). **F8.5a a F8.5c publicadas na produção em 27/out** (`793587f`, 3 migrações; registro em
+  [`producao.md`](producao.md)); falta o cliente pôr as chaves de notificação da produção na Vercel (Redeploy); depois F8.5c (notificações) e F8.5d (bot que não entende). Depois, **B** (clínica de testes na produção com o 2º número do cliente, já no WhatsApp Business; valida F8.1, F8.2b e
   F8.3) e **C** (piloto real com a Dra. Ana Karina). Também: conferir o 1º backup da produção (27/out). **Pendente de validação do cliente no staging (no fim, como pedido):** F8.1, F8.2, F8.2b
   e F8.3. Seguem também a validação da ajuda contextual (Alta, Média e Baixa).
 >   Banco local com os dados fictícios das Métricas (`npm run db:reset` limpa). Em paralelo,
