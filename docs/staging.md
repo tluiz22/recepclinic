@@ -443,8 +443,12 @@ pessoal para os testes. **Do passo 1 ao 6, o staging fica sem WhatsApp** (bot e 
    - **"oi" de teste:** o bot respondeu "Não entendi". Causa: na conexão a Meta entregou uma imagem antiga do mesmo
      número; o bot abriu a conversa e as boas-vindas foram recusadas (`131047`, mais de 24 h). **Cliente (27/out):
      deixar como está.** As mensagens do bot aparecem no app da recepção (espelho da coexistência; a Meta não permite
-     esconder). **Proposta do Claude (aguarda o cliente):** melhoria depois dos testes, aviso claro de "conversa precisa da
-     recepção" (opções num canvas).
+     esconder). **Decisão do cliente (27/out): manter a coexistência** (recusados: dois números, bot num número só da
+     API; tudo no RecepClinic, com caixa de conversas no painel). Pedido do cliente: acompanhar **pelo RecepClinic** o
+     que está pendente de atendimento humano, com um botão que abre direto a conversa no WhatsApp (celular ou
+     computador), sem precisar vigiar o app, e sempre o lembrete do `#bot`. Proposta no
+     [canvas](https://claude.ai/artifact/TGSF8DVMczXShqMpCuVjDw) (tela "Atendimento humano", aviso no Início, celular,
+     notificação e o caminho até o `#bot`); aguarda as decisões do cliente.
 7. **Claude, pelo terminal:** confere no banco a conexão (`coexistence`, sincronizações), o desvio do webhook para o
    `teste.` na conta nova e os templates criados.
 8. **Forma de pagamento:** no Gerenciador do WhatsApp do **portfólio novo**, *Visão geral › Adicionar forma de
