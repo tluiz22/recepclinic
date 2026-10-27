@@ -3,7 +3,9 @@
 > **Estado atual (retomar daqui), 27/out/2026**
 >
 > - Branch `CRM` criada a partir da `main` em 27/out (commit `eca4b79`).
-> - **Próximo:** o cliente descreve o CRM; depois, o planejamento (subetapas, decisões e validação) entra aqui.
+> - **CRM.0 (diagnóstico do que já existe), pedido em 27/out:** só investigação e documentação, sem código, banco
+>   ou migração. Relatório em [`analises/diagnostico-crm-atual.md`](analises/diagnostico-crm-atual.md).
+> - **Próximo:** o cliente revisa o diagnóstico; só depois disso se define o posicionamento e o roteiro do CRM.
 
 ## Como trabalhar nesta etapa
 
@@ -18,7 +20,27 @@
 
 ## Descrição do cliente
 
-(a preencher)
+**CRM.0, diagnóstico (27/out).** Antes de propor qualquer evolução de **CRM de relacionamento com pacientes**, o
+cliente quer uma auditoria funcional e técnica do que já existe, para não propor o que o sistema já faz. Pedidos:
+
+1. Inventário do que já funciona como CRM, mesmo sem esse nome: cadastro e identificação do paciente, histórico de
+   consultas e exames, histórico e conversas do WhatsApp (em andamento, pendentes, paradas), pedidos de agendamento
+   não concluídos, confirmações, cancelamentos e remarcações, lembretes e envios automáticos, pendências da recepção,
+   passagem do bot para uma pessoa, registro do que a equipe fez, retorno a agendar, indicadores, filtros, status,
+   responsáveis e observações.
+2. Análise da tela **"Resumo do dia"**: finalidade, dados, ações, limitações, se o nome ainda serve e três caminhos
+   (manter e criar "Relacionamento" à parte; evoluir o Resumo para central de relacionamento; Resumo como visão
+   gerencial e "Relacionamento" como área operacional), com prós, contras, reaproveitamento e impacto.
+3. Classificação de cada funcionalidade: implementada e funcional; parcial; interface sem fluxo completo comprovado;
+   infraestrutura sem funcionalidade de usuário; não encontrada; não foi possível verificar.
+4. Mapa de dados e arquitetura (entidades, tabelas, serviços, RLS, o que é persistido, risco de duplicação, visão
+   unificada do paciente, origem, motivo de desistência, responsável, prazo e próxima ação).
+5. Comparação com a visão de CRM em três grupos: **A** operacional (prioridade), **B** continuidade do relacionamento,
+   **C** comercial e inteligência (campanhas só com base legal, consentimento, saída e regras de frequência).
+6. Recomendações e roteiro em etapas, sem complexidade desnecessária, respeitando a LGPD e o isolamento entre clínicas.
+
+Sem segredos, valores de variáveis de ambiente ou dados reais de pacientes no relatório. **Não implementar nada**:
+aguardar a revisão do cliente.
 
 ## Planejamento
 
