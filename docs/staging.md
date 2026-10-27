@@ -457,3 +457,8 @@ pessoal para os testes. **Do passo 1 ao 6, o staging fica sem WhatsApp** (bot e 
    - um lembrete de teste chega com os botões.
 
 Ao terminar cada bloco (1 a 3, 4 a 6, 8 e 9), avisar o Claude.
+
+**Resultado (27/out):** passo 8 feito (forma de pagamento conferida pelo Suporte, conta `2549028448937032`). Passo 9
+conferido nos registros: eco da recepção pelo app (`agent_reply`), bot pausado (mensagens do paciente sem resposta do
+bot), `#bot` devolvendo a conversa e, depois, boas-vindas, menu e menu de consultas entregues. **Falta só o lembrete
+com botões**, quando a Meta aprovar os 18 templates (situação pelo **Atualizar situação**).
