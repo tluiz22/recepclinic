@@ -1793,6 +1793,10 @@ coexistência). No celular pessoal sem o número da clínica, abriria o WhatsApp
   Início ("N conversas aguardando a clínica" e a linha das em atendimento); **Devolver ao bot** com confirmação. Pausas
   vencidas saem da lista. Testes: 6 de unidade e 7 de banco (`tests/db/atendimento-humano.test.ts`: motivo e início,
   ordem, Profissional vê, outra clínica não, pausa vencida, devolver). Conferido no navegador local (computador e 390px).
+  **Ajustes da validação (cliente, 27/out):** no Início, todos os avisos (falha de envio, templates em análise na Meta,
+  forma de pagamento, desconexão, certificado) vão para o **fim da página**; só a faixa do atendimento humano fica no alto,
+  com o texto "**N conversas aguardando atendimento humano**". O aviso de retorno de uma ação (ex.: tela sem acesso) fica
+  no alto.
 - **F8.5b Horário da recepção:** o campo em Configurações › Clínica, preenchido a partir das agendas.
 - **F8.5c Notificações:** o painel instalável no celular (já tem o manifesto) com notificações do navegador (Web Push):
   ligar e desligar por pessoa, o aviso de "aguardando", o lembrete de 1 hora e o resumo ao abrir o horário.

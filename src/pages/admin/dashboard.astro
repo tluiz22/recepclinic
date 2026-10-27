@@ -101,40 +101,11 @@ const sectionTitle = "font-display text-[17px] leading-tight font-bold text-ink 
     </Fragment>
   </PageHeader>
 
-  {
-    (notice || sendsAlertLines.length > 0 || certificateAlert || templatesAlert || paymentAlert || disconnectedAlert) && (
-      <div class="mt-4 flex flex-col gap-2">
-        {notice && <Notice tone={notice.tone}>{notice.text}</Notice>}
-        {sendsAlertLines.length > 0 && (
-          <Notice tone="danger" href="/admin/consultas?tab=envios" linkLabel="Ver os envios">
-            {sendsAlertLines.join(" ")}
-          </Notice>
-        )}
-        {disconnectedAlert && (
-          <Notice tone="danger" href={withReturn("/admin/configuracoes/whatsapp", here)} linkLabel="Conectar de novo">
-            O WhatsApp da clínica foi desconectado da Meta em {formatInstant(disconnectedAlert, clinic.timezone, "dd/MM")}: o bot, os avisos e os lembretes
-            pararam. Conecte de novo em Configurações › WhatsApp.
-          </Notice>
-        )}
-        {paymentAlert && (
-          <Notice tone="warning" href={withReturn("/admin/configuracoes/whatsapp", here)} linkLabel="Abrir WhatsApp">
-            Falta conferir a forma de pagamento da conta do WhatsApp na Meta: sem ela, os lembretes e os avisos automáticos não saem. Adicione no Gerenciador
-            do WhatsApp e avise o suporte do RecepClinic para conferir.
-          </Notice>
-        )}
-        {templatesAlert && (
-          <Notice tone="warning" href={withReturn("/admin/configuracoes/whatsapp", here)} linkLabel="Abrir WhatsApp">
-            Algumas mensagens automáticas do WhatsApp ainda não estão aprovadas pela Meta ({templatesAlert}). Enquanto isso, esses envios não saem.
-          </Notice>
-        )}
-        {certificateAlert && (
-          <Notice tone="warning" href={withReturn("/admin/configuracoes/nota-fiscal", here)} linkLabel="Abrir Nota fiscal">
-            {certificateAlert}
-          </Notice>
-        )}
-      </div>
-    )
-  }
+  {notice && (
+    <div class="mt-4">
+      <Notice tone={notice.tone}>{notice.text}</Notice>
+    </div>
+  )}
   <FlashMessage />
 
   {
@@ -147,7 +118,7 @@ const sectionTitle = "font-display text-[17px] leading-tight font-bold text-ink 
           {awaiting.length}
         </span>
         <span class="flex min-w-0 flex-1 flex-col gap-0.5">
-          <strong class="text-[17px]">{plural(awaiting.length, "conversa aguardando a clínica", "conversas aguardando a clínica")}</strong>
+          <strong class="text-[17px]">{plural(awaiting.length, "conversa aguardando atendimento humano", "conversas aguardando atendimento humano")}</strong>
           <span class="text-[15px] text-ink-mid">{oldestWait}</span>
         </span>
         <span class="flex-none text-[15px] font-bold max-sm:hidden">Ver conversas ›</span>
@@ -248,6 +219,40 @@ const sectionTitle = "font-display text-[17px] leading-tight font-bold text-ink 
     )
   }
 
+  {/* Avisos no fim da página (cliente, 27/out/2026); só o atendimento humano fica no alto. */}
+  {
+    (sendsAlertLines.length > 0 || certificateAlert || templatesAlert || paymentAlert || disconnectedAlert) && (
+      <section aria-label="Avisos" class="mt-6 flex flex-col gap-2">
+        {sendsAlertLines.length > 0 && (
+          <Notice tone="danger" href="/admin/consultas?tab=envios" linkLabel="Ver os envios">
+            {sendsAlertLines.join(" ")}
+          </Notice>
+        )}
+        {disconnectedAlert && (
+          <Notice tone="danger" href={withReturn("/admin/configuracoes/whatsapp", here)} linkLabel="Conectar de novo">
+            O WhatsApp da clínica foi desconectado da Meta em {formatInstant(disconnectedAlert, clinic.timezone, "dd/MM")}: o bot, os avisos e os lembretes
+            pararam. Conecte de novo em Configurações › WhatsApp.
+          </Notice>
+        )}
+        {paymentAlert && (
+          <Notice tone="warning" href={withReturn("/admin/configuracoes/whatsapp", here)} linkLabel="Abrir WhatsApp">
+            Falta conferir a forma de pagamento da conta do WhatsApp na Meta: sem ela, os lembretes e os avisos automáticos não saem. Adicione no Gerenciador
+            do WhatsApp e avise o suporte do RecepClinic para conferir.
+          </Notice>
+        )}
+        {templatesAlert && (
+          <Notice tone="warning" href={withReturn("/admin/configuracoes/whatsapp", here)} linkLabel="Abrir WhatsApp">
+            Algumas mensagens automáticas do WhatsApp ainda não estão aprovadas pela Meta ({templatesAlert}). Enquanto isso, esses envios não saem.
+          </Notice>
+        )}
+        {certificateAlert && (
+          <Notice tone="warning" href={withReturn("/admin/configuracoes/nota-fiscal", here)} linkLabel="Abrir Nota fiscal">
+            {certificateAlert}
+          </Notice>
+        )}
+      </section>
+    )
+  }
   <div class="h-20 sm:hidden" aria-hidden="true" />
   <div class="fixed inset-x-0 bottom-[calc(61px+env(safe-area-inset-bottom))] z-10 flex items-center gap-3 border-t border-line bg-white px-4 py-2.5 shadow-[0_-4px_14px_rgba(18,48,42,.08)] sm:hidden">
     <span class="min-w-0 flex-1 truncate text-base font-semibold text-ink">Início</span>
