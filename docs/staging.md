@@ -419,6 +419,23 @@ pessoal para os testes. **Do passo 1 ao 6, o staging fica sem WhatsApp** (bot e 
    próprio Facebook e adiciona o cliente como administrador (*Configurações › Pessoas*); sem trocar senhas. Com dois
    portfólios, a janela deve perguntar qual usar: escolher **Consultorio de Teste**; depois do número, deve aparecer um
    código para copiar (não SMS ou ligação).
+   **O que se aprendeu na conexão (27/out):**
+   - A janela não oferece "app existente" no começo: a ordem é **número** (a tela mostra SMS/Ligação, mas não confirma
+     nada ali) → **portfólio** → perfil comercial (nome, país e **site**, obrigatório: `https://www.recepclinic.com.br`)
+     → **"Importar contatos e histórico de conversas" com QR code**. O QR é lido no app WhatsApp Business
+     (*Conectar-se à Plataforma WhatsApp Business*, que também aceita um código de acesso). Sem essa leitura, a metade
+     do celular não acontece.
+   - 1ª tentativa (a Meta criou a conta `2549028448937032` "RecepClinic" no portfólio "Consultório de teste", com o
+     cartão): o painel caiu no login ao fim da janela e o código (30 s) se perdeu; nada gravado. Suspeita: sessão do
+     Suporte aberta em duas janelas (normal e anônima). A investigar.
+   - 2ª e 3ª (reaproveitando a conta "RecepClinic"): a janela **pulou o QR code**; o RecepClinic gravou a conexão
+     (número `1408933992304112`, `is_on_biz_app: true`, nome "RecepClinic" liberado sem análise, webhook com o desvio
+     para o `teste.`), mas o app ficou sem a conexão: a Meta recusa as sincronizações com `133010` ("The account is not
+     registered") e não repassa as mensagens (um "oi" não chegou ao staging). Muitas tentativas seguidas deram `#4`
+     (limite de chamadas do app).
+   - **Próxima tentativa (cliente, 27/out):** esperar ~1 h, desconectar no painel e conectar criando uma **conta nova** do
+     WhatsApp, para a janela voltar a mostrar o QR; ler o QR no app **antes** de terminar a janela. Sem QR, chamado no
+     suporte da Meta.
 7. **Claude, pelo terminal:** confere no banco a conexão (`coexistence`, sincronizações), o desvio do webhook para o
    `teste.` na conta nova e os templates criados.
 8. **Forma de pagamento:** no Gerenciador do WhatsApp do **portfólio novo**, *Visão geral › Adicionar forma de
