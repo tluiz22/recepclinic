@@ -1,0 +1,202 @@
+---
+// Atendimento humano (F8.5a, cliente, 27/out/2026): conversas em que o bot
+// parou e a clínica precisa responder, para a equipe acompanhar pelo
+// RecepClinic sem vigiar o app do WhatsApp Business. "Abrir no WhatsApp" abre
+// a conversa no WhatsApp do aparelho (o da clínica, no celular dela ou no
+// WhatsApp Web). Ao terminar, "#bot" na conversa devolve ao bot; "Devolver ao
+// bot" faz o mesmo por aqui, para quando alguém esquecer.
+import { currentPath, withReturn } from "../../lib/returnPath";
+import AdminLayout from "../../layouts/AdminLayout.astro";
+import ConfirmDeleteDialog from "../../components/admin/ConfirmDeleteDialog.astro";
+import FlashMessage from "../../components/admin/FlashMessage.astro";
+import Icon from "../../components/admin/Icon.astro";
+import Button from "../../components/admin/ui/Button.astro";
+import EmptyState from "../../components/admin/ui/EmptyState.astro";
+import PageHeader from "../../components/admin/ui/PageHeader.astro";
+import { isAnonymizedPhone } from "../../lib/anonymization";
+import { formatInstant, localDateOf } from "../../lib/clinicTime";
+import { formatPhoneBR, whatsappHref } from "../../lib/phone";
+import { createUserClient } from "../../lib/data/clients";
+import { handoffReasonLabel, listHumanAttention } from "../../lib/data/whatsapp/attention";
+
+const clinic = Astro.locals.clinic!;
+if (!clinic.features.includes("whatsapp_bot")) return Astro.redirect("/admin/dashboard?aviso=acesso_negado");
+
+const db = createUserClient(Astro.request, Astro.cookies);
+const now = new Date();
+const items = await listHumanAttention(db, clinic.clinicId, clinic.timezone, now);
+const waiting = items.filter((item) => item.status === "waiting");
+const inProgress = items.filter((item) => item.status === "in_progress");
+const here = currentPath(Astro.url);
+
+// Selo da espera: amarelo até 15 minutos, vermelho depois.
+const LATE_MINUTES = 15;
+const minutesSince = (instant: Date) => Math.max(0, Math.floor((now.getTime() - instant.getTime()) / 60_000));
+const describeWait = (minutes: number) => {
+  if (minutes < 1) return "agora";
+  if (minutes < 60) return `há ${minutes} min`;
+  const hours = Math.floor(minutes / 60);
+  const rest = minutes % 60;
+  return rest ? `há ${hours} h ${rest} min` : `há ${hours} h`;
+};
+const today = localDateOf(now, clinic.timezone);
+const whenLabel = (instant: Date) =>
+  localDateOf(instant, clinic.timezone) === today
+    ? `às ${formatInstant(instant, clinic.timezone, "HH:mm")}`
+    : `em ${formatInstant(instant, clinic.timezone, "dd/MM 'às' HH:mm")}`;
+const backLabel = (deadline: Date) =>
+  localDateOf(deadline, clinic.timezone) === today
+    ? `hoje às ${formatInstant(deadline, clinic.timezone, "HH:mm")}`
+    : formatInstant(deadline, clinic.timezone, "EEEE (dd/MM) 'às' HH:mm");
+const displayName = (item: (typeof items)[number]) => item.name ?? "Número sem cadastro";
+const sectionTitle = "font-display text-[17px] leading-tight font-bold text-ink sm:text-lg";
+const countPill = "rounded-full px-2.5 py-0.5 font-sans text-sm font-semibold";
+const whatsappButton =
+  "inline-flex min-h-11 items-center justify-center gap-2 rounded-[10px] px-4 text-base font-bold no-underline focus-visible:outline-2 focus-visible:outline-offset-2";
+---
+
+<AdminLayout title="Atendimento humano">
+  <PageHeader title="Atendimento humano" subtitle="Conversas em que o bot parou e a clínica precisa responder." />
+  <FlashMessage />
+
+  <section aria-labelledby="aguardando" class="mt-5 flex flex-col gap-3">
+    <h2 id="aguardando" class={`${sectionTitle} flex items-center gap-2.5`}>
+      Aguardando a clínica
+      <span class:list={[countPill, waiting.length > 0 ? "bg-can-100 text-can-800" : "bg-canvas-deep text-ink-soft"]}>{waiting.length}</span>
+    </h2>
+    {
+      waiting.length === 0 ? (
+        <EmptyState
+          title="Nenhuma conversa aguardando a clínica"
+          text="Quando o paciente pedir para falar com a clínica ou o bot não conseguir seguir, a conversa aparece aqui com o botão para abrir no WhatsApp."
+        />
+      ) : (
+        <ul class="flex flex-col gap-3">
+          {waiting.map((item) => {
+            const minutes = minutesSince(item.waitingSince!);
+            const late = minutes >= LATE_MINUTES;
+            return (
+              <li
+                class:list={[
+                  "flex flex-wrap items-center gap-4 rounded-xl border bg-white px-4 py-4 sm:px-5",
+                  late ? "border-can-200" : "border-pend-200",
+                ]}
+              >
+                <div class="flex min-w-0 flex-[999_1_420px] flex-col gap-1.5">
+                  <div class="flex flex-wrap items-center gap-x-2.5 gap-y-1">
+                    {item.contactId ? (
+                      <a
+                        href={withReturn(`/admin/pacientes/contato/${item.contactId}`, here)}
+                        class="text-[17px] font-bold text-ink no-underline hover:text-brand hover:underline"
+                      >
+                        {displayName(item)}
+                      </a>
+                    ) : (
+                      <span class="text-[17px] font-bold text-ink">{displayName(item)}</span>
+                    )}
+                    <span class="text-[15px] text-ink-soft tabular-nums">{formatPhoneBR(item.phone)}</span>
+                    <span class:list={["rounded-md px-2 py-0.5 text-[13px] font-bold", late ? "bg-can-100 text-can-800" : "bg-pend-100 text-pend-800"]}>
+                      Esperando {describeWait(minutes)}
+                    </span>
+                  </div>
+                  <p class="text-[15px] text-ink-mid">
+                    <strong>{handoffReasonLabel(item.reason)}</strong> · {whenLabel(item.startedAt)}
+                  </p>
+                  {item.lastPatientMessage?.body && (
+                    <p class="rounded-lg bg-canvas px-3 py-2 text-[15px] break-words text-ink-soft">“{item.lastPatientMessage.body}”</p>
+                  )}
+                </div>
+                <div class="flex flex-[1_1_220px] flex-col gap-2">
+                  {!isAnonymizedPhone(item.phone) && (
+                    <a
+                      href={whatsappHref(item.phone)}
+                      target="_blank"
+                      rel="noopener"
+                      class={`${whatsappButton} bg-conf-500 text-white hover:bg-conf-800 focus-visible:outline-conf-500`}
+                    >
+                      <Icon name="chat-bubble" class="h-5 w-5" /> Abrir no WhatsApp
+                    </a>
+                  )}
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+      )
+    }
+  </section>
+
+  {
+    inProgress.length > 0 && (
+      <section aria-labelledby="atendendo" class="mt-7 flex flex-col gap-3">
+        <h2 id="atendendo" class={`${sectionTitle} flex items-center gap-2.5`}>
+          Em atendimento pela clínica
+          <span class={`${countPill} bg-att-100 text-att-800`}>{inProgress.length}</span>
+        </h2>
+        <ul class="flex flex-col gap-3">
+          {inProgress.map((item) => (
+            <li class="flex flex-col gap-3 rounded-xl border border-att-200 bg-white px-4 py-4 sm:px-5">
+              <div class="flex flex-wrap items-center gap-4">
+                <div class="flex min-w-0 flex-[999_1_420px] flex-col gap-1.5">
+                  <div class="flex flex-wrap items-center gap-x-2.5 gap-y-1">
+                    {item.contactId ? (
+                      <a
+                        href={withReturn(`/admin/pacientes/contato/${item.contactId}`, here)}
+                        class="text-[17px] font-bold text-ink no-underline hover:text-brand hover:underline"
+                      >
+                        {displayName(item)}
+                      </a>
+                    ) : (
+                      <span class="text-[17px] font-bold text-ink">{displayName(item)}</span>
+                    )}
+                    <span class="text-[15px] text-ink-soft tabular-nums">{formatPhoneBR(item.phone)}</span>
+                    <span class="rounded-md bg-att-100 px-2 py-0.5 text-[13px] font-bold text-att-800">
+                      A clínica respondeu {whenLabel(item.lastAgentAt!)}
+                    </span>
+                  </div>
+                  <p class="text-[15px] text-ink-mid">
+                    <strong>{handoffReasonLabel(item.reason)}</strong> · {whenLabel(item.startedAt)}
+                  </p>
+                </div>
+                <div class="flex flex-[1_1_220px] flex-col gap-2">
+                  {!isAnonymizedPhone(item.phone) && (
+                    <a
+                      href={whatsappHref(item.phone)}
+                      target="_blank"
+                      rel="noopener"
+                      class={`${whatsappButton} border border-conf-500 bg-white text-conf-800 hover:bg-conf-50 focus-visible:outline-conf-500`}
+                    >
+                      <Icon name="chat-bubble" class="h-5 w-5" /> Abrir no WhatsApp
+                    </a>
+                  )}
+                  <form method="POST" action="/api/admin/atendimento">
+                    <input type="hidden" name="acao" value="devolver" />
+                    <input type="hidden" name="telefone" value={item.phone} />
+                    <Button
+                      type="submit"
+                      variant="quiet"
+                      class="js-confirm-delete w-full"
+                      data-confirm-title="Devolver a conversa ao bot?"
+                      data-confirm-message={`O bot volta a atender ${displayName(item)} na próxima mensagem, do começo. Nada é enviado ao paciente agora. O caminho de sempre é escrever #bot na conversa.`}
+                      data-confirm-label="Devolver ao bot"
+                    >
+                      Devolver ao bot
+                    </Button>
+                  </form>
+                </div>
+              </div>
+              <p role="note" class="flex items-start gap-2.5 rounded-lg border border-pend-200 bg-pend-50 px-3.5 py-2.5 text-[15px] text-pend-800">
+                <Icon name="information-circle" class="mt-0.5 h-5 w-5 flex-none" />
+                <span>
+                  Ao terminar, escreva <strong class="rounded bg-pend-100 px-1 font-mono">#bot</strong> na conversa para o bot voltar a atender. Se ninguém
+                  escrever, o bot volta sozinho {backLabel(item.deadline)}.
+                </span>
+              </p>
+            </li>
+          ))}
+        </ul>
+        <ConfirmDeleteDialog />
+      </section>
+    )
+  }
+</AdminLayout>

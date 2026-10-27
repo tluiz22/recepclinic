@@ -1784,6 +1784,15 @@ coexistência). No celular pessoal sem o número da clínica, abriria o WhatsApp
 **Subetapas (proposta do Claude, 27/out):**
 - **F8.5a Dados e tela:** guardar o motivo e os horários da pausa (migração), a tela "Atendimento" (computador e
   celular), o contador no menu, a faixa no Início e o "Devolver ao bot".
+  **F8.5a implementada, testada no local e publicada no staging em 27/out** (migração
+  `20261027120000_atendimento_humano.sql`, aplicada e conferida no staging antes do push): a conversa guarda o motivo e o
+  início da pausa (`handoff_reason`, `handoff_started_at`; a recepção escrevendo de novo só renova o prazo); tela
+  `/admin/atendimento` (`attention.ts`: "Aguardando a clínica", a mais antiga primeiro, com o selo vermelho a partir de 15
+  minutos, e "Em atendimento", com o lembrete do `#bot` e quando o bot volta sozinho; nome pelo contato ou pelo telefone);
+  item **Atendimento** no menu com o contador (no celular, dentro do "Mais", com o contador também no botão); faixa no
+  Início ("N conversas aguardando a clínica" e a linha das em atendimento); **Devolver ao bot** com confirmação. Pausas
+  vencidas saem da lista. Testes: 6 de unidade e 7 de banco (`tests/db/atendimento-humano.test.ts`: motivo e início,
+  ordem, Profissional vê, outra clínica não, pausa vencida, devolver). Conferido no navegador local (computador e 390px).
 - **F8.5b Horário da recepção:** o campo em Configurações › Clínica, preenchido a partir das agendas.
 - **F8.5c Notificações:** o painel instalável no celular (já tem o manifesto) com notificações do navegador (Web Push):
   ligar e desligar por pessoa, o aviso de "aguardando", o lembrete de 1 hora e o resumo ao abrir o horário.

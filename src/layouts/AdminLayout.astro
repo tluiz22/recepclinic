@@ -8,6 +8,9 @@ import type { IconName } from "../components/admin/Icon.astro";
 import MoreMenu from "../components/admin/ui/MoreMenu.astro";
 import { menuItemClass } from "../components/admin/ui/styles";
 import { canAccessArea, roleLabel as describeRoles } from "../lib/clinicAccess";
+import { createUserClient } from "../lib/data/clients";
+import { countAwaitingClinic } from "../lib/data/whatsapp/attention";
+import { logError } from "../lib/log";
 
 interface Props {
   title: string;
@@ -20,10 +23,12 @@ interface Props {
 const { title, platform = false } = Astro.props;
 const frame = "max-w-6xl";
 
+type NavItem = { label: string; href: string; icon: IconName; badge?: number };
+
 // Os 4 primeiros são a barra inferior de abas no celular (uso frequente,
 // toque de um dedo só); Configurações/Relatórios ficam dentro de "Mais" —
 // ver decisão de navegação mobile no plano, seção Fase 9.
-const primaryNavItems: { label: string; href: string; icon: IconName }[] = [
+const primaryNavItems: NavItem[] = [
   { label: "Início", href: "/admin/dashboard", icon: "home" },
   { label: "Agenda", href: "/admin/agenda", icon: "calendar" },
   { label: "Pacientes", href: "/admin/pacientes", icon: "users" },
@@ -38,9 +43,18 @@ const clinic = Astro.locals.clinic;
 const access = clinic ?? { roles: [], isPlatformStaff: false };
 const roleLabel = describeRoles(access);
 
-type NavItem = { label: string; href: string; icon: IconName };
+// Atendimento humano (F8.5a, cliente, 27/out/2026): com o bot, toda a equipe vê as conversas que aguardam a
+// clínica; o contador fica no menu (e no "Mais" do celular). Falha na contagem não derruba a tela.
+const attentionCount =
+  clinic && !platform && clinic.features.includes("whatsapp_bot")
+    ? await countAwaitingClinic(createUserClient(Astro.request, Astro.cookies), clinic.clinicId, clinic.timezone).catch((error: unknown) => {
+        logError("atendimento humano: contador do menu", error, { clinica: clinic.clinicId });
+        return 0;
+      })
+    : null;
 
 const clinicMoreItems: NavItem[] = [
+  ...(attentionCount !== null ? [{ label: "Atendimento", href: "/admin/atendimento", icon: "chat-bubble" as IconName, badge: attentionCount }] : []),
   // Envios automáticos virou aba de Métricas (Fase 23 · etapa 5).
   ...(canAccessArea(access, "settings")
     ? [{ label: "Configurações", href: "/admin/configuracoes", icon: "settings" as IconName }]
@@ -191,8 +205,17 @@ const navLinkClass = (active: boolean) =>
         <nav aria-label="Menu principal" class="hidden min-w-0 flex-1 flex-wrap gap-0.5 text-[15px] font-semibold sm:flex">
           {
             headerNavItems.map((item) => (
-              <a href={item.href} aria-current={isActive(item.href) ? "page" : undefined} class={navLinkClass(isActive(item.href))}>
+              <a
+                href={item.href}
+                aria-current={isActive(item.href) ? "page" : undefined}
+                class={`${navLinkClass(isActive(item.href))} ${item.badge ? "inline-flex items-center gap-1.5" : ""}`}
+              >
                 {item.label}
+                {item.badge ? (
+                  <span class="rounded-full bg-can-500 px-1.5 text-[12px] leading-5 font-bold text-white" aria-label={`${item.badge} aguardando`}>
+                    {item.badge}
+                  </span>
+                ) : null}
               </a>
             ))
           }
@@ -290,7 +313,14 @@ const navLinkClass = (active: boolean) =>
             isMoreActive ? "text-brand" : "text-ink-soft"
           }`}
         >
-          <Icon name="more" class="h-6 w-6" />
+          <span class="relative">
+            <Icon name="more" class="h-6 w-6" />
+            {attentionCount ? (
+              <span class="absolute -top-1.5 -right-2.5 rounded-full bg-can-500 px-1.5 text-[11px] leading-[18px] font-bold text-white" aria-label={`${attentionCount} conversas aguardando a clínica`}>
+                {attentionCount}
+              </span>
+            ) : null}
+          </span>
           Mais
         </summary>
 
@@ -311,6 +341,11 @@ const navLinkClass = (active: boolean) =>
                   >
                     <Icon name={item.icon} class="h-5 w-5" />
                     {item.label}
+                    {item.badge ? (
+                      <span class="ml-auto rounded-full bg-can-500 px-1.5 text-[12px] leading-5 font-bold text-white" aria-label={`${item.badge} aguardando`}>
+                        {item.badge}
+                      </span>
+                    ) : null}
                   </a>
                 ))}
               </div>

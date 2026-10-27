@@ -378,6 +378,8 @@ export async function pauseForHuman(
         context: {},
         human_handoff: true,
         human_handoff_at: now.toISOString(),
+        // Atendimento humano (F8.5a): o motivo e o início são da pausa que começa; numa pausa em andamento, ficam.
+        ...(pauseActive ? {} : { handoff_reason: reason, handoff_started_at: now.toISOString() }),
         funnel_session_id: null,
         funnel_flow: null,
       },

@@ -20,6 +20,7 @@ import Stat from "../../components/admin/ui/Stat.astro";
 import { createUserClient } from "../../lib/data/clients";
 import { getDashboardCounts } from "../../lib/data/dashboard";
 import { describeSendsAlert, getSendsAlert } from "../../lib/data/sends";
+import { handoffReasonLabel, listHumanAttention } from "../../lib/data/whatsapp/attention";
 import { BOT_LIMIT_LABELS, listContactsToReview, REVIEW_WINDOW_DAYS } from "../../lib/data/whatsapp/botLimits";
 import { formatCalendarDate, formatInstant, todayIn } from "../../lib/clinicTime";
 import { certificateStatus } from "../../lib/certificate";
@@ -35,14 +36,25 @@ const has = (feature: (typeof clinic.features)[number]) => clinic.features.inclu
 const certificateOn = has("finance") && (clinic.roles.includes("admin") || clinic.isPlatformStaff);
 // Templates na Meta (F8.2, cliente, 25/out): aviso ao Administrador enquanto algum em uso não estiver aprovado.
 const isAdmin = clinic.roles.includes("admin") || clinic.isPlatformStaff;
-const [counts, sendsAlert, toReview, certificate, connection, templates] = await Promise.all([
+const [counts, sendsAlert, toReview, certificate, connection, templates, attention] = await Promise.all([
   getDashboardCounts(db, clinic.clinicId, clinic.timezone),
   getSendsAlert(db, clinic.clinicId),
   has("whatsapp_bot") ? listContactsToReview(db, clinic.clinicId) : Promise.resolve(null),
   certificateOn ? getFiscalCertificate(db, clinic.clinicId) : Promise.resolve(null),
   isAdmin ? getWhatsappConnection(db, clinic.clinicId) : Promise.resolve(null),
   isAdmin ? listWhatsappTemplates(db, clinic.clinicId) : Promise.resolve([]),
+  has("whatsapp_bot") ? listHumanAttention(db, clinic.clinicId, clinic.timezone) : Promise.resolve([]),
 ]);
+// Atendimento humano (F8.5a, cliente, 27/out/2026): faixa com as conversas que aguardam a clínica.
+const awaiting = attention.filter((item) => item.status === "waiting");
+const inAttention = attention.length - awaiting.length;
+const oldestWait = awaiting[0]
+  ? (() => {
+      const minutes = Math.max(0, Math.floor((Date.now() - awaiting[0].waitingSince!.getTime()) / 60_000));
+      const wait = minutes < 60 ? `${minutes} min` : `${Math.floor(minutes / 60)} h${minutes % 60 ? ` ${minutes % 60} min` : ""}`;
+      return `A mais antiga espera há ${wait} (${awaiting[0].name ?? "número sem cadastro"}: ${handoffReasonLabel(awaiting[0].reason).toLowerCase()}).`;
+    })()
+  : null;
 const templatesAlert =
   connection?.status === "connected" ? describeTemplateApproval(templateApproval(templatesInUse(clinic.features), templates)) : null;
 // F8.3 (cliente, 24 e 25/out): forma de pagamento ainda não conferida pelo Suporte; desconexão avisada pela Meta.
@@ -124,6 +136,32 @@ const sectionTitle = "font-display text-[17px] leading-tight font-bold text-ink 
     )
   }
   <FlashMessage />
+
+  {
+    awaiting.length > 0 && (
+      <a
+        href="/admin/atendimento"
+        class="mt-4 flex items-center gap-4 rounded-xl border border-can-200 bg-can-50 px-4 py-3.5 text-can-800 no-underline hover:border-can-500 sm:px-5"
+      >
+        <span class="flex h-11 w-11 flex-none items-center justify-center rounded-full bg-can-500 font-display text-xl font-bold text-white">
+          {awaiting.length}
+        </span>
+        <span class="flex min-w-0 flex-1 flex-col gap-0.5">
+          <strong class="text-[17px]">{plural(awaiting.length, "conversa aguardando a clínica", "conversas aguardando a clínica")}</strong>
+          <span class="text-[15px] text-ink-mid">{oldestWait}</span>
+        </span>
+        <span class="flex-none text-[15px] font-bold max-sm:hidden">Ver conversas ›</span>
+      </a>
+    )
+  }
+  {
+    inAttention > 0 && (
+      <p class="mt-2 text-[15px] text-ink-soft">
+        {plural(inAttention, "conversa", "conversas")} em atendimento pela clínica: ao terminar, escreva <strong class="font-mono">#bot</strong> na conversa.{" "}
+        <a href="/admin/atendimento">Ver</a>
+      </p>
+    )
+  }
 
   <section aria-labelledby="hoje" class="mt-5 flex flex-col gap-2.5">
     <h2 id="hoje" class={sectionTitle}>Hoje</h2>
