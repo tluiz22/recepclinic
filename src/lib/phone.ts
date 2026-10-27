@@ -34,5 +34,14 @@ export function whatsappHref(e164: string): string {
   return `https://wa.me/${e164.replace(/\D/g, "")}`;
 }
 
+/**
+ * Conversa direto no aplicativo do WhatsApp (celular): no app da Tela de
+ * Início do iPhone, o `wa.me` abre numa janela de navegador por cima do
+ * RecepClinic, que fica vazia ao voltar (cliente, 27/out/2026).
+ */
+export function whatsappAppHref(e164: string): string {
+  return `whatsapp://send?phone=${e164.replace(/\D/g, "")}`;
+}
+
 /** Telefone inválido, igual em todas as telas (U-08 da auditoria, cliente, 17/out/2026). */
 export const INVALID_PHONE_MESSAGE = "Telefone inválido: informe DDD + número, ex.: (84) 98188-0777.";

@@ -16,7 +16,7 @@ import EmptyState from "../../components/admin/ui/EmptyState.astro";
 import PageHeader from "../../components/admin/ui/PageHeader.astro";
 import { isAnonymizedPhone } from "../../lib/anonymization";
 import { formatInstant, localDateOf } from "../../lib/clinicTime";
-import { formatPhoneBR, whatsappHref } from "../../lib/phone";
+import { formatPhoneBR, whatsappAppHref, whatsappHref } from "../../lib/phone";
 import { createUserClient } from "../../lib/data/clients";
 import { handoffReasonLabel, listHumanAttention } from "../../lib/data/whatsapp/attention";
 import { listMyDevices } from "../../lib/data/whatsapp/attentionPush";
@@ -34,6 +34,8 @@ const [items, devices] = await Promise.all([
 const waiting = items.filter((item) => item.status === "waiting");
 const inProgress = items.filter((item) => item.status === "in_progress");
 const here = currentPath(Astro.url);
+// Vindo da notificação (F8.5c): a conversa em destaque e, no celular, o WhatsApp em seguida.
+const highlighted = Astro.url.searchParams.get("conversa");
 
 // Selo da espera: amarelo até 15 minutos, vermelho depois.
 const LATE_MINUTES = 15;
@@ -84,9 +86,11 @@ const whatsappButton =
             const late = minutes >= LATE_MINUTES;
             return (
               <li
+                data-conversa={item.phone}
                 class:list={[
                   "flex flex-wrap items-center gap-4 rounded-xl border bg-white px-4 py-4 sm:px-5",
                   late ? "border-can-200" : "border-pend-200",
+                  item.phone === highlighted && "ring-2 ring-brand ring-offset-2",
                 ]}
               >
                 <div class="flex min-w-0 flex-[999_1_420px] flex-col gap-1.5">
@@ -117,6 +121,7 @@ const whatsappButton =
                   {!isAnonymizedPhone(item.phone) && (
                     <a
                       href={whatsappHref(item.phone)}
+                      data-whatsapp-app={whatsappAppHref(item.phone)}
                       target="_blank"
                       rel="noopener"
                       class={`${whatsappButton} bg-conf-500 text-white hover:bg-conf-800 focus-visible:outline-conf-500`}
@@ -142,7 +147,10 @@ const whatsappButton =
         </h2>
         <ul class="flex flex-col gap-3">
           {inProgress.map((item) => (
-            <li class="flex flex-col gap-3 rounded-xl border border-att-200 bg-white px-4 py-4 sm:px-5">
+            <li
+              data-conversa={item.phone}
+              class:list={["flex flex-col gap-3 rounded-xl border border-att-200 bg-white px-4 py-4 sm:px-5", item.phone === highlighted && "ring-2 ring-brand ring-offset-2"]}
+            >
               <div class="flex flex-wrap items-center gap-4">
                 <div class="flex min-w-0 flex-[999_1_420px] flex-col gap-1.5">
                   <div class="flex flex-wrap items-center gap-x-2.5 gap-y-1">
@@ -169,6 +177,7 @@ const whatsappButton =
                   {!isAnonymizedPhone(item.phone) && (
                     <a
                       href={whatsappHref(item.phone)}
+                      data-whatsapp-app={whatsappAppHref(item.phone)}
                       target="_blank"
                       rel="noopener"
                       class={`${whatsappButton} border border-conf-500 bg-white text-conf-800 hover:bg-conf-50 focus-visible:outline-conf-500`}
@@ -207,3 +216,26 @@ const whatsappButton =
     )
   }
 </AdminLayout>
+
+<script>
+  // No celular, a conversa abre direto no aplicativo do WhatsApp (whatsapp://): no app da Tela de Início do
+  // iPhone, o wa.me abre uma janela de navegador por cima do RecepClinic, que fica vazia ao voltar (27/out/2026).
+  const mobile = /iPhone|iPad|Android/.test(navigator.userAgent);
+  const links = document.querySelectorAll<HTMLAnchorElement>("a[data-whatsapp-app]");
+  if (mobile) {
+    links.forEach((link) => {
+      link.href = link.dataset.whatsappApp!;
+      link.removeAttribute("target");
+    });
+  }
+  // Vindo da notificação: a conversa no meio da tela e, no celular, o WhatsApp aberto em seguida (um toque só).
+  const params = new URLSearchParams(location.search);
+  const phone = params.get("conversa");
+  if (phone) {
+    history.replaceState(null, "", location.pathname);
+    const card = document.querySelector<HTMLElement>(`[data-conversa="${CSS.escape(phone)}"]`);
+    card?.scrollIntoView({ block: "center" });
+    const link = card?.querySelector<HTMLAnchorElement>("a[data-whatsapp-app]");
+    if (mobile && link) location.href = link.dataset.whatsappApp!;
+  }
+</script>

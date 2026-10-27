@@ -1863,6 +1863,12 @@ coexistência). No celular pessoal sem o número da clínica, abriria o WhatsApp
   aberta), "A clínica responde a partir de amanhã, às 8h." (fechada; hoje, amanhã, dia da semana ou dd/MM) ou "A clínica
   responde assim que possível." (sem horário em 14 dias). Testes: 1 de unidade (quando abre) e 5 de banco
   (`tests/db/bot-nao-entende.test.ts`, pelo webhook com a Meta simulada).
+  **Ajuste da F8.5c no teste do cliente (27/out):** no iPhone, o toque na notificação abria o `wa.me` numa janela de
+  navegador por cima do app da Tela de Início; ao voltar do WhatsApp, ficava a janela vazia ("Buscar ou digitar nome do
+  site"). Agora o toque abre a tela **Atendimento** com a conversa em destaque (`?conversa=`; o endereço é limpo em
+  seguida) e, no celular, abre o WhatsApp sozinho pelo endereço do aplicativo (`whatsapp://send?phone=`), sem a janela
+  de navegador; os botões "Abrir no WhatsApp" usam o mesmo endereço no celular (no computador, o `wa.me`). Conferido no
+  navegador local (computador e iPhone simulado).
 
 ## F10 — Primeiro piloto
 

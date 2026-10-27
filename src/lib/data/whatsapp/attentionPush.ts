@@ -2,7 +2,7 @@ import webpush from "web-push";
 import { addDays, formatInstant, localDateOf } from "../../clinicTime";
 import type { WebPushEnv } from "../../env";
 import { logError } from "../../log";
-import { formatPhoneBR, whatsappHref } from "../../phone";
+import { formatPhoneBR } from "../../phone";
 import { isReceptionOpen, type ReceptionHours } from "../../receptionHours";
 import type { DbClient } from "../clients";
 import { DataError, unwrap, unwrapOne } from "../errors";
@@ -40,6 +40,13 @@ export function shouldRemind(item: AttentionItem, receptionOpen: boolean, now: D
   return !item.remindedAt || item.remindedAt.getTime() < item.lastActivityAt.getTime();
 }
 
+/**
+ * O toque abre a tela Atendimento com a conversa em destaque (e, no celular,
+ * o WhatsApp em seguida): um endereço do próprio RecepClinic, para o app da
+ * Tela de Início continuar nele ao voltar do WhatsApp (cliente, 27/out/2026).
+ */
+const conversationUrl = (phone: string) => `/admin/atendimento?conversa=${encodeURIComponent(phone)}`;
+
 const who = (item: AttentionItem) => item.name ?? formatPhoneBR(item.phone);
 const excerpt = (text: string | null | undefined, max = 90) => (!text ? null : text.length > max ? `${text.slice(0, max - 1)}…` : text);
 
@@ -49,7 +56,7 @@ export function waitingMessage(item: AttentionItem): PushMessage {
   return {
     title,
     body: [handoffReasonLabel(item.reason), quote ? `“${quote}”` : null, "Toque para abrir a conversa."].filter(Boolean).join(" · "),
-    url: whatsappHref(item.phone),
+    url: conversationUrl(item.phone),
     tag: `atendimento-${item.phone}`,
   };
 }
@@ -58,7 +65,7 @@ export function reminderMessage(item: AttentionItem): PushMessage {
   return {
     title: `${who(item)} segue com a clínica`,
     body: "Se já terminou, escreva #bot na conversa para o bot voltar a atender.",
-    url: whatsappHref(item.phone),
+    url: conversationUrl(item.phone),
     tag: `atendimento-${item.phone}`,
   };
 }

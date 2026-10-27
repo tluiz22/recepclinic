@@ -44,7 +44,7 @@ describe("notificações do atendimento humano (F8.5c)", () => {
     expect(waitingMessage(base)).toEqual({
       title: "Maria Souza quer falar com a clínica",
       body: "Pediu para falar com a clínica · “Queria saber do convênio” · Toque para abrir a conversa.",
-      url: "https://wa.me/5584988880001",
+      url: "/admin/atendimento?conversa=%2B5584988880001",
       tag: "atendimento-+5584988880001",
     });
     expect(waitingMessage({ ...base, name: null, reason: "no_availability", lastPatientMessage: null }).title).toBe("(84) 98888-0001 aguarda atendimento humano");
