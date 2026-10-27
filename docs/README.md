@@ -348,7 +348,9 @@
   consultório pela "Nova clínica" na produção, configuração, agenda atual, sessão de conexão com o Suporte, forma de
   pagamento, templates, coexistência e ativação). Seguem pendentes de validação no staging: F8.1, F8.2, F8.2b, F8.3 e
   a ajuda contextual. **Publicar na produção:** validado no staging, migrações novas na produção (simulação → aplicar
-  → conferir) e `git push origin main:producao`. **Pendente de validação do cliente no staging (no fim, como pedido):** F8.1, F8.2, F8.2b
+  → conferir) e `git push origin main:producao`. **Piloto (decisões de 26/out no [plano](plano.md)):** primeiro uma clínica de
+  testes **permanente e ativa** na produção, com um 2º número de testes do cliente (já no WhatsApp Business); depois,
+  a Dra. Ana Karina; e um roteiro compartilhável para as clínicas passarem o WhatsApp comum para o Business. **Pendente de validação do cliente no staging (no fim, como pedido):** F8.1, F8.2, F8.2b
   e F8.3. Seguem também a validação da ajuda contextual (Alta, Média e Baixa).
 >   Banco local com os dados fictícios das Métricas (`npm run db:reset` limpa). Em paralelo,
 >   aguardar a Meta (Análise do App até ~29/out).

@@ -1823,6 +1823,21 @@ Dra. Ana Karina") e o de testes (`+55 61 9903-3143`, que pelos docs está só na
   limitada antes de seguir.
   **F10.0c concluída em 26/out** (projeto novo com o Legacy JWT Secret; detalhes e o que surgiu no caminho em
   [`producao.md`](producao.md)); falta só conferir o primeiro backup diário em 27/out.
+
+**Piloto, decisões do cliente (26/out):**
+1. **Primeiro, uma clínica de testes na produção**, com um **segundo número de testes do cliente** (já no app WhatsApp
+   Business), passando pelas mesmas etapas do piloto (Nova clínica em implantação, configuração, agenda atual, conexão
+   por coexistência, conferência, ativação). **Depois**, o piloto real com o WhatsApp da Dra. Ana Karina.
+2. A clínica de testes **fica ativa e permanente** na produção, para conferir cada publicação de ponta a ponta (exceção
+   à regra "produção só com clínicas reais"; recusados: deixá-la desativada; apagá-la).
+3. A F8.2b e a F8.3 são **validadas no próprio teste da produção** (sem rodada antes no staging); a F8.1 (janela da
+   Meta) também, na conexão.
+4. **Roteiro para as clínicas** passarem o número do WhatsApp comum para o **WhatsApp Business** (o número da Dra. Ana
+   Karina ainda não está nele), como **documento compartilhável no claude.ai** (recusados: página no site; PDF).
+   Requisitos da coexistência conferidos na documentação da Meta em 26/out: app 2.24.17 ou mais nova; na conexão, um
+   código e o "Conectar" numa mensagem do Facebook; histórico de até 6 meses, sem grupos; depois dela, sem mensagens
+   temporárias, visualização única, localização em tempo real e listas de transmissão, e sem o WhatsApp para Windows;
+   celular principal parado ~14 dias desconecta.
 - **Depois, o piloto (F10.1 em diante):** clínica do consultório pela "Nova clínica" (nasce em implantação),
   configuração, agenda atual, sessão de conexão com o Suporte, forma de pagamento, templates aprovados, conferência da
   coexistência, ativação.
