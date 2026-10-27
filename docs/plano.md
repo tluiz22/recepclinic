@@ -1753,6 +1753,41 @@ página da coexistência):
   conexão do Suporte sem chamar a Meta; aviso da Meta pelo webhook; só a credencial da clínica marca). No navegador
   local: marcar a forma de pagamento, desconectar com a confirmação e o aviso da Meta no Início.
 
+## F8.5 — Atendimento humano (coexistência)
+
+**Origem (cliente, 27/out):** na coexistência, tudo o que o bot conversa aparece no app WhatsApp Business da clínica
+(espelho da Meta, sem como esconder) e a recepção não sabe, de relance, o que precisa dela. **Decisão: manter a
+coexistência** (recusados: dois números, com o bot num número só da API; tudo no RecepClinic, com caixa de conversas no
+painel) e acompanhar **pelo RecepClinic** o que está pendente de atendimento humano, com um botão que abre a conversa no
+WhatsApp e sempre o lembrete do `#bot`. Proposta no [canvas](https://claude.ai/artifact/TGSF8DVMczXShqMpCuVjDw).
+
+**Decisões do cliente (27/out):**
+1. **A e B juntas:** tela "Atendimento humano" (A) e notificação no celular (B) na mesma entrega.
+2. **A (tela):** item "Atendimento" no menu, com contador; "Aguardando a clínica" (nome, telefone em texto, motivo, há
+   quanto tempo espera, última mensagem do paciente e **Abrir no WhatsApp**) e "Em atendimento pela clínica" (com o
+   lembrete: escrever `#bot` ao terminar; sem `#bot`, o bot volta sozinho no prazo da pausa); faixa no Início; a mesma
+   lista no celular. Paciente que escreve de novo durante o atendimento volta para "Aguardando".
+3. **Quem vê:** Recepção, Administrador e Profissional; cada pessoa liga a notificação no próprio celular.
+4. **"Devolver ao bot"** na conversa em atendimento, com confirmação (faz o mesmo que o `#bot`, sem mandar nada ao
+   paciente); o `#bot` continua como o caminho principal no lembrete.
+5. **B (notificação):** "Fulano quer falar com a clínica" quando a conversa passa a aguardar; um toque abre a conversa.
+   **Lembrete do `#bot`** uma vez, quando a conversa fica **1 hora sem mensagens** em atendimento.
+6. **Só no horário da recepção:** fora dele, a conversa entra na lista sem notificação; ao abrir o horário, um resumo
+   ("3 conversas aguardando a clínica").
+7. **Horário da recepção:** campo novo em Configurações › Clínica, por dia da semana, sem os feriados da clínica; vem
+   preenchido com o início e o fim dos horários das agendas, e a clínica ajusta.
+
+**Limite registrado:** o "Abrir no WhatsApp" (`wa.me`) abre a conversa no WhatsApp que estiver com o número da clínica
+naquele aparelho (celular da clínica, WhatsApp Web ou app do Mac; o WhatsApp para Windows não funciona na
+coexistência). No celular pessoal sem o número da clínica, abriria o WhatsApp pessoal.
+
+**Subetapas (proposta do Claude, 27/out):**
+- **F8.5a Dados e tela:** guardar o motivo e os horários da pausa (migração), a tela "Atendimento" (computador e
+  celular), o contador no menu, a faixa no Início e o "Devolver ao bot".
+- **F8.5b Horário da recepção:** o campo em Configurações › Clínica, preenchido a partir das agendas.
+- **F8.5c Notificações:** o painel instalável no celular (já tem o manifesto) com notificações do navegador (Web Push):
+  ligar e desligar por pessoa, o aviso de "aguardando", o lembrete de 1 hora e o resumo ao abrir o horário.
+
 ## F10 — Primeiro piloto
 
 **Escopo:** produção (Supabase Pro + Vercel Pro, backup conferido); criação da 1ª clínica pelo
