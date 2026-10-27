@@ -411,6 +411,14 @@ pessoal para os testes. **Do passo 1 ao 6, o staging fica sem WhatsApp** (bot e 
    número; no celular, abrir a mensagem do Facebook no WhatsApp Business e tocar em **Conectar** (com o código que a
    janela mostrar); compartilhar o histórico ou não, tanto faz (o RecepClinic não grava). O cartão "Conexão" deve
    mostrar **Conectado, coexistência**. Erro na janela: anotar a mensagem e avisar o Claude.
+   **Tentativa de 27/out:** a janela foi direto para "Adicione seu número… SMS / Ligação telefônica" (caminho de
+   número novo), sem perguntar o portfólio: o cliente só tinha o portfólio RecepClinic (dono do app, sem a
+   coexistência). Interrompido antes do SMS. Criar outro portfólio deu "Você atingiu o limite do número de negócios
+   que pode criar" (o portfólio apagado do piloto antigo conta). **Decisão do cliente (27/out):** outra pessoa de
+   confiança (não a Dra. Ana Karina, que precisa da vaga no piloto real) cria o portfólio **Consultorio de Teste** com o
+   próprio Facebook e adiciona o cliente como administrador (*Configurações › Pessoas*); sem trocar senhas. Com dois
+   portfólios, a janela deve perguntar qual usar: escolher **Consultorio de Teste**; depois do número, deve aparecer um
+   código para copiar (não SMS ou ligação).
 7. **Claude, pelo terminal:** confere no banco a conexão (`coexistence`, sincronizações), o desvio do webhook para o
    `teste.` na conta nova e os templates criados.
 8. **Forma de pagamento:** no Gerenciador do WhatsApp do **portfólio novo**, *Visão geral › Adicionar forma de
