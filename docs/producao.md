@@ -36,7 +36,7 @@ Fazer na ordem. O `app.` só passa para a produção no passo 9, com tudo pronto
    **Se não aparecer, parar e avisar o Claude**: a credencial limitada à clínica (bot e páginas do paciente) é assinada
    com ele, e o Claude ajusta antes de continuar.
 4. Preencher no `.env.production` (abrir com `open -e .env.production`):
-   - *Data API*: Project URL → `PUBLIC_SUPABASE_URL`;
+   - *Data API*: Project URL → `PUBLIC_SUPABASE_URL`, **sem** o `/rest/v1/` do fim (a tela mostra com ele);
    - *API Keys*: **anon** → `PUBLIC_SUPABASE_ANON_KEY`; **service_role** → `SUPABASE_SERVICE_ROLE_KEY`;
    - *JWT Keys*: **Legacy JWT Secret** → `SUPABASE_JWT_SECRET` (**nunca revogar**, como no staging);
    - a senha do banco → `SUPABASE_DB_PASSWORD`;
@@ -106,6 +106,11 @@ rotinas chamam o `app.`, que ainda é o staging, e recebem recusa (o segredo é 
 2. Projeto **recepclinic-producao** › *Settings › Domains*: **Add** `app.recepclinic.com.br`, sem redirecionar. Se a
    Vercel mostrar um CNAME diferente de `ed13a388a0d7bbde.vercel-dns-017.com`, trocar o destino do registro `app` na
    Cloudflare.
+   Na F10.0c (26/out) a Vercel pediu **Verification Required** ("linked to another Vercel account": o `app.` tinha sido
+   cadastrado na conta pessoal): TXT `_vercel` com o `vc-domain-verify=…` que ela mostra, criado na Cloudflare (pode
+   ficar). As rotinas diárias (`series`, 03:00, e `notas-fiscais`, 03:30) ainda não tinham rodado e a Saúde dava 503:
+   o Claude rodou as duas uma vez (`select app.call_system_route('/api/cron/series')` e a das notas), sem clínica
+   nenhuma, só para registrar a execução.
 3. Supabase do **staging** (*Authentication › URL Configuration*): tirar `https://app.recepclinic.com.br/**` das Redirect
    URLs (fica só o `teste.`).
 4. **Meta: nada muda.** O webhook principal do app continua em `https://app.recepclinic.com.br/api/whatsapp/webhook`,
@@ -131,3 +136,10 @@ scripts/link-de-senha.mjs <seu e-mail>`.
 
 Validada no staging, o Claude (com o OK do cliente) aplica as migrações novas na produção (simulação → aplicar →
 conferir) e leva a `main` para a `producao` (`git push origin main:producao`); a Vercel publica a produção.
+
+## Feito em 26/out
+
+Passos 1 a 10 feitos e conferidos (cliente e Claude); passo 11 conferido pelo Claude: `app.` na produção (login,
+saúde, webhook com o token da Meta, erros), `teste.` no staging, 1 login de Suporte, banco sem clínica e sem erro;
+e-mail de senha da produção conferido pelo cliente (remetente, modelo e link em `app.`). Falta só conferir o
+primeiro backup diário (27/out).

@@ -340,7 +340,15 @@
   conferida, trava `main` no staging); passo 2 (organização `RecepClinic Produção` Pro, projeto
   `recepclinic-producao` em São Paulo, com Legacy JWT Secret; `.env.production` conferido); passo 3 (chave
   `producao-smtp`, login no SMTP conferido); passo 4 (63 migrações aplicadas, sem seed; estrutura igual à do staging:
-  57 tabelas, 205 políticas, 9 rotinas, 2 buckets; banco vazio). **Pendente de validação do cliente no staging (no fim, como pedido):** F8.1, F8.2, F8.2b
+  57 tabelas, 205 políticas, 9 rotinas, 2 buckets; banco vazio). Passos 5 a 11 feitos em 26/out: Auth da produção (cadastro
+  fechado, conferido pela API), branch `producao` (commit `1a4f09e`), projeto `recepclinic-producao` na Vercel (só
+  Production, publica a `producao`), agendador, `app.` passado para a produção (TXT `_vercel` de verificação),
+  `app.` tirado do Supabase do staging, login do Suporte e e-mail de senha conferidos. **F10.0c concluída em 26/out.**
+  **Retomar daqui:** conferir o 1º backup da produção (27/out, *Database › Backups*); depois, o piloto (clínica do
+  consultório pela "Nova clínica" na produção, configuração, agenda atual, sessão de conexão com o Suporte, forma de
+  pagamento, templates, coexistência e ativação). Seguem pendentes de validação no staging: F8.1, F8.2, F8.2b, F8.3 e
+  a ajuda contextual. **Publicar na produção:** validado no staging, migrações novas na produção (simulação → aplicar
+  → conferir) e `git push origin main:producao`. **Pendente de validação do cliente no staging (no fim, como pedido):** F8.1, F8.2, F8.2b
   e F8.3. Seguem também a validação da ajuda contextual (Alta, Média e Baixa).
 >   Banco local com os dados fictícios das Métricas (`npm run db:reset` limpa). Em paralelo,
 >   aguardar a Meta (Análise do App até ~29/out).

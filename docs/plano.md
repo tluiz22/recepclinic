@@ -1821,6 +1821,8 @@ Dra. Ana Karina") e o de testes (`+55 61 9903-3143`, que pelos docs está só na
   (`demo-clinicas`, `reset-test-data`) passam a recusar a produção (`RECEPCLINIC_PRODUCAO=1` ou `SITE_URL` do `app.`).
   Ponto de parada: se o projeto novo do Supabase não tiver o Legacy JWT Secret, ajustar a assinatura da credencial
   limitada antes de seguir.
+  **F10.0c concluída em 26/out** (projeto novo com o Legacy JWT Secret; detalhes e o que surgiu no caminho em
+  [`producao.md`](producao.md)); falta só conferir o primeiro backup diário em 27/out.
 - **Depois, o piloto (F10.1 em diante):** clínica do consultório pela "Nova clínica" (nasce em implantação),
   configuração, agenda atual, sessão de conexão com o Suporte, forma de pagamento, templates aprovados, conferência da
   coexistência, ativação.
