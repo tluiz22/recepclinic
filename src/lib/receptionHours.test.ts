@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  describeOpening,
   describeReceptionHours,
   isReceptionOpen,
   nextReceptionOpening,
@@ -61,5 +62,13 @@ describe("horário da recepção (F8.5b)", () => {
     expect(describeReceptionHours(hours)).toBe("Seg a Sex 08:00–18:00 · Sáb 08:00–12:00");
     expect(describeReceptionHours([weekday, weekday, null, null, null, null, null])).toBe("Seg 08:00–18:00 · Dom 08:00–18:00");
     expect(describeReceptionHours([null, null, null, null, null, null, null])).toBe("Fechada todos os dias");
+  });
+
+  it("quando a recepção abre, para o paciente", () => {
+    const now = at("2026-10-27T19:00:00");
+    expect(describeOpening(at("2026-10-27T20:00:00"), now, TZ)).toBe("hoje, às 20h");
+    expect(describeOpening(at("2026-10-28T08:00:00"), now, TZ)).toBe("amanhã, às 8h");
+    expect(describeOpening(at("2026-10-29T13:30:00"), now, TZ)).toBe("quinta-feira, às 13h30");
+    expect(describeOpening(at("2026-11-10T08:00:00"), now, TZ)).toBe("10/11, às 8h");
   });
 });

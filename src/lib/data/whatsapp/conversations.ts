@@ -95,9 +95,11 @@ export type Conversation = {
   funnelSessionId: string | null;
   funnelFlow: FunnelFlow | null;
   updatedAt: Date;
+  /** Mensagens seguidas que o bot não entendeu (F8.5d). */
+  notUnderstoodCount: number;
 };
 
-const COLUMNS = "id, contact_phone, contact_id, state, context, human_handoff, human_handoff_at, funnel_session_id, funnel_flow, updated_at";
+const COLUMNS = "id, contact_phone, contact_id, state, context, human_handoff, human_handoff_at, funnel_session_id, funnel_flow, updated_at, not_understood_count";
 
 type Row = {
   id: string;
@@ -110,6 +112,7 @@ type Row = {
   funnel_session_id: string | null;
   funnel_flow: string | null;
   updated_at: string;
+  not_understood_count: number;
 };
 
 const toConversation = (row: Row): Conversation => ({
@@ -123,6 +126,7 @@ const toConversation = (row: Row): Conversation => ({
   funnelSessionId: row.funnel_session_id,
   funnelFlow: row.funnel_flow as FunnelFlow | null,
   updatedAt: new Date(row.updated_at),
+  notUnderstoodCount: row.not_understood_count ?? 0,
 });
 
 export async function getConversation(db: DbClient, clinicId: string, phone: string): Promise<Conversation | null> {
@@ -287,9 +291,17 @@ export async function returnToBot(db: DbClient, clinicId: string, phone: string)
   unwrap(
     await db
       .from("conversation_state")
-      .update({ human_handoff: false, state: WELCOME, context: {}, funnel_session_id: null, funnel_flow: null })
+      .update({ human_handoff: false, state: WELCOME, context: {}, funnel_session_id: null, funnel_flow: null, not_understood_count: 0 })
       .eq("clinic_id", clinicId)
       .eq("contact_phone", phone),
+    "Conversa do WhatsApp",
+  );
+}
+
+/** Mensagens seguidas que o bot não entendeu (F8.5d): soma ou zera depois de cada mensagem respondida. */
+export async function setNotUnderstoodCount(db: DbClient, clinicId: string, phone: string, count: number): Promise<void> {
+  unwrap(
+    await db.from("conversation_state").update({ not_understood_count: count }).eq("clinic_id", clinicId).eq("contact_phone", phone),
     "Conversa do WhatsApp",
   );
 }
@@ -336,7 +348,7 @@ export async function pauseForHuman(
   db: DbClient,
   clinicId: string,
   phone: string,
-  { contactId, reason }: { contactId: string | null; reason: "agent_took_over" | "requested" | "bot_limit" | "no_availability" },
+  { contactId, reason }: { contactId: string | null; reason: "agent_took_over" | "requested" | "bot_limit" | "no_availability" | "not_understood" },
   now: Date = new Date(),
 ): Promise<void> {
   const current = await getConversation(db, clinicId, phone);
@@ -378,6 +390,7 @@ export async function pauseForHuman(
         context: {},
         human_handoff: true,
         human_handoff_at: now.toISOString(),
+        not_understood_count: 0,
         // Atendimento humano (F8.5a): o motivo e o início são da pausa que começa; numa pausa em andamento, ficam.
         ...(pauseActive ? {} : { handoff_reason: reason, handoff_started_at: now.toISOString() }),
         funnel_session_id: null,

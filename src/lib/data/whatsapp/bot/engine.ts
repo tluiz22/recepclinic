@@ -11,7 +11,7 @@ import { logFunnelStep, setConversationState, WELCOME, type Conversation } from 
 import { recordOutboundMessage, type SendOutcome } from "../messages";
 import type { ClinicSender, ListSection, ReplyButton } from "../send";
 import { loadCatalog, type BotCatalog } from "./catalog";
-import { LIST_BUTTON, wordsFor, type Words } from "./texts";
+import { LIST_BUTTON, MEDIA_AUDIO, MEDIA_OTHER, wordsFor, type Words } from "./texts";
 
 // Núcleo do bot (F6.3): a conversa em andamento, o que se sabe da clínica e
 // as respostas. Toda resposta é enviada pelo número da clínica e registrada
@@ -52,7 +52,40 @@ export type Bot = BotEnv & {
   catalog(): Promise<BotCatalog>;
   /** Lista ou botões enviados nesta mensagem (id da Meta; null = foram em texto). */
   promptId?: string | null;
+  /** Tipo da mensagem do paciente ("text", "audio", "image"…; F8.5d). */
+  incomingType: string | null;
+  /** O bot respondeu "não entendi" a esta mensagem (F8.5d). */
+  notUnderstoodSaid?: boolean;
 };
+
+/** Mensagens seguidas que o bot não entende até a conversa ir para a clínica (cliente, 27/out/2026). */
+export const NOT_UNDERSTOOD_LIMIT = 4;
+
+/** A próxima resposta seria o 4º "não entendi" seguido: o fluxo para e a conversa vai para a clínica (router). */
+export class NotUnderstoodLimitReached extends Error {
+  constructor() {
+    super("Bot: limite de mensagens não entendidas");
+    this.name = "NotUnderstoodLimitReached";
+  }
+}
+
+const AUDIO_TYPES = new Set(["audio", "voice"]);
+const MEDIA_TYPES = new Set(["image", "video", "sticker", "document"]);
+
+/**
+ * Cada "não entendi" passa por aqui (F8.5d): conta uma vez por mensagem do
+ * paciente e, com a recepção no app (coexistência), barra o 4º seguido. Para
+ * mídia, o texto próprio no lugar do "não entendi" genérico.
+ */
+function notUnderstood(b: Bot, body: string): string {
+  if (!b.notUnderstoodSaid && b.receptionAvailable && b.convo.notUnderstoodCount + 1 >= NOT_UNDERSTOOD_LIMIT) throw new NotUnderstoodLimitReached();
+  b.notUnderstoodSaid = true;
+  if (b.incomingType && AUDIO_TYPES.has(b.incomingType)) return MEDIA_AUDIO;
+  if (b.incomingType && MEDIA_TYPES.has(b.incomingType)) return MEDIA_OTHER;
+  return body;
+}
+
+const NOT_UNDERSTOOD_KIND = "bot_not_understood";
 
 /**
  * Última lista ou botões da conversa (id da Meta), no contexto: toque numa
@@ -87,7 +120,7 @@ export async function loadBotClinic(env: BotEnv): Promise<BotClinic> {
   };
 }
 
-export async function createBot(env: BotEnv, convo: Conversation, incomingId: string | null = null): Promise<Bot> {
+export async function createBot(env: BotEnv, convo: Conversation, incomingId: string | null = null, incomingType: string | null = null): Promise<Bot> {
   const [clinic, features, connection] = await Promise.all([
     loadBotClinic(env),
     getClinicFeatures(env.db, env.clinicId),
@@ -104,6 +137,7 @@ export async function createBot(env: BotEnv, convo: Conversation, incomingId: st
     features,
     receptionAvailable: connection?.coexistence ?? false,
     incomingId,
+    incomingType,
     custom,
     catalog: () => (catalog ??= loadCatalog(env.db, env.clinicId, features)),
   };
@@ -127,10 +161,12 @@ async function record(b: Bot, kind: string, outcome: SendOutcome, body: string):
 
 /** Texto livre (sempre dentro da janela de 24h: o paciente acabou de escrever). */
 export async function say(b: Bot, kind: string, body: string): Promise<void> {
-  await record(b, kind, await b.sender.text(b.phone, body), body);
+  const text = kind === NOT_UNDERSTOOD_KIND ? notUnderstood(b, body) : body;
+  await record(b, kind, await b.sender.text(b.phone, text), text);
 }
 
 export async function sendList(b: Bot, kind: string, body: string, sections: ListSection[]): Promise<void> {
+  if (kind === NOT_UNDERSTOOD_KIND) notUnderstood(b, body);
   const outcome = await b.sender.list(b.phone, body, LIST_BUTTON, sections);
   await record(b, kind, outcome, body);
   await rememberPrompt(b, outcome.sent ? outcome.messageId : null);
@@ -138,6 +174,7 @@ export async function sendList(b: Bot, kind: string, body: string, sections: Lis
 }
 
 export async function sendButtons(b: Bot, kind: string, body: string, buttons: ReplyButton[]): Promise<void> {
+  if (kind === NOT_UNDERSTOOD_KIND) notUnderstood(b, body);
   const outcome = await b.sender.buttons(b.phone, body, buttons);
   await record(b, kind, outcome, body);
   await rememberPrompt(b, outcome.sent ? outcome.messageId : null);

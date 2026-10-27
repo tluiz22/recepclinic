@@ -113,6 +113,22 @@ export function notUnderstood(isMainMenu = false): string {
 }
 export const NOT_UNDERSTOOD_YES_NO = "Não entendi 🙏 Responda apenas Sim ou Não.";
 
+// Mídia no lugar de uma resposta (F8.5d, cliente, 27/out/2026): o bot só lê texto e toques.
+export const MEDIA_AUDIO = "Ainda não consigo ouvir áudios 🙏 Toque em uma das opções abaixo ou escreva.";
+export const MEDIA_OTHER = "Ainda não consigo ver fotos, vídeos, figurinhas ou arquivos 🙏 Toque em uma das opções abaixo ou escreva.";
+
+/**
+ * 4ª mensagem seguida que o bot não entende (F8.5d): a conversa vai para a
+ * clínica. `when`: quando a recepção abre ("amanhã, às 8h"); null = aberta
+ * agora; undefined = sem horário conhecido.
+ */
+export function notUnderstoodHandoff(when: string | null | undefined): string {
+  const first = "Vou pedir para alguém da clínica te atender por aqui.";
+  if (when === null) return `${first} Aguarde, por favor.`;
+  if (when === undefined) return `${first} A clínica responde assim que possível.`;
+  return `${first} A clínica responde a partir de ${when}.`;
+}
+
 /** Conversa parada há 15 minutos (cliente, 07/out). */
 export const IDLE_CLOSED =
   "Como não tivemos resposta nos últimos minutos, encerramos este atendimento. Quando quiser, é só mandar uma mensagem que começamos de novo. 😊";

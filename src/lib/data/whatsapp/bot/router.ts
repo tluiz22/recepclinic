@@ -1,16 +1,26 @@
 import type { DbClient } from "../../clients";
 import { unwrap } from "../../errors";
 import { hasFeature } from "../../features";
-import { checkHandoff, IDLE_TIMEOUT_MINUTES, isPastIdleTimeout, logAbandonment, openConversation, setConversationState, WELCOME } from "../conversations";
+import {
+  checkHandoff,
+  IDLE_TIMEOUT_MINUTES,
+  isPastIdleTimeout,
+  logAbandonment,
+  openConversation,
+  setConversationState,
+  setNotUnderstoodCount,
+  WELCOME,
+  type Conversation,
+} from "../conversations";
 import { contactIdByPhone, recordOutboundMessage } from "../messages";
 import { toE164, type WaMessage } from "../meta";
 import type { ClinicSender } from "../send";
 import { BOOKING_STATES, handleBookingState } from "./booking";
-import { createBot, currentPrompt, say, type Bot, type BotEnv } from "./engine";
+import { createBot, currentPrompt, NotUnderstoodLimitReached, say, type Bot, type BotEnv } from "./engine";
 import { ENTRY_STATES, handleEntryState, startConversation } from "./entry";
 import { extractSelection, isBackToMenu } from "./input";
 import { handleInfo, handleMenu, handlePreparationChoice, handleSubmenu, showMenu } from "./menus";
-import { handleManageState, handleOfferTap, handleReminderTap, MANAGE_STATES, offerTapOf, reminderTapOf } from "./manage";
+import { handleManageState, handleOfferTap, handleReminderTap, handoffNotUnderstood, MANAGE_STATES, offerTapOf, reminderTapOf } from "./manage";
 import { BLOCKED_HANDOFF, BLOCKED_RECEPTION_WILL_CONTACT, IDLE_CLOSED } from "./texts";
 import { blockedContactByPhone, blockedNoticeDue, markBlockedNotice } from "../contactBlock";
 import { listBotMessages } from "../customMessages";
@@ -50,15 +60,36 @@ export async function handleIncomingMessage(env: BotEnv, message: WaMessage): Pr
   if (convo.state !== WELCOME && isPastIdleTimeout(convo.updatedAt, env.now)) {
     await logAbandonment(env.db, env.clinicId, convo, "timeout", env.now);
     convo = await setConversationState(env.db, env.clinicId, phone, WELCOME, { context: {} }, env.now);
+    // Conversa nova: a contagem do "não entendi" recomeça (F8.5d).
+    if (convo.notUnderstoodCount > 0) {
+      await setNotUnderstoodCount(env.db, env.clinicId, phone, 0);
+      convo = { ...convo, notUnderstoodCount: 0 };
+    }
   }
 
-  const b = await createBot(env, convo, message.id ?? null);
+  const b = await createBot(env, convo, message.id ?? null, message.type ?? null);
+  try {
+    await dispatch(env, b, convo, phone, message);
+  } catch (error) {
+    // 4ª mensagem seguida que o bot não entende (F8.5d): a conversa vai para a clínica.
+    if (!(error instanceof NotUnderstoodLimitReached)) throw error;
+    await handoffNotUnderstood(b);
+    return "handled";
+  }
+  // Mensagens seguidas que o bot não entendeu (F8.5d): soma uma ou zera.
+  const count = b.notUnderstoodSaid ? convo.notUnderstoodCount + 1 : 0;
+  if (count !== convo.notUnderstoodCount) await setNotUnderstoodCount(env.db, env.clinicId, phone, count);
+  return "handled";
+}
+
+/** Responde a mensagem conforme o ponto da conversa (o "não entendi" passa pelo motor, que conta). */
+async function dispatch(env: BotEnv, b: Bot, convo: Conversation, phone: string, message: WaMessage): Promise<void> {
   const selection = extractSelection(message);
 
   const blocked = await blockedContactByPhone(env.db, env.clinicId, phone);
   if (blocked && (!MANAGE_STATES.has(convo.state) || isBackToMenu(selection))) {
     await answerBlocked(b, blocked);
-    return "handled";
+    return;
   }
 
   // Toque numa lista ou botão de uma mensagem anterior (já respondida, ou de um passo que já passou):
@@ -67,27 +98,27 @@ export async function handleIncomingMessage(env: BotEnv, message: WaMessage): Pr
   if (tapped && message.context?.id && message.context.id !== currentPrompt(convo)) {
     if (convo.state !== WELCOME && convo.state !== "MENU") await logAbandonment(env.db, env.clinicId, convo, "back_to_menu", env.now);
     await showMenu(b, { notUnderstood: !isBackToMenu(selection) });
-    return "handled";
+    return;
   }
 
   // "Voltar ao menu" vale no meio de qualquer fluxo.
   if (convo.state !== WELCOME && convo.state !== "MENU" && isBackToMenu(selection)) {
     await logAbandonment(env.db, env.clinicId, convo, "back_to_menu", env.now);
     await showMenu(b);
-    return "handled";
+    return;
   }
 
   if (ENTRY_STATES.has(convo.state)) {
     await handleEntryState(b, convo.state, selection);
-    return "handled";
+    return;
   }
   if (MANAGE_STATES.has(convo.state)) {
     await handleManageState(b, convo.state, selection);
-    return "handled";
+    return;
   }
   if (BOOKING_STATES.has(convo.state)) {
     await handleBookingState(b, convo.state, selection);
-    return "handled";
+    return;
   }
   switch (convo.state) {
     case "MENU":
@@ -107,7 +138,7 @@ export async function handleIncomingMessage(env: BotEnv, message: WaMessage): Pr
       // WELCOME, ou estado de outra versão do bot: começa do zero (com atendimento marcado, pergunta antes do menu).
       await startConversation(b);
   }
-  return "handled";
+  return;
 }
 
 /** Número bloqueado: a resposta neutra na primeira mensagem do dia; a conversa fica no começo. */

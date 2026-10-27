@@ -1850,6 +1850,19 @@ coexistência). No celular pessoal sem o número da clínica, abriria o WhatsApp
   3. **Mensagem da passagem com o Horário da recepção (F8.5b):** no horário, "Vou pedir para alguém da clínica te atender
      por aqui. Aguarde, por favor."; fora dele, com quando a clínica responde ("a partir de amanhã, às 8h").
   Vale para a conexão com coexistência (sem ela, ninguém responderia pelo app: segue como hoje).
+  **F8.5d implementada, testada no local e publicada no staging em 27/out** (migração
+  `20261027180000_bot_nao_entende.sql`, aplicada e conferida no staging antes do push): coluna
+  `conversation_state.not_understood_count`; todo "não entendi" do bot (texto, lista ou botões) passa pelo motor
+  (`engine.ts`), que conta uma vez por mensagem e, **com coexistência**, barra o 4º seguido
+  (`NotUnderstoodLimitReached`); a despachante (`router.ts`) passa a conversa para a clínica (`handoffNotUnderstood`,
+  motivo `not_understood`, "O bot não entendeu as mensagens" na tela Atendimento, com a notificação da F8.5c) e soma ou
+  zera a contagem depois de cada resposta (zera também na pausa, na volta ao bot e na conversa que recomeça depois de 15
+  minutos parada). Áudio: "Ainda não consigo ouvir áudios 🙏 Toque em uma das opções abaixo ou escreva."; foto, vídeo,
+  figurinha e documento: "Ainda não consigo ver fotos, vídeos, figurinhas ou arquivos 🙏 …" (também sem coexistência).
+  Mensagem da passagem: "Vou pedir para alguém da clínica te atender por aqui." + "Aguarde, por favor." (recepção
+  aberta), "A clínica responde a partir de amanhã, às 8h." (fechada; hoje, amanhã, dia da semana ou dd/MM) ou "A clínica
+  responde assim que possível." (sem horário em 14 dias). Testes: 1 de unidade (quando abre) e 5 de banco
+  (`tests/db/bot-nao-entende.test.ts`, pelo webhook com a Meta simulada).
 
 ## F10 — Primeiro piloto
 

@@ -2,7 +2,10 @@ import type { Enums } from "../../../supabase/database.types";
 import { bookingPath } from "../../../publicId";
 import { cancelAppointment, findReturnOrigin, logTrail, rescheduleAppointment } from "../../agenda/appointments";
 import { BOT_LINK_TTL_MS, createBookingLink } from "../../agenda/links";
-import { getFreeSlotsBefore } from "../../agenda/slots";
+import { getFreeSlotsBefore, loadClinicHolidays } from "../../agenda/slots";
+import { getReceptionHours } from "../../config/receptionHours";
+import { addDays } from "../../../clinicTime";
+import { describeOpening, isReceptionOpen, nextReceptionOpening } from "../../../receptionHours";
 import { DataError, unwrap } from "../../errors";
 import { activeWaitlistAppointmentIds, endAsAdvanced, joinBlockReason, joinWaitlist, leaveWaitlist } from "../../waitlist/entries";
 import { acceptOffer, declineOffer, MIN_LEAD_MS, type OfferReplyResult, type OfferSender } from "../../waitlist/offers";
@@ -781,6 +784,21 @@ export async function handleOfferTap(b: Bot, tap: NonNullable<ReturnType<typeof 
 export async function handoff(b: Bot): Promise<void> {
   await say(b, "bot_handoff", textFor(b, "handoff", t.HANDOFF));
   await pauseForHuman(b.db, b.clinicId, b.phone, { contactId: b.convo.contactId, reason: "requested" }, b.now);
+}
+
+/**
+ * 4ª mensagem seguida que o bot não entende (F8.5d, cliente, 27/out/2026): a
+ * conversa vai para a clínica, com o horário da recepção na mensagem (fora
+ * dele, quando a clínica responde). Só com a recepção no app (coexistência).
+ */
+export async function handoffNotUnderstood(b: Bot): Promise<void> {
+  const { hours } = await getReceptionHours(b.db, b.clinicId);
+  const holidays = await loadClinicHolidays(b.db, b.clinicId, b.clinic.today, addDays(b.clinic.today, 15));
+  const timeZone = b.clinic.timeZone;
+  const opening = isReceptionOpen(hours, b.now, timeZone, holidays) ? b.now : nextReceptionOpening(hours, b.now, timeZone, holidays);
+  const when = opening === null ? undefined : opening === b.now ? null : describeOpening(opening, b.now, timeZone);
+  await say(b, "bot_handoff_not_understood", t.notUnderstoodHandoff(when));
+  await pauseForHuman(b.db, b.clinicId, b.phone, { contactId: b.convo.contactId, reason: "not_understood" }, b.now);
 }
 
 // ---------------------------------------------------------------------------

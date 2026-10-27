@@ -1,4 +1,4 @@
-import { addDays, isClockTime, localDateOf, localTimeOf, toInstant, weekdayOf } from "./clinicTime";
+import { addDays, formatCalendarDate, isClockTime, localDateOf, localTimeOf, toInstant, weekdayOf } from "./clinicTime";
 import { isNationalHoliday } from "./holidays";
 
 // Horário da recepção (F8.5b, cliente, 27/out/2026): um intervalo por dia da
@@ -82,3 +82,16 @@ export function describeReceptionHours(hours: ReceptionHours): string {
   }
   return parts.length ? parts.join(" · ") : "Fechada todos os dias";
 }
+
+/** Para o paciente: "hoje, às 8h", "amanhã, às 13h30", "segunda-feira, às 8h" ou "10/11, às 8h". */
+export function describeOpening(opening: Date, now: Date, timeZone: string): string {
+  const [hour, minute] = localTimeOf(opening, timeZone).split(":");
+  const time = `${Number(hour)}h${minute === "00" ? "" : minute}`;
+  const today = localDateOf(now, timeZone);
+  const date = localDateOf(opening, timeZone);
+  if (date === today) return `hoje, às ${time}`;
+  if (date === addDays(today, 1)) return `amanhã, às ${time}`;
+  for (let offset = 2; offset <= 6; offset++) if (date === addDays(today, offset)) return `${formatCalendarDate(date, "EEEE")}, às ${time}`;
+  return `${formatCalendarDate(date, "dd/MM")}, às ${time}`;
+}
+
