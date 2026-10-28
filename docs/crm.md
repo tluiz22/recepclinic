@@ -13,7 +13,7 @@
 > - **Desfeito a pedido do cliente:** o "Registrar contato" (C2, Q18).
 > - **P3 Lembretes** (28/out, no staging, validada): aba "Lembretes" na ficha e "Lembretes da equipe" no
 >   Relacionamento (seção 19.3 do plano).
-> - **Próximo:** P1–P3 concluídas; nenhuma etapa planejada. Publicar o CRM na produção só com autorização.
+> - **CRM concluído (cliente, 28/out).** Nada na produção: vai junto com o resto, depois das correções na `main`.
 > - **Branches:** `main` e `CRM` iguais em 28/out. Linha de base dos testes: 723 de unidade e 676 de banco.
 
 ## Como trabalhar nesta etapa
