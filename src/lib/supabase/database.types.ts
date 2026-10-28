@@ -631,6 +631,44 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"contact_interactions": {
+                  Row: {
+                    "appointment_id": string | null,"clinic_id": string,"contact_id": string | null,"contact_phone": string,"created_at": string,"created_by": string | null,"funnel_session_id": string | null,"id": string,"note": string | null,"outcome": string,"patient_id": string | null,"source": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "appointment_id"?: string | null,"clinic_id": string,"contact_id"?: string | null,"contact_phone": string,"created_at"?: string,"created_by"?: string | null,"funnel_session_id"?: string | null,"id"?: string,"note"?: string | null,"outcome": string,"patient_id"?: string | null,"source": string
+                  }
+                  Update: {
+                    "appointment_id"?: string | null,"clinic_id"?: string,"contact_id"?: string | null,"contact_phone"?: string,"created_at"?: string,"created_by"?: string | null,"funnel_session_id"?: string | null,"id"?: string,"note"?: string | null,"outcome"?: string,"patient_id"?: string | null,"source"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "contact_interactions_clinic_id_appointment_id_fkey"
+      columns: ["clinic_id","appointment_id"]
+isOneToOne: false
+      referencedRelation: "appointments"
+      referencedColumns: ["clinic_id","id"]
+    },{
+      foreignKeyName: "contact_interactions_clinic_id_contact_id_fkey"
+      columns: ["clinic_id","contact_id"]
+isOneToOne: false
+      referencedRelation: "contacts"
+      referencedColumns: ["clinic_id","id"]
+    },{
+      foreignKeyName: "contact_interactions_clinic_id_fkey"
+      columns: ["clinic_id"]
+isOneToOne: false
+      referencedRelation: "clinics"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "contact_interactions_clinic_id_patient_id_fkey"
+      columns: ["clinic_id","patient_id"]
+isOneToOne: false
+      referencedRelation: "patients"
+      referencedColumns: ["clinic_id","id"]
+    }
+                  ]
                 },"contacts": {
                   Row: {
                     "agenda_import_id": string | null,"anonymized_at": string | null,"bot_blocked_at": string | null,"bot_blocked_by": string | null,"bot_blocked_notified_at": string | null,"bot_blocked_reason": string | null,"bot_limits_exempt_at": string | null,"bot_limits_exempt_by": string | null,"bot_limits_reviewed_at": string | null,"bot_limits_reviewed_by": string | null,"clinic_id": string,"created_at": string,"default_home_address": string | null,"full_name": string,"id": string,"is_active": boolean,"phone": string,"updated_at": string
@@ -989,14 +1027,14 @@ isOneToOne: false
                   ]
                 },"patients": {
                   Row: {
-                    "agenda_import_id": string | null,"anonymized_at": string | null,"birthdate": string,"clinic_id": string,"contact_id": string,"created_at": string,"created_via": string,"full_name": string,"id": string,"insurance_card_number": string | null,"insurance_card_valid_until": string | null,"insurance_plan_id": string | null,"is_active": boolean,"is_contact_self": boolean,"notes": string | null,"updated_at": string
+                    "agenda_import_id": string | null,"anonymized_at": string | null,"birthdate": string,"clinic_id": string,"contact_id": string,"created_at": string,"created_via": string,"full_name": string,"id": string,"insurance_card_number": string | null,"insurance_card_valid_until": string | null,"insurance_plan_id": string | null,"is_active": boolean,"is_contact_self": boolean,"notes": string | null,"notes_updated_at": string | null,"notes_updated_by": string | null,"updated_at": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "agenda_import_id"?: string | null,"anonymized_at"?: string | null,"birthdate": string,"clinic_id": string,"contact_id": string,"created_at"?: string,"created_via"?: string,"full_name": string,"id"?: string,"insurance_card_number"?: string | null,"insurance_card_valid_until"?: string | null,"insurance_plan_id"?: string | null,"is_active"?: boolean,"is_contact_self"?: boolean,"notes"?: string | null,"updated_at"?: string
+                    "agenda_import_id"?: string | null,"anonymized_at"?: string | null,"birthdate": string,"clinic_id": string,"contact_id": string,"created_at"?: string,"created_via"?: string,"full_name": string,"id"?: string,"insurance_card_number"?: string | null,"insurance_card_valid_until"?: string | null,"insurance_plan_id"?: string | null,"is_active"?: boolean,"is_contact_self"?: boolean,"notes"?: string | null,"notes_updated_at"?: string | null,"notes_updated_by"?: string | null,"updated_at"?: string
                   }
                   Update: {
-                    "agenda_import_id"?: string | null,"anonymized_at"?: string | null,"birthdate"?: string,"clinic_id"?: string,"contact_id"?: string,"created_at"?: string,"created_via"?: string,"full_name"?: string,"id"?: string,"insurance_card_number"?: string | null,"insurance_card_valid_until"?: string | null,"insurance_plan_id"?: string | null,"is_active"?: boolean,"is_contact_self"?: boolean,"notes"?: string | null,"updated_at"?: string
+                    "agenda_import_id"?: string | null,"anonymized_at"?: string | null,"birthdate"?: string,"clinic_id"?: string,"contact_id"?: string,"created_at"?: string,"created_via"?: string,"full_name"?: string,"id"?: string,"insurance_card_number"?: string | null,"insurance_card_valid_until"?: string | null,"insurance_plan_id"?: string | null,"is_active"?: boolean,"is_contact_self"?: boolean,"notes"?: string | null,"notes_updated_at"?: string | null,"notes_updated_by"?: string | null,"updated_at"?: string
                   }
                   Relationships: [
                     {
@@ -1577,6 +1615,8 @@ isOneToOne: false
 "is_active": boolean,
 "is_contact_self": boolean,
 "notes": string | null,
+"notes_updated_at": string | null,
+"notes_updated_by": string | null,
 "updated_at": string
             }[]
                           SetofOptions: {

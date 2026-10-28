@@ -14,6 +14,10 @@
 // "Editar". Quem vê o Financeiro vê também "Pago"/"Pago em parte" nos
 // atendimentos e a nota de cada pagamento. No celular, os cartões recolhidos e
 // "Marcar" na barra fixa.
+//
+// CRM C2 (28/out/2026): "Atualizado em … por …" nas Observações (Q6, Q12) e,
+// com o item "Relacionamento", o cartão "Contatos da equipe" (os registros do
+// paciente e os do contato sem paciente; "Registrar contato" para quem pode).
 import AdminLayout from "../../../layouts/AdminLayout.astro";
 import ConfirmDeleteDialog from "../../../components/admin/ConfirmDeleteDialog.astro";
 import FlashMessage from "../../../components/admin/FlashMessage.astro";
@@ -44,6 +48,10 @@ import { listNoShowStats, listPatientAppointments } from "../../../lib/data/agen
 import { getClinicSettings } from "../../../lib/data/config/clinic";
 import { listInsurancePlans } from "../../../lib/data/config/insurance";
 import { getContact, getPatient, previewAnonymization } from "../../../lib/data/patients";
+import { actorText, loadActorLabels } from "../../../lib/data/agenda/trail";
+import { listPatientInteractions, OUTCOME_LABEL } from "../../../lib/data/contactInteractions";
+import { RELATIONSHIP_TABS } from "../../../lib/data/relationship";
+import { registerHref } from "../../../components/admin/relacionamento/registerHref";
 import { capitalize, vocabularyFor } from "../../../lib/vocabulary";
 
 const clinic = Astro.locals.clinic!;
@@ -114,6 +122,17 @@ const ageWarning =
   !anonymized && settings.consultationAgeLimitYears !== null && isOverConsultationAgeLimit(patient.birthdate, today, settings.consultationAgeLimitYears)
     ? `Passou da idade limite da Consulta (${settings.consultationAgeLimitYears} anos): só Retorno e Exame.`
     : null;
+// Registros de contato (CRM C2): todos da clínica leem; registra quem tem a área.
+const relationshipOn = clinic.features.includes("relationship");
+const canRegister = relationshipOn && !anonymized && canAccessArea(clinic, "relationship");
+const interactions = relationshipOn ? await listPatientInteractions(db, clinic.clinicId, patient.id, contact.id) : [];
+const actors = await loadActorLabels(db, clinic.clinicId, [patient.notesUpdatedBy, ...interactions.map((i) => i.createdBy)]);
+const notesUpdated = patient.notesUpdatedAt
+  ? [`Atualizado em ${formatInstant(patient.notesUpdatedAt, clinic.timezone, "dd/MM/yyyy 'às' HH:mm")}`, patient.notesUpdatedBy ? actorText(actors.get(patient.notesUpdatedBy)) : null]
+      .filter(Boolean)
+      .join(" por ")
+  : null;
+const sourceLabel = (source: string) => (source === "ficha_paciente" ? "Pela ficha" : `Em ${RELATIONSHIP_TABS.find((t) => t.id === source)?.label ?? source}`);
 const planName = (planId: string) => plans.find((plan) => plan.id === planId)?.name ?? "Plano";
 const planLabel = patient.insurance ? planName(patient.insurance.planId) : "Particular";
 
@@ -338,7 +357,7 @@ const canBook = patient.isActive && !anonymized;
               <dt class={dt}>Observações</dt>
               <dd class={patient.notes ? "font-medium whitespace-pre-line text-ink" : "text-ink-soft"}>{patient.notes ?? "Nenhuma"}</dd>
             </dl>
-            <p class={hint}>Observações: só a equipe vê.</p>
+            <p class={hint}>Observações: só a equipe vê.{notesUpdated && ` ${notesUpdated}.`}</p>
             <form slot="edit" method="POST" action={action} class="flex flex-col gap-4">
               <input type="hidden" name="acao" value="salvar" />
               <div class={field}>
@@ -583,6 +602,35 @@ const canBook = patient.isActive && !anonymized;
               })}
             </ul>
             {payments.length === 0 && <p class={hint}>Nenhum pagamento ainda. Registre pelo botão "Pagamento" na Agenda.</p>}
+          </EditCard>
+        )
+      }
+
+      {
+        relationshipOn && (
+          <EditCard id="contatos" title={`Contatos da equipe (${interactions.length})`} editable={false}>
+            {interactions.length > 0 && (
+              <ul class="flex flex-col divide-y divide-[#e6ecea]">
+                {interactions.map((i) => {
+                  const by = i.createdBy ? actorText(actors.get(i.createdBy)) : null;
+                  return (
+                    <li class="flex flex-col gap-0.5 py-2.5 text-[15px]">
+                      <span class="font-semibold text-ink">{OUTCOME_LABEL[i.outcome]}</span>
+                      <span class="text-[13.5px] text-ink-soft">
+                        {[formatInstant(i.createdAt, clinic.timezone, "dd/MM/yyyy 'às' HH:mm"), by, sourceLabel(i.source)].filter(Boolean).join(" · ")}
+                      </span>
+                      {i.note && <span class="whitespace-pre-line break-words text-ink">{i.note}</span>}
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+            {interactions.length === 0 && <p class={hint}>Nenhum contato registrado.</p>}
+            {canRegister && (
+              <Button size="sm" class="mt-2 self-start" href={registerHref({ source: "ficha_paciente", patientId: patient.id }, here)}>
+                Registrar contato
+              </Button>
+            )}
           </EditCard>
         )
       }

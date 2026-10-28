@@ -1,23 +1,32 @@
 ---
 // Relacionamento › Retomar contato (CRM A2, Q3): quem não concluiu pelo
-// WhatsApp nos últimos 14 dias, uma linha por telefone e fluxo.
+// WhatsApp nos últimos 14 dias, uma linha por telefone e fluxo. C2: a última
+// tentativa registrada e o "Registrar contato" (também de quem não tem cadastro).
+import ContactLogLine from "./ContactLogLine.astro";
+import { registerHref } from "./registerHref";
+import type { ActorLabel } from "../../../lib/data/agenda/trail";
+import type { PendencyLog } from "../../../lib/data/contactInteractions";
 import { currentPath, withReturn } from "../../../lib/returnPath";
 import PhoneLinks from "../PhoneLinks.astro";
+import Button from "../ui/Button.astro";
 import EmptyState from "../ui/EmptyState.astro";
 import HowItWorks from "../ui/HowItWorks.astro";
 import Pill from "../ui/Pill.astro";
 import { relacionamento } from "../../../lib/ajuda/relacionamento";
 import { formatInstant } from "../../../lib/clinicTime";
-import type { RecallGroup } from "../../../lib/data/relationship";
+import { recallKey, type RecallGroup } from "../../../lib/data/relationship";
 import { capitalize, type Vocabulary } from "../../../lib/vocabulary";
 
 interface Props {
   groups: RecallGroup[];
   timeZone: string;
   vocabulary: Vocabulary;
+  logs: Map<string, PendencyLog>;
+  actors: Map<string, ActorLabel>;
+  returnTo: string;
 }
 
-const { groups, timeZone, vocabulary } = Astro.props;
+const { groups, timeZone, vocabulary, logs, actors, returnTo } = Astro.props;
 const here = currentPath(Astro.url);
 ---
 
@@ -28,7 +37,8 @@ const here = currentPath(Astro.url);
   groups.length > 0 && (
     <ul class="mt-3 max-w-4xl divide-y divide-[#e6ecea] rounded-xl border border-line bg-white px-4">
       {groups.map((g) => (
-        <li class="flex flex-col gap-1 py-3.5">
+        <li class="flex flex-col gap-3 py-3.5 sm:flex-row sm:items-start sm:justify-between">
+          <div class="flex min-w-0 flex-col gap-1">
           <div class="flex flex-wrap items-start justify-between gap-2">
             {g.contactId && g.contactName ? (
               <a href={withReturn(`/admin/pacientes/contato/${g.contactId}`, here)} class="text-base font-semibold text-ink no-underline hover:text-brand hover:underline">
@@ -48,6 +58,11 @@ const here = currentPath(Astro.url);
           <span class="text-[13px] text-ink-soft">
             {g.attempts > 1 ? `${g.attempts} tentativas · a última` : "Iniciou"} em {formatInstant(g.latest.startedAt, timeZone, "dd/MM 'às' HH:mm")}
           </span>
+          <ContactLogLine log={logs.get(recallKey(g))} actors={actors} timeZone={timeZone} />
+          </div>
+          <Button size="sm" class="shrink-0 self-start" href={registerHref({ source: "retomar_contato", phone: g.phone, sessionId: g.latest.sessionId, since: g.latest.startedAt }, returnTo)}>
+            Registrar contato
+          </Button>
         </li>
       ))}
     </ul>

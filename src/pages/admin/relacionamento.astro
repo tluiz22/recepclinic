@@ -5,7 +5,8 @@
 // espera exigem também o item da lista de origem. As listas e as ações são as
 // do Resumo do Dia, que continua igual (Q1); só a volta das ações é esta tela.
 // A2 (27/out): Atendimento (resumo), Retomar contato, Retorno, Faltosos e
-// Contatos para revisar; as das Métricas sem exigir os itens delas.
+// Contatos para revisar; as das Métricas sem exigir os itens delas. C2
+// (28/out): o "Registrar contato" e a última tentativa em cada linha.
 import AdminLayout from "../../layouts/AdminLayout.astro";
 import ConfirmDeleteDialog from "../../components/admin/ConfirmDeleteDialog.astro";
 import FlashMessage from "../../components/admin/FlashMessage.astro";
@@ -26,7 +27,7 @@ import { createUserClient } from "../../lib/data/clients";
 import { loadActorLabels } from "../../lib/data/agenda/trail";
 import type { AgendaAppointment } from "../../lib/data/agenda/view";
 import { listServiceRefs } from "../../lib/data/config/services";
-import { loadRelationshipLists, menuTotal, RELATIONSHIP_TABS, relationshipCounts, relationshipTabs, type RelationshipTab } from "../../lib/data/relationship";
+import { loadRelationshipLists, menuTotal, RELATIONSHIP_TABS, relationshipCounts, relationshipTabs, type ContactLogs, type RelationshipTab } from "../../lib/data/relationship";
 import { listRecentOffers } from "../../lib/data/waitlist/entries";
 import { serviceTags } from "../../components/admin/agenda/categoryStyle";
 import { logError } from "../../lib/log";
@@ -39,7 +40,8 @@ const now = new Date();
 
 const available = relationshipTabs(clinic.features);
 const failed = (tab: RelationshipTab, error: unknown) => logError(`relacionamento: ${tab} não carregou`, error, { clinica: clinic.clinicId });
-const lists = await loadRelationshipLists(db, clinic.clinicId, available, failed, { timeZone: clinic.timezone, now });
+const logs: ContactLogs = {};
+const lists = await loadRelationshipLists(db, clinic.clinicId, available, failed, { timeZone: clinic.timezone, now, logs });
 const counts = relationshipCounts(lists);
 Astro.locals.relationshipMenuTotal = menuTotal(counts);
 
@@ -64,8 +66,12 @@ if (tab === "lista_espera" && !loadFailed) {
     loadFailed = true;
   }
 }
+const tabLog = logs[tab] ?? new Map();
 const [actors, serviceRefs] = await Promise.all([
-  loadActorLabels(db, clinic.clinicId, tab === "aguardando_remarcacao" ? awaiting.map((a) => a.canceledBy) : []),
+  loadActorLabels(db, clinic.clinicId, [
+    ...(tab === "aguardando_remarcacao" ? awaiting.map((a) => a.canceledBy) : []),
+    ...[...tabLog.values()].map((log) => log.last.createdBy),
+  ]),
   listServiceRefs(db, clinic.clinicId),
 ]);
 const tags = serviceTags(serviceRefs);
@@ -100,16 +106,16 @@ const tabs = RELATIONSHIP_TABS.filter((t) => available.includes(t.id)).map((t) =
     </div>
   )}
   {!loadFailed && tab === "atendimento" && <AtendimentoTab items={lists.atendimento ?? []} timeZone={clinic.timezone} now={now} />}
-  {!loadFailed && tab === "retomar_contato" && <RetomarContatoTab groups={lists.retomar_contato ?? []} timeZone={clinic.timezone} vocabulary={vocabulary} />}
-  {!loadFailed && tab === "retorno" && <RetornoTab opportunities={lists.retorno ?? []} timeZone={clinic.timezone} vocabulary={vocabulary} returnTo={returnTo} />}
-  {!loadFailed && tab === "faltosos" && <FaltososTab patients={lists.faltosos ?? []} timeZone={clinic.timezone} vocabulary={vocabulary} />}
+  {!loadFailed && tab === "retomar_contato" && <RetomarContatoTab groups={lists.retomar_contato ?? []} timeZone={clinic.timezone} vocabulary={vocabulary} logs={tabLog} actors={actors} returnTo={returnTo} />}
+  {!loadFailed && tab === "retorno" && <RetornoTab opportunities={lists.retorno ?? []} timeZone={clinic.timezone} vocabulary={vocabulary} returnTo={returnTo} logs={tabLog} actors={actors} />}
+  {!loadFailed && tab === "faltosos" && <FaltososTab patients={lists.faltosos ?? []} timeZone={clinic.timezone} vocabulary={vocabulary} logs={tabLog} actors={actors} returnTo={returnTo} />}
   {!loadFailed && tab === "revisar" && <RevisarTab contacts={lists.revisar ?? []} timeZone={clinic.timezone} returnTo={returnTo} />}
   {!loadFailed && tab === "aguardando_remarcacao" && (
     awaiting.length > 0
-      ? <AguardandoTab tags={tags} appointments={awaiting} actors={actors} timeZone={clinic.timezone} vocabulary={vocabulary} returnTo={returnTo} />
+      ? <AguardandoTab tags={tags} appointments={awaiting} actors={actors} timeZone={clinic.timezone} vocabulary={vocabulary} returnTo={returnTo} logs={tabLog} />
       : <div class="mt-4 max-w-4xl"><EmptyState variant="dashed" title={relacionamento.vazios.aguardando.titulo} text={relacionamento.vazios.aguardando.texto} /></div>
   )}
-  {!loadFailed && tab === "lembretes" && <LembretesPendentesTab tags={tags} reminders={reminders} timeZone={clinic.timezone} vocabulary={vocabulary} />}
+  {!loadFailed && tab === "lembretes" && <LembretesPendentesTab tags={tags} reminders={reminders} timeZone={clinic.timezone} vocabulary={vocabulary} logs={tabLog} actors={actors} returnTo={returnTo} />}
   {!loadFailed && tab === "lista_espera" && <ListaEsperaTab tags={tags} entries={waitlist} offers={offers} timeZone={clinic.timezone} returnTo={returnTo} />}
   <ConfirmDeleteDialog />
 </AdminLayout>

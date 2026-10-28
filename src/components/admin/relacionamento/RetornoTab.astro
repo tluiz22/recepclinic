@@ -1,6 +1,11 @@
 ---
 // Relacionamento › Retorno (CRM A2): a Oportunidade agora das Métricas, com
 // "Marcar retorno" (abre o Marcar com o paciente e a agenda, como no cartão).
+// C2: a última tentativa registrada e o "Registrar contato".
+import ContactLogLine from "./ContactLogLine.astro";
+import { registerHref } from "./registerHref";
+import type { ActorLabel } from "../../../lib/data/agenda/trail";
+import type { PendencyLog } from "../../../lib/data/contactInteractions";
 import { currentPath, withReturn } from "../../../lib/returnPath";
 import PhoneLinks from "../PhoneLinks.astro";
 import Button from "../ui/Button.astro";
@@ -16,9 +21,11 @@ interface Props {
   timeZone: string;
   vocabulary: Vocabulary;
   returnTo: string;
+  logs: Map<string, PendencyLog>;
+  actors: Map<string, ActorLabel>;
 }
 
-const { opportunities, timeZone, vocabulary, returnTo } = Astro.props;
+const { opportunities, timeZone, vocabulary, returnTo, logs, actors } = Astro.props;
 const here = currentPath(Astro.url);
 ---
 
@@ -43,10 +50,16 @@ const here = currentPath(Astro.url);
                 <PhoneLinks phone={o.person.phone} plain />
               </span>
             )}
+            <ContactLogLine log={logs.get(o.appointmentId)} actors={actors} timeZone={timeZone} />
           </div>
-          <Button variant="primary" size="sm" class="shrink-0 self-start" href={withReturn(`/admin/agenda/marcar?${new URLSearchParams({ patient_id: o.patientId, agenda_id: o.agendaId })}`, returnTo)}>
-            Marcar retorno
-          </Button>
+          <div class="flex shrink-0 flex-wrap gap-2 self-start">
+            <Button variant="primary" size="sm" href={withReturn(`/admin/agenda/marcar?${new URLSearchParams({ patient_id: o.patientId, agenda_id: o.agendaId })}`, returnTo)}>
+              Marcar retorno
+            </Button>
+            <Button size="sm" href={registerHref({ source: "retorno", patientId: o.patientId, appointmentId: o.appointmentId, since: o.scheduledAt }, returnTo)}>
+              Registrar contato
+            </Button>
+          </div>
         </li>
       ))}
     </ul>

@@ -812,3 +812,52 @@ guardadas.
 contagem antes da migração 2 (385 recebidas e 15 respostas da recepção com texto; 609 enviadas pelo sistema) →
 migração 2 (simulação → aplicar) → conferido: 0 recebidas e 0 respostas com texto, as 609 enviadas intactas; com o
 login, `body` e `retry_payload` dão 403 (42501) e as outras colunas leem; sem login, nada. **Produção: nada.**
+
+---
+
+## 18. C1 aprovada e C2 implementada (28/out, só no local)
+
+**C1:** SQL aprovado pelo cliente em 28/out, depois do resumo em linguagem simples. **Ajuste aprovado na C2 (Q17):** o
+registro guarda sempre o **telefone** e o contato cadastrado é opcional, para registrar quem está em "Retomar contato"
+sem cadastro. **Defeito achado no teste e corrigido:** a anonimização apagava a observação de um registro "Outro" e
+batia na regra "Outro exige observação"; a regra passou da tabela para o gatilho da gravação (vale para todo registro
+novo; a anonimização apaga depois).
+
+**Migração `20261029120000_registros_de_contato.sql`** (aplicada só no local; a reversão foi exercitada no local):
+tabela `contact_interactions` (telefone, contato e paciente opcionais, origem, atendimento, tentativa do bot, resultado,
+observação até 1000, autor e hora pelo banco); gatilho de gravação (autor e hora de quem grava, telefone do contato,
+"Outro" com observação, paciente do contato, "Marcou" só com atendimento ativo do contato); RLS (lê quem é da clínica;
+grava Administrador e Recepção com o item `relationship`; sem `update`/`delete`; bot sem acesso); auditoria do
+Suporte; anonimização (apaga a observação e troca o telefone, também nos registros feitos pelo telefone antes do
+cadastro); `patients.notes_updated_at`/`notes_updated_by` com o gatilho (só quando as observações mudam; valor enviado
+ignorado; anonimização zera).
+
+**Código:**
+- `src/lib/data/contactInteractions.ts`: as 7 opções, quem tira de cada lista (Q8, Q11), gravação, leitura, "Marcou"
+  (atendimento ativo criado desde o começo da pendência; na ficha, um por vir) e a conferência do pedido no servidor
+  (`resolveRegisterTarget`: paciente e atendimento da clínica e um do outro).
+- `relationship.ts`: `loadRelationshipLists` tira quem saiu pelo registro e guarda a última tentativa de cada linha
+  (Retomar contato = tentativas do telefone e fluxo, registro depois da última; Retorno = a consulta ou o "Marcou"
+  depois dela; Lembretes e Aguardando = o atendimento; Faltosos = o paciente, até uma falta nova). O total do menu
+  cai junto.
+- Tela `/admin/relacionamento/registrar` e rota `/api/admin/relacionamento/registro` (volta à tela de origem com o
+  aviso "saiu da lista" ou "continua na lista, com a tentativa").
+- Abas Retomar contato, Retorno, Lembretes, Aguardando remarcação (só na central; o Resumo do Dia não muda) e
+  Faltosos: "Registrar contato" e a última tentativa ("Não respondeu em dd/mm por Fulana · 2 registros"; "Link enviado
+  em dd/mm").
+- Ficha do paciente: cartão "Contatos da equipe" (com o item; todos leem; registra quem tem a área) e "Atualizado em
+  … por …" nas Observações.
+- Atendimento e Lista de espera sem "Registrar contato" nesta etapa (Q8: não mudam).
+- Seed: um registro de exemplo e a mensagem recebida sem texto (D12).
+
+**Testes:** unidade 720 passando (6 novos em `contactInteractions.test.ts`); banco 662 passando (13 novos em
+`tests/db/registros-de-contato.test.ts`); `astro check` sem erros; `npm run build` completo. Numa das duas rodadas
+completas do banco, 2 testes do bot (`bot-marcar.test.ts`, que esta etapa não toca) falharam e passaram sozinhos e
+na rodada seguinte: intermitente, registrado aqui. Navegador local: como Recepção, registro pela ficha ("Outro" sem
+observação recusado com a mensagem no campo; com observação, gravado e de volta à ficha); como Profissional, o cartão
+sem o botão e a tela de registro barrada. As abas da central com pendência não foram vistas no navegador (o seed local
+não tem pendências nelas); a saída das listas está coberta pelos testes de banco (Faltosos e Lembretes) e de unidade.
+
+**Fica para decidir com o cliente:** se os Faltosos passam a somar no número do menu (hoje fora, porque a lista era
+permanente até esta etapa).
+

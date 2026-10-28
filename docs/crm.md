@@ -61,8 +61,12 @@
 >   [plano](analises/plano-evolucao-relacionamento.md). **Validada pelo cliente no local em 28/out; na `main` e no
 >   staging em 28/out** (migração 1 → push da `main` → migração 2; conferido no banco do staging: texto das recebidas
 >   e das respostas apagado, `body` e `retry_payload` fechados ao login). **Produção: nada.**
-> - **Retomar daqui:** o cliente valida a B0 no staging (Atendimento e notificação sem a frase; Configurações ›
->   WhatsApp do Suporte); depois, a **etapa C** começa pela C1 (SQL de `contact_interactions` para aprovação).
+> - **B0 validada pelo cliente no staging em 28/out.**
+> - **C1 aprovada e C2 implementada em 28/out, só no local** (migração `20261029120000_registros_de_contato.sql`;
+>   "Registrar contato" nas abas e na ficha do paciente; saída das listas pela Q8; "Atualizado em … por …" nas
+>   Observações; ajuste Q17: registro pelo telefone, contato opcional). Testes: 720 de unidade e 662 de banco.
+>   Detalhes na seção 18 do [plano](analises/plano-evolucao-relacionamento.md). **Retomar daqui:** validação do
+>   cliente no local; com o OK, `main` e staging (migração antes do push) e a C3.
 
 ## Como trabalhar nesta etapa
 

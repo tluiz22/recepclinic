@@ -3,8 +3,12 @@
 // piloto): cancelados pela clínica (em massa ou pelo bloqueio) que ainda não
 // remarcaram. "Remarcar" abre o Marcar com o paciente, o serviço e a agenda;
 // "Desistiu" tira da lista (com confirmação; fica na trilha). Redesign R3
-// (15/out/2026): Remarcar em destaque e Desistiu à parte, em vermelho.
+// (15/out/2026): Remarcar em destaque e Desistiu à parte, em vermelho. No
+// Relacionamento (CRM C2), também a última tentativa e o "Registrar contato".
 import { currentPath, withReturn } from "../../../lib/returnPath";
+import ContactLogLine from "../relacionamento/ContactLogLine.astro";
+import { registerHref } from "../relacionamento/registerHref";
+import type { PendencyLog } from "../../../lib/data/contactInteractions";
 import PhoneLinks from "../PhoneLinks.astro";
 import Button from "../ui/Button.astro";
 import { formatInstant } from "../../../lib/clinicTime";
@@ -23,9 +27,11 @@ interface Props {
   tags: Map<string, ServiceTagInfo>;
   /** Para onde o "Desistiu" volta (CRM A1: a mesma aba no Relacionamento). */
   returnTo?: string;
+  /** Só no Relacionamento: as tentativas registradas (com elas, o "Registrar contato"). */
+  logs?: Map<string, PendencyLog>;
 }
 
-const { appointments, actors, timeZone, vocabulary, tags, returnTo = "/admin/consultas?tab=aguardando_remarcacao" } = Astro.props;
+const { appointments, actors, timeZone, vocabulary, tags, returnTo = "/admin/consultas?tab=aguardando_remarcacao", logs } = Astro.props;
 ---
 
 <p class="mt-4 text-[15px] text-ink-soft">
@@ -56,11 +62,17 @@ const { appointments, actors, timeZone, vocabulary, tags, returnTo = "/admin/con
                   {by ? ` por ${by}` : ""}
                 </span>
               )}
+              {logs && <ContactLogLine log={logs.get(a.id)} actors={actors} timeZone={timeZone} />}
             </div>
             <div class="flex shrink-0 items-center justify-between gap-2 sm:flex-col sm:items-end">
               <Button variant="primary" size="sm" href={withReturn(`/admin/agenda/marcar?patient_id=${a.patientId}&service_id=${a.serviceId}&agenda_id=${a.agendaId}`, returnTo)}>
                 Remarcar
               </Button>
+              {logs && (
+                <Button size="sm" href={registerHref({ source: "aguardando_remarcacao", patientId: a.patientId, appointmentId: a.id }, returnTo)}>
+                  Registrar contato
+                </Button>
+              )}
               <form method="POST" action={`/api/admin/agenda/atendimentos/${a.id}`} class="contents">
                 <input type="hidden" name="acao" value="desistiu" />
                 <input type="hidden" name="return_to" value={returnTo} />
