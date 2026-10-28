@@ -212,6 +212,8 @@ begin
   insert into public.contact_finance (clinic_id, contact_id, cpf) values (c_a, ct_maria, '52998224725');
   -- Anotação do paciente (CRM P2).
   insert into public.patient_notes (clinic_id, patient_id, body) values (c_a, pt_ana, 'Prefere atendimento à tarde.');
+  -- Lembrete da equipe (CRM P3), para hoje: aparece no Relacionamento.
+  insert into public.patient_reminders (clinic_id, patient_id, body, due_on) values (c_a, pt_ana, 'Cobrar a guia do plano.', current_date);
   insert into public.patient_finance (clinic_id, patient_id, payer, payer_name, payer_cpf)
     values (c_a, pt_ana, 'other', 'Pedro Souza', '12345678909');
 

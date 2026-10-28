@@ -132,3 +132,21 @@ anteriores", sem autor; nenhum paciente com o campo antigo preenchido; leitura s
 (Vercel do staging publicada; na produção, só a *preview*). O código antigo seguia funcionando entre a migração e o
 push (a coluna antiga continua). **Produção: nada.**
 
+
+### 19.3 P3 Lembretes implementada (28/out, só no local)
+
+**Decisões do cliente (28/out):** criam e marcam "Feito" Administrador, Recepção e Profissional (como nas Anotações);
+só o autor corrige texto e data ("editado em …"); só o Administrador apaga; o feito fica no histórico da ficha, com
+quem fez e "Desfazer"; aba própria "Lembretes (n)" na ficha (n = abertos); ao criar, a data não pode ser antes de hoje.
+
+**SQL aprovado pelo cliente em 28/out.** Migração `20261029140000_lembretes_do_paciente.sql`: tabela
+`patient_reminders` (texto de 1 a 500, `due_on`, autor e horas, `done_at`/`done_by`), gatilho
+`app.patient_reminder_rules` (autor e horas pelo banco; texto e data só pelo autor; "Feito" grava quem e quando,
+"Desfazer" limpa), RLS (lê a equipe; cria e atualiza Administrador, Recepção e Profissional; apaga só o
+Administrador), auditoria do Suporte, anonimização apaga (`app.drop_reminders_on_anonymize`); bot sem acesso.
+
+**Código:** `src/lib/data/patientReminders.ts`; rota `src/pages/api/admin/pacientes/[id]/lembretes.ts` (criar,
+editar, feito, desfazer, apagar; `return_to` para voltar ao Relacionamento); aba "Lembretes" na ficha
+(`?aba=lembretes`); aba "Lembretes da equipe" no Relacionamento (`LembretesEquipeTab.astro`, para todas as clínicas
+com o Relacionamento), com os de hoje e os atrasados, "Feito" com confirmação, somando no número do menu
+(`MENU_TABS`); ajuda contextual; seed com um lembrete para hoje (Ana Souza). Testes: 723 de unidade e 676 de banco.

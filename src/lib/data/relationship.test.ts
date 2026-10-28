@@ -7,15 +7,16 @@ import { groupRecall, loadRelationshipLists, menuTotal, pendingReminderKind, rel
 // contadores = tamanho da lista e falha isolada (seção 13.4 do plano).
 
 describe("abas da central", () => {
-  it("Retorno, Aguardando remarcação e Faltosos sempre (sem os itens das Métricas); as outras com o item da lista de origem", () => {
-    expect(relationshipTabs(["relationship"])).toEqual(["retorno", "aguardando_remarcacao", "faltosos"]);
-    expect(relationshipTabs(["relationship", "reminders"])).toEqual(["retorno", "lembretes", "aguardando_remarcacao", "faltosos"]);
-    expect(relationshipTabs(["relationship", "whatsapp_bot"])).toEqual(["atendimento", "retomar_contato", "retorno", "aguardando_remarcacao", "faltosos", "revisar"]);
+  it("Retorno, Lembretes da equipe, Aguardando remarcação e Faltosos sempre (sem os itens das Métricas); as outras com o item da lista de origem", () => {
+    expect(relationshipTabs(["relationship"])).toEqual(["retorno", "lembretes_equipe", "aguardando_remarcacao", "faltosos"]);
+    expect(relationshipTabs(["relationship", "reminders"])).toEqual(["retorno", "lembretes", "lembretes_equipe", "aguardando_remarcacao", "faltosos"]);
+    expect(relationshipTabs(["relationship", "whatsapp_bot"])).toEqual(["atendimento", "retomar_contato", "retorno", "lembretes_equipe", "aguardando_remarcacao", "faltosos", "revisar"]);
     expect(relationshipTabs(["relationship", "reminders", "waitlist", "whatsapp_bot"])).toEqual([
       "atendimento",
       "retomar_contato",
       "retorno",
       "lembretes",
+      "lembretes_equipe",
       "aguardando_remarcacao",
       "faltosos",
       "lista_espera",
@@ -40,7 +41,7 @@ describe("contadores", () => {
   });
 
   it("o menu soma as pendências com saída; Faltosos, Atendimento e Lista de espera não entram; falha não soma (cliente, 27/out)", () => {
-    expect(menuTotal({ aguardando_remarcacao: 2, lembretes: 3, retomar_contato: 4, retorno: 5, revisar: 1, faltosos: 9, atendimento: 8, lista_espera: 7 })).toBe(15);
+    expect(menuTotal({ aguardando_remarcacao: 2, lembretes: 3, lembretes_equipe: 6, retomar_contato: 4, retorno: 5, revisar: 1, faltosos: 9, atendimento: 8, lista_espera: 7 })).toBe(21);
     expect(menuTotal({ aguardando_remarcacao: 2, lembretes: null })).toBe(2);
     expect(menuTotal({})).toBe(0);
   });

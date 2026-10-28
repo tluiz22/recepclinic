@@ -11,10 +11,9 @@
 >     clínicas (Q25).
 >   - **P2 Anotações** (28/out): aba "Anotações" no lugar das Observações (as antigas viraram a 1ª anotação).
 > - **Desfeito a pedido do cliente:** o "Registrar contato" (C2, Q18).
-> - **Próximo: P3 Lembretes** (Q22): anotação com data; aba "Lembretes da equipe" na central Relacionamento, com os
->   do dia e os atrasados, somando no número do menu; some com "Feito"; aparece também na ficha. Começar pelo resumo
->   em linguagem simples e o SQL para aprovação.
-> - **Branches:** `main` e `CRM` iguais em 28/out. Linha de base dos testes: 718 de unidade e 665 de banco.
+> - **P3 Lembretes** (28/out, **só no local**, aguardando a validação do cliente): aba "Lembretes" na ficha e
+>   "Lembretes da equipe" no Relacionamento (seção 19.3 do plano). Depois: `main` e staging com o OK do cliente.
+> - **Branches:** `CRM` à frente da `main` (P3). Linha de base dos testes: 723 de unidade e 676 de banco.
 
 ## Como trabalhar nesta etapa
 

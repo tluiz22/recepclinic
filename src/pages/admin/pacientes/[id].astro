@@ -15,6 +15,11 @@
 // atendimentos e a nota de cada pagamento. No celular, os cartões recolhidos e
 // "Marcar" na barra fixa.
 //
+// CRM P3 (28/out/2026): aba "Lembretes" (Q22): texto com data; abertos pela
+// data, depois os feitos (com quem fez e "Desfazer"). Administrador, Recepção
+// e Profissional criam e marcam "Feito"; só o autor corrige; só o
+// Administrador apaga. Os de hoje e os atrasados vão também ao Relacionamento.
+//
 // CRM P2 (28/out/2026): aba "Anotações" no lugar das Observações (Q20, Q21):
 // lista datada com o autor; Administrador, Recepção e Profissional escrevem;
 // só o autor edita; só o Administrador apaga.
@@ -56,6 +61,7 @@ import { listInsurancePlans } from "../../../lib/data/config/insurance";
 import { getContact, getPatient, previewAnonymization } from "../../../lib/data/patients";
 import { actorText, loadActorLabels } from "../../../lib/data/agenda/trail";
 import { listPatientNotes, NOTE_MAX } from "../../../lib/data/patientNotes";
+import { listPatientReminders, REMINDER_MAX } from "../../../lib/data/patientReminders";
 import { DESCRIPTION_MAX, DOCUMENT_KIND_LABEL, DOCUMENT_KINDS, DOCUMENT_MIME_TYPES, listPatientDocuments } from "../../../lib/data/patientDocuments";
 import { platformEnv } from "../../../lib/env";
 import { capitalize, vocabularyFor } from "../../../lib/vocabulary";
@@ -136,7 +142,15 @@ const notes = anonymized ? [] : await listPatientNotes(db, clinic.clinicId, pati
 const canWriteNotes = !anonymized && (clinic.isPlatformStaff || clinic.roles.some((r) => r === "admin" || r === "reception" || r === "professional"));
 const canDeleteNotes = !anonymized && (clinic.isPlatformStaff || clinic.roles.includes("admin"));
 const notesApi = `/api/admin/pacientes/${patient.id}/anotacoes`;
-const documentActors = await loadActorLabels(db, clinic.clinicId, [...documents.map((d) => d.createdBy), ...notes.map((n) => n.createdBy)]);
+// Lembretes (CRM P3): os mesmos papéis das Anotações.
+const reminders = anonymized ? [] : await listPatientReminders(db, clinic.clinicId, patient.id);
+const openReminders = reminders.filter((r) => !r.doneAt).length;
+const remindersApi = `/api/admin/pacientes/${patient.id}/lembretes`;
+const documentActors = await loadActorLabels(db, clinic.clinicId, [
+  ...documents.map((d) => d.createdBy),
+  ...notes.map((n) => n.createdBy),
+  ...reminders.flatMap((r) => [r.createdBy, r.doneBy]),
+]);
 const documentsApi = `/api/admin/pacientes/${patient.id}/documentos`;
 // O envio e o "Compartilhar" falam direto com o armazenamento do Supabase (fora do 'self' da CSP).
 if ((canAttach || documents.length > 0) && Astro.csp) Astro.csp.insertDirective(`connect-src 'self' ${new URL(platformEnv().supabaseUrl).origin}`);
@@ -151,10 +165,12 @@ const tab =
     ? "documentos"
     : !anonymized && Astro.url.searchParams.get("aba") === "anotacoes"
       ? "anotacoes"
+      : !anonymized && Astro.url.searchParams.get("aba") === "lembretes"
+        ? "lembretes"
       : Astro.url.searchParams.get("atendimentos") === "anteriores"
       ? "anteriores"
       : "proximos";
-const tabQuery: Record<string, string> = { proximos: "", anteriores: "?atendimentos=anteriores", documentos: "?aba=documentos", anotacoes: "?aba=anotacoes" };
+const tabQuery: Record<string, string> = { proximos: "", anteriores: "?atendimentos=anteriores", documentos: "?aba=documentos", anotacoes: "?aba=anotacoes", lembretes: "?aba=lembretes" };
 const isAppointments = tab === "proximos" || tab === "anteriores";
 const tabHref = (value: string) => withReturn(`/admin/pacientes/${patient.id}${tabQuery[value]}`, volta);
 // Filtro por tipo na aba Documentos (só os tipos que o paciente tem).
@@ -300,10 +316,10 @@ const canBook = patient.isActive && !anonymized;
 
   <div class="mt-4 grid grid-cols-[minmax(0,1fr)] items-start gap-4 lg:grid-cols-[minmax(0,1fr)_400px] lg:gap-5">
     <section aria-labelledby="atendimentos-titulo" class={`${card} gap-1`}>
-      <h2 id="atendimentos-titulo" class={sectionTitle}>{anonymized ? "Atendimentos" : "Atendimentos, documentos e anotações"}</h2>
+      <h2 id="atendimentos-titulo" class={sectionTitle}>{anonymized ? "Atendimentos" : "Atendimentos, documentos, anotações e lembretes"}</h2>
       <Tabs
         inCard
-        label="Atendimentos, documentos e anotações"
+        label="Atendimentos, documentos, anotações e lembretes"
         class="mt-1"
         tabs={[
           { label: "Próximos", href: tabHref("proximos"), active: tab === "proximos", count: upcoming.length, countTone: "neutral", countLabel: plural(upcoming.length) },
@@ -333,6 +349,14 @@ const canBook = patient.isActive && !anonymized;
                   count: notes.length,
                   countTone: "neutral" as const,
                   countLabel: `${notes.length} ${notes.length === 1 ? "anotação" : "anotações"}`,
+                },
+                {
+                  label: "Lembretes",
+                  href: tabHref("lembretes"),
+                  active: tab === "lembretes",
+                  count: openReminders,
+                  countTone: "neutral" as const,
+                  countLabel: `${openReminders} ${openReminders === 1 ? "lembrete aberto" : "lembretes abertos"}`,
                 },
               ]),
         ]}
@@ -581,6 +605,112 @@ const canBook = patient.isActive && !anonymized;
               </ul>
             )}
             {notes.length === 0 && <p class="py-3 text-[15px] text-ink-soft">Nenhuma anotação.</p>}
+          </div>
+        )
+      }
+      {
+        tab === "lembretes" && (
+          <div class="flex flex-col gap-3 pt-2">
+            {canWriteNotes && (
+              <form method="POST" action={withReturn(remindersApi, volta)} class="flex flex-col gap-2">
+                <input type="hidden" name="acao" value="criar" />
+                <label for="reminder-body" class="sr-only">Novo lembrete</label>
+                <textarea
+                  id="reminder-body"
+                  name="body"
+                  rows="2"
+                  required
+                  maxlength={REMINDER_MAX}
+                  placeholder="Ex.: Cobrar a guia do plano; ligar para confirmar o exame."
+                  class={`${CONTROL} h-auto! py-2.5`}
+                ></textarea>
+                <div class="flex flex-wrap items-center gap-2">
+                  <label for="reminder-due" class="text-[15px] text-ink">Para o dia</label>
+                  <input id="reminder-due" type="date" name="due_on" required min={today} value={today} class={`${CONTROL} w-auto`} />
+                  <Button type="submit" variant="primary" size="sm" data-sending-label="Salvando…">Salvar lembrete</Button>
+                </div>
+                <span class={hint}>No dia, o lembrete aparece também no Relacionamento.</span>
+              </form>
+            )}
+            {reminders.length > 0 && (
+              <ul>
+                {reminders.map((r) => {
+                  const mine = !!r.createdBy && r.createdBy === clinic.userId && canWriteNotes && !r.doneAt;
+                  const due = formatCalendarDate(r.dueOn, "dd/MM/yyyy");
+                  return (
+                    <li class="flex flex-col gap-1.5 border-t border-line py-3 first:border-t-0">
+                      <div class="flex flex-wrap items-center gap-2">
+                        {r.doneAt ? (
+                          <Pill tone="success" icon="check">Feito</Pill>
+                        ) : r.dueOn < today ? (
+                          <Pill tone="warning">Atrasado · {due}</Pill>
+                        ) : r.dueOn === today ? (
+                          <Pill tone="info">Hoje</Pill>
+                        ) : (
+                          <Pill tone="neutral">{due}</Pill>
+                        )}
+                      </div>
+                      <p class={`rounded-lg border border-line bg-canvas px-3.5 py-2.5 text-[15.5px] leading-snug whitespace-pre-line break-words ${r.doneAt ? "text-ink-soft" : "text-ink"}`}>{r.body}</p>
+                      <span class="text-[13.5px] text-ink-soft">
+                        {[
+                          `para ${due}`,
+                          `criado em ${formatInstant(r.createdAt, clinic.timezone, "dd/MM 'às' HH:mm")}`,
+                          r.createdBy ? actorText(documentActors.get(r.createdBy)) : null,
+                          r.updatedAt ? `editado em ${formatInstant(r.updatedAt, clinic.timezone, "dd/MM 'às' HH:mm")}` : null,
+                          r.doneAt ? `feito em ${formatInstant(r.doneAt, clinic.timezone, "dd/MM 'às' HH:mm")}${r.doneBy ? ` por ${actorText(documentActors.get(r.doneBy))}` : ""}` : null,
+                        ]
+                          .filter(Boolean)
+                          .join(" · ")}
+                      </span>
+                      {(canWriteNotes || canDeleteNotes) && (
+                        <div class="flex flex-wrap items-start gap-1.5">
+                          {canWriteNotes && (
+                            <form method="POST" action={withReturn(remindersApi, volta)} class="contents">
+                              <input type="hidden" name="acao" value={r.doneAt ? "desfazer" : "feito"} />
+                              <input type="hidden" name="lembrete" value={r.id} />
+                              <Button type="submit" variant={r.doneAt ? "secondary" : "primary"} size="sm">{r.doneAt ? "Desfazer" : "Feito"}</Button>
+                            </form>
+                          )}
+                          {mine && (
+                            <details class="group open:w-full">
+                              <summary class={`${buttonClass("secondary", "sm")} cursor-pointer list-none group-open:hidden [&::-webkit-details-marker]:hidden`}>Editar</summary>
+                              <form method="POST" action={withReturn(remindersApi, volta)} class="flex flex-col gap-2">
+                                <input type="hidden" name="acao" value="editar" />
+                                <input type="hidden" name="lembrete" value={r.id} />
+                                <label for={`reminder-${r.id}`} class="sr-only">Corrigir o lembrete</label>
+                                <textarea id={`reminder-${r.id}`} name="body" rows="2" required maxlength={REMINDER_MAX} class={`${CONTROL} h-auto! py-2.5`}>{r.body}</textarea>
+                                <div class="flex flex-wrap items-center gap-2">
+                                  <label for={`reminder-due-${r.id}`} class="text-[15px] text-ink">Para o dia</label>
+                                  <input id={`reminder-due-${r.id}`} type="date" name="due_on" required value={r.dueOn} class={`${CONTROL} w-auto`} />
+                                  <Button type="submit" variant="primary" size="sm" data-sending-label="Salvando…">Salvar</Button>
+                                  <Button size="sm" href={tabHref("lembretes")}>Cancelar</Button>
+                                </div>
+                              </form>
+                            </details>
+                          )}
+                          {canDeleteNotes && (
+                            <form method="POST" action={withReturn(remindersApi, volta)} class="contents">
+                              <input type="hidden" name="acao" value="apagar" />
+                              <input type="hidden" name="lembrete" value={r.id} />
+                              <button
+                                type="submit"
+                                class={`js-confirm-delete ${buttonClass("danger-quiet", "sm")}`}
+                                data-confirm-title="Apagar o lembrete?"
+                                data-confirm-message="O lembrete sai da ficha do paciente e do Relacionamento. Não dá para desfazer."
+                                data-confirm-label="Apagar"
+                              >
+                                Apagar
+                              </button>
+                            </form>
+                          )}
+                        </div>
+                      )}
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+            {reminders.length === 0 && <p class="py-3 text-[15px] text-ink-soft">Nenhum lembrete.</p>}
           </div>
         )
       }

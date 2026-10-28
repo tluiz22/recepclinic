@@ -1,9 +1,11 @@
+import { todayIn } from "../clinicTime";
 import type { DbClient } from "./clients";
 import { unwrapAll, unwrapAllIn } from "./errors";
 import { listAwaitingRebooking } from "./daily";
 import { AGENDA_COLUMNS, toAgendaAppointment, type AgendaAppointment, type AgendaRow } from "./agenda/view";
 import { buildFunnelReportFromSessions, listFunnelSessions, type Incomplete } from "./botFunnel";
 import { listAgendas } from "./config/agendas";
+import { listDueReminders, type DueReminder } from "./patientReminders";
 import { listFrequentNoShows, type FrequentNoShow } from "./metrics";
 import { loadContactNames, loadPatientContacts, type PatientContact } from "./people";
 import { listReturnOpportunities, type ReturnRight } from "./performance";
@@ -15,13 +17,15 @@ import { listReminderActions, REMINDER_MESSAGE_TYPE, type ReminderAction } from 
 // Central de Relacionamento (CRM A1, cliente, 27/out/2026): as pendências que
 // pedem contato da equipe, numa tela só. Compõe as listas que já existem (as
 // mesmas funções, o mesmo RLS); nenhuma regra nova de entrada ou saída. A2
-// (27/out): as listas que eram só das Métricas, sem exigir os itens delas.
+// (27/out): as listas que eram só das Métricas, sem exigir os itens delas. P3
+// (28/out): "Lembretes da equipe", os lembretes da ficha com data até hoje.
 
 export type RelationshipTab =
   | "atendimento"
   | "retomar_contato"
   | "retorno"
   | "lembretes"
+  | "lembretes_equipe"
   | "aguardando_remarcacao"
   | "faltosos"
   | "lista_espera"
@@ -33,6 +37,7 @@ export const RELATIONSHIP_TABS: { id: RelationshipTab; label: string }[] = [
   { id: "retomar_contato", label: "Retomar contato" },
   { id: "retorno", label: "Retorno" },
   { id: "lembretes", label: "Lembretes" },
+  { id: "lembretes_equipe", label: "Lembretes da equipe" },
   { id: "aguardando_remarcacao", label: "Aguardando remarcação" },
   { id: "faltosos", label: "Faltosos" },
   { id: "lista_espera", label: "Lista de espera" },
@@ -186,6 +191,7 @@ export type RelationshipLists = {
   retomar_contato?: RecallGroup[] | null;
   retorno?: ReturnOpportunity[] | null;
   lembretes?: PendingReminder[] | null;
+  lembretes_equipe?: DueReminder[] | null;
   aguardando_remarcacao?: AgendaAppointment[] | null;
   faltosos?: FrequentNoShow[] | null;
   lista_espera?: WaitlistEntry[] | null;
@@ -216,6 +222,7 @@ export async function loadRelationshipLists(
     retomar_contato: () => listRecall(db, clinicId, now),
     retorno: async () => listReturnOpportunitiesWithPeople(db, clinicId, await agendaIds(), now),
     lembretes: () => listPendingReminders(db, clinicId, now),
+    lembretes_equipe: () => listDueReminders(db, clinicId, todayIn(timeZone, now)),
     aguardando_remarcacao: () => listAwaitingRebooking(db, clinicId, now),
     faltosos: async () => listFrequentNoShows(db, clinicId, await agendaIds()),
     lista_espera: () => listWaitlist(db, clinicId),
@@ -246,11 +253,12 @@ export function relationshipCounts(lists: RelationshipLists): RelationshipCounts
 
 /**
  * Abas que somam no número do menu (cliente, 27/out/2026): as pendências que
- * saem quando o motivo deixa de existir. Ficam fora os Faltosos (lista
+ * saem quando o motivo deixa de existir (os Lembretes da equipe, com o
+ * "Feito", P3). Ficam fora os Faltosos (lista
  * permanente até o registro da etapa C), o Atendimento (já tem o próprio
  * número no menu) e a Lista de espera (quem espera vaga não pede contato).
  */
-export const MENU_TABS: readonly RelationshipTab[] = ["retomar_contato", "retorno", "lembretes", "aguardando_remarcacao", "revisar"];
+export const MENU_TABS: readonly RelationshipTab[] = ["retomar_contato", "retorno", "lembretes", "lembretes_equipe", "aguardando_remarcacao", "revisar"];
 
 export function menuTotal(counts: RelationshipCounts): number {
   return MENU_TABS.reduce((total, tab) => total + (counts[tab] ?? 0), 0);

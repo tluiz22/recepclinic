@@ -11,8 +11,8 @@
 > - **Branches:** `main` (staging) e `CRM` (etapa do CRM) estão iguais em 28/out.
 >
 > **Frentes em andamento**
-> - **CRM** (branch `CRM`, retomar por [`crm.md`](crm.md)): próximo é a **P3 Lembretes** (aba "Lembretes da
->   equipe" no Relacionamento).
+> - **CRM** (branch `CRM`, retomar por [`crm.md`](crm.md)): **P3 Lembretes** pronta no local, aguardando a
+>   validação do cliente.
 > - **Piloto** (etapas no [plano](plano.md), F10): **A** feita (roteiros do WhatsApp Business: [único](https://claude.ai/artifact/8AXZMSLcEq8SMWFpYHaraq),
 >   [iPhone](https://claude.ai/artifact/C8E3xDoshuXE3M91qeDDHq), [Android](https://claude.ai/artifact/78hQ2cXQph4wvXHKPXexnm));
 >   coexistência no staging feita (parte P do [`staging.md`](staging.md)), falta o **lembrete com botões** quando a

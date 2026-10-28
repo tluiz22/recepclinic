@@ -1,0 +1,74 @@
+---
+// Relacionamento › Lembretes da equipe (CRM P3, Q22): os lembretes da ficha
+// com data até hoje, o mais antigo primeiro, com "Feito" (com confirmação),
+// que volta para esta aba. O lembrete é criado e corrigido na ficha.
+import { currentPath, withReturn } from "../../../lib/returnPath";
+import PhoneLinks from "../PhoneLinks.astro";
+import Button from "../ui/Button.astro";
+import EmptyState from "../ui/EmptyState.astro";
+import HowItWorks from "../ui/HowItWorks.astro";
+import Pill from "../ui/Pill.astro";
+import { relacionamento } from "../../../lib/ajuda/relacionamento";
+import { formatCalendarDate } from "../../../lib/clinicTime";
+import type { DueReminder } from "../../../lib/data/patientReminders";
+import { capitalize, type Vocabulary } from "../../../lib/vocabulary";
+
+interface Props {
+  reminders: DueReminder[];
+  today: string;
+  vocabulary: Vocabulary;
+  returnTo: string;
+}
+
+const { reminders, today, vocabulary, returnTo } = Astro.props;
+const here = currentPath(Astro.url);
+---
+
+<HowItWorks id="relacionamento-lembretes-equipe" topic={relacionamento.comoFunciona.lembretesEquipe} class="mt-4 max-w-4xl">
+  <p class="text-[15px] text-ink-soft">Os de hoje e os atrasados. O lembrete é criado na ficha do paciente.</p>
+</HowItWorks>
+{
+  reminders.length > 0 && (
+    <ul class="mt-3 max-w-4xl divide-y divide-[#e6ecea] rounded-xl border border-line bg-white px-4">
+      {reminders.map((r) => {
+        const name = r.person?.fullName ?? capitalize(vocabulary.patient);
+        return (
+          <li class="flex flex-col gap-3 py-3.5 sm:flex-row sm:items-start sm:justify-between">
+            <div class="flex min-w-0 flex-col gap-1">
+              <div class="flex flex-wrap items-center gap-2">
+                <a href={withReturn(`/admin/pacientes/${r.patientId}?aba=lembretes`, here)} class="text-base font-semibold text-ink no-underline hover:text-brand hover:underline">
+                  {name}
+                </a>
+                {r.dueOn < today ? <Pill tone="warning">Atrasado · {formatCalendarDate(r.dueOn, "dd/MM")}</Pill> : <Pill tone="info">Hoje</Pill>}
+              </div>
+              <p class="rounded-lg border border-line bg-canvas px-3.5 py-2 text-[15px] leading-snug whitespace-pre-line break-words text-ink">{r.body}</p>
+              {r.person?.phone && (
+                <span class="flex flex-wrap items-center gap-x-1.5 text-[15px] text-ink-soft sm:text-sm">
+                  {r.person.contactName && r.person.contactName !== r.person.fullName && `${capitalize(vocabulary.contact)}: ${r.person.contactName} · `}
+                  <PhoneLinks phone={r.person.phone} plain />
+                </span>
+              )}
+            </div>
+            <form method="POST" action={`/api/admin/pacientes/${r.patientId}/lembretes`} class="contents">
+              <input type="hidden" name="acao" value="feito" />
+              <input type="hidden" name="lembrete" value={r.id} />
+              <input type="hidden" name="return_to" value={returnTo} />
+              <Button
+                type="submit"
+                variant="primary"
+                size="sm"
+                class="js-confirm-delete shrink-0 self-start"
+                data-confirm-title="Marcar como feito?"
+                data-confirm-message={`O lembrete de ${name} sai desta lista e fica como feito na ficha.`}
+                data-confirm-label="Feito"
+              >
+                Feito
+              </Button>
+            </form>
+          </li>
+        );
+      })}
+    </ul>
+  )
+}
+{reminders.length === 0 && <div class="mt-3 max-w-4xl"><EmptyState variant="dashed" title={relacionamento.vazios.lembretesEquipe.titulo} text={relacionamento.vazios.lembretesEquipe.texto} /></div>}

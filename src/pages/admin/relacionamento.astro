@@ -5,7 +5,8 @@
 // espera exigem também o item da lista de origem. As listas e as ações são as
 // do Resumo do Dia, que continua igual (Q1); só a volta das ações é esta tela.
 // A2 (27/out): Atendimento (resumo), Retomar contato, Retorno, Faltosos e
-// Contatos para revisar; as das Métricas sem exigir os itens delas.
+// Contatos para revisar; as das Métricas sem exigir os itens delas. P3
+// (28/out): Lembretes da equipe, os da ficha com data até hoje.
 import AdminLayout from "../../layouts/AdminLayout.astro";
 import ConfirmDeleteDialog from "../../components/admin/ConfirmDeleteDialog.astro";
 import FlashMessage from "../../components/admin/FlashMessage.astro";
@@ -13,6 +14,7 @@ import AguardandoTab from "../../components/admin/resumo/AguardandoTab.astro";
 import ListaEsperaTab from "../../components/admin/resumo/ListaEsperaTab.astro";
 import AtendimentoTab from "../../components/admin/relacionamento/AtendimentoTab.astro";
 import FaltososTab from "../../components/admin/relacionamento/FaltososTab.astro";
+import LembretesEquipeTab from "../../components/admin/relacionamento/LembretesEquipeTab.astro";
 import LembretesPendentesTab from "../../components/admin/relacionamento/LembretesPendentesTab.astro";
 import RetomarContatoTab from "../../components/admin/relacionamento/RetomarContatoTab.astro";
 import RetornoTab from "../../components/admin/relacionamento/RetornoTab.astro";
@@ -29,6 +31,7 @@ import { listServiceRefs } from "../../lib/data/config/services";
 import { loadRelationshipLists, menuTotal, RELATIONSHIP_TABS, relationshipCounts, relationshipTabs, type RelationshipTab } from "../../lib/data/relationship";
 import { listRecentOffers } from "../../lib/data/waitlist/entries";
 import { serviceTags } from "../../components/admin/agenda/categoryStyle";
+import { todayIn } from "../../lib/clinicTime";
 import { logError } from "../../lib/log";
 import { vocabularyFor } from "../../lib/vocabulary";
 
@@ -76,6 +79,7 @@ const countOf = (id: RelationshipTab): Pick<TabItem, "count" | "countTone" | "al
   // Contagem que falhou: aviso, nunca 0 (seção 13.4 do plano).
   if (n === null || n === undefined) return { alert: true, countLabel: "Não foi possível contar" };
   if (id === "lista_espera") return { count: n, countTone: "info", countLabel: `${plural(n, "pessoa", "pessoas")} na lista` };
+  if (id === "lembretes_equipe") return { count: n, countLabel: `${plural(n, "lembrete", "lembretes")} para hoje ou atrasado(s)` };
   if (id === "lembretes") return { count: n, countLabel: `${n} sem resposta ou não entregue(s)` };
   if (id === "atendimento") return { count: n, countTone: "alert", countLabel: `${n} aguardando a clínica` };
   if (id === "retomar_contato") return { count: n, countLabel: `${n} para retomar` };
@@ -110,6 +114,7 @@ const tabs = RELATIONSHIP_TABS.filter((t) => available.includes(t.id)).map((t) =
       : <div class="mt-4 max-w-4xl"><EmptyState variant="dashed" title={relacionamento.vazios.aguardando.titulo} text={relacionamento.vazios.aguardando.texto} /></div>
   )}
   {!loadFailed && tab === "lembretes" && <LembretesPendentesTab tags={tags} reminders={reminders} timeZone={clinic.timezone} vocabulary={vocabulary} />}
+  {!loadFailed && tab === "lembretes_equipe" && <LembretesEquipeTab reminders={lists.lembretes_equipe ?? []} today={todayIn(clinic.timezone, now)} vocabulary={vocabulary} returnTo={returnTo} />}
   {!loadFailed && tab === "lista_espera" && <ListaEsperaTab tags={tags} entries={waitlist} offers={offers} timeZone={clinic.timezone} returnTo={returnTo} />}
   <ConfirmDeleteDialog />
 </AdminLayout>

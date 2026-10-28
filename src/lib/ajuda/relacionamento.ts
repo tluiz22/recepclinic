@@ -43,6 +43,16 @@ export const relacionamento = {
         "É a mesma lista da Oportunidade agora das Métricas.",
       ],
     },
+    // listDueReminders em src/lib/data/patientReminders.ts (CRM P3).
+    lembretesEquipe: {
+      serve: "Os lembretes que a equipe escreveu na ficha dos pacientes, no dia marcado.",
+      como: [
+        "Entra no dia do lembrete e fica, como atrasado, até alguém marcar \"Feito\".",
+        "O lembrete é criado na ficha do paciente, na aba Lembretes; lá ficam também os feitos, com quem fez.",
+        "O mais antigo vem primeiro.",
+      ],
+      exemplo: "A recepção escreveu \"cobrar a guia do plano\" para 05/11 na ficha de Ana: no dia 05/11, Ana aparece aqui até alguém marcar \"Feito\".",
+    },
     // listFrequentNoShows em src/lib/data/metrics.ts e isFrequentNoShow em agenda/view.ts.
     faltosos: {
       serve: "Pacientes que faltam com frequência, para a equipe conversar antes do próximo atendimento.",
@@ -79,6 +89,10 @@ export const relacionamento = {
     aguardando: {
       titulo: "Ninguém aguardando remarcação",
       texto: "Entra aqui quem teve o atendimento cancelado pela clínica (em massa ou pelo bloqueio) e ainda não remarcou.",
+    },
+    lembretesEquipe: {
+      titulo: "Nenhum lembrete para hoje",
+      texto: "Entra aqui, no dia marcado, o lembrete escrito na ficha do paciente, até alguém marcar \"Feito\".",
     },
     lembretes: {
       titulo: "Nenhum lembrete pedindo atenção",
