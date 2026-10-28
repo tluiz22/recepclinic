@@ -906,3 +906,6 @@ interno, esperando a próxima tela; no "Baixar" o navegador só baixa e a tela n
 O "Baixar" e os links do "Baixar selecionados" passaram a ter o atributo `download` (que o painel já ignora), com o
 nome original do arquivo. Conferido no navegador local: um e dois arquivos baixados, a barra desligada.
 
+**P1 validada pelo cliente no local em 28/out.** **Q25 (28/out): Documentos para todas as clínicas**, no básico do
+consultório (sem item na Matriz).
+
