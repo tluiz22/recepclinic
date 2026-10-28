@@ -5,7 +5,7 @@
 > vez; depois a F12.1 do roadmap (seção 12).
 >
 > Decisões já respondidas (28/out): **11.1** (motivos registrados), **modo de cobrança manual** (seção 3) e **11.2**
-> (pago = `CONFIRMED` ou `RECEIVED`) **11.3** (bloqueio no painel primeiro, banco depois) **11.4** (bot calado, link com aviso) e **11.5** (Assinatura só para o Administrador). Próxima: 11.6.
+> (pago = `CONFIRMED` ou `RECEIVED`) **11.3** (bloqueio no painel primeiro, banco depois) **11.4** (bot calado, link com aviso) **11.5** (Assinatura só para o Administrador) e **11.6** (estorno marca e avisa o Suporte). Próxima: 11.7.
 
 ## Como trabalhar nesta etapa
 
@@ -304,7 +304,9 @@ stateDiagram-v2
    nada fala de cobrança ou suspensão para o paciente.
 5. **Quem vê a tela Assinatura.** **Decidido (cliente, 28/out):** só o Administrador da clínica; Recepção e
    Profissional não veem e, na suspensão, veem só "Clínica suspensa: fale com o Administrador".
-6. **Estorno ou chargeback depois da reativação.** Recomendo marcar, avisar o Suporte, sem suspender sozinho.
+6. **Estorno ou chargeback depois do pagamento.** **Decidido (cliente, 28/out):** a cobrança fica marcada como
+   revertida e em destaque para o Suporte, que decide; nada muda sozinho no acesso e não sai aviso automático para a
+   clínica.
 7. **Mudança de valor no meio do ciclo.** Recomendo valer a partir do próximo ciclo, sem proporcional.
 8. **Implantação:** quando gerar e se conta para a reativação. Recomendo gerar ao ativar o contrato e contar como as
    outras.
