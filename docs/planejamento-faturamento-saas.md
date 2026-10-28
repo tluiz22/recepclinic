@@ -6,7 +6,7 @@
 >
 > Decisões já respondidas (28/out): **11.1** (motivos registrados), **modo de cobrança manual** (seção 3) e **11.2**
 > (pago = `CONFIRMED` ou `RECEIVED`) **11.3** (bloqueio no painel primeiro, banco depois) **11.4** (bot calado, link com aviso) **11.5** (Assinatura só para o Administrador) **11.6** (estorno marca e avisa o Suporte) **11.7** (novo valor no próximo ciclo, sem proporcional) **11.8** (implantação ao ativar, conta igual) **11.9** (cartão na página do Asaas). **11.10 fica pendente** (número do WhatsApp, decidir antes da F12.9).
-> Próxima: 11.11.
+> **11.11** (avisos do Asaas desligados, só os nossos). Próxima: 11.12.
 
 ## Como trabalhar nesta etapa
 
@@ -322,7 +322,9 @@ stateDiagram-v2
     o nome exibido vira "RecepClinic" para todos os contatos, as respostas das clínicas caem nas conversas pessoais e
     o número fica ligado à conta do RecepClinic na Meta) ou um chip dedicado (recomendado). Junto, decidir se a
     cobrança entra no ar só com e-mail até o WhatsApp estar aprovado (recomendado).
-11. **Avisos do próprio Asaas.** Recomendo desligar, se a opção existir.
+11. **Avisos do próprio Asaas.** **Decidido (cliente, 28/out):** desligar os avisos do Asaas ao pagador; a clínica
+    recebe só os do RecepClinic. Confirmar na referência do Asaas se e como dá para desligar; se não der, voltar ao
+    cliente antes da F12.7.
 12. **Cancelamento do contrato:** cobranças em aberto e acesso depois do fim.
 13. **D+3 e D+7:** dias corridos ou úteis, e o horário. Recomendo corridos, às 9h de Brasília.
 14. **Nota fiscal das mensalidades:** pelo Asaas ou fora do sistema.
