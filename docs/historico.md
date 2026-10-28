@@ -517,3 +517,6 @@ retomada fica no README). Para achar algo, buscar por data (ex.: `27/out`), fase
   - **C4.5** (28/out): "Como funciona?" do Alterar (`ajuda/agenda.ts`, `comoFunciona.alterar`, no topo da tela) e a
     série citando o alterar; confirmação sem mudança mostra só "Nada foi mudado". Conferido no local em 1470 e 360px.
     Sem migração.
+  - Confirmação da marcação no staging não chegou (28/out): `skipped_no_template`, os 18 templates da conta nova
+    ainda em análise na Meta (não é falha da C4). Decisão do cliente: a janela de confirmação continua dizendo que o
+    paciente recebe a mensagem mesmo com o template não aprovado (o aviso de salvo, depois, diz que não saiu).
