@@ -11,10 +11,14 @@
 >   [`analises/plano-evolucao-relacionamento.md`](analises/plano-evolucao-relacionamento.md), com as etapas A1–C3 e as
 >   dúvidas Q1–Q9. Linha de base: 691 testes de unidade e 636 de banco passando (local, 27/out).
 > - **Q1–Q9 respondidas pelo cliente em 27/out** (todas na opção recomendada; registradas na seção 11 do plano).
-> - **Fim da sessão de 27/out. Retomar daqui:** o cliente vai **revisar o plano** antes de aprovar (escolheu
->   "Quero revisar o documento antes"). Na próxima sessão: receber os ajustes ou o "aprovado"; só então a etapa
->   **A1** (começa mostrando o SQL da migração do item `relationship` da matriz, para aprovação). **Nada é
->   implementado antes.** Linha de base dos testes: 691 de unidade e 636 de banco passando (local, 27/out).
+> - **Revisão do plano pedida pelo cliente (27/out):** direção geral aprovada; 5 ajustes feitos só no documento
+>   (seção 13 do plano): segurança do histórico (rota e componente **não bastam**; etapa nova **B0** protege o texto
+>   das mensagens no banco, em dois passos), "Marcou" × envio do link, Observações do paciente (perfis, gatilho do
+>   "atualizado em/por" e proteção), critérios de teste de desempenho e consistência e a regra da produção.
+>   Novas dúvidas **Q10 a Q13** e os riscos ainda abertos (R1 a R9) na seção 13.6.
+> - **Retomar daqui:** o cliente aprova o documento revisado; depois, as dúvidas **Q10 a Q13**, uma de cada vez; só
+>   então a **A1** (começa mostrando o SQL do item `relationship` da matriz). **Nada é implementado antes.** Linha de
+>   base dos testes: 691 de unidade e 636 de banco passando (local, 27/out).
 
 ## Como trabalhar nesta etapa
 

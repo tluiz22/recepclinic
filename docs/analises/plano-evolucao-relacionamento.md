@@ -10,6 +10,12 @@
 > que já existem, (2) histórico do paciente e do contato, (3) registro simples do resultado de um contato, (4)
 > **anotações gerais do paciente e registros de interação**; acesso da Recepção por **permissão própria**, sem abrir
 > as Métricas; nada de CRM comercial, campanhas ou tarefas avançadas.
+>
+> **Revisão pedida pelo cliente (27/out), seção 13:** a direção geral está aprovada. A revisão conferiu no código a
+> segurança do histórico (**restringir rota e componente não basta**; proposta de proteção no banco, etapa nova
+> **B0**), separou "marcou de fato" de "enviou o link", detalhou as Observações do paciente, acrescentou critérios de
+> teste de desempenho e consistência e reforçou a regra da produção. Novas dúvidas **Q10 a Q13** (seção 11), a
+> responder uma de cada vez. Continua **sem código, banco ou migração** até a aprovação do documento revisado.
 
 ---
 
@@ -43,7 +49,7 @@ Os números de teste são a **linha de base**: cada etapa precisa terminar com t
   2. **Banco (RLS):** tudo isolado por `clinic_id` (`app.is_clinic_member`, `app.has_clinic_role`;
      `app.service_clinic_id()` para o bot e as rotinas). `appointments` também por agenda (`app.can_access_agenda`:
      o Profissional restrito vê só as agendas dele e as liberadas). Mensagens, conversa e funil: qualquer membro da
-     clínica lê.
+     clínica lê, **inclusive o texto das mensagens e direto pela API do Supabase com o próprio login** (seção 13.1).
 - **Funções de Métricas** (`public.metrics_*`, migração `20261023130000_metricas_acesso_na_entrada.sql`): `security
   definer`, conferem **clínica e agenda** na entrada (`app.metrics_agendas` → `app.can_access_agenda`; os passos do
   bot com `app.is_clinic_member`). **Não conferem o papel**: quem barra a Recepção nas Métricas é só a camada da
@@ -158,6 +164,8 @@ dado e a mesma função, só em duas telas, sem risco de divergir.
 chamar as funções `metrics_*` e ler `whatsapp_messages`, mesmo sem a tela. **Não vaza para fora da clínica** (o
 isolamento está testado), e o plano não piora isso. Endurecer o papel dentro do banco é outra etapa, com risco para
 as Métricas e o bot. Fica como recomendação futura (R1).
+**Exceção revista em 27/out (seção 13.1):** o **texto das mensagens** não pode esperar a R1, porque a Q5 decidiu
+que o Profissional não lê as conversas. A etapa B0 protege só o texto, no banco, sem mudar as Métricas nem o bot.
 
 ---
 
@@ -236,16 +244,18 @@ clinics ─┬─ contacts (telefone único na clínica) ─┬─ patients (N p
   app; mensagem automática; ação da equipe com o nome; passo do bot). Paginação por "Carregar mais" (por data, 50
   por vez). Falha numa fonte mostra aviso e o resto da ficha continua (padrão `safe` já usado nas Métricas).
   Índices existentes atendem: `(clinic_id, contact_phone, created_at desc)` e `contact_id`.
-- **Banco:** nada.
-- **Permissão:** depende da Q5 (quem lê o texto das conversas). A restrição, se houver, fica na aplicação (rota e
-  componente), porque mudar o RLS de `whatsapp_messages` afetaria o bot, o Atendimento e as Métricas.
+- **Banco:** nada na B1 e na B2. **Antes delas, a B0** (seção 13.1): o texto das mensagens sai da leitura direta
+  pelo login e passa a ser lido só por funções que conferem o papel.
+- **Permissão (Q5, revista em 27/out):** rota e componente restringem a **tela**, mas **não bastam**. Hoje qualquer
+  membro lê `whatsapp_messages.body` pela API do Supabase com o próprio login. A proteção do texto fica no banco
+  (B0), por coluna e por função, **sem mudar o RLS das linhas**: bot, Atendimento e Métricas seguem como estão.
 
 ### Etapa C: Anotações e registro do resultado do contato (com banco)
 
 **Anotações gerais do paciente:** reusar `patients.notes`, que já existe. Proposta mínima (Q6): mostrar
 "Atualizado em … por …" exige duas colunas novas (`notes_updated_at`, `notes_updated_by`), ou o próprio registro de
 interação "Anotação" na tabela abaixo. A recomendação é a primeira, mais simples, e a anotação **do contato**
-ficar para depois, se o cliente pedir.
+ficar para depois, se o cliente pedir. **Perfis, gravação e proteção detalhados na seção 13.3.**
 
 **Registro de interação e resultado do contato (proposta, não executada):**
 
@@ -295,12 +305,18 @@ create table public.contact_interactions (
 | `wrong_number` | Número errado ou sem WhatsApp | Sim |
 | `other` | Outro (com observação obrigatória) | Não |
 
+**Revisto em 27/out (seção 13.2):** o rótulo de `scheduled` mistura o atendimento **marcado de fato** com o envio do
+link ou a intenção de marcar. Proposta: "Marcou" só com um atendimento marcado conferido pelo sistema; o envio do
+link ganha registro próprio que **não** tira da fila (Q10). A lista da Q7 só muda com a resposta do cliente.
+
 ### 7.1 Migrações previstas (nenhuma criada ainda)
 
 | Etapa | Migração | Tipo | Risco |
 |---|---|---|---|
 | A | Inserir o item `relationship` em `public.features` (como as migrações de `20261005120000_matriz_de_acesso.sql` em diante); conferir se a coluna `area` aceita um grupo novo ou se o item entra num grupo existente da matriz (hoje: Agenda, WhatsApp, Métricas, Financeiro) | Dados, aditiva | Baixo. Reversão: apagar a linha e as liberações em `clinic_features` |
-| C | `contact_interactions` + RLS + gatilhos + anonimização; opcionalmente `patients.notes_updated_*` | Esquema, aditiva | Médio (anonimização e RLS precisam de teste). Reversão: `drop` |
+| B0, passo 1 | Funções `security definer` que leem o texto das mensagens com a conferência do papel (seção 13.1) | Esquema, aditiva | Baixo: nada usa ainda. Reversão: `drop function` |
+| B0, passo 2 | Tirar `body` e `retry_payload` do `select` do `authenticated` (privilégio por coluna) e limitar o `update` às colunas que o painel atualiza | Permissão | **Médio:** código que ainda lê o texto pela tabela quebra. Só depois que o código que usa as funções estiver no mesmo ambiente. Reversão: `grant select on public.whatsapp_messages to authenticated` |
+| C | `contact_interactions` + RLS + gatilhos + anonimização; `patients.notes_updated_at` e `notes_updated_by` com o gatilho da seção 13.3 | Esquema, aditiva | Médio (anonimização e RLS precisam de teste). Reversão: `drop` |
 
 Cada uma será apresentada com o SQL final, o teste e o plano de reversão **antes** de aplicar, primeiro no local,
 depois no staging; produção só no fluxo de publicação (`docs/producao.md`).
@@ -357,7 +373,11 @@ Retomar contato · quem começou pelo WhatsApp e não concluiu (últimos 14 dias
 | Mexer nas abas do Resumo (componentes reaproveitados) e mudar o que a equipe já usa | `components/admin/resumo/*` | Reusar sem mudar a saída no Resumo; teste visual no local e no staging |
 | Refatorar a leitura dos nomes nas Métricas | `metricas.astro`, `PerformanceTab.astro` | Extração 1:1 com teste; conferir as Métricas no staging |
 | Lentidão: a central chama várias funções por página | `relationship.ts` | Contadores com as mesmas consultas leves do Resumo; listas só da aba aberta; Retomar contato com janela curta |
-| Expor texto de conversa a quem não deveria | Etapa B | Q5 antes; restrição na rota e no componente; teste com cada papel |
+| Expor texto de conversa a quem não deveria | Etapa B | **Revisto (13.1):** rota e componente não bastam. B0 no banco (coluna + função com papel), testada com cada papel e também pela API direta |
+| B0 passo 2 aplicado no staging antes do código da `main` usar as funções | Atendimento e Configurações › WhatsApp no staging | Duas migrações separadas; o passo 2 só depois do código nas funções estar publicado no mesmo ambiente (13.5) |
+| Migração da branch `CRM` aplicada no staging sem estar na `main` | Histórico de migrações do staging | O `supabase db push` da `main` passa a acusar migração remota sem arquivo local. Proposta (Q13): o CRM vai ao staging só pela `main`, com o OK do cliente |
+| "Marcou" sem atendimento de fato tira a pessoa da fila | Etapa C | Regra mínima da 13.2: exige o atendimento conferido |
+| Contador diferente da lista ou zerado por falha | Etapa A | Critérios da 13.4: mesma consulta, "—" em vez de 0 quando a fonte falha |
 | Mudança no bot para alimentar a tela | — | **Nenhuma mudança no bot, nos lembretes, na agenda ou no WhatsApp** está prevista |
 | Migração aplicada fora de ordem quebra a tela | Etapas A e C | Ordem do staging (simulação → aplicar → conferir → push); produção só pelo fluxo de publicação |
 | Anonimização esquecer a tabela nova | Etapa C | Teste de anonimização cobrindo `contact_interactions` |
@@ -384,7 +404,9 @@ WhatsApp e mensagens (`acesso-whatsapp.test.ts`, `webhook-whatsapp.test.ts`).
   anonimizado, falha de uma fonte, paginação (unidade + banco);
 - `contact_interactions`: RLS por papel, outra clínica, paciente de outro contato, autor forçado, sem update e
   delete, anonimização, saída da fila (banco);
-- regressão: os testes atuais inteiros a cada etapa (agendamento, cancelamento, remarcação, atendimento humano).
+- regressão: os testes atuais inteiros a cada etapa (agendamento, cancelamento, remarcação, atendimento humano);
+- **critérios de desempenho e consistência** (contadores, agrupamento, carregamento das abas, isolamento por clínica e
+  agenda, falha isolada de uma consulta), proteção do texto das mensagens (B0) e Observações: **seção 13.4**.
 
 ---
 
@@ -431,6 +453,20 @@ WhatsApp e mensagens (`acesso-whatsapp.test.ts`, `webhook-whatsapp.test.ts`).
   **Decidido (cliente, 27/out):** **só acrescentar**; para corrigir, um registro novo (vale o último). A anonimização
   apaga a observação.
 
+**Novas dúvidas da revisão de 27/out (abertas, uma de cada vez, na ordem):**
+
+- **Q10. Envio do link × marcou:** acrescentar a 7ª opção **"Enviou o link / vai marcar"** (`link_sent`), que mantém
+  a pessoa na fila e mostra a tentativa, e deixar "Marcou" só quando o sistema achar o atendimento marcado (proposta,
+  seção 13.2)? Ou manter as 6 opções e usar "Pediu para falar depois" ou "Outro" para o link?
+- **Q11. Lembretes:** "Marcou" não se aplica a quem já tem o atendimento. Proposta: na aba Lembretes, a saída é pelas
+  ações que já existem (Confirmar presença, Remarcar, Cancelar) e pelos registros "Não quer marcar agora" e "Número
+  errado"; "Marcou" não aparece nessa aba.
+- **Q12. Observações do paciente:** quem lê e edita? Proposta: **como hoje** (Administrador, Recepção e
+  Profissional, inclusive o restrito, que vê todos os pacientes; Suporte com auditoria), só acrescentando o
+  "Atualizado em … por …". Alternativa: só Administrador e Recepção editam (o Profissional só lê).
+- **Q13. CRM no staging:** as migrações e o código do CRM vão ao staging só depois de entrar na `main`, com o OK do
+  cliente (proposta, porque o staging é o mesmo banco da `main`)? Até lá, a validação é no local.
+
 ---
 
 ## 12. Proposta de implementação em etapas
@@ -440,17 +476,165 @@ WhatsApp e mensagens (`acesso-whatsapp.test.ts`, `webhook-whatsapp.test.ts`).
 | **A1** | Permissão (área + item + regras de rota), menu, tela com as abas que já são de todos (Aguardando remarcação, Lista de espera, Lembretes), contadores e estados vazios; testes de acesso | Item na matriz (dados) | Q1, Q2, Q4 |
 | **A2** | Abas das listas que hoje são só das Métricas (Retomar contato agrupado, Oportunidade agora, Faltosos), com as leituras extraídas para `src/lib/data/`; Atendimento e Contatos para revisar como abas-resumo | Nada | Q3 |
 | **A3** | Validação por papel no navegador (local) e no staging; regressão completa | — | A1, A2 |
-| **B1** | Linha do tempo do contato (mensagens, bot, passagens, atendimentos dos pacientes) com paginação | Nada | Q5 |
+| **B0** | Proteção do texto das mensagens (seção 13.1): passo 1 (funções com a conferência do papel) + código do Atendimento e de Configurações › WhatsApp usando as funções; passo 2 (tirar `body` e `retry_payload` da leitura direta) **só depois**; testes por papel e pela API direta | 2 migrações, mostradas antes para aprovação | Q5, Q13 |
+| **B1** | Linha do tempo do contato (mensagens, bot, passagens, atendimentos dos pacientes) com paginação | Nada | B0 |
 | **B2** | Histórico do paciente (atendimentos, trilha, mensagens dos atendimentos) + link para as conversas do contato | Nada | B1 |
-| **C1** | Apresentar o SQL final de `contact_interactions` (e das anotações), testes e reversão, **para aprovação** | Proposta | Q6–Q9 |
+| **C1** | Apresentar o SQL final de `contact_interactions` (e das anotações), testes e reversão, **para aprovação** | Proposta | Q6–Q12 |
 | **C2** | Aplicar no local, depois no staging; "Registrar contato" na central e na ficha; registro na linha do tempo; saída da fila pela regra aprovada | Migração | C1 aprovado |
 | **C3** | Integração final: central ↔ ficha ↔ Atendimento humano; regressão; staging; preparo da publicação | — | C2 |
 
 Cada etapa termina com: o que mudou, arquivos, testes executados e resultados (unidade, banco, navegador local,
 staging; nunca "validado" sem ter rodado), o que falta validar, riscos, e como o cliente valida no staging.
-**Produção só com a autorização do cliente, depois do staging.**
+**Produção só com a autorização do cliente, depois do staging** (regras completas na seção 13.5).
 
 **Fora do escopo** (documentado para depois): responsável e prazo por pendência, lembretes de próxima ação,
 indicadores de relacionamento (tempo de resposta, conversão dos contatos), motivos de cancelamento pela equipe,
 origem do contato, campanhas (base legal, consentimento, saída, frequência) e endurecimento do papel dentro do
 banco (R1).
+
+---
+
+## 13. Revisão do plano (pedido do cliente, 27/out)
+
+Feita só no documento: nenhum código funcional, banco, migração, staging ou produção foi tocado. Tudo o que está
+abaixo foi conferido no código e nas migrações da branch `CRM`.
+
+### 13.1 Segurança do histórico (texto das conversas)
+
+**O que existe hoje:**
+
+| Caminho | Quem chega ao texto (`whatsapp_messages.body`) | Conferido em |
+|---|---|---|
+| RLS de `whatsapp_messages` e `conversation_state` (`app.enable_clinic_data_rls`) | `select` para **qualquer membro** da clínica (`app.is_clinic_member`, inclusive o Profissional restrito e o Suporte); `insert` e `update` para os três papéis; `delete` só Administrador. **Sem regra por papel nem por agenda** | `20261004170000_whatsapp_e_rotinas.sql:303`, `20261004140000_pacientes.sql:13` |
+| API do Supabase direta | O login do painel fica no cookie do `@supabase/ssr` (`createUserClient`, `src/lib/data/clients.ts`), que por padrão o navegador consegue ler; o endereço e a chave anônima do Supabase são públicos por natureza. Quem tem login pode pedir `/rest/v1/whatsapp_messages?select=body` com o próprio token, **sem passar pelo `middleware.ts`** | `clients.ts`, `env.ts` |
+| Telas do painel | `listHumanAttention` (`whatsapp/attention.ts:116`): última mensagem recebida ou da recepção, na tela Atendimento e no Início, **todos os papéis** (mantido pela Q5). `listWhatsappMessages` (`whatsapp/messages.ts:297`): Configurações › WhatsApp, área do Administrador | — |
+| Outras leituras pelo login | 20 leituras (`daily.ts`, `sends.ts`, `dashboard.ts`, `agenda/trail.ts`, `whatsapp/reminders.ts`, `preparation.ts`, `guidance.ts`, `retries.ts`, `nfseDelivery.ts`, `agenda/avisar.astro`) leem **só** situação, tipo, datas e ids, nunca o texto | `grep` das chamadas `.from("whatsapp_messages")` |
+| Rotas `/api/admin/**` | Nenhuma devolve o texto (são formulários que redirecionam) | — |
+| Bot, webhook e rotinas | Papel `clinic_service`, com políticas próprias: não são afetados por mudanças nos privilégios do `authenticated` | `enable_clinic_data_rls` |
+| Métricas | Funções `security definer` (rodam como dono): não dependem do privilégio do login e não devolvem o texto | `20261023130000_metricas_acesso_na_entrada.sql` |
+| `retry_payload` | Guarda o pedido à Meta para o reenvio, com o texto: mesma exposição do `body` | `20261023140000_reenvio_automatico.sql` |
+| `conversation_state.context` | Rascunho do bot (dados digitados no meio do fluxo, como nome e nascimento): mesma exposição; lido pelo login em `whatsapp/conversations.ts` (pausar e devolver ao bot) | `conversations.ts:102` |
+
+**Conclusão:** restringir a rota e o componente **não basta** para cumprir a Q5. O Profissional (e qualquer membro)
+consegue ler o texto de todas as conversas da clínica pela API, com o próprio login. O **isolamento entre clínicas
+continua garantido** (o RLS por `clinic_id` vale também na API direta). Também pela API, qualquer papel consegue
+**alterar** o texto de uma mensagem já gravada (`update` liberado aos três papéis).
+
+**Proteção proposta (etapa B0, em dois passos, SQL final mostrado antes para aprovação):**
+
+1. **Passo 1, aditivo:** funções `security definer` com a conferência na entrada, no padrão das `metrics_*`:
+   - `public.attention_last_messages(p_clinic_id, p_phones, p_since)`: **qualquer membro**, só as mensagens
+     recebidas e as `agent_reply` dos telefones com pausa em andamento. A tela Atendimento continua igual para todos
+     (Q5).
+   - `public.contact_message_history(p_clinic_id, p_contact_id, p_before, p_limit)`: **só Administrador, Recepção e
+     Suporte** (`app.has_clinic_role` / `app.is_platform_staff`); os outros recebem erro de acesso. Lê
+     `contact_id = X` ou (`contact_id` nulo e telefone do contato), no máximo 50 por vez, para a linha do tempo da B1
+     e para Configurações › WhatsApp.
+   - O código do Atendimento (`attention.ts`) e de Configurações › WhatsApp (`listWhatsappMessages`) passa a usar as
+     funções.
+2. **Passo 2, só depois que o código do passo 1 estiver no mesmo ambiente:**
+   `revoke select on public.whatsapp_messages from authenticated` e `grant select (...)` de **todas as colunas menos
+   `body` e `retry_payload`**. As 20 leituras sem texto continuam funcionando sem mudança. O `update` do login fica
+   limitado às colunas que o painel atualiza hoje, conferidas na implementação (situação e dados do reenvio); o
+   `insert` continua (o painel grava os reenvios e avisos pelo login).
+3. **Fica como está:** o RLS das linhas (por clínica), o bot e as rotinas (`clinic_service`), as Métricas e a
+   anonimização (que apaga o `body`). `conversation_state.context` **não muda agora** (não guarda conversa, e mexer
+   arrisca o "Devolver ao bot"); fica registrado como risco R2, para avaliar na B0.
+4. **Reversão:** `grant select on public.whatsapp_messages to authenticated` e `drop function` das duas funções.
+
+### 13.2 Resultado do contato: marcou de fato × enviou o link
+
+**Problema:** o rótulo aprovado de `scheduled` ("Marcou (pela equipe ou vai marcar pelo link)") junta o atendimento
+**marcado** com o **envio do link ou a intenção** de marcar. Pela Q8, "Marcou" tira a pessoa de quatro listas. Com
+o link enviado e nunca usado, a pessoa sumiria da fila sem ter marcado. Por isso a lista da Q7 precisa de ajuste, a
+decidir na **Q10** (a lista aprovada não muda sem a resposta).
+
+**Regra mínima proposta:**
+
+1. **"Marcou" exige o atendimento.** A opção só fica disponível quando o sistema encontra um atendimento **ativo**
+   (não cancelado) de um paciente do contato, **criado depois do início da pendência**. Na Oportunidade agora, vale
+   o retorno ligado à consulta ou uma consulta futura. O registro guarda esse `appointment_id` (obrigatório para
+   `scheduled`, conferido por gatilho no banco). Sem atendimento, a opção aparece desativada com "Ainda não há
+   atendimento marcado para este contato".
+2. **Envio do link ou intenção** ganha a opção própria **"Enviou o link / vai marcar"** (`link_sent`, Q10). Ela
+   **mantém** a pessoa na fila e mostra "link enviado em dd/mm".
+3. **A saída por dado real vem primeiro.** Retomar contato (conclusão posterior do mesmo fluxo), Oportunidade agora
+   (retorno ligado ou consulta futura) e Aguardando remarcação (`wasRebooked`) **já tiram a pessoa sozinhos** quando
+   ela marca. O registro "Marcou" não é necessário para a saída nessas listas; serve de histórico.
+4. **Lembretes (Q11):** "Marcou" não se aplica, porque o atendimento já existe. Saída pelas ações atuais (Confirmar
+   presença, Remarcar, Cancelar) e por "Não quer marcar agora" e "Número errado".
+5. **Nada sai por inferência:** "Pediu para falar depois", "Não respondeu", "Outro" e "Enviou o link" só registram a
+   tentativa.
+
+### 13.3 Observações do paciente (`patients.notes`)
+
+**Como funciona hoje (reaproveitado):** RLS de `patients` pelo `enable_clinic_data_rls`. **Lê:** qualquer membro da
+clínica (inclusive o Profissional restrito, que vê todos os pacientes, e o Suporte). **Edita:** Administrador,
+Recepção e Profissional. O bot (`clinic_service`) lê, mas não usa as observações. Tela: ficha do paciente
+(`pacientes/[id].astro`, "Só a equipe vê"). Gravação: `createPatient` e `updatePatient` (`data/patients.ts`), pela
+rota `/api/admin/pacientes/[id]`. **O mesmo formulário grava nome, nascimento e observações juntos.** A
+anonimização apaga (`notes = null`), e as gravações do Suporte já ficam na auditoria (`audit_platform_staff_write`).
+
+**Perfis (proposta, Q12):** **como hoje**. Administrador, Recepção e Profissional leem e editam; o Suporte também,
+com auditoria. Assim não há regressão de acesso. Alternativa, se o cliente preferir: só Administrador e Recepção
+editam, com o Profissional só lendo (`update` com regra por papel, mais um teste).
+
+**Gravação de `notes_updated_at` e `notes_updated_by` (migração da etapa C):**
+
+- Duas colunas novas em `patients`, ambas aceitando nulo (os pacientes existentes ficam "sem registro de edição").
+- Gatilho `before insert or update of notes`. Ele grava **só quando `new.notes is distinct from old.notes`**, porque
+  o formulário regrava as observações ao mudar só o nome; sem essa comparação, o "atualizado por" ficaria errado.
+  `notes_updated_at = now()`, `notes_updated_by = auth.uid()` (nulo quando quem grava é o `clinic_service`). O valor
+  enviado pela tela ou pela API é **sempre substituído** pelo gatilho, então ninguém escolhe o autor. Apagar a
+  observação também registra quem apagou.
+- Exibição: "Atualizado em dd/mm/aaaa às hh:mm por Nome (Papel)", com o `clinic_actor_labels` já usado na Trilha
+  (inclusive "Suporte RecepClinic (nome)"). Conferir na implementação como aparece quem já saiu da clínica.
+- A anonimização zera também as duas colunas (teste em `anonimizacao.test.ts`).
+
+**Proteção:** o isolamento por clínica é o do RLS atual, inclusive pela API direta. O texto não vai para logs (regra
+da F9), Métricas, bot, mensagens nem para a central: a central mostra só um link para a ficha. Testes: outra clínica
+não lê nem grava; autor forçado é ignorado; editar só o nome não muda o "atualizado"; anonimização; Suporte
+auditado.
+
+### 13.4 Critérios de teste de desempenho e consistência
+
+| Tema | Critério (teste) |
+|---|---|
+| **Contadores** | O contador da aba, do menu e do Início é **igual ao número de linhas da aba** com o mesmo filtro (teste com 0, 1, no limite e acima do limite). Acima do limite de leitura (Retomar contato 50, Aguardando 200), mostra "mais de N", **nunca um número menor** que o real. A soma do menu é a soma das abas que a pessoa acessa (item e papel) |
+| **Agrupamento** | 3 tentativas do mesmo telefone e fluxo = **1 linha** ("3 tentativas", a mais recente). Mesmo telefone em fluxos diferentes = 2 linhas. Tentativa concluída depois sai. Tentativa fora dos 14 dias não conta. Telefone sem cadastro aparece pelo telefone. Contato com dois pacientes não duplica. Anonimizado não mostra dado pessoal. Registro (etapa C) só esconde as tentativas iniciadas antes dele |
+| **Carregamento das abas** | Só a aba aberta carrega a lista; as outras só contam. Os nomes são lidos em lote (`in (...)`), sem uma consulta por linha (contagem de consultas no teste de unidade). Meta proposta: a página responde em **até 1,5 s no staging** com o volume de teste (≈500 atendimentos no mês, 2.000 mensagens e 300 tentativas no bot), medido e registrado. Resumo do Dia e Métricas sem piora medida antes e depois |
+| **Isolamento por clínica** | Em cada aba, contador e ação: a clínica A não vê nem age em nada da B (banco e rota) |
+| **Isolamento por papel e item** | Profissional sem a rota (redirecionamento na página, 403 na API), mesmo com o item; Recepção sem nenhuma rota das Métricas; item da clínica desligado esconde a aba e bloqueia a rota da aba; a central nunca contorna a regra de papel das ações (Desistiu, Tirar da lista, Revisado, Devolver ao bot) |
+| **Isolamento por agenda** | As listas por agenda continuam respeitando `app.can_access_agenda` (teste com Profissional restrito pelas funções, porque a regra do banco vale mesmo fora da tela) |
+| **Texto das mensagens (B0)** | Pela API direta, com o login de cada papel: Profissional e Profissional restrito **não leem** `body` nem `retry_payload`; a função do histórico nega o Profissional, aceita Administrador, Recepção e Suporte e nega outra clínica; a tela Atendimento continua para todos; o bot e o webhook gravam e leem como antes (`webhook-whatsapp.test.ts`); Métricas inalteradas |
+| **Falha isolada** | Uma fonte que falha (função com erro simulado) mostra "Não foi possível carregar esta lista" **só na aba dela**, e o contador mostra "—" (nunca 0). As outras abas, o menu e a página continuam. O erro vai para Administração › Erros sem dado pessoal |
+| **Consistência com as listas originais** | Para o mesmo período, a lista da central é igual à do Resumo ou das Métricas (teste comparando as saídas) |
+| **Ações repetidas** | Ação feita em outra aba ou repetida (envio duplo) não duplica o registro; ao voltar, a lista já mostra o novo estado |
+
+### 13.5 Produção e ambientes
+
+- Cada etapa termina com **unidade, banco e navegador no local**, depois o **staging**. Nada é "validado" sem ter
+  rodado.
+- **Nenhuma migração é executada na produção e nenhuma versão é publicada sem autorização explícita do cliente**,
+  dada para aquela publicação, pelo fluxo de `docs/producao.md`. Aprovar o plano ou uma etapa não autoriza a
+  produção.
+- **Staging:** a ordem de sempre (simulação → aplicar → conferir no banco → só então o push). O staging é o mesmo
+  banco que a `main` usa. Por isso a proposta (Q13) é o CRM ir ao staging **só pela `main`**, com o OK do cliente.
+  Uma migração aplicada a partir da `CRM` deixaria o histórico do staging com uma versão que a `main` não tem, e o
+  próximo `supabase db push` da `main` acusaria o erro.
+- **B0 em dois passos** em todo ambiente: o passo 2 (tirar o texto da leitura direta) só depois do código que usa as
+  funções estar publicado no mesmo ambiente. Senão a tela Atendimento e Configurações › WhatsApp quebram.
+
+### 13.6 Riscos ainda não resolvidos
+
+| Risco | Situação |
+|---|---|
+| **R1** Papel dentro do banco: qualquer membro chama as `metrics_*` e lê os metadados das mensagens, a conversa e o funil pela API (sem texto, depois da B0) | Recomendação futura; não piora com o plano |
+| **R2** `conversation_state.context` com dados digitados no bot, legível por qualquer membro pela API | A avaliar na B0 sem quebrar o "Devolver ao bot" |
+| **R3** Cookie do login legível pelo navegador (padrão do `@supabase/ssr`): qualquer script na página teria o token | Mitigado pela CSP da F9; mudar para `httpOnly` é outra etapa, com teste do login |
+| **R4** Tela Atendimento mostra a última mensagem a todos os papéis, inclusive o Profissional | Decisão da Q5; mantido salvo pedido do cliente |
+| **R5** Lista da Q7 e saída da Q8 com "Marcou" ambíguo | Depende da Q10 e da Q11 |
+| **R6** Perfis das Observações | Depende da Q12 |
+| **R7** Como validar no staging sem a `main` | Depende da Q13 |
+| **R8** Meta de 1,5 s sem medida atual | Medir a linha de base do Resumo e das Métricas no staging antes da A1 |
+| **R9** Edição das Observações sem histórico: só a última edição fica registrada (as anteriores se perdem) | Fora do escopo; as anotações datadas ficam nos registros de interação (Q6) |
