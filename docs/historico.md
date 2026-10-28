@@ -490,3 +490,8 @@ retomada fica no README). Para achar algo, buscar por data (ex.: `27/out`), fase
     `changed` da trilha (com o que mudou; substitui o `rescheduled` quando a mudança vem do Alterar) e
     `change_group_session` (turma: vaga conferida com a janela travada). Staging: simulação → aplicação → conferência
     (função responde) em 28/out. Observação: a mudança de horário pelo Alterar não conta como "remarcado" nas Métricas.
+  - **Data passada no Marcar e no Alterar** (cliente, 28/out; entra junto da **C4.3**): só pelo "Outro horário",
+    até **90 dias** para trás; vira aviso na confirmação ("essa data e horário já passaram", botão "assim mesmo"), sem
+    mensagem ao paciente; fica **Marcado**, com Compareceu/Faltou (pendência no Resumo do Dia); o **Remarcar** segue só
+    futuro; **série** só começa no futuro ("Repetir" escondido com data passada). Continuam travados: horário ocupado,
+    bloqueio, duplicidade e turma lotada.
