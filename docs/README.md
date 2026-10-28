@@ -13,8 +13,8 @@
 >
 > **Frentes em andamento**
 > - **Ajustes da produção, na `main`:** C1–C3 na produção. **C4 Alterar atendimento** (plano e etapas no
->   [`historico.md`](historico.md), busca "C4"): validada no staging e **na produção em 28/out** (C4.6, `3ec78dc`);
->   falta a conferência do cliente na produção. Próximo: o cliente traz o próximo ajuste.
+>   [`historico.md`](historico.md), busca "C4"): validada no staging e na produção (C4.6, `3ec78dc`,
+>   conferida pelo cliente em 28/out). Próximo: o cliente traz o próximo ajuste.
 > - **CRM concluído** (28/out; [`crm.md`](crm.md)): validado no staging e na produção desde 28/out.
 > - **Faturamento do SaaS (Asaas)** ([`planejamento-faturamento-saas.md`](planejamento-faturamento-saas.md)): planejamento
 >   aprovado (28/out), nada implementado; trabalho na branch **`faturamento`** (a `main` fica para correções urgentes

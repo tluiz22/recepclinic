@@ -520,3 +520,5 @@ retomada fica no README). Para achar algo, buscar por data (ex.: `27/out`), fase
   - Confirmação da marcação no staging não chegou (28/out): `skipped_no_template`, os 18 templates da conta nova
     ainda em análise na Meta (não é falha da C4). Decisão do cliente: a janela de confirmação continua dizendo que o
     paciente recebe a mensagem mesmo com o template não aprovado (o aviso de salvo, depois, diz que não saiu).
+  - **C4.6** (28/out): migrações `20261031120000` e `20261101120000` na produção (simulação → aplicação → conferência)
+    e `main` → `producao` (`3ec78dc`). **Validada pelo cliente na produção em 28/out.**
