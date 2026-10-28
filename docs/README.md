@@ -5,8 +5,8 @@
 >
 > **Ambientes**
 > - **Produção** (`app.recepclinic.com.br`, branch `producao`): no ar desde 26/out; publicações de 28/out: **CRM**
->   (Relacionamento, B0, P1–P3) e as correções **C1 Exame em paralelo**, **C2 Outro horário**, **C3 Horário de exame**
->   e **C4 Alterar atendimento**.
+>   (Relacionamento, B0, P1–P3) e as correções **C1 Exame em paralelo**, **C2 Outro horário**, **C3 Horário de exame**,
+>   **C4 Alterar atendimento**, **C5 Horário em local que o serviço não usa** e **C6 Escolha do serviço no Marcar**.
 >   Fluxo e registro em [`producao.md`](producao.md).
 > - **Staging** (`teste.recepclinic.com.br`, branch `main`): igual à produção em 28/out. Roteiros em [`staging.md`](staging.md).
 > - **Branches:** `main` = `producao` em 28/out; a `CRM` ficou para trás (etapa encerrada).
@@ -16,8 +16,9 @@
 >   [`historico.md`](historico.md), busca "C4"): validada no staging e na produção (C4.6, `3ec78dc`,
 >   conferida pelo cliente em 28/out). **C5 Horário em local que o serviço não usa** (histórico, busca "C5") no staging,
 >   validada no staging; vai para a produção junto com a próxima funcionalidade (pedido do cliente, 28/out).
->   **C6 Escolha do serviço no Marcar** (tipo primeiro, depois cartões) no staging, aguardando a validação do cliente;
->   depois, C5 e C6 juntas na produção, com autorização (sem migração).
+>   **C6 Escolha do serviço no Marcar** (tipo primeiro, depois cartões) validada no staging. **C5 e C6 na produção em
+>   28/out** (`da2a6fc`), falta a conferência do cliente. No Prick test da produção: salvar de novo o horário ou marcar o
+>   local no serviço.
 > - **CRM concluído** (28/out; [`crm.md`](crm.md)): validado no staging e na produção desde 28/out.
 > - **Faturamento do SaaS (Asaas)** ([`planejamento-faturamento-saas.md`](planejamento-faturamento-saas.md)): planejamento
 >   aprovado (28/out), nada implementado; trabalho na branch **`faturamento`** (a `main` fica para correções urgentes
