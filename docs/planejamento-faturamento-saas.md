@@ -5,7 +5,7 @@
 > vez; depois a F12.1 do roadmap (seção 12).
 >
 > Decisões já respondidas (28/out): **11.1** (motivos registrados), **modo de cobrança manual** (seção 3) e **11.2**
-> (pago = `CONFIRMED` ou `RECEIVED`) **11.3** (bloqueio no painel primeiro, banco depois) e **11.4** (bot calado, link com aviso). Próxima: 11.5.
+> (pago = `CONFIRMED` ou `RECEIVED`) **11.3** (bloqueio no painel primeiro, banco depois) **11.4** (bot calado, link com aviso) e **11.5** (Assinatura só para o Administrador). Próxima: 11.6.
 
 ## Como trabalhar nesta etapa
 
@@ -302,7 +302,8 @@ stateDiagram-v2
 4. **O que o paciente vê na suspensão.** **Decidido (cliente, 28/out):** o bot não responde (a mensagem chega no app
    do WhatsApp da clínica); os links públicos mostram "Agendamento indisponível no momento. Fale com a clínica.";
    nada fala de cobrança ou suspensão para o paciente.
-5. **Quem vê a tela Assinatura.** Recomendo só o Administrador da clínica.
+5. **Quem vê a tela Assinatura.** **Decidido (cliente, 28/out):** só o Administrador da clínica; Recepção e
+   Profissional não veem e, na suspensão, veem só "Clínica suspensa: fale com o Administrador".
 6. **Estorno ou chargeback depois da reativação.** Recomendo marcar, avisar o Suporte, sem suspender sozinho.
 7. **Mudança de valor no meio do ciclo.** Recomendo valer a partir do próximo ciclo, sem proporcional.
 8. **Implantação:** quando gerar e se conta para a reativação. Recomendo gerar ao ativar o contrato e contar como as
