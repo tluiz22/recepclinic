@@ -4,7 +4,7 @@
 > sem tabela, rota, variável ou conta no Asaas. **Próximo passo:** as decisões pendentes da seção 11, uma de cada
 > vez, começando pela 11.1 (modelo da suspensão); depois a F12.1 do roadmap (seção 12).
 >
-> Decisões já respondidas: **11.1** (motivos registrados, 28/out).
+> Decisões já respondidas: **11.1** (motivos registrados) e **modo de cobrança manual** (seção 3), ambas em 28/out.
 
 Marcas: **[Código]** conferido no repositório; **[Projeto]** registrado na documentação do projeto;
 **[Asaas]**, **[Meta]**, **[Vercel]** documentação oficial (fontes no fim); **[Inferência]** conclusão técnica;
@@ -66,6 +66,12 @@ pacientes, com `payments` e NFS-e). Nomes com prefixo `billing_` para não colid
 
 ## 3. Decisões de negócio já tomadas (cliente, 28/out/2026)
 
+- **Modo de cobrança por clínica (cliente, 28/out):** **automático** (Asaas, avisos, atraso e reativação, como abaixo)
+  ou **manual**: o Suporte marca que a clínica não entra na cobrança automática e cobra por fora. No manual o sistema
+  guarda o contrato e os **pagamentos registrados à mão pelo Suporte** (histórico), mas a clínica **nunca consta em
+  atraso**: sem cobrança no Asaas, sem avisos de atraso, sem reativação automática. Suspensão, se houver, é manual
+  (com motivo) e liberada pelo Suporte. A marcação do modo registra quem e quando.
+
 - Provedor Asaas; cartão, Pix Automático e Pix convencional.
 - Valor mensal negociado e gravado por contrato; implantação avulsa, quando houver; preço de referência não muda
   contrato.
@@ -96,8 +102,8 @@ erDiagram
 | Conceito | Nome proposto | Conteúdo essencial | Por quê |
 |---|---|---|---|
 | Conta de cobrança (1 por clínica) | `billing_accounts` | Razão social/nome e CNPJ/CPF do pagador, e-mail financeiro (obrigatório), telefone financeiro, opt-in de WhatsApp (quando, por quem), `asaas_customer_id` (único), ambiente | Separada de `clinic_fiscal_settings` (emissor da NFS-e, só com o F11) e dos contatos de pacientes; fora da linha `clinics`, que o Administrador da clínica pode alterar |
-| Contrato | `billing_contracts` | Valor mensal, implantação (valor ou isenção), 1º vencimento, forma de pagamento, retrato do plano de referência (informativo), vigência, situação (`draft`, `active`, `ended`, `canceled`), `asaas_subscription_id`, `pix_automatic_authorization_id` | Mudança comercial = nova versão (`replaces_contract_id`) com data de início |
-| Cobrança | `billing_charges` | `asaas_payment_id` (único), tipo (`monthly`, `setup`, `other`), vencimento, valor, forma, situação local e a bruta do Asaas, `paid_at`, link da fatura, `last_synced_at` | Espelho local consultado pelo painel e pela reativação |
+| Contrato | `billing_contracts` | **Modo de cobrança (`asaas` ou `manual`)**, valor mensal, implantação (valor ou isenção), 1º vencimento, forma de pagamento, retrato do plano de referência (informativo), vigência, situação (`draft`, `active`, `ended`, `canceled`), `asaas_subscription_id`, `pix_automatic_authorization_id` | Mudança comercial = nova versão (`replaces_contract_id`) com data de início |
+| Cobrança | `billing_charges` | Origem (`asaas` ou `manual`), `asaas_payment_id` (único, só no Asaas), tipo (`monthly`, `setup`, `other`), vencimento, valor, forma, situação local e a bruta do Asaas, `paid_at`, link da fatura, `last_synced_at`; no manual, quem registrou e quando | Espelho do Asaas e histórico dos pagamentos manuais num lugar só; atraso, avisos e reativação só olham a origem `asaas` |
 | Evento recebido | `billing_provider_events` | `provider_event_id` (único), tipo, recurso, dados mínimos, recebido/processado em, situação, tentativas, erro | Idempotência e reprocessamento |
 | Aviso | `billing_notifications` | Cobrança, tipo (`overdue_d3`, `overdue_d7`, `payment_confirmed`), programado para, situação; único por (cobrança, tipo) | Sem duplicidade; cancela os indevidos |
 | Envio por canal | `billing_notification_deliveries` | Canal (`email`, `whatsapp`), tentativas, id no provedor, erro, enviado em | Um canal não trava o outro |
@@ -178,6 +184,9 @@ stateDiagram-v2
   Suspensa --> Ativa: Suporte libera motivo administrativo (manual)
 ```
 
+0. **Modo manual:** o Suporte marca o contrato como `manual`; não cria cliente nem assinatura no Asaas; registra cada
+   pagamento recebido (valor, data, forma, observação), que fica no histórico; nenhuma rotina de atraso ou aviso olha
+   essa clínica; suspensão e liberação só pelo Suporte.
 1. **Contratação:** o Suporte abre "Faturamento" na clínica, preenche a conta de cobrança (ou o Administrador da
    clínica, os contatos) e o contrato em rascunho; ao ativar, cria ou associa o cliente no Asaas; tudo na trilha.
 2. **Preço negociado:** fixo no contrato; mudança = nova versão com data de início (decisão 11.7).
@@ -289,6 +298,9 @@ stateDiagram-v2
 14. **Nota fiscal das mensalidades:** pelo Asaas ou fora do sistema.
 15. **IP fixo na Vercel** para restringir a chave (custo).
 16. **Jurídico:** Asaas como operador, texto do opt-in, prazo de guarda.
+17. **Troca de modo** (manual ↔ automático) com o contrato em andamento: o que acontece com a assinatura e as cobranças
+    em aberto no Asaas. Recomendo: só por nova versão do contrato, com data de início; ao ir para o manual, cancelar a
+    assinatura no Asaas e marcar as cobranças em aberto como canceladas (com trilha).
 
 ## 12. Roadmap
 
