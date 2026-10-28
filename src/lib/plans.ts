@@ -41,7 +41,8 @@ export const ADDONS: PlanItem[] = [
 ];
 
 /** Fora da tabela de preços por ora. */
-export const OFF_TABLE: PlanItem[] = [single("series"), single("finance")];
+// Relacionamento (CRM A1, 27/out/2026): como o Financeiro, sem valor na tabela.
+export const OFF_TABLE: PlanItem[] = [single("series"), single("finance"), single("relationship")];
 
 export const ALL_ITEMS: PlanItem[] = [...BASIC_ITEMS, ...ADDONS, ...OFF_TABLE];
 

@@ -41,6 +41,8 @@ describe("planos", () => {
     expect(clinicPlan([...BASIC, "series"], 1)).toMatchObject({ kind: "custom", monthlyCents: 14_700 });
     expect(clinicPlan([...BASIC, "finance"], 1)).toMatchObject({ kind: "custom", monthlyCents: 14_700 });
     expect(COMPLETE).not.toContain("finance");
+    expect(COMPLETE).not.toContain("relationship");
+    expect(clinicPlan([...BASIC, "relationship"], 1)).toMatchObject({ kind: "custom", monthlyCents: 14_700 });
   });
 
   it("sem tudo do Básico, fica fora dos planos", () => {

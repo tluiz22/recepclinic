@@ -5,6 +5,7 @@ it("volta só para telas do dia a dia dentro do painel", () => {
   expect(safeReturnPath("/admin/agenda?date=2026-10-12", "/x")).toBe("/admin/agenda?date=2026-10-12");
   expect(safeReturnPath("/admin/consultas?tab=pendentes", "/x")).toBe("/admin/consultas?tab=pendentes");
   expect(safeReturnPath("/admin/financeiro/dmed?ano=2025", "/x")).toBe("/admin/financeiro/dmed?ano=2025");
+  expect(safeReturnPath("/admin/relacionamento?tab=lista_espera", "/x")).toBe("/admin/relacionamento?tab=lista_espera");
   expect(safeReturnPath("/admin/pacientes/8a64cd4f-aa75-430c-8e41-b58e9d20fe1d", "/x")).toBe("/admin/pacientes/8a64cd4f-aa75-430c-8e41-b58e9d20fe1d");
   expect(safeReturnPath("/admin/dashboard", "/x")).toBe("/admin/dashboard");
   expect(safeReturnPath("https://outro.site/admin/agenda", "/x")).toBe("/x");
@@ -29,6 +30,7 @@ it("leva a origem adiante e a recebe de volta, inclusive a origem da origem", ()
 
 it("diz para onde o Voltar leva (R9, Configurações abertas de outra tela)", () => {
   expect(returnLabel("/admin/financeiro/dmed?ano=2025")).toBe("Voltar para a DMED");
+  expect(returnLabel("/admin/relacionamento?tab=lembretes")).toBe("Voltar para o Relacionamento");
   expect(returnLabel("/admin/dashboard")).toBe("Voltar para o Início");
   expect(returnLabel("/admin/financeiro/pagamento/1?volta=%2Fadmin%2Fagenda")).toBe("Voltar para o pagamento");
   expect(returnLabel("/admin/agenda?date=2026-10-17")).toBe("Voltar");

@@ -9,7 +9,9 @@ import type { IconName } from "../components/admin/Icon.astro";
 import MoreMenu from "../components/admin/ui/MoreMenu.astro";
 import { menuItemClass } from "../components/admin/ui/styles";
 import { canAccessArea, roleLabel as describeRoles } from "../lib/clinicAccess";
+import { pageFlash } from "../lib/flash";
 import { createUserClient } from "../lib/data/clients";
+import { loadRelationshipLists, menuTotal, relationshipCounts, relationshipTabs } from "../lib/data/relationship";
 import { countAwaitingClinic } from "../lib/data/whatsapp/attention";
 import { logError } from "../lib/log";
 
@@ -24,7 +26,7 @@ interface Props {
 const { title, platform = false } = Astro.props;
 const frame = "max-w-6xl";
 
-type NavItem = { label: string; href: string; icon: IconName; badge?: number };
+type NavItem = { label: string; href: string; icon: IconName; badge?: number; badgeLabel?: string };
 
 // Os 4 primeiros são a barra inferior de abas no celular (uso frequente,
 // toque de um dedo só); Configurações/Relatórios ficam dentro de "Mais" —
@@ -41,6 +43,10 @@ const primaryNavItems: NavItem[] = [
 // Áreas sem acesso somem do menu, não só ficam bloqueadas na rota.
 // Relatórios virou uma aba de Métricas (Fase 23 · etapa 4).
 const clinic = Astro.locals.clinic;
+// O aviso da tela é lido antes das esperas do menu (contadores do Atendimento e do
+// Relacionamento): depois delas a resposta já começou a sair e o cookie não é mais
+// apagado, e o aviso aparecia de novo na tela seguinte (como o QA-02 da R9).
+pageFlash(Astro);
 const access = clinic ?? { roles: [], isPlatformStaff: false };
 const roleLabel = describeRoles(access);
 
@@ -54,7 +60,28 @@ const attentionCount =
       })
     : null;
 
+// Relacionamento (CRM A1, cliente, 27/out/2026): Administrador e Recepção, com o item. No celular fica no
+// "Mais", ao lado do Atendimento (Q1). O contador soma as pendências que pedem contato (menuTotal); falha
+// numa lista não derruba a tela nem o menu.
+const relationshipOn = clinic && !platform && canAccessArea(clinic, "relationship");
+const relationshipCount = !relationshipOn
+  ? 0
+  : (Astro.locals.relationshipMenuTotal ??
+    menuTotal(
+      relationshipCounts(
+        await loadRelationshipLists(
+          createUserClient(Astro.request, Astro.cookies),
+          clinic.clinicId,
+          relationshipTabs(clinic.features).filter((tab) => tab !== "lista_espera"),
+          (tab, error) => logError(`relacionamento: contador do menu (${tab})`, error, { clinica: clinic.clinicId }),
+        ),
+      ),
+    ));
+
 const clinicMoreItems: NavItem[] = [
+  ...(relationshipOn
+    ? [{ label: "Relacionamento", href: "/admin/relacionamento", icon: "user-check" as IconName, badge: relationshipCount, badgeLabel: `${relationshipCount} pendência(s)` }]
+    : []),
   ...(attentionCount !== null ? [{ label: "Atendimento", href: "/admin/atendimento", icon: "chat-bubble" as IconName, badge: attentionCount }] : []),
   // Envios automáticos virou aba de Métricas (Fase 23 · etapa 5).
   ...(canAccessArea(access, "settings")
@@ -201,7 +228,7 @@ const navLinkClass = (active: boolean) =>
               >
                 {item.label}
                 {item.badge ? (
-                  <span class="rounded-full bg-can-500 px-1.5 text-[12px] leading-5 font-bold text-white" aria-label={`${item.badge} aguardando`}>
+                  <span class="rounded-full bg-can-500 px-1.5 text-[12px] leading-5 font-bold text-white" aria-label={item.badgeLabel ?? `${item.badge} aguardando`}>
                     {item.badge}
                   </span>
                 ) : null}
@@ -331,7 +358,7 @@ const navLinkClass = (active: boolean) =>
                     <Icon name={item.icon} class="h-5 w-5" />
                     {item.label}
                     {item.badge ? (
-                      <span class="ml-auto rounded-full bg-can-500 px-1.5 text-[12px] leading-5 font-bold text-white" aria-label={`${item.badge} aguardando`}>
+                      <span class="ml-auto rounded-full bg-can-500 px-1.5 text-[12px] leading-5 font-bold text-white" aria-label={item.badgeLabel ?? `${item.badge} aguardando`}>
                         {item.badge}
                       </span>
                     ) : null}

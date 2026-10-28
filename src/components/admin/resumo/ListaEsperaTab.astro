@@ -22,9 +22,11 @@ interface Props {
   timeZone: string;
   /** Tipo e cor de cada serviço, para a etiqueta do tipo (cliente, 19/out/2026). */
   tags: Map<string, ServiceTagInfo>;
+  /** Para onde o "Tirar da lista" volta (CRM A1: a mesma aba no Relacionamento). */
+  returnTo?: string;
 }
 
-const { entries, offers, timeZone, tags } = Astro.props;
+const { entries, offers, timeZone, tags, returnTo = "/admin/consultas?tab=lista_espera" } = Astro.props;
 const when = (d: Date) => formatInstant(d, timeZone, "EEE dd/MM 'às' HH:mm");
 const groups = new Map<string, WaitlistEntry[]>();
 for (const entry of entries) {
@@ -41,7 +43,6 @@ const offerStatus: Record<OfferStatus, { label: string; tone: PillTone }> = {
   withdrawn: { label: "Retirada", tone: "neutral" },
   skipped: { label: "Pulada", tone: "neutral" },
 };
-const returnTo = "/admin/consultas?tab=lista_espera";
 const BOX = "overflow-hidden rounded-xl border border-line bg-white";
 const BOX_TITLE = "flex flex-wrap items-center justify-between gap-2 border-b border-line bg-[#f8faf9] px-4 py-3 text-[15px] font-bold text-ink";
 ---

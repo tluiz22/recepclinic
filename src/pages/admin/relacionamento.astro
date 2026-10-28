@@ -1,0 +1,98 @@
+---
+// Relacionamento (CRM A1, cliente, 27/out/2026): as pendências que pedem
+// contato da equipe, por aba. Administrador e Recepção, com o item
+// "Relacionamento" (conferido no middleware pela área); Lembretes e Lista de
+// espera exigem também o item da lista de origem. As listas e as ações são as
+// do Resumo do Dia, que continua igual (Q1); só a volta das ações é esta tela.
+import AdminLayout from "../../layouts/AdminLayout.astro";
+import ConfirmDeleteDialog from "../../components/admin/ConfirmDeleteDialog.astro";
+import FlashMessage from "../../components/admin/FlashMessage.astro";
+import AguardandoTab from "../../components/admin/resumo/AguardandoTab.astro";
+import ListaEsperaTab from "../../components/admin/resumo/ListaEsperaTab.astro";
+import LembretesPendentesTab from "../../components/admin/relacionamento/LembretesPendentesTab.astro";
+import EmptyState from "../../components/admin/ui/EmptyState.astro";
+import HowItWorks from "../../components/admin/ui/HowItWorks.astro";
+import PageHeader from "../../components/admin/ui/PageHeader.astro";
+import Tabs, { type TabItem } from "../../components/admin/ui/Tabs.astro";
+import { relacionamento } from "../../lib/ajuda/relacionamento";
+import { createUserClient } from "../../lib/data/clients";
+import { loadActorLabels } from "../../lib/data/agenda/trail";
+import type { AgendaAppointment } from "../../lib/data/agenda/view";
+import { listServiceRefs } from "../../lib/data/config/services";
+import { loadRelationshipLists, menuTotal, RELATIONSHIP_TABS, relationshipCounts, relationshipTabs, type RelationshipTab } from "../../lib/data/relationship";
+import { listRecentOffers } from "../../lib/data/waitlist/entries";
+import { serviceTags } from "../../components/admin/agenda/categoryStyle";
+import { logError } from "../../lib/log";
+import { vocabularyFor } from "../../lib/vocabulary";
+
+const clinic = Astro.locals.clinic!;
+const db = createUserClient(Astro.request, Astro.cookies);
+const vocabulary = vocabularyFor(clinic.clinicProfile);
+const now = new Date();
+
+const available = relationshipTabs(clinic.features);
+const failed = (tab: RelationshipTab, error: unknown) => logError(`relacionamento: ${tab} não carregou`, error, { clinica: clinic.clinicId });
+const lists = await loadRelationshipLists(db, clinic.clinicId, available, failed, now);
+const counts = relationshipCounts(lists);
+Astro.locals.relationshipMenuTotal = menuTotal(counts);
+
+// Sem aba no endereço, abre a primeira com pendência (ou a primeira).
+const asked = Astro.url.searchParams.get("tab");
+const tab: RelationshipTab =
+  available.find((id) => id === asked) ?? available.find((id) => (counts[id] ?? 0) > 0) ?? available[0];
+const tabHref = (id: RelationshipTab) => `/admin/relacionamento?tab=${id}`;
+const returnTo = tabHref(tab);
+
+// A aba aberta usa a lista já lida para o contador.
+let loadFailed = lists[tab] === null;
+const awaiting: AgendaAppointment[] = lists.aguardando_remarcacao ?? [];
+const reminders = lists.lembretes ?? [];
+const waitlist = lists.lista_espera ?? [];
+let offers: Awaited<ReturnType<typeof listRecentOffers>> = [];
+if (tab === "lista_espera" && !loadFailed) {
+  try {
+    offers = await listRecentOffers(db, clinic.clinicId);
+  } catch (error) {
+    failed(tab, error);
+    loadFailed = true;
+  }
+}
+const [actors, serviceRefs] = await Promise.all([
+  loadActorLabels(db, clinic.clinicId, tab === "aguardando_remarcacao" ? awaiting.map((a) => a.canceledBy) : []),
+  listServiceRefs(db, clinic.clinicId),
+]);
+const tags = serviceTags(serviceRefs);
+
+const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
+const countOf = (id: RelationshipTab): Pick<TabItem, "count" | "countTone" | "alert" | "countLabel"> => {
+  const n = counts[id];
+  // Contagem que falhou: aviso, nunca 0 (seção 13.4 do plano).
+  if (n === null || n === undefined) return { alert: true, countLabel: "Não foi possível contar" };
+  if (id === "lista_espera") return { count: n, countTone: "info", countLabel: `${plural(n, "pessoa", "pessoas")} na lista` };
+  if (id === "lembretes") return { count: n, countLabel: `${n} sem resposta ou não entregue(s)` };
+  return { count: n, countLabel: `${n} aguardando` };
+};
+const tabs = RELATIONSHIP_TABS.filter((t) => available.includes(t.id)).map((t) => ({ label: t.label, href: tabHref(t.id), active: t.id === tab, ...countOf(t.id) }));
+---
+<AdminLayout title="Relacionamento">
+  <PageHeader title="Relacionamento" />
+  <HowItWorks id="relacionamento" topic={relacionamento.comoFunciona.central} class="mt-1">
+    <p class="text-[15px] text-ink-soft sm:text-base">Pendências que pedem contato da equipe.</p>
+  </HowItWorks>
+  <Tabs label="Abas do Relacionamento" class="mt-4" tabs={tabs} />
+  <FlashMessage />
+
+  {loadFailed && (
+    <div class="mt-4 max-w-4xl">
+      <EmptyState variant="dashed" title="Não foi possível carregar esta lista" text="As outras abas continuam disponíveis. Tente abrir esta aba de novo daqui a pouco." />
+    </div>
+  )}
+  {!loadFailed && tab === "aguardando_remarcacao" && (
+    awaiting.length > 0
+      ? <AguardandoTab tags={tags} appointments={awaiting} actors={actors} timeZone={clinic.timezone} vocabulary={vocabulary} returnTo={returnTo} />
+      : <div class="mt-4 max-w-4xl"><EmptyState variant="dashed" title={relacionamento.vazios.aguardando.titulo} text={relacionamento.vazios.aguardando.texto} /></div>
+  )}
+  {!loadFailed && tab === "lembretes" && <LembretesPendentesTab tags={tags} reminders={reminders} timeZone={clinic.timezone} vocabulary={vocabulary} />}
+  {!loadFailed && tab === "lista_espera" && <ListaEsperaTab tags={tags} entries={waitlist} offers={offers} timeZone={clinic.timezone} returnTo={returnTo} />}
+  <ConfirmDeleteDialog />
+</AdminLayout>

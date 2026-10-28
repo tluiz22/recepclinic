@@ -20,8 +20,17 @@
 >   seção 11 do plano): 7ª opção "Enviou o link / vai marcar" e "Marcou" só com atendimento conferido; Lembretes saem
 >   pelas ações e por "Não quer" e "Número errado"; Observações como hoje, com "Atualizado em … por …"; o CRM vai ao
 >   **staging só pela `main`**, com o OK do cliente (validação de cada etapa no local antes).
-> - **Retomar daqui:** etapa **A1**, começando por mostrar o SQL do item `relationship` da matriz, para aprovação.
->   Linha de base dos testes: 691 de unidade e 636 de banco passando (local, 27/out).
+> - **A1 implementada e testada no local em 27/out** (sem staging, Q13): migração
+>   `20261028120000_relacionamento_matriz.sql` (item `relationship`, área própria, nenhuma clínica recebe; aplicada só
+>   no banco local), área `relationship` (Administrador e Recepção, com o item), menu "Relacionamento" com o total
+>   (Aguardando remarcação + Lembretes; a Lista de espera não soma), tela `/admin/relacionamento` com as abas
+>   Aguardando remarcação, Lembretes (só não entregue e sem resposta dos atendimentos por vir, Q4) e Lista de espera.
+>   Detalhes na seção 14 do [plano](analises/plano-evolucao-relacionamento.md). Testes: 703 de unidade e 642 de banco
+>   passando; navegador local por papel (Recepção, Recepção restrita, Administrador, Profissional) e no celular.
+> - **Defeito anterior achado na A1:** o aviso de uma ação (ex.: "Fora da lista…") aparecia de novo na tela seguinte
+>   em toda clínica com o bot, por causa do contador do Atendimento no menu (F8.5a, já na produção). Corrigido na
+>   `CRM` (o menu lê o aviso antes das esperas); levar à `main` e à produção depende do cliente.
+> - **Retomar daqui:** validação da A1 pelo cliente no local; depois, a **A2**.
 
 ## Como trabalhar nesta etapa
 

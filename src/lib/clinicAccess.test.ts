@@ -140,6 +140,26 @@ describe("papéis e áreas do painel (D6)", () => {
     expect(canAccessPath({ ...as("reception"), features: [] }, "/api/admin/financeiro/contato/1", new URLSearchParams())).toBe(false);
   });
 
+  it("Relacionamento (CRM A1, Q2): Administrador e Recepção, com o item; o Profissional não; nenhuma rota das Métricas", () => {
+    const none = new URLSearchParams();
+    expect(areaOfPath("/admin/relacionamento")).toBe("relationship");
+    expect(areaOfPath("/api/admin/relacionamento/qualquer")).toBe("relationship");
+    expect(areaOfPath("/admin/relacionamento-extra")).toBe("shared");
+    const on: FeatureKey[] = ["relationship"];
+    expect(canAccessArea({ ...as("admin"), features: on }, "relationship")).toBe(true);
+    expect(canAccessArea({ ...as("reception"), features: on }, "relationship")).toBe(true);
+    expect(canAccessArea({ ...as("professional"), features: on }, "relationship")).toBe(false);
+    expect(canAccessArea({ ...as("professional", "reception"), features: on }, "relationship")).toBe(true);
+    expect(canAccessArea({ ...as("reception"), features: [] }, "relationship")).toBe(false);
+    expect(canAccessArea({ ...as("admin"), features: [] }, "relationship")).toBe(false);
+    expect(canAccessArea({ ...support, features: on }, "relationship")).toBe(true);
+    expect(canAccessPath({ ...as("reception"), features: on }, "/admin/relacionamento", none)).toBe(true);
+    // A Recepção com a central continua sem as Métricas, mesmo com os itens delas.
+    const all: FeatureKey[] = ["relationship", "metrics_recall", "metrics_no_shows", "metrics_performance"];
+    expect(canAccessArea({ ...as("reception"), features: all }, "metrics")).toBe(false);
+    expect(canAccessPath({ ...as("reception"), features: all }, "/admin/metricas", new URLSearchParams("tab=retomar_contato"))).toBe(false);
+  });
+
   it("Nota fiscal (F11.3): só o Administrador (e o Suporte), com o Módulo financeiro", () => {
     const on: FeatureKey[] = ["finance"];
     const none = new URLSearchParams();

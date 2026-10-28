@@ -89,6 +89,17 @@ describe("acesso à rota: papel (D6) e item liberado (D11)", () => {
     expect(can(ctx(["reception"], []), "/admin/consultas?tab=lista_espera")).toBe(false);
   });
 
+  it("Relacionamento (CRM A1): as abas Lembretes e Lista de espera exigem o item da lista de origem", () => {
+    expect(route("/admin/relacionamento")).toBeNull();
+    expect(route("/admin/relacionamento?tab=aguardando_remarcacao")).toBeNull();
+    expect(route("/admin/relacionamento?tab=lembretes")).toBe("reminders");
+    expect(route("/admin/relacionamento?tab=lista_espera")).toBe("waitlist");
+    expect(can(ctx(["reception"], ["relationship"]), "/admin/relacionamento?tab=lembretes")).toBe(false);
+    expect(can(ctx(["reception"], ["relationship", "reminders"]), "/admin/relacionamento?tab=lembretes")).toBe(true);
+    expect(can(ctx(["reception"], ["reminders"]), "/admin/relacionamento?tab=lembretes")).toBe(false);
+    expect(can(ctx(["professional"], ["relationship", "reminders"]), "/admin/relacionamento?tab=lembretes")).toBe(false);
+  });
+
   it("item liberado não passa por cima do papel", () => {
     expect(can(ctx(["reception"], ["exams"]), "/admin/configuracoes/servicos")).toBe(false);
     expect(can(ctx(["reception"], ["metrics_financial"]), "/admin/metricas?tab=financeiro")).toBe(false);

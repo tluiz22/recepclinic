@@ -8,7 +8,7 @@
 // pacientes e contatos; a tela do Resumo do dia e o comparecimento;
 // configurações básicas.
 
-export type FeatureArea = "agenda" | "whatsapp" | "metrics" | "finance";
+export type FeatureArea = "agenda" | "whatsapp" | "metrics" | "finance" | "relationship";
 
 export type FeatureKey =
   | "exams"
@@ -28,7 +28,8 @@ export type FeatureKey =
   | "metrics_funnel"
   | "metrics_financial"
   | "metrics_personal"
-  | "finance";
+  | "finance"
+  | "relationship";
 
 export type Feature = { key: FeatureKey; area: FeatureArea; label: string; dependsOn: FeatureKey[] };
 
@@ -55,11 +56,19 @@ export const FEATURES: readonly Feature[] = [
   { key: "metrics_personal", area: "metrics", label: "Métricas pessoais do profissional", dependsOn: [] },
   // Módulo financeiro (F11, cliente, 12/out/2026): pagamentos e nota fiscal.
   { key: "finance", area: "finance", label: "Módulo financeiro (pagamentos e nota fiscal)", dependsOn: [] },
+  // Central de Relacionamento (CRM A1, cliente, 27/out/2026): cada aba exige também o item da lista de origem.
+  { key: "relationship", area: "relationship", label: "Relacionamento (central de pendências)", dependsOn: [] },
 ];
 
 const BY_KEY = new Map(FEATURES.map((feature) => [feature.key, feature]));
 
-export const AREA_LABELS: Record<FeatureArea, string> = { agenda: "Agenda", whatsapp: "WhatsApp", metrics: "Métricas", finance: "Financeiro" };
+export const AREA_LABELS: Record<FeatureArea, string> = {
+  agenda: "Agenda",
+  whatsapp: "WhatsApp",
+  metrics: "Métricas",
+  finance: "Financeiro",
+  relationship: "Relacionamento",
+};
 
 export function featureLabel(key: FeatureKey): string {
   return BY_KEY.get(key)?.label ?? key;
@@ -112,6 +121,9 @@ const PATH_RULES: PathRule[] = [
   // Resumo do Dia: abas do lembrete e da lista de espera.
   { prefix: "/admin/consultas", tab: "lembretes", feature: "reminders" },
   { prefix: "/admin/consultas", tab: "lista_espera", feature: "waitlist" },
+  // Relacionamento (CRM A1): as mesmas abas, com o item da lista de origem (o da central é conferido pela área).
+  { prefix: "/admin/relacionamento", tab: "lembretes", feature: "reminders" },
+  { prefix: "/admin/relacionamento", tab: "lista_espera", feature: "waitlist" },
   // Exames: na Agenda (F4.5), o serviço de exame só aparece com o item, e o
   // banco recusa marcar sem ele (o cadastro do serviço é travado desde a F4.3).
   // Configurações (F4.4b): convênios, contatos do resumo do dia e hora do lembrete.

@@ -647,3 +647,45 @@ auditado.
 | **R7** Como validar no staging sem a `main` | **Resolvido** pela Q13 (27/out): staging só pela `main`, com o OK do cliente. Consequência: a A3 e as validações por etapa no staging acontecem depois de cada entrada aprovada na `main` |
 | **R8** Meta de 1,5 s sem medida atual | Medir a linha de base do Resumo e das Métricas no staging antes da A1 |
 | **R9** Edição das Observações sem histórico: só a última edição fica registrada (as anteriores se perdem) | Fora do escopo; as anotações datadas ficam nos registros de interação (Q6) |
+
+---
+
+## 14. A1 implementada (27/out, só no local)
+
+**O que mudou:**
+
+| Parte | Arquivos |
+|---|---|
+| Migração aprovada (item `relationship`, área `relationship`, ordem 190, nenhuma clínica recebe) | `supabase/migrations/20261028120000_relacionamento_matriz.sql` (aplicada **só no banco local**, com `migration up --local`) |
+| Item, área e regras das abas (Lembretes exige `reminders`; Lista de espera, `waitlist`) | `src/lib/features.ts` |
+| Área do painel: Administrador e Recepção, com o item; o Profissional não; Métricas continuam fechadas para a Recepção | `src/lib/clinicAccess.ts` |
+| "Voltar" e ações voltam ao Relacionamento | `src/lib/returnPath.ts` |
+| Matriz: o item aparece em "Fora da tabela de preços", como o Financeiro (a tela agrupa pela venda, não pela área) | `src/lib/plans.ts`, `src/lib/ajuda/sistema.ts` |
+| Listas e contadores (as mesmas funções do Resumo; contador = linhas; falha isolada vira "!", nunca 0) | `src/lib/data/relationship.ts` |
+| Tela e aba de lembretes pendentes; ajuda contextual | `src/pages/admin/relacionamento.astro`, `src/components/admin/relacionamento/LembretesPendentesTab.astro`, `src/lib/ajuda/relacionamento.ts` |
+| Abas do Resumo reaproveitadas com a volta configurável (no Resumo, igual); o "Remarcar" do Aguardando passa a levar a volta | `src/components/admin/resumo/AguardandoTab.astro`, `ListaEsperaTab.astro` |
+| Menu "Relacionamento" com o total, ao lado do Atendimento (no celular, no "Mais") | `src/layouts/AdminLayout.astro`, `src/env.d.ts` |
+
+**Escolhas da implementação, a confirmar na validação:**
+1. **Total do menu** = Aguardando remarcação + Lembretes. A Lista de espera mostra o número na aba (azul, informativo,
+   como no Resumo), mas não soma no menu, porque quem espera vaga não pede contato.
+2. **Abertura:** sem aba no endereço, abre a primeira com algum número (inclusive a Lista de espera).
+3. **Lembretes:** lembretes enviados nos últimos 7 dias; entram os atendimentos por vir com o sinal "Reenviar
+   lembrete" (não entregue) ou "Reenviar (sem resposta)" do cartão da Agenda (sem resposta há mais de 2 horas). O
+   reenvio e o "Confirmar presença" continuam na Agenda ("Abrir na Agenda").
+
+**Defeito anterior achado e corrigido (na `CRM`):** desde a F8.5a, o menu espera o contador do Atendimento antes de
+montar a tela; depois dessa espera o cookie do aviso não era apagado, e o aviso de uma ação aparecia de novo na tela
+seguinte, em toda clínica com o bot (conferido no local: com o bot desligado, não acontecia). O menu agora lê o aviso
+antes das esperas (`pageFlash` no início do `AdminLayout`). Conferido em Resumo, Agenda, Pacientes, Relacionamento,
+Atendimento e Início. **A produção tem o defeito** (publicação `af0902d`).
+
+**Testes:** unidade 703 (691 + 12: `relationship.test.ts`, acesso, rotas, volta, planos e matriz); banco 642 (636 + 6:
+`tests/db/relacionamento.test.ts`: lembretes não entregues e sem resposta, saída ao confirmar ou cancelar, sem o item,
+outra clínica, mesma lista do Resumo, contador = linhas); `astro check` sem erros. Navegador local (computador e
+390px): Recepção (3 abas, contadores, "Desistiu" com confirmação e volta, menu atualizado), Recepção restrita (só as
+agendas dela), Administrador, Profissional (sem menu; a rota volta ao Início com acesso negado). Os dados de teste
+criados no banco local foram desfeitos; ficou só o item liberado para a Clínica Exemplo Saúde.
+
+**Não testado:** staging (Q13: só pela `main`, com o OK do cliente); falha real de uma fonte no navegador (só no
+teste de unidade); volume grande (meta de 1,5 s, R8).

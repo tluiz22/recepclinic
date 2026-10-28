@@ -21,9 +21,11 @@ interface Props {
   vocabulary: Vocabulary;
   /** Tipo e cor de cada serviço, para a etiqueta do tipo (cliente, 19/out/2026). */
   tags: Map<string, ServiceTagInfo>;
+  /** Para onde o "Desistiu" volta (CRM A1: a mesma aba no Relacionamento). */
+  returnTo?: string;
 }
 
-const { appointments, actors, timeZone, vocabulary, tags } = Astro.props;
+const { appointments, actors, timeZone, vocabulary, tags, returnTo = "/admin/consultas?tab=aguardando_remarcacao" } = Astro.props;
 ---
 
 <p class="mt-4 text-[15px] text-ink-soft">
@@ -56,12 +58,12 @@ const { appointments, actors, timeZone, vocabulary, tags } = Astro.props;
               )}
             </div>
             <div class="flex shrink-0 items-center justify-between gap-2 sm:flex-col sm:items-end">
-              <Button variant="primary" size="sm" href={`/admin/agenda/marcar?patient_id=${a.patientId}&service_id=${a.serviceId}&agenda_id=${a.agendaId}`}>
+              <Button variant="primary" size="sm" href={withReturn(`/admin/agenda/marcar?patient_id=${a.patientId}&service_id=${a.serviceId}&agenda_id=${a.agendaId}`, returnTo)}>
                 Remarcar
               </Button>
               <form method="POST" action={`/api/admin/agenda/atendimentos/${a.id}`} class="contents">
                 <input type="hidden" name="acao" value="desistiu" />
-                <input type="hidden" name="return_to" value="/admin/consultas?tab=aguardando_remarcacao" />
+                <input type="hidden" name="return_to" value={returnTo} />
                 <Button
                   type="submit"
                   size="sm"

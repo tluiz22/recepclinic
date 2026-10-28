@@ -1,0 +1,79 @@
+---
+// Relacionamento › Lembretes (CRM A1, Q4): atendimentos por vir com o
+// lembrete não entregue ou sem resposta, pela mesma regra do sinal do cartão
+// da Agenda. O reenvio e o "Confirmar presença" continuam na Agenda; o nome
+// leva à ficha e "Abrir na Agenda" ao dia do atendimento.
+import { currentPath, withReturn } from "../../../lib/returnPath";
+import PhoneLinks from "../PhoneLinks.astro";
+import Button from "../ui/Button.astro";
+import EmptyState from "../ui/EmptyState.astro";
+import HowItWorks from "../ui/HowItWorks.astro";
+import Pill from "../ui/Pill.astro";
+import { relacionamento } from "../../../lib/ajuda/relacionamento";
+import { formatInstant, localDateOf } from "../../../lib/clinicTime";
+import type { PendingReminder, PendingReminderKind } from "../../../lib/data/relationship";
+import { capitalize, type Vocabulary } from "../../../lib/vocabulary";
+
+import ServiceTag, { type ServiceTagInfo } from "../agenda/ServiceTag.astro";
+import { serviceBesideCategory } from "../agenda/categoryStyle";
+interface Props {
+  reminders: PendingReminder[];
+  timeZone: string;
+  vocabulary: Vocabulary;
+  tags: Map<string, ServiceTagInfo>;
+}
+
+const { reminders, timeZone, vocabulary, tags } = Astro.props;
+const groups: { kind: PendingReminderKind; label: string; tone: "danger" | "warning" }[] = [
+  { kind: "not_delivered", label: "Não entregue", tone: "danger" },
+  { kind: "no_answer", label: "Sem resposta", tone: "warning" },
+];
+const here = currentPath(Astro.url);
+---
+
+<HowItWorks id="relacionamento-lembretes" topic={relacionamento.comoFunciona.lembretes} class="mt-4 max-w-4xl">
+  <p class="text-[15px] text-ink-soft">Atendimentos por vir. O reenvio e o "Confirmar presença" ficam na Agenda.</p>
+</HowItWorks>
+{
+  reminders.length > 0 && (
+    <div class="mt-3 flex max-w-4xl flex-col gap-4">
+      {groups.map(({ kind, label, tone }) => {
+        const items = reminders.filter((r) => r.kind === kind);
+        return (
+          items.length > 0 && (
+            <section class="overflow-hidden rounded-xl border border-line bg-white" aria-label={label}>
+              <h2 class="flex items-center justify-between gap-2 border-b border-line bg-[#f8faf9] px-4 py-3 text-[15px] font-bold text-ink">
+                <Pill tone={tone}>{label}</Pill>
+                <span class="text-[13px] font-medium text-ink-soft tabular-nums">{items.length}</span>
+              </h2>
+              <ul class="divide-y divide-[#e6ecea] px-4">
+                {items.map(({ appointment: a, sentAt }) => (
+                  <li class="flex flex-col gap-3 py-3.5 sm:flex-row sm:items-start sm:justify-between">
+                    <div class="flex min-w-0 flex-col gap-0.5">
+                      <a href={withReturn(`/admin/pacientes/${a.patientId}`, here)} class="text-base font-semibold text-ink no-underline hover:text-brand hover:underline">
+                        {a.patientName}
+                      </a>
+                      <span class="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-[15px] text-ink-soft sm:text-sm">
+                        <ServiceTag info={tags.get(a.serviceId)} />
+                        {[serviceBesideCategory(a.serviceName, a.category), a.agendaName, formatInstant(a.scheduledAt, timeZone, "EEE dd/MM 'às' HH:mm")].filter(Boolean).join(" · ")}
+                      </span>
+                      <span class="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-[15px] text-ink-soft sm:text-sm">
+                        {!a.isContactSelf && `${capitalize(vocabulary.contact)}: ${a.contactName} · `}
+                        <PhoneLinks phone={a.contactPhone} plain />
+                      </span>
+                      <span class="text-[13px] text-ink-soft">Lembrete enviado em {formatInstant(sentAt, timeZone, "dd/MM 'às' HH:mm")}</span>
+                    </div>
+                    <Button size="sm" class="shrink-0 self-start" href={`/admin/agenda?date=${localDateOf(a.scheduledAt, timeZone)}`}>
+                      Abrir na Agenda
+                    </Button>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )
+        );
+      })}
+    </div>
+  )
+}
+{reminders.length === 0 && <div class="mt-3 max-w-4xl"><EmptyState variant="dashed" title={relacionamento.vazios.lembretes.titulo} text={relacionamento.vazios.lembretes.texto} /></div>}

@@ -35,5 +35,7 @@ declare namespace App {
     clinic?: import("./lib/clinicAccess").ClinicContext;
     // Aviso da tela já lido neste pedido (src/lib/flash.ts, pageFlash).
     flash?: import("./lib/flash").Flash | null;
+    // Total do Relacionamento já contado pela própria tela (o menu não lê de novo).
+    relationshipMenuTotal?: number;
   }
 }

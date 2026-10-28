@@ -112,7 +112,10 @@ export function hasRole(context: RoleHolder, ...roles: ClinicRole[]): boolean {
 //     (e só a própria agenda, `metricsScope`).
 //   - Financeiro (F11, cliente, 12/out/2026): o Administrador e a Recepção,
 //     com o "Módulo financeiro" liberado; o Profissional não entra.
-export type PanelArea = "settings" | "metrics" | "finance" | "shared";
+//   - Relacionamento (CRM A1, cliente, 27/out/2026, Q2): o Administrador e a
+//     Recepção, com o item "Relacionamento"; o Profissional não entra. Não
+//     abre nenhuma rota das Métricas.
+export type PanelArea = "settings" | "metrics" | "finance" | "relationship" | "shared";
 
 const AREA_PREFIXES: [string, PanelArea][] = [
   ["/admin/configuracoes", "settings"],
@@ -121,12 +124,15 @@ const AREA_PREFIXES: [string, PanelArea][] = [
   ["/admin/relatorios", "metrics"],
   ["/admin/financeiro", "finance"],
   ["/api/admin/financeiro", "finance"],
+  ["/admin/relacionamento", "relationship"],
+  ["/api/admin/relacionamento", "relationship"],
 ];
 
 const AREA_ROLES: Record<PanelArea, ClinicRole[]> = {
   settings: ["admin"],
   metrics: ["admin", "professional"],
   finance: ["admin", "reception"],
+  relationship: ["admin", "reception"],
   shared: ["admin", "professional", "reception"],
 };
 
@@ -138,7 +144,7 @@ export function areaOfPath(pathname: string): PanelArea {
 const METRICS_TABS = FEATURES.filter((feature) => feature.area === "metrics" && feature.key !== "metrics_personal").map((f) => f.key);
 
 export function canAccessArea(context: AccessHolder, area: PanelArea): boolean {
-  if (area === "finance") return hasRole(context, ...AREA_ROLES.finance) && (context.features ?? []).includes("finance");
+  if (area === "finance" || area === "relationship") return hasRole(context, ...AREA_ROLES[area]) && (context.features ?? []).includes(area);
   if (area !== "metrics") return hasRole(context, ...AREA_ROLES[area]);
   const features = context.features ?? [];
   return metricsScope({ ...context, features }) !== "none" && METRICS_TABS.some((key) => features.includes(key));
