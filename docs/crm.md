@@ -39,10 +39,13 @@
 >   espera). Testes: 714 de unidade e 644 de banco passando. Detalhes na seção 15 do
 >   [plano](analises/plano-evolucao-relacionamento.md).
 > - **A2 validada pelo cliente em 27/out.**
-> - **A3 (27/out), regressão e validação por papel no local:** ver a seção 16 do
->   [plano](analises/plano-evolucao-relacionamento.md). Próximo passo, só com o OK do cliente: entrada na `main`
->   (avanço direto: a `main` não andou desde `eca4b79`) e staging, na ordem simulação → `db push` da migração
->   `20261028120000` (a única que falta no staging, conferido com `migration list`) → conferir no banco → push.
+> - **A3 (27/out):** regressão e validação por papel no local (seção 16 do
+>   [plano](analises/plano-evolucao-relacionamento.md)). **Com o OK do cliente, o CRM (A1 e A2) entrou na `main` e foi
+>   ao staging em 27/out:** `CRM` → `main` por avanço direto; migração `20261028120000` simulada, aplicada e conferida
+>   no banco do staging (item criado, nenhuma clínica com ele); push da `main` (commit `d94bc4e`), conferido em `teste.recepclinic.com.br` (a produção, `app.`, segue sem a tela). Junto foi a
+>   correção do aviso que reaparecia. **Produção: nada.**
+> - **Retomar daqui:** o cliente libera o item "Relacionamento" na Matriz (Suporte) para a clínica de teste do staging
+>   e valida lá; depois, a **etapa B** (histórico) na branch `CRM`.
 
 ## Como trabalhar nesta etapa
 

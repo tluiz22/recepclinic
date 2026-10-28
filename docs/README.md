@@ -18,8 +18,10 @@
 >   `#bot` ou o "Devolver ao bot").
 > - **Etapa paralela CRM (cliente, 27/out):** desenvolvida na branch **`CRM`**, separada da `main`, para poder parar a
 >   qualquer momento e voltar às etapas do piloto (B e C). O planejamento e o ponto de retomada do CRM ficam em
->   `docs/crm.md`, **só na branch `CRM`**. Para trocar: `git switch CRM` / `git switch main`. A `main` segue sendo a
+>   `docs/crm.md`. Para trocar: `git switch CRM` / `git switch main`. A `main` segue sendo a
 >   única que publica no staging (e a `producao` na produção); o CRM só entra na `main` com a aprovação do cliente.
+>   **27/out: a central "Relacionamento" (A1 e A2) entrou na `main` e no staging** com o OK do cliente (migração
+>   `20261028120000` aplicada; o item é liberado por clínica na Matriz). **Não está na produção.**
 >
 > - **Etapas 0 a 4 concluídas**: cópia isolada, [diagnóstico](diagnostico.md), [limites](limites.md),
 >   [arquitetura](arquitetura.md) (decisões D1–D11) e [plano](plano.md) (fases F0–F10).
@@ -147,7 +149,7 @@
 >     clínica de teste "Consultorio de Teste" no staging (nome conferido em 12/out). ~~Nunca verificar esse número em app
 >     nenhum~~ **(revisto pelo cliente em 27/out: o número passa para o app WhatsApp Business e volta por coexistência,
 >     parte P do [`staging.md`](staging.md))**. Roteiro antigo na parte E.
->   - **Staging:** `https://app.recepclinic.com.br` (Vercel publica a cada push na `main`);
+>   - **Staging:** `https://teste.recepclinic.com.br` desde a F10 (`app.` é a produção; ver [`producao.md`](producao.md)) (Vercel publica a cada push na `main`);
 >     migrações novas vão com `supabase db push` antes do push (repositório ligado ao projeto
 >     `recepclinic-staging`; a senha do banco está em `SUPABASE_DB_PASSWORD` no `.env.staging`);
 >     agendador ligado (`scripts/agendador.mjs`); variáveis no `.env.staging` (fora do git). E-mail pelo
