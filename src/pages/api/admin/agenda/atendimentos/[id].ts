@@ -6,6 +6,8 @@ import { isUuid } from "../../../../../lib/clinicAccess";
 import {
   bookAppointment,
   cancelAppointment,
+  changeAppointment,
+  getAppointment,
   recordAttendance,
   rescheduleAppointment,
   setPresenceConfirmed,
@@ -23,6 +25,12 @@ import { GUIDANCE_RESEND_MESSAGES, resendGuidance } from "../../../../../lib/dat
 import { guidanceSender, preparationSender, reminderSender } from "../../../../../lib/data/whatsapp/send";
 import { formChecked, formInt, formOptionalText, formText } from "../../../../../lib/forms";
 import { changeSeriesFrom, createSeries, endSeriesFrom } from "../../../../../lib/data/agenda/series";
+import { snapshotChanges, snapshotOf } from "../../../../../lib/appointmentChanges";
+import { listAgendas } from "../../../../../lib/data/config/agendas";
+import { listInsurancePlans } from "../../../../../lib/data/config/insurance";
+import { listLocations } from "../../../../../lib/data/config/locations";
+import { listServices, servicePriceAt } from "../../../../../lib/data/config/services";
+import { getPatient } from "../../../../../lib/data/patients";
 
 // Ações da Agenda (F4.5) num atendimento: marcar (`novo`), remarcar,
 // cancelar, presença confirmada, comparecimento, lembrete, preparo e lista
@@ -125,6 +133,68 @@ export const POST: APIRoute = async (context) => {
           });
           const notice = await notify("reschedule", moved);
           return done(`Atendimento remarcado.${notice}`, `/admin/agenda?date=${localDateOf(moved.scheduledAt, clinic.timezone)}`);
+        }
+        case "alterar": {
+          // Alterar (C4; cliente, 28/out/2026): o paciente é avisado só se mudar data, hora, agenda ou local.
+          const slot = parseSlot(formText(form, "slot"));
+          if (!slot) throw new DataError("invalid", "Atendimento: escolha o horário", { start: "Escolha o horário." });
+          const insuranceOn = clinic.features.includes("insurance");
+          const [current, services, agendas, locations, plans] = await Promise.all([
+            getAppointment(db, clinic.clinicId, id),
+            listServices(db, clinic.clinicId, { includeInactive: true }),
+            listAgendas(db, clinic.clinicId),
+            listLocations(db, clinic.clinicId, { includeInactive: true }),
+            insuranceOn ? listInsurancePlans(db, clinic.clinicId, { includeInactive: true }) : Promise.resolve([]),
+          ]);
+          const patient = await getPatient(db, clinic.clinicId, current.patientId);
+          const serviceId = formText(form, "service_id");
+          const service = services.find((s) => s.id === serviceId);
+          const insurancePlanId = insuranceOn ? formOptionalText(form, "insurance_plan_id") || null : current.insurancePlanId;
+          const plan = (planId: string | null) => (planId ? (plans.find((p) => p.id === planId)?.name ?? "Convênio") : "Particular");
+          const agendaName = (agendaId: string) => agendas.find((a) => a.id === agendaId)?.name;
+          const locationName = (locationId: string) => locations.find((l) => l.id === locationId)?.name;
+          const isHome = locations.find((l) => l.id === slot.locationId)?.type === "home_visit";
+          const homeVisitAddress = isHome ? formOptionalText(form, "home_visit_address") : null;
+          const before = snapshotOf({
+            patient: patient.fullName,
+            service: services.find((s) => s.id === current.serviceId),
+            agenda: agendaName(current.agendaId),
+            location: locationName(current.locationId),
+            start: current.scheduledAt,
+            timeZone: clinic.timezone,
+            address: current.homeVisitAddress,
+            insurance: insuranceOn ? plan(current.insurancePlanId) : null,
+            priceCents: current.priceCents,
+          });
+          const after = snapshotOf({
+            patient: patient.fullName,
+            service,
+            agenda: agendaName(slot.agendaId),
+            location: locationName(slot.locationId),
+            start: slot.start,
+            timeZone: clinic.timezone,
+            address: homeVisitAddress,
+            insurance: insuranceOn ? plan(insurancePlanId) : null,
+            priceCents: service ? servicePriceAt(service, slot.locationId) : null,
+          });
+          const changes = snapshotChanges(before, after);
+          if (!changes.length) return done("Nada foi mudado: o atendimento continua igual.");
+          const changed = await changeAppointment(db, clinic.clinicId, id, {
+            serviceId,
+            agendaId: slot.agendaId,
+            locationId: slot.locationId,
+            start: slot.start,
+            insurancePlanId,
+            homeVisitAddress,
+            actorId,
+            changes,
+            acceptedWarnings: formChecked(form, "aceito_avisos"),
+          });
+          const notice = changed.scheduleChanged ? await notify("reschedule", changed.appointment) : "";
+          return done(
+            ["Atendimento alterado.", ...changed.returnWarnings].join(" ") + notice,
+            `/admin/agenda?date=${localDateOf(changed.appointment.scheduledAt, clinic.timezone)}`,
+          );
         }
         case "cancelar": {
           const canceled = await cancelAppointment(db, clinic.clinicId, id, { channel: "admin", actorId });

@@ -384,7 +384,7 @@ export async function agendasForService(db: DbClient, clinicId: string, serviceI
 export async function getFreeSlotsAnyAgenda(
   db: DbClient,
   clinicId: string,
-  query: { serviceId: string; date: string; locationId?: string | null },
+  query: { serviceId: string; date: string; locationId?: string | null; ignoreAppointmentId?: string | null },
   now: Date = new Date(),
 ): Promise<AgendaSlot[]> {
   const agendaIds = await agendasForService(db, clinicId, query.serviceId);
@@ -404,7 +404,7 @@ export async function getFreeSlotsAnyAgenda(
 export async function getNextAvailableDatesAnyAgenda(
   db: DbClient,
   clinicId: string,
-  query: { serviceId: string; locationId?: string | null; count?: number; maxDaysAhead?: number; lastDate?: string | null },
+  query: { serviceId: string; locationId?: string | null; count?: number; maxDaysAhead?: number; lastDate?: string | null; ignoreAppointmentId?: string | null },
   now: Date = new Date(),
 ): Promise<DateWithSlots[]> {
   const agendaIds = await agendasForService(db, clinicId, query.serviceId);

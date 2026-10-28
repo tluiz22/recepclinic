@@ -479,3 +479,14 @@ retomada fica no README). Para achar algo, buscar por data (ex.: `27/out`), fase
     (`data-confirm-details`, com "antes → depois" pronto para o C4.2) e aviso (`data-confirm-notice`); no Marcar:
     paciente, serviço, com quem, local, quando (na série, frequência e fim), endereço domiciliar e convênio ou valor
     (preço do local, `servicePriceAt`). `whatsappNoticeText` e `sendsPatientMessages` em `confirmText.ts`. Sem migração.
+    **Validada pelo cliente no staging em 28/out.**
+  - **C4.2** (28/out): ação **Alterar** no cartão (à vista, depois do Remarcar) → `marcar.astro?alterar=<id>`
+    (paciente fixo; serviço, com quem, data e hora; convênio no resumo; "Manter o horário atual" escolhido de início).
+    `changeAppointment` (appointments.ts): só ativo e futuro; trava de duplicidade só se mudar serviço ou agenda (o
+    atendimento já em duplicidade, ex. consulta e retorno na mesma agenda, ainda pode ser corrigido); horário conferido
+    como no Marcar da equipe, sem contar o próprio; endereço exigido no domiciliar; retorno religado à consulta; valor
+    pelo gatilho; mudou data, hora, agenda ou local: lembrete e presença zerados e o aviso de remarcação ao paciente.
+    Confirmação com "antes → depois" (`appointmentChanges.ts`). Migração `20261031120000_alterar_atendimento`: evento
+    `changed` da trilha (com o que mudou; substitui o `rescheduled` quando a mudança vem do Alterar) e
+    `change_group_session` (turma: vaga conferida com a janela travada). Staging: simulação → aplicação → conferência
+    (função responde) em 28/out. Observação: a mudança de horário pelo Alterar não conta como "remarcado" nas Métricas.

@@ -9,6 +9,11 @@
 // dias livres com setas e horários por turno. U-09: o dia pedido (vindo de um
 // dia da Agenda) continua valendo depois do serviço; sem vaga nele, um aviso e
 // o primeiro dia livre depois dele (src/lib/dayStrip.ts).
+//
+// Alterar (C4; cliente, 28/out/2026): `?alterar=<atendimento>` abre esta tela
+// preenchida com o atendimento (o paciente não muda) para trocar serviço,
+// agenda, local, convênio, endereço, data e hora. O próprio atendimento não
+// ocupa horário nem trava a duplicidade; a confirmação mostra "antes → depois".
 import { receivedReturn } from "../../../lib/returnPath";
 import AdminLayout from "../../../layouts/AdminLayout.astro";
 import ConfirmDeleteDialog from "../../../components/admin/ConfirmDeleteDialog.astro";
@@ -24,7 +29,7 @@ import { buttonClass, CONTROL } from "../../../components/admin/ui/styles";
 import { isOverConsultationAgeLimit, formatAge, formatAgeAndBirth } from "../../../lib/age";
 import { slotValue } from "../../../lib/agendaSlot";
 import { isUuid } from "../../../lib/clinicAccess";
-import { formatCalendarDate, formatInstant, isCalendarDate, todayIn, toInstant } from "../../../lib/clinicTime";
+import { formatCalendarDate, formatInstant, isCalendarDate, localDateOf, todayIn, toInstant } from "../../../lib/clinicTime";
 import { pickOne, readOtherTime } from "../../../lib/otherTime";
 import { buildDayStrip } from "../../../lib/dayStrip";
 import { createUserClient } from "../../../lib/data/clients";
@@ -38,7 +43,16 @@ import {
   getNextAvailableDatesAnyAgenda,
   isAgendaOpenOn,
 } from "../../../lib/data/agenda/slots";
-import { findBlockingAppointment, findReturnOrigin, listUpcomingAppointments, returnWarnings, type UpcomingAppointment } from "../../../lib/data/agenda/appointments";
+import {
+  findBlockingAppointment,
+  findReturnOrigin,
+  getAppointment,
+  listUpcomingAppointments,
+  returnWarnings,
+  type UpcomingAppointment,
+} from "../../../lib/data/agenda/appointments";
+import { snapshotOf, whenText } from "../../../lib/appointmentChanges";
+import { setFlash } from "../../../lib/flash";
 import { SERIES_HORIZON_MONTHS } from "../../../lib/data/agenda/series";
 import { listAgendas } from "../../../lib/data/config/agendas";
 import { getClinicSettings } from "../../../lib/data/config/clinic";
@@ -68,11 +82,19 @@ const FORM = "marcar-form";
 // Estado da tela, todo no endereço. `date`: o dia pedido; `de`: o primeiro dia
 // da faixa de dias.
 const validDate = (value: string | null) => (value && isCalendarDate(value) ? value : "");
+// Alterar: só atendimento marcado e ainda por vir (C4.2).
+const alterarId = isUuid(params.get("alterar")) ? params.get("alterar")! : "";
+const editing = alterarId ? await getAppointment(db, clinic.clinicId, alterarId).catch(() => null) : null;
+if (alterarId && (!editing || !(editing.status === "scheduled" || editing.status === "confirmed") || editing.scheduledAt <= new Date())) {
+  setFlash(Astro.cookies, { tone: "error", text: "Só atendimento marcado e ainda por vir pode ser alterado." });
+  return Astro.redirect(volta ?? "/admin/agenda");
+}
 const state = {
-  patient_id: isUuid(params.get("patient_id")) ? params.get("patient_id")! : "",
-  service_id: isUuid(params.get("service_id")) ? params.get("service_id")! : "",
-  agenda_id: params.get("agenda_id") ?? "",
-  date: validDate(params.get("date")),
+  alterar: editing?.id ?? "",
+  patient_id: editing?.patientId ?? (isUuid(params.get("patient_id")) ? params.get("patient_id")! : ""),
+  service_id: isUuid(params.get("service_id")) ? params.get("service_id")! : (editing?.serviceId ?? ""),
+  agenda_id: params.get("agenda_id") ?? editing?.agendaId ?? "",
+  date: validDate(params.get("date")) || (editing ? localDateOf(editing.scheduledAt, clinic.timezone) : ""),
   de: validDate(params.get("de")),
   volta: volta ?? "",
 };
@@ -85,7 +107,7 @@ const busca = (params.get("busca") ?? "").trim();
 
 const insuranceOn = clinic.features.includes("insurance");
 const [services, agendas, locations, settings, connection, plans] = await Promise.all([
-  listServices(db, clinic.clinicId),
+  listServices(db, clinic.clinicId, { includeInactive: !!editing }),
   listAgendas(db, clinic.clinicId),
   listLocations(db, clinic.clinicId),
   getClinicSettings(db, clinic.clinicId),
@@ -93,7 +115,8 @@ const [services, agendas, locations, settings, connection, plans] = await Promis
   insuranceOn ? listInsurancePlans(db, clinic.clinicId, { includeInactive: true }) : Promise.resolve([]),
 ]);
 const examsOn = clinic.features.includes("exams");
-const serviceOptions = services.filter((s) => examsOn || s.category !== "exam");
+// Alterar: o serviço atual aparece mesmo desativado.
+const serviceOptions = services.filter((s) => (s.isActive || s.id === editing?.serviceId) && (examsOn || s.category !== "exam" || s.id === editing?.serviceId));
 const service = serviceOptions.find((s) => s.id === state.service_id) ?? null;
 const agendaName = new Map(agendas.map((a) => [a.id, a.name]));
 const location = new Map(locations.map((l) => [l.id, l]));
@@ -107,7 +130,7 @@ const results = !patient && busca ? await searchPatients(db, clinic.clinicId, bu
 // (Consulta/Retorno na mesma agenda; Exame, o mesmo exame; série não trava),
 // antes da confirmação, como no bot.
 const upcomingByPatient = await listUpcomingAppointments(db, clinic.clinicId, patient ? [patient.id] : results.map((r) => r.id));
-const patientUpcoming = patient ? (upcomingByPatient.get(patient.id) ?? []) : [];
+const patientUpcoming = patient ? (upcomingByPatient.get(patient.id) ?? []).filter((a) => a.id !== editing?.id) : [];
 const serviceName = new Map(services.map((s) => [s.id, s.name]));
 const describeUpcoming = (a: UpcomingAppointment) =>
   `${serviceName.get(a.serviceId) ?? "Atendimento"}, ${formatInstant(a.scheduledAt, clinic.timezone, "EEEE, dd/MM 'às' HH:mm")}, com ${agendaName.get(a.agendaId) ?? "outra agenda"}`;
@@ -120,6 +143,9 @@ else if (!(agendaChoice === ANY || serviceAgendaIds.includes(agendaChoice))) age
 const blockedBy = new Map<string, UpcomingAppointment>();
 if (patient && service) {
   for (const agendaId of serviceAgendaIds) {
+    // Alterar: sessão de série não trava (como no servidor), e manter o serviço
+    // e a agenda do atendimento não cria duplicidade nova.
+    if (editing && (editing.seriesId || (service.id === editing.serviceId && agendaId === editing.agendaId))) continue;
     const blocking = findBlockingAppointment(patientUpcoming, { serviceId: service.id, agendaId, category: service.category });
     if (blocking) blockedBy.set(agendaId, blocking);
   }
@@ -141,10 +167,17 @@ const dayLabel = (d: string) => capitalize(formatCalendarDate(d, "EEEE, dd/MM"))
 const describe = (agendaId: string, locationId: string) =>
   [location.get(locationId)?.name ?? "Local", serviceAgendaIds.length > 1 ? agendaName.get(agendaId) : null].filter(Boolean).join(" · ");
 // Dados da confirmação (cliente, 28/out/2026): com quem, onde e o valor naquele local.
-const slotData = (agendaId: string, locationId: string) => {
+const slotData = (agendaId: string, locationId: string, start: Date) => {
   const price = service ? servicePriceAt(service, locationId) : null;
-  return { agenda: agendaName.get(agendaId) ?? "", location: location.get(locationId)?.name ?? "Local", price: price !== null ? formatCentsBRL(price) : undefined };
+  return {
+    agenda: agendaName.get(agendaId) ?? "",
+    location: location.get(locationId)?.name ?? "Local",
+    price: price !== null ? formatCentsBRL(price) : undefined,
+    when: whenText(start, clinic.timezone),
+  };
 };
+// Alterar: o próprio atendimento não ocupa horário.
+const ignore = { ignoreAppointmentId: editing?.id ?? null };
 if (patient && service && searchAgendas.length) {
   if (isGroup) {
     const sessions = (
@@ -167,14 +200,14 @@ if (patient && service && searchAgendas.length) {
           location.get(s.locationId)?.name ?? "Local",
         ),
         isHome: location.get(s.locationId)?.type === "home_visit",
-        ...slotData(s.agendaId, s.locationId),
+        ...slotData(s.agendaId, s.locationId, s.start),
       };
     });
   } else {
     const dates = (
       agendaChoice === ANY
-        ? await getNextAvailableDatesAnyAgenda(db, clinic.clinicId, { serviceId: service.id, count: ALL_DATES })
-        : await getNextAvailableDates(db, clinic.clinicId, { serviceId: service.id, agendaId: agendaChoice, count: ALL_DATES })
+        ? await getNextAvailableDatesAnyAgenda(db, clinic.clinicId, { serviceId: service.id, count: ALL_DATES, ...ignore })
+        : await getNextAvailableDates(db, clinic.clinicId, { serviceId: service.id, agendaId: agendaChoice, count: ALL_DATES, ...ignore })
     ).map((d) => d.date);
     const wanted = state.date && state.date >= today ? state.date : null;
     strip = buildDayStrip(dates, wanted, state.de || null);
@@ -182,8 +215,8 @@ if (patient && service && searchAgendas.length) {
     if (date) {
       const slots =
         agendaChoice === ANY
-          ? await getFreeSlotsAnyAgenda(db, clinic.clinicId, { serviceId: service.id, date })
-          : (await getFreeSlots(db, clinic.clinicId, { serviceId: service.id, agendaId: agendaChoice, date })).map((s) => ({ ...s, agendaId: agendaChoice }));
+          ? await getFreeSlotsAnyAgenda(db, clinic.clinicId, { serviceId: service.id, date, ...ignore })
+          : (await getFreeSlots(db, clinic.clinicId, { serviceId: service.id, agendaId: agendaChoice, date, ...ignore })).map((s) => ({ ...s, agendaId: agendaChoice }));
       slotOptions = slots.map((s) => ({
         value: slotValue(s),
         label: s.time,
@@ -192,7 +225,7 @@ if (patient && service && searchAgendas.length) {
         confirm: slotConfirmText(`${dayLabel(date)} às ${s.time}`, agendaName.get(s.agendaId) ?? "", location.get(s.locationId)?.name ?? "Local"),
         series: seriesStartText(date, s.time, agendaName.get(s.agendaId) ?? "", location.get(s.locationId)?.name ?? "Local"),
         isHome: location.get(s.locationId)?.type === "home_visit",
-        ...slotData(s.agendaId, s.locationId),
+        ...slotData(s.agendaId, s.locationId, s.start),
       }));
     }
   }
@@ -213,7 +246,7 @@ if (showOther && otherQuery) {
   else if (!locationId) otherError = "Escolha o local.";
   else {
     const start = toInstant(otherQuery.date, otherQuery.time, clinic.timezone);
-    const check = await checkFreeTime(db, clinic.clinicId, { serviceId: service!.id, agendaId, locationId, start });
+    const check = await checkFreeTime(db, clinic.clinicId, { serviceId: service!.id, agendaId, locationId, start, ...ignore });
     if (!check.ok) otherError = check.reason;
     else {
       otherWarnings = check.warnings;
@@ -227,10 +260,58 @@ if (showOther && otherQuery) {
         series: seriesStartText(otherQuery.date, otherQuery.time, agendaName.get(agendaId) ?? "", location.get(locationId)?.name ?? "Local"),
         isHome: location.get(locationId)?.type === "home_visit",
         warnings: check.warnings.join(" "),
-        ...slotData(agendaId, locationId),
+        ...slotData(agendaId, locationId, start),
       };
     }
   }
+}
+
+// Alterar: "Manter o horário atual" (com o serviço e a agenda escolhidos),
+// escolhido de início; sai da lista do dia para não aparecer duas vezes.
+let keepOption: SlotOption | null = null;
+let keepError: string | null = null;
+if (editing && service && patient && searchAgendas.length) {
+  const keepAgenda = agendaChoice === ANY ? (searchAgendas.includes(editing.agendaId) ? editing.agendaId : null) : agendaChoice;
+  const keepLocation = service.locations.some((l) => l.locationId === editing.locationId)
+    ? editing.locationId
+    : service.locations.length === 1
+      ? service.locations[0].locationId
+      : null;
+  const label = capitalize(formatInstant(editing.scheduledAt, clinic.timezone, "EEE dd/MM 'às' HH:mm"));
+  const when = whenText(editing.scheduledAt, clinic.timezone);
+  if (!keepAgenda)
+    keepError = serviceAgendaIds.includes(editing.agendaId)
+      ? `${agendaName.get(editing.agendaId)} não está disponível para este atendimento. Escolha um horário abaixo.`
+      : `${agendaName.get(editing.agendaId) ?? "O profissional atual"} não atende ${service.name}. Escolha um horário abaixo.`;
+  else if (isGroup) {
+    // Turma: o horário atual só vale na mesma turma (a vaga é conferida ao alterar).
+    if (service.id === editing.serviceId && keepAgenda === editing.agendaId) {
+      keepOption = {
+        value: slotValue({ agendaId: keepAgenda, start: editing.scheduledAt, locationId: editing.locationId }),
+        label,
+        detail: describe(keepAgenda, editing.locationId),
+        summary: label,
+        confirm: when,
+        ...slotData(keepAgenda, editing.locationId, editing.scheduledAt),
+      };
+    }
+  } else if (!keepLocation) keepError = `${service.name} não é feito no local atual. Escolha um horário abaixo ou o local no "Outro horário".`;
+  else {
+    const check = await checkFreeTime(db, clinic.clinicId, { serviceId: service.id, agendaId: keepAgenda, locationId: keepLocation, start: editing.scheduledAt, ...ignore });
+    if (!check.ok) keepError = `O horário atual não serve: ${check.reason} Escolha um horário abaixo.`;
+    else
+      keepOption = {
+        value: slotValue({ agendaId: keepAgenda, start: editing.scheduledAt, locationId: keepLocation }),
+        label,
+        detail: describe(keepAgenda, keepLocation),
+        summary: label,
+        confirm: when,
+        isHome: location.get(keepLocation)?.type === "home_visit",
+        warnings: check.warnings.join(" "),
+        ...slotData(keepAgenda, keepLocation, editing.scheduledAt),
+      };
+  }
+  if (keepOption) slotOptions = slotOptions.filter((o) => o.value !== keepOption!.value);
 }
 
 // Dia pedido sem horário (S-02 do teste da R11, cliente, 17/out/2026): sem
@@ -269,7 +350,7 @@ const ageWarning =
 const back = `${Astro.url.pathname}${Astro.url.search}`;
 // Série recorrente (D9; cliente, 05/out/2026: criada no próprio Marcar), só
 // com o item "Séries" e fora de turma.
-const canRepeat = clinic.features.includes("series") && !!patient && !!service && !isGroup;
+const canRepeat = clinic.features.includes("series") && !!patient && !!service && !isGroup && !editing;
 // O paciente vem primeiro (cliente, 16/out/2026): sem ele, Serviço e Data e
 // horário ficam travados, com o aviso de escolher o paciente.
 const locked = !patient;
@@ -297,8 +378,32 @@ const confirmInsurance = insuranceOn ? (planName ?? "Particular") : "";
 // Aviso do WhatsApp (cliente, 28/out/2026): só quando a mensagem sai de verdade
 // (fora da implantação e com o WhatsApp conectado).
 const recipient = patient?.isContactSelf ? (vocabulary.patient === "criança" ? "a criança" : `o ${vocabulary.patient}`) : `o ${vocabulary.contact}`;
-const confirmNotice =
-  service && sendsPatientMessages(clinic.clinicStatus, connection?.status) ? whatsappNoticeText(recipient, "marcacao", service.category) : "";
+const sends = sendsPatientMessages(clinic.clinicStatus, connection?.status);
+const confirmNotice = service && sends ? whatsappNoticeText(recipient, editing ? "alteracao" : "marcacao", service.category) : "";
+
+// Alterar: os dados de antes (a confirmação compara com os escolhidos), o
+// convênio para escolher e o endereço atual.
+const planLabel = (id: string | null) => (id ? (plans.find((p) => p.id === id)?.name ?? "Convênio") : "Particular");
+const confirmBefore =
+  editing && patient
+    ? JSON.stringify(
+        snapshotOf({
+          patient: patient.fullName,
+          service: services.find((s) => s.id === editing.serviceId),
+          agenda: agendaName.get(editing.agendaId),
+          location: location.get(editing.locationId)?.name,
+          start: editing.scheduledAt,
+          timeZone: clinic.timezone,
+          address: editing.homeVisitAddress,
+          insurance: insuranceOn ? planLabel(editing.insurancePlanId) : null,
+          priceCents: editing.priceCents,
+        }),
+      )
+    : "";
+const planOptions = plans.filter((p) => p.isActive || p.id === editing?.insurancePlanId);
+const homeAddress = editing?.homeVisitAddress ?? contact?.defaultHomeAddress ?? "";
+const verb = editing ? "Alterar" : "Marcar";
+const formAction = editing ? `/api/admin/agenda/atendimentos/${editing.id}` : "/api/admin/agenda/atendimentos/novo";
 const note = "flex items-start gap-2 rounded-[10px] border px-3 py-2.5 text-[15px] leading-snug sm:text-[14.5px]";
 const warnNote = `${note} border-pend-200 bg-pend-100 text-pend-800`;
 const okNote = `${note} border-conf-200 bg-conf-100/60 text-conf-800`;
@@ -307,18 +412,18 @@ const visits = (list: UpcomingAppointment[]) => list.filter((a) => a.seriesId ==
 const remarcarHref = (a: UpcomingAppointment) => `/admin/agenda/remarcar?id=${a.id}&return_to=${encodeURIComponent(link({}))}`;
 ---
 
-<AdminLayout title="Marcar">
+<AdminLayout title={verb}>
   <a href={volta ?? `/admin/agenda${state.date ? `?date=${state.date}` : ""}`} class="inline-flex min-h-8 items-center gap-1 text-[15px] font-semibold text-brand no-underline hover:underline">
     <Icon name="chevron-left" class="h-[18px] w-[18px]" strokeWidth={2.2} />
     {volta ? "Voltar" : "Agenda"}
   </a>
-  <PageHeader title="Marcar" class="mt-2" />
+  <PageHeader title={editing ? "Alterar atendimento" : "Marcar"} class="mt-2" />
   <FlashMessage />
 
   <div class="mt-4 flex flex-wrap items-start gap-5">
     <div class="flex min-w-0 flex-[999_1_560px] flex-col gap-3">
       <StepCard number={1} title={capitalize(vocabulary.patient)} state={stepOf(!!patient, !patient)} id="passo-paciente">
-        {patient && <a slot="action" href={link({ patient_id: "" })} class={buttonClass("quiet", "sm")}>Trocar</a>}
+        {patient && !editing && <a slot="action" href={link({ patient_id: "" })} class={buttonClass("quiet", "sm")}>Trocar</a>}
         {
           patient && contact ? (
             <div>
@@ -496,6 +601,21 @@ const remarcarHref = (a: UpcomingAppointment) => `/admin/agenda/remarcar?id=${a.
                   </span>
                 </p>
               )}
+              {editing && (keepOption || keepError) && (
+                <div class="flex flex-col gap-2 border-b border-line pb-4">
+                  <p class="text-[13px] leading-tight font-bold tracking-[.06em] text-ink-soft uppercase">Manter o horário atual</p>
+                  {keepOption ? (
+                    <>
+                      <SlotPicker options={[keepOption]} form={FORM} checked={keepOption.value} legend="Horário atual" />
+                      {/* Avisos do horário (ex.: feriado): aceitos na confirmação, como no Outro horário. */}
+                      {keepOption.warnings && <input type="hidden" form={FORM} name="aceito_avisos" value="1" />}
+                    </>
+                  ) : (
+                    <p class="text-[15px] text-ink-soft">{keepError}</p>
+                  )}
+                  {keepOption && <p class="text-sm text-ink-soft">Ou escolha outro dia e horário abaixo.</p>}
+                </div>
+              )}
               {!isGroup && strip.days.length > 0 && (
                 <DayStrip
                   strip={strip}
@@ -538,10 +658,11 @@ const remarcarHref = (a: UpcomingAppointment) => `/admin/agenda/remarcar?id=${a.
       <form
         id={FORM}
         method="POST"
-        action="/api/admin/agenda/atendimentos/novo"
+        action={formAction}
         class="flex flex-col gap-3.5 rounded-xl border border-line bg-white p-3.5 sm:px-5 sm:py-[18px]"
       >
-        <input type="hidden" name="acao" value="marcar" />
+        <input type="hidden" name="acao" value={editing ? "alterar" : "marcar"} />
+        {editing && <input type="hidden" name="return_to" value={volta ?? `/admin/agenda?date=${localDateOf(editing.scheduledAt, clinic.timezone)}`} />}
         <input type="hidden" name="patient_id" value={patient?.id ?? ""} />
         <input type="hidden" name="service_id" value={service?.id ?? ""} />
         <input type="hidden" name="back" value={back} />
@@ -566,8 +687,21 @@ const remarcarHref = (a: UpcomingAppointment) => `/admin/agenda/remarcar?id=${a.
         </dl>
         <div data-home-address hidden class="flex flex-col gap-1">
           <label for="home_visit_address" class="text-[15px] font-semibold text-ink">Endereço do atendimento domiciliar</label>
-          <input id="home_visit_address" name="home_visit_address" value={contact?.defaultHomeAddress ?? ""} placeholder="Rua, número, bairro, complemento" class={CONTROL} />
+          <input id="home_visit_address" name="home_visit_address" value={homeAddress} placeholder="Rua, número, bairro, complemento" class={CONTROL} />
         </div>
+        {
+          editing && insuranceOn && (
+            <div class="flex flex-col gap-1">
+              <label for="insurance_plan_id" class="text-[15px] font-semibold text-ink">Convênio</label>
+              <select id="insurance_plan_id" name="insurance_plan_id" class={CONTROL}>
+                <option value="" selected={!editing.insurancePlanId}>Particular</option>
+                {planOptions.map((p) => (
+                  <option value={p.id} selected={p.id === editing.insurancePlanId}>{p.name}</option>
+                ))}
+              </select>
+            </div>
+          )
+        }
         {
           canRepeat && (
             <fieldset class="flex flex-col gap-3 border-t border-line pt-3.5">
@@ -607,25 +741,35 @@ const remarcarHref = (a: UpcomingAppointment) => `/admin/agenda/remarcar?id=${a.
           )
         }
         {!patient && <p class="text-sm text-pend-800">Escolha o {vocabulary.patient} para marcar.</p>}
-        {canBook && <p class="text-sm text-ink-soft">{confirmNotice ? `Ao marcar, ${recipient} é avisado pelo WhatsApp. ` : ""}Antes, uma confirmação com os dados.</p>}
+        {
+          canBook && (
+            <p class="text-sm text-ink-soft">
+              {editing
+                ? `${sends ? `Se mudar data, hora, profissional ou local, ${recipient} é avisado pelo WhatsApp. ` : ""}Antes, uma confirmação com o que muda.`
+                : `${confirmNotice ? `Ao marcar, ${recipient} é avisado pelo WhatsApp. ` : ""}Antes, uma confirmação com os dados.`}
+            </p>
+          )
+        }
         <div class="hidden sm:block">
         <Button
           type="submit"
           variant="primary"
           class="js-confirm-delete h-[46px] w-full text-base"
-          disabled={!patient || (slotOptions.length === 0 && !otherOption)}
+          disabled={!patient || (slotOptions.length === 0 && !otherOption && !keepOption)}
           data-needs-slot
           data-marcar
-          data-confirm-title="Marcar o atendimento?"
+          data-confirm-title={editing ? "Alterar o atendimento?" : "Marcar o atendimento?"}
           data-confirm-message=""
           data-confirm-details={confirmBase}
           data-confirm-base={confirmBase}
           data-confirm-insurance={confirmInsurance}
-          data-confirm-notice={confirmNotice}
+          data-confirm-notice={editing ? "" : confirmNotice}
+          data-alteration-notice={editing ? confirmNotice : undefined}
+          data-confirm-before={confirmBefore || undefined}
           data-confirm-label="Marcar"
           data-confirm-tone="primary"
         >
-          Marcar
+          {verb}
         </Button>
         </div>
       </form>
@@ -646,19 +790,21 @@ const remarcarHref = (a: UpcomingAppointment) => `/admin/agenda/remarcar?id=${a.
             variant="primary"
             form={FORM}
             class="js-confirm-delete h-12 px-[22px] text-base"
-            disabled={!patient || (slotOptions.length === 0 && !otherOption)}
+            disabled={!patient || (slotOptions.length === 0 && !otherOption && !keepOption)}
             data-needs-slot
             data-marcar
-            data-confirm-title="Marcar o atendimento?"
+            data-confirm-title={editing ? "Alterar o atendimento?" : "Marcar o atendimento?"}
             data-confirm-message=""
             data-confirm-details={confirmBase}
             data-confirm-base={confirmBase}
             data-confirm-insurance={confirmInsurance}
-            data-confirm-notice={confirmNotice}
+            data-confirm-notice={editing ? "" : confirmNotice}
+            data-alteration-notice={editing ? confirmNotice : undefined}
+            data-confirm-before={confirmBefore || undefined}
             data-confirm-label="Marcar"
             data-confirm-tone="primary"
           >
-            Marcar
+            {verb}
           </Button>
         </div>
       </>
@@ -667,6 +813,7 @@ const remarcarHref = (a: UpcomingAppointment) => `/admin/agenda/remarcar?id=${a.
 
   <script>
     import { SERIES_SKIP_NOTE, seriesEndText, seriesWhenText, type SeriesEnd } from "../../../lib/confirmText";
+    import { changesSchedule, compareSnapshots, type AppointmentSnapshot } from "../../../lib/appointmentChanges";
     // Resumo: o horário escolhido (quando e onde) e o endereço, só para local domiciliar.
     const box = document.querySelector<HTMLElement>("[data-home-address]");
     // O botão só se habilita com o horário escolhido (proposta aprovada da R4;
@@ -691,7 +838,8 @@ const remarcarHref = (a: UpcomingAppointment) => `/admin/agenda/remarcar?id=${a.
     const submits = document.querySelectorAll<HTMLButtonElement>("button[data-marcar]");
     const firstTitle = submits[0]?.dataset.confirmTitle;
     const syncRepeat = () => {
-      if (repeatFields) repeatFields.hidden = !repeat?.checked;
+      if (!repeat) return;
+      if (repeatFields) repeatFields.hidden = !repeat.checked;
       submits.forEach((submit) => {
         submit.dataset.confirmTitle = repeat?.checked ? "Criar a série?" : firstTitle;
         submit.textContent = repeat?.checked ? "Marcar a série" : "Marcar";
@@ -726,6 +874,27 @@ const remarcarHref = (a: UpcomingAppointment) => `/admin/agenda/remarcar?id=${a.
           { label: "Quando", value: when },
         ];
         const address = field("home_visit_address")?.value.trim();
+        // Alterar (C4): antes → depois no que muda; o aviso só se mudar data, hora, agenda ou local.
+        if (submit.dataset.confirmBefore) {
+          const before = JSON.parse(submit.dataset.confirmBefore) as AppointmentSnapshot;
+          const plan = document.querySelector<HTMLSelectElement>("select[name='insurance_plan_id']");
+          const after: AppointmentSnapshot = {
+            ...before,
+            service: details[1]?.value ?? before.service,
+            agenda: chosen.dataset.agenda ?? "",
+            location: chosen.dataset.location ?? "",
+            when: chosen.dataset.when ?? "",
+            address: chosen.dataset.home === "1" ? address || null : null,
+            insurance: plan ? (plan.selectedOptions[0]?.textContent?.trim() ?? null) : before.insurance,
+            price: chosen.dataset.price ?? null,
+          };
+          const rows = compareSnapshots(before, after, details[0]?.label);
+          submit.dataset.confirmDetails = JSON.stringify(rows);
+          submit.dataset.confirmNotice = changesSchedule(before, after) ? (submit.dataset.alterationNotice ?? "") : "";
+          const nothing = rows.every((row) => row.before === undefined);
+          submit.dataset.confirmMessage = [nothing ? "Nada foi mudado: o atendimento continua igual." : "", warnings].filter(Boolean).join(" ");
+          return;
+        }
         if (chosen.dataset.home === "1" && address) details.push({ label: "Endereço", value: address });
         const insurance = submit.dataset.confirmInsurance;
         const price = chosen.dataset.price;

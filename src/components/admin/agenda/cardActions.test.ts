@@ -31,7 +31,7 @@ describe("cardActions", () => {
   it("futuro, não confirmado: Confirmar presença cheia; Pagamento no Mais; Cancelar à parte", () => {
     expect(layout(input())).toEqual({
       primary: "Confirmar presença",
-      visible: ["Remarcar"],
+      visible: ["Remarcar", "Alterar"],
       more: ["Pagamento", "Pôr na lista de espera", "Trilha"],
       aside: "Cancelar",
     });
@@ -39,14 +39,14 @@ describe("cardActions", () => {
 
   it("um sinal traz a ação que o resolve para a vista", () => {
     const r = layout(input({ reminderAction: "resend_unanswered", preparationResendable: true, guidanceResendable: true }));
-    expect(r.visible).toEqual(["Reenviar lembrete", "Reenviar preparo", "Reenviar orientações", "Remarcar"]);
-    expect(layout(input({ reminderAction: "send" })).visible).toEqual(["Enviar lembrete", "Remarcar"]);
+    expect(r.visible).toEqual(["Reenviar lembrete", "Reenviar preparo", "Reenviar orientações", "Remarcar", "Alterar"]);
+    expect(layout(input({ reminderAction: "send" })).visible).toEqual(["Enviar lembrete", "Remarcar", "Alterar"]);
   });
 
   it("futuro, presença confirmada: nada cheio; Remarcar e Pagamento à vista; Desfazer no Mais", () => {
     expect(layout(input({}, { patientConfirmedAt: past }))).toEqual({
       primary: undefined,
-      visible: ["Remarcar", "Pagamento"],
+      visible: ["Remarcar", "Alterar", "Pagamento"],
       more: ["Desfazer presença", "Pôr na lista de espera", "Trilha"],
       aside: "Cancelar",
     });
@@ -56,7 +56,7 @@ describe("cardActions", () => {
     const r = layout(input({}, { reminderResponse: "confirmed" }));
     expect(r.primary).toBeUndefined();
     expect(r.more).toContain("Confirmar presença");
-    expect(r.visible).toEqual(["Remarcar", "Pagamento"]);
+    expect(r.visible).toEqual(["Remarcar", "Alterar", "Pagamento"]);
   });
 
   it("já passou, sem registro: Compareceu cheio; Faltou e Pagamento à vista; sem Cancelar", () => {

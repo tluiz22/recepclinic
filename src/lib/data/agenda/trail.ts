@@ -132,6 +132,12 @@ export function describeTrail(row: TrailEntryRow, actors: Map<string, ActorLabel
       return make(d.reason === "bot" ? "Saiu da lista de espera pelo WhatsApp" : `Retirado da lista de espera${by}`);
     case "waitlist_advanced":
       return make(`Antecipado pela lista de espera: de ${when(d.from)} para ${when(d.to)}`, "success");
+    case "changed": {
+      // Alterar (C4, 28/out/2026): o que mudou, de → para.
+      const changes = Array.isArray(d.changes) ? (d.changes as { label: string; from: string; to: string }[]) : [];
+      const list = changes.map((c) => `${c.label}: ${c.from} → ${c.to}`).join("; ");
+      return make(`Alterado ${via}${by}${list ? `. ${list}` : ""}`);
+    }
     case "rebooking_dismissed":
       return make(`Marcado como "Desistiu" (sem remarcação)${by}`);
     default:

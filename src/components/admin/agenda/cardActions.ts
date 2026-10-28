@@ -3,7 +3,7 @@
 // onde ficam, pela tabela "ações por situação" do canvas aprovado:
 // - principal (botão cheio): Confirmar presença no futuro sem confirmação;
 //   Compareceu no que já passou sem registro;
-// - à vista: Remarcar, Marcar retorno, Pagamento, Faltou e a ação que resolve
+// - à vista: Remarcar, Alterar (C4, 28/out/2026), Marcar retorno, Pagamento, Faltou e a ação que resolve
 //   um sinal (Reenviar lembrete, preparo ou orientações);
 // - "Mais": as raras (lista de espera, correções, série, Trilha);
 // - à parte, à direita e em vermelho: Cancelar.
@@ -118,6 +118,8 @@ export function cardActions(input: CardActionInput): CardActions {
   }
   if (isFuture) {
     result.visible.push({ kind: "link", href: `/admin/agenda/remarcar?id=${a.id}&return_to=${encodeURIComponent(returnTo)}`, label: "Remarcar", icon: "arrow-path" });
+    // Alterar (C4; cliente, 28/out/2026): serviço, agenda, local, convênio, endereço, data e hora.
+    result.visible.push({ kind: "link", href: withReturn(`/admin/agenda/marcar?alterar=${a.id}`, returnTo), label: "Alterar", icon: "pencil" });
   }
 
   // Marcar retorno (cliente, 19/out/2026): só na Consulta apta (já começada), antes do Pagamento;

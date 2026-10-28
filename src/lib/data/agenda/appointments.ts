@@ -1,5 +1,5 @@
 import { addDays, localDateOf, localTimeOf, todayIn, weekdayOf } from "../../clinicTime";
-import type { Enums } from "../../supabase/database.types";
+import type { Enums, Json } from "../../supabase/database.types";
 import type { DbClient } from "../clients";
 import { DataError, fromDbError, unwrap, unwrapAllIn, unwrapOne } from "../errors";
 import { checkFreeTime, getFreeSlots, loadSchedulingPlan } from "./slots";
@@ -131,7 +131,8 @@ export type TrailEvent =
   | "reminder_resent"
   | "preparation_resent"
   | "guidance_resent"
-  | "rebooking_dismissed";
+  | "rebooking_dismissed"
+  | "changed";
 
 /**
  * Contexto da trilha das mudanças que o próprio banco registra (M1 das
@@ -139,11 +140,17 @@ export type TrailEvent =
  * comparecimento gravam o evento no gatilho da tabela, na mesma transação.
  * Aqui vai só o que a linha não diz sozinha (canal fino, evento, quem fez).
  */
-export function trailContext(ctx: { channel?: TrailChannel; event?: TrailEvent; actor?: string | null }): { channel?: TrailChannel; event?: TrailEvent; actor?: string } | null {
-  const out: { channel?: TrailChannel; event?: TrailEvent; actor?: string } = {};
+export function trailContext(ctx: {
+  channel?: TrailChannel;
+  event?: TrailEvent;
+  actor?: string | null;
+  details?: { [key: string]: Json };
+}): { channel?: TrailChannel; event?: TrailEvent; actor?: string; details?: { [key: string]: Json } } | null {
+  const out: { channel?: TrailChannel; event?: TrailEvent; actor?: string; details?: { [key: string]: Json } } = {};
   if (ctx.channel) out.channel = ctx.channel;
   if (ctx.event) out.event = ctx.event;
   if (ctx.actor) out.actor = ctx.actor;
+  if (ctx.details) out.details = ctx.details;
   return Object.keys(out).length ? out : null;
 }
 
@@ -628,6 +635,138 @@ export async function rescheduleAppointment(
   }
 
   return getAppointment(db, clinicId, id);
+}
+
+// ---------------------------------------------------------------------------
+// Alterar (C4; cliente, 28/out/2026)
+// ---------------------------------------------------------------------------
+
+export type ChangeInput = {
+  serviceId: string;
+  agendaId: string;
+  locationId: string;
+  start: Date;
+  insurancePlanId: string | null;
+  homeVisitAddress: string | null;
+  actorId: string | null;
+  /** O que mudou, para a trilha ("changed"): [{ label, from, to }]. */
+  changes: { label: string; from: string; to: string }[];
+} & AnyTimeInput;
+
+export type ChangeResult = { appointment: Appointment; scheduleChanged: boolean; returnWarnings: string[] };
+
+/**
+ * Corrige serviço, agenda, local, convênio, endereço, data e hora de um
+ * atendimento marcado. O horário é conferido como no Marcar da equipe
+ * (qualquer horário, com os avisos aceitos), sem contar o próprio atendimento.
+ * Mudou data, hora, agenda ou local: o lembrete e a presença recomeçam
+ * (`scheduleChanged`, e quem chama avisa o paciente). O valor sai do gatilho
+ * (app.appointment_defaults) quando muda o serviço ou o local.
+ */
+export async function changeAppointment(
+  db: DbClient,
+  clinicId: string,
+  id: string,
+  input: ChangeInput,
+  now: Date = new Date(),
+): Promise<ChangeResult> {
+  const current = await getAppointment(db, clinicId, id);
+  if (!ACTIVE.includes(current.status) || current.scheduledAt <= now) {
+    throw new DataError("invalid", "Atendimento: só atendimento marcado e ainda por vir pode ser alterado", { status: "Atendimento não pode ser alterado" });
+  }
+  const plan = await loadSchedulingPlan(db, clinicId, { serviceId: input.serviceId, agendaId: input.agendaId, locationId: input.locationId });
+  if (!plan) throw new DataError("invalid", "Atendimento: serviço inativo ou não atendido nesta agenda", { serviceId: "Serviço não atendido nesta agenda" });
+
+  // Sessão de série não passa pela trava (decisão de 04/out, F3.6b). Mesmo
+  // serviço e mesma agenda não criam duplicidade nova: a trava só vale na troca.
+  if (current.seriesId === null && (input.serviceId !== current.serviceId || input.agendaId !== current.agendaId)) {
+    await assertNotDuplicate(db, clinicId, { patientId: current.patientId, serviceId: input.serviceId, agendaId: input.agendaId, category: plan.category }, now, id);
+  }
+
+  const scheduleChanged =
+    input.start.getTime() !== current.scheduledAt.getTime() || input.agendaId !== current.agendaId || input.locationId !== current.locationId;
+  const slotChanged = scheduleChanged || input.serviceId !== current.serviceId;
+
+  let locationId = input.locationId;
+  if (slotChanged && !plan.isGroup) {
+    const date = localDateOf(input.start, plan.timeZone);
+    locationId = await resolveIndividualSlot(
+      db,
+      clinicId,
+      { serviceId: input.serviceId, agendaId: input.agendaId, locationId: input.locationId, start: input.start, date, ignoreAppointmentId: id },
+      { anyTime: true, acceptedWarnings: input.acceptedWarnings },
+      now,
+    );
+  }
+
+  const homeVisitAddress = input.homeVisitAddress?.trim() || null;
+  const isHomeVisit = (await locationType(db, clinicId, locationId)) === "home_visit";
+  if (isHomeVisit && !homeVisitAddress) {
+    throw new DataError("invalid", "Atendimento: informe o endereço do atendimento domiciliar", { homeVisitAddress: "Informe o endereço" });
+  }
+
+  let origin: ReturnOrigin | null = null;
+  if (plan.category === "return_visit") {
+    origin = await findReturnOrigin(
+      db,
+      clinicId,
+      { patientId: current.patientId, agendaId: input.agendaId, returnServiceId: input.serviceId, ignoreAppointmentId: id },
+      now,
+    );
+  }
+
+  const fields = {
+    insurance_plan_id: input.insurancePlanId,
+    home_visit_address: isHomeVisit ? homeVisitAddress : null,
+    origin_appointment_id: origin?.id ?? null,
+    ...(scheduleChanged ? { rescheduled_at: now.toISOString(), rescheduled_via: "admin" as const, rescheduled_by: input.actorId, ...PRESENCE_RESET } : {}),
+  };
+  const trail = trailContext({ channel: "admin", event: "changed", actor: input.actorId, details: { changes: input.changes } });
+
+  if (plan.isGroup) {
+    unwrap(await db.from("appointments").update(fields).eq("clinic_id", clinicId).eq("id", id), "Atendimento");
+    const { error } = await db.rpc("change_group_session", {
+      p_appointment_id: id,
+      p_service_id: input.serviceId,
+      p_agenda_id: input.agendaId,
+      p_scheduled_at: input.start.toISOString(),
+      p_trail: trail,
+    });
+    if (error) {
+      const message = (error as { message?: string }).message ?? "";
+      if (message === "slot_full" || message === "no_window") {
+        throw new DataError("conflict", "Atendimento: turma lotada ou inexistente neste horário", { start: "Turma indisponível" }, { cause: error });
+      }
+      throw fromDbError(error, "Atendimento");
+    }
+  } else {
+    const { data, error } = await db
+      .from("appointments")
+      .update({
+        ...fields,
+        service_id: input.serviceId,
+        agenda_id: input.agendaId,
+        location_id: locationId,
+        scheduled_at: input.start.toISOString(),
+        duration_minutes: plan.durationMinutes,
+        trail_context: trail,
+      })
+      .eq("clinic_id", clinicId)
+      .eq("id", id)
+      .in("status", ACTIVE)
+      .select("id")
+      .maybeSingle();
+    if (error && (error as { code?: string }).code === "23P01") {
+      throw new DataError("conflict", "Atendimento: horário não está mais livre", { start: "Horário não está mais livre" }, { cause: error });
+    }
+    unwrapOne({ data, error }, "Atendimento");
+  }
+
+  return {
+    appointment: await getAppointment(db, clinicId, id),
+    scheduleChanged,
+    returnWarnings: plan.category === "return_visit" ? returnWarnings(origin, todayIn(plan.timeZone, now)) : [],
+  };
 }
 
 // ---------------------------------------------------------------------------
