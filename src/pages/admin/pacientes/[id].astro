@@ -531,7 +531,7 @@ const canBook = patient.isActive && !anonymized;
                   const mine = !!n.createdBy && n.createdBy === clinic.userId && canWriteNotes;
                   return (
                     <li class="flex flex-col gap-1.5 border-t border-line py-3 first:border-t-0">
-                      <p class="text-[15.5px] leading-snug whitespace-pre-line break-words text-ink">{n.body}</p>
+                      <p class="rounded-lg border border-line bg-canvas px-3.5 py-2.5 text-[15.5px] leading-snug whitespace-pre-line break-words text-ink">{n.body}</p>
                       <span class="text-[13.5px] text-ink-soft">
                         {[
                           n.fromObservations ? null : formatInstant(n.createdAt, clinic.timezone, "dd/MM/yyyy 'às' HH:mm"),

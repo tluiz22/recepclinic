@@ -937,3 +937,6 @@ o teste antigo da edição do paciente deixou de usar as Observações); `astro 
 completo. Navegador local: como Recepção, escreveu e editou ("editada em"); como Administrador, apagou com
 confirmação; como Profissional, escreve e não vê "Apagar"; no celular, sem rolagem lateral.
 
+**Ajuste do cliente (28/out):** o texto de cada anotação aparece numa caixa (fundo cinza-claro e borda), separado
+da data, do autor e dos botões, para achar a descrição mais rápido. Conferido no navegador local.
+
