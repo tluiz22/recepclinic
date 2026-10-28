@@ -11,8 +11,8 @@
 > - **Branches:** `main` = `producao` em 28/out; a `CRM` ficou para trás (etapa encerrada).
 >
 > **Frentes em andamento**
-> - **Correções do cliente (28/out):** C1 e C2 validadas e na produção; **C3 Horário de exame** (exame cruza com
->   qualquer horário em Configurações › Horários) no staging e na produção, falta validar; próximo erro da lista.
+> - **Correções do cliente (28/out):** C1, C2 e C3 (Horário de exame) validadas e na produção; próximo erro da lista
+>   do cliente, se houver.
 > - **CRM concluído** (28/out; [`crm.md`](crm.md)): validado no staging e na produção desde 28/out.
 > - **Piloto** (etapas no [plano](plano.md), F10): **A** feita (roteiros do WhatsApp Business: [único](https://claude.ai/artifact/8AXZMSLcEq8SMWFpYHaraq),
 >   [iPhone](https://claude.ai/artifact/C8E3xDoshuXE3M91qeDDHq), [Android](https://claude.ai/artifact/78hQ2cXQph4wvXHKPXexnm));

@@ -461,3 +461,4 @@ retomada fica no README). Para achar algo, buscar por data (ex.: `27/out`), fase
   (individual ou turma) cruza com qualquer outro da agenda, até o geral; só não cruza com outro do mesmo serviço.
   `findWindowConflict` recebe os exames da clínica. Sem migração. Publicada no staging e na produção de uma vez, a
   pedido do cliente (validar direto na produção).
+  **Validada pelo cliente na produção em 28/out.**
