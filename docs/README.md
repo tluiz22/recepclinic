@@ -14,6 +14,8 @@
 > - **Correções do cliente (28/out):** C1, C2 e C3 (Horário de exame) validadas e na produção; próximo erro da lista
 >   do cliente, se houver.
 > - **CRM concluído** (28/out; [`crm.md`](crm.md)): validado no staging e na produção desde 28/out.
+> - **Faturamento do SaaS (Asaas)** ([`planejamento-faturamento-saas.md`](planejamento-faturamento-saas.md)): planejamento
+>   aprovado (28/out), nada implementado; próximo: decisões pendentes, uma de cada vez (começa pela 11.1).
 > - **Piloto** (etapas no [plano](plano.md), F10): **A** feita (roteiros do WhatsApp Business: [único](https://claude.ai/artifact/8AXZMSLcEq8SMWFpYHaraq),
 >   [iPhone](https://claude.ai/artifact/C8E3xDoshuXE3M91qeDDHq), [Android](https://claude.ai/artifact/78hQ2cXQph4wvXHKPXexnm));
 >   coexistência no staging feita (parte P do [`staging.md`](staging.md)), falta o **lembrete com botões** quando a
@@ -98,6 +100,8 @@ credenciais do piloto (banco, agendador e Vault do Supabase, número e app da Me
 - [`crm.md`](crm.md): etapa paralela do CRM (ponto de retomada); plano ativo em
   [`analises/plano-evolucao-relacionamento.md`](analises/plano-evolucao-relacionamento.md) e o que já foi feito em
   [`analises/crm-arquivo.md`](analises/crm-arquivo.md).
+- [`planejamento-faturamento-saas.md`](planejamento-faturamento-saas.md): faturamento do SaaS pelo Asaas (planejamento,
+  decisões pendentes e roadmap F12).
 - [`producao.md`](producao.md): produção (`app.`), fluxo de publicação e registro.
 - [`triagem-piloto.md`](triagem-piloto.md): registro das mudanças do piloto depois da cópia.
 - [`diagnostico.md`](diagnostico.md): diagnóstico da arquitetura atual (etapa 1).
