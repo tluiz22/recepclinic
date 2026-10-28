@@ -513,3 +513,7 @@ retomada fica no README). Para achar algo, buscar por data (ex.: `27/out`), fase
     lugar, conferindo antes todas (com alguma ocupada, nada muda e a tela diz as datas); outro dia ou horário:
     `changeSeriesFrom` com serviço, agenda, local, endereço e convênio novos (encerra e recomeça, como no Remarcar).
     Aviso ao paciente só da primeira sessão e só se mudar dia, hora, agenda ou local. Sem migração.
+    **Validada pelo cliente no staging em 28/out.**
+  - **C4.5** (28/out): "Como funciona?" do Alterar (`ajuda/agenda.ts`, `comoFunciona.alterar`, no topo da tela) e a
+    série citando o alterar; confirmação sem mudança mostra só "Nada foi mudado". Conferido no local em 1470 e 360px.
+    Sem migração.

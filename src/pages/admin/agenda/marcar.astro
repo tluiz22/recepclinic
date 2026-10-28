@@ -443,6 +443,7 @@ const remarcarHref = (a: UpcomingAppointment) => `/admin/agenda/remarcar?id=${a.
     {volta ? "Voltar" : "Agenda"}
   </a>
   <PageHeader title={editing ? "Alterar atendimento" : "Marcar"} class="mt-2" />
+  {editing && <HowItWorks id="alterar" topic={ajudaAgenda.comoFunciona.alterar} class="mt-2" />}
   <FlashMessage />
 
   <div class="mt-4 flex flex-wrap items-start gap-5">
@@ -970,7 +971,11 @@ const remarcarHref = (a: UpcomingAppointment) => `/admin/agenda/remarcar?id=${a.
                 ? "Esta e as próximas: a série passa para o novo dia da semana e horário, daqui em diante."
                 : "Esta e as próximas: as próximas sessões da série mudam também."
               : "";
-          submit.dataset.confirmMessage = [nothing ? "Nada foi mudado: o atendimento continua igual." : "", seriesNote, warnings, payment].filter(Boolean).join(" ");
+          // Nada mudou: só esse aviso (os avisos do horário atual não interessam).
+          if (nothing) submit.dataset.confirmLabel = submit.textContent?.trim() || "Alterar";
+          submit.dataset.confirmMessage = nothing
+            ? "Nada foi mudado: o atendimento continua igual."
+            : [seriesNote, warnings, payment].filter(Boolean).join(" ");
           return;
         }
         if (chosen.dataset.home === "1" && address) details.push({ label: "Endereço", value: address });
