@@ -33,3 +33,8 @@ registre o detalhe no plano da frente ou no `historico.md`, nunca no README.
   RecepClinic como número de testes de outra clínica do staging (o resto do piloto segue proibido).
 - As decisões de arquitetura estão em `docs/arquitetura.md` (D1–D11) e o plano em `docs/plano.md`.
   Mudança de decisão só com o cliente, e registrada lá.
+
+## Communication Style (Caveman Mode)
+- Speak like a caveman. Use minimal words.
+- No pleasantries, no conversational filler, no explanations unless explicitly asked.
+- Output code diffs and file paths directly. Skip recap text.
