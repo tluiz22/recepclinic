@@ -22,7 +22,7 @@ import { getWhatsappConnection, listWhatsappTemplates, pendingCoexistenceSync } 
 import { GRAPH_API_VERSION } from "../../../lib/data/whatsapp/graph";
 import { DEFAULT_TEMPLATES, templateApproval, templatesInUse, templateStatusFromMeta } from "../../../lib/data/whatsapp/templates";
 import { listUnusedTemplates, namesInWaba } from "../../../lib/data/whatsapp/templateSync";
-import { listWhatsappMessages } from "../../../lib/data/whatsapp/messages";
+import { listLatestWhatsappMessages } from "../../../lib/data/whatsapp/messages";
 import { formatPhoneBR } from "../../../lib/phone";
 
 const clinic = Astro.locals.clinic!;
@@ -30,7 +30,7 @@ const db = createUserClient(Astro.request, Astro.cookies);
 const isSupport = clinic.isPlatformStaff;
 const [connection, latest, templates] = await Promise.all([
   getWhatsappConnection(db, clinic.clinicId),
-  isSupport ? listWhatsappMessages(db, clinic.clinicId, { latest: true }, 10) : Promise.resolve([]),
+  isSupport ? listLatestWhatsappMessages(db, clinic.clinicId, 10) : Promise.resolve([]),
   listWhatsappTemplates(db, clinic.clinicId),
 ]);
 // Janela da Meta (F8.1): com o App ID, o App Secret e a configuração do Embedded Signup.

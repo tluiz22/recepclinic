@@ -12,7 +12,6 @@ const base: AttentionItem = {
   status: "waiting",
   waitingSince: at("10:00"),
   lastAgentAt: null,
-  lastPatientMessage: { body: "Queria saber do convênio", at: at("09:59") },
   deadline: at("23:59"),
   lastActivityAt: at("10:00"),
   notifiedAt: null,
@@ -43,11 +42,11 @@ describe("notificações do atendimento humano (F8.5c)", () => {
   it("textos: pedido, outro motivo, lembrete e resumo", () => {
     expect(waitingMessage(base)).toEqual({
       title: "Maria Souza quer falar com a clínica",
-      body: "Pediu para falar com a clínica · “Queria saber do convênio” · Toque para abrir a conversa.",
+      body: "Pediu para falar com a clínica · Toque para abrir a conversa.",
       url: "/admin/atendimento?conversa=%2B5584988880001",
       tag: "atendimento-+5584988880001",
     });
-    expect(waitingMessage({ ...base, name: null, reason: "no_availability", lastPatientMessage: null }).title).toBe("(84) 98888-0001 aguarda atendimento humano");
+    expect(waitingMessage({ ...base, name: null, reason: "no_availability" }).title).toBe("(84) 98888-0001 aguarda atendimento humano");
     expect(reminderMessage(base).body).toBe("Se já terminou, escreva #bot na conversa para o bot voltar a atender.");
     expect(summaryMessage([base, { ...base, waitingSince: at("07:30") }], "America/Fortaleza")).toEqual({
       title: "2 conversas aguardando atendimento humano",

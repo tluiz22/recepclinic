@@ -52,11 +52,14 @@
 >   Atendimento e de Configurações › WhatsApp para usá-las; o **passo 2** (tirar `body` e `retry_payload` da leitura
 >   direta) só depois do passo 1 publicado no mesmo ambiente. Nada é aplicado antes da aprovação do SQL. Linha de base
 >   dos testes: 714 de unidade e 644 de banco (local, 27/out).
-> - **B0 passo 1 (28/out):** SQL aprovado pelo cliente; implementado e testado **só no local** (migração
->   `20261028140000_mensagens_por_funcao.sql`, funções `attention_last_messages` e `contact_message_history`, Atendimento
->   e Configurações › WhatsApp usando-as). Testes: 714 de unidade e 651 de banco. Detalhes na seção 17 do
->   [plano](analises/plano-evolucao-relacionamento.md). **Aguardando a validação do cliente no local**; depois, com o OK,
->   o passo 2 (SQL próprio, para aprovação).
+> - **B0 revista em 28/out (cliente):** depois do passo 1 aprovado e feito no local, o cliente decidiu que as
+>   conversas ficam no app do WhatsApp (D12): o sistema **não guarda** o texto das mensagens recebidas nem das
+>   respostas da recepção (o já guardado é apagado); o texto do que o sistema envia fica, sem leitura pelo login
+>   (só o Suporte); **B1 e B2 saem do plano** (Q14–Q16). Passo 1 desfeito no local e substituído por duas migrações
+>   aprovadas (`20261028140000_mensagens_suporte.sql` e `20261028150000_mensagens_sem_texto.sql`), aplicadas **só no
+>   local**. Testes: 714 de unidade e 649 de banco. Detalhes na seção 17 do
+>   [plano](analises/plano-evolucao-relacionamento.md). **Aguardando a validação do cliente no local**; depois, com
+>   o OK, a `main` e o staging (migração 2 só depois do código publicado) e a etapa C.
 
 ## Como trabalhar nesta etapa
 

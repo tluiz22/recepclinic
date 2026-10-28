@@ -48,14 +48,12 @@ export function shouldRemind(item: AttentionItem, receptionOpen: boolean, now: D
 const conversationUrl = (phone: string) => `/admin/atendimento?conversa=${encodeURIComponent(phone)}`;
 
 const who = (item: AttentionItem) => item.name ?? formatPhoneBR(item.phone);
-const excerpt = (text: string | null | undefined, max = 90) => (!text ? null : text.length > max ? `${text.slice(0, max - 1)}…` : text);
 
 export function waitingMessage(item: AttentionItem): PushMessage {
   const title = item.reason === "requested" ? `${who(item)} quer falar com a clínica` : `${who(item)} aguarda atendimento humano`;
-  const quote = excerpt(item.lastPatientMessage?.body);
   return {
     title,
-    body: [handoffReasonLabel(item.reason), quote ? `“${quote}”` : null, "Toque para abrir a conversa."].filter(Boolean).join(" · "),
+    body: `${handoffReasonLabel(item.reason)} · Toque para abrir a conversa.`,
     url: conversationUrl(item.phone),
     tag: `atendimento-${item.phone}`,
   };

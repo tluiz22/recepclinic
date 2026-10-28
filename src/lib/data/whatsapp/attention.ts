@@ -59,7 +59,6 @@ export type AttentionItem = {
   /** Desde quando a clínica deve uma resposta (só em "Aguardando"). */
   waitingSince: Date | null;
   lastAgentAt: Date | null;
-  lastPatientMessage: { body: string | null; at: Date } | null;
   /** Quando o bot volta sozinho, sem "#bot". */
   deadline: Date;
   /** Última mensagem da conversa na pausa (paciente ou recepção pelo app). */
@@ -111,9 +110,17 @@ export async function listHumanAttention(
 
   const phones = open.map(({ row }) => row.contact_phone);
   const since = new Date(Math.min(...open.map(({ row }) => new Date(row.handoff_started_at ?? row.human_handoff_at!).getTime())) - 24 * 60 * 60_000);
-  // O texto vem pela função que confere quem pede (CRM B0), não pela tabela.
+  // Sem o texto: a conversa fica no app do WhatsApp (cliente, 28/out/2026, D12).
   const messages = unwrap(
-    await db.rpc("attention_last_messages", { p_clinic_id: clinicId, p_phones: phones, p_since: since.toISOString() }),
+    await db
+      .from("whatsapp_messages")
+      .select("contact_phone, direction, message_type, created_at")
+      .eq("clinic_id", clinicId)
+      .in("contact_phone", phones)
+      .or("direction.eq.inbound,message_type.eq.agent_reply")
+      .gte("created_at", since.toISOString())
+      .order("created_at", { ascending: false })
+      .limit(2000),
     "Atendimento humano",
   );
 
@@ -148,7 +155,6 @@ export async function listHumanAttention(
       reason: row.handoff_reason,
       startedAt,
       ...situation,
-      lastPatientMessage: last ? { body: last.body, at: new Date(last.created_at) } : null,
       deadline,
       lastActivityAt: new Date(Math.max(...activity.map((t) => t.getTime()))),
       notifiedAt: row.handoff_notified_at ? new Date(row.handoff_notified_at) : null,

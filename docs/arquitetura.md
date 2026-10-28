@@ -488,6 +488,20 @@ liberar funções aos poucos.
 Financeiro); pacotes fixos no código (ainda não definidos); papéis configuráveis por clínica
 (combinações demais para testar; a D6 continua).
 
+## D12 — Conversas do WhatsApp ficam no app (28/out/2026)
+
+**Decisão: o RecepClinic não guarda o texto das mensagens que o paciente escreve nem das respostas da recepção
+pelo app do WhatsApp Business; guarda só tipo, data, situação e motivo. O texto do que o próprio sistema envia
+(lembretes, avisos, bot) fica guardado para o reenvio automático, sem leitura pelo login da clínica (só o Suporte,
+por função, para diagnóstico).**
+**Por quê:** decisão do cliente. A conversa já está no app do WhatsApp; a secretária só precisa saber que há
+atendimento pendente para entrar lá e dar andamento. Guardar menos dado de saúde (LGPD) e fechar a leitura do
+texto pela API do Supabase, que qualquer membro tinha com o próprio login.
+
+**Descartado:** guardar sem exibir (o dado sensível continuaria no banco); histórico das conversas no painel (B1 e
+B2 do CRM, tirados do plano); não guardar nem o que o sistema envia (o reenvio automático usa esse texto).
+Consequência: a tela Atendimento e a notificação no celular deixam de mostrar a frase do paciente.
+
 ## Padrões assumidos (revisáveis)
 
 Pontos dos limites com caminho óbvio, que não precisaram de decisão. Qualquer um pode ser revisto.

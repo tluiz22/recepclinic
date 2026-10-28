@@ -1,6 +1,6 @@
 import type { DbClient } from "../clients";
 import { DataError, unwrap } from "../errors";
-import { deliveryRank, isDeliveryStatus, messageBody, reachedPhone, toE164, type WaMessage } from "./meta";
+import { deliveryRank, isDeliveryStatus, reachedPhone, toE164, type WaMessage } from "./meta";
 import { MAX_ATTEMPTS, nextRetryAt, RETRYABLE_MESSAGE_TYPES, type RetryContext, type SendFailure } from "./retryRules";
 
 // Registro das mensagens do WhatsApp (F3.9a), com a credencial da clínica.
@@ -57,7 +57,8 @@ export async function recordInboundMessage(db: DbClient, clinicId: string, msg: 
     contact_phone: phone,
     direction: "inbound",
     message_type: msg.type ?? "unknown",
-    body: messageBody(msg),
+    // O texto fica só no app do WhatsApp (cliente, 28/out/2026, D12).
+    body: null,
     status: "received",
     wa_message_id: msg.id ?? null,
     created_at: now.toISOString(),
@@ -80,7 +81,7 @@ export async function recordAgentEcho(db: DbClient, clinicId: string, echo: WaMe
     contact_phone: phone,
     direction: "outbound",
     message_type: "agent_reply",
-    body: messageBody(echo),
+    body: null,
     status: "sent",
     wa_message_id: echo.id ?? null,
     created_at: now.toISOString(),
@@ -291,25 +292,12 @@ export type WhatsappMessage = {
 };
 
 /**
- * Mensagens de um contato ou as últimas da clínica (Suporte, F6.1), das mais
- * novas para as mais antigas, no máximo 50. Pela função que confere o papel
- * (CRM B0): só Administrador, Recepção e Suporte; os outros recebem erro.
+ * Últimas mensagens da clínica, das mais novas para as mais antigas, no
+ * máximo 50: diagnóstico do Suporte (F6.1). Pela função que confere o papel
+ * (CRM B0): quem não é do Suporte recebe erro de acesso.
  */
-export async function listWhatsappMessages(
-  db: DbClient,
-  clinicId: string,
-  filter: { contactId: string } | { latest: true },
-  limit = 50,
-): Promise<WhatsappMessage[]> {
-  const rows = unwrap(
-    await db.rpc("contact_message_history", {
-      p_clinic_id: clinicId,
-      // Sem contato = as últimas da clínica (os tipos gerados não aceitam null).
-      p_contact_id: ("contactId" in filter ? filter.contactId : null) as string,
-      p_limit: limit,
-    }),
-    "Mensagens do WhatsApp",
-  );
+export async function listLatestWhatsappMessages(db: DbClient, clinicId: string, limit = 10): Promise<WhatsappMessage[]> {
+  const rows = unwrap(await db.rpc("support_latest_messages", { p_clinic_id: clinicId, p_limit: limit }), "Mensagens do WhatsApp");
   return rows.map((row) => ({
     id: row.id,
     direction: row.direction as "inbound" | "outbound",

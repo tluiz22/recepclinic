@@ -113,9 +113,6 @@ const whatsappButton =
                   <p class="text-[15px] text-ink-mid">
                     <strong>{handoffReasonLabel(item.reason)}</strong> · {whenLabel(item.startedAt)}
                   </p>
-                  {item.lastPatientMessage?.body && (
-                    <p class="rounded-lg bg-canvas px-3 py-2 text-[15px] break-words text-ink-soft">“{item.lastPatientMessage.body}”</p>
-                  )}
                 </div>
                 <div class="flex flex-[1_1_220px] flex-col gap-2">
                   {!isAnonymizedPhone(item.phone) && (

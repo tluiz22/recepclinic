@@ -63,9 +63,9 @@ describe("webhook do WhatsApp por clínica", () => {
     });
 
     expect(await messages(clinicA)).toEqual([
-      { direction: "inbound", message_type: "text", body: "Oi, quero marcar", status: "received", contact_phone: "+5584991110001", wa_message_id: "wamid.f61.1" },
+      { direction: "inbound", message_type: "text", body: null, status: "received", contact_phone: "+5584991110001", wa_message_id: "wamid.f61.1" },
     ]);
-    expect((await messages(clinicB)).map((m) => m.body)).toEqual(["Bom dia"]);
+    expect((await messages(clinicB)).map((m) => m.wa_message_id)).toEqual(["wamid.f61.2"]);
   });
 
   it("número sem clínica ou desconectado: ignora, sem erro", async () => {
@@ -78,7 +78,7 @@ describe("webhook do WhatsApp por clínica", () => {
     expect(await processWebhook(change(NUMBER_B, { messages: [inbound("wamid.f61.4", "5584991110002", "Oi de novo")] }), deps)).toMatchObject({
       unknownNumbers: 1,
     });
-    expect((await messages(clinicB)).map((m) => m.body)).toEqual(["Bom dia"]);
+    expect((await messages(clinicB)).map((m) => m.wa_message_id)).toEqual(["wamid.f61.2"]);
     await adminClient().from("whatsapp_connections").update({ status: "connected" }).eq("clinic_id", clinicB);
   });
 
@@ -102,7 +102,8 @@ describe("webhook do WhatsApp por clínica", () => {
     expect((await messages(clinicA)).find((m) => m.wa_message_id === "wamid.f61.eco")).toMatchObject({
       direction: "outbound",
       message_type: "agent_reply",
-      body: "Já te respondo",
+      // O texto fica só no app do WhatsApp (CRM B0, D12).
+      body: null,
     });
   });
 });

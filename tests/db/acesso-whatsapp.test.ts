@@ -22,7 +22,7 @@ import {
 import { logWebFunnelEvent } from "../../src/lib/data/whatsapp/funnel";
 import {
   isCustomerServiceWindowOpen,
-  listWhatsappMessages,
+  listLatestWhatsappMessages,
   recordAgentEcho,
   recordInboundMessage,
   recordOutboundMessage,
@@ -186,8 +186,8 @@ describe("mensagens", () => {
     // "Entregue" chegando depois de "lida" não muda nada.
     expect(await updateDeliveryStatus(botA, clinicA, id, "delivered")).toEqual({ updated: false });
     expect(await updateDeliveryStatus(botA, clinicA, id, "read")).toEqual({ updated: false });
-    const [message] = await listWhatsappMessages(asDb(reception.client), clinicA, { contactId: contactA }, 1);
-    expect(message).toMatchObject({ status: "read", direction: "outbound", phone: PHONE_KNOWN });
+    const { data: message } = await asDb(reception.client).from("whatsapp_messages").select("status, direction, contact_phone").eq("wa_message_id", id).single();
+    expect(message).toEqual({ status: "read", direction: "outbound", contact_phone: PHONE_KNOWN });
   });
 
   it("duas situações ao mesmo tempo: só uma vê a chegada ao celular", async () => {
@@ -209,8 +209,8 @@ describe("mensagens", () => {
   });
 
   it("o bot de outra clínica não lê as mensagens desta", async () => {
-    // O histórico é só da equipe (CRM B0): o bot nem chama a função.
-    await expect(listWhatsappMessages(botB, clinicA, { contactId: contactA })).rejects.toThrow();
+    // As últimas mensagens são só do Suporte (CRM B0): o bot nem chama a função.
+    await expect(listLatestWhatsappMessages(botB, clinicA)).rejects.toThrow();
     expect(await isCustomerServiceWindowOpen(botB, clinicA, PHONE_KNOWN)).toBe(false);
   });
 });

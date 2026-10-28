@@ -86,7 +86,6 @@ describe("atendimento humano (F8.5a)", () => {
       [PHONE_REQUESTED, "waiting", "Maria Souza", "requested", at("2031-03-11T10:00:01").toISOString()],
       [PHONE_TOOK_OVER, "in_progress", null, "agent_took_over", null],
     ]);
-    expect(items[1].lastPatientMessage).toEqual({ body: "Falar com a recepção", at: at("2031-03-11T10:00:00") });
     expect(items[2].lastAgentAt).toEqual(at("2031-03-11T09:45:00"));
     // O bot volta sozinho 24h depois da última mensagem da recepção (dia útil).
     expect(items[2].deadline).toEqual(at("2031-03-12T09:45:00"));

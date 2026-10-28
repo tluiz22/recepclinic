@@ -475,6 +475,13 @@ WhatsApp e mensagens (`acesso-whatsapp.test.ts`, `webhook-whatsapp.test.ts`).
   **Decidido (cliente, 27/out):** **só pela `main`, com o OK do cliente**: cada etapa é validada no local; aprovada,
   entra na `main` com as migrações e vai ao staging pelo fluxo de sempre. Nenhuma migração do CRM é aplicada no
   staging a partir da branch `CRM`.
+- **Q14. Texto das mensagens (28/out, depois da apresentação da B0):** o cliente lembrou que as conversas já estão
+  no app do WhatsApp. **Decidido:** o sistema **para de guardar** o texto das mensagens recebidas e das respostas
+  da recepção pelo app, e o texto já guardado é apagado; a tela Atendimento e a notificação ficam sem a frase do
+  paciente (D12).
+- **Q15. Texto do que o sistema envia (28/out):** **Decidido:** continua guardado para o reenvio automático e para
+  o diagnóstico do Suporte, sem leitura pelo login da clínica.
+- **Q16. B1 e B2 (28/out):** **Decidido:** saem do plano. Depois da B0, segue a etapa C.
 
 ---
 
@@ -485,9 +492,9 @@ WhatsApp e mensagens (`acesso-whatsapp.test.ts`, `webhook-whatsapp.test.ts`).
 | **A1** | Permissão (área + item + regras de rota), menu, tela com as abas que já são de todos (Aguardando remarcação, Lista de espera, Lembretes), contadores e estados vazios; testes de acesso | Item na matriz (dados) | Q1, Q2, Q4 |
 | **A2** | Abas das listas que hoje são só das Métricas (Retomar contato agrupado, Oportunidade agora, Faltosos), com as leituras extraídas para `src/lib/data/`; Atendimento e Contatos para revisar como abas-resumo | Nada | Q3 |
 | **A3** | Validação por papel no navegador (local); com o OK do cliente, entrada na `main` e validação no staging (Q13); regressão completa | — | A1, A2 |
-| **B0** | Proteção do texto das mensagens (seção 13.1): passo 1 (funções com a conferência do papel) + código do Atendimento e de Configurações › WhatsApp usando as funções; passo 2 (tirar `body` e `retry_payload` da leitura direta) **só depois**; testes por papel e pela API direta | 2 migrações, mostradas antes para aprovação | Q5, Q13 |
-| **B1** | Linha do tempo do contato (mensagens, bot, passagens, atendimentos dos pacientes) com paginação | Nada | B0 |
-| **B2** | Histórico do paciente (atendimentos, trilha, mensagens dos atendimentos) + link para as conversas do contato | Nada | B1 |
+| **B0** | **Revista em 28/out (Q14–Q16, seção 17):** sem guardar o texto das conversas; migração 1 (função do Suporte) com o código; migração 2 (apagar o texto guardado, tirar `body` e `retry_payload` da leitura do login) **só depois** do código publicado no mesmo ambiente | 2 migrações, aprovadas em 28/out | Q13–Q16 |
+| ~~B1~~ | ~~Linha do tempo do contato~~: **fora do plano** (Q16) | — | — |
+| ~~B2~~ | ~~Histórico do paciente~~: **fora do plano** (Q16) | — | — |
 | **C1** | Apresentar o SQL final de `contact_interactions` (e das anotações), testes e reversão, **para aprovação** | Proposta | Q6–Q12 |
 | **C2** | Aplicar no local, depois no staging; "Registrar contato" na central e na ficha; registro na linha do tempo; saída da fila pela regra aprovada | Migração | C1 aprovado |
 | **C3** | Integração final: central ↔ ficha ↔ Atendimento humano; regressão; staging; preparo da publicação | — | C2 |
@@ -766,30 +773,35 @@ reaparecia (decisão do cliente). Nenhuma clínica do staging recebe o item pela
 
 ---
 
-## 17. B0 passo 1 implementado (28/out, só no local)
+## 17. B0 revista e implementada (28/out, só no local)
 
-**SQL aprovado pelo cliente em 28/out** (como apresentado na seção 13.1). Migração
-`20261028140000_mensagens_por_funcao.sql`, aplicada só no banco local:
+**Como chegou aqui:** o passo 1 da seção 13.1 (funções `attention_last_messages` e `contact_message_history`) foi
+aprovado, implementado e testado no local. Em seguida o cliente decidiu (Q14–Q16, D12) que o RecepClinic **não
+guarda** o texto das conversas, porque elas ficam no app do WhatsApp; B1 e B2 saíram do plano. O passo 1 foi
+desfeito no banco local (as funções apagadas e a linha da migração tirada) e substituído pelo que está abaixo, com o
+OK do cliente. Nada foi ao staging.
 
-- `public.attention_last_messages(p_clinic_id, p_phones, p_since)`: `security definer`; qualquer membro da clínica e
-  o bot (`clinic_service`); só as recebidas e as `agent_reply` dos telefones com a conversa pausada; quem não é da
-  clínica recebe a lista vazia.
-- `public.contact_message_history(p_clinic_id, p_contact_id, p_before, p_limit)`: `security definer`; só
-  Administrador, Recepção e Suporte (os outros: erro `42501`); com contato, as dele e as do telefone dele sem contato
-  ligado; sem contato, as últimas da clínica; no máximo 50, `p_before` para o "Carregar mais". Não liberada ao bot.
-- Reversão: `drop function` das duas.
+**Migração 1, `20261028140000_mensagens_suporte.sql`:** `public.support_latest_messages(p_clinic_id, p_limit)`,
+`security definer`, só o Suporte (os outros: erro `42501`), no máximo 50. Reversão: `drop function`.
 
-**Código:** `listHumanAttention` (`whatsapp/attention.ts`) lê o texto pela `attention_last_messages` (Atendimento,
-Início, contador do menu, notificações e aba Atendimento do Relacionamento seguem iguais). `listWhatsappMessages`
-(`whatsapp/messages.ts`) usa a `contact_message_history`; saiu o filtro por atendimento (sem uso) e o limite padrão
-passou a 50. Tipos do banco regerados.
+**Migração 2, `20261028150000_mensagens_sem_texto.sql`** (só depois do código publicado no mesmo ambiente): apaga o
+`body` das mensagens recebidas e das `agent_reply` (sem volta); `revoke select, update` de `anon` e
+`authenticated`; `grant select` de todas as colunas menos `body` e `retry_payload`; `grant update` só de `status`,
+`message_type`, `appointment_id`, `retry_at`, `retry_payload` e `failure_code`/`failure_reason`. O `insert` do login,
+o bot e as rotinas (`clinic_service`), a anonimização e as Métricas não mudam. Reversão: `grant select, update on
+public.whatsapp_messages to anon, authenticated` (o texto apagado não volta).
 
-**Testes:** unidade 714 passando; banco 651 passando (7 novos em `tests/db/mensagens-por-funcao.test.ts`: acesso por
-papel, outra clínica, bot, mensagens do telefone sem contato, limite de 50 e "Carregar mais"; o teste antigo do bot
-de outra clínica em `acesso-whatsapp.test.ts` passou a esperar o erro de acesso); `astro check` sem erros.
-Navegador local: a conferir pelo cliente (Atendimento como Profissional e Recepção; Configurações › WhatsApp como
-Suporte).
+**Código:** o webhook grava `body` nulo nas mensagens recebidas e nos ecos da recepção (`whatsapp/messages.ts`; o
+`#bot` continua lido da mensagem que chega); `listHumanAttention` lê sem o texto e o item perdeu a última mensagem; a
+tela Atendimento e a notificação ficam sem a frase do paciente; Configurações › WhatsApp usa
+`listLatestWhatsappMessages` (a função do Suporte). Tipos do banco regerados.
 
-**Ainda não protege nada sozinho:** a leitura direta da tabela continua aberta até o passo 2. **Passo 2** (SQL próprio,
-para aprovação): `revoke select` de `whatsapp_messages` do `authenticated` e `grant select` das colunas menos `body` e
-`retry_payload`, `update` limitado às colunas do painel; só depois do passo 1 publicado no mesmo ambiente.
+**Testes:** unidade 714 passando; banco 649 passando (5 novos em `tests/db/mensagens-sem-texto.test.ts`: o que é
+gravado, leitura e alteração por coluna para Administrador, Recepção e Profissional, `anon` sem acesso, últimas
+mensagens só do Suporte; ajustados `acesso-whatsapp`, `atendimento-humano`, `webhook-whatsapp` e o teste da
+notificação); `astro check` sem erros. No banco local, a migração 2 apagou o texto de 4 mensagens recebidas e 1
+resposta da recepção (conferido antes e depois). Navegador local: a conferir pelo cliente.
+
+**Ordem no staging (depois do OK do cliente, pela `main`):** migração 1 → push da `main` (código publicado) →
+conferir → migração 2 (simulação → aplicar → conferir). Na produção, a migração 2 apaga para sempre as frases já
+guardadas.
