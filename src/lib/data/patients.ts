@@ -6,6 +6,7 @@ import { parseSearch, type SearchTerm } from "../patientSearch";
 import type { DbClient } from "./clients";
 import { cleanText, DataError, fromDbError, unwrap, unwrapOne, Validation } from "./errors";
 import { documentPaths, removeDocumentFiles } from "./patientDocuments";
+import { addPatientNote } from "./patientNotes";
 import { logError } from "../log";
 
 // Contatos e pacientes (D4a, D10). O contato é quem conversa no WhatsApp
@@ -52,7 +53,6 @@ export type Patient = {
   birthdate: string;
   /** O paciente é o próprio contato (fala por si no WhatsApp). */
   isContactSelf: boolean;
-  notes: string | null;
   /** null = particular (D10). */
   insurance: PatientInsurance | null;
   isActive: boolean;
@@ -64,7 +64,7 @@ export type PatientWithContact = Patient & { contact: Contact };
 
 const CONTACT_COLUMNS = "id, full_name, phone, default_home_address, is_active, anonymized_at, bot_blocked_at";
 const PATIENT_COLUMNS =
-  "id, contact_id, full_name, birthdate, is_contact_self, notes, insurance_plan_id, insurance_card_number, insurance_card_valid_until, is_active, anonymized_at";
+  "id, contact_id, full_name, birthdate, is_contact_self, insurance_plan_id, insurance_card_number, insurance_card_valid_until, is_active, anonymized_at";
 
 type ContactRow = {
   id: string;
@@ -81,7 +81,6 @@ type PatientRow = {
   full_name: string;
   birthdate: string;
   is_contact_self: boolean;
-  notes: string | null;
   insurance_plan_id: string | null;
   insurance_card_number: string | null;
   insurance_card_valid_until: string | null;
@@ -105,7 +104,6 @@ const toPatient = (row: PatientRow): Patient => ({
   fullName: row.full_name,
   birthdate: row.birthdate,
   isContactSelf: row.is_contact_self,
-  notes: row.notes,
   insurance: row.insurance_plan_id
     ? { planId: row.insurance_plan_id, cardNumber: row.insurance_card_number, cardValidUntil: row.insurance_card_valid_until }
     : null,
@@ -393,6 +391,7 @@ export type ContactChoice =
 export type RegisterPatientInput = {
   fullName: string;
   birthdate: string;
+  /** 1ª anotação do paciente (CRM P2; as Observações viraram anotações datadas). */
   notes?: string | null;
   insurance?: PatientInsuranceInput;
   contact: ContactChoice;
@@ -476,7 +475,6 @@ export async function registerPatient(
       full_name: fullName,
       birthdate: input.birthdate,
       is_contact_self: isContactSelf,
-      notes: cleanText(input.notes),
       created_via: input.createdVia ?? "admin",
       ...insurance,
     })
@@ -486,6 +484,8 @@ export async function registerPatient(
     throw new DataError("duplicate", `Paciente: ${PATIENT_MESSAGES.selfExists}`, { isContactSelf: PATIENT_MESSAGES.selfExists });
   }
   const patient = toPatient(unwrap({ data, error }, "Paciente"));
+  const firstNote = cleanText(input.notes);
+  if (firstNote) await addPatientNote(db, clinicId, patient.id, firstNote);
 
   const settings = unwrapOne(
     await db.from("clinic_settings").select("consultation_age_limit_years").eq("clinic_id", clinicId).maybeSingle(),
@@ -500,12 +500,12 @@ export async function registerPatient(
   };
 }
 
-/** Edita nome, nascimento e observações. Sendo o próprio contato, o nome do contato acompanha. */
+/** Edita nome e nascimento. Sendo o próprio contato, o nome do contato acompanha. */
 export async function updatePatient(
   db: DbClient,
   clinicId: string,
   id: string,
-  input: { fullName: string; birthdate: string; notes?: string | null },
+  input: { fullName: string; birthdate: string },
   today: string,
 ): Promise<Patient> {
   const current = await getPatient(db, clinicId, id);
@@ -517,7 +517,7 @@ export async function updatePatient(
     unwrapOne(
       await db
         .from("patients")
-        .update({ full_name: fullName, birthdate: input.birthdate, notes: cleanText(input.notes) })
+        .update({ full_name: fullName, birthdate: input.birthdate })
         .eq("clinic_id", clinicId)
         .eq("id", id)
         .select(PATIENT_COLUMNS)

@@ -1013,6 +1013,32 @@ isOneToOne: false
       referencedColumns: ["clinic_id","id"]
     }
                   ]
+                },"patient_notes": {
+                  Row: {
+                    "body": string,"clinic_id": string,"created_at": string,"created_by": string | null,"from_observations": boolean,"id": string,"patient_id": string,"updated_at": string | null
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "body": string,"clinic_id": string,"created_at"?: string,"created_by"?: string | null,"from_observations"?: boolean,"id"?: string,"patient_id": string,"updated_at"?: string | null
+                  }
+                  Update: {
+                    "body"?: string,"clinic_id"?: string,"created_at"?: string,"created_by"?: string | null,"from_observations"?: boolean,"id"?: string,"patient_id"?: string,"updated_at"?: string | null
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "patient_notes_clinic_id_fkey"
+      columns: ["clinic_id"]
+isOneToOne: false
+      referencedRelation: "clinics"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "patient_notes_clinic_id_patient_id_fkey"
+      columns: ["clinic_id","patient_id"]
+isOneToOne: false
+      referencedRelation: "patients"
+      referencedColumns: ["clinic_id","id"]
+    }
+                  ]
                 },"patients": {
                   Row: {
                     "agenda_import_id": string | null,"anonymized_at": string | null,"birthdate": string,"clinic_id": string,"contact_id": string,"created_at": string,"created_via": string,"full_name": string,"id": string,"insurance_card_number": string | null,"insurance_card_valid_until": string | null,"insurance_plan_id": string | null,"is_active": boolean,"is_contact_self": boolean,"notes": string | null,"updated_at": string

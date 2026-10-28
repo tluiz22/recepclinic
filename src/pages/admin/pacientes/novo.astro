@@ -194,9 +194,9 @@ import { pacientes } from "../../../lib/ajuda/pacientes";
               )}
       </div>
       <div class={field}>
-        <label for="notes" class={fieldLabel}>Observações <span class={optional}>(opcional)</span></label>
-        <textarea id="notes" name="notes" rows="2" aria-describedby="notes-hint" class={`${CONTROL} h-auto! py-2.5`}>{values.notes}</textarea>
-        <p id="notes-hint" class={hint}>Só a equipe vê.</p>
+        <label for="notes" class={fieldLabel}>Anotação <span class={optional}>(opcional)</span></label>
+        <textarea id="notes" name="notes" rows="2" maxlength="2000" aria-describedby="notes-hint" class={`${CONTROL} h-auto! py-2.5`}>{values.notes}</textarea>
+        <p id="notes-hint" class={hint}>Vira a primeira anotação do {vocabulary.patient}, com a data e o seu nome. Só a equipe vê.</p>
       </div>
     </section>
 

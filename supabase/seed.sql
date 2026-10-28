@@ -210,6 +210,8 @@ begin
   -- Módulo financeiro (F11.1): o CPF de Maria (paga pelos filhos, o padrão) e,
   -- para Ana, o pai como outra pessoa. CPFs fictícios, com dígitos válidos.
   insert into public.contact_finance (clinic_id, contact_id, cpf) values (c_a, ct_maria, '52998224725');
+  -- Anotação do paciente (CRM P2).
+  insert into public.patient_notes (clinic_id, patient_id, body) values (c_a, pt_ana, 'Prefere atendimento à tarde.');
   insert into public.patient_finance (clinic_id, patient_id, payer, payer_name, payer_cpf)
     values (c_a, pt_ana, 'other', 'Pedro Souza', '12345678909');
 

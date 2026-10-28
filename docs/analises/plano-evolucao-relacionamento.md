@@ -915,3 +915,25 @@ foto ou PDF; tabela respondendo; leitura e envio sem login recusados) → push d
 na produção, só a *preview*). **A conferir pelo cliente no staging:** anexar (é o teste da CSP, que só vale fora do
 `npm run dev`; se o envio falhar com "O arquivo não foi enviado", é ela). **Produção: nada.**
 
+### 19.2 P2 Anotações implementada (28/out, só no local)
+
+**SQL aprovado pelo cliente em 28/out.** Migração `20261029130000_anotacoes_do_paciente.sql` (aplicada só no local):
+tabela `patient_notes` (texto de 1 a 2000, origem "Observações anteriores", autor e hora pelo banco, "editada em"),
+gatilho (na gravação, autor e hora de quem grava; na edição, só o texto muda), RLS (lê quem é da clínica; escrevem
+Administrador, Recepção e Profissional; edita só o autor; apaga só o Administrador; bot sem acesso), auditoria do
+Suporte, gatilho da anonimização (apaga as anotações) e a passagem das Observações de cada paciente para a 1ª anotação
+(campo antigo `patients.notes` vazio e sem uso). Passagem conferida no local numa transação desfeita no fim (texto
+sem os espaços, sem autor, campo antigo vazio); o banco local não tinha Observações.
+
+**Código:** `src/lib/data/patientNotes.ts`; rota `/api/admin/pacientes/[id]/anotacoes` (escrever, editar, apagar;
+volta à aba); aba **"Anotações (n)"** na ficha (campo e "Salvar anotação" no alto, lista com data e autor,
+"Observações anteriores", "editada em", "Editar" só para o autor, "Apagar" com confirmação só para o Administrador);
+o cartão "Dados" sem as Observações; no cadastro de paciente novo, "Anotação (opcional)" cria a 1ª anotação; o
+aviso da anonimização cita anotações e documentos; a área virou "Atendimentos, documentos e anotações". Seed: uma
+anotação de exemplo.
+
+**Testes:** unidade 718 passando (1 novo); banco 665 passando (8 novos em `tests/db/anotacoes-do-paciente.test.ts`;
+o teste antigo da edição do paciente deixou de usar as Observações); `astro check` sem erros; `npm run build`
+completo. Navegador local: como Recepção, escreveu e editou ("editada em"); como Administrador, apagou com
+confirmação; como Profissional, escreve e não vê "Apagar"; no celular, sem rolagem lateral.
+

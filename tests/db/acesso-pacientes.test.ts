@@ -192,9 +192,9 @@ describe("edição, plano e desativação", () => {
     expect((await failure(() => updatePatient(db(reception), clinicId, pedro.id, { fullName: "Pedro", birthdate: yearsAgo(10) }, TODAY))).code).toBe(
       "invalid",
     );
-    await updatePatient(db(reception), clinicId, pedro.id, { fullName: "Pedro Alves Filho", birthdate: yearsAgo(31), notes: "  " }, TODAY);
+    await updatePatient(db(reception), clinicId, pedro.id, { fullName: "Pedro Alves Filho", birthdate: yearsAgo(31) }, TODAY);
     expect((await findContactByPhone(db(reception), clinicId, "85999990003"))?.fullName).toBe("Pedro Alves Filho");
-    expect((await getPatient(db(reception), clinicId, pedro.id)).notes).toBeNull();
+    expect((await getPatient(db(reception), clinicId, pedro.id)).fullName).toBe("Pedro Alves Filho");
   });
 
   it("plano com carteirinha; particular limpa tudo (D10)", async () => {

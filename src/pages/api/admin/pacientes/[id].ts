@@ -29,7 +29,7 @@ export const POST: APIRoute = async (context) => {
             db,
             clinic.clinicId,
             id,
-            { fullName: formText(form, "full_name"), birthdate: formText(form, "birthdate"), notes: formOptionalText(form, "notes") },
+            { fullName: formText(form, "full_name"), birthdate: formText(form, "birthdate") },
             todayIn(clinic.timezone),
           );
           return { redirectTo: page, message: "Dados salvos." };

@@ -70,8 +70,10 @@
 >   [plano](analises/plano-evolucao-relacionamento.md)). **P1 Documentos implementada em 28/out, só no local**
 >   (migração `20261029120000_documentos_do_paciente.sql`; 717 de unidade e 657 de banco). Validada no local
 >   (com os ajustes: botões, aba "Documentos" na ficha, download sem a barra) e **publicada no staging em 28/out**
->   (`5061feb`); Documentos para todas as clínicas (Q25). **Produção: nada.** **Retomar daqui:** validação do cliente
->   no staging (anexar confere a CSP) e a P2 Anotações.
+>   (`5061feb`); Documentos para todas as clínicas (Q25). **Produção: nada.** P1 validada no staging em 28/out. **P2
+>   Anotações implementada em 28/out, só no local** (migração `20261029130000_anotacoes_do_paciente.sql`; 718 de
+>   unidade e 665 de banco). **Retomar daqui:** validação do cliente no local; com o OK, `main` e staging (contar antes
+>   as Observações do staging) e a P3 Lembretes.
 
 ## Como trabalhar nesta etapa
 

@@ -15,6 +15,10 @@
 // atendimentos e a nota de cada pagamento. No celular, os cartões recolhidos e
 // "Marcar" na barra fixa.
 //
+// CRM P2 (28/out/2026): aba "Anotações" no lugar das Observações (Q20, Q21):
+// lista datada com o autor; Administrador, Recepção e Profissional escrevem;
+// só o autor edita; só o Administrador apaga.
+//
 // CRM P1 (28/out/2026): aba "Documentos" ao lado dos atendimentos (cliente:
 // lista longa não cabe na coluna da direita), com filtro por tipo. Foto ou PDF
 // da carteirinha, identidade, pedidos: a equipe toda vê, abre e baixa;
@@ -51,6 +55,7 @@ import { getClinicSettings } from "../../../lib/data/config/clinic";
 import { listInsurancePlans } from "../../../lib/data/config/insurance";
 import { getContact, getPatient, previewAnonymization } from "../../../lib/data/patients";
 import { actorText, loadActorLabels } from "../../../lib/data/agenda/trail";
+import { listPatientNotes, NOTE_MAX } from "../../../lib/data/patientNotes";
 import { DESCRIPTION_MAX, DOCUMENT_KIND_LABEL, DOCUMENT_KINDS, DOCUMENT_MIME_TYPES, listPatientDocuments } from "../../../lib/data/patientDocuments";
 import { platformEnv } from "../../../lib/env";
 import { capitalize, vocabularyFor } from "../../../lib/vocabulary";
@@ -84,7 +89,7 @@ const canAnonymize = !anonymized && (clinic.isPlatformStaff || clinic.roles.incl
 const preview = canAnonymize ? await previewAnonymization(db, clinic.clinicId, patient.id, now) : null;
 const anonymizeMessage = preview
   ? [
-      `Só a pedido do ${vocabulary.patient} (LGPD). Nome, nascimento, observações e carteirinha de ${patient.fullName} serão apagados, e o ${vocabulary.contact} (${contact.fullName}) perde nome, telefone, endereço e as mensagens do WhatsApp. O histórico de atendimentos fica, sem identificação.`,
+      `Só a pedido do ${vocabulary.patient} (LGPD). Nome, nascimento, anotações, documentos e carteirinha de ${patient.fullName} serão apagados, e o ${vocabulary.contact} (${contact.fullName}) perde nome, telefone, endereço e as mensagens do WhatsApp. O histórico de atendimentos fica, sem identificação.`,
       preview.futureAppointments > 0
         ? `${preview.futureAppointments} ${preview.futureAppointments === 1 ? "atendimento futuro será cancelado" : "atendimentos futuros serão cancelados"}, sem aviso ao paciente.`
         : "",
@@ -126,7 +131,12 @@ const ageWarning =
 // Documentos (CRM P1).
 const documents = anonymized ? [] : await listPatientDocuments(db, clinic.clinicId, patient.id);
 const canAttach = !anonymized && (clinic.isPlatformStaff || clinic.roles.includes("admin") || clinic.roles.includes("reception"));
-const documentActors = await loadActorLabels(db, clinic.clinicId, documents.map((d) => d.createdBy));
+// Anotações (CRM P2).
+const notes = anonymized ? [] : await listPatientNotes(db, clinic.clinicId, patient.id);
+const canWriteNotes = !anonymized && (clinic.isPlatformStaff || clinic.roles.some((r) => r === "admin" || r === "reception" || r === "professional"));
+const canDeleteNotes = !anonymized && (clinic.isPlatformStaff || clinic.roles.includes("admin"));
+const notesApi = `/api/admin/pacientes/${patient.id}/anotacoes`;
+const documentActors = await loadActorLabels(db, clinic.clinicId, [...documents.map((d) => d.createdBy), ...notes.map((n) => n.createdBy)]);
 const documentsApi = `/api/admin/pacientes/${patient.id}/documentos`;
 // O envio e o "Compartilhar" falam direto com o armazenamento do Supabase (fora do 'self' da CSP).
 if ((canAttach || documents.length > 0) && Astro.csp) Astro.csp.insertDirective(`connect-src 'self' ${new URL(platformEnv().supabaseUrl).origin}`);
@@ -139,10 +149,13 @@ const planLabel = patient.insurance ? planName(patient.insurance.planId) : "Part
 const tab =
   !anonymized && Astro.url.searchParams.get("aba") === "documentos"
     ? "documentos"
-    : Astro.url.searchParams.get("atendimentos") === "anteriores"
+    : !anonymized && Astro.url.searchParams.get("aba") === "anotacoes"
+      ? "anotacoes"
+      : Astro.url.searchParams.get("atendimentos") === "anteriores"
       ? "anteriores"
       : "proximos";
-const tabQuery: Record<string, string> = { proximos: "", anteriores: "?atendimentos=anteriores", documentos: "?aba=documentos" };
+const tabQuery: Record<string, string> = { proximos: "", anteriores: "?atendimentos=anteriores", documentos: "?aba=documentos", anotacoes: "?aba=anotacoes" };
+const isAppointments = tab === "proximos" || tab === "anteriores";
 const tabHref = (value: string) => withReturn(`/admin/pacientes/${patient.id}${tabQuery[value]}`, volta);
 // Filtro por tipo na aba Documentos (só os tipos que o paciente tem).
 const kindFilter = DOCUMENT_KINDS.find((k) => k.key === Astro.url.searchParams.get("tipo"))?.key ?? null;
@@ -287,10 +300,10 @@ const canBook = patient.isActive && !anonymized;
 
   <div class="mt-4 grid grid-cols-[minmax(0,1fr)] items-start gap-4 lg:grid-cols-[minmax(0,1fr)_400px] lg:gap-5">
     <section aria-labelledby="atendimentos-titulo" class={`${card} gap-1`}>
-      <h2 id="atendimentos-titulo" class={sectionTitle}>{anonymized ? "Atendimentos" : "Atendimentos e documentos"}</h2>
+      <h2 id="atendimentos-titulo" class={sectionTitle}>{anonymized ? "Atendimentos" : "Atendimentos, documentos e anotações"}</h2>
       <Tabs
         inCard
-        label="Atendimentos e documentos"
+        label="Atendimentos, documentos e anotações"
         class="mt-1"
         tabs={[
           { label: "Próximos", href: tabHref("proximos"), active: tab === "proximos", count: upcoming.length, countTone: "neutral", countLabel: plural(upcoming.length) },
@@ -313,10 +326,18 @@ const canBook = patient.isActive && !anonymized;
                   countTone: "neutral" as const,
                   countLabel: `${documents.length} ${documents.length === 1 ? "documento" : "documentos"}`,
                 },
+                {
+                  label: "Anotações",
+                  href: tabHref("anotacoes"),
+                  active: tab === "anotacoes",
+                  count: notes.length,
+                  countTone: "neutral" as const,
+                  countLabel: `${notes.length} ${notes.length === 1 ? "anotação" : "anotações"}`,
+                },
               ]),
         ]}
       />
-      {tab !== "documentos" && <ul>
+      {isAppointments && <ul>
         {rows.map((a) => {
           const paid = paymentStates?.get(a.id);
           return (
@@ -363,7 +384,7 @@ const canBook = patient.isActive && !anonymized;
         })}
       </ul>}
       {
-        tab !== "documentos" && rows.length === 0 && (
+        isAppointments && rows.length === 0 && (
           <p class="py-3 text-[15px] text-ink-soft">{tab === "anteriores" ? "Nenhum atendimento anterior." : "Nenhum atendimento marcado."}</p>
         )
       }
@@ -481,6 +502,88 @@ const canBook = patient.isActive && !anonymized;
           </div>
         )
       }
+      {
+        tab === "anotacoes" && (
+          <div class="flex flex-col gap-3 pt-2">
+            {canWriteNotes && (
+              <form method="POST" action={withReturn(notesApi, volta)} class="flex flex-col gap-2">
+                <input type="hidden" name="acao" value="escrever" />
+                <label for="note-body" class="sr-only">Nova anotação</label>
+                <textarea
+                  id="note-body"
+                  name="body"
+                  rows="3"
+                  required
+                  maxlength={NOTE_MAX}
+                  placeholder="Ex.: Plano pediu o laudo do exame; a mãe prefere atendimento à tarde."
+                  class={`${CONTROL} h-auto! py-2.5`}
+                ></textarea>
+                <div class="flex flex-wrap items-center gap-2">
+                  <Button type="submit" variant="primary" size="sm" data-sending-label="Salvando…">Salvar anotação</Button>
+                  <span class={hint}>Só a equipe vê.</span>
+                </div>
+              </form>
+            )}
+            {notes.length > 0 && (
+              <ul>
+                {notes.map((n) => {
+                  const by = n.fromObservations ? "Observações anteriores" : n.createdBy ? actorText(documentActors.get(n.createdBy)) : null;
+                  const mine = !!n.createdBy && n.createdBy === clinic.userId && canWriteNotes;
+                  return (
+                    <li class="flex flex-col gap-1.5 border-t border-line py-3 first:border-t-0">
+                      <p class="text-[15.5px] leading-snug whitespace-pre-line break-words text-ink">{n.body}</p>
+                      <span class="text-[13.5px] text-ink-soft">
+                        {[
+                          n.fromObservations ? null : formatInstant(n.createdAt, clinic.timezone, "dd/MM/yyyy 'às' HH:mm"),
+                          by,
+                          n.updatedAt ? `editada em ${formatInstant(n.updatedAt, clinic.timezone, "dd/MM 'às' HH:mm")}` : null,
+                        ]
+                          .filter(Boolean)
+                          .join(" · ")}
+                      </span>
+                      {(mine || canDeleteNotes) && (
+                        <div class="flex flex-wrap items-start gap-1.5">
+                          {mine && (
+                            <details class="group open:w-full">
+                              <summary class={`${buttonClass("secondary", "sm")} cursor-pointer list-none group-open:hidden [&::-webkit-details-marker]:hidden`}>Editar</summary>
+                              <form method="POST" action={withReturn(notesApi, volta)} class="flex flex-col gap-2">
+                                <input type="hidden" name="acao" value="editar" />
+                                <input type="hidden" name="anotacao" value={n.id} />
+                                <label for={`note-${n.id}`} class="sr-only">Corrigir a anotação</label>
+                                <textarea id={`note-${n.id}`} name="body" rows="3" required maxlength={NOTE_MAX} class={`${CONTROL} h-auto! py-2.5`}>{n.body}</textarea>
+                                <div class="flex flex-wrap gap-2">
+                                  <Button type="submit" variant="primary" size="sm" data-sending-label="Salvando…">Salvar</Button>
+                                  <Button size="sm" href={tabHref("anotacoes")}>Cancelar</Button>
+                                </div>
+                              </form>
+                            </details>
+                          )}
+                          {canDeleteNotes && (
+                            <form method="POST" action={withReturn(notesApi, volta)} class="contents">
+                              <input type="hidden" name="acao" value="apagar" />
+                              <input type="hidden" name="anotacao" value={n.id} />
+                              <button
+                                type="submit"
+                                class={`js-confirm-delete ${buttonClass("danger-quiet", "sm")}`}
+                                data-confirm-title="Apagar a anotação?"
+                                data-confirm-message="A anotação sai da ficha do paciente. Não dá para desfazer."
+                                data-confirm-label="Apagar"
+                              >
+                                Apagar
+                              </button>
+                            </form>
+                          )}
+                        </div>
+                      )}
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+            {notes.length === 0 && <p class="py-3 text-[15px] text-ink-soft">Nenhuma anotação.</p>}
+          </div>
+        )
+      }
     </section>
 
     <div class="flex flex-col gap-4">
@@ -490,10 +593,7 @@ const canBook = patient.isActive && !anonymized;
             <dl class={kv}>
               <dt class={dt}>Nascimento</dt>
               <dd class={dd}>{formatCalendarDate(patient.birthdate, "dd/MM/yyyy")}</dd>
-              <dt class={dt}>Observações</dt>
-              <dd class={patient.notes ? "font-medium whitespace-pre-line text-ink" : "text-ink-soft"}>{patient.notes ?? "Nenhuma"}</dd>
             </dl>
-            <p class={hint}>Observações: só a equipe vê.</p>
             <form slot="edit" method="POST" action={action} class="flex flex-col gap-4">
               <input type="hidden" name="acao" value="salvar" />
               <div class={field}>
@@ -503,11 +603,6 @@ const canBook = patient.isActive && !anonymized;
               <div class={field}>
                 <label for="birthdate" class={fieldLabel}>Data de nascimento</label>
                 <input id="birthdate" name="birthdate" type="date" required max={today} value={patient.birthdate} class={`${CONTROL} w-48`} />
-              </div>
-              <div class={field}>
-                <label for="notes" class={fieldLabel}>Observações</label>
-                <textarea id="notes" name="notes" rows="3" aria-describedby="notes-hint" class={`${CONTROL} h-auto! py-2.5`}>{patient.notes ?? ""}</textarea>
-                <p id="notes-hint" class={hint}>Só a equipe vê.</p>
               </div>
               <div class="flex gap-2">
                 <Button type="submit" variant="primary" data-sending-label="Salvando…">Salvar</Button>
