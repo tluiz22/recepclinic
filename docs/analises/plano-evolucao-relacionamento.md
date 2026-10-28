@@ -14,8 +14,8 @@
 > **Revisão pedida pelo cliente (27/out), seção 13:** a direção geral está aprovada. A revisão conferiu no código a
 > segurança do histórico (**restringir rota e componente não basta**; proposta de proteção no banco, etapa nova
 > **B0**), separou "marcou de fato" de "enviou o link", detalhou as Observações do paciente, acrescentou critérios de
-> teste de desempenho e consistência e reforçou a regra da produção. Novas dúvidas **Q10 a Q13** (seção 11), a
-> responder uma de cada vez. Continua **sem código, banco ou migração** até a aprovação do documento revisado.
+> teste de desempenho e consistência e reforçou a regra da produção. Novas dúvidas **Q10 a Q13** (seção 11),
+> **respondidas pelo cliente em 27/out** (todas na opção recomendada). Continua **sem código, banco ou migração** até a aprovação do documento revisado.
 
 ---
 
@@ -453,19 +453,28 @@ WhatsApp e mensagens (`acesso-whatsapp.test.ts`, `webhook-whatsapp.test.ts`).
   **Decidido (cliente, 27/out):** **só acrescentar**; para corrigir, um registro novo (vale o último). A anonimização
   apaga a observação.
 
-**Novas dúvidas da revisão de 27/out (abertas, uma de cada vez, na ordem):**
+**Novas dúvidas da revisão de 27/out (respondidas pelo cliente em 27/out):**
 
 - **Q10. Envio do link × marcou:** acrescentar a 7ª opção **"Enviou o link / vai marcar"** (`link_sent`), que mantém
   a pessoa na fila e mostra a tentativa, e deixar "Marcou" só quando o sistema achar o atendimento marcado (proposta,
   seção 13.2)? Ou manter as 6 opções e usar "Pediu para falar depois" ou "Outro" para o link?
+  **Decidido (cliente, 27/out):** **7ª opção "Enviou o link / vai marcar"** (`link_sent`), que mantém na fila e
+  mostra "link enviado em dd/mm"; **"Marcou" só com o atendimento marcado conferido** pelo sistema (regra da 13.2).
 - **Q11. Lembretes:** "Marcou" não se aplica a quem já tem o atendimento. Proposta: na aba Lembretes, a saída é pelas
   ações que já existem (Confirmar presença, Remarcar, Cancelar) e pelos registros "Não quer marcar agora" e "Número
   errado"; "Marcou" não aparece nessa aba.
+  **Decidido (cliente, 27/out):** como a proposta: ações atuais + "Não quer marcar agora" e "Número errado"; sem
+  "Marcou" nessa aba; os outros registros só marcam a tentativa.
 - **Q12. Observações do paciente:** quem lê e edita? Proposta: **como hoje** (Administrador, Recepção e
   Profissional, inclusive o restrito, que vê todos os pacientes; Suporte com auditoria), só acrescentando o
   "Atualizado em … por …". Alternativa: só Administrador e Recepção editam (o Profissional só lê).
+  **Decidido (cliente, 27/out):** **como hoje** (os três papéis leem e editam; Suporte com auditoria), só com o
+  "Atualizado em … por …".
 - **Q13. CRM no staging:** as migrações e o código do CRM vão ao staging só depois de entrar na `main`, com o OK do
   cliente (proposta, porque o staging é o mesmo banco da `main`)? Até lá, a validação é no local.
+  **Decidido (cliente, 27/out):** **só pela `main`, com o OK do cliente**: cada etapa é validada no local; aprovada,
+  entra na `main` com as migrações e vai ao staging pelo fluxo de sempre. Nenhuma migração do CRM é aplicada no
+  staging a partir da branch `CRM`.
 
 ---
 
@@ -475,7 +484,7 @@ WhatsApp e mensagens (`acesso-whatsapp.test.ts`, `webhook-whatsapp.test.ts`).
 |---|---|---|---|
 | **A1** | Permissão (área + item + regras de rota), menu, tela com as abas que já são de todos (Aguardando remarcação, Lista de espera, Lembretes), contadores e estados vazios; testes de acesso | Item na matriz (dados) | Q1, Q2, Q4 |
 | **A2** | Abas das listas que hoje são só das Métricas (Retomar contato agrupado, Oportunidade agora, Faltosos), com as leituras extraídas para `src/lib/data/`; Atendimento e Contatos para revisar como abas-resumo | Nada | Q3 |
-| **A3** | Validação por papel no navegador (local) e no staging; regressão completa | — | A1, A2 |
+| **A3** | Validação por papel no navegador (local); com o OK do cliente, entrada na `main` e validação no staging (Q13); regressão completa | — | A1, A2 |
 | **B0** | Proteção do texto das mensagens (seção 13.1): passo 1 (funções com a conferência do papel) + código do Atendimento e de Configurações › WhatsApp usando as funções; passo 2 (tirar `body` e `retry_payload` da leitura direta) **só depois**; testes por papel e pela API direta | 2 migrações, mostradas antes para aprovação | Q5, Q13 |
 | **B1** | Linha do tempo do contato (mensagens, bot, passagens, atendimentos dos pacientes) com paginação | Nada | B0 |
 | **B2** | Histórico do paciente (atendimentos, trilha, mensagens dos atendimentos) + link para as conversas do contato | Nada | B1 |
@@ -633,8 +642,8 @@ auditado.
 | **R2** `conversation_state.context` com dados digitados no bot, legível por qualquer membro pela API | A avaliar na B0 sem quebrar o "Devolver ao bot" |
 | **R3** Cookie do login legível pelo navegador (padrão do `@supabase/ssr`): qualquer script na página teria o token | Mitigado pela CSP da F9; mudar para `httpOnly` é outra etapa, com teste do login |
 | **R4** Tela Atendimento mostra a última mensagem a todos os papéis, inclusive o Profissional | Decisão da Q5; mantido salvo pedido do cliente |
-| **R5** Lista da Q7 e saída da Q8 com "Marcou" ambíguo | Depende da Q10 e da Q11 |
-| **R6** Perfis das Observações | Depende da Q12 |
-| **R7** Como validar no staging sem a `main` | Depende da Q13 |
+| **R5** Lista da Q7 e saída da Q8 com "Marcou" ambíguo | **Resolvido** pela Q10 e pela Q11 (27/out) |
+| **R6** Perfis das Observações | **Resolvido** pela Q12 (27/out): como hoje |
+| **R7** Como validar no staging sem a `main` | **Resolvido** pela Q13 (27/out): staging só pela `main`, com o OK do cliente. Consequência: a A3 e as validações por etapa no staging acontecem depois de cada entrada aprovada na `main` |
 | **R8** Meta de 1,5 s sem medida atual | Medir a linha de base do Resumo e das Métricas no staging antes da A1 |
 | **R9** Edição das Observações sem histórico: só a última edição fica registrada (as anteriores se perdem) | Fora do escopo; as anotações datadas ficam nos registros de interação (Q6) |

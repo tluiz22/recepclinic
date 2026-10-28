@@ -16,9 +16,12 @@
 >   das mensagens no banco, em dois passos), "Marcou" × envio do link, Observações do paciente (perfis, gatilho do
 >   "atualizado em/por" e proteção), critérios de teste de desempenho e consistência e a regra da produção.
 >   Novas dúvidas **Q10 a Q13** e os riscos ainda abertos (R1 a R9) na seção 13.6.
-> - **Retomar daqui:** o cliente aprova o documento revisado; depois, as dúvidas **Q10 a Q13**, uma de cada vez; só
->   então a **A1** (começa mostrando o SQL do item `relationship` da matriz). **Nada é implementado antes.** Linha de
->   base dos testes: 691 de unidade e 636 de banco passando (local, 27/out).
+> - **Documento revisado aprovado pelo cliente em 27/out; Q10 a Q13 respondidas** (todas na opção recomendada,
+>   seção 11 do plano): 7ª opção "Enviou o link / vai marcar" e "Marcou" só com atendimento conferido; Lembretes saem
+>   pelas ações e por "Não quer" e "Número errado"; Observações como hoje, com "Atualizado em … por …"; o CRM vai ao
+>   **staging só pela `main`**, com o OK do cliente (validação de cada etapa no local antes).
+> - **Retomar daqui:** etapa **A1**, começando por mostrar o SQL do item `relationship` da matriz, para aprovação.
+>   Linha de base dos testes: 691 de unidade e 636 de banco passando (local, 27/out).
 
 ## Como trabalhar nesta etapa
 
