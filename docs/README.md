@@ -11,8 +11,8 @@
 > - **Branches:** `main` = `producao` em 28/out; a `CRM` ficou para trás (etapa encerrada).
 >
 > **Frentes em andamento**
-> - **Correções do cliente (28/out):** C1, C2 e C3 (Horário de exame) validadas e na produção; próximo erro da lista
->   do cliente, se houver.
+> - **Próxima sessão (cliente, 28/out): ajustes na versão em produção, na `main`** (o cliente traz a lista). C1, C2 e
+>   C3 já validadas e na produção.
 > - **CRM concluído** (28/out; [`crm.md`](crm.md)): validado no staging e na produção desde 28/out.
 > - **Faturamento do SaaS (Asaas)** ([`planejamento-faturamento-saas.md`](planejamento-faturamento-saas.md)): planejamento
 >   aprovado (28/out), nada implementado; trabalho na branch **`faturamento`** (a `main` fica para correções urgentes
