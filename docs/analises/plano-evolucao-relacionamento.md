@@ -888,3 +888,8 @@ arquivos; motivo em `isolamento.test.ts`); `astro check` sem erros; `npm run bui
 arquivo saíram). **Não conferido:** a CSP (o `npm run dev` não a aplica; conferir primeiro no staging), "Baixar
 selecionados" e "Compartilhar" (este só no celular), foto pelo celular.
 
+**Ajuste da validação do cliente (28/out):** o seletor de arquivo não aparecia como botão (o padrão do navegador
+ficava sem estilo) e "Anexar documento", Abrir, Baixar e Apagar pareciam links. Agora: botão "Escolher arquivo" com o
+nome do arquivo escolhido ao lado, "Anexar documento" como botão (com "Cancelar" no formulário) e Abrir, Baixar e
+Apagar como botões. Conferido no navegador local, no computador e na largura do celular.
+
