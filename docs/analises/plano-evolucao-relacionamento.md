@@ -901,3 +901,8 @@ aba. A área passou a se chamar "Atendimentos e documentos" (as Anotações da P
 achado no celular e corrigido:** a grade das colunas crescia com as abas e a página ganhava rolagem lateral (462 px
 numa tela de 375); agora a coluna fica na largura da tela e as abas rolam dentro delas.
 
+**Ajuste do cliente (28/out): barra de carregamento depois de baixar.** O painel liga a barra ao clicar num link
+interno, esperando a próxima tela; no "Baixar" o navegador só baixa e a tela não muda, então a barra ficava ligada.
+O "Baixar" e os links do "Baixar selecionados" passaram a ter o atributo `download` (que o painel já ignora), com o
+nome original do arquivo. Conferido no navegador local: um e dois arquivos baixados, a barra desligada.
+

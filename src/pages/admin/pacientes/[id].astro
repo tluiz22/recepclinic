@@ -445,7 +445,7 @@ const canBook = patient.isActive && !anonymized;
                       </div>
                       <div class="col-span-2 flex flex-wrap gap-1.5 sm:col-span-1 sm:justify-end">
                         <Button size="sm" href={`${documentsApi}/${d.id}`} target="_blank" rel="noopener">Abrir</Button>
-                        <Button size="sm" href={`${documentsApi}/${d.id}?modo=baixar`}>Baixar</Button>
+                        <Button size="sm" href={`${documentsApi}/${d.id}?modo=baixar`} download={d.fileName}>Baixar</Button>
                         {canAttach && (
                           <form method="POST" action={withReturn(documentsApi, volta)} class="contents">
                             <input type="hidden" name="acao" value="apagar" />
@@ -849,6 +849,8 @@ const canBook = patient.isActive && !anonymized;
         const a = document.createElement("a");
         a.href = await link(box.dataset.document!, true);
         a.rel = "noopener";
+        // Download: a barra de carregamento do painel não liga (a tela não muda).
+        a.download = box.dataset.name!;
         document.body.append(a);
         a.click();
         a.remove();
