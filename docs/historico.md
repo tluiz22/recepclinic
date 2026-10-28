@@ -538,4 +538,4 @@ retomada fica no README). Para achar algo, buscar por data (ex.: `27/out`), fase
   Decisões do cliente: **nenhum tipo vem escolhido** (com o serviço já definido, abre no tipo dele); **sem valor** no
   cartão. Busca dentro do tipo com mais de 8 serviços (filtra no navegador). `ServicePicker.astro` e
   `lib/servicePicker.ts`; parâmetro `tipo` no endereço do Marcar (vale também no Alterar). Sem migração. Staging em 28/out.
-  **Validada pelo cliente no staging em 28/out.** C5 e C6 na produção em 28/out (`da2a6fc`).
+  **Validada pelo cliente no staging em 28/out.** C5 e C6 na produção em 28/out (`da2a6fc`), **validadas pelo cliente na produção**.
