@@ -5,7 +5,12 @@
 > - Branch `CRM` criada a partir da `main` em 27/out (commit `eca4b79`).
 > - **CRM.0 (diagnóstico do que já existe), pedido em 27/out:** só investigação e documentação, sem código, banco
 >   ou migração. Relatório em [`analises/diagnostico-crm-atual.md`](analises/diagnostico-crm-atual.md).
-> - **Próximo:** o cliente revisa o diagnóstico; só depois disso se define o posicionamento e o roteiro do CRM.
+> - **CRM.1 (auditoria e plano da Central de Relacionamento), pedido em 27/out:** decisões do cliente (área
+>   "Relacionamento"; Resumo do Dia continua; escopo inicial = listas existentes, histórico, resultado do contato,
+>   anotações gerais e registros de interação; acesso da Recepção sem abrir as Métricas). Plano em
+>   [`analises/plano-evolucao-relacionamento.md`](analises/plano-evolucao-relacionamento.md), com as etapas A1–C3 e as
+>   dúvidas Q1–Q9. Linha de base: 691 testes de unidade e 636 de banco passando (local, 27/out).
+> - **Próximo:** o cliente aprova o plano e responde Q1–Q9 (uma de cada vez); **nada é implementado antes.**
 
 ## Como trabalhar nesta etapa
 

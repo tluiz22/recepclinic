@@ -30,8 +30,10 @@
    agora** (retornos ainda dentro do prazo e não marcados) e **Faltosos**.
 4. **As lacunas reais (que pedem banco e regra nova) são poucas e claras:** não existe **registro de
    acompanhamento** (tentativa de contato, resultado, próxima ação, prazo, responsável) nem **motivo de
-   desistência ou perda** informado pela equipe. Também não existe **histórico das passagens para a clínica**:
-   `conversation_state` guarda só o estado atual, e o "Devolver ao bot" não registra quem nem quando. **Origem do
+   desistência ou perda** informado pela equipe. O **histórico das passagens para a clínica** é incompleto: o
+   início de cada pausa fica em `bot_funnel_events` (fluxo `handoff`, com o motivo; *corrigido na auditoria do plano,
+   27/out: a 1ª versão dizia que só havia o estado atual*), mas o fim não, porque `conversation_state` guarda só o
+   estado atual e o "Devolver ao bot" não registra quem nem quando. **Origem do
    contato** existe só como canal (painel, WhatsApp, link), sem "como conheceu a clínica".
 5. **"Resumo do Dia" já não é um resumo do dia.** Das 7 abas, só 2 são de um dia (Resumo do dia e Lembretes). As
    outras são filas permanentes (Aguardando remarcação, A registrar, Lista de espera), um histórico (Registradas) e
@@ -278,7 +280,8 @@ Legenda da coluna "Muda": **I** interface, **R** regra de negócio, **B** banco,
 1. Registro de acompanhamento: tentativa de contato, resultado, anotação datada com autor, próxima ação e prazo.
 2. Responsável pela pendência (se o cliente quiser).
 3. Motivo de desistência, perda ou cancelamento informado pela equipe.
-4. Histórico das passagens para a clínica (hoje só o estado atual; o "Devolver ao bot" não deixa rastro).
+4. Fim das passagens para a clínica (o início, com o motivo, já fica em `bot_funnel_events`; o fim e o "Devolver ao
+   bot" não deixam rastro).
 5. Origem do contato (só se o cliente quiser medir).
 6. Consentimento e opção de saída (só se houver campanha, e não no início).
 
