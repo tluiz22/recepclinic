@@ -7,7 +7,14 @@
 // No computador (lg+) texto e prévia ficam lado a lado. No celular ficam na
 // mesma área, alternadas pelas abas Editar/Prévia — com o teclado aberto a
 // prévia abaixo do campo ficaria fora da tela (decisão do cliente).
+//
+// Arquivo com as orientações (C7; cliente, 28/out/2026): PDF, JPG ou PNG até
+// 10 MB, que sai pelo WhatsApp depois do texto. Ao escolher, ele já sobe ao
+// armazenamento (link de envio de uso único) e o formulário leva o caminho em
+// "preparation_file"; a prévia mostra o segundo balão: o documento (ou a
+// imagem) com o texto do modelo embaixo.
 import { MAX_PREPARATION_LENGTH, whatsAppTextToHtml } from "../../lib/whatsappFormat";
+import { PREPARATION_FILE_TYPES } from "../../lib/data/config/preparationFile";
 import type { Dica } from "../../lib/ajuda/tipos";
 import HelpTip from "./ui/HelpTip.astro";
 
@@ -15,9 +22,14 @@ interface Props {
   value?: string | null;
   /** O "i" do rótulo (ajuda contextual): quando o preparo sai. */
   help?: Dica;
+  /** Arquivo já gravado, com o link temporário para abrir (C7). */
+  file?: { name: string; type: string; size: number; url: string | null } | null;
+  /** Nome do exame, para o texto do modelo na prévia. */
+  examName?: string;
 }
 
-const { value, help } = Astro.props;
+const { value, help, file = null, examName = "" } = Astro.props;
+const sizeText = (bytes: number) => (bytes >= 1024 * 1024 ? `${(bytes / 1024 / 1024).toLocaleString("pt-BR", { maximumFractionDigits: 1 })} MB` : `${Math.max(1, Math.round(bytes / 1024))} KB`);
 const initial = value ?? "";
 
 const tabClass =
@@ -59,6 +71,30 @@ const tabClass =
         <code>~riscado~</code> e emojis. Deixe em branco se o exame não tem preparo. Máximo de
         {MAX_PREPARATION_LENGTH.toLocaleString("pt-BR")} caracteres.
       </p>
+      <div class="js-preparation-file mt-4 flex flex-col gap-1.5" data-name={file?.name ?? ""} data-type={file?.type ?? ""} data-size={file?.size ?? ""} data-url={file?.url ?? ""}>
+        <label for="preparation_file_input" class="text-[14.5px] font-semibold text-ink">Arquivo com as orientações (opcional)</label>
+        <p class="text-xs text-ink-soft">PDF, JPG ou PNG, até 10 MB. Sai pelo WhatsApp logo depois do texto acima, que passa a ser obrigatório.</p>
+        {
+          file && (
+            <p class="js-file-current flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-ink">
+              <span class="font-semibold">{file.name}</span>
+              <span class="text-ink-soft">{sizeText(file.size)}</span>
+              {file.url && <a href={file.url} target="_blank" rel="noopener" class="font-semibold text-brand">Abrir</a>}
+              <label class="flex items-center gap-1.5 text-ink-mid">
+                <input type="checkbox" name="remover_arquivo" class="js-file-remove h-4 w-4 accent-brand" /> Tirar o arquivo
+              </label>
+            </p>
+          )
+        }
+        <input
+          id="preparation_file_input"
+          type="file"
+          accept={PREPARATION_FILE_TYPES.join(",")}
+          class="js-file-input text-sm text-ink file:mr-3 file:rounded-lg file:border file:border-line-strong file:bg-white file:px-3 file:py-2 file:text-sm file:font-semibold file:text-ink"
+        />
+        <input type="hidden" name="preparation_file" class="js-file-value" />
+        <p class="js-file-status text-sm text-ink-soft" role="status" aria-live="polite"></p>
+      </div>
     </div>
     <div class="js-preparation-panel max-lg:hidden" data-panel="preview">
       <p class="hidden text-sm font-medium text-ink-mid lg:block">Prévia</p>
@@ -71,6 +107,18 @@ const tabClass =
         <p class="js-preparation-empty text-xs text-ink-soft" hidden={!!initial}>
           Sem preparo cadastrado.
         </p>
+        <!-- Segundo balão (C7): o arquivo, com o texto do modelo embaixo. -->
+        <div class="js-file-bubble mt-2 max-w-[300px] overflow-hidden rounded-lg bg-white text-sm text-ink shadow-sm" hidden>
+          <img class="js-file-image block max-h-60 w-full object-cover" alt="Prévia da imagem com as orientações" hidden />
+          <div class="js-file-doc m-1.5 flex items-center gap-3 rounded-md bg-[#f5f6f6] px-3 py-2.5" hidden>
+            <svg aria-hidden="true" viewBox="0 0 24 24" class="h-8 w-8 shrink-0 text-[#e05545]" fill="currentColor"><path d="M6 2h8l6 6v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2Zm7 1.5V9h5.5L13 3.5Z" /></svg>
+            <span class="min-w-0">
+              <span class="js-file-name block truncate font-semibold"></span>
+              <span class="js-file-meta block text-xs text-ink-soft"></span>
+            </span>
+          </div>
+          <p class="px-3 pt-1 pb-2">Orientações de preparo do exame <span class="js-file-exam">{examName || "…"}</span> em anexo.</p>
+        </div>
       </div>
     </div>
   </div>
@@ -106,5 +154,67 @@ const tabClass =
 
     input.addEventListener("input", render);
     render();
+
+    // Arquivo (C7): sobe ao escolher; a prévia mostra o segundo balão.
+    const box = field.querySelector<HTMLElement>(".js-preparation-file");
+    if (!box) continue;
+    const fileInput = box.querySelector<HTMLInputElement>(".js-file-input")!;
+    const value = box.querySelector<HTMLInputElement>(".js-file-value")!;
+    const status = box.querySelector<HTMLElement>(".js-file-status")!;
+    const remove = box.querySelector<HTMLInputElement>(".js-file-remove");
+    const bubble = field.querySelector<HTMLElement>(".js-file-bubble")!;
+    const image = field.querySelector<HTMLImageElement>(".js-file-image")!;
+    const doc = field.querySelector<HTMLElement>(".js-file-doc")!;
+    const examName = field.querySelector<HTMLElement>(".js-file-exam")!;
+    const size = (bytes: number) => (bytes >= 1024 * 1024 ? `${(bytes / 1024 / 1024).toLocaleString("pt-BR", { maximumFractionDigits: 1 })} MB` : `${Math.max(1, Math.round(bytes / 1024))} KB`);
+    const show = (file: { name: string; type: string; size: number; url: string } | null) => {
+      bubble.hidden = !file;
+      if (!file) return;
+      const isImage = file.type.startsWith("image/");
+      image.hidden = !isImage;
+      doc.hidden = isImage;
+      if (isImage) image.src = file.url;
+      field.querySelector<HTMLElement>(".js-file-name")!.textContent = file.name;
+      field.querySelector<HTMLElement>(".js-file-meta")!.textContent = `${size(file.size)} · ${isImage ? "imagem" : "PDF"}`;
+    };
+    const saved = box.dataset.name ? { name: box.dataset.name, type: box.dataset.type ?? "", size: Number(box.dataset.size), url: box.dataset.url ?? "" } : null;
+    show(saved);
+    remove?.addEventListener("change", () => show(remove.checked && !value.value ? null : saved));
+
+    // O nome do exame do formulário, no texto do modelo.
+    const nameInput = document.querySelector<HTMLInputElement>('input[name="name"]');
+    const syncName = () => (examName.textContent = nameInput?.value.trim() || "…");
+    nameInput?.addEventListener("input", syncName);
+    syncName();
+
+    fileInput.addEventListener("change", async () => {
+      const file = fileInput.files?.[0];
+      value.value = "";
+      if (!file) return show(saved);
+      show({ name: file.name, type: file.type, size: file.size, url: URL.createObjectURL(file) });
+      const input = { fileName: file.name, mimeType: file.type, sizeBytes: file.size };
+      try {
+        status.textContent = "Enviando o arquivo…";
+        const prepared = await fetch("/api/admin/configuracoes/servicos/arquivo", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(input),
+        });
+        const result = (await prepared.json().catch(() => ({}))) as { path?: string; uploadUrl?: string; error?: string; fields?: Record<string, string> };
+        if (!prepared.ok || !result.uploadUrl) throw new Error(result.fields?.preparation_file ?? result.error ?? "O arquivo não foi enviado.");
+        const body = new FormData();
+        body.append("cacheControl", "3600");
+        body.append("", file);
+        const upload = await fetch(result.uploadUrl, { method: "PUT", headers: { "x-upsert": "false" }, body });
+        if (!upload.ok) throw new Error("O arquivo não foi enviado. Confira a internet e tente de novo.");
+        value.value = JSON.stringify({ path: result.path, name: file.name, type: file.type, size: file.size });
+        if (remove) remove.checked = false;
+        status.textContent = "Arquivo pronto. Salve o serviço para guardar.";
+      } catch (e) {
+        status.textContent = e instanceof Error && e.message ? e.message : "Não deu certo. Tente de novo.";
+        fileInput.value = "";
+        show(saved);
+      }
+    });
   }
 </script>

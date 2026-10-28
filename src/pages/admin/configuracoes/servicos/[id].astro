@@ -18,6 +18,7 @@ import { listAgendas } from "../../../../lib/data/config/agendas";
 import { listLocations } from "../../../../lib/data/config/locations";
 import { listServices } from "../../../../lib/data/config/services";
 import { listServiceWindows, WEEKDAY_NAMES } from "../../../../lib/data/config/availability";
+import { preparationFileLink } from "../../../../lib/data/config/preparationFile";
 import ConfirmDeleteDialog from "../../../../components/admin/ConfirmDeleteDialog.astro";
 import { centsToInput } from "../../../../lib/forms";
 import { CATEGORY_LABELS } from "../../../../lib/serviceLabels";
@@ -65,6 +66,10 @@ const markAgendas = new Set([setupParam(Astro.url, "agenda"), setupParam(Astro.u
 const markLocations = new Set([setupParam(Astro.url, "local"), setupParam(Astro.url, "marcar_local")].filter(Boolean));
 const noLocation = !locations.some((l) => l.isActive && (homeVisitOn || l.type !== "home_visit"));
 const noAgenda = !agendas.some((a) => a.isActive);
+// Arquivo do preparo (C7), com o link temporário para abrir e para a prévia da imagem.
+const preparationFile = service?.preparationFile
+  ? { ...service.preparationFile, url: await preparationFileLink(db, service.preparationFile.path) }
+  : null;
 // Horários do serviço por local (C5; cliente, 28/out/2026): tirar o local avisa
 // antes de salvar, e os horários dele ali ficam desativados.
 const serviceWindows = isNew ? [] : await listServiceWindows(db, clinic.clinicId, id!);
@@ -155,7 +160,12 @@ for (const w of serviceWindows) {
         </Field>
       </div>
       <div data-only="exam">
-        <PreparationField value={service?.preparationInstructions} help={configuracoes.dicas.servicoPreparo} />
+        <PreparationField
+          value={service?.preparationInstructions}
+          help={configuracoes.dicas.servicoPreparo}
+          file={preparationFile}
+          examName={service?.name ?? ""}
+        />
       </div>
 
       <fieldset class="min-w-0 border-t border-[#e6ecea] pt-5">

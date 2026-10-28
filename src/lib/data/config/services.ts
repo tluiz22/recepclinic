@@ -1,3 +1,4 @@
+import type { PreparationFile } from "./preparationFile";
 import { MAX_PREPARATION_LENGTH, normalizeMultilineText } from "../../whatsappFormat";
 import type { Enums } from "../../supabase/database.types";
 import type { DbClient } from "../clients";
@@ -24,15 +25,17 @@ export type Service = {
   preparationInstructions: string | null;
   /** Só Exame: individual ou turma. */
   schedulingMode: SchedulingMode;
+  /** Só Exame: arquivo com as orientações, enviado depois do preparo (C7). */
+  preparationFile: PreparationFile | null;
   isActive: boolean;
   agendaIds: string[];
   locations: ServiceLocationPrice[];
 };
 
-export type ServiceInput = Omit<Service, "id" | "isActive" | "agendaIds" | "locations">;
+export type ServiceInput = Omit<Service, "id" | "isActive" | "agendaIds" | "locations" | "preparationFile">;
 
 const COLUMNS =
-  "id, name, category, duration_minutes, price_cents, return_deadline_days, preparation_instructions, scheduling_mode, is_active, service_agendas ( agenda_id ), service_locations ( location_id, price_cents )";
+  "id, name, category, duration_minutes, price_cents, return_deadline_days, preparation_instructions, preparation_file_path, preparation_file_name, preparation_file_type, preparation_file_size, scheduling_mode, is_active, service_agendas ( agenda_id ), service_locations ( location_id, price_cents )";
 const CATEGORIES: ServiceCategory[] = ["consultation", "return_visit", "exam"];
 
 type Row = {
@@ -43,6 +46,10 @@ type Row = {
   price_cents: number;
   return_deadline_days: number | null;
   preparation_instructions: string | null;
+  preparation_file_path: string | null;
+  preparation_file_name: string | null;
+  preparation_file_type: string | null;
+  preparation_file_size: number | null;
   scheduling_mode: SchedulingMode;
   is_active: boolean;
   service_agendas: { agenda_id: string }[];
@@ -58,6 +65,10 @@ const toService = (row: Row): Service => ({
   returnDeadlineDays: row.return_deadline_days,
   preparationInstructions: row.preparation_instructions,
   schedulingMode: row.scheduling_mode,
+  preparationFile:
+    row.preparation_file_path && row.preparation_file_name && row.preparation_file_type && row.preparation_file_size
+      ? { path: row.preparation_file_path, name: row.preparation_file_name, type: row.preparation_file_type, size: row.preparation_file_size }
+      : null,
   isActive: row.is_active,
   agendaIds: row.service_agendas.map((link) => link.agenda_id).sort(),
   locations: row.service_locations

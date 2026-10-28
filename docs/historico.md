@@ -539,3 +539,17 @@ retomada fica no README). Para achar algo, buscar por data (ex.: `27/out`), fase
   cartão. Busca dentro do tipo com mais de 8 serviços (filtra no navegador). `ServicePicker.astro` e
   `lib/servicePicker.ts`; parâmetro `tipo` no endereço do Marcar (vale também no Alterar). Sem migração. Staging em 28/out.
   **Validada pelo cliente no staging em 28/out.** C5 e C6 na produção em 28/out (`da2a6fc`), **validadas pelo cliente na produção**.
+- **C7 Arquivo no preparo do exame** (cliente, 28/out). Decisões do cliente: o preparo continua como hoje (texto com a
+  conversa aberta; modelo `rc_preparo_exame_v2` com o link, fechada); quando o exame tem arquivo, sai **depois** uma
+  mensagem só com o arquivo (aberta: documento direto; fechada: **modelo novo com o arquivo**), enviada quando a Meta
+  confirma a entrega do preparo; o Administrador escreve o texto (ex.: "Segue orientações para o exame:"), que passa a
+  ser **obrigatório com arquivo**; **PDF, JPG ou PNG até 10 MB**; texto do modelo mínimo ("Orientações de preparo do
+  exame {exame} em anexo.", a Meta exige texto e recusa variável no fim); **prévia com os dois balões** (o arquivo
+  aparece ao escolher). Etapas: **C7.1** cadastro e prévia; **C7.2** envio e reenvio; **C7.3** modelo na lista do
+  Suporte e Trilha; produção no fim, com autorização.
+  - **C7.1** (28/out): migração `20261102120000_arquivo_do_preparo` (colunas `preparation_file_*` no serviço, com o
+    texto obrigatório no banco; bucket privado `service-files` "<clínica>/preparo/<id>.<ext>"; Administrador grava e
+    apaga, a equipe vê; `clinic_service` só lê o da própria clínica, com o `usage`/`select` do storage e o `execute` de
+    `app.storage_folder_clinic`). `preparationFile.ts`; rota `servicos/arquivo` (link de envio de uso único: o arquivo
+    sobe ao escolher, sem passar pela Vercel); `PreparationField` com o campo, "Abrir", "Tirar o arquivo" e o segundo
+    balão da prévia. Staging: simulação → aplicação → conferência (colunas e bucket) em 28/out.
