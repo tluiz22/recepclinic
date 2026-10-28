@@ -11,7 +11,7 @@ import { menuItemClass } from "../components/admin/ui/styles";
 import { canAccessArea, roleLabel as describeRoles } from "../lib/clinicAccess";
 import { pageFlash } from "../lib/flash";
 import { createUserClient } from "../lib/data/clients";
-import { loadRelationshipLists, menuTotal, relationshipCounts, relationshipTabs } from "../lib/data/relationship";
+import { loadRelationshipLists, MENU_TABS, menuTotal, relationshipCounts, relationshipTabs } from "../lib/data/relationship";
 import { countAwaitingClinic } from "../lib/data/whatsapp/attention";
 import { logError } from "../lib/log";
 
@@ -72,8 +72,9 @@ const relationshipCount = !relationshipOn
         await loadRelationshipLists(
           createUserClient(Astro.request, Astro.cookies),
           clinic.clinicId,
-          relationshipTabs(clinic.features).filter((tab) => tab !== "lista_espera"),
+          relationshipTabs(clinic.features).filter((tab) => MENU_TABS.includes(tab)),
           (tab, error) => logError(`relacionamento: contador do menu (${tab})`, error, { clinica: clinic.clinicId }),
+          { timeZone: clinic.timezone },
         ),
       ),
     ));

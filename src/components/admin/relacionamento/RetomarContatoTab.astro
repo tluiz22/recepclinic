@@ -1,0 +1,56 @@
+---
+// Relacionamento › Retomar contato (CRM A2, Q3): quem não concluiu pelo
+// WhatsApp nos últimos 14 dias, uma linha por telefone e fluxo.
+import { currentPath, withReturn } from "../../../lib/returnPath";
+import PhoneLinks from "../PhoneLinks.astro";
+import EmptyState from "../ui/EmptyState.astro";
+import HowItWorks from "../ui/HowItWorks.astro";
+import Pill from "../ui/Pill.astro";
+import { relacionamento } from "../../../lib/ajuda/relacionamento";
+import { formatInstant } from "../../../lib/clinicTime";
+import type { RecallGroup } from "../../../lib/data/relationship";
+import { capitalize, type Vocabulary } from "../../../lib/vocabulary";
+
+interface Props {
+  groups: RecallGroup[];
+  timeZone: string;
+  vocabulary: Vocabulary;
+}
+
+const { groups, timeZone, vocabulary } = Astro.props;
+const here = currentPath(Astro.url);
+---
+
+<HowItWorks id="relacionamento-retomar" topic={relacionamento.comoFunciona.retomar} class="mt-4 max-w-4xl">
+  <p class="text-[15px] text-ink-soft">Últimos 14 dias. Uma linha por número e fluxo.</p>
+</HowItWorks>
+{
+  groups.length > 0 && (
+    <ul class="mt-3 max-w-4xl divide-y divide-[#e6ecea] rounded-xl border border-line bg-white px-4">
+      {groups.map((g) => (
+        <li class="flex flex-col gap-1 py-3.5">
+          <div class="flex flex-wrap items-start justify-between gap-2">
+            {g.contactId && g.contactName ? (
+              <a href={withReturn(`/admin/pacientes/contato/${g.contactId}`, here)} class="text-base font-semibold text-ink no-underline hover:text-brand hover:underline">
+                {g.contactName}
+              </a>
+            ) : (
+              <span class="text-base font-semibold text-ink">{capitalize(vocabulary.contact)} sem cadastro</span>
+            )}
+            <Pill tone="info">{g.flowLabel}</Pill>
+          </div>
+          <span class="text-[15px] text-ink-soft sm:text-sm">
+            <PhoneLinks phone={g.phone} plain />
+          </span>
+          <span class="text-[15px] text-ink-soft sm:text-sm">
+            Parou em <span class="font-semibold text-ink">{g.latest.lastStage}</span>. {g.latest.detail}
+          </span>
+          <span class="text-[13px] text-ink-soft">
+            {g.attempts > 1 ? `${g.attempts} tentativas · a última` : "Iniciou"} em {formatInstant(g.latest.startedAt, timeZone, "dd/MM 'às' HH:mm")}
+          </span>
+        </li>
+      ))}
+    </ul>
+  )
+}
+{groups.length === 0 && <div class="mt-3 max-w-4xl"><EmptyState variant="dashed" title={relacionamento.vazios.retomar.titulo} text={relacionamento.vazios.retomar.texto} /></div>}

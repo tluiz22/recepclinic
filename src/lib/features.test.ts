@@ -98,6 +98,11 @@ describe("acesso à rota: papel (D6) e item liberado (D11)", () => {
     expect(can(ctx(["reception"], ["relationship", "reminders"]), "/admin/relacionamento?tab=lembretes")).toBe(true);
     expect(can(ctx(["reception"], ["reminders"]), "/admin/relacionamento?tab=lembretes")).toBe(false);
     expect(can(ctx(["professional"], ["relationship", "reminders"]), "/admin/relacionamento?tab=lembretes")).toBe(false);
+    // A2: Atendimento, Retomar contato e Contatos para revisar exigem o bot; Retorno e Faltosos, só o item da central.
+    for (const tab of ["atendimento", "retomar_contato", "revisar"]) expect(route(`/admin/relacionamento?tab=${tab}`)).toBe("whatsapp_bot");
+    for (const tab of ["retorno", "faltosos"]) expect(route(`/admin/relacionamento?tab=${tab}`)).toBeNull();
+    expect(can(ctx(["reception"], ["relationship"]), "/admin/relacionamento?tab=faltosos")).toBe(true);
+    expect(can(ctx(["reception"], ["relationship"]), "/admin/relacionamento?tab=retomar_contato")).toBe(false);
   });
 
   it("item liberado não passa por cima do papel", () => {

@@ -23,6 +23,7 @@ import {
   type ReminderRow,
   type ReturnRight,
 } from "../../../lib/data/performance";
+import { loadPatientContacts } from "../../../lib/data/people";
 import { logError } from "../../../lib/log";
 import {
   buckets as makeBuckets,
@@ -160,12 +161,7 @@ if (s.reminders.notDelivered > 0) {
 const OPPORTUNITY_LIMIT = 50;
 const opportunityPeople =
   (opportunities ?? []).length > 0
-    ? await safe("retornos", async () => {
-        const ids = [...new Set(opportunities!.slice(0, OPPORTUNITY_LIMIT).map((o) => o.patientId))];
-        const { data, error } = await db.from("patients").select("id, full_name, contacts ( full_name, phone )").eq("clinic_id", clinic.clinicId).in("id", ids);
-        if (error) throw error;
-        return new Map((data as unknown as { id: string; full_name: string; contacts: { full_name: string; phone: string } | null }[]).map((row) => [row.id, row]));
-      })
+    ? await safe("retornos", () => loadPatientContacts(db, clinic.clinicId, opportunities!.slice(0, OPPORTUNITY_LIMIT).map((o) => o.patientId)))
     : null;
 
 const card = "flex min-w-0 flex-col gap-3 rounded-xl border border-line bg-white px-4 py-4 sm:px-5";
@@ -566,13 +562,13 @@ import { metricas } from "../../../lib/ajuda/metricas";
                     <li class="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 border-b border-[#e6ecea] px-3.5 py-2.5 last:border-b-0">
                       <span class="flex min-w-0 flex-col">
                         <a href={withReturn(`/admin/pacientes/${o.patientId}`, here)} class="font-semibold text-ink no-underline hover:text-brand hover:underline">
-                          {person?.full_name ?? "Paciente"}
+                          {person?.fullName ?? "Paciente"}
                         </a>
                         <span class="text-sm text-ink-soft">
                           Consulta em {formatInstant(o.scheduledAt, tz, "dd/MM")} · retorno até {formatCalendarDate(o.lastDate, "dd/MM/yyyy")}
                         </span>
                       </span>
-                      {person?.contacts?.phone && <PhoneLinks phone={person.contacts.phone} plain class="text-[15px]" />}
+                      {person?.phone && <PhoneLinks phone={person.phone} plain class="text-[15px]" />}
                     </li>
                   );
                 })}

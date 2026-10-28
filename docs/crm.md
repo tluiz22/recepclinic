@@ -30,7 +30,16 @@
 > - **Defeito anterior achado na A1:** o aviso de uma ação (ex.: "Fora da lista…") aparecia de novo na tela seguinte
 >   em toda clínica com o bot, por causa do contador do Atendimento no menu (F8.5a, já na produção). Corrigido na
 >   `CRM` (o menu lê o aviso antes das esperas). **Decisão do cliente (27/out): vai à `main` só junto com o CRM.**
-> - **Retomar daqui:** validação da A1 pelo cliente no local; depois, a **A2**.
+> - **A1 validada pelo cliente em 27/out** (inclusive as 3 escolhas: total do menu, aba de abertura e reenvio na Agenda).
+> - **A2 implementada e testada no local em 27/out:** abas Atendimento (resumo, sem o texto das mensagens), Retomar
+>   contato (14 dias, uma linha por número e fluxo), Retorno (a Oportunidade agora, com "Marcar retorno"), Faltosos e
+>   Contatos para revisar (com "Revisado"); as das Métricas sem exigir os itens delas. Nomes lidos por uma função
+>   compartilhada com as Métricas (`src/lib/data/people.ts`). **Total do menu (cliente, 27/out):** Aguardando
+>   remarcação + Lembretes + Retomar contato + Retorno + Contatos para revisar (fora: Faltosos, Atendimento e Lista de
+>   espera). Testes: 714 de unidade e 644 de banco passando. Detalhes na seção 15 do
+>   [plano](analises/plano-evolucao-relacionamento.md).
+> - **Retomar daqui:** validação da A2 pelo cliente no local; depois, a **A3** (validação por papel e regressão; com o
+>   OK do cliente, entrada na `main` e staging, Q13).
 
 ## Como trabalhar nesta etapa
 

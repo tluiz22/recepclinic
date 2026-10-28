@@ -689,3 +689,45 @@ criados no banco local foram desfeitos; ficou só o item liberado para a Clínic
 
 **Não testado:** staging (Q13: só pela `main`, com o OK do cliente); falha real de uma fonte no navegador (só no
 teste de unidade); volume grande (meta de 1,5 s, R8).
+
+---
+
+## 15. A2 implementada (27/out, só no local)
+
+**Validação da A1:** aprovada pelo cliente em 27/out, com as 3 escolhas da seção 14.
+
+**Abas novas** (ordem da seção 8): Atendimento, Retomar contato, Retorno, Lembretes, Aguardando remarcação, Faltosos,
+Lista de espera, Contatos para revisar.
+
+| Aba | Fonte (a mesma de antes) | Item exigido | Ação |
+|---|---|---|---|
+| Atendimento | `listHumanAttention` (resumo: aguardando e há quanto tempo, em atendimento; **sem o texto das mensagens**) | `whatsapp_bot` | "Abrir Atendimento" |
+| Retomar contato | `listFunnelSessions` + `buildFunnelReportFromSessions(...).incomplete`, **últimos 14 dias** (Q3), agrupado por telefone e fluxo (`groupRecall`) | `whatsapp_bot` | Nome abre o contato |
+| Retorno | `listReturnOpportunities` (a Oportunidade agora das Métricas), nas agendas que o login vê | só o da central | "Marcar retorno" (Marcar com o paciente e a agenda; "Voltar" para a aba) |
+| Faltosos | `listFrequentNoShows`, nas agendas que o login vê | só o da central | Nome abre a ficha |
+| Contatos para revisar | `listContactsToReview` | `whatsapp_bot` | "Revisado" (com confirmação; volta para a aba) |
+
+**Mudanças de apoio:** `src/lib/data/people.ts` (nomes lidos em lote; as Métricas passaram a usar, sem mudar a tela,
+achado 2 da seção 3); `src/lib/data/relationship.ts` (abas, agrupamento, contadores, `MENU_TABS`); a rota do contato
+aceita `return_to` no "Revisado" (o do Início continua voltando ao Início); `src/lib/features.ts` (Atendimento, Retomar
+contato e Revisar exigem o bot).
+
+**Total do menu (cliente, 27/out):** Aguardando remarcação + Lembretes + Retomar contato + Retorno + Contatos para
+revisar. Ficam fora os Faltosos (lista permanente até o registro da etapa C), o Atendimento (já tem o próprio número
+no menu) e a Lista de espera. Na aba Atendimento, o contador é o das conversas que aguardam a clínica (como o número do
+menu Atendimento).
+
+**Testes:** unidade 714 (abas por item, agrupamento do Retomar contato, total do menu, contador do Atendimento, regras
+de rota, falha isolada); banco 644 (Retorno e Faltosos iguais às funções das Métricas, com nome e WhatsApp, lidos pela
+Recepção; todas as 8 abas sem erro; outra clínica conta zero em todas); `astro check` sem erros. Navegador local:
+Recepção nas 8 abas (vazias e com dados temporários de Retorno e Faltosos), "Marcar retorno" com o "Voltar", "Revisado"
+com aviso uma vez só e o menu atualizado, celular (390px) sem rolagem lateral, Profissional barrado nas abas novas;
+Métricas (Desempenho, Retomar contato e Faltosos) continuam iguais com a leitura extraída. Dados temporários desfeitos
+(inclusive o contador de uso da clínica); ficou só o horário de "atualizado em" de um contato do banco local.
+
+**Observações:**
+- No computador, as 8 abas não cabem numa linha a 1280px e a barra rola de lado, como o componente de abas já faz.
+- Retomar contato **não foi visto com dados no navegador** (o banco local não tem tentativas abandonadas); a regra é a
+  das Métricas, coberta pelos testes do funil, e o agrupamento pelos testes de unidade.
+- A tela lê as 8 listas a cada abertura (os contadores são o tamanho das listas) e o menu lê 5 em cada página. Medir no
+  staging (R8).

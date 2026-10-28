@@ -1,6 +1,6 @@
 import type { APIRoute } from "astro";
 import { isUuid } from "../../../../../lib/clinicAccess";
-import { receivedReturn, withReturn } from "../../../../../lib/returnPath";
+import { receivedReturn, safeReturnPath, withReturn } from "../../../../../lib/returnPath";
 import { createUserClient } from "../../../../../lib/data/clients";
 import { DataError } from "../../../../../lib/data/errors";
 import { runFormAction } from "../../../../../lib/data/formAction";
@@ -52,7 +52,9 @@ export const POST: APIRoute = async (context) => {
         }
         case "revisado": {
           await markContactReviewed(db, clinic.clinicId, id);
-          return { redirectTo: formText(form, "voltar") === "painel" ? "/admin/dashboard" : page, message: "Marcado como revisado." };
+          // Relacionamento (CRM A2): volta para a aba de onde veio.
+          const back = formText(form, "voltar") === "painel" ? "/admin/dashboard" : safeReturnPath(formOptionalText(form, "return_to"), page);
+          return { redirectTo: back, message: "Marcado como revisado." };
         }
         case "liberar_limites":
         case "aplicar_limites": {

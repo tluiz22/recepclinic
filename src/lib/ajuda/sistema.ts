@@ -26,5 +26,5 @@ export const itensDaMatriz: Record<string, string> = {
   series: "Desligado, some o \"Repetir\" do Marcar, e a rotina diária para de marcar as próximas sessões das séries sem fim.",
   finance: "Desligado, somem o menu Financeiro, a Nota fiscal em Configurações e os pagamentos na ficha do paciente e na Agenda.",
   relationship:
-    "Desligado, some o menu Relacionamento (pendências que pedem contato da equipe). As mesmas listas continuam no Resumo do Dia.",
+    "Desligado, some o menu Relacionamento (pendências que pedem contato da equipe). As mesmas listas continuam no Resumo do Dia, nas Métricas e no Início.",
 };

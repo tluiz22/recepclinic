@@ -2,27 +2,115 @@ import type { DbClient } from "./clients";
 import { unwrapAll, unwrapAllIn } from "./errors";
 import { listAwaitingRebooking } from "./daily";
 import { AGENDA_COLUMNS, toAgendaAppointment, type AgendaAppointment, type AgendaRow } from "./agenda/view";
+import { buildFunnelReportFromSessions, listFunnelSessions, type Incomplete } from "./botFunnel";
+import { listAgendas } from "./config/agendas";
+import { listFrequentNoShows, type FrequentNoShow } from "./metrics";
+import { loadContactNames, loadPatientContacts, type PatientContact } from "./people";
+import { listReturnOpportunities, type ReturnRight } from "./performance";
 import { listWaitlist, type WaitlistEntry } from "./waitlist/entries";
+import { listHumanAttention, type AttentionItem } from "./whatsapp/attention";
+import { listContactsToReview, type ContactToReview } from "./whatsapp/botLimits";
 import { listReminderActions, REMINDER_MESSAGE_TYPE, type ReminderAction } from "./whatsapp/reminders";
 
 // Central de Relacionamento (CRM A1, cliente, 27/out/2026): as pendências que
 // pedem contato da equipe, numa tela só. Compõe as listas que já existem (as
-// mesmas funções, o mesmo RLS); nenhuma regra nova de entrada ou saída.
+// mesmas funções, o mesmo RLS); nenhuma regra nova de entrada ou saída. A2
+// (27/out): as listas que eram só das Métricas, sem exigir os itens delas.
 
-export type RelationshipTab = "aguardando_remarcacao" | "lembretes" | "lista_espera";
+export type RelationshipTab =
+  | "atendimento"
+  | "retomar_contato"
+  | "retorno"
+  | "lembretes"
+  | "aguardando_remarcacao"
+  | "faltosos"
+  | "lista_espera"
+  | "revisar";
 
-/** Ordem das abas na tela; as das Métricas entram na A2. */
+/** Ordem das abas na tela (seção 8 do plano). */
 export const RELATIONSHIP_TABS: { id: RelationshipTab; label: string }[] = [
-  { id: "aguardando_remarcacao", label: "Aguardando remarcação" },
+  { id: "atendimento", label: "Atendimento" },
+  { id: "retomar_contato", label: "Retomar contato" },
+  { id: "retorno", label: "Retorno" },
   { id: "lembretes", label: "Lembretes" },
+  { id: "aguardando_remarcacao", label: "Aguardando remarcação" },
+  { id: "faltosos", label: "Faltosos" },
   { id: "lista_espera", label: "Lista de espera" },
+  { id: "revisar", label: "Contatos para revisar" },
 ];
 
-/** Abas que a clínica tem: Lembretes e Lista de espera exigem o item da lista de origem. */
+/** Item da lista de origem que cada aba exige (as das Métricas não exigem os itens `metrics_*`). */
+const TAB_FEATURE: Partial<Record<RelationshipTab, string>> = {
+  atendimento: "whatsapp_bot",
+  retomar_contato: "whatsapp_bot",
+  revisar: "whatsapp_bot",
+  lembretes: "reminders",
+  lista_espera: "waitlist",
+};
+
+/** Abas que a clínica tem. */
 export function relationshipTabs(features: readonly string[]): RelationshipTab[] {
-  return RELATIONSHIP_TABS.map((t) => t.id).filter(
-    (id) => (id !== "lembretes" || features.includes("reminders")) && (id !== "lista_espera" || features.includes("waitlist")),
-  );
+  return RELATIONSHIP_TABS.map((t) => t.id).filter((id) => {
+    const feature = TAB_FEATURE[id];
+    return !feature || features.includes(feature);
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Retomar contato (Q3): a mesma regra das Métricas, nos últimos 14 dias,
+// agrupada por telefone e fluxo (achado 1 da seção 3 do plano)
+// ---------------------------------------------------------------------------
+
+export const RECALL_DAYS = 14;
+
+export type RecallGroup = {
+  phone: string;
+  contactId: string | null;
+  /** Nome do contato; null = sem cadastro. */
+  contactName: string | null;
+  flowLabel: string;
+  /** A tentativa mais recente (onde parou e o detalhe). */
+  latest: Incomplete;
+  attempts: number;
+};
+
+/** Uma linha por telefone e fluxo: a tentativa mais recente e quantas foram. */
+export function groupRecall(incomplete: readonly Incomplete[]): Omit<RecallGroup, "contactName">[] {
+  const groups = new Map<string, Omit<RecallGroup, "contactName">>();
+  for (const item of incomplete) {
+    const key = `${item.phone}:${item.flowLabel}`;
+    const group = groups.get(key);
+    if (!group) {
+      groups.set(key, { phone: item.phone, contactId: item.contactId, flowLabel: item.flowLabel, latest: item, attempts: 1 });
+      continue;
+    }
+    group.attempts++;
+    if (item.startedAt > group.latest.startedAt) group.latest = item;
+    group.contactId ??= item.contactId;
+  }
+  return [...groups.values()].sort((a, b) => b.latest.startedAt.getTime() - a.latest.startedAt.getTime());
+}
+
+export async function listRecall(db: DbClient, clinicId: string, now: Date = new Date()): Promise<RecallGroup[]> {
+  const start = new Date(now.getTime() - RECALL_DAYS * 24 * 60 * 60_000);
+  const sessions = await listFunnelSessions(db, clinicId, start, now);
+  const groups = groupRecall(buildFunnelReportFromSessions(sessions, now).incomplete);
+  const names = await loadContactNames(db, clinicId, groups.map((g) => g.contactId));
+  return groups.map((g) => ({ ...g, contactName: (g.contactId && names.get(g.contactId)) || null }));
+}
+
+// ---------------------------------------------------------------------------
+// Retorno (Oportunidade agora) e Faltosos: as funções das Métricas, nas
+// agendas que o login vê (Administrador e Recepção: todas; Recepção restrita: as dela)
+// ---------------------------------------------------------------------------
+
+export type ReturnOpportunity = ReturnRight & { person: PatientContact | null };
+
+export async function listReturnOpportunitiesWithPeople(db: DbClient, clinicId: string, agendaIds: string[], now: Date = new Date()): Promise<ReturnOpportunity[]> {
+  if (agendaIds.length === 0) return [];
+  const opportunities = await listReturnOpportunities(db, clinicId, { agendaIds, locationIds: null }, now);
+  const people = await loadPatientContacts(db, clinicId, opportunities.map((o) => o.patientId));
+  return opportunities.map((o) => ({ ...o, person: people.get(o.patientId) ?? null }));
 }
 
 // ---------------------------------------------------------------------------
@@ -94,9 +182,14 @@ export async function listPendingReminders(db: DbClient, clinicId: string, now: 
 
 /** Lista de cada aba; `null` = a leitura falhou (a tela mostra o aviso, nunca 0). */
 export type RelationshipLists = {
-  aguardando_remarcacao?: AgendaAppointment[] | null;
+  atendimento?: AttentionItem[] | null;
+  retomar_contato?: RecallGroup[] | null;
+  retorno?: ReturnOpportunity[] | null;
   lembretes?: PendingReminder[] | null;
+  aguardando_remarcacao?: AgendaAppointment[] | null;
+  faltosos?: FrequentNoShow[] | null;
   lista_espera?: WaitlistEntry[] | null;
+  revisar?: ContactToReview[] | null;
 };
 
 /** Pendências por aba (o tamanho da lista); `null` = a leitura falhou. */
@@ -113,12 +206,20 @@ export async function loadRelationshipLists(
   clinicId: string,
   tabs: readonly RelationshipTab[],
   onError: (tab: RelationshipTab, error: unknown) => void,
-  now: Date = new Date(),
+  { timeZone, now = new Date() }: { timeZone: string; now?: Date },
 ): Promise<RelationshipLists> {
+  // Agendas que o login vê (RLS), lidas uma vez para Retorno e Faltosos.
+  let agendas: Promise<string[]> | null = null;
+  const agendaIds = () => (agendas ??= listAgendas(db, clinicId, { includeInactive: true }).then((list) => list.map((a) => a.id)));
   const sources: { [K in RelationshipTab]: () => Promise<NonNullable<RelationshipLists[K]>> } = {
-    aguardando_remarcacao: () => listAwaitingRebooking(db, clinicId, now),
+    atendimento: () => listHumanAttention(db, clinicId, timeZone, now),
+    retomar_contato: () => listRecall(db, clinicId, now),
+    retorno: async () => listReturnOpportunitiesWithPeople(db, clinicId, await agendaIds(), now),
     lembretes: () => listPendingReminders(db, clinicId, now),
+    aguardando_remarcacao: () => listAwaitingRebooking(db, clinicId, now),
+    faltosos: async () => listFrequentNoShows(db, clinicId, await agendaIds()),
     lista_espera: () => listWaitlist(db, clinicId),
+    revisar: () => listContactsToReview(db, clinicId, now),
   };
   const entries = await Promise.all(
     tabs.map(async (tab) => {
@@ -133,17 +234,24 @@ export async function loadRelationshipLists(
   return Object.fromEntries(entries) as RelationshipLists;
 }
 
+/** Contador = linhas da aba; no Atendimento, as conversas que aguardam a clínica (como o número do menu Atendimento). */
 export function relationshipCounts(lists: RelationshipLists): RelationshipCounts {
   return Object.fromEntries(
-    (Object.entries(lists) as [RelationshipTab, unknown[] | null][]).map(([tab, list]) => [tab, list ? list.length : null]),
+    (Object.entries(lists) as [RelationshipTab, unknown[] | null][]).map(([tab, list]) => [
+      tab,
+      !list ? null : tab === "atendimento" ? (list as AttentionItem[]).filter((item) => item.status === "waiting").length : list.length,
+    ]),
   );
 }
 
 /**
- * Total do menu: as pendências que pedem contato (Aguardando remarcação e
- * Lembretes). A Lista de espera é de quem espera vaga e não entra, como no
- * Resumo do Dia, onde o contador dela é só informativo.
+ * Abas que somam no número do menu (cliente, 27/out/2026): as pendências que
+ * saem quando o motivo deixa de existir. Ficam fora os Faltosos (lista
+ * permanente até o registro da etapa C), o Atendimento (já tem o próprio
+ * número no menu) e a Lista de espera (quem espera vaga não pede contato).
  */
+export const MENU_TABS: readonly RelationshipTab[] = ["retomar_contato", "retorno", "lembretes", "aguardando_remarcacao", "revisar"];
+
 export function menuTotal(counts: RelationshipCounts): number {
-  return (counts.aguardando_remarcacao ?? 0) + (counts.lembretes ?? 0);
+  return MENU_TABS.reduce((total, tab) => total + (counts[tab] ?? 0), 0);
 }

@@ -4,12 +4,19 @@
 // "Relacionamento" (conferido no middleware pela área); Lembretes e Lista de
 // espera exigem também o item da lista de origem. As listas e as ações são as
 // do Resumo do Dia, que continua igual (Q1); só a volta das ações é esta tela.
+// A2 (27/out): Atendimento (resumo), Retomar contato, Retorno, Faltosos e
+// Contatos para revisar; as das Métricas sem exigir os itens delas.
 import AdminLayout from "../../layouts/AdminLayout.astro";
 import ConfirmDeleteDialog from "../../components/admin/ConfirmDeleteDialog.astro";
 import FlashMessage from "../../components/admin/FlashMessage.astro";
 import AguardandoTab from "../../components/admin/resumo/AguardandoTab.astro";
 import ListaEsperaTab from "../../components/admin/resumo/ListaEsperaTab.astro";
+import AtendimentoTab from "../../components/admin/relacionamento/AtendimentoTab.astro";
+import FaltososTab from "../../components/admin/relacionamento/FaltososTab.astro";
 import LembretesPendentesTab from "../../components/admin/relacionamento/LembretesPendentesTab.astro";
+import RetomarContatoTab from "../../components/admin/relacionamento/RetomarContatoTab.astro";
+import RetornoTab from "../../components/admin/relacionamento/RetornoTab.astro";
+import RevisarTab from "../../components/admin/relacionamento/RevisarTab.astro";
 import EmptyState from "../../components/admin/ui/EmptyState.astro";
 import HowItWorks from "../../components/admin/ui/HowItWorks.astro";
 import PageHeader from "../../components/admin/ui/PageHeader.astro";
@@ -32,7 +39,7 @@ const now = new Date();
 
 const available = relationshipTabs(clinic.features);
 const failed = (tab: RelationshipTab, error: unknown) => logError(`relacionamento: ${tab} não carregou`, error, { clinica: clinic.clinicId });
-const lists = await loadRelationshipLists(db, clinic.clinicId, available, failed, now);
+const lists = await loadRelationshipLists(db, clinic.clinicId, available, failed, { timeZone: clinic.timezone, now });
 const counts = relationshipCounts(lists);
 Astro.locals.relationshipMenuTotal = menuTotal(counts);
 
@@ -70,6 +77,11 @@ const countOf = (id: RelationshipTab): Pick<TabItem, "count" | "countTone" | "al
   if (n === null || n === undefined) return { alert: true, countLabel: "Não foi possível contar" };
   if (id === "lista_espera") return { count: n, countTone: "info", countLabel: `${plural(n, "pessoa", "pessoas")} na lista` };
   if (id === "lembretes") return { count: n, countLabel: `${n} sem resposta ou não entregue(s)` };
+  if (id === "atendimento") return { count: n, countTone: "alert", countLabel: `${n} aguardando a clínica` };
+  if (id === "retomar_contato") return { count: n, countLabel: `${n} para retomar` };
+  if (id === "retorno") return { count: n, countLabel: `${n} com retorno a marcar` };
+  if (id === "faltosos") return { count: n, countTone: "neutral", countLabel: `${n} faltam com frequência` };
+  if (id === "revisar") return { count: n, countLabel: `${n} para revisar` };
   return { count: n, countLabel: `${n} aguardando` };
 };
 const tabs = RELATIONSHIP_TABS.filter((t) => available.includes(t.id)).map((t) => ({ label: t.label, href: tabHref(t.id), active: t.id === tab, ...countOf(t.id) }));
@@ -87,6 +99,11 @@ const tabs = RELATIONSHIP_TABS.filter((t) => available.includes(t.id)).map((t) =
       <EmptyState variant="dashed" title="Não foi possível carregar esta lista" text="As outras abas continuam disponíveis. Tente abrir esta aba de novo daqui a pouco." />
     </div>
   )}
+  {!loadFailed && tab === "atendimento" && <AtendimentoTab items={lists.atendimento ?? []} timeZone={clinic.timezone} now={now} />}
+  {!loadFailed && tab === "retomar_contato" && <RetomarContatoTab groups={lists.retomar_contato ?? []} timeZone={clinic.timezone} vocabulary={vocabulary} />}
+  {!loadFailed && tab === "retorno" && <RetornoTab opportunities={lists.retorno ?? []} timeZone={clinic.timezone} vocabulary={vocabulary} returnTo={returnTo} />}
+  {!loadFailed && tab === "faltosos" && <FaltososTab patients={lists.faltosos ?? []} timeZone={clinic.timezone} vocabulary={vocabulary} />}
+  {!loadFailed && tab === "revisar" && <RevisarTab contacts={lists.revisar ?? []} timeZone={clinic.timezone} returnTo={returnTo} />}
   {!loadFailed && tab === "aguardando_remarcacao" && (
     awaiting.length > 0
       ? <AguardandoTab tags={tags} appointments={awaiting} actors={actors} timeZone={clinic.timezone} vocabulary={vocabulary} returnTo={returnTo} />

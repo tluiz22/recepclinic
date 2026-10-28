@@ -44,6 +44,7 @@ import { metricsScope, type FeatureKey } from "../../lib/features";
 import { buildFunnelReportFromSessions, DIGITAL_OPERATIONS, listFunnelSessions, type DigitalOperation, type DigitalOrigin, type FunnelSession } from "../../lib/data/botFunnel";
 import DigitalTab from "../../components/admin/metricas/DigitalTab.astro";
 import { logError } from "../../lib/log";
+import { loadContactNames } from "../../lib/data/people";
 import { INVALID_PERIOD_MESSAGES, PERIOD_PRESETS, parsePeriod } from "../../lib/metricsPeriod";
 import { formatCentsBRL } from "../../lib/money";
 import { formatPhoneBR } from "../../lib/phone";
@@ -132,18 +133,11 @@ const originParam = params.get("origem");
 const digitalOrigin: DigitalOrigin = originParam === "menu" || originParam === "lembrete" ? originParam : "todas";
 const RECALL_LIMIT = 50;
 const recall = tab === "retomar_contato" && funnel ? funnel.incomplete.slice(0, RECALL_LIMIT) : [];
-const recallContacts =
-  recall.length > 0
-    ? new Map(
-        (
-          (await db
-            .from("contacts")
-            .select("id, full_name")
-            .eq("clinic_id", clinic.clinicId)
-            .in("id", [...new Set(recall.map((r) => r.contactId).filter((id): id is string => !!id))])).data ?? []
-        ).map((c) => [c.id, c.full_name]),
-      )
-    : new Map<string, string>();
+// Nomes lidos pela função compartilhada com o Relacionamento (CRM A2); falha = "sem cadastro", como antes.
+const recallContacts = await loadContactNames(db, clinic.clinicId, recall.map((r) => r.contactId)).catch((error: unknown) => {
+  logError("métricas: nomes do Retomar contato não carregaram", error, { clinica: clinic.clinicId });
+  return new Map<string, string>();
+});
 const financialTotals = tab === "financeiro" ? await listFinancialTotals(db, clinic.clinicId, { start: period.start, end: period.end, agendaIds, patientIds }) : [];
 const frequent = tab === "faltosos" ? await listFrequentNoShows(db, clinic.clinicId, agendaIds) : [];
 

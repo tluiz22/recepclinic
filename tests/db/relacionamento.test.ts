@@ -3,14 +3,20 @@ import { bookAppointment } from "../../src/lib/data/agenda/appointments";
 import { cancelByClinic } from "../../src/lib/data/agenda/blocks";
 import { listAwaitingRebooking } from "../../src/lib/data/daily";
 import { listPendingReminders, loadRelationshipLists, relationshipCounts } from "../../src/lib/data/relationship";
+import { listFrequentNoShows } from "../../src/lib/data/metrics";
+import { registerPatient } from "../../src/lib/data/patients";
+import { listReturnOpportunities } from "../../src/lib/data/performance";
 import { listWaitlist } from "../../src/lib/data/waitlist/entries";
 import { asDb, at, MON1, NOW, setupAgendaClinic, type AgendaFixture } from "./agendaFixture";
 import { adminClient } from "./helpers";
 
 // CRM A1 — Central de Relacionamento: lembretes que pedem ação (Q4, Q11),
 // as mesmas listas do Resumo do Dia, contadores = linhas e isolamento entre
-// clínicas pelo RLS.
+// clínicas pelo RLS. A2: Retorno e Faltosos iguais às Métricas, todas as abas
+// lidas pela Recepção sem erro.
 
+const tz = "America/Fortaleza";
+const ALL_TABS = ["atendimento", "retomar_contato", "retorno", "lembretes", "aguardando_remarcacao", "faltosos", "lista_espera", "revisar"] as const;
 let clinic: AgendaFixture;
 let other: AgendaFixture;
 const ids = { failed: "", unanswered: "", recent: "" };
@@ -90,7 +96,7 @@ describe("as mesmas listas do Resumo do Dia", () => {
     const canceled = (await book(clinic, clinic.ids.p2, "08:00", clinic.ids.agendaDra2)).appointment.id;
     await cancelByClinic(asDb(clinic.admin), clinic.clinicId, [canceled], clinic.admin.id, NOW);
     const errors: string[] = [];
-    const lists = await loadRelationshipLists(asDb(clinic.reception), clinic.clinicId, ["aguardando_remarcacao", "lembretes", "lista_espera"], (tab) => errors.push(tab), NOW);
+    const lists = await loadRelationshipLists(asDb(clinic.reception), clinic.clinicId, ["aguardando_remarcacao", "lembretes", "lista_espera"], (tab) => errors.push(tab), { timeZone: tz, now: NOW });
     expect(errors).toEqual([]);
     const resumo = await listAwaitingRebooking(asDb(clinic.reception), clinic.clinicId, NOW);
     expect(lists.aguardando_remarcacao!.map((a) => a.id)).toEqual(resumo.map((a) => a.id));
@@ -103,7 +109,62 @@ describe("as mesmas listas do Resumo do Dia", () => {
   });
 
   it("a outra clínica conta zero nas listas da primeira", async () => {
-    const lists = await loadRelationshipLists(asDb(other.reception), clinic.clinicId, ["aguardando_remarcacao", "lembretes", "lista_espera"], () => {}, NOW);
-    expect(relationshipCounts(lists)).toEqual({ aguardando_remarcacao: 0, lembretes: 0, lista_espera: 0 });
+    const lists = await loadRelationshipLists(asDb(other.reception), clinic.clinicId, ALL_TABS, () => {}, { timeZone: tz, now: NOW });
+    expect(relationshipCounts(lists)).toEqual(Object.fromEntries(ALL_TABS.map((tab) => [tab, 0])));
+  });
+});
+
+describe("listas das Métricas na central (A2)", () => {
+  let returnPatient = "";
+  let noShowPatient = "";
+
+  beforeAll(async () => {
+    const register = async (fullName: string, phone: string) => {
+      const result = await registerPatient(asDb(clinic.admin), clinic.clinicId, { fullName, birthdate: "2020-01-01", contact: { mode: "new", fullName, phone } }, "2031-03-09");
+      if (result.status !== "created") throw new Error(result.status);
+      return result.patient.id;
+    };
+    returnPatient = await register("Paciente do Retorno", "84944450091");
+    noShowPatient = await register("Paciente que Falta", "84944450092");
+    const past = (patientId: string, agendaId: string, when: string, status: string) =>
+      adminClient().from("appointments").insert({
+        clinic_id: clinic.clinicId,
+        patient_id: patientId,
+        service_id: clinic.ids.consulta,
+        agenda_id: agendaId,
+        location_id: clinic.ids.office,
+        scheduled_at: new Date(when).toISOString(),
+        duration_minutes: 30,
+        booking_channel: "admin",
+        status,
+      });
+    // Consulta realizada há 6 dias, com o prazo de 30 dias do Retorno aberto.
+    expect((await past(returnPatient, clinic.ids.agendaDra, "2031-03-03T08:00:00-03:00", "completed")).error).toBeNull();
+    // Duas faltas em dois atendimentos registrados.
+    expect((await past(noShowPatient, clinic.ids.agendaDra2, "2031-02-24T08:00:00-03:00", "no_show")).error).toBeNull();
+    expect((await past(noShowPatient, clinic.ids.agendaDra2, "2031-03-03T08:00:00-03:00", "no_show")).error).toBeNull();
+  });
+
+  it("Retorno e Faltosos: as mesmas listas das Métricas, com nome e WhatsApp, lidas pela Recepção", async () => {
+    const errors: string[] = [];
+    const lists = await loadRelationshipLists(asDb(clinic.reception), clinic.clinicId, ALL_TABS, (tab) => errors.push(tab), { timeZone: tz, now: NOW });
+    expect(errors).toEqual([]);
+    const agendaIds = [clinic.ids.agendaDra, clinic.ids.agendaDra2, clinic.ids.agendaExams];
+    const metricsReturns = await listReturnOpportunities(asDb(clinic.admin), clinic.clinicId, { agendaIds, locationIds: null }, NOW);
+    expect(lists.retorno!.map((o) => o.appointmentId)).toEqual(metricsReturns.map((o) => o.appointmentId));
+    const opportunity = lists.retorno!.find((o) => o.patientId === returnPatient);
+    expect(opportunity?.person).toEqual({ fullName: "Paciente do Retorno", contactName: "Paciente do Retorno", phone: "+5584944450091" });
+    const metricsNoShows = await listFrequentNoShows(asDb(clinic.admin), clinic.clinicId, agendaIds);
+    expect(lists.faltosos!.map((f) => f.patientId)).toEqual(metricsNoShows.map((f) => f.patientId));
+    expect(lists.faltosos!.map((f) => f.patientId)).toContain(noShowPatient);
+    // Sem conversas nem tentativas no bot nesta clínica: listas vazias, sem erro.
+    expect(lists.atendimento).toEqual([]);
+    expect(lists.retomar_contato).toEqual([]);
+    expect(lists.revisar).toEqual([]);
+  });
+
+  it("a outra clínica não vê o retorno nem os faltosos da primeira", async () => {
+    const lists = await loadRelationshipLists(asDb(other.reception), clinic.clinicId, ["retorno", "faltosos"], () => {}, { timeZone: tz, now: NOW });
+    expect(lists).toEqual({ retorno: [], faltosos: [] });
   });
 });

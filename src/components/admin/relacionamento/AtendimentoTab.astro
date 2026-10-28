@@ -1,0 +1,63 @@
+---
+// Relacionamento › Atendimento (CRM A2): resumo das conversas com a clínica
+// (aguardando e há quanto tempo; em atendimento), sem o texto das mensagens.
+// Responder, "#bot" e "Devolver ao bot" continuam na tela Atendimento.
+import { currentPath, withReturn } from "../../../lib/returnPath";
+import PhoneLinks from "../PhoneLinks.astro";
+import Button from "../ui/Button.astro";
+import EmptyState from "../ui/EmptyState.astro";
+import Pill from "../ui/Pill.astro";
+import { relacionamento } from "../../../lib/ajuda/relacionamento";
+import { formatInstant } from "../../../lib/clinicTime";
+import { handoffReasonLabel, type AttentionItem } from "../../../lib/data/whatsapp/attention";
+
+interface Props {
+  items: AttentionItem[];
+  timeZone: string;
+  now: Date;
+}
+
+const { items, timeZone, now } = Astro.props;
+const here = currentPath(Astro.url);
+const waitFor = (since: Date) => {
+  const minutes = Math.max(0, Math.floor((now.getTime() - since.getTime()) / 60_000));
+  return minutes < 60 ? `${minutes} min` : minutes < 24 * 60 ? `${Math.floor(minutes / 60)} h` : `${Math.floor(minutes / (24 * 60))} dia(s)`;
+};
+const ordered = [...items].sort((a, b) => (a.status === b.status ? 0 : a.status === "waiting" ? -1 : 1));
+---
+
+<div class="mt-4 flex max-w-4xl flex-wrap items-center justify-between gap-3">
+  <p class="text-[15px] text-ink-soft">Conversas em que o bot parou e passou para a equipe. Responder e devolver ao bot ficam na tela Atendimento.</p>
+  <Button variant="primary" size="sm" href="/admin/atendimento">Abrir Atendimento</Button>
+</div>
+{
+  ordered.length > 0 && (
+    <ul class="mt-3 max-w-4xl divide-y divide-[#e6ecea] rounded-xl border border-line bg-white px-4">
+      {ordered.map((item) => (
+        <li class="flex flex-col gap-1 py-3.5 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
+          <div class="flex min-w-0 flex-col gap-0.5">
+            {item.contactId ? (
+              <a href={withReturn(`/admin/pacientes/contato/${item.contactId}`, here)} class="text-base font-semibold text-ink no-underline hover:text-brand hover:underline">
+                {item.name ?? "Contato sem nome"}
+              </a>
+            ) : (
+              <span class="text-base font-semibold text-ink">{item.name ?? "Número sem cadastro"}</span>
+            )}
+            <span class="text-[15px] text-ink-soft sm:text-sm">
+              <PhoneLinks phone={item.phone} plain />
+            </span>
+            <span class="text-[15px] text-ink-soft sm:text-sm">
+              {handoffReasonLabel(item.reason)} · desde {formatInstant(item.startedAt, timeZone, "dd/MM 'às' HH:mm")}
+            </span>
+          </div>
+          {item.status === "waiting" ? (
+            <Pill tone="danger">Aguardando há {waitFor(item.waitingSince ?? item.startedAt)}</Pill>
+          ) : (
+            <Pill tone="warning">Em atendimento</Pill>
+          )}
+        </li>
+      ))}
+    </ul>
+  )
+}
+{ordered.length === 0 && <div class="mt-3 max-w-4xl"><EmptyState variant="dashed" title={relacionamento.vazios.atendimento.titulo} text={relacionamento.vazios.atendimento.texto} /></div>}

@@ -1,0 +1,55 @@
+---
+// Relacionamento › Retorno (CRM A2): a Oportunidade agora das Métricas, com
+// "Marcar retorno" (abre o Marcar com o paciente e a agenda, como no cartão).
+import { currentPath, withReturn } from "../../../lib/returnPath";
+import PhoneLinks from "../PhoneLinks.astro";
+import Button from "../ui/Button.astro";
+import EmptyState from "../ui/EmptyState.astro";
+import HowItWorks from "../ui/HowItWorks.astro";
+import { relacionamento } from "../../../lib/ajuda/relacionamento";
+import { formatCalendarDate, formatInstant } from "../../../lib/clinicTime";
+import type { ReturnOpportunity } from "../../../lib/data/relationship";
+import { capitalize, type Vocabulary } from "../../../lib/vocabulary";
+
+interface Props {
+  opportunities: ReturnOpportunity[];
+  timeZone: string;
+  vocabulary: Vocabulary;
+  returnTo: string;
+}
+
+const { opportunities, timeZone, vocabulary, returnTo } = Astro.props;
+const here = currentPath(Astro.url);
+---
+
+<HowItWorks id="relacionamento-retorno" topic={relacionamento.comoFunciona.retorno} class="mt-4 max-w-4xl">
+  <p class="text-[15px] text-ink-soft">O prazo que acaba primeiro vem antes.</p>
+</HowItWorks>
+{
+  opportunities.length > 0 && (
+    <ul class="mt-3 max-w-4xl divide-y divide-[#e6ecea] rounded-xl border border-line bg-white px-4">
+      {opportunities.map((o) => (
+        <li class="flex flex-col gap-3 py-3.5 sm:flex-row sm:items-start sm:justify-between">
+          <div class="flex min-w-0 flex-col gap-0.5">
+            <a href={withReturn(`/admin/pacientes/${o.patientId}`, here)} class="text-base font-semibold text-ink no-underline hover:text-brand hover:underline">
+              {o.person?.fullName ?? capitalize(vocabulary.patient)}
+            </a>
+            <span class="text-[15px] text-ink-soft sm:text-sm">
+              Consulta em {formatInstant(o.scheduledAt, timeZone, "dd/MM/yyyy")} · retorno até <span class="font-semibold text-ink">{formatCalendarDate(o.lastDate, "dd/MM/yyyy")}</span>
+            </span>
+            {o.person?.phone && (
+              <span class="flex flex-wrap items-center gap-x-1.5 text-[15px] text-ink-soft sm:text-sm">
+                {o.person.contactName && o.person.contactName !== o.person.fullName && `${capitalize(vocabulary.contact)}: ${o.person.contactName} · `}
+                <PhoneLinks phone={o.person.phone} plain />
+              </span>
+            )}
+          </div>
+          <Button variant="primary" size="sm" class="shrink-0 self-start" href={withReturn(`/admin/agenda/marcar?${new URLSearchParams({ patient_id: o.patientId, agenda_id: o.agendaId })}`, returnTo)}>
+            Marcar retorno
+          </Button>
+        </li>
+      ))}
+    </ul>
+  )
+}
+{opportunities.length === 0 && <div class="mt-3 max-w-4xl"><EmptyState variant="dashed" title={relacionamento.vazios.retorno.titulo} text={relacionamento.vazios.retorno.texto} /></div>}

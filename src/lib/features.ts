@@ -124,6 +124,9 @@ const PATH_RULES: PathRule[] = [
   // Relacionamento (CRM A1): as mesmas abas, com o item da lista de origem (o da central é conferido pela área).
   { prefix: "/admin/relacionamento", tab: "lembretes", feature: "reminders" },
   { prefix: "/admin/relacionamento", tab: "lista_espera", feature: "waitlist" },
+  { prefix: "/admin/relacionamento", tab: "atendimento", feature: "whatsapp_bot" },
+  { prefix: "/admin/relacionamento", tab: "retomar_contato", feature: "whatsapp_bot" },
+  { prefix: "/admin/relacionamento", tab: "revisar", feature: "whatsapp_bot" },
   // Exames: na Agenda (F4.5), o serviço de exame só aparece com o item, e o
   // banco recusa marcar sem ele (o cadastro do serviço é travado desde a F4.3).
   // Configurações (F4.4b): convênios, contatos do resumo do dia e hora do lembrete.
