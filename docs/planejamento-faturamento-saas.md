@@ -2,9 +2,10 @@
 
 > **Estado atual (retomar daqui), 28/out/2026.** Planejamento aprovado pelo cliente (28/out). Nada implementado:
 > sem tabela, rota, variável ou conta no Asaas. **Próximo passo:** as decisões pendentes da seção 11, uma de cada
-> vez, começando pela 11.1 (modelo da suspensão); depois a F12.1 do roadmap (seção 12).
+> vez; depois a F12.1 do roadmap (seção 12).
 >
-> Decisões já respondidas: **11.1** (motivos registrados) e **modo de cobrança manual** (seção 3), ambas em 28/out.
+> Decisões já respondidas (28/out): **11.1** (motivos registrados), **modo de cobrança manual** (seção 3) e **11.2**
+> (pago = `CONFIRMED` ou `RECEIVED`). Próxima: 11.3.
 
 Marcas: **[Código]** conferido no repositório; **[Projeto]** registrado na documentação do projeto;
 **[Asaas]**, **[Meta]**, **[Vercel]** documentação oficial (fontes no fim); **[Inferência]** conclusão técnica;
@@ -281,7 +282,8 @@ stateDiagram-v2
 1. **Modelo da suspensão.** **Decidido (cliente, 28/out):** motivos registrados (`clinic_suspensions`: inadimplência ou
    administrativo, com quem, quando e texto); a clínica fica suspensa enquanto houver algum motivo ativo; o pagamento
    libera só o de inadimplência; `clinics.status = 'suspended'` continua sendo o sinal para o resto do sistema.
-2. **O que conta como pago** para reativar e avisar. Recomendo `CONFIRMED` ou `RECEIVED`; análise de risco não conta.
+2. **O que conta como pago** para reativar e avisar. **Decidido (cliente, 28/out):** `CONFIRMED` ou `RECEIVED`
+   (também o recebimento em dinheiro registrado no Asaas, se houver); análise de risco não conta.
 3. **Onde fica o bloqueio.** Recomendo código primeiro (painel, páginas públicas, bot, rotinas) e o banco numa fase
    seguinte.
 4. **O que o paciente vê na suspensão.** Recomendo bot calado e link "indisponível no momento, fale com a clínica".
