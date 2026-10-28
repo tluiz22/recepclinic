@@ -22,6 +22,7 @@
 >   única que publica no staging (e a `producao` na produção); o CRM só entra na `main` com a aprovação do cliente.
 >   **27/out: a central "Relacionamento" (A1 e A2) entrou na `main` e no staging** com o OK do cliente (migração
 >   `20261028120000` aplicada; o item é liberado por clínica na Matriz). **Não está na produção.**
+>   **Validado pelo cliente no staging em 27/out.** Próxima sessão do CRM: etapa B (começa pela B0), retomar por `docs/crm.md`.
 >
 > - **Etapas 0 a 4 concluídas**: cópia isolada, [diagnóstico](diagnostico.md), [limites](limites.md),
 >   [arquitetura](arquitetura.md) (decisões D1–D11) e [plano](plano.md) (fases F0–F10).

@@ -44,8 +44,14 @@
 >   ao staging em 27/out:** `CRM` → `main` por avanço direto; migração `20261028120000` simulada, aplicada e conferida
 >   no banco do staging (item criado, nenhuma clínica com ele); push da `main` (commit `d94bc4e`), conferido em `teste.recepclinic.com.br` (a produção, `app.`, segue sem a tela). Junto foi a
 >   correção do aviso que reaparecia. **Produção: nada.**
-> - **Retomar daqui:** o cliente libera o item "Relacionamento" na Matriz (Suporte) para a clínica de teste do staging
->   e valida lá; depois, a **etapa B** (histórico) na branch `CRM`.
+> - **Relacionamento (A1 e A2) validado pelo cliente no staging em 27/out.** Produção: nada (só com autorização
+>   explícita, pelo fluxo de `docs/producao.md`).
+> - **Fim da sessão de 27/out. Retomar daqui (próxima sessão):** **etapa B**, na branch `CRM` (`git switch CRM`; hoje
+>   `main` e `CRM` estão iguais). Começa pela **B0** (seção 13.1 do plano): mostrar ao cliente o SQL do **passo 1**
+>   (funções `attention_last_messages` e `contact_message_history`, com a conferência do papel) e a troca do código do
+>   Atendimento e de Configurações › WhatsApp para usá-las; o **passo 2** (tirar `body` e `retry_payload` da leitura
+>   direta) só depois do passo 1 publicado no mesmo ambiente. Nada é aplicado antes da aprovação do SQL. Linha de base
+>   dos testes: 714 de unidade e 644 de banco (local, 27/out).
 
 ## Como trabalhar nesta etapa
 
