@@ -4,7 +4,7 @@
 > sem tabela, rota, variável ou conta no Asaas. **Próximo passo:** as decisões pendentes da seção 11, uma de cada
 > vez, começando pela 11.1 (modelo da suspensão); depois a F12.1 do roadmap (seção 12).
 >
-> Decisões já respondidas: (nenhuma ainda).
+> Decisões já respondidas: **11.1** (motivos registrados, 28/out).
 
 Marcas: **[Código]** conferido no repositório; **[Projeto]** registrado na documentação do projeto;
 **[Asaas]**, **[Meta]**, **[Vercel]** documentação oficial (fontes no fim); **[Inferência]** conclusão técnica;
@@ -88,7 +88,7 @@ erDiagram
   billing_contracts ||--o{ billing_charges : "gera"
   billing_charges ||--o{ billing_notifications : "avisos"
   billing_notifications ||--o{ billing_notification_deliveries : "por canal"
-  clinics ||--o{ billing_suspensions : "motivos de suspensão"
+  clinics ||--o{ clinic_suspensions : "motivos de suspensão"
   billing_provider_events }o--o| billing_charges : "eventos do Asaas"
   clinics ||--o{ billing_audit_log : "trilha"
 ```
@@ -101,7 +101,7 @@ erDiagram
 | Evento recebido | `billing_provider_events` | `provider_event_id` (único), tipo, recurso, dados mínimos, recebido/processado em, situação, tentativas, erro | Idempotência e reprocessamento |
 | Aviso | `billing_notifications` | Cobrança, tipo (`overdue_d3`, `overdue_d7`, `payment_confirmed`), programado para, situação; único por (cobrança, tipo) | Sem duplicidade; cancela os indevidos |
 | Envio por canal | `billing_notification_deliveries` | Canal (`email`, `whatsapp`), tentativas, id no provedor, erro, enviado em | Um canal não trava o outro |
-| Motivo de suspensão | `billing_suspensions` (ou `clinic_suspensions`) | Motivo (`non_payment`, `administrative`…), texto, criado por/em; liberado em/por (nulo = sistema), motivo da liberação | Distingue inadimplência de outros motivos |
+| Motivo de suspensão | `clinic_suspensions` (decisão 11.1; fora do prefixo `billing_` porque nem todo motivo é financeiro) | Motivo (`non_payment`, `administrative`…), texto, criado por/em; liberado em/por (nulo = sistema), motivo da liberação | Distingue inadimplência de outros motivos |
 | Trilha | `billing_audit_log` (só inclusão) | Ator (pessoa, sistema, webhook), ação, antes/depois, motivo | O `platform_audit_log` só pega o Suporte |
 
 Sem duplicar: `clinic_usage_monthly` (uso), `plans.ts` (referência), `clinics.status` (sinal das rotinas),
@@ -269,7 +269,9 @@ stateDiagram-v2
 
 ## 11. Decisões pendentes (uma de cada vez, com recomendação)
 
-1. **Modelo da suspensão.** Recomendo tabela de motivos e `clinics.status` como consequência.
+1. **Modelo da suspensão.** **Decidido (cliente, 28/out):** motivos registrados (`clinic_suspensions`: inadimplência ou
+   administrativo, com quem, quando e texto); a clínica fica suspensa enquanto houver algum motivo ativo; o pagamento
+   libera só o de inadimplência; `clinics.status = 'suspended'` continua sendo o sinal para o resto do sistema.
 2. **O que conta como pago** para reativar e avisar. Recomendo `CONFIRMED` ou `RECEIVED`; análise de risco não conta.
 3. **Onde fica o bloqueio.** Recomendo código primeiro (painel, páginas públicas, bot, rotinas) e o banco numa fase
    seguinte.
