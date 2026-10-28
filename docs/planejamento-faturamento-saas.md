@@ -7,7 +7,7 @@
 > Decisões já respondidas (28/out): **11.1** (motivos registrados), **modo de cobrança manual** (seção 3) e **11.2**
 > (pago = `CONFIRMED` ou `RECEIVED`) **11.3** (bloqueio no painel primeiro, banco depois) **11.4** (bot calado, link com aviso) **11.5** (Assinatura só para o Administrador) **11.6** (estorno marca e avisa o Suporte) **11.7** (novo valor no próximo ciclo, sem proporcional) **11.8** (implantação ao ativar, conta igual) **11.9** (cartão na página do Asaas). **11.10 fica pendente** (número do WhatsApp, decidir antes da F12.9).
 > **11.11** (avisos do Asaas desligados, só os nossos) e **11.12** (cancelamento: cobra o devido, acesso até o
-> fim do período pago). Próxima: 11.13.
+> fim do período pago) e **11.13** (dias corridos, 9h de Brasília). Próxima: 11.14.
 
 ## Como trabalhar nesta etapa
 
@@ -330,7 +330,8 @@ stateDiagram-v2
     futuras deixam de ser geradas; as já vencidas continuam em aberto para cobrar; a clínica usa até o fim do período
     já pago e então fica suspensa com o motivo `contract_ended` (liberado só pelo Suporte); dados preservados para
     exportação ou devolução conforme o contrato (prazo e forma com o advogado, item 16).
-13. **D+3 e D+7:** dias corridos ou úteis, e o horário. Recomendo corridos, às 9h de Brasília.
+13. **D+3 e D+7.** **Decidido (cliente, 28/out):** dias corridos a partir do vencimento, envio às 9h de Brasília,
+    também em fim de semana e feriado (vence dia 10: aviso dia 13, alerta dia 17).
 14. **Nota fiscal das mensalidades:** pelo Asaas ou fora do sistema.
 15. **IP fixo na Vercel** para restringir a chave (custo).
 16. **Jurídico:** Asaas como operador, texto do opt-in, prazo de guarda.
