@@ -71,7 +71,8 @@ describe("horários em vários dias", () => {
 
   it("grava um horário por dia marcado", async () => {
     const created = await addAvailabilityWindows(db(admin), clinicId, window(), [1, 3, 5]);
-    expect(created.map((w) => w.weekday)).toEqual([1, 3, 5]);
+    expect(created.windows.map((w) => w.weekday)).toEqual([1, 3, 5]);
+    expect(created.locationAdded).toBeNull();
   });
 
   it("conflito num dia: nenhum dia é gravado", async () => {
@@ -84,13 +85,13 @@ describe("horários em vários dias", () => {
   it("editar (cliente, 21/out): muda dia e horário, sem conflito consigo; conflito com outro dia não grava", async () => {
     const [monday] = (await listAvailability(db(admin), clinicId, agendaA.id)).filter((w) => w.weekday === 1);
     const { agendaId: _agenda, ...fields } = window();
-    const saved = await updateAvailabilityWindow(db(admin), clinicId, monday.id, { ...fields, weekday: 1, startTime: "09:00", endTime: "13:00" });
+    const { window: saved } = await updateAvailabilityWindow(db(admin), clinicId, monday.id, { ...fields, weekday: 1, startTime: "09:00", endTime: "13:00" });
     expect([saved.weekday, saved.startTime, saved.endTime]).toEqual([1, "09:00", "13:00"]);
     expect(await codeOf(() => updateAvailabilityWindow(db(admin), clinicId, monday.id, { ...fields, weekday: 3 }))).toBe("conflict");
     expect(await codeOf(() => updateAvailabilityWindow(db(admin), clinicId, monday.id, { ...fields, weekday: 1, startTime: "13:00", endTime: "12:00" }))).toBe("invalid");
     // Desativado não conta para a sobreposição e continua desativado.
     await setAvailabilityWindowActive(db(admin), clinicId, monday.id, false);
-    const moved = await updateAvailabilityWindow(db(admin), clinicId, monday.id, { ...fields, weekday: 3 });
+    const { window: moved } = await updateAvailabilityWindow(db(admin), clinicId, monday.id, { ...fields, weekday: 3 });
     expect([moved.weekday, moved.isActive]).toEqual([3, false]);
   });
 });

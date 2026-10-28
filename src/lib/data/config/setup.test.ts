@@ -8,8 +8,8 @@ const base = (): SetupInput => ({
   agendas: [{ id: "a1", name: "Thiago Luiz", professionalId: "p1", isActive: true }],
   locations: [{ id: "l1", name: "Consultorio TI", type: "clinic", address: "Rua A, 1", isActive: true }],
   services: [
-    { id: "s1", name: "Consulta", category: "consultation", isActive: true, agendaIds: ["a1"], locations: [{ locationId: "l1", priceCents: null }] },
-    { id: "s2", name: "Espirometria", category: "exam", isActive: true, agendaIds: ["a1"], locations: [{ locationId: "l1", priceCents: null }] },
+    { id: "s1", name: "Consulta", category: "consultation", schedulingMode: "individual", isActive: true, agendaIds: ["a1"], locations: [{ locationId: "l1", priceCents: null }] },
+    { id: "s2", name: "Espirometria", category: "exam", schedulingMode: "individual", isActive: true, agendaIds: ["a1"], locations: [{ locationId: "l1", priceCents: null }] },
   ],
   windows: [{ agendaId: "a1", locationId: "l1", serviceId: "s1" }],
   features: ["exams"],
@@ -128,5 +128,33 @@ describe("jornada de configuração (F6.3b)", () => {
     const input = base();
     input.services[1].isActive = false;
     expect(computeSetup(input).complete).toBe(true);
+  });
+
+  // C5 (cliente, 28/out/2026): caso da produção, o horário do serviço num local que ele não usa.
+  it("horário do serviço em local ou agenda que ele não usa: o alerta diz o motivo e leva ao serviço", () => {
+    const input = base();
+    input.locations.push({ id: "l2", name: "Consultório A", type: "clinic", address: "Rua B, 2", isActive: true });
+    input.windows.push({ agendaId: "a1", locationId: "l2", serviceId: "s2" });
+    const setup = computeSetup(input);
+    expect(setup.hoursReasons.get("s2")).toBe("o horário dele está em Consultório A, mas o serviço não é feito lá. Marque o local no serviço.");
+    expect(setup.steps.find((s) => s.key === "services")!.items).toContainEqual({
+      text: "Espirometria: sem horário que valha: o horário dele está em Consultório A, mas o serviço não é feito lá. Marque o local no serviço.",
+      href: "/admin/configuracoes/servicos/s2",
+    });
+
+    input.agendas.push({ id: "a2", name: "Exames", professionalId: null, isActive: true });
+    input.windows = [{ agendaId: "a2", locationId: "l1", serviceId: "s2" }];
+    expect(computeSetup(input).hoursReasons.get("s2")).toBe("o horário dele está na agenda Exames, que não atende o serviço. Marque a agenda no serviço.");
+  });
+
+  it("turma só vale com horário próprio (regra do bot): o geral da agenda não basta", () => {
+    const input = base();
+    input.services[1].schedulingMode = "group";
+    input.windows = [{ agendaId: "a1", locationId: "l1", serviceId: null }];
+    const setup = computeSetup(input);
+    expect(setup.issues.services.get("s2")).toEqual(["no_hours"]);
+    expect(setup.hoursReasons.get("s2")).toContain("turma precisa de horário próprio");
+    input.windows.push({ agendaId: "a1", locationId: "l1", serviceId: "s2" });
+    expect(computeSetup(input).issues.services.get("s2")).toBeUndefined();
   });
 });

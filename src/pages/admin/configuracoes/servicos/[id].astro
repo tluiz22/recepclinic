@@ -17,6 +17,8 @@ import { createUserClient } from "../../../../lib/data/clients";
 import { listAgendas } from "../../../../lib/data/config/agendas";
 import { listLocations } from "../../../../lib/data/config/locations";
 import { listServices } from "../../../../lib/data/config/services";
+import { listServiceWindows, WEEKDAY_NAMES } from "../../../../lib/data/config/availability";
+import ConfirmDeleteDialog from "../../../../components/admin/ConfirmDeleteDialog.astro";
 import { centsToInput } from "../../../../lib/forms";
 import { CATEGORY_LABELS } from "../../../../lib/serviceLabels";
 import { originPage, setupOrigin, setupParam } from "../../../../lib/setupFlow";
@@ -63,6 +65,14 @@ const markAgendas = new Set([setupParam(Astro.url, "agenda"), setupParam(Astro.u
 const markLocations = new Set([setupParam(Astro.url, "local"), setupParam(Astro.url, "marcar_local")].filter(Boolean));
 const noLocation = !locations.some((l) => l.isActive && (homeVisitOn || l.type !== "home_visit"));
 const noAgenda = !agendas.some((a) => a.isActive);
+// Horários do serviço por local (C5; cliente, 28/out/2026): tirar o local avisa
+// antes de salvar, e os horários dele ali ficam desativados.
+const serviceWindows = isNew ? [] : await listServiceWindows(db, clinic.clinicId, id!);
+const windowsAt = new Map<string, string>();
+for (const w of serviceWindows) {
+  const text = `${WEEKDAY_NAMES[w.weekday].slice(0, 3).toLowerCase()} ${w.startTime}–${w.endTime}`;
+  windowsAt.set(w.locationId, windowsAt.has(w.locationId) ? `${windowsAt.get(w.locationId)}, ${text}` : text);
+}
 ---
 
 <ConfigShell current="servicos" title={isNew ? "Novo serviço" : service!.name} back={back}>
@@ -73,6 +83,8 @@ const noAgenda = !agendas.some((a) => a.isActive);
       <NextStep text="Antes do serviço, crie a agenda que vai atendê-lo." href={`/admin/configuracoes/agendas/novo?servico=${id}`} label="Criar a agenda" />
     ) : serviceIssues.includes("no_agenda") || serviceIssues.includes("no_location") ? (
       <NextStep text="Marque abaixo a agenda e o local deste serviço e salve. Depois, cadastre os horários." />
+    ) : serviceIssues.includes("no_hours") && setup?.hoursReasons.has(id!) ? (
+      <NextStep text={`${service!.name} não tem horário que valha: ${setup.hoursReasons.get(id!)} Depois, salve.`} />
     ) : (
       serviceIssues.includes("no_hours") &&
       hoursAgenda && (
@@ -192,6 +204,17 @@ const noAgenda = !agendas.some((a) => a.isActive);
                     value={centsToInput(own)}
                     class={`${INPUT_INLINE} w-28`}
                   />
+                  {windowsAt.has(location.id) && (
+                    <p
+                      hidden
+                      data-windows-note={location.id}
+                      data-windows={windowsAt.get(location.id)}
+                      data-location={location.name}
+                      class="w-full rounded-[10px] border border-pend-200 bg-pend-100 px-3 py-2 text-sm text-pend-800"
+                    >
+                      {service!.name} tem horário aqui ({windowsAt.get(location.id)}). Sem este local, o horário fica desativado.
+                    </p>
+                  )}
                 </div>
               );
             })
@@ -204,7 +227,18 @@ const noAgenda = !agendas.some((a) => a.isActive);
       </fieldset>
 
       <div class="flex flex-wrap gap-2 border-t border-[#e6ecea] pt-4">
-        <button type="submit" class={PRIMARY_BUTTON} data-sending-label="Salvando…">{isNew ? "Cadastrar" : "Salvar"}</button>
+        <button
+          type="submit"
+          class={`${PRIMARY_BUTTON} js-confirm-delete`}
+          data-sending-label="Salvando…"
+          data-confirm-skip
+          data-confirm-title="Tirar o local do serviço?"
+          data-confirm-label="Salvar assim mesmo"
+          data-confirm-tone="primary"
+          data-save-button
+        >
+          {isNew ? "Cadastrar" : "Salvar"}
+        </button>
         <a href={back.href} class={SECONDARY_BUTTON}>Cancelar</a>
       </div>
     </form>
@@ -225,5 +259,25 @@ const noAgenda = !agendas.some((a) => a.isActive);
     };
     select?.addEventListener("change", sync);
     sync();
+
+    // Local com horário do serviço desmarcado (C5; cliente, 28/out/2026): o aviso
+    // aparece embaixo dele, e o Salvar pede confirmação antes.
+    const save = form?.querySelector<HTMLButtonElement>("[data-save-button]");
+    const syncLocations = () => {
+      const lost: string[] = [];
+      form?.querySelectorAll<HTMLElement>("[data-windows-note]").forEach((note) => {
+        const box = form.querySelector<HTMLInputElement>(`input[name="location_id"][value="${note.dataset.windowsNote}"]`);
+        note.hidden = !!box?.checked;
+        if (!box?.checked) lost.push(`${note.dataset.location} (${note.dataset.windows})`);
+      });
+      if (!save) return;
+      if (lost.length) {
+        delete save.dataset.confirmSkip;
+        save.dataset.confirmMessage = `O serviço tem horário em ${lost.join(" e ")}. Sem ${lost.length > 1 ? "esses locais" : "esse local"}, o horário fica desativado (não é apagado).`;
+      } else save.dataset.confirmSkip = "";
+    };
+    form?.querySelectorAll('input[name="location_id"]').forEach((box) => box.addEventListener("change", syncLocations));
+    syncLocations();
   </script>
+  <ConfirmDeleteDialog />
 </ConfigShell>

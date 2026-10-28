@@ -50,6 +50,8 @@ const TONES = {
 
 document.querySelectorAll<HTMLButtonElement>(".js-confirm-delete").forEach((btn) => {
   btn.addEventListener("click", (event) => {
+    // Confirmação só quando a tela pede (ex.: Serviço, ao tirar um local com horário; C5, 28/out/2026).
+    if (btn.dataset.confirmSkip !== undefined) return;
     event.preventDefault();
     // `btn.form`: também o botão fora do formulário, ligado por `form="…"` (R4).
     pendingForm = btn.form ?? btn.closest("form");

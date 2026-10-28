@@ -11,6 +11,7 @@ import {
   type ServiceCategory,
 } from "../../../../../lib/data/config/services";
 import { listLocations } from "../../../../../lib/data/config/locations";
+import { deactivateServiceWindowsOutside } from "../../../../../lib/data/config/availability";
 import { runFormAction } from "../../../../../lib/data/formAction";
 import { allFilterOn, withAllFilter } from "../../../../../lib/returnPath";
 import { formAll, formChecked, formInt, formMoneyCents, formOptionalInt, formOptionalMoneyCents, formText } from "../../../../../lib/forms";
@@ -60,8 +61,11 @@ export const POST: APIRoute = async (context) => {
       const keep = locals.clinic!.features.includes("home_visit")
         ? []
         : (await listLocations(db, clinicId, { includeInactive: true })).filter((l) => l.type === "home_visit").map((l) => l.id);
-      await setServiceLocations(db, clinicId, id, locations, { keep });
-      return { redirectTo: page(), message: isNew ? "Serviço cadastrado." : "Serviço salvo." };
+      const saved = await setServiceLocations(db, clinicId, id, locations, { keep });
+      // Local tirado do serviço: os horários dele ali ficam desativados (C5; cliente, 28/out/2026).
+      const off = isNew ? 0 : await deactivateServiceWindowsOutside(db, clinicId, id, saved.locations.map((l) => l.locationId));
+      const offText = off ? ` ${off === 1 ? "1 horário do serviço ficou desativado" : `${off} horários do serviço ficaram desativados`} (local tirado).` : "";
+      return { redirectTo: page(), message: `${isNew ? "Serviço cadastrado." : "Serviço salvo."}${offText}` };
     },
     page,
   );

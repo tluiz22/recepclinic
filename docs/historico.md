@@ -522,3 +522,12 @@ retomada fica no README). Para achar algo, buscar por data (ex.: `27/out`), fase
     paciente recebe a mensagem mesmo com o template não aprovado (o aviso de salvo, depois, diz que não saiu).
   - **C4.6** (28/out): migrações `20261031120000` e `20261101120000` na produção (simulação → aplicação → conferência)
     e `main` → `producao` (`3ec78dc`). **Validada pelo cliente na produção em 28/out.**
+- **C5 Horário em local que o serviço não usa** (cliente, 28/out, achado na produção: Prick test para aeroalérgenos
+  com o alerta "sem horário de atendimento" tendo horário cadastrado). Causa confirmada pelo cliente: o horário do
+  serviço estava num local que o serviço não usa; a tela de Horários conferia a agenda do serviço, mas não o local
+  (`availability.ts`, `checkWindowService`), e o horário ficava sem valer (o bot e o link também não o ofereciam).
+  Decisões do cliente: (1) horário de um serviço num local que ele não usa **salva e marca o local no serviço** (valor
+  do serviço), com o aviso de salvo dizendo isso; (2) tirar do serviço um local com horário dele **avisa e pede
+  confirmação**, e o horário fica **desativado** (não apagado); (3) o alerta **diz o motivo** (agenda ou local que o
+  serviço não usa). Achado no caminho: na turma, o alerta aceitava horário geral, e o bot só o da turma; o alerta passa
+  a seguir o bot (`setup.ts`, `fits`). Sem migração. Staging em 28/out.
