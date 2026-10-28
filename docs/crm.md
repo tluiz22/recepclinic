@@ -72,8 +72,9 @@
 >   (com os ajustes: botões, aba "Documentos" na ficha, download sem a barra) e **publicada no staging em 28/out**
 >   (`5061feb`); Documentos para todas as clínicas (Q25). **Produção: nada.** P1 validada no staging em 28/out. **P2
 >   Anotações implementada em 28/out, só no local** (migração `20261029130000_anotacoes_do_paciente.sql`; 718 de
->   unidade e 665 de banco). **Retomar daqui:** validação do cliente no local; com o OK, `main` e staging (contar antes
->   as Observações do staging) e a P3 Lembretes.
+>   unidade e 665 de banco). Validada no local (com o texto numa caixa) e
+>   **publicada no staging em 28/out** (`48fa578`; a Observação do único paciente do staging virou anotação).
+>   **Produção: nada.** **Retomar daqui:** validação do cliente no staging e a P3 Lembretes.
 
 ## Como trabalhar nesta etapa
 

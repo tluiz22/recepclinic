@@ -940,3 +940,10 @@ confirmação; como Profissional, escreve e não vê "Apagar"; no celular, sem r
 **Ajuste do cliente (28/out):** o texto de cada anotação aparece numa caixa (fundo cinza-claro e borda), separado
 da data, do autor e dos botões, para achar a descrição mais rápido. Conferido no navegador local.
 
+**P2 validada pelo cliente no local em 28/out. Staging (28/out, com o OK do cliente):** antes, contadas as Observações
+do staging (1 paciente, nenhuma acima de 2000 caracteres). `CRM` → `main` por avanço direto (`48fa578`). Migração
+`20261029130000_anotacoes_do_paciente.sql`: simulação (só ela) → aplicada → conferida (1 anotação "Observações
+anteriores", sem autor; nenhum paciente com o campo antigo preenchido; leitura sem login recusada) → push da `main`
+(Vercel do staging publicada; na produção, só a *preview*). O código antigo seguia funcionando entre a migração e o
+push (a coluna antiga continua). **Produção: nada.**
+
