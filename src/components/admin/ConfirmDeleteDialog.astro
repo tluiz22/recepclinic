@@ -6,6 +6,8 @@
 // atributo data-confirm-message do próprio botão (título e texto do botão de
 // confirmar podem mudar com data-confirm-title/data-confirm-label, ex.:
 // "Retirar da lista de espera"). Ver src/scripts/confirmDelete.ts.
+// Marcar e Alterar (cliente, 28/out/2026): a lista dos dados
+// (data-confirm-details) e o aviso do WhatsApp (data-confirm-notice).
 ---
 
 <dialog
@@ -17,6 +19,14 @@
   <div class="flex flex-col gap-3 p-[22px]">
     <h2 id="delete_dialog_title" class="font-display text-xl leading-tight font-bold text-ink">Excluir?</h2>
     <p id="delete_dialog_message" class="text-[15px] leading-normal text-ink-mid"></p>
+    <dl
+      id="delete_dialog_details"
+      hidden
+      class="grid grid-cols-[88px_minmax(0,1fr)] gap-x-3 gap-y-1.5 rounded-[10px] border border-line bg-canvas px-3 py-2.5 text-[15px] leading-snug"
+    >
+    </dl>
+    <p id="delete_dialog_notice" hidden class="flex items-start gap-2 rounded-[10px] border border-conf-200 bg-conf-100/60 px-3 py-2.5 text-[14.5px] leading-snug text-conf-800">
+    </p>
     <div class="mt-1 flex flex-wrap justify-end gap-2">
       <button
         type="button"

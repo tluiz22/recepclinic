@@ -462,3 +462,20 @@ retomada fica no README). Para achar algo, buscar por data (ex.: `27/out`), fase
   `findWindowConflict` recebe os exames da clínica. Sem migração. Publicada no staging e na produção de uma vez, a
   pedido do cliente (validar direto na produção).
   **Validada pelo cliente na produção em 28/out.**
+- **C4 Alterar atendimento** (cliente, 28/out, achado na produção: o primeiro usuário marcou o serviço errado e não
+  conseguia corrigir). Decisões do cliente: nova ação **Alterar** no cartão (o Remarcar continua só para data e hora),
+  que abre o Marcar preenchido (paciente fixo) e muda serviço, agenda, local, convênio, endereço, data e hora; vale para
+  qualquer atendimento menos o cancelado; WhatsApp ao paciente (e lembrete e presença zerados) só se mudar data, hora,
+  agenda ou local; valor recalculado e mostrado antes ("R$ 300 → R$ 250"), pagamentos registrados não mudam (aviso se
+  ficarem acima ou abaixo); série pergunta "só esta" ou "esta e as próximas"; Marcar e Alterar com janela de
+  confirmação com todos os dados ("antes → depois" no que muda no Alterar) e o aviso "O paciente receberá uma mensagem
+  no WhatsApp informando a marcação/alteração da consulta/exame", escondido na clínica em implantação. Assumido (cliente
+  pode mudar): aviso também escondido sem WhatsApp conectado; no atendimento passado, data e hora mudam sem conferir
+  horário nem mandar mensagem; nota fiscal emitida não muda; toda alteração na Trilha.
+  Etapas: **C4.1** confirmação completa no Marcar; **C4.2** Alterar futuro avulso (função no banco, valor, aviso,
+  Trilha); **C4.3** Alterar passado (aviso de pagamento); **C4.4** série "esta e as próximas"; **C4.5** ajuda e testes;
+  **C4.6** produção (com autorização).
+  - **C4.1** (28/out): janela de confirmação (`ConfirmDeleteDialog` + `confirmDelete.ts`) com lista de dados
+    (`data-confirm-details`, com "antes → depois" pronto para o C4.2) e aviso (`data-confirm-notice`); no Marcar:
+    paciente, serviço, com quem, local, quando (na série, frequência e fim), endereço domiciliar e convênio ou valor
+    (preço do local, `servicePriceAt`). `whatsappNoticeText` e `sendsPatientMessages` em `confirmText.ts`. Sem migração.

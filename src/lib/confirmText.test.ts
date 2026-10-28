@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { seriesConfirmMessage, seriesEndText, seriesStartText, slotConfirmText } from "./confirmText";
+import { sendsPatientMessages, seriesEndText, seriesStartText, seriesWhenText, slotConfirmText, whatsappNoticeText } from "./confirmText";
 
 describe("textos das confirmações", () => {
   it("horário escolhido, com a agenda e o local", () => {
@@ -28,17 +28,30 @@ describe("textos das confirmações", () => {
     );
   });
 
-  it("confirmação da série inteira", () => {
+  it("quando da série inteira", () => {
     expect(
-      seriesConfirmMessage({
-        intro: "Ana Souza: Consulta pediátrica",
+      seriesWhenText({
         intervalWeeks: 2,
         start: "às terças, 09:00, com Rafael Lima (Consultório Centro), a partir de 20/10",
         end: "com 10 sessões",
       }),
-    ).toBe(
-      "Ana Souza: Consulta pediátrica, a cada 2 semanas (quinzenal) às terças, 09:00, com Rafael Lima (Consultório Centro), a partir de 20/10, com 10 sessões. " +
-        "Feriado, bloqueio ou horário ocupado: a data é pulada e aparece na tela da série. O paciente é avisado pelo WhatsApp.",
+    ).toBe("A cada 2 semanas (quinzenal) às terças, 09:00, com Rafael Lima (Consultório Centro), a partir de 20/10, com 10 sessões");
+  });
+
+  it("aviso do WhatsApp na confirmação", () => {
+    expect(whatsappNoticeText("o paciente", "marcacao", "consultation")).toBe(
+      "O paciente receberá uma mensagem no WhatsApp informando a marcação da consulta.",
     );
+    expect(whatsappNoticeText("o responsável", "alteracao", "exam")).toBe(
+      "O responsável receberá uma mensagem no WhatsApp informando a alteração do exame.",
+    );
+    expect(whatsappNoticeText("o paciente", "marcacao", "return_visit")).toContain("da consulta");
+  });
+
+  it("aviso só quando a clínica manda mensagens", () => {
+    expect(sendsPatientMessages("active", "connected")).toBe(true);
+    expect(sendsPatientMessages("onboarding", "connected")).toBe(false);
+    expect(sendsPatientMessages("active", "disconnected")).toBe(false);
+    expect(sendsPatientMessages("active", null)).toBe(false);
   });
 });

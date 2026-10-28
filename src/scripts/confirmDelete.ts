@@ -3,6 +3,39 @@ const messageEl = document.getElementById("delete_dialog_message") as HTMLParagr
 const dismissBtn = document.getElementById("delete_dialog_dismiss") as HTMLButtonElement;
 const acceptBtn = document.getElementById("delete_dialog_accept") as HTMLButtonElement;
 const titleEl = document.getElementById("delete_dialog_title") as HTMLHeadingElement;
+const detailsEl = document.getElementById("delete_dialog_details") as HTMLDListElement;
+const noticeEl = document.getElementById("delete_dialog_notice") as HTMLParagraphElement;
+
+// Dados do atendimento na confirmação (Marcar e Alterar; cliente, 28/out/2026):
+// `data-confirm-details` é uma lista JSON de ConfirmDetail; com `before`, a
+// linha mostra "antes → depois".
+type ConfirmDetail = { label: string; value: string; before?: string };
+
+function renderDetails(raw: string | undefined) {
+  let details: ConfirmDetail[] = [];
+  try {
+    details = raw ? (JSON.parse(raw) as ConfirmDetail[]) : [];
+  } catch {
+    details = [];
+  }
+  detailsEl.replaceChildren(
+    ...details.flatMap((detail) => {
+      const dt = document.createElement("dt");
+      dt.className = "font-medium text-ink-soft";
+      dt.textContent = detail.label;
+      const dd = document.createElement("dd");
+      dd.className = "font-semibold text-ink";
+      if (detail.before !== undefined) {
+        const before = document.createElement("s");
+        before.className = "font-medium text-ink-soft";
+        before.textContent = detail.before;
+        dd.append(before, " → ", detail.value);
+      } else dd.textContent = detail.value;
+      return [dt, dd];
+    }),
+  );
+  detailsEl.hidden = details.length === 0;
+}
 
 let pendingForm: HTMLFormElement | null = null;
 let pendingButton: HTMLButtonElement | null = null;
@@ -26,7 +59,11 @@ document.querySelectorAll<HTMLButtonElement>(".js-confirm-delete").forEach((btn)
       pendingForm.reportValidity();
       return;
     }
-    messageEl.textContent = btn.dataset.confirmMessage ?? "Tem certeza que quer excluir?";
+    messageEl.textContent = btn.dataset.confirmMessage ?? (btn.dataset.confirmDetails ? "" : "Tem certeza que quer excluir?");
+    messageEl.hidden = !messageEl.textContent;
+    renderDetails(btn.dataset.confirmDetails);
+    noticeEl.textContent = btn.dataset.confirmNotice ?? "";
+    noticeEl.hidden = !noticeEl.textContent;
     titleEl.textContent = btn.dataset.confirmTitle ?? "Excluir?";
     acceptBtn.textContent = btn.dataset.confirmLabel ?? "Excluir";
     const tone = btn.dataset.confirmTone === "primary" ? "primary" : "danger";

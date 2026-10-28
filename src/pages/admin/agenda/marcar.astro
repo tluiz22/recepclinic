@@ -43,14 +43,17 @@ import { SERIES_HORIZON_MONTHS } from "../../../lib/data/agenda/series";
 import { listAgendas } from "../../../lib/data/config/agendas";
 import { getClinicSettings } from "../../../lib/data/config/clinic";
 import { listLocations } from "../../../lib/data/config/locations";
-import { listServices } from "../../../lib/data/config/services";
+import { listInsurancePlans } from "../../../lib/data/config/insurance";
+import { listServices, servicePriceAt } from "../../../lib/data/config/services";
+import { getWhatsappConnection } from "../../../lib/data/whatsapp/connection";
+import { formatCentsBRL } from "../../../lib/money";
 import { getContact, getPatient, searchPatients } from "../../../lib/data/patients";
 import { formatPhoneBR } from "../../../lib/phone";
 import { capitalize, vocabularyFor } from "../../../lib/vocabulary";
 import { frequencyLabel } from "../../../lib/seriesLabels";
 import HowItWorks from "../../../components/admin/ui/HowItWorks.astro";
 import { agenda as ajudaAgenda } from "../../../lib/ajuda/agenda";
-import { seriesStartText, slotConfirmText } from "../../../lib/confirmText";
+import { sendsPatientMessages, seriesStartText, slotConfirmText, whatsappNoticeText } from "../../../lib/confirmText";
 
 const clinic = Astro.locals.clinic!;
 const db = createUserClient(Astro.request, Astro.cookies);
@@ -80,11 +83,14 @@ const link = (changes: Partial<typeof state> & { busca?: string }) => {
 };
 const busca = (params.get("busca") ?? "").trim();
 
-const [services, agendas, locations, settings] = await Promise.all([
+const insuranceOn = clinic.features.includes("insurance");
+const [services, agendas, locations, settings, connection, plans] = await Promise.all([
   listServices(db, clinic.clinicId),
   listAgendas(db, clinic.clinicId),
   listLocations(db, clinic.clinicId),
   getClinicSettings(db, clinic.clinicId),
+  getWhatsappConnection(db, clinic.clinicId),
+  insuranceOn ? listInsurancePlans(db, clinic.clinicId, { includeInactive: true }) : Promise.resolve([]),
 ]);
 const examsOn = clinic.features.includes("exams");
 const serviceOptions = services.filter((s) => examsOn || s.category !== "exam");
@@ -134,6 +140,11 @@ const isGroup = service?.schedulingMode === "group";
 const dayLabel = (d: string) => capitalize(formatCalendarDate(d, "EEEE, dd/MM"));
 const describe = (agendaId: string, locationId: string) =>
   [location.get(locationId)?.name ?? "Local", serviceAgendaIds.length > 1 ? agendaName.get(agendaId) : null].filter(Boolean).join(" · ");
+// Dados da confirmação (cliente, 28/out/2026): com quem, onde e o valor naquele local.
+const slotData = (agendaId: string, locationId: string) => {
+  const price = service ? servicePriceAt(service, locationId) : null;
+  return { agenda: agendaName.get(agendaId) ?? "", location: location.get(locationId)?.name ?? "Local", price: price !== null ? formatCentsBRL(price) : undefined };
+};
 if (patient && service && searchAgendas.length) {
   if (isGroup) {
     const sessions = (
@@ -156,6 +167,7 @@ if (patient && service && searchAgendas.length) {
           location.get(s.locationId)?.name ?? "Local",
         ),
         isHome: location.get(s.locationId)?.type === "home_visit",
+        ...slotData(s.agendaId, s.locationId),
       };
     });
   } else {
@@ -180,6 +192,7 @@ if (patient && service && searchAgendas.length) {
         confirm: slotConfirmText(`${dayLabel(date)} às ${s.time}`, agendaName.get(s.agendaId) ?? "", location.get(s.locationId)?.name ?? "Local"),
         series: seriesStartText(date, s.time, agendaName.get(s.agendaId) ?? "", location.get(s.locationId)?.name ?? "Local"),
         isHome: location.get(s.locationId)?.type === "home_visit",
+        ...slotData(s.agendaId, s.locationId),
       }));
     }
   }
@@ -214,6 +227,7 @@ if (showOther && otherQuery) {
         series: seriesStartText(otherQuery.date, otherQuery.time, agendaName.get(agendaId) ?? "", location.get(locationId)?.name ?? "Local"),
         isHome: location.get(locationId)?.type === "home_visit",
         warnings: check.warnings.join(" "),
+        ...slotData(agendaId, locationId),
       };
     }
   }
@@ -268,10 +282,23 @@ const chip = (active: boolean) =>
     active ? "border-brand bg-brand text-white" : "border-line-strong bg-white text-ink hover:border-brand"
   }`;
 const withName = agendaChoice === ANY ? (serviceAgendaIds.length > 1 ? "Primeiro horário disponível" : agendaName.get(serviceAgendaIds[0] ?? "")) : agendaName.get(agendaChoice);
-// A confirmação diz o horário escolhido (cliente, 17/out/2026): o script troca
-// "no horário escolhido" pelo texto do horário e, na série, pela frequência e o fim.
-const confirmIntro = `${patient?.fullName ?? ""}: ${service?.name ?? ""}`;
-const confirmMessage = `${confirmIntro}, no horário escolhido. O paciente é avisado pelo WhatsApp.`;
+// Confirmação com todos os dados (cliente, 28/out/2026): o paciente e o serviço
+// daqui; o script junta com quem, onde, quando, o endereço e o convênio ou o valor.
+const confirmBase = JSON.stringify(
+  patient && service
+    ? [
+        { label: capitalize(vocabulary.patient), value: patient.fullName },
+        { label: "Serviço", value: `${service.name} · ${service.durationMinutes} min` },
+      ]
+    : [],
+);
+const planName = patient?.insurance ? (plans.find((p) => p.id === patient.insurance!.planId)?.name ?? "Convênio") : null;
+const confirmInsurance = insuranceOn ? (planName ?? "Particular") : "";
+// Aviso do WhatsApp (cliente, 28/out/2026): só quando a mensagem sai de verdade
+// (fora da implantação e com o WhatsApp conectado).
+const recipient = patient?.isContactSelf ? (vocabulary.patient === "criança" ? "a criança" : `o ${vocabulary.patient}`) : `o ${vocabulary.contact}`;
+const confirmNotice =
+  service && sendsPatientMessages(clinic.clinicStatus, connection?.status) ? whatsappNoticeText(recipient, "marcacao", service.category) : "";
 const note = "flex items-start gap-2 rounded-[10px] border px-3 py-2.5 text-[15px] leading-snug sm:text-[14.5px]";
 const warnNote = `${note} border-pend-200 bg-pend-100 text-pend-800`;
 const okNote = `${note} border-conf-200 bg-conf-100/60 text-conf-800`;
@@ -580,7 +607,7 @@ const remarcarHref = (a: UpcomingAppointment) => `/admin/agenda/remarcar?id=${a.
           )
         }
         {!patient && <p class="text-sm text-pend-800">Escolha o {vocabulary.patient} para marcar.</p>}
-        {canBook && <p class="text-sm text-ink-soft">Ao marcar, o paciente é avisado pelo WhatsApp. Antes, uma confirmação.</p>}
+        {canBook && <p class="text-sm text-ink-soft">{confirmNotice ? `Ao marcar, ${recipient} é avisado pelo WhatsApp. ` : ""}Antes, uma confirmação com os dados.</p>}
         <div class="hidden sm:block">
         <Button
           type="submit"
@@ -590,8 +617,11 @@ const remarcarHref = (a: UpcomingAppointment) => `/admin/agenda/remarcar?id=${a.
           data-needs-slot
           data-marcar
           data-confirm-title="Marcar o atendimento?"
-          data-confirm-message={confirmMessage}
-          data-confirm-intro={confirmIntro}
+          data-confirm-message=""
+          data-confirm-details={confirmBase}
+          data-confirm-base={confirmBase}
+          data-confirm-insurance={confirmInsurance}
+          data-confirm-notice={confirmNotice}
           data-confirm-label="Marcar"
           data-confirm-tone="primary"
         >
@@ -620,8 +650,11 @@ const remarcarHref = (a: UpcomingAppointment) => `/admin/agenda/remarcar?id=${a.
             data-needs-slot
             data-marcar
             data-confirm-title="Marcar o atendimento?"
-            data-confirm-message={confirmMessage}
-            data-confirm-intro={confirmIntro}
+            data-confirm-message=""
+            data-confirm-details={confirmBase}
+            data-confirm-base={confirmBase}
+            data-confirm-insurance={confirmInsurance}
+            data-confirm-notice={confirmNotice}
             data-confirm-label="Marcar"
             data-confirm-tone="primary"
           >
@@ -633,7 +666,7 @@ const remarcarHref = (a: UpcomingAppointment) => `/admin/agenda/remarcar?id=${a.
   }
 
   <script>
-    import { seriesConfirmMessage, seriesEndText, type SeriesEnd } from "../../../lib/confirmText";
+    import { SERIES_SKIP_NOTE, seriesEndText, seriesWhenText, type SeriesEnd } from "../../../lib/confirmText";
     // Resumo: o horário escolhido (quando e onde) e o endereço, só para local domiciliar.
     const box = document.querySelector<HTMLElement>("[data-home-address]");
     // O botão só se habilita com o horário escolhido (proposta aprovada da R4;
@@ -667,30 +700,39 @@ const remarcarHref = (a: UpcomingAppointment) => `/admin/agenda/remarcar?id=${a.
     repeat?.addEventListener("change", syncRepeat);
     syncRepeat();
 
-    // Texto da confirmação (cliente, 17/out/2026): o horário escolhido e, na
-    // série, a frequência, o começo e até quando, como estão no formulário.
+    // Confirmação com todos os dados (cliente, 28/out/2026): com quem, onde,
+    // quando (na série, a frequência, o começo e até quando), o endereço e o
+    // convênio ou o valor, como estão no formulário.
     const field = (name: string) => document.querySelector<HTMLInputElement | HTMLSelectElement>(`[name='${name}']`);
     const syncMessage = () => {
       const chosen = document.querySelector<HTMLInputElement>("input[name='slot']:checked");
       if (!chosen?.dataset.confirm) return;
       submits.forEach((submit) => {
-        const intro = submit.dataset.confirmIntro ?? "";
         // Outro horário: os avisos na confirmação, e o botão diz "assim mesmo".
-        const warnings = chosen.dataset.warnings ? ` Atenção: ${chosen.dataset.warnings}` : "";
+        const warnings = chosen.dataset.warnings ? `Atenção: ${chosen.dataset.warnings}` : "";
         submit.dataset.confirmLabel = warnings ? `${submit.textContent?.trim() || "Marcar"} assim mesmo` : submit.textContent?.trim() || "Marcar";
-        if (repeat?.checked && chosen.dataset.series) {
+        const series = !!repeat?.checked && !!chosen.dataset.series;
+        let when = chosen.dataset.summary ?? "";
+        if (series) {
           const startDate = chosen.value.split("|")[1]?.slice(0, 10) ?? ""; // agenda|início ISO|local
           const fim = (document.querySelector<HTMLInputElement>("input[name='fim']:checked")?.value ?? "sem_fim") as SeriesEnd["fim"];
-          const end = seriesEndText({ fim, endsOn: field("ends_on")?.value, maxSessions: field("max_sessions")?.value }, startDate, Number(repeat.dataset.horizon) || 3);
-          submit.dataset.confirmMessage = seriesConfirmMessage({
-            intro,
-            intervalWeeks: Number(field("interval_weeks")?.value) || 1,
-            start: chosen.dataset.series,
-            end,
-          }) + warnings;
-        } else {
-          submit.dataset.confirmMessage = `${intro}, ${chosen.dataset.confirm}.${warnings} O paciente é avisado pelo WhatsApp.`;
+          const end = seriesEndText({ fim, endsOn: field("ends_on")?.value, maxSessions: field("max_sessions")?.value }, startDate, Number(repeat?.dataset.horizon) || 3);
+          when = seriesWhenText({ intervalWeeks: Number(field("interval_weeks")?.value) || 1, start: chosen.dataset.series!, end });
         }
+        const details: { label: string; value: string }[] = [
+          ...(JSON.parse(submit.dataset.confirmBase || "[]") as { label: string; value: string }[]),
+          { label: "Com quem", value: chosen.dataset.agenda ?? "" },
+          { label: "Local", value: chosen.dataset.location ?? "" },
+          { label: "Quando", value: when },
+        ];
+        const address = field("home_visit_address")?.value.trim();
+        if (chosen.dataset.home === "1" && address) details.push({ label: "Endereço", value: address });
+        const insurance = submit.dataset.confirmInsurance;
+        const price = chosen.dataset.price;
+        if (insurance) details.push({ label: "Convênio", value: insurance === "Particular" && price ? `Particular · ${price}` : insurance });
+        else if (price) details.push({ label: "Valor", value: price });
+        submit.dataset.confirmDetails = JSON.stringify(details);
+        submit.dataset.confirmMessage = [series ? SERIES_SKIP_NOTE : "", warnings].filter(Boolean).join(" ");
       });
     };
     document.addEventListener("change", syncMessage);
