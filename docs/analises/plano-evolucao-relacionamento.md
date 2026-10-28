@@ -154,4 +154,4 @@ com o Relacionamento), com os de hoje e os atrasados, "Feito" com confirmação,
 **P3 validada pelo cliente no local em 28/out. Staging (28/out, com o OK do cliente):** `CRM` → `main` por avanço
 direto (`6ed02c8`). Migração `20261029140000_lembretes_do_paciente.sql`: simulação (só ela) → aplicada → conferida
 (tabela vazia; leitura sem login recusada) → push da `main` (Vercel do staging; na produção, só a *preview*).
-**Produção: nada.**
+**Produção: nada.** Validada pelo cliente no staging em 28/out.
