@@ -678,7 +678,7 @@ auditado.
 montar a tela; depois dessa espera o cookie do aviso não era apagado, e o aviso de uma ação aparecia de novo na tela
 seguinte, em toda clínica com o bot (conferido no local: com o bot desligado, não acontecia). O menu agora lê o aviso
 antes das esperas (`pageFlash` no início do `AdminLayout`). Conferido em Resumo, Agenda, Pacientes, Relacionamento,
-Atendimento e Início. **A produção tem o defeito** (publicação `af0902d`).
+Atendimento e Início. **A produção tem o defeito** (publicação `af0902d`). **Decisão do cliente (27/out):** a correção vai à `main` só junto com o CRM.
 
 **Testes:** unidade 703 (691 + 12: `relationship.test.ts`, acesso, rotas, volta, planos e matriz); banco 642 (636 + 6:
 `tests/db/relacionamento.test.ts`: lembretes não entregues e sem resposta, saída ao confirmar ou cancelar, sem o item,

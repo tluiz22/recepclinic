@@ -29,7 +29,7 @@
 >   passando; navegador local por papel (Recepção, Recepção restrita, Administrador, Profissional) e no celular.
 > - **Defeito anterior achado na A1:** o aviso de uma ação (ex.: "Fora da lista…") aparecia de novo na tela seguinte
 >   em toda clínica com o bot, por causa do contador do Atendimento no menu (F8.5a, já na produção). Corrigido na
->   `CRM` (o menu lê o aviso antes das esperas); levar à `main` e à produção depende do cliente.
+>   `CRM` (o menu lê o aviso antes das esperas). **Decisão do cliente (27/out): vai à `main` só junto com o CRM.**
 > - **Retomar daqui:** validação da A1 pelo cliente no local; depois, a **A2**.
 
 ## Como trabalhar nesta etapa
