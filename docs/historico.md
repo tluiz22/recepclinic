@@ -531,3 +531,4 @@ retomada fica no README). Para achar algo, buscar por data (ex.: `27/out`), fase
   confirmação**, e o horário fica **desativado** (não apagado); (3) o alerta **diz o motivo** (agenda ou local que o
   serviço não usa). Achado no caminho: na turma, o alerta aceitava horário geral, e o bot só o da turma; o alerta passa
   a seguir o bot (`setup.ts`, `fits`). Sem migração. Staging em 28/out.
+  **Validada pelo cliente no staging em 28/out**; produção depois da próxima funcionalidade (pedido do cliente).
