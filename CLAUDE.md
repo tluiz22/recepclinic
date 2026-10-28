@@ -1,7 +1,13 @@
 # RecepClinic: instruções para o Claude
 
-Antes de qualquer coisa, leia `docs/README.md`. O bloco **"Estado atual (retomar daqui)"** diz
-onde o trabalho parou.
+Antes de qualquer coisa, leia o bloco **"Estado atual (retomar daqui)"** do `docs/README.md`: ele diz onde
+o trabalho parou. Numa frente com arquivo próprio (ex.: o CRM em `docs/crm.md`), leia também o bloco de retomada
+dele.
+
+**Para economizar contexto:** na retomada, leia só esses blocos. `docs/plano.md`, `docs/historico.md`,
+`docs/analises/crm-arquivo.md` e os demais documentos longos só por busca (`grep`), no trecho necessário. Ao fim de
+cada etapa, atualize o bloco de retomada de forma **enxuta** (o que está em cada ambiente e o próximo passo) e
+registre o detalhe no plano da frente ou no `historico.md`, nunca no README.
 
 ## Como trabalhar com o cliente
 
