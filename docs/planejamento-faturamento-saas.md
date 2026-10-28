@@ -1,14 +1,16 @@
 # Faturamento recorrente do SaaS (Asaas)
 
-> **Estado atual (retomar daqui), 28/out/2026.** Planejamento aprovado pelo cliente (28/out). Nada implementado:
-> sem tabela, rota, variável ou conta no Asaas. **Próximo passo:** as decisões pendentes da seção 11, uma de cada
-> vez; depois a F12.1 do roadmap (seção 12).
+> **Estado atual (retomar daqui), 28/out/2026.** **Planejamento concluído** (cliente, 28/out). Nada implementado:
+> sem tabela, rota, variável ou conta no Asaas. **Próximo passo: começar a F12.1** (conta de cobrança: contatos
+> financeiros, opt-in e trilha, sem Asaas) **na branch `faturamento`**, com o OK do cliente para iniciar. Antes de
+> publicar a F12.1 no endereço de teste da branch: o cliente confere na Vercel as variáveis do ambiente de testes
+> (Preview) da branch.
 >
 > Decisões já respondidas (28/out): **11.1** (motivos registrados), **modo de cobrança manual** (seção 3) e **11.2**
 > (pago = `CONFIRMED` ou `RECEIVED`) **11.3** (bloqueio no painel primeiro, banco depois) **11.4** (bot calado, link com aviso) **11.5** (Assinatura só para o Administrador) **11.6** (estorno marca e avisa o Suporte) **11.7** (novo valor no próximo ciclo, sem proporcional) **11.8** (implantação ao ativar, conta igual) **11.9** (cartão na página do Asaas). **11.10 fica pendente** (número do WhatsApp, decidir antes da F12.9).
 > **11.11** (avisos do Asaas desligados, só os nossos) e **11.12** (cancelamento: cobra o devido, acesso até o
-> fim do período pago) **11.13** (dias corridos, 9h de Brasília) **11.14** (nota fiscal fora do sistema) **11.15** (sem IP fixo por agora) e **11.17** (troca de modo por nova versão do contrato). Faltam: 11.10 (número
-> do WhatsApp, antes da F12.9), 11.16 (jurídico, antes da F12.11) e o caminho de publicação (antes da F12.1).
+> fim do período pago) **11.13** (dias corridos, 9h de Brasília) **11.14** (nota fiscal fora do sistema) **11.15** (sem IP fixo por agora) **11.17** (troca de modo por nova versão do contrato) e **publicação pelo endereço de
+> teste da branch**. Faltam: 11.10 (número do WhatsApp, antes da F12.9) e 11.16 (jurídico, antes da F12.11).
 
 ## Como trabalhar nesta etapa
 
@@ -19,8 +21,14 @@
   retomar pelo bloco acima.
 - **Parar e voltar à `main`:** commit e push do que estiver em andamento na `faturamento`, atualizar o bloco "Estado
   atual" deste arquivo e `git switch main`.
-- Nada do faturamento vai para o staging ou a produção sem o OK do cliente; o caminho de publicação (merge na `main`
-  ou ambiente próprio) é decidido antes da F12.1.
+- **Publicação (cliente, 28/out):** cada fase vai para o **endereço de teste da branch** na Vercel (Preview da
+  `faturamento`), usando o banco do staging; as migrações do faturamento só acrescentam e não afetam o `teste.`. A
+  `main` segue indo à produção sem o faturamento; só com o conjunto validado pelo cliente a `faturamento` entra na
+  `main` e segue o fluxo normal de `producao.md`. Nada vai a ambiente nenhum sem o OK do cliente.
+- **Cuidado com o banco do staging:** com migrações da `faturamento` aplicadas nele, um `supabase db push` feito da
+  `main` (correção urgente com migração) acusa versões remotas que a `main` não tem. Nesse caso, aplicar a migração da
+  correção pelo SQL Editor e registrar a versão (`supabase_migrations.schema_migrations`), como na parte de migrações
+  de `staging.md`, ou trazer a correção para a `faturamento` antes. A produção não é afetada.
 
 Marcas: **[Código]** conferido no repositório; **[Projeto]** registrado na documentação do projeto;
 **[Asaas]**, **[Meta]**, **[Vercel]** documentação oficial (fontes no fim); **[Inferência]** conclusão técnica;
