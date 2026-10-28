@@ -211,6 +211,12 @@ describe("importação da agenda: conferência", () => {
     expect(issues[appointmentField("p2", "a9", "time")]).toBe("Choca com outra consulta deste link na mesma agenda.");
   });
 
+  it("exame individual fica em paralelo com consulta na mesma agenda", () => {
+    const individual = { ...catalog, services: [...catalog.services, { id: "s-ecg", name: "Eletrocardiograma", durationMinutes: 20, group: false, category: "exam" as const }], serviceAgendas: [...catalog.serviceAgendas, { serviceId: "s-ecg", agendaId: "ag-ana" }] };
+    const busy = [{ agendaId: "ag-ana", start: toInstant("2026-10-21", "08:45", TZ), end: toInstant("2026-10-21", "09:15", TZ) }];
+    expect(check([patient({ appointments: [appt({ serviceId: "s-ecg" })] })], busy, individual)).toEqual({});
+  });
+
   it("turma de exame não trava o horário", () => {
     const exam = (key: string) => appt({ key, serviceId: "s-exam", agendaId: "ag-exames" });
     expect(check([patient({ appointments: [exam("a1"), exam("a2")] })])).toEqual({});

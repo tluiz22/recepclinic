@@ -135,6 +135,34 @@ describe("trava de horário por agenda (D2)", () => {
   });
 });
 
+describe("exame em paralelo (cliente, 28/out/2026)", () => {
+  it("exame individual e consulta no mesmo horário da mesma agenda; dois exames também", async () => {
+    const examJoao = await insert("services", { clinic_id: clinicA, name: "Eletrocardiograma", category: "exam", duration_minutes: 20, price_cents: 9000 });
+    await link("service_agendas", { clinic_id: clinicA, service_id: examJoao, agenda_id: a.agendaJoao });
+    const at = MONDAY("18:00");
+
+    const exam = await receptionA.client
+      .from("appointments")
+      .insert(appointment({ service_id: examJoao, scheduled_at: at, duration_minutes: 20 }))
+      .select("is_exam")
+      .single();
+    expect(exam.error).toBeNull();
+    expect(exam.data!.is_exam).toBe(true);
+
+    const consultation = await receptionA.client.from("appointments").insert(appointment({ patient_id: a.patient2, scheduled_at: at }));
+    expect(consultation.error).toBeNull();
+
+    const secondExam = await receptionA.client
+      .from("appointments")
+      .insert(appointment({ patient_id: a.patient3, service_id: examJoao, scheduled_at: at, duration_minutes: 20 }));
+    expect(secondExam.error).toBeNull();
+
+    // Duas consultas continuam travadas.
+    const clash = await receptionA.client.from("appointments").insert(appointment({ patient_id: a.patient3, scheduled_at: MONDAY("18:10") }));
+    expect(clash.error?.code).toBe("23P01");
+  });
+});
+
 describe("regras automáticas do atendimento", () => {
   it("preço do serviço; no local com preço próprio, o do local; recalcula ao trocar o local", async () => {
     const { data: office } = await receptionA.client

@@ -164,7 +164,7 @@ export async function loadBusyPeriods(db: DbClient, clinicId: string, patients: 
         .select("agenda_id, scheduled_at, duration_minutes")
         .eq("clinic_id", clinicId)
         .in("status", ["scheduled", "confirmed"])
-        .eq("is_group_session", false)
+        .eq("is_exam", false)
         .gte("scheduled_at", start.toISOString())
         .lt("scheduled_at", end.toISOString())
         .order("id")

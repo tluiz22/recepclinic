@@ -438,3 +438,13 @@ retomada fica no README). Para achar algo, buscar por data (ex.: `27/out`), fase
 >     com o advogado e o contador, o prazo de guarda fiscal e o texto do termo de autorização da F11.
 >   - ~~excluir na Meta os 3 templates antigos sem uso~~ **feito** (conferido em 12/out).
 > - **Triagem do piloto**: nenhum commit novo do piloto desde `aad94dd` até 06/out/2026 (início da F6).
+
+## Correções antes da produção (28/out/2026)
+
+- **C1 Exame em paralelo** (cliente, 28/out): não dava para marcar consulta ou retorno no horário de um exame.
+  Regra do cliente: exame fica em paralelo com qualquer serviço, até com outro exame (decidido pelo cliente na
+  mesma data); bloqueios e feriados valem para todos. Causa: a trava `appointments_no_overlap` só deixava de fora a
+  turma de exame, e `loadBusy` contava todo atendimento como ocupado. Migração `20261030120000_exame_em_paralelo`
+  (coluna `is_exam` copiada da categoria do serviço, preenchida nos atendimentos antigos sem gatilhos; trava sem os
+  exames); `loadBusy` sem exames e, para marcar exame, só bloqueios; importação da agenda igual. Staging: migração
+  aplicada e conferida (18 exames marcados) em 28/out.

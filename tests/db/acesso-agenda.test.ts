@@ -230,3 +230,23 @@ describe("acesso às agendas (D6)", () => {
     }
   });
 });
+
+describe("exame em paralelo (cliente, 28/out/2026)", () => {
+  const MON5 = "2031-04-07";
+
+  it("exame não ocupa o horário da consulta, nem consulta o do exame; dois exames no mesmo horário", async () => {
+    const { error } = await adminClient().from("service_agendas").insert({ clinic_id: clinicId, service_id: ids.exame, agenda_id: ids.agendaDra2 });
+    expect(error).toBeNull();
+    const free = async (service: string) => times(await getFreeSlots(db(reception), clinicId, { serviceId: service, agendaId: ids.agendaDra2, date: MON5 }, NOW));
+
+    await book(ids.p3, ids.exame, ids.agendaDra2, at(MON5, "08:00"));
+    expect((await free(ids.consulta))[0]).toBe("08:00");
+    expect((await free(ids.exame))[0]).toBe("08:00");
+
+    await book(ids.p3, ids.consulta, ids.agendaDra2, at(MON5, "08:00"));
+    expect((await free(ids.consulta))[0]).toBe("08:30");
+    expect((await free(ids.exame))[0]).toBe("08:00");
+
+    await book(ids.p2, ids.exame, ids.agendaDra2, at(MON5, "08:00"));
+  });
+});

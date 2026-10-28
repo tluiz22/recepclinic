@@ -126,7 +126,11 @@ export async function loadSchedulingPlan(
   };
 }
 
-/** Ocupado na agenda entre dois instantes: atendimentos ativos e bloqueios. */
+/**
+ * Ocupado na agenda entre dois instantes: atendimentos ativos e bloqueios.
+ * Exame fica em paralelo com tudo (cliente, 28/out/2026): não ocupa horário,
+ * e para marcar um exame só os bloqueios contam.
+ */
 export async function loadBusy(
   db: DbClient,
   clinicId: string,
@@ -134,6 +138,7 @@ export async function loadBusy(
   from: Date,
   to: Date,
   ignoreAppointmentId?: string | null,
+  forExam = false,
 ): Promise<BusyInterval[]> {
   // Em páginas: 60 dias de uma agenda cheia passam das 1000 linhas da API.
   const appointmentsPage = (pageFrom: number, pageTo: number) => {
@@ -143,6 +148,7 @@ export async function loadBusy(
       .eq("clinic_id", clinicId)
       .eq("agenda_id", agendaId)
       .in("status", ["scheduled", "confirmed"])
+      .eq("is_exam", false)
       .gte("scheduled_at", new Date(from.getTime() - MAX_APPOINTMENT_SPAN_MS).toISOString())
       .lt("scheduled_at", to.toISOString());
     // Remarcar: o próprio atendimento não ocupa o horário que vai deixar.
@@ -150,7 +156,7 @@ export async function loadBusy(
     return query.order("scheduled_at").order("id").range(pageFrom, pageTo);
   };
   const [appointments, blocks] = await Promise.all([
-    unwrapAll(appointmentsPage, "Atendimentos da agenda"),
+    forExam ? [] : unwrapAll(appointmentsPage, "Atendimentos da agenda"),
     loadBlocks(db, clinicId, agendaId, from, to),
   ]);
   return [
@@ -216,7 +222,7 @@ export async function getFreeSlots(
   if (!plan) return [];
   const { start, end } = dayBounds(query.date, plan.timeZone);
   const [busy, holidays] = await Promise.all([
-    loadBusy(db, clinicId, query.agendaId, start, end, query.ignoreAppointmentId),
+    loadBusy(db, clinicId, query.agendaId, start, end, query.ignoreAppointmentId, plan.category === "exam"),
     loadClinicHolidays(db, clinicId, query.date, query.date),
   ]);
   return slotsOn(plan, query.date, busy, holidays, now);
@@ -257,7 +263,7 @@ export async function getNextAvailableDates(
   const firstDate = todayIn(plan.timeZone, now);
   const finalDate = searchEnd(firstDate, query);
   const [busy, holidays] = await Promise.all([
-    loadBusy(db, clinicId, query.agendaId, dayBounds(firstDate, plan.timeZone).start, dayBounds(finalDate, plan.timeZone).end, query.ignoreAppointmentId),
+    loadBusy(db, clinicId, query.agendaId, dayBounds(firstDate, plan.timeZone).start, dayBounds(finalDate, plan.timeZone).end, query.ignoreAppointmentId, plan.category === "exam"),
     loadClinicHolidays(db, clinicId, firstDate, finalDate),
   ]);
   const result: DateWithSlots[] = [];
@@ -431,7 +437,7 @@ export async function getFreeSlotsBefore(
   const firstDate = localDateOf(from, plan.timeZone);
   const lastDate = localDateOf(before, plan.timeZone);
   const [busy, holidays] = await Promise.all([
-    loadBusy(db, clinicId, query.agendaId, dayBounds(firstDate, plan.timeZone).start, dayBounds(lastDate, plan.timeZone).end, query.ignoreAppointmentId),
+    loadBusy(db, clinicId, query.agendaId, dayBounds(firstDate, plan.timeZone).start, dayBounds(lastDate, plan.timeZone).end, query.ignoreAppointmentId, plan.category === "exam"),
     loadClinicHolidays(db, clinicId, firstDate, lastDate),
   ]);
   const result: FreeSlot[] = [];

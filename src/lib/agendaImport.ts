@@ -228,8 +228,8 @@ export function validateImport(
       else if (!location) add(af("locationId"), "Escolha o local na lista.");
       else if (location.homeVisit && !appointment.homeAddress) add(af("homeAddress"), "Informe o endereço da visita.");
 
-      // Horário ocupado na mesma agenda (turma de exame fica de fora, como no banco).
-      if (start && service && !service.group && agendas.has(appointment.agendaId)) {
+      // Horário ocupado na mesma agenda (exame fica de fora, como no banco: em paralelo com tudo).
+      if (start && service && service.category !== "exam" && agendas.has(appointment.agendaId)) {
         const end = new Date(start.getTime() + service.durationMinutes * 60_000);
         const clash = taken.find((t) => t.agendaId === appointment.agendaId && t.start < end && start < t.end);
         if (clash) {
