@@ -7,11 +7,11 @@
 > - **Produção** (`app.recepclinic.com.br`, branch `producao`): no ar desde 26/out; última publicação **F8.5
 >   Atendimento humano** em 27/out (`af0902d`). Fluxo e registro em [`producao.md`](producao.md).
 > - **Staging** (`teste.recepclinic.com.br`, branch `main`): tudo da produção mais o **CRM** (Relacionamento A1/A2,
->   B0, P1 Documentos, P2 Anotações), todo validado pelo cliente. Roteiros em [`staging.md`](staging.md).
+>   B0, P1 Documentos, P2 Anotações, P3 Lembretes); falta validar a P3. Roteiros em [`staging.md`](staging.md).
 > - **Branches:** `main` (staging) e `CRM` (etapa do CRM) estão iguais em 28/out.
 >
 > **Frentes em andamento**
-> - **CRM** (branch `CRM`, retomar por [`crm.md`](crm.md)): **P3 Lembretes** pronta no local, aguardando a
+> - **CRM** (branch `CRM`, retomar por [`crm.md`](crm.md)): **P3 Lembretes** no staging, aguardando a
 >   validação do cliente.
 > - **Piloto** (etapas no [plano](plano.md), F10): **A** feita (roteiros do WhatsApp Business: [único](https://claude.ai/artifact/8AXZMSLcEq8SMWFpYHaraq),
 >   [iPhone](https://claude.ai/artifact/C8E3xDoshuXE3M91qeDDHq), [Android](https://claude.ai/artifact/78hQ2cXQph4wvXHKPXexnm));

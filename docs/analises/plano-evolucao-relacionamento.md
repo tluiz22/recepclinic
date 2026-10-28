@@ -133,7 +133,7 @@ anteriores", sem autor; nenhum paciente com o campo antigo preenchido; leitura s
 push (a coluna antiga continua). **Produção: nada.**
 
 
-### 19.3 P3 Lembretes implementada (28/out, só no local)
+### 19.3 P3 Lembretes implementada (28/out, no staging)
 
 **Decisões do cliente (28/out):** criam e marcam "Feito" Administrador, Recepção e Profissional (como nas Anotações);
 só o autor corrige texto e data ("editado em …"); só o Administrador apaga; o feito fica no histórico da ficha, com
@@ -150,3 +150,8 @@ editar, feito, desfazer, apagar; `return_to` para voltar ao Relacionamento); aba
 (`?aba=lembretes`); aba "Lembretes da equipe" no Relacionamento (`LembretesEquipeTab.astro`, para todas as clínicas
 com o Relacionamento), com os de hoje e os atrasados, "Feito" com confirmação, somando no número do menu
 (`MENU_TABS`); ajuda contextual; seed com um lembrete para hoje (Ana Souza). Testes: 723 de unidade e 676 de banco.
+
+**P3 validada pelo cliente no local em 28/out. Staging (28/out, com o OK do cliente):** `CRM` → `main` por avanço
+direto (`6ed02c8`). Migração `20261029140000_lembretes_do_paciente.sql`: simulação (só ela) → aplicada → conferida
+(tabela vazia; leitura sem login recusada) → push da `main` (Vercel do staging; na produção, só a *preview*).
+**Produção: nada.**

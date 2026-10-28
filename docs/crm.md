@@ -11,9 +11,9 @@
 >     clínicas (Q25).
 >   - **P2 Anotações** (28/out): aba "Anotações" no lugar das Observações (as antigas viraram a 1ª anotação).
 > - **Desfeito a pedido do cliente:** o "Registrar contato" (C2, Q18).
-> - **P3 Lembretes** (28/out, **só no local**, aguardando a validação do cliente): aba "Lembretes" na ficha e
->   "Lembretes da equipe" no Relacionamento (seção 19.3 do plano). Depois: `main` e staging com o OK do cliente.
-> - **Branches:** `CRM` à frente da `main` (P3). Linha de base dos testes: 723 de unidade e 676 de banco.
+> - **P3 Lembretes** (28/out, **no staging**, aguardando a validação do cliente): aba "Lembretes" na ficha e
+>   "Lembretes da equipe" no Relacionamento (seção 19.3 do plano).
+> - **Branches:** `main` e `CRM` iguais em 28/out. Linha de base dos testes: 723 de unidade e 676 de banco.
 
 ## Como trabalhar nesta etapa
 
