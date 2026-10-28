@@ -456,3 +456,8 @@ retomada fica no README). Para achar algo, buscar por data (ex.: `27/out`), fase
   público seguem só com a lista. `checkFreeTime` (slots.ts), `anyTime`/`acceptedWarnings` em `bookAppointment` e
   `rescheduleAppointment` (só a rota da equipe passa), componente `OtherTime.astro`. Série já aceitava qualquer
   horário (só pula feriado, bloqueio e conflito). Sem migração. Staging em 28/out.
+- **C3 Horário de exame** (cliente, 28/out, achado na produção): em Configurações › Horários, um horário de exame
+  era recusado por cruzar com uma turma ("Cruza com um horário de turma"). Decisão do cliente: horário de exame
+  (individual ou turma) cruza com qualquer outro da agenda, até o geral; só não cruza com outro do mesmo serviço.
+  `findWindowConflict` recebe os exames da clínica. Sem migração. Publicada no staging e na produção de uma vez, a
+  pedido do cliente (validar direto na produção).

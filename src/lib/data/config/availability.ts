@@ -9,11 +9,12 @@ import { DataError, unwrap, unwrapOne, Validation } from "../errors";
 // Sobreposição (decisão do cliente, 04/out/2026, F3.4): vale **por agenda**,
 // mesmo em locais diferentes; agendas diferentes nunca conflitam. Na mesma
 // agenda e no mesmo dia, duas janelas ativas que se cruzam conflitam quando:
-//   - uma delas é geral (sem serviço);
 //   - as duas são do mesmo serviço;
-//   - uma delas é de turma.
-// Serviços individuais diferentes podem dividir horário (regra do piloto para
-// exames): a trava de horário da agenda impede dois atendimentos ao mesmo tempo.
+//   - uma delas é geral (sem serviço) ou de turma, e nenhuma é de exame.
+// Exame (individual ou turma) cruza com qualquer outro horário (cliente,
+// 28/out/2026, como na marcação: exame fica em paralelo com tudo). Serviços
+// individuais diferentes podem dividir horário (regra do piloto para exames):
+// a trava de horário da agenda impede dois atendimentos ao mesmo tempo.
 // Janelas inativas e de serviços inativos não contam.
 
 export type AvailabilityWindow = {
@@ -41,12 +42,18 @@ export type WindowConflict = { kind: WindowConflictKind; window: AvailabilityWin
 type Comparable = Pick<AvailabilityWindow, "weekday" | "startTime" | "endTime" | "serviceId" | "capacity"> & { id?: string };
 
 /** Regra de sobreposição da agenda (ver o topo do arquivo). Devolve o primeiro conflito. */
-export function findWindowConflict(candidate: Comparable, existing: AvailabilityWindow[]): WindowConflict | null {
+export function findWindowConflict(
+  candidate: Comparable,
+  existing: AvailabilityWindow[],
+  examServiceIds: ReadonlySet<string> = new Set(),
+): WindowConflict | null {
+  const isExam = (serviceId: string | null) => serviceId !== null && examServiceIds.has(serviceId);
   for (const other of existing) {
     if (!other.isActive || other.id === candidate.id || other.weekday !== candidate.weekday) continue;
     if (!(candidate.startTime < other.endTime && candidate.endTime > other.startTime)) continue;
+    if (candidate.serviceId !== null && candidate.serviceId === other.serviceId) return { kind: "same_service", window: other };
+    if (isExam(candidate.serviceId) || isExam(other.serviceId)) continue;
     if (candidate.serviceId === null || other.serviceId === null) return { kind: "general", window: other };
-    if (candidate.serviceId === other.serviceId) return { kind: "same_service", window: other };
     if (candidate.capacity !== null || other.capacity !== null) return { kind: "group", window: other };
   }
   return null;
@@ -93,6 +100,12 @@ export async function listAvailability(
     .order("start_time");
   if (!includeInactive) query = query.eq("is_active", true);
   return unwrap(await query, "Horários de atendimento").map(toWindow);
+}
+
+/** Serviços de exame da clínica (cruzam com qualquer horário). */
+async function examServiceIds(db: DbClient, clinicId: string): Promise<Set<string>> {
+  const rows = unwrap(await db.from("services").select("id").eq("clinic_id", clinicId).eq("category", "exam"), "Exames da clínica");
+  return new Set(rows.map((row) => row.id));
 }
 
 /** Janelas ativas da agenda que contam para a sobreposição (serviço inativo não conta). */
@@ -182,9 +195,9 @@ export async function addAvailabilityWindows(
   const inputs = days.map((weekday) => ({ ...input, weekday }));
   for (const one of inputs) validateWindowShape(one);
   await checkWindowService(db, clinicId, inputs[0]);
-  const existing = await windowsThatCount(db, clinicId, input.agendaId);
+  const [existing, exams] = await Promise.all([windowsThatCount(db, clinicId, input.agendaId), examServiceIds(db, clinicId)]);
   for (const one of inputs) {
-    const conflict = findWindowConflict(one, existing);
+    const conflict = findWindowConflict(one, existing, exams);
     if (conflict) throw conflictError(conflict);
   }
   return unwrap(
@@ -225,7 +238,7 @@ export async function updateAvailabilityWindow(
   validateWindowShape(next);
   await checkWindowService(db, clinicId, next);
   if (current.isActive) {
-    const conflict = findWindowConflict({ ...next, id }, await windowsThatCount(db, clinicId, current.agendaId));
+    const conflict = findWindowConflict({ ...next, id }, await windowsThatCount(db, clinicId, current.agendaId), await examServiceIds(db, clinicId));
     if (conflict) throw conflictError(conflict);
   }
   return toWindow(
@@ -255,7 +268,7 @@ export async function setAvailabilityWindowActive(db: DbClient, clinicId: string
     const window = toWindow(
       unwrapOne(await db.from("availability_windows").select(COLUMNS).eq("clinic_id", clinicId).eq("id", id).maybeSingle(), "Horário de atendimento"),
     );
-    const conflict = findWindowConflict(window, await windowsThatCount(db, clinicId, window.agendaId));
+    const conflict = findWindowConflict(window, await windowsThatCount(db, clinicId, window.agendaId), await examServiceIds(db, clinicId));
     if (conflict) throw conflictError(conflict);
   }
   unwrapOne(

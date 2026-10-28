@@ -71,6 +71,17 @@ describe("sobreposição de horários na agenda (decisão de 04/out)", () => {
     );
   });
 
+  it("exame (individual ou turma) cruza com qualquer horário, menos com o do mesmo exame (cliente, 28/out/2026)", () => {
+    const exams = new Set(["ecg", "turma"]);
+    expect(findWindowConflict(candidate({ serviceId: "ecg" }), [window({ serviceId: "turma", capacity: 6 })], exams)).toBeNull();
+    expect(findWindowConflict(candidate({ serviceId: "consulta" }), [window({ serviceId: "turma", capacity: 6 })], exams)).toBeNull();
+    expect(findWindowConflict(candidate({ serviceId: "turma", capacity: 6 }), [window({})], exams)).toBeNull();
+    expect(findWindowConflict(candidate({}), [window({ serviceId: "ecg" })], exams)).toBeNull();
+    expect(findWindowConflict(candidate({ serviceId: "turma", capacity: 6 }), [window({ serviceId: "turma", capacity: 6 })], exams)?.kind).toBe("same_service");
+    // Sem exame no meio, o geral continua travando.
+    expect(findWindowConflict(candidate({ serviceId: "consulta" }), [window({})], exams)?.kind).toBe("general");
+  });
+
   it("encostar não é cruzar; outro dia não conta; inativo não conta", () => {
     expect(findWindowConflict(candidate({ startTime: "12:00", endTime: "13:00" }), [window({})])).toBeNull();
     expect(findWindowConflict(candidate({ startTime: "07:00", endTime: "08:00" }), [window({})])).toBeNull();

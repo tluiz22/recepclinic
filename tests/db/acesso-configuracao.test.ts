@@ -364,14 +364,16 @@ describe("dias e horários (sobreposição por agenda)", () => {
     expect(await codeOf(() => addAvailabilityWindow(db(admin), clinicId, { ...window, serviceId: examA.id }))).toBe("conflict");
   });
 
-  it("turma exige vagas e não cruza com nenhum outro", async () => {
+  it("turma exige vagas; cruza com outros exames (cliente, 28/out/2026), mas não com ela mesma", async () => {
     const window = { ...base, agendaId: examsAgenda.id, locationId: office.id, serviceId: groupExam.id };
     expect(await codeOf(() => addAvailabilityWindow(db(admin), clinicId, { ...window, startTime: "14:00", endTime: "16:00" }))).toBe("invalid");
-    expect(
-      await codeOf(() => addAvailabilityWindow(db(admin), clinicId, { ...window, capacity: 6, startTime: "11:00", endTime: "13:00" })),
-    ).toBe("conflict");
+    // Cruza com o horário do examA (08:00–12:00).
+    await addAvailabilityWindow(db(admin), clinicId, { ...window, capacity: 6, startTime: "11:00", endTime: "13:00" });
     const group = await addAvailabilityWindow(db(admin), clinicId, { ...window, capacity: 6, startTime: "14:00", endTime: "16:00" });
     expect(group.capacity).toBe(6);
+    expect(
+      await codeOf(() => addAvailabilityWindow(db(admin), clinicId, { ...window, capacity: 6, startTime: "15:00", endTime: "17:00" })),
+    ).toBe("conflict");
   });
 
   it("individual não aceita vagas; serviço fora da agenda é recusado", async () => {
@@ -396,13 +398,23 @@ describe("dias e horários (sobreposição por agenda)", () => {
     expect(tuesdays.map((w) => `${w.startTime}-${w.endTime}`)).toEqual(["10:00-11:00"]);
   });
 
-  it("exame inativo não conta para a sobreposição", async () => {
-    const wednesday = { ...base, weekday: 3, agendaId: examsAgenda.id, locationId: office.id, startTime: "09:00", endTime: "10:00" };
-    await addAvailabilityWindow(db(admin), clinicId, { ...wednesday, serviceId: examB.id });
-    const group = { ...wednesday, serviceId: groupExam.id, capacity: 4 };
-    expect(await codeOf(() => addAvailabilityWindow(db(admin), clinicId, group))).toBe("conflict");
-    await setServiceActive(db(admin), clinicId, examB.id, false);
-    expect((await addAvailabilityWindow(db(admin), clinicId, group)).capacity).toBe(4);
+  it("serviço inativo não conta para a sobreposição", async () => {
+    const wednesday = { ...base, weekday: 3, agendaId: doctorAgenda.id, locationId: office.id, startTime: "09:00", endTime: "10:00" };
+    await addAvailabilityWindow(db(admin), clinicId, { ...wednesday, serviceId: consultation.id });
+    expect(await codeOf(() => addAvailabilityWindow(db(admin), clinicId, wednesday))).toBe("conflict");
+    await setServiceActive(db(admin), clinicId, consultation.id, false);
+    try {
+      expect((await addAvailabilityWindow(db(admin), clinicId, wednesday)).serviceId).toBeNull();
+    } finally {
+      await setServiceActive(db(admin), clinicId, consultation.id, true);
+    }
+  });
+
+  it("exame cruza com o horário geral da agenda (cliente, 28/out/2026)", async () => {
+    await setServiceAgendas(db(admin), clinicId, examB.id, [examsAgenda.id, doctorAgenda.id]);
+    const thursday = { ...base, weekday: 4, agendaId: doctorAgenda.id, locationId: office.id };
+    await addAvailabilityWindow(db(admin), clinicId, { ...thursday, startTime: "08:00", endTime: "12:00" });
+    await addAvailabilityWindow(db(admin), clinicId, { ...thursday, serviceId: examB.id, startTime: "09:00", endTime: "10:00" });
   });
 
   it("Recepção não mexe nos horários", async () => {
