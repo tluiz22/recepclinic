@@ -805,3 +805,10 @@ resposta da recepção (conferido antes e depois). Navegador local: a conferir p
 **Ordem no staging (depois do OK do cliente, pela `main`):** migração 1 → push da `main` (código publicado) →
 conferir → migração 2 (simulação → aplicar → conferir). Na produção, a migração 2 apaga para sempre as frases já
 guardadas.
+
+**Staging (28/out, com o OK do cliente depois da validação no local):** `CRM` → `main` por avanço direto
+(`51dc07a`). Migração 1 sozinha (simulação → aplicar; a função existe e recusa quem não tem login) → push da `main`
+(Vercel do staging publicada; no projeto da produção, só a *preview*, porque a produção segue a branch `producao`) →
+contagem antes da migração 2 (385 recebidas e 15 respostas da recepção com texto; 609 enviadas pelo sistema) →
+migração 2 (simulação → aplicar) → conferido: 0 recebidas e 0 respostas com texto, as 609 enviadas intactas; com o
+login, `body` e `retry_payload` dão 403 (42501) e as outras colunas leem; sem login, nada. **Produção: nada.**

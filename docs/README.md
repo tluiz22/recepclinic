@@ -22,7 +22,11 @@
 >   única que publica no staging (e a `producao` na produção); o CRM só entra na `main` com a aprovação do cliente.
 >   **27/out: a central "Relacionamento" (A1 e A2) entrou na `main` e no staging** com o OK do cliente (migração
 >   `20261028120000` aplicada; o item é liberado por clínica na Matriz). **Não está na produção.**
->   **Validado pelo cliente no staging em 27/out.** Próxima sessão do CRM: etapa B (começa pela B0), retomar por `docs/crm.md`.
+>   **Validado pelo cliente no staging em 27/out.**
+>   **28/out: CRM B0 na `main` e no staging** (decisão D12: o texto das conversas fica no app do WhatsApp; o
+>   RecepClinic não guarda o que o paciente escreve nem o que a recepção responde, e o texto já guardado foi apagado
+>   no staging; B1 e B2 saíram do plano). **Não está na produção** (a migração 2 apaga para sempre o texto guardado:
+>   só com autorização explícita). Próximo do CRM: validação da B0 no staging e a etapa C, por `docs/crm.md`.
 >
 > - **Etapas 0 a 4 concluídas**: cópia isolada, [diagnóstico](diagnostico.md), [limites](limites.md),
 >   [arquitetura](arquitetura.md) (decisões D1–D11) e [plano](plano.md) (fases F0–F10).

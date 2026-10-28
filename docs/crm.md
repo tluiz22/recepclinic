@@ -58,8 +58,11 @@
 >   (só o Suporte); **B1 e B2 saem do plano** (Q14–Q16). Passo 1 desfeito no local e substituído por duas migrações
 >   aprovadas (`20261028140000_mensagens_suporte.sql` e `20261028150000_mensagens_sem_texto.sql`), aplicadas **só no
 >   local**. Testes: 714 de unidade e 649 de banco. Detalhes na seção 17 do
->   [plano](analises/plano-evolucao-relacionamento.md). **Aguardando a validação do cliente no local**; depois, com
->   o OK, a `main` e o staging (migração 2 só depois do código publicado) e a etapa C.
+>   [plano](analises/plano-evolucao-relacionamento.md). **Validada pelo cliente no local em 28/out; na `main` e no
+>   staging em 28/out** (migração 1 → push da `main` → migração 2; conferido no banco do staging: texto das recebidas
+>   e das respostas apagado, `body` e `retry_payload` fechados ao login). **Produção: nada.**
+> - **Retomar daqui:** o cliente valida a B0 no staging (Atendimento e notificação sem a frase; Configurações ›
+>   WhatsApp do Suporte); depois, a **etapa C** começa pela C1 (SQL de `contact_interactions` para aprovação).
 
 ## Como trabalhar nesta etapa
 
