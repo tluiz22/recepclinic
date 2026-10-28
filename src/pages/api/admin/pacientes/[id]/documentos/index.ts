@@ -20,7 +20,8 @@ export const POST: APIRoute = async (context) => {
   const clinic = locals.clinic!;
   const patientId = params.id!;
   const db = createUserClient(request, cookies);
-  const page = withReturn(`/admin/pacientes/${patientId}`, receivedReturn(new URL(request.url)));
+  // Volta para a aba Documentos da ficha.
+  const page = withReturn(`/admin/pacientes/${patientId}?aba=documentos`, receivedReturn(new URL(request.url)));
 
   if (request.headers.get("content-type")?.includes("application/json")) {
     const body = (await request.json().catch(() => null)) as (Partial<DocumentInput> & { acao?: string; documentId?: string }) | null;

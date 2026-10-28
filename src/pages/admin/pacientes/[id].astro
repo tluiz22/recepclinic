@@ -15,10 +15,11 @@
 // atendimentos e a nota de cada pagamento. No celular, os cartões recolhidos e
 // "Marcar" na barra fixa.
 //
-// CRM P1 (28/out/2026): cartão "Documentos" (foto ou PDF da carteirinha,
-// identidade, pedidos): a equipe toda vê, abre e baixa; Administrador e
-// Recepção anexam e apagam (Q19); "Baixar selecionados" e, no celular,
-// "Compartilhar" (Q24). O arquivo vai do aparelho direto ao armazenamento.
+// CRM P1 (28/out/2026): aba "Documentos" ao lado dos atendimentos (cliente:
+// lista longa não cabe na coluna da direita), com filtro por tipo. Foto ou PDF
+// da carteirinha, identidade, pedidos: a equipe toda vê, abre e baixa;
+// Administrador e Recepção anexam e apagam (Q19); "Baixar selecionados" e, no
+// celular, "Compartilhar" (Q24). O arquivo vai do aparelho direto ao armazenamento.
 import AdminLayout from "../../../layouts/AdminLayout.astro";
 import ConfirmDeleteDialog from "../../../components/admin/ConfirmDeleteDialog.astro";
 import FlashMessage from "../../../components/admin/FlashMessage.astro";
@@ -135,8 +136,19 @@ const planName = (planId: string) => plans.find((plan) => plan.id === planId)?.n
 const planLabel = patient.insurance ? planName(patient.insurance.planId) : "Particular";
 
 // Abas dos atendimentos: links que mantêm a origem do "Voltar".
-const tab = Astro.url.searchParams.get("atendimentos") === "anteriores" ? "anteriores" : "proximos";
-const tabHref = (value: string) => withReturn(`/admin/pacientes/${patient.id}${value === "anteriores" ? "?atendimentos=anteriores" : ""}`, volta);
+const tab =
+  !anonymized && Astro.url.searchParams.get("aba") === "documentos"
+    ? "documentos"
+    : Astro.url.searchParams.get("atendimentos") === "anteriores"
+      ? "anteriores"
+      : "proximos";
+const tabQuery: Record<string, string> = { proximos: "", anteriores: "?atendimentos=anteriores", documentos: "?aba=documentos" };
+const tabHref = (value: string) => withReturn(`/admin/pacientes/${patient.id}${tabQuery[value]}`, volta);
+// Filtro por tipo na aba Documentos (só os tipos que o paciente tem).
+const kindFilter = DOCUMENT_KINDS.find((k) => k.key === Astro.url.searchParams.get("tipo"))?.key ?? null;
+const shownDocuments = kindFilter ? documents.filter((d) => d.kind === kindFilter) : documents;
+const kindsPresent = DOCUMENT_KINDS.filter((k) => documents.some((d) => d.kind === k.key));
+const kindHref = (key: string | null) => withReturn(`/admin/pacientes/${patient.id}?aba=documentos${key ? `&tipo=${key}` : ""}`, volta);
 const plural = (n: number) => `${n} ${n === 1 ? "atendimento" : "atendimentos"}`;
 const rows = tab === "anteriores" ? previous : upcoming;
 
@@ -273,12 +285,12 @@ const canBook = patient.isActive && !anonymized;
     }
   </section>
 
-  <div class="mt-4 grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_400px] lg:gap-5">
+  <div class="mt-4 grid grid-cols-[minmax(0,1fr)] items-start gap-4 lg:grid-cols-[minmax(0,1fr)_400px] lg:gap-5">
     <section aria-labelledby="atendimentos-titulo" class={`${card} gap-1`}>
-      <h2 id="atendimentos-titulo" class={sectionTitle}>Atendimentos</h2>
+      <h2 id="atendimentos-titulo" class={sectionTitle}>{anonymized ? "Atendimentos" : "Atendimentos e documentos"}</h2>
       <Tabs
         inCard
-        label="Atendimentos"
+        label="Atendimentos e documentos"
         class="mt-1"
         tabs={[
           { label: "Próximos", href: tabHref("proximos"), active: tab === "proximos", count: upcoming.length, countTone: "neutral", countLabel: plural(upcoming.length) },
@@ -290,9 +302,21 @@ const canBook = patient.isActive && !anonymized;
             countTone: "neutral",
             countLabel: plural(previous.length),
           },
+          ...(anonymized
+            ? []
+            : [
+                {
+                  label: "Documentos",
+                  href: tabHref("documentos"),
+                  active: tab === "documentos",
+                  count: documents.length,
+                  countTone: "neutral" as const,
+                  countLabel: `${documents.length} ${documents.length === 1 ? "documento" : "documentos"}`,
+                },
+              ]),
         ]}
       />
-      <ul>
+      {tab !== "documentos" && <ul>
         {rows.map((a) => {
           const paid = paymentStates?.get(a.id);
           return (
@@ -337,10 +361,124 @@ const canBook = patient.isActive && !anonymized;
             </li>
           );
         })}
-      </ul>
+      </ul>}
       {
-        rows.length === 0 && (
+        tab !== "documentos" && rows.length === 0 && (
           <p class="py-3 text-[15px] text-ink-soft">{tab === "anteriores" ? "Nenhum atendimento anterior." : "Nenhum atendimento marcado."}</p>
+        )
+      }
+      {
+        tab === "documentos" && (
+          <div class="flex flex-col gap-3 pt-2">
+            {kindsPresent.length > 1 && (
+              <nav aria-label="Filtrar por tipo" class="flex flex-wrap gap-1.5">
+                {[{ key: null, label: "Todos", count: documents.length }, ...kindsPresent.map((k) => ({ key: k.key, label: k.label, count: documents.filter((d) => d.kind === k.key).length }))].map((f) => (
+                  <Button
+                    size="sm"
+                    href={kindHref(f.key)}
+                    aria-current={kindFilter === f.key ? "page" : undefined}
+                    class={kindFilter === f.key ? "border-brand! bg-brand-soft! text-brand-ink!" : ""}
+                  >
+                    {f.label} ({f.count})
+                  </Button>
+                ))}
+              </nav>
+            )}
+            {canAttach && (
+              <details class="group" data-attach-box>
+                <summary class={`${buttonClass("primary", "sm")} cursor-pointer list-none group-open:hidden [&::-webkit-details-marker]:hidden`}>Anexar documento</summary>
+                <form class="flex flex-col gap-3 rounded-lg border border-line p-3" data-attach={documentsApi} novalidate>
+                  <div class={field}>
+                    <label for="document-kind" class={fieldLabel}>Tipo</label>
+                    <select id="document-kind" name="kind" required class={CONTROL}>
+                      <option value="">Escolha</option>
+                      {DOCUMENT_KINDS.map((k) => <option value={k.key}>{k.label}</option>)}
+                    </select>
+                  </div>
+                  <div class={field}>
+                    <label for="document-description" class={fieldLabel}>Descrição (opcional)</label>
+                    <input id="document-description" name="description" maxlength={DESCRIPTION_MAX} placeholder="Ex.: Carteirinha Unimed 2026" class={CONTROL} />
+                  </div>
+                  <div class={field}>
+                    <span class={fieldLabel}>Arquivo</span>
+                    <div class="flex flex-wrap items-center gap-2.5">
+                      <input id="document-file" name="file" type="file" required accept={["image/*", ...DOCUMENT_MIME_TYPES].join(",")} class="peer sr-only" />
+                      <label for="document-file" class={`${buttonClass("secondary", "sm")} cursor-pointer peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-brand`}>
+                        Escolher arquivo
+                      </label>
+                      <span class="min-w-0 text-[15px] break-all text-ink-soft" data-file-name>Nenhum arquivo escolhido</span>
+                    </div>
+                    <p class={hint}>Foto (JPG, PNG ou HEIC) ou PDF, até 10 MB. No celular, dá para tirar a foto na hora.</p>
+                  </div>
+                  <p class="hidden text-[15px] font-semibold text-can-800" role="alert" data-attach-error></p>
+                  <div class="flex flex-wrap items-center gap-2">
+                    <Button type="submit" variant="primary" data-attach-submit>Anexar</Button>
+                    <Button data-attach-cancel>Cancelar</Button>
+                    <span class="text-[15px] text-ink-soft" aria-live="polite" data-attach-status></span>
+                  </div>
+                </form>
+                <noscript><p class={hint}>Para anexar, ative o JavaScript do navegador.</p></noscript>
+              </details>
+            )}
+            {shownDocuments.length > 0 && (
+              <ul data-documents={documentsApi}>
+                {shownDocuments.map((d) => {
+                  const by = d.createdBy ? actorText(documentActors.get(d.createdBy)) : null;
+                  return (
+                    <li class="grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-2 border-t border-line py-3 first:border-t-0 sm:grid-cols-[auto_minmax(0,1fr)_auto] sm:items-center">
+                      <input
+                        type="checkbox"
+                        class="mt-0.5 h-[18px] w-[18px] shrink-0 self-start accent-brand sm:self-center"
+                        aria-label={`Selecionar ${DOCUMENT_KIND_LABEL[d.kind]}${d.description ? `: ${d.description}` : ""}`}
+                        data-document={d.id}
+                        data-name={d.fileName}
+                        data-type={d.mimeType}
+                      />
+                      <div class="flex min-w-0 flex-col gap-0.5">
+                        <span class="text-[15.5px] leading-snug font-semibold text-ink">
+                          {DOCUMENT_KIND_LABEL[d.kind]}
+                          {d.description && <span class="font-normal break-words"> · {d.description}</span>}
+                        </span>
+                        <span class="text-[13.5px] text-ink-soft">
+                          {[formatInstant(d.createdAt, clinic.timezone, "dd/MM/yyyy"), by, `${fileType(d.mimeType)}, ${fileSize(d.sizeBytes)}`].filter(Boolean).join(" · ")}
+                        </span>
+                      </div>
+                      <div class="col-span-2 flex flex-wrap gap-1.5 sm:col-span-1 sm:justify-end">
+                        <Button size="sm" href={`${documentsApi}/${d.id}`} target="_blank" rel="noopener">Abrir</Button>
+                        <Button size="sm" href={`${documentsApi}/${d.id}?modo=baixar`}>Baixar</Button>
+                        {canAttach && (
+                          <form method="POST" action={withReturn(documentsApi, volta)} class="contents">
+                            <input type="hidden" name="acao" value="apagar" />
+                            <input type="hidden" name="documento" value={d.id} />
+                            <button
+                              type="submit"
+                              class={`js-confirm-delete ${buttonClass("danger-quiet", "sm")}`}
+                              data-confirm-title="Apagar o documento?"
+                              data-confirm-message={`${DOCUMENT_KIND_LABEL[d.kind]}${d.description ? ` (${d.description})` : ""} sai da ficha e o arquivo é apagado. Não dá para desfazer.`}
+                              data-confirm-label="Apagar"
+                            >
+                              Apagar
+                            </button>
+                          </form>
+                        )}
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+            {shownDocuments.length > 0 && (
+              <div class="flex flex-wrap items-center gap-2">
+                <div class="flex flex-wrap gap-2" data-selection hidden>
+                  <Button size="sm" data-download-selected>Baixar selecionados</Button>
+                  <Button size="sm" data-share-selected hidden>Compartilhar</Button>
+                </div>
+                <p class={hint} data-selection-hint>Marque os documentos para baixar ou compartilhar vários de uma vez.</p>
+              </div>
+            )}
+            {documents.length === 0 && <p class="py-3 text-[15px] text-ink-soft">Nenhum documento. Anexe a carteirinha, a identidade ou os pedidos em foto ou PDF.</p>}
+
+          </div>
         )
       }
     </section>
@@ -376,102 +514,6 @@ const canBook = patient.isActive && !anonymized;
                 <Button href={here} data-edit-cancel>Cancelar</Button>
               </div>
             </form>
-          </EditCard>
-        )
-      }
-
-      {
-        !anonymized && (
-          <EditCard id="documentos" title={`Documentos (${documents.length})`} editable={false}>
-            {documents.length > 0 && (
-              <>
-                <ul class="flex flex-col divide-y divide-[#e6ecea]" data-documents={documentsApi}>
-                  {documents.map((d) => {
-                    const by = d.createdBy ? actorText(documentActors.get(d.createdBy)) : null;
-                    return (
-                      <li class="flex items-start gap-2.5 py-2.5">
-                        <input
-                          type="checkbox"
-                          class="mt-1 h-[18px] w-[18px] shrink-0 accent-brand"
-                          aria-label={`Selecionar ${DOCUMENT_KIND_LABEL[d.kind]}`}
-                          data-document={d.id}
-                          data-name={d.fileName}
-                          data-type={d.mimeType}
-                        />
-                        <div class="flex min-w-0 flex-1 flex-col gap-0.5">
-                          <span class="text-[15px] font-semibold text-ink">{DOCUMENT_KIND_LABEL[d.kind]}</span>
-                          {d.description && <span class="text-[15px] break-words text-ink">{d.description}</span>}
-                          <span class="text-[13.5px] text-ink-soft">
-                            {[formatInstant(d.createdAt, clinic.timezone, "dd/MM/yyyy"), by, `${fileType(d.mimeType)}, ${fileSize(d.sizeBytes)}`].filter(Boolean).join(" · ")}
-                          </span>
-                          <span class="mt-1.5 flex flex-wrap gap-2">
-                            <Button size="sm" href={`${documentsApi}/${d.id}`} target="_blank" rel="noopener">Abrir</Button>
-                            <Button size="sm" href={`${documentsApi}/${d.id}?modo=baixar`}>Baixar</Button>
-                            {canAttach && (
-                              <form method="POST" action={withReturn(documentsApi, volta)} class="contents">
-                                <input type="hidden" name="acao" value="apagar" />
-                                <input type="hidden" name="documento" value={d.id} />
-                                <button
-                                  type="submit"
-                                  class={`js-confirm-delete ${buttonClass("danger-quiet", "sm")}`}
-                                  data-confirm-title="Apagar o documento?"
-                                  data-confirm-message={`${DOCUMENT_KIND_LABEL[d.kind]}${d.description ? ` (${d.description})` : ""} sai da ficha e o arquivo é apagado. Não dá para desfazer.`}
-                                  data-confirm-label="Apagar"
-                                >
-                                  Apagar
-                                </button>
-                              </form>
-                            )}
-                          </span>
-                        </div>
-                      </li>
-                    );
-                  })}
-                </ul>
-                <div class="mt-2 flex flex-wrap gap-2" data-selection hidden>
-                  <Button size="sm" data-download-selected>Baixar selecionados</Button>
-                  <Button size="sm" data-share-selected hidden>Compartilhar</Button>
-                </div>
-                <p class={hint}>Marque os documentos para baixar ou compartilhar vários de uma vez.</p>
-              </>
-            )}
-            {documents.length === 0 && <p class={hint}>Nenhum documento. Anexe a carteirinha, a identidade ou os pedidos em foto ou PDF.</p>}
-            {canAttach && (
-              <details class="group mt-3" data-attach-box>
-                <summary class={`${buttonClass("primary", "sm")} cursor-pointer list-none group-open:hidden [&::-webkit-details-marker]:hidden`}>Anexar documento</summary>
-                <form class="flex flex-col gap-3 rounded-lg border border-line p-3" data-attach={documentsApi} novalidate>
-                  <div class={field}>
-                    <label for="document-kind" class={fieldLabel}>Tipo</label>
-                    <select id="document-kind" name="kind" required class={CONTROL}>
-                      <option value="">Escolha</option>
-                      {DOCUMENT_KINDS.map((k) => <option value={k.key}>{k.label}</option>)}
-                    </select>
-                  </div>
-                  <div class={field}>
-                    <label for="document-description" class={fieldLabel}>Descrição (opcional)</label>
-                    <input id="document-description" name="description" maxlength={DESCRIPTION_MAX} placeholder="Ex.: Carteirinha Unimed 2026" class={CONTROL} />
-                  </div>
-                  <div class={field}>
-                    <span class={fieldLabel}>Arquivo</span>
-                    <div class="flex flex-wrap items-center gap-2.5">
-                      <input id="document-file" name="file" type="file" required accept={["image/*", ...DOCUMENT_MIME_TYPES].join(",")} class="peer sr-only" />
-                      <label for="document-file" class={`${buttonClass("secondary", "sm")} cursor-pointer peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-brand`}>
-                        Escolher arquivo
-                      </label>
-                      <span class="min-w-0 text-[15px] break-all text-ink-soft" data-file-name>Nenhum arquivo escolhido</span>
-                    </div>
-                    <p class={hint}>Foto (JPG, PNG ou HEIC) ou PDF, até 10 MB. No celular, dá para tirar a foto na hora.</p>
-                  </div>
-                  <p class="hidden text-[15px] font-semibold text-can-800" role="alert" data-attach-error></p>
-                  <div class="flex flex-wrap items-center gap-2">
-                    <Button type="submit" variant="primary" data-attach-submit>Anexar</Button>
-                    <Button data-attach-cancel>Cancelar</Button>
-                    <span class="text-[15px] text-ink-soft" aria-live="polite" data-attach-status></span>
-                  </div>
-                </form>
-                <noscript><p class={hint}>Para anexar, ative o JavaScript do navegador.</p></noscript>
-              </details>
-            )}
           </EditCard>
         )
       }
@@ -796,8 +838,10 @@ const canBook = patient.isActive && !anonymized;
       return ((await response.json()) as { url: string }).url;
     };
     const canShareFiles = typeof navigator.canShare === "function" && navigator.canShare({ files: [new File([""], "teste.pdf", { type: "application/pdf" })] });
+    const selectionHint = document.querySelector<HTMLElement>("[data-selection-hint]");
     list.addEventListener("change", () => {
       bar.hidden = selected().length === 0;
+      if (selectionHint) selectionHint.hidden = !bar.hidden;
       share.hidden = !canShareFiles;
     });
     bar.querySelector<HTMLButtonElement>("[data-download-selected]")!.addEventListener("click", async () => {

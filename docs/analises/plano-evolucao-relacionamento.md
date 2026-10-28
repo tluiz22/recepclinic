@@ -893,3 +893,11 @@ ficava sem estilo) e "Anexar documento", Abrir, Baixar e Apagar pareciam links. 
 nome do arquivo escolhido ao lado, "Anexar documento" como botão (com "Cancelar" no formulário) e Abrir, Baixar e
 Apagar como botões. Conferido no navegador local, no computador e na largura do celular.
 
+**Ajuste do cliente (28/out): Documentos numa aba.** Uma lista longa não cabia bem na coluna da direita. Escolha do
+cliente (entre aba, cartão resumido com tela própria e menu lateral): aba **"Documentos (n)"** na área larga, ao
+lado de "Próximos" e "Anteriores e cancelados" (`?aba=documentos`), com filtro por tipo (só quando há mais de um
+tipo), "Anexar documento" no alto e as ações na mesma linha; o cartão da direita saiu; anexar e apagar voltam para a
+aba. A área passou a se chamar "Atendimentos e documentos" (as Anotações da P2 entram no mesmo lugar). **Defeito
+achado no celular e corrigido:** a grade das colunas crescia com as abas e a página ganhava rolagem lateral (462 px
+numa tela de 375); agora a coluna fica na largura da tela e as abas rolam dentro delas.
+
