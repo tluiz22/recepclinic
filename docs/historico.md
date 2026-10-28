@@ -494,4 +494,16 @@ retomada fica no README). Para achar algo, buscar por data (ex.: `27/out`), fase
     até **90 dias** para trás; vira aviso na confirmação ("essa data e horário já passaram", botão "assim mesmo"), sem
     mensagem ao paciente; fica **Marcado**, com Compareceu/Faltou (pendência no Resumo do Dia); o **Remarcar** segue só
     futuro; **série** só começa no futuro ("Repetir" escondido com data passada). Continuam travados: horário ocupado,
-    bloqueio, duplicidade e turma lotada.
+    bloqueio e turma lotada. **Revisto pelo cliente (28/out):** a duplicidade só trava data futura (o lançamento
+    no passado passa mesmo com consulta futura na mesma agenda).
+  - **C4.2 validada pelo cliente no staging em 28/out.**
+  - **C4.3** (28/out): `checkFreeTime` com `pastFrom` (data passada vira o aviso `PAST_WARNING`; mais de
+    `PAST_LIMIT_DAYS` = 90 dias, recusada); `pastLimit` no Marcar (rota) e no Alterar (até 90 dias ou até o horário
+    atual, se mais antigo). Outro horário aceita data passada no Marcar e no Alterar (o Remarcar, não), e continua
+    aparecendo quando o paciente tem atendimento futuro na agenda (a duplicidade só vale no futuro, também em
+    `bookAppointment` e `changeAppointment`). Série com data passada: "Repetir" some e a rota recusa. Aviso do WhatsApp
+    some com data passada. Alterar vale para tudo menos o cancelado (botão no "Mais" do que já passou); com
+    comparecimento registrado, a data fica no passado; lembrete e presença só zeram no ativo. Pagamento registrado com
+    valor novo: a confirmação diz quanto falta ou quanto foi pago a mais (`paymentChangeNote`). Migração
+    `20261101120000_alterar_passado` (`change_group_session` aceita o atendimento registrado). Staging: simulação →
+    aplicação → conferência em 28/out.

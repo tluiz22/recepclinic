@@ -2,6 +2,7 @@
 // 17/out/2026; S-01 do teste da R0 a R4): dizem o dia, o horário, com quem e
 // onde, e, na série, a frequência, o começo e até quando. Usados no servidor
 // (texto de cada horário) e no navegador (a série muda com o formulário).
+import { formatCentsBRL } from "./money";
 import { frequencyLabel } from "./seriesLabels";
 
 const WEEKDAYS_PLURAL = ["domingos", "segundas", "terças", "quartas", "quintas", "sextas", "sábados"];
@@ -67,4 +68,17 @@ export function whatsappNoticeText(who: string, action: "marcacao" | "alteracao"
  */
 export function sendsPatientMessages(clinicStatus: string, connectionStatus: string | null | undefined): boolean {
   return clinicStatus === "active" && connectionStatus === "connected";
+}
+
+/**
+ * Alterar com pagamento registrado (C4.3; cliente, 28/out/2026): os pagamentos
+ * não mudam; com valor novo, a confirmação diz quanto falta ou quanto foi pago a mais.
+ */
+export function paymentChangeNote(paidCents: number, beforeCents: number | null, afterCents: number | null): string {
+  if (paidCents <= 0 || afterCents === null || afterCents === beforeCents) return "";
+  const paid = `Já há ${formatCentsBRL(paidCents)} em pagamentos registrados, que não mudam.`;
+  if (paidCents === afterCents) return `${paid} Com o novo valor (${formatCentsBRL(afterCents)}), o atendimento fica pago.`;
+  return paidCents > afterCents
+    ? `${paid} Com o novo valor (${formatCentsBRL(afterCents)}), fica ${formatCentsBRL(paidCents - afterCents)} pago a mais: confira no Financeiro.`
+    : `${paid} Com o novo valor (${formatCentsBRL(afterCents)}), faltam ${formatCentsBRL(afterCents - paidCents)}.`;
 }

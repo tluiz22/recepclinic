@@ -2,7 +2,7 @@ import { addDays, localDateOf, localTimeOf, todayIn, weekdayOf } from "../../cli
 import type { Enums, Json } from "../../supabase/database.types";
 import type { DbClient } from "../clients";
 import { DataError, fromDbError, unwrap, unwrapAllIn, unwrapOne } from "../errors";
-import { checkFreeTime, getFreeSlots, loadSchedulingPlan } from "./slots";
+import { checkFreeTime, getFreeSlots, loadSchedulingPlan, pastLimit } from "./slots";
 import { logError } from "../../log";
 
 // Marcar, remarcar, cancelar, presença e comparecimento (F3.6a), para a tela
@@ -384,7 +384,8 @@ export type BookInput = {
  * horário, até fora da lista (checkFreeTime); os avisos precisam ser aceitos.
  * O bot e o link de agendamento não passam isto: só a lista.
  */
-type AnyTimeInput = { anyTime?: boolean; acceptedWarnings?: boolean };
+/** `pastFrom`: a equipe marca ou altera no passado até essa data (Marcar e Alterar; cliente, 28/out/2026). */
+type AnyTimeInput = { anyTime?: boolean; acceptedWarnings?: boolean; pastFrom?: Date | null };
 
 /** Horário da lista ou, para a equipe, qualquer horário que passe em checkFreeTime. O local do horário. */
 async function resolveIndividualSlot(
@@ -398,7 +399,7 @@ async function resolveIndividualSlot(
   const slot = slots.find((s) => s.start.getTime() === query.start.getTime());
   if (slot) return slot.locationId;
   if (!input.anyTime || !query.locationId) throw new DataError("conflict", "Atendimento: horário não está mais livre", { start: "Horário não está mais livre" });
-  const check = await checkFreeTime(db, clinicId, { ...query, locationId: query.locationId }, now);
+  const check = await checkFreeTime(db, clinicId, { ...query, locationId: query.locationId, pastFrom: input.pastFrom }, now);
   if (!check.ok) throw new DataError("conflict", `Atendimento: ${check.reason}`, { start: check.reason });
   if (check.warnings.length && !input.acceptedWarnings) {
     throw new DataError("invalid", "Atendimento: confirme os avisos do horário", { start: check.warnings.join(" ") });
@@ -442,7 +443,8 @@ export async function bookAppointment(db: DbClient, clinicId: string, input: Boo
   );
   if (!patient.is_active) throw new DataError("invalid", "Atendimento: paciente desativado", { patientId: "Paciente desativado" });
 
-  await assertNotDuplicate(db, clinicId, { ...input, category: plan.category }, now);
+  // Duplicidade é de atendimento futuro: o lançamento no passado não trava (cliente, 28/out/2026).
+  if (input.start > now) await assertNotDuplicate(db, clinicId, { ...input, category: plan.category }, now);
 
   const date = localDateOf(input.start, plan.timeZone);
   let locationId: string;
@@ -655,13 +657,19 @@ export type ChangeInput = {
 
 export type ChangeResult = { appointment: Appointment; scheduleChanged: boolean; returnWarnings: string[] };
 
+/** Pode ser alterado: qualquer um, menos o cancelado (C4.3; cliente, 28/out/2026). */
+const CHANGEABLE: AppointmentStatus[] = ["scheduled", "confirmed", "completed", "no_show"];
+
 /**
  * Corrige serviço, agenda, local, convênio, endereço, data e hora de um
- * atendimento marcado. O horário é conferido como no Marcar da equipe
- * (qualquer horário, com os avisos aceitos), sem contar o próprio atendimento.
- * Mudou data, hora, agenda ou local: o lembrete e a presença recomeçam
- * (`scheduleChanged`, e quem chama avisa o paciente). O valor sai do gatilho
- * (app.appointment_defaults) quando muda o serviço ou o local.
+ * atendimento (menos o cancelado). O horário é conferido como no Marcar da
+ * equipe (qualquer horário, com os avisos aceitos; no passado, até 90 dias ou
+ * até o horário atual, se for mais antigo), sem contar o próprio atendimento.
+ * Com o comparecimento registrado, fica no passado. Ativo e com data, hora,
+ * agenda ou local novos: o lembrete e a presença recomeçam (`scheduleChanged`;
+ * quem chama avisa o paciente, se for no futuro). O valor sai do gatilho
+ * (app.appointment_defaults) quando muda o serviço ou o local; os pagamentos
+ * registrados não mudam.
  */
 export async function changeAppointment(
   db: DbClient,
@@ -671,15 +679,20 @@ export async function changeAppointment(
   now: Date = new Date(),
 ): Promise<ChangeResult> {
   const current = await getAppointment(db, clinicId, id);
-  if (!ACTIVE.includes(current.status) || current.scheduledAt <= now) {
-    throw new DataError("invalid", "Atendimento: só atendimento marcado e ainda por vir pode ser alterado", { status: "Atendimento não pode ser alterado" });
+  if (!CHANGEABLE.includes(current.status)) {
+    throw new DataError("invalid", "Atendimento: cancelado não pode ser alterado", { status: "Atendimento cancelado" });
+  }
+  const isActive = ACTIVE.includes(current.status);
+  if (!isActive && input.start > now) {
+    throw new DataError("invalid", "Atendimento: com o comparecimento registrado, a data fica no passado", { start: "Escolha uma data que já passou" });
   }
   const plan = await loadSchedulingPlan(db, clinicId, { serviceId: input.serviceId, agendaId: input.agendaId, locationId: input.locationId });
   if (!plan) throw new DataError("invalid", "Atendimento: serviço inativo ou não atendido nesta agenda", { serviceId: "Serviço não atendido nesta agenda" });
 
   // Sessão de série não passa pela trava (decisão de 04/out, F3.6b). Mesmo
-  // serviço e mesma agenda não criam duplicidade nova: a trava só vale na troca.
-  if (current.seriesId === null && (input.serviceId !== current.serviceId || input.agendaId !== current.agendaId)) {
+  // serviço e mesma agenda não criam duplicidade nova: a trava só vale na troca,
+  // e só para data futura (cliente, 28/out/2026).
+  if (current.seriesId === null && input.start > now && (input.serviceId !== current.serviceId || input.agendaId !== current.agendaId)) {
     await assertNotDuplicate(db, clinicId, { patientId: current.patientId, serviceId: input.serviceId, agendaId: input.agendaId, category: plan.category }, now, id);
   }
 
@@ -694,7 +707,11 @@ export async function changeAppointment(
       db,
       clinicId,
       { serviceId: input.serviceId, agendaId: input.agendaId, locationId: input.locationId, start: input.start, date, ignoreAppointmentId: id },
-      { anyTime: true, acceptedWarnings: input.acceptedWarnings },
+      {
+        anyTime: true,
+        acceptedWarnings: input.acceptedWarnings,
+        pastFrom: new Date(Math.min(pastLimit(plan.timeZone, now).getTime(), current.scheduledAt.getTime())),
+      },
       now,
     );
   }
@@ -719,7 +736,7 @@ export async function changeAppointment(
     insurance_plan_id: input.insurancePlanId,
     home_visit_address: isHomeVisit ? homeVisitAddress : null,
     origin_appointment_id: origin?.id ?? null,
-    ...(scheduleChanged ? { rescheduled_at: now.toISOString(), rescheduled_via: "admin" as const, rescheduled_by: input.actorId, ...PRESENCE_RESET } : {}),
+    ...(scheduleChanged && isActive ? { rescheduled_at: now.toISOString(), rescheduled_via: "admin" as const, rescheduled_by: input.actorId, ...PRESENCE_RESET } : {}),
   };
   const trail = trailContext({ channel: "admin", event: "changed", actor: input.actorId, details: { changes: input.changes } });
 
@@ -753,7 +770,7 @@ export async function changeAppointment(
       })
       .eq("clinic_id", clinicId)
       .eq("id", id)
-      .in("status", ACTIVE)
+      .in("status", CHANGEABLE)
       .select("id")
       .maybeSingle();
     if (error && (error as { code?: string }).code === "23P01") {

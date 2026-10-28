@@ -42,6 +42,8 @@ import {
   getNextAvailableDates,
   getNextAvailableDatesAnyAgenda,
   isAgendaOpenOn,
+  pastLimit,
+  PAST_LIMIT_DAYS,
 } from "../../../lib/data/agenda/slots";
 import {
   findBlockingAppointment,
@@ -58,6 +60,7 @@ import { listAgendas } from "../../../lib/data/config/agendas";
 import { getClinicSettings } from "../../../lib/data/config/clinic";
 import { listLocations } from "../../../lib/data/config/locations";
 import { listInsurancePlans } from "../../../lib/data/config/insurance";
+import { listAppointmentPayments } from "../../../lib/data/payments";
 import { listServices, servicePriceAt } from "../../../lib/data/config/services";
 import { getWhatsappConnection } from "../../../lib/data/whatsapp/connection";
 import { formatCentsBRL } from "../../../lib/money";
@@ -82,11 +85,11 @@ const FORM = "marcar-form";
 // Estado da tela, todo no endereço. `date`: o dia pedido; `de`: o primeiro dia
 // da faixa de dias.
 const validDate = (value: string | null) => (value && isCalendarDate(value) ? value : "");
-// Alterar: só atendimento marcado e ainda por vir (C4.2).
+// Alterar: qualquer atendimento, menos o cancelado (C4.3).
 const alterarId = isUuid(params.get("alterar")) ? params.get("alterar")! : "";
 const editing = alterarId ? await getAppointment(db, clinic.clinicId, alterarId).catch(() => null) : null;
-if (alterarId && (!editing || !(editing.status === "scheduled" || editing.status === "confirmed") || editing.scheduledAt <= new Date())) {
-  setFlash(Astro.cookies, { tone: "error", text: "Só atendimento marcado e ainda por vir pode ser alterado." });
+if (alterarId && (!editing || editing.status === "canceled")) {
+  setFlash(Astro.cookies, { tone: "error", text: "Atendimento cancelado não pode ser alterado." });
   return Astro.redirect(volta ?? "/admin/agenda");
 }
 const state = {
@@ -173,11 +176,17 @@ const slotData = (agendaId: string, locationId: string, start: Date) => {
     agenda: agendaName.get(agendaId) ?? "",
     location: location.get(locationId)?.name ?? "Local",
     price: price !== null ? formatCentsBRL(price) : undefined,
+    priceCents: price ?? undefined,
     when: whenText(start, clinic.timezone),
   };
 };
-// Alterar: o próprio atendimento não ocupa horário.
+// Alterar: o próprio atendimento não ocupa horário. Data passada (Marcar e
+// Alterar; cliente, 28/out/2026): até 90 dias, ou até o horário atual do
+// atendimento, se for mais antigo.
 const ignore = { ignoreAppointmentId: editing?.id ?? null };
+const pastFromTime = Math.min(pastLimit(clinic.timezone).getTime(), editing?.scheduledAt.getTime() ?? Infinity);
+const pastFrom = new Date(pastFromTime);
+const pastMin = localDateOf(pastFrom, clinic.timezone);
 if (patient && service && searchAgendas.length) {
   if (isGroup) {
     const sessions = (
@@ -232,22 +241,27 @@ if (patient && service && searchAgendas.length) {
 }
 // Outro horário (cliente, 28/out/2026): a equipe marca em qualquer dia e hora;
 // conferido aqui (os avisos aparecem antes) e de novo ao marcar.
-const showOther = !!patient && !!service && !isGroup && searchAgendas.length > 0;
+// Com atendimento futuro na agenda (duplicidade), o Outro horário continua
+// para o passado: a trava é só de data futura (cliente, 28/out/2026).
+const choiceAgendas = agendaChoice === ANY ? serviceAgendaIds : [agendaChoice];
+const showOther = !!patient && !!service && !isGroup && choiceAgendas.length > 0;
 const otherQuery = readOtherTime(params);
 const otherLocations = (service?.locations ?? []).filter((l) => location.has(l.locationId)).map((l) => ({ id: l.locationId, name: location.get(l.locationId)!.name }));
-const otherAgendas = searchAgendas.map((id) => ({ id, name: agendaName.get(id) ?? "" }));
+const otherAgendas = choiceAgendas.map((id) => ({ id, name: agendaName.get(id) ?? "" }));
 let otherOption: SlotOption | null = null;
 let otherError: string | null = null;
 let otherWarnings: string[] = [];
 if (showOther && otherQuery) {
-  const agendaId = pickOne(otherQuery.agendaId, searchAgendas);
+  const agendaId = pickOne(otherQuery.agendaId, choiceAgendas);
   const locationId = pickOne(otherQuery.locationId, otherLocations.map((l) => l.id));
   if (!agendaId) otherError = "Escolha com quem.";
   else if (!locationId) otherError = "Escolha o local.";
   else {
     const start = toInstant(otherQuery.date, otherQuery.time, clinic.timezone);
-    const check = await checkFreeTime(db, clinic.clinicId, { serviceId: service!.id, agendaId, locationId, start, ...ignore });
+    const check = await checkFreeTime(db, clinic.clinicId, { serviceId: service!.id, agendaId, locationId, start, pastFrom, ...ignore });
+    const blocking = start.getTime() > Date.now() ? blockedBy.get(agendaId) : undefined;
     if (!check.ok) otherError = check.reason;
+    else if (blocking) otherError = `${patient!.fullName} já tem atendimento marcado: ${describeUpcoming(blocking)}. Numa data futura, remarque esse atendimento; numa data passada, pode lançar.`;
     else {
       otherWarnings = check.warnings;
       const when = `${dayLabel(otherQuery.date)} às ${otherQuery.time}`;
@@ -297,7 +311,7 @@ if (editing && service && patient && searchAgendas.length) {
     }
   } else if (!keepLocation) keepError = `${service.name} não é feito no local atual. Escolha um horário abaixo ou o local no "Outro horário".`;
   else {
-    const check = await checkFreeTime(db, clinic.clinicId, { serviceId: service.id, agendaId: keepAgenda, locationId: keepLocation, start: editing.scheduledAt, ...ignore });
+    const check = await checkFreeTime(db, clinic.clinicId, { serviceId: service.id, agendaId: keepAgenda, locationId: keepLocation, start: editing.scheduledAt, pastFrom, ...ignore });
     if (!check.ok) keepError = `O horário atual não serve: ${check.reason} Escolha um horário abaixo.`;
     else
       keepOption = {
@@ -356,6 +370,8 @@ const canRepeat = clinic.features.includes("series") && !!patient && !!service &
 const locked = !patient;
 const showAgendaStep = !locked && !!service && serviceAgendaIds.length > 1;
 const canBook = !locked && !!service && searchAgendas.length > 0;
+// Pode enviar: com horários, ou só pelo Outro horário (no passado, com atendimento futuro na agenda).
+const canSubmit = canBook || !!otherOption;
 const stepOf = (done: boolean, isCurrent: boolean) => (done ? "done" : isCurrent ? "current" : "todo") as "done" | "current" | "todo";
 const timeStep = showAgendaStep ? 4 : 3;
 const chip = (active: boolean) =>
@@ -400,6 +416,11 @@ const confirmBefore =
         }),
       )
     : "";
+// Pagamentos já registrados (C4.3): não mudam; a confirmação avisa se o valor novo fica diferente.
+const paidCents =
+  editing && clinic.features.includes("finance")
+    ? (await listAppointmentPayments(db, clinic.clinicId, editing.id).catch(() => [])).filter((p) => !p.deletedAt).reduce((sum, p) => sum + p.amountCents, 0)
+    : 0;
 const planOptions = plans.filter((p) => p.isActive || p.id === editing?.insurancePlanId);
 const homeAddress = editing?.homeVisitAddress ?? contact?.defaultHomeAddress ?? "";
 const verb = editing ? "Alterar" : "Marcar";
@@ -630,27 +651,30 @@ const remarcarHref = (a: UpcomingAppointment) => `/admin/agenda/remarcar?id=${a.
               {(isGroup || strip.selected) && slotOptions.length === 0 && (
                 <p class="text-[15px] text-ink-soft">{isGroup ? "Nenhuma turma com vaga." : "Nenhum horário livre nesta data."}</p>
               )}
-              {showOther && (
-                <OtherTime
-                  action="/admin/agenda/marcar"
-                  hidden={{ ...state, agenda_id: agendaChoice }}
-                  form={FORM}
-                  min={today}
-                  date={otherQuery?.date ?? strip.selected ?? (state.date || today)}
-                  time={otherQuery?.time ?? ""}
-                  locations={otherLocations}
-                  locationId={otherQuery?.locationId ?? ""}
-                  agendas={otherAgendas}
-                  agendaId={otherQuery?.agendaId ?? ""}
-                  open={!!otherQuery}
-                  error={otherError}
-                  option={otherOption}
-                  warnings={otherWarnings}
-                />
-              )}
             </div>
           )
         }
+        {(fullBlock || canBook) && showOther && (
+          <div class="mt-4">
+            <OtherTime
+              action="/admin/agenda/marcar"
+              hidden={{ ...state, agenda_id: agendaChoice }}
+              form={FORM}
+              min={pastMin}
+              pastDays={PAST_LIMIT_DAYS}
+              date={otherQuery?.date ?? strip.selected ?? (state.date || today)}
+              time={otherQuery?.time ?? ""}
+              locations={otherLocations}
+              locationId={otherQuery?.locationId ?? ""}
+              agendas={otherAgendas}
+              agendaId={otherQuery?.agendaId ?? ""}
+              open={!!otherQuery}
+              error={otherError}
+              option={otherOption}
+              warnings={otherWarnings}
+            />
+          </div>
+        )}
       </StepCard>
     </div>
 
@@ -742,11 +766,11 @@ const remarcarHref = (a: UpcomingAppointment) => `/admin/agenda/remarcar?id=${a.
         }
         {!patient && <p class="text-sm text-pend-800">Escolha o {vocabulary.patient} para marcar.</p>}
         {
-          canBook && (
+          canSubmit && (
             <p class="text-sm text-ink-soft">
               {editing
-                ? `${sends ? `Se mudar data, hora, profissional ou local, ${recipient} é avisado pelo WhatsApp. ` : ""}Antes, uma confirmação com o que muda.`
-                : `${confirmNotice ? `Ao marcar, ${recipient} é avisado pelo WhatsApp. ` : ""}Antes, uma confirmação com os dados.`}
+                ? `${sends ? `Se mudar data, hora, profissional ou local para o futuro, ${recipient} é avisado pelo WhatsApp. ` : ""}Antes, uma confirmação com o que muda.`
+                : `${confirmNotice ? `Ao marcar numa data futura, ${recipient} é avisado pelo WhatsApp. ` : ""}Antes, uma confirmação com os dados.`}
             </p>
           )
         }
@@ -763,9 +787,11 @@ const remarcarHref = (a: UpcomingAppointment) => `/admin/agenda/remarcar?id=${a.
           data-confirm-details={confirmBase}
           data-confirm-base={confirmBase}
           data-confirm-insurance={confirmInsurance}
-          data-confirm-notice={editing ? "" : confirmNotice}
-          data-alteration-notice={editing ? confirmNotice : undefined}
+          data-confirm-notice=""
+          data-whatsapp-notice={confirmNotice}
           data-confirm-before={confirmBefore || undefined}
+          data-before-price-cents={editing?.priceCents ?? undefined}
+          data-paid-cents={paidCents || undefined}
           data-confirm-label="Marcar"
           data-confirm-tone="primary"
         >
@@ -777,7 +803,7 @@ const remarcarHref = (a: UpcomingAppointment) => `/admin/agenda/remarcar?id=${a.
   </div>
 
   {
-    canBook && (
+    canSubmit && (
       <>
         <div class="h-20 sm:hidden" aria-hidden="true" />
         <div class="fixed inset-x-0 bottom-[calc(61px+env(safe-area-inset-bottom))] z-10 flex items-center gap-3 border-t border-line bg-white px-4 py-2.5 shadow-[0_-4px_14px_rgba(18,48,42,.08)] sm:hidden">
@@ -798,9 +824,11 @@ const remarcarHref = (a: UpcomingAppointment) => `/admin/agenda/remarcar?id=${a.
             data-confirm-details={confirmBase}
             data-confirm-base={confirmBase}
             data-confirm-insurance={confirmInsurance}
-            data-confirm-notice={editing ? "" : confirmNotice}
-            data-alteration-notice={editing ? confirmNotice : undefined}
+            data-confirm-notice=""
+            data-whatsapp-notice={confirmNotice}
             data-confirm-before={confirmBefore || undefined}
+            data-before-price-cents={editing?.priceCents ?? undefined}
+            data-paid-cents={paidCents || undefined}
             data-confirm-label="Marcar"
             data-confirm-tone="primary"
           >
@@ -814,6 +842,7 @@ const remarcarHref = (a: UpcomingAppointment) => `/admin/agenda/remarcar?id=${a.
   <script>
     import { SERIES_SKIP_NOTE, seriesEndText, seriesWhenText, type SeriesEnd } from "../../../lib/confirmText";
     import { changesSchedule, compareSnapshots, type AppointmentSnapshot } from "../../../lib/appointmentChanges";
+    import { paymentChangeNote } from "../../../lib/confirmText";
     // Resumo: o horário escolhido (quando e onde) e o endereço, só para local domiciliar.
     const box = document.querySelector<HTMLElement>("[data-home-address]");
     // O botão só se habilita com o horário escolhido (proposta aprovada da R4;
@@ -837,8 +866,17 @@ const remarcarHref = (a: UpcomingAppointment) => `/admin/agenda/remarcar?id=${a.
     const repeatFields = document.querySelector<HTMLElement>("[data-repeat-fields]");
     const submits = document.querySelectorAll<HTMLButtonElement>("button[data-marcar]");
     const firstTitle = submits[0]?.dataset.confirmTitle;
+    // Série só começa no futuro (cliente, 28/out/2026): com data passada, o "Repetir" some.
+    const chosenIsPast = () => {
+      const chosen = document.querySelector<HTMLInputElement>("input[name='slot']:checked");
+      const start = chosen?.value.split("|")[1]; // agenda|início ISO|local
+      return !!start && new Date(start).getTime() <= Date.now();
+    };
     const syncRepeat = () => {
       if (!repeat) return;
+      const box = repeat.closest("fieldset");
+      if (box) box.hidden = chosenIsPast();
+      if (chosenIsPast()) repeat.checked = false;
       if (repeatFields) repeatFields.hidden = !repeat.checked;
       submits.forEach((submit) => {
         submit.dataset.confirmTitle = repeat?.checked ? "Criar a série?" : firstTitle;
@@ -846,6 +884,7 @@ const remarcarHref = (a: UpcomingAppointment) => `/admin/agenda/remarcar?id=${a.
       });
     };
     repeat?.addEventListener("change", syncRepeat);
+    document.querySelectorAll("input[name='slot']").forEach((input) => input.addEventListener("change", syncRepeat));
     syncRepeat();
 
     // Confirmação com todos os dados (cliente, 28/out/2026): com quem, onde,
@@ -890,9 +929,15 @@ const remarcarHref = (a: UpcomingAppointment) => `/admin/agenda/remarcar?id=${a.
           };
           const rows = compareSnapshots(before, after, details[0]?.label);
           submit.dataset.confirmDetails = JSON.stringify(rows);
-          submit.dataset.confirmNotice = changesSchedule(before, after) ? (submit.dataset.alterationNotice ?? "") : "";
+          // Mensagem ao paciente só com data, hora, agenda ou local novos, e no futuro.
+          submit.dataset.confirmNotice = changesSchedule(before, after) && !chosenIsPast() ? (submit.dataset.whatsappNotice ?? "") : "";
           const nothing = rows.every((row) => row.before === undefined);
-          submit.dataset.confirmMessage = [nothing ? "Nada foi mudado: o atendimento continua igual." : "", warnings].filter(Boolean).join(" ");
+          const payment = paymentChangeNote(
+            Number(submit.dataset.paidCents) || 0,
+            submit.dataset.beforePriceCents ? Number(submit.dataset.beforePriceCents) : null,
+            chosen.dataset.priceCents ? Number(chosen.dataset.priceCents) : null,
+          );
+          submit.dataset.confirmMessage = [nothing ? "Nada foi mudado: o atendimento continua igual." : "", warnings, payment].filter(Boolean).join(" ");
           return;
         }
         if (chosen.dataset.home === "1" && address) details.push({ label: "Endereço", value: address });
@@ -901,6 +946,7 @@ const remarcarHref = (a: UpcomingAppointment) => `/admin/agenda/remarcar?id=${a.
         if (insurance) details.push({ label: "Convênio", value: insurance === "Particular" && price ? `Particular · ${price}` : insurance });
         else if (price) details.push({ label: "Valor", value: price });
         submit.dataset.confirmDetails = JSON.stringify(details);
+        submit.dataset.confirmNotice = chosenIsPast() ? "" : (submit.dataset.whatsappNotice ?? "");
         submit.dataset.confirmMessage = [series ? SERIES_SKIP_NOTE : "", warnings].filter(Boolean).join(" ");
       });
     };

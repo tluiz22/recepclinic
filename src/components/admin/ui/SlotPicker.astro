@@ -24,6 +24,7 @@ export interface SlotOption {
   agenda?: string;
   location?: string;
   price?: string;
+  priceCents?: number;
   /** Alterar (C4): "Sexta-feira, 06/11 às 14:00", para comparar com o horário atual. */
   when?: string;
 }
@@ -75,6 +76,7 @@ const grid = byPeriod ? "grid-cols-3 sm:grid-cols-4 lg:grid-cols-5" : "grid-cols
               data-agenda={slot.agenda}
               data-location={slot.location}
               data-price={slot.price}
+              data-price-cents={slot.priceCents}
               data-when={slot.when}
               class="sr-only"
             />

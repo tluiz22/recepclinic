@@ -4,10 +4,12 @@ import {
   cancelAppointment,
   changeAppointment,
   getAppointment,
+  recordAttendance,
   setPresenceConfirmed,
   type Appointment,
   type ChangeInput,
 } from "../../src/lib/data/agenda/appointments";
+import { checkFreeTime, PAST_WARNING, pastLimit } from "../../src/lib/data/agenda/slots";
 import { adminClient } from "./helpers";
 import { asDb, at, codeOf, MON1, MON3, NOW, setupAgendaClinic, type AgendaFixture, type AgendaIds } from "./agendaFixture";
 import type { TestUser } from "./helpers";
@@ -123,10 +125,41 @@ describe("alterar atendimento", () => {
     expect((await trail(a.id)).map((e) => e.event_type)).toEqual(["created", "changed"]);
   });
 
-  it("atendimento que já passou ou cancelado não é alterado (por enquanto)", async () => {
+  it("cancelado não é alterado", async () => {
     const a = await book(ids.p2, ids.consulta, ids.agendaDra, at(MON1, "08:00"), { locationId: ids.office });
-    expect(await codeOf(() => change(a, { serviceId: ids.retorno }, at(MON1, "09:00")))).toBe("invalid");
     await cancelAppointment(db(reception), clinicId, a.id, { channel: "admin", actorId: reception.id }, NOW);
     expect(await codeOf(() => change(a, { serviceId: ids.retorno }))).toBe("invalid");
+  });
+});
+
+// C4.3 (cliente, 28/out/2026): marcar com data passada (até 90 dias, com aviso)
+// e alterar o atendimento que já passou.
+describe("data passada", () => {
+  const PAST = "2031-03-03"; // segunda-feira antes do NOW (09/03)
+  const pastFrom = () => pastLimit("America/Fortaleza", NOW);
+
+  it("marcar no passado só com pastFrom, com o aviso aceito, até 90 dias", async () => {
+    const office = { locationId: ids.office };
+    expect(await codeOf(() => book(ids.p1, ids.consulta, ids.agendaDra2, at(PAST, "08:00"), office))).toBe("conflict");
+    expect(await codeOf(() => book(ids.p1, ids.consulta, ids.agendaDra2, at(PAST, "08:00"), { ...office, pastFrom: pastFrom(), acceptedWarnings: false }))).toBe("invalid");
+    expect(await codeOf(() => book(ids.p1, ids.consulta, ids.agendaDra2, at("2030-11-25", "08:00"), { ...office, pastFrom: pastFrom() }))).toBe("conflict");
+    const a = await book(ids.p1, ids.consulta, ids.agendaDra2, at(PAST, "08:00"), { ...office, pastFrom: pastFrom() });
+    expect(a.status).toBe("scheduled");
+    const check = await checkFreeTime(
+      db(reception),
+      clinicId,
+      { serviceId: ids.consulta, agendaId: ids.agendaDra2, locationId: ids.office, start: at(PAST, "08:30"), pastFrom: pastFrom() },
+      NOW,
+    );
+    expect(check).toEqual({ ok: true, warnings: [PAST_WARNING] });
+  });
+
+  it("altera o que já passou (até com comparecimento), sem ir para o futuro", async () => {
+    const a = await book(ids.p2, ids.consulta, ids.agendaDra2, at(PAST, "08:30"), { locationId: ids.office, pastFrom: pastFrom() });
+    await recordAttendance(db(reception), clinicId, a.id, "completed", reception.id);
+    const done = await getAppointment(db(reception), clinicId, a.id);
+    const result = await change(done, { agendaId: ids.agendaDra, start: at(PAST, "09:00"), acceptedWarnings: true });
+    expect(result.appointment).toMatchObject({ status: "completed", agendaId: ids.agendaDra });
+    expect(await codeOf(() => change(result.appointment, { start: at(MON3, "08:00") }))).toBe("invalid");
   });
 });

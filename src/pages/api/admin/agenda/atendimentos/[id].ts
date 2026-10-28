@@ -27,6 +27,7 @@ import { formChecked, formInt, formOptionalText, formText } from "../../../../..
 import { changeSeriesFrom, createSeries, endSeriesFrom } from "../../../../../lib/data/agenda/series";
 import { snapshotChanges, snapshotOf } from "../../../../../lib/appointmentChanges";
 import { listAgendas } from "../../../../../lib/data/config/agendas";
+import { pastLimit } from "../../../../../lib/data/agenda/slots";
 import { listInsurancePlans } from "../../../../../lib/data/config/insurance";
 import { listLocations } from "../../../../../lib/data/config/locations";
 import { listServices, servicePriceAt } from "../../../../../lib/data/config/services";
@@ -68,6 +69,10 @@ export const POST: APIRoute = async (context) => {
           const slot = parseSlot(formText(form, "slot"));
           if (!slot) throw new DataError("invalid", "Atendimento: escolha o horário", { start: "Escolha o horário." });
           if (formChecked(form, "repetir")) {
+            // Série só começa no futuro (cliente, 28/out/2026).
+            if (slot.start.getTime() <= Date.now()) {
+              throw new DataError("invalid", "Atendimento: série só começa numa data futura", { start: "Para repetir, escolha uma data futura." });
+            }
             const fim = formText(form, "fim");
             const created = await createSeries(db, clinic.clinicId, {
               patientId: formText(form, "patient_id"),
@@ -98,6 +103,8 @@ export const POST: APIRoute = async (context) => {
             // Equipe: qualquer horário, com os avisos aceitos na confirmação (cliente, 28/out/2026).
             anyTime: true,
             acceptedWarnings: formChecked(form, "aceito_avisos"),
+            // Data passada, até 90 dias (cliente, 28/out/2026): sem aviso ao paciente (notify só avisa o futuro).
+            pastFrom: pastLimit(clinic.timezone),
           });
           const date = localDateOf(result.appointment.scheduledAt, clinic.timezone);
           const notice = await notify("confirmation", result.appointment);

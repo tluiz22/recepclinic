@@ -171,6 +171,11 @@ export function cardActions(input: CardActionInput): CardActions {
     result.more.push({ kind: "form", acao: "faltou", label: "Corrigir: faltou", icon: "x-mark", danger: true, title: "Registrar a falta?", message: who, confirm: "Faltou" });
   }
 
+  // Alterar o que já passou (C4.3; cliente, 28/out/2026): no "Mais"; o cancelado não se altera.
+  if (!isFuture && a.status !== "canceled") {
+    result.more.push({ kind: "link", href: withReturn(`/admin/agenda/marcar?alterar=${a.id}`, returnTo), label: "Alterar", icon: "pencil" });
+  }
+
   if (a.seriesId) result.more.push({ kind: "link", href: withReturn(`/admin/agenda/serie/${a.seriesId}`, returnTo), label: "Ver série", icon: "calendar" });
 
   // Trilha: à vista no cancelado (é a única ação dele); nos outros, no "Mais".

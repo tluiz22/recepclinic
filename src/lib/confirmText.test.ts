@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { sendsPatientMessages, seriesEndText, seriesStartText, seriesWhenText, slotConfirmText, whatsappNoticeText } from "./confirmText";
+import { paymentChangeNote, sendsPatientMessages, seriesEndText, seriesStartText, seriesWhenText, slotConfirmText, whatsappNoticeText } from "./confirmText";
 
 describe("textos das confirmações", () => {
   it("horário escolhido, com a agenda e o local", () => {
@@ -53,5 +53,19 @@ describe("textos das confirmações", () => {
     expect(sendsPatientMessages("onboarding", "connected")).toBe(false);
     expect(sendsPatientMessages("active", "disconnected")).toBe(false);
     expect(sendsPatientMessages("active", null)).toBe(false);
+  });
+
+  it("pagamento registrado quando o valor muda", () => {
+    // A moeda vem com espaço fixo entre "R$" e o número.
+    const note = (paid: number, before: number | null, after: number | null) => paymentChangeNote(paid, before, after).replace(/\u00a0/g, " ");
+    expect(paymentChangeNote(0, 30000, 20000)).toBe("");
+    expect(paymentChangeNote(30000, 30000, 30000)).toBe("");
+    expect(note(30000, 30000, 20000)).toBe(
+      "Já há R$ 300,00 em pagamentos registrados, que não mudam. Com o novo valor (R$ 200,00), fica R$ 100,00 pago a mais: confira no Financeiro.",
+    );
+    expect(note(10000, 30000, 45000)).toBe(
+      "Já há R$ 100,00 em pagamentos registrados, que não mudam. Com o novo valor (R$ 450,00), faltam R$ 350,00.",
+    );
+    expect(paymentChangeNote(20000, 30000, 20000)).toContain("o atendimento fica pago");
   });
 });

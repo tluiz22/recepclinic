@@ -63,7 +63,7 @@ describe("cardActions", () => {
     expect(layout(input({}, { scheduledAt: past }))).toEqual({
       primary: "Compareceu",
       visible: ["Faltou", "Pagamento"],
-      more: ["Trilha"],
+      more: ["Alterar", "Trilha"],
       aside: undefined,
     });
   });
@@ -72,7 +72,7 @@ describe("cardActions", () => {
     expect(layout(input({}, { scheduledAt: past, status: "completed" }))).toEqual({
       primary: undefined,
       visible: ["Pagamento"],
-      more: ["Corrigir: faltou", "Trilha"],
+      more: ["Corrigir: faltou", "Alterar", "Trilha"],
       aside: undefined,
     });
   });
@@ -81,7 +81,7 @@ describe("cardActions", () => {
     expect(layout(input({}, { scheduledAt: past, status: "no_show" }))).toEqual({
       primary: undefined,
       visible: [],
-      more: ["Corrigir: compareceu", "Trilha"],
+      more: ["Corrigir: compareceu", "Alterar", "Trilha"],
       aside: undefined,
     });
   });
