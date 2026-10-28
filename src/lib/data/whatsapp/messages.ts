@@ -291,22 +291,25 @@ export type WhatsappMessage = {
 };
 
 /**
- * Mensagens de um atendimento (trilha), de um contato ou as últimas da
- * clínica (Suporte, F6.1), das mais novas para as mais antigas.
+ * Mensagens de um contato ou as últimas da clínica (Suporte, F6.1), das mais
+ * novas para as mais antigas, no máximo 50. Pela função que confere o papel
+ * (CRM B0): só Administrador, Recepção e Suporte; os outros recebem erro.
  */
 export async function listWhatsappMessages(
   db: DbClient,
   clinicId: string,
-  filter: { appointmentId: string } | { contactId: string } | { latest: true },
-  limit = 100,
+  filter: { contactId: string } | { latest: true },
+  limit = 50,
 ): Promise<WhatsappMessage[]> {
-  let query = db
-    .from("whatsapp_messages")
-    .select("id, direction, message_type, template_name, body, status, contact_phone, contact_id, appointment_id, created_at")
-    .eq("clinic_id", clinicId);
-  if ("appointmentId" in filter) query = query.eq("appointment_id", filter.appointmentId);
-  else if ("contactId" in filter) query = query.eq("contact_id", filter.contactId);
-  const rows = unwrap(await query.order("created_at", { ascending: false }).limit(limit), "Mensagens do WhatsApp");
+  const rows = unwrap(
+    await db.rpc("contact_message_history", {
+      p_clinic_id: clinicId,
+      // Sem contato = as últimas da clínica (os tipos gerados não aceitam null).
+      p_contact_id: ("contactId" in filter ? filter.contactId : null) as string,
+      p_limit: limit,
+    }),
+    "Mensagens do WhatsApp",
+  );
   return rows.map((row) => ({
     id: row.id,
     direction: row.direction as "inbound" | "outbound",

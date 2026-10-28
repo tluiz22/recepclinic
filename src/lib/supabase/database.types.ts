@@ -1540,6 +1540,11 @@ isOneToOne: false
             "anonymize_patient":
 { Args: { "p_clinic_id": string,"p_patient_id": string }; Returns: Json
                            },
+"attention_last_messages":
+{ Args: { "p_clinic_id": string,"p_phones": (string)[],"p_since": string }; Returns: {
+              "body": string,"contact_phone": string,"created_at": string,"direction": string,"message_type": string
+            }[]
+                           },
 "begin_nfse_cancel":
 { Args: { "p_invoice_id": string,"p_reason_code": number,"p_reason_text": string }; Returns: Json
                            },
@@ -1556,6 +1561,11 @@ isOneToOne: false
                            },
 "connect_whatsapp":
 { Args: { "p_clinic_id": string,"p_coexistence": boolean,"p_contacts_synced"?: boolean,"p_display_phone": string,"p_history_synced"?: boolean,"p_phone_number_id": string,"p_pin"?: string,"p_token": string,"p_waba_id": string }; Returns: undefined
+                           },
+"contact_message_history":
+{ Args: { "p_before"?: string,"p_clinic_id": string,"p_contact_id": string,"p_limit"?: number }; Returns: {
+              "appointment_id": string,"body": string,"contact_id": string,"contact_phone": string,"created_at": string,"direction": string,"id": string,"message_type": string,"status": string,"template_name": string
+            }[]
                            },
 "disconnect_whatsapp":
 { Args: { "p_clinic_id": string }; Returns: boolean

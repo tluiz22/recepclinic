@@ -209,7 +209,8 @@ describe("mensagens", () => {
   });
 
   it("o bot de outra clínica não lê as mensagens desta", async () => {
-    expect(await listWhatsappMessages(botB, clinicA, { contactId: contactA })).toEqual([]);
+    // O histórico é só da equipe (CRM B0): o bot nem chama a função.
+    await expect(listWhatsappMessages(botB, clinicA, { contactId: contactA })).rejects.toThrow();
     expect(await isCustomerServiceWindowOpen(botB, clinicA, PHONE_KNOWN)).toBe(false);
   });
 });

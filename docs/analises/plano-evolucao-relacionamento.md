@@ -763,3 +763,33 @@ ao Resumo.
 → conferir o item no banco → push da `main` (a Vercel publica o staging). Junto vai a correção do aviso que
 reaparecia (decisão do cliente). Nenhuma clínica do staging recebe o item pela migração: o Suporte libera na Matriz.
 **Produção: nada**, só com autorização explícita depois do staging.
+
+---
+
+## 17. B0 passo 1 implementado (28/out, só no local)
+
+**SQL aprovado pelo cliente em 28/out** (como apresentado na seção 13.1). Migração
+`20261028140000_mensagens_por_funcao.sql`, aplicada só no banco local:
+
+- `public.attention_last_messages(p_clinic_id, p_phones, p_since)`: `security definer`; qualquer membro da clínica e
+  o bot (`clinic_service`); só as recebidas e as `agent_reply` dos telefones com a conversa pausada; quem não é da
+  clínica recebe a lista vazia.
+- `public.contact_message_history(p_clinic_id, p_contact_id, p_before, p_limit)`: `security definer`; só
+  Administrador, Recepção e Suporte (os outros: erro `42501`); com contato, as dele e as do telefone dele sem contato
+  ligado; sem contato, as últimas da clínica; no máximo 50, `p_before` para o "Carregar mais". Não liberada ao bot.
+- Reversão: `drop function` das duas.
+
+**Código:** `listHumanAttention` (`whatsapp/attention.ts`) lê o texto pela `attention_last_messages` (Atendimento,
+Início, contador do menu, notificações e aba Atendimento do Relacionamento seguem iguais). `listWhatsappMessages`
+(`whatsapp/messages.ts`) usa a `contact_message_history`; saiu o filtro por atendimento (sem uso) e o limite padrão
+passou a 50. Tipos do banco regerados.
+
+**Testes:** unidade 714 passando; banco 651 passando (7 novos em `tests/db/mensagens-por-funcao.test.ts`: acesso por
+papel, outra clínica, bot, mensagens do telefone sem contato, limite de 50 e "Carregar mais"; o teste antigo do bot
+de outra clínica em `acesso-whatsapp.test.ts` passou a esperar o erro de acesso); `astro check` sem erros.
+Navegador local: a conferir pelo cliente (Atendimento como Profissional e Recepção; Configurações › WhatsApp como
+Suporte).
+
+**Ainda não protege nada sozinho:** a leitura direta da tabela continua aberta até o passo 2. **Passo 2** (SQL próprio,
+para aprovação): `revoke select` de `whatsapp_messages` do `authenticated` e `grant select` das colunas menos `body` e
+`retry_payload`, `update` limitado às colunas do painel; só depois do passo 1 publicado no mesmo ambiente.

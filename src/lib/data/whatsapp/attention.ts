@@ -111,16 +111,9 @@ export async function listHumanAttention(
 
   const phones = open.map(({ row }) => row.contact_phone);
   const since = new Date(Math.min(...open.map(({ row }) => new Date(row.handoff_started_at ?? row.human_handoff_at!).getTime())) - 24 * 60 * 60_000);
+  // O texto vem pela função que confere quem pede (CRM B0), não pela tabela.
   const messages = unwrap(
-    await db
-      .from("whatsapp_messages")
-      .select("contact_phone, direction, message_type, body, created_at")
-      .eq("clinic_id", clinicId)
-      .in("contact_phone", phones)
-      .or("direction.eq.inbound,message_type.eq.agent_reply")
-      .gte("created_at", since.toISOString())
-      .order("created_at", { ascending: false })
-      .limit(2000),
+    await db.rpc("attention_last_messages", { p_clinic_id: clinicId, p_phones: phones, p_since: since.toISOString() }),
     "Atendimento humano",
   );
 

@@ -52,6 +52,11 @@
 >   Atendimento e de Configurações › WhatsApp para usá-las; o **passo 2** (tirar `body` e `retry_payload` da leitura
 >   direta) só depois do passo 1 publicado no mesmo ambiente. Nada é aplicado antes da aprovação do SQL. Linha de base
 >   dos testes: 714 de unidade e 644 de banco (local, 27/out).
+> - **B0 passo 1 (28/out):** SQL aprovado pelo cliente; implementado e testado **só no local** (migração
+>   `20261028140000_mensagens_por_funcao.sql`, funções `attention_last_messages` e `contact_message_history`, Atendimento
+>   e Configurações › WhatsApp usando-as). Testes: 714 de unidade e 651 de banco. Detalhes na seção 17 do
+>   [plano](analises/plano-evolucao-relacionamento.md). **Aguardando a validação do cliente no local**; depois, com o OK,
+>   o passo 2 (SQL próprio, para aprovação).
 
 ## Como trabalhar nesta etapa
 
