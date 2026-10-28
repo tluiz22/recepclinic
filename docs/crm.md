@@ -38,8 +38,11 @@
 >   remarcação + Lembretes + Retomar contato + Retorno + Contatos para revisar (fora: Faltosos, Atendimento e Lista de
 >   espera). Testes: 714 de unidade e 644 de banco passando. Detalhes na seção 15 do
 >   [plano](analises/plano-evolucao-relacionamento.md).
-> - **Retomar daqui:** validação da A2 pelo cliente no local; depois, a **A3** (validação por papel e regressão; com o
->   OK do cliente, entrada na `main` e staging, Q13).
+> - **A2 validada pelo cliente em 27/out.**
+> - **A3 (27/out), regressão e validação por papel no local:** ver a seção 16 do
+>   [plano](analises/plano-evolucao-relacionamento.md). Próximo passo, só com o OK do cliente: entrada na `main`
+>   (avanço direto: a `main` não andou desde `eca4b79`) e staging, na ordem simulação → `db push` da migração
+>   `20261028120000` (a única que falta no staging, conferido com `migration list`) → conferir no banco → push.
 
 ## Como trabalhar nesta etapa
 

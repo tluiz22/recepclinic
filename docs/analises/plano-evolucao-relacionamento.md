@@ -731,3 +731,35 @@ Métricas (Desempenho, Retomar contato e Faltosos) continuam iguais com a leitur
   das Métricas, coberta pelos testes do funil, e o agrupamento pelos testes de unidade.
 - A tela lê as 8 listas a cada abertura (os contadores são o tamanho das listas) e o menu lê 5 em cada página. Medir no
   staging (R8).
+
+---
+
+## 16. A3: regressão e validação por papel (27/out, só no local)
+
+**Validação da A2:** aprovada pelo cliente em 27/out.
+
+**Regressão completa no local:** unidade 714 passando; banco 644 passando; `astro check` sem erros; `npm run build`
+completo.
+
+**Validação por papel no navegador (local):**
+
+| Login | Relacionamento | Métricas | Resumo do Dia |
+|---|---|---|---|
+| Administrador (Exemplo Saúde) | Menu e as 8 abas | Abre | As 7 abas de sempre |
+| Recepção (todas as agendas) | Menu e as 8 abas | Barrada (acesso negado) | As 7 abas de sempre |
+| Recepção restrita (psicóloga e fisioterapia) | Menu e as 8 abas; Lista de espera sem número (é de outra agenda); Atendimento e Revisar são da clínica toda, como na tela Atendimento | Barrada | As 7 abas de sempre |
+| Profissionais (pediatra, psicóloga) | Sem menu; a rota volta ao Início com acesso negado | Métricas pessoais, como antes | As 7 abas de sempre |
+| Clínica Odonto (item não liberado): Administrador + Profissional e Recepção | Sem menu; rota barrada | Como antes | As 7 abas de sempre |
+| Suporte | Matriz mostra "Relacionamento (central de pendências)" em "Fora da tabela de preços", desmarcado na Odonto | — | — |
+
+O "Revisado" do Início continua voltando ao Início (`voltar=painel`), e o "Tirar da lista" do Resumo continua voltando
+ao Resumo.
+
+**Staging (conferido só com leitura, `migration list`):** todas as migrações em dia; falta só a
+`20261028120000_relacionamento_matriz.sql`. A `main` não andou desde a criação da `CRM` (`eca4b79`), então a entrada
+é um avanço direto, sem conflito.
+
+**Próximo passo, só com o OK do cliente (Q13):** levar a `CRM` à `main`; no staging, simulação do `db push` → aplicar
+→ conferir o item no banco → push da `main` (a Vercel publica o staging). Junto vai a correção do aviso que
+reaparecia (decisão do cliente). Nenhuma clínica do staging recebe o item pela migração: o Suporte libera na Matriz.
+**Produção: nada**, só com autorização explícita depois do staging.
