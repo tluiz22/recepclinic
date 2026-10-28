@@ -10,7 +10,8 @@
 >   anotações gerais e registros de interação; acesso da Recepção sem abrir as Métricas). Plano em
 >   [`analises/plano-evolucao-relacionamento.md`](analises/plano-evolucao-relacionamento.md), com as etapas A1–C3 e as
 >   dúvidas Q1–Q9. Linha de base: 691 testes de unidade e 636 de banco passando (local, 27/out).
-> - **Próximo:** o cliente aprova o plano e responde Q1–Q9 (uma de cada vez); **nada é implementado antes.**
+> - **Q1–Q9 respondidas pelo cliente em 27/out** (todas na opção recomendada; registradas na seção 11 do plano).
+> - **Próximo:** aprovação explícita do plano pelo cliente; só então a etapa **A1**. **Nada é implementado antes.**
 
 ## Como trabalhar nesta etapa
 

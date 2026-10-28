@@ -393,18 +393,43 @@ WhatsApp e mensagens (`acesso-whatsapp.test.ts`, `webhook-whatsapp.test.ts`).
 - **Q1. Navegação:** Relacionamento no "Mais" do celular (proposta) ou no lugar do Resumo do Dia na barra? As abas
   Lembretes, Lista de espera e Aguardando remarcação continuam **também** no Resumo (proposta) ou passam só para a
   central?
+  **Decidido (cliente, 27/out):** Relacionamento no **"Mais"** do celular, ao lado do Atendimento; as três abas
+  continuam **também** no Resumo do Dia (nada sai de lá).
 - **Q2. Papéis:** a central é do Administrador e da Recepção (proposta). O Profissional vê (só as próprias agendas,
   sem as listas do bot)? É item novo da matriz (proposta) ou do básico?
+  **Decidido (cliente, 27/out):** **Administrador e Recepção**; o Profissional não entra. **Item próprio
+  "Relacionamento" na matriz**, liberado por clínica.
 - **Q3. Janela do Retomar contato** na central: 14 dias (proposta), 7 ou 30?
+  **Decidido (cliente, 27/out):** **últimos 14 dias** (nas Métricas continua o período escolhido).
 - **Q4. Lembretes como pendência:** só "não responderam" e "não entregue" dos atendimentos **por vir** (proposta), ou
   a aba do dia como está?
+  **Decidido (cliente, 27/out):** só **"sem resposta" e "não entregue" dos atendimentos por vir**, sem escolher data.
+  Implementação: reaproveitar a regra do sinal do cartão da Agenda (`reminderActions`: `resend` e
+  `resend_unanswered`, em `whatsapp/reminders.ts`) para os atendimentos futuros, sem criar regra nova.
 - **Q5. Texto das conversas:** quem lê o histórico com o texto: Administrador e Recepção (proposta), todos, ou também
   o Profissional dos próprios pacientes?
+  **Decidido (cliente, 27/out):** **Administrador e Recepção** leem o texto; o Profissional vê o histórico de
+  atendimentos e a trilha, sem o texto das conversas (restrição na aplicação: rota e componente). *Observação:* a tela
+  Atendimento já mostra a última mensagem do paciente a todos os papéis (F8.5a); continua como está, salvo pedido do
+  cliente.
 - **Q6. Anotações gerais:** reusar as "Observações" do paciente com "atualizado em/por" (proposta)? Anotação do
   contato agora ou depois?
+  **Decidido (cliente, 27/out):** reusar as **Observações** do paciente com **"Atualizado em … por …"**
+  (`notes_updated_at`, `notes_updated_by`); anotação do contato fica para depois; as anotações datadas de cada contato
+  ficam nos registros de interação.
 - **Q7. Resultados do contato:** a lista da seção 7 serve?
+  **Decidido (cliente, 27/out):** as **6 opções** da seção 7; observação obrigatória só em "Outro".
 - **Q8. Saída da fila:** quais resultados tiram a pessoa de cada lista (proposta na seção 7)?
+  **Decidido (cliente, 27/out):** "Marcou", "Não quer marcar agora" e "Número errado" tiram a pessoa de **Retomar
+  contato, Oportunidade agora, Faltosos e Lembretes**; "Não respondeu", "Pediu para falar depois" e "Outro" mantêm e
+  mostram a tentativa. Aguardando remarcação só sai ao remarcar ou com "Desistiu"; Lista de espera e Atendimento não
+  mudam. **Pendência nova aparece de novo.** Como cada saída se liga à pendência (para não esconder a próxima):
+  Retomar contato = tentativas do mesmo telefone e fluxo iniciadas **antes** do registro; Oportunidade agora = a
+  consulta (`appointment_id`); Lembretes = o atendimento (`appointment_id`); Faltosos = o paciente, até uma **falta
+  nova** depois do registro.
 - **Q9. Registros:** podem ser corrigidos ou apagados, ou só acrescentados (proposta: só acrescentar)?
+  **Decidido (cliente, 27/out):** **só acrescentar**; para corrigir, um registro novo (vale o último). A anonimização
+  apaga a observação.
 
 ---
 
