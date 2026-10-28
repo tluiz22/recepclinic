@@ -5,7 +5,8 @@
 > vez; depois a F12.1 do roadmap (seção 12).
 >
 > Decisões já respondidas (28/out): **11.1** (motivos registrados), **modo de cobrança manual** (seção 3) e **11.2**
-> (pago = `CONFIRMED` ou `RECEIVED`) **11.3** (bloqueio no painel primeiro, banco depois) **11.4** (bot calado, link com aviso) **11.5** (Assinatura só para o Administrador) **11.6** (estorno marca e avisa o Suporte) **11.7** (novo valor no próximo ciclo, sem proporcional) **11.8** (implantação ao ativar, conta igual) e **11.9** (cartão na página do Asaas). Próxima: 11.10.
+> (pago = `CONFIRMED` ou `RECEIVED`) **11.3** (bloqueio no painel primeiro, banco depois) **11.4** (bot calado, link com aviso) **11.5** (Assinatura só para o Administrador) **11.6** (estorno marca e avisa o Suporte) **11.7** (novo valor no próximo ciclo, sem proporcional) **11.8** (implantação ao ativar, conta igual) **11.9** (cartão na página do Asaas). **11.10 fica pendente** (número do WhatsApp, decidir antes da F12.9).
+> Próxima: 11.11.
 
 ## Como trabalhar nesta etapa
 
@@ -315,7 +316,12 @@ stateDiagram-v2
 9. **Captura do cartão.** **Decidido (cliente, 28/out):** na página de pagamento do Asaas (link na tela Assinatura e
    no e-mail); nenhum dado de cartão no RecepClinic. Confirmar na referência do Asaas como a página trata a
    assinatura no cartão nos ciclos seguintes.
-10. **Número de WhatsApp do RecepClinic** e lançamento só com e-mail até ele existir. Recomendo começar com e-mail.
+10. **Número de WhatsApp do RecepClinic.** **Pendente a pedido do cliente (28/out), decidir antes da implementação da
+    F12.9.** Precisa ser um número do RecepClinic (não o da clínica, que fala com os pacientes). Opções levantadas:
+    o número do RecepClinic hoje usado nos testes (tiraria dos testes), o número pessoal do cliente (em coexistência;
+    o nome exibido vira "RecepClinic" para todos os contatos, as respostas das clínicas caem nas conversas pessoais e
+    o número fica ligado à conta do RecepClinic na Meta) ou um chip dedicado (recomendado). Junto, decidir se a
+    cobrança entra no ar só com e-mail até o WhatsApp estar aprovado (recomendado).
 11. **Avisos do próprio Asaas.** Recomendo desligar, se a opção existir.
 12. **Cancelamento do contrato:** cobranças em aberto e acesso depois do fim.
 13. **D+3 e D+7:** dias corridos ou úteis, e o horário. Recomendo corridos, às 9h de Brasília.
