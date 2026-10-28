@@ -4,16 +4,15 @@
 > na retomada; buscar por data, fase ou commit quando precisar).
 >
 > **Ambientes**
-> - **Produção** (`app.recepclinic.com.br`, branch `producao`): no ar desde 26/out; última publicação **F8.5
->   Atendimento humano** em 27/out (`af0902d`). Fluxo e registro em [`producao.md`](producao.md).
-> - **Staging** (`teste.recepclinic.com.br`, branch `main`): tudo da produção mais o **CRM** (Relacionamento A1/A2,
->   B0, P1 Documentos, P2 Anotações, P3 Lembretes), todo validado pelo cliente. Roteiros em [`staging.md`](staging.md).
-> - **Branches:** `main` (staging) e `CRM` (etapa do CRM) estão iguais em 28/out.
+> - **Produção** (`app.recepclinic.com.br`, branch `producao`): no ar desde 26/out; última publicação em 28/out
+>   (`a2b4465`): **CRM** (Relacionamento, B0, P1–P3) e as correções **C1 Exame em paralelo** e **C2 Outro horário**.
+>   Fluxo e registro em [`producao.md`](producao.md).
+> - **Staging** (`teste.recepclinic.com.br`, branch `main`): igual à produção em 28/out. Roteiros em [`staging.md`](staging.md).
+> - **Branches:** `main` = `producao` em 28/out; a `CRM` ficou para trás (etapa encerrada).
 >
 > **Frentes em andamento**
-> - **Agora (28/out): correções na `main`** dos erros que o cliente encontrou, uma por vez no staging, antes de
->   publicar tudo na produção. **C1 Exame em paralelo** e **C2 Outro horário** (equipe marca em qualquer horário, com avisos) no staging, faltam validar; próximo erro da lista do cliente.
-> - **CRM concluído** (28/out; [`crm.md`](crm.md)): Relacionamento, B0 e P1–P3 validados no staging; nada na produção.
+> - **Correções do cliente (28/out):** C1 e C2 validadas e na produção; próximo erro da lista do cliente, se houver.
+> - **CRM concluído** (28/out; [`crm.md`](crm.md)): validado no staging e na produção desde 28/out.
 > - **Piloto** (etapas no [plano](plano.md), F10): **A** feita (roteiros do WhatsApp Business: [único](https://claude.ai/artifact/8AXZMSLcEq8SMWFpYHaraq),
 >   [iPhone](https://claude.ai/artifact/C8E3xDoshuXE3M91qeDDHq), [Android](https://claude.ai/artifact/78hQ2cXQph4wvXHKPXexnm));
 >   coexistência no staging feita (parte P do [`staging.md`](staging.md)), falta o **lembrete com botões** quando a
