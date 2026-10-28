@@ -87,6 +87,9 @@ export const POST: APIRoute = async (context) => {
             homeVisitAddress: formOptionalText(form, "home_visit_address"),
             channel: "admin",
             actorId,
+            // Equipe: qualquer horário, com os avisos aceitos na confirmação (cliente, 28/out/2026).
+            anyTime: true,
+            acceptedWarnings: formChecked(form, "aceito_avisos"),
           });
           const date = localDateOf(result.appointment.scheduledAt, clinic.timezone);
           const notice = await notify("confirmation", result.appointment);
@@ -112,7 +115,14 @@ export const POST: APIRoute = async (context) => {
               `/admin/agenda/serie/${changed.next.series.id}`,
             );
           }
-          const moved = await rescheduleAppointment(db, clinic.clinicId, id, { start: slot.start, locationId: slot.locationId, channel: "admin", actorId });
+          const moved = await rescheduleAppointment(db, clinic.clinicId, id, {
+            start: slot.start,
+            locationId: slot.locationId,
+            channel: "admin",
+            actorId,
+            anyTime: true,
+            acceptedWarnings: formChecked(form, "aceito_avisos"),
+          });
           const notice = await notify("reschedule", moved);
           return done(`Atendimento remarcado.${notice}`, `/admin/agenda?date=${localDateOf(moved.scheduledAt, clinic.timezone)}`);
         }

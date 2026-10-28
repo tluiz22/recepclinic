@@ -11,7 +11,7 @@ import { computeFreeSlots, type BusyInterval, type FreeSlot, type SlotWindow } f
 //   - feriado nacional ou da clínica: nenhum horário;
 //   - janelas ativas da agenda no dia da semana, gerais ou do próprio serviço,
 //     em locais onde o serviço é oferecido;
-//   - ocupado = atendimentos ativos da agenda (turmas inclusive) + bloqueios;
+//   - ocupado = atendimentos ativos da agenda (sem os exames, que ficam em paralelo) + bloqueios;
 //   - serviço ou agenda inativos, ou serviço que a agenda não atende: nada;
 //   - turma tem cálculo próprio (getGroupSessions): uma sessão por janela, com vagas.
 
@@ -39,6 +39,8 @@ export type SchedulingPlan = {
   consultationMinutes: number | null;
   /** Janelas por dia da semana (gerais e do serviço; capacidade só nas de turma). */
   windowsByWeekday: Map<number, (SlotWindow & { capacity: number | null })[]>;
+  /** Locais onde o serviço é oferecido. */
+  locationIds: string[];
 };
 
 export type DateWithSlots = { date: string; weekday: number };
@@ -123,6 +125,7 @@ export async function loadSchedulingPlan(
     bufferMinutes: agenda.buffer_minutes,
     consultationMinutes,
     windowsByWeekday,
+    locationIds: [...offeredAt],
   };
 }
 
@@ -140,6 +143,22 @@ export async function loadBusy(
   ignoreAppointmentId?: string | null,
   forExam = false,
 ): Promise<BusyInterval[]> {
+  const [appointments, blocks] = await Promise.all([
+    forExam ? [] : loadAppointmentIntervals(db, clinicId, agendaId, from, to, ignoreAppointmentId),
+    loadBlocks(db, clinicId, agendaId, from, to),
+  ]);
+  return [...appointments, ...blocks].filter((interval) => interval.end > from);
+}
+
+/** Atendimentos ativos da agenda (sem os exames) entre dois instantes. */
+async function loadAppointmentIntervals(
+  db: DbClient,
+  clinicId: string,
+  agendaId: string,
+  from: Date,
+  to: Date,
+  ignoreAppointmentId?: string | null,
+): Promise<BusyInterval[]> {
   // Em páginas: 60 dias de uma agenda cheia passam das 1000 linhas da API.
   const appointmentsPage = (pageFrom: number, pageTo: number) => {
     let query = db
@@ -155,17 +174,11 @@ export async function loadBusy(
     if (ignoreAppointmentId) query = query.neq("id", ignoreAppointmentId);
     return query.order("scheduled_at").order("id").range(pageFrom, pageTo);
   };
-  const [appointments, blocks] = await Promise.all([
-    forExam ? [] : unwrapAll(appointmentsPage, "Atendimentos da agenda"),
-    loadBlocks(db, clinicId, agendaId, from, to),
-  ]);
-  return [
-    ...appointments.map((a) => {
-      const start = new Date(a.scheduled_at);
-      return { start, end: new Date(start.getTime() + a.duration_minutes * 60_000) };
-    }),
-    ...blocks,
-  ].filter((interval) => interval.end > from);
+  const appointments = await unwrapAll(appointmentsPage, "Atendimentos da agenda");
+  return appointments.map((a) => {
+    const start = new Date(a.scheduled_at);
+    return { start, end: new Date(start.getTime() + a.duration_minutes * 60_000) };
+  });
 }
 
 /** Bloqueios da agenda entre dois instantes. */
@@ -248,6 +261,71 @@ export async function isAgendaOpenOn(
     loadClinicHolidays(db, clinicId, query.date, query.date),
   ]);
   return slotsOn(plan, query.date, blocks, holidays, start).length > 0;
+}
+
+export type FreeTimeCheck =
+  | { ok: true; warnings: string[] }
+  | { ok: false; reason: string };
+
+/**
+ * Horário digitado pela equipe da clínica ("Outro horário"; cliente, 28/out/2026):
+ * qualquer dia e hora, até fora da lista de horários livres. Continuam
+ * travados o horário passado, o bloqueio, o atendimento no mesmo horário (exame
+ * fica em paralelo) e o local que não oferece o serviço. Fora do horário de
+ * atendimento, feriado, sem o intervalo da agenda ou fora da sequência de
+ * horários (pode deixar buraco) passam, com aviso para a equipe confirmar.
+ */
+export async function checkFreeTime(
+  db: DbClient,
+  clinicId: string,
+  query: { serviceId: string; agendaId: string; locationId: string; start: Date; ignoreAppointmentId?: string | null },
+  now: Date = new Date(),
+): Promise<FreeTimeCheck> {
+  const plan = await loadSchedulingPlan(db, clinicId, { serviceId: query.serviceId, agendaId: query.agendaId });
+  if (!plan || plan.isGroup) return { ok: false, reason: "Serviço não atendido nesta agenda." };
+  if (!plan.locationIds.includes(query.locationId)) return { ok: false, reason: "Este serviço não é atendido neste local." };
+  const { start } = query;
+  if (start <= now) return { ok: false, reason: "Esse horário já passou." };
+  const end = new Date(start.getTime() + plan.durationMinutes * 60_000);
+  const isExam = plan.category === "exam";
+  const date = localDateOf(start, plan.timeZone);
+  const day = dayBounds(date, plan.timeZone);
+  const [appointments, blocks, holidays] = await Promise.all([
+    isExam ? [] : loadAppointmentIntervals(db, clinicId, query.agendaId, new Date(day.start.getTime() - MAX_APPOINTMENT_SPAN_MS), day.end, query.ignoreAppointmentId),
+    loadBlocks(db, clinicId, query.agendaId, day.start, new Date(day.end.getTime() + MAX_APPOINTMENT_SPAN_MS)),
+    loadClinicHolidays(db, clinicId, date, date),
+  ]);
+  const overlaps = (i: BusyInterval, margin = 0) => i.start.getTime() - margin < end.getTime() && start.getTime() < i.end.getTime() + margin;
+  if (blocks.some((b) => overlaps(b))) return { ok: false, reason: "Horário bloqueado na agenda." };
+  if (appointments.some((a) => overlaps(a))) return { ok: false, reason: "Horário ocupado por outro atendimento nesta agenda." };
+
+  const warnings: string[] = [];
+  if (isNationalHoliday(date) || holidays.has(date)) warnings.push("Dia de feriado.");
+  const minutes = (time: string) => Number(time.slice(0, 2)) * 60 + Number(time.slice(3, 5));
+  const startMinutes = minutes(localTimeOf(start, plan.timeZone));
+  const endMinutes = localDateOf(end, plan.timeZone) === date ? minutes(localTimeOf(end, plan.timeZone)) : 24 * 60;
+  const windows = (plan.windowsByWeekday.get(weekdayOf(date)) ?? []).filter((w) => w.locationId === query.locationId);
+  const inWindow = windows.some((w) => minutes(w.startTime) <= startMinutes && endMinutes <= minutes(w.endTime));
+  if (!inWindow) warnings.push("Fora do horário de atendimento da agenda.");
+  const bufferMs = plan.bufferMinutes * 60_000;
+  const tight = bufferMs > 0 && appointments.some((a) => overlaps(a, bufferMs));
+  if (tight) warnings.push(`Sem o intervalo de ${plan.bufferMinutes} min entre atendimentos da agenda.`);
+  if (inWindow && !tight) {
+    const grid = computeFreeSlots({
+      date,
+      timeZone: plan.timeZone,
+      windows,
+      busy: [...appointments, ...blocks],
+      durationMinutes: plan.durationMinutes,
+      bufferMinutes: plan.bufferMinutes,
+      strategy: { kind: "fill" },
+      now,
+    });
+    if (!grid.some((slot) => slot.start.getTime() === start.getTime())) {
+      warnings.push(`Fora da sequência de horários de ${plan.durationMinutes} min: pode deixar buraco na agenda.`);
+    }
+  }
+  return { ok: true, warnings };
 }
 
 /** Próximas datas com pelo menos um horário livre, a partir de hoje (fuso da clínica). */

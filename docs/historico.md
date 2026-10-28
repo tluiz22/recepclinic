@@ -448,3 +448,11 @@ retomada fica no README). Para achar algo, buscar por data (ex.: `27/out`), fase
   (coluna `is_exam` copiada da categoria do serviço, preenchida nos atendimentos antigos sem gatilhos; trava sem os
   exames); `loadBusy` sem exames e, para marcar exame, só bloqueios; importação da agenda igual. Staging: migração
   aplicada e conferida (18 exames marcados) em 28/out.
+- **C2 Outro horário** (cliente, 28/out): a equipe da clínica marca e remarca em qualquer dia e hora, pelo
+  "Outro horário" abaixo da lista de sugestões (Marcar e Remarcar). Decisões do cliente: liberados fora do horário de
+  atendimento, fora da sequência de horários (aviso de buraco na agenda), retorno fora das 4 sugestões, sem o
+  intervalo da agenda e feriado, todos com aviso e confirmação ("Marcar assim mesmo"); continuam travados horário
+  passado, bloqueio, outro atendimento no mesmo horário (exame em paralelo), duplicidade e vaga da turma. Bot e link
+  público seguem só com a lista. `checkFreeTime` (slots.ts), `anyTime`/`acceptedWarnings` em `bookAppointment` e
+  `rescheduleAppointment` (só a rota da equipe passa), componente `OtherTime.astro`. Série já aceitava qualquer
+  horário (só pula feriado, bloqueio e conflito). Sem migração. Staging em 28/out.

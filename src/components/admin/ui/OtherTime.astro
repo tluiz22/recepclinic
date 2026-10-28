@@ -1,0 +1,106 @@
+---
+// "Outro horário" do Marcar e do Remarcar (cliente, 28/out/2026): a equipe
+// digita dia e hora (e o local, com quem, quando há escolha) e vê o horário
+// conferido, com os avisos (fora do horário de atendimento, feriado, sem o
+// intervalo, buraco na agenda) ou o motivo de não poder (passado, bloqueado,
+// ocupado). O horário entra como mais uma opção do formulário `form`, já
+// marcada; os avisos vão para a confirmação do botão.
+import Icon from "../Icon.astro";
+import Button from "./Button.astro";
+import SlotPicker, { type SlotOption } from "./SlotPicker.astro";
+import { CONTROL } from "./styles";
+
+type Choice = { id: string; name: string };
+
+interface Props {
+  /** Rota da tela e campos que o formulário mantém. */
+  action: string;
+  hidden: Record<string, string>;
+  /** Formulário que envia a marcação (o resumo). */
+  form: string;
+  min: string;
+  date: string;
+  time: string;
+  locations: Choice[];
+  locationId: string;
+  /** Com quem: só no "Primeiro horário disponível" com mais de uma agenda. */
+  agendas?: Choice[];
+  agendaId?: string;
+  /** Aberto quando a tela veio do próprio formulário. */
+  open: boolean;
+  error: string | null;
+  option: SlotOption | null;
+  warnings: string[];
+}
+
+const { action, hidden, form, min, date, time, locations, locationId, agendas = [], agendaId = "", open, error, option, warnings } = Astro.props;
+const note = "flex items-start gap-2 rounded-[10px] border px-3 py-2.5 text-[15px] leading-snug sm:text-[14.5px]";
+const label = "flex flex-col gap-1 text-sm font-semibold text-ink";
+---
+
+<details class="rounded-[10px] border border-line" open={open} id="outro-horario">
+  <summary class="flex min-h-11 cursor-pointer items-center px-3 text-[15px] font-semibold text-brand">Outro horário</summary>
+  <div class="flex flex-col gap-3 border-t border-line p-3">
+    <p class="text-sm text-ink-soft">Qualquer dia e hora, até fora dos horários livres. Horário passado, bloqueado ou ocupado não pode.</p>
+    <form method="GET" action={`${action}#outro-horario`} class="flex flex-wrap items-end gap-2">
+      {Object.entries(hidden).map(([key, value]) => value && <input type="hidden" name={key} value={value} />)}
+      <label class={label}>
+        Data
+        <input type="date" name="outro_data" value={date} min={min} required class={`${CONTROL} w-44`} />
+      </label>
+      <label class={label}>
+        Hora
+        <input type="time" name="outro_hora" value={time} required class={`${CONTROL} w-32`} />
+      </label>
+      {
+        agendas.length > 1 && (
+          <label class={label}>
+            Com quem
+            <select name="outro_agenda" required class={CONTROL}>
+              <option value="">Escolha…</option>
+              {agendas.map((a) => <option value={a.id} selected={a.id === agendaId}>{a.name}</option>)}
+            </select>
+          </label>
+        )
+      }
+      {
+        locations.length > 1 && (
+          <label class={label}>
+            Local
+            <select name="outro_local" required class={CONTROL}>
+              <option value="">Escolha…</option>
+              {locations.map((l) => <option value={l.id} selected={l.id === locationId}>{l.name}</option>)}
+            </select>
+          </label>
+        )
+      }
+      <Button type="submit">Ver horário</Button>
+    </form>
+    {
+      error && (
+        <p class={`${note} border-can-200 bg-can-50 text-can-800`} role="alert">
+          <Icon name="warning" class="mt-0.5 h-[18px] w-[18px] shrink-0" />
+          {error}
+        </p>
+      )
+    }
+    {
+      option && (
+        <>
+          {warnings.length > 0 && (
+            <div class={`${note} border-pend-200 bg-pend-100 text-pend-800`} role="status">
+              <Icon name="warning" class="mt-0.5 h-[18px] w-[18px] shrink-0" />
+              <div>
+                <p class="font-semibold">Atenção</p>
+                {warnings.map((w) => <p>{w}</p>)}
+                <p class="mt-1 text-sm">Dá para marcar assim mesmo: a confirmação repete os avisos.</p>
+              </div>
+            </div>
+          )}
+          <SlotPicker options={[option]} form={form} checked={option.value} legend="Outro horário" />
+          <input type="hidden" form={form} name="aceito_avisos" value="1" />
+        </>
+      )
+    }
+  </div>
+</details>

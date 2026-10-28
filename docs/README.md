@@ -12,7 +12,7 @@
 >
 > **Frentes em andamento**
 > - **Agora (28/out): correções na `main`** dos erros que o cliente encontrou, uma por vez no staging, antes de
->   publicar tudo na produção. **C1 Exame em paralelo** no staging (falta validar); próximo erro da lista do cliente.
+>   publicar tudo na produção. **C1 Exame em paralelo** e **C2 Outro horário** (equipe marca em qualquer horário, com avisos) no staging, faltam validar; próximo erro da lista do cliente.
 > - **CRM concluído** (28/out; [`crm.md`](crm.md)): Relacionamento, B0 e P1–P3 validados no staging; nada na produção.
 > - **Piloto** (etapas no [plano](plano.md), F10): **A** feita (roteiros do WhatsApp Business: [único](https://claude.ai/artifact/8AXZMSLcEq8SMWFpYHaraq),
 >   [iPhone](https://claude.ai/artifact/C8E3xDoshuXE3M91qeDDHq), [Android](https://claude.ai/artifact/78hQ2cXQph4wvXHKPXexnm));

@@ -18,6 +18,8 @@ export interface SlotOption {
   /** Começo da série (Marcar): "às terças, 09:00, com …, a partir de 20/10". */
   series?: string;
   isHome?: boolean;
+  /** "Outro horário": os avisos que a confirmação mostra (cliente, 28/out/2026). */
+  warnings?: string;
 }
 
 interface Props {
@@ -27,9 +29,11 @@ interface Props {
   byPeriod?: boolean;
   /** Valor marcado de início (volta com erro). */
   checked?: string;
+  /** Nome da lista sem turnos, para leitor de tela. */
+  legend?: string;
 }
 
-const { options, form, byPeriod = false, checked } = Astro.props;
+const { options, form, byPeriod = false, checked, legend = "Turmas com vaga" } = Astro.props;
 const groups = byPeriod
   ? (["Manhã", "Tarde", "Noite"] as const)
       .map((period) => ({ title: period as string, items: options.filter((o) => periodOf(o.label) === period) }))
@@ -44,7 +48,7 @@ const grid = byPeriod ? "grid-cols-3 sm:grid-cols-4 lg:grid-cols-5" : "grid-cols
       {group.title ? (
         <legend class="mb-2 text-[13px] leading-tight font-bold tracking-[.06em] text-ink-soft uppercase">{group.title}</legend>
       ) : (
-        <legend class="sr-only">Turmas com vaga</legend>
+        <legend class="sr-only">{legend}</legend>
       )}
       <div class={`grid gap-2 ${grid}`}>
         {group.items.map((slot) => (
@@ -61,6 +65,7 @@ const grid = byPeriod ? "grid-cols-3 sm:grid-cols-4 lg:grid-cols-5" : "grid-cols
               data-where={slot.detail}
               data-confirm={slot.confirm}
               data-series={slot.series}
+              data-warnings={slot.warnings || undefined}
               class="sr-only"
             />
             <span class="text-[17px] leading-tight font-bold text-ink tabular-nums first-letter:uppercase">{slot.label}</span>

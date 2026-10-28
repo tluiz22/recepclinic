@@ -2,7 +2,7 @@ import { addDays, localDateOf, localTimeOf, todayIn, weekdayOf } from "../../cli
 import type { Enums } from "../../supabase/database.types";
 import type { DbClient } from "../clients";
 import { DataError, fromDbError, unwrap, unwrapAllIn, unwrapOne } from "../errors";
-import { getFreeSlots, loadSchedulingPlan } from "./slots";
+import { checkFreeTime, getFreeSlots, loadSchedulingPlan } from "./slots";
 import { logError } from "../../log";
 
 // Marcar, remarcar, cancelar, presença e comparecimento (F3.6a), para a tela
@@ -370,7 +370,34 @@ export type BookInput = {
   /** Origem na trilha, se diferente do canal (ex.: link de agendamento). */
   trailChannel?: TrailChannel;
   actorId: string | null;
-};
+} & AnyTimeInput;
+
+/**
+ * Equipe da clínica (cliente, 28/out/2026): marca ou remarca em qualquer
+ * horário, até fora da lista (checkFreeTime); os avisos precisam ser aceitos.
+ * O bot e o link de agendamento não passam isto: só a lista.
+ */
+type AnyTimeInput = { anyTime?: boolean; acceptedWarnings?: boolean };
+
+/** Horário da lista ou, para a equipe, qualquer horário que passe em checkFreeTime. O local do horário. */
+async function resolveIndividualSlot(
+  db: DbClient,
+  clinicId: string,
+  query: { serviceId: string; agendaId: string; locationId?: string | null; start: Date; date: string; ignoreAppointmentId?: string },
+  input: AnyTimeInput,
+  now: Date,
+): Promise<string> {
+  const slots = await getFreeSlots(db, clinicId, query, now);
+  const slot = slots.find((s) => s.start.getTime() === query.start.getTime());
+  if (slot) return slot.locationId;
+  if (!input.anyTime || !query.locationId) throw new DataError("conflict", "Atendimento: horário não está mais livre", { start: "Horário não está mais livre" });
+  const check = await checkFreeTime(db, clinicId, { ...query, locationId: query.locationId }, now);
+  if (!check.ok) throw new DataError("conflict", `Atendimento: ${check.reason}`, { start: check.reason });
+  if (check.warnings.length && !input.acceptedWarnings) {
+    throw new DataError("invalid", "Atendimento: confirme os avisos do horário", { start: check.warnings.join(" ") });
+  }
+  return query.locationId;
+}
 
 export type BookResult = { appointment: Appointment; returnWarnings: string[] };
 
@@ -418,10 +445,13 @@ export async function bookAppointment(db: DbClient, clinicId: string, input: Boo
     if (!window) throw new DataError("conflict", "Atendimento: não há turma neste horário", { start: "Não há turma neste horário" });
     locationId = window.locationId;
   } else {
-    const slots = await getFreeSlots(db, clinicId, { serviceId: input.serviceId, agendaId: input.agendaId, locationId: input.locationId, date }, now);
-    const slot = slots.find((s) => s.start.getTime() === input.start.getTime());
-    if (!slot) throw new DataError("conflict", "Atendimento: horário não está mais livre", { start: "Horário não está mais livre" });
-    locationId = slot.locationId;
+    locationId = await resolveIndividualSlot(
+      db,
+      clinicId,
+      { serviceId: input.serviceId, agendaId: input.agendaId, locationId: input.locationId, start: input.start, date },
+      input,
+      now,
+    );
   }
 
   const homeVisitAddress = input.homeVisitAddress?.trim() || null;
@@ -518,7 +548,7 @@ export type RescheduleInput = {
   /** Evento da trilha, se não for "remarcado" (ex.: antecipado pela lista de espera). */
   trailEvent?: TrailEvent;
   actorId: string | null;
-};
+} & AnyTimeInput;
 
 /** Remarcar zera o lembrete e a confirmação de presença (a data nova pede outros). */
 const PRESENCE_RESET = {
@@ -568,14 +598,18 @@ export async function rescheduleAppointment(
   } else {
     // O próprio atendimento não ocupa o horário que vai deixar.
     const date = localDateOf(input.start, plan.timeZone);
-    const slots = await getFreeSlots(db, clinicId, { serviceId: current.serviceId, agendaId: current.agendaId, locationId: input.locationId, date, ignoreAppointmentId: id }, now);
-    const slot = slots.find((s) => s.start.getTime() === input.start.getTime());
-    if (!slot) throw new DataError("conflict", "Atendimento: horário não está mais livre", { start: "Horário não está mais livre" });
+    const slotLocationId = await resolveIndividualSlot(
+      db,
+      clinicId,
+      { serviceId: current.serviceId, agendaId: current.agendaId, locationId: input.locationId, start: input.start, date, ignoreAppointmentId: id },
+      input,
+      now,
+    );
     const { data, error } = await db
       .from("appointments")
       .update({
         scheduled_at: input.start.toISOString(),
-        location_id: slot.locationId,
+        location_id: slotLocationId,
         rescheduled_at: now.toISOString(),
         rescheduled_via: input.channel,
         rescheduled_by: input.actorId,

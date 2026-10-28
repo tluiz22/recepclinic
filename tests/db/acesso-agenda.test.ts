@@ -11,6 +11,7 @@ import {
   setPresenceConfirmed,
 } from "../../src/lib/data/agenda/appointments";
 import {
+  checkFreeTime,
   getFreeSlots,
   getFreeSlotsAnyAgenda,
   getGroupSessions,
@@ -248,5 +249,81 @@ describe("exame em paralelo (cliente, 28/out/2026)", () => {
     expect((await free(ids.exame))[0]).toBe("08:00");
 
     await book(ids.p2, ids.exame, ids.agendaDra2, at(MON5, "08:00"));
+  });
+});
+
+describe("outro horário: a equipe marca em qualquer horário (cliente, 28/out/2026)", () => {
+  const MON6 = "2031-04-14";
+  const SUN = "2031-04-13";
+  let patient: string;
+  const check = (date: string, time: string, extra: Record<string, unknown> = {}) =>
+    checkFreeTime(db(reception), clinicId, { serviceId: ids.consulta, agendaId: ids.agendaDra, locationId: ids.office, start: at(date, time), ...extra }, NOW);
+
+  beforeAll(async () => {
+    const { data: p1 } = await adminClient().from("patients").select("contact_id").eq("id", ids.p1).single();
+    const { data, error } = await adminClient()
+      .from("patients")
+      .insert({ clinic_id: clinicId, contact_id: p1!.contact_id, full_name: "Paciente Quatro", birthdate: "2020-01-01" })
+      .select("id")
+      .single();
+    if (error) throw error;
+    patient = data.id;
+  });
+
+  it("horário da lista: sem aviso; fora da sequência, fora do expediente ou domingo: com aviso", async () => {
+    expect(await check(MON6, "08:00")).toEqual({ ok: true, warnings: [] });
+    expect(await check(MON6, "08:10")).toEqual({ ok: true, warnings: ["Fora da sequência de horários de 30 min: pode deixar buraco na agenda."] });
+    expect(await check(MON6, "07:00")).toEqual({ ok: true, warnings: ["Fora do horário de atendimento da agenda."] });
+    expect(await check(SUN, "10:00")).toEqual({ ok: true, warnings: ["Fora do horário de atendimento da agenda."] });
+  });
+
+  it("feriado: com aviso", async () => {
+    await addClinicHoliday(db(admin), clinicId, { date: "2031-04-21", description: "Feriado do teste" });
+    expect(await check("2031-04-21", "08:00")).toEqual({ ok: true, warnings: ["Dia de feriado."] });
+  });
+
+  it("passado, local que não oferece o serviço: não pode", async () => {
+    expect(await check("2031-03-03", "08:00")).toEqual({ ok: false, reason: "Esse horário já passou." });
+    const exam = await checkFreeTime(db(reception), clinicId, { serviceId: ids.consulta, agendaId: ids.agendaExams, locationId: ids.office, start: at(MON6, "08:00") }, NOW);
+    expect(exam.ok).toBe(false);
+  });
+
+  it("marcar fora da lista: só a equipe, com os avisos aceitos; depois o horário fica ocupado", async () => {
+    const start = at(MON6, "08:10");
+    expect(await codeOf(() => book(patient, ids.consulta, ids.agendaDra, start, { locationId: ids.office }))).toBe("conflict");
+    expect(await codeOf(() => book(patient, ids.consulta, ids.agendaDra, start, { locationId: ids.office, anyTime: true }))).toBe("invalid");
+    const { appointment } = await book(patient, ids.consulta, ids.agendaDra, start, { locationId: ids.office, anyTime: true, acceptedWarnings: true });
+    expect(appointment.scheduledAt.getTime()).toBe(start.getTime());
+
+    expect(await check(MON6, "08:20")).toEqual({ ok: false, reason: "Horário ocupado por outro atendimento nesta agenda." });
+    await adminClient().from("agendas").update({ buffer_minutes: 10 }).eq("id", ids.agendaDra);
+    try {
+      expect(await check(MON6, "08:45")).toEqual({ ok: true, warnings: ["Sem o intervalo de 10 min entre atendimentos da agenda."] });
+    } finally {
+      await adminClient().from("agendas").update({ buffer_minutes: 0 }).eq("id", ids.agendaDra);
+    }
+
+    // Remarcar para fora do expediente, com os avisos aceitos.
+    const later = at(MON6, "19:00");
+    expect(await codeOf(() => rescheduleAppointment(db(reception), clinicId, appointment.id, { start: later, locationId: ids.office, channel: "admin", actorId: reception.id }, NOW))).toBe("conflict");
+    const moved = await rescheduleAppointment(
+      db(reception),
+      clinicId,
+      appointment.id,
+      { start: later, locationId: ids.office, channel: "admin", actorId: reception.id, anyTime: true, acceptedWarnings: true },
+      NOW,
+    );
+    expect(moved.scheduledAt.getTime()).toBe(later.getTime());
+  });
+
+  it("bloqueio continua travando", async () => {
+    await adminClient().from("schedule_blocks").insert({
+      clinic_id: clinicId,
+      agenda_id: ids.agendaDra,
+      starts_at: at(MON6, "10:00").toISOString(),
+      ends_at: at(MON6, "11:00").toISOString(),
+      reason: "Reunião",
+    });
+    expect(await check(MON6, "10:30")).toEqual({ ok: false, reason: "Horário bloqueado na agenda." });
   });
 });

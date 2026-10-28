@@ -17,17 +17,20 @@ import Icon from "../../../components/admin/Icon.astro";
 import Button from "../../../components/admin/ui/Button.astro";
 import DayStrip from "../../../components/admin/ui/DayStrip.astro";
 import PageHeader from "../../../components/admin/ui/PageHeader.astro";
+import OtherTime from "../../../components/admin/ui/OtherTime.astro";
 import SlotPicker, { type SlotOption } from "../../../components/admin/ui/SlotPicker.astro";
 import StepCard from "../../../components/admin/ui/StepCard.astro";
 import { buttonClass, CONTROL } from "../../../components/admin/ui/styles";
 import { isOverConsultationAgeLimit, formatAge, formatAgeAndBirth } from "../../../lib/age";
 import { slotValue } from "../../../lib/agendaSlot";
 import { isUuid } from "../../../lib/clinicAccess";
-import { formatCalendarDate, formatInstant, isCalendarDate, todayIn } from "../../../lib/clinicTime";
+import { formatCalendarDate, formatInstant, isCalendarDate, todayIn, toInstant } from "../../../lib/clinicTime";
+import { pickOne, readOtherTime } from "../../../lib/otherTime";
 import { buildDayStrip } from "../../../lib/dayStrip";
 import { createUserClient } from "../../../lib/data/clients";
 import {
   agendasForService,
+  checkFreeTime,
   getFreeSlots,
   getFreeSlotsAnyAgenda,
   getGroupSessions,
@@ -129,9 +132,9 @@ let strip = buildDayStrip([], null, null);
 let slotOptions: SlotOption[] = [];
 const isGroup = service?.schedulingMode === "group";
 const dayLabel = (d: string) => capitalize(formatCalendarDate(d, "EEEE, dd/MM"));
+const describe = (agendaId: string, locationId: string) =>
+  [location.get(locationId)?.name ?? "Local", serviceAgendaIds.length > 1 ? agendaName.get(agendaId) : null].filter(Boolean).join(" · ");
 if (patient && service && searchAgendas.length) {
-  const describe = (agendaId: string, locationId: string) =>
-    [location.get(locationId)?.name ?? "Local", serviceAgendaIds.length > 1 ? agendaName.get(agendaId) : null].filter(Boolean).join(" · ");
   if (isGroup) {
     const sessions = (
       await Promise.all(
@@ -181,6 +184,41 @@ if (patient && service && searchAgendas.length) {
     }
   }
 }
+// Outro horário (cliente, 28/out/2026): a equipe marca em qualquer dia e hora;
+// conferido aqui (os avisos aparecem antes) e de novo ao marcar.
+const showOther = !!patient && !!service && !isGroup && searchAgendas.length > 0;
+const otherQuery = readOtherTime(params);
+const otherLocations = (service?.locations ?? []).filter((l) => location.has(l.locationId)).map((l) => ({ id: l.locationId, name: location.get(l.locationId)!.name }));
+const otherAgendas = searchAgendas.map((id) => ({ id, name: agendaName.get(id) ?? "" }));
+let otherOption: SlotOption | null = null;
+let otherError: string | null = null;
+let otherWarnings: string[] = [];
+if (showOther && otherQuery) {
+  const agendaId = pickOne(otherQuery.agendaId, searchAgendas);
+  const locationId = pickOne(otherQuery.locationId, otherLocations.map((l) => l.id));
+  if (!agendaId) otherError = "Escolha com quem.";
+  else if (!locationId) otherError = "Escolha o local.";
+  else {
+    const start = toInstant(otherQuery.date, otherQuery.time, clinic.timezone);
+    const check = await checkFreeTime(db, clinic.clinicId, { serviceId: service!.id, agendaId, locationId, start });
+    if (!check.ok) otherError = check.reason;
+    else {
+      otherWarnings = check.warnings;
+      const when = `${dayLabel(otherQuery.date)} às ${otherQuery.time}`;
+      otherOption = {
+        value: slotValue({ agendaId, start, locationId }),
+        label: capitalize(formatInstant(start, clinic.timezone, "EEE dd/MM 'às' HH:mm")),
+        detail: describe(agendaId, locationId),
+        summary: when,
+        confirm: slotConfirmText(when, agendaName.get(agendaId) ?? "", location.get(locationId)?.name ?? "Local"),
+        series: seriesStartText(otherQuery.date, otherQuery.time, agendaName.get(agendaId) ?? "", location.get(locationId)?.name ?? "Local"),
+        isHome: location.get(locationId)?.type === "home_visit",
+        warnings: check.warnings.join(" "),
+      };
+    }
+  }
+}
+
 // Dia pedido sem horário (S-02 do teste da R11, cliente, 17/out/2026): sem
 // agenda aberta (não atende, feriado, bloqueado por inteiro) ou aberta e cheia.
 const unavailableOpen =
@@ -445,6 +483,24 @@ const remarcarHref = (a: UpcomingAppointment) => `/admin/agenda/remarcar?id=${a.
               {(isGroup || strip.selected) && slotOptions.length === 0 && (
                 <p class="text-[15px] text-ink-soft">{isGroup ? "Nenhuma turma com vaga." : "Nenhum horário livre nesta data."}</p>
               )}
+              {showOther && (
+                <OtherTime
+                  action="/admin/agenda/marcar"
+                  hidden={{ ...state, agenda_id: agendaChoice }}
+                  form={FORM}
+                  min={today}
+                  date={otherQuery?.date ?? strip.selected ?? (state.date || today)}
+                  time={otherQuery?.time ?? ""}
+                  locations={otherLocations}
+                  locationId={otherQuery?.locationId ?? ""}
+                  agendas={otherAgendas}
+                  agendaId={otherQuery?.agendaId ?? ""}
+                  open={!!otherQuery}
+                  error={otherError}
+                  option={otherOption}
+                  warnings={otherWarnings}
+                />
+              )}
             </div>
           )
         }
@@ -530,7 +586,7 @@ const remarcarHref = (a: UpcomingAppointment) => `/admin/agenda/remarcar?id=${a.
           type="submit"
           variant="primary"
           class="js-confirm-delete h-[46px] w-full text-base"
-          disabled={!patient || slotOptions.length === 0}
+          disabled={!patient || (slotOptions.length === 0 && !otherOption)}
           data-needs-slot
           data-marcar
           data-confirm-title="Marcar o atendimento?"
@@ -560,7 +616,7 @@ const remarcarHref = (a: UpcomingAppointment) => `/admin/agenda/remarcar?id=${a.
             variant="primary"
             form={FORM}
             class="js-confirm-delete h-12 px-[22px] text-base"
-            disabled={!patient || slotOptions.length === 0}
+            disabled={!patient || (slotOptions.length === 0 && !otherOption)}
             data-needs-slot
             data-marcar
             data-confirm-title="Marcar o atendimento?"
@@ -619,6 +675,9 @@ const remarcarHref = (a: UpcomingAppointment) => `/admin/agenda/remarcar?id=${a.
       if (!chosen?.dataset.confirm) return;
       submits.forEach((submit) => {
         const intro = submit.dataset.confirmIntro ?? "";
+        // Outro horário: os avisos na confirmação, e o botão diz "assim mesmo".
+        const warnings = chosen.dataset.warnings ? ` Atenção: ${chosen.dataset.warnings}` : "";
+        submit.dataset.confirmLabel = warnings ? `${submit.textContent?.trim() || "Marcar"} assim mesmo` : submit.textContent?.trim() || "Marcar";
         if (repeat?.checked && chosen.dataset.series) {
           const startDate = chosen.value.split("|")[1]?.slice(0, 10) ?? ""; // agenda|início ISO|local
           const fim = (document.querySelector<HTMLInputElement>("input[name='fim']:checked")?.value ?? "sem_fim") as SeriesEnd["fim"];
@@ -628,9 +687,9 @@ const remarcarHref = (a: UpcomingAppointment) => `/admin/agenda/remarcar?id=${a.
             intervalWeeks: Number(field("interval_weeks")?.value) || 1,
             start: chosen.dataset.series,
             end,
-          });
+          }) + warnings;
         } else {
-          submit.dataset.confirmMessage = `${intro}, ${chosen.dataset.confirm}. O paciente é avisado pelo WhatsApp.`;
+          submit.dataset.confirmMessage = `${intro}, ${chosen.dataset.confirm}.${warnings} O paciente é avisado pelo WhatsApp.`;
         }
       });
     };
