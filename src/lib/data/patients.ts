@@ -51,9 +51,6 @@ export type Patient = {
   /** O paciente é o próprio contato (fala por si no WhatsApp). */
   isContactSelf: boolean;
   notes: string | null;
-  /** Última mudança das observações (CRM C2): quando e quem (gravado pelo banco). */
-  notesUpdatedAt: Date | null;
-  notesUpdatedBy: string | null;
   /** null = particular (D10). */
   insurance: PatientInsurance | null;
   isActive: boolean;
@@ -65,7 +62,7 @@ export type PatientWithContact = Patient & { contact: Contact };
 
 const CONTACT_COLUMNS = "id, full_name, phone, default_home_address, is_active, anonymized_at, bot_blocked_at";
 const PATIENT_COLUMNS =
-  "id, contact_id, full_name, birthdate, is_contact_self, notes, notes_updated_at, notes_updated_by, insurance_plan_id, insurance_card_number, insurance_card_valid_until, is_active, anonymized_at";
+  "id, contact_id, full_name, birthdate, is_contact_self, notes, insurance_plan_id, insurance_card_number, insurance_card_valid_until, is_active, anonymized_at";
 
 type ContactRow = {
   id: string;
@@ -83,8 +80,6 @@ type PatientRow = {
   birthdate: string;
   is_contact_self: boolean;
   notes: string | null;
-  notes_updated_at: string | null;
-  notes_updated_by: string | null;
   insurance_plan_id: string | null;
   insurance_card_number: string | null;
   insurance_card_valid_until: string | null;
@@ -109,8 +104,6 @@ const toPatient = (row: PatientRow): Patient => ({
   birthdate: row.birthdate,
   isContactSelf: row.is_contact_self,
   notes: row.notes,
-  notesUpdatedAt: row.notes_updated_at ? new Date(row.notes_updated_at) : null,
-  notesUpdatedBy: row.notes_updated_by,
   insurance: row.insurance_plan_id
     ? { planId: row.insurance_plan_id, cardNumber: row.insurance_card_number, cardValidUntil: row.insurance_card_valid_until }
     : null,

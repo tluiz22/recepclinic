@@ -482,6 +482,13 @@ WhatsApp e mensagens (`acesso-whatsapp.test.ts`, `webhook-whatsapp.test.ts`).
 - **Q15. Texto do que o sistema envia (28/out):** **Decidido:** continua guardado para o reenvio automático e para
   o diagnóstico do Suporte, sem leitura pelo login da clínica.
 - **Q16. B1 e B2 (28/out):** **Decidido:** saem do plano. Depois da B0, segue a etapa C.
+- **Q17. Registro sem cadastro (28/out, na C2):** **Decidido:** pelo telefone, contato opcional (ficou sem efeito pela Q18).
+- **Q18. "Registrar contato" (28/out, depois de ver a C2 no local):** o cliente não viu valor nas 7 opções (o bot já
+  acompanha a jornada) e explicou a necessidade real: na ficha do paciente, **anotações, lembretes e documentos**
+  (foto ou PDF da carteirinha, identidade, pedido de exame ou médico) para a secretária pegar e encaminhar ao plano de
+  saúde. Registro de contato, se houver, só onde a secretária iniciou o contato. **Decidido:** **tirar tudo** da C2
+  (tabela, telas, saída das listas e o "Atualizado em … por …"); a nova necessidade vira uma etapa nova, planejada
+  com o cliente.
 
 ---
 
@@ -495,6 +502,7 @@ WhatsApp e mensagens (`acesso-whatsapp.test.ts`, `webhook-whatsapp.test.ts`).
 | **B0** | **Revista em 28/out (Q14–Q16, seção 17):** sem guardar o texto das conversas; migração 1 (função do Suporte) com o código; migração 2 (apagar o texto guardado, tirar `body` e `retry_payload` da leitura do login) **só depois** do código publicado no mesmo ambiente | 2 migrações, aprovadas em 28/out | Q13–Q16 |
 | ~~B1~~ | ~~Linha do tempo do contato~~: **fora do plano** (Q16) | — | — |
 | ~~B2~~ | ~~Histórico do paciente~~: **fora do plano** (Q16) | — | — |
+| ~~C1–C3~~ | **Desfeitas em 28/out (Q18)**; no lugar, a etapa de anotações, lembretes e documentos do paciente (a planejar) | — | — |
 | **C1** | Apresentar o SQL final de `contact_interactions` (e das anotações), testes e reversão, **para aprovação** | Proposta | Q6–Q12 |
 | **C2** | Aplicar no local, depois no staging; "Registrar contato" na central e na ficha; registro na linha do tempo; saída da fila pela regra aprovada | Migração | C1 aprovado |
 | **C3** | Integração final: central ↔ ficha ↔ Atendimento humano; regressão; staging; preparo da publicação | — | C2 |
@@ -815,49 +823,15 @@ login, `body` e `retry_payload` dão 403 (42501) e as outras colunas leem; sem l
 
 ---
 
-## 18. C1 aprovada e C2 implementada (28/out, só no local)
+## 18. C2 desfeita (28/out, Q18)
 
-**C1:** SQL aprovado pelo cliente em 28/out, depois do resumo em linguagem simples. **Ajuste aprovado na C2 (Q17):** o
-registro guarda sempre o **telefone** e o contato cadastrado é opcional, para registrar quem está em "Retomar contato"
-sem cadastro. **Defeito achado no teste e corrigido:** a anonimização apagava a observação de um registro "Outro" e
-batia na regra "Outro exige observação"; a regra passou da tabela para o gatilho da gravação (vale para todo registro
-novo; a anonimização apaga depois).
+A C1 foi aprovada e a C2 (registro do resultado do contato, com a tabela `contact_interactions`, "Registrar contato"
+nas abas e na ficha, saída das listas e "Atualizado em … por …" nas Observações) foi implementada e testada só no
+local (commit `0a7e8eb`, na `CRM`). Ao ver o resultado, o cliente decidiu tirar tudo (Q18). Desfeita pelo commit de
+reversão: o código volta ao da B0; a migração `20261029120000` foi apagada do banco local (as funções, a tabela, as
+colunas e a linha do histórico) e o arquivo saiu. Fica só o seed com a mensagem recebida sem texto (D12). Nada foi
+à `main`, ao staging ou à produção.
 
-**Migração `20261029120000_registros_de_contato.sql`** (aplicada só no local; a reversão foi exercitada no local):
-tabela `contact_interactions` (telefone, contato e paciente opcionais, origem, atendimento, tentativa do bot, resultado,
-observação até 1000, autor e hora pelo banco); gatilho de gravação (autor e hora de quem grava, telefone do contato,
-"Outro" com observação, paciente do contato, "Marcou" só com atendimento ativo do contato); RLS (lê quem é da clínica;
-grava Administrador e Recepção com o item `relationship`; sem `update`/`delete`; bot sem acesso); auditoria do
-Suporte; anonimização (apaga a observação e troca o telefone, também nos registros feitos pelo telefone antes do
-cadastro); `patients.notes_updated_at`/`notes_updated_by` com o gatilho (só quando as observações mudam; valor enviado
-ignorado; anonimização zera).
-
-**Código:**
-- `src/lib/data/contactInteractions.ts`: as 7 opções, quem tira de cada lista (Q8, Q11), gravação, leitura, "Marcou"
-  (atendimento ativo criado desde o começo da pendência; na ficha, um por vir) e a conferência do pedido no servidor
-  (`resolveRegisterTarget`: paciente e atendimento da clínica e um do outro).
-- `relationship.ts`: `loadRelationshipLists` tira quem saiu pelo registro e guarda a última tentativa de cada linha
-  (Retomar contato = tentativas do telefone e fluxo, registro depois da última; Retorno = a consulta ou o "Marcou"
-  depois dela; Lembretes e Aguardando = o atendimento; Faltosos = o paciente, até uma falta nova). O total do menu
-  cai junto.
-- Tela `/admin/relacionamento/registrar` e rota `/api/admin/relacionamento/registro` (volta à tela de origem com o
-  aviso "saiu da lista" ou "continua na lista, com a tentativa").
-- Abas Retomar contato, Retorno, Lembretes, Aguardando remarcação (só na central; o Resumo do Dia não muda) e
-  Faltosos: "Registrar contato" e a última tentativa ("Não respondeu em dd/mm por Fulana · 2 registros"; "Link enviado
-  em dd/mm").
-- Ficha do paciente: cartão "Contatos da equipe" (com o item; todos leem; registra quem tem a área) e "Atualizado em
-  … por …" nas Observações.
-- Atendimento e Lista de espera sem "Registrar contato" nesta etapa (Q8: não mudam).
-- Seed: um registro de exemplo e a mensagem recebida sem texto (D12).
-
-**Testes:** unidade 720 passando (6 novos em `contactInteractions.test.ts`); banco 662 passando (13 novos em
-`tests/db/registros-de-contato.test.ts`); `astro check` sem erros; `npm run build` completo. Numa das duas rodadas
-completas do banco, 2 testes do bot (`bot-marcar.test.ts`, que esta etapa não toca) falharam e passaram sozinhos e
-na rodada seguinte: intermitente, registrado aqui. Navegador local: como Recepção, registro pela ficha ("Outro" sem
-observação recusado com a mensagem no campo; com observação, gravado e de volta à ficha); como Profissional, o cartão
-sem o botão e a tela de registro barrada. As abas da central com pendência não foram vistas no navegador (o seed local
-não tem pendências nelas); a saída das listas está coberta pelos testes de banco (Faltosos e Lembretes) e de unidade.
-
-**Fica para decidir com o cliente:** se os Faltosos passam a somar no número do menu (hoje fora, porque a lista era
-permanente até esta etapa).
+**Aprendizado registrado:** antes de implementar uma etapa planejada, confirmar com o cliente, em linguagem simples e
+com o exemplo de uso, se ela resolve a necessidade do dia a dia.
 

@@ -345,10 +345,6 @@ begin
     (c_a, '0a0f0000-0000-4000-8000-000000000001', 'booking', 'started', '+5584988880001', ct_maria),
     (c_a, '0a0f0000-0000-4000-8000-000000000001', 'booking', 'confirmed', '+5584988880001', ct_maria);
 
-  -- Registro do resultado do contato (CRM C2): a recepção tentou falar com a Maria sobre a Ana.
-  insert into public.contact_interactions (clinic_id, contact_phone, contact_id, patient_id, source, outcome, note) values
-    (c_a, '+5584988880001', ct_maria, pt_ana, 'ficha_paciente', 'call_back', 'Pediu para ligar depois das 18h');
-
   -- Limite do bot atingido (F9.6a): a conversa do Carlos foi para a recepção
   -- (aparece em "Contatos para revisar" no Painel e na tela do contato).
   insert into public.bot_limit_events (clinic_id, contact_id, reason, limit_value, current_value, paused, created_at)

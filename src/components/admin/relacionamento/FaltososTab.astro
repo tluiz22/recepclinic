@@ -1,13 +1,7 @@
 ---
 // Relacionamento › Faltosos (CRM A2): a mesma lista dos Faltosos das Métricas.
-// C2: a última tentativa e o "Registrar contato"; quem sai volta com uma falta nova.
-import ContactLogLine from "./ContactLogLine.astro";
-import { registerHref } from "./registerHref";
-import type { ActorLabel } from "../../../lib/data/agenda/trail";
-import type { PendencyLog } from "../../../lib/data/contactInteractions";
 import { currentPath, withReturn } from "../../../lib/returnPath";
 import PhoneLinks from "../PhoneLinks.astro";
-import Button from "../ui/Button.astro";
 import EmptyState from "../ui/EmptyState.astro";
 import HowItWorks from "../ui/HowItWorks.astro";
 import { relacionamento } from "../../../lib/ajuda/relacionamento";
@@ -19,12 +13,9 @@ interface Props {
   patients: FrequentNoShow[];
   timeZone: string;
   vocabulary: Vocabulary;
-  logs: Map<string, PendencyLog>;
-  actors: Map<string, ActorLabel>;
-  returnTo: string;
 }
 
-const { patients, timeZone, vocabulary, logs, actors, returnTo } = Astro.props;
+const { patients, timeZone, vocabulary } = Astro.props;
 const here = currentPath(Astro.url);
 ---
 
@@ -44,17 +35,11 @@ const here = currentPath(Astro.url);
               {!f.isContactSelf && `${capitalize(vocabulary.contact)}: ${f.contactName} · `}
               <PhoneLinks phone={f.contactPhone} plain />
             </span>
-            <ContactLogLine log={logs.get(f.patientId)} actors={actors} timeZone={timeZone} />
           </div>
-          <div class="flex shrink-0 flex-col gap-2 sm:items-end">
-            <span class="text-[15px] text-ink-soft tabular-nums sm:text-right sm:text-sm">
-              <span class="font-semibold text-ink">{f.noShows} faltas</span> em {f.total} registrados
-              <span class="block text-[13px]">última em {formatInstant(f.lastNoShow, timeZone, "dd/MM/yyyy")}</span>
-            </span>
-            <Button size="sm" class="self-start sm:self-end" href={registerHref({ source: "faltosos", patientId: f.patientId, since: f.lastNoShow }, returnTo)}>
-              Registrar contato
-            </Button>
-          </div>
+          <span class="text-[15px] text-ink-soft tabular-nums sm:text-right sm:text-sm">
+            <span class="font-semibold text-ink">{f.noShows} faltas</span> em {f.total} registrados
+            <span class="block text-[13px]">última em {formatInstant(f.lastNoShow, timeZone, "dd/MM/yyyy")}</span>
+          </span>
         </li>
       ))}
     </ul>

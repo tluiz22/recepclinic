@@ -2,12 +2,7 @@
 // Relacionamento › Lembretes (CRM A1, Q4): atendimentos por vir com o
 // lembrete não entregue ou sem resposta, pela mesma regra do sinal do cartão
 // da Agenda. O reenvio e o "Confirmar presença" continuam na Agenda; o nome
-// leva à ficha e "Abrir na Agenda" ao dia do atendimento. C2 (Q11): a última
-// tentativa e o "Registrar contato" (sem "Marcou").
-import ContactLogLine from "./ContactLogLine.astro";
-import { registerHref } from "./registerHref";
-import type { ActorLabel } from "../../../lib/data/agenda/trail";
-import type { PendencyLog } from "../../../lib/data/contactInteractions";
+// leva à ficha e "Abrir na Agenda" ao dia do atendimento.
 import { currentPath, withReturn } from "../../../lib/returnPath";
 import PhoneLinks from "../PhoneLinks.astro";
 import Button from "../ui/Button.astro";
@@ -26,12 +21,9 @@ interface Props {
   timeZone: string;
   vocabulary: Vocabulary;
   tags: Map<string, ServiceTagInfo>;
-  logs: Map<string, PendencyLog>;
-  actors: Map<string, ActorLabel>;
-  returnTo: string;
 }
 
-const { reminders, timeZone, vocabulary, tags, logs, actors, returnTo } = Astro.props;
+const { reminders, timeZone, vocabulary, tags } = Astro.props;
 const groups: { kind: PendingReminderKind; label: string; tone: "danger" | "warning" }[] = [
   { kind: "not_delivered", label: "Não entregue", tone: "danger" },
   { kind: "no_answer", label: "Sem resposta", tone: "warning" },
@@ -70,16 +62,10 @@ const here = currentPath(Astro.url);
                         <PhoneLinks phone={a.contactPhone} plain />
                       </span>
                       <span class="text-[13px] text-ink-soft">Lembrete enviado em {formatInstant(sentAt, timeZone, "dd/MM 'às' HH:mm")}</span>
-                      <ContactLogLine log={logs.get(a.id)} actors={actors} timeZone={timeZone} />
                     </div>
-                    <div class="flex shrink-0 flex-wrap gap-2 self-start">
-                      <Button size="sm" href={`/admin/agenda?date=${localDateOf(a.scheduledAt, timeZone)}`}>
-                        Abrir na Agenda
-                      </Button>
-                      <Button size="sm" href={registerHref({ source: "lembretes", patientId: a.patientId, appointmentId: a.id }, returnTo)}>
-                        Registrar contato
-                      </Button>
-                    </div>
+                    <Button size="sm" class="shrink-0 self-start" href={`/admin/agenda?date=${localDateOf(a.scheduledAt, timeZone)}`}>
+                      Abrir na Agenda
+                    </Button>
                   </li>
                 ))}
               </ul>

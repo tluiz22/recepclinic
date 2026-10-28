@@ -4,7 +4,6 @@ import { listAwaitingRebooking } from "./daily";
 import { AGENDA_COLUMNS, toAgendaAppointment, type AgendaAppointment, type AgendaRow } from "./agenda/view";
 import { buildFunnelReportFromSessions, listFunnelSessions, type Incomplete } from "./botFunnel";
 import { listAgendas } from "./config/agendas";
-import { listInteractions, pendencyState, type ContactInteraction, type InteractionSource, type PendencyLog } from "./contactInteractions";
 import { listFrequentNoShows, type FrequentNoShow } from "./metrics";
 import { loadContactNames, loadPatientContacts, type PatientContact } from "./people";
 import { listReturnOpportunities, type ReturnRight } from "./performance";
@@ -15,9 +14,8 @@ import { listReminderActions, REMINDER_MESSAGE_TYPE, type ReminderAction } from 
 
 // Central de Relacionamento (CRM A1, cliente, 27/out/2026): as pendências que
 // pedem contato da equipe, numa tela só. Compõe as listas que já existem (as
-// mesmas funções, o mesmo RLS); nenhuma regra nova de entrada. A2 (27/out):
-// as listas que eram só das Métricas, sem exigir os itens delas. C2 (28/out):
-// o registro do resultado do contato tira da lista pela regra da Q8.
+// mesmas funções, o mesmo RLS); nenhuma regra nova de entrada ou saída. A2
+// (27/out): as listas que eram só das Métricas, sem exigir os itens delas.
 
 export type RelationshipTab =
   | "atendimento"
@@ -74,8 +72,6 @@ export type RecallGroup = {
   /** A tentativa mais recente (onde parou e o detalhe). */
   latest: Incomplete;
   attempts: number;
-  /** As tentativas do grupo (o registro de contato aponta para uma delas). */
-  sessionIds: string[];
 };
 
 /** Uma linha por telefone e fluxo: a tentativa mais recente e quantas foram. */
@@ -85,11 +81,10 @@ export function groupRecall(incomplete: readonly Incomplete[]): Omit<RecallGroup
     const key = `${item.phone}:${item.flowLabel}`;
     const group = groups.get(key);
     if (!group) {
-      groups.set(key, { phone: item.phone, contactId: item.contactId, flowLabel: item.flowLabel, latest: item, attempts: 1, sessionIds: [item.sessionId] });
+      groups.set(key, { phone: item.phone, contactId: item.contactId, flowLabel: item.flowLabel, latest: item, attempts: 1 });
       continue;
     }
     group.attempts++;
-    group.sessionIds.push(item.sessionId);
     if (item.startedAt > group.latest.startedAt) group.latest = item;
     group.contactId ??= item.contactId;
   }
@@ -197,84 +192,6 @@ export type RelationshipLists = {
   revisar?: ContactToReview[] | null;
 };
 
-// ---------------------------------------------------------------------------
-// Registro do resultado do contato (C2, Q8): o que tira de cada lista
-// ---------------------------------------------------------------------------
-
-/** A tentativa mais recente de cada linha, pela chave da pendência. */
-export type ContactLogs = Partial<Record<RelationshipTab, Map<string, PendencyLog>>>;
-
-export const recallKey = (g: Pick<RecallGroup, "phone" | "flowLabel">) => `${g.phone}:${g.flowLabel}`;
-
-/** Tira da lista quem saiu pelo registro e guarda a tentativa das outras linhas. */
-export function applyContactLog<T>(
-  source: InteractionSource,
-  items: readonly T[],
-  keyOf: (item: T) => string,
-  belongs: (item: T, interaction: ContactInteraction) => boolean,
-  interactions: readonly ContactInteraction[],
-): { kept: T[]; log: Map<string, PendencyLog> } {
-  const log = new Map<string, PendencyLog>();
-  const kept = items.filter((item) => {
-    const state = pendencyState(source, interactions.filter((i) => belongs(item, i)));
-    if (state.log) log.set(keyOf(item), state.log);
-    return !state.exits;
-  });
-  return { kept, log };
-}
-
-/**
- * Cada pendência e os registros dela (Q8): Retomar contato = as tentativas do
- * mesmo telefone e fluxo iniciadas antes do registro; Retorno = a consulta
- * (ou o "Marcou" do paciente depois dela); Lembretes e Aguardando remarcação =
- * o atendimento; Faltosos = o paciente, até uma falta nova depois do registro.
- */
-async function withContactLog<K extends RelationshipTab>(
-  db: DbClient,
-  clinicId: string,
-  tab: K,
-  list: NonNullable<RelationshipLists[K]>,
-): Promise<{ list: NonNullable<RelationshipLists[K]>; log: Map<string, PendencyLog> | null }> {
-  const read = (source: InteractionSource, column: "contact_phone" | "appointment_id" | "patient_id", values: string[]) =>
-    listInteractions(db, clinicId, source, column, values);
-  switch (tab) {
-    case "retomar_contato": {
-      const groups = list as RecallGroup[];
-      const found = await read("retomar_contato", "contact_phone", groups.map((g) => g.phone));
-      const { kept, log } = applyContactLog("retomar_contato", groups, recallKey, (g, i) => !!i.sessionId && g.sessionIds.includes(i.sessionId) && i.createdAt > g.latest.startedAt, found);
-      return { list: kept as never, log };
-    }
-    case "retorno": {
-      const items = list as ReturnOpportunity[];
-      const found = await read("retorno", "patient_id", items.map((o) => o.patientId));
-      const belongs = (o: ReturnOpportunity, i: ContactInteraction) =>
-        i.appointmentId === o.appointmentId || (i.outcome === "scheduled" && i.patientId === o.patientId && i.createdAt > o.scheduledAt);
-      const { kept, log } = applyContactLog("retorno", items, (o) => o.appointmentId, belongs, found);
-      return { list: kept as never, log };
-    }
-    case "lembretes": {
-      const items = list as PendingReminder[];
-      const found = await read("lembretes", "appointment_id", items.map((r) => r.appointment.id));
-      const { kept, log } = applyContactLog("lembretes", items, (r) => r.appointment.id, (r, i) => i.appointmentId === r.appointment.id, found);
-      return { list: kept as never, log };
-    }
-    case "aguardando_remarcacao": {
-      const items = list as AgendaAppointment[];
-      const found = await read("aguardando_remarcacao", "appointment_id", items.map((a) => a.id));
-      const { kept, log } = applyContactLog("aguardando_remarcacao", items, (a) => a.id, (a, i) => i.appointmentId === a.id, found);
-      return { list: kept as never, log };
-    }
-    case "faltosos": {
-      const items = list as FrequentNoShow[];
-      const found = await read("faltosos", "patient_id", items.map((f) => f.patientId));
-      const { kept, log } = applyContactLog("faltosos", items, (f) => f.patientId, (f, i) => i.patientId === f.patientId && i.createdAt > f.lastNoShow, found);
-      return { list: kept as never, log };
-    }
-    default:
-      return { list, log: null };
-  }
-}
-
 /** Pendências por aba (o tamanho da lista); `null` = a leitura falhou. */
 export type RelationshipCounts = Partial<Record<RelationshipTab, number | null>>;
 
@@ -289,7 +206,7 @@ export async function loadRelationshipLists(
   clinicId: string,
   tabs: readonly RelationshipTab[],
   onError: (tab: RelationshipTab, error: unknown) => void,
-  { timeZone, now = new Date(), logs }: { timeZone: string; now?: Date; logs?: ContactLogs },
+  { timeZone, now = new Date() }: { timeZone: string; now?: Date },
 ): Promise<RelationshipLists> {
   // Agendas que o login vê (RLS), lidas uma vez para Retorno e Faltosos.
   let agendas: Promise<string[]> | null = null;
@@ -307,10 +224,7 @@ export async function loadRelationshipLists(
   const entries = await Promise.all(
     tabs.map(async (tab) => {
       try {
-        // Quem saiu pelo registro de contato (C2) já não conta nem aparece.
-        const { list, log } = await withContactLog(db, clinicId, tab, await sources[tab]());
-        if (log && logs) logs[tab] = log;
-        return [tab, list] as const;
+        return [tab, await sources[tab]()] as const;
       } catch (error) {
         onError(tab, error);
         return [tab, null] as const;
