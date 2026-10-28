@@ -26,7 +26,10 @@
 >   **28/out: CRM B0 na `main` e no staging** (decisão D12: o texto das conversas fica no app do WhatsApp; o
 >   RecepClinic não guarda o que o paciente escreve nem o que a recepção responde, e o texto já guardado foi apagado
 >   no staging; B1 e B2 saíram do plano). **Não está na produção** (a migração 2 apaga para sempre o texto guardado:
->   só com autorização explícita). Próximo do CRM: validação da B0 no staging e a etapa C, por `docs/crm.md`.
+>   só com autorização explícita). B0 validada no staging. A etapa C (registro do contato) foi feita e desfeita a pedido do cliente;
+>   no lugar, **documentos, anotações e lembretes do paciente**: **P1 Documentos no staging em 28/out** (foto ou PDF
+>   na aba "Documentos" da ficha; para todas as clínicas). **Não está na produção.** Próximo do CRM: validação da P1
+>   no staging e a P2 Anotações, por `docs/crm.md`.
 >
 > - **Etapas 0 a 4 concluídas**: cópia isolada, [diagnóstico](diagnostico.md), [limites](limites.md),
 >   [arquitetura](arquitetura.md) (decisões D1–D11) e [plano](plano.md) (fases F0–F10).

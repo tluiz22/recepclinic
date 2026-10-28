@@ -68,8 +68,10 @@
 >   **anotações, lembretes e documentos** (foto ou PDF de carteirinha, identidade, pedidos de exame ou médicos) para a
 >   secretária encaminhar ao plano. Etapa nova planejada com o cliente em 28/out (Q19 a Q24, seção 19 do
 >   [plano](analises/plano-evolucao-relacionamento.md)). **P1 Documentos implementada em 28/out, só no local**
->   (migração `20261029120000_documentos_do_paciente.sql`; 717 de unidade e 657 de banco). **Retomar daqui:**
->   validação do cliente no local; com o OK, `main` e staging (migração antes do push; conferir a CSP lá) e a P2.
+>   (migração `20261029120000_documentos_do_paciente.sql`; 717 de unidade e 657 de banco). Validada no local
+>   (com os ajustes: botões, aba "Documentos" na ficha, download sem a barra) e **publicada no staging em 28/out**
+>   (`5061feb`); Documentos para todas as clínicas (Q25). **Produção: nada.** **Retomar daqui:** validação do cliente
+>   no staging (anexar confere a CSP) e a P2 Anotações.
 
 ## Como trabalhar nesta etapa
 

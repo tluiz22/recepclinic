@@ -909,3 +909,9 @@ nome original do arquivo. Conferido no navegador local: um e dois arquivos baixa
 **P1 validada pelo cliente no local em 28/out.** **Q25 (28/out): Documentos para todas as clínicas**, no básico do
 consultório (sem item na Matriz).
 
+**Staging (28/out, com o OK do cliente):** `CRM` → `main` por avanço direto (`5061feb`). Migração
+`20261029120000_documentos_do_paciente.sql`: simulação (só ela) → aplicada → conferida (armazenamento privado, 10 MB,
+foto ou PDF; tabela respondendo; leitura e envio sem login recusados) → push da `main` (Vercel do staging publicada;
+na produção, só a *preview*). **A conferir pelo cliente no staging:** anexar (é o teste da CSP, que só vale fora do
+`npm run dev`; se o envio falhar com "O arquivo não foi enviado", é ela). **Produção: nada.**
+
