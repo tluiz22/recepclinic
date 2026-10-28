@@ -532,3 +532,9 @@ retomada fica no README). Para achar algo, buscar por data (ex.: `27/out`), fase
   serviço não usa). Achado no caminho: na turma, o alerta aceitava horário geral, e o bot só o da turma; o alerta passa
   a seguir o bot (`setup.ts`, `fits`). Sem migração. Staging em 28/out.
   **Validada pelo cliente no staging em 28/out**; produção depois da próxima funcionalidade (pedido do cliente).
+- **C6 Escolha do serviço no Marcar** (cliente, 28/out: com lista grande, fácil escolher o serviço errado). Protótipos
+  A, B e C no canvas https://claude.ai/artifact/Y7spM4gyT7yvaWjuUjaqWZ; escolhida a **B**: botões do tipo (Consulta ·
+  N | Retorno · N | Exame · N) e, do tipo aberto, os serviços em cartões com nome e duração ("turma" quando for).
+  Decisões do cliente: **nenhum tipo vem escolhido** (com o serviço já definido, abre no tipo dele); **sem valor** no
+  cartão. Busca dentro do tipo com mais de 8 serviços (filtra no navegador). `ServicePicker.astro` e
+  `lib/servicePicker.ts`; parâmetro `tipo` no endereço do Marcar (vale também no Alterar). Sem migração. Staging em 28/out.

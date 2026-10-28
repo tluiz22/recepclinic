@@ -16,6 +16,8 @@
 >   [`historico.md`](historico.md), busca "C4"): validada no staging e na produção (C4.6, `3ec78dc`,
 >   conferida pelo cliente em 28/out). **C5 Horário em local que o serviço não usa** (histórico, busca "C5") no staging,
 >   validada no staging; vai para a produção junto com a próxima funcionalidade (pedido do cliente, 28/out).
+>   **C6 Escolha do serviço no Marcar** (tipo primeiro, depois cartões) no staging, aguardando a validação do cliente;
+>   depois, C5 e C6 juntas na produção, com autorização (sem migração).
 > - **CRM concluído** (28/out; [`crm.md`](crm.md)): validado no staging e na produção desde 28/out.
 > - **Faturamento do SaaS (Asaas)** ([`planejamento-faturamento-saas.md`](planejamento-faturamento-saas.md)): planejamento
 >   aprovado (28/out), nada implementado; trabalho na branch **`faturamento`** (a `main` fica para correções urgentes

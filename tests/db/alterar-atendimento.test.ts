@@ -168,7 +168,7 @@ describe("data passada", () => {
 // C4.4 (cliente, 28/out/2026): série, "esta e as próximas".
 describe("série: esta e as próximas", () => {
   it("no mesmo horário muda no lugar; com uma sessão ocupada, nada muda", async () => {
-    const { series, created } = await createSeries(
+    const { created } = await createSeries(
       db(reception),
       clinicId,
       { patientId: ids.p3, serviceId: ids.consulta, agendaId: ids.agendaDra2, locationId: ids.office, intervalWeeks: 1, startsOn: "2031-04-07", startTime: "08:00", maxSessions: 3, actorId: reception.id },

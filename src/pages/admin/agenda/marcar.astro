@@ -55,6 +55,8 @@ import {
 } from "../../../lib/data/agenda/appointments";
 import { snapshotOf, whenText } from "../../../lib/appointmentChanges";
 import { setFlash } from "../../../lib/flash";
+import { openType } from "../../../lib/servicePicker";
+import ServicePicker from "../../../components/admin/agenda/ServicePicker.astro";
 import { SERIES_HORIZON_MONTHS } from "../../../lib/data/agenda/series";
 import { listAgendas } from "../../../lib/data/config/agendas";
 import { getClinicSettings } from "../../../lib/data/config/clinic";
@@ -99,6 +101,8 @@ const state = {
   agenda_id: params.get("agenda_id") ?? editing?.agendaId ?? "",
   date: validDate(params.get("date")) || (editing ? localDateOf(editing.scheduledAt, clinic.timezone) : ""),
   de: validDate(params.get("de")),
+  // Tipo aberto na escolha do serviço (C6): o do endereço; sem ele, o do serviço escolhido.
+  tipo: params.get("tipo") ?? "",
   volta: volta ?? "",
 };
 const link = (changes: Partial<typeof state> & { busca?: string }) => {
@@ -121,6 +125,7 @@ const examsOn = clinic.features.includes("exams");
 // Alterar: o serviço atual aparece mesmo desativado.
 const serviceOptions = services.filter((s) => (s.isActive || s.id === editing?.serviceId) && (examsOn || s.category !== "exam" || s.id === editing?.serviceId));
 const service = serviceOptions.find((s) => s.id === state.service_id) ?? null;
+const openTipo = openType(state.tipo || null, serviceOptions, service);
 const agendaName = new Map(agendas.map((a) => [a.id, a.name]));
 const location = new Map(locations.map((l) => [l.id, l]));
 
@@ -530,21 +535,14 @@ const remarcarHref = (a: UpcomingAppointment) => `/admin/agenda/remarcar?id=${a.
           <p class="text-[15px] text-ink-soft">Escolha o {vocabulary.patient} primeiro.</p>
         ) : (
         <div class="flex flex-col gap-2.5">
-          <form method="GET">
-            {/* U-09: o dia pedido continua valendo depois do serviço; só a faixa recomeça. */}
-            {Object.entries(state).map(([key, value]) => value && key !== "service_id" && key !== "de" && <input type="hidden" name={key} value={value} />)}
-            <select name="service_id" aria-label="Serviço" class={`${CONTROL} w-full sm:max-w-[480px]`} data-autosubmit>
-              <option value="">Escolha…</option>
-              {
-                serviceOptions.map((s) => (
-                  <option value={s.id} selected={s.id === service?.id}>
-                    {s.name} ({s.durationMinutes} min){s.schedulingMode === "group" ? " · turma" : ""}
-                  </option>
-                ))
-              }
-            </select>
-            <noscript><Button type="submit" class="mt-2">Escolher</Button></noscript>
-          </form>
+          {/* C6: tipo primeiro, depois o serviço. U-09: o dia pedido continua valendo depois do serviço; só a faixa recomeça. */}
+          <ServicePicker
+            services={serviceOptions}
+            open={openTipo}
+            selectedId={service?.id ?? null}
+            typeHref={(tipo) => link({ tipo, service_id: tipo === service?.category ? state.service_id : "", de: "" })}
+            serviceHref={(s) => link({ tipo: s.category, service_id: s.id, de: "" })}
+          />
           {service && serviceAgendaIds.length === 0 && (
             <p class={warnNote}>
               <Icon name="warning" class="mt-0.5 h-[18px] w-[18px] shrink-0" />
