@@ -507,3 +507,9 @@ retomada fica no README). Para achar algo, buscar por data (ex.: `27/out`), fase
     valor novo: a confirmação diz quanto falta ou quanto foi pago a mais (`paymentChangeNote`). Migração
     `20261101120000_alterar_passado` (`change_group_session` aceita o atendimento registrado). Staging: simulação →
     aplicação → conferência em 28/out.
+    **Validada pelo cliente no staging em 28/out.**
+  - **C4.4** (28/out): no Alterar de sessão de série ainda por vir, "Só esta sessão" ou "Esta e as próximas" (como no
+    Remarcar). Mesmo horário: `changeSeriesDetailsFrom` (series.ts) muda a série e cada sessão ativa dali em diante no
+    lugar, conferindo antes todas (com alguma ocupada, nada muda e a tela diz as datas); outro dia ou horário:
+    `changeSeriesFrom` com serviço, agenda, local, endereço e convênio novos (encerra e recomeça, como no Remarcar).
+    Aviso ao paciente só da primeira sessão e só se mudar dia, hora, agenda ou local. Sem migração.

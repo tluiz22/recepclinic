@@ -3,8 +3,16 @@ import { isNationalHoliday } from "../../holidays";
 import type { Enums } from "../../supabase/database.types";
 import type { DbClient } from "../clients";
 import { DataError, fromDbError, unwrap, unwrapOne, Validation } from "../errors";
-import { cancelAppointment, getAppointment, trailContext, type Appointment, type TrailChannel } from "./appointments";
-import { loadClinicHolidays, loadSchedulingPlan } from "./slots";
+import {
+  cancelAppointment,
+  changeAppointment,
+  getAppointment,
+  trailContext,
+  type Appointment,
+  type ChangeInput,
+  type TrailChannel,
+} from "./appointments";
+import { checkFreeTime, loadClinicHolidays, loadSchedulingPlan } from "./slots";
 import { hasFeature } from "../features";
 import { logError } from "../../log";
 
@@ -57,6 +65,8 @@ export type SeriesInput = {
   endsOn?: string | null;
   maxSessions?: number | null;
   homeVisitAddress?: string | null;
+  /** Sem ele, o convênio do paciente (Alterar "esta e as próximas" passa o escolhido). */
+  insurancePlanId?: string | null;
   actorId: string | null;
 };
 
@@ -297,7 +307,7 @@ export async function createSeries(
       ends_on: input.endsOn ?? null,
       max_sessions: input.maxSessions ?? null,
       home_visit_address: location.type === "home_visit" ? homeVisitAddress : null,
-      insurance_plan_id: patient.insurance_plan_id,
+      insurance_plan_id: input.insurancePlanId !== undefined ? input.insurancePlanId : patient.insurance_plan_id,
       created_by: input.actorId,
     }),
     "Série",
@@ -401,7 +411,17 @@ export async function changeSeriesFrom(
   db: DbClient,
   clinicId: string,
   appointmentId: string,
-  change: { startsOn: string; startTime: string; intervalWeeks?: number },
+  change: {
+    startsOn: string;
+    startTime: string;
+    intervalWeeks?: number;
+    /** Alterar "esta e as próximas" (C4.4): serviço, agenda, local, endereço e convênio novos. */
+    serviceId?: string;
+    agendaId?: string;
+    locationId?: string;
+    homeVisitAddress?: string | null;
+    insurancePlanId?: string | null;
+  },
   actorId: string | null,
   now: Date = new Date(),
 ): Promise<{ ended: AppointmentSeries; canceled: Appointment[]; next: ({ series: AppointmentSeries } & GenerationResult) | null }> {
@@ -424,15 +444,16 @@ export async function changeSeriesFrom(
   // Valida a mudança antes de encerrar a série antiga.
   const input: SeriesInput = {
     patientId: old.patientId,
-    serviceId: old.serviceId,
-    agendaId: old.agendaId,
-    locationId: old.locationId,
+    serviceId: change.serviceId ?? old.serviceId,
+    agendaId: change.agendaId ?? old.agendaId,
+    locationId: change.locationId ?? old.locationId,
     intervalWeeks: change.intervalWeeks ?? old.intervalWeeks,
     startsOn: change.startsOn,
     startTime: change.startTime,
     endsOn: old.endsOn,
     maxSessions: remaining,
-    homeVisitAddress: old.homeVisitAddress,
+    homeVisitAddress: change.homeVisitAddress !== undefined ? change.homeVisitAddress : old.homeVisitAddress,
+    insurancePlanId: change.insurancePlanId,
     actorId,
   };
   if (remaining === null || remaining > 0) validateSeriesInput(input, todayIn((await loadTimezone(db, clinicId)), now));
@@ -444,4 +465,68 @@ export async function changeSeriesFrom(
 
 async function loadTimezone(db: DbClient, clinicId: string): Promise<string> {
   return unwrapOne(await db.from("clinic_settings").select("timezone").eq("clinic_id", clinicId).maybeSingle(), "Configuração da clínica").timezone;
+}
+
+/**
+ * Alterar "esta e as próximas" no mesmo dia e horário (C4.4; cliente,
+ * 28/out/2026): serviço, agenda, local, endereço e convênio mudam na série e
+ * em cada sessão ativa a partir desta, no lugar (a presença confirmada fica,
+ * se a agenda e o local não mudam). Confere antes todas as sessões: com
+ * alguma ocupada, nada muda. Mudar o dia ou o horário é `changeSeriesFrom`.
+ */
+export async function changeSeriesDetailsFrom(
+  db: DbClient,
+  clinicId: string,
+  appointmentId: string,
+  input: Omit<ChangeInput, "start">,
+  now: Date = new Date(),
+): Promise<{ series: AppointmentSeries; changed: Appointment[]; scheduleChanged: boolean }> {
+  const session = await sessionOfSeries(db, clinicId, appointmentId);
+  if (!(session.status === "scheduled" || session.status === "confirmed") || session.scheduledAt <= now) {
+    throw new DataError("invalid", "Série: só uma sessão ainda por vir muda as próximas", { modo: "Altere só esta sessão" });
+  }
+  const plan = await loadSchedulingPlan(db, clinicId, { serviceId: input.serviceId, agendaId: input.agendaId, locationId: input.locationId });
+  if (!plan) throw new DataError("invalid", "Série: serviço inativo ou não atendido nesta agenda", { serviceId: "Serviço não atendido nesta agenda" });
+  if (plan.isGroup) throw new DataError("invalid", "Série: turma não tem série (as vagas são por sessão)", { serviceId: "Turma não tem série" });
+
+  const ids = await activeSessionsFrom(db, clinicId, session, now);
+  const sessions = await Promise.all(ids.map((id) => getAppointment(db, clinicId, id)));
+  // Todas as sessões precisam caber (a duração e a agenda podem mudar).
+  const busy: string[] = [];
+  for (const s of sessions) {
+    if (s.serviceId === input.serviceId && s.agendaId === input.agendaId && s.locationId === input.locationId) continue;
+    const check = await checkFreeTime(db, clinicId, { serviceId: input.serviceId, agendaId: input.agendaId, locationId: input.locationId, start: s.scheduledAt, ignoreAppointmentId: s.id }, now);
+    if (!check.ok) busy.push(`${localDateOf(s.scheduledAt, plan.timeZone).split("-").reverse().slice(0, 2).join("/")} (${check.reason.replace(/\.$/, "").toLowerCase()})`);
+  }
+  if (busy.length) {
+    throw new DataError("conflict", `Série: não dá para mudar as próximas sessões: ${busy.join("; ")}`, {
+      modo: `Não dá em ${busy.join("; ")}. Altere só esta sessão ou mude o horário.`,
+    });
+  }
+
+  const changed: Appointment[] = [];
+  let scheduleChanged = false;
+  for (const s of sessions) {
+    const result = await changeAppointment(db, clinicId, s.id, { ...input, start: s.scheduledAt, acceptedWarnings: true }, now);
+    scheduleChanged ||= result.scheduleChanged;
+    changed.push(result.appointment);
+  }
+  unwrapOne(
+    await db
+      .from("appointment_series")
+      .update({
+        service_id: input.serviceId,
+        agenda_id: input.agendaId,
+        location_id: input.locationId,
+        duration_minutes: plan.durationMinutes,
+        home_visit_address: input.homeVisitAddress?.trim() || null,
+        insurance_plan_id: input.insurancePlanId,
+      })
+      .eq("clinic_id", clinicId)
+      .eq("id", session.seriesId!)
+      .select("id")
+      .maybeSingle(),
+    "Série",
+  );
+  return { series: await getSeries(db, clinicId, session.seriesId!), changed, scheduleChanged };
 }

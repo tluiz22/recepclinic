@@ -9,6 +9,7 @@ import {
   type Appointment,
   type ChangeInput,
 } from "../../src/lib/data/agenda/appointments";
+import { changeSeriesDetailsFrom, changeSeriesFrom, createSeries } from "../../src/lib/data/agenda/series";
 import { checkFreeTime, PAST_WARNING, pastLimit } from "../../src/lib/data/agenda/slots";
 import { adminClient } from "./helpers";
 import { asDb, at, codeOf, MON1, MON3, NOW, setupAgendaClinic, type AgendaFixture, type AgendaIds } from "./agendaFixture";
@@ -161,5 +162,48 @@ describe("data passada", () => {
     const result = await change(done, { agendaId: ids.agendaDra, start: at(PAST, "09:00"), acceptedWarnings: true });
     expect(result.appointment).toMatchObject({ status: "completed", agendaId: ids.agendaDra });
     expect(await codeOf(() => change(result.appointment, { start: at(MON3, "08:00") }))).toBe("invalid");
+  });
+});
+
+// C4.4 (cliente, 28/out/2026): série, "esta e as próximas".
+describe("série: esta e as próximas", () => {
+  it("no mesmo horário muda no lugar; com uma sessão ocupada, nada muda", async () => {
+    const { series, created } = await createSeries(
+      db(reception),
+      clinicId,
+      { patientId: ids.p3, serviceId: ids.consulta, agendaId: ids.agendaDra2, locationId: ids.office, intervalWeeks: 1, startsOn: "2031-04-07", startTime: "08:00", maxSessions: 3, actorId: reception.id },
+      NOW,
+    );
+    expect(created).toHaveLength(3);
+    const input = { serviceId: ids.retorno, agendaId: ids.agendaDra, locationId: ids.office, insurancePlanId: null, homeVisitAddress: null, actorId: reception.id, changes: [{ label: "Serviço", from: "Consulta", to: "Retorno" }] };
+
+    const blocker = await book(ids.p2, ids.consulta, ids.agendaDra, at("2031-04-14", "08:00"), { locationId: ids.office });
+    expect(await codeOf(() => changeSeriesDetailsFrom(db(reception), clinicId, created[0].id, input, NOW))).toBe("conflict");
+    expect((await getAppointment(db(reception), clinicId, created[0].id)).serviceId).toBe(ids.consulta);
+
+    await cancelAppointment(db(reception), clinicId, blocker.id, { channel: "admin", actorId: reception.id }, NOW);
+    const result = await changeSeriesDetailsFrom(db(reception), clinicId, created[0].id, input, NOW);
+    expect(result.scheduleChanged).toBe(true);
+    expect(result.changed.map((a) => [a.serviceId, a.agendaId, a.durationMinutes])).toEqual(Array(3).fill([ids.retorno, ids.agendaDra, 20]));
+    expect(result.series).toMatchObject({ serviceId: ids.retorno, agendaId: ids.agendaDra, durationMinutes: 20 });
+  });
+
+  it("com outro horário, a série recomeça dali com os dados novos", async () => {
+    const { created } = await createSeries(
+      db(reception),
+      clinicId,
+      { patientId: ids.p2, serviceId: ids.consulta, agendaId: ids.agendaDra, locationId: ids.office, intervalWeeks: 1, startsOn: "2031-05-05", startTime: "10:00", maxSessions: 2, actorId: reception.id },
+      NOW,
+    );
+    const moved = await changeSeriesFrom(
+      db(reception),
+      clinicId,
+      created[0].id,
+      { startsOn: "2031-05-05", startTime: "11:00", serviceId: ids.retorno, agendaId: ids.agendaDra, locationId: ids.office },
+      reception.id,
+      NOW,
+    );
+    expect(moved.next?.series).toMatchObject({ serviceId: ids.retorno, startTime: "11:00" });
+    expect(moved.next?.created).toHaveLength(2);
   });
 });

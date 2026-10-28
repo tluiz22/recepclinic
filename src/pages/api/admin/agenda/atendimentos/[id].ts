@@ -24,7 +24,7 @@ import { RESEND_MESSAGES, sendReminderFromPanel } from "../../../../../lib/data/
 import { GUIDANCE_RESEND_MESSAGES, resendGuidance } from "../../../../../lib/data/whatsapp/guidance";
 import { guidanceSender, preparationSender, reminderSender } from "../../../../../lib/data/whatsapp/send";
 import { formChecked, formInt, formOptionalText, formText } from "../../../../../lib/forms";
-import { changeSeriesFrom, createSeries, endSeriesFrom } from "../../../../../lib/data/agenda/series";
+import { changeSeriesDetailsFrom, changeSeriesFrom, createSeries, endSeriesFrom } from "../../../../../lib/data/agenda/series";
 import { snapshotChanges, snapshotOf } from "../../../../../lib/appointmentChanges";
 import { listAgendas } from "../../../../../lib/data/config/agendas";
 import { pastLimit } from "../../../../../lib/data/agenda/slots";
@@ -186,6 +186,27 @@ export const POST: APIRoute = async (context) => {
           });
           const changes = snapshotChanges(before, after);
           if (!changes.length) return done("Nada foi mudado: o atendimento continua igual.");
+          // Série, "esta e as próximas" (C4.4): no mesmo horário, muda no lugar; com outro dia ou horário, a série
+          // recomeça dali (como no Remarcar).
+          if (current.seriesId && formText(form, "modo") === "serie") {
+            const details = { serviceId, agendaId: slot.agendaId, locationId: slot.locationId, insurancePlanId, homeVisitAddress };
+            if (slot.start.getTime() === current.scheduledAt.getTime()) {
+              const result = await changeSeriesDetailsFrom(db, clinic.clinicId, id, { ...details, actorId, changes });
+              const notice = result.scheduleChanged ? await notify("reschedule", result.changed[0] ?? null) : "";
+              return done(`Série alterada: ${result.changed.length} sessão(ões) desta em diante.${notice}`, `/admin/agenda/serie/${result.series.id}`);
+            }
+            const moved = await changeSeriesFrom(
+              db,
+              clinic.clinicId,
+              id,
+              { ...details, startsOn: localDateOf(slot.start, clinic.timezone), startTime: localTimeOf(slot.start, clinic.timezone) },
+              actorId,
+            );
+            if (!moved.next) return done("Série encerrada: não faltavam sessões.");
+            const skipped = moved.next.skipped.length ? ` ${moved.next.skipped.length} data(s) pulada(s): veja abaixo.` : "";
+            const notice = await notify("reschedule", firstByDate(moved.next.created));
+            return done(`Série alterada: ${moved.next.created.length} sessão(ões) no novo dia e horário.${skipped}${notice}`, `/admin/agenda/serie/${moved.next.series.id}`);
+          }
           const changed = await changeAppointment(db, clinic.clinicId, id, {
             serviceId,
             agendaId: slot.agendaId,

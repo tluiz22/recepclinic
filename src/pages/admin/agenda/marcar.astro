@@ -421,6 +421,10 @@ const paidCents =
   editing && clinic.features.includes("finance")
     ? (await listAppointmentPayments(db, clinic.clinicId, editing.id).catch(() => [])).filter((p) => !p.deletedAt).reduce((sum, p) => sum + p.amountCents, 0)
     : 0;
+// Sessão de série ainda por vir (C4.4): "só esta" ou "esta e as próximas", como no Remarcar.
+const seriesChoice = !!editing?.seriesId && (editing.status === "scheduled" || editing.status === "confirmed") && editing.scheduledAt > new Date();
+const radio =
+  "flex cursor-pointer items-start gap-2.5 rounded-[9px] border border-line-strong px-3 py-2.5 text-[15px] leading-snug has-[:checked]:border-2 has-[:checked]:border-brand has-[:checked]:bg-[#e7f4ef] has-[:checked]:px-[11px] has-[:checked]:py-[9px]";
 const planOptions = plans.filter((p) => p.isActive || p.id === editing?.insurancePlanId);
 const homeAddress = editing?.homeVisitAddress ?? contact?.defaultHomeAddress ?? "";
 const verb = editing ? "Alterar" : "Marcar";
@@ -727,6 +731,27 @@ const remarcarHref = (a: UpcomingAppointment) => `/admin/agenda/remarcar?id=${a.
           )
         }
         {
+          seriesChoice && (
+            <fieldset class="flex flex-col gap-2 border-t border-line pt-3.5">
+              <legend class="float-left mb-2 w-full text-[15px] font-semibold text-ink">Esta sessão é de uma série</legend>
+              <label class={radio}>
+                <input type="radio" name="modo" value="sessao" checked class="mt-0.5 h-[18px] w-[18px] shrink-0 accent-brand" />
+                <span>
+                  Só esta sessão
+                  <span class="block text-sm text-ink-soft">As outras sessões da série continuam como estão.</span>
+                </span>
+              </label>
+              <label class={radio}>
+                <input type="radio" name="modo" value="serie" class="mt-0.5 h-[18px] w-[18px] shrink-0 accent-brand" />
+                <span>
+                  Esta e as próximas
+                  <span class="block text-sm text-ink-soft">As próximas sessões mudam também; com outro dia ou horário, a série passa para ele. As que já passaram não mudam.</span>
+                </span>
+              </label>
+            </fieldset>
+          )
+        }
+        {
           canRepeat && (
             <fieldset class="flex flex-col gap-3 border-t border-line pt-3.5">
               <HowItWorks id="serie" topic={ajudaAgenda.comoFunciona.serie} narrow>
@@ -937,7 +962,15 @@ const remarcarHref = (a: UpcomingAppointment) => `/admin/agenda/remarcar?id=${a.
             submit.dataset.beforePriceCents ? Number(submit.dataset.beforePriceCents) : null,
             chosen.dataset.priceCents ? Number(chosen.dataset.priceCents) : null,
           );
-          submit.dataset.confirmMessage = [nothing ? "Nada foi mudado: o atendimento continua igual." : "", warnings, payment].filter(Boolean).join(" ");
+          // Série, "esta e as próximas" (C4.4).
+          const wholeSeries = document.querySelector<HTMLInputElement>("input[name='modo']:checked")?.value === "serie";
+          const seriesNote =
+            wholeSeries && !nothing
+              ? before.when !== after.when
+                ? "Esta e as próximas: a série passa para o novo dia da semana e horário, daqui em diante."
+                : "Esta e as próximas: as próximas sessões da série mudam também."
+              : "";
+          submit.dataset.confirmMessage = [nothing ? "Nada foi mudado: o atendimento continua igual." : "", seriesNote, warnings, payment].filter(Boolean).join(" ");
           return;
         }
         if (chosen.dataset.home === "1" && address) details.push({ label: "Endereço", value: address });
