@@ -5,7 +5,7 @@
 > vez; depois a F12.1 do roadmap (seção 12).
 >
 > Decisões já respondidas (28/out): **11.1** (motivos registrados), **modo de cobrança manual** (seção 3) e **11.2**
-> (pago = `CONFIRMED` ou `RECEIVED`). Próxima: 11.3.
+> (pago = `CONFIRMED` ou `RECEIVED`) e **11.3** (bloqueio no painel primeiro, banco depois). Próxima: 11.4.
 
 ## Como trabalhar nesta etapa
 
@@ -296,8 +296,9 @@ stateDiagram-v2
    libera só o de inadimplência; `clinics.status = 'suspended'` continua sendo o sinal para o resto do sistema.
 2. **O que conta como pago** para reativar e avisar. **Decidido (cliente, 28/out):** `CONFIRMED` ou `RECEIVED`
    (também o recebimento em dinheiro registrado no Asaas, se houver); análise de risco não conta.
-3. **Onde fica o bloqueio.** Recomendo código primeiro (painel, páginas públicas, bot, rotinas) e o banco numa fase
-   seguinte.
+3. **Onde fica o bloqueio.** **Decidido (cliente, 28/out):** primeiro no código (painel, páginas públicas, bot,
+   rotinas e envios), na F12.3; depois, numa fase própria (F12.3b), o banco também recusa gravações operacionais da
+   clínica suspensa, com testes próprios.
 4. **O que o paciente vê na suspensão.** Recomendo bot calado e link "indisponível no momento, fale com a clínica".
 5. **Quem vê a tela Assinatura.** Recomendo só o Administrador da clínica.
 6. **Estorno ou chargeback depois da reativação.** Recomendo marcar, avisar o Suporte, sem suspender sozinho.
@@ -326,6 +327,7 @@ Cada fase vai ao staging e depende da validação do cliente.
 | F12.1 | Conta de cobrança: contatos financeiros, opt-in, trilha (sem Asaas) | F12.0 |
 | F12.2 | Contrato e versões, valor negociado e implantação (sem Asaas) | F12.1 |
 | F12.3 | Suspensão manual por motivos e bloqueio no painel, páginas públicas, bot e rotinas | decisões 1, 3, 4 |
+| F12.3b | Bloqueio no banco: gravações operacionais recusadas para a clínica suspensa (a tela Assinatura e o Suporte seguem) | F12.3 |
 | F12.4 | Cliente e cobranças no Asaas (sandbox): assinatura Pix convencional, implantação, espelho local | conta de testes |
 | F12.5 | Webhook, fila de eventos, processamento idempotente, conciliação, saúde | F12.4 |
 | F12.6 | Reativação automática com trava | F12.3, F12.5, decisão 2 |
