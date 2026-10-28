@@ -6,7 +6,8 @@
 >
 > Decisões já respondidas (28/out): **11.1** (motivos registrados), **modo de cobrança manual** (seção 3) e **11.2**
 > (pago = `CONFIRMED` ou `RECEIVED`) **11.3** (bloqueio no painel primeiro, banco depois) **11.4** (bot calado, link com aviso) **11.5** (Assinatura só para o Administrador) **11.6** (estorno marca e avisa o Suporte) **11.7** (novo valor no próximo ciclo, sem proporcional) **11.8** (implantação ao ativar, conta igual) **11.9** (cartão na página do Asaas). **11.10 fica pendente** (número do WhatsApp, decidir antes da F12.9).
-> **11.11** (avisos do Asaas desligados, só os nossos). Próxima: 11.12.
+> **11.11** (avisos do Asaas desligados, só os nossos) e **11.12** (cancelamento: cobra o devido, acesso até o
+> fim do período pago). Próxima: 11.13.
 
 ## Como trabalhar nesta etapa
 
@@ -121,7 +122,7 @@ erDiagram
 | Evento recebido | `billing_provider_events` | `provider_event_id` (único), tipo, recurso, dados mínimos, recebido/processado em, situação, tentativas, erro | Idempotência e reprocessamento |
 | Aviso | `billing_notifications` | Cobrança, tipo (`overdue_d3`, `overdue_d7`, `payment_confirmed`), programado para, situação; único por (cobrança, tipo) | Sem duplicidade; cancela os indevidos |
 | Envio por canal | `billing_notification_deliveries` | Canal (`email`, `whatsapp`), tentativas, id no provedor, erro, enviado em | Um canal não trava o outro |
-| Motivo de suspensão | `clinic_suspensions` (decisão 11.1; fora do prefixo `billing_` porque nem todo motivo é financeiro) | Motivo (`non_payment`, `administrative`…), texto, criado por/em; liberado em/por (nulo = sistema), motivo da liberação | Distingue inadimplência de outros motivos |
+| Motivo de suspensão | `clinic_suspensions` (decisão 11.1; fora do prefixo `billing_` porque nem todo motivo é financeiro) | Motivo (`non_payment`, `administrative`, `contract_ended`), texto, criado por/em; liberado em/por (nulo = sistema), motivo da liberação | Distingue inadimplência de outros motivos |
 | Trilha | `billing_audit_log` (só inclusão) | Ator (pessoa, sistema, webhook), ação, antes/depois, motivo | O `platform_audit_log` só pega o Suporte |
 
 Sem duplicar: `clinic_usage_monthly` (uso), `plans.ts` (referência), `clinics.status` (sinal das rotinas),
@@ -325,7 +326,10 @@ stateDiagram-v2
 11. **Avisos do próprio Asaas.** **Decidido (cliente, 28/out):** desligar os avisos do Asaas ao pagador; a clínica
     recebe só os do RecepClinic. Confirmar na referência do Asaas se e como dá para desligar; se não der, voltar ao
     cliente antes da F12.7.
-12. **Cancelamento do contrato:** cobranças em aberto e acesso depois do fim.
+12. **Cancelamento do contrato.** **Decidido (cliente, 28/out):** a assinatura no Asaas é cancelada e as mensalidades
+    futuras deixam de ser geradas; as já vencidas continuam em aberto para cobrar; a clínica usa até o fim do período
+    já pago e então fica suspensa com o motivo `contract_ended` (liberado só pelo Suporte); dados preservados para
+    exportação ou devolução conforme o contrato (prazo e forma com o advogado, item 16).
 13. **D+3 e D+7:** dias corridos ou úteis, e o horário. Recomendo corridos, às 9h de Brasília.
 14. **Nota fiscal das mensalidades:** pelo Asaas ou fora do sistema.
 15. **IP fixo na Vercel** para restringir a chave (custo).
