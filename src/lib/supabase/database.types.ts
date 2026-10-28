@@ -961,6 +961,32 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"patient_documents": {
+                  Row: {
+                    "clinic_id": string,"created_at": string,"created_by": string | null,"description": string | null,"file_name": string,"id": string,"kind": string,"mime_type": string,"patient_id": string,"size_bytes": number,"storage_path": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "clinic_id": string,"created_at"?: string,"created_by"?: string | null,"description"?: string | null,"file_name": string,"id"?: string,"kind": string,"mime_type": string,"patient_id": string,"size_bytes": number,"storage_path": string
+                  }
+                  Update: {
+                    "clinic_id"?: string,"created_at"?: string,"created_by"?: string | null,"description"?: string | null,"file_name"?: string,"id"?: string,"kind"?: string,"mime_type"?: string,"patient_id"?: string,"size_bytes"?: number,"storage_path"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "patient_documents_clinic_id_fkey"
+      columns: ["clinic_id"]
+isOneToOne: false
+      referencedRelation: "clinics"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "patient_documents_clinic_id_patient_id_fkey"
+      columns: ["clinic_id","patient_id"]
+isOneToOne: false
+      referencedRelation: "patients"
+      referencedColumns: ["clinic_id","id"]
+    }
+                  ]
                 },"patient_finance": {
                   Row: {
                     "clinic_id": string,"cpf": string | null,"created_at": string,"invoice_auto_send": boolean,"invoice_email": string | null,"invoice_phone": string | null,"patient_id": string,"payer": string,"payer_cpf": string | null,"payer_name": string | null,"updated_at": string,"updated_by": string | null

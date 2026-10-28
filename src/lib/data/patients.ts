@@ -5,6 +5,8 @@ import { INVALID_PHONE_MESSAGE, normalizePhone } from "../phone";
 import { parseSearch, type SearchTerm } from "../patientSearch";
 import type { DbClient } from "./clients";
 import { cleanText, DataError, fromDbError, unwrap, unwrapOne, Validation } from "./errors";
+import { documentPaths, removeDocumentFiles } from "./patientDocuments";
+import { logError } from "../log";
 
 // Contatos e pacientes (D4a, D10). O contato é quem conversa no WhatsApp
 // (antigo "responsável"); o paciente é cuidado por um contato, e pode ser o
@@ -600,14 +602,23 @@ export async function previewAnonymization(db: DbClient, clinicId: string, patie
   };
 }
 
-/** Anonimiza o paciente e o contato dele (função do banco; só Administrador e Suporte). Irreversível. */
+/**
+ * Anonimiza o paciente e o contato dele (função do banco; só Administrador e
+ * Suporte). Irreversível. Os documentos (CRM P1): o banco apaga as linhas e
+ * aqui saem os arquivos, com os caminhos lidos antes; arquivo que não sai vai
+ * para Administração › Erros.
+ */
 export async function anonymizePatient(db: DbClient, clinicId: string, patientId: string): Promise<{ canceled: number; otherPatients: number }> {
+  const files = await documentPaths(db, clinicId, patientId);
   const { data, error } = await db.rpc("anonymize_patient", { p_clinic_id: clinicId, p_patient_id: patientId });
   if (error) {
     if (error.code === "42501") throw new DataError("forbidden", "Anonimizar: só o Administrador da clínica ou o Suporte", {}, { cause: error });
     if (error.code === "P0002") throw new DataError("not_found", "Paciente não encontrado", {}, { cause: error });
     if (error.hint === "already_anonymized") throw new DataError("invalid", "Paciente já anonimizado", {}, { cause: error });
     throw fromDbError(error, "Anonimizar paciente");
+  }
+  if (!(await removeDocumentFiles(db, files))) {
+    logError("anonimização: arquivos dos documentos não saíram", undefined, { clinica: clinicId, paciente: patientId });
   }
   const result = (data ?? {}) as { canceled?: number; other_patients?: number };
   return { canceled: result.canceled ?? 0, otherPatients: result.other_patients ?? 0 };

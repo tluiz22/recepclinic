@@ -14,6 +14,11 @@
 // "Editar". Quem vê o Financeiro vê também "Pago"/"Pago em parte" nos
 // atendimentos e a nota de cada pagamento. No celular, os cartões recolhidos e
 // "Marcar" na barra fixa.
+//
+// CRM P1 (28/out/2026): cartão "Documentos" (foto ou PDF da carteirinha,
+// identidade, pedidos): a equipe toda vê, abre e baixa; Administrador e
+// Recepção anexam e apagam (Q19); "Baixar selecionados" e, no celular,
+// "Compartilhar" (Q24). O arquivo vai do aparelho direto ao armazenamento.
 import AdminLayout from "../../../layouts/AdminLayout.astro";
 import ConfirmDeleteDialog from "../../../components/admin/ConfirmDeleteDialog.astro";
 import FlashMessage from "../../../components/admin/FlashMessage.astro";
@@ -44,6 +49,9 @@ import { listNoShowStats, listPatientAppointments } from "../../../lib/data/agen
 import { getClinicSettings } from "../../../lib/data/config/clinic";
 import { listInsurancePlans } from "../../../lib/data/config/insurance";
 import { getContact, getPatient, previewAnonymization } from "../../../lib/data/patients";
+import { actorText, loadActorLabels } from "../../../lib/data/agenda/trail";
+import { DESCRIPTION_MAX, DOCUMENT_KIND_LABEL, DOCUMENT_KINDS, DOCUMENT_MIME_TYPES, listPatientDocuments } from "../../../lib/data/patientDocuments";
+import { platformEnv } from "../../../lib/env";
 import { capitalize, vocabularyFor } from "../../../lib/vocabulary";
 
 const clinic = Astro.locals.clinic!;
@@ -114,6 +122,15 @@ const ageWarning =
   !anonymized && settings.consultationAgeLimitYears !== null && isOverConsultationAgeLimit(patient.birthdate, today, settings.consultationAgeLimitYears)
     ? `Passou da idade limite da Consulta (${settings.consultationAgeLimitYears} anos): só Retorno e Exame.`
     : null;
+// Documentos (CRM P1).
+const documents = anonymized ? [] : await listPatientDocuments(db, clinic.clinicId, patient.id);
+const canAttach = !anonymized && (clinic.isPlatformStaff || clinic.roles.includes("admin") || clinic.roles.includes("reception"));
+const documentActors = await loadActorLabels(db, clinic.clinicId, documents.map((d) => d.createdBy));
+const documentsApi = `/api/admin/pacientes/${patient.id}/documentos`;
+// O envio e o "Compartilhar" falam direto com o armazenamento do Supabase (fora do 'self' da CSP).
+if ((canAttach || documents.length > 0) && Astro.csp) Astro.csp.insertDirective(`connect-src 'self' ${new URL(platformEnv().supabaseUrl).origin}`);
+const fileSize = (bytes: number) => (bytes >= 1024 * 1024 ? `${(bytes / (1024 * 1024)).toFixed(1).replace(".", ",")} MB` : `${Math.max(1, Math.round(bytes / 1024))} KB`);
+const fileType = (mime: string) => (mime === "application/pdf" ? "PDF" : "Foto");
 const planName = (planId: string) => plans.find((plan) => plan.id === planId)?.name ?? "Plano";
 const planLabel = patient.insurance ? planName(patient.insurance.planId) : "Particular";
 
@@ -364,6 +381,95 @@ const canBook = patient.isActive && !anonymized;
       }
 
       {
+        !anonymized && (
+          <EditCard id="documentos" title={`Documentos (${documents.length})`} editable={false}>
+            {documents.length > 0 && (
+              <>
+                <ul class="flex flex-col divide-y divide-[#e6ecea]" data-documents={documentsApi}>
+                  {documents.map((d) => {
+                    const by = d.createdBy ? actorText(documentActors.get(d.createdBy)) : null;
+                    return (
+                      <li class="flex items-start gap-2.5 py-2.5">
+                        <input
+                          type="checkbox"
+                          class="mt-1 h-[18px] w-[18px] shrink-0 accent-brand"
+                          aria-label={`Selecionar ${DOCUMENT_KIND_LABEL[d.kind]}`}
+                          data-document={d.id}
+                          data-name={d.fileName}
+                          data-type={d.mimeType}
+                        />
+                        <div class="flex min-w-0 flex-1 flex-col gap-0.5">
+                          <span class="text-[15px] font-semibold text-ink">{DOCUMENT_KIND_LABEL[d.kind]}</span>
+                          {d.description && <span class="text-[15px] break-words text-ink">{d.description}</span>}
+                          <span class="text-[13.5px] text-ink-soft">
+                            {[formatInstant(d.createdAt, clinic.timezone, "dd/MM/yyyy"), by, `${fileType(d.mimeType)}, ${fileSize(d.sizeBytes)}`].filter(Boolean).join(" · ")}
+                          </span>
+                          <span class="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-[14.5px] font-semibold">
+                            <a href={`${documentsApi}/${d.id}`} target="_blank" rel="noopener" class="text-brand no-underline hover:underline">Abrir</a>
+                            <a href={`${documentsApi}/${d.id}?modo=baixar`} class="text-brand no-underline hover:underline">Baixar</a>
+                            {canAttach && (
+                              <form method="POST" action={withReturn(documentsApi, volta)} class="contents">
+                                <input type="hidden" name="acao" value="apagar" />
+                                <input type="hidden" name="documento" value={d.id} />
+                                <button
+                                  type="submit"
+                                  class="js-confirm-delete cursor-pointer font-semibold text-can-800 hover:underline"
+                                  data-confirm-title="Apagar o documento?"
+                                  data-confirm-message={`${DOCUMENT_KIND_LABEL[d.kind]}${d.description ? ` (${d.description})` : ""} sai da ficha e o arquivo é apagado. Não dá para desfazer.`}
+                                  data-confirm-label="Apagar"
+                                >
+                                  Apagar
+                                </button>
+                              </form>
+                            )}
+                          </span>
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ul>
+                <div class="mt-2 flex flex-wrap gap-2" data-selection hidden>
+                  <Button size="sm" data-download-selected>Baixar selecionados</Button>
+                  <Button size="sm" data-share-selected hidden>Compartilhar</Button>
+                </div>
+                <p class={hint}>Marque os documentos para baixar ou compartilhar vários de uma vez.</p>
+              </>
+            )}
+            {documents.length === 0 && <p class={hint}>Nenhum documento. Anexe a carteirinha, a identidade ou os pedidos em foto ou PDF.</p>}
+            {canAttach && (
+              <details class="mt-3 rounded-lg border border-line px-3 py-2" data-attach-box>
+                <summary class="min-h-8 cursor-pointer text-[15px] font-semibold text-brand-ink">Anexar documento</summary>
+                <form class="mt-3 flex flex-col gap-3" data-attach={documentsApi} novalidate>
+                  <div class={field}>
+                    <label for="document-kind" class={fieldLabel}>Tipo</label>
+                    <select id="document-kind" name="kind" required class={CONTROL}>
+                      <option value="">Escolha</option>
+                      {DOCUMENT_KINDS.map((k) => <option value={k.key}>{k.label}</option>)}
+                    </select>
+                  </div>
+                  <div class={field}>
+                    <label for="document-description" class={fieldLabel}>Descrição (opcional)</label>
+                    <input id="document-description" name="description" maxlength={DESCRIPTION_MAX} placeholder="Ex.: Carteirinha Unimed 2026" class={CONTROL} />
+                  </div>
+                  <div class={field}>
+                    <label for="document-file" class={fieldLabel}>Arquivo</label>
+                    <input id="document-file" name="file" type="file" required accept={["image/*", ...DOCUMENT_MIME_TYPES].join(",")} class="text-[15px]" />
+                    <p class={hint}>Foto (JPG, PNG ou HEIC) ou PDF, até 10 MB. No celular, dá para tirar a foto na hora.</p>
+                  </div>
+                  <p class="hidden text-[15px] font-semibold text-can-800" role="alert" data-attach-error></p>
+                  <div class="flex flex-wrap items-center gap-2">
+                    <Button type="submit" variant="primary" data-attach-submit>Anexar</Button>
+                    <span class="text-[15px] text-ink-soft" aria-live="polite" data-attach-status></span>
+                  </div>
+                </form>
+                <noscript><p class={hint}>Para anexar, ative o JavaScript do navegador.</p></noscript>
+              </details>
+            )}
+          </EditCard>
+        )
+      }
+
+      {
         insuranceOn && !anonymized && (
           <EditCard id="plano" title="Plano de saúde" summary={planLabel}>
             <dl class={kv}>
@@ -606,6 +712,104 @@ const canBook = patient.isActive && !anonymized;
 </AdminLayout>
 
 <script>
+  // Documentos (CRM P1): anexar em dois passos (o arquivo vai direto ao
+  // armazenamento), baixar ou compartilhar os selecionados.
+  const attach = document.querySelector<HTMLFormElement>("form[data-attach]");
+  if (attach) {
+    const api = attach.dataset.attach!;
+    const error = attach.querySelector<HTMLElement>("[data-attach-error]")!;
+    const status = attach.querySelector<HTMLElement>("[data-attach-status]")!;
+    const submit = attach.querySelector<HTMLButtonElement>("[data-attach-submit]")!;
+    const fail = (text: string) => {
+      error.textContent = text;
+      error.classList.remove("hidden");
+      status.textContent = "";
+      submit.disabled = false;
+    };
+    const post = async (body: Record<string, unknown>) => {
+      const response = await fetch(api, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+      const data = await response.json().catch(() => ({ error: "Não deu certo. Tente de novo." }));
+      if (!response.ok) throw new Error(Object.values(data.fields ?? {})[0] as string ?? data.error);
+      return data;
+    };
+    attach.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      error.classList.add("hidden");
+      const file = (attach.elements.namedItem("file") as HTMLInputElement).files?.[0];
+      const kind = (attach.elements.namedItem("kind") as HTMLSelectElement).value;
+      if (!kind) return fail("Escolha o tipo do documento.");
+      if (!file) return fail("Escolha o arquivo.");
+      const input = {
+        kind,
+        description: (attach.elements.namedItem("description") as HTMLInputElement).value,
+        fileName: file.name,
+        mimeType: file.type,
+        sizeBytes: file.size,
+      };
+      submit.disabled = true;
+      try {
+        status.textContent = "Preparando…";
+        const { documentId, uploadUrl } = await post({ acao: "preparar", ...input });
+        status.textContent = "Enviando o arquivo…";
+        const body = new FormData();
+        body.append("cacheControl", "3600");
+        body.append("", file);
+        const upload = await fetch(uploadUrl, { method: "PUT", headers: { "x-upsert": "false" }, body });
+        if (!upload.ok) throw new Error("O arquivo não foi enviado. Confira a internet e tente de novo.");
+        status.textContent = "Salvando…";
+        const { redirectTo } = await post({ acao: "confirmar", documentId, ...input });
+        window.location.href = redirectTo;
+      } catch (e) {
+        fail(e instanceof Error && e.message ? e.message : "Não deu certo. Tente de novo.");
+      }
+    });
+  }
+
+  const list = document.querySelector<HTMLElement>("[data-documents]");
+  if (list) {
+    const bar = document.querySelector<HTMLElement>("[data-selection]")!;
+    const share = bar.querySelector<HTMLButtonElement>("[data-share-selected]")!;
+    const api = list.dataset.documents!;
+    const selected = () => [...list.querySelectorAll<HTMLInputElement>("input[data-document]:checked")];
+    const link = async (id: string, download: boolean) => {
+      const response = await fetch(`${api}/${id}?formato=json${download ? "&modo=baixar" : ""}`);
+      if (!response.ok) throw new Error("Documento não encontrado.");
+      return ((await response.json()) as { url: string }).url;
+    };
+    const canShareFiles = typeof navigator.canShare === "function" && navigator.canShare({ files: [new File([""], "teste.pdf", { type: "application/pdf" })] });
+    list.addEventListener("change", () => {
+      bar.hidden = selected().length === 0;
+      share.hidden = !canShareFiles;
+    });
+    bar.querySelector<HTMLButtonElement>("[data-download-selected]")!.addEventListener("click", async () => {
+      for (const box of selected()) {
+        const a = document.createElement("a");
+        a.href = await link(box.dataset.document!, true);
+        a.rel = "noopener";
+        document.body.append(a);
+        a.click();
+        a.remove();
+        await new Promise((resolve) => setTimeout(resolve, 600));
+      }
+    });
+    share.addEventListener("click", async () => {
+      share.disabled = true;
+      try {
+        const files = await Promise.all(
+          selected().map(async (box) => {
+            const blob = await (await fetch(await link(box.dataset.document!, false))).blob();
+            return new File([blob], box.dataset.name!, { type: box.dataset.type });
+          }),
+        );
+        await navigator.share({ files });
+      } catch {
+        // Cancelado pela pessoa ou o aparelho não aceitou: nada a fazer.
+      } finally {
+        share.disabled = false;
+      }
+    });
+  }
+
   // Financeiro: mostra só os campos do responsável escolhido.
   const form = document.getElementById("financeiro-form");
   if (form) {

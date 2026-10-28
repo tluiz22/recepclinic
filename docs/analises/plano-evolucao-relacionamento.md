@@ -862,3 +862,29 @@ Supabase, já usado no XML das notas fiscais.
 anonimização apaga anotações, lembretes e arquivos; cada etapa com o SQL mostrado antes, testes, local → staging pela
 `main` com o OK do cliente; produção só com autorização.
 
+**Ordem (cliente, 28/out):** P1 Documentos → P2 Anotações → P3 Lembretes.
+
+### 19.1 P1 Documentos implementada (28/out, só no local)
+
+**SQL aprovado pelo cliente em 28/out.** Migração `20261029120000_documentos_do_paciente.sql` (aplicada só no local):
+armazenamento privado `patient-documents` (10 MB; JPG, PNG, HEIC/HEIF e PDF), tabela `patient_documents` (tipo,
+descrição até 120, caminho `<clínica>/<paciente>/<documento>.<ext>`, nome, tipo e tamanho lidos do arquivo pelo
+gatilho, autor e hora pelo banco), RLS (lê quem é da clínica; anexa e apaga Administrador e Recepção; sem `update`;
+bot sem acesso), as mesmas regras nos arquivos pela pasta da clínica (`app.storage_folder_clinic`), auditoria do
+Suporte e o gatilho da anonimização (apaga as linhas; o código apaga os arquivos com os caminhos lidos antes; arquivo
+que não sai vai para Administração › Erros).
+
+**Código:** `src/lib/data/patientDocuments.ts`; rotas `/api/admin/pacientes/[id]/documentos` (preparar e confirmar em
+JSON; apagar por formulário com confirmação) e `/api/admin/pacientes/[id]/documentos/[documento]` (link de 2 minutos
+para abrir ou baixar); cartão "Documentos" na ficha (Anexar, Abrir, Baixar, Apagar, seleção com "Baixar selecionados"
+e "Compartilhar" quando o aparelho aceita arquivos); a ficha libera o endereço do Supabase no `connect-src` da CSP;
+`anonymizePatient` apaga os arquivos.
+
+**Testes:** unidade 717 passando (3 novos); banco 657 passando (8 novos em `tests/db/documentos-do-paciente.test.ts`,
+com o armazenamento de verdade: quem anexa, vê, abre e apaga; outra clínica; tipo e tamanho; caminho de outro
+paciente; anonimização; auditoria); `patient_documents` fora da varredura de dados do seed (o seed em SQL não envia
+arquivos; motivo em `isolamento.test.ts`); `astro check` sem erros; `npm run build` completo. Navegador local
+(Recepção, ficha da Ana Souza): anexou um PDF, abriu (200, `application/pdf`) e apagou com confirmação (linha e
+arquivo saíram). **Não conferido:** a CSP (o `npm run dev` não a aplica; conferir primeiro no staging), "Baixar
+selecionados" e "Compartilhar" (este só no celular), foto pelo celular.
+
