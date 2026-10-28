@@ -66,7 +66,7 @@
 > - **B0 validada pelo cliente no staging em 28/out.** C1 aprovada e C2 feita só no local, e **desfeita no mesmo dia
 >   a pedido do cliente (Q18)**: o "Registrar contato" não atende; a necessidade real é, na ficha do paciente,
 >   **anotações, lembretes e documentos** (foto ou PDF de carteirinha, identidade, pedidos de exame ou médicos) para a
->   secretária encaminhar ao plano. **Retomar daqui:** planejar essa etapa nova com o cliente (seção 18 do
+>   secretária encaminhar ao plano. Etapa nova planejada com o cliente em 28/out (Q19 a Q24, seção 19 do
 >   [plano](analises/plano-evolucao-relacionamento.md)).
 
 ## Como trabalhar nesta etapa

@@ -835,3 +835,30 @@ colunas e a linha do histórico) e o arquivo saiu. Fica só o seed com a mensage
 **Aprendizado registrado:** antes de implementar uma etapa planejada, confirmar com o cliente, em linguagem simples e
 com o exemplo de uso, se ela resolve a necessidade do dia a dia.
 
+---
+
+## 19. Etapa nova: anotações, lembretes e documentos do paciente (planejamento, 28/out)
+
+**Objetivo (cliente, Q18):** a secretária guarda na ficha do paciente o que precisa ter à mão (anotações, lembretes e
+documentos em foto ou PDF) e encontra rápido para encaminhar ao plano de saúde. Reaproveita o Storage privado do
+Supabase, já usado no XML das notas fiscais.
+
+**Decisões do cliente (28/out):**
+
+- **Q19. Documentos, quem:** a equipe toda vê (Administrador, Recepção e Profissional; o profissional pode precisar do
+  pedido médico); só Administrador e Recepção anexam e apagam; Suporte com auditoria.
+- **Q20. Anotações × Observações:** **só anotações datadas** (com data e autor). O texto atual das Observações vira a
+  primeira anotação de cada paciente e o campo único deixa de existir. Escrevem os mesmos papéis de hoje
+  (Administrador, Recepção e Profissional, Q12).
+- **Q21. Corrigir ou apagar:** quem escreveu corrige (aparece "editada em …"); só o Administrador apaga.
+- **Q22. Lembretes:** aba nova **"Lembretes da equipe"** na central Relacionamento, com os do dia e os atrasados,
+  somando no número do menu; some ao marcar "Feito"; aparece também na ficha do paciente.
+- **Q23. Arquivos:** JPG, PNG, HEIC (foto do iPhone) e PDF, até 10 MB cada, enviados direto do aparelho ao
+  armazenamento privado (o limite de 4,5 MB das funções da Vercel não se aplica).
+- **Q24. Encaminhar ao plano:** "Baixar" (computador) e "Compartilhar" (menu do celular: WhatsApp, e-mail), com
+  seleção de vários documentos; nenhum link público. Os links para abrir valem poucos minutos.
+
+**Regras de sempre:** isolamento por clínica (RLS e caminho do arquivo por clínica), arquivos fora de logs e Métricas,
+anonimização apaga anotações, lembretes e arquivos; cada etapa com o SQL mostrado antes, testes, local → staging pela
+`main` com o OK do cliente; produção só com autorização.
+
