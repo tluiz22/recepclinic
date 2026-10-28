@@ -5,7 +5,7 @@
 > vez; depois a F12.1 do roadmap (seção 12).
 >
 > Decisões já respondidas (28/out): **11.1** (motivos registrados), **modo de cobrança manual** (seção 3) e **11.2**
-> (pago = `CONFIRMED` ou `RECEIVED`) e **11.3** (bloqueio no painel primeiro, banco depois). Próxima: 11.4.
+> (pago = `CONFIRMED` ou `RECEIVED`) **11.3** (bloqueio no painel primeiro, banco depois) e **11.4** (bot calado, link com aviso). Próxima: 11.5.
 
 ## Como trabalhar nesta etapa
 
@@ -299,7 +299,9 @@ stateDiagram-v2
 3. **Onde fica o bloqueio.** **Decidido (cliente, 28/out):** primeiro no código (painel, páginas públicas, bot,
    rotinas e envios), na F12.3; depois, numa fase própria (F12.3b), o banco também recusa gravações operacionais da
    clínica suspensa, com testes próprios.
-4. **O que o paciente vê na suspensão.** Recomendo bot calado e link "indisponível no momento, fale com a clínica".
+4. **O que o paciente vê na suspensão.** **Decidido (cliente, 28/out):** o bot não responde (a mensagem chega no app
+   do WhatsApp da clínica); os links públicos mostram "Agendamento indisponível no momento. Fale com a clínica.";
+   nada fala de cobrança ou suspensão para o paciente.
 5. **Quem vê a tela Assinatura.** Recomendo só o Administrador da clínica.
 6. **Estorno ou chargeback depois da reativação.** Recomendo marcar, avisar o Suporte, sem suspender sozinho.
 7. **Mudança de valor no meio do ciclo.** Recomendo valer a partir do próximo ciclo, sem proporcional.
