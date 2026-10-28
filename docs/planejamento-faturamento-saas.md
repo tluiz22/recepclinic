@@ -7,7 +7,7 @@
 > Decisões já respondidas (28/out): **11.1** (motivos registrados), **modo de cobrança manual** (seção 3) e **11.2**
 > (pago = `CONFIRMED` ou `RECEIVED`) **11.3** (bloqueio no painel primeiro, banco depois) **11.4** (bot calado, link com aviso) **11.5** (Assinatura só para o Administrador) **11.6** (estorno marca e avisa o Suporte) **11.7** (novo valor no próximo ciclo, sem proporcional) **11.8** (implantação ao ativar, conta igual) **11.9** (cartão na página do Asaas). **11.10 fica pendente** (número do WhatsApp, decidir antes da F12.9).
 > **11.11** (avisos do Asaas desligados, só os nossos) e **11.12** (cancelamento: cobra o devido, acesso até o
-> fim do período pago) **11.13** (dias corridos, 9h de Brasília) e **11.14** (nota fiscal fora do sistema). Próxima: 11.15.
+> fim do período pago) **11.13** (dias corridos, 9h de Brasília) **11.14** (nota fiscal fora do sistema) e **11.15** (sem IP fixo por agora). Próxima: 11.17.
 
 ## Como trabalhar nesta etapa
 
@@ -334,8 +334,10 @@ stateDiagram-v2
     também em fim de semana e feriado (vence dia 10: aviso dia 13, alerta dia 17).
 14. **Nota fiscal das mensalidades.** **Decidido (cliente, 28/out):** fora do sistema (o contador emite); o
     faturamento não trata nota fiscal e a emissão automática do Asaas fica desligada.
-15. **IP fixo na Vercel** para restringir a chave (custo).
-16. **Jurídico:** Asaas como operador, texto do opt-in, prazo de guarda.
+15. **IP fixo na Vercel.** **Decidido (cliente, 28/out):** não por agora; a chave fica só nas variáveis da Vercel
+    (nunca no código ou nos registros), com troca periódica; reavaliar quando houver mais clínicas pagando.
+16. **Jurídico (pendência do cliente com o advogado, antes da F12.11):** Asaas como operador, texto do opt-in, prazo
+    de guarda e forma de devolução ou exportação dos dados no fim do contrato.
 17. **Troca de modo** (manual ↔ automático) com o contrato em andamento: o que acontece com a assinatura e as cobranças
     em aberto no Asaas. Recomendo: só por nova versão do contrato, com data de início; ao ir para o manual, cancelar a
     assinatura no Asaas e marcar as cobranças em aberto como canceladas (com trilha).
