@@ -5,7 +5,7 @@
 > vez; depois a F12.1 do roadmap (seção 12).
 >
 > Decisões já respondidas (28/out): **11.1** (motivos registrados), **modo de cobrança manual** (seção 3) e **11.2**
-> (pago = `CONFIRMED` ou `RECEIVED`) **11.3** (bloqueio no painel primeiro, banco depois) **11.4** (bot calado, link com aviso) **11.5** (Assinatura só para o Administrador) **11.6** (estorno marca e avisa o Suporte) e **11.7** (novo valor no próximo ciclo, sem proporcional). Próxima: 11.8.
+> (pago = `CONFIRMED` ou `RECEIVED`) **11.3** (bloqueio no painel primeiro, banco depois) **11.4** (bot calado, link com aviso) **11.5** (Assinatura só para o Administrador) **11.6** (estorno marca e avisa o Suporte) **11.7** (novo valor no próximo ciclo, sem proporcional) e **11.8** (implantação ao ativar, conta igual). Próxima: 11.9.
 
 ## Como trabalhar nesta etapa
 
@@ -309,8 +309,9 @@ stateDiagram-v2
    clínica.
 7. **Mudança de valor no meio do ciclo.** **Decidido (cliente, 28/out):** vale a partir do próximo ciclo, sem
    proporcional; a cobrança já gerada não muda; o Suporte registra a nova versão do contrato com a data de início.
-8. **Implantação:** quando gerar e se conta para a reativação. Recomendo gerar ao ativar o contrato e contar como as
-   outras.
+8. **Implantação.** **Decidido (cliente, 28/out):** a cobrança avulsa é gerada quando o Suporte ativa o contrato,
+   com o vencimento que ele informar; vencida, segue as regras da mensalidade (avisos D+3 e D+7, pesa na suspensão,
+   precisa estar paga para reativar).
 9. **Captura do cartão.** Recomendo a página do Asaas.
 10. **Número de WhatsApp do RecepClinic** e lançamento só com e-mail até ele existir. Recomendo começar com e-mail.
 11. **Avisos do próprio Asaas.** Recomendo desligar, se a opção existir.
