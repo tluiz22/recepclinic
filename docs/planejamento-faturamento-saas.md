@@ -5,7 +5,7 @@
 > vez; depois a F12.1 do roadmap (seção 12).
 >
 > Decisões já respondidas (28/out): **11.1** (motivos registrados), **modo de cobrança manual** (seção 3) e **11.2**
-> (pago = `CONFIRMED` ou `RECEIVED`) **11.3** (bloqueio no painel primeiro, banco depois) **11.4** (bot calado, link com aviso) **11.5** (Assinatura só para o Administrador) e **11.6** (estorno marca e avisa o Suporte). Próxima: 11.7.
+> (pago = `CONFIRMED` ou `RECEIVED`) **11.3** (bloqueio no painel primeiro, banco depois) **11.4** (bot calado, link com aviso) **11.5** (Assinatura só para o Administrador) **11.6** (estorno marca e avisa o Suporte) e **11.7** (novo valor no próximo ciclo, sem proporcional). Próxima: 11.8.
 
 ## Como trabalhar nesta etapa
 
@@ -307,7 +307,8 @@ stateDiagram-v2
 6. **Estorno ou chargeback depois do pagamento.** **Decidido (cliente, 28/out):** a cobrança fica marcada como
    revertida e em destaque para o Suporte, que decide; nada muda sozinho no acesso e não sai aviso automático para a
    clínica.
-7. **Mudança de valor no meio do ciclo.** Recomendo valer a partir do próximo ciclo, sem proporcional.
+7. **Mudança de valor no meio do ciclo.** **Decidido (cliente, 28/out):** vale a partir do próximo ciclo, sem
+   proporcional; a cobrança já gerada não muda; o Suporte registra a nova versão do contrato com a data de início.
 8. **Implantação:** quando gerar e se conta para a reativação. Recomendo gerar ao ativar o contrato e contar como as
    outras.
 9. **Captura do cartão.** Recomendo a página do Asaas.
