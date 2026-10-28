@@ -7,6 +7,18 @@
 > Decisões já respondidas (28/out): **11.1** (motivos registrados), **modo de cobrança manual** (seção 3) e **11.2**
 > (pago = `CONFIRMED` ou `RECEIVED`). Próxima: 11.3.
 
+## Como trabalhar nesta etapa
+
+- Todo o código e a documentação do faturamento ficam na branch **`faturamento`** (criada da `main` em 28/out). A
+  `main` fica livre para correções urgentes do piloto em produção (publica no staging a cada push; a `producao`
+  publica na produção).
+- **Começar ou voltar ao faturamento:** `git switch faturamento`, trazer o que mudou na `main` (`git merge main`) e
+  retomar pelo bloco acima.
+- **Parar e voltar à `main`:** commit e push do que estiver em andamento na `faturamento`, atualizar o bloco "Estado
+  atual" deste arquivo e `git switch main`.
+- Nada do faturamento vai para o staging ou a produção sem o OK do cliente; o caminho de publicação (merge na `main`
+  ou ambiente próprio) é decidido antes da F12.1.
+
 Marcas: **[Código]** conferido no repositório; **[Projeto]** registrado na documentação do projeto;
 **[Asaas]**, **[Meta]**, **[Vercel]** documentação oficial (fontes no fim); **[Inferência]** conclusão técnica;
 **[Recomendação]** proposta, aprovada só quando a decisão correspondente for respondida.
