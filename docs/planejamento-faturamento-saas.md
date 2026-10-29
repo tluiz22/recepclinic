@@ -1,6 +1,7 @@
 # Faturamento recorrente do SaaS (Asaas)
 
-> **Estado atual (retomar daqui), 28/out/2026.** **Planejamento concluído** (cliente, 28/out). Nada implementado:
+> **Estado atual (retomar daqui), 29/out/2026.** **Planejamento concluído** (cliente, 28/out), **ampliado em 29/out** com
+> a cobrança por nota fiscal emitida (seção 3 e [`planejamento-nfse-asaas.md`](planejamento-nfse-asaas.md)). Nada implementado:
 > sem tabela, rota, variável ou conta no Asaas. **Próximo passo: começar a F12.1** (conta de cobrança: contatos
 > financeiros, opt-in e trilha, sem Asaas) **na branch `faturamento`**, com o OK do cliente para iniciar. Antes de
 > publicar a F12.1 no endereço de teste da branch: o cliente confere na Vercel as variáveis do ambiente de testes
@@ -96,6 +97,13 @@ pacientes, com `payments` e NFS-e). Nomes com prefixo `billing_` para não colid
   atraso**: sem cobrança no Asaas, sem avisos de atraso, sem reativação automática. Suspensão, se houver, é manual
   (com motivo) e liberada pelo Suporte. A marcação do modo registra quem e quando.
 
+- **Cobrança por nota fiscal emitida (cliente, 29/out):** a NFS-e das clínicas passa a sair pelo Asaas (subconta por
+  clínica, [`planejamento-nfse-asaas.md`](planejamento-nfse-asaas.md)); o RecepClinic paga a tarifa do Asaas e cobra da
+  clínica um **preço por nota** (padrão do Suporte, copiado para o contrato e negociável), com **franquia mensal** no
+  contrato (ou ilimitada; sem acumular). Contam as notas autorizadas no mês, inclusive as canceladas depois. As
+  excedentes de um mês entram na **fatura do mês seguinte**, com o detalhamento na tela Assinatura (Administrador da
+  clínica). No modo manual, o Suporte cobra pelo mesmo detalhamento.
+
 - Provedor Asaas; cartão, Pix Automático e Pix convencional.
 - Valor mensal negociado e gravado por contrato; implantação avulsa, quando houver; preço de referência não muda
   contrato.
@@ -126,8 +134,11 @@ erDiagram
 | Conceito | Nome proposto | Conteúdo essencial | Por quê |
 |---|---|---|---|
 | Conta de cobrança (1 por clínica) | `billing_accounts` | Razão social/nome e CNPJ/CPF do pagador, e-mail financeiro (obrigatório), telefone financeiro, opt-in de WhatsApp (quando, por quem), `asaas_customer_id` (único), ambiente | Separada de `clinic_fiscal_settings` (emissor da NFS-e, só com o F11) e dos contatos de pacientes; fora da linha `clinics`, que o Administrador da clínica pode alterar |
-| Contrato | `billing_contracts` | **Modo de cobrança (`asaas` ou `manual`)**, valor mensal, implantação (valor ou isenção), 1º vencimento, forma de pagamento, retrato do plano de referência (informativo), vigência, situação (`draft`, `active`, `ended`, `canceled`), `asaas_subscription_id`, `pix_automatic_authorization_id` | Mudança comercial = nova versão (`replaces_contract_id`) com data de início |
+| Contrato | `billing_contracts` | **Modo de cobrança (`asaas` ou `manual`)**, valor mensal, **preço por nota (`invoice_unit_price_cents`) e franquia mensal (`invoice_monthly_allowance`, nulo = ilimitada)** (29/out), implantação (valor ou isenção), 1º vencimento, forma de pagamento, retrato do plano de referência (informativo), vigência, situação (`draft`, `active`, `ended`, `canceled`), `asaas_subscription_id`, `pix_automatic_authorization_id` | Mudança comercial = nova versão (`replaces_contract_id`) com data de início |
 | Cobrança | `billing_charges` | Origem (`asaas` ou `manual`), `asaas_payment_id` (único, só no Asaas), tipo (`monthly`, `setup`, `other`), vencimento, valor, forma, situação local e a bruta do Asaas, `paid_at`, link da fatura, `last_synced_at`; no manual, quem registrou e quando | Espelho do Asaas e histórico dos pagamentos manuais num lugar só; atraso, avisos e reativação só olham a origem `asaas` |
+| Item da cobrança (29/out) | `billing_charge_items` | Cobrança, tipo (`monthly`, `setup`, `invoice_overage`, `other`), quantidade, preço unitário, total | Detalhamento da fatura para a clínica |
+| Apuração das notas (29/out) | `billing_invoice_usage` | Clínica, mês, notas autorizadas (lidas de `nfse_invoices`), franquia, excedentes, preço, valor, cobrança em que entrou; fechada no 1º dia do mês seguinte | Fatura do mês seguinte; o mês aberto é calculado ao vivo |
+| Preço padrão por nota (29/out) | `billing_settings` (uma linha) | Preço padrão em centavos, quem mudou e quando | Parâmetro do Suporte, copiado para os contratos novos |
 | Evento recebido | `billing_provider_events` | `provider_event_id` (único), tipo, recurso, dados mínimos, recebido/processado em, situação, tentativas, erro | Idempotência e reprocessamento |
 | Aviso | `billing_notifications` | Cobrança, tipo (`overdue_d3`, `overdue_d7`, `payment_confirmed`), programado para, situação; único por (cobrança, tipo) | Sem duplicidade; cancela os indevidos |
 | Envio por canal | `billing_notification_deliveries` | Canal (`email`, `whatsapp`), tentativas, id no provedor, erro, enviado em | Um canal não trava o outro |
@@ -263,7 +274,8 @@ stateDiagram-v2
   canal, "Suspender por inadimplência" (confirmação e motivo), "Liberar motivo administrativo", trilha, divergências.
   Na visão geral: clínicas com vencidas e saúde do webhook.
 - **Administrador da clínica:** tela "Assinatura": valor contratado, próximas e vencidas com o link de pagamento,
-  contatos financeiros e opt-in (com trilha). Na suspensão, é a única tela liberada, com a faixa explicando.
+  contatos financeiros e opt-in (com trilha). **Notas fiscais (29/out):** preço por nota, franquia, notas do mês até agora
+  (incluídas, excedentes, valor previsto), histórico por mês e a lista das notas que entraram (sem CPF). Na suspensão, é a única tela liberada, com a faixa explicando.
 
 ## 9. Testes e implantação
 
@@ -359,7 +371,8 @@ Cada fase vai ao staging e depende da validação do cliente.
 |---|---|---|
 | F12.0 | Este documento e as decisões 1 a 3 | cliente |
 | F12.1 | Conta de cobrança: contatos financeiros, opt-in, trilha (sem Asaas) | F12.0 |
-| F12.2 | Contrato e versões, valor negociado e implantação (sem Asaas) | F12.1 |
+| F12.2 | Contrato e versões, valor negociado e implantação, **preço por nota e franquia, preço padrão do Suporte** (sem Asaas) | F12.1 |
+| N1–N6 | Nota fiscal pelo Asaas, apuração e detalhamento das notas ([`planejamento-nfse-asaas.md`](planejamento-nfse-asaas.md), seção 12) | F12.2, N0 |
 | F12.3 | Suspensão manual por motivos e bloqueio no painel, páginas públicas, bot e rotinas | decisões 1, 3, 4 |
 | F12.3b | Bloqueio no banco: gravações operacionais recusadas para a clínica suspensa (a tela Assinatura e o Suporte seguem) | F12.3 |
 | F12.4 | Cliente e cobranças no Asaas (sandbox): assinatura Pix convencional, implantação, espelho local | conta de testes |
