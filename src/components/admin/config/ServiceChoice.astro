@@ -121,6 +121,17 @@ const open = services.find((s) => s.id === selected)?.category ?? null;
       if (any.checked) openType(null);
     });
 
+    // Nada escolhido ao salvar: o navegador avisa na primeira opção do grupo
+    // ("Qualquer serviço"). Com um tipo aberto, o aviso vai para o primeiro
+    // cartão dele; as opções escondidas nunca avisam.
+    for (const input of choice.querySelectorAll<HTMLInputElement>('input[name="service_id"]')) {
+      input.addEventListener("invalid", (event) => {
+        const open = [...lists].find((l) => !l.hidden);
+        const target = (open && open.querySelector<HTMLInputElement>("li:not([hidden]) input")) || any;
+        if (input !== target) event.preventDefault();
+      });
+    }
+
     // Busca dentro do tipo: esconde os cartões que não têm o texto no nome.
     for (const list of lists) {
       const input = list.querySelector<HTMLInputElement>("[data-service-search]");

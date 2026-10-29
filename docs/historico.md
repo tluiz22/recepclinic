@@ -619,3 +619,6 @@ retomada fica no README). Para achar algo, buscar por data (ex.: `27/out`), fase
   "turma" e "desativado" no cartão; as vagas aparecem com o cartão de turma. `config/ServiceChoice.astro`; estilos do
   botão e do cartão em `lib/servicePicker.ts` (os dois usam). Sem migração. Conferida no local (escolher, Qualquer
   serviço, salvar, editar); publicada no staging em 29/out.
+  - Correção (29/out, achado do cliente no staging): com um tipo aberto e nenhum cartão escolhido, o aviso de campo
+    obrigatório aparecia em "Qualquer serviço" (a primeira opção do grupo); agora vai para o primeiro cartão do tipo
+    aberto (as outras opções cancelam o `invalid`).
