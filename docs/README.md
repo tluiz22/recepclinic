@@ -12,15 +12,13 @@
 > - **Branches:** `main` = `producao` em 28/out; a `CRM` ficou para trás (etapa encerrada).
 >
 > **Frentes em andamento**
-> - **Ajustes da produção, na `main`:** C1–C3 na produção. **C4 Alterar atendimento** (plano e etapas no
->   [`historico.md`](historico.md), busca "C4"): validada no staging e na produção (C4.6, `3ec78dc`,
->   conferida pelo cliente em 28/out). **C5 Horário em local que o serviço não usa** (histórico, busca "C5") no staging,
->   validada no staging; vai para a produção junto com a próxima funcionalidade (pedido do cliente, 28/out).
->   **C6 Escolha do serviço no Marcar** (tipo primeiro, depois cartões) validada no staging. **C5 e C6 na produção** (`da2a6fc`,
->   conferidas pelo cliente em 28/out). **C7 Arquivo no preparo do exame** (histórico, busca "C7"): C7.1 (cadastro e
->   prévia) e C7.2 validadas; C7.3 e C7.4 no staging. **Plano revisto (C7.5 envio único, C7.6 cadastro, C8 Horários)
->   registrado no histórico, aguardando a autorização do cliente para implementar**; depois, produção com autorização (migrações `20261102120000` e `20261103120000`). Envio real no staging
->   depende da Meta aprovar os modelos da conta nova.
+> - **Ajustes da produção, na `main`:** C1–C6 validados e na produção (`da2a6fc`, conferidos pelo cliente em 28/out;
+>   detalhes no [`historico.md`](historico.md), busca "C4", "C5", "C6"). **C7 Arquivo no preparo do exame** (busca "C7"):
+>   C7.1–C7.4 no staging (migrações `20261102120000` e `20261103120000` aplicadas lá); o cliente revisou o plano depois
+>   de a Meta pôr o `rc_preparo_arquivo_v1` como marketing. **Próxima sessão: implementar a C7.5** (uma mensagem de
+>   preparo só, `rc_preparo_arquivo_v2`, final "Estamos à disposição…", bot sem link; migração tira a regra "arquivo
+>   exige texto"), depois **C7.6** (cadastro) e **C8** (Horários), cada uma validada no staging; produção no fim, com
+>   autorização. Envio real no staging depende da Meta aprovar os modelos da conta nova.
 > - **CRM concluído** (28/out; [`crm.md`](crm.md)): validado no staging e na produção desde 28/out.
 > - **Faturamento do SaaS (Asaas)** ([`planejamento-faturamento-saas.md`](planejamento-faturamento-saas.md)): planejamento
 >   aprovado (28/out), nada implementado; trabalho na branch **`faturamento`** (a `main` fica para correções urgentes
