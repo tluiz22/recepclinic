@@ -626,4 +626,6 @@ retomada fica no README). Para achar algo, buscar por data (ex.: `27/out`), fase
   em negrito, ponto final no lugar dos dois pontos) + "Estamos à disposição para qualquer dúvida." Na legenda do documento,
   na prévia da tela e no modelo, que passa a **`rc_preparo_arquivo_v3`** (a v2 já estava em análise na Meta do staging e
   modelo em análise não se edita). O preparo sem arquivo (`rc_preparo_exame_v3`) não muda. Sem migração. Publicada no
-  staging em 29/out; lá, "Criar na Meta" cria a v3 e a v2 pode sair por "Excluir da Meta".
+  staging em 29/out; lá, "Criar na Meta" cria a v3 e a v2 pode sair por "Excluir da Meta". **Validada pelo cliente no staging em 29/out.**
+- **Produção (29/out, `5ef2be6`):** C7.1–C7.7 e C8, com as migrações `20261102120000`, `20261103120000` e
+  `20261104120000` (simulação → aplicação → conferência). Registro em [`producao.md`](producao.md).

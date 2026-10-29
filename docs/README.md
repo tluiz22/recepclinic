@@ -6,17 +6,16 @@
 > **Ambientes**
 > - **Produção** (`app.recepclinic.com.br`, branch `producao`): no ar desde 26/out; publicações de 28/out: **CRM**
 >   (Relacionamento, B0, P1–P3) e as correções **C1 Exame em paralelo**, **C2 Outro horário**, **C3 Horário de exame**,
->   **C4 Alterar atendimento**, **C5 Horário em local que o serviço não usa** e **C6 Escolha do serviço no Marcar**.
->   Fluxo e registro em [`producao.md`](producao.md).
-> - **Staging** (`teste.recepclinic.com.br`, branch `main`): igual à produção em 28/out. Roteiros em [`staging.md`](staging.md).
-> - **Branches:** `main` = `producao` em 28/out; a `CRM` ficou para trás (etapa encerrada).
+>   **C4 Alterar atendimento**, **C5 Horário em local que o serviço não usa** e **C6 Escolha do serviço no Marcar**; em 29/out, **C7 Arquivo no preparo do
+>   exame** (C7.1–C7.7) e **C8 Escolha do serviço em Horários** (`5ef2be6`). Fluxo e registro em [`producao.md`](producao.md).
+> - **Staging** (`teste.recepclinic.com.br`, branch `main`): igual à produção em 29/out. Roteiros em [`staging.md`](staging.md).
+> - **Branches:** `main` = `producao` em 29/out; a `CRM` ficou para trás (etapa encerrada).
 >
 > **Frentes em andamento**
-> - **Ajustes da produção, na `main`:** C1–C6 validados e na produção (`da2a6fc`, conferidos pelo cliente em 28/out;
->   detalhes no [`historico.md`](historico.md), busca "C4", "C5", "C6"). **C7 Arquivo no preparo do exame** (busca "C7"):
->   C7.1–C7.5 no staging (migrações `20261102120000`, `20261103120000` e `20261104120000` aplicadas lá). **C7.5**
->   (envio único, bot sem link) validada em 29/out; **C7.6** (cadastro e ajudas)
->   validada em 29/out; **C8** (Horários) validada em 29/out; **C7.7** (texto com arquivo, `rc_preparo_arquivo_v3`) no staging, aguarda a validação; produção no fim, com autorização. Envio real no staging depende da Meta aprovar os modelos da conta nova.
+> - **Ajustes da produção, na `main`:** C1–C8 validados e na produção (C1–C6 em 28/out, `da2a6fc`; C7 e C8 em 29/out,
+>   `5ef2be6`; detalhes no [`historico.md`](historico.md), busca "C7", "C8"). Na produção, cada clínica com exames
+>   precisa do "Criar na Meta" (Suporte) para os modelos `rc_preparo_exame_v3` e `rc_preparo_arquivo_v3`. Próximo: nada
+>   pendente nesta frente; aguarda o cliente.
 > - **CRM concluído** (28/out; [`crm.md`](crm.md)): validado no staging e na produção desde 28/out.
 > - **Faturamento do SaaS (Asaas)** ([`planejamento-faturamento-saas.md`](planejamento-faturamento-saas.md)): planejamento
 >   aprovado (28/out), nada implementado; trabalho na branch **`faturamento`** (a `main` fica para correções urgentes
