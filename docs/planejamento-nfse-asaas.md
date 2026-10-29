@@ -312,6 +312,23 @@ tem dados fiscais antes da N5.
 > 9. Prazo para cancelar uma nota em Mossoró ou no Emissor Nacional.
 > 10. A DMED continua sendo gerada pelo RecepClinic a partir dos pagamentos registrados: alguma ressalva?
 
+### 13.5 Dados fiscais da clínica piloto (nota emitida em 24/09/2026, conferida em 29/out)
+
+Só os dados da clínica (o arquivo e os dados do tomador não ficam no projeto):
+- **Emissão pelo sistema próprio da Prefeitura de Mossoró** ("Ambiente Gerador: Sistema Próprio do Município"), no
+  padrão nacional (DANFSe v2.0, chave de 50 dígitos, consulta no portal nacional).
+- **Não optante do Simples Nacional:** a regra de 01/11/2026 (Simples só pelo Emissor Nacional) não se aplica; o
+  piloto é o caso **(b)** da pergunta 9 ao Asaas (fora do Simples, sistema da prefeitura). O emissor direto atual
+  (Sefin Nacional) provavelmente não atenderia esse caso.
+- Regime especial: nenhum. Código de tributação nacional **04.01.01** (Medicina), sem código municipal. NBS
+  **1.2301.22.00**. ISS **5%**, tributável em Mossoró, **não retido**. Sem retenções federais.
+- IBS/CBS: CST **200**, cClassTrib **200029**, indicador de operação **100301**, redução de 60% (equivalem a
+  `taxSituationCode`, `taxClassificationCode` e `operationIndicatorCode` do Asaas).
+- DPS série **2026**, número no formato 26000000000xx (para o `rpsSerie`/`rpsNumber` na implantação).
+- Descrição usada hoje: "REFERENTE A CONSULTA DE [paciente]", com o responsável como tomador (o modelo do plano).
+- Falta: **secretária** (site e login usados para emitir: certificado A1 ou usuário e senha) e **contador** (CNAE e
+  confirmação dos códigos do IBS/CBS).
+
 ### 13.4 Roteiro no Sandbox (depois que o cliente criar a conta e a chave)
 
 Chave em `.env.asaas-sandbox` (fora do git), nunca no chat. Só o Sandbox; nada na produção.
