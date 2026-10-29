@@ -610,5 +610,5 @@ retomada fica no README). Para achar algo, buscar por data (ex.: `27/out`), fase
     com o aviso "Com arquivo, as instruções não são enviadas…"; a prévia mostra só o arquivo com o início e o final
     (`preparationFileCaption`). "Tirar o arquivo" reabilita na hora e a prévia volta ao texto. "i" das instruções e do
     arquivo reescritos sem conversa aberta/fechada nem link (o bot também manda). `PreparationField.astro`,
-    `ajuda/configuracoes.ts`. Sem migração. Conferida no local (escolher, salvar, texto guardado, tirar) e no staging
-    em 29/out.
+    `ajuda/configuracoes.ts`. Sem migração. Conferida no local (escolher, salvar, texto guardado, tirar); publicada no
+    staging em 29/out.
