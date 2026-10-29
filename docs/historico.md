@@ -605,3 +605,10 @@ retomada fica no README). Para achar algo, buscar por data (ex.: `27/out`), fase
     `20261104120000_preparo_arquivo_sem_texto` (sai `services_preparation_file_needs_text`) e a mesma regra tirada da
     tela do serviço. Staging: simulação → aplicação → conferência em 29/out. As ajudas ("i") ficam para a C7.6. **Validada pelo cliente no
     staging em 29/out.**
+  - **C7.6 Cadastro e ajudas** (29/out): na tela do exame, o arquivo vem acima das "Instruções de preparo". Com arquivo,
+    as instruções ficam só leitura e acinzentadas (`readonly`, não `disabled`: o texto continua guardado ao salvar),
+    com o aviso "Com arquivo, as instruções não são enviadas…"; a prévia mostra só o arquivo com o início e o final
+    (`preparationFileCaption`). "Tirar o arquivo" reabilita na hora e a prévia volta ao texto. "i" das instruções e do
+    arquivo reescritos sem conversa aberta/fechada nem link (o bot também manda). `PreparationField.astro`,
+    `ajuda/configuracoes.ts`. Sem migração. Conferida no local (escolher, salvar, texto guardado, tirar) e no staging
+    em 29/out.
