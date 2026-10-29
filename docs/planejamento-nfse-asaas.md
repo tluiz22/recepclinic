@@ -2,7 +2,8 @@
 
 > **Estado atual (retomar daqui), 29/out/2026.** **Planejamento concluído** (cliente, 29/out). Nada implementado.
 > A implementação será feita na branch **`faturamento`**, só com a autorização do cliente, na ordem da seção 12.
-> **Próximo passo:** a fase **N0** (perguntas ao Asaas e ao contador, testes na conta Sandbox), sem código.
+> **Próxima sessão (cliente, 29/out): iniciar a fase N0** (perguntas ao Asaas e ao contador, testes na conta
+> Sandbox), sem código; depois a F12.1.
 
 Marcas: **[Código]** conferido no repositório; **[Asaas]** documentação oficial do Asaas; **[Oficial]** prefeitura ou
 governo; **[Cliente]** decisão ou informação do cliente; **[Hipótese]** conclusão técnica sem confirmação;
