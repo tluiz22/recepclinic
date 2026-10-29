@@ -101,7 +101,8 @@ pacientes, com `payments` e NFS-e). Nomes com prefixo `billing_` para não colid
   clínica, [`planejamento-nfse-asaas.md`](planejamento-nfse-asaas.md)); o RecepClinic paga a tarifa do Asaas e cobra da
   clínica um **preço por nota** (padrão do Suporte, copiado para o contrato e negociável), com **franquia mensal** no
   contrato (ou ilimitada; sem acumular). Contam as notas autorizadas no mês, inclusive as canceladas depois. As
-  excedentes de um mês entram na **fatura do mês seguinte**, com o detalhamento na tela Assinatura (Administrador da
+  excedentes de um mês são cobradas no mês seguinte numa **cobrança avulsa separada**, com o mesmo vencimento da
+  mensalidade (a assinatura não muda; cliente, 29/out, recomendação do Asaas), com o detalhamento na tela Assinatura (Administrador da
   clínica). No modo manual, o Suporte cobra pelo mesmo detalhamento.
 
 - Provedor Asaas; cartão, Pix Automático e Pix convencional.
@@ -178,7 +179,7 @@ Sem duplicar: `clinic_usage_monthly` (uso), `plans.ts` (referência), `clinics.s
 1. Cliente criado pelo Suporte ao ativar a conta de cobrança; guardar `asaas_customer_id`; referência externa = id da
    clínica (nome do campo a confirmar); procurar pelo CNPJ/CPF antes de criar.
 2. Cartão e Pix convencional por **assinatura** do Asaas; Pix Automático por autorização em modo `SUBSCRIPTION`;
-   implantação por cobrança avulsa (`POST /v3/payments`).
+   implantação e notas excedentes por cobrança avulsa (`POST /v3/payments`).
 3. Cartão sem dado de cartão no RecepClinic: página de fatura do Asaas (a confirmar na referência).
 4. Webhook: rota pública fora de `/admin`; token em tempo constante (e IPs oficiais, se aprovado); grava em
    `billing_provider_events` com `on conflict do nothing`; responde 200; processa com `waitUntil` e rotina de

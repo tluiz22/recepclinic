@@ -74,10 +74,10 @@ conta.
   depois), franquia, excedentes, preço unitário, valor, e a cobrança em que entrou. Mês aberto = cálculo ao vivo para a
   tela.
 - **Detalhe da cobrança** (`billing_charge_items`): itens da fatura (`monthly`, `setup`, `invoice_overage`, `other`)
-  com quantidade, preço unitário e total; a mensalidade do mês seguinte leva o item das excedentes.
-- **Asaas (cobrança automática, F12.4+):** somar o item ao valor da cobrança do mês antes do vencimento.
-  **[Pendência]** confirmar a forma com a assinatura (alterar o valor da cobrança pendente gerada pela assinatura ou
-  cobrança avulsa no mesmo vencimento). **Modo manual:** o Suporte vê o mesmo detalhamento e registra o pagamento.
+  com quantidade, preço unitário e total; as excedentes do mês formam uma cobrança própria (item `invoice_overage`), separada da mensalidade.
+- **Asaas (cobrança automática, F12.4+):** **decidido (cliente, 29/out, recomendação do Asaas):** a cobrança da
+  assinatura não muda; as excedentes do mês vão numa **cobrança avulsa separada**, com o mesmo vencimento da
+  mensalidade seguinte. **Modo manual:** o Suporte vê o mesmo detalhamento e registra o pagamento.
 - **Tela Assinatura** (Administrador da clínica, decisão 11.5): mensalidade, preço por nota, franquia, notas do mês
   até agora (incluídas, excedentes, valor previsto), histórico por mês e a lista das notas que entraram (data, número,
   situação; sem CPF).
@@ -232,7 +232,7 @@ Assinatura e aba Faturamento do Suporte (faturamento); `tests/db/{emissao-nfse,e
 3. Validade e acesso dos links `pdfUrl`/`xmlUrl`.
 4. Como desligar as notificações do Asaas ao tomador.
 5. Filtro por `externalReference` na listagem de notas.
-6. Como somar as excedentes à cobrança do mês gerada pela assinatura.
+6. ~~Como somar as excedentes à cobrança da assinatura~~: cobrança avulsa separada (13.7).
 7. `municipalOptions` da clínica piloto (autenticação, cancelamento, regime).
 
 **Com o contador:** regime da clínica piloto, CNAE, código de serviço, NBS, número inicial da série, data do Simples
@@ -252,7 +252,7 @@ tem dados fiscais antes da N5.
 | N4b | Apuração mensal e **detalhamento** na tela Assinatura e na aba do Suporte (cobrança manual) | F12.2, N3 |
 | N5 | Desligar e remover o emissor antigo | N3, N4, produção conferida |
 | N6 | Nota real em Mossoró e produção | autorização do cliente e do contador |
-| F12.3+ | Restante do faturamento; na F12.4+, as excedentes entram na cobrança automática | planejamento do faturamento |
+| F12.3+ | Restante do faturamento; na F12.4+, as excedentes viram cobrança avulsa automática | planejamento do faturamento |
 
 ## 13. Fase N0 (29/out/2026)
 
@@ -403,8 +403,8 @@ Conta principal do Sandbox (PJ) e uma subconta fictícia com endereço em Mossor
    para a produção (N2 em diante só no Sandbox).
 2. **Custo novo:** R$ 12,90 por clínica habilitada, na conta principal. **[Pendência]** decisão do cliente: absorver
    ou cobrar da clínica (item `setup` já existe em `billing_charge_items`).
-3. **Excedentes:** cobrança avulsa separada, não alterar a da assinatura. **[Pendência]** decisão do cliente (seção 3
-   previa somar à mensalidade).
+3. **Excedentes:** **decidido (cliente, 29/out):** cobrança avulsa separada, mesmo vencimento; a da assinatura não
+   muda (seção 3).
 4. **Chaves:** guardar a chave da criação no Vault (já previsto). Clínica 6 meses sem nota perde a chave; recriar
    exige IP fixo (decisão 11.15: "não por agora"). **[Pendência]** com o cliente: formulário ao Produto do Asaas,
    Static IPs da Vercel ou aceitar recriar a chave pela interface do Asaas.
