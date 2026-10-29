@@ -64,8 +64,8 @@ describe("templates na conexão pela janela da Meta (F8.2)", () => {
     const result = await createTemplatesAfterConnect(service(), clinicId, meta.fetcher, "111111");
     expect(result.ok).toBe(true);
     const lines = result.ok ? result.lines : [];
-    // A nota fiscal sobe o PDF de exemplo pelo app: na Meta simulada dá erro, e o resto segue.
-    expect(lines.filter((l) => l.problem).map((l) => l.key)).toEqual(["nfse_document"]);
+    // A nota fiscal e o arquivo do preparo (C7) sobem o PDF de exemplo pelo app: na Meta simulada dá erro, e o resto segue.
+    expect(lines.filter((l) => l.problem).map((l) => l.key)).toEqual(["exam_preparation_file", "nfse_document"]);
     expect(lines.find((l) => l.name === "rc_lembrete_v1")).toMatchObject({ status: "approved" });
     expect(lines.find((l) => l.name === CUSTOM_NAME)).toMatchObject({ status: "pending", problem: null });
     expect(lines.some((l) => l.name === "rc_confirmacao_f82_v2")).toBe(false);
@@ -80,7 +80,8 @@ describe("templates na conexão pela janela da Meta (F8.2)", () => {
     expect(data).toContainEqual({ name: CUSTOM_NAME, status: "pending", version: 2 });
     expect(data).toContainEqual({ name: "rc_lembrete_v1", status: "approved", version: 1 });
     expect(data).toContainEqual({ name: "rc_confirmacao_v1", status: "pending", version: 1 });
-    expect(data!.filter((t) => t.version === 1)).toHaveLength(DEFAULT_TEMPLATES.length - 1);
+    // Os dois com PDF de exemplo (nota fiscal e arquivo do preparo) não foram criados na Meta simulada.
+    expect(data!.filter((t) => t.version === 1)).toHaveLength(DEFAULT_TEMPLATES.length - 2);
   });
 
   it("reconectar a mesma conta não cria de novo: só guarda a situação", async () => {

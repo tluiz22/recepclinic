@@ -9,8 +9,8 @@ const input = (): SetupInput => ({
   agendas: [{ id: "a1", name: "Thiago Luiz", professionalId: "p1", isActive: true }],
   locations: [{ id: "l1", name: "Consultorio TI", type: "clinic", address: null, isActive: true }],
   services: [
-    { id: "s1", name: "Consulta", category: "consultation", isActive: true, agendaIds: ["a1"], locations: [{ locationId: "l1", priceCents: null }] },
-    { id: "s2", name: "Espirometria", category: "exam", isActive: true, agendaIds: ["a1"], locations: [{ locationId: "l1", priceCents: null }] },
+    { id: "s1", name: "Consulta", category: "consultation", schedulingMode: "individual", isActive: true, agendaIds: ["a1"], locations: [{ locationId: "l1", priceCents: null }] },
+    { id: "s2", name: "Espirometria", category: "exam", schedulingMode: "individual", isActive: true, agendaIds: ["a1"], locations: [{ locationId: "l1", priceCents: null }] },
   ],
   windows: [{ agendaId: "a1", locationId: "l1", serviceId: "s1" }],
   features: ["exams"],

@@ -74,10 +74,23 @@ export const DEFAULT_TEMPLATES: DefaultTemplate[] = [
   },
   {
     // v2: a Meta classificou a v1 como marketing (07/out); o texto deixa claro que é o exame marcado.
+    // v3 (C7.4; cliente, 28/out/2026): sai logo depois da confirmação, então sem saudação e sem link; as
+    // instruções cadastradas numa linha só (src/lib/preparationMessage.ts). Quem ainda só tem a v2 aprovada
+    // continua com ela (preparationSender, LEGACY_PREPARATION). C7.5: final "Estamos à disposição…".
     key: "exam_preparation",
-    name: "rc_preparo_exame_v2",
-    body: `${GREETING}\nPara o exame {{3}} que você marcou, siga as orientações de preparo neste link: {{4}}\n\n${ANY_QUESTION}`,
-    examples: ["Maria", "da Clínica Sorriso", "Espirometria", "https://app.recepclinic.com.br/preparo/exemplo"],
+    name: "rc_preparo_exame_v3",
+    body: "Segue orientações para a realização do exame {{1}}:\n\n{{2}}\n\nEstamos à disposição para qualquer dúvida.",
+    examples: ["Espirometria", "*Não usar* broncodilatador nas 4 horas anteriores. · Venha de roupa confortável."],
+  },
+  {
+    // Preparo com arquivo, com a conversa fechada (C7.5; cliente, 28/out/2026): a única mensagem do preparo,
+    // com o arquivo no topo. A v1 ("… em anexo.", enviada depois do preparo) a Meta pôs como marketing. v3
+    // (cliente, 29/out): o exame em negrito e ponto final no lugar dos dois pontos (a v2 estava em análise).
+    key: "exam_preparation_file",
+    name: "rc_preparo_arquivo_v3",
+    body: "Segue orientações para a realização do exame *{{1}}*.\n\nEstamos à disposição para qualquer dúvida.",
+    examples: ["Espirometria"],
+    documentHeader: true,
   },
   {
     // Orientações gerais da consulta, fora da janela de 24h (texto aprovado pelo cliente em 08/out).
@@ -121,6 +134,9 @@ export const DEFAULT_TEMPLATES: DefaultTemplate[] = [
   },
 ];
 
+/** Texto da v2 do preparo (com o link), para quem ainda só tem ela aprovada (C7.4). */
+export const LEGACY_PREPARATION_BODY = `${GREETING}\nPara o exame {{3}} que você marcou, siga as orientações de preparo neste link: {{4}}\n\n${ANY_QUESTION}`;
+
 export function defaultTemplate(key: TemplateKey): DefaultTemplate | null {
   return DEFAULT_TEMPLATES.find((t) => t.key === key) ?? null;
 }
@@ -130,7 +146,7 @@ export function templatesInUse(features: readonly FeatureKey[]): DefaultTemplate
   const has = (feature: FeatureKey) => features.includes(feature);
   return DEFAULT_TEMPLATES.filter(
     (t) =>
-      (t.key !== "exam_preparation" || has("exams")) &&
+      ((t.key !== "exam_preparation" && t.key !== "exam_preparation_file") || has("exams")) &&
       (!t.key.startsWith("daily_summary") || has("daily_summary")) &&
       (!t.key.startsWith("daily_summary_exams") || has("exams")) &&
       (t.key !== "waitlist_offer" || has("waitlist")) &&

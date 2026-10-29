@@ -11,6 +11,8 @@ import {
   type ServiceCategory,
 } from "../../../../../lib/data/config/services";
 import { listLocations } from "../../../../../lib/data/config/locations";
+import { deactivateServiceWindowsOutside } from "../../../../../lib/data/config/availability";
+import { receivedPreparationFile, setPreparationFile, type PreparationFile } from "../../../../../lib/data/config/preparationFile";
 import { runFormAction } from "../../../../../lib/data/formAction";
 import { allFilterOn, withAllFilter } from "../../../../../lib/returnPath";
 import { formAll, formChecked, formInt, formMoneyCents, formOptionalInt, formOptionalMoneyCents, formText } from "../../../../../lib/forms";
@@ -46,10 +48,17 @@ export const POST: APIRoute = async (context) => {
         schedulingMode: (category === "exam" && formText(form, "scheduling_mode") === "group" ? "group" : "individual") as SchedulingMode,
       };
       const isNew = id === "novo";
+      // Arquivo do preparo (C7): só no exame; o novo vem da tela já no armazenamento. C7.5: vai sem as instruções.
+      const currentFile = isNew ? null : (await getService(db, clinicId, id)).preparationFile;
+      let file: PreparationFile | null = category === "exam" ? currentFile : null;
+      const newFile = formText(form, "preparation_file");
+      if (category === "exam" && newFile) file = await receivedPreparationFile(db, clinicId, newFile);
+      else if (category === "exam" && formChecked(form, "remover_arquivo")) file = null;
       if (isNew) id = (await createService(db, clinicId, { ...input, category })).id;
       else await updateService(db, clinicId, id, input);
 
       // Depois de criado, um erro aqui volta para a tela do serviço (já existe).
+      if (file?.path !== currentFile?.path) await setPreparationFile(db, clinicId, id, file);
       await setServiceAgendas(db, clinicId, id, formAll(form, "agenda_id"));
       const locations = formAll(form, "location_id").map((locationId) => ({
         locationId,
@@ -60,8 +69,11 @@ export const POST: APIRoute = async (context) => {
       const keep = locals.clinic!.features.includes("home_visit")
         ? []
         : (await listLocations(db, clinicId, { includeInactive: true })).filter((l) => l.type === "home_visit").map((l) => l.id);
-      await setServiceLocations(db, clinicId, id, locations, { keep });
-      return { redirectTo: page(), message: isNew ? "Serviço cadastrado." : "Serviço salvo." };
+      const saved = await setServiceLocations(db, clinicId, id, locations, { keep });
+      // Local tirado do serviço: os horários dele ali ficam desativados (C5; cliente, 28/out/2026).
+      const off = isNew ? 0 : await deactivateServiceWindowsOutside(db, clinicId, id, saved.locations.map((l) => l.locationId));
+      const offText = off ? ` ${off === 1 ? "1 horário do serviço ficou desativado" : `${off} horários do serviço ficaram desativados`} (local tirado).` : "";
+      return { redirectTo: page(), message: `${isNew ? "Serviço cadastrado." : "Serviço salvo."}${offText}` };
     },
     page,
   );

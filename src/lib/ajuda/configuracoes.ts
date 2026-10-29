@@ -15,9 +15,12 @@ export const configuracoes = {
       { termo: "Individual", texto: "um paciente por horário." },
       { termo: "Em turma", texto: "vários pacientes no mesmo horário, até o número de vagas, que se define em Horários (\"Vagas da turma\")." },
     ],
-    // src/lib/data/whatsapp/preparation.ts (cabeçalho) e "Reenviar preparo" no cartão da Agenda (cardActions.ts).
+    // src/lib/data/whatsapp/preparation.ts (cabeçalho), bot/menus.ts (handlePreparationChoice) e "Reenviar preparo" no cartão da Agenda (cardActions.ts).
     servicoPreparo:
-      "Vai uma vez só pelo WhatsApp, logo depois que a confirmação da marcação chega ao paciente, com o link da página do preparo. Não vai no lembrete nem de novo ao remarcar. Se não chegou, use \"Reenviar preparo\" na Agenda. Sem texto, nada é enviado.",
+      "Vai uma vez só pelo WhatsApp, como na prévia, logo depois que a confirmação da marcação chega ao paciente; o bot também manda quando ele pede. Não vai no lembrete nem ao remarcar. Se não chegou, use \"Reenviar preparo\" na Agenda. Sem texto e sem arquivo, nada vai.",
+    // C7.5: preparation.ts (deliverPreparation, resendPreparation) e o modelo rc_preparo_arquivo_v3.
+    servicoPreparoArquivo:
+      "Com arquivo, o preparo é o arquivo com a mensagem curta da prévia; as instruções ficam guardadas, sem ir. Vai uma vez só, depois da confirmação, e pelo bot. Se não chegou, use \"Reenviar preparo\" na Agenda. Para voltar às instruções, marque \"Tirar o arquivo\" e salve.",
     // isOverConsultationAgeLimit em src/lib/age.ts; aviso no Marcar e na ficha do paciente.
     clinicaIdade:
       "Para quando a clínica marca Consulta só até certa idade, como na pediatria. Ex.: com 18 anos, quem já fez 18 não marca Consulta pelo bot (Retorno e Exame seguem); no painel, o Marcar e a ficha avisam, sem impedir.",

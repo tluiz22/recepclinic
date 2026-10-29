@@ -29,9 +29,25 @@ export const agenda = {
         "Escolha a frequência (toda semana, a cada 2 semanas…) e até quando: um dia, um número de sessões ou sem data para terminar.",
         "Ficam marcadas as sessões dos próximos 3 meses. Uma vez por dia, o sistema marca as que entram nesse prazo, até o fim da série.",
         "Feriado, bloqueio ou horário ocupado: a data é pulada e aparece na tela da série, para marcar à mão se quiser. No fim por número de sessões, a data pulada não conta.",
-        "Cada sessão é um atendimento comum: dá para remarcar ou cancelar só ela, ou encerrar a série dali em diante.",
+        "Cada sessão é um atendimento comum: dá para remarcar, alterar ou cancelar só ela, ou mudar ou encerrar a série dali em diante.",
       ],
       exemplo: "Toda semana, às terças às 14h, 10 sessões, com um feriado numa das terças: a data do feriado é pulada e a série vai até a 11ª terça, para completar as 10.",
+    },
+    // C4 Alterar atendimento (cliente, 28/out/2026): src/lib/data/agenda/appointments.ts (changeAppointment),
+    // series.ts (changeSeriesDetailsFrom), slots.ts (checkFreeTime, PAST_LIMIT_DAYS), appointmentChanges.ts e
+    // confirmText.ts (paymentChangeNote).
+    alterar: {
+      serve: "Corrigir um atendimento já marcado (serviço, profissional, local, convênio, endereço, data e hora) sem cancelar e marcar de novo.",
+      como: [
+        "A tela abre com o horário atual escolhido: para corrigir só o serviço ou o convênio, basta confirmar. Para outro dia e hora, escolha abaixo ou no \"Outro horário\" (até 90 dias para trás).",
+        "A confirmação mostra o que muda (antes → depois). O paciente recebe mensagem no WhatsApp só se mudar data, hora, profissional ou local para uma data futura; aí o lembrete e a presença confirmada recomeçam.",
+        "O valor segue o serviço e o local novos. Pagamentos já registrados não mudam: a confirmação avisa se fica faltando ou sobrando.",
+        "Sessão de série ainda por vir: \"Só esta sessão\" ou \"Esta e as próximas\". Com Compareceu ou Faltou registrado, a data fica no passado; o cancelado não se altera.",
+        "Tudo fica na Trilha do atendimento: o que mudou, quando e quem fez.",
+      ],
+      exemplo:
+        "Marcou Consulta, mas era Avaliação inicial: em Alterar, troque o serviço e confirme. O horário continua o mesmo, o valor passa a ser o da Avaliação e o paciente não recebe mensagem.",
+      erro: "\"Horário ocupado\": outro atendimento usa esse horário na agenda; escolha outro horário. \"Já tem atendimento marcado\": o paciente já tem atendimento futuro com esse profissional; altere aquele.",
     },
   },
 } satisfies ModuloDeAjuda;

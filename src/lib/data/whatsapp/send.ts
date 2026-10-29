@@ -5,13 +5,14 @@ import { getSendingSetup, type TemplateKey } from "./connection";
 import { GraphRequestError, sendMessage, uploadMedia, type Fetcher } from "./graph";
 import type { SendOutcome } from "./messages";
 import { toWaNumber } from "./meta";
-import type { PreparationSender } from "./preparation";
+import type { PreparationFileContent, PreparationSender } from "./preparation";
+import { preparationFileCaption, preparationInstructionsOneLine, preparationMessageText } from "../../preparationMessage";
 import type { ReminderSender } from "./reminders";
 import type { DailySummarySender } from "./dailySummary";
 import type { OfferSender } from "../waitlist/offers";
 import { getApprovedTemplate } from "./connection";
 import { isCustomerServiceWindowOpen, recordOutboundMessage } from "./messages";
-import { appointmentParams, cleanParam, clinicLabel, defaultTemplate, fillTemplate, firstName, formatAppointmentWhen, formatSummaryDate, offerTypeWord, paramCount, type MessageArticle } from "./templates";
+import { appointmentParams, cleanParam, LEGACY_PREPARATION_BODY, clinicLabel, defaultTemplate, fillTemplate, firstName, formatAppointmentWhen, formatSummaryDate, offerTypeWord, paramCount, type MessageArticle } from "./templates";
 import { isAnonymizedPhone } from "../../anonymization";
 import { logError } from "../../log";
 import { classifySendError } from "./retryRules";
@@ -40,8 +41,8 @@ export type ClinicSender = {
   list(to: string, body: string, button: string, sections: ListSection[]): Promise<SendOutcome>;
   /** Botões de resposta (até 3, título com até 20 caracteres). */
   buttons(to: string, body: string, buttons: ReplyButton[]): Promise<SendOutcome>;
-  /** Sobe um arquivo (ex.: o PDF da nota, F11.5) e devolve o id da mídia na Meta. */
-  uploadDocument?(file: { bytes: Uint8Array; filename: string }): Promise<string>;
+  /** Sobe um arquivo (ex.: o PDF da nota, F11.5; o arquivo do preparo, C7) e devolve o id da mídia na Meta. */
+  uploadDocument?(file: { bytes: Uint8Array; filename: string; mimeType?: string }): Promise<string>;
   /** Template com o documento no topo (rc_nota_fiscal_v1). */
   documentTemplate?(
     to: string,
@@ -144,7 +145,7 @@ export async function createClinicSender(
       );
     },
     uploadDocument(file) {
-      return uploadMedia(setup.phoneNumberId, setup.accessToken, { ...file, mimeType: "application/pdf" }, fetcher);
+      return uploadMedia(setup.phoneNumberId, setup.accessToken, { ...file, mimeType: file.mimeType ?? "application/pdf" }, fetcher);
     },
     documentTemplate(to, key, template, params, document) {
       const text = template.body ?? defaultTemplate(key)?.body ?? null;
@@ -174,24 +175,59 @@ export function reminderSender(sender: ClinicSender): ReminderSender {
     sender.template(reminder.phone, "reminder", reminder.template, appointmentParams(sender.clinicLabel, reminder), reminder.buttonPayloads);
 }
 
-/** Preparo do exame: texto com as orientações (janela aberta) ou template com o link (fechada). */
+/** Preparo do exame: texto com as orientações (janela aberta) ou o template (fechada); com arquivo, o arquivo (C7.5). */
 export function preparationSender(sender: ClinicSender): PreparationSender {
   return (preparation) => {
-    const link = `${sender.baseUrl}${preparation.pagePath}`;
-    const greeting = `Olá, ${firstName(preparation.contactName)}! Aqui é ${sender.clinicLabel}.`;
+    if (preparation.file) {
+      const template = preparation.mode === "template" ? preparation.template : null;
+      return sendPreparationFile(sender, preparation.phone, preparation.examName, preparation.file, template);
+    }
+    // C7.4: sem saudação e sem link, só as instruções entre a linha antes e a linha depois.
     if (preparation.mode === "text" || !preparation.template) {
-      return sender.text(
-        preparation.phone,
-        `${greeting}\nPreparo do exame *${preparation.examName}*:\n\n${preparation.instructions}\n\nAs orientações também estão neste link: ${link}\n\nQualquer dúvida, é só responder esta mensagem.`,
-      );
+      return sender.text(preparation.phone, preparationMessageText(preparation.examName, preparation.instructions));
+    }
+    // Clínica que ainda só tem a v2 aprovada (ou uma versão personalizada dela): nome, clínica, exame e o link.
+    if (isLegacyPreparation(preparation.template)) {
+      // O texto da v2 conta os 4 campos (o padrão agora é a v3, com 2).
+      const template = { ...preparation.template, body: preparation.template.body ?? LEGACY_PREPARATION_BODY };
+      return sender.template(preparation.phone, "exam_preparation", template, [
+        firstName(preparation.contactName),
+        sender.clinicLabel,
+        preparation.examName,
+        `${sender.baseUrl}${preparation.pagePath}`,
+      ]);
     }
     return sender.template(preparation.phone, "exam_preparation", preparation.template, [
-      firstName(preparation.contactName),
-      sender.clinicLabel,
       preparation.examName,
-      link,
+      preparationInstructionsOneLine(preparation.instructions),
     ]);
   };
+}
+
+/** v1/v2 do preparo (com o link) e as versões personalizadas delas (4 campos: nome, clínica, exame, link). */
+export function isLegacyPreparation(template: { name: string; body?: string | null }): boolean {
+  if (/^rc_preparo_exame_v[12]$/.test(template.name)) return true;
+  return !!template.body && paramCount(template.body) === 4;
+}
+
+/**
+ * Preparo com arquivo (C7.5): sobe o arquivo à Meta e manda como documento com
+ * a legenda (janela aberta; também o bot) ou pelo modelo com o arquivo no topo
+ * (fechada).
+ */
+export async function sendPreparationFile(
+  sender: ClinicSender,
+  phone: string,
+  examName: string,
+  file: PreparationFileContent,
+  template: { name: string; language: string; body?: string | null } | null,
+): Promise<SendOutcome> {
+  if (!sender.uploadDocument || !sender.document || !sender.documentTemplate) {
+    return { sent: false, reason: "envio de arquivo indisponível" };
+  }
+  const document = { mediaId: await sender.uploadDocument(file), filename: file.filename };
+  if (!template) return sender.document(phone, document, preparationFileCaption(examName));
+  return sender.documentTemplate(phone, "exam_preparation_file", template, [examName], document);
 }
 
 /** Orientações gerais da consulta (cliente, 08/out): o texto (janela aberta) ou o template com o link (fechada). */

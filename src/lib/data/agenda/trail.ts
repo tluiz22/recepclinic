@@ -60,6 +60,7 @@ const MESSAGE_LABELS: Record<string, { label: string; gender: Gender }> = {
   appointment_mass_cancellation: { label: "Aviso de cancelamento pela clínica (com o link para remarcar)", gender: "m" },
   waitlist_offer: { label: "Oferta da lista de espera", gender: "f" },
   nfse_document: { label: "Nota fiscal", gender: "f" },
+  exam_preparation_file: { label: "Arquivo do preparo do exame", gender: "m" },
 };
 /** Tipo sem nome cadastrado: "Mensagem", nunca o nome interno. */
 const OTHER_MESSAGE = { label: "Mensagem", gender: "f" as Gender };
@@ -132,6 +133,12 @@ export function describeTrail(row: TrailEntryRow, actors: Map<string, ActorLabel
       return make(d.reason === "bot" ? "Saiu da lista de espera pelo WhatsApp" : `Retirado da lista de espera${by}`);
     case "waitlist_advanced":
       return make(`Antecipado pela lista de espera: de ${when(d.from)} para ${when(d.to)}`, "success");
+    case "changed": {
+      // Alterar (C4, 28/out/2026): o que mudou, de → para.
+      const changes = Array.isArray(d.changes) ? (d.changes as { label: string; from: string; to: string }[]) : [];
+      const list = changes.map((c) => `${c.label}: ${c.from} → ${c.to}`).join("; ");
+      return make(`Alterado ${via}${by}${list ? `. ${list}` : ""}`);
+    }
     case "rebooking_dismissed":
       return make(`Marcado como "Desistiu" (sem remarcação)${by}`);
     default:

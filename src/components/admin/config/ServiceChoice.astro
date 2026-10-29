@@ -1,0 +1,150 @@
+---
+// Escolha do serviço em Horários (C8; cliente, 28/out/2026): como no Marcar
+// (C6), primeiro o tipo e depois os serviços dele em cartões, mas na própria
+// tela, sem recarregar (o formulário já tem dias e horas preenchidos). Os
+// cartões são opções do campo `service_id`; "Qualquer serviço" (valor
+// `todos`) é o primeiro botão da fila dos tipos (decisão do cliente, 29/out)
+// e, escolhido, esconde os cartões. Nenhum tipo vem aberto; com o serviço já
+// definido (edição, "Cadastrar os horários" do serviço), abre no tipo dele.
+import { CATEGORY_LABELS } from "../../../lib/serviceLabels";
+import {
+  anyChipClass,
+  SEARCH_FROM,
+  SERVICE_TYPE_PLURAL as plural,
+  serviceCardToggleClass,
+  serviceTypes,
+  typeChipToggleClass,
+  type ServiceCategory,
+} from "../../../lib/servicePicker";
+import { CONTROL } from "../ui/styles";
+
+type ChoiceService = { id: string; name: string; category: ServiceCategory; durationMinutes: number; schedulingMode: string; isActive: boolean };
+
+interface Props {
+  services: ChoiceService[];
+  /** Serviço escolhido: o id, "todos" ou "" (nenhum). */
+  selected: string;
+}
+
+const { services, selected } = Astro.props;
+const types = serviceTypes(services);
+const open = services.find((s) => s.id === selected)?.category ?? null;
+---
+
+<fieldset class="flex min-w-0 flex-col gap-3" data-service-choice>
+  <legend class="text-[14.5px] font-semibold text-ink">Serviço</legend>
+  <div role="group" aria-label="Tipo de atendimento" class="flex flex-wrap gap-2">
+    <label class={anyChipClass}>
+      <input type="radio" name="service_id" value="todos" required checked={selected === "todos"} class="sr-only" data-any />
+      Qualquer serviço
+    </label>
+    {
+      types.map((t) => (
+        <button type="button" class={typeChipToggleClass} aria-pressed={t.category === open ? "true" : "false"} data-type={t.category}>
+          {CATEGORY_LABELS[t.category]}
+          <span class="font-medium opacity-80">· {t.count}</span>
+        </button>
+      ))
+    }
+  </div>
+  <p class="text-[15px] text-ink-soft" data-choice-empty hidden={!!open || selected === "todos"}>
+    Escolha o tipo de atendimento para ver os serviços, ou "Qualquer serviço" para o horário valer para todos.
+  </p>
+  <p class="text-[15px] text-ink-soft" data-choice-any hidden={selected !== "todos"}>O horário vale para qualquer serviço desta agenda.</p>
+  {
+    types.map((t) => {
+      const shown = services.filter((s) => s.category === t.category);
+      return (
+        <div class="flex flex-col gap-3" data-type-list={t.category} hidden={t.category !== open}>
+          {shown.length > SEARCH_FROM && (
+            <label class="flex flex-col gap-1 text-sm font-semibold text-ink">
+              Buscar em {plural[t.category]}
+              <input type="search" data-service-search placeholder="Digite parte do nome" class={`${CONTROL} w-full font-normal sm:max-w-[420px]`} />
+            </label>
+          )}
+          <ul class="grid grid-cols-1 gap-2 sm:grid-cols-2" aria-label={`Serviços: ${plural[t.category]}`}>
+            {shown.map((s) => (
+              <li data-service-name={s.name.toLocaleLowerCase("pt-BR")}>
+                <label class={serviceCardToggleClass}>
+                  <input
+                    type="radio"
+                    name="service_id"
+                    value={s.id}
+                    required
+                    checked={s.id === selected}
+                    data-group={s.schedulingMode === "group" ? "1" : undefined}
+                    class="sr-only"
+                  />
+                  <span class="text-base leading-snug font-bold text-ink">{s.name}</span>
+                  <span class="text-sm text-ink-soft">
+                    {s.durationMinutes} min{s.schedulingMode === "group" ? " · turma" : ""}
+                    {!s.isActive ? " · desativado" : ""}
+                  </span>
+                </label>
+              </li>
+            ))}
+          </ul>
+          <p class="text-[15px] text-ink-soft" data-service-none hidden>
+            Nenhum serviço com esse nome.
+          </p>
+        </div>
+      );
+    })
+  }
+</fieldset>
+
+<script>
+  document.querySelectorAll<HTMLElement>("[data-service-choice]").forEach((choice) => {
+    const any = choice.querySelector<HTMLInputElement>("[data-any]")!;
+    const empty = choice.querySelector<HTMLElement>("[data-choice-empty]")!;
+    const anyNote = choice.querySelector<HTMLElement>("[data-choice-any]")!;
+    const buttons = choice.querySelectorAll<HTMLButtonElement>("[data-type]");
+    const lists = choice.querySelectorAll<HTMLElement>("[data-type-list]");
+    const openType = (type: string | null) => {
+      for (const b of buttons) b.setAttribute("aria-pressed", String(b.dataset.type === type));
+      for (const l of lists) l.hidden = l.dataset.typeList !== type;
+      empty.hidden = !!type || any.checked;
+      anyNote.hidden = !any.checked;
+    };
+    // O tipo abre os cartões; a escolha de fora dele ("Qualquer serviço" ou de outro tipo) sai, como no Marcar.
+    for (const b of buttons) {
+      b.addEventListener("click", () => {
+        const checked = choice.querySelector<HTMLInputElement>('input[name="service_id"]:checked');
+        if (checked && checked.closest<HTMLElement>("[data-type-list]")?.dataset.typeList !== b.dataset.type) {
+          checked.checked = false;
+          checked.dispatchEvent(new Event("change", { bubbles: true }));
+        }
+        openType(b.dataset.type ?? null);
+      });
+    }
+    any.addEventListener("change", () => {
+      if (any.checked) openType(null);
+    });
+
+    // Nada escolhido ao salvar: o navegador avisa na primeira opção do grupo
+    // ("Qualquer serviço"). Com um tipo aberto, o aviso vai para o primeiro
+    // cartão dele; as opções escondidas nunca avisam.
+    for (const input of choice.querySelectorAll<HTMLInputElement>('input[name="service_id"]')) {
+      input.addEventListener("invalid", (event) => {
+        const open = [...lists].find((l) => !l.hidden);
+        const target = (open && open.querySelector<HTMLInputElement>("li:not([hidden]) input")) || any;
+        if (input !== target) event.preventDefault();
+      });
+    }
+
+    // Busca dentro do tipo: esconde os cartões que não têm o texto no nome.
+    for (const list of lists) {
+      const input = list.querySelector<HTMLInputElement>("[data-service-search]");
+      const none = list.querySelector<HTMLElement>("[data-service-none]");
+      input?.addEventListener("input", () => {
+        const term = input.value.trim().toLocaleLowerCase("pt-BR");
+        let visible = 0;
+        list.querySelectorAll<HTMLElement>("[data-service-name]").forEach((item) => {
+          item.hidden = !!term && !(item.dataset.serviceName ?? "").includes(term);
+          if (!item.hidden) visible += 1;
+        });
+        if (none) none.hidden = visible > 0;
+      });
+    }
+  });
+</script>

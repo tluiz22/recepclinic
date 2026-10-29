@@ -247,7 +247,6 @@ export function addressText(locations: { name: string; address: string }[]): str
 }
 
 export const PREPARATION_QUESTION = "De qual exame você quer ver o preparo?";
-export const preparationText = (instructions: string, url: string) => `${instructions}\n\n🔗 Para guardar ou compartilhar estas orientações:\n${url}`;
 
 // ---------------------------------------------------------------------------
 // Cancelar, remarcar, lembrete, encaixe e recepção (F6.4), aprovados pelo

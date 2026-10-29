@@ -2,6 +2,7 @@
 // 17/out/2026; S-01 do teste da R0 a R4): dizem o dia, o horário, com quem e
 // onde, e, na série, a frequência, o começo e até quando. Usados no servidor
 // (texto de cada horário) e no navegador (a série muda com o formulário).
+import { formatCentsBRL } from "./money";
 import { frequencyLabel } from "./seriesLabels";
 
 const WEEKDAYS_PLURAL = ["domingos", "segundas", "terças", "quartas", "quintas", "sextas", "sábados"];
@@ -41,17 +42,43 @@ export function seriesEndText(end: SeriesEnd, startDate: string, horizonMonths: 
   return `sem data para terminar (ficam marcadas as sessões dos próximos ${horizonMonths} meses)`;
 }
 
-/** Confirmação da série inteira. */
-export function seriesConfirmMessage(input: {
-  /** "Ana Souza: Consulta pediátrica". */
-  intro: string;
-  intervalWeeks: number;
-  start: string;
-  end: string;
-}): string {
-  const frequency = frequencyLabel(input.intervalWeeks);
-  return (
-    `${input.intro}, ${frequency.charAt(0).toLowerCase()}${frequency.slice(1)} ${input.start}, ${input.end}. ` +
-    "Feriado, bloqueio ou horário ocupado: a data é pulada e aparece na tela da série. O paciente é avisado pelo WhatsApp."
-  );
+/**
+ * Quando da série, na lista de dados da confirmação: "A cada 2 semanas
+ * (quinzenal) às terças, 09:00, com …, a partir de 20/10, com 10 sessões".
+ */
+export function seriesWhenText(input: { intervalWeeks: number; start: string; end: string }): string {
+  return `${frequencyLabel(input.intervalWeeks)} ${input.start}, ${input.end}`;
+}
+
+/** Aviso da série, abaixo da lista de dados. */
+export const SERIES_SKIP_NOTE = "Feriado, bloqueio ou horário ocupado: a data é pulada e aparece na tela da série.";
+
+/**
+ * Aviso da confirmação (cliente, 28/out/2026): quem recebe a mensagem do
+ * WhatsApp sobre a marcação ou a alteração. `who` é "o paciente" ou "o responsável".
+ */
+export function whatsappNoticeText(who: string, action: "marcacao" | "alteracao", category: "consultation" | "return_visit" | "exam"): string {
+  const what = category === "exam" ? "do exame" : "da consulta";
+  return `${who.charAt(0).toUpperCase()}${who.slice(1)} receberá uma mensagem no WhatsApp informando a ${action === "marcacao" ? "marcação" : "alteração"} ${what}.`;
+}
+
+/**
+ * Se a clínica manda mensagem aos pacientes: em implantação nada sai (F8.2b) e,
+ * sem o WhatsApp conectado, também não (src/lib/data/whatsapp/send.ts).
+ */
+export function sendsPatientMessages(clinicStatus: string, connectionStatus: string | null | undefined): boolean {
+  return clinicStatus === "active" && connectionStatus === "connected";
+}
+
+/**
+ * Alterar com pagamento registrado (C4.3; cliente, 28/out/2026): os pagamentos
+ * não mudam; com valor novo, a confirmação diz quanto falta ou quanto foi pago a mais.
+ */
+export function paymentChangeNote(paidCents: number, beforeCents: number | null, afterCents: number | null): string {
+  if (paidCents <= 0 || afterCents === null || afterCents === beforeCents) return "";
+  const paid = `Já há ${formatCentsBRL(paidCents)} em pagamentos registrados, que não mudam.`;
+  if (paidCents === afterCents) return `${paid} Com o novo valor (${formatCentsBRL(afterCents)}), o atendimento fica pago.`;
+  return paidCents > afterCents
+    ? `${paid} Com o novo valor (${formatCentsBRL(afterCents)}), fica ${formatCentsBRL(paidCents - afterCents)} pago a mais: confira no Financeiro.`
+    : `${paid} Com o novo valor (${formatCentsBRL(afterCents)}), faltam ${formatCentsBRL(afterCents - paidCents)}.`;
 }

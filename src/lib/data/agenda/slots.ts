@@ -263,6 +263,16 @@ export async function isAgendaOpenOn(
   return slotsOn(plan, query.date, blocks, holidays, start).length > 0;
 }
 
+/** Até quantos dias para trás a equipe marca ou altera (cliente, 28/out/2026). */
+export const PAST_LIMIT_DAYS = 90;
+
+/** O começo do dia mais antigo em que a equipe pode marcar no passado. */
+export function pastLimit(timeZone: string, now: Date = new Date()): Date {
+  return toInstant(addDays(todayIn(timeZone, now), -PAST_LIMIT_DAYS), "00:00", timeZone);
+}
+
+export const PAST_WARNING = "Essa data e horário já passaram: o paciente não recebe mensagem.";
+
 export type FreeTimeCheck =
   | { ok: true; warnings: string[] }
   | { ok: false; reason: string };
@@ -274,18 +284,22 @@ export type FreeTimeCheck =
  * fica em paralelo) e o local que não oferece o serviço. Fora do horário de
  * atendimento, feriado, sem o intervalo da agenda ou fora da sequência de
  * horários (pode deixar buraco) passam, com aviso para a equipe confirmar.
+ * Data passada (Marcar e Alterar; cliente, 28/out/2026): só com `pastFrom`
+ * (o mais antigo aceito, em geral `pastLimit`), também com aviso.
  */
 export async function checkFreeTime(
   db: DbClient,
   clinicId: string,
-  query: { serviceId: string; agendaId: string; locationId: string; start: Date; ignoreAppointmentId?: string | null },
+  query: { serviceId: string; agendaId: string; locationId: string; start: Date; ignoreAppointmentId?: string | null; pastFrom?: Date | null },
   now: Date = new Date(),
 ): Promise<FreeTimeCheck> {
   const plan = await loadSchedulingPlan(db, clinicId, { serviceId: query.serviceId, agendaId: query.agendaId });
   if (!plan || plan.isGroup) return { ok: false, reason: "Serviço não atendido nesta agenda." };
   if (!plan.locationIds.includes(query.locationId)) return { ok: false, reason: "Este serviço não é atendido neste local." };
   const { start } = query;
-  if (start <= now) return { ok: false, reason: "Esse horário já passou." };
+  const isPast = start <= now;
+  if (isPast && !query.pastFrom) return { ok: false, reason: "Esse horário já passou." };
+  if (isPast && start < query.pastFrom!) return { ok: false, reason: `Essa data passou há mais de ${PAST_LIMIT_DAYS} dias.` };
   const end = new Date(start.getTime() + plan.durationMinutes * 60_000);
   const isExam = plan.category === "exam";
   const date = localDateOf(start, plan.timeZone);
@@ -299,7 +313,7 @@ export async function checkFreeTime(
   if (blocks.some((b) => overlaps(b))) return { ok: false, reason: "Horário bloqueado na agenda." };
   if (appointments.some((a) => overlaps(a))) return { ok: false, reason: "Horário ocupado por outro atendimento nesta agenda." };
 
-  const warnings: string[] = [];
+  const warnings: string[] = isPast ? [PAST_WARNING] : [];
   if (isNationalHoliday(date) || holidays.has(date)) warnings.push("Dia de feriado.");
   const minutes = (time: string) => Number(time.slice(0, 2)) * 60 + Number(time.slice(3, 5));
   const startMinutes = minutes(localTimeOf(start, plan.timeZone));
@@ -319,7 +333,8 @@ export async function checkFreeTime(
       durationMinutes: plan.durationMinutes,
       bufferMinutes: plan.bufferMinutes,
       strategy: { kind: "fill" },
-      now,
+      // No passado, a sequência do dia inteiro (o `now` cortaria todos os horários).
+      now: isPast ? new Date(day.start.getTime() - 1) : now,
     });
     if (!grid.some((slot) => slot.start.getTime() === start.getTime())) {
       warnings.push(`Fora da sequência de horários de ${plan.durationMinutes} min: pode deixar buraco na agenda.`);
@@ -384,7 +399,7 @@ export async function agendasForService(db: DbClient, clinicId: string, serviceI
 export async function getFreeSlotsAnyAgenda(
   db: DbClient,
   clinicId: string,
-  query: { serviceId: string; date: string; locationId?: string | null },
+  query: { serviceId: string; date: string; locationId?: string | null; ignoreAppointmentId?: string | null },
   now: Date = new Date(),
 ): Promise<AgendaSlot[]> {
   const agendaIds = await agendasForService(db, clinicId, query.serviceId);
@@ -404,7 +419,7 @@ export async function getFreeSlotsAnyAgenda(
 export async function getNextAvailableDatesAnyAgenda(
   db: DbClient,
   clinicId: string,
-  query: { serviceId: string; locationId?: string | null; count?: number; maxDaysAhead?: number; lastDate?: string | null },
+  query: { serviceId: string; locationId?: string | null; count?: number; maxDaysAhead?: number; lastDate?: string | null; ignoreAppointmentId?: string | null },
   now: Date = new Date(),
 ): Promise<DateWithSlots[]> {
   const agendaIds = await agendasForService(db, clinicId, query.serviceId);

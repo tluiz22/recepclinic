@@ -26,7 +26,8 @@ export const TEMPLATE_MARKERS: Partial<Record<TemplateKey, string[]>> = {
   reminder: APPOINTMENT_MARKERS,
   cancellation: APPOINTMENT_MARKERS.slice(0, 5),
   clinic_cancellation: ["nome", "clinica", "paciente", "servico", "data", "link"],
-  exam_preparation: ["nome", "clinica", "exame", "link"],
+  exam_preparation: ["exame", "instrucoes"],
+  exam_preparation_file: ["exame"],
   consultation_guidance: ["nome", "clinica", "paciente", "link"],
   daily_summary_consultations: ["nome", "clinica", "data", "lista"],
   daily_summary_exams: ["nome", "clinica", "data", "lista"],
@@ -37,10 +38,11 @@ export const TEMPLATE_MARKERS: Partial<Record<TemplateKey, string[]>> = {
 };
 
 /**
- * Templates sem texto próprio: o da nota fiscal leva o PDF no topo, que a
- * versão personalizada (criada sem o documento) perderia (F11.5).
+ * Templates sem texto próprio: o da nota fiscal e o do arquivo do preparo (C7)
+ * levam o arquivo no topo, que a versão personalizada (criada sem o documento)
+ * perderia (F11.5).
  */
-export const NOT_CUSTOMIZABLE: TemplateKey[] = ["nfse_document"];
+export const NOT_CUSTOMIZABLE: TemplateKey[] = ["nfse_document", "exam_preparation_file"];
 
 export const MARKER_LABELS: Record<string, string> = {
   nome: "primeiro nome de quem recebe",
@@ -50,6 +52,7 @@ export const MARKER_LABELS: Record<string, string> = {
   data: "dia e hora",
   local: "local e endereço",
   link: "link",
+  instrucoes: "instruções de preparo do exame",
   exame: "nome do exame",
   atendimento: '"a consulta", "o retorno", "o exame…"',
   lista: "lista dos atendimentos (uma linha)",

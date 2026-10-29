@@ -4,6 +4,7 @@ import { hasFeature } from "../features";
 import { logTrail } from "../agenda/appointments";
 import { preparationPath } from "../../publicId";
 import { getApprovedTemplate, getWhatsappConnection } from "./connection";
+import { SERVICE_FILES_BUCKET } from "../config/preparationFile";
 import { isCustomerServiceWindowOpen, recordOutboundMessage, type DeliveryUpdate, type SendOutcome } from "./messages";
 
 // Preparo do exame (Fase 18 do piloto), F3.9b. Regra do cliente (piloto,
@@ -13,10 +14,16 @@ import { isCustomerServiceWindowOpen, recordOutboundMessage, type DeliveryUpdate
 // ou na presença confirmada. O botão "Reenviar preparo do exame" vale para
 // exame ativo e futuro cuja última tentativa não chegou.
 //
-// Janela de 24h aberta → texto com o preparo e o link da página do preparo;
-// fechada → template com o nome do exame e o link. Exame sem preparo
+// Janela de 24h aberta → texto com o preparo; fechada → template com o nome
+// do exame e as instruções (C7.4: sem link; a v2, com o link, só para quem
+// ainda só tem ela aprovada). Exame sem preparo
 // cadastrado não envia nada. Só com o item "Exames e procedimentos" liberado
 // e o WhatsApp conectado. O envio de verdade é de quem chama (F6/F7).
+//
+// Arquivo do preparo (C7.5; cliente, 28/out/2026): uma mensagem de preparo
+// só. O exame com arquivo manda o arquivo com o início e o final da mensagem,
+// sem as instruções (janela aberta: documento com legenda; fechada: o modelo
+// rc_preparo_arquivo_v3, com o arquivo no topo). Sem arquivo, as instruções.
 
 export const PREPARATION_MESSAGE_TYPE = "exam_preparation";
 /** Mensagens cuja entrega dispara o preparo. */
@@ -25,6 +32,8 @@ export const PREPARATION_TRIGGER_TYPES = ["appointment_confirmation"];
 const NOT_DELIVERED = new Set(["failed", "skipped_no_template"]);
 const ACTIVE = ["scheduled", "confirmed"];
 
+export type PreparationFileContent = { bytes: Uint8Array; filename: string; mimeType: string };
+
 export type PreparationToSend = {
   clinicId: string;
   appointmentId: string;
@@ -32,16 +41,25 @@ export type PreparationToSend = {
   contactName: string;
   patientName: string;
   examName: string;
-  /** Orientações cadastradas no serviço (formatação do WhatsApp). */
+  /** Orientações cadastradas no serviço (formatação do WhatsApp); com arquivo, não vão. */
   instructions: string;
+  /** Arquivo do preparo (C7.5): vai no lugar das instruções. */
+  file: PreparationFileContent | null;
   /** Caminho da página pública do preparo (quem envia monta o endereço do site). */
   pagePath: string;
-  /** Texto livre (janela aberta) ou template (fechada). */
+  /** Texto ou documento livre (janela aberta) ou template (fechada). */
   mode: "text" | "template";
   template: { name: string; language: string; body?: string | null } | null;
 };
 
 export type PreparationSender = (preparation: PreparationToSend) => Promise<SendOutcome>;
+
+/** O arquivo do preparo, lido do armazenamento (com a credencial da clínica). */
+export async function downloadPreparationFile(db: DbClient, file: { path: string; name: string; type: string }): Promise<PreparationFileContent> {
+  const { data, error } = await db.storage.from(SERVICE_FILES_BUCKET).download(file.path);
+  if (error || !data) throw new Error("arquivo do preparo não encontrado no armazenamento");
+  return { bytes: new Uint8Array(await data.arrayBuffer()), filename: file.name, mimeType: file.type };
+}
 
 /** Situação registrada ("sent", "failed", "skipped_no_template") ou "not_connected" (nada registrado). */
 export type PreparationStatus = "sent" | "failed" | "skipped_no_template" | "not_connected";
@@ -51,12 +69,19 @@ type ExamRow = {
   status: string;
   scheduled_at: string;
   service_id: string;
-  services: { name: string; category: string; preparation_instructions: string | null };
+  services: {
+    name: string;
+    category: string;
+    preparation_instructions: string | null;
+    preparation_file_path: string | null;
+    preparation_file_name: string | null;
+    preparation_file_type: string | null;
+  };
   patients: { full_name: string; contacts: { id: string; full_name: string; phone: string } };
 };
 
 const EXAM_COLUMNS =
-  "id, status, scheduled_at, service_id, services ( name, category, preparation_instructions ), patients ( full_name, contacts ( id, full_name, phone ) )";
+  "id, status, scheduled_at, service_id, services ( name, category, preparation_instructions, preparation_file_path, preparation_file_name, preparation_file_type ), patients ( full_name, contacts ( id, full_name, phone ) )";
 
 async function loadExam(db: DbClient, clinicId: string, appointmentId: string, now: Date): Promise<ExamRow | null> {
   const row = unwrap(
@@ -69,7 +94,7 @@ async function loadExam(db: DbClient, clinicId: string, appointmentId: string, n
   return row;
 }
 
-/** Envia o preparo e registra; null = não é exame ativo e futuro com preparo cadastrado. */
+/** Envia o preparo e registra; null = não é exame ativo e futuro com preparo (instruções ou arquivo) cadastrado. */
 async function deliverPreparation(
   db: DbClient,
   clinicId: string,
@@ -77,14 +102,16 @@ async function deliverPreparation(
   sender: PreparationSender,
   now: Date,
 ): Promise<PreparationStatus | null> {
-  const instructions = row.services.preparation_instructions?.trim();
-  if (!instructions) return null;
+  const instructions = row.services.preparation_instructions?.trim() ?? "";
+  const { preparation_file_path: path, preparation_file_name: filename, preparation_file_type: mimeType } = row.services;
+  const file = path && filename && mimeType ? { path, name: filename, type: mimeType } : null;
+  if (!instructions && !file) return null;
   const connection = await getWhatsappConnection(db, clinicId);
   if (connection?.status !== "connected") return "not_connected";
 
   const contact = row.patients.contacts;
   const windowOpen = await isCustomerServiceWindowOpen(db, clinicId, contact.phone, now);
-  const template = windowOpen ? null : await getApprovedTemplate(db, clinicId, "exam_preparation");
+  const template = windowOpen ? null : await getApprovedTemplate(db, clinicId, file ? "exam_preparation_file" : "exam_preparation");
 
   let status: PreparationStatus;
   let outcome: SendOutcome | null = null;
@@ -103,6 +130,7 @@ async function deliverPreparation(
         patientName: row.patients.full_name,
         examName: row.services.name,
         instructions,
+        file: file ? await downloadPreparationFile(db, file) : null,
         pagePath: preparationPath(row.service_id),
         mode: windowOpen ? "text" : "template",
         template,
@@ -168,7 +196,7 @@ export async function sendPreparationAfterDelivery(
   return row ? deliverPreparation(db, clinicId, row, sender, now) : null;
 }
 
-/** Quais destes atendimentos mostram "Reenviar preparo": a última tentativa não chegou. */
+/** Quais destes atendimentos mostram "Reenviar preparo": a última tentativa do preparo não chegou. */
 export async function listPreparationResendable(db: DbClient, clinicId: string, appointmentIds: string[]): Promise<Set<string>> {
   if (appointmentIds.length === 0) return new Set();
   const rows = await unwrapAllIn(

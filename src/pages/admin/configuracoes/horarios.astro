@@ -18,6 +18,7 @@ import { listAgendas } from "../../../lib/data/config/agendas";
 import { listAvailability, WEEKDAY_NAMES } from "../../../lib/data/config/availability";
 import { listLocations } from "../../../lib/data/config/locations";
 import { listServiceRefs, listServices } from "../../../lib/data/config/services";
+import ServiceChoice from "../../../components/admin/config/ServiceChoice.astro";
 
 const clinic = Astro.locals.clinic!;
 const db = createUserClient(Astro.request, Astro.cookies);
@@ -293,23 +294,7 @@ import { configuracoes } from "../../../lib/ajuda/configuracoes";
                 </select>
               </div>
               <div>
-                <label for="service_id" class={LABEL}>
-                  Serviço
-                </label>
-                <select id="service_id" name="service_id" required class={INPUT}>
-                  <option value="" selected={preselectedService === ""}>
-                    Escolha o serviço…
-                  </option>
-                  <option value="todos" selected={preselectedService === "todos"}>
-                    Qualquer serviço desta agenda
-                  </option>
-                  {serviceOptions.map((s) => (
-                    <option value={s.id} data-group={s.schedulingMode === "group" ? "1" : undefined} selected={s.id === preselectedService}>
-                      {s.name}
-                      {s.schedulingMode === "group" ? " (turma)" : ""}
-                    </option>
-                  ))}
-                </select>
+                <ServiceChoice services={serviceOptions} selected={preselectedService} />
                 <p class={HINT}>Escolha um serviço quando o horário for só dele (ex.: exame só na terça de manhã).</p>
               </div>
               <div data-capacity hidden>
@@ -341,12 +326,11 @@ import { configuracoes } from "../../../lib/ajuda/configuracoes";
   }
 
   <script>
-    // Vagas só para serviço em turma.
-    const service = document.getElementById("service_id") as HTMLSelectElement | null;
+    // Vagas só para serviço em turma (C8: o serviço é a opção marcada nos cartões).
     const capacity = document.querySelector<HTMLElement>("[data-capacity]");
     const sync = () => {
-      if (!service || !capacity) return;
-      const isGroup = service.selectedOptions[0]?.dataset.group === "1";
+      if (!capacity) return;
+      const isGroup = document.querySelector<HTMLInputElement>('input[name="service_id"]:checked')?.dataset.group === "1";
       capacity.hidden = !isGroup;
       const input = capacity.querySelector("input");
       if (input) {
@@ -354,7 +338,7 @@ import { configuracoes } from "../../../lib/ajuda/configuracoes";
         if (!isGroup) input.value = "";
       }
     };
-    service?.addEventListener("change", sync);
+    document.querySelectorAll('input[name="service_id"]').forEach((input) => input.addEventListener("change", sync));
     sync();
   </script>
 </ConfigShell>

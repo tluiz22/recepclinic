@@ -11,7 +11,10 @@ import { listServices, type Service } from "./services";
 // Agendas → Serviços → Horários. A mesma conta alimenta o guia no topo de
 // Configurações, os selos das listas e o "próximo passo" de cada cadastro.
 // "Sem horário" segue a regra do bot (catálogo, F6.3): serviço sem horário
-// ativo numa agenda e num local dele não aparece no bot nem no link de agendar.
+// ativo numa agenda e num local dele não aparece no bot nem no link de agendar
+// (turma: só o horário do próprio serviço, com as vagas). Com horário do
+// serviço que não vale (agenda ou local que o serviço não usa), o alerta diz o
+// motivo (C5; cliente, 28/out/2026).
 // Itens desligados na matriz (D11) não contam: exames sem "Exames e
 // procedimentos", domiciliar sem "Atendimento domiciliar".
 
@@ -41,7 +44,7 @@ export type SetupInput = {
   professionals: Pick<Professional, "id" | "displayName" | "isActive">[];
   agendas: Pick<Agenda, "id" | "name" | "professionalId" | "isActive">[];
   locations: Pick<Location, "id" | "name" | "type" | "address" | "isActive">[];
-  services: Pick<Service, "id" | "name" | "category" | "isActive" | "agendaIds" | "locations">[];
+  services: Pick<Service, "id" | "name" | "category" | "schedulingMode" | "isActive" | "agendaIds" | "locations">[];
   windows: { agendaId: string; locationId: string; serviceId: string | null }[];
   features: readonly FeatureKey[];
 };
@@ -75,6 +78,8 @@ export type SetupStatus = {
     locations: Map<string, Issue[]>;
     services: Map<string, Issue[]>;
   };
+  /** Serviço "sem horário" que tem horário que não vale: o motivo ("o horário dele está em …"). */
+  hoursReasons: Map<string, string>;
 };
 
 const BASE = "/admin/configuracoes";
@@ -93,14 +98,34 @@ export function computeSetup(input: SetupInput): SetupStatus {
 
   const serviceAgendas = (s: SetupInput["services"][number]) => s.agendaIds.filter((id) => agendaIds.has(id));
   const serviceLocations = (s: SetupInput["services"][number]) => s.locations.map((l) => l.locationId).filter((id) => locationIds.has(id));
+  const isGroup = (s: SetupInput["services"][number]) => s.schedulingMode === "group";
+  // A regra do bot (slots.ts, loadSchedulingPlan): turma só com o horário dela; individual, geral ou dele.
+  const fits = (s: SetupInput["services"][number], w: SetupInput["windows"][number]) =>
+    isGroup(s) ? w.serviceId === s.id : w.serviceId === null || w.serviceId === s.id;
   const hasHours = (s: SetupInput["services"][number]) => {
     const own = new Set(serviceAgendas(s));
     const where = new Set(serviceLocations(s));
-    return windows.some((w) => own.has(w.agendaId) && where.has(w.locationId) && (w.serviceId === null || w.serviceId === s.id));
+    return windows.some((w) => own.has(w.agendaId) && where.has(w.locationId) && fits(s, w));
+  };
+  const agendaName = new Map(agendas.map((a) => [a.id, a.name]));
+  const locationName = new Map(locations.map((l) => [l.id, l.name]));
+  const hoursReason = (s: SetupInput["services"][number]): string | null => {
+    const own = new Set(serviceAgendas(s));
+    const where = new Set(serviceLocations(s));
+    const mine = windows.filter((w) => w.serviceId === s.id);
+    const otherAgenda = mine.find((w) => !own.has(w.agendaId));
+    if (otherAgenda) return `o horário dele está na agenda ${agendaName.get(otherAgenda.agendaId)}, que não atende o serviço. Marque a agenda no serviço.`;
+    const otherPlace = mine.find((w) => !where.has(w.locationId));
+    if (otherPlace) return `o horário dele está em ${locationName.get(otherPlace.locationId)}, mas o serviço não é feito lá. Marque o local no serviço.`;
+    if (isGroup(s) && windows.some((w) => w.serviceId === null && own.has(w.agendaId) && where.has(w.locationId))) {
+      return "turma precisa de horário próprio, com as vagas: os horários gerais da agenda não valem para ela.";
+    }
+    return null;
   };
 
   const issues: SetupStatus["issues"] = { professionals: new Map(), agendas: new Map(), locations: new Map(), services: new Map() };
   const add = (map: Map<string, Issue[]>, id: string, issue: Issue) => map.set(id, [...(map.get(id) ?? []), issue]);
+  const hoursReasons = new Map<string, string>();
 
   for (const p of professionals) if (!agendas.some((a) => a.professionalId === p.id)) add(issues.professionals, p.id, "no_agenda");
   for (const l of locations) {
@@ -114,7 +139,11 @@ export function computeSetup(input: SetupInput): SetupStatus {
   for (const s of services) {
     if (!serviceAgendas(s).length) add(issues.services, s.id, "no_agenda");
     if (!serviceLocations(s).length) add(issues.services, s.id, "no_location");
-    if (!hasHours(s)) add(issues.services, s.id, "no_hours");
+    if (!hasHours(s)) {
+      add(issues.services, s.id, "no_hours");
+      const reason = hoursReason(s);
+      if (reason) hoursReasons.set(s.id, reason);
+    }
   }
 
   const lines = <T extends { id: string }>(
@@ -124,11 +153,12 @@ export function computeSetup(input: SetupInput): SetupStatus {
     href: (item: T, issue: Issue) => string,
     only?: Issue[],
     hints: Partial<Record<Issue, string>> = {},
+    hintFor: (item: T, issue: Issue) => string | undefined = () => undefined,
   ) =>
     list.flatMap((item) =>
       (map.get(item.id) ?? [])
         .filter((issue) => !only || only.includes(issue))
-        .map((issue) => ({ text: `${name(item)}: ${lowerFirst(hints[issue] ?? ISSUE_HINTS[issue])}`, href: href(item, issue) })),
+        .map((issue) => ({ text: `${name(item)}: ${lowerFirst(hintFor(item, issue) ?? hints[issue] ?? ISSUE_HINTS[issue])}`, href: href(item, issue) })),
     );
   const firstAgenda = (s: SetupInput["services"][number]) => serviceAgendas(s)[0] ?? "";
 
@@ -171,12 +201,17 @@ export function computeSetup(input: SetupInput): SetupStatus {
         services,
         new Map([...issues.services].map(([id, list]) => [id, list.some((i) => i === "no_agenda" || i === "no_location") ? list.filter((i) => i !== "no_hours") : list])),
         (s) => s.name,
-        (s, issue) => (issue === "no_hours" && firstAgenda(s) ? `${BASE}/horarios?agenda=${firstAgenda(s)}&servico=${s.id}` : `${BASE}/servicos/${s.id}`),
+        // Com o motivo, a correção é no próprio serviço (marcar a agenda ou o local).
+        (s, issue) =>
+          issue === "no_hours" && firstAgenda(s) && !hoursReasons.has(s.id) ? `${BASE}/horarios?agenda=${firstAgenda(s)}&servico=${s.id}` : `${BASE}/servicos/${s.id}`,
+        undefined,
+        {},
+        (s, issue) => (issue === "no_hours" && hoursReasons.has(s.id) ? `Sem horário que valha: ${hoursReasons.get(s.id)}` : undefined),
       ),
     ),
     step("hours", "Horários", `${BASE}/horarios`, windows.length, []),
   ];
-  return { steps, complete: steps.every((s) => s.status === "done"), hasLocations, inactiveAgendaOf, issues };
+  return { steps, complete: steps.every((s) => s.status === "done"), hasLocations, inactiveAgendaOf, issues, hoursReasons };
 }
 
 export async function loadSetupStatus(db: DbClient, clinicId: string, features: readonly FeatureKey[]): Promise<SetupStatus> {

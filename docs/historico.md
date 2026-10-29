@@ -462,3 +462,170 @@ retomada fica no README). Para achar algo, buscar por data (ex.: `27/out`), fase
   `findWindowConflict` recebe os exames da clínica. Sem migração. Publicada no staging e na produção de uma vez, a
   pedido do cliente (validar direto na produção).
   **Validada pelo cliente na produção em 28/out.**
+- **C4 Alterar atendimento** (cliente, 28/out, achado na produção: o primeiro usuário marcou o serviço errado e não
+  conseguia corrigir). Decisões do cliente: nova ação **Alterar** no cartão (o Remarcar continua só para data e hora),
+  que abre o Marcar preenchido (paciente fixo) e muda serviço, agenda, local, convênio, endereço, data e hora; vale para
+  qualquer atendimento menos o cancelado; WhatsApp ao paciente (e lembrete e presença zerados) só se mudar data, hora,
+  agenda ou local; valor recalculado e mostrado antes ("R$ 300 → R$ 250"), pagamentos registrados não mudam (aviso se
+  ficarem acima ou abaixo); série pergunta "só esta" ou "esta e as próximas"; Marcar e Alterar com janela de
+  confirmação com todos os dados ("antes → depois" no que muda no Alterar) e o aviso "O paciente receberá uma mensagem
+  no WhatsApp informando a marcação/alteração da consulta/exame", escondido na clínica em implantação. Assumido (cliente
+  pode mudar): aviso também escondido sem WhatsApp conectado; no atendimento passado, data e hora mudam sem conferir
+  horário nem mandar mensagem; nota fiscal emitida não muda; toda alteração na Trilha.
+  Etapas: **C4.1** confirmação completa no Marcar; **C4.2** Alterar futuro avulso (função no banco, valor, aviso,
+  Trilha); **C4.3** Alterar passado (aviso de pagamento); **C4.4** série "esta e as próximas"; **C4.5** ajuda e testes;
+  **C4.6** produção (com autorização).
+  - **C4.1** (28/out): janela de confirmação (`ConfirmDeleteDialog` + `confirmDelete.ts`) com lista de dados
+    (`data-confirm-details`, com "antes → depois" pronto para o C4.2) e aviso (`data-confirm-notice`); no Marcar:
+    paciente, serviço, com quem, local, quando (na série, frequência e fim), endereço domiciliar e convênio ou valor
+    (preço do local, `servicePriceAt`). `whatsappNoticeText` e `sendsPatientMessages` em `confirmText.ts`. Sem migração.
+    **Validada pelo cliente no staging em 28/out.**
+  - **C4.2** (28/out): ação **Alterar** no cartão (à vista, depois do Remarcar) → `marcar.astro?alterar=<id>`
+    (paciente fixo; serviço, com quem, data e hora; convênio no resumo; "Manter o horário atual" escolhido de início).
+    `changeAppointment` (appointments.ts): só ativo e futuro; trava de duplicidade só se mudar serviço ou agenda (o
+    atendimento já em duplicidade, ex. consulta e retorno na mesma agenda, ainda pode ser corrigido); horário conferido
+    como no Marcar da equipe, sem contar o próprio; endereço exigido no domiciliar; retorno religado à consulta; valor
+    pelo gatilho; mudou data, hora, agenda ou local: lembrete e presença zerados e o aviso de remarcação ao paciente.
+    Confirmação com "antes → depois" (`appointmentChanges.ts`). Migração `20261031120000_alterar_atendimento`: evento
+    `changed` da trilha (com o que mudou; substitui o `rescheduled` quando a mudança vem do Alterar) e
+    `change_group_session` (turma: vaga conferida com a janela travada). Staging: simulação → aplicação → conferência
+    (função responde) em 28/out. Observação: a mudança de horário pelo Alterar não conta como "remarcado" nas Métricas.
+  - **Data passada no Marcar e no Alterar** (cliente, 28/out; entra junto da **C4.3**): só pelo "Outro horário",
+    até **90 dias** para trás; vira aviso na confirmação ("essa data e horário já passaram", botão "assim mesmo"), sem
+    mensagem ao paciente; fica **Marcado**, com Compareceu/Faltou (pendência no Resumo do Dia); o **Remarcar** segue só
+    futuro; **série** só começa no futuro ("Repetir" escondido com data passada). Continuam travados: horário ocupado,
+    bloqueio e turma lotada. **Revisto pelo cliente (28/out):** a duplicidade só trava data futura (o lançamento
+    no passado passa mesmo com consulta futura na mesma agenda).
+  - **C4.2 validada pelo cliente no staging em 28/out.**
+  - **C4.3** (28/out): `checkFreeTime` com `pastFrom` (data passada vira o aviso `PAST_WARNING`; mais de
+    `PAST_LIMIT_DAYS` = 90 dias, recusada); `pastLimit` no Marcar (rota) e no Alterar (até 90 dias ou até o horário
+    atual, se mais antigo). Outro horário aceita data passada no Marcar e no Alterar (o Remarcar, não), e continua
+    aparecendo quando o paciente tem atendimento futuro na agenda (a duplicidade só vale no futuro, também em
+    `bookAppointment` e `changeAppointment`). Série com data passada: "Repetir" some e a rota recusa. Aviso do WhatsApp
+    some com data passada. Alterar vale para tudo menos o cancelado (botão no "Mais" do que já passou); com
+    comparecimento registrado, a data fica no passado; lembrete e presença só zeram no ativo. Pagamento registrado com
+    valor novo: a confirmação diz quanto falta ou quanto foi pago a mais (`paymentChangeNote`). Migração
+    `20261101120000_alterar_passado` (`change_group_session` aceita o atendimento registrado). Staging: simulação →
+    aplicação → conferência em 28/out.
+    **Validada pelo cliente no staging em 28/out.**
+  - **C4.4** (28/out): no Alterar de sessão de série ainda por vir, "Só esta sessão" ou "Esta e as próximas" (como no
+    Remarcar). Mesmo horário: `changeSeriesDetailsFrom` (series.ts) muda a série e cada sessão ativa dali em diante no
+    lugar, conferindo antes todas (com alguma ocupada, nada muda e a tela diz as datas); outro dia ou horário:
+    `changeSeriesFrom` com serviço, agenda, local, endereço e convênio novos (encerra e recomeça, como no Remarcar).
+    Aviso ao paciente só da primeira sessão e só se mudar dia, hora, agenda ou local. Sem migração.
+    **Validada pelo cliente no staging em 28/out.**
+  - **C4.5** (28/out): "Como funciona?" do Alterar (`ajuda/agenda.ts`, `comoFunciona.alterar`, no topo da tela) e a
+    série citando o alterar; confirmação sem mudança mostra só "Nada foi mudado". Conferido no local em 1470 e 360px.
+    Sem migração.
+  - Confirmação da marcação no staging não chegou (28/out): `skipped_no_template`, os 18 templates da conta nova
+    ainda em análise na Meta (não é falha da C4). Decisão do cliente: a janela de confirmação continua dizendo que o
+    paciente recebe a mensagem mesmo com o template não aprovado (o aviso de salvo, depois, diz que não saiu).
+  - **C4.6** (28/out): migrações `20261031120000` e `20261101120000` na produção (simulação → aplicação → conferência)
+    e `main` → `producao` (`3ec78dc`). **Validada pelo cliente na produção em 28/out.**
+- **C5 Horário em local que o serviço não usa** (cliente, 28/out, achado na produção: Prick test para aeroalérgenos
+  com o alerta "sem horário de atendimento" tendo horário cadastrado). Causa confirmada pelo cliente: o horário do
+  serviço estava num local que o serviço não usa; a tela de Horários conferia a agenda do serviço, mas não o local
+  (`availability.ts`, `checkWindowService`), e o horário ficava sem valer (o bot e o link também não o ofereciam).
+  Decisões do cliente: (1) horário de um serviço num local que ele não usa **salva e marca o local no serviço** (valor
+  do serviço), com o aviso de salvo dizendo isso; (2) tirar do serviço um local com horário dele **avisa e pede
+  confirmação**, e o horário fica **desativado** (não apagado); (3) o alerta **diz o motivo** (agenda ou local que o
+  serviço não usa). Achado no caminho: na turma, o alerta aceitava horário geral, e o bot só o da turma; o alerta passa
+  a seguir o bot (`setup.ts`, `fits`). Sem migração. Staging em 28/out.
+  **Validada pelo cliente no staging em 28/out**; produção depois da próxima funcionalidade (pedido do cliente).
+- **C6 Escolha do serviço no Marcar** (cliente, 28/out: com lista grande, fácil escolher o serviço errado). Protótipos
+  A, B e C no canvas https://claude.ai/artifact/Y7spM4gyT7yvaWjuUjaqWZ; escolhida a **B**: botões do tipo (Consulta ·
+  N | Retorno · N | Exame · N) e, do tipo aberto, os serviços em cartões com nome e duração ("turma" quando for).
+  Decisões do cliente: **nenhum tipo vem escolhido** (com o serviço já definido, abre no tipo dele); **sem valor** no
+  cartão. Busca dentro do tipo com mais de 8 serviços (filtra no navegador). `ServicePicker.astro` e
+  `lib/servicePicker.ts`; parâmetro `tipo` no endereço do Marcar (vale também no Alterar). Sem migração. Staging em 28/out.
+  **Validada pelo cliente no staging em 28/out.** C5 e C6 na produção em 28/out (`da2a6fc`), **validadas pelo cliente na produção**.
+- **C7 Arquivo no preparo do exame** (cliente, 28/out). Decisões do cliente: o preparo continua como hoje (texto com a
+  conversa aberta; modelo `rc_preparo_exame_v2` com o link, fechada); quando o exame tem arquivo, sai **depois** uma
+  mensagem só com o arquivo (aberta: documento direto; fechada: **modelo novo com o arquivo**), enviada quando a Meta
+  confirma a entrega do preparo; o Administrador escreve o texto (ex.: "Segue orientações para o exame:"), que passa a
+  ser **obrigatório com arquivo**; **PDF, JPG ou PNG até 10 MB**; texto do modelo mínimo ("Orientações de preparo do
+  exame {exame} em anexo.", a Meta exige texto e recusa variável no fim); **prévia com os dois balões** (o arquivo
+  aparece ao escolher). Etapas: **C7.1** cadastro e prévia; **C7.2** envio e reenvio; **C7.3** modelo na lista do
+  Suporte e Trilha; produção no fim, com autorização.
+  - **C7.1** (28/out): migração `20261102120000_arquivo_do_preparo` (colunas `preparation_file_*` no serviço, com o
+    texto obrigatório no banco; bucket privado `service-files` "<clínica>/preparo/<id>.<ext>"; Administrador grava e
+    apaga, a equipe vê; `clinic_service` só lê o da própria clínica, com o `usage`/`select` do storage e o `execute` de
+    `app.storage_folder_clinic`). `preparationFile.ts`; rota `servicos/arquivo` (link de envio de uso único: o arquivo
+    sobe ao escolher, sem passar pela Vercel); `PreparationField` com o campo, "Abrir", "Tirar o arquivo" e o segundo
+    balão da prévia. Staging: simulação → aplicação → conferência (colunas e bucket) em 28/out.
+    **Validada pelo cliente no staging em 28/out.**
+  - **C7.2** (28/out): envio do arquivo depois da entrega do preparo (`sendPreparationFileAfterDelivery`, chamado no
+    webhook quando o `exam_preparation` chega ao celular; uma vez por atendimento); janela aberta: documento com a
+    legenda; fechada: modelo `exam_preparation_file` / `rc_preparo_arquivo_v1` ("Orientações de preparo do exame {{1}}
+    em anexo.", arquivo no topo, PDF de exemplo `preparationSamplePdf.ts` para a Meta, não personalizável). O arquivo
+    sai do armazenamento com a credencial da clínica e sobe à Meta (`uploadDocument` com o tipo do arquivo; imagem vai
+    como documento). "Reenviar preparo" cobre o preparo (o arquivo vem depois) ou só o arquivo que não chegou; reenvio
+    automático e Trilha ("Arquivo do preparo do exame"). Migração `20261103120000_modelo_arquivo_do_preparo` (o modelo
+    na lista aceita). Registro do modelo (antes previsto na C7.3) trazido para cá: sem ele a conversa fechada não envia.
+    Staging: simulação → aplicação → conferência em 28/out. Observação: no staging os modelos da conta nova ainda estão
+    em análise na Meta (nem a confirmação sai), então o envio real só dá para ver depois da aprovação.
+    **Validada pelo cliente no staging em 28/out** (a parte que dá para ver sem a Meta).
+  - **C7.3** (28/out): "i" do campo do arquivo (`configuracoes.dicas.servicoPreparoArquivo`): sai logo depois que o
+    texto do preparo chega, uma vez; conversa fechada pelo modelo com o arquivo (aprovação da Meta); "Reenviar preparo".
+    Sem migração. Staging em 28/out. Próximo: produção (migrações `20261102120000` e `20261103120000`), com autorização;
+    na produção, o Suporte cria o `rc_preparo_arquivo_v1` na Meta para cada clínica com exames.
+  - Correção (28/out, achado do cliente no staging): o envio do arquivo era bloqueado pela política de segurança (CSP,
+    `default-src 'self'`); a tela do serviço passa a liberar o `connect-src` do Supabase, como a ficha do paciente; a
+    prévia de imagem recém-escolhida usa `data:` (o `img-src` não libera `blob:`). O `npm run dev` não aplica o CSP.
+  - **C7.4 Preparo sem link** (cliente, 28/out): o preparo sai logo depois da confirmação, então sem saudação e sem
+    link. Mensagem (decisão do cliente): "Segue orientações para a realização do exame {exame}:" + as instruções +
+    "Qualquer dúvida, responda esta mensagem." Conversa aberta: texto com as quebras de linha; fechada: modelo novo
+    `rc_preparo_exame_v3` ({{1}} exame, {{2}} instruções numa linha, quebras viram " · "). Campo "Instruções de
+    preparo" limitado a **700 caracteres** (contador; o modelo da Meta tem ~1.000 no total); texto antigo maior é cortado
+    com "…" só no modelo. Quem ainda só tem a v2 aprovada (ou versão personalizada dela, 4 campos) segue com ela e o link
+    (`isLegacyPreparation`, `LEGACY_PREPARATION_BODY`); ao criar a v3, ela substitui a v2 e, em análise, o preparo da
+    conversa fechada fica "não enviado" (Reenviar depois). Marcadores da personalização: {exame}, {instrucoes}. Botão
+    "Ver o preparo do exame" tirado da tela "Atendimento confirmado" do link de agendamento. Prévia do cadastro mostra a
+    mensagem completa. `src/lib/preparationMessage.ts`. Sem migração. Staging em 28/out. Pendente de decisão: o menu de
+    informações do bot ("preparo de exames") ainda manda o texto com o link.
+  - **Plano revisto pelo cliente (28/out)**, depois de a Meta reclassificar o `rc_preparo_arquivo_v1` como marketing.
+    Decisões: sai **uma** mensagem de preparo só: com arquivo, o modelo do arquivo **`rc_preparo_arquivo_v2`** (nome
+    novo, análise nova; texto "Segue orientações para a realização do exame {exame}:" + "Estamos à disposição para
+    qualquer dúvida.", o arquivo no topo, regra do WhatsApp); sem arquivo, o `rc_preparo_exame_v3` com o final "Estamos
+    à disposição para qualquer dúvida."; conversa aberta com arquivo manda a mesma mensagem (documento com legenda). No
+    cadastro: arquivo acima das instruções; com arquivo, as instruções ficam desabilitadas (o texto fica guardado, não é
+    enviado) e a prévia mostra a mensagem exata; "Tirar o arquivo" reabilita. "i" do arquivo e das instruções sem falar
+    de conversa aberta/fechada nem de link. Bot ("preparo de exames"): sem o link, manda como na confirmação. Horários:
+    escolha do serviço como no Marcar (tipo e cartões), na própria tela. Etapas: **C7.5** envio único e modelos
+    (migração: sai a regra "arquivo exige texto"); **C7.6** cadastro e ajudas; **C8** Horários. Implementação só com a
+    autorização do cliente.
+  - **C7.5 Envio único do preparo** (29/out): uma mensagem de preparo só. Com arquivo: o arquivo com "Segue orientações
+    para a realização do exame {exame}:" + "Estamos à disposição para qualquer dúvida.", sem as instruções (conversa
+    aberta: documento com legenda; fechada: modelo novo `rc_preparo_arquivo_v2`, que substitui a v1 na linha do modelo
+    ao "Criar na Meta"; sem ele aprovado, "não enviado" e Reenviar depois, não cai no modelo do texto). Sem arquivo: o
+    `rc_preparo_exame_v3` com o final "Estamos à disposição para qualquer dúvida." (a v3 ainda não existia na Meta do
+    staging). Tudo como `exam_preparation` (o segundo envio `exam_preparation_file` e o `sendPreparationFileAfterDelivery`
+    saíram); "Reenviar preparo" e o reenvio automático cobrem o arquivo. Bot ("preparo de exames"): sem o link, manda
+    como na confirmação (o arquivo, ou o texto); exame só com arquivo também aparece. Migração
+    `20261104120000_preparo_arquivo_sem_texto` (sai `services_preparation_file_needs_text`) e a mesma regra tirada da
+    tela do serviço. Staging: simulação → aplicação → conferência em 29/out. As ajudas ("i") ficam para a C7.6. **Validada pelo cliente no
+    staging em 29/out.**
+  - **C7.6 Cadastro e ajudas** (29/out): na tela do exame, o arquivo vem acima das "Instruções de preparo". Com arquivo,
+    as instruções ficam só leitura e acinzentadas (`readonly`, não `disabled`: o texto continua guardado ao salvar),
+    com o aviso "Com arquivo, as instruções não são enviadas…"; a prévia mostra só o arquivo com o início e o final
+    (`preparationFileCaption`). "Tirar o arquivo" reabilita na hora e a prévia volta ao texto. "i" das instruções e do
+    arquivo reescritos sem conversa aberta/fechada nem link (o bot também manda). `PreparationField.astro`,
+    `ajuda/configuracoes.ts`. Sem migração. Conferida no local (escolher, salvar, texto guardado, tirar); publicada no
+    staging em 29/out. **Validada pelo cliente no staging em 29/out.**
+- **C8 Escolha do serviço em Horários** (29/out): como no Marcar (C6), tipo e cartões, mas na própria tela, sem
+  recarregar (o formulário já tem dias e horas). "Qualquer serviço" (valor `todos`) é o primeiro botão da fila dos tipos
+  (decisão do cliente, 29/out) e esconde os cartões; trocar de tipo tira a escolha de fora dele, como no Marcar. Nenhum
+  tipo vem aberto; na edição e no "Cadastrar os horários" do serviço, abre no tipo dele. Busca com mais de 8 serviços;
+  "turma" e "desativado" no cartão; as vagas aparecem com o cartão de turma. `config/ServiceChoice.astro`; estilos do
+  botão e do cartão em `lib/servicePicker.ts` (os dois usam). Sem migração. Conferida no local (escolher, Qualquer
+  serviço, salvar, editar); publicada no staging em 29/out.
+  - Correção (29/out, achado do cliente no staging): com um tipo aberto e nenhum cartão escolhido, o aviso de campo
+    obrigatório aparecia em "Qualquer serviço" (a primeira opção do grupo); agora vai para o primeiro cartão do tipo
+    aberto (as outras opções cancelam o `invalid`). **C8 validada pelo cliente no staging em 29/out.**
+- **C7.7 Texto do preparo com arquivo** (cliente, 29/out): "Segue orientações para a realização do exame *{exame}*." (exame
+  em negrito, ponto final no lugar dos dois pontos) + "Estamos à disposição para qualquer dúvida." Na legenda do documento,
+  na prévia da tela e no modelo, que passa a **`rc_preparo_arquivo_v3`** (a v2 já estava em análise na Meta do staging e
+  modelo em análise não se edita). O preparo sem arquivo (`rc_preparo_exame_v3`) não muda. Sem migração. Publicada no
+  staging em 29/out; lá, "Criar na Meta" cria a v3 e a v2 pode sair por "Excluir da Meta". **Validada pelo cliente no staging em 29/out.**
+- **Produção (29/out, `5ef2be6`):** C7.1–C7.7 e C8, com as migrações `20261102120000`, `20261103120000` e
+  `20261104120000` (simulação → aplicação → conferência). Registro em [`producao.md`](producao.md).

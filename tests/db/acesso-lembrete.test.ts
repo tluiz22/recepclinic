@@ -254,6 +254,42 @@ describe("preparo do exame", () => {
     expect(await resendPreparation(db(reception), clinicId, appt.e2, reception.id, prepSender, later)).toBe("not_eligible");
     expect(await resendPreparation(db(reception), clinicId, appt.a1, reception.id, prepSender, later)).toBe("not_eligible");
   });
+
+  // C7.5 (cliente, 28/out/2026): com arquivo, uma mensagem só, pelo modelo do arquivo e sem as instruções.
+  it("exame com arquivo: o preparo é o arquivo, pelo modelo com o arquivo; sem o modelo aprovado, Reenviar depois", async () => {
+    const path = `${clinicId}/preparo/${crypto.randomUUID()}.pdf`;
+    await adminClient().storage.from("service-files").upload(path, new Blob(["%PDF-1.4 preparo"], { type: "application/pdf" }), { contentType: "application/pdf" });
+    // Sem instruções: o arquivo não exige mais o texto (20261104120000).
+    await adminClient()
+      .from("services")
+      .update({ preparation_instructions: null, preparation_file_path: path, preparation_file_name: "orientacoes.pdf", preparation_file_type: "application/pdf", preparation_file_size: 16 })
+      .eq("id", ids.exame);
+
+    // O modelo do arquivo ainda não aprovado: não sai pelo modelo do texto.
+    appt.e3 = await book(ids.p3, ids.exame, ids.agendaExams, at(MON1, "08:40"));
+    const phone = await phoneOfPatient(ids.p3);
+    const sentBefore = preparations.length;
+    expect(await sendPreparationAfterDelivery(bot, clinicId, await confirmationDelivered(appt.e3, phone, NOW), prepSender, NOW)).toBe("skipped_no_template");
+    expect(preparations.length).toBe(sentBefore);
+    expect(await listPreparationResendable(db(reception), clinicId, [appt.e3])).toEqual(new Set([appt.e3]));
+
+    await adminClient().from("whatsapp_templates").insert({ clinic_id: clinicId, template_key: "exam_preparation_file", name: "rc_preparo_arquivo", status: "approved" });
+    expect(await resendPreparation(db(reception), clinicId, appt.e3, reception.id, prepSender, at(SUN, "13:30"))).toBe("sent");
+    expect(preparations.at(-1)).toMatchObject({ appointmentId: appt.e3, examName: "Exame", instructions: "", mode: "template", template: { name: "rc_preparo_arquivo" } });
+    expect(preparations.at(-1)!.file).toMatchObject({ filename: "orientacoes.pdf", mimeType: "application/pdf" });
+    expect(new TextDecoder().decode(preparations.at(-1)!.file!.bytes)).toBe("%PDF-1.4 preparo");
+    expect((await messagesOf(appt.e3, "exam_preparation")).map((m) => [m.status, m.template_name])).toEqual([
+      ["skipped_no_template", null],
+      ["sent", "rc_preparo_arquivo"],
+    ]);
+
+    // Os testes seguintes contam com o exame sem arquivo, com as instruções e sem este atendimento.
+    await cancelAppointment(db(reception), clinicId, appt.e3, { channel: "admin", actorId: reception.id }, NOW);
+    await adminClient()
+      .from("services")
+      .update({ preparation_instructions: "Jejum de 4 horas.", preparation_file_path: null, preparation_file_name: null, preparation_file_type: null, preparation_file_size: null })
+      .eq("id", ids.exame);
+  });
 });
 
 describe("sem template, sem conexão e sem o item", () => {

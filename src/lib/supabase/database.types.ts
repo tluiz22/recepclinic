@@ -1373,14 +1373,14 @@ isOneToOne: false
                   ]
                 },"services": {
                   Row: {
-                    "category": Database["public"]['Enums']["service_category"],"clinic_id": string,"created_at": string,"duration_minutes": number,"id": string,"is_active": boolean,"name": string,"preparation_instructions": string | null,"price_cents": number,"return_deadline_days": number | null,"scheduling_mode": Database["public"]['Enums']["scheduling_mode"],"updated_at": string
+                    "category": Database["public"]['Enums']["service_category"],"clinic_id": string,"created_at": string,"duration_minutes": number,"id": string,"is_active": boolean,"name": string,"preparation_file_name": string | null,"preparation_file_path": string | null,"preparation_file_size": number | null,"preparation_file_type": string | null,"preparation_instructions": string | null,"price_cents": number,"return_deadline_days": number | null,"scheduling_mode": Database["public"]['Enums']["scheduling_mode"],"updated_at": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "category": Database["public"]['Enums']["service_category"],"clinic_id": string,"created_at"?: string,"duration_minutes": number,"id"?: string,"is_active"?: boolean,"name": string,"preparation_instructions"?: string | null,"price_cents": number,"return_deadline_days"?: number | null,"scheduling_mode"?: Database["public"]['Enums']["scheduling_mode"],"updated_at"?: string
+                    "category": Database["public"]['Enums']["service_category"],"clinic_id": string,"created_at"?: string,"duration_minutes": number,"id"?: string,"is_active"?: boolean,"name": string,"preparation_file_name"?: string | null,"preparation_file_path"?: string | null,"preparation_file_size"?: number | null,"preparation_file_type"?: string | null,"preparation_instructions"?: string | null,"price_cents": number,"return_deadline_days"?: number | null,"scheduling_mode"?: Database["public"]['Enums']["scheduling_mode"],"updated_at"?: string
                   }
                   Update: {
-                    "category"?: Database["public"]['Enums']["service_category"],"clinic_id"?: string,"created_at"?: string,"duration_minutes"?: number,"id"?: string,"is_active"?: boolean,"name"?: string,"preparation_instructions"?: string | null,"price_cents"?: number,"return_deadline_days"?: number | null,"scheduling_mode"?: Database["public"]['Enums']["scheduling_mode"],"updated_at"?: string
+                    "category"?: Database["public"]['Enums']["service_category"],"clinic_id"?: string,"created_at"?: string,"duration_minutes"?: number,"id"?: string,"is_active"?: boolean,"name"?: string,"preparation_file_name"?: string | null,"preparation_file_path"?: string | null,"preparation_file_size"?: number | null,"preparation_file_type"?: string | null,"preparation_instructions"?: string | null,"price_cents"?: number,"return_deadline_days"?: number | null,"scheduling_mode"?: Database["public"]['Enums']["scheduling_mode"],"updated_at"?: string
                   }
                   Relationships: [
                     {
@@ -1626,6 +1626,9 @@ isOneToOne: false
                            },
 "book_group_session":
 { Args: { "p_agenda_id": string,"p_booking_channel": Database["public"]['Enums']["action_channel"],"p_location_id": string,"p_patient_id": string,"p_scheduled_at": string,"p_service_id": string,"p_trail"?: Json }; Returns: string
+                           },
+"change_group_session":
+{ Args: { "p_agenda_id": string,"p_appointment_id": string,"p_scheduled_at": string,"p_service_id": string,"p_trail"?: Json }; Returns: undefined
                            },
 "clinic_actor_labels":
 { Args: { "p_clinic_id": string,"p_user_ids": (string)[] }; Returns: {

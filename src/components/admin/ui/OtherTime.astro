@@ -31,9 +31,11 @@ interface Props {
   error: string | null;
   option: SlotOption | null;
   warnings: string[];
+  /** Marcar e Alterar (cliente, 28/out/2026): até quantos dias para trás; sem ele, só o futuro. */
+  pastDays?: number;
 }
 
-const { action, hidden, form, min, date, time, locations, locationId, agendas = [], agendaId = "", open, error, option, warnings } = Astro.props;
+const { action, hidden, form, min, date, time, locations, locationId, agendas = [], agendaId = "", open, error, option, warnings, pastDays } = Astro.props;
 const note = "flex items-start gap-2 rounded-[10px] border px-3 py-2.5 text-[15px] leading-snug sm:text-[14.5px]";
 const label = "flex flex-col gap-1 text-sm font-semibold text-ink";
 ---
@@ -41,7 +43,11 @@ const label = "flex flex-col gap-1 text-sm font-semibold text-ink";
 <details class="rounded-[10px] border border-line" open={open} id="outro-horario">
   <summary class="flex min-h-11 cursor-pointer items-center px-3 text-[15px] font-semibold text-brand">Outro horário</summary>
   <div class="flex flex-col gap-3 border-t border-line p-3">
-    <p class="text-sm text-ink-soft">Qualquer dia e hora, até fora dos horários livres. Horário passado, bloqueado ou ocupado não pode.</p>
+    <p class="text-sm text-ink-soft">
+      {pastDays
+        ? `Qualquer dia e hora, até fora dos horários livres e até ${pastDays} dias para trás. Horário bloqueado ou ocupado não pode.`
+        : "Qualquer dia e hora, até fora dos horários livres. Horário passado, bloqueado ou ocupado não pode."}
+    </p>
     <form method="GET" action={`${action}#outro-horario`} class="flex flex-wrap items-end gap-2">
       {Object.entries(hidden).map(([key, value]) => value && <input type="hidden" name={key} value={value} />)}
       <label class={label}>

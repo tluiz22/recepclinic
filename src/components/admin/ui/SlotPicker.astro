@@ -20,6 +20,13 @@ export interface SlotOption {
   isHome?: boolean;
   /** "Outro horário": os avisos que a confirmação mostra (cliente, 28/out/2026). */
   warnings?: string;
+  /** Dados da confirmação do Marcar (cliente, 28/out/2026): com quem, onde e o valor. */
+  agenda?: string;
+  location?: string;
+  price?: string;
+  priceCents?: number;
+  /** Alterar (C4): "Sexta-feira, 06/11 às 14:00", para comparar com o horário atual. */
+  when?: string;
 }
 
 interface Props {
@@ -66,6 +73,11 @@ const grid = byPeriod ? "grid-cols-3 sm:grid-cols-4 lg:grid-cols-5" : "grid-cols
               data-confirm={slot.confirm}
               data-series={slot.series}
               data-warnings={slot.warnings || undefined}
+              data-agenda={slot.agenda}
+              data-location={slot.location}
+              data-price={slot.price}
+              data-price-cents={slot.priceCents}
+              data-when={slot.when}
               class="sr-only"
             />
             <span class="text-[17px] leading-tight font-bold text-ink tabular-nums first-letter:uppercase">{slot.label}</span>

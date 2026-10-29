@@ -32,6 +32,9 @@ describe("trilha do atendimento (F4.8)", () => {
     expect(event("attendance_corrected", { details: { from: "no_show", to: "completed" } }).text).toBe('Corrigido de "faltou" para "compareceu"');
     expect(event("reminder_resent", { details: { first: true } }).text).toBe("Lembrete enviado à mão");
     expect(event("rebooking_dismissed", { actorId: "maria" }).text).toBe('Marcado como "Desistiu" (sem remarcação) por Maria (Recepção)');
+    expect(
+      event("changed", { actorId: "maria", details: { changes: [{ label: "Serviço", from: "Consulta · 30 min", to: "Avaliação · 50 min" }] } }).text,
+    ).toBe("Alterado pelo painel por Maria (Recepção). Serviço: Consulta · 30 min → Avaliação · 50 min");
   });
 
   it("mensagens do WhatsApp com a situação da entrega", () => {
