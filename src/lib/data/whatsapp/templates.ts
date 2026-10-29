@@ -84,10 +84,11 @@ export const DEFAULT_TEMPLATES: DefaultTemplate[] = [
   },
   {
     // Preparo com arquivo, com a conversa fechada (C7.5; cliente, 28/out/2026): a única mensagem do preparo,
-    // com o arquivo no topo. A v1 ("… em anexo.", enviada depois do preparo) a Meta pôs como marketing.
+    // com o arquivo no topo. A v1 ("… em anexo.", enviada depois do preparo) a Meta pôs como marketing. v3
+    // (cliente, 29/out): o exame em negrito e ponto final no lugar dos dois pontos (a v2 estava em análise).
     key: "exam_preparation_file",
-    name: "rc_preparo_arquivo_v2",
-    body: "Segue orientações para a realização do exame {{1}}:\n\nEstamos à disposição para qualquer dúvida.",
+    name: "rc_preparo_arquivo_v3",
+    body: "Segue orientações para a realização do exame *{{1}}*.\n\nEstamos à disposição para qualquer dúvida.",
     examples: ["Espirometria"],
     documentHeader: true,
   },

@@ -1,6 +1,6 @@
 import { PDFDocument, rgb, StandardFonts } from "pdf-lib";
 
-// PDF de exemplo do modelo do arquivo do preparo (C7.5; rc_preparo_arquivo_v2):
+// PDF de exemplo do modelo do arquivo do preparo (C7.5; rc_preparo_arquivo_v3):
 // a Meta exige um arquivo de exemplo ao criar um modelo com documento no topo.
 // Orientações fictícias de um exame, só para a análise da Meta.
 export async function samplePreparationPdf(): Promise<Uint8Array> {

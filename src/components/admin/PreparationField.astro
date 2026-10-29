@@ -140,7 +140,7 @@ const tabClass =
               <span class="js-file-meta block text-xs text-ink-soft"></span>
             </span>
           </div>
-          <p class="js-file-caption whitespace-pre-line px-3 pt-1 pb-2">{preparationFileCaption(examName || "…")}</p>
+          <p class="js-file-caption whitespace-pre-line px-3 pt-1 pb-2" set:html={whatsAppTextToHtml(preparationFileCaption(examName || "…"))} />
         </div>
       </div>
     </div>
@@ -171,7 +171,7 @@ const tabClass =
       preview.innerHTML = text ? whatsAppTextToHtml(preparationMessageText(exam, text)) : "";
       preview.hidden = !text || withFile;
       empty.hidden = !!text || withFile;
-      if (caption) caption.textContent = preparationFileCaption(exam);
+      if (caption) caption.innerHTML = whatsAppTextToHtml(preparationFileCaption(exam));
       input.readOnly = withFile;
       if (withFile) input.setAttribute("aria-disabled", "true");
       else input.removeAttribute("aria-disabled");

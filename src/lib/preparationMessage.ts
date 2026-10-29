@@ -7,7 +7,7 @@
 //
 // C7.5 (cliente, 28/out/2026): uma mensagem de preparo só. Com arquivo, o
 // arquivo com o início e o final (sem as instruções): documento com legenda
-// (conversa aberta) ou o modelo rc_preparo_arquivo_v2 (fechada).
+// (conversa aberta) ou o modelo rc_preparo_arquivo_v3 (fechada).
 
 import { MAX_PREPARATION_LENGTH } from "./whatsappFormat";
 
@@ -22,9 +22,9 @@ export function preparationMessageText(examName: string, instructions: string): 
   return `${PREPARATION_INTRO(examName)}\n\n${instructions.trim()}\n\n${PREPARATION_CLOSING}`;
 }
 
-/** A mensagem do preparo com arquivo: a legenda do documento (e a prévia da tela). */
+/** A mensagem do preparo com arquivo: a legenda do documento (e a prévia da tela); o exame em negrito e ponto final (cliente, 29/out). */
 export function preparationFileCaption(examName: string): string {
-  return `${PREPARATION_INTRO(examName)}\n\n${PREPARATION_CLOSING}`;
+  return `Segue orientações para a realização do exame *${examName}*.\n\n${PREPARATION_CLOSING}`;
 }
 
 /** As instruções para o modelo: as linhas separadas por " · ", sem espaços repetidos, até o limite. */

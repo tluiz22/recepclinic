@@ -621,4 +621,9 @@ retomada fica no README). Para achar algo, buscar por data (ex.: `27/out`), fase
   serviço, salvar, editar); publicada no staging em 29/out.
   - Correção (29/out, achado do cliente no staging): com um tipo aberto e nenhum cartão escolhido, o aviso de campo
     obrigatório aparecia em "Qualquer serviço" (a primeira opção do grupo); agora vai para o primeiro cartão do tipo
-    aberto (as outras opções cancelam o `invalid`).
+    aberto (as outras opções cancelam o `invalid`). **C8 validada pelo cliente no staging em 29/out.**
+- **C7.7 Texto do preparo com arquivo** (cliente, 29/out): "Segue orientações para a realização do exame *{exame}*." (exame
+  em negrito, ponto final no lugar dos dois pontos) + "Estamos à disposição para qualquer dúvida." Na legenda do documento,
+  na prévia da tela e no modelo, que passa a **`rc_preparo_arquivo_v3`** (a v2 já estava em análise na Meta do staging e
+  modelo em análise não se edita). O preparo sem arquivo (`rc_preparo_exame_v3`) não muda. Sem migração. Publicada no
+  staging em 29/out; lá, "Criar na Meta" cria a v3 e a v2 pode sair por "Excluir da Meta".

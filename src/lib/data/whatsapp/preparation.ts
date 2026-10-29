@@ -23,7 +23,7 @@ import { isCustomerServiceWindowOpen, recordOutboundMessage, type DeliveryUpdate
 // Arquivo do preparo (C7.5; cliente, 28/out/2026): uma mensagem de preparo
 // só. O exame com arquivo manda o arquivo com o início e o final da mensagem,
 // sem as instruções (janela aberta: documento com legenda; fechada: o modelo
-// rc_preparo_arquivo_v2, com o arquivo no topo). Sem arquivo, as instruções.
+// rc_preparo_arquivo_v3, com o arquivo no topo). Sem arquivo, as instruções.
 
 export const PREPARATION_MESSAGE_TYPE = "exam_preparation";
 /** Mensagens cuja entrega dispara o preparo. */

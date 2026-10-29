@@ -200,21 +200,21 @@ describe("quem envia (F6.2)", () => {
       pagePath: "/preparo/s1",
     };
     await preparationSender(sender)({ ...base, mode: "text", template: null });
-    await preparationSender(sender)({ ...base, mode: "template", template: { name: "rc_preparo_arquivo_v2", language: "pt_BR" } });
+    await preparationSender(sender)({ ...base, mode: "template", template: { name: "rc_preparo_arquivo_v3", language: "pt_BR" } });
     expect(calls).toEqual([
       ["upload", "orientacoes.jpg", "image/jpeg"],
       [
         "document",
         "+5584999990000",
         { mediaId: "media-1", filename: "orientacoes.jpg" },
-        "Segue orientações para a realização do exame Espirometria:\n\nEstamos à disposição para qualquer dúvida.",
+        "Segue orientações para a realização do exame *Espirometria*.\n\nEstamos à disposição para qualquer dúvida.",
       ],
       ["upload", "orientacoes.jpg", "image/jpeg"],
       [
         "documentTemplate",
         "+5584999990000",
         "exam_preparation_file",
-        { name: "rc_preparo_arquivo_v2", language: "pt_BR" },
+        { name: "rc_preparo_arquivo_v3", language: "pt_BR" },
         ["Espirometria"],
         { mediaId: "media-1", filename: "orientacoes.jpg" },
       ],
