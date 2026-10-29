@@ -569,3 +569,6 @@ retomada fica no README). Para achar algo, buscar por data (ex.: `27/out`), fase
     texto do preparo chega, uma vez; conversa fechada pelo modelo com o arquivo (aprovação da Meta); "Reenviar preparo".
     Sem migração. Staging em 28/out. Próximo: produção (migrações `20261102120000` e `20261103120000`), com autorização;
     na produção, o Suporte cria o `rc_preparo_arquivo_v1` na Meta para cada clínica com exames.
+  - Correção (28/out, achado do cliente no staging): o envio do arquivo era bloqueado pela política de segurança (CSP,
+    `default-src 'self'`); a tela do serviço passa a liberar o `connect-src` do Supabase, como a ficha do paciente; a
+    prévia de imagem recém-escolhida usa `data:` (o `img-src` não libera `blob:`). O `npm run dev` não aplica o CSP.

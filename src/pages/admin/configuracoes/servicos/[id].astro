@@ -19,6 +19,7 @@ import { listLocations } from "../../../../lib/data/config/locations";
 import { listServices } from "../../../../lib/data/config/services";
 import { listServiceWindows, WEEKDAY_NAMES } from "../../../../lib/data/config/availability";
 import { preparationFileLink } from "../../../../lib/data/config/preparationFile";
+import { platformEnv } from "../../../../lib/env";
 import ConfirmDeleteDialog from "../../../../components/admin/ConfirmDeleteDialog.astro";
 import { centsToInput } from "../../../../lib/forms";
 import { CATEGORY_LABELS } from "../../../../lib/serviceLabels";
@@ -66,6 +67,9 @@ const markAgendas = new Set([setupParam(Astro.url, "agenda"), setupParam(Astro.u
 const markLocations = new Set([setupParam(Astro.url, "local"), setupParam(Astro.url, "marcar_local")].filter(Boolean));
 const noLocation = !locations.some((l) => l.isActive && (homeVisitOn || l.type !== "home_visit"));
 const noAgenda = !agendas.some((a) => a.isActive);
+// Arquivo do preparo (C7): o envio vai do navegador direto ao armazenamento, que a
+// política de segurança (CSP) só libera nesta tela, como na ficha do paciente.
+if (examsOn && Astro.csp) Astro.csp.insertDirective(`connect-src 'self' ${new URL(platformEnv().supabaseUrl).origin}`);
 // Arquivo do preparo (C7), com o link temporário para abrir e para a prévia da imagem.
 const preparationFile = service?.preparationFile
   ? { ...service.preparationFile, url: await preparationFileLink(db, service.preparationFile.path) }
