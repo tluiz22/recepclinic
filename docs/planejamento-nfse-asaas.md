@@ -34,6 +34,7 @@ A única ligação entre eles: o faturamento **lê** a contagem de notas autoriz
 | Pacote | **Franquia mensal** no contrato (quantidade ou ilimitada; ex.: Básico R$ 199 com 50 notas, Pro R$ 299 ilimitadas). Passou da franquia, cada nota a mais pelo preço do contrato. Sobra não acumula. |
 | Quando cobra | As excedentes de um mês entram na **fatura do mês seguinte**, junto da mensalidade. O Administrador da clínica vê durante o mês quantas usou e quanto vai dar. |
 | Transparência | O preço por nota e o detalhamento das cobranças ficam claros para o Administrador da clínica (tela Assinatura). |
+| Tomador | E-mail e endereço completo de quem pagou no Financeiro (contato, paciente, outra pessoa), pedidos só ao emitir, como o CPF (29/out, depois do teste no Sandbox). |
 | Ordem | Contrato com preço e franquia (F12.1/F12.2, sem Asaas) → base Asaas, subconta e emissão → detalhamento → cobrança automática (F12.4+). Até a cobrança automática, o Suporte cobra pelo modo manual com o mesmo detalhamento. |
 
 ## 2. Diagnóstico da implementação atual (F11, conferido em 29/out)
@@ -367,7 +368,10 @@ Conta principal do Sandbox (PJ) e uma subconta fictícia com endereço em Mossor
 **Consequências para o plano:**
 1. **Dados do tomador (decisão de negócio):** a nota exige e-mail e endereço completo de quem pagou; hoje o
    Financeiro guarda CPF e nome (e o e-mail para envio da nota, opcional). O Financeiro do contato e do paciente
-   precisa passar a guardar o endereço e o e-mail de quem paga (só no módulo, como o CPF).
+   precisa passar a guardar o endereço e o e-mail de quem paga (só no módulo, como o CPF). **Decidido (cliente,
+   29/out):** e-mail e endereço (CEP, rua, número, bairro; o CEP preenche a rua) no cartão Financeiro do contato e do
+   paciente e na pessoa "outra" que paga; não obrigatórios para registrar o pagamento, pedidos só ao emitir a nota,
+   como o CPF; gravados também no pagamento (como nome e CPF), para a nota não mudar se o cadastro mudar.
 2. **Tarifa:** cai na subconta, que não recebe dinheiro; o RecepClinic precisa cobrir o saldo negativo (transferência
    da conta principal ou condição do Asaas). Pergunta 4 ao Asaas continua: o que acontece com saldo negativo
    prolongado.
