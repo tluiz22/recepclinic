@@ -564,3 +564,8 @@ retomada fica no README). Para achar algo, buscar por data (ex.: `27/out`), fase
     na lista aceita). Registro do modelo (antes previsto na C7.3) trazido para cá: sem ele a conversa fechada não envia.
     Staging: simulação → aplicação → conferência em 28/out. Observação: no staging os modelos da conta nova ainda estão
     em análise na Meta (nem a confirmação sai), então o envio real só dá para ver depois da aprovação.
+    **Validada pelo cliente no staging em 28/out** (a parte que dá para ver sem a Meta).
+  - **C7.3** (28/out): "i" do campo do arquivo (`configuracoes.dicas.servicoPreparoArquivo`): sai logo depois que o
+    texto do preparo chega, uma vez; conversa fechada pelo modelo com o arquivo (aprovação da Meta); "Reenviar preparo".
+    Sem migração. Staging em 28/out. Próximo: produção (migrações `20261102120000` e `20261103120000`), com autorização;
+    na produção, o Suporte cria o `rc_preparo_arquivo_v1` na Meta para cada clínica com exames.

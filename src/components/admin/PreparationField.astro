@@ -26,9 +26,11 @@ interface Props {
   file?: { name: string; type: string; size: number; url: string | null } | null;
   /** Nome do exame, para o texto do modelo na prévia. */
   examName?: string;
+  /** O "i" do arquivo: quando ele sai (C7). */
+  fileHelp?: Dica;
 }
 
-const { value, help, file = null, examName = "" } = Astro.props;
+const { value, help, file = null, examName = "", fileHelp } = Astro.props;
 const sizeText = (bytes: number) => (bytes >= 1024 * 1024 ? `${(bytes / 1024 / 1024).toLocaleString("pt-BR", { maximumFractionDigits: 1 })} MB` : `${Math.max(1, Math.round(bytes / 1024))} KB`);
 const initial = value ?? "";
 
@@ -72,7 +74,15 @@ const tabClass =
         {MAX_PREPARATION_LENGTH.toLocaleString("pt-BR")} caracteres.
       </p>
       <div class="js-preparation-file mt-4 flex flex-col gap-1.5" data-name={file?.name ?? ""} data-type={file?.type ?? ""} data-size={file?.size ?? ""} data-url={file?.url ?? ""}>
-        <label for="preparation_file_input" class="text-[14.5px] font-semibold text-ink">Arquivo com as orientações (opcional)</label>
+        {
+          fileHelp ? (
+            <HelpTip subject="Arquivo com as orientações" text={fileHelp} id="preparation_file">
+              <label for="preparation_file_input" class="text-[14.5px] font-semibold text-ink">Arquivo com as orientações (opcional)</label>
+            </HelpTip>
+          ) : (
+            <label for="preparation_file_input" class="text-[14.5px] font-semibold text-ink">Arquivo com as orientações (opcional)</label>
+          )
+        }
         <p class="text-xs text-ink-soft">PDF, JPG ou PNG, até 10 MB. Sai pelo WhatsApp logo depois do texto acima, que passa a ser obrigatório.</p>
         {
           file && (
