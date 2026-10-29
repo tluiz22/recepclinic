@@ -20,7 +20,8 @@
 > - **Faturamento do SaaS e NFS-e pelo Asaas** (na branch **`faturamento`**; a `main` fica para correções urgentes):
 >   planejamento do faturamento concluído (28/out) e ampliado em 29/out com a **nota fiscal pelo Asaas** (D13: subconta
 >   por clínica, preço por nota e franquia na fatura; `planejamento-nfse-asaas.md`, só na branch). Nada implementado.
->   Próximo: fase **N0** (perguntas ao Asaas e ao contador, conta Sandbox) e a F12.1, só com a autorização do cliente.
+>   **Próxima sessão (cliente, 29/out): iniciar na `faturamento`**, pela fase **N0** (perguntas ao Asaas e ao contador,
+>   conta Sandbox); depois a F12.1. Cada etapa com o OK do cliente.
 > - **Piloto** (etapas no [plano](plano.md), F10): **A** feita (roteiros do WhatsApp Business: [único](https://claude.ai/artifact/8AXZMSLcEq8SMWFpYHaraq),
 >   [iPhone](https://claude.ai/artifact/C8E3xDoshuXE3M91qeDDHq), [Android](https://claude.ai/artifact/78hQ2cXQph4wvXHKPXexnm));
 >   coexistência no staging feita (parte P do [`staging.md`](staging.md)), falta o **lembrete com botões** quando a
