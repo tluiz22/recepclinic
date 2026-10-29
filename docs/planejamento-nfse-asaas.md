@@ -407,7 +407,7 @@ Conta principal do Sandbox (PJ) e uma subconta fictícia com endereço em Mossor
    muda (seção 3).
 4. **Chaves:** guardar a chave da criação no Vault (já previsto). Clínica 6 meses sem nota perde a chave; recriar
    exige IP fixo (decisão 11.15: "não por agora"). **Decidido (cliente, 29/out):** mantém a 11.15; pedir alternativa
-   ao time de Produto do Asaas pelo formulário, junto com a avaliação BaaS. Até a resposta, o Suporte acompanha as
+   ao time de Produto do Asaas pelo [formulário](https://forms.gle/UzvzStNa9Fdhr1X68) (indicado em "Whitelist de IPs" da documentação), junto com a avaliação BaaS. Até a resposta, o Suporte acompanha as
    clínicas sem nota há muito tempo.
 5. **Marca do Asaas** nas telas de habilitação fiscal e no contrato com a clínica: entra na N2 e nos termos.
 6. **Reperguntar ao Asaas:** saldo negativo da subconta (a nota continua saindo? como a principal cobre?).
