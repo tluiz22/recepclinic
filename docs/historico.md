@@ -583,3 +583,14 @@ retomada fica no README). Para achar algo, buscar por data (ex.: `27/out`), fase
     "Ver o preparo do exame" tirado da tela "Atendimento confirmado" do link de agendamento. Prévia do cadastro mostra a
     mensagem completa. `src/lib/preparationMessage.ts`. Sem migração. Staging em 28/out. Pendente de decisão: o menu de
     informações do bot ("preparo de exames") ainda manda o texto com o link.
+  - **Plano revisto pelo cliente (28/out)**, depois de a Meta reclassificar o `rc_preparo_arquivo_v1` como marketing.
+    Decisões: sai **uma** mensagem de preparo só: com arquivo, o modelo do arquivo **`rc_preparo_arquivo_v2`** (nome
+    novo, análise nova; texto "Segue orientações para a realização do exame {exame}:" + "Estamos à disposição para
+    qualquer dúvida.", o arquivo no topo, regra do WhatsApp); sem arquivo, o `rc_preparo_exame_v3` com o final "Estamos
+    à disposição para qualquer dúvida."; conversa aberta com arquivo manda a mesma mensagem (documento com legenda). No
+    cadastro: arquivo acima das instruções; com arquivo, as instruções ficam desabilitadas (o texto fica guardado, não é
+    enviado) e a prévia mostra a mensagem exata; "Tirar o arquivo" reabilita. "i" do arquivo e das instruções sem falar
+    de conversa aberta/fechada nem de link. Bot ("preparo de exames"): sem o link, manda como na confirmação. Horários:
+    escolha do serviço como no Marcar (tipo e cartões), na própria tela. Etapas: **C7.5** envio único e modelos
+    (migração: sai a regra "arquivo exige texto"); **C7.6** cadastro e ajudas; **C8** Horários. Implementação só com a
+    autorização do cliente.
