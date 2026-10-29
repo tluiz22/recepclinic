@@ -15,7 +15,7 @@
 > - **Ajustes da produção, na `main`:** C1–C6 validados e na produção (`da2a6fc`, conferidos pelo cliente em 28/out;
 >   detalhes no [`historico.md`](historico.md), busca "C4", "C5", "C6"). **C7 Arquivo no preparo do exame** (busca "C7"):
 >   C7.1–C7.5 no staging (migrações `20261102120000`, `20261103120000` e `20261104120000` aplicadas lá). **C7.5**
->   (envio único, `rc_preparo_arquivo_v2`, bot sem link) aguarda a validação do cliente; depois **C7.6** (cadastro e
+>   (envio único, `rc_preparo_arquivo_v2`, bot sem link) validada em 29/out; próxima: **C7.6** (cadastro e
 >   ajudas) e **C8** (Horários), cada uma validada no staging; produção no fim, com autorização. Envio real no staging depende da Meta aprovar os modelos da conta nova.
 > - **CRM concluído** (28/out; [`crm.md`](crm.md)): validado no staging e na produção desde 28/out.
 > - **Faturamento do SaaS (Asaas)** ([`planejamento-faturamento-saas.md`](planejamento-faturamento-saas.md)): planejamento

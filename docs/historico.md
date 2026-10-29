@@ -603,4 +603,5 @@ retomada fica no README). Para achar algo, buscar por data (ex.: `27/out`), fase
     saíram); "Reenviar preparo" e o reenvio automático cobrem o arquivo. Bot ("preparo de exames"): sem o link, manda
     como na confirmação (o arquivo, ou o texto); exame só com arquivo também aparece. Migração
     `20261104120000_preparo_arquivo_sem_texto` (sai `services_preparation_file_needs_text`) e a mesma regra tirada da
-    tela do serviço. Staging: simulação → aplicação → conferência em 29/out. As ajudas ("i") ficam para a C7.6.
+    tela do serviço. Staging: simulação → aplicação → conferência em 29/out. As ajudas ("i") ficam para a C7.6. **Validada pelo cliente no
+    staging em 29/out.**
