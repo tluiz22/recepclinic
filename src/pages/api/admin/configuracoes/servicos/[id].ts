@@ -13,7 +13,6 @@ import {
 import { listLocations } from "../../../../../lib/data/config/locations";
 import { deactivateServiceWindowsOutside } from "../../../../../lib/data/config/availability";
 import { receivedPreparationFile, setPreparationFile, type PreparationFile } from "../../../../../lib/data/config/preparationFile";
-import { DataError } from "../../../../../lib/data/errors";
 import { runFormAction } from "../../../../../lib/data/formAction";
 import { allFilterOn, withAllFilter } from "../../../../../lib/returnPath";
 import { formAll, formChecked, formInt, formMoneyCents, formOptionalInt, formOptionalMoneyCents, formText } from "../../../../../lib/forms";
@@ -49,15 +48,12 @@ export const POST: APIRoute = async (context) => {
         schedulingMode: (category === "exam" && formText(form, "scheduling_mode") === "group" ? "group" : "individual") as SchedulingMode,
       };
       const isNew = id === "novo";
-      // Arquivo do preparo (C7): só no exame; o novo vem da tela já no armazenamento; com arquivo, o texto é obrigatório.
+      // Arquivo do preparo (C7): só no exame; o novo vem da tela já no armazenamento. C7.5: vai sem as instruções.
       const currentFile = isNew ? null : (await getService(db, clinicId, id)).preparationFile;
       let file: PreparationFile | null = category === "exam" ? currentFile : null;
       const newFile = formText(form, "preparation_file");
       if (category === "exam" && newFile) file = await receivedPreparationFile(db, clinicId, newFile);
       else if (category === "exam" && formChecked(form, "remover_arquivo")) file = null;
-      if (file && !input.preparationInstructions?.trim()) {
-        throw new DataError("invalid", "Serviço: falta o texto do preparo", { preparation_instructions: "Com arquivo, escreva a mensagem que vai antes dele." });
-      }
       if (isNew) id = (await createService(db, clinicId, { ...input, category })).id;
       else await updateService(db, clinicId, id, input);
 

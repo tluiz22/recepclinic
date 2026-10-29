@@ -76,18 +76,18 @@ export const DEFAULT_TEMPLATES: DefaultTemplate[] = [
     // v2: a Meta classificou a v1 como marketing (07/out); o texto deixa claro que é o exame marcado.
     // v3 (C7.4; cliente, 28/out/2026): sai logo depois da confirmação, então sem saudação e sem link; as
     // instruções cadastradas numa linha só (src/lib/preparationMessage.ts). Quem ainda só tem a v2 aprovada
-    // continua com ela (preparationSender, LEGACY_PREPARATION).
+    // continua com ela (preparationSender, LEGACY_PREPARATION). C7.5: final "Estamos à disposição…".
     key: "exam_preparation",
     name: "rc_preparo_exame_v3",
-    body: "Segue orientações para a realização do exame {{1}}:\n\n{{2}}\n\nQualquer dúvida, responda esta mensagem.",
+    body: "Segue orientações para a realização do exame {{1}}:\n\n{{2}}\n\nEstamos à disposição para qualquer dúvida.",
     examples: ["Espirometria", "*Não usar* broncodilatador nas 4 horas anteriores. · Venha de roupa confortável."],
   },
   {
-    // Arquivo do preparo, depois do preparo, com a conversa fechada (C7; cliente, 28/out/2026): o arquivo no
-    // topo e o mínimo de texto (a Meta exige texto e recusa variável no fim).
+    // Preparo com arquivo, com a conversa fechada (C7.5; cliente, 28/out/2026): a única mensagem do preparo,
+    // com o arquivo no topo. A v1 ("… em anexo.", enviada depois do preparo) a Meta pôs como marketing.
     key: "exam_preparation_file",
-    name: "rc_preparo_arquivo_v1",
-    body: "Orientações de preparo do exame {{1}} em anexo.",
+    name: "rc_preparo_arquivo_v2",
+    body: "Segue orientações para a realização do exame {{1}}:\n\nEstamos à disposição para qualquer dúvida.",
     examples: ["Espirometria"],
     documentHeader: true,
   },

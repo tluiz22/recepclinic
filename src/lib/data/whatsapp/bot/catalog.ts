@@ -5,6 +5,7 @@ import { listProfessionals } from "../../config/professionals";
 import { listServices, servicePriceAt, type ServiceCategory } from "../../config/services";
 import { unwrap } from "../../errors";
 import type { FeatureKey } from "../../../features";
+import type { PreparationFile } from "../../config/preparationFile";
 
 // Catálogo do bot (F6.3, D4c): os menus saem dos serviços da clínica. Um
 // serviço aparece quando tem agenda ativa com horário de atendimento
@@ -34,6 +35,8 @@ export type BotService = {
   priceCents: number;
   returnDeadlineDays: number | null;
   preparation: string | null;
+  /** Arquivo do preparo (C7.5): vai no lugar das instruções. */
+  preparationFile: PreparationFile | null;
 };
 
 export type BotLocation = { id: string; name: string; type: LocationType; address: string | null };
@@ -91,6 +94,7 @@ export async function loadCatalog(db: DbClient, clinicId: string, features: read
       priceCents: service.priceCents,
       returnDeadlineDays: service.returnDeadlineDays,
       preparation: service.preparationInstructions?.trim() || null,
+      preparationFile: service.preparationFile,
     });
   }
   return {

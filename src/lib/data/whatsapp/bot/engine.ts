@@ -9,7 +9,10 @@ import { getWhatsappConnection } from "../connection";
 import { listBotMessages, renderMarkers, type BotMessageKey } from "../customMessages";
 import { logFunnelStep, setConversationState, WELCOME, type Conversation } from "../conversations";
 import { recordOutboundMessage, type SendOutcome } from "../messages";
-import type { ClinicSender, ListSection, ReplyButton } from "../send";
+import { sendPreparationFile, type ClinicSender, type ListSection, type ReplyButton } from "../send";
+import { downloadPreparationFile } from "../preparation";
+import type { PreparationFile } from "../../config/preparationFile";
+import { preparationFileCaption } from "../../../preparationMessage";
 import { loadCatalog, type BotCatalog } from "./catalog";
 import { LIST_BUTTON, MEDIA_AUDIO, MEDIA_OTHER, wordsFor, type Words } from "./texts";
 
@@ -163,6 +166,17 @@ async function record(b: Bot, kind: string, outcome: SendOutcome, body: string):
 export async function say(b: Bot, kind: string, body: string): Promise<void> {
   const text = kind === NOT_UNDERSTOOD_KIND ? notUnderstood(b, body) : body;
   await record(b, kind, await b.sender.text(b.phone, text), text);
+}
+
+/** Preparo com arquivo (C7.5): o documento com a legenda, como na confirmação. */
+export async function sayPreparationFile(b: Bot, kind: string, examName: string, file: PreparationFile): Promise<void> {
+  let outcome: SendOutcome;
+  try {
+    outcome = await sendPreparationFile(b.sender, b.phone, examName, await downloadPreparationFile(b.db, file), null);
+  } catch (error) {
+    outcome = { sent: false, reason: error instanceof Error ? error.message : String(error) };
+  }
+  await record(b, kind, outcome, `[${file.name}] ${preparationFileCaption(examName)}`);
 }
 
 export async function sendList(b: Bot, kind: string, body: string, sections: ListSection[]): Promise<void> {

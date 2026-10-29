@@ -1,6 +1,6 @@
-import { preparationPath } from "../../../publicId";
+import { preparationMessageText } from "../../../preparationMessage";
 import { servicesOf, type BotService } from "./catalog";
-import { go, say, sendList, textFor, type Bot } from "./engine";
+import { go, say, sayPreparationFile, sendList, textFor, type Bot } from "./engine";
 import { pick, type Selection } from "./input";
 import * as t from "./texts";
 import { handOver, startBooking, startReturn } from "./booking";
@@ -106,7 +106,7 @@ async function infoItems(b: Bot): Promise<InfoKey[]> {
 const addressLocations = (_b: Bot, locations: { name: string; type: string; address: string | null }[]) =>
   locations.filter((l): l is typeof l & { address: string } => l.type === "clinic" && !!l.address);
 
-const preparationExams = (services: BotService[]) => services.filter((s) => s.category === "exam" && s.preparation).slice(0, t.MAX_LIST_ROWS - 1);
+const preparationExams = (services: BotService[]) => services.filter((s) => s.category === "exam" && (s.preparation || s.preparationFile)).slice(0, t.MAX_LIST_ROWS - 1);
 
 async function showInfo(b: Bot, notUnderstood = false): Promise<void> {
   if (notUnderstood) await say(b, "bot_not_understood", textFor(b, "not_understood", t.notUnderstood()));
@@ -159,6 +159,8 @@ export async function handlePreparationChoice(b: Bot, selection: Selection): Pro
     await sendList(b, "bot_info_preparation_choice", t.PREPARATION_QUESTION, t.numberedList(exams.map((s) => ({ id: `prep_${s.id}`, label: s.name }))));
     return;
   }
-  await say(b, "bot_info_preparation", t.preparationText(exam.preparation!, `${b.sender.baseUrl}${preparationPath(exam.id)}`));
+  // Como na confirmação, sem o link (C7.5; cliente, 28/out/2026): o arquivo, ou as instruções.
+  if (exam.preparationFile) await sayPreparationFile(b, "bot_info_preparation", exam.name, exam.preparationFile);
+  else await say(b, "bot_info_preparation", preparationMessageText(exam.name, exam.preparation!));
   await showInfo(b);
 }

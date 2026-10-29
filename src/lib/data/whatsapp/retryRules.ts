@@ -39,7 +39,6 @@ export const RETRYABLE_MESSAGE_TYPES: ReadonlySet<string> = new Set([
   "appointment_cancellation",
   "appointment_mass_cancellation",
   "exam_preparation",
-  "exam_preparation_file",
   "consultation_guidance",
   "daily_summary_consultas",
   "daily_summary_exames",

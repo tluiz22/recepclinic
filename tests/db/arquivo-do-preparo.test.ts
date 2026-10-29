@@ -6,7 +6,7 @@ import {
   SERVICE_FILES_BUCKET,
   setPreparationFile,
 } from "../../src/lib/data/config/preparationFile";
-import { getService, updateService } from "../../src/lib/data/config/services";
+import { getService } from "../../src/lib/data/config/services";
 import { clinicServiceClient } from "./helpers";
 import { asDb, codeOf, setupAgendaClinic, type AgendaFixture, type AgendaIds } from "./agendaFixture";
 import type { TestUser } from "./helpers";
@@ -48,14 +48,11 @@ describe("arquivo do preparo do exame", () => {
     expect(await codeOf(() => preparePreparationUpload(db(reception), clinicId, { fileName: "a.pdf", mimeType: "application/pdf", sizeBytes: PDF.size }))).toBe("forbidden");
   });
 
-  it("grava no exame com o texto do preparo; sem texto, o banco recusa", async () => {
+  it("grava no exame, mesmo sem o texto do preparo (C7.5)", async () => {
     const path = await upload(admin);
     const file = await receivedPreparationFile(db(admin), clinicId, JSON.stringify({ path, name: "orientacoes.pdf", type: "application/pdf", size: PDF.size }));
-    // O Exame da clínica de teste ainda não tem texto de preparo.
-    expect(await codeOf(() => setPreparationFile(db(admin), clinicId, ids.exame, file))).toBe("invalid");
-
-    const exam = await getService(db(admin), clinicId, ids.exame);
-    await updateService(db(admin), clinicId, ids.exame, { ...exam, preparationInstructions: "Segue orientações para o exame:" });
+    // O Exame da clínica de teste não tem texto de preparo: com arquivo, as instruções não vão.
+    expect((await getService(db(admin), clinicId, ids.exame)).preparationInstructions).toBeNull();
     await setPreparationFile(db(admin), clinicId, ids.exame, file);
     expect((await getService(db(admin), clinicId, ids.exame)).preparationFile).toEqual(file);
 

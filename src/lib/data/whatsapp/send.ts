@@ -5,8 +5,8 @@ import { getSendingSetup, type TemplateKey } from "./connection";
 import { GraphRequestError, sendMessage, uploadMedia, type Fetcher } from "./graph";
 import type { SendOutcome } from "./messages";
 import { toWaNumber } from "./meta";
-import { preparationFileCaption, type PreparationFileSender, type PreparationSender } from "./preparation";
-import { preparationInstructionsOneLine, preparationMessageText } from "../../preparationMessage";
+import type { PreparationFileContent, PreparationSender } from "./preparation";
+import { preparationFileCaption, preparationInstructionsOneLine, preparationMessageText } from "../../preparationMessage";
 import type { ReminderSender } from "./reminders";
 import type { DailySummarySender } from "./dailySummary";
 import type { OfferSender } from "../waitlist/offers";
@@ -175,9 +175,13 @@ export function reminderSender(sender: ClinicSender): ReminderSender {
     sender.template(reminder.phone, "reminder", reminder.template, appointmentParams(sender.clinicLabel, reminder), reminder.buttonPayloads);
 }
 
-/** Preparo do exame: texto com as orientações (janela aberta) ou template com o link (fechada). */
+/** Preparo do exame: texto com as orientações (janela aberta) ou o template (fechada); com arquivo, o arquivo (C7.5). */
 export function preparationSender(sender: ClinicSender): PreparationSender {
   return (preparation) => {
+    if (preparation.file) {
+      const template = preparation.mode === "template" ? preparation.template : null;
+      return sendPreparationFile(sender, preparation.phone, preparation.examName, preparation.file, template);
+    }
     // C7.4: sem saudação e sem link, só as instruções entre a linha antes e a linha depois.
     if (preparation.mode === "text" || !preparation.template) {
       return sender.text(preparation.phone, preparationMessageText(preparation.examName, preparation.instructions));
@@ -207,21 +211,23 @@ export function isLegacyPreparation(template: { name: string; body?: string | nu
 }
 
 /**
- * Arquivo do preparo (C7): sobe o arquivo à Meta e manda como documento com a
- * legenda (janela aberta) ou pelo modelo com o arquivo no topo (fechada).
+ * Preparo com arquivo (C7.5): sobe o arquivo à Meta e manda como documento com
+ * a legenda (janela aberta; também o bot) ou pelo modelo com o arquivo no topo
+ * (fechada).
  */
-export function preparationFileSender(sender: ClinicSender): PreparationFileSender {
-  return async (preparation) => {
-    if (!sender.uploadDocument || !sender.document || !sender.documentTemplate) {
-      return { sent: false, reason: "envio de arquivo indisponível" };
-    }
-    const mediaId = await sender.uploadDocument(preparation.file);
-    const document = { mediaId, filename: preparation.file.filename };
-    if (preparation.mode === "document" || !preparation.template) {
-      return sender.document(preparation.phone, document, preparationFileCaption(preparation.examName));
-    }
-    return sender.documentTemplate(preparation.phone, "exam_preparation_file", preparation.template, [preparation.examName], document);
-  };
+export async function sendPreparationFile(
+  sender: ClinicSender,
+  phone: string,
+  examName: string,
+  file: PreparationFileContent,
+  template: { name: string; language: string; body?: string | null } | null,
+): Promise<SendOutcome> {
+  if (!sender.uploadDocument || !sender.document || !sender.documentTemplate) {
+    return { sent: false, reason: "envio de arquivo indisponível" };
+  }
+  const document = { mediaId: await sender.uploadDocument(file), filename: file.filename };
+  if (!template) return sender.document(phone, document, preparationFileCaption(examName));
+  return sender.documentTemplate(phone, "exam_preparation_file", template, [examName], document);
 }
 
 /** Orientações gerais da consulta (cliente, 08/out): o texto (janela aberta) ou o template com o link (fechada). */

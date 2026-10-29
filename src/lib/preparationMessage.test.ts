@@ -4,7 +4,7 @@ import { PREPARATION_MAX_LENGTH, preparationInstructionsOneLine, preparationMess
 describe("mensagem do preparo (C7.4)", () => {
   it("conversa aberta: linha antes, as instruções como foram escritas e a linha depois", () => {
     expect(preparationMessageText("Espirometria", "*Não usar* broncodilatador.\nVenha de roupa confortável.\n")).toBe(
-      "Segue orientações para a realização do exame Espirometria:\n\n*Não usar* broncodilatador.\nVenha de roupa confortável.\n\nQualquer dúvida, responda esta mensagem.",
+      "Segue orientações para a realização do exame Espirometria:\n\n*Não usar* broncodilatador.\nVenha de roupa confortável.\n\nEstamos à disposição para qualquer dúvida.",
     );
   });
 

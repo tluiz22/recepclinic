@@ -594,3 +594,13 @@ retomada fica no README). Para achar algo, buscar por data (ex.: `27/out`), fase
     escolha do serviço como no Marcar (tipo e cartões), na própria tela. Etapas: **C7.5** envio único e modelos
     (migração: sai a regra "arquivo exige texto"); **C7.6** cadastro e ajudas; **C8** Horários. Implementação só com a
     autorização do cliente.
+  - **C7.5 Envio único do preparo** (29/out): uma mensagem de preparo só. Com arquivo: o arquivo com "Segue orientações
+    para a realização do exame {exame}:" + "Estamos à disposição para qualquer dúvida.", sem as instruções (conversa
+    aberta: documento com legenda; fechada: modelo novo `rc_preparo_arquivo_v2`, que substitui a v1 na linha do modelo
+    ao "Criar na Meta"; sem ele aprovado, "não enviado" e Reenviar depois, não cai no modelo do texto). Sem arquivo: o
+    `rc_preparo_exame_v3` com o final "Estamos à disposição para qualquer dúvida." (a v3 ainda não existia na Meta do
+    staging). Tudo como `exam_preparation` (o segundo envio `exam_preparation_file` e o `sendPreparationFileAfterDelivery`
+    saíram); "Reenviar preparo" e o reenvio automático cobrem o arquivo. Bot ("preparo de exames"): sem o link, manda
+    como na confirmação (o arquivo, ou o texto); exame só com arquivo também aparece. Migração
+    `20261104120000_preparo_arquivo_sem_texto` (sai `services_preparation_file_needs_text`) e a mesma regra tirada da
+    tela do serviço. Staging: simulação → aplicação → conferência em 29/out. As ajudas ("i") ficam para a C7.6.

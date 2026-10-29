@@ -4,10 +4,10 @@ import { toE164, type WaMessage } from "./meta";
 import { hasFeature } from "../features";
 import { handleAgentEcho } from "./conversations";
 import { recordAgentEcho, recordInboundMessage, updateDeliveryStatus, type RecordResult } from "./messages";
-import { sendPreparationAfterDelivery, sendPreparationFileAfterDelivery } from "./preparation";
+import { sendPreparationAfterDelivery } from "./preparation";
 import { sendGuidanceAfterDelivery } from "./guidance";
 import { scheduleRetryAfterLateFailure } from "./retries";
-import { guidanceSender, preparationFileSender, preparationSender, type ClinicSender } from "./send";
+import { guidanceSender, preparationSender, type ClinicSender } from "./send";
 import { applyTemplateStatusEvent, type TemplateStatusEvent } from "./templateSync";
 import { markWhatsappDisconnectedByMeta } from "./connection";
 import { notifyWaitingConversation, type PushContext } from "./attentionPush";
@@ -209,11 +209,6 @@ export async function processWebhook(payload: unknown, deps: WebhookDeps, now: D
           if (!sender) return;
           const sent = await sendPreparationAfterDelivery(db, clinicId, result, preparationSender(sender), now);
           if (sent) summary.preparations += 1;
-        });
-        // Preparo entregue: o arquivo do preparo sai depois dele, uma vez (C7; cliente, 28/out/2026).
-        await attempt("arquivo do preparo", async () => {
-          const sender = await deps.senderFor!(clinicId);
-          if (sender) await sendPreparationFileAfterDelivery(db, clinicId, result, preparationFileSender(sender), now);
         });
         // Confirmação de consulta entregue: as orientações gerais saem uma vez (cliente, 08/out).
         await attempt("orientações gerais", async () => {

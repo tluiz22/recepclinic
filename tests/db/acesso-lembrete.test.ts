@@ -8,9 +8,6 @@ import {
   listPreparationResendable,
   resendPreparation,
   sendPreparationAfterDelivery,
-  sendPreparationFileAfterDelivery,
-  type PreparationFileSender,
-  type PreparationFileToSend,
   type PreparationSender,
   type PreparationToSend,
 } from "../../src/lib/data/whatsapp/preparation";
@@ -57,15 +54,6 @@ const prepSender: PreparationSender = async (preparation) => {
     ? { sent: false, reason: "recusado" }
     : { sent: true, messageId: `wamid.prep.${Date.now()}.${++seq}` };
 };
-
-// Arquivo do preparo (C7).
-const files: PreparationFileToSend[] = [];
-const fileFailFor = new Set<string>();
-const fileSender: PreparationFileSender = async (file) => {
-  files.push(file);
-  return fileFailFor.has(file.phone) ? { sent: false, reason: "recusado" } : { sent: true, messageId: `wamid.file.${Date.now()}.${++seq}` };
-};
-const prepSenders = { preparation: prepSender, file: fileSender };
 
 const book = async (patient: string, service: string, agenda: string, start: Date, now = NOW) =>
   (await bookAppointment(db(reception), clinicId, { patientId: patient, serviceId: service, agendaId: agenda, start, channel: "admin", actorId: reception.id }, now))
@@ -260,60 +248,46 @@ describe("preparo do exame", () => {
 
     prepFailFor.delete(appt.e2);
     const later = at(SUN, "13:00");
-    expect(await resendPreparation(db(reception), clinicId, appt.e2, reception.id, prepSenders, later)).toBe("sent");
+    expect(await resendPreparation(db(reception), clinicId, appt.e2, reception.id, prepSender, later)).toBe("sent");
     expect(preparations.at(-1)).toMatchObject({ appointmentId: appt.e2, mode: "text", template: null });
     expect(await trailOf(appt.e2, "preparation_resent")).toEqual([{ channel: "admin", actor_id: reception.id, details: {} }]);
-    expect(await resendPreparation(db(reception), clinicId, appt.e2, reception.id, prepSenders, later)).toBe("not_eligible");
-    expect(await resendPreparation(db(reception), clinicId, appt.a1, reception.id, prepSenders, later)).toBe("not_eligible");
+    expect(await resendPreparation(db(reception), clinicId, appt.e2, reception.id, prepSender, later)).toBe("not_eligible");
+    expect(await resendPreparation(db(reception), clinicId, appt.a1, reception.id, prepSender, later)).toBe("not_eligible");
   });
 
-  // C7 (cliente, 28/out/2026): o arquivo sai depois que o preparo chega, uma vez; o reenvio cobre o arquivo.
-  it("exame com arquivo: o arquivo sai depois da entrega do preparo, pelo modelo com o arquivo; falhou, Reenviar manda só ele", async () => {
+  // C7.5 (cliente, 28/out/2026): com arquivo, uma mensagem só, pelo modelo do arquivo e sem as instruções.
+  it("exame com arquivo: o preparo é o arquivo, pelo modelo com o arquivo; sem o modelo aprovado, Reenviar depois", async () => {
     const path = `${clinicId}/preparo/${crypto.randomUUID()}.pdf`;
     await adminClient().storage.from("service-files").upload(path, new Blob(["%PDF-1.4 preparo"], { type: "application/pdf" }), { contentType: "application/pdf" });
+    // Sem instruções: o arquivo não exige mais o texto (20261104120000).
     await adminClient()
       .from("services")
-      .update({ preparation_file_path: path, preparation_file_name: "orientacoes.pdf", preparation_file_type: "application/pdf", preparation_file_size: 16 })
+      .update({ preparation_instructions: null, preparation_file_path: path, preparation_file_name: "orientacoes.pdf", preparation_file_type: "application/pdf", preparation_file_size: 16 })
       .eq("id", ids.exame);
-    await adminClient().from("whatsapp_templates").insert({ clinic_id: clinicId, template_key: "exam_preparation_file", name: "rc_preparo_arquivo", status: "approved" });
-    const preparationDelivered = async (appointmentId: string) => {
-      const [last] = (await messagesOf(appointmentId, "exam_preparation")).slice(-1);
-      return updateDeliveryStatus(bot, clinicId, last.wa_message_id!, "delivered");
-    };
 
+    // O modelo do arquivo ainda não aprovado: não sai pelo modelo do texto.
     appt.e3 = await book(ids.p3, ids.exame, ids.agendaExams, at(MON1, "08:40"));
     const phone = await phoneOfPatient(ids.p3);
-    // A confirmação entregue dispara só o preparo; o arquivo espera a entrega dele.
-    const confirmation = await confirmationDelivered(appt.e3, phone, NOW);
-    expect(await sendPreparationFileAfterDelivery(bot, clinicId, confirmation, fileSender, NOW)).toBeNull();
-    expect(await sendPreparationAfterDelivery(bot, clinicId, confirmation, prepSender, NOW)).toBe("sent");
-    const delivered = await preparationDelivered(appt.e3);
-    expect(await sendPreparationFileAfterDelivery(bot, clinicId, delivered, fileSender, NOW)).toBe("sent");
-    expect(files.at(-1)).toMatchObject({ examName: "Exame", mode: "template", template: { name: "rc_preparo_arquivo" } });
-    expect(files.at(-1)!.file).toMatchObject({ filename: "orientacoes.pdf", mimeType: "application/pdf" });
-    expect(new TextDecoder().decode(files.at(-1)!.file.bytes)).toBe("%PDF-1.4 preparo");
-    // Uma vez só.
-    expect(await sendPreparationFileAfterDelivery(bot, clinicId, await preparationDelivered(appt.e3), fileSender, NOW)).toBeNull();
+    const sentBefore = preparations.length;
+    expect(await sendPreparationAfterDelivery(bot, clinicId, await confirmationDelivered(appt.e3, phone, NOW), prepSender, NOW)).toBe("skipped_no_template");
+    expect(preparations.length).toBe(sentBefore);
+    expect(await listPreparationResendable(db(reception), clinicId, [appt.e3])).toEqual(new Set([appt.e3]));
 
-    // O arquivo falhou: "Reenviar preparo" manda só o arquivo.
+    await adminClient().from("whatsapp_templates").insert({ clinic_id: clinicId, template_key: "exam_preparation_file", name: "rc_preparo_arquivo", status: "approved" });
+    expect(await resendPreparation(db(reception), clinicId, appt.e3, reception.id, prepSender, at(SUN, "13:30"))).toBe("sent");
+    expect(preparations.at(-1)).toMatchObject({ appointmentId: appt.e3, examName: "Exame", instructions: "", mode: "template", template: { name: "rc_preparo_arquivo" } });
+    expect(preparations.at(-1)!.file).toMatchObject({ filename: "orientacoes.pdf", mimeType: "application/pdf" });
+    expect(new TextDecoder().decode(preparations.at(-1)!.file!.bytes)).toBe("%PDF-1.4 preparo");
+    expect((await messagesOf(appt.e3, "exam_preparation")).map((m) => [m.status, m.template_name])).toEqual([
+      ["skipped_no_template", null],
+      ["sent", "rc_preparo_arquivo"],
+    ]);
+
+    // Os testes seguintes contam com o exame sem arquivo, com as instruções e sem este atendimento.
     await cancelAppointment(db(reception), clinicId, appt.e3, { channel: "admin", actorId: reception.id }, NOW);
-    appt.e4 = await book(ids.p3, ids.exame, ids.agendaExams, at(MON2, "08:00"));
-    const phone4 = phone;
-    expect(await sendPreparationAfterDelivery(bot, clinicId, await confirmationDelivered(appt.e4, phone4, NOW), prepSender, NOW)).toBe("sent");
-    fileFailFor.add(phone4);
-    expect(await sendPreparationFileAfterDelivery(bot, clinicId, await preparationDelivered(appt.e4), fileSender, NOW)).toBe("failed");
-    expect(await listPreparationResendable(db(reception), clinicId, [appt.e1, appt.e4])).toEqual(new Set([appt.e4]));
-    fileFailFor.delete(phone4);
-    const sentPreparations = preparations.length;
-    expect(await resendPreparation(db(reception), clinicId, appt.e4, reception.id, prepSenders, at(SUN, "13:30"))).toBe("sent");
-    expect(preparations.length).toBe(sentPreparations);
-    expect((await messagesOf(appt.e4, "exam_preparation_file")).map((m) => m.status)).toEqual(["failed", "sent"]);
-
-    // Os testes seguintes contam com o exame sem arquivo e sem estes atendimentos.
-    await cancelAppointment(db(reception), clinicId, appt.e4, { channel: "admin", actorId: reception.id }, NOW);
     await adminClient()
       .from("services")
-      .update({ preparation_file_path: null, preparation_file_name: null, preparation_file_type: null, preparation_file_size: null })
+      .update({ preparation_instructions: "Jejum de 4 horas.", preparation_file_path: null, preparation_file_name: null, preparation_file_type: null, preparation_file_size: null })
       .eq("id", ids.exame);
   });
 });
@@ -348,6 +322,6 @@ describe("sem template, sem conexão e sem o item", () => {
     expect(await runAppointmentReminders(off, clinicOff, { trigger: "manual", sender })).toEqual({ skipped: "not_enabled" });
     expect(await listReminderActions(off, clinicOff, [appt.a1])).toEqual(new Map());
     expect(await sendReminderFromPanel(off, clinicOff, appt.a1, null, sender)).toBe("not_enabled");
-    expect(await resendPreparation(off, clinicOff, appt.e2, null, prepSenders)).toBe("not_enabled");
+    expect(await resendPreparation(off, clinicOff, appt.e2, null, prepSender)).toBe("not_enabled");
   });
 });

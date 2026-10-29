@@ -22,7 +22,7 @@ import { firstByDate, NOTICE_RESULT_TEXT, sendAppointmentNotice, type NoticeKind
 import { PREPARATION_RESEND_MESSAGES, resendPreparation } from "../../../../../lib/data/whatsapp/preparation";
 import { RESEND_MESSAGES, sendReminderFromPanel } from "../../../../../lib/data/whatsapp/reminders";
 import { GUIDANCE_RESEND_MESSAGES, resendGuidance } from "../../../../../lib/data/whatsapp/guidance";
-import { guidanceSender, preparationFileSender, preparationSender, reminderSender } from "../../../../../lib/data/whatsapp/send";
+import { guidanceSender, preparationSender, reminderSender } from "../../../../../lib/data/whatsapp/send";
 import { formChecked, formInt, formOptionalText, formText } from "../../../../../lib/forms";
 import { changeSeriesDetailsFrom, changeSeriesFrom, createSeries, endSeriesFrom } from "../../../../../lib/data/agenda/series";
 import { snapshotChanges, snapshotOf } from "../../../../../lib/appointmentChanges";
@@ -253,7 +253,7 @@ export const POST: APIRoute = async (context) => {
         }
         case "preparo": {
           const sender = await clinicSenderFor(clinic.clinicId, request.url);
-          const outcome = sender ? await resendPreparation(db, clinic.clinicId, id, actorId, { preparation: preparationSender(sender), file: preparationFileSender(sender) }) : "not_connected";
+          const outcome = sender ? await resendPreparation(db, clinic.clinicId, id, actorId, preparationSender(sender)) : "not_connected";
           const message = PREPARATION_RESEND_MESSAGES[outcome];
           if (!message.ok) throw new DataError("invalid", message.text, { outcome: message.text });
           return done(message.text);

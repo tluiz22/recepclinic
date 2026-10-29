@@ -2,12 +2,12 @@ import type { DbClient } from "../clients";
 import { DataError, unwrap } from "../errors";
 
 // Arquivo do preparo do exame (C7; cliente, 28/out/2026): PDF, JPG ou PNG até
-// 10 MB, enviado pelo WhatsApp depois da mensagem do preparo. Como os
+// 10 MB, enviado pelo WhatsApp como a mensagem do preparo (C7.5). Como os
 // documentos do paciente, o arquivo vai do aparelho direto ao armazenamento
 // privado por um link de envio de uso único (o limite das funções da Vercel
 // não se aplica) e o cadastro do serviço grava onde ele ficou
-// (20261102120000_arquivo_do_preparo.sql). Com arquivo, o texto do preparo é
-// obrigatório: é a mensagem que vem antes.
+// (20261102120000_arquivo_do_preparo.sql). Com arquivo, as instruções não vão
+// (20261104120000_preparo_arquivo_sem_texto.sql).
 
 export const SERVICE_FILES_BUCKET = "service-files";
 export const PREPARATION_FILE_MAX_BYTES = 10 * 1024 * 1024;

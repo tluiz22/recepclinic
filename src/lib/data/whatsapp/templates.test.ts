@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { guidanceSender, preparationFileSender, preparationSender, reminderSender, type ClinicSender } from "./send";
+import { guidanceSender, preparationSender, reminderSender, type ClinicSender } from "./send";
 import {
   LEGACY_PREPARATION_BODY,
   appointmentParams,
@@ -156,6 +156,7 @@ describe("quem envia (F6.2)", () => {
       patientName: "João",
       examName: "Espirometria",
       instructions: "*Não usar* broncodilatador.\nVenha de roupa confortável.",
+      file: null,
       pagePath: "/preparo/s1",
     };
     await preparationSender(sender)({ ...base, mode: "text", template: null });
@@ -164,7 +165,7 @@ describe("quem envia (F6.2)", () => {
     expect(calls[0]).toEqual([
       "text",
       "+5584999990000",
-      "Segue orientações para a realização do exame Espirometria:\n\n*Não usar* broncodilatador.\nVenha de roupa confortável.\n\nQualquer dúvida, responda esta mensagem.",
+      "Segue orientações para a realização do exame Espirometria:\n\n*Não usar* broncodilatador.\nVenha de roupa confortável.\n\nEstamos à disposição para qualquer dúvida.",
     ]);
     expect(calls[1]).toEqual([
       "template",
@@ -182,23 +183,38 @@ describe("quem envia (F6.2)", () => {
     ]);
   });
 
-  it("arquivo do preparo (C7): sobe o arquivo; documento com a legenda (janela aberta) ou o modelo com o arquivo no topo (fechada)", async () => {
+  it("preparo com arquivo (C7.5): uma mensagem só, sem as instruções; documento com a legenda (janela aberta) ou o modelo com o arquivo no topo (fechada)", async () => {
     const { sender, calls } = fakeSender();
     sender.uploadDocument = async (file) => (calls.push(["upload", file.filename, file.mimeType]), "media-1");
     sender.document = async (...args) => (calls.push(["document", ...args]), { sent: true, messageId: "w5" });
     sender.documentTemplate = async (...args) => (calls.push(["documentTemplate", ...args]), { sent: true, messageId: "w6" });
-    const base = { phone: "+5584999990000", examName: "Espirometria", file: { bytes: new Uint8Array([1]), filename: "orientacoes.jpg", mimeType: "image/jpeg" } };
-    await preparationFileSender(sender)({ ...base, mode: "document", template: null });
-    await preparationFileSender(sender)({ ...base, mode: "template", template: { name: "rc_preparo_arquivo_v1", language: "pt_BR" } });
+    const base = {
+      clinicId: "c1",
+      appointmentId: "a1",
+      phone: "+5584999990000",
+      contactName: "Maria Silva",
+      patientName: "João",
+      examName: "Espirometria",
+      instructions: "Texto guardado, não vai.",
+      file: { bytes: new Uint8Array([1]), filename: "orientacoes.jpg", mimeType: "image/jpeg" },
+      pagePath: "/preparo/s1",
+    };
+    await preparationSender(sender)({ ...base, mode: "text", template: null });
+    await preparationSender(sender)({ ...base, mode: "template", template: { name: "rc_preparo_arquivo_v2", language: "pt_BR" } });
     expect(calls).toEqual([
       ["upload", "orientacoes.jpg", "image/jpeg"],
-      ["document", "+5584999990000", { mediaId: "media-1", filename: "orientacoes.jpg" }, "Orientações de preparo do exame Espirometria em anexo."],
+      [
+        "document",
+        "+5584999990000",
+        { mediaId: "media-1", filename: "orientacoes.jpg" },
+        "Segue orientações para a realização do exame Espirometria:\n\nEstamos à disposição para qualquer dúvida.",
+      ],
       ["upload", "orientacoes.jpg", "image/jpeg"],
       [
         "documentTemplate",
         "+5584999990000",
         "exam_preparation_file",
-        { name: "rc_preparo_arquivo_v1", language: "pt_BR" },
+        { name: "rc_preparo_arquivo_v2", language: "pt_BR" },
         ["Espirometria"],
         { mediaId: "media-1", filename: "orientacoes.jpg" },
       ],

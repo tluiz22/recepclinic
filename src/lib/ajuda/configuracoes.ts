@@ -18,7 +18,7 @@ export const configuracoes = {
     // src/lib/data/whatsapp/preparation.ts (cabeçalho) e "Reenviar preparo" no cartão da Agenda (cardActions.ts).
     servicoPreparo:
       "Vai uma vez só pelo WhatsApp, logo depois que a confirmação da marcação chega ao paciente, com o link da página do preparo. Não vai no lembrete nem de novo ao remarcar. Se não chegou, use \"Reenviar preparo\" na Agenda. Sem texto, nada é enviado.",
-    // C7: preparation.ts (sendPreparationFileAfterDelivery, resendPreparation) e o modelo rc_preparo_arquivo_v1.
+    // C7.5: preparation.ts (deliverPreparation, resendPreparation) e o modelo rc_preparo_arquivo_v2.
     servicoPreparoArquivo:
       "Sai pelo WhatsApp logo depois que o texto do preparo chega ao paciente, uma vez só. Com a conversa fechada, vai pelo modelo com o arquivo, que a Meta precisa aprovar. Se não chegou, use \"Reenviar preparo\" na Agenda.",
     // isOverConsultationAgeLimit em src/lib/age.ts; aviso no Marcar e na ficha do paciente.
