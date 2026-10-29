@@ -18,8 +18,8 @@
 >   validada no staging; vai para a produção junto com a próxima funcionalidade (pedido do cliente, 28/out).
 >   **C6 Escolha do serviço no Marcar** (tipo primeiro, depois cartões) validada no staging. **C5 e C6 na produção** (`da2a6fc`,
 >   conferidas pelo cliente em 28/out). **C7 Arquivo no preparo do exame** (histórico, busca "C7"): C7.1 (cadastro e
->   prévia) e C7.2 (envio e reenvio, modelo `rc_preparo_arquivo_v1`) validadas; C7.3 (ajuda) no staging, aguardando o
->   cliente; depois, produção com autorização (migrações `20261102120000` e `20261103120000`). Envio real no staging
+>   prévia) e C7.2 (envio e reenvio, modelo `rc_preparo_arquivo_v1`) validadas; C7.3 (ajuda) e C7.4 (preparo sem
+>   link, modelo `rc_preparo_exame_v3`, 700 caracteres) no staging, aguardando o cliente; depois, produção com autorização (migrações `20261102120000` e `20261103120000`). Envio real no staging
 >   depende da Meta aprovar os modelos da conta nova.
 > - **CRM concluído** (28/out; [`crm.md`](crm.md)): validado no staging e na produção desde 28/out.
 > - **Faturamento do SaaS (Asaas)** ([`planejamento-faturamento-saas.md`](planejamento-faturamento-saas.md)): planejamento

@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { bookingPath, guidancePath, preparationPath } from "../../src/lib/publicId";
+import { bookingPath, guidancePath } from "../../src/lib/publicId";
 import { bookAppointment, cancelAppointment } from "../../src/lib/data/agenda/appointments";
 import { createClinicServiceClient } from "../../src/lib/data/clinicService";
 import type { DbClient } from "../../src/lib/data/clients";
@@ -130,7 +130,7 @@ describe("templates padrão na conta da clínica (Suporte)", () => {
       rc_cancelamento_v1: { status: "APPROVED" },
       rc_cancelamento_clinica_v1: { status: "PENDING" },
       rc_lembrete_v1: { status: "APPROVED" },
-      rc_preparo_exame_v2: { status: "REJECTED", reason: "INVALID_FORMAT" },
+      rc_preparo_exame_v3: { status: "REJECTED", reason: "INVALID_FORMAT" },
     });
     expect(await refreshTemplateStatuses(service, f.clinicId, meta.fetcher)).toMatchObject({ ok: true });
     const { data } = await adminClient()
@@ -151,14 +151,14 @@ describe("templates padrão na conta da clínica (Suporte)", () => {
   });
 
   it("Reenviar à Meta (F8a.1): edita o recusado com o texto atual, mesmo nome, e ele volta para a análise", async () => {
-    const meta = fakeMeta({ rc_preparo_exame_v2: { status: "REJECTED", reason: "INVALID_FORMAT" } });
+    const meta = fakeMeta({ rc_preparo_exame_v3: { status: "REJECTED", reason: "INVALID_FORMAT" } });
     // Só o recusado é reenviado; o aprovado não muda.
     expect(await resendRejectedTemplate(service, f.clinicId, "confirmation", meta.fetcher)).toMatchObject({ ok: false });
     expect(meta.calls).toHaveLength(0);
 
-    expect(await resendRejectedTemplate(service, f.clinicId, "exam_preparation", meta.fetcher)).toEqual({ ok: true, name: "rc_preparo_exame_v2" });
+    expect(await resendRejectedTemplate(service, f.clinicId, "exam_preparation", meta.fetcher)).toEqual({ ok: true, name: "rc_preparo_exame_v3" });
     const edits = meta.calls.filter((c) => c.method === "POST");
-    expect(edits.map((c) => c.path)).toEqual(["/tpl-rc_preparo_exame_v2"]);
+    expect(edits.map((c) => c.path)).toEqual(["/tpl-rc_preparo_exame_v3"]);
     // Sem nome nem idioma (não mudam); texto, exemplos e categoria vão de novo.
     expect(Object.keys(edits[0].body!).sort()).toEqual(["category", "components"]);
     const { data } = await adminClient()
@@ -167,7 +167,7 @@ describe("templates padrão na conta da clínica (Suporte)", () => {
       .eq("clinic_id", f.clinicId)
       .eq("template_key", "exam_preparation")
       .single();
-    expect(data).toEqual({ name: "rc_preparo_exame_v2", status: "pending", rejection_reason: null, meta_template_id: "tpl-rc_preparo_exame_v2" });
+    expect(data).toEqual({ name: "rc_preparo_exame_v3", status: "pending", rejection_reason: null, meta_template_id: "tpl-rc_preparo_exame_v3" });
 
     // Em análise: não há o que reenviar.
     expect(await resendRejectedTemplate(service, f.clinicId, "exam_preparation", meta.fetcher)).toMatchObject({ ok: false });
@@ -177,7 +177,7 @@ describe("templates padrão na conta da clínica (Suporte)", () => {
     await adminClient().from("whatsapp_templates").update({ status: "rejected", rejection_reason: "INVALID_FORMAT" }).eq("clinic_id", f.clinicId).eq("template_key", "exam_preparation");
     const meta: typeof fetch = async () =>
       new Response(JSON.stringify({ error: { message: "Invalid parameter", code: 100, error_user_msg: "Texto com formato inválido." } }), { status: 400 });
-    expect(await resendRejectedTemplate(service, f.clinicId, "exam_preparation", meta)).toEqual({ ok: false, message: "rc_preparo_exame_v2: Texto com formato inválido." });
+    expect(await resendRejectedTemplate(service, f.clinicId, "exam_preparation", meta)).toEqual({ ok: false, message: "rc_preparo_exame_v3: Texto com formato inválido." });
     const { data } = await adminClient().from("whatsapp_templates").select("status").eq("clinic_id", f.clinicId).eq("template_key", "exam_preparation").single();
     expect(data!.status).toBe("rejected");
   });
@@ -283,7 +283,7 @@ describe("templates padrão na conta da clínica (Suporte)", () => {
           changes: [
             {
               field: "message_template_status_update",
-              value: { event: "APPROVED", message_template_id: 99, message_template_name: "rc_preparo_exame_v2", message_template_language: "pt_BR", reason: "NONE" },
+              value: { event: "APPROVED", message_template_id: 99, message_template_name: "rc_preparo_exame_v3", message_template_language: "pt_BR", reason: "NONE" },
             },
           ],
         },
@@ -366,7 +366,7 @@ describe("avisos ao paciente", () => {
 });
 
 describe("preparo do exame depois da entrega (webhook)", () => {
-  it("confirmação do exame entregue: o preparo sai pelo template com o link, uma vez só", async () => {
+  it("confirmação do exame entregue: o preparo sai pelo template com as instruções, uma vez só", async () => {
     await adminClient().from("services").update({ preparation_instructions: "Jejum de 4 horas." }).eq("id", f.ids.exame);
     const { appointment } = await bookAppointment(
       asDb(f.reception),
@@ -396,13 +396,9 @@ describe("preparo do exame depois da entrega (webhook)", () => {
 
     expect(meta.calls).toHaveLength(1);
     const sent = meta.calls[0].body as { template: { name: string; components: { parameters: { text: string }[] }[] } };
-    expect(sent.template.name).toBe("rc_preparo_exame_v2");
-    expect(sent.template.components[0].parameters.map((p) => p.text)).toEqual([
-      "Resp.",
-      "da Clínica Envio F62",
-      "Exame",
-      `${BASE_URL}${preparationPath(f.ids.exame)}`,
-    ]);
+    expect(sent.template.name).toBe("rc_preparo_exame_v3");
+    // C7.4: a v3 leva só o exame e as instruções, sem saudação nem link.
+    expect(sent.template.components[0].parameters.map((p) => p.text)).toEqual(["Exame", "Jejum de 4 horas."]);
     expect((await outbound(appointment.id)).map((m) => [m.message_type, m.status])).toEqual([
       ["appointment_confirmation", "read"],
       ["exam_preparation", "sent"],

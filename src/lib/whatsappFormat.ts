@@ -44,9 +44,10 @@ export function whatsAppTextSummary(text: string, maxLength = 60): string {
   return firstLine.length > maxLength ? `${firstLine.slice(0, maxLength - 1).trimEnd()}…` : firstLine;
 }
 
-// Limite do preparo: o WhatsApp aceita até 4096 caracteres por mensagem de
-// texto, e o bot manda o preparo + a linha do link na mesma mensagem.
-export const MAX_PREPARATION_LENGTH = 3800;
+// Limite do preparo (C7.4; cliente, 28/out/2026): com a conversa fechada, as
+// instruções vão dentro do modelo rc_preparo_exame_v3, que a Meta limita a
+// cerca de 1.000 caracteres no total (src/lib/preparationMessage.ts).
+export const MAX_PREPARATION_LENGTH = 700;
 
 // Normaliza o texto vindo do formulário: o textarea envia `\r\n`; tira
 // espaços sobrando no começo/fim, mas mantém as linhas em branco do meio

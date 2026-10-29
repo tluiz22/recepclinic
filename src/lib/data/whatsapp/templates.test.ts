@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { guidanceSender, preparationFileSender, preparationSender, reminderSender, type ClinicSender } from "./send";
 import {
+  LEGACY_PREPARATION_BODY,
   appointmentParams,
   appointmentPlace,
   cleanParam,
@@ -145,7 +146,7 @@ describe("quem envia (F6.2)", () => {
     ]);
   });
 
-  it("preparo: texto com as orientações (janela aberta) ou template com o link (fechada)", async () => {
+  it("preparo (C7.4): sem saudação nem link; texto com as quebras (janela aberta) ou a v3 numa linha (fechada); quem só tem a v2 segue com o link", async () => {
     const { sender, calls } = fakeSender();
     const base = {
       clinicId: "c1",
@@ -154,18 +155,29 @@ describe("quem envia (F6.2)", () => {
       contactName: "Maria Silva",
       patientName: "João",
       examName: "Espirometria",
-      instructions: "Jejum de 4 horas.",
+      instructions: "*Não usar* broncodilatador.\nVenha de roupa confortável.",
       pagePath: "/preparo/s1",
     };
     await preparationSender(sender)({ ...base, mode: "text", template: null });
-    await preparationSender(sender)({ ...base, mode: "template", template: { name: "rc_preparo_exame_v1", language: "pt_BR" } });
-    expect(calls[0][2]).toContain("Preparo do exame *Espirometria*:\n\nJejum de 4 horas.");
-    expect(calls[0][2]).toContain("https://app.exemplo.test/preparo/s1");
+    await preparationSender(sender)({ ...base, mode: "template", template: { name: "rc_preparo_exame_v3", language: "pt_BR" } });
+    await preparationSender(sender)({ ...base, mode: "template", template: { name: "rc_preparo_exame_v2", language: "pt_BR" } });
+    expect(calls[0]).toEqual([
+      "text",
+      "+5584999990000",
+      "Segue orientações para a realização do exame Espirometria:\n\n*Não usar* broncodilatador.\nVenha de roupa confortável.\n\nQualquer dúvida, responda esta mensagem.",
+    ]);
     expect(calls[1]).toEqual([
       "template",
       "+5584999990000",
       "exam_preparation",
-      { name: "rc_preparo_exame_v1", language: "pt_BR" },
+      { name: "rc_preparo_exame_v3", language: "pt_BR" },
+      ["Espirometria", "*Não usar* broncodilatador. · Venha de roupa confortável."],
+    ]);
+    expect(calls[2]).toEqual([
+      "template",
+      "+5584999990000",
+      "exam_preparation",
+      { name: "rc_preparo_exame_v2", language: "pt_BR", body: LEGACY_PREPARATION_BODY },
       ["Maria", "da Clínica Sorriso", "Espirometria", "https://app.exemplo.test/preparo/s1"],
     ]);
   });

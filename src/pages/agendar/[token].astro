@@ -36,7 +36,7 @@ import { buildDayStrip, type DayStrip } from "../../lib/dayStrip";
 import Icon from "../../components/admin/Icon.astro";
 import { formatPhoneBR } from "../../lib/phone";
 import { capitalize, vocabularyFor } from "../../lib/vocabulary";
-import { bookingPath, parsePublicId, preparationPath } from "../../lib/publicId";
+import { bookingPath, parsePublicId } from "../../lib/publicId";
 
 // Link curto ou o UUID dos links antigos (cliente, 18/out/2026: chave Pix no WhatsApp).
 const token = parsePublicId(Astro.params.token) ?? "";
@@ -227,13 +227,7 @@ const unavailableNote = !strip?.unavailable
             )
           }
         </dl>
-        {
-          page.service.hasPreparation && (
-            <a href={preparationPath(page.service.id)} class={`${PATIENT_BUTTON} w-full`}>
-              Ver o preparo do exame
-            </a>
-          )
-        }
+        {/* O preparo chega só pelo WhatsApp, sem a página (C7.4; cliente, 28/out/2026). */}
       </section>
     )
   }

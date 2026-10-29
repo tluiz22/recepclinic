@@ -69,6 +69,6 @@ describe("normalizeMultilineText", () => {
   });
 
   it("limite do preparo: 3800 caracteres", () => {
-    expect(MAX_PREPARATION_LENGTH).toBe(3800);
+    expect(MAX_PREPARATION_LENGTH).toBe(700);
   });
 });

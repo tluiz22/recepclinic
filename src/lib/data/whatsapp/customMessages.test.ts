@@ -23,21 +23,21 @@ describe("marcadores dos templates (F6.6)", () => {
   });
 
   it("texto próprio com os marcadores na ordem do padrão", () => {
-    expect(markersToTemplate("exam_preparation", "Oi, {nome}! {clinica} avisa: o exame {exame} tem preparo: {link} Até logo!")).toBe(
-      "Oi, {{1}}! {{2}} avisa: o exame {{3}} tem preparo: {{4}} Até logo!",
+    expect(markersToTemplate("consultation_guidance", "Oi, {nome}! {clinica} avisa: o paciente {paciente} tem orientações: {link} Até logo!")).toBe(
+      "Oi, {{1}}! {{2}} avisa: o paciente {{3}} tem orientações: {{4}} Até logo!",
     );
   });
 
   it("recusa marcador faltando, repetido, fora de ordem, desconhecido e texto que começa ou termina com marcador", () => {
-    expect(fieldError(() => markersToTemplate("exam_preparation", "Oi, {nome}! {clinica}: {exame}. Até logo"))).toBe("Falta: {link}");
-    expect(fieldError(() => markersToTemplate("exam_preparation", "Oi, {nome} {nome}! {clinica} {exame} {link}."))).toBe(
+    expect(fieldError(() => markersToTemplate("consultation_guidance", "Oi, {nome}! {clinica}: {paciente}. Até logo"))).toBe("Falta: {link}");
+    expect(fieldError(() => markersToTemplate("consultation_guidance", "Oi, {nome} {nome}! {clinica} {paciente} {link}."))).toBe(
       "Use cada campo automático uma vez só: {nome}",
     );
-    expect(fieldError(() => markersToTemplate("exam_preparation", "Oi, {clinica}! {nome} {exame} {link}."))).toBe(
-      "Os campos automáticos precisam ficar nesta ordem: {nome}, {clinica}, {exame}, {link}",
+    expect(fieldError(() => markersToTemplate("consultation_guidance", "Oi, {clinica}! {nome} {paciente} {link}."))).toBe(
+      "Os campos automáticos precisam ficar nesta ordem: {nome}, {clinica}, {paciente}, {link}",
     );
-    expect(fieldError(() => markersToTemplate("exam_preparation", "Oi, {nome}! {clinica} {exame} {link} {cpf}."))).toBe("Campo automático desconhecido: {cpf}");
-    expect(fieldError(() => markersToTemplate("exam_preparation", "Oi, {nome}! {clinica} {exame} {link}"))).toBe(
+    expect(fieldError(() => markersToTemplate("consultation_guidance", "Oi, {nome}! {clinica} {paciente} {link} {cpf}."))).toBe("Campo automático desconhecido: {cpf}");
+    expect(fieldError(() => markersToTemplate("consultation_guidance", "Oi, {nome}! {clinica} {paciente} {link}"))).toBe(
       "O texto não pode começar nem terminar com um campo automático (regra da Meta)",
     );
   });

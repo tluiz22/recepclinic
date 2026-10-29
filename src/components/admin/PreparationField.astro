@@ -15,6 +15,7 @@
 // imagem) com o texto do modelo embaixo.
 import { MAX_PREPARATION_LENGTH, whatsAppTextToHtml } from "../../lib/whatsappFormat";
 import { PREPARATION_FILE_TYPES } from "../../lib/data/config/preparationFile";
+import { preparationMessageText } from "../../lib/preparationMessage";
 import type { Dica } from "../../lib/ajuda/tipos";
 import HelpTip from "./ui/HelpTip.astro";
 
@@ -68,10 +69,12 @@ const tabClass =
         placeholder={"📋 *Orientações para o exame*\n\n*No dia do exame:*\n✅ Venha em jejum de 8 horas"}
         class="js-preparation-input w-full rounded-lg border border-line-strong px-3 py-2.5 font-mono text-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
       >{initial}</textarea>
-      <p class="mt-1 text-xs text-ink-soft">
-        Mesma formatação do WhatsApp: <code>*negrito*</code>, <code>_itálico_</code>,
-        <code>~riscado~</code> e emojis. Deixe em branco se o exame não tem preparo. Máximo de
-        {MAX_PREPARATION_LENGTH.toLocaleString("pt-BR")} caracteres.
+      <p class="mt-1 flex flex-wrap justify-between gap-x-3 text-xs text-ink-soft">
+        <span>
+          Mesma formatação do WhatsApp: <code>*negrito*</code>, <code>_itálico_</code>,
+          <code>~riscado~</code> e emojis. Deixe em branco se o exame não tem preparo.
+        </span>
+        <span class="js-preparation-count tabular-nums" aria-live="polite">{initial.length} de {MAX_PREPARATION_LENGTH}</span>
       </p>
       <div class="js-preparation-file mt-4 flex flex-col gap-1.5" data-name={file?.name ?? ""} data-type={file?.type ?? ""} data-size={file?.size ?? ""} data-url={file?.url ?? ""}>
         {
@@ -112,7 +115,7 @@ const tabClass =
         <div
           class="js-preparation-preview max-w-md whitespace-pre-line break-words rounded-lg bg-white px-3 py-2 text-sm text-ink shadow-sm"
           hidden={!initial}
-          set:html={initial ? whatsAppTextToHtml(initial) : ""}
+          set:html={initial ? whatsAppTextToHtml(preparationMessageText(examName || "…", initial)) : ""}
         />
         <p class="js-preparation-empty text-xs text-ink-soft" hidden={!!initial}>
           Sem preparo cadastrado.
@@ -136,6 +139,7 @@ const tabClass =
 
 <script>
   import { whatsAppTextToHtml } from "../../lib/whatsappFormat";
+  import { preparationMessageText } from "../../lib/preparationMessage";
 
   for (const field of document.querySelectorAll<HTMLElement>(".js-preparation-field")) {
     const input = field.querySelector<HTMLTextAreaElement>(".js-preparation-input")!;
@@ -144,12 +148,17 @@ const tabClass =
     const tabs = field.querySelectorAll<HTMLButtonElement>(".js-preparation-tab");
     const panels = field.querySelectorAll<HTMLElement>(".js-preparation-panel");
 
+    // A prévia mostra a mensagem como sai (C7.4): a linha antes, as instruções e a linha depois.
+    const count = field.querySelector<HTMLElement>(".js-preparation-count");
+    const examInput = document.querySelector<HTMLInputElement>('input[name="name"]');
     const render = () => {
       const text = input.value.trim();
-      preview.innerHTML = text ? whatsAppTextToHtml(text) : "";
+      preview.innerHTML = text ? whatsAppTextToHtml(preparationMessageText(examInput?.value.trim() || "…", text)) : "";
       preview.hidden = !text;
       empty.hidden = !!text;
+      if (count) count.textContent = `${input.value.length} de ${input.maxLength}`;
     };
+    examInput?.addEventListener("input", render);
 
     // Só esconde o painel inativo abaixo de lg (`max-lg:hidden`); no
     // computador os dois continuam visíveis, lado a lado.

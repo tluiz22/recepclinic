@@ -128,10 +128,10 @@ describe("serviços", () => {
     expect(validateService({ ...base, category: "exam", schedulingMode: "group" }).scheduling_mode).toBe("group");
   });
 
-  it("preparo até 3800 caracteres (limite do piloto)", () => {
+  it("preparo até 700 caracteres (cabe no modelo rc_preparo_exame_v3; C7.4)", () => {
     const exam = { ...base, category: "exam" as const };
-    expect(() => validateService({ ...exam, preparationInstructions: "a".repeat(3800) })).not.toThrow();
-    expect(fieldsOf(() => validateService({ ...exam, preparationInstructions: "a".repeat(3801) }))).toHaveProperty(
+    expect(() => validateService({ ...exam, preparationInstructions: "a".repeat(700) })).not.toThrow();
+    expect(fieldsOf(() => validateService({ ...exam, preparationInstructions: "a".repeat(701) }))).toHaveProperty(
       "preparationInstructions",
     );
   });

@@ -74,10 +74,13 @@ export const DEFAULT_TEMPLATES: DefaultTemplate[] = [
   },
   {
     // v2: a Meta classificou a v1 como marketing (07/out); o texto deixa claro que é o exame marcado.
+    // v3 (C7.4; cliente, 28/out/2026): sai logo depois da confirmação, então sem saudação e sem link; as
+    // instruções cadastradas numa linha só (src/lib/preparationMessage.ts). Quem ainda só tem a v2 aprovada
+    // continua com ela (preparationSender, LEGACY_PREPARATION).
     key: "exam_preparation",
-    name: "rc_preparo_exame_v2",
-    body: `${GREETING}\nPara o exame {{3}} que você marcou, siga as orientações de preparo neste link: {{4}}\n\n${ANY_QUESTION}`,
-    examples: ["Maria", "da Clínica Sorriso", "Espirometria", "https://app.recepclinic.com.br/preparo/exemplo"],
+    name: "rc_preparo_exame_v3",
+    body: "Segue orientações para a realização do exame {{1}}:\n\n{{2}}\n\nQualquer dúvida, responda esta mensagem.",
+    examples: ["Espirometria", "*Não usar* broncodilatador nas 4 horas anteriores. · Venha de roupa confortável."],
   },
   {
     // Arquivo do preparo, depois do preparo, com a conversa fechada (C7; cliente, 28/out/2026): o arquivo no
@@ -129,6 +132,9 @@ export const DEFAULT_TEMPLATES: DefaultTemplate[] = [
     documentHeader: true,
   },
 ];
+
+/** Texto da v2 do preparo (com o link), para quem ainda só tem ela aprovada (C7.4). */
+export const LEGACY_PREPARATION_BODY = `${GREETING}\nPara o exame {{3}} que você marcou, siga as orientações de preparo neste link: {{4}}\n\n${ANY_QUESTION}`;
 
 export function defaultTemplate(key: TemplateKey): DefaultTemplate | null {
   return DEFAULT_TEMPLATES.find((t) => t.key === key) ?? null;

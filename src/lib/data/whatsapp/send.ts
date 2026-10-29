@@ -6,12 +6,13 @@ import { GraphRequestError, sendMessage, uploadMedia, type Fetcher } from "./gra
 import type { SendOutcome } from "./messages";
 import { toWaNumber } from "./meta";
 import { preparationFileCaption, type PreparationFileSender, type PreparationSender } from "./preparation";
+import { preparationInstructionsOneLine, preparationMessageText } from "../../preparationMessage";
 import type { ReminderSender } from "./reminders";
 import type { DailySummarySender } from "./dailySummary";
 import type { OfferSender } from "../waitlist/offers";
 import { getApprovedTemplate } from "./connection";
 import { isCustomerServiceWindowOpen, recordOutboundMessage } from "./messages";
-import { appointmentParams, cleanParam, clinicLabel, defaultTemplate, fillTemplate, firstName, formatAppointmentWhen, formatSummaryDate, offerTypeWord, paramCount, type MessageArticle } from "./templates";
+import { appointmentParams, cleanParam, LEGACY_PREPARATION_BODY, clinicLabel, defaultTemplate, fillTemplate, firstName, formatAppointmentWhen, formatSummaryDate, offerTypeWord, paramCount, type MessageArticle } from "./templates";
 import { isAnonymizedPhone } from "../../anonymization";
 import { logError } from "../../log";
 import { classifySendError } from "./retryRules";
@@ -177,21 +178,32 @@ export function reminderSender(sender: ClinicSender): ReminderSender {
 /** Preparo do exame: texto com as orientações (janela aberta) ou template com o link (fechada). */
 export function preparationSender(sender: ClinicSender): PreparationSender {
   return (preparation) => {
-    const link = `${sender.baseUrl}${preparation.pagePath}`;
-    const greeting = `Olá, ${firstName(preparation.contactName)}! Aqui é ${sender.clinicLabel}.`;
+    // C7.4: sem saudação e sem link, só as instruções entre a linha antes e a linha depois.
     if (preparation.mode === "text" || !preparation.template) {
-      return sender.text(
-        preparation.phone,
-        `${greeting}\nPreparo do exame *${preparation.examName}*:\n\n${preparation.instructions}\n\nAs orientações também estão neste link: ${link}\n\nQualquer dúvida, é só responder esta mensagem.`,
-      );
+      return sender.text(preparation.phone, preparationMessageText(preparation.examName, preparation.instructions));
+    }
+    // Clínica que ainda só tem a v2 aprovada (ou uma versão personalizada dela): nome, clínica, exame e o link.
+    if (isLegacyPreparation(preparation.template)) {
+      // O texto da v2 conta os 4 campos (o padrão agora é a v3, com 2).
+      const template = { ...preparation.template, body: preparation.template.body ?? LEGACY_PREPARATION_BODY };
+      return sender.template(preparation.phone, "exam_preparation", template, [
+        firstName(preparation.contactName),
+        sender.clinicLabel,
+        preparation.examName,
+        `${sender.baseUrl}${preparation.pagePath}`,
+      ]);
     }
     return sender.template(preparation.phone, "exam_preparation", preparation.template, [
-      firstName(preparation.contactName),
-      sender.clinicLabel,
       preparation.examName,
-      link,
+      preparationInstructionsOneLine(preparation.instructions),
     ]);
   };
+}
+
+/** v1/v2 do preparo (com o link) e as versões personalizadas delas (4 campos: nome, clínica, exame, link). */
+export function isLegacyPreparation(template: { name: string; body?: string | null }): boolean {
+  if (/^rc_preparo_exame_v[12]$/.test(template.name)) return true;
+  return !!template.body && paramCount(template.body) === 4;
 }
 
 /**

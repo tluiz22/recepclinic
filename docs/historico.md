@@ -572,3 +572,14 @@ retomada fica no README). Para achar algo, buscar por data (ex.: `27/out`), fase
   - Correção (28/out, achado do cliente no staging): o envio do arquivo era bloqueado pela política de segurança (CSP,
     `default-src 'self'`); a tela do serviço passa a liberar o `connect-src` do Supabase, como a ficha do paciente; a
     prévia de imagem recém-escolhida usa `data:` (o `img-src` não libera `blob:`). O `npm run dev` não aplica o CSP.
+  - **C7.4 Preparo sem link** (cliente, 28/out): o preparo sai logo depois da confirmação, então sem saudação e sem
+    link. Mensagem (decisão do cliente): "Segue orientações para a realização do exame {exame}:" + as instruções +
+    "Qualquer dúvida, responda esta mensagem." Conversa aberta: texto com as quebras de linha; fechada: modelo novo
+    `rc_preparo_exame_v3` ({{1}} exame, {{2}} instruções numa linha, quebras viram " · "). Campo "Instruções de
+    preparo" limitado a **700 caracteres** (contador; o modelo da Meta tem ~1.000 no total); texto antigo maior é cortado
+    com "…" só no modelo. Quem ainda só tem a v2 aprovada (ou versão personalizada dela, 4 campos) segue com ela e o link
+    (`isLegacyPreparation`, `LEGACY_PREPARATION_BODY`); ao criar a v3, ela substitui a v2 e, em análise, o preparo da
+    conversa fechada fica "não enviado" (Reenviar depois). Marcadores da personalização: {exame}, {instrucoes}. Botão
+    "Ver o preparo do exame" tirado da tela "Atendimento confirmado" do link de agendamento. Prévia do cadastro mostra a
+    mensagem completa. `src/lib/preparationMessage.ts`. Sem migração. Staging em 28/out. Pendente de decisão: o menu de
+    informações do bot ("preparo de exames") ainda manda o texto com o link.
