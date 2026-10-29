@@ -612,3 +612,10 @@ retomada fica no README). Para achar algo, buscar por data (ex.: `27/out`), fase
     arquivo reescritos sem conversa aberta/fechada nem link (o bot também manda). `PreparationField.astro`,
     `ajuda/configuracoes.ts`. Sem migração. Conferida no local (escolher, salvar, texto guardado, tirar); publicada no
     staging em 29/out. **Validada pelo cliente no staging em 29/out.**
+- **C8 Escolha do serviço em Horários** (29/out): como no Marcar (C6), tipo e cartões, mas na própria tela, sem
+  recarregar (o formulário já tem dias e horas). "Qualquer serviço" (valor `todos`) é o primeiro botão da fila dos tipos
+  (decisão do cliente, 29/out) e esconde os cartões; trocar de tipo tira a escolha de fora dele, como no Marcar. Nenhum
+  tipo vem aberto; na edição e no "Cadastrar os horários" do serviço, abre no tipo dele. Busca com mais de 8 serviços;
+  "turma" e "desativado" no cartão; as vagas aparecem com o cartão de turma. `config/ServiceChoice.astro`; estilos do
+  botão e do cartão em `lib/servicePicker.ts` (os dois usam). Sem migração. Conferida no local (escolher, Qualquer
+  serviço, salvar, editar); publicada no staging em 29/out.

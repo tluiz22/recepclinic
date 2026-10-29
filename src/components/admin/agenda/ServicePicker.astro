@@ -5,7 +5,7 @@
 // escolha é um link que recarrega a tela, como o resto do Marcar. A busca
 // filtra os cartões no navegador e só aparece com mais de SEARCH_FROM serviços.
 import { CATEGORY_LABELS } from "../../../lib/serviceLabels";
-import { SEARCH_FROM, serviceTypes, type ServiceCategory } from "../../../lib/servicePicker";
+import { SEARCH_FROM, SERVICE_TYPE_PLURAL as plural, serviceCardClass as card, serviceTypes, typeChipClass as chip, type ServiceCategory } from "../../../lib/servicePicker";
 import { CONTROL } from "../ui/styles";
 
 type PickerService = { id: string; name: string; category: ServiceCategory; durationMinutes: number; schedulingMode: string };
@@ -21,15 +21,6 @@ interface Props {
 const { services, open, selectedId, typeHref, serviceHref } = Astro.props;
 const types = serviceTypes(services);
 const shown = open ? services.filter((s) => s.category === open) : [];
-const plural: Record<ServiceCategory, string> = { consultation: "consultas", return_visit: "retornos", exam: "exames" };
-const chip = (active: boolean) =>
-  `inline-flex min-h-11 items-center gap-1 rounded-lg border px-3.5 text-[15px] font-semibold no-underline sm:min-h-10 ${
-    active ? "border-brand bg-brand text-white" : "border-line-strong bg-white text-ink hover:border-brand"
-  }`;
-const card = (active: boolean) =>
-  `flex min-h-11 flex-col gap-0.5 rounded-[10px] border no-underline hover:border-brand ${
-    active ? "border-2 border-brand bg-[#e7f4ef] px-[13px] py-[9px]" : "border-line-strong bg-white px-3.5 py-2.5"
-  }`;
 ---
 
 <div class="flex flex-col gap-3" data-service-picker>
