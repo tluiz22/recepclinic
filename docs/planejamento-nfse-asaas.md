@@ -2,8 +2,9 @@
 
 > **Estado atual (retomar daqui), 29/out/2026.** **Planejamento concluído** (cliente, 29/out). Nada implementado.
 > A implementação será feita na branch **`faturamento`**, só com a autorização do cliente, na ordem da seção 12.
-> **Próxima sessão (cliente, 29/out): iniciar a fase N0** (perguntas ao Asaas e ao contador, testes na conta
-> Sandbox), sem código; depois a F12.1.
+> **N0 em andamento (29/out):** documentação conferida e perguntas prontas (seção 13); aguardando o cliente enviar
+> as perguntas ao Asaas e ao contador e criar a conta Sandbox (chave em `.env.asaas-sandbox`, fora do git) para o
+> roteiro de testes. Depois da N0: a F12.1, com o OK do cliente.
 
 Marcas: **[Código]** conferido no repositório; **[Asaas]** documentação oficial do Asaas; **[Oficial]** prefeitura ou
 governo; **[Cliente]** decisão ou informação do cliente; **[Hipótese]** conclusão técnica sem confirmação;
@@ -251,6 +252,80 @@ tem dados fiscais antes da N5.
 | N6 | Nota real em Mossoró e produção | autorização do cliente e do contador |
 | F12.3+ | Restante do faturamento; na F12.4+, as excedentes entram na cobrança automática | planejamento do faturamento |
 
+## 13. Fase N0 (29/out/2026)
+
+### 13.1 Respondido pela documentação do Asaas
+
+| Pendência | Resposta |
+|---|---|
+| Buscar nota pela referência (item 5) | **Sim.** `GET /v3/invoices` filtra por `externalReference`, `customer`, `payment`, `status` e `effectiveDate[Ge]`/`[Le]` (até 100 por página). Timeout ao agendar: procurar pelo `externalReference` antes de repetir. |
+| Tomador sem duplicar | `GET /v3/customers` filtra por `cpfCnpj` e `externalReference`; procurar antes de criar. |
+| Avisos ao paciente (item 4) | `POST /v3/customers` aceita `notificationDisabled: true` ("desabilitar o envio de notificações de cobrança"). **Falta confirmar** se cobre o e-mail da nota fiscal. |
+| Excedentes na fatura (item 6) | `PUT /v3/payments/{id}` altera o valor de cobrança `PENDING` ou `OVERDUE` (envia `billingType`, `value`, `dueDate`; gera `PAYMENT_UPDATED`). **Falta confirmar** para cobranças geradas por assinatura. |
+| Chaves das subcontas | **Ponto crítico novo:** a chave da subconta "fica disponível somente durante o Período de Avaliação"; continuar usando exige **adequação ao BaaS** (alinhada com o gerente de contas) ou subcontas de filiais (mesmo prefixo de CNPJ, não é o caso). O gerenciamento de chaves de subconta (`/v3/accounts/{id}/accessTokens`) exige liberação temporária de 2 h na interface e **lista de IPs autorizados** (a Vercel não tem IP fixo; decisão 11.15). |
+| Período de avaliação | Começa na 1ª subconta criada em produção; até 10 subcontas, R$ 2.000 em cobranças por subconta, 60 dias; depois, bloqueio de novas subcontas até a **homologação regulatória**, que pode ser pedida a qualquer momento. Subcontas do Sandbox não vão para a produção. |
+| Tarifa da subconta (item 1) | Só documentado o `isFeePayer` da Conta Escrow (quem paga a mensalidade dela). Nada sobre a tarifa da nota: **pergunta ao Asaas**. |
+
+### 13.2 Perguntas ao Asaas (texto para o cliente enviar ao gerente de contas ou ao suporte)
+
+> Somos o RecepClinic, um sistema (SaaS) para clínicas médicas. Queremos que cada clínica cliente emita NFS-e aos
+> seus pacientes pelo Asaas, com uma subconta por clínica criada pela nossa conta principal via API. A subconta seria
+> usada só para emitir notas (os pacientes pagam a clínica fora do Asaas). Piloto em Mossoró/RN.
+>
+> 1. Esse uso exige o modelo BaaS ou a subconta padrão atende? Se exigir BaaS, quais são as condições e os custos?
+> 2. A documentação diz que a chave de API da subconta só fica disponível durante o período de avaliação. Depois da
+>    homologação, as chaves das subcontas continuam válidas? Qual é o caminho para o nosso caso?
+> 3. O gerenciamento de chaves de subconta exige lista de IPs autorizados, e nossa hospedagem não tem IP fixo. Há
+>    alternativa?
+> 4. A tarifa por nota emitida (R$ 0,49 na tabela) é debitada da subconta que emite? Nossa conta principal pode pagar
+>    as tarifas das subcontas (débito direto na principal, `isFeePayer` ou transferência)? Se a subconta estiver sem
+>    saldo, a nota é emitida?
+> 5. Há tarifa de criação ou mensalidade por subconta no nosso contrato? Quais valores?
+> 6. A subconta precisa estar aprovada (documentos do titular) para configurar as informações fiscais e emitir nota?
+>    O que a clínica precisa enviar?
+> 7. O titular da subconta recebe e-mails do Asaas e precisa acessar o painel? O `notificationDisabled` do cliente
+>    também impede o e-mail da nota fiscal ao tomador (o paciente)?
+> 8. Os links `pdfUrl` e `xmlUrl` são públicos? Expiram? Podemos baixar e guardar uma cópia?
+> 9. Mossoró/RN: confirmam a emissão (a) para ME/EPP do Simples pelo Portal Nacional, com certificado A1, e (b) para
+>    empresa fora do Simples pelo sistema da prefeitura? O cancelamento automático é suportado lá?
+> 10. Na nossa cobrança mensal às clínicas (assinatura na conta principal), podemos alterar o valor da cobrança
+>     pendente gerada pela assinatura (`PUT /v3/payments/{id}`) para somar as notas excedentes do mês? Ou recomendam
+>     cobrança avulsa no mesmo vencimento?
+> 11. Homologação regulatória: o que é exigido para o nosso caso? Podemos iniciar antes de criar a primeira subconta
+>     em produção?
+> 12. Webhooks: podemos usar um só endereço para todas as subcontas, com um token diferente por subconta, configurado
+>     no campo `webhooks` da criação?
+> 13. Onde precisamos exibir a marca do Asaas, já que não haverá cobrança ao paciente pela subconta?
+
+### 13.3 Perguntas ao contador da clínica piloto
+
+> 1. Regime da clínica: Simples Nacional (ME/EPP), Lucro Presumido ou outro? Há regime especial (ex.: sociedade de
+>    profissionais)?
+> 2. Se for do Simples: a clínica já emite pelo Emissor Nacional? Qual a data em que passa a ser obrigatório
+>    (01/11/2026?)?
+> 3. CNAE usado nas notas.
+> 4. Código de serviço da lista nacional e código de tributação nacional; código NBS.
+> 5. Alíquota de ISS e retenções (ISS retido, PIS, COFINS, CSLL, IR, INSS) para nota a pessoa física.
+> 6. Série e número da última nota (ou DPS) emitida, para a numeração continuar.
+> 7. Inscrição municipal e cadastro na Sefaz Digital de Mossoró ativos? A clínica tem certificado A1 (e-CNPJ)?
+> 8. A descrição "Consulta. Paciente: Nome. Atendimento em dd/mm/aaaa." está adequada?
+> 9. Prazo para cancelar uma nota em Mossoró ou no Emissor Nacional.
+> 10. A DMED continua sendo gerada pelo RecepClinic a partir dos pagamentos registrados: alguma ressalva?
+
+### 13.4 Roteiro no Sandbox (depois que o cliente criar a conta e a chave)
+
+Chave em `.env.asaas-sandbox` (fora do git), nunca no chat. Só o Sandbox; nada na produção.
+1. `GET /v3/myAccount` (a chave funciona).
+2. `POST /v3/accounts`: subconta fictícia com endereço de Mossoró; guardar `apiKey` e `walletId` só no arquivo local.
+3. Na subconta: `GET /v3/fiscalInfo/municipalOptions` (autenticação, cancelamento, regime).
+4. `POST /v3/fiscalInfo` com dados de teste; `GET /v3/fiscalInfo`.
+5. `POST /v3/customers` com `notificationDisabled: true`; `GET /v3/customers?cpfCnpj=`.
+6. `POST /v3/invoices` (origem `customer`, `externalReference`) e `POST /v3/invoices/{id}/authorize`.
+7. `GET /v3/invoices/{id}` (estado, `pdfUrl`, `xmlUrl`) e `GET /v3/invoices?externalReference=`.
+8. Baixar o PDF e o XML (acesso e validade dos links).
+9. `POST /v3/invoices/{id}/cancel`, se o município de teste permitir.
+10. Extrato da subconta e da principal: onde a tarifa da nota foi debitada.
+
 ## Fontes (consultadas em 29/out/2026)
 
 - Asaas: [Notas fiscais](https://docs.asaas.com/docs/notas-fiscais), [FAQ](https://docs.asaas.com/docs/faq-de-notas-fiscais),
@@ -262,6 +337,12 @@ tem dados fiscais antes da N5.
   [Aprovação de subcontas](https://docs.asaas.com/docs/detalhamento-do-fluxo-de-aprova%C3%A7%C3%A3o-de-subcontas),
   [Preços e taxas](https://www.asaas.com/precos-e-taxas),
   [Portal Nacional (blog, 23/out/2026)](https://blog.asaas.com/emissao-de-nota-fiscal-pelo-portal-nacional/),
-  [Mudanças na NFS-e em 2026](https://blog.asaas.com/release/mudancas-na-nfs-e-no-asaas/).
+  [Mudanças na NFS-e em 2026](https://blog.asaas.com/release/mudancas-na-nfs-e-no-asaas/),
+  [Listar notas fiscais](https://docs.asaas.com/reference/listar-notas-fiscais.md),
+  [Criar cliente](https://docs.asaas.com/reference/criar-novo-cliente.md), [Listar clientes](https://docs.asaas.com/reference/listar-clientes.md),
+  [Atualizar cobrança](https://docs.asaas.com/reference/atualizar-cobranca-existente.md),
+  [Chaves de API de subcontas](https://docs.asaas.com/docs/gerenciamento-de-chaves-de-api-de-subcontas),
+  [FAQ do período de avaliação](https://docs.asaas.com/docs/faq-periodo-de-avaliacao), [BaaS](https://docs.asaas.com/docs/sobre-baas),
+  [Taxa por subconta (Escrow)](https://docs.asaas.com/docs/cobran%C3%A7a-da-taxa-por-subconta-configurada).
 - [Prefeitura de Mossoró: Decreto 7.497/2026](https://prefeiturademossoro.com.br/noticias/decreto-regulamenta-instituicao-da-nota-fiscal-de-servicos-eletronica-de-padrao-nacional-em-mossoro/15551);
   [Resolução CGSN 189/2026](https://www.legisweb.com.br/legislacao/?id=494855).
