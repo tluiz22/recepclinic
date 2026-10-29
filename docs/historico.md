@@ -553,3 +553,14 @@ retomada fica no README). Para achar algo, buscar por data (ex.: `27/out`), fase
     `app.storage_folder_clinic`). `preparationFile.ts`; rota `servicos/arquivo` (link de envio de uso único: o arquivo
     sobe ao escolher, sem passar pela Vercel); `PreparationField` com o campo, "Abrir", "Tirar o arquivo" e o segundo
     balão da prévia. Staging: simulação → aplicação → conferência (colunas e bucket) em 28/out.
+    **Validada pelo cliente no staging em 28/out.**
+  - **C7.2** (28/out): envio do arquivo depois da entrega do preparo (`sendPreparationFileAfterDelivery`, chamado no
+    webhook quando o `exam_preparation` chega ao celular; uma vez por atendimento); janela aberta: documento com a
+    legenda; fechada: modelo `exam_preparation_file` / `rc_preparo_arquivo_v1` ("Orientações de preparo do exame {{1}}
+    em anexo.", arquivo no topo, PDF de exemplo `preparationSamplePdf.ts` para a Meta, não personalizável). O arquivo
+    sai do armazenamento com a credencial da clínica e sobe à Meta (`uploadDocument` com o tipo do arquivo; imagem vai
+    como documento). "Reenviar preparo" cobre o preparo (o arquivo vem depois) ou só o arquivo que não chegou; reenvio
+    automático e Trilha ("Arquivo do preparo do exame"). Migração `20261103120000_modelo_arquivo_do_preparo` (o modelo
+    na lista aceita). Registro do modelo (antes previsto na C7.3) trazido para cá: sem ele a conversa fechada não envia.
+    Staging: simulação → aplicação → conferência em 28/out. Observação: no staging os modelos da conta nova ainda estão
+    em análise na Meta (nem a confirmação sai), então o envio real só dá para ver depois da aprovação.

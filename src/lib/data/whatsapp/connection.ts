@@ -402,6 +402,7 @@ export const TEMPLATE_KEYS = [
   "clinic_cancellation",
   "reminder",
   "exam_preparation",
+  "exam_preparation_file",
   "consultation_guidance",
   "waitlist_offer",
   "daily_summary_consultations",

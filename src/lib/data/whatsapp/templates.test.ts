@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { guidanceSender, preparationSender, reminderSender, type ClinicSender } from "./send";
+import { guidanceSender, preparationFileSender, preparationSender, reminderSender, type ClinicSender } from "./send";
 import {
   appointmentParams,
   appointmentPlace,
@@ -167,6 +167,29 @@ describe("quem envia (F6.2)", () => {
       "exam_preparation",
       { name: "rc_preparo_exame_v1", language: "pt_BR" },
       ["Maria", "da Clínica Sorriso", "Espirometria", "https://app.exemplo.test/preparo/s1"],
+    ]);
+  });
+
+  it("arquivo do preparo (C7): sobe o arquivo; documento com a legenda (janela aberta) ou o modelo com o arquivo no topo (fechada)", async () => {
+    const { sender, calls } = fakeSender();
+    sender.uploadDocument = async (file) => (calls.push(["upload", file.filename, file.mimeType]), "media-1");
+    sender.document = async (...args) => (calls.push(["document", ...args]), { sent: true, messageId: "w5" });
+    sender.documentTemplate = async (...args) => (calls.push(["documentTemplate", ...args]), { sent: true, messageId: "w6" });
+    const base = { phone: "+5584999990000", examName: "Espirometria", file: { bytes: new Uint8Array([1]), filename: "orientacoes.jpg", mimeType: "image/jpeg" } };
+    await preparationFileSender(sender)({ ...base, mode: "document", template: null });
+    await preparationFileSender(sender)({ ...base, mode: "template", template: { name: "rc_preparo_arquivo_v1", language: "pt_BR" } });
+    expect(calls).toEqual([
+      ["upload", "orientacoes.jpg", "image/jpeg"],
+      ["document", "+5584999990000", { mediaId: "media-1", filename: "orientacoes.jpg" }, "Orientações de preparo do exame Espirometria em anexo."],
+      ["upload", "orientacoes.jpg", "image/jpeg"],
+      [
+        "documentTemplate",
+        "+5584999990000",
+        "exam_preparation_file",
+        { name: "rc_preparo_arquivo_v1", language: "pt_BR" },
+        ["Espirometria"],
+        { mediaId: "media-1", filename: "orientacoes.jpg" },
+      ],
     ]);
   });
 

@@ -101,6 +101,8 @@ describe("templates padrão na conta da clínica (Suporte)", () => {
       ["clinic_cancellation", "pending", null],
       ["reminder", "approved", null],
       ["exam_preparation", "pending", null],
+      // C7: o arquivo do preparo também leva um PDF de exemplo, que sobe pelo app.
+      ["exam_preparation_file", null, "falta a variável WHATSAPP_APP_ID (ID do app RecepClinic na Meta) para enviar o PDF de exemplo"],
       // Orientações gerais da consulta (08/out).
       ["consultation_guidance", "pending", null],
       // F7: resumo do dia e oferta de vaga.

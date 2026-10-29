@@ -5,6 +5,7 @@ import { unwrap } from "../errors";
 import { getWhatsappAccessToken, getWhatsappConnection, listWhatsappTemplates, type TemplateKey, type TemplateStatus } from "./connection";
 import { createTemplate, deleteTemplate, editTemplate, fetchAllTemplates, fetchTemplatesByName, GraphRequestError, uploadTemplateExample, type Fetcher, type MetaTemplate } from "./graph";
 import { buildDanfse } from "../../nfse/danfse";
+import { samplePreparationPdf } from "../../preparationSamplePdf";
 import sampleNfseXml from "../../nfse/fixtures/nfse-exemplo.xml?raw";
 import { platformEnv } from "../../env";
 import { DEFAULT_TEMPLATES, defaultTemplate, rejectionReason, TEMPLATE_LANGUAGE, templateCreationPayload, templateEditPayload, templateStatusFromMeta } from "./templates";
@@ -97,6 +98,10 @@ async function documentHandle(template: (typeof DEFAULT_TEMPLATES)[number], toke
   if (!template.documentHeader) return undefined;
   if (!appId) {
     throw new GraphRequestError("PDF de exemplo", { code: null, message: "falta a variável WHATSAPP_APP_ID (ID do app RecepClinic na Meta) para enviar o PDF de exemplo" });
+  }
+  // Arquivo do preparo (C7): um PDF de exemplo com orientações fictícias.
+  if (template.key === "exam_preparation_file") {
+    return uploadTemplateExample(appId, token, { bytes: await samplePreparationPdf(), filename: "orientacoes-exemplo.pdf", mimeType: "application/pdf" }, fetcher);
   }
   const bytes = await buildDanfse(sampleNfseXml);
   return uploadTemplateExample(appId, token, { bytes, filename: "nota-fiscal-exemplo.pdf", mimeType: "application/pdf" }, fetcher);

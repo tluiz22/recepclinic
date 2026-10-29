@@ -80,6 +80,15 @@ export const DEFAULT_TEMPLATES: DefaultTemplate[] = [
     examples: ["Maria", "da Clínica Sorriso", "Espirometria", "https://app.recepclinic.com.br/preparo/exemplo"],
   },
   {
+    // Arquivo do preparo, depois do preparo, com a conversa fechada (C7; cliente, 28/out/2026): o arquivo no
+    // topo e o mínimo de texto (a Meta exige texto e recusa variável no fim).
+    key: "exam_preparation_file",
+    name: "rc_preparo_arquivo_v1",
+    body: "Orientações de preparo do exame {{1}} em anexo.",
+    examples: ["Espirometria"],
+    documentHeader: true,
+  },
+  {
     // Orientações gerais da consulta, fora da janela de 24h (texto aprovado pelo cliente em 08/out).
     key: "consultation_guidance",
     name: "rc_orientacoes_consulta_v1",
@@ -130,7 +139,7 @@ export function templatesInUse(features: readonly FeatureKey[]): DefaultTemplate
   const has = (feature: FeatureKey) => features.includes(feature);
   return DEFAULT_TEMPLATES.filter(
     (t) =>
-      (t.key !== "exam_preparation" || has("exams")) &&
+      ((t.key !== "exam_preparation" && t.key !== "exam_preparation_file") || has("exams")) &&
       (!t.key.startsWith("daily_summary") || has("daily_summary")) &&
       (!t.key.startsWith("daily_summary_exams") || has("exams")) &&
       (t.key !== "waitlist_offer" || has("waitlist")) &&

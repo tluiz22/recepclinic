@@ -5,7 +5,7 @@ import { getSendingSetup, type TemplateKey } from "./connection";
 import { GraphRequestError, sendMessage, uploadMedia, type Fetcher } from "./graph";
 import type { SendOutcome } from "./messages";
 import { toWaNumber } from "./meta";
-import type { PreparationSender } from "./preparation";
+import { preparationFileCaption, type PreparationFileSender, type PreparationSender } from "./preparation";
 import type { ReminderSender } from "./reminders";
 import type { DailySummarySender } from "./dailySummary";
 import type { OfferSender } from "../waitlist/offers";
@@ -40,8 +40,8 @@ export type ClinicSender = {
   list(to: string, body: string, button: string, sections: ListSection[]): Promise<SendOutcome>;
   /** Botões de resposta (até 3, título com até 20 caracteres). */
   buttons(to: string, body: string, buttons: ReplyButton[]): Promise<SendOutcome>;
-  /** Sobe um arquivo (ex.: o PDF da nota, F11.5) e devolve o id da mídia na Meta. */
-  uploadDocument?(file: { bytes: Uint8Array; filename: string }): Promise<string>;
+  /** Sobe um arquivo (ex.: o PDF da nota, F11.5; o arquivo do preparo, C7) e devolve o id da mídia na Meta. */
+  uploadDocument?(file: { bytes: Uint8Array; filename: string; mimeType?: string }): Promise<string>;
   /** Template com o documento no topo (rc_nota_fiscal_v1). */
   documentTemplate?(
     to: string,
@@ -144,7 +144,7 @@ export async function createClinicSender(
       );
     },
     uploadDocument(file) {
-      return uploadMedia(setup.phoneNumberId, setup.accessToken, { ...file, mimeType: "application/pdf" }, fetcher);
+      return uploadMedia(setup.phoneNumberId, setup.accessToken, { ...file, mimeType: file.mimeType ?? "application/pdf" }, fetcher);
     },
     documentTemplate(to, key, template, params, document) {
       const text = template.body ?? defaultTemplate(key)?.body ?? null;
@@ -191,6 +191,24 @@ export function preparationSender(sender: ClinicSender): PreparationSender {
       preparation.examName,
       link,
     ]);
+  };
+}
+
+/**
+ * Arquivo do preparo (C7): sobe o arquivo à Meta e manda como documento com a
+ * legenda (janela aberta) ou pelo modelo com o arquivo no topo (fechada).
+ */
+export function preparationFileSender(sender: ClinicSender): PreparationFileSender {
+  return async (preparation) => {
+    if (!sender.uploadDocument || !sender.document || !sender.documentTemplate) {
+      return { sent: false, reason: "envio de arquivo indisponível" };
+    }
+    const mediaId = await sender.uploadDocument(preparation.file);
+    const document = { mediaId, filename: preparation.file.filename };
+    if (preparation.mode === "document" || !preparation.template) {
+      return sender.document(preparation.phone, document, preparationFileCaption(preparation.examName));
+    }
+    return sender.documentTemplate(preparation.phone, "exam_preparation_file", preparation.template, [preparation.examName], document);
   };
 }
 
