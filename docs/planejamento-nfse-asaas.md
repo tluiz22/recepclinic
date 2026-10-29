@@ -401,8 +401,8 @@ Conta principal do Sandbox (PJ) e uma subconta fictícia com endereço em Mossor
 **Consequências para o plano:**
 1. **Ação do cliente:** pedir a avaliação BaaS ao Asaas e apresentar a arquitetura (seções 5 e 8). Sem isso, nada vai
    para a produção (N2 em diante só no Sandbox).
-2. **Custo novo:** R$ 12,90 por clínica habilitada, na conta principal. **[Pendência]** decisão do cliente: absorver
-   ou cobrar da clínica (item `setup` já existe em `billing_charge_items`).
+2. **Custo novo:** R$ 12,90 por clínica habilitada, na conta principal. **Decidido (cliente, 29/out):** o RecepClinic
+   absorve; não aparece na fatura da clínica (pode ser considerado no preço da implantação).
 3. **Excedentes:** **decidido (cliente, 29/out):** cobrança avulsa separada, mesmo vencimento; a da assinatura não
    muda (seção 3).
 4. **Chaves:** guardar a chave da criação no Vault (já previsto). Clínica 6 meses sem nota perde a chave; recriar
