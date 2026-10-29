@@ -16,7 +16,7 @@
 >   detalhes no [`historico.md`](historico.md), busca "C4", "C5", "C6"). **C7 Arquivo no preparo do exame** (busca "C7"):
 >   C7.1–C7.5 no staging (migrações `20261102120000`, `20261103120000` e `20261104120000` aplicadas lá). **C7.5**
 >   (envio único, `rc_preparo_arquivo_v2`, bot sem link) validada em 29/out; **C7.6** (cadastro e ajudas)
->   no staging, aguarda a validação do cliente; depois **C8** (Horários); produção no fim, com autorização. Envio real no staging depende da Meta aprovar os modelos da conta nova.
+>   validada em 29/out; em andamento: **C8** (Horários); produção no fim, com autorização. Envio real no staging depende da Meta aprovar os modelos da conta nova.
 > - **CRM concluído** (28/out; [`crm.md`](crm.md)): validado no staging e na produção desde 28/out.
 > - **Faturamento do SaaS (Asaas)** ([`planejamento-faturamento-saas.md`](planejamento-faturamento-saas.md)): planejamento
 >   aprovado (28/out), nada implementado; trabalho na branch **`faturamento`** (a `main` fica para correções urgentes
