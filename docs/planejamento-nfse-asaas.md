@@ -2,9 +2,10 @@
 
 > **Estado atual (retomar daqui), 29/out/2026.** **Planejamento concluído** (cliente, 29/out). Nada implementado.
 > A implementação será feita na branch **`faturamento`**, só com a autorização do cliente, na ordem da seção 12.
-> **N0 em andamento (29/out):** documentação conferida e perguntas prontas (seção 13); aguardando o cliente enviar
-> as perguntas ao Asaas e ao contador e criar a conta Sandbox (chave em `.env.asaas-sandbox`, fora do git) para o
-> roteiro de testes. Depois da N0: a F12.1, com o OK do cliente.
+> **N0 em andamento (29/out):** documentação conferida, nota de referência lida e **roteiro do Sandbox executado**
+> (seção 13.6: emissão em Mossoró funciona ponta a ponta). Aguardando as respostas do Asaas (sobretudo chaves das
+> subcontas depois da avaliação e saldo negativo), do contador e da secretária. Depois da N0: a F12.1, com o OK do
+> cliente.
 
 Marcas: **[Código]** conferido no repositório; **[Asaas]** documentação oficial do Asaas; **[Oficial]** prefeitura ou
 governo; **[Cliente]** decisão ou informação do cliente; **[Hipótese]** conclusão técnica sem confirmação;
@@ -342,6 +343,38 @@ Chave em `.env.asaas-sandbox` (fora do git), nunca no chat. Só o Sandbox; nada 
 8. Baixar o PDF e o XML (acesso e validade dos links).
 9. `POST /v3/invoices/{id}/cancel`, se o município de teste permitir.
 10. Extrato da subconta e da principal: onde a tarifa da nota foi debitada.
+
+### 13.6 Resultado do roteiro no Sandbox (29/out/2026)
+
+Conta principal do Sandbox (PJ) e uma subconta fictícia com endereço em Mossoró (IBGE 2408003); chaves em
+`.env.asaas-sandbox` e `.env.asaas-sandbox-sub` (fora do git); scripts descartáveis, fora do repositório.
+
+| Passo | Resultado |
+|---|---|
+| Chave e conta | `GET /v3/myAccount` 200. |
+| Subconta | `POST /v3/accounts` 200 (`apiKey` e `walletId` na resposta). Recusas úteis: CEP genérico inválido; CNPJ já usado por outra conta do Sandbox. Situação inicial: `general: PENDING`. |
+| Regras de Mossoró | `authenticationType: CERTIFICATE` (**A1 obrigatório**), `supportsCancellation: true`, `usesSpecialTaxRegimes: true` (lista "-", Microempresa Municipal, Estimativa, Sociedade de Profissionais, Cooperativa, MEI, ME/EPP), `usesServiceListItem: true` (ex.: "04.01"), `usesNbs: true`, `usesStateInscription: false`. |
+| Configuração fiscal | `POST /v3/fiscalInfo` (multipart) aceito com `simplesNacional=false`, inscrição, CNAE, `specialTaxRegime=0`, `serviceListItem=04.01`, NBS **formatado** (`1.2301.22.00`; sem pontos é recusado), série e número, certificado A1 de teste. Volta `useNationalPortal: false` (**emissão pelo sistema da prefeitura**). |
+| Aprovação | **Sem o cadastro geral aprovado a nota não sai:** "Você precisa ter seu cadastro geral aprovado para emitir notas fiscais." No Sandbox, `POST /v3/sandbox/myAccount/approve`; na produção, documentos do titular (a clínica). |
+| Tomador | `POST /v3/customers` com `notificationDisabled: true`; `GET /v3/customers?cpfCnpj=` encontra. **Para autorizar, o tomador precisa de e-mail e endereço completo com CEP válido** (recusa: "E-mail do cliente incompleto; Endereço do cliente incompleto; CEP do cliente é inválido"). |
+| Nota | `POST /v3/invoices` com `customer`, `externalReference`, `municipalServiceCode=04.01.01`, `municipalServiceName`, `taxes` (ISS 5%, não retido; CST 200, cClassTrib 200029, indicador 100301) **e `pisCofinsTaxStatus`** (obrigatório; teste com `NONE`). IBS/CBS calculados pelo Asaas **iguais aos da nota real** (IBS estadual 0,04% = R$ 0,17; CBS 0,36% = R$ 1,54). `GET /v3/invoices?externalReference=` encontra a nota. |
+| Autorização | `POST /authorize` respondeu `SYNCHRONIZED` (**estado fora da lista documentada**: o código deve aceitar estados desconhecidos); `AUTHORIZED` em cerca de 5 s, com número, `pdfUrl` e `xmlUrl`. |
+| PDF e XML | Links em `sandbox.asaas.com/000/file/…`, **abertos sem login** (200, PDF de 16 KB e XML de 4 KB): tratar como confidenciais, copiar para o bucket privado e nunca mostrar o link à clínica. Validade não informada. |
+| Cancelamento | `POST /cancel` → `PROCESSING_CANCELLATION` → `CANCELED` em poucos segundos. |
+| Tarifa | **R$ 0,49 debitado da subconta** (`INVOICE_FEE`, "Taxa de emissão da nota fiscal de serviço nr. …"), que ficou com **saldo negativo** (−0,49); a conta principal não foi cobrada; **a tarifa não volta no cancelamento** (confirma a contagem das canceladas). A emissão não foi barrada pelo saldo zero (no Sandbox). |
+| Webhooks | Não testados (precisam de endereço público): ficam para a N3, no staging. |
+
+**Consequências para o plano:**
+1. **Dados do tomador (decisão de negócio):** a nota exige e-mail e endereço completo de quem pagou; hoje o
+   Financeiro guarda CPF e nome (e o e-mail para envio da nota, opcional). O Financeiro do contato e do paciente
+   precisa passar a guardar o endereço e o e-mail de quem paga (só no módulo, como o CPF).
+2. **Tarifa:** cai na subconta, que não recebe dinheiro; o RecepClinic precisa cobrir o saldo negativo (transferência
+   da conta principal ou condição do Asaas). Pergunta 4 ao Asaas continua: o que acontece com saldo negativo
+   prolongado.
+3. **Aprovação da subconta** entra no fluxo de habilitação (Suporte acompanha `GET /v3/myAccount/status` e o
+   webhook de aprovação); a clínica envia os documentos.
+4. **Contador:** confirmar o `pisCofinsTaxStatus` correto (o teste usou `NONE`, como na nota de referência, sem PIS
+   e COFINS) e o CNAE (o teste usou 8630503, sem confirmação).
 
 ## Fontes (consultadas em 29/out/2026)
 
