@@ -328,8 +328,10 @@ Só os dados da clínica (o arquivo e os dados do tomador não ficam no projeto)
   `taxSituationCode`, `taxClassificationCode` e `operationIndicatorCode` do Asaas).
 - DPS série **2026**, número no formato 26000000000xx (para o `rpsSerie`/`rpsNumber` na implantação).
 - Descrição usada hoje: "REFERENTE A CONSULTA DE [paciente]", com o responsável como tomador (o modelo do plano).
-- Falta: **secretária** (site e login usados para emitir: certificado A1 ou usuário e senha) e **contador** (CNAE e
-  confirmação dos códigos do IBS/CBS).
+- **Secretária (29/out):** entra com **usuário e senha** (site ainda não informado). **Atenção:** pelo Asaas, Mossoró
+  exige **certificado A1** (`authenticationType: CERTIFICATE`, seção 13.6); usuário e senha não servem. **[Pendência]**
+  a clínica tem A1 de pessoa jurídica (o contador costuma ter)? Se não tiver, precisa comprar antes da N6.
+- Falta: site da secretária e **contador** (CNAE, códigos do IBS/CBS, PIS/COFINS e o certificado A1).
 
 ### 13.4 Roteiro no Sandbox (depois que o cliente criar a conta e a chave)
 
