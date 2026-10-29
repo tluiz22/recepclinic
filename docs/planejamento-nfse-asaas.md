@@ -4,7 +4,7 @@
 > A implementação será feita na branch **`faturamento`**, só com a autorização do cliente, na ordem da seção 12.
 > **N0 em andamento (29/out):** documentação conferida, nota de referência lida e **roteiro do Sandbox executado**
 > (seção 13.6: emissão em Mossoró funciona ponta a ponta). **Asaas respondeu (13.7):** exige BaaS; chaves seguem
-> válidas no BaaS. Pendentes: decisões do cliente (13.7), saldo negativo (Asaas), contador e secretária. Depois da
+> válidas no BaaS. Decisões do cliente registradas; conta de produção aberta; avaliação BaaS e formulário de IP enviados. Pendentes: Asaas (BaaS, saldo negativo), contador e secretária. Depois da
 > N0: a F12.1, com o OK do cliente.
 
 Marcas: **[Código]** conferido no repositório; **[Asaas]** documentação oficial do Asaas; **[Oficial]** prefeitura ou
@@ -409,6 +409,8 @@ Conta principal do Sandbox (PJ) e uma subconta fictícia com endereço em Mossor
    exige IP fixo (decisão 11.15: "não por agora"). **Decidido (cliente, 29/out):** mantém a 11.15; pedir alternativa
    ao time de Produto do Asaas pelo [formulário](https://forms.gle/UzvzStNa9Fdhr1X68) (indicado em "Whitelist de IPs" da documentação), junto com a avaliação BaaS. Até a resposta, o Suporte acompanha as
    clínicas sem nota há muito tempo.
+   **Enviado (cliente, 29/out):** formulário de IP; resposta ao suporte pedindo a avaliação BaaS e reperguntando
+   saldo negativo e e-mail da nota ao tomador. Conta principal de produção aberta (sem subconta e sem chave de API).
 5. **Marca do Asaas** nas telas de habilitação fiscal e no contrato com a clínica: entra na N2 e nos termos.
 6. **Reperguntar ao Asaas:** saldo negativo da subconta (a nota continua saindo? como a principal cobre?).
 7. **Teste na N3 (staging):** tomador com `notificationDisabled: true` e e-mail nosso; conferir se chega e-mail da
