@@ -3,9 +3,9 @@
 > **Estado atual (retomar daqui), 29/out/2026.** **Planejamento concluído** (cliente, 29/out). Nada implementado.
 > A implementação será feita na branch **`faturamento`**, só com a autorização do cliente, na ordem da seção 12.
 > **N0 em andamento (29/out):** documentação conferida, nota de referência lida e **roteiro do Sandbox executado**
-> (seção 13.6: emissão em Mossoró funciona ponta a ponta). Aguardando as respostas do Asaas (sobretudo chaves das
-> subcontas depois da avaliação e saldo negativo), do contador e da secretária. Depois da N0: a F12.1, com o OK do
-> cliente.
+> (seção 13.6: emissão em Mossoró funciona ponta a ponta). **Asaas respondeu (13.7):** exige BaaS; chaves seguem
+> válidas no BaaS. Pendentes: decisões do cliente (13.7), saldo negativo (Asaas), contador e secretária. Depois da
+> N0: a F12.1, com o OK do cliente.
 
 Marcas: **[Código]** conferido no repositório; **[Asaas]** documentação oficial do Asaas; **[Oficial]** prefeitura ou
 governo; **[Cliente]** decisão ou informação do cliente; **[Hipótese]** conclusão técnica sem confirmação;
@@ -379,6 +379,39 @@ Conta principal do Sandbox (PJ) e uma subconta fictícia com endereço em Mossor
    webhook de aprovação); a clínica envia os documentos.
 4. **Contador:** confirmar o `pisCofinsTaxStatus` correto (o teste usou `NONE`, como na nota de referência, sem PIS
    e COFINS) e o CNAE (o teste usou 8630503, sem confirmação).
+
+### 13.7 Resposta do Asaas (suporte, 29/out/2026)
+
+| # | Resposta **[Asaas]** |
+|---|---|
+| 1 | **Exige BaaS**, alinhado e habilitado antes. Sem custo de implantação. Avaliação: 10 subcontas, R$ 2.000 por subconta ou 60 dias. |
+| 2 | **No BaaS, as chaves das subcontas continuam válidas** depois da avaliação. A principal pode criar chave nova pela API. **Expiram após 6 meses sem uso.** |
+| 3 | Gerenciar chaves exige **lista de IPs**. Sem IP fixo: mandar os detalhes pelo formulário para o time de Produto avaliar alternativa. |
+| 4 | R$ 0,49 por nota, emitida em nome da subconta. **Não responderam** quem paga nem o que acontece com saldo negativo. |
+| 5 | **R$ 12,90 por subconta, uma vez, descontado da principal.** Sem mensalidade da subconta. |
+| 6 | Subconta aprovada e configuração fiscal antes de emitir. Documentos pelo `onboardingUrl` ou pela API. |
+| 7 | No BaaS a clínica não usa o painel do Asaas. **`notificationDisabled` não confirmado** para o e-mail da nota: validar antes. |
+| 8 | Pode guardar cópia. Validade dos links não informada (já previsto: cópia no bucket). |
+| 9 | Ler sempre `municipalOptions` (já previsto). **Simples Nacional sai do sistema da prefeitura para o Portal Nacional em 01/11/2026**; autenticação por A1 ou CNPJ e senha do Portal Nacional. Piloto fora do Simples: segue o teste (prefeitura). |
+| 10 | **Recomendam não alterar a cobrança da assinatura: cobrança avulsa separada para as excedentes.** |
+| 11 | Homologação pode ser pedida já, no processo de avaliação BaaS (checklist, documentos, adequações). |
+| 12 | Um só endereço de webhook para todas as subcontas, com `authToken` (já previsto). |
+| 13 | **Marca, links e textos de responsabilidade do Asaas** nas telas, comprovantes, onboarding e contratos com a clínica; conferidos na homologação. |
+
+**Consequências para o plano:**
+1. **Ação do cliente:** pedir a avaliação BaaS ao Asaas e apresentar a arquitetura (seções 5 e 8). Sem isso, nada vai
+   para a produção (N2 em diante só no Sandbox).
+2. **Custo novo:** R$ 12,90 por clínica habilitada, na conta principal. **[Pendência]** decisão do cliente: absorver
+   ou cobrar da clínica (item `setup` já existe em `billing_charge_items`).
+3. **Excedentes:** cobrança avulsa separada, não alterar a da assinatura. **[Pendência]** decisão do cliente (seção 3
+   previa somar à mensalidade).
+4. **Chaves:** guardar a chave da criação no Vault (já previsto). Clínica 6 meses sem nota perde a chave; recriar
+   exige IP fixo (decisão 11.15: "não por agora"). **[Pendência]** com o cliente: formulário ao Produto do Asaas,
+   Static IPs da Vercel ou aceitar recriar a chave pela interface do Asaas.
+5. **Marca do Asaas** nas telas de habilitação fiscal e no contrato com a clínica: entra na N2 e nos termos.
+6. **Reperguntar ao Asaas:** saldo negativo da subconta (a nota continua saindo? como a principal cobre?).
+7. **Teste na N3 (staging):** tomador com `notificationDisabled: true` e e-mail nosso; conferir se chega e-mail da
+   nota.
 
 ## Fontes (consultadas em 29/out/2026)
 
