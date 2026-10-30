@@ -1,0 +1,242 @@
+---
+// Vendas › Implantação (cliente, 30/out/2026): o roteiro para colocar uma
+// clínica nova no ar, do contrato à ativação, com o que é do Suporte e o que é
+// do Administrador da clínica lado a lado em cada etapa. Veio do roteiro do
+// piloto (plano, F10 item 7), da F8 (conexão por coexistência) e da parte P do
+// staging.md. Atualizar junto quando o caminho da implantação mudar.
+import Card from "../config/Panel.astro";
+import { formatCentsBRL } from "../../../lib/money";
+import { PRICES } from "../../../lib/plans";
+
+const setup = formatCentsBRL(PRICES.setupCents);
+
+const H2 = "font-display text-[17px] leading-tight font-bold text-ink sm:text-lg";
+const LANE = "text-[12.5px] font-bold uppercase tracking-[.06em]";
+
+const ROTEIRO_IPHONE = "https://claude.ai/artifact/C8E3xDoshuXE3M91qeDDHq";
+const ROTEIRO_ANDROID = "https://claude.ai/artifact/78hQ2cXQph4wvXHKPXexnm";
+
+// Pré-requisitos: o que a clínica precisa ter antes da sessão de conexão.
+const prereqs = [
+  {
+    title: "Conta pessoal no Facebook, com login funcionando",
+    text: "Do Administrador da clínica (quem vai conectar). É com ela que se cria o portfólio empresarial da clínica na janela da Meta. Conferir antes se a pessoa lembra a senha e recebe o código de confirmação. Se ela já criou muitos portfólios, a Meta pode recusar um novo (\"limite do número de negócios\"); aí outra pessoa de confiança cria e adiciona o Administrador.",
+  },
+  {
+    title: "Número da clínica no WhatsApp Business",
+    text: "O app WhatsApp Business (versão 2.24.17 ou mais nova) no celular com o chip do número, já em uso. Se a clínica usa o WhatsApp comum, passa antes para o Business pelo roteiro do aparelho (as conversas vêm junto).",
+    links: [{ label: "Roteiro iPhone", href: ROTEIRO_IPHONE }, { label: "Roteiro Android", href: ROTEIRO_ANDROID }],
+  },
+  {
+    title: "Computador com navegador",
+    text: "A janela de conexão da Meta não funciona no navegador do celular. Na sessão, o celular do número fica ao lado do computador (para ler o QR code).",
+  },
+  {
+    title: "Cartão de crédito para a Meta",
+    text: "As mensagens automáticas (lembretes, avisos) são cobradas pela Meta direto da clínica, à parte do RecepClinic. O cartão é cadastrado no Gerenciador do WhatsApp da clínica.",
+  },
+  {
+    title: "Endereço de site",
+    text: "A janela da Meta pede um site no perfil comercial. Se a clínica não tiver, combinar com o Suporte antes da sessão.",
+  },
+  {
+    title: "E-mail do Administrador",
+    text: "Recebe o convite do RecepClinic (vale 24 horas). Pode ser o mesmo do Facebook ou outro.",
+  },
+  {
+    title: "Dados para a configuração",
+    text: "Profissionais (registro e RQE), locais, serviços com preço e preparo, horários de atendimento, feriados, convênios aceitos, formas de pagamento e as consultas já marcadas (de hoje em diante).",
+  },
+];
+
+// Etapas, na ordem. Cada uma com o que o Suporte faz e o que a clínica faz.
+type Lane = string[];
+const steps: { title: string; when?: string; support: Lane; clinic: Lane; note?: string }[] = [
+  {
+    title: "Contratação",
+    support: [
+      "Simula o plano com a clínica em Vendas › Planos (Básico ou Completo, adicionais, profissionais).",
+      `Envia o contrato e o termo de tratamento de dados; cobra a implantação (${setup}, salvo se isenta).`,
+      "Manda à clínica a lista de pré-requisitos (quadro acima).",
+    ],
+    clinic: [
+      "Assina o contrato e o termo de tratamento de dados.",
+      "Paga a implantação.",
+      "Separa os pré-requisitos.",
+    ],
+  },
+  {
+    title: "Criar a clínica",
+    support: [
+      "Sistema › Clínicas › Nova clínica: nome, perfil, fuso e e-mail do Administrador. A clínica nasce Em implantação: nada sai para os pacientes pelo WhatsApp.",
+      "Sistema › Matriz: plano, itens liberados e limite de profissionais.",
+      "Se o convite não chegar: Sistema › Clínicas › clínica › Convites › Reenviar convite.",
+    ],
+    clinic: [
+      "O Administrador abre o e-mail do convite (vale 24 horas) e cria a senha.",
+      "Entra no painel: a faixa \"Clínica em implantação\" aparece no topo.",
+    ],
+  },
+  {
+    title: "WhatsApp Business no celular",
+    support: [
+      "Envia o roteiro do aparelho (iPhone ou Android) se o número ainda está no WhatsApp comum.",
+      "Confere com a clínica: app atualizado, perfil comercial com nome e categoria Saúde.",
+    ],
+    clinic: [
+      "Passa o número para o WhatsApp Business, se ainda não estiver.",
+      "Atualiza o app e confere que envia e recebe mensagens.",
+    ],
+  },
+  {
+    title: "Configuração",
+    support: [
+      "Se a clínica preferir que o Suporte configure: Sistema › Clínicas › clínica › Pedir as informações ao Administrador (formulário por link, vale 30 dias).",
+      "Com as respostas, cadastra em Configurações (Abrir a clínica para configurar) e marca como revisado.",
+    ],
+    clinic: [
+      "Segue o guia do Início, na ordem: Profissional → Local → Agenda → Serviços → Horários.",
+      "Depois: Feriados, Convênios, Lembretes, Mensagens e Equipe (convites para a recepção).",
+      "Ou responde o formulário do Suporte, se combinado assim.",
+    ],
+  },
+  {
+    title: "Conectar o WhatsApp",
+    when: "Sessão por chamada de vídeo, com a tela do Administrador compartilhada.",
+    support: [
+      "Acompanha a sessão e orienta cada tela da janela da Meta.",
+      "No fim, confere o cartão Configurações › WhatsApp › Conexão: \"Conectado, coexistência\", com as duas sincronizações.",
+      "Os templates de mensagem são criados sozinhos na conexão; confere a lista em Templates (Suporte).",
+    ],
+    clinic: [
+      "No computador: Configurações › WhatsApp › Conectar WhatsApp.",
+      "Na janela da Meta: entra com o próprio Facebook; informa o número; cria um portfólio novo com o nome da clínica; preenche o perfil comercial (nome, país, site).",
+      "No celular, lê o QR code no WhatsApp Business (Conectar-se à Plataforma WhatsApp Business) antes de fechar a janela.",
+      "Compartilhar o histórico ou não, tanto faz: o RecepClinic não grava as conversas antigas.",
+    ],
+    note: "Se a conexão ficar sem as sincronizações, aparece \"Sincronizar de novo\": vale por 24 horas. Erro na janela: anotar a mensagem e passar ao Suporte.",
+  },
+  {
+    title: "Forma de pagamento e templates",
+    support: [
+      "Depois do cartão cadastrado, marca \"Forma de pagamento conferida\" em Configurações › WhatsApp.",
+      "Acompanha os templates até \"Aprovado\" (Atualizar situação).",
+      "Clínica com exames: Criar na Meta os templates do preparo do exame e do arquivo do preparo.",
+    ],
+    clinic: [
+      "No Gerenciador do WhatsApp (business.facebook.com/wa/manage/home/), Visão geral › Adicionar forma de pagamento.",
+    ],
+  },
+  {
+    title: "Agenda atual",
+    support: [
+      "Sistema › Clínicas › clínica › Agenda atual › Pedir a agenda atual: a clínica recebe o link com a planilha modelo.",
+      "Confere a planilha enviada (erros e avisos) e autoriza a carga, ou devolve com comentário.",
+    ],
+    clinic: [
+      "Baixa o modelo, preenche os pacientes e as consultas de hoje em diante e envia pelo link.",
+      "As consultas importadas não geram aviso de marcação; os lembretes saem normalmente.",
+    ],
+  },
+  {
+    title: "Ativação e testes",
+    support: [
+      "Sistema › Clínicas › clínica › Situação: confere WhatsApp, forma de pagamento e templates; Ativar a clínica.",
+      "Acompanha os testes ao lado da clínica.",
+    ],
+    clinic: [
+      "De um celular pessoal, manda \"oi\" para o número: o bot responde.",
+      "A recepção responde pelo WhatsApp Business: o bot pausa naquela conversa.",
+      "Manda #bot pelo app: a conversa volta para o bot.",
+      "Marca um atendimento de teste para amanhã e confere o lembrete com os botões.",
+    ],
+  },
+  {
+    title: "Primeiras semanas",
+    support: [
+      "Acompanha Sistema › Erros, Uso e os Envios da clínica.",
+      "Combina um retorno com a clínica na primeira semana.",
+    ],
+    clinic: [
+      "A equipe acompanha Atendimento (conversas que pediram a recepção) e a Agenda do dia.",
+      "Celular do número em uso: parado por cerca de 14 dias, a Meta desconecta.",
+    ],
+  },
+];
+
+const cautions = [
+  "Depois da conexão, o WhatsApp Business deixa de ter mensagens temporárias, visualização única, localização em tempo real e listas de transmissão novas; o WhatsApp para Windows é desligado.",
+  "As mensagens do bot aparecem no app da recepção (a Meta não permite esconder).",
+  "O RecepClinic não guarda as conversas nem os contatos antigos do app: só o que chega a partir da conexão.",
+  "Trocar o número ou desconectar: só com o Suporte.",
+];
+---
+
+<div class="mt-4 flex flex-col gap-4">
+  <p class="text-[15px] text-ink-soft">
+    Roteiro para colocar uma clínica nova no ar, do contrato à ativação. Em cada etapa, o que o Suporte faz e o que a clínica
+    (o Administrador) faz. A clínica fica Em implantação até a última etapa: pode configurar tudo, mas nada sai para os
+    pacientes pelo WhatsApp.
+  </p>
+
+  <Card>
+    <h2 class={H2}>Antes de começar (pré-requisitos da clínica)</h2>
+    <ul class="mt-3 flex flex-col gap-3">
+      {prereqs.map((item) => (
+        <li class="flex gap-2.5 text-[15px]">
+          <span aria-hidden="true" class="mt-[7px] h-2 w-2 shrink-0 rounded-full bg-brand" />
+          <div class="min-w-0">
+            <span class="font-semibold text-ink">{item.title}.</span> <span class="text-ink-mid">{item.text}</span>
+            {item.links && (
+              <span class="mt-1 flex flex-wrap gap-3">
+                {item.links.map((link) => (
+                  <a href={link.href} target="_blank" rel="noopener" class="text-sm font-semibold text-brand no-underline hover:underline">{link.label}</a>
+                ))}
+              </span>
+            )}
+          </div>
+        </li>
+      ))}
+    </ul>
+  </Card>
+
+  <Card>
+    <h2 class={H2}>Etapas</h2>
+    <p class="mt-1 text-[15px] text-ink-soft">Na ordem. Uma etapa só começa com a anterior concluída.</p>
+    <ol class="mt-3 flex flex-col gap-3">
+      {steps.map((step, index) => (
+        <li class="rounded-xl border border-line">
+          <div class="flex items-baseline gap-2 border-b border-line bg-[#f8faf9] px-3 py-2.5 sm:px-4">
+            <span class="font-display text-[15px] font-bold text-brand">{index + 1}.</span>
+            <div class="min-w-0">
+              <h3 class="font-semibold text-ink">{step.title}</h3>
+              {step.when && <p class="text-[13px] text-ink-soft">{step.when}</p>}
+            </div>
+          </div>
+          <div class="grid gap-px bg-line md:grid-cols-2">
+            <div class="bg-white px-3 py-3 sm:px-4">
+              <p class={`${LANE} text-ink-soft`}>Suporte</p>
+              <ul class="mt-1.5 flex list-disc flex-col gap-1 pl-5 text-[15px] text-ink-mid">
+                {step.support.map((text) => <li>{text}</li>)}
+              </ul>
+            </div>
+            <div class="bg-white px-3 py-3 sm:px-4">
+              <p class={`${LANE} text-brand`}>Clínica (Administrador)</p>
+              <ul class="mt-1.5 flex list-disc flex-col gap-1 pl-5 text-[15px] text-ink-mid">
+                {step.clinic.map((text) => <li>{text}</li>)}
+              </ul>
+            </div>
+          </div>
+          {step.note && <p class="border-t border-line px-3 py-2 text-[13px] text-ink-soft sm:px-4">{step.note}</p>}
+        </li>
+      ))}
+    </ol>
+  </Card>
+
+  <Card>
+    <h2 class={H2}>Para avisar a clínica</h2>
+    <ul class="mt-2 flex list-disc flex-col gap-1 pl-5 text-[15px] text-ink-mid">
+      {cautions.map((text) => <li>{text}</li>)}
+    </ul>
+  </Card>
+</div>

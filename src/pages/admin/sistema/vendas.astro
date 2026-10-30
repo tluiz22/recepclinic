@@ -9,11 +9,13 @@ import Tabs from "../../../components/admin/ui/Tabs.astro";
 import PlanosTab from "../../../components/admin/vendas/PlanosTab.astro";
 import DemonstracaoTab from "../../../components/admin/vendas/DemonstracaoTab.astro";
 import RoteiroTab from "../../../components/admin/vendas/RoteiroTab.astro";
+import ImplantacaoTab from "../../../components/admin/vendas/ImplantacaoTab.astro";
 
 const TABS = [
   { key: "planos", label: "Planos" },
   { key: "demonstracao", label: "Demonstração" },
   { key: "roteiro", label: "Roteiro de vendas" },
+  { key: "implantacao", label: "Implantação" },
 ] as const;
 type TabKey = (typeof TABS)[number]["key"];
 
@@ -27,4 +29,5 @@ const tab: TabKey = TABS.find((t) => t.key === requested)?.key ?? "planos";
   {tab === "planos" && <PlanosTab />}
   {tab === "demonstracao" && <DemonstracaoTab />}
   {tab === "roteiro" && <RoteiroTab />}
+  {tab === "implantacao" && <ImplantacaoTab />}
 </AdminLayout>
