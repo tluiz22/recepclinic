@@ -88,7 +88,7 @@ const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one :
 const sectionTitle = "font-display text-[17px] leading-tight font-bold text-ink sm:text-lg";
 ---
 
-<AdminLayout title="Início">
+<AdminLayout title="Início" autoRefresh>
   <PageHeader title="Início" subtitle={today}>
     <Fragment slot="actions">
       <Button href="/admin/agenda" class="max-sm:hidden">

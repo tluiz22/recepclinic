@@ -646,3 +646,11 @@ retomada fica no README). Para achar algo, buscar por data (ex.: `27/out`), fase
   **"Como funciona?"** (o que é a lista, o que é o bot, quando entra, como devolver; `relacionamento.comoFunciona.atendimento`).
   Textos do Início, do cartão de notificações e do lembrete no celular passam a falar do "Devolver ao bot"; o `#bot`
   continua valendo. Sem migração. Publicada no staging em 30/out.
+- **C11 Atualização automática das telas** (30/out): **decisões do cliente (30/out):** Início, Agenda, Resumo do Dia e
+  Atendimento humano recarregam sozinhos **a cada 1 minuto, o dia todo** (recusados: 2 ou 5 minutos; só no horário da
+  recepção). Recarga da página inteira (opção 1; recusadas por agora: atualizar só a lista e tempo real). Só a tela
+  aberta numa aba visível; aba em segundo plano, janela minimizada ou celular apagado não pedem nada; ao voltar à aba
+  depois do intervalo, recarrega na hora. Nunca no meio de um uso: campo com foco ou alterado, confirmação aberta, menu
+  "Mais", ajuda "i", cartão em edição ou a tela já saindo (filtros da Agenda e grupos de Lembretes, que abrem
+  expandidos, e o "Como funciona?" não contam). `src/scripts/autoRefresh.ts`, ligado por `autoRefresh` no
+  `AdminLayout`. Custo: uma recarga = um F5 (~600 por dia por tela aberta). Sem migração. Publicada no staging em 30/out.

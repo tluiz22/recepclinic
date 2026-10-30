@@ -19,11 +19,13 @@ interface Props {
   title: string;
   /** Tela da administração do sistema (só o Suporte, sem clínica ativa). */
   platform?: boolean;
+  /** Recarrega sozinha a cada 1 minuto, com a aba à vista (src/scripts/autoRefresh.ts). */
+  autoRefresh?: boolean;
 }
 
 // Uma largura só para todas as telas (cliente, 16/out/2026: a Agenda e o Resumo do Dia
 // deixaram a largura de 1600px da R1 para ficar como as outras).
-const { title, platform = false } = Astro.props;
+const { title, platform = false, autoRefresh = false } = Astro.props;
 const frame = "max-w-6xl";
 
 type NavItem = { label: string; href: string; icon: IconName; badge?: number; badgeLabel?: string };
@@ -183,7 +185,7 @@ const navLinkClass = (active: boolean) =>
       }
     </style>
   </head>
-  <body class="flex min-h-screen flex-col bg-canvas font-body text-ink antialiased">
+  <body class="flex min-h-screen flex-col bg-canvas font-body text-ink antialiased" data-auto-refresh={autoRefresh ? "" : undefined}>
     <!-- Pular o menu pelo teclado (auditoria de frontend, A-03): aparece só com o foco. -->
     <a
       href="#conteudo"
@@ -385,6 +387,7 @@ const navLinkClass = (active: boolean) =>
     <script src="../scripts/sendOnce.ts"></script>
     <script src="../scripts/scrollRegion.ts"></script>
     <script src="../scripts/helpTips.ts"></script>
+    <script src="../scripts/autoRefresh.ts"></script>
     <script>
       // Liga a barra ao sair da página: link interno ou envio de formulário
       // que não foi tratado por JavaScript (ex.: botões de reenvio, que

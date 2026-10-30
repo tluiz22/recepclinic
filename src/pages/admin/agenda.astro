@@ -111,7 +111,7 @@ const cardProps = (a: (typeof appointments)[number]) => ({
 });
 ---
 
-<AdminLayout title="Agenda">
+<AdminLayout title="Agenda" autoRefresh>
   <AgendaHeader view="dia" date={date} agendas={scope.selectable} selectedAgendaId={scope.selectedAgendaId} subtitle={subtitle}>
     <DateStepper
       slot="nav"
