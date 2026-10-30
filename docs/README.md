@@ -12,15 +12,10 @@
 > - **Branches:** `main` = `producao` em 30/out; `CRM` e `faturamento` excluídas em 30/out (tudo delas na `main`).
 >
 > **Frentes em andamento**
-> - **Ajustes da produção, na `main`:** C1–C8 validados e na produção (C1–C6 em 28/out, `da2a6fc`; C7 e C8 em 29/out,
->   `5ef2be6`; detalhes no [`historico.md`](historico.md), busca "C7", "C8"). **C9** (conversas só depois de ativar a
->   clínica) e **C10** (conversa não volta sozinha ao bot; Atendimento com "Como funciona?") na produção em 30/out
->   (`a7e077a`), com a limpeza das conversas gravadas pelo piloto em implantação (pacientes e agendamentos intactos).
->   **C11**, **C12** e **C13/C13b** (telas que se
->   atualizam a cada 1 minuto; saída da data e do Sim/Não; pedido de recepção digitado com confirmação e registro nas
->   Métricas) na produção em 30/out (`b9dc41a`). Próximo: nada pendente nesta frente; aguarda o cliente. Na produção, cada clínica com exames
->   precisa do "Criar na Meta" (Suporte) para os modelos `rc_preparo_exame_v3` e `rc_preparo_arquivo_v3`. Próximo: nada
->   pendente nesta frente; aguarda o cliente.
+> - **Ajustes da produção, na `main`:** C1–C13 validados e na produção (C1–C6 em 28/out; C7–C8 em 29/out; C9–C10 em
+>   30/out, `a7e077a`, com a limpeza das conversas gravadas pelo piloto em implantação; C11–C13b em 30/out, `b9dc41a`).
+>   Detalhes no [`historico.md`](historico.md) (busca "C9" a "C13"). Clínica com exames: "Criar na Meta" (Suporte) para
+>   `rc_preparo_exame_v3` e `rc_preparo_arquivo_v3`. Próximo: nada pendente nesta frente; aguarda o cliente.
 > - **CRM concluído** (28/out; [`crm.md`](crm.md)): validado no staging e na produção desde 28/out.
 > - **Faturamento do SaaS e NFS-e pelo Asaas** (planejamento na `main`; a branch `faturamento` foi excluída em 30/out e
 >   é recriada da `main` só quando o código começar):
