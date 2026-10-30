@@ -5,7 +5,8 @@
 >
 > **Agora (30/out):** NFS-e pelo Asaas, N0 (seções 13.8 e 13.9 do `planejamento-nfse-asaas.md`; ler o bloco de
 > retomada dele). Cartão do selo do Asaas na `main` (`13ebeab`), visível só com `ASAAS_PREVIEW=1` (staging).
-> Próximo: cliente põe a variável no staging, valida, tira o print e envia o formulário BaaS (13.9).
+> Validado no staging (30/out). Próximo: cliente tira o print e envia o formulário BaaS (13.9); depois informa ao Asaas o
+> e-mail usado.
 >
 > **Ambientes**
 > - **Produção** (`app.recepclinic.com.br`, branch `producao`): no ar desde 26/out; publicações de 28/out: **CRM**
