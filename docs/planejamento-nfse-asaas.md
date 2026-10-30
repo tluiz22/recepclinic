@@ -8,8 +8,8 @@
 > válidas no BaaS. Decisões do cliente registradas; conta de produção aberta; avaliação BaaS e formulário de IP enviados.
 > **30/out (13.8):** Asaas respondeu saldo negativo e e-mail da nota e mandou playbook, checklist e selos do BaaS.
 > Decidido: reposição automática do saldo da subconta; e-mail real do tomador (entrega própria só pelo WhatsApp).
-> Checklist = formulário do Google (13.9, respostas em rascunho). **Próximo:** tela da habilitação fiscal com o selo no
-> staging (branch `faturamento`), print e envio do formulário pelo cliente. Pendentes: contador e secretária. Depois da
+> Checklist = formulário do Google (13.9). Selo no staging validado e **formulário BaaS enviado (30/out)**: aguardando
+> a análise do Asaas. Pendentes: contador e secretária. Depois da
 > N0: a F12.1, com o OK do cliente.
 
 Marcas: **[Código]** conferido no repositório; **[Asaas]** documentação oficial do Asaas; **[Oficial]** prefeitura ou
@@ -481,7 +481,10 @@ link, texto de que a nota é emitida pelo Asaas, canais de suporte do Asaas e bo
 liberação"), sem chamar o Asaas. O cliente tira o print e envia o formulário; a N2 completa a tela. **Feito (30/out,
 `src/lib/asaas/brand.ts`):** o cartão só aparece com a variável **`ASAAS_PREVIEW=1`** (só na Vercel do staging;
 a produção não tem a variável e não mostra nada, a pedido do cliente). **Validado pelo cliente no staging (30/out)**
-(a tela exige o Módulo financeiro na Matriz da clínica). Respostas propostas (**[Cliente]** = o cliente informa):
+(a tela exige o Módulo financeiro na Matriz da clínica).
+**Formulário enviado pelo cliente (30/out)** com o e-mail `tluiz22projetos@gmail.com`; 13 e 14 sem estimativa
+(produto em fase inicial; até 10 subcontas no 1º ano como referência). Aguardando a análise do Asaas (até 3 dias
+úteis), depois contrato BaaS e checklist de Segurança da Informação. Respostas propostas (**[Cliente]** = o cliente informa):
 
 | # | Pergunta (resumo) | Resposta proposta |
 |---|---|---|
