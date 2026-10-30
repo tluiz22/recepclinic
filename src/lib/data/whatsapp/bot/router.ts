@@ -42,6 +42,8 @@ import { logError } from "../../../log";
 // os toques no lembrete e o fluxo que eles abrem (cancelar, remarcar); o resto
 // recebe a resposta neutra, uma vez por dia. Nunca lança: o erro vai para o
 // log e a Meta recebe 200 do mesmo jeito.
+// Mudou o caminho do paciente: atualizar o fluxograma em
+// src/components/admin/tecnologia/botJourney.ts (Tecnologia › Jornada do bot).
 
 export async function handleIncomingMessage(env: BotEnv, message: WaMessage): Promise<"handled" | "skipped"> {
   const phone = toE164(message.from);

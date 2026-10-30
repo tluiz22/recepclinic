@@ -1,0 +1,49 @@
+---
+// Tecnologia › Jornada do bot (cliente, 30/out/2026): o fluxograma do que o
+// paciente vive no WhatsApp, para mostrar ao dono da clínica. O conteúdo fica
+// em botJourney.ts; atualizar lá a cada mudança na jornada do bot.
+import Card from "../config/Panel.astro";
+import FlowChain from "./FlowChain.astro";
+import { JOURNEY, JOURNEY_RULES, JOURNEY_UPDATED, NODE_STYLES, type NodeKind } from "./botJourney";
+
+const H2 = "font-display text-[17px] leading-tight font-bold text-ink sm:text-lg";
+const LEGEND: NodeKind[] = ["patient", "bot", "page", "auto", "reception", "decision"];
+---
+
+<div class="mt-4 flex flex-col gap-4">
+  <p class="text-[15px] text-ink-soft">
+    O caminho do paciente no WhatsApp da clínica, do primeiro "oi" ao dia do atendimento. Para apresentar ao dono da clínica.
+    Atualizado em {JOURNEY_UPDATED}.
+  </p>
+
+  <Card>
+    <h2 class={H2}>Legenda</h2>
+    <ul class="mt-3 flex flex-wrap gap-2">
+      {LEGEND.map((kind) => (
+        <li class={`rounded-lg border px-2.5 py-1 text-[11px] font-bold uppercase tracking-[.06em] ${NODE_STYLES[kind].box} ${NODE_STYLES[kind].tag}`}>{NODE_STYLES[kind].label}</li>
+      ))}
+    </ul>
+    <nav aria-label="Etapas da jornada" class="mt-4 flex flex-wrap gap-2">
+      {JOURNEY.map((section) => (
+        <a href={`#${section.id}`} class="inline-flex min-h-8 items-center rounded-md border border-line bg-white px-2.5 text-sm font-semibold text-ink-mid no-underline hover:border-brand hover:text-brand-ink">{section.title}</a>
+      ))}
+    </nav>
+  </Card>
+
+  {JOURNEY.map((section) => (
+    <Card id={section.id} class="scroll-mt-16">
+      <h2 class={H2}>{section.title}</h2>
+      <p class="mt-1 text-[15px] text-ink-soft">{section.intro}</p>
+      <div class="mt-3">
+        <FlowChain items={section.flow} />
+      </div>
+    </Card>
+  ))}
+
+  <Card>
+    <h2 class={H2}>Em qualquer ponto da conversa</h2>
+    <ul class="mt-2 flex list-disc flex-col gap-1 pl-5 text-[15px] text-ink-mid">
+      {JOURNEY_RULES.map((text) => <li>{text}</li>)}
+    </ul>
+  </Card>
+</div>

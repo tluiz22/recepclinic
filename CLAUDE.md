@@ -36,6 +36,9 @@ registre o detalhe no plano da frente ou no `historico.md`, nunca no README.
   para a branch (`git merge main`), roda os testes e avisa; com conflito, para e pergunta. Nunca o caminho inverso sem
   o OK do cliente: antes de juntar a branch na `main`, trazer a `main` para ela, rodar todos os testes e conferir que
   nenhuma correção da `main` voltou ao estado antigo. O bloco de retomada do README só é editado na `main`.
+- **Jornada do bot** (cliente, 30/out/2026): toda mudança no caminho do paciente no WhatsApp (bot em
+  `src/lib/data/whatsapp/bot/` ou mensagens automáticas) atualiza, no mesmo commit, o fluxograma de Tecnologia ›
+  Jornada do bot (`src/components/admin/tecnologia/botJourney.ts`, com a data em `JOURNEY_UPDATED`).
 - As decisões de arquitetura estão em `docs/arquitetura.md` (D1–D11) e o plano em `docs/plano.md`.
   Mudança de decisão só com o cliente, e registrada lá.
 

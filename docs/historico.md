@@ -691,3 +691,12 @@ retomada fica no README). Para achar algo, buscar por data (ex.: `27/out`), fase
   a ajuda e a aba do Financeiro. Migração `20261105120000_sem_dmed.sql` (apaga `clinic_dmed_settings` e
   `log_dmed_generated`; os registros `dmed_generated` da trilha fiscal ficam). Aplicada no staging e na `main`
   (`73d703b`) em 30/out; a produção não usa o Financeiro. 738 testes de unidade e 702 de banco.
+- **Vendas › Implantação** (30/out, `2c6c88f`): **cliente (30/out):** aba nova com o roteiro de implantação de uma
+  clínica, em 9 etapas (contratação à primeiras semanas), cada uma com o que faz o Suporte e o que faz o Administrador
+  da clínica, lado a lado; quadro de pré-requisitos (Facebook com login, WhatsApp Business, computador, cartão para a
+  Meta, site, e-mail, dados da configuração) e os avisos à clínica. Fontes: F10 item 7, F8 e parte P do `staging.md`.
+- **Tecnologia › Jornada do bot** (30/out): **cliente (30/out):** Tecnologia em duas abas, Infraestrutura (o conteúdo
+  de antes) e Jornada do bot (fluxograma para apresentar ao dono da clínica: começo da conversa, marcar, retorno,
+  remarcar e cancelar, encaixe, informações, mensagens depois de marcar e a recepção). Conteúdo em
+  `src/components/admin/tecnologia/botJourney.ts`. **Regra (cliente, 30/out):** mudou a jornada do bot, atualizar o
+  fluxograma no mesmo commit (CLAUDE.md).

@@ -4,13 +4,24 @@
 // segredos (só os nomes, nunca os valores) e o desenho da arquitetura.
 // Conteúdo fixo: atualizar aqui quando mudar a hospedagem, um plano ou uma
 // integração (as decisões ficam em docs/arquitetura.md). R10 (cliente,
-// 17/out/2026): o padrão novo e os atalhos "Nesta página".
+// 17/out/2026): o padrão novo e os atalhos "Nesta página". Abas (cliente,
+// 30/out/2026): Infraestrutura (o conteúdo de sempre) e Jornada do bot.
 import AdminLayout from "../../../layouts/AdminLayout.astro";
 import Card from "../../../components/admin/config/Panel.astro";
 import SystemHeader from "../../../components/admin/sistema/SystemHeader.astro";
+import Tabs from "../../../components/admin/ui/Tabs.astro";
+import JornadaBotTab from "../../../components/admin/tecnologia/JornadaBotTab.astro";
 import { GRAPH_API_VERSION } from "../../../lib/data/whatsapp/graph";
 
 const UPDATED = "11/10/2026";
+
+const TABS = [
+  { key: "infraestrutura", label: "Infraestrutura" },
+  { key: "jornada", label: "Jornada do bot" },
+] as const;
+type TabKey = (typeof TABS)[number]["key"];
+const requested = Astro.url.searchParams.get("tab");
+const tab: TabKey = TABS.find((t) => t.key === requested)?.key ?? "infraestrutura";
 
 const stack = [
   { layer: "Aplicação", tech: "Astro 7 (renderização no servidor) e TypeScript 6", use: "Painel da clínica, administração do sistema, páginas públicas (marcar, preparo, orientações, formulário) e as rotas de API" },
@@ -105,8 +116,12 @@ const TD = "px-3 py-2.5 align-top";
 <AdminLayout title="Tecnologia" platform>
   <SystemHeader
     title="Tecnologia"
-    subtitle={`O que o RecepClinic usa, onde cada parte está hospedada e como as partes conversam. Segredos aparecem só pelo nome, nunca pelo valor. Atualizado em ${UPDATED}.`}
+    subtitle={tab === "jornada" ? "Como o bot atende o paciente no WhatsApp da clínica." : `O que o RecepClinic usa, onde cada parte está hospedada e como as partes conversam. Segredos aparecem só pelo nome, nunca pelo valor. Atualizado em ${UPDATED}.`}
   />
+  <Tabs class="mt-4" label="Abas de Tecnologia" tabs={TABS.map((t) => ({ label: t.label, href: `/admin/sistema/tecnologia?tab=${t.key}`, active: t.key === tab }))} />
+  {tab === "jornada" && <JornadaBotTab />}
+  {tab === "infraestrutura" && (
+    <>
   <nav aria-label="Nesta página" class="mt-4 flex flex-wrap gap-2">
       <a href="#tecnologias" class="inline-flex min-h-8 items-center rounded-md border border-line bg-white px-2.5 text-sm font-semibold text-ink-mid no-underline hover:border-brand hover:text-brand-ink">Tecnologias</a>
       <a href="#hospedagem" class="inline-flex min-h-8 items-center rounded-md border border-line bg-white px-2.5 text-sm font-semibold text-ink-mid no-underline hover:border-brand hover:text-brand-ink">Hospedagem</a>
@@ -347,4 +362,6 @@ const TD = "px-3 py-2.5 align-top";
       </div>
     </Card>
   </div>
+    </>
+  )}
 </AdminLayout>
