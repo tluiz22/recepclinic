@@ -17,8 +17,8 @@
 >   clínica) e **C10** (conversa não volta sozinha ao bot; Atendimento com "Como funciona?") na produção em 30/out
 >   (`a7e077a`), com a limpeza das conversas gravadas pelo piloto em implantação (pacientes e agendamentos intactos).
 >   Aguarda a validação do cliente na produção. **C11** (Início, Agenda, Resumo do Dia e Atendimento se atualizam a
->   cada 1 minuto) e **C12** (saída das perguntas de data e de Sim/Não que o bot não entende) no staging em 30/out;
->   aguardam validação e o OK para a produção. Na produção, cada clínica com exames
+>   cada 1 minuto) **C12** (saída das perguntas de data e de Sim/Não que o bot não entende) e **C13** (pedido de recepção
+>   digitado; origem, etapa e motivos nas Métricas) no staging em 30/out; aguardam validação e o OK para a produção. Na produção, cada clínica com exames
 >   precisa do "Criar na Meta" (Suporte) para os modelos `rc_preparo_exame_v3` e `rc_preparo_arquivo_v3`. Próximo: nada
 >   pendente nesta frente; aguarda o cliente.
 > - **CRM concluído** (28/out; [`crm.md`](crm.md)): validado no staging e na produção desde 28/out.

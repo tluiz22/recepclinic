@@ -16,6 +16,24 @@ export function extractSelection(msg: WaMessage): Selection {
   return { id: null, text: (msg.text?.body ?? "").trim() };
 }
 
+const normalized = (text: string) =>
+  text
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim();
+
+/** Pedido de recepção digitado (cliente, 30/out/2026): só em mensagem curta, para um relato não transferir. */
+const RECEPTION_MAX_LENGTH = 60;
+const RECEPTION_WORDS =
+  /\b(atendente|recepcao|recepcionista|secretaria|humano)\b|falar com (alguem|uma pessoa|a clinica)|pessoa de verdade/;
+
+export function asksForReception(selection: Selection): boolean {
+  if (selection.id) return false;
+  const text = normalized(selection.text);
+  return text.length > 0 && text.length <= RECEPTION_MAX_LENGTH && RECEPTION_WORDS.test(text);
+}
+
 /** "Voltar ao menu" (toque), "0" ou "menu" digitados. */
 export function isBackToMenu(selection: Selection): boolean {
   if (selection.id === BACK_TO_MENU_ID) return true;

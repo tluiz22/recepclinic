@@ -16,9 +16,9 @@ import { contactIdByPhone, recordOutboundMessage } from "../messages";
 import { toE164, type WaMessage } from "../meta";
 import type { ClinicSender } from "../send";
 import { BOOKING_STATES, handleBookingState } from "./booking";
-import { createBot, currentPrompt, go, NotUnderstoodLimitReached, say, type Bot, type BotEnv } from "./engine";
+import { createBot, currentPrompt, NotUnderstoodLimitReached, say, type Bot, type BotEnv } from "./engine";
 import { ENTRY_STATES, handleEntryState, startConversation } from "./entry";
-import { extractSelection, isBackToMenu, TALK_TO_RECEPTION_ID } from "./input";
+import { asksForReception, extractSelection, isBackToMenu, TALK_TO_RECEPTION_ID } from "./input";
 import { handleInfo, handleMenu, handlePreparationChoice, handleSubmenu, showMenu } from "./menus";
 import { handleManageState, handleOfferTap, handleReminderTap, handoff, handoffNotUnderstood, MANAGE_STATES, offerTapOf, reminderTapOf } from "./manage";
 import { BLOCKED_HANDOFF, BLOCKED_RECEPTION_WILL_CONTACT, IDLE_CLOSED } from "./texts";
@@ -81,6 +81,10 @@ export async function handleIncomingMessage(env: BotEnv, message: WaMessage): Pr
 }
 
 /** Responde a mensagem conforme o ponto da conversa (o "não entendi" passa pelo motor, que conta). */
+/** Passos em que qualquer texto é a resposta (nome e endereço): o pedido digitado de recepção não vale neles. */
+const FREE_TEXT_AWAITING = new Set(["address_input", "contact_name", "patient_name", "self_name"]);
+const awaitingOf = (convo: Conversation) => ((convo.context ?? {}) as { awaiting?: string }).awaiting;
+
 async function dispatch(env: BotEnv, b: Bot, convo: Conversation, phone: string, message: WaMessage): Promise<void> {
   const selection = extractSelection(message);
 
@@ -106,12 +110,10 @@ async function dispatch(env: BotEnv, b: Bot, convo: Conversation, phone: string,
     return;
   }
 
-  // "Falar com a recepção" dos botões de saída (resposta não entendida, cliente, 30/out/2026), em qualquer passo.
-  if (selection.id === TALK_TO_RECEPTION_ID && b.receptionAvailable) {
-    await go(b, WELCOME);
-    await handoff(b);
-    return;
-  }
+  // "Falar com a recepção" em qualquer passo (cliente, 30/out/2026): o botão de saída de uma resposta não entendida
+  // ou o pedido digitado ("atendente"), este fora dos passos em que qualquer texto é a resposta (nome e endereço).
+  if (b.receptionAvailable && selection.id === TALK_TO_RECEPTION_ID) return handoff(b, "way_out");
+  if (b.receptionAvailable && !FREE_TEXT_AWAITING.has(awaitingOf(convo) ?? "") && asksForReception(selection)) return handoff(b, "typed");
 
   if (ENTRY_STATES.has(convo.state)) {
     await handleEntryState(b, convo.state, selection);

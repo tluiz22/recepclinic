@@ -209,6 +209,37 @@ describe("bot: marcar consulta (número novo)", () => {
   });
 });
 
+describe("bot: pedido de recepção digitado nos passos de texto livre (cliente, 30/out/2026)", () => {
+  it("endereço e nome com \"recepção\" são a resposta, não um pedido de recepção", async () => {
+    const other = "+5584991226398";
+    await adminClient().from("whatsapp_connections").update({ coexistence: true }).eq("clinic_id", f.clinicId);
+    try {
+      await say(other, "oi");
+      await say(other, "1");
+      await say(other, "1");
+      let reply = await say(other, "1");
+      reply = await say(other, { id: optionId(reply, "Dra. Agenda") });
+      reply = await say(other, "2");
+      expect(reply[0].body).toContain("Qual é o endereço para o atendimento domiciliar?");
+      reply = await say(other, "Rua A, 5, ao lado da recepção");
+      expect(reply[0].body).toContain("*Rua A, 5, ao lado da recepção*");
+      await say(other, "sim");
+      reply = await say(other, { id: "for_other" });
+      expect(reply[0].body).toBe("Antes de continuar, qual é o seu nome completo?");
+      reply = await say(other, "Maria Secretária");
+      expect(reply[0].body).toContain("*Maria Secretária*");
+      expect((await conversation(other)).state).toBe("BOOK_PATIENT_NEW");
+      // Fora desses passos, o mesmo texto transfere.
+      reply = await say(other, "quero falar com a secretária");
+      expect(reply[0].body).toContain("Vou te transferir para a recepção");
+      expect((await conversation(other)).state).toBe("HUMAN_HANDOFF");
+    } finally {
+      await adminClient().from("conversation_state").update({ state: "WELCOME", context: {}, human_handoff: false }).eq("clinic_id", f.clinicId).eq("contact_phone", other);
+      await adminClient().from("whatsapp_connections").update({ coexistence: false }).eq("clinic_id", f.clinicId);
+    }
+  });
+});
+
 describe("bot: exame para o contato já cadastrado", () => {
   it("lista os exames, para quem, acha o paciente pela data e manda o link", async () => {
     const phone = "+5584991226301"; // contato do Paciente Um

@@ -221,7 +221,7 @@ export async function logFunnelStep(
   );
 }
 
-export type AbandonReason = "timeout" | "back_to_menu" | "secretary_took_over";
+export type AbandonReason = "timeout" | "back_to_menu" | "secretary_took_over" | "reception_requested";
 
 /** Tentativa interrompida (sem resultado): grava "abandoned" com o motivo e o último estado. */
 export async function logAbandonment(
@@ -284,11 +284,21 @@ export function checkHandoff(conversation: Conversation): "active" | "paused" {
  * ("secretária assumiu"). Número que nunca falou com o bot já nasce pausado.
  * Na pausa em andamento, o motivo e o início ficam.
  */
+/**
+ * De onde veio o pedido de recepção (cliente, 30/out/2026): opção do menu, ações do agendamento na entrada, data
+ * não encontrada, botão de saída de uma resposta não entendida (C12) ou pedido digitado ("atendente").
+ */
+export type HandoffOrigin = "menu" | "entry_actions" | "identity_not_found" | "way_out" | "typed";
+
 export async function pauseForHuman(
   db: DbClient,
   clinicId: string,
   phone: string,
-  { contactId, reason }: { contactId: string | null; reason: "agent_took_over" | "requested" | "bot_limit" | "no_availability" | "not_understood" },
+  {
+    contactId,
+    reason,
+    origin,
+  }: { contactId: string | null; reason: "agent_took_over" | "requested" | "bot_limit" | "no_availability" | "not_understood"; origin?: HandoffOrigin },
   now: Date = new Date(),
 ): Promise<void> {
   const current = await getConversation(db, clinicId, phone);
@@ -310,6 +320,7 @@ export async function pauseForHuman(
           // M3 das Métricas: a tentativa e a etapa da conversa no momento do pedido.
           ...(current?.funnelSessionId ? { journey_session_id: current.funnelSessionId } : {}),
           ...(current?.state ? { journey_state: current.state } : {}),
+          ...(origin ? { origin } : {}),
         },
       },
       now,
@@ -317,6 +328,10 @@ export async function pauseForHuman(
   }
   if (current?.funnelSessionId && reason === "agent_took_over") {
     await logAbandonment(db, clinicId, current, "secretary_took_over", now);
+  }
+  // Pedido no meio de uma marcação, remarcação ou cancelamento (ex.: o botão de saída da C12): a tentativa para aqui.
+  if (current?.funnelSessionId && reason === "requested") {
+    await logAbandonment(db, clinicId, current, "reception_requested", now);
   }
 
   unwrap(

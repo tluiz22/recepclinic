@@ -128,7 +128,9 @@ describe("Agendamento digital (M5 das Métricas)", () => {
     ev("d6", "reschedule", "page_opened", 42, {}, P(6)),
     ev("d6", "reschedule", "confirmed", 43, {}, P(6)),
     // h1: pediu a recepção no meio de uma marcação (com a etapa, M3).
-    ev("h1", "handoff", "requested", 50, { mid_journey: true, journey_state: "BOOK_PATIENT_NEW" }, P(4)),
+    ev("h1", "handoff", "requested", 50, { mid_journey: true, journey_state: "BOOK_PATIENT_NEW", origin: "way_out" }, P(4)),
+    // h2: o bot não entendeu na entrada (motivo próprio, sem origem de pedido).
+    ev("h2", "handoff", "not_understood", 51, { mid_journey: false, journey_state: "ENTRY_BIRTHDATE" }, P(4)),
   ];
   const sessions = groupEvents(events, start, end).map((s) => (s.sessionId === "d1" ? { ...s, appointmentStatus: "canceled" } : s));
 
@@ -171,7 +173,16 @@ describe("Agendamento digital (M5 das Métricas)", () => {
   it("recepção: por contato, com a etapa do pedido", () => {
     const r = buildDigitalReport(sessions, now);
     expect(r.reception).toMatchObject({ requested: 1, tookOver: 0, contactsNeeding: 1, contactsTotal: 6, withoutStep: 0 });
-    expect(r.reception.byStep).toEqual([{ label: "Cadastrando o paciente", count: 1 }]);
+    expect(r.reception.byStep).toEqual([
+      { label: "Cadastrando o paciente", count: 1 },
+      { label: "Informando a data de nascimento (agendamento marcado)", count: 1 },
+    ]);
+    // Os motivos da pausa e, nos pedidos, de onde vieram (cliente, 30/out/2026).
+    expect(r.reception.byReason).toEqual([
+      { label: "O bot não entendeu", count: 1 },
+      { label: "Pediram a recepção", count: 1 },
+    ]);
+    expect(r.reception.byOrigin).toEqual([{ label: "Botão de saída (resposta não entendida)", count: 1 }]);
   });
 
   it("sem tentativas: tudo zero, sem divisão por zero", () => {

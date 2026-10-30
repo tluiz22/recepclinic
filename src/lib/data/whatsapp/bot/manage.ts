@@ -9,7 +9,7 @@ import { describeOpening, isReceptionOpen, nextReceptionOpening } from "../../..
 import { DataError, unwrap } from "../../errors";
 import { activeWaitlistAppointmentIds, endAsAdvanced, joinBlockReason, joinWaitlist, leaveWaitlist } from "../../waitlist/entries";
 import { acceptOffer, declineOffer, MIN_LEAD_MS, type OfferReplyResult, type OfferSender } from "../../waitlist/offers";
-import { pauseForHuman, startFunnel } from "../conversations";
+import { pauseForHuman, startFunnel, type HandoffOrigin } from "../conversations";
 import type { WaMessage } from "../meta";
 import { sendAppointmentNotice } from "../notices";
 import { parseReminderTap, recordReminderTap } from "../reminders";
@@ -220,7 +220,7 @@ async function handleSelect(b: Bot, selection: Selection): Promise<void> {
     if (choice === "reception" || choice === "menu") {
       if (ctx.action !== "waitlist") await end(b, "blocked", { reason: "no_match" });
       else await go(b, "WELCOME");
-      return choice === "reception" ? handoff(b) : showMenu(b);
+      return choice === "reception" ? handoff(b, "identity_not_found") : showMenu(b);
     }
     if (!choice) {
       await say(b, "bot_not_understood", textFor(b, "not_understood", t.notUnderstood()));
@@ -779,9 +779,10 @@ export async function handleOfferTap(b: Bot, tap: NonNullable<ReturnType<typeof 
 // Falar com a recepção (só com coexistência, até a F8)
 // ---------------------------------------------------------------------------
 
-export async function handoff(b: Bot): Promise<void> {
+/** Pedido de recepção: o aviso e a pausa, com a origem do pedido e a etapa em que a pessoa estava (Métricas). */
+export async function handoff(b: Bot, origin: HandoffOrigin): Promise<void> {
   await say(b, "bot_handoff", textFor(b, "handoff", t.HANDOFF));
-  await pauseForHuman(b.db, b.clinicId, b.phone, { contactId: b.convo.contactId, reason: "requested" }, b.now);
+  await pauseForHuman(b.db, b.clinicId, b.phone, { contactId: b.convo.contactId, reason: "requested", origin }, b.now);
 }
 
 /**

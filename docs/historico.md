@@ -667,3 +667,16 @@ retomada fica no README). Para achar algo, buscar por data (ex.: `27/out`), fase
   em qualquer passo, como o "Voltar ao menu". Listas e botões já tinham saída (repetem as opções com "digite 0");
   nome e endereço aceitam qualquer texto. `sayInvalidBirthdate`, `repeatYesNo` e `yesNoButtonsFor` em
   `bot/engine.ts`. Sem migração. Testes em `tests/db/bot-entrada.test.ts`. Publicada no staging em 30/out.
+- **C13 Pedido de recepção: digitado e registro completo** (30/out): diagnóstico pedido pelo cliente sobre por que o
+  paciente vai para a recepção. **Decisões do cliente (30/out):** o assunto (o que a pessoa queria) **não** é registrado
+  por agora (recusados: a recepção marca ao devolver; o paciente escolhe; os dois); pedido **digitado** vale em qualquer
+  passo (recusados: só no menu; não), com o comportamento confirmado antes: só com coexistência; fora dos passos de
+  texto livre (nome e endereço); mensagem de até 60 caracteres com atendente, recepção, recepcionista, secretária,
+  humano, "falar com alguém / uma pessoa / a clínica" ou "pessoa de verdade" (sem acento nem maiúscula); o mesmo que o
+  botão "Falar com a recepção". **Registro:** cada pedido guarda a **origem** (`origin`: menu, ações do agendamento,
+  data não encontrada, botão de saída da C12, digitado); os pedidos da entrada deixaram de voltar ao começo antes de
+  registrar (a etapa aparecia como "No menu inicial"); pedido no meio de uma tentativa encerra a tentativa como
+  abandono "pediu a recepção". **Métricas › Digital › Recepção no WhatsApp:** "Pediram a recepção" (não mais "pelo
+  menu"), todas as etapas com nome (saiu o "Outra etapa"), **"Por que a conversa foi para a clínica"** (os 5 motivos) e
+  **"Onde pediram a recepção"** (a origem; registros antigos sem ela). Sem migração. Testes em `bot-entrada`,
+  `bot-marcar`, `botFunnel.test` e `input.test`. Publicada no staging em 30/out.

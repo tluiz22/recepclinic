@@ -1,8 +1,21 @@
 import { describe, expect, it } from "vitest";
-import { extractSelection, formatBirthdate, isBackToMenu, parseBirthdate, pick, yesNo } from "./input";
+import { asksForReception, extractSelection, formatBirthdate, isBackToMenu, parseBirthdate, pick, yesNo } from "./input";
 import { ageLimit, askBirthdate, confirmPatient, numberedList, otherPatientLabel, row, wordsFor } from "./texts";
 
 const typed = (text: string) => ({ id: null, text });
+
+describe("pedido de recepção digitado (cliente, 30/out/2026)", () => {
+  it("palavras e frases, sem acento nem maiúscula, só em mensagem curta", () => {
+    for (const text of ["Atendente", "quero falar com a recepção", "RECEPCIONISTA por favor", "Secretária", "falar com um humano", "posso falar com alguém?", "falar com uma pessoa", "quero uma pessoa de verdade", "falar com a clínica"]) {
+      expect(asksForReception(typed(text)), text).toBe(true);
+    }
+    expect(asksForReception(typed("oi"))).toBe(false);
+    expect(asksForReception(typed("10/03/2020"))).toBe(false);
+    expect(asksForReception(typed("Bom dia, meu filho fez o exame ontem e quero saber com a recepção quando sai o resultado"))).toBe(false);
+    // Toque num botão ou lista nunca conta como digitado.
+    expect(asksForReception({ id: "menu_reception", text: "Falar com a recepção" })).toBe(false);
+  });
+});
 
 describe("leitura da resposta (F6.3)", () => {
   it("toque em lista, botão ou texto digitado", () => {

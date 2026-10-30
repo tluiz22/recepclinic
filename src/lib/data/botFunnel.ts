@@ -175,6 +175,7 @@ const REASONS: Record<string, string> = {
   timeout: "tempo esgotado",
   back_to_menu: "voltou ao menu",
   secretary_took_over: "recepção assumiu",
+  reception_requested: "pediu a recepção",
 };
 
 export const reasonLabel = (reason: unknown) => (typeof reason === "string" && reason ? (REASONS[reason] ?? reason) : "—");
@@ -486,6 +487,10 @@ export type DigitalReport = {
     requested: number;
     tookOver: number;
     midJourney: number;
+    /** Por que a conversa foi para a clínica: os 5 motivos da pausa (cliente, 30/out/2026). */
+    byReason: { label: string; count: number }[];
+    /** De onde veio o pedido de recepção (menu, entrada, data não encontrada, botão de saída, digitado). */
+    byOrigin: { label: string; count: number }[];
     contactsNeeding: number;
     contactsTotal: number;
     byStep: { label: string; count: number }[];
@@ -494,8 +499,19 @@ export type DigitalReport = {
 };
 
 /** Etapa da conversa em que a pessoa pediu ajuda (M3), em português. */
+// Todos os passos do bot (cliente, 30/out/2026: nenhum fica como "Outra etapa").
 const JOURNEY_STATES: Record<string, string> = {
-  WELCOME: "No menu inicial",
+  WELCOME: "Começo da conversa",
+  MENU: "No menu inicial",
+  CONSULTAS_MENU: "No menu de consultas",
+  EXAMES_MENU: "No menu de exames",
+  INFO_MENU: "Nas informações",
+  INFO_PREP_SELECT: "Vendo o preparo de exame",
+  ENTRY_ASK: "Perguntado sobre o agendamento marcado",
+  ENTRY_BIRTHDATE: "Informando a data de nascimento (agendamento marcado)",
+  ENTRY_SELECT: "Escolhendo o agendamento marcado",
+  ENTRY_ACTIONS: "Nas ações do agendamento marcado",
+  PRESENCE_CONFIRM: "Confirmando a presença",
   BOOK_SERVICE: "Escolhendo o serviço",
   BOOK_AGENDA: "Escolhendo a agenda",
   BOOK_LOCATION: "Escolhendo o local",
@@ -503,10 +519,32 @@ const JOURNEY_STATES: Record<string, string> = {
   BOOK_FOR_WHOM: "Dizendo para quem é",
   BOOK_PATIENT_SELECT: "Escolhendo o paciente",
   BOOK_PATIENT_NEW: "Cadastrando o paciente",
+  BOOK_AGE_LIMIT: "No limite de idade do serviço",
   RETURN_SELECT: "Escolhendo o retorno",
   RESCHEDULE_SELECT: "Escolhendo o que remarcar",
+  RESCHEDULE_HOME_ADDRESS: "Confirmando o endereço da remarcação",
   CANCEL_SELECT: "Escolhendo o que cancelar",
   CANCEL_CONFIRM: "Confirmando o cancelamento",
+  WAITLIST_SELECT: "Escolhendo o que antecipar",
+  WAITLIST_EARLIER: "Vendo horários para antecipar",
+  WAITLIST_LEAVE_CONFIRM: "Saindo da lista de espera",
+  HUMAN_HANDOFF: "Já com a recepção",
+};
+
+const HANDOFF_REASONS: Record<string, string> = {
+  requested: "Pediram a recepção",
+  agent_took_over: "A recepção assumiu pelo app",
+  bot_limit: "Limite do contato",
+  no_availability: "Sem horário livre",
+  not_understood: "O bot não entendeu",
+};
+
+const HANDOFF_ORIGINS: Record<string, string> = {
+  menu: "Opção do menu",
+  entry_actions: "Ações do agendamento marcado",
+  identity_not_found: "Data de nascimento não encontrada",
+  way_out: "Botão de saída (resposta não entendida)",
+  typed: "Digitaram (ex.: \"atendente\")",
 };
 
 const reached = (s: Session, steps: string[]) => s.events.some((e) => steps.includes(e.step));
@@ -571,6 +609,7 @@ export function buildDigitalReport(all: FunnelSession[], now: Date, operation: D
         tally(dropped, "Abriram o link depois de vencer");
       } else if (reason === "back_to_menu") tally(dropped, "Voltaram ao menu");
       else if (reason === "secretary_took_over") tally(dropped, "A recepção assumiu");
+      else if (reason === "reception_requested") tally(dropped, "Pediram a recepção");
       else if (reason === "timeout") tally(dropped, "Tempo esgotado na conversa");
       else tally(dropped, "Pararam de responder");
     }
@@ -629,11 +668,19 @@ export function buildDigitalReport(all: FunnelSession[], now: Date, operation: D
   const contactsNeeding = new Set(handoffs.map((s) => s.phone));
   const contactsTotal = new Set(inPeriod.map((s) => s.phone));
   const steps = new Map<string, number>();
+  const reasons = new Map<string, number>();
+  const origins = new Map<string, number>();
   let withoutStep = 0;
   for (const s of handoffs) {
-    const state = s.events[0]?.metadata.journey_state;
+    const first = s.events[0];
+    const state = first?.metadata.journey_state;
     if (typeof state === "string") tally(steps, JOURNEY_STATES[state] ?? "Outra etapa");
     else withoutStep++;
+    if (first) tally(reasons, HANDOFF_REASONS[first.step] ?? "Outro motivo");
+    if (first?.step === "requested") {
+      const from = first.metadata.origin;
+      tally(origins, typeof from === "string" ? (HANDOFF_ORIGINS[from] ?? "Outra origem") : "Sem a origem (registros antigos)");
+    }
   }
 
   return {
@@ -652,6 +699,8 @@ export function buildDigitalReport(all: FunnelSession[], now: Date, operation: D
       requested: requested.length,
       tookOver: tookOver.length,
       midJourney: tookOver.filter((s) => find(s, "agent_took_over")?.metadata.mid_journey === true).length,
+      byReason: sorted(reasons),
+      byOrigin: sorted(origins),
       contactsNeeding: contactsNeeding.size,
       contactsTotal: contactsTotal.size,
       byStep: sorted(steps),

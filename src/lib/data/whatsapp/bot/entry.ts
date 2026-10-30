@@ -76,10 +76,7 @@ async function handleBirthdate(b: Bot, selection: Selection): Promise<void> {
   if (ctxOf(b).awaiting === "identity_choice" && !parseBirthdate(selection.text, b.clinic.today)) {
     // Uma data digitada vale como nova tentativa; senão, a escolha.
     const choice = identityChoiceOf(b, selection);
-    if (choice === "reception") {
-      await go(b, "WELCOME");
-      return handoff(b);
-    }
+    if (choice === "reception") return handoff(b, "identity_not_found");
     if (choice === "menu") return showMenu(b);
     if (choice === "retry") {
       await say(b, "bot_entry_ask_birthdate", t.askBirthdate(b.words));
@@ -190,10 +187,7 @@ async function handleActions(b: Bot, selection: Selection): Promise<void> {
     await say(b, "bot_not_understood", textFor(b, "not_understood", t.notUnderstood()));
     return showActions(b, appointment);
   }
-  if (key === "reception") {
-    await go(b, "WELCOME");
-    return handoff(b);
-  }
+  if (key === "reception") return handoff(b, "entry_actions");
   await manageIdentified(b, key, appointment);
 }
 

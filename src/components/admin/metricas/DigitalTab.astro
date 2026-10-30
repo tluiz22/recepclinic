@@ -407,7 +407,7 @@ import { metricas } from "../../../lib/ajuda/metricas";
         </div>
         <div class="grid gap-4 sm:grid-cols-3">
           <div class="flex flex-col gap-1">
-            <span class="text-[14.5px] font-semibold text-ink-mid">Pediram a recepção pelo menu</span>
+            <span class="text-[14.5px] font-semibold text-ink-mid">Pediram a recepção</span>
             <span class="font-display text-[30px] leading-none font-bold tabular-nums">{r.reception.requested}</span>
           </div>
           <div class="flex flex-col gap-1">
@@ -430,6 +430,39 @@ import { metricas } from "../../../lib/ajuda/metricas";
                   </li>
                 ))}
                 {r.reception.withoutStep > 0 && <li class="text-ink-soft">{r.reception.withoutStep} sem a etapa (registros antigos)</li>}
+              </ul>
+            )}
+          </div>
+        </div>
+        {/* Motivos e origem do pedido (cliente, 30/out/2026). */}
+        <div class="grid gap-4 sm:grid-cols-2">
+          <div class="flex flex-col gap-1.5 rounded-[10px] border border-line px-3.5 py-3">
+            <span class="text-[14.5px] font-semibold text-ink-mid">Por que a conversa foi para a clínica</span>
+            {r.reception.byReason.length === 0 ? (
+              <span class={sub}>Nenhuma conversa foi para a clínica no período.</span>
+            ) : (
+              <ul class="flex flex-col gap-0.5 text-sm">
+                {r.reception.byReason.map((x) => (
+                  <li class="flex justify-between gap-3">
+                    <span>{x.label}</span>
+                    <b class="tabular-nums">{x.count}</b>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+          <div class="flex flex-col gap-1.5 rounded-[10px] border border-line px-3.5 py-3">
+            <span class="text-[14.5px] font-semibold text-ink-mid">Onde pediram a recepção</span>
+            {r.reception.byOrigin.length === 0 ? (
+              <span class={sub}>Nenhum pedido no período.</span>
+            ) : (
+              <ul class="flex flex-col gap-0.5 text-sm">
+                {r.reception.byOrigin.map((x) => (
+                  <li class="flex justify-between gap-3">
+                    <span>{x.label}</span>
+                    <b class="tabular-nums">{x.count}</b>
+                  </li>
+                ))}
               </ul>
             )}
           </div>

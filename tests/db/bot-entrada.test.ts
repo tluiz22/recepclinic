@@ -424,6 +424,39 @@ describe("robustez", () => {
     expect((await adminClient().from("appointments").select("status").eq("id", consultP2).single()).data!.status).not.toBe("canceled");
   });
 
+  it("pedido de recepção (cliente, 30/out/2026): digitado vale em qualquer passo e guarda a origem e a etapa", async () => {
+    const lastHandoff = async () =>
+      (await adminClient().from("bot_funnel_events").select("step, metadata").eq("clinic_id", f.clinicId).eq("contact_phone", P1).eq("flow", "handoff").order("occurred_at", { ascending: false }).limit(1).single()).data!;
+    // Sem coexistência: o texto não transfere (segue como resposta da etapa).
+    await fresh(P1);
+    await say(P1, "oi");
+    let reply = await say(P1, "quero falar com a atendente");
+    expect((await conversation(P1)).human_handoff).toBe(false);
+    expect(reply[0].body).not.toContain("Vou te transferir");
+
+    await adminClient().from("whatsapp_connections").update({ coexistence: true }).eq("clinic_id", f.clinicId);
+    try {
+      await fresh(P1);
+      await say(P1, "oi");
+      reply = await say(P1, "Quero falar com a recepção");
+      expect(reply[0].body).toContain("Vou te transferir para a recepção");
+      expect(await conversation(P1)).toMatchObject({ state: "HUMAN_HANDOFF", human_handoff: true });
+      expect(await lastHandoff()).toMatchObject({ step: "requested", metadata: { origin: "typed", journey_state: "ENTRY_ASK" } });
+
+      // Pela ação do agendamento: a etapa da entrada fica registrada (antes aparecia como o começo da conversa).
+      await fresh(P1);
+      await say(P1, "oi");
+      await say(P1, "sim");
+      await say(P1, "01/01/2020");
+      await say(P1, { id: `entry_appointment_${consultP1}` });
+      await say(P1, { id: "entry_reception" });
+      expect(await lastHandoff()).toMatchObject({ step: "requested", metadata: { origin: "entry_actions", journey_state: "ENTRY_ACTIONS" } });
+    } finally {
+      await fresh(P1);
+      await adminClient().from("whatsapp_connections").update({ coexistence: false }).eq("clinic_id", f.clinicId);
+    }
+  });
+
   it("13. toque no lembrete no meio da entrada: segue o fluxo do lembrete", async () => {
     await adminClient().from("appointments").update({ patient_confirmed_at: null }).eq("id", consultP2);
     await fresh(P2);

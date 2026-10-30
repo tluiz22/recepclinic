@@ -57,7 +57,7 @@ export async function handleMenu(b: Bot, selection: Selection): Promise<void> {
   if (choice?.id === "menu_consultations") return showSubmenu(b, "CONSULTAS_MENU");
   if (choice?.id === "menu_exams") return showSubmenu(b, "EXAMES_MENU");
   if (choice?.id === "menu_info") return showInfo(b);
-  if (choice?.id === "menu_reception") return handoff(b);
+  if (choice?.id === "menu_reception") return handoff(b, "menu");
   await showMenu(b, { notUnderstood: true });
 }
 
