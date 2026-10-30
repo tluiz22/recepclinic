@@ -341,7 +341,11 @@ Só os dados da clínica (o arquivo e os dados do tomador não ficam no projeto)
   `https://www.tinus.com.br/csp/mossoro/portal/index.csp`, área restrita do contribuinte), com **usuário e senha**. **Atenção:** pelo Asaas, Mossoró
   exige **certificado A1** (`authenticationType: CERTIFICATE`, seção 13.6); usuário e senha não servem. **[Pendência]**
   a clínica tem A1 de pessoa jurídica (o contador costuma ter)? Se não tiver, precisa comprar antes da N6.
-- Falta (**contador**): PIS/COFINS e o certificado A1 (a clínica tem e-CNPJ A1?); as demais perguntas da 13.3
+- **Certificado (cliente, 30/out):** a médica tem certificado da **VIDaaS** (Valid). **[Hipótese]** não serve para
+  o Asaas: o VIDaaS é certificado **em nuvem** (sem arquivo .pfx para enviar) e costuma ser **e-CPF** da pessoa
+  física; Mossoró pelo Asaas exige `certificateFile` (.pfx/.p12) **e-CNPJ A1** da clínica. Confirmar com o contador;
+  se confirmado, a clínica compra um e-CNPJ A1 antes da N6.
+- Falta (**contador**): PIS/COFINS e a confirmação do certificado; as demais perguntas da 13.3
   (série e última nota, prazo de cancelamento, descrição, DMED) quando ele puder.
 
 ### 13.4 Roteiro no Sandbox (depois que o cliente criar a conta e a chave)
