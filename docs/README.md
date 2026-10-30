@@ -1,6 +1,6 @@
 # RecepClinic
 
-> **Estado atual (retomar daqui), 29/out/2026.** Histórico completo em [`historico.md`](historico.md) (não ler
+> **Estado atual (retomar daqui), 30/out/2026.** Histórico completo em [`historico.md`](historico.md) (não ler
 > na retomada; buscar por data, fase ou commit quando precisar).
 >
 > **Próxima sessão (cliente, 30/out):** voltar às pendências do planejamento do financeiro (faturamento do SaaS e
