@@ -208,8 +208,7 @@ módulo. O cliente valida cada parte antes da seguinte.
 - **Pacientes:** "i" em "Quem fala com a clínica pelo WhatsApp" no Cadastrar (os envios usam o telefone do
   contato). A confirmação do Anonimizar já listava o que o banco faz e "Não dá para desfazer"; ganhou "Só a
   pedido do paciente (LGPD)" e, com o Financeiro, "Os pagamentos continuam guardados, pelo prazo fiscal".
-- **Financeiro:** "i" no CPF de quem pagou (Pagamento) e "Como funciona?" da DMED (só pagamento sem CPF fica
-  de fora, conferido em `dmed.astro`).
+- **Financeiro:** "i" no CPF de quem pagou (Pagamento). O "Como funciona?" da DMED saiu com a DMED (30/out/2026).
 - **Métricas:** "i" no gráfico do Desempenho (conferido em `metrics_activity` e na soma da tela) e em "Como
   terminaram" (`classify` de `botFunnel.ts`). Retomar contato: a regra do inventário já está escrita no alto
   da aba; um "i" repetiria o texto, então o ponto fica atendido como está.
@@ -255,8 +254,7 @@ Mesmo jeito: regra conferida, testado no local e publicado no staging, sem migra
   evento de `trail.ts`). Na trilha, "template não aprovado" virou "mensagem não aprovada pela Meta" (também no aviso
   do Desempenho, nas Métricas).
 - **Convênios:** "i" no Código ANS (**conferido:** hoje só aparece em Convênios; o bot e as notas não usam).
-- **DMED:** "i" no CPF do responsável perante o CNPJ e no CNES (os dois vão na linha DECPJ do arquivo, `dmed.ts`; o
-  CNES é opcional).
+- ~~**DMED:** "i" no CPF do responsável perante o CNPJ e no CNES~~ (a DMED saiu do sistema em 30/out/2026).
 - **Matriz (Suporte):** "i" em cada item vendido, dizendo o que some da clínica com ele desligado (`itensDaMatriz` em
   `src/lib/ajuda/sistema.ts`, conferido nas regras de rota de `features.ts` e em quem chama `hasFeature`). O teste do
   catálogo confere que todo item de `plans.ts` tem o texto. Clicar no balão não marca nem desmarca o item.

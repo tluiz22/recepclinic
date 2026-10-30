@@ -686,3 +686,8 @@ retomada fica no README). Para achar algo, buscar por data (ex.: `27/out`), fase
   continuar de onde parou); na 1ª mensagem da conversa, o "Não" leva às boas-vindas e ao menu; outra resposta vale para
   o passo em que a pessoa estava. A espera fica no contexto (`_reception_confirm`), sem trocar o passo. O botão de saída
   da C12 continua transferindo direto. Sem migração. Publicada no staging em 30/out.
+- **DMED removida** (30/out): **cliente (30/out):** a DMED é do contador da clínica; o RecepClinic não gera mais o
+  arquivo. Saíram a tela Financeiro › DMED, a rota do arquivo, `src/lib/dmed.ts`, `src/lib/data/dmed.ts`, os testes,
+  a ajuda e a aba do Financeiro. Migração `20261105120000_sem_dmed.sql` (apaga `clinic_dmed_settings` e
+  `log_dmed_generated`; os registros `dmed_generated` da trilha fiscal ficam). Aplicada no staging e na `main`
+  (`73d703b`) em 30/out; a produção não usa o Financeiro. 738 testes de unidade e 702 de banco.

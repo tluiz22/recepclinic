@@ -6,7 +6,9 @@
 > **Agora (30/out):** NFS-e pelo Asaas, N0 (seções 13.8 e 13.9 do `planejamento-nfse-asaas.md`; ler o bloco de
 > retomada dele). Cartão do selo do Asaas na `main` (`13ebeab`), visível só com `ASAAS_PREVIEW=1` (staging).
 > Validado no staging e **formulário BaaS enviado (30/out)**. Aguardando a análise do Asaas (até 3 dias úteis) e o
-> contador (falta PIS/COFINS; e-CNPJ A1 a providenciar; seção 13.5). **DMED sai do sistema** (cliente, 30/out).
+> contador (falta PIS/COFINS; e-CNPJ A1 a providenciar; seção 13.5). **DMED removida** (cliente, 30/out; staging e `main`,
+> `73d703b`; a produção não usa o Financeiro).
+> **Regra (cliente, 30/out):** todo código do financeiro vai na branch `faturamento`.
 >
 > **Ambientes**
 > - **Produção** (`app.recepclinic.com.br`, branch `producao`): no ar desde 26/out; publicações de 28/out: **CRM**
@@ -43,7 +45,7 @@
 > **Pendências**
 > - **Validação do cliente no staging (no fim, como pedido):** F8.1, F8.2, F8.2b, F8.3 e a ajuda contextual.
 > - **F11 (financeiro):** testes do roteiro a partir do T3.1; fora do sistema, teste real na Produção Restrita
->   (e-CNPJ A1), DMED no PGD pelo contador, template `rc_nota_fiscal_v1` na Meta e termo com o advogado; melhorias
+>   (e-CNPJ A1), template `rc_nota_fiscal_v1` na Meta e termo com o advogado; melhorias
 >   no processo da nota numa sessão própria (o cliente traz a lista).
 > - **Operação:** conferir o 1º backup diário da produção (*Database › Backups* do `recepclinic-producao`); investigar
 >   a sessão do painel que caiu durante a janela da Meta (parte P do [`staging.md`](staging.md)).

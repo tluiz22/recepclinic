@@ -10,7 +10,7 @@
 > Decidido: reposição automática do saldo da subconta; e-mail real do tomador (entrega própria só pelo WhatsApp).
 > Checklist = formulário do Google (13.9). Selo no staging validado e **formulário BaaS enviado (30/out)**: aguardando
 > a análise do Asaas. Secretária respondida; contador em parte (30/out; falta PIS/COFINS; A1 a
-> providenciar). **DMED sai do sistema** (cliente, 30/out). Depois da
+> providenciar). **DMED removida** (30/out, `73d703b`). Depois da
 > N0: a F12.1, com o OK do cliente.
 
 Marcas: **[Código]** conferido no repositório; **[Asaas]** documentação oficial do Asaas; **[Oficial]** prefeitura ou

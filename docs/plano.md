@@ -2142,7 +2142,8 @@ gera.
 
 **Mudança de decisão (cliente, 29/out/2026, D13):** a emissão da NFS-e passa para o **Asaas** (subconta por
 clínica), no lugar da integração direta da F11.4; o emissor direto, o certificado no Vault, a numeração própria e a
-Simulação serão desligados e removidos. Pagamentos, dados financeiros, envio e DMED ficam. Plano em
+Simulação serão desligados e removidos. Pagamentos, dados financeiros e envio ficam. **A DMED saiu do sistema em
+30/out/2026** (cliente: é do contador da clínica; migração `20261105120000_sem_dmed.sql`). Plano em
 [`planejamento-nfse-asaas.md`](planejamento-nfse-asaas.md); implementação na branch `faturamento`, com autorização.
 
 **Prioridade (cliente, 12/out):** quando a Meta aprovar, a F11 pausa e o trabalho volta à F8 e
@@ -2158,7 +2159,7 @@ Simulação serão desligados e removidos. Pagamentos, dados financeiros, envio 
 | F11.4 | Emissão e cancelamento na API nacional (ambiente de testes da Receita) | F11.2, F11.3 e os itens do cliente abaixo | implementada (12/out), **validada na Simulação pelo cliente em 19/out**; falta o teste real na Produção Restrita (e-CNPJ A1) |
 | F11.4b | Ambiente "Simulação" da nota (testar sem e-CNPJ, só no staging) | F11.4 | implementada (13/out), **validada pelo cliente em 19/out** |
 | F11.5 | PDF da nota no histórico e envio pelo WhatsApp (template novo) | F11.4 e a Meta | implementada (12/out), **validada pelo cliente em 19/out**; falta o template `rc_nota_fiscal_v1` aprovado na Meta |
-| F11.6 | Arquivo da DMED do ano | F11.2 | implementada (12/out), **validada pelo cliente em 19/out** (roteiro) |
+| F11.6 | Arquivo da DMED do ano | F11.2 | implementada (12/out), validada em 19/out; **removida em 30/out** (cliente: a DMED é do contador da clínica) |
 
 **Testes do roteiro (19/out):** o cliente concluiu os Testes 0 a 7 do
 [roteiro](https://claude.ai/code/artifact/f7a032e3-c6f4-4e13-8fa1-f6d6e61afbcb) no staging, com os certificados
