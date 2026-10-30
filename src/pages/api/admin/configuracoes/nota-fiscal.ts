@@ -17,7 +17,7 @@ export const POST: APIRoute = async (context) => {
   const form = await request.formData().catch(() => null);
   const clinic = locals.clinic!;
   const db = createUserClient(request, cookies);
-  // Aberta de outra tela (DMED, aviso do Início), volta para lá com a origem (R9, S-01).
+  // Aberta de outra tela (pagamento, aviso do Início), volta para lá com a origem (R9, S-01).
   const page = withReturn("/admin/configuracoes/nota-fiscal", receivedReturn(new URL(request.url)));
 
   return runFormAction(

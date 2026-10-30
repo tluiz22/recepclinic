@@ -9,7 +9,6 @@ export type Database = {
                   Row: {
                     "clinic_id": string,"email": string,"entries": NonNullable<Json>,"expires_at": string,"id": string,"link_sent_at": string,"loaded_at": string | null,"loaded_by": string | null,"requested_at": string,"requested_by": string | null,"return_comment": string | null,"returned_at": string | null,"returned_by": string | null,"saved_at": string | null,"status": string,"submitted_at": string | null,"token_hash": string,"undone_at": string | null,"undone_by": string | null
                   }
-                  ComputedFields: never
                   Insert: {
                     "clinic_id": string,"email": string,"entries"?: NonNullable<Json>,"expires_at": string,"id"?: string,"link_sent_at"?: string,"loaded_at"?: string | null,"loaded_by"?: string | null,"requested_at"?: string,"requested_by"?: string | null,"return_comment"?: string | null,"returned_at"?: string | null,"returned_by"?: string | null,"saved_at"?: string | null,"status"?: string,"submitted_at"?: string | null,"token_hash": string,"undone_at"?: string | null,"undone_by"?: string | null
                   }
@@ -29,7 +28,6 @@ isOneToOne: false
                   Row: {
                     "buffer_minutes": number,"clinic_id": string,"created_at": string,"id": string,"is_active": boolean,"kind": Database["public"]['Enums']["agenda_kind"],"name": string,"professional_id": string | null,"updated_at": string
                   }
-                  ComputedFields: never
                   Insert: {
                     "buffer_minutes"?: number,"clinic_id": string,"created_at"?: string,"id"?: string,"is_active"?: boolean,"kind": Database["public"]['Enums']["agenda_kind"],"name": string,"professional_id"?: string | null,"updated_at"?: string
                   }
@@ -55,7 +53,6 @@ isOneToOne: false
                   Row: {
                     "actor_id": string | null,"appointment_id": string,"channel": string,"clinic_id": string,"details": NonNullable<Json>,"event_type": string,"id": number,"occurred_at": string
                   }
-                  ComputedFields: never
                   Insert: {
                     "actor_id"?: string | null,"appointment_id": string,"channel": string,"clinic_id": string,"details"?: NonNullable<Json>,"event_type": string,"id"?: never,"occurred_at"?: string
                   }
@@ -81,7 +78,6 @@ isOneToOne: false
                   Row: {
                     "agenda_id": string,"clinic_id": string,"created_at": string,"created_by": string | null,"duration_minutes": number,"ended_at": string | null,"ended_by": string | null,"ends_on": string | null,"home_visit_address": string | null,"id": string,"insurance_plan_id": string | null,"interval_weeks": number,"location_id": string,"max_sessions": number | null,"patient_id": string,"service_id": string,"start_time": string,"starts_on": string,"updated_at": string,"weekday": number
                   }
-                  ComputedFields: never
                   Insert: {
                     "agenda_id": string,"clinic_id": string,"created_at"?: string,"created_by"?: string | null,"duration_minutes": number,"ended_at"?: string | null,"ended_by"?: string | null,"ends_on"?: string | null,"home_visit_address"?: string | null,"id"?: string,"insurance_plan_id"?: string | null,"interval_weeks"?: number,"location_id": string,"max_sessions"?: number | null,"patient_id": string,"service_id": string,"start_time": string,"starts_on": string,"updated_at"?: string,"weekday": number
                   }
@@ -131,7 +127,6 @@ isOneToOne: false
                   Row: {
                     "clinic_id": string,"created_at": string,"id": string,"reason": Database["public"]['Enums']["series_skip_reason"],"series_id": string,"skipped_on": string
                   }
-                  ComputedFields: never
                   Insert: {
                     "clinic_id": string,"created_at"?: string,"id"?: string,"reason": Database["public"]['Enums']["series_skip_reason"],"series_id": string,"skipped_on": string
                   }
@@ -157,7 +152,6 @@ isOneToOne: false
                   Row: {
                     "agenda_id": string,"agenda_import_id": string | null,"booking_channel": Database["public"]['Enums']["action_channel"],"canceled_at": string | null,"canceled_by": string | null,"canceled_via": Database["public"]['Enums']["action_channel"] | null,"clinic_id": string,"confirmed_at": string | null,"created_at": string,"created_by": string | null,"duration_minutes": number,"home_visit_address": string | null,"id": string,"insurance_plan_id": string | null,"is_exam": boolean,"is_group_session": boolean,"location_id": string,"mass_canceled": boolean,"origin_appointment_id": string | null,"patient_confirmed_at": string | null,"patient_confirmed_by": string | null,"patient_id": string,"price_cents": number | null,"rebooking_dismissed_at": string | null,"reminder_response": string | null,"reminder_response_at": string | null,"reminder_sent_at": string | null,"rescheduled_at": string | null,"rescheduled_by": string | null,"rescheduled_via": Database["public"]['Enums']["action_channel"] | null,"scheduled_at": string,"series_id": string | null,"service_id": string,"status": Database["public"]['Enums']["appointment_status"],"trail_context": Json | null,"updated_at": string
                   }
-                  ComputedFields: never
                   Insert: {
                     "agenda_id": string,"agenda_import_id"?: string | null,"booking_channel": Database["public"]['Enums']["action_channel"],"canceled_at"?: string | null,"canceled_by"?: string | null,"canceled_via"?: Database["public"]['Enums']["action_channel"] | null,"clinic_id": string,"confirmed_at"?: string | null,"created_at"?: string,"created_by"?: string | null,"duration_minutes": number,"home_visit_address"?: string | null,"id"?: string,"insurance_plan_id"?: string | null,"is_exam"?: boolean,"is_group_session"?: boolean,"location_id": string,"mass_canceled"?: boolean,"origin_appointment_id"?: string | null,"patient_confirmed_at"?: string | null,"patient_confirmed_by"?: string | null,"patient_id": string,"price_cents"?: number | null,"rebooking_dismissed_at"?: string | null,"reminder_response"?: string | null,"reminder_response_at"?: string | null,"reminder_sent_at"?: string | null,"rescheduled_at"?: string | null,"rescheduled_by"?: string | null,"rescheduled_via"?: Database["public"]['Enums']["action_channel"] | null,"scheduled_at": string,"series_id"?: string | null,"service_id": string,"status"?: Database["public"]['Enums']["appointment_status"],"trail_context"?: Json | null,"updated_at"?: string
                   }
@@ -225,7 +219,6 @@ isOneToOne: false
                   Row: {
                     "agenda_id": string,"capacity": number | null,"clinic_id": string,"created_at": string,"end_time": string,"id": string,"is_active": boolean,"location_id": string,"service_id": string | null,"start_time": string,"updated_at": string,"weekday": number
                   }
-                  ComputedFields: never
                   Insert: {
                     "agenda_id": string,"capacity"?: number | null,"clinic_id": string,"created_at"?: string,"end_time": string,"id"?: string,"is_active"?: boolean,"location_id": string,"service_id"?: string | null,"start_time": string,"updated_at"?: string,"weekday": number
                   }
@@ -263,7 +256,6 @@ isOneToOne: false
                   Row: {
                     "agenda_id": string | null,"appointment_id": string | null,"canceled_appointment_id": string | null,"clinic_id": string,"contact_id": string,"contact_phone": string,"created_at": string,"expires_at": string,"funnel_session_id": string | null,"home_visit_address": string | null,"id": string,"join_waitlist": boolean,"location_category": Database["public"]['Enums']["location_type"] | null,"location_id": string | null,"mode": Database["public"]['Enums']["booking_link_mode"],"origin_appointment_id": string | null,"patient_id": string,"return_deadline_waived": boolean,"service_id": string,"used_at": string | null
                   }
-                  ComputedFields: never
                   Insert: {
                     "agenda_id"?: string | null,"appointment_id"?: string | null,"canceled_appointment_id"?: string | null,"clinic_id": string,"contact_id": string,"contact_phone": string,"created_at"?: string,"expires_at": string,"funnel_session_id"?: string | null,"home_visit_address"?: string | null,"id"?: string,"join_waitlist"?: boolean,"location_category"?: Database["public"]['Enums']["location_type"] | null,"location_id"?: string | null,"mode": Database["public"]['Enums']["booking_link_mode"],"origin_appointment_id"?: string | null,"patient_id": string,"return_deadline_waived"?: boolean,"service_id": string,"used_at"?: string | null
                   }
@@ -331,7 +323,6 @@ isOneToOne: false
                   Row: {
                     "appointment_id": string | null,"clinic_id": string,"contact_id": string | null,"contact_phone": string,"flow": string,"id": number,"metadata": NonNullable<Json>,"occurred_at": string,"session_id": string,"source": string,"step": string
                   }
-                  ComputedFields: never
                   Insert: {
                     "appointment_id"?: string | null,"clinic_id": string,"contact_id"?: string | null,"contact_phone": string,"flow": string,"id"?: never,"metadata"?: NonNullable<Json>,"occurred_at"?: string,"session_id": string,"source"?: string,"step": string
                   }
@@ -363,7 +354,6 @@ isOneToOne: false
                   Row: {
                     "clinic_id": string,"contact_id": string,"created_at": string,"current_value": number,"id": number,"limit_value": number,"paused": boolean,"reason": string
                   }
-                  ComputedFields: never
                   Insert: {
                     "clinic_id": string,"contact_id": string,"created_at"?: string,"current_value": number,"id"?: never,"limit_value": number,"paused": boolean,"reason": string
                   }
@@ -389,7 +379,6 @@ isOneToOne: false
                   Row: {
                     "body": string,"clinic_id": string,"message_key": string,"updated_at": string,"updated_by": string | null
                   }
-                  ComputedFields: never
                   Insert: {
                     "body": string,"clinic_id": string,"message_key": string,"updated_at"?: string,"updated_by"?: string | null
                   }
@@ -405,31 +394,10 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
-                },"clinic_dmed_settings": {
-                  Row: {
-                    "clinic_id": string,"cnes": string | null,"filler_cpf": string,"filler_ddd": string,"filler_email": string | null,"filler_extension": string | null,"filler_name": string,"filler_phone": string,"legal_responsible_cpf": string,"updated_at": string,"updated_by": string | null
-                  }
-                  ComputedFields: never
-                  Insert: {
-                    "clinic_id": string,"cnes"?: string | null,"filler_cpf": string,"filler_ddd": string,"filler_email"?: string | null,"filler_extension"?: string | null,"filler_name": string,"filler_phone": string,"legal_responsible_cpf": string,"updated_at"?: string,"updated_by"?: string | null
-                  }
-                  Update: {
-                    "clinic_id"?: string,"cnes"?: string | null,"filler_cpf"?: string,"filler_ddd"?: string,"filler_email"?: string | null,"filler_extension"?: string | null,"filler_name"?: string,"filler_phone"?: string,"legal_responsible_cpf"?: string,"updated_at"?: string,"updated_by"?: string | null
-                  }
-                  Relationships: [
-                    {
-      foreignKeyName: "clinic_dmed_settings_clinic_id_fkey"
-      columns: ["clinic_id"]
-isOneToOne: true
-      referencedRelation: "clinics"
-      referencedColumns: ["id"]
-    }
-                  ]
                 },"clinic_features": {
                   Row: {
                     "clinic_id": string,"enabled_at": string,"enabled_by": string | null,"feature_key": string
                   }
-                  ComputedFields: never
                   Insert: {
                     "clinic_id": string,"enabled_at"?: string,"enabled_by"?: string | null,"feature_key": string
                   }
@@ -455,7 +423,6 @@ isOneToOne: false
                   Row: {
                     "clinic_id": string,"password_secret_id": string,"pfx_secret_id": string,"subject_cnpj": string,"subject_name": string,"terms_version": string,"uploaded_at": string,"uploaded_by": string | null,"valid_from": string,"valid_until": string
                   }
-                  ComputedFields: never
                   Insert: {
                     "clinic_id": string,"password_secret_id": string,"pfx_secret_id": string,"subject_cnpj": string,"subject_name": string,"terms_version": string,"uploaded_at"?: string,"uploaded_by"?: string | null,"valid_from": string,"valid_until": string
                   }
@@ -475,7 +442,6 @@ isOneToOne: true
                   Row: {
                     "clinic_id": string,"cnpj": string,"created_at": string,"environment": string,"iss_rate": number,"legal_name": string,"municipal_registration": string | null,"municipality_ibge": string,"service_code": string,"simples_nacional": string,"simples_regime": string | null,"simples_total_rate": number | null,"special_regime": string,"updated_at": string,"updated_by": string | null
                   }
-                  ComputedFields: never
                   Insert: {
                     "clinic_id": string,"cnpj": string,"created_at"?: string,"environment"?: string,"iss_rate": number,"legal_name": string,"municipal_registration"?: string | null,"municipality_ibge": string,"service_code": string,"simples_nacional": string,"simples_regime"?: string | null,"simples_total_rate"?: number | null,"special_regime"?: string,"updated_at"?: string,"updated_by"?: string | null
                   }
@@ -495,7 +461,6 @@ isOneToOne: true
                   Row: {
                     "clinic_id": string,"created_at": string,"date": string,"description": string,"id": string
                   }
-                  ComputedFields: never
                   Insert: {
                     "clinic_id": string,"created_at"?: string,"date": string,"description": string,"id"?: string
                   }
@@ -515,7 +480,6 @@ isOneToOne: false
                   Row: {
                     "accepted_at": string | null,"clinic_id": string,"email": string,"id": string,"invited_at": string,"invited_by": string | null,"last_sent_at": string | null,"roles": (Database["public"]['Enums']["clinic_role"])[],"user_id": string | null
                   }
-                  ComputedFields: never
                   Insert: {
                     "accepted_at"?: string | null,"clinic_id": string,"email": string,"id"?: string,"invited_at"?: string,"invited_by"?: string | null,"last_sent_at"?: string | null,"roles": (Database["public"]['Enums']["clinic_role"])[],"user_id"?: string | null
                   }
@@ -535,7 +499,6 @@ isOneToOne: false
                   Row: {
                     "agenda_scope": Database["public"]['Enums']["agenda_scope"],"clinic_id": string,"created_at": string,"display_name": string | null,"roles": (Database["public"]['Enums']["clinic_role"])[],"updated_at": string,"user_id": string
                   }
-                  ComputedFields: never
                   Insert: {
                     "agenda_scope": Database["public"]['Enums']["agenda_scope"],"clinic_id": string,"created_at"?: string,"display_name"?: string | null,"roles": (Database["public"]['Enums']["clinic_role"])[],"updated_at"?: string,"user_id": string
                   }
@@ -555,7 +518,6 @@ isOneToOne: false
                   Row: {
                     "booking_horizon_days": number,"bot_insurance_info": string | null,"bot_max_future_appointments": number,"bot_max_new_patients": number,"bot_max_no_shows": number,"bot_notes": string | null,"bot_payment_info": string | null,"brand_color": string | null,"clinic_id": string,"consultation_age_limit_years": number | null,"guidance_enabled": boolean,"logo_url": string | null,"message_article": string,"message_noun": string,"message_noun_article": string,"professional_summary_enabled": boolean,"professional_summary_hour": number,"professional_summary_timing": string,"profile": Database["public"]['Enums']["clinic_profile"],"reception_hours": Json | null,"reception_summary_sent_on": string | null,"reminder_enabled": boolean,"reminder_hour": number,"reminder_timing": string,"require_insurance_details": boolean,"team_summary_enabled": boolean,"team_summary_hour": number,"team_summary_timing": string,"timezone": string,"updated_at": string,"website_url": string | null
                   }
-                  ComputedFields: never
                   Insert: {
                     "booking_horizon_days"?: number,"bot_insurance_info"?: string | null,"bot_max_future_appointments"?: number,"bot_max_new_patients"?: number,"bot_max_no_shows"?: number,"bot_notes"?: string | null,"bot_payment_info"?: string | null,"brand_color"?: string | null,"clinic_id": string,"consultation_age_limit_years"?: number | null,"guidance_enabled"?: boolean,"logo_url"?: string | null,"message_article"?: string,"message_noun"?: string,"message_noun_article"?: string,"professional_summary_enabled"?: boolean,"professional_summary_hour"?: number,"professional_summary_timing"?: string,"profile"?: Database["public"]['Enums']["clinic_profile"],"reception_hours"?: Json | null,"reception_summary_sent_on"?: string | null,"reminder_enabled"?: boolean,"reminder_hour"?: number,"reminder_timing"?: string,"require_insurance_details"?: boolean,"team_summary_enabled"?: boolean,"team_summary_hour"?: number,"team_summary_timing"?: string,"timezone"?: string,"updated_at"?: string,"website_url"?: string | null
                   }
@@ -575,7 +537,6 @@ isOneToOne: true
                   Row: {
                     "appointments_created": number,"bot_limit_hits": number,"clinic_id": string,"messages_sent": number,"month": string,"templates_sent": number
                   }
-                  ComputedFields: never
                   Insert: {
                     "appointments_created"?: number,"bot_limit_hits"?: number,"clinic_id": string,"messages_sent"?: number,"month": string,"templates_sent"?: number
                   }
@@ -595,7 +556,6 @@ isOneToOne: false
                   Row: {
                     "created_at": string,"id": string,"max_professionals": number,"name": string,"status": Database["public"]['Enums']["clinic_status"],"updated_at": string
                   }
-                  ComputedFields: never
                   Insert: {
                     "created_at"?: string,"id"?: string,"max_professionals"?: number,"name": string,"status"?: Database["public"]['Enums']["clinic_status"],"updated_at"?: string
                   }
@@ -609,7 +569,6 @@ isOneToOne: false
                   Row: {
                     "clinic_id": string,"contact_id": string,"cpf": string | null,"created_at": string,"updated_at": string,"updated_by": string | null
                   }
-                  ComputedFields: never
                   Insert: {
                     "clinic_id": string,"contact_id": string,"cpf"?: string | null,"created_at"?: string,"updated_at"?: string,"updated_by"?: string | null
                   }
@@ -635,7 +594,6 @@ isOneToOne: false
                   Row: {
                     "agenda_import_id": string | null,"anonymized_at": string | null,"bot_blocked_at": string | null,"bot_blocked_by": string | null,"bot_blocked_notified_at": string | null,"bot_blocked_reason": string | null,"bot_limits_exempt_at": string | null,"bot_limits_exempt_by": string | null,"bot_limits_reviewed_at": string | null,"bot_limits_reviewed_by": string | null,"clinic_id": string,"created_at": string,"default_home_address": string | null,"full_name": string,"id": string,"is_active": boolean,"phone": string,"updated_at": string
                   }
-                  ComputedFields: never
                   Insert: {
                     "agenda_import_id"?: string | null,"anonymized_at"?: string | null,"bot_blocked_at"?: string | null,"bot_blocked_by"?: string | null,"bot_blocked_notified_at"?: string | null,"bot_blocked_reason"?: string | null,"bot_limits_exempt_at"?: string | null,"bot_limits_exempt_by"?: string | null,"bot_limits_reviewed_at"?: string | null,"bot_limits_reviewed_by"?: string | null,"clinic_id": string,"created_at"?: string,"default_home_address"?: string | null,"full_name": string,"id"?: string,"is_active"?: boolean,"phone": string,"updated_at"?: string
                   }
@@ -661,7 +619,6 @@ isOneToOne: false
                   Row: {
                     "clinic_id": string,"contact_id": string | null,"contact_phone": string,"context": NonNullable<Json>,"funnel_flow": string | null,"funnel_session_id": string | null,"handoff_notified_at": string | null,"handoff_reason": string | null,"handoff_reminded_at": string | null,"handoff_started_at": string | null,"human_handoff": boolean,"human_handoff_at": string | null,"id": string,"not_understood_count": number,"state": string,"updated_at": string
                   }
-                  ComputedFields: never
                   Insert: {
                     "clinic_id": string,"contact_id"?: string | null,"contact_phone": string,"context"?: NonNullable<Json>,"funnel_flow"?: string | null,"funnel_session_id"?: string | null,"handoff_notified_at"?: string | null,"handoff_reason"?: string | null,"handoff_reminded_at"?: string | null,"handoff_started_at"?: string | null,"human_handoff"?: boolean,"human_handoff_at"?: string | null,"id"?: string,"not_understood_count"?: number,"state"?: string,"updated_at"?: string
                   }
@@ -687,7 +644,6 @@ isOneToOne: false
                   Row: {
                     "clinics": number,"errors": number,"job": string,"last_finished_at": string
                   }
-                  ComputedFields: never
                   Insert: {
                     "clinics"?: number,"errors"?: number,"job": string,"last_finished_at": string
                   }
@@ -701,7 +657,6 @@ isOneToOne: false
                   Row: {
                     "clinic_id": string,"first_scheduled_at": string,"id": number,"kind": string,"professional_id": string | null,"sent_at": string,"summary_date": string,"variant": string
                   }
-                  ComputedFields: never
                   Insert: {
                     "clinic_id": string,"first_scheduled_at": string,"id"?: never,"kind": string,"professional_id"?: string | null,"sent_at"?: string,"summary_date": string,"variant"?: string
                   }
@@ -727,7 +682,6 @@ isOneToOne: false
                   Row: {
                     "area": string,"depends_on": (string)[],"key": string,"label": string,"sort_order": number
                   }
-                  ComputedFields: never
                   Insert: {
                     "area": string,"depends_on"?: (string)[],"key": string,"label": string,"sort_order": number
                   }
@@ -741,7 +695,6 @@ isOneToOne: false
                   Row: {
                     "actor_id": string | null,"clinic_id": string,"created_at": string,"details": NonNullable<Json>,"event": string,"id": string
                   }
-                  ComputedFields: never
                   Insert: {
                     "actor_id"?: string | null,"clinic_id": string,"created_at"?: string,"details"?: NonNullable<Json>,"event": string,"id"?: string
                   }
@@ -761,7 +714,6 @@ isOneToOne: false
                   Row: {
                     "alternative_names": (string)[],"ans_code": string | null,"clinic_id": string,"created_at": string,"id": string,"is_active": boolean,"name": string,"updated_at": string
                   }
-                  ComputedFields: never
                   Insert: {
                     "alternative_names"?: (string)[],"ans_code"?: string | null,"clinic_id": string,"created_at"?: string,"id"?: string,"is_active"?: boolean,"name": string,"updated_at"?: string
                   }
@@ -781,7 +733,6 @@ isOneToOne: false
                   Row: {
                     "clinic_id": string,"error_message": string | null,"finished_at": string | null,"id": number,"job": string,"started_at": string,"status": string,"totals": NonNullable<Json>,"trigger": string | null,"variant": string | null
                   }
-                  ComputedFields: never
                   Insert: {
                     "clinic_id": string,"error_message"?: string | null,"finished_at"?: string | null,"id"?: never,"job": string,"started_at"?: string,"status"?: string,"totals"?: NonNullable<Json>,"trigger"?: string | null,"variant"?: string | null
                   }
@@ -801,7 +752,6 @@ isOneToOne: false
                   Row: {
                     "address": string | null,"clinic_id": string,"created_at": string,"id": string,"is_active": boolean,"name": string,"type": Database["public"]['Enums']["location_type"],"updated_at": string
                   }
-                  ComputedFields: never
                   Insert: {
                     "address"?: string | null,"clinic_id": string,"created_at"?: string,"id"?: string,"is_active"?: boolean,"name": string,"type": Database["public"]['Enums']["location_type"],"updated_at"?: string
                   }
@@ -821,7 +771,6 @@ isOneToOne: false
                   Row: {
                     "agenda_id": string,"clinic_id": string,"created_at": string,"user_id": string
                   }
-                  ComputedFields: never
                   Insert: {
                     "agenda_id": string,"clinic_id": string,"created_at"?: string,"user_id": string
                   }
@@ -853,7 +802,6 @@ isOneToOne: false
                   Row: {
                     "automatic": boolean,"channel": string,"clinic_id": string,"created_at": string,"destination": string,"error": string | null,"id": string,"invoice_id": string,"sent_by": string | null,"status": string,"target": string,"whatsapp_message_id": string | null
                   }
-                  ComputedFields: never
                   Insert: {
                     "automatic"?: boolean,"channel": string,"clinic_id": string,"created_at"?: string,"destination": string,"error"?: string | null,"id"?: string,"invoice_id": string,"sent_by"?: string | null,"status": string,"target": string,"whatsapp_message_id"?: string | null
                   }
@@ -879,7 +827,6 @@ isOneToOne: false
                   Row: {
                     "clinic_id": string,"environment": string,"last_number": number
                   }
-                  ComputedFields: never
                   Insert: {
                     "clinic_id": string,"environment": string,"last_number": number
                   }
@@ -899,7 +846,6 @@ isOneToOne: false
                   Row: {
                     "access_key": string | null,"cancel_reason_code": number | null,"cancel_reason_text": string | null,"cancel_requested_by": string | null,"canceled_at": string | null,"checked_at": string | null,"clinic_id": string,"dps_id": string,"dps_number": number,"environment": string,"error_code": string | null,"error_message": string | null,"id": string,"issued_at": string | null,"nfse_number": string | null,"payment_id": string,"requested_at": string,"requested_by": string | null,"series": string,"status": string,"xml_path": string | null
                   }
-                  ComputedFields: never
                   Insert: {
                     "access_key"?: string | null,"cancel_reason_code"?: number | null,"cancel_reason_text"?: string | null,"cancel_requested_by"?: string | null,"canceled_at"?: string | null,"checked_at"?: string | null,"clinic_id": string,"dps_id": string,"dps_number": number,"environment": string,"error_code"?: string | null,"error_message"?: string | null,"id"?: string,"issued_at"?: string | null,"nfse_number"?: string | null,"payment_id": string,"requested_at"?: string,"requested_by"?: string | null,"series": string,"status"?: string,"xml_path"?: string | null
                   }
@@ -925,7 +871,6 @@ isOneToOne: false
                   Row: {
                     "clinic_id": string,"created_at": string,"id": string,"is_active": boolean,"label": string,"phone": string,"receives_consultations": boolean,"receives_exams": boolean,"updated_at": string
                   }
-                  ComputedFields: never
                   Insert: {
                     "clinic_id": string,"created_at"?: string,"id"?: string,"is_active"?: boolean,"label": string,"phone": string,"receives_consultations"?: boolean,"receives_exams"?: boolean,"updated_at"?: string
                   }
@@ -945,7 +890,6 @@ isOneToOne: false
                   Row: {
                     "answers": NonNullable<Json>,"clinic_id": string,"email": string,"expires_at": string,"id": string,"requested_at": string,"requested_by": string | null,"reviewed_at": string | null,"reviewed_by": string | null,"saved_at": string | null,"status": string,"submitted_at": string | null,"token_hash": string
                   }
-                  ComputedFields: never
                   Insert: {
                     "answers"?: NonNullable<Json>,"clinic_id": string,"email": string,"expires_at": string,"id"?: string,"requested_at"?: string,"requested_by"?: string | null,"reviewed_at"?: string | null,"reviewed_by"?: string | null,"saved_at"?: string | null,"status"?: string,"submitted_at"?: string | null,"token_hash": string
                   }
@@ -965,7 +909,6 @@ isOneToOne: false
                   Row: {
                     "clinic_id": string,"created_at": string,"created_by": string | null,"description": string | null,"file_name": string,"id": string,"kind": string,"mime_type": string,"patient_id": string,"size_bytes": number,"storage_path": string
                   }
-                  ComputedFields: never
                   Insert: {
                     "clinic_id": string,"created_at"?: string,"created_by"?: string | null,"description"?: string | null,"file_name": string,"id"?: string,"kind": string,"mime_type": string,"patient_id": string,"size_bytes": number,"storage_path": string
                   }
@@ -991,7 +934,6 @@ isOneToOne: false
                   Row: {
                     "clinic_id": string,"cpf": string | null,"created_at": string,"invoice_auto_send": boolean,"invoice_email": string | null,"invoice_phone": string | null,"patient_id": string,"payer": string,"payer_cpf": string | null,"payer_name": string | null,"updated_at": string,"updated_by": string | null
                   }
-                  ComputedFields: never
                   Insert: {
                     "clinic_id": string,"cpf"?: string | null,"created_at"?: string,"invoice_auto_send"?: boolean,"invoice_email"?: string | null,"invoice_phone"?: string | null,"patient_id": string,"payer"?: string,"payer_cpf"?: string | null,"payer_name"?: string | null,"updated_at"?: string,"updated_by"?: string | null
                   }
@@ -1017,7 +959,6 @@ isOneToOne: false
                   Row: {
                     "body": string,"clinic_id": string,"created_at": string,"created_by": string | null,"from_observations": boolean,"id": string,"patient_id": string,"updated_at": string | null
                   }
-                  ComputedFields: never
                   Insert: {
                     "body": string,"clinic_id": string,"created_at"?: string,"created_by"?: string | null,"from_observations"?: boolean,"id"?: string,"patient_id": string,"updated_at"?: string | null
                   }
@@ -1043,7 +984,6 @@ isOneToOne: false
                   Row: {
                     "body": string,"clinic_id": string,"created_at": string,"created_by": string | null,"done_at": string | null,"done_by": string | null,"due_on": string,"id": string,"patient_id": string,"updated_at": string | null
                   }
-                  ComputedFields: never
                   Insert: {
                     "body": string,"clinic_id": string,"created_at"?: string,"created_by"?: string | null,"done_at"?: string | null,"done_by"?: string | null,"due_on": string,"id"?: string,"patient_id": string,"updated_at"?: string | null
                   }
@@ -1069,7 +1009,6 @@ isOneToOne: false
                   Row: {
                     "agenda_import_id": string | null,"anonymized_at": string | null,"birthdate": string,"clinic_id": string,"contact_id": string,"created_at": string,"created_via": string,"full_name": string,"id": string,"insurance_card_number": string | null,"insurance_card_valid_until": string | null,"insurance_plan_id": string | null,"is_active": boolean,"is_contact_self": boolean,"notes": string | null,"updated_at": string
                   }
-                  ComputedFields: never
                   Insert: {
                     "agenda_import_id"?: string | null,"anonymized_at"?: string | null,"birthdate": string,"clinic_id": string,"contact_id": string,"created_at"?: string,"created_via"?: string,"full_name": string,"id"?: string,"insurance_card_number"?: string | null,"insurance_card_valid_until"?: string | null,"insurance_plan_id"?: string | null,"is_active"?: boolean,"is_contact_self"?: boolean,"notes"?: string | null,"updated_at"?: string
                   }
@@ -1107,7 +1046,6 @@ isOneToOne: false
                   Row: {
                     "amount_cents": number,"appointment_id": string,"clinic_id": string,"created_at": string,"created_by": string | null,"deleted_at": string | null,"deleted_by": string | null,"id": string,"method": string,"paid_on": string,"patient_id": string,"payer": string,"payer_cpf": string | null,"payer_name": string
                   }
-                  ComputedFields: never
                   Insert: {
                     "amount_cents": number,"appointment_id": string,"clinic_id": string,"created_at"?: string,"created_by"?: string | null,"deleted_at"?: string | null,"deleted_by"?: string | null,"id"?: string,"method": string,"paid_on": string,"patient_id": string,"payer": string,"payer_cpf"?: string | null,"payer_name": string
                   }
@@ -1139,7 +1077,6 @@ isOneToOne: false
                   Row: {
                     "actor_user_id": string,"clinic_id": string,"id": number,"method": string,"occurred_at": string,"path": string
                   }
-                  ComputedFields: never
                   Insert: {
                     "actor_user_id": string,"clinic_id": string,"id"?: never,"method": string,"occurred_at"?: string,"path": string
                   }
@@ -1153,7 +1090,6 @@ isOneToOne: false
                   Row: {
                     "actor_user_id": string,"clinic_id": string | null,"id": number,"new_row": Json | null,"occurred_at": string,"old_row": Json | null,"operation": string,"table_name": string
                   }
-                  ComputedFields: never
                   Insert: {
                     "actor_user_id": string,"clinic_id"?: string | null,"id"?: never,"new_row"?: Json | null,"occurred_at"?: string,"old_row"?: Json | null,"operation": string,"table_name": string
                   }
@@ -1167,7 +1103,6 @@ isOneToOne: false
                   Row: {
                     "created_at": string,"display_name": string,"user_id": string
                   }
-                  ComputedFields: never
                   Insert: {
                     "created_at"?: string,"display_name"?: string,"user_id": string
                   }
@@ -1181,7 +1116,6 @@ isOneToOne: false
                   Row: {
                     "clinic_id": string,"insurance_plan_id": string,"professional_id": string
                   }
-                  ComputedFields: never
                   Insert: {
                     "clinic_id": string,"insurance_plan_id": string,"professional_id": string
                   }
@@ -1213,7 +1147,6 @@ isOneToOne: false
                   Row: {
                     "clinic_id": string,"council": string | null,"council_number": string | null,"council_state": string | null,"created_at": string,"display_name": string,"id": string,"is_active": boolean,"phone": string | null,"profession": string,"receives_daily_summary": boolean,"rqe": string | null,"specialty": string | null,"updated_at": string,"user_id": string | null
                   }
-                  ComputedFields: never
                   Insert: {
                     "clinic_id": string,"council"?: string | null,"council_number"?: string | null,"council_state"?: string | null,"created_at"?: string,"display_name": string,"id"?: string,"is_active"?: boolean,"phone"?: string | null,"profession": string,"receives_daily_summary"?: boolean,"rqe"?: string | null,"specialty"?: string | null,"updated_at"?: string,"user_id"?: string | null
                   }
@@ -1239,7 +1172,6 @@ isOneToOne: false
                   Row: {
                     "auth": string,"clinic_id": string,"created_at": string,"device": string | null,"endpoint": string,"id": string,"last_sent_at": string | null,"p256dh": string,"user_id": string
                   }
-                  ComputedFields: never
                   Insert: {
                     "auth": string,"clinic_id": string,"created_at"?: string,"device"?: string | null,"endpoint": string,"id"?: string,"last_sent_at"?: string | null,"p256dh": string,"user_id": string
                   }
@@ -1259,7 +1191,6 @@ isOneToOne: false
                   Row: {
                     "agenda_id": string,"clinic_id": string,"created_at": string,"created_by": string | null,"ends_at": string,"id": string,"reason": string,"removed_at": string | null,"removed_by": string | null,"starts_at": string,"updated_at": string | null,"updated_by": string | null
                   }
-                  ComputedFields: never
                   Insert: {
                     "agenda_id": string,"clinic_id": string,"created_at"?: string,"created_by"?: string | null,"ends_at": string,"id"?: string,"reason": string,"removed_at"?: string | null,"removed_by"?: string | null,"starts_at": string,"updated_at"?: string | null,"updated_by"?: string | null
                   }
@@ -1285,7 +1216,6 @@ isOneToOne: false
                   Row: {
                     "agenda_id": string,"clinic_id": string,"service_id": string
                   }
-                  ComputedFields: never
                   Insert: {
                     "agenda_id": string,"clinic_id": string,"service_id": string
                   }
@@ -1317,7 +1247,6 @@ isOneToOne: false
                   Row: {
                     "clinic_id": string,"service_code": string,"service_id": string,"updated_at": string,"updated_by": string | null
                   }
-                  ComputedFields: never
                   Insert: {
                     "clinic_id": string,"service_code": string,"service_id": string,"updated_at"?: string,"updated_by"?: string | null
                   }
@@ -1343,7 +1272,6 @@ isOneToOne: false
                   Row: {
                     "clinic_id": string,"location_id": string,"price_cents": number | null,"service_id": string
                   }
-                  ComputedFields: never
                   Insert: {
                     "clinic_id": string,"location_id": string,"price_cents"?: number | null,"service_id": string
                   }
@@ -1375,7 +1303,6 @@ isOneToOne: false
                   Row: {
                     "category": Database["public"]['Enums']["service_category"],"clinic_id": string,"created_at": string,"duration_minutes": number,"id": string,"is_active": boolean,"name": string,"preparation_file_name": string | null,"preparation_file_path": string | null,"preparation_file_size": number | null,"preparation_file_type": string | null,"preparation_instructions": string | null,"price_cents": number,"return_deadline_days": number | null,"scheduling_mode": Database["public"]['Enums']["scheduling_mode"],"updated_at": string
                   }
-                  ComputedFields: never
                   Insert: {
                     "category": Database["public"]['Enums']["service_category"],"clinic_id": string,"created_at"?: string,"duration_minutes": number,"id"?: string,"is_active"?: boolean,"name": string,"preparation_file_name"?: string | null,"preparation_file_path"?: string | null,"preparation_file_size"?: number | null,"preparation_file_type"?: string | null,"preparation_instructions"?: string | null,"price_cents": number,"return_deadline_days"?: number | null,"scheduling_mode"?: Database["public"]['Enums']["scheduling_mode"],"updated_at"?: string
                   }
@@ -1395,7 +1322,6 @@ isOneToOne: false
                   Row: {
                     "clinic_id": string | null,"id": number,"ids": NonNullable<Json>,"message": string,"occurred_at": string,"scope": string
                   }
-                  ComputedFields: never
                   Insert: {
                     "clinic_id"?: string | null,"id"?: never,"ids"?: NonNullable<Json>,"message"?: string,"occurred_at"?: string,"scope": string
                   }
@@ -1415,7 +1341,6 @@ isOneToOne: false
                   Row: {
                     "appointment_id": string,"clinic_id": string,"created_at": string,"created_via": string,"ended_at": string | null,"ended_by": string | null,"ended_reason": string | null,"id": string,"status": string
                   }
-                  ComputedFields: never
                   Insert: {
                     "appointment_id": string,"clinic_id": string,"created_at"?: string,"created_via"?: string,"ended_at"?: string | null,"ended_by"?: string | null,"ended_reason"?: string | null,"id"?: string,"status"?: string
                   }
@@ -1441,7 +1366,6 @@ isOneToOne: false
                   Row: {
                     "appointment_id": string,"clinic_id": string,"details": NonNullable<Json>,"entry_id": string,"expires_at": string,"id": string,"offered_at": string,"opened_by_appointment_id": string | null,"opening_id": string | null,"responded_at": string | null,"slot_duration_minutes": number,"slot_location_id": string,"slot_scheduled_at": string,"status": string,"whatsapp_message_id": string | null
                   }
-                  ComputedFields: never
                   Insert: {
                     "appointment_id": string,"clinic_id": string,"details"?: NonNullable<Json>,"entry_id": string,"expires_at": string,"id"?: string,"offered_at"?: string,"opened_by_appointment_id"?: string | null,"opening_id"?: string | null,"responded_at"?: string | null,"slot_duration_minutes": number,"slot_location_id": string,"slot_scheduled_at": string,"status"?: string,"whatsapp_message_id"?: string | null
                   }
@@ -1491,7 +1415,6 @@ isOneToOne: false
                   Row: {
                     "agenda_id": string,"clinic_id": string,"closed_reason": string | null,"created_at": string,"id": string,"is_group_session": boolean,"opened_by_appointment_id": string | null,"reason": string,"service_id": string,"slot_duration_minutes": number,"slot_location_id": string,"slot_scheduled_at": string,"status": string,"updated_at": string
                   }
-                  ComputedFields: never
                   Insert: {
                     "agenda_id": string,"clinic_id": string,"closed_reason"?: string | null,"created_at"?: string,"id"?: string,"is_group_session"?: boolean,"opened_by_appointment_id"?: string | null,"reason": string,"service_id": string,"slot_duration_minutes": number,"slot_location_id": string,"slot_scheduled_at": string,"status"?: string,"updated_at"?: string
                   }
@@ -1535,7 +1458,6 @@ isOneToOne: false
                   Row: {
                     "access_token_secret_id": string | null,"clinic_id": string,"coexistence": boolean,"connected_at": string | null,"connected_via": string,"contacts_synced_at": string | null,"created_at": string,"disconnected_at": string | null,"disconnected_via": string | null,"display_phone": string | null,"history_synced_at": string | null,"payment_checked_at": string | null,"payment_checked_waba": string | null,"phone_number_id": string,"pin_secret_id": string | null,"status": string,"updated_at": string,"waba_id": string
                   }
-                  ComputedFields: never
                   Insert: {
                     "access_token_secret_id"?: string | null,"clinic_id": string,"coexistence"?: boolean,"connected_at"?: string | null,"connected_via"?: string,"contacts_synced_at"?: string | null,"created_at"?: string,"disconnected_at"?: string | null,"disconnected_via"?: string | null,"display_phone"?: string | null,"history_synced_at"?: string | null,"payment_checked_at"?: string | null,"payment_checked_waba"?: string | null,"phone_number_id": string,"pin_secret_id"?: string | null,"status"?: string,"updated_at"?: string,"waba_id": string
                   }
@@ -1555,7 +1477,6 @@ isOneToOne: true
                   Row: {
                     "appointment_id": string | null,"attempt": number,"body": string | null,"clinic_id": string,"contact_id": string | null,"contact_phone": string | null,"created_at": string,"direction": string,"failure_code": number | null,"failure_reason": string | null,"first_attempt_id": string | null,"id": string,"message_type": string,"retry_at": string | null,"retry_payload": Json | null,"status": string | null,"template_name": string | null,"wa_message_id": string | null
                   }
-                  ComputedFields: never
                   Insert: {
                     "appointment_id"?: string | null,"attempt"?: number,"body"?: string | null,"clinic_id": string,"contact_id"?: string | null,"contact_phone"?: string | null,"created_at"?: string,"direction": string,"failure_code"?: number | null,"failure_reason"?: string | null,"first_attempt_id"?: string | null,"id"?: string,"message_type": string,"retry_at"?: string | null,"retry_payload"?: Json | null,"status"?: string | null,"template_name"?: string | null,"wa_message_id"?: string | null
                   }
@@ -1593,7 +1514,6 @@ isOneToOne: false
                   Row: {
                     "body": string | null,"clinic_id": string,"created_at": string,"id": string,"language": string,"meta_template_id": string | null,"name": string,"proposed_at": string | null,"proposed_by": string | null,"rejection_reason": string | null,"stage": string,"status": string,"support_note": string | null,"template_key": string,"updated_at": string,"version": number
                   }
-                  ComputedFields: never
                   Insert: {
                     "body"?: string | null,"clinic_id": string,"created_at"?: string,"id"?: string,"language"?: string,"meta_template_id"?: string | null,"name": string,"proposed_at"?: string | null,"proposed_by"?: string | null,"rejection_reason"?: string | null,"stage"?: string,"status"?: string,"support_note"?: string | null,"template_key": string,"updated_at"?: string,"version"?: number
                   }
@@ -1704,9 +1624,6 @@ isOneToOne: false
                            },
 "load_agenda_import":
 { Args: { "p_plan": Json,"p_request_id": string }; Returns: Json
-                           },
-"log_dmed_generated":
-{ Args: { "p_clinic_id": string,"p_left_out": number,"p_responsibles": number,"p_total_cents": number,"p_year": number }; Returns: undefined
                            },
 "log_platform_access":
 { Args: { "p_clinic_id": string,"p_method": string,"p_path": string }; Returns: undefined

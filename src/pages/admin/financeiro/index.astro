@@ -4,8 +4,8 @@
 // ele, a nota fiscal não sai). Busca e páginas como em Pacientes. Só o
 // Administrador e a Recepção, com o item liberado (o Suporte vê).
 //
-// Redesign R8 (proposta aprovada pelo cliente em 17/out/2026): abas "Quem
-// paga" e "DMED"; no computador, uma linha por paciente (quem paga com o tipo
+// Redesign R8 (proposta aprovada pelo cliente em 17/out/2026; a aba "DMED"
+// saiu em 30/out/2026, a DMED é do contador da clínica): no computador, uma linha por paciente (quem paga com o tipo
 // e o CPF mascarado com o selo); no celular, cartões. Filtro "Falta CPF" (a
 // única novidade da etapa, decisão do cliente), junto com a busca.
 import { currentPath, withReturn } from "../../../lib/returnPath";
@@ -56,7 +56,7 @@ const segOff = `${segItem} font-semibold text-ink-soft hover:bg-white/60 hover:t
 ---
 
 <AdminLayout title="Financeiro">
-  <FinanceHeader active="quem-paga" />
+  <FinanceHeader />
   <FlashMessage />
 
   <div class={`${card} mt-4 flex flex-wrap items-end gap-x-4 gap-y-3 p-3.5 sm:px-4`}>
@@ -95,7 +95,7 @@ const segOff = `${segItem} font-semibold text-ink-soft hover:bg-white/60 hover:t
       <section aria-label={`Quem paga por cada ${vocabulary.patient}`} class={`${card} mt-2 overflow-hidden`}>
         <div aria-hidden="true" class={`hidden gap-4 px-5 py-3 text-[12.5px] font-semibold tracking-[.05em] text-ink-soft uppercase lg:grid ${cols}`}>
           <span>{capitalize(vocabulary.patient)}</span>
-          <span>Quem paga (nota e DMED)</span>
+          <span>Quem paga (nota fiscal)</span>
           <span>CPF de quem paga</span>
           <span />
         </div>

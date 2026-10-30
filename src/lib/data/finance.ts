@@ -13,7 +13,7 @@ import { listPatientsPage, type Contact, type Page, type Patient, type PatientWi
 // o contato do WhatsApp (que é o próprio paciente quando ele fala por si);
 // pode ser o próprio paciente ou outra pessoa, com nome e CPF. Só o CPF do
 // responsável será exigido para emitir a nota (F11.4); o do paciente é
-// opcional (na DMED vai a data de nascimento). O paciente que fala por si é o
+// opcional. O paciente que fala por si é o
 // próprio contato: o CPF dele fica uma vez só, no contato.
 
 export type Payer = "contact" | "patient" | "other";

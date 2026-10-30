@@ -4,9 +4,8 @@
 // desabilitados, com `aria-busy`, e o que tem `data-sending-label` troca o texto
 // (ex.: "Registrando…"). Vale para o envio comum e para o do diálogo de
 // confirmação (`rc:enviar`, src/scripts/confirmDelete.ts). Ficam de fora o
-// formulário com `data-envio-livre` (o "Gerar arquivo" da DMED, que baixa um
-// arquivo e não sai da tela), o que abre em outra aba e o tratado por
-// JavaScript (envio cancelado). Voltar pelo navegador destrava tudo.
+// formulário que abre em outra aba e o tratado por JavaScript (envio
+// cancelado). Voltar pelo navegador destrava tudo.
 
 const SENDING = "sending";
 
@@ -19,7 +18,6 @@ function submitButtons(form: HTMLFormElement): HTMLButtonElement[] {
 
 function lockable(form: HTMLFormElement): boolean {
   if ((form.getAttribute("method") ?? "").toUpperCase() !== "POST") return false;
-  if (form.hasAttribute("data-envio-livre")) return false;
   const target = form.getAttribute("target");
   return !target || target === "_self";
 }

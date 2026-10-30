@@ -50,7 +50,7 @@ const actors = await loadActorLabels(db, clinic.clinicId, audit.map((a) => a.act
 // O certificado é só do Administrador da clínica (o Suporte nunca mexe).
 const isClinicAdmin = clinic.roles.includes("admin");
 const status = certificate ? certificateStatus(certificate.validUntil) : null;
-// Aberta de outra tela (DMED, aviso do Início): "Voltar" para lá, também depois
+// Aberta de outra tela (pagamento, aviso do Início): "Voltar" para lá, também depois
 // de salvar (R9; S-01 do relatório da R8). Aberta pelo menu, sem "Voltar".
 const volta = receivedReturn(Astro.url);
 const action = withReturn("/api/admin/configuracoes/nota-fiscal", volta);
