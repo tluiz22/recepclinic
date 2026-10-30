@@ -1,7 +1,8 @@
 # Emissão de NFS-e pelo Asaas (substitui o emissor direto da F11)
 
 > **Estado atual (retomar daqui), 29/out/2026.** **Planejamento concluído** (cliente, 29/out). Nada implementado.
-> A implementação será feita na branch **`faturamento`**, só com a autorização do cliente, na ordem da seção 12.
+> A implementação será feita numa branch **`faturamento`** recriada da `main` ao começar o código, só com a autorização
+> do cliente, na ordem da seção 12.
 > **N0 em andamento (29/out):** documentação conferida, nota de referência lida e **roteiro do Sandbox executado**
 > (seção 13.6: emissão em Mossoró funciona ponta a ponta). **Asaas respondeu (13.7):** exige BaaS; chaves seguem
 > válidas no BaaS. Decisões do cliente registradas; conta de produção aberta; avaliação BaaS e formulário de IP enviados. Pendentes: Asaas (BaaS, saldo negativo), contador e secretária. Depois da
@@ -239,7 +240,7 @@ Assinatura e aba Faturamento do Suporte (faturamento); `tests/db/{emissao-nfse,e
 no Emissor Nacional. **Com o advogado:** termos e prazo de guarda (seção 8). **Operação:** conferir que a produção não
 tem dados fiscais antes da N5.
 
-## 12. Fases (na branch `faturamento`, cada uma com a autorização e a validação do cliente)
+## 12. Fases (na branch `faturamento` recriada ao começar o código, cada uma com a autorização e a validação do cliente)
 
 | Fase | Entrega | Depende de |
 |---|---|---|

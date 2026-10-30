@@ -15,11 +15,9 @@
 
 ## Como trabalhar nesta etapa
 
-- Todo o código e a documentação do faturamento ficam na branch **`faturamento`** (criada da `main` em 28/out). A
-  `main` fica livre para correções urgentes do piloto em produção (publica no staging a cada push; a `producao`
-  publica na produção).
-- **Começar ou voltar ao faturamento:** `git switch faturamento`, trazer o que mudou na `main` (`git merge main`) e
-  retomar pelo bloco acima.
+- **Planejamento na `main`** (cliente, 30/out): a branch `faturamento` (criada em 28/out, só com documentos) entrou na
+  `main` e foi excluída. Ela é **recriada da `main` só quando o código começar** (F12.1 ou N1), e segue as regras de
+  branch paralela do `CLAUDE.md`.
 - **Parar e voltar à `main`:** commit e push do que estiver em andamento na `faturamento`, atualizar o bloco "Estado
   atual" deste arquivo e `git switch main`.
 - **Publicação (cliente, 28/out):** cada fase vai para o **endereço de teste da branch** na Vercel (Preview da

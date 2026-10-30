@@ -20,10 +20,11 @@
 >   precisa do "Criar na Meta" (Suporte) para os modelos `rc_preparo_exame_v3` e `rc_preparo_arquivo_v3`. Próximo: nada
 >   pendente nesta frente; aguarda o cliente.
 > - **CRM concluído** (28/out; [`crm.md`](crm.md)): validado no staging e na produção desde 28/out.
-> - **Faturamento do SaaS e NFS-e pelo Asaas** (na branch **`faturamento`**; a `main` fica para correções urgentes):
+> - **Faturamento do SaaS e NFS-e pelo Asaas** (planejamento na `main`; a branch `faturamento` foi excluída em 30/out e
+>   é recriada da `main` só quando o código começar):
 >   planejamento do faturamento concluído (28/out) e ampliado em 29/out com a **nota fiscal pelo Asaas** (D13: subconta
->   por clínica, preço por nota e franquia na fatura; `planejamento-nfse-asaas.md`, só na branch). Nada implementado.
->   **N0 em andamento (29/out), na `faturamento`:** Sandbox testado em Mossoró; Asaas respondeu (exige BaaS; avaliação
+>   por clínica, preço por nota e franquia na fatura; `planejamento-nfse-asaas.md`). Nada implementado.
+>   **N0 em andamento (29/out):** Sandbox testado em Mossoró; Asaas respondeu (exige BaaS; avaliação
 >   pedida); aguardando Asaas (BaaS, saldo negativo, IP) e contador (CNAE, IBS/CBS, PIS/COFINS, **certificado A1**,
 >   exigido em Mossoró). Retomar pela seção 13 do plano; depois a F12.1. Cada etapa com o OK do cliente.
 > - **Piloto** (etapas no [plano](plano.md), F10): **A** feita (roteiros do WhatsApp Business: [único](https://claude.ai/artifact/8AXZMSLcEq8SMWFpYHaraq),
