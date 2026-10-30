@@ -9,7 +9,8 @@
 > **30/out (13.8):** Asaas respondeu saldo negativo e e-mail da nota e mandou playbook, checklist e selos do BaaS.
 > Decidido: reposição automática do saldo da subconta; e-mail real do tomador (entrega própria só pelo WhatsApp).
 > Checklist = formulário do Google (13.9). Selo no staging validado e **formulário BaaS enviado (30/out)**: aguardando
-> a análise do Asaas. Pendentes: contador e secretária. Depois da
+> a análise do Asaas. Secretária respondida; contador em parte (CNAE e IBS/CBS, 30/out; faltam
+> PIS/COFINS e certificado A1). Depois da
 > N0: a F12.1, com o OK do cliente.
 
 Marcas: **[Código]** conferido no repositório; **[Asaas]** documentação oficial do Asaas; **[Oficial]** prefeitura ou
@@ -333,10 +334,15 @@ Só os dados da clínica (o arquivo e os dados do tomador não ficam no projeto)
   `taxSituationCode`, `taxClassificationCode` e `operationIndicatorCode` do Asaas).
 - DPS série **2026**, número no formato 26000000000xx (para o `rpsSerie`/`rpsNumber` na implantação).
 - Descrição usada hoje: "REFERENTE A CONSULTA DE [paciente]", com o responsável como tomador (o modelo do plano).
-- **Secretária (29/out):** entra com **usuário e senha** (site ainda não informado). **Atenção:** pelo Asaas, Mossoró
+- **Contador (30/out):** CNAE **86.30-5-03** (atividade médica ambulatorial restrita a consultas). IBS/CBS: manter
+  CST **200** e cClassTrib **200029**, mas o **indicador de operação correto é 030101** (as notas de hoje saem com
+  100301). Na implantação, usar 030101.
+- **Secretária (29/out; site em 30/out):** emite na **Sefaz Digital de Mossoró** (portal Tinus,
+  `https://www.tinus.com.br/csp/mossoro/portal/index.csp`, área restrita do contribuinte), com **usuário e senha**. **Atenção:** pelo Asaas, Mossoró
   exige **certificado A1** (`authenticationType: CERTIFICATE`, seção 13.6); usuário e senha não servem. **[Pendência]**
   a clínica tem A1 de pessoa jurídica (o contador costuma ter)? Se não tiver, precisa comprar antes da N6.
-- Falta: site da secretária e **contador** (CNAE, códigos do IBS/CBS, PIS/COFINS e o certificado A1).
+- Falta (**contador**): PIS/COFINS e o certificado A1 (a clínica tem e-CNPJ A1?); as demais perguntas da 13.3
+  (série e última nota, prazo de cancelamento, descrição, DMED) quando ele puder.
 
 ### 13.4 Roteiro no Sandbox (depois que o cliente criar a conta e a chave)
 
