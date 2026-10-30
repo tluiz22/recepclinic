@@ -3,8 +3,8 @@
 > **Estado atual (retomar daqui), 30/out/2026.** Histórico completo em [`historico.md`](historico.md) (não ler
 > na retomada; buscar por data, fase ou commit quando precisar).
 >
-> **Próxima sessão (cliente, 30/out):** voltar às pendências do planejamento do financeiro (faturamento do SaaS e
-> NFS-e pelo Asaas, N0: seção 13 do `planejamento-nfse-asaas.md`; antes, ler o bloco de retomada dele).
+> **Agora (30/out):** NFS-e pelo Asaas, N0 (seções 13.8 e 13.9 do `planejamento-nfse-asaas.md`; ler o bloco de
+> retomada dele). Próximo: tela da habilitação fiscal com o selo do Asaas no staging, para o formulário BaaS.
 >
 > **Ambientes**
 > - **Produção** (`app.recepclinic.com.br`, branch `producao`): no ar desde 26/out; publicações de 28/out: **CRM**

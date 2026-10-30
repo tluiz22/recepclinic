@@ -5,7 +5,11 @@
 > do cliente, na ordem da seção 12.
 > **N0 em andamento (29/out):** documentação conferida, nota de referência lida e **roteiro do Sandbox executado**
 > (seção 13.6: emissão em Mossoró funciona ponta a ponta). **Asaas respondeu (13.7):** exige BaaS; chaves seguem
-> válidas no BaaS. Decisões do cliente registradas; conta de produção aberta; avaliação BaaS e formulário de IP enviados. Pendentes: Asaas (BaaS, saldo negativo), contador e secretária. Depois da
+> válidas no BaaS. Decisões do cliente registradas; conta de produção aberta; avaliação BaaS e formulário de IP enviados.
+> **30/out (13.8):** Asaas respondeu saldo negativo e e-mail da nota e mandou playbook, checklist e selos do BaaS.
+> Decidido: reposição automática do saldo da subconta; e-mail real do tomador (entrega própria só pelo WhatsApp).
+> Checklist = formulário do Google (13.9, respostas em rascunho). **Próximo:** tela da habilitação fiscal com o selo no
+> staging (branch `faturamento`), print e envio do formulário pelo cliente. Pendentes: contador e secretária. Depois da
 > N0: a F12.1, com o OK do cliente.
 
 Marcas: **[Código]** conferido no repositório; **[Asaas]** documentação oficial do Asaas; **[Oficial]** prefeitura ou
@@ -416,8 +420,88 @@ Conta principal do Sandbox (PJ) e uma subconta fictícia com endereço em Mossor
    saldo negativo e e-mail da nota ao tomador. Conta principal de produção aberta (sem subconta e sem chave de API).
 5. **Marca do Asaas** nas telas de habilitação fiscal e no contrato com a clínica: entra na N2 e nos termos.
 6. **Reperguntar ao Asaas:** saldo negativo da subconta (a nota continua saindo? como a principal cobre?).
-7. **Teste na N3 (staging):** tomador com `notificationDisabled: true` e e-mail nosso; conferir se chega e-mail da
-   nota.
+7. ~~**Teste na N3 (staging):** tomador com `notificationDisabled: true` e e-mail nosso; conferir se chega e-mail da
+   nota.~~ Respondido pelo Asaas (13.8): o e-mail sempre chega.
+
+### 13.8 Segunda resposta do Asaas e playbook do BaaS (30/out/2026)
+
+**Saldo negativo da subconta [Asaas]:** a nota continua saindo, com travas: até **10 notas avulsas** (sem cobrança do
+Asaas, que é o nosso caso) ou 150 ligadas a cobranças do Asaas; acima de **−R$ 20,00** acumulados, novas emissões
+são bloqueadas e a subconta entra em recuperação de saldo devedor. A tarifa é debitada da subconta (prestadora da
+nota perante o fisco); **não há débito automático na principal**. Recomendado: a principal transfere para a subconta
+de forma preventiva ou periódica (`POST /v3/transfers` com o `walletId` da subconta; na hora e sem tarifa).
+- **Consequência:** a reposição do saldo da subconta é obrigatória e entra na N2/N3 (rotina e conferência antes de
+  emitir). A conta principal precisa de saldo para isso (depósito do RecepClinic). **Decidido (cliente, 30/out):
+  reposição automática:** antes de emitir, o sistema confere o saldo da subconta e, se estiver abaixo do alvo
+  (ex.: R$ 10, cerca de 20 notas), transfere da principal até o alvo; uma rotina diária faz o mesmo. O Suporte
+  acompanha o saldo da conta principal.
+
+**E-mail da nota ao tomador [Asaas]:** `notificationDisabled` só desliga a régua de cobrança. **Toda nota autorizada
+é enviada pelo Asaas ao e-mail do tomador**, sem opção de desligar (a prefeitura ou o Portal Nacional também podem
+enviar). Alternativa indicada: cadastrar no tomador um e-mail controlado pela plataforma.
+- **Consequência:** o teste do item 7 da 13.7 deixa de ser necessário. Escolher entre o e-mail real de quem pagou
+  (o paciente recebe o e-mail do Asaas) e um e-mail da plataforma (a nota sai com esse e-mail; efeito fiscal a
+  confirmar com o contador). **Decidido (cliente, 30/out): e-mail real de quem pagou.** O e-mail da nota fica com o
+  Asaas; a saída de entregas do RecepClinic (N4) envia **só pelo WhatsApp** (`rc_nota_fiscal_v1`), sem e-mail
+  próprio, para não duplicar. `notificationDisabled: true` continua no tomador (desliga a régua de cobrança).
+
+**Avaliação BaaS [Asaas]:** enviaram o **playbook** (`docs/Playbook de BaaS para clientes Asaas.pdf`), o **checklist
+de informações** para habilitar subcontas (não está no repositório) e os **selos** do RecepClinic:
+- Positivo: `https://baas.asaas.com/selos/Servicos_financeiros_Asaas-Reduzida-Positivo.svg?id=77d97322-c59c-4983-bbb1-e0dbe253d4c3`
+- Negativo preto: `https://baas.asaas.com/selos/Servicos_financeiros_Asaas-Reduzida-Negativo-Preto.svg?id=77d97322-c59c-4983-bbb1-e0dbe253d4c3`
+- Negativo branco: `https://baas.asaas.com/selos/Servicos_financeiros_Asaas-Reduzida-Negativo-Branco.svg?id=77d97322-c59c-4983-bbb1-e0dbe253d4c3`
+
+Passos pedidos: ler o playbook, **incluir o selo no código**, depois preencher o
+[formulário](https://docs.google.com/forms/d/e/1FAIpQLSc6wr8qBnncEo68bAW1SwIE589v2JemGyzZQhJA71v075QdzQ/viewform) e
+informar ao Asaas o e-mail usado. Depois: análise em até 3 dias úteis, contrato BaaS, checklist de Segurança da
+Informação e liberação das subcontas pela API.
+
+**Regras do playbook que afetam o RecepClinic [Asaas]** (Resolução Conjunta nº 16/2025 do Banco Central):
+1. O selo vai em toda tela de produto que envolva o serviço do Asaas (no nosso caso, a **habilitação fiscal da
+   clínica**, que cria a subconta), com link para `https://asaas.com` (`target="_blank" rel="noopener noreferrer"`) e
+   **sem** política `no-referrer` na imagem (o Asaas confere o carregamento do selo pelo Referer). **[Código]**
+   `src/lib/securityHeaders.ts` usa `strict-origin-when-cross-origin` (envia a origem): compatível.
+2. Contrato e termos com a clínica: cláusula-modelo do Asaas ("os serviços financeiros e de pagamentos [...] são
+   prestados pelo ASAAS GESTÃO FINANCEIRA INSTITUIÇÃO DE PAGAMENTOS S.A. [...]"); vai para o advogado.
+3. Canais de suporte do Asaas visíveis ao cliente final (0800 009 0037; contato@asaas.com.br).
+4. Vedado: nome que sugira instituição financeira (Bank, Pay, Wallet...), usar outro provedor BaaS, cobrar tarifa
+   financeira como se fosse o prestador. **O preço por nota da fatura** (D13) é cobrança da plataforma: deixar claro
+   na fatura e no contrato que a nota é emitida pelo Asaas (conferir na avaliação).
+5. Não alterar nem criar documentos legais sobre o processamento financeiro.
+
+**Selos no repositório:** cópias em `docs/selos_Asaas/` só como referência. **No código, usar as URLs acima** (o
+Asaas confere o carregamento do selo pela URL com o `id`); nunca servir a cópia local.
+
+### 13.9 Formulário "Asaas | Checklist BAAS" (rascunho das respostas, 30/out/2026)
+
+O checklist é o próprio formulário do Google. **Exige print da tela de criação da subconta com o selo** (e as URLs
+onde o selo aparece): a tela precisa existir antes do envio. **Decidido (cliente, 30/out): antecipar a parte visual da
+habilitação fiscal** (Configurações › Nota fiscal) na branch `faturamento` recriada da `main`, no staging: selo com
+link, texto de que a nota é emitida pelo Asaas, canais de suporte do Asaas e botão desativado ("aguardando
+liberação"), sem chamar o Asaas. O cliente tira o print e envia o formulário; a N2 completa a tela. Respostas propostas (**[Cliente]** = o cliente informa):
+
+| # | Pergunta (resumo) | Resposta proposta |
+|---|---|---|
+| — | E-mail; empresa/CNPJ | **[Cliente]** (informar ao Asaas o e-mail usado) |
+| 01 | Nome com Bank, Pay, Financeira... | Não |
+| 02 | Asaas é o prestador do serviço financeiro; a empresa é só plataforma | Sim (evidências na 06: selo na tela e cláusula no contrato) |
+| 03 | Fica claro ao cliente final que o serviço é do Asaas | Sim (selo na habilitação fiscal; cláusula nos termos) |
+| 04 | Clientes revendem os serviços do Asaas | Não |
+| 05 | Estrutura | (a) Direta Tomador: o RecepClinic usa a chave da subconta em nome da clínica |
+| 06 | Marca Asaas visível | Sim; URL e print da tela de habilitação fiscal (Configurações › Nota fiscal) |
+| 07 | Só o Asaas como provedor BaaS | Sim |
+| 08 | Cobra tarifa financeira (Pix, boleto...) em nome próprio | Não (o preço por nota da fatura é do software; explicar nos comentários) |
+| 09 | Apresenta-se como instituição financeira | Não |
+| 10 | Modelo de negócio | SaaS de recepção para clínicas (WhatsApp, agenda, financeiro). O Asaas é usado **só para a emissão de NFS-e**: uma subconta BaaS por clínica (prestadora da nota), criada pela API; o RecepClinic emite, cancela e consulta as notas pela chave da subconta e transfere da conta principal o saldo das tarifas. Sem cobrança, Pix ou boleto aos pacientes. |
+| 11 | Links públicos | **[Cliente]** site (`recepclinic.com.br`?) e redes |
+| 12 | Canais | Painel web `app.recepclinic.com.br` (área logada da clínica) |
+| 13 | Volume de subcontas | **[Cliente]** estimativa (ex.: 1 no piloto; N em 12 meses) |
+| 14 | Volume financeiro mensal | Só as transferências de tarifa (R$ 0,49 por nota): **[Cliente]** estimativa (ex.: < R$ 500) |
+| 15 | Funcionários | **[Cliente]** |
+| 16 | Faturamento do último ano | **[Cliente]** |
+| 17 | Avalia o atendimento | **[Cliente]** |
+| 18 | Modelo de subconta | Subcontas BaaS (documentos pela URL dedicada, sem painel do Asaas) |
+| — | Comentários | Uso restrito à NFS-e; preço por nota cobrado pela plataforma como parte do software; sem IP fixo (formulário de IP enviado em 29/out). |
 
 ## Fontes (consultadas em 29/out/2026)
 
