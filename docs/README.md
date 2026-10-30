@@ -6,7 +6,7 @@
 > **Agora (30/out):** NFS-e pelo Asaas, N0 (seções 13.8 e 13.9 do `planejamento-nfse-asaas.md`; ler o bloco de
 > retomada dele). Cartão do selo do Asaas na `main` (`13ebeab`), visível só com `ASAAS_PREVIEW=1` (staging).
 > Validado no staging e **formulário BaaS enviado (30/out)**. Aguardando a análise do Asaas (até 3 dias úteis) e o
-> contador (faltam PIS/COFINS e certificado A1; CNAE e IBS/CBS respondidos em 30/out, seção 13.5).
+> contador (falta PIS/COFINS; e-CNPJ A1 a providenciar; seção 13.5). **DMED sai do sistema** (cliente, 30/out).
 >
 > **Ambientes**
 > - **Produção** (`app.recepclinic.com.br`, branch `producao`): no ar desde 26/out; publicações de 28/out: **CRM**

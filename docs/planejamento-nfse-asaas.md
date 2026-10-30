@@ -9,8 +9,8 @@
 > **30/out (13.8):** Asaas respondeu saldo negativo e e-mail da nota e mandou playbook, checklist e selos do BaaS.
 > Decidido: reposição automática do saldo da subconta; e-mail real do tomador (entrega própria só pelo WhatsApp).
 > Checklist = formulário do Google (13.9). Selo no staging validado e **formulário BaaS enviado (30/out)**: aguardando
-> a análise do Asaas. Secretária respondida; contador em parte (CNAE e IBS/CBS, 30/out; faltam
-> PIS/COFINS e certificado A1). Depois da
+> a análise do Asaas. Secretária respondida; contador em parte (30/out; falta PIS/COFINS; A1 a
+> providenciar). **DMED sai do sistema** (cliente, 30/out). Depois da
 > N0: a F12.1, com o OK do cliente.
 
 Marcas: **[Código]** conferido no repositório; **[Asaas]** documentação oficial do Asaas; **[Oficial]** prefeitura ou
@@ -345,7 +345,12 @@ Só os dados da clínica (o arquivo e os dados do tomador não ficam no projeto)
   o Asaas: o VIDaaS é certificado **em nuvem** (sem arquivo .pfx para enviar) e costuma ser **e-CPF** da pessoa
   física; Mossoró pelo Asaas exige `certificateFile` (.pfx/.p12) **e-CNPJ A1** da clínica. Confirmar com o contador;
   se confirmado, a clínica compra um e-CNPJ A1 antes da N6.
-- Falta (**contador**): PIS/COFINS e a confirmação do certificado; as demais perguntas da 13.3
+- **Respostas do cliente (30/out):** a clínica **vai providenciar o e-CNPJ A1** (antes da N6). PIS/COFINS: o cliente
+  pergunta ao contador. Série e número da última nota: informados na implantação (N6). Descrição "Consulta.
+  Paciente: Nome. Atendimento em dd/mm/aaaa.": **aprovada**. Prazo de cancelamento: o Asaas só informa se o
+  município cancela (`supportsCancellation`, sim em Mossoró), não o prazo; o sistema tenta e mostra a recusa da
+  prefeitura, se houver. **DMED: sai do RecepClinic** (é do contador da clínica; decisão do cliente, 30/out).
+- Falta (**contador**): PIS/COFINS; as demais perguntas da 13.3
   (série e última nota, prazo de cancelamento, descrição, DMED) quando ele puder.
 
 ### 13.4 Roteiro no Sandbox (depois que o cliente criar a conta e a chave)
