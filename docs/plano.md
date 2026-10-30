@@ -1965,6 +1965,11 @@ Dra. Ana Karina") e o de testes (`+55 61 9903-3143`, que pelos docs está só na
    Provider), o `+55 61 9903-3143` sai da Cloud API pura e volta à **Consultorio de Teste** por coexistência (recusado:
    uma clínica nova). A regra "nunca verificar esse número em app nenhum" deixa de valer. Roteiro na parte P do
    [`staging.md`](staging.md).
+7. **Ordem revista pelo cliente (29/out): piloto direto**, sem a etapa B antes. A conexão da produção (F8.1, F8.2b,
+   F8.3) é testada já com o número da Dra. Ana Karina; a B fica para depois. Recusados: B primeiro; B e piloto no mesmo
+   dia. Roteiro: WhatsApp Business no celular → Nova clínica (em implantação) → Conectar WhatsApp (portfólio novo da
+   clínica, QR lido antes de fechar a janela) → conferência pelo Claude → forma de pagamento → templates aprovados →
+   configuração → conferência em implantação → ativação com os testes do bot, do eco, do `#bot` e do lembrete.
 - **Depois, o piloto (F10.1 em diante):** clínica do consultório pela "Nova clínica" (nasce em implantação),
   configuração, agenda atual, sessão de conexão com o Suporte, forma de pagamento, templates aprovados, conferência da
   coexistência, ativação.
