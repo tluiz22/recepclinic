@@ -231,6 +231,8 @@ describe("bot: pedido de recepção digitado nos passos de texto livre (cliente,
       expect((await conversation(other)).state).toBe("BOOK_PATIENT_NEW");
       // Fora desses passos, o mesmo texto transfere.
       reply = await say(other, "quero falar com a secretária");
+      expect(reply[0].body).toBe("Você quer falar com a recepção? A conversa passa para a nossa equipe.");
+      reply = await say(other, { id: "reception_yes" });
       expect(reply[0].body).toContain("Vou te transferir para a recepção");
       expect((await conversation(other)).state).toBe("HUMAN_HANDOFF");
     } finally {

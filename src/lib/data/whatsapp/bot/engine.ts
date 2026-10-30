@@ -232,6 +232,14 @@ export async function repeatYesNo(b: Bot, kind: string, question: string): Promi
 /** Botões de Sim/Não: com "Voltar ao menu" quando esta é a 2ª resposta não entendida seguida (cliente, 30/out/2026). */
 export const yesNoButtonsFor = (b: Bot) => (b.notUnderstoodSaid && b.convo.notUnderstoodCount > 0 ? YES_NO_BACK_BUTTONS : YES_NO_BUTTONS);
 
+/** Junta valores ao contexto da conversa sem trocar o passo (undefined tira a chave). */
+export async function mergeContext(b: Bot, values: Record<string, unknown>): Promise<void> {
+  const context = { ...((b.convo.context ?? {}) as Record<string, unknown>), ...values };
+  for (const key of Object.keys(values)) if (values[key] === undefined) delete context[key];
+  unwrap(await b.db.from("conversation_state").update({ context: context as never }).eq("id", b.convo.id), "Conversa do WhatsApp");
+  b.convo = { ...b.convo, context };
+}
+
 /** Guarda a lista ou os botões que valem agora (o passo pode continuar o mesmo, sem `go`). */
 async function rememberPrompt(b: Bot, id: string | null): Promise<void> {
   b.promptId = id;

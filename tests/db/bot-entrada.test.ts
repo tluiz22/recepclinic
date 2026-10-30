@@ -436,12 +436,31 @@ describe("robustez", () => {
 
     await adminClient().from("whatsapp_connections").update({ coexistence: true }).eq("clinic_id", f.clinicId);
     try {
+      // Digitado: pede confirmação (cliente, 30/out/2026). "Não" volta ao menu; outra resposta vale para o passo.
       await fresh(P1);
       await say(P1, "oi");
       reply = await say(P1, "Quero falar com a recepção");
+      expect(reply).toMatchObject([{ kind: "buttons", body: "Você quer falar com a recepção? A conversa passa para a nossa equipe." }]);
+      expect(titles(reply)).toEqual(["Sim", "Não"]);
+      expect((await conversation(P1)).human_handoff).toBe(false);
+      reply = await say(P1, { id: "reception_no" });
+      expect(reply.map((m) => m.body)).toEqual(["Tudo bem, seguimos por aqui.", MENU]);
+      expect((await conversation(P1)).state).toBe("MENU");
+
+      await fresh(P1);
+      await say(P1, "oi");
+      await say(P1, "atendente");
+      reply = await say(P1, "sim");
       expect(reply[0].body).toContain("Vou te transferir para a recepção");
       expect(await conversation(P1)).toMatchObject({ state: "HUMAN_HANDOFF", human_handoff: true });
       expect(await lastHandoff()).toMatchObject({ step: "requested", metadata: { origin: "typed", journey_state: "ENTRY_ASK" } });
+
+      await fresh(P1);
+      await say(P1, "oi");
+      await say(P1, { id: "entry_yes" });
+      await say(P1, "atendente");
+      reply = await say(P1, "01/01/2020");
+      expect(reply).toMatchObject([{ kind: "list", body: "Qual agendamento você quer consultar ou alterar?" }]);
 
       // Pela ação do agendamento: a etapa da entrada fica registrada (antes aparecia como o começo da conversa).
       await fresh(P1);

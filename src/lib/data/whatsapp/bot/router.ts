@@ -16,12 +16,20 @@ import { contactIdByPhone, recordOutboundMessage } from "../messages";
 import { toE164, type WaMessage } from "../meta";
 import type { ClinicSender } from "../send";
 import { BOOKING_STATES, handleBookingState } from "./booking";
-import { createBot, currentPrompt, NotUnderstoodLimitReached, say, type Bot, type BotEnv } from "./engine";
+import { createBot, currentPrompt, mergeContext, NotUnderstoodLimitReached, say, sendButtons, type Bot, type BotEnv } from "./engine";
 import { ENTRY_STATES, handleEntryState, startConversation } from "./entry";
-import { asksForReception, extractSelection, isBackToMenu, TALK_TO_RECEPTION_ID } from "./input";
+import { asksForReception, extractSelection, isBackToMenu, TALK_TO_RECEPTION_ID, yesNo } from "./input";
 import { handleInfo, handleMenu, handlePreparationChoice, handleSubmenu, showMenu } from "./menus";
 import { handleManageState, handleOfferTap, handleReminderTap, handoff, handoffNotUnderstood, MANAGE_STATES, offerTapOf, reminderTapOf } from "./manage";
-import { BLOCKED_HANDOFF, BLOCKED_RECEPTION_WILL_CONTACT, IDLE_CLOSED } from "./texts";
+import {
+  BLOCKED_HANDOFF,
+  BLOCKED_RECEPTION_WILL_CONTACT,
+  IDLE_CLOSED,
+  RECEPTION_CONFIRM,
+  RECEPTION_CONFIRM_BUTTONS,
+  RECEPTION_CONFIRM_IDS,
+  RECEPTION_DECLINED,
+} from "./texts";
 import { blockedContactByPhone, blockedNoticeDue, markBlockedNotice } from "../contactBlock";
 import { listBotMessages } from "../customMessages";
 import { logError } from "../../../log";
@@ -84,6 +92,9 @@ export async function handleIncomingMessage(env: BotEnv, message: WaMessage): Pr
 /** Passos em que qualquer texto é a resposta (nome e endereço): o pedido digitado de recepção não vale neles. */
 const FREE_TEXT_AWAITING = new Set(["address_input", "contact_name", "patient_name", "self_name"]);
 const awaitingOf = (convo: Conversation) => ((convo.context ?? {}) as { awaiting?: string }).awaiting;
+/** Pedido de recepção digitado esperando o Sim ou o Não (no contexto, sem trocar o passo). */
+const RECEPTION_CONFIRM_KEY = "_reception_confirm";
+const receptionConfirmPending = (convo: Conversation) => ((convo.context ?? {}) as Record<string, unknown>)[RECEPTION_CONFIRM_KEY] === true;
 
 async function dispatch(env: BotEnv, b: Bot, convo: Conversation, phone: string, message: WaMessage): Promise<void> {
   const selection = extractSelection(message);
@@ -111,9 +122,24 @@ async function dispatch(env: BotEnv, b: Bot, convo: Conversation, phone: string,
   }
 
   // "Falar com a recepção" em qualquer passo (cliente, 30/out/2026): o botão de saída de uma resposta não entendida
-  // ou o pedido digitado ("atendente"), este fora dos passos em que qualquer texto é a resposta (nome e endereço).
+  // transfere; o pedido digitado ("atendente"), fora dos passos de texto livre (nome e endereço), pede confirmação.
   if (b.receptionAvailable && selection.id === TALK_TO_RECEPTION_ID) return handoff(b, "way_out");
-  if (b.receptionAvailable && !FREE_TEXT_AWAITING.has(awaitingOf(convo) ?? "") && asksForReception(selection)) return handoff(b, "typed");
+  if (receptionConfirmPending(convo)) {
+    await mergeContext(b, { [RECEPTION_CONFIRM_KEY]: undefined });
+    const answer = yesNo(selection, RECEPTION_CONFIRM_IDS);
+    if (answer === true) return handoff(b, "typed");
+    if (answer === false) {
+      if (convo.funnelSessionId) await logAbandonment(env.db, env.clinicId, convo, "back_to_menu", env.now);
+      // Pedido logo na 1ª mensagem: as boas-vindas e o menu.
+      if (convo.state === WELCOME) return showMenu(b, { withWelcome: true });
+      await say(b, "bot_reception_declined", RECEPTION_DECLINED);
+      return showMenu(b);
+    }
+    // Outra resposta: vale para o passo em que a pessoa estava.
+  } else if (b.receptionAvailable && !FREE_TEXT_AWAITING.has(awaitingOf(convo) ?? "") && asksForReception(selection)) {
+    await mergeContext(b, { [RECEPTION_CONFIRM_KEY]: true });
+    return sendButtons(b, "bot_reception_confirm", RECEPTION_CONFIRM, RECEPTION_CONFIRM_BUTTONS);
+  }
 
   if (ENTRY_STATES.has(convo.state)) {
     await handleEntryState(b, convo.state, selection);

@@ -680,3 +680,9 @@ retomada fica no README). Para achar algo, buscar por data (ex.: `27/out`), fase
   menu"), todas as etapas com nome (saiu o "Outra etapa"), **"Por que a conversa foi para a clínica"** (os 5 motivos) e
   **"Onde pediram a recepção"** (a origem; registros antigos sem ela). Sem migração. Testes em `bot-entrada`,
   `bot-marcar`, `botFunnel.test` e `input.test`. Publicada no staging em 30/out.
+- **C13b Confirmação do pedido digitado** (30/out): **cliente (30/out):** o pedido de recepção digitado pede
+  confirmação antes de transferir: "Você quer falar com a recepção? A conversa passa para a nossa equipe." com Sim e
+  Não. Sim transfere (origem "digitado"); **Não volta ao menu** ("Tudo bem, seguimos por aqui." e o menu; recusado:
+  continuar de onde parou); na 1ª mensagem da conversa, o "Não" leva às boas-vindas e ao menu; outra resposta vale para
+  o passo em que a pessoa estava. A espera fica no contexto (`_reception_confirm`), sem trocar o passo. O botão de saída
+  da C12 continua transferindo direto. Sem migração. Publicada no staging em 30/out.

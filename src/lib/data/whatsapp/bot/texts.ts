@@ -374,6 +374,12 @@ export const offerTaken = (stillInList: boolean) => `Que pena, essa vaga acabou 
 export const OFFER_ALREADY_ACCEPTED = "Essa vaga já está confirmada para você ✓";
 export const OFFER_NOT_FOUND = "Essa oferta não está mais ativa.";
 
+// Pedido de recepção digitado: confirma antes de transferir; "Não" volta ao menu (cliente, 30/out/2026).
+export const RECEPTION_CONFIRM = "Você quer falar com a recepção? A conversa passa para a nossa equipe.";
+export const RECEPTION_CONFIRM_IDS = { yes: "reception_yes", no: "reception_no" } as const;
+export const RECEPTION_CONFIRM_BUTTONS = [button(RECEPTION_CONFIRM_IDS.yes, "Sim"), button(RECEPTION_CONFIRM_IDS.no, "Não")];
+export const RECEPTION_DECLINED = "Tudo bem, seguimos por aqui.";
+
 export const HANDOFF =
   "Combinado! Vou te transferir para a recepção, que responde por aqui assim que possível. O atendimento automático fica pausado até lá.";
 
