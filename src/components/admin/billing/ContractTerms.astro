@@ -1,0 +1,67 @@
+---
+// Faturamento (F12.2): os termos de um contrato em modo leitura, na aba
+// Faturamento (Suporte) e na tela Assinatura (Administrador da clínica).
+import { DD, DT, KV } from "../config/formStyles";
+import { formatCalendarDate } from "../../../lib/clinicTime";
+import { BILLING_MODES, describeAllowance, PAYMENT_METHODS, type BillingContract } from "../../../lib/data/billing";
+import { formatCentsBRL } from "../../../lib/money";
+
+interface Props {
+  contract: BillingContract;
+  /** Mostra o modo, a referência da tabela e as observações (só o Suporte). */
+  internal?: boolean;
+}
+
+const { contract, internal = false } = Astro.props;
+const date = (value: string) => formatCalendarDate(value, "dd/MM/yyyy");
+---
+
+<dl class={KV}>
+  {
+    internal && (
+      <>
+        <dt class={DT}>Modo de cobrança</dt>
+        <dd class={DD}>{BILLING_MODES[contract.billingMode]}</dd>
+      </>
+    )
+  }
+  <dt class={DT}>Mensalidade</dt>
+  <dd class={DD}>{formatCentsBRL(contract.monthlyCents)}</dd>
+  <dt class={DT}>Implantação</dt>
+  <dd class={DD}>{contract.setupCents === 0 ? "isenta" : formatCentsBRL(contract.setupCents)}</dd>
+  {
+    contract.paymentMethod && (
+      <>
+        <dt class={DT}>Forma de pagamento</dt>
+        <dd class={DD}>{PAYMENT_METHODS[contract.paymentMethod]}</dd>
+      </>
+    )
+  }
+  <dt class={DT}>Preço por nota fiscal</dt>
+  <dd class={DD}>{formatCentsBRL(contract.invoiceUnitPriceCents)}</dd>
+  <dt class={DT}>Franquia de notas</dt>
+  <dd class={DD}>{describeAllowance(contract.invoiceMonthlyAllowance)}</dd>
+  <dt class={DT}>Início</dt>
+  <dd class={DD}>{date(contract.startsOn)}{contract.endsOn ? ` até ${date(contract.endsOn)}` : ""}</dd>
+  <dt class={DT}>1º vencimento</dt>
+  <dd class={DD}>{date(contract.firstDueDate)}</dd>
+  {
+    internal && contract.planSnapshot.label && (
+      <>
+        <dt class={DT}>Plano de referência</dt>
+        <dd class={DD}>
+          {contract.planSnapshot.label}
+          {contract.planSnapshot.tableMonthlyCents ? ` (tabela: ${formatCentsBRL(contract.planSnapshot.tableMonthlyCents)})` : ""}
+        </dd>
+      </>
+    )
+  }
+  {
+    internal && contract.notes && (
+      <>
+        <dt class={DT}>Observações</dt>
+        <dd class={DD}>{contract.notes}</dd>
+      </>
+    )
+  }
+</dl>

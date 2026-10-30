@@ -2,16 +2,33 @@
 // Sistema › Clínicas › clínica › Faturamento (F12.1, faturamento do SaaS):
 // a conta de cobrança, que só o Suporte cria e altera (pagador e contatos), a
 // situação do WhatsApp financeiro (só o Administrador da clínica autoriza) e
-// a trilha. Contrato, cobranças e suspensão entram nas próximas fases.
+// a trilha. F12.2: o contrato vigente, o rascunho (cria, altera, descarta e
+// ativa; mudança = nova versão) e as versões. Cobranças e suspensão entram
+// nas próximas fases.
 import Badge from "../config/Badge.astro";
 import Card from "../config/Panel.astro";
+import ConfirmDeleteDialog from "../ConfirmDeleteDialog.astro";
 import BillingTrail from "./BillingTrail.astro";
-import { HINT, INPUT, LABEL, PRIMARY_BUTTON } from "../config/formStyles";
-import { formatInstant } from "../../../lib/clinicTime";
+import ContractTerms from "./ContractTerms.astro";
+import { CHECK, CHOICE, HINT, INPUT, LABEL, LEGEND, PRIMARY_BUTTON, SECONDARY_BUTTON } from "../config/formStyles";
+import { formatCalendarDate, formatInstant, todayIn } from "../../../lib/clinicTime";
 import { loadActorLabels } from "../../../lib/data/agenda/trail";
-import { formatPayerDocument, getBillingAccount, listBillingAudit } from "../../../lib/data/billing";
+import {
+  BILLING_MODES,
+  CONTRACT_STATUS,
+  contractsInForce,
+  formatPayerDocument,
+  getBillingAccount,
+  getDefaultInvoicePrice,
+  listBillingAudit,
+  listBillingContracts,
+  PAYMENT_METHODS,
+} from "../../../lib/data/billing";
 import type { DbClient } from "../../../lib/data/clients";
+import { centsToInput } from "../../../lib/forms";
+import { formatCentsBRL } from "../../../lib/money";
 import { formatPhoneBR } from "../../../lib/phone";
+import { PRICES } from "../../../lib/plans";
 
 interface Props {
   db: DbClient;
@@ -19,56 +36,247 @@ interface Props {
   timezone: string;
   /** Sugestão de e-mail financeiro na conta nova (o do Administrador convidado). */
   suggestedEmail: string;
+  /** Plano de referência da matriz (sugestão da mensalidade no 1º contrato). */
+  reference: { label: string; monthlyCents: number | null };
 }
 
-const { db, clinicId, timezone, suggestedEmail } = Astro.props;
-const [account, audit] = await Promise.all([getBillingAccount(db, clinicId), listBillingAudit(db, clinicId)]);
+const { db, clinicId, timezone, suggestedEmail, reference } = Astro.props;
+const [account, audit, contracts, defaultPrice] = await Promise.all([
+  getBillingAccount(db, clinicId),
+  listBillingAudit(db, clinicId),
+  listBillingContracts(db, clinicId),
+  getDefaultInvoicePrice(db),
+]);
 const actors = await loadActorLabels(db, clinicId, audit.map((a) => a.actorId));
 const action = `/api/admin/sistema/clinicas/${clinicId}`;
 const H2 = "font-display text-[17px] leading-tight font-bold text-ink sm:text-lg";
+const active = contracts.find((c) => c.status === "active") ?? null;
+const draft = contracts.find((c) => c.status === "draft") ?? null;
+const { current, next } = contractsInForce(contracts, todayIn(timezone));
+// Versões que não são a de hoje nem a próxima.
+const history = contracts.filter((c) => c.status === "ended" && c.id !== current?.id);
+const date = (value: string) => formatCalendarDate(value, "dd/MM/yyyy");
+// O formulário parte do rascunho; sem ele, da versão vigente; sem nada, das sugestões.
+const base = draft ?? active;
+const form = {
+  mode: base?.billingMode ?? "",
+  monthly: centsToInput(base?.monthlyCents ?? reference.monthlyCents),
+  setup: centsToInput(draft ? draft.setupCents : active ? 0 : PRICES.setupCents),
+  method: base?.paymentMethod ?? "",
+  price: centsToInput(base?.invoiceUnitPriceCents ?? defaultPrice),
+  unlimited: base ? base.invoiceMonthlyAllowance === null : false,
+  allowance: base?.invoiceMonthlyAllowance?.toString() ?? "",
+  startsOn: draft?.startsOn ?? (active ? "" : todayIn(timezone)),
+  firstDueDate: draft?.firstDueDate ?? "",
+  notes: draft?.notes ?? "",
+};
 ---
 
 <div class="mt-4 grid items-start gap-4 lg:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)]">
-  <Card>
-    <div class="flex flex-wrap items-center gap-2">
-      <h2 class={H2}>Conta de cobrança</h2>
-      {!account && <Badge variant="warning">Não cadastrada</Badge>}
-    </div>
-    <p class="mt-1 text-sm text-ink-soft">
-      Quem paga o RecepClinic e para onde vão as cobranças. O Administrador da clínica também altera os contatos, em Configurações › Assinatura.
-    </p>
-    <form method="POST" action={action} class="mt-3 flex flex-col gap-3">
-      <input type="hidden" name="acao" value="conta_cobranca" />
-      <div>
-        <label for="payer_name" class={LABEL}>Nome ou razão social do pagador</label>
-        <input id="payer_name" name="payer_name" required maxlength="200" value={account?.payerName ?? ""} class={INPUT} />
+  <div class="flex min-w-0 flex-col gap-4">
+    <Card>
+      <div class="flex flex-wrap items-center gap-2">
+        <h2 class={H2}>Contrato</h2>
+        {current ? <Badge variant="success">Versão {current.version} vigente</Badge> : <Badge variant="warning">{next ? "Ainda não começou" : "Sem contrato ativo"}</Badge>}
       </div>
-      <div>
-        <label for="payer_document" class={LABEL}>CNPJ ou CPF</label>
-        <input id="payer_document" name="payer_document" required value={account ? formatPayerDocument(account.payerDocument) : ""} class={INPUT} />
+      {
+        current ? (
+          <div class="mt-3">
+            <ContractTerms contract={current} internal />
+          </div>
+        ) : (
+          !next && <p class="mt-1 text-sm text-ink-soft">Monte o rascunho abaixo e ative. Ativar exige a conta de cobrança.</p>
+        )
+      }
+    </Card>
+    {
+      next && (
+        <Card>
+          <div class="flex flex-wrap items-center gap-2">
+            <h2 class={H2}>Próxima versão</h2>
+            <Badge variant="info">Versão {next.version} a partir de {date(next.startsOn)}</Badge>
+          </div>
+          <div class="mt-3">
+            <ContractTerms contract={next} internal />
+          </div>
+        </Card>
+      )
+    }
+
+    <Card>
+      <div class="flex flex-wrap items-center gap-2">
+        <h2 class={H2}>{draft ? "Rascunho" : active ? "Nova versão do contrato" : "Rascunho do contrato"}</h2>
+        {draft && <Badge variant="warning">Rascunho</Badge>}
       </div>
-      <div class="grid gap-3 sm:grid-cols-2">
-        <div>
-          <label for="finance_email" class={LABEL}>E-mail financeiro</label>
-          <input id="finance_email" name="finance_email" type="email" required value={account?.financeEmail ?? suggestedEmail} class={INPUT} />
+      <p class="mt-1 text-sm text-ink-soft">
+        {
+          active
+            ? `Mudança de valor, preço por nota, franquia ou modo é uma nova versão, com início depois de ${date(active.startsOn)}; ao ativar, a versão ${active.version} termina na véspera. Cobranças já geradas não mudam.`
+            : "O rascunho não vale nada até ser ativado, e a clínica não o vê."
+        }
+      </p>
+      <form method="POST" action={action} class="mt-3 flex flex-col gap-3">
+        <input type="hidden" name="acao" value="contrato_rascunho" />
+        <fieldset class="min-w-0">
+          <legend class={LEGEND}>Modo de cobrança</legend>
+          <div class="mt-1.5 flex flex-col gap-1">
+            {
+              Object.entries(BILLING_MODES).map(([value, label]) => (
+                <label class={CHOICE}>
+                  <input type="radio" name="billing_mode" value={value} required checked={form.mode === value} class={CHECK} />
+                  {label}
+                </label>
+              ))
+            }
+          </div>
+          <p class={HINT}>No manual, a clínica nunca fica em atraso pelo sistema: o Suporte registra os pagamentos à mão.</p>
+        </fieldset>
+        <div class="grid gap-3 sm:grid-cols-2">
+          <div>
+            <label for="monthly" class={LABEL}>Mensalidade (R$)</label>
+            <input id="monthly" name="monthly" required inputmode="decimal" value={form.monthly} class={INPUT} />
+            {!base && reference.monthlyCents !== null && <p class={HINT}>Sugestão: tabela do plano {reference.label}.</p>}
+          </div>
+          <div>
+            <label for="setup" class={LABEL}>Implantação (R$)</label>
+            <input id="setup" name="setup" required inputmode="decimal" value={form.setup} class={INPUT} />
+            <p class={HINT}>0 = isenta. Cobrada quando o contrato é ativado.</p>
+          </div>
+        </div>
+        <fieldset class="min-w-0" data-asaas-only>
+          <legend class={LEGEND}>Forma de pagamento (automático)</legend>
+          <div class="mt-1.5 flex flex-wrap gap-x-5 gap-y-1">
+            {
+              Object.entries(PAYMENT_METHODS).map(([value, label]) => (
+                <label class={CHOICE}>
+                  <input type="radio" name="payment_method" value={value} checked={form.method === value} class={CHECK} />
+                  {label}
+                </label>
+              ))
+            }
+          </div>
+        </fieldset>
+        <div class="grid gap-3 sm:grid-cols-2">
+          <div>
+            <label for="starts_on" class={LABEL}>Início</label>
+            <input id="starts_on" name="starts_on" type="date" required value={form.startsOn} class={INPUT} />
+          </div>
+          <div>
+            <label for="first_due_date" class={LABEL}>1º vencimento</label>
+            <input id="first_due_date" name="first_due_date" type="date" required value={form.firstDueDate} class={INPUT} />
+          </div>
+        </div>
+        <div class="grid gap-3 sm:grid-cols-2">
+          <div>
+            <label for="invoice_price" class={LABEL}>Preço por nota fiscal (R$)</label>
+            <input id="invoice_price" name="invoice_price" required inputmode="decimal" value={form.price} class={INPUT} />
+            <p class={HINT}>
+              {defaultPrice === null ? "Preço padrão ainda não definido (Vendas › Planos)." : `Padrão: ${formatCentsBRL(defaultPrice)}; negociável aqui.`}
+            </p>
+          </div>
+          <fieldset class="min-w-0">
+            <legend class={LEGEND}>Franquia de notas por mês</legend>
+            <div class="mt-1.5 flex flex-col gap-1">
+              <label class={CHOICE}>
+                <input type="radio" name="allowance_kind" value="ilimitada" required checked={!!base && form.unlimited} class={CHECK} />
+                Ilimitada
+              </label>
+              <label class={CHOICE}>
+                <input type="radio" name="allowance_kind" value="limitada" checked={!!base && !form.unlimited} class={CHECK} />
+                Até
+                <input name="allowance" inputmode="numeric" aria-label="Notas por mês" value={form.allowance} class="w-20 rounded-md border border-line-strong px-2 py-1 text-[15px]" />
+                notas
+              </label>
+            </div>
+            <p class={HINT}>Passou da franquia, cada nota a mais pelo preço por nota. Sobra não acumula.</p>
+          </fieldset>
         </div>
         <div>
-          <label for="finance_phone" class={LABEL}>Telefone financeiro (opcional)</label>
-          <input
-            id="finance_phone"
-            name="finance_phone"
-            type="tel"
-            inputmode="tel"
-            placeholder="(84) 98188-0777"
-            value={account?.financePhone ? formatPhoneBR(account.financePhone) : ""}
-            class={INPUT}
-          />
+          <label for="notes" class={LABEL}>Observações (só o Suporte vê)</label>
+          <textarea id="notes" name="notes" rows="2" maxlength="1000" class={INPUT}>{form.notes}</textarea>
         </div>
+        <button type="submit" data-sending-label="Salvando…" class={`${PRIMARY_BUTTON} self-start`}>Salvar rascunho</button>
+      </form>
+      {
+        draft && (
+          <div class="mt-4 flex flex-wrap gap-2 border-t border-[#e6ecea] pt-4">
+            <form method="POST" action={action}>
+              <input type="hidden" name="acao" value="contrato_ativar" />
+              <button
+                type="submit"
+                class={`${PRIMARY_BUTTON} js-confirm-delete`}
+                disabled={!account}
+                data-confirm-title="Ativar o contrato?"
+                data-confirm-message={
+                  active
+                    ? `A versão ${active.version} termina em ${date(draft.startsOn)} menos um dia, e a nova vale a partir de ${date(draft.startsOn)}. Depois de ativo, o contrato só muda por nova versão.`
+                    : `O contrato vale a partir de ${date(draft.startsOn)}. Depois de ativo, só muda por nova versão.`
+                }
+                data-confirm-label="Ativar"
+                data-confirm-tone="primary"
+              >
+                Ativar o contrato
+              </button>
+            </form>
+            <form method="POST" action={action}>
+              <input type="hidden" name="acao" value="contrato_descartar" />
+              <button
+                type="submit"
+                class={`${SECONDARY_BUTTON} js-confirm-delete`}
+                data-confirm-title="Descartar o rascunho?"
+                data-confirm-message="O rascunho sai da tela; fica só no histórico."
+                data-confirm-label="Descartar"
+              >
+                Descartar rascunho
+              </button>
+            </form>
+            {!account && <p class="w-full text-sm text-pend-800">Cadastre a conta de cobrança antes de ativar.</p>}
+          </div>
+        )
+      }
+    </Card>
+
+    <Card>
+      <div class="flex flex-wrap items-center gap-2">
+        <h2 class={H2}>Conta de cobrança</h2>
+        {!account && <Badge variant="warning">Não cadastrada</Badge>}
       </div>
-      {account?.whatsappOptIn && <p class={HINT}>Trocar ou apagar o telefone retira a autorização do WhatsApp financeiro.</p>}
-      <button type="submit" data-sending-label="Salvando…" class={`${PRIMARY_BUTTON} self-start`}>{account ? "Salvar a conta" : "Cadastrar a conta"}</button>
-    </form>
-  </Card>
+      <p class="mt-1 text-sm text-ink-soft">
+        Quem paga o RecepClinic e para onde vão as cobranças. O Administrador da clínica também altera os contatos, em Configurações › Assinatura.
+      </p>
+      <form method="POST" action={action} class="mt-3 flex flex-col gap-3">
+        <input type="hidden" name="acao" value="conta_cobranca" />
+        <div>
+          <label for="payer_name" class={LABEL}>Nome ou razão social do pagador</label>
+          <input id="payer_name" name="payer_name" required maxlength="200" value={account?.payerName ?? ""} class={INPUT} />
+        </div>
+        <div>
+          <label for="payer_document" class={LABEL}>CNPJ ou CPF</label>
+          <input id="payer_document" name="payer_document" required value={account ? formatPayerDocument(account.payerDocument) : ""} class={INPUT} />
+        </div>
+        <div class="grid gap-3 sm:grid-cols-2">
+          <div>
+            <label for="finance_email" class={LABEL}>E-mail financeiro</label>
+            <input id="finance_email" name="finance_email" type="email" required value={account?.financeEmail ?? suggestedEmail} class={INPUT} />
+          </div>
+          <div>
+            <label for="finance_phone" class={LABEL}>Telefone financeiro (opcional)</label>
+            <input
+              id="finance_phone"
+              name="finance_phone"
+              type="tel"
+              inputmode="tel"
+              placeholder="(84) 98188-0777"
+              value={account?.financePhone ? formatPhoneBR(account.financePhone) : ""}
+              class={INPUT}
+            />
+          </div>
+        </div>
+        {account?.whatsappOptIn && <p class={HINT}>Trocar ou apagar o telefone retira a autorização do WhatsApp financeiro.</p>}
+        <button type="submit" data-sending-label="Salvando…" class={`${PRIMARY_BUTTON} self-start`}>{account ? "Salvar a conta" : "Cadastrar a conta"}</button>
+      </form>
+    </Card>
+  </div>
 
   <div class="flex min-w-0 flex-col gap-4">
     {
@@ -86,6 +294,45 @@ const H2 = "font-display text-[17px] leading-tight font-bold text-ink sm:text-lg
         </Card>
       )
     }
+    {
+      history.length > 0 && (
+        <Card>
+          <h2 class={H2}>Versões anteriores</h2>
+          <ul class="mt-2 divide-y divide-[#e6ecea]">
+            {history.map((contract) => (
+              <li class="py-2 text-sm">
+                <span class="flex flex-wrap items-center gap-1.5 font-medium text-ink">
+                  Versão {contract.version} <Badge>{CONTRACT_STATUS[contract.status].label}</Badge>
+                </span>
+                <span class="block text-ink-soft">
+                  {date(contract.startsOn)}
+                  {contract.endsOn ? ` a ${date(contract.endsOn)}` : ""} · {formatCentsBRL(contract.monthlyCents)} por mês · {BILLING_MODES[contract.billingMode]}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </Card>
+      )
+    }
     <BillingTrail entries={audit} actors={actors} timezone={timezone} />
   </div>
 </div>
+<ConfirmDeleteDialog />
+
+<script>
+  // A forma de pagamento só vale (e só vai) no modo automático.
+  const box = document.querySelector<HTMLElement>("[data-asaas-only]");
+  const modes = document.querySelectorAll<HTMLInputElement>('input[name="billing_mode"]');
+  if (box && modes.length) {
+    const sync = () => {
+      const on = [...modes].some((m) => m.checked && m.value === "asaas");
+      box.hidden = !on;
+      box.querySelectorAll<HTMLInputElement>("input").forEach((input) => {
+        input.disabled = !on;
+        input.required = on;
+      });
+    };
+    modes.forEach((m) => m.addEventListener("change", sync));
+    sync();
+  }
+</script>

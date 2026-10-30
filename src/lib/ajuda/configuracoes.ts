@@ -43,6 +43,8 @@ export const configuracoes = {
     // Assinatura (F12.1, faturamento do SaaS): configuracoes/assinatura.astro.
     assinaturaWhatsapp:
       "Mensagens do RecepClinic sobre a assinatura da clínica, nunca para os pacientes. Saem de um número do próprio RecepClinic, não do número da clínica. Só o Administrador autoriza ou retira; trocar o telefone retira a autorização.",
+    assinaturaFranquia:
+      "A franquia é a quantidade de notas fiscais por mês incluída na mensalidade. Passou dela, cada nota a mais custa o preço por nota do contrato, cobrado no mês seguinte. Sobra não acumula.",
     assinaturaTelefone: "Telefone de quem cuida das contas da clínica. Pode ser diferente do número que atende os pacientes.",
     // ans_code (config/insurance.ts): só nas telas de Convênios; o bot e as notas não usam.
     convenioAns:
@@ -79,6 +81,7 @@ export const configuracoes = {
       serve: "Guardar quem paga o RecepClinic e para onde vão as cobranças e os avisos.",
       como: [
         "O Suporte cadastra o pagador (nome e CNPJ ou CPF) na contratação; para mudar o pagador, fale com o Suporte.",
+        "O contrato (mensalidade, preço por nota fiscal e franquia) é feito com o Suporte; mudança vale a partir do próximo ciclo, numa nova versão.",
         "O Administrador mantém o e-mail e o telefone financeiros em dia.",
         "Os avisos de cobrança (vencimento, atraso e pagamento reconhecido) sempre vão para o e-mail financeiro.",
         "Com o WhatsApp financeiro autorizado, os mesmos avisos também vão para o telefone financeiro.",

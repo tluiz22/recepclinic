@@ -1,15 +1,20 @@
 import { BILLING_OPT_IN_VERSION } from "../billingOptIn";
+import { isCalendarDate } from "../clinicTime";
 import { formatCnpj, normalizeCnpj } from "../cnpj";
 import { formatCpf, normalizeCpf } from "../cpf";
+import { parseMoneyCents } from "../forms";
 import { INVALID_PHONE_MESSAGE, normalizePhone } from "../phone";
 import type { DbClient } from "./clients";
-import { cleanText, fromDbError, unwrap, Validation } from "./errors";
+import { cleanText, DataError, fromDbError, unwrap, Validation } from "./errors";
 
 // Faturamento do SaaS, F12.1 (planejamento-faturamento-saas.md; cliente,
 // 28/out/2026): conta de cobrança da clínica e trilha. O Suporte cria e altera
 // a conta inteira; o Administrador da clínica, só os contatos e o opt-in do
 // WhatsApp (só ele dá ou retira). Tudo grava por funções do banco, que travam
 // a conta e registram na trilha (billing_audit_log).
+//
+// F12.2: contrato com versões (rascunho → ativo; mudança = nova versão) e o
+// preço padrão por nota fiscal, só do Suporte. Sem Asaas até a F12.4.
 
 export type BillingAccount = {
   payerName: string;
@@ -116,6 +121,10 @@ export const BILLING_ACTIONS = {
   contacts_updated: "Contatos financeiros alterados",
   whatsapp_opt_in: "WhatsApp financeiro autorizado",
   whatsapp_opt_out: "WhatsApp financeiro retirado",
+  contract_draft_saved: "Rascunho do contrato salvo",
+  contract_draft_discarded: "Rascunho do contrato descartado",
+  contract_activated: "Contrato ativado",
+  contract_ended: "Fim da versão do contrato marcado",
 } as const;
 
 export type BillingAuditEntry = {
@@ -157,6 +166,15 @@ const FIELD_LABELS: Record<string, string> = {
   finance_email: "e-mail",
   finance_phone: "telefone",
   whatsapp_opt_in_at: "WhatsApp",
+  billing_mode: "modo de cobrança",
+  monthly_cents: "mensalidade",
+  setup_cents: "implantação",
+  payment_method: "forma de pagamento",
+  first_due_date: "1º vencimento",
+  invoice_unit_price_cents: "preço por nota",
+  invoice_monthly_allowance: "franquia",
+  starts_on: "início",
+  notes: "observações",
 };
 
 /** Campos que mudaram numa entrada da trilha ("e-mail, telefone"). */
@@ -168,4 +186,213 @@ export function changedFields(entry: Pick<BillingAuditEntry, "before" | "after">
 /** CNPJ ou CPF formatado para a tela. */
 export function formatPayerDocument(document: string): string {
   return document.length === 14 ? formatCnpj(document) : formatCpf(document);
+}
+
+// ---------------------------------------------------------------------------
+// Contrato (F12.2)
+// ---------------------------------------------------------------------------
+
+export const BILLING_MODES = {
+  asaas: "Automático (Asaas)",
+  manual: "Manual (o Suporte cobra por fora)",
+} as const;
+
+export const PAYMENT_METHODS = {
+  pix: "Pix",
+  credit_card: "Cartão de crédito",
+} as const;
+
+export const CONTRACT_STATUS = {
+  draft: { label: "Rascunho", variant: "warning" },
+  active: { label: "Vigente", variant: "success" },
+  ended: { label: "Encerrado", variant: "neutral" },
+  canceled: { label: "Descartado", variant: "neutral" },
+} as const;
+
+export type BillingMode = keyof typeof BILLING_MODES;
+export type PaymentMethod = keyof typeof PAYMENT_METHODS;
+export type ContractStatus = keyof typeof CONTRACT_STATUS;
+
+/** Retrato do plano de referência quando o contrato foi feito (informativo). */
+export type PlanSnapshot = { kind?: string; label?: string; tableMonthlyCents?: number; professionals?: number };
+
+export type BillingContract = {
+  id: string;
+  version: number | null;
+  status: ContractStatus;
+  billingMode: BillingMode;
+  monthlyCents: number;
+  setupCents: number;
+  paymentMethod: PaymentMethod | null;
+  firstDueDate: string;
+  invoiceUnitPriceCents: number;
+  /** null = ilimitada. */
+  invoiceMonthlyAllowance: number | null;
+  planSnapshot: PlanSnapshot;
+  notes: string | null;
+  startsOn: string;
+  endsOn: string | null;
+  activatedAt: Date | null;
+};
+
+type ContractRow = {
+  id: string;
+  version: number | null;
+  status: string;
+  billing_mode: string;
+  monthly_cents: number;
+  setup_cents: number;
+  payment_method: string | null;
+  first_due_date: string;
+  invoice_unit_price_cents: number;
+  invoice_monthly_allowance: number | null;
+  plan_snapshot: unknown;
+  notes: string | null;
+  starts_on: string;
+  ends_on: string | null;
+  activated_at: string | null;
+};
+
+/** Contratos da clínica, o mais novo primeiro. O Administrador vê só o vigente e os encerrados. */
+export async function listBillingContracts(db: DbClient, clinicId: string): Promise<BillingContract[]> {
+  const rows = unwrap(
+    await db
+      .from("billing_contracts")
+      .select(
+        "id, version, status, billing_mode, monthly_cents, setup_cents, payment_method, first_due_date, invoice_unit_price_cents, invoice_monthly_allowance, plan_snapshot, notes, starts_on, ends_on, activated_at",
+      )
+      .eq("clinic_id", clinicId)
+      .order("created_at", { ascending: false }),
+    "Contrato",
+  ) as ContractRow[];
+  return rows.map((row) => ({
+    id: row.id,
+    version: row.version,
+    status: row.status as ContractStatus,
+    billingMode: row.billing_mode as BillingMode,
+    monthlyCents: row.monthly_cents,
+    setupCents: row.setup_cents,
+    paymentMethod: row.payment_method as PaymentMethod | null,
+    firstDueDate: row.first_due_date,
+    invoiceUnitPriceCents: row.invoice_unit_price_cents,
+    invoiceMonthlyAllowance: row.invoice_monthly_allowance,
+    planSnapshot: (row.plan_snapshot as PlanSnapshot | null) ?? {},
+    notes: row.notes,
+    startsOn: row.starts_on,
+    endsOn: row.ends_on,
+    activatedAt: row.activated_at ? new Date(row.activated_at) : null,
+  }));
+}
+
+export const CONTRACT_MESSAGES = {
+  mode: "Escolha o modo de cobrança.",
+  monthly: "Mensalidade: informe o valor em reais (ex.: 299 ou 299,90).",
+  setup: "Implantação: informe o valor em reais, ou 0 se for isenta.",
+  paymentMethod: "Escolha a forma de pagamento.",
+  firstDueDate: "Informe o 1º vencimento, no início do contrato ou depois.",
+  startsOn: "Informe a data de início.",
+  invoicePrice: "Preço por nota: informe o valor em reais (ex.: 0,80), ou 0.",
+  allowance: "Franquia: informe a quantidade de notas por mês (0 ou mais), ou marque ilimitada.",
+  notes: "Observações: até 1.000 caracteres.",
+} as const;
+
+export type ContractDraftInput = {
+  billingMode: string;
+  monthly: string;
+  setup: string;
+  paymentMethod?: string | null;
+  firstDueDate: string;
+  startsOn: string;
+  invoicePrice: string;
+  /** "ilimitada" ou "limitada". */
+  allowanceKind: string;
+  allowance?: string | null;
+  notes?: string | null;
+};
+
+const MAX_CENTS = 10_000_000;
+
+/** Suporte: cria ou altera o rascunho do contrato (nova versão, se já há um vigente). */
+export async function saveBillingContractDraft(db: DbClient, clinicId: string, input: ContractDraftInput, planSnapshot: PlanSnapshot): Promise<void> {
+  const v = new Validation();
+  const mode = input.billingMode in BILLING_MODES ? (input.billingMode as BillingMode) : null;
+  v.check(mode !== null, "billing_mode", CONTRACT_MESSAGES.mode);
+  const monthly = parseMoneyCents(input.monthly);
+  v.check(Number.isFinite(monthly) && monthly > 0 && monthly <= MAX_CENTS, "monthly", CONTRACT_MESSAGES.monthly);
+  const setup = parseMoneyCents(input.setup);
+  v.check(Number.isFinite(setup) && setup >= 0 && setup <= MAX_CENTS, "setup", CONTRACT_MESSAGES.setup);
+  const method = mode === "asaas" && input.paymentMethod && input.paymentMethod in PAYMENT_METHODS ? (input.paymentMethod as PaymentMethod) : null;
+  v.check(mode !== "asaas" || method !== null, "payment_method", CONTRACT_MESSAGES.paymentMethod);
+  v.check(isCalendarDate(input.startsOn), "starts_on", CONTRACT_MESSAGES.startsOn);
+  v.check(isCalendarDate(input.firstDueDate) && (!isCalendarDate(input.startsOn) || input.firstDueDate >= input.startsOn), "first_due_date", CONTRACT_MESSAGES.firstDueDate);
+  const price = parseMoneyCents(input.invoicePrice);
+  v.check(Number.isFinite(price) && price >= 0 && price <= 100_000, "invoice_price", CONTRACT_MESSAGES.invoicePrice);
+  const unlimited = input.allowanceKind === "ilimitada";
+  const allowanceText = (input.allowance ?? "").trim();
+  const allowance = unlimited ? null : /^\d{1,6}$/.test(allowanceText) ? Number(allowanceText) : Number.NaN;
+  v.check((unlimited || input.allowanceKind === "limitada") && (allowance === null || (allowance >= 0 && allowance <= 100_000)), "allowance", CONTRACT_MESSAGES.allowance);
+  const notes = cleanText(input.notes);
+  v.check(notes === null || notes.length <= 1000, "notes", CONTRACT_MESSAGES.notes);
+  v.throwIfInvalid("Contrato");
+
+  const { error } = await db.rpc("save_billing_contract_draft", {
+    p_clinic_id: clinicId,
+    p_billing_mode: mode!,
+    p_monthly_cents: monthly,
+    p_setup_cents: setup,
+    p_payment_method: method ?? "",
+    p_first_due_date: input.firstDueDate,
+    p_invoice_unit_price_cents: price,
+    p_invoice_monthly_allowance: allowance as number,
+    p_starts_on: input.startsOn,
+    p_plan_snapshot: planSnapshot,
+    p_notes: notes ?? "",
+  });
+  if (error) throw fromDbError(error, "Contrato");
+}
+
+export async function discardBillingContractDraft(db: DbClient, clinicId: string): Promise<void> {
+  const { error } = await db.rpc("discard_billing_contract_draft", { p_clinic_id: clinicId });
+  if (error) throw fromDbError(error, "Contrato");
+}
+
+/** Ativa o rascunho; a versão vigente é encerrada na véspera do início da nova. */
+export async function activateBillingContract(db: DbClient, clinicId: string): Promise<void> {
+  const { error } = await db.rpc("activate_billing_contract", { p_clinic_id: clinicId });
+  if (error) throw fromDbError(error, "Contrato");
+}
+
+/** Preço padrão por nota (Suporte); null = ainda não definido. */
+export async function getDefaultInvoicePrice(db: DbClient): Promise<number | null> {
+  const row = unwrap(await db.from("billing_settings").select("default_invoice_unit_price_cents").maybeSingle(), "Preço padrão por nota") as {
+    default_invoice_unit_price_cents: number | null;
+  } | null;
+  return row?.default_invoice_unit_price_cents ?? null;
+}
+
+export async function setDefaultInvoicePrice(db: DbClient, priceText: string): Promise<void> {
+  const cents = parseMoneyCents(priceText);
+  if (!Number.isFinite(cents) || cents < 0 || cents > 100_000) {
+    throw new DataError("invalid", `Preço padrão por nota: ${CONTRACT_MESSAGES.invoicePrice}`, { default_invoice_price: CONTRACT_MESSAGES.invoicePrice });
+  }
+  const { error } = await db.rpc("set_billing_default_invoice_price", { p_cents: cents });
+  if (error) throw fromDbError(error, "Preço padrão por nota");
+}
+
+/**
+ * Contrato que vale hoje e o próximo (versão já ativada com início futuro).
+ * Ao ativar a nova versão, a anterior fica "encerrada" com fim na véspera do
+ * início da nova, mas segue valendo até lá.
+ */
+export function contractsInForce(contracts: BillingContract[], today: string): { current: BillingContract | null; next: BillingContract | null } {
+  const signed = contracts.filter((c) => c.status === "active" || c.status === "ended");
+  const current = signed.find((c) => c.startsOn <= today && (c.endsOn === null || c.endsOn >= today)) ?? null;
+  const next = signed.find((c) => c.status === "active" && c.startsOn > today) ?? null;
+  return { current, next };
+}
+
+/** "50 notas por mês" ou "ilimitada". */
+export function describeAllowance(allowance: number | null): string {
+  if (allowance === null) return "ilimitada";
+  return `${allowance} ${allowance === 1 ? "nota" : "notas"} por mês`;
 }

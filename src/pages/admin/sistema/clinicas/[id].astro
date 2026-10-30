@@ -54,7 +54,8 @@ const now = Date.now();
 // Vencido sem ter sido enviado ao Suporte.
 const expired = (request: (typeof requests)[number]) => (request.status === "sent" || request.status === "draft") && request.expiresAt.getTime() < now;
 const features = clinic.clinic_features.map((grant) => grant.feature_key).filter(isFeatureKey);
-const plan = PLAN_LABELS[clinicPlan(features, clinic.max_professionals).kind];
+const planInfo = clinicPlan(features, clinic.max_professionals);
+const plan = PLAN_LABELS[planInfo.kind];
 const active = clinic.professionals.filter((p) => p.is_active).length;
 const summary = [
   `Criada em ${formatInstant(new Date(clinic.created_at), settings.timezone, "dd/MM/yyyy")}`,
@@ -99,7 +100,7 @@ const tab = TABS.find((t) => t.key === requestedTab)?.key ?? "implantacao";
   </div>
   <FlashMessage />
   <Tabs class="mt-4" label="Abas da clínica" tabs={TABS.map((t) => ({ label: t.label, href: `/admin/sistema/clinicas/${clinic.id}?tab=${t.key}`, active: t.key === tab }))} />
-  {tab === "faturamento" && <SupportBillingTab db={db} clinicId={clinic.id} timezone={settings.timezone} suggestedEmail={firstAdmin} />}
+  {tab === "faturamento" && <SupportBillingTab db={db} clinicId={clinic.id} timezone={settings.timezone} suggestedEmail={firstAdmin} reference={{ label: plan, monthlyCents: planInfo.kind === "none" ? null : planInfo.monthlyCents }} />}
 
   {tab === "implantacao" && (
   <div class="mt-5 grid items-start gap-4 lg:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)]">

@@ -290,6 +290,44 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"billing_contracts": {
+                  Row: {
+                    "activated_at": string | null,"activated_by": string | null,"billing_mode": string,"clinic_id": string,"created_at": string,"created_by": string | null,"ends_on": string | null,"first_due_date": string,"id": string,"invoice_monthly_allowance": number | null,"invoice_unit_price_cents": number,"monthly_cents": number,"notes": string | null,"payment_method": string | null,"plan_snapshot": NonNullable<Json>,"replaces_contract_id": string | null,"setup_cents": number,"starts_on": string,"status": string,"updated_at": string,"version": number | null
+                  }
+                  Insert: {
+                    "activated_at"?: string | null,"activated_by"?: string | null,"billing_mode": string,"clinic_id": string,"created_at"?: string,"created_by"?: string | null,"ends_on"?: string | null,"first_due_date": string,"id"?: string,"invoice_monthly_allowance"?: number | null,"invoice_unit_price_cents": number,"monthly_cents": number,"notes"?: string | null,"payment_method"?: string | null,"plan_snapshot"?: NonNullable<Json>,"replaces_contract_id"?: string | null,"setup_cents"?: number,"starts_on": string,"status"?: string,"updated_at"?: string,"version"?: number | null
+                  }
+                  Update: {
+                    "activated_at"?: string | null,"activated_by"?: string | null,"billing_mode"?: string,"clinic_id"?: string,"created_at"?: string,"created_by"?: string | null,"ends_on"?: string | null,"first_due_date"?: string,"id"?: string,"invoice_monthly_allowance"?: number | null,"invoice_unit_price_cents"?: number,"monthly_cents"?: number,"notes"?: string | null,"payment_method"?: string | null,"plan_snapshot"?: NonNullable<Json>,"replaces_contract_id"?: string | null,"setup_cents"?: number,"starts_on"?: string,"status"?: string,"updated_at"?: string,"version"?: number | null
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "billing_contracts_clinic_id_fkey"
+      columns: ["clinic_id"]
+isOneToOne: false
+      referencedRelation: "clinics"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "billing_contracts_replaces_contract_id_fkey"
+      columns: ["replaces_contract_id"]
+isOneToOne: false
+      referencedRelation: "billing_contracts"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"billing_settings": {
+                  Row: {
+                    "default_invoice_unit_price_cents": number | null,"id": boolean,"updated_at": string,"updated_by": string | null
+                  }
+                  Insert: {
+                    "default_invoice_unit_price_cents"?: number | null,"id"?: boolean,"updated_at"?: string,"updated_by"?: string | null
+                  }
+                  Update: {
+                    "default_invoice_unit_price_cents"?: number | null,"id"?: boolean,"updated_at"?: string,"updated_by"?: string | null
+                  }
+                  Relationships: [
+                    
+                  ]
                 },"booking_links": {
                   Row: {
                     "agenda_id": string | null,"appointment_id": string | null,"canceled_appointment_id": string | null,"clinic_id": string,"contact_id": string,"contact_phone": string,"created_at": string,"expires_at": string,"funnel_session_id": string | null,"home_visit_address": string | null,"id": string,"join_waitlist": boolean,"location_category": Database["public"]['Enums']["location_type"] | null,"location_id": string | null,"mode": Database["public"]['Enums']["booking_link_mode"],"origin_appointment_id": string | null,"patient_id": string,"return_deadline_waived": boolean,"service_id": string,"used_at": string | null
@@ -1573,7 +1611,10 @@ isOneToOne: false
             [_ in never]: never
           }
           Functions: {
-            "anonymize_patient":
+            "activate_billing_contract":
+{ Args: { "p_clinic_id": string }; Returns: undefined
+                           },
+"anonymize_patient":
 { Args: { "p_clinic_id": string,"p_patient_id": string }; Returns: Json
                            },
 "begin_nfse_cancel":
@@ -1595,6 +1636,9 @@ isOneToOne: false
                            },
 "connect_whatsapp":
 { Args: { "p_clinic_id": string,"p_coexistence": boolean,"p_contacts_synced"?: boolean,"p_display_phone": string,"p_history_synced"?: boolean,"p_phone_number_id": string,"p_pin"?: string,"p_token": string,"p_waba_id": string }; Returns: undefined
+                           },
+"discard_billing_contract_draft":
+{ Args: { "p_clinic_id": string }; Returns: undefined
                            },
 "disconnect_whatsapp":
 { Args: { "p_clinic_id": string }; Returns: boolean
@@ -1755,10 +1799,16 @@ isOneToOne: false
 "save_billing_contacts":
 { Args: { "p_clinic_id": string,"p_finance_email": string,"p_finance_phone": string }; Returns: undefined
                            },
+"save_billing_contract_draft":
+{ Args: { "p_billing_mode": string,"p_clinic_id": string,"p_first_due_date": string,"p_invoice_monthly_allowance": number,"p_invoice_unit_price_cents": number,"p_monthly_cents": number,"p_notes": string,"p_payment_method": string,"p_plan_snapshot": Json,"p_setup_cents": number,"p_starts_on": string }; Returns: string
+                           },
 "search_insurance_plans":
 { Args: { "p_clinic_id": string,"p_query": string }; Returns: {
               "id": string,"name": string,"score": number
             }[]
+                           },
+"set_billing_default_invoice_price":
+{ Args: { "p_cents": number }; Returns: undefined
                            },
 "set_billing_whatsapp_opt_in":
 { Args: { "p_clinic_id": string,"p_opt_in": boolean,"p_text_version": string }; Returns: undefined

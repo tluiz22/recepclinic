@@ -27,6 +27,8 @@ const CLINIC_B = "0b000000-0000-4000-8000-000000000001"; // Odonto Exemplo
 //   está em tests/db/documentos-do-paciente.test.ts.
 // - cron_heartbeats: última execução de cada rotina (F9.3), da plataforma
 //   (sem clinic_id); só a plataforma grava.
+// - billing_settings: preço padrão por nota do faturamento (F12.2), da
+//   plataforma (sem clinic_id); só o Suporte lê e grava (tests/db/contrato.test.ts).
 const NO_DIRECT_FK = new Set(["platform_audit_log", "platform_access_log", "system_errors"]);
 const NO_AUDIT_TRIGGER = new Set(["platform_audit_log", "platform_access_log", "clinic_usage_monthly", "system_errors"]);
 const NOT_IN_DATA_SWEEP = new Set(["platform_audit_log", "system_errors", "push_subscriptions", "patient_documents"]);
@@ -185,7 +187,7 @@ describe("varredura de isolamento (dados de teste)", () => {
   });
 
   it("todas as tabelas do banco entraram na varredura ou têm exceção registrada", () => {
-    const covered = new Set([...dataTables, ...NOT_IN_DATA_SWEEP, "platform_staff", "features", "cron_heartbeats"]);
+    const covered = new Set([...dataTables, ...NOT_IN_DATA_SWEEP, "platform_staff", "features", "cron_heartbeats", "billing_settings"]);
     expect(allTables.filter((name) => !covered.has(name))).toEqual([]);
   });
 });

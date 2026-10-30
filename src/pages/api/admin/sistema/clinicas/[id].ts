@@ -1,13 +1,15 @@
 import type { APIRoute } from "astro";
 import { isUuid } from "../../../../../lib/clinicAccess";
 import { authorizeAgendaImport, requestAgendaImport, returnAgendaImport, undoAgendaImport } from "../../../../../lib/data/agendaImport";
-import { saveBillingAccount } from "../../../../../lib/data/billing";
+import { activateBillingContract, discardBillingContractDraft, saveBillingAccount, saveBillingContractDraft } from "../../../../../lib/data/billing";
 import { createUserClient } from "../../../../../lib/data/clients";
 import { DataError } from "../../../../../lib/data/errors";
 import { runFormAction } from "../../../../../lib/data/formAction";
 import { createInfoRequest, markInfoRequestReviewed, resendInvitation, setClinicStatus } from "../../../../../lib/data/onboarding";
 import { onboardingDeps } from "../../../../../lib/data/onboardingDeps";
+import { isFeatureKey } from "../../../../../lib/features";
 import { formOptionalText, formText } from "../../../../../lib/forms";
+import { clinicPlan, PLAN_LABELS } from "../../../../../lib/plans";
 
 // Ações do Suporte numa clínica (F4.4a): reenviar convite, pedir as
 // informações por e-mail e marcar as respostas como revisadas; pedir a agenda
@@ -15,7 +17,7 @@ import { formOptionalText, formText } from "../../../../../lib/forms";
 // enviada à clínica, com comentário (F10.1b); autorizar a carga (F10.1c) e
 // desfazer a carga (F10.1d); ativar a clínica em implantação ou voltar para
 // a implantação (F8.2b); cadastrar ou alterar a conta de cobrança (F12.1,
-// aba Faturamento).
+// aba Faturamento); rascunho, ativação e descarte do contrato (F12.2).
 export const POST: APIRoute = async (context) => {
   const { request, cookies, locals, params, url } = context;
   const clinicId = params.id!;
@@ -24,7 +26,7 @@ export const POST: APIRoute = async (context) => {
   // Erro ao devolver: volta à conferência, com o comentário marcado.
   const billingPage = `${page}?tab=faturamento`;
   const acao = formText(form, "acao");
-  const failureTo = ["devolver_agenda", "autorizar_carga", "desfazer_carga"].includes(acao) ? `${page}/agenda-atual` : acao === "conta_cobranca" ? billingPage : page;
+  const failureTo = ["devolver_agenda", "autorizar_carga", "desfazer_carga"].includes(acao) ? `${page}/agenda-atual` : acao === "conta_cobranca" || acao.startsWith("contrato_") ? billingPage : page;
   const db = createUserClient(request, cookies);
 
   return runFormAction(
@@ -116,6 +118,40 @@ export const POST: APIRoute = async (context) => {
             financePhone: formOptionalText(form, "finance_phone"),
           });
           return { redirectTo: billingPage, message: "Conta de cobrança salva." };
+        case "contrato_rascunho": {
+          // Retrato do plano de referência (informativo), pela matriz de hoje.
+          const { data: access } = await db.from("clinics").select("max_professionals, clinic_features ( feature_key )").eq("id", clinicId).maybeSingle();
+          const reference = clinicPlan((access?.clinic_features ?? []).map((grant) => grant.feature_key).filter(isFeatureKey), access?.max_professionals ?? 1);
+          await saveBillingContractDraft(
+            db,
+            clinicId,
+            {
+              billingMode: formText(form, "billing_mode"),
+              monthly: formText(form, "monthly"),
+              setup: formText(form, "setup"),
+              paymentMethod: formOptionalText(form, "payment_method"),
+              firstDueDate: formText(form, "first_due_date"),
+              startsOn: formText(form, "starts_on"),
+              invoicePrice: formText(form, "invoice_price"),
+              allowanceKind: formText(form, "allowance_kind"),
+              allowance: formOptionalText(form, "allowance"),
+              notes: formOptionalText(form, "notes"),
+            },
+            {
+              kind: reference.kind,
+              label: PLAN_LABELS[reference.kind],
+              tableMonthlyCents: reference.kind === "none" ? undefined : reference.monthlyCents,
+              professionals: access?.max_professionals ?? 1,
+            },
+          );
+          return { redirectTo: billingPage, message: "Rascunho do contrato salvo. Confira e ative." };
+        }
+        case "contrato_ativar":
+          await activateBillingContract(db, clinicId);
+          return { redirectTo: billingPage, message: "Contrato ativado." };
+        case "contrato_descartar":
+          await discardBillingContractDraft(db, clinicId);
+          return { redirectTo: billingPage, message: "Rascunho do contrato descartado." };
         case "marcar_revisado":
           await markInfoRequestReviewed(db, locals.userId!, formText(form, "request_id"));
           return { redirectTo: page, message: "Respostas marcadas como revisadas." };

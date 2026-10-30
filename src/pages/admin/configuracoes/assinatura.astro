@@ -3,26 +3,34 @@
 // docs/planejamento-faturamento-saas.md): a conta de cobrança da clínica no
 // RecepClinic. O pagador (nome e CNPJ/CPF) é do Suporte; o Administrador da
 // clínica altera os contatos financeiros e só ele autoriza ou retira o
-// WhatsApp financeiro. Contrato e cobranças entram nas próximas fases.
+// WhatsApp financeiro. F12.2: o contrato vigente (mensalidade, implantação,
+// preço por nota e franquia), só leitura. Cobranças entram nas próximas fases.
 import ConfigShell from "../../../components/admin/config/ConfigShell.astro";
 import Badge from "../../../components/admin/config/Badge.astro";
 import Card from "../../../components/admin/config/Panel.astro";
 import ConfirmDeleteDialog from "../../../components/admin/ConfirmDeleteDialog.astro";
 import BillingTrail from "../../../components/admin/billing/BillingTrail.astro";
+import ContractTerms from "../../../components/admin/billing/ContractTerms.astro";
 import HelpTip from "../../../components/admin/ui/HelpTip.astro";
 import HowItWorks from "../../../components/admin/ui/HowItWorks.astro";
 import { configuracoes } from "../../../lib/ajuda/configuracoes";
 import { DD, DT, HINT, INPUT, KV, LABEL, PRIMARY_BUTTON, SECONDARY_BUTTON } from "../../../components/admin/config/formStyles";
 import { BILLING_OPT_IN_TEXT, BILLING_OPT_IN_VERSION } from "../../../lib/billingOptIn";
-import { formatInstant } from "../../../lib/clinicTime";
+import { formatCalendarDate, formatInstant, todayIn } from "../../../lib/clinicTime";
 import { loadActorLabels } from "../../../lib/data/agenda/trail";
-import { formatPayerDocument, getBillingAccount, listBillingAudit } from "../../../lib/data/billing";
+import { contractsInForce, formatPayerDocument, getBillingAccount, listBillingAudit, listBillingContracts } from "../../../lib/data/billing";
 import { createUserClient } from "../../../lib/data/clients";
 import { formatPhoneBR } from "../../../lib/phone";
 
 const clinic = Astro.locals.clinic!;
 const db = createUserClient(Astro.request, Astro.cookies);
-const [account, audit] = await Promise.all([getBillingAccount(db, clinic.clinicId), listBillingAudit(db, clinic.clinicId)]);
+const [account, audit, contracts] = await Promise.all([
+  getBillingAccount(db, clinic.clinicId),
+  listBillingAudit(db, clinic.clinicId),
+  listBillingContracts(db, clinic.clinicId),
+]);
+// O Administrador vê o vigente e os encerrados (o rascunho é só do Suporte).
+const { current: contract, next } = contractsInForce(contracts, todayIn(clinic.timezone));
 const actors = await loadActorLabels(db, clinic.clinicId, audit.map((a) => a.actorId));
 // O opt-in é o consentimento da clínica: só o Administrador dela (o Suporte vê).
 const isClinicAdmin = clinic.roles.includes("admin");
@@ -43,6 +51,33 @@ const H2 = "font-display text-[17px] leading-tight font-bold text-ink sm:text-lg
     ) : (
       <div class="grid gap-4 lg:grid-cols-2">
         <div class="flex flex-col gap-4">
+          <Card>
+            <div class="flex flex-wrap items-center gap-2">
+              <HelpTip subject="Franquia de notas" text={configuracoes.dicas.assinaturaFranquia} id="contrato">
+                <h2 class={H2}>Contrato</h2>
+              </HelpTip>
+              {contract && <Badge variant="success">Vigente</Badge>}
+            </div>
+            {contract ? (
+              <div class="mt-3">
+                <ContractTerms contract={contract} />
+              </div>
+            ) : (
+              !next && <p class="mt-1 text-sm text-ink-soft">O contrato aparece aqui quando o Suporte do RecepClinic o ativar.</p>
+            )}
+          </Card>
+          {next && (
+            <Card>
+              <div class="flex flex-wrap items-center gap-2">
+                <h2 class={H2}>Próxima versão do contrato</h2>
+                <Badge variant="info">A partir de {formatCalendarDate(next.startsOn, "dd/MM/yyyy")}</Badge>
+              </div>
+              <div class="mt-3">
+                <ContractTerms contract={next} />
+              </div>
+            </Card>
+          )}
+
           <Card>
             <h2 class={H2}>Conta de cobrança</h2>
             <dl class={`${KV} mt-3`}>

@@ -1,14 +1,16 @@
 # Faturamento recorrente do SaaS (Asaas)
 
-> **Estado atual (retomar daqui), 30/out/2026.** **F12.1 feita na branch `faturamento`** (local, sem push; cliente
-> pediu o início em 30/out): migração `20261106120000_conta_de_cobranca.sql` (`billing_accounts`, `billing_audit_log`,
-> funções `save_billing_account`, `save_billing_contacts`, `set_billing_whatsapp_opt_in`), Sistema › Clínicas › clínica ›
-> aba **Faturamento** (Suporte) e Configurações › **Assinatura** (Administrador). Regras: o Suporte cria e altera a conta
-> inteira; o Administrador, só os contatos; só o Administrador da clínica dá ou retira o opt-in do WhatsApp (texto
-> provisório, `src/lib/billingOptIn.ts`, revisar com o advogado: 11.16); trocar ou apagar o telefone retira o opt-in.
-> Testes: `tests/db/conta-de-cobranca.test.ts`; `npm test`, `npm run test:db` e `astro check` passando no local.
-> **Próximo:** validação do cliente no local; depois, com o OK, push da branch, migração no banco do staging e
-> conferência no endereço de teste da branch (antes, o cliente confere as variáveis do Preview na Vercel). Depois, F12.2.
+> **Estado atual (retomar daqui), 30/out/2026.** Branch **`faturamento`**, local, sem push (cliente, 30/out: subir
+> depois). **F12.1 validada pelo cliente (30/out):** conta de cobrança (`20261106120000_conta_de_cobranca.sql`), aba
+> **Faturamento** da clínica (Suporte), Configurações › **Assinatura** (Administrador), opt-in do WhatsApp só do
+> Administrador (texto provisório, `src/lib/billingOptIn.ts`; advogado: 11.16) e ajuda contextual.
+> **F12.2 feita, aguardando validação:** `20261107120000_contrato.sql` (`billing_contracts` com versões e
+> `billing_settings`). O Suporte monta o rascunho (modo, mensalidade, implantação, forma de pagamento só no automático:
+> Pix ou cartão, início, 1º vencimento, preço por nota e franquia), descarta ou ativa (exige a conta); mudança = nova
+> versão com início depois da vigente, que termina na véspera. Preço padrão por nota em Vendas › Planos (começa sem
+> valor; o Suporte define). Assinatura mostra o contrato vigente e a próxima versão. Testes: `tests/db/contrato.test.ts`,
+> `src/lib/data/billing.test.ts`. **Próximo:** validação da F12.2 no local; depois N0/N1 (nota pelo Asaas) ou F12.3,
+> com o OK do cliente; push da branch e staging quando o cliente pedir.
 >
 > Decisões já respondidas (28/out): **11.1** (motivos registrados), **modo de cobrança manual** (seção 3) e **11.2**
 > (pago = `CONFIRMED` ou `RECEIVED`) **11.3** (bloqueio no painel primeiro, banco depois) **11.4** (bot calado, link com aviso) **11.5** (Assinatura só para o Administrador) **11.6** (estorno marca e avisa o Suporte) **11.7** (novo valor no próximo ciclo, sem proporcional) **11.8** (implantação ao ativar, conta igual) **11.9** (cartão na página do Asaas). **11.10 fica pendente** (número do WhatsApp, decidir antes da F12.9).
