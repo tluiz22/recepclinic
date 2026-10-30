@@ -9,7 +9,7 @@
 >   **C4 Alterar atendimento**, **C5 Horário em local que o serviço não usa** e **C6 Escolha do serviço no Marcar**; em 29/out, **C7 Arquivo no preparo do
 >   exame** (C7.1–C7.7) e **C8 Escolha do serviço em Horários** (`5ef2be6`). Fluxo e registro em [`producao.md`](producao.md).
 > - **Staging** (`teste.recepclinic.com.br`, branch `main`): igual à produção em 30/out (`a7e077a`). Roteiros em [`staging.md`](staging.md).
-> - **Branches:** `main` = `producao` em 29/out; a `CRM` ficou para trás (etapa encerrada).
+> - **Branches:** `main` = `producao` em 30/out; `CRM` e `faturamento` excluídas em 30/out (tudo delas na `main`).
 >
 > **Frentes em andamento**
 > - **Ajustes da produção, na `main`:** C1–C8 validados e na produção (C1–C6 em 28/out, `da2a6fc`; C7 e C8 em 29/out,

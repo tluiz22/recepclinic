@@ -14,15 +14,12 @@
 > - **P3 Lembretes** (28/out, no staging, validada): aba "Lembretes" na ficha e "Lembretes da equipe" no
 >   Relacionamento (seção 19.3 do plano).
 > - **CRM concluído (cliente, 28/out).** Nada na produção: vai junto com o resto, depois das correções na `main`.
-> - **Branches:** `main` e `CRM` iguais em 28/out. Linha de base dos testes: 723 de unidade e 676 de banco.
+> - **Branches:** a `CRM` entrou toda na `main` e foi excluída em 30/out. Linha de base dos testes em 28/out: 723 de
+>   unidade e 676 de banco.
 
 ## Como trabalhar nesta etapa
 
-- Todo o código e a documentação do CRM ficam na branch **`CRM`**. A `main` segue com as etapas do piloto (B e C) e
-  publica no staging a cada push; a `producao` publica na produção.
-- **Parar o CRM e voltar ao piloto:** commit e push do que estiver em andamento na `CRM`, atualizar o bloco
-  "Estado atual" deste arquivo e `git switch main`.
-- **Voltar ao CRM:** `git switch CRM`, trazer o que mudou na `main` (`git merge main`) e retomar pelo bloco acima.
-- Um push na `CRM` pode gerar só uma *preview* na Vercel; não muda o staging nem a produção.
+- A branch **`CRM`** (28/out) entrou na `main` e foi excluída em 30/out. Etapa nova do CRM com código: branch
+  recriada da `main`, pelas regras de branch paralela do `CLAUDE.md`.
 - O CRM entra na `main` só com a aprovação do cliente, e as decisões de arquitetura novas vão para
   [`arquitetura.md`](arquitetura.md), como as D1–D11.
