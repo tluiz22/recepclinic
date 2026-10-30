@@ -3,7 +3,12 @@
 > **Estado atual (retomar daqui), 30/out/2026.** Histórico completo em [`historico.md`](historico.md) (não ler
 > na retomada; buscar por data, fase ou commit quando precisar).
 >
-> **Agora (30/out):** NFS-e pelo Asaas, N0 (seções 13.8 e 13.9 do `planejamento-nfse-asaas.md`; ler o bloco de
+> **Próxima sessão (cliente, 30/out):** melhorias pedidas pelo cliente **na `main`**; depois **tudo junto para a
+> produção** (fluxo do `producao.md`, com autorização). Já na `main` e fora da produção: cartão do Asaas (escondido sem
+> `ASAAS_PREVIEW`) e **remoção da DMED com a migração `20261105120000_sem_dmed.sql`** (aplicar no banco da produção
+> junto com o push).
+>
+> **N0 do Asaas (30/out):** NFS-e pelo Asaas, N0 (seções 13.8 e 13.9 do `planejamento-nfse-asaas.md`; ler o bloco de
 > retomada dele). Cartão do selo do Asaas na `main` (`13ebeab`), visível só com `ASAAS_PREVIEW=1` (staging).
 > Validado no staging e **formulário BaaS enviado (30/out)**. Aguardando a análise do Asaas (até 3 dias úteis) e o
 > contador (falta PIS/COFINS; e-CNPJ A1 a providenciar; seção 13.5). **DMED removida** (cliente, 30/out; staging e `main`,
@@ -15,7 +20,8 @@
 >   (Relacionamento, B0, P1–P3) e as correções **C1 Exame em paralelo**, **C2 Outro horário**, **C3 Horário de exame**,
 >   **C4 Alterar atendimento**, **C5 Horário em local que o serviço não usa** e **C6 Escolha do serviço no Marcar**; em 29/out, **C7 Arquivo no preparo do
 >   exame** (C7.1–C7.7) e **C8 Escolha do serviço em Horários** (`5ef2be6`). Fluxo e registro em [`producao.md`](producao.md).
-> - **Staging** (`teste.recepclinic.com.br`, branch `main`): `13ebeab` (30/out): produção + cartão do Asaas, escondido sem `ASAAS_PREVIEW`. Roteiros em [`staging.md`](staging.md).
+> - **Staging** (`teste.recepclinic.com.br`, branch `main`): produção + cartão do Asaas (escondido sem `ASAAS_PREVIEW`) +
+>   DMED removida (banco e código, 30/out). Roteiros em [`staging.md`](staging.md).
 > - **Branches:** `main` = `producao` em 30/out; `CRM` e `faturamento` excluídas em 30/out (tudo delas na `main`).
 >
 > **Frentes em andamento**
