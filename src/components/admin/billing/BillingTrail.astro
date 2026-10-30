@@ -1,0 +1,46 @@
+---
+// Faturamento (F12.1): a trilha da conta de cobrança, a mais nova em cima,
+// com quem fez e o que mudou. Na tela Assinatura (Administrador da clínica) e
+// na aba Faturamento da clínica (Suporte).
+import Card from "../config/Panel.astro";
+import { formatInstant } from "../../../lib/clinicTime";
+import type { ActorLabel } from "../../../lib/data/agenda/trail";
+import { BILLING_ACTIONS, changedFields, type BillingAuditEntry } from "../../../lib/data/billing";
+
+interface Props {
+  entries: BillingAuditEntry[];
+  actors: Map<string, ActorLabel>;
+  timezone: string;
+}
+
+const { entries, actors, timezone } = Astro.props;
+const who = (entry: BillingAuditEntry) => {
+  if (entry.actorKind === "system") return "sistema";
+  if (entry.actorKind === "webhook") return "Asaas";
+  const name = entry.actorId ? actors.get(entry.actorId)?.name : null;
+  if (entry.actorKind === "support") return name ? `${name} (Suporte RecepClinic)` : "Suporte RecepClinic";
+  return name ?? "alguém da clínica";
+};
+---
+
+<Card>
+  <h2 class="font-display text-[17px] leading-tight font-bold text-ink sm:text-lg">Histórico</h2>
+  <ul class="mt-2 divide-y divide-[#e6ecea]">
+    {
+      entries.map((entry) => {
+        const fields = entry.action === "account_created" ? [] : changedFields(entry);
+        return (
+          <li class="py-2 text-sm">
+            <span class="font-medium text-ink">{BILLING_ACTIONS[entry.action]}</span>
+            <span class="block text-ink-soft">
+              {formatInstant(entry.createdAt, timezone, "dd/MM/yyyy 'às' HH:mm")} · {who(entry)}
+              {entry.action !== "whatsapp_opt_in" && entry.action !== "whatsapp_opt_out" && fields.length > 0 ? ` · ${fields.join(", ")}` : ""}
+            </span>
+            {entry.reason && <span class="block text-ink-soft">{entry.reason}</span>}
+          </li>
+        );
+      })
+    }
+    {entries.length === 0 && <li class="py-2 text-sm text-ink-soft">Nada ainda.</li>}
+  </ul>
+</Card>

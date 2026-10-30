@@ -252,6 +252,44 @@ isOneToOne: false
       referencedColumns: ["clinic_id","id"]
     }
                   ]
+                },"billing_accounts": {
+                  Row: {
+                    "clinic_id": string,"created_at": string,"finance_email": string,"finance_phone": string | null,"payer_document": string,"payer_name": string,"updated_at": string,"updated_by": string | null,"whatsapp_opt_in_at": string | null,"whatsapp_opt_in_by": string | null,"whatsapp_opt_in_version": string | null
+                  }
+                  Insert: {
+                    "clinic_id": string,"created_at"?: string,"finance_email": string,"finance_phone"?: string | null,"payer_document": string,"payer_name": string,"updated_at"?: string,"updated_by"?: string | null,"whatsapp_opt_in_at"?: string | null,"whatsapp_opt_in_by"?: string | null,"whatsapp_opt_in_version"?: string | null
+                  }
+                  Update: {
+                    "clinic_id"?: string,"created_at"?: string,"finance_email"?: string,"finance_phone"?: string | null,"payer_document"?: string,"payer_name"?: string,"updated_at"?: string,"updated_by"?: string | null,"whatsapp_opt_in_at"?: string | null,"whatsapp_opt_in_by"?: string | null,"whatsapp_opt_in_version"?: string | null
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "billing_accounts_clinic_id_fkey"
+      columns: ["clinic_id"]
+isOneToOne: true
+      referencedRelation: "clinics"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"billing_audit_log": {
+                  Row: {
+                    "action": string,"actor_id": string | null,"actor_kind": string,"after": Json | null,"before": Json | null,"clinic_id": string,"created_at": string,"id": string,"reason": string | null
+                  }
+                  Insert: {
+                    "action": string,"actor_id"?: string | null,"actor_kind": string,"after"?: Json | null,"before"?: Json | null,"clinic_id": string,"created_at"?: string,"id"?: string,"reason"?: string | null
+                  }
+                  Update: {
+                    "action"?: string,"actor_id"?: string | null,"actor_kind"?: string,"after"?: Json | null,"before"?: Json | null,"clinic_id"?: string,"created_at"?: string,"id"?: string,"reason"?: string | null
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "billing_audit_log_clinic_id_fkey"
+      columns: ["clinic_id"]
+isOneToOne: false
+      referencedRelation: "clinics"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"booking_links": {
                   Row: {
                     "agenda_id": string | null,"appointment_id": string | null,"canceled_appointment_id": string | null,"clinic_id": string,"contact_id": string,"contact_phone": string,"created_at": string,"expires_at": string,"funnel_session_id": string | null,"home_visit_address": string | null,"id": string,"join_waitlist": boolean,"location_category": Database["public"]['Enums']["location_type"] | null,"location_id": string | null,"mode": Database["public"]['Enums']["booking_link_mode"],"origin_appointment_id": string | null,"patient_id": string,"return_deadline_waived": boolean,"service_id": string,"used_at": string | null
@@ -1711,10 +1749,19 @@ isOneToOne: false
 "revoke_fiscal_certificate":
 { Args: { "p_clinic_id": string }; Returns: undefined
                            },
+"save_billing_account":
+{ Args: { "p_clinic_id": string,"p_finance_email": string,"p_finance_phone": string,"p_payer_document": string,"p_payer_name": string }; Returns: undefined
+                           },
+"save_billing_contacts":
+{ Args: { "p_clinic_id": string,"p_finance_email": string,"p_finance_phone": string }; Returns: undefined
+                           },
 "search_insurance_plans":
 { Args: { "p_clinic_id": string,"p_query": string }; Returns: {
               "id": string,"name": string,"score": number
             }[]
+                           },
+"set_billing_whatsapp_opt_in":
+{ Args: { "p_clinic_id": string,"p_opt_in": boolean,"p_text_version": string }; Returns: undefined
                            },
 "set_clinic_features":
 { Args: { "p_clinic_id": string,"p_features": (string)[] }; Returns: undefined

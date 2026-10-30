@@ -37,7 +37,7 @@ describe("menu lateral de Configurações (R9)", () => {
     const ids = (features: Parameters<typeof configSections>[0], support: boolean) =>
       configSections(features, support, null).map((g) => [g.title, g.items.map((s) => s.id)]);
     expect(ids([], false)).toEqual([
-      ["A clínica", ["clinica", "equipe"]],
+      ["A clínica", ["clinica", "equipe", "assinatura"]],
       ["Atendimento", ["profissionais", "locais", "agendas", "servicos", "horarios", "feriados"]],
       ["Mensagens", ["lembretes", "mensagens", "whatsapp"]],
     ]);

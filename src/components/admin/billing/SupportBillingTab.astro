@@ -1,0 +1,91 @@
+---
+// Sistema › Clínicas › clínica › Faturamento (F12.1, faturamento do SaaS):
+// a conta de cobrança, que só o Suporte cria e altera (pagador e contatos), a
+// situação do WhatsApp financeiro (só o Administrador da clínica autoriza) e
+// a trilha. Contrato, cobranças e suspensão entram nas próximas fases.
+import Badge from "../config/Badge.astro";
+import Card from "../config/Panel.astro";
+import BillingTrail from "./BillingTrail.astro";
+import { HINT, INPUT, LABEL, PRIMARY_BUTTON } from "../config/formStyles";
+import { formatInstant } from "../../../lib/clinicTime";
+import { loadActorLabels } from "../../../lib/data/agenda/trail";
+import { formatPayerDocument, getBillingAccount, listBillingAudit } from "../../../lib/data/billing";
+import type { DbClient } from "../../../lib/data/clients";
+import { formatPhoneBR } from "../../../lib/phone";
+
+interface Props {
+  db: DbClient;
+  clinicId: string;
+  timezone: string;
+  /** Sugestão de e-mail financeiro na conta nova (o do Administrador convidado). */
+  suggestedEmail: string;
+}
+
+const { db, clinicId, timezone, suggestedEmail } = Astro.props;
+const [account, audit] = await Promise.all([getBillingAccount(db, clinicId), listBillingAudit(db, clinicId)]);
+const actors = await loadActorLabels(db, clinicId, audit.map((a) => a.actorId));
+const action = `/api/admin/sistema/clinicas/${clinicId}`;
+const H2 = "font-display text-[17px] leading-tight font-bold text-ink sm:text-lg";
+---
+
+<div class="mt-4 grid items-start gap-4 lg:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)]">
+  <Card>
+    <div class="flex flex-wrap items-center gap-2">
+      <h2 class={H2}>Conta de cobrança</h2>
+      {!account && <Badge variant="warning">Não cadastrada</Badge>}
+    </div>
+    <p class="mt-1 text-sm text-ink-soft">
+      Quem paga o RecepClinic e para onde vão as cobranças. O Administrador da clínica também altera os contatos, em Configurações › Assinatura.
+    </p>
+    <form method="POST" action={action} class="mt-3 flex flex-col gap-3">
+      <input type="hidden" name="acao" value="conta_cobranca" />
+      <div>
+        <label for="payer_name" class={LABEL}>Nome ou razão social do pagador</label>
+        <input id="payer_name" name="payer_name" required maxlength="200" value={account?.payerName ?? ""} class={INPUT} />
+      </div>
+      <div>
+        <label for="payer_document" class={LABEL}>CNPJ ou CPF</label>
+        <input id="payer_document" name="payer_document" required value={account ? formatPayerDocument(account.payerDocument) : ""} class={INPUT} />
+      </div>
+      <div class="grid gap-3 sm:grid-cols-2">
+        <div>
+          <label for="finance_email" class={LABEL}>E-mail financeiro</label>
+          <input id="finance_email" name="finance_email" type="email" required value={account?.financeEmail ?? suggestedEmail} class={INPUT} />
+        </div>
+        <div>
+          <label for="finance_phone" class={LABEL}>Telefone financeiro (opcional)</label>
+          <input
+            id="finance_phone"
+            name="finance_phone"
+            type="tel"
+            inputmode="tel"
+            placeholder="(84) 98188-0777"
+            value={account?.financePhone ? formatPhoneBR(account.financePhone) : ""}
+            class={INPUT}
+          />
+        </div>
+      </div>
+      {account?.whatsappOptIn && <p class={HINT}>Trocar ou apagar o telefone retira a autorização do WhatsApp financeiro.</p>}
+      <button type="submit" data-sending-label="Salvando…" class={`${PRIMARY_BUTTON} self-start`}>{account ? "Salvar a conta" : "Cadastrar a conta"}</button>
+    </form>
+  </Card>
+
+  <div class="flex min-w-0 flex-col gap-4">
+    {
+      account && (
+        <Card>
+          <div class="flex flex-wrap items-center gap-2">
+            <h2 class={H2}>WhatsApp financeiro</h2>
+            {account.whatsappOptIn ? <Badge variant="success">Autorizado</Badge> : <Badge>Não autorizado</Badge>}
+          </div>
+          <p class="mt-1 text-sm text-ink-soft">
+            {account.whatsappOptIn
+              ? `Autorizado pelo Administrador da clínica em ${formatInstant(account.whatsappOptIn.at, timezone, "dd/MM/yyyy 'às' HH:mm")} (texto ${account.whatsappOptIn.version}).`
+              : "Só o Administrador da clínica autoriza, em Configurações › Assinatura. Sem a autorização, os avisos vão só por e-mail."}
+          </p>
+        </Card>
+      )
+    }
+    <BillingTrail entries={audit} actors={actors} timezone={timezone} />
+  </div>
+</div>

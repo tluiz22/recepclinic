@@ -230,6 +230,12 @@ begin
   insert into public.fiscal_audit_log (clinic_id, event, details)
     values (c_a, 'certificate_uploaded', '{"subject_name": "CLINICA EXEMPLO SAUDE LTDA", "cnpj": "11222333000181"}');
 
+  -- Conta de cobrança no RecepClinic (F12.1, faturamento do SaaS) e a trilha.
+  insert into public.billing_accounts (clinic_id, payer_name, payer_document, finance_email, finance_phone)
+    values (c_a, 'Clínica Exemplo Saúde Ltda', '11222333000181', 'financeiro@exemplo-saude.local', '+5584988880100');
+  insert into public.billing_audit_log (clinic_id, actor_kind, action, after)
+    values (c_a, 'support', 'account_created', '{"payer_name": "Clínica Exemplo Saúde Ltda", "finance_email": "financeiro@exemplo-saude.local"}');
+
   -- Atendimentos da próxima semana.
   insert into public.appointments (clinic_id, patient_id, service_id, agenda_id, location_id, scheduled_at, duration_minutes, booking_channel, status)
     values (c_a, pt_joao, s_consulta, ag_ped, l_office, (monday + time '08:00') at time zone tz, 30, 'whatsapp_bot', 'confirmed')

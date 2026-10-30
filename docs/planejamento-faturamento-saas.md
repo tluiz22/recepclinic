@@ -1,11 +1,14 @@
 # Faturamento recorrente do SaaS (Asaas)
 
-> **Estado atual (retomar daqui), 29/out/2026.** **Planejamento concluído** (cliente, 28/out), **ampliado em 29/out** com
-> a cobrança por nota fiscal emitida (seção 3 e [`planejamento-nfse-asaas.md`](planejamento-nfse-asaas.md)). Nada implementado:
-> sem tabela, rota, variável ou conta no Asaas. **Próximo passo: começar a F12.1** (conta de cobrança: contatos
-> financeiros, opt-in e trilha, sem Asaas) **na branch `faturamento`**, com o OK do cliente para iniciar. Antes de
-> publicar a F12.1 no endereço de teste da branch: o cliente confere na Vercel as variáveis do ambiente de testes
-> (Preview) da branch.
+> **Estado atual (retomar daqui), 30/out/2026.** **F12.1 feita na branch `faturamento`** (local, sem push; cliente
+> pediu o início em 30/out): migração `20261106120000_conta_de_cobranca.sql` (`billing_accounts`, `billing_audit_log`,
+> funções `save_billing_account`, `save_billing_contacts`, `set_billing_whatsapp_opt_in`), Sistema › Clínicas › clínica ›
+> aba **Faturamento** (Suporte) e Configurações › **Assinatura** (Administrador). Regras: o Suporte cria e altera a conta
+> inteira; o Administrador, só os contatos; só o Administrador da clínica dá ou retira o opt-in do WhatsApp (texto
+> provisório, `src/lib/billingOptIn.ts`, revisar com o advogado: 11.16); trocar ou apagar o telefone retira o opt-in.
+> Testes: `tests/db/conta-de-cobranca.test.ts`; `npm test`, `npm run test:db` e `astro check` passando no local.
+> **Próximo:** validação do cliente no local; depois, com o OK, push da branch, migração no banco do staging e
+> conferência no endereço de teste da branch (antes, o cliente confere as variáveis do Preview na Vercel). Depois, F12.2.
 >
 > Decisões já respondidas (28/out): **11.1** (motivos registrados), **modo de cobrança manual** (seção 3) e **11.2**
 > (pago = `CONFIRMED` ou `RECEIVED`) **11.3** (bloqueio no painel primeiro, banco depois) **11.4** (bot calado, link com aviso) **11.5** (Assinatura só para o Administrador) **11.6** (estorno marca e avisa o Suporte) **11.7** (novo valor no próximo ciclo, sem proporcional) **11.8** (implantação ao ativar, conta igual) **11.9** (cartão na página do Asaas). **11.10 fica pendente** (número do WhatsApp, decidir antes da F12.9).

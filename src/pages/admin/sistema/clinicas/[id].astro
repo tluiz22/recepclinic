@@ -6,13 +6,16 @@
 // linhas e os pedidos num cartão, o mais novo em cima. F10.1a (cliente,
 // 20/out/2026): "Agenda atual", o pedido do link para a importação. F8.2b
 // (cliente, 25/out/2026): "Situação", com "Ativar a clínica" em implantação
-// e o que conferir antes (WhatsApp e templates).
+// e o que conferir antes (WhatsApp e templates). F12.1 (faturamento do SaaS):
+// abas Implantação (o de antes) e Faturamento (conta de cobrança e trilha).
 import AdminLayout from "../../../../layouts/AdminLayout.astro";
 import Badge from "../../../../components/admin/config/Badge.astro";
 import ConfirmDeleteDialog from "../../../../components/admin/ConfirmDeleteDialog.astro";
 import FlashMessage from "../../../../components/admin/FlashMessage.astro";
 import OnboardingAnswersView from "../../../../components/admin/OnboardingAnswersView.astro";
+import SupportBillingTab from "../../../../components/admin/billing/SupportBillingTab.astro";
 import SystemHeader from "../../../../components/admin/sistema/SystemHeader.astro";
+import Tabs from "../../../../components/admin/ui/Tabs.astro";
 import Button from "../../../../components/admin/ui/Button.astro";
 import { CARD, INPUT, LABEL, PANEL, PRIMARY_BUTTON, SECTION_TITLE } from "../../../../components/admin/config/formStyles";
 import { countAppointments, IMPORT_STATUS, isImportOpen } from "../../../../lib/agendaImport";
@@ -73,6 +76,12 @@ const importActive = importOpen || agendaImport?.status === "submitted";
 const importExpired = importOpen && agendaImport!.expiresAt.getTime() < now;
 const importPatients = agendaImport?.entries.length ?? 0;
 const importAppointments = agendaImport ? countAppointments(agendaImport.entries) : 0;
+const TABS = [
+  { key: "implantacao", label: "Implantação" },
+  { key: "faturamento", label: "Faturamento" },
+] as const;
+const requestedTab = Astro.url.searchParams.get("tab");
+const tab = TABS.find((t) => t.key === requestedTab)?.key ?? "implantacao";
 ---
 
 <AdminLayout title={clinic.name} platform>
@@ -89,7 +98,10 @@ const importAppointments = agendaImport ? countAppointments(agendaImport.entries
     </SystemHeader>
   </div>
   <FlashMessage />
+  <Tabs class="mt-4" label="Abas da clínica" tabs={TABS.map((t) => ({ label: t.label, href: `/admin/sistema/clinicas/${clinic.id}?tab=${t.key}`, active: t.key === tab }))} />
+  {tab === "faturamento" && <SupportBillingTab db={db} clinicId={clinic.id} timezone={settings.timezone} suggestedEmail={firstAdmin} />}
 
+  {tab === "implantacao" && (
   <div class="mt-5 grid items-start gap-4 lg:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)]">
     <div class="flex min-w-0 flex-col gap-4">
       <section class={`${CARD} overflow-hidden`} aria-labelledby="t-convites">
@@ -330,4 +342,5 @@ const importAppointments = agendaImport ? countAppointments(agendaImport.entries
       </section>
     </div>
   </div>
+  )}
 </AdminLayout>

@@ -1,26 +1,30 @@
 import type { APIRoute } from "astro";
 import { isUuid } from "../../../../../lib/clinicAccess";
 import { authorizeAgendaImport, requestAgendaImport, returnAgendaImport, undoAgendaImport } from "../../../../../lib/data/agendaImport";
+import { saveBillingAccount } from "../../../../../lib/data/billing";
 import { createUserClient } from "../../../../../lib/data/clients";
 import { DataError } from "../../../../../lib/data/errors";
 import { runFormAction } from "../../../../../lib/data/formAction";
 import { createInfoRequest, markInfoRequestReviewed, resendInvitation, setClinicStatus } from "../../../../../lib/data/onboarding";
 import { onboardingDeps } from "../../../../../lib/data/onboardingDeps";
-import { formText } from "../../../../../lib/forms";
+import { formOptionalText, formText } from "../../../../../lib/forms";
 
 // Ações do Suporte numa clínica (F4.4a): reenviar convite, pedir as
 // informações por e-mail e marcar as respostas como revisadas; pedir a agenda
 // atual para a importação ou mandar um link novo (F10.1a) e devolver a agenda
 // enviada à clínica, com comentário (F10.1b); autorizar a carga (F10.1c) e
 // desfazer a carga (F10.1d); ativar a clínica em implantação ou voltar para
-// a implantação (F8.2b).
+// a implantação (F8.2b); cadastrar ou alterar a conta de cobrança (F12.1,
+// aba Faturamento).
 export const POST: APIRoute = async (context) => {
   const { request, cookies, locals, params, url } = context;
   const clinicId = params.id!;
   const form = await request.formData().catch(() => null);
   const page = `/admin/sistema/clinicas/${clinicId}`;
   // Erro ao devolver: volta à conferência, com o comentário marcado.
-  const failureTo = ["devolver_agenda", "autorizar_carga", "desfazer_carga"].includes(formText(form, "acao")) ? `${page}/agenda-atual` : page;
+  const billingPage = `${page}?tab=faturamento`;
+  const acao = formText(form, "acao");
+  const failureTo = ["devolver_agenda", "autorizar_carga", "desfazer_carga"].includes(acao) ? `${page}/agenda-atual` : acao === "conta_cobranca" ? billingPage : page;
   const db = createUserClient(request, cookies);
 
   return runFormAction(
@@ -104,6 +108,14 @@ export const POST: APIRoute = async (context) => {
         case "voltar_implantacao":
           await setClinicStatus(db, clinicId, "onboarding");
           return { redirectTo: page, message: `${clinic.name} voltou para "Em implantação": nada sai para os pacientes pelo WhatsApp até ativar de novo.` };
+        case "conta_cobranca":
+          await saveBillingAccount(db, clinicId, {
+            payerName: formText(form, "payer_name"),
+            payerDocument: formText(form, "payer_document"),
+            financeEmail: formText(form, "finance_email"),
+            financePhone: formOptionalText(form, "finance_phone"),
+          });
+          return { redirectTo: billingPage, message: "Conta de cobrança salva." };
         case "marcar_revisado":
           await markInfoRequestReviewed(db, locals.userId!, formText(form, "request_id"));
           return { redirectTo: page, message: "Respostas marcadas como revisadas." };
