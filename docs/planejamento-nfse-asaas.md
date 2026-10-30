@@ -107,7 +107,7 @@ conta.
 | 10 | PDF e XML | **[Asaas]** `pdfUrl` e `xmlUrl` depois de `AUTHORIZED`; também `number` e `validationCode`. |
 | 11 | Estados e webhooks | **[Asaas]** `SCHEDULED`, `AUTHORIZED`, `PROCESSING_CANCELLATION`, `CANCELED`, `CANCELLATION_DENIED`, `ERROR`. Eventos `INVOICE_CREATED`, `_UPDATED`, `_SYNCHRONIZED`, `_AUTHORIZED`, `_PROCESSING_CANCELLATION`, `_CANCELED`, `_CANCELLATION_DENIED`, `_ERROR`. "Pelo menos uma vez" (deduplicar pelo `id`), token `asaas-access-token` (sem assinatura), fila pausada após 15 falhas, eventos por 14 dias, `SEQUENTIALLY`/`NON_SEQUENTIALLY`, campos novos podem aparecer. **Agendar não é emitir.** |
 | 12 | Tarifas | **[Asaas]** R$ 0,49 por nota emitida (tabela padrão; o contrato pode diferir). |
-| 13 | DMED e contador | **[Código]** A DMED sai de `payments`. **[Pendência]** O contador informa regime, CNAE, código de serviço, NBS e o número inicial (`rpsNumber`), para a numeração continuar. |
+| 13 | DMED e contador | ~~A DMED sai de `payments`.~~ DMED removida do sistema (30/out). **[Pendência]** O contador informa regime, CNAE, código de serviço, NBS e o número inicial (`rpsNumber`), para a numeração continuar. |
 | — | API | **[Asaas]** Sandbox `https://api-sandbox.asaas.com/v3`, Produção `https://api.asaas.com/v3`; cabeçalho `access_token`; contas e chaves independentes por ambiente. |
 
 ## 5. Arquitetura
