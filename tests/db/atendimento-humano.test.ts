@@ -79,26 +79,23 @@ describe("atendimento humano (F8.5a)", () => {
   });
 
   it("lista: aguardando (a mais antiga primeiro) e em atendimento, para o Profissional também", async () => {
-    const now = at("2031-03-11T10:30:00");
-    const items = await listHumanAttention(asDb(professional.client), clinic, TZ, now);
+    const items = await listHumanAttention(asDb(professional.client), clinic);
     expect(items.map((i) => [i.phone, i.status, i.name, i.reason, i.waitingSince?.toISOString() ?? null])).toEqual([
       [PHONE_WROTE_AGAIN, "waiting", null, "no_availability", at("2031-03-11T08:20:00").toISOString()],
       [PHONE_REQUESTED, "waiting", "Maria Souza", "requested", at("2031-03-11T10:00:01").toISOString()],
       [PHONE_TOOK_OVER, "in_progress", null, "agent_took_over", null],
     ]);
     expect(items[2].lastAgentAt).toEqual(at("2031-03-11T09:45:00"));
-    // O bot volta sozinho 24h depois da última mensagem da recepção (dia útil).
-    expect(items[2].deadline).toEqual(at("2031-03-12T09:45:00"));
-    expect(await countAwaitingClinic(asDb(professional.client), clinic, TZ, now)).toBe(2);
+    expect(await countAwaitingClinic(asDb(professional.client), clinic)).toBe(2);
   });
 
   it("outra clínica não vê nada", async () => {
-    expect(await listHumanAttention(asDb(outsider.client), clinic, TZ, at("2031-03-11T10:30:00"))).toEqual([]);
+    expect(await listHumanAttention(asDb(outsider.client), clinic)).toEqual([]);
   });
 
-  it("pausa vencida sai da lista", async () => {
-    const items = await listHumanAttention(asDb(professional.client), clinic, TZ, at("2031-03-12T10:00:01"));
-    expect(items.map((i) => i.phone)).toEqual([]);
+  it("a conversa não sai sozinha da lista, nem dias depois (cliente, 30/out/2026)", async () => {
+    const items = await listHumanAttention(asDb(professional.client), clinic);
+    expect(items.map((i) => i.phone)).toEqual([PHONE_WROTE_AGAIN, PHONE_REQUESTED, PHONE_TOOK_OVER]);
   });
 
   it("Devolver ao bot: a conversa volta ao bot e sai da lista; de novo, já tinha voltado", async () => {
@@ -113,7 +110,7 @@ describe("atendimento humano (F8.5a)", () => {
       .single();
     expect(data).toEqual({ handoff_reason: null, handoff_started_at: null });
     expect(await giveBackToBot(db, clinic, PHONE_TOOK_OVER)).toBe(false);
-    const items = await listHumanAttention(db, clinic, TZ, at("2031-03-11T10:30:00"));
+    const items = await listHumanAttention(db, clinic);
     expect(items.map((i) => i.phone)).not.toContain(PHONE_TOOK_OVER);
   });
 

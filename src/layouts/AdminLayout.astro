@@ -54,7 +54,7 @@ const roleLabel = describeRoles(access);
 // clínica; o contador fica no menu (e no "Mais" do celular). Falha na contagem não derruba a tela.
 const attentionCount =
   clinic && !platform && clinic.features.includes("whatsapp_bot")
-    ? await countAwaitingClinic(createUserClient(Astro.request, Astro.cookies), clinic.clinicId, clinic.timezone).catch((error: unknown) => {
+    ? await countAwaitingClinic(createUserClient(Astro.request, Astro.cookies), clinic.clinicId).catch((error: unknown) => {
         logError("atendimento humano: contador do menu", error, { clinica: clinic.clinicId });
         return 0;
       })

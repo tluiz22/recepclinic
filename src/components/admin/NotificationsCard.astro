@@ -21,7 +21,7 @@ const deviceList = devices.map((d) => d.device ?? "Aparelho").join(", ");
     <div class="flex min-w-0 flex-[999_1_360px] flex-col gap-1">
       <h2 id="notificacoes" class="font-display text-[17px] leading-tight font-bold text-ink">Notificações neste aparelho</h2>
       <p class="text-[15px] text-ink-soft">
-        Avisa quando uma conversa passa a aguardar atendimento humano e lembra do <strong class="font-mono">#bot</strong>, no horário da recepção. Um
+        Avisa quando uma conversa passa a aguardar atendimento humano e lembra de devolver ao bot, no horário da recepção. Um
         toque abre a conversa no WhatsApp.
       </p>
       {devices.length > 0 && <p class="text-sm text-ink-soft">Ativas para você em: {deviceList}.</p>}

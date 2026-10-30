@@ -4,6 +4,21 @@ import type { ModuloDeAjuda } from "./tipos";
 
 export const relacionamento = {
   comoFunciona: {
+    // listHumanAttention e classifyAttention em src/lib/data/whatsapp/attention.ts; pauseForHuman, checkHandoff e
+    // handleAgentEcho em whatsapp/conversations.ts (cliente, 30/out/2026: a conversa não volta sozinha ao bot).
+    atendimento: {
+      serve:
+        "Mostra as conversas do WhatsApp pendentes de atendimento humano: o bot parou de responder e alguém da clínica precisa atender. O bot é o atendimento automático do RecepClinic no WhatsApp da clínica (responde, marca, remarca e cancela sem ninguém da equipe).",
+      como: [
+        "A conversa entra aqui quando o paciente pede para falar com a clínica, quando a recepção responde pelo app do WhatsApp Business ou quando o bot não entende, não acha horário livre ou bate um limite do contato.",
+        "Enquanto a conversa está aqui, o bot fica calado só com esse paciente. Ela não volta sozinha ao bot.",
+        "\"Aguardando a clínica\": ninguém respondeu ainda, ou o paciente escreveu de novo. \"Em atendimento pela clínica\": a recepção já respondeu.",
+        "Ao terminar o atendimento, clique em \"Devolver ao bot\": o bot volta a responder esse paciente na próxima mensagem, do começo. Nada é enviado ao paciente na hora. Escrever #bot na conversa, pelo app, faz o mesmo.",
+      ],
+      exemplo:
+        "Maria escreve \"quero falar com a recepção\" às 9h e a conversa aparece em Aguardando. A recepção responde pelo app e ela passa para Em atendimento. Resolvido, a recepção clica em \"Devolver ao bot\" e, na próxima mensagem da Maria, o bot responde.",
+      erro: "Esqueceu de devolver? O bot continua calado com esse paciente e a conversa segue aqui (o Início também avisa). Clique em \"Devolver ao bot\" assim que terminar.",
+    },
     // src/lib/data/relationship.ts (cabeçalho e relationshipTabs); Q1 a Q4 do plano da central.
     central: {
       serve: "Reúne numa tela só as pessoas que pedem contato da equipe, cada uma com o motivo.",

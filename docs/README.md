@@ -14,7 +14,9 @@
 > **Frentes em andamento**
 > - **Ajustes da produção, na `main`:** C1–C8 validados e na produção (C1–C6 em 28/out, `da2a6fc`; C7 e C8 em 29/out,
 >   `5ef2be6`; detalhes no [`historico.md`](historico.md), busca "C7", "C8"). **C9** (conversas só depois de ativar a
->   clínica) na `main` e no staging em 30/out; aguarda a validação e a produção. Na produção, cada clínica com exames
+>   clínica) e **C10** (conversa não volta sozinha ao bot; Atendimento com "Como funciona?") na `main` e no staging em
+>   30/out; aguardam o OK para a produção, junto com a limpeza do que o piloto gravou em implantação (cliente: apagar
+>   tudo das conversas; nunca pacientes, responsáveis ou agendamentos). Na produção, cada clínica com exames
 >   precisa do "Criar na Meta" (Suporte) para os modelos `rc_preparo_exame_v3` e `rc_preparo_arquivo_v3`. Próximo: nada
 >   pendente nesta frente; aguarda o cliente.
 > - **CRM concluído** (28/out; [`crm.md`](crm.md)): validado no staging e na produção desde 28/out.

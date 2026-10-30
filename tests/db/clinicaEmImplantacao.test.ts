@@ -94,8 +94,8 @@ describe("clínica em implantação (F8.2b)", () => {
 
     // Pausa de antes (ex.: gravada antes desta regra): não aparece em implantação; ativa, aparece.
     await pauseForHuman(asDb(clinicServiceClient(clinicId)), clinicId, "+5584977730002", { contactId: null, reason: "agent_took_over" });
-    expect(await listHumanAttention(asDb(admin.client), clinicId, "America/Sao_Paulo")).toEqual([]);
+    expect(await listHumanAttention(asDb(admin.client), clinicId)).toEqual([]);
     await setClinicStatus(asDb(support.client), clinicId, "active");
-    expect((await listHumanAttention(asDb(admin.client), clinicId, "America/Sao_Paulo")).map((i) => i.phone)).toEqual(["+5584977730002"]);
+    expect((await listHumanAttention(asDb(admin.client), clinicId)).map((i) => i.phone)).toEqual(["+5584977730002"]);
   });
 });

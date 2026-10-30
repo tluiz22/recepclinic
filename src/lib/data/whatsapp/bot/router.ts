@@ -41,9 +41,7 @@ export async function handleIncomingMessage(env: BotEnv, message: WaMessage): Pr
   if (!(await hasFeature(env.db, env.clinicId, "whatsapp_bot"))) return "skipped";
 
   let convo = await openConversation(env.db, env.clinicId, phone, await contactIdByPhone(env.db, env.clinicId, phone));
-  const handoff = await checkHandoff(env.db, env.clinicId, convo, env.now);
-  const paused = handoff === "paused";
-  if (handoff === "resumed") convo = await openConversation(env.db, env.clinicId, phone, convo.contactId);
+  const paused = checkHandoff(convo) === "paused";
 
   // Toques em botões de template valem em qualquer ponto da conversa.
   const offerTap = offerTapOf(message);

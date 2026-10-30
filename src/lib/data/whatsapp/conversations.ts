@@ -1,9 +1,6 @@
-import { addDays, localDateOf, localTimeOf, toInstant, weekdayOf } from "../../clinicTime";
-import { isNationalHoliday } from "../../holidays";
 import type { Json } from "../../supabase/database.types";
 import type { DbClient } from "../clients";
 import { unwrap, unwrapOne } from "../errors";
-import { loadClinicHolidays } from "../agenda/slots";
 import { logFunnelEvent, type FunnelFlow } from "./funnel";
 import { isReturnToBotKeyword, messageBody, toE164, type WaMessage } from "./meta";
 import { logError } from "../../log";
@@ -14,14 +11,11 @@ import { logError } from "../../log";
 // e gravar funil sem o item).
 //
 // Pausa da recepção: quando a recepção escreve pelo app do WhatsApp Business
-// (eco) ou o paciente pede atendimento humano, o bot fica em silêncio. A pausa
-// vale 24h desde a última mensagem da recepção; se o prazo cair em sábado,
-// domingo ou feriado da clínica (nacional ou próprio), passa para o próximo
-// dia útil no mesmo horário, no fuso da clínica (cliente, 05/out/2026; no
-// piloto, feriado não contava). Vencido o prazo, a próxima mensagem do
-// paciente devolve a conversa ao bot; "#bot" da recepção devolve antes.
+// (eco), o paciente pede atendimento humano ou o bot não consegue seguir, o
+// bot fica em silêncio. A conversa só volta ao bot pelo "Devolver ao bot" da
+// tela Atendimento ou pelo "#bot" da recepção: não há prazo para voltar
+// sozinha (cliente, 30/out/2026; antes, 24h em dia útil).
 
-export const HANDOFF_HOURS = 24;
 /** Conversa parada fora do repouso por mais que isso recomeça do zero (piloto). */
 export const IDLE_TIMEOUT_MINUTES = 15;
 
@@ -50,31 +44,6 @@ export const NON_FUNNEL_STATES = new Set([
 // ---------------------------------------------------------------------------
 // Regras puras
 // ---------------------------------------------------------------------------
-
-/** Dia sem atendimento para o prazo da pausa: fim de semana ou feriado. */
-function isOffDay(date: string, clinicHolidays: Set<string>): boolean {
-  const weekday = weekdayOf(date);
-  return weekday === 0 || weekday === 6 || isNationalHoliday(date) || clinicHolidays.has(date);
-}
-
-/** Até quantos dias seguidos sem atendimento o prazo pula (contra laço sem fim). */
-const MAX_OFF_DAYS = 31;
-
-/**
- * Fim da pausa iniciada (ou renovada) em `handoffAt`: 24h depois; caindo em
- * fim de semana ou feriado, o próximo dia útil no mesmo horário da clínica.
- */
-export function handoffDeadline(handoffAt: Date, timeZone: string, clinicHolidays: Set<string>): Date {
-  const plain = new Date(handoffAt.getTime() + HANDOFF_HOURS * 60 * 60_000);
-  let date = localDateOf(plain, timeZone);
-  if (!isOffDay(date, clinicHolidays)) return plain;
-
-  const time = localTimeOf(plain, timeZone);
-  // Segundos que o "HH:mm" deixa de fora.
-  const remainder = plain.getTime() - toInstant(date, time, timeZone).getTime();
-  for (let i = 0; i < MAX_OFF_DAYS && isOffDay(date, clinicHolidays); i++) date = addDays(date, 1);
-  return new Date(toInstant(date, time, timeZone).getTime() + remainder);
-}
 
 export function isPastIdleTimeout(lastUpdatedAt: Date, now: Date = new Date()): boolean {
   return now.getTime() - lastUpdatedAt.getTime() >= IDLE_TIMEOUT_MINUTES * 60_000;
@@ -269,23 +238,6 @@ export async function logAbandonment(
 // Pausa da recepção
 // ---------------------------------------------------------------------------
 
-async function clinicTimeZone(db: DbClient, clinicId: string): Promise<string> {
-  const row = unwrapOne(
-    await db.from("clinic_settings").select("timezone").eq("clinic_id", clinicId).maybeSingle(),
-    "Configuração da clínica",
-  );
-  return row.timezone;
-}
-
-/** Fim da pausa da conversa no calendário da clínica (null = sem pausa). */
-export async function getHandoffDeadline(db: DbClient, clinicId: string, conversation: Conversation): Promise<Date | null> {
-  if (!conversation.humanHandoff || !conversation.humanHandoffAt) return null;
-  const timeZone = await clinicTimeZone(db, clinicId);
-  const from = localDateOf(conversation.humanHandoffAt, timeZone);
-  const holidays = await loadClinicHolidays(db, clinicId, from, addDays(from, MAX_OFF_DAYS + 2));
-  return handoffDeadline(conversation.humanHandoffAt, timeZone, holidays);
-}
-
 /** Devolve a conversa ao bot, do começo (o paciente pode não lembrar onde parou). */
 export async function returnToBot(db: DbClient, clinicId: string, phone: string): Promise<void> {
   unwrap(
@@ -320,22 +272,9 @@ export async function resetConversationAfterNotice(db: DbClient, clinicId: strin
   if (error) logError("conversa: não recomeçou depois do aviso", error, { clinica: clinicId });
 }
 
-/**
- * Mensagem do paciente numa conversa pausada: `paused` = o bot fica calado;
- * `resumed` = o prazo venceu e a conversa voltou ao bot (do começo); `active`
- * = não estava pausada.
- */
-export async function checkHandoff(
-  db: DbClient,
-  clinicId: string,
-  conversation: Conversation,
-  now: Date = new Date(),
-): Promise<"active" | "paused" | "resumed"> {
-  if (!conversation.humanHandoff) return "active";
-  const deadline = await getHandoffDeadline(db, clinicId, conversation);
-  if (deadline && now.getTime() < deadline.getTime()) return "paused";
-  await returnToBot(db, clinicId, conversation.phone);
-  return "resumed";
+/** Mensagem do paciente numa conversa pausada: o bot fica calado até a conversa ser devolvida. */
+export function checkHandoff(conversation: Conversation): "active" | "paused" {
+  return conversation.humanHandoff ? "paused" : "active";
 }
 
 /**
@@ -343,6 +282,7 @@ export async function checkHandoff(
  * humano ou um limite do contato barrou a marcação (F9.6a). Mensagens
  * seguintes da recepção só renovam o prazo; o funil conta o início de cada pausa, e a tentativa em andamento fica como abandono
  * ("secretária assumiu"). Número que nunca falou com o bot já nasce pausado.
+ * Na pausa em andamento, o motivo e o início ficam.
  */
 export async function pauseForHuman(
   db: DbClient,
@@ -352,8 +292,7 @@ export async function pauseForHuman(
   now: Date = new Date(),
 ): Promise<void> {
   const current = await getConversation(db, clinicId, phone);
-  const deadline = current ? await getHandoffDeadline(db, clinicId, current) : null;
-  const pauseActive = !!deadline && now.getTime() < deadline.getTime();
+  const pauseActive = !!current?.humanHandoff;
 
   if (!pauseActive) {
     await logFunnelEvent(

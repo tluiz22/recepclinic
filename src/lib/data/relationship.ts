@@ -218,7 +218,7 @@ export async function loadRelationshipLists(
   let agendas: Promise<string[]> | null = null;
   const agendaIds = () => (agendas ??= listAgendas(db, clinicId, { includeInactive: true }).then((list) => list.map((a) => a.id)));
   const sources: { [K in RelationshipTab]: () => Promise<NonNullable<RelationshipLists[K]>> } = {
-    atendimento: () => listHumanAttention(db, clinicId, timeZone, now),
+    atendimento: () => listHumanAttention(db, clinicId),
     retomar_contato: () => listRecall(db, clinicId, now),
     retorno: async () => listReturnOpportunitiesWithPeople(db, clinicId, await agendaIds(), now),
     lembretes: () => listPendingReminders(db, clinicId, now),

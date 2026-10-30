@@ -62,7 +62,7 @@ export function waitingMessage(item: AttentionItem): PushMessage {
 export function reminderMessage(item: AttentionItem): PushMessage {
   return {
     title: `${who(item)} segue com a clínica`,
-    body: "Se já terminou, escreva #bot na conversa para o bot voltar a atender.",
+    body: "O bot não volta sozinho. Se já terminou, toque aqui e use \"Devolver ao bot\".",
     url: conversationUrl(item.phone),
     tag: `atendimento-${item.phone}`,
   };
@@ -151,7 +151,7 @@ export async function notifyWaitingConversation(db: DbClient, clinicId: string, 
   try {
     if (!(await hasSubscriptions(db, clinicId))) return false;
     const reception = await loadReception(db, clinicId, now);
-    const [item] = await listHumanAttention(db, clinicId, reception.timeZone, now, phone);
+    const [item] = await listHumanAttention(db, clinicId, phone);
     if (!item || !shouldNotifyWaiting(item, isReceptionOpen(reception.hours, now, reception.timeZone, reception.holidays))) return false;
     await sendToClinic(db, clinicId, waitingMessage(item), push, now);
     await markConversation(db, clinicId, phone, "handoff_notified_at", now);
@@ -172,7 +172,7 @@ export async function runAttentionRoutine(
   if (!push || !(await hasSubscriptions(db, clinicId))) return { reminders: 0, summary: false };
   const reception = await loadReception(db, clinicId, now);
   if (!isReceptionOpen(reception.hours, now, reception.timeZone, reception.holidays)) return { reminders: 0, summary: false };
-  const items = await listHumanAttention(db, clinicId, reception.timeZone, now);
+  const items = await listHumanAttention(db, clinicId);
 
   // Primeira passada no horário aberto do dia: o resumo do que chegou fora dele.
   let summary = false;

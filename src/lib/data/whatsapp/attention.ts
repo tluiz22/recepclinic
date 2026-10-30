@@ -1,8 +1,6 @@
-import { addDays, localDateOf } from "../../clinicTime";
 import type { DbClient } from "../clients";
 import { unwrap } from "../errors";
-import { loadClinicHolidays } from "../agenda/slots";
-import { handoffDeadline, returnToBot } from "./conversations";
+import { returnToBot } from "./conversations";
 
 // Atendimento humano (F8.5a, cliente, 27/out/2026): as conversas em que o bot
 // parou e a clínica precisa responder. Na coexistência tudo o que o bot fala
@@ -11,8 +9,8 @@ import { handoffDeadline, returnToBot } from "./conversations";
 // "Aguardando a clínica": a pausa começou e a clínica ainda não respondeu
 // pelo app, ou o paciente escreveu de novo depois da última resposta.
 // "Em atendimento": a clínica respondeu e o paciente não escreveu depois.
-// A conversa sai da lista com o "#bot", com o "Devolver ao bot" ou quando o
-// prazo da pausa vence (a conversa volta ao bot na próxima mensagem).
+// A conversa sai da lista só com o "Devolver ao bot" ou com o "#bot": não volta
+// sozinha ao bot (cliente, 30/out/2026).
 
 export type HandoffReason = "requested" | "agent_took_over" | "bot_limit" | "no_availability" | "not_understood";
 
@@ -59,8 +57,6 @@ export type AttentionItem = {
   /** Desde quando a clínica deve uma resposta (só em "Aguardando"). */
   waitingSince: Date | null;
   lastAgentAt: Date | null;
-  /** Quando o bot volta sozinho, sem "#bot". */
-  deadline: Date;
   /** Última mensagem da conversa na pausa (paciente ou recepção pelo app). */
   lastActivityAt: Date;
   /** Notificações (F8.5c): último aviso de "aguardando" e último lembrete do "#bot". */
@@ -86,8 +82,6 @@ type PausedRow = {
 export async function listHumanAttention(
   db: DbClient,
   clinicId: string,
-  timeZone: string,
-  now: Date = new Date(),
   phone?: string,
 ): Promise<AttentionItem[]> {
   // Em implantação nada é da recepção ainda (cliente, 29/out/2026): a lista começa ao ativar.
@@ -101,15 +95,7 @@ export async function listHumanAttention(
     .eq("human_handoff", true);
   if (phone) query = query.eq("contact_phone", phone);
   const paused = unwrap(await query, "Atendimento humano") as unknown as PausedRow[];
-  const rows = paused.filter((row) => row.human_handoff_at);
-  if (rows.length === 0) return [];
-
-  // Prazo da pausa (vencido = a conversa já é do bot de novo, na próxima mensagem).
-  const firstDay = rows.map((row) => localDateOf(new Date(row.human_handoff_at!), timeZone)).sort()[0];
-  const holidays = await loadClinicHolidays(db, clinicId, firstDay, addDays(firstDay, 40));
-  const open = rows
-    .map((row) => ({ row, deadline: handoffDeadline(new Date(row.human_handoff_at!), timeZone, holidays) }))
-    .filter(({ deadline }) => now.getTime() < deadline.getTime());
+  const open = paused.filter((row) => row.human_handoff_at).map((row) => ({ row }));
   if (open.length === 0) return [];
 
   const phones = open.map(({ row }) => row.contact_phone);
@@ -139,7 +125,7 @@ export async function listHumanAttention(
     for (const contact of contacts) byPhone.set(contact.phone, contact);
   }
 
-  const items = open.map(({ row, deadline }): AttentionItem => {
+  const items = open.map(({ row }): AttentionItem => {
     const own = messages.filter((m) => m.contact_phone === row.contact_phone);
     const patient = own.filter((m) => m.direction === "inbound");
     const agent = own.filter((m) => m.message_type === "agent_reply");
@@ -159,7 +145,6 @@ export async function listHumanAttention(
       reason: row.handoff_reason,
       startedAt,
       ...situation,
-      deadline,
       lastActivityAt: new Date(Math.max(...activity.map((t) => t.getTime()))),
       notifiedAt: row.handoff_notified_at ? new Date(row.handoff_notified_at) : null,
       remindedAt: row.handoff_reminded_at ? new Date(row.handoff_reminded_at) : null,
@@ -172,8 +157,8 @@ export async function listHumanAttention(
 }
 
 /** Quantas conversas aguardam a clínica (contador do menu e do Início). */
-export async function countAwaitingClinic(db: DbClient, clinicId: string, timeZone: string, now: Date = new Date()): Promise<number> {
-  return (await listHumanAttention(db, clinicId, timeZone, now)).filter((item) => item.status === "waiting").length;
+export async function countAwaitingClinic(db: DbClient, clinicId: string): Promise<number> {
+  return (await listHumanAttention(db, clinicId)).filter((item) => item.status === "waiting").length;
 }
 
 /**

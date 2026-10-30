@@ -637,3 +637,12 @@ retomada fica no README). Para achar algo, buscar por data (ex.: `27/out`), fase
   Atendimento, Início, contador do menu, notificações e a rotina `atendimento-humano`). Sem migração. Teste de banco em
   `tests/db/clinicaEmImplantacao.test.ts`. Publicada no staging em 30/out. Pendente: os dados que o piloto gravou em
   implantação na produção (8 pausas e as mensagens).
+- **C10 Conversa não volta sozinha ao bot** (30/out): **decisão do cliente (29/out–30/out):** nenhuma conversa com a
+  clínica volta sozinha ao bot, qualquer que seja o motivo (recusado: só "a clínica respondeu" e "pediu para falar com a
+  clínica" sem prazo, os outros três voltando em 24 h). Antes: 24 h em dia útil, depois da última mensagem da recepção.
+  Sai `handoffDeadline`/`getHandoffDeadline` e o "resumed" do `checkHandoff`; a pausa em andamento mantém motivo e
+  início; `listHumanAttention` sem filtro de prazo (e sem `timeZone`/`now`). Tela Atendimento: aviso "Conversa
+  pendente com a clínica… clique em Devolver ao bot", botão **Devolver ao bot** em destaque (primário, com ícone) e
+  **"Como funciona?"** (o que é a lista, o que é o bot, quando entra, como devolver; `relacionamento.comoFunciona.atendimento`).
+  Textos do Início, do cartão de notificações e do lembrete no celular passam a falar do "Devolver ao bot"; o `#bot`
+  continua valendo. Sem migração. Publicada no staging em 30/out.

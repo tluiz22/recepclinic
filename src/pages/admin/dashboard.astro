@@ -43,7 +43,7 @@ const [counts, sendsAlert, toReview, certificate, connection, templates, attenti
   certificateOn ? getFiscalCertificate(db, clinic.clinicId) : Promise.resolve(null),
   isAdmin ? getWhatsappConnection(db, clinic.clinicId) : Promise.resolve(null),
   isAdmin ? listWhatsappTemplates(db, clinic.clinicId) : Promise.resolve([]),
-  has("whatsapp_bot") ? listHumanAttention(db, clinic.clinicId, clinic.timezone) : Promise.resolve([]),
+  has("whatsapp_bot") ? listHumanAttention(db, clinic.clinicId) : Promise.resolve([]),
 ]);
 // Atendimento humano (F8.5a, cliente, 27/out/2026): faixa com as conversas que aguardam a clínica.
 const awaiting = attention.filter((item) => item.status === "waiting");
@@ -134,7 +134,7 @@ const sectionTitle = "font-display text-[17px] leading-tight font-bold text-ink 
         {inProgress.length === 1
           ? `A conversa com ${inProgressNames} está com a clínica e ainda não voltou ao bot.`
           : `${inProgress.length} conversas estão com a clínica e ainda não voltaram ao bot (${inProgressNames}).`}{" "}
-        Ao terminar, escreva <strong class="font-mono">#bot</strong> na conversa ou use "Devolver ao bot" em Atendimento.
+        O bot não volta sozinho: ao terminar, use "Devolver ao bot" em Atendimento.
       </Notice>
     )
   }

@@ -3,8 +3,8 @@
 // parou e a clínica precisa responder, para a equipe acompanhar pelo
 // RecepClinic sem vigiar o app do WhatsApp Business. "Abrir no WhatsApp" abre
 // a conversa no WhatsApp do aparelho (o da clínica, no celular dela ou no
-// WhatsApp Web). Ao terminar, "#bot" na conversa devolve ao bot; "Devolver ao
-// bot" faz o mesmo por aqui, para quando alguém esquecer.
+// WhatsApp Web). A conversa não volta sozinha ao bot (cliente, 30/out/2026):
+// ao terminar, "Devolver ao bot" (ou "#bot" na conversa pelo app).
 import { currentPath, withReturn } from "../../lib/returnPath";
 import AdminLayout from "../../layouts/AdminLayout.astro";
 import ConfirmDeleteDialog from "../../components/admin/ConfirmDeleteDialog.astro";
@@ -13,9 +13,11 @@ import NotificationsCard from "../../components/admin/NotificationsCard.astro";
 import Icon from "../../components/admin/Icon.astro";
 import Button from "../../components/admin/ui/Button.astro";
 import EmptyState from "../../components/admin/ui/EmptyState.astro";
+import HowItWorks from "../../components/admin/ui/HowItWorks.astro";
 import PageHeader from "../../components/admin/ui/PageHeader.astro";
 import { isAnonymizedPhone } from "../../lib/anonymization";
 import { formatInstant, localDateOf } from "../../lib/clinicTime";
+import { relacionamento } from "../../lib/ajuda/relacionamento";
 import { formatPhoneBR, whatsappAppHref, whatsappHref } from "../../lib/phone";
 import { createUserClient } from "../../lib/data/clients";
 import { handoffReasonLabel, listHumanAttention } from "../../lib/data/whatsapp/attention";
@@ -28,7 +30,7 @@ if (!clinic.features.includes("whatsapp_bot")) return Astro.redirect("/admin/das
 const db = createUserClient(Astro.request, Astro.cookies);
 const now = new Date();
 const [items, devices] = await Promise.all([
-  listHumanAttention(db, clinic.clinicId, clinic.timezone, now),
+  listHumanAttention(db, clinic.clinicId),
   listMyDevices(db, clinic.clinicId, clinic.userId),
 ]);
 const waiting = items.filter((item) => item.status === "waiting");
@@ -52,10 +54,6 @@ const whenLabel = (instant: Date) =>
   localDateOf(instant, clinic.timezone) === today
     ? `às ${formatInstant(instant, clinic.timezone, "HH:mm")}`
     : `em ${formatInstant(instant, clinic.timezone, "dd/MM 'às' HH:mm")}`;
-const backLabel = (deadline: Date) =>
-  localDateOf(deadline, clinic.timezone) === today
-    ? `hoje às ${formatInstant(deadline, clinic.timezone, "HH:mm")}`
-    : formatInstant(deadline, clinic.timezone, "EEEE (dd/MM) 'às' HH:mm");
 const displayName = (item: (typeof items)[number]) => item.name ?? "Número sem cadastro";
 const sectionTitle = "font-display text-[17px] leading-tight font-bold text-ink sm:text-lg";
 const countPill = "rounded-full px-2.5 py-0.5 font-sans text-sm font-semibold";
@@ -66,6 +64,9 @@ const whatsappButton =
 <AdminLayout title="Atendimento humano">
   <PageHeader title="Atendimento humano" subtitle="Conversas em que o bot parou e a clínica precisa responder." />
   <FlashMessage />
+  <HowItWorks id="atendimento-humano" topic={relacionamento.comoFunciona.atendimento} class="mt-4">
+    <p class="text-[15px] text-ink-soft">Conversas pendentes de atendimento humano. Ao terminar, devolva ao bot.</p>
+  </HowItWorks>
   <NotificationsCard publicKey={platformEnv().webPush?.publicKey ?? null} devices={devices} timeZone={clinic.timezone} />
 
   <section aria-labelledby="aguardando" class="mt-5 flex flex-col gap-3">
@@ -187,13 +188,13 @@ const whatsappButton =
                     <input type="hidden" name="telefone" value={item.phone} />
                     <Button
                       type="submit"
-                      variant="quiet"
-                      class="js-confirm-delete w-full"
+                      variant="primary"
+                      class="js-confirm-delete min-h-11 w-full gap-2 text-base font-bold"
                       data-confirm-title="Devolver a conversa ao bot?"
-                      data-confirm-message={`O bot volta a atender ${displayName(item)} na próxima mensagem, do começo. Nada é enviado ao paciente agora. O caminho de sempre é escrever #bot na conversa.`}
+                      data-confirm-message={`O bot volta a atender ${displayName(item)} na próxima mensagem, do começo. Nada é enviado ao paciente agora.`}
                       data-confirm-label="Devolver ao bot"
                     >
-                      Devolver ao bot
+                      <Icon name="arrow-uturn-left" class="h-5 w-5" /> Devolver ao bot
                     </Button>
                   </form>
                 </div>
@@ -201,8 +202,8 @@ const whatsappButton =
               <p role="note" class="flex items-start gap-2.5 rounded-lg border border-pend-200 bg-pend-50 px-3.5 py-2.5 text-[15px] text-pend-800">
                 <Icon name="information-circle" class="mt-0.5 h-5 w-5 flex-none" />
                 <span>
-                  Ao terminar, escreva <strong class="rounded bg-pend-100 px-1 font-mono">#bot</strong> na conversa para o bot voltar a atender. Se ninguém
-                  escrever, o bot volta sozinho {backLabel(item.deadline)}.
+                  <strong>Conversa pendente com a clínica.</strong> O bot está calado com este paciente e não volta sozinho. Ao terminar o atendimento,
+                  clique em <strong>Devolver ao bot</strong>.
                 </span>
               </p>
             </li>

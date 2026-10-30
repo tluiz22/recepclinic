@@ -289,20 +289,21 @@ describe("pausa da recepção", () => {
       expect.objectContaining({ session_id: session, step: "abandoned", metadata: { reason: "secretary_took_over", last_step: "CANCEL_SELECT" } }),
     );
 
-    // Antes do prazo (quarta 15h), o bot fica calado; depois, volta do começo.
-    expect(await checkHandoff(botA, clinicA, conversation, at("2031-03-12T14:59:00"))).toBe("paused");
-    expect(await checkHandoff(botA, clinicA, conversation, at("2031-03-12T15:00:00"))).toBe("resumed");
-    expect(await getConversation(botA, clinicA, phone)).toMatchObject({ state: "WELCOME", humanHandoff: false, humanHandoffAt: null });
+    // Sem prazo (cliente, 30/out/2026): o bot segue calado até devolverem a conversa.
+    expect(checkHandoff(conversation)).toBe("paused");
+    expect(await getConversation(botA, clinicA, phone)).toMatchObject({ state: "HUMAN_HANDOFF", humanHandoff: true });
   });
 
-  it("o prazo pula o feriado próprio da clínica e o fim de semana", async () => {
+  it("pausa antiga não volta sozinha ao bot; pausar de novo mantém o motivo e conta uma vez no funil", async () => {
     const phone = "+5584977710021";
-    await adminClient().from("clinic_holidays").insert({ clinic_id: clinicA, date: "2031-03-14", description: "Aniversário da cidade" });
-    // Quinta 9h → sexta (feriado da clínica), sábado, domingo → segunda 9h.
     await pauseForHuman(botA, clinicA, phone, { contactId: null, reason: "requested" }, at("2031-03-13T09:00:00"));
+    // Um mês depois, a recepção responde pelo app: a pausa é a mesma.
+    await pauseForHuman(botA, clinicA, phone, { contactId: null, reason: "agent_took_over" }, at("2031-04-13T09:00:00"));
     const conversation = (await getConversation(botA, clinicA, phone))!;
-    expect(await checkHandoff(botA, clinicA, conversation, at("2031-03-16T20:00:00"))).toBe("paused");
-    expect(await checkHandoff(botA, clinicA, conversation, at("2031-03-17T09:00:00"))).toBe("resumed");
+    expect(checkHandoff(conversation)).toBe("paused");
+    const { data } = await adminClient().from("conversation_state").select("handoff_reason, handoff_started_at").eq("clinic_id", clinicA).eq("contact_phone", phone).single();
+    expect(data).toMatchObject({ handoff_reason: "requested" });
+    expect(new Date(data!.handoff_started_at!)).toEqual(at("2031-03-13T09:00:00"));
     expect((await funnelOf(clinicA, phone)).map((e) => [e.flow, e.step])).toEqual([["handoff", "requested"]]);
   });
 

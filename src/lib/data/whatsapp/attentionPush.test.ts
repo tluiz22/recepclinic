@@ -12,7 +12,6 @@ const base: AttentionItem = {
   status: "waiting",
   waitingSince: at("10:00"),
   lastAgentAt: null,
-  deadline: at("23:59"),
   lastActivityAt: at("10:00"),
   notifiedAt: null,
   remindedAt: null,
@@ -47,7 +46,7 @@ describe("notificações do atendimento humano (F8.5c)", () => {
       tag: "atendimento-+5584988880001",
     });
     expect(waitingMessage({ ...base, name: null, reason: "no_availability" }).title).toBe("(84) 98888-0001 aguarda atendimento humano");
-    expect(reminderMessage(base).body).toBe("Se já terminou, escreva #bot na conversa para o bot voltar a atender.");
+    expect(reminderMessage(base).body).toBe("O bot não volta sozinho. Se já terminou, toque aqui e use \"Devolver ao bot\".");
     expect(summaryMessage([base, { ...base, waitingSince: at("07:30") }], "America/Fortaleza")).toEqual({
       title: "2 conversas aguardando atendimento humano",
       body: "Chegaram fora do horário da recepção; a mais antiga desde 27/10 às 07:30. Toque para ver.",
