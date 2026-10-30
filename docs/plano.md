@@ -2140,6 +2140,11 @@ gera.
 - **Fora:** recibo do Receita Saúde (profissional pessoa física, sem API oficial) e outras cidades,
   até alguma clínica pedir.
 
+**Mudança de decisão (cliente, 29/out/2026, D13):** a emissão da NFS-e passa para o **Asaas** (subconta por
+clínica), no lugar da integração direta da F11.4; o emissor direto, o certificado no Vault, a numeração própria e a
+Simulação serão desligados e removidos. Pagamentos, dados financeiros, envio e DMED ficam. Plano em
+[`planejamento-nfse-asaas.md`](planejamento-nfse-asaas.md); implementação na branch `faturamento`, com autorização.
+
 **Prioridade (cliente, 12/out):** quando a Meta aprovar, a F11 pausa e o trabalho volta à F8 e
 à F10 para terminar e iniciar o piloto; a F11 continua depois.
 

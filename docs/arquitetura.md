@@ -502,6 +502,19 @@ texto pela API do Supabase, que qualquer membro tinha com o próprio login.
 B2 do CRM, tirados do plano); não guardar nem o que o sistema envia (o reenvio automático usa esse texto).
 Consequência: a tela Atendimento e a notificação no celular deixam de mostrar a frase do paciente.
 
+## D13 — Nota fiscal das clínicas pelo Asaas (29/out/2026)
+
+**Decisão: a NFS-e que as clínicas emitem aos pacientes sai pelo Asaas, com uma subconta por clínica criada pelo
+RecepClinic, no lugar da integração direta com a Sefin Nacional (F11.4). O RecepClinic paga a tarifa do Asaas e
+cobra da clínica um preço por nota, com franquia mensal no contrato, na fatura do faturamento do SaaS.**
+**Por quê:** decisão do cliente: o Asaas atende Mossoró (piloto), cuida da transmissão, numeração e documentos em
+cada município, e a nota vira receita direta do RecepClinic. Faturamento do SaaS, financeiro dos pacientes e emissão
+fiscal seguem domínios separados; a fatura só lê a contagem de notas.
+
+**Descartado:** manter o emissor direto (decisão da F11 de 12/out) ou os dois em paralelo; conta Asaas própria de
+cada clínica com a chave cedida; tarifa paga pela clínica direto ao Asaas. Plano em
+[`planejamento-nfse-asaas.md`](planejamento-nfse-asaas.md).
+
 ## Padrões assumidos (revisáveis)
 
 Pontos dos limites com caminho óbvio, que não precisaram de decisão. Qualquer um pode ser revisto.
