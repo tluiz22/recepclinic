@@ -629,3 +629,11 @@ retomada fica no README). Para achar algo, buscar por data (ex.: `27/out`), fase
   staging em 29/out; lá, "Criar na Meta" cria a v3 e a v2 pode sair por "Excluir da Meta". **Validada pelo cliente no staging em 29/out.**
 - **Produção (29/out, `5ef2be6`):** C7.1–C7.7 e C8, com as migrações `20261102120000`, `20261103120000` e
   `20261104120000` (simulação → aplicação → conferência). Registro em [`producao.md`](producao.md).
+- **C9 Conversas só depois de ativar** (30/out): na produção, o piloto em implantação já mostrava conversas em
+  Atendimento (8 pausas "a clínica respondeu pelo app", criadas pelo eco da recepção). **Decisão do cliente (29/out):**
+  em implantação o sistema **não guarda nada** das conversas (recusado: guardar só para conferência). O webhook ignora
+  mensagens recebidas e ecos da clínica em implantação (sem gravar, sem bot, sem pausa; contagem `onboarding` no
+  resumo); situações de entrega, templates e desconexão seguem. `listHumanAttention` devolve vazio em implantação (tela
+  Atendimento, Início, contador do menu, notificações e a rotina `atendimento-humano`). Sem migração. Teste de banco em
+  `tests/db/clinicaEmImplantacao.test.ts`. Publicada no staging em 30/out. Pendente: os dados que o piloto gravou em
+  implantação na produção (8 pausas e as mensagens).

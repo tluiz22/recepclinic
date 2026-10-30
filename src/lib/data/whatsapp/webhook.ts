@@ -13,6 +13,7 @@ import { markWhatsappDisconnectedByMeta } from "./connection";
 import { notifyWaitingConversation, type PushContext } from "./attentionPush";
 import { handleIncomingMessage } from "./bot/router";
 import { logError, logWarn } from "../../log";
+import { unwrap } from "../errors";
 
 // Webhook do WhatsApp por clínica (F6.1, D3a). Cada evento traz o número que
 // recebeu (`metadata.phone_number_id`); a plataforma descobre a clínica dele
@@ -135,12 +136,14 @@ export type WebhookSummary = {
   disconnections: number;
   /** Mensagens respondidas pelo bot. */
   botReplies: number;
+  /** Mensagens e ecos ignorados: clínica em implantação. */
+  onboarding: number;
   errors: number;
 };
 
 /** Registra os eventos. Erro num evento não para os outros (vai para o log). */
 export async function processWebhook(payload: unknown, deps: WebhookDeps, now: Date = new Date()): Promise<WebhookSummary> {
-  const summary: WebhookSummary = { inbound: 0, echoes: 0, statuses: 0, duplicates: 0, unknownNumbers: 0, preparations: 0, templates: 0, disconnections: 0, botReplies: 0, errors: 0 };
+  const summary: WebhookSummary = { inbound: 0, echoes: 0, statuses: 0, duplicates: 0, unknownNumbers: 0, preparations: 0, templates: 0, disconnections: 0, botReplies: 0, onboarding: 0, errors: 0 };
   const count = (result: RecordResult, kind: "inbound" | "echoes") => {
     if (result.recorded) summary[kind] += 1;
     else if (result.reason === "duplicate") summary.duplicates += 1;
@@ -166,7 +169,19 @@ export async function processWebhook(payload: unknown, deps: WebhookDeps, now: D
     }
     const db = deps.clientFor(clinicId);
 
-    for (const message of change.messages ?? []) {
+    // Em implantação (cliente, 29/out/2026), as conversas não são gravadas nem pausam o bot:
+    // o Atendimento e a leitura das mensagens começam do zero ao ativar a clínica.
+    const conversations = (change.messages?.length ?? 0) + (change.message_echoes?.length ?? 0);
+    let onboarding = false;
+    if (conversations) {
+      await attempt("situação da clínica", async () => {
+        const clinic = unwrap(await db.from("clinics").select("status").eq("id", clinicId).maybeSingle(), "Clínica");
+        onboarding = clinic?.status === "onboarding";
+      });
+    }
+    if (onboarding) summary.onboarding += conversations;
+
+    for (const message of onboarding ? [] : (change.messages ?? [])) {
       let recorded = false;
       await attempt("mensagem recebida", async () => {
         const result = await recordInboundMessage(db, clinicId, message, now);
@@ -217,7 +232,7 @@ export async function processWebhook(payload: unknown, deps: WebhookDeps, now: D
         });
       });
     }
-    for (const echo of change.message_echoes ?? []) {
+    for (const echo of onboarding ? [] : (change.message_echoes ?? [])) {
       await attempt("eco da recepção", async () => {
         const result = await recordAgentEcho(db, clinicId, echo, now);
         count(result, "echoes");

@@ -90,6 +90,10 @@ export async function listHumanAttention(
   now: Date = new Date(),
   phone?: string,
 ): Promise<AttentionItem[]> {
+  // Em implantação nada é da recepção ainda (cliente, 29/out/2026): a lista começa ao ativar.
+  const clinic = unwrap(await db.from("clinics").select("status").eq("id", clinicId).maybeSingle(), "Atendimento humano");
+  if (!clinic || clinic.status === "onboarding") return [];
+
   let query = db
     .from("conversation_state")
     .select("contact_phone, contact_id, handoff_reason, handoff_started_at, human_handoff_at, handoff_notified_at, handoff_reminded_at, contacts ( full_name )")
