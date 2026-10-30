@@ -28,8 +28,9 @@
 >   coexistência no staging feita (parte P do [`staging.md`](staging.md)), falta o **lembrete com botões** quando a
 >   Meta aprovar os 18 templates da conta nova; depois **B** (clínica de testes permanente na produção, 2º número do
 >   cliente; valida F8.1, F8.2b e F8.3) e **C** (piloto com a Dra. Ana Karina). **Revisto em 29/out: piloto direto**
->   (B depois); roteiro no plano (F10, item 7). Próximo: cliente faz os passos 1–3 (WhatsApp Business, Nova clínica,
->   Conectar WhatsApp) e avisa o Claude, que confere a conexão no banco da produção.
+>   (B depois); roteiro no plano (F10, item 7). **Clínica piloto criada e WhatsApp conectado na produção
+>   (29/out, cliente).** Próximo: Claude confere a conexão no banco (precisa da permissão de leitura da produção); forma
+>   de pagamento; templates aprovados; configuração; ativação em Sistema › Clínicas › clínica › Situação.
 > - **Meta:** Análise do App e Verificação do acesso aprovadas; o RecepClinic é Tech Provider (24/out).
 >
 > **Pendências**
