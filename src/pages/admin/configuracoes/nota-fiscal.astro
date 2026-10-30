@@ -32,6 +32,7 @@ import {
   SIMPLES_REGIME_OPTIONS,
   SPECIAL_REGIME_OPTIONS,
 } from "../../../lib/data/fiscal";
+import { ASAAS_PROVIDER_NOTICE, ASAAS_SEAL, ASAAS_SITE, ASAAS_SUPPORT } from "../../../lib/asaas/brand";
 import { FISCAL_TERMS, FISCAL_TERMS_VERSION } from "../../../lib/fiscalTerms";
 import { platformEnv } from "../../../lib/env";
 import { receivedReturn, returnLabel, withReturn } from "../../../lib/returnPath";
@@ -236,6 +237,26 @@ const switchTargets = !settings
     </div>
 
     <div class="flex flex-col gap-4">
+      <Card class="flex flex-col">
+        <h2 class="flex flex-wrap items-center gap-2 font-display text-[17px] leading-tight font-bold text-ink sm:text-lg">
+          Emissão pelo Asaas
+          <Badge variant="warning">aguardando liberação</Badge>
+        </h2>
+        <p class="mt-1 text-sm text-ink-soft">
+          A nota fiscal da clínica vai passar a ser emitida pelo Asaas. Ao habilitar, o RecepClinic cria a conta da clínica no Asaas e os documentos são
+          enviados por um link do próprio Asaas.
+        </p>
+        <p class="mt-2 text-sm text-ink-mid">{ASAAS_PROVIDER_NOTICE}</p>
+        <a href={ASAAS_SITE} target="_blank" rel="noopener noreferrer" class="mt-3 inline-block self-start">
+          <img src={ASAAS_SEAL.positive} alt="Selo Serviços financeiros Asaas" width="160" height="48" style="display: inline-block;" />
+        </a>
+        <p class={HINT}>
+          Suporte do Asaas para a conta e as tarifas: {ASAAS_SUPPORT.phone} · {ASAAS_SUPPORT.email}
+        </p>
+        <button type="button" class={`${PRIMARY_BUTTON} mt-3 self-start`} disabled>Habilitar emissão pelo Asaas</button>
+        <p class={HINT}>Aguardando a liberação do Asaas. Até lá, a emissão segue como está nesta tela.</p>
+      </Card>
+
       <Card>
         <h2 class="flex flex-wrap items-center gap-2 font-display text-[17px] leading-tight font-bold text-ink sm:text-lg">
           Certificado digital A1
