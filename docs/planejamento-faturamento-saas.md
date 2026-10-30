@@ -9,8 +9,11 @@
 > Pix ou cartão, início, 1º vencimento, preço por nota e franquia), descarta ou ativa (exige a conta); mudança = nova
 > versão com início depois da vigente, que termina na véspera. Preço padrão por nota em Vendas › Planos (começa sem
 > valor; o Suporte define). Assinatura mostra o contrato vigente e a próxima versão. Testes: `tests/db/contrato.test.ts`,
-> `src/lib/data/billing.test.ts`. **Próximo:** validação da F12.2 no local; depois N0/N1 (nota pelo Asaas) ou F12.3,
-> com o OK do cliente; push da branch e staging quando o cliente pedir.
+> `src/lib/data/billing.test.ts`. **Ordem decidida (cliente, 30/out):** cobrança primeiro, até cobrar a clínica piloto
+> em produção, **só com aviso por e-mail**: F12.3, F12.3b, F12.4 a F12.8 e F12.11. Depois: F12.9 (WhatsApp, decisão
+> 11.10), F12.10 (Pix Automático) e a nota fiscal pelo Asaas (N0–N6). **Próximo:** validação da F12.2 no local e o OK
+> para a F12.3; push da branch e staging quando o cliente pedir. Antes da F12.11: advogado (11.16), chave e webhook do
+> Asaas de produção, avisos do Asaas desligados (11.11) e o valor combinado com a clínica piloto.
 >
 > Decisões já respondidas (28/out): **11.1** (motivos registrados), **modo de cobrança manual** (seção 3) e **11.2**
 > (pago = `CONFIRMED` ou `RECEIVED`) **11.3** (bloqueio no painel primeiro, banco depois) **11.4** (bot calado, link com aviso) **11.5** (Assinatura só para o Administrador) **11.6** (estorno marca e avisa o Suporte) **11.7** (novo valor no próximo ciclo, sem proporcional) **11.8** (implantação ao ativar, conta igual) **11.9** (cartão na página do Asaas). **11.10 fica pendente** (número do WhatsApp, decidir antes da F12.9).
@@ -373,6 +376,10 @@ stateDiagram-v2
 ## 12. Roadmap
 
 Cada fase vai ao staging e depende da validação do cliente.
+
+**Ordem revista (cliente, 30/out/2026):** a cobrança vem antes da nota fiscal. Até a produção (cobrar a clínica
+piloto): F12.3, F12.3b, F12.4, F12.5, F12.6, F12.7, F12.8 e F12.11, **só com aviso por e-mail**. Depois: F12.9, F12.10
+e N1–N6. Preço por nota e franquia ficam no contrato, mas só valem quando a nota fiscal entrar.
 
 | Fase | Entrega | Depende de |
 |---|---|---|
