@@ -9,6 +9,9 @@ import Badge from "../../../components/admin/config/Badge.astro";
 import Card from "../../../components/admin/config/Panel.astro";
 import ConfirmDeleteDialog from "../../../components/admin/ConfirmDeleteDialog.astro";
 import BillingTrail from "../../../components/admin/billing/BillingTrail.astro";
+import HelpTip from "../../../components/admin/ui/HelpTip.astro";
+import HowItWorks from "../../../components/admin/ui/HowItWorks.astro";
+import { configuracoes } from "../../../lib/ajuda/configuracoes";
 import { DD, DT, HINT, INPUT, KV, LABEL, PRIMARY_BUTTON, SECONDARY_BUTTON } from "../../../components/admin/config/formStyles";
 import { BILLING_OPT_IN_TEXT, BILLING_OPT_IN_VERSION } from "../../../lib/billingOptIn";
 import { formatInstant } from "../../../lib/clinicTime";
@@ -28,6 +31,9 @@ const H2 = "font-display text-[17px] leading-tight font-bold text-ink sm:text-lg
 ---
 
 <ConfigShell current="assinatura" title="Assinatura" subtitle="A conta da clínica no RecepClinic: quem paga e para onde vão os avisos de cobrança.">
+  <HowItWorks id="assinatura" topic={configuracoes.comoFunciona.assinatura} class="mb-4">
+    <p class="text-[15px] text-ink-soft">Quem paga e para onde vão os avisos.</p>
+  </HowItWorks>
   {
     !account ? (
       <Card>
@@ -58,7 +64,9 @@ const H2 = "font-display text-[17px] leading-tight font-bold text-ink sm:text-lg
                 <input id="finance_email" name="finance_email" type="email" required value={account.financeEmail} class={INPUT} />
               </div>
               <div>
-                <label for="finance_phone" class={LABEL}>Telefone financeiro (opcional)</label>
+                <HelpTip subject="Telefone financeiro" text={configuracoes.dicas.assinaturaTelefone} id="finance_phone">
+                  <label for="finance_phone" class={LABEL}>Telefone financeiro (opcional)</label>
+                </HelpTip>
                 <input
                   id="finance_phone"
                   name="finance_phone"
@@ -78,7 +86,9 @@ const H2 = "font-display text-[17px] leading-tight font-bold text-ink sm:text-lg
         <div class="flex flex-col gap-4">
           <Card>
             <div class="flex flex-wrap items-center gap-2">
-              <h2 class={H2}>WhatsApp financeiro</h2>
+              <HelpTip subject="WhatsApp financeiro" text={configuracoes.dicas.assinaturaWhatsapp} id="whatsapp_financeiro">
+                <h2 class={H2}>WhatsApp financeiro</h2>
+              </HelpTip>
               {account.whatsappOptIn ? <Badge variant="success">Autorizado</Badge> : <Badge>Não autorizado</Badge>}
             </div>
             <p class="mt-1 text-sm text-ink-soft">

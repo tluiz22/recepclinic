@@ -40,6 +40,10 @@ export const configuracoes = {
       "O número da clínica no cadastro de contribuintes do ISS da prefeitura. Costuma estar no alvará ou no comprovante de inscrição municipal; o contador também tem.",
     nfIss: "O percentual do ISS, o imposto municipal sobre o serviço, que vai na nota. Depende do município e do serviço: o contador informa.",
     nfRegime: "Tratamento diferente do ISS que a prefeitura dá a alguns tipos de empresa. Se a clínica não tem nenhum, fica \"Nenhum\".",
+    // Assinatura (F12.1, faturamento do SaaS): configuracoes/assinatura.astro.
+    assinaturaWhatsapp:
+      "Mensagens do RecepClinic sobre a assinatura da clínica, nunca para os pacientes. Saem de um número do próprio RecepClinic, não do número da clínica. Só o Administrador autoriza ou retira; trocar o telefone retira a autorização.",
+    assinaturaTelefone: "Telefone de quem cuida das contas da clínica. Pode ser diferente do número que atende os pacientes.",
     // ans_code (config/insurance.ts): só nas telas de Convênios; o bot e as notas não usam.
     convenioAns:
       "Número de registro do plano de saúde na ANS (Agência Nacional de Saúde Suplementar). É opcional e, por enquanto, só aparece aqui, em Convênios.",
@@ -69,6 +73,17 @@ export const configuracoes = {
         "Toda clínica começa em testes, sem valor fiscal; o suporte passa a nota a valer depois que o contador confere uma nota de teste.",
       ],
       erro: "Certificado vencido desliga a emissão até o novo ser enviado. Nota recusada pela Receita mostra o motivo na tela do pagamento.",
+    },
+    // configuracoes/assinatura.astro (F12.1): conta de cobrança, contatos e WhatsApp financeiro.
+    assinatura: {
+      serve: "Guardar quem paga o RecepClinic e para onde vão as cobranças e os avisos.",
+      como: [
+        "O Suporte cadastra o pagador (nome e CNPJ ou CPF) na contratação; para mudar o pagador, fale com o Suporte.",
+        "O Administrador mantém o e-mail e o telefone financeiros em dia.",
+        "Os avisos de cobrança (vencimento, atraso e pagamento reconhecido) sempre vão para o e-mail financeiro.",
+        "Com o WhatsApp financeiro autorizado, os mesmos avisos também vão para o telefone financeiro.",
+      ],
+      erro: "Com o e-mail errado, a clínica perde os avisos de cobrança: confira depois de salvar.",
     },
     // src/pages/admin/configuracoes/mensagens.astro (as duas listas, a revisão do Suporte e as 24 horas).
     mensagens: {

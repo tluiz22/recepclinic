@@ -21,6 +21,9 @@
 - **Planejamento na `main`** (cliente, 30/out): a branch `faturamento` (criada em 28/out, só com documentos) entrou na
   `main` e foi excluída. Ela é **recriada da `main` só quando o código começar** (F12.1 ou N1), e segue as regras de
   branch paralela do `CLAUDE.md`.
+- **Ajuda contextual (cliente, 30/out):** cada fase entra com a ajuda das próprias telas ("i" nos campos e "Como
+  funciona?", padrão de [`ajuda-contextual.md`](ajuda-contextual.md); textos em `src/lib/ajuda/`). A F12.1 já entrou com
+  a da tela Assinatura (WhatsApp financeiro e telefone financeiro).
 - **Parar e voltar à `main`:** commit e push do que estiver em andamento na `faturamento`, atualizar o bloco "Estado
   atual" deste arquivo e `git switch main`.
 - **Publicação (cliente, 28/out):** cada fase vai para o **endereço de teste da branch** na Vercel (Preview da
