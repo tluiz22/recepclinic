@@ -40,6 +40,12 @@ export type PlatformEnv = {
    */
   nfseSimulation: boolean;
   /**
+   * Cartão "Emissão pelo Asaas" em Configurações › Nota fiscal (N0, formulário
+   * BaaS): só onde ASAAS_PREVIEW=1 (o staging). Sem a variável, como na
+   * produção, a tela não muda.
+   */
+  asaasPreview: boolean;
+  /**
    * Notificações no celular do atendimento humano (F8.5c, Web Push): o par de
    * chaves VAPID do ambiente. null = desligadas (a tela avisa).
    */
@@ -160,6 +166,9 @@ export function parsePlatformEnv(source: EnvSource): PlatformEnv {
   const nfseSimulation = text(source, "NFSE_SIMULATION");
   if (nfseSimulation && nfseSimulation !== "1" && nfseSimulation !== "0") problems.push("NFSE_SIMULATION inválida (1 liga a simulação da nota fiscal; 0 ou vazia, desliga)");
 
+  const asaasPreview = text(source, "ASAAS_PREVIEW");
+  if (asaasPreview && asaasPreview !== "1" && asaasPreview !== "0") problems.push("ASAAS_PREVIEW inválida (1 mostra o cartão do Asaas na Nota fiscal; 0 ou vazia, esconde)");
+
   // Notificações (F8.5c): opcionais; uma chave sem a outra é configuração pela metade.
   let webPush: WebPushEnv | null = null;
   const pushPublic = text(source, "WEB_PUSH_PUBLIC_KEY");
@@ -171,7 +180,7 @@ export function parsePlatformEnv(source: EnvSource): PlatformEnv {
   }
 
   if (problems.length) throw new PlatformEnvError(problems);
-  return { supabaseUrl, supabaseAnonKey, supabaseServiceRoleKey, supabaseJwtSecret, cronSecret, siteUrl, email, whatsapp, whatsappAppId: whatsappAppId ?? null, whatsappSignupConfigId: whatsappSignupConfigId ?? null, nfseSimulation: nfseSimulation === "1", webPush };
+  return { supabaseUrl, supabaseAnonKey, supabaseServiceRoleKey, supabaseJwtSecret, cronSecret, siteUrl, email, whatsapp, whatsappAppId: whatsappAppId ?? null, whatsappSignupConfigId: whatsappSignupConfigId ?? null, nfseSimulation: nfseSimulation === "1", asaasPreview: asaasPreview === "1", webPush };
 }
 
 let cached: PlatformEnv | undefined;
@@ -197,6 +206,7 @@ export function platformEnv(): PlatformEnv {
     WHATSAPP_APP_ID: import.meta.env.WHATSAPP_APP_ID,
     WHATSAPP_ES_CONFIG_ID: import.meta.env.WHATSAPP_ES_CONFIG_ID,
     NFSE_SIMULATION: import.meta.env.NFSE_SIMULATION,
+    ASAAS_PREVIEW: import.meta.env.ASAAS_PREVIEW,
     WEB_PUSH_PUBLIC_KEY: import.meta.env.WEB_PUSH_PUBLIC_KEY,
     WEB_PUSH_PRIVATE_KEY: import.meta.env.WEB_PUSH_PRIVATE_KEY,
   });

@@ -478,7 +478,9 @@ O checklist é o próprio formulário do Google. **Exige print da tela de criaç
 onde o selo aparece): a tela precisa existir antes do envio. **Decidido (cliente, 30/out): antecipar a parte visual da
 habilitação fiscal** (Configurações › Nota fiscal) na branch `faturamento` recriada da `main`, no staging: selo com
 link, texto de que a nota é emitida pelo Asaas, canais de suporte do Asaas e botão desativado ("aguardando
-liberação"), sem chamar o Asaas. O cliente tira o print e envia o formulário; a N2 completa a tela. Respostas propostas (**[Cliente]** = o cliente informa):
+liberação"), sem chamar o Asaas. O cliente tira o print e envia o formulário; a N2 completa a tela. **Feito (30/out,
+`src/lib/asaas/brand.ts`):** o cartão só aparece com a variável **`ASAAS_PREVIEW=1`** (só na Vercel do staging;
+a produção não tem a variável e não mostra nada, a pedido do cliente). Respostas propostas (**[Cliente]** = o cliente informa):
 
 | # | Pergunta (resumo) | Resposta proposta |
 |---|---|---|
