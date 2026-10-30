@@ -11,7 +11,7 @@ import { pauseForHuman, startFunnel } from "../conversations";
 import { checkBookingLimits, checkNewPatientLimit, contactForLimits, recordBotLimitEvent } from "../botLimits";
 import { formatAppointmentWhen } from "../templates";
 import { servicesOf, type BotService } from "./catalog";
-import { attachContact, end, go, say, sendButtons, sendList, step, textFor, type Bot } from "./engine";
+import { attachContact, end, go, repeatYesNo, say, sayInvalidBirthdate, sendButtons, sendList, step, textFor, type Bot } from "./engine";
 import { formatBirthdate, parseBirthdate, pick, yesNo, type Selection } from "./input";
 import { showMenu, showSubmenu } from "./menus";
 import * as t from "./texts";
@@ -271,10 +271,9 @@ async function handleAddress(b: Bot, selection: Selection): Promise<void> {
   }
   const answer = yesNo(selection);
   if (answer === null) {
-    await say(b, "bot_not_understood", t.NOT_UNDERSTOOD_YES_NO);
     const address = ctx.pendingAddress ?? "";
     const isDefault = ctx.awaiting === "address_default";
-    await say(b, isDefault ? "bot_book_home_address_confirm_default" : "bot_book_home_address_confirm_new", isDefault ? t.homeAddressConfirmDefault(address) : t.homeAddressConfirmNew(address));
+    await repeatYesNo(b, isDefault ? "bot_book_home_address_confirm_default" : "bot_book_home_address_confirm_new", isDefault ? t.homeAddressConfirmDefault(address) : t.homeAddressConfirmNew(address));
     return;
   }
   if (!answer) return askAddress(b, ctx);
@@ -383,7 +382,7 @@ async function handlePatientSelect(b: Bot, selection: Selection): Promise<void> 
 
   if (ctx.awaiting === "birthdate_search") {
     const birthdate = parseBirthdate(selection.text, b.clinic.today);
-    if (!birthdate) return say(b, "bot_invalid_birthdate", t.INVALID_BIRTHDATE);
+    if (!birthdate) return sayInvalidBirthdate(b);
     if (await refusedByAgeLimit(b, ctx, birthdate)) return;
     const matches = (await activePatients(b))
       .filter((p) => !p.isContactSelf && p.birthdate === birthdate)
@@ -402,8 +401,7 @@ async function handlePatientSelect(b: Bot, selection: Selection): Promise<void> 
   if (!pending) return askPatientName(b, ctx);
   const answer = yesNo(selection);
   if (answer === null) {
-    await say(b, "bot_not_understood", t.NOT_UNDERSTOOD_YES_NO);
-    return say(b, "bot_book_confirm_patient", t.confirmPatient(b.words, pending.name, formatBirthdate(pending.birthdate)));
+    return repeatYesNo(b, "bot_book_confirm_patient", t.confirmPatient(b.words, pending.name, formatBirthdate(pending.birthdate)));
   }
   if (answer) return finish(b, ctx, pending);
   await askPatientName(b, ctx, pending.birthdate);
@@ -421,8 +419,7 @@ async function handlePatientNew(b: Bot, selection: Selection): Promise<void> {
     case "contact_confirm": {
       const answer = yesNo(selection);
       if (answer === null) {
-        await say(b, "bot_not_understood", t.NOT_UNDERSTOOD_YES_NO);
-        return say(b, "bot_book_confirm_contact_name", t.confirmContactName(ctx.contactName ?? ""));
+        return repeatYesNo(b, "bot_book_confirm_contact_name", t.confirmContactName(ctx.contactName ?? ""));
       }
       if (answer && ctx.contactName) return askPatientName(b, ctx);
       await say(b, "bot_book_ask_contact_name", t.ASK_CONTACT_NAME);
@@ -436,15 +433,14 @@ async function handlePatientNew(b: Bot, selection: Selection): Promise<void> {
     }
     case "patient_birthdate": {
       const birthdate = parseBirthdate(text, b.clinic.today);
-      if (!birthdate) return say(b, "bot_invalid_birthdate", t.INVALID_BIRTHDATE);
+      if (!birthdate) return sayInvalidBirthdate(b);
       if (await refusedByAgeLimit(b, ctx, birthdate)) return;
       return askNewConfirm(b, ctx, ctx.newName ?? "", birthdate);
     }
     case "new_confirm": {
       const answer = yesNo(selection);
       if (answer === null) {
-        await say(b, "bot_not_understood", t.NOT_UNDERSTOOD_YES_NO);
-        return say(b, "bot_book_confirm_new_patient", t.confirmNewPatient(b.words, ctx.newName ?? "", formatBirthdate(ctx.newBirthdate ?? "")));
+        return repeatYesNo(b, "bot_book_confirm_new_patient", t.confirmNewPatient(b.words, ctx.newName ?? "", formatBirthdate(ctx.newBirthdate ?? "")));
       }
       if (!answer) return b.convo.contactId ? beginNew(b, ctx) : askPatientName(b, ctx);
       const contact: ContactChoice = b.convo.contactId
@@ -454,7 +450,7 @@ async function handlePatientNew(b: Bot, selection: Selection): Promise<void> {
     }
     case "self_birthdate": {
       const birthdate = parseBirthdate(text, b.clinic.today);
-      if (!birthdate) return say(b, "bot_invalid_birthdate", t.INVALID_BIRTHDATE);
+      if (!birthdate) return sayInvalidBirthdate(b);
       if (!isAdult(birthdate, b.clinic.today)) {
         await say(b, "bot_book_self_minor", t.SELF_MINOR);
         return end(b, "blocked", { reason: "self_minor" });
@@ -472,8 +468,7 @@ async function handlePatientNew(b: Bot, selection: Selection): Promise<void> {
     case "self_confirm": {
       const answer = yesNo(selection);
       if (answer === null) {
-        await say(b, "bot_not_understood", t.NOT_UNDERSTOOD_YES_NO);
-        return say(b, "bot_book_confirm_self", t.confirmSelf(ctx.selfName ?? "", formatBirthdate(ctx.selfBirthdate ?? "")));
+        return repeatYesNo(b, "bot_book_confirm_self", t.confirmSelf(ctx.selfName ?? "", formatBirthdate(ctx.selfBirthdate ?? "")));
       }
       if (!answer) return askSelfBirthdate(b, { ...ctx, selfAskName: true });
       return registerAndFinish(b, ctx, ctx.selfName ?? "", ctx.selfBirthdate ?? "", {
@@ -593,7 +588,8 @@ async function handleAgeLimit(b: Bot, selection: Selection): Promise<void> {
   const ctx = ctxOf(b);
   const answer = yesNo(selection, t.YES_NO_IDS);
   if (answer === null) {
-    await sendButtons(b, "bot_not_understood", `${t.NOT_UNDERSTOOD_YES_NO}\n\n${t.ageLimit(ctx.serviceName ?? "A consulta", b.clinic.ageLimitYears ?? 0, b.words)}`, t.YES_NO_BUTTONS);
+    const buttons = b.convo.notUnderstoodCount > 0 ? t.YES_NO_BACK_BUTTONS : t.YES_NO_BUTTONS;
+    await sendButtons(b, "bot_not_understood", `${t.NOT_UNDERSTOOD_YES_NO}\n\n${t.ageLimit(ctx.serviceName ?? "A consulta", b.clinic.ageLimitYears ?? 0, b.words)}`, buttons);
     return;
   }
   if (answer) {

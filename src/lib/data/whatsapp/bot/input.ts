@@ -6,6 +6,8 @@ import type { WaMessage } from "../meta";
 export type Selection = { id: string | null; text: string };
 
 export const BACK_TO_MENU_ID = "back_to_menu";
+/** "Falar com a recepção" dos botões de saída (resposta não entendida; vale em qualquer passo). */
+export const TALK_TO_RECEPTION_ID = "talk_to_reception";
 
 export function extractSelection(msg: WaMessage): Selection {
   const reply = msg.interactive?.list_reply ?? msg.interactive?.button_reply;

@@ -16,11 +16,11 @@ import { contactIdByPhone, recordOutboundMessage } from "../messages";
 import { toE164, type WaMessage } from "../meta";
 import type { ClinicSender } from "../send";
 import { BOOKING_STATES, handleBookingState } from "./booking";
-import { createBot, currentPrompt, NotUnderstoodLimitReached, say, type Bot, type BotEnv } from "./engine";
+import { createBot, currentPrompt, go, NotUnderstoodLimitReached, say, type Bot, type BotEnv } from "./engine";
 import { ENTRY_STATES, handleEntryState, startConversation } from "./entry";
-import { extractSelection, isBackToMenu } from "./input";
+import { extractSelection, isBackToMenu, TALK_TO_RECEPTION_ID } from "./input";
 import { handleInfo, handleMenu, handlePreparationChoice, handleSubmenu, showMenu } from "./menus";
-import { handleManageState, handleOfferTap, handleReminderTap, handoffNotUnderstood, MANAGE_STATES, offerTapOf, reminderTapOf } from "./manage";
+import { handleManageState, handleOfferTap, handleReminderTap, handoff, handoffNotUnderstood, MANAGE_STATES, offerTapOf, reminderTapOf } from "./manage";
 import { BLOCKED_HANDOFF, BLOCKED_RECEPTION_WILL_CONTACT, IDLE_CLOSED } from "./texts";
 import { blockedContactByPhone, blockedNoticeDue, markBlockedNotice } from "../contactBlock";
 import { listBotMessages } from "../customMessages";
@@ -103,6 +103,13 @@ async function dispatch(env: BotEnv, b: Bot, convo: Conversation, phone: string,
   if (convo.state !== WELCOME && convo.state !== "MENU" && isBackToMenu(selection)) {
     await logAbandonment(env.db, env.clinicId, convo, "back_to_menu", env.now);
     await showMenu(b);
+    return;
+  }
+
+  // "Falar com a recepção" dos botões de saída (resposta não entendida, cliente, 30/out/2026), em qualquer passo.
+  if (selection.id === TALK_TO_RECEPTION_ID && b.receptionAvailable) {
+    await go(b, WELCOME);
+    await handoff(b);
     return;
   }
 

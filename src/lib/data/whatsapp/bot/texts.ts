@@ -2,7 +2,7 @@ import type { ClinicProfile } from "../../../vocabulary";
 import { designationText, designationTitle, type Designation } from "../../../designation";
 import { formatCentsBRL } from "../../../money";
 import type { ListRow, ListSection, ReplyButton } from "../send";
-import { BACK_TO_MENU_ID } from "./input";
+import { BACK_TO_MENU_ID, TALK_TO_RECEPTION_ID } from "./input";
 
 // Textos do bot (F6.3), aprovados pelo cliente em 07/out/2026: os do piloto,
 // sem citar a Dra., com o nome da clínica e o vocabulário do perfil (D4b):
@@ -55,6 +55,15 @@ export function button(id: string, title: string): ReplyButton {
 
 export const YES_NO_IDS = { yes: "yes", no: "no" } as const;
 export const YES_NO_BUTTONS = [button(YES_NO_IDS.yes, "Sim"), button(YES_NO_IDS.no, "Não")];
+
+// Saída de uma pergunta sem resposta válida (cliente, 30/out/2026): da 2ª resposta não entendida seguida em diante,
+// a data de nascimento vem com "Voltar ao menu" e "Falar com a recepção"; o Sim/Não, com Sim, Não e "Voltar ao menu".
+const BACK_TO_MENU_BUTTON = button(BACK_TO_MENU_ID, "Voltar ao menu");
+export const YES_NO_BACK_BUTTONS = [...YES_NO_BUTTONS, BACK_TO_MENU_BUTTON];
+export const wayOutButtons = (receptionAvailable: boolean) => [
+  BACK_TO_MENU_BUTTON,
+  ...(receptionAvailable ? [button(TALK_TO_RECEPTION_ID, "Falar com a recepção")] : []),
+];
 
 export const price = (cents: number | null | undefined) => (cents == null ? null : formatCentsBRL(cents));
 
@@ -175,6 +184,7 @@ export const otherPatientLabel = other;
 export const askBirthdate = (w: Words) => `Qual a data de nascimento ${of(w)}? (formato dd/mm/aaaa)`;
 export const SELF_BIRTHDATE = "Qual é a sua data de nascimento? (formato dd/mm/aaaa)";
 export const INVALID_BIRTHDATE = "Não consegui entender essa data. Por favor, digite no formato dd/mm/aaaa (ex.: 10/03/2020).";
+export const INVALID_BIRTHDATE_AGAIN = `${INVALID_BIRTHDATE}\n\nSe não souber a data, escolha uma opção abaixo.`;
 export const birthdateMatches = (w: Words) =>
   `Encontramos ${w.feminine ? "crianças" : "pacientes"} já ${w.feminine ? "cadastradas" : "cadastrados"} com essa data de nascimento nesse telefone. É ${w.feminine ? "uma delas" : "um deles"}?`;
 export const confirmPatient = (w: Words, name: string, birthdate: string) =>

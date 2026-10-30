@@ -14,7 +14,19 @@ import { downloadPreparationFile } from "../preparation";
 import type { PreparationFile } from "../../config/preparationFile";
 import { preparationFileCaption } from "../../../preparationMessage";
 import { loadCatalog, type BotCatalog } from "./catalog";
-import { LIST_BUTTON, MEDIA_AUDIO, MEDIA_OTHER, wordsFor, type Words } from "./texts";
+import {
+  INVALID_BIRTHDATE,
+  INVALID_BIRTHDATE_AGAIN,
+  LIST_BUTTON,
+  MEDIA_AUDIO,
+  MEDIA_OTHER,
+  NOT_UNDERSTOOD_YES_NO,
+  wayOutButtons,
+  wordsFor,
+  YES_NO_BACK_BUTTONS,
+  YES_NO_BUTTONS,
+  type Words,
+} from "./texts";
 
 // Núcleo do bot (F6.3): a conversa em andamento, o que se sabe da clínica e
 // as respostas. Toda resposta é enviada pelo número da clínica e registrada
@@ -194,6 +206,31 @@ export async function sendButtons(b: Bot, kind: string, body: string, buttons: R
   await rememberPrompt(b, outcome.sent ? outcome.messageId : null);
   if (!outcome.sent) await textFallback(b, kind, outcome, body, buttons.map((button, index) => ({ ...button, title: `${index + 1}. ${button.title}` })));
 }
+
+/**
+ * Data de nascimento não entendida (cliente, 30/out/2026): conta no "não entendi" (na 4ª seguida, a conversa vai
+ * para a clínica) e, da 2ª seguida em diante, vem com "Voltar ao menu" e "Falar com a recepção". Digitar a data
+ * continua valendo.
+ */
+export async function sayInvalidBirthdate(b: Bot): Promise<void> {
+  const again = b.convo.notUnderstoodCount > 0;
+  const body = notUnderstood(b, again ? INVALID_BIRTHDATE_AGAIN : INVALID_BIRTHDATE);
+  if (again) return sendButtons(b, "bot_invalid_birthdate", body, wayOutButtons(b.receptionAvailable));
+  await record(b, "bot_invalid_birthdate", await b.sender.text(b.phone, body), body);
+}
+
+/**
+ * Sim/Não não entendido: na 1ª vez, o aviso e a pergunta de novo; da 2ª seguida em diante (cliente, 30/out/2026),
+ * os dois numa mensagem com Sim, Não e "Voltar ao menu".
+ */
+export async function repeatYesNo(b: Bot, kind: string, question: string): Promise<void> {
+  if (b.convo.notUnderstoodCount > 0) return sendButtons(b, NOT_UNDERSTOOD_KIND, `${NOT_UNDERSTOOD_YES_NO}\n\n${question}`, YES_NO_BACK_BUTTONS);
+  await say(b, NOT_UNDERSTOOD_KIND, NOT_UNDERSTOOD_YES_NO);
+  await say(b, kind, question);
+}
+
+/** Botões de Sim/Não: com "Voltar ao menu" quando esta é a 2ª resposta não entendida seguida (cliente, 30/out/2026). */
+export const yesNoButtonsFor = (b: Bot) => (b.notUnderstoodSaid && b.convo.notUnderstoodCount > 0 ? YES_NO_BACK_BUTTONS : YES_NO_BUTTONS);
 
 /** Guarda a lista ou os botões que valem agora (o passo pode continuar o mesmo, sem `go`). */
 async function rememberPrompt(b: Bot, id: string | null): Promise<void> {

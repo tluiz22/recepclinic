@@ -1,6 +1,6 @@
 import { joinBlockReason } from "../../waitlist/entries";
 import { formatAppointmentWhen } from "../templates";
-import { go, say, sendButtons, sendList, textFor, type Bot } from "./engine";
+import { go, say, sayInvalidBirthdate, sendButtons, sendList, textFor, type Bot } from "./engine";
 import { parseBirthdate, pick, yesNo, type Selection } from "./input";
 import { handoff, identityChoiceOf, loadActive, manageIdentified, presenceConfirmed, sendIdentityNotFound, upcomingOfContact, type ManagedAppointment } from "./manage";
 import { showMenu } from "./menus";
@@ -89,7 +89,7 @@ async function handleBirthdate(b: Bot, selection: Selection): Promise<void> {
     return sendIdentityNotFound(b);
   }
   const birthdate = parseBirthdate(selection.text, b.clinic.today);
-  if (!birthdate) return say(b, "bot_invalid_birthdate", t.INVALID_BIRTHDATE);
+  if (!birthdate) return sayInvalidBirthdate(b);
   let matches: ManagedAppointment[];
   try {
     matches = (await upcomingOfContact(b)).filter((a) => a.birthdate === birthdate);

@@ -16,7 +16,7 @@ import { parseReminderTap, recordReminderTap } from "../reminders";
 import { formatAppointmentWhen } from "../templates";
 import { startBooking, startReturn } from "./booking";
 import { servicesOf } from "./catalog";
-import { end, go, say, sendButtons, sendList, step, textFor, type Bot } from "./engine";
+import { end, go, repeatYesNo, say, sayInvalidBirthdate, sendButtons, sendList, step, textFor, yesNoButtonsFor, type Bot } from "./engine";
 import { formatBirthdate, parseBirthdate, pick, yesNo, type Selection } from "./input";
 import { showMenu } from "./menus";
 import * as t from "./texts";
@@ -230,7 +230,7 @@ async function handleSelect(b: Bot, selection: Selection): Promise<void> {
 
   if (ctx.awaiting === "birthdate_search" || ctx.awaiting === "identity_choice") {
     const birthdate = parseBirthdate(selection.text, b.clinic.today);
-    if (!birthdate) return say(b, "bot_invalid_birthdate", t.INVALID_BIRTHDATE);
+    if (!birthdate) return sayInvalidBirthdate(b);
     const matches = candidates.filter((c) => c.birthdate === birthdate);
     if (!matches.length) {
       // Sem bloqueio por data errada (cliente, 24/out/2026).
@@ -335,8 +335,7 @@ async function handleCancelConfirm(b: Bot, selection: Selection): Promise<void> 
   const answer = yesNo(selection);
   const { phrase, end: ending } = words(appointment);
   if (answer === null) {
-    await say(b, "bot_not_understood", t.NOT_UNDERSTOOD_YES_NO);
-    return say(b, "bot_cancel_confirm", t.confirmCancel(phrase, appointment.patientName, when(b, appointment)));
+    return repeatYesNo(b, "bot_cancel_confirm", t.confirmCancel(phrase, appointment.patientName, when(b, appointment)));
   }
   if (answer) {
     const canceled = await cancelAppointment(b.db, b.clinicId, appointment.id, { channel: "whatsapp_bot", actorId: null }, b.now);
@@ -479,8 +478,7 @@ async function handleRescheduleAddress(b: Bot, selection: Selection): Promise<vo
   const answer = yesNo(selection);
   const address = ctx.pendingAddress ?? "";
   if (answer === null) {
-    await say(b, "bot_not_understood", t.NOT_UNDERSTOOD_YES_NO);
-    return say(b, "bot_reschedule_home_address_confirm", ctx.awaiting === "address_current" ? t.homeAddressConfirmCurrent(address) : t.homeAddressConfirmNew(address));
+    return repeatYesNo(b, "bot_reschedule_home_address_confirm", ctx.awaiting === "address_current" ? t.homeAddressConfirmCurrent(address) : t.homeAddressConfirmNew(address));
   }
   if (!answer) {
     await say(b, "bot_reschedule_home_address_ask", t.HOME_ADDRESS_ASK);
@@ -620,12 +618,12 @@ async function showEarlier(b: Bot, appointment: ManagedAppointment, slots: Earli
 }
 
 async function askJoin(b: Bot, ctx: EarlierContext, appointment: ManagedAppointment): Promise<void> {
-  await sendButtons(b, "bot_waitlist_ask_join", t.askJoinWaitlist(when(b, appointment)), t.YES_NO_BUTTONS);
+  await sendButtons(b, "bot_waitlist_ask_join", t.askJoinWaitlist(when(b, appointment)), yesNoButtonsFor(b));
   await go(b, "WAITLIST_EARLIER", { ...ctx, chosen: undefined, step: "join_confirm" } satisfies EarlierContext);
 }
 
 const askAdvance = (b: Bot, appointment: ManagedAppointment, slot: EarlierSlot) =>
-  sendButtons(b, "bot_waitlist_confirm_advance", t.confirmAdvance(words(appointment).phrase, appointment.patientName, when(b, appointment), slotWhen(b, slot)), t.YES_NO_BUTTONS);
+  sendButtons(b, "bot_waitlist_confirm_advance", t.confirmAdvance(words(appointment).phrase, appointment.patientName, when(b, appointment), slotWhen(b, slot)), yesNoButtonsFor(b));
 
 async function handleEarlier(b: Bot, selection: Selection): Promise<void> {
   const ctx = b.convo.context as EarlierContext;

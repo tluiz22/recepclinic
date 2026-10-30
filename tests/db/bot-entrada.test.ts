@@ -361,6 +361,69 @@ describe("robustez", () => {
     }
   });
 
+  it("data não entendida (cliente, 30/out/2026): 1ª só o texto; da 2ª em diante, com as saídas; 4ª vai para a clínica", async () => {
+    const INVALID = "Não consegui entender essa data. Por favor, digite no formato dd/mm/aaaa (ex.: 10/03/2020).";
+    const AGAIN = `${INVALID}\n\nSe não souber a data, escolha uma opção abaixo.`;
+    // Sem coexistência: só "Voltar ao menu".
+    await fresh(P1);
+    await say(P1, "oi");
+    await say(P1, "sim");
+    let reply = await say(P1, "não lembro");
+    expect(reply).toMatchObject([{ kind: "text", body: INVALID }]);
+    reply = await say(P1, "não sei");
+    expect(reply).toMatchObject([{ kind: "buttons", body: AGAIN }]);
+    expect(titles(reply)).toEqual(["Voltar ao menu"]);
+    reply = await say(P1, { id: "back_to_menu" });
+    expect(reply.map((m) => m.body)).toEqual([MENU]);
+
+    await adminClient().from("whatsapp_connections").update({ coexistence: true }).eq("clinic_id", f.clinicId);
+    try {
+      // Com coexistência: "Falar com a recepção" pausa o bot.
+      await fresh(P1);
+      await say(P1, "oi");
+      await say(P1, "sim");
+      await say(P1, "não lembro");
+      reply = await say(P1, "não sei");
+      expect(titles(reply)).toEqual(["Voltar ao menu", "Falar com a recepção"]);
+      reply = await say(P1, { id: "talk_to_reception" });
+      expect(reply[0].body).toContain("Vou te transferir para a recepção");
+      expect(await conversation(P1)).toMatchObject({ state: "HUMAN_HANDOFF", human_handoff: true });
+
+      // A data errada conta no "não entendi": na 4ª seguida, a conversa vai para a clínica.
+      await fresh(P1);
+      await say(P1, "oi");
+      await say(P1, "sim");
+      for (const text of ["a", "b", "c"]) await say(P1, text);
+      reply = await say(P1, "d");
+      expect(reply.map((m) => m.kind)).toEqual(["text"]);
+      expect((await conversation(P1)).human_handoff).toBe(true);
+    } finally {
+      await fresh(P1);
+      await adminClient().from("conversation_state").update({ not_understood_count: 0 }).eq("clinic_id", f.clinicId).eq("contact_phone", P1);
+      await adminClient().from("whatsapp_connections").update({ coexistence: false }).eq("clinic_id", f.clinicId);
+    }
+  });
+
+  it("Sim/Não não entendido (cliente, 30/out/2026): 1ª o aviso e a pergunta; da 2ª em diante, uma mensagem com Sim, Não e Voltar ao menu", async () => {
+    const CONFIRM = "Confirma o cancelamento da consulta de *Paciente Dois* em segunda, 10/03 às 08:00? Responda Sim ou Não.";
+    await fresh(P2);
+    await say(P2, "oi");
+    await say(P2, { id: "entry_yes" });
+    await say(P2, "01/01/2020");
+    await say(P2, { id: "entry_cancel" });
+    let reply = await say(P2, "talvez");
+    expect(reply.map((m) => [m.kind, m.body])).toEqual([
+      ["text", "Não entendi 🙏 Responda apenas Sim ou Não."],
+      ["text", CONFIRM],
+    ]);
+    reply = await say(P2, "hmm");
+    expect(reply).toMatchObject([{ kind: "buttons", body: `Não entendi 🙏 Responda apenas Sim ou Não.\n\n${CONFIRM}` }]);
+    expect(titles(reply)).toEqual(["Sim", "Não", "Voltar ao menu"]);
+    reply = await say(P2, { id: "back_to_menu" });
+    expect(reply.map((m) => m.body)).toEqual([MENU]);
+    expect((await adminClient().from("appointments").select("status").eq("id", consultP2).single()).data!.status).not.toBe("canceled");
+  });
+
   it("13. toque no lembrete no meio da entrada: segue o fluxo do lembrete", async () => {
     await adminClient().from("appointments").update({ patient_confirmed_at: null }).eq("id", consultP2);
     await fresh(P2);

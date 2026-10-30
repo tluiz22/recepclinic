@@ -654,3 +654,16 @@ retomada fica no README). Para achar algo, buscar por data (ex.: `27/out`), fase
   "Mais", ajuda "i", cartão em edição ou a tela já saindo (filtros da Agenda e grupos de Lembretes, que abrem
   expandidos, e o "Como funciona?" não contam). `src/scripts/autoRefresh.ts`, ligado por `autoRefresh` no
   `AdminLayout`. Custo: uma recarga = um F5 (~600 por dia por tela aberta). Sem migração. Publicada no staging em 30/out.
+- **C12 Saída das perguntas que o bot não entende** (30/out): o paciente que não lembrava a data de nascimento ficava
+  preso na entrada ("Não consegui entender essa data" para sempre; a data errada não contava no "não entendi").
+  **Decisões do cliente (30/out):** opção 3, botões a partir da 2ª resposta não entendida seguida (recusados: botões
+  já na 1ª; só o texto com "digite 0"); também nas perguntas de Sim ou Não, com Sim, Não e "Voltar ao menu" (recusados:
+  os botões da data; só a data). **Data de nascimento** (5 pontos: entrada, cancelar/remarcar, busca do paciente,
+  paciente novo, quem marca para si): 1ª, o texto de sempre; da 2ª seguida, o texto + "Se não souber a data, escolha uma
+  opção abaixo." com "Voltar ao menu" e "Falar com a recepção" (este só com coexistência); passa a contar no "não
+  entendi" (4ª seguida vai para a clínica, com coexistência). **Sim ou Não** (7 perguntas em texto): 1ª, o aviso e a
+  pergunta; da 2ª seguida, os dois numa mensagem com Sim, Não e "Voltar ao menu"; limite de idade e lista de espera (já
+  com Sim/Não em botões) ganham o "Voltar ao menu" da 2ª em diante. "Falar com a recepção" (`talk_to_reception`) vale
+  em qualquer passo, como o "Voltar ao menu". Listas e botões já tinham saída (repetem as opções com "digite 0");
+  nome e endereço aceitam qualquer texto. `sayInvalidBirthdate`, `repeatYesNo` e `yesNoButtonsFor` em
+  `bot/engine.ts`. Sem migração. Testes em `tests/db/bot-entrada.test.ts`. Publicada no staging em 30/out.
