@@ -8,7 +8,7 @@
 >   (Relacionamento, B0, P1–P3) e as correções **C1 Exame em paralelo**, **C2 Outro horário**, **C3 Horário de exame**,
 >   **C4 Alterar atendimento**, **C5 Horário em local que o serviço não usa** e **C6 Escolha do serviço no Marcar**; em 29/out, **C7 Arquivo no preparo do
 >   exame** (C7.1–C7.7) e **C8 Escolha do serviço em Horários** (`5ef2be6`). Fluxo e registro em [`producao.md`](producao.md).
-> - **Staging** (`teste.recepclinic.com.br`, branch `main`): igual à produção em 30/out (`a7e077a`). Roteiros em [`staging.md`](staging.md).
+> - **Staging** (`teste.recepclinic.com.br`, branch `main`): igual à produção em 30/out (`b9dc41a`). Roteiros em [`staging.md`](staging.md).
 > - **Branches:** `main` = `producao` em 30/out; `CRM` e `faturamento` excluídas em 30/out (tudo delas na `main`).
 >
 > **Frentes em andamento**
@@ -16,9 +16,9 @@
 >   `5ef2be6`; detalhes no [`historico.md`](historico.md), busca "C7", "C8"). **C9** (conversas só depois de ativar a
 >   clínica) e **C10** (conversa não volta sozinha ao bot; Atendimento com "Como funciona?") na produção em 30/out
 >   (`a7e077a`), com a limpeza das conversas gravadas pelo piloto em implantação (pacientes e agendamentos intactos).
->   Aguarda a validação do cliente na produção. **C11** (Início, Agenda, Resumo do Dia e Atendimento se atualizam a
->   cada 1 minuto) **C12** (saída das perguntas de data e de Sim/Não que o bot não entende) e **C13** (pedido de recepção
->   digitado, com confirmação Sim/Não; origem, etapa e motivos nas Métricas) no staging em 30/out; aguardam validação e o OK para a produção. Na produção, cada clínica com exames
+>   **C11**, **C12** e **C13/C13b** (telas que se
+>   atualizam a cada 1 minuto; saída da data e do Sim/Não; pedido de recepção digitado com confirmação e registro nas
+>   Métricas) na produção em 30/out (`b9dc41a`). Próximo: nada pendente nesta frente; aguarda o cliente. Na produção, cada clínica com exames
 >   precisa do "Criar na Meta" (Suporte) para os modelos `rc_preparo_exame_v3` e `rc_preparo_arquivo_v3`. Próximo: nada
 >   pendente nesta frente; aguarda o cliente.
 > - **CRM concluído** (28/out; [`crm.md`](crm.md)): validado no staging e na produção desde 28/out.
