@@ -7,6 +7,8 @@
 > produção** (fluxo do `producao.md`, com autorização). Já na `main` e fora da produção: cartão do Asaas (escondido sem
 > `ASAAS_PREVIEW`) e **remoção da DMED com a migração `20261105120000_sem_dmed.sql`** (aplicar no banco da produção
 > junto com o push).
+> Melhorias de 30/out no staging, aguardando validação: **Vendas › Implantação** (`2c6c88f`) e **Tecnologia › Jornada
+> do bot** (`96adb59`; regra no CLAUDE.md: mudou o bot, atualizar o fluxograma).
 >
 > **N0 do Asaas (30/out):** NFS-e pelo Asaas, N0 (seções 13.8 e 13.9 do `planejamento-nfse-asaas.md`; ler o bloco de
 > retomada dele). Cartão do selo do Asaas na `main` (`13ebeab`), visível só com `ASAAS_PREVIEW=1` (staging).
