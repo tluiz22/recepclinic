@@ -4,14 +4,15 @@
 > na retomada; buscar por data, fase ou commit quando precisar).
 >
 > **Agora (30/out):** NFS-e pelo Asaas, N0 (seções 13.8 e 13.9 do `planejamento-nfse-asaas.md`; ler o bloco de
-> retomada dele). Próximo: tela da habilitação fiscal com o selo do Asaas no staging, para o formulário BaaS.
+> retomada dele). Cartão do selo do Asaas na `main` (`13ebeab`), visível só com `ASAAS_PREVIEW=1` (staging).
+> Próximo: cliente põe a variável no staging, valida, tira o print e envia o formulário BaaS (13.9).
 >
 > **Ambientes**
 > - **Produção** (`app.recepclinic.com.br`, branch `producao`): no ar desde 26/out; publicações de 28/out: **CRM**
 >   (Relacionamento, B0, P1–P3) e as correções **C1 Exame em paralelo**, **C2 Outro horário**, **C3 Horário de exame**,
 >   **C4 Alterar atendimento**, **C5 Horário em local que o serviço não usa** e **C6 Escolha do serviço no Marcar**; em 29/out, **C7 Arquivo no preparo do
 >   exame** (C7.1–C7.7) e **C8 Escolha do serviço em Horários** (`5ef2be6`). Fluxo e registro em [`producao.md`](producao.md).
-> - **Staging** (`teste.recepclinic.com.br`, branch `main`): igual à produção em 30/out (`b9dc41a`). Roteiros em [`staging.md`](staging.md).
+> - **Staging** (`teste.recepclinic.com.br`, branch `main`): `13ebeab` (30/out): produção + cartão do Asaas, escondido sem `ASAAS_PREVIEW`. Roteiros em [`staging.md`](staging.md).
 > - **Branches:** `main` = `producao` em 30/out; `CRM` e `faturamento` excluídas em 30/out (tudo delas na `main`).
 >
 > **Frentes em andamento**
