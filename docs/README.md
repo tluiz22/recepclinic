@@ -3,6 +3,9 @@
 > **Estado atual (retomar daqui), 29/out/2026.** Histórico completo em [`historico.md`](historico.md) (não ler
 > na retomada; buscar por data, fase ou commit quando precisar).
 >
+> **Próxima sessão (cliente, 30/out):** voltar às pendências do planejamento do financeiro (faturamento do SaaS e
+> NFS-e pelo Asaas, N0: seção 13 do `planejamento-nfse-asaas.md`; antes, ler o bloco de retomada dele).
+>
 > **Ambientes**
 > - **Produção** (`app.recepclinic.com.br`, branch `producao`): no ar desde 26/out; publicações de 28/out: **CRM**
 >   (Relacionamento, B0, P1–P3) e as correções **C1 Exame em paralelo**, **C2 Outro horário**, **C3 Horário de exame**,
