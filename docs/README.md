@@ -8,15 +8,15 @@
 >   (Relacionamento, B0, P1–P3) e as correções **C1 Exame em paralelo**, **C2 Outro horário**, **C3 Horário de exame**,
 >   **C4 Alterar atendimento**, **C5 Horário em local que o serviço não usa** e **C6 Escolha do serviço no Marcar**; em 29/out, **C7 Arquivo no preparo do
 >   exame** (C7.1–C7.7) e **C8 Escolha do serviço em Horários** (`5ef2be6`). Fluxo e registro em [`producao.md`](producao.md).
-> - **Staging** (`teste.recepclinic.com.br`, branch `main`): igual à produção em 29/out. Roteiros em [`staging.md`](staging.md).
+> - **Staging** (`teste.recepclinic.com.br`, branch `main`): igual à produção em 30/out (`a7e077a`). Roteiros em [`staging.md`](staging.md).
 > - **Branches:** `main` = `producao` em 29/out; a `CRM` ficou para trás (etapa encerrada).
 >
 > **Frentes em andamento**
 > - **Ajustes da produção, na `main`:** C1–C8 validados e na produção (C1–C6 em 28/out, `da2a6fc`; C7 e C8 em 29/out,
 >   `5ef2be6`; detalhes no [`historico.md`](historico.md), busca "C7", "C8"). **C9** (conversas só depois de ativar a
->   clínica) e **C10** (conversa não volta sozinha ao bot; Atendimento com "Como funciona?") na `main` e no staging em
->   30/out; aguardam o OK para a produção, junto com a limpeza do que o piloto gravou em implantação (cliente: apagar
->   tudo das conversas; nunca pacientes, responsáveis ou agendamentos). Na produção, cada clínica com exames
+>   clínica) e **C10** (conversa não volta sozinha ao bot; Atendimento com "Como funciona?") na produção em 30/out
+>   (`a7e077a`), com a limpeza das conversas gravadas pelo piloto em implantação (pacientes e agendamentos intactos).
+>   Aguarda a validação do cliente na produção. Na produção, cada clínica com exames
 >   precisa do "Criar na Meta" (Suporte) para os modelos `rc_preparo_exame_v3` e `rc_preparo_arquivo_v3`. Próximo: nada
 >   pendente nesta frente; aguarda o cliente.
 > - **CRM concluído** (28/out; [`crm.md`](crm.md)): validado no staging e na produção desde 28/out.
