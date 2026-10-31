@@ -367,11 +367,26 @@ stateDiagram-v2
     faturamento não trata nota fiscal e a emissão automática do Asaas fica desligada.
 15. **IP fixo na Vercel.** **Decidido (cliente, 28/out):** não por agora; a chave fica só nas variáveis da Vercel
     (nunca no código ou nos registros), com troca periódica; reavaliar quando houver mais clínicas pagando.
-16. **Jurídico (pendência do cliente com o advogado, antes da F12.11):** Asaas como operador, texto do opt-in, prazo
+16. **Jurídico (respondido pelo advogado em 30/out, item 18):** Asaas como operador, texto do opt-in, prazo
     de guarda e forma de devolução ou exportação dos dados no fim do contrato.
 17. **Troca de modo.** **Decidido (cliente, 28/out):** só por nova versão do contrato, com data de início; para o
     automático, cria a assinatura no Asaas a partir dessa data; para o manual, cancela a assinatura e as cobranças em
     aberto no Asaas (com trilha) e o Suporte passa a cobrar por fora.
+
+18. **Parecer do advogado (30/out/2026; [documento](https://claude.ai/artifact/8zajhx22J5AGXDyqEn64F7)).** Confirmados: papéis
+    (clínica controladora dos pacientes; RecepClinic operador deles e controlador dos dados de cobrança; Asaas
+    suboperador só da cobrança), cancelamento sem multa com acesso até o fim do período pago, guarda de 5 anos dos
+    dados financeiros e da trilha, opt-in do WhatsApp livre (e-mail continua obrigatório). Para a F12.9: mensagem
+    identificada ("Mensagem oficial do RecepClinic") e saída imediata por "SAIR". Política de privacidade (no site):
+    seção de suboperadores com o Asaas. Ainda a decidir com o cliente: aviso de 30 dias e aceite nas mudanças de
+    contrato, preço por nota (contrato × tabela) e prazo de exportação dos dados no fim do contrato.
+19. **Juros e multa.** **Decidido (cliente, 30/out):** multa de 2% e juros de 1% ao mês, configurados na cobrança do
+    Asaas (F12.4); sem correção monetária. No modo manual, o Suporte decide.
+20. **Prazo da suspensão.** **Decidido (cliente, 30/out; muda o fluxo 7):** a suspensão por inadimplência só pode ser
+    feita a partir do **15º dia** de atraso (o banco recusa antes); os avisos informam a data a partir da qual a
+    clínica pode ser suspensa.
+21. **Clínicas em atraso para o Suporte (cliente, 30/out):** o Suporte consulta numa lista todas as clínicas com
+    cobrança vencida (dias de atraso, valor, avisos enviados, situação), além da aba de cada clínica.
 
 ## 12. Roadmap
 
