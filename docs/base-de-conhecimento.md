@@ -191,3 +191,11 @@ Clínica não edita a base. (Os textos da clínica continuam nos campos dela: pa
     filtra); serviço inexistente ou sem horário → não informa; preço zero → "Sem custo"; valor pelo convênio →
     não responde (não há dado). **Na marcação, com o serviço já escolhido:** o valor desse serviço (e do local, se
     já escolhido) com as formas de pagamento, e repete o passo.
+11. **Especialidades** (mesmo momento das demais): resposta pelos profissionais do catálogo (ativos, com agenda e
+    horário; `professionals.specialty` é um texto livre por profissional). A base ganha um **dicionário global
+    de especialidades** (nome canônico + como o paciente fala: "médico do pulmão" → Pneumologia; "dentista de
+    criança" → Odontopediatria), mantido pelo Suporte; o bot cruza com o texto da especialidade da clínica
+    (normalizado + semelhança). Achou → profissional e "Marcar consulta"; "quais especialidades?" → lista;
+    "o Dr. X atende aqui?" → profissão e especialidade, se ativo e com horário; "que especialista procuro para
+    dor…" → aviso da pergunta clínica (decisão 9). **Não achou:** nunca diz "não temos"; mostra as
+    especialidades que a clínica atende e o menu.
