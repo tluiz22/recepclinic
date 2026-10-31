@@ -5,7 +5,7 @@
 // (CLAUDE.md): mudou a jornada do bot, atualizar este arquivo no mesmo commit,
 // junto com JOURNEY_UPDATED.
 
-export const JOURNEY_UPDATED = "30/10/2026";
+export const JOURNEY_UPDATED = "31/10/2026";
 
 export type NodeKind = "patient" | "bot" | "page" | "auto" | "reception" | "decision";
 
@@ -65,7 +65,7 @@ export const JOURNEY: JourneySection[] = [
     title: "2. Marcar consulta ou exame",
     intro: "Consultas › Marcar consulta, ou Exames › Marcar exame. O dia e o horário são escolhidos numa página, com a agenda real.",
     flow: [
-      bot("Qual consulta (ou exame) você quer marcar?", "Lista dos serviços, sempre mostrada, mesmo com um só."),
+      bot("Qual consulta (ou exame) você quer marcar?", "Lista dos serviços, sem preço. Com um serviço só, o bot escolhe sozinho e avisa: \"Vamos marcar *Consulta*\"."),
       check("O serviço tem horário livre no prazo da agenda?"),
       branch(
         ["Não", [bot("\"No momento não há horários livres\"; a recepção assume a conversa")]],
@@ -105,7 +105,7 @@ export const JOURNEY: JourneySection[] = [
         [
           "Sim",
           [
-            bot("Valor do retorno, prazo e \"Para qual paciente é o retorno?\""),
+            bot("Prazo e \"Para qual paciente é o retorno?\"", "Sem falar de valor."),
             bot("Manda o link, com datas só até o fim do prazo"),
             page("Escolhe o dia e o horário"),
             auto("Confirmação da marcação"),

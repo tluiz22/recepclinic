@@ -82,9 +82,8 @@ async function startConsultation(): Promise<Sent[]> {
 
 /** Do "Marcar consulta" até o "para outra pessoa" (Dr. Segundo: só consultório). */
 async function upToForOther(): Promise<Sent[]> {
-  const reply = await startConsultation();
-  expect(reply.at(-1)!.body).toBe("Qual consulta você quer marcar?");
-  const agendas = await say("1");
+  const agendas = await startConsultation();
+  expect(agendas.map((m) => m.body)).toEqual(["Vamos marcar *Consulta*.", "Com qual profissional?"]);
   await say({ id: agendas.at(-1)!.options.find((o) => o.title.includes("Dr. Segundo"))!.id });
   return say({ id: "for_other" });
 }
@@ -198,7 +197,7 @@ describe("bot: limites do contato, sem coexistência", () => {
       .eq("id", booked.appointment.id);
 
     // Desligado (0): marca normalmente.
-    expect((await startConsultation()).at(-1)!.body).toBe("Qual consulta você quer marcar?");
+    expect((await startConsultation())[0].body).toBe("Vamos marcar *Consulta*.");
     await say("0"); // volta ao menu
 
     await setLimits({ bot_max_no_shows: 1 });

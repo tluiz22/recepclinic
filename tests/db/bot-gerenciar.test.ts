@@ -301,7 +301,7 @@ describe("encaixe ou antecipar", () => {
     let reply = await choose(P2, "manage_waitlist");
     expect(titles(reply)).toEqual(["Marcar consulta", "Marcar retorno", "Voltar ao menu"]);
     reply = await say(P2, { id: "waitlist_book_consultation" });
-    expect(reply.at(-1)!.body).toBe("Qual consulta você quer marcar?");
+    expect(reply.map((m) => m.body)).toEqual(["Vamos marcar *Consulta*.", "Com qual profissional?"]);
   });
 });
 

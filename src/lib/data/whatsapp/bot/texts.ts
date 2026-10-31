@@ -158,6 +158,8 @@ export const linkError = (d: Designation) =>
 export const serviceQuestion = (category: "consultation" | "exam") =>
   category === "exam" ? "Qual exame você quer marcar?" : "Qual consulta você quer marcar?";
 
+export const serviceAuto = (serviceName: string) => `Vamos marcar *${serviceName}*.`;
+
 export const AGENDA_QUESTION = "Com qual profissional?";
 /** "Primeiro horário disponível" não cabe no título da linha (24 caracteres): o resto vai na descrição. */
 export const FIRST_AVAILABLE = "Primeiro horário";
@@ -214,11 +216,8 @@ export const alreadyScheduled = (patientName: string, serviceName: string, when:
 // Retorno
 // ---------------------------------------------------------------------------
 
-export function returnPriceLine(cents: number): string {
-  return cents === 0 ? "O retorno não tem custo." : `Valor do retorno: ${formatCentsBRL(cents)}.`;
-}
-export const returnChoice = (w: Words, priceLine: string, deadlineDays: number | null) =>
-  `${priceLine}\n\n${deadlineDays !== null ? `O retorno deve ser feito em até ${deadlineDays} dias após a consulta. ` : ""}Para qual ${w.patient} é o retorno?`;
+export const returnChoice = (w: Words, deadlineDays: number | null) =>
+  `${deadlineDays !== null ? `O retorno deve ser feito em até ${deadlineDays} dias após a consulta. ` : ""}Para qual ${w.patient} é o retorno?`;
 export const returnNoRecent = (deadlineDays: number | null) =>
   deadlineDays !== null
     ? `Não encontramos consulta nos últimos ${deadlineDays} dias. O retorno deve ser feito em até ${deadlineDays} dias após a consulta; passado esse prazo, é preciso marcar uma nova consulta em Consultas › Marcar consulta.`

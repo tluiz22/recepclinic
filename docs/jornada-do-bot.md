@@ -4,7 +4,7 @@
 > precisa acompanhar as mudanças do bot; ao fim dessa revisão, excluir.
 
 O caminho do paciente no WhatsApp da clínica, do primeiro "Oi" até a recepção. Fonte: Tecnologia › Jornada do bot
-(`src/components/admin/tecnologia/botJourney.ts`, atualizada em **30/10/2026**), que espelha o bot em
+(`src/components/admin/tecnologia/botJourney.ts`, atualizada em **31/10/2026**), que espelha o bot em
 `src/lib/data/whatsapp/bot/` e as mensagens automáticas. Mudou a jornada, atualizar os dois no mesmo commit.
 
 **Quem age em cada passo**
@@ -59,7 +59,8 @@ O paciente manda qualquer mensagem para o número da clínica, a qualquer hora.
 
 Consultas › Marcar consulta, ou Exames › Marcar exame. O dia e o horário são escolhidos numa página, com a agenda real.
 
-1. 🤖 Qual consulta (ou exame) você quer marcar? *Lista dos serviços, sempre mostrada, mesmo com um só.*
+1. 🤖 Qual consulta (ou exame) você quer marcar? *Lista dos serviços, sem preço. Com um serviço só, o bot escolhe
+   sozinho e avisa: "Vamos marcar *Consulta*".*
 2. 🔍 O serviço tem horário livre no prazo da agenda?
    - **Não:** 🤖 "No momento não há horários livres"; a recepção assume a conversa.
    - **Sim**
@@ -84,7 +85,7 @@ Consultas › Marcar retorno. Só para quem tem direito, com o profissional da c
 1. 🔍 Algum paciente deste número tem consulta recente, dentro do prazo do retorno, sem retorno marcado?
    - **Não:** 🤖 Explica o motivo (prazo vencido, retorno já usado, consulta domiciliar) e indica Marcar consulta.
    - **Sim**
-     1. 🤖 Valor do retorno, prazo e "Para qual paciente é o retorno?"
+     1. 🤖 Prazo e "Para qual paciente é o retorno?" *Sem falar de valor.*
      2. 🤖 Manda o link, com datas só até o fim do prazo.
      3. 🌐 Escolhe o dia e o horário.
      4. ✉️ Confirmação da marcação.

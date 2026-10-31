@@ -125,21 +125,22 @@ export async function startBooking(b: Bot, category: "consultation" | "exam", { 
   if (await stoppedByBotLimit(b, "booking")) return;
   const services = servicesOf(await b.catalog(), category);
   if (!services.length) return handOver(b, "bot_nothing_to_book", t.willReply(b.clinic.designation), "no_service");
-  // Sempre mostra a lista, mesmo com um serviço só: o paciente vê e confirma o que está marcando (cliente, 07/out).
-  await askService(b, { category, ...(joinWaitlist ? { joinWaitlist } : {}) }, services);
+  const ctx: BookingContext = { category, ...(joinWaitlist ? { joinWaitlist } : {}) };
+  // Um serviço só: escolhe sozinho e avisa qual é (cliente, 31/out/2026; revoga a lista sempre de 07/out).
+  if (services.length === 1) {
+    await say(b, "bot_book_service_auto", t.serviceAuto(services[0].name));
+    return chooseService(b, ctx, services[0]);
+  }
+  await askService(b, ctx, services);
 }
-
-const minPrice = (s: BotService) => {
-  const values = Object.values(s.locationPrices);
-  return values.length ? Math.min(...values) : s.priceCents;
-};
 
 async function askService(b: Bot, ctx: BookingContext, services: BotService[]): Promise<void> {
   await sendList(
     b,
     "bot_book_service",
     t.serviceQuestion(ctx.category === "exam" ? "exam" : "consultation"),
-    t.numberedList(services.map((s) => ({ id: `service_${s.id}`, label: s.name, description: t.price(minPrice(s)) }))),
+    // Sem preço na lista: o valor vem depois das escolhas (cliente, 31/out/2026).
+    t.numberedList(services.map((s) => ({ id: `service_${s.id}`, label: s.name }))),
   );
   await go(b, "BOOK_SERVICE", ctx);
 }
@@ -714,11 +715,11 @@ export async function startReturn(b: Bot, { joinWaitlist = false } = {}): Promis
   if (!candidates.length) return refuseReturn(b, reasons, deadline);
   const shown = candidates.slice(0, t.MAX_LIST_ROWS - 1);
   const first = shown[0].service;
-  const priceLine = t.returnPriceLine(first.locationPrices.clinic ?? first.priceCents);
+  // O retorno nunca fala de valor (cliente, 31/out/2026).
   await sendList(
     b,
     "bot_book_return_patient_choice",
-    t.returnChoice(b.words, priceLine, first.returnDeadlineDays),
+    t.returnChoice(b.words, first.returnDeadlineDays),
     t.numberedList(shown.map((c) => ({ id: `return_${c.id}`, label: c.name }))),
   );
   await go(b, "RETURN_SELECT", {
