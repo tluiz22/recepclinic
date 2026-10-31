@@ -483,8 +483,13 @@ async function enterPatientSelect(b: Bot, ctx: BookingContext): Promise<void> {
 async function sayAgeLimitNotice(b: Bot, ctx: BookingContext): Promise<void> {
   const limit = b.clinic.ageLimitYears;
   if (ctx.category !== "consultation" || limit === null) return;
-  const agenda = ctx.agendaId ? (await serviceOf(b, ctx))?.agendas.find((a) => a.id === ctx.agendaId) : undefined;
-  await say(b, "bot_book_age_limit_notice", t.ageLimitNotice(agenda?.professionalName ?? null, b.clinic.designation, limit));
+  await say(b, "bot_book_age_limit_notice", t.ageLimitNotice(await chosenProfessional(b, ctx), b.clinic.designation, limit));
+}
+
+/** Nome do profissional escolhido; null no "Primeiro horário" (os textos usam a clínica). */
+async function chosenProfessional(b: Bot, ctx: BookingContext): Promise<string | null> {
+  if (!ctx.agendaId) return null;
+  return (await serviceOf(b, ctx))?.agendas.find((a) => a.id === ctx.agendaId)?.professionalName ?? null;
 }
 
 /** Número novo, depois do paciente: o nome de quem escreve (paciente menor: "do responsável"). */
@@ -736,7 +741,7 @@ export async function handOver(b: Bot, kind: string, text: string, reason: strin
 async function refusedByAgeLimit(b: Bot, ctx: BookingContext, birthdate: string): Promise<boolean> {
   const limit = b.clinic.ageLimitYears;
   if (ctx.category !== "consultation" || limit === null || !isOverConsultationAgeLimit(birthdate, b.clinic.today, limit)) return false;
-  await sendButtons(b, "bot_book_consultation_age_limit", t.ageLimit(ctx.serviceName ?? "A consulta", limit, b.words), t.YES_NO_BUTTONS);
+  await sendButtons(b, "bot_book_consultation_age_limit", t.ageLimit(await chosenProfessional(b, ctx), b.clinic.designation, limit, b.words), t.YES_NO_BUTTONS);
   await go(b, "BOOK_AGE_LIMIT", keepPath(ctx));
   return true;
 }
@@ -746,7 +751,7 @@ async function handleAgeLimit(b: Bot, selection: Selection): Promise<void> {
   const answer = yesNo(selection, t.YES_NO_IDS);
   if (answer === null) {
     const buttons = b.convo.notUnderstoodCount > 0 ? t.YES_NO_BACK_BUTTONS : t.YES_NO_BUTTONS;
-    await sendButtons(b, "bot_not_understood", `${t.NOT_UNDERSTOOD_YES_NO}\n\n${t.ageLimit(ctx.serviceName ?? "A consulta", b.clinic.ageLimitYears ?? 0, b.words)}`, buttons);
+    await sendButtons(b, "bot_not_understood", `${t.NOT_UNDERSTOOD_YES_NO}\n\n${t.ageLimit(await chosenProfessional(b, ctx), b.clinic.designation, b.clinic.ageLimitYears ?? 0, b.words)}`, buttons);
     return;
   }
   if (answer) {

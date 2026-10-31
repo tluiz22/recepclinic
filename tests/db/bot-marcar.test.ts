@@ -317,7 +317,7 @@ describe("bot: retorno e idade limite", () => {
     reply = await say(phone, { id: optionId(reply, "Dr. Segundo") });
     reply = await say(phone, { id: "for_other" });
     reply = await say(phone, "01/01/2020");
-    expect(reply.at(-1)).toMatchObject({ kind: "buttons", body: "Consulta é para pacientes até 4 anos.\n\nDeseja agendar para outra pessoa?" });
+    expect(reply.at(-1)).toMatchObject({ kind: "buttons", body: "Dr. Segundo atende pacientes até 4 anos.\n\nDeseja agendar para outra pessoa?" });
     reply = await say(phone, { id: "no" });
     expect(titles(reply)).toEqual(["1. Consultas", "2. Exames", "3. Informações"]);
     await adminClient().from("clinic_settings").update({ consultation_age_limit_years: null }).eq("clinic_id", f.clinicId);

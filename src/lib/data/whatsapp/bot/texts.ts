@@ -228,8 +228,9 @@ export const SELF_MINOR = "Para menores de 18 anos, o agendamento precisa ser fe
 export const bookingLink = (serviceName: string, patientName: string, url: string) =>
   `Prontinho! Escolha o melhor dia e horário para *${serviceName}* de ${patientName} neste link:\n${url}\n\nO link vale por 30 minutos.`;
 
-export const ageLimit = (serviceName: string, limitYears: number, w: Words) =>
-  `${serviceName} é para pacientes até ${limitYears - 1} anos.\n\nDeseja agendar para ${w.feminine ? "outra criança" : "outra pessoa"}?`;
+/** Acima da idade limite, com o profissional escolhido ou a clínica (cliente, 31/out/2026). */
+export const ageLimit = (professionalName: string | null, d: Designation, limitYears: number, w: Words) =>
+  `${ageLimitNotice(professionalName, d, limitYears)}\n\nDeseja agendar para ${w.feminine ? "outra criança" : "outra pessoa"}?`;
 
 /** Já tem marcado: aponta o Remarcar do próprio bot, com o caminho (cliente, 11/out/2026). */
 export const alreadyScheduled = (patientName: string, serviceName: string, when: string, group: "consultation" | "exam") =>

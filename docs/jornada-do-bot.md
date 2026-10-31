@@ -82,7 +82,8 @@ Consultas › Marcar consulta, ou Exames › Marcar exame. O dia e o horário s�
         "A clínica atende…".*
      6. 🤖 Identifica o paciente: escolhe um já cadastrado ou informa nome completo e data de nascimento. *Número novo: o
         paciente primeiro, depois o nome de quem escreve (paciente menor: "do responsável"), que recebe os lembretes.
-        Menor de 18 anos marcando para si: só pelo responsável. Idade limite conferida.*
+        Menor de 18 anos marcando para si: só pelo responsável. Acima da idade limite: "Dr(a). X atende pacientes até N
+        anos. Deseja agendar para outra criança?"*
      7. 🔍 O paciente já tem esse atendimento marcado?
         - **Sim:** 🤖 Avisa o dia marcado e indica Remarcar.
         - **Não**

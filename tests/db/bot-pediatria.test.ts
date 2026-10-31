@@ -139,7 +139,7 @@ describe("clínica Pediátrica com idade limite", () => {
     await consultationWith(phone, "Dr. Segundo");
     await say(phone, "Caio Alves");
     const reply = await say(phone, "01/01/2012");
-    expect(reply.at(-1)).toMatchObject({ kind: "buttons", body: "Consulta é para pacientes até 11 anos.\n\nDeseja agendar para outra criança?" });
+    expect(reply.at(-1)).toMatchObject({ kind: "buttons", body: "Dr. Segundo atende pacientes até 11 anos.\n\nDeseja agendar para outra criança?" });
   });
 
   it("criança já cadastrada no número: reaproveita o cadastro, sem pedir o responsável", async () => {
