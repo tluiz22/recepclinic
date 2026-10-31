@@ -783,6 +783,136 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"kb_categories": {
+                  Row: {
+                    "key": string,"label": string,"sort_order": number
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "key": string,"label": string,"sort_order": number
+                  }
+                  Update: {
+                    "key"?: string,"label"?: string,"sort_order"?: number
+                  }
+                  Relationships: [
+                    
+                  ]
+                },"kb_clinical_terms": {
+                  Row: {
+                    "id": string,"is_active": boolean,"term": string,"term_group": string,"updated_at": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "id"?: string,"is_active"?: boolean,"term": string,"term_group": string,"updated_at"?: string
+                  }
+                  Update: {
+                    "id"?: string,"is_active"?: boolean,"term"?: string,"term_group"?: string,"updated_at"?: string
+                  }
+                  Relationships: [
+                    
+                  ]
+                },"kb_entries": {
+                  Row: {
+                    "answer_type": Database["public"]['Enums']["kb_answer_type"],"category_key": string,"code": string,"created_at": string,"flow": string | null,"guidance": string,"id": string,"keywords": (string)[],"offers_reception": boolean,"question": string,"required_term": string | null,"sources": (string)[],"status": Database["public"]['Enums']["kb_status"],"template": string | null,"updated_at": string,"updated_by": string | null,"version": number
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "answer_type": Database["public"]['Enums']["kb_answer_type"],"category_key": string,"code": string,"created_at"?: string,"flow"?: string | null,"guidance"?: string,"id"?: string,"keywords"?: (string)[],"offers_reception"?: boolean,"question": string,"required_term"?: string | null,"sources"?: (string)[],"status"?: Database["public"]['Enums']["kb_status"],"template"?: string | null,"updated_at"?: string,"updated_by"?: string | null,"version"?: number
+                  }
+                  Update: {
+                    "answer_type"?: Database["public"]['Enums']["kb_answer_type"],"category_key"?: string,"code"?: string,"created_at"?: string,"flow"?: string | null,"guidance"?: string,"id"?: string,"keywords"?: (string)[],"offers_reception"?: boolean,"question"?: string,"required_term"?: string | null,"sources"?: (string)[],"status"?: Database["public"]['Enums']["kb_status"],"template"?: string | null,"updated_at"?: string,"updated_by"?: string | null,"version"?: number
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "kb_entries_category_key_fkey"
+      columns: ["category_key"]
+isOneToOne: false
+      referencedRelation: "kb_categories"
+      referencedColumns: ["key"]
+    }
+                  ]
+                },"kb_publications": {
+                  Row: {
+                    "content": NonNullable<Json>,"published_at": string,"published_by": string | null,"version": number
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "content": NonNullable<Json>,"published_at"?: string,"published_by"?: string | null,"version": number
+                  }
+                  Update: {
+                    "content"?: NonNullable<Json>,"published_at"?: string,"published_by"?: string | null,"version"?: number
+                  }
+                  Relationships: [
+                    
+                  ]
+                },"kb_revisions": {
+                  Row: {
+                    "actor_user_id": string | null,"entry_id": string | null,"id": number,"new_row": Json | null,"occurred_at": string,"old_row": Json | null,"operation": string,"record_id": string,"table_name": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "actor_user_id"?: string | null,"entry_id"?: string | null,"id"?: never,"new_row"?: Json | null,"occurred_at"?: string,"old_row"?: Json | null,"operation": string,"record_id": string,"table_name": string
+                  }
+                  Update: {
+                    "actor_user_id"?: string | null,"entry_id"?: string | null,"id"?: never,"new_row"?: Json | null,"occurred_at"?: string,"old_row"?: Json | null,"operation"?: string,"record_id"?: string,"table_name"?: string
+                  }
+                  Relationships: [
+                    
+                  ]
+                },"kb_specialties": {
+                  Row: {
+                    "id": string,"is_active": boolean,"name": string,"terms": (string)[],"updated_at": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "id"?: string,"is_active"?: boolean,"name": string,"terms"?: (string)[],"updated_at"?: string
+                  }
+                  Update: {
+                    "id"?: string,"is_active"?: boolean,"name"?: string,"terms"?: (string)[],"updated_at"?: string
+                  }
+                  Relationships: [
+                    
+                  ]
+                },"kb_synonyms": {
+                  Row: {
+                    "created_at": string,"entry_id": string,"id": string,"text": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "created_at"?: string,"entry_id": string,"id"?: string,"text": string
+                  }
+                  Update: {
+                    "created_at"?: string,"entry_id"?: string,"id"?: string,"text"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "kb_synonyms_entry_id_fkey"
+      columns: ["entry_id"]
+isOneToOne: false
+      referencedRelation: "kb_entries"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"kb_unmatched": {
+                  Row: {
+                    "clinic_id": string,"conversation_state": string | null,"id": number,"occurred_at": string,"text": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "clinic_id": string,"conversation_state"?: string | null,"id"?: never,"occurred_at"?: string,"text": string
+                  }
+                  Update: {
+                    "clinic_id"?: string,"conversation_state"?: string | null,"id"?: never,"occurred_at"?: string,"text"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "kb_unmatched_clinic_id_fkey"
+      columns: ["clinic_id"]
+isOneToOne: false
+      referencedRelation: "clinics"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"locations": {
                   Row: {
                     "address": string | null,"clinic_id": string,"created_at": string,"id": string,"is_active": boolean,"name": string,"type": Database["public"]['Enums']["location_type"],"updated_at": string
@@ -1773,6 +1903,9 @@ isOneToOne: false
 "nfse_invoice_issued_for_retry":
 { Args: { "p_invoice_id": string }; Returns: boolean
                            },
+"publish_knowledge_base":
+{ Args: Record<PropertyKey, never>; Returns: number
+                           },
 "reschedule_group_session":
 { Args: { "p_appointment_id": string,"p_channel": Database["public"]['Enums']["action_channel"],"p_scheduled_at": string,"p_trail"?: Json }; Returns: undefined
                            },
@@ -1836,7 +1969,7 @@ isOneToOne: false
                            }
           }
           Enums: {
-            "action_channel": "admin"|"whatsapp_bot","agenda_kind": "professional"|"resource","agenda_scope": "all"|"restricted","appointment_status": "scheduled"|"confirmed"|"completed"|"canceled"|"no_show","booking_link_mode": "create"|"reschedule","clinic_profile": "pediatric"|"adult"|"mixed","clinic_role": "admin"|"professional"|"reception","clinic_status": "active"|"suspended"|"onboarding","location_type": "clinic"|"home_visit","scheduling_mode": "individual"|"group","series_skip_reason": "holiday"|"block"|"conflict","service_category": "consultation"|"return_visit"|"exam"
+            "action_channel": "admin"|"whatsapp_bot","agenda_kind": "professional"|"resource","agenda_scope": "all"|"restricted","appointment_status": "scheduled"|"confirmed"|"completed"|"canceled"|"no_show","booking_link_mode": "create"|"reschedule","clinic_profile": "pediatric"|"adult"|"mixed","clinic_role": "admin"|"professional"|"reception","clinic_status": "active"|"suspended"|"onboarding","kb_answer_type": "template"|"source"|"flow"|"fixed"|"reception","kb_status": "draft"|"approved"|"active"|"inactive","location_type": "clinic"|"home_visit","scheduling_mode": "individual"|"group","series_skip_reason": "holiday"|"block"|"conflict","service_category": "consultation"|"return_visit"|"exam"
           }
           CompositeTypes: {
             [_ in never]: never
@@ -1952,7 +2085,7 @@ export type CompositeTypes<
 export const Constants = {
   "public": {
           Enums: {
-            "action_channel": ["admin", "whatsapp_bot"],"agenda_kind": ["professional", "resource"],"agenda_scope": ["all", "restricted"],"appointment_status": ["scheduled", "confirmed", "completed", "canceled", "no_show"],"booking_link_mode": ["create", "reschedule"],"clinic_profile": ["pediatric", "adult", "mixed"],"clinic_role": ["admin", "professional", "reception"],"clinic_status": ["active", "suspended", "onboarding"],"location_type": ["clinic", "home_visit"],"scheduling_mode": ["individual", "group"],"series_skip_reason": ["holiday", "block", "conflict"],"service_category": ["consultation", "return_visit", "exam"]
+            "action_channel": ["admin", "whatsapp_bot"],"agenda_kind": ["professional", "resource"],"agenda_scope": ["all", "restricted"],"appointment_status": ["scheduled", "confirmed", "completed", "canceled", "no_show"],"booking_link_mode": ["create", "reschedule"],"clinic_profile": ["pediatric", "adult", "mixed"],"clinic_role": ["admin", "professional", "reception"],"clinic_status": ["active", "suspended", "onboarding"],"kb_answer_type": ["template", "source", "flow", "fixed", "reception"],"kb_status": ["draft", "approved", "active", "inactive"],"location_type": ["clinic", "home_visit"],"scheduling_mode": ["individual", "group"],"series_skip_reason": ["holiday", "block", "conflict"],"service_category": ["consultation", "return_visit", "exam"]
           }
         }
 } as const

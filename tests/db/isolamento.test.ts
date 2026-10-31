@@ -27,9 +27,16 @@ const CLINIC_B = "0b000000-0000-4000-8000-000000000001"; // Odonto Exemplo
 //   está em tests/db/documentos-do-paciente.test.ts.
 // - cron_heartbeats: última execução de cada rotina (F9.3), da plataforma
 //   (sem clinic_id); só a plataforma grava.
+// - kb_*: Base de Conhecimento Global (cliente, 31/out/2026), igual para todas
+//   as clínicas (sem clinic_id); só o Suporte grava.
+// - kb_unmatched: perguntas que o bot não reconheceu (texto, sem telefone);
+//   o bot grava só na própria clínica, só o Suporte lê e ninguém altera (sem
+//   gatilho de auditoria); a clínica de exemplo não tem linhas. O isolamento
+//   está em tests/db/base-de-conhecimento.test.ts.
 const NO_DIRECT_FK = new Set(["platform_audit_log", "platform_access_log", "system_errors"]);
-const NO_AUDIT_TRIGGER = new Set(["platform_audit_log", "platform_access_log", "clinic_usage_monthly", "system_errors"]);
-const NOT_IN_DATA_SWEEP = new Set(["platform_audit_log", "system_errors", "push_subscriptions", "patient_documents"]);
+const NO_AUDIT_TRIGGER = new Set(["platform_audit_log", "platform_access_log", "clinic_usage_monthly", "system_errors", "kb_unmatched"]);
+const NOT_IN_DATA_SWEEP = new Set(["platform_audit_log", "system_errors", "push_subscriptions", "patient_documents", "kb_unmatched"]);
+const KNOWLEDGE_BASE = ["kb_categories", "kb_entries", "kb_synonyms", "kb_specialties", "kb_clinical_terms", "kb_revisions", "kb_publications"];
 
 let clinicTables: string[] = [];
 let allTables: string[] = [];
@@ -185,7 +192,7 @@ describe("varredura de isolamento (dados de teste)", () => {
   });
 
   it("todas as tabelas do banco entraram na varredura ou têm exceção registrada", () => {
-    const covered = new Set([...dataTables, ...NOT_IN_DATA_SWEEP, "platform_staff", "features", "cron_heartbeats"]);
+    const covered = new Set([...dataTables, ...NOT_IN_DATA_SWEEP, ...KNOWLEDGE_BASE, "platform_staff", "features", "cron_heartbeats"]);
     expect(allTables.filter((name) => !covered.has(name))).toEqual([]);
   });
 });
