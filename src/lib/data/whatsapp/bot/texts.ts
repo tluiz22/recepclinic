@@ -210,8 +210,13 @@ export const birthdateMatches = (w: Words) =>
 export const confirmPatient = (w: Words, name: string, birthdate: string) =>
   `Encontramos *${name}*, nascido(a) em ${birthdate}: ${w.feminine ? "é essa a" : "é esse o"} ${w.patient}? Responda Sim ou Não.`;
 
-export const ASK_CONTACT_NAME = "Antes de continuar, qual é o seu nome completo?";
 export const confirmContactName = (name: string) => `Confira o seu nome: *${name}*\n\nEstá correto? Responda Sim ou Não.`;
+// Número novo marcando para outra pessoa (cliente, 31/out/2026): o paciente primeiro, depois quem escreve; menor de 18, o responsável.
+export const ASK_GUARDIAN_NAME = "Qual é o nome completo do responsável?";
+export const confirmGuardianName = (name: string) => `Confira o nome do responsável: *${name}*\n\nEstá correto? Responda Sim ou Não.`;
+/** Idade limite da clínica (consulta), com o profissional escolhido ou, no "Primeiro horário", a clínica. */
+export const ageLimitNotice = (professionalName: string | null, d: Designation, limitYears: number) =>
+  `${professionalName ?? designationTitle(d)} atende pacientes até ${limitYears - 1} anos.`;
 export const askPatientName = (w: Words) => `Qual é o nome completo ${of(w)}?`;
 export const ASK_SELF_NAME = "Qual é o seu nome completo?";
 export const confirmNewPatient = (w: Words, name: string, birthdate: string) =>

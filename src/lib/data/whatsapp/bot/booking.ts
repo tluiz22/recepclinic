@@ -86,6 +86,8 @@ export type BookingContext = {
   insurancePlanId?: string;
   planCandidates?: Plan[];
   refusedPlan?: { name: string | null; forThisService: boolean };
+  /** Número novo, paciente menor: quem escreve é o responsável. */
+  guardian?: boolean;
 };
 
 /** Estados dos fluxos de marcar (cada um vira passo do funil). */
@@ -454,10 +456,9 @@ const activePatients = async (b: Bot): Promise<Patient[]> =>
 /** Lista os pacientes do contato com atendimento futuro do mesmo tipo; nunca todos (convênio com muitas crianças, piloto). */
 async function enterPatientSelect(b: Bot, ctx: BookingContext): Promise<void> {
   const base = keepPath(ctx);
-  if (!b.convo.contactId) {
-    await say(b, "bot_book_ask_contact_name", t.ASK_CONTACT_NAME);
-    return go(b, "BOOK_PATIENT_NEW", { ...base, awaiting: "contact_name" });
-  }
+  await sayAgeLimitNotice(b, base);
+  // Número novo: o paciente primeiro (nome e nascimento), depois quem escreve (cliente, 31/out/2026).
+  if (!b.convo.contactId) return askPatientName(b, base);
   const patients = (await activePatients(b)).filter((p) => !p.isContactSelf);
   const upcoming = await listUpcomingAppointments(
     b.db,
@@ -477,6 +478,22 @@ async function enterPatientSelect(b: Bot, ctx: BookingContext): Promise<void> {
   await sendPatientChoice(b, candidates, t.patientChoice(b.words));
   await go(b, "BOOK_PATIENT_SELECT", { ...base, awaiting: "patient_choice", candidates });
 }
+
+/** Consulta com idade limite na clínica: avisa antes de identificar o paciente (cliente, 31/out/2026). */
+async function sayAgeLimitNotice(b: Bot, ctx: BookingContext): Promise<void> {
+  const limit = b.clinic.ageLimitYears;
+  if (ctx.category !== "consultation" || limit === null) return;
+  const agenda = ctx.agendaId ? (await serviceOf(b, ctx))?.agendas.find((a) => a.id === ctx.agendaId) : undefined;
+  await say(b, "bot_book_age_limit_notice", t.ageLimitNotice(agenda?.professionalName ?? null, b.clinic.designation, limit));
+}
+
+/** Número novo, depois do paciente: o nome de quem escreve (paciente menor: "do responsável"). */
+async function askContactName(b: Bot, ctx: BookingContext, guardian: boolean): Promise<void> {
+  await say(b, "bot_book_ask_contact_name", guardian ? t.ASK_GUARDIAN_NAME : t.ASK_SELF_NAME);
+  await go(b, "BOOK_PATIENT_NEW", { ...ctx, awaiting: "contact_name", contactName: undefined, guardian });
+}
+
+const confirmContactText = (ctx: BookingContext, name: string) => (ctx.guardian ? t.confirmGuardianName(name) : t.confirmContactName(name));
 
 async function sendPatientChoice(b: Bot, candidates: Candidate[], body: string): Promise<void> {
   const items = [...candidates.map((c) => ({ id: `patient_${c.id}`, label: c.name })), { id: t.PATIENT_NEW_ID, label: t.otherPatientLabel(b.words) }];
@@ -544,18 +561,21 @@ async function handlePatientNew(b: Bot, selection: Selection): Promise<void> {
   const text = selection.text.trim();
   switch (ctx.awaiting) {
     case "contact_name": {
-      if (!text) return say(b, "bot_book_ask_contact_name", t.ASK_CONTACT_NAME);
-      await say(b, "bot_book_confirm_contact_name", t.confirmContactName(text));
+      if (!text) return askContactName(b, ctx, ctx.guardian ?? false);
+      await say(b, "bot_book_confirm_contact_name", confirmContactText(ctx, text));
       return go(b, "BOOK_PATIENT_NEW", { ...ctx, awaiting: "contact_confirm", contactName: text });
     }
     case "contact_confirm": {
       const answer = yesNo(selection);
       if (answer === null) {
-        return repeatYesNo(b, "bot_book_confirm_contact_name", t.confirmContactName(ctx.contactName ?? ""));
+        return repeatYesNo(b, "bot_book_confirm_contact_name", confirmContactText(ctx, ctx.contactName ?? ""));
       }
-      if (answer && ctx.contactName) return askPatientName(b, ctx);
-      await say(b, "bot_book_ask_contact_name", t.ASK_CONTACT_NAME);
-      return go(b, "BOOK_PATIENT_NEW", { ...ctx, awaiting: "contact_name", contactName: undefined });
+      if (answer && ctx.contactName) {
+        // O paciente já foi informado: só falta conferir os dados dele.
+        if (ctx.newName && ctx.newBirthdate) return askNewConfirm(b, ctx, ctx.newName, ctx.newBirthdate);
+        return askPatientName(b, ctx);
+      }
+      return askContactName(b, ctx, ctx.guardian ?? false);
     }
     case "patient_name": {
       if (!text) return say(b, "bot_book_ask_patient_name", t.askPatientName(b.words));
@@ -567,6 +587,7 @@ async function handlePatientNew(b: Bot, selection: Selection): Promise<void> {
       const birthdate = parseBirthdate(text, b.clinic.today);
       if (!birthdate) return sayInvalidBirthdate(b);
       if (await refusedByAgeLimit(b, ctx, birthdate)) return;
+      if (!b.convo.contactId && !ctx.contactName) return askContactName(b, { ...ctx, newBirthdate: birthdate }, !isAdult(birthdate, b.clinic.today));
       return askNewConfirm(b, ctx, ctx.newName ?? "", birthdate);
     }
     case "new_confirm": {

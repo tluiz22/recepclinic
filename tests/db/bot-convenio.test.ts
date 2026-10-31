@@ -198,10 +198,7 @@ describe("clínica com convênios", () => {
     reply = await say(phone, { id: optionId(reply, "Unimed") });
     expect(bodies(reply)).toEqual(["Atendemos pelo convênio *Unimed*.", "É para você ou para outra pessoa?"]);
     await say(phone, { id: "for_other" });
-    await say(phone, "Maria Convênio");
-    await say(phone, "sim");
-    await say(phone, "Joana Convênio");
-    await say(phone, "10/03/2015");
+    for (const input of ["Joana Convênio", "10/03/2015", "Maria Convênio", "sim"]) await say(phone, input);
     reply = await say(phone, "Sim");
     expect(reply[0].body).toContain("/agendar/");
     expect(transcript.join("\n")).not.toContain("R$");
@@ -241,7 +238,7 @@ describe("clínica com convênios", () => {
     reply = await say(phone, { id: optionId(reply, "Amil") });
     expect(reply[0].body).toBe("Atendemos pelo convênio *Amil*.");
     await say(phone, { id: "for_other" });
-    for (const input of ["Rita Amil", "sim", "Lia Amil", "05/05/2016", "Sim"]) reply = await say(phone, input);
+    for (const input of ["Lia Amil", "05/05/2016", "Rita Amil", "sim", "Sim"]) reply = await say(phone, input);
     expect(reply[0].body).toContain("/agendar/");
     const link = await lastLink(phone);
     expect(link).toMatchObject({ insurance_plan_id: plans.Amil, agenda_id: null });

@@ -99,7 +99,11 @@ export const JOURNEY: JourneySection[] = [
               ],
             ),
             bot("É para você ou para outra pessoa?", "Clínica pediátrica: só no exame."),
-            bot("Identifica o paciente: escolhe um já cadastrado ou informa nome e data de nascimento", "Na primeira vez, o nome de quem escreve. Menor de 18 anos marcando para si: só pelo responsável. Idade limite do serviço conferida."),
+            bot("\"Dr(a). X atende pacientes até N anos\"", "Só na consulta, com idade limite na clínica. No \"Primeiro horário\": \"A clínica atende…\"."),
+            bot(
+              "Identifica o paciente: escolhe um já cadastrado ou informa nome completo e data de nascimento",
+              "Número novo: o paciente primeiro, depois o nome de quem escreve (paciente menor: \"do responsável\"), que recebe os lembretes. Menor de 18 anos marcando para si: só pelo responsável. Idade limite conferida.",
+            ),
             check("O paciente já tem esse atendimento marcado?"),
             branch(
               ["Sim", [bot("Avisa o dia marcado e indica Remarcar")]],

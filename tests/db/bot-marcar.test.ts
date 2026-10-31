@@ -117,16 +117,17 @@ describe("bot: marcar consulta (número novo)", () => {
     reply = await say(phone, "1");
     // Perfil Mista: a consulta pergunta para quem.
     expect(reply.at(-1)).toMatchObject({ kind: "buttons", body: "É para você ou para outra pessoa?" });
+    // Número novo: o paciente primeiro (nome e nascimento), depois o responsável (cliente, 31/out/2026).
     reply = await say(phone, { id: "for_other" });
-    expect(reply[0].body).toBe("Antes de continuar, qual é o seu nome completo?");
-    reply = await say(phone, "Maria Souza");
-    expect(reply[0].body).toContain("*Maria Souza*");
-    reply = await say(phone, "sim");
     expect(reply[0].body).toBe("Qual é o nome completo do paciente?");
     await say(phone, "Joana Souza");
     reply = await say(phone, "31/02/2015");
     expect(reply[0].body).toContain("Não consegui entender essa data");
     reply = await say(phone, "10/03/2015");
+    expect(reply[0].body).toBe("Qual é o nome completo do responsável?");
+    reply = await say(phone, "Maria Souza");
+    expect(reply[0].body).toContain("*Maria Souza*");
+    reply = await say(phone, "sim");
     expect(reply[0].body).toContain("Nome: *Joana Souza*\nData de nascimento: *10/03/2015*");
     reply = await say(phone, "Sim");
     expect(reply[0].body).toMatch(/^Prontinho! Escolha o melhor dia e horário para \*Consulta\* de Joana Souza neste link:\nhttps:\/\/app\.exemplo\.test\/agendar\/[A-Za-z0-9_-]{22}\n\nO link vale por 30 minutos\.$/);
@@ -220,9 +221,9 @@ describe("bot: pedido de recepção digitado nos passos de texto livre (cliente,
       expect(reply[0].body).toContain("*Rua A, 5, ao lado da recepção*");
       await say(other, "sim");
       reply = await say(other, { id: "for_other" });
-      expect(reply[0].body).toBe("Antes de continuar, qual é o seu nome completo?");
+      expect(reply[0].body).toBe("Qual é o nome completo do paciente?");
       reply = await say(other, "Maria Secretária");
-      expect(reply[0].body).toContain("*Maria Secretária*");
+      expect(reply[0].body).toBe("Qual a data de nascimento do paciente? (formato dd/mm/aaaa)");
       expect((await conversation(other)).state).toBe("BOOK_PATIENT_NEW");
       // Fora desses passos, o mesmo texto transfere.
       reply = await say(other, "quero falar com a secretária");

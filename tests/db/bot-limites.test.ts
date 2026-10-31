@@ -116,13 +116,16 @@ afterAll(async () => f.cleanup());
 
 describe("bot: limites do contato, sem coexistência", () => {
   it("dois cadastros pelo bot com link: os links ainda válidos contam como atendimentos", async () => {
-    // Número novo: nome do contato, paciente, link.
+    // Número novo: paciente (nome e nascimento), responsável, link (cliente, 31/out/2026).
     let reply = await upToForOther();
-    expect(reply[0].body).toBe("Antes de continuar, qual é o seu nome completo?");
-    await say("Rita Lima");
-    await say("sim");
+    expect(reply[0].body).toBe("Qual é o nome completo do paciente?");
     await say("Ana Lima");
-    await say("10/03/2015");
+    reply = await say("10/03/2015");
+    expect(reply[0].body).toBe("Qual é o nome completo do responsável?");
+    reply = await say("Rita Lima");
+    expect(reply[0].body).toContain("Confira o nome do responsável: *Rita Lima*");
+    reply = await say("sim");
+    expect(reply[0].body).toContain("Nome: *Ana Lima*");
     reply = await say("sim");
     expect(reply[0].body).toContain("Prontinho!");
 

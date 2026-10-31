@@ -78,9 +78,12 @@ Consultas › Marcar consulta, ou Exames › Marcar exame. O dia e o horário s�
               quem atende o plano.*
             - **Não atendido:** 🤖 Avisa e pergunta se quer particular. *Sim: valor. Não: a recepção assume.*
      4. 🤖 É para você ou para outra pessoa? *Clínica pediátrica: só no exame.*
-     5. 🤖 Identifica o paciente: escolhe um já cadastrado ou informa nome e data de nascimento. *Na primeira vez, o nome
-        de quem escreve. Menor de 18 anos marcando para si: só pelo responsável. Idade limite do serviço conferida.*
-     6. 🔍 O paciente já tem esse atendimento marcado?
+     5. 🤖 "Dr(a). X atende pacientes até N anos." *Só na consulta, com idade limite na clínica; no "Primeiro horário",
+        "A clínica atende…".*
+     6. 🤖 Identifica o paciente: escolhe um já cadastrado ou informa nome completo e data de nascimento. *Número novo: o
+        paciente primeiro, depois o nome de quem escreve (paciente menor: "do responsável"), que recebe os lembretes.
+        Menor de 18 anos marcando para si: só pelo responsável. Idade limite conferida.*
+     7. 🔍 O paciente já tem esse atendimento marcado?
         - **Sim:** 🤖 Avisa o dia marcado e indica Remarcar.
         - **Não**
           1. 🤖 Manda o link para escolher dia e horário. *O link vale 30 minutos.*
