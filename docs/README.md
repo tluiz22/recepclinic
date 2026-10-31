@@ -1,16 +1,16 @@
 # RecepClinic
 
-> **Estado atual (retomar daqui), 30/out/2026.** Histórico completo em [`historico.md`](historico.md) (não ler
+> **Estado atual (retomar daqui), 31/out/2026.** Histórico completo em [`historico.md`](historico.md) (não ler
 > na retomada; buscar por data, fase ou commit quando precisar).
 >
 > **Produção = `main` em 31/out (`20c2239`):** menu lateral (L1–L3), C14 "Alterar" no "Mais", C15 Retomar contato sem
 > alertas e com "Retirar da lista" e C16 ("Como funciona?" de Contatos para revisar; limites do bot com padrão 5);
 > publicados a pedido do cliente antes da validação no staging.
 >
-> **Próxima sessão (cliente, 30/out): menu lateral, na `main`** ([`menu-lateral.md`](menu-lateral.md); ler o bloco de
-> retomada dele): L1–L3 na produção (31/out); o cliente valida. Em seguida,
-> revisão da jornada do bot ([`jornada-do-bot.md`](jornada-do-bot.md), temporário). O faturamento fica parado na branch
-> `faturamento` (abaixo).
+> **Próxima sessão (cliente, 31/out): revisão da jornada do bot, na `main`.** Base: [`jornada-do-bot.md`](jornada-do-bot.md)
+> (temporário: não precisa acompanhar o bot; excluir ao fim da revisão). Mudança no caminho do paciente atualiza também
+> Tecnologia › Jornada do bot (`botJourney.ts`, regra do `CLAUDE.md`). Menu lateral ([`menu-lateral.md`](menu-lateral.md))
+> concluído e na produção; o cliente valida quando puder. O faturamento fica parado na branch `faturamento` (abaixo).
 >
 > **N0 do Asaas (30/out):** NFS-e pelo Asaas, N0 (seções 13.8 e 13.9 do `planejamento-nfse-asaas.md`; ler o bloco de
 > retomada dele). Cartão do selo do Asaas na `main` (`13ebeab`), visível só com `ASAAS_PREVIEW=1` (staging).
