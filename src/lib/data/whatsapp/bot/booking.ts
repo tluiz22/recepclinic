@@ -2,7 +2,7 @@ import { isAdult, isOverConsultationAgeLimit } from "../../../age";
 import { bookingPath } from "../../../publicId";
 import { evaluateReturnEligibility, findBlockingAppointment, findReturnOrigin, listUpcomingAppointments, type ReturnEligibility } from "../../agenda/appointments";
 import { BOT_LINK_TTL_MS, createBookingLink } from "../../agenda/links";
-import { bookableAgendaLocations } from "../../agenda/publicBooking";
+import { agendasAcceptingPlan, bookableAgendaLocations } from "../../agenda/publicBooking";
 import { earliestDate, horizonLastDate } from "../../agenda/slots";
 import type { LocationType } from "../../config/locations";
 import { DataError, unwrap } from "../../errors";
@@ -11,7 +11,7 @@ import { pauseForHuman, startFunnel } from "../conversations";
 import { checkBookingLimits, checkNewPatientLimit, contactForLimits, recordBotLimitEvent } from "../botLimits";
 import { formatAppointmentWhen } from "../templates";
 import { servicesOf, type BotService } from "./catalog";
-import { attachContact, end, go, repeatYesNo, say, sayInvalidBirthdate, sendButtons, sendList, step, textFor, type Bot } from "./engine";
+import { askHandoffSubject, attachContact, end, go, repeatYesNo, say, sayInvalidBirthdate, sendButtons, sendList, step, textFor, type Bot } from "./engine";
 import { formatBirthdate, parseBirthdate, pick, yesNo, type Selection } from "./input";
 import { showMenu, showSubmenu } from "./menus";
 import * as t from "./texts";
@@ -42,10 +42,15 @@ type Awaiting =
   | "new_confirm"
   | "self_birthdate"
   | "self_name"
-  | "self_confirm";
+  | "self_confirm"
+  | "coverage"
+  | "plan_choice"
+  | "plan_name"
+  | "private_offer";
 
 type Candidate = { id: string; name: string; birthdate?: string };
 type ReturnCandidate = Candidate & { originId: string; agendaId: string; serviceId: string };
+type Plan = { id: string; name: string };
 
 export type BookingContext = {
   category: Category;
@@ -75,6 +80,14 @@ export type BookingContext = {
   joinWaitlist?: boolean;
   /** Agendas do serviço com horário livre no prazo e os tipos de local de cada uma (cliente, 11/out/2026). */
   bookable?: Record<string, LocationType[]>;
+  /** Particular ou convênio, já respondido (cliente, 31/out/2026). */
+  coverage?: "private" | "insurance";
+  /** Convênio aceito: vai no link e fica no atendimento. */
+  insurancePlanId?: string;
+  planCandidates?: Plan[];
+  refusedPlan?: { name: string | null; forThisService: boolean };
+  /** Número novo, paciente menor: quem escreve é o responsável. */
+  guardian?: boolean;
 };
 
 /** Estados dos fluxos de marcar (cada um vira passo do funil). */
@@ -83,6 +96,7 @@ export const BOOKING_STATES = new Set([
   "BOOK_AGENDA",
   "BOOK_LOCATION",
   "BOOK_HOME_ADDRESS",
+  "BOOK_COVERAGE",
   "BOOK_FOR_WHOM",
   "BOOK_PATIENT_SELECT",
   "BOOK_PATIENT_NEW",
@@ -114,32 +128,41 @@ const keepPath = (ctx: BookingContext): BookingContext => ({
   contactName: ctx.contactName,
   originAppointmentId: ctx.originAppointmentId,
   joinWaitlist: ctx.joinWaitlist,
+  coverage: ctx.coverage,
+  insurancePlanId: ctx.insurancePlanId,
 });
 
 // ---------------------------------------------------------------------------
 // Serviço, profissional e local
 // ---------------------------------------------------------------------------
 
-export async function startBooking(b: Bot, category: "consultation" | "exam", { joinWaitlist = false } = {}): Promise<void> {
+export async function startBooking(
+  b: Bot,
+  category: "consultation" | "exam",
+  { joinWaitlist = false, serviceId }: { joinWaitlist?: boolean; serviceId?: string } = {},
+): Promise<void> {
   await open(b, category === "exam" ? "exam" : "booking", joinWaitlist ? { waitlist: true } : {});
   if (await stoppedByBotLimit(b, "booking")) return;
   const services = servicesOf(await b.catalog(), category);
   if (!services.length) return handOver(b, "bot_nothing_to_book", t.willReply(b.clinic.designation), "no_service");
-  // Sempre mostra a lista, mesmo com um serviço só: o paciente vê e confirma o que está marcando (cliente, 07/out).
-  await askService(b, { category, ...(joinWaitlist ? { joinWaitlist } : {}) }, services);
+  const ctx: BookingContext = { category, ...(joinWaitlist ? { joinWaitlist } : {}) };
+  // Um serviço só, ou o citado na pergunta (base de conhecimento): escolhe sozinho e avisa qual é
+  // (cliente, 31/out/2026; revoga a lista sempre de 07/out).
+  const chosen = services.length === 1 ? services[0] : services.find((s) => s.id === serviceId);
+  if (chosen) {
+    await say(b, "bot_book_service_auto", t.serviceAuto(chosen.name));
+    return chooseService(b, ctx, chosen);
+  }
+  await askService(b, ctx, services);
 }
-
-const minPrice = (s: BotService) => {
-  const values = Object.values(s.locationPrices);
-  return values.length ? Math.min(...values) : s.priceCents;
-};
 
 async function askService(b: Bot, ctx: BookingContext, services: BotService[]): Promise<void> {
   await sendList(
     b,
     "bot_book_service",
     t.serviceQuestion(ctx.category === "exam" ? "exam" : "consultation"),
-    t.numberedList(services.map((s) => ({ id: `service_${s.id}`, label: s.name, description: t.price(minPrice(s)) }))),
+    // Sem preço na lista: o valor vem depois das escolhas (cliente, 31/out/2026).
+    t.numberedList(services.map((s) => ({ id: `service_${s.id}`, label: s.name }))),
   );
   await go(b, "BOOK_SERVICE", ctx);
 }
@@ -220,7 +243,8 @@ async function askLocation(b: Bot, ctx: BookingContext, service: BotService, typ
     b,
     "bot_book_location",
     t.LOCATION_QUESTION,
-    t.numberedList(types.map((type) => ({ id: `location_${type}`, label: t.LOCATION_LABELS[type], description: t.price(service.locationPrices[type]) }))),
+        // Sem preço: o valor vem depois das escolhas (cliente, 31/out/2026).
+    t.numberedList(types.map((type) => ({ id: `location_${type}`, label: t.LOCATION_LABELS[type] }))),
   );
   await go(b, "BOOK_LOCATION", ctx);
 }
@@ -287,6 +311,121 @@ async function handleAddress(b: Bot, selection: Selection): Promise<void> {
 }
 
 // ---------------------------------------------------------------------------
+// Particular ou convênio e valor (cliente, 31/out/2026)
+// ---------------------------------------------------------------------------
+// Depois de serviço, profissional e local. Clínica sem convênios (recurso
+// desligado ou nenhum plano ativo): particular direto. Convênio: só planos
+// ativos da clínica, atendidos por algum profissional do caminho escolhido;
+// sem o valor particular. O retorno não passa por aqui.
+
+/** Planos com lista (mais o "Outro convênio" e o "Voltar ao menu"); acima disso, o paciente escreve. */
+const MAX_PLANS_IN_LIST = t.MAX_LIST_ROWS - 2;
+
+async function activePlans(b: Bot): Promise<Plan[]> {
+  if (!b.features.includes("insurance")) return [];
+  return unwrap(await b.db.from("insurance_plans").select("id, name").eq("clinic_id", b.clinicId).eq("is_active", true).order("name"), "Convênios");
+}
+
+/** Agendas do caminho escolhido: a do profissional ou, no "Primeiro horário", as com horário no local escolhido. */
+function pathAgendas(service: BotService, ctx: BookingContext): string[] {
+  if (ctx.agendaId) return [ctx.agendaId];
+  return bookableAgendas(service, ctx)
+    .filter((a) => !ctx.locationCategory || (ctx.bookable?.[a.id] ?? a.locationTypes).includes(ctx.locationCategory))
+    .map((a) => a.id);
+}
+
+async function enterCoverage(b: Bot, ctx: BookingContext): Promise<void> {
+  if (!(await activePlans(b)).length) return choosePrivate(b, ctx);
+  await sendButtons(b, "bot_book_coverage", t.COVERAGE_QUESTION, t.COVERAGE_BUTTONS);
+  await go(b, "BOOK_COVERAGE", { ...ctx, awaiting: "coverage" });
+}
+
+async function choosePrivate(b: Bot, ctx: BookingContext): Promise<void> {
+  const service = await serviceOf(b, ctx);
+  if (!service) return restart(b);
+  const cents = (ctx.locationCategory ? service.locationPrices[ctx.locationCategory] : undefined) ?? service.priceCents;
+  if (cents > 0) await say(b, "bot_book_price", t.priceInfo(ctx.category === "exam" ? "exam" : "consultation", cents, b.clinic.paymentInfo));
+  await afterPlace(b, { ...ctx, awaiting: undefined, planCandidates: undefined, refusedPlan: undefined, coverage: "private", insurancePlanId: undefined });
+}
+
+const planItems = (plans: Plan[]) => [
+  ...plans.map((p) => ({ id: `plan_${p.id}`, label: p.name })),
+  { id: t.PLAN_OTHER_ID, label: t.PLAN_OTHER_LABEL },
+];
+
+async function askPlanChoice(b: Bot, ctx: BookingContext, plans: Plan[]): Promise<void> {
+  await sendList(b, "bot_book_plan_choice", t.PLAN_LIST_QUESTION, t.numberedList(planItems(plans)));
+  await go(b, "BOOK_COVERAGE", { ...ctx, awaiting: "plan_choice", planCandidates: plans });
+}
+
+async function askPlan(b: Bot, ctx: BookingContext): Promise<void> {
+  const plans = await activePlans(b);
+  if (plans.length <= MAX_PLANS_IN_LIST) return askPlanChoice(b, ctx, plans);
+  await say(b, "bot_book_plan_ask", t.PLAN_TEXT_QUESTION);
+  await go(b, "BOOK_COVERAGE", { ...ctx, awaiting: "plan_name" });
+}
+
+async function acceptPlan(b: Bot, ctx: BookingContext, service: BotService, plan: Plan): Promise<void> {
+  const accepting = await agendasAcceptingPlan(b.db, b.clinicId, pathAgendas(service, ctx), plan.id);
+  if (!accepting.length) return refusePlan(b, ctx, plan.name, true);
+  await step(b, "insurance_accepted");
+  await say(b, "bot_book_plan_accepted", t.planAccepted(plan.name));
+  await afterPlace(b, { ...ctx, awaiting: undefined, planCandidates: undefined, refusedPlan: undefined, coverage: "insurance", insurancePlanId: plan.id });
+}
+
+async function refusePlan(b: Bot, ctx: BookingContext, planName: string | null, forThisService: boolean): Promise<void> {
+  await step(b, "insurance_not_accepted");
+  await sendButtons(b, "bot_book_plan_not_accepted", t.planNotAccepted(planName, b.clinic.designation, forThisService), t.YES_NO_BUTTONS);
+  await go(b, "BOOK_COVERAGE", { ...ctx, awaiting: "private_offer", planCandidates: undefined, refusedPlan: { name: planName, forThisService } });
+}
+
+async function handleCoverage(b: Bot, selection: Selection): Promise<void> {
+  const ctx = ctxOf(b);
+  const service = await serviceOf(b, ctx);
+  if (!service) return restart(b);
+  switch (ctx.awaiting) {
+    case "coverage": {
+      const text = selection.text.trim().toLowerCase();
+      const isPrivate = selection.id === t.COVERAGE_IDS.private || text === "1" || text.startsWith("particular");
+      const isInsurance = selection.id === t.COVERAGE_IDS.insurance || text === "2" || /^(conv[eê]nio|plano)/.test(text);
+      if (!isPrivate && !isInsurance) {
+        await say(b, "bot_not_understood", textFor(b, "not_understood", t.notUnderstood()));
+        return sendButtons(b, "bot_book_coverage", t.COVERAGE_QUESTION, t.COVERAGE_BUTTONS);
+      }
+      await step(b, "coverage", { answer: isPrivate ? "private" : "insurance" });
+      return isPrivate ? choosePrivate(b, ctx) : askPlan(b, ctx);
+    }
+    case "plan_choice": {
+      const plans = ctx.planCandidates ?? [];
+      const choice = pick(selection, planItems(plans), (i) => i.id);
+      if (!choice) {
+        await say(b, "bot_not_understood", textFor(b, "not_understood", t.notUnderstood()));
+        return askPlanChoice(b, ctx, plans);
+      }
+      const plan = plans.find((p) => `plan_${p.id}` === choice.id);
+      return plan ? acceptPlan(b, ctx, service, plan) : refusePlan(b, ctx, null, false);
+    }
+    case "plan_name": {
+      const text = selection.text.trim();
+      if (!text) return say(b, "bot_book_plan_ask", t.PLAN_TEXT_QUESTION);
+      // Só os planos ativos da clínica, pelo nome ou pelos outros nomes; o paciente confirma na lista (nunca pelo nome digitado).
+      const found = unwrap(await b.db.rpc("search_insurance_plans", { p_clinic_id: b.clinicId, p_query: text }), "Convênios").map((p) => ({ id: p.id, name: p.name }));
+      if (!found.length) return refusePlan(b, ctx, null, false);
+      return askPlanChoice(b, ctx, found);
+    }
+    case "private_offer": {
+      const refused = ctx.refusedPlan ?? { name: null, forThisService: false };
+      const answer = yesNo(selection);
+      if (answer === null) return repeatYesNo(b, "bot_book_plan_not_accepted", t.planNotAccepted(refused.name, b.clinic.designation, refused.forThisService));
+      if (answer) return choosePrivate(b, ctx);
+      return handOver(b, "bot_book_insurance_reception", t.insuranceToReception(b.clinic.designation), "insurance_not_accepted", "requested");
+    }
+    default:
+      return restart(b);
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Para quem e identificação do paciente
 // ---------------------------------------------------------------------------
 
@@ -296,6 +435,7 @@ function asksForWhom(b: Bot, ctx: BookingContext): boolean {
 }
 
 async function afterPlace(b: Bot, ctx: BookingContext): Promise<void> {
+  if (ctx.category !== "return_visit" && !ctx.coverage) return enterCoverage(b, ctx);
   if (!asksForWhom(b, ctx)) return enterPatientSelect(b, ctx);
   await sendButtons(b, "bot_book_for_whom", t.FOR_WHOM_QUESTION, t.FOR_WHOM_BUTTONS);
   await go(b, "BOOK_FOR_WHOM", ctx);
@@ -322,10 +462,9 @@ const activePatients = async (b: Bot): Promise<Patient[]> =>
 /** Lista os pacientes do contato com atendimento futuro do mesmo tipo; nunca todos (convênio com muitas crianças, piloto). */
 async function enterPatientSelect(b: Bot, ctx: BookingContext): Promise<void> {
   const base = keepPath(ctx);
-  if (!b.convo.contactId) {
-    await say(b, "bot_book_ask_contact_name", t.ASK_CONTACT_NAME);
-    return go(b, "BOOK_PATIENT_NEW", { ...base, awaiting: "contact_name" });
-  }
+  await sayAgeLimitNotice(b, base);
+  // Número novo: o paciente primeiro (nome e nascimento), depois quem escreve (cliente, 31/out/2026).
+  if (!b.convo.contactId) return askPatientName(b, base);
   const patients = (await activePatients(b)).filter((p) => !p.isContactSelf);
   const upcoming = await listUpcomingAppointments(
     b.db,
@@ -345,6 +484,27 @@ async function enterPatientSelect(b: Bot, ctx: BookingContext): Promise<void> {
   await sendPatientChoice(b, candidates, t.patientChoice(b.words));
   await go(b, "BOOK_PATIENT_SELECT", { ...base, awaiting: "patient_choice", candidates });
 }
+
+/** Consulta com idade limite na clínica: avisa antes de identificar o paciente (cliente, 31/out/2026). */
+async function sayAgeLimitNotice(b: Bot, ctx: BookingContext): Promise<void> {
+  const limit = b.clinic.ageLimitYears;
+  if (ctx.category !== "consultation" || limit === null) return;
+  await say(b, "bot_book_age_limit_notice", t.ageLimitNotice(await chosenProfessional(b, ctx), b.clinic.designation, limit));
+}
+
+/** Nome do profissional escolhido; null no "Primeiro horário" (os textos usam a clínica). */
+async function chosenProfessional(b: Bot, ctx: BookingContext): Promise<string | null> {
+  if (!ctx.agendaId) return null;
+  return (await serviceOf(b, ctx))?.agendas.find((a) => a.id === ctx.agendaId)?.professionalName ?? null;
+}
+
+/** Número novo, depois do paciente: o nome de quem escreve (paciente menor: "do responsável"). */
+async function askContactName(b: Bot, ctx: BookingContext, guardian: boolean): Promise<void> {
+  await say(b, "bot_book_ask_contact_name", guardian ? t.ASK_GUARDIAN_NAME : t.ASK_SELF_NAME);
+  await go(b, "BOOK_PATIENT_NEW", { ...ctx, awaiting: "contact_name", contactName: undefined, guardian });
+}
+
+const confirmContactText = (ctx: BookingContext, name: string) => (ctx.guardian ? t.confirmGuardianName(name) : t.confirmContactName(name));
 
 async function sendPatientChoice(b: Bot, candidates: Candidate[], body: string): Promise<void> {
   const items = [...candidates.map((c) => ({ id: `patient_${c.id}`, label: c.name })), { id: t.PATIENT_NEW_ID, label: t.otherPatientLabel(b.words) }];
@@ -412,18 +572,21 @@ async function handlePatientNew(b: Bot, selection: Selection): Promise<void> {
   const text = selection.text.trim();
   switch (ctx.awaiting) {
     case "contact_name": {
-      if (!text) return say(b, "bot_book_ask_contact_name", t.ASK_CONTACT_NAME);
-      await say(b, "bot_book_confirm_contact_name", t.confirmContactName(text));
+      if (!text) return askContactName(b, ctx, ctx.guardian ?? false);
+      await say(b, "bot_book_confirm_contact_name", confirmContactText(ctx, text));
       return go(b, "BOOK_PATIENT_NEW", { ...ctx, awaiting: "contact_confirm", contactName: text });
     }
     case "contact_confirm": {
       const answer = yesNo(selection);
       if (answer === null) {
-        return repeatYesNo(b, "bot_book_confirm_contact_name", t.confirmContactName(ctx.contactName ?? ""));
+        return repeatYesNo(b, "bot_book_confirm_contact_name", confirmContactText(ctx, ctx.contactName ?? ""));
       }
-      if (answer && ctx.contactName) return askPatientName(b, ctx);
-      await say(b, "bot_book_ask_contact_name", t.ASK_CONTACT_NAME);
-      return go(b, "BOOK_PATIENT_NEW", { ...ctx, awaiting: "contact_name", contactName: undefined });
+      if (answer && ctx.contactName) {
+        // O paciente já foi informado: só falta conferir os dados dele.
+        if (ctx.newName && ctx.newBirthdate) return askNewConfirm(b, ctx, ctx.newName, ctx.newBirthdate);
+        return askPatientName(b, ctx);
+      }
+      return askContactName(b, ctx, ctx.guardian ?? false);
     }
     case "patient_name": {
       if (!text) return say(b, "bot_book_ask_patient_name", t.askPatientName(b.words));
@@ -435,6 +598,7 @@ async function handlePatientNew(b: Bot, selection: Selection): Promise<void> {
       const birthdate = parseBirthdate(text, b.clinic.today);
       if (!birthdate) return sayInvalidBirthdate(b);
       if (await refusedByAgeLimit(b, ctx, birthdate)) return;
+      if (!b.convo.contactId && !ctx.contactName) return askContactName(b, { ...ctx, newBirthdate: birthdate }, !isAdult(birthdate, b.clinic.today));
       return askNewConfirm(b, ctx, ctx.newName ?? "", birthdate);
     }
     case "new_confirm": {
@@ -556,7 +720,10 @@ async function stoppedByBotLimit(b: Bot, check: "booking" | "new_patient"): Prom
   await recordBotLimitEvent(b.db, b.clinicId, contactId, hit, pause, b.now);
   await say(b, "bot_limit_reached", pause ? t.LIMIT_HANDOFF : t.LIMIT_RECEPTION_WILL_CONTACT);
   await end(b, "blocked", { reason: `limit_${hit.reason}` });
-  if (pause) await pauseForHuman(b.db, b.clinicId, b.phone, { contactId, reason: "bot_limit" }, b.now);
+  if (pause) {
+    await pauseForHuman(b.db, b.clinicId, b.phone, { contactId, reason: "bot_limit" }, b.now);
+    await askHandoffSubject(b);
+  }
   return true;
 }
 
@@ -565,10 +732,11 @@ async function stoppedByBotLimit(b: Bot, check: "booking" | "new_patient"): Prom
  * prazo): avisa que a clínica responde em breve e a recepção assume, com a
  * pausa padrão (cliente, 11/out/2026).
  */
-export async function handOver(b: Bot, kind: string, text: string, reason: string): Promise<void> {
+export async function handOver(b: Bot, kind: string, text: string, reason: string, handoff: "no_availability" | "requested" = "no_availability"): Promise<void> {
   await say(b, kind, text);
   await end(b, "blocked", { reason });
-  await pauseForHuman(b.db, b.clinicId, b.phone, { contactId: b.convo.contactId, reason: "no_availability" }, b.now);
+  await pauseForHuman(b.db, b.clinicId, b.phone, { contactId: b.convo.contactId, reason: handoff }, b.now);
+  await askHandoffSubject(b);
 }
 
 // ---------------------------------------------------------------------------
@@ -579,7 +747,7 @@ export async function handOver(b: Bot, kind: string, text: string, reason: strin
 async function refusedByAgeLimit(b: Bot, ctx: BookingContext, birthdate: string): Promise<boolean> {
   const limit = b.clinic.ageLimitYears;
   if (ctx.category !== "consultation" || limit === null || !isOverConsultationAgeLimit(birthdate, b.clinic.today, limit)) return false;
-  await sendButtons(b, "bot_book_consultation_age_limit", t.ageLimit(ctx.serviceName ?? "A consulta", limit, b.words), t.YES_NO_BUTTONS);
+  await sendButtons(b, "bot_book_consultation_age_limit", t.ageLimit(await chosenProfessional(b, ctx), b.clinic.designation, limit, b.words), t.YES_NO_BUTTONS);
   await go(b, "BOOK_AGE_LIMIT", keepPath(ctx));
   return true;
 }
@@ -589,7 +757,7 @@ async function handleAgeLimit(b: Bot, selection: Selection): Promise<void> {
   const answer = yesNo(selection, t.YES_NO_IDS);
   if (answer === null) {
     const buttons = b.convo.notUnderstoodCount > 0 ? t.YES_NO_BACK_BUTTONS : t.YES_NO_BUTTONS;
-    await sendButtons(b, "bot_not_understood", `${t.NOT_UNDERSTOOD_YES_NO}\n\n${t.ageLimit(ctx.serviceName ?? "A consulta", b.clinic.ageLimitYears ?? 0, b.words)}`, buttons);
+    await sendButtons(b, "bot_not_understood", `${t.NOT_UNDERSTOOD_YES_NO}\n\n${t.ageLimit(await chosenProfessional(b, ctx), b.clinic.designation, b.clinic.ageLimitYears ?? 0, b.words)}`, buttons);
     return;
   }
   if (answer) {
@@ -652,6 +820,7 @@ async function finish(b: Bot, ctx: BookingContext, patient: Candidate): Promise<
         homeVisitAddress: ctx.locationCategory === "home_visit" ? (ctx.homeAddress ?? null) : null,
         funnelSessionId: b.convo.funnelSessionId,
         joinWaitlist: ctx.joinWaitlist ?? false,
+        insurancePlanId: ctx.insurancePlanId ?? null,
         ttlMs: BOT_LINK_TTL_MS,
       },
       b.now,
@@ -714,11 +883,11 @@ export async function startReturn(b: Bot, { joinWaitlist = false } = {}): Promis
   if (!candidates.length) return refuseReturn(b, reasons, deadline);
   const shown = candidates.slice(0, t.MAX_LIST_ROWS - 1);
   const first = shown[0].service;
-  const priceLine = t.returnPriceLine(first.locationPrices.clinic ?? first.priceCents);
+  // O retorno nunca fala de valor (cliente, 31/out/2026).
   await sendList(
     b,
     "bot_book_return_patient_choice",
-    t.returnChoice(b.words, priceLine, first.returnDeadlineDays),
+    t.returnChoice(b.words, first.returnDeadlineDays),
     t.numberedList(shown.map((c) => ({ id: `return_${c.id}`, label: c.name }))),
   );
   await go(b, "RETURN_SELECT", {
@@ -809,6 +978,8 @@ export async function handleBookingState(b: Bot, state: string, selection: Selec
       return handleLocation(b, selection);
     case "BOOK_HOME_ADDRESS":
       return handleAddress(b, selection);
+    case "BOOK_COVERAGE":
+      return handleCoverage(b, selection);
     case "BOOK_FOR_WHOM":
       return handleForWhom(b, selection);
     case "BOOK_PATIENT_SELECT":

@@ -1,7 +1,9 @@
 ---
 // Relacionamento › Retomar contato (CRM A2, Q3): quem não concluiu pelo
-// WhatsApp nos últimos 14 dias, uma linha por telefone e fluxo.
+// WhatsApp nos últimos 14 dias, uma linha por telefone e fluxo. "Retirar da
+// lista" (cliente, 31/out/2026), com confirmação: uma tentativa nova traz de volta.
 import { currentPath, withReturn } from "../../../lib/returnPath";
+import Button from "../ui/Button.astro";
 import PhoneLinks from "../PhoneLinks.astro";
 import EmptyState from "../ui/EmptyState.astro";
 import HowItWorks from "../ui/HowItWorks.astro";
@@ -45,9 +47,26 @@ const here = currentPath(Astro.url);
           <span class="text-[15px] text-ink-soft sm:text-sm">
             Parou em <span class="font-semibold text-ink">{g.latest.lastStage}</span>. {g.latest.detail}
           </span>
-          <span class="text-[13px] text-ink-soft">
-            {g.attempts > 1 ? `${g.attempts} tentativas · a última` : "Iniciou"} em {formatInstant(g.latest.startedAt, timeZone, "dd/MM 'às' HH:mm")}
-          </span>
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <span class="text-[13px] text-ink-soft">
+              {g.attempts > 1 ? `${g.attempts} tentativas · a última` : "Iniciou"} em {formatInstant(g.latest.startedAt, timeZone, "dd/MM 'às' HH:mm")}
+            </span>
+            <form method="POST" action="/api/admin/relacionamento/retomar" class="contents">
+              <input type="hidden" name="telefone" value={g.phone} />
+              <input type="hidden" name="fluxo" value={g.flowLabel} />
+              <input type="hidden" name="return_to" value={here} />
+              <Button
+                type="submit"
+                size="sm"
+                class="js-confirm-delete shrink-0"
+                data-confirm-title="Retirar da lista?"
+                data-confirm-message={`${g.contactName ?? `${capitalize(vocabulary.contact)} sem cadastro`} (${g.flowLabel}) sai do Retomar contato, aqui e nas Métricas. Se começar de novo pelo WhatsApp e não concluir, volta para a lista.`}
+                data-confirm-label="Retirar"
+              >
+                Retirar da lista
+              </Button>
+            </form>
+          </div>
         </li>
       ))}
     </ul>

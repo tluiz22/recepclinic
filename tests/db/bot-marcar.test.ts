@@ -22,7 +22,7 @@ const env = () => ({
 });
 
 const NUMBER = "f63-numero";
-type Sent = { to: string; kind: "text" | "list" | "buttons"; body: string; options: { id: string; title: string }[] };
+type Sent = { to: string; kind: "text" | "list" | "buttons"; body: string; options: { id: string; title: string; description?: string }[] };
 
 let f: AgendaFixture;
 let sent: Sent[] = [];
@@ -37,7 +37,7 @@ const sender: ClinicSender = {
   template: async () => ({ sent: false, reason: "sem template no teste" }),
   text: async (to, body) => (sent.push({ to, kind: "text", body, options: [] }), { sent: true, messageId: `wamid.f63.out.${++seq}`, body }),
   list: async (to: string, body: string, _button: string, sections: ListSection[]) => (
-    sent.push({ to, kind: "list", body, options: sections.flatMap((s) => s.rows.map((r) => ({ id: r.id, title: r.title }))) }),
+    sent.push({ to, kind: "list", body, options: sections.flatMap((s) => s.rows.map((r) => ({ id: r.id, title: r.title, description: r.description }))) }),
     { sent: true, messageId: `wamid.f63.out.${++seq}` }
   ),
   buttons: async (to: string, body: string, buttons: ReplyButton[]) => (
@@ -107,12 +107,9 @@ describe("bot: marcar consulta (número novo)", () => {
     expect(titles(await say(phone, "1"))).toEqual(["1. Marcar consulta", "2. Marcar retorno", "3. Remarcar", "4. Cancelar", "5. Encaixe ou antecipar", "6. Voltar ao menu"]);
   });
 
-  it("qual consulta (mesmo com uma só), com quem? (dois profissionais), local, para quem, cadastro, link", async () => {
+  it("consulta única escolhida sozinha (cliente, 31/out/2026), com quem? (dois profissionais), local, para quem, cadastro, link", async () => {
     let reply = await say(phone, "1");
-    expect(reply.at(-1)!.body).toBe("Qual consulta você quer marcar?");
-    expect(titles(reply)).toEqual(["1. Consulta", "2. Voltar ao menu"]);
-    reply = await say(phone, "1");
-    expect(reply.at(-1)!.body).toBe("Com qual profissional?");
+    expect(reply.map((m) => m.body)).toEqual(["Vamos marcar *Consulta*.", "Com qual profissional?"]);
     expect(titles(reply)).toEqual(["1. Primeiro horário", "2. Dr. Segundo", "3. Dra. Agenda", "4. Voltar ao menu"]);
 
     reply = await say(phone, { id: optionId(reply, "Dra. Agenda") });
@@ -120,16 +117,17 @@ describe("bot: marcar consulta (número novo)", () => {
     reply = await say(phone, "1");
     // Perfil Mista: a consulta pergunta para quem.
     expect(reply.at(-1)).toMatchObject({ kind: "buttons", body: "É para você ou para outra pessoa?" });
+    // Número novo: o paciente primeiro (nome e nascimento), depois o responsável (cliente, 31/out/2026).
     reply = await say(phone, { id: "for_other" });
-    expect(reply[0].body).toBe("Antes de continuar, qual é o seu nome completo?");
-    reply = await say(phone, "Maria Souza");
-    expect(reply[0].body).toContain("*Maria Souza*");
-    reply = await say(phone, "sim");
     expect(reply[0].body).toBe("Qual é o nome completo do paciente?");
     await say(phone, "Joana Souza");
     reply = await say(phone, "31/02/2015");
     expect(reply[0].body).toContain("Não consegui entender essa data");
     reply = await say(phone, "10/03/2015");
+    expect(reply[0].body).toBe("Qual é o nome completo do responsável?");
+    reply = await say(phone, "Maria Souza");
+    expect(reply[0].body).toContain("*Maria Souza*");
+    reply = await say(phone, "sim");
     expect(reply[0].body).toContain("Nome: *Joana Souza*\nData de nascimento: *10/03/2015*");
     reply = await say(phone, "Sim");
     expect(reply[0].body).toMatch(/^Prontinho! Escolha o melhor dia e horário para \*Consulta\* de Joana Souza neste link:\nhttps:\/\/app\.exemplo\.test\/agendar\/[A-Za-z0-9_-]{22}\n\nO link vale por 30 minutos\.$/);
@@ -152,7 +150,7 @@ describe("bot: marcar consulta (número novo)", () => {
       .order("occurred_at");
     expect(steps!.map((s) => s.step)).toEqual([
       "started",
-      "BOOK_SERVICE",
+      // Consulta única: sem o passo da lista de serviços.
       "BOOK_AGENDA",
       "BOOK_LOCATION",
       "BOOK_FOR_WHOM",
@@ -188,7 +186,6 @@ describe("bot: marcar consulta (número novo)", () => {
   it("domiciliar: pede o endereço, confirma e guarda como padrão do contato", async () => {
     await say(phone, "oi");
     await say(phone, "1");
-    await say(phone, "1");
     let reply = await say(phone, "1");
     reply = await say(phone, { id: optionId(reply, "Dra. Agenda") });
     reply = await say(phone, "2");
@@ -216,7 +213,6 @@ describe("bot: pedido de recepção digitado nos passos de texto livre (cliente,
     try {
       await say(other, "oi");
       await say(other, "1");
-      await say(other, "1");
       let reply = await say(other, "1");
       reply = await say(other, { id: optionId(reply, "Dra. Agenda") });
       reply = await say(other, "2");
@@ -225,9 +221,9 @@ describe("bot: pedido de recepção digitado nos passos de texto livre (cliente,
       expect(reply[0].body).toContain("*Rua A, 5, ao lado da recepção*");
       await say(other, "sim");
       reply = await say(other, { id: "for_other" });
-      expect(reply[0].body).toBe("Antes de continuar, qual é o seu nome completo?");
+      expect(reply[0].body).toBe("Qual é o nome completo do paciente?");
       reply = await say(other, "Maria Secretária");
-      expect(reply[0].body).toContain("*Maria Secretária*");
+      expect(reply[0].body).toBe("Qual a data de nascimento do paciente? (formato dd/mm/aaaa)");
       expect((await conversation(other)).state).toBe("BOOK_PATIENT_NEW");
       // Fora desses passos, o mesmo texto transfere.
       reply = await say(other, "quero falar com a secretária");
@@ -243,7 +239,7 @@ describe("bot: pedido de recepção digitado nos passos de texto livre (cliente,
 });
 
 describe("bot: exame para o contato já cadastrado", () => {
-  it("lista os exames, para quem, acha o paciente pela data e manda o link", async () => {
+  it("lista os exames (mais de um, sem preço), para quem, acha o paciente pela data e manda o link", async () => {
     const phone = "+5584991226301"; // contato do Paciente Um
     await say(phone, "Bom dia");
     let reply = await say(phone, "2");
@@ -251,6 +247,8 @@ describe("bot: exame para o contato já cadastrado", () => {
     reply = await say(phone, "1");
     expect(reply.at(-1)!.body).toBe("Qual exame você quer marcar?");
     expect(titles(reply)).toEqual(["1. Exame", "2. Turma", "3. Voltar ao menu"]);
+    // Sem preço na lista (cliente, 31/out/2026).
+    expect(reply.at(-1)!.options.map((o) => o.description)).toEqual([undefined, undefined, undefined]);
     reply = await say(phone, "1");
     expect(reply.at(-1)!.body).toBe("É para você ou para outra pessoa?");
     reply = await say(phone, "2");
@@ -297,7 +295,8 @@ describe("bot: retorno e idade limite", () => {
     await say(phone, "oi");
     await say(phone, "1");
     let reply = await say(phone, "2");
-    expect(reply.at(-1)!.body).toBe("O retorno não tem custo.\n\nO retorno deve ser feito em até 30 dias após a consulta. Para qual paciente é o retorno?");
+    // Sem valor (cliente, 31/out/2026).
+    expect(reply.at(-1)!.body).toBe("O retorno deve ser feito em até 30 dias após a consulta. Para qual paciente é o retorno?");
     expect(titles(reply)).toEqual(["1. Paciente Dois", "2. Voltar ao menu"]);
     reply = await say(phone, "1");
     expect(reply[0].body).toContain("para *Retorno* de Paciente Dois");
@@ -314,12 +313,11 @@ describe("bot: retorno e idade limite", () => {
     const phone = "+5584991226303"; // contato do Paciente Três (2020)
     await say(phone, "oi");
     await say(phone, "1");
-    await say(phone, "1");
     let reply = await say(phone, "1");
     reply = await say(phone, { id: optionId(reply, "Dr. Segundo") });
     reply = await say(phone, { id: "for_other" });
     reply = await say(phone, "01/01/2020");
-    expect(reply.at(-1)).toMatchObject({ kind: "buttons", body: "Consulta é para pacientes até 4 anos.\n\nDeseja agendar para outra pessoa?" });
+    expect(reply.at(-1)).toMatchObject({ kind: "buttons", body: "Dr. Segundo atende pacientes até 4 anos.\n\nDeseja agendar para outra pessoa?" });
     reply = await say(phone, { id: "no" });
     expect(titles(reply)).toEqual(["1. Consultas", "2. Exames", "3. Informações"]);
     await adminClient().from("clinic_settings").update({ consultation_age_limit_years: null }).eq("clinic_id", f.clinicId);
@@ -348,8 +346,7 @@ describe("conversa parada há 15 minutos", () => {
     const phone = "+5584991226305";
     await say(phone, "oi");
     await say(phone, "1");
-    await say(phone, "1"); // Qual consulta?
-    await say(phone, "1"); // Com qual profissional?
+    await say(phone, "1"); // Consulta única: Com qual profissional?
     const db = createClinicServiceClient(f.clinicId, env());
 
     sent = [];
@@ -401,8 +398,7 @@ describe("bot: serviço sem horário livre no prazo (cliente, 11/out/2026)", () 
       blocks.push((await blockAll(f.ids.agendaDra2)).data!.id);
       await say(phone, "Oi");
       await say(phone, "1");
-      let reply = await say(phone, "1"); // Marcar consulta
-      reply = await say(phone, "1"); // Consulta
+      let reply = await say(phone, "1"); // Marcar consulta (consulta única)
       expect(reply.at(-1)!.body).toBe("Prefere consultório ou atendimento domiciliar?");
 
       // As duas bloqueadas: aviso logo depois de escolher o serviço, sem cadastro, e a conversa fica com a recepção.
@@ -410,12 +406,16 @@ describe("bot: serviço sem horário livre no prazo (cliente, 11/out/2026)", () 
       await adminClient().from("conversation_state").update({ state: "WELCOME", context: {} }).eq("clinic_id", f.clinicId).eq("contact_phone", phone);
       await say(phone, "Oi");
       await say(phone, "1");
-      await say(phone, "1");
       reply = await say(phone, "1");
-      expect(reply.map((m) => m.body)).toEqual(["No momento não há horários livres para *Consulta*. O consultório responderá sua mensagem em breve."]);
+      expect(reply.map((m) => m.body)).toEqual([
+        "Vamos marcar *Consulta*.",
+        "No momento não há horários livres para *Consulta*. O consultório responderá sua mensagem em breve.",
+        "Para agilizar, poderia me contar brevemente qual assunto deseja tratar com a secretária?",
+      ]);
       const { data: convo } = await adminClient().from("conversation_state").select("human_handoff").eq("clinic_id", f.clinicId).eq("contact_phone", phone).single();
       expect(convo!.human_handoff).toBe(true);
-      // Pausado: o bot não responde.
+      // Pausado: a 1ª resposta é o assunto; depois, o bot não responde.
+      expect((await say(phone, "Queria um horário na sexta")).map((m) => m.body)).toEqual(["Obrigado! Já repassamos para a nossa equipe."]);
       expect(await say(phone, "Oi")).toEqual([]);
     } finally {
       await adminClient().from("schedule_blocks").delete().in("id", blocks);

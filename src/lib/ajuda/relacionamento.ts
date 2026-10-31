@@ -4,6 +4,20 @@ import type { ModuloDeAjuda } from "./tipos";
 
 export const relacionamento = {
   comoFunciona: {
+    // "Contatos para revisar" do Início (texto aprovado pelo cliente em 31/out/2026): listContactsToReview,
+    // DEFAULT_BOT_LIMITS e REVIEW_WINDOW_DAYS em src/lib/data/whatsapp/botLimits.ts.
+    revisar: {
+      serve: "Mostrar quem tentou marcar pelo WhatsApp e foi barrado por um limite de segurança do bot. A equipe confere se é um caso normal ou um abuso.",
+      como: [
+        "O bot tem três limites por número de WhatsApp, somando todos os pacientes do número: atendimentos futuros marcados, pacientes cadastrados pelo bot em 30 dias e faltas em 90 dias (padrão: 5 cada). Os valores ficam em Configurações › Clínica › Limites do bot por contato.",
+        "Quando um limite é atingido, o bot não marca e passa a conversa para a recepção. Cancelar, remarcar e confirmar presença continuam funcionando pelo bot.",
+        "A equipe marca normalmente pelo painel, sem limite.",
+        "\"Revisado\" tira o contato desta lista. Se ele atingir um limite de novo, volta.",
+        "Para um número que deve marcar sem limite (ex.: uma empresa com acordo), o Administrador usa \"Liberar dos limites do bot\" na tela do contato.",
+      ],
+      exemplo:
+        "Maria já tem 5 consultas marcadas para os filhos e pede a 6ª pelo WhatsApp. O bot não marca, passa a conversa para a recepção, e Maria aparece aqui com \"Limite de atendimentos futuros\". A recepção confere, marca pelo painel se fizer sentido e toca em \"Revisado\".",
+    },
     // listHumanAttention e classifyAttention em src/lib/data/whatsapp/attention.ts; pauseForHuman, checkHandoff e
     // handleAgentEcho em whatsapp/conversations.ts (cliente, 30/out/2026: a conversa não volta sozinha ao bot).
     atendimento: {
@@ -12,6 +26,7 @@ export const relacionamento = {
       como: [
         "A conversa entra aqui quando o paciente pede para falar com a clínica, quando a recepção responde pelo app do WhatsApp Business ou quando o bot não entende, não acha horário livre ou bate um limite do contato.",
         "Enquanto a conversa está aqui, o bot fica calado só com esse paciente. Ela não volta sozinha ao bot.",
+        "Ao transferir, o bot pergunta o assunto uma vez e mostra aqui a primeira resposta do paciente (\"Assunto ainda não informado\" até ele responder). O assunto é apagado quando a conversa volta ao bot.",
         "\"Aguardando a clínica\": ninguém respondeu ainda, ou o paciente escreveu de novo. \"Em atendimento pela clínica\": a recepção já respondeu.",
         "Ao terminar o atendimento, clique em \"Devolver ao bot\": o bot volta a responder esse paciente na próxima mensagem, do começo. Nada é enviado ao paciente na hora. Escrever #bot na conversa, pelo app, faz o mesmo.",
       ],
@@ -24,8 +39,8 @@ export const relacionamento = {
       serve: "Reúne numa tela só as pessoas que pedem contato da equipe, cada uma com o motivo.",
       como: [
         "São as mesmas listas do Resumo do Dia, das Métricas e do Início, com as mesmas regras: nada muda lá.",
-        "Cada aba mostra quantas pessoas pedem atenção. A pessoa sai sozinha quando o motivo deixa de existir.",
-        "As ações são as mesmas de sempre (Remarcar, Marcar retorno, Desistiu, Tirar da lista, Revisado) e voltam para esta tela.",
+        "Cada aba mostra quantas pessoas pedem atenção (o Retomar contato, não: começar e desistir é comum). A pessoa sai sozinha quando o motivo deixa de existir.",
+        "As ações são as mesmas de sempre (Remarcar, Marcar retorno, Desistiu, Tirar da lista, Revisado), mais o \"Retirar da lista\" do Retomar contato, e voltam para esta tela.",
       ],
       erro: "Uma aba mostra \"!\"? A lista dela não carregou agora; as outras continuam. Tente abrir a aba de novo.",
     },
@@ -39,12 +54,13 @@ export const relacionamento = {
       ],
       exemplo: "O lembrete de Ana saiu ontem às 18h e ela não respondeu: Ana aparece em \"Sem resposta\" até a equipe confirmar a presença na Agenda.",
     },
-    // listRecall e groupRecall em src/lib/data/relationship.ts; buildFunnelReportFromSessions (incomplete) em botFunnel.ts.
+    // listRecall, groupRecall e withoutDismissed ("Retirar da lista", 31/out/2026) em src/lib/data/relationship.ts; buildFunnelReportFromSessions (incomplete) em botFunnel.ts.
     retomar: {
       serve: "Quem começou pelo WhatsApp (bot ou link) e não concluiu nos últimos 14 dias.",
       como: [
         "Entra a tentativa abandonada ou com erro. Sai sozinha quando a mesma pessoa conclui o mesmo fluxo depois.",
         "Várias tentativas do mesmo número no mesmo fluxo viram uma linha só, com a mais recente e quantas foram.",
+        "\"Retirar da lista\": a linha sai daqui e das Métricas. Se a pessoa começar de novo e não concluir, volta.",
         "É a mesma regra da aba Retomar contato das Métricas, só que sempre nos últimos 14 dias.",
       ],
       exemplo: "Maria tentou marcar consulta 3 vezes e parou na escolha do horário: aparece uma linha, \"3 tentativas\", até ela concluir.",

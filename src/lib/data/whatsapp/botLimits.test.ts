@@ -3,19 +3,20 @@ import { DEFAULT_BOT_LIMITS, describeBotLimitHit, evaluateBookingLimits, evaluat
 
 describe("limites do bot por contato (F9.6a)", () => {
   it("atendimentos futuros: barra ao chegar no limite", () => {
-    expect(evaluateBookingLimits(DEFAULT_BOT_LIMITS, { futureAppointments: 2, noShows: 0 })).toBeNull();
-    expect(evaluateBookingLimits(DEFAULT_BOT_LIMITS, { futureAppointments: 3, noShows: 0 })).toEqual({ reason: "future_appointments", limit: 3, current: 3 });
+    expect(evaluateBookingLimits(DEFAULT_BOT_LIMITS, { futureAppointments: 4, noShows: 0 })).toBeNull();
+    expect(evaluateBookingLimits(DEFAULT_BOT_LIMITS, { futureAppointments: 5, noShows: 0 })).toEqual({ reason: "future_appointments", limit: 5, current: 5 });
   });
 
   it("faltas: depois dos atendimentos; 0 desliga", () => {
-    expect(evaluateBookingLimits(DEFAULT_BOT_LIMITS, { futureAppointments: 0, noShows: 2 })).toEqual({ reason: "no_shows", limit: 2, current: 2 });
-    expect(evaluateBookingLimits(DEFAULT_BOT_LIMITS, { futureAppointments: 3, noShows: 5 })?.reason).toBe("future_appointments");
+    expect(evaluateBookingLimits(DEFAULT_BOT_LIMITS, { futureAppointments: 0, noShows: 4 })).toBeNull();
+    expect(evaluateBookingLimits(DEFAULT_BOT_LIMITS, { futureAppointments: 0, noShows: 5 })).toEqual({ reason: "no_shows", limit: 5, current: 5 });
+    expect(evaluateBookingLimits(DEFAULT_BOT_LIMITS, { futureAppointments: 5, noShows: 5 })?.reason).toBe("future_appointments");
     expect(evaluateBookingLimits({ ...DEFAULT_BOT_LIMITS, maxNoShows: 0 }, { futureAppointments: 0, noShows: 9 })).toBeNull();
   });
 
   it("cadastros pelo bot", () => {
-    expect(evaluateNewPatientLimit(DEFAULT_BOT_LIMITS, 2)).toBeNull();
-    expect(evaluateNewPatientLimit(DEFAULT_BOT_LIMITS, 3)).toEqual({ reason: "new_patients", limit: 3, current: 3 });
+    expect(evaluateNewPatientLimit(DEFAULT_BOT_LIMITS, 4)).toBeNull();
+    expect(evaluateNewPatientLimit(DEFAULT_BOT_LIMITS, 5)).toEqual({ reason: "new_patients", limit: 5, current: 5 });
   });
 
   it("texto para a equipe", () => {

@@ -25,18 +25,17 @@ import Kpi from "./Kpi.astro";
 interface Props {
   db: DbClient;
   clinic: ClinicContext;
-  /** Tentativas do período (já lidas pela página, que também conta Retomar contato); null = não carregou. */
+  /** Tentativas do período (já lidas pela página); null = não carregou. */
   sessions: FunnelSession[] | null;
   range: DateRange;
   compare: boolean;
   operation: DigitalOperation;
   origin: DigitalOrigin;
-  recallCount: number;
-  links: { recall: string; retry: string };
+  links: { retry: string };
   now: Date;
 }
 
-const { db, clinic, sessions, range, compare, operation, origin, recallCount, links, now } = Astro.props;
+const { db, clinic, sessions, range, compare, operation, origin, links, now } = Astro.props;
 const tz = clinic.timezone;
 const group = operation === "remarcar" ? "remarcar" : operation === "cancelar" ? "cancelar" : "marcar";
 const verb = { marcar: "marcar", remarcar: "remarcar", cancelar: "cancelar" }[group];
@@ -110,9 +109,7 @@ if (r) {
       linkLabel: "Ver os erros",
     });
   }
-  if (recallCount > 0) {
-    attention.push({ strong: `${recallCount} ${recallCount === 1 ? "pessoa não concluiu" : "pessoas não concluíram"}`, rest: "e não voltaram a tentar.", href: links.recall, linkLabel: "Retomar contato" });
-  }
+  // Sem o aviso de quem não concluiu (cliente, 31/out/2026): começar e abandonar é normal; a lista fica na aba Retomar contato.
   if (failures) {
     attention.push({
       strong: `${failures} ${failures === 1 ? "passo do bot não foi gravado" : "passos do bot não foram gravados"}`,

@@ -18,6 +18,7 @@ export type BotAgenda = {
   id: string;
   name: string;
   professionalName: string | null;
+  professionalId: string | null;
   specialty: string | null;
   /** Tipos de local com horário nesta agenda. */
   locationTypes: LocationType[];
@@ -87,7 +88,7 @@ export async function loadCatalog(db: DbClient, clinicId: string, features: read
           const agenda = agendaById.get(id)!;
           const professional = agenda.professionalId ? professionalById.get(agenda.professionalId) : undefined;
           const locationTypes = [...new Set(fits.filter((w) => w.agenda_id === id).map((w) => locationById.get(w.location_id)!.type))];
-          return { id, name: agenda.name, professionalName: professional?.displayName ?? null, specialty: professional?.specialty ?? null, locationTypes };
+          return { id, name: agenda.name, professionalName: professional?.displayName ?? null, professionalId: agenda.professionalId ?? null, specialty: professional?.specialty ?? null, locationTypes };
         })
         .sort((a, b) => (a.professionalName ?? a.name).localeCompare(b.professionalName ?? b.name, "pt-BR")),
       locationPrices,

@@ -82,9 +82,8 @@ async function startConsultation(): Promise<Sent[]> {
 
 /** Do "Marcar consulta" até o "para outra pessoa" (Dr. Segundo: só consultório). */
 async function upToForOther(): Promise<Sent[]> {
-  const reply = await startConsultation();
-  expect(reply.at(-1)!.body).toBe("Qual consulta você quer marcar?");
-  const agendas = await say("1");
+  const agendas = await startConsultation();
+  expect(agendas.map((m) => m.body)).toEqual(["Vamos marcar *Consulta*.", "Com qual profissional?"]);
   await say({ id: agendas.at(-1)!.options.find((o) => o.title.includes("Dr. Segundo"))!.id });
   return say({ id: "for_other" });
 }
@@ -117,13 +116,16 @@ afterAll(async () => f.cleanup());
 
 describe("bot: limites do contato, sem coexistência", () => {
   it("dois cadastros pelo bot com link: os links ainda válidos contam como atendimentos", async () => {
-    // Número novo: nome do contato, paciente, link.
+    // Número novo: paciente (nome e nascimento), responsável, link (cliente, 31/out/2026).
     let reply = await upToForOther();
-    expect(reply[0].body).toBe("Antes de continuar, qual é o seu nome completo?");
-    await say("Rita Lima");
-    await say("sim");
+    expect(reply[0].body).toBe("Qual é o nome completo do paciente?");
     await say("Ana Lima");
-    await say("10/03/2015");
+    reply = await say("10/03/2015");
+    expect(reply[0].body).toBe("Qual é o nome completo do responsável?");
+    reply = await say("Rita Lima");
+    expect(reply[0].body).toContain("Confira o nome do responsável: *Rita Lima*");
+    reply = await say("sim");
+    expect(reply[0].body).toContain("Nome: *Ana Lima*");
     reply = await say("sim");
     expect(reply[0].body).toContain("Prontinho!");
 
@@ -198,7 +200,7 @@ describe("bot: limites do contato, sem coexistência", () => {
       .eq("id", booked.appointment.id);
 
     // Desligado (0): marca normalmente.
-    expect((await startConsultation()).at(-1)!.body).toBe("Qual consulta você quer marcar?");
+    expect((await startConsultation())[0].body).toBe("Vamos marcar *Consulta*.");
     await say("0"); // volta ao menu
 
     await setLimits({ bot_max_no_shows: 1 });
@@ -212,8 +214,7 @@ describe("bot: limites do contato, com coexistência", () => {
   it("passa a conversa para a recepção (pausa) e o funil conta a pausa", async () => {
     await adminClient().from("whatsapp_connections").update({ coexistence: true }).eq("clinic_id", f.clinicId);
     const reply = await startConsultation();
-    expect(reply).toHaveLength(1);
-    expect(reply[0].body).toBe(NEUTRAL_HANDOFF);
+    expect(reply.map((m) => m.body)).toEqual([NEUTRAL_HANDOFF, "Para agilizar, poderia me contar brevemente qual assunto deseja tratar com a secretária?"]);
     const { data: convo } = await adminClient().from("conversation_state").select("state, human_handoff").eq("clinic_id", f.clinicId).eq("contact_phone", PHONE).single();
     expect(convo).toEqual({ state: "HUMAN_HANDOFF", human_handoff: true });
     expect((await events()).at(-1)).toMatchObject({ reason: "no_shows", paused: true });
@@ -225,7 +226,8 @@ describe("bot: limites do contato, com coexistência", () => {
       .eq("step", "bot_limit");
     expect(count).toBe(1);
 
-    // Pausado: o bot fica calado.
+    // Pausado: a 1ª resposta é o assunto (cliente, 31/out/2026); depois, o bot fica calado.
+    expect((await say("Quero marcar para minha filha")).map((m) => m.body)).toEqual(["Obrigado! Já repassamos para a nossa equipe."]);
     expect(await say("oi")).toEqual([]);
   });
 });

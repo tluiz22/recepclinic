@@ -49,6 +49,11 @@ const ordered = [...items].sort((a, b) => (a.status === b.status ? 0 : a.status 
             <span class="text-[15px] text-ink-soft sm:text-sm">
               {handoffReasonLabel(item.reason)} · desde {formatInstant(item.startedAt, timeZone, "dd/MM 'às' HH:mm")}
             </span>
+            {item.subject ? (
+              <span class="text-[15px] text-ink sm:text-sm">Assunto: “{item.subject}”</span>
+            ) : (
+              item.subjectAsked && <span class="text-[15px] text-ink-soft italic sm:text-sm">Assunto ainda não informado</span>
+            )}
           </div>
           {item.status === "waiting" ? (
             <Pill tone="danger">Aguardando há {waitFor(item.waitingSince ?? item.startedAt)}</Pill>

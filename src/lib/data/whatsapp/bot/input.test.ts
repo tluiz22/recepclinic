@@ -68,7 +68,8 @@ describe("textos pelo perfil (F6.3)", () => {
     ]);
     expect([otherPatientLabel(kid), otherPatientLabel(wordsFor("mixed"))]).toEqual(["Outra criança", "Outro paciente"]);
     expect(confirmPatient(kid, "Ana", "10/03/2020")).toBe("Encontramos *Ana*, nascido(a) em 10/03/2020: é essa a criança? Responda Sim ou Não.");
-    expect(ageLimit("Consulta", 14, kid)).toBe("Consulta é para pacientes até 13 anos.\n\nDeseja agendar para outra criança?");
+    expect(ageLimit("Dra. Ana", { noun: "clínica", article: "a" }, 14, kid)).toBe("Dra. Ana atende pacientes até 13 anos.\n\nDeseja agendar para outra criança?");
+    expect(ageLimit(null, { noun: "clínica", article: "a" }, 14, kid)).toBe("A clínica atende pacientes até 13 anos.\n\nDeseja agendar para outra criança?");
   });
 
   it("linha da lista no limite da Meta: título cortado, nome inteiro na descrição", () => {

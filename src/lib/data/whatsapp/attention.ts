@@ -52,6 +52,9 @@ export type AttentionItem = {
   contactId: string | null;
   name: string | null;
   reason: string | null;
+  /** Assunto informado ao bot (jornada E4); `subjectAsked` sem assunto = "não informado". */
+  subject: string | null;
+  subjectAsked: boolean;
   startedAt: Date;
   status: AttentionStatus;
   /** Desde quando a clínica deve uma resposta (só em "Aguardando"). */
@@ -72,6 +75,8 @@ type PausedRow = {
   human_handoff_at: string | null;
   handoff_notified_at: string | null;
   handoff_reminded_at: string | null;
+  handoff_subject: string | null;
+  handoff_subject_asked_at: string | null;
   contacts: { full_name: string } | null;
 };
 
@@ -90,7 +95,7 @@ export async function listHumanAttention(
 
   let query = db
     .from("conversation_state")
-    .select("contact_phone, contact_id, handoff_reason, handoff_started_at, human_handoff_at, handoff_notified_at, handoff_reminded_at, contacts ( full_name )")
+    .select("contact_phone, contact_id, handoff_reason, handoff_started_at, human_handoff_at, handoff_notified_at, handoff_reminded_at, handoff_subject, handoff_subject_asked_at, contacts ( full_name )")
     .eq("clinic_id", clinicId)
     .eq("human_handoff", true);
   if (phone) query = query.eq("contact_phone", phone);
@@ -143,6 +148,8 @@ export async function listHumanAttention(
       contactId: row.contact_id ?? known?.id ?? null,
       name: row.contacts?.full_name ?? known?.full_name ?? null,
       reason: row.handoff_reason,
+      subject: row.handoff_subject,
+      subjectAsked: !!row.handoff_subject_asked_at,
       startedAt,
       ...situation,
       lastActivityAt: new Date(Math.max(...activity.map((t) => t.getTime()))),

@@ -106,7 +106,7 @@ const fresh = (phone: string) =>
 
 const WELCOME = "Olá! 👋 Aqui é da Clínica Bot Entrada.";
 const MENU = "Como podemos ajudar? Escolha uma opção abaixo (ou digite o número).";
-const ASK_ONE = "Como podemos ajudar? Identificamos um agendamento associado a este número. Você deseja tratar desse agendamento?";
+const ASK_ONE = "Identificamos um agendamento associado a este número. Você deseja tratar desse agendamento?";
 const ASK_MANY = "Como podemos ajudar? Encontramos mais de um agendamento associado a este número. Você deseja consultar ou alterar algum deles?";
 const ASK_BIRTHDATE = "Para sua segurança, antes de mostrar o agendamento precisamos confirmar a identidade.\n\nQual a data de nascimento do paciente? (formato dd/mm/aaaa)";
 const NOT_FOUND = "Não encontramos agendamentos para essa data de nascimento.";
@@ -225,7 +225,7 @@ describe("um atendimento", () => {
     expect((await conversation(P2)).state).toBe("MENU");
   });
 
-  it("6b. várias datas erradas no número: a pergunta continua; com coexistência, a recepção só se a pessoa escolher", async () => {
+  it("6b. várias datas erradas no número: a pergunta continua; mesmo com coexistência, sem \"Falar com a recepção\" (cliente, 31/out/2026)", async () => {
     for (let round = 0; round < 3; round++) {
       await fresh(P5);
       expect((await say(P5, "oi")).at(-1)!.body).toBe(ASK_ONE);
@@ -239,18 +239,12 @@ describe("um atendimento", () => {
       expect((await say(P5, "oi")).at(-1)!.body).toBe(ASK_ONE);
       await say(P5, { id: "entry_yes" });
       let reply = await say(P5, "02/02/2002");
-      expect(reply[0]).toMatchObject({ kind: "buttons", body: `${NOT_FOUND} Deseja falar com a recepção?` });
-      expect(titles(reply)).toEqual(["Falar com a recepção", "Tentar outra data", "Voltar ao menu"]);
+      expect(reply[0]).toMatchObject({ kind: "buttons", body: NOT_FOUND });
+      expect(titles(reply)).toEqual(["Tentar outra data", "Voltar ao menu"]);
       // A data digitada no lugar do botão vale como nova tentativa.
       reply = await say(P5, "07/07/2015");
       expect(reply[0].body).toBe("A consulta de *Paciente Cinco* está marcada para segunda, 10/03 às 10:00.\n\nO que você deseja fazer?");
-      await fresh(P5);
-      await say(P5, "oi");
-      await say(P5, { id: "entry_yes" });
-      await say(P5, "02/02/2002");
-      reply = await say(P5, { id: "identity_reception" });
-      expect(reply[0].body).toContain("Vou te transferir para a recepção");
-      expect((await conversation(P5)).human_handoff).toBe(true);
+      expect((await conversation(P5)).human_handoff).toBe(false);
     } finally {
       await fresh(P5);
       await adminClient().from("whatsapp_connections").update({ coexistence: false }).eq("clinic_id", f.clinicId);
@@ -354,7 +348,9 @@ describe("robustez", () => {
       reply = await say(P1, { id: "entry_reception" });
       expect(reply[0].body).toContain("Vou te transferir para a recepção");
       expect((await conversation(P1)).human_handoff).toBe(true);
-      expect(await say(P1, "alô?")).toEqual([]);
+      // Assunto da transferência (cliente, 31/out/2026): a 1ª resposta é o assunto; depois, o bot fica calado.
+      expect((await say(P1, "alô?")).map((m) => m.body)).toEqual(["Obrigado! Já repassamos para a nossa equipe."]);
+      expect(await say(P1, "tem alguém aí?")).toEqual([]);
     } finally {
       await fresh(P1);
       await adminClient().from("whatsapp_connections").update({ coexistence: false }).eq("clinic_id", f.clinicId);
@@ -395,7 +391,7 @@ describe("robustez", () => {
       await say(P1, "sim");
       for (const text of ["a", "b", "c"]) await say(P1, text);
       reply = await say(P1, "d");
-      expect(reply.map((m) => m.kind)).toEqual(["text"]);
+      expect(reply.map((m) => m.kind)).toEqual(["text", "text"]);
       expect((await conversation(P1)).human_handoff).toBe(true);
     } finally {
       await fresh(P1);

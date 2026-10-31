@@ -115,20 +115,13 @@ async function showInfo(b: Bot, notUnderstood = false): Promise<void> {
   await go(b, "INFO_MENU");
 }
 
-function priceLines(service: BotService): string[] {
-  const types = Object.keys(service.locationPrices) as (keyof typeof t.LOCATION_LABELS)[];
-  const value = (cents: number) => (cents === 0 ? "Sem custo" : t.price(cents)!);
-  if (types.length <= 1) return [value(types.length ? service.locationPrices[types[0]]! : service.priceCents)];
-  return types.map((type) => `${t.LOCATION_LABELS[type]}: ${value(service.locationPrices[type]!)}`);
-}
-
 export async function handleInfo(b: Bot, selection: Selection): Promise<void> {
   const catalog = await b.catalog();
   const keys = await infoItems(b);
   const choice = pick(selection, keys, (key) => `info_${key}`);
   switch (choice) {
     case "prices":
-      await say(b, "bot_info_prices", t.pricesText(catalog.services.map((s) => ({ name: s.name, lines: priceLines(s) })), b.clinic.paymentInfo));
+      await say(b, "bot_info_prices", t.pricesText(catalog.services.map((s) => ({ name: s.name, lines: t.servicePriceLines(s) })), b.clinic.paymentInfo));
       break;
     case "insurance":
       await say(b, "bot_info_insurance", b.clinic.insuranceInfo!);
@@ -139,16 +132,19 @@ export async function handleInfo(b: Bot, selection: Selection): Promise<void> {
     case "notes":
       await say(b, "bot_info_notes", b.clinic.notes!);
       break;
-    case "preparation": {
-      const exams = preparationExams(catalog.services);
-      await sendList(b, "bot_info_preparation_choice", t.PREPARATION_QUESTION, t.numberedList(exams.map((s) => ({ id: `prep_${s.id}`, label: s.name }))));
-      await go(b, "INFO_PREP_SELECT");
-      return;
-    }
+    case "preparation":
+      return showPreparationChoice(b);
     default:
       return showInfo(b, true);
   }
   await showInfo(b);
+}
+
+/** Lista dos exames com preparo (Informações e base de conhecimento). */
+export async function showPreparationChoice(b: Bot): Promise<void> {
+  const exams = preparationExams((await b.catalog()).services);
+  await sendList(b, "bot_info_preparation_choice", t.PREPARATION_QUESTION, t.numberedList(exams.map((s) => ({ id: `prep_${s.id}`, label: s.name }))));
+  await go(b, "INFO_PREP_SELECT");
 }
 
 export async function handlePreparationChoice(b: Bot, selection: Selection): Promise<void> {

@@ -40,8 +40,11 @@ async function relevantCount(b: Bot): Promise<number> {
   return appointments.length;
 }
 
-/** Começo da conversa: boas-vindas e, com atendimento marcado, a pergunta; senão, o menu. */
-export async function startConversation(b: Bot): Promise<void> {
+/**
+ * Começo da conversa: boas-vindas e, com atendimento marcado, a pergunta; senão, o menu. Pergunta da base na 1ª
+ * mensagem (cliente, 31/out/2026): `afterWelcome` responde depois das boas-vindas; false = a base assumiu a conversa.
+ */
+export async function startConversation(b: Bot, { afterWelcome }: { afterWelcome?: () => Promise<boolean> } = {}): Promise<void> {
   let count = 0;
   try {
     count = await relevantCount(b);
@@ -49,9 +52,27 @@ export async function startConversation(b: Bot): Promise<void> {
     // Sem a consulta, o menu de sempre (nada do atendimento é mostrado).
     logError("bot: atendimentos da entrada", error, { clinica: b.clinicId });
   }
-  if (!count) return showMenu(b, { withWelcome: true });
+  if (!count && !afterWelcome) return showMenu(b, { withWelcome: true });
   await say(b, "bot_welcome", textFor(b, "welcome", t.welcome(b.clinic.label), { clinica: b.clinic.label }));
+  if (afterWelcome && !(await afterWelcome())) return;
+  if (!count) return showMenu(b);
   await askAbout(b, count);
+}
+
+/** "Quero confirmar", "minha consulta está marcada?" (base de conhecimento): a data de nascimento antes de qualquer detalhe. */
+export async function startIdentification(b: Bot): Promise<void> {
+  let count = 0;
+  try {
+    count = await relevantCount(b);
+  } catch (error) {
+    logError("bot: atendimentos da entrada", error, { clinica: b.clinicId });
+  }
+  if (!count) {
+    await say(b, "bot_kb_no_appointments", t.KB_NO_APPOINTMENTS);
+    return showMenu(b);
+  }
+  await say(b, "bot_entry_ask_birthdate", t.ENTRY_ASK_BIRTHDATE);
+  await go(b, "ENTRY_BIRTHDATE", {} satisfies EntryContext);
 }
 
 async function askAbout(b: Bot, count: number): Promise<void> {
@@ -68,7 +89,7 @@ async function handleAsk(b: Bot, selection: Selection): Promise<void> {
     const count = (b.convo.context as { count?: number }).count ?? 1;
     return askAbout(b, count);
   }
-  await say(b, "bot_entry_ask_birthdate", t.entryAskBirthdate(b.words));
+  await say(b, "bot_entry_ask_birthdate", t.ENTRY_ASK_BIRTHDATE);
   await go(b, "ENTRY_BIRTHDATE", {} satisfies EntryContext);
 }
 
@@ -76,7 +97,6 @@ async function handleBirthdate(b: Bot, selection: Selection): Promise<void> {
   if (ctxOf(b).awaiting === "identity_choice" && !parseBirthdate(selection.text, b.clinic.today)) {
     // Uma data digitada vale como nova tentativa; senão, a escolha.
     const choice = identityChoiceOf(b, selection);
-    if (choice === "reception") return handoff(b, "identity_not_found");
     if (choice === "menu") return showMenu(b);
     if (choice === "retry") {
       await say(b, "bot_entry_ask_birthdate", t.askBirthdate(b.words));

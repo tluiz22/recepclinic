@@ -686,6 +686,33 @@ retomada fica no README). Para achar algo, buscar por data (ex.: `27/out`), fase
   continuar de onde parou); na 1ª mensagem da conversa, o "Não" leva às boas-vindas e ao menu; outra resposta vale para
   o passo em que a pessoa estava. A espera fica no contexto (`_reception_confirm`), sem trocar o passo. O botão de saída
   da C12 continua transferindo direto. Sem migração. Publicada no staging em 30/out.
+- **C14 Alterar no "Mais"** (31/out): **cliente (31/out):** para o cartão do atendimento ter menos botões, o
+  "Alterar" sai da vista e vai para o "Mais", como 1º item no atendimento futuro (no que já passou, já ficava no "Mais").
+  Remarcar, Pagamento e as demais continuam onde estavam. Só `cardActions.ts` e o teste. Sem migração. Publicada no
+  staging em 31/out; o cliente valida no fim, junto com o menu lateral.
+- **C15 Retomar contato sem alerta e "Retirar da lista"** (31/out): **cliente (31/out):** começar pelo WhatsApp e
+  desistir é normal (às vezes só para tirar dúvida). Saíram o número da aba Retomar contato (Relacionamento e
+  Métricas), o aviso "X pessoas não concluíram" do Agendamento digital (Métricas) e a soma do Retomar contato no número
+  do Relacionamento no menu (visto no Início); a aba continua. Novo **"Retirar da lista"** em cada linha do Retomar
+  contato, com confirmação (Administrador e Recepção). **Decisões do cliente:** vale para as tentativas até a hora em que
+  foi retirado (uma tentativa nova traz de volta; recusado: sair de vez) e some também da aba das Métricas (recusado: só
+  no Relacionamento). Migração `20261105130000_retomar_contato_retirados.sql` (tabela `recall_dismissals`, chave número
+  + rótulo do fluxo, como a lista agrupa; o número da branch `faturamento`, 20261106/07, fica depois). Testes: unidade
+  (`withoutDismissed`) e banco (papéis, outra clínica, retirar de novo). Conferido no local com uma tentativa de teste
+  (retirar, sumir nas Métricas, voltar com tentativa nova), apagada depois. Migração aplicada no staging (conferida a
+  tabela) e publicada no staging em 31/out; o cliente valida no fim.
+- **C16 "Como funciona?" de Contatos para revisar e limites do bot com padrão 5** (31/out): **cliente (31/out):** texto
+  aprovado para o Início (`relacionamento.comoFunciona.revisar`; os três limites viraram um item só, por causa do máximo
+  de 5 itens, e o exemplo passou a 5 consultas). Padrão 5 nos três limites (antes 3, 3 e 2); **decisão do cliente:**
+  as clínicas que existem passam para 5 só no limite que ainda está no padrão antigo (recusado: só clínicas novas).
+  Migração `20261105140000_limites_do_bot_padrao_5.sql`. Testes de unidade atualizados. Staging (31/out): 5 clínicas
+  passaram para 5 (uma com 3, 5 e 5 teve só o 3 trocado); a de 10, 10 e 10 ficou como estava. Publicada no staging e,
+  em 31/out, na produção (`20c2239`; a clínica piloto foi de 3, 3 e 2 para 5, 5 e 5).
+- **CI de volta ao verde** (31/out): o job `db` falhava desde `73d703b` (DMED, 30/out) porque o `database.types.ts`
+  editado à mão perdeu as 60 linhas `ComputedFields` que o gerador escreve; refeito a partir da versão anterior, sem a
+  DMED e com a `recall_dismissals` (`4947dd2`). A C15 também precisou de uma linha no seed para a varredura de
+  isolamento (`tests/db/isolamento.test.ts` exige dados em toda tabela). Cuidado: o banco local tem as tabelas da
+  branch `faturamento`; gerar os tipos dele traz tabelas que a `main` não tem.
 - **DMED removida** (30/out): **cliente (30/out):** a DMED é do contador da clínica; o RecepClinic não gera mais o
   arquivo. Saíram a tela Financeiro › DMED, a rota do arquivo, `src/lib/dmed.ts`, `src/lib/data/dmed.ts`, os testes,
   a ajuda e a aba do Financeiro. Migração `20261105120000_sem_dmed.sql` (apaga `clinic_dmed_settings` e
@@ -700,3 +727,127 @@ retomada fica no README). Para achar algo, buscar por data (ex.: `27/out`), fase
   remarcar e cancelar, encaixe, informações, mensagens depois de marcar e a recepção). Conteúdo em
   `src/components/admin/tecnologia/botJourney.ts`. **Regra (cliente, 30/out):** mudou a jornada do bot, atualizar o
   fluxograma no mesmo commit (CLAUDE.md).
+
+## Bloco de retomada do README até 31/out/2026
+
+Cópia integral do bloco antes de ser enxugado (cliente, 31/out).
+
+> **Estado atual (retomar daqui), 31/out/2026.** Histórico completo em [`historico.md`](historico.md) (não ler
+> na retomada; buscar por data, fase ou commit quando precisar).
+>
+> **Produção = `main` em 31/out (`20c2239`):** menu lateral (L1–L3), C14 "Alterar" no "Mais", C15 Retomar contato sem
+> alertas e com "Retirar da lista" e C16 ("Como funciona?" de Contatos para revisar; limites do bot com padrão 5);
+> publicados a pedido do cliente antes da validação no staging.
+>
+> **Próxima sessão (cliente, 31/out): revisão da jornada do bot, na `main`.** Base: [`jornada-do-bot.md`](jornada-do-bot.md)
+> (temporário: não precisa acompanhar o bot; excluir ao fim da revisão). Mudança no caminho do paciente atualiza também
+> Tecnologia › Jornada do bot (`botJourney.ts`, regra do `CLAUDE.md`). Menu lateral ([`menu-lateral.md`](menu-lateral.md))
+> concluído e na produção; o cliente valida quando puder. O faturamento fica parado na branch `faturamento` (abaixo).
+>
+> **N0 do Asaas (30/out):** NFS-e pelo Asaas, N0 (seções 13.8 e 13.9 do `planejamento-nfse-asaas.md`; ler o bloco de
+> retomada dele). Cartão do selo do Asaas na `main` (`13ebeab`), visível só com `ASAAS_PREVIEW=1` (staging).
+> Validado no staging e **formulário BaaS enviado (30/out)**. Aguardando a análise do Asaas (até 3 dias úteis) e o
+> contador (falta PIS/COFINS; e-CNPJ A1 a providenciar; seção 13.5). **DMED removida** (cliente, 30/out; staging e `main`,
+> `73d703b`; a produção não usa o Financeiro).
+> **Regra (cliente, 30/out):** todo código do financeiro vai na branch `faturamento`.
+>
+> **Ambientes**
+> - **Produção** (`app.recepclinic.com.br`, branch `producao`): no ar desde 26/out; publicações de 28/out: **CRM**
+>   (Relacionamento, B0, P1–P3) e as correções **C1 Exame em paralelo**, **C2 Outro horário**, **C3 Horário de exame**,
+>   **C4 Alterar atendimento**, **C5 Horário em local que o serviço não usa** e **C6 Escolha do serviço no Marcar**; em 29/out, **C7 Arquivo no preparo do
+>   exame** (C7.1–C7.7) e **C8 Escolha do serviço em Horários** (`5ef2be6`); em 30/out, DMED removida, Implantação e Jornada do bot (`71cbbec`). Fluxo e registro em [`producao.md`](producao.md).
+> - **Staging** (`teste.recepclinic.com.br`, branch `main`): igual à produção; o cartão do Asaas só aparece aqui
+>   (`ASAAS_PREVIEW=1`). Roteiros em [`staging.md`](staging.md).
+> - **Branches:** `main` = `producao` em 31/out; `CRM` e `faturamento` excluídas em 30/out (tudo delas na `main`).
+>
+> **Frentes em andamento**
+> - **Ajustes da produção, na `main`:** C1–C13 validados e na produção (C1–C6 em 28/out; C7–C8 em 29/out; C9–C10 em
+>   30/out, `a7e077a`, com a limpeza das conversas gravadas pelo piloto em implantação; C11–C13b em 30/out, `b9dc41a`; C14 "Alterar" no "Mais" do cartão, no staging em 31/out; C15 Retomar contato sem alerta e "Retirar da lista";
+>   C14 e C15 na produção em 31/out, `fd4668c`).
+>   Detalhes no [`historico.md`](historico.md) (busca "C9" a "C13"). Clínica com exames: "Criar na Meta" (Suporte) para
+>   `rc_preparo_exame_v3` e `rc_preparo_arquivo_v3`. Próximo: nada pendente nesta frente; aguarda o cliente.
+> - **CRM concluído** (28/out; [`crm.md`](crm.md)): validado no staging e na produção desde 28/out.
+> - **Faturamento do SaaS** (código na branch **`faturamento`, só local, sem push** a pedido do cliente; retomar pelo
+>   bloco de retomada do `planejamento-faturamento-saas.md` **na branch**): **F12.1** (conta de cobrança) e **F12.2**
+>   (contrato com versões) feitas e **validadas no local (30/out)**. Ordem decidida: cobrança antes da nota fiscal, só
+>   com e-mail, até cobrar a clínica piloto em produção. Parecer do advogado recebido e decisões registradas (itens 18 a
+>   27 da seção 11 do plano, na branch). **Próximo: F12.2b** (aceite do contrato na tela e aviso de 30 dias); pedir ao
+>   advogado o texto completo do contrato.
+> - **NFS-e pelo Asaas** (`planejamento-nfse-asaas.md`; volta depois da cobrança no ar). **N0 em andamento (29/out):** Sandbox testado em Mossoró; Asaas respondeu (exige BaaS; avaliação
+>   pedida); aguardando Asaas (BaaS, saldo negativo, IP) e contador (CNAE, IBS/CBS, PIS/COFINS, **certificado A1**,
+>   exigido em Mossoró). Retomar pela seção 13 do plano; depois a F12.1. Cada etapa com o OK do cliente.
+> - **Piloto** (etapas no [plano](plano.md), F10): **A** feita (roteiros do WhatsApp Business: [único](https://claude.ai/artifact/8AXZMSLcEq8SMWFpYHaraq),
+>   [iPhone](https://claude.ai/artifact/C8E3xDoshuXE3M91qeDDHq), [Android](https://claude.ai/artifact/78hQ2cXQph4wvXHKPXexnm));
+>   coexistência no staging feita (parte P do [`staging.md`](staging.md)), falta o **lembrete com botões** quando a
+>   Meta aprovar os 18 templates da conta nova; depois **B** (clínica de testes permanente na produção, 2º número do
+>   cliente; valida F8.1, F8.2b e F8.3) e **C** (piloto com a Dra. Ana Karina). **Revisto em 29/out: piloto direto**
+>   (B depois); roteiro no plano (F10, item 7). **Clínica piloto criada e WhatsApp conectado na produção
+>   (29/out, cliente).** Conferido pelo Claude: conexão por coexistência, as duas sincronizações,
+>   forma de pagamento conferida, 14 templates (catálogo completo) em análise na Meta, eco da recepção chegando.
+>   Próximo: templates aprovados; configuração; ativação em Sistema › Clínicas › clínica › Situação; testes do bot.
+> - **Meta:** Análise do App e Verificação do acesso aprovadas; o RecepClinic é Tech Provider (24/out).
+>
+> **Pendências**
+> - **Validação do cliente no staging (no fim, como pedido):** F8.1, F8.2, F8.2b, F8.3 e a ajuda contextual.
+> - **F11 (financeiro):** testes do roteiro a partir do T3.1; fora do sistema, teste real na Produção Restrita
+>   (e-CNPJ A1), template `rc_nota_fiscal_v1` na Meta e termo com o advogado; melhorias
+>   no processo da nota numa sessão própria (o cliente traz a lista).
+> - **Operação:** conferir o 1º backup diário da produção (*Database › Backups* do `recepclinic-producao`); investigar
+>   a sessão do painel que caiu durante a janela da Meta (parte P do [`staging.md`](staging.md)).
+> - **Do cliente:** advogado (páginas legais e [política de pedidos de autoridades](politica-pedidos-de-autoridades.md)),
+>   contrato com as clínicas e termo de tratamento de dados; número do app antigo da Meta como 2ª clínica de testes do
+>   staging (quando o aparelho estiver com ele).
+>
+> **Como trabalhar** (detalhes em [`staging.md`](staging.md) e [`producao.md`](producao.md))
+> - **Migrações:** staging com `supabase db push` na ordem simulação → aplicar → conferir no banco → push do código;
+>   produção só com autorização explícita, pelo fluxo de `producao.md` (`git push origin main:producao`).
+> - **Local:** OrbStack, `npm run db:start`, `npm run dev`; testes `npm test` e `npm run test:db` (o shell precisa de
+>   `/opt/homebrew/bin` no PATH). Variável nova na Vercel só vale depois de um Redeploy.
+> - **WhatsApp de testes:** `+55 61 9903-3143`, na "Consultorio de Teste" do staging, em coexistência.
+> - **Frentes paralelas:** site em [`site-plano.md`](site-plano.md) (pasta `recepclinic-site`, nunca aqui);
+>   comercial no Suporte › Vendas; triagem do piloto em [`triagem-piloto.md`](triagem-piloto.md).
+
+## Revisão da jornada do bot (31/out/2026)
+
+E1–E4 e ajustes de texto, na produção em 31/out (`20bfe8b`). Decisões do cliente, copiadas do `jornada-do-bot.md`
+(temporário, excluído ao fim da revisão):
+
+Pedido do cliente (31/out): jornada mais objetiva, valor só depois das escolhas, particular ou convênio, pediatria,
+assunto na transferência. Código na branch `jornada-bot` (criada da `main`); cada etapa com testes de jornada completa
+em `tests/db/`, staging e OK do cliente.
+
+**Decisões (cliente, 31/out)**
+1. Serviço único na categoria: o bot escolhe sozinho e avisa ("Vamos marcar a *X*"). Revoga a decisão de 07/out.
+2. Lista de serviços sem preço.
+3. Retorno: nunca fala de valor, mesmo com preço cadastrado (o preço continua na agenda).
+4. "Aceita convênios" = recurso Convênios ligado e pelo menos um plano ativo. Plano procurado pelo nome e pelos outros
+   nomes (`search_insurance_plans`); profissional com o plano em `professional_insurance_exclusions` = não aceito.
+   Sem regra por serviço ou modalidade (não existe no sistema).
+5. Convênio gravado no atendimento (pelo link); no paciente só se ele ainda não tiver plano.
+6. Valor e formas de pagamento: depois de serviço, profissional, modalidade e particular; formas = texto de Configurações
+   (`bot_payment_info`); sem texto, só o valor.
+7. Pediatria: idade limite = a da clínica (`consultation_age_limit_years`), com o nome do profissional escolhido; sem
+   campo novo.
+8. Pediatria: nome completo da criança → nascimento → nome do responsável (o contato). **Não** pergunta outro telefone:
+   lembretes no número da conversa.
+9. Transferência para a recepção: em **todas** (pedido, não entendeu, sem horário, convênio recusado, limite) o bot avisa,
+   pergunta o assunto uma vez e grava a primeira resposta; sem resposta, fica "assunto não informado" na tela
+   Atendimento. O bot pausa como hoje.
+10. Já atendidos, só ganham testes: sem horário (a lista só mostra profissional com horário; sem nenhum, recepção) e
+    dia e hora só pela página do link.
+
+11. Convênio: até 8 planos ativos (limite de 10 linhas do WhatsApp, com "Outro convênio" e "Voltar ao menu"), lista com os planos e "Outro convênio" (= não atendido); mais de 9, o paciente digita
+    e o bot procura.
+12. Coleta pediátrica (paciente, nascimento, depois quem escreve/responsável): perfil Pediatria **ou** paciente menor
+    em qualquer clínica. Na prática, para outra pessoa: nome do paciente → nascimento → nome de quem escreve (número
+    novo). Menor: "nome do responsável".
+13. Idade limite com "Primeiro horário": a mensagem usa o nome da clínica.
+14. Publicação (cliente, 31/out): E2–E4 seguidas na branch, testes a cada etapa, e no fim juntar na `main` e publicar no
+    staging (com as migrações) para validação pelo celular.
+
+**Etapas:** E1 serviço único, lista sem preço e retorno sem valor · E2 particular ou convênio, valor depois das escolhas
+(migração no link) · E3 pediatria · E4 assunto na transferência (migração e tela Atendimento).
+
+Depois das etapas (cliente, 31/out): entrada com agendamento sem "Como podemos ajudar?"; idade limite ultrapassada
+com o nome do profissional; confirmação na página do link ao marcar e remarcar; data de nascimento "do paciente" em
+qualquer perfil e data sem atendimento só com "Tentar outra data" e "Voltar ao menu".

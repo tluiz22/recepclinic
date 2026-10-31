@@ -16,7 +16,9 @@ import PhoneLinks from "../../components/admin/PhoneLinks.astro";
 import Button from "../../components/admin/ui/Button.astro";
 import Notice, { type NoticeTone } from "../../components/admin/ui/Notice.astro";
 import PageHeader from "../../components/admin/ui/PageHeader.astro";
+import HowItWorks from "../../components/admin/ui/HowItWorks.astro";
 import Stat from "../../components/admin/ui/Stat.astro";
+import { relacionamento } from "../../lib/ajuda/relacionamento";
 import { createUserClient } from "../../lib/data/clients";
 import { getDashboardCounts } from "../../lib/data/dashboard";
 import { describeSendsAlert, getSendsAlert } from "../../lib/data/sends";
@@ -176,12 +178,13 @@ const sectionTitle = "font-display text-[17px] leading-tight font-bold text-ink 
   {
     toReview && (
       <section aria-labelledby="revisar" class="mt-6 flex flex-col rounded-xl border border-line bg-white p-3.5 sm:px-5 sm:py-[18px]">
-        <div class="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
-          <h2 id="revisar" class={sectionTitle}>
-            Contatos para revisar{toReview.length > 0 && <span class="font-sans text-sm font-semibold text-ink-soft"> ({toReview.length})</span>}
-          </h2>
+        <h2 id="revisar" class={sectionTitle}>
+          Contatos para revisar{toReview.length > 0 && <span class="font-sans text-sm font-semibold text-ink-soft"> ({toReview.length})</span>}
+        </h2>
+        {/* "Como funciona?" (texto aprovado pelo cliente em 31/out/2026). */}
+        <HowItWorks id="contatos-revisar" topic={relacionamento.comoFunciona.revisar} class="mt-1">
           <p class="text-sm text-ink-soft">Nos últimos {REVIEW_WINDOW_DAYS} dias, o bot deixou de marcar para estes números por um limite do contato.</p>
-        </div>
+        </HowItWorks>
         {toReview.length === 0 ? (
           <p class="mt-2 text-[15px] text-ink-soft">Nenhum contato para revisar.</p>
         ) : (

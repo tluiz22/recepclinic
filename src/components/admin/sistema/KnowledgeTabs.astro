@@ -1,0 +1,22 @@
+---
+// Abas da Base de Conhecimento (BC 3.3): entradas, testador, termos, perguntas
+// não reconhecidas e histórico.
+import Tabs from "../ui/Tabs.astro";
+
+interface Props {
+  active: "entradas" | "testar" | "termos" | "nao-reconhecidas" | "historico";
+  unmatched?: number;
+}
+
+const { active, unmatched = 0 } = Astro.props;
+const BASE = "/admin/sistema/conhecimento";
+const tabs = [
+  { key: "entradas", label: "Entradas", href: BASE },
+  { key: "testar", label: "Testar", href: `${BASE}/testar` },
+  { key: "termos", label: "Especialidades e filtro", href: `${BASE}/termos` },
+  { key: "nao-reconhecidas", label: "Não reconhecidas", href: `${BASE}/nao-reconhecidas`, count: unmatched, countTone: "info" as const },
+  { key: "historico", label: "Histórico", href: `${BASE}/historico` },
+].map((tab) => ({ ...tab, active: tab.key === active }));
+---
+
+<Tabs tabs={tabs} label="Base de conhecimento" />

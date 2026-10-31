@@ -2,6 +2,7 @@ import type { ClinicProfile } from "../../../vocabulary";
 import { designationText, designationTitle, type Designation } from "../../../designation";
 import { formatCentsBRL } from "../../../money";
 import type { ListRow, ListSection, ReplyButton } from "../send";
+import type { BotService } from "./catalog";
 import { BACK_TO_MENU_ID, TALK_TO_RECEPTION_ID } from "./input";
 
 // Textos do bot (F6.3), aprovados pelo cliente em 07/out/2026: os do piloto,
@@ -77,24 +78,24 @@ export const MENU_BODY = "Como podemos ajudar? Escolha uma opção abaixo (ou di
 // Entrada com atendimento marcado no número (cliente, 23/out/2026): pergunta
 // antes do menu; os detalhes só depois da data de nascimento.
 export const ENTRY_IDS = { yes: "entry_yes", no: "entry_no" } as const;
-export const ENTRY_ONE = "Como podemos ajudar? Identificamos um agendamento associado a este número. Você deseja tratar desse agendamento?";
+export const ENTRY_ONE = "Identificamos um agendamento associado a este número. Você deseja tratar desse agendamento?";
 export const ENTRY_MANY = "Como podemos ajudar? Encontramos mais de um agendamento associado a este número. Você deseja consultar ou alterar algum deles?";
 export const ENTRY_ONE_BUTTONS = [button(ENTRY_IDS.yes, "Sim, quero"), button(ENTRY_IDS.no, "Não, outro assunto")];
 export const ENTRY_MANY_BUTTONS = [button(ENTRY_IDS.yes, "Sim, consultar"), button(ENTRY_IDS.no, "Não, outro assunto")];
 export const ENTRY_NOT_UNDERSTOOD = "Não entendi 🙏 Toque em uma das opções abaixo.";
-export const entryAskBirthdate = (w: Words) =>
-  `Para sua segurança, antes de mostrar o agendamento precisamos confirmar a identidade.\n\nQual a data de nascimento ${of(w)}? (formato dd/mm/aaaa)`;
+// "do paciente" em qualquer perfil (cliente, 31/out/2026).
+export const ENTRY_ASK_BIRTHDATE =
+  "Para sua segurança, antes de mostrar o agendamento precisamos confirmar a identidade.\n\nQual a data de nascimento do paciente? (formato dd/mm/aaaa)";
 
 // Data de nascimento sem atendimento, na entrada e em Cancelar, Remarcar e
 // Encaixe (cliente, 24/out/2026): sem bloqueio por data errada; a pessoa
-// escolhe a recepção (só com coexistência), outra data ou o menu.
-export const IDENTITY_IDS = { reception: "identity_reception", retry: "identity_retry", menu: "identity_menu" } as const;
+// escolhe outra data ou o menu (sem "Falar com a recepção": cliente, 31/out/2026).
+export const IDENTITY_IDS = { retry: "identity_retry", menu: "identity_menu" } as const;
 export type IdentityChoice = keyof typeof IDENTITY_IDS;
-export const identityChoices = (receptionAvailable: boolean): IdentityChoice[] => [...(receptionAvailable ? (["reception"] as const) : []), "retry", "menu"];
-export const identityNotFound = (receptionAvailable: boolean) =>
-  `Não encontramos agendamentos para essa data de nascimento.${receptionAvailable ? " Deseja falar com a recepção?" : ""}`;
-const IDENTITY_TITLES: Record<IdentityChoice, string> = { reception: "Falar com a recepção", retry: "Tentar outra data", menu: "Voltar ao menu" };
-export const identityNotFoundButtons = (receptionAvailable: boolean) => identityChoices(receptionAvailable).map((k) => button(IDENTITY_IDS[k], IDENTITY_TITLES[k]));
+export const IDENTITY_CHOICES: IdentityChoice[] = ["retry", "menu"];
+export const IDENTITY_NOT_FOUND = "Não encontramos agendamentos para essa data de nascimento.";
+const IDENTITY_TITLES: Record<IdentityChoice, string> = { retry: "Tentar outra data", menu: "Voltar ao menu" };
+export const IDENTITY_NOT_FOUND_BUTTONS = IDENTITY_CHOICES.map((k) => button(IDENTITY_IDS[k], IDENTITY_TITLES[k]));
 export const ENTRY_LOOKUP_ERROR = "Não conseguimos consultar os agendamentos agora. Você pode seguir pelas opções do menu.";
 export const ENTRY_CHOOSE = "Qual agendamento você quer consultar ou alterar?";
 export const ENTRY_ACTION_ITEMS = {
@@ -158,6 +159,26 @@ export const linkError = (d: Designation) =>
 export const serviceQuestion = (category: "consultation" | "exam") =>
   category === "exam" ? "Qual exame você quer marcar?" : "Qual consulta você quer marcar?";
 
+export const serviceAuto = (serviceName: string) => `Vamos marcar *${serviceName}*.`;
+
+// Particular ou convênio e valor (cliente, 31/out/2026).
+export const COVERAGE_QUESTION = "O atendimento será particular ou por convênio?";
+export const COVERAGE_IDS = { private: "coverage_private", insurance: "coverage_insurance" } as const;
+export const COVERAGE_BUTTONS = [button(COVERAGE_IDS.private, "Particular"), button(COVERAGE_IDS.insurance, "Convênio")];
+export const PLAN_LIST_QUESTION = "Qual é o seu convênio?";
+export const PLAN_TEXT_QUESTION = "Qual é o seu convênio? Escreva o nome do plano.";
+export const PLAN_OTHER_ID = "plan_other";
+export const PLAN_OTHER_LABEL = "Outro convênio";
+export const planAccepted = (planName: string) => `Atendemos pelo convênio *${planName}*.`;
+/** Plano fora da lista, não encontrado ou não atendido pelo(s) profissional(is) do caminho escolhido. */
+export const planNotAccepted = (planName: string | null, d: Designation, forThisService: boolean) =>
+  `Infelizmente ${designationText(d)} não atende ${planName ? `pelo convênio *${planName}*` : "por esse convênio"}${forThisService ? " neste atendimento" : ""}.\n\nQuer seguir com o atendimento particular?`;
+export const insuranceToReception = (d: Designation) => `Tudo bem. ${willReply(d)}`;
+export function priceInfo(category: "consultation" | "exam", cents: number, paymentInfo: string | null): string {
+  const value = `O valor ${category === "exam" ? "do exame" : "da consulta"} é ${formatCentsBRL(cents)}.`;
+  return paymentInfo ? `${value}\n\nFormas de pagamento: ${paymentInfo}` : value;
+}
+
 export const AGENDA_QUESTION = "Com qual profissional?";
 /** "Primeiro horário disponível" não cabe no título da linha (24 caracteres): o resto vai na descrição. */
 export const FIRST_AVAILABLE = "Primeiro horário";
@@ -183,6 +204,8 @@ export const otherPatientLabel = other;
 
 export const askBirthdate = (w: Words) => `Qual a data de nascimento ${of(w)}? (formato dd/mm/aaaa)`;
 export const SELF_BIRTHDATE = "Qual é a sua data de nascimento? (formato dd/mm/aaaa)";
+/** Depois de responder uma pergunta da base no meio do pedido da data (BC, Etapa 4). */
+export const ASK_BIRTHDATE_AGAIN = "Qual a data de nascimento do paciente? (formato dd/mm/aaaa)";
 export const INVALID_BIRTHDATE = "Não consegui entender essa data. Por favor, digite no formato dd/mm/aaaa (ex.: 10/03/2020).";
 export const INVALID_BIRTHDATE_AGAIN = `${INVALID_BIRTHDATE}\n\nSe não souber a data, escolha uma opção abaixo.`;
 export const birthdateMatches = (w: Words) =>
@@ -190,8 +213,13 @@ export const birthdateMatches = (w: Words) =>
 export const confirmPatient = (w: Words, name: string, birthdate: string) =>
   `Encontramos *${name}*, nascido(a) em ${birthdate}: ${w.feminine ? "é essa a" : "é esse o"} ${w.patient}? Responda Sim ou Não.`;
 
-export const ASK_CONTACT_NAME = "Antes de continuar, qual é o seu nome completo?";
 export const confirmContactName = (name: string) => `Confira o seu nome: *${name}*\n\nEstá correto? Responda Sim ou Não.`;
+// Número novo marcando para outra pessoa (cliente, 31/out/2026): o paciente primeiro, depois quem escreve; menor de 18, o responsável.
+export const ASK_GUARDIAN_NAME = "Qual é o nome completo do responsável?";
+export const confirmGuardianName = (name: string) => `Confira o nome do responsável: *${name}*\n\nEstá correto? Responda Sim ou Não.`;
+/** Idade limite da clínica (consulta), com o profissional escolhido ou, no "Primeiro horário", a clínica. */
+export const ageLimitNotice = (professionalName: string | null, d: Designation, limitYears: number) =>
+  `${professionalName ?? designationTitle(d)} atende pacientes até ${limitYears - 1} anos.`;
 export const askPatientName = (w: Words) => `Qual é o nome completo ${of(w)}?`;
 export const ASK_SELF_NAME = "Qual é o seu nome completo?";
 export const confirmNewPatient = (w: Words, name: string, birthdate: string) =>
@@ -203,8 +231,9 @@ export const SELF_MINOR = "Para menores de 18 anos, o agendamento precisa ser fe
 export const bookingLink = (serviceName: string, patientName: string, url: string) =>
   `Prontinho! Escolha o melhor dia e horário para *${serviceName}* de ${patientName} neste link:\n${url}\n\nO link vale por 30 minutos.`;
 
-export const ageLimit = (serviceName: string, limitYears: number, w: Words) =>
-  `${serviceName} é para pacientes até ${limitYears - 1} anos.\n\nDeseja agendar para ${w.feminine ? "outra criança" : "outra pessoa"}?`;
+/** Acima da idade limite, com o profissional escolhido ou a clínica (cliente, 31/out/2026). */
+export const ageLimit = (professionalName: string | null, d: Designation, limitYears: number, w: Words) =>
+  `${ageLimitNotice(professionalName, d, limitYears)}\n\nDeseja agendar para ${w.feminine ? "outra criança" : "outra pessoa"}?`;
 
 /** Já tem marcado: aponta o Remarcar do próprio bot, com o caminho (cliente, 11/out/2026). */
 export const alreadyScheduled = (patientName: string, serviceName: string, when: string, group: "consultation" | "exam") =>
@@ -214,11 +243,8 @@ export const alreadyScheduled = (patientName: string, serviceName: string, when:
 // Retorno
 // ---------------------------------------------------------------------------
 
-export function returnPriceLine(cents: number): string {
-  return cents === 0 ? "O retorno não tem custo." : `Valor do retorno: ${formatCentsBRL(cents)}.`;
-}
-export const returnChoice = (w: Words, priceLine: string, deadlineDays: number | null) =>
-  `${priceLine}\n\n${deadlineDays !== null ? `O retorno deve ser feito em até ${deadlineDays} dias após a consulta. ` : ""}Para qual ${w.patient} é o retorno?`;
+export const returnChoice = (w: Words, deadlineDays: number | null) =>
+  `${deadlineDays !== null ? `O retorno deve ser feito em até ${deadlineDays} dias após a consulta. ` : ""}Para qual ${w.patient} é o retorno?`;
 export const returnNoRecent = (deadlineDays: number | null) =>
   deadlineDays !== null
     ? `Não encontramos consulta nos últimos ${deadlineDays} dias. O retorno deve ser feito em até ${deadlineDays} dias após a consulta; passado esse prazo, é preciso marcar uma nova consulta em Consultas › Marcar consulta.`
@@ -241,6 +267,14 @@ export const INFO_ITEMS = {
 } as const;
 
 export type PriceLine = { name: string; lines: string[] };
+
+/** Valor do serviço por tipo de local (Informações › Valores e perguntas frequentes); zero = "Sem custo". */
+export function servicePriceLines(service: Pick<BotService, "locationPrices" | "priceCents">): string[] {
+  const types = Object.keys(service.locationPrices) as (keyof typeof LOCATION_LABELS)[];
+  const value = (cents: number) => (cents === 0 ? "Sem custo" : price(cents)!);
+  if (types.length <= 1) return [value(types.length ? service.locationPrices[types[0]]! : service.priceCents)];
+  return types.map((type) => `${LOCATION_LABELS[type]}: ${value(service.locationPrices[type]!)}`);
+}
 
 export function pricesText(groups: PriceLine[], paymentInfo: string | null): string {
   const blocks = groups.map((g) => `*${g.name}*\n${g.lines.join("\n")}`);
@@ -375,6 +409,10 @@ export const OFFER_ALREADY_ACCEPTED = "Essa vaga já está confirmada para você
 export const OFFER_NOT_FOUND = "Essa oferta não está mais ativa.";
 
 // Pedido de recepção digitado: confirma antes de transferir; "Não" volta ao menu (cliente, 30/out/2026).
+// Assunto da transferência (cliente, 31/out/2026): perguntado uma vez, depois do aviso de transferência.
+export const HANDOFF_SUBJECT_QUESTION = "Para agilizar, poderia me contar brevemente qual assunto deseja tratar com a secretária?";
+export const HANDOFF_SUBJECT_THANKS = "Obrigado! Já repassamos para a nossa equipe.";
+
 export const RECEPTION_CONFIRM = "Você quer falar com a recepção? A conversa passa para a nossa equipe.";
 export const RECEPTION_CONFIRM_IDS = { yes: "reception_yes", no: "reception_no" } as const;
 export const RECEPTION_CONFIRM_BUTTONS = [button(RECEPTION_CONFIRM_IDS.yes, "Sim"), button(RECEPTION_CONFIRM_IDS.no, "Não")];
@@ -392,3 +430,12 @@ export const LIMIT_RECEPTION_WILL_CONTACT = "Para esse agendamento, a recepção
 export const BLOCKED_HANDOFF = "Sua conversa está com a recepção, que responde por aqui assim que possível.";
 /** Número sem coexistência. */
 export const BLOCKED_RECEPTION_WILL_CONTACT = "Sua conversa está com a recepção, que vai entrar em contato com você.";
+
+// ---------------------------------------------------------------------------
+// Base de conhecimento (BC, Etapa 4)
+// ---------------------------------------------------------------------------
+
+export const KB_DID_YOU_MEAN = "Você quis dizer…?";
+export const KB_NONE_OF_THESE = "Nenhuma destas";
+export const KB_BOOK = "Marcar";
+export const KB_NO_APPOINTMENTS = "Não encontramos atendimento marcado para este número.";

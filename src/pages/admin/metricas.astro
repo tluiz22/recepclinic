@@ -45,6 +45,7 @@ import { buildFunnelReportFromSessions, DIGITAL_OPERATIONS, listFunnelSessions, 
 import DigitalTab from "../../components/admin/metricas/DigitalTab.astro";
 import { logError } from "../../lib/log";
 import { loadContactNames } from "../../lib/data/people";
+import { loadRecallDismissals, withoutDismissed } from "../../lib/data/relationship";
 import { INVALID_PERIOD_MESSAGES, PERIOD_PRESETS, parsePeriod } from "../../lib/metricsPeriod";
 import { formatCentsBRL } from "../../lib/money";
 import { formatPhoneBR } from "../../lib/phone";
@@ -124,15 +125,21 @@ if (botVisible) {
     logError("métricas: tentativas do bot não carregaram", error, { clinica: clinic.clinicId });
   }
 }
-const recallVisible = visible.some((t) => t.id === "retomar_contato");
-const recallCount = botSessions && recallVisible ? buildFunnelReportFromSessions(botSessions, now).incomplete.length : 0;
 const funnel =
   botTab && botSessions ? buildFunnelReportFromSessions(filterPhone ? botSessions.filter((s) => s.phone === filterPhone) : botSessions, now) : null;
 const operation: DigitalOperation = DIGITAL_OPERATIONS.find((o) => o.id === params.get("operacao"))?.id ?? "marcar";
 const originParam = params.get("origem");
 const digitalOrigin: DigitalOrigin = originParam === "menu" || originParam === "lembrete" ? originParam : "todas";
 const RECALL_LIMIT = 50;
-const recall = tab === "retomar_contato" && funnel ? funnel.incomplete.slice(0, RECALL_LIMIT) : [];
+// Sem quem a equipe retirou no Relacionamento (cliente, 31/out/2026); falha = a lista inteira, como antes.
+const recallDismissals =
+  tab === "retomar_contato" && funnel
+    ? await loadRecallDismissals(db, clinic.clinicId).catch((error: unknown) => {
+        logError("métricas: retirados do Retomar contato não carregaram", error, { clinica: clinic.clinicId });
+        return new Map<string, Date>();
+      })
+    : new Map<string, Date>();
+const recall = tab === "retomar_contato" && funnel ? withoutDismissed(funnel.incomplete, recallDismissals).slice(0, RECALL_LIMIT) : [];
 // Nomes lidos pela função compartilhada com o Relacionamento (CRM A2); falha = "sem cadastro", como antes.
 const recallContacts = await loadContactNames(db, clinic.clinicId, recall.map((r) => r.contactId)).catch((error: unknown) => {
   logError("métricas: nomes do Retomar contato não carregaram", error, { clinica: clinic.clinicId });
@@ -215,7 +222,6 @@ const fin = tab === "financeiro" ? financial(financialTotals) : null;
             label: t.label,
             href: link({ tab: t.id }),
             active: t.id === tab,
-            ...(t.id === "retomar_contato" && recallCount > 0 ? { count: recallCount, countTone: "warning" as const, countLabel: `${recallCount} para retomar` } : {}),
           }))} />
 
         <details data-metric-filters data-keep-open={showCustom || busca ? "" : undefined} open class="mt-4 rounded-xl border border-line bg-white">
@@ -427,8 +433,7 @@ const fin = tab === "financeiro" ? financial(financialTotals) : null;
             compare={compare}
             operation={operation}
             origin={digitalOrigin}
-            recallCount={recallCount}
-            links={{ recall: link({ tab: "retomar_contato", operacao: "", origem: "" }), retry: link({}) }}
+            links={{ retry: link({}) }}
             now={now}
           />
         )}
@@ -481,7 +486,7 @@ const fin = tab === "financeiro" ? financial(financialTotals) : null;
           <>
             <p class={`${intro} mt-4 max-w-4xl`}>
               Quem começou pelo WhatsApp e não concluiu no período (abandono ou erro), para retomar o contato. Sai da lista quem concluiu o mesmo fluxo
-              depois.{funnel.incomplete.length > RECALL_LIMIT && ` Mostrando os ${RECALL_LIMIT} mais recentes.`}
+              depois ou foi retirado no Relacionamento.{funnel.incomplete.length > RECALL_LIMIT && ` Mostrando os ${RECALL_LIMIT} mais recentes.`}
             </p>
             {recall.length === 0 ? (
               <p class={`${card} mt-3 text-[15px] text-ink-soft`}>Ninguém nessa situação no período.</p>

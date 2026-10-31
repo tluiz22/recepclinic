@@ -301,7 +301,7 @@ describe("encaixe ou antecipar", () => {
     let reply = await choose(P2, "manage_waitlist");
     expect(titles(reply)).toEqual(["Marcar consulta", "Marcar retorno", "Voltar ao menu"]);
     reply = await say(P2, { id: "waitlist_book_consultation" });
-    expect(reply.at(-1)!.body).toBe("Qual consulta você quer marcar?");
+    expect(reply.map((m) => m.body)).toEqual(["Vamos marcar *Consulta*.", "Com qual profissional?"]);
   });
 });
 
@@ -315,7 +315,9 @@ describe("recepção e pausa", () => {
     expect(titles(reply)).toContain("4. Falar com a recepção");
     reply = await say(phone, "4");
     expect(reply[0].body).toContain("Vou te transferir para a recepção");
-    expect(await say(phone, "alô?")).toEqual([]);
+    // Assunto da transferência (cliente, 31/out/2026): a 1ª resposta é o assunto; depois, o bot fica calado.
+      expect((await say(phone, "alô?")).map((m) => m.body)).toEqual(["Obrigado! Já repassamos para a nossa equipe."]);
+      expect(await say(phone, "tem alguém aí?")).toEqual([]);
 
     // A recepção devolve ao bot pelo app.
     await webhook({ message_echoes: [{ id: `wamid.f64.echo.${++seq}`, from: "5584000000000", to: phone.slice(1), type: "text", text: { body: "#bot" } }] });
@@ -380,7 +382,7 @@ describe("não achou neste número (cliente, 11/out/2026)", () => {
     expect(funnel).toMatchObject({ step: "blocked", metadata: { reason: "no_match" } });
   });
 
-  it("com coexistência: pergunta se quer falar com a recepção; só vai para ela se escolher", async () => {
+  it("com coexistência: sem \"Falar com a recepção\" na data sem atendimento (cliente, 31/out/2026)", async () => {
     await adminClient().from("whatsapp_connections").update({ coexistence: true }).eq("clinic_id", f.clinicId);
     try {
       await fresh(P3);
@@ -388,12 +390,11 @@ describe("não achou neste número (cliente, 11/out/2026)", () => {
       await say(P3, "2");
       await say(P3, { id: "manage_cancel" });
       let reply = await say(P3, "02/02/2002");
-      expect(reply[0]).toMatchObject({ kind: "buttons", body: `${NOT_FOUND} Deseja falar com a recepção?` });
-      expect(titles(reply)).toEqual(["Falar com a recepção", "Tentar outra data", "Voltar ao menu"]);
+      expect(reply[0]).toMatchObject({ kind: "buttons", body: NOT_FOUND });
+      expect(titles(reply)).toEqual(["Tentar outra data", "Voltar ao menu"]);
       expect(bodies(reply)).not.toMatch(/Paciente|17\/03/);
-      reply = await say(P3, { id: "identity_reception" });
-      expect(reply[0].body).toContain("Vou te transferir para a recepção");
-      expect(await say(P3, "alô?")).toEqual([]);
+      reply = await say(P3, { id: "identity_menu" });
+      expect(reply.at(-1)!.options.map((o) => o.title)).toContain("4. Falar com a recepção");
     } finally {
       await fresh(P3);
       await adminClient().from("whatsapp_connections").update({ coexistence: false }).eq("clinic_id", f.clinicId);

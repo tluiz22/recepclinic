@@ -8,6 +8,8 @@
 // Substitui as abas em pílulas (ConfiguracoesTabs, F4.3). Redesign 2B (cliente,
 // 19/out/2026): cada seção com um ícone e o grupo como um título pequeno, sem
 // maiúsculas, com uma linha ao lado (computador); no celular, os mesmos ícones.
+// Menu lateral (M5; cliente, 30/out/2026): no computador, as seções vão para a
+// lateral do AdminLayout (slot "side"), no lugar do menu principal.
 import AdminLayout from "../../../layouts/AdminLayout.astro";
 import FlashMessage from "../FlashMessage.astro";
 import Icon from "../Icon.astro";
@@ -44,13 +46,15 @@ const count = "rounded-full bg-pend-100 px-2 text-[12.5px] leading-normal font-s
 const support = "rounded-md bg-blk-100 px-1.5 text-[11.5px] leading-normal font-semibold text-blk-800";
 ---
 
-<AdminLayout title={pageTitle ?? title}>
-  <div class="lg:grid lg:grid-cols-[208px_minmax(0,1fr)] lg:items-start lg:gap-8">
-    <nav aria-label="Seções de Configurações" class="hidden lg:flex lg:flex-col lg:gap-4">
+<AdminLayout title={pageTitle ?? title} sideTitle="Configurações">
+    <nav slot="side" aria-label="Seções de Configurações" class="flex flex-col gap-4">
+      <span class="flex items-center gap-2.5 px-2.5 font-display text-lg font-bold text-ink">
+        <Icon name="settings" class="h-5 w-5 shrink-0 text-brand" strokeWidth={1.8} /> Configurações
+      </span>
       {
         groups.map((group) => (
           <div class="flex flex-col gap-0.5">
-            <span class="flex items-center gap-2 px-1 pb-1">
+            <span class="flex items-center gap-2 px-2.5 pb-1">
               <span class="text-[13px] leading-none font-semibold whitespace-nowrap text-ink-soft">{group.title}</span>
               <span class="h-px flex-1 bg-line-strong" aria-hidden="true" />
             </span>
@@ -59,7 +63,7 @@ const support = "rounded-md bg-blk-100 px-1.5 text-[11.5px] leading-normal font-
                 href={s.href}
                 aria-current={s.id === current ? "page" : undefined}
                 class={`group/item flex h-[38px] items-center gap-2.5 rounded-lg px-2.5 text-[15px] no-underline ${
-                  s.id === current ? "bg-brand-soft font-bold text-brand-ink" : "font-semibold text-ink hover:bg-canvas-deep"
+                  s.id === current ? "bg-brand-soft font-bold text-brand-ink" : "font-semibold text-ink hover:bg-canvas"
                 }`}
               >
                 <Icon name={s.icon} class={`h-[19px] w-[19px] shrink-0 ${s.id === current ? "text-brand" : "text-ink-soft group-hover/item:text-ink"}`} strokeWidth={1.8} />
@@ -165,7 +169,6 @@ const support = "rounded-md bg-blk-100 px-1.5 text-[11.5px] leading-normal font-
         <slot />
       </div>
     </div>
-  </div>
 </AdminLayout>
 
 <script>

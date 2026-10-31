@@ -1,0 +1,136 @@
+---
+// Testador da Base de Conhecimento (BC 3.3): o Suporte escolhe uma clínica e
+// escreve uma frase; a tela mostra a entrada reconhecida, a pontuação, as
+// alternativas, os nomes da clínica encontrados e a resposta montada com os
+// dados dela. Nada é enviado. Base "em edição" (tudo menos as inativas) ou a
+// publicada. A leitura da clínica fica no registro de leituras do Suporte.
+import AdminLayout from "../../../../layouts/AdminLayout.astro";
+import Badge from "../../../../components/admin/config/Badge.astro";
+import KnowledgeTabs from "../../../../components/admin/sistema/KnowledgeTabs.astro";
+import SystemHeader from "../../../../components/admin/sistema/SystemHeader.astro";
+import Notice from "../../../../components/admin/ui/Notice.astro";
+import { DD, DT, INPUT, KV, LABEL, PANEL, PRIMARY_BUTTON, SECTION_TITLE } from "../../../../components/admin/config/formStyles";
+import { isUuid } from "../../../../lib/clinicAccess";
+import { createUserClient } from "../../../../lib/data/clients";
+import { listClinicsAccess } from "../../../../lib/data/features";
+import { testQuestion, type KbTestMode, type KbTestResult } from "../../../../lib/data/knowledge/admin";
+import { CLINICAL_NOTICE } from "../../../../lib/data/whatsapp/bot/knowledge/answers";
+import { FLOW_LABELS } from "../../../../lib/knowledge/labels";
+import { ACCEPT_SCORE, SUGGEST_SCORE } from "../../../../lib/knowledge/match";
+import { logError } from "../../../../lib/log";
+
+const db = createUserClient(Astro.request, Astro.cookies);
+const clinics = await listClinicsAccess(db);
+const clinicId = Astro.url.searchParams.get("clinica") ?? "";
+const phrase = (Astro.url.searchParams.get("frase") ?? "").slice(0, 500);
+const mode: KbTestMode = Astro.url.searchParams.get("base") === "publicada" ? "published" : "editing";
+let result: KbTestResult | null = null;
+let failed = false;
+let nothingPublished = false;
+if (isUuid(clinicId) && phrase.trim()) {
+  try {
+    result = await testQuestion(db, clinicId, phrase, mode, new Date());
+    nothingPublished = !result;
+  } catch (error) {
+    logError("testador da base", error);
+    failed = true;
+  }
+}
+const pct = (score: number) => `${Math.round(score * 100)}%`;
+const kindLabel: Record<KbTestResult["match"]["kind"], string> = {
+  answer: "Reconhecida",
+  ambiguous: "Você quis dizer…?",
+  clinical: "Pergunta clínica",
+  none: "Não reconhecida",
+};
+---
+
+<AdminLayout title="Testar a base" platform>
+  <SystemHeader title="Base de conhecimento" subtitle="Teste uma frase com os dados de uma clínica. Nada é enviado ao paciente." />
+  <KnowledgeTabs active="testar" />
+
+  <form method="get" class={`mt-4 ${PANEL} grid gap-4`}>
+    <div class="grid gap-4 sm:grid-cols-2">
+      <div>
+        <label for="clinica" class={LABEL}>Clínica</label>
+        <select id="clinica" name="clinica" required class={INPUT}>
+          <option value="">Escolha</option>
+          {clinics.map((c) => <option value={c.id} selected={c.id === clinicId}>{c.name}</option>)}
+        </select>
+      </div>
+      <div>
+        <label for="base" class={LABEL}>Base</label>
+        <select id="base" name="base" class={INPUT}>
+          <option value="edicao" selected={mode === "editing"}>Em edição (tudo menos as inativas)</option>
+          <option value="publicada" selected={mode === "published"}>Publicada</option>
+        </select>
+      </div>
+    </div>
+    <div>
+      <label for="frase" class={LABEL}>Frase do paciente</label>
+      <input id="frase" name="frase" required maxlength="500" value={phrase} placeholder="vocês aceitam unimed?" class={INPUT} />
+    </div>
+    <div><button type="submit" class={PRIMARY_BUTTON}>Testar</button></div>
+  </form>
+
+  {failed && <Notice tone="danger" class="mt-3">Não conseguimos testar agora (falha registrada para o suporte). Tente de novo.</Notice>}
+  {nothingPublished && <Notice tone="warning" class="mt-3">A base ainda não foi publicada. Teste com a base em edição.</Notice>}
+
+  {
+    result && (
+      <section aria-label="Resultado" class={`mt-4 ${PANEL}`}>
+        <div class="flex flex-wrap items-center gap-2">
+          <h2 class={SECTION_TITLE}>Resultado</h2>
+          <Badge variant={result.match.kind === "answer" ? "success" : result.match.kind === "none" ? "neutral" : "warning"}>{kindLabel[result.match.kind]}</Badge>
+          <span class="text-sm text-ink-soft">{result.mode === "published" ? `Base publicada, versão ${result.version}` : "Base em edição"}</span>
+        </div>
+        <dl class={`mt-3 ${KV}`}>
+          {result.match.kind === "answer" && (
+            <>
+              <dt class={DT}>Entrada</dt>
+              <dd class={DD}>
+                <a href={`/admin/sistema/conhecimento/${result.match.entry.code}`} class="text-brand hover:underline">{`${result.match.entry.code} · ${result.match.entry.question}`}</a>
+                {` (${pct(result.match.score)})`}
+              </dd>
+            </>
+          )}
+          {result.match.kind === "ambiguous" && (
+            <>
+              <dt class={DT}>Opções ao paciente</dt>
+              <dd class={DD}>{result.match.options.map((o) => `${o.code} · ${o.question}`).join(" / ")}</dd>
+            </>
+          )}
+          <dt class={DT}>Nomes da clínica encontrados</dt>
+          <dd class={DD}>
+            {[...result.terms.services.map((s) => `serviço ${s}`), ...result.terms.professionals.map((p) => `profissional ${p}`), ...result.terms.plans.map((p) => `plano ${p}`), ...result.terms.specialties.map((s) => `especialidade ${s}`)].join(", ") || "Nenhum"}
+          </dd>
+          <dt class={DT}>Filtro clínico</dt>
+          <dd class={DD}>{result.clinical ? "Acionado" : "Não acionado"}</dd>
+          <dt class={DT}>Alternativas</dt>
+          <dd class={DD}>
+            {result.ranked.length ? (
+              <ul class="grid gap-0.5 font-normal">
+                {result.ranked.map((r) => <li>{`${r.code} · ${r.question}: ${pct(r.score)}`}</li>)}
+              </ul>
+            ) : (
+              "Nenhuma entrada passou pelas palavras-chave"
+            )}
+          </dd>
+        </dl>
+        <p class="mt-3 text-sm text-ink-soft">{`Responde a partir de ${pct(ACCEPT_SCORE)}; entre ${pct(SUGGEST_SCORE)} e ${pct(ACCEPT_SCORE)}, ou empatada, pergunta "Você quis dizer…?".`}</p>
+
+        <h3 class="mt-4 text-[15px] font-bold text-ink">O que o paciente recebe</h3>
+        <div class="mt-2 rounded-lg bg-canvas px-3.5 py-3 text-[15px] whitespace-pre-line text-ink">
+          {result.match.kind === "clinical" && `${CLINICAL_NOTICE}\n\n(Depois: "Você quer falar com a recepção?" Sim/Não; sem recepção no app, o menu.)`}
+          {result.match.kind === "ambiguous" && `Você quis dizer…?\n${result.match.options.map((o, i) => `${i + 1}. ${o.question}`).join("\n")}\nNenhuma destas`}
+          {result.match.kind === "none" && `O "não entendi" de hoje (e a frase entra nas não reconhecidas).`}
+          {result.match.kind === "answer" && !result.answer && "Nada: a clínica não tem o dado cadastrado. Segue o \"não entendi\" de hoje."}
+          {result.answer?.kind === "text" && `${result.answer.text}${result.answer.book ? "\n\n[Botão: Marcar]" : ""}${result.answer.offerReception ? "\n\n(Depois: \"Você quer falar com a recepção?\" Sim/Não.)" : ""}`}
+          {result.answer?.kind === "reception" && `${result.answer.text} [Sim / Não]`}
+          {result.answer?.kind === "flow" && `Abre o fluxo "${FLOW_LABELS[result.answer.flow]}"${result.answer.serviceId ? " já com o serviço citado" : ""}.`}
+          {result.answer?.kind === "preparation" && `O preparo ${result.answer.serviceIds.length === 1 ? "do exame citado" : `de um dos ${result.answer.serviceIds.length} exames (o paciente escolhe na lista)`}.`}
+        </div>
+      </section>
+    )
+  }
+</AdminLayout>

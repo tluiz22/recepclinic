@@ -6,10 +6,9 @@ const consultorio = { noun: "consultório", article: "o" as const };
 
 describe("textos do bot: não achou neste número", () => {
   it("data de nascimento sem atendimento: pergunta da recepção só com coexistência (cliente, 24/out/2026)", () => {
-    expect(t.identityNotFound(true)).toBe("Não encontramos agendamentos para essa data de nascimento. Deseja falar com a recepção?");
-    expect(t.identityNotFound(false)).toBe("Não encontramos agendamentos para essa data de nascimento.");
-    expect(t.identityNotFoundButtons(true).map((b) => b.title)).toEqual(["Falar com a recepção", "Tentar outra data", "Voltar ao menu"]);
-    expect(t.identityNotFoundButtons(false).map((b) => b.title)).toEqual(["Tentar outra data", "Voltar ao menu"]);
+    // Sem "Falar com a recepção" (cliente, 31/out/2026).
+    expect(t.IDENTITY_NOT_FOUND).toBe("Não encontramos agendamentos para essa data de nascimento.");
+    expect(t.IDENTITY_NOT_FOUND_BUTTONS.map((b) => b.title)).toEqual(["Tentar outra data", "Voltar ao menu"]);
   });
 
   it("com recepção no número, aponta o \"Falar com a recepção\"; sem, escrever pelo outro número", () => {

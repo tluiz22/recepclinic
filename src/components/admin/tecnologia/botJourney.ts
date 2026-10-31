@@ -5,7 +5,7 @@
 // (CLAUDE.md): mudou a jornada do bot, atualizar este arquivo no mesmo commit,
 // junto com JOURNEY_UPDATED.
 
-export const JOURNEY_UPDATED = "30/10/2026";
+export const JOURNEY_UPDATED = "31/10/2026";
 
 export type NodeKind = "patient" | "bot" | "page" | "auto" | "reception" | "decision";
 
@@ -45,7 +45,11 @@ export const JOURNEY: JourneySection[] = [
       branch(
         [
           "Não",
-          [bot("\"Olá! 👋 Aqui é [clínica].\""), bot(MENU, "Só aparecem as opções que a clínica usa.")],
+          [
+            bot("\"Olá! 👋 Aqui é [clínica].\""),
+            bot("Se a mensagem já traz uma pergunta frequente (\"vocês aceitam Unimed?\"), a resposta", "Com \"Perguntas frequentes no bot\" ligado (item 9). \"Oi\" sozinho: só as boas-vindas."),
+            bot(MENU, "Só aparecem as opções que a clínica usa."),
+          ],
         ],
         [
           "Sim",
@@ -53,7 +57,7 @@ export const JOURNEY: JourneySection[] = [
             bot("Boas-vindas e \"Identificamos um agendamento associado a este número. Você deseja tratar desse agendamento?\""),
             patient("Sim, quero", "\"Não, outro assunto\": vai para o menu principal."),
             bot("Pede a data de nascimento do paciente, por segurança", "Nada do atendimento aparece antes disso."),
-            check("A data confere com um paciente com atendimento?", "Não: Falar com a recepção · Tentar outra data · Voltar ao menu."),
+            check("A data confere com um paciente com atendimento?", "Não: \"Não encontramos agendamentos para essa data de nascimento.\" com Tentar outra data · Voltar ao menu."),
             bot("Mostra o atendimento (dia e hora) e pergunta o que fazer: Confirmar presença · Remarcar · Cancelar · Encaixe ou antecipar · Falar com a recepção"),
           ],
         ],
@@ -65,7 +69,7 @@ export const JOURNEY: JourneySection[] = [
     title: "2. Marcar consulta ou exame",
     intro: "Consultas › Marcar consulta, ou Exames › Marcar exame. O dia e o horário são escolhidos numa página, com a agenda real.",
     flow: [
-      bot("Qual consulta (ou exame) você quer marcar?", "Lista dos serviços, sempre mostrada, mesmo com um só."),
+      bot("Qual consulta (ou exame) você quer marcar?", "Lista dos serviços, sem preço. Com um serviço só, o bot escolhe sozinho e avisa: \"Vamos marcar *Consulta*\"."),
       check("O serviço tem horário livre no prazo da agenda?"),
       branch(
         ["Não", [bot("\"No momento não há horários livres\"; a recepção assume a conversa")]],
@@ -73,9 +77,37 @@ export const JOURNEY: JourneySection[] = [
           "Sim",
           [
             bot("Com qual profissional? (ou \"Primeiro horário\")", "Só quando mais de um profissional atende o serviço."),
-            bot("Consultório ou atendimento domiciliar?", "Só quando o serviço tem os dois. Domiciliar: pede e confirma o endereço."),
+            bot("Consultório ou atendimento domiciliar?", "Só quando o serviço tem os dois, sem preço. Domiciliar: pede e confirma o endereço."),
+            check("A clínica aceita convênios?", "Recurso Convênios ligado e pelo menos um plano ativo."),
+            branch(
+              ["Não", [bot("Valor e formas de pagamento", "\"O valor da consulta (ou do exame) é R$ …\" e o texto de formas de pagamento das Configurações.")]],
+              [
+                "Sim",
+                [
+                  bot("O atendimento será particular ou por convênio?"),
+                  branch(
+                    ["Particular", [bot("Valor e formas de pagamento")]],
+                    [
+                      "Convênio",
+                      [
+                        bot("Qual é o seu convênio?", "Até 8 planos: lista com \"Outro convênio\"; mais que isso, o paciente escreve e confirma na lista. Só planos ativos."),
+                        check("O plano é atendido pelo profissional escolhido (ou por algum, no \"Primeiro horário\")?"),
+                        branch(
+                          ["Sim", [bot("\"Atendemos pelo convênio *X*\"", "Sem valor. O plano fica no atendimento; a página só oferece quem atende o plano.")]],
+                          ["Não", [bot("Não atende e pergunta se quer particular", "Sim: valor e formas de pagamento. Não: a recepção assume.")]],
+                        ),
+                      ],
+                    ],
+                  ),
+                ],
+              ],
+            ),
             bot("É para você ou para outra pessoa?", "Clínica pediátrica: só no exame."),
-            bot("Identifica o paciente: escolhe um já cadastrado ou informa nome e data de nascimento", "Na primeira vez, o nome de quem escreve. Menor de 18 anos marcando para si: só pelo responsável. Idade limite do serviço conferida."),
+            bot("\"Dr(a). X atende pacientes até N anos\"", "Só na consulta, com idade limite na clínica. No \"Primeiro horário\": \"A clínica atende…\"."),
+            bot(
+              "Identifica o paciente: escolhe um já cadastrado ou informa nome completo e data de nascimento",
+              "Número novo: o paciente primeiro, depois o nome de quem escreve (paciente menor: \"do responsável\"), que recebe os lembretes. Menor de 18 anos marcando para si: só pelo responsável. Acima da idade limite: \"Dr(a). X atende pacientes até N anos. Deseja agendar para outra criança?\"",
+            ),
             check("O paciente já tem esse atendimento marcado?"),
             branch(
               ["Sim", [bot("Avisa o dia marcado e indica Remarcar")]],
@@ -83,7 +115,7 @@ export const JOURNEY: JourneySection[] = [
                 "Não",
                 [
                   bot("Manda o link para escolher dia e horário", "O link vale 30 minutos."),
-                  page("Escolhe o dia e o horário livres e confirma"),
+                  page("Escolhe o dia e o horário livres e confirma", "Antes de gravar, confirma num quadro com o atendimento, o dia e o horário, o profissional e o local."),
                   auto("Confirmação da marcação, com dia, hora e local"),
                   auto("Preparo do exame (texto ou arquivo) ou orientações da consulta", "Quando o serviço tem."),
                 ],
@@ -105,9 +137,9 @@ export const JOURNEY: JourneySection[] = [
         [
           "Sim",
           [
-            bot("Valor do retorno, prazo e \"Para qual paciente é o retorno?\""),
+            bot("Prazo e \"Para qual paciente é o retorno?\"", "Sem falar de valor."),
             bot("Manda o link, com datas só até o fim do prazo"),
-            page("Escolhe o dia e o horário"),
+            page("Escolhe o dia e o horário e confirma", "Antes de gravar, confirma num quadro com o atendimento, o dia e o horário, o profissional e o local."),
             auto("Confirmação da marcação"),
           ],
         ],
@@ -127,7 +159,7 @@ export const JOURNEY: JourneySection[] = [
           [
             bot("Domiciliar: confirma o endereço. Retorno: confere o prazo"),
             bot("Manda o link para o novo dia e horário"),
-            page("Escolhe o novo horário"),
+            page("Escolhe o novo horário e confirma", "O quadro de confirmação mostra o horário atual e o novo."),
             auto("Confirmação da remarcação"),
           ],
         ],
@@ -198,11 +230,37 @@ export const JOURNEY: JourneySection[] = [
       branch(
         ["O paciente pede", [patient("Toca em \"Falar com a recepção\" (ou escreve pedindo)", "Escrito: o bot confirma antes.")]],
         ["O bot não entende", [bot("Na 4ª mensagem seguida que não entende, passa para a clínica", "Áudio, foto e figurinha: o bot avisa que só lê texto.")]],
-        ["Não há o que marcar", [bot("Sem serviço ou sem horário livre: avisa que a recepção responde")]],
+        ["Não há o que marcar", [bot("Sem serviço, sem horário livre ou convênio não atendido sem particular: avisa que a recepção responde")]],
       ),
       bot("\"Vou te transferir para a recepção…\"; o bot fica pausado nessa conversa"),
+      bot(
+        "\"Para agilizar, poderia me contar brevemente qual assunto deseja tratar com a secretária?\"",
+        "Uma vez por transferência. A primeira resposta em texto (antes de a recepção responder) aparece na tela Atendimento; sem resposta: \"Assunto ainda não informado\".",
+      ),
       reception("Responde pelo app WhatsApp Business, no celular ou no computador", "Responder pelo app também pausa o bot. A tela Atendimento mostra quem espera."),
       reception("Manda #bot ou toca em \"Devolver ao bot\" no painel: o bot volta a atender essa conversa"),
+    ],
+  },
+  {
+    id: "perguntas",
+    title: "9. Perguntas frequentes",
+    intro:
+      "Com \"Perguntas frequentes no bot\" ligado, o paciente pode escrever a pergunta em qualquer ponto da conversa. A resposta sai do cadastro da clínica; o que não está cadastrado, o bot não responde.",
+    flow: [
+      patient("Escreve uma pergunta (\"qual o endereço?\", \"quanto custa?\", \"aceitam Unimed?\")", "Número, toque, Sim/Não, data, nome e endereço continuam como antes."),
+      check("O bot reconhece a pergunta?"),
+      branch(
+        [
+          "Sim",
+          [
+            bot("Responde com os dados da clínica e repete a pergunta em que a pessoa estava", "No meio da marcação, a marcação continua de onde estava. \"Quanto custa?\" depois de escolher o serviço: o valor dele."),
+            bot("Pedido de marcar, remarcar, cancelar ou confirmar: abre esse caminho", "Remarcar e cancelar como no item 4; nada de data digitada."),
+          ],
+        ],
+        ["Em dúvida", [bot("\"Você quis dizer…?\" com até 3 opções e \"Nenhuma destas\"")]],
+        ["Pergunta de saúde", [bot("\"Por aqui não conseguimos dar orientação de saúde.\" e \"Quer falar com a recepção?\"", "Sintoma junto com pedido de marcação: abre a marcação.")]],
+        ["Não", [bot("O \"não entendi\" de sempre", "A pergunta fica, sem o telefone, para o Suporte melhorar as respostas.")]],
+      ),
     ],
   },
 ];

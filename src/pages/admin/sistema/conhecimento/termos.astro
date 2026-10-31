@@ -1,0 +1,105 @@
+---
+// Dicionário de especialidades e termos do filtro clínico da Base de
+// Conhecimento (BC 3.3): o Suporte mantém, sem deploy. Valem no bot depois de
+// publicar.
+import AdminLayout from "../../../../layouts/AdminLayout.astro";
+import Badge from "../../../../components/admin/config/Badge.astro";
+import FlashMessage from "../../../../components/admin/FlashMessage.astro";
+import KnowledgeTabs from "../../../../components/admin/sistema/KnowledgeTabs.astro";
+import SystemHeader from "../../../../components/admin/sistema/SystemHeader.astro";
+import { CHECK, CHOICE, HINT, INPUT, LABEL, PANEL, SECONDARY_BUTTON, SECTION_TITLE } from "../../../../components/admin/config/formStyles";
+import { createUserClient } from "../../../../lib/data/clients";
+import { CLINICAL_GROUP_LABELS, listClinicalTerms, listSpecialties, type KbClinicalTerm } from "../../../../lib/data/knowledge/admin";
+
+const db = createUserClient(Astro.request, Astro.cookies);
+const [specialties, terms] = await Promise.all([listSpecialties(db), listClinicalTerms(db)]);
+const ACTION = "/api/admin/sistema/conhecimento/termos";
+const groups = (Object.keys(CLINICAL_GROUP_LABELS) as KbClinicalTerm["group"][]).map((group) => ({ group, terms: terms.filter((t) => t.group === group) }));
+---
+
+<AdminLayout title="Especialidades e filtro clínico" platform>
+  <SystemHeader title="Base de conhecimento" subtitle="Como o paciente chama cada especialidade e as palavras que levam ao aviso de saúde." />
+  <FlashMessage />
+  <KnowledgeTabs active="termos" />
+
+  <section id="especialidades" aria-label="Especialidades" class={`mt-4 ${PANEL}`}>
+    <h2 class={SECTION_TITLE}>{`Dicionário de especialidades (${specialties.length})`}</h2>
+    <p class={HINT}>O bot cruza estes termos com a especialidade cadastrada de cada profissional da clínica.</p>
+    <div class="mt-3 grid gap-2">
+      {
+        specialties.map((s) => (
+          <form method="POST" action={ACTION} class="grid gap-2 rounded-lg border border-line p-3 sm:grid-cols-[220px_minmax(0,1fr)_auto_auto] sm:items-end">
+            <input type="hidden" name="acao" value="especialidade" />
+            <input type="hidden" name="id" value={s.id} />
+            <div>
+              <label for={`nome-${s.id}`} class={LABEL}>Especialidade</label>
+              <input id={`nome-${s.id}`} name="name" required value={s.name} class={INPUT} />
+            </div>
+            <div>
+              <label for={`termos-${s.id}`} class={LABEL}>Como o paciente fala</label>
+              <input id={`termos-${s.id}`} name="terms" value={s.terms.join(", ")} class={INPUT} />
+            </div>
+            <label class={CHOICE}>
+              <input type="checkbox" name="is_active" checked={s.isActive} class={CHECK} /> Ativa
+            </label>
+            <button type="submit" class={SECONDARY_BUTTON}>Salvar</button>
+          </form>
+        ))
+      }
+    </div>
+    <form method="POST" action={ACTION} class="mt-4 grid gap-2 sm:grid-cols-[220px_minmax(0,1fr)_auto] sm:items-end">
+      <input type="hidden" name="acao" value="especialidade" />
+      <div>
+        <label for="nova-especialidade" class={LABEL}>Nova especialidade</label>
+        <input id="nova-especialidade" name="name" required class={INPUT} />
+      </div>
+      <div>
+        <label for="novos-termos" class={LABEL}>Como o paciente fala (separado por vírgula)</label>
+        <input id="novos-termos" name="terms" class={INPUT} />
+      </div>
+      <button type="submit" class={SECONDARY_BUTTON}>Incluir</button>
+    </form>
+  </section>
+
+  <section id="filtro" aria-label="Filtro clínico" class={`mt-4 ${PANEL}`}>
+    <h2 class={SECTION_TITLE}>Filtro clínico</h2>
+    <p class={HINT}>Mensagem com um destes termos recebe "Por aqui não conseguimos dar orientação de saúde." e a oferta da recepção (menos com pedido de marcação).</p>
+    {
+      groups.map(({ group, terms: list }) => (
+        <div class="mt-3">
+          <h3 class="text-[15px] font-bold text-ink">{CLINICAL_GROUP_LABELS[group]}</h3>
+          <ul class="mt-1.5 flex flex-wrap gap-1.5">
+            {list.map((t) => (
+              <li>
+                <form method="POST" action={ACTION} class="inline-flex items-center gap-1.5 rounded-full border border-line px-2.5 py-1">
+                  <input type="hidden" name="acao" value="termo_ativo" />
+                  <input type="hidden" name="id" value={t.id} />
+                  {!t.isActive && <input type="hidden" name="is_active" value="on" />}
+                  <span class={`text-[14.5px] ${t.isActive ? "text-ink" : "text-ink-soft line-through"}`}>{t.term}</span>
+                  <button type="submit" class="text-[13px] font-semibold text-brand hover:underline" aria-label={`${t.isActive ? "Desativar" : "Ativar"} ${t.term}`}>
+                    {t.isActive ? "desativar" : "ativar"}
+                  </button>
+                </form>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ))
+    }
+    <form method="POST" action={ACTION} class="mt-4 grid gap-2 sm:grid-cols-[220px_minmax(0,1fr)_auto] sm:items-end">
+      <input type="hidden" name="acao" value="termo" />
+      <div>
+        <label for="grupo" class={LABEL}>Grupo</label>
+        <select id="grupo" name="group" class={INPUT}>
+          {(Object.keys(CLINICAL_GROUP_LABELS) as KbClinicalTerm["group"][]).map((g) => <option value={g}>{CLINICAL_GROUP_LABELS[g]}</option>)}
+        </select>
+      </div>
+      <div>
+        <label for="termo" class={LABEL}>Novo termo</label>
+        <input id="termo" name="term" required class={INPUT} />
+      </div>
+      <button type="submit" class={SECONDARY_BUTTON}>Incluir</button>
+    </form>
+  </section>
+  <p class="mt-3 text-sm text-ink-soft"><Badge>Dica</Badge> Teste a mudança na aba Testar antes de publicar.</p>
+</AdminLayout>
