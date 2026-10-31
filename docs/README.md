@@ -29,7 +29,7 @@
 >
 > **Frentes em andamento**
 > - **Ajustes da produção, na `main`:** C1–C13 validados e na produção (C1–C6 em 28/out; C7–C8 em 29/out; C9–C10 em
->   30/out, `a7e077a`, com a limpeza das conversas gravadas pelo piloto em implantação; C11–C13b em 30/out, `b9dc41a`).
+>   30/out, `a7e077a`, com a limpeza das conversas gravadas pelo piloto em implantação; C11–C13b em 30/out, `b9dc41a`; C14 "Alterar" no "Mais" do cartão, no staging em 31/out).
 >   Detalhes no [`historico.md`](historico.md) (busca "C9" a "C13"). Clínica com exames: "Criar na Meta" (Suporte) para
 >   `rc_preparo_exame_v3` e `rc_preparo_arquivo_v3`. Próximo: nada pendente nesta frente; aguarda o cliente.
 > - **CRM concluído** (28/out; [`crm.md`](crm.md)): validado no staging e na produção desde 28/out.

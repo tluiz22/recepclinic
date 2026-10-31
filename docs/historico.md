@@ -686,6 +686,10 @@ retomada fica no README). Para achar algo, buscar por data (ex.: `27/out`), fase
   continuar de onde parou); na 1ª mensagem da conversa, o "Não" leva às boas-vindas e ao menu; outra resposta vale para
   o passo em que a pessoa estava. A espera fica no contexto (`_reception_confirm`), sem trocar o passo. O botão de saída
   da C12 continua transferindo direto. Sem migração. Publicada no staging em 30/out.
+- **C14 Alterar no "Mais"** (31/out): **cliente (31/out):** para o cartão do atendimento ter menos botões, o
+  "Alterar" sai da vista e vai para o "Mais", como 1º item no atendimento futuro (no que já passou, já ficava no "Mais").
+  Remarcar, Pagamento e as demais continuam onde estavam. Só `cardActions.ts` e o teste. Sem migração. Publicada no
+  staging em 31/out; o cliente valida no fim, junto com o menu lateral.
 - **DMED removida** (30/out): **cliente (30/out):** a DMED é do contador da clínica; o RecepClinic não gera mais o
   arquivo. Saíram a tela Financeiro › DMED, a rota do arquivo, `src/lib/dmed.ts`, `src/lib/data/dmed.ts`, os testes,
   a ajuda e a aba do Financeiro. Migração `20261105120000_sem_dmed.sql` (apaga `clinic_dmed_settings` e
