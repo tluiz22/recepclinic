@@ -499,8 +499,9 @@ em nenhuma clínica). A publicação vale para **todas** as clínicas com o item
    - Configurações da clínica: formas de pagamento, site, horário da recepção, endereço do consultório; um ou dois
      convênios (ex.: Unimed, com "Unimed Fortaleza" como nome alternativo); especialidade nos profissionais; um exame
      com preparo; prazo no serviço de retorno.
-2. **Ativar e publicar** (Sistema › Base de conhecimento): abrir cada entrada a homologar e mudar a situação para
-   **Ativo** (para o teste completo, as 31); **Publicar**. O painel mostra a versão e quantas ativas.
+2. **Ativar e publicar** (Sistema › Base de conhecimento): na lista, **Marcar todas as 31 mostradas** (ou só as que
+   for homologar), "Situação das marcadas" = **Ativo** › **Mudar situação**; depois **Publicar**. O painel mostra a
+   versão e quantas ativas.
 3. **Testar sem enviar** (aba Testar): a clínica de teste e uma clínica com outros dados (outra clínica do staging, ou
    uma criada só para isso), com as mesmas frases: as respostas saem do cadastro de cada uma e nada de uma aparece na
    outra; sem o dado cadastrado, "não responde".
