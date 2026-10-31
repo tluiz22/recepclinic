@@ -234,7 +234,7 @@ const sideLinkClass = (active: boolean) =>
       <div class="h-full w-2/5 bg-brand"></div>
     </div>
     <!-- Menu lateral (M1–M3): só a partir de `lg`; fica parado enquanto o conteúdo rola. -->
-    <aside class="sticky top-0 hidden h-screen w-60 shrink-0 flex-col gap-5 overflow-y-auto border-r border-line bg-white px-3.5 pt-[calc(20px+env(safe-area-inset-top))] pb-4 lg:flex">
+    <aside class="sticky top-0 hidden h-screen w-60 shrink-0 flex-col gap-5 border-r border-line bg-white px-3.5 pt-[calc(20px+env(safe-area-inset-top))] pb-4 lg:flex">
       <div class="flex items-center gap-3 px-1.5">
         <span aria-hidden="true" class="flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px] bg-brand-soft font-display text-base font-bold text-brand-ink">{initials}</span>
         <span class="flex min-w-0 flex-col leading-tight">
@@ -249,6 +249,8 @@ const sideLinkClass = (active: boolean) =>
         </span>
       </div>
 
+      {/* Só os itens rolam: a clínica (no alto) e o "Sair" (no pé) ficam sempre à vista (QA-01 do teste da L3). */}
+      <div data-side-scroll class="-mx-3.5 flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto px-3.5">
       {
         hasSide && (
           <div data-side-view="section" class="flex flex-col gap-5 [&[hidden]]:hidden">
@@ -295,7 +297,9 @@ const sideLinkClass = (active: boolean) =>
         }
       </nav>
 
-      <div class="mt-auto flex items-center gap-2.5 border-t border-line px-1.5 pt-3">
+      </div>
+
+      <div class="flex shrink-0 items-center gap-2.5 border-t border-line px-1.5 pt-3">
         <span class="min-w-0 flex-1 truncate text-sm text-ink-soft">{whoLabel}</span>
         <form method="POST" action="/api/admin/auth/logout">
           <button type="submit" class="h-9 rounded-lg border border-line-strong bg-white px-3 text-sm font-semibold text-ink hover:bg-canvas">Sair</button>
@@ -489,6 +493,16 @@ const sideLinkClass = (active: boolean) =>
         }
         document.querySelector<HTMLElement>(`[data-side-view="${view}"] [data-side-switch]`)?.focus();
       });
+
+      // Item aberto fora da vista da lateral (tela baixa, seção do fim de Configurações):
+      // a lateral rola até ele (QA-02 do teste da L3).
+      const sideScroll = document.querySelector<HTMLElement>("[data-side-scroll]");
+      const openItem = sideScroll?.querySelector<HTMLElement>("[data-side-view]:not([hidden]) a[aria-current='page']");
+      if (sideScroll && openItem) {
+        const box = sideScroll.getBoundingClientRect();
+        const item = openItem.getBoundingClientRect();
+        if (item.bottom > box.bottom) sideScroll.scrollTop += item.bottom - box.bottom + 16;
+      }
 
       // Voltar pelo navegador pode reabrir a página do cache com a barra ligada.
       window.addEventListener("pageshow", () => loading?.removeAttribute("data-active"));

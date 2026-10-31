@@ -1,7 +1,7 @@
 # Menu lateral (redesign do menu superior)
 
-> **Retomar daqui (31/out/2026):** L1 e L2 feitas e publicadas no staging (sem migração); o cliente valida tudo no
-> fim (31/out). Próximo: L3 (teste de interface). Em seguida ao menu, a revisão da jornada do bot
+> **Retomar daqui (31/out/2026):** L1, L2 e L3 feitas e publicadas no staging (sem migração); **aguarda a
+> validação do cliente** (no fim, a pedido dele). Depois do menu: revisão da jornada do bot
 > ([`jornada-do-bot.md`](jornada-do-bot.md), temporário).
 
 ## Por quê
@@ -53,3 +53,6 @@ Configurações), abaixo vale o modelo do celular; a lateral fica parada enquant
   Configurações ›" para voltar. A troca é na própria tela, sem recarregar (script no `AdminLayout`). No celular e no
   tablet, o botão "Seção: …" de sempre. Conferido em 1280px (Suporte) e 390px; `npm test` e `npm run check` sem erros.
 - **L3. Teste de interface** (Playwright) e publicação no staging; validação do cliente.
+  **Feita em 31/out:** [relatório](auditoria-frontend/menu-lateral-report.md), 19 cenários; 2 falhas Baixas
+  corrigidas e retestadas (QA-01: só os itens da lateral rolam, com a clínica e o "Sair" fixos; QA-02: a lateral rola
+  até o item aberto). Falta a validação do cliente no staging (Safari e iPhone).

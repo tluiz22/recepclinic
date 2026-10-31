@@ -7,7 +7,7 @@
 > Implantação e Tecnologia › Jornada do bot.
 >
 > **Próxima sessão (cliente, 30/out): menu lateral, na `main`** ([`menu-lateral.md`](menu-lateral.md); ler o bloco de
-> retomada dele): L1 e L2 no staging (validação no fim, a pedido do cliente); próximo, L3. Em seguida,
+> retomada dele): L1–L3 no staging, aguarda a validação do cliente; depois, a produção. Em seguida,
 > revisão da jornada do bot ([`jornada-do-bot.md`](jornada-do-bot.md), temporário). O faturamento fica parado na branch
 > `faturamento` (abaixo).
 >
