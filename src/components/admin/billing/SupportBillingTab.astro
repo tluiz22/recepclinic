@@ -38,9 +38,11 @@ interface Props {
   suggestedEmail: string;
   /** Plano de referência da matriz (sugestão da mensalidade no 1º contrato). */
   reference: { label: string; monthlyCents: number | null };
+  /** A clínica tem a emissão de nota fiscal (item "finance"): só então o contrato fala de nota. */
+  invoicing: boolean;
 }
 
-const { db, clinicId, timezone, suggestedEmail, reference } = Astro.props;
+const { db, clinicId, timezone, suggestedEmail, reference, invoicing } = Astro.props;
 const [account, audit, contracts, defaultPrice] = await Promise.all([
   getBillingAccount(db, clinicId),
   listBillingAudit(db, clinicId),
@@ -166,6 +168,10 @@ const form = {
             <input id="first_due_date" name="first_due_date" type="date" required value={form.firstDueDate} class={INPUT} />
           </div>
         </div>
+        {invoicing && active && active.invoiceUnitPriceCents === null && (
+          <p class="text-sm text-pend-800">A emissão de nota fiscal foi liberada, mas o contrato vigente não cobra nota: para cobrar, ative uma nova versão com o preço por nota.</p>
+        )}
+        {invoicing ? (
         <div class="grid gap-3 sm:grid-cols-2">
           <div>
             <label for="invoice_price" class={LABEL}>Preço por nota fiscal (R$)</label>
@@ -191,6 +197,9 @@ const form = {
             <p class={HINT}>Passou da franquia, cada nota a mais pelo preço por nota. Sobra não acumula.</p>
           </fieldset>
         </div>
+        ) : (
+          <p class={HINT}>Sem a emissão de nota fiscal liberada (Módulo financeiro na matriz), o contrato não tem preço por nota nem franquia.</p>
+        )}
         <div>
           <label for="notes" class={LABEL}>Observações (só o Suporte vê)</label>
           <textarea id="notes" name="notes" rows="2" maxlength="1000" class={INPUT}>{form.notes}</textarea>

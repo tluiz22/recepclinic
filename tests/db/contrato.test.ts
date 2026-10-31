@@ -10,14 +10,15 @@ import {
   setDefaultInvoicePrice,
   type ContractDraftInput,
 } from "../../src/lib/data/billing";
-import { clinicServiceClient, createUser, deleteUsers, makePlatformStaff, type TestUser } from "./helpers";
+import { clinicServiceClient, createUser, deleteUsers, makePlatformStaff, withDatabase, type TestUser } from "./helpers";
 import { asDb, codeOf, setupAgendaClinic, type AgendaFixture } from "./agendaFixture";
 
 // F12.2 — Contrato (faturamento do SaaS). Só o Suporte escreve: rascunho (um
 // por clínica), descarte e ativação (exige a conta de cobrança). Ativo não
 // muda: nova versão começa depois da vigente, que termina na véspera. O
 // Administrador lê o vigente e os encerrados, não o rascunho; Recepção e bot
-// não leem. Preço padrão por nota: só o Suporte.
+// não leem. Preço padrão por nota: só o Suporte. Preço por nota e franquia só
+// com a emissão de nota fiscal liberada (item "finance"; cliente, 30/out/2026).
 const DRAFT: ContractDraftInput = {
   billingMode: "asaas",
   monthly: "299,00",
@@ -41,14 +42,22 @@ beforeAll(async () => {
   clinicId = fixture.clinicId;
   support = await createUser("contrato-suporte");
   await makePlatformStaff(support.id);
+  await setInvoicing(true);
 });
+
+const setInvoicing = (on: boolean) =>
+  withDatabase((db) =>
+    on
+      ? db.query(`insert into public.clinic_features (clinic_id, feature_key) values ($1, 'finance') on conflict do nothing`, [clinicId])
+      : db.query(`delete from public.clinic_features where clinic_id = $1 and feature_key = 'finance'`, [clinicId]),
+  );
 
 afterAll(async () => {
   await fixture.cleanup();
   await deleteUsers([support]);
 });
 
-const save = (input: Partial<ContractDraftInput> = {}, user = support) => saveBillingContractDraft(asDb(user), clinicId, { ...DRAFT, ...input }, SNAPSHOT);
+const save = (input: Partial<ContractDraftInput> = {}, user = support) => saveBillingContractDraft(asDb(user), clinicId, { ...DRAFT, ...input }, SNAPSHOT, { invoicing: true });
 
 describe("Preço padrão por nota (F12.2)", () => {
   it("só o Suporte define; o Administrador não lê nem grava", async () => {
@@ -135,6 +144,30 @@ describe("Contrato (F12.2)", () => {
     expect(statuses).toEqual(["active", "canceled", "ended"]);
     expect(await codeOf(() => discardBillingContractDraft(asDb(support), clinicId))).toBe("invalid");
     expect(await codeOf(() => activateBillingContract(asDb(support), clinicId))).toBe("invalid");
+  });
+
+  it("sem a emissão de nota fiscal, o contrato não tem preço por nota nem franquia (também no banco)", async () => {
+    await setInvoicing(false);
+    await save({ startsOn: "2031-08-01", firstDueDate: "2031-08-10" });
+    const draft = (await listBillingContracts(asDb(support), clinicId)).find((c) => c.status === "draft")!;
+    expect(draft).toMatchObject({ invoiceUnitPriceCents: null, invoiceMonthlyAllowance: null });
+    await discardBillingContractDraft(asDb(support), clinicId);
+    await setInvoicing(true);
+    // Com a nota liberada, o banco exige o preço.
+    const { error } = await support.client.rpc("save_billing_contract_draft", {
+      p_clinic_id: clinicId,
+      p_billing_mode: "manual",
+      p_monthly_cents: 100,
+      p_setup_cents: 0,
+      p_payment_method: "",
+      p_first_due_date: "2031-08-10",
+      p_invoice_unit_price_cents: null,
+      p_invoice_monthly_allowance: null,
+      p_starts_on: "2031-08-01",
+      p_plan_snapshot: {},
+      p_notes: "",
+    });
+    expect(error?.hint).toBe("billing_invoice_price");
   });
 
   it("ninguém grava direto; Recepção e bot não leem", async () => {

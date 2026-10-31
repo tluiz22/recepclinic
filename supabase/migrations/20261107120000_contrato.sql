@@ -8,7 +8,9 @@
 --      mensalidade, implantação (0 = isenta), forma de pagamento (só no
 --      automático), 1º vencimento, preço por nota e franquia mensal de notas
 --      (nula = ilimitada), retrato do plano de referência (informativo) e a
---      data de início;
+--      data de início. Preço por nota e franquia só existem quando a clínica
+--      tem a emissão de nota fiscal (item "finance" da matriz; cliente,
+--      30/out/2026): sem ele, o contrato não fala de nota fiscal;
 --   2. só o Suporte escreve. O contrato nasce em rascunho (um por clínica),
 --      que o Suporte altera, descarta ou ativa. Ativo não muda: mudança
 --      comercial ou troca de modo = nova versão, com data de início depois da
@@ -49,7 +51,8 @@ create table public.billing_contracts (
   -- Só no automático; o manual é cobrado por fora.
   payment_method text check (payment_method in ('pix', 'credit_card')),
   first_due_date date not null,
-  invoice_unit_price_cents integer not null check (invoice_unit_price_cents between 0 and 100000),
+  -- Nulo = o contrato não cobra nota fiscal (clínica sem o item "finance").
+  invoice_unit_price_cents integer check (invoice_unit_price_cents is null or invoice_unit_price_cents between 0 and 100000),
   invoice_monthly_allowance integer check (invoice_monthly_allowance is null or invoice_monthly_allowance between 0 and 100000),
   plan_snapshot jsonb not null default '{}'::jsonb,
   notes text check (notes is null or length(notes) <= 1000),
@@ -62,6 +65,7 @@ create table public.billing_contracts (
   activated_at timestamptz,
   check ((billing_mode = 'asaas') = (payment_method is not null)),
   check (first_due_date >= starts_on),
+  check (invoice_unit_price_cents is not null or invoice_monthly_allowance is null),
   check (ends_on is null or ends_on >= starts_on - 1),
   -- Versão só depois de ativado; o rascunho descartado fica sem versão.
   check (case status when 'draft' then version is null when 'canceled' then true else version is not null end),
@@ -151,6 +155,9 @@ declare
   v_saved public.billing_contracts%rowtype;
   v_method text := case when p_billing_mode = 'asaas' then p_payment_method end;
   v_notes text := nullif(trim(coalesce(p_notes, '')), '');
+  v_invoicing boolean := exists (select 1 from public.clinic_features where clinic_id = p_clinic_id and feature_key = 'finance');
+  v_price integer := case when v_invoicing then p_invoice_unit_price_cents end;
+  v_allowance integer := case when v_invoicing then p_invoice_monthly_allowance end;
 begin
   if not app.is_platform_staff() then
     raise exception 'Só o Suporte altera o contrato.' using errcode = '42501';
@@ -163,6 +170,9 @@ begin
   end if;
   if p_billing_mode = 'asaas' and (v_method is null or v_method not in ('pix', 'credit_card')) then
     raise exception 'Escolha a forma de pagamento.' using errcode = 'P0001', hint = 'billing_payment_method';
+  end if;
+  if v_invoicing and v_price is null then
+    raise exception 'Informe o preço por nota fiscal.' using errcode = 'P0001', hint = 'billing_invoice_price';
   end if;
   if p_starts_on is null or p_first_due_date is null or p_first_due_date < p_starts_on then
     raise exception 'O 1º vencimento não pode ser antes do início do contrato.' using errcode = 'P0001', hint = 'billing_dates';
@@ -181,13 +191,13 @@ begin
     insert into public.billing_contracts (clinic_id, replaces_contract_id, billing_mode, monthly_cents, setup_cents, payment_method,
       first_due_date, invoice_unit_price_cents, invoice_monthly_allowance, plan_snapshot, notes, starts_on, created_by)
     values (p_clinic_id, v_active.id, p_billing_mode, p_monthly_cents, coalesce(p_setup_cents, 0), v_method,
-      p_first_due_date, p_invoice_unit_price_cents, p_invoice_monthly_allowance, coalesce(p_plan_snapshot, '{}'::jsonb), v_notes, p_starts_on, (select auth.uid()))
+      p_first_due_date, v_price, v_allowance, coalesce(p_plan_snapshot, '{}'::jsonb), v_notes, p_starts_on, (select auth.uid()))
     returning * into v_saved;
   else
     update public.billing_contracts
        set replaces_contract_id = v_active.id, billing_mode = p_billing_mode, monthly_cents = p_monthly_cents,
            setup_cents = coalesce(p_setup_cents, 0), payment_method = v_method, first_due_date = p_first_due_date,
-           invoice_unit_price_cents = p_invoice_unit_price_cents, invoice_monthly_allowance = p_invoice_monthly_allowance,
+           invoice_unit_price_cents = v_price, invoice_monthly_allowance = v_allowance,
            plan_snapshot = coalesce(p_plan_snapshot, '{}'::jsonb), notes = v_notes, starts_on = p_starts_on, updated_at = now()
      where id = v_draft.id
      returning * into v_saved;

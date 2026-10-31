@@ -81,7 +81,7 @@ export const configuracoes = {
       serve: "Guardar quem paga o RecepClinic e para onde vão as cobranças e os avisos.",
       como: [
         "O Suporte cadastra o pagador (nome e CNPJ ou CPF) na contratação; para mudar o pagador, fale com o Suporte.",
-        "O contrato (mensalidade, preço por nota fiscal e franquia) é feito com o Suporte; mudança vale a partir do próximo ciclo, numa nova versão.",
+        "O contrato (mensalidade e, com a nota fiscal liberada, o preço por nota e a franquia) é feito com o Suporte; mudança vale a partir do próximo ciclo, numa nova versão.",
         "O Administrador mantém o e-mail e o telefone financeiros em dia.",
         "Os avisos de cobrança (vencimento, atraso e pagamento reconhecido) sempre vão para o e-mail financeiro.",
         "Com o WhatsApp financeiro autorizado, os mesmos avisos também vão para o telefone financeiro.",

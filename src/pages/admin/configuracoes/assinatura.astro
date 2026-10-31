@@ -53,9 +53,13 @@ const H2 = "font-display text-[17px] leading-tight font-bold text-ink sm:text-lg
         <div class="flex flex-col gap-4">
           <Card>
             <div class="flex flex-wrap items-center gap-2">
-              <HelpTip subject="Franquia de notas" text={configuracoes.dicas.assinaturaFranquia} id="contrato">
+              {contract?.invoiceUnitPriceCents != null ? (
+                <HelpTip subject="Franquia de notas" text={configuracoes.dicas.assinaturaFranquia} id="contrato">
+                  <h2 class={H2}>Contrato</h2>
+                </HelpTip>
+              ) : (
                 <h2 class={H2}>Contrato</h2>
-              </HelpTip>
+              )}
               {contract && <Badge variant="success">Vigente</Badge>}
             </div>
             {contract ? (

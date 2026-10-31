@@ -1,6 +1,7 @@
 ---
 // Faturamento (F12.2): os termos de um contrato em modo leitura, na aba
 // Faturamento (Suporte) e na tela Assinatura (Administrador da clínica).
+// Preço por nota e franquia só quando o contrato cobra nota fiscal.
 import { DD, DT, KV } from "../config/formStyles";
 import { formatCalendarDate } from "../../../lib/clinicTime";
 import { BILLING_MODES, describeAllowance, PAYMENT_METHODS, type BillingContract } from "../../../lib/data/billing";
@@ -37,10 +38,16 @@ const date = (value: string) => formatCalendarDate(value, "dd/MM/yyyy");
       </>
     )
   }
-  <dt class={DT}>Preço por nota fiscal</dt>
-  <dd class={DD}>{formatCentsBRL(contract.invoiceUnitPriceCents)}</dd>
-  <dt class={DT}>Franquia de notas</dt>
-  <dd class={DD}>{describeAllowance(contract.invoiceMonthlyAllowance)}</dd>
+  {
+    contract.invoiceUnitPriceCents !== null && (
+      <>
+        <dt class={DT}>Preço por nota fiscal</dt>
+        <dd class={DD}>{formatCentsBRL(contract.invoiceUnitPriceCents)}</dd>
+        <dt class={DT}>Franquia de notas</dt>
+        <dd class={DD}>{describeAllowance(contract.invoiceMonthlyAllowance)}</dd>
+      </>
+    )
+  }
   <dt class={DT}>Início</dt>
   <dd class={DD}>{date(contract.startsOn)}{contract.endsOn ? ` até ${date(contract.endsOn)}` : ""}</dd>
   <dt class={DT}>1º vencimento</dt>

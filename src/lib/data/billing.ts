@@ -225,8 +225,9 @@ export type BillingContract = {
   setupCents: number;
   paymentMethod: PaymentMethod | null;
   firstDueDate: string;
-  invoiceUnitPriceCents: number;
-  /** null = ilimitada. */
+  /** null = o contrato não cobra nota fiscal (clínica sem a emissão de nota). */
+  invoiceUnitPriceCents: number | null;
+  /** null = ilimitada (ou sem nota fiscal). */
   invoiceMonthlyAllowance: number | null;
   planSnapshot: PlanSnapshot;
   notes: string | null;
@@ -244,7 +245,7 @@ type ContractRow = {
   setup_cents: number;
   payment_method: string | null;
   first_due_date: string;
-  invoice_unit_price_cents: number;
+  invoice_unit_price_cents: number | null;
   invoice_monthly_allowance: number | null;
   plan_snapshot: unknown;
   notes: string | null;
@@ -303,17 +304,28 @@ export type ContractDraftInput = {
   paymentMethod?: string | null;
   firstDueDate: string;
   startsOn: string;
-  invoicePrice: string;
+  /** Só com a emissão de nota fiscal liberada para a clínica (item "finance"). */
+  invoicePrice?: string | null;
   /** "ilimitada" ou "limitada". */
-  allowanceKind: string;
+  allowanceKind?: string | null;
   allowance?: string | null;
   notes?: string | null;
 };
 
 const MAX_CENTS = 10_000_000;
 
-/** Suporte: cria ou altera o rascunho do contrato (nova versão, se já há um vigente). */
-export async function saveBillingContractDraft(db: DbClient, clinicId: string, input: ContractDraftInput, planSnapshot: PlanSnapshot): Promise<void> {
+/**
+ * Suporte: cria ou altera o rascunho do contrato (nova versão, se já há um
+ * vigente). Preço por nota e franquia só entram com `invoicing` (a clínica tem
+ * a emissão de nota fiscal; cliente, 30/out/2026); o banco confere de novo.
+ */
+export async function saveBillingContractDraft(
+  db: DbClient,
+  clinicId: string,
+  input: ContractDraftInput,
+  planSnapshot: PlanSnapshot,
+  { invoicing }: { invoicing: boolean },
+): Promise<void> {
   const v = new Validation();
   const mode = input.billingMode in BILLING_MODES ? (input.billingMode as BillingMode) : null;
   v.check(mode !== null, "billing_mode", CONTRACT_MESSAGES.mode);
@@ -325,12 +337,16 @@ export async function saveBillingContractDraft(db: DbClient, clinicId: string, i
   v.check(mode !== "asaas" || method !== null, "payment_method", CONTRACT_MESSAGES.paymentMethod);
   v.check(isCalendarDate(input.startsOn), "starts_on", CONTRACT_MESSAGES.startsOn);
   v.check(isCalendarDate(input.firstDueDate) && (!isCalendarDate(input.startsOn) || input.firstDueDate >= input.startsOn), "first_due_date", CONTRACT_MESSAGES.firstDueDate);
-  const price = parseMoneyCents(input.invoicePrice);
-  v.check(Number.isFinite(price) && price >= 0 && price <= 100_000, "invoice_price", CONTRACT_MESSAGES.invoicePrice);
+  const price = invoicing ? parseMoneyCents(input.invoicePrice ?? "") : null;
+  v.check(price === null || (Number.isFinite(price) && price >= 0 && price <= 100_000), "invoice_price", CONTRACT_MESSAGES.invoicePrice);
   const unlimited = input.allowanceKind === "ilimitada";
   const allowanceText = (input.allowance ?? "").trim();
-  const allowance = unlimited ? null : /^\d{1,6}$/.test(allowanceText) ? Number(allowanceText) : Number.NaN;
-  v.check((unlimited || input.allowanceKind === "limitada") && (allowance === null || (allowance >= 0 && allowance <= 100_000)), "allowance", CONTRACT_MESSAGES.allowance);
+  const allowance = !invoicing || unlimited ? null : /^\d{1,6}$/.test(allowanceText) ? Number(allowanceText) : Number.NaN;
+  v.check(
+    !invoicing || ((unlimited || input.allowanceKind === "limitada") && (allowance === null || (allowance >= 0 && allowance <= 100_000))),
+    "allowance",
+    CONTRACT_MESSAGES.allowance,
+  );
   const notes = cleanText(input.notes);
   v.check(notes === null || notes.length <= 1000, "notes", CONTRACT_MESSAGES.notes);
   v.throwIfInvalid("Contrato");
@@ -342,7 +358,7 @@ export async function saveBillingContractDraft(db: DbClient, clinicId: string, i
     p_setup_cents: setup,
     p_payment_method: method ?? "",
     p_first_due_date: input.firstDueDate,
-    p_invoice_unit_price_cents: price,
+    p_invoice_unit_price_cents: price as number,
     p_invoice_monthly_allowance: allowance as number,
     p_starts_on: input.startsOn,
     p_plan_snapshot: planSnapshot,

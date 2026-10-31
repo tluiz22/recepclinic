@@ -403,6 +403,10 @@ stateDiagram-v2
 26. **Fim do contrato.** **Decidido (cliente, 30/out):** dados da clínica disponíveis para exportação por **60 dias**,
     depois exclusão ou anonimização (dados financeiros da cobrança: 5 anos). Fase **F12.12**, depois do lançamento.
 
+27. **Nota fiscal no contrato só quando liberada.** **Decidido (cliente, 30/out):** preço por nota e franquia só
+    entram no contrato da clínica com a emissão de nota fiscal liberada (item "finance" da matriz); sem ela, o
+    contrato não fala de nota (colunas nulas, o banco confere). Liberada depois, cobrar exige nova versão do contrato.
+
 ## 12. Roadmap
 
 Cada fase vai ao staging e depende da validação do cliente.

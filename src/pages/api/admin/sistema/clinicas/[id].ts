@@ -121,7 +121,8 @@ export const POST: APIRoute = async (context) => {
         case "contrato_rascunho": {
           // Retrato do plano de referência (informativo), pela matriz de hoje.
           const { data: access } = await db.from("clinics").select("max_professionals, clinic_features ( feature_key )").eq("id", clinicId).maybeSingle();
-          const reference = clinicPlan((access?.clinic_features ?? []).map((grant) => grant.feature_key).filter(isFeatureKey), access?.max_professionals ?? 1);
+          const features = (access?.clinic_features ?? []).map((grant) => grant.feature_key).filter(isFeatureKey);
+          const reference = clinicPlan(features, access?.max_professionals ?? 1);
           await saveBillingContractDraft(
             db,
             clinicId,
@@ -132,8 +133,8 @@ export const POST: APIRoute = async (context) => {
               paymentMethod: formOptionalText(form, "payment_method"),
               firstDueDate: formText(form, "first_due_date"),
               startsOn: formText(form, "starts_on"),
-              invoicePrice: formText(form, "invoice_price"),
-              allowanceKind: formText(form, "allowance_kind"),
+              invoicePrice: formOptionalText(form, "invoice_price"),
+              allowanceKind: formOptionalText(form, "allowance_kind"),
               allowance: formOptionalText(form, "allowance"),
               notes: formOptionalText(form, "notes"),
             },
@@ -143,6 +144,8 @@ export const POST: APIRoute = async (context) => {
               tableMonthlyCents: reference.kind === "none" ? undefined : reference.monthlyCents,
               professionals: access?.max_professionals ?? 1,
             },
+            // Nota fiscal só no contrato da clínica com a emissão liberada (cliente, 30/out/2026).
+            { invoicing: features.includes("finance") },
           );
           return { redirectTo: billingPage, message: "Rascunho do contrato salvo. Confira e ative." };
         }
