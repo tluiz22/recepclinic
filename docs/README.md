@@ -1,79 +1,41 @@
 # RecepClinic
 
-> **Estado atual (retomar daqui), 31/out/2026.** Histórico completo em [`historico.md`](historico.md) (não ler
-> na retomada; buscar por data, fase ou commit quando precisar).
+> **Estado atual (retomar daqui), 31/out/2026.** Detalhes e datas no [`historico.md`](historico.md) (só por busca).
 >
-> **Produção = `main` em 31/out (`20c2239`):** menu lateral (L1–L3), C14 "Alterar" no "Mais", C15 Retomar contato sem
-> alertas e com "Retirar da lista" e C16 ("Como funciona?" de Contatos para revisar; limites do bot com padrão 5);
-> publicados a pedido do cliente antes da validação no staging.
->
-> **Próxima sessão (cliente, 31/out): revisão da jornada do bot, na `main`.** Base: [`jornada-do-bot.md`](jornada-do-bot.md)
-> (temporário: não precisa acompanhar o bot; excluir ao fim da revisão). Mudança no caminho do paciente atualiza também
-> Tecnologia › Jornada do bot (`botJourney.ts`, regra do `CLAUDE.md`). Menu lateral ([`menu-lateral.md`](menu-lateral.md))
-> concluído e na produção; o cliente valida quando puder. O faturamento fica parado na branch `faturamento` (abaixo).
->
-> **N0 do Asaas (30/out):** NFS-e pelo Asaas, N0 (seções 13.8 e 13.9 do `planejamento-nfse-asaas.md`; ler o bloco de
-> retomada dele). Cartão do selo do Asaas na `main` (`13ebeab`), visível só com `ASAAS_PREVIEW=1` (staging).
-> Validado no staging e **formulário BaaS enviado (30/out)**. Aguardando a análise do Asaas (até 3 dias úteis) e o
-> contador (falta PIS/COFINS; e-CNPJ A1 a providenciar; seção 13.5). **DMED removida** (cliente, 30/out; staging e `main`,
-> `73d703b`; a produção não usa o Financeiro).
-> **Regra (cliente, 30/out):** todo código do financeiro vai na branch `faturamento`.
+> **Próximo (cliente, 31/out):** revisão da jornada do bot, na `main`, pelo [`jornada-do-bot.md`](jornada-do-bot.md)
+> (temporário; excluir ao fim). Mudança no caminho do paciente atualiza `botJourney.ts` no mesmo commit.
 >
 > **Ambientes**
-> - **Produção** (`app.recepclinic.com.br`, branch `producao`): no ar desde 26/out; publicações de 28/out: **CRM**
->   (Relacionamento, B0, P1–P3) e as correções **C1 Exame em paralelo**, **C2 Outro horário**, **C3 Horário de exame**,
->   **C4 Alterar atendimento**, **C5 Horário em local que o serviço não usa** e **C6 Escolha do serviço no Marcar**; em 29/out, **C7 Arquivo no preparo do
->   exame** (C7.1–C7.7) e **C8 Escolha do serviço em Horários** (`5ef2be6`); em 30/out, DMED removida, Implantação e Jornada do bot (`71cbbec`). Fluxo e registro em [`producao.md`](producao.md).
-> - **Staging** (`teste.recepclinic.com.br`, branch `main`): igual à produção; o cartão do Asaas só aparece aqui
->   (`ASAAS_PREVIEW=1`). Roteiros em [`staging.md`](staging.md).
-> - **Branches:** `main` = `producao` em 31/out; `CRM` e `faturamento` excluídas em 30/out (tudo delas na `main`).
+> - **Produção** (`app.recepclinic.com.br`, branch `producao`) = `main` em `20c2239` (até C16 e menu lateral).
+>   Fluxo em [`producao.md`](producao.md).
+> - **Staging** (`teste.recepclinic.com.br`, branch `main`): igual à produção + cartão do Asaas (`ASAAS_PREVIEW=1`).
+>   Roteiros em [`staging.md`](staging.md).
+> - **Branch `faturamento`** (só local, sem push): todo código do financeiro.
 >
-> **Frentes em andamento**
-> - **Ajustes da produção, na `main`:** C1–C13 validados e na produção (C1–C6 em 28/out; C7–C8 em 29/out; C9–C10 em
->   30/out, `a7e077a`, com a limpeza das conversas gravadas pelo piloto em implantação; C11–C13b em 30/out, `b9dc41a`; C14 "Alterar" no "Mais" do cartão, no staging em 31/out; C15 Retomar contato sem alerta e "Retirar da lista";
->   C14 e C15 na produção em 31/out, `fd4668c`).
->   Detalhes no [`historico.md`](historico.md) (busca "C9" a "C13"). Clínica com exames: "Criar na Meta" (Suporte) para
->   `rc_preparo_exame_v3` e `rc_preparo_arquivo_v3`. Próximo: nada pendente nesta frente; aguarda o cliente.
-> - **CRM concluído** (28/out; [`crm.md`](crm.md)): validado no staging e na produção desde 28/out.
-> - **Faturamento do SaaS** (código na branch **`faturamento`, só local, sem push** a pedido do cliente; retomar pelo
->   bloco de retomada do `planejamento-faturamento-saas.md` **na branch**): **F12.1** (conta de cobrança) e **F12.2**
->   (contrato com versões) feitas e **validadas no local (30/out)**. Ordem decidida: cobrança antes da nota fiscal, só
->   com e-mail, até cobrar a clínica piloto em produção. Parecer do advogado recebido e decisões registradas (itens 18 a
->   27 da seção 11 do plano, na branch). **Próximo: F12.2b** (aceite do contrato na tela e aviso de 30 dias); pedir ao
->   advogado o texto completo do contrato.
-> - **NFS-e pelo Asaas** (`planejamento-nfse-asaas.md`; volta depois da cobrança no ar). **N0 em andamento (29/out):** Sandbox testado em Mossoró; Asaas respondeu (exige BaaS; avaliação
->   pedida); aguardando Asaas (BaaS, saldo negativo, IP) e contador (CNAE, IBS/CBS, PIS/COFINS, **certificado A1**,
->   exigido em Mossoró). Retomar pela seção 13 do plano; depois a F12.1. Cada etapa com o OK do cliente.
-> - **Piloto** (etapas no [plano](plano.md), F10): **A** feita (roteiros do WhatsApp Business: [único](https://claude.ai/artifact/8AXZMSLcEq8SMWFpYHaraq),
->   [iPhone](https://claude.ai/artifact/C8E3xDoshuXE3M91qeDDHq), [Android](https://claude.ai/artifact/78hQ2cXQph4wvXHKPXexnm));
->   coexistência no staging feita (parte P do [`staging.md`](staging.md)), falta o **lembrete com botões** quando a
->   Meta aprovar os 18 templates da conta nova; depois **B** (clínica de testes permanente na produção, 2º número do
->   cliente; valida F8.1, F8.2b e F8.3) e **C** (piloto com a Dra. Ana Karina). **Revisto em 29/out: piloto direto**
->   (B depois); roteiro no plano (F10, item 7). **Clínica piloto criada e WhatsApp conectado na produção
->   (29/out, cliente).** Conferido pelo Claude: conexão por coexistência, as duas sincronizações,
->   forma de pagamento conferida, 14 templates (catálogo completo) em análise na Meta, eco da recepção chegando.
->   Próximo: templates aprovados; configuração; ativação em Sistema › Clínicas › clínica › Situação; testes do bot.
-> - **Meta:** Análise do App e Verificação do acesso aprovadas; o RecepClinic é Tech Provider (24/out).
+> **Frentes**
+> - **Ajustes da produção (C1–C16):** todos na produção; nada pendente.
+> - **Faturamento do SaaS:** F12.1 e F12.2 validadas no local. Próximo: **F12.2b** (aceite do contrato e aviso de 30
+>   dias); texto do contrato com o advogado. Retomar pelo `planejamento-faturamento-saas.md` **na branch**.
+> - **NFS-e pelo Asaas** (`planejamento-nfse-asaas.md`, seção 13): N0; formulário BaaS enviado (30/out). Aguarda
+>   Asaas e contador (PIS/COFINS, e-CNPJ A1).
+> - **Piloto (F10, [plano](plano.md)):** clínica piloto criada na produção, WhatsApp conectado, templates em análise
+>   na Meta. Próximo: templates aprovados → configuração → ativação → testes do bot. Depois: lembrete com botões no
+>   staging e etapa B.
 >
 > **Pendências**
-> - **Validação do cliente no staging (no fim, como pedido):** F8.1, F8.2, F8.2b, F8.3 e a ajuda contextual.
-> - **F11 (financeiro):** testes do roteiro a partir do T3.1; fora do sistema, teste real na Produção Restrita
->   (e-CNPJ A1), template `rc_nota_fiscal_v1` na Meta e termo com o advogado; melhorias
->   no processo da nota numa sessão própria (o cliente traz a lista).
-> - **Operação:** conferir o 1º backup diário da produção (*Database › Backups* do `recepclinic-producao`); investigar
->   a sessão do painel que caiu durante a janela da Meta (parte P do [`staging.md`](staging.md)).
-> - **Do cliente:** advogado (páginas legais e [política de pedidos de autoridades](politica-pedidos-de-autoridades.md)),
->   contrato com as clínicas e termo de tratamento de dados; número do app antigo da Meta como 2ª clínica de testes do
->   staging (quando o aparelho estiver com ele).
+> - **Cliente valida no staging (no fim):** F8.1, F8.2, F8.2b, F8.3, ajuda contextual e menu lateral.
+> - **F11:** roteiro a partir do T3.1; Produção Restrita (A1), template `rc_nota_fiscal_v1`, termo com o advogado.
+> - **Operação:** 1º backup diário da produção; sessão do painel que caiu (parte P do `staging.md`).
+> - **Do cliente:** advogado (páginas legais, [pedidos de autoridades](politica-pedidos-de-autoridades.md), contrato,
+>   termo de dados); número do app antigo como 2ª clínica de testes do staging.
 >
-> **Como trabalhar** (detalhes em [`staging.md`](staging.md) e [`producao.md`](producao.md))
-> - **Migrações:** staging com `supabase db push` na ordem simulação → aplicar → conferir no banco → push do código;
->   produção só com autorização explícita, pelo fluxo de `producao.md` (`git push origin main:producao`).
-> - **Local:** OrbStack, `npm run db:start`, `npm run dev`; testes `npm test` e `npm run test:db` (o shell precisa de
->   `/opt/homebrew/bin` no PATH). Variável nova na Vercel só vale depois de um Redeploy.
-> - **WhatsApp de testes:** `+55 61 9903-3143`, na "Consultorio de Teste" do staging, em coexistência.
-> - **Frentes paralelas:** site em [`site-plano.md`](site-plano.md) (pasta `recepclinic-site`, nunca aqui);
->   comercial no Suporte › Vendas; triagem do piloto em [`triagem-piloto.md`](triagem-piloto.md).
+> **Como trabalhar**
+> - **Migrações:** staging com `supabase db push` (simular → aplicar → conferir → push do código); produção só com
+>   autorização, pelo `producao.md` (`git push origin main:producao`).
+> - **Local:** OrbStack, `npm run db:start`, `npm run dev`; `npm test`, `npm run test:db` (PATH com `/opt/homebrew/bin`).
+> - **WhatsApp de testes:** `+55 61 9903-3143` ("Consultorio de Teste", staging).
+> - **Outras:** site em [`site-plano.md`](site-plano.md) (pasta `recepclinic-site`); triagem em
+>   [`triagem-piloto.md`](triagem-piloto.md).
 
 > **RecepClinic — a recepção inteligente da sua clínica.**
 
