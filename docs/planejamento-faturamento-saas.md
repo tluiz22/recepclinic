@@ -385,6 +385,11 @@ stateDiagram-v2
 20. **Prazo da suspensão.** **Decidido (cliente, 30/out; muda o fluxo 7):** a suspensão por inadimplência só pode ser
     feita a partir do **15º dia** de atraso (o banco recusa antes); os avisos informam a data a partir da qual a
     clínica pode ser suspensa.
+22. **Avisos de atraso.** **Decidido (cliente, 30/out; muda D+3/D+7):** e-mail no **3º, 7º e 14º dia** de atraso
+    (`overdue_d3`, `overdue_d7`, `overdue_d14`); o do 14º diz que a clínica pode ser suspensa a partir do dia seguinte.
+23. **Clínica sem o app WhatsApp Business** (número só no sistema). **Decidido (cliente, 30/out):** na suspensão
+    ninguém recebe as mensagens dos pacientes; a tela de suspender mostra um alerta forte e pede uma confirmação a
+    mais. Com o app (coexistência), o app segue normal e a recepção responde; só o bot e os envios automáticos param.
 21. **Clínicas em atraso para o Suporte (cliente, 30/out):** o Suporte consulta numa lista todas as clínicas com
     cobrança vencida (dias de atraso, valor, avisos enviados, situação), além da aba de cada clínica.
 
