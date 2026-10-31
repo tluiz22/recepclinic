@@ -2,13 +2,15 @@
 
 > **Estado atual (retomar daqui), 31/out/2026.** Detalhes e datas no [`historico.md`](historico.md) (só por busca).
 >
-> **Próximo (cliente, 31/out):** revisão da jornada do bot, na `main`, pelo [`jornada-do-bot.md`](jornada-do-bot.md)
-> (temporário; excluir ao fim). Mudança no caminho do paciente atualiza `botJourney.ts` no mesmo commit.
+> **Próximo (cliente, 31/out):** validar no staging, pelo celular, a revisão da jornada do bot (E1–E4), pelo roteiro
+> no fim do [`jornada-do-bot.md`](jornada-do-bot.md) (V1–V8). Depois: produção (2 migrações) e excluir o arquivo.
+> Mudança no caminho do paciente atualiza `botJourney.ts` no mesmo commit.
 >
 > **Ambientes**
 > - **Produção** (`app.recepclinic.com.br`, branch `producao`) = `main` em `20c2239` (até C16 e menu lateral).
 >   Fluxo em [`producao.md`](producao.md).
-> - **Staging** (`teste.recepclinic.com.br`, branch `main`): igual à produção + cartão do Asaas (`ASAAS_PREVIEW=1`).
+> - **Staging** (`teste.recepclinic.com.br`, branch `main`): produção + jornada do bot E1–E4 (`54a9243`, migrações
+>   `20261108120000` e `20261108130000` aplicadas) + cartão do Asaas (`ASAAS_PREVIEW=1`).
 >   Roteiros em [`staging.md`](staging.md).
 > - **Branch `faturamento`** (só local, sem push): todo código do financeiro.
 >

@@ -239,3 +239,19 @@ em `tests/db/`, staging e OK do cliente.
 
 **Etapas:** E1 serviço único, lista sem preço e retorno sem valor · E2 particular ou convênio, valor depois das escolhas
 (migração no link) · E3 pediatria · E4 assunto na transferência (migração e tela Atendimento).
+
+## Roteiro de validação no staging (31/out/2026)
+
+Staging (`teste.recepclinic.com.br`), "Consultorio de Teste", WhatsApp de testes `+55 61 9903-3143`. Usar um celular
+**sem cadastro** na clínica para V4 (ou excluir o contato antes). Ao fim de cada item, mandar "0" para voltar ao menu.
+
+| # | Como testar | O que conferir |
+|---|---|---|
+| V1 | Consultas › Marcar consulta (ou Exames › Marcar exame) | Um serviço só: "Vamos marcar *X*." sem pergunta. Mais de um: lista **sem preço** |
+| V2 | Sem plano ativo em Configurações › Convênios: marcar até o fim do local | "O valor da consulta é R$ …" e as formas de pagamento; não pergunta convênio. Consultório/domiciliar sem preço |
+| V3 | Cadastrar 2 planos ativos e 1 inativo; num profissional, marcar que não atende um deles | Pergunta "particular ou convênio?"; lista só os ativos + "Outro convênio"; plano aceito: "Atendemos pelo convênio *X*", **sem valor**; plano que o profissional não atende ou "Outro convênio": oferece particular (Sim: valor; Não: recepção) |
+| V4 | Número novo, "para outra pessoa" com uma criança | Ordem: nome da criança → nascimento → "nome completo do responsável" → conferência → link. Com adulto: "Qual é o seu nome completo?" |
+| V5 | Configurações: idade limite da consulta (ex.: 12); marcar consulta para outra pessoa | "Dr(a). X atende pacientes até 11 anos." (no "Primeiro horário": "A clínica atende…"); criança acima do limite é barrada |
+| V6 | Consultas › Marcar retorno (paciente com consulta recente) | Só o prazo e "Para qual paciente é o retorno?", **sem valor** |
+| V7 | "Falar com a recepção" (ou 4 mensagens sem sentido) | Aviso + "Para agilizar, poderia me contar brevemente…"; responder; "Obrigado! Já repassamos…"; Relacionamento › Atendimento mostra "Assunto: …"; outra mensagem: bot calado; "Devolver ao bot" apaga o assunto |
+| V8 | Marcar pelo link com convênio aceito e confirmar | Na Agenda, o atendimento mostra o plano; o cadastro do paciente sem plano fica com ele |
