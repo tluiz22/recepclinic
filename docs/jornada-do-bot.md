@@ -210,5 +210,14 @@ em `tests/db/`, staging e OK do cliente.
 10. Já atendidos, só ganham testes: sem horário (a lista só mostra profissional com horário; sem nenhum, recepção) e
     dia e hora só pela página do link.
 
+11. Convênio: até 9 planos ativos, lista com os planos e "Outro convênio" (= não atendido); mais de 9, o paciente digita
+    e o bot procura.
+12. Coleta pediátrica (paciente, nascimento, depois quem escreve/responsável): perfil Pediatria **ou** paciente menor
+    em qualquer clínica. Na prática, para outra pessoa: nome do paciente → nascimento → nome de quem escreve (número
+    novo). Menor: "nome do responsável".
+13. Idade limite com "Primeiro horário": a mensagem usa o nome da clínica.
+14. Publicação (cliente, 31/out): E2–E4 seguidas na branch, testes a cada etapa, e no fim juntar na `main` e publicar no
+    staging (com as migrações) para validação pelo celular.
+
 **Etapas:** E1 serviço único, lista sem preço e retorno sem valor · E2 particular ou convênio, valor depois das escolhas
 (migração no link) · E3 pediatria · E4 assunto na transferência (migração e tela Atendimento).
