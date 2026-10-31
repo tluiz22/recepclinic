@@ -1,0 +1,144 @@
+---
+// Base de Conhecimento Global (BC 3.3, cliente, 31/out/2026): o Suporte vê as
+// entradas por categoria e situação e publica a base. Só as entradas ativas
+// vão ao bot, e só depois de "Publicar"; vale nas clínicas com o item
+// "Perguntas frequentes no bot" ligado na matriz.
+import AdminLayout from "../../../../layouts/AdminLayout.astro";
+import Badge from "../../../../components/admin/config/Badge.astro";
+import FlashMessage from "../../../../components/admin/FlashMessage.astro";
+import Icon from "../../../../components/admin/Icon.astro";
+import KnowledgeTabs from "../../../../components/admin/sistema/KnowledgeTabs.astro";
+import SystemHeader from "../../../../components/admin/sistema/SystemHeader.astro";
+import Button from "../../../../components/admin/ui/Button.astro";
+import Notice from "../../../../components/admin/ui/Notice.astro";
+import ConfirmDeleteDialog from "../../../../components/admin/ConfirmDeleteDialog.astro";
+import { CONTROL } from "../../../../components/admin/ui/styles";
+import { HEAD_ROW, LABEL, LIST, PANEL, PRIMARY_BUTTON, ROW, ROW_GO, ROW_NAME, SECONDARY_BUTTON } from "../../../../components/admin/config/formStyles";
+import { DEFAULT_TIMEZONE, formatInstant } from "../../../../lib/clinicTime";
+import { createUserClient } from "../../../../lib/data/clients";
+import { changesSincePublication, latestPublication, listCategories, listEntries, publicationProblems } from "../../../../lib/data/knowledge/admin";
+import { normalizeText } from "../../../../lib/knowledge/normalize";
+import { KB_STATUS_LABELS, KB_STATUSES, type KbStatus } from "../../../../lib/knowledge/lists";
+import { ANSWER_TYPE_LABELS, STATUS_BADGE } from "../../../../lib/knowledge/labels";
+
+const db = createUserClient(Astro.request, Astro.cookies);
+const [categories, entries, publication] = await Promise.all([listCategories(db), listEntries(db), latestPublication(db)]);
+const changes = publication ? await changesSincePublication(db, publication) : 0;
+const problems = publicationProblems(entries);
+
+const status = KB_STATUSES.find((s) => s === Astro.url.searchParams.get("situacao")) ?? null;
+const query = Astro.url.searchParams.get("busca")?.trim() ?? "";
+const needle = normalizeText(query);
+const shown = entries.filter(
+  (e) =>
+    (!status || e.status === status) &&
+    (!needle || normalizeText([e.code, e.question, ...e.keywords, ...e.synonyms.map((s) => s.text)].join(" ")).includes(needle)),
+);
+const counts = Object.fromEntries(KB_STATUSES.map((s) => [s, entries.filter((e) => e.status === s).length])) as Record<KbStatus, number>;
+const groups = categories.map((c) => ({ ...c, entries: shown.filter((e) => e.categoryKey === c.key) })).filter((g) => g.entries.length);
+const COLS = "lg:grid-cols-[64px_minmax(0,3fr)_150px_110px_40px]";
+---
+
+<AdminLayout title="Base de conhecimento" platform>
+  <SystemHeader title="Base de conhecimento" subtitle="Perguntas frequentes que o bot responde com os dados de cada clínica. Vale para todas as clínicas com o item ligado na matriz.">
+    <Button slot="actions" href="/admin/sistema/conhecimento/nova" class="sm:h-11">
+      <Icon name="plus" class="h-[18px] w-[18px]" strokeWidth={2.4} /> Nova entrada
+    </Button>
+  </SystemHeader>
+  <FlashMessage />
+  <KnowledgeTabs active="entradas" />
+
+  <section aria-label="Publicação" class={`mt-4 ${PANEL} flex flex-wrap items-center justify-between gap-3`}>
+    <div class="min-w-0 text-[15px]">
+      {
+        publication ? (
+          <p class="font-semibold text-ink">
+            Publicada: versão {publication.version}, {formatInstant(new Date(publication.publishedAt), DEFAULT_TIMEZONE, "dd/MM/yyyy 'às' HH:mm")}
+            {publication.publishedBy && ` por ${publication.publishedBy}`} · {publication.entries} {publication.entries === 1 ? "entrada ativa" : "entradas ativas"}
+          </p>
+        ) : (
+          <p class="font-semibold text-ink">Ainda não publicada: o bot não responde nenhuma pergunta da base.</p>
+        )
+      }
+      <p class="mt-1 text-ink-soft">
+        {publication && (changes ? `${changes} ${changes === 1 ? "alteração" : "alterações"} depois da última publicação. ` : "Nada mudou depois da última publicação. ")}
+        {`Ativas agora: ${counts.active}.`}
+        {!publication && counts.active === 0 && " Ative pelo menos uma entrada para publicar."}
+      </p>
+    </div>
+    <form method="POST" action="/api/admin/sistema/conhecimento/publicar">
+      <button
+        type="submit"
+        class={`${PRIMARY_BUTTON} js-confirm-delete`}
+        disabled={problems.length > 0 || (!publication && counts.active === 0)}
+        data-confirm-title="Publicar a base?"
+        data-confirm-message={`${counts.active} ${counts.active === 1 ? "entrada ativa vai" : "entradas ativas vão"} ao bot de todas as clínicas com "Perguntas frequentes no bot" ligado, na próxima mensagem.`}
+        data-confirm-label="Publicar"
+        data-confirm-tone="primary"
+      >
+        Publicar
+      </button>
+    </form>
+  </section>
+  {
+    problems.length > 0 && (
+      <Notice tone="danger" class="mt-3">
+        Corrija antes de publicar: {problems.join("; ")}.
+      </Notice>
+    )
+  }
+
+  <form method="get" role="search" class="mt-4 flex flex-wrap items-end gap-2">
+    <div class="min-w-0 flex-1 sm:max-w-[360px]">
+      <label for="busca" class={LABEL}>Buscar</label>
+      <input type="search" id="busca" name="busca" value={query} placeholder="Código, pergunta, sinônimo" autocomplete="off" class={`mt-1.5 w-full ${CONTROL}`} />
+    </div>
+    <div>
+      <label for="situacao" class={LABEL}>Situação</label>
+      <select id="situacao" name="situacao" class={`mt-1.5 ${CONTROL}`}>
+        <option value="">Todas ({entries.length})</option>
+        {KB_STATUSES.map((s) => <option value={s} selected={s === status}>{`${KB_STATUS_LABELS[s]} (${counts[s]})`}</option>)}
+      </select>
+    </div>
+    <button type="submit" class={SECONDARY_BUTTON}>Filtrar</button>
+  </form>
+
+  {
+    groups.length === 0 ? (
+      <div class="mt-3 rounded-xl border border-line bg-white px-6 py-7 text-center">
+        <p class="text-base font-bold text-ink">Nenhuma entrada encontrada</p>
+        <a href="/admin/sistema/conhecimento" class="mt-2 inline-block font-semibold text-brand">Limpar os filtros</a>
+      </div>
+    ) : (
+      groups.map((group) => (
+        <section aria-label={group.label} class="mt-4">
+          <h2 class="mb-2 text-[15px] font-bold text-ink-soft">{group.label}</h2>
+          <div class={LIST}>
+            <div aria-hidden="true" class={`${HEAD_ROW} ${COLS}`}>
+              <span>Código</span>
+              <span>Pergunta</span>
+              <span>Tipo</span>
+              <span>Situação</span>
+              <span />
+            </div>
+            {group.entries.map((entry) => (
+              <div class={`${ROW} ${COLS}`}>
+                <span class="font-mono text-[15px] font-bold text-ink">{entry.code}</span>
+                <a href={`/admin/sistema/conhecimento/${entry.code}`} class={`${ROW_NAME} justify-self-end lg:order-last`} aria-label={`Abrir ${entry.code}`}>
+                  <span class={ROW_GO}><Icon name="chevron-right" class="h-5 w-5" strokeWidth={2.2} /></span>
+                </a>
+                <div class="col-span-2 min-w-0 lg:col-span-1">
+                  <a href={`/admin/sistema/conhecimento/${entry.code}`} class={ROW_NAME}>{entry.question}</a>
+                  <p class="text-sm text-ink-soft">{`${entry.synonyms.length} ${entry.synonyms.length === 1 ? "sinônimo" : "sinônimos"} · versão ${entry.version}`}</p>
+                </div>
+                <span class="text-[15px] text-ink-soft">{ANSWER_TYPE_LABELS[entry.answerType]}</span>
+                <span><Badge variant={STATUS_BADGE[entry.status]}>{KB_STATUS_LABELS[entry.status]}</Badge></span>
+              </div>
+            ))}
+          </div>
+        </section>
+      ))
+    )
+  }
+  <ConfirmDeleteDialog />
+</AdminLayout>

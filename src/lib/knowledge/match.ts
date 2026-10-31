@@ -204,6 +204,8 @@ function passesGate(e: CompiledEntry, tokens: string[], terms: DetectedTerms, be
 function entryScore(kb: CompiledKb, e: CompiledEntry, tokens: string[], content: string[], terms: DetectedTerms): number {
   const keywordWords = e.keywords.flatMap(tokensOf).filter((word) => !STOPWORDS.has(word));
   let score = Math.max(0, ...e.candidates.map((c) => candidateScore(kb, c, keywordWords, tokens, content)));
+  // Mensagem só com palavras-chave da entrada ("horário?", "convênio?"): a intenção é a dela.
+  if (content.length && content.every((token) => keywordWords.some((word) => tokenMatches(token, word) || tokenMatches(word, token)))) score = Math.max(score, 0.65);
   // Termo exigido na mensagem (serviço, profissional, especialidade): a intenção está clara.
   if (e.entry.requiredTerm) score = Math.max(score + 0.15, 0.7);
   // Plano da clínica citado: é pergunta de convênio, mesmo com o profissional junto ("o dr João atende Unimed?").
@@ -224,24 +226,36 @@ const isClinical = (kb: CompiledKb, tokens: string[]) => {
   return kb.clinical.some((term) => containsPhrase(rest, term));
 };
 
-export function matchQuestion(kb: CompiledKb, text: string, clinic: ClinicTerms): KbMatch {
+export type KbRanking = {
+  terms: DetectedTerms;
+  clinical: boolean;
+  /** Entradas que passaram pela palavra-chave, da maior pontuação para a menor. */
+  ranked: { entry: KbEntry; score: number }[];
+};
+
+/** Pontuação de cada entrada (o testador do Suporte mostra as alternativas). */
+export function rankEntries(kb: CompiledKb, text: string, clinic: ClinicTerms): KbRanking {
   const tokens = tokensOf(normalizeText(text));
   const terms = detectTerms(kb, tokens, clinic);
-  if (!tokens.length || tokens.every((token) => /^\d+$/.test(token))) return { kind: "none", terms };
+  if (!tokens.length || tokens.every((token) => /^\d+$/.test(token))) return { terms, clinical: false, ranked: [] };
   const names = nameTokens(kb, tokens, clinic, terms);
   const content = contentOf(tokens).filter((token) => !names.has(token));
-
-  const scored = kb.entries
+  const ranked = kb.entries
     .map((e) => ({ e, score: entryScore(kb, e, tokens, content, terms) }))
     .filter(({ e, score }) => passesGate(e, tokens, terms, score))
     .map(({ e, score }) => ({ entry: e.entry, score }))
     .sort((a, b) => b.score - a.score || a.entry.code.localeCompare(b.entry.code));
+  return { terms, clinical: isClinical(kb, tokens), ranked };
+}
+
+export function matchQuestion(kb: CompiledKb, text: string, clinic: ClinicTerms): KbMatch {
+  const { terms, clinical, ranked: scored } = rankEntries(kb, text, clinic);
   // Cortesia (texto fixo) só quando nenhuma outra entrada serve.
   const main = scored.filter((s) => s.entry.answerType !== "fixed");
   const pool = main.some((s) => s.score >= SUGGEST_SCORE) ? main : scored;
   const best = pool[0];
 
-  if (isClinical(kb, tokens)) {
+  if (clinical) {
     // Sintoma com pedido de marcação: abre a marcação, sem orientar (Q1).
     if (best && best.score >= ACCEPT_SCORE && best.entry.flow && BOOKING_FLOWS.has(best.entry.flow)) return { kind: "answer", ...best, terms };
     return { kind: "clinical", terms };

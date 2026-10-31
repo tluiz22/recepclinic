@@ -4,7 +4,13 @@ import { listClinicHolidays } from "../../../config/holidays";
 import { listInsurancePlans } from "../../../config/insurance";
 import { listProfessionals } from "../../../config/professionals";
 import { getReceptionHours } from "../../../config/receptionHours";
-import type { Bot } from "../engine";
+import type { DbClient } from "../../../clients";
+import { getClinicFeatures } from "../../../features";
+import { getWhatsappConnection } from "../../connection";
+import type { ClinicSender } from "../../send";
+import { clinicLabel, type MessageArticle } from "../../templates";
+import { loadCatalog } from "../catalog";
+import { loadBotClinic, type Bot } from "../engine";
 import type { KbClinicData } from "./answers";
 
 // Dados da clínica para as respostas da base (BC 3.2). Lidos com a credencial
@@ -13,7 +19,30 @@ import type { KbClinicData } from "./answers";
 // do plano). Só lido quando a mensagem chega à base (texto que o passo não
 // entendeu). Nada do paciente.
 
-export async function loadKbClinicData(b: Bot): Promise<KbClinicData> {
+/** O que as fontes usam do bot (o testador do Suporte monta o mesmo sem conversa). */
+export type KbSourceEnv = Pick<Bot, "db" | "clinicId" | "clinic" | "features" | "receptionAvailable" | "catalog">;
+
+/** Ambiente das fontes sem conversa (testador do Suporte): os mesmos dados que o bot da clínica lê. */
+export async function kbSourceEnv(db: DbClient, clinicId: string, now: Date): Promise<KbSourceEnv> {
+  const [clinic, settings, features, connection] = await Promise.all([
+    db.from("clinics").select("name").eq("id", clinicId).maybeSingle().then((r) => unwrapOne(r, "Clínica")),
+    db.from("clinic_settings").select("message_article").eq("clinic_id", clinicId).maybeSingle().then((r) => unwrapOne(r, "Configuração da clínica")),
+    getClinicFeatures(db, clinicId),
+    getWhatsappConnection(db, clinicId),
+  ]);
+  const sender = { clinicLabel: clinicLabel(clinic.name, settings.message_article as MessageArticle) } as ClinicSender;
+  let catalog: ReturnType<typeof loadCatalog> | null = null;
+  return {
+    db,
+    clinicId,
+    clinic: await loadBotClinic({ db, clinicId, sender, now }),
+    features,
+    receptionAvailable: connection?.coexistence ?? false,
+    catalog: () => (catalog ??= loadCatalog(db, clinicId, features)),
+  };
+}
+
+export async function loadKbClinicData(b: KbSourceEnv): Promise<KbClinicData> {
   const insuranceOn = b.features.includes("insurance");
   const [catalog, professionals, plans, exclusions, reception, holidays, settings] = await Promise.all([
     b.catalog(),

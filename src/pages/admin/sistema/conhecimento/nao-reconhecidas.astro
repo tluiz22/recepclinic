@@ -1,0 +1,44 @@
+---
+// Perguntas que o bot não reconheceu (BC 3.3, decisão 4): só o texto, a
+// clínica e a data, sem telefone; apagadas depois de 90 dias. O Suporte usa
+// para incluir sinônimos ou entradas.
+import AdminLayout from "../../../../layouts/AdminLayout.astro";
+import KnowledgeTabs from "../../../../components/admin/sistema/KnowledgeTabs.astro";
+import SystemHeader from "../../../../components/admin/sistema/SystemHeader.astro";
+import { HEAD_ROW, LIST, ROW } from "../../../../components/admin/config/formStyles";
+import { DEFAULT_TIMEZONE, formatInstant } from "../../../../lib/clinicTime";
+import { createUserClient } from "../../../../lib/data/clients";
+import { listUnmatched } from "../../../../lib/data/knowledge/admin";
+
+const db = createUserClient(Astro.request, Astro.cookies);
+const rows = await listUnmatched(db);
+const COLS = "lg:grid-cols-[130px_minmax(0,3fr)_minmax(0,1.4fr)]";
+---
+
+<AdminLayout title="Perguntas não reconhecidas" platform>
+  <SystemHeader title="Base de conhecimento" subtitle="Mensagens que o bot não reconheceu nos últimos 90 dias (sem telefone nem paciente)." />
+  <KnowledgeTabs active="nao-reconhecidas" unmatched={rows.length} />
+  {
+    rows.length === 0 ? (
+      <div class="mt-4 rounded-xl border border-line bg-white px-6 py-7 text-center">
+        <p class="text-base font-bold text-ink">Nenhuma pergunta não reconhecida</p>
+        <p class="mt-1 text-[15px] text-ink-soft">Aparecem aqui as mensagens das clínicas com o item ligado que o bot não entendeu.</p>
+      </div>
+    ) : (
+      <section aria-label="Perguntas não reconhecidas" class={`mt-4 ${LIST}`}>
+        <div aria-hidden="true" class={`${HEAD_ROW} ${COLS}`}>
+          <span>Quando</span>
+          <span>Mensagem</span>
+          <span>Clínica</span>
+        </div>
+        {rows.map((r) => (
+          <div class={`${ROW} ${COLS}`}>
+            <span class="text-[15px] text-ink-soft">{formatInstant(new Date(r.occurredAt), DEFAULT_TIMEZONE, "dd/MM HH:mm")}</span>
+            <span class="col-span-2 text-[15.5px] break-words text-ink lg:col-span-1">{r.text}</span>
+            <span class="col-span-2 text-[15px] text-ink-soft lg:col-span-1">{r.clinicName}</span>
+          </div>
+        ))}
+      </section>
+    )
+  }
+</AdminLayout>
