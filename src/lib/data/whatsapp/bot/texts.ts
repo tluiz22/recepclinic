@@ -82,19 +82,19 @@ export const ENTRY_MANY = "Como podemos ajudar? Encontramos mais de um agendamen
 export const ENTRY_ONE_BUTTONS = [button(ENTRY_IDS.yes, "Sim, quero"), button(ENTRY_IDS.no, "Não, outro assunto")];
 export const ENTRY_MANY_BUTTONS = [button(ENTRY_IDS.yes, "Sim, consultar"), button(ENTRY_IDS.no, "Não, outro assunto")];
 export const ENTRY_NOT_UNDERSTOOD = "Não entendi 🙏 Toque em uma das opções abaixo.";
-export const entryAskBirthdate = (w: Words) =>
-  `Para sua segurança, antes de mostrar o agendamento precisamos confirmar a identidade.\n\nQual a data de nascimento ${of(w)}? (formato dd/mm/aaaa)`;
+// "do paciente" em qualquer perfil (cliente, 31/out/2026).
+export const ENTRY_ASK_BIRTHDATE =
+  "Para sua segurança, antes de mostrar o agendamento precisamos confirmar a identidade.\n\nQual a data de nascimento do paciente? (formato dd/mm/aaaa)";
 
 // Data de nascimento sem atendimento, na entrada e em Cancelar, Remarcar e
 // Encaixe (cliente, 24/out/2026): sem bloqueio por data errada; a pessoa
-// escolhe a recepção (só com coexistência), outra data ou o menu.
-export const IDENTITY_IDS = { reception: "identity_reception", retry: "identity_retry", menu: "identity_menu" } as const;
+// escolhe outra data ou o menu (sem "Falar com a recepção": cliente, 31/out/2026).
+export const IDENTITY_IDS = { retry: "identity_retry", menu: "identity_menu" } as const;
 export type IdentityChoice = keyof typeof IDENTITY_IDS;
-export const identityChoices = (receptionAvailable: boolean): IdentityChoice[] => [...(receptionAvailable ? (["reception"] as const) : []), "retry", "menu"];
-export const identityNotFound = (receptionAvailable: boolean) =>
-  `Não encontramos agendamentos para essa data de nascimento.${receptionAvailable ? " Deseja falar com a recepção?" : ""}`;
-const IDENTITY_TITLES: Record<IdentityChoice, string> = { reception: "Falar com a recepção", retry: "Tentar outra data", menu: "Voltar ao menu" };
-export const identityNotFoundButtons = (receptionAvailable: boolean) => identityChoices(receptionAvailable).map((k) => button(IDENTITY_IDS[k], IDENTITY_TITLES[k]));
+export const IDENTITY_CHOICES: IdentityChoice[] = ["retry", "menu"];
+export const IDENTITY_NOT_FOUND = "Não encontramos agendamentos para essa data de nascimento.";
+const IDENTITY_TITLES: Record<IdentityChoice, string> = { retry: "Tentar outra data", menu: "Voltar ao menu" };
+export const IDENTITY_NOT_FOUND_BUTTONS = IDENTITY_CHOICES.map((k) => button(IDENTITY_IDS[k], IDENTITY_TITLES[k]));
 export const ENTRY_LOOKUP_ERROR = "Não conseguimos consultar os agendamentos agora. Você pode seguir pelas opções do menu.";
 export const ENTRY_CHOOSE = "Qual agendamento você quer consultar ou alterar?";
 export const ENTRY_ACTION_ITEMS = {

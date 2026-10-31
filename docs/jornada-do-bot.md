@@ -50,8 +50,8 @@ O paciente manda qualquer mensagem para o número da clínica, a qualquer hora.
      1. 🤖 Boas-vindas e "Identificamos um agendamento associado a este número. Você deseja tratar desse agendamento?"
      2. 🧑 Sim, quero. *"Não, outro assunto": vai para o menu principal.*
      3. 🤖 Pede a data de nascimento do paciente, por segurança. *Nada do atendimento aparece antes disso.*
-     4. 🔍 A data confere com um paciente com atendimento? *Não: Falar com a recepção · Tentar outra data · Voltar ao
-        menu.*
+     4. 🔍 A data confere com um paciente com atendimento? *Não: "Não encontramos agendamentos para essa data de
+        nascimento." com Tentar outra data · Voltar ao menu.*
      5. 🤖 Mostra o atendimento (dia e hora) e pergunta o que fazer: **Confirmar presença · Remarcar · Cancelar ·
         Encaixe ou antecipar · Falar com a recepção**.
 

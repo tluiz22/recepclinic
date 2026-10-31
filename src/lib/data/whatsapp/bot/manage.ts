@@ -193,17 +193,17 @@ export async function startManage(b: Bot, action: Action, group: t.Group): Promi
     return showMenu(b);
   }
   // Data de nascimento antes de qualquer detalhe, com um ou mais atendimentos, como na entrada (cliente, 24/out/2026).
-  await say(b, "bot_ask_birthdate", t.entryAskBirthdate(b.words));
+  await say(b, "bot_ask_birthdate", t.ENTRY_ASK_BIRTHDATE);
   await go(b, SELECT_STATE[action], { ...ctx, awaiting: "birthdate_search", candidates: appointments.map(toCandidate) });
 }
 
-/** Data de nascimento sem atendimento (entrada e menu): recepção (com coexistência), outra data ou o menu. */
+/** Data de nascimento sem atendimento (entrada e menu): outra data ou o menu. */
 export async function sendIdentityNotFound(b: Bot): Promise<void> {
-  await sendButtons(b, "bot_identity_not_found", t.identityNotFound(b.receptionAvailable), t.identityNotFoundButtons(b.receptionAvailable));
+  await sendButtons(b, "bot_identity_not_found", t.IDENTITY_NOT_FOUND, t.IDENTITY_NOT_FOUND_BUTTONS);
 }
 
-export const identityChoiceOf = (b: Bot, selection: Selection): t.IdentityChoice | null =>
-  pick(selection, t.identityChoices(b.receptionAvailable), (k) => t.IDENTITY_IDS[k]);
+export const identityChoiceOf = (_b: Bot, selection: Selection): t.IdentityChoice | null =>
+  pick(selection, t.IDENTITY_CHOICES, (k) => t.IDENTITY_IDS[k]);
 
 async function handleSelect(b: Bot, selection: Selection): Promise<void> {
   const ctx = ctxOf(b);
@@ -217,10 +217,10 @@ async function handleSelect(b: Bot, selection: Selection): Promise<void> {
       await say(b, "bot_ask_birthdate", t.askBirthdate(b.words));
       return go(b, SELECT_STATE[ctx.action], { ...ctx, awaiting: "birthdate_search" });
     }
-    if (choice === "reception" || choice === "menu") {
+    if (choice === "menu") {
       if (ctx.action !== "waitlist") await end(b, "blocked", { reason: "no_match" });
       else await go(b, "WELCOME");
-      return choice === "reception" ? handoff(b, "identity_not_found") : showMenu(b);
+      return showMenu(b);
     }
     if (!choice) {
       await say(b, "bot_not_understood", textFor(b, "not_understood", t.notUnderstood()));

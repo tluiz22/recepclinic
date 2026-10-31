@@ -68,7 +68,7 @@ async function handleAsk(b: Bot, selection: Selection): Promise<void> {
     const count = (b.convo.context as { count?: number }).count ?? 1;
     return askAbout(b, count);
   }
-  await say(b, "bot_entry_ask_birthdate", t.entryAskBirthdate(b.words));
+  await say(b, "bot_entry_ask_birthdate", t.ENTRY_ASK_BIRTHDATE);
   await go(b, "ENTRY_BIRTHDATE", {} satisfies EntryContext);
 }
 
@@ -76,7 +76,6 @@ async function handleBirthdate(b: Bot, selection: Selection): Promise<void> {
   if (ctxOf(b).awaiting === "identity_choice" && !parseBirthdate(selection.text, b.clinic.today)) {
     // Uma data digitada vale como nova tentativa; senão, a escolha.
     const choice = identityChoiceOf(b, selection);
-    if (choice === "reception") return handoff(b, "identity_not_found");
     if (choice === "menu") return showMenu(b);
     if (choice === "retry") {
       await say(b, "bot_entry_ask_birthdate", t.askBirthdate(b.words));

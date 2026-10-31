@@ -168,6 +168,40 @@ describe("clínica Pediátrica com idade limite", () => {
   });
 });
 
+describe("entrada com agendamento (cliente, 31/out/2026)", () => {
+  it("pede a data \"do paciente\" mesmo na Pediátrica; data sem atendimento: só outra data ou o menu", async () => {
+    const phone = "+5584991228002"; // contato do Paciente Dois
+    const { data: agenda } = await adminClient().from("agendas").select("id").eq("id", f.ids.agendaDra2).single();
+    const { data: booked } = await adminClient()
+      .from("appointments")
+      .insert({
+        clinic_id: f.clinicId,
+        patient_id: f.ids.p2,
+        service_id: f.ids.consulta,
+        agenda_id: agenda!.id,
+        location_id: f.ids.office,
+        scheduled_at: new Date(Date.now() + 3 * 24 * 60 * 60_000).toISOString(),
+        duration_minutes: 30,
+        booking_channel: "admin",
+      })
+      .select("id")
+      .single();
+    try {
+      await adminClient().from("conversation_state").update({ state: "WELCOME", context: {} }).eq("clinic_id", f.clinicId).eq("contact_phone", phone);
+      await say(phone, "Oi");
+      let reply = await say(phone, { id: "entry_yes" });
+      expect(reply[0].body).toBe(
+        "Para sua segurança, antes de mostrar o agendamento precisamos confirmar a identidade.\n\nQual a data de nascimento do paciente? (formato dd/mm/aaaa)",
+      );
+      reply = await say(phone, "02/02/2002");
+      expect(reply[0]).toMatchObject({ kind: "buttons", body: "Não encontramos agendamentos para essa data de nascimento." });
+      expect(reply[0].options.map((o) => o.title)).toEqual(["Tentar outra data", "Voltar ao menu"]);
+    } finally {
+      await adminClient().from("appointments").delete().eq("id", booked!.id);
+    }
+  });
+});
+
 describe("sem idade limite e paciente adulto", () => {
   it("sem idade limite: sem aviso", async () => {
     await settings({ consultation_age_limit_years: null });

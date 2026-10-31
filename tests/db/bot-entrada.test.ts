@@ -225,7 +225,7 @@ describe("um atendimento", () => {
     expect((await conversation(P2)).state).toBe("MENU");
   });
 
-  it("6b. várias datas erradas no número: a pergunta continua; com coexistência, a recepção só se a pessoa escolher", async () => {
+  it("6b. várias datas erradas no número: a pergunta continua; mesmo com coexistência, sem \"Falar com a recepção\" (cliente, 31/out/2026)", async () => {
     for (let round = 0; round < 3; round++) {
       await fresh(P5);
       expect((await say(P5, "oi")).at(-1)!.body).toBe(ASK_ONE);
@@ -239,18 +239,12 @@ describe("um atendimento", () => {
       expect((await say(P5, "oi")).at(-1)!.body).toBe(ASK_ONE);
       await say(P5, { id: "entry_yes" });
       let reply = await say(P5, "02/02/2002");
-      expect(reply[0]).toMatchObject({ kind: "buttons", body: `${NOT_FOUND} Deseja falar com a recepção?` });
-      expect(titles(reply)).toEqual(["Falar com a recepção", "Tentar outra data", "Voltar ao menu"]);
+      expect(reply[0]).toMatchObject({ kind: "buttons", body: NOT_FOUND });
+      expect(titles(reply)).toEqual(["Tentar outra data", "Voltar ao menu"]);
       // A data digitada no lugar do botão vale como nova tentativa.
       reply = await say(P5, "07/07/2015");
       expect(reply[0].body).toBe("A consulta de *Paciente Cinco* está marcada para segunda, 10/03 às 10:00.\n\nO que você deseja fazer?");
-      await fresh(P5);
-      await say(P5, "oi");
-      await say(P5, { id: "entry_yes" });
-      await say(P5, "02/02/2002");
-      reply = await say(P5, { id: "identity_reception" });
-      expect(reply[0].body).toContain("Vou te transferir para a recepção");
-      expect((await conversation(P5)).human_handoff).toBe(true);
+      expect((await conversation(P5)).human_handoff).toBe(false);
     } finally {
       await fresh(P5);
       await adminClient().from("whatsapp_connections").update({ coexistence: false }).eq("clinic_id", f.clinicId);
