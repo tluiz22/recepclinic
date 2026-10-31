@@ -806,3 +806,48 @@ Cópia integral do bloco antes de ser enxugado (cliente, 31/out).
 > - **WhatsApp de testes:** `+55 61 9903-3143`, na "Consultorio de Teste" do staging, em coexistência.
 > - **Frentes paralelas:** site em [`site-plano.md`](site-plano.md) (pasta `recepclinic-site`, nunca aqui);
 >   comercial no Suporte › Vendas; triagem do piloto em [`triagem-piloto.md`](triagem-piloto.md).
+
+## Revisão da jornada do bot (31/out/2026)
+
+E1–E4 e ajustes de texto, na produção em 31/out (`20bfe8b`). Decisões do cliente, copiadas do `jornada-do-bot.md`
+(temporário, excluído ao fim da revisão):
+
+Pedido do cliente (31/out): jornada mais objetiva, valor só depois das escolhas, particular ou convênio, pediatria,
+assunto na transferência. Código na branch `jornada-bot` (criada da `main`); cada etapa com testes de jornada completa
+em `tests/db/`, staging e OK do cliente.
+
+**Decisões (cliente, 31/out)**
+1. Serviço único na categoria: o bot escolhe sozinho e avisa ("Vamos marcar a *X*"). Revoga a decisão de 07/out.
+2. Lista de serviços sem preço.
+3. Retorno: nunca fala de valor, mesmo com preço cadastrado (o preço continua na agenda).
+4. "Aceita convênios" = recurso Convênios ligado e pelo menos um plano ativo. Plano procurado pelo nome e pelos outros
+   nomes (`search_insurance_plans`); profissional com o plano em `professional_insurance_exclusions` = não aceito.
+   Sem regra por serviço ou modalidade (não existe no sistema).
+5. Convênio gravado no atendimento (pelo link); no paciente só se ele ainda não tiver plano.
+6. Valor e formas de pagamento: depois de serviço, profissional, modalidade e particular; formas = texto de Configurações
+   (`bot_payment_info`); sem texto, só o valor.
+7. Pediatria: idade limite = a da clínica (`consultation_age_limit_years`), com o nome do profissional escolhido; sem
+   campo novo.
+8. Pediatria: nome completo da criança → nascimento → nome do responsável (o contato). **Não** pergunta outro telefone:
+   lembretes no número da conversa.
+9. Transferência para a recepção: em **todas** (pedido, não entendeu, sem horário, convênio recusado, limite) o bot avisa,
+   pergunta o assunto uma vez e grava a primeira resposta; sem resposta, fica "assunto não informado" na tela
+   Atendimento. O bot pausa como hoje.
+10. Já atendidos, só ganham testes: sem horário (a lista só mostra profissional com horário; sem nenhum, recepção) e
+    dia e hora só pela página do link.
+
+11. Convênio: até 8 planos ativos (limite de 10 linhas do WhatsApp, com "Outro convênio" e "Voltar ao menu"), lista com os planos e "Outro convênio" (= não atendido); mais de 9, o paciente digita
+    e o bot procura.
+12. Coleta pediátrica (paciente, nascimento, depois quem escreve/responsável): perfil Pediatria **ou** paciente menor
+    em qualquer clínica. Na prática, para outra pessoa: nome do paciente → nascimento → nome de quem escreve (número
+    novo). Menor: "nome do responsável".
+13. Idade limite com "Primeiro horário": a mensagem usa o nome da clínica.
+14. Publicação (cliente, 31/out): E2–E4 seguidas na branch, testes a cada etapa, e no fim juntar na `main` e publicar no
+    staging (com as migrações) para validação pelo celular.
+
+**Etapas:** E1 serviço único, lista sem preço e retorno sem valor · E2 particular ou convênio, valor depois das escolhas
+(migração no link) · E3 pediatria · E4 assunto na transferência (migração e tela Atendimento).
+
+Depois das etapas (cliente, 31/out): entrada com agendamento sem "Como podemos ajudar?"; idade limite ultrapassada
+com o nome do profissional; confirmação na página do link ao marcar e remarcar; data de nascimento "do paciente" em
+qualquer perfil e data sem atendimento só com "Tentar outra data" e "Voltar ao menu".

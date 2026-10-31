@@ -505,7 +505,7 @@ Consequência: a tela Atendimento e a notificação no celular deixam de mostrar
 **Exceção (cliente, 31/out/2026): o assunto da transferência para a recepção.** Na transferência, o bot pergunta uma
 vez o assunto; a primeira resposta em texto (até 300 caracteres) fica guardada na conversa, aparece só na tela
 Atendimento para a equipe da clínica e é apagada quando a conversa volta ao bot. Nenhum outro texto do paciente é
-guardado. Revisão da jornada do bot, E4 ([`jornada-do-bot.md`](jornada-do-bot.md)).
+guardado. Revisão da jornada do bot, E4 ([`historico.md`](historico.md), busca "Revisão da jornada do bot").
 
 ## D13 — Nota fiscal das clínicas pelo Asaas (29/out/2026)
 

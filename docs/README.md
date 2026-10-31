@@ -2,20 +2,19 @@
 
 > **Estado atual (retomar daqui), 31/out/2026.** Detalhes e datas no [`historico.md`](historico.md) (só por busca).
 >
-> **Próximo (cliente, 31/out):** validar no staging, pelo celular, a revisão da jornada do bot (E1–E4), pelo roteiro
-> no fim do [`jornada-do-bot.md`](jornada-do-bot.md) (V1–V8). Depois: produção (2 migrações) e excluir o arquivo.
-> Mudança no caminho do paciente atualiza `botJourney.ts` no mesmo commit.
+> **Próximo (cliente, 31/out):** planejar uma nova melhoria (o cliente traz na próxima sessão). Mudança no caminho
+> do paciente atualiza `botJourney.ts` no mesmo commit.
 >
 > **Ambientes**
-> - **Produção** (`app.recepclinic.com.br`, branch `producao`) = `main` em `20c2239` (até C16 e menu lateral).
->   Fluxo em [`producao.md`](producao.md).
-> - **Staging** (`teste.recepclinic.com.br`, branch `main`): produção + jornada do bot E1–E4 (`54a9243`, migrações
->   `20261108120000` e `20261108130000` aplicadas) + cartão do Asaas (`ASAAS_PREVIEW=1`).
+> - **Produção** (`app.recepclinic.com.br`, branch `producao`) = `main` em `20bfe8b` (revisão da jornada do bot E1–E4,
+>   confirmação na página do link). Fluxo em [`producao.md`](producao.md).
+> - **Staging** (`teste.recepclinic.com.br`, branch `main`): igual à produção + cartão do Asaas (`ASAAS_PREVIEW=1`).
 >   Roteiros em [`staging.md`](staging.md).
 > - **Branch `faturamento`** (só local, sem push): todo código do financeiro.
 >
 > **Frentes**
-> - **Ajustes da produção (C1–C16):** todos na produção; nada pendente.
+> - **Ajustes da produção (C1–C16) e revisão da jornada do bot:** todos na produção; nada pendente. Decisões da
+>   revisão no [`historico.md`](historico.md) (busca "Revisão da jornada do bot").
 > - **Faturamento do SaaS:** F12.1 e F12.2 validadas no local. Próximo: **F12.2b** (aceite do contrato e aviso de 30
 >   dias); texto do contrato com o advogado. Retomar pelo `planejamento-faturamento-saas.md` **na branch**.
 > - **NFS-e pelo Asaas** (`planejamento-nfse-asaas.md`, seção 13): N0; formulário BaaS enviado (30/out). Aguarda
