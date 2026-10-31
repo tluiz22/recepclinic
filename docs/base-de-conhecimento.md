@@ -185,3 +185,9 @@ Clínica não edita a base. (Os textos da clínica continuam nos campos dela: pa
 9. **Pergunta clínica:** aviso "Por aqui não conseguimos dar orientação de saúde." (sem a frase da emergência) e
    a pergunta "Quer falar com a recepção?" (Sim/Não, como o pedido de recepção digitado). Sem recepção no app
    (fora da coexistência): só o aviso e o menu.
+10. **Perguntas sobre valor** (mesmo momento das demais, decisão 2): genérica → a lista de Informações › Valores
+    (serviços com agenda e horário, preço por tipo de local, formas de pagamento); com serviço ou profissional
+    citado → só aquele serviço, se ativo e com horário (o preço é do serviço e do local; o profissional só
+    filtra); serviço inexistente ou sem horário → não informa; preço zero → "Sem custo"; valor pelo convênio →
+    não responde (não há dado). **Na marcação, com o serviço já escolhido:** o valor desse serviço (e do local, se
+    já escolhido) com as formas de pagamento, e repete o passo.
