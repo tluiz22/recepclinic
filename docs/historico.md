@@ -699,7 +699,8 @@ retomada fica no README). Para achar algo, buscar por data (ex.: `27/out`), fase
   no Relacionamento). Migração `20261105130000_retomar_contato_retirados.sql` (tabela `recall_dismissals`, chave número
   + rótulo do fluxo, como a lista agrupa; o número da branch `faturamento`, 20261106/07, fica depois). Testes: unidade
   (`withoutDismissed`) e banco (papéis, outra clínica, retirar de novo). Conferido no local com uma tentativa de teste
-  (retirar, sumir nas Métricas, voltar com tentativa nova), apagada depois.
+  (retirar, sumir nas Métricas, voltar com tentativa nova), apagada depois. Migração aplicada no staging (conferida a
+  tabela) e publicada no staging em 31/out; o cliente valida no fim.
 - **DMED removida** (30/out): **cliente (30/out):** a DMED é do contador da clínica; o RecepClinic não gera mais o
   arquivo. Saíram a tela Financeiro › DMED, a rota do arquivo, `src/lib/dmed.ts`, `src/lib/data/dmed.ts`, os testes,
   a ajuda e a aba do Financeiro. Migração `20261105120000_sem_dmed.sql` (apaga `clinic_dmed_settings` e
