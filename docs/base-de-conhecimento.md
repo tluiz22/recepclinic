@@ -1,7 +1,8 @@
 # Base de Conhecimento Global do bot (BC)
 
-> **Retomar daqui (31/out/2026).** Etapa 1 (diagnóstico e arquitetura) apresentada; questões decididas (seção 9).
-> Nada de código. Próximo: OK do cliente na Etapa 1 → Etapa 2 (catálogo inicial, para avaliação; nada publicado).
+> **Retomar daqui (31/out/2026).** Questões da Etapa 1 decididas (seção 9).
+> Etapa 1 aprovada. Etapa 2: catálogo proposto em [`base-de-conhecimento-catalogo.md`](base-de-conhecimento-catalogo.md)
+> (nada publicado); cliente avalia e decide Q1–Q6.
 
 Pedido do cliente em 31/out/2026: uma base global de perguntas frequentes, mantida pelo Suporte RecepClinic e
 compartilhada por todas as clínicas. A base reconhece a pergunta; a resposta sai dos dados da clínica. Ela não
