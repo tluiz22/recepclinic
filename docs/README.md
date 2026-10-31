@@ -4,7 +4,10 @@
 > na retomada; buscar por data, fase ou commit quando precisar).
 >
 > **Produção = `main` em 30/out (`71cbbec`):** DMED removida (migração aplicada), cartão do Asaas escondido, Vendas ›
-> Implantação e Tecnologia › Jornada do bot. Próximo: aguarda o cliente.
+> Implantação e Tecnologia › Jornada do bot.
+>
+> **Próxima sessão (cliente, 30/out): redesign do menu superior, na `main`.** O faturamento fica parado na branch
+> `faturamento` (abaixo).
 >
 > **N0 do Asaas (30/out):** NFS-e pelo Asaas, N0 (seções 13.8 e 13.9 do `planejamento-nfse-asaas.md`; ler o bloco de
 > retomada dele). Cartão do selo do Asaas na `main` (`13ebeab`), visível só com `ASAAS_PREVIEW=1` (staging).
@@ -28,11 +31,13 @@
 >   Detalhes no [`historico.md`](historico.md) (busca "C9" a "C13"). Clínica com exames: "Criar na Meta" (Suporte) para
 >   `rc_preparo_exame_v3` e `rc_preparo_arquivo_v3`. Próximo: nada pendente nesta frente; aguarda o cliente.
 > - **CRM concluído** (28/out; [`crm.md`](crm.md)): validado no staging e na produção desde 28/out.
-> - **Faturamento do SaaS e NFS-e pelo Asaas** (planejamento na `main`; a branch `faturamento` foi excluída em 30/out e
->   é recriada da `main` só quando o código começar):
->   planejamento do faturamento concluído (28/out) e ampliado em 29/out com a **nota fiscal pelo Asaas** (D13: subconta
->   por clínica, preço por nota e franquia na fatura; `planejamento-nfse-asaas.md`). Nada implementado.
->   **N0 em andamento (29/out):** Sandbox testado em Mossoró; Asaas respondeu (exige BaaS; avaliação
+> - **Faturamento do SaaS** (código na branch **`faturamento`, só local, sem push** a pedido do cliente; retomar pelo
+>   bloco de retomada do `planejamento-faturamento-saas.md` **na branch**): **F12.1** (conta de cobrança) e **F12.2**
+>   (contrato com versões) feitas e **validadas no local (30/out)**. Ordem decidida: cobrança antes da nota fiscal, só
+>   com e-mail, até cobrar a clínica piloto em produção. Parecer do advogado recebido e decisões registradas (itens 18 a
+>   27 da seção 11 do plano, na branch). **Próximo: F12.2b** (aceite do contrato na tela e aviso de 30 dias); pedir ao
+>   advogado o texto completo do contrato.
+> - **NFS-e pelo Asaas** (`planejamento-nfse-asaas.md`; volta depois da cobrança no ar). **N0 em andamento (29/out):** Sandbox testado em Mossoró; Asaas respondeu (exige BaaS; avaliação
 >   pedida); aguardando Asaas (BaaS, saldo negativo, IP) e contador (CNAE, IBS/CBS, PIS/COFINS, **certificado A1**,
 >   exigido em Mossoró). Retomar pela seção 13 do plano; depois a F12.1. Cada etapa com o OK do cliente.
 > - **Piloto** (etapas no [plano](plano.md), F10): **A** feita (roteiros do WhatsApp Business: [único](https://claude.ai/artifact/8AXZMSLcEq8SMWFpYHaraq),
