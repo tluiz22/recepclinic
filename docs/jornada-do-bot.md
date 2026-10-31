@@ -183,3 +183,32 @@ Fora da jornada do paciente:
 - `rc_nota_fiscal_v1`: Financeiro, envio da nota fiscal com o PDF.
 
 Catálogo completo e textos em `src/lib/data/whatsapp/templates.ts`.
+
+## Revisão de 31/out/2026: decisões e etapas
+
+Pedido do cliente (31/out): jornada mais objetiva, valor só depois das escolhas, particular ou convênio, pediatria,
+assunto na transferência. Código na branch `jornada-bot` (criada da `main`); cada etapa com testes de jornada completa
+em `tests/db/`, staging e OK do cliente.
+
+**Decisões (cliente, 31/out)**
+1. Serviço único na categoria: o bot escolhe sozinho e avisa ("Vamos marcar a *X*"). Revoga a decisão de 07/out.
+2. Lista de serviços sem preço.
+3. Retorno: nunca fala de valor, mesmo com preço cadastrado (o preço continua na agenda).
+4. "Aceita convênios" = recurso Convênios ligado e pelo menos um plano ativo. Plano procurado pelo nome e pelos outros
+   nomes (`search_insurance_plans`); profissional com o plano em `professional_insurance_exclusions` = não aceito.
+   Sem regra por serviço ou modalidade (não existe no sistema).
+5. Convênio gravado no atendimento (pelo link); no paciente só se ele ainda não tiver plano.
+6. Valor e formas de pagamento: depois de serviço, profissional, modalidade e particular; formas = texto de Configurações
+   (`bot_payment_info`); sem texto, só o valor.
+7. Pediatria: idade limite = a da clínica (`consultation_age_limit_years`), com o nome do profissional escolhido; sem
+   campo novo.
+8. Pediatria: nome completo da criança → nascimento → nome do responsável (o contato). **Não** pergunta outro telefone:
+   lembretes no número da conversa.
+9. Transferência para a recepção: em **todas** (pedido, não entendeu, sem horário, convênio recusado, limite) o bot avisa,
+   pergunta o assunto uma vez e grava a primeira resposta; sem resposta, fica "assunto não informado" na tela
+   Atendimento. O bot pausa como hoje.
+10. Já atendidos, só ganham testes: sem horário (a lista só mostra profissional com horário; sem nenhum, recepção) e
+    dia e hora só pela página do link.
+
+**Etapas:** E1 serviço único, lista sem preço e retorno sem valor · E2 particular ou convênio, valor depois das escolhas
+(migração no link) · E3 pediatria · E4 assunto na transferência (migração e tela Atendimento).
