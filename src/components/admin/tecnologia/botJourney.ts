@@ -45,7 +45,11 @@ export const JOURNEY: JourneySection[] = [
       branch(
         [
           "Não",
-          [bot("\"Olá! 👋 Aqui é [clínica].\""), bot(MENU, "Só aparecem as opções que a clínica usa.")],
+          [
+            bot("\"Olá! 👋 Aqui é [clínica].\""),
+            bot("Se a mensagem já traz uma pergunta frequente (\"vocês aceitam Unimed?\"), a resposta", "Com \"Perguntas frequentes no bot\" ligado (item 9). \"Oi\" sozinho: só as boas-vindas."),
+            bot(MENU, "Só aparecem as opções que a clínica usa."),
+          ],
         ],
         [
           "Sim",
@@ -235,6 +239,28 @@ export const JOURNEY: JourneySection[] = [
       ),
       reception("Responde pelo app WhatsApp Business, no celular ou no computador", "Responder pelo app também pausa o bot. A tela Atendimento mostra quem espera."),
       reception("Manda #bot ou toca em \"Devolver ao bot\" no painel: o bot volta a atender essa conversa"),
+    ],
+  },
+  {
+    id: "perguntas",
+    title: "9. Perguntas frequentes",
+    intro:
+      "Com \"Perguntas frequentes no bot\" ligado, o paciente pode escrever a pergunta em qualquer ponto da conversa. A resposta sai do cadastro da clínica; o que não está cadastrado, o bot não responde.",
+    flow: [
+      patient("Escreve uma pergunta (\"qual o endereço?\", \"quanto custa?\", \"aceitam Unimed?\")", "Número, toque, Sim/Não, data, nome e endereço continuam como antes."),
+      check("O bot reconhece a pergunta?"),
+      branch(
+        [
+          "Sim",
+          [
+            bot("Responde com os dados da clínica e repete a pergunta em que a pessoa estava", "No meio da marcação, a marcação continua de onde estava. \"Quanto custa?\" depois de escolher o serviço: o valor dele."),
+            bot("Pedido de marcar, remarcar, cancelar ou confirmar: abre esse caminho", "Remarcar e cancelar como no item 4; nada de data digitada."),
+          ],
+        ],
+        ["Em dúvida", [bot("\"Você quis dizer…?\" com até 3 opções e \"Nenhuma destas\"")]],
+        ["Pergunta de saúde", [bot("\"Por aqui não conseguimos dar orientação de saúde.\" e \"Quer falar com a recepção?\"", "Sintoma junto com pedido de marcação: abre a marcação.")]],
+        ["Não", [bot("O \"não entendi\" de sempre", "A pergunta fica, sem o telefone, para o Suporte melhorar as respostas.")]],
+      ),
     ],
   },
 ];

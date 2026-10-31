@@ -15,6 +15,7 @@ import type { PreparationFile } from "../../config/preparationFile";
 import { preparationFileCaption } from "../../../preparationMessage";
 import { loadCatalog, type BotCatalog } from "./catalog";
 import {
+  ASK_BIRTHDATE_AGAIN,
   HANDOFF_SUBJECT_QUESTION,
   INVALID_BIRTHDATE,
   INVALID_BIRTHDATE_AGAIN,
@@ -72,7 +73,33 @@ export type Bot = BotEnv & {
   incomingType: string | null;
   /** O bot respondeu "não entendi" a esta mensagem (F8.5d). */
   notUnderstoodSaid?: boolean;
+  /** Texto digitado pelo paciente (null = toque, mídia ou vazio). */
+  incomingText?: string | null;
+  /** Base de conhecimento (BC, Etapa 4): consultada no lugar do primeiro "não entendi" da mensagem. */
+  knowledge?: KnowledgeHook;
 };
+
+/**
+ * Base de conhecimento no "não entendi" (BC, Etapa 4): o router liga com a base
+ * publicada e o item da matriz. `run` responde (a resposta já foi enviada e o
+ * passo se repete sem o "não entendi"), não reconhece, ou pede para assumir a
+ * conversa (fluxo, recepção, "Você quis dizer…?", aviso de saúde).
+ */
+export type KnowledgeHook = {
+  /** Já consultada nesta mensagem. */
+  done: boolean;
+  /** Repetir o passo sem o "não entendi" (depois de uma resposta escolhida no "Você quis dizer…?"). */
+  silent: boolean;
+  run(b: Bot): Promise<"answered" | "none" | KnowledgeTakeover>;
+};
+
+/** A base assume a conversa: o fluxo do passo para e o router faz o resto (como no limite do "não entendi"). */
+export class KnowledgeTakeover extends Error {
+  constructor(readonly action: unknown) {
+    super("Bot: a base de conhecimento assumiu a mensagem");
+    this.name = "KnowledgeTakeover";
+  }
+}
 
 /** Mensagens seguidas que o bot não entende até a conversa ir para a clínica (cliente, 27/out/2026). */
 export const NOT_UNDERSTOOD_LIMIT = 4;
@@ -91,9 +118,18 @@ const MEDIA_TYPES = new Set(["image", "video", "sticker", "document"]);
 /**
  * Cada "não entendi" passa por aqui (F8.5d): conta uma vez por mensagem do
  * paciente e, com a recepção no app (coexistência), barra o 4º seguido. Para
- * mídia, o texto próprio no lugar do "não entendi" genérico.
+ * mídia, o texto próprio no lugar do "não entendi" genérico. Antes, a base de
+ * conhecimento: se ela respondeu, null (o passo se repete sem o "não entendi"
+ * e não conta).
  */
-function notUnderstood(b: Bot, body: string): string {
+async function notUnderstood(b: Bot, body: string): Promise<string | null> {
+  if (b.knowledge && !b.knowledge.done && !b.notUnderstoodSaid) {
+    b.knowledge.done = true;
+    const outcome = await b.knowledge.run(b);
+    if (outcome instanceof KnowledgeTakeover) throw outcome;
+    if (outcome === "answered") b.knowledge.silent = true;
+  }
+  if (b.knowledge?.silent) return null;
   if (!b.notUnderstoodSaid && b.receptionAvailable && b.convo.notUnderstoodCount + 1 >= NOT_UNDERSTOOD_LIMIT) throw new NotUnderstoodLimitReached();
   b.notUnderstoodSaid = true;
   if (b.incomingType && AUDIO_TYPES.has(b.incomingType)) return MEDIA_AUDIO;
@@ -108,6 +144,9 @@ const NOT_UNDERSTOOD_KIND = "bot_not_understood";
  * mensagem anterior não vale (cliente, 23/out/2026).
  */
 export const PROMPT_KEY = "_prompt";
+
+/** Pedido de recepção esperando o Sim ou o Não (no contexto, sem trocar o passo; router e base de conhecimento). */
+export const RECEPTION_CONFIRM_KEY = "_reception_confirm";
 
 export const currentPrompt = (convo: Conversation): string | null => ((convo.context ?? {}) as Record<string, unknown>)[PROMPT_KEY] as string | null ?? null;
 
@@ -177,8 +216,15 @@ async function record(b: Bot, kind: string, outcome: SendOutcome, body: string):
 
 /** Texto livre (sempre dentro da janela de 24h: o paciente acabou de escrever). */
 export async function say(b: Bot, kind: string, body: string): Promise<void> {
-  const text = kind === NOT_UNDERSTOOD_KIND ? notUnderstood(b, body) : body;
+  const text = kind === NOT_UNDERSTOOD_KIND ? await notUnderstood(b, body) : body;
+  if (text === null) return;
   await record(b, kind, await b.sender.text(b.phone, text), text);
+}
+
+/** Pergunta do passo sem o "não entendi" do começo (a base já respondeu). */
+function withoutNotUnderstood(body: string): string {
+  if (body.startsWith(NOT_UNDERSTOOD_YES_NO)) return body.slice(NOT_UNDERSTOOD_YES_NO.length).trim() || body;
+  return body.replace(/^Não entendi\.\s+/, "");
 }
 
 /** Preparo com arquivo (C7.5): o documento com a legenda, como na confirmação. */
@@ -193,7 +239,7 @@ export async function sayPreparationFile(b: Bot, kind: string, examName: string,
 }
 
 export async function sendList(b: Bot, kind: string, body: string, sections: ListSection[]): Promise<void> {
-  if (kind === NOT_UNDERSTOOD_KIND) notUnderstood(b, body);
+  if (kind === NOT_UNDERSTOOD_KIND && (await notUnderstood(b, body)) === null) body = withoutNotUnderstood(body);
   const outcome = await b.sender.list(b.phone, body, LIST_BUTTON, sections);
   await record(b, kind, outcome, body);
   await rememberPrompt(b, outcome.sent ? outcome.messageId : null);
@@ -201,7 +247,7 @@ export async function sendList(b: Bot, kind: string, body: string, sections: Lis
 }
 
 export async function sendButtons(b: Bot, kind: string, body: string, buttons: ReplyButton[]): Promise<void> {
-  if (kind === NOT_UNDERSTOOD_KIND) notUnderstood(b, body);
+  if (kind === NOT_UNDERSTOOD_KIND && (await notUnderstood(b, body)) === null) body = withoutNotUnderstood(body);
   const outcome = await b.sender.buttons(b.phone, body, buttons);
   await record(b, kind, outcome, body);
   await rememberPrompt(b, outcome.sent ? outcome.messageId : null);
@@ -215,7 +261,9 @@ export async function sendButtons(b: Bot, kind: string, body: string, buttons: R
  */
 export async function sayInvalidBirthdate(b: Bot): Promise<void> {
   const again = b.convo.notUnderstoodCount > 0;
-  const body = notUnderstood(b, again ? INVALID_BIRTHDATE_AGAIN : INVALID_BIRTHDATE);
+  const body = await notUnderstood(b, again ? INVALID_BIRTHDATE_AGAIN : INVALID_BIRTHDATE);
+  // A base respondeu: a pergunta da data de novo, sem o "não entendi".
+  if (body === null) return say(b, "bot_ask_birthdate_again", ASK_BIRTHDATE_AGAIN);
   if (again) return sendButtons(b, "bot_invalid_birthdate", body, wayOutButtons(b.receptionAvailable));
   await record(b, "bot_invalid_birthdate", await b.sender.text(b.phone, body), body);
 }

@@ -204,6 +204,8 @@ export const otherPatientLabel = other;
 
 export const askBirthdate = (w: Words) => `Qual a data de nascimento ${of(w)}? (formato dd/mm/aaaa)`;
 export const SELF_BIRTHDATE = "Qual é a sua data de nascimento? (formato dd/mm/aaaa)";
+/** Depois de responder uma pergunta da base no meio do pedido da data (BC, Etapa 4). */
+export const ASK_BIRTHDATE_AGAIN = "Qual a data de nascimento do paciente? (formato dd/mm/aaaa)";
 export const INVALID_BIRTHDATE = "Não consegui entender essa data. Por favor, digite no formato dd/mm/aaaa (ex.: 10/03/2020).";
 export const INVALID_BIRTHDATE_AGAIN = `${INVALID_BIRTHDATE}\n\nSe não souber a data, escolha uma opção abaixo.`;
 export const birthdateMatches = (w: Words) =>
@@ -428,3 +430,12 @@ export const LIMIT_RECEPTION_WILL_CONTACT = "Para esse agendamento, a recepção
 export const BLOCKED_HANDOFF = "Sua conversa está com a recepção, que responde por aqui assim que possível.";
 /** Número sem coexistência. */
 export const BLOCKED_RECEPTION_WILL_CONTACT = "Sua conversa está com a recepção, que vai entrar em contato com você.";
+
+// ---------------------------------------------------------------------------
+// Base de conhecimento (BC, Etapa 4)
+// ---------------------------------------------------------------------------
+
+export const KB_DID_YOU_MEAN = "Você quis dizer…?";
+export const KB_NONE_OF_THESE = "Nenhuma destas";
+export const KB_BOOK = "Marcar";
+export const KB_NO_APPOINTMENTS = "Não encontramos atendimento marcado para este número.";

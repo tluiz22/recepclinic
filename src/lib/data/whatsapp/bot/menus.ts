@@ -132,16 +132,19 @@ export async function handleInfo(b: Bot, selection: Selection): Promise<void> {
     case "notes":
       await say(b, "bot_info_notes", b.clinic.notes!);
       break;
-    case "preparation": {
-      const exams = preparationExams(catalog.services);
-      await sendList(b, "bot_info_preparation_choice", t.PREPARATION_QUESTION, t.numberedList(exams.map((s) => ({ id: `prep_${s.id}`, label: s.name }))));
-      await go(b, "INFO_PREP_SELECT");
-      return;
-    }
+    case "preparation":
+      return showPreparationChoice(b);
     default:
       return showInfo(b, true);
   }
   await showInfo(b);
+}
+
+/** Lista dos exames com preparo (Informações e base de conhecimento). */
+export async function showPreparationChoice(b: Bot): Promise<void> {
+  const exams = preparationExams((await b.catalog()).services);
+  await sendList(b, "bot_info_preparation_choice", t.PREPARATION_QUESTION, t.numberedList(exams.map((s) => ({ id: `prep_${s.id}`, label: s.name }))));
+  await go(b, "INFO_PREP_SELECT");
 }
 
 export async function handlePreparationChoice(b: Bot, selection: Selection): Promise<void> {

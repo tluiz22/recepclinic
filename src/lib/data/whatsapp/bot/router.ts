@@ -17,7 +17,7 @@ import { contactIdByPhone, recordOutboundMessage } from "../messages";
 import { messageBody, toE164, type WaMessage } from "../meta";
 import type { ClinicSender } from "../send";
 import { BOOKING_STATES, handleBookingState } from "./booking";
-import { createBot, currentPrompt, mergeContext, NotUnderstoodLimitReached, say, sendButtons, type Bot, type BotEnv } from "./engine";
+import { createBot, currentPrompt, KnowledgeTakeover, mergeContext, NotUnderstoodLimitReached, RECEPTION_CONFIRM_KEY, say, sendButtons, type Bot, type BotEnv } from "./engine";
 import { ENTRY_STATES, handleEntryState, startConversation } from "./entry";
 import { asksForReception, extractSelection, isBackToMenu, TALK_TO_RECEPTION_ID, yesNo } from "./input";
 import { handleInfo, handleMenu, handlePreparationChoice, handleSubmenu, showMenu } from "./menus";
@@ -34,6 +34,7 @@ import {
 } from "./texts";
 import { blockedContactByPhone, blockedNoticeDue, markBlockedNotice } from "../contactBlock";
 import { listBotMessages } from "../customMessages";
+import { firstMessageAnswer, handleKnowledgeReply, knowledgeHookFor, performTakeover } from "./knowledge/respond";
 import { logError } from "../../../log";
 
 // Entrada do bot (F6.3): chamado pelo webhook para cada mensagem recebida, já
@@ -85,13 +86,21 @@ export async function handleIncomingMessage(env: BotEnv, message: WaMessage): Pr
   }
 
   const b = await createBot(env, convo, message.id ?? null, message.type ?? null);
+  // Base de conhecimento (BC, Etapa 4): texto digitado, ou toque numa mensagem dela, fora dos passos de texto livre.
+  b.incomingText = message.type === "text" ? (messageBody(message) ?? "").trim() || null : null;
+  const kbTap = /^kb_/.test(extractSelection(message).id ?? "");
+  if ((b.incomingText || kbTap) && !FREE_TEXT_AWAITING.has(awaitingOf(convo) ?? "")) b.knowledge = await knowledgeHookFor(b);
   try {
     await dispatch(env, b, convo, phone, message);
   } catch (error) {
-    // 4ª mensagem seguida que o bot não entende (F8.5d): a conversa vai para a clínica.
-    if (!(error instanceof NotUnderstoodLimitReached)) throw error;
-    await handoffNotUnderstood(b);
-    return "handled";
+    if (error instanceof KnowledgeTakeover) {
+      await performTakeover(b, error.action);
+    } else {
+      // 4ª mensagem seguida que o bot não entende (F8.5d): a conversa vai para a clínica.
+      if (!(error instanceof NotUnderstoodLimitReached)) throw error;
+      await handoffNotUnderstood(b);
+      return "handled";
+    }
   }
   // Mensagens seguidas que o bot não entendeu (F8.5d): soma uma ou zera.
   const count = b.notUnderstoodSaid ? convo.notUnderstoodCount + 1 : 0;
@@ -104,7 +113,6 @@ export async function handleIncomingMessage(env: BotEnv, message: WaMessage): Pr
 const FREE_TEXT_AWAITING = new Set(["address_input", "contact_name", "patient_name", "self_name"]);
 const awaitingOf = (convo: Conversation) => ((convo.context ?? {}) as { awaiting?: string }).awaiting;
 /** Pedido de recepção digitado esperando o Sim ou o Não (no contexto, sem trocar o passo). */
-const RECEPTION_CONFIRM_KEY = "_reception_confirm";
 const receptionConfirmPending = (convo: Conversation) => ((convo.context ?? {}) as Record<string, unknown>)[RECEPTION_CONFIRM_KEY] === true;
 
 async function dispatch(env: BotEnv, b: Bot, convo: Conversation, phone: string, message: WaMessage): Promise<void> {
@@ -119,7 +127,12 @@ async function dispatch(env: BotEnv, b: Bot, convo: Conversation, phone: string,
   // Toque numa lista ou botão de uma mensagem anterior (já respondida, ou de um passo que já passou):
   // não entendeu e o menu inicial (cliente, 23/out/2026). Os botões de template já foram tratados acima.
   const tapped = message.interactive?.list_reply ?? message.interactive?.button_reply;
-  if (tapped && message.context?.id && message.context.id !== currentPrompt(convo)) {
+  const stale = !!(tapped && message.context?.id && message.context.id !== currentPrompt(convo));
+
+  // "Marcar" e "Você quis dizer…?" da base de conhecimento: a escolha responde e o passo se repete.
+  if (b.knowledge && !stale && (await handleKnowledgeReply(b, selection)) === "handled") return;
+
+  if (stale) {
     if (convo.state !== WELCOME && convo.state !== "MENU") await logAbandonment(env.db, env.clinicId, convo, "back_to_menu", env.now);
     await showMenu(b, { notUnderstood: !isBackToMenu(selection) });
     return;
@@ -180,7 +193,8 @@ async function dispatch(env: BotEnv, b: Bot, convo: Conversation, phone: string,
       break;
     default:
       // WELCOME, ou estado de outra versão do bot: começa do zero (com atendimento marcado, pergunta antes do menu).
-      await startConversation(b);
+      // Pergunta da base na 1ª mensagem: a resposta depois das boas-vindas (cliente, 31/out/2026).
+      await startConversation(b, { afterWelcome: convo.state === WELCOME && b.knowledge ? await firstMessageAnswer(b) : undefined });
   }
   return;
 }
