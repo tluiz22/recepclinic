@@ -2,9 +2,10 @@
 
 > **Estado atual (retomar daqui), 31/out/2026.** Detalhes e datas no [`historico.md`](historico.md) (só por busca).
 >
-> **Próximo (cliente, 31/out):** Base de Conhecimento Global do bot: Etapa 1 aprovada; Etapa 2: catálogo proposto,
-> Q1–Q6 decididas; aguarda aprovação do catálogo. Retomar pelo [`base-de-conhecimento.md`](base-de-conhecimento.md). Mudança no caminho
-> do paciente atualiza `botJourney.ts` no mesmo commit.
+> **Próximo (cliente, 31/out):** Base de Conhecimento Global do bot: Etapas 1 e 2 aprovadas; Etapa 3 na branch
+> `base-conhecimento` (só local), 3.1 (banco) aguarda validação. Retomar pelo
+> [`base-de-conhecimento.md`](base-de-conhecimento.md). Mudança no caminho do paciente atualiza `botJourney.ts` no
+> mesmo commit.
 >
 > **Ambientes**
 > - **Produção** (`app.recepclinic.com.br`, branch `producao`) = `main` em `20bfe8b` (revisão da jornada do bot E1–E4,
@@ -12,6 +13,7 @@
 > - **Staging** (`teste.recepclinic.com.br`, branch `main`): igual à produção + cartão do Asaas (`ASAAS_PREVIEW=1`).
 >   Roteiros em [`staging.md`](staging.md).
 > - **Branch `faturamento`** (só local, sem push): todo código do financeiro.
+> - **Branch `base-conhecimento`** (só local): Base de Conhecimento do bot (Etapa 3).
 >
 > **Frentes**
 > - **Ajustes da produção (C1–C16) e revisão da jornada do bot:** todos na produção; nada pendente. Decisões da

@@ -1,8 +1,9 @@
 # Base de Conhecimento Global do bot (BC)
 
-> **Retomar daqui (31/out/2026).** Questões da Etapa 1 decididas (seção 9).
-> Etapa 1 aprovada. Etapa 2: catálogo proposto em [`base-de-conhecimento-catalogo.md`](base-de-conhecimento-catalogo.md)
-> (nada publicado); Q1–Q6 decididas. Próximo: aprovação do catálogo pelo cliente → Etapa 3.
+> **Retomar daqui (31/out/2026).** Etapas 1 e 2 aprovadas (catálogo em
+> [`base-de-conhecimento-catalogo.md`](base-de-conhecimento-catalogo.md)). Etapa 3 na branch `base-conhecimento`
+> (só local): **3.1 (banco) feita**, aguarda validação do cliente. Depois: 3.2 (núcleo: casamento, fontes, cache) e
+> 3.3 (página do Suporte). Detalhe na seção 10.
 
 Pedido do cliente em 31/out/2026: uma base global de perguntas frequentes, mantida pelo Suporte RecepClinic e
 compartilhada por todas as clínicas. A base reconhece a pergunta; a resposta sai dos dados da clínica. Ela não
@@ -200,3 +201,29 @@ Clínica não edita a base. (Os textos da clínica continuam nos campos dela: pa
     "o Dr. X atende aqui?" → profissão e especialidade, se ativo e com horário; "que especialista procuro para
     dor…" → aviso da pergunta clínica (decisão 9). **Não achou:** nunca diz "não temos"; mostra as
     especialidades que a clínica atende e o menu.
+
+## 10. Etapa 3 (estrutura), na branch `base-conhecimento`
+
+Sub-etapas: **3.1** banco → **3.2** núcleo (normalização, casamento, fontes, cache) → **3.3** página do Suporte
+(cadastro, publicação, histórico, testador). A integração com o bot é a Etapa 4.
+
+### 3.1 — Banco (31/out/2026, `e9c5328`)
+
+- Migração `20261109120000_base_de_conhecimento.sql`: `kb_categories`, `kb_entries` (status rascunho/aprovado/
+  ativo/inativo, versão e autor por gatilho, travas com as listas de fontes, fluxos e termos de
+  `src/lib/knowledge.ts`), `kb_synonyms`, `kb_specialties`, `kb_clinical_terms` (com o grupo "exception", que não
+  aciona o filtro), `kb_revisions` (histórico por gatilho), `kb_publications` e `publish_knowledge_base()`,
+  `kb_unmatched` (limpeza diária de 90 dias no pg_cron).
+- **Ajuste da arquitetura (seções 4 e 6):** "Publicar" grava uma **fotografia** (jsonb) das entradas ativas, do
+  dicionário e dos termos. O bot lê só a última publicação (nunca o rascunho); editar não muda nada até publicar.
+  O casamento é feito **em memória** sobre a fotografia (cache por número da versão), sem `pg_trgm` nem consulta por
+  mensagem além de conferir a versão.
+- Permissões: conteúdo e histórico só o Suporte; publicação lida pelo bot e pelo Suporte, gravada só pela função;
+  não reconhecidas gravadas pelo bot só na própria clínica, lidas só pelo Suporte.
+- Item da matriz `knowledge_base` "Perguntas frequentes no bot" (depende do bot), fora da tabela de preços até a
+  homologação (valor a definir com o cliente).
+- Catálogo inicial: 31 entradas em rascunho, 183 sinônimos, 34 especialidades, 45 termos; nenhuma publicação.
+- Testes: `tests/db/base-de-conhecimento.test.ts` (14); `isolamento.test.ts` com as exceções das tabelas `kb_*`.
+  `npm test` 740/740; `test:db` passa, menos `billing_settings` no isolamento (tabela da `faturamento` aplicada
+  no banco local, sem relação com esta branch). A migração foi aplicada no local sem `db reset`, para não apagar
+  as migrações e os dados da `faturamento`.
