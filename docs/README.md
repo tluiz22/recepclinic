@@ -2,7 +2,8 @@
 
 > **Estado atual (retomar daqui), 31/out/2026.** Detalhes e datas no [`historico.md`](historico.md) (só por busca).
 >
-> **Próximo (cliente, 31/out):** planejar uma nova melhoria (o cliente traz na próxima sessão). Mudança no caminho
+> **Próximo (cliente, 31/out):** Base de Conhecimento Global do bot: Etapa 1 (diagnóstico) apresentada; cliente
+> decide as questões abertas. Retomar pelo [`base-de-conhecimento.md`](base-de-conhecimento.md). Mudança no caminho
 > do paciente atualiza `botJourney.ts` no mesmo commit.
 >
 > **Ambientes**
