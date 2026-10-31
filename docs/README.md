@@ -3,11 +3,11 @@
 > **Estado atual (retomar daqui), 30/out/2026.** Histórico completo em [`historico.md`](historico.md) (não ler
 > na retomada; buscar por data, fase ou commit quando precisar).
 >
-> **Produção = `main` em 30/out (`71cbbec`):** DMED removida (migração aplicada), cartão do Asaas escondido, Vendas ›
-> Implantação e Tecnologia › Jornada do bot.
+> **Produção = `main` em 31/out (`fd4668c`):** menu lateral (L1–L3), C14 "Alterar" no "Mais" e C15 Retomar contato sem
+> alertas e com "Retirar da lista" (migração aplicada); publicados a pedido do cliente antes da validação no staging.
 >
 > **Próxima sessão (cliente, 30/out): menu lateral, na `main`** ([`menu-lateral.md`](menu-lateral.md); ler o bloco de
-> retomada dele): L1–L3 no staging, aguarda a validação do cliente; depois, a produção. Em seguida,
+> retomada dele): L1–L3 na produção (31/out); o cliente valida. Em seguida,
 > revisão da jornada do bot ([`jornada-do-bot.md`](jornada-do-bot.md), temporário). O faturamento fica parado na branch
 > `faturamento` (abaixo).
 >
@@ -25,12 +25,12 @@
 >   exame** (C7.1–C7.7) e **C8 Escolha do serviço em Horários** (`5ef2be6`); em 30/out, DMED removida, Implantação e Jornada do bot (`71cbbec`). Fluxo e registro em [`producao.md`](producao.md).
 > - **Staging** (`teste.recepclinic.com.br`, branch `main`): igual à produção; o cartão do Asaas só aparece aqui
 >   (`ASAAS_PREVIEW=1`). Roteiros em [`staging.md`](staging.md).
-> - **Branches:** `main` = `producao` em 30/out; `CRM` e `faturamento` excluídas em 30/out (tudo delas na `main`).
+> - **Branches:** `main` = `producao` em 31/out; `CRM` e `faturamento` excluídas em 30/out (tudo delas na `main`).
 >
 > **Frentes em andamento**
 > - **Ajustes da produção, na `main`:** C1–C13 validados e na produção (C1–C6 em 28/out; C7–C8 em 29/out; C9–C10 em
->   30/out, `a7e077a`, com a limpeza das conversas gravadas pelo piloto em implantação; C11–C13b em 30/out, `b9dc41a`; C14 "Alterar" no "Mais" do cartão, no staging em 31/out; C15 Retomar contato sem alerta e "Retirar da lista", com
->   migração aplicada no staging em 31/out).
+>   30/out, `a7e077a`, com a limpeza das conversas gravadas pelo piloto em implantação; C11–C13b em 30/out, `b9dc41a`; C14 "Alterar" no "Mais" do cartão, no staging em 31/out; C15 Retomar contato sem alerta e "Retirar da lista";
+>   C14 e C15 na produção em 31/out, `fd4668c`).
 >   Detalhes no [`historico.md`](historico.md) (busca "C9" a "C13"). Clínica com exames: "Criar na Meta" (Suporte) para
 >   `rc_preparo_exame_v3` e `rc_preparo_arquivo_v3`. Próximo: nada pendente nesta frente; aguarda o cliente.
 > - **CRM concluído** (28/out; [`crm.md`](crm.md)): validado no staging e na produção desde 28/out.

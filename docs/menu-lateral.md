@@ -1,7 +1,7 @@
 # Menu lateral (redesign do menu superior)
 
-> **Retomar daqui (31/out/2026):** L1, L2 e L3 feitas e publicadas no staging (sem migração); **aguarda a
-> validação do cliente** (no fim, a pedido dele). Depois do menu: revisão da jornada do bot
+> **Retomar daqui (31/out/2026):** L1, L2 e L3 feitas, no staging e **na produção (31/out, `fd4668c`, a pedido
+> do cliente)**; falta a validação do cliente. Depois do menu: revisão da jornada do bot
 > ([`jornada-do-bot.md`](jornada-do-bot.md), temporário).
 
 ## Por quê
