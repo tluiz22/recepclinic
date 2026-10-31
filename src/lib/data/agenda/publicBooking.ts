@@ -107,6 +107,23 @@ async function loadAppointmentView(db: DbClient, clinicId: string, id: string): 
   };
 }
 
+/** Agendas sem profissional ou com profissional que atende o plano (exceções em `professional_insurance_exclusions`). */
+export async function agendasAcceptingPlan(db: DbClient, clinicId: string, agendaIds: string[], insurancePlanId: string): Promise<string[]> {
+  if (!agendaIds.length) return [];
+  const [agendas, excluded] = await Promise.all([
+    db.from("agendas").select("id, professional_id").eq("clinic_id", clinicId).in("id", agendaIds).then((r) => unwrap(r, "Agendas")),
+    db
+      .from("professional_insurance_exclusions")
+      .select("professional_id")
+      .eq("clinic_id", clinicId)
+      .eq("insurance_plan_id", insurancePlanId)
+      .then((r) => unwrap(r, "Convênios do profissional")),
+  ]);
+  const out = new Set(excluded.map((e) => e.professional_id));
+  const accepting = new Set(agendas.filter((a) => !a.professional_id || !out.has(a.professional_id)).map((a) => a.id));
+  return agendaIds.filter((id) => accepting.has(id));
+}
+
 /** Agendas (a do link, a do atendimento remarcado ou todas as do serviço) e locais (do serviço, filtrados pelo link). */
 export async function linkCandidates(db: DbClient, clinicId: string, link: BookingLink): Promise<LinkCandidates> {
   let agendaIds: string[];
@@ -114,6 +131,8 @@ export async function linkCandidates(db: DbClient, clinicId: string, link: Booki
     agendaIds = [(await getAppointment(db, clinicId, link.appointmentId)).agendaId];
   } else {
     agendaIds = link.agendaId ? [link.agendaId] : await agendasForService(db, clinicId, link.serviceId);
+    // Convênio aceito no bot (jornada E2): sem os profissionais que não atendem o plano.
+    if (link.insurancePlanId && !link.agendaId) agendaIds = await agendasAcceptingPlan(db, clinicId, agendaIds, link.insurancePlanId);
   }
   const [agendas, offered] = await Promise.all([
     agendaIds.length
@@ -493,6 +512,27 @@ export async function confirmBookingLink(
     if (error instanceof DataError && error.code === "duplicate") return { status: "duplicate" };
     logError("agendar: não confirmou", error, { clinica: clinicId, link: linkId });
     return { status: "failed" };
+  }
+
+  // Convênio aceito no bot (jornada E2): no atendimento e no paciente ainda sem plano.
+  if (link.mode === "create" && link.insurancePlanId) {
+    try {
+      unwrap(
+        await db.from("appointments").update({ insurance_plan_id: link.insurancePlanId }).eq("clinic_id", clinicId).eq("id", appointmentId),
+        "Atendimento",
+      );
+      unwrap(
+        await db
+          .from("patients")
+          .update({ insurance_plan_id: link.insurancePlanId })
+          .eq("clinic_id", clinicId)
+          .eq("id", link.patientId)
+          .is("insurance_plan_id", null),
+        "Paciente",
+      );
+    } catch (error) {
+      logError("agendar: não gravou o convênio", error, { clinica: clinicId });
+    }
   }
 
   // Lista de espera pedida antes de ter marcação (piloto, Fase 25).

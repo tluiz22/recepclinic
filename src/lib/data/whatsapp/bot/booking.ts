@@ -2,7 +2,7 @@ import { isAdult, isOverConsultationAgeLimit } from "../../../age";
 import { bookingPath } from "../../../publicId";
 import { evaluateReturnEligibility, findBlockingAppointment, findReturnOrigin, listUpcomingAppointments, type ReturnEligibility } from "../../agenda/appointments";
 import { BOT_LINK_TTL_MS, createBookingLink } from "../../agenda/links";
-import { bookableAgendaLocations } from "../../agenda/publicBooking";
+import { agendasAcceptingPlan, bookableAgendaLocations } from "../../agenda/publicBooking";
 import { earliestDate, horizonLastDate } from "../../agenda/slots";
 import type { LocationType } from "../../config/locations";
 import { DataError, unwrap } from "../../errors";
@@ -42,10 +42,15 @@ type Awaiting =
   | "new_confirm"
   | "self_birthdate"
   | "self_name"
-  | "self_confirm";
+  | "self_confirm"
+  | "coverage"
+  | "plan_choice"
+  | "plan_name"
+  | "private_offer";
 
 type Candidate = { id: string; name: string; birthdate?: string };
 type ReturnCandidate = Candidate & { originId: string; agendaId: string; serviceId: string };
+type Plan = { id: string; name: string };
 
 export type BookingContext = {
   category: Category;
@@ -75,6 +80,12 @@ export type BookingContext = {
   joinWaitlist?: boolean;
   /** Agendas do serviço com horário livre no prazo e os tipos de local de cada uma (cliente, 11/out/2026). */
   bookable?: Record<string, LocationType[]>;
+  /** Particular ou convênio, já respondido (cliente, 31/out/2026). */
+  coverage?: "private" | "insurance";
+  /** Convênio aceito: vai no link e fica no atendimento. */
+  insurancePlanId?: string;
+  planCandidates?: Plan[];
+  refusedPlan?: { name: string | null; forThisService: boolean };
 };
 
 /** Estados dos fluxos de marcar (cada um vira passo do funil). */
@@ -83,6 +94,7 @@ export const BOOKING_STATES = new Set([
   "BOOK_AGENDA",
   "BOOK_LOCATION",
   "BOOK_HOME_ADDRESS",
+  "BOOK_COVERAGE",
   "BOOK_FOR_WHOM",
   "BOOK_PATIENT_SELECT",
   "BOOK_PATIENT_NEW",
@@ -114,6 +126,8 @@ const keepPath = (ctx: BookingContext): BookingContext => ({
   contactName: ctx.contactName,
   originAppointmentId: ctx.originAppointmentId,
   joinWaitlist: ctx.joinWaitlist,
+  coverage: ctx.coverage,
+  insurancePlanId: ctx.insurancePlanId,
 });
 
 // ---------------------------------------------------------------------------
@@ -221,7 +235,8 @@ async function askLocation(b: Bot, ctx: BookingContext, service: BotService, typ
     b,
     "bot_book_location",
     t.LOCATION_QUESTION,
-    t.numberedList(types.map((type) => ({ id: `location_${type}`, label: t.LOCATION_LABELS[type], description: t.price(service.locationPrices[type]) }))),
+        // Sem preço: o valor vem depois das escolhas (cliente, 31/out/2026).
+    t.numberedList(types.map((type) => ({ id: `location_${type}`, label: t.LOCATION_LABELS[type] }))),
   );
   await go(b, "BOOK_LOCATION", ctx);
 }
@@ -288,6 +303,121 @@ async function handleAddress(b: Bot, selection: Selection): Promise<void> {
 }
 
 // ---------------------------------------------------------------------------
+// Particular ou convênio e valor (cliente, 31/out/2026)
+// ---------------------------------------------------------------------------
+// Depois de serviço, profissional e local. Clínica sem convênios (recurso
+// desligado ou nenhum plano ativo): particular direto. Convênio: só planos
+// ativos da clínica, atendidos por algum profissional do caminho escolhido;
+// sem o valor particular. O retorno não passa por aqui.
+
+/** Planos com lista (mais o "Outro convênio" e o "Voltar ao menu"); acima disso, o paciente escreve. */
+const MAX_PLANS_IN_LIST = t.MAX_LIST_ROWS - 2;
+
+async function activePlans(b: Bot): Promise<Plan[]> {
+  if (!b.features.includes("insurance")) return [];
+  return unwrap(await b.db.from("insurance_plans").select("id, name").eq("clinic_id", b.clinicId).eq("is_active", true).order("name"), "Convênios");
+}
+
+/** Agendas do caminho escolhido: a do profissional ou, no "Primeiro horário", as com horário no local escolhido. */
+function pathAgendas(service: BotService, ctx: BookingContext): string[] {
+  if (ctx.agendaId) return [ctx.agendaId];
+  return bookableAgendas(service, ctx)
+    .filter((a) => !ctx.locationCategory || (ctx.bookable?.[a.id] ?? a.locationTypes).includes(ctx.locationCategory))
+    .map((a) => a.id);
+}
+
+async function enterCoverage(b: Bot, ctx: BookingContext): Promise<void> {
+  if (!(await activePlans(b)).length) return choosePrivate(b, ctx);
+  await sendButtons(b, "bot_book_coverage", t.COVERAGE_QUESTION, t.COVERAGE_BUTTONS);
+  await go(b, "BOOK_COVERAGE", { ...ctx, awaiting: "coverage" });
+}
+
+async function choosePrivate(b: Bot, ctx: BookingContext): Promise<void> {
+  const service = await serviceOf(b, ctx);
+  if (!service) return restart(b);
+  const cents = (ctx.locationCategory ? service.locationPrices[ctx.locationCategory] : undefined) ?? service.priceCents;
+  if (cents > 0) await say(b, "bot_book_price", t.priceInfo(ctx.category === "exam" ? "exam" : "consultation", cents, b.clinic.paymentInfo));
+  await afterPlace(b, { ...ctx, awaiting: undefined, planCandidates: undefined, refusedPlan: undefined, coverage: "private", insurancePlanId: undefined });
+}
+
+const planItems = (plans: Plan[]) => [
+  ...plans.map((p) => ({ id: `plan_${p.id}`, label: p.name })),
+  { id: t.PLAN_OTHER_ID, label: t.PLAN_OTHER_LABEL },
+];
+
+async function askPlanChoice(b: Bot, ctx: BookingContext, plans: Plan[]): Promise<void> {
+  await sendList(b, "bot_book_plan_choice", t.PLAN_LIST_QUESTION, t.numberedList(planItems(plans)));
+  await go(b, "BOOK_COVERAGE", { ...ctx, awaiting: "plan_choice", planCandidates: plans });
+}
+
+async function askPlan(b: Bot, ctx: BookingContext): Promise<void> {
+  const plans = await activePlans(b);
+  if (plans.length <= MAX_PLANS_IN_LIST) return askPlanChoice(b, ctx, plans);
+  await say(b, "bot_book_plan_ask", t.PLAN_TEXT_QUESTION);
+  await go(b, "BOOK_COVERAGE", { ...ctx, awaiting: "plan_name" });
+}
+
+async function acceptPlan(b: Bot, ctx: BookingContext, service: BotService, plan: Plan): Promise<void> {
+  const accepting = await agendasAcceptingPlan(b.db, b.clinicId, pathAgendas(service, ctx), plan.id);
+  if (!accepting.length) return refusePlan(b, ctx, plan.name, true);
+  await step(b, "insurance_accepted");
+  await say(b, "bot_book_plan_accepted", t.planAccepted(plan.name));
+  await afterPlace(b, { ...ctx, awaiting: undefined, planCandidates: undefined, refusedPlan: undefined, coverage: "insurance", insurancePlanId: plan.id });
+}
+
+async function refusePlan(b: Bot, ctx: BookingContext, planName: string | null, forThisService: boolean): Promise<void> {
+  await step(b, "insurance_not_accepted");
+  await sendButtons(b, "bot_book_plan_not_accepted", t.planNotAccepted(planName, b.clinic.designation, forThisService), t.YES_NO_BUTTONS);
+  await go(b, "BOOK_COVERAGE", { ...ctx, awaiting: "private_offer", planCandidates: undefined, refusedPlan: { name: planName, forThisService } });
+}
+
+async function handleCoverage(b: Bot, selection: Selection): Promise<void> {
+  const ctx = ctxOf(b);
+  const service = await serviceOf(b, ctx);
+  if (!service) return restart(b);
+  switch (ctx.awaiting) {
+    case "coverage": {
+      const text = selection.text.trim().toLowerCase();
+      const isPrivate = selection.id === t.COVERAGE_IDS.private || text === "1" || text.startsWith("particular");
+      const isInsurance = selection.id === t.COVERAGE_IDS.insurance || text === "2" || /^(conv[eê]nio|plano)/.test(text);
+      if (!isPrivate && !isInsurance) {
+        await say(b, "bot_not_understood", textFor(b, "not_understood", t.notUnderstood()));
+        return sendButtons(b, "bot_book_coverage", t.COVERAGE_QUESTION, t.COVERAGE_BUTTONS);
+      }
+      await step(b, "coverage", { answer: isPrivate ? "private" : "insurance" });
+      return isPrivate ? choosePrivate(b, ctx) : askPlan(b, ctx);
+    }
+    case "plan_choice": {
+      const plans = ctx.planCandidates ?? [];
+      const choice = pick(selection, planItems(plans), (i) => i.id);
+      if (!choice) {
+        await say(b, "bot_not_understood", textFor(b, "not_understood", t.notUnderstood()));
+        return askPlanChoice(b, ctx, plans);
+      }
+      const plan = plans.find((p) => `plan_${p.id}` === choice.id);
+      return plan ? acceptPlan(b, ctx, service, plan) : refusePlan(b, ctx, null, false);
+    }
+    case "plan_name": {
+      const text = selection.text.trim();
+      if (!text) return say(b, "bot_book_plan_ask", t.PLAN_TEXT_QUESTION);
+      // Só os planos ativos da clínica, pelo nome ou pelos outros nomes; o paciente confirma na lista (nunca pelo nome digitado).
+      const found = unwrap(await b.db.rpc("search_insurance_plans", { p_clinic_id: b.clinicId, p_query: text }), "Convênios").map((p) => ({ id: p.id, name: p.name }));
+      if (!found.length) return refusePlan(b, ctx, null, false);
+      return askPlanChoice(b, ctx, found);
+    }
+    case "private_offer": {
+      const refused = ctx.refusedPlan ?? { name: null, forThisService: false };
+      const answer = yesNo(selection);
+      if (answer === null) return repeatYesNo(b, "bot_book_plan_not_accepted", t.planNotAccepted(refused.name, b.clinic.designation, refused.forThisService));
+      if (answer) return choosePrivate(b, ctx);
+      return handOver(b, "bot_book_insurance_reception", t.insuranceToReception(b.clinic.designation), "insurance_not_accepted", "requested");
+    }
+    default:
+      return restart(b);
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Para quem e identificação do paciente
 // ---------------------------------------------------------------------------
 
@@ -297,6 +427,7 @@ function asksForWhom(b: Bot, ctx: BookingContext): boolean {
 }
 
 async function afterPlace(b: Bot, ctx: BookingContext): Promise<void> {
+  if (ctx.category !== "return_visit" && !ctx.coverage) return enterCoverage(b, ctx);
   if (!asksForWhom(b, ctx)) return enterPatientSelect(b, ctx);
   await sendButtons(b, "bot_book_for_whom", t.FOR_WHOM_QUESTION, t.FOR_WHOM_BUTTONS);
   await go(b, "BOOK_FOR_WHOM", ctx);
@@ -566,10 +697,10 @@ async function stoppedByBotLimit(b: Bot, check: "booking" | "new_patient"): Prom
  * prazo): avisa que a clínica responde em breve e a recepção assume, com a
  * pausa padrão (cliente, 11/out/2026).
  */
-export async function handOver(b: Bot, kind: string, text: string, reason: string): Promise<void> {
+export async function handOver(b: Bot, kind: string, text: string, reason: string, handoff: "no_availability" | "requested" = "no_availability"): Promise<void> {
   await say(b, kind, text);
   await end(b, "blocked", { reason });
-  await pauseForHuman(b.db, b.clinicId, b.phone, { contactId: b.convo.contactId, reason: "no_availability" }, b.now);
+  await pauseForHuman(b.db, b.clinicId, b.phone, { contactId: b.convo.contactId, reason: handoff }, b.now);
 }
 
 // ---------------------------------------------------------------------------
@@ -653,6 +784,7 @@ async function finish(b: Bot, ctx: BookingContext, patient: Candidate): Promise<
         homeVisitAddress: ctx.locationCategory === "home_visit" ? (ctx.homeAddress ?? null) : null,
         funnelSessionId: b.convo.funnelSessionId,
         joinWaitlist: ctx.joinWaitlist ?? false,
+        insurancePlanId: ctx.insurancePlanId ?? null,
         ttlMs: BOT_LINK_TTL_MS,
       },
       b.now,
@@ -810,6 +942,8 @@ export async function handleBookingState(b: Bot, state: string, selection: Selec
       return handleLocation(b, selection);
     case "BOOK_HOME_ADDRESS":
       return handleAddress(b, selection);
+    case "BOOK_COVERAGE":
+      return handleCoverage(b, selection);
     case "BOOK_FOR_WHOM":
       return handleForWhom(b, selection);
     case "BOOK_PATIENT_SELECT":

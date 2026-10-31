@@ -160,6 +160,24 @@ export const serviceQuestion = (category: "consultation" | "exam") =>
 
 export const serviceAuto = (serviceName: string) => `Vamos marcar *${serviceName}*.`;
 
+// Particular ou convênio e valor (cliente, 31/out/2026).
+export const COVERAGE_QUESTION = "O atendimento será particular ou por convênio?";
+export const COVERAGE_IDS = { private: "coverage_private", insurance: "coverage_insurance" } as const;
+export const COVERAGE_BUTTONS = [button(COVERAGE_IDS.private, "Particular"), button(COVERAGE_IDS.insurance, "Convênio")];
+export const PLAN_LIST_QUESTION = "Qual é o seu convênio?";
+export const PLAN_TEXT_QUESTION = "Qual é o seu convênio? Escreva o nome do plano.";
+export const PLAN_OTHER_ID = "plan_other";
+export const PLAN_OTHER_LABEL = "Outro convênio";
+export const planAccepted = (planName: string) => `Atendemos pelo convênio *${planName}*.`;
+/** Plano fora da lista, não encontrado ou não atendido pelo(s) profissional(is) do caminho escolhido. */
+export const planNotAccepted = (planName: string | null, d: Designation, forThisService: boolean) =>
+  `Infelizmente ${designationText(d)} não atende ${planName ? `pelo convênio *${planName}*` : "por esse convênio"}${forThisService ? " neste atendimento" : ""}.\n\nQuer seguir com o atendimento particular?`;
+export const insuranceToReception = (d: Designation) => `Tudo bem. ${willReply(d)}`;
+export function priceInfo(category: "consultation" | "exam", cents: number, paymentInfo: string | null): string {
+  const value = `O valor ${category === "exam" ? "do exame" : "da consulta"} é ${formatCentsBRL(cents)}.`;
+  return paymentInfo ? `${value}\n\nFormas de pagamento: ${paymentInfo}` : value;
+}
+
 export const AGENDA_QUESTION = "Com qual profissional?";
 /** "Primeiro horário disponível" não cabe no título da linha (24 caracteres): o resto vai na descrição. */
 export const FIRST_AVAILABLE = "Primeiro horário";

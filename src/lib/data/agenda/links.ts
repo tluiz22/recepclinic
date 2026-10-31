@@ -36,21 +36,24 @@ export type BookingLink = {
   homeVisitAddress: string | null;
   joinWaitlist: boolean;
   funnelSessionId: string | null;
+  /** Convênio aceito no bot (jornada E2, 31/out/2026); null = particular ou sem convênios. */
+  insurancePlanId: string | null;
   expiresAt: Date;
   usedAt: Date | null;
 };
 
-export type BookingLinkInput = Omit<BookingLink, "id" | "expiresAt" | "usedAt" | "returnDeadlineWaived" | "joinWaitlist" | "funnelSessionId"> & {
+export type BookingLinkInput = Omit<BookingLink, "id" | "expiresAt" | "usedAt" | "returnDeadlineWaived" | "joinWaitlist" | "funnelSessionId" | "insurancePlanId"> & {
   /** Link de remarcação: o atendimento cancelado pela clínica (F5.4). */
   canceledAppointmentId?: string | null;
   returnDeadlineWaived?: boolean;
   joinWaitlist?: boolean;
   funnelSessionId?: string | null;
+  insurancePlanId?: string | null;
   ttlMs: number;
 };
 
 const COLUMNS =
-  "id, mode, contact_id, patient_id, service_id, agenda_id, location_id, location_category, appointment_id, origin_appointment_id, return_deadline_waived, contact_phone, home_visit_address, join_waitlist, funnel_session_id, expires_at, used_at";
+  "id, mode, contact_id, patient_id, service_id, agenda_id, location_id, location_category, appointment_id, origin_appointment_id, return_deadline_waived, contact_phone, home_visit_address, join_waitlist, funnel_session_id, insurance_plan_id, expires_at, used_at";
 
 type Row = {
   id: string;
@@ -68,6 +71,7 @@ type Row = {
   home_visit_address: string | null;
   join_waitlist: boolean;
   funnel_session_id: string | null;
+  insurance_plan_id: string | null;
   expires_at: string;
   used_at: string | null;
 };
@@ -88,6 +92,7 @@ const toLink = (row: Row): BookingLink => ({
   homeVisitAddress: row.home_visit_address,
   joinWaitlist: row.join_waitlist,
   funnelSessionId: row.funnel_session_id,
+  insurancePlanId: row.insurance_plan_id,
   expiresAt: new Date(row.expires_at),
   usedAt: row.used_at ? new Date(row.used_at) : null,
 });
@@ -119,6 +124,7 @@ export async function createBookingLink(
     home_visit_address: input.homeVisitAddress?.trim() || null,
     join_waitlist: input.joinWaitlist ?? false,
     funnel_session_id: input.funnelSessionId ?? null,
+    insurance_plan_id: input.insurancePlanId ?? null,
     canceled_appointment_id: input.canceledAppointmentId ?? null,
     expires_at: new Date(now.getTime() + input.ttlMs).toISOString(),
   };

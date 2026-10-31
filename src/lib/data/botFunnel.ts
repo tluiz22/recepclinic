@@ -513,6 +513,7 @@ const JOURNEY_STATES: Record<string, string> = {
   ENTRY_ACTIONS: "Nas ações do agendamento marcado",
   PRESENCE_CONFIRM: "Confirmando a presença",
   BOOK_SERVICE: "Escolhendo o serviço",
+  BOOK_COVERAGE: "Particular ou convênio",
   BOOK_AGENDA: "Escolhendo a agenda",
   BOOK_LOCATION: "Escolhendo o local",
   BOOK_HOME_ADDRESS: "Informando o endereço",

@@ -65,12 +65,22 @@ Consultas › Marcar consulta, ou Exames › Marcar exame. O dia e o horário s�
    - **Não:** 🤖 "No momento não há horários livres"; a recepção assume a conversa.
    - **Sim**
      1. 🤖 Com qual profissional? (ou "Primeiro horário"). *Só quando mais de um profissional atende o serviço.*
-     2. 🤖 Consultório ou atendimento domiciliar? *Só quando o serviço tem os dois. Domiciliar: pede e confirma o
-        endereço.*
-     3. 🤖 É para você ou para outra pessoa? *Clínica pediátrica: só no exame.*
-     4. 🤖 Identifica o paciente: escolhe um já cadastrado ou informa nome e data de nascimento. *Na primeira vez, o nome
+     2. 🤖 Consultório ou atendimento domiciliar? *Só quando o serviço tem os dois, sem preço. Domiciliar: pede e
+        confirma o endereço.*
+     3. 🔍 A clínica aceita convênios? *Recurso Convênios ligado e pelo menos um plano ativo.*
+        - **Não:** 🤖 "O valor da consulta (ou do exame) é R$ …" e as formas de pagamento (texto das Configurações).
+        - **Sim:** 🤖 "O atendimento será particular ou por convênio?"
+          - **Particular:** 🤖 Valor e formas de pagamento.
+          - **Convênio:** 🤖 "Qual é o seu convênio?" *Até 8 planos ativos: lista com "Outro convênio"; mais que isso, o
+            paciente escreve e confirma na lista.*
+            - **Atendido** (pelo profissional escolhido ou por algum, no "Primeiro horário"): 🤖 "Atendemos pelo convênio
+              *X*", sem valor. *O plano vai no link, fica no atendimento e no paciente sem plano; a página só oferece
+              quem atende o plano.*
+            - **Não atendido:** 🤖 Avisa e pergunta se quer particular. *Sim: valor. Não: a recepção assume.*
+     4. 🤖 É para você ou para outra pessoa? *Clínica pediátrica: só no exame.*
+     5. 🤖 Identifica o paciente: escolhe um já cadastrado ou informa nome e data de nascimento. *Na primeira vez, o nome
         de quem escreve. Menor de 18 anos marcando para si: só pelo responsável. Idade limite do serviço conferida.*
-     5. 🔍 O paciente já tem esse atendimento marcado?
+     6. 🔍 O paciente já tem esse atendimento marcado?
         - **Sim:** 🤖 Avisa o dia marcado e indica Remarcar.
         - **Não**
           1. 🤖 Manda o link para escolher dia e horário. *O link vale 30 minutos.*
@@ -211,7 +221,7 @@ em `tests/db/`, staging e OK do cliente.
 10. Já atendidos, só ganham testes: sem horário (a lista só mostra profissional com horário; sem nenhum, recepção) e
     dia e hora só pela página do link.
 
-11. Convênio: até 9 planos ativos, lista com os planos e "Outro convênio" (= não atendido); mais de 9, o paciente digita
+11. Convênio: até 8 planos ativos (limite de 10 linhas do WhatsApp, com "Outro convênio" e "Voltar ao menu"), lista com os planos e "Outro convênio" (= não atendido); mais de 9, o paciente digita
     e o bot procura.
 12. Coleta pediátrica (paciente, nascimento, depois quem escreve/responsável): perfil Pediatria **ou** paciente menor
     em qualquer clínica. Na prática, para outra pessoa: nome do paciente → nascimento → nome de quem escreve (número

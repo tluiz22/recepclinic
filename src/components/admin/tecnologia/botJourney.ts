@@ -73,7 +73,31 @@ export const JOURNEY: JourneySection[] = [
           "Sim",
           [
             bot("Com qual profissional? (ou \"Primeiro horário\")", "Só quando mais de um profissional atende o serviço."),
-            bot("Consultório ou atendimento domiciliar?", "Só quando o serviço tem os dois. Domiciliar: pede e confirma o endereço."),
+            bot("Consultório ou atendimento domiciliar?", "Só quando o serviço tem os dois, sem preço. Domiciliar: pede e confirma o endereço."),
+            check("A clínica aceita convênios?", "Recurso Convênios ligado e pelo menos um plano ativo."),
+            branch(
+              ["Não", [bot("Valor e formas de pagamento", "\"O valor da consulta (ou do exame) é R$ …\" e o texto de formas de pagamento das Configurações.")]],
+              [
+                "Sim",
+                [
+                  bot("O atendimento será particular ou por convênio?"),
+                  branch(
+                    ["Particular", [bot("Valor e formas de pagamento")]],
+                    [
+                      "Convênio",
+                      [
+                        bot("Qual é o seu convênio?", "Até 8 planos: lista com \"Outro convênio\"; mais que isso, o paciente escreve e confirma na lista. Só planos ativos."),
+                        check("O plano é atendido pelo profissional escolhido (ou por algum, no \"Primeiro horário\")?"),
+                        branch(
+                          ["Sim", [bot("\"Atendemos pelo convênio *X*\"", "Sem valor. O plano fica no atendimento; a página só oferece quem atende o plano.")]],
+                          ["Não", [bot("Não atende e pergunta se quer particular", "Sim: valor e formas de pagamento. Não: a recepção assume.")]],
+                        ),
+                      ],
+                    ],
+                  ),
+                ],
+              ],
+            ),
             bot("É para você ou para outra pessoa?", "Clínica pediátrica: só no exame."),
             bot("Identifica o paciente: escolhe um já cadastrado ou informa nome e data de nascimento", "Na primeira vez, o nome de quem escreve. Menor de 18 anos marcando para si: só pelo responsável. Idade limite do serviço conferida."),
             check("O paciente já tem esse atendimento marcado?"),

@@ -261,14 +261,14 @@ isOneToOne: false
                   ]
                 },"booking_links": {
                   Row: {
-                    "agenda_id": string | null,"appointment_id": string | null,"canceled_appointment_id": string | null,"clinic_id": string,"contact_id": string,"contact_phone": string,"created_at": string,"expires_at": string,"funnel_session_id": string | null,"home_visit_address": string | null,"id": string,"join_waitlist": boolean,"location_category": Database["public"]['Enums']["location_type"] | null,"location_id": string | null,"mode": Database["public"]['Enums']["booking_link_mode"],"origin_appointment_id": string | null,"patient_id": string,"return_deadline_waived": boolean,"service_id": string,"used_at": string | null
+                    "agenda_id": string | null,"appointment_id": string | null,"canceled_appointment_id": string | null,"clinic_id": string,"contact_id": string,"contact_phone": string,"created_at": string,"expires_at": string,"funnel_session_id": string | null,"home_visit_address": string | null,"id": string,"insurance_plan_id": string | null,"join_waitlist": boolean,"location_category": Database["public"]['Enums']["location_type"] | null,"location_id": string | null,"mode": Database["public"]['Enums']["booking_link_mode"],"origin_appointment_id": string | null,"patient_id": string,"return_deadline_waived": boolean,"service_id": string,"used_at": string | null
                   }
                   ComputedFields: never
                   Insert: {
-                    "agenda_id"?: string | null,"appointment_id"?: string | null,"canceled_appointment_id"?: string | null,"clinic_id": string,"contact_id": string,"contact_phone": string,"created_at"?: string,"expires_at": string,"funnel_session_id"?: string | null,"home_visit_address"?: string | null,"id"?: string,"join_waitlist"?: boolean,"location_category"?: Database["public"]['Enums']["location_type"] | null,"location_id"?: string | null,"mode": Database["public"]['Enums']["booking_link_mode"],"origin_appointment_id"?: string | null,"patient_id": string,"return_deadline_waived"?: boolean,"service_id": string,"used_at"?: string | null
+                    "agenda_id"?: string | null,"appointment_id"?: string | null,"canceled_appointment_id"?: string | null,"clinic_id": string,"contact_id": string,"contact_phone": string,"created_at"?: string,"expires_at": string,"funnel_session_id"?: string | null,"home_visit_address"?: string | null,"id"?: string,"insurance_plan_id"?: string | null,"join_waitlist"?: boolean,"location_category"?: Database["public"]['Enums']["location_type"] | null,"location_id"?: string | null,"mode": Database["public"]['Enums']["booking_link_mode"],"origin_appointment_id"?: string | null,"patient_id": string,"return_deadline_waived"?: boolean,"service_id": string,"used_at"?: string | null
                   }
                   Update: {
-                    "agenda_id"?: string | null,"appointment_id"?: string | null,"canceled_appointment_id"?: string | null,"clinic_id"?: string,"contact_id"?: string,"contact_phone"?: string,"created_at"?: string,"expires_at"?: string,"funnel_session_id"?: string | null,"home_visit_address"?: string | null,"id"?: string,"join_waitlist"?: boolean,"location_category"?: Database["public"]['Enums']["location_type"] | null,"location_id"?: string | null,"mode"?: Database["public"]['Enums']["booking_link_mode"],"origin_appointment_id"?: string | null,"patient_id"?: string,"return_deadline_waived"?: boolean,"service_id"?: string,"used_at"?: string | null
+                    "agenda_id"?: string | null,"appointment_id"?: string | null,"canceled_appointment_id"?: string | null,"clinic_id"?: string,"contact_id"?: string,"contact_phone"?: string,"created_at"?: string,"expires_at"?: string,"funnel_session_id"?: string | null,"home_visit_address"?: string | null,"id"?: string,"insurance_plan_id"?: string | null,"join_waitlist"?: boolean,"location_category"?: Database["public"]['Enums']["location_type"] | null,"location_id"?: string | null,"mode"?: Database["public"]['Enums']["booking_link_mode"],"origin_appointment_id"?: string | null,"patient_id"?: string,"return_deadline_waived"?: boolean,"service_id"?: string,"used_at"?: string | null
                   }
                   Relationships: [
                     {
@@ -301,6 +301,12 @@ isOneToOne: false
 isOneToOne: false
       referencedRelation: "clinics"
       referencedColumns: ["id"]
+    },{
+      foreignKeyName: "booking_links_clinic_id_insurance_plan_id_fkey"
+      columns: ["clinic_id","insurance_plan_id"]
+isOneToOne: false
+      referencedRelation: "insurance_plans"
+      referencedColumns: ["clinic_id","id"]
     },{
       foreignKeyName: "booking_links_clinic_id_location_id_fkey"
       columns: ["clinic_id","location_id"]
