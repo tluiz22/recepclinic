@@ -22,7 +22,7 @@
   O tipo de estabelecimento aparece só nos sinônimos (ex.: "dentista") e no dicionário de especialidades.
 - Depois de responder, o bot **repete o passo** em que a pessoa estava (no menu, o menu).
 
-Total: **29 entradas** em 18 categorias (a 15, documentos, fica de fora) + dicionário de especialidades + filtro clínico.
+Total: **31 entradas** em 18 categorias (a 15, documentos, fica de fora) + dicionário de especialidades + filtro clínico.
 
 ---
 
@@ -115,7 +115,16 @@ Total: **29 entradas** em 18 categorias (a 15, documentos, fica de fora) + dicio
 - **Resposta:** "Sim, {profissional} ({profissão}, {especialidade}) atende por aqui." + botão "Marcar consulta".
   Dia e horário não são informados: o link de marcar mostra as datas livres.
 - **Sem dado:** nome não encontrado → como P1.
-- **Para decidir:** incluir o registro no conselho (ex.: "CRM 12345/CE") na resposta? (questão Q2)
+- Sem o registro no conselho (Q2); ele só vai na P3.
+
+### P3. Qual o CRM do(a) {profissional}?
+- **Sinônimos:** qual o registro do dr {nome}; CRM da doutora; CRO do dentista; o médico tem RQE; número do
+  conselho.
+- **Palavras-chave:** CRM, CRO, CRP, CREFITO, CRN, RQE, registro, conselho.
+- **Tipo / fontes:** `fonte` · `profissionais` (conselho, número, UF, RQE).
+- **Resposta:** "{profissional}: {conselho} {número}/{UF}{, RQE {rqe}}." Sem profissional citado e com um só na
+  clínica: o dele; com vários: um por linha.
+- **Sem dado:** registro não cadastrado → não responde.
 
 ## 5. Valores e formas de pagamento
 
@@ -150,7 +159,7 @@ Total: **29 entradas** em 18 categorias (a 15, documentos, fica de fora) + dicio
 - **Resposta:**
   - plano citado e aceito: "Sim, atendemos {plano}." (com profissional citado e exceção: "{profissional} não
     atende {plano}; {outros} atendem.");
-  - plano citado e não encontrado: "Não encontrei {texto} entre os convênios que atendemos: {lista}." (questão Q3);
+  - plano citado e não encontrado: "Não encontrei {texto} entre os convênios que atendemos: {lista}." (Q3);
   - sem plano citado: "Atendemos os convênios: {lista}."
   - sem cadastro de planos: o texto "Convênios" das Informações do bot.
 - **Sem dado:** item "Convênios" desligado e sem texto → não responde.
@@ -221,6 +230,14 @@ Total: **29 entradas** em 18 categorias (a 15, documentos, fica de fora) + dicio
   (passo de hoje).
 - **Sem dado:** nenhum exame com preparo → não responde. "Jejum" não aciona o filtro clínico.
 
+### X2. O resultado do meu exame já saiu?
+- **Sinônimos:** meu exame ficou pronto; quando sai o resultado; como pego o resultado; buscar resultado; entrega
+  do exame; laudo pronto.
+- **Palavras-chave:** resultado, laudo, pronto, ficou pronto, entrega + exame.
+- **Tipo / fontes:** `recepcao` · "Sobre resultados de exames, a recepção pode te ajudar. Você quer falar com a
+  recepção?" (Sim/Não). Sem recepção no app: "{designação} responderá sua mensagem em breve." e o menu (Q5).
+- **Observação:** pergunta de interpretação ("meu exame deu…", "está normal?") vai para o filtro clínico, não aqui.
+
 ## 13. Atendimento domiciliar
 
 ### D1. Vocês atendem em casa?
@@ -229,7 +246,7 @@ Total: **29 entradas** em 18 categorias (a 15, documentos, fica de fora) + dicio
 - **Palavras-chave:** domiciliar, domicílio, em casa, minha casa, visita.
 - **Tipo / fontes:** `fonte` · `domiciliar` (item da matriz + serviços com horário em local domiciliar).
 - **Resposta:** "Sim, fazemos atendimento domiciliar: {serviços}." + valores domiciliares + botão "Marcar".
-- **Sem dado:** sem domiciliar → (questão Q4).
+- **Sem dado:** sem domiciliar → "No momento não fazemos atendimento domiciliar." (Q4; dado estruturado).
 
 ## 14. Crianças e adolescentes
 
@@ -364,7 +381,10 @@ com a recepção?" (Sim/Não; sem recepção no app: o aviso e o menu).
   que eu tenho, interpretar, valor de referência.
 
 Não acionam: "jejum", "preparo", "exame" sozinho, nome de serviço ou especialidade (ex.: "consulta de alergia" →
-S2/S4).
+S2/S4), "resultado do exame saiu/ficou pronto" (X2).
+
+**Sintoma com pedido de marcação** ("quero marcar, meu filho está com febre"): abre a marcação (M1), sem nenhuma
+orientação sobre o sintoma (Q1).
 
 ## 22. Fora da base nesta carga (sem dado no cadastro)
 
@@ -372,15 +392,11 @@ Seguem como o "não entendi" de hoje: documentos necessários (decisão 8); esta
 ou prazo para cancelar; nota fiscal e recibo; reembolso; autorização ou guia do plano; Instagram e redes sociais;
 "não recebi o lembrete". Podem entrar depois, com o dado cadastrado.
 
-## 23. Questões para o cliente (uma por vez)
+## 23. Decisões do cliente sobre o catálogo (31/out/2026)
 
-- **Q1.** Sintoma junto com pedido de marcação ("quero marcar, meu filho está com febre"): abrir a marcação sem
-  orientar (recomendado) ou dar o aviso clínico.
-- **Q2.** P2: mostrar o registro no conselho (CRM/CRO…) do profissional.
-- **Q3.** C1, plano não encontrado: "Não encontrei {texto} entre os convênios que atendemos: {lista}"
-  (recomendado) ou só a lista.
-- **Q4.** D1, clínica sem domiciliar: "No momento não fazemos atendimento domiciliar." (dado estruturado, sem
-  risco de erro; recomendado) ou "não entendi".
-- **Q5.** "O resultado do meu exame já saiu?" (administrativo, sem dado): filtro clínico (aviso + recepção,
-  recomendado, porque oferece a recepção) ou "não entendi".
-- **Q6.** G1/G2 (agradecimento e saudação): manter na base (recomendado) ou deixar o "não entendi" de hoje.
+- **Q1.** Sintoma com pedido de marcação: abre a marcação, sem orientar (seção 21).
+- **Q2.** Registro no conselho fora da P2; entrada própria (P3) quando o paciente pergunta.
+- **Q3.** Plano não encontrado: "Não encontrei {texto} entre os convênios que atendemos: {lista}".
+- **Q4.** Clínica sem domiciliar: "No momento não fazemos atendimento domiciliar."
+- **Q5.** Resultado de exame (administrativo): entrada própria (X2) que oferece a recepção, sem o aviso de saúde.
+- **Q6.** Agradecimento e saudação ficam na base (G1, G2).

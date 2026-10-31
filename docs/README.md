@@ -3,7 +3,7 @@
 > **Estado atual (retomar daqui), 31/out/2026.** Detalhes e datas no [`historico.md`](historico.md) (só por busca).
 >
 > **Próximo (cliente, 31/out):** Base de Conhecimento Global do bot: Etapa 1 aprovada; Etapa 2: catálogo proposto,
-> cliente avalia (Q1–Q6). Retomar pelo [`base-de-conhecimento.md`](base-de-conhecimento.md). Mudança no caminho
+> Q1–Q6 decididas; aguarda aprovação do catálogo. Retomar pelo [`base-de-conhecimento.md`](base-de-conhecimento.md). Mudança no caminho
 > do paciente atualiza `botJourney.ts` no mesmo commit.
 >
 > **Ambientes**
