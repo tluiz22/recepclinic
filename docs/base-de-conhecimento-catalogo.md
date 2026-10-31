@@ -153,7 +153,8 @@ Total: **31 entradas** em 18 categorias (a 15, documentos, fica de fora) + dicio
 ### C1. Quais convênios vocês aceitam? / Aceitam {plano}?
 - **Sinônimos:** atendem Unimed; aceitam plano de saúde; trabalham com convênio; meu plano é aceito; atende pelo
   plano; aceita Hapvida; atende particular e convênio; o dr {nome} atende {plano}.
-- **Palavras-chave:** convênio(s), plano, planos, plano de saúde, o nome (ou nome alternativo) de um plano **da
+- **Palavras-chave:** convênio(s), plano, planos, plano de saúde, aceita, aceitam, operadoras comuns (Unimed, Hapvida,
+  Amil, Bradesco, SulAmérica, NotreDame, Cassi, GEAP, Porto Seguro) e o nome (ou nome alternativo) de um plano **da
   clínica**.
 - **Tipo / fontes:** `fonte` · `convenios` (decisão 6).
 - **Resposta:**
@@ -188,7 +189,8 @@ Total: **31 entradas** em 18 categorias (a 15, documentos, fica de fora) + dicio
 
 ### R1. Quero remarcar
 - **Sinônimos:** mudar a data; trocar o horário; adiar a consulta; mudar o dia; passar para outro dia; como faço
-  para remarcar; não vou poder ir nesse horário, quero outro.
+  para remarcar; não vou poder ir (também em K1: empate → "Você quis dizer…?"); não vou poder ir nesse horário,
+  quero outro.
 - **Palavras-chave:** remarcar, remarcação, mudar, trocar, adiar, outro dia, outro horário.
 - **Tipo / fontes:** `fluxo` · Remarcar (data de nascimento → atendimento → link). Nunca pede a data digitada.
 - **Sem dado:** sem atendimento futuro → a resposta do fluxo de hoje.

@@ -2,8 +2,8 @@
 
 > **Retomar daqui (31/out/2026).** Etapas 1 e 2 aprovadas (catálogo em
 > [`base-de-conhecimento-catalogo.md`](base-de-conhecimento-catalogo.md)). Etapa 3 na branch `base-conhecimento`
-> (só local): **3.1 (banco) feita**, aguarda validação do cliente. Depois: 3.2 (núcleo: casamento, fontes, cache) e
-> 3.3 (página do Suporte). Detalhe na seção 10.
+> (só local): 3.1 (banco) validada; **3.2 (núcleo) feita**, aguarda validação do cliente. Depois: 3.3 (página do
+> Suporte). Detalhe na seção 10.
 
 Pedido do cliente em 31/out/2026: uma base global de perguntas frequentes, mantida pelo Suporte RecepClinic e
 compartilhada por todas as clínicas. A base reconhece a pergunta; a resposta sai dos dados da clínica. Ela não
@@ -227,3 +227,29 @@ Sub-etapas: **3.1** banco → **3.2** núcleo (normalização, casamento, fontes
   `npm test` 740/740; `test:db` passa, menos `billing_settings` no isolamento (tabela da `faturamento` aplicada
   no banco local, sem relação com esta branch). A migração foi aplicada no local sem `db reset`, para não apagar
   as migrações e os dados da `faturamento`.
+
+### 3.2 — Núcleo (31/out/2026, `92a9504`)
+
+- `src/lib/knowledge/`: `normalize.ts` (sem acento, caixa e pontuação; abreviações "vcs", "q", "hj", "dra"…),
+  `match.ts` (reconhecimento puro), `template.ts` (variáveis dos modelos; `variablesWithoutSource` para barrar
+  publicação), `lists.ts` (listas fechadas e as variáveis de cada fonte).
+- **Reconhecimento:** pergunta e sinônimos de cada entrada × mensagem; peso por palavra (palavra usada por muitas
+  entradas, como "consulta", pesa menos); a entrada só vale com uma palavra-chave dela, o termo exigido (serviço,
+  profissional, especialidade) ou um sinônimo igual à mensagem. Nomes da clínica citados não contam contra a
+  pergunta. Responde a partir de 0,6; empate (até 0,08) ou entre 0,45 e 0,6 → "Você quis dizer…?" (até 3);
+  cortesia (texto fixo) só quando nada mais serve. Filtro clínico antes, menos com pedido de marcação (Q1).
+- **Fontes** (`src/lib/data/whatsapp/bot/knowledge/`): `clinicData.ts` lê, com a credencial da clínica e sem cache,
+  catálogo, profissionais com agenda, convênios e exceções, horário da recepção, feriado de hoje, site e lembrete;
+  `answers.ts` monta a resposta de cada fonte (decisões 6, 7, 10, 11 e Q2–Q4) ou devolve "sem dado".
+- **Cache** (`src/lib/data/knowledge/published.ts`): a base publicada compilada em memória, pela versão; cada uso
+  confere só o número da versão.
+- Ajustes no catálogo (na migração e no banco local): R1 ganhou o sinônimo "não vou poder ir" (o empate com K1 vira
+  "Você quis dizer…?"); C1 ganhou as palavras-chave "aceita", "aceitam" e nomes de operadoras (Unimed, Hapvida, Amil,
+  Bradesco, SulAmérica, NotreDame, Cassi, GEAP, Porto Seguro), para "aceitam Amil?" em clínica sem esse plano.
+- O cálculo dos valores por local foi para `texts.ts` (`servicePriceLines`), usado por Informações › Valores e
+  pela base.
+- Testes: `match.test.ts` (75: catálogo inteiro, intenções parecidas, não reconhecidas, filtro clínico, nomes da
+  clínica, base alterada), `answers.test.ts` (23: cada fonte, sem dado, duas clínicas), `published.test.ts` (3:
+  cache), `base-de-conhecimento-fontes.test.ts` (5, banco: duas clínicas reais, alteração vale na hora, credencial
+  de uma clínica não lê a outra) e o fixture do catálogo conferido com o banco. `npm test` 841/841; `test:db`
+  752/753 (só `billing_settings`, da `faturamento`).
