@@ -10,7 +10,8 @@
 > versão com início depois da vigente, que termina na véspera. Preço padrão por nota em Vendas › Planos (começa sem
 > valor; o Suporte define). Assinatura mostra o contrato vigente e a próxima versão. Testes: `tests/db/contrato.test.ts`,
 > `src/lib/data/billing.test.ts`. **Ordem decidida (cliente, 30/out):** cobrança primeiro, até cobrar a clínica piloto
-> em produção, **só com aviso por e-mail**: F12.3, F12.3b, F12.4 a F12.8 e F12.11. Depois: F12.9 (WhatsApp, decisão
+> em produção, **só com aviso por e-mail**: F12.2b, F12.3, F12.3b, F12.4 a F12.8 e F12.11 (parecer do advogado e
+> decisões de 30/out: itens 18 a 26 da seção 11). Depois: F12.9 (WhatsApp, decisão
 > 11.10), F12.10 (Pix Automático) e a nota fiscal pelo Asaas (N0–N6). **Próximo:** validação da F12.2 no local e o OK
 > para a F12.3; push da branch e staging quando o cliente pedir. Antes da F12.11: advogado (11.16), chave e webhook do
 > Asaas de produção, avisos do Asaas desligados (11.11) e o valor combinado com a clínica piloto.
@@ -378,8 +379,7 @@ stateDiagram-v2
     suboperador só da cobrança), cancelamento sem multa com acesso até o fim do período pago, guarda de 5 anos dos
     dados financeiros e da trilha, opt-in do WhatsApp livre (e-mail continua obrigatório). Para a F12.9: mensagem
     identificada ("Mensagem oficial do RecepClinic") e saída imediata por "SAIR". Política de privacidade (no site):
-    seção de suboperadores com o Asaas. Ainda a decidir com o cliente: aviso de 30 dias e aceite nas mudanças de
-    contrato, preço por nota (contrato × tabela) e prazo de exportação dos dados no fim do contrato.
+    seção de suboperadores com o Asaas. Decisões do cliente sobre o parecer: itens 19 a 26.
 19. **Juros e multa.** **Decidido (cliente, 30/out):** multa de 2% e juros de 1% ao mês, configurados na cobrança do
     Asaas (F12.4); sem correção monetária. No modo manual, o Suporte decide.
 20. **Prazo da suspensão.** **Decidido (cliente, 30/out; muda o fluxo 7):** a suspensão por inadimplência só pode ser
@@ -393,13 +393,25 @@ stateDiagram-v2
 21. **Clínicas em atraso para o Suporte (cliente, 30/out):** o Suporte consulta numa lista todas as clínicas com
     cobrança vencida (dias de atraso, valor, avisos enviados, situação), além da aba de cada clínica.
 
+24. **Aceite do contrato.** **Decidido (cliente, 30/out):** o 1º contrato é aceito pelo Administrador da clínica em
+    Configurações › Assinatura (caixa de aceite; data, hora, IP e versão do texto registrados); a cobrança só começa
+    depois do aceite. Mudança de valor: ao ativar a nova versão, e-mail ao financeiro com os novos termos; a nova
+    versão só pode começar **30 dias** depois da ativação; o uso continuado vale como aceite. O texto do contrato vem
+    do advogado (versionado no sistema). Fase **F12.2b**.
+25. **Preço por nota.** **Decidido (cliente, 30/out):** vale o do contrato (como na F12.2); a cláusula do advogado
+    troca "tabela vigente" por "preço previsto no contrato".
+26. **Fim do contrato.** **Decidido (cliente, 30/out):** dados da clínica disponíveis para exportação por **60 dias**,
+    depois exclusão ou anonimização (dados financeiros da cobrança: 5 anos). Fase **F12.12**, depois do lançamento.
+
 ## 12. Roadmap
 
 Cada fase vai ao staging e depende da validação do cliente.
 
 **Ordem revista (cliente, 30/out/2026):** a cobrança vem antes da nota fiscal. Até a produção (cobrar a clínica
-piloto): F12.3, F12.3b, F12.4, F12.5, F12.6, F12.7, F12.8 e F12.11, **só com aviso por e-mail**. Depois: F12.9, F12.10
-e N1–N6. Preço por nota e franquia ficam no contrato, mas só valem quando a nota fiscal entrar.
+piloto): F12.2b, F12.3, F12.3b, F12.4, F12.5, F12.6, F12.7, F12.8 e F12.11, **só com aviso por e-mail**. Depois:
+F12.12, F12.9, F12.10 e N1–N6. F12.2b = aceite do contrato na tela e aviso de 30 dias (item 24); F12.12 = exportação
+e exclusão no fim do contrato (item 26); a lista das clínicas em atraso (item 21) entra na F12.5; aviso do 14º dia
+(item 22) na F12.7; suspensão só a partir do 15º dia (item 20) na F12.3. Preço por nota e franquia ficam no contrato, mas só valem quando a nota fiscal entrar.
 
 | Fase | Entrega | Depende de |
 |---|---|---|
