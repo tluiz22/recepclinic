@@ -106,7 +106,7 @@ const fresh = (phone: string) =>
 
 const WELCOME = "Olá! 👋 Aqui é da Clínica Bot Entrada.";
 const MENU = "Como podemos ajudar? Escolha uma opção abaixo (ou digite o número).";
-const ASK_ONE = "Como podemos ajudar? Identificamos um agendamento associado a este número. Você deseja tratar desse agendamento?";
+const ASK_ONE = "Identificamos um agendamento associado a este número. Você deseja tratar desse agendamento?";
 const ASK_MANY = "Como podemos ajudar? Encontramos mais de um agendamento associado a este número. Você deseja consultar ou alterar algum deles?";
 const ASK_BIRTHDATE = "Para sua segurança, antes de mostrar o agendamento precisamos confirmar a identidade.\n\nQual a data de nascimento do paciente? (formato dd/mm/aaaa)";
 const NOT_FOUND = "Não encontramos agendamentos para essa data de nascimento.";

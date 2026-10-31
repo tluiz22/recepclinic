@@ -77,7 +77,7 @@ export const MENU_BODY = "Como podemos ajudar? Escolha uma opção abaixo (ou di
 // Entrada com atendimento marcado no número (cliente, 23/out/2026): pergunta
 // antes do menu; os detalhes só depois da data de nascimento.
 export const ENTRY_IDS = { yes: "entry_yes", no: "entry_no" } as const;
-export const ENTRY_ONE = "Como podemos ajudar? Identificamos um agendamento associado a este número. Você deseja tratar desse agendamento?";
+export const ENTRY_ONE = "Identificamos um agendamento associado a este número. Você deseja tratar desse agendamento?";
 export const ENTRY_MANY = "Como podemos ajudar? Encontramos mais de um agendamento associado a este número. Você deseja consultar ou alterar algum deles?";
 export const ENTRY_ONE_BUTTONS = [button(ENTRY_IDS.yes, "Sim, quero"), button(ENTRY_IDS.no, "Não, outro assunto")];
 export const ENTRY_MANY_BUTTONS = [button(ENTRY_IDS.yes, "Sim, consultar"), button(ENTRY_IDS.no, "Não, outro assunto")];
