@@ -701,6 +701,11 @@ retomada fica no README). Para achar algo, buscar por data (ex.: `27/out`), fase
   (`withoutDismissed`) e banco (papéis, outra clínica, retirar de novo). Conferido no local com uma tentativa de teste
   (retirar, sumir nas Métricas, voltar com tentativa nova), apagada depois. Migração aplicada no staging (conferida a
   tabela) e publicada no staging em 31/out; o cliente valida no fim.
+- **C16 "Como funciona?" de Contatos para revisar e limites do bot com padrão 5** (31/out): **cliente (31/out):** texto
+  aprovado para o Início (`relacionamento.comoFunciona.revisar`; os três limites viraram um item só, por causa do máximo
+  de 5 itens, e o exemplo passou a 5 consultas). Padrão 5 nos três limites (antes 3, 3 e 2); **decisão do cliente:**
+  as clínicas que existem passam para 5 só no limite que ainda está no padrão antigo (recusado: só clínicas novas).
+  Migração `20261105140000_limites_do_bot_padrao_5.sql`. Testes de unidade atualizados.
 - **CI de volta ao verde** (31/out): o job `db` falhava desde `73d703b` (DMED, 30/out) porque o `database.types.ts`
   editado à mão perdeu as 60 linhas `ComputedFields` que o gerador escreve; refeito a partir da versão anterior, sem a
   DMED e com a `recall_dismissals` (`4947dd2`). A C15 também precisou de uma linha no seed para a varredura de

@@ -29,7 +29,8 @@ export type BotLimits = {
   maxNoShows: number;
 };
 
-export const DEFAULT_BOT_LIMITS: BotLimits = { maxFutureAppointments: 3, maxNewPatients: 3, maxNoShows: 2 };
+// Padrão 5 nos três (cliente, 31/out/2026; antes 3, 3 e 2).
+export const DEFAULT_BOT_LIMITS: BotLimits = { maxFutureAppointments: 5, maxNewPatients: 5, maxNoShows: 5 };
 export const BOT_LIMIT_RANGES: Record<keyof BotLimits, { min: number; max: number }> = {
   maxFutureAppointments: { min: 1, max: 10 },
   maxNewPatients: { min: 1, max: 10 },

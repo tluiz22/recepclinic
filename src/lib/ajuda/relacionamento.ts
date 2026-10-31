@@ -4,6 +4,20 @@ import type { ModuloDeAjuda } from "./tipos";
 
 export const relacionamento = {
   comoFunciona: {
+    // "Contatos para revisar" do Início (texto aprovado pelo cliente em 31/out/2026): listContactsToReview,
+    // DEFAULT_BOT_LIMITS e REVIEW_WINDOW_DAYS em src/lib/data/whatsapp/botLimits.ts.
+    revisar: {
+      serve: "Mostrar quem tentou marcar pelo WhatsApp e foi barrado por um limite de segurança do bot. A equipe confere se é um caso normal ou um abuso.",
+      como: [
+        "O bot tem três limites por número de WhatsApp, somando todos os pacientes do número: atendimentos futuros marcados, pacientes cadastrados pelo bot em 30 dias e faltas em 90 dias (padrão: 5 cada). Os valores ficam em Configurações › Clínica › Limites do bot por contato.",
+        "Quando um limite é atingido, o bot não marca e passa a conversa para a recepção. Cancelar, remarcar e confirmar presença continuam funcionando pelo bot.",
+        "A equipe marca normalmente pelo painel, sem limite.",
+        "\"Revisado\" tira o contato desta lista. Se ele atingir um limite de novo, volta.",
+        "Para um número que deve marcar sem limite (ex.: uma empresa com acordo), o Administrador usa \"Liberar dos limites do bot\" na tela do contato.",
+      ],
+      exemplo:
+        "Maria já tem 5 consultas marcadas para os filhos e pede a 6ª pelo WhatsApp. O bot não marca, passa a conversa para a recepção, e Maria aparece aqui com \"Limite de atendimentos futuros\". A recepção confere, marca pelo painel se fizer sentido e toca em \"Revisado\".",
+    },
     // listHumanAttention e classifyAttention em src/lib/data/whatsapp/attention.ts; pauseForHuman, checkHandoff e
     // handleAgentEcho em whatsapp/conversations.ts (cliente, 30/out/2026: a conversa não volta sozinha ao bot).
     atendimento: {
