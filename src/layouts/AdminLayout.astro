@@ -19,11 +19,16 @@ interface Props {
   platform?: boolean;
   /** Recarrega sozinha a cada 1 minuto, com a aba à vista (src/scripts/autoRefresh.ts). */
   autoRefresh?: boolean;
+  /** Nome da área cujas seções vêm no slot "side" (ex.: "Configurações"), no lugar do menu principal. */
+  sideTitle?: string;
 }
 
 // Uma largura só para todas as telas (cliente, 16/out/2026: a Agenda e o Resumo do Dia
 // deixaram a largura de 1600px da R1 para ficar como as outras).
-const { title, platform = false, autoRefresh = false } = Astro.props;
+const { title, platform = false, autoRefresh = false, sideTitle } = Astro.props;
+// Seções de uma área na lateral (M5, Configurações; cliente, 30/out/2026): elas aparecem no lugar do menu
+// principal, que volta pelo "‹ Menu principal" sem sair da tela.
+const hasSide = Astro.slots.has("side");
 const frame = "max-w-6xl";
 
 type NavItem = { label: string; href: string; icon: IconName; badge?: number; badgeLabel?: string };
@@ -244,7 +249,26 @@ const sideLinkClass = (active: boolean) =>
         </span>
       </div>
 
-      <nav aria-label="Menu principal" class="flex flex-col gap-5">
+      {
+        hasSide && (
+          <div data-side-view="section" class="flex flex-col gap-5 [&[hidden]]:hidden">
+            <button type="button" data-side-switch="main" class="flex h-10 items-center gap-2 rounded-[10px] bg-canvas px-2.5 text-left text-[15px] font-bold text-brand-ink hover:bg-canvas-deep">
+              <Icon name="chevron-left" class="h-[18px] w-[18px] shrink-0" strokeWidth={2.2} /> Menu principal
+            </button>
+            <slot name="side" />
+          </div>
+        )
+      }
+
+      <nav aria-label="Menu principal" data-side-view="main" hidden={hasSide} class="flex flex-col gap-5 [&[hidden]]:hidden">
+        {
+          hasSide && (
+            <button type="button" data-side-switch="section" class="flex min-h-10 items-center py-1.5 leading-snug justify-between gap-2 rounded-[10px] bg-canvas px-2.5 text-left text-[15px] font-bold text-brand-ink hover:bg-canvas-deep">
+              Seções de {sideTitle}
+              <Icon name="chevron-right" class="h-[18px] w-[18px] shrink-0" strokeWidth={2.2} />
+            </button>
+          )
+        }
         {
           sideGroups.map((group) => (
             <div class="flex flex-col gap-0.5">
@@ -452,6 +476,18 @@ const sideLinkClass = (active: boolean) =>
         if (!field?.form || !field.hasAttribute("data-autosubmit")) return;
         show();
         field.form.submit();
+      });
+
+      // Lateral com as seções de uma área (M5): "‹ Menu principal" mostra o menu e
+      // "Seções de …" volta às seções, sem sair da tela.
+      document.addEventListener("click", (event) => {
+        const button = (event.target as Element | null)?.closest<HTMLElement>("[data-side-switch]");
+        if (!button) return;
+        const view = button.dataset.sideSwitch;
+        for (const panel of document.querySelectorAll<HTMLElement>("[data-side-view]")) {
+          panel.hidden = panel.dataset.sideView !== view;
+        }
+        document.querySelector<HTMLElement>(`[data-side-view="${view}"] [data-side-switch]`)?.focus();
       });
 
       // Voltar pelo navegador pode reabrir a página do cache com a barra ligada.

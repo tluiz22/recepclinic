@@ -1,7 +1,7 @@
 # Menu lateral (redesign do menu superior)
 
-> **Retomar daqui (31/out/2026):** L1 feita e publicada no staging (sem migração); o cliente valida tudo no fim
-> (31/out). Próximo: L2. Em seguida ao menu, a revisão da jornada do bot
+> **Retomar daqui (31/out/2026):** L1 e L2 feitas e publicadas no staging (sem migração); o cliente valida tudo no
+> fim (31/out). Próximo: L3 (teste de interface). Em seguida ao menu, a revisão da jornada do bot
 > ([`jornada-do-bot.md`](jornada-do-bot.md), temporário).
 
 ## Por quê
@@ -48,4 +48,8 @@ Configurações), abaixo vale o modelo do celular; a lateral fica parada enquant
   `npm run check` sem erros.
 - **L2. Configurações na lateral** (M5): o `ConfigShell` passa as seções para a lateral; "‹ Menu principal";
   "Voltar" para a origem continua como hoje.
+  **Feita em 31/out:** o `AdminLayout` ganhou o slot `side` (com `sideTitle`): as seções aparecem no lugar do menu
+  principal, com "‹ Menu principal" no alto; o menu principal (com Configurações marcada) tem no alto "Seções de
+  Configurações ›" para voltar. A troca é na própria tela, sem recarregar (script no `AdminLayout`). No celular e no
+  tablet, o botão "Seção: …" de sempre. Conferido em 1280px (Suporte) e 390px; `npm test` e `npm run check` sem erros.
 - **L3. Teste de interface** (Playwright) e publicação no staging; validação do cliente.
