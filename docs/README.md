@@ -7,7 +7,8 @@
 > Implantação e Tecnologia › Jornada do bot.
 >
 > **Próxima sessão (cliente, 30/out): menu lateral, na `main`** ([`menu-lateral.md`](menu-lateral.md); ler o bloco de
-> retomada dele): decisões M1–M7 tomadas; próximo, a etapa L1. O faturamento fica parado na branch
+> retomada dele): L1 no staging (validação no fim, a pedido do cliente); próximo, L2. Em seguida,
+> revisão da jornada do bot ([`jornada-do-bot.md`](jornada-do-bot.md), temporário). O faturamento fica parado na branch
 > `faturamento` (abaixo).
 >
 > **N0 do Asaas (30/out):** NFS-e pelo Asaas, N0 (seções 13.8 e 13.9 do `planejamento-nfse-asaas.md`; ler o bloco de

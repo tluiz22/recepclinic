@@ -6,8 +6,6 @@ import "../styles/global.css";
 import AppInstallHead from "../components/admin/AppInstallHead.astro";
 import Icon from "../components/admin/Icon.astro";
 import type { IconName } from "../components/admin/Icon.astro";
-import MoreMenu from "../components/admin/ui/MoreMenu.astro";
-import { menuItemClass } from "../components/admin/ui/styles";
 import { canAccessArea, roleLabel as describeRoles } from "../lib/clinicAccess";
 import { pageFlash } from "../lib/flash";
 import { createUserClient } from "../lib/data/clients";
@@ -81,21 +79,25 @@ const relationshipCount = !relationshipOn
       ),
     ));
 
-const clinicMoreItems: NavItem[] = [
+// Grupos por tarefa (menu lateral, M2; cliente, 30/out/2026): Hoje, Pacientes e Gestão.
+const [homeItem, agendaItem, patientsItem, summaryItem] = primaryNavItems;
+const contactItems: NavItem[] = [
+  ...(attentionCount !== null ? [{ label: "Atendimento", href: "/admin/atendimento", icon: "chat-bubble" as IconName, badge: attentionCount }] : []),
   ...(relationshipOn
     ? [{ label: "Relacionamento", href: "/admin/relacionamento", icon: "user-check" as IconName, badge: relationshipCount, badgeLabel: `${relationshipCount} pendência(s)` }]
     : []),
-  ...(attentionCount !== null ? [{ label: "Atendimento", href: "/admin/atendimento", icon: "chat-bubble" as IconName, badge: attentionCount }] : []),
+];
+const managementItems: NavItem[] = [
   // Envios automáticos virou aba de Métricas (Fase 23 · etapa 5).
-  ...(canAccessArea(access, "settings")
-    ? [{ label: "Configurações", href: "/admin/configuracoes", icon: "settings" as IconName }]
-    : []),
   ...(canAccessArea(access, "metrics")
     ? [{ label: "Métricas", href: "/admin/metricas", icon: "funnel" as IconName }]
     : []),
   // Módulo financeiro (F11): Administrador e Recepção, com o item liberado.
   ...(canAccessArea(access, "finance")
     ? [{ label: "Financeiro", href: "/admin/financeiro", icon: "banknotes" as IconName }]
+    : []),
+  ...(canAccessArea(access, "settings")
+    ? [{ label: "Configurações", href: "/admin/configuracoes", icon: "settings" as IconName }]
     : []),
 ];
 
@@ -112,33 +114,58 @@ const systemNavItems: NavItem[] =
       ]
     : [];
 
-// Menu do Suporte agrupado (pendência da R1, U-07; cliente, 16/out/2026):
-// dentro de uma clínica, os itens dela ficam no cabeçalho e os do sistema vão
-// para o botão "Sistema"; na Administração do sistema (sem clínica aberta),
-// só os do sistema. No celular, o "Mais" separa os grupos Clínica e Sistema.
-const headerNavItems = platform ? systemNavItems : [...primaryNavItems, ...clinicMoreItems];
-const headerSystemItems = platform ? [] : systemNavItems;
-const tabBarItems = platform ? systemNavItems.slice(0, 4) : primaryNavItems;
-const moreGroups: { title?: string; items: NavItem[] }[] = platform
-  ? [{ items: systemNavItems.slice(4) }]
-  : systemNavItems.length > 0
-    ? [
-        { title: "Clínica", items: clinicMoreItems },
-        { title: "Sistema · só o Suporte", items: systemNavItems },
-      ].filter((group) => group.items.length > 0)
-    : [{ items: clinicMoreItems }];
-const moreNavItems = moreGroups.flatMap((group) => group.items);
+// Menu lateral (M1–M3, M7; cliente, 30/out/2026): a partir de `lg`, os grupos ficam
+// numa coluna à esquerda, sem barra no topo; o Sistema (só o Suporte) vem por último.
+// Na Administração do sistema (sem clínica aberta), só os itens do Sistema.
+type NavGroup = { title?: string; support?: boolean; items: NavItem[] };
+const SYSTEM_TITLE = "Sistema · só o Suporte";
+const sideGroups: NavGroup[] = (
+  platform
+    ? [{ items: systemNavItems }]
+    : [
+        { title: "Hoje", items: [homeItem, agendaItem, summaryItem] },
+        { title: "Pacientes", items: [patientsItem, ...contactItems] },
+        { title: "Gestão", items: managementItems },
+        { title: SYSTEM_TITLE, support: true, items: systemNavItems },
+      ]
+).filter((group) => group.items.length > 0);
 
-// Dentro da clínica, a faixa amarela já diz que é o Suporte: o canto direito fica só com o "Sair".
-const showRoleLabel = platform || !clinic?.isPlatformStaff;
+// Celular e tablet (M6): a barra inferior de sempre e o "Mais" com os mesmos grupos,
+// sem os itens que já estão na barra.
+const tabBarItems = platform ? systemNavItems.slice(0, 4) : primaryNavItems;
+const moreGroups: NavGroup[] = (
+  platform
+    ? [{ items: systemNavItems.slice(4) }]
+    : [
+        { title: "Pacientes", items: contactItems },
+        { title: "Gestão", items: managementItems },
+        { title: SYSTEM_TITLE, support: true, items: systemNavItems },
+      ]
+).filter((group) => group.items.length > 0);
+const moreNavItems = moreGroups.flatMap((group) => group.items);
+// O "Mais" soma as pendências de Atendimento e Relacionamento.
+const moreBadge = (attentionCount ?? 0) + relationshipCount;
+
+// Quem está no painel, no pé da lateral (o "Sair" fica ao lado).
+const whoLabel = platform || clinic?.isPlatformStaff ? "Suporte RecepClinic" : roleLabel;
+const placeName = platform ? "Administração do sistema" : (clinic?.clinicName ?? "");
+const switchLink = platform ? "Abrir uma clínica" : clinic?.canSwitchClinic ? "Trocar clínica" : null;
+// Iniciais da clínica no quadradinho do alto da lateral ("Clínica Bem-Estar" → "CB").
+const initials = platform
+  ? "R"
+  : placeName
+      .split(/[\s-]+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((word) => word[0].toUpperCase())
+      .join("");
 
 const currentPath = Astro.url.pathname;
 const isActive = (href: string) => currentPath.startsWith(href);
 const isMoreActive = moreNavItems.some((item) => isActive(item.href));
-const isSystemActive = headerSystemItems.some((item) => isActive(item.href));
-const navLinkClass = (active: boolean) =>
-  `rounded-lg px-2.5 py-2 whitespace-nowrap no-underline ${
-    active ? "bg-brand-soft text-brand-ink" : "text-ink-soft hover:bg-canvas hover:text-ink"
+const sideLinkClass = (active: boolean) =>
+  `group/side flex h-10 items-center gap-3 rounded-[10px] px-2.5 text-[15px] no-underline ${
+    active ? "bg-brand-soft font-bold text-brand-ink" : "font-semibold text-ink hover:bg-canvas"
   }`;
 ---
 
@@ -185,7 +212,7 @@ const navLinkClass = (active: boolean) =>
       }
     </style>
   </head>
-  <body class="flex min-h-screen flex-col bg-canvas font-body text-ink antialiased" data-auto-refresh={autoRefresh ? "" : undefined}>
+  <body class="min-h-screen bg-canvas font-body text-ink antialiased lg:flex" data-auto-refresh={autoRefresh ? "" : undefined}>
     <!-- Pular o menu pelo teclado (auditoria de frontend, A-03): aparece só com o foco. -->
     <a
       href="#conteudo"
@@ -201,114 +228,120 @@ const navLinkClass = (active: boolean) =>
     >
       <div class="h-full w-2/5 bg-brand"></div>
     </div>
-    <header class="border-b border-line bg-white pt-[env(safe-area-inset-top)]">
-      <div class={`mx-auto flex min-h-16 items-center justify-between gap-4 px-4 py-2.5 sm:gap-6 ${frame}`}>
-        <div class="flex min-w-[9.5rem] max-w-64 shrink-0 items-center gap-2.5 max-sm:shrink">
-          <span aria-hidden="true" class="flex h-8 w-8 shrink-0 items-center justify-center rounded-[9px] bg-brand font-display text-[17px] font-bold text-white">R</span>
-          <div class="min-w-0">
-          {/* O link fica na linha de cima, fora do nome cortado (truncate): ali dentro, sumia com nome longo. */}
-          <span class="flex flex-wrap items-baseline gap-x-2">
-            <span class="text-[11px] leading-tight font-bold tracking-[.09em] text-brand uppercase">RecepClinic</span>
-            {
-              (platform || clinic?.canSwitchClinic) && (
-                <a href="/admin/escolher-clinica" class="whitespace-nowrap text-xs font-normal text-brand hover:underline">
-                  {platform ? "Abrir uma clínica" : "Trocar"}
+    <!-- Menu lateral (M1–M3): só a partir de `lg`; fica parado enquanto o conteúdo rola. -->
+    <aside class="sticky top-0 hidden h-screen w-60 shrink-0 flex-col gap-5 overflow-y-auto border-r border-line bg-white px-3.5 pt-[calc(20px+env(safe-area-inset-top))] pb-4 lg:flex">
+      <div class="flex items-center gap-3 px-1.5">
+        <span aria-hidden="true" class="flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px] bg-brand-soft font-display text-base font-bold text-brand-ink">{initials}</span>
+        <span class="flex min-w-0 flex-col leading-tight">
+          <span class="line-clamp-2 text-[15px] font-bold break-words text-ink" title={placeName}>{placeName}</span>
+          {
+            switchLink && (
+              <a href="/admin/escolher-clinica" class="mt-0.5 text-[13px] font-semibold text-brand no-underline hover:underline">
+                {switchLink}
+              </a>
+            )
+          }
+        </span>
+      </div>
+
+      <nav aria-label="Menu principal" class="flex flex-col gap-5">
+        {
+          sideGroups.map((group) => (
+            <div class="flex flex-col gap-0.5">
+              {group.title && (
+                <span class={`px-2.5 pb-1 text-[13px] leading-none font-semibold ${group.support ? "text-pend-800" : "text-ink-soft"}`}>{group.title}</span>
+              )}
+              {group.items.map((item) => (
+                <a href={item.href} aria-current={isActive(item.href) ? "page" : undefined} class={sideLinkClass(isActive(item.href))}>
+                  <Icon
+                    name={item.icon}
+                    class={`h-5 w-5 shrink-0 ${isActive(item.href) ? "text-brand" : "text-ink-soft group-hover/side:text-ink"}`}
+                    strokeWidth={1.8}
+                  />
+                  <span class="min-w-0 flex-1 truncate">{item.label}</span>
+                  {item.badge ? (
+                    <span class="rounded-full bg-can-500 px-1.5 text-[12px] leading-5 font-bold text-white" aria-label={item.badgeLabel ?? `${item.badge} aguardando`}>
+                      {item.badge}
+                    </span>
+                  ) : null}
                 </a>
+              ))}
+            </div>
+          ))
+        }
+      </nav>
+
+      <div class="mt-auto flex items-center gap-2.5 border-t border-line px-1.5 pt-3">
+        <span class="min-w-0 flex-1 truncate text-sm text-ink-soft">{whoLabel}</span>
+        <form method="POST" action="/api/admin/auth/logout">
+          <button type="submit" class="h-9 rounded-lg border border-line-strong bg-white px-3 text-sm font-semibold text-ink hover:bg-canvas">Sair</button>
+        </form>
+      </div>
+    </aside>
+
+    <div class="flex min-h-screen min-w-0 flex-1 flex-col">
+      <!-- Celular e tablet: cabeçalho curto (o menu fica na barra inferior). -->
+      <header class="border-b border-line bg-white pt-[env(safe-area-inset-top)] lg:hidden">
+        <div class="flex min-h-16 items-center justify-between gap-4 px-4 py-2.5">
+          <div class="flex min-w-0 items-center gap-2.5">
+            <span aria-hidden="true" class="flex h-8 w-8 shrink-0 items-center justify-center rounded-[9px] bg-brand font-display text-[17px] font-bold text-white">R</span>
+            <div class="min-w-0">
+              {/* O link fica na linha de cima, fora do nome cortado (truncate): ali dentro, sumia com nome longo. */}
+              <span class="flex flex-wrap items-baseline gap-x-2">
+                <span class="text-[11px] leading-tight font-bold tracking-[.09em] text-brand uppercase">RecepClinic</span>
+                {
+                  switchLink && (
+                    <a href="/admin/escolher-clinica" class="whitespace-nowrap text-xs font-normal text-brand hover:underline">
+                      {platform ? "Abrir uma clínica" : "Trocar"}
+                    </a>
+                  )
+                }
+              </span>
+              <span class="block truncate text-[15px] leading-tight font-semibold text-ink">{placeName}</span>
+            </div>
+          </div>
+
+          <div class="flex shrink-0 items-center gap-3">
+            {
+              // Dentro da clínica, a faixa amarela já diz que é o Suporte. No celular, "Suporte RecepClinic"
+              // empurrava o "Sair" para fora da tela (teste da R10); abaixo de 380px, o papel também sai (QA-01
+              // do teste da S-01 e S-02).
+              (platform || !clinic?.isPlatformStaff) && (
+                <span class={`text-sm text-ink-soft ${platform ? "max-sm:hidden" : "max-[380px]:hidden"}`}>{whoLabel}</span>
               )
             }
-          </span>
-          <span class="block truncate text-[15px] leading-tight font-semibold text-ink">{platform ? "Administração do sistema" : clinic?.clinicName}</span>
+            <form method="POST" action="/api/admin/auth/logout">
+              <button type="submit" class="h-9 rounded-[7px] border border-line-strong bg-white px-3 text-sm font-semibold text-ink hover:bg-canvas">
+                Sair
+              </button>
+            </form>
           </div>
         </div>
+      </header>
 
-        <nav aria-label="Menu principal" class="hidden min-w-0 flex-1 flex-wrap gap-0 text-[15px] font-semibold sm:flex">
-          {
-            headerNavItems.map((item) => (
-              <a
-                href={item.href}
-                aria-current={isActive(item.href) ? "page" : undefined}
-                class={`${navLinkClass(isActive(item.href))} ${item.badge ? "inline-flex items-center gap-1.5" : ""}`}
-              >
-                {item.label}
-                {item.badge ? (
-                  <span class="rounded-full bg-can-500 px-1.5 text-[12px] leading-5 font-bold text-white" aria-label={item.badgeLabel ?? `${item.badge} aguardando`}>
-                    {item.badge}
-                  </span>
-                ) : null}
-              </a>
-            ))
-          }
-          {
-            headerSystemItems.length > 0 && (
-              <MoreMenu
-                id="menu-sistema"
-                label="Sistema"
-                text="Sistema"
-                triggerClass={`inline-flex cursor-pointer items-center gap-1 border-0 font-semibold focus-visible:outline-2 focus-visible:outline-brand ${navLinkClass(isSystemActive)}`}
-              >
-                <span class="px-2.5 pt-2 pb-1 text-[11.5px] font-bold tracking-[.08em] text-ink-soft uppercase">Sistema · só o Suporte</span>
-                {
-                  headerSystemItems.map((item) => (
-                    <a
-                      href={item.href}
-                      aria-current={isActive(item.href) ? "page" : undefined}
-                      class={`${menuItemClass()} ${isActive(item.href) ? "bg-brand-soft text-brand-ink" : ""}`}
-                    >
-                      <Icon name={item.icon} class="h-[18px] w-[18px] shrink-0" strokeWidth={1.8} />
-                      {item.label}
-                    </a>
-                  ))
-                }
-              </MoreMenu>
-            )
-          }
-        </nav>
+      {
+        clinic?.isPlatformStaff && (
+          <div class="border-b border-amber-200 bg-amber-50 px-4 py-2 text-center text-xs text-amber-800">
+            Você está como Suporte RecepClinic nesta clínica: cada tela aberta fica registrada.
+          </div>
+        )
+      }
+      {
+        !platform && clinic?.clinicStatus === "onboarding" && (
+          <div class="border-b border-amber-200 bg-amber-50 px-4 py-2 text-center text-xs text-amber-800">
+            Clínica em implantação: nada sai para os pacientes pelo WhatsApp (bot, avisos e lembretes) até o Suporte do RecepClinic ativar.
+          </div>
+        )
+      }
 
-        <div class="flex shrink-0 items-center gap-3">
-          {
-            showRoleLabel && (
-              // No celular, "Suporte RecepClinic" empurrava o "Sair" para fora da tela
-              // (teste da R10); o nome "Administração do sistema" já diz onde se está.
-              // Abaixo de 380px, o papel também sai (QA-01 do teste da S-01 e S-02).
-              <span class={`text-sm text-ink-soft ${platform ? "max-sm:hidden" : "max-[380px]:hidden"}`}>
-                {platform ? "Suporte RecepClinic" : roleLabel}
-              </span>
-            )
-          }
-          <form method="POST" action="/api/admin/auth/logout">
-            <button
-              type="submit"
-              class="h-9 rounded-[7px] border border-line-strong bg-white px-3 text-sm font-semibold text-ink hover:bg-canvas sm:h-8"
-            >
-              Sair
-            </button>
-          </form>
-        </div>
-      </div>
-    </header>
+      <main id="conteudo" tabindex="-1" class={`mx-auto w-full flex-1 px-4 pt-6 pb-28 outline-none sm:pt-8 lg:px-6 lg:pb-12 ${frame}`}>
+        <slot />
+      </main>
+    </div>
 
-    {
-      clinic?.isPlatformStaff && (
-        <div class="border-b border-amber-200 bg-amber-50 px-4 py-2 text-center text-xs text-amber-800">
-          Você está como Suporte RecepClinic nesta clínica: cada tela aberta fica registrada.
-        </div>
-      )
-    }
-    {
-      !platform && clinic?.clinicStatus === "onboarding" && (
-        <div class="border-b border-amber-200 bg-amber-50 px-4 py-2 text-center text-xs text-amber-800">
-          Clínica em implantação: nada sai para os pacientes pelo WhatsApp (bot, avisos e lembretes) até o Suporte do RecepClinic ativar.
-        </div>
-      )
-    }
-
-    <main id="conteudo" tabindex="-1" class={`mx-auto w-full flex-1 px-4 pt-6 pb-28 outline-none sm:pb-12 ${frame} sm:pt-8`}>
-      <slot />
-    </main>
-
-    <!-- Barra inferior de abas — só no celular (escondida a partir de `sm`). -->
+    <!-- Barra inferior de abas: celular e tablet (escondida a partir de `lg`, onde há o menu lateral). -->
     <nav
-      class="fixed inset-x-0 bottom-0 z-20 flex border-t border-line bg-white pb-[env(safe-area-inset-bottom)] sm:hidden"
+      class="fixed inset-x-0 bottom-0 z-20 flex border-t border-line bg-white pb-[env(safe-area-inset-bottom)] lg:hidden"
       aria-label="Navegação principal"
     >
       {
@@ -334,27 +367,27 @@ const navLinkClass = (active: boolean) =>
         >
           <span class="relative">
             <Icon name="more" class="h-6 w-6" />
-            {attentionCount ? (
-              <span class="absolute -top-1.5 -right-2.5 rounded-full bg-can-500 px-1.5 text-[11px] leading-[18px] font-bold text-white" aria-label={`${attentionCount} conversas aguardando a clínica`}>
-                {attentionCount}
+            {moreBadge ? (
+              <span class="absolute -top-1.5 -right-2.5 rounded-full bg-can-500 px-1.5 text-[11px] leading-[18px] font-bold text-white" aria-label={`${moreBadge} pendência(s) em Atendimento e Relacionamento`}>
+                {moreBadge}
               </span>
             ) : null}
           </span>
           Mais
         </summary>
 
-        <div class="absolute bottom-full right-2 mb-2 w-52 rounded-[10px] border border-line bg-white p-1.5 text-[15px] shadow-[0_10px_30px_rgba(18,48,42,.16)]">
+        <div class="absolute right-2 bottom-full mb-2 max-h-[70vh] w-60 overflow-y-auto rounded-[12px] border border-line bg-white p-1.5 text-[15px] shadow-[0_10px_30px_rgba(18,48,42,.16)]">
           {
             moreGroups.map((group, index) => (
               <div class={index > 0 ? "mt-1.5 border-t border-line pt-1.5" : ""}>
                 {group.title && (
-                  <span class="block px-3 pt-1.5 pb-1 text-[11.5px] font-bold tracking-[.08em] text-ink-soft uppercase">{group.title}</span>
+                  <span class={`block px-3 pt-1.5 pb-1 text-[13px] font-semibold ${group.support ? "text-pend-800" : "text-ink-soft"}`}>{group.title}</span>
                 )}
                 {group.items.map((item) => (
                   <a
                     href={item.href}
                     aria-current={isActive(item.href) ? "page" : undefined}
-                    class={`flex items-center gap-2 rounded-md px-3 py-2 font-medium ${
+                    class={`flex min-h-11 items-center gap-2 rounded-md px-3 font-medium ${
                       isActive(item.href) ? "bg-brand-soft text-brand-ink" : "text-ink hover:bg-canvas"
                     }`}
                   >
@@ -370,11 +403,8 @@ const navLinkClass = (active: boolean) =>
               </div>
             ))
           }
-          <form method="POST" action="/api/admin/auth/logout">
-            <button
-              type="submit"
-              class="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left font-medium text-ink hover:bg-canvas"
-            >
+          <form method="POST" action="/api/admin/auth/logout" class="mt-1.5 border-t border-line pt-1.5">
+            <button type="submit" class="flex min-h-11 w-full items-center gap-2 rounded-md px-3 text-left font-medium text-ink hover:bg-canvas">
               <Icon name="logout" class="h-5 w-5" />
               Sair
             </button>

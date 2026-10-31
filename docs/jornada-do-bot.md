@@ -1,5 +1,8 @@
 # Jornada do bot no WhatsApp
 
+> **Arquivo temporário (cliente, 31/out/2026):** base para revisar a jornada do bot depois do menu lateral. Não
+> precisa acompanhar as mudanças do bot; ao fim dessa revisão, excluir.
+
 O caminho do paciente no WhatsApp da clínica, do primeiro "Oi" até a recepção. Fonte: Tecnologia › Jornada do bot
 (`src/components/admin/tecnologia/botJourney.ts`, atualizada em **30/10/2026**), que espelha o bot em
 `src/lib/data/whatsapp/bot/` e as mensagens automáticas. Mudou a jornada, atualizar os dois no mesmo commit.

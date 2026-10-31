@@ -1,7 +1,8 @@
 # Menu lateral (redesign do menu superior)
 
-> **Retomar daqui (30/out/2026):** decisões M1–M7 tomadas pelo cliente; nenhum código ainda. Próximo: **etapa L1**
-> (moldura nova no `AdminLayout`), na `main`, depois do OK do cliente.
+> **Retomar daqui (31/out/2026):** L1 feita e publicada no staging (sem migração); o cliente valida tudo no fim
+> (31/out). Próximo: L2. Em seguida ao menu, a revisão da jornada do bot
+> ([`jornada-do-bot.md`](jornada-do-bot.md), temporário).
 
 ## Por quê
 
@@ -39,6 +40,12 @@ Configurações), abaixo vale o modelo do celular; a lateral fica parada enquant
 - **L1. Moldura nova** no `AdminLayout.astro`: lateral com grupos (M1–M3, M7), sem barra do topo; celular com o "Mais"
   em grupos (M6). Testes e conferência no navegador local (1280px e 1440px, Agenda com 4 colunas, Suporte e
   Administrador, celular).
+  **Feita em 31/out (local):** lateral de 240px (`w-60`); para caber a Agenda em 1280px, as colunas do Dia passaram
+  de no mínimo 250px para 230px (4 colunas sem rolar de lado). De 640px a 1023px (tablet) vale a barra inferior;
+  antes, o tablet tinha o menu no topo. O "Mais" mostra Pacientes (Atendimento e Relacionamento), Gestão e Sistema,
+  com a soma das pendências no botão. Conferido: Administrador e Suporte em 1280px e 1440px, Administração do
+  sistema, Configurações (lista de seções ainda ao lado até a L2), tablet 900px e celular 390px; `npm test` e
+  `npm run check` sem erros.
 - **L2. Configurações na lateral** (M5): o `ConfigShell` passa as seções para a lateral; "‹ Menu principal";
   "Voltar" para a origem continua como hoje.
 - **L3. Teste de interface** (Playwright) e publicação no staging; validação do cliente.
