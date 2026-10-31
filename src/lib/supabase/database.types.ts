@@ -1187,6 +1187,26 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"recall_dismissals": {
+                  Row: {
+                    "clinic_id": string,"dismissed_at": string,"dismissed_by": string | null,"flow_label": string,"phone": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "clinic_id": string,"dismissed_at"?: string,"dismissed_by"?: string | null,"flow_label": string,"phone": string
+                  }
+                  Update: {
+                    "clinic_id"?: string,"dismissed_at"?: string,"dismissed_by"?: string | null,"flow_label"?: string,"phone"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "recall_dismissals_clinic_id_fkey"
+      columns: ["clinic_id"]
+isOneToOne: false
+      referencedRelation: "clinics"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"schedule_blocks": {
                   Row: {
                     "agenda_id": string,"clinic_id": string,"created_at": string,"created_by": string | null,"ends_at": string,"id": string,"reason": string,"removed_at": string | null,"removed_by": string | null,"starts_at": string,"updated_at": string | null,"updated_by": string | null

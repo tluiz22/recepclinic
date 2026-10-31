@@ -24,8 +24,8 @@ export const relacionamento = {
       serve: "Reúne numa tela só as pessoas que pedem contato da equipe, cada uma com o motivo.",
       como: [
         "São as mesmas listas do Resumo do Dia, das Métricas e do Início, com as mesmas regras: nada muda lá.",
-        "Cada aba mostra quantas pessoas pedem atenção. A pessoa sai sozinha quando o motivo deixa de existir.",
-        "As ações são as mesmas de sempre (Remarcar, Marcar retorno, Desistiu, Tirar da lista, Revisado) e voltam para esta tela.",
+        "Cada aba mostra quantas pessoas pedem atenção (o Retomar contato, não: começar e desistir é comum). A pessoa sai sozinha quando o motivo deixa de existir.",
+        "As ações são as mesmas de sempre (Remarcar, Marcar retorno, Desistiu, Tirar da lista, Revisado), mais o \"Retirar da lista\" do Retomar contato, e voltam para esta tela.",
       ],
       erro: "Uma aba mostra \"!\"? A lista dela não carregou agora; as outras continuam. Tente abrir a aba de novo.",
     },
@@ -39,12 +39,13 @@ export const relacionamento = {
       ],
       exemplo: "O lembrete de Ana saiu ontem às 18h e ela não respondeu: Ana aparece em \"Sem resposta\" até a equipe confirmar a presença na Agenda.",
     },
-    // listRecall e groupRecall em src/lib/data/relationship.ts; buildFunnelReportFromSessions (incomplete) em botFunnel.ts.
+    // listRecall, groupRecall e withoutDismissed ("Retirar da lista", 31/out/2026) em src/lib/data/relationship.ts; buildFunnelReportFromSessions (incomplete) em botFunnel.ts.
     retomar: {
       serve: "Quem começou pelo WhatsApp (bot ou link) e não concluiu nos últimos 14 dias.",
       como: [
         "Entra a tentativa abandonada ou com erro. Sai sozinha quando a mesma pessoa conclui o mesmo fluxo depois.",
         "Várias tentativas do mesmo número no mesmo fluxo viram uma linha só, com a mais recente e quantas foram.",
+        "\"Retirar da lista\": a linha sai daqui e das Métricas. Se a pessoa começar de novo e não concluir, volta.",
         "É a mesma regra da aba Retomar contato das Métricas, só que sempre nos últimos 14 dias.",
       ],
       exemplo: "Maria tentou marcar consulta 3 vezes e parou na escolha do horário: aparece uma linha, \"3 tentativas\", até ela concluir.",

@@ -690,6 +690,16 @@ retomada fica no README). Para achar algo, buscar por data (ex.: `27/out`), fase
   "Alterar" sai da vista e vai para o "Mais", como 1º item no atendimento futuro (no que já passou, já ficava no "Mais").
   Remarcar, Pagamento e as demais continuam onde estavam. Só `cardActions.ts` e o teste. Sem migração. Publicada no
   staging em 31/out; o cliente valida no fim, junto com o menu lateral.
+- **C15 Retomar contato sem alerta e "Retirar da lista"** (31/out): **cliente (31/out):** começar pelo WhatsApp e
+  desistir é normal (às vezes só para tirar dúvida). Saíram o número da aba Retomar contato (Relacionamento e
+  Métricas), o aviso "X pessoas não concluíram" do Agendamento digital (Métricas) e a soma do Retomar contato no número
+  do Relacionamento no menu (visto no Início); a aba continua. Novo **"Retirar da lista"** em cada linha do Retomar
+  contato, com confirmação (Administrador e Recepção). **Decisões do cliente:** vale para as tentativas até a hora em que
+  foi retirado (uma tentativa nova traz de volta; recusado: sair de vez) e some também da aba das Métricas (recusado: só
+  no Relacionamento). Migração `20261105130000_retomar_contato_retirados.sql` (tabela `recall_dismissals`, chave número
+  + rótulo do fluxo, como a lista agrupa; o número da branch `faturamento`, 20261106/07, fica depois). Testes: unidade
+  (`withoutDismissed`) e banco (papéis, outra clínica, retirar de novo). Conferido no local com uma tentativa de teste
+  (retirar, sumir nas Métricas, voltar com tentativa nova), apagada depois.
 - **DMED removida** (30/out): **cliente (30/out):** a DMED é do contador da clínica; o RecepClinic não gera mais o
   arquivo. Saíram a tela Financeiro › DMED, a rota do arquivo, `src/lib/dmed.ts`, `src/lib/data/dmed.ts`, os testes,
   a ajuda e a aba do Financeiro. Migração `20261105120000_sem_dmed.sql` (apaga `clinic_dmed_settings` e

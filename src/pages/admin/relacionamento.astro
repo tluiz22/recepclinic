@@ -82,7 +82,8 @@ const countOf = (id: RelationshipTab): Pick<TabItem, "count" | "countTone" | "al
   if (id === "lembretes_equipe") return { count: n, countLabel: `${plural(n, "lembrete", "lembretes")} para hoje ou atrasado(s)` };
   if (id === "lembretes") return { count: n, countLabel: `${n} sem resposta ou não entregue(s)` };
   if (id === "atendimento") return { count: n, countTone: "alert", countLabel: `${n} aguardando a clínica` };
-  if (id === "retomar_contato") return { count: n, countLabel: `${n} para retomar` };
+  // Retomar contato sem número (cliente, 31/out/2026): abandonar a conversa é normal.
+  if (id === "retomar_contato") return {};
   if (id === "retorno") return { count: n, countLabel: `${n} com retorno a marcar` };
   if (id === "faltosos") return { count: n, countTone: "neutral", countLabel: `${n} faltam com frequência` };
   if (id === "revisar") return { count: n, countLabel: `${n} para revisar` };

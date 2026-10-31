@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { DbClient } from "./clients";
 import type { Incomplete } from "./botFunnel";
-import { groupRecall, loadRelationshipLists, menuTotal, pendingReminderKind, relationshipCounts, relationshipTabs, type RelationshipTab } from "./relationship";
+import { groupRecall, loadRelationshipLists, menuTotal, pendingReminderKind, relationshipCounts, relationshipTabs, withoutDismissed, type RelationshipTab } from "./relationship";
 
 // Central de Relacionamento (CRM A1): abas por item, regra dos lembretes,
 // contadores = tamanho da lista e falha isolada (seção 13.4 do plano).
@@ -41,7 +41,7 @@ describe("contadores", () => {
   });
 
   it("o menu soma as pendências com saída; Faltosos, Atendimento e Lista de espera não entram; falha não soma (cliente, 27/out)", () => {
-    expect(menuTotal({ aguardando_remarcacao: 2, lembretes: 3, lembretes_equipe: 6, retomar_contato: 4, retorno: 5, revisar: 1, faltosos: 9, atendimento: 8, lista_espera: 7 })).toBe(21);
+    expect(menuTotal({ aguardando_remarcacao: 2, lembretes: 3, lembretes_equipe: 6, retomar_contato: 4, retorno: 5, revisar: 1, faltosos: 9, atendimento: 8, lista_espera: 7 })).toBe(17);
     expect(menuTotal({ aguardando_remarcacao: 2, lembretes: null })).toBe(2);
     expect(menuTotal({})).toBe(0);
   });
@@ -82,6 +82,22 @@ describe("Retomar contato agrupado (telefone e fluxo)", () => {
     const [group] = groupRecall([attempt("+5584999990003", "Marcar exame", 1, "c9"), attempt("+5584999990003", "Marcar exame", 2)]);
     expect(group.contactId).toBe("c9");
     expect(group.latest.lastStage).toBe("etapa 2");
+  });
+
+  it("retirado da lista: some até a hora em que foi retirado; uma tentativa nova volta (cliente, 31/out/2026)", () => {
+    const dismissals = new Map([["+5584999990001:Marcar consulta", new Date(Date.UTC(2031, 2, 4, 18))]]);
+    const left = withoutDismissed(
+      [
+        attempt("+5584999990001", "Marcar consulta", 3),
+        attempt("+5584999990001", "Marcar consulta", 4),
+        attempt("+5584999990001", "Remarcar", 2),
+        attempt("+5584999990002", "Marcar consulta", 1),
+      ],
+      dismissals,
+    );
+    expect(left.map((x) => `${x.phone} ${x.flowLabel} ${x.lastStage}`)).toEqual(["+5584999990001 Remarcar etapa 2", "+5584999990002 Marcar consulta etapa 1"]);
+    const back = groupRecall(withoutDismissed([attempt("+5584999990001", "Marcar consulta", 3), attempt("+5584999990001", "Marcar consulta", 6)], dismissals));
+    expect(back.map((g) => [g.attempts, g.latest.lastStage])).toEqual([[1, "etapa 6"]]);
   });
 });
 

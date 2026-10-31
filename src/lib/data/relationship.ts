@@ -1,6 +1,6 @@
 import { todayIn } from "../clinicTime";
 import type { DbClient } from "./clients";
-import { unwrapAll, unwrapAllIn } from "./errors";
+import { DataError, fromDbError, unwrapAll, unwrapAllIn } from "./errors";
 import { listAwaitingRebooking } from "./daily";
 import { AGENDA_COLUMNS, toAgendaAppointment, type AgendaAppointment, type AgendaRow } from "./agenda/view";
 import { buildFunnelReportFromSessions, listFunnelSessions, type Incomplete } from "./botFunnel";
@@ -98,10 +98,45 @@ export function groupRecall(incomplete: readonly Incomplete[]): Omit<RecallGroup
 
 export async function listRecall(db: DbClient, clinicId: string, now: Date = new Date()): Promise<RecallGroup[]> {
   const start = new Date(now.getTime() - RECALL_DAYS * 24 * 60 * 60_000);
-  const sessions = await listFunnelSessions(db, clinicId, start, now);
-  const groups = groupRecall(buildFunnelReportFromSessions(sessions, now).incomplete);
+  const [sessions, dismissals] = await Promise.all([listFunnelSessions(db, clinicId, start, now), loadRecallDismissals(db, clinicId)]);
+  const groups = groupRecall(withoutDismissed(buildFunnelReportFromSessions(sessions, now).incomplete, dismissals));
   const names = await loadContactNames(db, clinicId, groups.map((g) => g.contactId));
   return groups.map((g) => ({ ...g, contactName: (g.contactId && names.get(g.contactId)) || null }));
+}
+
+// "Retirar da lista" (cliente, 31/out/2026): vale para as tentativas até a hora
+// em que a equipe retirou; uma tentativa nova traz a pessoa de volta. Some daqui
+// e da aba Retomar contato das Métricas. Chave: número e rótulo do fluxo, como a
+// lista agrupa (`groupRecall`).
+export type RecallDismissals = Map<string, Date>;
+
+const recallKey = (phone: string, flowLabel: string) => `${phone}:${flowLabel}`;
+
+export async function loadRecallDismissals(db: DbClient, clinicId: string): Promise<RecallDismissals> {
+  const rows = await unwrapAll(
+    (from, to) => db.from("recall_dismissals").select("phone, flow_label, dismissed_at").eq("clinic_id", clinicId).order("phone").order("flow_label").range(from, to),
+    "Retirados do Retomar contato",
+  );
+  return new Map(rows.map((r) => [recallKey(r.phone, r.flow_label), new Date(r.dismissed_at)]));
+}
+
+/** Tira as tentativas que começaram até a hora em que o número e o fluxo foram retirados. */
+export function withoutDismissed(incomplete: readonly Incomplete[], dismissals: RecallDismissals): Incomplete[] {
+  return incomplete.filter((item) => {
+    const at = dismissals.get(recallKey(item.phone, item.flowLabel));
+    return !at || item.startedAt > at;
+  });
+}
+
+/** Administrador e Recepção (o banco confere); retirar de novo atualiza a hora. */
+export async function dismissRecall(db: DbClient, clinicId: string, phone: string, flowLabel: string): Promise<void> {
+  if (!phone || !flowLabel) throw new DataError("invalid", "Retomar contato: número ou fluxo em branco");
+  const { data, error } = await db
+    .from("recall_dismissals")
+    .upsert({ clinic_id: clinicId, phone, flow_label: flowLabel }, { onConflict: "clinic_id,phone,flow_label" })
+    .select("phone");
+  if (error) throw fromDbError(error, "Retirar do Retomar contato");
+  if (!data?.length) throw new DataError("forbidden", "Retomar contato: sem permissão para retirar");
 }
 
 // ---------------------------------------------------------------------------
@@ -256,9 +291,11 @@ export function relationshipCounts(lists: RelationshipLists): RelationshipCounts
  * saem quando o motivo deixa de existir (os Lembretes da equipe, com o
  * "Feito", P3). Ficam fora os Faltosos (lista
  * permanente até o registro da etapa C), o Atendimento (já tem o próprio
- * número no menu) e a Lista de espera (quem espera vaga não pede contato).
+ * número no menu), a Lista de espera (quem espera vaga não pede contato) e o
+ * Retomar contato (cliente, 31/out/2026: começar e abandonar é normal, às vezes
+ * só para tirar dúvida; a aba fica, sem número).
  */
-export const MENU_TABS: readonly RelationshipTab[] = ["retomar_contato", "retorno", "lembretes", "lembretes_equipe", "aguardando_remarcacao", "revisar"];
+export const MENU_TABS: readonly RelationshipTab[] = ["retorno", "lembretes", "lembretes_equipe", "aguardando_remarcacao", "revisar"];
 
 export function menuTotal(counts: RelationshipCounts): number {
   return MENU_TABS.reduce((total, tab) => total + (counts[tab] ?? 0), 0);
