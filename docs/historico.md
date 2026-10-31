@@ -701,6 +701,11 @@ retomada fica no README). Para achar algo, buscar por data (ex.: `27/out`), fase
   (`withoutDismissed`) e banco (papéis, outra clínica, retirar de novo). Conferido no local com uma tentativa de teste
   (retirar, sumir nas Métricas, voltar com tentativa nova), apagada depois. Migração aplicada no staging (conferida a
   tabela) e publicada no staging em 31/out; o cliente valida no fim.
+- **CI de volta ao verde** (31/out): o job `db` falhava desde `73d703b` (DMED, 30/out) porque o `database.types.ts`
+  editado à mão perdeu as 60 linhas `ComputedFields` que o gerador escreve; refeito a partir da versão anterior, sem a
+  DMED e com a `recall_dismissals` (`4947dd2`). A C15 também precisou de uma linha no seed para a varredura de
+  isolamento (`tests/db/isolamento.test.ts` exige dados em toda tabela). Cuidado: o banco local tem as tabelas da
+  branch `faturamento`; gerar os tipos dele traz tabelas que a `main` não tem.
 - **DMED removida** (30/out): **cliente (30/out):** a DMED é do contador da clínica; o RecepClinic não gera mais o
   arquivo. Saíram a tela Financeiro › DMED, a rota do arquivo, `src/lib/dmed.ts`, `src/lib/data/dmed.ts`, os testes,
   a ajuda e a aba do Financeiro. Migração `20261105120000_sem_dmed.sql` (apaga `clinic_dmed_settings` e
