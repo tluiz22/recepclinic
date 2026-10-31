@@ -488,3 +488,38 @@ As chaves das notificações (par VAPID) do staging já estão no `.env.staging`
    com a clínica"; o toque abre a conversa no WhatsApp. Responder pelo app e esperar 1 hora sem mensagens: chega o
    lembrete do `#bot`.
 
+
+## R. Base de Conhecimento do bot (BC, Etapa 5)
+
+Migração `20261109120000_base_de_conhecimento` aplicada em 31/out (catálogo em rascunho, nada publicado, item ligado
+em nenhuma clínica). A publicação vale para **todas** as clínicas com o item ligado: no staging, só a de teste.
+
+1. **Preparar a clínica de teste** ("Consultorio de Teste", número `+55 61 9903-3143`), como Suporte:
+   - Matriz de acesso: ligar **Perguntas frequentes no bot** (e Convênios, Exames e Domiciliar, para testar tudo);
+   - Configurações da clínica: formas de pagamento, site, horário da recepção, endereço do consultório; um ou dois
+     convênios (ex.: Unimed, com "Unimed Fortaleza" como nome alternativo); especialidade nos profissionais; um exame
+     com preparo; prazo no serviço de retorno.
+2. **Ativar e publicar** (Sistema › Base de conhecimento): abrir cada entrada a homologar e mudar a situação para
+   **Ativo** (para o teste completo, as 31); **Publicar**. O painel mostra a versão e quantas ativas.
+3. **Testar sem enviar** (aba Testar): a clínica de teste e uma clínica com outros dados (outra clínica do staging, ou
+   uma criada só para isso), com as mesmas frases: as respostas saem do cadastro de cada uma e nada de uma aparece na
+   outra; sem o dado cadastrado, "não responde".
+4. **Conversas reais** do celular pessoal para o número de testes:
+   - 1ª mensagem com pergunta ("oi, vocês aceitam Unimed?"): boas-vindas, a resposta e o menu; "oi" sozinho: como antes;
+   - no menu: "qual o endereço?", "qual o horário?", "aceita pix?", "quais especialidades?", "tem pediatra?",
+     "o retorno é pago?", "precisa de jejum?", "vocês atendem em casa?", "vou receber lembrete?", "é um robô?",
+     "obrigado": a resposta e o menu de novo, sem "Não entendi";
+   - no meio da marcação (na lista de profissionais ou de locais): "quanto custa?" → o valor do serviço escolhido e a
+     mesma pergunta de novo; a marcação continua normalmente;
+   - "quero marcar uma consulta", "quero remarcar", "quero cancelar", "minha consulta está marcada?": o fluxo de cada um;
+   - "não vou poder ir": "Você quis dizer…?" (Cancelar · Remarcar · Nenhuma destas);
+   - "meu filho está com febre": "Por aqui não conseguimos dar orientação de saúde." e o menu (com coexistência: a
+     pergunta da recepção);
+   - "tem estacionamento?": o "não entendi" de antes; aparece em Sistema › Base de conhecimento › Não reconhecidas
+     (sem telefone);
+   - números, Sim/Não, data de nascimento, nome e endereço digitados: como antes.
+5. **Mudar sem deploy**: incluir um sinônimo (ex.: "tem estacionamento" numa entrada nova ou existente), publicar, e
+   a mesma frase passa a ser respondida na próxima mensagem; desativar uma entrada e publicar: ela deixa de responder.
+6. **Desligar** o item na matriz: o bot volta ao "não entendi" de antes.
+
+Aprovado aqui, a ativação na produção é planejada à parte (quais entradas, quais clínicas, o valor do item).

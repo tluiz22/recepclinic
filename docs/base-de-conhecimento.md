@@ -2,8 +2,9 @@
 
 > **Retomar daqui (31/out/2026).** Etapas 1 e 2 aprovadas (catálogo em
 > [`base-de-conhecimento-catalogo.md`](base-de-conhecimento-catalogo.md)). Etapa 3 na branch `base-conhecimento`
-> (só local): Etapa 3 validada; **Etapa 4 (integração com o bot) feita**, aguarda validação do cliente.
-> Depois: Etapa 5 (homologação no staging). Detalhe nas seções 10 e 11.
+> (Etapas 3 e 4) juntada na `main` e no **staging** (migração aplicada em 31/out; nada publicado, item
+> ligado em nenhuma clínica). Próximo: **Etapa 5**, homologação pelo roteiro da parte R do
+> [`staging.md`](staging.md). Produção: só depois, planejada à parte. Detalhe nas seções 10 e 11.
 
 Pedido do cliente em 31/out/2026: uma base global de perguntas frequentes, mantida pelo Suporte RecepClinic e
 compartilhada por todas as clínicas. A base reconhece a pergunta; a resposta sai dos dados da clínica. Ela não
@@ -206,7 +207,7 @@ Clínica não edita a base. (Os textos da clínica continuam nos campos dela: pa
     entrada, com atendimento marcado). Só com a pergunta reconhecida com segurança; "oi" e cortesia, "Você quis
     dizer…?" e não reconhecida: como antes. Pergunta de saúde: boas-vindas e o aviso.
 
-## 10. Etapa 3 (estrutura), na branch `base-conhecimento`
+## 10. Etapa 3 (estrutura)
 
 Sub-etapas: **3.1** banco → **3.2** núcleo (normalização, casamento, fontes, cache) → **3.3** página do Suporte
 (cadastro, publicação, histórico, testador). A integração com o bot é a Etapa 4.
@@ -281,7 +282,7 @@ Sub-etapas: **3.1** banco → **3.2** núcleo (normalização, casamento, fontes
   alterações, testador nas duas bases com registro da leitura, clínica sem acesso, não reconhecidas sem telefone).
   Telas conferidas no navegador (local, Suporte). `npm test` 841/841; `test:db` 761/762 (só `billing_settings`).
 
-## 11. Etapa 4 (integração com o bot), na branch `base-conhecimento`
+## 11. Etapa 4 (integração com o bot)
 
 ### 4 — Bot (31/out/2026, `445cf1e`)
 
