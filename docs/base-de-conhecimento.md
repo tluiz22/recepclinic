@@ -2,8 +2,8 @@
 
 > **Retomar daqui (31/out/2026).** Etapas 1 e 2 aprovadas (catálogo em
 > [`base-de-conhecimento-catalogo.md`](base-de-conhecimento-catalogo.md)). Etapa 3 na branch `base-conhecimento`
-> (só local): 3.1 e 3.2 validadas; **3.3 (página do Suporte) feita**, aguarda validação do cliente. Depois:
-> Etapa 4 (integração com o bot). Detalhe na seção 10.
+> (só local): Etapa 3 validada; **Etapa 4 (integração com o bot) feita**, aguarda validação do cliente.
+> Depois: Etapa 5 (homologação no staging). Detalhe nas seções 10 e 11.
 
 Pedido do cliente em 31/out/2026: uma base global de perguntas frequentes, mantida pelo Suporte RecepClinic e
 compartilhada por todas as clínicas. A base reconhece a pergunta; a resposta sai dos dados da clínica. Ela não
@@ -202,6 +202,10 @@ Clínica não edita a base. (Os textos da clínica continuam nos campos dela: pa
     dor…" → aviso da pergunta clínica (decisão 9). **Não achou:** nunca diz "não temos"; mostra as
     especialidades que a clínica atende e o menu.
 
+12. **Primeira mensagem com pergunta** (31/out/2026, na Etapa 4): boas-vindas, a resposta e o menu (ou a pergunta da
+    entrada, com atendimento marcado). Só com a pergunta reconhecida com segurança; "oi" e cortesia, "Você quis
+    dizer…?" e não reconhecida: como antes. Pergunta de saúde: boas-vindas e o aviso.
+
 ## 10. Etapa 3 (estrutura), na branch `base-conhecimento`
 
 Sub-etapas: **3.1** banco → **3.2** núcleo (normalização, casamento, fontes, cache) → **3.3** página do Suporte
@@ -276,3 +280,31 @@ Sub-etapas: **3.1** banco → **3.2** núcleo (normalização, casamento, fontes
 - Testes: `base-de-conhecimento-admin.test.ts` (9: cadastro e validação, histórico, publicação barrada, versão e
   alterações, testador nas duas bases com registro da leitura, clínica sem acesso, não reconhecidas sem telefone).
   Telas conferidas no navegador (local, Suporte). `npm test` 841/841; `test:db` 761/762 (só `billing_settings`).
+
+## 11. Etapa 4 (integração com o bot), na branch `base-conhecimento`
+
+### 4 — Bot (31/out/2026, `445cf1e`)
+
+- **Onde entra:** no `notUnderstood` do motor (`engine.ts`), o ponto único de todo "não entendi". No primeiro da
+  mensagem, com o item ligado, a base publicada e texto digitado (fora dos passos de nome e endereço), a base é
+  consultada (`bot/knowledge/respond.ts`):
+  - **resposta em texto:** enviada; o "não entendi" não sai, não conta para o limite, e o passo se repete como já
+    fazia (listas e botões com "Não entendi…" saem sem esse começo; na data de nascimento, a pergunta da data de novo);
+  - **fluxo** (marcar com o serviço citado, retorno, remarcar e cancelar por `startManage`, confirmar e "minha
+    consulta" pela identificação com a data de nascimento): o passo para (`KnowledgeTakeover`, como o limite do
+    "não entendi") e o fluxo começa; a tentativa anterior conta como abandono no funil;
+  - **recepção** (H1, X2, H2 e o aviso de saúde): Sim/Não da recepção (o mesmo do pedido digitado); sem recepção no
+    app, "responderá em breve" (H1, X2) ou o menu (saúde);
+  - **"Você quis dizer…?":** lista com as opções e "Nenhuma destas"; a escolha responde e o passo se repete;
+    "Nenhuma" dá o "não entendi" de antes;
+  - **resposta com "Marcar"** (serviço, profissional, domiciliar) fora de um fluxo: botões Marcar · Voltar ao menu;
+  - **não reconhecida:** o "não entendi" de antes e o texto em `kb_unmatched` (mensagem sem letras não entra).
+- **Primeira mensagem** (decisão 12): `startConversation` com a resposta depois das boas-vindas.
+- `startBooking` aceita o serviço já escolhido; `showPreparationChoice` (menus) e `startIdentification` (entrada)
+  servem à base; textos novos em `texts.ts`.
+- Jornada do bot (Tecnologia › Jornada do bot): item 9 "Perguntas frequentes" e a primeira mensagem no item 1.
+- Testes: `bot-base-de-conhecimento.test.ts` (14, ponta a ponta pelo webhook com o catálogo ativo e publicado só
+  durante o teste: primeira mensagem, menu, número fora das opções, não reconhecida sem telefone, agradecimento,
+  marcar, "Marcar", valor no meio da marcação com o passo repetido, "Você quis dizer…?" e "Nenhuma", saúde com e
+  sem recepção, item desligado). Sem regressão nos testes do bot. `npm test` 841/841; `test:db` 775/776 (só
+  `billing_settings`).

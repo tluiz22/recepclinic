@@ -2,8 +2,8 @@
 
 > **Estado atual (retomar daqui), 31/out/2026.** Detalhes e datas no [`historico.md`](historico.md) (só por busca).
 >
-> **Próximo (cliente, 31/out):** Base de Conhecimento Global do bot: Etapas 1 e 2 aprovadas; Etapa 3 na branch
-> `base-conhecimento` (só local), 3.3 (página do Suporte) aguarda validação. Retomar pelo
+> **Próximo (cliente, 31/out):** Base de Conhecimento Global do bot: Etapas 1 a 3 aprovadas; Etapa 4 na branch
+> `base-conhecimento` (só local), Etapa 4 (integração com o bot) aguarda validação. Retomar pelo
 > [`base-de-conhecimento.md`](base-de-conhecimento.md). Mudança no caminho do paciente atualiza `botJourney.ts` no
 > mesmo commit.
 >
