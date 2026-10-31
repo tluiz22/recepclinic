@@ -214,6 +214,8 @@ begin
   insert into public.patient_notes (clinic_id, patient_id, body) values (c_a, pt_ana, 'Prefere atendimento à tarde.');
   -- Lembrete da equipe (CRM P3), para hoje: aparece no Relacionamento.
   insert into public.patient_reminders (clinic_id, patient_id, body, due_on) values (c_a, pt_ana, 'Cobrar a guia do plano.', current_date);
+  -- Retirado do Retomar contato (C15): número fictício, sem tentativa no bot.
+  insert into public.recall_dismissals (clinic_id, phone, flow_label) values (c_a, '+5584999990999', 'Marcar consulta');
   insert into public.patient_finance (clinic_id, patient_id, payer, payer_name, payer_cpf)
     values (c_a, pt_ana, 'other', 'Pedro Souza', '12345678909');
 
