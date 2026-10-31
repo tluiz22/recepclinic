@@ -13,7 +13,7 @@ import Button from "../../../../components/admin/ui/Button.astro";
 import Notice from "../../../../components/admin/ui/Notice.astro";
 import ConfirmDeleteDialog from "../../../../components/admin/ConfirmDeleteDialog.astro";
 import { CONTROL } from "../../../../components/admin/ui/styles";
-import { HEAD_ROW, LABEL, LIST, PANEL, PRIMARY_BUTTON, ROW, ROW_GO, ROW_NAME, SECONDARY_BUTTON } from "../../../../components/admin/config/formStyles";
+import { CHECK, CHOICE, HEAD_ROW, LABEL, LIST, PANEL, PRIMARY_BUTTON, ROW, ROW_GO, ROW_NAME, SECONDARY_BUTTON } from "../../../../components/admin/config/formStyles";
 import { DEFAULT_TIMEZONE, formatInstant } from "../../../../lib/clinicTime";
 import { createUserClient } from "../../../../lib/data/clients";
 import { changesSincePublication, latestPublication, listCategories, listEntries, publicationProblems } from "../../../../lib/data/knowledge/admin";
@@ -36,7 +36,7 @@ const shown = entries.filter(
 );
 const counts = Object.fromEntries(KB_STATUSES.map((s) => [s, entries.filter((e) => e.status === s).length])) as Record<KbStatus, number>;
 const groups = categories.map((c) => ({ ...c, entries: shown.filter((e) => e.categoryKey === c.key) })).filter((g) => g.entries.length);
-const COLS = "lg:grid-cols-[64px_minmax(0,3fr)_150px_110px_40px]";
+const COLS = "lg:grid-cols-[28px_64px_minmax(0,3fr)_150px_110px_40px]";
 ---
 
 <AdminLayout title="Base de conhecimento" platform>
@@ -104,6 +104,34 @@ const COLS = "lg:grid-cols-[64px_minmax(0,3fr)_150px_110px_40px]";
   </form>
 
   {
+    groups.length > 0 && (
+      <form id="lote" method="POST" action="/api/admin/sistema/conhecimento/entrada" class={`mt-4 ${PANEL} flex flex-wrap items-end gap-3`}>
+        <input type="hidden" name="acao" value="situacao_lote" />
+        <label class={`${CHOICE} mr-auto`}>
+          <input type="checkbox" data-mark-all class={CHECK} />
+          {`Marcar todas as ${shown.length} mostradas`}
+        </label>
+        <div>
+          <label for="status-lote" class={LABEL}>Situação das marcadas</label>
+          <select id="status-lote" name="status" class={`mt-1.5 ${CONTROL}`}>
+            {KB_STATUSES.map((s) => <option value={s} selected={s === "active"}>{KB_STATUS_LABELS[s]}</option>)}
+          </select>
+        </div>
+        <button
+          type="submit"
+          class={`${SECONDARY_BUTTON} js-confirm-delete`}
+          data-confirm-title="Mudar a situação das entradas marcadas?"
+          data-confirm-message="Todas as entradas marcadas passam para a situação escolhida. Nada muda no bot até você publicar."
+          data-confirm-label="Mudar"
+          data-confirm-tone="primary"
+        >
+          Mudar situação
+        </button>
+      </form>
+    )
+  }
+
+  {
     groups.length === 0 ? (
       <div class="mt-3 rounded-xl border border-line bg-white px-6 py-7 text-center">
         <p class="text-base font-bold text-ink">Nenhuma entrada encontrada</p>
@@ -115,6 +143,7 @@ const COLS = "lg:grid-cols-[64px_minmax(0,3fr)_150px_110px_40px]";
           <h2 class="mb-2 text-[15px] font-bold text-ink-soft">{group.label}</h2>
           <div class={LIST}>
             <div aria-hidden="true" class={`${HEAD_ROW} ${COLS}`}>
+              <span />
               <span>Código</span>
               <span>Pergunta</span>
               <span>Tipo</span>
@@ -123,7 +152,10 @@ const COLS = "lg:grid-cols-[64px_minmax(0,3fr)_150px_110px_40px]";
             </div>
             {group.entries.map((entry) => (
               <div class={`${ROW} ${COLS}`}>
-                <span class="font-mono text-[15px] font-bold text-ink">{entry.code}</span>
+                <label class="flex items-center gap-2.5 lg:contents">
+                  <input type="checkbox" form="lote" name="codigos" value={entry.code} class={CHECK} aria-label={`Marcar ${entry.code}`} />
+                  <span class="font-mono text-[15px] font-bold text-ink">{entry.code}</span>
+                </label>
                 <a href={`/admin/sistema/conhecimento/${entry.code}`} class={`${ROW_NAME} justify-self-end lg:order-last`} aria-label={`Abrir ${entry.code}`}>
                   <span class={ROW_GO}><Icon name="chevron-right" class="h-5 w-5" strokeWidth={2.2} /></span>
                 </a>
@@ -142,3 +174,11 @@ const COLS = "lg:grid-cols-[64px_minmax(0,3fr)_150px_110px_40px]";
   }
   <ConfirmDeleteDialog />
 </AdminLayout>
+
+<script>
+  // "Marcar todas as mostradas" (situação em lote): marca ou desmarca as caixas da lista filtrada.
+  document.querySelector<HTMLInputElement>("[data-mark-all]")?.addEventListener("change", (event) => {
+    const on = (event.target as HTMLInputElement).checked;
+    document.querySelectorAll<HTMLInputElement>('input[name="codigos"]').forEach((box) => (box.checked = on));
+  });
+</script>

@@ -172,6 +172,16 @@ export async function setEntryStatus(db: DbClient, code: string, status: KbStatu
   unwrapOne(await db.from("kb_entries").update({ status }).eq("code", code).select("code").maybeSingle(), "Entrada da base");
 }
 
+/** Mesma situação para várias entradas de uma vez (cada uma entra no histórico). Devolve quantas mudaram. */
+export async function setEntriesStatus(db: DbClient, codes: string[], status: KbStatus): Promise<number> {
+  const v = new Validation();
+  v.check(KB_STATUSES.includes(status), "status", "Escolha a situação");
+  v.check(codes.length > 0, "codigos", "Marque pelo menos uma entrada");
+  v.throwIfInvalid("Situação das entradas");
+  const rows = unwrap(await db.from("kb_entries").update({ status }).in("code", codes).neq("status", status).select("code"), "Entradas da base");
+  return rows.length;
+}
+
 export async function addSynonym(db: DbClient, code: string, text: string): Promise<void> {
   const clean = text.trim();
   const v = new Validation();
