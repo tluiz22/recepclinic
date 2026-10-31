@@ -1,7 +1,7 @@
 # Base de Conhecimento Global do bot (BC)
 
-> **Retomar daqui (31/out/2026).** Etapa 1 (diagnóstico e arquitetura) apresentada ao cliente; nada de código.
-> Próximo: o cliente decide as questões abertas (seção 9), uma por vez; depois, Etapa 2 (catálogo).
+> **Retomar daqui (31/out/2026).** Etapa 1 (diagnóstico e arquitetura) apresentada; questões decididas (seção 9).
+> Nada de código. Próximo: OK do cliente na Etapa 1 → Etapa 2 (catálogo inicial, para avaliação; nada publicado).
 
 Pedido do cliente em 31/out/2026: uma base global de perguntas frequentes, mantida pelo Suporte RecepClinic e
 compartilhada por todas as clínicas. A base reconhece a pergunta; a resposta sai dos dados da clínica. Ela não
@@ -42,7 +42,7 @@ Cada uma só avança com o OK do cliente.
 | Preparo de exames | `services.preparation_instructions` / arquivo | |
 | Crianças/adolescentes | `clinic_settings.profile` + idade limite | |
 | Domiciliar | item da matriz + locais `home_visit` | |
-| Documentos necessários | **não existe** | lacuna: pede campo novo ou fica "pergunte à recepção" |
+| Documentos necessários | **não existe** | fica de fora (decisão 9.8) |
 | Telefone da clínica | **não existe** (o paciente já está no WhatsApp da clínica) | |
 
 ## 2. Arquitetura proposta
@@ -114,7 +114,7 @@ Permissões (RLS):
 - Busca por função `security invoker` (como `search_insurance_plans`), recebendo só o texto já normalizado.
 
 Ligar por clínica: item novo na matriz (D11), ex. **"Perguntas frequentes no bot"**, dependente de "Bot de
-WhatsApp". Permite ligar primeiro numa clínica de teste do staging (questão aberta 9.5).
+WhatsApp". Permite ligar primeiro numa clínica de teste do staging (decisão 9.5).
 
 ## 5. Administração (Sistema › Base de conhecimento)
 
@@ -168,17 +168,20 @@ Clínica não edita a base. (Os textos da clínica continuam nos campos dela: pa
   para o limite); pergunta clínica; "como remarco" abre o fluxo; ambígua.
 - **Ponta a ponta no staging (Etapa 5):** duas clínicas de teste com dados diferentes.
 
-## 9. Questões abertas (cliente decide, uma por vez)
+## 9. Decisões do cliente (31/out/2026)
 
-1. **Casamento sem IA** (determinístico, recomendado) ou com IA.
-2. **Pergunta no meio de um fluxo** (marcando, remarcando): responder e repetir o passo (recomendado), ou só
-   responder fora dos fluxos.
-3. **Pergunta ambígua:** "Você quis dizer…?" com até 3 opções (recomendado) ou ir direto para a recepção.
-4. **Perguntas não reconhecidas:** guardar o texto (sem telefone, por 90 dias) para o Suporte melhorar a base, ou
-   não guardar.
-5. **Ligar por clínica** pela matriz (recomendado) ou para todas de uma vez quando publicada.
-6. **Convênios:** responder pelo cadastro estruturado (`insurance_plans`, recomendado) e usar o texto livre só
-   quando não houver cadastro; ou só o texto livre como hoje.
-7. **Horário de funcionamento:** usar o horário da recepção (F8.5b) ou criar um campo próprio.
-8. **Documentos necessários:** campo novo da clínica ou sempre "a recepção informa".
-9. **Mensagem para pergunta clínica** (texto exato; inclui orientação de emergência 192/pronto-socorro?).
+1. **Reconhecimento sem IA** (determinístico, seção 2.2).
+2. **Pergunta no meio de um fluxo:** responde e repete o passo; o fluxo continua de onde estava. Número, toque,
+   nome e endereço digitados nunca vão para a BC.
+3. **Pergunta ambígua:** "Você quis dizer…?" com até 3 opções e "Nenhuma destas" (que segue como "não entendi").
+4. **Não reconhecidas:** guarda só o texto, a clínica e a data (sem telefone nem paciente; fora dos passos de
+   nome e endereço), por 90 dias; só o Suporte vê, na página da base.
+5. **Ligar por clínica** pela matriz: item novo "Perguntas frequentes no bot", dependente de "Bot de WhatsApp".
+6. **Convênios:** pelo cadastro (`insurance_plans`: nome e nomes alternativos, só ativos, exceções por
+   profissional) com o item "Convênios" ligado; sem cadastro, o texto livre das Informações; sem nenhum, não
+   responde.
+7. **Horário de funcionamento:** o horário da recepção (F8.5b), sem campo novo.
+8. **Documentos necessários:** sem campo novo; a pergunta não entra na base e segue como "não entendi" de hoje.
+9. **Pergunta clínica:** aviso "Por aqui não conseguimos dar orientação de saúde." (sem a frase da emergência) e
+   a pergunta "Quer falar com a recepção?" (Sim/Não, como o pedido de recepção digitado). Sem recepção no app
+   (fora da coexistência): só o aviso e o menu.
