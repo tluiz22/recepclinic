@@ -705,7 +705,8 @@ retomada fica no README). Para achar algo, buscar por data (ex.: `27/out`), fase
   aprovado para o Início (`relacionamento.comoFunciona.revisar`; os três limites viraram um item só, por causa do máximo
   de 5 itens, e o exemplo passou a 5 consultas). Padrão 5 nos três limites (antes 3, 3 e 2); **decisão do cliente:**
   as clínicas que existem passam para 5 só no limite que ainda está no padrão antigo (recusado: só clínicas novas).
-  Migração `20261105140000_limites_do_bot_padrao_5.sql`. Testes de unidade atualizados.
+  Migração `20261105140000_limites_do_bot_padrao_5.sql`. Testes de unidade atualizados. Staging (31/out): 5 clínicas
+  passaram para 5 (uma com 3, 5 e 5 teve só o 3 trocado); a de 10, 10 e 10 ficou como estava. Publicada no staging.
 - **CI de volta ao verde** (31/out): o job `db` falhava desde `73d703b` (DMED, 30/out) porque o `database.types.ts`
   editado à mão perdeu as 60 linhas `ComputedFields` que o gerador escreve; refeito a partir da versão anterior, sem a
   DMED e com a `recall_dismissals` (`4947dd2`). A C15 também precisou de uma linha no seed para a varredura de
