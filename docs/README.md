@@ -6,7 +6,8 @@
 > **Produção = `main` em 30/out (`71cbbec`):** DMED removida (migração aplicada), cartão do Asaas escondido, Vendas ›
 > Implantação e Tecnologia › Jornada do bot.
 >
-> **Próxima sessão (cliente, 30/out): redesign do menu superior, na `main`.** O faturamento fica parado na branch
+> **Próxima sessão (cliente, 30/out): menu lateral, na `main`** ([`menu-lateral.md`](menu-lateral.md); ler o bloco de
+> retomada dele): decisões M1–M7 tomadas; próximo, a etapa L1. O faturamento fica parado na branch
 > `faturamento` (abaixo).
 >
 > **N0 do Asaas (30/out):** NFS-e pelo Asaas, N0 (seções 13.8 e 13.9 do `planejamento-nfse-asaas.md`; ler o bloco de
