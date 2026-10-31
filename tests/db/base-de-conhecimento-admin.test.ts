@@ -11,6 +11,7 @@ import {
   publish,
   removeSynonym,
   saveEntry,
+  setEntriesStatus,
   setEntryStatus,
   testQuestion,
   type KbEntryInput,
@@ -79,6 +80,18 @@ describe("cadastro", () => {
     await expect(saveEntry(db(), input("ZZZ9"))).rejects.toMatchObject({ code: "invalid" });
     await expect(saveEntry(db(), input("Z8", { answerType: "flow", template: null }))).rejects.toMatchObject({ code: "invalid", fields: { flow: expect.any(String) } });
     expect(await saveEntry(db(), input("Z8", { keywords: ["girafa"], answerType: "template", template: "Site: {site}", sources: ["website"] }))).toBe("Z8");
+  });
+
+  it("situação em lote: só as marcadas, cada uma no histórico; sem nenhuma marcada, recusa", async () => {
+    await expect(setEntriesStatus(db(), [], "active")).rejects.toMatchObject({ code: "invalid", fields: { codigos: expect.any(String) } });
+    expect(await setEntriesStatus(db(), ["Z7", "Z8"], "inactive")).toBe(2);
+    expect(await setEntriesStatus(db(), ["Z7", "Z8"], "inactive")).toBe(0);
+    expect((await getEntry(db(), "Z7"))!.status).toBe("inactive");
+    expect((await getEntry(db(), "F1"))!.status).toBe("draft");
+    const z8 = await getEntry(db(), "Z8");
+    expect((await listRevisions(db(), { entryId: z8!.id })).some((r) => r.changed.includes("situação: draft → inactive"))).toBe(true);
+    await setEntriesStatus(db(), ["Z7"], "approved");
+    await setEntriesStatus(db(), ["Z8"], "draft");
   });
 
   it("histórico com quem fez e o que mudou", async () => {

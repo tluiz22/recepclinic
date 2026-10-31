@@ -309,3 +309,9 @@ Sub-etapas: **3.1** banco → **3.2** núcleo (normalização, casamento, fontes
   marcar, "Marcar", valor no meio da marcação com o passo repetido, "Você quis dizer…?" e "Nenhuma", saúde com e
   sem recepção, item desligado). Sem regressão nos testes do bot. `npm test` 841/841; `test:db` 775/776 (só
   `billing_settings`).
+
+### Ajuste da homologação: situação em lote (31/out/2026)
+
+Pedido do cliente: ativar todas as entradas de uma vez. Na lista de Entradas, caixas de marcar em cada linha, "Marcar
+todas as mostradas" (respeita a busca e o filtro) e "Situação das marcadas" › Mudar situação, com confirmação; cada
+entrada entra no histórico. `setEntriesStatus` em `admin.ts`; teste em `base-de-conhecimento-admin.test.ts`.
