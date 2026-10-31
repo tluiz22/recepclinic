@@ -1,0 +1,1360 @@
+{
+ "entries": [
+  {
+   "code": "C1",
+   "flow": null,
+   "sources": [
+    "insurance"
+   ],
+   "category": "insurance",
+   "keywords": [
+    "convênio",
+    "convênios",
+    "plano",
+    "planos",
+    "plano de saúde",
+    "aceita",
+    "aceitam",
+    "unimed",
+    "hapvida",
+    "amil",
+    "bradesco",
+    "sulamérica",
+    "notredame",
+    "cassi",
+    "geap",
+    "porto seguro"
+   ],
+   "question": "Quais convênios vocês aceitam?",
+   "synonyms": [
+    "aceita hapvida",
+    "aceitam plano de saúde",
+    "atende particular e convênio",
+    "atende pelo plano",
+    "atendem unimed",
+    "meu plano é aceito",
+    "o doutor atende meu plano",
+    "trabalham com convênio"
+   ],
+   "template": null,
+   "answerType": "source",
+   "requiredTerm": null,
+   "offersReception": false
+  },
+  {
+   "code": "CF1",
+   "flow": "confirm",
+   "sources": [],
+   "category": "confirmation",
+   "keywords": [
+    "confirmar",
+    "confirmo",
+    "confirmação",
+    "comparecer"
+   ],
+   "question": "Quero confirmar minha consulta",
+   "synonyms": [
+    "confirmar presença",
+    "confirmo a consulta",
+    "quero confirmar o horário",
+    "vou comparecer"
+   ],
+   "template": null,
+   "answerType": "flow",
+   "requiredTerm": null,
+   "offersReception": false
+  },
+  {
+   "code": "CF2",
+   "flow": "my_appointments",
+   "sources": [],
+   "category": "confirmation",
+   "keywords": [
+    "minha consulta",
+    "meu exame",
+    "meu agendamento",
+    "marcada",
+    "marcado",
+    "que dia",
+    "que horas",
+    "quando"
+   ],
+   "question": "Minha consulta está marcada? Para quando é?",
+   "synonyms": [
+    "esqueci o horário",
+    "que dia é minha consulta",
+    "que horas é minha consulta",
+    "quero ver meu agendamento",
+    "tenho consulta marcada"
+   ],
+   "template": null,
+   "answerType": "flow",
+   "requiredTerm": null,
+   "offersReception": false
+  },
+  {
+   "code": "D1",
+   "flow": null,
+   "sources": [
+    "home_visit"
+   ],
+   "category": "home_visit",
+   "keywords": [
+    "domiciliar",
+    "domicílio",
+    "em casa",
+    "minha casa",
+    "visita"
+   ],
+   "question": "Vocês atendem em casa?",
+   "synonyms": [
+    "atende a domicílio",
+    "atendimento domiciliar",
+    "consulta em casa",
+    "vem até minha casa",
+    "visita em casa"
+   ],
+   "template": null,
+   "answerType": "source",
+   "requiredTerm": null,
+   "offersReception": false
+  },
+  {
+   "code": "E1",
+   "flow": null,
+   "sources": [
+    "addresses"
+   ],
+   "category": "location",
+   "keywords": [
+    "endereço",
+    "onde",
+    "localização",
+    "local",
+    "chego",
+    "chegar",
+    "rua",
+    "bairro",
+    "fica"
+   ],
+   "question": "Qual o endereço da clínica?",
+   "synonyms": [
+    "como chego aí",
+    "endereço do consultório",
+    "fica em qual bairro",
+    "manda a localização",
+    "onde fica",
+    "onde vocês ficam",
+    "ponto de referência",
+    "qual a localização",
+    "qual a rua"
+   ],
+   "template": null,
+   "answerType": "source",
+   "requiredTerm": null,
+   "offersReception": false
+  },
+  {
+   "code": "E2",
+   "flow": null,
+   "sources": [
+    "website"
+   ],
+   "category": "location",
+   "keywords": [
+    "site",
+    "página",
+    "internet"
+   ],
+   "question": "Vocês têm site?",
+   "synonyms": [
+    "endereço do site",
+    "qual o site",
+    "tem página na internet"
+   ],
+   "template": "Nosso site: {site}",
+   "answerType": "template",
+   "requiredTerm": null,
+   "offersReception": false
+  },
+  {
+   "code": "F1",
+   "flow": null,
+   "sources": [
+    "reception_hours",
+    "holiday_today"
+   ],
+   "category": "hours",
+   "keywords": [
+    "horário",
+    "hora",
+    "horas",
+    "abre",
+    "abrem",
+    "fecha",
+    "fecham",
+    "funciona",
+    "funcionamento",
+    "aberto",
+    "sábado",
+    "domingo",
+    "feriado"
+   ],
+   "question": "Qual o horário de funcionamento?",
+   "synonyms": [
+    "abre feriado",
+    "até que horas funciona",
+    "atende domingo",
+    "atendem aos sábados",
+    "está aberto agora",
+    "funciona hoje",
+    "horário da clínica",
+    "qual o horário de atendimento",
+    "que horas começa o atendimento",
+    "que horas fecha",
+    "que horas vocês abrem",
+    "vocês abrem sábado"
+   ],
+   "template": "Nosso horário de atendimento:\n{horario_semana}{aviso_feriado}",
+   "answerType": "template",
+   "requiredTerm": null,
+   "offersReception": false
+  },
+  {
+   "code": "G1",
+   "flow": null,
+   "sources": [],
+   "category": "general",
+   "keywords": [
+    "obrigado",
+    "obrigada",
+    "obg",
+    "valeu",
+    "brigado",
+    "brigada",
+    "tchau",
+    "até logo"
+   ],
+   "question": "Obrigado",
+   "synonyms": [
+    "até logo",
+    "brigado",
+    "obg",
+    "obrigada",
+    "ok obrigado",
+    "só isso",
+    "tchau",
+    "valeu"
+   ],
+   "template": "Por nada! Se precisar, é só mandar mensagem por aqui.",
+   "answerType": "fixed",
+   "requiredTerm": null,
+   "offersReception": false
+  },
+  {
+   "code": "G2",
+   "flow": null,
+   "sources": [],
+   "category": "general",
+   "keywords": [
+    "oi",
+    "olá",
+    "ola",
+    "bom dia",
+    "boa tarde",
+    "boa noite"
+   ],
+   "question": "Oi",
+   "synonyms": [
+    "boa noite",
+    "boa tarde",
+    "bom dia",
+    "oi tudo bem",
+    "olá"
+   ],
+   "template": "Olá!",
+   "answerType": "fixed",
+   "requiredTerm": null,
+   "offersReception": false
+  },
+  {
+   "code": "G3",
+   "flow": null,
+   "sources": [
+    "clinic"
+   ],
+   "category": "general",
+   "keywords": [
+    "robô",
+    "robo",
+    "automático",
+    "automatico",
+    "alguém aí",
+    "pessoa"
+   ],
+   "question": "É um robô?",
+   "synonyms": [
+    "é automático",
+    "é uma pessoa",
+    "estou falando com robô",
+    "tem alguém aí"
+   ],
+   "template": "Sou o atendimento automático {da_clinica}.{dica_recepcao}",
+   "answerType": "template",
+   "requiredTerm": null,
+   "offersReception": false
+  },
+  {
+   "code": "H1",
+   "flow": null,
+   "sources": [],
+   "category": "reception",
+   "keywords": [
+    "médico",
+    "médica",
+    "doutor",
+    "doutora",
+    "dentista",
+    "profissional"
+   ],
+   "question": "Quero falar com o médico",
+   "synonyms": [
+    "falar com a doutora",
+    "falar com o dentista",
+    "mandar mensagem para o médico",
+    "o médico pode me responder"
+   ],
+   "template": "Quem responde por aqui é a recepção. Você quer falar com a recepção?",
+   "answerType": "reception",
+   "requiredTerm": null,
+   "offersReception": false
+  },
+  {
+   "code": "H2",
+   "flow": null,
+   "sources": [
+    "clinic"
+   ],
+   "category": "reception",
+   "keywords": [
+    "telefone",
+    "ligar",
+    "ligação",
+    "número",
+    "fixo"
+   ],
+   "question": "Qual o telefone da clínica?",
+   "synonyms": [
+    "posso ligar",
+    "qual o número para ligar",
+    "tem outro número",
+    "tem telefone fixo"
+   ],
+   "template": "Este WhatsApp é o canal de atendimento {da_clinica}. Pode falar por aqui mesmo.",
+   "answerType": "template",
+   "requiredTerm": null,
+   "offersReception": true
+  },
+  {
+   "code": "I1",
+   "flow": null,
+   "sources": [
+    "age_profile"
+   ],
+   "category": "children",
+   "keywords": [
+    "criança",
+    "crianças",
+    "bebê",
+    "bebês",
+    "recém-nascido",
+    "adolescente",
+    "adolescentes",
+    "idade",
+    "adulto",
+    "adultos",
+    "infantil"
+   ],
+   "question": "Vocês atendem crianças?",
+   "synonyms": [
+    "até que idade",
+    "atende adolescente",
+    "atende adulto",
+    "atende bebê",
+    "atende recém-nascido",
+    "qual a idade que vocês atendem"
+   ],
+   "template": null,
+   "answerType": "source",
+   "requiredTerm": null,
+   "offersReception": false
+  },
+  {
+   "code": "K1",
+   "flow": "cancel",
+   "sources": [],
+   "category": "cancel",
+   "keywords": [
+    "cancelar",
+    "cancelamento",
+    "desmarcar",
+    "desistir",
+    "não vou"
+   ],
+   "question": "Quero cancelar",
+   "synonyms": [
+    "cancelar consulta",
+    "cancelar exame",
+    "desistir da consulta",
+    "desmarcar",
+    "não vou mais",
+    "não vou poder ir"
+   ],
+   "template": null,
+   "answerType": "flow",
+   "requiredTerm": null,
+   "offersReception": false
+  },
+  {
+   "code": "L1",
+   "flow": null,
+   "sources": [
+    "reminder"
+   ],
+   "category": "reminders",
+   "keywords": [
+    "lembrete",
+    "lembretes",
+    "lembrar",
+    "avisam",
+    "aviso"
+   ],
+   "question": "Vou receber lembrete?",
+   "synonyms": [
+    "como recebo o lembrete",
+    "mandam mensagem antes da consulta",
+    "quando chega o lembrete",
+    "vocês avisam antes"
+   ],
+   "template": "Sim! Enviamos um lembrete por aqui {quando_lembrete}, com os botões para confirmar, remarcar ou cancelar.",
+   "answerType": "template",
+   "requiredTerm": null,
+   "offersReception": false
+  },
+  {
+   "code": "M1",
+   "flow": "book_consultation",
+   "sources": [],
+   "category": "booking",
+   "keywords": [
+    "marcar",
+    "agendar",
+    "agendamento",
+    "consulta",
+    "vaga",
+    "vagas",
+    "horário livre",
+    "encaixar"
+   ],
+   "question": "Quero marcar uma consulta",
+   "synonyms": [
+    "agendar consulta",
+    "como faço para marcar",
+    "como funciona o agendamento",
+    "marcar horário",
+    "marcar para meu filho",
+    "marcar para outra pessoa",
+    "primeira consulta",
+    "qual o próximo horário",
+    "quero uma consulta",
+    "tem horário",
+    "tem horário amanhã",
+    "tem vaga"
+   ],
+   "template": null,
+   "answerType": "flow",
+   "requiredTerm": null,
+   "offersReception": false
+  },
+  {
+   "code": "P1",
+   "flow": null,
+   "sources": [
+    "professionals"
+   ],
+   "category": "professionals",
+   "keywords": [
+    "profissionais",
+    "profissional",
+    "médico",
+    "médicos",
+    "médica",
+    "médicas",
+    "dentista",
+    "dentistas",
+    "doutor",
+    "doutora",
+    "dr",
+    "dra",
+    "quem atende"
+   ],
+   "question": "Quais profissionais atendem?",
+   "synonyms": [
+    "quais dentistas",
+    "quais médicos",
+    "qual o nome do médico",
+    "quem atende",
+    "quem é a doutora",
+    "quem são os profissionais"
+   ],
+   "template": null,
+   "answerType": "source",
+   "requiredTerm": null,
+   "offersReception": false
+  },
+  {
+   "code": "P2",
+   "flow": null,
+   "sources": [
+    "professionals"
+   ],
+   "category": "professionals",
+   "keywords": [
+    "atende",
+    "atendem",
+    "especialidade"
+   ],
+   "question": "O(a) {profissional} atende aí?",
+   "synonyms": [
+    "a doutora atende",
+    "atende em qual dia",
+    "o doutor ainda atende",
+    "qual a especialidade do doutor"
+   ],
+   "template": null,
+   "answerType": "source",
+   "requiredTerm": "professional",
+   "offersReception": false
+  },
+  {
+   "code": "P3",
+   "flow": null,
+   "sources": [
+    "council_registration"
+   ],
+   "category": "professionals",
+   "keywords": [
+    "crm",
+    "cro",
+    "crp",
+    "crefito",
+    "crn",
+    "rqe",
+    "registro",
+    "conselho"
+   ],
+   "question": "Qual o CRM do(a) {profissional}?",
+   "synonyms": [
+    "crm da doutora",
+    "cro do dentista",
+    "número do conselho",
+    "o médico tem rqe",
+    "qual o registro do doutor"
+   ],
+   "template": null,
+   "answerType": "source",
+   "requiredTerm": null,
+   "offersReception": false
+  },
+  {
+   "code": "PR1",
+   "flow": null,
+   "sources": [
+    "preparation"
+   ],
+   "category": "preparation",
+   "keywords": [
+    "preparo",
+    "preparação",
+    "jejum",
+    "preparar",
+    "antes do exame"
+   ],
+   "question": "Qual o preparo do exame?",
+   "synonyms": [
+    "como me preparar para o exame",
+    "o que fazer antes do exame",
+    "posso comer antes do exame",
+    "precisa de jejum",
+    "quantas horas de jejum",
+    "tem preparo"
+   ],
+   "template": null,
+   "answerType": "source",
+   "requiredTerm": null,
+   "offersReception": false
+  },
+  {
+   "code": "R1",
+   "flow": "reschedule",
+   "sources": [],
+   "category": "reschedule",
+   "keywords": [
+    "remarcar",
+    "remarcação",
+    "mudar",
+    "trocar",
+    "adiar",
+    "outro dia",
+    "outro horário"
+   ],
+   "question": "Quero remarcar",
+   "synonyms": [
+    "adiar a consulta",
+    "como faço para remarcar",
+    "mudar a data",
+    "mudar o dia",
+    "não vou poder ir",
+    "não vou poder ir nesse horário, quero outro",
+    "passar para outro dia",
+    "trocar o horário"
+   ],
+   "template": null,
+   "answerType": "flow",
+   "requiredTerm": null,
+   "offersReception": false
+  },
+  {
+   "code": "S1",
+   "flow": null,
+   "sources": [
+    "services"
+   ],
+   "category": "services",
+   "keywords": [
+    "serviços",
+    "consultas",
+    "exames",
+    "procedimentos",
+    "tratamentos",
+    "atendimentos",
+    "fazem",
+    "oferecem"
+   ],
+   "question": "Quais serviços vocês oferecem?",
+   "synonyms": [
+    "o que vocês fazem",
+    "quais consultas vocês têm",
+    "quais exames vocês fazem",
+    "quais procedimentos",
+    "quais tratamentos",
+    "que tipo de atendimento tem"
+   ],
+   "template": null,
+   "answerType": "source",
+   "requiredTerm": null,
+   "offersReception": false
+  },
+  {
+   "code": "S2",
+   "flow": null,
+   "sources": [
+    "services"
+   ],
+   "category": "services",
+   "keywords": [
+    "fazem",
+    "tem",
+    "atendem",
+    "realizam"
+   ],
+   "question": "Vocês fazem {serviço}?",
+   "synonyms": [
+    "fazem exame de",
+    "realizam",
+    "tem consulta de",
+    "vocês atendem",
+    "vocês fazem"
+   ],
+   "template": null,
+   "answerType": "source",
+   "requiredTerm": "service",
+   "offersReception": false
+  },
+  {
+   "code": "S3",
+   "flow": null,
+   "sources": [
+    "professionals"
+   ],
+   "category": "services",
+   "keywords": [
+    "especialidade",
+    "especialidades",
+    "especialista",
+    "especialistas"
+   ],
+   "question": "Quais especialidades vocês têm?",
+   "synonyms": [
+    "quais especialidades",
+    "quais especialistas",
+    "que tipo de dentista tem",
+    "que tipo de médico tem"
+   ],
+   "template": null,
+   "answerType": "source",
+   "requiredTerm": null,
+   "offersReception": false
+  },
+  {
+   "code": "S4",
+   "flow": null,
+   "sources": [
+    "professionals"
+   ],
+   "category": "services",
+   "keywords": [
+    "tem",
+    "atende",
+    "atendem"
+   ],
+   "question": "Vocês têm {especialidade}?",
+   "synonyms": [
+    "atende a especialidade",
+    "tem algum especialista",
+    "tem dentista de criança",
+    "tem médico de pulmão",
+    "tem pediatra"
+   ],
+   "template": null,
+   "answerType": "source",
+   "requiredTerm": "specialty",
+   "offersReception": false
+  },
+  {
+   "code": "T1",
+   "flow": "book_return",
+   "sources": [],
+   "category": "return_visit",
+   "keywords": [
+    "retorno",
+    "revisão",
+    "volta"
+   ],
+   "question": "Quero marcar retorno",
+   "synonyms": [
+    "agendar retorno",
+    "consulta de revisão",
+    "levar o exame para o médico ver",
+    "marcar a volta"
+   ],
+   "template": null,
+   "answerType": "flow",
+   "requiredTerm": null,
+   "offersReception": false
+  },
+  {
+   "code": "T2",
+   "flow": null,
+   "sources": [
+    "return_visit"
+   ],
+   "category": "return_visit",
+   "keywords": [
+    "prazo",
+    "dias",
+    "até quando",
+    "pago",
+    "paga",
+    "custo",
+    "grátis",
+    "gratuito",
+    "valor"
+   ],
+   "question": "Qual o prazo do retorno? O retorno é pago?",
+   "synonyms": [
+    "até quando posso voltar",
+    "preciso pagar o retorno",
+    "quantos dias tenho para o retorno",
+    "retorno é gratuito",
+    "retorno tem custo"
+   ],
+   "template": null,
+   "answerType": "source",
+   "requiredTerm": null,
+   "offersReception": false
+  },
+  {
+   "code": "V1",
+   "flow": null,
+   "sources": [
+    "prices",
+    "payment"
+   ],
+   "category": "prices",
+   "keywords": [
+    "valor",
+    "valores",
+    "preço",
+    "preços",
+    "custa",
+    "custo",
+    "quanto é",
+    "quanto fica",
+    "cobra",
+    "cobram",
+    "particular"
+   ],
+   "question": "Quanto custa a consulta?",
+   "synonyms": [
+    "preço do atendimento",
+    "qual o preço",
+    "qual o valor",
+    "quanto custa com o doutor",
+    "quanto custa o exame",
+    "quanto é",
+    "quanto fica",
+    "valor da consulta",
+    "valor particular"
+   ],
+   "template": null,
+   "answerType": "source",
+   "requiredTerm": null,
+   "offersReception": false
+  },
+  {
+   "code": "V2",
+   "flow": null,
+   "sources": [
+    "payment"
+   ],
+   "category": "prices",
+   "keywords": [
+    "pagamento",
+    "pagar",
+    "cartão",
+    "crédito",
+    "débito",
+    "pix",
+    "dinheiro",
+    "parcela",
+    "parcelar",
+    "parcelado",
+    "à vista"
+   ],
+   "question": "Quais as formas de pagamento?",
+   "synonyms": [
+    "aceita cartão",
+    "aceita débito",
+    "aceita dinheiro",
+    "aceita pix",
+    "como posso pagar",
+    "paga na hora",
+    "pode parcelar",
+    "tem desconto à vista"
+   ],
+   "template": "Formas de pagamento: {pagamento}",
+   "answerType": "template",
+   "requiredTerm": null,
+   "offersReception": false
+  },
+  {
+   "code": "X1",
+   "flow": "book_exam",
+   "sources": [],
+   "category": "exams",
+   "keywords": [
+    "exame",
+    "exames",
+    "procedimento",
+    "procedimentos"
+   ],
+   "question": "Quero marcar um exame",
+   "synonyms": [
+    "agendar exame",
+    "fazer um exame",
+    "marcar procedimento",
+    "tem horário para exame"
+   ],
+   "template": null,
+   "answerType": "flow",
+   "requiredTerm": null,
+   "offersReception": false
+  },
+  {
+   "code": "X2",
+   "flow": null,
+   "sources": [],
+   "category": "exams",
+   "keywords": [
+    "resultado",
+    "resultados",
+    "laudo",
+    "pronto",
+    "pronta",
+    "entrega"
+   ],
+   "question": "O resultado do meu exame já saiu?",
+   "synonyms": [
+    "buscar resultado",
+    "como pego o resultado",
+    "entrega do exame",
+    "laudo pronto",
+    "meu exame ficou pronto",
+    "quando sai o resultado"
+   ],
+   "template": "Sobre resultados de exames, a recepção pode te ajudar. Você quer falar com a recepção?",
+   "answerType": "reception",
+   "requiredTerm": null,
+   "offersReception": false
+  }
+ ],
+ "specialties": [
+  {
+   "name": "Alergia e imunologia",
+   "terms": [
+    "alergista",
+    "imunologista"
+   ]
+  },
+  {
+   "name": "Cardiologia",
+   "terms": [
+    "cardiologista",
+    "cardio",
+    "médico do coração"
+   ]
+  },
+  {
+   "name": "Cirurgia bucomaxilofacial",
+   "terms": [
+    "bucomaxilo",
+    "siso",
+    "tirar o siso"
+   ]
+  },
+  {
+   "name": "Clínica médica",
+   "terms": [
+    "clínico geral",
+    "médico geral",
+    "clínico"
+   ]
+  },
+  {
+   "name": "Dermatologia",
+   "terms": [
+    "dermatologista",
+    "dermato",
+    "médico de pele"
+   ]
+  },
+  {
+   "name": "Endocrinologia",
+   "terms": [
+    "endocrinologista",
+    "endócrino",
+    "endocrino",
+    "tireoide"
+   ]
+  },
+  {
+   "name": "Endodontia",
+   "terms": [
+    "endodontista",
+    "canal",
+    "tratamento de canal"
+   ]
+  },
+  {
+   "name": "Fisioterapia",
+   "terms": [
+    "fisioterapeuta",
+    "fisio"
+   ]
+  },
+  {
+   "name": "Fonoaudiologia",
+   "terms": [
+    "fonoaudiólogo",
+    "fonoaudióloga",
+    "fono"
+   ]
+  },
+  {
+   "name": "Gastroenterologia",
+   "terms": [
+    "gastroenterologista",
+    "gastro",
+    "médico do estômago"
+   ]
+  },
+  {
+   "name": "Geriatria",
+   "terms": [
+    "geriatra",
+    "médico de idoso"
+   ]
+  },
+  {
+   "name": "Ginecologia e obstetrícia",
+   "terms": [
+    "ginecologista",
+    "gineco",
+    "GO",
+    "obstetra",
+    "pré-natal"
+   ]
+  },
+  {
+   "name": "Hebiatria",
+   "terms": [
+    "hebiatra",
+    "médico de adolescente"
+   ]
+  },
+  {
+   "name": "Implantodontia",
+   "terms": [
+    "implante",
+    "implante dentário"
+   ]
+  },
+  {
+   "name": "Nefrologia",
+   "terms": [
+    "nefrologista",
+    "médico do rim"
+   ]
+  },
+  {
+   "name": "Neurologia",
+   "terms": [
+    "neurologista",
+    "neuro"
+   ]
+  },
+  {
+   "name": "Neuropediatria",
+   "terms": [
+    "neuropediatra",
+    "neuro infantil"
+   ]
+  },
+  {
+   "name": "Nutrição",
+   "terms": [
+    "nutricionista",
+    "nutri",
+    "dieta"
+   ]
+  },
+  {
+   "name": "Odontologia (clínica geral)",
+   "terms": [
+    "dentista",
+    "clínico geral dentista"
+   ]
+  },
+  {
+   "name": "Odontopediatria",
+   "terms": [
+    "odontopediatra",
+    "dentista de criança",
+    "dentista infantil"
+   ]
+  },
+  {
+   "name": "Oftalmologia",
+   "terms": [
+    "oftalmologista",
+    "oftalmo",
+    "oculista",
+    "médico de olho",
+    "vista"
+   ]
+  },
+  {
+   "name": "Ortodontia",
+   "terms": [
+    "ortodontista",
+    "aparelho",
+    "aparelho nos dentes"
+   ]
+  },
+  {
+   "name": "Ortopedia",
+   "terms": [
+    "ortopedista",
+    "médico de osso",
+    "coluna",
+    "joelho"
+   ]
+  },
+  {
+   "name": "Otorrinolaringologia",
+   "terms": [
+    "otorrino",
+    "médico de ouvido",
+    "nariz e garganta"
+   ]
+  },
+  {
+   "name": "Pediatria",
+   "terms": [
+    "pediatra",
+    "médico de criança",
+    "médico infantil"
+   ]
+  },
+  {
+   "name": "Periodontia",
+   "terms": [
+    "periodontista",
+    "gengiva"
+   ]
+  },
+  {
+   "name": "Pneumologia",
+   "terms": [
+    "pneumologista",
+    "pneumo",
+    "médico do pulmão",
+    "respiração"
+   ]
+  },
+  {
+   "name": "Pneumologia pediátrica",
+   "terms": [
+    "pneumopediatra",
+    "pneumo infantil",
+    "médico do pulmão de criança"
+   ]
+  },
+  {
+   "name": "Prótese dentária",
+   "terms": [
+    "prótese",
+    "dentadura"
+   ]
+  },
+  {
+   "name": "Psicologia",
+   "terms": [
+    "psicólogo",
+    "psicóloga",
+    "terapia",
+    "terapeuta"
+   ]
+  },
+  {
+   "name": "Psiquiatria",
+   "terms": [
+    "psiquiatra"
+   ]
+  },
+  {
+   "name": "Reumatologia",
+   "terms": [
+    "reumatologista",
+    "reumato"
+   ]
+  },
+  {
+   "name": "Terapia ocupacional",
+   "terms": [
+    "terapeuta ocupacional",
+    "TO"
+   ]
+  },
+  {
+   "name": "Urologia",
+   "terms": [
+    "urologista",
+    "uro"
+   ]
+  }
+ ],
+ "clinicalTerms": [
+  {
+   "term": "consulta de alergia",
+   "group": "exception"
+  },
+  {
+   "term": "ficou pronto",
+   "group": "exception"
+  },
+  {
+   "term": "jejum",
+   "group": "exception"
+  },
+  {
+   "term": "preparo",
+   "group": "exception"
+  },
+  {
+   "term": "resultado saiu",
+   "group": "exception"
+  },
+  {
+   "term": "antibiótico",
+   "group": "medicine"
+  },
+  {
+   "term": "dosagem",
+   "group": "medicine"
+  },
+  {
+   "term": "dose",
+   "group": "medicine"
+  },
+  {
+   "term": "gotas",
+   "group": "medicine"
+  },
+  {
+   "term": "medicamento",
+   "group": "medicine"
+  },
+  {
+   "term": "mg",
+   "group": "medicine"
+  },
+  {
+   "term": "pomada",
+   "group": "medicine"
+  },
+  {
+   "term": "posso dar",
+   "group": "medicine"
+  },
+  {
+   "term": "posso tomar",
+   "group": "medicine"
+  },
+  {
+   "term": "reação da vacina",
+   "group": "medicine"
+  },
+  {
+   "term": "remédio",
+   "group": "medicine"
+  },
+  {
+   "term": "xarope",
+   "group": "medicine"
+  },
+  {
+   "term": "é grave",
+   "group": "result"
+  },
+  {
+   "term": "é normal",
+   "group": "result"
+  },
+  {
+   "term": "está normal",
+   "group": "result"
+  },
+  {
+   "term": "interpretar",
+   "group": "result"
+  },
+  {
+   "term": "meu exame deu",
+   "group": "result"
+  },
+  {
+   "term": "o que eu tenho",
+   "group": "result"
+  },
+  {
+   "term": "o que pode ser",
+   "group": "result"
+  },
+  {
+   "term": "o resultado deu",
+   "group": "result"
+  },
+  {
+   "term": "valor de referência",
+   "group": "result"
+  },
+  {
+   "term": "alergia",
+   "group": "symptom"
+  },
+  {
+   "term": "bateu a cabeça",
+   "group": "symptom"
+  },
+  {
+   "term": "caiu",
+   "group": "symptom"
+  },
+  {
+   "term": "cansaço",
+   "group": "symptom"
+  },
+  {
+   "term": "coceira",
+   "group": "symptom"
+  },
+  {
+   "term": "convulsão",
+   "group": "symptom"
+  },
+  {
+   "term": "desmaio",
+   "group": "symptom"
+  },
+  {
+   "term": "diarreia",
+   "group": "symptom"
+  },
+  {
+   "term": "dor",
+   "group": "symptom"
+  },
+  {
+   "term": "falta de ar",
+   "group": "symptom"
+  },
+  {
+   "term": "febre",
+   "group": "symptom"
+  },
+  {
+   "term": "inchaço",
+   "group": "symptom"
+  },
+  {
+   "term": "inchado",
+   "group": "symptom"
+  },
+  {
+   "term": "machucou",
+   "group": "symptom"
+  },
+  {
+   "term": "mancha",
+   "group": "symptom"
+  },
+  {
+   "term": "sangramento",
+   "group": "symptom"
+  },
+  {
+   "term": "sangrando",
+   "group": "symptom"
+  },
+  {
+   "term": "tosse",
+   "group": "symptom"
+  },
+  {
+   "term": "vômito",
+   "group": "symptom"
+  }
+ ]
+}

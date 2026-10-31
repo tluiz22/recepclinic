@@ -2,6 +2,7 @@ import type { ClinicProfile } from "../../../vocabulary";
 import { designationText, designationTitle, type Designation } from "../../../designation";
 import { formatCentsBRL } from "../../../money";
 import type { ListRow, ListSection, ReplyButton } from "../send";
+import type { BotService } from "./catalog";
 import { BACK_TO_MENU_ID, TALK_TO_RECEPTION_ID } from "./input";
 
 // Textos do bot (F6.3), aprovados pelo cliente em 07/out/2026: os do piloto,
@@ -264,6 +265,14 @@ export const INFO_ITEMS = {
 } as const;
 
 export type PriceLine = { name: string; lines: string[] };
+
+/** Valor do serviço por tipo de local (Informações › Valores e perguntas frequentes); zero = "Sem custo". */
+export function servicePriceLines(service: Pick<BotService, "locationPrices" | "priceCents">): string[] {
+  const types = Object.keys(service.locationPrices) as (keyof typeof LOCATION_LABELS)[];
+  const value = (cents: number) => (cents === 0 ? "Sem custo" : price(cents)!);
+  if (types.length <= 1) return [value(types.length ? service.locationPrices[types[0]]! : service.priceCents)];
+  return types.map((type) => `${LOCATION_LABELS[type]}: ${value(service.locationPrices[type]!)}`);
+}
 
 export function pricesText(groups: PriceLine[], paymentInfo: string | null): string {
   const blocks = groups.map((g) => `*${g.name}*\n${g.lines.join("\n")}`);

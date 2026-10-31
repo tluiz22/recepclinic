@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { KB_FLOWS, KB_REQUIRED_TERMS, KB_SOURCES } from "../../src/lib/knowledge";
+import { KB_FLOWS, KB_REQUIRED_TERMS, KB_SOURCES } from "../../src/lib/knowledge/lists";
+import fixture from "../../src/lib/knowledge/__fixtures__/catalogo-inicial.json";
 import {
   addMember,
   adminClient,
@@ -75,6 +76,30 @@ describe("catálogo inicial", () => {
     expect(specialties).toBe(34);
     const { count: categories } = await adminClient().from("kb_categories").select("*", { count: "exact", head: true });
     expect(categories).toBe(18);
+  });
+
+  it("o fixture dos testes do reconhecimento é o catálogo do banco", async () => {
+    const { data: entries } = await adminClient().from("kb_entries").select("code, question, keywords, answer_type, template, sources, flow, required_term, offers_reception, kb_synonyms ( text )").not("code", "like", "Z%").order("code");
+    const fromDb = entries!.map((e) => ({
+      code: e.code,
+      question: e.question,
+      keywords: e.keywords,
+      answerType: e.answer_type,
+      template: e.template,
+      sources: e.sources,
+      flow: e.flow,
+      requiredTerm: e.required_term,
+      offersReception: e.offers_reception,
+      synonyms: (e.kb_synonyms as { text: string }[]).map((s) => s.text).sort(),
+    }));
+    const fromFixture = [...fixture.entries]
+      .sort((x, y) => x.code.localeCompare(y.code))
+      .map(({ category: _category, synonyms, ...rest }) => ({ ...rest, synonyms: [...synonyms].sort() }));
+    expect(fromFixture).toEqual(fromDb.map((e) => ({ ...e })).sort((x, y) => x.code.localeCompare(y.code)));
+    const { data: specialties } = await adminClient().from("kb_specialties").select("name");
+    expect(fixture.specialties.map((s) => s.name).sort()).toEqual(specialties!.map((s) => s.name).sort());
+    const { data: terms } = await adminClient().from("kb_clinical_terms").select("term");
+    expect(fixture.clinicalTerms.map((t) => t.term).sort()).toEqual(terms!.map((t) => t.term).sort());
   });
 
   it("as listas de fontes, fluxos e termos do banco são as do código", async () => {

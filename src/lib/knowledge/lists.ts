@@ -48,3 +48,16 @@ export const KB_STATUS_LABELS: Record<KbStatus, string> = {
   active: "Ativo",
   inactive: "Inativo",
 };
+
+/**
+ * Variáveis que cada fonte preenche nos modelos ({variável}). Variável fora
+ * desta lista, ou de fonte que a entrada não usa, não publica.
+ */
+export const KB_SOURCE_VARIABLES: Partial<Record<KbSource, readonly string[]>> = {
+  clinic: ["da_clinica", "dica_recepcao"],
+  reception_hours: ["horario_semana"],
+  holiday_today: ["aviso_feriado"],
+  website: ["site"],
+  payment: ["pagamento"],
+  reminder: ["quando_lembrete"],
+};

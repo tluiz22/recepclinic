@@ -115,20 +115,13 @@ async function showInfo(b: Bot, notUnderstood = false): Promise<void> {
   await go(b, "INFO_MENU");
 }
 
-function priceLines(service: BotService): string[] {
-  const types = Object.keys(service.locationPrices) as (keyof typeof t.LOCATION_LABELS)[];
-  const value = (cents: number) => (cents === 0 ? "Sem custo" : t.price(cents)!);
-  if (types.length <= 1) return [value(types.length ? service.locationPrices[types[0]]! : service.priceCents)];
-  return types.map((type) => `${t.LOCATION_LABELS[type]}: ${value(service.locationPrices[type]!)}`);
-}
-
 export async function handleInfo(b: Bot, selection: Selection): Promise<void> {
   const catalog = await b.catalog();
   const keys = await infoItems(b);
   const choice = pick(selection, keys, (key) => `info_${key}`);
   switch (choice) {
     case "prices":
-      await say(b, "bot_info_prices", t.pricesText(catalog.services.map((s) => ({ name: s.name, lines: priceLines(s) })), b.clinic.paymentInfo));
+      await say(b, "bot_info_prices", t.pricesText(catalog.services.map((s) => ({ name: s.name, lines: t.servicePriceLines(s) })), b.clinic.paymentInfo));
       break;
     case "insurance":
       await say(b, "bot_info_insurance", b.clinic.insuranceInfo!);
