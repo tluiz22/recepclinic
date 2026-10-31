@@ -2,8 +2,8 @@
 
 > **Retomar daqui (31/out/2026).** Etapas 1 e 2 aprovadas (catálogo em
 > [`base-de-conhecimento-catalogo.md`](base-de-conhecimento-catalogo.md)). Etapa 3 na branch `base-conhecimento`
-> (só local): 3.1 (banco) validada; **3.2 (núcleo) feita**, aguarda validação do cliente. Depois: 3.3 (página do
-> Suporte). Detalhe na seção 10.
+> (só local): 3.1 e 3.2 validadas; **3.3 (página do Suporte) feita**, aguarda validação do cliente. Depois:
+> Etapa 4 (integração com o bot). Detalhe na seção 10.
 
 Pedido do cliente em 31/out/2026: uma base global de perguntas frequentes, mantida pelo Suporte RecepClinic e
 compartilhada por todas as clínicas. A base reconhece a pergunta; a resposta sai dos dados da clínica. Ela não
@@ -253,3 +253,26 @@ Sub-etapas: **3.1** banco → **3.2** núcleo (normalização, casamento, fontes
   cache), `base-de-conhecimento-fontes.test.ts` (5, banco: duas clínicas reais, alteração vale na hora, credencial
   de uma clínica não lê a outra) e o fixture do catálogo conferido com o banco. `npm test` 841/841; `test:db`
   752/753 (só `billing_settings`, da `faturamento`).
+
+### 3.3 — Página do Suporte (31/out/2026, `91e8a7e`)
+
+- **Sistema › Base de conhecimento** (menu do Suporte), com abas:
+  - **Entradas:** lista por categoria, busca e filtro por situação; painel da publicação (versão, data, quem, quantas
+    ativas, alterações depois da última) e **Publicar** (com confirmação; desligado sem entrada ativa ou com modelo
+    sem fonte). "Nova entrada" cria em rascunho.
+  - **Entrada** (`/admin/sistema/conhecimento/<código>`): pergunta, categoria, palavras-chave, termo exigido,
+    orientação (só o Suporte vê), tipo, texto, fontes, fluxo, "oferece a recepção"; situação; sinônimos (incluir e
+    tirar, com confirmação); histórico da entrada.
+  - **Testar:** clínica + frase + base (em edição, tudo menos as inativas, ou a publicada) → entrada reconhecida,
+    pontuação, até 5 alternativas, nomes da clínica encontrados, filtro clínico e o que o paciente receberia. Nada é
+    enviado; a leitura da clínica entra no registro de leituras do Suporte (`log_platform_access`).
+  - **Especialidades e filtro:** editar o dicionário (nome, termos, ativa) e os termos do filtro clínico por grupo
+    (incluir, ativar, desativar).
+  - **Não reconhecidas:** texto, clínica e data (90 dias).
+  - **Histórico:** últimas 200 alterações, com quem fez e o que mudou.
+- Dados: `src/lib/data/knowledge/admin.ts` (validação: código, categoria, texto por tipo, fonte, fluxo, palavra-chave
+  ou termo exigido, variável sem fonte); rotas em `src/pages/api/admin/sistema/conhecimento/`.
+- Reconhecimento: mensagem só com palavras-chave da entrada ("horário?") passa a valer (0,65).
+- Testes: `base-de-conhecimento-admin.test.ts` (9: cadastro e validação, histórico, publicação barrada, versão e
+  alterações, testador nas duas bases com registro da leitura, clínica sem acesso, não reconhecidas sem telefone).
+  Telas conferidas no navegador (local, Suporte). `npm test` 841/841; `test:db` 761/762 (só `billing_settings`).
