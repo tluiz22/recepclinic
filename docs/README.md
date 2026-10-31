@@ -3,8 +3,9 @@
 > **Estado atual (retomar daqui), 30/out/2026.** Histórico completo em [`historico.md`](historico.md) (não ler
 > na retomada; buscar por data, fase ou commit quando precisar).
 >
-> **Produção = `main` em 31/out (`fd4668c`):** menu lateral (L1–L3), C14 "Alterar" no "Mais" e C15 Retomar contato sem
-> alertas e com "Retirar da lista" (migração aplicada); publicados a pedido do cliente antes da validação no staging.
+> **Produção = `main` em 31/out (`20c2239`):** menu lateral (L1–L3), C14 "Alterar" no "Mais", C15 Retomar contato sem
+> alertas e com "Retirar da lista" e C16 ("Como funciona?" de Contatos para revisar; limites do bot com padrão 5);
+> publicados a pedido do cliente antes da validação no staging.
 >
 > **Próxima sessão (cliente, 30/out): menu lateral, na `main`** ([`menu-lateral.md`](menu-lateral.md); ler o bloco de
 > retomada dele): L1–L3 na produção (31/out); o cliente valida. Em seguida,
