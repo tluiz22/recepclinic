@@ -111,7 +111,7 @@ export const JOURNEY: JourneySection[] = [
                 "Não",
                 [
                   bot("Manda o link para escolher dia e horário", "O link vale 30 minutos."),
-                  page("Escolhe o dia e o horário livres e confirma"),
+                  page("Escolhe o dia e o horário livres e confirma", "Antes de gravar, confirma num quadro com o atendimento, o dia e o horário, o profissional e o local."),
                   auto("Confirmação da marcação, com dia, hora e local"),
                   auto("Preparo do exame (texto ou arquivo) ou orientações da consulta", "Quando o serviço tem."),
                 ],
@@ -135,7 +135,7 @@ export const JOURNEY: JourneySection[] = [
           [
             bot("Prazo e \"Para qual paciente é o retorno?\"", "Sem falar de valor."),
             bot("Manda o link, com datas só até o fim do prazo"),
-            page("Escolhe o dia e o horário"),
+            page("Escolhe o dia e o horário e confirma", "Antes de gravar, confirma num quadro com o atendimento, o dia e o horário, o profissional e o local."),
             auto("Confirmação da marcação"),
           ],
         ],
@@ -155,7 +155,7 @@ export const JOURNEY: JourneySection[] = [
           [
             bot("Domiciliar: confirma o endereço. Retorno: confere o prazo"),
             bot("Manda o link para o novo dia e horário"),
-            page("Escolhe o novo horário"),
+            page("Escolhe o novo horário e confirma", "O quadro de confirmação mostra o horário atual e o novo."),
             auto("Confirmação da remarcação"),
           ],
         ],

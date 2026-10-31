@@ -88,7 +88,8 @@ Consultas › Marcar consulta, ou Exames › Marcar exame. O dia e o horário s�
         - **Sim:** 🤖 Avisa o dia marcado e indica Remarcar.
         - **Não**
           1. 🤖 Manda o link para escolher dia e horário. *O link vale 30 minutos.*
-          2. 🌐 Escolhe o dia e o horário livres e confirma.
+          2. 🌐 Escolhe o dia e o horário livres e confirma. *Antes de gravar, um quadro de confirmação com o atendimento,
+             o dia e o horário, o profissional e o local.*
           3. ✉️ Confirmação da marcação, com dia, hora e local.
           4. ✉️ Preparo do exame (texto ou arquivo) ou orientações da consulta. *Quando o serviço tem.*
 
@@ -101,7 +102,7 @@ Consultas › Marcar retorno. Só para quem tem direito, com o profissional da c
    - **Sim**
      1. 🤖 Prazo e "Para qual paciente é o retorno?" *Sem falar de valor.*
      2. 🤖 Manda o link, com datas só até o fim do prazo.
-     3. 🌐 Escolhe o dia e o horário.
+     3. 🌐 Escolhe o dia e o horário e confirma no quadro.
      4. ✉️ Confirmação da marcação.
 
 ## 4. Remarcar ou cancelar
@@ -113,7 +114,7 @@ Pelo menu (Consultas ou Exames), pela entrada da conversa ou pelos botões do le
    - **Remarcar**
      1. 🤖 Domiciliar: confirma o endereço. Retorno: confere o prazo.
      2. 🤖 Manda o link para o novo dia e horário.
-     3. 🌐 Escolhe o novo horário.
+     3. 🌐 Escolhe o novo horário e confirma no quadro (horário atual → novo).
      4. ✉️ Confirmação da remarcação.
    - **Cancelar**
      1. 🤖 "Confirma o cancelamento?" Sim ou Não.
