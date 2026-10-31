@@ -163,8 +163,12 @@ O número continua no WhatsApp Business da recepção. O bot sai de cena quando 
    - **O paciente pede:** 🧑 Toca em "Falar com a recepção" (ou escreve pedindo). *Escrito: o bot confirma antes.*
    - **O bot não entende:** 🤖 Na 4ª mensagem seguida que não entende, passa para a clínica. *Áudio, foto e figurinha:
      o bot avisa que só lê texto.*
-   - **Não há o que marcar:** 🤖 Sem serviço ou sem horário livre: avisa que a recepção responde.
+   - **Não há o que marcar:** 🤖 Sem serviço, sem horário livre ou convênio não atendido sem particular: avisa que a
+     recepção responde.
 2. 🤖 "Vou te transferir para a recepção…"; o bot fica pausado nessa conversa.
+   🤖 "Para agilizar, poderia me contar brevemente qual assunto deseja tratar com a secretária?" *Uma vez por
+   transferência; a primeira resposta em texto, antes de a recepção responder, aparece na tela Atendimento (até 300
+   caracteres, apagada quando a conversa volta ao bot). Sem resposta: "Assunto ainda não informado".*
 3. 🏥 Responde pelo app WhatsApp Business, no celular ou no computador. *Responder pelo app também pausa o bot. A tela
    Atendimento mostra quem espera.*
 4. 🏥 Manda **#bot** ou toca em "Devolver ao bot" no painel: o bot volta a atender essa conversa.

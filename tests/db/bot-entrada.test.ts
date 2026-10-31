@@ -354,7 +354,9 @@ describe("robustez", () => {
       reply = await say(P1, { id: "entry_reception" });
       expect(reply[0].body).toContain("Vou te transferir para a recepção");
       expect((await conversation(P1)).human_handoff).toBe(true);
-      expect(await say(P1, "alô?")).toEqual([]);
+      // Assunto da transferência (cliente, 31/out/2026): a 1ª resposta é o assunto; depois, o bot fica calado.
+      expect((await say(P1, "alô?")).map((m) => m.body)).toEqual(["Obrigado! Já repassamos para a nossa equipe."]);
+      expect(await say(P1, "tem alguém aí?")).toEqual([]);
     } finally {
       await fresh(P1);
       await adminClient().from("whatsapp_connections").update({ coexistence: false }).eq("clinic_id", f.clinicId);
@@ -395,7 +397,7 @@ describe("robustez", () => {
       await say(P1, "sim");
       for (const text of ["a", "b", "c"]) await say(P1, text);
       reply = await say(P1, "d");
-      expect(reply.map((m) => m.kind)).toEqual(["text"]);
+      expect(reply.map((m) => m.kind)).toEqual(["text", "text"]);
       expect((await conversation(P1)).human_handoff).toBe(true);
     } finally {
       await fresh(P1);

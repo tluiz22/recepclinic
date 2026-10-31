@@ -315,7 +315,9 @@ describe("recepção e pausa", () => {
     expect(titles(reply)).toContain("4. Falar com a recepção");
     reply = await say(phone, "4");
     expect(reply[0].body).toContain("Vou te transferir para a recepção");
-    expect(await say(phone, "alô?")).toEqual([]);
+    // Assunto da transferência (cliente, 31/out/2026): a 1ª resposta é o assunto; depois, o bot fica calado.
+      expect((await say(phone, "alô?")).map((m) => m.body)).toEqual(["Obrigado! Já repassamos para a nossa equipe."]);
+      expect(await say(phone, "tem alguém aí?")).toEqual([]);
 
     // A recepção devolve ao bot pelo app.
     await webhook({ message_echoes: [{ id: `wamid.f64.echo.${++seq}`, from: "5584000000000", to: phone.slice(1), type: "text", text: { body: "#bot" } }] });
@@ -393,7 +395,9 @@ describe("não achou neste número (cliente, 11/out/2026)", () => {
       expect(bodies(reply)).not.toMatch(/Paciente|17\/03/);
       reply = await say(P3, { id: "identity_reception" });
       expect(reply[0].body).toContain("Vou te transferir para a recepção");
-      expect(await say(P3, "alô?")).toEqual([]);
+      // Assunto da transferência (cliente, 31/out/2026): a 1ª resposta é o assunto; depois, o bot fica calado.
+      expect((await say(P3, "alô?")).map((m) => m.body)).toEqual(["Obrigado! Já repassamos para a nossa equipe."]);
+      expect(await say(P3, "tem alguém aí?")).toEqual([]);
     } finally {
       await fresh(P3);
       await adminClient().from("whatsapp_connections").update({ coexistence: false }).eq("clinic_id", f.clinicId);

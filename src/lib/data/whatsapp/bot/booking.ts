@@ -11,7 +11,7 @@ import { pauseForHuman, startFunnel } from "../conversations";
 import { checkBookingLimits, checkNewPatientLimit, contactForLimits, recordBotLimitEvent } from "../botLimits";
 import { formatAppointmentWhen } from "../templates";
 import { servicesOf, type BotService } from "./catalog";
-import { attachContact, end, go, repeatYesNo, say, sayInvalidBirthdate, sendButtons, sendList, step, textFor, type Bot } from "./engine";
+import { askHandoffSubject, attachContact, end, go, repeatYesNo, say, sayInvalidBirthdate, sendButtons, sendList, step, textFor, type Bot } from "./engine";
 import { formatBirthdate, parseBirthdate, pick, yesNo, type Selection } from "./input";
 import { showMenu, showSubmenu } from "./menus";
 import * as t from "./texts";
@@ -709,7 +709,10 @@ async function stoppedByBotLimit(b: Bot, check: "booking" | "new_patient"): Prom
   await recordBotLimitEvent(b.db, b.clinicId, contactId, hit, pause, b.now);
   await say(b, "bot_limit_reached", pause ? t.LIMIT_HANDOFF : t.LIMIT_RECEPTION_WILL_CONTACT);
   await end(b, "blocked", { reason: `limit_${hit.reason}` });
-  if (pause) await pauseForHuman(b.db, b.clinicId, b.phone, { contactId, reason: "bot_limit" }, b.now);
+  if (pause) {
+    await pauseForHuman(b.db, b.clinicId, b.phone, { contactId, reason: "bot_limit" }, b.now);
+    await askHandoffSubject(b);
+  }
   return true;
 }
 
@@ -722,6 +725,7 @@ export async function handOver(b: Bot, kind: string, text: string, reason: strin
   await say(b, kind, text);
   await end(b, "blocked", { reason });
   await pauseForHuman(b.db, b.clinicId, b.phone, { contactId: b.convo.contactId, reason: handoff }, b.now);
+  await askHandoffSubject(b);
 }
 
 // ---------------------------------------------------------------------------

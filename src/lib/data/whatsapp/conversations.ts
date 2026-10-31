@@ -66,9 +66,12 @@ export type Conversation = {
   updatedAt: Date;
   /** Mensagens seguidas que o bot não entendeu (F8.5d). */
   notUnderstoodCount: number;
+  /** Assunto da transferência (jornada E4): quando o bot perguntou e a resposta. */
+  handoffSubjectAskedAt: Date | null;
+  handoffSubject: string | null;
 };
 
-const COLUMNS = "id, contact_phone, contact_id, state, context, human_handoff, human_handoff_at, funnel_session_id, funnel_flow, updated_at, not_understood_count";
+const COLUMNS = "id, contact_phone, contact_id, state, context, human_handoff, human_handoff_at, funnel_session_id, funnel_flow, updated_at, not_understood_count, handoff_subject_asked_at, handoff_subject";
 
 type Row = {
   id: string;
@@ -82,6 +85,8 @@ type Row = {
   funnel_flow: string | null;
   updated_at: string;
   not_understood_count: number;
+  handoff_subject_asked_at: string | null;
+  handoff_subject: string | null;
 };
 
 const toConversation = (row: Row): Conversation => ({
@@ -96,6 +101,8 @@ const toConversation = (row: Row): Conversation => ({
   funnelFlow: row.funnel_flow as FunnelFlow | null,
   updatedAt: new Date(row.updated_at),
   notUnderstoodCount: row.not_understood_count ?? 0,
+  handoffSubjectAskedAt: row.handoff_subject_asked_at ? new Date(row.handoff_subject_asked_at) : null,
+  handoffSubject: row.handoff_subject ?? null,
 });
 
 export async function getConversation(db: DbClient, clinicId: string, phone: string): Promise<Conversation | null> {
@@ -354,6 +361,64 @@ export async function pauseForHuman(
     ),
     "Conversa do WhatsApp",
   );
+}
+
+// ---------------------------------------------------------------------------
+// Assunto da transferência (jornada E4, cliente, 31/out/2026; exceção da D12)
+// ---------------------------------------------------------------------------
+
+export const HANDOFF_SUBJECT_MAX = 300;
+
+/** O bot perguntou o assunto: uma vez por pausa. false = já tinha perguntado (ou a conversa não está pausada). */
+export async function markHandoffSubjectAsked(db: DbClient, clinicId: string, phone: string, now: Date = new Date()): Promise<boolean> {
+  const row = unwrap(
+    await db
+      .from("conversation_state")
+      .update({ handoff_subject_asked_at: now.toISOString() })
+      .eq("clinic_id", clinicId)
+      .eq("contact_phone", phone)
+      .eq("human_handoff", true)
+      .is("handoff_subject_asked_at", null)
+      .select("id")
+      .maybeSingle(),
+    "Conversa do WhatsApp",
+  );
+  return row !== null;
+}
+
+/**
+ * Primeira resposta em texto depois da pergunta vira o assunto, se a recepção
+ * ainda não respondeu (depois disso é conversa, que fica no app). Guarda no
+ * máximo 300 caracteres; nunca regrava. true = gravou.
+ */
+export async function recordHandoffSubject(db: DbClient, clinicId: string, convo: Conversation, text: string | null): Promise<boolean> {
+  const subject = (text ?? "").trim().slice(0, HANDOFF_SUBJECT_MAX);
+  if (!convo.humanHandoff || !convo.handoffSubjectAskedAt || convo.handoffSubject || !subject) return false;
+  const replied = unwrap(
+    await db
+      .from("whatsapp_messages")
+      .select("id")
+      .eq("clinic_id", clinicId)
+      .eq("contact_phone", convo.phone)
+      .eq("message_type", "agent_reply")
+      .gt("created_at", convo.handoffSubjectAskedAt.toISOString())
+      .limit(1),
+    "Mensagens do WhatsApp",
+  );
+  if (replied.length) return false;
+  const row = unwrap(
+    await db
+      .from("conversation_state")
+      .update({ handoff_subject: subject })
+      .eq("clinic_id", clinicId)
+      .eq("contact_phone", convo.phone)
+      .eq("human_handoff", true)
+      .is("handoff_subject", null)
+      .select("id")
+      .maybeSingle(),
+    "Conversa do WhatsApp",
+  );
+  return row !== null;
 }
 
 /**

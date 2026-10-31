@@ -226,9 +226,13 @@ export const JOURNEY: JourneySection[] = [
       branch(
         ["O paciente pede", [patient("Toca em \"Falar com a recepção\" (ou escreve pedindo)", "Escrito: o bot confirma antes.")]],
         ["O bot não entende", [bot("Na 4ª mensagem seguida que não entende, passa para a clínica", "Áudio, foto e figurinha: o bot avisa que só lê texto.")]],
-        ["Não há o que marcar", [bot("Sem serviço ou sem horário livre: avisa que a recepção responde")]],
+        ["Não há o que marcar", [bot("Sem serviço, sem horário livre ou convênio não atendido sem particular: avisa que a recepção responde")]],
       ),
       bot("\"Vou te transferir para a recepção…\"; o bot fica pausado nessa conversa"),
+      bot(
+        "\"Para agilizar, poderia me contar brevemente qual assunto deseja tratar com a secretária?\"",
+        "Uma vez por transferência. A primeira resposta em texto (antes de a recepção responder) aparece na tela Atendimento; sem resposta: \"Assunto ainda não informado\".",
+      ),
       reception("Responde pelo app WhatsApp Business, no celular ou no computador", "Responder pelo app também pausa o bot. A tela Atendimento mostra quem espera."),
       reception("Manda #bot ou toca em \"Devolver ao bot\" no painel: o bot volta a atender essa conversa"),
     ],

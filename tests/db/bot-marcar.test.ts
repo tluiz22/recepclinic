@@ -407,10 +407,15 @@ describe("bot: serviço sem horário livre no prazo (cliente, 11/out/2026)", () 
       await say(phone, "Oi");
       await say(phone, "1");
       reply = await say(phone, "1");
-      expect(reply.map((m) => m.body)).toEqual(["Vamos marcar *Consulta*.", "No momento não há horários livres para *Consulta*. O consultório responderá sua mensagem em breve."]);
+      expect(reply.map((m) => m.body)).toEqual([
+        "Vamos marcar *Consulta*.",
+        "No momento não há horários livres para *Consulta*. O consultório responderá sua mensagem em breve.",
+        "Para agilizar, poderia me contar brevemente qual assunto deseja tratar com a secretária?",
+      ]);
       const { data: convo } = await adminClient().from("conversation_state").select("human_handoff").eq("clinic_id", f.clinicId).eq("contact_phone", phone).single();
       expect(convo!.human_handoff).toBe(true);
-      // Pausado: o bot não responde.
+      // Pausado: a 1ª resposta é o assunto; depois, o bot não responde.
+      expect((await say(phone, "Queria um horário na sexta")).map((m) => m.body)).toEqual(["Obrigado! Já repassamos para a nossa equipe."]);
       expect(await say(phone, "Oi")).toEqual([]);
     } finally {
       await adminClient().from("schedule_blocks").delete().in("id", blocks);

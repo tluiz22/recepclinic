@@ -107,10 +107,11 @@ describe("bot que não entende (F8.5d)", () => {
     expect((await message(phone, "xyz"))[0]).toMatch(NOT_UNDERSTOOD);
     expect((await message(phone, { media: "audio" }))[0]).toBe(MEDIA_AUDIO);
     expect((await message(phone, "???"))[0]).toMatch(NOT_UNDERSTOOD);
-    expect(await message(phone, { media: "image" })).toEqual(["Vou pedir para alguém da clínica te atender por aqui. Aguarde, por favor."]);
+    expect(await message(phone, { media: "image" })).toEqual(["Vou pedir para alguém da clínica te atender por aqui. Aguarde, por favor.", "Para agilizar, poderia me contar brevemente qual assunto deseja tratar com a secretária?"]);
     expect(await conversation(phone)).toEqual({ state: "HUMAN_HANDOFF", human_handoff: true, handoff_reason: "not_understood", not_understood_count: 0 });
-    // Pausada: o bot fica calado.
-    expect(await message(phone, "alô?")).toEqual([]);
+    // Pausada: a 1ª resposta é o assunto; depois, o bot fica calado.
+    expect(await message(phone, "alô?")).toEqual(["Obrigado! Já repassamos para a nossa equipe."]);
+    expect(await message(phone, "alguém?")).toEqual([]);
   });
 
   it("fora do horário da recepção: diz quando a clínica responde", async () => {
@@ -118,7 +119,7 @@ describe("bot que não entende (F8.5d)", () => {
     await setReceptionHours(Array.from({ length: 7 }, () => null));
     await message(phone, "oi");
     for (const text of ["a", "b", "c"]) await message(phone, text);
-    expect(await message(phone, "d")).toEqual(["Vou pedir para alguém da clínica te atender por aqui. A clínica responde assim que possível."]);
+    expect(await message(phone, "d")).toEqual(["Vou pedir para alguém da clínica te atender por aqui. A clínica responde assim que possível.", "Para agilizar, poderia me contar brevemente qual assunto deseja tratar com a secretária?"]);
     const other = "+5584991227704";
     // Só na segunda-feira, das 8h às 9h: "a partir de …".
     await setReceptionHours([null, { open: "08:00", close: "09:00" }, null, null, null, null, null]);

@@ -214,8 +214,7 @@ describe("bot: limites do contato, com coexistência", () => {
   it("passa a conversa para a recepção (pausa) e o funil conta a pausa", async () => {
     await adminClient().from("whatsapp_connections").update({ coexistence: true }).eq("clinic_id", f.clinicId);
     const reply = await startConsultation();
-    expect(reply).toHaveLength(1);
-    expect(reply[0].body).toBe(NEUTRAL_HANDOFF);
+    expect(reply.map((m) => m.body)).toEqual([NEUTRAL_HANDOFF, "Para agilizar, poderia me contar brevemente qual assunto deseja tratar com a secretária?"]);
     const { data: convo } = await adminClient().from("conversation_state").select("state, human_handoff").eq("clinic_id", f.clinicId).eq("contact_phone", PHONE).single();
     expect(convo).toEqual({ state: "HUMAN_HANDOFF", human_handoff: true });
     expect((await events()).at(-1)).toMatchObject({ reason: "no_shows", paused: true });
@@ -227,7 +226,8 @@ describe("bot: limites do contato, com coexistência", () => {
       .eq("step", "bot_limit");
     expect(count).toBe(1);
 
-    // Pausado: o bot fica calado.
+    // Pausado: a 1ª resposta é o assunto (cliente, 31/out/2026); depois, o bot fica calado.
+    expect((await say("Quero marcar para minha filha")).map((m) => m.body)).toEqual(["Obrigado! Já repassamos para a nossa equipe."]);
     expect(await say("oi")).toEqual([]);
   });
 });

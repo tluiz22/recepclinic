@@ -8,6 +8,8 @@ const base: AttentionItem = {
   contactId: "c1",
   name: "Maria Souza",
   reason: "requested",
+  subject: null,
+  subjectAsked: false,
   startedAt: at("10:00"),
   status: "waiting",
   waitingSince: at("10:00"),

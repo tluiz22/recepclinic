@@ -26,6 +26,7 @@ export const relacionamento = {
       como: [
         "A conversa entra aqui quando o paciente pede para falar com a clínica, quando a recepção responde pelo app do WhatsApp Business ou quando o bot não entende, não acha horário livre ou bate um limite do contato.",
         "Enquanto a conversa está aqui, o bot fica calado só com esse paciente. Ela não volta sozinha ao bot.",
+        "Ao transferir, o bot pergunta o assunto uma vez e mostra aqui a primeira resposta do paciente (\"Assunto ainda não informado\" até ele responder). O assunto é apagado quando a conversa volta ao bot.",
         "\"Aguardando a clínica\": ninguém respondeu ainda, ou o paciente escreveu de novo. \"Em atendimento pela clínica\": a recepção já respondeu.",
         "Ao terminar o atendimento, clique em \"Devolver ao bot\": o bot volta a responder esse paciente na próxima mensagem, do começo. Nada é enviado ao paciente na hora. Escrever #bot na conversa, pelo app, faz o mesmo.",
       ],

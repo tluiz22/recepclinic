@@ -397,6 +397,10 @@ export const OFFER_ALREADY_ACCEPTED = "Essa vaga já está confirmada para você
 export const OFFER_NOT_FOUND = "Essa oferta não está mais ativa.";
 
 // Pedido de recepção digitado: confirma antes de transferir; "Não" volta ao menu (cliente, 30/out/2026).
+// Assunto da transferência (cliente, 31/out/2026): perguntado uma vez, depois do aviso de transferência.
+export const HANDOFF_SUBJECT_QUESTION = "Para agilizar, poderia me contar brevemente qual assunto deseja tratar com a secretária?";
+export const HANDOFF_SUBJECT_THANKS = "Obrigado! Já repassamos para a nossa equipe.";
+
 export const RECEPTION_CONFIRM = "Você quer falar com a recepção? A conversa passa para a nossa equipe.";
 export const RECEPTION_CONFIRM_IDS = { yes: "reception_yes", no: "reception_no" } as const;
 export const RECEPTION_CONFIRM_BUTTONS = [button(RECEPTION_CONFIRM_IDS.yes, "Sim"), button(RECEPTION_CONFIRM_IDS.no, "Não")];

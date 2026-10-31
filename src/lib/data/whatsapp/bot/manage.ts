@@ -16,7 +16,7 @@ import { parseReminderTap, recordReminderTap } from "../reminders";
 import { formatAppointmentWhen } from "../templates";
 import { startBooking, startReturn } from "./booking";
 import { servicesOf } from "./catalog";
-import { end, go, repeatYesNo, say, sayInvalidBirthdate, sendButtons, sendList, step, textFor, yesNoButtonsFor, type Bot } from "./engine";
+import { askHandoffSubject, end, go, repeatYesNo, say, sayInvalidBirthdate, sendButtons, sendList, step, textFor, yesNoButtonsFor, type Bot } from "./engine";
 import { formatBirthdate, parseBirthdate, pick, yesNo, type Selection } from "./input";
 import { showMenu } from "./menus";
 import * as t from "./texts";
@@ -783,6 +783,7 @@ export async function handleOfferTap(b: Bot, tap: NonNullable<ReturnType<typeof 
 export async function handoff(b: Bot, origin: HandoffOrigin): Promise<void> {
   await say(b, "bot_handoff", textFor(b, "handoff", t.HANDOFF));
   await pauseForHuman(b.db, b.clinicId, b.phone, { contactId: b.convo.contactId, reason: "requested", origin }, b.now);
+  await askHandoffSubject(b);
 }
 
 /**
@@ -798,6 +799,7 @@ export async function handoffNotUnderstood(b: Bot): Promise<void> {
   const when = opening === null ? undefined : opening === b.now ? null : describeOpening(opening, b.now, timeZone);
   await say(b, "bot_handoff_not_understood", t.notUnderstoodHandoff(when));
   await pauseForHuman(b.db, b.clinicId, b.phone, { contactId: b.convo.contactId, reason: "not_understood" }, b.now);
+  await askHandoffSubject(b);
 }
 
 // ---------------------------------------------------------------------------

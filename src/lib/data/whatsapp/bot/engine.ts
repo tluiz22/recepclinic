@@ -7,7 +7,7 @@ import { unwrap, unwrapOne } from "../../errors";
 import { getClinicFeatures } from "../../features";
 import { getWhatsappConnection } from "../connection";
 import { listBotMessages, renderMarkers, type BotMessageKey } from "../customMessages";
-import { logFunnelStep, setConversationState, WELCOME, type Conversation } from "../conversations";
+import { logFunnelStep, markHandoffSubjectAsked, setConversationState, WELCOME, type Conversation } from "../conversations";
 import { recordOutboundMessage, type SendOutcome } from "../messages";
 import { sendPreparationFile, type ClinicSender, type ListSection, type ReplyButton } from "../send";
 import { downloadPreparationFile } from "../preparation";
@@ -15,6 +15,7 @@ import type { PreparationFile } from "../../config/preparationFile";
 import { preparationFileCaption } from "../../../preparationMessage";
 import { loadCatalog, type BotCatalog } from "./catalog";
 import {
+  HANDOFF_SUBJECT_QUESTION,
   INVALID_BIRTHDATE,
   INVALID_BIRTHDATE_AGAIN,
   LIST_BUTTON,
@@ -293,4 +294,10 @@ export async function attachContact(b: Bot, contactId: string): Promise<void> {
 export function textFor(b: Bot, key: BotMessageKey, fallback: string, values: Record<string, string> = {}): string {
   const custom = b.custom.get(key);
   return custom ? renderMarkers(custom, values) : fallback;
+}
+
+/** Depois de passar a conversa para a recepção (jornada E4): pergunta o assunto, uma vez por pausa. */
+export async function askHandoffSubject(b: Bot): Promise<void> {
+  if (!(await markHandoffSubjectAsked(b.db, b.clinicId, b.phone, b.now))) return;
+  await say(b, "bot_handoff_subject", HANDOFF_SUBJECT_QUESTION);
 }

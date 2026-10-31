@@ -7,13 +7,14 @@ import {
   isPastIdleTimeout,
   logAbandonment,
   openConversation,
+  recordHandoffSubject,
   setConversationState,
   setNotUnderstoodCount,
   WELCOME,
   type Conversation,
 } from "../conversations";
 import { contactIdByPhone, recordOutboundMessage } from "../messages";
-import { toE164, type WaMessage } from "../meta";
+import { messageBody, toE164, type WaMessage } from "../meta";
 import type { ClinicSender } from "../send";
 import { BOOKING_STATES, handleBookingState } from "./booking";
 import { createBot, currentPrompt, mergeContext, NotUnderstoodLimitReached, say, sendButtons, type Bot, type BotEnv } from "./engine";
@@ -24,6 +25,7 @@ import { handleManageState, handleOfferTap, handleReminderTap, handoff, handoffN
 import {
   BLOCKED_HANDOFF,
   BLOCKED_RECEPTION_WILL_CONTACT,
+  HANDOFF_SUBJECT_THANKS,
   IDLE_CLOSED,
   RECEPTION_CONFIRM,
   RECEPTION_CONFIRM_BUTTONS,
@@ -62,7 +64,14 @@ export async function handleIncomingMessage(env: BotEnv, message: WaMessage): Pr
     else await handleReminderTap(b, reminderTap!, paused);
     return "handled";
   }
-  if (paused) return "skipped";
+  if (paused) {
+    // Assunto da transferência (jornada E4): a primeira resposta em texto depois da pergunta; o resto fica com a recepção.
+    if (message.type === "text" && (await recordHandoffSubject(env.db, env.clinicId, convo, messageBody(message)))) {
+      await say(await createBot(env, convo, message.id ?? null), "bot_handoff_subject_thanks", HANDOFF_SUBJECT_THANKS);
+      return "handled";
+    }
+    return "skipped";
+  }
 
   // Parada há mais de 15 minutos (a rotina costuma ter encerrado antes): recomeça.
   if (convo.state !== WELCOME && isPastIdleTimeout(convo.updatedAt, env.now)) {

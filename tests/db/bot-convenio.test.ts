@@ -252,7 +252,7 @@ describe("clínica com convênios", () => {
     reply = await say(phone, { id: "plan_other" });
     expect(reply.at(-1)!.body).toBe("Infelizmente a clínica não atende por esse convênio.\n\nQuer seguir com o atendimento particular?");
     reply = await say(phone, "não");
-    expect(bodies(reply)).toEqual(["Tudo bem. A clínica responderá sua mensagem em breve."]);
+    expect(bodies(reply)).toEqual(["Tudo bem. A clínica responderá sua mensagem em breve.", "Para agilizar, poderia me contar brevemente qual assunto deseja tratar com a secretária?"]);
     expect(await handoff(phone)).toBe(true);
     expect(transcript.join("\n")).not.toContain("R$");
   });
