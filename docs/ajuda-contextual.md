@@ -278,6 +278,6 @@ explica (papel e item liberado, `canAccessPath`); artigos internos só para o Su
 informado em Sistema › Suporte (campo novo, tabela `platform_settings`); procedimentos delicados documentados só para o
 Administrador, sem dados secretos. Conteúdo no código (`src/lib/central/artigos/`, FAQ em `faq.ts`), busca no servidor
 (`search.ts`: sem acento, sinônimos, peso por raridade), painel lateral "Ajuda desta tela" (`helpPanel.ts`). Não
-documentados por não existirem: Google Calendar e mesclar cadastros duplicados. Sem capturas de tela (próxima etapa).
+documentados por não existirem: Google Calendar e mesclar cadastros duplicados. Capturas reais em `public/ajuda/` (25, 01/nov, mapa em `imagens.ts`).
 O número do suporte nunca passa pelo bot nem entra em Atendimento (`webhook.ts`, `attention.ts`; teste
 `tests/db/numero-do-suporte.test.ts`). Migração `20261111120000`.

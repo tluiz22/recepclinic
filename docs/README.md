@@ -2,10 +2,10 @@
 
 > **Estado atual (retomar daqui), 31/out/2026.** Detalhes e datas no [`historico.md`](historico.md) (só por busca).
 >
-> **Próximo (cliente, 01/nov):** no **staging** para validar: (1) ajustes da Base de Conhecimento (ativar EN1 e publicar);
-> (2) "Como funciona?" com "Depende de" e "Alimenta" em Configurações; (3) **Central de Ajuda** (58 artigos, busca, painel
-> "Ajuda desta tela") e o campo do WhatsApp do suporte em Sistema › Suporte (migração `20261111120000` aplicada; o
-> número ainda não foi informado). Falta: capturas de tela nos artigos. Detalhes em [`ajuda-contextual.md`](ajuda-contextual.md), fim.
+> **Próximo (cliente, 01/nov):** validado no staging: Base de Conhecimento, "Como funciona?" de Configurações e Central de
+> Ajuda. No staging para validar: **25 capturas reais de tela** nos artigos da Central (`public/ajuda/`, refazer quando a
+> tela mudar). Falta informar o WhatsApp do suporte (Sistema › Suporte), se ainda não foi. Detalhes em
+> [`ajuda-contextual.md`](ajuda-contextual.md), fim. Cliente vai pedir novos ajustes.
 >
 > **Ambientes**
 > - **Produção** (`app.recepclinic.com.br`, branch `producao`) = `main` em `20bfe8b` (revisão da jornada do bot E1–E4,
