@@ -23,7 +23,6 @@ export const pacientesArtigos = [
       "Toque no nome para abrir a ficha. São 20 por página.",
       "Sem resultado, use \"Limpar a busca\" ou \"Cadastrar\".",
     ],
-    contextual: ["/admin/pacientes"],
   }),
   article({
     id: "cadastrar-paciente",
