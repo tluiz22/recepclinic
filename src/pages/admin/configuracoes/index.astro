@@ -88,6 +88,10 @@ import { configuracoes } from "../../../lib/ajuda/configuracoes";
 <ConfigShell current="clinica" title="Clínica" subtitle="Como a clínica se apresenta ao paciente, nas mensagens e nas páginas de agendar." setup={setup}>
   <SetupGuide status={setup} />
 
+  <HowItWorks id="clinica" topic={configuracoes.comoFunciona.clinica}>
+    <p class="text-[15px] text-ink-soft">O que cada bloco muda e a ordem da jornada de configuração.</p>
+  </HowItWorks>
+
   <EditCard id="identificacao" title="Identificação" summary={settings.name}>
     <dl class={KV}>
       <dt class={DT}>Nome da clínica</dt>

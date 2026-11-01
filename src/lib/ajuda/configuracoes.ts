@@ -61,6 +61,36 @@ export const configuracoes = {
   comoFunciona: {
     // Jornada de configuração (setup.ts): Clínica → Profissionais → Locais → Agendas → Serviços → Horários.
     // Equipe é à parte: liga pessoas do painel a um profissional (team.ts) e restringe agendas (app.can_access_agenda).
+    clinica: {
+      serve: "Dizer ao sistema quem é a clínica. Os dados daqui aparecem para o paciente e regem o fuso, os prazos e as palavras do bot.",
+      como: [
+        "Identificação, perfil e fuso horário definem como a clínica se apresenta e as palavras das telas e do bot; o fuso vale para a agenda, os lembretes e os resumos.",
+        "O prazo para oferecer horários limita até onde o bot e o link de agendamento mostram vagas; a recepção, pelo painel, não tem esse limite.",
+        "As páginas públicas (logo, cor e site) e as informações do bot são o que o paciente vê ao agendar e em Informações no WhatsApp.",
+        "O horário da recepção diz quando a clínica atende no WhatsApp; fora dele, as conversas entram em Atendimento sem notificação.",
+      ],
+      depende: [{ texto: "Nada: é o primeiro passo da jornada." }],
+      alimenta: [
+        { texto: "Profissionais, Locais, Agendas, Serviços e Horários: o guia no topo mostra o que falta em cada um.", href: "/admin/configuracoes/profissionais" },
+        { texto: "Lembretes e Mensagens: usam o fuso e o nome da clínica.", href: "/admin/configuracoes/lembretes" },
+        { texto: "Feriados: contam como recepção fechada.", href: "/admin/configuracoes/feriados" },
+      ],
+    },
+    locais: {
+      serve: "Cadastrar onde a clínica atende: consultórios, com endereço, e o atendimento domiciliar. Sem local, nada pode ser marcado.",
+      como: [
+        "Consultório: o paciente vai até a clínica, e o endereço vai no lembrete e na confirmação, com o link do mapa.",
+        "Domiciliar: a equipe vai até o paciente; o endereço é pedido na hora de marcar. Depende de o item estar liberado para a clínica.",
+        "Um local sem endereço (consultório) ou desativado não serve para marcar; a lista mostra o selo do que falta.",
+        "O tipo do local não muda depois de criado.",
+      ],
+      depende: [{ texto: "Clínica: os dados básicos, feitos primeiro.", href: "/admin/configuracoes" }],
+      alimenta: [
+        { texto: "Serviços: cada serviço é atendido em um ou mais locais.", href: "/admin/configuracoes/servicos" },
+        { texto: "Horários: cada horário de atendimento é de um local.", href: "/admin/configuracoes/horarios" },
+        { texto: "Informações do bot: o endereço vem daqui.", href: "/admin/configuracoes" },
+      ],
+    },
     equipe: {
       serve: "Dar acesso ao painel: quem entra, com qual papel e quais agendas vê.",
       como: [
