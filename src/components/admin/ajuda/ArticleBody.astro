@@ -25,6 +25,14 @@ const H = "font-display text-[17px] leading-tight font-bold text-ink sm:text-lg"
   </dl>
 
   {
+    article.images?.map((image) => (
+      <figure class="overflow-hidden rounded-xl border border-line bg-white">
+        <img src={`/ajuda/${image.file}.png`} alt={image.alt} width="1280" height="770" loading="lazy" class="block h-auto w-full" />
+        <figcaption class="border-t border-line px-4 py-2 text-[14.5px] text-ink-soft">{image.caption}</figcaption>
+      </figure>
+    ))
+  }
+  {
     article.whenToUse && (
       <section>
         <h2 class={H}>Quando usar</h2>

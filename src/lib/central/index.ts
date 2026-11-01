@@ -7,6 +7,7 @@ import { primeirosPassos } from "./artigos/primeiros-passos";
 import { problemasArtigos } from "./artigos/problemas";
 import { suporteArtigos } from "./artigos/suporte";
 import { whatsappArtigos } from "./artigos/whatsapp";
+import { IMAGENS } from "./imagens";
 import type { Article } from "./types";
 
 export { CATEGORIES, categoryOf } from "./categories";
@@ -23,7 +24,7 @@ export const ARTICLES: readonly Article[] = [
   ...equipeMetricasFinanceiro,
   ...problemasArtigos,
   ...suporteArtigos,
-].sort((a, b) => a.order - b.order);
+].map((a) => ({ ...a, images: IMAGENS[a.id] })).sort((a, b) => a.order - b.order);
 
 export const articleById = (id: string) => ARTICLES.find((a) => a.id === id);
 

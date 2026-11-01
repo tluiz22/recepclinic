@@ -1,3 +1,4 @@
+import { existsSync, readdirSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { canSeeArticle, visibleArticles, visibleFaqs } from "./access";
 import { articleForPath, ARTICLES, CATEGORIES, FAQS } from "./index";
@@ -83,5 +84,21 @@ describe("Central de Ajuda: ajuda contextual", () => {
     expect(articleForPath("/admin/consultas")?.id).toBe("resumo-do-dia");
     expect(articleForPath("/admin/dashboard")?.id).toBe("inicio-do-painel");
     expect(articleForPath("/admin/nada")).toBeUndefined();
+  });
+});
+
+describe("Central de Ajuda: capturas de tela", () => {
+  it("toda captura citada existe e nenhuma ficou sem uso", () => {
+    const used = new Set<string>();
+    for (const a of ARTICLES) {
+      for (const image of a.images ?? []) {
+        used.add(`${image.file}.png`);
+        expect(existsSync(`public/ajuda/${image.file}.png`), `${a.id}: ${image.file}`).toBe(true);
+        expect(image.alt.length, a.id).toBeGreaterThan(15);
+        expect(image.caption.length, a.id).toBeGreaterThan(15);
+      }
+    }
+    const files = readdirSync("public/ajuda").filter((f) => f.endsWith(".png"));
+    expect(files.filter((f) => !used.has(f))).toEqual([]);
   });
 });

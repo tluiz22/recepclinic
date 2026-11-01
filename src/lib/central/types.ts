@@ -51,7 +51,11 @@ export type Article = {
   problems?: ArticleProblem[];
   /** Telas do painel (caminhos) que abrem este artigo no botão "Ajuda desta tela". */
   contextual?: string[];
+  /** Capturas reais da tela (public/ajuda/), com o ponto principal destacado em vermelho. */
+  images?: ArticleImage[];
 };
+
+export type ArticleImage = { file: string; alt: string; caption: string };
 
 export type Faq = {
   id: string;
