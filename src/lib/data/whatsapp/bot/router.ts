@@ -19,8 +19,8 @@ import type { ClinicSender } from "../send";
 import { BOOKING_STATES, handleBookingState } from "./booking";
 import { createBot, currentPrompt, KnowledgeTakeover, mergeContext, NotUnderstoodLimitReached, RECEPTION_CONFIRM_KEY, say, sendButtons, type Bot, type BotEnv } from "./engine";
 import { ENTRY_STATES, handleEntryState, startConversation } from "./entry";
-import { asksForReception, extractSelection, isBackToMenu, TALK_TO_RECEPTION_ID, yesNo } from "./input";
-import { handleInfo, handleMenu, handlePreparationChoice, handleSubmenu, showMenu } from "./menus";
+import { asksForReception, extractSelection, isBack, isBackToMenu, TALK_TO_RECEPTION_ID, yesNo } from "./input";
+import { handleInfo, handleMenu, handlePreparationChoice, handleSubmenu, showMenu, showPreviousMenu } from "./menus";
 import { handleManageState, handleOfferTap, handleReminderTap, handoff, handoffNotUnderstood, MANAGE_STATES, offerTapOf, reminderTapOf } from "./manage";
 import {
   BLOCKED_HANDOFF,
@@ -143,6 +143,13 @@ async function dispatch(env: BotEnv, b: Bot, convo: Conversation, phone: string,
     await logAbandonment(env.db, env.clinicId, convo, "back_to_menu", env.now);
     await showMenu(b);
     return;
+  }
+
+  // "voltar" digitado (cliente, 31/out/2026): o menu de onde veio, nunca o retorno da base.
+  if (isBack(selection)) {
+    if (convo.state === WELCOME) return startConversation(b);
+    if (convo.funnelSessionId) await logAbandonment(env.db, env.clinicId, convo, "back_to_menu", env.now);
+    return showPreviousMenu(b);
   }
 
   // "Falar com a recepção" em qualquer passo (cliente, 30/out/2026): o botão de saída de uma resposta não entendida

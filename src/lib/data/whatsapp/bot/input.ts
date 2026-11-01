@@ -42,6 +42,18 @@ export function isBackToMenu(selection: Selection): boolean {
 }
 
 /**
+ * "voltar" digitado (cliente, 31/out/2026): o menu de onde a pessoa veio, antes
+ * da base de conhecimento (que lia "voltar" como retorno). Só a frase inteira.
+ */
+const BACK_WORDS =
+  /^(?:(?:quero|pode|posso|vamos|deixa eu) )?(?:(?:voltar|volta)(?: (?:ao|para o|pro|pra|no) (?:menu|menu anterior|inicio|comeco|tela anterior|anterior|passo anterior))?(?: atras)?|retornar (?:ao|para o|pro|pra) (?:menu|menu anterior|inicio|tela anterior))(?:,? por favor)?$|^(?:o )?(?:menu|tela|passo|opcao) anterior$|^anterior$/;
+
+export function isBack(selection: Selection): boolean {
+  if (selection.id) return false;
+  return BACK_WORDS.test(normalized(selection.text).replace(/[!.?]+$/, "").replace(/\s+/g, " "));
+}
+
+/**
  * Item escolhido de uma lista numerada: pelo id do toque ou pelo número
  * digitado ("2", "2." ou "2 algo").
  */

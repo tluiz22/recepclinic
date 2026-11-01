@@ -254,11 +254,11 @@ export const JOURNEY: JourneySection[] = [
           "Sim",
           [
             bot("Responde com os dados da clínica e repete a pergunta em que a pessoa estava", "No meio da marcação, a marcação continua de onde estava. \"Quanto custa?\" depois de escolher o serviço: o valor dele."),
-            bot("Pedido de marcar, remarcar, cancelar ou confirmar: abre esse caminho", "Remarcar e cancelar como no item 4; nada de data digitada."),
+            bot("Pedido de marcar, remarcar, cancelar ou confirmar: abre esse caminho", "Marcar consulta ou exame abre o submenu Consultas ou Exames (marcar, retorno, remarcar, cancelar, encaixe). Remarcar e cancelar como no item 4; nada de data digitada."),
           ],
         ],
         ["Em dúvida", [bot("\"Você quis dizer…?\" com até 3 opções e \"Nenhuma destas\"")]],
-        ["Pergunta de saúde", [bot("\"Por aqui não conseguimos dar orientação de saúde.\" e \"Quer falar com a recepção?\"", "Sintoma junto com pedido de marcação: abre a marcação.")]],
+        ["Pergunta de saúde", [bot("\"Por aqui não conseguimos dar orientação de saúde.\" e \"Quer falar com a recepção?\"", "Sintoma junto com pedido de marcação: abre o submenu de marcar.")]],
         ["Não", [bot("O \"não entendi\" de sempre", "A pergunta fica, sem o telefone, para o Suporte melhorar as respostas.")]],
       ),
     ],
@@ -268,6 +268,7 @@ export const JOURNEY: JourneySection[] = [
 /** Regras gerais, fora do desenho. */
 export const JOURNEY_RULES = [
   "A qualquer momento: \"0\" ou \"Voltar ao menu\" volta ao menu principal.",
+  "\"voltar\" ou \"menu anterior\" digitado: no meio de um caminho, o submenu de onde veio (Consultas ou Exames); no preparo de exame, Informações; nos menus, o menu principal.",
   "Conversa parada por 15 minutos: o bot encerra com aviso; a próxima mensagem começa de novo.",
   "Os botões do lembrete e da oferta de vaga funcionam em qualquer ponto da conversa.",
   "Clínica em implantação: o bot não responde e nenhuma mensagem automática sai.",

@@ -157,10 +157,15 @@ describe("no menu", () => {
     expect(bodies(await say(phone, "obrigado!"))).toEqual(["Por nada! Se precisar, é só mandar mensagem por aqui.", MENU]);
   });
 
-  it("pedido de marcação abre o fluxo de marcar", async () => {
+  it("pedido de marcação abre o submenu, com marcar, retorno, remarcar e cancelar (cliente, 31/out/2026)", async () => {
     await reset(phone);
     const reply = await say(phone, "quero marcar uma consulta");
-    expect(bodies(reply)).toEqual(["Vamos marcar *Consulta*.", "Com qual profissional?"]);
+    expect(bodies(reply)).toEqual(["O que você precisa sobre consultas?"]);
+    expect(reply.at(-1)!.options.map((o) => o.title)).toEqual(expect.arrayContaining(["1. Marcar consulta", "3. Remarcar", "4. Cancelar"]));
+    expect((await convo(phone)).state).toBe("CONSULTAS_MENU");
+    const exam = await say(phone, "quero marcar um exame");
+    expect(bodies(exam)).toEqual(["O que você precisa sobre exames?"]);
+    expect((await convo(phone)).state).toBe("EXAMES_MENU");
   });
 
   it("serviço citado: a resposta com \"Marcar\", que abre a marcação dele", async () => {
@@ -188,6 +193,24 @@ describe("no meio da marcação", () => {
     const next = await say(phone, { id: optionId(reply, "Dr. Segundo") });
     // Com convênio cadastrado, o passo seguinte de hoje: particular ou convênio.
     expect(next.at(-1)!.body).toContain("particular");
+  });
+});
+
+describe("\"voltar\" digitado (cliente, 31/out/2026)", () => {
+  const phone = "+5584991337025";
+
+  it("na marcação, o submenu de onde veio; no submenu, o menu; nunca o retorno", async () => {
+    await say(phone, "Oi");
+    await say(phone, "1"); // Consultas
+    await say(phone, "1"); // Marcar consulta
+    const back = await say(phone, "voltar");
+    expect(bodies(back)).toEqual(["O que você precisa sobre consultas?"]);
+    expect((await convo(phone)).state).toBe("CONSULTAS_MENU");
+    const menu = await say(phone, "Voltar ao menu anterior");
+    expect(bodies(menu)).toEqual([MENU]);
+    const again = await say(phone, "voltar");
+    expect(bodies(again)).toEqual([MENU]);
+    expect((await convo(phone)).not_understood_count).toBe(0);
   });
 });
 

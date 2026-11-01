@@ -8,7 +8,7 @@ import { KnowledgeTakeover, mergeContext, RECEPTION_CONFIRM_KEY, say, sayPrepara
 import { startIdentification } from "../entry";
 import { BACK_TO_MENU_ID, pick, type Selection } from "../input";
 import { startManage } from "../manage";
-import { showMenu, showPreparationChoice } from "../menus";
+import { showMenu, showPreparationChoice, showSubmenu } from "../menus";
 import * as t from "../texts";
 import { CLINICAL_NOTICE, clinicTermsOf, composeAnswer, type KbAnswer, type KbClinicData, type KbContext } from "./answers";
 import { loadKbClinicData } from "./clinicData";
@@ -34,7 +34,7 @@ const NONE_ID = "kb_none";
 const BOOK_PREFIX = "kb_book_";
 
 type Takeover =
-  | { kind: "flow"; flow: KbFlow; serviceId?: string; group: t.Group }
+  | { kind: "flow"; flow: KbFlow; group: t.Group }
   | { kind: "reception"; text: string }
   | { kind: "offer_reception" }
   | { kind: "clinical" }
@@ -124,7 +124,7 @@ async function send(b: Bot, answer: KbAnswer, entry: KbEntry, terms: DetectedTer
   const kind = `bot_kb_${entry.code.toLowerCase()}`;
   switch (answer.kind) {
     case "flow":
-      return new KnowledgeTakeover({ kind: "flow", flow: answer.flow, serviceId: answer.serviceId, group: groupOf(terms, data, text) } satisfies Takeover);
+      return new KnowledgeTakeover({ kind: "flow", flow: answer.flow, group: groupOf(terms, data, text) } satisfies Takeover);
     case "reception":
       return new KnowledgeTakeover({ kind: "reception", text: answer.text } satisfies Takeover);
     case "preparation": {
@@ -160,9 +160,10 @@ export async function performTakeover(b: Bot, action: unknown): Promise<void> {
   switch (takeover.kind) {
     case "flow": {
       await leaveFlow(b);
-      const { flow, serviceId, group } = takeover;
-      if (flow === "book_consultation") return startBooking(b, "consultation", { serviceId });
-      if (flow === "book_exam") return startBooking(b, "exam", { serviceId });
+      const { flow, group } = takeover;
+      // Marcar pela base: o submenu, com marcar, retorno, remarcar, cancelar e encaixe (cliente, 31/out/2026).
+      if (flow === "book_consultation") return showSubmenu(b, "CONSULTAS_MENU");
+      if (flow === "book_exam") return showSubmenu(b, "EXAMES_MENU");
       if (flow === "book_return") return startReturn(b);
       if (flow === "reschedule" || flow === "cancel") return startManage(b, flow, group);
       return startIdentification(b);
