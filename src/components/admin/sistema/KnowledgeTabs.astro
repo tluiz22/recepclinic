@@ -2,6 +2,7 @@
 // Abas da Base de Conhecimento (BC 3.3): entradas, testador, termos, perguntas
 // não reconhecidas e histórico.
 import Tabs from "../ui/Tabs.astro";
+import PublishPrompt from "./PublishPrompt.astro";
 
 interface Props {
   active: "entradas" | "testar" | "termos" | "nao-reconhecidas" | "historico";
@@ -20,3 +21,5 @@ const tabs = [
 ---
 
 <Tabs tabs={tabs} label="Base de conhecimento" />
+{/* Na lista de entradas o painel de publicação já está na própria tela. */}
+{active !== "entradas" && <PublishPrompt />}

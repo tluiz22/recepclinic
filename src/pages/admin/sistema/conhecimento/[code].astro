@@ -6,6 +6,7 @@ import AdminLayout from "../../../../layouts/AdminLayout.astro";
 import Badge from "../../../../components/admin/config/Badge.astro";
 import ConfirmDeleteDialog from "../../../../components/admin/ConfirmDeleteDialog.astro";
 import FlashMessage from "../../../../components/admin/FlashMessage.astro";
+import PublishPrompt from "../../../../components/admin/sistema/PublishPrompt.astro";
 import SystemHeader from "../../../../components/admin/sistema/SystemHeader.astro";
 import { CHECK, CHOICE, HINT, INPUT, LABEL, LEGEND, PANEL, PRIMARY_BUTTON, SECONDARY_BUTTON, SECTION_TITLE } from "../../../../components/admin/config/formStyles";
 import { DEFAULT_TIMEZONE, formatInstant } from "../../../../lib/clinicTime";
@@ -30,6 +31,7 @@ const title = entry ? `${entry.code} · ${entry.question}` : "Nova entrada";
     {entry && <Badge slot="actions" variant={STATUS_BADGE[entry.status]}>{`${KB_STATUS_LABELS[entry.status]} · versão ${entry.version}`}</Badge>}
   </SystemHeader>
   <FlashMessage />
+  <PublishPrompt dialog={false} />
 
   <form method="POST" action={ACTION} class={`mt-4 ${PANEL} grid gap-4`}>
     <input type="hidden" name="acao" value={isNew ? "criar" : "salvar"} />

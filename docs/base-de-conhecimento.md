@@ -349,3 +349,10 @@ Etapas (uma por vez, na branch `bc-ajustes`, cada uma com `botJourney.ts`): **A*
   também pergunta (Sim: `handoffNotUnderstood`). Sem recepção no app: "Você quer que {a clínica} entre em contato por
   aqui?". Cliente, 31/out: o limite de marcações do contato **continua transferindo direto**; clínica sem nada para
   marcar, o Não despede ("Se precisar, é só mandar mensagem por aqui.") e a próxima mensagem recomeça.
+
+## Aviso de alterações não publicadas (cliente, 01/nov/2026)
+
+O bot só lê a base publicada: a EN1 (encaixe) foi ativada no staging mas não publicada, e "Encaixe" seguiu sem resposta.
+Agora toda tela da base (`PublishPrompt.astro`, embaixo das abas e na tela da entrada) avisa "N alterações ainda não
+publicadas… Deseja publicar agora?" com o botão Publicar (com confirmação); na lista de Entradas, o painel de publicação
+ganha o mesmo texto e fica em destaque. Some quando nada mudou depois da última publicação.

@@ -1,0 +1,51 @@
+---
+// Aviso de alterações não publicadas da Base de Conhecimento (cliente, 01/nov/2026):
+// o bot só lê a base publicada, então toda alteração (entrada, sinônimo, termo,
+// situação) pede a decisão de publicar. Aparece embaixo das abas, em todas as telas
+// da base; some quando nada mudou depois da última publicação.
+import { createUserClient } from "../../../lib/data/clients";
+import { changesSincePublication, latestPublication, listEntries, publicationProblems } from "../../../lib/data/knowledge/admin";
+import { PRIMARY_BUTTON } from "../config/formStyles";
+import ConfirmDeleteDialog from "../ConfirmDeleteDialog.astro";
+import Notice from "../ui/Notice.astro";
+
+interface Props {
+  /** A tela já tem o modal de confirmação (ConfirmDeleteDialog). */
+  dialog?: boolean;
+}
+
+const { dialog = true } = Astro.props;
+const db = createUserClient(Astro.request, Astro.cookies);
+const publication = await latestPublication(db);
+const changes = publication ? await changesSincePublication(db, publication) : 0;
+const entries = changes > 0 || !publication ? await listEntries(db) : [];
+const active = entries.filter((e) => e.status === "active").length;
+const pending = publication ? changes > 0 : active > 0;
+const problems = pending ? publicationProblems(entries) : [];
+const what = publication ? `${changes} ${changes === 1 ? "alteração ainda não publicada" : "alterações ainda não publicadas"}` : "A base ainda não foi publicada";
+---
+
+{
+  pending && (
+    <Notice tone="warning" class="mt-4">
+      <form method="POST" action="/api/admin/sistema/conhecimento/publicar" class="flex flex-wrap items-center justify-between gap-3">
+        <p class="min-w-0 flex-1">
+          <b>{what}.</b> O bot só usa o que foi publicado. Deseja publicar agora?
+          {problems.length > 0 && ` Corrija antes: ${problems.join("; ")}.`}
+        </p>
+        <button
+          type="submit"
+          class={`${PRIMARY_BUTTON} js-confirm-delete`}
+          disabled={problems.length > 0}
+          data-confirm-title="Publicar a base?"
+          data-confirm-message={`${active} ${active === 1 ? "entrada ativa vai" : "entradas ativas vão"} ao bot de todas as clínicas com "Perguntas frequentes no bot" ligado, na próxima mensagem.`}
+          data-confirm-label="Publicar"
+          data-confirm-tone="primary"
+        >
+          Publicar agora
+        </button>
+      </form>
+    </Notice>
+  )
+}
+{pending && dialog && <ConfirmDeleteDialog />}
