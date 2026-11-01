@@ -2,20 +2,19 @@
 
 > **Estado atual (retomar daqui), 31/out/2026.** Detalhes e datas no [`historico.md`](historico.md) (só por busca).
 >
-> **Próximo (cliente, 31/out):** Base de Conhecimento: a homologação (Etapa 5) trouxe 5 ajustes, feitos nas Etapas
-> A, B e C na branch **`bc-ajustes`** (só local, sem push; `9cbbe07`, `5eeb26c`, `9d781a4`), aprovadas no local. O
-> cliente vai pedir mais uma melhoria **nessa mesma branch**; depois, tudo junto para a `main` e o staging (migração
-> `20261110120000` antes do push; ativar EN1 e publicar). Retomar pelo [`base-de-conhecimento.md`](base-de-conhecimento.md)
-> (seção "Ajustes da homologação"). Mudança no caminho do paciente atualiza `botJourney.ts` no mesmo commit.
+> **Próximo (cliente, 01/nov):** Base de Conhecimento: os 5 ajustes da homologação (Etapas A, B, C) estão na `main` e
+> no **staging** (migração `20261110120000` aplicada). Cliente valida no staging (ativar a entrada EN1 de encaixe e
+> publicar a base na clínica de teste) e vai pedir novos ajustes; a branch `bc-ajustes` já está dentro da `main`.
+> Retomar pelo [`base-de-conhecimento.md`](base-de-conhecimento.md) (seção "Ajustes da homologação").
 >
 > **Ambientes**
 > - **Produção** (`app.recepclinic.com.br`, branch `producao`) = `main` em `20bfe8b` (revisão da jornada do bot E1–E4,
 >   confirmação na página do link). Fluxo em [`producao.md`](producao.md).
 > - **Staging** (`teste.recepclinic.com.br`, branch `main`): produção + cartão do Asaas (`ASAAS_PREVIEW=1`) + Base de
->   Conhecimento do bot (`7c2b1ae`; migração aplicada).
+>   Conhecimento do bot com os ajustes da homologação (migração aplicada).
 >   Roteiros em [`staging.md`](staging.md).
-> - **Branch `faturamento`** (só local, sem push): todo código do financeiro. Tem a `main` até `823d4e3`; falta só
->   `bb2b29b` (regra no CLAUDE.md), atualizar quando o cliente pedir.
+> - **Branch `faturamento`** (só local, sem push): todo código do financeiro. Tem a `main` até `823d4e3`; atualizar
+>   só quando o cliente pedir (cliente, 01/nov).
 >
 > **Frentes**
 > - **Ajustes da produção (C1–C16) e revisão da jornada do bot:** todos na produção; nada pendente. Decisões da
