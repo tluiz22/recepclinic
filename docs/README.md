@@ -7,14 +7,13 @@
 > tela mudar). Falta informar o WhatsApp do suporte (Sistema › Suporte), se ainda não foi. Detalhes em
 > [`ajuda-contextual.md`](ajuda-contextual.md), fim. Cliente vai pedir novos ajustes.
 >
-> **Em andamento (cliente, 01/nov):** recesso da clínica e horário da recepção no bot, **só no local** (commits `d7ff3e2`,
-> `2659321`, `fdc8de3` e a Central de Ajuda). Migração `20261112120000_recesso_da_clinica.sql` aplicada só no local.
-> Falta: cliente validar; depois migração no staging (`supabase db push`), push da `main` e recaptura da captura
-> `bloquear` (`docs/capturas-pendentes.md`, aguarda autorização). Detalhe no [`historico.md`](historico.md) ("Recesso").
+> **Em produção (cliente, 01/nov):** recesso da clínica, horário da recepção, Sim/Não em botões, encaixe com tipo e
+> serviço, Base de Conhecimento (migrada do staging) e aviso de não publicadas: `45c2b9c` (4 migrações). Falta: ligar
+> `knowledge_base` na matriz da clínica, informar o WhatsApp do suporte (Sistema › Suporte) e recapturar `bloquear`
+> (`capturas-pendentes.md`, aguarda autorização). Detalhe no [`historico.md`](historico.md) ("Recesso").
 >
 > **Ambientes**
-> - **Produção** (`app.recepclinic.com.br`, branch `producao`) = `main` em `20bfe8b` (revisão da jornada do bot E1–E4,
->   confirmação na página do link). Fluxo em [`producao.md`](producao.md).
+> - **Produção** (`app.recepclinic.com.br`, branch `producao`) = `main` em `45c2b9c` (ver acima). Fluxo em [`producao.md`](producao.md).
 > - **Staging** (`teste.recepclinic.com.br`, branch `main`): produção + cartão do Asaas (`ASAAS_PREVIEW=1`) + Base de
 >   Conhecimento do bot com os ajustes da homologação (migração aplicada).
 >   Roteiros em [`staging.md`](staging.md).
