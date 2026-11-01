@@ -2,18 +2,23 @@
 
 > **Estado atual (retomar daqui), 31/out/2026.** Detalhes e datas no [`historico.md`](historico.md) (só por busca).
 >
-> **Próximo (cliente, 31/out):** Base de Conhecimento Global do bot: Etapas 1 a 4 feitas e no staging (nada publicado,
-> item ligado em nenhuma clínica). Etapa 5: homologação pela parte R do [`staging.md`](staging.md). Retomar pelo
-> [`base-de-conhecimento.md`](base-de-conhecimento.md). Mudança no caminho do paciente atualiza `botJourney.ts` no
-> mesmo commit.
+> **Próximo (cliente, 01/nov):** validado no staging: Base de Conhecimento, "Como funciona?" de Configurações e Central de
+> Ajuda. No staging para validar: **25 capturas reais de tela** nos artigos da Central (`public/ajuda/`, refazer quando a
+> tela mudar). Falta informar o WhatsApp do suporte (Sistema › Suporte), se ainda não foi. Detalhes em
+> [`ajuda-contextual.md`](ajuda-contextual.md), fim. Cliente vai pedir novos ajustes.
+>
+> **Em produção (cliente, 01/nov):** recesso da clínica, horário da recepção, Sim/Não em botões, encaixe com tipo e
+> serviço, Base de Conhecimento (migrada do staging) e aviso de não publicadas: `45c2b9c` (4 migrações). Falta: ligar
+> `knowledge_base` na matriz da clínica, informar o WhatsApp do suporte (Sistema › Suporte) e recapturar `bloquear`
+> (`capturas-pendentes.md`, aguarda autorização). Detalhe no [`historico.md`](historico.md) ("Recesso").
 >
 > **Ambientes**
-> - **Produção** (`app.recepclinic.com.br`, branch `producao`) = `main` em `20bfe8b` (revisão da jornada do bot E1–E4,
->   confirmação na página do link). Fluxo em [`producao.md`](producao.md).
+> - **Produção** (`app.recepclinic.com.br`, branch `producao`) = `main` em `45c2b9c` (ver acima). Fluxo em [`producao.md`](producao.md).
 > - **Staging** (`teste.recepclinic.com.br`, branch `main`): produção + cartão do Asaas (`ASAAS_PREVIEW=1`) + Base de
->   Conhecimento do bot (`7c2b1ae`; migração aplicada).
+>   Conhecimento do bot com os ajustes da homologação (migração aplicada).
 >   Roteiros em [`staging.md`](staging.md).
-> - **Branch `faturamento`** (só local, sem push): todo código do financeiro.
+> - **Branch `faturamento`** (só local, sem push): todo código do financeiro. Tem a `main` até `823d4e3`; atualizar
+>   só quando o cliente pedir (cliente, 01/nov).
 >
 > **Frentes**
 > - **Ajustes da produção (C1–C16) e revisão da jornada do bot:** todos na produção; nada pendente. Decisões da

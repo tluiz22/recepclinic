@@ -144,8 +144,13 @@ describe("conversa do bot", () => {
       );
     await hello("wamid.f66.in.1");
     expect(sent[0]).toBe("Oi! Aqui é da Clínica Mensagens F66 😊");
-    // Clínica sem serviço para o bot: depois das boas-vindas, a recepção assume (cliente, 11/out/2026).
-    expect(sent[1]).toBe("A clínica responderá sua mensagem em breve.");
+    // Clínica sem serviço para o bot: depois das boas-vindas, a pergunta; Sim e a recepção assume (cliente, 31/out/2026).
+    expect(sent[1]).toBe("No momento não há horários para marcar por aqui.\n\nVocê quer que a clínica entre em contato por aqui?");
+    await processWebhook(
+      { entry: [{ changes: [{ field: "messages", value: { metadata: { phone_number_id: NUMBER }, messages: [{ id: "wamid.f66.in.yes", from: "5584991226601", type: "text", text: { body: "sim" } }] } }] }] },
+      { resolveClinic: (pid) => resolveClinicByPhoneNumberId(pid, env()), clientFor: (cid) => createClinicServiceClient(cid, env()), senderFor: async () => sender },
+    );
+    expect(sent[2]).toBe("A clínica responderá sua mensagem em breve.");
     const { data: paused } = await adminClient().from("conversation_state").select("human_handoff").eq("clinic_id", clinicId).single();
     expect(paused!.human_handoff).toBe(true);
 

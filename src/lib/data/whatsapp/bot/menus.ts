@@ -3,8 +3,8 @@ import { servicesOf, type BotService } from "./catalog";
 import { go, say, sayPreparationFile, sendList, textFor, type Bot } from "./engine";
 import { pick, type Selection } from "./input";
 import * as t from "./texts";
-import { handOver, startBooking, startReturn } from "./booking";
-import { handoff, startManage } from "./manage";
+import { BOOKING_STATES, handOver, startBooking, startReturn } from "./booking";
+import { handoff, MANAGE_STATES, startManage } from "./manage";
 
 // Menus do bot, na estrutura do piloto: Consultas › Marcar consulta / Marcar
 // retorno / Remarcar / Cancelar / Encaixe ou antecipar; Exames › Marcar exame
@@ -46,10 +46,25 @@ export async function showMenu(b: Bot, { withWelcome = false, notUnderstood = fa
   if (withWelcome) await say(b, "bot_welcome", textFor(b, "welcome", t.welcome(b.clinic.label), { clinica: b.clinic.label }));
   const items = await mainItems(b);
   // Clínica sem nada para o bot marcar: depois das boas-vindas, a recepção assume (cliente, 11/out/2026).
-  if (!items.length) return handOver(b, "bot_nothing_to_book", t.willReply(b.clinic.designation), "no_service");
+  if (!items.length) return handOver(b, "bot_nothing_to_book", t.NOTHING_TO_BOOK, "no_service", "no_availability", true);
   if (notUnderstood) await say(b, "bot_not_understood", textFor(b, "not_understood", t.notUnderstood(true)));
   await sendList(b, "bot_menu", textFor(b, "menu", t.MENU_BODY), t.numberedList(items, false));
   await go(b, "MENU");
+}
+
+/**
+ * "voltar" digitado (cliente, 31/out/2026): dentro de um fluxo, o submenu de onde veio (Consultas ou Exames); no
+ * preparo, Informações; no submenu, em Informações ou fora de um fluxo com grupo, o menu principal.
+ */
+export async function showPreviousMenu(b: Bot): Promise<void> {
+  const state = b.convo.state;
+  if (state === "INFO_PREP_SELECT") return showInfo(b);
+  const context = (b.convo.context ?? {}) as { category?: string; group?: string };
+  const inFlow = BOOKING_STATES.has(state) || MANAGE_STATES.has(state);
+  const group = !inFlow ? undefined : BOOKING_STATES.has(state) ? context.category : context.group;
+  if (group === "exam") return showSubmenu(b, "EXAMES_MENU");
+  if (group === "consultation" || group === "return_visit") return showSubmenu(b, "CONSULTAS_MENU");
+  return showMenu(b);
 }
 
 export async function handleMenu(b: Bot, selection: Selection): Promise<void> {

@@ -48,7 +48,7 @@ const COLS = "lg:grid-cols-[28px_64px_minmax(0,3fr)_150px_110px_40px]";
   <FlashMessage />
   <KnowledgeTabs active="entradas" />
 
-  <section aria-label="Publicação" class={`mt-4 ${PANEL} flex flex-wrap items-center justify-between gap-3`}>
+  <section aria-label="Publicação" class={`mt-4 ${PANEL} ${changes > 0 ? "border-pend-200! bg-pend-50!" : ""} flex flex-wrap items-center justify-between gap-3`}>
     <div class="min-w-0 text-[15px]">
       {
         publication ? (
@@ -61,7 +61,7 @@ const COLS = "lg:grid-cols-[28px_64px_minmax(0,3fr)_150px_110px_40px]";
         )
       }
       <p class="mt-1 text-ink-soft">
-        {publication && (changes ? `${changes} ${changes === 1 ? "alteração" : "alterações"} depois da última publicação. ` : "Nada mudou depois da última publicação. ")}
+        {publication && (changes ? `${changes} ${changes === 1 ? "alteração" : "alterações"} ainda não ${changes === 1 ? "publicada" : "publicadas"}: o bot só usa o que foi publicado. Deseja publicar agora? ` : "Nada mudou depois da última publicação. ")}
         {`Ativas agora: ${counts.active}.`}
         {!publication && counts.active === 0 && " Ative pelo menos uma entrada para publicar."}
       </p>

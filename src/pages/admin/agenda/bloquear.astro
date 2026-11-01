@@ -14,6 +14,7 @@ import Icon from "../../../components/admin/Icon.astro";
 import { CHECK, CHOICE, DANGER_BUTTON, INPUT, PANEL, PRIMARY_BUTTON, SECONDARY_BUTTON } from "../../../components/admin/config/formStyles";
 import Field from "../../../components/admin/ui/Field.astro";
 import { describedBy } from "../../../components/admin/ui/field";
+import HowItWorks from "../../../components/admin/ui/HowItWorks.astro";
 import PageHeader from "../../../components/admin/ui/PageHeader.astro";
 import { addDays, formatInstant, isCalendarDate, isClockTime, todayIn, toInstant } from "../../../lib/clinicTime";
 import { createUserClient } from "../../../lib/data/clients";
@@ -24,7 +25,8 @@ import { listAgendaAppointmentsByIds, type AgendaAppointment } from "../../../li
 import { listAgendas } from "../../../lib/data/config/agendas";
 import { DataError } from "../../../lib/data/errors";
 import { describeDataError } from "../../../lib/data/formAction";
-import { bloquear as bloquearAjuda } from "../../../lib/ajuda/agenda";
+import { agenda as ajudaAgenda, bloquear as bloquearAjuda } from "../../../lib/ajuda/agenda";
+import { blockDays, RECESS_ASK_AFTER_DAYS, RECESS_DEFAULT_MESSAGE, renderRecessMessage } from "../../../lib/recess";
 import { setFlash } from "../../../lib/flash";
 import { formAll, formChecked, formText } from "../../../lib/forms";
 
@@ -45,12 +47,20 @@ const values = {
   endDate: "",
   endTime: "12:00",
   reason: "",
+  recess: false,
+  recessMessage: RECESS_DEFAULT_MESSAGE,
 };
 values.endDate = values.startDate;
+// Perguntas do recesso (cliente, 01/nov/2026): "recesso_ok" guarda a assinatura do pedido já confirmado.
+let recessSig = "";
+let recessConfirmed = false;
+let recessStage: { kind: "missing"; names: string[] } | { kind: "long"; days: number } | null = null;
 let error: string | null = null;
 // Erro de cada campo, embaixo dele (ajuda contextual, 23/out/2026).
 let fieldErrors: Record<string, string> = {};
 let conflicts: AgendaAppointment[] = [];
+// Interrompe o envio para mostrar a pergunta do recesso (não é erro).
+class RecessPause extends Error {}
 
 function period() {
   const v = new Map<string, string>();
@@ -58,6 +68,7 @@ function period() {
   if (!isCalendarDate(values.startDate) || !isCalendarDate(values.endDate)) v.set("date", "Datas inválidas.");
   if (!values.fullDay && (!isClockTime(values.startTime) || !isClockTime(values.endTime))) v.set("time", "Horários inválidos.");
   if (!values.reason.trim()) v.set("reason", "Informe o motivo.");
+  if (values.recess && !values.recessMessage.trim()) v.set("recess_message", "Escreva a mensagem de recesso.");
   if (v.size) throw new DataError("invalid", "Bloqueio: dados inválidos", Object.fromEntries(v));
   const startsAt = toInstant(values.startDate, values.fullDay ? "00:00" : values.startTime, clinic.timezone);
   const endsAt = values.fullDay ? toInstant(addDays(values.endDate, 1), "00:00", clinic.timezone) : toInstant(values.endDate, values.endTime, clinic.timezone);
@@ -80,11 +91,24 @@ if (Astro.request.method === "POST") {
     endDate: formText(form, "end_date"),
     endTime: formText(form, "end_time"),
     reason: formText(form, "reason"),
+    recess: formChecked(form, "recess"),
+    recessMessage: formText(form, "recess_message") || RECESS_DEFAULT_MESSAGE,
   });
+  const activateRecess = !!formText(form, "ativar_recesso");
+  if (activateRecess) values.recess = true;
+  recessSig = [[...values.agendaIds].sort().join(","), values.startDate, values.endDate, values.fullDay ? 1 : 0, values.startTime, values.endTime, values.recess ? 1 : 0].join("|");
+  recessConfirmed = formText(form, "recesso_ok") === recessSig;
   let decision = formText(form, "decisao");
   const seen = formText(form, "vistos").split(",").filter(Boolean).sort().join(",");
   try {
     const range = period();
+    if (!activateRecess && !recessConfirmed) {
+      const missing = agendas.filter((a) => !values.agendaIds.includes(a.id));
+      const days = blockDays(range.startsAt, range.endsAt, clinic.timezone);
+      if (values.recess && missing.length) recessStage = { kind: "missing", names: missing.map((a) => a.name) };
+      else if (!values.recess && days > RECESS_ASK_AFTER_DAYS) recessStage = { kind: "long", days };
+    }
+    if (activateRecess || recessStage) throw new RecessPause();
     const found = await conflictsByAgenda(range);
     const total = found.reduce((sum, item) => sum + item.appointments.length, 0);
     // Período mudado depois de ver a lista (ou atendimento novo nele): mostra de novo.
@@ -99,6 +123,7 @@ if (Astro.request.method === "POST") {
           agendaId: item.agendaId,
           ...range,
           reason: values.reason,
+          recessMessage: values.recess ? values.recessMessage : null,
           cancelAppointmentIds: decision === "cancelar" ? item.appointments.map((a) => a.id) : [],
           actorId: Astro.locals.userId ?? null,
         });
@@ -114,14 +139,14 @@ if (Astro.request.method === "POST") {
         if (missed.length) return Astro.redirect(`/admin/agenda/avisar?ids=${missed.join(",")}&volta=${encodeURIComponent(backTo)}`, 303);
         return Astro.redirect(backTo, 303);
       }
-      setFlash(Astro.cookies, { tone: "success", text: `${agendaWord}.${decision === "manter" ? " Os atendimentos do período foram mantidos." : ""}` });
+      setFlash(Astro.cookies, { tone: "success", text: `${agendaWord}${values.recess ? " em recesso da clínica" : ""}.${decision === "manter" ? " Os atendimentos do período foram mantidos." : ""}` });
       return Astro.redirect(backTo, 303);
     }
   } catch (caught) {
-    if (!(caught instanceof DataError)) logError("bloquear", caught);
+    if (!(caught instanceof DataError) && !(caught instanceof RecessPause)) logError("bloquear", caught);
     fieldErrors = caught instanceof DataError && caught.code === "invalid" ? caught.fields : {};
     const marked = Object.keys(fieldErrors).length;
-    error = marked
+    error = caught instanceof RecessPause ? null : marked
       ? `Não bloqueamos: confira ${marked > 1 ? `os ${marked} campos marcados` : "o campo marcado"}.`
       : caught instanceof DataError
         ? describeDataError(caught)
@@ -129,6 +154,8 @@ if (Astro.request.method === "POST") {
   }
 }
 const agendaName = new Map(agendas.map((a) => [a.id, a.name]));
+const previewDate = isCalendarDate(values.endDate) ? addDays(values.endDate, 1) : today;
+const recessPreview = renderRecessMessage(values.recessMessage, previewDate);
 ---
 
 <AdminLayout title="Bloquear agenda">
@@ -139,6 +166,7 @@ const agendaName = new Map(agendas.map((a) => [a.id, a.name]));
   <PageHeader title="Bloquear agenda" subtitle="Nenhum horário do período é oferecido enquanto o bloqueio existir." class="mt-2">
     <a slot="actions" href="/admin/agenda/bloqueios" class={SECONDARY_BUTTON}>Ver bloqueios</a>
   </PageHeader>
+  <HowItWorks id="bloquear" topic={ajudaAgenda.comoFunciona.bloquear} class="mt-4" />
   {error && <FormMessage tone="error">{error}</FormMessage>}
 
   <form method="POST" class="mt-4 flex max-w-2xl flex-col gap-4">
@@ -197,10 +225,53 @@ const agendaName = new Map(agendas.map((a) => [a.id, a.name]));
       <Field id="reason" label="Motivo" hint="Aparece na Agenda para a equipe." error={fieldErrors.reason}>
         <input id="reason" name="reason" required placeholder="Congresso, reunião, férias…" value={values.reason} aria-invalid={fieldErrors.reason ? "true" : undefined} aria-describedby={describedBy("reason", { hint: true, error: !!fieldErrors.reason })} class={INPUT} />
       </Field>
+      <div class="flex flex-col gap-2 border-t border-line pt-4">
+        <label class={`${CHOICE} font-semibold`}>
+          <input type="checkbox" id="recess" name="recess" checked={values.recess} class={CHECK} />
+          Recesso da clínica
+        </label>
+        <p class="text-sm text-ink-soft">Marque para avisar, pelo WhatsApp, o paciente que pedir a recepção durante o bloqueio. Ao marcar, escolha todas as agendas.</p>
+        <div id="recess-box" hidden={!values.recess} class="flex flex-col gap-3">
+          <Field id="recess_message" label="Mensagem de recesso" hint="Use {data} onde entra o dia do retorno (o dia seguinte ao fim do bloqueio)." error={fieldErrors.recess_message}>
+            <textarea id="recess_message" name="recess_message" rows="6" maxlength="1000" aria-invalid={fieldErrors.recess_message ? "true" : undefined} aria-describedby={describedBy("recess_message", { hint: true, error: !!fieldErrors.recess_message })} class={`${INPUT} h-auto`}>{values.recessMessage}</textarea>
+          </Field>
+          <div>
+            <p class="text-[14.5px] font-semibold text-ink">Como o paciente vai receber</p>
+            <div id="recess-preview" class="mt-1.5 max-w-sm rounded-xl rounded-tl-sm bg-brand-soft px-3.5 py-2.5 text-[15px] whitespace-pre-line text-ink">{recessPreview}</div>
+          </div>
+        </div>
+      </div>
     </div>
 
+    {recessConfirmed && <input type="hidden" name="recesso_ok" value={recessSig} />}
     {
-      conflicts.length > 0 ? (
+      recessStage?.kind === "missing" && (
+        <section aria-labelledby="recesso-faltam" class="flex flex-col gap-3 rounded-xl border border-pend-200 bg-pend-50 p-4 text-pend-800 sm:px-5 sm:py-[18px]">
+          <h2 id="recesso-faltam" class="font-display text-[17px] leading-tight font-bold">
+            Recesso da clínica sem {recessStage.names.length > 1 ? "as agendas" : "a agenda"} {recessStage.names.join(", ")}
+          </h2>
+          <p class="text-[15px]">O recesso vale para a clínica toda, mas {recessStage.names.length > 1 ? "essas agendas não estão marcadas" : "essa agenda não está marcada"}. Continuar mesmo assim? Para incluir, marque {recessStage.names.length > 1 ? "as agendas" : "a agenda"} acima e envie de novo.</p>
+          <div class="flex flex-wrap gap-2">
+            <button type="submit" name="recesso_ok" value={recessSig} class={SECONDARY_BUTTON}>Continuar mesmo assim</button>
+          </div>
+        </section>
+      )
+    }
+    {
+      recessStage?.kind === "long" && (
+        <section aria-labelledby="recesso-longo" class="flex flex-col gap-3 rounded-xl border border-pend-200 bg-pend-50 p-4 text-pend-800 sm:px-5 sm:py-[18px]">
+          <h2 id="recesso-longo" class="font-display text-[17px] leading-tight font-bold">O bloqueio tem {recessStage.days} dias. Enviar mensagem de recesso?</h2>
+          <p class="text-[15px]">Se o paciente pedir a recepção nesse período, o WhatsApp responde com a mensagem de recesso e a data de retorno.</p>
+          <div class="flex flex-wrap gap-2">
+            <button type="submit" name="ativar_recesso" value="1" class={PRIMARY_BUTTON}>Sim, enviar mensagem de recesso</button>
+            <button type="submit" name="recesso_ok" value={recessSig} class={SECONDARY_BUTTON}>Não, bloquear sem recesso</button>
+          </div>
+        </section>
+      )
+    }
+
+    {
+      recessStage ? null : conflicts.length > 0 ? (
         <section aria-labelledby="conflitos" class="flex flex-col gap-3 rounded-xl border border-pend-200 bg-pend-50 p-4 text-pend-800 sm:px-5 sm:py-[18px]">
           <input type="hidden" name="vistos" value={conflicts.map((a) => a.id).join(",")} />
           <h2 id="conflitos" class="font-display text-[17px] leading-tight font-bold">
@@ -279,5 +350,26 @@ const agendaName = new Map(agendas.map((a) => [a.id, a.name]));
     start?.addEventListener("change", () => {
       if (end && (!end.value || end.value < start.value)) end.value = start.value;
     });
+    // Recesso da clínica: mostra o texto e a prévia; {data} = dia seguinte ao fim do bloqueio.
+    const recess = document.getElementById("recess") as HTMLInputElement | null;
+    const recessBox = document.getElementById("recess-box");
+    const recessText = document.getElementById("recess_message") as HTMLTextAreaElement | null;
+    const preview = document.getElementById("recess-preview");
+    const endInput = document.getElementById("end_date") as HTMLInputElement | null;
+    const returnDate = () => {
+      if (!endInput?.value) return "{data}";
+      const [y, m, d] = endInput.value.split("-").map(Number);
+      const next = new Date(Date.UTC(y, m - 1, d + 1));
+      return `${String(next.getUTCDate()).padStart(2, "0")}/${String(next.getUTCMonth() + 1).padStart(2, "0")}/${next.getUTCFullYear()}`;
+    };
+    const syncRecess = () => {
+      if (recessBox) recessBox.hidden = !recess?.checked;
+      if (preview && recessText) preview.textContent = recessText.value.replaceAll("{data}", returnDate());
+    };
+    recess?.addEventListener("change", syncRecess);
+    recessText?.addEventListener("input", syncRecess);
+    endInput?.addEventListener("change", syncRecess);
+    start?.addEventListener("change", () => setTimeout(syncRecess));
+    syncRecess();
   </script>
 </AdminLayout>

@@ -7,6 +7,7 @@ import {
   isPastIdleTimeout,
   logAbandonment,
   openConversation,
+  pauseForHuman,
   recordHandoffSubject,
   setConversationState,
   setNotUnderstoodCount,
@@ -17,20 +18,23 @@ import { contactIdByPhone, recordOutboundMessage } from "../messages";
 import { messageBody, toE164, type WaMessage } from "../meta";
 import type { ClinicSender } from "../send";
 import { BOOKING_STATES, handleBookingState } from "./booking";
-import { createBot, currentPrompt, KnowledgeTakeover, mergeContext, NotUnderstoodLimitReached, RECEPTION_CONFIRM_KEY, say, sendButtons, type Bot, type BotEnv } from "./engine";
+import { askHandoffSubject, createBot, currentPrompt, go, KnowledgeTakeover, mergeContext, NotUnderstoodLimitReached, offerReception, RECEPTION_CONFIRM_KEY, say, sendButtons, textFor, type Bot, type BotEnv, type ReceptionOffer } from "./engine";
 import { ENTRY_STATES, handleEntryState, startConversation } from "./entry";
-import { asksForReception, extractSelection, isBackToMenu, TALK_TO_RECEPTION_ID, yesNo } from "./input";
-import { handleInfo, handleMenu, handlePreparationChoice, handleSubmenu, showMenu } from "./menus";
-import { handleManageState, handleOfferTap, handleReminderTap, handoff, handoffNotUnderstood, MANAGE_STATES, offerTapOf, reminderTapOf } from "./manage";
+import { asksForReception, extractSelection, isBack, isBackToMenu, TALK_TO_RECEPTION_ID, yesNo } from "./input";
+import { handleInfo, handleMenu, handlePreparationChoice, handleSubmenu, showMenu, showPreviousMenu } from "./menus";
+import { handleManageState, handleOfferTap, handleReminderTap, handoff, handoffNotUnderstood, handoffText, MANAGE_STATES, offerTapOf, reminderTapOf } from "./manage";
 import {
   BLOCKED_HANDOFF,
   BLOCKED_RECEPTION_WILL_CONTACT,
   HANDOFF_SUBJECT_THANKS,
   IDLE_CLOSED,
+  NOT_UNDERSTOOD_OFFER,
   RECEPTION_CONFIRM,
   RECEPTION_CONFIRM_BUTTONS,
   RECEPTION_CONFIRM_IDS,
   RECEPTION_DECLINED,
+  RECEPTION_DECLINED_NO_MENU,
+  willReply,
 } from "./texts";
 import { blockedContactByPhone, blockedNoticeDue, markBlockedNotice } from "../contactBlock";
 import { listBotMessages } from "../customMessages";
@@ -96,9 +100,9 @@ export async function handleIncomingMessage(env: BotEnv, message: WaMessage): Pr
     if (error instanceof KnowledgeTakeover) {
       await performTakeover(b, error.action);
     } else {
-      // 4ª mensagem seguida que o bot não entende (F8.5d): a conversa vai para a clínica.
+      // 4ª mensagem seguida que o bot não entende (F8.5d): pergunta se quer a recepção (cliente, 31/out/2026).
       if (!(error instanceof NotUnderstoodLimitReached)) throw error;
-      await handoffNotUnderstood(b);
+      await offerReception(b, { kind: "bot_handoff_not_understood", reason: "not_understood" }, NOT_UNDERSTOOD_OFFER);
       return "handled";
     }
   }
@@ -113,7 +117,30 @@ export async function handleIncomingMessage(env: BotEnv, message: WaMessage): Pr
 const FREE_TEXT_AWAITING = new Set(["address_input", "contact_name", "patient_name", "self_name"]);
 const awaitingOf = (convo: Conversation) => ((convo.context ?? {}) as { awaiting?: string }).awaiting;
 /** Pedido de recepção digitado esperando o Sim ou o Não (no contexto, sem trocar o passo). */
-const receptionConfirmPending = (convo: Conversation) => ((convo.context ?? {}) as Record<string, unknown>)[RECEPTION_CONFIRM_KEY] === true;
+const receptionConfirmPending = (convo: Conversation) => !!((convo.context ?? {}) as Record<string, unknown>)[RECEPTION_CONFIRM_KEY];
+/** Transferência oferecida pelo bot (sem horário, convênio, "não entendi"…), e não o pedido digitado. */
+const receptionOfferOf = (convo: Conversation) => {
+  const value = ((convo.context ?? {}) as Record<string, unknown>)[RECEPTION_CONFIRM_KEY];
+  return typeof value === "object" && value !== null ? (value as ReceptionOffer) : null;
+};
+
+/** Sim à transferência oferecida: a pausa de antes, com o motivo dela. */
+async function acceptReceptionOffer(b: Bot, offer: ReceptionOffer): Promise<void> {
+  if (offer.reason === "not_understood") return handoffNotUnderstood(b);
+  await say(b, offer.kind, b.receptionAvailable ? await handoffText(b) : willReply(b.clinic.designation));
+  await pauseForHuman(b.db, b.clinicId, b.phone, { contactId: b.convo.contactId, reason: offer.reason }, b.now);
+  await askHandoffSubject(b);
+}
+
+/** Não à transferência oferecida: o menu; na clínica sem nada para marcar, a despedida (cliente, 31/out/2026). */
+async function declineReceptionOffer(b: Bot, offer: ReceptionOffer): Promise<void> {
+  if (offer.noMenu) {
+    await say(b, "bot_reception_declined", RECEPTION_DECLINED_NO_MENU);
+    return go(b, WELCOME);
+  }
+  await say(b, "bot_reception_declined", RECEPTION_DECLINED);
+  return showMenu(b);
+}
 
 async function dispatch(env: BotEnv, b: Bot, convo: Conversation, phone: string, message: WaMessage): Promise<void> {
   const selection = extractSelection(message);
@@ -145,15 +172,24 @@ async function dispatch(env: BotEnv, b: Bot, convo: Conversation, phone: string,
     return;
   }
 
+  // "voltar" digitado (cliente, 31/out/2026): o menu de onde veio, nunca o retorno da base.
+  if (isBack(selection)) {
+    if (convo.state === WELCOME) return startConversation(b);
+    if (convo.funnelSessionId) await logAbandonment(env.db, env.clinicId, convo, "back_to_menu", env.now);
+    return showPreviousMenu(b);
+  }
+
   // "Falar com a recepção" em qualquer passo (cliente, 30/out/2026): o botão de saída de uma resposta não entendida
   // transfere; o pedido digitado ("atendente"), fora dos passos de texto livre (nome e endereço), pede confirmação.
   if (b.receptionAvailable && selection.id === TALK_TO_RECEPTION_ID) return handoff(b, "way_out");
   if (receptionConfirmPending(convo)) {
+    const offer = receptionOfferOf(convo);
     await mergeContext(b, { [RECEPTION_CONFIRM_KEY]: undefined });
     const answer = yesNo(selection, RECEPTION_CONFIRM_IDS);
-    if (answer === true) return handoff(b, "typed");
+    if (answer === true) return offer ? acceptReceptionOffer(b, offer) : handoff(b, "typed");
     if (answer === false) {
       if (convo.funnelSessionId) await logAbandonment(env.db, env.clinicId, convo, "back_to_menu", env.now);
+      if (offer) return declineReceptionOffer(b, offer);
       // Pedido logo na 1ª mensagem: as boas-vindas e o menu.
       if (convo.state === WELCOME) return showMenu(b, { withWelcome: true });
       await say(b, "bot_reception_declined", RECEPTION_DECLINED);

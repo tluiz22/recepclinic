@@ -11,7 +11,7 @@ import { pauseForHuman, startFunnel } from "../conversations";
 import { checkBookingLimits, checkNewPatientLimit, contactForLimits, recordBotLimitEvent } from "../botLimits";
 import { formatAppointmentWhen } from "../templates";
 import { servicesOf, type BotService } from "./catalog";
-import { askHandoffSubject, attachContact, end, go, repeatYesNo, say, sayInvalidBirthdate, sendButtons, sendList, step, textFor, type Bot } from "./engine";
+import { askHandoffSubject, attachContact, end, go, offerReception, repeatYesNo, say, sayInvalidBirthdate, sendButtons, sendList, step, textFor, type Bot } from "./engine";
 import { formatBirthdate, parseBirthdate, pick, yesNo, type Selection } from "./input";
 import { showMenu, showSubmenu } from "./menus";
 import * as t from "./texts";
@@ -144,7 +144,7 @@ export async function startBooking(
   await open(b, category === "exam" ? "exam" : "booking", joinWaitlist ? { waitlist: true } : {});
   if (await stoppedByBotLimit(b, "booking")) return;
   const services = servicesOf(await b.catalog(), category);
-  if (!services.length) return handOver(b, "bot_nothing_to_book", t.willReply(b.clinic.designation), "no_service");
+  if (!services.length) return handOver(b, "bot_nothing_to_book", t.NOTHING_TO_BOOK, "no_service", "no_availability", true);
   const ctx: BookingContext = { category, ...(joinWaitlist ? { joinWaitlist } : {}) };
   // Um serviço só, ou o citado na pergunta (base de conhecimento): escolhe sozinho e avisa qual é
   // (cliente, 31/out/2026; revoga a lista sempre de 07/out).
@@ -187,7 +187,7 @@ async function chooseService(b: Bot, ctx: BookingContext, service: BotService): 
   const lastDate = horizonLastDate(b.clinic.today, b.clinic.horizonDays);
   const found = await bookableAgendaLocations(b.db, b.clinicId, { serviceId: service.id, agendaIds: service.agendas.map((a) => a.id), lastDate }, b.now);
   const agendas = service.agendas.filter((a) => found.has(a.id));
-  if (!agendas.length) return handOver(b, "bot_book_no_free_times", t.noFreeTimes(service.name, b.clinic.designation), "no_free_times");
+  if (!agendas.length) return handOver(b, "bot_book_no_free_times", t.noFreeTimesOffer(service.name), "no_free_times");
   const bookable = Object.fromEntries([...found].map(([id, types]) => [id, [...types]]));
   const next: BookingContext = { ...ctx, serviceId: service.id, serviceName: service.name, bookable };
   if (agendas.length > 1) return askAgenda(b, next, service);
@@ -274,7 +274,7 @@ async function afterLocation(b: Bot, ctx: BookingContext): Promise<void> {
 async function enterAddress(b: Bot, ctx: BookingContext): Promise<void> {
   const saved = b.convo.contactId ? (await getContact(b.db, b.clinicId, b.convo.contactId)).defaultHomeAddress : null;
   if (saved) {
-    await say(b, "bot_book_home_address_confirm_default", t.homeAddressConfirmDefault(saved));
+    await sendButtons(b, "bot_book_home_address_confirm_default", t.homeAddressConfirmDefault(saved), t.YES_NO_BUTTONS);
     return go(b, "BOOK_HOME_ADDRESS", { ...ctx, awaiting: "address_default", pendingAddress: saved });
   }
   await askAddress(b, ctx);
@@ -290,7 +290,7 @@ async function handleAddress(b: Bot, selection: Selection): Promise<void> {
   if (ctx.awaiting === "address_input") {
     const address = selection.text.trim();
     if (!address) return askAddress(b, ctx);
-    await say(b, "bot_book_home_address_confirm_new", t.homeAddressConfirmNew(address));
+    await sendButtons(b, "bot_book_home_address_confirm_new", t.homeAddressConfirmNew(address), t.YES_NO_BUTTONS);
     return go(b, "BOOK_HOME_ADDRESS", { ...ctx, awaiting: "address_new", pendingAddress: address });
   }
   const answer = yesNo(selection);
@@ -418,7 +418,7 @@ async function handleCoverage(b: Bot, selection: Selection): Promise<void> {
       const answer = yesNo(selection);
       if (answer === null) return repeatYesNo(b, "bot_book_plan_not_accepted", t.planNotAccepted(refused.name, b.clinic.designation, refused.forThisService));
       if (answer) return choosePrivate(b, ctx);
-      return handOver(b, "bot_book_insurance_reception", t.insuranceToReception(b.clinic.designation), "insurance_not_accepted", "requested");
+      return handOver(b, "bot_book_insurance_reception", "Tudo bem.", "insurance_not_accepted", "requested");
     }
     default:
       return restart(b);
@@ -549,7 +549,7 @@ async function handlePatientSelect(b: Bot, selection: Selection): Promise<void> 
       .map((p) => ({ id: p.id, name: p.fullName, birthdate: p.birthdate }));
     if (!matches.length) return askPatientName(b, ctx, birthdate);
     if (matches.length === 1) {
-      await say(b, "bot_book_confirm_patient", t.confirmPatient(b.words, matches[0].name, formatBirthdate(birthdate)));
+      await sendButtons(b, "bot_book_confirm_patient", t.confirmPatient(b.words, matches[0].name, formatBirthdate(birthdate)), t.YES_NO_BUTTONS);
       return go(b, "BOOK_PATIENT_SELECT", { ...keepPath(ctx), awaiting: "confirm_patient", pending: matches[0] });
     }
     await sendPatientChoice(b, matches, t.birthdateMatches(b.words));
@@ -573,7 +573,7 @@ async function handlePatientNew(b: Bot, selection: Selection): Promise<void> {
   switch (ctx.awaiting) {
     case "contact_name": {
       if (!text) return askContactName(b, ctx, ctx.guardian ?? false);
-      await say(b, "bot_book_confirm_contact_name", confirmContactText(ctx, text));
+      await sendButtons(b, "bot_book_confirm_contact_name", confirmContactText(ctx, text), t.YES_NO_BUTTONS);
       return go(b, "BOOK_PATIENT_NEW", { ...ctx, awaiting: "contact_confirm", contactName: text });
     }
     case "contact_confirm": {
@@ -647,7 +647,7 @@ async function handlePatientNew(b: Bot, selection: Selection): Promise<void> {
 }
 
 async function askNewConfirm(b: Bot, ctx: BookingContext, name: string, birthdate: string): Promise<void> {
-  await say(b, "bot_book_confirm_new_patient", t.confirmNewPatient(b.words, name, formatBirthdate(birthdate)));
+  await sendButtons(b, "bot_book_confirm_new_patient", t.confirmNewPatient(b.words, name, formatBirthdate(birthdate)), t.YES_NO_BUTTONS);
   await go(b, "BOOK_PATIENT_NEW", { ...ctx, awaiting: "new_confirm", newName: name, newBirthdate: birthdate });
 }
 
@@ -666,7 +666,7 @@ async function askSelfBirthdate(b: Bot, ctx: BookingContext): Promise<void> {
 }
 
 async function askSelfConfirm(b: Bot, ctx: BookingContext, name: string, birthdate: string): Promise<void> {
-  await say(b, "bot_book_confirm_self", t.confirmSelf(name, formatBirthdate(birthdate)));
+  await sendButtons(b, "bot_book_confirm_self", t.confirmSelf(name, formatBirthdate(birthdate)), t.YES_NO_BUTTONS);
   await go(b, "BOOK_PATIENT_NEW", { ...ctx, awaiting: "self_confirm", selfName: name, selfBirthdate: birthdate });
 }
 
@@ -729,14 +729,13 @@ async function stoppedByBotLimit(b: Bot, check: "booking" | "new_patient"): Prom
 
 /**
  * Nada para o bot marcar (clínica sem serviço, serviço sem horário livre no
- * prazo): avisa que a clínica responde em breve e a recepção assume, com a
- * pausa padrão (cliente, 11/out/2026).
+ * prazo) ou convênio não aceito: a tentativa termina e o bot pergunta se a
+ * pessoa quer a recepção (cliente, 31/out/2026: nunca transferir sem
+ * perguntar). O Sim e o Não estão no router (`acceptReceptionOffer`).
  */
-export async function handOver(b: Bot, kind: string, text: string, reason: string, handoff: "no_availability" | "requested" = "no_availability"): Promise<void> {
-  await say(b, kind, text);
+export async function handOver(b: Bot, kind: string, lead: string | null, reason: string, handoff: "no_availability" | "requested" = "no_availability", noMenu = false): Promise<void> {
   await end(b, "blocked", { reason });
-  await pauseForHuman(b.db, b.clinicId, b.phone, { contactId: b.convo.contactId, reason: handoff }, b.now);
-  await askHandoffSubject(b);
+  await offerReception(b, { kind, reason: handoff, ...(noMenu ? { noMenu } : {}) }, lead);
 }
 
 // ---------------------------------------------------------------------------
@@ -945,7 +944,7 @@ async function handleReturn(b: Bot, selection: Selection): Promise<void> {
   );
   const lastDate = earliestDate(origin?.lastDate ?? null, horizonLastDate(b.clinic.today, b.clinic.horizonDays));
   const free = (await bookableAgendaLocations(b.db, b.clinicId, { serviceId: service.id, agendaIds: [chosen.agendaId], lastDate }, b.now)).get(chosen.agendaId);
-  if (!free) return handOver(b, "bot_book_no_free_times", t.noFreeTimes(service.name, b.clinic.designation), "no_free_times");
+  if (!free) return handOver(b, "bot_book_no_free_times", t.noFreeTimesOffer(service.name), "no_free_times");
   // Retorno no consultório, como no piloto (o domiciliar não dá direito a retorno).
   const types = (agenda?.locationTypes ?? []).filter((type) => free.has(type));
   const locationCategory = types.includes("clinic") ? "clinic" : (types[0] ?? null);

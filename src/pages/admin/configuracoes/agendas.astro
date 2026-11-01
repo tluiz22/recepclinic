@@ -38,6 +38,8 @@ const servicesOf = (agendaId: string) => services.filter((s) => s.agendaIds.incl
 const canCreateProfessional = professionalsWithoutAgenda(professionals, all).length > 0;
 const canCreateTeam = clinic.features.includes("exams") && !all.some((a) => a.kind === "resource");
 const cols = "lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1.4fr)_minmax(0,2fr)_36px]";
+import HowItWorks from "../../../components/admin/ui/HowItWorks.astro";
+import { configuracoes } from "../../../lib/ajuda/configuracoes";
 ---
 
 <ConfigShell current="agendas" title="Agendas" subtitle="De um profissional ou da equipe (Exames), com os serviços que atendem." setup={setup}>
@@ -48,6 +50,10 @@ const cols = "lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1.4fr)_minmax(0,2fr)_36px]"
       </Button>
     )
   }
+
+  <HowItWorks id="agendas" topic={configuracoes.comoFunciona.agendas} class="mb-3">
+    <p class="text-[15px] text-ink-soft">De quem é a agenda e o que depende dela.</p>
+  </HowItWorks>
 
   <div class="flex flex-wrap items-center justify-between gap-3">
     <p class="text-sm text-ink-soft" role="status">

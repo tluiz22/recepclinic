@@ -73,7 +73,7 @@ async function say(phone: string, input: string | { id: string }): Promise<Sent[
 
 const bodies = (reply: Sent[]) => reply.map((m) => m.body);
 const optionId = (reply: Sent[], title: string) => reply.at(-1)!.options.find((o) => o.title.includes(title))!.id;
-const MENU = "Como podemos ajudar? Escolha uma opção abaixo (ou digite o número).";
+const MENU = "Escolha uma opção abaixo (ou digite o número).";
 
 async function reset(phone: string, state = "MENU") {
   await adminClient().from("conversation_state").update({ state, context: {}, human_handoff: false, not_understood_count: 0 }).eq("clinic_id", f.clinicId).eq("contact_phone", phone);
@@ -157,10 +157,15 @@ describe("no menu", () => {
     expect(bodies(await say(phone, "obrigado!"))).toEqual(["Por nada! Se precisar, é só mandar mensagem por aqui.", MENU]);
   });
 
-  it("pedido de marcação abre o fluxo de marcar", async () => {
+  it("pedido de marcação abre o submenu, com marcar, retorno, remarcar e cancelar (cliente, 31/out/2026)", async () => {
     await reset(phone);
     const reply = await say(phone, "quero marcar uma consulta");
-    expect(bodies(reply)).toEqual(["Vamos marcar *Consulta*.", "Com qual profissional?"]);
+    expect(bodies(reply)).toEqual(["O que você precisa sobre consultas?"]);
+    expect(reply.at(-1)!.options.map((o) => o.title)).toEqual(expect.arrayContaining(["1. Marcar consulta", "3. Remarcar", "4. Cancelar"]));
+    expect((await convo(phone)).state).toBe("CONSULTAS_MENU");
+    const exam = await say(phone, "quero marcar um exame");
+    expect(bodies(exam)).toEqual(["O que você precisa sobre exames?"]);
+    expect((await convo(phone)).state).toBe("EXAMES_MENU");
   });
 
   it("serviço citado: a resposta com \"Marcar\", que abre a marcação dele", async () => {
@@ -188,6 +193,24 @@ describe("no meio da marcação", () => {
     const next = await say(phone, { id: optionId(reply, "Dr. Segundo") });
     // Com convênio cadastrado, o passo seguinte de hoje: particular ou convênio.
     expect(next.at(-1)!.body).toContain("particular");
+  });
+});
+
+describe("\"voltar\" digitado (cliente, 31/out/2026)", () => {
+  const phone = "+5584991337025";
+
+  it("na marcação, o submenu de onde veio; no submenu, o menu; nunca o retorno", async () => {
+    await say(phone, "Oi");
+    await say(phone, "1"); // Consultas
+    await say(phone, "1"); // Marcar consulta
+    const back = await say(phone, "voltar");
+    expect(bodies(back)).toEqual(["O que você precisa sobre consultas?"]);
+    expect((await convo(phone)).state).toBe("CONSULTAS_MENU");
+    const menu = await say(phone, "Voltar ao menu anterior");
+    expect(bodies(menu)).toEqual([MENU]);
+    const again = await say(phone, "voltar");
+    expect(bodies(again)).toEqual([MENU]);
+    expect((await convo(phone)).not_understood_count).toBe(0);
   });
 });
 
@@ -231,6 +254,42 @@ describe("pergunta clínica", () => {
     await say(phone, { id: "reception_yes" });
     expect((await convo(phone)).human_handoff).toBe(true);
     await setCoexistence(false);
+  });
+});
+
+describe("encaixe (cliente, 31/out/2026)", () => {
+  const phone = "+5584991337045";
+
+  it("com a Lista de espera: pergunta o tipo (consulta, retorno ou exame) e abre o \"Encaixe ou antecipar\"", async () => {
+    await say(phone, "Oi");
+    let reply = await say(phone, "Preciso de um encaixe");
+    expect(reply.at(-1)).toMatchObject({ kind: "buttons", body: "O encaixe é para qual tipo de atendimento?" });
+    expect(reply.at(-1)!.options.map((o) => o.title)).toEqual(["Consulta", "Retorno", "Exame"]);
+    // Número sem atendimento marcado: a resposta de hoje do encaixe, com Marcar, do tipo escolhido.
+    reply = await say(phone, { id: "waitlist_type_return" });
+    expect(reply.at(-1)!.body).toContain("não encontramos um retorno marcado");
+    await reset(phone);
+    const other = await say(phone, "consigo um encaixe?");
+    expect(other.at(-1)!.body).toBe("O encaixe é para qual tipo de atendimento?");
+    // Com o tipo na mensagem, não pergunta.
+    await reset(phone);
+    const exam = await say(phone, "tem encaixe para exame?");
+    expect(exam.at(-1)!.body).toContain("A lista de espera serve para antecipar um horário já marcado, e não encontramos um exame marcado");
+  });
+
+  it("sem a Lista de espera: explica e pergunta da recepção; sem recepção no app, o aviso e o menu", async () => {
+    const { data: features } = await adminClient().from("clinic_features").select("feature_key").eq("clinic_id", f.clinicId);
+    const keys = features!.map((x) => x.feature_key);
+    await adminClient().rpc("set_clinic_features", { p_clinic_id: f.clinicId, p_features: keys.filter((k) => k !== "waitlist") });
+    await setCoexistence(true);
+    await reset(phone);
+    const reply = await say(phone, "encaixe");
+    expect(reply.at(-1)).toMatchObject({ kind: "buttons", body: "O encaixe é combinado com a recepção. Você quer falar com a recepção?" });
+    await setCoexistence(false);
+    await reset(phone);
+    const without = await say(phone, "encaixe");
+    expect(without.at(-1)!.body).toBe(MENU);
+    await adminClient().rpc("set_clinic_features", { p_clinic_id: f.clinicId, p_features: keys });
   });
 });
 

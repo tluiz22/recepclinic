@@ -260,3 +260,24 @@ Mesmo jeito: regra conferida, testado no local e publicado no staging, sem migra
   catálogo confere que todo item de `plans.ts` tem o texto. Clicar no balão não marca nem desmarca o item.
 - **WhatsApp (só Suporte):** sem mudança, como o inventário previa ("avaliar depois do 1º piloto").
 
+
+## Ajuda em todas as telas de Configurações e dependências da jornada (cliente, 01/nov/2026)
+
+Decisão do cliente: cada tela de Configurações ganha um "Como funciona?" com **Para que serve**, **Depende de** (com
+link) e **Alimenta** (o que passa a depender dela), mais "i" nos campos pouco óbvios. Ordem da jornada:
+Clínica → Profissionais → Locais → Agendas → Serviços → Horários (Equipe à parte). Branch `ajuda-config`.
+Etapas: **1** componente (`depende`/`alimenta`) + Equipe e Profissionais; **2** Clínica e Locais; **3** Agendas e
+Serviços; **4** Horários, Feriados, Convênios e Contatos; **5** Lembretes, Mensagens, WhatsApp e Nota fiscal.
+
+Etapas 3 a 5 feitas em 01/nov/2026 (Agendas, Serviços, Feriados, Convênios, WhatsApp; Horários, Lembretes, Mensagens e Nota fiscal ganharam "Depende de" e "Alimenta"). Textos em `src/lib/ajuda/configuracoes.ts`.
+
+## Central de Ajuda (cliente, 01/nov/2026)
+
+Manual do sistema dentro do painel, na branch `central-ajuda`. Decisões do cliente: acesso do artigo segue a tela que ele
+explica (papel e item liberado, `canAccessPath`); artigos internos só para o Suporte; canal de suporte = WhatsApp
+informado em Sistema › Suporte (campo novo, tabela `platform_settings`); procedimentos delicados documentados só para o
+Administrador, sem dados secretos. Conteúdo no código (`src/lib/central/artigos/`, FAQ em `faq.ts`), busca no servidor
+(`search.ts`: sem acento, sinônimos, peso por raridade), painel lateral "Ajuda desta tela" (`helpPanel.ts`). Não
+documentados por não existirem: Google Calendar e mesclar cadastros duplicados. Capturas reais em `public/ajuda/` (25, 01/nov, mapa em `imagens.ts`).
+O número do suporte nunca passa pelo bot nem entra em Atendimento (`webhook.ts`, `attention.ts`; teste
+`tests/db/numero-do-suporte.test.ts`). Migração `20261111120000`.

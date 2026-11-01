@@ -12,6 +12,8 @@ import { createUserClient } from "../lib/data/clients";
 import { loadRelationshipLists, MENU_TABS, menuTotal, relationshipCounts, relationshipTabs } from "../lib/data/relationship";
 import { countAwaitingClinic } from "../lib/data/whatsapp/attention";
 import { logError } from "../lib/log";
+import { articleForPath } from "../lib/central";
+import { canSeeArticle } from "../lib/central/access";
 
 interface Props {
   title: string;
@@ -106,6 +108,9 @@ const managementItems: NavItem[] = [
     : []),
 ];
 
+// Central de Ajuda (cliente, 01/nov/2026): item permanente, para todos os papéis e para o Suporte.
+const helpItem: NavItem = { label: "Central de Ajuda", href: "/admin/ajuda", icon: "life-buoy" };
+
 // Administração do sistema (F4.2, F4.4a, F9.3 e F9.5): só o Suporte.
 const systemNavItems: NavItem[] =
   platform || clinic?.isPlatformStaff
@@ -117,6 +122,7 @@ const systemNavItems: NavItem[] =
         { label: "Uso", href: "/admin/sistema/uso", icon: "chart-bar" },
         { label: "Erros", href: "/admin/sistema/erros", icon: "warning" },
         { label: "Tecnologia", href: "/admin/sistema/tecnologia", icon: "cpu" },
+        { label: "Suporte", href: "/admin/sistema/suporte", icon: "device-phone" },
       ]
     : [];
 
@@ -127,11 +133,12 @@ type NavGroup = { title?: string; support?: boolean; items: NavItem[] };
 const SYSTEM_TITLE = "Sistema · só o Suporte";
 const sideGroups: NavGroup[] = (
   platform
-    ? [{ items: systemNavItems }]
+    ? [{ items: systemNavItems }, { title: "Ajuda", items: [helpItem] }]
     : [
         { title: "Hoje", items: [homeItem, agendaItem, summaryItem] },
         { title: "Pacientes", items: [patientsItem, ...contactItems] },
         { title: "Gestão", items: managementItems },
+        { title: "Ajuda", items: [helpItem] },
         { title: SYSTEM_TITLE, support: true, items: systemNavItems },
       ]
 ).filter((group) => group.items.length > 0);
@@ -141,10 +148,11 @@ const sideGroups: NavGroup[] = (
 const tabBarItems = platform ? systemNavItems.slice(0, 4) : primaryNavItems;
 const moreGroups: NavGroup[] = (
   platform
-    ? [{ items: systemNavItems.slice(4) }]
+    ? [{ items: systemNavItems.slice(4) }, { title: "Ajuda", items: [helpItem] }]
     : [
         { title: "Pacientes", items: contactItems },
         { title: "Gestão", items: managementItems },
+        { title: "Ajuda", items: [helpItem] },
         { title: SYSTEM_TITLE, support: true, items: systemNavItems },
       ]
 ).filter((group) => group.items.length > 0);
@@ -167,6 +175,11 @@ const initials = platform
       .join("");
 
 const currentPath = Astro.url.pathname;
+// "Ajuda desta tela": o artigo da Central ligado a esta rota, se a pessoa pode ver (painel lateral).
+const helpArticle = (() => {
+  const found = articleForPath(currentPath);
+  return found && canSeeArticle(access as Parameters<typeof canSeeArticle>[0], found) ? found : undefined;
+})();
 const isActive = (href: string) => currentPath.startsWith(href);
 const isMoreActive = moreNavItems.some((item) => isActive(item.href));
 const sideLinkClass = (active: boolean) =>
@@ -364,6 +377,20 @@ const sideLinkClass = (active: boolean) =>
       }
 
       <main id="conteudo" tabindex="-1" class={`mx-auto w-full flex-1 px-4 pt-6 pb-28 outline-none sm:pt-8 lg:px-6 lg:pb-12 ${frame}`}>
+        {
+          helpArticle && (
+            <div class="mb-2 flex justify-end">
+              <a
+                href={`/admin/ajuda/${helpArticle.id}`}
+                data-help-open
+                data-help-title={helpArticle.title}
+                class="inline-flex min-h-9 items-center gap-1.5 rounded-lg px-2.5 text-[15px] font-semibold text-brand-ink no-underline hover:bg-brand-soft focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+              >
+                <Icon name="life-buoy" class="h-[18px] w-[18px]" strokeWidth={1.8} /> Ajuda desta tela
+              </a>
+            </div>
+          )
+        }
         <slot />
       </main>
     </div>
@@ -446,6 +473,30 @@ const sideLinkClass = (active: boolean) =>
     <script src="../scripts/sendOnce.ts"></script>
     <script src="../scripts/scrollRegion.ts"></script>
     <script src="../scripts/helpTips.ts"></script>
+    <script src="../scripts/helpPanel.ts"></script>
+    {
+      helpArticle && (
+        <dialog id="help-panel" aria-labelledby="help-panel-title" class="help-panel m-0 ml-auto h-full max-h-none w-full max-w-[520px] border-l border-line bg-white p-0 text-ink shadow-2xl backdrop:bg-black/30">
+          <div class="flex h-full flex-col">
+            <div class="flex items-start justify-between gap-3 border-b border-line px-4 py-3">
+              <div class="min-w-0">
+                <p class="text-[12.5px] font-bold tracking-[.06em] text-ink-soft uppercase">Central de Ajuda</p>
+                <h2 id="help-panel-title" data-help-title class="font-display text-[20px] leading-tight font-bold">{helpArticle.title}</h2>
+              </div>
+              <button type="button" data-help-close class="min-h-11 shrink-0 rounded-lg px-3 text-[15px] font-bold text-brand-ink hover:bg-brand-soft">Fechar</button>
+            </div>
+            <div data-help-scroll class="min-h-0 flex-1 overflow-y-auto px-4 py-4">
+              <div data-help-body />
+            </div>
+            <div class="border-t border-line px-4 py-3 text-[15px]">
+              <a data-help-full href={`/admin/ajuda/${helpArticle.id}`} class="font-semibold text-brand no-underline hover:underline">Abrir a página completa</a>
+              <span class="text-ink-soft"> · </span>
+              <a href="/admin/ajuda" class="font-semibold text-brand no-underline hover:underline">Central de Ajuda</a>
+            </div>
+          </div>
+        </dialog>
+      )
+    }
     <script src="../scripts/autoRefresh.ts"></script>
     <script>
       // Liga a barra ao sair da página: link interno ou envio de formulário

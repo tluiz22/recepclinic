@@ -1,0 +1,165 @@
+---
+// Central de Ajuda (cliente, 01/nov/2026): o manual do RecepClinic dentro do painel.
+// Busca no servidor (src/lib/central/search.ts) só entre os artigos que a pessoa pode ver;
+// categorias; perguntas frequentes. Texto dos artigos em src/lib/central/artigos/.
+import AdminLayout from "../../../layouts/AdminLayout.astro";
+import Icon from "../../../components/admin/Icon.astro";
+import type { IconName } from "../../../components/admin/Icon.astro";
+import PageHeader from "../../../components/admin/ui/PageHeader.astro";
+import { audienceLabel } from "../../../lib/central/audience";
+import { ARTICLES, CATEGORIES, FAQS, categoryOf } from "../../../lib/central";
+import { visibleArticles, visibleFaqs } from "../../../lib/central/access";
+import { highlightParts, search } from "../../../lib/central/search";
+import { INPUT } from "../../../components/admin/config/formStyles";
+
+const viewer = Astro.locals.clinic ?? { roles: [], isPlatformStaff: false, features: [] };
+const articles = visibleArticles(viewer, ARTICLES);
+const faqs = visibleFaqs(viewer, FAQS, ARTICLES);
+const categories = CATEGORIES.map((c) => ({ ...c, items: articles.filter((a) => a.category === c.id) })).filter((c) => c.items.length > 0);
+
+const query = (Astro.url.searchParams.get("q") ?? "").trim().slice(0, 120);
+const requested = Astro.url.searchParams.get("categoria");
+const category = categories.find((c) => c.id === requested) ?? null;
+const result = query ? search(query, articles, faqs, category?.id) : null;
+const byId = new Map(articles.map((a) => [a.id, a]));
+const mark = (text: string) => (result ? highlightParts(text, result.terms) : [{ text, mark: false }]);
+const EXAMPLES = ["Como marcar uma consulta?", "Como remarcar um paciente?", "Como bloquear a agenda?", "Como cadastrar um médico?", "Como configurar o WhatsApp?", "Por que o bot não está agendando?"].filter((_, i) => i < 6);
+const visibleFaqList = category ? faqs.filter((f) => byId.get(f.article)?.category === category.id) : faqs;
+---
+
+<AdminLayout title="Central de Ajuda">
+  <PageHeader title="Central de Ajuda" subtitle="O manual do RecepClinic: passo a passo, configurações e respostas rápidas." />
+
+  <form method="GET" role="search" class="mt-5 flex flex-col gap-3 rounded-2xl border border-line bg-white p-4 sm:p-5">
+    <label for="q" class="font-display text-[20px] font-bold text-ink">Como podemos ajudar?</label>
+    <div class="flex flex-col gap-2 sm:flex-row">
+      <input
+        id="q"
+        name="q"
+        type="search"
+        value={query}
+        placeholder="Ex.: como remarcar um paciente"
+        autocomplete="off"
+        class={`${INPUT} mt-0 h-12 flex-1 text-base`}
+      />
+      {category && <input type="hidden" name="categoria" value={category.id} />}
+      <button type="submit" class="inline-flex h-12 items-center justify-center gap-2 rounded-[10px] bg-brand px-5 text-base font-semibold text-white hover:bg-brand-ink">
+        <Icon name="magnifying-glass" class="h-5 w-5" strokeWidth={2} /> Buscar
+      </button>
+    </div>
+    {
+      !query && (
+        <p class="flex flex-wrap gap-x-3 gap-y-1 text-[15px] text-ink-soft">
+          <span>Experimente:</span>
+          {EXAMPLES.map((example) => (
+            <a href={`/admin/ajuda?q=${encodeURIComponent(example)}`} class="font-semibold text-brand no-underline hover:underline">{example}</a>
+          ))}
+        </p>
+      )
+    }
+  </form>
+
+  <nav aria-label="Categorias" class="mt-4 flex flex-wrap gap-2">
+    <a href={query ? `/admin/ajuda?q=${encodeURIComponent(query)}` : "/admin/ajuda"} aria-current={!category ? "page" : undefined} class={`rounded-full border px-3.5 py-1.5 text-[15px] font-semibold no-underline ${!category ? "border-brand bg-brand-soft text-brand-ink" : "border-line-strong bg-white text-ink hover:bg-canvas"}`}>Todas</a>
+    {
+      categories.map((c) => (
+        <a
+          href={`/admin/ajuda?categoria=${c.id}${query ? `&q=${encodeURIComponent(query)}` : ""}`}
+          aria-current={category?.id === c.id ? "page" : undefined}
+          class={`rounded-full border px-3.5 py-1.5 text-[15px] font-semibold no-underline ${category?.id === c.id ? "border-brand bg-brand-soft text-brand-ink" : "border-line-strong bg-white text-ink hover:bg-canvas"}`}
+        >
+          {c.title}
+        </a>
+      ))
+    }
+  </nav>
+
+  {
+    result && (
+      <section class="mt-6" aria-label="Resultados da busca" aria-live="polite">
+        <h2 class="font-display text-[20px] font-bold text-ink">
+          {result.articles.length + result.faqs.length === 0 ? "Nenhum resultado" : `${result.articles.length} ${result.articles.length === 1 ? "artigo" : "artigos"} e ${result.faqs.length} ${result.faqs.length === 1 ? "resposta rápida" : "respostas rápidas"}`}
+          <span class="font-normal text-ink-soft"> para “{query}”{category ? ` em ${category.title}` : ""}</span>
+        </h2>
+        {result.articles.length + result.faqs.length === 0 && (
+          <div class="mt-3 rounded-xl border border-line bg-white px-4 py-4 text-[16px]">
+            <p>Não encontramos nada para essa busca. Tente outras palavras (por exemplo, “cancelar” no lugar de “desmarcar”), tire o filtro de categoria ou navegue pelas categorias abaixo.</p>
+            <p class="mt-2"><a href="/admin/ajuda" class="font-semibold text-brand no-underline hover:underline">Ver todas as categorias</a></p>
+          </div>
+        )}
+        <ul class="mt-3 flex flex-col gap-3">
+          {result.articles.map((hit) => (
+            <li class="rounded-xl border border-line bg-white px-4 py-3">
+              <a href={`/admin/ajuda/${hit.item.id}`} class="text-[17px] font-bold text-ink no-underline hover:underline">{hit.item.title}</a>
+              <p class="mt-0.5 text-[15px] text-ink-mid">
+                {mark(hit.snippet).map((part) => (part.mark ? <mark class="rounded bg-att-100 px-0.5 text-ink">{part.text}</mark> : part.text))}
+              </p>
+              <p class="mt-1.5 flex flex-wrap items-center gap-2 text-[13.5px] text-ink-soft">
+                <span class="rounded-full bg-canvas px-2 py-0.5 font-semibold">{categoryOf(hit.item.category)?.title}</span>
+                <span>{audienceLabel(hit.item)}</span>
+              </p>
+            </li>
+          ))}
+          {result.faqs.map((hit) => (
+            <li class="rounded-xl border border-line bg-white px-4 py-3">
+              <p class="text-[17px] font-bold text-ink">{hit.item.question}</p>
+              <p class="mt-0.5 text-[15px] text-ink-mid">
+                {mark(hit.item.answer).map((part) => (part.mark ? <mark class="rounded bg-att-100 px-0.5 text-ink">{part.text}</mark> : part.text))}
+              </p>
+              <p class="mt-1.5 text-[14.5px]">
+                <span class="mr-2 rounded-full bg-canvas px-2 py-0.5 text-[13.5px] font-semibold text-ink-soft">Resposta rápida</span>
+                <a href={`/admin/ajuda/${hit.item.article}`} class="font-semibold text-brand no-underline hover:underline">Ler o artigo completo</a>
+              </p>
+            </li>
+          ))}
+        </ul>
+      </section>
+    )
+  }
+
+  {
+    !query && (
+      <section class="mt-6 grid gap-4 md:grid-cols-2" aria-label="Categorias de ajuda">
+        {(category ? [category] : categories).map((c) => (
+          <div class="rounded-xl border border-line bg-white p-4 sm:p-5">
+            <h2 class="flex items-center gap-2.5 font-display text-[19px] font-bold text-ink">
+              <span aria-hidden="true" class="flex h-9 w-9 items-center justify-center rounded-[10px] bg-brand-soft text-brand-ink">
+                <Icon name={c.icon as IconName} class="h-5 w-5" strokeWidth={1.8} />
+              </span>
+              {c.title}
+            </h2>
+            <p class="mt-1 text-[15px] text-ink-soft">{c.description}</p>
+            <ul class="mt-3 flex flex-col gap-1.5">
+              {c.items.map((a) => (
+                <li>
+                  <a href={`/admin/ajuda/${a.id}`} class="text-[16px] font-semibold text-brand no-underline hover:underline">{a.title}</a>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))}
+      </section>
+    )
+  }
+
+  {
+    !query && visibleFaqList.length > 0 && (
+      <section class="mt-8" aria-labelledby="faq">
+        <h2 id="faq" class="font-display text-[22px] font-bold text-ink">Perguntas frequentes</h2>
+        <p class="mt-1 text-[15px] text-ink-soft">Respostas rápidas. Cada uma leva ao artigo completo.</p>
+        <div class="mt-3 flex flex-col divide-y divide-line overflow-hidden rounded-xl border border-line bg-white">
+          {visibleFaqList.map((f) => (
+            <details class="group px-4 py-3">
+              <summary class="flex min-h-9 cursor-pointer list-none items-center justify-between gap-3 text-[16px] font-semibold text-ink [&::-webkit-details-marker]:hidden">
+                {f.question}
+                <Icon name="chevron-down" class="h-5 w-5 shrink-0 text-ink-soft transition-transform group-open:rotate-180" strokeWidth={2} />
+              </summary>
+              <p class="mt-1.5 text-[15.5px] text-ink-mid">{f.answer}</p>
+              <p class="mt-1.5 text-[15px]"><a href={`/admin/ajuda/${f.article}`} class="font-semibold text-brand no-underline hover:underline">Ler o artigo completo</a></p>
+            </details>
+          ))}
+        </div>
+      </section>
+    )
+  }
+</AdminLayout>

@@ -1,0 +1,65 @@
+---
+// Central de Ajuda › artigo (cliente, 01/nov/2026). Só abre o que a pessoa pode ver
+// (src/lib/central/access.ts); artigo que não existe ou é de outra função dá 404, sem
+// revelar que existe. O painel lateral da ajuda contextual busca esta mesma página
+// e usa só o #artigo.
+import AdminLayout from "../../../layouts/AdminLayout.astro";
+import ArticleBody from "../../../components/admin/ajuda/ArticleBody.astro";
+import Icon from "../../../components/admin/Icon.astro";
+import { audienceLabel } from "../../../lib/central/audience";
+import { ARTICLES, articleById, categoryOf } from "../../../lib/central";
+import { canSeeArticle, visibleArticles } from "../../../lib/central/access";
+import { CONTACT_TEXT } from "../../../lib/central/contact";
+import { getSupportWhatsapp } from "../../../lib/data/platformSettings";
+import { createUserClient } from "../../../lib/data/clients";
+import { formatPhoneBR, whatsappHref } from "../../../lib/phone";
+
+const viewer = Astro.locals.clinic ?? { roles: [], isPlatformStaff: false, features: [] };
+const article = articleById(Astro.params.id ?? "");
+if (!article || !canSeeArticle(viewer, article)) return new Response(null, { status: 404 });
+
+const category = categoryOf(article.category)!;
+const visible = new Map(visibleArticles(viewer, ARTICLES).map((a) => [a.id, a]));
+const related = article.related.map((id) => visible.get(id)).filter((a) => !!a);
+const supportPhone = await getSupportWhatsapp(createUserClient(Astro.request, Astro.cookies)).catch(() => null);
+---
+
+<AdminLayout title={article.title}>
+  <nav aria-label="Você está em" class="flex flex-wrap items-center gap-1.5 text-[15px] text-ink-soft">
+    <a href="/admin/ajuda" class="inline-flex min-h-8 items-center gap-1 font-semibold text-brand no-underline hover:underline">
+      <Icon name="chevron-left" class="h-[18px] w-[18px]" strokeWidth={2.2} /> Central de Ajuda
+    </a>
+    <span aria-hidden="true">/</span>
+    <a href={`/admin/ajuda?categoria=${category.id}`} class="no-underline hover:underline">{category.title}</a>
+  </nav>
+
+  <div class="mx-auto mt-3 max-w-3xl">
+    <h1 class="font-display text-[28px] leading-[1.1] font-bold text-ink sm:text-[32px]">{article.title}</h1>
+    <p class="mt-1.5 text-[16px] text-ink-soft">{article.summary}</p>
+    <div class="mt-5"><ArticleBody article={article} audience={audienceLabel(article)} /></div>
+
+    {
+      related.length > 0 && (
+        <section class="mt-8" aria-labelledby="relacionados">
+          <h2 id="relacionados" class="font-display text-[17px] font-bold text-ink sm:text-lg">Veja também</h2>
+          <ul class="mt-2 flex flex-col gap-1.5">
+            {related.map((item) => (
+              <li><a href={`/admin/ajuda/${item!.id}`} class="font-semibold text-brand no-underline hover:underline">{item!.title}</a></li>
+            ))}
+          </ul>
+        </section>
+      )
+    }
+
+    <section class="mt-8 rounded-xl border border-line bg-white px-4 py-3 text-[15px]" aria-label="Ainda precisa de ajuda?">
+      <b>Ainda precisa de ajuda?</b>
+      {
+        supportPhone ? (
+          <p class="mt-1">Fale com o suporte do RecepClinic pelo WhatsApp: <a class="font-semibold text-brand-ink underline" href={whatsappHref(supportPhone)} rel="noopener">{formatPhoneBR(supportPhone)}</a>.</p>
+        ) : (
+          <p class="mt-1">{CONTACT_TEXT}</p>
+        )
+      }
+    </section>
+  </div>
+</AdminLayout>

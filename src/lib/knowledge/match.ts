@@ -213,7 +213,7 @@ function entryScore(kb: CompiledKb, e: CompiledEntry, tokens: string[], content:
   return score;
 }
 
-const BOOKING_FLOWS = new Set<KbFlow>(["book_consultation", "book_exam", "book_return"]);
+const BOOKING_FLOWS = new Set<KbFlow>(["book_consultation", "book_exam", "book_return", "waitlist"]);
 
 function withoutPhrases(tokens: string[], phrases: string[]): string[] {
   let rest = ` ${tokens.join(" ")} `;

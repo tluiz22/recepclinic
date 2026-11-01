@@ -49,6 +49,10 @@ describe("catálogo da ajuda contextual", () => {
           for (const text of [topic.serve, ...topic.como, topic.exemplo ?? "", topic.erro ?? ""]) {
             expect(text.length).toBeLessThanOrEqual(LIMITE_DICA);
           }
+          for (const lista of [topic.depende ?? [], topic.alimenta ?? []]) {
+            expect(lista.length).toBeLessThanOrEqual(4);
+            for (const v of lista) expect(v.texto.length).toBeLessThanOrEqual(LIMITE_DICA);
+          }
           expect(used(file, `.comoFunciona.${key}`)).toBe(true);
         });
       }

@@ -23,6 +23,9 @@ import {
   MEDIA_AUDIO,
   MEDIA_OTHER,
   NOT_UNDERSTOOD_YES_NO,
+  RECEPTION_CONFIRM,
+  RECEPTION_CONFIRM_BUTTONS,
+  receptionContactOffer,
   wayOutButtons,
   wordsFor,
   YES_NO_BACK_BUTTONS,
@@ -148,6 +151,20 @@ export const PROMPT_KEY = "_prompt";
 /** Pedido de recepção esperando o Sim ou o Não (no contexto, sem trocar o passo; router e base de conhecimento). */
 export const RECEPTION_CONFIRM_KEY = "_reception_confirm";
 
+/**
+ * Transferência que o bot oferece (cliente, 31/out/2026: nunca transferir sem perguntar), guardada em
+ * RECEPTION_CONFIRM_KEY no lugar do `true` do pedido digitado. `kind` e `reason` são os da transferência de antes;
+ * `noMenu`: clínica sem nada para marcar, o "Não" despede em vez do menu.
+ */
+export type ReceptionOffer = { kind: string; reason: "no_availability" | "requested" | "not_understood"; noMenu?: boolean };
+
+/** Pergunta da transferência: com a recepção no app, "Você quer falar com a recepção?"; sem, se a clínica entra em contato. */
+export async function offerReception(b: Bot, offer: ReceptionOffer, lead: string | null): Promise<void> {
+  await mergeContext(b, { [RECEPTION_CONFIRM_KEY]: offer });
+  const question = b.receptionAvailable ? RECEPTION_CONFIRM : receptionContactOffer(b.clinic.designation);
+  await sendButtons(b, `${offer.kind}_offer`, lead ? `${lead}\n\n${question}` : question, RECEPTION_CONFIRM_BUTTONS);
+}
+
 export const currentPrompt = (convo: Conversation): string | null => ((convo.context ?? {}) as Record<string, unknown>)[PROMPT_KEY] as string | null ?? null;
 
 export async function loadBotClinic(env: BotEnv): Promise<BotClinic> {
@@ -269,13 +286,12 @@ export async function sayInvalidBirthdate(b: Bot): Promise<void> {
 }
 
 /**
- * Sim/Não não entendido: na 1ª vez, o aviso e a pergunta de novo; da 2ª seguida em diante (cliente, 30/out/2026),
- * os dois numa mensagem com Sim, Não e "Voltar ao menu".
+ * Sim/Não não entendido: o aviso e a pergunta de novo numa mensagem com Sim e Não; da 2ª seguida em diante
+ * (cliente, 30/out/2026), também com "Voltar ao menu".
  */
 export async function repeatYesNo(b: Bot, kind: string, question: string): Promise<void> {
-  if (b.convo.notUnderstoodCount > 0) return sendButtons(b, NOT_UNDERSTOOD_KIND, `${NOT_UNDERSTOOD_YES_NO}\n\n${question}`, YES_NO_BACK_BUTTONS);
-  await say(b, NOT_UNDERSTOOD_KIND, NOT_UNDERSTOOD_YES_NO);
-  await say(b, kind, question);
+  // Sempre com os botões (cliente, 01/nov/2026); da 2ª seguida, com "Voltar ao menu".
+  await sendButtons(b, NOT_UNDERSTOOD_KIND, `${NOT_UNDERSTOOD_YES_NO}\n\n${question}`, b.convo.notUnderstoodCount > 0 ? YES_NO_BACK_BUTTONS : YES_NO_BUTTONS);
 }
 
 /** Botões de Sim/Não: com "Voltar ao menu" quando esta é a 2ª resposta não entendida seguida (cliente, 30/out/2026). */

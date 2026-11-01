@@ -851,3 +851,10 @@ em `tests/db/`, staging e OK do cliente.
 Depois das etapas (cliente, 31/out): entrada com agendamento sem "Como podemos ajudar?"; idade limite ultrapassada
 com o nome do profissional; confirmação na página do link ao marcar e remarcar; data de nascimento "do paciente" em
 qualquer perfil e data sem atendimento só com "Tentar outra data" e "Voltar ao menu".
+
+## Recesso da clínica e horário da recepção no bot (cliente, 01/nov/2026)
+
+- Transferência para a recepção fora do horário (Configurações › Clínica, com feriados) acrescenta quando a clínica responde (`receptionReplyWhen`/`handoffText` em `bot/manage.ts`).
+- Recesso: `schedule_blocks.recess_message` (`{data}` = dia seguinte ao fim). Vale qualquer bloqueio de recesso cobrindo agora (de qualquer agenda; o que termina mais tarde). Substitui o aviso comum, inclusive na transferência por "não entendi"; a conversa pausa igual.
+- Tela Bloquear: caixa "Recesso da clínica", mensagem padrão editável com prévia, pergunta acima de 5 dias, confirmação se faltar agenda, "Como funciona?". Regras puras em `src/lib/recess.ts`.
+- Central de Ajuda: artigo `bloquear-agenda`, FAQ "recesso" e nota no artigo do bot.

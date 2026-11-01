@@ -32,13 +32,19 @@ registre o detalhe no plano da frente ou no `historico.md`, nunca no README.
   Dra. Ana Karina" é do cliente; o app antigo é excluído e esse número pode entrar no portfólio
   RecepClinic como número de testes de outra clínica do staging (o resto do piloto segue proibido).
 - **Branches paralelas** (cliente, 30/out/2026): planejamento fica na `main` (cada frente no seu arquivo); branch
-  paralela só quando há código, criada da `main` e de vida curta. A cada correção na `main`, o Claude traz a `main`
-  para a branch (`git merge main`), roda os testes e avisa; com conflito, para e pergunta. Nunca o caminho inverso sem
+  paralela só quando há código, criada da `main` e de vida curta. A cada correção na `main`, o Claude **pergunta**
+  se é para atualizar as outras branches (cliente, 31/out/2026); com o OK, traz a `main` para a branch
+  (`git merge main`), roda os testes e avisa; com conflito, para e pergunta. Nunca o caminho inverso sem
   o OK do cliente: antes de juntar a branch na `main`, trazer a `main` para ela, rodar todos os testes e conferir que
   nenhuma correção da `main` voltou ao estado antigo. O bloco de retomada do README só é editado na `main`.
 - **Jornada do bot** (cliente, 30/out/2026): toda mudança no caminho do paciente no WhatsApp (bot em
   `src/lib/data/whatsapp/bot/` ou mensagens automáticas) atualiza, no mesmo commit, o fluxograma de Tecnologia ›
   Jornada do bot (`src/components/admin/tecnologia/botJourney.ts`, com a data em `JOURNEY_UPDATED`).
+- **Capturas da Central de Ajuda** (cliente, 01/nov/2026): mudou uma tela que tem captura em `public/ajuda/` (lista em
+  `src/lib/central/imagens.ts`): **não recapturar sozinho**. Anotar a captura e o motivo em `docs/capturas-pendentes.md`
+  no mesmo commit, avisar o cliente no fim da etapa e esperar a autorização; com ela, `npm run ajuda:capturas --
+  --pendentes` (com o `npm run dev` no ar), conferir as imagens e atualizar o texto do artigo se citar o que mudou. Tela
+  nova com artigo: acrescentar a linha em `scripts/capturas-ajuda.mjs` e em `imagens.ts`.
 - As decisões de arquitetura estão em `docs/arquitetura.md` (D1–D11) e o plano em `docs/plano.md`.
   Mudança de decisão só com o cliente, e registrada lá.
 

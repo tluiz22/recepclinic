@@ -1,0 +1,95 @@
+import { article } from "./helper";
+
+// Primeiros passos: o painel, o Início e a ordem de montar a clínica.
+// Fontes: src/layouts/AdminLayout.astro (menu), src/lib/clinicAccess.ts (papéis),
+// src/pages/admin/dashboard.astro e src/lib/data/config/setup.ts (a jornada de configuração).
+
+export const primeirosPassos = [
+  article({
+    id: "visao-geral-do-painel",
+    title: "Conhecer o painel e o menu lateral",
+    summary: "Para que serve cada item do menu e quem enxerga o quê.",
+    category: "primeiros-passos",
+    module: "Painel",
+    where: "Menu lateral (no celular, a barra de baixo e o botão Mais)",
+    keywords: ["menu", "painel", "primeiro acesso", "começar", "navegar"],
+    synonyms: ["onde fica", "como usar o sistema", "tela inicial"],
+    related: ["inicio-do-painel", "papeis-e-permissoes", "ordem-de-configuracao"],
+    order: 1,
+    intro: "O menu lateral agrupa o painel por tarefa. Itens que a sua função ou o plano da clínica não liberam não aparecem.",
+    fields: [
+      { name: "Hoje: Início, Agenda e Resumo do Dia", text: "O dia a dia da recepção: números de hoje, marcar e acompanhar atendimentos, registrar comparecimento." },
+      { name: "Pacientes: Pacientes, Atendimento e Relacionamento", text: "Cadastro e ficha; as conversas do WhatsApp que esperam a clínica (só com o bot); e as pendências que pedem contato da equipe (Administrador e Recepção, com o item liberado)." },
+      { name: "Gestão: Métricas, Financeiro e Configurações", text: "Indicadores, pagamentos e nota fiscal, e a montagem da clínica. Cada um depende do papel e do plano." },
+      { name: "Central de Ajuda", text: "Este manual. Fica no menu para todos os papéis." },
+      { name: "Trocar clínica", text: "Aparece no alto do menu para quem tem acesso a mais de uma clínica." },
+    ],
+    notes: [
+      "No celular, a barra de baixo mostra Início, Agenda, Pacientes, Resumo do Dia e Mais; o Mais traz os outros grupos.",
+      "Um número vermelho ao lado de Atendimento ou Relacionamento é quantas conversas ou pendências esperam a equipe.",
+    ],
+  }),
+  article({
+    id: "inicio-do-painel",
+    title: "Entender a tela Início",
+    summary: "Os números de hoje, os avisos e os atalhos.",
+    category: "primeiros-passos",
+    module: "Início",
+    where: "Início",
+    keywords: ["início", "hoje", "avisos", "comparecimento a registrar", "presença não confirmada"],
+    synonyms: ["tela inicial", "resumo", "dashboard"],
+    related: ["resumo-do-dia", "contatos-para-revisar", "visao-geral-do-painel"],
+    order: 2,
+    intro: "O Início mostra o dia da clínica: quantos atendimentos há hoje, o que ainda pede ação e os avisos do sistema. Cartões e atalhos seguem os itens liberados para a clínica.",
+    fields: [
+      { name: "Consultas hoje / Exames hoje", text: "Atendimentos do dia, sem os cancelados. Exames aparece só com o item Exames e procedimentos." },
+      { name: "Comparecimento a registrar", text: "Atendimentos que já passaram e ainda não têm Compareceu ou Faltou. Registre no cartão da Agenda ou no Resumo do Dia." },
+      { name: "Presença não confirmada", text: "Atendimentos por vir em que o paciente ainda não confirmou presença." },
+      { name: "Contatos para revisar", text: "Com o bot: números que bateram um limite do bot nos últimos 7 dias. Veja o artigo sobre Contatos para revisar." },
+      { name: "Avisos", text: "Envios automáticos que falharam e outros alertas do sistema." },
+    ],
+    notes: ["A tela se atualiza sozinha a cada minuto enquanto está à vista."],
+    contextual: ["/admin/dashboard"],
+  }),
+  article({
+    id: "ordem-de-configuracao",
+    title: "Ordem de configuração da clínica",
+    summary: "Em que ordem preencher as Configurações, e do que cada passo depende.",
+    category: "primeiros-passos",
+    module: "Configurações",
+    where: "Configurações › Clínica (o guia de configuração no topo)",
+    screen: { path: "/admin/configuracoes" },
+    keywords: ["ordem", "implantação", "configurar", "começar", "passo a passo", "dependências", "guia de configuração"],
+    synonyms: ["montar a clínica", "primeira configuração", "o que configurar primeiro", "o bot não mostra serviço"],
+    related: ["config-clinica", "config-profissionais", "config-locais", "config-agendas", "config-servicos", "config-horarios", "config-whatsapp"],
+    order: 3,
+    intro:
+      "A clínica só atende de verdade quando uma cadeia está completa: Profissional → Agenda → Serviço → Horário, num Local. O guia de configuração, no topo de Configurações › Clínica, mostra o que falta em cada passo e leva direto ao ajuste.",
+    steps: [
+      "Clínica: nome, perfil, fuso horário, prazo para oferecer horários e as informações que o paciente vê. É a base de tudo.",
+      "Profissionais: cadastre quem atende. Sem profissional não existe agenda.",
+      "Locais: cadastre o consultório (com endereço) e, se a clínica tiver, o atendimento domiciliar.",
+      "Agendas: crie a agenda de cada profissional (e a da equipe, para exames, se precisar).",
+      "Serviços: cadastre consultas, retornos e exames, marcando as agendas e os locais que os atendem.",
+      "Horários: diga quando cada agenda atende, em que local e para quais serviços. É daqui que saem as vagas.",
+      "Depois: Feriados, Convênios (se tiver o item), Lembretes, Mensagens e WhatsApp.",
+      "Equipe: convide as pessoas e ligue quem tem o papel Profissional ao cadastro dele.",
+    ],
+    fields: [
+      { name: "Agenda depende de", text: "Um profissional (a agenda da equipe, de exames, é a exceção)." },
+      { name: "Serviço depende de", text: "Pelo menos uma agenda e um local ativos que o atendam." },
+      { name: "Horário depende de", text: "Uma agenda e um local; pode valer para um serviço só ou para todos da agenda." },
+      { name: "Vaga para marcar depende de", text: "Serviço ativo com horário de atendimento numa agenda e num local dele, sem feriado nem bloqueio no dia." },
+      { name: "Lembretes dependem de", text: "WhatsApp conectado e mensagem aprovada pela Meta." },
+      { name: "Acesso restrito da Equipe depende de", text: "Agendas já criadas." },
+    ],
+    notes: [
+      "Serviço sem horário numa agenda e num local dele não aparece no bot nem no link de agendar.",
+      "Ao mudar algo importante, revise o que depende dele: trocar o local de um serviço exige conferir os Horários; desativar uma agenda tira as vagas dela; mudar o fuso muda os horários dos lembretes e da agenda.",
+      "Itens desligados na matriz da clínica não contam no guia (exames sem Exames e procedimentos, domiciliar sem Atendimento domiciliar).",
+    ],
+    problems: [
+      { problem: "O serviço não aparece para marcar no bot ou no link.", solution: "Confira, pelo guia, se ele está ativo, tem agenda, local e horário de atendimento. O selo em Serviços diz o que falta." },
+    ],
+  }),
+];

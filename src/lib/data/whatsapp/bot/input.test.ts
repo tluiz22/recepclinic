@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { asksForReception, extractSelection, formatBirthdate, isBackToMenu, parseBirthdate, pick, yesNo } from "./input";
+import { asksForReception, extractSelection, formatBirthdate, isBack, isBackToMenu, parseBirthdate, pick, yesNo } from "./input";
 import { ageLimit, askBirthdate, confirmPatient, numberedList, otherPatientLabel, row, wordsFor } from "./texts";
 
 const typed = (text: string) => ({ id: null, text });
@@ -14,6 +14,18 @@ describe("pedido de recepção digitado (cliente, 30/out/2026)", () => {
     expect(asksForReception(typed("Bom dia, meu filho fez o exame ontem e quero saber com a recepção quando sai o resultado"))).toBe(false);
     // Toque num botão ou lista nunca conta como digitado.
     expect(asksForReception({ id: "menu_reception", text: "Falar com a recepção" })).toBe(false);
+  });
+});
+
+describe("\"voltar\" digitado (cliente, 31/out/2026)", () => {
+  it("a frase inteira, sem acento nem maiúscula; retorno e frases longas não contam", () => {
+    for (const text of ["voltar", "Voltar!", "volta", "voltar ao menu", "Voltar ao menu anterior", "quero voltar", "voltar atrás", "menu anterior", "Anterior", "retornar ao menu", "voltar, por favor"]) {
+      expect(isBack(typed(text)), text).toBe(true);
+    }
+    for (const text of ["retorno", "retornar", "quero marcar retorno", "quero voltar no médico", "voltei"]) {
+      expect(isBack(typed(text)), text).toBe(false);
+    }
+    expect(isBack({ id: "back_to_menu", text: "voltar" })).toBe(false);
   });
 });
 
@@ -67,7 +79,7 @@ describe("textos pelo perfil (F6.3)", () => {
       "Qual a data de nascimento do paciente? (formato dd/mm/aaaa)",
     ]);
     expect([otherPatientLabel(kid), otherPatientLabel(wordsFor("mixed"))]).toEqual(["Outra criança", "Outro paciente"]);
-    expect(confirmPatient(kid, "Ana", "10/03/2020")).toBe("Encontramos *Ana*, nascido(a) em 10/03/2020: é essa a criança? Responda Sim ou Não.");
+    expect(confirmPatient(kid, "Ana", "10/03/2020")).toBe("Encontramos *Ana*, nascido(a) em 10/03/2020: é essa a criança?");
     expect(ageLimit("Dra. Ana", { noun: "clínica", article: "a" }, 14, kid)).toBe("Dra. Ana atende pacientes até 13 anos.\n\nDeseja agendar para outra criança?");
     expect(ageLimit(null, { noun: "clínica", article: "a" }, 14, kid)).toBe("A clínica atende pacientes até 13 anos.\n\nDeseja agendar para outra criança?");
   });

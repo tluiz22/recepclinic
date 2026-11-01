@@ -73,13 +73,13 @@ export const price = (cents: number | null | undefined) => (cents == null ? null
 // ---------------------------------------------------------------------------
 
 export const welcome = (clinicLabel: string) => `Olá! 👋 Aqui é ${clinicLabel}.`;
-export const MENU_BODY = "Como podemos ajudar? Escolha uma opção abaixo (ou digite o número).";
+export const MENU_BODY = "Escolha uma opção abaixo (ou digite o número).";
 
 // Entrada com atendimento marcado no número (cliente, 23/out/2026): pergunta
 // antes do menu; os detalhes só depois da data de nascimento.
 export const ENTRY_IDS = { yes: "entry_yes", no: "entry_no" } as const;
 export const ENTRY_ONE = "Identificamos um agendamento associado a este número. Você deseja tratar desse agendamento?";
-export const ENTRY_MANY = "Como podemos ajudar? Encontramos mais de um agendamento associado a este número. Você deseja consultar ou alterar algum deles?";
+export const ENTRY_MANY = "Encontramos mais de um agendamento associado a este número. Você deseja consultar ou alterar algum deles?";
 export const ENTRY_ONE_BUTTONS = [button(ENTRY_IDS.yes, "Sim, quero"), button(ENTRY_IDS.no, "Não, outro assunto")];
 export const ENTRY_MANY_BUTTONS = [button(ENTRY_IDS.yes, "Sim, consultar"), button(ENTRY_IDS.no, "Não, outro assunto")];
 export const ENTRY_NOT_UNDERSTOOD = "Não entendi 🙏 Toque em uma das opções abaixo.";
@@ -148,7 +148,6 @@ export const IDLE_CLOSED =
  * prazo): a recepção assume a conversa (cliente, 11/out/2026).
  */
 export const willReply = (d: Designation) => `${designationTitle(d)} responderá sua mensagem em breve.`;
-export const noFreeTimes = (serviceName: string, d: Designation) => `No momento não há horários livres para *${serviceName}*. ${willReply(d)}`;
 export const linkError = (d: Designation) =>
   `Tivemos um problema para gerar o link de agendamento. Por favor, tente de novo em alguns minutos ou fale com ${designationText(d)}.`;
 
@@ -173,7 +172,6 @@ export const planAccepted = (planName: string) => `Atendemos pelo convênio *${p
 /** Plano fora da lista, não encontrado ou não atendido pelo(s) profissional(is) do caminho escolhido. */
 export const planNotAccepted = (planName: string | null, d: Designation, forThisService: boolean) =>
   `Infelizmente ${designationText(d)} não atende ${planName ? `pelo convênio *${planName}*` : "por esse convênio"}${forThisService ? " neste atendimento" : ""}.\n\nQuer seguir com o atendimento particular?`;
-export const insuranceToReception = (d: Designation) => `Tudo bem. ${willReply(d)}`;
 export function priceInfo(category: "consultation" | "exam", cents: number, paymentInfo: string | null): string {
   const value = `O valor ${category === "exam" ? "do exame" : "da consulta"} é ${formatCentsBRL(cents)}.`;
   return paymentInfo ? `${value}\n\nFormas de pagamento: ${paymentInfo}` : value;
@@ -191,8 +189,8 @@ export const HOME_ADDRESS_ASK =
   "Qual é o endereço para o atendimento domiciliar? (rua, número, bairro, complemento e um ponto de referência, se tiver)\n\n" +
   "Esse endereço é usado só para a nossa equipe chegar até vocês nesse atendimento.";
 export const homeAddressConfirmDefault = (address: string) =>
-  `A última visita domiciliar foi feita neste endereço: *${address}*. Ainda é esse? Responda Sim ou Não.`;
-export const homeAddressConfirmNew = (address: string) => `Confirma que o endereço é esse? *${address}*\nResponda Sim ou Não.`;
+  `A última visita domiciliar foi feita neste endereço: *${address}*. Ainda é esse?`;
+export const homeAddressConfirmNew = (address: string) => `Confirma que o endereço é esse? *${address}*`;
 
 export const FOR_WHOM_QUESTION = "É para você ou para outra pessoa?";
 export const FOR_WHOM_IDS = { self: "for_self", other: "for_other" } as const;
@@ -211,21 +209,21 @@ export const INVALID_BIRTHDATE_AGAIN = `${INVALID_BIRTHDATE}\n\nSe não souber a
 export const birthdateMatches = (w: Words) =>
   `Encontramos ${w.feminine ? "crianças" : "pacientes"} já ${w.feminine ? "cadastradas" : "cadastrados"} com essa data de nascimento nesse telefone. É ${w.feminine ? "uma delas" : "um deles"}?`;
 export const confirmPatient = (w: Words, name: string, birthdate: string) =>
-  `Encontramos *${name}*, nascido(a) em ${birthdate}: ${w.feminine ? "é essa a" : "é esse o"} ${w.patient}? Responda Sim ou Não.`;
+  `Encontramos *${name}*, nascido(a) em ${birthdate}: ${w.feminine ? "é essa a" : "é esse o"} ${w.patient}?`;
 
-export const confirmContactName = (name: string) => `Confira o seu nome: *${name}*\n\nEstá correto? Responda Sim ou Não.`;
+export const confirmContactName = (name: string) => `Confira o seu nome: *${name}*\n\nEstá correto?`;
 // Número novo marcando para outra pessoa (cliente, 31/out/2026): o paciente primeiro, depois quem escreve; menor de 18, o responsável.
 export const ASK_GUARDIAN_NAME = "Qual é o nome completo do responsável?";
-export const confirmGuardianName = (name: string) => `Confira o nome do responsável: *${name}*\n\nEstá correto? Responda Sim ou Não.`;
+export const confirmGuardianName = (name: string) => `Confira o nome do responsável: *${name}*\n\nEstá correto?`;
 /** Idade limite da clínica (consulta), com o profissional escolhido ou, no "Primeiro horário", a clínica. */
 export const ageLimitNotice = (professionalName: string | null, d: Designation, limitYears: number) =>
   `${professionalName ?? designationTitle(d)} atende pacientes até ${limitYears - 1} anos.`;
 export const askPatientName = (w: Words) => `Qual é o nome completo ${of(w)}?`;
 export const ASK_SELF_NAME = "Qual é o seu nome completo?";
 export const confirmNewPatient = (w: Words, name: string, birthdate: string) =>
-  `Confira os dados ${of(w)}:\nNome: *${name}*\nData de nascimento: *${birthdate}*\n\nEstá tudo certo? Responda Sim ou Não.`;
+  `Confira os dados ${of(w)}:\nNome: *${name}*\nData de nascimento: *${birthdate}*\n\nEstá tudo certo?`;
 export const confirmSelf = (name: string, birthdate: string) =>
-  `Confira os seus dados:\nNome: *${name}*\nData de nascimento: *${birthdate}*\n\nEstá tudo certo? Responda Sim ou Não.`;
+  `Confira os seus dados:\nNome: *${name}*\nData de nascimento: *${birthdate}*\n\nEstá tudo certo?`;
 export const SELF_MINOR = "Para menores de 18 anos, o agendamento precisa ser feito pelo responsável.";
 
 export const bookingLink = (serviceName: string, patientName: string, url: string) =>
@@ -331,7 +329,7 @@ export function noAppointments(action: "cancelar" | "remarcar", group: Group, re
 }
 
 export const confirmCancel = (phrase: string, patientName: string, when: string) =>
-  `Confirma o cancelamento ${phrase.replace(/^a /, "da ").replace(/^o /, "do ")} de *${patientName}* em ${when}? Responda Sim ou Não.`;
+  `Confirma o cancelamento ${phrase.replace(/^a /, "da ").replace(/^o /, "do ")} de *${patientName}* em ${when}?`;
 
 export const cancelDone = (phrase: string, end: "a" | "o", patientName: string, when: string, group: Group) =>
   `Prontinho, cancelamos ${phrase} de ${patientName} que estava marcad${end} para ${when}. Se precisar marcar ${group === "exam" ? "um novo exame" : "uma nova consulta"}, é só me chamar de novo.`;
@@ -349,7 +347,7 @@ export const returnDeadlinePassed = (patientName: string, lastDate: string, rece
     receptionAvailable ? `Para falar com ${designationText(d)}, escolha a opção *Falar com a recepção* no menu inicial.` : `Por favor, fale com ${designationText(d)}.`
   }`;
 export const homeAddressConfirmCurrent = (address: string) =>
-  `O endereço gravado para esse atendimento domiciliar é: *${address}*. Ainda é esse? Responda Sim ou Não.`;
+  `O endereço gravado para esse atendimento domiciliar é: *${address}*. Ainda é esse?`;
 
 export function presenceConfirmed(patientName: string, when: string, isExam: boolean): string {
   return (
@@ -389,13 +387,19 @@ export const WAITLIST_ALREADY_BUTTONS = [button(WAITLIST_IDS.leave, "Sair da lis
 export const waitlistLeft = (patientName: string, phrase: string, end: "a" | "o", when: string) =>
   `Pronto, *${patientName}* saiu da lista de espera. ${capital(phrase)} continua marcad${end} para ${when}.`;
 export const waitlistStay = (patientName: string) => `Ok, *${patientName}* continua na lista de espera. Se abrir uma vaga antes, eu aviso por aqui.`;
-export function waitlistNoAppointment(group: Group): string {
-  const what = group === "exam" ? "um exame marcado" : "uma consulta marcada";
+export function waitlistNoAppointment(group: Group, category?: "consultation" | "return_visit" | "exam"): string {
+  const what = category === "return_visit" ? "um retorno marcado" : group === "exam" ? "um exame marcado" : "uma consulta marcada";
   return (
     `A lista de espera serve para antecipar um horário já marcado, e não encontramos ${what} neste número. ` +
     "Quer marcar agora? Depois de confirmar pela página, o atendimento entra na lista de espera e eu aviso por aqui se abrir uma vaga antes."
   );
 }
+// Encaixe pedido pela base sem dizer o tipo (cliente, 01/nov/2026): primeiro o tipo, depois o serviço.
+export const WAITLIST_TYPE_QUESTION = "O encaixe é para qual tipo de atendimento?";
+export const WAITLIST_TYPE_IDS = { consultation: "waitlist_type_consultation", return_visit: "waitlist_type_return", exam: "waitlist_type_exam" } as const;
+export const WAITLIST_TYPE_LABELS = { consultation: "Consulta", return_visit: "Retorno", exam: "Exame" } as const;
+export const WAITLIST_SERVICE_QUESTION = "Para qual serviço é o encaixe?";
+
 export const WAITLIST_ERROR = "Tivemos um problema com a lista de espera. Por favor, tente de novo em instantes.";
 
 const STILL_IN_LIST = " Você continua na lista de espera: se abrir outra vaga, eu aviso por aqui.";
@@ -417,6 +421,17 @@ export const RECEPTION_CONFIRM = "Você quer falar com a recepção? A conversa 
 export const RECEPTION_CONFIRM_IDS = { yes: "reception_yes", no: "reception_no" } as const;
 export const RECEPTION_CONFIRM_BUTTONS = [button(RECEPTION_CONFIRM_IDS.yes, "Sim"), button(RECEPTION_CONFIRM_IDS.no, "Não")];
 export const RECEPTION_DECLINED = "Tudo bem, seguimos por aqui.";
+/** Sem a recepção no app: a pergunta da transferência (cliente, 31/out/2026). */
+export const receptionContactOffer = (d: Designation) => `Você quer que ${designationText(d)} entre em contato por aqui?`;
+/** "Não" à transferência na clínica sem nada para marcar: não há menu (cliente, 31/out/2026). */
+export const RECEPTION_DECLINED_NO_MENU = "Tudo bem. Se precisar, é só mandar mensagem por aqui.";
+export const NOT_UNDERSTOOD_OFFER = "Não consegui entender sua mensagem.";
+export const NOTHING_TO_BOOK = "No momento não há horários para marcar por aqui.";
+export const noFreeTimesOffer = (serviceName: string) => `No momento não há horários livres para *${serviceName}*.`;
+
+/** Fora do horário da recepção (cliente, 01/nov/2026). `when` null = aberta; undefined = sem previsão. */
+export const outsideHoursNotice = (when: string | undefined): string =>
+  when === undefined ? "No momento a recepção está fora do horário de atendimento; responderemos assim que possível." : `No momento a recepção está fora do horário de atendimento; responderemos a partir de ${when}.`;
 
 export const HANDOFF =
   "Combinado! Vou te transferir para a recepção, que responde por aqui assim que possível. O atendimento automático fica pausado até lá.";
@@ -438,4 +453,6 @@ export const BLOCKED_RECEPTION_WILL_CONTACT = "Sua conversa está com a recepç�
 export const KB_DID_YOU_MEAN = "Você quis dizer…?";
 export const KB_NONE_OF_THESE = "Nenhuma destas";
 export const KB_BOOK = "Marcar";
+/** Encaixe pela base sem o item Lista de espera (cliente, 31/out/2026). */
+export const KB_WAITLIST_RECEPTION = "O encaixe é combinado com a recepção. Você quer falar com a recepção?";
 export const KB_NO_APPOINTMENTS = "Não encontramos atendimento marcado para este número.";

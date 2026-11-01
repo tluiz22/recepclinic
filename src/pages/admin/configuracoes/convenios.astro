@@ -24,12 +24,18 @@ const active = all.filter((p) => p.isActive);
 // Aba "Desativados" (cliente, 21/out/2026): só os desativados.
 const plans = showInactive ? all.filter((p) => !p.isActive) : active;
 const cols = "lg:grid-cols-[minmax(0,1.6fr)_minmax(0,2fr)_120px_36px]";
+import HowItWorks from "../../../components/admin/ui/HowItWorks.astro";
+import { configuracoes } from "../../../lib/ajuda/configuracoes";
 ---
 
 <ConfigShell current="convenios" title="Convênios" subtitle="Os planos atendidos, com os outros nomes que o paciente usa no WhatsApp.">
   <Button slot="actions" href="/admin/configuracoes/convenios/novo" variant="primary">
     <Icon name="plus" class="h-[18px] w-[18px]" strokeWidth={2.2} /> Novo plano
   </Button>
+
+  <HowItWorks id="convenios" topic={configuracoes.comoFunciona.convenios} class="mb-3">
+    <p class="text-[15px] text-ink-soft">Planos atendidos e como o bot os reconhece.</p>
+  </HowItWorks>
 
   <form method="POST" action="/api/admin/configuracoes/convenios/opcoes" class={`${PANEL} flex flex-wrap items-center justify-between gap-3`}>
     <label class="flex items-start gap-2.5 text-[15px] text-ink">

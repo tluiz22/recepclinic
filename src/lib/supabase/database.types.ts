@@ -1355,6 +1355,20 @@ isOneToOne: false
                   Relationships: [
                     
                   ]
+                },"platform_settings": {
+                  Row: {
+                    "id": boolean,"support_whatsapp": string | null,"updated_at": string,"updated_by": string | null
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "id"?: boolean,"support_whatsapp"?: string | null,"updated_at"?: string,"updated_by"?: string | null
+                  }
+                  Update: {
+                    "id"?: boolean,"support_whatsapp"?: string | null,"updated_at"?: string,"updated_by"?: string | null
+                  }
+                  Relationships: [
+                    
+                  ]
                 },"platform_staff": {
                   Row: {
                     "created_at": string,"display_name": string,"user_id": string
@@ -1469,14 +1483,14 @@ isOneToOne: false
                   ]
                 },"schedule_blocks": {
                   Row: {
-                    "agenda_id": string,"clinic_id": string,"created_at": string,"created_by": string | null,"ends_at": string,"id": string,"reason": string,"removed_at": string | null,"removed_by": string | null,"starts_at": string,"updated_at": string | null,"updated_by": string | null
+                    "agenda_id": string,"clinic_id": string,"created_at": string,"created_by": string | null,"ends_at": string,"id": string,"reason": string,"recess_message": string | null,"removed_at": string | null,"removed_by": string | null,"starts_at": string,"updated_at": string | null,"updated_by": string | null
                   }
                   ComputedFields: never
                   Insert: {
-                    "agenda_id": string,"clinic_id": string,"created_at"?: string,"created_by"?: string | null,"ends_at": string,"id"?: string,"reason": string,"removed_at"?: string | null,"removed_by"?: string | null,"starts_at": string,"updated_at"?: string | null,"updated_by"?: string | null
+                    "agenda_id": string,"clinic_id": string,"created_at"?: string,"created_by"?: string | null,"ends_at": string,"id"?: string,"reason": string,"recess_message"?: string | null,"removed_at"?: string | null,"removed_by"?: string | null,"starts_at": string,"updated_at"?: string | null,"updated_by"?: string | null
                   }
                   Update: {
-                    "agenda_id"?: string,"clinic_id"?: string,"created_at"?: string,"created_by"?: string | null,"ends_at"?: string,"id"?: string,"reason"?: string,"removed_at"?: string | null,"removed_by"?: string | null,"starts_at"?: string,"updated_at"?: string | null,"updated_by"?: string | null
+                    "agenda_id"?: string,"clinic_id"?: string,"created_at"?: string,"created_by"?: string | null,"ends_at"?: string,"id"?: string,"reason"?: string,"recess_message"?: string | null,"removed_at"?: string | null,"removed_by"?: string | null,"starts_at"?: string,"updated_at"?: string | null,"updated_by"?: string | null
                   }
                   Relationships: [
                     {

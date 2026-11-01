@@ -171,9 +171,9 @@ Total: **31 entradas** em 18 categorias (a 15, documentos, fica de fora) + dicio
 - **Sinônimos:** agendar consulta; marcar horário; quero uma consulta; tem vaga; tem horário; tem horário
   amanhã; qual o próximo horário; primeira consulta; marcar para meu filho; marcar para outra pessoa; como faço
   para marcar; como funciona o agendamento.
-- **Palavras-chave:** marcar, agendar, agendamento, consulta, vaga, horário livre, encaixar.
-- **Tipo / fontes:** `fluxo` · Marcar consulta (com serviço citado, já escolhido).
-- **Resposta:** o fluxo de hoje (serviço → profissional → link com datas e horários).
+- **Palavras-chave:** marcar, agendar, agendamento, consulta, vaga, horário livre ("encaixar" foi para EN1, 31/out).
+- **Tipo / fontes:** `fluxo` · Marcar consulta.
+- **Resposta:** o submenu Consultas (marcar, retorno, remarcar, cancelar, encaixe; cliente, 31/out/2026).
 - **Sem dado:** sem consulta no catálogo → não responde. **Já marcando:** repete o passo.
 
 ## 8. Marcação de exames
@@ -182,8 +182,19 @@ Total: **31 entradas** em 18 categorias (a 15, documentos, fica de fora) + dicio
 - **Sinônimos:** agendar exame; fazer um exame; marcar procedimento; tem horário para exame.
 - **Palavras-chave:** exame(s), procedimento + marcar/agendar/fazer.
 - **Tipo / fontes:** `fluxo` · Marcar exame.
-- **Resposta:** o fluxo de hoje.
+- **Resposta:** o submenu Exames (cliente, 31/out/2026).
 - **Sem dado:** item "Exames" desligado ou sem exame no catálogo → não responde.
+
+### EN1. Preciso de um encaixe (ajuste da homologação, 31/out/2026)
+- **Sinônimos:** consigo um encaixe; tem encaixe; tem como encaixar; quero adiantar minha consulta; antecipar a
+  consulta; antecipar o exame; tem horário mais cedo; quero entrar na lista de espera; entrar na fila de espera; se
+  alguém desistir me avisa; tem desistência.
+- **Palavras-chave:** encaixe, encaixar, encaixa, adiantar, antecipar, antecipação, mais cedo, lista de espera, fila de
+  espera, desistência.
+- **Tipo / fontes:** `fluxo` · Encaixe ou antecipar (categoria "Encaixe e lista de espera").
+- **Resposta:** o "Encaixe ou antecipar" de hoje (Consultas ou Exames, pela mensagem).
+- **Sem dado:** sem o item Lista de espera → "O encaixe é combinado com a recepção. Você quer falar com a
+  recepção?" (sem recepção no app: o aviso de que a clínica responde e o menu).
 
 ## 9. Remarcação
 

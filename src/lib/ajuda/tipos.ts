@@ -10,6 +10,9 @@ export type Termo = { termo: string; texto: string };
 /** Texto do "i": frase simples ou termos explicados um a um. Até ~280 caracteres. */
 export type Dica = string | Termo[];
 
+/** Um vizinho na jornada de configuração: o texto diz a relação; o link leva à tela. */
+export type Vizinho = { texto: string; href?: string };
+
 /** "Como funciona?" de uma funcionalidade: no máximo 5 itens em "Como funciona". */
 export type ComoFunciona = {
   /** Para que serve, numa frase. */
@@ -18,6 +21,10 @@ export type ComoFunciona = {
   exemplo?: string;
   /** "Se algo der errado": o que conferir. */
   erro?: string;
+  /** Jornada de configuração: do que este item precisa antes (até 4). */
+  depende?: Vizinho[];
+  /** Jornada de configuração: o que passa a depender deste item (até 4). */
+  alimenta?: Vizinho[];
 };
 
 /** Lista vazia: o que é a lista e como ela se enche. */

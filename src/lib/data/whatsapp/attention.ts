@@ -1,5 +1,6 @@
 import type { DbClient } from "../clients";
 import { unwrap } from "../errors";
+import { getSupportWhatsapp } from "../platformSettings";
 import { returnToBot } from "./conversations";
 
 // Atendimento humano (F8.5a, cliente, 27/out/2026): as conversas em que o bot
@@ -100,7 +101,9 @@ export async function listHumanAttention(
     .eq("human_handoff", true);
   if (phone) query = query.eq("contact_phone", phone);
   const paused = unwrap(await query, "Atendimento humano") as unknown as PausedRow[];
-  const open = paused.filter((row) => row.human_handoff_at).map((row) => ({ row }));
+  // O suporte do RecepClinic nunca aparece como pendência (cliente, 01/nov/2026).
+  const support = await getSupportWhatsapp(db);
+  const open = paused.filter((row) => row.human_handoff_at && row.contact_phone !== support).map((row) => ({ row }));
   if (open.length === 0) return [];
 
   const phones = open.map(({ row }) => row.contact_phone);

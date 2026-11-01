@@ -65,6 +65,137 @@ export const configuracoes = {
     ],
   },
   comoFunciona: {
+    // Jornada de configuração (setup.ts): Clínica → Profissionais → Locais → Agendas → Serviços → Horários.
+    // Equipe é à parte: liga pessoas do painel a um profissional (team.ts) e restringe agendas (app.can_access_agenda).
+    clinica: {
+      serve: "Dizer ao sistema quem é a clínica. Os dados daqui aparecem para o paciente e regem o fuso, os prazos e as palavras do bot.",
+      como: [
+        "Identificação, perfil e fuso horário definem como a clínica se apresenta e as palavras das telas e do bot; o fuso vale para a agenda, os lembretes e os resumos.",
+        "O prazo para oferecer horários limita até onde o bot e o link de agendamento mostram vagas; a recepção, pelo painel, não tem esse limite.",
+        "As páginas públicas (logo, cor e site) e as informações do bot são o que o paciente vê ao agendar e em Informações no WhatsApp.",
+        "O horário da recepção diz quando a clínica atende no WhatsApp; fora dele, as conversas entram em Atendimento sem notificação.",
+      ],
+      depende: [{ texto: "Nada: é o primeiro passo da jornada." }],
+      alimenta: [
+        { texto: "Profissionais, Locais, Agendas, Serviços e Horários: o guia no topo mostra o que falta em cada um.", href: "/admin/configuracoes/profissionais" },
+        { texto: "Lembretes e Mensagens: usam o fuso e o nome da clínica.", href: "/admin/configuracoes/lembretes" },
+        { texto: "Feriados: contam como recepção fechada.", href: "/admin/configuracoes/feriados" },
+      ],
+    },
+    locais: {
+      serve: "Cadastrar onde a clínica atende: consultórios, com endereço, e o atendimento domiciliar. Sem local, nada pode ser marcado.",
+      como: [
+        "Consultório: o paciente vai até a clínica, e o endereço vai no lembrete e na confirmação, com o link do mapa.",
+        "Domiciliar: a equipe vai até o paciente; o endereço é pedido na hora de marcar. Depende de o item estar liberado para a clínica.",
+        "Um local sem endereço (consultório) ou desativado não serve para marcar; a lista mostra o selo do que falta.",
+        "O tipo do local não muda depois de criado.",
+      ],
+      depende: [{ texto: "Clínica: os dados básicos, feitos primeiro.", href: "/admin/configuracoes" }],
+      alimenta: [
+        { texto: "Serviços: cada serviço é atendido em um ou mais locais.", href: "/admin/configuracoes/servicos" },
+        { texto: "Horários: cada horário de atendimento é de um local.", href: "/admin/configuracoes/horarios" },
+        { texto: "Informações do bot: o endereço vem daqui.", href: "/admin/configuracoes" },
+      ],
+    },
+    agendas: {
+      serve: "Definir a agenda de cada profissional (ou da equipe, para exames). É nela que os atendimentos são marcados.",
+      como: [
+        "Cada profissional tem uma agenda; a da equipe atende só exames que não são de um profissional cadastrado, e a clínica só pode ter uma.",
+        "O intervalo entre atendimentos é o tempo livre deixado depois de cada atendimento dela.",
+        "Agenda sem serviço ou sem horário de atendimento não recebe marcações; a lista mostra o selo do que falta.",
+        "O tipo e o profissional não mudam depois de criada.",
+      ],
+      depende: [{ texto: "Profissionais: toda agenda de profissional parte de um cadastro.", href: "/admin/configuracoes/profissionais" }],
+      alimenta: [
+        { texto: "Serviços: o serviço só aparece para marcar nas agendas marcadas nele.", href: "/admin/configuracoes/servicos" },
+        { texto: "Horários: cada horário de atendimento é de uma agenda.", href: "/admin/configuracoes/horarios" },
+        { texto: "Equipe: o acesso restrito libera agendas escolhidas.", href: "/admin/configuracoes/equipe" },
+      ],
+    },
+    servicos: {
+      serve: "Cadastrar o que o paciente pode marcar: consultas, retornos e exames, com duração, valor e as agendas que atendem.",
+      como: [
+        "A duração define o tamanho de cada horário livre; o valor aparece no bot e na marcação, e pode ser diferente em cada local.",
+        "O serviço só aparece para marcar nas agendas e nos locais marcados nele.",
+        "Sem horário de atendimento numa agenda e num local dele, o serviço não aparece no bot nem no link de agendar.",
+        "Exame pode ter preparo e ser em turma, com as vagas definidas em Horários.",
+      ],
+      depende: [
+        { texto: "Agendas: pelo menos uma que o atenda.", href: "/admin/configuracoes/agendas" },
+        { texto: "Locais: pelo menos um onde seja atendido.", href: "/admin/configuracoes/locais" },
+      ],
+      alimenta: [
+        { texto: "Horários: um horário pode ser de um serviço só ou de todos da agenda.", href: "/admin/configuracoes/horarios" },
+        { texto: "Nota fiscal: o código fiscal pode ser definido em cada serviço.", href: "/admin/configuracoes/nota-fiscal" },
+      ],
+    },
+    feriados: {
+      serve: "Marcar os dias em que a clínica não atende. Nesses dias a agenda não oferece horário.",
+      como: [
+        "Os feriados nacionais já vêm cadastrados e não mudam.",
+        "Os da clínica (municipais, estaduais, recesso) são um por data.",
+        "Feriado tira os horários do dia no painel, no bot e no link de agendar, mas não mexe nos atendimentos já marcados.",
+        "Também conta como recepção fechada no WhatsApp.",
+      ],
+      depende: [{ texto: "Horários: só tiram vagas onde já há horário de atendimento.", href: "/admin/configuracoes/horarios" }],
+      alimenta: [{ texto: "Agenda, bot e link de agendar: os dias saem da lista de vagas." }],
+    },
+    convenios: {
+      serve: "Cadastrar os planos de saúde atendidos e como o paciente os escreve no WhatsApp.",
+      como: [
+        "Os outros nomes ajudam o bot a reconhecer o plano que o paciente escreve.",
+        "Cada plano indica os profissionais que o atendem.",
+        "A opção de carteirinha e validade pede os dois dados ao marcar por plano, no painel e na página de horário.",
+        "Plano não aceito: o bot avisa e pergunta se o paciente quer seguir como particular.",
+      ],
+      depende: [{ texto: "Profissionais: cada plano indica quais o atendem.", href: "/admin/configuracoes/profissionais" }],
+      alimenta: [
+        { texto: "Bot e Marcar: oferecem só os planos cadastrados." },
+        { texto: "Informações do bot (Clínica): o texto de Convênios é escrito à parte.", href: "/admin/configuracoes" },
+      ],
+    },
+    whatsapp: {
+      serve: "Ligar o número de WhatsApp da clínica ao sistema. Sem a conexão, não há bot, lembretes nem avisos.",
+      como: [
+        "Conectar o número é o que permite ao bot receber e responder as mensagens.",
+        "Os avisos que a clínica manda primeiro usam modelos aprovados pela Meta; sem aprovação, não saem.",
+        "A situação da conexão e dos modelos aparece aqui; o cadastro técnico e os modelos são do Suporte.",
+      ],
+      depende: [{ texto: "Clínica: o nome e os dados que vão nas mensagens.", href: "/admin/configuracoes" }],
+      alimenta: [
+        { texto: "Lembretes: sem a conexão, o lembrete não sai.", href: "/admin/configuracoes/lembretes" },
+        { texto: "Mensagens: os textos do bot e os avisos aprovados.", href: "/admin/configuracoes/mensagens" },
+        { texto: "Bot de agendamento: todo o caminho do paciente no WhatsApp." },
+      ],
+    },
+    equipe: {
+      serve: "Dar acesso ao painel: quem entra, com qual papel e quais agendas vê.",
+      como: [
+        "Convide pela Equipe: a pessoa recebe um e-mail para criar a senha. Enquanto não aceita, aparece \"Convite pendente\".",
+        "O papel define as áreas do painel: Configurações é só do Administrador.",
+        "Quem tem o papel Profissional precisa estar ligado a um cadastro de profissional; sem a ligação, a lista avisa \"Falta ligar ao profissional\".",
+        "O acesso às agendas pode ser a todas ou só às selecionadas.",
+      ],
+      depende: [
+        { texto: "Profissionais: o cadastro de quem tem o papel Profissional.", href: "/admin/configuracoes/profissionais" },
+        { texto: "Agendas: só dá para liberar agendas que já existem.", href: "/admin/configuracoes/agendas" },
+      ],
+      alimenta: [{ texto: "Quem aparece como autor nos atendimentos (\"Marcado por Maria\") e o que cada pessoa vê na Agenda e nas Métricas." }],
+    },
+    profissionais: {
+      serve: "Cadastrar quem atende. É o primeiro passo da jornada: sem profissional, não existe agenda.",
+      como: [
+        "O nome do cadastro é o que o paciente vê ao marcar; profissão, conselho e RQE aparecem só no painel.",
+        "Cada profissional ativo precisa de uma agenda; sem ela, a lista mostra \"sem agenda\".",
+        "O WhatsApp do profissional serve para ele receber o lembrete dos atendimentos, se ligado em Lembretes.",
+      ],
+      depende: [{ texto: "Clínica: os dados básicos, feitos primeiro.", href: "/admin/configuracoes" }],
+      alimenta: [
+        { texto: "Agendas: cada agenda pertence a um profissional.", href: "/admin/configuracoes/agendas" },
+        { texto: "Equipe: o papel Profissional liga a pessoa a este cadastro.", href: "/admin/configuracoes/equipe" },
+        { texto: "Lembretes: o resumo do dia vai ao WhatsApp dele.", href: "/admin/configuracoes/lembretes" },
+      ],
+    },
     // configuracoes/nota-fiscal.astro (certificado, ambiente) e "Emitir nota" em financeiro/pagamento/[id].astro; F11.3 e F11.4.
     notaFiscal: {
       serve: "Emitir a NFS-e nacional (a nota fiscal de serviço) pelo próprio painel.",
@@ -75,6 +206,11 @@ export const configuracoes = {
         "Toda clínica começa em testes, sem valor fiscal; o suporte passa a nota a valer depois que o contador confere uma nota de teste.",
       ],
       erro: "Certificado vencido desliga a emissão até o novo ser enviado. Nota recusada pela Receita mostra o motivo na tela do pagamento.",
+      depende: [
+        { texto: "Clínica: o nome e os dados da clínica.", href: "/admin/configuracoes" },
+        { texto: "Serviços: o código fiscal de cada serviço, se for diferente do padrão.", href: "/admin/configuracoes/servicos" },
+      ],
+      alimenta: [{ texto: "Financeiro: a nota é emitida na tela do pagamento." }],
     },
     // configuracoes/assinatura.astro (F12.1): conta de cobrança, contatos e WhatsApp financeiro.
     assinatura: {
@@ -96,6 +232,8 @@ export const configuracoes = {
         "\"Mensagens aprovadas pela Meta\": os avisos que a clínica manda primeiro (lembrete, cancelamento e outros). Um texto novo passa pela revisão do Suporte e pela aprovação da Meta; até lá, segue o texto atual.",
         "Mensagem livre só vai para quem escreveu para a clínica nas últimas 24 horas; para os outros, vai a mensagem aprovada pela Meta.",
       ],
+      depende: [{ texto: "WhatsApp: a conexão do número da clínica.", href: "/admin/configuracoes/whatsapp" }],
+      alimenta: [{ texto: "Bot e lembretes: o que o paciente lê no WhatsApp." }],
     },
     // src/lib/data/whatsapp/reminders.ts (cabeçalho); botões do template em templates.ts; reenvio de 23/out (retryRules.ts).
     lembretes: {
@@ -107,6 +245,11 @@ export const configuracoes = {
         "Falha técnica no envio é tentada de novo sozinha, em 10 e 30 minutos.",
         "Sem o WhatsApp conectado ou sem a mensagem aprovada pela Meta, o lembrete não sai e a trilha do atendimento registra o motivo.",
       ],
+      depende: [
+        { texto: "WhatsApp: a conexão e as mensagens aprovadas pela Meta.", href: "/admin/configuracoes/whatsapp" },
+        { texto: "Horários e Agendas: só há lembrete de atendimento marcado.", href: "/admin/configuracoes/horarios" },
+      ],
+      alimenta: [{ texto: "Agenda: confirmação, remarcação e cancelamento pelos botões do lembrete." }],
     },
     // src/lib/data/agenda/slots.ts e freeSlots.ts; sem ligação dos atendimentos com o horário (removeAvailabilityWindow).
     horarios: {
@@ -119,6 +262,15 @@ export const configuracoes = {
         "Mudar ou apagar um horário não mexe nos atendimentos já marcados.",
       ],
       exemplo: "Das 8h às 12h, Consulta de 30 minutos e agenda sem intervalo: 8h, 8h30, 9h… até 11h30. Com uma Consulta já marcada às 9h, o horário das 9h sai da lista.",
+      depende: [
+        { texto: "Agendas: cada horário é de uma agenda.", href: "/admin/configuracoes/agendas" },
+        { texto: "Locais: e acontece em um local.", href: "/admin/configuracoes/locais" },
+        { texto: "Serviços: para um serviço ou todos os da agenda.", href: "/admin/configuracoes/servicos" },
+      ],
+      alimenta: [
+        { texto: "Painel, bot e link de agendar: os horários livres saem daqui." },
+        { texto: "Feriados: tiram os dias dos horários.", href: "/admin/configuracoes/feriados" },
+      ],
     },
     // src/lib/data/whatsapp/botLimits.ts (cabeçalho); "Contatos para revisar" no Início; tela do contato.
     limitesBot: {

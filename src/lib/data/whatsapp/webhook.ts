@@ -12,6 +12,7 @@ import { applyTemplateStatusEvent, type TemplateStatusEvent } from "./templateSy
 import { markWhatsappDisconnectedByMeta } from "./connection";
 import { notifyWaitingConversation, type PushContext } from "./attentionPush";
 import { handleIncomingMessage } from "./bot/router";
+import { getSupportWhatsapp, isSupportPhone } from "../platformSettings";
 import { logError, logWarn } from "../../log";
 import { unwrap } from "../errors";
 
@@ -181,6 +182,15 @@ export async function processWebhook(payload: unknown, deps: WebhookDeps, now: D
     }
     if (onboarding) summary.onboarding += conversations;
 
+    // O número do suporte do RecepClinic conversa com a clínica sem bot e sem Atendimento (cliente, 01/nov/2026):
+    // a mensagem é gravada no histórico, mas não chama o bot, não pausa a conversa e não avisa a equipe.
+    const support: { phone: string | null } = { phone: null };
+    if (conversations && !onboarding) {
+      await attempt("número do suporte", async () => {
+        support.phone = await getSupportWhatsapp(db);
+      });
+    }
+
     for (const message of onboarding ? [] : (change.messages ?? [])) {
       let recorded = false;
       await attempt("mensagem recebida", async () => {
@@ -189,6 +199,7 @@ export async function processWebhook(payload: unknown, deps: WebhookDeps, now: D
         recorded = result.recorded;
       });
       if (!recorded) continue;
+      if (isSupportPhone(toE164(message.from), support.phone)) continue;
       if (deps.senderFor) {
         await attempt("bot", async () => {
           const sender = await deps.senderFor!(clinicId);
@@ -236,6 +247,7 @@ export async function processWebhook(payload: unknown, deps: WebhookDeps, now: D
       await attempt("eco da recepção", async () => {
         const result = await recordAgentEcho(db, clinicId, echo, now);
         count(result, "echoes");
+        if (isSupportPhone(toE164(echo.to), support.phone)) return;
         // A recepção respondeu pelo app (coexistência): pausa o bot naquela conversa; "#bot" devolve (F6.4).
         if (result.recorded && (await hasFeature(db, clinicId, "whatsapp_bot"))) await handleAgentEcho(db, clinicId, echo, result.contactId, now);
       });

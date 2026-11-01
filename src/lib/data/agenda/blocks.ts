@@ -4,6 +4,7 @@ import { cleanText, unwrap, unwrapOne, Validation } from "../errors";
 import { cancelAppointments, listAppointmentsBetween, type Appointment } from "./appointments";
 import { createRebookingLink, type BookingLink } from "./links";
 import { logError } from "../../log";
+import { recessReturnDate, renderRecessMessage } from "../../recess";
 
 // Bloqueios por agenda e cancelamento do dia pela clínica (Fases 12 e 13 do
 // piloto). O bloqueio é criado em duas etapas na tela: primeiro a lista dos
@@ -20,14 +21,16 @@ export type ScheduleBlock = {
   startsAt: Date;
   endsAt: Date;
   reason: string;
+  /** Texto do recesso da clínica ({data} = dia do retorno); null = bloqueio comum. */
+  recessMessage: string | null;
   removedAt: Date | null;
 };
 
 export type CanceledWithLink = { appointment: Appointment; rebookingLink: BookingLink | null };
 
-const COLUMNS = "id, agenda_id, starts_at, ends_at, reason, removed_at";
+const COLUMNS = "id, agenda_id, starts_at, ends_at, reason, recess_message, removed_at";
 
-type Row = { id: string; agenda_id: string; starts_at: string; ends_at: string; reason: string; removed_at: string | null };
+type Row = { id: string; agenda_id: string; starts_at: string; ends_at: string; reason: string; recess_message: string | null; removed_at: string | null };
 
 const toBlock = (row: Row): ScheduleBlock => ({
   id: row.id,
@@ -35,6 +38,7 @@ const toBlock = (row: Row): ScheduleBlock => ({
   startsAt: new Date(row.starts_at),
   endsAt: new Date(row.ends_at),
   reason: row.reason,
+  recessMessage: row.recess_message,
   removedAt: row.removed_at ? new Date(row.removed_at) : null,
 });
 
@@ -112,7 +116,7 @@ async function cancelWithLinks(
 export async function createBlock(
   db: DbClient,
   clinicId: string,
-  input: { agendaId: string; startsAt: Date; endsAt: Date; reason: string; cancelAppointmentIds: string[]; actorId: string | null },
+  input: { agendaId: string; startsAt: Date; endsAt: Date; reason: string; recessMessage?: string | null; cancelAppointmentIds: string[]; actorId: string | null },
   now: Date = new Date(),
 ): Promise<{ block: ScheduleBlock; canceled: CanceledWithLink[] }> {
   const reason = validatePeriod(input.startsAt, input.endsAt, input.reason);
@@ -129,6 +133,7 @@ export async function createBlock(
       starts_at: input.startsAt.toISOString(),
       ends_at: input.endsAt.toISOString(),
       reason,
+      recess_message: cleanText(input.recessMessage ?? "") ?? null,
       created_by: input.actorId,
     }),
     "Bloqueio",
@@ -185,3 +190,26 @@ export async function cancelByClinic(
   return cancelWithLinks(db, clinicId, appointmentIds, "mass_cancel", actorId, now);
 }
 
+
+/**
+ * Recesso da clínica em vigor agora: o bloqueio ativo com mensagem de recesso
+ * que cobre o instante (de qualquer agenda; vale o que termina mais tarde).
+ * Devolve a mensagem pronta, com {data} no dia seguinte ao fim.
+ */
+export async function activeRecessMessage(db: DbClient, clinicId: string, now: Date, timeZone: string): Promise<string | null> {
+  const rows = unwrap(
+    await db
+      .from("schedule_blocks")
+      .select(COLUMNS)
+      .eq("clinic_id", clinicId)
+      .is("removed_at", null)
+      .not("recess_message", "is", null)
+      .lte("starts_at", now.toISOString())
+      .gt("ends_at", now.toISOString())
+      .order("ends_at", { ascending: false })
+      .limit(1),
+    "Recesso",
+  ).map(toBlock);
+  const block = rows[0];
+  return block?.recessMessage ? renderRecessMessage(block.recessMessage, recessReturnDate(block.endsAt, timeZone)) : null;
+}

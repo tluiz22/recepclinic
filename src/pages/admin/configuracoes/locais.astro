@@ -9,8 +9,10 @@ import { HEAD_ROW, LIST, ROW, ROW_CELL, ROW_GO, ROW_NAME, SOFT } from "../../../
 import Icon from "../../../components/admin/Icon.astro";
 import IssueBadges from "../../../components/admin/setup/IssueBadges.astro";
 import Button from "../../../components/admin/ui/Button.astro";
+import HowItWorks from "../../../components/admin/ui/HowItWorks.astro";
 import Pill from "../../../components/admin/ui/Pill.astro";
 import Tag from "../../../components/admin/ui/Tag.astro";
+import { configuracoes } from "../../../lib/ajuda/configuracoes";
 import { createUserClient } from "../../../lib/data/clients";
 import { listLocations } from "../../../lib/data/config/locations";
 import { loadSetupStatus } from "../../../lib/data/config/setup";
@@ -34,6 +36,10 @@ const cols = "lg:grid-cols-[minmax(0,1.6fr)_minmax(0,2.4fr)_36px]";
   <Button slot="actions" href="/admin/configuracoes/locais/novo" variant="primary">
     <Icon name="plus" class="h-[18px] w-[18px]" strokeWidth={2.2} /> Novo local
   </Button>
+
+  <HowItWorks id="locais" topic={configuracoes.comoFunciona.locais} class="mb-3">
+    <p class="text-[15px] text-ink-soft">Consultório e domiciliar, e o que depende dos locais.</p>
+  </HowItWorks>
 
   <div class="flex flex-wrap items-center justify-between gap-3">
     <p class="text-sm text-ink-soft" role="status">

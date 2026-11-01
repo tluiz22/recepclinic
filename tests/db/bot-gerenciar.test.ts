@@ -129,7 +129,7 @@ describe("cancelar pelo menu", () => {
     let reply = await say(P2, { id: "manage_cancel" });
     expect(reply.map((m) => m.body)).toEqual([ASK_BIRTHDATE]);
     reply = await say(P2, "01/01/2020");
-    expect(reply[0].body).toBe("Confirma o cancelamento da consulta de *Paciente Dois* em segunda, 10/03 às 08:00? Responda Sim ou Não.");
+    expect(reply[0].body).toBe("Confirma o cancelamento da consulta de *Paciente Dois* em segunda, 10/03 às 08:00?");
     reply = await say(P2, "não");
     expect(reply[0].body).toBe("Ok, mantivemos sua consulta marcada.");
     expect((await appointment(consultP2)).status).toBe("scheduled");
@@ -152,7 +152,7 @@ describe("cancelar pelo menu", () => {
     expect(reply[0].body).toBe(
       "Não encontramos nenhuma consulta futura para cancelar neste número. Se o agendamento foi feito por outro número, escreva por aquele número.",
     );
-    expect(reply[1].body).toBe("Como podemos ajudar? Escolha uma opção abaixo (ou digite o número).");
+    expect(reply[1].body).toBe("Escolha uma opção abaixo (ou digite o número).");
 
     const stranger = "+5584991226499";
     await hello(stranger);
@@ -161,7 +161,7 @@ describe("cancelar pelo menu", () => {
     expect(strangerReply[0].body).toBe(
       "Não encontramos agendamento marcado para esse número de telefone. Se o agendamento foi feito por outro número, escreva por aquele número.",
     );
-    expect(strangerReply[1].body).toBe("Como podemos ajudar? Escolha uma opção abaixo (ou digite o número).");
+    expect(strangerReply[1].body).toBe("Escolha uma opção abaixo (ou digite o número).");
   });
 });
 
@@ -295,6 +295,23 @@ describe("encaixe ou antecipar", () => {
     expect(reply[0].body).toBe("Pronto! *Paciente Três* está na lista de espera para antecipar o exame Exame marcado para segunda, 17/03 às 08:00.");
   });
 
+  it("mais de um serviço do paciente: lista os serviços antes dos atendimentos (cliente, 01/nov/2026)", async () => {
+    const returnId = (
+      await bookAppointment(asDb(f.reception), f.clinicId, { patientId: f.ids.p1, serviceId: f.ids.retorno, agendaId: f.ids.agendaDra, start: at(MON2, "08:00"), locationId: f.ids.office, channel: "admin", actorId: null }, NOW)
+    ).appointment.id;
+    try {
+      await hello(P1);
+      await say(P1, "1");
+      let reply = await choose(P1, "manage_waitlist");
+      expect(reply[0]).toMatchObject({ kind: "list", body: "Para qual serviço é o encaixe?" });
+      expect(titles(reply)).toEqual(["1. Consulta", "2. Retorno", "3. Voltar ao menu"]);
+      reply = await say(P1, { id: `service_${f.ids.retorno}` });
+      expect(bodies(reply)).toContain("Paciente Um");
+    } finally {
+      await adminClient().from("appointments").update({ status: "canceled" }).eq("id", returnId);
+    }
+  });
+
   it("sem nada marcado: oferece marcar; o link leva o pedido de entrar na lista", async () => {
     await hello(P2);
     await say(P2, "1");
@@ -325,6 +342,23 @@ describe("recepção e pausa", () => {
     await adminClient().from("whatsapp_connections").update({ coexistence: false }).eq("clinic_id", f.clinicId);
   });
 
+  it("em recesso da clínica: a mensagem de recesso substitui o aviso, com a data do retorno", async () => {
+    const phone = "+5584991226405";
+    await adminClient().from("whatsapp_connections").update({ coexistence: true }).eq("clinic_id", f.clinicId);
+    const end = new Date(Date.now() + 10 * 24 * 60 * 60_000);
+    const { data: block } = await adminClient()
+      .from("schedule_blocks")
+      .insert({ clinic_id: f.clinicId, agenda_id: f.ids.agendaExams, starts_at: new Date(Date.now() - 60_000).toISOString(), ends_at: end.toISOString(), reason: "Recesso", recess_message: "Em recesso até {data}." })
+      .select("id")
+      .single();
+    await hello(phone);
+    const reply = await say(phone, "4");
+    expect(reply[0].body).toMatch(/^Em recesso até \d{2}\/\d{2}\/\d{4}\.$/);
+    await adminClient().from("schedule_blocks").delete().eq("id", block!.id);
+    await webhook({ message_echoes: [{ id: `wamid.f64.echo.${++seq}`, from: "5584000000000", to: phone.slice(1), type: "text", text: { body: "#bot" } }] });
+    await adminClient().from("whatsapp_connections").update({ coexistence: false }).eq("clinic_id", f.clinicId);
+  });
+
   it("a recepção responde pelo app: o bot fica em silêncio, mas o Confirmar do lembrete responde", async () => {
     await webhook({ message_echoes: [{ id: `wamid.f64.echo.${++seq}`, from: "5584000000000", to: P1.slice(1), type: "text", text: { body: "Oi, aqui é a recepção" } }] });
     expect(await hello(P1)).toEqual([]);
@@ -337,7 +371,7 @@ describe("recepção e pausa", () => {
 });
 
 describe("não achou neste número (cliente, 11/out/2026)", () => {
-  const MENU = "Como podemos ajudar? Escolha uma opção abaixo (ou digite o número).";
+  const MENU = "Escolha uma opção abaixo (ou digite o número).";
   const fresh = (phone: string) =>
     adminClient().from("conversation_state").update({ state: "WELCOME", context: {}, human_handoff: false }).eq("clinic_id", f.clinicId).eq("contact_phone", phone);
 

@@ -315,3 +315,44 @@ Sub-etapas: **3.1** banco → **3.2** núcleo (normalização, casamento, fontes
 Pedido do cliente: ativar todas as entradas de uma vez. Na lista de Entradas, caixas de marcar em cada linha, "Marcar
 todas as mostradas" (respeita a busca e o filtro) e "Situação das marcadas" › Mudar situação, com confirmação; cada
 entrada entra no histórico. `setEntriesStatus` em `admin.ts`; teste em `base-de-conhecimento-admin.test.ts`.
+
+### Ajustes da homologação: pedidos do cliente (31/out/2026)
+
+Resultado dos testes da parte R, com as decisões do cliente:
+
+1. **Marcar pela base leva ao submenu.** Os fluxos "marcar consulta" e "marcar exame" abrem o submenu Consultas ou
+   Exames (marcar, retorno, remarcar, cancelar, encaixe), não o primeiro passo da marcação.
+2. **Encaixe pela base.** "Encaixe", "preciso de um encaixe", "consigo um encaixe" iam para Não reconhecidas. Entrada
+   nova (encaixe, adiantar, antecipar) com o fluxo novo `waitlist`, que abre o "Encaixe ou antecipar" de hoje
+   (`startManage(..., "waitlist")`). Clínica sem o item Lista de espera: explica que o encaixe é com a recepção e
+   pergunta se quer falar com ela (Sim/Não).
+3. **"voltar" é voltar, não retorno.** "voltar", "voltar ao menu", "menu anterior" e parecidos, antes da base: dentro
+   de um fluxo, o submenu de onde veio (Consultas ou Exames); no submenu ou em Informações, o menu principal; no menu
+   principal, o menu de novo. O toque em "Voltar ao menu" continua no menu principal.
+4. **Nunca transferir sem perguntar.** As transferências automáticas (4ª mensagem não entendida, sem horário livre,
+   clínica sem nada para marcar, convênio não aceito e "Não" ao particular) passam a perguntar Sim/Não. "Não":
+   "Tudo bem." e o menu principal (na 4ª não entendida, a contagem zera). Sem recepção no app, a mesma pergunta
+   ("Quer que a clínica entre em contato?"); Sim pausa e avisa que a clínica responde em breve.
+
+Etapas (uma por vez, na branch `bc-ajustes`, cada uma com `botJourney.ts`): **A** itens 1 e 3; **B** item 2
+(migração do fluxo `waitlist` e entrada no catálogo); **C** item 4.
+
+- **A** (`9cbbe07`): `isBack` (`input.ts`) e `showPreviousMenu` (`menus.ts`), no router antes da base; marcar pela
+  base → `showSubmenu`. Testes em `input.test.ts` e `bot-base-de-conhecimento.test.ts`.
+- **B:** migração `20261110120000_base_de_conhecimento_encaixe.sql` (fluxo `waitlist` na trava, categoria
+  `waitlist`, entrada EN1 em rascunho com 11 sinônimos, "encaixar" sai de M1); `waitlist` em `KB_FLOWS` e entre os
+  pedidos de marcação do reconhecimento (sintoma junto não barra); `performTakeover` abre `startManage(..., "waitlist")`
+  ou a pergunta da recepção. No staging, depois da migração: ativar EN1 e publicar.
+- **C:** `handOver` (`booking.ts`) termina a tentativa e chama `offerReception` (`engine.ts`): a transferência fica em
+  `RECEPTION_CONFIRM_KEY` (objeto com o tipo e o motivo da pausa; o pedido digitado segue `true`), e o router responde
+  o Sim (`acceptReceptionOffer`: a pausa de antes, com o motivo) e o Não (`declineReceptionOffer`). A 4ª não entendida
+  também pergunta (Sim: `handoffNotUnderstood`). Sem recepção no app: "Você quer que {a clínica} entre em contato por
+  aqui?". Cliente, 31/out: o limite de marcações do contato **continua transferindo direto**; clínica sem nada para
+  marcar, o Não despede ("Se precisar, é só mandar mensagem por aqui.") e a próxima mensagem recomeça.
+
+## Aviso de alterações não publicadas (cliente, 01/nov/2026)
+
+O bot só lê a base publicada: a EN1 (encaixe) foi ativada no staging mas não publicada, e "Encaixe" seguiu sem resposta.
+Agora toda tela da base (`PublishPrompt.astro`, embaixo das abas e na tela da entrada) avisa "N alterações ainda não
+publicadas… Deseja publicar agora?" com o botão Publicar (com confirmação); na lista de Entradas, o painel de publicação
+ganha o mesmo texto e fica em destaque. Some quando nada mudou depois da última publicação.

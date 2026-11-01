@@ -9,6 +9,19 @@ export const agenda = {
       "Aparece quando o paciente tem 2 ou mais faltas e faltou em pelo menos metade dos atendimentos registrados (compareceu ou faltou), em todo o histórico. Só informa: não impede marcar.",
   },
   comoFunciona: {
+    // src/pages/admin/agenda/bloquear.astro; src/lib/data/agenda/blocks.ts (activeRecessMessage, cancelWithLinks);
+    // src/lib/recess.ts; Aguardando remarcação em src/lib/data/daily.ts (listAwaitingRebooking).
+    bloquear: {
+      serve: "Impedir marcações por um período (férias, congresso) e, se a clínica fechar, avisar quem pedir a recepção.",
+      como: [
+        "Escolha as agendas, o período e o motivo. Nenhum horário do período é oferecido enquanto o bloqueio existir.",
+        "Com atendimentos no período, a tela pergunta: \"cancelar\" manda ao paciente, pelo WhatsApp, o link para remarcar; \"manter\" não mexe neles.",
+        "Quem teve o atendimento cancelado e não remarcou aparece em Relacionamento › Aguardando remarcação.",
+        "Recesso da clínica: quem pedir a recepção no WhatsApp recebe a mensagem de recesso, com a data de retorno (dia seguinte ao fim). Vem pronta e dá para editar.",
+        "Bloqueio de mais de 5 dias pergunta se envia o recesso; faltando agenda, pede confirmação.",
+      ],
+      erro: "Paciente sem a mensagem de recesso: confira se o bloqueio é de recesso, se o período cobre hoje e se o número tem a recepção no app.",
+    },
     // src/components/admin/agenda/situationStyle.ts (appointmentSituation); botão "Confirmar presença" do
     // lembrete (src/lib/data/whatsapp/templates.ts) e do bot (bot/manage.ts, confirmPresence); cardActions.ts.
     situacoes: {
