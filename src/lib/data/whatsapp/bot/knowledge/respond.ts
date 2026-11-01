@@ -7,7 +7,7 @@ import { BOOKING_STATES, startBooking, startReturn, type BookingContext } from "
 import { KnowledgeTakeover, mergeContext, RECEPTION_CONFIRM_KEY, say, sayPreparationFile, sendButtons, sendList, type Bot, type KnowledgeHook } from "../engine";
 import { startIdentification } from "../entry";
 import { BACK_TO_MENU_ID, pick, type Selection } from "../input";
-import { startManage } from "../manage";
+import { askWaitlistType, startManage } from "../manage";
 import { showMenu, showPreparationChoice, showSubmenu } from "../menus";
 import * as t from "../texts";
 import { CLINICAL_NOTICE, clinicTermsOf, composeAnswer, type KbAnswer, type KbClinicData, type KbContext } from "./answers";
@@ -34,7 +34,7 @@ const NONE_ID = "kb_none";
 const BOOK_PREFIX = "kb_book_";
 
 type Takeover =
-  | { kind: "flow"; flow: KbFlow; group: t.Group }
+  | { kind: "flow"; flow: KbFlow; group: t.Group; typed?: "consultation" | "return_visit" | "exam" }
   | { kind: "reception"; text: string }
   | { kind: "offer_reception" }
   | { kind: "clinical" }
@@ -76,6 +76,16 @@ function contextOf(b: Bot): KbContext {
   const ctx = b.convo.context as BookingContext;
   return { serviceId: ctx.serviceId, locationType: ctx.locationCategory ?? undefined };
 }
+
+/** Tipo dito na mensagem (exame, retorno ou consulta, ou o serviço citado); undefined = não disse. */
+const typedCategory = (terms: DetectedTerms, data: KbClinicData, message: string): "consultation" | "return_visit" | "exam" | undefined => {
+  const named = data.catalog.services.filter((s) => terms.serviceIds.includes(s.id));
+  if (named.length) return named[0].category as "consultation" | "return_visit" | "exam";
+  if (/\bexames?\b/i.test(message)) return "exam";
+  if (/\bretornos?\b/i.test(message)) return "return_visit";
+  if (/\bconsultas?\b/i.test(message)) return "consultation";
+  return undefined;
+};
 
 const groupOf = (terms: DetectedTerms, data: KbClinicData, message: string): t.Group => {
   const named = data.catalog.services.filter((s) => terms.serviceIds.includes(s.id));
@@ -124,7 +134,7 @@ async function send(b: Bot, answer: KbAnswer, entry: KbEntry, terms: DetectedTer
   const kind = `bot_kb_${entry.code.toLowerCase()}`;
   switch (answer.kind) {
     case "flow":
-      return new KnowledgeTakeover({ kind: "flow", flow: answer.flow, group: groupOf(terms, data, text) } satisfies Takeover);
+      return new KnowledgeTakeover({ kind: "flow", flow: answer.flow, group: groupOf(terms, data, text), typed: typedCategory(terms, data, text) } satisfies Takeover);
     case "reception":
       return new KnowledgeTakeover({ kind: "reception", text: answer.text } satisfies Takeover);
     case "preparation": {
@@ -160,7 +170,7 @@ export async function performTakeover(b: Bot, action: unknown): Promise<void> {
   switch (takeover.kind) {
     case "flow": {
       await leaveFlow(b);
-      const { flow, group } = takeover;
+      const { flow, group, typed } = takeover;
       // Marcar pela base: o submenu, com marcar, retorno, remarcar, cancelar e encaixe (cliente, 31/out/2026).
       if (flow === "book_consultation") return showSubmenu(b, "CONSULTAS_MENU");
       if (flow === "book_exam") return showSubmenu(b, "EXAMES_MENU");
@@ -168,7 +178,8 @@ export async function performTakeover(b: Bot, action: unknown): Promise<void> {
       if (flow === "reschedule" || flow === "cancel") return startManage(b, flow, group);
       // Encaixe (cliente, 31/out/2026): o "Encaixe ou antecipar"; sem o item Lista de espera, é com a recepção.
       if (flow === "waitlist") {
-        if (b.features.includes("waitlist")) return startManage(b, "waitlist", group);
+        // Sem o tipo na mensagem, pergunta consulta, retorno ou exame (cliente, 01/nov/2026).
+        if (b.features.includes("waitlist")) return typed ? startManage(b, "waitlist", typed === "exam" ? "exam" : "consultation", typed) : askWaitlistType(b);
         return performTakeover(b, { kind: "reception", text: t.KB_WAITLIST_RECEPTION } satisfies Takeover);
       }
       return startIdentification(b);

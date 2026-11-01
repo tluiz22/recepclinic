@@ -88,8 +88,8 @@ const toManaged = (row: Row): ManagedAppointment => ({
 const inGroup = (group: t.Group, category: Category) => (group === "exam" ? category === "exam" : category !== "exam");
 
 /** Atendimentos ativos e futuros dos pacientes do contato, só do grupo (nunca mistura consulta e exame). */
-async function loadUpcoming(b: Bot, group: t.Group): Promise<ManagedAppointment[]> {
-  return (await upcomingOfContact(b)).filter((a) => inGroup(group, a.category));
+async function loadUpcoming(b: Bot, group: t.Group, category?: Category): Promise<ManagedAppointment[]> {
+  return (await upcomingOfContact(b)).filter((a) => (category ? a.category === category : inGroup(group, a.category)));
 }
 
 /** Atendimentos ativos (marcados ou confirmados) e futuros dos pacientes do contato, consultas e exames. */
@@ -132,12 +132,14 @@ const groupOf = (a: ManagedAppointment): t.Group => (a.category === "exam" ? "ex
 type Action = "cancel" | "reschedule" | "waitlist";
 
 /** Lista no contexto (só o que a escolha precisa; o resto é relido do banco). */
-type Candidate = { id: string; patientName: string; birthdate: string; scheduledAt: string };
+type Candidate = { id: string; patientName: string; birthdate: string; scheduledAt: string; serviceId?: string; serviceName?: string };
 
 export type ManageContext = {
   action: Action;
   group: t.Group;
-  awaiting?: "appointment_choice" | "birthdate_search" | "identity_choice" | "address_current" | "address_input" | "address_new" | "book_choice";
+  awaiting?: "appointment_choice" | "birthdate_search" | "identity_choice" | "address_current" | "address_input" | "address_new" | "book_choice" | "type_choice" | "service_choice";
+  /** Encaixe: tipo escolhido (consulta, retorno ou exame); sem ele, vale o grupo. */
+  category?: Category;
   candidates?: Candidate[];
   pendingId?: string;
   pendingAddress?: string;
@@ -159,7 +161,7 @@ const SELECT_STATE: Record<Action, string> = { cancel: "CANCEL_SELECT", reschedu
 const VERB: Record<Action, "cancelar" | "remarcar" | "antecipar"> = { cancel: "cancelar", reschedule: "remarcar", waitlist: "antecipar" };
 
 const ctxOf = (b: Bot) => b.convo.context as ManageContext;
-const toCandidate = (a: ManagedAppointment): Candidate => ({ id: a.id, patientName: a.patientName, birthdate: a.birthdate, scheduledAt: a.scheduledAt.toISOString() });
+const toCandidate = (a: ManagedAppointment): Candidate => ({ id: a.id, patientName: a.patientName, birthdate: a.birthdate, scheduledAt: a.scheduledAt.toISOString(), serviceId: a.serviceId, serviceName: a.serviceName });
 
 async function openFunnel(b: Bot, flow: "cancel" | "reschedule", metadata: Record<string, unknown>): Promise<void> {
   b.now = new Date(b.now.getTime() + 1);
@@ -177,16 +179,39 @@ async function sendChoice(b: Bot, ctx: ManageContext, candidates: Candidate[]): 
 }
 
 /** Menu › Cancelar / Remarcar / Encaixe: acha os atendimentos e segue. */
-export async function startManage(b: Bot, action: Action, group: t.Group): Promise<void> {
+/**
+ * Encaixe pedido pela base sem dizer o tipo (cliente, 01/nov/2026): pergunta consulta, retorno ou exame (só o que a
+ * clínica oferece); com um só tipo, segue direto.
+ */
+export async function askWaitlistType(b: Bot): Promise<void> {
+  const catalog = await b.catalog();
+  const types = (["consultation", "return_visit", "exam"] as const).filter((c) => servicesOf(catalog, c).length > 0);
+  if (types.length === 1) return startManage(b, "waitlist", types[0] === "exam" ? "exam" : "consultation", types[0]);
+  if (types.length === 0) return startManage(b, "waitlist", "consultation");
+  await sendButtons(b, "bot_waitlist_type", t.WAITLIST_TYPE_QUESTION, types.map((c) => t.button(t.WAITLIST_TYPE_IDS[c], t.WAITLIST_TYPE_LABELS[c])));
+  await go(b, "WAITLIST_SELECT", { action: "waitlist", group: "consultation", awaiting: "type_choice" } satisfies ManageContext);
+}
+
+async function handleTypeChoice(b: Bot, selection: Selection): Promise<void> {
+  const types = ["consultation", "return_visit", "exam"] as const;
+  const choice = pick(selection, [...types], (c) => t.WAITLIST_TYPE_IDS[c]);
+  if (!choice) {
+    await say(b, "bot_not_understood", textFor(b, "not_understood", t.notUnderstood()));
+    return askWaitlistType(b);
+  }
+  return startManage(b, "waitlist", choice === "exam" ? "exam" : "consultation", choice);
+}
+
+export async function startManage(b: Bot, action: Action, group: t.Group, category?: Category): Promise<void> {
   if (action !== "waitlist") await openFunnel(b, action, { category: group });
   if (!b.convo.contactId && action !== "waitlist") {
     await say(b, `bot_${action}_no_contact`, t.noRegistration(b.receptionAvailable));
     await end(b, "blocked", { reason: "no_contact" });
     return showMenu(b);
   }
-  let appointments = await loadUpcoming(b, group);
+  let appointments = await loadUpcoming(b, group, category);
   if (action === "waitlist") appointments = appointments.filter((a) => joinBlockReason(a, b.now) === null);
-  const ctx: ManageContext = { action, group };
+  const ctx: ManageContext = { action, group, ...(category ? { category } : {}) };
   if (!appointments.length) {
     if (action === "waitlist") return offerBooking(b, ctx);
     await say(b, `bot_${action}_no_appointments`, t.noAppointments(VERB[action] as "cancelar" | "remarcar", group, b.receptionAvailable));
@@ -196,6 +221,30 @@ export async function startManage(b: Bot, action: Action, group: t.Group): Promi
   // Data de nascimento antes de qualquer detalhe, com um ou mais atendimentos, como na entrada (cliente, 24/out/2026).
   await say(b, "bot_ask_birthdate", t.ENTRY_ASK_BIRTHDATE);
   await go(b, SELECT_STATE[action], { ...ctx, awaiting: "birthdate_search", candidates: appointments.map(toCandidate) });
+}
+
+const serviceChoices = (candidates: Candidate[]) => {
+  const seen = new Map<string, string>();
+  for (const c of candidates) if (c.serviceId && !seen.has(c.serviceId)) seen.set(c.serviceId, c.serviceName ?? "Serviço");
+  return [...seen].map(([id, name]) => ({ id, name }));
+};
+
+async function sendServiceChoice(b: Bot, services: { id: string; name: string }[]): Promise<void> {
+  await sendList(b, "bot_waitlist_service", t.WAITLIST_SERVICE_QUESTION, t.numberedList(services.map((s) => ({ id: `service_${s.id}`, label: s.name }))));
+}
+
+/** Identidade confirmada pela data de nascimento: encaixe com mais de um serviço lista os serviços primeiro. */
+async function afterIdentity(b: Bot, ctx: ManageContext, matches: Candidate[], serviceDone = false): Promise<void> {
+  if (matches.length === 1) return proceed(b, ctx, matches[0].id);
+  if (ctx.action === "waitlist" && !serviceDone) {
+    const services = serviceChoices(matches);
+    if (services.length > 1) {
+      await sendServiceChoice(b, services);
+      return go(b, SELECT_STATE[ctx.action], { ...ctx, awaiting: "service_choice", candidates: matches });
+    }
+  }
+  await sendChoice(b, ctx, matches);
+  return go(b, SELECT_STATE[ctx.action], { ...ctx, awaiting: "appointment_choice", candidates: matches });
 }
 
 /** Data de nascimento sem atendimento (entrada e menu): outra data ou o menu. */
@@ -209,6 +258,7 @@ export const identityChoiceOf = (_b: Bot, selection: Selection): t.IdentityChoic
 async function handleSelect(b: Bot, selection: Selection): Promise<void> {
   const ctx = ctxOf(b);
   if (ctx.awaiting === "book_choice") return handleBookChoice(b, selection);
+  if (ctx.awaiting === "type_choice") return handleTypeChoice(b, selection);
   const candidates = ctx.candidates ?? [];
 
   if (ctx.awaiting === "identity_choice") {
@@ -238,9 +288,17 @@ async function handleSelect(b: Bot, selection: Selection): Promise<void> {
       await sendIdentityNotFound(b);
       return go(b, SELECT_STATE[ctx.action], { ...ctx, awaiting: "identity_choice" });
     }
-    if (matches.length === 1) return proceed(b, ctx, matches[0].id);
-    await sendChoice(b, ctx, matches);
-    return go(b, SELECT_STATE[ctx.action], { ...ctx, awaiting: "appointment_choice", candidates: matches });
+    return afterIdentity(b, ctx, matches);
+  }
+
+  if (ctx.awaiting === "service_choice") {
+    const services = serviceChoices(candidates);
+    const service = pick(selection, services, (s) => `service_${s.id}`);
+    if (!service) {
+      await say(b, "bot_not_understood", textFor(b, "not_understood", t.notUnderstood()));
+      return sendServiceChoice(b, services);
+    }
+    return afterIdentity(b, ctx, candidates.filter((c) => c.serviceId === service.id), true);
   }
 
   const choice = pick(selection, candidates, (c) => `appointment_${c.id}`);
@@ -713,13 +771,17 @@ async function handleWaitlistLeave(b: Bot, selection: Selection): Promise<void> 
 async function offerBooking(b: Bot, ctx: ManageContext): Promise<void> {
   const catalog = await b.catalog();
   const buttons =
-    ctx.group === "exam"
-      ? [t.button(t.WAITLIST_IDS.bookExam, "Marcar exame")]
-      : [
+    ctx.category === "return_visit"
+      ? [t.button(t.WAITLIST_IDS.bookReturn, "Marcar retorno")]
+      : ctx.category === "consultation"
+        ? [t.button(t.WAITLIST_IDS.bookConsultation, "Marcar consulta")]
+        : ctx.group === "exam"
+          ? [t.button(t.WAITLIST_IDS.bookExam, "Marcar exame")]
+          : [
           ...(servicesOf(catalog, "consultation").length ? [t.button(t.WAITLIST_IDS.bookConsultation, "Marcar consulta")] : []),
           ...(servicesOf(catalog, "return_visit").length ? [t.button(t.WAITLIST_IDS.bookReturn, "Marcar retorno")] : []),
         ];
-  await sendButtons(b, "bot_waitlist_no_appointment", t.waitlistNoAppointment(ctx.group), [...buttons, t.button("back_to_menu", "Voltar ao menu")]);
+  await sendButtons(b, "bot_waitlist_no_appointment", t.waitlistNoAppointment(ctx.group, ctx.category), [...buttons, t.button("back_to_menu", "Voltar ao menu")]);
   await go(b, "WAITLIST_SELECT", { ...ctx, awaiting: "book_choice" });
 }
 

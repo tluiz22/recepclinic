@@ -181,7 +181,8 @@ export const JOURNEY: JourneySection[] = [
     title: "5. Encaixe ou antecipar",
     intro: "Com a Lista de espera ligada: para quem quer um horário mais cedo do que o marcado.",
     flow: [
-      bot("Pede a data de nascimento e mostra o atendimento", "Sem atendimento marcado: oferece marcar agora e entrar na lista depois."),
+      bot("Pergunta o tipo: Consulta, Retorno ou Exame", "Só quando o paciente pede \"encaixe\" por escrito sem dizer o tipo (só os tipos que a clínica oferece). Pelo menu Consultas ou Exames, o tipo já está escolhido."),
+      bot("Pede a data de nascimento e mostra o atendimento", "Sem atendimento marcado: oferece marcar agora e entrar na lista depois. Com mais de um serviço marcado, lista os serviços para escolher antes dos atendimentos."),
       check("Há horário livre antes do atendimento?"),
       branch(
         ["Sim", [bot("\"Quer antecipar para um destes?\""), patient("Escolhe um horário (ou \"Nenhum desses\")"), bot("Confirma e antecipa")]],

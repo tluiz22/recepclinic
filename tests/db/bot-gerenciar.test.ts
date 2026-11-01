@@ -295,6 +295,23 @@ describe("encaixe ou antecipar", () => {
     expect(reply[0].body).toBe("Pronto! *Paciente Três* está na lista de espera para antecipar o exame Exame marcado para segunda, 17/03 às 08:00.");
   });
 
+  it("mais de um serviço do paciente: lista os serviços antes dos atendimentos (cliente, 01/nov/2026)", async () => {
+    const returnId = (
+      await bookAppointment(asDb(f.reception), f.clinicId, { patientId: f.ids.p1, serviceId: f.ids.retorno, agendaId: f.ids.agendaDra, start: at(MON2, "08:00"), locationId: f.ids.office, channel: "admin", actorId: null }, NOW)
+    ).appointment.id;
+    try {
+      await hello(P1);
+      await say(P1, "1");
+      let reply = await choose(P1, "manage_waitlist");
+      expect(reply[0]).toMatchObject({ kind: "list", body: "Para qual serviço é o encaixe?" });
+      expect(titles(reply)).toEqual(["1. Consulta", "2. Retorno", "3. Voltar ao menu"]);
+      reply = await say(P1, { id: `service_${f.ids.retorno}` });
+      expect(bodies(reply)).toContain("Paciente Um");
+    } finally {
+      await adminClient().from("appointments").update({ status: "canceled" }).eq("id", returnId);
+    }
+  });
+
   it("sem nada marcado: oferece marcar; o link leva o pedido de entrar na lista", async () => {
     await hello(P2);
     await say(P2, "1");

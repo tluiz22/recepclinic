@@ -260,14 +260,21 @@ describe("pergunta clínica", () => {
 describe("encaixe (cliente, 31/out/2026)", () => {
   const phone = "+5584991337045";
 
-  it("com a Lista de espera: abre o \"Encaixe ou antecipar\"", async () => {
+  it("com a Lista de espera: pergunta o tipo (consulta, retorno ou exame) e abre o \"Encaixe ou antecipar\"", async () => {
     await say(phone, "Oi");
-    const reply = await say(phone, "Preciso de um encaixe");
-    // Número sem atendimento marcado: a resposta de hoje do encaixe, com Marcar.
-    expect(reply.at(-1)!.body).toContain("A lista de espera serve para antecipar um horário já marcado");
+    let reply = await say(phone, "Preciso de um encaixe");
+    expect(reply.at(-1)).toMatchObject({ kind: "buttons", body: "O encaixe é para qual tipo de atendimento?" });
+    expect(reply.at(-1)!.options.map((o) => o.title)).toEqual(["Consulta", "Retorno", "Exame"]);
+    // Número sem atendimento marcado: a resposta de hoje do encaixe, com Marcar, do tipo escolhido.
+    reply = await say(phone, { id: "waitlist_type_return" });
+    expect(reply.at(-1)!.body).toContain("não encontramos um retorno marcado");
     await reset(phone);
     const other = await say(phone, "consigo um encaixe?");
-    expect(other.at(-1)!.body).toContain("A lista de espera serve para antecipar");
+    expect(other.at(-1)!.body).toBe("O encaixe é para qual tipo de atendimento?");
+    // Com o tipo na mensagem, não pergunta.
+    await reset(phone);
+    const exam = await say(phone, "tem encaixe para exame?");
+    expect(exam.at(-1)!.body).toContain("A lista de espera serve para antecipar um horário já marcado, e não encontramos um exame marcado");
   });
 
   it("sem a Lista de espera: explica e pergunta da recepção; sem recepção no app, o aviso e o menu", async () => {

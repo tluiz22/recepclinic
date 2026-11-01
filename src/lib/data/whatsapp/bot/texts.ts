@@ -387,13 +387,19 @@ export const WAITLIST_ALREADY_BUTTONS = [button(WAITLIST_IDS.leave, "Sair da lis
 export const waitlistLeft = (patientName: string, phrase: string, end: "a" | "o", when: string) =>
   `Pronto, *${patientName}* saiu da lista de espera. ${capital(phrase)} continua marcad${end} para ${when}.`;
 export const waitlistStay = (patientName: string) => `Ok, *${patientName}* continua na lista de espera. Se abrir uma vaga antes, eu aviso por aqui.`;
-export function waitlistNoAppointment(group: Group): string {
-  const what = group === "exam" ? "um exame marcado" : "uma consulta marcada";
+export function waitlistNoAppointment(group: Group, category?: "consultation" | "return_visit" | "exam"): string {
+  const what = category === "return_visit" ? "um retorno marcado" : group === "exam" ? "um exame marcado" : "uma consulta marcada";
   return (
     `A lista de espera serve para antecipar um horário já marcado, e não encontramos ${what} neste número. ` +
     "Quer marcar agora? Depois de confirmar pela página, o atendimento entra na lista de espera e eu aviso por aqui se abrir uma vaga antes."
   );
 }
+// Encaixe pedido pela base sem dizer o tipo (cliente, 01/nov/2026): primeiro o tipo, depois o serviço.
+export const WAITLIST_TYPE_QUESTION = "O encaixe é para qual tipo de atendimento?";
+export const WAITLIST_TYPE_IDS = { consultation: "waitlist_type_consultation", return_visit: "waitlist_type_return", exam: "waitlist_type_exam" } as const;
+export const WAITLIST_TYPE_LABELS = { consultation: "Consulta", return_visit: "Retorno", exam: "Exame" } as const;
+export const WAITLIST_SERVICE_QUESTION = "Para qual serviço é o encaixe?";
+
 export const WAITLIST_ERROR = "Tivemos um problema com a lista de espera. Por favor, tente de novo em instantes.";
 
 const STILL_IN_LIST = " Você continua na lista de espera: se abrir outra vaga, eu aviso por aqui.";
