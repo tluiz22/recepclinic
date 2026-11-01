@@ -59,6 +59,36 @@ export const configuracoes = {
     ],
   },
   comoFunciona: {
+    // Jornada de configuração (setup.ts): Clínica → Profissionais → Locais → Agendas → Serviços → Horários.
+    // Equipe é à parte: liga pessoas do painel a um profissional (team.ts) e restringe agendas (app.can_access_agenda).
+    equipe: {
+      serve: "Dar acesso ao painel: quem entra, com qual papel e quais agendas vê.",
+      como: [
+        "Convide pela Equipe: a pessoa recebe um e-mail para criar a senha. Enquanto não aceita, aparece \"Convite pendente\".",
+        "O papel define as áreas do painel: Configurações é só do Administrador.",
+        "Quem tem o papel Profissional precisa estar ligado a um cadastro de profissional; sem a ligação, a lista avisa \"Falta ligar ao profissional\".",
+        "O acesso às agendas pode ser a todas ou só às selecionadas.",
+      ],
+      depende: [
+        { texto: "Profissionais: o cadastro de quem tem o papel Profissional.", href: "/admin/configuracoes/profissionais" },
+        { texto: "Agendas: só dá para liberar agendas que já existem.", href: "/admin/configuracoes/agendas" },
+      ],
+      alimenta: [{ texto: "Quem aparece como autor nos atendimentos (\"Marcado por Maria\") e o que cada pessoa vê na Agenda e nas Métricas." }],
+    },
+    profissionais: {
+      serve: "Cadastrar quem atende. É o primeiro passo da jornada: sem profissional, não existe agenda.",
+      como: [
+        "O nome do cadastro é o que o paciente vê ao marcar; profissão, conselho e RQE aparecem só no painel.",
+        "Cada profissional ativo precisa de uma agenda; sem ela, a lista mostra \"sem agenda\".",
+        "O WhatsApp do profissional serve para ele receber o lembrete dos atendimentos, se ligado em Lembretes.",
+      ],
+      depende: [{ texto: "Clínica: os dados básicos, feitos primeiro.", href: "/admin/configuracoes" }],
+      alimenta: [
+        { texto: "Agendas: cada agenda pertence a um profissional.", href: "/admin/configuracoes/agendas" },
+        { texto: "Equipe: o papel Profissional liga a pessoa a este cadastro.", href: "/admin/configuracoes/equipe" },
+        { texto: "Lembretes: o resumo do dia vai ao WhatsApp dele.", href: "/admin/configuracoes/lembretes" },
+      ],
+    },
     // configuracoes/nota-fiscal.astro (certificado, ambiente) e "Emitir nota" em financeiro/pagamento/[id].astro; F11.3 e F11.4.
     notaFiscal: {
       serve: "Emitir a NFS-e nacional (a nota fiscal de serviço) pelo próprio painel.",

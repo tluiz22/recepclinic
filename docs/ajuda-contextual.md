@@ -260,3 +260,11 @@ Mesmo jeito: regra conferida, testado no local e publicado no staging, sem migra
   catálogo confere que todo item de `plans.ts` tem o texto. Clicar no balão não marca nem desmarca o item.
 - **WhatsApp (só Suporte):** sem mudança, como o inventário previa ("avaliar depois do 1º piloto").
 
+
+## Ajuda em todas as telas de Configurações e dependências da jornada (cliente, 01/nov/2026)
+
+Decisão do cliente: cada tela de Configurações ganha um "Como funciona?" com **Para que serve**, **Depende de** (com
+link) e **Alimenta** (o que passa a depender dela), mais "i" nos campos pouco óbvios. Ordem da jornada:
+Clínica → Profissionais → Locais → Agendas → Serviços → Horários (Equipe à parte). Branch `ajuda-config`.
+Etapas: **1** componente (`depende`/`alimenta`) + Equipe e Profissionais; **2** Clínica e Locais; **3** Agendas e
+Serviços; **4** Horários, Feriados, Convênios e Contatos; **5** Lembretes, Mensagens, WhatsApp e Nota fiscal.

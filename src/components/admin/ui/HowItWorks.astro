@@ -5,7 +5,7 @@
 // "Exemplo" e "Se algo der errado". Fechado por padrão; funciona sem
 // JavaScript (<details>). O src/scripts/helpTips.ts mostra o "Fechar" e
 // lembra, só neste navegador, se a pessoa deixou aberto.
-import type { ComoFunciona } from "../../../lib/ajuda/tipos";
+import type { ComoFunciona, Vizinho } from "../../../lib/ajuda/tipos";
 
 interface Props {
   /** Nome curto e fixo: guarda o aberto/fechado no navegador. */
@@ -65,6 +65,23 @@ const BLOCK_TITLE = "mb-1 block text-[15px] font-bold";
           <b class={BLOCK_TITLE}>Se algo der errado</b>
           {topic.erro}
         </div>
+      )
+    }
+    {
+      [
+        ["Depende de", topic.depende],
+        ["Alimenta", topic.alimenta],
+      ].map(([title, items]) =>
+        items && items.length > 0 ? (
+          <div>
+            <b class={BLOCK_TITLE}>{title as string}</b>
+            <ul class="flex list-disc flex-col gap-1 pl-[18px]">
+              {(items as Vizinho[]).map((v) => (
+                <li>{v.href ? <a href={v.href} class="font-semibold underline">{v.texto}</a> : v.texto}</li>
+              ))}
+            </ul>
+          </div>
+        ) : null,
       )
     }
     <div class={`flex justify-end ${narrow ? "" : "md:col-span-2"}`} data-how-close hidden>
