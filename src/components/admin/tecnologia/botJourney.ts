@@ -237,7 +237,7 @@ export const JOURNEY: JourneySection[] = [
         ["Não", [bot("\"Tudo bem, seguimos por aqui.\" e o menu", "Clínica sem nada para marcar: \"Se precisar, é só mandar mensagem por aqui.\" e a próxima mensagem recomeça.")]],
         ["Sim", [bot("A conversa passa para a recepção")]],
       ),
-      bot("\"Vou te transferir para a recepção…\"; o bot fica pausado nessa conversa"),
+      bot("\"Vou te transferir para a recepção…\"; o bot fica pausado nessa conversa", "Fora do horário da recepção (Configurações › Clínica), acrescenta que responde a partir da próxima abertura."),
       bot(
         "\"Para agilizar, poderia me contar brevemente qual assunto deseja tratar com a secretária?\"",
         "Uma vez por transferência. A primeira resposta em texto (antes de a recepção responder) aparece na tela Atendimento; sem resposta: \"Assunto ainda não informado\".",

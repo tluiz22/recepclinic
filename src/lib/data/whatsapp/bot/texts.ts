@@ -423,6 +423,10 @@ export const NOT_UNDERSTOOD_OFFER = "Não consegui entender sua mensagem.";
 export const NOTHING_TO_BOOK = "No momento não há horários para marcar por aqui.";
 export const noFreeTimesOffer = (serviceName: string) => `No momento não há horários livres para *${serviceName}*.`;
 
+/** Fora do horário da recepção (cliente, 01/nov/2026). `when` null = aberta; undefined = sem previsão. */
+export const outsideHoursNotice = (when: string | undefined): string =>
+  when === undefined ? "No momento a recepção está fora do horário de atendimento; responderemos assim que possível." : `No momento a recepção está fora do horário de atendimento; responderemos a partir de ${when}.`;
+
 export const HANDOFF =
   "Combinado! Vou te transferir para a recepção, que responde por aqui assim que possível. O atendimento automático fica pausado até lá.";
 

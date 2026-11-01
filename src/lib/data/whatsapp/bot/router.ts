@@ -22,11 +22,10 @@ import { askHandoffSubject, createBot, currentPrompt, go, KnowledgeTakeover, mer
 import { ENTRY_STATES, handleEntryState, startConversation } from "./entry";
 import { asksForReception, extractSelection, isBack, isBackToMenu, TALK_TO_RECEPTION_ID, yesNo } from "./input";
 import { handleInfo, handleMenu, handlePreparationChoice, handleSubmenu, showMenu, showPreviousMenu } from "./menus";
-import { handleManageState, handleOfferTap, handleReminderTap, handoff, handoffNotUnderstood, MANAGE_STATES, offerTapOf, reminderTapOf } from "./manage";
+import { handleManageState, handleOfferTap, handleReminderTap, handoff, handoffNotUnderstood, handoffText, MANAGE_STATES, offerTapOf, reminderTapOf } from "./manage";
 import {
   BLOCKED_HANDOFF,
   BLOCKED_RECEPTION_WILL_CONTACT,
-  HANDOFF,
   HANDOFF_SUBJECT_THANKS,
   IDLE_CLOSED,
   NOT_UNDERSTOOD_OFFER,
@@ -128,7 +127,7 @@ const receptionOfferOf = (convo: Conversation) => {
 /** Sim à transferência oferecida: a pausa de antes, com o motivo dela. */
 async function acceptReceptionOffer(b: Bot, offer: ReceptionOffer): Promise<void> {
   if (offer.reason === "not_understood") return handoffNotUnderstood(b);
-  await say(b, offer.kind, b.receptionAvailable ? textFor(b, "handoff", HANDOFF) : willReply(b.clinic.designation));
+  await say(b, offer.kind, b.receptionAvailable ? await handoffText(b) : willReply(b.clinic.designation));
   await pauseForHuman(b.db, b.clinicId, b.phone, { contactId: b.convo.contactId, reason: offer.reason }, b.now);
   await askHandoffSubject(b);
 }

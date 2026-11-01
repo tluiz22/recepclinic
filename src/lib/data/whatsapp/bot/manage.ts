@@ -780,8 +780,24 @@ export async function handleOfferTap(b: Bot, tap: NonNullable<ReturnType<typeof 
 // ---------------------------------------------------------------------------
 
 /** Pedido de recepção: o aviso e a pausa, com a origem do pedido e a etapa em que a pessoa estava (Métricas). */
+/** Quando a recepção responde: null = aberta agora; undefined = sem abertura nos próximos dias; texto = próxima abertura. */
+export async function receptionReplyWhen(b: Bot): Promise<string | null | undefined> {
+  const { hours } = await getReceptionHours(b.db, b.clinicId);
+  const holidays = await loadClinicHolidays(b.db, b.clinicId, b.clinic.today, addDays(b.clinic.today, 15));
+  const timeZone = b.clinic.timeZone;
+  const opening = isReceptionOpen(hours, b.now, timeZone, holidays) ? b.now : nextReceptionOpening(hours, b.now, timeZone, holidays);
+  return opening === null ? undefined : opening === b.now ? null : describeOpening(opening, b.now, timeZone);
+}
+
+/** Aviso de transferência com o horário da recepção (cliente, 01/nov/2026): fora do horário, diz quando responde. */
+export async function handoffText(b: Bot): Promise<string> {
+  const base = textFor(b, "handoff", t.HANDOFF);
+  const when = await receptionReplyWhen(b);
+  return when === null ? base : `${base} ${t.outsideHoursNotice(when)}`;
+}
+
 export async function handoff(b: Bot, origin: HandoffOrigin): Promise<void> {
-  await say(b, "bot_handoff", textFor(b, "handoff", t.HANDOFF));
+  await say(b, "bot_handoff", await handoffText(b));
   await pauseForHuman(b.db, b.clinicId, b.phone, { contactId: b.convo.contactId, reason: "requested", origin }, b.now);
   await askHandoffSubject(b);
 }
@@ -792,11 +808,7 @@ export async function handoff(b: Bot, origin: HandoffOrigin): Promise<void> {
  * dele, quando a clínica responde). Só com a recepção no app (coexistência).
  */
 export async function handoffNotUnderstood(b: Bot): Promise<void> {
-  const { hours } = await getReceptionHours(b.db, b.clinicId);
-  const holidays = await loadClinicHolidays(b.db, b.clinicId, b.clinic.today, addDays(b.clinic.today, 15));
-  const timeZone = b.clinic.timeZone;
-  const opening = isReceptionOpen(hours, b.now, timeZone, holidays) ? b.now : nextReceptionOpening(hours, b.now, timeZone, holidays);
-  const when = opening === null ? undefined : opening === b.now ? null : describeOpening(opening, b.now, timeZone);
+  const when = await receptionReplyWhen(b);
   await say(b, "bot_handoff_not_understood", t.notUnderstoodHandoff(when));
   await pauseForHuman(b.db, b.clinicId, b.phone, { contactId: b.convo.contactId, reason: "not_understood" }, b.now);
   await askHandoffSubject(b);
