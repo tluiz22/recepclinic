@@ -166,6 +166,11 @@ export async function performTakeover(b: Bot, action: unknown): Promise<void> {
       if (flow === "book_exam") return showSubmenu(b, "EXAMES_MENU");
       if (flow === "book_return") return startReturn(b);
       if (flow === "reschedule" || flow === "cancel") return startManage(b, flow, group);
+      // Encaixe (cliente, 31/out/2026): o "Encaixe ou antecipar"; sem o item Lista de espera, é com a recepção.
+      if (flow === "waitlist") {
+        if (b.features.includes("waitlist")) return startManage(b, "waitlist", group);
+        return performTakeover(b, { kind: "reception", text: t.KB_WAITLIST_RECEPTION } satisfies Takeover);
+      }
       return startIdentification(b);
     }
     case "reception":

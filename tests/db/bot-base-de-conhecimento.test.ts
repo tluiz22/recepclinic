@@ -257,6 +257,35 @@ describe("pergunta clínica", () => {
   });
 });
 
+describe("encaixe (cliente, 31/out/2026)", () => {
+  const phone = "+5584991337045";
+
+  it("com a Lista de espera: abre o \"Encaixe ou antecipar\"", async () => {
+    await say(phone, "Oi");
+    const reply = await say(phone, "Preciso de um encaixe");
+    // Número sem atendimento marcado: a resposta de hoje do encaixe, com Marcar.
+    expect(reply.at(-1)!.body).toContain("A lista de espera serve para antecipar um horário já marcado");
+    await reset(phone);
+    const other = await say(phone, "consigo um encaixe?");
+    expect(other.at(-1)!.body).toContain("A lista de espera serve para antecipar");
+  });
+
+  it("sem a Lista de espera: explica e pergunta da recepção; sem recepção no app, o aviso e o menu", async () => {
+    const { data: features } = await adminClient().from("clinic_features").select("feature_key").eq("clinic_id", f.clinicId);
+    const keys = features!.map((x) => x.feature_key);
+    await adminClient().rpc("set_clinic_features", { p_clinic_id: f.clinicId, p_features: keys.filter((k) => k !== "waitlist") });
+    await setCoexistence(true);
+    await reset(phone);
+    const reply = await say(phone, "encaixe");
+    expect(reply.at(-1)).toMatchObject({ kind: "buttons", body: "O encaixe é combinado com a recepção. Você quer falar com a recepção?" });
+    await setCoexistence(false);
+    await reset(phone);
+    const without = await say(phone, "encaixe");
+    expect(without.at(-1)!.body).toBe(MENU);
+    await adminClient().rpc("set_clinic_features", { p_clinic_id: f.clinicId, p_features: keys });
+  });
+});
+
 describe("item da matriz", () => {
   it("desligado: o bot segue como hoje", async () => {
     const phone = "+5584991337050";

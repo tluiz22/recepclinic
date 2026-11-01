@@ -37,6 +37,7 @@ export const FLOW_LABELS: Record<KbFlow, string> = {
   cancel: "Cancelar",
   confirm: "Confirmar presença",
   my_appointments: "Meus atendimentos",
+  waitlist: "Encaixe ou antecipar",
 };
 
 export const REQUIRED_TERM_LABELS: Record<KbRequiredTerm, string> = {

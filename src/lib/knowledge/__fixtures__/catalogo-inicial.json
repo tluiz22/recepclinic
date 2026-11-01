@@ -178,6 +178,42 @@
    "offersReception": false
   },
   {
+   "code": "EN1",
+   "flow": "waitlist",
+   "sources": [],
+   "category": "waitlist",
+   "keywords": [
+    "encaixe",
+    "encaixar",
+    "encaixa",
+    "adiantar",
+    "antecipar",
+    "antecipação",
+    "mais cedo",
+    "lista de espera",
+    "fila de espera",
+    "desistência"
+   ],
+   "question": "Preciso de um encaixe",
+   "synonyms": [
+    "antecipar a consulta",
+    "antecipar o exame",
+    "consigo um encaixe",
+    "entrar na fila de espera",
+    "quero adiantar minha consulta",
+    "quero entrar na lista de espera",
+    "se alguém desistir me avisa",
+    "tem como encaixar",
+    "tem desistência",
+    "tem encaixe",
+    "tem horário mais cedo"
+   ],
+   "template": null,
+   "answerType": "flow",
+   "requiredTerm": null,
+   "offersReception": false
+  },
+  {
    "code": "F1",
    "flow": null,
    "sources": [
@@ -453,8 +489,7 @@
     "consulta",
     "vaga",
     "vagas",
-    "horário livre",
-    "encaixar"
+    "horário livre"
    ],
    "question": "Quero marcar uma consulta",
    "synonyms": [

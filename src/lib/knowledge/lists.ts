@@ -26,7 +26,7 @@ export const KB_SOURCES = [
 
 export type KbSource = (typeof KB_SOURCES)[number];
 
-export const KB_FLOWS = ["book_consultation", "book_exam", "book_return", "reschedule", "cancel", "confirm", "my_appointments"] as const;
+export const KB_FLOWS = ["book_consultation", "book_exam", "book_return", "reschedule", "cancel", "confirm", "my_appointments", "waitlist"] as const;
 
 export type KbFlow = (typeof KB_FLOWS)[number];
 

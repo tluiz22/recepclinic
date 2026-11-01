@@ -438,4 +438,6 @@ export const BLOCKED_RECEPTION_WILL_CONTACT = "Sua conversa está com a recepç�
 export const KB_DID_YOU_MEAN = "Você quis dizer…?";
 export const KB_NONE_OF_THESE = "Nenhuma destas";
 export const KB_BOOK = "Marcar";
+/** Encaixe pela base sem o item Lista de espera (cliente, 31/out/2026). */
+export const KB_WAITLIST_RECEPTION = "O encaixe é combinado com a recepção. Você quer falar com a recepção?";
 export const KB_NO_APPOINTMENTS = "Não encontramos atendimento marcado para este número.";

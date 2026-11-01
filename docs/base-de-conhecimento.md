@@ -336,3 +336,10 @@ Resultado dos testes da parte R, com as decisões do cliente:
 
 Etapas (uma por vez, na branch `bc-ajustes`, cada uma com `botJourney.ts`): **A** itens 1 e 3; **B** item 2
 (migração do fluxo `waitlist` e entrada no catálogo); **C** item 4.
+
+- **A** (`9cbbe07`): `isBack` (`input.ts`) e `showPreviousMenu` (`menus.ts`), no router antes da base; marcar pela
+  base → `showSubmenu`. Testes em `input.test.ts` e `bot-base-de-conhecimento.test.ts`.
+- **B:** migração `20261110120000_base_de_conhecimento_encaixe.sql` (fluxo `waitlist` na trava, categoria
+  `waitlist`, entrada EN1 em rascunho com 11 sinônimos, "encaixar" sai de M1); `waitlist` em `KB_FLOWS` e entre os
+  pedidos de marcação do reconhecimento (sintoma junto não barra); `performTakeover` abre `startManage(..., "waitlist")`
+  ou a pergunta da recepção. No staging, depois da migração: ativar EN1 e publicar.

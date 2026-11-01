@@ -66,16 +66,16 @@ afterAll(async () => {
 });
 
 describe("catálogo inicial", () => {
-  it("31 entradas, todas em rascunho, com sinônimos; sem publicação do catálogo", async () => {
+  it("32 entradas (com o encaixe, EN1), todas em rascunho, com sinônimos; sem publicação do catálogo", async () => {
     const { data: entries } = await adminClient().from("kb_entries").select("code, status").not("code", "like", "Z%");
-    expect(entries).toHaveLength(31);
+    expect(entries).toHaveLength(32);
     expect(new Set(entries!.map((e) => e.status))).toEqual(new Set(["draft"]));
     const { data: synonyms } = await adminClient().from("kb_synonyms").select("entry_id");
     expect(synonyms!.length).toBeGreaterThan(150);
     const { count: specialties } = await adminClient().from("kb_specialties").select("*", { count: "exact", head: true });
     expect(specialties).toBe(34);
     const { count: categories } = await adminClient().from("kb_categories").select("*", { count: "exact", head: true });
-    expect(categories).toBe(18);
+    expect(categories).toBe(19);
   });
 
   it("o fixture dos testes do reconhecimento é o catálogo do banco", async () => {
