@@ -73,7 +73,7 @@ async function say(phone: string, input: string | { id: string }): Promise<Sent[
 
 const bodies = (reply: Sent[]) => reply.map((m) => m.body);
 const optionId = (reply: Sent[], title: string) => reply.at(-1)!.options.find((o) => o.title.includes(title))!.id;
-const MENU = "Como podemos ajudar? Escolha uma opção abaixo (ou digite o número).";
+const MENU = "Escolha uma opção abaixo (ou digite o número).";
 
 async function reset(phone: string, state = "MENU") {
   await adminClient().from("conversation_state").update({ state, context: {}, human_handoff: false, not_understood_count: 0 }).eq("clinic_id", f.clinicId).eq("contact_phone", phone);
