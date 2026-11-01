@@ -268,3 +268,5 @@ link) e **Alimenta** (o que passa a depender dela), mais "i" nos campos pouco ó
 Clínica → Profissionais → Locais → Agendas → Serviços → Horários (Equipe à parte). Branch `ajuda-config`.
 Etapas: **1** componente (`depende`/`alimenta`) + Equipe e Profissionais; **2** Clínica e Locais; **3** Agendas e
 Serviços; **4** Horários, Feriados, Convênios e Contatos; **5** Lembretes, Mensagens, WhatsApp e Nota fiscal.
+
+Etapas 3 a 5 feitas em 01/nov/2026 (Agendas, Serviços, Feriados, Convênios, WhatsApp; Horários, Lembretes, Mensagens e Nota fiscal ganharam "Depende de" e "Alimenta"). Textos em `src/lib/ajuda/configuracoes.ts`.

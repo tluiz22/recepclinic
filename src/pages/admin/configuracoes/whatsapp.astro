@@ -68,6 +68,8 @@ const unused = connection && Astro.url.searchParams.has("sem-uso")
   ? await listUnusedTemplates(createClinicServiceClient(clinic.clinicId), clinic.clinicId, namesInWaba())
   : null;
 const templateRows = DEFAULT_TEMPLATES.map((template) => ({ template, saved: templates.find((t) => t.key === template.key && t.version === 1) ?? null }));
+import HowItWorks from "../../../components/admin/ui/HowItWorks.astro";
+import { configuracoes } from "../../../lib/ajuda/configuracoes";
 ---
 
 <ConfigShell
@@ -75,6 +77,10 @@ const templateRows = DEFAULT_TEMPLATES.map((template) => ({ template, saved: tem
   title="WhatsApp"
   subtitle={isSupport ? "Conexão com a Meta, templates e as últimas mensagens." : "Conexão do número de WhatsApp da clínica com o sistema."}
 >
+
+  <HowItWorks id="whatsapp" topic={configuracoes.comoFunciona.whatsapp} class="mb-3">
+    <p class="text-[15px] text-ink-soft">A conexão e o que depende dela.</p>
+  </HowItWorks>
 
   <div class="flex max-w-2xl flex-col gap-4">
     <WhatsappConnectionCard connection={connection} timeZone={clinic.timezone} manage={{ signup, pendingSync: pendingCoexistenceSync(connection), templates: templateApproval(templatesInUse(clinic.features), templates), isSupport }} />

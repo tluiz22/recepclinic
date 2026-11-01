@@ -21,9 +21,15 @@ const yearAhead = addDays(today, 365);
 const national = [...listNationalHolidays(year), ...listNationalHolidays(year + 1)].filter((h) => h.date >= today && h.date < yearAhead);
 const action = "/api/admin/configuracoes/feriados";
 const show = (date: string) => formatCalendarDate(date, "EEE, dd/MM/yyyy");
+import HowItWorks from "../../../components/admin/ui/HowItWorks.astro";
+import { configuracoes } from "../../../lib/ajuda/configuracoes";
 ---
 
 <ConfigShell current="feriados" title="Feriados" subtitle="Dias em que a clínica não atende: os feriados nacionais e os da clínica.">
+
+  <HowItWorks id="feriados" topic={configuracoes.comoFunciona.feriados} class="mb-3">
+    <p class="text-[15px] text-ink-soft">Dias sem atendimento e o que eles tiram.</p>
+  </HowItWorks>
 
   <div class="grid gap-4 lg:grid-cols-2">
     <section>

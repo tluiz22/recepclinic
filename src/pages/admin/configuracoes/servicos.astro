@@ -37,6 +37,8 @@ const agendaName = new Map(agendas.map((a) => [a.id, a.name]));
 const returns = active.filter((s) => s.category === "return_visit");
 const returnReady = returns.some((s) => !setup.issues.services.get(s.id)?.length);
 const cols = "lg:grid-cols-[minmax(0,2fr)_200px_minmax(0,2fr)_36px]";
+import HowItWorks from "../../../components/admin/ui/HowItWorks.astro";
+import { configuracoes } from "../../../lib/ajuda/configuracoes";
 ---
 
 <ConfigShell current="servicos" title="Serviços" subtitle="O que a clínica oferece para marcar, com duração, preço e as agendas que atendem." setup={setup}>
@@ -57,6 +59,10 @@ const cols = "lg:grid-cols-[minmax(0,2fr)_200px_minmax(0,2fr)_36px]";
         </Notice>
       ))
   }
+
+  <HowItWorks id="servicos" topic={configuracoes.comoFunciona.servicos} class="mb-3">
+    <p class="text-[15px] text-ink-soft">O que o paciente pode marcar e do que o serviço depende.</p>
+  </HowItWorks>
 
   <div class="flex flex-wrap items-center justify-between gap-3">
     <p class="text-sm text-ink-soft" role="status">
