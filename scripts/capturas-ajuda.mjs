@@ -1,14 +1,17 @@
 // Recaptura das imagens da Central de Ajuda (public/ajuda/*.png), com o ponto principal destacado em vermelho.
-// Regra do projeto (CLAUDE.md): mudou uma tela que tem captura, rodar este roteiro no mesmo commit.
+// Regra do projeto (CLAUDE.md): mudou uma tela que tem captura, anotar em docs/capturas-pendentes.md e pedir autorização
+// ao cliente; só ele manda recapturar.
 //
 // Uso:  npm run dev   (outro terminal, com o banco local no ar: npm run db:start)
 //       npm run ajuda:capturas            tudo
 //       npm run ajuda:capturas -- config-horarios marcar     só estas (nomes da lista abaixo)
+//       npm run ajuda:capturas -- --pendentes                 só as de docs/capturas-pendentes.md (e esvazia a fila)
 // Primeira vez na máquina:  npx playwright install chromium
 // Variáveis: BASE_URL (padrão http://localhost:4321).
 //
 // Os dados vêm do seed local (clínica "Clínica Exemplo Saúde", tudo fictício). Depois de recapturar, conferir
 // as imagens a olho e rodar `npm test` (um teste confere que todo arquivo citado existe e que nenhum sobra).
+import { readFileSync, writeFileSync } from "node:fs";
 import { chromium } from "playwright";
 
 const BASE = process.env.BASE_URL ?? "http://localhost:4321";
@@ -69,7 +72,15 @@ function highlight([texts, selectors]) {
   }
 }
 
-const wanted = process.argv.slice(2);
+const QUEUE = new URL("../docs/capturas-pendentes.md", import.meta.url).pathname;
+const args = process.argv.slice(2);
+const fromQueue = args.includes("--pendentes");
+const queued = fromQueue ? [...readFileSync(QUEUE, "utf8").matchAll(/^- `([a-z-]+)`/gm)].map((m) => m[1]) : [];
+if (fromQueue && queued.length === 0) {
+  console.log("Nenhuma captura pendente em docs/capturas-pendentes.md.");
+  process.exit(0);
+}
+const wanted = fromQueue ? queued : args;
 const unknown = wanted.filter((name) => !CAPTURAS.some(([n]) => n === name));
 if (unknown.length) {
   console.error(`Nome(s) desconhecido(s): ${unknown.join(", ")}\nDisponíveis: ${CAPTURAS.map(([n]) => n).join(", ")}`);
@@ -105,6 +116,11 @@ try {
     done += 1;
   }
   console.log(`${done} captura(s) em public/ajuda/. Confira as imagens e rode npm test.`);
+  if (fromQueue && !process.exitCode) {
+    // Esvazia a fila: tira as linhas das capturas feitas.
+    const text = readFileSync(QUEUE, "utf8").replace(/^- `[a-z-]+`.*\n/gm, "");
+    writeFileSync(QUEUE, text.replace(/## Pendentes\n\s*$/, "## Pendentes\n\n(nenhuma)\n").replace(/## Pendentes\n\n+(?!\(nenhuma\))$/, "## Pendentes\n\n(nenhuma)\n"));
+  }
 } finally {
   await browser.close();
 }

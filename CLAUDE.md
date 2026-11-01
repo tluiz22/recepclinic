@@ -41,9 +41,10 @@ registre o detalhe no plano da frente ou no `historico.md`, nunca no README.
   `src/lib/data/whatsapp/bot/` ou mensagens automáticas) atualiza, no mesmo commit, o fluxograma de Tecnologia ›
   Jornada do bot (`src/components/admin/tecnologia/botJourney.ts`, com a data em `JOURNEY_UPDATED`).
 - **Capturas da Central de Ajuda** (cliente, 01/nov/2026): mudou uma tela que tem captura em `public/ajuda/` (lista em
-  `src/lib/central/imagens.ts`), rodar `npm run ajuda:capturas` (com o `npm run dev` no ar) no mesmo commit, conferir as
-  imagens a olho e, se o texto do artigo falar do que mudou, atualizar o artigo em `src/lib/central/artigos/`. Tela nova
-  com artigo: acrescentar a linha em `scripts/capturas-ajuda.mjs` e em `imagens.ts`.
+  `src/lib/central/imagens.ts`): **não recapturar sozinho**. Anotar a captura e o motivo em `docs/capturas-pendentes.md`
+  no mesmo commit, avisar o cliente no fim da etapa e esperar a autorização; com ela, `npm run ajuda:capturas --
+  --pendentes` (com o `npm run dev` no ar), conferir as imagens e atualizar o texto do artigo se citar o que mudou. Tela
+  nova com artigo: acrescentar a linha em `scripts/capturas-ajuda.mjs` e em `imagens.ts`.
 - As decisões de arquitetura estão em `docs/arquitetura.md` (D1–D11) e o plano em `docs/plano.md`.
   Mudança de decisão só com o cliente, e registrada lá.
 
