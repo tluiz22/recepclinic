@@ -148,7 +148,6 @@ export const IDLE_CLOSED =
  * prazo): a recepção assume a conversa (cliente, 11/out/2026).
  */
 export const willReply = (d: Designation) => `${designationTitle(d)} responderá sua mensagem em breve.`;
-export const noFreeTimes = (serviceName: string, d: Designation) => `No momento não há horários livres para *${serviceName}*. ${willReply(d)}`;
 export const linkError = (d: Designation) =>
   `Tivemos um problema para gerar o link de agendamento. Por favor, tente de novo em alguns minutos ou fale com ${designationText(d)}.`;
 
@@ -173,7 +172,6 @@ export const planAccepted = (planName: string) => `Atendemos pelo convênio *${p
 /** Plano fora da lista, não encontrado ou não atendido pelo(s) profissional(is) do caminho escolhido. */
 export const planNotAccepted = (planName: string | null, d: Designation, forThisService: boolean) =>
   `Infelizmente ${designationText(d)} não atende ${planName ? `pelo convênio *${planName}*` : "por esse convênio"}${forThisService ? " neste atendimento" : ""}.\n\nQuer seguir com o atendimento particular?`;
-export const insuranceToReception = (d: Designation) => `Tudo bem. ${willReply(d)}`;
 export function priceInfo(category: "consultation" | "exam", cents: number, paymentInfo: string | null): string {
   const value = `O valor ${category === "exam" ? "do exame" : "da consulta"} é ${formatCentsBRL(cents)}.`;
   return paymentInfo ? `${value}\n\nFormas de pagamento: ${paymentInfo}` : value;
@@ -417,6 +415,13 @@ export const RECEPTION_CONFIRM = "Você quer falar com a recepção? A conversa 
 export const RECEPTION_CONFIRM_IDS = { yes: "reception_yes", no: "reception_no" } as const;
 export const RECEPTION_CONFIRM_BUTTONS = [button(RECEPTION_CONFIRM_IDS.yes, "Sim"), button(RECEPTION_CONFIRM_IDS.no, "Não")];
 export const RECEPTION_DECLINED = "Tudo bem, seguimos por aqui.";
+/** Sem a recepção no app: a pergunta da transferência (cliente, 31/out/2026). */
+export const receptionContactOffer = (d: Designation) => `Você quer que ${designationText(d)} entre em contato por aqui?`;
+/** "Não" à transferência na clínica sem nada para marcar: não há menu (cliente, 31/out/2026). */
+export const RECEPTION_DECLINED_NO_MENU = "Tudo bem. Se precisar, é só mandar mensagem por aqui.";
+export const NOT_UNDERSTOOD_OFFER = "Não consegui entender sua mensagem.";
+export const NOTHING_TO_BOOK = "No momento não há horários para marcar por aqui.";
+export const noFreeTimesOffer = (serviceName: string) => `No momento não há horários livres para *${serviceName}*.`;
 
 export const HANDOFF =
   "Combinado! Vou te transferir para a recepção, que responde por aqui assim que possível. O atendimento automático fica pausado até lá.";

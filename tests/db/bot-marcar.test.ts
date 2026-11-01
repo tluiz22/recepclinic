@@ -401,7 +401,7 @@ describe("bot: serviço sem horário livre no prazo (cliente, 11/out/2026)", () 
       let reply = await say(phone, "1"); // Marcar consulta (consulta única)
       expect(reply.at(-1)!.body).toBe("Prefere consultório ou atendimento domiciliar?");
 
-      // As duas bloqueadas: aviso logo depois de escolher o serviço, sem cadastro, e a conversa fica com a recepção.
+      // As duas bloqueadas: aviso logo depois de escolher o serviço, sem cadastro, e a pergunta (cliente, 31/out/2026).
       blocks.push((await blockAll(f.ids.agendaDra)).data!.id);
       await adminClient().from("conversation_state").update({ state: "WELCOME", context: {} }).eq("clinic_id", f.clinicId).eq("contact_phone", phone);
       await say(phone, "Oi");
@@ -409,7 +409,11 @@ describe("bot: serviço sem horário livre no prazo (cliente, 11/out/2026)", () 
       reply = await say(phone, "1");
       expect(reply.map((m) => m.body)).toEqual([
         "Vamos marcar *Consulta*.",
-        "No momento não há horários livres para *Consulta*. O consultório responderá sua mensagem em breve.",
+        "No momento não há horários livres para *Consulta*.\n\nVocê quer que o consultório entre em contato por aqui?",
+      ]);
+      reply = await say(phone, "sim");
+      expect(reply.map((m) => m.body)).toEqual([
+        "O consultório responderá sua mensagem em breve.",
         "Para agilizar, poderia me contar brevemente qual assunto deseja tratar com a secretária?",
       ]);
       const { data: convo } = await adminClient().from("conversation_state").select("human_handoff").eq("clinic_id", f.clinicId).eq("contact_phone", phone).single();

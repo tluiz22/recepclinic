@@ -246,15 +246,30 @@ describe("clínica com convênios", () => {
     expect(candidates.agendas.map((a) => a.id)).toEqual([f.ids.agendaDra]);
   });
 
-  it("\"Outro convênio\": não atende; sem particular, a conversa vai para a recepção", async () => {
+  it("\"Outro convênio\": não atende; sem particular, pergunta e, com o Sim, a conversa vai para a recepção", async () => {
     await upToProfessional(phone, "Dr. Segundo");
     let reply = await say(phone, { id: "coverage_insurance" });
     reply = await say(phone, { id: "plan_other" });
     expect(reply.at(-1)!.body).toBe("Infelizmente a clínica não atende por esse convênio.\n\nQuer seguir com o atendimento particular?");
     reply = await say(phone, "não");
-    expect(bodies(reply)).toEqual(["Tudo bem. A clínica responderá sua mensagem em breve.", "Para agilizar, poderia me contar brevemente qual assunto deseja tratar com a secretária?"]);
+    expect(bodies(reply)).toEqual(["Tudo bem.\n\nVocê quer que a clínica entre em contato por aqui?"]);
+    expect(await handoff(phone)).toBe(false);
+    reply = await say(phone, "sim");
+    expect(bodies(reply)).toEqual(["A clínica responderá sua mensagem em breve.", "Para agilizar, poderia me contar brevemente qual assunto deseja tratar com a secretária?"]);
     expect(await handoff(phone)).toBe(true);
     expect(transcript.join("\n")).not.toContain("R$");
+  });
+
+  it("\"Outro convênio\" e Não à recepção: \"Tudo bem\" e o menu, sem transferir (cliente, 31/out/2026)", async () => {
+    await reset(phone);
+    await upToProfessional(phone, "Dr. Segundo");
+    await say(phone, { id: "coverage_insurance" });
+    await say(phone, { id: "plan_other" });
+    await say(phone, "não");
+    const reply = await say(phone, "não");
+    expect(reply[0].body).toBe("Tudo bem, seguimos por aqui.");
+    expect(reply.at(-1)!.kind).toBe("list");
+    expect(await handoff(phone)).toBe(false);
   });
 
   it("exame particular: \"valor do exame\"; agenda sem profissional atende o plano", async () => {

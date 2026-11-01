@@ -72,7 +72,7 @@ export const JOURNEY: JourneySection[] = [
       bot("Qual consulta (ou exame) você quer marcar?", "Lista dos serviços, sem preço. Com um serviço só, o bot escolhe sozinho e avisa: \"Vamos marcar *Consulta*\"."),
       check("O serviço tem horário livre no prazo da agenda?"),
       branch(
-        ["Não", [bot("\"No momento não há horários livres\"; a recepção assume a conversa")]],
+        ["Não", [bot("\"No momento não há horários livres\" e pergunta se quer falar com a recepção", "Sim: a recepção assume (item 8). Não: o menu.")]],
         [
           "Sim",
           [
@@ -94,7 +94,7 @@ export const JOURNEY: JourneySection[] = [
                         check("O plano é atendido pelo profissional escolhido (ou por algum, no \"Primeiro horário\")?"),
                         branch(
                           ["Sim", [bot("\"Atendemos pelo convênio *X*\"", "Sem valor. O plano fica no atendimento; a página só oferece quem atende o plano.")]],
-                          ["Não", [bot("Não atende e pergunta se quer particular", "Sim: valor e formas de pagamento. Não: a recepção assume.")]],
+                          ["Não", [bot("Não atende e pergunta se quer particular", "Sim: valor e formas de pagamento. Não: pergunta se quer falar com a recepção (item 8).")]],
                         ),
                       ],
                     ],
@@ -229,8 +229,13 @@ export const JOURNEY: JourneySection[] = [
       check("Por que a conversa vai para a recepção?"),
       branch(
         ["O paciente pede", [patient("Toca em \"Falar com a recepção\" (ou escreve pedindo)", "Escrito: o bot confirma antes.")]],
-        ["O bot não entende", [bot("Na 4ª mensagem seguida que não entende, passa para a clínica", "Áudio, foto e figurinha: o bot avisa que só lê texto.")]],
-        ["Não há o que marcar", [bot("Sem serviço, sem horário livre ou convênio não atendido sem particular: avisa que a recepção responde")]],
+        ["O bot não entende", [bot("Na 4ª mensagem seguida que não entende: \"Não consegui entender sua mensagem.\"", "Áudio, foto e figurinha: o bot avisa que só lê texto.")]],
+        ["Não há o que marcar", [bot("Sem serviço, sem horário livre ou convênio não atendido sem particular: avisa")]],
+      ),
+      check("O bot pergunta: \"Você quer falar com a recepção?\"", "Nunca transfere sem perguntar (cliente, 31/out/2026). Sem a recepção no app: \"Você quer que a clínica entre em contato por aqui?\". Fora disso, só o limite de marcações do contato transfere direto."),
+      branch(
+        ["Não", [bot("\"Tudo bem, seguimos por aqui.\" e o menu", "Clínica sem nada para marcar: \"Se precisar, é só mandar mensagem por aqui.\" e a próxima mensagem recomeça.")]],
+        ["Sim", [bot("A conversa passa para a recepção")]],
       ),
       bot("\"Vou te transferir para a recepção…\"; o bot fica pausado nessa conversa"),
       bot(

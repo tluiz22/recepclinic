@@ -385,12 +385,14 @@ describe("robustez", () => {
       expect(reply[0].body).toContain("Vou te transferir para a recepção");
       expect(await conversation(P1)).toMatchObject({ state: "HUMAN_HANDOFF", human_handoff: true });
 
-      // A data errada conta no "não entendi": na 4ª seguida, a conversa vai para a clínica.
+      // A data errada conta no "não entendi": na 4ª seguida, a pergunta da recepção; Sim e a conversa vai para a clínica.
       await fresh(P1);
       await say(P1, "oi");
       await say(P1, "sim");
       for (const text of ["a", "b", "c"]) await say(P1, text);
       reply = await say(P1, "d");
+      expect(reply.map((m) => m.kind)).toEqual(["buttons"]);
+      reply = await say(P1, { id: "reception_yes" });
       expect(reply.map((m) => m.kind)).toEqual(["text", "text"]);
       expect((await conversation(P1)).human_handoff).toBe(true);
     } finally {

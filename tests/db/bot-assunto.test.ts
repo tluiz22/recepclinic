@@ -160,7 +160,8 @@ describe("assunto da transferência", () => {
     const phone = "+5584991229096";
     await say(phone, "Oi");
     for (const text of ["xyz", "???", "hmm"]) await say(phone, text);
-    const reply = await say(phone, "kkk");
+    await say(phone, "kkk"); // "Você quer falar com a recepção?" (cliente, 31/out/2026)
+    const reply = await say(phone, "sim");
     expect(reply.at(-1)).toBe(QUESTION);
     expect(await say(phone, "Resultado de exame")).toEqual([THANKS]);
     expect(await state(phone)).toMatchObject({ handoff_reason: "not_understood", handoff_subject: "Resultado de exame" });

@@ -46,7 +46,7 @@ export async function showMenu(b: Bot, { withWelcome = false, notUnderstood = fa
   if (withWelcome) await say(b, "bot_welcome", textFor(b, "welcome", t.welcome(b.clinic.label), { clinica: b.clinic.label }));
   const items = await mainItems(b);
   // Clínica sem nada para o bot marcar: depois das boas-vindas, a recepção assume (cliente, 11/out/2026).
-  if (!items.length) return handOver(b, "bot_nothing_to_book", t.willReply(b.clinic.designation), "no_service");
+  if (!items.length) return handOver(b, "bot_nothing_to_book", t.NOTHING_TO_BOOK, "no_service", "no_availability", true);
   if (notUnderstood) await say(b, "bot_not_understood", textFor(b, "not_understood", t.notUnderstood(true)));
   await sendList(b, "bot_menu", textFor(b, "menu", t.MENU_BODY), t.numberedList(items, false));
   await go(b, "MENU");

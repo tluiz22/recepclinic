@@ -92,6 +92,8 @@ beforeEach(async () => {
   await setReceptionHours(ALWAYS_OPEN);
 });
 
+const OFFER = "Não consegui entender sua mensagem.\n\nVocê quer falar com a recepção? A conversa passa para a nossa equipe.";
+
 describe("bot que não entende (F8.5d)", () => {
   it("áudio e figurinha: aviso próprio no lugar do 'não entendi'", async () => {
     const phone = "+5584991227701";
@@ -101,13 +103,15 @@ describe("bot que não entende (F8.5d)", () => {
     expect((await conversation(phone)).not_understood_count).toBe(2);
   });
 
-  it("4ª seguida: não repete o 'não entendi', avisa e a conversa vai para a clínica", async () => {
+  it("4ª seguida: não repete o 'não entendi', pergunta da recepção; Sim e a conversa vai para a clínica (cliente, 31/out/2026)", async () => {
     const phone = "+5584991227702";
     await message(phone, "oi");
     expect((await message(phone, "xyz"))[0]).toMatch(NOT_UNDERSTOOD);
     expect((await message(phone, { media: "audio" }))[0]).toBe(MEDIA_AUDIO);
     expect((await message(phone, "???"))[0]).toMatch(NOT_UNDERSTOOD);
-    expect(await message(phone, { media: "image" })).toEqual(["Vou pedir para alguém da clínica te atender por aqui. Aguarde, por favor.", "Para agilizar, poderia me contar brevemente qual assunto deseja tratar com a secretária?"]);
+    expect(await message(phone, { media: "image" })).toEqual([OFFER]);
+    expect((await conversation(phone)).human_handoff).toBe(false);
+    expect(await message(phone, "sim")).toEqual(["Vou pedir para alguém da clínica te atender por aqui. Aguarde, por favor.", "Para agilizar, poderia me contar brevemente qual assunto deseja tratar com a secretária?"]);
     expect(await conversation(phone)).toEqual({ state: "HUMAN_HANDOFF", human_handoff: true, handoff_reason: "not_understood", not_understood_count: 0 });
     // Pausada: a 1ª resposta é o assunto; depois, o bot fica calado.
     expect(await message(phone, "alô?")).toEqual(["Obrigado! Já repassamos para a nossa equipe."]);
@@ -119,14 +123,26 @@ describe("bot que não entende (F8.5d)", () => {
     await setReceptionHours(Array.from({ length: 7 }, () => null));
     await message(phone, "oi");
     for (const text of ["a", "b", "c"]) await message(phone, text);
-    expect(await message(phone, "d")).toEqual(["Vou pedir para alguém da clínica te atender por aqui. A clínica responde assim que possível.", "Para agilizar, poderia me contar brevemente qual assunto deseja tratar com a secretária?"]);
+    expect(await message(phone, "d")).toEqual([OFFER]);
+    expect(await message(phone, "sim")).toEqual(["Vou pedir para alguém da clínica te atender por aqui. A clínica responde assim que possível.", "Para agilizar, poderia me contar brevemente qual assunto deseja tratar com a secretária?"]);
     const other = "+5584991227704";
     // Só na segunda-feira, das 8h às 9h: "a partir de …".
     await setReceptionHours([null, { open: "08:00", close: "09:00" }, null, null, null, null, null]);
     await message(other, "oi");
     for (const text of ["a", "b", "c"]) await message(other, text);
-    const [reply] = await message(other, "d");
+    await message(other, "d");
+    const [reply] = await message(other, "sim");
     expect(reply).toMatch(/^Vou pedir para alguém da clínica te atender por aqui\. A clínica responde a partir de .+, às 8h\.$/);
+  });
+
+  it("4ª seguida e Não: \"Tudo bem\", o menu e a contagem zerada; nada de transferência", async () => {
+    const phone = "+5584991227706";
+    await message(phone, "oi");
+    for (const text of ["a", "b", "c"]) await message(phone, text);
+    expect(await message(phone, "d")).toEqual([OFFER]);
+    const reply = await message(phone, "não");
+    expect(reply[0]).toBe("Tudo bem, seguimos por aqui.");
+    expect(await conversation(phone)).toMatchObject({ state: "MENU", human_handoff: false, not_understood_count: 0 });
   });
 
   it("uma resposta entendida zera a contagem", async () => {

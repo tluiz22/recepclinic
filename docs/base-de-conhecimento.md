@@ -343,3 +343,9 @@ Etapas (uma por vez, na branch `bc-ajustes`, cada uma com `botJourney.ts`): **A*
   `waitlist`, entrada EN1 em rascunho com 11 sinônimos, "encaixar" sai de M1); `waitlist` em `KB_FLOWS` e entre os
   pedidos de marcação do reconhecimento (sintoma junto não barra); `performTakeover` abre `startManage(..., "waitlist")`
   ou a pergunta da recepção. No staging, depois da migração: ativar EN1 e publicar.
+- **C:** `handOver` (`booking.ts`) termina a tentativa e chama `offerReception` (`engine.ts`): a transferência fica em
+  `RECEPTION_CONFIRM_KEY` (objeto com o tipo e o motivo da pausa; o pedido digitado segue `true`), e o router responde
+  o Sim (`acceptReceptionOffer`: a pausa de antes, com o motivo) e o Não (`declineReceptionOffer`). A 4ª não entendida
+  também pergunta (Sim: `handoffNotUnderstood`). Sem recepção no app: "Você quer que {a clínica} entre em contato por
+  aqui?". Cliente, 31/out: o limite de marcações do contato **continua transferindo direto**; clínica sem nada para
+  marcar, o Não despede ("Se precisar, é só mandar mensagem por aqui.") e a próxima mensagem recomeça.
