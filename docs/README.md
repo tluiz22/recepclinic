@@ -2,10 +2,9 @@
 
 > **Estado atual (retomar daqui), 31/out/2026.** Detalhes e datas no [`historico.md`](historico.md) (só por busca).
 >
-> **Próximo (cliente, 01/nov):** Base de Conhecimento: os 5 ajustes da homologação (Etapas A, B, C) estão na `main` e
-> no **staging** (migração `20261110120000` aplicada). Cliente valida no staging (ativar a entrada EN1 de encaixe e
-> publicar a base na clínica de teste) e vai pedir novos ajustes; a branch `bc-ajustes` já está dentro da `main`.
-> Retomar pelo [`base-de-conhecimento.md`](base-de-conhecimento.md) (seção "Ajustes da homologação").
+> **Próximo (cliente, 01/nov):** no **staging** para validar: (1) ajustes da Base de Conhecimento (migração aplicada;
+> ativar EN1 e publicar); (2) "Como funciona?" com "Depende de" e "Alimenta" em todas as telas de Configurações
+> (plano em [`ajuda-contextual.md`](ajuda-contextual.md), fim). Cliente vai pedir novos ajustes.
 >
 > **Ambientes**
 > - **Produção** (`app.recepclinic.com.br`, branch `producao`) = `main` em `20bfe8b` (revisão da jornada do bot E1–E4,
