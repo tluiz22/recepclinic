@@ -166,7 +166,7 @@ export const JOURNEY: JourneySection[] = [
         [
           "Cancelar",
           [
-            bot("\"Confirma o cancelamento?\" Sim ou Não"),
+            bot("\"Confirma o cancelamento?\" com os botões Sim e Não", "Toda confirmação de Sim ou Não do bot (dados, paciente, endereço, cancelamento) vem com esses botões; digitar sim ou não também vale."),
             branch(
               ["Sim", [bot("\"Prontinho, cancelamos…\""), auto("A vaga é oferecida à lista de espera", "Com a Lista de espera ligada.")]],
               ["Não", [bot("Mantém o atendimento e pergunta se quer confirmar a presença")]],

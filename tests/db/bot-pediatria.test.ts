@@ -112,7 +112,7 @@ describe("clínica Pediátrica com idade limite", () => {
     reply = await say(phone, "05/05/2019");
     expect(reply[0].body).toBe("Qual é o nome completo do responsável?");
     reply = await say(phone, "Paula Pereira");
-    expect(reply[0].body).toBe("Confira o nome do responsável: *Paula Pereira*\n\nEstá correto? Responda Sim ou Não.");
+    expect(reply[0].body).toBe("Confira o nome do responsável: *Paula Pereira*\n\nEstá correto?");
     reply = await say(phone, "não");
     expect(reply[0].body).toBe("Qual é o nome completo do responsável?");
     await say(phone, "Paula Pereira Costa");
@@ -226,7 +226,7 @@ describe("sem idade limite e paciente adulto", () => {
       reply = await say(phone, "03/03/1950");
       expect(reply[0].body).toBe("Qual é o seu nome completo?");
       reply = await say(phone, "Marta Lima");
-      expect(reply[0].body).toBe("Confira o seu nome: *Marta Lima*\n\nEstá correto? Responda Sim ou Não.");
+      expect(reply[0].body).toBe("Confira o seu nome: *Marta Lima*\n\nEstá correto?");
     } finally {
       await settings({ profile: "pediatric", consultation_age_limit_years: 12 });
     }

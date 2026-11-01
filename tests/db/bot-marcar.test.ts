@@ -197,7 +197,7 @@ describe("bot: marcar consulta (número novo)", () => {
     // Joana não tem atendimento futuro: paciente novo pela data (acha o cadastro).
     expect(reply[0].body).toBe("Qual a data de nascimento do paciente? (formato dd/mm/aaaa)");
     reply = await say(phone, "10/03/2015");
-    expect(reply[0].body).toBe("Encontramos *Joana Souza*, nascido(a) em 10/03/2015: é esse o paciente? Responda Sim ou Não.");
+    expect(reply[0].body).toBe("Encontramos *Joana Souza*, nascido(a) em 10/03/2015: é esse o paciente?");
     reply = await say(phone, "sim");
     expect(reply[0].body).toContain("Prontinho!");
     expect(await lastLink(phone)).toMatchObject({ location_category: "home_visit", home_visit_address: "Rua das Flores, 10" });

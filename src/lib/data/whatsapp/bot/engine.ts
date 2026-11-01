@@ -286,13 +286,12 @@ export async function sayInvalidBirthdate(b: Bot): Promise<void> {
 }
 
 /**
- * Sim/Não não entendido: na 1ª vez, o aviso e a pergunta de novo; da 2ª seguida em diante (cliente, 30/out/2026),
- * os dois numa mensagem com Sim, Não e "Voltar ao menu".
+ * Sim/Não não entendido: o aviso e a pergunta de novo numa mensagem com Sim e Não; da 2ª seguida em diante
+ * (cliente, 30/out/2026), também com "Voltar ao menu".
  */
 export async function repeatYesNo(b: Bot, kind: string, question: string): Promise<void> {
-  if (b.convo.notUnderstoodCount > 0) return sendButtons(b, NOT_UNDERSTOOD_KIND, `${NOT_UNDERSTOOD_YES_NO}\n\n${question}`, YES_NO_BACK_BUTTONS);
-  await say(b, NOT_UNDERSTOOD_KIND, NOT_UNDERSTOOD_YES_NO);
-  await say(b, kind, question);
+  // Sempre com os botões (cliente, 01/nov/2026); da 2ª seguida, com "Voltar ao menu".
+  await sendButtons(b, NOT_UNDERSTOOD_KIND, `${NOT_UNDERSTOOD_YES_NO}\n\n${question}`, b.convo.notUnderstoodCount > 0 ? YES_NO_BACK_BUTTONS : YES_NO_BUTTONS);
 }
 
 /** Botões de Sim/Não: com "Voltar ao menu" quando esta é a 2ª resposta não entendida seguida (cliente, 30/out/2026). */

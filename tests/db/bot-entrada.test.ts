@@ -307,7 +307,7 @@ describe("vários atendimentos", () => {
     await say(P1, { id: "entry_yes" });
     await say(P1, "05/05/2018");
     let reply = await say(P1, { id: "entry_cancel" });
-    expect(reply[0].body).toBe("Confirma o cancelamento da consulta de *Paciente Quatro* em segunda, 10/03 às 09:00? Responda Sim ou Não.");
+    expect(reply[0].body).toBe("Confirma o cancelamento da consulta de *Paciente Quatro* em segunda, 10/03 às 09:00?");
     reply = await say(P1, "sim");
     expect(reply[0].body).toContain("Prontinho, cancelamos a consulta de Paciente Quatro");
     expect((await adminClient().from("appointments").select("status, canceled_via").eq("id", consultP4).single()).data).toEqual({ status: "canceled", canceled_via: "whatsapp_bot" });
@@ -402,18 +402,16 @@ describe("robustez", () => {
     }
   });
 
-  it("Sim/Não não entendido (cliente, 30/out/2026): 1ª o aviso e a pergunta; da 2ª em diante, uma mensagem com Sim, Não e Voltar ao menu", async () => {
-    const CONFIRM = "Confirma o cancelamento da consulta de *Paciente Dois* em segunda, 10/03 às 08:00? Responda Sim ou Não.";
+  it("Sim/Não não entendido (cliente, 30/out/2026): sempre uma mensagem com Sim e Não; da 2ª em diante, também Voltar ao menu", async () => {
+    const CONFIRM = "Confirma o cancelamento da consulta de *Paciente Dois* em segunda, 10/03 às 08:00?";
     await fresh(P2);
     await say(P2, "oi");
     await say(P2, { id: "entry_yes" });
     await say(P2, "01/01/2020");
     await say(P2, { id: "entry_cancel" });
     let reply = await say(P2, "talvez");
-    expect(reply.map((m) => [m.kind, m.body])).toEqual([
-      ["text", "Não entendi 🙏 Responda apenas Sim ou Não."],
-      ["text", CONFIRM],
-    ]);
+    expect(reply).toMatchObject([{ kind: "buttons", body: `Não entendi 🙏 Responda apenas Sim ou Não.\n\n${CONFIRM}` }]);
+    expect(titles(reply)).toEqual(["Sim", "Não"]);
     reply = await say(P2, "hmm");
     expect(reply).toMatchObject([{ kind: "buttons", body: `Não entendi 🙏 Responda apenas Sim ou Não.\n\n${CONFIRM}` }]);
     expect(titles(reply)).toEqual(["Sim", "Não", "Voltar ao menu"]);
@@ -482,7 +480,7 @@ describe("robustez", () => {
     let reply = await say(P2, { payload: reminderButtonPayload("confirm", consultP2) });
     expect(reply[0].body).toContain("Presença confirmada ✓");
     reply = await say(P2, { payload: reminderButtonPayload("cancel", consultP2) });
-    expect(reply[0].body).toBe("Confirma o cancelamento da consulta de *Paciente Dois* em segunda, 10/03 às 08:00? Responda Sim ou Não.");
+    expect(reply[0].body).toBe("Confirma o cancelamento da consulta de *Paciente Dois* em segunda, 10/03 às 08:00?");
     expect((await conversation(P2)).state).toBe("CANCEL_CONFIRM");
     await say(P2, "não");
   });

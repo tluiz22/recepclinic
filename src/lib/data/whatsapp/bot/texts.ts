@@ -189,8 +189,8 @@ export const HOME_ADDRESS_ASK =
   "Qual é o endereço para o atendimento domiciliar? (rua, número, bairro, complemento e um ponto de referência, se tiver)\n\n" +
   "Esse endereço é usado só para a nossa equipe chegar até vocês nesse atendimento.";
 export const homeAddressConfirmDefault = (address: string) =>
-  `A última visita domiciliar foi feita neste endereço: *${address}*. Ainda é esse? Responda Sim ou Não.`;
-export const homeAddressConfirmNew = (address: string) => `Confirma que o endereço é esse? *${address}*\nResponda Sim ou Não.`;
+  `A última visita domiciliar foi feita neste endereço: *${address}*. Ainda é esse?`;
+export const homeAddressConfirmNew = (address: string) => `Confirma que o endereço é esse? *${address}*`;
 
 export const FOR_WHOM_QUESTION = "É para você ou para outra pessoa?";
 export const FOR_WHOM_IDS = { self: "for_self", other: "for_other" } as const;
@@ -209,21 +209,21 @@ export const INVALID_BIRTHDATE_AGAIN = `${INVALID_BIRTHDATE}\n\nSe não souber a
 export const birthdateMatches = (w: Words) =>
   `Encontramos ${w.feminine ? "crianças" : "pacientes"} já ${w.feminine ? "cadastradas" : "cadastrados"} com essa data de nascimento nesse telefone. É ${w.feminine ? "uma delas" : "um deles"}?`;
 export const confirmPatient = (w: Words, name: string, birthdate: string) =>
-  `Encontramos *${name}*, nascido(a) em ${birthdate}: ${w.feminine ? "é essa a" : "é esse o"} ${w.patient}? Responda Sim ou Não.`;
+  `Encontramos *${name}*, nascido(a) em ${birthdate}: ${w.feminine ? "é essa a" : "é esse o"} ${w.patient}?`;
 
-export const confirmContactName = (name: string) => `Confira o seu nome: *${name}*\n\nEstá correto? Responda Sim ou Não.`;
+export const confirmContactName = (name: string) => `Confira o seu nome: *${name}*\n\nEstá correto?`;
 // Número novo marcando para outra pessoa (cliente, 31/out/2026): o paciente primeiro, depois quem escreve; menor de 18, o responsável.
 export const ASK_GUARDIAN_NAME = "Qual é o nome completo do responsável?";
-export const confirmGuardianName = (name: string) => `Confira o nome do responsável: *${name}*\n\nEstá correto? Responda Sim ou Não.`;
+export const confirmGuardianName = (name: string) => `Confira o nome do responsável: *${name}*\n\nEstá correto?`;
 /** Idade limite da clínica (consulta), com o profissional escolhido ou, no "Primeiro horário", a clínica. */
 export const ageLimitNotice = (professionalName: string | null, d: Designation, limitYears: number) =>
   `${professionalName ?? designationTitle(d)} atende pacientes até ${limitYears - 1} anos.`;
 export const askPatientName = (w: Words) => `Qual é o nome completo ${of(w)}?`;
 export const ASK_SELF_NAME = "Qual é o seu nome completo?";
 export const confirmNewPatient = (w: Words, name: string, birthdate: string) =>
-  `Confira os dados ${of(w)}:\nNome: *${name}*\nData de nascimento: *${birthdate}*\n\nEstá tudo certo? Responda Sim ou Não.`;
+  `Confira os dados ${of(w)}:\nNome: *${name}*\nData de nascimento: *${birthdate}*\n\nEstá tudo certo?`;
 export const confirmSelf = (name: string, birthdate: string) =>
-  `Confira os seus dados:\nNome: *${name}*\nData de nascimento: *${birthdate}*\n\nEstá tudo certo? Responda Sim ou Não.`;
+  `Confira os seus dados:\nNome: *${name}*\nData de nascimento: *${birthdate}*\n\nEstá tudo certo?`;
 export const SELF_MINOR = "Para menores de 18 anos, o agendamento precisa ser feito pelo responsável.";
 
 export const bookingLink = (serviceName: string, patientName: string, url: string) =>
@@ -329,7 +329,7 @@ export function noAppointments(action: "cancelar" | "remarcar", group: Group, re
 }
 
 export const confirmCancel = (phrase: string, patientName: string, when: string) =>
-  `Confirma o cancelamento ${phrase.replace(/^a /, "da ").replace(/^o /, "do ")} de *${patientName}* em ${when}? Responda Sim ou Não.`;
+  `Confirma o cancelamento ${phrase.replace(/^a /, "da ").replace(/^o /, "do ")} de *${patientName}* em ${when}?`;
 
 export const cancelDone = (phrase: string, end: "a" | "o", patientName: string, when: string, group: Group) =>
   `Prontinho, cancelamos ${phrase} de ${patientName} que estava marcad${end} para ${when}. Se precisar marcar ${group === "exam" ? "um novo exame" : "uma nova consulta"}, é só me chamar de novo.`;
@@ -347,7 +347,7 @@ export const returnDeadlinePassed = (patientName: string, lastDate: string, rece
     receptionAvailable ? `Para falar com ${designationText(d)}, escolha a opção *Falar com a recepção* no menu inicial.` : `Por favor, fale com ${designationText(d)}.`
   }`;
 export const homeAddressConfirmCurrent = (address: string) =>
-  `O endereço gravado para esse atendimento domiciliar é: *${address}*. Ainda é esse? Responda Sim ou Não.`;
+  `O endereço gravado para esse atendimento domiciliar é: *${address}*. Ainda é esse?`;
 
 export function presenceConfirmed(patientName: string, when: string, isExam: boolean): string {
   return (

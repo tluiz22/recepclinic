@@ -274,7 +274,7 @@ async function afterLocation(b: Bot, ctx: BookingContext): Promise<void> {
 async function enterAddress(b: Bot, ctx: BookingContext): Promise<void> {
   const saved = b.convo.contactId ? (await getContact(b.db, b.clinicId, b.convo.contactId)).defaultHomeAddress : null;
   if (saved) {
-    await say(b, "bot_book_home_address_confirm_default", t.homeAddressConfirmDefault(saved));
+    await sendButtons(b, "bot_book_home_address_confirm_default", t.homeAddressConfirmDefault(saved), t.YES_NO_BUTTONS);
     return go(b, "BOOK_HOME_ADDRESS", { ...ctx, awaiting: "address_default", pendingAddress: saved });
   }
   await askAddress(b, ctx);
@@ -290,7 +290,7 @@ async function handleAddress(b: Bot, selection: Selection): Promise<void> {
   if (ctx.awaiting === "address_input") {
     const address = selection.text.trim();
     if (!address) return askAddress(b, ctx);
-    await say(b, "bot_book_home_address_confirm_new", t.homeAddressConfirmNew(address));
+    await sendButtons(b, "bot_book_home_address_confirm_new", t.homeAddressConfirmNew(address), t.YES_NO_BUTTONS);
     return go(b, "BOOK_HOME_ADDRESS", { ...ctx, awaiting: "address_new", pendingAddress: address });
   }
   const answer = yesNo(selection);
@@ -549,7 +549,7 @@ async function handlePatientSelect(b: Bot, selection: Selection): Promise<void> 
       .map((p) => ({ id: p.id, name: p.fullName, birthdate: p.birthdate }));
     if (!matches.length) return askPatientName(b, ctx, birthdate);
     if (matches.length === 1) {
-      await say(b, "bot_book_confirm_patient", t.confirmPatient(b.words, matches[0].name, formatBirthdate(birthdate)));
+      await sendButtons(b, "bot_book_confirm_patient", t.confirmPatient(b.words, matches[0].name, formatBirthdate(birthdate)), t.YES_NO_BUTTONS);
       return go(b, "BOOK_PATIENT_SELECT", { ...keepPath(ctx), awaiting: "confirm_patient", pending: matches[0] });
     }
     await sendPatientChoice(b, matches, t.birthdateMatches(b.words));
@@ -573,7 +573,7 @@ async function handlePatientNew(b: Bot, selection: Selection): Promise<void> {
   switch (ctx.awaiting) {
     case "contact_name": {
       if (!text) return askContactName(b, ctx, ctx.guardian ?? false);
-      await say(b, "bot_book_confirm_contact_name", confirmContactText(ctx, text));
+      await sendButtons(b, "bot_book_confirm_contact_name", confirmContactText(ctx, text), t.YES_NO_BUTTONS);
       return go(b, "BOOK_PATIENT_NEW", { ...ctx, awaiting: "contact_confirm", contactName: text });
     }
     case "contact_confirm": {
@@ -647,7 +647,7 @@ async function handlePatientNew(b: Bot, selection: Selection): Promise<void> {
 }
 
 async function askNewConfirm(b: Bot, ctx: BookingContext, name: string, birthdate: string): Promise<void> {
-  await say(b, "bot_book_confirm_new_patient", t.confirmNewPatient(b.words, name, formatBirthdate(birthdate)));
+  await sendButtons(b, "bot_book_confirm_new_patient", t.confirmNewPatient(b.words, name, formatBirthdate(birthdate)), t.YES_NO_BUTTONS);
   await go(b, "BOOK_PATIENT_NEW", { ...ctx, awaiting: "new_confirm", newName: name, newBirthdate: birthdate });
 }
 
@@ -666,7 +666,7 @@ async function askSelfBirthdate(b: Bot, ctx: BookingContext): Promise<void> {
 }
 
 async function askSelfConfirm(b: Bot, ctx: BookingContext, name: string, birthdate: string): Promise<void> {
-  await say(b, "bot_book_confirm_self", t.confirmSelf(name, formatBirthdate(birthdate)));
+  await sendButtons(b, "bot_book_confirm_self", t.confirmSelf(name, formatBirthdate(birthdate)), t.YES_NO_BUTTONS);
   await go(b, "BOOK_PATIENT_NEW", { ...ctx, awaiting: "self_confirm", selfName: name, selfBirthdate: birthdate });
 }
 

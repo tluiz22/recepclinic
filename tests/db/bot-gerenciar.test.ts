@@ -129,7 +129,7 @@ describe("cancelar pelo menu", () => {
     let reply = await say(P2, { id: "manage_cancel" });
     expect(reply.map((m) => m.body)).toEqual([ASK_BIRTHDATE]);
     reply = await say(P2, "01/01/2020");
-    expect(reply[0].body).toBe("Confirma o cancelamento da consulta de *Paciente Dois* em segunda, 10/03 às 08:00? Responda Sim ou Não.");
+    expect(reply[0].body).toBe("Confirma o cancelamento da consulta de *Paciente Dois* em segunda, 10/03 às 08:00?");
     reply = await say(P2, "não");
     expect(reply[0].body).toBe("Ok, mantivemos sua consulta marcada.");
     expect((await appointment(consultP2)).status).toBe("scheduled");

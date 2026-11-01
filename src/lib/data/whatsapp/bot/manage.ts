@@ -322,7 +322,7 @@ async function confirmFromEntry(b: Bot, appointment: ManagedAppointment): Promis
 // ---------------------------------------------------------------------------
 
 async function askCancel(b: Bot, ctx: ManageContext, appointment: ManagedAppointment): Promise<void> {
-  await say(b, "bot_cancel_confirm", t.confirmCancel(words(appointment).phrase, appointment.patientName, when(b, appointment)));
+  await sendButtons(b, "bot_cancel_confirm", t.confirmCancel(words(appointment).phrase, appointment.patientName, when(b, appointment)), t.YES_NO_BUTTONS);
   await go(b, "CANCEL_CONFIRM", { ...ctx, action: "cancel", group: groupOf(appointment), pendingId: appointment.id, candidates: undefined });
 }
 
@@ -427,7 +427,7 @@ async function rescheduleLink(b: Bot, ctx: ManageContext, appointment: ManagedAp
     const current = appointment.homeVisitAddress;
     const next: ManageContext = { ...ctx, action: "reschedule", pendingId: appointment.id, candidates: undefined };
     if (current) {
-      await say(b, "bot_reschedule_home_address_confirm_current", t.homeAddressConfirmCurrent(current));
+      await sendButtons(b, "bot_reschedule_home_address_confirm_current", t.homeAddressConfirmCurrent(current), t.YES_NO_BUTTONS);
       return go(b, "RESCHEDULE_HOME_ADDRESS", { ...next, awaiting: "address_current", pendingAddress: current });
     }
     await say(b, "bot_reschedule_home_address_ask", t.HOME_ADDRESS_ASK);
@@ -473,7 +473,7 @@ async function handleRescheduleAddress(b: Bot, selection: Selection): Promise<vo
   if (ctx.awaiting === "address_input") {
     const address = selection.text.trim();
     if (!address) return say(b, "bot_reschedule_home_address_ask", t.HOME_ADDRESS_ASK);
-    await say(b, "bot_reschedule_home_address_confirm_new", t.homeAddressConfirmNew(address));
+    await sendButtons(b, "bot_reschedule_home_address_confirm_new", t.homeAddressConfirmNew(address), t.YES_NO_BUTTONS);
     return go(b, "RESCHEDULE_HOME_ADDRESS", { ...ctx, awaiting: "address_new", pendingAddress: address });
   }
   const answer = yesNo(selection);
