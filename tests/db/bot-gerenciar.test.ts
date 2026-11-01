@@ -325,6 +325,23 @@ describe("recepção e pausa", () => {
     await adminClient().from("whatsapp_connections").update({ coexistence: false }).eq("clinic_id", f.clinicId);
   });
 
+  it("em recesso da clínica: a mensagem de recesso substitui o aviso, com a data do retorno", async () => {
+    const phone = "+5584991226405";
+    await adminClient().from("whatsapp_connections").update({ coexistence: true }).eq("clinic_id", f.clinicId);
+    const end = new Date(Date.now() + 10 * 24 * 60 * 60_000);
+    const { data: block } = await adminClient()
+      .from("schedule_blocks")
+      .insert({ clinic_id: f.clinicId, agenda_id: f.ids.agendaExams, starts_at: new Date(Date.now() - 60_000).toISOString(), ends_at: end.toISOString(), reason: "Recesso", recess_message: "Em recesso até {data}." })
+      .select("id")
+      .single();
+    await hello(phone);
+    const reply = await say(phone, "4");
+    expect(reply[0].body).toMatch(/^Em recesso até \d{2}\/\d{2}\/\d{4}\.$/);
+    await adminClient().from("schedule_blocks").delete().eq("id", block!.id);
+    await webhook({ message_echoes: [{ id: `wamid.f64.echo.${++seq}`, from: "5584000000000", to: phone.slice(1), type: "text", text: { body: "#bot" } }] });
+    await adminClient().from("whatsapp_connections").update({ coexistence: false }).eq("clinic_id", f.clinicId);
+  });
+
   it("a recepção responde pelo app: o bot fica em silêncio, mas o Confirmar do lembrete responde", async () => {
     await webhook({ message_echoes: [{ id: `wamid.f64.echo.${++seq}`, from: "5584000000000", to: P1.slice(1), type: "text", text: { body: "Oi, aqui é a recepção" } }] });
     expect(await hello(P1)).toEqual([]);

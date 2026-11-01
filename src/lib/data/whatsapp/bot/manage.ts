@@ -1,6 +1,7 @@
 import type { Enums } from "../../../supabase/database.types";
 import { bookingPath } from "../../../publicId";
 import { cancelAppointment, findReturnOrigin, logTrail, rescheduleAppointment } from "../../agenda/appointments";
+import { activeRecessMessage } from "../../agenda/blocks";
 import { BOT_LINK_TTL_MS, createBookingLink } from "../../agenda/links";
 import { getFreeSlotsBefore, loadClinicHolidays } from "../../agenda/slots";
 import { getReceptionHours } from "../../config/receptionHours";
@@ -791,6 +792,9 @@ export async function receptionReplyWhen(b: Bot): Promise<string | null | undefi
 
 /** Aviso de transferência com o horário da recepção (cliente, 01/nov/2026): fora do horário, diz quando responde. */
 export async function handoffText(b: Bot): Promise<string> {
+  // Recesso da clínica (cliente, 01/nov/2026): a mensagem de recesso substitui o aviso comum.
+  const recess = await activeRecessMessage(b.db, b.clinicId, b.now, b.clinic.timeZone);
+  if (recess) return recess;
   const base = textFor(b, "handoff", t.HANDOFF);
   const when = await receptionReplyWhen(b);
   return when === null ? base : `${base} ${t.outsideHoursNotice(when)}`;
@@ -808,8 +812,8 @@ export async function handoff(b: Bot, origin: HandoffOrigin): Promise<void> {
  * dele, quando a clínica responde). Só com a recepção no app (coexistência).
  */
 export async function handoffNotUnderstood(b: Bot): Promise<void> {
-  const when = await receptionReplyWhen(b);
-  await say(b, "bot_handoff_not_understood", t.notUnderstoodHandoff(when));
+  const recess = await activeRecessMessage(b.db, b.clinicId, b.now, b.clinic.timeZone);
+  await say(b, "bot_handoff_not_understood", recess ?? t.notUnderstoodHandoff(await receptionReplyWhen(b)));
   await pauseForHuman(b.db, b.clinicId, b.phone, { contactId: b.convo.contactId, reason: "not_understood" }, b.now);
   await askHandoffSubject(b);
 }

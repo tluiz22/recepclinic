@@ -40,7 +40,7 @@ describe("dia da agenda (F4.5)", () => {
     const turma = { isGroupSession: true, serviceId: "turma", scheduledAt: at("07:00"), endsAt: at("08:00") };
     const items = buildDayItems(
       [appointment({ scheduledAt: at("09:00") }), appointment(turma), appointment(turma), appointment({ ...turma, agendaId: "outra" })],
-      [{ id: "b", agendaId: "agenda", agendaName: "Agenda", startsAt: at("08:00"), endsAt: at("08:30"), reason: "Reunião", removedAt: null }],
+      [{ id: "b", agendaId: "agenda", agendaName: "Agenda", startsAt: at("08:00"), endsAt: at("08:30"), reason: "Reunião", recessMessage: null, removedAt: null }],
     );
     expect(items.map((i) => i.kind)).toEqual(["group", "group", "block", "appointment"]);
     expect(items[0].kind === "group" && items[0].appointments).toHaveLength(2);
