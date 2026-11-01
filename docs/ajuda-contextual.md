@@ -270,3 +270,14 @@ Etapas: **1** componente (`depende`/`alimenta`) + Equipe e Profissionais; **2** 
 Serviços; **4** Horários, Feriados, Convênios e Contatos; **5** Lembretes, Mensagens, WhatsApp e Nota fiscal.
 
 Etapas 3 a 5 feitas em 01/nov/2026 (Agendas, Serviços, Feriados, Convênios, WhatsApp; Horários, Lembretes, Mensagens e Nota fiscal ganharam "Depende de" e "Alimenta"). Textos em `src/lib/ajuda/configuracoes.ts`.
+
+## Central de Ajuda (cliente, 01/nov/2026)
+
+Manual do sistema dentro do painel, na branch `central-ajuda`. Decisões do cliente: acesso do artigo segue a tela que ele
+explica (papel e item liberado, `canAccessPath`); artigos internos só para o Suporte; canal de suporte = WhatsApp
+informado em Sistema › Suporte (campo novo, tabela `platform_settings`); procedimentos delicados documentados só para o
+Administrador, sem dados secretos. Conteúdo no código (`src/lib/central/artigos/`, FAQ em `faq.ts`), busca no servidor
+(`search.ts`: sem acento, sinônimos, peso por raridade), painel lateral "Ajuda desta tela" (`helpPanel.ts`). Não
+documentados por não existirem: Google Calendar e mesclar cadastros duplicados. Sem capturas de tela (próxima etapa).
+O número do suporte nunca passa pelo bot nem entra em Atendimento (`webhook.ts`, `attention.ts`; teste
+`tests/db/numero-do-suporte.test.ts`). Migração `20261111120000`.

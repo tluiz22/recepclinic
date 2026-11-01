@@ -1,0 +1,104 @@
+---
+// Corpo de um artigo da Central de Ajuda: o mesmo na página e no painel lateral.
+import type { Article } from "../../../lib/central/types";
+
+interface Props {
+  article: Article;
+  /** Rótulo do público ("Toda a equipe", "Administrador"...). */
+  audience: string;
+}
+
+const { article, audience } = Astro.props;
+const H = "font-display text-[17px] leading-tight font-bold text-ink sm:text-lg";
+---
+
+<article id="artigo" class="flex flex-col gap-5 text-[16px] leading-relaxed text-ink">
+  <p class="text-[17px] text-ink-mid">{article.intro}</p>
+
+  <dl class="grid gap-x-4 gap-y-1 rounded-xl border border-line bg-canvas px-4 py-3 text-[15px] sm:grid-cols-[130px_minmax(0,1fr)]">
+    <dt class="text-ink-soft">Onde fica</dt>
+    <dd class="font-semibold">{article.where}</dd>
+    <dt class="text-ink-soft">Módulo</dt>
+    <dd class="font-semibold">{article.module}</dd>
+    <dt class="text-ink-soft">Quem usa</dt>
+    <dd class="font-semibold">{audience}</dd>
+  </dl>
+
+  {
+    article.whenToUse && (
+      <section>
+        <h2 class={H}>Quando usar</h2>
+        <p class="mt-1.5">{article.whenToUse}</p>
+      </section>
+    )
+  }
+  {
+    article.prerequisites && article.prerequisites.length > 0 && (
+      <section>
+        <h2 class={H}>Antes de começar</h2>
+        <ul class="mt-1.5 flex list-disc flex-col gap-1 pl-5">{article.prerequisites.map((item) => <li>{item}</li>)}</ul>
+      </section>
+    )
+  }
+  {
+    article.steps && article.steps.length > 0 && (
+      <section>
+        <h2 class={H}>Passo a passo</h2>
+        <ol class="mt-2 flex flex-col gap-2">
+          {article.steps.map((step, index) => (
+            <li class="flex gap-3">
+              <span aria-hidden="true" class="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-brand-soft text-[14px] font-bold text-brand-ink">{index + 1}</span>
+              <span class="min-w-0 flex-1">{step}</span>
+            </li>
+          ))}
+        </ol>
+      </section>
+    )
+  }
+  {
+    article.fields && article.fields.length > 0 && (
+      <section>
+        <h2 class={H}>Campos e opções</h2>
+        <dl class="mt-2 flex flex-col divide-y divide-line overflow-hidden rounded-xl border border-line bg-white">
+          {article.fields.map((field) => (
+            <div class="grid gap-x-4 gap-y-0.5 px-4 py-2.5 sm:grid-cols-[220px_minmax(0,1fr)]">
+              <dt class="font-semibold">{field.name}</dt>
+              <dd class="text-ink-mid">{field.text}</dd>
+            </div>
+          ))}
+        </dl>
+      </section>
+    )
+  }
+  {
+    article.result && (
+      <section>
+        <h2 class={H}>Resultado esperado</h2>
+        <p class="mt-1.5">{article.result}</p>
+      </section>
+    )
+  }
+  {
+    article.notes && article.notes.length > 0 && (
+      <section class="rounded-xl border border-att-200 bg-att-50 px-4 py-3 text-att-800">
+        <h2 class="text-[15px] font-bold">Importante</h2>
+        <ul class="mt-1 flex list-disc flex-col gap-1 pl-5 text-[15px]">{article.notes.map((note) => <li>{note}</li>)}</ul>
+      </section>
+    )
+  }
+  {
+    article.problems && article.problems.length > 0 && (
+      <section>
+        <h2 class={H}>Problemas comuns</h2>
+        <dl class="mt-2 flex flex-col gap-3">
+          {article.problems.map((item) => (
+            <div>
+              <dt class="font-semibold">{item.problem}</dt>
+              <dd class="text-ink-mid">{item.solution}</dd>
+            </div>
+          ))}
+        </dl>
+      </section>
+    )
+  }
+</article>
