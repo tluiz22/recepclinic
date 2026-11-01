@@ -315,3 +315,24 @@ Sub-etapas: **3.1** banco → **3.2** núcleo (normalização, casamento, fontes
 Pedido do cliente: ativar todas as entradas de uma vez. Na lista de Entradas, caixas de marcar em cada linha, "Marcar
 todas as mostradas" (respeita a busca e o filtro) e "Situação das marcadas" › Mudar situação, com confirmação; cada
 entrada entra no histórico. `setEntriesStatus` em `admin.ts`; teste em `base-de-conhecimento-admin.test.ts`.
+
+### Ajustes da homologação: pedidos do cliente (31/out/2026)
+
+Resultado dos testes da parte R, com as decisões do cliente:
+
+1. **Marcar pela base leva ao submenu.** Os fluxos "marcar consulta" e "marcar exame" abrem o submenu Consultas ou
+   Exames (marcar, retorno, remarcar, cancelar, encaixe), não o primeiro passo da marcação.
+2. **Encaixe pela base.** "Encaixe", "preciso de um encaixe", "consigo um encaixe" iam para Não reconhecidas. Entrada
+   nova (encaixe, adiantar, antecipar) com o fluxo novo `waitlist`, que abre o "Encaixe ou antecipar" de hoje
+   (`startManage(..., "waitlist")`). Clínica sem o item Lista de espera: explica que o encaixe é com a recepção e
+   pergunta se quer falar com ela (Sim/Não).
+3. **"voltar" é voltar, não retorno.** "voltar", "voltar ao menu", "menu anterior" e parecidos, antes da base: dentro
+   de um fluxo, o submenu de onde veio (Consultas ou Exames); no submenu ou em Informações, o menu principal; no menu
+   principal, o menu de novo. O toque em "Voltar ao menu" continua no menu principal.
+4. **Nunca transferir sem perguntar.** As transferências automáticas (4ª mensagem não entendida, sem horário livre,
+   clínica sem nada para marcar, convênio não aceito e "Não" ao particular) passam a perguntar Sim/Não. "Não":
+   "Tudo bem." e o menu principal (na 4ª não entendida, a contagem zera). Sem recepção no app, a mesma pergunta
+   ("Quer que a clínica entre em contato?"); Sim pausa e avisa que a clínica responde em breve.
+
+Etapas (uma por vez, na branch `bc-ajustes`, cada uma com `botJourney.ts`): **A** itens 1 e 3; **B** item 2
+(migração do fluxo `waitlist` e entrada no catálogo); **C** item 4.
