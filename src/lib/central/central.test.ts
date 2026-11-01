@@ -1,4 +1,4 @@
-import { existsSync, readdirSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { canSeeArticle, visibleArticles, visibleFaqs } from "./access";
 import { articleForPath, ARTICLES, CATEGORIES, FAQS } from "./index";
@@ -100,5 +100,11 @@ describe("Central de Ajuda: capturas de tela", () => {
     }
     const files = readdirSync("public/ajuda").filter((f) => f.endsWith(".png"));
     expect(files.filter((f) => !used.has(f))).toEqual([]);
+  });
+  it("o roteiro de recaptura (scripts/capturas-ajuda.mjs) cobre exatamente as imagens", () => {
+    const script = readFileSync("scripts/capturas-ajuda.mjs", "utf8");
+    const names = [...script.matchAll(/^\s*\["([a-z-]+)", [`"]\//gm)].map((m) => m[1]).sort();
+    const files = readdirSync("public/ajuda").filter((f) => f.endsWith(".png")).map((f) => f.replace(/\.png$/, "")).sort();
+    expect(names).toEqual(files);
   });
 });
