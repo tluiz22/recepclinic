@@ -192,7 +192,7 @@ describe("varredura de isolamento (dados de teste)", () => {
   });
 
   it("todas as tabelas do banco entraram na varredura ou têm exceção registrada", () => {
-    const covered = new Set([...dataTables, ...NOT_IN_DATA_SWEEP, ...KNOWLEDGE_BASE, "platform_staff", "features", "cron_heartbeats"]);
+    const covered = new Set([...dataTables, ...NOT_IN_DATA_SWEEP, ...KNOWLEDGE_BASE, "platform_staff", "platform_settings", "features", "cron_heartbeats"]);
     expect(allTables.filter((name) => !covered.has(name))).toEqual([]);
   });
 });

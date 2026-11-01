@@ -5,7 +5,7 @@
 // (CLAUDE.md): mudou a jornada do bot, atualizar este arquivo no mesmo commit,
 // junto com JOURNEY_UPDATED.
 
-export const JOURNEY_UPDATED = "31/10/2026";
+export const JOURNEY_UPDATED = "01/11/2026";
 
 export type NodeKind = "patient" | "bot" | "page" | "auto" | "reception" | "decision";
 
@@ -40,7 +40,7 @@ export const JOURNEY: JourneySection[] = [
     title: "1. Começo da conversa",
     intro: "O paciente manda qualquer mensagem para o número da clínica, a qualquer hora.",
     flow: [
-      patient("\"Oi\" (ou qualquer mensagem)"),
+      patient("\"Oi\" (ou qualquer mensagem)", "Exceção: o número de WhatsApp do suporte do RecepClinic (Sistema › Suporte) nunca passa pelo bot nem entra em Atendimento."),
       check("Há atendimento marcado para este número?"),
       branch(
         [

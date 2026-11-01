@@ -1279,6 +1279,20 @@ isOneToOne: false
                   Relationships: [
                     
                   ]
+                },"platform_settings": {
+                  Row: {
+                    "id": boolean,"support_whatsapp": string | null,"updated_at": string,"updated_by": string | null
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "id"?: boolean,"support_whatsapp"?: string | null,"updated_at"?: string,"updated_by"?: string | null
+                  }
+                  Update: {
+                    "id"?: boolean,"support_whatsapp"?: string | null,"updated_at"?: string,"updated_by"?: string | null
+                  }
+                  Relationships: [
+                    
+                  ]
                 },"platform_staff": {
                   Row: {
                     "created_at": string,"display_name": string,"user_id": string

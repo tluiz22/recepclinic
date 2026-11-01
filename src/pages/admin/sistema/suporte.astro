@@ -1,0 +1,36 @@
+---
+// Sistema › Suporte (cliente, 01/nov/2026): o WhatsApp do suporte do
+// RecepClinic. A Central de Ajuda mostra o número às clínicas, e a conversa
+// dele com o WhatsApp da clínica não passa pelo bot nem aparece em Atendimento.
+import AdminLayout from "../../../layouts/AdminLayout.astro";
+import Card from "../../../components/admin/config/Panel.astro";
+import FormMessage from "../../../components/admin/FormMessage.astro";
+import SystemHeader from "../../../components/admin/sistema/SystemHeader.astro";
+import { HINT, INPUT, LABEL, PRIMARY_BUTTON } from "../../../components/admin/config/formStyles";
+import { createUserClient } from "../../../lib/data/clients";
+import { getSupportWhatsapp } from "../../../lib/data/platformSettings";
+import { formatPhoneBR, INVALID_PHONE_MESSAGE } from "../../../lib/phone";
+
+const db = createUserClient(Astro.request, Astro.cookies);
+const phone = await getSupportWhatsapp(db);
+const saved = Astro.url.searchParams.get("salvo") === "1";
+const invalid = Astro.url.searchParams.get("erro") === "telefone";
+---
+
+<AdminLayout title="Suporte" platform>
+  <SystemHeader title="Suporte" subtitle="O WhatsApp que as clínicas veem na Central de Ajuda para falar com o RecepClinic." />
+  <Card class="mt-5 max-w-xl">
+    <form method="POST" action="/api/admin/sistema/suporte" class="flex flex-col gap-3">
+      <div>
+        <label for="support_whatsapp" class={LABEL}>WhatsApp do suporte</label>
+        <input id="support_whatsapp" name="support_whatsapp" inputmode="tel" placeholder="(84) 98188-0777" value={phone ? formatPhoneBR(phone) : ""} class={INPUT} />
+        <p class={HINT}>
+          Conversa com o WhatsApp de qualquer clínica sem passar pelo bot e sem entrar em Atendimento. Vazio: a Central só diz "fale com o suporte do RecepClinic".
+        </p>
+      </div>
+      <div><button type="submit" class={PRIMARY_BUTTON}>Salvar</button></div>
+      {saved && <FormMessage tone="success">Salvo.</FormMessage>}
+      {invalid && <FormMessage tone="error">{INVALID_PHONE_MESSAGE}</FormMessage>}
+    </form>
+  </Card>
+</AdminLayout>
