@@ -2,11 +2,11 @@
 
 > **Estado atual (retomar daqui), 31/out/2026.** Detalhes e datas no [`historico.md`](historico.md) (só por busca).
 >
-> **Próximo (cliente, 31/out):** Base de Conhecimento Global do bot: Etapas 1 a 4 feitas e no staging (nada publicado,
-> item ligado em nenhuma clínica). Etapa 5: o cliente homologa pela parte R do [`staging.md`](staging.md) (com a
-> situação em lote) e traz o resultado na próxima sessão. Retomar pelo
-> [`base-de-conhecimento.md`](base-de-conhecimento.md). Mudança no caminho do paciente atualiza `botJourney.ts` no
-> mesmo commit.
+> **Próximo (cliente, 31/out):** Base de Conhecimento: a homologação (Etapa 5) trouxe 5 ajustes, feitos nas Etapas
+> A, B e C na branch **`bc-ajustes`** (só local, sem push; `9cbbe07`, `5eeb26c`, `9d781a4`), aprovadas no local. O
+> cliente vai pedir mais uma melhoria **nessa mesma branch**; depois, tudo junto para a `main` e o staging (migração
+> `20261110120000` antes do push; ativar EN1 e publicar). Retomar pelo [`base-de-conhecimento.md`](base-de-conhecimento.md)
+> (seção "Ajustes da homologação"). Mudança no caminho do paciente atualiza `botJourney.ts` no mesmo commit.
 >
 > **Ambientes**
 > - **Produção** (`app.recepclinic.com.br`, branch `producao`) = `main` em `20bfe8b` (revisão da jornada do bot E1–E4,
