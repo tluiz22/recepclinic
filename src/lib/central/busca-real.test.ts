@@ -9,6 +9,7 @@ const CASES: [string, string][] = [
   ["desmarcar consulta", "cancelar-atendimento"],
   ["Como bloquear a agenda?", "bloquear-agenda"],
   ["médico vai viajar", "bloquear-agenda"],
+  ["como marcar recesso da clínica", "bloquear-agenda"],
   ["Como cadastrar um médico?", "config-profissionais"],
   ["Como configurar o WhatsApp?", "config-whatsapp"],
   ["Por que o bot não está realizando agendamentos?", "bot-nao-agenda"],

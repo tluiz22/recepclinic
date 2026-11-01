@@ -12,6 +12,7 @@ export const FAQS: Faq[] = [
   f("desmarcar", "Como desmarco uma consulta?", "No cartão do atendimento, toque em Cancelar (em vermelho, à direita) e confirme.", "cancelar-atendimento", ["cancelar"]),
   f("trocar-servico", "Marquei o serviço errado. Preciso cancelar e marcar de novo?", "Não. Em Mais › Alterar você troca serviço, profissional, local, convênio ou horário no mesmo atendimento.", "alterar-atendimento"),
   f("bloquear", "Como bloqueio a agenda do médico nas férias?", "Agenda › Bloquear: marque a agenda, o período e o motivo. Se houver atendimentos, escolha entre bloquear e cancelar ou bloquear e manter.", "bloquear-agenda", ["folga"]),
+  f("recesso", "Como marco o recesso da clínica?", "Agenda › Bloquear: marque todas as agendas, ligue \"Recesso da clínica\" e confira a mensagem. Quem pedir a recepção no WhatsApp recebe essa mensagem, com a data de retorno.", "bloquear-agenda", ["férias coletivas", "clínica fechada"]),
   f("desbloquear", "Como desbloqueio um horário?", "Agenda › Bloqueios: abra o bloqueio e remova.", "gerenciar-bloqueios"),
   f("cores", "O que significam as cores dos atendimentos na Agenda?", "Dizem a situação: Não confirmado, Confirmado, Compareceu, Faltou, Cancelado e Bloqueio.", "situacoes-e-acoes-do-cartao"),
   f("registrar-falta", "Como registro que o paciente veio ou faltou?", "No cartão do atendimento, toque em Compareceu ou Faltou. Os que ainda faltam registrar ficam em Resumo do Dia › A registrar.", "resumo-do-dia", ["comparecimento"]),

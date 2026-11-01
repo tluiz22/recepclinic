@@ -7,6 +7,11 @@
 > tela mudar). Falta informar o WhatsApp do suporte (Sistema › Suporte), se ainda não foi. Detalhes em
 > [`ajuda-contextual.md`](ajuda-contextual.md), fim. Cliente vai pedir novos ajustes.
 >
+> **Em andamento (cliente, 01/nov):** recesso da clínica e horário da recepção no bot, **só no local** (commits `d7ff3e2`,
+> `2659321`, `fdc8de3` e a Central de Ajuda). Migração `20261112120000_recesso_da_clinica.sql` aplicada só no local.
+> Falta: cliente validar; depois migração no staging (`supabase db push`), push da `main` e recaptura da captura
+> `bloquear` (`docs/capturas-pendentes.md`, aguarda autorização). Detalhe no [`historico.md`](historico.md) ("Recesso").
+>
 > **Ambientes**
 > - **Produção** (`app.recepclinic.com.br`, branch `producao`) = `main` em `20bfe8b` (revisão da jornada do bot E1–E4,
 >   confirmação na página do link). Fluxo em [`producao.md`](producao.md).

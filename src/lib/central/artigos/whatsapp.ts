@@ -30,6 +30,7 @@ export const whatsappArtigos = [
       "A qualquer momento, \"0\" ou \"Voltar ao menu\" volta ao menu principal. \"voltar\" digitado volta à tela de onde veio.",
       "Conversa parada por 15 minutos: o bot encerra com aviso; a próxima mensagem começa de novo.",
       "O bot nunca transfere para a recepção sem perguntar. Na 4ª mensagem seguida que não entende, ele pergunta \"Você quer falar com a recepção?\". Só o limite de marcações do contato transfere direto.",
+      "Ao transferir fora do horário da recepção (Configurações › Clínica), o bot avisa quando a clínica responde. Em recesso (Agenda › Bloquear), envia a mensagem de recesso no lugar.",
       "Áudio, foto e figurinha: o bot avisa que só lê texto.",
       "Clínica em implantação: o bot não responde e nenhuma mensagem automática sai.",
       "O número do suporte do RecepClinic é a exceção: nunca passa pelo bot.",
