@@ -94,7 +94,7 @@ const LINK = "font-semibold text-brand-ink underline-offset-2 hover:underline";
   }
 
   {
-    manage && connection?.status === "disconnected" && connection.disconnectedVia === "meta" && connection.disconnectedAt && (
+    manage?.isSupport && connection?.status === "disconnected" && connection.disconnectedVia === "meta" && connection.disconnectedAt && (
       <Notice tone="warning" class="mt-3">
         A Meta avisou em {formatInstant(connection.disconnectedAt, timeZone, "dd/MM/yyyy 'às' HH:mm")} que o WhatsApp da clínica foi desconectado (pelo app
         WhatsApp Business ou na conta da Meta): o bot, os avisos e os lembretes pararam. Conecte de novo pelo botão acima.
@@ -118,7 +118,7 @@ const LINK = "font-semibold text-brand-ink underline-offset-2 hover:underline";
   }
 
   {
-    templates && (
+    templates && manage?.isSupport && (
       <div class="mt-3 border-t border-line pt-3 text-sm text-ink-mid">
         <p>
           <span class="font-medium text-ink">Mensagens automáticas na Meta:</span> {templatesText ?? "todas aprovadas."}
@@ -136,7 +136,7 @@ const LINK = "font-semibold text-brand-ink underline-offset-2 hover:underline";
   }
 
   {
-    manage && connected && (
+    manage?.isSupport && connected && (
       <div class="mt-3 border-t border-line pt-3 text-sm text-ink-mid">
         <p>
           <span class="font-medium text-ink">Forma de pagamento na Meta:</span>{" "}
@@ -191,7 +191,7 @@ const LINK = "font-semibold text-brand-ink underline-offset-2 hover:underline";
   }
 
   {
-    manage?.pendingSync && (
+    manage?.isSupport && manage.pendingSync && (
       <Notice tone="warning" class="mt-3">
         Falta uma etapa pedida pela Meta para o app WhatsApp Business (sincronização). Ela precisa ser feita nas primeiras 24 horas da conexão.
         <form method="POST" action="/api/admin/configuracoes/whatsapp-sincronizar" class="mt-2">

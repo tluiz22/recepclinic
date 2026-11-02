@@ -46,14 +46,14 @@ const has = (feature: (typeof clinic.features)[number]) => clinic.features.inclu
 // vencimento), templates na Meta (F8.2) e forma de pagamento do WhatsApp (F8.3). O Administrador da clínica não os vê.
 const isSupport = clinic.isPlatformStaff;
 const certificateOn = has("finance") && isSupport;
-// A desconexão avisada pela Meta continua ao Administrador (decisão pendente do cliente, 02/nov/2026).
-const isAdmin = clinic.roles.includes("admin") || clinic.isPlatformStaff;
+// Todos os avisos técnicos do Meu dia são do Suporte (cliente, 02/nov/2026): desconexão avisada pela Meta, envios
+// com falha e os de cima. O Suporte acompanha as clínicas; a tela de pendências do Suporte está em docs/painel-suporte.md.
 const [counts, sendsAlert, toReview, certificate, connection, templates, attention] = await Promise.all([
   getDashboardCounts(db, clinic.clinicId, clinic.timezone),
   getSendsAlert(db, clinic.clinicId),
   has("whatsapp_bot") ? listContactsToReview(db, clinic.clinicId) : Promise.resolve(null),
   certificateOn ? getFiscalCertificate(db, clinic.clinicId) : Promise.resolve(null),
-  isAdmin ? getWhatsappConnection(db, clinic.clinicId) : Promise.resolve(null),
+  isSupport ? getWhatsappConnection(db, clinic.clinicId) : Promise.resolve(null),
   isSupport ? listWhatsappTemplates(db, clinic.clinicId) : Promise.resolve([]),
   has("whatsapp_bot") ? listHumanAttention(db, clinic.clinicId) : Promise.resolve([]),
 ]);
@@ -82,7 +82,7 @@ const certificateAlert = (() => {
     return `O certificado digital A1 vence em ${status.daysLeft} ${status.daysLeft === 1 ? "dia" : "dias"} (${formatInstant(certificate.validUntil, clinic.timezone, "dd/MM/yyyy")}): renove e envie o novo.`;
   return null;
 })();
-const sendsAlertLines = describeSendsAlert(sendsAlert);
+const sendsAlertLines = isSupport ? describeSendsAlert(sendsAlert) : [];
 
 const here = currentPath(Astro.url);
 

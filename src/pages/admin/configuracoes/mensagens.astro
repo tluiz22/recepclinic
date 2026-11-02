@@ -118,10 +118,11 @@ const TEMPLATE_LABELS: Record<string, string> = {
   waitlist_offer: "Oferta de vaga (lista de espera)",
   nfse_document: "Nota fiscal (com o PDF no topo)",
 };
+// Só o Suporte vê a Meta nos rótulos (cliente, 02/nov/2026): para a clínica, "Em análise" e "Recusado".
 const STATUS = {
   approved: { label: "Aprovado", variant: "success" },
-  pending: { label: "Em análise na Meta", variant: "warning" },
-  rejected: { label: "Recusado pela Meta", variant: "danger" },
+  pending: { label: clinic.isPlatformStaff ? "Em análise na Meta" : "Em análise", variant: "warning" },
+  rejected: { label: clinic.isPlatformStaff ? "Recusado pela Meta" : "Recusado", variant: "danger" },
   disabled: { label: "Desativado", variant: "neutral" },
 } as const;
 

@@ -46,7 +46,7 @@ const attempts = appointments.length
   : [];
 const lastStatus = new Map(attempts.map((m) => [m.appointment_id, m.status]));
 const REASONS: Record<string, string> = {
-  skipped_no_template: "a mensagem do aviso ainda não foi aprovada pela Meta",
+  skipped_no_template: clinic.isPlatformStaff ? "a mensagem do aviso ainda não foi aprovada pela Meta" : "o aviso não pôde ser enviado pelo WhatsApp neste momento",
   failed: "o WhatsApp recusou o envio",
   sent: "o aviso saiu pelo WhatsApp",
 };
