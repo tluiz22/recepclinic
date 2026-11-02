@@ -23,7 +23,16 @@ import { getDashboardCounts } from "../../lib/data/dashboard";
 import { describeSendsAlert, getSendsAlert } from "../../lib/data/sends";
 import { handoffReasonLabel, listHumanAttention } from "../../lib/data/whatsapp/attention";
 import { BOT_LIMIT_LABELS, listContactsToReview, REVIEW_WINDOW_DAYS } from "../../lib/data/whatsapp/botLimits";
-import { formatCalendarDate, formatInstant, todayIn } from "../../lib/clinicTime";
+import { addDays, dayBounds, formatCalendarDate, formatInstant, todayIn } from "../../lib/clinicTime";
+import CardActionButton from "../../components/admin/agenda/CardActionButton.astro";
+import { cardActions } from "../../components/admin/agenda/cardActions";
+import { appointmentSituation } from "../../components/admin/agenda/situationStyle";
+import StatusPill from "../../components/admin/ui/StatusPill.astro";
+import { listAgendas } from "../../lib/data/config/agendas";
+import { listAgendaAppointments, type AgendaAppointment } from "../../lib/data/agenda/view";
+import { listPendingReminders } from "../../lib/data/relationship";
+import { logError } from "../../lib/log";
+import { vocabularyFor } from "../../lib/vocabulary";
 import { certificateStatus } from "../../lib/certificate";
 import { getFiscalCertificate } from "../../lib/data/fiscal";
 import { getWhatsappConnection, listWhatsappTemplates } from "../../lib/data/whatsapp/connection";
@@ -72,6 +81,51 @@ const certificateAlert = (() => {
   return null;
 })();
 const sendsAlertLines = describeSendsAlert(sendsAlert);
+
+const here = currentPath(Astro.url);
+
+// RX3: "Esperando o paciente" (lembretes sem resposta de hoje e de amanhã, ainda por vir) e "Próximas consultas"
+// (as de hoje que ainda não foram registradas). Falha de leitura vira aviso na seção, nunca lista vazia.
+const nowAt = new Date();
+const todayDate = todayIn(clinic.timezone, nowAt);
+const tomorrowEnd = dayBounds(addDays(todayDate, 1), clinic.timezone).end;
+const vocabulary = vocabularyFor(clinic.clinicProfile);
+const load = async <T,>(label: string, run: () => Promise<T>): Promise<T | null> => {
+  try {
+    return await run();
+  } catch (error) {
+    logError(`meu dia: ${label} não carregou`, error, { clinica: clinic.clinicId });
+    return null;
+  }
+};
+const [pendingReminders, todayAppointments] = await Promise.all([
+  has("reminders") ? load("lembretes sem resposta", () => listPendingReminders(db, clinic.clinicId, nowAt)) : Promise.resolve([]),
+  load("próximas consultas", async () => {
+    const agendas = await listAgendas(db, clinic.clinicId, { includeInactive: true });
+    return listAgendaAppointments(db, clinic.clinicId, { fromDate: todayDate, toDate: todayDate, timeZone: clinic.timezone, agendaIds: agendas.map((a) => a.id) });
+  }),
+]);
+const waiting = pendingReminders?.filter((r) => r.kind === "no_answer" && r.appointment.scheduledAt > nowAt && r.appointment.scheduledAt < tomorrowEnd).map((r) => r.appointment) ?? [];
+const upcoming = todayAppointments?.filter((a) => a.status === "scheduled" || a.status === "confirmed") ?? [];
+const hhmm = (d: Date) => formatInstant(d, clinic.timezone, "HH:mm");
+// Mesmas ações e confirmações do cartão da Agenda; aqui só as que a linha precisa.
+const rowActions = (a: AgendaAppointment) =>
+  cardActions({
+    appointment: a,
+    now: nowAt,
+    who: `${a.patientName}, ${formatInstant(a.scheduledAt, clinic.timezone, "dd/MM 'às' HH:mm")}`,
+    contact: vocabulary.contact,
+    returnTo: here,
+    preparationResendable: false,
+    guidanceResendable: false,
+    waitlistOn: false,
+    onWaitlist: false,
+  });
+const endpointOf = (a: AgendaAppointment) => `/api/admin/agenda/atendimentos/${a.id}`;
+const dayLabel = (a: AgendaAppointment) => (localDay(a.scheduledAt) === todayDate ? "Hoje" : "Amanhã");
+function localDay(d: Date) {
+  return formatInstant(d, clinic.timezone, "yyyy-MM-dd");
+}
 const canReview = clinic.isPlatformStaff || clinic.roles.includes("admin") || clinic.roles.includes("reception");
 // A aba Envios fica no Resumo do Dia, para toda a equipe (cliente, 05/out/2026).
 
@@ -83,7 +137,6 @@ const NOTICES: Record<string, { tone: NoticeTone; text: string }> = {
 };
 const notice = aviso ? NOTICES[aviso] : undefined;
 
-const here = currentPath(Astro.url);
 const today = formatCalendarDate(todayIn(clinic.timezone), "EEEE, d 'de' MMMM 'de' yyyy");
 const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
 // Linha do dia (RX2): atendidas e confirmadas sobre o total de hoje; o resto ainda não confirmou.
@@ -188,7 +241,9 @@ const sectionTitle = "font-display text-[17px] leading-tight font-bold text-ink 
     }
   </section>
 
-  <section aria-labelledby="precisa" class="mt-6 flex flex-col gap-2">
+  <div class="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px] lg:items-start">
+  <div class="flex min-w-0 flex-col gap-6">
+  <section aria-labelledby="precisa" class="flex flex-col gap-2">
     <h2 id="precisa" class={sectionTitle}>Precisa de você</h2>
     {!hasPending && <p class="rounded-xl border border-line bg-white px-4 py-3.5 text-[15px] text-ink-soft">Nada pendente agora.</p>}
     {
@@ -248,17 +303,22 @@ const sectionTitle = "font-display text-[17px] leading-tight font-bold text-ink 
           </HowItWorks>
           <ul class="mt-2">
             {toReview.map((item) => (
-              <li class="grid gap-x-4 gap-y-1 border-t border-[#e6ecea] py-3 first:border-t-0 sm:grid-cols-[minmax(0,1fr)_260px_150px_auto] sm:items-center">
-                <span class="flex flex-wrap items-center gap-x-2 gap-y-1">
-                  <a href={withReturn(`/admin/pacientes/contato/${item.contactId}`, here)} class="text-base font-semibold text-ink no-underline hover:text-brand hover:underline">
-                    {item.name}
-                  </a>
-                  {item.phone && <PhoneLinks phone={item.phone} plain class="text-sm text-ink-soft" />}
-                </span>
-                <span class="text-[15px] text-ink">{BOT_LIMIT_LABELS[item.last.reason]}</span>
-                <span class="text-sm text-ink-soft tabular-nums">
-                  {formatInstant(item.last.at, clinic.timezone, "dd/MM HH:mm")}
-                  {item.hits > 1 && ` · ${plural(item.hits, "vez", "vezes")}`}
+              <li class="grid gap-x-4 gap-y-1 border-t border-[#e6ecea] py-3 first:border-t-0 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
+                <span class="flex min-w-0 flex-col gap-1">
+                  <span class="flex flex-wrap items-center gap-x-2 gap-y-1">
+                    <a href={withReturn(`/admin/pacientes/contato/${item.contactId}`, here)} class="text-base font-semibold text-ink no-underline hover:text-brand hover:underline">
+                      {item.name}
+                    </a>
+                    {item.phone && <PhoneLinks phone={item.phone} plain class="text-sm text-ink-soft" />}
+                  </span>
+                  <span class="text-[15px] text-ink">
+                    {BOT_LIMIT_LABELS[item.last.reason]}
+                    <span class="text-sm text-ink-soft tabular-nums">
+                      {" · "}
+                      {formatInstant(item.last.at, clinic.timezone, "dd/MM HH:mm")}
+                      {item.hits > 1 && ` · ${plural(item.hits, "vez", "vezes")}`}
+                    </span>
+                  </span>
                 </span>
                 {canReview && (
                   <form method="POST" action={`/api/admin/pacientes/contato/${item.contactId}`} class="max-sm:mt-1">
@@ -279,11 +339,90 @@ const sectionTitle = "font-display text-[17px] leading-tight font-bold text-ink 
               </li>
             ))}
           </ul>
-          {canReview && <ConfirmDeleteDialog />}
         </div>
       )
     }
   </section>
+
+  {
+    has("reminders") && (
+      <section aria-labelledby="esperando" class="flex flex-col gap-2">
+        <h2 id="esperando" class={sectionTitle}>
+          Esperando o paciente{waiting.length > 0 && <span class="font-sans text-sm font-semibold text-ink-soft"> ({waiting.length})</span>}
+        </h2>
+        {pendingReminders === null && <Notice tone="warning">Não foi possível carregar os lembretes sem resposta. Tente atualizar a página.</Notice>}
+        {pendingReminders !== null && waiting.length === 0 && <p class="rounded-xl border border-line bg-white px-4 py-3.5 text-[15px] text-ink-soft">Nenhum lembrete de hoje ou de amanhã sem resposta.</p>}
+        {
+          waiting.length > 0 && (
+            <ul class="rounded-xl border border-line bg-white px-4 sm:px-5">
+              {waiting.map((a) => {
+                const actions = rowActions(a);
+                const confirm = actions.primary?.kind === "form" && actions.primary.acao === "confirmar_presenca" ? actions.primary : undefined;
+                const rebook = actions.visible.find((x) => x.kind === "link" && x.label === "Remarcar");
+                return (
+                  <li class="grid gap-x-4 gap-y-2 border-t border-[#e6ecea] py-3 first:border-t-0 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
+                    <span class="flex min-w-0 flex-col gap-0.5">
+                      <a href={withReturn(`/admin/pacientes/${a.patientId}`, here)} class="text-base font-semibold text-ink no-underline hover:text-brand hover:underline">
+                        <span class="tabular-nums">{dayLabel(a)}, {hhmm(a.scheduledAt)}</span> · {a.patientName}
+                      </a>
+                      <span class="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-ink-soft">
+                        {!a.isContactSelf && `${a.contactName} · `}
+                        <PhoneLinks phone={a.contactPhone} plain />
+                      </span>
+                    </span>
+                    <span class="flex flex-wrap gap-2">
+                      {confirm && <CardActionButton action={confirm} endpoint={endpointOf(a)} returnTo={here} />}
+                      {rebook && <CardActionButton action={rebook} endpoint={endpointOf(a)} returnTo={here} />}
+                    </span>
+                  </li>
+                );
+              })}
+            </ul>
+          )
+        }
+      </section>
+    )
+  }
+  </div>
+
+  <aside aria-labelledby="proximas" class="flex flex-col gap-2">
+    <h2 id="proximas" class={sectionTitle}>Próximas consultas</h2>
+    {todayAppointments === null && <Notice tone="warning">Não foi possível carregar as consultas de hoje. Tente atualizar a página.</Notice>}
+    {todayAppointments !== null && upcoming.length === 0 && <p class="rounded-xl border border-line bg-white px-4 py-3.5 text-[15px] text-ink-soft">Nenhuma consulta pendente hoje.</p>}
+    {
+      upcoming.length > 0 && (
+        <ul class="rounded-xl border border-line bg-white px-4">
+          {upcoming.map((a) => {
+            const actions = rowActions(a);
+            const done = actions.primary?.kind === "form" && actions.primary.acao === "compareceu" ? actions.primary : undefined;
+            return (
+              <li class="flex flex-col gap-1.5 border-t border-[#e6ecea] py-3 first:border-t-0">
+                <span class="flex items-baseline gap-2">
+                  <span class="font-display text-[17px] font-bold text-ink tabular-nums">{hhmm(a.scheduledAt)}</span>
+                  <a href={withReturn(`/admin/pacientes/${a.patientId}`, here)} class="min-w-0 truncate text-base font-semibold text-ink no-underline hover:text-brand hover:underline">
+                    {a.patientName}
+                  </a>
+                </span>
+                <span class="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-ink-soft">
+                  {a.agendaName}
+                  <StatusPill situation={appointmentSituation(a)} />
+                </span>
+                {done && (
+                  <span class="mt-0.5 flex">
+                    <CardActionButton action={done} endpoint={endpointOf(a)} returnTo={here} variant="primary" />
+                  </span>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+      )
+    }
+  </aside>
+  </div>
+
+  {/* Um só diálogo de confirmação para todas as ações da tela. */}
+  <ConfirmDeleteDialog />
 
   <div class="h-20 sm:hidden" aria-hidden="true" />
   <div class="fixed inset-x-0 bottom-[calc(61px+env(safe-area-inset-bottom))] z-10 flex items-center gap-3 border-t border-line bg-white px-4 py-2.5 shadow-[0_-4px_14px_rgba(18,48,42,.08)] sm:hidden">
