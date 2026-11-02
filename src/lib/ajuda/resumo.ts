@@ -1,6 +1,6 @@
 import type { ModuloDeAjuda } from "./tipos";
 
-// Ajuda contextual do Resumo do Dia (inventário de 23/out/2026).
+// Ajuda contextual do Relatório do dia (inventário de 23/out/2026).
 
 export const resumo = {
   dicas: {

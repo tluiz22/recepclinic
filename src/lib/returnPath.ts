@@ -52,9 +52,9 @@ export function allFilterOn(url: URL): boolean {
  */
 export function returnLabel(path: string): string {
   const pathname = path.split("?")[0];
-  if (pathname === "/admin/dashboard") return "Voltar para o Início";
+  if (pathname === "/admin/dashboard") return "Voltar para o Meu dia";
   if (pathname.startsWith("/admin/financeiro/pagamento/")) return "Voltar para o pagamento";
   if (pathname === "/admin/financeiro") return "Voltar para o Financeiro";
-  if (pathname === "/admin/relacionamento") return "Voltar para o Relacionamento";
+  if (pathname === "/admin/relacionamento" || pathname === "/admin/pacientes/para-contatar") return "Voltar para Para contatar";
   return "Voltar";
 }

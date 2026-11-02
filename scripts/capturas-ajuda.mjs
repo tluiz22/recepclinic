@@ -35,7 +35,7 @@ export const CAPTURAS = [
   ["paciente-novo", "/admin/pacientes/novo", [], ["button[type=submit]"]],
   ["resumo-do-dia", "/admin/consultas", ["Lembretes", "A registrar", "Registradas"], []],
   ["atendimento", "/admin/atendimento", [], []],
-  ["relacionamento", "/admin/relacionamento", [], []],
+  ["relacionamento", "/admin/pacientes/para-contatar", ["Retomar contato"], []],
   ["metricas", "/admin/metricas", [], []],
   ["financeiro", "/admin/financeiro", ["Falta CPF"], []],
   ["config-clinica", "/admin/configuracoes", ["Identificação", "Atendimento"], []],

@@ -34,6 +34,9 @@ import ConfirmDeleteDialog from "../../../components/admin/ConfirmDeleteDialog.a
 import FlashMessage from "../../../components/admin/FlashMessage.astro";
 import Icon from "../../../components/admin/Icon.astro";
 import PhoneLinks from "../../../components/admin/PhoneLinks.astro";
+import CardActionButton from "../../../components/admin/agenda/CardActionButton.astro";
+import { cardActions } from "../../../components/admin/agenda/cardActions";
+import { serviceBesideCategory } from "../../../components/admin/agenda/categoryStyle";
 import { appointmentSituation } from "../../../components/admin/agenda/situationStyle";
 import Button from "../../../components/admin/ui/Button.astro";
 import EditCard from "../../../components/admin/ui/EditCard.astro";
@@ -85,6 +88,9 @@ const today = todayIn(clinic.timezone);
 const upcoming = history.filter((a) => (a.status === "scheduled" || a.status === "confirmed") && a.scheduledAt > now).reverse();
 const previous = history.filter((a) => !upcoming.includes(a));
 const stats = noShows.get(patient.id);
+// Faixa "Próxima consulta" (RX9, RX-D8 opção A; cliente, 02/nov/2026): o próximo atendimento ativo, com as ações do
+// cartão da Agenda (Confirmar presença e Remarcar, com a mesma confirmação) e "Abrir na Agenda".
+const nextAppointment = patient.anonymizedAt === null ? upcoming[0] : undefined;
 const pending = (a: (typeof history)[number]) => (a.status === "scheduled" || a.status === "confirmed") && a.scheduledAt <= now;
 // Voltar: para a tela de onde veio (cliente, 10/out/2026); sem origem, Pacientes.
 const volta = receivedReturn(Astro.url);
@@ -313,6 +319,44 @@ const canBook = patient.isActive && !anonymized;
       )
     }
   </section>
+
+  {
+    nextAppointment && (() => {
+      const a = nextAppointment;
+      const actions = cardActions({
+        appointment: a,
+        now,
+        who: `${a.patientName}, ${formatInstant(a.scheduledAt, clinic.timezone, "dd/MM 'às' HH:mm")}`,
+        contact: vocabulary.contact,
+        returnTo: here,
+        preparationResendable: false,
+        guidanceResendable: false,
+        waitlistOn: false,
+        onWaitlist: false,
+      });
+      const confirm = [actions.primary, ...actions.more].find((x) => x?.kind === "form" && x.acao === "confirmar_presenca");
+      const rebook = actions.visible.find((x) => x.kind === "link" && x.label === "Remarcar");
+      const endpoint = `/api/admin/agenda/atendimentos/${a.id}`;
+      const detail = [serviceBesideCategory(a.serviceName, a.category), a.agendaName, a.locationName].filter(Boolean).join(" · ");
+      return (
+        <section aria-labelledby="proxima-consulta" class="mt-3 flex flex-wrap items-center justify-between gap-x-4 gap-y-3 rounded-xl border border-brand/25 bg-brand-soft/60 px-4 py-3 sm:px-5">
+          <div class="flex min-w-0 flex-col gap-1">
+            <h2 id="proxima-consulta" class="text-[14px] font-semibold text-ink-soft">Próxima consulta</h2>
+            <p class="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[17px] leading-snug font-bold text-ink">
+              <span class="first-letter:uppercase">{formatInstant(a.scheduledAt, clinic.timezone, "EEEE, dd/MM 'às' HH:mm")}</span>
+              <StatusPill situation={appointmentSituation(a)} />
+            </p>
+            <p class="text-[15px] text-ink-mid">{detail}</p>
+          </div>
+          <div class="flex flex-wrap gap-2">
+            {confirm && <CardActionButton action={confirm} endpoint={endpoint} returnTo={here} variant="primary" />}
+            {rebook && <CardActionButton action={rebook} endpoint={endpoint} returnTo={here} />}
+            <Button href={withReturn(`/admin/agenda?date=${localDateOf(a.scheduledAt, clinic.timezone)}`, here)}>Abrir na Agenda</Button>
+          </div>
+        </section>
+      );
+    })()
+  }
 
   <div class="mt-4 grid grid-cols-[minmax(0,1fr)] items-start gap-4 lg:grid-cols-[minmax(0,1fr)_400px] lg:gap-5">
     <section aria-labelledby="atendimentos-titulo" class={`${card} gap-1`}>

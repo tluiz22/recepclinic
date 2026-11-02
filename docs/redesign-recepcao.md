@@ -1,8 +1,13 @@
 # Redesign da Recepção (UX)
 
-> **Retomar daqui (02/nov/2026):** design aprovado pelo cliente e **guardado para o futuro** (cliente, 02/nov). Nada
-> implementado. Quando o cliente pedir, começar pela etapa **RX1** (seção 7), uma etapa por vez, em branch curta
-> criada da `main`.
+> **Retomar daqui (02/nov/2026):** as nove etapas (RX1 a RX9) estão **implementadas e commitadas na branch
+> `rx1-historico`** (local, sem push, criada da `main` em `c239b84`), cada uma aprovada pelo cliente. Falta: o cliente
+> validar tudo, trazer a `main` para a branch e rodar os testes, juntar na `main` (staging) e, com autorização,
+> recapturar as telas da Central de Ajuda (lista em [`capturas-pendentes.md`](capturas-pendentes.md)). Decisões tomadas
+> no caminho: contador do Meu dia (soma de conversas à espera, conversas com a clínica, presença a registrar e
+> contatos a conferir); "Resolvido hoje" ficou de fora (sem dado persistido); avisos técnicos só para o Suporte
+> ([`painel-suporte.md`](painel-suporte.md), tela do Suporte pendente); "Avisar pacientes" fora do "Mais" da Agenda;
+> horário livre = lacunas das janelas gerais, com a hora levada ao Marcar (`hora`).
 
 Canvas com as propostas e as escolhas: <https://claude.ai/artifact/LUVvbPjkrLfVaazSCgMMTT>. As fileiras de baixo
 (Menu, Meu dia, Agenda, Pacientes) têm as versões escolhidas marcadas. Os quadros de cima (diagnóstico, fluxos, mapa e

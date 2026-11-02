@@ -1,6 +1,6 @@
 import type { ModuloDeAjuda } from "./tipos";
 
-// Ajuda contextual da Agenda e do Resumo do Dia (inventário de 23/out/2026).
+// Ajuda contextual da Agenda e do Relatório do dia (inventário de 23/out/2026).
 
 export const agenda = {
   dicas: {
@@ -16,7 +16,7 @@ export const agenda = {
       como: [
         "Escolha as agendas, o período e o motivo. Nenhum horário do período é oferecido enquanto o bloqueio existir.",
         "Com atendimentos no período, a tela pergunta: \"cancelar\" manda ao paciente, pelo WhatsApp, o link para remarcar; \"manter\" não mexe neles.",
-        "Quem teve o atendimento cancelado e não remarcou aparece em Relacionamento › Aguardando remarcação.",
+        "Quem teve o atendimento cancelado e não remarcou aparece em Pacientes › Para contatar › Aguardando remarcação.",
         "Recesso da clínica: quem pedir a recepção no WhatsApp recebe a mensagem de recesso, com a data de retorno (dia seguinte ao fim). Vem pronta e dá para editar.",
         "Bloqueio de mais de 5 dias pergunta se envia o recesso; faltando agenda, pede confirmação.",
       ],
@@ -68,6 +68,6 @@ export const agenda = {
 /** Consequência de cada saída do Bloquear (docs/plano.md F6.5; AguardandoTab.astro), visível antes de confirmar. */
 export const bloquear = {
   cancelar:
-    "Bloquear e cancelar: os atendimentos do período são cancelados; cada paciente recebe o aviso pelo WhatsApp da clínica, com o link para remarcar, e passa para \"Aguardando remarcação\" no Resumo do Dia.",
+    "Bloquear e cancelar: os atendimentos do período são cancelados; cada paciente recebe o aviso pelo WhatsApp da clínica, com o link para remarcar, e passa para \"Aguardando remarcação\" no Relatório do dia.",
   manter: "Bloquear e manter: os atendimentos continuam marcados; só os horários livres do período deixam de ser oferecidos.",
 };

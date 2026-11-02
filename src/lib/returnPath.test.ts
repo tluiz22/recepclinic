@@ -31,8 +31,9 @@ it("leva a origem adiante e a recebe de volta, inclusive a origem da origem", ()
 
 it("diz para onde o Voltar leva (R9, Configurações abertas de outra tela)", () => {
   expect(returnLabel("/admin/financeiro?q=Ana")).toBe("Voltar para o Financeiro");
-  expect(returnLabel("/admin/relacionamento?tab=lembretes")).toBe("Voltar para o Relacionamento");
-  expect(returnLabel("/admin/dashboard")).toBe("Voltar para o Início");
+  expect(returnLabel("/admin/relacionamento?tab=lembretes")).toBe("Voltar para Para contatar");
+  expect(returnLabel("/admin/pacientes/para-contatar?lista=retorno")).toBe("Voltar para Para contatar");
+  expect(returnLabel("/admin/dashboard")).toBe("Voltar para o Meu dia");
   expect(returnLabel("/admin/financeiro/pagamento/1?volta=%2Fadmin%2Fagenda")).toBe("Voltar para o pagamento");
   expect(returnLabel("/admin/agenda?date=2026-10-17")).toBe("Voltar");
 });

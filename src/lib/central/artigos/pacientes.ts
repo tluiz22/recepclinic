@@ -70,7 +70,7 @@ export const pacientesArtigos = [
       { name: "Histórico", text: "Os atendimentos próximos e anteriores, das agendas que a sua função vê (o Profissional vê só as próprias)." },
       { name: "Anotações", text: "Texto livre com data e autor. A equipe vê." },
       { name: "Documentos", text: "Arquivos do paciente, com filtro por tipo." },
-      { name: "Lembretes", text: "Textos com data. No dia, aparecem em Relacionamento › Lembretes da equipe até alguém marcar Feito." },
+      { name: "Lembretes", text: "Textos com data. No dia, aparecem em Pacientes › Para contatar › Lembretes da equipe até alguém marcar Feito." },
       { name: "Financeiro", text: "Com o módulo Financeiro: CPF e responsável financeiro (Administrador e Recepção)." },
       { name: "Desativar / Reativar", text: "Tira o paciente das listas e da marcação sem apagar o histórico; dá para reativar." },
     ],

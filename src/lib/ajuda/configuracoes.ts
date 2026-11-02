@@ -254,14 +254,14 @@ export const configuracoes = {
         { texto: "Feriados: tiram os dias dos horários.", href: "/admin/configuracoes/feriados" },
       ],
     },
-    // src/lib/data/whatsapp/botLimits.ts (cabeçalho); "Contatos para revisar" no Início; tela do contato.
+    // src/lib/data/whatsapp/botLimits.ts (cabeçalho); "Contatos para revisar" no Meu dia; tela do contato.
     limitesBot: {
       serve: "Proteger o agendamento pelo WhatsApp de abuso, como alguém marcando muitos horários de uma vez.",
       como: [
         "Os limites contam por número de WhatsApp, somando todos os pacientes dele.",
         "Atendimentos futuros contam os marcados pelo bot ou pela equipe e os links de marcar ainda válidos.",
         "Atingido um limite, o bot não marca e passa a conversa para a recepção. Cancelar, remarcar e confirmar seguem pelo bot; a equipe marca sem limite pelo painel.",
-        "O contato aparece no Início, em \"Contatos para revisar\", por 7 dias. \"Revisado\" tira o aviso; na tela do contato, \"Liberar dos limites do bot\" (só o Administrador) desliga os três para aquele número.",
+        "O contato aparece no Meu dia, em \"Contatos para revisar\", por 7 dias. \"Revisado\" tira o aviso; na tela do contato, \"Liberar dos limites do bot\" (só o Administrador) desliga os três para aquele número.",
       ],
     },
   },

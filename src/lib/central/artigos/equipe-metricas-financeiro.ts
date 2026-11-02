@@ -17,9 +17,9 @@ export const equipeMetricasFinanceiro = [
     order: 80,
     intro: "Uma pessoa pode ter mais de um papel (ex.: Administrador e Profissional). O que ela vê é a soma dos papéis. O Suporte do RecepClinic vale por todos os papéis, e cada leitura dele numa clínica é registrada.",
     fields: [
-      { name: "Todos os papéis", text: "Início, Agenda, Pacientes, Resumo do Dia, Atendimento e a Central de Ajuda." },
-      { name: "Administrador", text: "Também Configurações, Equipe, Métricas, Financeiro e Relacionamento (os dois últimos dependem do item liberado para a clínica)." },
-      { name: "Recepção", text: "Também Financeiro e Relacionamento, com o item liberado. Não abre Configurações nem Métricas." },
+      { name: "Todos os papéis", text: "Meu dia, Agenda (com o Relatório do dia), Pacientes e a Central de Ajuda." },
+      { name: "Administrador", text: "Também Configurações, Equipe, Métricas, Financeiro e Pacientes › Para contatar (os dois últimos dependem do item liberado para a clínica)." },
+      { name: "Recepção", text: "Também Financeiro e Pacientes › Para contatar, com o item liberado. Não abre Configurações nem Métricas." },
       { name: "Profissional", text: "Métricas pessoais (só a própria agenda) com o item liberado. Vê só as próprias agendas." },
     ],
     notes: [
@@ -67,7 +67,7 @@ export const equipeMetricasFinanceiro = [
       { name: "Desempenho", text: "Os indicadores do período e o gráfico de atividade. Agendamentos criados contam no dia da marcação, mesmo se cancelados depois (fora a agenda carregada na implantação); Remarcações, no dia em que aconteceram; Cancelamentos, no dia do cancelamento." },
       { name: "Marcados por", text: "WhatsApp (bot) são os marcados pelo bot ou pelo link; Painel (equipe), os marcados pela equipe. A conta é pela data da marcação." },
       { name: "Agendamento digital", text: "O funil do bot: Marcaram, Abandonaram (30 minutos sem passo novo), Barradas pela regra, Erro técnico, Desistiram e Em andamento. A taxa é de concluídas sobre as tentativas já terminadas; \"Onde mais perde\" mostra a passagem entre duas etapas em que mais tentativas pararam." },
-      { name: "Retomar contato", text: "Quem começou pelo WhatsApp e não concluiu: a mesma lista de Relacionamento, mas pelo período escolhido." },
+      { name: "Retomar contato", text: "Quem começou pelo WhatsApp e não concluiu: a mesma lista de Pacientes › Para contatar, mas pelo período escolhido." },
       { name: "Faltosos", text: "Pacientes que faltam com frequência (2 ou mais faltas e pelo menos metade dos registrados)." },
       { name: "Financeiro", text: "Valores por serviço pelo valor da tabela gravado na marcação (não o recebido): Realizado (compareceu), Previsto (sem registro) e Faltas. Cancelados e Retorno ficam de fora." },
     ],
