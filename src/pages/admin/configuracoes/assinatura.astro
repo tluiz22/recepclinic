@@ -14,6 +14,7 @@ import Card from "../../../components/admin/config/Panel.astro";
 import ConfirmDeleteDialog from "../../../components/admin/ConfirmDeleteDialog.astro";
 import BillingTrail from "../../../components/admin/billing/BillingTrail.astro";
 import ContractAcceptanceInfo from "../../../components/admin/billing/ContractAcceptanceInfo.astro";
+import ChargesList from "../../../components/admin/billing/ChargesList.astro";
 import ContractTerms from "../../../components/admin/billing/ContractTerms.astro";
 import ContractText from "../../../components/admin/billing/ContractText.astro";
 import HelpTip from "../../../components/admin/ui/HelpTip.astro";
@@ -23,17 +24,18 @@ import { DD, DT, HINT, INPUT, KV, LABEL, PRIMARY_BUTTON, SECONDARY_BUTTON } from
 import { BILLING_OPT_IN_TEXT, BILLING_OPT_IN_VERSION } from "../../../lib/billingOptIn";
 import { formatCalendarDate, formatInstant, todayIn } from "../../../lib/clinicTime";
 import { loadActorLabels } from "../../../lib/data/agenda/trail";
-import { contractsInForce, formatPayerDocument, getBillingAccount, listBillingAudit, listBillingContracts } from "../../../lib/data/billing";
+import { contractsInForce, formatPayerDocument, getBillingAccount, listBillingAudit, listBillingCharges, listBillingContracts } from "../../../lib/data/billing";
 import { createUserClient } from "../../../lib/data/clients";
 import { activeSuspensionReasons, describeReasons } from "../../../lib/data/suspension";
 import { formatPhoneBR } from "../../../lib/phone";
 
 const clinic = Astro.locals.clinic!;
 const db = createUserClient(Astro.request, Astro.cookies);
-const [account, audit, contracts, suspensionReasons] = await Promise.all([
+const [account, audit, contracts, charges, suspensionReasons] = await Promise.all([
   getBillingAccount(db, clinic.clinicId),
   listBillingAudit(db, clinic.clinicId),
   listBillingContracts(db, clinic.clinicId),
+  listBillingCharges(db, clinic.clinicId),
   clinic.clinicStatus === "suspended" ? activeSuspensionReasons(db, clinic.clinicId) : Promise.resolve([]),
 ]);
 // O Administrador vê o vigente e os encerrados (o rascunho é só do Suporte).
@@ -135,6 +137,16 @@ const H2 = "font-display text-[17px] leading-tight font-bold text-ink sm:text-lg
                   <p class="text-sm text-ink-soft">Continuar usando o RecepClinic a partir de {formatCalendarDate(next.startsOn, "dd/MM/yyyy")} vale como aceite. Se não concordar, fale com o Suporte antes dessa data.</p>
                 )}
                 <ContractTerms contract={next} />
+              </div>
+            </Card>
+          )}
+
+          {charges.length > 0 && (
+            <Card>
+              <h2 class={H2}>Cobranças</h2>
+              <p class="mt-1 text-sm text-ink-soft">"Pagar" abre a fatura no Asaas, com o Pix (ou o cartão, se for a forma do contrato).</p>
+              <div class="mt-2">
+                <ChargesList charges={charges} timezone={clinic.timezone} />
               </div>
             </Card>
           )}

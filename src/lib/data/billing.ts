@@ -31,6 +31,8 @@ export type BillingAccount = {
   /** E.164, ou null. */
   financePhone: string | null;
   whatsappOptIn: { at: Date; version: string } | null;
+  /** F12.4: cliente no Asaas (null = ainda não criado). */
+  asaasCustomerId: string | null;
   updatedAt: Date;
 };
 
@@ -50,6 +52,7 @@ type AccountRow = {
   finance_phone: string | null;
   whatsapp_opt_in_at: string | null;
   whatsapp_opt_in_version: string | null;
+  asaas_customer_id: string | null;
   updated_at: string;
 };
 
@@ -57,7 +60,7 @@ export async function getBillingAccount(db: DbClient, clinicId: string): Promise
   const row = unwrap(
     await db
       .from("billing_accounts")
-      .select("payer_name, payer_document, finance_email, finance_phone, whatsapp_opt_in_at, whatsapp_opt_in_version, updated_at")
+      .select("payer_name, payer_document, finance_email, finance_phone, whatsapp_opt_in_at, whatsapp_opt_in_version, asaas_customer_id, updated_at")
       .eq("clinic_id", clinicId)
       .maybeSingle(),
     "Conta de cobrança",
@@ -69,6 +72,7 @@ export async function getBillingAccount(db: DbClient, clinicId: string): Promise
     financeEmail: row.finance_email,
     financePhone: row.finance_phone,
     whatsappOptIn: row.whatsapp_opt_in_at ? { at: new Date(row.whatsapp_opt_in_at), version: row.whatsapp_opt_in_version ?? "" } : null,
+    asaasCustomerId: row.asaas_customer_id,
     updatedAt: new Date(row.updated_at),
   };
 }
@@ -135,6 +139,11 @@ export const BILLING_ACTIONS = {
   contract_accepted: "Contrato aceito pelo Administrador",
   contract_notice_sent: "Novos termos enviados por e-mail",
   contract_notice_failed: "E-mail dos novos termos não saiu",
+  asaas_customer_linked: "Cliente ligado no Asaas",
+  asaas_subscription_created: "Assinatura criada no Asaas",
+  charge_created: "Cobrança gerada",
+  charge_updated: "Situação da cobrança mudou",
+  asaas_sync_failed: "Falha ao falar com o Asaas",
   clinic_suspended: "Clínica suspensa",
   suspension_released: "Motivo da suspensão liberado",
 } as const;
@@ -254,6 +263,10 @@ export type BillingContract = {
   acceptedBy: string | null;
   acceptedIp: string | null;
   noticeSentAt: Date | null;
+  /** F12.4: assinatura no Asaas, última sincronização e o erro da última tentativa. */
+  asaasSubscriptionId: string | null;
+  asaasSyncedAt: Date | null;
+  asaasSyncError: string | null;
 };
 
 export type ContractAcceptance = "pending" | "explicit" | "tacit";
@@ -280,6 +293,9 @@ type ContractRow = {
   accepted_by: string | null;
   accepted_ip: string | null;
   notice_sent_at: string | null;
+  asaas_subscription_id: string | null;
+  asaas_synced_at: string | null;
+  asaas_sync_error: string | null;
 };
 
 /** Contratos da clínica, o mais novo primeiro. O Administrador vê só o vigente e os encerrados. */
@@ -288,7 +304,7 @@ export async function listBillingContracts(db: DbClient, clinicId: string): Prom
     await db
       .from("billing_contracts")
       .select(
-        "id, version, status, billing_mode, monthly_cents, setup_cents, payment_method, first_due_date, invoice_unit_price_cents, invoice_monthly_allowance, plan_snapshot, notes, starts_on, ends_on, activated_at, terms_version, acceptance, accepted_at, accepted_by, accepted_ip, notice_sent_at",
+        "id, version, status, billing_mode, monthly_cents, setup_cents, payment_method, first_due_date, invoice_unit_price_cents, invoice_monthly_allowance, plan_snapshot, notes, starts_on, ends_on, activated_at, terms_version, acceptance, accepted_at, accepted_by, accepted_ip, notice_sent_at, asaas_subscription_id, asaas_synced_at, asaas_sync_error",
       )
       .eq("clinic_id", clinicId)
       .order("created_at", { ascending: false }),
@@ -316,6 +332,9 @@ export async function listBillingContracts(db: DbClient, clinicId: string): Prom
     acceptedBy: row.accepted_by,
     acceptedIp: row.accepted_ip,
     noticeSentAt: row.notice_sent_at ? new Date(row.notice_sent_at) : null,
+    asaasSubscriptionId: row.asaas_subscription_id,
+    asaasSyncedAt: row.asaas_synced_at ? new Date(row.asaas_synced_at) : null,
+    asaasSyncError: row.asaas_sync_error,
   }));
 }
 
@@ -519,4 +538,64 @@ export function contractsInForce(contracts: BillingContract[], today: string): {
 export function describeAllowance(allowance: number | null): string {
   if (allowance === null) return "ilimitada";
   return `${allowance} ${allowance === 1 ? "nota" : "notas"} por mês`;
+}
+
+// ---------------------------------------------------------------------------
+// Cobranças (F12.4): espelho do Asaas, só leitura (o servidor grava)
+// ---------------------------------------------------------------------------
+
+export const CHARGE_STATUS = {
+  pending: { label: "Em aberto", variant: "info" },
+  paid: { label: "Paga", variant: "success" },
+  overdue: { label: "Vencida", variant: "danger" },
+  refunded: { label: "Estornada", variant: "warning" },
+  canceled: { label: "Cancelada", variant: "neutral" },
+  other: { label: "Em análise", variant: "neutral" },
+} as const;
+
+export const CHARGE_KINDS = { monthly: "Mensalidade", setup: "Implantação", other: "Outra" } as const;
+
+export type BillingCharge = {
+  id: string;
+  kind: keyof typeof CHARGE_KINDS;
+  dueDate: string;
+  valueCents: number;
+  billingType: string | null;
+  status: keyof typeof CHARGE_STATUS;
+  rawStatus: string | null;
+  paidAt: Date | null;
+  invoiceUrl: string | null;
+  asaasPaymentId: string | null;
+};
+
+/** Cobranças da clínica, a de vencimento mais novo primeiro (Suporte e Administrador). */
+export async function listBillingCharges(db: DbClient, clinicId: string, limit = 24): Promise<BillingCharge[]> {
+  const rows = unwrap(
+    await db
+      .from("billing_charges")
+      .select("id, kind, due_date, value_cents, billing_type, status, raw_status, paid_at, invoice_url, asaas_payment_id")
+      .eq("clinic_id", clinicId)
+      .order("due_date", { ascending: false })
+      .limit(limit),
+    "Cobranças",
+  );
+  return rows.map((row) => ({
+    id: row.id,
+    kind: row.kind as BillingCharge["kind"],
+    dueDate: row.due_date,
+    valueCents: row.value_cents,
+    billingType: row.billing_type,
+    status: row.status as BillingCharge["status"],
+    rawStatus: row.raw_status,
+    paidAt: row.paid_at ? new Date(row.paid_at) : null,
+    invoiceUrl: row.invoice_url,
+    asaasPaymentId: row.asaas_payment_id,
+  }));
+}
+
+/** Suporte: a clínica já pode ser suspensa por inadimplência (15º dia de atraso de uma cobrança do Asaas)? */
+export async function canSuspendForNonPayment(db: DbClient, clinicId: string): Promise<boolean> {
+  const { data, error } = await db.rpc("billing_can_suspend_for_non_payment", { p_clinic_id: clinicId });
+  if (error) throw fromDbError(error, "Suspensão");
+  return data === true;
 }

@@ -4,8 +4,9 @@ import { cleanText, DataError, fromDbError, unwrap } from "./errors";
 // Suspensão da clínica por motivos (F12.3, faturamento do SaaS; decisão 11.1
 // do planejamento-faturamento-saas.md). Só o Suporte suspende e libera, pelas
 // funções do banco (trava, trilha e a situação anterior guardada). A clínica
-// fica suspensa enquanto houver algum motivo ativo. Inadimplência só a partir
-// da F12.4 (cliente, 02/nov/2026); o pagamento é que a libera (F12.6).
+// fica suspensa enquanto houver algum motivo ativo. Inadimplência (F12.4): o
+// banco só aceita com uma cobrança do Asaas em aberto a partir do 15º dia de
+// atraso (item 20); o pagamento é que a libera (F12.6).
 
 export const SUSPENSION_REASONS = {
   non_payment: "Inadimplência",
@@ -15,7 +16,7 @@ export const SUSPENSION_REASONS = {
 
 export type SuspensionReason = keyof typeof SUSPENSION_REASONS;
 
-/** Motivos que o Suporte escolhe na F12.3 (inadimplência entra com as cobranças). */
+/** Motivos que o Suporte escolhe sempre; a inadimplência, só com a cobrança no 15º dia de atraso. */
 export const MANUAL_SUSPENSION_REASONS: SuspensionReason[] = ["administrative", "contract_ended"];
 
 export const SUSPENSION_MESSAGES = {
@@ -76,7 +77,7 @@ export async function suspendClinic(
   clinicId: string,
   input: { reason: string; note: string; noAppConfirmed?: boolean },
 ): Promise<void> {
-  if (!MANUAL_SUSPENSION_REASONS.includes(input.reason as SuspensionReason)) {
+  if (!(input.reason in SUSPENSION_REASONS)) {
     throw new DataError("invalid", `Suspensão: ${SUSPENSION_MESSAGES.reason}`, { suspension_reason: SUSPENSION_MESSAGES.reason });
   }
   const note = checkNote(input.note, "suspension_note");

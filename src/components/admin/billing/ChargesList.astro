@@ -1,0 +1,48 @@
+---
+// Faturamento (F12.4): as cobranças da clínica (espelho do Asaas), na tela
+// Assinatura (Administrador: "Pagar" abre a fatura do Asaas) e na aba
+// Faturamento (Suporte: com o id do Asaas).
+import Badge from "../config/Badge.astro";
+import { formatCalendarDate, formatInstant } from "../../../lib/clinicTime";
+import { CHARGE_KINDS, CHARGE_STATUS, type BillingCharge } from "../../../lib/data/billing";
+import { formatCentsBRL } from "../../../lib/money";
+
+interface Props {
+  charges: BillingCharge[];
+  timezone: string;
+  internal?: boolean;
+}
+
+const { charges, timezone, internal = false } = Astro.props;
+---
+
+{
+  charges.length === 0 ? (
+    <p class="text-sm text-ink-soft">Nenhuma cobrança ainda.</p>
+  ) : (
+    <ul class="divide-y divide-[#e6ecea]">
+      {charges.map((charge) => (
+        <li class="flex flex-wrap items-center justify-between gap-2 py-2 text-sm">
+          <span class="min-w-0">
+            <span class="block font-medium text-ink">
+              {CHARGE_KINDS[charge.kind]} · {formatCentsBRL(charge.valueCents)}
+            </span>
+            <span class="block text-ink-soft">
+              Vence em {formatCalendarDate(charge.dueDate, "dd/MM/yyyy")}
+              {charge.paidAt ? ` · paga em ${formatInstant(charge.paidAt, timezone, "dd/MM/yyyy")}` : ""}
+              {internal && charge.asaasPaymentId ? ` · ${charge.asaasPaymentId} (${charge.rawStatus ?? "?"})` : ""}
+            </span>
+          </span>
+          <span class="flex items-center gap-2">
+            <Badge variant={CHARGE_STATUS[charge.status].variant}>{CHARGE_STATUS[charge.status].label}</Badge>
+            {(charge.status === "pending" || charge.status === "overdue") && charge.invoiceUrl && (
+              <a href={charge.invoiceUrl} target="_blank" rel="noopener noreferrer" class="font-semibold text-brand">
+                {internal ? "Fatura" : "Pagar"}
+              </a>
+            )}
+          </span>
+        </li>
+      ))}
+    </ul>
+  )
+}

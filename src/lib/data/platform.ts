@@ -275,3 +275,117 @@ export function platformNfseRecorder(env: ServiceEnv = platformEnv()) {
     },
   };
 }
+
+// ---------------------------------------------------------------------------
+// Faturamento do SaaS no Asaas (F12.4): o servidor lê o necessário de um
+// contrato e grava o retorno do Asaas pelas funções do banco liberadas só à
+// service role (20261120120000_cobranca_asaas.sql).
+// ---------------------------------------------------------------------------
+
+export type BillingSyncSnapshot = {
+  clinicId: string;
+  clinicName: string;
+  contract: {
+    id: string;
+    version: number | null;
+    status: string;
+    billingMode: string;
+    acceptance: string | null;
+    paymentMethod: string | null;
+    monthlyCents: number;
+    setupCents: number;
+    firstDueDate: string;
+    subscriptionId: string | null;
+    /** Assinatura da versão que esta substitui (mudança de versão). */
+    replacedSubscriptionId: string | null;
+  };
+  account: { payerName: string; payerDocument: string; financeEmail: string; financePhone: string | null; customerId: string | null } | null;
+};
+
+export type BillingChargeInput = {
+  contractId: string;
+  paymentId: string;
+  kind: "monthly" | "setup" | "other";
+  dueDate: string;
+  valueCents: number;
+  billingType: string;
+  rawStatus: string;
+  paidAt: string | null;
+  invoiceUrl: string | null;
+};
+
+export type BillingStore = {
+  load(contractId: string): Promise<BillingSyncSnapshot | null>;
+  linkCustomer(clinicId: string, customerId: string): Promise<void>;
+  linkSubscription(contractId: string, subscriptionId: string): Promise<void>;
+  upsertCharge(charge: BillingChargeInput): Promise<void>;
+  recordSync(contractId: string, error: string | null): Promise<void>;
+};
+
+export function platformBillingStore(env: ServiceEnv = platformEnv()): BillingStore {
+  const db = platformClient(env);
+  const rpc = async (name: string, args: Record<string, unknown>) => {
+    const { error } = await (db.rpc as unknown as (n: string, a: Record<string, unknown>) => Promise<{ error: unknown }>)(name, args);
+    if (error) throw new PlatformLookupError(name, error);
+  };
+  return {
+    async load(contractId) {
+      if (!isUuid(contractId)) return null;
+      const { data: contract, error } = await db
+        .from("billing_contracts")
+        .select("id, clinic_id, version, status, billing_mode, acceptance, payment_method, monthly_cents, setup_cents, first_due_date, asaas_subscription_id, replaces_contract_id")
+        .eq("id", contractId)
+        .maybeSingle();
+      if (error) throw new PlatformLookupError("contrato", error);
+      if (!contract) return null;
+      const [{ data: clinic }, { data: account }, replaced] = await Promise.all([
+        db.from("clinics").select("name").eq("id", contract.clinic_id).maybeSingle(),
+        db.from("billing_accounts").select("payer_name, payer_document, finance_email, finance_phone, asaas_customer_id").eq("clinic_id", contract.clinic_id).maybeSingle(),
+        contract.replaces_contract_id
+          ? db.from("billing_contracts").select("asaas_subscription_id").eq("id", contract.replaces_contract_id).maybeSingle()
+          : Promise.resolve({ data: null }),
+      ]);
+      return {
+        clinicId: contract.clinic_id,
+        clinicName: clinic?.name ?? "",
+        contract: {
+          id: contract.id,
+          version: contract.version,
+          status: contract.status,
+          billingMode: contract.billing_mode,
+          acceptance: contract.acceptance,
+          paymentMethod: contract.payment_method,
+          monthlyCents: contract.monthly_cents,
+          setupCents: contract.setup_cents,
+          firstDueDate: contract.first_due_date,
+          subscriptionId: contract.asaas_subscription_id,
+          replacedSubscriptionId: replaced.data?.asaas_subscription_id ?? null,
+        },
+        account: account
+          ? {
+              payerName: account.payer_name,
+              payerDocument: account.payer_document,
+              financeEmail: account.finance_email,
+              financePhone: account.finance_phone,
+              customerId: account.asaas_customer_id,
+            }
+          : null,
+      };
+    },
+    linkCustomer: (clinicId, customerId) => rpc("billing_link_asaas_customer", { p_clinic_id: clinicId, p_customer_id: customerId }),
+    linkSubscription: (contractId, subscriptionId) => rpc("billing_link_asaas_subscription", { p_contract_id: contractId, p_subscription_id: subscriptionId }),
+    upsertCharge: (c) =>
+      rpc("billing_upsert_asaas_charge", {
+        p_contract_id: c.contractId,
+        p_payment_id: c.paymentId,
+        p_kind: c.kind,
+        p_due_date: c.dueDate,
+        p_value_cents: c.valueCents,
+        p_billing_type: c.billingType,
+        p_raw_status: c.rawStatus,
+        p_paid_at: c.paidAt,
+        p_invoice_url: c.invoiceUrl,
+      }),
+    recordSync: (contractId, error) => rpc("billing_record_asaas_sync", { p_contract_id: contractId, p_error: error ?? "" }),
+  };
+}

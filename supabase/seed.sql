@@ -242,6 +242,9 @@ begin
       invoice_unit_price_cents, invoice_monthly_allowance, plan_snapshot, starts_on, activated_at, terms_version, acceptance, accepted_at, accepted_ip)
     values (c_a, 1, 'active', 'manual', 29900, 29700, current_date + 10, 80, 50, '{"kind": "complete", "label": "Completo"}', current_date, now(),
       'seed', 'explicit', now(), '203.0.113.10');
+  -- Cobrança paga à mão (F12.4: o espelho também guarda o modo manual), da implantação do contrato manual.
+  insert into public.billing_charges (clinic_id, contract_id, origin, kind, due_date, value_cents, status, paid_at)
+    select c_a, id, 'manual', 'setup', current_date, 29700, 'paid', now() from public.billing_contracts where clinic_id = c_a and version = 1;
   -- Suspensão já liberada (F12.3): a clínica de exemplo segue ativa.
   insert into public.clinic_suspensions (clinic_id, reason, note, created_at, released_at, release_note)
     values (c_a, 'administrative', 'Exemplo: pausa pedida pela clínica.', now() - interval '40 days', now() - interval '30 days', 'Exemplo: retomada.');

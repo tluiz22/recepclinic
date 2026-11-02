@@ -36,7 +36,7 @@ describe("Suspensão da clínica (F12.3)", () => {
     expect(await codeOf(() => suspendClinic(asDb(support), clinicId, { reason: "administrative", note: "x" }))).toBe("invalid");
     expect(await codeOf(() => suspendClinic(asDb(support), clinicId, { reason: "non_payment", note: "atraso" }))).toBe("invalid");
     const { error } = await support.client.rpc("suspend_clinic", { p_clinic_id: clinicId, p_reason: "non_payment", p_note: "atraso", p_no_app_confirmed: false });
-    expect(error?.hint).toBe("suspension_non_payment_unavailable");
+    expect(error?.hint).toBe("suspension_non_payment_too_early");
     expect((await status()).status).toBe("active");
   });
 

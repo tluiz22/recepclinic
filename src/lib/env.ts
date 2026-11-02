@@ -50,7 +50,18 @@ export type PlatformEnv = {
    * chaves VAPID do ambiente. null = desligadas (a tela avisa).
    */
   webPush: WebPushEnv | null;
+  /**
+   * Conta do RecepClinic no Asaas para cobrar as clínicas (F12.4, faturamento
+   * do SaaS): ASAAS_API_KEY e ASAAS_BASE_URL (sandbox ou produção). null = a
+   * cobrança automática não chega ao Asaas (a aba Faturamento avisa).
+   */
+  asaas: AsaasEnv | null;
 };
+
+export type AsaasEnv = { apiKey: string; baseUrl: string };
+
+/** Endereços aceitos da API do Asaas (sempre com /v3). */
+export const ASAAS_BASE_URLS = ["https://api-sandbox.asaas.com/v3", "https://api.asaas.com/v3"] as const;
 
 export type WebPushEnv = { publicKey: string; privateKey: string };
 
@@ -179,8 +190,20 @@ export function parsePlatformEnv(source: EnvSource): PlatformEnv {
     if (pushPublic && pushPrivate) webPush = { publicKey: pushPublic, privateKey: pushPrivate };
   }
 
+  // Cobrança das clínicas pelo Asaas (F12.4): as duas juntas ou nenhuma.
+  let asaas: AsaasEnv | null = null;
+  const asaasKey = text(source, "ASAAS_API_KEY");
+  const asaasUrlText = text(source, "ASAAS_BASE_URL");
+  if (asaasKey || asaasUrlText) {
+    const asaasUrl = asaasUrlText?.replace(/\/+$/, "").replace(/(\.com)$/, "$1/v3");
+    if (!asaasKey) problems.push("ASAAS_API_KEY não definida (chave da API do Asaas)");
+    if (!asaasUrl || !(ASAAS_BASE_URLS as readonly string[]).includes(asaasUrl)) {
+      problems.push(`ASAAS_BASE_URL inválida (use ${ASAAS_BASE_URLS.join(" ou ")})`);
+    } else if (asaasKey) asaas = { apiKey: asaasKey, baseUrl: asaasUrl };
+  }
+
   if (problems.length) throw new PlatformEnvError(problems);
-  return { supabaseUrl, supabaseAnonKey, supabaseServiceRoleKey, supabaseJwtSecret, cronSecret, siteUrl, email, whatsapp, whatsappAppId: whatsappAppId ?? null, whatsappSignupConfigId: whatsappSignupConfigId ?? null, nfseSimulation: nfseSimulation === "1", asaasPreview: asaasPreview === "1", webPush };
+  return { supabaseUrl, supabaseAnonKey, supabaseServiceRoleKey, supabaseJwtSecret, cronSecret, siteUrl, email, whatsapp, whatsappAppId: whatsappAppId ?? null, whatsappSignupConfigId: whatsappSignupConfigId ?? null, nfseSimulation: nfseSimulation === "1", asaasPreview: asaasPreview === "1", webPush, asaas };
 }
 
 let cached: PlatformEnv | undefined;
@@ -207,6 +230,8 @@ export function platformEnv(): PlatformEnv {
     WHATSAPP_ES_CONFIG_ID: import.meta.env.WHATSAPP_ES_CONFIG_ID,
     NFSE_SIMULATION: import.meta.env.NFSE_SIMULATION,
     ASAAS_PREVIEW: import.meta.env.ASAAS_PREVIEW,
+    ASAAS_API_KEY: import.meta.env.ASAAS_API_KEY,
+    ASAAS_BASE_URL: import.meta.env.ASAAS_BASE_URL,
     WEB_PUSH_PUBLIC_KEY: import.meta.env.WEB_PUSH_PUBLIC_KEY,
     WEB_PUSH_PRIVATE_KEY: import.meta.env.WEB_PUSH_PRIVATE_KEY,
   });

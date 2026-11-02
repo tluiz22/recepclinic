@@ -17,7 +17,18 @@
 > com `clinic_id` (fora `app.suspension_free_tables()`: billing_*, clinic_suspensions, registros e push) e na própria
 > `clinics`; recusa a gravação de login da clínica (não o Suporte) na clínica suspensa; `clinic_service` e service
 > role seguem. **Tabela nova com `clinic_id` precisa do gatilho** (o teste `suspensao-banco` confere). Arquivos do
-> Storage (logo) não entram. **Próximo: F12.4** (cliente e cobranças no Asaas sandbox): precisa da conta de testes.
+> Storage (logo) não entram.
+> **F12.4 feita** (`20261120120000_cobranca_asaas.sql`; itens 28 e 29): no aceite (modo automático), o servidor cria no
+> Asaas o cliente (procura pelo CNPJ/CPF; avisos do Asaas desligados), a assinatura (1º vencimento do contrato, ou hoje
+> se já passou) e a implantação **com vencimento no dia do aceite**; espelho em `billing_charges` (paga = CONFIRMED,
+> RECEIVED ou RECEIVED_IN_CASH); tudo idempotente pela referência externa. Falha fica no contrato e na trilha; o Suporte
+> tem "Tentar de novo"/"Atualizar do Asaas" na aba Faturamento. Assinatura mostra as Cobranças com "Pagar" (fatura do
+> Asaas). Inadimplência liberada: o banco exige cobrança do Asaas em aberto no 15º dia de atraso ou depois.
+> Variáveis: `ASAAS_API_KEY` e `ASAAS_BASE_URL` (sandbox ou produção); sem elas, a aba avisa "não configurado". Para
+> testar no local, copiar as duas do `.env.asaas-sandbox` para o `.env`. Código: `src/lib/asaas/billingApi.ts`,
+> `src/lib/data/billingAsaas.ts`, `platformBillingStore` em `platform.ts`. **Ficam para depois:** mudança de versão e
+> troca de modo de quem já tem assinatura (pula com aviso); cartão segue pela fatura do Asaas (F12.8). **Próximo:
+> F12.5** (webhook, fila de eventos, conciliação).
 > **Ordem decidida (cliente, 30/out):** cobrança primeiro, até cobrar a clínica piloto em produção, **só com aviso por
 > e-mail**: F12.2b, F12.3, F12.3b, F12.4 a F12.8 e F12.11 (itens 18 a 26 da seção 11). Depois: F12.9 (decisão 11.10),
 > F12.10 (Pix Automático) e a nota fiscal pelo Asaas (N0–N6). **Próximo:** validação da F12.2b no local e o OK para a
@@ -418,6 +429,11 @@ stateDiagram-v2
 28. **Inadimplência antes das cobranças.** **Decidido (cliente, 02/nov):** a F12.3 entrega os motivos administrativo e
     fim do contrato e todo o bloqueio; o motivo inadimplência fica pronto no banco, mas é recusado até a F12.4, quando o
     banco passa a conferir a cobrança vencida há 15 dias ou mais (modo automático). No modo manual, decidir depois.
+
+29. **Quando a cobrança nasce no Asaas.** **Decidido (cliente, 02/nov):** no aceite do contrato, sozinha: o sistema cria
+    o cliente, a assinatura (a partir do 1º vencimento do contrato) e a cobrança da implantação; falha fica na aba
+    Faturamento com "Tentar de novo". **A implantação é cobrada na hora: vence no dia do aceite** (substitui o
+    "vencimento que o Suporte informar" da decisão 11.8).
 
 ## 12. Roadmap
 

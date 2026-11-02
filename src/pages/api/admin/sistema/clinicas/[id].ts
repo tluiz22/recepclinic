@@ -17,6 +17,7 @@ import { createInfoRequest, markInfoRequestReviewed, resendInvitation, setClinic
 import { releaseClinicSuspension, suspendClinic } from "../../../../../lib/data/suspension";
 import { onboardingDeps } from "../../../../../lib/data/onboardingDeps";
 import { isFeatureKey } from "../../../../../lib/features";
+import { syncContractNow } from "../../../../../lib/data/billingAsaasDeps";
 import { smtpSender } from "../../../../../lib/email";
 import { platformEnv } from "../../../../../lib/env";
 import { formChecked, formOptionalText, formText } from "../../../../../lib/forms";
@@ -30,7 +31,8 @@ import { clinicPlan, PLAN_LABELS } from "../../../../../lib/plans";
 // a implantação (F8.2b); cadastrar ou alterar a conta de cobrança (F12.1,
 // aba Faturamento); rascunho, ativação e descarte do contrato (F12.2); aviso
 // por e-mail da nova versão com aceite tácito, na ativação ou de novo (F12.2b);
-// suspender por um motivo e liberar um motivo (F12.3).
+// suspender por um motivo e liberar um motivo (F12.3); sincronizar o contrato
+// vigente com o Asaas (F12.4).
 export const POST: APIRoute = async (context) => {
   const { request, cookies, locals, params, url } = context;
   const clinicId = params.id!;
@@ -39,7 +41,7 @@ export const POST: APIRoute = async (context) => {
   // Erro ao devolver: volta à conferência, com o comentário marcado.
   const billingPage = `${page}?tab=faturamento`;
   const acao = formText(form, "acao");
-  const failureTo = ["devolver_agenda", "autorizar_carga", "desfazer_carga"].includes(acao) ? `${page}/agenda-atual` : acao === "conta_cobranca" || acao.startsWith("contrato_") || acao === "suspender" || acao === "liberar_suspensao" ? billingPage : page;
+  const failureTo = ["devolver_agenda", "autorizar_carga", "desfazer_carga"].includes(acao) ? `${page}/agenda-atual` : acao === "conta_cobranca" || acao.startsWith("contrato_") || acao === "asaas_sincronizar" || acao === "suspender" || acao === "liberar_suspensao" ? billingPage : page;
   const db = createUserClient(request, cookies);
 
   return runFormAction(
@@ -181,6 +183,13 @@ export const POST: APIRoute = async (context) => {
         case "contrato_descartar":
           await discardBillingContractDraft(db, clinicId);
           return { redirectTo: billingPage, message: "Rascunho do contrato descartado." };
+        case "asaas_sincronizar": {
+          const contract = (await listBillingContracts(db, clinicId)).find((c) => c.status === "active");
+          if (!contract) throw new DataError("not_found", "Asaas: não há contrato vigente");
+          const sync = await syncContractNow(contract.id);
+          if (sync.status === "failed") throw new DataError("unexpected", `Asaas: ${sync.reason}`);
+          return { redirectTo: billingPage, message: sync.status === "synced" ? "Cobranças atualizadas do Asaas." : `Nada a fazer no Asaas: ${sync.reason}.` };
+        }
         case "suspender":
           await suspendClinic(db, clinicId, {
             reason: formText(form, "suspension_reason"),

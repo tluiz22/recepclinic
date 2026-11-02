@@ -6,17 +6,20 @@
 // ativa; mudança = nova versão) e as versões. F12.2b: a situação do aceite,
 // o aviso de 30 dias na mudança aceita pelo uso e o reenvio do e-mail com os
 // novos termos. F12.3: a suspensão por motivos (SupportSuspensionCard).
+// F12.4: cobrança no Asaas (ids, sincronização, erro) e as cobranças.
 // Cobranças entram nas próximas fases.
 import Badge from "../config/Badge.astro";
 import Card from "../config/Panel.astro";
 import ConfirmDeleteDialog from "../ConfirmDeleteDialog.astro";
 import BillingTrail from "./BillingTrail.astro";
 import ContractAcceptanceInfo from "./ContractAcceptanceInfo.astro";
+import ChargesList from "./ChargesList.astro";
 import ContractTerms from "./ContractTerms.astro";
 import SupportSuspensionCard from "./SupportSuspensionCard.astro";
 import { CHECK, CHOICE, HINT, INPUT, LABEL, LEGEND, PRIMARY_BUTTON, SECONDARY_BUTTON } from "../config/formStyles";
 import { BILLING_CONTRACT_TERMS_VERSION } from "../../../lib/billingContractText";
 import { formatCalendarDate, formatInstant, todayIn } from "../../../lib/clinicTime";
+import { platformEnv } from "../../../lib/env";
 import { loadActorLabels } from "../../../lib/data/agenda/trail";
 import {
   BILLING_MODES,
@@ -26,6 +29,7 @@ import {
   getBillingAccount,
   getDefaultInvoicePrice,
   listBillingAudit,
+  listBillingCharges,
   listBillingContracts,
   noticeStartDate,
   PAYMENT_METHODS,
@@ -49,12 +53,16 @@ interface Props {
 }
 
 const { db, clinicId, timezone, suggestedEmail, reference, invoicing } = Astro.props;
-const [account, audit, contracts, defaultPrice] = await Promise.all([
+const [account, audit, contracts, defaultPrice, charges] = await Promise.all([
   getBillingAccount(db, clinicId),
   listBillingAudit(db, clinicId),
   listBillingContracts(db, clinicId),
   getDefaultInvoicePrice(db),
+  listBillingCharges(db, clinicId),
 ]);
+// F12.4: ambiente do Asaas (sandbox ou produção), ou sem Asaas.
+const asaasEnv = platformEnv().asaas;
+const asaasLabel = !asaasEnv ? "não configurado neste ambiente" : asaasEnv.baseUrl.includes("sandbox") ? "sandbox (testes)" : "produção";
 const actors = await loadActorLabels(db, clinicId, [...audit.map((a) => a.actorId), ...contracts.map((c) => c.acceptedBy)]);
 const action = `/api/admin/sistema/clinicas/${clinicId}`;
 const H2 = "font-display text-[17px] leading-tight font-bold text-ink sm:text-lg";
@@ -121,6 +129,56 @@ const form = {
                 </button>
               </form>
             )}
+          </div>
+        </Card>
+      )
+    }
+
+    {
+      active && (
+        <Card>
+          <div class="flex flex-wrap items-center gap-2">
+            <h2 class={H2}>Cobrança no Asaas</h2>
+            {active.billingMode === "manual" ? (
+              <Badge>Modo manual</Badge>
+            ) : active.asaasSyncError ? (
+              <Badge variant="danger">Com erro</Badge>
+            ) : active.asaasSubscriptionId ? (
+              <Badge variant="success">Em dia</Badge>
+            ) : (
+              <Badge variant="warning">{active.acceptance === "pending" ? "Aguarda o aceite" : "Não criada"}</Badge>
+            )}
+          </div>
+          <p class="mt-1 text-sm text-ink-soft">
+            {active.billingMode === "manual"
+              ? "No manual, nada vai ao Asaas: o Suporte cobra por fora."
+              : "Criada sozinha no aceite do contrato: cliente, assinatura da mensalidade e a implantação, que vence no dia do aceite."}{" "}
+            Asaas: {asaasLabel}.
+          </p>
+          {active.billingMode === "asaas" && (
+            <>
+              <dl class="mt-2 grid gap-x-4 gap-y-1 text-sm sm:grid-cols-[160px_minmax(0,1fr)]">
+                <dt class="text-ink-soft">Cliente</dt>
+                <dd class="font-medium break-all text-ink">{account?.asaasCustomerId ?? "—"}</dd>
+                <dt class="text-ink-soft">Assinatura</dt>
+                <dd class="font-medium break-all text-ink">{active.asaasSubscriptionId ?? "—"}</dd>
+                <dt class="text-ink-soft">Última sincronização</dt>
+                <dd class="font-medium text-ink">{active.asaasSyncedAt ? formatInstant(active.asaasSyncedAt, timezone, "dd/MM/yyyy 'às' HH:mm") : "—"}</dd>
+              </dl>
+              {active.asaasSyncError && <p class="mt-2 text-sm text-can-800">Erro: {active.asaasSyncError}</p>}
+              {active.acceptance !== "pending" && (
+                <form method="POST" action={action} class="mt-3">
+                  <input type="hidden" name="acao" value="asaas_sincronizar" />
+                  <button type="submit" data-sending-label="Falando com o Asaas…" class={SECONDARY_BUTTON}>
+                    {active.asaasSubscriptionId && !active.asaasSyncError ? "Atualizar do Asaas" : "Tentar de novo"}
+                  </button>
+                </form>
+              )}
+            </>
+          )}
+          <h3 class="mt-4 text-sm font-semibold text-ink">Cobranças</h3>
+          <div class="mt-1">
+            <ChargesList charges={charges} timezone={timezone} internal />
           </div>
         </Card>
       )

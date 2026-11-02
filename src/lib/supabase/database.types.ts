@@ -254,13 +254,13 @@ isOneToOne: false
                   ]
                 },"billing_accounts": {
                   Row: {
-                    "clinic_id": string,"created_at": string,"finance_email": string,"finance_phone": string | null,"payer_document": string,"payer_name": string,"updated_at": string,"updated_by": string | null,"whatsapp_opt_in_at": string | null,"whatsapp_opt_in_by": string | null,"whatsapp_opt_in_version": string | null
+                    "asaas_customer_id": string | null,"clinic_id": string,"created_at": string,"finance_email": string,"finance_phone": string | null,"payer_document": string,"payer_name": string,"updated_at": string,"updated_by": string | null,"whatsapp_opt_in_at": string | null,"whatsapp_opt_in_by": string | null,"whatsapp_opt_in_version": string | null
                   }
                   Insert: {
-                    "clinic_id": string,"created_at"?: string,"finance_email": string,"finance_phone"?: string | null,"payer_document": string,"payer_name": string,"updated_at"?: string,"updated_by"?: string | null,"whatsapp_opt_in_at"?: string | null,"whatsapp_opt_in_by"?: string | null,"whatsapp_opt_in_version"?: string | null
+                    "asaas_customer_id"?: string | null,"clinic_id": string,"created_at"?: string,"finance_email": string,"finance_phone"?: string | null,"payer_document": string,"payer_name": string,"updated_at"?: string,"updated_by"?: string | null,"whatsapp_opt_in_at"?: string | null,"whatsapp_opt_in_by"?: string | null,"whatsapp_opt_in_version"?: string | null
                   }
                   Update: {
-                    "clinic_id"?: string,"created_at"?: string,"finance_email"?: string,"finance_phone"?: string | null,"payer_document"?: string,"payer_name"?: string,"updated_at"?: string,"updated_by"?: string | null,"whatsapp_opt_in_at"?: string | null,"whatsapp_opt_in_by"?: string | null,"whatsapp_opt_in_version"?: string | null
+                    "asaas_customer_id"?: string | null,"clinic_id"?: string,"created_at"?: string,"finance_email"?: string,"finance_phone"?: string | null,"payer_document"?: string,"payer_name"?: string,"updated_at"?: string,"updated_by"?: string | null,"whatsapp_opt_in_at"?: string | null,"whatsapp_opt_in_by"?: string | null,"whatsapp_opt_in_version"?: string | null
                   }
                   Relationships: [
                     {
@@ -290,15 +290,40 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
-                },"billing_contracts": {
+                },"billing_charges": {
                   Row: {
-                    "acceptance": string | null,"accepted_at": string | null,"accepted_by": string | null,"accepted_ip": unknown,"activated_at": string | null,"activated_by": string | null,"billing_mode": string,"clinic_id": string,"created_at": string,"created_by": string | null,"ends_on": string | null,"first_due_date": string,"id": string,"invoice_monthly_allowance": number | null,"invoice_unit_price_cents": number | null,"monthly_cents": number,"notes": string | null,"notice_sent_at": string | null,"payment_method": string | null,"plan_snapshot": NonNullable<Json>,"replaces_contract_id": string | null,"setup_cents": number,"starts_on": string,"status": string,"terms_version": string | null,"updated_at": string,"version": number | null
+                    "asaas_payment_id": string | null,"billing_type": string | null,"clinic_id": string,"contract_id": string | null,"created_at": string,"due_date": string,"id": string,"invoice_url": string | null,"kind": string,"last_synced_at": string | null,"origin": string,"paid_at": string | null,"raw_status": string | null,"status": string,"updated_at": string,"value_cents": number
                   }
                   Insert: {
-                    "acceptance"?: string | null,"accepted_at"?: string | null,"accepted_by"?: string | null,"accepted_ip"?: unknown,"activated_at"?: string | null,"activated_by"?: string | null,"billing_mode": string,"clinic_id": string,"created_at"?: string,"created_by"?: string | null,"ends_on"?: string | null,"first_due_date": string,"id"?: string,"invoice_monthly_allowance"?: number | null,"invoice_unit_price_cents"?: number | null,"monthly_cents": number,"notes"?: string | null,"notice_sent_at"?: string | null,"payment_method"?: string | null,"plan_snapshot"?: NonNullable<Json>,"replaces_contract_id"?: string | null,"setup_cents"?: number,"starts_on": string,"status"?: string,"terms_version"?: string | null,"updated_at"?: string,"version"?: number | null
+                    "asaas_payment_id"?: string | null,"billing_type"?: string | null,"clinic_id": string,"contract_id"?: string | null,"created_at"?: string,"due_date": string,"id"?: string,"invoice_url"?: string | null,"kind": string,"last_synced_at"?: string | null,"origin"?: string,"paid_at"?: string | null,"raw_status"?: string | null,"status": string,"updated_at"?: string,"value_cents": number
                   }
                   Update: {
-                    "acceptance"?: string | null,"accepted_at"?: string | null,"accepted_by"?: string | null,"accepted_ip"?: unknown,"activated_at"?: string | null,"activated_by"?: string | null,"billing_mode"?: string,"clinic_id"?: string,"created_at"?: string,"created_by"?: string | null,"ends_on"?: string | null,"first_due_date"?: string,"id"?: string,"invoice_monthly_allowance"?: number | null,"invoice_unit_price_cents"?: number | null,"monthly_cents"?: number,"notes"?: string | null,"notice_sent_at"?: string | null,"payment_method"?: string | null,"plan_snapshot"?: NonNullable<Json>,"replaces_contract_id"?: string | null,"setup_cents"?: number,"starts_on"?: string,"status"?: string,"terms_version"?: string | null,"updated_at"?: string,"version"?: number | null
+                    "asaas_payment_id"?: string | null,"billing_type"?: string | null,"clinic_id"?: string,"contract_id"?: string | null,"created_at"?: string,"due_date"?: string,"id"?: string,"invoice_url"?: string | null,"kind"?: string,"last_synced_at"?: string | null,"origin"?: string,"paid_at"?: string | null,"raw_status"?: string | null,"status"?: string,"updated_at"?: string,"value_cents"?: number
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "billing_charges_clinic_id_fkey"
+      columns: ["clinic_id"]
+isOneToOne: false
+      referencedRelation: "clinics"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "billing_charges_contract_id_fkey"
+      columns: ["contract_id"]
+isOneToOne: false
+      referencedRelation: "billing_contracts"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"billing_contracts": {
+                  Row: {
+                    "acceptance": string | null,"accepted_at": string | null,"accepted_by": string | null,"accepted_ip": unknown,"activated_at": string | null,"activated_by": string | null,"asaas_subscription_id": string | null,"asaas_sync_error": string | null,"asaas_synced_at": string | null,"billing_mode": string,"clinic_id": string,"created_at": string,"created_by": string | null,"ends_on": string | null,"first_due_date": string,"id": string,"invoice_monthly_allowance": number | null,"invoice_unit_price_cents": number | null,"monthly_cents": number,"notes": string | null,"notice_sent_at": string | null,"payment_method": string | null,"plan_snapshot": NonNullable<Json>,"replaces_contract_id": string | null,"setup_cents": number,"starts_on": string,"status": string,"terms_version": string | null,"updated_at": string,"version": number | null
+                  }
+                  Insert: {
+                    "acceptance"?: string | null,"accepted_at"?: string | null,"accepted_by"?: string | null,"accepted_ip"?: unknown,"activated_at"?: string | null,"activated_by"?: string | null,"asaas_subscription_id"?: string | null,"asaas_sync_error"?: string | null,"asaas_synced_at"?: string | null,"billing_mode": string,"clinic_id": string,"created_at"?: string,"created_by"?: string | null,"ends_on"?: string | null,"first_due_date": string,"id"?: string,"invoice_monthly_allowance"?: number | null,"invoice_unit_price_cents"?: number | null,"monthly_cents": number,"notes"?: string | null,"notice_sent_at"?: string | null,"payment_method"?: string | null,"plan_snapshot"?: NonNullable<Json>,"replaces_contract_id"?: string | null,"setup_cents"?: number,"starts_on": string,"status"?: string,"terms_version"?: string | null,"updated_at"?: string,"version"?: number | null
+                  }
+                  Update: {
+                    "acceptance"?: string | null,"accepted_at"?: string | null,"accepted_by"?: string | null,"accepted_ip"?: unknown,"activated_at"?: string | null,"activated_by"?: string | null,"asaas_subscription_id"?: string | null,"asaas_sync_error"?: string | null,"asaas_synced_at"?: string | null,"billing_mode"?: string,"clinic_id"?: string,"created_at"?: string,"created_by"?: string | null,"ends_on"?: string | null,"first_due_date"?: string,"id"?: string,"invoice_monthly_allowance"?: number | null,"invoice_unit_price_cents"?: number | null,"monthly_cents"?: number,"notes"?: string | null,"notice_sent_at"?: string | null,"payment_method"?: string | null,"plan_snapshot"?: NonNullable<Json>,"replaces_contract_id"?: string | null,"setup_cents"?: number,"starts_on"?: string,"status"?: string,"terms_version"?: string | null,"updated_at"?: string,"version"?: number | null
                   }
                   Relationships: [
                     {
@@ -1804,6 +1829,21 @@ isOneToOne: false
                            },
 "begin_nfse_issue":
 { Args: { "p_payment_id": string }; Returns: Json
+                           },
+"billing_can_suspend_for_non_payment":
+{ Args: { "p_clinic_id": string }; Returns: boolean
+                           },
+"billing_link_asaas_customer":
+{ Args: { "p_clinic_id": string,"p_customer_id": string }; Returns: undefined
+                           },
+"billing_link_asaas_subscription":
+{ Args: { "p_contract_id": string,"p_subscription_id": string }; Returns: undefined
+                           },
+"billing_record_asaas_sync":
+{ Args: { "p_contract_id": string,"p_error": string }; Returns: undefined
+                           },
+"billing_upsert_asaas_charge":
+{ Args: { "p_billing_type": string,"p_contract_id": string,"p_due_date": string,"p_invoice_url": string,"p_kind": string,"p_paid_at": string,"p_payment_id": string,"p_raw_status": string,"p_value_cents": number }; Returns: undefined
                            },
 "book_group_session":
 { Args: { "p_agenda_id": string,"p_booking_channel": Database["public"]['Enums']["action_channel"],"p_location_id": string,"p_patient_id": string,"p_scheduled_at": string,"p_service_id": string,"p_trail"?: Json }; Returns: string

@@ -10,7 +10,8 @@ import { CHECK, CHOICE, DANGER_BUTTON, HINT, INPUT, LABEL, LEGEND, SECONDARY_BUT
 import { formatInstant } from "../../../lib/clinicTime";
 import { loadActorLabels } from "../../../lib/data/agenda/trail";
 import type { DbClient } from "../../../lib/data/clients";
-import { describeReasons, listClinicSuspensions, MANUAL_SUSPENSION_REASONS, SUSPENSION_REASONS } from "../../../lib/data/suspension";
+import { canSuspendForNonPayment } from "../../../lib/data/billing";
+import { describeReasons, listClinicSuspensions, MANUAL_SUSPENSION_REASONS, SUSPENSION_REASONS, type SuspensionReason } from "../../../lib/data/suspension";
 
 interface Props {
   db: DbClient;
@@ -19,15 +20,18 @@ interface Props {
 }
 
 const { db, clinicId, timezone } = Astro.props;
-const [suspensions, { data: clinic }, { data: connection }] = await Promise.all([
+const [suspensions, { data: clinic }, { data: connection }, nonPayment] = await Promise.all([
   listClinicSuspensions(db, clinicId),
   db.from("clinics").select("status, status_before_suspension").eq("id", clinicId).maybeSingle(),
   db.from("whatsapp_connections").select("status, coexistence").eq("clinic_id", clinicId).maybeSingle(),
+  canSuspendForNonPayment(db, clinicId),
 ]);
 const actors = await loadActorLabels(db, clinicId, suspensions.flatMap((s) => [s.createdBy, s.releasedBy]));
 const active = suspensions.filter((s) => s.releasedAt === null);
 const released = suspensions.filter((s) => s.releasedAt !== null).slice(0, 10);
-const available = MANUAL_SUSPENSION_REASONS.filter((reason) => !active.some((s) => s.reason === reason));
+// Inadimplência só com uma cobrança do Asaas em aberto no 15º dia de atraso ou depois (item 20; o banco confere).
+const reasons: SuspensionReason[] = nonPayment ? ["non_payment", ...MANUAL_SUSPENSION_REASONS] : MANUAL_SUSPENSION_REASONS;
+const available = reasons.filter((reason) => !active.some((s) => s.reason === reason));
 // Item 23: número só na API (sem o app), ninguém recebe as mensagens na suspensão.
 const noApp = connection?.status === "connected" && !connection.coexistence;
 const action = `/api/admin/sistema/clinicas/${clinicId}`;
@@ -102,7 +106,7 @@ const before = clinic?.status_before_suspension === "onboarding" ? "em implanta�
               </label>
             ))}
           </div>
-          <p class={HINT}>Inadimplência entra com as cobranças, a partir do 15º dia de atraso.</p>
+          {!nonPayment && <p class={HINT}>Inadimplência só aparece com uma cobrança em aberto a partir do 15º dia de atraso.</p>}
         </fieldset>
         <div>
           <label for="suspension_note" class={LABEL}>
