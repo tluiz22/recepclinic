@@ -1,8 +1,8 @@
 # Evolução do assistente (EA): jornada inteligente, atendimento humano e taxa de resolução
 
-> **Retomar daqui (02/nov/2026).** Auditoria, decisões e código feitos na branch **`assistente`** (só local, sem
-> push), com os testes passando. Próximo: o cliente valida; com o OK, trazer a `main`, rodar os testes, juntar na
-> `main` (staging: `supabase db push` da migração `20261116120000`) e, depois, produção com autorização.
+> **Retomar daqui (02/nov/2026).** Na `main` e no **staging** (branch `assistente` juntada e apagada; migração
+> `20261116120000` aplicada e conferida no staging: 6 clínicas com o bot, todas com a BC; evento `info` aceito).
+> Próximo: o cliente valida no staging; **produção só com autorização**, pelo `producao.md` (migração antes do push).
 
 Pedido do cliente em 02/nov/2026: evoluir o bot em três frentes integradas, sem criar outro assistente, outro
 reconhecedor nem outra base: (1) entrada com texto livre ou menu; (2) pedido de recepção que tenta resolver antes

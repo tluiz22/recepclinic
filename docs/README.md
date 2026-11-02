@@ -22,8 +22,8 @@
 > - **Ajustes da produção (C1–C16) e revisão da jornada do bot:** todos na produção; nada pendente. Decisões da
 >   revisão no [`historico.md`](historico.md) (busca "Revisão da jornada do bot").
 > - **Evolução do assistente** ([`evolucao-assistente.md`](evolucao-assistente.md)): texto livre na entrada, motivo antes
->   da recepção e taxa de resolução sem a recepção. Código na branch **`assistente`** (só local), testes passando.
->   Próximo: o cliente valida; com o OK, juntar na `main` e aplicar a migração no staging.
+>   da recepção e taxa de resolução sem a recepção. **Na `main` e no staging (02/nov)**, migração `20261116120000`
+>   aplicada no staging. Próximo: o cliente valida no staging; produção só com autorização (migração antes do push).
 > - **Faturamento do SaaS:** F12.1 e F12.2 validadas no local. Próximo: **F12.2b** (aceite do contrato e aviso de 30
 >   dias); texto do contrato com o advogado. Retomar pelo `planejamento-faturamento-saas.md` **na branch**.
 > - **NFS-e pelo Asaas** (`planejamento-nfse-asaas.md`, seção 13): N0; formulário BaaS enviado (30/out). Aguarda

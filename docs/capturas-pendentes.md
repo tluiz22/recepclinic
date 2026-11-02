@@ -11,4 +11,3 @@ a captura e o motivo, avisar o cliente no fim da etapa e esperar a autorização
 
 - `config-agendas` — o botão "Nova agenda" (ou "Nova agenda da equipe (exames)") agora aparece também quando só falta a agenda da equipe; o link discreto saiu (02/11/2026)
 - `config-horarios` — com mais de uma agenda, nenhuma vem escolhida; o roteiro agora abre com `?agenda=` (a Helena do seed) (02/11/2026)
-- `config-mensagens` — o texto padrão das boas-vindas do bot passou a convidar o paciente a escrever o que precisa (evolução do assistente) (02/11/2026)
