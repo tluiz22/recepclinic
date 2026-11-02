@@ -194,6 +194,29 @@ async function logInfo(b: Bot, sessionId: string, step: string, metadata: Record
 }
 
 const bookId = (book: Book) => `${BOOK_PREFIX}${book.category}${book.serviceId ? `_${book.serviceId}` : ""}`;
+/** "Agendar Atendimento" sem serviço: pergunta o tipo. */
+const BOOK_ANY_ID = `${BOOK_PREFIX}any`;
+const BOOK_ID = /^kb_book_(consultation|return_visit|exam|any)(?:_(.+))?$/;
+const BOOK_TYPES = ["consultation", "return_visit", "exam"] as const;
+
+/** Tipos que a clínica marca pelo bot (serviço ativo no catálogo). */
+async function bookTypes(b: Bot): Promise<(typeof BOOK_TYPES)[number][]> {
+  const services = (await b.catalog()).services;
+  return BOOK_TYPES.filter((category) => services.some((s) => s.category === category));
+}
+
+async function startBookingOf(b: Bot, category: (typeof BOOK_TYPES)[number], serviceId?: string): Promise<void> {
+  if (category === "return_visit") return startReturn(b);
+  return startBooking(b, category, { serviceId });
+}
+
+/** "Agendar Atendimento": um tipo só vai direto; mais de um, Consulta · Retorno · Exame (só os que a clínica tem). */
+async function askBookType(b: Bot): Promise<void> {
+  const types = await bookTypes(b);
+  if (types.length === 1) return startBookingOf(b, types[0]);
+  if (!types.length) return showMenu(b);
+  await sendButtons(b, "bot_kb_book_type", t.KB_BOOK_TYPE_QUESTION, types.map((category) => t.button(bookId({ category }), t.KB_BOOK_TYPE_LABELS[category])));
+}
 
 /** Botões do "Resolvido?": no pedido de recepção, a recepção em 2º; fora dele, o menu (e "Marcar" quando a resposta leva a uma marcação). */
 async function confirmButtons(b: Bot, origin: ConfirmOrigin, book: Book | undefined) {
@@ -201,8 +224,8 @@ async function confirmButtons(b: Bot, origin: ConfirmOrigin, book: Book | undefi
   const reception = b.receptionAvailable ? [t.button(t.KB_CONFIRM_IDS.reception, t.KB_RECEPTION_LABEL)] : [];
   const menu = t.button(t.KB_CONFIRM_IDS.menu, t.KB_MENU_LABEL);
   if (origin === "reception") {
-    const consultations = (await b.catalog()).services.some((s) => s.category === "consultation");
-    const marcar = book ? [t.button(bookId(book), t.KB_BOOK)] : consultations ? [t.button(bookId({ category: "consultation" }), t.KB_BOOK_CONSULTATION)] : [];
+    // Serviço citado na resposta: abre ele; senão, "Agendar Atendimento" pergunta o tipo (cliente, 02/nov/2026).
+    const marcar = book ? [t.button(bookId(book), t.KB_BOOK)] : (await bookTypes(b)).length ? [t.button(BOOK_ANY_ID, t.KB_BOOK)] : [];
     return [resolved, ...reception, ...marcar];
   }
   if (book) return [resolved, t.button(bookId(book), t.KB_BOOK), menu];
@@ -414,10 +437,12 @@ export async function performTakeover(b: Bot, action: unknown): Promise<void> {
 export async function handleKnowledgeReply(b: Bot, selection: Selection): Promise<"handled" | "redispatch" | "pass"> {
   const pending = ((b.convo.context ?? {}) as Record<string, unknown>)[CONFIRM_KEY] as PendingConfirm | undefined;
   if (pending && (await handleConfirmReply(b, pending, selection)) === "handled") return "handled";
-  if (selection.id?.startsWith(BOOK_PREFIX)) {
-    const [category, serviceId] = selection.id.slice(BOOK_PREFIX.length).split("_");
-    if (category === "return_visit") await startReturn(b);
-    else await startBooking(b, category === "exam" ? "exam" : "consultation", { serviceId });
+  const book = selection.id?.match(BOOK_ID);
+  if (book) {
+    // "return_visit" tem "_": o id é lido inteiro (antes, o retorno abria a consulta).
+    const [, category, serviceId] = book;
+    if (category === "any") await askBookType(b);
+    else await startBookingOf(b, category as (typeof BOOK_TYPES)[number], serviceId);
     return "handled";
   }
   const context = (b.convo.context ?? {}) as Record<string, unknown>;

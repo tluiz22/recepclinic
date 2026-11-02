@@ -465,7 +465,8 @@ export const BLOCKED_RECEPTION_WILL_CONTACT = "Sua conversa está com a recepç�
 
 export const KB_DID_YOU_MEAN = "Você quis dizer…?";
 export const KB_NONE_OF_THESE = "Nenhuma destas";
-export const KB_BOOK = "Marcar";
+/** Botão de agendar depois de uma resposta da base (cliente, 02/nov/2026: "Agendar Atendimento", no lugar de "Marcar"). */
+export const KB_BOOK = "Agendar Atendimento";
 /** Encaixe pela base sem o item Lista de espera (cliente, 31/out/2026). */
 export const KB_WAITLIST_RECEPTION = "O encaixe é combinado com a recepção. Você quer falar com a recepção?";
 export const KB_NO_APPOINTMENTS = "Não encontramos atendimento marcado para este número.";
@@ -490,4 +491,6 @@ export const KB_CONFIRM_IDS = { resolved: "kb_resolved", reception: "kb_receptio
 export const KB_RESOLVED_LABEL = "Resolvido";
 export const KB_RECEPTION_LABEL = "Falar com a recepção";
 export const KB_MENU_LABEL = "Voltar ao menu";
-export const KB_BOOK_CONSULTATION = "Marcar consulta";
+/** "Agendar Atendimento" sem serviço na resposta: o tipo, só entre o que a clínica marca pelo bot (cliente, 02/nov/2026). */
+export const KB_BOOK_TYPE_QUESTION = "O que você quer agendar?";
+export const KB_BOOK_TYPE_LABELS = { consultation: "Consulta", return_visit: "Retorno", exam: "Exame" } as const;

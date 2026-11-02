@@ -184,8 +184,8 @@ describe("no menu", () => {
     await reset(phone);
     const reply = await say(phone, "vocês fazem exame?");
     expect(bodies(reply)).toEqual(["Sim, fazemos *Exame*.", RESOLVED_Q]);
-    expect(titles(reply)).toEqual(["Resolvido", "Marcar", "Voltar ao menu"]);
-    const booking = await say(phone, { id: optionId(reply, "Marcar") });
+    expect(titles(reply)).toEqual(["Resolvido", "Agendar Atendimento", "Voltar ao menu"]);
+    const booking = await say(phone, { id: optionId(reply, "Agendar Atendimento") });
     expect(booking[0].body).toBe("Vamos marcar *Exame*.");
   });
 });
@@ -440,7 +440,7 @@ describe("pedido de recepção: o motivo antes de transferir (EA)", () => {
     const reply = await say(phone, "quanto custa a consulta?");
     expect(reply[0].body).toContain("R$ 300,00");
     expect(reply.at(-1)!.body).toBe(AFTER_RECEPTION);
-    expect(titles(reply)).toEqual(["Resolvido", "Falar com a recepção", "Marcar consulta"]);
+    expect(titles(reply)).toEqual(["Resolvido", "Falar com a recepção", "Agendar Atendimento"]);
     await say(phone, { id: "kb_resolved" });
     expect((await handoffOf(phone)).human_handoff).toBe(false);
     expect(await funnel(phone, "handoff")).toEqual([]);
@@ -464,14 +464,30 @@ describe("pedido de recepção: o motivo antes de transferir (EA)", () => {
     expect((await funnel(phone, "handoff"))[0].metadata).toMatchObject({ origin: "menu" });
   });
 
-  it("situação A, \"Marcar consulta\": a marcação começa e a dúvida conta como resolvida", async () => {
+  it("situação A, \"Agendar Atendimento\": pergunta o tipo (só os da clínica); a marcação começa e a dúvida conta como resolvida", async () => {
     const phone = "+5584991337074";
     await say(phone, "Oi");
     await say(phone, "atendente");
     const reply = await say(phone, "quanto custa a consulta?");
-    const booking = await say(phone, { id: optionId(reply, "Marcar consulta") });
+    const type = await say(phone, { id: optionId(reply, "Agendar Atendimento") });
+    expect(type.at(-1)).toMatchObject({ kind: "buttons", body: "O que você quer agendar?" });
+    expect(titles(type)).toEqual(["Consulta", "Retorno", "Exame"]);
+    const booking = await say(phone, { id: optionId(type, "Consulta") });
     expect(booking.at(-1)!.body).toBe("Com qual profissional?");
     expect((await funnel(phone, "info")).at(-1)).toMatchObject({ step: "resolved", metadata: { via: "book" } });
+  });
+
+  it("\"Agendar Atendimento\" › Retorno abre o retorno (antes, o id do retorno abria a consulta)", async () => {
+    const phone = "+5584991337082";
+    await say(phone, "Oi");
+    await say(phone, "atendente");
+    const reply = await say(phone, "quanto custa a consulta?");
+    const type = await say(phone, { id: optionId(reply, "Agendar Atendimento") });
+    const ret = await say(phone, { id: optionId(type, "Retorno") });
+    // Número sem consulta anterior: a resposta de hoje do retorno, nada de consulta.
+    expect(ret.map((m) => m.body).join("\n")).not.toContain("Com qual profissional?");
+    const { data } = await adminClient().from("bot_funnel_events").select("flow").eq("clinic_id", f.clinicId).eq("contact_phone", phone).eq("step", "started").neq("flow", "info");
+    expect(data!.map((d) => d.flow)).toEqual(["return_booking"]);
   });
 
   it("situação B: sem resposta segura, transfere dizendo isso, com o motivo como assunto", async () => {

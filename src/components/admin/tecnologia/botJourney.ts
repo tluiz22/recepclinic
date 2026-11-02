@@ -255,7 +255,7 @@ export const JOURNEY: JourneySection[] = [
                     [
                       "Sim",
                       [
-                        bot("Responde (ou abre o caminho: marcar, remarcar, cancelar) e pergunta \"Espero ter ajudado! 😊 Conseguiu resolver ou ainda quer falar com a recepção?\"", "Botões: Resolvido · Falar com a recepção · Marcar consulta (se a clínica marca pelo bot). No meio de uma marcação, ela para (pediu a recepção)."),
+                        bot("Responde (ou abre o caminho: marcar, remarcar, cancelar) e pergunta \"Espero ter ajudado! 😊 Conseguiu resolver ou ainda quer falar com a recepção?\"", "Botões: Resolvido · Falar com a recepção · Agendar Atendimento (pergunta Consulta · Retorno · Exame, só o que a clínica marca pelo bot; um tipo só vai direto; serviço citado na resposta abre ele). No meio de uma marcação, ela para (pediu a recepção)."),
                         branch(
                           ["Resolvido", [bot("\"Que bom! Se precisar, é só escrever por aqui.\"", "Sem pendência para a recepção; conta como resolvida nas Métricas.")]],
                           ["Falar com a recepção", [bot("Transfere com o motivo como assunto", "Não pergunta o assunto de novo.")]],
@@ -301,7 +301,7 @@ export const JOURNEY: JourneySection[] = [
           [
             bot(
               "Fora de um caminho: responde com os dados da clínica e pergunta \"Isso resolve sua dúvida?\" com Resolvido · Voltar ao menu · Falar com a recepção",
-              "Quando a resposta leva a uma marcação (\"vocês fazem exame?\"): Resolvido · Marcar · Voltar ao menu. \"Obrigado\" digitado vale como Resolvido; \"Obrigado\" sozinho (cortesia) só responde. Só com \"Resolvido\" a dúvida conta como resolvida nas Métricas.",
+              "Quando a resposta leva a uma marcação (\"vocês fazem exame?\"): Resolvido · Agendar Atendimento · Voltar ao menu. \"Obrigado\" digitado vale como Resolvido; \"Obrigado\" sozinho (cortesia) só responde. Só com \"Resolvido\" a dúvida conta como resolvida nas Métricas.",
             ),
             bot("No meio de um caminho: responde e repete a pergunta em que a pessoa estava", "A marcação continua de onde estava. \"Quanto custa?\" depois de escolher o serviço: o valor dele."),
             bot("Pedido de marcar, remarcar, cancelar ou confirmar: abre esse caminho", "Marcar consulta ou exame abre o submenu Consultas ou Exames (marcar, retorno, remarcar, cancelar, encaixe). Remarcar e cancelar como no item 4; nada de data digitada. Encaixe, adiantar ou antecipar: o Encaixe ou antecipar (sem a Lista de espera, pergunta se quer falar com a recepção)."),

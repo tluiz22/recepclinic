@@ -91,7 +91,7 @@ Decisões do cliente:
 4. **Direto para a recepção (situação C):** entradas da BC com resposta do tipo "recepção" (o Suporte cadastra
    reclamação, reembolso etc.), mais o pedido repetido.
 5. **Resposta no pedido de recepção:** a resposta + "Espero ter ajudado! 😊 Conseguiu resolver ou ainda quer falar
-   com a recepção?" [Resolvido] [Falar com a recepção] [Marcar consulta, se a clínica marca pelo bot]. Resolvido →
+   com a recepção?" [Resolvido] [Falar com a recepção] [Agendar Atendimento]. Resolvido →
    "Que bom! Se precisar, é só escrever por aqui.", sem pendência.
 6. **Fora do pedido de recepção**, fora de um fluxo: a resposta da BC vem com "Isso resolve sua dúvida?"
    [Resolvido] [Voltar ao menu] [Falar com a recepção], no lugar do menu repetido. Dentro de um fluxo, como hoje.
@@ -100,6 +100,10 @@ Decisões do cliente:
    confirmação" à parte.
 9. **Tela:** bloco "Resolução sem a recepção" no topo da aba Agendamento digital (taxa, números, evolução por dia,
    tabela por tipo), fora do filtro de operação, com período e comparação. Sai o cartão "Precisaram da recepção".
+10. **"Agendar Atendimento"** (cliente, 02/nov/2026, na validação): no lugar de "Marcar consulta"/"Marcar" nos botões
+    depois da resposta. Sem serviço citado, pergunta "O que você quer agendar?" [Consulta] [Retorno] [Exame], só os
+    tipos que a clínica marca pelo bot (um tipo só: direto); com serviço citado, abre esse serviço. Corrigido junto: o
+    botão de retorno da BC (`kb_book_return_visit`) abria a consulta.
 
 ## 4. O que foi implementado (branch `assistente`, 02/nov/2026)
 
@@ -125,7 +129,7 @@ Decisões do cliente:
   (`withoutReceptionWords` + BC): segue direto. Sem a BC: o Sim/Não (digitado) e a transferência direta (menu), como antes.
 - Próxima mensagem (`router.ts`): toque, novo pedido ou áudio → transfere; texto → `handleReceptionReason`:
   - A (resposta segura): responde (ou abre o fluxo) e "Espero ter ajudado! 😊 …" [Resolvido] [Falar com a recepção]
-    [Marcar consulta]; no meio de um fluxo, ele é encerrado como "pediu a recepção".
+    [Agendar Atendimento]; no meio de um fluxo, ele é encerrado como "pediu a recepção".
   - B (não reconhecida ou empate): "Não encontrei uma informação segura…" + transferência.
   - C (entrada do tipo `reception`, cortesia, pergunta clínica com o aviso de saúde): transferência.
   - Transferido, o motivo vira o assunto (`setHandoffSubject`; a pergunta do assunto não se repete). Fora do horário
@@ -190,6 +194,6 @@ Decisões do cliente:
 - Com a conversa transferida, o bot fica pausado até "Devolver ao bot"/#bot (regra de antes): fora do horário, o
   paciente não usa o bot enquanto espera.
 - Dúvidas só entram na taxa a partir da implantação (antes não havia evento); nada é reclassificado para trás.
-- Resposta que leva a uma marcação, fora do pedido de recepção: [Resolvido] [Marcar] [Voltar ao menu] (3 botões no
+- Resposta que leva a uma marcação, fora do pedido de recepção: [Resolvido] [Agendar Atendimento] [Voltar ao menu] (3 botões no
   máximo); a recepção continua a um "atendente" digitado.
 - "Recepção assumiu" sem tentativa ligada conta como pedido de recepção.
