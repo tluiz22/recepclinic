@@ -11,3 +11,5 @@ a captura e o motivo, avisar o cliente no fim da etapa e esperar a autorização
 
 - `inicio` — a tela virou Meu dia (linha do dia, "Precisa de você", busca de paciente); o cartão "Comparecimento a registrar" saiu e o roteiro agora espera "Precisa de você" (02/11/2026)
 - `pacientes` — as abas viraram Todos, Responsáveis e Para contatar (com contador) (02/11/2026)
+- `resumo-do-dia` — a tela passou a se chamar Relatório do dia (título e abas); o nome na captura e no artigo muda (02/11/2026)
+- `agenda-dia` — cabeçalho novo: Bloquear, Mais (Bloqueios, Buscar paciente, Relatório do dia) e Marcar consulta; a busca saiu da barra (02/11/2026)

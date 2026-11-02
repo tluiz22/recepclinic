@@ -7,11 +7,15 @@
 // e a busca; no celular, a agenda e a busca ficam recolhidas. De 640 a
 // 1279px, a agenda e a busca vão para a segunda linha da barra (regressão de
 // 18/out, REG-01; cliente, 19/out/2026); numa linha só a partir de 1280px.
+// RX5 do redesign da Recepção (cliente, 02/nov/2026, RX-D6): no alto, Bloquear, "Mais" (Bloqueios, Buscar paciente e
+// Relatório do dia) e "+ Marcar consulta" em destaque; a busca de paciente sai da barra e vira item do "Mais"
+// (a tela da busca mantém o campo).
 import { currentPath, withReturn } from "../../../lib/returnPath";
 import Icon from "../Icon.astro";
 import Button from "../ui/Button.astro";
+import MoreMenu from "../ui/MoreMenu.astro";
 import SegmentedControl from "../ui/SegmentedControl.astro";
-import { CONTROL } from "../ui/styles";
+import { CONTROL, menuItemClass } from "../ui/styles";
 import { ALL_AGENDAS } from "../../../lib/agendaChoice";
 
 interface Props {
@@ -41,7 +45,10 @@ const here = currentPath(Astro.url);
 // uma busca nova feita na própria tela da busca mantém essa origem.
 const searchReturn = view === "busca" ? returnTo : here;
 const selectedName = agendas.find((agenda) => agenda.id === selectedAgendaId)?.name;
-const filtersLabel = agendas.length > 1 ? `${selectedName ?? "Todas as agendas"} · buscar paciente` : "Buscar paciente";
+const searching = view === "busca";
+const filtersLabel = searching ? (agendas.length > 1 ? `${selectedName ?? "Todas as agendas"} · buscar paciente` : "Buscar paciente") : (selectedName ?? "Todas as agendas");
+// Sem mais de uma agenda e fora da busca, não sobra nada na barra de filtros.
+const hasFilters = agendas.length > 1 || searching;
 ---
 
 <div class="flex flex-wrap items-end justify-between gap-x-4 gap-y-3">
@@ -50,11 +57,21 @@ const filtersLabel = agendas.length > 1 ? `${selectedName ?? "Todas as agendas"}
     {subtitle && <p class="mt-1 text-[15px] text-ink-soft first-letter:uppercase sm:text-base">{subtitle}</p>}
   </div>
   <div class="flex flex-wrap gap-2">
-    <Button variant="primary" href={withReturn(`/admin/agenda/marcar?date=${date}${selectedAgendaId ? `&agenda_id=${selectedAgendaId}` : ""}`, here)}>
-      <Icon name="plus" class="h-4 w-4" strokeWidth={2.4} /> Marcar
-    </Button>
     <Button href={withReturn(`/admin/agenda/bloquear?date=${date}${selectedAgendaId ? `&agenda=${selectedAgendaId}` : ""}`, here)}>Bloquear</Button>
-    <Button variant="quiet" href={withReturn("/admin/agenda/bloqueios", here)}>Bloqueios</Button>
+    <MoreMenu id="agenda-mais" label="Mais opções da Agenda" size="md">
+      <a href={withReturn("/admin/agenda/bloqueios", here)} class={menuItemClass()}>
+        <Icon name="calendar" class="h-4 w-4 shrink-0" strokeWidth={2} /> Bloqueios
+      </a>
+      <a href={`/admin/agenda/buscar${searchReturn ? `?volta=${encodeURIComponent(searchReturn)}` : ""}`} class={menuItemClass()}>
+        <Icon name="magnifying-glass" class="h-4 w-4 shrink-0" strokeWidth={2} /> Buscar paciente
+      </a>
+      <a href="/admin/consultas" class={menuItemClass()}>
+        <Icon name="check-circle" class="h-4 w-4 shrink-0" strokeWidth={2} /> Relatório do dia
+      </a>
+    </MoreMenu>
+    <Button variant="primary" href={withReturn(`/admin/agenda/marcar?date=${date}${selectedAgendaId ? `&agenda_id=${selectedAgendaId}` : ""}`, here)}>
+      <Icon name="plus" class="h-4 w-4" strokeWidth={2.4} /> Marcar consulta
+    </Button>
   </div>
 </div>
 
@@ -66,6 +83,7 @@ const filtersLabel = agendas.length > 1 ? `${selectedName ?? "Todas as agendas"}
   />
   <slot name="nav" />
 
+  {hasFilters && (
   <details data-agenda-filters open class="group rounded-xl border border-line bg-white sm:w-full sm:rounded-none sm:border-0 sm:bg-transparent xl:w-auto xl:min-w-0 xl:flex-1">
     <summary class="flex h-12 cursor-pointer list-none items-center justify-between gap-2 px-3.5 text-[15px] font-semibold text-ink sm:hidden [&::-webkit-details-marker]:hidden">
       <span class="inline-flex min-w-0 items-center gap-2">
@@ -100,6 +118,7 @@ const filtersLabel = agendas.length > 1 ? `${selectedName ?? "Todas as agendas"}
           </form>
         )
       }
+      {searching && (
       <form method="GET" action="/admin/agenda/buscar" role="search" class="flex min-w-0 gap-2 sm:ml-auto sm:min-w-56 sm:max-w-md sm:flex-1 sm:gap-1.5">
         {searchReturn && <input type="hidden" name="volta" value={searchReturn} />}
         <label for="patient_search" class="sr-only">Atendimentos marcados de um paciente</label>
@@ -109,8 +128,10 @@ const filtersLabel = agendas.length > 1 ? `${selectedName ?? "Todas as agendas"}
         </div>
         <Button type="submit">Buscar</Button>
       </form>
+      )}
     </div>
   </details>
+  )}
 </div>
 
 <script>

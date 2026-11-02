@@ -136,8 +136,8 @@ const subtitle = !dated
       ...(tab === "resumo" ? [plural(activeOfDay, "atendimento", "atendimentos"), ...(canceledOfDay ? [plural(canceledOfDay, "cancelado", "cancelados")] : [])] : []),
     ].join(" · ");
 ---
-<AdminLayout title="Resumo do Dia" autoRefresh>
-  <PageHeader title="Resumo do Dia" subtitle={subtitle}>
+<AdminLayout title="Relatório do dia" autoRefresh>
+  <PageHeader title="Relatório do dia" subtitle={subtitle}>
     {tab === "resumo" && (
       <Button slot="actions" href={`/admin/agenda?date=${date}`}>
         Abrir na Agenda
@@ -145,7 +145,7 @@ const subtitle = !dated
     )}
   </PageHeader>
   <Tabs
-    label="Abas do Resumo do Dia"
+    label="Abas do Relatório do dia"
     class="mt-4"
     tabs={visible.map((t) => ({ label: t.label, href: tabHref(t.id), active: t.id === tab, ...tabCount[t.id] }))}
   />
