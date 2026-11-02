@@ -3,7 +3,7 @@ import { isNationalHoliday } from "../../holidays";
 import type { Enums } from "../../supabase/database.types";
 import type { DbClient } from "../clients";
 import { unwrap, unwrapAll, unwrapOne } from "../errors";
-import { computeFreeSlots, type BusyInterval, type FreeSlot, type SlotWindow } from "./freeSlots";
+import { computeFreeGaps, computeFreeSlots, type BusyInterval, type FreeGap, type FreeSlot, type SlotWindow } from "./freeSlots";
 
 // Horários livres por agenda, serviço, local e dia (F3.6a), lidos com o login
 // (ou a credencial do bot) de quem pergunta: o RLS limita às agendas que ele
@@ -536,6 +536,69 @@ export async function getFreeSlotsBefore(
   const result: FreeSlot[] = [];
   for (let date = firstDate; date <= lastDate && result.length < limit; date = addDays(date, 1)) {
     result.push(...slotsOn(plan, date, busy, holidays, now).filter(useful).slice(0, limit - result.length));
+  }
+  return result;
+}
+
+/**
+ * Lacunas livres de cada agenda num dia, para a linha "Livre · + Marcar" da Agenda › Dia (RX8; cliente, 02/nov/2026).
+ * Só leitura, com o login de quem olha (o RLS limita às agendas que ele vê). Regras: de hoje em diante; fora de
+ * feriado; só agenda ativa, nas janelas gerais do dia da semana (as de um serviço só, e as de turma, ficam de fora);
+ * ocupado = atendimentos ativos (sem exame, que corre em paralelo) e bloqueios, com o intervalo da agenda; a lacuna
+ * tem de caber o menor serviço individual ativo da agenda (exame não conta).
+ */
+export async function listFreeGaps(
+  db: DbClient,
+  clinicId: string,
+  { date, agendaIds, timeZone }: { date: string; agendaIds: string[]; timeZone: string },
+  now: Date = new Date(),
+): Promise<(FreeGap & { agendaId: string })[]> {
+  if (agendaIds.length === 0 || date < todayIn(timeZone, now) || isNationalHoliday(date)) return [];
+  const { start, end } = dayBounds(date, timeZone);
+  const [holidays, agendas, windows, services] = await Promise.all([
+    loadClinicHolidays(db, clinicId, date, date),
+    db.from("agendas").select("id, buffer_minutes").eq("clinic_id", clinicId).eq("is_active", true).in("id", agendaIds).then((r) => unwrap(r, "Agendas")),
+    db
+      .from("availability_windows")
+      .select("agenda_id, start_time, end_time")
+      .eq("clinic_id", clinicId)
+      .eq("is_active", true)
+      .eq("weekday", weekdayOf(date))
+      .is("service_id", null)
+      .in("agenda_id", agendaIds)
+      .then((r) => unwrap(r, "Horários de atendimento")),
+    db
+      .from("services")
+      .select("duration_minutes, service_agendas ( agenda_id )")
+      .eq("clinic_id", clinicId)
+      .eq("is_active", true)
+      .neq("scheduling_mode", "group")
+      .neq("category", "exam")
+      .then((r) => unwrap(r, "Serviços")),
+  ]);
+  if (holidays.has(date)) return [];
+  const minByAgenda = new Map<string, number>();
+  for (const service of services as unknown as { duration_minutes: number; service_agendas: { agenda_id: string }[] }[]) {
+    for (const link of service.service_agendas) {
+      minByAgenda.set(link.agenda_id, Math.min(minByAgenda.get(link.agenda_id) ?? Infinity, service.duration_minutes));
+    }
+  }
+  const result: (FreeGap & { agendaId: string })[] = [];
+  for (const agenda of agendas) {
+    const minMinutes = minByAgenda.get(agenda.id);
+    const own = windows.filter((w) => w.agenda_id === agenda.id);
+    if (!minMinutes || own.length === 0) continue;
+    const busy = await loadBusy(db, clinicId, agenda.id, start, end);
+    const gaps = computeFreeGaps({
+      date,
+      timeZone,
+      windows: own.map((w) => ({ startTime: w.start_time.slice(0, 5), endTime: w.end_time.slice(0, 5) })),
+      busy,
+      bufferMinutes: agenda.buffer_minutes,
+      minMinutes,
+      now,
+    });
+    result.push(...gaps.map((gap) => ({ ...gap, agendaId: agenda.id })));
   }
   return result;
 }

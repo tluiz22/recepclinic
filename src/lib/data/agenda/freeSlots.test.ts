@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { computeFreeSlots, type BusyInterval, type SlotStrategy, type SlotWindow } from "./freeSlots";
+import { computeFreeGaps, computeFreeSlots, type BusyInterval, type SlotStrategy, type SlotWindow } from "./freeSlots";
 
 // Mesmos casos de computeAvailableSlots (F1), no cálculo novo com fuso.
 // Quarta-feira, 14/10/2026; "agora" na véspera, salvo nos testes de horário passado.
@@ -141,5 +141,33 @@ describe("fuso da clínica", () => {
       now: new Date("2018-11-01T00:00:00Z"),
     });
     expect(result.map((slot) => slot.time)).toEqual(["01:00", "01:30"]);
+  });
+});
+
+describe("lacunas livres (Agenda › Dia)", () => {
+  const gaps = ({ windows = [morning], busy = [] as BusyInterval[], bufferMinutes = 0, minMinutes = 30, now = local("12:00", "2026-10-13") } = {}) =>
+    computeFreeGaps({ date: DATE, timeZone: FORTALEZA, windows, busy, bufferMinutes, minMinutes, now }).map((g) => `${g.time}-${g.endTime}`);
+
+  it("a janela inteira quando nada está ocupado", () => {
+    expect(gaps()).toEqual(["08:00-12:00"]);
+  });
+
+  it("desconta o ocupado e o intervalo da agenda", () => {
+    expect(gaps({ busy: [busyAt("09:00", "10:00")] })).toEqual(["08:00-09:00", "10:00-12:00"]);
+    expect(gaps({ busy: [busyAt("09:00", "10:00")], bufferMinutes: 10 })).toEqual(["08:00-08:50", "10:10-12:00"]);
+  });
+
+  it("ignora lacuna menor que o menor serviço", () => {
+    expect(gaps({ busy: [busyAt("08:20", "12:00")], minMinutes: 30 })).toEqual([]);
+    expect(gaps({ busy: [busyAt("08:30", "12:00")], minMinutes: 30 })).toEqual(["08:00-08:30"]);
+  });
+
+  it("hoje começa no próximo múltiplo de 5 minutos depois de agora", () => {
+    expect(gaps({ now: local("09:07") })).toEqual(["09:10-12:00"]);
+    expect(gaps({ now: local("12:00") })).toEqual([]);
+  });
+
+  it("junta janelas que se sobrepõem (locais diferentes)", () => {
+    expect(gaps({ windows: [morning, { locationId: "loc-b", startTime: "11:00", endTime: "14:00" }] })).toEqual(["08:00-14:00"]);
   });
 });

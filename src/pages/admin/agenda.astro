@@ -23,6 +23,7 @@ import { addDays, formatCalendarDate, formatInstant, isCalendarDate, localDateOf
 import { canAccessArea } from "../../lib/clinicAccess";
 import { createUserClient } from "../../lib/data/clients";
 import { loadAgendaScope } from "../../lib/data/agenda/scope";
+import { listFreeGaps } from "../../lib/data/agenda/slots";
 import { buildDayItems, itemAgendaId, listAgendaAppointments, listAgendaBlocks, listNoShowStats, listOrigins } from "../../lib/data/agenda/view";
 import { listReturnReady } from "../../lib/data/agenda/returnReady";
 import { listServiceRefs } from "../../lib/data/config/services";
@@ -31,6 +32,7 @@ import { activeWaitlistAppointmentIds } from "../../lib/data/waitlist/entries";
 import { listGuidanceResendable } from "../../lib/data/whatsapp/guidance";
 import { listPreparationResendable } from "../../lib/data/whatsapp/preparation";
 import { listReminderActions } from "../../lib/data/whatsapp/reminders";
+import { logError } from "../../lib/log";
 import { vocabularyFor } from "../../lib/vocabulary";
 
 const clinic = Astro.locals.clinic!;
@@ -42,14 +44,20 @@ const date = dateParam && isCalendarDate(dateParam) ? dateParam : today;
 
 const scope = await loadAgendaScope(db, clinic.clinicId, Astro.url, Astro.cookies);
 const range = { fromDate: date, toDate: date, timeZone: clinic.timezone, agendaIds: scope.agendaIds };
-const [appointments, blocks, serviceRefs] = await Promise.all([
+// Horário livre (RX8): lacunas de cada agenda; se a leitura falhar, a Agenda abre sem as linhas "Livre".
+const [appointments, blocks, serviceRefs, gaps] = await Promise.all([
   listAgendaAppointments(db, clinic.clinicId, range),
   listAgendaBlocks(db, clinic.clinicId, { ...range, agendaNames: scope.agendaNames }),
   listServiceRefs(db, clinic.clinicId),
+  listFreeGaps(db, clinic.clinicId, { date, agendaIds: scope.agendaIds, timeZone: clinic.timezone }, now).catch((error: unknown) => {
+    logError("agenda: horários livres não carregaram", error, { clinica: clinic.clinicId });
+    return [];
+  }),
 ]);
 // Cor de cada serviço na faixa do cartão (cliente, 19/out/2026).
 const tints = serviceTints(serviceRefs);
-const items = buildDayItems(appointments, blocks);
+const items = buildDayItems(appointments, blocks, gaps.map((gap) => ({ ...gap, agendaName: scope.agendaNames.get(gap.agendaId) ?? "" })));
+const hasContent = items.some((item) => item.kind !== "free");
 
 const activeFuture = appointments.filter((a) => (a.status === "scheduled" || a.status === "confirmed") && a.scheduledAt > now).map((a) => a.id);
 const examsFuture = appointments.filter((a) => a.category === "exam" && activeFuture.includes(a.id)).map((a) => a.id);
@@ -209,6 +217,20 @@ const cardProps = (a: (typeof appointments)[number]) => ({
                     ))}
                   </div>
                 </article>
+              ) : item.kind === "free" ? (
+                // Horário livre (RX8): abre o Marcar com a agenda, o dia e a hora de início (o Marcar confere tudo ao marcar).
+                <a
+                  href={withReturn(`/admin/agenda/marcar?date=${date}&agenda_id=${item.agendaId}&hora=${item.time}`, returnTo)}
+                  aria-label={`Livre das ${item.time} às ${item.endTime}${byColumn ? `, ${item.agendaName}` : ""}: marcar`}
+                  class="flex min-h-11 min-w-0 items-center gap-2 rounded-xl border border-dashed border-line-strong bg-white/60 px-3 py-2 text-[15px] no-underline hover:border-brand hover:bg-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+                  style={orderOf(item) !== undefined ? `order: ${orderOf(item)}` : undefined}
+                >
+                  <span class="font-semibold text-ink-mid tabular-nums">{item.time}–{item.endTime}</span>
+                  <span class="text-ink-soft">Livre{byColumn && <span class="sm:hidden"> · {item.agendaName}</span>}</span>
+                  <span class="ml-auto inline-flex items-center gap-1 font-bold text-brand">
+                    <Icon name="plus" class="h-4 w-4" strokeWidth={2.4} /> Marcar
+                  </span>
+                </a>
               ) : (
                 <article class="flex min-w-0 flex-col gap-1.5 rounded-xl border border-blk-200 border-l-[5px] border-l-blk-500 bg-blk-50 px-3 pt-3 pb-2.5" style={orderOf(item) !== undefined ? `order: ${orderOf(item)}` : undefined}>
                   <div class="flex items-center justify-between gap-2">
@@ -246,7 +268,7 @@ const cardProps = (a: (typeof appointments)[number]) => ({
                 </article>
               ),
             )}
-            {column.items.length === 0 && (
+            {column.items.every((item) => item.kind === "free") && (
               <p class={`rounded-xl border border-dashed border-line-strong px-3 py-5 text-center text-[15px] text-ink-soft ${byColumn ? "hidden sm:block" : ""}`}>
                 {byColumn ? "Nenhum atendimento." : "Nenhum atendimento neste dia."}
               </p>
@@ -254,7 +276,7 @@ const cardProps = (a: (typeof appointments)[number]) => ({
           </section>
         ))
       }
-      {byColumn && items.length === 0 && (
+      {byColumn && !hasContent && (
         <p class="rounded-xl border border-dashed border-line-strong px-3 py-5 text-center text-[15px] text-ink-soft sm:hidden">Nenhum atendimento neste dia.</p>
       )}
     </div>

@@ -116,3 +116,61 @@ export function computeFreeSlots({
     .slice(0, MAX_RETURN_VISIT_SUGGESTIONS)
     .sort((a, b) => a.start.getTime() - b.start.getTime());
 }
+
+export type FreeGap = { start: Date; end: Date; time: string; endTime: string };
+
+/**
+ * Lacunas livres de uma agenda num dia (RX8 do redesign da Recepção; cliente, 02/nov/2026): o que sobra das janelas,
+ * descontado o ocupado (com o intervalo da agenda), sem depender de serviço. Só do que ainda não passou (hoje, a
+ * partir do próximo múltiplo de 5 minutos) e com pelo menos `minMinutes`, para caber algum serviço.
+ */
+export function computeFreeGaps({
+  date,
+  timeZone,
+  windows,
+  busy,
+  bufferMinutes,
+  minMinutes,
+  now,
+}: {
+  date: string;
+  timeZone: string;
+  windows: Pick<SlotWindow, "startTime" | "endTime">[];
+  busy: BusyInterval[];
+  bufferMinutes: number;
+  minMinutes: number;
+  now: Date;
+}): FreeGap[] {
+  const merged = mergeBusy(busy, date, timeZone, bufferMinutes);
+  // Janelas de locais diferentes podem se sobrepor: a lacuna é do horário, não do local.
+  const spans: Interval[] = [];
+  for (const window of [...windows].sort((a, b) => a.startTime.localeCompare(b.startTime))) {
+    const span = { start: toMinutes(window.startTime), end: toMinutes(window.endTime) };
+    const last = spans[spans.length - 1];
+    if (last && span.start <= last.end) last.end = Math.max(last.end, span.end);
+    else spans.push(span);
+  }
+  const nowMinutes = minutesIntoDay(now, date, timeZone);
+  const earliest = Number.isFinite(nowMinutes) ? Math.ceil((nowMinutes + 1) / 5) * 5 : nowMinutes;
+  const gaps: Interval[] = [];
+  for (const span of spans) {
+    let cursor = span.start;
+    for (const interval of merged) {
+      const gapEnd = Math.min(interval.start, span.end);
+      if (gapEnd > cursor) gaps.push({ start: cursor, end: gapEnd });
+      cursor = Math.max(cursor, Math.min(interval.end, span.end));
+      if (cursor >= span.end) break;
+    }
+    if (cursor < span.end) gaps.push({ start: cursor, end: span.end });
+  }
+  return gaps
+    .map((gap) => ({ start: Math.max(gap.start, earliest), end: gap.end }))
+    .filter((gap) => gap.end - gap.start >= minMinutes)
+    .map((gap) => {
+      const time = toClock(gap.start);
+      const endTime = toClock(gap.end);
+      return { start: toInstant(date, time, timeZone), end: toInstant(date, endTime, timeZone), time, endTime };
+    })
+    // Hora que não existe no dia (horário de verão) cai noutra: não oferece.
+    .filter((gap) => localTimeOf(gap.start, timeZone) === gap.time);
+}
