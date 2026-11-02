@@ -33,10 +33,11 @@ import AdminLayout from "../../../layouts/AdminLayout.astro";
 import ConfirmDeleteDialog from "../../../components/admin/ConfirmDeleteDialog.astro";
 import FlashMessage from "../../../components/admin/FlashMessage.astro";
 import Icon from "../../../components/admin/Icon.astro";
-import PhoneLinks from "../../../components/admin/PhoneLinks.astro";
 import CardActionButton from "../../../components/admin/agenda/CardActionButton.astro";
 import { cardActions } from "../../../components/admin/agenda/cardActions";
-import { serviceBesideCategory } from "../../../components/admin/agenda/categoryStyle";
+import { serviceLook } from "../../../components/admin/agenda/categoryStyle";
+import { isAnonymizedPhone } from "../../../lib/anonymization";
+import { whatsappHref } from "../../../lib/phone";
 import { appointmentSituation } from "../../../components/admin/agenda/situationStyle";
 import Button from "../../../components/admin/ui/Button.astro";
 import EditCard from "../../../components/admin/ui/EditCard.astro";
@@ -56,7 +57,7 @@ import { getSavedDestinations } from "../../../lib/data/nfseDelivery";
 import { formatPhoneBR } from "../../../lib/phone";
 import { formatCentsBRL } from "../../../lib/money";
 import { currentPath, receivedReturn, withReturn } from "../../../lib/returnPath";
-import { formatCalendarDate, formatInstant, localDateOf, todayIn } from "../../../lib/clinicTime";
+import { addDays, formatCalendarDate, formatInstant, localDateOf, todayIn } from "../../../lib/clinicTime";
 import { createUserClient } from "../../../lib/data/clients";
 import { listNoShowStats, listPatientAppointments } from "../../../lib/data/agenda/view";
 import { getClinicSettings } from "../../../lib/data/config/clinic";
@@ -175,9 +176,11 @@ const tab =
         ? "lembretes"
       : Astro.url.searchParams.get("atendimentos") === "anteriores"
       ? "anteriores"
+      : Astro.url.searchParams.get("atendimentos") === "todos"
+      ? "todos"
       : "proximos";
-const tabQuery: Record<string, string> = { proximos: "", anteriores: "?atendimentos=anteriores", documentos: "?aba=documentos", anotacoes: "?aba=anotacoes", lembretes: "?aba=lembretes" };
-const isAppointments = tab === "proximos" || tab === "anteriores";
+const tabQuery: Record<string, string> = { proximos: "", anteriores: "?atendimentos=anteriores", todos: "?atendimentos=todos", documentos: "?aba=documentos", anotacoes: "?aba=anotacoes", lembretes: "?aba=lembretes" };
+const isAppointments = tab === "proximos" || tab === "anteriores" || tab === "todos";
 const tabHref = (value: string) => withReturn(`/admin/pacientes/${patient.id}${tabQuery[value]}`, volta);
 // Filtro por tipo na aba Documentos (só os tipos que o paciente tem).
 const kindFilter = DOCUMENT_KINDS.find((k) => k.key === Astro.url.searchParams.get("tipo"))?.key ?? null;
@@ -185,7 +188,17 @@ const shownDocuments = kindFilter ? documents.filter((d) => d.kind === kindFilte
 const kindsPresent = DOCUMENT_KINDS.filter((k) => documents.some((d) => d.kind === k.key));
 const kindHref = (key: string | null) => withReturn(`/admin/pacientes/${patient.id}?aba=documentos${key ? `&tipo=${key}` : ""}`, volta);
 const plural = (n: number) => `${n} ${n === 1 ? "atendimento" : "atendimentos"}`;
-const rows = tab === "anteriores" ? previous : upcoming;
+const rows = tab === "anteriores" ? previous : tab === "todos" ? history : upcoming;
+// "Paciente desde" (protótipo da ficha A; cliente, 02/nov/2026): o ano do cadastro.
+const createdAt = await db
+  .from("patients")
+  .select("created_at")
+  .eq("clinic_id", clinic.clinicId)
+  .eq("id", patient.id)
+  .maybeSingle()
+  .then((r) => r.data?.created_at ?? null, () => null);
+const sinceText = createdAt ? `${vocabulary.patient === "paciente" ? "paciente" : "na clínica"} desde ${createdAt.slice(0, 4)}` : null;
+const phoneOk = !isAnonymizedPhone(contact.phone);
 
 // Nota de cada pagamento: a ativa (emitida, emitindo ou cancelando); sem ela, "Sem nota".
 const INVOICE_PILL: Partial<Record<InvoiceStatus, { tone: PillTone; text: (n: string | null) => string }>> = {
@@ -204,14 +217,10 @@ const deliveryText = () => {
 const payerRole = (payer: string) => (payer === "other" ? "outra pessoa" : payer === "patient" ? vocabulary.patient : patient.isContactSelf ? vocabulary.patient : vocabulary.contact);
 
 const card = "flex flex-col rounded-xl border border-line bg-white p-3.5 sm:px-5 sm:py-[18px]";
-const sectionTitle = "font-display text-[17px] leading-tight font-bold text-ink sm:text-lg";
 const notice = "flex items-start gap-2.5 rounded-[10px] border px-3.5 py-3 text-[15px] leading-snug";
 const field = "flex flex-col gap-1.5";
 const fieldLabel = "text-[14.5px] font-semibold text-ink";
 const hint = "text-sm text-ink-soft";
-const kv = "grid grid-cols-[120px_minmax(0,1fr)] gap-x-3 gap-y-2 text-[15px]";
-const dt = "text-ink-soft";
-const dd = "font-semibold text-ink";
 const radio = "flex items-center gap-2.5 text-[15px] text-ink";
 const canBook = patient.isActive && !anonymized;
 ---
@@ -223,7 +232,7 @@ const canBook = patient.isActive && !anonymized;
   </a>
   <FlashMessage />
 
-  <section aria-label={capitalize(vocabulary.patient)} class={`${card} mt-3 gap-3 sm:px-6 sm:py-5`}>
+  <section aria-label={capitalize(vocabulary.patient)} class="mt-3 flex flex-col gap-3">
     <div class="flex flex-wrap items-start justify-between gap-4">
       <div class="flex min-w-0 flex-col gap-2">
         <div class="flex flex-wrap items-center gap-2.5">
@@ -232,32 +241,49 @@ const canBook = patient.isActive && !anonymized;
           {stats && <Pill tone="alert" icon="user-x">Faltou {stats.noShows} de {stats.total}</Pill>}
           {contact.botBlockedAt && <Pill tone="danger" icon="lock">{capitalize(vocabulary.contact)} bloqueado</Pill>}
         </div>
-        <div class="flex flex-wrap items-center gap-x-3.5 gap-y-1.5 text-[15.5px] text-ink">
-          {!anonymized && <span>{formatAge(patient.birthdate, today)}</span>}
-          {insuranceOn && !anonymized && <Tag>{planLabel}</Tag>}
-          <span class="inline-flex flex-wrap items-center gap-x-1.5 gap-y-1">
-            {patient.isContactSelf ? (
-              "WhatsApp:"
-            ) : (
-              <>
-                {capitalize(vocabulary.contact)}:
-                <a href={withReturn(`/admin/pacientes/contato/${contact.id}`, here)} class="font-semibold text-brand no-underline hover:underline">{contact.fullName}</a>·
-              </>
-            )}
-            <PhoneLinks phone={contact.phone} plain />
-          </span>
-          {
-            patient.isContactSelf && (
-              <a href={withReturn(`/admin/pacientes/contato/${contact.id}`, here)} class="text-[15px] font-semibold text-brand no-underline hover:underline">
-                Editar o telefone
+        {!anonymized && (
+          <span class="text-[15px] text-ink-mid">{[formatAge(patient.birthdate, today), insuranceOn ? planLabel : null, sinceText].filter(Boolean).join(" · ")}</span>
+        )}
+        <div class="flex flex-wrap items-center gap-x-2.5 gap-y-1.5 text-[15.5px] text-ink">
+          {!patient.isContactSelf && (
+            <span>
+              {capitalize(vocabulary.contact)}:{" "}
+              <a href={withReturn(`/admin/pacientes/contato/${contact.id}`, here)} class="font-semibold text-brand no-underline hover:underline">{contact.fullName}</a> ·
+            </span>
+          )}
+          {phoneOk ? (
+            <>
+              <span class="tabular-nums">{formatPhoneBR(contact.phone)}</span>
+              <a
+                href={whatsappHref(contact.phone)}
+                target="_blank"
+                rel="noopener"
+                aria-label={`Abrir conversa no WhatsApp com ${contact.fullName}`}
+                class="inline-flex min-h-8 items-center rounded-[9px] border border-conf-500 bg-conf-500 px-2.5 text-[13.5px] font-semibold text-white no-underline hover:bg-conf-800"
+              >
+                WhatsApp
               </a>
-            )
-          }
+            </>
+          ) : (
+            <span class="text-ink-soft">telefone anonimizado</span>
+          )}
+          {patient.isContactSelf && !anonymized && (
+            <a href={withReturn(`/admin/pacientes/contato/${contact.id}`, here)} class="text-[15px] font-semibold text-brand no-underline hover:underline">
+              Editar o telefone
+            </a>
+          )}
         </div>
       </div>
       {
         !anonymized && (
           <div class="flex gap-2">
+            {
+              canBook && (
+                <Button href={withReturn(`/admin/agenda/marcar?patient_id=${patient.id}`, here)} variant="primary" class="max-sm:hidden">
+                  <Icon name="plus" class="h-[18px] w-[18px]" strokeWidth={2.2} /> Marcar
+                </Button>
+              )
+            }
             <MoreMenu id="mais-paciente" label={`Mais ações: ${patient.fullName}`} size="md">
               <form method="POST" action={action}>
                 <input type="hidden" name="acao" value={patient.isActive ? "desativar" : "reativar"} />
@@ -288,13 +314,6 @@ const canBook = patient.isActive && !anonymized;
                 )
               }
             </MoreMenu>
-            {
-              canBook && (
-                <Button href={withReturn(`/admin/agenda/marcar?patient_id=${patient.id}`, here)} variant="primary" class="max-sm:hidden">
-                  <Icon name="plus" class="h-[18px] w-[18px]" strokeWidth={2.2} /> Marcar
-                </Button>
-              )
-            }
           </div>
         )
       }
@@ -337,22 +356,21 @@ const canBook = patient.isActive && !anonymized;
       const confirm = [actions.primary, ...actions.more].find((x) => x?.kind === "form" && x.acao === "confirmar_presenca");
       const rebook = actions.visible.find((x) => x.kind === "link" && x.label === "Remarcar");
       const endpoint = `/api/admin/agenda/atendimentos/${a.id}`;
-      const detail = [serviceBesideCategory(a.serviceName, a.category), a.agendaName, a.locationName].filter(Boolean).join(" · ");
+      const dayOf = localDateOf(a.scheduledAt, clinic.timezone);
+      const dayWord = dayOf === today ? "Hoje" : dayOf === addDays(today, 1) ? "Amanhã" : capitalize(formatInstant(a.scheduledAt, clinic.timezone, "EEE dd/MM"));
+      const confirmed = a.status === "confirmed" || a.patientConfirmedAt !== null;
       return (
-        <section aria-labelledby="proxima-consulta" class="mt-3 flex flex-wrap items-center justify-between gap-x-4 gap-y-3 rounded-xl border border-brand/25 bg-brand-soft/60 px-4 py-3 sm:px-5">
-          <div class="flex min-w-0 flex-col gap-1">
-            <h2 id="proxima-consulta" class="text-[14px] font-semibold text-ink-soft">Próxima consulta</h2>
-            <p class="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[17px] leading-snug font-bold text-ink">
-              <span class="first-letter:uppercase">{formatInstant(a.scheduledAt, clinic.timezone, "EEEE, dd/MM 'às' HH:mm")}</span>
-              <StatusPill situation={appointmentSituation(a)} />
-            </p>
-            <p class="text-[15px] text-ink-mid">{detail}</p>
+        <section aria-labelledby="proxima-consulta" class="mt-4 flex flex-wrap items-center gap-x-3.5 gap-y-2.5 rounded-xl border border-pend-200 bg-pend-50 px-4 py-3.5 sm:px-[18px]">
+          <div class="flex min-w-0 flex-[1_1_280px] flex-col gap-0.5">
+            <h2 id="proxima-consulta" class="text-[12.5px] font-bold tracking-[.05em] text-pend-800 uppercase">Próxima consulta</h2>
+            <strong class="text-[16.5px] text-ink">
+              {dayWord}, {formatInstant(a.scheduledAt, clinic.timezone, "HH:mm")} · {serviceLook(a.category).label} com {a.agendaName}
+            </strong>
+            <span class="text-sm text-ink-mid">{confirmed ? "Presença confirmada" : "Ainda não confirmou"} · {a.locationName}</span>
           </div>
-          <div class="flex flex-wrap gap-2">
-            {confirm && <CardActionButton action={confirm} endpoint={endpoint} returnTo={here} variant="primary" />}
-            {rebook && <CardActionButton action={rebook} endpoint={endpoint} returnTo={here} />}
-            <Button href={withReturn(`/admin/agenda?date=${localDateOf(a.scheduledAt, clinic.timezone)}`, here)}>Abrir na Agenda</Button>
-          </div>
+          {confirm && <CardActionButton action={confirm} endpoint={endpoint} returnTo={here} />}
+          {rebook && <CardActionButton action={rebook} endpoint={endpoint} returnTo={here} />}
+          <Button href={withReturn(`/admin/agenda?date=${dayOf}`, here)} variant="quiet" size="sm">Abrir na Agenda</Button>
         </section>
       );
     })()
@@ -360,7 +378,7 @@ const canBook = patient.isActive && !anonymized;
 
   <div class="mt-4 grid grid-cols-[minmax(0,1fr)] items-start gap-4 lg:grid-cols-[minmax(0,1fr)_400px] lg:gap-5">
     <section aria-labelledby="atendimentos-titulo" class={`${card} gap-1`}>
-      <h2 id="atendimentos-titulo" class={sectionTitle}>{anonymized ? "Atendimentos" : "Atendimentos, documentos, anotações e lembretes"}</h2>
+      <h2 id="atendimentos-titulo" class="sr-only">{anonymized ? "Atendimentos" : "Atendimentos, documentos, anotações e lembretes"}</h2>
       <Tabs
         inCard
         label="Atendimentos, documentos, anotações e lembretes"
@@ -375,6 +393,7 @@ const canBook = patient.isActive && !anonymized;
             countTone: "neutral",
             countLabel: plural(previous.length),
           },
+          { label: "Todos", href: tabHref("todos"), active: tab === "todos", count: history.length, countTone: "neutral", countLabel: plural(history.length) },
           ...(anonymized
             ? []
             : [
@@ -409,51 +428,51 @@ const canBook = patient.isActive && !anonymized;
         {rows.map((a) => {
           const paid = paymentStates?.get(a.id);
           return (
-            <li class="grid grid-cols-[112px_minmax(0,1fr)] gap-x-3 gap-y-2.5 border-t border-line py-3.5 first:border-t-0 sm:grid-cols-[124px_minmax(0,1fr)_auto] sm:items-center sm:gap-x-4">
-              <div class="flex flex-col">
-                <span class="text-[13.5px] font-semibold text-ink-soft first-letter:uppercase">{formatInstant(a.scheduledAt, clinic.timezone, "EEE, dd/MM/yyyy")}</span>
-                <span class="font-display text-[22px] leading-tight font-bold text-ink tabular-nums">{formatInstant(a.scheduledAt, clinic.timezone, "HH:mm")}</span>
-              </div>
-              <div class="flex min-w-0 flex-col gap-1.5">
-                <span class={`text-[15.5px] leading-snug font-semibold ${a.status === "canceled" ? "text-ink-soft" : "text-ink"}`}>
-                  {a.serviceName} · {a.agendaName}
-                </span>
-                <span class="flex flex-wrap items-center gap-1.5">
-                  {pending(a) ? (
-                    <Pill tone="warning" icon="clock">
-                      Registrar comparecimento
-                    </Pill>
-                  ) : (
-                    <StatusPill situation={appointmentSituation(a)} />
-                  )}
-                  {a.seriesId && <Tag>série</Tag>}
-                  {paid === "paid" && (
-                    <Pill tone="success" icon="banknotes">
-                      Pago
-                    </Pill>
-                  )}
-                  {paid === "partial" && (
-                    <Pill tone="warning" icon="banknotes">
-                      Pago em parte
-                    </Pill>
-                  )}
-                </span>
-              </div>
-              <div class="col-span-2 flex flex-wrap gap-1.5 sm:col-span-1 sm:justify-end">
-                <Button href={`/admin/agenda?date=${localDateOf(a.scheduledAt, clinic.timezone)}`} size="sm">
-                  Abrir na Agenda
-                </Button>
+            <li class="flex flex-wrap items-center gap-x-3.5 gap-y-2 border-t border-line py-3 first:border-t-0">
+              <strong class={`min-w-[104px] text-[15px] tabular-nums ${a.status === "canceled" ? "text-ink-soft" : "text-ink"}`}>
+                {formatInstant(a.scheduledAt, clinic.timezone, "dd/MMM/yyyy").replace(".", "")}
+                <span class="block text-[13px] font-normal text-ink-soft">{formatInstant(a.scheduledAt, clinic.timezone, "HH:mm")}</span>
+              </strong>
+              <span class={`min-w-0 flex-[1_1_200px] text-[15px] ${a.status === "canceled" ? "text-ink-soft" : "text-ink"}`}>
+                {serviceLook(a.category).label} · {a.agendaName}
+                {a.seriesId && <Tag class="ml-1.5">série</Tag>}
+              </span>
+              <span class="flex flex-wrap items-center gap-1.5">
+                {pending(a) ? (
+                  <Pill tone="warning" icon="clock">
+                    Registrar comparecimento
+                  </Pill>
+                ) : (
+                  <StatusPill situation={appointmentSituation(a)} />
+                )}
+                {paid === "paid" && (
+                  <Pill tone="success" icon="banknotes">
+                    Pago
+                  </Pill>
+                )}
+                {paid === "partial" && (
+                  <Pill tone="warning" icon="banknotes">
+                    Pago em parte
+                  </Pill>
+                )}
+              </span>
+              <span class="flex gap-1">
+                {(a.status === "scheduled" || a.status === "confirmed") && a.scheduledAt > now && (
+                  <Button href={`/admin/agenda?date=${localDateOf(a.scheduledAt, clinic.timezone)}`} size="sm" variant="quiet">
+                    Abrir na Agenda
+                  </Button>
+                )}
                 <Button href={withReturn(`/admin/agenda/trilha/${a.id}`, here)} size="sm" variant="quiet">
                   Histórico
                 </Button>
-              </div>
+              </span>
             </li>
           );
         })}
       </ul>}
       {
         isAppointments && rows.length === 0 && (
-          <p class="py-3 text-[15px] text-ink-soft">{tab === "anteriores" ? "Nenhum atendimento anterior." : "Nenhum atendimento marcado."}</p>
+          <p class="py-3 text-[15px] text-ink-soft">{tab === "anteriores" ? "Nenhum atendimento anterior." : tab === "todos" ? "Nenhum atendimento." : "Nenhum atendimento marcado."}</p>
         )
       }
       {
@@ -764,10 +783,8 @@ const canBook = patient.isActive && !anonymized;
       {
         !anonymized && (
           <EditCard id="dados" title="Dados" summary={`Nasc. ${formatCalendarDate(patient.birthdate, "dd/MM/yyyy")}`}>
-            <dl class={kv}>
-              <dt class={dt}>Nascimento</dt>
-              <dd class={dd}>{formatCalendarDate(patient.birthdate, "dd/MM/yyyy")}</dd>
-            </dl>
+            {/* Cartões curtos, como na ficha A do protótipo: um resumo de uma linha; "Editar" abre o formulário completo. */}
+            <p class="text-[14.5px] leading-snug text-ink-mid">Nascimento {formatCalendarDate(patient.birthdate, "dd/MM/yyyy")}{finance ? " · CPF no Financeiro" : ""}</p>
             <form slot="edit" method="POST" action={action} class="flex flex-col gap-4">
               <input type="hidden" name="acao" value="salvar" />
               <div class={field}>
@@ -788,24 +805,31 @@ const canBook = patient.isActive && !anonymized;
       }
 
       {
+        !anonymized && (
+          <section aria-labelledby="quem-fala-titulo" class="flex flex-col gap-1 rounded-xl border border-line bg-white px-3.5 py-3.5 lg:px-5 lg:py-[18px]">
+            <div class="flex items-center justify-between gap-3">
+              <h2 id="quem-fala-titulo" class="font-display text-[17px] leading-tight font-bold text-ink sm:text-lg">Quem fala com a clínica</h2>
+              <Button href={withReturn(`/admin/pacientes/contato/${contact.id}`, here)} size="sm">Editar</Button>
+            </div>
+            <p class="text-[14.5px] leading-snug text-ink-mid">
+              {patient.isContactSelf ? `O próprio ${vocabulary.patient}` : `${contact.fullName} (${vocabulary.contact})`} · {phoneOk ? formatPhoneBR(contact.phone) : "telefone anonimizado"}
+            </p>
+          </section>
+        )
+      }
+
+      {
         insuranceOn && !anonymized && (
           <EditCard id="plano" title="Plano de saúde" summary={planLabel}>
-            <dl class={kv}>
-              <dt class={dt}>Plano</dt>
-              <dd class={dd}>{planLabel}</dd>
-              {patient.insurance?.cardNumber && (
-                <>
-                  <dt class={dt}>Carteirinha</dt>
-                  <dd class={`${dd} tabular-nums`}>{patient.insurance.cardNumber}</dd>
-                </>
-              )}
-              {patient.insurance?.cardValidUntil && (
-                <>
-                  <dt class={dt}>Validade</dt>
-                  <dd class={dd}>{formatCalendarDate(patient.insurance.cardValidUntil, "dd/MM/yyyy")}</dd>
-                </>
-              )}
-            </dl>
+            <p class="text-[14.5px] leading-snug text-ink-mid">
+              {[
+                planLabel,
+                patient.insurance?.cardNumber ? `carteirinha ${patient.insurance.cardNumber}` : null,
+                patient.insurance?.cardValidUntil ? `validade ${formatCalendarDate(patient.insurance.cardValidUntil, "dd/MM/yyyy")}` : null,
+              ]
+                .filter(Boolean)
+                .join(" · ")}
+            </p>
             <form slot="edit" method="POST" action={action} class="flex flex-col gap-4">
               <input type="hidden" name="acao" value="plano" />
               <div class={field}>
@@ -844,22 +868,10 @@ const canBook = patient.isActive && !anonymized;
       {
         finance && responsible && (
           <EditCard id="financeiro" title="Financeiro" summary={responsible.name || "Outra pessoa"} editable={canEditFinance}>
-            <dl class={kv}>
-              <dt class={dt}>Quem paga</dt>
-              <dd class={dd}>
-                {responsible.name || "—"} <span class="font-normal text-ink-soft">({payerRole(responsible.payer)})</span>
-              </dd>
-              <dt class={dt}>CPF</dt>
-              <dd class={responsible.cpf ? `${dd} tabular-nums` : "text-ink-soft"}>{responsible.cpf ? formatCpf(responsible.cpf) : "não informado"}</dd>
-              {!patient.isContactSelf && responsible.payer !== "patient" && (
-                <>
-                  <dt class={dt}>CPF de {patient.fullName.split(" ")[0]}</dt>
-                  <dd class={finance.cpf ? `${dd} tabular-nums` : "text-ink-soft"}>{finance.cpf ? formatCpf(finance.cpf) : "não informado (opcional)"}</dd>
-                </>
-              )}
-              <dt class={dt}>Envio das notas</dt>
-              <dd class="font-medium text-ink">{deliveryText()}</dd>
-            </dl>
+            <p class="text-[14.5px] leading-snug text-ink-mid">
+              Responsável financeiro: {responsible.name || "não informado"} ({payerRole(responsible.payer)}) · CPF {responsible.cpf ? formatCpf(responsible.cpf) : "não informado"}
+            </p>
+            <p class={hint}>Envio das notas: {deliveryText()}</p>
             {
               !responsible.cpf && (
                 <p class={`${notice} border-pend-200 bg-pend-50 text-pend-800`}>

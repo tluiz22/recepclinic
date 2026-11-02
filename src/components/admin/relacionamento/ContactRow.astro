@@ -1,0 +1,51 @@
+---
+// Linha de uma lista de Para contatar (protótipo "Para contatar · A"): nome (com link) e telefone na mesma linha, o
+// detalhe embaixo e, à direita, o botão verde do WhatsApp e as ações da lista (slot "actions").
+import { isAnonymizedPhone } from "../../../lib/anonymization";
+import { formatPhoneBR, whatsappHref } from "../../../lib/phone";
+
+interface Props {
+  name: string;
+  href?: string;
+  phone?: string | null;
+  /** "Responsável: Maria" antes do telefone, quando quem fala não é o próprio. */
+  contactNote?: string | null;
+}
+
+const { name, href, phone, contactNote } = Astro.props;
+const phoneOk = !!phone && !isAnonymizedPhone(phone);
+---
+
+<div class="flex flex-wrap items-center gap-x-4 gap-y-3 border-t border-[#e7eeeb] px-4 py-3.5 sm:px-[18px]">
+  <div class="flex min-w-0 flex-[1_1_260px] flex-col gap-0.5">
+    <span class="text-base">
+      {href ? (
+        <a href={href} class="font-bold text-ink no-underline hover:text-brand hover:underline">{name}</a>
+      ) : (
+        <strong>{name}</strong>
+      )}
+      {(contactNote || phoneOk) && (
+        <span class="text-[14.5px] text-ink-soft">
+          {" "}
+          {contactNote && `${contactNote} · `}
+          {phoneOk && formatPhoneBR(phone!)}
+        </span>
+      )}
+    </span>
+    <span class="text-[14.5px] text-ink-mid"><slot /></span>
+  </div>
+  <div class="flex flex-wrap items-center gap-2">
+    {phoneOk && (
+      <a
+        href={whatsappHref(phone!)}
+        target="_blank"
+        rel="noopener"
+        aria-label={`Abrir conversa no WhatsApp com ${name}`}
+        class="inline-flex min-h-11 items-center rounded-[9px] border border-conf-500 bg-conf-500 px-3.5 text-[14.5px] font-semibold text-white no-underline hover:bg-conf-800 sm:min-h-10"
+      >
+        WhatsApp
+      </a>
+    )}
+    <slot name="actions" />
+  </div>
+</div>

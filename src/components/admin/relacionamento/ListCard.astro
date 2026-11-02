@@ -1,0 +1,34 @@
+---
+// Lista de Pacientes › Para contatar (protótipo "Para contatar · A"; cliente, 02/nov/2026): cartão branco com o nome da
+// lista, a frase do que entra nela, o "Como funciona?" e as linhas (slot). `padded`: o conteúdo é um componente com
+// layout próprio (Aguardando remarcação e Lista de espera, iguais aos do Relatório do dia).
+import type { ComoFunciona } from "../../../lib/ajuda/tipos";
+import HowItWorks from "../ui/HowItWorks.astro";
+
+interface Props {
+  title: string;
+  description: string;
+  help?: { id: string; topic: ComoFunciona };
+  padded?: boolean;
+}
+
+const { title, description, help, padded = false } = Astro.props;
+---
+
+<section aria-labelledby="lista-titulo" class="overflow-hidden rounded-xl border border-line bg-white">
+  <div class="flex flex-col gap-0.5 px-4 pt-4 pb-3 sm:px-[18px]">
+    <h2 id="lista-titulo" class="font-display text-[21px] leading-tight font-bold text-ink">{title}</h2>
+    {
+      help ? (
+        <HowItWorks id={help.id} topic={help.topic}>
+          <p class="text-[14.5px] text-ink-soft">{description}</p>
+        </HowItWorks>
+      ) : (
+        <p class="text-[14.5px] text-ink-soft">{description}</p>
+      )
+    }
+  </div>
+  <div class={padded ? "border-t border-[#e7eeeb] px-4 pb-4 sm:px-[18px]" : ""}>
+    <slot />
+  </div>
+</section>

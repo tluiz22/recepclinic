@@ -1,7 +1,11 @@
 ---
-// Abas de Pacientes (RX4 do redesign da Recepção, cliente, 02/nov/2026): Todos, Contatos (pelo vocabulário da
-// clínica) e Para contatar (Administrador e Recepção, com o item "Relacionamento"), com o contador das pendências.
-import Tabs from "./ui/Tabs.astro";
+// Cabeçalho de Pacientes (protótipo "Para contatar · A"; cliente, 02/nov/2026): título, abas e "+ Novo paciente" numa
+// linha só, com um traço embaixo. Abas: Todos, Contatos (pelo vocabulário da clínica) e Para contatar (Administrador e
+// Recepção, com o item "Relacionamento"), com o número das pendências. O título segue o perfil da clínica (D4b):
+// "Crianças" na pediátrica, "Pacientes" nas outras.
+import Icon from "./Icon.astro";
+import Button from "./ui/Button.astro";
+import { withReturn } from "../../lib/returnPath";
 import { capitalize, type Vocabulary } from "../../lib/vocabulary";
 
 interface Props {
@@ -11,29 +15,41 @@ interface Props {
   showContact: boolean;
   /** Pendências da aba Para contatar; null = a leitura falhou. */
   contactCount: number | null;
+  /** Tela de onde o "+ Novo paciente" volta. */
+  returnTo: string;
 }
 
-const { active, vocabulary, showContact, contactCount } = Astro.props;
-const contactTab = !showContact
-  ? []
-  : [
-      {
-        label: "Para contatar",
-        href: "/admin/pacientes/para-contatar",
-        active: active === "para-contatar",
-        ...(contactCount === null
-          ? { alert: true, countLabel: "Não foi possível contar" }
-          : { count: contactCount, countLabel: `${contactCount} ${contactCount === 1 ? "pendência" : "pendências"}` }),
-      },
-    ];
+const { active, vocabulary, showContact, contactCount, returnTo } = Astro.props;
+const tabs = [
+  { id: "todos", label: "Todos", href: "/admin/pacientes" },
+  { id: "contatos", label: capitalize(vocabulary.contacts), href: "/admin/pacientes?tab=contatos" },
+  ...(showContact ? [{ id: "para-contatar", label: "Para contatar", href: "/admin/pacientes/para-contatar" }] : []),
+];
+const tabClass = (on: boolean) =>
+  `inline-flex min-h-11 items-center gap-1.5 border-b-[3px] px-0.5 text-base font-semibold no-underline ${on ? "border-brand text-brand-ink" : "border-transparent text-ink-soft hover:text-ink"}`;
+const newLabel = vocabulary.patient === "criança" ? "Nova criança" : `Novo ${vocabulary.patient}`;
 ---
 
-<Tabs
-  label="Listas"
-  class="mt-4"
-  tabs={[
-    { label: "Todos", href: "/admin/pacientes", active: active === "todos" },
-    { label: capitalize(vocabulary.contacts), href: "/admin/pacientes?tab=contatos", active: active === "contatos" },
-    ...contactTab,
-  ]}
-/>
+<header class="flex flex-wrap items-end gap-x-6 gap-y-2 border-b border-line">
+  <h1 class="mb-1.5 font-display text-[28px] leading-tight font-bold text-ink">{capitalize(vocabulary.patients)}</h1>
+  <nav aria-label="Listas" class="flex flex-wrap gap-x-6">
+    {
+      tabs.map((tab) => (
+        <a href={tab.href} aria-current={tab.id === active ? "page" : undefined} class={tabClass(tab.id === active)}>
+          {tab.label}
+          {tab.id === "para-contatar" &&
+            (contactCount === null ? (
+              <span class="rounded-full bg-pend-100 px-1.5 text-[13px] font-bold text-pend-800" aria-label="Não foi possível contar">!</span>
+            ) : contactCount > 0 ? (
+              <span class="rounded-full bg-pend-100 px-1.5 text-[13px] font-bold text-pend-800 tabular-nums" aria-label={`${contactCount} ${contactCount === 1 ? "pendência" : "pendências"}`}>
+                {contactCount}
+              </span>
+            ) : null)}
+        </a>
+      ))
+    }
+  </nav>
+  <Button href={withReturn("/admin/pacientes/novo", returnTo)} variant="primary" class="mb-1.5 sm:ml-auto">
+    <Icon name="plus" class="h-[18px] w-[18px]" strokeWidth={2.2} /> {newLabel}
+  </Button>
+</header>

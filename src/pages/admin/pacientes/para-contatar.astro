@@ -15,9 +15,7 @@ import LembretesEquipeTab from "../../../components/admin/relacionamento/Lembret
 import RetomarContatoTab from "../../../components/admin/relacionamento/RetomarContatoTab.astro";
 import RetornoTab from "../../../components/admin/relacionamento/RetornoTab.astro";
 import EmptyState from "../../../components/admin/ui/EmptyState.astro";
-import PageHeader from "../../../components/admin/ui/PageHeader.astro";
-import Icon from "../../../components/admin/Icon.astro";
-import Button from "../../../components/admin/ui/Button.astro";
+import ListCard from "../../../components/admin/relacionamento/ListCard.astro";
 import { serviceTags } from "../../../components/admin/agenda/categoryStyle";
 import { relacionamento } from "../../../lib/ajuda/relacionamento";
 import { todayIn } from "../../../lib/clinicTime";
@@ -34,7 +32,6 @@ import {
   type RelationshipTab,
 } from "../../../lib/data/relationship";
 import { listRecentOffers } from "../../../lib/data/waitlist/entries";
-import { withReturn } from "../../../lib/returnPath";
 import { logError } from "../../../lib/log";
 import { capitalize, vocabularyFor } from "../../../lib/vocabulary";
 
@@ -79,7 +76,6 @@ const countText = (id: RelationshipTab) => {
   const n = counts[id];
   if (id === "retomar_contato") return null;
   if (n === null || n === undefined) return { text: "!", label: "Não foi possível contar", alert: true };
-  if (n === 0) return null;
   return { text: String(n), label: `${n} ${id === "lista_espera" ? "na lista" : "pendente(s)"}`, alert: false };
 };
 const contactCount = CONTACT_COUNT_TABS.reduce((total, id) => total + (counts[id] ?? 0), 0);
@@ -87,15 +83,10 @@ const anyCountFailed = CONTACT_COUNT_TABS.some((id) => available.includes(id) &&
 ---
 
 <AdminLayout title={capitalize(vocabulary.patients)}>
-  <PageHeader title={capitalize(vocabulary.patients)}>
-    <Button slot="actions" href={withReturn("/admin/pacientes/novo", returnTo)} variant="primary">
-      <Icon name="plus" class="h-[18px] w-[18px]" strokeWidth={2.2} /> Cadastrar {vocabulary.patient}
-    </Button>
-  </PageHeader>
-  <PacientesTabs active="para-contatar" vocabulary={vocabulary} showContact contactCount={anyCountFailed ? null : contactCount} />
+  <PacientesTabs active="para-contatar" vocabulary={vocabulary} showContact contactCount={anyCountFailed ? null : contactCount} returnTo={returnTo} />
   <FlashMessage />
 
-  <div class="mt-4 grid gap-4 lg:grid-cols-[260px_minmax(0,1fr)] lg:items-start">
+  <div class="mt-4 grid gap-[18px] lg:grid-cols-[260px_minmax(0,1fr)] lg:items-start">
     <nav aria-label="Listas para contatar" class="rounded-xl border border-line bg-white p-1.5">
       <ul class="flex flex-col">
         {
@@ -107,13 +98,13 @@ const anyCountFailed = CONTACT_COUNT_TABS.some((id) => available.includes(id) &&
                 <a
                   href={listHref(id)}
                   aria-current={active ? "page" : undefined}
-                  class={`flex min-h-11 items-center justify-between gap-3 rounded-lg px-3 py-2 text-[15px] no-underline ${active ? "bg-[#e3efec] font-bold text-ink" : "font-semibold text-ink-mid hover:bg-[#f2f7f6]"}`}
+                  class={`flex min-h-11 items-center justify-between gap-3 rounded-[9px] px-3.5 py-2 text-[15px] no-underline ${active ? "bg-brand-soft font-bold text-brand-ink" : "text-ink-mid hover:bg-canvas"}`}
                 >
                   <span>{labelOf(id)}</span>
                   {count && (
                     <span
                       aria-label={count.label}
-                      class={`min-w-6 rounded-full px-2 py-0.5 text-center text-[13px] font-bold tabular-nums ${count.alert ? "bg-pend-100 text-pend-800" : "bg-white text-ink ring-1 ring-line"}`}
+                      class={`min-w-6 rounded-full px-2 py-0.5 text-center text-[13px] font-bold tabular-nums ${count.alert ? "bg-pend-100 text-pend-800" : "bg-blk-100 text-ink-mid"}`}
                     >
                       {count.text}
                     </span>
@@ -133,12 +124,18 @@ const anyCountFailed = CONTACT_COUNT_TABS.some((id) => available.includes(id) &&
       {!loadFailed && list === "faltosos" && <FaltososTab patients={lists.faltosos ?? []} timeZone={clinic.timezone} vocabulary={vocabulary} />}
       {
         !loadFailed && list === "aguardando_remarcacao" && (
-          awaiting.length > 0
-            ? <AguardandoTab tags={tags} appointments={awaiting} actors={actors} timeZone={clinic.timezone} vocabulary={vocabulary} returnTo={returnTo} />
-            : <EmptyState variant="dashed" title={relacionamento.vazios.aguardando.titulo} text={relacionamento.vazios.aguardando.texto} />
+          <ListCard title="Aguardando remarcação" description="Atendimentos cancelados pela clínica (em massa ou pelo bloqueio) que ainda não foram remarcados." padded>
+            {awaiting.length > 0
+              ? <AguardandoTab tags={tags} appointments={awaiting} actors={actors} timeZone={clinic.timezone} vocabulary={vocabulary} returnTo={returnTo} />
+              : <p class="pt-4 text-[15px] text-ink-soft"><strong class="text-ink">{relacionamento.vazios.aguardando.titulo}.</strong> {relacionamento.vazios.aguardando.texto}</p>}
+          </ListCard>
         )
       }
-      {!loadFailed && list === "lista_espera" && <ListaEsperaTab tags={tags} entries={lists.lista_espera ?? []} offers={offers} timeZone={clinic.timezone} returnTo={returnTo} />}
+      {!loadFailed && list === "lista_espera" && (
+        <ListCard title="Lista de espera" description="Quem quer antecipar o atendimento, na ordem de entrada, por agenda e serviço." padded>
+          <ListaEsperaTab tags={tags} entries={lists.lista_espera ?? []} offers={offers} timeZone={clinic.timezone} returnTo={returnTo} />
+        </ListCard>
+      )}
       {!loadFailed && list === "lembretes_equipe" && <LembretesEquipeTab reminders={lists.lembretes_equipe ?? []} today={todayIn(clinic.timezone, now)} vocabulary={vocabulary} returnTo={returnTo} />}
     </div>
   </div>

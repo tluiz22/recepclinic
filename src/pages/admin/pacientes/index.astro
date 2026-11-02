@@ -14,7 +14,6 @@ import FlashMessage from "../../../components/admin/FlashMessage.astro";
 import Icon from "../../../components/admin/Icon.astro";
 import PhoneLinks from "../../../components/admin/PhoneLinks.astro";
 import Button from "../../../components/admin/ui/Button.astro";
-import PageHeader from "../../../components/admin/ui/PageHeader.astro";
 import Pill from "../../../components/admin/ui/Pill.astro";
 import PacientesTabs from "../../../components/admin/PacientesTabs.astro";
 import Tag from "../../../components/admin/ui/Tag.astro";
@@ -69,12 +68,7 @@ const pageLink = `${buttonClass("secondary", "sm")}`;
 ---
 
 <AdminLayout title={capitalize(vocabulary.patients)}>
-  <PageHeader title={capitalize(vocabulary.patients)}>
-    <Button slot="actions" href={withReturn("/admin/pacientes/novo", here)} variant="primary">
-      <Icon name="plus" class="h-[18px] w-[18px]" strokeWidth={2.2} /> Cadastrar {vocabulary.patient}
-    </Button>
-  </PageHeader>
-  <PacientesTabs active={tab === "contatos" ? "contatos" : "todos"} vocabulary={vocabulary} showContact={showContact} contactCount={contactCount} />
+  <PacientesTabs active={tab === "contatos" ? "contatos" : "todos"} vocabulary={vocabulary} showContact={showContact} contactCount={contactCount} returnTo={here} />
   <FlashMessage />
 
   <form method="GET" role="search" class={`${card} mt-4 flex flex-wrap items-end gap-x-3 gap-y-2 p-3.5 sm:px-4`}>
