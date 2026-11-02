@@ -30,10 +30,11 @@
 > - **Piloto (F10, [plano](plano.md)):** clínica piloto criada na produção, WhatsApp conectado, templates em análise
 >   na Meta. Próximo: templates aprovados → configuração → ativação → testes do bot. Depois: lembrete com botões no
 >   staging e etapa B.
-> - **Redesign da Recepção (UX)** ([`redesign-recepcao.md`](redesign-recepcao.md)): RX1 a RX9 **na `main` e no
->   staging (02/nov)**, sem produção; falta o cliente validar. Recapturar as telas da Central
->   ([`capturas-pendentes.md`](capturas-pendentes.md)) só com autorização. Avisos técnicos agora só do Suporte; tela de
->   pendências do Suporte pendente em [`painel-suporte.md`](painel-suporte.md).
+> - **Redesign da Recepção (UX)** ([`redesign-recepcao.md`](redesign-recepcao.md)): RX1 a RX9 e os ajustes da validação
+>   (Meu dia, Agenda opção B, Pacientes/ficha A, Relatório do dia opção C) **na `main` e no staging (02/nov)**, sem
+>   produção. **Próximo (cliente, 02/nov): atualizar a Central de Ajuda** com todas as mudanças das telas (artigos e
+>   recaptura de todas as telas: [`capturas-pendentes.md`](capturas-pendentes.md)). Avisos técnicos só do Suporte; tela
+>   de pendências do Suporte pendente em [`painel-suporte.md`](painel-suporte.md).
 >
 > **Pendências**
 > - **Cliente valida no staging (no fim):** F8.1, F8.2, F8.2b, F8.3, ajuda contextual e menu lateral.
