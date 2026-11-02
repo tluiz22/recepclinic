@@ -26,7 +26,7 @@ const agendaDate = () => {
 
 // [nome do arquivo, caminho, textos a destacar (começam com…), seletores CSS a destacar]
 export const CAPTURAS = [
-  ["inicio", "/admin/dashboard", ["Comparecimento a registrar"], []],
+  ["inicio", "/admin/dashboard", ["Precisa de você"], []],
   ["agenda-dia", `/admin/agenda?date=${agendaDate()}`, ["Marcar", "Bloquear"], []],
   ["marcar", "/admin/agenda/marcar", ["Paciente"], []],
   ["bloquear", "/admin/agenda/bloquear", ["Dia todo"], []],

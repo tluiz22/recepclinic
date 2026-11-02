@@ -9,4 +9,4 @@ a captura e o motivo, avisar o cliente no fim da etapa e esperar a autorização
 
 ## Pendentes
 
-(nenhuma)
+- `inicio` — a tela virou Meu dia (linha do dia, "Precisa de você", busca de paciente); o cartão "Comparecimento a registrar" saiu e o roteiro agora espera "Precisa de você" (02/11/2026)

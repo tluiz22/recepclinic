@@ -13,6 +13,10 @@ export const PENDING_ATTENDANCE_DAYS = 60;
 export type DashboardCounts = {
   consultationsToday: number;
   examsToday: number;
+  /** Meu dia, linha do dia (RX2): atendimentos de hoje sem os cancelados, por situação. */
+  totalToday: number;
+  confirmedToday: number;
+  completedToday: number;
   /** Ainda marcados ou confirmados, já passados: falta registrar realizado ou falta. */
   pendingAttendance: number;
   /** Lembretes enviados hoje sem resposta (nenhum botão tocado). */
@@ -27,13 +31,13 @@ export async function getDashboardCounts(db: DbClient, clinicId: string, timeZon
     unwrap(
       await db
         .from("appointments")
-        .select("services ( category )")
+        .select("status, services ( category )")
         .eq("clinic_id", clinicId)
         .neq("status", "canceled")
         .gte("scheduled_at", today.start.toISOString())
         .lt("scheduled_at", today.end.toISOString()),
       "Atendimentos de hoje",
-    ) as unknown as { services: { category: Enums<"service_category"> } }[],
+    ) as unknown as { status: Enums<"appointment_status">; services: { category: Enums<"service_category"> } }[],
     db
       .from("appointments")
       .select("id", { count: "exact", head: true })
@@ -81,6 +85,9 @@ export async function getDashboardCounts(db: DbClient, clinicId: string, timeZon
   return {
     consultationsToday: todayRows.length - examsToday,
     examsToday,
+    totalToday: todayRows.length,
+    confirmedToday: todayRows.filter((row) => row.status === "confirmed").length,
+    completedToday: todayRows.filter((row) => row.status === "completed").length,
     pendingAttendance: pending.count ?? 0,
     unansweredReminders: unanswered,
   };
