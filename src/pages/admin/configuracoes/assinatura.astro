@@ -56,7 +56,10 @@ const H2 = "font-display text-[17px] leading-tight font-bold text-ink sm:text-lg
         <h2 class={`${H2} text-can-800`}>Clínica suspensa</h2>
         <p class="mt-1 text-[15px] text-can-800">
           {suspensionReasons.length > 0 ? `Motivo: ${describeReasons(suspensionReasons).toLowerCase()}. ` : ""}
-          Enquanto isso, o painel fica restrito a esta tela, o bot não responde, os links de agendamento estão indisponíveis e nada sai pelo WhatsApp. Os dados continuam guardados. Para regularizar, fale com o Suporte do RecepClinic.
+          Enquanto isso, o painel fica restrito a esta tela, o bot não responde, os links de agendamento estão indisponíveis e nada sai pelo WhatsApp. Os dados continuam guardados.{" "}
+          {suspensionReasons.includes("non_payment")
+            ? "Pague as cobranças vencidas em Cobranças, abaixo: reconhecido o pagamento, a clínica volta sozinha (outros motivos, com o Suporte do RecepClinic)."
+            : "Para regularizar, fale com o Suporte do RecepClinic."}
         </p>
       </Card>
     )

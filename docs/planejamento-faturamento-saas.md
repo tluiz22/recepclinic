@@ -35,7 +35,12 @@
 > `conciliacao-asaas` (6h15 de Brasília: sincroniza todo contrato automático aceito e refaz criação que falhou), as duas
 > na `/api/saude`. **Falta, fora do código:** gerar o token, pôr no ambiente e cadastrar o webhook no painel do Asaas
 > (fila não sequencial, eventos de cobrança); no local o Asaas não alcança a máquina, então o teste de verdade é no
-> staging, quando a branch subir. **Próximo: F12.6** (reativação automática com trava).
+> staging, quando a branch subir.
+> **F12.6 feita** (`20261122120000_reativacao_automatica.sql`): toda cobrança que fica paga tenta reativar, na trava da
+> conta de cobrança; libera só a inadimplência e só sem cobrança do Asaas vencida em aberto; sem outro motivo, volta à
+> situação de antes; liberado pelo sistema, com o pagamento na trilha. A Assinatura da clínica suspensa por
+> inadimplência diz para pagar em Cobranças. **Próximo: F12.7** (avisos por e-mail no 3º, 7º e 14º dia de atraso e de
+> pagamento reconhecido).
 > **Ordem decidida (cliente, 30/out):** cobrança primeiro, até cobrar a clínica piloto em produção, **só com aviso por
 > e-mail**: F12.2b, F12.3, F12.3b, F12.4 a F12.8 e F12.11 (itens 18 a 26 da seção 11). Depois: F12.9 (decisão 11.10),
 > F12.10 (Pix Automático) e a nota fiscal pelo Asaas (N0–N6). **Próximo:** validação da F12.2b no local e o OK para a

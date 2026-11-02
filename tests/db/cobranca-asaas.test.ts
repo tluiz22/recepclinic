@@ -14,7 +14,8 @@ import {
 } from "../../src/lib/data/billing";
 import { syncContractWithAsaas } from "../../src/lib/data/billingAsaas";
 import { platformBillingStore } from "../../src/lib/data/platform";
-import { suspendClinic } from "../../src/lib/data/suspension";
+import { activeSuspensionReasons, listClinicSuspensions, releaseClinicSuspension, suspendClinic } from "../../src/lib/data/suspension";
+import { adminClient } from "./helpers";
 import { todayIn } from "../../src/lib/clinicTime";
 import { clinicServiceClient, createUser, deleteUsers, makePlatformStaff, type TestUser } from "./helpers";
 import { asDb, codeOf, setupAgendaClinic, type AgendaFixture } from "./agendaFixture";
@@ -137,6 +138,32 @@ describe("Cobrança no Asaas (F12.4)", () => {
     expect(await canSuspendForNonPayment(asDb(fixture.admin), clinicId)).toBe(false);
     await suspendClinic(asDb(support), clinicId, { reason: "non_payment", note: "15 dias de atraso." });
     expect((await listBillingAudit(asDb(support), clinicId))[0]).toMatchObject({ action: "clinic_suspended" });
+  });
+
+  it("reativação automática (F12.6): só sem vencida em aberto, e só a inadimplência", async () => {
+    const status = async () => (await adminClient().from("clinics").select("status").eq("id", clinicId).single()).data!.status;
+    await suspendClinic(asDb(support), clinicId, { reason: "administrative", note: "Outro motivo." });
+    const paid = (days: number): AsaasPayment => ({ ...monthly, id: `pay_old_${days}_${stamp}`, dueDate: daysAgo(days), status: "RECEIVED", paidAt: `${today}T12:00:00-03:00` });
+    const sync = (payments: AsaasPayment[]) => {
+      const a = api();
+      a.listSubscriptionPayments = async () => payments;
+      return syncContractWithAsaas(store(), a, contractId, today);
+    };
+    // Pagou a de 15 dias, a de 14 segue vencida: continua suspensa por inadimplência.
+    await sync([monthly, paid(15)]);
+    expect(await activeSuspensionReasons(asDb(support), clinicId)).toEqual(["non_payment", "administrative"]);
+    // Pagou todas: o sistema libera a inadimplência; o motivo administrativo segura a suspensão.
+    await sync([monthly, paid(15), paid(14)]);
+    expect(await activeSuspensionReasons(asDb(support), clinicId)).toEqual(["administrative"]);
+    expect(await status()).toBe("suspended");
+    const released = (await listClinicSuspensions(asDb(support), clinicId)).find((s) => s.reason === "non_payment")!;
+    expect(released).toMatchObject({ releasedBy: null });
+    expect(released.releaseNote).toMatch(/Pagamento reconhecido/);
+    const audit = await listBillingAudit(asDb(support), clinicId);
+    expect(audit.find((e) => e.action === "suspension_released")).toMatchObject({ actorKind: "system" });
+    // Liberado o último motivo, volta a ficar ativa.
+    await releaseClinicSuspension(asDb(support), (await listClinicSuspensions(asDb(support), clinicId)).find((s) => !s.releasedAt)!.id, "Resolvido.");
+    expect(await status()).toBe("active");
   });
 
   it("o contrato guarda a versão do texto aceita", async () => {
