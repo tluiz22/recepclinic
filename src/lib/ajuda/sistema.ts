@@ -20,7 +20,8 @@ export const itensDaMatriz: Record<string, string> = {
   knowledge_base:
     "Desligado, o bot não responde as perguntas frequentes digitadas (horário, endereço, convênios…) e segue com o \"não entendi\".",
   waitlist: "Desligado, somem a aba Lista de espera do Resumo do Dia e a opção no bot, e nenhuma vaga é oferecida.",
-  metrics: "Desligado, some o menu Métricas, com todas as abas e as métricas pessoais do profissional.",
+  metrics: "Desligado, some o menu Métricas, com as abas (menos o Agendamento digital) e as métricas pessoais do profissional.",
+  metrics_funnel: "Desligado, some a aba Métricas › Agendamento digital. O Suporte libera clínica a clínica, depois de avaliar a jornada no WhatsApp; vale com ou sem o bot ligado.",
   custom_messages:
     "Desligado, a clínica não muda os textos do bot nem pede mensagens novas à Meta em Configurações › Mensagens: valem os textos padrão.",
   home_visit: "Desligado, o tipo Domiciliar some de Locais e da marcação. O que já estava ligado a ele fica guardado e volta se o item for liberado.",

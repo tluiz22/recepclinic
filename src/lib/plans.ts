@@ -20,7 +20,8 @@ export const PRICES = {
 /** Item da matriz como é vendido: um ou mais itens do banco ligados juntos. */
 export type PlanItem = { id: string; label: string; features: FeatureKey[]; priceCents: number | null };
 
-const METRICS = FEATURES.filter((feature) => feature.area === "metrics").map((feature) => feature.key);
+// Agendamento digital fica de fora do pacote: item próprio, que o Suporte libera clínica a clínica (cliente, 02/nov/2026).
+const METRICS = FEATURES.filter((feature) => feature.area === "metrics" && feature.key !== "metrics_funnel").map((feature) => feature.key);
 
 const single = (key: FeatureKey): PlanItem => ({ id: key, label: featureLabel(key), features: [key], priceCents: null });
 
@@ -43,7 +44,7 @@ export const ADDONS: PlanItem[] = [
 /** Fora da tabela de preços por ora. */
 // Relacionamento (CRM A1, 27/out/2026): como o Financeiro, sem valor na tabela.
 // Perguntas frequentes no bot (Base de Conhecimento, 31/out/2026): sem valor até a homologação.
-export const OFF_TABLE: PlanItem[] = [single("series"), single("finance"), single("relationship"), single("knowledge_base")];
+export const OFF_TABLE: PlanItem[] = [single("series"), single("finance"), single("relationship"), single("knowledge_base"), single("metrics_funnel")];
 
 export const ALL_ITEMS: PlanItem[] = [...BASIC_ITEMS, ...ADDONS, ...OFF_TABLE];
 
