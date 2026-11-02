@@ -9,11 +9,11 @@
 >
 > **Em produção (cliente, 02/nov):** `d6bc2d6` (1 migração): data sem barras com confirmação, local com link do Maps após a
 > presença e Agendamento digital como item próprio da matriz. Antes: recesso, Base de Conhecimento (ligada na clínica
-> piloto, WhatsApp do suporte informado), Sim/Não em botões, encaixe com tipo. Falta recapturar `bloquear`
-> (`capturas-pendentes.md`, aguarda autorização). Detalhe no [`historico.md`](historico.md) ("Recesso").
+> piloto, WhatsApp do suporte informado), Sim/Não em botões, encaixe com tipo. Captura `bloquear` refeita
+> (`d47f445`). Detalhe no [`historico.md`](historico.md) ("Recesso").
 >
 > **Ambientes**
-> - **Produção** (`app.recepclinic.com.br`, branch `producao`) = `main` em `d6bc2d6` (ver acima). Fluxo em [`producao.md`](producao.md).
+> - **Produção** (`app.recepclinic.com.br`, branch `producao`) = `main` em `d47f445` (ver acima). Fluxo em [`producao.md`](producao.md).
 > - **Staging** (`teste.recepclinic.com.br`, branch `main`): produção + cartão do Asaas (`ASAAS_PREVIEW=1`) + Base de
 >   Conhecimento do bot com os ajustes da homologação (migração aplicada).
 >   Roteiros em [`staging.md`](staging.md).
