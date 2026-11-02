@@ -24,6 +24,9 @@ Só o Suporte (`clinic.isPlatformStaff`) vê:
 **Risco aceito:** o Administrador não é mais avisado do vencimento do certificado A1, que só ele troca. O Suporte precisa
 avisar a clínica por fora até a tela abaixo existir.
 
+- **Relatório do dia › Envios** (02/nov/2026): a aba saiu para a clínica; só o Suporte a vê ("Envios (Suporte)") até a
+  tela abaixo existir, quando os envios passam para ela.
+
 ## Pendente: tela do Suporte
 
 Uma tela (em Sistema) com as **clínicas que precisam de apoio**, uma linha por pendência:

@@ -4,32 +4,33 @@
 // remarcação, A registrar, Registradas e Envios (cliente, 05/out/2026: aqui,
 // para toda a equipe; com o lembrete ou o resumo do dia liberado). Tudo das
 // agendas que a pessoa vê (o Profissional, só as próprias).
+// Redesign do Relatório do dia, opção C (cliente, 02/nov/2026): três abas. Resumo do dia (linhas curtas), Lembretes
+// (como antes) e A registrar (linhas com Compareceu e Faltou, a mais antiga primeiro). Saíram Lista de espera e
+// Aguardando remarcação (estão em Pacientes › Para contatar), Registradas (corrigir pela Agenda) e Envios (só o
+// Suporte, até a tela de pendências do Suporte; docs/painel-suporte.md). Os endereços antigos levam ao lugar novo.
 import AdminLayout from "../../../layouts/AdminLayout.astro";
-import AppointmentCard from "../../../components/admin/agenda/AppointmentCard.astro";
+import CardActionButton from "../../../components/admin/agenda/CardActionButton.astro";
+import { cardActions } from "../../../components/admin/agenda/cardActions";
+import { isAnonymizedPhone } from "../../../lib/anonymization";
+import { formatPhoneBR } from "../../../lib/phone";
+import { withReturn } from "../../../lib/returnPath";
 import ConfirmDeleteDialog from "../../../components/admin/ConfirmDeleteDialog.astro";
 import FlashMessage from "../../../components/admin/FlashMessage.astro";
-import AguardandoTab from "../../../components/admin/resumo/AguardandoTab.astro";
 import EnviosTab from "../../../components/admin/resumo/EnviosTab.astro";
 import LembretesTab from "../../../components/admin/resumo/LembretesTab.astro";
-import ListaEsperaTab from "../../../components/admin/resumo/ListaEsperaTab.astro";
 import ResumoDia from "../../../components/admin/resumo/ResumoDia.astro";
 import Button from "../../../components/admin/ui/Button.astro";
-import DateStepper from "../../../components/admin/ui/DateStepper.astro";
-import PageHeader from "../../../components/admin/ui/PageHeader.astro";
-import Tabs, { type TabItem } from "../../../components/admin/ui/Tabs.astro";
-import { addDays, formatCalendarDate, isCalendarDate, todayIn } from "../../../lib/clinicTime";
+import type { TabItem } from "../../../components/admin/ui/Tabs.astro";
+import { addDays, formatCalendarDate, formatInstant, isCalendarDate, localDateOf, todayIn } from "../../../lib/clinicTime";
 import { canAccessArea } from "../../../lib/clinicAccess";
 import { createUserClient } from "../../../lib/data/clients";
 import { loadActorLabels } from "../../../lib/data/agenda/trail";
-import { listAgendaAppointments, listNoShowStats, listOrigins, type AgendaAppointment } from "../../../lib/data/agenda/view";
+import { listAgendaAppointments, type AgendaAppointment } from "../../../lib/data/agenda/view";
 import { listAgendas } from "../../../lib/data/config/agendas";
-import { getResumoTabCounts, listAwaitingRebooking, listPendingAttendance, listRecordedPage, listRemindersOfDay } from "../../../lib/data/daily";
+import { getResumoTabCounts, listPendingAttendance, listRemindersOfDay } from "../../../lib/data/daily";
 import { describeSendsAlert, getSendsAlert, listAppointmentsWithFailedSends, listJobRuns } from "../../../lib/data/sends";
-import { listPaymentStates } from "../../../lib/data/payments";
-import { listReturnReady } from "../../../lib/data/agenda/returnReady";
 import { listServiceRefs } from "../../../lib/data/config/services";
-import { serviceTags, serviceTints } from "../../../components/admin/agenda/categoryStyle";
-import { listRecentOffers, listWaitlist } from "../../../lib/data/waitlist/entries";
+import { serviceTags } from "../../../components/admin/agenda/categoryStyle";
 import { vocabularyFor } from "../../../lib/vocabulary";
 
 const clinic = Astro.locals.clinic!;
@@ -39,18 +40,21 @@ const params = Astro.url.searchParams;
 const has = (key: string) => clinic.features.includes(key as never);
 const sendsOn = has("reminders") || has("daily_summary");
 
-type Tab = "resumo" | "lembretes" | "lista_espera" | "aguardando_remarcacao" | "pendentes" | "confirmadas" | "envios";
+type Tab = "resumo" | "lembretes" | "pendentes" | "envios";
 const tabs: { id: Tab; label: string; show: boolean }[] = [
   { id: "resumo", label: "Resumo do dia", show: true },
   { id: "lembretes", label: "Lembretes", show: has("reminders") },
-  { id: "lista_espera", label: "Lista de espera", show: has("waitlist") },
-  { id: "aguardando_remarcacao", label: "Aguardando remarcação", show: true },
   { id: "pendentes", label: "A registrar", show: true },
-  { id: "confirmadas", label: "Registradas", show: true },
-  { id: "envios", label: "Envios", show: sendsOn },
+  { id: "envios", label: "Envios (Suporte)", show: sendsOn && clinic.isPlatformStaff },
 ];
+// Abas que saíram: o endereço antigo leva ao lugar novo.
+const asked = params.get("tab");
+if (asked === "lista_espera" || asked === "aguardando_remarcacao") {
+  return Astro.redirect(canAccessArea(clinic, "relationship") ? `/admin/pacientes/para-contatar?lista=${asked}` : "/admin/consultas");
+}
+if (asked === "confirmadas") return Astro.redirect("/admin/consultas?tab=pendentes");
 const visible = tabs.filter((t) => t.show);
-const tab: Tab = visible.find((t) => t.id === params.get("tab"))?.id ?? "resumo";
+const tab: Tab = visible.find((t) => t.id === asked)?.id ?? "resumo";
 
 const now = new Date();
 const today = todayIn(clinic.timezone, now);
@@ -65,11 +69,7 @@ const returnTo = tabHref(tab);
 
 let dayAppointments: AgendaAppointment[] = [];
 let cards: AgendaAppointment[] = [];
-let recorded: Awaited<ReturnType<typeof listRecordedPage>> | null = null;
 let reminders: Awaited<ReturnType<typeof listRemindersOfDay>> = [];
-let waitlist: Awaited<ReturnType<typeof listWaitlist>> = [];
-let offers: Awaited<ReturnType<typeof listRecentOffers>> = [];
-let awaiting: AgendaAppointment[] = [];
 let sends: { alerts: string[]; runs: Awaited<ReturnType<typeof listJobRuns>>; failed: Awaited<ReturnType<typeof listAppointmentsWithFailedSends>> } | null = null;
 
 switch (tab) {
@@ -79,18 +79,9 @@ switch (tab) {
   case "lembretes":
     reminders = await listRemindersOfDay(db, clinic.clinicId, date, clinic.timezone);
     break;
-  case "lista_espera":
-    [waitlist, offers] = await Promise.all([listWaitlist(db, clinic.clinicId), listRecentOffers(db, clinic.clinicId)]);
-    break;
-  case "aguardando_remarcacao":
-    awaiting = await listAwaitingRebooking(db, clinic.clinicId, now);
-    break;
   case "pendentes":
-    cards = await listPendingAttendance(db, clinic.clinicId, now);
-    break;
-  case "confirmadas":
-    recorded = await listRecordedPage(db, clinic.clinicId, Number(params.get("pagina")) || 1);
-    cards = recorded.items;
+    // A mais antiga primeiro (protótipo B do redesign, aba A registrar).
+    cards = (await listPendingAttendance(db, clinic.clinicId, now)).sort((a, b) => a.scheduledAt.getTime() - b.scheduledAt.getTime());
     break;
   case "envios": {
     const [alert, runs, failed] = await Promise.all([
@@ -102,26 +93,15 @@ switch (tab) {
     break;
   }
 }
-const actors = await loadActorLabels(db, clinic.clinicId, [...dayAppointments.map((a) => a.createdBy), ...awaiting.map((a) => a.canceledBy)]);
-// Módulo financeiro (F11.2): selo e botão "Pagamento", para quem tem a área.
-const financeOn = canAccessArea(clinic, "finance");
-const [noShows, origins, paymentStates, serviceRefs, returnReady] = await Promise.all([
-  cards.length ? listNoShowStats(db, clinic.clinicId, cards.map((a) => a.patientId)) : Promise.resolve(new Map()),
-  cards.length ? listOrigins(db, clinic.clinicId, cards) : Promise.resolve(new Map()),
-  financeOn && cards.length ? listPaymentStates(db, clinic.clinicId, cards.map((a) => a.id)) : Promise.resolve(null),
-  listServiceRefs(db, clinic.clinicId),
-  cards.length ? listReturnReady(db, clinic.clinicId, cards, clinic.timezone, now) : Promise.resolve(new Map()),
-]);
+const actors = await loadActorLabels(db, clinic.clinicId, dayAppointments.map((a) => a.createdBy));
+const serviceRefs = await listServiceRefs(db, clinic.clinicId);
 // Cor de cada serviço: faixa do cartão e etiqueta do tipo nas outras abas (cliente, 19/out/2026).
-const tints = serviceTints(serviceRefs);
 const tags = serviceTags(serviceRefs);
 // Contadores das abas (R3; cliente, 15/out/2026): onde há pendência.
-const counts = await getResumoTabCounts(db, clinic.clinicId, { timeZone: clinic.timezone, reminders: has("reminders"), waitlist: has("waitlist"), sends: sendsOn }, now);
+const counts = await getResumoTabCounts(db, clinic.clinicId, { timeZone: clinic.timezone, reminders: has("reminders"), waitlist: false, sends: sendsOn && clinic.isPlatformStaff }, now);
 const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
 const tabCount: Partial<Record<Tab, Pick<TabItem, "count" | "countTone" | "alert" | "countLabel">>> = {
   lembretes: { count: counts.reminders, countLabel: `${counts.reminders ?? 0} sem resposta ou não entregue(s) hoje` },
-  lista_espera: { count: counts.waitlist, countTone: "info", countLabel: `${plural(counts.waitlist ?? 0, "pessoa", "pessoas")} na lista` },
-  aguardando_remarcacao: { count: counts.awaitingRebooking, countLabel: `${counts.awaitingRebooking} aguardando` },
   pendentes: { count: counts.pendingAttendance, countLabel: `${counts.pendingAttendance} a registrar` },
   envios: { alert: counts.sendsAlert, countLabel: "Há envios que pedem atenção" },
 };
@@ -129,97 +109,110 @@ const dated = isDatedTab(tab);
 const dayHref = (d: string) => `/admin/consultas?tab=${tab}&date=${d}`;
 const activeOfDay = dayAppointments.filter((a) => a.status !== "canceled").length;
 const canceledOfDay = dayAppointments.length - activeOfDay;
-const subtitle = !dated
-  ? undefined
-  : [
-      formatCalendarDate(date, "EEEE, d 'de' MMMM 'de' yyyy"),
-      ...(tab === "resumo" ? [plural(activeOfDay, "atendimento", "atendimentos"), ...(canceledOfDay ? [plural(canceledOfDay, "cancelado", "cancelados")] : [])] : []),
-    ].join(" · ");
+const dayTitle = `${formatCalendarDate(date, "EEEE").replace("-feira", "")}, ${formatCalendarDate(date, date.slice(0, 4) === today.slice(0, 4) ? "d 'de' MMMM" : "d 'de' MMMM 'de' yyyy")}`;
+const dayCounts = tab === "resumo" ? [plural(activeOfDay, "atendimento", "atendimentos"), ...(canceledOfDay ? [plural(canceledOfDay, "cancelado", "cancelados")] : [])].join(" · ") : "";
+// A registrar: as ações Compareceu e Faltou do cartão da Agenda (cardActions), com a mesma confirmação.
+const who = (a: AgendaAppointment) => `${a.patientName}, ${formatInstant(a.scheduledAt, clinic.timezone, "dd/MM 'às' HH:mm")}`;
+const registerActions = (a: AgendaAppointment) => {
+  const actions = cardActions({ appointment: a, now, who: who(a), contact: vocabulary.contact, returnTo, preparationResendable: false, guidanceResendable: false, waitlistOn: false, onWaitlist: false });
+  const forms = [actions.primary, ...actions.visible].filter((x): x is Extract<typeof x, { kind: "form" }> => !!x && x.kind === "form");
+  return { came: forms.find((x) => x.acao === "compareceu"), missed: forms.find((x) => x.acao === "faltou") };
+};
+const dayWord = (a: AgendaAppointment) => {
+  const day = localDateOf(a.scheduledAt, clinic.timezone);
+  return day === today ? "hoje" : day === addDays(today, -1) ? "ontem" : formatInstant(a.scheduledAt, clinic.timezone, "EEEE, dd/MM").replace("-feira", "");
+};
+const tabClass = (on: boolean) =>
+  `inline-flex min-h-11 items-center gap-1.5 border-b-[3px] px-0.5 text-base font-semibold no-underline ${on ? "border-brand text-brand-ink" : "border-transparent text-ink-soft hover:text-ink"}`;
 ---
 <AdminLayout title="Relatório do dia" autoRefresh>
-  <PageHeader title="Relatório do dia" subtitle={subtitle}>
-    {tab === "resumo" && (
-      <Button slot="actions" href={`/admin/agenda?date=${date}`}>
-        Abrir na Agenda
-      </Button>
-    )}
-  </PageHeader>
-  <Tabs
-    label="Abas do Relatório do dia"
-    class="mt-4"
-    tabs={visible.map((t) => ({ label: t.label, href: tabHref(t.id), active: t.id === tab, ...tabCount[t.id] }))}
-  />
+  <header class="flex flex-wrap items-end gap-x-6 gap-y-2 border-b border-line">
+    <h1 class="mb-1.5 font-display text-[28px] leading-tight font-bold text-ink">Relatório do dia</h1>
+    <nav aria-label="Abas do Relatório do dia" class="flex flex-wrap gap-x-6">
+      {
+        visible.map((t) => {
+          const c = tabCount[t.id];
+          return (
+            <a href={tabHref(t.id)} aria-current={t.id === tab ? "page" : undefined} class={tabClass(t.id === tab)}>
+              {t.label}
+              {c?.alert ? (
+                <span class="rounded-full bg-can-100 px-1.5 text-[13px] font-bold text-can-800" aria-label={c.countLabel}>!</span>
+              ) : c?.count ? (
+                <span class="rounded-full bg-pend-100 px-1.5 text-[13px] font-bold text-pend-800 tabular-nums" aria-label={c.countLabel}>{c.count}</span>
+              ) : null}
+            </a>
+          );
+        })
+      }
+    </nav>
+  </header>
   <FlashMessage />
 
   {dated && (
-    <DateStepper
-      class="mt-4"
-      action="/admin/consultas"
-      date={date}
-      hidden={{ tab }}
-      prevHref={dayHref(addDays(date, -1))}
-      nextHref={dayHref(addDays(date, 1))}
-      todayHref={date !== today ? dayHref(today) : undefined}
-    />
+    <div class="mt-4 flex flex-wrap items-center gap-x-3 gap-y-2">
+      <div class="flex items-center gap-1.5">
+        <Button href={dayHref(addDays(date, -1))} aria-label="Dia anterior" class="w-9 px-0">‹</Button>
+        <Button href={dayHref(today)} class="px-3">Hoje</Button>
+        <Button href={dayHref(addDays(date, 1))} aria-label="Próximo dia" class="w-9 px-0">›</Button>
+      </div>
+      <form method="GET" action="/admin/consultas" class="relative">
+        <input type="hidden" name="tab" value={tab} />
+        <h2 class="font-display text-[22px] leading-tight font-bold text-ink first-letter:uppercase">{dayTitle}</h2>
+        <label class="absolute inset-0 cursor-pointer" title="Escolher o dia">
+          <span class="sr-only">Escolher o dia</span>
+          <input type="date" name="date" value={date} data-autosubmit class="absolute inset-0 h-full w-full cursor-pointer opacity-0" />
+        </label>
+      </form>
+      {dayCounts && <span class="text-[15px] text-ink-soft">{dayCounts}</span>}
+      {tab === "resumo" && <a href={`/admin/agenda?date=${date}`} class="text-[15px] font-semibold text-brand no-underline hover:underline sm:ml-auto">Abrir na Agenda</a>}
+    </div>
   )}
   {tab === "resumo" && <ResumoDia tags={tags} appointments={dayAppointments} actors={actors} date={date} timeZone={clinic.timezone} vocabulary={vocabulary} showAgenda={showAgenda} />}
   {tab === "lembretes" && <LembretesTab tags={tags} reminders={reminders} timeZone={clinic.timezone} vocabulary={vocabulary} openGroup={params.get("grupo")} />}
-  {tab === "lista_espera" && <ListaEsperaTab tags={tags} entries={waitlist} offers={offers} timeZone={clinic.timezone} />}
-  {tab === "aguardando_remarcacao" && <AguardandoTab tags={tags} appointments={awaiting} actors={actors} timeZone={clinic.timezone} vocabulary={vocabulary} />}
   {tab === "envios" && sends && <EnviosTab tags={tags} alerts={sends.alerts} runs={sends.runs} failed={sends.failed} timeZone={clinic.timezone} />}
 
   {
-    (tab === "pendentes" || tab === "confirmadas") && (
-      <>
-        <p class="mt-4 text-[15px] text-ink-soft">
-          {tab === "pendentes"
-            ? `Atendimentos dos últimos 60 dias que já passaram sem registro (${cards.length}).`
-            : `Comparecimento já registrado (${recorded?.total ?? 0}). Dá para corrigir.`}
-        </p>
-        <div class="mt-3 grid items-start gap-3 lg:grid-cols-2 2xl:grid-cols-3">
-          {cards.map((a) => (
-            <AppointmentCard
-              appointment={a}
-              tint={tints.get(a.serviceId)}
-              timeZone={clinic.timezone}
-              now={now}
-              showAgenda={showAgenda}
-              vocabulary={vocabulary}
-              returnTo={returnTo}
-              preparationResendable={false}
-              waitlistOn={false}
-              onWaitlist={false}
-              noShow={noShows.get(a.patientId)}
-              origin={a.originAppointmentId ? origins.get(a.originAppointmentId) : undefined}
-              payment={paymentStates ? (paymentStates.get(a.id) ?? "none") : undefined}
-              returnReady={returnReady.get(a.id)}
-              withDate
-            />
-          ))}
-        </div>
-        {cards.length === 0 && (
-          <p class="mt-3 rounded-xl border border-dashed border-line-strong px-3 py-5 text-center text-[15px] text-ink-soft">
-            {tab === "pendentes" ? "Nada a registrar." : "Nenhum registro ainda."}
+    tab === "pendentes" && (
+      <section aria-labelledby="registrar-titulo" class="mt-4 overflow-hidden rounded-xl border border-line bg-white">
+        <div class="flex flex-col gap-0.5 px-4 pt-4 pb-3 sm:px-[18px]">
+          <h2 id="registrar-titulo" class="font-display text-[21px] leading-tight font-bold text-ink">Consultas sem presença registrada</h2>
+          <p class="text-[14.5px] text-ink-soft">
+            Já passaram e estão sem "Compareceu" ou "Faltou", de qualquer dia (até 60 dias), a mais antiga primeiro. Errou um registro? Corrija pela
+            Agenda, no atendimento.
           </p>
-        )}
-        {recorded && recorded.pageCount > 1 && (
-          <nav aria-label="Páginas" class="mt-4 flex items-center gap-2 text-[15px]">
-            {recorded.page > 1 && (
-              <Button size="sm" href={`/admin/consultas?tab=confirmadas&pagina=${recorded.page - 1}`}>
-                Anterior
-              </Button>
-            )}
-            <span class="px-1 text-ink-soft">
-              Página {recorded.page} de {recorded.pageCount}
-            </span>
-            {recorded.page < recorded.pageCount && (
-              <Button size="sm" href={`/admin/consultas?tab=confirmadas&pagina=${recorded.page + 1}`}>
-                Próxima
-              </Button>
-            )}
-          </nav>
-        )}
-      </>
+        </div>
+        {cards.map((a) => {
+          const { came, missed } = registerActions(a);
+          const endpoint = `/api/admin/agenda/atendimentos/${a.id}`;
+          return (
+            <div class="flex flex-wrap items-center gap-x-3.5 gap-y-2 border-t border-[#e7eeeb] px-4 py-3.5 sm:px-[18px]">
+              <div class="flex min-w-[108px] flex-col">
+                <strong class="text-[15.5px] tabular-nums">{formatInstant(a.scheduledAt, clinic.timezone, "HH:mm")}</strong>
+                <span class="text-[13.5px] text-ink-soft">{dayWord(a)}</span>
+              </div>
+              <div class="flex min-w-0 flex-[1_1_220px] flex-col gap-0.5">
+                <span class="text-base">
+                  <a href={withReturn(`/admin/pacientes/${a.patientId}`, returnTo)} class="font-bold text-ink no-underline hover:text-brand hover:underline">{a.patientName}</a>
+                  {" · "}
+                  {a.serviceName} · {a.agendaName}
+                </span>
+                <span class="text-sm text-ink-soft">
+                  {!a.isContactSelf && `${vocabulary.contact === "contato" ? "Contato" : "Resp."}: ${a.contactName} · `}
+                  {isAnonymizedPhone(a.contactPhone) ? "telefone anonimizado" : formatPhoneBR(a.contactPhone)}
+                </span>
+              </div>
+              <div class="flex flex-wrap items-center gap-2">
+                {came && <CardActionButton action={came} endpoint={endpoint} returnTo={returnTo} variant="primary" />}
+                {missed && <CardActionButton action={missed} endpoint={endpoint} returnTo={returnTo} variant="danger" />}
+                <Button href={withReturn(`/admin/agenda?date=${localDateOf(a.scheduledAt, clinic.timezone)}&sel=${a.id}`, returnTo)} variant="quiet" size="sm">
+                  Abrir na Agenda
+                </Button>
+              </div>
+            </div>
+          );
+        })}
+        {cards.length === 0 && <p class="border-t border-[#e7eeeb] px-4 py-5 text-[15px] text-ink-soft sm:px-[18px]">Tudo registrado.</p>}
+      </section>
     )
   }
   <ConfirmDeleteDialog />

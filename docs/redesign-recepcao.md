@@ -44,6 +44,11 @@ agora.** Não remove função, não muda regra de negócio, banco, API, integra�
 - **RX-D7. Pacientes › "Para contatar": opção A**, uma lista por vez (seção 4.3). Recusada: B (tudo numa lista).
 - **RX-D8. Ficha do paciente: opção A**, a ficha de hoje (R6) com a faixa "Próxima consulta". Recusada: B (linha do
   tempo única).
+- **RX-D10. Relatório do dia: opção C** (cliente, 02/nov/2026; canvas <https://claude.ai/artifact/LjptqCJPoddFvznjyHMXf1>):
+  três abas, Resumo do dia (linhas curtas), Lembretes (como antes) e A registrar (como o quadro "B · aba A registrar":
+  linhas com Compareceu e Faltou, a mais antiga primeiro). Saíram Lista de espera e Aguardando remarcação (estão em
+  Pacientes › Para contatar; o Profissional, que não tem Para contatar, deixa de vê-las), Registradas (corrigir pela
+  Agenda) e Envios (só o Suporte, até a tela do Suporte). Os endereços antigos levam ao lugar novo.
 - **RX-D9. "Trilha" passa a se chamar "Histórico" em todo o sistema** (cartão da Agenda, ficha, título da tela,
   artigos da Central de Ajuda). O endereço da tela (`/admin/agenda/trilha/…`) não muda.
 

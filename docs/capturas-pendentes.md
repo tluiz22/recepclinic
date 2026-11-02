@@ -17,3 +17,4 @@ a captura e o motivo, avisar o cliente no fim da etapa e esperar a autorização
 - `agenda-dia` (de novo; usada também no artigo dos cartões) — o atendimento virou linha curta que abre no lugar (RX7) (02/11/2026)
 - `agenda-dia` (de novo) — Agenda opção B: cartões por agenda com linhas curtas e o painel ao lado; cabeçalho numa linha (02/11/2026)
 - `pacientes`, `ficha-do-paciente` e `relacionamento` (de novo) — Pacientes, Para contatar e ficha como no protótipo A (cabeçalho com abas, cartões de lista, faixa âmbar, cartões-resumo) (02/11/2026)
+- `resumo-do-dia` (de novo) — Relatório do dia opção C: três abas, Resumo em linhas curtas e A registrar com Compareceu/Faltou (02/11/2026)

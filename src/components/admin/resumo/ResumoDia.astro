@@ -5,22 +5,17 @@
 // Redesign R3 (cliente, 15/out/2026): legenda com contadores e, no
 // computador, uma linha por atendimento; no celular, um cartão por atendimento.
 import { currentPath, withReturn } from "../../../lib/returnPath";
-import PhoneLinks from "../PhoneLinks.astro";
-import { CANCELED_TEXT, SITUATIONS, appointmentSituation, countSituations } from "../agenda/situationStyle";
-import SituationLegend from "../agenda/SituationLegend.astro";
+import { CANCELED_TEXT, appointmentSituation } from "../agenda/situationStyle";
 import HowItWorks from "../ui/HowItWorks.astro";
 import { agenda as ajudaAgenda } from "../../../lib/ajuda/agenda";
-import Signal from "../ui/Signal.astro";
 import StatusPill from "../ui/StatusPill.astro";
-import Tag from "../ui/Tag.astro";
 import ServiceTag, { type ServiceTagInfo } from "../agenda/ServiceTag.astro";
 import { serviceBesideCategory } from "../agenda/categoryStyle";
-import { formatAge } from "../../../lib/age";
 import { formatInstant } from "../../../lib/clinicTime";
 import type { AgendaAppointment } from "../../../lib/data/agenda/view";
 import { actorText, type ActorLabel } from "../../../lib/data/agenda/trail";
 import { confirmedByReminder } from "../../../lib/reminderResponse";
-import { capitalize, type Vocabulary } from "../../../lib/vocabulary";
+import type { Vocabulary } from "../../../lib/vocabulary";
 
 interface Props {
   appointments: AgendaAppointment[];
@@ -33,7 +28,7 @@ interface Props {
   tags: Map<string, ServiceTagInfo>;
 }
 
-const { appointments, actors, date, timeZone, vocabulary, showAgenda, tags } = Astro.props;
+const { appointments, actors, timeZone, tags } = Astro.props;
 const now = new Date();
 const VIA: Record<string, string> = { admin: "pelo painel", whatsapp_bot: "pelo WhatsApp", booking_link: "pelo link" };
 const bookedBy = (a: AgendaAppointment) => {
@@ -53,85 +48,42 @@ const presence = (a: AgendaAppointment) => {
   return null;
 };
 const here = currentPath(Astro.url);
-const COLUMNS = "lg:grid lg:grid-cols-[150px_minmax(0,1.3fr)_minmax(0,1.2fr)_200px_210px] lg:gap-4";
 ---
 
-<HowItWorks id="situacoes" topic={ajudaAgenda.comoFunciona.situacoes} class="mt-4">
-  <SituationLegend counts={countSituations(appointments, 0)} withBlock={false} class="" />
+<HowItWorks id="situacoes" topic={ajudaAgenda.comoFunciona.situacoes} class="mt-1">
+  <p class="text-[14.5px] text-ink-soft">Só informação: as ações de cada atendimento ficam na Agenda.</p>
 </HowItWorks>
 {
   appointments.length > 0 && (
-    <div class="mt-4 lg:overflow-hidden lg:rounded-xl lg:border lg:border-line lg:bg-white">
-      <div aria-hidden="true" class={`hidden border-b border-line border-l-[5px] border-l-transparent bg-[#f8faf9] px-4 py-2.5 text-[13px] font-semibold text-ink-soft ${COLUMNS}`}>
-        <span>Horário</span>
-        <span>{capitalize(vocabulary.patient)} e contato</span>
-        <span>Atendimento</span>
-        <span>Presença</span>
-        <span>Quem marcou</span>
-      </div>
-      <ul aria-label="Atendimentos do dia" class="flex flex-col gap-2.5 lg:gap-0">
-        {[...active, ...canceled].map((a) => {
-          const situation = appointmentSituation(a);
-          const p = presence(a);
-          return (
-            <li
-              class={`flex min-w-0 flex-col gap-1.5 rounded-xl border border-l-[5px] px-3 py-3 lg:items-start lg:rounded-none lg:border-0 lg:border-b lg:border-l-[5px] lg:border-b-[#e6ecea] lg:px-4 lg:last:border-b-0 ${SITUATIONS[situation].edge} ${SITUATIONS[situation].card} ${situation === "canceled" ? "" : "lg:bg-transparent"} ${COLUMNS}`}
-            >
-              <div class="flex items-center justify-between gap-2 lg:flex-col lg:items-start lg:gap-1.5">
-                <span class={`text-[17px] leading-tight font-bold tabular-nums lg:text-base ${a.status === "canceled" ? CANCELED_TEXT : "text-ink"}`}>
-                  {formatInstant(a.scheduledAt, timeZone, "HH:mm")}
-                </span>
-                <StatusPill situation={situation} />
-              </div>
-              <div class="flex min-w-0 flex-col gap-0.5">
-                <span>
-                  <a href={withReturn(`/admin/pacientes/${a.patientId}`, here)} class="text-[17px] leading-snug font-semibold text-ink no-underline hover:text-brand hover:underline lg:text-base">
-                    {a.patientName}
-                  </a>{" "}
-                  <span class="text-sm text-ink-soft">{formatAge(a.patientBirthdate, date)}</span>
-                </span>
-                <span class="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-[15px] leading-snug text-ink-soft lg:text-sm">
-                  {!a.isContactSelf && `${capitalize(vocabulary.contact)}: ${a.contactName} · `}
-                  <PhoneLinks phone={a.contactPhone} plain />
-                </span>
-                {a.homeVisitAddress && <span class="text-sm text-ink-soft">Endereço: {a.homeVisitAddress}</span>}
-              </div>
-              {/* Etiqueta do tipo na cor do serviço, o serviço e o local (proposta A, cliente, 19/out/2026). */}
-              <div class="flex min-w-0 flex-wrap items-center gap-1.5 lg:flex-col lg:items-start lg:gap-1">
+    // Opção C do redesign do Relatório do dia (cliente, 02/nov/2026): uma linha curta por atendimento.
+    <ul aria-label="Atendimentos do dia" class="mt-3 overflow-hidden rounded-xl border border-line bg-white">
+      {[...active, ...canceled].map((a) => {
+        const situation = appointmentSituation(a);
+        const p = presence(a);
+        const canceledRow = a.status === "canceled";
+        return (
+          <li class="flex flex-wrap items-center gap-x-3.5 gap-y-1.5 border-t border-[#e7eeeb] px-4 py-2.5 first:border-t-0 sm:px-[18px]">
+            <strong class={`min-w-[52px] text-[15px] tabular-nums ${canceledRow ? CANCELED_TEXT : "text-ink"}`}>{formatInstant(a.scheduledAt, timeZone, "HH:mm")}</strong>
+            <span class="min-w-0 flex-[1_1_240px] text-[15px]">
+              <a href={withReturn(`/admin/pacientes/${a.patientId}`, here)} class={`font-bold no-underline hover:text-brand hover:underline ${canceledRow ? CANCELED_TEXT : "text-ink"}`}>{a.patientName}</a>
+              <span class="text-ink-mid">
+                {" · "}
                 <ServiceTag info={tags.get(a.serviceId)} />
-                {serviceBesideCategory(a.serviceName, a.category) && (
-                  <span class="text-[15px] leading-snug font-semibold text-ink-mid lg:text-sm">{a.serviceName}</span>
-                )}
-                <span class="flex flex-wrap gap-1.5">
-                  {showAgenda && (
-                    <Tag strong class="lg:bg-ink/[0.07] lg:text-ink-mid">
-                      {a.agendaName}
-                    </Tag>
-                  )}
-                  <Tag>{a.locationName}</Tag>
-                </span>
-              </div>
-              <div>
-                {p ? (
-                  <Signal tone={p.tone} icon={p.icon}>
-                    {p.label}
-                  </Signal>
-                ) : (
-                  <span class="hidden text-sm text-ink-soft lg:inline" aria-hidden="true">
-                    —
-                  </span>
-                )}
-              </div>
-              <span class="text-[13.5px] leading-snug text-ink-soft lg:text-[13px]">{bookedBy(a)}</span>
-            </li>
-          );
-        })}
-      </ul>
-    </div>
+                {serviceBesideCategory(a.serviceName, a.category) && ` ${a.serviceName}`}
+                {` · ${a.agendaName}`}
+              </span>
+              {p && p.tone === "success" && <span class="sr-only"> · {p.label}</span>}
+            </span>
+            <span class="min-w-[160px] text-[13.5px] text-ink-soft">{bookedBy(a).replace(/^Marcado /, "")}</span>
+            <StatusPill situation={situation} />
+          </li>
+        );
+      })}
+    </ul>
   )
 }
 {
   appointments.length === 0 && (
-    <p class="mt-4 rounded-xl border border-dashed border-line-strong px-3 py-5 text-center text-[15px] text-ink-soft">Nenhum atendimento neste dia.</p>
+    <p class="mt-3 rounded-xl border border-dashed border-line-strong px-3 py-5 text-center text-[15px] text-ink-soft">Nenhum atendimento neste dia.</p>
   )
 }
