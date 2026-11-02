@@ -16,9 +16,10 @@ describe("planos", () => {
     expect(clinicPlan(BASIC, 1)).toMatchObject({ kind: "basic", monthlyCents: 14_700 });
   });
 
-  it("Completo: tudo menos as séries, com as métricas juntas", () => {
+  it("Completo: tudo menos as séries e o Agendamento digital, com as outras métricas juntas", () => {
     expect(COMPLETE).not.toContain("series");
-    expect(COMPLETE).toEqual(expect.arrayContaining(FEATURES.filter((f) => f.area === "metrics").map((f) => f.key)));
+    expect(COMPLETE).not.toContain("metrics_funnel");
+    expect(COMPLETE).toEqual(expect.arrayContaining(FEATURES.filter((f) => f.area === "metrics" && f.key !== "metrics_funnel").map((f) => f.key)));
     expect(missingDependencies(COMPLETE)).toEqual([]);
     expect(clinicPlan(COMPLETE, 3)).toMatchObject({ kind: "complete", monthlyCents: 29_700 + 2 * 4_700 });
   });
