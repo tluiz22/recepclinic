@@ -144,6 +144,8 @@ export const BILLING_ACTIONS = {
   charge_created: "Cobrança gerada",
   charge_updated: "Situação da cobrança mudou",
   asaas_sync_failed: "Falha ao falar com o Asaas",
+  notice_sent: "Aviso de cobrança enviado",
+  notice_failed: "Aviso de cobrança não saiu",
   clinic_suspended: "Clínica suspensa",
   suspension_released: "Motivo da suspensão liberado",
 } as const;

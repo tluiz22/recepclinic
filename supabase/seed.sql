@@ -245,6 +245,9 @@ begin
   -- Cobrança paga à mão (F12.4: o espelho também guarda o modo manual), da implantação do contrato manual.
   insert into public.billing_charges (clinic_id, contract_id, origin, kind, due_date, value_cents, status, paid_at)
     select c_a, id, 'manual', 'setup', current_date, 29700, 'paid', now() from public.billing_contracts where clinic_id = c_a and version = 1;
+  -- Aviso de pagamento reconhecido já enviado (F12.7).
+  insert into public.billing_notifications (clinic_id, charge_id, kind, scheduled_for, status, attempts, sent_at, sent_to)
+    select c_a, id, 'payment_confirmed', current_date, 'sent', 1, now(), 'financeiro@exemplo-saude.local' from public.billing_charges where clinic_id = c_a limit 1;
   -- Suspensão já liberada (F12.3): a clínica de exemplo segue ativa.
   insert into public.clinic_suspensions (clinic_id, reason, note, created_at, released_at, release_note)
     values (c_a, 'administrative', 'Exemplo: pausa pedida pela clínica.', now() - interval '40 days', now() - interval '30 days', 'Exemplo: retomada.');

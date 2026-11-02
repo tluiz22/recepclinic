@@ -154,6 +154,45 @@ export function contractChangeEmail(
 }
 
 /**
+ * Avisos de cobrança do RecepClinic à clínica (F12.7; itens 20 e 22 do
+ * planejamento-faturamento-saas.md): atraso no 3º, 7º e 14º dia, sempre com a
+ * data a partir da qual a clínica pode ser suspensa (15º dia), e pagamento
+ * reconhecido. Vão ao e-mail financeiro. **Textos para o cliente revisar.**
+ */
+export type BillingNoticeKind = "overdue_d3" | "overdue_d7" | "overdue_d14" | "payment_confirmed";
+
+export function billingNoticeEmail(
+  to: string,
+  input: { kind: BillingNoticeKind; clinicName: string; what: string; amount: string; dueDate: string; suspendFrom: string; paidOn: string | null; payLink: string | null; panelLink: string },
+): Email {
+  const { kind, clinicName, what, amount, dueDate, suspendFrom, paidOn, payLink, panelLink } = input;
+  if (kind === "payment_confirmed") {
+    const body = layout(
+      "Pagamento reconhecido",
+      [
+        `Recebemos o pagamento da ${what.toLowerCase()} da ${clinicName} no RecepClinic: ${amount}, com vencimento em ${dueDate}${paidOn ? `, pago em ${paidOn}` : ""}.`,
+        "Obrigado! As cobranças ficam no painel, em Configurações › Assinatura.",
+      ],
+      { label: "Ver a assinatura", href: panelLink },
+    );
+    return { to, subject: `Pagamento reconhecido: ${clinicName} no RecepClinic`, ...body };
+  }
+  const last = kind === "overdue_d14";
+  const body = layout(
+    last ? "Último aviso: cobrança em atraso" : "Cobrança em atraso",
+    [
+      `A ${what.toLowerCase()} da ${clinicName} no RecepClinic, de ${amount}, venceu em ${dueDate} e ainda não foi paga.`,
+      last
+        ? `A partir de amanhã, ${suspendFrom}, a clínica pode ser suspensa: o painel fica restrito à Assinatura, o bot para de responder e nada sai pelo WhatsApp até o pagamento ser reconhecido.`
+        : `Se continuar em aberto, a clínica pode ser suspensa a partir de ${suspendFrom}.`,
+      "Se já pagou, desconsidere: o reconhecimento pode levar algumas horas.",
+    ],
+    payLink ? { label: "Pagar agora", href: payLink } : { label: "Ver a assinatura", href: panelLink },
+  );
+  return { to, subject: `${last ? "Último aviso: " : ""}cobrança em atraso da ${clinicName} no RecepClinic`, ...body };
+}
+
+/**
  * Nota fiscal do pagamento (F11.5), com o PDF e o XML anexados. Mesmo texto do
  * template do WhatsApp (aprovado pelo cliente em 12/out/2026), menos o "é só
  * responder": o e-mail sai de um endereço que não recebe resposta.

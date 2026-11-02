@@ -340,6 +340,31 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"billing_notifications": {
+                  Row: {
+                    "attempts": number,"charge_id": string,"clinic_id": string,"created_at": string,"id": string,"kind": string,"last_error": string | null,"scheduled_for": string,"sent_at": string | null,"sent_to": string | null,"status": string
+                  }
+                  Insert: {
+                    "attempts"?: number,"charge_id": string,"clinic_id": string,"created_at"?: string,"id"?: string,"kind": string,"last_error"?: string | null,"scheduled_for": string,"sent_at"?: string | null,"sent_to"?: string | null,"status"?: string
+                  }
+                  Update: {
+                    "attempts"?: number,"charge_id"?: string,"clinic_id"?: string,"created_at"?: string,"id"?: string,"kind"?: string,"last_error"?: string | null,"scheduled_for"?: string,"sent_at"?: string | null,"sent_to"?: string | null,"status"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "billing_notifications_charge_id_fkey"
+      columns: ["charge_id"]
+isOneToOne: false
+      referencedRelation: "billing_charges"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "billing_notifications_clinic_id_fkey"
+      columns: ["clinic_id"]
+isOneToOne: false
+      referencedRelation: "clinics"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"billing_provider_events": {
                   Row: {
                     "attempts": number,"event": string,"id": string,"last_error": string | null,"payload": NonNullable<Json>,"processed_at": string | null,"provider_event_id": string,"received_at": string,"resource_id": string | null,"status": string
@@ -1852,6 +1877,9 @@ isOneToOne: false
 "billing_contracts_to_reconcile":
 { Args: Record<PropertyKey, never>; Returns: string[]
                            },
+"billing_finish_notice":
+{ Args: { "p_error": string,"p_id": string,"p_sent_to": string,"p_status": string }; Returns: undefined
+                           },
 "billing_finish_provider_event":
 { Args: { "p_error": string,"p_id": string,"p_status": string }; Returns: undefined
                            },
@@ -1860,6 +1888,11 @@ isOneToOne: false
                            },
 "billing_link_asaas_subscription":
 { Args: { "p_contract_id": string,"p_subscription_id": string }; Returns: undefined
+                           },
+"billing_open_notices":
+{ Args: { "p_limit": number }; Returns: {
+              "charge_kind": string,"charge_status": string,"clinic_id": string,"clinic_name": string,"due_date": string,"finance_email": string,"id": string,"invoice_url": string,"kind": string,"paid_at": string,"value_cents": number
+            }[]
                            },
 "billing_open_provider_events":
 { Args: { "p_limit": number }; Returns: {
@@ -1885,6 +1918,9 @@ isOneToOne: false
                            },
 "billing_record_provider_event":
 { Args: { "p_event": string,"p_payload": Json,"p_provider_event_id": string,"p_resource_id": string }; Returns: string
+                           },
+"billing_schedule_overdue_notices":
+{ Args: Record<PropertyKey, never>; Returns: number
                            },
 "billing_upsert_asaas_charge":
 { Args: { "p_billing_type": string,"p_contract_id": string,"p_due_date": string,"p_invoice_url": string,"p_kind": string,"p_paid_at": string,"p_payment_id": string,"p_raw_status": string,"p_value_cents": number }; Returns: undefined

@@ -429,3 +429,54 @@ export function platformBillingEventStore(env: ServiceEnv = platformEnv()): Bill
     contractsToReconcile: async () => (await call<string[] | null>("billing_contracts_to_reconcile", {})) ?? [],
   };
 }
+
+// Avisos de cobrança (F12.7): o servidor agenda, lê e marca pelo banco.
+export type BillingNotice = {
+  id: string;
+  kind: "overdue_d3" | "overdue_d7" | "overdue_d14" | "payment_confirmed";
+  clinicId: string;
+  clinicName: string;
+  financeEmail: string | null;
+  chargeKind: string;
+  chargeStatus: string;
+  dueDate: string;
+  valueCents: number;
+  invoiceUrl: string | null;
+  paidAt: string | null;
+};
+
+export type BillingNoticeStore = {
+  scheduleOverdue(): Promise<number>;
+  openNotices(limit: number): Promise<BillingNotice[]>;
+  finishNotice(id: string, status: "sent" | "canceled" | "failed", sentTo: string | null, error: string | null): Promise<void>;
+};
+
+export function platformBillingNoticeStore(env: ServiceEnv = platformEnv()): BillingNoticeStore {
+  const db = platformClient(env);
+  const call = async <T>(name: string, args: Record<string, unknown>): Promise<T> => {
+    const { data, error } = await (db.rpc as unknown as (n: string, a: Record<string, unknown>) => Promise<{ data: T; error: unknown }>)(name, args);
+    if (error) throw new PlatformLookupError(name, error);
+    return data;
+  };
+  return {
+    scheduleOverdue: async () => (await call<number | null>("billing_schedule_overdue_notices", {})) ?? 0,
+    async openNotices(limit) {
+      type Row = { id: string; kind: BillingNotice["kind"]; clinic_id: string; clinic_name: string; finance_email: string | null; charge_kind: string; charge_status: string; due_date: string; value_cents: number; invoice_url: string | null; paid_at: string | null };
+      const rows = (await call<Row[] | null>("billing_open_notices", { p_limit: limit })) ?? [];
+      return rows.map((r) => ({
+        id: r.id,
+        kind: r.kind,
+        clinicId: r.clinic_id,
+        clinicName: r.clinic_name,
+        financeEmail: r.finance_email,
+        chargeKind: r.charge_kind,
+        chargeStatus: r.charge_status,
+        dueDate: r.due_date,
+        valueCents: r.value_cents,
+        invoiceUrl: r.invoice_url,
+        paidAt: r.paid_at,
+      }));
+    },
+    finishNotice: (id, status, sentTo, error) => call<null>("billing_finish_notice", { p_id: id, p_status: status, p_sent_to: sentTo ?? "", p_error: error ?? "" }).then(() => undefined),
+  };
+}

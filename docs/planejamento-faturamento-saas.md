@@ -39,8 +39,13 @@
 > **F12.6 feita** (`20261122120000_reativacao_automatica.sql`): toda cobrança que fica paga tenta reativar, na trava da
 > conta de cobrança; libera só a inadimplência e só sem cobrança do Asaas vencida em aberto; sem outro motivo, volta à
 > situação de antes; liberado pelo sistema, com o pagamento na trilha. A Assinatura da clínica suspensa por
-> inadimplência diz para pagar em Cobranças. **Próximo: F12.7** (avisos por e-mail no 3º, 7º e 14º dia de atraso e de
-> pagamento reconhecido).
+> inadimplência diz para pagar em Cobranças.
+> **F12.7 feita** (`20261123120000_avisos_de_cobranca.sql`): `billing_notifications` (um por cobrança e tipo); rotina
+> `avisos-cobranca` às 9h de Brasília agenda o aviso de atraso mais recente que cabe (3º, 7º ou 14º dia; os anteriores
+> não saem atrasados) e envia; cobrança paga gera `payment_confirmed` (sai pela `faturamento-eventos`, a cada 10 min) e
+> cancela os de atraso pendentes; na hora de enviar confere de novo; falha tenta até 5 vezes; trilha `notice_sent` /
+> `notice_failed`. Textos em `billingNoticeEmail` (`src/lib/email.ts`), com a data do 15º dia: **cliente revisa**.
+> **Próximo: F12.8** (cartão pela página do Asaas).
 > **Ordem decidida (cliente, 30/out):** cobrança primeiro, até cobrar a clínica piloto em produção, **só com aviso por
 > e-mail**: F12.2b, F12.3, F12.3b, F12.4 a F12.8 e F12.11 (itens 18 a 26 da seção 11). Depois: F12.9 (decisão 11.10),
 > F12.10 (Pix Automático) e a nota fiscal pelo Asaas (N0–N6). **Próximo:** validação da F12.2b no local e o OK para a

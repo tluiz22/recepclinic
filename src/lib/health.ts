@@ -20,6 +20,7 @@ export const CRON_JOBS: Readonly<Record<string, { every: string; maxDelayMinutes
   // Faturamento do SaaS (F12.5, 20261121120000_webhook_asaas.sql).
   "faturamento-eventos": { every: "a cada 10 minutos", maxDelayMinutes: 40 },
   "conciliacao-asaas": { every: "uma vez por dia", maxDelayMinutes: 26 * 60 },
+  "avisos-cobranca": { every: "uma vez por dia", maxDelayMinutes: 26 * 60 },
 };
 
 /** Janela da /api/saude/erros: erro mais novo que isso deixa o monitor vermelho. */
