@@ -15,7 +15,6 @@ import Icon from "../../components/admin/Icon.astro";
 import PhoneLinks from "../../components/admin/PhoneLinks.astro";
 import Button from "../../components/admin/ui/Button.astro";
 import Notice, { type NoticeTone } from "../../components/admin/ui/Notice.astro";
-import PageHeader from "../../components/admin/ui/PageHeader.astro";
 import HowItWorks from "../../components/admin/ui/HowItWorks.astro";
 import { relacionamento } from "../../lib/ajuda/relacionamento";
 import { createUserClient } from "../../lib/data/clients";
@@ -23,7 +22,7 @@ import { getDashboardCounts } from "../../lib/data/dashboard";
 import { describeSendsAlert, getSendsAlert } from "../../lib/data/sends";
 import { handoffReasonLabel, listHumanAttention } from "../../lib/data/whatsapp/attention";
 import { BOT_LIMIT_LABELS, listContactsToReview, REVIEW_WINDOW_DAYS } from "../../lib/data/whatsapp/botLimits";
-import { addDays, dayBounds, formatCalendarDate, formatInstant, todayIn } from "../../lib/clinicTime";
+import { addDays, dayBounds, formatCalendarDate, formatInstant, localHourOf, todayIn } from "../../lib/clinicTime";
 import CardActionButton from "../../components/admin/agenda/CardActionButton.astro";
 import { cardActions } from "../../components/admin/agenda/cardActions";
 import { appointmentSituation } from "../../components/admin/agenda/situationStyle";
@@ -139,7 +138,19 @@ const NOTICES: Record<string, { tone: NoticeTone; text: string }> = {
 };
 const notice = aviso ? NOTICES[aviso] : undefined;
 
-const today = formatCalendarDate(todayIn(clinic.timezone), "EEEE, d 'de' MMMM 'de' yyyy");
+const today = formatCalendarDate(todayIn(clinic.timezone), "EEEE, d 'de' MMMM");
+// Saudação do protótipo aprovado ("Bom dia, Marta"): pelo horário da clínica e pelo primeiro nome da pessoa na equipe
+// (o nome que ela tem na clínica; sem nome, ou no Suporte que não é da equipe, só a saudação).
+const hour = localHourOf(new Date(), clinic.timezone);
+const greeting = hour < 12 ? "Bom dia" : hour < 18 ? "Boa tarde" : "Boa noite";
+const memberName = await db
+  .from("clinic_members")
+  .select("display_name")
+  .eq("clinic_id", clinic.clinicId)
+  .eq("user_id", clinic.userId)
+  .maybeSingle()
+  .then((r) => r.data?.display_name ?? null, () => null);
+const firstName = memberName?.trim().split(/\s+/)[0] ?? "";
 const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
 // Linha do dia (RX2): atendidas e confirmadas sobre o total de hoje; o resto ainda não confirmou.
 const pct = (n: number) => (counts.totalToday > 0 ? Math.round((n / counts.totalToday) * 100) : 0);
@@ -153,25 +164,24 @@ const sectionTitle = "font-display text-[17px] leading-tight font-bold text-ink 
 ---
 
 <AdminLayout title="Meu dia" autoRefresh>
-  <PageHeader title="Meu dia" subtitle={today}>
-    <Fragment slot="actions">
+  <header class="flex flex-wrap items-end justify-between gap-x-4 gap-y-3">
+    <div class="flex min-w-0 flex-col gap-1">
+      <p class="text-[15px] text-ink-soft first-letter:uppercase">{today}</p>
+      <h1 class="font-display text-[28px] leading-[1.1] font-bold text-ink sm:text-[32px]">{firstName ? `${greeting}, ${firstName}` : greeting}</h1>
+    </div>
+    <div class="flex flex-wrap items-center gap-2.5 max-sm:w-full">
+      <form method="GET" action="/admin/pacientes" role="search" class="w-full sm:w-[300px]">
+        <label for="buscar-paciente" class="sr-only">Buscar paciente por nome, telefone ou nascimento</label>
+        <div class="flex h-[42px] items-center gap-2 rounded-[9px] border border-line-strong bg-white px-3 focus-within:border-brand focus-within:ring-1 focus-within:ring-brand">
+          <Icon name="magnifying-glass" class="h-[18px] w-[18px] shrink-0 text-ink-soft" strokeWidth={2} />
+          <input id="buscar-paciente" name="q" type="search" placeholder="Buscar paciente" class="min-w-0 flex-1 border-0 bg-transparent p-0 text-[15px] text-ink outline-none focus:ring-0" />
+        </div>
+      </form>
       <Button href={withReturn("/admin/agenda/marcar", here)} variant="primary" class="max-sm:hidden">
         <Icon name="plus" class="h-[18px] w-[18px]" strokeWidth={2.2} /> Marcar consulta
       </Button>
-    </Fragment>
-  </PageHeader>
-
-  <form method="GET" action="/admin/pacientes" role="search" class="mt-3 flex max-w-xl gap-2">
-    <label for="buscar-paciente" class="sr-only">Buscar paciente por nome, telefone ou nascimento</label>
-    <input
-      id="buscar-paciente"
-      name="q"
-      type="search"
-      placeholder="Buscar paciente por nome, telefone ou nascimento"
-      class="h-11 min-w-0 flex-1 rounded-lg border border-line bg-white px-3 text-base text-ink focus:border-brand focus:ring-0"
-    />
-    <Button type="submit" class="h-11">Buscar</Button>
-  </form>
+    </div>
+  </header>
 
   {notice && (
     <div class="mt-4">
