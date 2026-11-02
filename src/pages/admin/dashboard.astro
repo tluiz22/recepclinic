@@ -42,9 +42,11 @@ const clinic = Astro.locals.clinic!;
 const db = createUserClient(Astro.request, Astro.cookies);
 const has = (feature: (typeof clinic.features)[number]) => clinic.features.includes(feature);
 
-// Certificado A1 (F11.3): aviso ao Administrador a partir de 30 dias do vencimento.
-const certificateOn = has("finance") && (clinic.roles.includes("admin") || clinic.isPlatformStaff);
-// Templates na Meta (F8.2, cliente, 25/out): aviso ao Administrador enquanto algum em uso não estiver aprovado.
+// Avisos técnicos só para o Suporte (cliente, 02/nov/2026): certificado A1 (F11.3, a partir de 30 dias do
+// vencimento), templates na Meta (F8.2) e forma de pagamento do WhatsApp (F8.3). O Administrador da clínica não os vê.
+const isSupport = clinic.isPlatformStaff;
+const certificateOn = has("finance") && isSupport;
+// A desconexão avisada pela Meta continua ao Administrador (decisão pendente do cliente, 02/nov/2026).
 const isAdmin = clinic.roles.includes("admin") || clinic.isPlatformStaff;
 const [counts, sendsAlert, toReview, certificate, connection, templates, attention] = await Promise.all([
   getDashboardCounts(db, clinic.clinicId, clinic.timezone),
@@ -52,7 +54,7 @@ const [counts, sendsAlert, toReview, certificate, connection, templates, attenti
   has("whatsapp_bot") ? listContactsToReview(db, clinic.clinicId) : Promise.resolve(null),
   certificateOn ? getFiscalCertificate(db, clinic.clinicId) : Promise.resolve(null),
   isAdmin ? getWhatsappConnection(db, clinic.clinicId) : Promise.resolve(null),
-  isAdmin ? listWhatsappTemplates(db, clinic.clinicId) : Promise.resolve([]),
+  isSupport ? listWhatsappTemplates(db, clinic.clinicId) : Promise.resolve([]),
   has("whatsapp_bot") ? listHumanAttention(db, clinic.clinicId) : Promise.resolve([]),
 ]);
 // Atendimento humano (F8.5a, cliente, 27/out/2026): faixa com as conversas que aguardam a clínica.
@@ -68,9 +70,9 @@ const oldestWait = awaiting[0]
     })()
   : null;
 const templatesAlert =
-  connection?.status === "connected" ? describeTemplateApproval(templateApproval(templatesInUse(clinic.features), templates)) : null;
+  isSupport && connection?.status === "connected" ? describeTemplateApproval(templateApproval(templatesInUse(clinic.features), templates)) : null;
 // F8.3 (cliente, 24 e 25/out): forma de pagamento ainda não conferida pelo Suporte; desconexão avisada pela Meta.
-const paymentAlert = connection?.status === "connected" && !connection.paymentCheckedAt;
+const paymentAlert = isSupport && connection?.status === "connected" && !connection.paymentCheckedAt;
 const disconnectedAlert = connection?.status === "disconnected" && connection.disconnectedVia === "meta" ? connection.disconnectedAt : null;
 const certificateAlert = (() => {
   if (!certificate) return null;
