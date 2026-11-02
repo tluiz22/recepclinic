@@ -35,8 +35,12 @@ agora.** Não remove função, não muda regra de negócio, banco, API, integra�
 - **RX-D5. Cancelados pela clínica que ainda não remarcaram ficam fora do Meu dia**, só em Pacientes › Para contatar
   (cliente, 02/nov). Motivo: o bot não gera "pedido de remarcação" para a recepção; o paciente remarca sozinho pelo
   link, e quando o bot não acha horário a conversa já vai ao atendimento humano.
-- **RX-D6. Agenda: opção C**, linha curta que abre as ações no lugar (seção 4.2). Recusadas: A (cartão de hoje) e B
-  (painel ao lado).
+- **RX-D6. Agenda: opção B** (revista pelo cliente em 02/nov/2026, depois da RX7): linha curta + **painel ao lado**,
+  exatamente como o quadro "Agenda · B" do canvas. Cada agenda é um cartão com linhas curtas (hora, paciente, tipo,
+  situação) e os horários livres; tocar numa linha abre, no painel à direita, o atendimento com as mesmas ações do
+  cartão (principal, frequentes, "Mais", Cancelar) e "Abrir ficha do paciente"; no celular e no tablet o painel sobe
+  de baixo. Cabeçalho numa linha: ‹ Hoje ›, o dia (tocar abre o calendário), Dia/Semana/Mês, Bloquear, Mais e
+  "+ Marcar consulta". Antes: C (linha que abre no lugar, a RX7), agora substituída; recusada: A (cartão de hoje).
 - **RX-D7. Pacientes › "Para contatar": opção A**, uma lista por vez (seção 4.3). Recusada: B (tudo numa lista).
 - **RX-D8. Ficha do paciente: opção A**, a ficha de hoje (R6) com a faixa "Próxima consulta". Recusada: B (linha do
   tempo única).

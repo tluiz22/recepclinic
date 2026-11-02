@@ -1,0 +1,185 @@
+---
+// Painel ao lado da Agenda › Dia (opção B do redesign da Recepção; cliente, 02/nov/2026, muda a RX-D6): o
+// atendimento escolhido na linha curta, com o tipo, quando e com quem, o paciente, o telefone com o WhatsApp, a
+// situação e os sinais, e as MESMAS ações do cartão (cardActions.ts), na mesma ordem: a principal, as frequentes,
+// o "Mais" e o Cancelar à parte. Cada ação de formulário pede confirmação, como sempre. No pé, a ficha do paciente.
+import Icon from "../Icon.astro";
+import MoreMenu from "../ui/MoreMenu.astro";
+import Signal from "../ui/Signal.astro";
+import StatusPill from "../ui/StatusPill.astro";
+import Tag from "../ui/Tag.astro";
+import HelpTip from "../ui/HelpTip.astro";
+import { buttonClass } from "../ui/styles";
+import CardActionButton from "./CardActionButton.astro";
+import { cardActions, cardSignals } from "./cardActions";
+import { serviceBesideCategory, serviceLook, type ServiceTint } from "./categoryStyle";
+import { appointmentSituation } from "./situationStyle";
+import { agenda as ajudaAgenda } from "../../../lib/ajuda/agenda";
+import { formatInstant } from "../../../lib/clinicTime";
+import type { AgendaAppointment, NoShowStats, OriginInfo } from "../../../lib/data/agenda/view";
+import type { ReturnReady } from "../../../lib/data/agenda/returnReady";
+import type { PaymentState } from "../../../lib/data/payments";
+import type { ReminderAction } from "../../../lib/data/whatsapp/reminders";
+import { isAnonymizedPhone } from "../../../lib/anonymization";
+import { formatPhoneBR, whatsappHref } from "../../../lib/phone";
+import { withReturn } from "../../../lib/returnPath";
+import { capitalize, type Vocabulary } from "../../../lib/vocabulary";
+
+interface Props {
+  appointment: AgendaAppointment;
+  timeZone: string;
+  now: Date;
+  /** "Hoje", "Amanhã" ou o dia ("Ter 03/11"). */
+  dayText: string;
+  vocabulary: Vocabulary;
+  returnTo: string;
+  /** Endereço para fechar o painel (a Agenda do dia, sem a escolha). */
+  closeHref: string;
+  reminderAction?: ReminderAction;
+  preparationResendable: boolean;
+  guidanceResendable?: boolean;
+  waitlistOn: boolean;
+  onWaitlist: boolean;
+  noShow?: NoShowStats;
+  origin?: OriginInfo;
+  payment?: PaymentState;
+  tint?: ServiceTint;
+  returnReady?: ReturnReady;
+}
+
+const {
+  appointment: a,
+  timeZone,
+  now,
+  dayText,
+  vocabulary,
+  returnTo,
+  closeHref,
+  reminderAction,
+  preparationResendable,
+  guidanceResendable = false,
+  waitlistOn,
+  onWaitlist,
+  noShow,
+  origin,
+  payment,
+  tint,
+  returnReady,
+} = Astro.props;
+const endpoint = `/api/admin/agenda/atendimentos/${a.id}`;
+const time = (d: Date) => formatInstant(d, timeZone, "HH:mm");
+const category = serviceLook(a.category, tint);
+const service = serviceBesideCategory(a.serviceName, a.category);
+const originText =
+  a.category !== "return_visit"
+    ? null
+    : origin
+      ? `Retorno da consulta de ${formatInstant(origin.scheduledAt, timeZone, "dd/MM/yyyy")}${origin.status === "canceled" ? " (cancelada)" : ""}`
+      : a.originAppointmentId
+        ? "Retorno ligado a uma consulta"
+        : "Retorno sem consulta de origem";
+const who = `${a.patientName}, ${formatInstant(a.scheduledAt, timeZone, "dd/MM 'às' HH:mm")}`;
+const signals = cardSignals({ appointment: a, now, reminderAction, preparationResendable, guidanceResendable, onWaitlist, payment });
+const actions = cardActions({
+  appointment: a,
+  now,
+  who,
+  contact: vocabulary.contact,
+  returnTo,
+  reminderAction,
+  preparationResendable,
+  guidanceResendable,
+  waitlistOn,
+  onWaitlist,
+  payment,
+  returnReady,
+});
+const variantOf = (x: (typeof actions.visible)[number]) => (x.kind === "form" && x.danger ? "danger" : "secondary");
+const canceled = a.status === "canceled";
+const phoneOk = !isAnonymizedPhone(a.contactPhone);
+---
+
+<div class="flex h-full flex-col">
+  <p class={`px-[18px] py-1.5 text-[12.5px] font-bold tracking-[.04em] uppercase ${category.band} ${category.text}`}>
+    {category.label}{service && ` · ${service}`}
+  </p>
+  <div class="flex flex-col gap-1.5 border-b border-[#e7eeeb] px-[18px] py-3.5">
+    <div class="flex items-center justify-between gap-2">
+      <strong class="text-base tabular-nums">{dayText}, {time(a.scheduledAt)}–{time(a.endsAt)} · {a.agendaName}</strong>
+      <a href={closeHref} data-panel-close aria-label="Fechar" class={`${buttonClass("quiet", "sm")} min-h-8 px-1.5`}>
+        <Icon name="x-mark" class="h-[18px] w-[18px]" strokeWidth={2.2} />
+      </a>
+    </div>
+    <h2 data-panel-title tabindex="-1" class={`font-display text-[23px] leading-tight font-bold outline-none ${canceled ? "text-ink-soft line-through" : "text-ink"}`}>{a.patientName}</h2>
+    {
+      noShow && (
+        <span class="inline-flex items-center gap-1">
+          <Signal tone="alert" icon="warning">
+            Faltou {noShow.noShows} de {noShow.total}
+          </Signal>
+          <HelpTip variant="pop" subject={`Faltou ${noShow.noShows} de ${noShow.total}`} text={ajudaAgenda.dicas.seloFaltas} id={`painel-faltas-${a.id}`} />
+        </span>
+      )
+    }
+    <div class="flex flex-wrap items-center gap-x-2.5 gap-y-1.5 text-[15px]">
+      {!a.isContactSelf && <span class="text-ink-soft">{capitalize(vocabulary.contact)}: {a.contactName}</span>}
+      {
+        phoneOk ? (
+          <>
+            <span class="tabular-nums">{formatPhoneBR(a.contactPhone)}</span>
+            <a
+              href={whatsappHref(a.contactPhone)}
+              target="_blank"
+              rel="noopener"
+              aria-label={`Abrir conversa no WhatsApp com ${a.contactName}`}
+              class="inline-flex min-h-8 items-center rounded-[9px] border border-conf-500 bg-conf-500 px-2.5 text-[13px] font-semibold text-white no-underline hover:bg-conf-800"
+            >
+              WhatsApp
+            </a>
+          </>
+        ) : (
+          <span class="text-ink-soft">telefone anonimizado</span>
+        )
+      }
+    </div>
+    <div class="flex flex-wrap items-center gap-x-2.5 gap-y-1">
+      <StatusPill situation={appointmentSituation(a)} />
+      {signals.map((s) => (
+        <Signal tone={s.tone} icon={s.icon}>
+          {s.label}
+        </Signal>
+      ))}
+    </div>
+    <div class="flex flex-wrap gap-1.5">
+      <Tag>{a.locationName}</Tag>
+      {a.seriesId && <Tag>Série</Tag>}
+    </div>
+    {a.homeVisitAddress && <p class="text-sm text-ink-soft">Endereço: {a.homeVisitAddress}</p>}
+    {originText && <p class="text-sm text-ink-soft">{originText}</p>}
+  </div>
+
+  <div class="flex flex-col gap-2 px-[18px] py-4">
+    {actions.primary && <CardActionButton action={actions.primary} endpoint={endpoint} returnTo={returnTo} variant="primary" class="w-full" />}
+    {
+      (actions.visible.length > 0 || actions.more.length > 0) && (
+        <div class="grid grid-cols-2 gap-2">
+          {actions.visible.map((x) => (
+            <CardActionButton action={x} endpoint={endpoint} returnTo={returnTo} variant={variantOf(x)} class="w-full" />
+          ))}
+          {actions.more.length > 0 && (
+            <MoreMenu id={`painel-mais-${a.id}`} label={`Mais ações de ${a.patientName}, ${time(a.scheduledAt)}`} triggerClass={`${buttonClass("secondary", "sm")} w-full`}>
+              {actions.more.map((x) => (
+                <CardActionButton action={x} endpoint={endpoint} returnTo={returnTo} inMenu />
+              ))}
+            </MoreMenu>
+          )}
+        </div>
+      )
+    }
+    {actions.aside && <CardActionButton action={actions.aside} endpoint={endpoint} returnTo={returnTo} variant="danger" class="w-full" />}
+  </div>
+
+  <a href={withReturn(`/admin/pacientes/${a.patientId}`, returnTo)} class="mt-auto border-t border-[#e7eeeb] px-[18px] py-3 text-[14.5px] font-bold text-brand no-underline hover:underline">
+    Abrir ficha do paciente ›
+  </a>
+</div>

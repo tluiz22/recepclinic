@@ -214,3 +214,41 @@ export function cardActions(input: CardActionInput): CardActions {
   return result;
 }
 
+
+// ---------------------------------------------------------------------------
+// Sinais do atendimento (só informação; cor quando pedem ação). Usados no cartão e no painel da Agenda (opção B).
+// ---------------------------------------------------------------------------
+
+export type CardSignalTone = "warning" | "success" | "alert" | "info" | "neutral";
+export type CardSignal = { label: string; tone: CardSignalTone; icon: IconName };
+
+export function cardSignals(input: {
+  appointment: Pick<AgendaAppointment, "status" | "scheduledAt" | "patientConfirmedAt" | "reminderResponse">;
+  now: Date;
+  reminderAction?: ReminderAction;
+  preparationResendable: boolean;
+  guidanceResendable: boolean;
+  onWaitlist: boolean;
+  payment?: PaymentState;
+}): CardSignal[] {
+  const { appointment: a, now } = input;
+  const isActive = a.status === "scheduled" || a.status === "confirmed";
+  const isPast = a.scheduledAt.getTime() <= now.getTime();
+  const reminder: Record<ReminderAction, { label: string; tone: CardSignalTone }> = {
+    send: { label: "Sem lembrete automático", tone: "neutral" },
+    resend: { label: "Lembrete não entregue", tone: "warning" },
+    resend_unanswered: { label: "Lembrete sem resposta", tone: "warning" },
+  };
+  const signals: CardSignal[] = [];
+  // O "confirmo" do lembrete também grava a presença: ele vem primeiro.
+  if (isActive && !isPast && confirmedByReminder(a.reminderResponse)) signals.push({ label: "Confirmou pelo lembrete", tone: "success", icon: "check" });
+  else if (isActive && !isPast && a.patientConfirmedAt) signals.push({ label: "Presença confirmada", tone: "success", icon: "check" });
+  if (input.reminderAction) signals.push({ ...reminder[input.reminderAction], icon: "paper-airplane" });
+  if (input.preparationResendable) signals.push({ label: "Preparo não entregue", tone: "warning", icon: "paper-airplane" });
+  if (input.guidanceResendable) signals.push({ label: "Orientações não entregues", tone: "warning", icon: "paper-airplane" });
+  if (input.onWaitlist) signals.push({ label: "Na lista de espera", tone: "info", icon: "clock" });
+  if (isActive && isPast) signals.push({ label: "Já passou: registre o comparecimento", tone: "warning", icon: "clock" });
+  if (input.payment === "paid") signals.push({ label: "Pago", tone: "success", icon: "banknotes" });
+  else if (input.payment === "partial") signals.push({ label: "Pago em parte", tone: "warning", icon: "banknotes" });
+  return signals;
+}
