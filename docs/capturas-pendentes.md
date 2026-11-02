@@ -9,4 +9,4 @@ a captura e o motivo, avisar o cliente no fim da etapa e esperar a autorização
 
 ## Pendentes
 
-- `bloquear` — tela Agenda › Bloquear ganhou "Como funciona?", a opção "Recesso da clínica" (mensagem e prévia) e as perguntas do recesso (01/11/2026)
+(nenhuma)
