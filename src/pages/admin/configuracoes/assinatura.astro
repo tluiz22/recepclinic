@@ -6,7 +6,8 @@
 // WhatsApp financeiro. F12.2: o contrato vigente (mensalidade, implantação,
 // preço por nota e franquia), só leitura. F12.2b: o aceite do contrato (só o
 // Administrador; texto versionado) e a situação do aceite. Cobranças entram
-// nas próximas fases.
+// nas próximas fases. F12.3: na suspensão, é a única tela do Administrador,
+// com o motivo (sem o texto do Suporte).
 import ConfigShell from "../../../components/admin/config/ConfigShell.astro";
 import Badge from "../../../components/admin/config/Badge.astro";
 import Card from "../../../components/admin/config/Panel.astro";
@@ -24,14 +25,16 @@ import { formatCalendarDate, formatInstant, todayIn } from "../../../lib/clinicT
 import { loadActorLabels } from "../../../lib/data/agenda/trail";
 import { contractsInForce, formatPayerDocument, getBillingAccount, listBillingAudit, listBillingContracts } from "../../../lib/data/billing";
 import { createUserClient } from "../../../lib/data/clients";
+import { activeSuspensionReasons, describeReasons } from "../../../lib/data/suspension";
 import { formatPhoneBR } from "../../../lib/phone";
 
 const clinic = Astro.locals.clinic!;
 const db = createUserClient(Astro.request, Astro.cookies);
-const [account, audit, contracts] = await Promise.all([
+const [account, audit, contracts, suspensionReasons] = await Promise.all([
   getBillingAccount(db, clinic.clinicId),
   listBillingAudit(db, clinic.clinicId),
   listBillingContracts(db, clinic.clinicId),
+  clinic.clinicStatus === "suspended" ? activeSuspensionReasons(db, clinic.clinicId) : Promise.resolve([]),
 ]);
 // O Administrador vê o vigente e os encerrados (o rascunho é só do Suporte).
 const { current: contract, next } = contractsInForce(contracts, todayIn(clinic.timezone));
@@ -45,6 +48,17 @@ const H2 = "font-display text-[17px] leading-tight font-bold text-ink sm:text-lg
 ---
 
 <ConfigShell current="assinatura" title="Assinatura" subtitle="A conta da clínica no RecepClinic: quem paga e para onde vão os avisos de cobrança.">
+  {
+    clinic.clinicStatus === "suspended" && (
+      <Card class="mb-4 border-can-200 bg-can-100">
+        <h2 class={`${H2} text-can-800`}>Clínica suspensa</h2>
+        <p class="mt-1 text-[15px] text-can-800">
+          {suspensionReasons.length > 0 ? `Motivo: ${describeReasons(suspensionReasons).toLowerCase()}. ` : ""}
+          Enquanto isso, o painel fica restrito a esta tela, o bot não responde, os links de agendamento estão indisponíveis e nada sai pelo WhatsApp. Os dados continuam guardados. Para regularizar, fale com o Suporte do RecepClinic.
+        </p>
+      </Card>
+    )
+  }
   <HowItWorks id="assinatura" topic={configuracoes.comoFunciona.assinatura} class="mb-4">
     <p class="text-[15px] text-ink-soft">Quem paga e para onde vão os avisos.</p>
   </HowItWorks>

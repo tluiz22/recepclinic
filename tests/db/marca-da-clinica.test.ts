@@ -102,6 +102,7 @@ describe("marca da clínica", () => {
       websiteUrl: "https://clinicab.com.br",
       designation: { noun: "clínica", article: "a" },
       whatsappPhone: null,
+      suspended: false,
     });
   });
 

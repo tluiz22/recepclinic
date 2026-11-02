@@ -135,6 +135,8 @@ export const BILLING_ACTIONS = {
   contract_accepted: "Contrato aceito pelo Administrador",
   contract_notice_sent: "Novos termos enviados por e-mail",
   contract_notice_failed: "E-mail dos novos termos não saiu",
+  clinic_suspended: "Clínica suspensa",
+  suspension_released: "Motivo da suspensão liberado",
 } as const;
 
 export type BillingAuditEntry = {

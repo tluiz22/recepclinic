@@ -75,7 +75,8 @@ const failure = (error: unknown): SendOutcome => ({
 /**
  * Quem envia pela clínica, ou null se o WhatsApp dela não está conectado (ou
  * sem token) ou se a clínica está em implantação (F8.2b: nada sai para os
- * pacientes até o Suporte ativar). `serviceDb` é a credencial da clínica.
+ * pacientes até o Suporte ativar) ou suspensa (F12.3, decisão 11.4: o bot
+ * não responde e nada sai). `serviceDb` é a credencial da clínica.
  */
 export async function createClinicSender(
   serviceDb: DbClient,
@@ -83,7 +84,7 @@ export async function createClinicSender(
   { baseUrl, fetcher = fetch }: { baseUrl: string; fetcher?: Fetcher },
 ): Promise<ClinicSender | null> {
   const clinic = unwrapOne(await serviceDb.from("clinics").select("name, status").eq("id", clinicId).maybeSingle(), "Clínica");
-  if (clinic.status === "onboarding") return null;
+  if (clinic.status === "onboarding" || clinic.status === "suspended") return null;
   const setup = await getSendingSetup(serviceDb, clinicId);
   if (!setup) return null;
   const settings = unwrapOne(

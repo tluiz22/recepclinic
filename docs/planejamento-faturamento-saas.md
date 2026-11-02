@@ -1,12 +1,19 @@
 # Faturamento recorrente do SaaS (Asaas)
 
 > **Estado atual (retomar daqui), 02/nov/2026.** Branch **`faturamento`**, local, sem push. F12.1 e F12.2 validadas
-> no local. **F12.2b feita, aguardando validação no local** (`20261117120000_aceite_do_contrato.sql`): o Administrador
-> aceita o contrato em Configurações › Assinatura (data, hora, quem, IP e versão do texto); texto **provisório**
-> versionado em `src/lib/billingContractText.ts` (cliente, 02/nov), o do advogado entra como nova versão e pede novo
-> aceite. Mudança com o mesmo texto: aceite tácito, início só 30 dias depois da ativação (data de Brasília) e e-mail
-> com os novos termos ao financeiro na ativação (envio ou falha na trilha; reenvio pela aba Faturamento). Regra para a
-> F12.4: só cobrar contrato com aceite (`acceptance` diferente de `pending`). Testes: `tests/db/aceite-contrato.test.ts`.
+> no local. **Cliente valida no fim (02/nov):** seguir as fases sem parar; validar tudo junto no local.
+> **F12.2b feita** (`20261117120000_aceite_do_contrato.sql`): aceite do contrato pelo Administrador em Configurações ›
+> Assinatura (data, hora, quem, IP, versão do texto); texto **provisório** em `src/lib/billingContractText.ts`; mudança
+> com o mesmo texto = aceite tácito, início só 30 dias depois da ativação, e-mail dos novos termos ao financeiro (envio
+> ou falha na trilha; reenvio na aba Faturamento). Regra para a F12.4: só cobrar contrato com aceite.
+> **F12.3 feita** (`20261118120000_suspensao_da_clinica.sql`): `clinic_suspensions` (administrativo e fim do contrato;
+> inadimplência recusada até a F12.4, item 28), situação anterior guardada e devolvida, "suspensa" só pelas funções;
+> cartão Suspensão na aba Faturamento (alerta e confirmação a mais sem o app, item 23). Bloqueio no código: painel
+> (Administrador só na Assinatura, outros em `/admin/clinica-suspensa`, API 403), `/agendar`, `/preparo` e
+> `/orientacoes` com "indisponível no momento", bot e envios (`createClinicSender` nulo; a mensagem fica no histórico,
+> sem aviso à equipe); rotinas já pulavam. `/formulario` e `/importar` (links da clínica com o Suporte) seguem abertos.
+> Testes: `tests/db/suspensao.test.ts`, `clinicaEmImplantacao.test.ts`. **Próximo: F12.3b** (o banco recusa as
+> gravações operacionais da clínica suspensa).
 > **Ordem decidida (cliente, 30/out):** cobrança primeiro, até cobrar a clínica piloto em produção, **só com aviso por
 > e-mail**: F12.2b, F12.3, F12.3b, F12.4 a F12.8 e F12.11 (itens 18 a 26 da seção 11). Depois: F12.9 (decisão 11.10),
 > F12.10 (Pix Automático) e a nota fiscal pelo Asaas (N0–N6). **Próximo:** validação da F12.2b no local e o OK para a
@@ -404,6 +411,10 @@ stateDiagram-v2
     entram no contrato da clínica com a emissão de nota fiscal liberada (item "finance" da matriz); sem ela, o
     contrato não fala de nota (colunas nulas, o banco confere). Liberada depois, cobrar exige nova versão do contrato.
 
+28. **Inadimplência antes das cobranças.** **Decidido (cliente, 02/nov):** a F12.3 entrega os motivos administrativo e
+    fim do contrato e todo o bloqueio; o motivo inadimplência fica pronto no banco, mas é recusado até a F12.4, quando o
+    banco passa a conferir a cobrança vencida há 15 dias ou mais (modo automático). No modo manual, decidir depois.
+
 ## 12. Roadmap
 
 Cada fase vai ao staging e depende da validação do cliente.
@@ -421,7 +432,7 @@ e exclusão no fim do contrato (item 26); a lista das clínicas em atraso (item 
 | F12.2 | Contrato e versões, valor negociado e implantação, **preço por nota e franquia, preço padrão do Suporte** (sem Asaas) | F12.1 |
 | F12.2b | Aceite do contrato pelo Administrador (texto versionado), aviso de 30 dias e e-mail dos novos termos (item 24) | F12.2 |
 | N1–N6 | Nota fiscal pelo Asaas, apuração e detalhamento das notas ([`planejamento-nfse-asaas.md`](planejamento-nfse-asaas.md), seção 12) | F12.2, N0 |
-| F12.3 | Suspensão manual por motivos e bloqueio no painel, páginas públicas, bot e rotinas | decisões 1, 3, 4 |
+| F12.3 | Suspensão manual por motivos e bloqueio no painel, páginas públicas, bot e rotinas (inadimplência a partir da F12.4, item 28) | decisões 1, 3, 4 |
 | F12.3b | Bloqueio no banco: gravações operacionais recusadas para a clínica suspensa (a tela Assinatura e o Suporte seguem) | F12.3 |
 | F12.4 | Cliente e cobranças no Asaas (sandbox): assinatura Pix convencional, implantação, espelho local | conta de testes |
 | F12.5 | Webhook, fila de eventos, processamento idempotente, conciliação, saúde | F12.4 |

@@ -173,11 +173,15 @@ export async function processWebhook(payload: unknown, deps: WebhookDeps, now: D
     // Em implantação (cliente, 29/out/2026), as conversas não são gravadas nem pausam o bot:
     // o Atendimento e a leitura das mensagens começam do zero ao ativar a clínica.
     const conversations = (change.messages?.length ?? 0) + (change.message_echoes?.length ?? 0);
+    // Suspensa (F12.3, decisão 11.4): a mensagem fica no histórico, mas o bot não responde (sem quem envie) e a
+    // equipe não é avisada (o painel está fechado); com o app, a recepção responde por lá.
     let onboarding = false;
+    let suspended = false;
     if (conversations) {
       await attempt("situação da clínica", async () => {
         const clinic = unwrap(await db.from("clinics").select("status").eq("id", clinicId).maybeSingle(), "Clínica");
         onboarding = clinic?.status === "onboarding";
+        suspended = clinic?.status === "suspended";
       });
     }
     if (onboarding) summary.onboarding += conversations;
@@ -208,7 +212,7 @@ export async function processWebhook(payload: unknown, deps: WebhookDeps, now: D
       }
       // Conversa que passou a aguardar a clínica (pedido, sem horário, limite ou o paciente escreveu de novo): avisa (F8.5c).
       const phone = toE164(message.from);
-      if (deps.push && phone) await notifyWaitingConversation(db, clinicId, phone, deps.push, now);
+      if (deps.push && phone && !suspended) await notifyWaitingConversation(db, clinicId, phone, deps.push, now);
     }
     for (const status of change.statuses ?? []) {
       if (status.status === "failed" && status.errors?.length) {

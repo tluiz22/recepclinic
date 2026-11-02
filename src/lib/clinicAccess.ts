@@ -159,6 +159,24 @@ export function canAccessPath(context: AccessHolder, pathname: string, searchPar
   return feature === null || (context.features ?? []).includes(feature);
 }
 
+// Clínica suspensa (F12.3, decisões 11.5 e fluxo 8 do planejamento-faturamento-saas.md): fora o Suporte, o
+// Administrador fica só na Assinatura (para regularizar) e os outros papéis só na tela de aviso.
+export const SUSPENDED_PAGE = "/admin/clinica-suspensa";
+export const SUSPENDED_ADMIN_PAGE = "/admin/configuracoes/assinatura";
+const SUSPENDED_ADMIN_PATHS = [SUSPENDED_ADMIN_PAGE, "/api/admin/configuracoes/assinatura"];
+
+/** Para onde vai quem abre `pathname` na clínica suspensa; null = pode abrir. */
+export function suspendedLanding(context: Pick<ClinicContext, "clinicStatus" | "roles" | "isPlatformStaff">, pathname: string): string | null {
+  if (context.clinicStatus !== "suspended" || context.isPlatformStaff || pathname === SUSPENDED_PAGE) return null;
+  if (context.roles.includes("admin")) return SUSPENDED_ADMIN_PATHS.includes(pathname) ? null : SUSPENDED_ADMIN_PAGE;
+  return SUSPENDED_PAGE;
+}
+
+/** Vê o painel restrito da clínica suspensa (não o Suporte). */
+export function inSuspendedView(context: Pick<ClinicContext, "clinicStatus" | "isPlatformStaff"> | null | undefined): boolean {
+  return !!context && context.clinicStatus === "suspended" && !context.isPlatformStaff;
+}
+
 const ROLE_LABELS: Record<ClinicRole, string> = {
   admin: "Administrador",
   professional: "Profissional",

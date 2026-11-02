@@ -7,8 +7,10 @@ import {
   chooseActiveClinic,
   expectsPage,
   hasRole,
+  inSuspendedView,
   isUuid,
   roleLabel,
+  suspendedLanding,
   type ClinicRole,
   type Membership,
 } from "./clinicAccess";
@@ -202,5 +204,32 @@ describe("expectsPage", () => {
     expect(expectsPage(request("*/*"))).toBe(false);
     expect(expectsPage(request("application/json"))).toBe(false);
     expect(expectsPage(request(null))).toBe(false);
+  });
+});
+
+describe("clínica suspensa (F12.3)", () => {
+  const ctx = (roles: ClinicRole[], isPlatformStaff = false, clinicStatus: "active" | "suspended" | "onboarding" = "suspended") => ({ roles, isPlatformStaff, clinicStatus });
+
+  it("o Administrador fica só na Assinatura", () => {
+    expect(suspendedLanding(ctx(["admin"]), "/admin/agenda")).toBe("/admin/configuracoes/assinatura");
+    expect(suspendedLanding(ctx(["admin", "professional"]), "/api/admin/agendamentos")).toBe("/admin/configuracoes/assinatura");
+    expect(suspendedLanding(ctx(["admin"]), "/admin/configuracoes/assinatura")).toBeNull();
+    expect(suspendedLanding(ctx(["admin"]), "/api/admin/configuracoes/assinatura")).toBeNull();
+    expect(suspendedLanding(ctx(["admin"]), "/admin/configuracoes/equipe")).toBe("/admin/configuracoes/assinatura");
+  });
+
+  it("Recepção e Profissional só no aviso", () => {
+    expect(suspendedLanding(ctx(["reception"]), "/admin/dashboard")).toBe("/admin/clinica-suspensa");
+    expect(suspendedLanding(ctx(["professional"]), "/admin/configuracoes/assinatura")).toBe("/admin/clinica-suspensa");
+    expect(suspendedLanding(ctx(["reception"]), "/admin/clinica-suspensa")).toBeNull();
+  });
+
+  it("o Suporte e as clínicas não suspensas abrem tudo", () => {
+    expect(suspendedLanding(ctx([], true), "/admin/agenda")).toBeNull();
+    expect(suspendedLanding(ctx(["reception"], false, "active"), "/admin/agenda")).toBeNull();
+    expect(suspendedLanding(ctx(["reception"], false, "onboarding"), "/admin/agenda")).toBeNull();
+    expect(inSuspendedView(ctx(["admin"]))).toBe(true);
+    expect(inSuspendedView(ctx([], true))).toBe(false);
+    expect(inSuspendedView(null)).toBe(false);
   });
 });

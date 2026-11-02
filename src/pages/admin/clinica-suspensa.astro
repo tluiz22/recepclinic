@@ -1,0 +1,25 @@
+---
+// Clínica suspensa (F12.3, decisão 11.5 do planejamento-faturamento-saas.md):
+// Recepção e Profissional veem só este aviso; o Administrador vai para a
+// Assinatura (middleware). Fora da suspensão, volta para o painel.
+import AuthLayout from "../../layouts/AuthLayout.astro";
+import Notice from "../../components/admin/ui/Notice.astro";
+import { AUTH_LINK } from "../../components/admin/auth/styles";
+import { SUSPENDED_ADMIN_PAGE } from "../../lib/clinicAccess";
+
+const clinic = Astro.locals.clinic!;
+if (clinic.clinicStatus !== "suspended" || clinic.isPlatformStaff) return Astro.redirect("/admin/dashboard");
+const isAdmin = clinic.roles.includes("admin");
+---
+
+<AuthLayout title="Clínica suspensa">
+  <Notice tone="warning">{clinic.clinicName}: clínica suspensa. Fale com o Administrador da clínica.</Notice>
+  <p class="text-[15px] text-ink-soft">Enquanto a clínica estiver suspensa, o painel fica fechado para a equipe. Os dados continuam guardados.</p>
+  {isAdmin && <a href={SUSPENDED_ADMIN_PAGE} class="text-[15px] font-semibold text-brand">Abrir a Assinatura</a>}
+  <div class="flex flex-wrap justify-center gap-4">
+    {clinic.canSwitchClinic && <a href="/admin/escolher-clinica" class={AUTH_LINK}>Trocar de clínica</a>}
+    <form method="POST" action="/api/admin/auth/logout">
+      <button type="submit" class={`${AUTH_LINK} cursor-pointer border-0 bg-transparent`}>Sair</button>
+    </form>
+  </div>
+</AuthLayout>

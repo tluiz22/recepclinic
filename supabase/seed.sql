@@ -237,10 +237,14 @@ begin
     values (c_a, 'Clínica Exemplo Saúde Ltda', '11222333000181', 'financeiro@exemplo-saude.local', '+5584988880100');
   insert into public.billing_audit_log (clinic_id, actor_kind, action, after)
     values (c_a, 'support', 'account_created', '{"payer_name": "Clínica Exemplo Saúde Ltda", "finance_email": "financeiro@exemplo-saude.local"}');
-  -- Contrato vigente (F12.2): manual, sem a cobrança automática.
+  -- Contrato vigente (F12.2): manual, sem a cobrança automática; aceito pelo Administrador (F12.2b).
   insert into public.billing_contracts (clinic_id, version, status, billing_mode, monthly_cents, setup_cents, first_due_date,
-      invoice_unit_price_cents, invoice_monthly_allowance, plan_snapshot, starts_on, activated_at)
-    values (c_a, 1, 'active', 'manual', 29900, 29700, current_date + 10, 80, 50, '{"kind": "complete", "label": "Completo"}', current_date, now());
+      invoice_unit_price_cents, invoice_monthly_allowance, plan_snapshot, starts_on, activated_at, terms_version, acceptance, accepted_at, accepted_ip)
+    values (c_a, 1, 'active', 'manual', 29900, 29700, current_date + 10, 80, 50, '{"kind": "complete", "label": "Completo"}', current_date, now(),
+      'seed', 'explicit', now(), '203.0.113.10');
+  -- Suspensão já liberada (F12.3): a clínica de exemplo segue ativa.
+  insert into public.clinic_suspensions (clinic_id, reason, note, created_at, released_at, release_note)
+    values (c_a, 'administrative', 'Exemplo: pausa pedida pela clínica.', now() - interval '40 days', now() - interval '30 days', 'Exemplo: retomada.');
 
   -- Atendimentos da próxima semana.
   insert into public.appointments (clinic_id, patient_id, service_id, agenda_id, location_id, scheduled_at, duration_minutes, booking_channel, status)

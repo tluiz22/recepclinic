@@ -30,11 +30,13 @@ if (id) {
     if (error instanceof DataError && error.code === "not_found") return null;
     throw error;
   });
-  if (brand) guidance = (await getGuidance(db, id))?.trim() || null;
+  if (brand && !brand.suspended) guidance = (await getGuidance(db, id))?.trim() || null;
 }
 
-if (!guidance) Astro.response.status = 404;
-const pageTitle = guidance ? "Orientações gerais para a consulta" : "Orientações não encontradas";
+// Clínica suspensa (F12.3, decisão 11.4): "indisponível no momento", sem falar de cobrança.
+const suspended = brand?.suspended ?? false;
+if (!guidance && !suspended) Astro.response.status = 404;
+const pageTitle = suspended ? "Página indisponível" : guidance ? "Orientações gerais para a consulta" : "Orientações não encontradas";
 // "fale com o consultório": como a clínica é chamada (cliente, 11/out/2026).
 const clinicWord = designationText(brand?.designation ?? DEFAULT_DESIGNATION);
 ---
@@ -49,6 +51,10 @@ const clinicWord = designationText(brand?.designation ?? DEFAULT_DESIGNATION);
         </div>
         <div class={PATIENT_TEXT} set:html={whatsAppTextToHtml(guidance)} />
       </>
+    ) : suspended ? (
+      <LinkNotice icon="information-circle" title="Página indisponível">
+        Página indisponível no momento. Fale com a clínica.
+      </LinkNotice>
     ) : (
       <LinkNotice icon="information-circle" title="Orientações não encontradas" whatsappPhone={brand?.whatsappPhone} clinicWord={clinicWord}>
         Em caso de dúvida, fale com {clinicWord} pelo WhatsApp.

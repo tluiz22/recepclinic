@@ -5,13 +5,15 @@
 // a trilha. F12.2: o contrato vigente, o rascunho (cria, altera, descarta e
 // ativa; mudança = nova versão) e as versões. F12.2b: a situação do aceite,
 // o aviso de 30 dias na mudança aceita pelo uso e o reenvio do e-mail com os
-// novos termos. Cobranças e suspensão entram nas próximas fases.
+// novos termos. F12.3: a suspensão por motivos (SupportSuspensionCard).
+// Cobranças entram nas próximas fases.
 import Badge from "../config/Badge.astro";
 import Card from "../config/Panel.astro";
 import ConfirmDeleteDialog from "../ConfirmDeleteDialog.astro";
 import BillingTrail from "./BillingTrail.astro";
 import ContractAcceptanceInfo from "./ContractAcceptanceInfo.astro";
 import ContractTerms from "./ContractTerms.astro";
+import SupportSuspensionCard from "./SupportSuspensionCard.astro";
 import { CHECK, CHOICE, HINT, INPUT, LABEL, LEGEND, PRIMARY_BUTTON, SECONDARY_BUTTON } from "../config/formStyles";
 import { BILLING_CONTRACT_TERMS_VERSION } from "../../../lib/billingContractText";
 import { formatCalendarDate, formatInstant, todayIn } from "../../../lib/clinicTime";
@@ -84,6 +86,7 @@ const form = {
 
 <div class="mt-4 grid items-start gap-4 lg:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)]">
   <div class="flex min-w-0 flex-col gap-4">
+    <SupportSuspensionCard db={db} clinicId={clinicId} timezone={timezone} />
     <Card>
       <div class="flex flex-wrap items-center gap-2">
         <h2 class={H2}>Contrato</h2>

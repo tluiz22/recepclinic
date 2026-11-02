@@ -615,6 +615,25 @@ isOneToOne: true
       referencedColumns: ["id"]
     }
                   ]
+                },"clinic_suspensions": {
+                  Row: {
+                    "clinic_id": string,"created_at": string,"created_by": string | null,"id": string,"note": string,"reason": string,"release_note": string | null,"released_at": string | null,"released_by": string | null
+                  }
+                  Insert: {
+                    "clinic_id": string,"created_at"?: string,"created_by"?: string | null,"id"?: string,"note": string,"reason": string,"release_note"?: string | null,"released_at"?: string | null,"released_by"?: string | null
+                  }
+                  Update: {
+                    "clinic_id"?: string,"created_at"?: string,"created_by"?: string | null,"id"?: string,"note"?: string,"reason"?: string,"release_note"?: string | null,"released_at"?: string | null,"released_by"?: string | null
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "clinic_suspensions_clinic_id_fkey"
+      columns: ["clinic_id"]
+isOneToOne: false
+      referencedRelation: "clinics"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"clinic_usage_monthly": {
                   Row: {
                     "appointments_created": number,"bot_limit_hits": number,"clinic_id": string,"messages_sent": number,"month": string,"templates_sent": number
@@ -636,13 +655,13 @@ isOneToOne: false
                   ]
                 },"clinics": {
                   Row: {
-                    "created_at": string,"id": string,"max_professionals": number,"name": string,"status": Database["public"]['Enums']["clinic_status"],"updated_at": string
+                    "created_at": string,"id": string,"max_professionals": number,"name": string,"status": Database["public"]['Enums']["clinic_status"],"status_before_suspension": Database["public"]['Enums']["clinic_status"] | null,"updated_at": string
                   }
                   Insert: {
-                    "created_at"?: string,"id"?: string,"max_professionals"?: number,"name": string,"status"?: Database["public"]['Enums']["clinic_status"],"updated_at"?: string
+                    "created_at"?: string,"id"?: string,"max_professionals"?: number,"name": string,"status"?: Database["public"]['Enums']["clinic_status"],"status_before_suspension"?: Database["public"]['Enums']["clinic_status"] | null,"updated_at"?: string
                   }
                   Update: {
-                    "created_at"?: string,"id"?: string,"max_professionals"?: number,"name"?: string,"status"?: Database["public"]['Enums']["clinic_status"],"updated_at"?: string
+                    "created_at"?: string,"id"?: string,"max_professionals"?: number,"name"?: string,"status"?: Database["public"]['Enums']["clinic_status"],"status_before_suspension"?: Database["public"]['Enums']["clinic_status"] | null,"updated_at"?: string
                   }
                   Relationships: [
                     
@@ -1797,6 +1816,9 @@ isOneToOne: false
               "is_support": boolean,"name": string,"roles": (Database["public"]['Enums']["clinic_role"])[],"user_id": string
             }[]
                            },
+"clinic_suspension_reasons":
+{ Args: { "p_clinic_id": string }; Returns: string[]
+                           },
 "connect_whatsapp":
 { Args: { "p_clinic_id": string,"p_coexistence": boolean,"p_contacts_synced"?: boolean,"p_display_phone": string,"p_history_synced"?: boolean,"p_phone_number_id": string,"p_pin"?: string,"p_token": string,"p_waba_id": string }; Returns: undefined
                            },
@@ -1941,6 +1963,9 @@ isOneToOne: false
 "record_billing_contract_notice":
 { Args: { "p_clinic_id": string,"p_contract_id": string,"p_error": string,"p_sent_to": string }; Returns: undefined
                            },
+"release_clinic_suspension":
+{ Args: { "p_note": string,"p_suspension_id": string }; Returns: undefined
+                           },
 "reschedule_group_session":
 { Args: { "p_appointment_id": string,"p_channel": Database["public"]['Enums']["action_channel"],"p_scheduled_at": string,"p_trail"?: Json }; Returns: undefined
                            },
@@ -2013,6 +2038,9 @@ isOneToOne: false
 { Args: { "p_clinic_id": string,"p_limit"?: number }; Returns: {
               "appointment_id": string,"body": string,"contact_id": string,"contact_phone": string,"created_at": string,"direction": string,"id": string,"message_type": string,"status": string,"template_name": string
             }[]
+                           },
+"suspend_clinic":
+{ Args: { "p_clinic_id": string,"p_no_app_confirmed"?: boolean,"p_note": string,"p_reason": string }; Returns: string
                            },
 "undo_agenda_import":
 { Args: { "p_apply": boolean,"p_request_id": string }; Returns: Json

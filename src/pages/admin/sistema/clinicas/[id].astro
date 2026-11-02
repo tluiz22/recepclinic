@@ -195,6 +195,24 @@ const tab = TABS.find((t) => t.key === requestedTab)?.key ?? "implantacao";
 
     <div class="flex min-w-0 flex-col gap-4">
       {
+        clinic.status === "suspended" && (
+          <section class={`${PANEL} flex flex-col gap-3`} aria-labelledby="t-situacao">
+            <div class="flex flex-wrap items-center gap-2">
+              <h2 id="t-situacao" class={SECTION_TITLE}>
+                Situação
+              </h2>
+              <Badge variant="danger">Suspensa</Badge>
+            </div>
+            <p class="text-[15px] text-ink-soft">
+              Painel da clínica restrito à Assinatura, bot calado, links para os pacientes indisponíveis e nada sai pelo WhatsApp. Os motivos e a liberação ficam na aba Faturamento.
+            </p>
+            <a href={`/admin/sistema/clinicas/${clinic.id}?tab=faturamento#suspensao`} class="self-start text-[15px] font-semibold text-brand">
+              Ver os motivos
+            </a>
+          </section>
+        )
+      }
+      {
         clinic.status !== "suspended" && (
           <section class={`${PANEL} flex flex-col gap-3`} aria-labelledby="t-situacao">
             <div class="flex flex-wrap items-center gap-2">

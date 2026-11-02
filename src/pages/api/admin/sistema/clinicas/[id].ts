@@ -14,11 +14,12 @@ import { createUserClient } from "../../../../../lib/data/clients";
 import { DataError } from "../../../../../lib/data/errors";
 import { runFormAction } from "../../../../../lib/data/formAction";
 import { createInfoRequest, markInfoRequestReviewed, resendInvitation, setClinicStatus } from "../../../../../lib/data/onboarding";
+import { releaseClinicSuspension, suspendClinic } from "../../../../../lib/data/suspension";
 import { onboardingDeps } from "../../../../../lib/data/onboardingDeps";
 import { isFeatureKey } from "../../../../../lib/features";
 import { smtpSender } from "../../../../../lib/email";
 import { platformEnv } from "../../../../../lib/env";
-import { formOptionalText, formText } from "../../../../../lib/forms";
+import { formChecked, formOptionalText, formText } from "../../../../../lib/forms";
 import { clinicPlan, PLAN_LABELS } from "../../../../../lib/plans";
 
 // Ações do Suporte numa clínica (F4.4a): reenviar convite, pedir as
@@ -28,7 +29,8 @@ import { clinicPlan, PLAN_LABELS } from "../../../../../lib/plans";
 // desfazer a carga (F10.1d); ativar a clínica em implantação ou voltar para
 // a implantação (F8.2b); cadastrar ou alterar a conta de cobrança (F12.1,
 // aba Faturamento); rascunho, ativação e descarte do contrato (F12.2); aviso
-// por e-mail da nova versão com aceite tácito, na ativação ou de novo (F12.2b).
+// por e-mail da nova versão com aceite tácito, na ativação ou de novo (F12.2b);
+// suspender por um motivo e liberar um motivo (F12.3).
 export const POST: APIRoute = async (context) => {
   const { request, cookies, locals, params, url } = context;
   const clinicId = params.id!;
@@ -37,7 +39,7 @@ export const POST: APIRoute = async (context) => {
   // Erro ao devolver: volta à conferência, com o comentário marcado.
   const billingPage = `${page}?tab=faturamento`;
   const acao = formText(form, "acao");
-  const failureTo = ["devolver_agenda", "autorizar_carga", "desfazer_carga"].includes(acao) ? `${page}/agenda-atual` : acao === "conta_cobranca" || acao.startsWith("contrato_") ? billingPage : page;
+  const failureTo = ["devolver_agenda", "autorizar_carga", "desfazer_carga"].includes(acao) ? `${page}/agenda-atual` : acao === "conta_cobranca" || acao.startsWith("contrato_") || acao === "suspender" || acao === "liberar_suspensao" ? billingPage : page;
   const db = createUserClient(request, cookies);
 
   return runFormAction(
@@ -179,6 +181,16 @@ export const POST: APIRoute = async (context) => {
         case "contrato_descartar":
           await discardBillingContractDraft(db, clinicId);
           return { redirectTo: billingPage, message: "Rascunho do contrato descartado." };
+        case "suspender":
+          await suspendClinic(db, clinicId, {
+            reason: formText(form, "suspension_reason"),
+            note: formText(form, "suspension_note"),
+            noAppConfirmed: formChecked(form, "no_app_confirmed"),
+          });
+          return { redirectTo: billingPage, message: "Clínica suspensa." };
+        case "liberar_suspensao":
+          await releaseClinicSuspension(db, formText(form, "suspension_id"), formText(form, "release_note"));
+          return { redirectTo: billingPage, message: "Motivo liberado." };
         case "marcar_revisado":
           await markInfoRequestReviewed(db, locals.userId!, formText(form, "request_id"));
           return { redirectTo: page, message: "Respostas marcadas como revisadas." };

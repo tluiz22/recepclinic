@@ -40,12 +40,14 @@ export type PublicClinicBrand = {
   designation: Designation;
   /** Número do WhatsApp conectado, para "Falar com a clínica no WhatsApp" (R11, cliente, 17/out/2026); null sem conexão. */
   whatsappPhone: string | null;
+  /** Clínica suspensa (F12.3, decisão 11.4): os links mostram só "indisponível no momento". */
+  suspended: boolean;
 };
 
 /** Marca para as páginas públicas (cliente de serviço, depois de achar a clínica pelo link). */
 export async function getPublicClinicBrand(db: DbClient, clinicId: string): Promise<PublicClinicBrand> {
   const [clinic, settings, whatsapp] = await Promise.all([
-    db.from("clinics").select("name").eq("id", clinicId).maybeSingle().then((r) => unwrapOne(r, "Clínica")),
+    db.from("clinics").select("name, status").eq("id", clinicId).maybeSingle().then((r) => unwrapOne(r, "Clínica")),
     db
       .from("clinic_settings")
       .select("logo_url, brand_color, website_url, message_noun, message_noun_article")
@@ -71,7 +73,14 @@ export async function getPublicClinicBrand(db: DbClient, clinicId: string): Prom
     websiteUrl: settings.website_url,
     designation: { noun: settings.message_noun, article: settings.message_noun_article as NounArticle },
     whatsappPhone: phoneDigits.length >= 10 ? phoneDigits : null,
+    suspended: clinic.status === "suspended",
   };
+}
+
+/** Clínica suspensa (F12.3): as rotas públicas recusam (agendar, horários e confirmar). */
+export async function isClinicSuspended(db: DbClient, clinicId: string): Promise<boolean> {
+  const clinic = unwrapOne(await db.from("clinics").select("status").eq("id", clinicId).maybeSingle(), "Clínica");
+  return clinic.status === "suspended";
 }
 
 export function validateLogoFile(file: { size: number; type: string }): void {

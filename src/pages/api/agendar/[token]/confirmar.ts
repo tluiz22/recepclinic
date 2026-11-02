@@ -1,6 +1,7 @@
 import type { APIRoute } from "astro";
 import { createClinicServiceClient } from "../../../../lib/data/clinicService";
 import { confirmBookingLink, loadBookingPage, logBookingPageStep, parseSlotChoice } from "../../../../lib/data/agenda/publicBooking";
+import { isClinicSuspended } from "../../../../lib/data/config/brand";
 import { resolveClinicByBookingLink } from "../../../../lib/data/platform";
 import { clinicSenderFor } from "../../../../lib/data/whatsapp/clinicSender";
 import { sendAppointmentNotice } from "../../../../lib/data/whatsapp/notices";
@@ -19,6 +20,8 @@ export const POST: APIRoute = async ({ params, request, redirect }) => {
   const clinicId = await resolveClinicByBookingLink(token);
   if (!clinicId) return redirect(pageUrl, 303);
   const db = createClinicServiceClient(clinicId);
+  // Clínica suspensa (F12.3): nada é marcado; a página mostra "Agendamento indisponível".
+  if (await isClinicSuspended(db, clinicId)) return redirect(pageUrl, 303);
 
   const back = async (error: string) => {
     const page = await loadBookingPage(db, clinicId, token).catch(() => null);

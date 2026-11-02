@@ -322,5 +322,6 @@ export const JOURNEY_RULES = [
   "Conversa parada por 15 minutos: o bot encerra com aviso; a próxima mensagem começa de novo.",
   "Os botões do lembrete e da oferta de vaga funcionam em qualquer ponto da conversa.",
   "Clínica em implantação: o bot não responde e nenhuma mensagem automática sai.",
+  "Clínica suspensa: o bot não responde, nenhuma mensagem automática sai e os links (agendar, preparo, orientações) mostram \"indisponível no momento\"; a mensagem do paciente fica no histórico.",
   "Número sem WhatsApp Business (só no sistema): não há \"Falar com a recepção\".",
 ];
