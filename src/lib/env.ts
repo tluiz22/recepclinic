@@ -58,7 +58,12 @@ export type PlatformEnv = {
   asaas: AsaasEnv | null;
 };
 
-export type AsaasEnv = { apiKey: string; baseUrl: string };
+export type AsaasEnv = {
+  apiKey: string;
+  baseUrl: string;
+  /** Token que o Asaas manda no cabeçalho asaas-access-token do webhook (F12.5); null = webhook recusa tudo. */
+  webhookToken: string | null;
+};
 
 /** Endereços aceitos da API do Asaas (sempre com /v3). */
 export const ASAAS_BASE_URLS = ["https://api-sandbox.asaas.com/v3", "https://api.asaas.com/v3"] as const;
@@ -199,7 +204,13 @@ export function parsePlatformEnv(source: EnvSource): PlatformEnv {
     if (!asaasKey) problems.push("ASAAS_API_KEY não definida (chave da API do Asaas)");
     if (!asaasUrl || !(ASAAS_BASE_URLS as readonly string[]).includes(asaasUrl)) {
       problems.push(`ASAAS_BASE_URL inválida (use ${ASAAS_BASE_URLS.join(" ou ")})`);
-    } else if (asaasKey) asaas = { apiKey: asaasKey, baseUrl: asaasUrl };
+    } else if (asaasKey) asaas = { apiKey: asaasKey, baseUrl: asaasUrl, webhookToken: null };
+  }
+  const asaasWebhookToken = text(source, "ASAAS_WEBHOOK_TOKEN");
+  if (asaasWebhookToken) {
+    if (asaasWebhookToken.length < 32) problems.push("ASAAS_WEBHOOK_TOKEN curta demais (32 caracteres ou mais)");
+    else if (!asaasKey && !asaasUrlText) problems.push("ASAAS_WEBHOOK_TOKEN sem ASAAS_API_KEY e ASAAS_BASE_URL");
+    else if (asaas) asaas.webhookToken = asaasWebhookToken;
   }
 
   if (problems.length) throw new PlatformEnvError(problems);
@@ -232,6 +243,7 @@ export function platformEnv(): PlatformEnv {
     ASAAS_PREVIEW: import.meta.env.ASAAS_PREVIEW,
     ASAAS_API_KEY: import.meta.env.ASAAS_API_KEY,
     ASAAS_BASE_URL: import.meta.env.ASAAS_BASE_URL,
+    ASAAS_WEBHOOK_TOKEN: import.meta.env.ASAAS_WEBHOOK_TOKEN,
     WEB_PUSH_PUBLIC_KEY: import.meta.env.WEB_PUSH_PUBLIC_KEY,
     WEB_PUSH_PRIVATE_KEY: import.meta.env.WEB_PUSH_PRIVATE_KEY,
   });

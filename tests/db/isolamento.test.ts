@@ -27,6 +27,8 @@ const CLINIC_B = "0b000000-0000-4000-8000-000000000001"; // Odonto Exemplo
 //   está em tests/db/documentos-do-paciente.test.ts.
 // - cron_heartbeats: última execução de cada rotina (F9.3), da plataforma
 //   (sem clinic_id); só a plataforma grava.
+// - billing_provider_events: fila do webhook do Asaas (F12.5), da plataforma,
+//   sem clinic_id (o evento chega antes de saber a clínica); só o Suporte lê.
 // - billing_settings: preço padrão por nota do faturamento (F12.2), da
 //   plataforma (sem clinic_id); só o Suporte lê e grava (tests/db/contrato.test.ts).
 // - kb_*: Base de Conhecimento Global (cliente, 31/out/2026), igual para todas
@@ -194,7 +196,7 @@ describe("varredura de isolamento (dados de teste)", () => {
   });
 
   it("todas as tabelas do banco entraram na varredura ou têm exceção registrada", () => {
-    const covered = new Set([...dataTables, ...NOT_IN_DATA_SWEEP, ...KNOWLEDGE_BASE, "platform_staff", "platform_settings", "features", "cron_heartbeats", "billing_settings"]);
+    const covered = new Set([...dataTables, ...NOT_IN_DATA_SWEEP, ...KNOWLEDGE_BASE, "platform_staff", "platform_settings", "features", "cron_heartbeats", "billing_settings", "billing_provider_events"]);
     expect(allTables.filter((name) => !covered.has(name))).toEqual([]);
   });
 });

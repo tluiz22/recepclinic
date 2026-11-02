@@ -389,3 +389,43 @@ export function platformBillingStore(env: ServiceEnv = platformEnv()): BillingSt
     recordSync: (contractId, error) => rpc("billing_record_asaas_sync", { p_contract_id: contractId, p_error: error ?? "" }),
   };
 }
+
+// Fila de eventos do webhook do Asaas e conciliação (F12.5).
+export type BillingProviderEvent = { id: string; providerEventId: string; event: string; resourceId: string | null; attempts: number };
+
+export type BillingEventStore = BillingStore & {
+  recordEvent(input: { providerEventId: string; event: string; resourceId: string | null; payload: Record<string, unknown> }): Promise<boolean>;
+  openEvents(limit: number): Promise<BillingProviderEvent[]>;
+  finishEvent(id: string, status: "processed" | "ignored" | "failed", error: string | null): Promise<void>;
+  contractForPayment(subscriptionId: string | null, externalReference: string | null): Promise<string | null>;
+  contractsToReconcile(): Promise<string[]>;
+};
+
+export function platformBillingEventStore(env: ServiceEnv = platformEnv()): BillingEventStore {
+  const db = platformClient(env);
+  const call = async <T>(name: string, args: Record<string, unknown>): Promise<T> => {
+    const { data, error } = await (db.rpc as unknown as (n: string, a: Record<string, unknown>) => Promise<{ data: T; error: unknown }>)(name, args);
+    if (error) throw new PlatformLookupError(name, error);
+    return data;
+  };
+  return {
+    ...platformBillingStore(env),
+    async recordEvent(input) {
+      const id = await call<string | null>("billing_record_provider_event", {
+        p_provider_event_id: input.providerEventId,
+        p_event: input.event,
+        p_resource_id: input.resourceId,
+        p_payload: input.payload,
+      });
+      return id !== null;
+    },
+    async openEvents(limit) {
+      const rows = await call<{ id: string; provider_event_id: string; event: string; resource_id: string | null; attempts: number }[]>("billing_open_provider_events", { p_limit: limit });
+      return (rows ?? []).map((r) => ({ id: r.id, providerEventId: r.provider_event_id, event: r.event, resourceId: r.resource_id, attempts: r.attempts }));
+    },
+    finishEvent: (id, status, error) => call<null>("billing_finish_provider_event", { p_id: id, p_status: status, p_error: error ?? "" }).then(() => undefined),
+    contractForPayment: (subscriptionId, externalReference) =>
+      call<string | null>("billing_contract_for_payment", { p_subscription_id: subscriptionId, p_external_reference: externalReference }),
+    contractsToReconcile: async () => (await call<string[] | null>("billing_contracts_to_reconcile", {})) ?? [],
+  };
+}

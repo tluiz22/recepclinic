@@ -27,8 +27,15 @@
 > Variáveis: `ASAAS_API_KEY` e `ASAAS_BASE_URL` (sandbox ou produção); sem elas, a aba avisa "não configurado". Para
 > testar no local, copiar as duas do `.env.asaas-sandbox` para o `.env`. Código: `src/lib/asaas/billingApi.ts`,
 > `src/lib/data/billingAsaas.ts`, `platformBillingStore` em `platform.ts`. **Ficam para depois:** mudança de versão e
-> troca de modo de quem já tem assinatura (pula com aviso); cartão segue pela fatura do Asaas (F12.8). **Próximo:
-> F12.5** (webhook, fila de eventos, conciliação).
+> troca de modo de quem já tem assinatura (pula com aviso); cartão segue pela fatura do Asaas (F12.8).
+> **F12.5 feita** (`20261121120000_webhook_asaas.sql`): `POST /api/asaas/webhook` confere `asaas-access-token` em tempo
+> constante (`ASAAS_WEBHOOK_TOKEN`, 32+ caracteres), grava em `billing_provider_events` (id único: repetido ignorado),
+> responde 200 e processa em segundo plano consultando a cobrança na API (ordem não importa); evento sem contrato nosso
+> ou de assinatura = ignorado; falha volta à fila até 10 vezes. Rotinas: `faturamento-eventos` (10 min) e
+> `conciliacao-asaas` (6h15 de Brasília: sincroniza todo contrato automático aceito e refaz criação que falhou), as duas
+> na `/api/saude`. **Falta, fora do código:** gerar o token, pôr no ambiente e cadastrar o webhook no painel do Asaas
+> (fila não sequencial, eventos de cobrança); no local o Asaas não alcança a máquina, então o teste de verdade é no
+> staging, quando a branch subir. **Próximo: F12.6** (reativação automática com trava).
 > **Ordem decidida (cliente, 30/out):** cobrança primeiro, até cobrar a clínica piloto em produção, **só com aviso por
 > e-mail**: F12.2b, F12.3, F12.3b, F12.4 a F12.8 e F12.11 (itens 18 a 26 da seção 11). Depois: F12.9 (decisão 11.10),
 > F12.10 (Pix Automático) e a nota fiscal pelo Asaas (N0–N6). **Próximo:** validação da F12.2b no local e o OK para a

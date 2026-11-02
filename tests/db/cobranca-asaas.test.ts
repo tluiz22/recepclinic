@@ -46,6 +46,7 @@ const api = (): AsaasBillingApi => ({
   findPayment: async () => null,
   createPayment: async (input) => ({ id: `pay_setup_${stamp}`, subscription: null, externalReference: input.externalReference, dueDate: input.dueDate, valueCents: input.valueCents, billingType: "PIX", status: "PENDING", paidAt: null, invoiceUrl: "https://sandbox.asaas.com/i/setup" }),
   listSubscriptionPayments: async () => [monthly],
+  getPayment: async () => monthly,
 });
 
 beforeAll(async () => {

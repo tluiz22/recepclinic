@@ -340,6 +340,19 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"billing_provider_events": {
+                  Row: {
+                    "attempts": number,"event": string,"id": string,"last_error": string | null,"payload": NonNullable<Json>,"processed_at": string | null,"provider_event_id": string,"received_at": string,"resource_id": string | null,"status": string
+                  }
+                  Insert: {
+                    "attempts"?: number,"event": string,"id"?: string,"last_error"?: string | null,"payload"?: NonNullable<Json>,"processed_at"?: string | null,"provider_event_id": string,"received_at"?: string,"resource_id"?: string | null,"status"?: string
+                  }
+                  Update: {
+                    "attempts"?: number,"event"?: string,"id"?: string,"last_error"?: string | null,"payload"?: NonNullable<Json>,"processed_at"?: string | null,"provider_event_id"?: string,"received_at"?: string,"resource_id"?: string | null,"status"?: string
+                  }
+                  Relationships: [
+                    
+                  ]
                 },"billing_settings": {
                   Row: {
                     "default_invoice_unit_price_cents": number | null,"id": boolean,"updated_at": string,"updated_by": string | null
@@ -1833,14 +1846,45 @@ isOneToOne: false
 "billing_can_suspend_for_non_payment":
 { Args: { "p_clinic_id": string }; Returns: boolean
                            },
+"billing_contract_for_payment":
+{ Args: { "p_external_reference": string,"p_subscription_id": string }; Returns: string
+                           },
+"billing_contracts_to_reconcile":
+{ Args: Record<PropertyKey, never>; Returns: string[]
+                           },
+"billing_finish_provider_event":
+{ Args: { "p_error": string,"p_id": string,"p_status": string }; Returns: undefined
+                           },
 "billing_link_asaas_customer":
 { Args: { "p_clinic_id": string,"p_customer_id": string }; Returns: undefined
                            },
 "billing_link_asaas_subscription":
 { Args: { "p_contract_id": string,"p_subscription_id": string }; Returns: undefined
                            },
+"billing_open_provider_events":
+{ Args: { "p_limit": number }; Returns: {
+              "attempts": number,
+"event": string,
+"id": string,
+"last_error": string | null,
+"payload": NonNullable<Json>,
+"processed_at": string | null,
+"provider_event_id": string,
+"received_at": string,
+"resource_id": string | null,
+"status": string
+            }[]
+                          SetofOptions: {
+        from: "*"
+        to: "billing_provider_events"
+        isOneToOne: false
+        isSetofReturn: true
+      } },
 "billing_record_asaas_sync":
 { Args: { "p_contract_id": string,"p_error": string }; Returns: undefined
+                           },
+"billing_record_provider_event":
+{ Args: { "p_event": string,"p_payload": Json,"p_provider_event_id": string,"p_resource_id": string }; Returns: string
                            },
 "billing_upsert_asaas_charge":
 { Args: { "p_billing_type": string,"p_contract_id": string,"p_due_date": string,"p_invoice_url": string,"p_kind": string,"p_paid_at": string,"p_payment_id": string,"p_raw_status": string,"p_value_cents": number }; Returns: undefined

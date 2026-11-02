@@ -111,7 +111,12 @@ describe("variáveis da plataforma", () => {
     expect(parsePlatformEnv({ ...valid, ASAAS_API_KEY: "chave", ASAAS_BASE_URL: "https://api-sandbox.asaas.com/v3/" }).asaas).toEqual({
       apiKey: "chave",
       baseUrl: "https://api-sandbox.asaas.com/v3",
+      webhookToken: null,
     });
+    const token = "t".repeat(32);
+    expect(parsePlatformEnv({ ...valid, ASAAS_API_KEY: "chave", ASAAS_BASE_URL: "https://api.asaas.com/v3", ASAAS_WEBHOOK_TOKEN: token }).asaas?.webhookToken).toBe(token);
+    expect(() => parsePlatformEnv({ ...valid, ASAAS_WEBHOOK_TOKEN: token })).toThrow(/ASAAS_WEBHOOK_TOKEN/);
+    expect(() => parsePlatformEnv({ ...valid, ASAAS_API_KEY: "chave", ASAAS_BASE_URL: "https://api.asaas.com/v3", ASAAS_WEBHOOK_TOKEN: "curta" })).toThrow(/curta/);
     expect(parsePlatformEnv({ ...valid, ASAAS_API_KEY: "chave", ASAAS_BASE_URL: "https://api.asaas.com" }).asaas?.baseUrl).toBe("https://api.asaas.com/v3");
     expect(() => parsePlatformEnv({ ...valid, ASAAS_API_KEY: "chave" })).toThrow(/ASAAS_BASE_URL/);
     expect(() => parsePlatformEnv({ ...valid, ASAAS_BASE_URL: "https://api.asaas.com/v3" })).toThrow(/ASAAS_API_KEY/);

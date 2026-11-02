@@ -168,6 +168,11 @@ export function asaasBillingApi(env: AsaasEnv, fetcher: Fetcher = fetch) {
       return toPayment(created);
     },
 
+    /** Estado real de uma cobrança (o webhook só avisa; F12.5). */
+    async getPayment(id: string): Promise<AsaasPayment> {
+      return toPayment(await get<RawPayment>(`/payments/${encodeURIComponent(id)}`));
+    },
+
     /** Cobranças geradas pela assinatura (até 100, as mais novas primeiro não é garantido: o espelho ordena). */
     async listSubscriptionPayments(subscription: string): Promise<AsaasPayment[]> {
       const list = await get<List<RawPayment>>(`/subscriptions/${encodeURIComponent(subscription)}/payments?${q({ limit: "100" })}`);
