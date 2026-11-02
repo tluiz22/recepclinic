@@ -63,6 +63,11 @@ interface Props {
   tint?: ServiceTint;
   /** Consulta apta a retorno: botão "Marcar retorno" (cliente, 19/out/2026). */
   returnReady?: ReturnReady;
+  /**
+   * Aberto dentro da linha da Agenda › Dia (RX7): o horário, o nome e a situação já estão na linha, então sem o selo
+   * nem o nome; entra "Ficha" nas ações. O contêiner (borda e cor da situação) é da linha.
+   */
+  inRow?: boolean;
 }
 
 const {
@@ -86,7 +91,9 @@ const {
   withDate = false,
   tint,
   returnReady,
+  inRow = false,
 } = Astro.props;
+const Root = inRow ? "div" : "article";
 const endpoint = `/api/admin/agenda/atendimentos/${a.id}`;
 const time = (d: Date) => formatInstant(d, timeZone, "HH:mm");
 const isActive = a.status === "scheduled" || a.status === "confirmed";
@@ -144,14 +151,17 @@ if (compact) {
   actions.visible = actions.visible.filter((x) => x.kind !== "link");
   actions.more = [...links, ...actions.more];
 }
+// "Ficha" (RX7): o nome deixou de ser link à vista na linha; a ação leva à ficha e volta para a Agenda.
+const record: (typeof actions.visible)[number] = { kind: "link", href: withReturn(`/admin/pacientes/${a.patientId}`, returnTo), label: "Ficha", icon: "users" };
+if (inRow) actions.visible.push(record);
 const hasActions = Boolean(actions.primary || actions.visible.length || actions.more.length || actions.aside);
 const moreLabel = `Mais ações de ${a.patientName}, ${time(a.scheduledAt)}`;
 const variantOf = (x: (typeof actions.visible)[number]) => (x.kind === "form" && x.danger ? "danger" : "secondary");
 ---
 
-<article
-  class={`flex min-w-0 flex-col gap-1.5 rounded-xl border ${SITUATIONS[situation].edge} ${SITUATIONS[situation].card} ${compact ? "rounded-lg px-2.5 py-2" : "px-3 pb-2.5 pt-3"}`}
-  style={order !== undefined ? `order: ${order}` : undefined}
+<Root
+  class={`flex min-w-0 flex-col gap-1.5 ${inRow ? "px-3 pb-2.5 pt-3" : `rounded-xl border ${SITUATIONS[situation].edge} ${SITUATIONS[situation].card} ${compact ? "rounded-lg px-2.5 py-2" : "px-3 pb-2.5 pt-3"}`}`}
+  style={order !== undefined && !inRow ? `order: ${order}` : undefined}
 >
   {
     compact ? (
@@ -176,12 +186,14 @@ const variantOf = (x: (typeof actions.visible)[number]) => (x.kind === "form" &&
             {withDate && <span class="capitalize">{formatInstant(a.scheduledAt, timeZone, "EEE dd/MM")} · </span>}
             {time(a.scheduledAt)} – {time(a.endsAt)}
           </span>
-          <StatusPill situation={situation} />
+          {!inRow && <StatusPill situation={situation} />}
         </div>
         <div class="flex flex-wrap items-center gap-x-2.5 gap-y-1">
-          <a href={withReturn(`/admin/pacientes/${a.patientId}`, returnTo)} class="text-[17px] leading-snug font-semibold text-ink no-underline hover:text-brand hover:underline sm:text-base">
-            {a.patientName}
-          </a>
+          {!inRow && (
+            <a href={withReturn(`/admin/pacientes/${a.patientId}`, returnTo)} class="text-[17px] leading-snug font-semibold text-ink no-underline hover:text-brand hover:underline sm:text-base">
+              {a.patientName}
+            </a>
+          )}
           {noShow && (
             <span class="inline-flex items-center gap-1">
               <Signal tone="alert" icon="warning">
@@ -294,4 +306,4 @@ const variantOf = (x: (typeof actions.visible)[number]) => (x.kind === "form" &&
         </div>
       ))
   }
-</article>
+</Root>

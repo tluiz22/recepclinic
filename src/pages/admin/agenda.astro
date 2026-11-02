@@ -6,6 +6,7 @@ import { withReturn } from "../../lib/returnPath";
 import AdminLayout from "../../layouts/AdminLayout.astro";
 import AgendaHeader from "../../components/admin/agenda/AgendaHeader.astro";
 import AppointmentCard from "../../components/admin/agenda/AppointmentCard.astro";
+import AgendaRow from "../../components/admin/agenda/AgendaRow.astro";
 import ConfirmDeleteDialog from "../../components/admin/ConfirmDeleteDialog.astro";
 import SituationLegend from "../../components/admin/agenda/SituationLegend.astro";
 import HowItWorks from "../../components/admin/ui/HowItWorks.astro";
@@ -90,6 +91,12 @@ const subtitle = [
 // Bloqueio de vários dias: data junto do horário quando não é o dia aberto.
 const blockTime = (d: Date) => formatInstant(d, clinic.timezone, localDateOf(d, clinic.timezone) === date ? "HH:mm" : "dd/MM HH:mm");
 const time = (d: Date) => formatInstant(d, clinic.timezone, "HH:mm");
+// Ponto âmbar na linha: lembrete sem resposta ou não entregue, preparo ou orientações não entregues, já passou sem registro.
+const needsAttention = (a: (typeof appointments)[number]) => {
+  const reminder = reminderActions.get(a.id);
+  const pastActive = (a.status === "scheduled" || a.status === "confirmed") && a.scheduledAt <= now;
+  return pastActive || reminder === "resend" || reminder === "resend_unanswered" || preparationResendable.has(a.id) || guidanceResendable.has(a.id);
+};
 const cardProps = (a: (typeof appointments)[number]) => ({
   appointment: a,
   tint: tints.get(a.serviceId),
@@ -161,7 +168,9 @@ const cardProps = (a: (typeof appointments)[number]) => ({
             )}
             {column.items.map((item) =>
               item.kind === "appointment" ? (
-                <AppointmentCard {...cardProps(item.appointment)} order={orderOf(item)} />
+                <AgendaRow appointment={item.appointment} tint={tints.get(item.appointment.serviceId)} timeZone={clinic.timezone} attention={needsAttention(item.appointment)} order={orderOf(item)}>
+                  <AppointmentCard {...cardProps(item.appointment)} inRow />
+                </AgendaRow>
               ) : item.kind === "group" ? (
                 <article class="flex min-w-0 flex-col gap-1.5 rounded-xl border border-line bg-white px-3 pt-3 pb-2.5" style={orderOf(item) !== undefined ? `order: ${orderOf(item)}` : undefined}>
                   {/* Faixa do tipo, como no cartão do atendimento (1C; turma decidida pelo cliente, S-01, 19/out/2026). */}
@@ -251,6 +260,21 @@ const cardProps = (a: (typeof appointments)[number]) => ({
     </div>
   </div>
   <ConfirmDeleteDialog />
+
+  <script>
+    // Uma linha aberta por vez: o atributo `name` do <details> já faz isso nos navegadores novos; aqui, nos demais.
+    document.addEventListener(
+      "toggle",
+      (event) => {
+        const target = event.target;
+        if (!(target instanceof HTMLDetailsElement) || !target.matches("[data-agenda-row]") || !target.open) return;
+        document.querySelectorAll<HTMLDetailsElement>("[data-agenda-row][open]").forEach((row) => {
+          if (row !== target) row.open = false;
+        });
+      },
+      true,
+    );
+  </script>
 
   <script>
     // Colunas por agenda: uma barra de rolagem também acima dos nomes
