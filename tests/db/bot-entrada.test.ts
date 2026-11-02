@@ -207,6 +207,24 @@ describe("um atendimento", () => {
     await say(P2, "menu");
   });
 
+  it("5b. data sem barras: confirma com as barras; Sim segue, Não pede de novo", async () => {
+    await fresh(P2);
+    await say(P2, "oi");
+    await say(P2, { id: "entry_yes" });
+    let reply = await say(P2, "01012020");
+    expect(reply).toEqual([expect.objectContaining({ kind: "buttons", body: "Você quis dizer a data *01/01/2020*?" })]);
+    expect(titles(reply)).toEqual(["Sim", "Não"]);
+    reply = await say(P2, { id: "no" });
+    expect(reply.map((m) => m.body)).toEqual(["Tudo bem. Digite a data novamente, no formato dd/mm/aaaa (ex.: 10/03/2020)."]);
+    reply = await say(P2, "01012020");
+    expect(reply[0].body).toContain("*01/01/2020*");
+    reply = await say(P2, "talvez");
+    expect(reply[0].body).toContain("Responda apenas Sim ou Não");
+    reply = await say(P2, { id: "yes" });
+    expect(reply[0].body).toContain("está marcada para");
+    await say(P2, "menu");
+  });
+
   it("6. data errada: não revela nada; sem bloqueio, \"Tentar outra data\" pede de novo e \"Voltar ao menu\" leva ao menu", async () => {
     await fresh(P2);
     await say(P2, "oi");

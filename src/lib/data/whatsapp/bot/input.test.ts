@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { asksForReception, extractSelection, formatBirthdate, isBack, isBackToMenu, parseBirthdate, pick, yesNo } from "./input";
+import { asksForReception, extractSelection, formatBirthdate, isBack, isBackToMenu, parseBirthdate, pick, slashlessBirthdate, yesNo } from "./input";
 import { ageLimit, askBirthdate, confirmPatient, numberedList, otherPatientLabel, row, wordsFor } from "./texts";
 
 const typed = (text: string) => ({ id: null, text });
@@ -92,5 +92,16 @@ describe("textos pelo perfil (F6.3)", () => {
     const list = numberedList(Array.from({ length: 12 }, (_, i) => ({ id: `s${i}`, label: `Serviço ${i}` })));
     expect(list[0].rows).toHaveLength(10);
     expect(list[0].rows.at(-1)).toEqual({ id: "back_to_menu", title: "10. Voltar ao menu" });
+  });
+});
+
+describe("data sem barras", () => {
+  it("8 dígitos de uma data válida viram dd/mm/aaaa; o resto não", () => {
+    expect(slashlessBirthdate("10032020", "2026-10-07")).toBe("10/03/2020");
+    expect(slashlessBirthdate(" 10032020 ", "2026-10-07")).toBe("10/03/2020");
+    expect(slashlessBirthdate("31022020", "2026-10-07")).toBeNull();
+    expect(slashlessBirthdate("10032030", "2026-10-07")).toBeNull();
+    expect(slashlessBirthdate("1032020", "2026-10-07")).toBeNull();
+    expect(slashlessBirthdate("10/03/2020", "2026-10-07")).toBeNull();
   });
 });

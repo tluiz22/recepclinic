@@ -52,7 +52,7 @@ describe("planos", () => {
 
   it("formulário: ids desconhecidos saem; dependências por item", () => {
     expect(featuresOfItems(["custom_messages", "inventado"])).toEqual(["custom_messages", "custom_templates"]);
-    expect(itemDependsOn(ADDONS.find((a) => a.id === "metrics")!)).toEqual(["whatsapp_bot"]);
+    expect(itemDependsOn(ADDONS.find((a) => a.id === "metrics")!)).toEqual([]);
     expect(itemDependsOn(ADDONS.find((a) => a.id === "waitlist")!)).toEqual(["whatsapp_bot"]);
     expect(BASIC_ITEMS.flatMap(itemDependsOn)).toEqual([]);
   });

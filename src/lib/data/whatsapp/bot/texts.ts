@@ -204,6 +204,9 @@ export const askBirthdate = (w: Words) => `Qual a data de nascimento ${of(w)}? (
 export const SELF_BIRTHDATE = "Qual é a sua data de nascimento? (formato dd/mm/aaaa)";
 /** Depois de responder uma pergunta da base no meio do pedido da data (BC, Etapa 4). */
 export const ASK_BIRTHDATE_AGAIN = "Qual a data de nascimento do paciente? (formato dd/mm/aaaa)";
+/** Data digitada sem as barras (cliente, 02/nov/2026): confirma com as barras antes de seguir. */
+export const confirmTypedDate = (date: string) => `Você quis dizer a data *${date}*?`;
+export const TYPED_DATE_RETRY = "Tudo bem. Digite a data novamente, no formato dd/mm/aaaa (ex.: 10/03/2020).";
 export const INVALID_BIRTHDATE = "Não consegui entender essa data. Por favor, digite no formato dd/mm/aaaa (ex.: 10/03/2020).";
 export const INVALID_BIRTHDATE_AGAIN = `${INVALID_BIRTHDATE}\n\nSe não souber a data, escolha uma opção abaixo.`;
 export const birthdateMatches = (w: Words) =>
@@ -357,6 +360,9 @@ export function presenceConfirmed(patientName: string, when: string, isExam: boo
     "Obrigado! Qualquer dúvida, é só chamar por aqui."
   );
 }
+/** Local da consulta depois da presença confirmada (cliente, 02/nov/2026): nome, endereço e o mapa. */
+export const mapsLink = (address: string) => `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`;
+export const locationAfterConfirm = (name: string, address: string) => `📍 *${name}*\n${address}\n\nComo chegar: ${mapsLink(address)}`;
 export const presenceAlreadyConfirmed = (patientName: string, when: string) => `A presença de ${patientName} em ${when} já estava confirmada ✓`;
 export const APPOINTMENT_INACTIVE = "Esse agendamento não está mais ativo.";
 

@@ -182,6 +182,8 @@ describe("botões do lembrete", () => {
     await hello(P1);
     const reply = await say(P1, { payload: reminderButtonPayload("confirm", consultP1) });
     expect(reply[0].body).toBe("Presença confirmada ✓\n\n👤 Paciente: Paciente Um\n📅 segunda, 10/03 às 08:00\n\nObrigado! Qualquer dúvida, é só chamar por aqui.");
+    // Depois da presença: o local com o link do Maps, numa mensagem à parte (cliente, 02/nov/2026).
+    expect(reply[1].body).toBe("📍 *Consultório*\nRua A, 1\n\nComo chegar: https://www.google.com/maps/search/?api=1&query=Rua%20A%2C%201");
     expect((await appointment(consultP1)).patient_confirmed_at).not.toBeNull();
     expect((await say(P1, { payload: reminderButtonPayload("confirm", consultP1) }))[0].body).toBe(
       "A presença de Paciente Um em segunda, 10/03 às 08:00 já estava confirmada ✓",

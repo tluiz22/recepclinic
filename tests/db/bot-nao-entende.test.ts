@@ -111,7 +111,11 @@ describe("bot que não entende (F8.5d)", () => {
     expect((await message(phone, "???"))[0]).toMatch(NOT_UNDERSTOOD);
     expect(await message(phone, { media: "image" })).toEqual([OFFER]);
     expect((await conversation(phone)).human_handoff).toBe(false);
-    expect(await message(phone, "sim")).toEqual(["Vou pedir para alguém da clínica te atender por aqui. Aguarde, por favor.", "Para agilizar, poderia me contar brevemente qual assunto deseja tratar com a secretária?"]);
+    // Em feriado nacional a recepção conta como fechada (o aviso traz quando responde): confere só o começo.
+    const accepted = await message(phone, "sim");
+    expect(accepted).toHaveLength(2);
+    expect(accepted[0]).toMatch(/^Vou pedir para alguém da clínica te atender por aqui\./);
+    expect(accepted[1]).toBe("Para agilizar, poderia me contar brevemente qual assunto deseja tratar com a secretária?");
     expect(await conversation(phone)).toEqual({ state: "HUMAN_HANDOFF", human_handoff: true, handoff_reason: "not_understood", not_understood_count: 0 });
     // Pausada: a 1ª resposta é o assunto; depois, o bot fica calado.
     expect(await message(phone, "alô?")).toEqual(["Obrigado! Já repassamos para a nossa equipe."]);

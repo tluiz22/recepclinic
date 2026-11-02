@@ -5,7 +5,7 @@
 // (CLAUDE.md): mudou a jornada do bot, atualizar este arquivo no mesmo commit,
 // junto com JOURNEY_UPDATED.
 
-export const JOURNEY_UPDATED = "01/11/2026";
+export const JOURNEY_UPDATED = "02/11/2026";
 
 export type NodeKind = "patient" | "bot" | "page" | "auto" | "reception" | "decision";
 
@@ -56,7 +56,7 @@ export const JOURNEY: JourneySection[] = [
           [
             bot("Boas-vindas e \"Identificamos um agendamento associado a este número. Você deseja tratar desse agendamento?\""),
             patient("Sim, quero", "\"Não, outro assunto\": vai para o menu principal."),
-            bot("Pede a data de nascimento do paciente, por segurança", "Nada do atendimento aparece antes disso."),
+            bot("Pede a data de nascimento do paciente, por segurança", "Nada do atendimento aparece antes disso. Data digitada sem as barras (10032020): pergunta \"Você quis dizer 10/03/2020?\" com Sim · Não; vale em todo pedido de data."),
             check("A data confere com um paciente com atendimento?", "Não: \"Não encontramos agendamentos para essa data de nascimento.\" com Tentar outra data · Voltar ao menu."),
             bot("Mostra o atendimento (dia e hora) e pergunta o que fazer: Confirmar presença · Remarcar · Cancelar · Encaixe ou antecipar · Falar com a recepção"),
           ],
@@ -215,7 +215,7 @@ export const JOURNEY: JourneySection[] = [
       auto("Confirmação, com preparo ou orientações quando houver"),
       auto("Lembrete na véspera ou no dia (como a clínica escolher), com Confirmar presença · Remarcar · Cancelar"),
       branch(
-        ["Confirmar presença", [bot("\"Presença confirmada ✓\""), reception("A agenda mostra a presença confirmada")]],
+        ["Confirmar presença", [bot("\"Presença confirmada ✓\"", "Em seguida, outra mensagem com o nome e o endereço do local e o link do Google Maps (só local da clínica com endereço)"), reception("A agenda mostra a presença confirmada")]],
         ["Remarcar", [bot("Segue o caminho do Remarcar (item 4)")]],
         ["Cancelar", [bot("Segue o caminho do Cancelar (item 4)")]],
       ),

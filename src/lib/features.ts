@@ -54,7 +54,8 @@ export const FEATURES: readonly Feature[] = [
   { key: "metrics_performance", area: "metrics", label: "Métricas: Desempenho", dependsOn: [] },
   { key: "metrics_no_shows", area: "metrics", label: "Métricas: Faltosos", dependsOn: [] },
   { key: "metrics_recall", area: "metrics", label: "Métricas: Retomar contato", dependsOn: [] },
-  { key: "metrics_funnel", area: "metrics", label: "Métricas: Agendamento digital", dependsOn: ["whatsapp_bot"] },
+  // Sem depender do bot (cliente, 02/nov/2026): o Suporte avalia a jornada no WhatsApp e libera a aba clínica a clínica.
+  { key: "metrics_funnel", area: "metrics", label: "Métricas: Agendamento digital", dependsOn: [] },
   { key: "metrics_financial", area: "metrics", label: "Métricas: Financeiro", dependsOn: [] },
   { key: "metrics_personal", area: "metrics", label: "Métricas pessoais do profissional", dependsOn: [] },
   // Módulo financeiro (F11, cliente, 12/out/2026): pagamentos e nota fiscal.
@@ -94,7 +95,7 @@ export function missingDependencies(keys: readonly FeatureKey[]): { feature: Fea
   );
 }
 
-/** Desligar um item desliga os que dependem dele (ex.: sem bot, sai a lista de espera e o Funil). */
+/** Desligar um item desliga os que dependem dele (ex.: sem bot, sai a lista de espera). */
 export function withoutDependents(keys: readonly FeatureKey[], removed: FeatureKey): FeatureKey[] {
   let result = keys.filter((key) => key !== removed);
   for (;;) {

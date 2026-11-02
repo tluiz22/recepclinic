@@ -18,9 +18,9 @@ import { contactIdByPhone, recordOutboundMessage } from "../messages";
 import { messageBody, toE164, type WaMessage } from "../meta";
 import type { ClinicSender } from "../send";
 import { BOOKING_STATES, handleBookingState } from "./booking";
-import { askHandoffSubject, createBot, currentPrompt, go, KnowledgeTakeover, mergeContext, NotUnderstoodLimitReached, offerReception, RECEPTION_CONFIRM_KEY, say, sendButtons, textFor, type Bot, type BotEnv, type ReceptionOffer } from "./engine";
+import { askHandoffSubject, createBot, currentPrompt, go, KnowledgeTakeover, mergeContext, NotUnderstoodLimitReached, offerReception, RECEPTION_CONFIRM_KEY, repeatYesNo, say, sendButtons, textFor, type Bot, type BotEnv, type ReceptionOffer } from "./engine";
 import { ENTRY_STATES, handleEntryState, startConversation } from "./entry";
-import { asksForReception, extractSelection, isBack, isBackToMenu, TALK_TO_RECEPTION_ID, yesNo } from "./input";
+import { asksForReception, extractSelection, type Selection, isBack, isBackToMenu, parseBirthdate, slashlessBirthdate, TALK_TO_RECEPTION_ID, yesNo } from "./input";
 import { handleInfo, handleMenu, handlePreparationChoice, handleSubmenu, showMenu, showPreviousMenu } from "./menus";
 import { handleManageState, handleOfferTap, handleReminderTap, handoff, handoffNotUnderstood, handoffText, MANAGE_STATES, offerTapOf, reminderTapOf } from "./manage";
 import {
@@ -34,6 +34,9 @@ import {
   RECEPTION_CONFIRM_IDS,
   RECEPTION_DECLINED,
   RECEPTION_DECLINED_NO_MENU,
+  confirmTypedDate as typedDateQuestion,
+  TYPED_DATE_RETRY,
+  YES_NO_BUTTONS,
   willReply,
 } from "./texts";
 import { blockedContactByPhone, blockedNoticeDue, markBlockedNotice } from "../contactBlock";
@@ -116,6 +119,59 @@ export async function handleIncomingMessage(env: BotEnv, message: WaMessage): Pr
 /** Passos em que qualquer texto é a resposta (nome e endereço): o pedido digitado de recepção não vale neles. */
 const FREE_TEXT_AWAITING = new Set(["address_input", "contact_name", "patient_name", "self_name"]);
 const awaitingOf = (convo: Conversation) => ((convo.context ?? {}) as { awaiting?: string }).awaiting;
+
+/** Passos que esperam a data de nascimento digitada. */
+function expectsBirthdate(convo: Conversation): boolean {
+  const awaiting = awaitingOf(convo);
+  switch (convo.state) {
+    case "ENTRY_BIRTHDATE":
+      return true;
+    case "BOOK_PATIENT_SELECT":
+      return awaiting === "birthdate_search";
+    case "BOOK_PATIENT_NEW":
+      return awaiting === "patient_birthdate" || awaiting === "self_birthdate";
+    case "CANCEL_SELECT":
+    case "RESCHEDULE_SELECT":
+    case "WAITLIST_SELECT":
+      return awaiting === "birthdate_search" || awaiting === "identity_choice";
+    default:
+      return false;
+  }
+}
+
+const TYPED_DATE_KEY = "_typed_date";
+
+/**
+ * Data sem barras ("10032020"): pergunta "Você quis dizer 10/03/2020?" com Sim e Não. Sim segue como se a pessoa
+ * tivesse digitado a data com barras (devolve a seleção); Não pede a data de novo. "handled" = já respondeu.
+ */
+async function askTypedDate(b: Bot, convo: Conversation, selection: Selection): Promise<Selection | "handled" | null> {
+  if (!expectsBirthdate(convo)) return null;
+  let pending = ((convo.context ?? {}) as Record<string, unknown>)[TYPED_DATE_KEY] as string | undefined;
+  if (pending) {
+    // Outra data digitada vale no lugar da pendente.
+    if (!selection.id && (parseBirthdate(selection.text, b.clinic.today) || slashlessBirthdate(selection.text, b.clinic.today))) {
+      await mergeContext(b, { [TYPED_DATE_KEY]: undefined });
+      pending = undefined;
+    } else {
+      const answer = yesNo(selection);
+      if (answer === null) {
+        await repeatYesNo(b, "bot_typed_date_confirm", typedDateQuestion(pending));
+        return "handled";
+      }
+      await mergeContext(b, { [TYPED_DATE_KEY]: undefined });
+      if (answer) return { id: null, text: pending };
+      await say(b, "bot_typed_date_retry", TYPED_DATE_RETRY);
+      return "handled";
+    }
+  }
+  if (selection.id) return null;
+  const date = slashlessBirthdate(selection.text, b.clinic.today);
+  if (!date) return null;
+  await mergeContext(b, { [TYPED_DATE_KEY]: date });
+  await sendButtons(b, "bot_typed_date_confirm", typedDateQuestion(date), YES_NO_BUTTONS);
+  return "handled";
+}
 /** Pedido de recepção digitado esperando o Sim ou o Não (no contexto, sem trocar o passo). */
 const receptionConfirmPending = (convo: Conversation) => !!((convo.context ?? {}) as Record<string, unknown>)[RECEPTION_CONFIRM_KEY];
 /** Transferência oferecida pelo bot (sem horário, convênio, "não entendi"…), e não o pedido digitado. */
@@ -143,7 +199,7 @@ async function declineReceptionOffer(b: Bot, offer: ReceptionOffer): Promise<voi
 }
 
 async function dispatch(env: BotEnv, b: Bot, convo: Conversation, phone: string, message: WaMessage): Promise<void> {
-  const selection = extractSelection(message);
+  let selection = extractSelection(message);
 
   const blocked = await blockedContactByPhone(env.db, env.clinicId, phone);
   if (blocked && (!MANAGE_STATES.has(convo.state) || isBackToMenu(selection))) {
@@ -200,6 +256,11 @@ async function dispatch(env: BotEnv, b: Bot, convo: Conversation, phone: string,
     await mergeContext(b, { [RECEPTION_CONFIRM_KEY]: true });
     return sendButtons(b, "bot_reception_confirm", RECEPTION_CONFIRM, RECEPTION_CONFIRM_BUTTONS);
   }
+
+  // Data digitada sem as barras: confirma com as barras antes de seguir (cliente, 02/nov/2026).
+  const typedDate = await askTypedDate(b, convo, selection);
+  if (typedDate === "handled") return;
+  if (typedDate) selection = typedDate;
 
   if (ENTRY_STATES.has(convo.state)) {
     await handleEntryState(b, convo.state, selection);

@@ -14,16 +14,13 @@ describe("itens da matriz e dependências (D11)", () => {
     for (const feature of FEATURES) for (const dep of feature.dependsOn) expect(keys).toContain(dep);
   });
 
-  it("lista de espera e Funil dependem do bot", () => {
-    expect(missingDependencies(["waitlist", "metrics_funnel", "exams"])).toEqual([
-      { feature: "waitlist", needs: "whatsapp_bot" },
-      { feature: "metrics_funnel", needs: "whatsapp_bot" },
-    ]);
+  it("lista de espera depende do bot; o Agendamento digital não", () => {
+    expect(missingDependencies(["waitlist", "metrics_funnel", "exams"])).toEqual([{ feature: "waitlist", needs: "whatsapp_bot" }]);
     expect(missingDependencies(["whatsapp_bot", "waitlist"])).toEqual([]);
   });
 
   it("desligar o bot desliga quem depende dele", () => {
-    expect(withoutDependents(["whatsapp_bot", "waitlist", "metrics_funnel", "reminders"], "whatsapp_bot")).toEqual(["reminders"]);
+    expect(withoutDependents(["whatsapp_bot", "waitlist", "metrics_funnel", "reminders"], "whatsapp_bot")).toEqual(["metrics_funnel", "reminders"]);
     expect(withoutDependents(["whatsapp_bot", "waitlist"], "waitlist")).toEqual(["whatsapp_bot"]);
   });
 });
