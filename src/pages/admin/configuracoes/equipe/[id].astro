@@ -33,8 +33,8 @@ const pending = member?.invitation && !member.invitation.acceptedAt;
 const action = `/api/admin/configuracoes/equipe/${id}`;
 const roleHints: Record<string, string> = {
   admin: "tudo, inclusive Configurações, a equipe e, se liberados, as Métricas e o Financeiro",
-  professional: "Início, Agenda, Pacientes, Resumo do Dia e, se liberadas, as métricas da própria agenda",
-  reception: "Início, Agenda, Pacientes, Resumo do Dia (lembretes, envios e lista de espera) e, se liberado, o Financeiro",
+  professional: "Meu dia, Agenda, Pacientes (com o Relatório do dia na Agenda) e, se liberadas, as métricas da própria agenda",
+  reception: "Meu dia, Agenda, Pacientes (com o Relatório do dia na Agenda: lembretes, envios e lista de espera) e, se liberado, o Financeiro",
 };
 import Field from "../../../../components/admin/ui/Field.astro";
 import { configuracoes } from "../../../../lib/ajuda/configuracoes";

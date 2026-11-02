@@ -13,3 +13,4 @@ a captura e o motivo, avisar o cliente no fim da etapa e esperar a autorização
 - `pacientes` — as abas viraram Todos, Responsáveis e Para contatar (com contador) (02/11/2026)
 - `resumo-do-dia` — a tela passou a se chamar Relatório do dia (título e abas); o nome na captura e no artigo muda (02/11/2026)
 - `agenda-dia` — cabeçalho novo: Bloquear, Mais (Bloqueios, Buscar paciente, Relatório do dia) e Marcar consulta; a busca saiu da barra (02/11/2026)
+- **todas as capturas de tela inteira** — o menu lateral mudou (Meu dia, Agenda, Pacientes e Mais); toda captura que mostra a lateral fica desatualizada. Recapturar tudo de uma vez, junto com a RX9 (02/11/2026)

@@ -28,7 +28,7 @@ import { createUserClient } from "../../lib/data/clients";
 import { loadActorLabels } from "../../lib/data/agenda/trail";
 import type { AgendaAppointment } from "../../lib/data/agenda/view";
 import { listServiceRefs } from "../../lib/data/config/services";
-import { loadRelationshipLists, menuTotal, RELATIONSHIP_TABS, relationshipCounts, relationshipTabs, type RelationshipTab } from "../../lib/data/relationship";
+import { loadRelationshipLists, RELATIONSHIP_TABS, relationshipCounts, relationshipTabs, type RelationshipTab } from "../../lib/data/relationship";
 import { listRecentOffers } from "../../lib/data/waitlist/entries";
 import { serviceTags } from "../../components/admin/agenda/categoryStyle";
 import { todayIn } from "../../lib/clinicTime";
@@ -44,7 +44,6 @@ const available = relationshipTabs(clinic.features);
 const failed = (tab: RelationshipTab, error: unknown) => logError(`relacionamento: ${tab} não carregou`, error, { clinica: clinic.clinicId });
 const lists = await loadRelationshipLists(db, clinic.clinicId, available, failed, { timeZone: clinic.timezone, now });
 const counts = relationshipCounts(lists);
-Astro.locals.relationshipMenuTotal = menuTotal(counts);
 
 // Sem aba no endereço, abre a primeira com pendência (ou a primeira).
 const asked = Astro.url.searchParams.get("tab");

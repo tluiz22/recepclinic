@@ -146,6 +146,8 @@ const pct = (n: number) => (counts.totalToday > 0 ? Math.round((n / counts.total
 const donePct = pct(counts.completedToday);
 const confirmedPct = pct(counts.confirmedToday);
 // "Precisa de você": some a linha de quem não tem pendência; vazio mostra um texto de tudo em dia.
+// O menu usa este número (mesma conta de getMeuDiaCount) sem ler de novo.
+Astro.locals.meuDiaCount = awaiting.length + inProgress.length + counts.pendingAttendance + (toReview?.length ?? 0);
 const hasPending = awaiting.length > 0 || inProgress.length > 0 || counts.pendingAttendance > 0 || (toReview?.length ?? 0) > 0;
 const sectionTitle = "font-display text-[17px] leading-tight font-bold text-ink sm:text-lg";
 ---

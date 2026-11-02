@@ -36,7 +36,7 @@ declare namespace App {
     clinic?: import("./lib/clinicAccess").ClinicContext;
     // Aviso da tela já lido neste pedido (src/lib/flash.ts, pageFlash).
     flash?: import("./lib/flash").Flash | null;
-    // Total do Relacionamento já contado pela própria tela (o menu não lê de novo).
-    relationshipMenuTotal?: number;
+    /** Contador do Meu dia no menu (RX6); a tela do Meu dia o informa para o menu não ler de novo. */
+    meuDiaCount?: number;
   }
 }
