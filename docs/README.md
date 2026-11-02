@@ -32,8 +32,7 @@
 >   staging e etapa B.
 > - **Redesign da Recepção (UX)** ([`redesign-recepcao.md`](redesign-recepcao.md)): RX1 a RX9 e os ajustes da validação
 >   (Meu dia, Agenda opção B, Pacientes/ficha A, Relatório do dia opção C) **na `main` e no staging (02/nov)**, sem
->   produção. **Próximo (cliente, 02/nov): atualizar a Central de Ajuda** com todas as mudanças das telas (artigos e
->   recaptura de todas as telas: [`capturas-pendentes.md`](capturas-pendentes.md)). Avisos técnicos só do Suporte; tela
+>   produção. **Central de Ajuda atualizada com o redesign (02/nov):** artigos e as 25 capturas refeitas, no staging após o push; falta o cliente validar. Avisos técnicos só do Suporte; tela
 >   de pendências do Suporte pendente em [`painel-suporte.md`](painel-suporte.md).
 >
 > **Pendências**

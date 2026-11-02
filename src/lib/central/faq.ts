@@ -25,7 +25,7 @@ export const FAQS: Faq[] = [
   f("bot-parou", "A conversa parou de ser respondida pelo bot. Por quê?", "Provavelmente está em Atendimento, esperando a clínica. Depois de atender, toque em Devolver ao bot (ou escreva #bot na conversa).", "atendimento-humano", ["pausado"]),
   f("devolver-bot", "Como devolvo a conversa ao bot?", "Em Atendimento, \"Devolver ao bot\", ou escreva #bot na conversa pelo app. O bot volta na próxima mensagem do paciente.", "atendimento-humano"),
   f("bot-nao-agenda", "Por que o bot não está realizando agendamentos?", "Confira se a clínica saiu da implantação, se o WhatsApp está Conectado, se há horário livre no prazo e se o contato não bateu um limite.", "bot-nao-agenda"),
-  f("lembrete-nao-saiu", "O paciente não recebeu o lembrete. O que olho?", "Veja Relatório do dia › Envios e Configurações › WhatsApp (conexão, mensagens aprovadas e forma de pagamento na Meta).", "lembrete-nao-saiu"),
+  f("lembrete-nao-saiu", "O paciente não recebeu o lembrete. O que olho?", "Veja Relatório do dia › Lembretes (Não entregue) e Configurações › WhatsApp (conexão, mensagens aprovadas e forma de pagamento na Meta).", "lembrete-nao-saiu"),
   f("confirmar-presenca", "Como o paciente confirma a presença?", "Tocando em Confirmar presença no lembrete do WhatsApp. A recepção também confirma pelo cartão.", "lembretes-e-confirmacoes"),
   f("sem-horario", "Não aparece nenhum horário livre. O que pode ser?", "Falta horário de atendimento, é feriado, há bloqueio, o serviço não está ligado à agenda/local, ou o dia passou do prazo (no bot e no link).", "sem-horario-livre"),
   f("servico-sumiu", "O serviço não aparece para marcar. Por quê?", "Veja o selo dele em Configurações › Serviços: sem agenda, sem local ou sem horário.", "servico-nao-aparece"),

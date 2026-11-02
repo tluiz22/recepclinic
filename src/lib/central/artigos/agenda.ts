@@ -21,7 +21,7 @@ export const agendaArtigos = [
       "Abra Agenda. A visão Dia abre com todas as agendas que a sua função vê; o nome da agenda aparece em cada atendimento.",
       "Use as setas e a data para mudar o dia. Na Semana e no Mês, toque num dia para abri-lo na visão Dia, onde ficam as ações.",
       "Para ver só algumas agendas, escolha-as no filtro de agendas.",
-      "Para achar os atendimentos futuros de um paciente, use a busca da Agenda: nome ou telefone (4 dígitos ou mais). Com um só resultado, os próximos atendimentos já aparecem.",
+      "Para achar os atendimentos futuros de um paciente, use Mais › Buscar paciente, no alto da Agenda: nome ou telefone (4 dígitos ou mais). Com um só resultado, os próximos atendimentos já aparecem.",
     ],
     notes: [
       "O Profissional vê só as próprias agendas. Quem tem acesso restrito vê apenas as agendas liberadas na Equipe.",
@@ -68,7 +68,7 @@ export const agendaArtigos = [
   }),
   article({
     id: "situacoes-e-acoes-do-cartao",
-    title: "Situações e ações do cartão do atendimento",
+    title: "Situações e ações do atendimento (cartão)",
     summary: "O que significam as cores e os botões de cada atendimento na Agenda.",
     category: "agenda",
     module: "Agenda › Dia",
@@ -77,7 +77,7 @@ export const agendaArtigos = [
     synonyms: ["cores da agenda", "o que significa", "confirmar presença", "registrar falta"],
     related: ["remarcar-atendimento", "cancelar-atendimento", "alterar-atendimento", "trilha-do-atendimento"],
     order: 12,
-    intro: "A cor e o selo de cada atendimento dizem em que pé ele está. As ações mudam conforme a situação.",
+    intro: "Na Agenda › Dia, cada atendimento é uma linha curta com o horário, o paciente e a situação. Toque na linha para abrir as ações no lugar (o \"cartão\"). A cor e o selo dizem em que pé ele está; as ações mudam conforme a situação.",
     fields: [
       { name: "Não confirmado", text: "O paciente ainda não confirmou a presença." },
       { name: "Confirmado", text: "O paciente tocou em Confirmar presença no lembrete do WhatsApp ou pelo bot, ou a recepção usou Confirmar presença no cartão." },
@@ -281,12 +281,11 @@ export const agendaArtigos = [
     title: "Lista de espera: encaixe e antecipar atendimentos",
     summary: "Como a vaga de um cancelamento é oferecida a quem quer antecipar.",
     category: "agenda",
-    module: "Relatório do dia › Lista de espera",
-    where: "Relatório do dia › Lista de espera (com o item Lista de espera)",
-    screen: { path: "/admin/consultas", tab: "lista_espera" },
+    module: "Pacientes › Para contatar › Lista de espera",
+    where: "Pacientes › Para contatar › Lista de espera (com o item Lista de espera)",
     keywords: ["lista de espera", "encaixe", "antecipar", "vaga", "oferta", "fila"],
     synonyms: ["adiantar consulta", "quero um horário mais cedo", "vaga que abriu"],
-    related: ["cancelar-atendimento", "como-funciona-o-bot", "resumo-do-dia"],
+    related: ["cancelar-atendimento", "como-funciona-o-bot", "relacionamento"],
     order: 21,
     intro: "A lista é de quem já tem horário marcado e quer antecipar. Entra pelo WhatsApp (\"Encaixe ou antecipar\") ou pela recepção.",
     fields: [

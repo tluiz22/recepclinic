@@ -9,12 +9,4 @@ a captura e o motivo, avisar o cliente no fim da etapa e esperar a autorização
 
 ## Pendentes
 
-- `inicio` — a tela virou Meu dia (linha do dia, "Precisa de você", busca de paciente); o cartão "Comparecimento a registrar" saiu e o roteiro agora espera "Precisa de você" (02/11/2026)
-- `pacientes` — as abas viraram Todos, Responsáveis e Para contatar (com contador) (02/11/2026)
-- `resumo-do-dia` — a tela passou a se chamar Relatório do dia (título e abas); o nome na captura e no artigo muda (02/11/2026)
-- `agenda-dia` — cabeçalho novo: Bloquear, Mais (Bloqueios, Buscar paciente, Relatório do dia) e Marcar consulta; a busca saiu da barra (02/11/2026)
-- **todas as capturas de tela inteira** — o menu lateral mudou (Meu dia, Agenda, Pacientes e Mais); toda captura que mostra a lateral fica desatualizada. Recapturar tudo de uma vez, junto com a RX9 (02/11/2026)
-- `agenda-dia` (de novo; usada também no artigo dos cartões) — o atendimento virou linha curta que abre no lugar (RX7) (02/11/2026)
-- `agenda-dia` (de novo) — Agenda opção B: cartões por agenda com linhas curtas e o painel ao lado; cabeçalho numa linha (02/11/2026)
-- `pacientes`, `ficha-do-paciente` e `relacionamento` (de novo) — Pacientes, Para contatar e ficha como no protótipo A (cabeçalho com abas, cartões de lista, faixa âmbar, cartões-resumo) (02/11/2026)
-- `resumo-do-dia` (de novo) — Relatório do dia opção C: três abas, Resumo em linhas curtas e A registrar com Compareceu/Faltou (02/11/2026)
+(nenhuma; as 25 capturas foram refeitas em 02/11/2026, com o redesign da Recepção)
