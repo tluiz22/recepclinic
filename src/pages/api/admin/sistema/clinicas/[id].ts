@@ -1,13 +1,23 @@
 import type { APIRoute } from "astro";
 import { isUuid } from "../../../../../lib/clinicAccess";
 import { authorizeAgendaImport, requestAgendaImport, returnAgendaImport, undoAgendaImport } from "../../../../../lib/data/agendaImport";
-import { activateBillingContract, discardBillingContractDraft, saveBillingAccount, saveBillingContractDraft } from "../../../../../lib/data/billing";
+import {
+  activateBillingContract,
+  discardBillingContractDraft,
+  listBillingContracts,
+  saveBillingAccount,
+  saveBillingContractDraft,
+  sendBillingContractNotice,
+  type ContractNoticeResult,
+} from "../../../../../lib/data/billing";
 import { createUserClient } from "../../../../../lib/data/clients";
 import { DataError } from "../../../../../lib/data/errors";
 import { runFormAction } from "../../../../../lib/data/formAction";
 import { createInfoRequest, markInfoRequestReviewed, resendInvitation, setClinicStatus } from "../../../../../lib/data/onboarding";
 import { onboardingDeps } from "../../../../../lib/data/onboardingDeps";
 import { isFeatureKey } from "../../../../../lib/features";
+import { smtpSender } from "../../../../../lib/email";
+import { platformEnv } from "../../../../../lib/env";
 import { formOptionalText, formText } from "../../../../../lib/forms";
 import { clinicPlan, PLAN_LABELS } from "../../../../../lib/plans";
 
@@ -17,7 +27,8 @@ import { clinicPlan, PLAN_LABELS } from "../../../../../lib/plans";
 // enviada à clínica, com comentário (F10.1b); autorizar a carga (F10.1c) e
 // desfazer a carga (F10.1d); ativar a clínica em implantação ou voltar para
 // a implantação (F8.2b); cadastrar ou alterar a conta de cobrança (F12.1,
-// aba Faturamento); rascunho, ativação e descarte do contrato (F12.2).
+// aba Faturamento); rascunho, ativação e descarte do contrato (F12.2); aviso
+// por e-mail da nova versão com aceite tácito, na ativação ou de novo (F12.2b).
 export const POST: APIRoute = async (context) => {
   const { request, cookies, locals, params, url } = context;
   const clinicId = params.id!;
@@ -38,6 +49,11 @@ export const POST: APIRoute = async (context) => {
         db.from("clinic_settings").select("timezone").eq("clinic_id", clinicId).maybeSingle(),
       ]);
       if (!clinic || !settings) throw new DataError("not_found", "Clínica: não encontrada");
+      // Aviso da nova versão ao e-mail financeiro (F12.2b); a falha fica na trilha.
+      const sendNotice = (contract: Parameters<typeof sendBillingContractNotice>[2]) =>
+        sendBillingContractNotice(db, clinic, contract, { sendEmail: smtpSender(platformEnv().email), link: new URL("/admin/configuracoes/assinatura", url).toString() });
+      const noticeMessage = (notice: ContractNoticeResult) =>
+        notice.sent ? `Novos termos enviados para ${notice.to}.` : `Mas o e-mail dos novos termos não saiu (${notice.reason}): reenvie pela aba ou avise a clínica.`;
       const notSent = (reason: string) => ` Mas o e-mail não saiu (${reason}).`;
 
       switch (formText(form, "acao")) {
@@ -149,9 +165,17 @@ export const POST: APIRoute = async (context) => {
           );
           return { redirectTo: billingPage, message: "Rascunho do contrato salvo. Confira e ative." };
         }
-        case "contrato_ativar":
-          await activateBillingContract(db, clinicId);
-          return { redirectTo: billingPage, message: "Contrato ativado." };
+        case "contrato_ativar": {
+          const contract = await activateBillingContract(db, clinicId);
+          if (contract.acceptance !== "tacit") return { redirectTo: billingPage, message: "Contrato ativado. Falta o Administrador da clínica aceitar, em Configurações › Assinatura." };
+          const notice = await sendNotice(contract);
+          return { redirectTo: billingPage, message: `Nova versão ativada. ${noticeMessage(notice)}` };
+        }
+        case "contrato_reenviar_aviso": {
+          const contract = (await listBillingContracts(db, clinicId)).find((c) => c.status === "active" && c.acceptance === "tacit");
+          if (!contract) throw new DataError("not_found", "Contrato: não há nova versão para avisar");
+          return { redirectTo: billingPage, message: noticeMessage(await sendNotice(contract)) };
+        }
         case "contrato_descartar":
           await discardBillingContractDraft(db, clinicId);
           return { redirectTo: billingPage, message: "Rascunho do contrato descartado." };

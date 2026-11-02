@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { changedFields, contractsInForce, describeAllowance, type BillingContract } from "./billing";
+import { changedFields, contractsInForce, contractTermLines, describeAllowance, noticeStartDate, type BillingContract } from "./billing";
 
 // Faturamento (F12.2): qual versão do contrato vale hoje e qual vem depois.
 const contract = (over: Partial<BillingContract>): BillingContract => ({
@@ -18,6 +18,12 @@ const contract = (over: Partial<BillingContract>): BillingContract => ({
   startsOn: "2026-11-01",
   endsOn: null,
   activatedAt: null,
+  termsVersion: "provisorio",
+  acceptance: "pending",
+  acceptedAt: null,
+  acceptedBy: null,
+  acceptedIp: null,
+  noticeSentAt: null,
   ...over,
 });
 
@@ -50,5 +56,23 @@ describe("textos", () => {
   it("campos mudados na trilha", () => {
     expect(changedFields({ before: { monthly_cents: 1, finance_email: "a" }, after: { monthly_cents: 2, finance_email: "a" } })).toEqual(["mensalidade"]);
     expect(changedFields({ before: null, after: { monthly_cents: 2 } })).toEqual([]);
+  });
+
+  it("prazo de 30 dias da mudança (F12.2b), também na virada do ano", () => {
+    expect(noticeStartDate("2026-11-02")).toBe("2026-12-02");
+    expect(noticeStartDate("2026-12-15")).toBe("2027-01-14");
+  });
+
+  it("termos do e-mail da nova versão (F12.2b)", () => {
+    const lines = contractTermLines(contract({ paymentMethod: "pix", setupCents: 0 })).map((line) => line.replace(/\s/g, " "));
+    expect(lines).toEqual([
+      "Mensalidade: R$ 299,00",
+      "Implantação: isenta",
+      "Forma de pagamento: Pix",
+      "Preço por nota fiscal: R$ 0,80",
+      "Franquia de notas: 50 notas por mês",
+      "Início: 01/11/2026",
+      "1º vencimento: 10/11/2026",
+    ]);
   });
 });

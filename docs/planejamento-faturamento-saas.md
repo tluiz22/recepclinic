@@ -1,20 +1,17 @@
 # Faturamento recorrente do SaaS (Asaas)
 
-> **Estado atual (retomar daqui), 30/out/2026.** Branch **`faturamento`**, local, sem push (cliente, 30/out: subir
-> depois). **F12.1 validada pelo cliente (30/out):** conta de cobrança (`20261106120000_conta_de_cobranca.sql`), aba
-> **Faturamento** da clínica (Suporte), Configurações › **Assinatura** (Administrador), opt-in do WhatsApp só do
-> Administrador (texto provisório, `src/lib/billingOptIn.ts`; advogado: 11.16) e ajuda contextual.
-> **F12.2 feita, aguardando validação:** `20261107120000_contrato.sql` (`billing_contracts` com versões e
-> `billing_settings`). O Suporte monta o rascunho (modo, mensalidade, implantação, forma de pagamento só no automático:
-> Pix ou cartão, início, 1º vencimento, preço por nota e franquia), descarta ou ativa (exige a conta); mudança = nova
-> versão com início depois da vigente, que termina na véspera. Preço padrão por nota em Vendas › Planos (começa sem
-> valor; o Suporte define). Assinatura mostra o contrato vigente e a próxima versão. Testes: `tests/db/contrato.test.ts`,
-> `src/lib/data/billing.test.ts`. **Ordem decidida (cliente, 30/out):** cobrança primeiro, até cobrar a clínica piloto
-> em produção, **só com aviso por e-mail**: F12.2b, F12.3, F12.3b, F12.4 a F12.8 e F12.11 (parecer do advogado e
-> decisões de 30/out: itens 18 a 26 da seção 11). Depois: F12.9 (WhatsApp, decisão
-> 11.10), F12.10 (Pix Automático) e a nota fiscal pelo Asaas (N0–N6). **Próximo:** validação da F12.2 no local e o OK
-> para a F12.3; push da branch e staging quando o cliente pedir. Antes da F12.11: advogado (11.16), chave e webhook do
-> Asaas de produção, avisos do Asaas desligados (11.11) e o valor combinado com a clínica piloto.
+> **Estado atual (retomar daqui), 02/nov/2026.** Branch **`faturamento`**, local, sem push. F12.1 e F12.2 validadas
+> no local. **F12.2b feita, aguardando validação no local** (`20261117120000_aceite_do_contrato.sql`): o Administrador
+> aceita o contrato em Configurações › Assinatura (data, hora, quem, IP e versão do texto); texto **provisório**
+> versionado em `src/lib/billingContractText.ts` (cliente, 02/nov), o do advogado entra como nova versão e pede novo
+> aceite. Mudança com o mesmo texto: aceite tácito, início só 30 dias depois da ativação (data de Brasília) e e-mail
+> com os novos termos ao financeiro na ativação (envio ou falha na trilha; reenvio pela aba Faturamento). Regra para a
+> F12.4: só cobrar contrato com aceite (`acceptance` diferente de `pending`). Testes: `tests/db/aceite-contrato.test.ts`.
+> **Ordem decidida (cliente, 30/out):** cobrança primeiro, até cobrar a clínica piloto em produção, **só com aviso por
+> e-mail**: F12.2b, F12.3, F12.3b, F12.4 a F12.8 e F12.11 (itens 18 a 26 da seção 11). Depois: F12.9 (decisão 11.10),
+> F12.10 (Pix Automático) e a nota fiscal pelo Asaas (N0–N6). **Próximo:** validação da F12.2b no local e o OK para a
+> F12.3. Antes da F12.11: advogado (11.16 e texto do contrato), chave e webhook do Asaas de produção, avisos do Asaas
+> desligados (11.11) e o valor combinado com a clínica piloto.
 >
 > Decisões já respondidas (28/out): **11.1** (motivos registrados), **modo de cobrança manual** (seção 3) e **11.2**
 > (pago = `CONFIRMED` ou `RECEIVED`) **11.3** (bloqueio no painel primeiro, banco depois) **11.4** (bot calado, link com aviso) **11.5** (Assinatura só para o Administrador) **11.6** (estorno marca e avisa o Suporte) **11.7** (novo valor no próximo ciclo, sem proporcional) **11.8** (implantação ao ativar, conta igual) **11.9** (cartão na página do Asaas). **11.10 fica pendente** (número do WhatsApp, decidir antes da F12.9).
@@ -422,6 +419,7 @@ e exclusão no fim do contrato (item 26); a lista das clínicas em atraso (item 
 | F12.0 | Este documento e as decisões 1 a 3 | cliente |
 | F12.1 | Conta de cobrança: contatos financeiros, opt-in, trilha (sem Asaas) | F12.0 |
 | F12.2 | Contrato e versões, valor negociado e implantação, **preço por nota e franquia, preço padrão do Suporte** (sem Asaas) | F12.1 |
+| F12.2b | Aceite do contrato pelo Administrador (texto versionado), aviso de 30 dias e e-mail dos novos termos (item 24) | F12.2 |
 | N1–N6 | Nota fiscal pelo Asaas, apuração e detalhamento das notas ([`planejamento-nfse-asaas.md`](planejamento-nfse-asaas.md), seção 12) | F12.2, N0 |
 | F12.3 | Suspensão manual por motivos e bloqueio no painel, páginas públicas, bot e rotinas | decisões 1, 3, 4 |
 | F12.3b | Bloqueio no banco: gravações operacionais recusadas para a clínica suspensa (a tela Assinatura e o Suporte seguem) | F12.3 |

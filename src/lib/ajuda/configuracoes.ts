@@ -212,14 +212,14 @@ export const configuracoes = {
       ],
       alimenta: [{ texto: "Financeiro: a nota é emitida na tela do pagamento." }],
     },
-    // configuracoes/assinatura.astro (F12.1): conta de cobrança, contatos e WhatsApp financeiro.
+    // configuracoes/assinatura.astro (F12.1): conta de cobrança, contatos e WhatsApp financeiro; aceite do contrato (F12.2b).
     assinatura: {
       serve: "Guardar quem paga o RecepClinic e para onde vão as cobranças e os avisos.",
       como: [
-        "O Suporte cadastra o pagador (nome e CNPJ ou CPF) na contratação; para mudar o pagador, fale com o Suporte.",
-        "O contrato (mensalidade e, com a nota fiscal liberada, o preço por nota e a franquia) é feito com o Suporte; mudança vale a partir do próximo ciclo, numa nova versão.",
-        "O Administrador mantém o e-mail e o telefone financeiros em dia.",
-        "Os avisos de cobrança (vencimento, atraso e pagamento reconhecido) sempre vão para o e-mail financeiro.",
+        "O Suporte cadastra o pagador e o contrato (mensalidade e, com a nota fiscal liberada, o preço por nota e a franquia); para mudar, fale com o Suporte.",
+        "O Administrador lê e aceita o contrato nesta tela; a cobrança só começa depois do aceite. Ficam registrados data, hora, quem aceitou, IP e versão do texto.",
+        "Mudança de valor chega por e-mail ao financeiro e só vale 30 dias depois; continuar usando vale como aceite. Texto do contrato novo pede aceite de novo.",
+        "Os avisos de cobrança (vencimento, atraso e pagamento reconhecido) sempre vão para o e-mail financeiro, que o Administrador mantém em dia.",
         "Com o WhatsApp financeiro autorizado, os mesmos avisos também vão para o telefone financeiro.",
       ],
       erro: "Com o e-mail errado, a clínica perde os avisos de cobrança: confira depois de salvar.",

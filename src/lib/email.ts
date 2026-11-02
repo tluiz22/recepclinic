@@ -130,6 +130,30 @@ export function agendaImportReturnedEmail(
 }
 
 /**
+ * Nova versão do contrato com o mesmo texto (F12.2b, item 24 do
+ * planejamento-faturamento-saas.md): os novos termos vão ao e-mail financeiro
+ * na ativação; a versão só começa 30 dias depois, e o uso continuado vale como
+ * aceite. Os termos vêm prontos (contractTermLines, em data/billing.ts).
+ */
+export function contractChangeEmail(
+  to: string,
+  { clinicName, contract, link }: { clinicName: string; contract: { version: number | null; startsOn: string; terms: string[] }; link: string },
+): Email {
+  const startsOn = contract.startsOn.split("-").reverse().join("/");
+  const body = layout(
+    `Novos termos do contrato da ${clinicName}`,
+    [
+      `O contrato da ${clinicName} com o RecepClinic tem uma nova versão (${contract.version ?? "nova"}), que vale a partir de ${startsOn}:`,
+      ...contract.terms,
+      `Continuar usando o RecepClinic a partir de ${startsOn} vale como aceite destes termos. Se não concordar, fale com o Suporte do RecepClinic antes dessa data; o cancelamento é sem multa.`,
+      "Os termos também ficam no painel, em Configurações › Assinatura.",
+    ],
+    { label: "Ver a assinatura", href: link },
+  );
+  return { to, subject: `Novos termos do contrato da ${clinicName} no RecepClinic`, ...body };
+}
+
+/**
  * Nota fiscal do pagamento (F11.5), com o PDF e o XML anexados. Mesmo texto do
  * template do WhatsApp (aprovado pelo cliente em 12/out/2026), menos o "é só
  * responder": o e-mail sai de um endereço que não recebe resposta.

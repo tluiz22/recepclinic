@@ -1,3 +1,4 @@
+import { BILLING_CONTRACT_TERMS_VERSION } from "../billingContractText";
 import { BILLING_OPT_IN_VERSION } from "../billingOptIn";
 import { isCalendarDate } from "../clinicTime";
 import { formatCnpj, normalizeCnpj } from "../cnpj";
@@ -5,6 +6,8 @@ import { formatCpf, normalizeCpf } from "../cpf";
 import { parseMoneyCents } from "../forms";
 import { INVALID_PHONE_MESSAGE, normalizePhone } from "../phone";
 import type { DbClient } from "./clients";
+import { contractChangeEmail, EmailNotConfiguredError, type EmailSender } from "../email";
+import { formatCentsBRL } from "../money";
 import { cleanText, DataError, fromDbError, unwrap, Validation } from "./errors";
 
 // Faturamento do SaaS, F12.1 (planejamento-faturamento-saas.md; cliente,
@@ -15,6 +18,10 @@ import { cleanText, DataError, fromDbError, unwrap, Validation } from "./errors"
 //
 // F12.2: contrato com versões (rascunho → ativo; mudança = nova versão) e o
 // preço padrão por nota fiscal, só do Suporte. Sem Asaas até a F12.4.
+//
+// F12.2b: aceite do contrato pelo Administrador (texto versionado em
+// billingContractText.ts) e, na mudança com o mesmo texto, aviso de 30 dias
+// por e-mail (o uso continuado vale como aceite).
 
 export type BillingAccount = {
   payerName: string;
@@ -125,6 +132,9 @@ export const BILLING_ACTIONS = {
   contract_draft_discarded: "Rascunho do contrato descartado",
   contract_activated: "Contrato ativado",
   contract_ended: "Fim da versão do contrato marcado",
+  contract_accepted: "Contrato aceito pelo Administrador",
+  contract_notice_sent: "Novos termos enviados por e-mail",
+  contract_notice_failed: "E-mail dos novos termos não saiu",
 } as const;
 
 export type BillingAuditEntry = {
@@ -234,7 +244,17 @@ export type BillingContract = {
   startsOn: string;
   endsOn: string | null;
   activatedAt: Date | null;
+  /** Versão do texto do contrato (null no rascunho). */
+  termsVersion: string | null;
+  /** null no rascunho e no descartado. */
+  acceptance: ContractAcceptance | null;
+  acceptedAt: Date | null;
+  acceptedBy: string | null;
+  acceptedIp: string | null;
+  noticeSentAt: Date | null;
 };
+
+export type ContractAcceptance = "pending" | "explicit" | "tacit";
 
 type ContractRow = {
   id: string;
@@ -252,6 +272,12 @@ type ContractRow = {
   starts_on: string;
   ends_on: string | null;
   activated_at: string | null;
+  terms_version: string | null;
+  acceptance: string | null;
+  accepted_at: string | null;
+  accepted_by: string | null;
+  accepted_ip: string | null;
+  notice_sent_at: string | null;
 };
 
 /** Contratos da clínica, o mais novo primeiro. O Administrador vê só o vigente e os encerrados. */
@@ -260,7 +286,7 @@ export async function listBillingContracts(db: DbClient, clinicId: string): Prom
     await db
       .from("billing_contracts")
       .select(
-        "id, version, status, billing_mode, monthly_cents, setup_cents, payment_method, first_due_date, invoice_unit_price_cents, invoice_monthly_allowance, plan_snapshot, notes, starts_on, ends_on, activated_at",
+        "id, version, status, billing_mode, monthly_cents, setup_cents, payment_method, first_due_date, invoice_unit_price_cents, invoice_monthly_allowance, plan_snapshot, notes, starts_on, ends_on, activated_at, terms_version, acceptance, accepted_at, accepted_by, accepted_ip, notice_sent_at",
       )
       .eq("clinic_id", clinicId)
       .order("created_at", { ascending: false }),
@@ -282,6 +308,12 @@ export async function listBillingContracts(db: DbClient, clinicId: string): Prom
     startsOn: row.starts_on,
     endsOn: row.ends_on,
     activatedAt: row.activated_at ? new Date(row.activated_at) : null,
+    termsVersion: row.terms_version,
+    acceptance: row.acceptance as ContractAcceptance | null,
+    acceptedAt: row.accepted_at ? new Date(row.accepted_at) : null,
+    acceptedBy: row.accepted_by,
+    acceptedIp: row.accepted_ip,
+    noticeSentAt: row.notice_sent_at ? new Date(row.notice_sent_at) : null,
   }));
 }
 
@@ -372,10 +404,84 @@ export async function discardBillingContractDraft(db: DbClient, clinicId: string
   if (error) throw fromDbError(error, "Contrato");
 }
 
-/** Ativa o rascunho; a versão vigente é encerrada na véspera do início da nova. */
-export async function activateBillingContract(db: DbClient, clinicId: string): Promise<void> {
-  const { error } = await db.rpc("activate_billing_contract", { p_clinic_id: clinicId });
+/**
+ * Ativa o rascunho com o texto atual do contrato; a versão vigente é encerrada
+ * na véspera do início da nova. Devolve a versão ativada: com aceite tácito
+ * (mudança com o mesmo texto), o servidor envia os novos termos por e-mail.
+ */
+export async function activateBillingContract(db: DbClient, clinicId: string): Promise<BillingContract> {
+  const { error } = await db.rpc("activate_billing_contract", { p_clinic_id: clinicId, p_terms_version: BILLING_CONTRACT_TERMS_VERSION });
   if (error) throw fromDbError(error, "Contrato");
+  const active = (await listBillingContracts(db, clinicId)).find((c) => c.status === "active");
+  if (!active) throw new DataError("not_found", "Contrato: não encontrado");
+  return active;
+}
+
+/** Só o Administrador da clínica: aceita na tela o contrato com o texto mostrado (F12.2b). */
+export async function acceptBillingContract(db: DbClient, clinicId: string, contractId: string, ip: string | null): Promise<void> {
+  const { error } = await db.rpc("accept_billing_contract", {
+    p_clinic_id: clinicId,
+    p_contract_id: contractId,
+    p_terms_version: BILLING_CONTRACT_TERMS_VERSION,
+    p_ip: ip ?? "",
+  });
+  if (error) throw fromDbError(error, "Aceite do contrato");
+}
+
+export type ContractNoticeResult = { sent: true; to: string } | { sent: false; to: string | null; reason: string };
+
+/**
+ * Suporte: manda ao e-mail financeiro os novos termos da versão com aceite
+ * tácito e registra o envio (ou a falha) na trilha.
+ */
+export async function sendBillingContractNotice(
+  db: DbClient,
+  clinic: { id: string; name: string },
+  contract: BillingContract,
+  { sendEmail, link }: { sendEmail: EmailSender; link: string },
+): Promise<ContractNoticeResult> {
+  const account = await getBillingAccount(db, clinic.id);
+  const to = account?.financeEmail ?? null;
+  let reason: string | null = null;
+  if (!to) reason = "sem conta de cobrança";
+  else {
+    try {
+      await sendEmail(contractChangeEmail(to, { clinicName: clinic.name, contract: { version: contract.version, startsOn: contract.startsOn, terms: contractTermLines(contract) }, link }));
+    } catch (err) {
+      reason = err instanceof EmailNotConfiguredError ? "envio de e-mail não configurado" : err instanceof Error ? err.message : "erro desconhecido";
+    }
+  }
+  const { error } = await db.rpc("record_billing_contract_notice", { p_clinic_id: clinic.id, p_contract_id: contract.id, p_sent_to: to ?? "", p_error: reason ?? "" });
+  if (error) throw fromDbError(error, "Aviso do contrato");
+  return reason === null ? { sent: true, to: to! } : { sent: false, to, reason };
+}
+
+/** Linhas dos termos para o e-mail ("Mensalidade: R$ 349,00"). */
+export function contractTermLines(contract: BillingContract): string[] {
+  const date = (value: string) => value.split("-").reverse().join("/");
+  return [
+    `Mensalidade: ${formatCentsBRL(contract.monthlyCents)}`,
+    `Implantação: ${contract.setupCents === 0 ? "isenta" : formatCentsBRL(contract.setupCents)}`,
+    ...(contract.paymentMethod ? [`Forma de pagamento: ${PAYMENT_METHODS[contract.paymentMethod]}`] : []),
+    ...(contract.invoiceUnitPriceCents !== null
+      ? [`Preço por nota fiscal: ${formatCentsBRL(contract.invoiceUnitPriceCents)}`, `Franquia de notas: ${describeAllowance(contract.invoiceMonthlyAllowance)}`]
+      : []),
+    `Início: ${date(contract.startsOn)}`,
+    `1º vencimento: ${date(contract.firstDueDate)}`,
+  ];
+}
+
+export const CONTRACT_ACCEPTANCE = {
+  pending: { label: "Aguardando aceite", variant: "warning" },
+  explicit: { label: "Aceito", variant: "success" },
+  tacit: { label: "Aceito pelo uso", variant: "success" },
+} as const;
+
+/** Data mínima de início de uma mudança com aceite tácito: hoje (Brasília) + 30 dias. */
+export function noticeStartDate(today: string): string {
+  const day = new Date(`${today}T12:00:00Z`);
+  day.setUTCDate(day.getUTCDate() + 30);
+  return day.toISOString().slice(0, 10);
 }
 
 /** Preço padrão por nota (Suporte); null = ainda não definido. */

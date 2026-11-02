@@ -4,13 +4,17 @@
 // RecepClinic. O pagador (nome e CNPJ/CPF) é do Suporte; o Administrador da
 // clínica altera os contatos financeiros e só ele autoriza ou retira o
 // WhatsApp financeiro. F12.2: o contrato vigente (mensalidade, implantação,
-// preço por nota e franquia), só leitura. Cobranças entram nas próximas fases.
+// preço por nota e franquia), só leitura. F12.2b: o aceite do contrato (só o
+// Administrador; texto versionado) e a situação do aceite. Cobranças entram
+// nas próximas fases.
 import ConfigShell from "../../../components/admin/config/ConfigShell.astro";
 import Badge from "../../../components/admin/config/Badge.astro";
 import Card from "../../../components/admin/config/Panel.astro";
 import ConfirmDeleteDialog from "../../../components/admin/ConfirmDeleteDialog.astro";
 import BillingTrail from "../../../components/admin/billing/BillingTrail.astro";
+import ContractAcceptanceInfo from "../../../components/admin/billing/ContractAcceptanceInfo.astro";
 import ContractTerms from "../../../components/admin/billing/ContractTerms.astro";
+import ContractText from "../../../components/admin/billing/ContractText.astro";
 import HelpTip from "../../../components/admin/ui/HelpTip.astro";
 import HowItWorks from "../../../components/admin/ui/HowItWorks.astro";
 import { configuracoes } from "../../../lib/ajuda/configuracoes";
@@ -31,7 +35,9 @@ const [account, audit, contracts] = await Promise.all([
 ]);
 // O Administrador vê o vigente e os encerrados (o rascunho é só do Suporte).
 const { current: contract, next } = contractsInForce(contracts, todayIn(clinic.timezone));
-const actors = await loadActorLabels(db, clinic.clinicId, audit.map((a) => a.actorId));
+// A versão ativada que falta aceitar (a de hoje ou a próxima).
+const pending = contracts.find((c) => c.status === "active" && c.acceptance === "pending") ?? null;
+const actors = await loadActorLabels(db, clinic.clinicId, [...audit.map((a) => a.actorId), ...contracts.map((c) => c.acceptedBy)]);
 // O opt-in é o consentimento da clínica: só o Administrador dela (o Suporte vê).
 const isClinicAdmin = clinic.roles.includes("admin");
 const action = "/api/admin/configuracoes/assinatura";
@@ -50,6 +56,37 @@ const H2 = "font-display text-[17px] leading-tight font-bold text-ink sm:text-lg
       </Card>
     ) : (
       <div class="grid gap-4 lg:grid-cols-2">
+        {pending && (
+          <Card class="lg:col-span-2">
+            <div class="flex flex-wrap items-center gap-2">
+              <h2 class={H2}>Aceite do contrato</h2>
+              <Badge variant="warning">Aguardando aceite</Badge>
+            </div>
+            <p class="mt-1 text-[15px] text-ink-soft">
+              {pending.version === 1 || !contracts.some((c) => c.acceptance === "explicit" || c.acceptance === "tacit")
+                ? "Leia os termos e o texto do contrato. A cobrança só começa depois do aceite."
+                : "O texto do contrato mudou: leia e aceite a nova versão."}
+            </p>
+            <div class="mt-3 grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)]">
+              <ContractTerms contract={pending} />
+              <ContractText version={pending.termsVersion ?? ""} open />
+            </div>
+            {isClinicAdmin ? (
+              <form method="POST" action={action} class="mt-4 flex flex-col gap-3 border-t border-[#e6ecea] pt-4">
+                <input type="hidden" name="acao" value="contrato_aceitar" />
+                <input type="hidden" name="contract_id" value={pending.id} />
+                <label class="flex items-start gap-2 text-sm text-ink-mid">
+                  <input type="checkbox" name="aceite" value="1" required class="mt-0.5 h-[18px] w-[18px] shrink-0 accent-brand" />
+                  <span>Li e aceito o contrato, em nome da clínica.</span>
+                </label>
+                <p class={HINT}>Ficam registrados a data, a hora, quem aceitou, o endereço de internet (IP) e a versão do texto.</p>
+                <button type="submit" data-sending-label="Salvando…" class={`${PRIMARY_BUTTON} self-start`}>Aceitar o contrato</button>
+              </form>
+            ) : (
+              <p class="mt-4 border-t border-[#e6ecea] pt-3 text-sm text-ink-soft">Só o Administrador da clínica aceita o contrato.</p>
+            )}
+          </Card>
+        )}
         <div class="flex flex-col gap-4">
           <Card>
             <div class="flex flex-wrap items-center gap-2">
@@ -63,8 +100,10 @@ const H2 = "font-display text-[17px] leading-tight font-bold text-ink sm:text-lg
               {contract && <Badge variant="success">Vigente</Badge>}
             </div>
             {contract ? (
-              <div class="mt-3">
+              <div class="mt-3 flex flex-col gap-3">
+                <ContractAcceptanceInfo contract={contract} actors={actors} timezone={clinic.timezone} />
                 <ContractTerms contract={contract} />
+                {contract.termsVersion && <ContractText version={contract.termsVersion} />}
               </div>
             ) : (
               !next && <p class="mt-1 text-sm text-ink-soft">O contrato aparece aqui quando o Suporte do RecepClinic o ativar.</p>
@@ -76,7 +115,11 @@ const H2 = "font-display text-[17px] leading-tight font-bold text-ink sm:text-lg
                 <h2 class={H2}>Próxima versão do contrato</h2>
                 <Badge variant="info">A partir de {formatCalendarDate(next.startsOn, "dd/MM/yyyy")}</Badge>
               </div>
-              <div class="mt-3">
+              <div class="mt-3 flex flex-col gap-3">
+                <ContractAcceptanceInfo contract={next} actors={actors} timezone={clinic.timezone} />
+                {next.acceptance === "tacit" && (
+                  <p class="text-sm text-ink-soft">Continuar usando o RecepClinic a partir de {formatCalendarDate(next.startsOn, "dd/MM/yyyy")} vale como aceite. Se não concordar, fale com o Suporte antes dessa data.</p>
+                )}
                 <ContractTerms contract={next} />
               </div>
             </Card>

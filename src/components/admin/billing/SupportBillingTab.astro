@@ -3,14 +3,17 @@
 // a conta de cobrança, que só o Suporte cria e altera (pagador e contatos), a
 // situação do WhatsApp financeiro (só o Administrador da clínica autoriza) e
 // a trilha. F12.2: o contrato vigente, o rascunho (cria, altera, descarta e
-// ativa; mudança = nova versão) e as versões. Cobranças e suspensão entram
-// nas próximas fases.
+// ativa; mudança = nova versão) e as versões. F12.2b: a situação do aceite,
+// o aviso de 30 dias na mudança aceita pelo uso e o reenvio do e-mail com os
+// novos termos. Cobranças e suspensão entram nas próximas fases.
 import Badge from "../config/Badge.astro";
 import Card from "../config/Panel.astro";
 import ConfirmDeleteDialog from "../ConfirmDeleteDialog.astro";
 import BillingTrail from "./BillingTrail.astro";
+import ContractAcceptanceInfo from "./ContractAcceptanceInfo.astro";
 import ContractTerms from "./ContractTerms.astro";
 import { CHECK, CHOICE, HINT, INPUT, LABEL, LEGEND, PRIMARY_BUTTON, SECONDARY_BUTTON } from "../config/formStyles";
+import { BILLING_CONTRACT_TERMS_VERSION } from "../../../lib/billingContractText";
 import { formatCalendarDate, formatInstant, todayIn } from "../../../lib/clinicTime";
 import { loadActorLabels } from "../../../lib/data/agenda/trail";
 import {
@@ -22,6 +25,7 @@ import {
   getDefaultInvoicePrice,
   listBillingAudit,
   listBillingContracts,
+  noticeStartDate,
   PAYMENT_METHODS,
 } from "../../../lib/data/billing";
 import type { DbClient } from "../../../lib/data/clients";
@@ -49,7 +53,7 @@ const [account, audit, contracts, defaultPrice] = await Promise.all([
   listBillingContracts(db, clinicId),
   getDefaultInvoicePrice(db),
 ]);
-const actors = await loadActorLabels(db, clinicId, audit.map((a) => a.actorId));
+const actors = await loadActorLabels(db, clinicId, [...audit.map((a) => a.actorId), ...contracts.map((c) => c.acceptedBy)]);
 const action = `/api/admin/sistema/clinicas/${clinicId}`;
 const H2 = "font-display text-[17px] leading-tight font-bold text-ink sm:text-lg";
 const active = contracts.find((c) => c.status === "active") ?? null;
@@ -58,6 +62,10 @@ const { current, next } = contractsInForce(contracts, todayIn(timezone));
 // Versões que não são a de hoje nem a próxima.
 const history = contracts.filter((c) => c.status === "ended" && c.id !== current?.id);
 const date = (value: string) => formatCalendarDate(value, "dd/MM/yyyy");
+// F12.2b: com a vigente aceita e o mesmo texto, a nova versão vale pelo uso e
+// só começa 30 dias depois da ativação (dias corridos, data de Brasília).
+const tacitNext = !!active && (active.acceptance === "explicit" || active.acceptance === "tacit") && active.termsVersion === BILLING_CONTRACT_TERMS_VERSION;
+const earliestStart = noticeStartDate(todayIn("America/Sao_Paulo"));
 // O formulário parte do rascunho; sem ele, da versão vigente; sem nada, das sugestões.
 const base = draft ?? active;
 const form = {
@@ -83,7 +91,8 @@ const form = {
       </div>
       {
         current ? (
-          <div class="mt-3">
+          <div class="mt-3 flex flex-col gap-3">
+            <ContractAcceptanceInfo contract={current} actors={actors} timezone={timezone} internal />
             <ContractTerms contract={current} internal />
           </div>
         ) : (
@@ -98,8 +107,17 @@ const form = {
             <h2 class={H2}>Próxima versão</h2>
             <Badge variant="info">Versão {next.version} a partir de {date(next.startsOn)}</Badge>
           </div>
-          <div class="mt-3">
+          <div class="mt-3 flex flex-col gap-3">
+            <ContractAcceptanceInfo contract={next} actors={actors} timezone={timezone} internal />
             <ContractTerms contract={next} internal />
+            {next.acceptance === "tacit" && (
+              <form method="POST" action={action}>
+                <input type="hidden" name="acao" value="contrato_reenviar_aviso" />
+                <button type="submit" data-sending-label="Enviando…" class={SECONDARY_BUTTON}>
+                  {next.noticeSentAt ? "Reenviar o e-mail dos novos termos" : "Enviar o e-mail dos novos termos"}
+                </button>
+              </form>
+            )}
           </div>
         </Card>
       )
@@ -114,9 +132,18 @@ const form = {
         {
           active
             ? `Mudança de valor, preço por nota, franquia ou modo é uma nova versão, com início depois de ${date(active.startsOn)}; ao ativar, a versão ${active.version} termina na véspera. Cobranças já geradas não mudam.`
-            : "O rascunho não vale nada até ser ativado, e a clínica não o vê."
+            : "O rascunho não vale nada até ser ativado, e a clínica não o vê. Ativado, o Administrador da clínica aceita em Configurações › Assinatura; a cobrança só começa depois do aceite."
         }
       </p>
+      {
+        active && (
+          <p class="mt-1 text-sm text-ink-soft">
+            {tacitNext
+              ? `Com o contrato já aceito, a nova versão vale pelo uso continuado: só pode começar a partir de ${date(earliestStart)} (30 dias depois da ativação), e o e-mail financeiro recebe os novos termos ao ativar.`
+              : "A versão vigente ainda não foi aceita (ou o texto do contrato mudou): a nova versão também pede o aceite do Administrador."}
+          </p>
+        )
+      }
       <form method="POST" action={action} class="mt-3 flex flex-col gap-3">
         <input type="hidden" name="acao" value="contrato_rascunho" />
         <fieldset class="min-w-0">
@@ -218,8 +245,8 @@ const form = {
                 data-confirm-title="Ativar o contrato?"
                 data-confirm-message={
                   active
-                    ? `A versão ${active.version} termina em ${date(draft.startsOn)} menos um dia, e a nova vale a partir de ${date(draft.startsOn)}. Depois de ativo, o contrato só muda por nova versão.`
-                    : `O contrato vale a partir de ${date(draft.startsOn)}. Depois de ativo, só muda por nova versão.`
+                    ? `A versão ${active.version} termina em ${date(draft.startsOn)} menos um dia, e a nova vale a partir de ${date(draft.startsOn)}. ${tacitNext ? "Os novos termos vão por e-mail ao financeiro da clínica." : "A clínica precisa aceitar a nova versão."} Depois de ativo, o contrato só muda por nova versão.`
+                    : `O contrato vale a partir de ${date(draft.startsOn)}, depois do aceite do Administrador da clínica. Depois de ativo, só muda por nova versão.`
                 }
                 data-confirm-label="Ativar"
                 data-confirm-tone="primary"
