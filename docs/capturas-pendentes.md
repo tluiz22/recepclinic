@@ -9,5 +9,4 @@ a captura e o motivo, avisar o cliente no fim da etapa e esperar a autorização
 
 ## Pendentes
 
-- `agenda-dia` — ganhou o link "Como funciona?" (situações) abaixo do cabeçalho (02/11/2026)
-- `inicio` — "Esperando o paciente" ganhou "Como funciona?" (só aparece com lembretes; a captura atual pode nem mostrar a seção) (02/11/2026)
+(nenhuma; `agenda-dia` e `inicio` refeitas em 02/11/2026)
