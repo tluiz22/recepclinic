@@ -121,8 +121,11 @@ export type FreeGap = { start: Date; end: Date; time: string; endTime: string };
 
 /**
  * Horários livres de uma agenda num dia, um por linha, como no protótipo da Agenda (opção B; cliente, 02/nov/2026):
- * o que sobra das janelas, descontado o ocupado (com o intervalo da agenda), cortado em passos de `stepMinutes` (o
- * menor serviço individual da agenda), a partir do começo de cada intervalo livre. Só os que ainda não começaram.
+ * o que sobra das janelas, descontado o ocupado (com o intervalo da agenda), cortado em passos, a partir do começo de
+ * cada intervalo livre. Só os que ainda não começaram.
+ * O passo é o da duração do serviço de cada janela (cliente, 02/nov/2026: 13:00 às 13:45 de Retorno de 15 min dá linhas
+ * de 15 min; 13:45 às 17:30 de Consulta de 45 min dá linhas de 45 min). Onde duas janelas se sobrepõem, vale o menor
+ * passo. Janela sem `stepMinutes` usa o `stepMinutes` geral.
  */
 export function computeFreeGaps({
   date,
@@ -135,38 +138,44 @@ export function computeFreeGaps({
 }: {
   date: string;
   timeZone: string;
-  windows: Pick<SlotWindow, "startTime" | "endTime">[];
+  windows: (Pick<SlotWindow, "startTime" | "endTime"> & { stepMinutes?: number })[];
   busy: BusyInterval[];
   bufferMinutes: number;
   stepMinutes: number;
   now: Date;
 }): FreeGap[] {
-  if (stepMinutes <= 0) return [];
   const merged = mergeBusy(busy, date, timeZone, bufferMinutes);
-  // Janelas de locais ou serviços diferentes podem se sobrepor: o livre é do horário, não do local.
-  const spans: Interval[] = [];
-  for (const window of [...windows].sort((a, b) => a.startTime.localeCompare(b.startTime))) {
-    const span = { start: toMinutes(window.startTime), end: toMinutes(window.endTime) };
-    const last = spans[spans.length - 1];
-    if (last && span.start <= last.end) last.end = Math.max(last.end, span.end);
-    else spans.push(span);
+  // Trechos do dia com o passo de cada um: cada ponto de início ou fim de janela divide o dia; o passo do trecho é o
+  // menor entre as janelas que o cobrem (o livre é do horário, não do local), e trechos vizinhos de mesmo passo se juntam.
+  const spans = windows
+    .map((w) => ({ start: toMinutes(w.startTime), end: toMinutes(w.endTime), step: w.stepMinutes ?? stepMinutes }))
+    .filter((w) => w.step > 0 && w.end > w.start);
+  const points = [...new Set(spans.flatMap((w) => [w.start, w.end]))].sort((x, y) => x - y);
+  const pieces: (Interval & { step: number })[] = [];
+  for (let i = 0; i + 1 < points.length; i++) {
+    const covering = spans.filter((w) => w.start <= points[i] && w.end >= points[i + 1]);
+    if (covering.length === 0) continue;
+    const step = Math.min(...covering.map((w) => w.step));
+    const last = pieces[pieces.length - 1];
+    if (last && last.end === points[i] && last.step === step) last.end = points[i + 1];
+    else pieces.push({ start: points[i], end: points[i + 1], step });
   }
-  const gaps: Interval[] = [];
-  for (const span of spans) {
+  const gaps: (Interval & { step: number })[] = [];
+  for (const span of pieces) {
     let cursor = span.start;
     for (const interval of merged) {
       const gapEnd = Math.min(interval.start, span.end);
-      if (gapEnd > cursor) gaps.push({ start: cursor, end: gapEnd });
+      if (gapEnd > cursor) gaps.push({ start: cursor, end: gapEnd, step: span.step });
       cursor = Math.max(cursor, Math.min(interval.end, span.end));
       if (cursor >= span.end) break;
     }
-    if (cursor < span.end) gaps.push({ start: cursor, end: span.end });
+    if (cursor < span.end) gaps.push({ start: cursor, end: span.end, step: span.step });
   }
   const result: FreeGap[] = [];
   for (const gap of gaps) {
-    for (let minute = gap.start; minute + stepMinutes <= gap.end; minute += stepMinutes) {
+    for (let minute = gap.start; minute + gap.step <= gap.end; minute += gap.step) {
       const time = toClock(minute);
-      const endTime = toClock(minute + stepMinutes);
+      const endTime = toClock(minute + gap.step);
       const start = toInstant(date, time, timeZone);
       // Hora que não existe no dia (horário de verão) cai noutra: não oferece.
       if (start > now && localTimeOf(start, timeZone) === time) result.push({ start, end: toInstant(date, endTime, timeZone), time, endTime });

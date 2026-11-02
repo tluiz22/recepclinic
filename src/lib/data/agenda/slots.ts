@@ -546,7 +546,8 @@ export async function getFreeSlotsBefore(
  * diante; fora de feriado; só agenda ativa, nas janelas do dia da semana (gerais e de serviço individual; as de turma
  * ficam de fora);
  * ocupado = atendimentos ativos (sem exame, que corre em paralelo) e bloqueios, com o intervalo da agenda; a lacuna
- * em passos do menor serviço individual ativo da agenda (exame não conta).
+ * em passos da duração do serviço de cada janela (a de todos os serviços, o menor da agenda); a agenda de exames
+ * também mostra as linhas (só os bloqueios a ocupam).
  */
 export async function listFreeGaps(
   db: DbClient,
@@ -578,30 +579,47 @@ export async function listFreeGaps(
   const rows = services as unknown as { id: string; duration_minutes: number; scheduling_mode: string; category: string; service_agendas: { agenda_id: string }[] }[];
   // Turma tem horário próprio (a sessão): as janelas dela não viram "Livre".
   const groupIds = new Set(rows.filter((service) => service.scheduling_mode === "group").map((service) => service.id));
-  const minByAgenda = new Map<string, number>();
+  const byId = new Map(rows.map((service) => [service.id, service]));
+  // Passo da linha (cliente, 02/nov/2026): a duração do serviço da janela; janela de todos os serviços, o menor serviço
+  // individual da agenda (sem exame; numa agenda só de exames, o menor exame). Duas janelas sobrepostas: vale o menor.
+  const individualOf = new Map<string, typeof rows>();
   for (const service of rows) {
-    if (service.scheduling_mode === "group" || service.category === "exam") continue;
-    for (const link of service.service_agendas) {
-      minByAgenda.set(link.agenda_id, Math.min(minByAgenda.get(link.agenda_id) ?? Infinity, service.duration_minutes));
-    }
+    if (service.scheduling_mode === "group") continue;
+    for (const link of service.service_agendas) individualOf.set(link.agenda_id, [...(individualOf.get(link.agenda_id) ?? []), service]);
   }
   const result: (FreeGap & { agendaId: string })[] = [];
   for (const agenda of agendas) {
-    const minMinutes = minByAgenda.get(agenda.id);
-    // Janelas gerais e as de um serviço individual (cliente, 02/nov/2026: a linha "Livre" aparece em toda agenda aberta).
-    const own = windows.filter((w) => w.agenda_id === agenda.id && !(w.service_id && groupIds.has(w.service_id)));
-    if (!minMinutes || own.length === 0) continue;
-    const busy = await loadBusy(db, clinicId, agenda.id, start, end);
-    const gaps = computeFreeGaps({
-      date,
-      timeZone,
-      windows: own.map((w) => ({ startTime: w.start_time.slice(0, 5), endTime: w.end_time.slice(0, 5) })),
-      busy,
-      bufferMinutes: agenda.buffer_minutes,
-      stepMinutes: minMinutes,
-      now,
-    });
-    result.push(...gaps.map((gap) => ({ ...gap, agendaId: agenda.id })));
+    const services = individualOf.get(agenda.id) ?? [];
+    const nonExam = services.filter((service) => service.category !== "exam");
+    const onlyExams = nonExam.length === 0;
+    const fallback = Math.min(...(onlyExams ? services : nonExam).map((service) => service.duration_minutes));
+    // Janela de serviço desativado ou de turma não vira linha.
+    const own = windows
+      .filter((w) => w.agenda_id === agenda.id && !(w.service_id && (groupIds.has(w.service_id) || !byId.has(w.service_id))))
+      .map((w) => {
+        const service = w.service_id ? byId.get(w.service_id) : undefined;
+        return {
+          startTime: w.start_time.slice(0, 5),
+          endTime: w.end_time.slice(0, 5),
+          stepMinutes: service ? service.duration_minutes : fallback,
+          isExam: service ? service.category === "exam" : onlyExams,
+        };
+      })
+      .filter((w) => Number.isFinite(w.stepMinutes) && w.stepMinutes > 0);
+    if (own.length === 0) continue;
+    // Exame corre em paralelo (28/out): só os bloqueios o ocupam; os demais, também os atendimentos.
+    const [busyAll, busyBlocksOnly] = await Promise.all([loadBusy(db, clinicId, agenda.id, start, end), loadBusy(db, clinicId, agenda.id, start, end, null, true)]);
+    const seen = new Set<number>();
+    for (const [isExam, busy] of [[false, busyAll], [true, busyBlocksOnly]] as const) {
+      const group = own.filter((w) => w.isExam === isExam);
+      if (group.length === 0) continue;
+      const gaps = computeFreeGaps({ date, timeZone, windows: group, busy, bufferMinutes: agenda.buffer_minutes, stepMinutes: fallback, now });
+      for (const gap of gaps) {
+        if (seen.has(gap.start.getTime())) continue;
+        seen.add(gap.start.getTime());
+        result.push({ ...gap, agendaId: agenda.id });
+      }
+    }
   }
   return result;
 }
