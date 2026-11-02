@@ -1,6 +1,9 @@
 # RecepClinic
 
-> **Estado atual (retomar daqui), 31/out/2026.** Detalhes e datas no [`historico.md`](historico.md) (só por busca).
+> **Estado atual (retomar daqui), 02/nov/2026.** Detalhes e datas no [`historico.md`](historico.md) (só por busca).
+>
+> **Próxima sessão (cliente, 02/nov):** voltar ao **faturamento** na branch `faturamento` (F12.2b, pelo
+> `planejamento-faturamento-saas.md` da branch).
 >
 > **Próximo (cliente, 01/nov):** validado no staging: Base de Conhecimento, "Como funciona?" de Configurações e Central de
 > Ajuda. No staging para validar: **25 capturas reais de tela** nos artigos da Central (`public/ajuda/`, refazer quando a
@@ -15,8 +18,8 @@
 > - **Staging** (`teste.recepclinic.com.br`, branch `main`): produção + redesign da Recepção (RX1 a RX9, sem migração) +
 >   cartão do Asaas (`ASAAS_PREVIEW=1`) + Base de Conhecimento do bot (migração aplicada).
 >   Roteiros em [`staging.md`](staging.md).
-> - **Branch `faturamento`** (só local, sem push): todo código do financeiro. Tem a `main` até `76d2688` (merge de 02/nov); atualizar
->   só quando o cliente pedir (cliente, 01/nov).
+> - **Branch `faturamento`** (só local, sem push): todo código do financeiro. Tem a `main` até `4d17a7f` (merge de 02/nov,
+>   `2b779bb`; 920 testes de unidade e 836 de banco passando); atualizar só quando o cliente pedir (cliente, 01/nov).
 >
 > **Frentes**
 > - **Ajustes da produção (C1–C16) e revisão da jornada do bot:** todos na produção; nada pendente. Decisões da
