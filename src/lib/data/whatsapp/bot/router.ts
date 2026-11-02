@@ -34,6 +34,7 @@ import {
   RECEPTION_CONFIRM_IDS,
   RECEPTION_DECLINED,
   RECEPTION_DECLINED_NO_MENU,
+  RECEPTION_NOW_ID,
   confirmTypedDate as typedDateQuestion,
   TYPED_DATE_RETRY,
   YES_NO_BUTTONS,
@@ -41,7 +42,7 @@ import {
 } from "./texts";
 import { blockedContactByPhone, blockedNoticeDue, markBlockedNotice } from "../contactBlock";
 import { listBotMessages } from "../customMessages";
-import { firstMessageAnswer, handleKnowledgeReply, knowledgeHookFor, performTakeover } from "./knowledge/respond";
+import { askReceptionReason, firstMessageAnswer, handleKnowledgeReply, handleReceptionReason, knowledgeHookFor, pendingReasonOf, performTakeover, REASON_KEY } from "./knowledge/respond";
 import { logError } from "../../../log";
 
 // Entrada do bot (F6.3): chamado pelo webhook para cada mensagem recebida, já
@@ -116,6 +117,8 @@ export async function handleIncomingMessage(env: BotEnv, message: WaMessage): Pr
 }
 
 /** Responde a mensagem conforme o ponto da conversa (o "não entendi" passa pelo motor, que conta). */
+const AUDIO_TYPES = new Set(["audio", "voice"]);
+
 /** Passos em que qualquer texto é a resposta (nome e endereço): o pedido digitado de recepção não vale neles. */
 const FREE_TEXT_AWAITING = new Set(["address_input", "contact_name", "patient_name", "self_name"]);
 const awaitingOf = (convo: Conversation) => ((convo.context ?? {}) as { awaiting?: string }).awaiting;
@@ -238,6 +241,16 @@ async function dispatch(env: BotEnv, b: Bot, convo: Conversation, phone: string,
   // "Falar com a recepção" em qualquer passo (cliente, 30/out/2026): o botão de saída de uma resposta não entendida
   // transfere; o pedido digitado ("atendente"), fora dos passos de texto livre (nome e endereço), pede confirmação.
   if (b.receptionAvailable && selection.id === TALK_TO_RECEPTION_ID) return handoff(b, "way_out");
+
+  // Motivo do pedido de recepção (EA, cliente, 02/nov/2026): o toque ou um novo pedido transfere direto (nunca uma
+  // barreira); áudio também (o bot não ouve); o texto vai para a base. Número, outro toque: segue o passo.
+  const reason = b.receptionAvailable ? pendingReasonOf(b) : undefined;
+  if (reason) {
+    await mergeContext(b, { [REASON_KEY]: undefined });
+    if (selection.id === RECEPTION_NOW_ID || asksForReception(selection) || AUDIO_TYPES.has(message.type ?? "")) return handoff(b, reason.origin);
+    if (!selection.id && /\p{L}/u.test(selection.text)) return handleReceptionReason(b, selection.text, reason.origin);
+  }
+
   if (receptionConfirmPending(convo)) {
     const offer = receptionOfferOf(convo);
     await mergeContext(b, { [RECEPTION_CONFIRM_KEY]: undefined });
@@ -253,6 +266,8 @@ async function dispatch(env: BotEnv, b: Bot, convo: Conversation, phone: string,
     }
     // Outra resposta: vale para o passo em que a pessoa estava.
   } else if (b.receptionAvailable && !FREE_TEXT_AWAITING.has(awaitingOf(convo) ?? "") && asksForReception(selection)) {
+    // Com a base: pergunta o motivo (EA); sem ela, confirma antes de transferir, como antes.
+    if (b.features.includes("knowledge_base")) return askReceptionReason(b, "typed", selection.text);
     await mergeContext(b, { [RECEPTION_CONFIRM_KEY]: true });
     return sendButtons(b, "bot_reception_confirm", RECEPTION_CONFIRM, RECEPTION_CONFIRM_BUTTONS);
   }

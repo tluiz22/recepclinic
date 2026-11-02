@@ -268,6 +268,17 @@ function classify(def: FlowDef, s: Session, now: number): Outcome {
   return now - s.lastAt.getTime() < IN_PROGRESS_MS ? "in_progress" : "abandoned";
 }
 
+/** Desfecho de uma tentativa de marcar, remarcar ou cancelar (null = outro fluxo); usado na taxa de resolução (EA). */
+export function sessionOutcome(s: FunnelSession, now: Date): Outcome | null {
+  const def = FLOW_DEFS.find((d) => matches(d, s));
+  return def ? classify(def, s, now.getTime()) : null;
+}
+
+/** Passo da tentativa (o primeiro com esse nome). */
+export const sessionStep = (s: FunnelSession, step: string) => find(s, step);
+
+export { IN_PROGRESS_MS };
+
 function detail(s: Session, outcome: Outcome): string {
   if (outcome === "error") return reasonLabel(find(s, "error")?.metadata.reason);
   const abandoned = find(s, "abandoned");
@@ -546,6 +557,7 @@ const HANDOFF_ORIGINS: Record<string, string> = {
   identity_not_found: "Data de nascimento não encontrada",
   way_out: "Botão de saída (resposta não entendida)",
   typed: "Digitaram (ex.: \"atendente\")",
+  kb_answer: "Depois de uma resposta da base",
 };
 
 const reached = (s: Session, steps: string[]) => s.events.some((e) => steps.includes(e.step));

@@ -161,7 +161,7 @@ describe("conversa do bot", () => {
     sent.length = 0;
     await adminClient().from("conversation_state").update({ state: "WELCOME", human_handoff: false }).eq("clinic_id", clinicId);
     await hello("wamid.f66.in.2");
-    expect(sent[0]).toBe("Olá! 👋 Aqui é da Clínica Mensagens F66.");
+    expect(sent[0]).toBe("Olá! 👋 Aqui é da Clínica Mensagens F66.\n\nSou a assistente virtual e estou aqui para ajudar.\nVocê pode escrever o que precisa ou escolher uma das opções abaixo.");
   });
 });
 

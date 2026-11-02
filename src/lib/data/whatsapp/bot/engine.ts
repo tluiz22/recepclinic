@@ -27,6 +27,7 @@ import {
   RECEPTION_CONFIRM_BUTTONS,
   receptionContactOffer,
   wayOutButtons,
+  welcome,
   wordsFor,
   YES_NO_BACK_BUTTONS,
   YES_NO_BUTTONS,
@@ -325,7 +326,7 @@ async function textFallback(b: Bot, kind: string, outcome: SendOutcome, body: st
 }
 
 /** Horário do próximo passo do funil: 1 ms depois do anterior, para a ordem dos passos de uma mesma mensagem. */
-function tick(b: Bot): Date {
+export function tick(b: Bot): Date {
   b.now = new Date(b.now.getTime() + 1);
   return b.now;
 }
@@ -358,6 +359,11 @@ export async function attachContact(b: Bot, contactId: string): Promise<void> {
 export function textFor(b: Bot, key: BotMessageKey, fallback: string, values: Record<string, string> = {}): string {
   const custom = b.custom.get(key);
   return custom ? renderMarkers(custom, values) : fallback;
+}
+
+/** Boas-vindas: o texto próprio da clínica ou o padrão (com a base ligada, convida a escrever; EA, 02/nov/2026). */
+export function welcomeText(b: Bot): string {
+  return textFor(b, "welcome", welcome(b.clinic.label, b.features.includes("knowledge_base")), { clinica: b.clinic.label });
 }
 
 /** Depois de passar a conversa para a recepção (jornada E4): pergunta o assunto, uma vez por pausa. */

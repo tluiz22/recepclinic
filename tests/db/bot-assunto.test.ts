@@ -87,10 +87,11 @@ async function state(phone: string) {
 
 const attentionOf = async (phone: string) => (await listHumanAttention(asDb(f.reception), f.clinicId, phone))[0];
 
-/** "Oi" › "Falar com a recepção" do menu. */
+/** "Oi" › "Falar com a recepção" do menu (o bot pergunta o motivo, EA) › toque em "Falar com a recepção". */
 async function askReception(phone: string): Promise<string[]> {
   await say(phone, "Oi");
-  return say(phone, "4");
+  expect((await say(phone, "4")).at(-1)).toContain("Poderia me contar brevemente o que você precisa?");
+  return say(phone, { id: "reception_now" });
 }
 
 beforeAll(async () => {
@@ -172,8 +173,8 @@ describe("assunto da transferência", () => {
     await say(phone, "Oi");
     await say(phone, "1"); // Consultas
     await say(phone, "1"); // Marcar consulta (consulta única): "Com qual profissional?"
-    await say(phone, "quero falar com atendente");
-    const reply = await say(phone, { id: "reception_yes" });
+    expect((await say(phone, "quero falar com atendente")).at(-1)).toContain("Poderia me contar brevemente");
+    const reply = await say(phone, { id: "reception_now" });
     expect(reply.at(-1)).toBe(QUESTION);
     const { data } = await adminClient()
       .from("bot_funnel_events")

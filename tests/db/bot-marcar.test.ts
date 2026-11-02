@@ -102,7 +102,7 @@ describe("bot: marcar consulta (número novo)", () => {
 
   it("boas-vindas e menu só com o que funciona", async () => {
     const reply = await say(phone, "Oi");
-    expect(reply[0]).toMatchObject({ kind: "text", body: "Olá! 👋 Aqui é da Clínica Bot F63." });
+    expect(reply[0]).toMatchObject({ kind: "text", body: "Olá! 👋 Aqui é da Clínica Bot F63.\n\nSou a assistente virtual e estou aqui para ajudar.\nVocê pode escrever o que precisa ou escolher uma das opções abaixo." });
     expect(titles(reply)).toEqual(["1. Consultas", "2. Exames", "3. Informações"]);
     expect(titles(await say(phone, "1"))).toEqual(["1. Marcar consulta", "2. Marcar retorno", "3. Remarcar", "4. Cancelar", "5. Encaixe ou antecipar", "6. Voltar ao menu"]);
   });
@@ -225,10 +225,10 @@ describe("bot: pedido de recepção digitado nos passos de texto livre (cliente,
       reply = await say(other, "Maria Secretária");
       expect(reply[0].body).toBe("Qual a data de nascimento do paciente? (formato dd/mm/aaaa)");
       expect((await conversation(other)).state).toBe("BOOK_PATIENT_NEW");
-      // Fora desses passos, o mesmo texto transfere.
+      // Fora desses passos, o mesmo texto é um pedido de recepção: o motivo (EA, 02/nov/2026) e a recepção a um toque.
       reply = await say(other, "quero falar com a secretária");
-      expect(reply[0].body).toBe("Você quer falar com a recepção? A conversa passa para a nossa equipe.");
-      reply = await say(other, { id: "reception_yes" });
+      expect(reply[0].body).toContain("Poderia me contar brevemente o que você precisa?");
+      reply = await say(other, { id: "reception_now" });
       expect(reply[0].body).toContain("Vou te transferir para a recepção");
       expect((await conversation(other)).state).toBe("HUMAN_HANDOFF");
     } finally {

@@ -28,6 +28,13 @@ export const metricas = {
       { termo: "Previsto", texto: "ainda sem registro." },
       { termo: "Faltas", texto: "faltou." },
     ],
+    // src/lib/data/botResolution.ts (EA, cliente, 02/nov/2026).
+    resolucao: [
+      { termo: "Necessidade", texto: "mesmo contato e tipo em 24h contam uma vez." },
+      { termo: "Resolvidas", texto: "concluídas pelo WhatsApp, ou dúvida com \"Resolvido\"." },
+      { termo: "Inconclusivas", texto: "pararam, regra, erro ou dúvida sem \"Resolvido\"." },
+      { termo: "Taxa", texto: "resolvidas ÷ (resolvidas + recepção + inconclusivas); em andamento fica fora." },
+    ],
     // src/lib/data/botFunnel.ts (classify, IN_PROGRESS_MS = 30 minutos).
     comoTerminaram: [
       { termo: "Marcaram", texto: "concluíram (ou Remarcaram, Cancelaram)." },

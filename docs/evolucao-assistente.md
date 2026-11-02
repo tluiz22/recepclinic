@@ -1,7 +1,8 @@
 # Evolução do assistente (EA): jornada inteligente, atendimento humano e taxa de resolução
 
-> **Retomar daqui (02/nov/2026).** Etapa 1 (auditoria) feita; diagnóstico abaixo. Próximo: **rodada de dúvidas
-> de negócio** com o cliente (seção 3), depois plano técnico e código numa branch `assistente` criada da `main`.
+> **Retomar daqui (02/nov/2026).** Auditoria, decisões e código feitos na branch **`assistente`** (só local, sem
+> push), com os testes passando. Próximo: o cliente valida; com o OK, trazer a `main`, rodar os testes, juntar na
+> `main` (staging: `supabase db push` da migração `20261116120000`) e, depois, produção com autorização.
 
 Pedido do cliente em 02/nov/2026: evoluir o bot em três frentes integradas, sem criar outro assistente, outro
 reconhecedor nem outra base: (1) entrada com texto livre ou menu; (2) pedido de recepção que tenta resolver antes
@@ -99,3 +100,96 @@ Decisões do cliente:
    confirmação" à parte.
 9. **Tela:** bloco "Resolução sem a recepção" no topo da aba Agendamento digital (taxa, números, evolução por dia,
    tabela por tipo), fora do filtro de operação, com período e comparação. Sai o cartão "Precisaram da recepção".
+
+## 4. O que foi implementado (branch `assistente`, 02/nov/2026)
+
+### 4.1 Jornada inicial
+
+- Boas-vindas novas (decisão 2), só com a BC ligada (`welcome(label, invite)`, `welcomeText` no motor); texto próprio
+  da clínica continua valendo. Padrão da tela Mensagens atualizado.
+- Texto livre na 1ª mensagem (já existia, `firstMessageAnswer`): pedido claro abre o fluxo sem o menu; pergunta
+  recebe a resposta e "Isso resolve sua dúvida?" no lugar do menu; "oi" sozinho, boas-vindas e menu. Depois da
+  resposta a conversa vai para `MENU` (a próxima mensagem não repete as boas-vindas).
+
+### 4.2 Regras de identificação de intenção (sem mudança de mecanismo)
+
+- Reconhecimento = BC (palavras, sinônimos, pesos; decisão 1 da BC, sem IA). Ordem do router mantida: toque, "menu",
+  "voltar", botão de saída, motivo pendente, Sim/Não pendente, pedido de recepção, data, passo; a BC só entra onde
+  sairia "não entendi" (e na 1ª mensagem). Fluxo em andamento não é interrompido: dentro de um fluxo, a resposta e o
+  passo de novo. Ambígua: "Você quis dizer…?". Não reconhecida: "não entendi" e `kb_unmatched`.
+
+### 4.3 Atendimento humano
+
+- "atendente" digitado (≤ 60 caracteres) e "Falar com a recepção" do menu, com a BC ligada: `askReceptionReason`
+  pergunta o motivo (`_reception_reason` no contexto) com [Falar com a recepção]. Motivo já na mensagem
+  (`withoutReceptionWords` + BC): segue direto. Sem a BC: o Sim/Não (digitado) e a transferência direta (menu), como antes.
+- Próxima mensagem (`router.ts`): toque, novo pedido ou áudio → transfere; texto → `handleReceptionReason`:
+  - A (resposta segura): responde (ou abre o fluxo) e "Espero ter ajudado! 😊 …" [Resolvido] [Falar com a recepção]
+    [Marcar consulta]; no meio de um fluxo, ele é encerrado como "pediu a recepção".
+  - B (não reconhecida ou empate): "Não encontrei uma informação segura…" + transferência.
+  - C (entrada do tipo `reception`, cortesia, pergunta clínica com o aviso de saúde): transferência.
+  - Transferido, o motivo vira o assunto (`setHandoffSubject`; a pergunta do assunto não se repete). Fora do horário
+    ou em recesso, a mensagem de sempre (`handoffText(b, lead)`).
+- "Resolvido?" (`_kb_confirm` no contexto): [Resolvido] → "Que bom!…", volta ao começo, sem pendência; [Falar com a
+  recepção] → transfere com a pergunta como assunto; [Voltar ao menu] → menu; "Marcar" → a marcação (conta como
+  resolvida); digitado "obrigado/sim/resolveu" = Resolvido, "não" = transfere (no pedido de recepção) ou o menu; novo
+  pedido de recepção = transfere; qualquer outra mensagem segue o passo (a dúvida fica sem confirmação).
+
+### 4.4 Uso da base de conhecimento
+
+- Base global do Suporte; resposta só com o cadastro da clínica (sem o dado, não responde → situação B no pedido de
+  recepção). Situação C pelas entradas do tipo "recepção" (o Suporte cadastra reclamação, reembolso etc.). Cortesia
+  ("obrigado") não pergunta "Resolvido?".
+
+### 4.5 Taxa de resolução sem intervenção humana (fórmula definitiva)
+
+**Taxa = resolvidas ÷ (resolvidas + recepção + inconclusivas)**, por necessidade (`src/lib/data/botResolution.ts`):
+
+- Necessidade = mesmo contato + mesmo tipo (marcar, remarcar, cancelar, dúvida, pedido de recepção) em 24h a partir da
+  primeira tentativa; melhor desfecho (resolvida > em andamento > recepção > inconclusiva); entra no período pela
+  primeira tentativa.
+- Marcar/remarcar/cancelar: concluída = resolvida; abandono por "pediu a recepção"/"recepção assumiu" ou transferência
+  ligada (`journey_session_id`) = recepção; em andamento (< 30 min) fora da taxa; abandono, regra, erro, desistência =
+  inconclusiva.
+- Dúvida (`info`): `resolved` = resolvida; `escalated` (ou transferência com `info_session_id`) = recepção;
+  `not_resolved` ou sem confirmação há 30 min = inconclusiva ("sem confirmação" mostrado à parte).
+- Transferência sem tentativa nem dúvida ligada = pedido de recepção, recepção.
+- Dúvida dentro de um fluxo não conta à parte (é parte da tentativa). Mensagem repetida da Meta: já descartada no
+  webhook. Várias mensagens da mesma tentativa: uma sessão.
+
+### 4.6 Eventos e banco
+
+- Migração `20261116120000_evolucao_do_assistente.sql`: `bot_funnel_events.flow` aceita `info`; "Perguntas
+  frequentes no bot" ligado para quem já tem o bot. Sem tabela nova; RLS e isolamento do funil de sempre (credencial
+  da clínica; a RPC `metrics_bot_sessions` já lê sessões com `started`).
+- Eventos `info`: `started` {code, origin: reception | first_message | menu}, `answered`, `resolved` {via?, typed?},
+  `escalated`, `not_resolved`. Handoff ganha `origin: "kb_answer"` e `info_session_id`. Sem telefone novo, sem texto
+  da mensagem no funil.
+- `setClinicFeatures`: ligar o bot liga junto "Perguntas frequentes no bot"; depois o Suporte desliga.
+
+### 4.7 Interface
+
+- Métricas › Agendamento digital: bloco "Resolução sem a recepção" no topo (`ResolutionBlock.astro`: taxa com
+  comparação, barra e legenda dos desfechos, "sem confirmação", evolução por dia/semana no `RateLine`, tabela por
+  tipo). Sai o cartão "Precisaram da recepção". Dica de ajuda `metricas.dicas.resolucao`; artigo da Central atualizado.
+- Fluxograma da jornada (Tecnologia › Jornada do bot) atualizado; captura `config-mensagens` na fila.
+
+### 4.8 Arquivos
+
+`bot/router.ts`, `bot/menus.ts`, `bot/entry.ts`, `bot/engine.ts`, `bot/input.ts`, `bot/manage.ts`, `bot/texts.ts`,
+`bot/knowledge/respond.ts`, `whatsapp/conversations.ts`, `whatsapp/funnel.ts`, `whatsapp/customMessages.ts`,
+`data/features.ts`, `data/botFunnel.ts`, `data/botResolution.ts` (novo), `metricas/DigitalTab.astro`,
+`metricas/ResolutionBlock.astro` (novo), `ajuda/metricas.ts`, `central/artigos/equipe-metricas-financeiro.ts`,
+`tecnologia/botJourney.ts`, migração, testes (`botResolution.test.ts` novo; `bot-base-de-conhecimento`,
+`bot-assunto`, `bot-entrada`, `bot-gerenciar`, `bot-marcar`, `mensagens`, `painel-matriz`).
+
+### 4.9 Limitações
+
+- O reconhecimento continua por palavras (sem IA): a cobertura depende do catálogo do Suporte; o que não casa vai para
+  `kb_unmatched`.
+- Com a conversa transferida, o bot fica pausado até "Devolver ao bot"/#bot (regra de antes): fora do horário, o
+  paciente não usa o bot enquanto espera.
+- Dúvidas só entram na taxa a partir da implantação (antes não havia evento); nada é reclassificado para trás.
+- Resposta que leva a uma marcação, fora do pedido de recepção: [Resolvido] [Marcar] [Voltar ao menu] (3 botões no
+  máximo); a recepção continua a um "atendente" digitado.
+- "Recepção assumiu" sem tentativa ligada conta como pedido de recepção.

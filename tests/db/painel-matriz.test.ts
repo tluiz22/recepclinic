@@ -49,6 +49,23 @@ describe("matriz de acesso pela tela", () => {
     );
   });
 
+  it("\"Perguntas frequentes no bot\" vem ligado com o Bot de WhatsApp; depois, o Suporte desliga (EA, 02/nov/2026)", async () => {
+    const other = await createClinic("Clínica da matriz EA", []);
+    try {
+      const keys = async () => (await listClinicsAccess(asDb(support))).find((c) => c.id === other)!.features.map((f) => f.key).sort();
+      await setClinicFeatures(asDb(support), other, ["whatsapp_bot"]);
+      expect(await keys()).toEqual(["knowledge_base", "whatsapp_bot"]);
+      // Com o bot já ligado, tirar o item vale.
+      await setClinicFeatures(asDb(support), other, ["whatsapp_bot"]);
+      expect(await keys()).toEqual(["whatsapp_bot"]);
+      // Sem o bot, nada é acrescentado.
+      await setClinicFeatures(asDb(support), other, ["exams"]);
+      expect(await keys()).toEqual(["exams"]);
+    } finally {
+      await deleteClinics([other]);
+    }
+  });
+
   it("a equipe da clínica não grava a matriz nem vê a lista do Suporte", async () => {
     expect(await codeOf(() => setClinicFeatures(asDb(admin), clinicId, ["metrics_personal"]))).toBe("forbidden");
     expect((await listPlatformStaffNames(asDb(admin))).size).toBe(0);

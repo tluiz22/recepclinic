@@ -72,7 +72,14 @@ export const price = (cents: number | null | undefined) => (cents == null ? null
 // Início e menus
 // ---------------------------------------------------------------------------
 
-export const welcome = (clinicLabel: string) => `Olá! 👋 Aqui é ${clinicLabel}.`;
+/**
+ * Boas-vindas (EA, cliente, 02/nov/2026): com a base de conhecimento ligada, convida a escrever o que precisa;
+ * sem ela, o texto de antes (o texto livre não seria entendido).
+ */
+export const welcome = (clinicLabel: string, invite = true) =>
+  invite
+    ? `Olá! 👋 Aqui é ${clinicLabel}.\n\nSou a assistente virtual e estou aqui para ajudar.\nVocê pode escrever o que precisa ou escolher uma das opções abaixo.`
+    : `Olá! 👋 Aqui é ${clinicLabel}.`;
 export const MENU_BODY = "Escolha uma opção abaixo (ou digite o número).";
 
 // Entrada com atendimento marcado no número (cliente, 23/out/2026): pergunta
@@ -462,3 +469,25 @@ export const KB_BOOK = "Marcar";
 /** Encaixe pela base sem o item Lista de espera (cliente, 31/out/2026). */
 export const KB_WAITLIST_RECEPTION = "O encaixe é combinado com a recepção. Você quer falar com a recepção?";
 export const KB_NO_APPOINTMENTS = "Não encontramos atendimento marcado para este número.";
+
+// ---------------------------------------------------------------------------
+// Evolução do assistente (EA, cliente, 02/nov/2026)
+// ---------------------------------------------------------------------------
+
+/** Pedido de recepção sem motivo: o bot pergunta o motivo, com a recepção a um toque. */
+export const RECEPTION_REASON_QUESTION =
+  "Claro! 😊 Poderia me contar brevemente o que você precisa?\n\nAssim, talvez eu consiga ajudar você agora. Se preferir, toque abaixo e passo para a recepção.";
+export const RECEPTION_NOW_ID = "reception_now";
+export const RECEPTION_NOW_BUTTONS = [button(RECEPTION_NOW_ID, "Falar com a recepção")];
+/** Motivo sem resposta segura na base (situação B). */
+export const KB_NO_SAFE_ANSWER = "Não encontrei uma informação segura para responder sua dúvida. Vou encaminhar sua solicitação para a recepção, que poderá ajudar você.";
+
+/** Confirmação depois da resposta da base: no pedido de recepção e fora de um fluxo. */
+export const KB_CONFIRM_AFTER_RECEPTION = "Espero ter ajudado! 😊 Conseguiu resolver ou ainda quer falar com a recepção?";
+export const KB_CONFIRM_QUESTION = "Isso resolve sua dúvida?";
+export const KB_RESOLVED_THANKS = "Que bom! Se precisar, é só escrever por aqui.";
+export const KB_CONFIRM_IDS = { resolved: "kb_resolved", reception: "kb_reception", menu: "kb_menu" } as const;
+export const KB_RESOLVED_LABEL = "Resolvido";
+export const KB_RECEPTION_LABEL = "Falar com a recepção";
+export const KB_MENU_LABEL = "Voltar ao menu";
+export const KB_BOOK_CONSULTATION = "Marcar consulta";

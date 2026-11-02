@@ -332,7 +332,9 @@ describe("recepção e pausa", () => {
     await adminClient().from("whatsapp_connections").update({ coexistence: true }).eq("clinic_id", f.clinicId);
     let reply = await hello(phone);
     expect(titles(reply)).toContain("4. Falar com a recepção");
-    reply = await say(phone, "4");
+    // Com a base: pergunta o motivo, com a recepção a um toque (EA, 02/nov/2026).
+    expect((await say(phone, "4"))[0].body).toContain("Poderia me contar brevemente o que você precisa?");
+    reply = await say(phone, { id: "reception_now" });
     expect(reply[0].body).toContain("Vou te transferir para a recepção");
     // Assunto da transferência (cliente, 31/out/2026): a 1ª resposta é o assunto; depois, o bot fica calado.
       expect((await say(phone, "alô?")).map((m) => m.body)).toEqual(["Obrigado! Já repassamos para a nossa equipe."]);
@@ -354,7 +356,8 @@ describe("recepção e pausa", () => {
       .select("id")
       .single();
     await hello(phone);
-    const reply = await say(phone, "4");
+    await say(phone, "4");
+    const reply = await say(phone, { id: "reception_now" });
     expect(reply[0].body).toMatch(/^Em recesso até \d{2}\/\d{2}\/\d{4}\.$/);
     await adminClient().from("schedule_blocks").delete().eq("id", block!.id);
     await webhook({ message_echoes: [{ id: `wamid.f64.echo.${++seq}`, from: "5584000000000", to: phone.slice(1), type: "text", text: { body: "#bot" } }] });

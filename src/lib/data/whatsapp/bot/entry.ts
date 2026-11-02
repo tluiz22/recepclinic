@@ -1,6 +1,6 @@
 import { joinBlockReason } from "../../waitlist/entries";
 import { formatAppointmentWhen } from "../templates";
-import { go, say, sayInvalidBirthdate, sendButtons, sendList, textFor, type Bot } from "./engine";
+import { go, say, sayInvalidBirthdate, sendButtons, sendList, textFor, welcomeText, type Bot } from "./engine";
 import { parseBirthdate, pick, yesNo, type Selection } from "./input";
 import { handoff, identityChoiceOf, loadActive, manageIdentified, presenceConfirmed, sendIdentityNotFound, upcomingOfContact, type ManagedAppointment } from "./manage";
 import { showMenu } from "./menus";
@@ -53,7 +53,7 @@ export async function startConversation(b: Bot, { afterWelcome }: { afterWelcome
     logError("bot: atendimentos da entrada", error, { clinica: b.clinicId });
   }
   if (!count && !afterWelcome) return showMenu(b, { withWelcome: true });
-  await say(b, "bot_welcome", textFor(b, "welcome", t.welcome(b.clinic.label), { clinica: b.clinic.label }));
+  await say(b, "bot_welcome", welcomeText(b));
   if (afterWelcome && !(await afterWelcome())) return;
   if (!count) return showMenu(b);
   await askAbout(b, count);

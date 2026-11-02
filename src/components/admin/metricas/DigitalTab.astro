@@ -5,7 +5,8 @@
 // tabela por fluxo (as etapas abrem na linha), motivos, erros e a recepção.
 // Tentativa não é agendamento: "seguem de pé" confere o atendimento gravado.
 import type { ClinicContext } from "../../../lib/clinicAccess";
-import { dayBounds, formatCalendarDate, localDateOf } from "../../../lib/clinicTime";
+import { dayBounds, formatCalendarDate, localDateOf, todayIn } from "../../../lib/clinicTime";
+import { buildResolutionReport } from "../../../lib/data/botResolution";
 import {
   buildDigitalReport,
   DIGITAL_OPERATIONS,
@@ -17,7 +18,8 @@ import {
 } from "../../../lib/data/botFunnel";
 import type { DbClient } from "../../../lib/data/clients";
 import { logError } from "../../../lib/log";
-import { compareCounts, compareRates, comparisonRange, describeComparison, formatRate, formatRatio, ratio, type DateRange } from "../../../lib/metricsRules";
+import { buckets as makeBuckets, compareCounts, compareRates, comparisonRange, defaultGrouping, describeComparison, formatRate, formatRatio, ratio, type DateRange } from "../../../lib/metricsRules";
+import ResolutionBlock from "./ResolutionBlock.astro";
 import Attention, { type AttentionItem } from "./Attention.astro";
 import { countDelta, previousCount, previousRate, rateDelta } from "./compare";
 import Kpi from "./Kpi.astro";
@@ -81,7 +83,12 @@ const p = previousSessions ? buildDigitalReport(previousSessions, now, operation
 const conclusion = r ? ratio(r.outcomes.concluded, r.finished) : null;
 const attemptsCmp = r && p ? compareCounts(r.attempts, p.attempts) : null;
 const conclusionCmp = r && p && conclusion ? compareRates(conclusion, ratio(p.outcomes.concluded, p.finished)) : null;
-const reception = r ? ratio(r.reception.contactsNeeding, r.reception.contactsTotal) : null;
+// Resolução sem a recepção (EA, 02/nov/2026): todas as necessidades, sem o filtro de operação.
+const dayOf = (date: Date) => localDateOf(date, tz);
+const resolution = sessions ? buildResolutionReport(sessions, now, dayOf) : null;
+const previousResolution = previousSessions ? buildResolutionReport(previousSessions, now, dayOf) : null;
+const resolutionGrouping = defaultGrouping(range);
+const resolutionBuckets = makeBuckets(range, resolutionGrouping, todayIn(tz, now));
 const periodText = range.from === range.to ? formatCalendarDate(range.from, "dd/MM") : `${formatCalendarDate(range.from, "d/MM")} a ${formatCalendarDate(range.to, "d/MM")}`;
 
 // Precisa de atenção.
@@ -139,6 +146,12 @@ import { metricas } from "../../../lib/ajuda/metricas";
 ---
 
 {
+  r && firstEvent && resolution && resolution.total > 0 && (
+    <ResolutionBlock report={resolution} previous={previousResolution} prevText={prevText} buckets={resolutionBuckets} grouping={resolutionGrouping} />
+  )
+}
+
+{
   !r ? (
     <div role="alert" class={`${card} mt-4 border-danger-line bg-can-50`}>
       <h2 class={`${h2} text-can-800`}>Não foi possível carregar o Agendamento digital</h2>
@@ -162,7 +175,7 @@ import { metricas } from "../../../lib/ajuda/metricas";
       <Attention items={attention} />
       {noCompareReason && <p class="mt-3 text-sm text-ink-soft">{noCompareReason}</p>}
 
-      <section aria-label="Indicadores principais" class="mt-4 grid grid-cols-1 gap-3 min-[520px]:grid-cols-2 xl:grid-cols-4">
+      <section aria-label="Indicadores principais" class="mt-4 grid grid-cols-1 gap-3 min-[520px]:grid-cols-2 xl:grid-cols-3">
         <Kpi
           id="kpi-tentativas"
           label={`Tentativas de ${verb}`}
@@ -195,15 +208,7 @@ import { metricas } from "../../../lib/ajuda/metricas";
               : `dos ${r.outcomes.concluded} concluídos. ${r.standing.canceledLater} ${r.standing.canceledLater === 1 ? "foi cancelado" : "foram cancelados"} depois${r.standing.unlinked ? `; ${r.standing.unlinked} sem o atendimento ligado (registros antigos)` : ""}.`}
           </Kpi>
         )}
-        <Kpi
-          id="kpi-recepcao"
-          label="Precisaram da recepção"
-          value={formatRatio(reception!)}
-          rule="Contatos que pediram a recepção pelo menu ou que tiveram a conversa assumida pela recepção ÷ contatos com alguma tentativa ou pedido no período. É por contato (telefone), não por tentativa, e vale para todas as operações."
-        >
-          {r.reception.contactsNeeding} de {r.reception.contactsTotal} contatos.
-        </Kpi>
-      </section>
+        </section>
 
       <section aria-labelledby="etapas" class="mt-4 grid gap-3 lg:grid-cols-3">
         <div class={`${card} lg:col-span-2`}>

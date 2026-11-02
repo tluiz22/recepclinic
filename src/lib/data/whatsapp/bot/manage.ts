@@ -10,7 +10,7 @@ import { describeOpening, isReceptionOpen, nextReceptionOpening } from "../../..
 import { DataError, unwrap } from "../../errors";
 import { activeWaitlistAppointmentIds, endAsAdvanced, joinBlockReason, joinWaitlist, leaveWaitlist } from "../../waitlist/entries";
 import { acceptOffer, declineOffer, MIN_LEAD_MS, type OfferReplyResult, type OfferSender } from "../../waitlist/offers";
-import { pauseForHuman, startFunnel, type HandoffOrigin } from "../conversations";
+import { pauseForHuman, setHandoffSubject, startFunnel, type HandoffOrigin } from "../conversations";
 import type { WaMessage } from "../meta";
 import { sendAppointmentNotice } from "../notices";
 import { parseReminderTap, recordReminderTap } from "../reminders";
@@ -874,19 +874,28 @@ export async function receptionReplyWhen(b: Bot): Promise<string | null | undefi
 }
 
 /** Aviso de transferência com o horário da recepção (cliente, 01/nov/2026): fora do horário, diz quando responde. */
-export async function handoffText(b: Bot): Promise<string> {
+export async function handoffText(b: Bot, lead?: string): Promise<string> {
   // Recesso da clínica (cliente, 01/nov/2026): a mensagem de recesso substitui o aviso comum.
   const recess = await activeRecessMessage(b.db, b.clinicId, b.now, b.clinic.timeZone);
   if (recess) return recess;
-  const base = textFor(b, "handoff", t.HANDOFF);
+  const base = lead ?? textFor(b, "handoff", t.HANDOFF);
   const when = await receptionReplyWhen(b);
   return when === null ? base : `${base} ${t.outsideHoursNotice(when)}`;
 }
 
-export async function handoff(b: Bot, origin: HandoffOrigin): Promise<void> {
-  await say(b, "bot_handoff", await handoffText(b));
-  await pauseForHuman(b.db, b.clinicId, b.phone, { contactId: b.convo.contactId, reason: "requested", origin }, b.now);
-  await askHandoffSubject(b);
+/**
+ * Transferência pedida: o aviso e a pausa. Com o motivo já contado (EA, cliente, 02/nov/2026), ele vira o assunto e
+ * o bot não pergunta de novo; `lead` troca o aviso padrão (ex.: "Não encontrei uma informação segura…").
+ */
+export async function handoff(
+  b: Bot,
+  origin: HandoffOrigin,
+  { subject, lead, infoSessionId }: { subject?: string | null; lead?: string; infoSessionId?: string } = {},
+): Promise<void> {
+  await say(b, "bot_handoff", await handoffText(b, lead));
+  await pauseForHuman(b.db, b.clinicId, b.phone, { contactId: b.convo.contactId, reason: "requested", origin, infoSessionId }, b.now);
+  if (subject?.trim()) await setHandoffSubject(b.db, b.clinicId, b.phone, subject, b.now);
+  else await askHandoffSubject(b);
 }
 
 /**

@@ -184,7 +184,7 @@ export async function startFunnel(
   db: DbClient,
   clinicId: string,
   phone: string,
-  flow: Exclude<FunnelFlow, "handoff">,
+  flow: Exclude<FunnelFlow, "handoff" | "info">,
   metadata: Record<string, unknown> = {},
   now: Date = new Date(),
 ): Promise<string> {
@@ -295,7 +295,7 @@ export function checkHandoff(conversation: Conversation): "active" | "paused" {
  * De onde veio o pedido de recepção (cliente, 30/out/2026): opção do menu, ações do agendamento na entrada, data
  * não encontrada, botão de saída de uma resposta não entendida (C12) ou pedido digitado ("atendente").
  */
-export type HandoffOrigin = "menu" | "entry_actions" | "identity_not_found" | "way_out" | "typed";
+export type HandoffOrigin = "menu" | "entry_actions" | "identity_not_found" | "way_out" | "typed" | "kb_answer";
 
 export async function pauseForHuman(
   db: DbClient,
@@ -305,7 +305,14 @@ export async function pauseForHuman(
     contactId,
     reason,
     origin,
-  }: { contactId: string | null; reason: "agent_took_over" | "requested" | "bot_limit" | "no_availability" | "not_understood"; origin?: HandoffOrigin },
+    infoSessionId,
+  }: {
+    contactId: string | null;
+    reason: "agent_took_over" | "requested" | "bot_limit" | "no_availability" | "not_understood";
+    origin?: HandoffOrigin;
+    /** Dúvida respondida pela base que levou ao pedido (EA): a taxa de resolução conta uma vez só. */
+    infoSessionId?: string;
+  },
   now: Date = new Date(),
 ): Promise<void> {
   const current = await getConversation(db, clinicId, phone);
@@ -328,6 +335,7 @@ export async function pauseForHuman(
           ...(current?.funnelSessionId ? { journey_session_id: current.funnelSessionId } : {}),
           ...(current?.state ? { journey_state: current.state } : {}),
           ...(origin ? { origin } : {}),
+          ...(infoSessionId ? { info_session_id: infoSessionId } : {}),
         },
       },
       now,
@@ -384,6 +392,25 @@ export async function markHandoffSubjectAsked(db: DbClient, clinicId: string, ph
     "Conversa do WhatsApp",
   );
   return row !== null;
+}
+
+/**
+ * Motivo já contado ao bot antes da transferência (EA, cliente, 02/nov/2026): vira o assunto da pausa que acabou de
+ * começar, e a pergunta do assunto fica como feita (não é repetida). Até 300 caracteres; nunca regrava.
+ */
+export async function setHandoffSubject(db: DbClient, clinicId: string, phone: string, text: string, now: Date = new Date()): Promise<void> {
+  const subject = text.trim().slice(0, HANDOFF_SUBJECT_MAX);
+  if (!subject) return;
+  unwrap(
+    await db
+      .from("conversation_state")
+      .update({ handoff_subject: subject, handoff_subject_asked_at: now.toISOString() })
+      .eq("clinic_id", clinicId)
+      .eq("contact_phone", phone)
+      .eq("human_handoff", true)
+      .is("handoff_subject", null),
+    "Conversa do WhatsApp",
+  );
 }
 
 /**

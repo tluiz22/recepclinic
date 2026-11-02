@@ -1,10 +1,11 @@
 import { preparationMessageText } from "../../../preparationMessage";
 import { servicesOf, type BotService } from "./catalog";
-import { go, say, sayPreparationFile, sendList, textFor, type Bot } from "./engine";
+import { go, say, sayPreparationFile, sendList, textFor, welcomeText, type Bot } from "./engine";
 import { pick, type Selection } from "./input";
 import * as t from "./texts";
 import { BOOKING_STATES, handOver, startBooking, startReturn } from "./booking";
 import { handoff, MANAGE_STATES, startManage } from "./manage";
+import { askReceptionReason } from "./knowledge/respond";
 
 // Menus do bot, na estrutura do piloto: Consultas › Marcar consulta / Marcar
 // retorno / Remarcar / Cancelar / Encaixe ou antecipar; Exames › Marcar exame
@@ -43,7 +44,7 @@ const examItems = (b: Bot): Item[] => [{ id: "book_exam", label: "Marcar exame" 
 
 /** Menu principal; clínica sem nada para mostrar recebe o aviso e a recepção assume. */
 export async function showMenu(b: Bot, { withWelcome = false, notUnderstood = false } = {}): Promise<void> {
-  if (withWelcome) await say(b, "bot_welcome", textFor(b, "welcome", t.welcome(b.clinic.label), { clinica: b.clinic.label }));
+  if (withWelcome) await say(b, "bot_welcome", welcomeText(b));
   const items = await mainItems(b);
   // Clínica sem nada para o bot marcar: depois das boas-vindas, a recepção assume (cliente, 11/out/2026).
   if (!items.length) return handOver(b, "bot_nothing_to_book", t.NOTHING_TO_BOOK, "no_service", "no_availability", true);
@@ -72,7 +73,8 @@ export async function handleMenu(b: Bot, selection: Selection): Promise<void> {
   if (choice?.id === "menu_consultations") return showSubmenu(b, "CONSULTAS_MENU");
   if (choice?.id === "menu_exams") return showSubmenu(b, "EXAMES_MENU");
   if (choice?.id === "menu_info") return showInfo(b);
-  if (choice?.id === "menu_reception") return handoff(b, "menu");
+  // Com a base: pergunta o motivo antes, com a recepção a um toque (EA, cliente, 02/nov/2026).
+  if (choice?.id === "menu_reception") return b.features.includes("knowledge_base") ? askReceptionReason(b, "menu") : handoff(b, "menu");
   await showMenu(b, { notUnderstood: true });
 }
 
