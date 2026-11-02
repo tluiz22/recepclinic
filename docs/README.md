@@ -30,6 +30,8 @@
 > - **Piloto (F10, [plano](plano.md)):** clínica piloto criada na produção, WhatsApp conectado, templates em análise
 >   na Meta. Próximo: templates aprovados → configuração → ativação → testes do bot. Depois: lembrete com botões no
 >   staging e etapa B.
+> - **Redesign da Recepção (UX)** ([`redesign-recepcao.md`](redesign-recepcao.md)): design aprovado em 02/nov e
+>   guardado para o futuro; nada implementado. Quando o cliente pedir, começar pela RX1.
 >
 > **Pendências**
 > - **Cliente valida no staging (no fim):** F8.1, F8.2, F8.2b, F8.3, ajuda contextual e menu lateral.

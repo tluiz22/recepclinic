@@ -14,6 +14,9 @@ Propostas: [página de propostas](https://claude.ai/artifact/43h7JwJQhXYhjr8pLXi
 
 ## Decisões (cliente, 30/out/2026)
 
+> **Revisão futura (cliente, 02/nov/2026):** o [redesign da Recepção](redesign-recepcao.md) (RX-D1) substitui M2 e M6
+> quando for implementado (etapa RX6): menu com Meu dia, Agenda, Pacientes e "Mais". Até lá, M2 e M6 valem.
+
 - **M1. Opção 1, lateral clara por tarefa.** Coluna branca à esquerda (~256px), nomes inteiros, ícone em cada item,
   título pequeno em cada grupo, contadores em pílula vermelha. Recusadas: coluna verde (opção 2) e trilho + painel
   (opção 3).
