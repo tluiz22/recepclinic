@@ -10,7 +10,7 @@ import { logError } from "../../log";
 // aqui nunca trava a conversa nem a página; fica no log e em Administração ›
 // Erros, e as Métricas mostram quantas foram (M2, 22/out/2026).
 
-export type FunnelFlow = "booking" | "return_booking" | "exam" | "cancel" | "reschedule" | "handoff";
+export type FunnelFlow = "booking" | "return_booking" | "exam" | "cancel" | "reschedule" | "handoff" | "info";
 
 export type FunnelEvent = {
   sessionId: string;

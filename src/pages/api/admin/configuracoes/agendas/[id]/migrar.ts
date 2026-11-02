@@ -10,12 +10,14 @@ export const POST: APIRoute = async (context) => {
   const id = params.id!;
   const form = await request.formData().catch(() => null);
   const to = formText(form, "para");
+  // Sem nenhum serviço marcado na tela (agenda sem serviços com horário) migra tudo.
+  const serviceIds = form ? form.getAll("servico").map(String) : [];
   const db = createUserClient(request, cookies);
   const back = `/admin/configuracoes/agendas/${id}/migrar?para=${encodeURIComponent(to)}`;
   return runFormAction(
     context,
     async () => {
-      const r = await migrateAgenda(db, id, to, true);
+      const r = await migrateAgenda(db, id, to, true, serviceIds.length ? serviceIds : undefined);
       const left = r.conflicts.length;
       return {
         redirectTo: `/admin/configuracoes/agendas/${id}`,

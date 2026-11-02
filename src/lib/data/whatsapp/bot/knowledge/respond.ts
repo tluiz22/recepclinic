@@ -2,15 +2,17 @@ import { preparationMessageText } from "../../../../preparationMessage";
 import type { KbFlow } from "../../../../knowledge/lists";
 import { matchQuestion, type CompiledKb, type DetectedTerms, type KbEntry } from "../../../../knowledge/match";
 import { publishedKnowledge } from "../../../knowledge/published";
-import { logAbandonment } from "../../conversations";
+import { logAbandonment, WELCOME, type HandoffOrigin } from "../../conversations";
+import { logFunnelEvent } from "../../funnel";
 import { BOOKING_STATES, startBooking, startReturn, type BookingContext } from "../booking";
-import { KnowledgeTakeover, mergeContext, RECEPTION_CONFIRM_KEY, say, sayPreparationFile, sendButtons, sendList, type Bot, type KnowledgeHook } from "../engine";
+import { go, KnowledgeTakeover, mergeContext, RECEPTION_CONFIRM_KEY, say, sayPreparationFile, sendButtons, sendList, tick, type Bot, type KnowledgeHook } from "../engine";
 import { startIdentification } from "../entry";
-import { BACK_TO_MENU_ID, pick, type Selection } from "../input";
-import { askWaitlistType, startManage } from "../manage";
+import { asksForReception, pick, withoutReceptionWords, yesNo, type Selection } from "../input";
+import { askWaitlistType, handoff, startManage } from "../manage";
 import { showMenu, showPreparationChoice, showSubmenu } from "../menus";
 import * as t from "../texts";
 import { CLINICAL_NOTICE, clinicTermsOf, composeAnswer, type KbAnswer, type KbClinicData, type KbContext } from "./answers";
+import type { ServiceCategory } from "../../../config/services";
 import { loadKbClinicData } from "./clinicData";
 import { logError } from "../../../../log";
 
@@ -33,12 +35,29 @@ const PICK_PREFIX = "kb_pick_";
 const NONE_ID = "kb_none";
 const BOOK_PREFIX = "kb_book_";
 
+/**
+ * Evolução do assistente (EA, cliente, 02/nov/2026). Resposta fora de um fluxo: "Resolvido" ou não, pendente no
+ * contexto, e a dúvida vira tentativa no funil (flow "info": started → answered → resolved | escalated |
+ * not_resolved). Pedido de recepção sem motivo: o motivo pendente no contexto.
+ */
+const CONFIRM_KEY = "_kb_confirm";
+export const REASON_KEY = "_reception_reason";
+
+/** De onde veio a dúvida respondida: o motivo de um pedido de recepção, a 1ª mensagem ou o menu. */
+type ConfirmOrigin = "reception" | "first_message" | "menu";
+type Book = { category: ServiceCategory; serviceId?: string };
+type PendingConfirm = { sessionId: string; origin: ConfirmOrigin; handoffOrigin: HandoffOrigin; subject: string };
+type PendingReason = { origin: HandoffOrigin };
+
+/** Mensagem que é o motivo de um pedido de recepção (a resposta vem com "ainda quer falar com a recepção?"). */
+const receptionAsks = new WeakMap<Bot, { origin: HandoffOrigin; subject: string }>();
+
 type Takeover =
   | { kind: "flow"; flow: KbFlow; group: t.Group; typed?: "consultation" | "return_visit" | "exam" }
   | { kind: "reception"; text: string }
   | { kind: "offer_reception" }
   | { kind: "clinical" }
-  | { kind: "book_offer"; text: string; category: "consultation" | "exam" | "return_visit"; serviceId?: string }
+  | { kind: "confirm"; code: string; book?: Book; message: string }
   | { kind: "preparation_list" }
   | { kind: "ambiguous"; options: KbEntry[]; message: string };
 
@@ -132,6 +151,8 @@ async function deliver(b: Bot, session: Session, data: KbClinicData, entry: KbEn
 
 async function send(b: Bot, answer: KbAnswer, entry: KbEntry, terms: DetectedTerms, data: KbClinicData, text: string): Promise<"answered" | KnowledgeTakeover> {
   const kind = `bot_kb_${entry.code.toLowerCase()}`;
+  // Fora de um fluxo (ou no motivo de um pedido de recepção): a resposta e "Resolvido?" no lugar do menu repetido (EA).
+  const confirm = (book?: Book) => new KnowledgeTakeover({ kind: "confirm", code: entry.code, book, message: text } satisfies Takeover);
   switch (answer.kind) {
     case "flow":
       return new KnowledgeTakeover({ kind: "flow", flow: answer.flow, group: groupOf(terms, data, text), typed: typedCategory(terms, data, text) } satisfies Takeover);
@@ -142,14 +163,14 @@ async function send(b: Bot, answer: KbAnswer, entry: KbEntry, terms: DetectedTer
       const exam = data.catalog.services.find((s) => s.id === answer.serviceIds[0])!;
       if (exam.preparationFile) await sayPreparationFile(b, kind, exam.name, exam.preparationFile);
       else await say(b, kind, preparationMessageText(exam.name, exam.preparation!));
-      return "answered";
+      return inFlow(b) ? "answered" : confirm();
     }
     case "text":
-      // Fora de um fluxo, "Marcar" junto da resposta; dentro, só a resposta e o passo de novo.
-      if (answer.book && !inFlow(b)) {
-        return new KnowledgeTakeover({ kind: "book_offer", text: answer.text, category: answer.book.category, serviceId: answer.book.serviceId } satisfies Takeover);
-      }
       await say(b, kind, answer.text);
+      // Fora de um fluxo: "Resolvido?", com "Marcar" quando a resposta leva a uma marcação (o botão traz a recepção).
+      // Cortesia ("obrigado"): só a resposta e o menu, como antes.
+      if (!inFlow(b) && entry.answerType !== "fixed") return confirm(answer.book);
+      // Dentro: só a resposta e o passo de novo.
       if (answer.offerReception) return new KnowledgeTakeover({ kind: "offer_reception" } satisfies Takeover);
       return "answered";
   }
@@ -162,6 +183,203 @@ async function askReception(b: Bot, kind: string, body: string): Promise<void> {
 
 async function leaveFlow(b: Bot): Promise<void> {
   if (inFlow(b) && b.convo.funnelSessionId) await logAbandonment(b.db, b.clinicId, b.convo, "back_to_menu", b.now);
+}
+
+// ---------------------------------------------------------------------------
+// Dúvida respondida: "Resolvido?" e o funil (EA)
+// ---------------------------------------------------------------------------
+
+async function logInfo(b: Bot, sessionId: string, step: string, metadata: Record<string, unknown> = {}): Promise<void> {
+  await logFunnelEvent(b.db, b.clinicId, { sessionId, flow: "info", step, phone: b.phone, contactId: b.convo.contactId, metadata }, tick(b));
+}
+
+const bookId = (book: Book) => `${BOOK_PREFIX}${book.category}${book.serviceId ? `_${book.serviceId}` : ""}`;
+/** "Agendar Atendimento" sem serviço: pergunta o tipo. */
+const BOOK_ANY_ID = `${BOOK_PREFIX}any`;
+const BOOK_ID = /^kb_book_(consultation|return_visit|exam|any)(?:_(.+))?$/;
+const BOOK_TYPES = ["consultation", "return_visit", "exam"] as const;
+
+/** Tipos que a clínica marca pelo bot (serviço ativo no catálogo). */
+async function bookTypes(b: Bot): Promise<(typeof BOOK_TYPES)[number][]> {
+  const services = (await b.catalog()).services;
+  return BOOK_TYPES.filter((category) => services.some((s) => s.category === category));
+}
+
+async function startBookingOf(b: Bot, category: (typeof BOOK_TYPES)[number], serviceId?: string): Promise<void> {
+  if (category === "return_visit") return startReturn(b);
+  return startBooking(b, category, { serviceId });
+}
+
+/** "Agendar Atendimento": um tipo só vai direto; mais de um, Consulta · Retorno · Exame (só os que a clínica tem). */
+async function askBookType(b: Bot): Promise<void> {
+  const types = await bookTypes(b);
+  if (types.length === 1) return startBookingOf(b, types[0]);
+  if (!types.length) return showMenu(b);
+  await sendButtons(b, "bot_kb_book_type", t.KB_BOOK_TYPE_QUESTION, types.map((category) => t.button(bookId({ category }), t.KB_BOOK_TYPE_LABELS[category])));
+}
+
+/** Botões do "Resolvido?": no pedido de recepção, a recepção em 2º; fora dele, o menu (e "Marcar" quando a resposta leva a uma marcação). */
+async function confirmButtons(b: Bot, origin: ConfirmOrigin, book: Book | undefined) {
+  const resolved = t.button(t.KB_CONFIRM_IDS.resolved, t.KB_RESOLVED_LABEL);
+  const reception = b.receptionAvailable ? [t.button(t.KB_CONFIRM_IDS.reception, t.KB_RECEPTION_LABEL)] : [];
+  const menu = t.button(t.KB_CONFIRM_IDS.menu, t.KB_MENU_LABEL);
+  if (origin === "reception") {
+    // Serviço citado na resposta: abre ele; senão, "Agendar Atendimento" pergunta o tipo (cliente, 02/nov/2026).
+    const marcar = book ? [t.button(bookId(book), t.KB_BOOK)] : (await bookTypes(b)).length ? [t.button(BOOK_ANY_ID, t.KB_BOOK)] : [];
+    return [resolved, ...reception, ...marcar];
+  }
+  if (book) return [resolved, t.button(bookId(book), t.KB_BOOK), menu];
+  return [resolved, menu, ...reception];
+}
+
+async function askConfirmation(b: Bot, takeover: Extract<Takeover, { kind: "confirm" }>): Promise<void> {
+  const ask = receptionAsks.get(b);
+  const origin: ConfirmOrigin = ask ? "reception" : b.convo.state === WELCOME ? "first_message" : "menu";
+  const sessionId = crypto.randomUUID();
+  await logInfo(b, sessionId, "started", { code: takeover.code, origin });
+  await logInfo(b, sessionId, "answered");
+  // Respondida na 1ª mensagem: a conversa sai do começo (a próxima mensagem não recebe as boas-vindas de novo).
+  if (b.convo.state === WELCOME) await go(b, "MENU");
+  const pending: PendingConfirm = { sessionId, origin, handoffOrigin: ask?.origin ?? "kb_answer", subject: ask?.subject ?? takeover.message };
+  await mergeContext(b, { [CONFIRM_KEY]: pending });
+  await sendButtons(b, "bot_kb_confirm", origin === "reception" ? t.KB_CONFIRM_AFTER_RECEPTION : t.KB_CONFIRM_QUESTION, await confirmButtons(b, origin, takeover.book));
+}
+
+const RESOLVED_WORDS = /^(?:sim\b|s\b|resolvid[oa]|resolveu|resolve|ajudou|obrigad[oa]|obg|valeu|vlw|ok\b|okay|certo|perfeito|otimo|entendi|beleza|blz)/;
+
+/** Resposta ao "Resolvido?" digitada: true = resolveu; false = não; null = outra coisa (segue o passo). */
+function typedConfirm(selection: Selection): boolean | null {
+  if (selection.id) return null;
+  const text = selection.text.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+  if (/^(?:nao|n)\b/.test(text)) return false;
+  if (RESOLVED_WORDS.test(text) && text.length <= 40) return true;
+  return yesNo(selection);
+}
+
+/** Toque ou resposta ao "Resolvido?". "pass" = outra mensagem (a dúvida fica sem confirmação: inconclusiva). */
+async function handleConfirmReply(b: Bot, pending: PendingConfirm, selection: Selection): Promise<"handled" | "pass"> {
+  await mergeContext(b, { [CONFIRM_KEY]: undefined });
+  const escalate = async () => {
+    await logInfo(b, pending.sessionId, "escalated");
+    if (!b.receptionAvailable) {
+      await say(b, "bot_kb_will_reply", t.willReply(b.clinic.designation));
+      return showMenu(b);
+    }
+    return handoff(b, pending.handoffOrigin, { subject: pending.subject, infoSessionId: pending.sessionId });
+  };
+  if (selection.id === t.KB_CONFIRM_IDS.resolved) {
+    await logInfo(b, pending.sessionId, "resolved");
+    await say(b, "bot_kb_resolved", t.KB_RESOLVED_THANKS);
+    await go(b, WELCOME);
+    return "handled";
+  }
+  if (selection.id === t.KB_CONFIRM_IDS.reception) {
+    await escalate();
+    return "handled";
+  }
+  if (selection.id === t.KB_CONFIRM_IDS.menu) {
+    await showMenu(b);
+    return "handled";
+  }
+  // "Marcar" depois da resposta: a dúvida foi resolvida e a marcação segue pelo fluxo (que conta à parte).
+  if (selection.id?.startsWith(BOOK_PREFIX)) {
+    await logInfo(b, pending.sessionId, "resolved", { via: "book" });
+    return "pass";
+  }
+  // Pediu a recepção de novo: transfere direto (nunca uma barreira).
+  if (b.receptionAvailable && asksForReception(selection)) {
+    await escalate();
+    return "handled";
+  }
+  const answer = typedConfirm(selection);
+  if (answer === true) {
+    await logInfo(b, pending.sessionId, "resolved", { typed: true });
+    await say(b, "bot_kb_resolved", t.KB_RESOLVED_THANKS);
+    await go(b, WELCOME);
+    return "handled";
+  }
+  if (answer === false) {
+    // Veio de um pedido de recepção: transfere. Fora dele, o menu (que tem "Falar com a recepção").
+    if (pending.origin === "reception") {
+      await escalate();
+      return "handled";
+    }
+    await logInfo(b, pending.sessionId, "not_resolved");
+    await showMenu(b);
+    return "handled";
+  }
+  return "pass";
+}
+
+// ---------------------------------------------------------------------------
+// Pedido de recepção: o motivo antes de transferir (EA)
+// ---------------------------------------------------------------------------
+
+/**
+ * Pedido de recepção sem motivo ("atendente" digitado ou a opção do menu): pergunta o motivo, com "Falar com a
+ * recepção" a um toque. Motivo na mesma mensagem ("atendente, quanto custa a consulta?"): vai direto para a base.
+ */
+export async function askReceptionReason(b: Bot, origin: HandoffOrigin, text: string | null = null): Promise<void> {
+  if (text && (await reasonInMessage(b, text))) return handleReceptionReason(b, text, origin);
+  await mergeContext(b, { [REASON_KEY]: { origin } satisfies PendingReason });
+  await sendButtons(b, "bot_reception_reason", t.RECEPTION_REASON_QUESTION, t.RECEPTION_NOW_BUTTONS);
+}
+
+/** O pedido digitado já diz o que a pessoa precisa (e a base sabe responder ou abrir o fluxo). */
+async function reasonInMessage(b: Bot, text: string): Promise<boolean> {
+  const session = sessionOf(b);
+  const rest = withoutReceptionWords(text);
+  if (!session || !/\p{L}{3,}/u.test(rest)) return false;
+  try {
+    const match = matchQuestion(session.kb, rest, clinicTermsOf(await dataOf(b, session)));
+    return match.kind === "answer" && match.entry.answerType !== "fixed" && match.entry.answerType !== "reception";
+  } catch (error) {
+    logError("bot: motivo do pedido de recepção", error, { clinica: b.clinicId });
+    return false;
+  }
+}
+
+export const pendingReasonOf = (b: Bot) => ((b.convo.context ?? {}) as Record<string, unknown>)[REASON_KEY] as PendingReason | undefined;
+
+/**
+ * O motivo contado (EA, cliente, 02/nov/2026). A: a base responde (ou abre o fluxo) e pergunta se resolveu.
+ * B: sem resposta segura, transfere dizendo isso. C: entrada do tipo "recepção" (reclamação, reembolso…), cortesia
+ * ou pergunta clínica: transfere. Transferido, o motivo vira o assunto (não é perguntado de novo).
+ */
+export async function handleReceptionReason(b: Bot, text: string, origin: HandoffOrigin): Promise<void> {
+  const transfer = (lead?: string) => handoff(b, origin, { subject: text, lead });
+  const session = sessionOf(b);
+  if (!session) return transfer();
+  let data: KbClinicData;
+  try {
+    data = await dataOf(b, session);
+  } catch (error) {
+    logError("bot: dados da base de conhecimento", error, { clinica: b.clinicId });
+    return transfer();
+  }
+  b.knowledge!.done = true;
+  const match = matchQuestion(session.kb, withoutReceptionWords(text) || text, clinicTermsOf(data));
+  if (match.kind === "clinical") {
+    await say(b, "bot_kb_clinical", CLINICAL_NOTICE);
+    return transfer();
+  }
+  if (match.kind === "none") {
+    await logUnmatched(b, text);
+    return transfer(t.KB_NO_SAFE_ANSWER);
+  }
+  // Empate: não adivinha.
+  if (match.kind === "ambiguous") return transfer(t.KB_NO_SAFE_ANSWER);
+  if (match.entry.answerType === "fixed" || match.entry.answerType === "reception") return transfer();
+  const answer = composeAnswer(session.kb, match.entry, match.terms, text, data);
+  if (!answer || answer.kind === "reception") return transfer(answer ? undefined : t.KB_NO_SAFE_ANSWER);
+  // No meio de um fluxo: a tentativa para aqui (pediu a recepção) e a conversa volta ao começo.
+  if (inFlow(b)) {
+    if (b.convo.funnelSessionId) await logAbandonment(b.db, b.clinicId, b.convo, "reception_requested", b.now);
+    await go(b, WELCOME);
+  }
+  receptionAsks.set(b, { origin, subject: text });
+  const outcome = await send(b, answer, match.entry, match.terms, data, text);
+  if (outcome instanceof KnowledgeTakeover) await performTakeover(b, outcome.action);
 }
 
 /** A base assumiu a mensagem (o router chama ao pegar o KnowledgeTakeover). */
@@ -194,10 +412,8 @@ export async function performTakeover(b: Bot, action: unknown): Promise<void> {
       await say(b, "bot_kb_clinical", CLINICAL_NOTICE);
       if (b.receptionAvailable) return askReception(b, "bot_reception_confirm", t.RECEPTION_CONFIRM);
       return showMenu(b);
-    case "book_offer": {
-      const id = `${BOOK_PREFIX}${takeover.category}${takeover.serviceId ? `_${takeover.serviceId}` : ""}`;
-      return sendButtons(b, "bot_kb_book_offer", takeover.text, [t.button(id, t.KB_BOOK), t.button(BACK_TO_MENU_ID, "Voltar ao menu")]);
-    }
+    case "confirm":
+      return askConfirmation(b, takeover);
     case "preparation_list":
       await leaveFlow(b);
       return showPreparationChoice(b);
@@ -219,10 +435,14 @@ export async function performTakeover(b: Bot, action: unknown): Promise<void> {
  * entendi", conforme a escolha); "pass" = não era para a base.
  */
 export async function handleKnowledgeReply(b: Bot, selection: Selection): Promise<"handled" | "redispatch" | "pass"> {
-  if (selection.id?.startsWith(BOOK_PREFIX)) {
-    const [category, serviceId] = selection.id.slice(BOOK_PREFIX.length).split("_");
-    if (category === "return_visit") await startReturn(b);
-    else await startBooking(b, category === "exam" ? "exam" : "consultation", { serviceId });
+  const pending = ((b.convo.context ?? {}) as Record<string, unknown>)[CONFIRM_KEY] as PendingConfirm | undefined;
+  if (pending && (await handleConfirmReply(b, pending, selection)) === "handled") return "handled";
+  const book = selection.id?.match(BOOK_ID);
+  if (book) {
+    // "return_visit" tem "_": o id é lido inteiro (antes, o retorno abria a consulta).
+    const [, category, serviceId] = book;
+    if (category === "any") await askBookType(b);
+    else await startBookingOf(b, category as (typeof BOOK_TYPES)[number], serviceId);
     return "handled";
   }
   const context = (b.convo.context ?? {}) as Record<string, unknown>;
@@ -278,8 +498,8 @@ export async function firstMessageAnswer(b: Bot): Promise<(() => Promise<boolean
   const answer = composeAnswer(session.kb, match.entry, match.terms, text, data);
   if (!answer) return undefined;
   return async () => {
-    // Na 1ª mensagem o menu vem logo depois: a resposta sem o "Marcar".
-    const outcome = await send(b, answer.kind === "text" ? { ...answer, book: undefined } : answer, match.entry, match.terms, data, text);
+    // Resposta de texto: "Resolvido?" no lugar do menu (EA); fluxo: abre o fluxo.
+    const outcome = await send(b, answer, match.entry, match.terms, data, text);
     if (outcome === "answered") return true;
     await performTakeover(b, outcome.action);
     return false;

@@ -104,7 +104,7 @@ async function conversation(phone: string, clinicId = f.clinicId) {
 const fresh = (phone: string) =>
   adminClient().from("conversation_state").update({ state: "WELCOME", context: {}, human_handoff: false }).eq("clinic_id", f.clinicId).eq("contact_phone", phone);
 
-const WELCOME = "Olá! 👋 Aqui é da Clínica Bot Entrada.";
+const WELCOME = "Olá! 👋 Aqui é da Clínica Bot Entrada.\n\nSou a assistente virtual e estou aqui para ajudar.\nVocê pode escrever o que precisa ou escolher uma das opções abaixo.";
 const MENU = "Escolha uma opção abaixo (ou digite o número).";
 const ASK_ONE = "Identificamos um agendamento associado a este número. Você deseja tratar desse agendamento?";
 const ASK_MANY = "Encontramos mais de um agendamento associado a este número. Você deseja consultar ou alterar algum deles?";
@@ -450,21 +450,22 @@ describe("robustez", () => {
 
     await adminClient().from("whatsapp_connections").update({ coexistence: true }).eq("clinic_id", f.clinicId);
     try {
-      // Digitado: pede confirmação (cliente, 30/out/2026). "Não" volta ao menu; outra resposta vale para o passo.
+      // Digitado: pergunta o motivo, com a recepção a um toque (EA, 02/nov/2026). "menu" volta ao menu; uma
+      // resposta sem letras vale para o passo; pedir de novo transfere.
       await fresh(P1);
       await say(P1, "oi");
       reply = await say(P1, "Quero falar com a recepção");
-      expect(reply).toMatchObject([{ kind: "buttons", body: "Você quer falar com a recepção? A conversa passa para a nossa equipe." }]);
-      expect(titles(reply)).toEqual(["Sim", "Não"]);
+      expect(reply).toMatchObject([{ kind: "buttons", body: expect.stringContaining("Poderia me contar brevemente o que você precisa?") }]);
+      expect(titles(reply)).toEqual(["Falar com a recepção"]);
       expect((await conversation(P1)).human_handoff).toBe(false);
-      reply = await say(P1, { id: "reception_no" });
-      expect(reply.map((m) => m.body)).toEqual(["Tudo bem, seguimos por aqui.", MENU]);
+      reply = await say(P1, "menu");
+      expect(reply.map((m) => m.body)).toEqual([MENU]);
       expect((await conversation(P1)).state).toBe("MENU");
 
       await fresh(P1);
       await say(P1, "oi");
       await say(P1, "atendente");
-      reply = await say(P1, "sim");
+      reply = await say(P1, "atendente");
       expect(reply[0].body).toContain("Vou te transferir para a recepção");
       expect(await conversation(P1)).toMatchObject({ state: "HUMAN_HANDOFF", human_handoff: true });
       expect(await lastHandoff()).toMatchObject({ step: "requested", metadata: { origin: "typed", journey_state: "ENTRY_ASK" } });

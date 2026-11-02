@@ -60,6 +60,11 @@ export async function listClinicsAccess(db: DbClient): Promise<ClinicAccessSumma
  */
 export async function setClinicFeatures(db: DbClient, clinicId: string, keys: FeatureKey[]): Promise<void> {
   const unique = [...new Set(keys)];
+  // "Perguntas frequentes no bot" vem junto quando o "Bot de WhatsApp" é ligado (EA, cliente, 02/nov/2026);
+  // depois, o Suporte pode desligar o item sozinho.
+  if (unique.includes("whatsapp_bot") && !unique.includes("knowledge_base") && !(await getClinicFeatures(db, clinicId)).includes("whatsapp_bot")) {
+    unique.push("knowledge_base");
+  }
   const missing = missingDependencies(unique);
   if (missing.length) {
     const fields = Object.fromEntries(missing.map(({ feature, needs }) => [feature, `Depende de ${needs}`]));

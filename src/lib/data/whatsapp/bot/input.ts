@@ -34,6 +34,18 @@ export function asksForReception(selection: Selection): boolean {
   return text.length > 0 && text.length <= RECEPTION_MAX_LENGTH && RECEPTION_WORDS.test(text);
 }
 
+/** Pedido de recepção sem as palavras do pedido ("atendente, quanto custa?" → "quanto custa?"): o motivo, se houver (EA). */
+const RECEPTION_PHRASES =
+  /\b(?:(?:quero|queria|gostaria de|preciso|posso|pode)\s+)?(?:falar\s+com\s+(?:o|a|um|uma)?\s*)?(?:atendente|recepcao|recepcionista|secretaria|humano|alguem|uma pessoa|a clinica|pessoa de verdade)\b/g;
+
+export function withoutReceptionWords(text: string): string {
+  return normalized(text)
+    .replace(RECEPTION_PHRASES, " ")
+    .replace(/^[\s,.;:!?-]+|[\s,;:-]+$/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 /** "Voltar ao menu" (toque), "0" ou "menu" digitados. */
 export function isBackToMenu(selection: Selection): boolean {
   if (selection.id === BACK_TO_MENU_ID) return true;

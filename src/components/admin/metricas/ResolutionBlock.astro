@@ -1,0 +1,132 @@
+---
+// Resolução sem a recepção (EA, cliente, 02/nov/2026; decisão 9 do docs/evolucao-assistente.md): no topo do
+// Agendamento digital, todas as necessidades do período (não depende do filtro de operação), com a taxa, os
+// desfechos, a evolução e a tabela por tipo. Regra em src/lib/data/botResolution.ts.
+import type { ResolutionReport } from "../../../lib/data/botResolution";
+import { compareRates, formatRate, formatRatio, ratio, sumByBucket, type Bucket } from "../../../lib/metricsRules";
+import { metricas } from "../../../lib/ajuda/metricas";
+import HelpTip from "../ui/HelpTip.astro";
+import { previousRate, rateDelta } from "./compare";
+import RateLine from "./RateLine.astro";
+
+interface Props {
+  report: ResolutionReport;
+  previous: ResolutionReport | null;
+  prevText: string;
+  buckets: Bucket[];
+  grouping: "day" | "week";
+}
+
+const { report: r, previous, prevText, buckets, grouping } = Astro.props;
+const main = ratio(r.resolved, r.eligible);
+const cmp = previous ? compareRates(main, ratio(previous.resolved, previous.eligible)) : null;
+const delta = cmp ? rateDelta(cmp, "up") : null;
+
+const PARTS = [
+  { key: "resolved", label: "Resolvidas pelo assistente", color: "#0b7a62", value: r.resolved },
+  { key: "human", label: "Com a recepção", color: "#3a7bc8", value: r.human },
+  { key: "inconclusive", label: "Inconclusivas", color: "#e0a106", value: r.inconclusive },
+  { key: "in_progress", label: "Em andamento (fora da taxa)", color: "#c5d3ce", value: r.inProgress },
+] as const;
+const total = Math.max(r.total, 1);
+
+const series = sumByBucket(r.byDay, buckets, ["resolved", "eligible"]);
+const points = buckets.map((b, i) => ({ label: b.label, n: series[i].resolved, base: series[i].eligible, partial: b.partial }));
+const types = r.byType.filter((t) => t.total > 0);
+
+const card = "flex min-w-0 flex-col gap-3 rounded-xl border border-line bg-white px-4 py-4 sm:px-5";
+const h2 = "font-display text-lg leading-tight font-bold text-ink";
+const sub = "text-sm leading-relaxed text-ink-soft";
+const DELTA = { good: "bg-conf-100 text-conf-800", bad: "bg-ns-100 text-ns-800", flat: "bg-canvas-deep text-ink-mid" };
+const rate = (n: number | null) => (n === null ? "—" : formatRate(n));
+---
+
+<section aria-labelledby="resolucao" class={`${card} mt-4`}>
+  <div class="flex flex-col gap-1">
+    <HelpTip subject="Resolução sem a recepção" text={metricas.dicas.resolucao} id="resolucao-ajuda">
+      <h2 id="resolucao" class={`${h2} scroll-mt-16`}>Resolução sem a recepção</h2>
+    </HelpTip>
+    <p class={sub}>Todas as necessidades do período (marcar, remarcar, cancelar, dúvidas e pedidos de recepção); o filtro de operação não muda este bloco.</p>
+  </div>
+
+  <div class="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)]">
+    <div class="flex flex-col gap-2">
+      <span class="font-display text-[38px] leading-none font-bold text-ink tabular-nums" data-testid="taxa-resolucao">{formatRatio(main)}</span>
+      <span class="text-[14.5px] font-semibold text-ink-mid">resolvidas pelo assistente</span>
+      {
+        (delta || cmp) && (
+          <div class="flex flex-wrap items-center gap-x-2 gap-y-1">
+            {delta && <span class={`inline-flex items-center rounded-full px-2 py-0.5 text-[13px] font-bold ${DELTA[delta.tone]}`}>{delta.text}</span>}
+            {cmp && <span class="text-[13.5px] leading-snug text-ink-soft">{previousRate(cmp, prevText)}</span>}
+          </div>
+        )
+      }
+      {/* Base pequena: o número grande já é "7 de 12". */}
+      {(main.enough || r.inProgress > 0) && (
+        <span class={sub}>
+          {main.enough ? `${r.resolved} de ${r.eligible} ${r.eligible === 1 ? "necessidade" : "necessidades"}` : ""}
+          {r.inProgress ? `${main.enough ? "; " : ""}${r.inProgress} em andamento` : ""}.
+        </span>
+      )}
+    </div>
+
+    <div class="flex flex-col gap-2.5">
+      <div class="flex h-3 w-full gap-[2px] overflow-hidden rounded-[4px]" aria-hidden="true">
+        {PARTS.filter((p) => p.value > 0).map((p) => <span class="block h-3" style={`width:${(p.value / total) * 100}%;background:${p.color}`} title={`${p.label}: ${p.value}`} />)}
+      </div>
+      <ul class="grid grid-cols-1 gap-x-4 gap-y-1.5 text-[14.5px] min-[520px]:grid-cols-2">
+        {
+          PARTS.map((p) => (
+            <li class="flex items-center justify-between gap-2">
+              <span class="inline-flex items-center gap-2">
+                <span class="h-3 w-3 shrink-0 rounded-[3px]" style={`background:${p.color}`} />
+                {p.label}
+              </span>
+              <b class="tabular-nums">{p.value}</b>
+            </li>
+          ))
+        }
+      </ul>
+      {r.unconfirmed > 0 && <p class={sub}>{r.unconfirmed} {r.unconfirmed === 1 ? "dúvida respondida ficou" : "dúvidas respondidas ficaram"} sem o "Resolvido" (contam como inconclusivas).</p>}
+    </div>
+  </div>
+
+  {
+    points.length > 1 && (
+      <div class="flex flex-col gap-1">
+        <h3 class="text-[15px] font-bold text-ink">Evolução por {grouping === "week" ? "semana" : "dia"}</h3>
+        <RateLine title={`Resolução sem a recepção por ${grouping === "week" ? "semana" : "dia"}`} points={points} average={main.rate} color="#0b7a62" />
+      </div>
+    )
+  }
+
+  <div data-scroll-region="Resolução por tipo" class="overflow-x-auto" tabindex="0">
+    <table class="w-full min-w-[520px] text-left text-[14.5px]">
+      <caption class="sr-only">Resolução sem a recepção por tipo de necessidade</caption>
+      <thead>
+        <tr class="border-b border-line text-[13px] font-semibold text-ink-soft">
+          <th scope="col" class="py-2 pr-3 font-semibold">Tipo</th>
+          <th scope="col" class="px-2 py-2 text-right font-semibold">Total</th>
+          <th scope="col" class="px-2 py-2 text-right font-semibold">Resolvidas</th>
+          <th scope="col" class="px-2 py-2 text-right font-semibold">Recepção</th>
+          <th scope="col" class="px-2 py-2 text-right font-semibold">Inconclusivas</th>
+          <th scope="col" class="py-2 pl-2 text-right font-semibold">Taxa</th>
+        </tr>
+      </thead>
+      <tbody>
+        {
+          types.map((t) => (
+            <tr class="border-b border-[#e6ecea] last:border-b-0">
+              <th scope="row" class="py-2 pr-3 font-semibold text-ink">{t.label}</th>
+              <td class="px-2 py-2 text-right tabular-nums">{t.total}</td>
+              <td class="px-2 py-2 text-right tabular-nums">{t.resolved}</td>
+              <td class="px-2 py-2 text-right tabular-nums">{t.human}</td>
+              <td class="px-2 py-2 text-right tabular-nums">{t.inconclusive}</td>
+              <td class="py-2 pl-2 text-right font-bold tabular-nums">{rate(t.rate)}</td>
+            </tr>
+          ))
+        }
+      </tbody>
+    </table>
+  </div>
+</section>

@@ -1,5 +1,8 @@
 # Base de Conhecimento Global do bot (BC)
 
+> **Correção do cliente (02/nov/2026):** a BC já está na produção, em uso na clínica piloto; com a evolução do
+> assistente ([`evolucao-assistente.md`](evolucao-assistente.md)), vem ligada por padrão com o Bot de WhatsApp.
+>
 > **Retomar daqui (31/out/2026).** Etapas 1 e 2 aprovadas (catálogo em
 > [`base-de-conhecimento-catalogo.md`](base-de-conhecimento-catalogo.md)). Etapa 3 na branch `base-conhecimento`
 > (Etapas 3 e 4) juntada na `main` e no **staging** (migração aplicada em 31/out; nada publicado, item

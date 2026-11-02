@@ -169,4 +169,20 @@ describe("horários livres da Agenda › Dia (uma linha por horário)", () => {
   it("junta janelas que se sobrepõem", () => {
     expect(rows({ windows: [morning, { locationId: "loc-b", startTime: "11:00", endTime: "14:00" }] })).toEqual(["08:00", "09:00", "10:00", "11:00", "12:00", "13:00"]);
   });
+
+  it("o passo é a duração do serviço de cada janela", () => {
+    const windows = [
+      { locationId: "loc-a", startTime: "13:00", endTime: "13:45", stepMinutes: 15 },
+      { locationId: "loc-a", startTime: "13:45", endTime: "15:15", stepMinutes: 45 },
+    ];
+    expect(rows({ windows })).toEqual(["13:00", "13:15", "13:30", "13:45", "14:30"]);
+  });
+
+  it("janelas sobrepostas: vale o menor passo", () => {
+    const windows = [
+      { locationId: "loc-a", startTime: "08:00", endTime: "10:00", stepMinutes: 60 },
+      { locationId: "loc-a", startTime: "09:00", endTime: "10:00", stepMinutes: 30 },
+    ];
+    expect(rows({ windows })).toEqual(["08:00", "09:00", "09:30"]);
+  });
 });

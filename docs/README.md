@@ -7,22 +7,23 @@
 > tela mudar). Falta informar o WhatsApp do suporte (Sistema › Suporte), se ainda não foi. Detalhes em
 > [`ajuda-contextual.md`](ajuda-contextual.md), fim. Cliente vai pedir novos ajustes.
 >
-> **Em produção (cliente, 02/nov):** `d6bc2d6` (1 migração): data sem barras com confirmação, local com link do Maps após a
-> presença e Agendamento digital como item próprio da matriz. Antes: recesso, Base de Conhecimento (ligada na clínica
-> piloto, WhatsApp do suporte informado), Sim/Não em botões, encaixe com tipo. Captura `bloquear` refeita
-> (`d47f445`). Detalhe no [`historico.md`](historico.md) ("Recesso").
+> **Em produção (cliente, 02/nov):** `c9418ac`: evolução do assistente (migração `evolucao_do_assistente`), sobre o
+> `93ab8cd` (redesign da Recepção, Central de Ajuda atualizada, Migrar de agenda, linhas "Livre"). Detalhe no [`producao.md`](producao.md) (Publicações).
 >
 > **Ambientes**
-> - **Produção** (`app.recepclinic.com.br`, branch `producao`) = `main` em `d47f445` (ver acima). Fluxo em [`producao.md`](producao.md).
+> - **Produção** (`app.recepclinic.com.br`, branch `producao`) = `main` em `c9418ac` (ver acima). Fluxo em [`producao.md`](producao.md).
 > - **Staging** (`teste.recepclinic.com.br`, branch `main`): produção + redesign da Recepção (RX1 a RX9, sem migração) +
 >   cartão do Asaas (`ASAAS_PREVIEW=1`) + Base de Conhecimento do bot (migração aplicada).
 >   Roteiros em [`staging.md`](staging.md).
-> - **Branch `faturamento`** (só local, sem push): todo código do financeiro. Tem a `main` até `d6bc2d6`; atualizar
+> - **Branch `faturamento`** (só local, sem push): todo código do financeiro. Tem a `main` até `76d2688` (merge de 02/nov); atualizar
 >   só quando o cliente pedir (cliente, 01/nov).
 >
 > **Frentes**
 > - **Ajustes da produção (C1–C16) e revisão da jornada do bot:** todos na produção; nada pendente. Decisões da
 >   revisão no [`historico.md`](historico.md) (busca "Revisão da jornada do bot").
+> - **Evolução do assistente** ([`evolucao-assistente.md`](evolucao-assistente.md)): texto livre na entrada, motivo antes
+>   da recepção e taxa de resolução sem a recepção. **Na produção (02/nov, `c9418ac`)**, migração aplicada no staging
+>   e na produção. Próximo: acompanhar a taxa e as perguntas não reconhecidas da BC.
 > - **Faturamento do SaaS:** F12.1 e F12.2 validadas no local. Próximo: **F12.2b** (aceite do contrato e aviso de 30
 >   dias); texto do contrato com o advogado. Retomar pelo `planejamento-faturamento-saas.md` **na branch**.
 > - **NFS-e pelo Asaas** (`planejamento-nfse-asaas.md`, seção 13): N0; formulário BaaS enviado (30/out). Aguarda
