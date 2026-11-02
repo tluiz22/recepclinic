@@ -1780,9 +1780,6 @@ isOneToOne: false
 "change_group_session":
 { Args: { "p_agenda_id": string,"p_appointment_id": string,"p_scheduled_at": string,"p_service_id": string,"p_trail"?: Json }; Returns: undefined
                            },
-"migrate_agenda":
-{ Args: { "p_apply"?: boolean,"p_from": string,"p_to": string }; Returns: Json
-                           },
 "clinic_actor_labels":
 { Args: { "p_clinic_id": string,"p_user_ids": (string)[] }; Returns: {
               "is_support": boolean,"name": string,"roles": (Database["public"]['Enums']["clinic_role"])[],"user_id": string
@@ -1913,6 +1910,9 @@ isOneToOne: false
 { Args: { "p_agenda_ids": (string)[],"p_clinic_id": string,"p_end": string,"p_location_ids"?: (string)[],"p_now"?: string,"p_start": string }; Returns: {
               "agenda_id": string,"appointment_id": string,"has_return": boolean,"has_upcoming": boolean,"last_date": string,"patient_id": string,"scheduled_at": string,"status": string
             }[]
+                           },
+"migrate_agenda":
+{ Args: { "p_apply"?: boolean,"p_from": string,"p_to": string }; Returns: Json
                            },
 "nfse_delivery_follow_retry":
 { Args: { "p_error": string,"p_message_id": string,"p_previous_message_id": string,"p_sent": boolean }; Returns: undefined
