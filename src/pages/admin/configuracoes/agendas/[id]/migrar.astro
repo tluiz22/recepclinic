@@ -20,11 +20,23 @@ const targets = agendas.filter((a) => a.isActive && a.id !== from.id);
 const to = targets.find((a) => a.id === Astro.url.searchParams.get("para"));
 const back = { href: `/admin/configuracoes/agendas/${from.id}`, label: from.name };
 
+// Por serviço (cliente, 02/nov/2026): a nova agenda pode não atender todos os serviços da antiga. A pessoa marca os que
+// migram (já vêm marcados os que a nova atende); o resto fica na antiga.
+let services: AgendaMigration["services"] = [];
+let selected: string[] | undefined;
 let preview: AgendaMigration | null = null;
 let problem = "";
 if (to) {
   try {
-    preview = await migrateAgenda(db, from.id, to.id, false);
+    services = (await migrateAgenda(db, from.id, to.id, false, [])).services;
+    const asked = Astro.url.searchParams.getAll("servico");
+    const chosen = Astro.url.searchParams.has("ver") ? asked : services.filter((x) => x.target_attends).map((x) => x.id);
+    selected = services.length > 0 ? chosen : undefined;
+    if (selected === undefined || (Astro.url.searchParams.has("ver") && selected.length > 0)) {
+      preview = await migrateAgenda(db, from.id, to.id, false, selected);
+    } else if (Astro.url.searchParams.has("ver")) {
+      problem = "Marque pelo menos um serviço para migrar.";
+    }
   } catch (error) {
     if (!(error instanceof DataError)) throw error;
     problem = describeDataError(error);
@@ -36,7 +48,7 @@ const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one :
 <ConfigShell current="agendas" title={`Migrar ${from.name}`} back={back}>
   <div class="flex max-w-3xl flex-col gap-4">
     <p class="text-[15px] text-ink">
-      Passa os <strong>horários de atendimento</strong> e os <strong>atendimentos de hoje em diante</strong> desta agenda para outra. O histórico
+      Passa os <strong>horários de atendimento</strong> e os <strong>atendimentos de hoje em diante</strong> desta agenda para outra, dos serviços que você escolher (a nova agenda precisa atender o serviço). O histórico
       (atendimentos que já passaram ou foram cancelados) fica nesta agenda. O paciente não recebe aviso: dia, hora e local não mudam.
     </p>
 
@@ -52,6 +64,32 @@ const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one :
               <option value={a.id} selected={a.id === to?.id}>{a.name}</option>
             ))}
           </select>
+          <div><button type="submit" class={SECONDARY_BUTTON}>Escolher os serviços</button></div>
+        </form>
+      )
+    }
+
+    {
+      to && services.length > 0 && (
+        <form method="GET" class={`${CARD} flex flex-col gap-3 p-4 sm:p-5`} aria-label="Serviços a migrar">
+          <input type="hidden" name="para" value={to.id} />
+          <input type="hidden" name="ver" value="1" />
+          <fieldset class="flex flex-col gap-2">
+            <legend class="text-[15px] font-semibold text-ink">Quais serviços migram?</legend>
+            {services.map((x) => (
+              <label class="flex min-h-11 items-start gap-2.5 text-[15px] text-ink">
+                <input type="checkbox" name="servico" value={x.id} checked={selected?.includes(x.id)} disabled={!x.target_attends} class="mt-1 h-5 w-5" />
+                <span>
+                  <strong>{x.name}</strong>
+                  <span class="block text-sm text-ink-soft">
+                    {plural(x.windows, "horário", "horários")}, {plural(x.appointments, "atendimento futuro", "atendimentos futuros")}
+                    {x.target_attends ? "" : ` · ${to.name} não atende este serviço; fica em ${from.name}`}
+                  </span>
+                </span>
+              </label>
+            ))}
+          </fieldset>
+          <p class="text-sm text-ink-soft">O horário "de todos os serviços" só migra quando todos os serviços migram; o que fica continua em {from.name}.</p>
           <div><button type="submit" class={SECONDARY_BUTTON}>Ver o que será migrado</button></div>
         </form>
       )
@@ -82,6 +120,7 @@ const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one :
           <p class="text-sm text-ink-soft">Para desfazer, migre de volta. Cada atendimento guarda a troca no Histórico.</p>
           <form method="POST" action={`/api/admin/configuracoes/agendas/${from.id}/migrar`} class="flex flex-wrap gap-2 border-t border-[#e6ecea] pt-4">
             <input type="hidden" name="para" value={to.id} />
+            {selected?.map((id) => <input type="hidden" name="servico" value={id} />)}
             <button type="submit" class={PRIMARY_BUTTON} data-sending-label="Migrando…">Migrar para {to.name}</button>
             <a href={back.href} class={SECONDARY_BUTTON}>Cancelar</a>
           </form>

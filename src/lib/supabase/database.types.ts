@@ -1912,7 +1912,7 @@ isOneToOne: false
             }[]
                            },
 "migrate_agenda":
-{ Args: { "p_apply"?: boolean,"p_from": string,"p_to": string }; Returns: Json
+{ Args: { "p_apply"?: boolean,"p_from": string,"p_services"?: (string)[],"p_to": string }; Returns: Json
                            },
 "nfse_delivery_follow_retry":
 { Args: { "p_error": string,"p_message_id": string,"p_previous_message_id": string,"p_sent": boolean }; Returns: undefined

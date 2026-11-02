@@ -248,16 +248,25 @@ export type AgendaMigration = {
   series: number;
   appointments: number;
   conflicts: { id: string; scheduled_at: string; patient: string }[];
+  /** Serviços da agenda de origem com horário, atendimento futuro ou série, e se a de destino os atende. */
+  services: { id: string; name: string; windows: number; appointments: number; series: number; target_attends: boolean }[];
   applied: boolean;
 };
 
 /**
  * Migrar de agenda (cliente, 02/nov/2026): os horários e os atendimentos futuros passam de `from` para `to`; o
- * histórico fica. `apply = false` só conta (prévia). Só o Administrador (o banco confere). Atendimento que
+ * histórico fica; com `serviceIds`, só o que é desses serviços (por serviço, 02/nov/2026). `apply = false` só conta (prévia). Só o Administrador (o banco confere). Atendimento que
  * cairia sobre outro já marcado na nova agenda não migra e volta em `conflicts`; exame não conflita.
  */
-export async function migrateAgenda(db: DbClient, from: string, to: string, apply: boolean): Promise<AgendaMigration> {
-  const { data, error } = await db.rpc("migrate_agenda", { p_from: from, p_to: to, p_apply: apply });
+export async function migrateAgenda(
+  db: DbClient,
+  from: string,
+  to: string,
+  apply: boolean,
+  /** Só estes serviços migram; `[]` não migra nada e só traz a lista de serviços; sem o campo, tudo. */
+  serviceIds?: string[],
+): Promise<AgendaMigration> {
+  const { data, error } = await db.rpc("migrate_agenda", { p_from: from, p_to: to, p_apply: apply, ...(serviceIds ? { p_services: serviceIds } : {}) });
   if (error) {
     const message = (error as { message?: string }).message ?? "";
     if (message.startsWith("service_not_in_agenda:")) {

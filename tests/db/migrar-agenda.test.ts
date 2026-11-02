@@ -27,6 +27,20 @@ describe("migrar de agenda", () => {
     expect(await codeOf(() => migrateAgenda(asDb(admin), ids.agendaDra, ids.agendaDra2, false))).toBe("invalid");
   });
 
+  it("por serviço: só o escolhido migra e o resto fica", async () => {
+    const { ids, admin, clinicId } = fixture;
+    const a = asDb(admin);
+    const list = await migrateAgenda(a, ids.agendaDra, ids.agendaDra2, false, []);
+    expect(list.appointments).toBe(0);
+    expect(list.services.find((x) => x.id === ids.retorno)).toMatchObject({ target_attends: false, windows: 1 });
+    // Retorno não é atendido na nova agenda: escolher só a Consulta não recusa (o horário de Retorno fica).
+    expect(await codeOf(() => migrateAgenda(a, ids.agendaDra, ids.agendaDra2, true, [ids.retorno]))).toBe("invalid");
+    expect((await migrateAgenda(a, ids.agendaDra, ids.agendaDra2, false, [ids.consulta])).windows).toBe(0);
+    const { count } = await adminClient().from("availability_windows").select("id", { count: "exact", head: true }).eq("agenda_id", ids.agendaDra).eq("service_id", ids.retorno);
+    expect(count).toBe(1);
+    void clinicId;
+  });
+
   it("conta na prévia e migra horários e atendimentos, deixando o conflito", async () => {
     const { ids, admin, clinicId } = fixture;
     const a = asDb(admin);
