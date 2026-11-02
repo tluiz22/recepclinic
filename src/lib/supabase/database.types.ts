@@ -1780,6 +1780,9 @@ isOneToOne: false
 "change_group_session":
 { Args: { "p_agenda_id": string,"p_appointment_id": string,"p_scheduled_at": string,"p_service_id": string,"p_trail"?: Json }; Returns: undefined
                            },
+"migrate_agenda":
+{ Args: { "p_apply"?: boolean,"p_from": string,"p_to": string }; Returns: Json
+                           },
 "clinic_actor_labels":
 { Args: { "p_clinic_id": string,"p_user_ids": (string)[] }; Returns: {
               "is_support": boolean,"name": string,"roles": (Database["public"]['Enums']["clinic_role"])[],"user_id": string

@@ -1,6 +1,6 @@
 import type { Enums } from "../../supabase/database.types";
 import type { DbClient } from "../clients";
-import { cleanText, DataError, unwrap, unwrapOne, Validation } from "../errors";
+import { cleanText, DataError, fromDbError, unwrap, unwrapOne, Validation } from "../errors";
 
 // Agendas (D2): de um profissional ou da equipe (ex.: "Exames"), e o
 // acesso de cada membro a elas (D6 revista). A listagem já vem filtrada pelo
@@ -241,4 +241,34 @@ export async function setMemberAgendaAccess(
     );
   }
   return getMemberAgendaAccess(db, clinicId, userId);
+}
+
+export type AgendaMigration = {
+  windows: number;
+  series: number;
+  appointments: number;
+  conflicts: { id: string; scheduled_at: string; patient: string }[];
+  applied: boolean;
+};
+
+/**
+ * Migrar de agenda (cliente, 02/nov/2026): os horários e os atendimentos futuros passam de `from` para `to`; o
+ * histórico fica. `apply = false` só conta (prévia). Só o Administrador (o banco confere). Atendimento que
+ * cairia sobre outro já marcado na nova agenda não migra e volta em `conflicts`; exame não conflita.
+ */
+export async function migrateAgenda(db: DbClient, from: string, to: string, apply: boolean): Promise<AgendaMigration> {
+  const { data, error } = await db.rpc("migrate_agenda", { p_from: from, p_to: to, p_apply: apply });
+  if (error) {
+    const message = (error as { message?: string }).message ?? "";
+    if (message.startsWith("service_not_in_agenda:")) {
+      throw new DataError(
+        "invalid",
+        "Agenda: serviço não atendido na nova agenda",
+        { to: `A nova agenda ainda não atende: ${message.slice("service_not_in_agenda:".length).trim()}. Marque a agenda em Serviços e tente de novo.` },
+        { cause: error },
+      );
+    }
+    throw fromDbError(error, "Agenda");
+  }
+  return data as unknown as AgendaMigration;
 }

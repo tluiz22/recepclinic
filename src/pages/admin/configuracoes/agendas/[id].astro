@@ -156,6 +156,15 @@ const agendaIssues = setup?.issues.agendas.get(id!) ?? [];
         <a href={back.href} class={SECONDARY_BUTTON}>Cancelar</a>
       </div>
     </form>
+    {
+      !isNew && agenda!.isActive && agendas.some((a) => a.isActive && a.id !== agenda!.id) && (
+        <section class={`${CARD} flex flex-col gap-2 p-4 sm:p-5`} aria-label="Migrar para outra agenda">
+          <h2 class="font-display text-[19px] font-bold text-ink">Migrar para outra agenda</h2>
+          <p class={HINT}>Trocou a agenda de um serviço? Passe os horários e os atendimentos futuros desta agenda para a nova, de uma vez.</p>
+          <div><a href={`/admin/configuracoes/agendas/${agenda!.id}/migrar`} class={SECONDARY_BUTTON}>Migrar horários e atendimentos</a></div>
+        </section>
+      )
+    }
     {!isNew && <ActiveToggle action={action} isActive={agenda!.isActive} what="a agenda" />}
   </div>
 

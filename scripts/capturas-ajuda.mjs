@@ -43,7 +43,7 @@ export const CAPTURAS = [
   ["config-locais", "/admin/configuracoes/locais", ["Novo local"], []],
   ["config-agendas", "/admin/configuracoes/agendas", ["Nova agenda"], []],
   ["config-servicos", "/admin/configuracoes/servicos", ["Novo serviço"], []],
-  ["config-horarios", "/admin/configuracoes/horarios", [], ["#agenda"]],
+  ["config-horarios", "/admin/configuracoes/horarios?agenda=67ded4dd-3f96-45c8-aac3-e4b27cd69a7e", [], ["#agenda"]],
   ["config-feriados", "/admin/configuracoes/feriados", ["Adicionar"], []],
   ["config-convenios", "/admin/configuracoes/convenios", ["Novo plano"], []],
   ["config-lembretes", "/admin/configuracoes/lembretes", [], []],
