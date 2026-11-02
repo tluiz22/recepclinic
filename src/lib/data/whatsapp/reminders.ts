@@ -131,7 +131,7 @@ export type ResendOutcome = "sent" | "failed" | "no_template" | "not_connected" 
 
 export const RESEND_MESSAGES: Record<ResendOutcome, { text: string; ok: boolean }> = {
   sent: { text: "Lembrete enviado.", ok: true },
-  failed: { text: "O lembrete não foi enviado: o WhatsApp recusou o envio. Veja a trilha do atendimento.", ok: false },
+  failed: { text: "O lembrete não foi enviado: o WhatsApp recusou o envio. Veja o histórico do atendimento.", ok: false },
   no_template: { text: "O lembrete não foi enviado: o template do lembrete não está aprovado.", ok: false },
   not_connected: { text: "O lembrete não foi enviado: o WhatsApp da clínica não está conectado.", ok: false },
   not_enabled: { text: "O lembrete não está liberado para a clínica.", ok: false },

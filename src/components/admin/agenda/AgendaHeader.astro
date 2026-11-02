@@ -7,11 +7,18 @@
 // e a busca; no celular, a agenda e a busca ficam recolhidas. De 640 a
 // 1279px, a agenda e a busca vão para a segunda linha da barra (regressão de
 // 18/out, REG-01; cliente, 19/out/2026); numa linha só a partir de 1280px.
+// RX5 do redesign da Recepção (cliente, 02/nov/2026, RX-D6): no alto, Bloquear, "Mais" (Bloqueios, Buscar paciente e
+// Relatório do dia) e "+ Marcar consulta" em destaque; a busca de paciente sai da barra e vira item do "Mais"
+// (a tela da busca mantém o campo).
+// Opção B (cliente, 02/nov/2026): uma linha só, como no protótipo: ‹ Hoje › (slot "nav"), o dia como título,
+// Dia/Semana/Mês e, à direita, Bloquear, Mais e "+ Marcar consulta". A escolha da agenda (com mais de uma) e a busca
+// (na tela da busca) ficam numa segunda linha.
 import { currentPath, withReturn } from "../../../lib/returnPath";
 import Icon from "../Icon.astro";
 import Button from "../ui/Button.astro";
+import MoreMenu from "../ui/MoreMenu.astro";
 import SegmentedControl from "../ui/SegmentedControl.astro";
-import { CONTROL } from "../ui/styles";
+import { CONTROL, menuItemClass } from "../ui/styles";
 import { ALL_AGENDAS } from "../../../lib/agendaChoice";
 
 interface Props {
@@ -22,7 +29,7 @@ interface Props {
   date: string;
   agendas: { id: string; name: string }[];
   selectedAgendaId: string | null;
-  /** Linha abaixo do título (ex.: a data por extenso e quantos atendimentos). */
+  /** Título da linha (o dia, a semana ou o mês). */
   subtitle?: string;
   /** Na tela da busca: a tela da Agenda de onde a busca saiu (o "Voltar" dela). */
   returnTo?: string | null;
@@ -40,90 +47,76 @@ const here = currentPath(Astro.url);
 // A busca volta para a tela de onde saiu (teste do redesign, NAV-07, 16/out/2026);
 // uma busca nova feita na própria tela da busca mantém essa origem.
 const searchReturn = view === "busca" ? returnTo : here;
-const selectedName = agendas.find((agenda) => agenda.id === selectedAgendaId)?.name;
-const filtersLabel = agendas.length > 1 ? `${selectedName ?? "Todas as agendas"} · buscar paciente` : "Buscar paciente";
+const searching = view === "busca";
+// Sem mais de uma agenda e fora da busca, não sobra nada na barra de filtros.
+const hasFilters = agendas.length > 1 || searching;
 ---
 
-<div class="flex flex-wrap items-end justify-between gap-x-4 gap-y-3">
-  <div class="min-w-0">
-    <h1 class="font-display text-[28px] leading-[1.1] font-bold text-ink sm:text-[30px]">Agenda</h1>
-    {subtitle && <p class="mt-1 text-[15px] text-ink-soft first-letter:uppercase sm:text-base">{subtitle}</p>}
-  </div>
-  <div class="flex flex-wrap gap-2">
-    <Button variant="primary" href={withReturn(`/admin/agenda/marcar?date=${date}${selectedAgendaId ? `&agenda_id=${selectedAgendaId}` : ""}`, here)}>
-      <Icon name="plus" class="h-4 w-4" strokeWidth={2.4} /> Marcar
-    </Button>
-    <Button href={withReturn(`/admin/agenda/bloquear?date=${date}${selectedAgendaId ? `&agenda=${selectedAgendaId}` : ""}`, here)}>Bloquear</Button>
-    <Button variant="quiet" href={withReturn("/admin/agenda/bloqueios", here)}>Bloqueios</Button>
-  </div>
-</div>
-
-<div class="mt-4 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-3 sm:gap-y-2.5 sm:rounded-xl sm:border sm:border-line sm:bg-white sm:px-3 sm:py-2.5">
+<div class="flex flex-wrap items-center gap-x-2 gap-y-3">
+  <slot name="nav" />
+  {Astro.slots.has("title") ? <slot name="title" /> : <h1 class="font-display text-[22px] leading-tight font-bold whitespace-nowrap text-ink first-letter:uppercase">{subtitle ?? "Agenda"}</h1>}
   <SegmentedControl
+    class="[&>a]:px-2"
     label="Visualização"
     current={view === "busca" ? undefined : view}
     items={views.map((v) => ({ id: v.id, label: v.label, href: `${v.href}?date=${date}` }))}
   />
-  <slot name="nav" />
-
-  <details data-agenda-filters open class="group rounded-xl border border-line bg-white sm:w-full sm:rounded-none sm:border-0 sm:bg-transparent xl:w-auto xl:min-w-0 xl:flex-1">
-    <summary class="flex h-12 cursor-pointer list-none items-center justify-between gap-2 px-3.5 text-[15px] font-semibold text-ink sm:hidden [&::-webkit-details-marker]:hidden">
-      <span class="inline-flex min-w-0 items-center gap-2">
-        <Icon name="adjustments" class="h-[18px] w-[18px] shrink-0" strokeWidth={2.2} />
-        <span class="truncate">{filtersLabel}</span>
-      </span>
-      <Icon name="chevron-down" class="h-4 w-4 shrink-0 transition-transform group-open:rotate-180" strokeWidth={2.4} />
-    </summary>
-    <div class="flex flex-col gap-3 border-t border-line p-3.5 sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-3 sm:gap-y-2.5 sm:border-0 sm:p-0">
-      {
-        agendas.length > 1 && (
-          <form method="GET" action={current.href}>
-            <input type="hidden" name="date" value={date} />
-            <label for="agenda_choice" class="sr-only">
-              Agenda
-            </label>
-            <select id="agenda_choice" name="agenda" class={`${CONTROL} w-full sm:w-52`} data-autosubmit>
-              <option value={ALL_AGENDAS} selected={!selectedAgendaId}>
-                Todas as agendas
-              </option>
-              {agendas.map((agenda) => (
-                <option value={agenda.id} selected={agenda.id === selectedAgendaId}>
-                  {agenda.name}
-                </option>
-              ))}
-            </select>
-            <noscript>
-              <button type="submit" class="ml-2 text-sm text-brand">
-                Ver
-              </button>
-            </noscript>
-          </form>
-        )
-      }
-      <form method="GET" action="/admin/agenda/buscar" role="search" class="flex min-w-0 gap-2 sm:ml-auto sm:min-w-56 sm:max-w-md sm:flex-1 sm:gap-1.5">
-        {searchReturn && <input type="hidden" name="volta" value={searchReturn} />}
-        <label for="patient_search" class="sr-only">Atendimentos marcados de um paciente</label>
-        <div class="relative min-w-0 flex-1">
-          <Icon name="magnifying-glass" class="pointer-events-none absolute top-1/2 left-3 h-[17px] w-[17px] -translate-y-1/2 text-ink-soft" strokeWidth={2.2} />
-          <input id="patient_search" type="search" name="q" value={query} placeholder="Nome, telefone ou nascimento" class={`${CONTROL} w-full pl-9`} />
-        </div>
-        <Button type="submit">Buscar</Button>
-      </form>
-    </div>
-  </details>
+  <div class="flex flex-wrap gap-2 lg:ml-auto">
+    <Button href={withReturn(`/admin/agenda/bloquear?date=${date}${selectedAgendaId ? `&agenda=${selectedAgendaId}` : ""}`, here)}>Bloquear</Button>
+    <MoreMenu id="agenda-mais" label="Mais opções da Agenda" size="md">
+      <a href={withReturn("/admin/agenda/bloqueios", here)} class={menuItemClass()}>
+        <Icon name="calendar" class="h-4 w-4 shrink-0" strokeWidth={2} /> Bloqueios
+      </a>
+      <a href={`/admin/agenda/buscar${searchReturn ? `?volta=${encodeURIComponent(searchReturn)}` : ""}`} class={menuItemClass()}>
+        <Icon name="magnifying-glass" class="h-4 w-4 shrink-0" strokeWidth={2} /> Buscar paciente
+      </a>
+      <a href="/admin/consultas" class={menuItemClass()}>
+        <Icon name="check-circle" class="h-4 w-4 shrink-0" strokeWidth={2} /> Relatório do dia
+      </a>
+    </MoreMenu>
+    <Button variant="primary" href={withReturn(`/admin/agenda/marcar?date=${date}${selectedAgendaId ? `&agenda_id=${selectedAgendaId}` : ""}`, here)}>
+      <Icon name="plus" class="h-4 w-4" strokeWidth={2.4} /> Marcar consulta
+    </Button>
+  </div>
 </div>
 
-<script>
-  // Celular: agenda e busca recolhidas (abertas na tela da busca); a partir
-  // de 640px ficam sempre à vista, na barra.
-  const filters = document.querySelector<HTMLDetailsElement>("[data-agenda-filters]");
-  if (filters) {
-    const wide = window.matchMedia("(min-width: 640px)");
-    const searching = Boolean(filters.querySelector<HTMLInputElement>("#patient_search")?.value);
-    const sync = () => {
-      if (wide.matches) filters.open = true;
-    };
-    if (!wide.matches && !searching) filters.open = false;
-    wide.addEventListener("change", sync);
-  }
-</script>
+{
+  hasFilters && (
+    <div class="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2">
+      {agendas.length > 1 && (
+        <form method="GET" action={current.href}>
+          <input type="hidden" name="date" value={date} />
+          <label for="agenda_choice" class="sr-only">
+            Agenda
+          </label>
+          <select id="agenda_choice" name="agenda" class={`${CONTROL} w-full sm:w-56`} data-autosubmit>
+            <option value={ALL_AGENDAS} selected={!selectedAgendaId}>
+              Todas as agendas
+            </option>
+            {agendas.map((agenda) => (
+              <option value={agenda.id} selected={agenda.id === selectedAgendaId}>
+                {agenda.name}
+              </option>
+            ))}
+          </select>
+          <noscript>
+            <button type="submit" class="ml-2 text-sm text-brand">
+              Ver
+            </button>
+          </noscript>
+        </form>
+      )}
+      {searching && (
+        <form method="GET" action="/admin/agenda/buscar" role="search" class="flex min-w-0 flex-1 gap-2 sm:max-w-md sm:gap-1.5">
+          {searchReturn && <input type="hidden" name="volta" value={searchReturn} />}
+          <label for="patient_search" class="sr-only">Atendimentos marcados de um paciente</label>
+          <div class="relative min-w-0 flex-1">
+            <Icon name="magnifying-glass" class="pointer-events-none absolute top-1/2 left-3 h-[17px] w-[17px] -translate-y-1/2 text-ink-soft" strokeWidth={2.2} />
+            <input id="patient_search" type="search" name="q" value={query} placeholder="Nome, telefone ou nascimento" class={`${CONTROL} w-full pl-9`} />
+          </div>
+          <Button type="submit">Buscar</Button>
+        </form>
+      )}
+    </div>
+  )
+}

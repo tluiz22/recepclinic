@@ -14,10 +14,13 @@ Propostas: [página de propostas](https://claude.ai/artifact/43h7JwJQhXYhjr8pLXi
 
 ## Decisões (cliente, 30/out/2026)
 
+> **Revisado na RX6 (cliente, 02/nov/2026):** o [redesign da Recepção](redesign-recepcao.md) (RX-D1) substituiu **M2 e M6**
+> (abaixo, marcadas como substituídas). M1, M3, M4, M5 e M7 continuam.
+
 - **M1. Opção 1, lateral clara por tarefa.** Coluna branca à esquerda (~256px), nomes inteiros, ícone em cada item,
   título pequeno em cada grupo, contadores em pílula vermelha. Recusadas: coluna verde (opção 2) e trilho + painel
   (opção 3).
-- **M2. Grupos por tarefa.** Hoje: Início, Agenda, Resumo do Dia. Pacientes: Pacientes, Atendimento, Relacionamento.
+- **M2. Grupos por tarefa. (Substituída na RX6: ver M2′.)** Hoje: Início, Agenda, Resumo do Dia. Pacientes: Pacientes, Atendimento, Relacionamento.
   Gestão: Métricas, Financeiro, Configurações. Sistema · só o Suporte: Clínicas, Matriz de acesso, Vendas, Uso, Erros,
   Tecnologia. Itens sem acesso somem, como hoje.
 - **M3. Sem barra no topo.** A clínica (com "Trocar clínica") fica no alto da lateral; a pessoa, o papel e o "Sair",
@@ -27,9 +30,20 @@ Propostas: [página de propostas](https://claude.ai/artifact/43h7JwJQhXYhjr8pLXi
 - **M5. Configurações dentro da lateral.** Ao abrir Configurações, a lateral troca o menu principal pelas seções
   (grupos A clínica, Atendimento, Mensagens, Financeiro), com "‹ Menu principal" no alto; some a lista de seções
   própria de Configurações no computador. Recusado: duas colunas.
-- **M6. Celular igual a hoje na barra inferior** (Início, Agenda, Pacientes, Resumo do Dia, Mais); o "Mais" mostra os
+- **M6. Celular igual a hoje na barra inferior. (Substituída na RX6: ver M6′.)** (Início, Agenda, Pacientes, Resumo do Dia, Mais); o "Mais" mostra os
   grupos da lateral em cartões, com o total de Atendimento + Relacionamento no botão. Configurações no celular segue
   com o botão "Seção: …" de hoje.
+- **M2′. Menu com os lugares de trabalho (RX6, RX-D1, cliente, 02/nov/2026).** Sem título de grupo: **Meu dia**,
+  **Agenda**, **Relatório do dia** (acrescentado em 02/nov, a pedido do cliente: estava escondido no "Mais" da
+  Agenda, que continua com o atalho) e **Pacientes**. Grupo **Mais**: Financeiro, Métricas, Configurações e Central de Ajuda (cada um some sem
+  acesso). Sistema · só o Suporte, como antes. Atendimento, Relacionamento e Resumo do Dia deixaram de ser itens: o
+  Atendimento abre pelas linhas do Meu dia, o Relatório do dia pelo "Mais" da Agenda e as listas de contato por
+  Pacientes › Para contatar. As rotas antigas continuam abertas; cada uma deixa marcado o item que a contém.
+- **M6′. Celular e tablet: barra inferior com Meu dia, Agenda, Relatório do dia, Pacientes e Mais.** O "Mais" mostra o grupo Mais e o
+  Sistema; a pílula vermelha do Meu dia aparece também na barra.
+- **Contador (decisão 5.1, RX6).** Um número vermelho, no Meu dia: conversas aguardando atendimento humano + conversas
+  que a clínica assumiu e ainda não devolveu ao bot + consultas sem presença registrada + contatos a conferir. Fora
+  dele: "Esperando o paciente" e Pacientes › Para contatar (esta aba tem o próprio número).
 - **M7. Administração do sistema** (sem clínica aberta): a lateral mostra só os itens do Sistema.
 
 Padrões técnicos (sem decisão de negócio): a lateral aparece a partir de 1024px (`lg`, o mesmo ponto de

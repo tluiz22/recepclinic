@@ -1,6 +1,6 @@
 import type { ModuloDeAjuda } from "./tipos";
 
-// Ajuda contextual da Agenda e do Resumo do Dia (inventário de 23/out/2026).
+// Ajuda contextual da Agenda (inventário de 23/out/2026; textos do Dia revistos em 02/nov/2026, redesign da Recepção).
 
 export const agenda = {
   dicas: {
@@ -16,7 +16,7 @@ export const agenda = {
       como: [
         "Escolha as agendas, o período e o motivo. Nenhum horário do período é oferecido enquanto o bloqueio existir.",
         "Com atendimentos no período, a tela pergunta: \"cancelar\" manda ao paciente, pelo WhatsApp, o link para remarcar; \"manter\" não mexe neles.",
-        "Quem teve o atendimento cancelado e não remarcou aparece em Relacionamento › Aguardando remarcação.",
+        "Quem teve o atendimento cancelado e não remarcou aparece em Pacientes › Para contatar › Aguardando remarcação.",
         "Recesso da clínica: quem pedir a recepção no WhatsApp recebe a mensagem de recesso, com a data de retorno (dia seguinte ao fim). Vem pronta e dá para editar.",
         "Bloqueio de mais de 5 dias pergunta se envia o recesso; faltando agenda, pede confirmação.",
       ],
@@ -25,11 +25,11 @@ export const agenda = {
     // src/components/admin/agenda/situationStyle.ts (appointmentSituation); botão "Confirmar presença" do
     // lembrete (src/lib/data/whatsapp/templates.ts) e do bot (bot/manage.ts, confirmPresence); cardActions.ts.
     situacoes: {
-      serve: "A cor e o selo de cada atendimento dizem em que pé ele está.",
+      serve: "A cor e o selo de cada atendimento dizem em que pé ele está. Toque na linha para abrir as ações ao lado.",
       como: [
         "Não confirmado: o paciente ainda não confirmou a presença.",
-        "Confirmado: o paciente tocou em \"Confirmar presença\" no lembrete do WhatsApp (ou confirmou pelo bot), ou a recepção usou \"Confirmar presença\" no cartão.",
-        "Compareceu e Faltou: a recepção registra no cartão do atendimento.",
+        "Confirmado: o paciente tocou em \"Confirmar presença\" no lembrete do WhatsApp (ou confirmou pelo bot), ou a recepção usou \"Confirmar presença\" nas ações do atendimento (toque na linha).",
+        "Compareceu e Faltou: a recepção registra nas ações do atendimento (toque na linha) ou em Relatório do dia › A registrar.",
         "Cancelado: pela clínica, ou pelo paciente no WhatsApp.",
         "Bloqueio: período em que a agenda não recebe marcações.",
       ],
@@ -56,7 +56,7 @@ export const agenda = {
         "A confirmação mostra o que muda (antes → depois). O paciente recebe mensagem no WhatsApp só se mudar data, hora, profissional ou local para uma data futura; aí o lembrete e a presença confirmada recomeçam.",
         "O valor segue o serviço e o local novos. Pagamentos já registrados não mudam: a confirmação avisa se fica faltando ou sobrando.",
         "Sessão de série ainda por vir: \"Só esta sessão\" ou \"Esta e as próximas\". Com Compareceu ou Faltou registrado, a data fica no passado; o cancelado não se altera.",
-        "Tudo fica na Trilha do atendimento: o que mudou, quando e quem fez.",
+        "Tudo fica no Histórico do atendimento: o que mudou, quando e quem fez.",
       ],
       exemplo:
         "Marcou Consulta, mas era Avaliação inicial: em Alterar, troque o serviço e confirme. O horário continua o mesmo, o valor passa a ser o da Avaliação e o paciente não recebe mensagem.",
@@ -68,6 +68,6 @@ export const agenda = {
 /** Consequência de cada saída do Bloquear (docs/plano.md F6.5; AguardandoTab.astro), visível antes de confirmar. */
 export const bloquear = {
   cancelar:
-    "Bloquear e cancelar: os atendimentos do período são cancelados; cada paciente recebe o aviso pelo WhatsApp da clínica, com o link para remarcar, e passa para \"Aguardando remarcação\" no Resumo do Dia.",
+    "Bloquear e cancelar: os atendimentos do período são cancelados; cada paciente recebe o aviso pelo WhatsApp da clínica, com o link para remarcar, e passa para \"Aguardando remarcação\" em Pacientes › Para contatar.",
   manter: "Bloquear e manter: os atendimentos continuam marcados; só os horários livres do período deixam de ser oferecidos.",
 };

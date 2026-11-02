@@ -32,7 +32,7 @@ describe("cardActions", () => {
     expect(layout(input())).toEqual({
       primary: "Confirmar presença",
       visible: ["Remarcar"],
-      more: ["Alterar", "Pagamento", "Pôr na lista de espera", "Trilha"],
+      more: ["Alterar", "Pagamento", "Pôr na lista de espera", "Histórico"],
       aside: "Cancelar",
     });
   });
@@ -47,7 +47,7 @@ describe("cardActions", () => {
     expect(layout(input({}, { patientConfirmedAt: past }))).toEqual({
       primary: undefined,
       visible: ["Remarcar", "Pagamento"],
-      more: ["Alterar", "Desfazer presença", "Pôr na lista de espera", "Trilha"],
+      more: ["Alterar", "Desfazer presença", "Pôr na lista de espera", "Histórico"],
       aside: "Cancelar",
     });
   });
@@ -64,7 +64,7 @@ describe("cardActions", () => {
     expect(layout(input({}, { scheduledAt: past }))).toEqual({
       primary: "Compareceu",
       visible: ["Faltou", "Pagamento"],
-      more: ["Alterar", "Trilha"],
+      more: ["Alterar", "Histórico"],
       aside: undefined,
     });
   });
@@ -73,7 +73,7 @@ describe("cardActions", () => {
     expect(layout(input({}, { scheduledAt: past, status: "completed" }))).toEqual({
       primary: undefined,
       visible: ["Pagamento"],
-      more: ["Corrigir: faltou", "Alterar", "Trilha"],
+      more: ["Corrigir: faltou", "Alterar", "Histórico"],
       aside: undefined,
     });
   });
@@ -82,18 +82,18 @@ describe("cardActions", () => {
     expect(layout(input({}, { scheduledAt: past, status: "no_show" }))).toEqual({
       primary: undefined,
       visible: [],
-      more: ["Corrigir: compareceu", "Alterar", "Trilha"],
+      more: ["Corrigir: compareceu", "Alterar", "Histórico"],
       aside: undefined,
     });
   });
 
-  it("cancelado: só a Trilha, à vista", () => {
-    expect(layout(input({}, { status: "canceled" }))).toEqual({ primary: undefined, visible: ["Trilha"], more: [], aside: undefined });
+  it("cancelado: só o Histórico, à vista", () => {
+    expect(layout(input({}, { status: "canceled" }))).toEqual({ primary: undefined, visible: ["Histórico"], more: [], aside: undefined });
   });
 
   it("sessão de série futura: Ver série e Encerrar no Mais; Cancelar só esta à parte; sem lista de espera", () => {
     const r = layout(input({}, { seriesId: "s1" }));
-    expect(r.more).toEqual(["Alterar", "Pagamento", "Ver série", "Trilha", "Encerrar a série"]);
+    expect(r.more).toEqual(["Alterar", "Pagamento", "Ver série", "Histórico", "Encerrar a série"]);
     expect(r.aside).toBe("Cancelar só esta");
   });
 

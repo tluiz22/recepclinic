@@ -4,7 +4,7 @@ import type { ModuloDeAjuda } from "./tipos";
 
 export const relacionamento = {
   comoFunciona: {
-    // "Contatos para revisar" do Início (texto aprovado pelo cliente em 31/out/2026): listContactsToReview,
+    // "Contatos para revisar" do Meu dia (texto aprovado pelo cliente em 31/out/2026): listContactsToReview,
     // DEFAULT_BOT_LIMITS e REVIEW_WINDOW_DAYS em src/lib/data/whatsapp/botLimits.ts.
     revisar: {
       serve: "Mostrar quem tentou marcar pelo WhatsApp e foi barrado por um limite de segurança do bot. A equipe confere se é um caso normal ou um abuso.",
@@ -32,17 +32,7 @@ export const relacionamento = {
       ],
       exemplo:
         "Maria escreve \"quero falar com a recepção\" às 9h e a conversa aparece em Aguardando. A recepção responde pelo app e ela passa para Em atendimento. Resolvido, a recepção clica em \"Devolver ao bot\" e, na próxima mensagem da Maria, o bot responde.",
-      erro: "Esqueceu de devolver? O bot continua calado com esse paciente e a conversa segue aqui (o Início também avisa). Clique em \"Devolver ao bot\" assim que terminar.",
-    },
-    // src/lib/data/relationship.ts (cabeçalho e relationshipTabs); Q1 a Q4 do plano da central.
-    central: {
-      serve: "Reúne numa tela só as pessoas que pedem contato da equipe, cada uma com o motivo.",
-      como: [
-        "São as mesmas listas do Resumo do Dia, das Métricas e do Início, com as mesmas regras: nada muda lá.",
-        "Cada aba mostra quantas pessoas pedem atenção (o Retomar contato, não: começar e desistir é comum). A pessoa sai sozinha quando o motivo deixa de existir.",
-        "As ações são as mesmas de sempre (Remarcar, Marcar retorno, Desistiu, Tirar da lista, Revisado), mais o \"Retirar da lista\" do Retomar contato, e voltam para esta tela.",
-      ],
-      erro: "Uma aba mostra \"!\"? A lista dela não carregou agora; as outras continuam. Tente abrir a aba de novo.",
+      erro: "Esqueceu de devolver? O bot continua calado com esse paciente e a conversa segue aqui (o Meu dia também avisa). Clique em \"Devolver ao bot\" assim que terminar.",
     },
     // listPendingReminders e pendingReminderKind em src/lib/data/relationship.ts; reminderAction em whatsapp/reminders.ts (UNANSWERED_BUTTON_MS).
     lembretes: {
@@ -94,11 +84,6 @@ export const relacionamento = {
     },
   },
   vazios: {
-    // listHumanAttention em src/lib/data/whatsapp/attention.ts.
-    atendimento: {
-      titulo: "Nenhuma conversa com a clínica",
-      texto: "Entra aqui a conversa em que o bot parou e passou para a equipe: o paciente pediu, o bot não entendeu ou a recepção assumiu pelo app.",
-    },
     retomar: {
       titulo: "Ninguém para retomar",
       texto: "Nos últimos 14 dias, ninguém deixou de concluir uma marcação, remarcação ou cancelamento pelo WhatsApp.",
@@ -110,11 +95,6 @@ export const relacionamento = {
     faltosos: {
       titulo: "Ninguém faltando com frequência",
       texto: "Entra aqui quem tem 2 ou mais faltas e faltou em pelo menos metade dos atendimentos registrados.",
-    },
-    // listContactsToReview em src/lib/data/whatsapp/botLimits.ts (REVIEW_WINDOW_DAYS).
-    revisar: {
-      titulo: "Nenhum contato para revisar",
-      texto: "Entra aqui o número que bateu um limite do bot nos últimos 7 dias e ainda não foi marcado como revisado.",
     },
     // listAwaitingRebooking em src/lib/data/daily.ts.
     aguardando: {

@@ -1,6 +1,6 @@
 import type { ModuloDeAjuda } from "./tipos";
 
-// Ajuda contextual do Resumo do Dia (inventário de 23/out/2026).
+// Ajuda contextual do Relatório do dia (inventário de 23/out/2026; A registrar em 02/nov/2026) e da lista de espera de Pacientes › Para contatar.
 
 export const resumo = {
   dicas: {
@@ -18,6 +18,16 @@ export const resumo = {
       "Cada vez que o sistema roda os lembretes, o resumo do dia ou as ofertas da lista de espera, fica uma linha aqui. Rodou: terminou. Rodando: ainda em andamento. Travou: rodando há mais de 15 minutos. Erro: parou com uma falha.",
   },
   comoFunciona: {
+    // src/pages/admin/consultas/index.astro (aba pendentes) e lib/data/daily.ts (listPendingAttendance, janela de 60 dias).
+    aRegistrar: {
+      serve: "Registrar quem veio e quem faltou nas consultas que já passaram e ficaram sem registro.",
+      como: [
+        "Aparecem consultas de qualquer dia (até 60 dias atrás), a mais antiga primeiro.",
+        "Compareceu e Faltou pedem confirmação, e a linha sai da lista.",
+        "Registro errado: corrija pela Agenda, no atendimento (Mais).",
+        "O mesmo número aparece em Precisa de você, no Meu dia, e no contador do menu.",
+      ],
+    },
     // src/lib/data/waitlist/offers.ts (cabeçalho, OFFER_MINUTES, MIN_LEAD_MS); D2 em docs/arquitetura.md.
     listaEspera: {
       serve: "Pacientes que já têm horário marcado e querem antecipar. Entram pelo WhatsApp (\"Encaixe ou antecipar\") ou pela recepção.",

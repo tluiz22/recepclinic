@@ -64,7 +64,7 @@ const plural = (n: number) => `${n} ${n === 1 ? "atendimento marcado" : "atendim
     {volta ? "Voltar" : "Agenda"}
   </a>
   <div class="mt-2">
-    <AgendaHeader view="busca" date={headerDate} agendas={[]} selectedAgendaId={null} query={q} returnTo={volta} />
+    <AgendaHeader view="busca" date={headerDate} agendas={[]} selectedAgendaId={null} query={q} returnTo={volta} subtitle="Buscar paciente" />
   </div>
 
   {!q && !chosen && <p class="mt-4 text-[15px] text-ink-soft">Digite o nome ou o telefone do {vocabulary.patient} para ver os atendimentos marcados dele.</p>}

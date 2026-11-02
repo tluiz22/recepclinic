@@ -1993,6 +1993,9 @@ isOneToOne: false
               "agenda_id": string,"appointment_id": string,"has_return": boolean,"has_upcoming": boolean,"last_date": string,"patient_id": string,"scheduled_at": string,"status": string
             }[]
                            },
+"migrate_agenda":
+{ Args: { "p_apply"?: boolean,"p_from": string,"p_to": string }; Returns: Json
+                           },
 "nfse_delivery_follow_retry":
 { Args: { "p_error": string,"p_message_id": string,"p_previous_message_id": string,"p_sent": boolean }; Returns: undefined
                            },

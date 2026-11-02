@@ -3,7 +3,7 @@ import { isNationalHoliday } from "../../holidays";
 import type { Enums } from "../../supabase/database.types";
 import type { DbClient } from "../clients";
 import { unwrap, unwrapAll, unwrapOne } from "../errors";
-import { computeFreeSlots, type BusyInterval, type FreeSlot, type SlotWindow } from "./freeSlots";
+import { computeFreeGaps, computeFreeSlots, type BusyInterval, type FreeGap, type FreeSlot, type SlotWindow } from "./freeSlots";
 
 // Horários livres por agenda, serviço, local e dia (F3.6a), lidos com o login
 // (ou a credencial do bot) de quem pergunta: o RLS limita às agendas que ele
@@ -536,6 +536,72 @@ export async function getFreeSlotsBefore(
   const result: FreeSlot[] = [];
   for (let date = firstDate; date <= lastDate && result.length < limit; date = addDays(date, 1)) {
     result.push(...slotsOn(plan, date, busy, holidays, now).filter(useful).slice(0, limit - result.length));
+  }
+  return result;
+}
+
+/**
+ * Horários livres de cada agenda num dia, uma linha "Livre · + Marcar" por horário na Agenda › Dia (RX8 e opção B;
+ * cliente, 02/nov/2026). Só leitura, com o login de quem olha (o RLS limita às agendas que ele vê). Regras: de hoje em
+ * diante; fora de feriado; só agenda ativa, nas janelas do dia da semana (gerais e de serviço individual; as de turma
+ * ficam de fora);
+ * ocupado = atendimentos ativos (sem exame, que corre em paralelo) e bloqueios, com o intervalo da agenda; a lacuna
+ * em passos do menor serviço individual ativo da agenda (exame não conta).
+ */
+export async function listFreeGaps(
+  db: DbClient,
+  clinicId: string,
+  { date, agendaIds, timeZone }: { date: string; agendaIds: string[]; timeZone: string },
+  now: Date = new Date(),
+): Promise<(FreeGap & { agendaId: string })[]> {
+  if (agendaIds.length === 0 || date < todayIn(timeZone, now) || isNationalHoliday(date)) return [];
+  const { start, end } = dayBounds(date, timeZone);
+  const [holidays, agendas, windows, services] = await Promise.all([
+    loadClinicHolidays(db, clinicId, date, date),
+    db.from("agendas").select("id, buffer_minutes").eq("clinic_id", clinicId).eq("is_active", true).in("id", agendaIds).then((r) => unwrap(r, "Agendas")),
+    db
+      .from("availability_windows")
+      .select("agenda_id, service_id, start_time, end_time")
+      .eq("clinic_id", clinicId)
+      .eq("is_active", true)
+      .eq("weekday", weekdayOf(date))
+      .in("agenda_id", agendaIds)
+      .then((r) => unwrap(r, "Horários de atendimento")),
+    db
+      .from("services")
+      .select("id, duration_minutes, scheduling_mode, category, service_agendas ( agenda_id )")
+      .eq("clinic_id", clinicId)
+      .eq("is_active", true)
+      .then((r) => unwrap(r, "Serviços")),
+  ]);
+  if (holidays.has(date)) return [];
+  const rows = services as unknown as { id: string; duration_minutes: number; scheduling_mode: string; category: string; service_agendas: { agenda_id: string }[] }[];
+  // Turma tem horário próprio (a sessão): as janelas dela não viram "Livre".
+  const groupIds = new Set(rows.filter((service) => service.scheduling_mode === "group").map((service) => service.id));
+  const minByAgenda = new Map<string, number>();
+  for (const service of rows) {
+    if (service.scheduling_mode === "group" || service.category === "exam") continue;
+    for (const link of service.service_agendas) {
+      minByAgenda.set(link.agenda_id, Math.min(minByAgenda.get(link.agenda_id) ?? Infinity, service.duration_minutes));
+    }
+  }
+  const result: (FreeGap & { agendaId: string })[] = [];
+  for (const agenda of agendas) {
+    const minMinutes = minByAgenda.get(agenda.id);
+    // Janelas gerais e as de um serviço individual (cliente, 02/nov/2026: a linha "Livre" aparece em toda agenda aberta).
+    const own = windows.filter((w) => w.agenda_id === agenda.id && !(w.service_id && groupIds.has(w.service_id)));
+    if (!minMinutes || own.length === 0) continue;
+    const busy = await loadBusy(db, clinicId, agenda.id, start, end);
+    const gaps = computeFreeGaps({
+      date,
+      timeZone,
+      windows: own.map((w) => ({ startTime: w.start_time.slice(0, 5), endTime: w.end_time.slice(0, 5) })),
+      busy,
+      bufferMinutes: agenda.buffer_minutes,
+      stepMinutes: minMinutes,
+      now,
+    });
+    result.push(...gaps.map((gap) => ({ ...gap, agendaId: agenda.id })));
   }
   return result;
 }

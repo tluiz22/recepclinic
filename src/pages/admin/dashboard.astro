@@ -1,5 +1,5 @@
 ---
-// Tela inicial (Fase 9 do piloto; banco novo na F4.1): números de hoje no dia
+// Meu dia (antigo Início; RX2 do redesign da Recepção, cliente, 02/nov/2026; Fase 9 do piloto, banco novo na F4.1): números de hoje no dia
 // da clínica, alerta de envios automáticos e atalhos. Cartões e atalhos seguem
 // os itens liberados para a clínica (D11). Com o bot, "Contatos para revisar"
 // (F9.6a): quem bateu um limite do bot nos últimos 7 dias e ainda não foi
@@ -15,16 +15,28 @@ import Icon from "../../components/admin/Icon.astro";
 import PhoneLinks from "../../components/admin/PhoneLinks.astro";
 import Button from "../../components/admin/ui/Button.astro";
 import Notice, { type NoticeTone } from "../../components/admin/ui/Notice.astro";
-import PageHeader from "../../components/admin/ui/PageHeader.astro";
 import HowItWorks from "../../components/admin/ui/HowItWorks.astro";
-import Stat from "../../components/admin/ui/Stat.astro";
 import { relacionamento } from "../../lib/ajuda/relacionamento";
+import { meuDia } from "../../lib/ajuda/meu-dia";
 import { createUserClient } from "../../lib/data/clients";
 import { getDashboardCounts } from "../../lib/data/dashboard";
 import { describeSendsAlert, getSendsAlert } from "../../lib/data/sends";
 import { handoffReasonLabel, listHumanAttention } from "../../lib/data/whatsapp/attention";
 import { BOT_LIMIT_LABELS, listContactsToReview, REVIEW_WINDOW_DAYS } from "../../lib/data/whatsapp/botLimits";
-import { formatCalendarDate, formatInstant, todayIn } from "../../lib/clinicTime";
+import { addDays, dayBounds, formatCalendarDate, formatInstant, localHourOf, todayIn } from "../../lib/clinicTime";
+import CardActionButton from "../../components/admin/agenda/CardActionButton.astro";
+import { cardActions } from "../../components/admin/agenda/cardActions";
+import { appointmentSituation } from "../../components/admin/agenda/situationStyle";
+import StatusPill from "../../components/admin/ui/StatusPill.astro";
+import { listAgendas } from "../../lib/data/config/agendas";
+import { listAgendaAppointments, type AgendaAppointment } from "../../lib/data/agenda/view";
+import { listPendingReminders } from "../../lib/data/relationship";
+import { listPendingAttendance } from "../../lib/data/daily";
+import { isAnonymizedPhone } from "../../lib/anonymization";
+import { formatPhoneBR, whatsappHref } from "../../lib/phone";
+import { serviceLook } from "../../components/admin/agenda/categoryStyle";
+import { logError } from "../../lib/log";
+import { vocabularyFor } from "../../lib/vocabulary";
 import { certificateStatus } from "../../lib/certificate";
 import { getFiscalCertificate } from "../../lib/data/fiscal";
 import { getWhatsappConnection, listWhatsappTemplates } from "../../lib/data/whatsapp/connection";
@@ -34,17 +46,19 @@ const clinic = Astro.locals.clinic!;
 const db = createUserClient(Astro.request, Astro.cookies);
 const has = (feature: (typeof clinic.features)[number]) => clinic.features.includes(feature);
 
-// Certificado A1 (F11.3): aviso ao Administrador a partir de 30 dias do vencimento.
-const certificateOn = has("finance") && (clinic.roles.includes("admin") || clinic.isPlatformStaff);
-// Templates na Meta (F8.2, cliente, 25/out): aviso ao Administrador enquanto algum em uso não estiver aprovado.
-const isAdmin = clinic.roles.includes("admin") || clinic.isPlatformStaff;
+// Avisos técnicos só para o Suporte (cliente, 02/nov/2026): certificado A1 (F11.3, a partir de 30 dias do
+// vencimento), templates na Meta (F8.2) e forma de pagamento do WhatsApp (F8.3). O Administrador da clínica não os vê.
+const isSupport = clinic.isPlatformStaff;
+const certificateOn = has("finance") && isSupport;
+// Todos os avisos técnicos do Meu dia são do Suporte (cliente, 02/nov/2026): desconexão avisada pela Meta, envios
+// com falha e os de cima. O Suporte acompanha as clínicas; a tela de pendências do Suporte está em docs/painel-suporte.md.
 const [counts, sendsAlert, toReview, certificate, connection, templates, attention] = await Promise.all([
   getDashboardCounts(db, clinic.clinicId, clinic.timezone),
   getSendsAlert(db, clinic.clinicId),
   has("whatsapp_bot") ? listContactsToReview(db, clinic.clinicId) : Promise.resolve(null),
   certificateOn ? getFiscalCertificate(db, clinic.clinicId) : Promise.resolve(null),
-  isAdmin ? getWhatsappConnection(db, clinic.clinicId) : Promise.resolve(null),
-  isAdmin ? listWhatsappTemplates(db, clinic.clinicId) : Promise.resolve([]),
+  isSupport ? getWhatsappConnection(db, clinic.clinicId) : Promise.resolve(null),
+  isSupport ? listWhatsappTemplates(db, clinic.clinicId) : Promise.resolve([]),
   has("whatsapp_bot") ? listHumanAttention(db, clinic.clinicId) : Promise.resolve([]),
 ]);
 // Atendimento humano (F8.5a, cliente, 27/out/2026): faixa com as conversas que aguardam a clínica.
@@ -60,9 +74,9 @@ const oldestWait = awaiting[0]
     })()
   : null;
 const templatesAlert =
-  connection?.status === "connected" ? describeTemplateApproval(templateApproval(templatesInUse(clinic.features), templates)) : null;
+  isSupport && connection?.status === "connected" ? describeTemplateApproval(templateApproval(templatesInUse(clinic.features), templates)) : null;
 // F8.3 (cliente, 24 e 25/out): forma de pagamento ainda não conferida pelo Suporte; desconexão avisada pela Meta.
-const paymentAlert = connection?.status === "connected" && !connection.paymentCheckedAt;
+const paymentAlert = isSupport && connection?.status === "connected" && !connection.paymentCheckedAt;
 const disconnectedAlert = connection?.status === "disconnected" && connection.disconnectedVia === "meta" ? connection.disconnectedAt : null;
 const certificateAlert = (() => {
   if (!certificate) return null;
@@ -72,7 +86,60 @@ const certificateAlert = (() => {
     return `O certificado digital A1 vence em ${status.daysLeft} ${status.daysLeft === 1 ? "dia" : "dias"} (${formatInstant(certificate.validUntil, clinic.timezone, "dd/MM/yyyy")}): renove e envie o novo.`;
   return null;
 })();
-const sendsAlertLines = describeSendsAlert(sendsAlert);
+const sendsAlertLines = isSupport ? describeSendsAlert(sendsAlert) : [];
+
+const here = currentPath(Astro.url);
+
+// RX3: "Esperando o paciente" (lembretes sem resposta de hoje e de amanhã, ainda por vir) e "Próximas consultas"
+// (as de hoje que ainda não foram registradas). Falha de leitura vira aviso na seção, nunca lista vazia.
+const nowAt = new Date();
+const todayDate = todayIn(clinic.timezone, nowAt);
+const tomorrowEnd = dayBounds(addDays(todayDate, 1), clinic.timezone).end;
+const vocabulary = vocabularyFor(clinic.clinicProfile);
+const load = async <T,>(label: string, run: () => Promise<T>): Promise<T | null> => {
+  try {
+    return await run();
+  } catch (error) {
+    logError(`meu dia: ${label} não carregou`, error, { clinica: clinic.clinicId });
+    return null;
+  }
+};
+const [pendingReminders, todayAppointments, pendingAttendanceList] = await Promise.all([
+  has("reminders") ? load("lembretes sem resposta", () => listPendingReminders(db, clinic.clinicId, nowAt)) : Promise.resolve([]),
+  load("próximas consultas", async () => {
+    const agendas = await listAgendas(db, clinic.clinicId, { includeInactive: true });
+    return listAgendaAppointments(db, clinic.clinicId, { fromDate: todayDate, toDate: todayDate, timeZone: clinic.timezone, agendaIds: agendas.map((a) => a.id) });
+  }),
+  // Nomes da linha "Registrar presença" (só se há algo a registrar; a contagem vem de getDashboardCounts).
+  counts.pendingAttendance > 0 ? load("consultas a registrar", () => listPendingAttendance(db, clinic.clinicId, nowAt)) : Promise.resolve([]),
+]);
+const waiting = pendingReminders?.filter((r) => r.kind === "no_answer" && r.appointment.scheduledAt > nowAt && r.appointment.scheduledAt < tomorrowEnd).map((r) => ({ appointment: r.appointment, sentAt: r.sentAt })) ?? [];
+const upcoming = todayAppointments?.filter((a) => a.status === "scheduled" || a.status === "confirmed") ?? [];
+const hhmm = (d: Date) => formatInstant(d, clinic.timezone, "HH:mm");
+// Mesmas ações e confirmações do cartão da Agenda; aqui só as que a linha precisa.
+const rowActions = (a: AgendaAppointment) =>
+  cardActions({
+    appointment: a,
+    now: nowAt,
+    who: `${a.patientName}, ${formatInstant(a.scheduledAt, clinic.timezone, "dd/MM 'às' HH:mm")}`,
+    contact: vocabulary.contact,
+    returnTo: here,
+    preparationResendable: false,
+    guidanceResendable: false,
+    waitlistOn: false,
+    onWaitlist: false,
+  });
+const endpointOf = (a: AgendaAppointment) => `/api/admin/agenda/atendimentos/${a.id}`;
+const dayLabel = (a: AgendaAppointment) => (localDay(a.scheduledAt) === todayDate ? "hoje" : "amanhã");
+// "lembrete enviado ontem, 18:00".
+const sentText = (sentAt: Date) => {
+  const day = localDay(sentAt);
+  const when = day === todayDate ? "hoje" : day === addDays(todayDate, -1) ? "ontem" : formatInstant(sentAt, clinic.timezone, "dd/MM");
+  return `lembrete enviado ${when}, ${hhmm(sentAt)}`;
+};
+function localDay(d: Date) {
+  return formatInstant(d, clinic.timezone, "yyyy-MM-dd");
+}
 const canReview = clinic.isPlatformStaff || clinic.roles.includes("admin") || clinic.roles.includes("reception");
 // A aba Envios fica no Resumo do Dia, para toda a equipe (cliente, 05/out/2026).
 
@@ -84,26 +151,62 @@ const NOTICES: Record<string, { tone: NoticeTone; text: string }> = {
 };
 const notice = aviso ? NOTICES[aviso] : undefined;
 
-const here = currentPath(Astro.url);
-const today = formatCalendarDate(todayIn(clinic.timezone), "EEEE, d 'de' MMMM 'de' yyyy");
+const today = formatCalendarDate(todayIn(clinic.timezone), "EEEE, d 'de' MMMM");
+// Saudação do protótipo aprovado ("Bom dia, Marta"): pelo horário da clínica e pelo primeiro nome da pessoa na equipe
+// (o nome que ela tem na clínica; sem nome, ou no Suporte que não é da equipe, só a saudação).
+const hour = localHourOf(new Date(), clinic.timezone);
+const greeting = hour < 12 ? "Bom dia" : hour < 18 ? "Boa tarde" : "Boa noite";
+const memberName = await db
+  .from("clinic_members")
+  .select("display_name")
+  .eq("clinic_id", clinic.clinicId)
+  .eq("user_id", clinic.userId)
+  .maybeSingle()
+  .then((r) => r.data?.display_name ?? null, () => null);
+const firstName = memberName?.trim().split(/\s+/)[0] ?? "";
 const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
+// Linha do dia (RX2): atendidas e confirmadas sobre o total de hoje; o resto ainda não confirmou.
+const pct = (n: number) => (counts.totalToday > 0 ? Math.round((n / counts.totalToday) * 100) : 0);
+const donePct = pct(counts.completedToday);
+const confirmedPct = pct(counts.confirmedToday);
+const unansweredPct = has("reminders") ? pct(counts.unansweredReminders) : 0;
+// "Registrar presença": as primeiras consultas, em ordem de horário, para o detalhe da linha.
+const pendingSorted = [...(pendingAttendanceList ?? [])].sort((a, b) => a.scheduledAt.getTime() - b.scheduledAt.getTime());
+const pendingNames = (() => {
+  const shown = pendingSorted.slice(0, 3).map((a) => `${a.patientName} ${formatInstant(a.scheduledAt, clinic.timezone, localDay(a.scheduledAt) === todayDate ? "HH:mm" : "dd/MM HH:mm")}`);
+  const more = counts.pendingAttendance - shown.length;
+  return shown.join(" · ") + (more > 0 ? ` e mais ${more}` : "");
+})();
+const pendingFirstDate = pendingSorted[0] ? localDay(pendingSorted[0].scheduledAt) : todayDate;
+// Linhas de "Precisa de você" (o número ao lado do título; o do menu soma os itens).
+const precisaLines = (awaiting.length > 0 ? 1 : 0) + (inProgress.length > 0 ? 1 : 0) + (counts.pendingAttendance > 0 ? 1 : 0) + (toReview?.length ?? 0);
+const tagClass = "rounded-md px-2 py-0.5 text-[12.5px] font-bold whitespace-nowrap";
+// "Precisa de você": some a linha de quem não tem pendência; vazio mostra um texto de tudo em dia.
+// O menu usa este número (mesma conta de getMeuDiaCount) sem ler de novo.
+Astro.locals.meuDiaCount = awaiting.length + inProgress.length + counts.pendingAttendance + (toReview?.length ?? 0);
+const hasPending = awaiting.length > 0 || inProgress.length > 0 || counts.pendingAttendance > 0 || (toReview?.length ?? 0) > 0;
 const sectionTitle = "font-display text-[17px] leading-tight font-bold text-ink sm:text-lg";
 ---
 
-<AdminLayout title="Início" autoRefresh>
-  <PageHeader title="Início" subtitle={today}>
-    <Fragment slot="actions">
-      <Button href="/admin/agenda" class="max-sm:hidden">
-        <Icon name="calendar" class="h-[18px] w-[18px]" /> Agenda do dia
-      </Button>
-      <Button href="/admin/consultas?tab=pendentes" class="max-sm:hidden">
-        <Icon name="check-circle" class="h-[18px] w-[18px]" /> Registrar comparecimento
-      </Button>
+<AdminLayout title="Meu dia" autoRefresh>
+  <header class="flex flex-wrap items-end justify-between gap-x-4 gap-y-3">
+    <div class="flex min-w-0 flex-col gap-1">
+      <p class="text-[15px] text-ink-soft first-letter:uppercase">{today}</p>
+      <h1 class="font-display text-[28px] leading-[1.1] font-bold text-ink sm:text-[32px]">{firstName ? `${greeting}, ${firstName}` : greeting}</h1>
+    </div>
+    <div class="flex flex-wrap items-center gap-2.5 max-sm:w-full">
+      <form method="GET" action="/admin/pacientes" role="search" class="w-full sm:w-[300px]">
+        <label for="buscar-paciente" class="sr-only">Buscar paciente por nome, telefone ou nascimento</label>
+        <div class="flex h-[42px] items-center gap-2 rounded-[9px] border border-line-strong bg-white px-3 focus-within:border-brand focus-within:ring-1 focus-within:ring-brand">
+          <Icon name="magnifying-glass" class="h-[18px] w-[18px] shrink-0 text-ink-soft" strokeWidth={2} />
+          <input id="buscar-paciente" name="q" type="search" placeholder="Buscar paciente" class="min-w-0 flex-1 border-0 bg-transparent p-0 text-[15px] text-ink outline-none focus:ring-0" />
+        </div>
+      </form>
       <Button href={withReturn("/admin/agenda/marcar", here)} variant="primary" class="max-sm:hidden">
-        <Icon name="plus" class="h-[18px] w-[18px]" strokeWidth={2.2} /> Marcar
+        <Icon name="plus" class="h-[18px] w-[18px]" strokeWidth={2.2} /> Marcar consulta
       </Button>
-    </Fragment>
-  </PageHeader>
+    </div>
+  </header>
 
   {notice && (
     <div class="mt-4">
@@ -112,125 +215,10 @@ const sectionTitle = "font-display text-[17px] leading-tight font-bold text-ink 
   )}
   <FlashMessage />
 
-  {
-    awaiting.length > 0 && (
-      <a
-        href="/admin/atendimento"
-        class="mt-4 flex items-center gap-4 rounded-xl border border-can-200 bg-can-50 px-4 py-3.5 text-can-800 no-underline hover:border-can-500 sm:px-5"
-      >
-        <span class="flex h-11 w-11 flex-none items-center justify-center rounded-full bg-can-500 font-display text-xl font-bold text-white">
-          {awaiting.length}
-        </span>
-        <span class="flex min-w-0 flex-1 flex-col gap-0.5">
-          <strong class="text-[17px]">{plural(awaiting.length, "conversa aguardando atendimento humano", "conversas aguardando atendimento humano")}</strong>
-          <span class="text-[15px] text-ink-mid">{oldestWait}</span>
-        </span>
-        <span class="flex-none text-[15px] font-bold max-sm:hidden">Ver conversas ›</span>
-      </a>
-    )
-  }
-  {
-    inProgress.length > 0 && (
-      // Alerta das conversas que a clínica assumiu e ainda não devolveu ao bot (cliente, 27/out/2026).
-      <Notice tone="warning" href="/admin/atendimento" linkLabel="Ver conversas" class="mt-2">
-        {inProgress.length === 1
-          ? `A conversa com ${inProgressNames} está com a clínica e ainda não voltou ao bot.`
-          : `${inProgress.length} conversas estão com a clínica e ainda não voltaram ao bot (${inProgressNames}).`}{" "}
-        O bot não volta sozinho: ao terminar, use "Devolver ao bot" em Atendimento.
-      </Notice>
-    )
-  }
-
-  <section aria-labelledby="hoje" class="mt-5 flex flex-col gap-2.5">
-    <h2 id="hoje" class={sectionTitle}>Hoje</h2>
-    <div class="grid grid-cols-2 gap-2.5 sm:gap-3 lg:grid-cols-4">
-      <Stat label="Consultas hoje" value={counts.consultationsToday} hint="sem as canceladas" />
-      {has("exams") && <Stat label="Exames hoje" value={counts.examsToday} hint="sem os cancelados" />}
-      <Stat
-        label="Comparecimento a registrar"
-        value={counts.pendingAttendance}
-        hint={counts.pendingAttendance > 0 ? "Já passaram, sem registro" : "Nada a registrar"}
-        attention={counts.pendingAttendance > 0}
-        href="/admin/consultas?tab=pendentes"
-        linkLabel="Ver em A registrar"
-      />
-      {
-        has("reminders") && (
-          <Stat
-            label="Presença não confirmada"
-            value={counts.unansweredReminders}
-            hint={counts.unansweredReminders > 0 ? "Lembretes de hoje sem resposta" : "Nenhum lembrete sem resposta"}
-            attention={counts.unansweredReminders > 0}
-            icon="paper-airplane"
-            href="/admin/consultas?tab=lembretes&grupo=no_answer"
-            linkLabel="Ver em Lembretes"
-          />
-        )
-      }
-    </div>
-  </section>
-
-  <div class="mt-3 grid grid-cols-2 gap-2.5 sm:hidden">
-    <Button href="/admin/agenda">Agenda do dia</Button>
-    <Button href="/admin/consultas?tab=pendentes" class="h-auto min-h-11 py-1.5 leading-tight whitespace-normal">Registrar comparecimento</Button>
-  </div>
-
-  {
-    toReview && (
-      <section aria-labelledby="revisar" class="mt-6 flex flex-col rounded-xl border border-line bg-white p-3.5 sm:px-5 sm:py-[18px]">
-        <h2 id="revisar" class={sectionTitle}>
-          Contatos para revisar{toReview.length > 0 && <span class="font-sans text-sm font-semibold text-ink-soft"> ({toReview.length})</span>}
-        </h2>
-        {/* "Como funciona?" (texto aprovado pelo cliente em 31/out/2026). */}
-        <HowItWorks id="contatos-revisar" topic={relacionamento.comoFunciona.revisar} class="mt-1">
-          <p class="text-sm text-ink-soft">Nos últimos {REVIEW_WINDOW_DAYS} dias, o bot deixou de marcar para estes números por um limite do contato.</p>
-        </HowItWorks>
-        {toReview.length === 0 ? (
-          <p class="mt-2 text-[15px] text-ink-soft">Nenhum contato para revisar.</p>
-        ) : (
-          <ul class="mt-2">
-            {toReview.map((item) => (
-              <li class="grid gap-x-4 gap-y-1 border-t border-[#e6ecea] py-3 first:border-t-0 sm:grid-cols-[minmax(0,1fr)_260px_150px_auto] sm:items-center">
-                <span class="flex flex-wrap items-center gap-x-2 gap-y-1">
-                  <a href={withReturn(`/admin/pacientes/contato/${item.contactId}`, here)} class="text-base font-semibold text-ink no-underline hover:text-brand hover:underline">
-                    {item.name}
-                  </a>
-                  {item.phone && <PhoneLinks phone={item.phone} plain class="text-sm text-ink-soft" />}
-                </span>
-                <span class="text-[15px] text-ink">{BOT_LIMIT_LABELS[item.last.reason]}</span>
-                <span class="text-sm text-ink-soft tabular-nums">
-                  {formatInstant(item.last.at, clinic.timezone, "dd/MM HH:mm")}
-                  {item.hits > 1 && ` · ${plural(item.hits, "vez", "vezes")}`}
-                </span>
-                {canReview && (
-                  <form method="POST" action={`/api/admin/pacientes/contato/${item.contactId}`} class="max-sm:mt-1">
-                    <input type="hidden" name="acao" value="revisado" />
-                    <input type="hidden" name="voltar" value="painel" />
-                    <Button
-                      type="submit"
-                      size="sm"
-                      class="js-confirm-delete"
-                      data-confirm-title="Marcar como revisado?"
-                      data-confirm-message={`${item.name} sai desta lista. Se atingir um limite de novo, volta.`}
-                      data-confirm-label="Revisado"
-                    >
-                      Revisado
-                    </Button>
-                  </form>
-                )}
-              </li>
-            ))}
-          </ul>
-        )}
-        {canReview && toReview.length > 0 && <ConfirmDeleteDialog />}
-      </section>
-    )
-  }
-
-  {/* Avisos no fim da página (cliente, 27/out/2026); só o atendimento humano fica no alto. */}
+  {/* Avisos que ficavam no Início continuam no alto (RX2). */}
   {
     (sendsAlertLines.length > 0 || certificateAlert || templatesAlert || paymentAlert || disconnectedAlert) && (
-      <section aria-label="Avisos" class="mt-6 flex flex-col gap-2">
+      <section aria-label="Avisos" class="mt-4 flex flex-col gap-2">
         {sendsAlertLines.length > 0 && (
           <Notice tone="danger" href="/admin/consultas?tab=envios" linkLabel="Ver os envios">
             {sendsAlertLines.join(" ")}
@@ -261,9 +249,247 @@ const sectionTitle = "font-display text-[17px] leading-tight font-bold text-ink 
       </section>
     )
   }
+
+  <section aria-labelledby="hoje" class="mt-5 flex flex-col gap-2.5 rounded-xl border border-line bg-white px-4 py-3.5 sm:px-5">
+    <div class="flex flex-wrap items-baseline gap-x-5 gap-y-1 text-[15.5px]">
+      <h2 id="hoje" class="text-[16.5px] font-bold text-ink">
+        {counts.totalToday === 0 ? "Nenhum atendimento hoje" : `Hoje, ${plural(counts.totalToday, has("exams") ? "atendimento" : "consulta", has("exams") ? "atendimentos" : "consultas")}`}
+      </h2>
+      {
+        counts.totalToday > 0 && (
+          <>
+            <span class="inline-flex items-center gap-1.5"><span class="h-2.5 w-2.5 rounded-[3px] bg-conf-500" aria-hidden="true"></span>{plural(counts.confirmedToday, "confirmada", "confirmadas")}</span>
+            {has("reminders") && (
+              <span class="inline-flex items-center gap-1.5"><span class="h-2.5 w-2.5 rounded-[3px] bg-pend-500" aria-hidden="true"></span>{counts.unansweredReminders} sem resposta</span>
+            )}
+            <span class="inline-flex items-center gap-1.5"><span class="h-2.5 w-2.5 rounded-[3px] bg-att-500" aria-hidden="true"></span>{plural(counts.completedToday, "já atendida", "já atendidas")}</span>
+          </>
+        )
+      }
+      <a href="/admin/agenda" class="font-semibold text-brand no-underline hover:underline sm:ml-auto">Abrir agenda de hoje</a>
+    </div>
+    {
+      counts.totalToday > 0 && (
+        <div
+          class="flex h-2 gap-0.5 overflow-hidden rounded-full bg-line"
+          role="img"
+          aria-label={`${counts.completedToday} já atendidas, ${counts.confirmedToday} confirmadas${has("reminders") ? ` e ${counts.unansweredReminders} sem resposta` : ""}, de ${counts.totalToday} hoje`}
+        >
+          <span class="bg-att-500" style={`width:${donePct}%`}></span>
+          <span class="bg-conf-500" style={`width:${confirmedPct}%`}></span>
+          <span class="bg-pend-500" style={`width:${unansweredPct}%`}></span>
+        </div>
+      )
+    }
+  </section>
+
+  <div class="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px] lg:items-start">
+  <div class="flex min-w-0 flex-col gap-6">
+  <section aria-labelledby="precisa" class="overflow-hidden rounded-xl border border-line bg-white">
+    <div class="flex flex-col gap-0.5 px-4 pt-4 pb-3 sm:px-[18px]">
+      <h2 id="precisa" class="flex items-center gap-2.5 font-display text-[21px] leading-tight font-bold text-ink">
+        Precisa de você
+        {precisaLines > 0 && <span class="rounded-full bg-can-100 px-2.5 py-px font-sans text-sm font-bold text-can-800">{precisaLines}</span>}
+      </h2>
+      <p class="text-[14.5px] text-ink-soft">Só some daqui quando alguém resolver.</p>
+      {
+        toReview && toReview.length > 0 && (
+          // "Como funciona?" de "Conferir contato" (texto aprovado pelo cliente em 31/out/2026).
+          <HowItWorks id="contatos-revisar" topic={relacionamento.comoFunciona.revisar} class="mt-1">
+            <p class="text-sm text-ink-soft">Nos últimos {REVIEW_WINDOW_DAYS} dias, o bot deixou de marcar para estes números por um limite do contato.</p>
+          </HowItWorks>
+        )
+      }
+    </div>
+    {!hasPending && <p class="border-t border-[#e7eeeb] px-4 py-4 text-[15px] text-ink-soft sm:px-[18px]">Nada pendente agora.</p>}
+    {
+      awaiting.length > 0 && (
+        <a
+          href="/admin/atendimento"
+          class="flex flex-wrap items-center gap-3.5 border-t border-can-200 bg-can-50 px-4 py-3.5 text-can-800 no-underline hover:bg-can-100/60 sm:px-[18px]"
+        >
+          <span class="flex h-11 w-11 flex-none items-center justify-center rounded-full bg-can-500 font-display text-xl font-bold text-white">{awaiting.length}</span>
+          <span class="flex min-w-0 flex-[1_1_280px] flex-col gap-0.5">
+            <strong class="text-[17px]">{plural(awaiting.length, "conversa aguardando atendimento humano", "conversas aguardando atendimento humano")}</strong>
+            <span class="text-[15px] text-ink-mid">{oldestWait}</span>
+          </span>
+          <span class="flex-none text-[15px] font-bold">Ver conversas ›</span>
+        </a>
+      )
+    }
+    {
+      inProgress.length > 0 && (
+        // Conversas que a clínica assumiu e ainda não devolveu ao bot (cliente, 27/out/2026).
+        <a
+          href="/admin/atendimento"
+          class="flex flex-wrap items-center gap-3.5 border-t border-pend-200 bg-pend-50 px-4 py-3.5 text-pend-800 no-underline hover:bg-pend-100/60 sm:px-[18px]"
+        >
+          <span class="flex h-11 w-11 flex-none items-center justify-center rounded-full bg-pend-500 font-display text-xl font-bold text-ink">{inProgress.length}</span>
+          <span class="flex min-w-0 flex-[1_1_280px] flex-col gap-0.5">
+            <strong class="text-[17px]">
+              {inProgress.length === 1 ? "1 conversa está com a clínica e ainda não voltou ao bot" : `${inProgress.length} conversas estão com a clínica e ainda não voltaram ao bot`}
+            </strong>
+            <span class="text-[15px] text-ink-mid">{inProgressNames}. O bot não volta sozinho: ao terminar, use "Devolver ao bot" em Atendimento.</span>
+          </span>
+          <span class="flex-none text-[15px] font-bold">Ver conversas ›</span>
+        </a>
+      )
+    }
+    {
+      counts.pendingAttendance > 0 && (
+        <div class="flex flex-wrap items-center gap-3 border-t border-[#e7eeeb] px-4 py-3.5 sm:px-[18px]">
+          <span class={`${tagClass} bg-att-100 text-att-800`}>Registrar presença</span>
+          <div class="flex min-w-0 flex-[1_1_200px] flex-col gap-0.5">
+            <span class="text-base"><strong>{plural(counts.pendingAttendance, "consulta", "consultas")}</strong> já {counts.pendingAttendance === 1 ? "passou" : "passaram"}, sem presença ou falta</span>
+            {pendingNames && <span class="text-sm text-ink-soft">{pendingNames}</span>}
+          </div>
+          <div class="flex flex-wrap gap-2">
+            <Button href="/admin/consultas?tab=pendentes">Registrar</Button>
+            <Button href={withReturn(`/admin/agenda?date=${pendingFirstDate}`, here)} variant="quiet">Abrir na agenda</Button>
+          </div>
+        </div>
+      )
+    }
+    {
+      toReview?.map((item) => (
+        <div class="flex flex-wrap items-center gap-3 border-t border-[#e7eeeb] px-4 py-3.5 sm:px-[18px]">
+          <span class={`${tagClass} bg-blk-100 text-blk-800`}>Conferir contato</span>
+          <div class="flex min-w-0 flex-[1_1_200px] flex-col gap-0.5">
+            <span class="text-base"><strong>{item.name}</strong> {BOT_LIMIT_LABELS[item.last.reason].toLowerCase()}</span>
+            <span class="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-ink-soft">
+              {item.phone && <PhoneLinks phone={item.phone} plain />}
+              <span class="tabular-nums">
+                {formatInstant(item.last.at, clinic.timezone, "dd/MM HH:mm")}
+                {item.hits > 1 && ` · ${plural(item.hits, "vez", "vezes")}`}
+              </span>
+            </span>
+          </div>
+          <div class="flex flex-wrap gap-2">
+            <Button href={withReturn(`/admin/pacientes/contato/${item.contactId}`, here)}>Ver contato</Button>
+            {canReview && (
+              <form method="POST" action={`/api/admin/pacientes/contato/${item.contactId}`} class="contents">
+                <input type="hidden" name="acao" value="revisado" />
+                <input type="hidden" name="voltar" value="painel" />
+                <Button
+                  type="submit"
+                  variant="quiet"
+                  class="js-confirm-delete"
+                  data-confirm-title="Marcar como revisado?"
+                  data-confirm-message={`${item.name} sai desta lista. Se atingir um limite de novo, volta.`}
+                  data-confirm-label="Revisado"
+                >
+                  Marcar como visto
+                </Button>
+              </form>
+            )}
+          </div>
+        </div>
+      ))
+    }
+  </section>
+
+  {
+    has("reminders") && (
+      <section aria-labelledby="esperando" class="overflow-hidden rounded-xl border border-line bg-white">
+        <div class="flex flex-col gap-0.5 px-4 pt-4 pb-3 sm:px-[18px]">
+          <h2 id="esperando" class="flex items-center gap-2.5 font-display text-[21px] leading-tight font-bold text-ink">
+            Esperando o paciente
+            {waiting.length > 0 && <span class="rounded-full bg-pend-100 px-2.5 py-px font-sans text-sm font-bold text-pend-800">{waiting.length}</span>}
+          </h2>
+          <HowItWorks id="esperando-paciente" topic={meuDia.comoFunciona.esperando} class="mt-1">
+            <p class="text-[14.5px] text-ink-soft">O lembrete foi enviado e o paciente ainda não respondeu. Nada a fazer, a não ser que queira insistir.</p>
+          </HowItWorks>
+        </div>
+        {pendingReminders === null && <div class="px-4 pb-4 sm:px-[18px]"><Notice tone="warning">Não foi possível carregar os lembretes sem resposta. Tente atualizar a página.</Notice></div>}
+        {pendingReminders !== null && waiting.length === 0 && <p class="border-t border-[#e7eeeb] px-4 py-4 text-[15px] text-ink-soft sm:px-[18px]">Nenhum lembrete de hoje ou de amanhã sem resposta.</p>}
+        {
+          waiting.map(({ appointment: a, sentAt }) => {
+            const actions = rowActions(a);
+            const confirm = actions.primary?.kind === "form" && actions.primary.acao === "confirmar_presenca" ? actions.primary : undefined;
+            const rebook = actions.visible.find((x) => x.kind === "link" && x.label === "Remarcar");
+            const phone = formatPhoneBR(a.contactPhone);
+            return (
+              <div class="flex flex-wrap items-center gap-3 border-t border-[#e7eeeb] px-4 py-3.5 sm:px-[18px]">
+                <div class="flex min-w-[56px] flex-col">
+                  <strong class="text-base tabular-nums">{hhmm(a.scheduledAt)}</strong>
+                  <span class="text-[13.5px] text-ink-soft">{dayLabel(a)}</span>
+                </div>
+                <div class="flex min-w-0 flex-[1_1_150px] flex-col gap-0.5">
+                  <span class="text-base">
+                    <a href={withReturn(`/admin/pacientes/${a.patientId}`, here)} class="font-bold text-ink no-underline hover:text-brand hover:underline">{a.patientName}</a>
+                    {" · "}{serviceLook(a.category).label}
+                  </span>
+                  <span class="text-sm text-ink-soft">
+                    {!a.isContactSelf && `${a.contactName} · `}
+                    {isAnonymizedPhone(a.contactPhone) ? "telefone anonimizado" : phone} · {sentText(sentAt)}
+                  </span>
+                </div>
+                <div class="flex flex-wrap gap-2">
+                  {!isAnonymizedPhone(a.contactPhone) && (
+                    <a
+                      href={whatsappHref(a.contactPhone)}
+                      target="_blank"
+                      rel="noopener"
+                      aria-label={`Abrir conversa no WhatsApp com ${phone}`}
+                      class="inline-flex min-h-11 items-center justify-center rounded-[9px] border border-conf-500 bg-conf-500 px-3.5 text-[14.5px] font-semibold text-white no-underline hover:bg-conf-800 sm:min-h-8"
+                    >
+                      WhatsApp
+                    </a>
+                  )}
+                  {confirm && <CardActionButton action={confirm} endpoint={endpointOf(a)} returnTo={here} />}
+                  {rebook && <CardActionButton action={rebook} endpoint={endpointOf(a)} returnTo={here} variant="quiet" />}
+                </div>
+              </div>
+            );
+          })
+        }
+      </section>
+    )
+  }
+  </div>
+
+  <aside aria-labelledby="proximas" class="flex flex-col gap-2">
+    <h2 id="proximas" class={sectionTitle}>Próximas consultas</h2>
+    {todayAppointments === null && <Notice tone="warning">Não foi possível carregar as consultas de hoje. Tente atualizar a página.</Notice>}
+    {todayAppointments !== null && upcoming.length === 0 && <p class="rounded-xl border border-line bg-white px-4 py-3.5 text-[15px] text-ink-soft">Nenhuma consulta pendente hoje.</p>}
+    {
+      upcoming.length > 0 && (
+        <ul class="rounded-xl border border-line bg-white px-4">
+          {upcoming.map((a) => {
+            const actions = rowActions(a);
+            const done = actions.primary?.kind === "form" && actions.primary.acao === "compareceu" ? actions.primary : undefined;
+            return (
+              <li class="flex flex-col gap-1.5 border-t border-[#e6ecea] py-3 first:border-t-0">
+                <span class="flex items-baseline gap-2">
+                  <span class="font-display text-[17px] font-bold text-ink tabular-nums">{hhmm(a.scheduledAt)}</span>
+                  <a href={withReturn(`/admin/pacientes/${a.patientId}`, here)} class="min-w-0 truncate text-base font-semibold text-ink no-underline hover:text-brand hover:underline">
+                    {a.patientName}
+                  </a>
+                </span>
+                <span class="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-ink-soft">
+                  {a.agendaName}
+                  <StatusPill situation={appointmentSituation(a)} />
+                </span>
+                {done && (
+                  <span class="mt-0.5 flex">
+                    <CardActionButton action={done} endpoint={endpointOf(a)} returnTo={here} variant="primary" />
+                  </span>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+      )
+    }
+  </aside>
+  </div>
+
+  {/* Um só diálogo de confirmação para todas as ações da tela. */}
+  <ConfirmDeleteDialog />
+
   <div class="h-20 sm:hidden" aria-hidden="true" />
   <div class="fixed inset-x-0 bottom-[calc(61px+env(safe-area-inset-bottom))] z-10 flex items-center gap-3 border-t border-line bg-white px-4 py-2.5 shadow-[0_-4px_14px_rgba(18,48,42,.08)] sm:hidden">
-    <span class="min-w-0 flex-1 truncate text-base font-semibold text-ink">Início</span>
-    <Button href={withReturn("/admin/agenda/marcar", here)} variant="primary" class="h-12 px-6 text-base">Marcar</Button>
+    <span class="min-w-0 flex-1 truncate text-base font-semibold text-ink">Meu dia</span>
+    <Button href={withReturn("/admin/agenda/marcar", here)} variant="primary" class="h-12 px-6 text-base">Marcar consulta</Button>
   </div>
 </AdminLayout>

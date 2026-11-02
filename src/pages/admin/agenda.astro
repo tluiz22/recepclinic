@@ -2,26 +2,30 @@
 // Agenda › Dia (F4.5): atendimentos, turmas e bloqueios do dia nas agendas
 // escolhidas (todas por padrão, com o nome da agenda em cada um; cliente,
 // 05/out/2026), com as ações de cada atendimento no cartão.
+// Opção B do redesign da Recepção (cliente, 02/nov/2026, muda a RX-D6): cada agenda é um cartão com linhas curtas
+// (hora, paciente, tipo, situação) e os horários livres; tocar numa linha abre, no painel ao lado, o atendimento
+// com as mesmas ações do cartão (AgendaPanel). A escolha fica no endereço (`sel`), então a atualização automática e
+// o "Voltar" das ações a mantêm; sem JavaScript, a linha é um link para o mesmo endereço.
 import { withReturn } from "../../lib/returnPath";
 import AdminLayout from "../../layouts/AdminLayout.astro";
 import AgendaHeader from "../../components/admin/agenda/AgendaHeader.astro";
 import AppointmentCard from "../../components/admin/agenda/AppointmentCard.astro";
+import AgendaPanel from "../../components/admin/agenda/AgendaPanel.astro";
 import ConfirmDeleteDialog from "../../components/admin/ConfirmDeleteDialog.astro";
-import SituationLegend from "../../components/admin/agenda/SituationLegend.astro";
-import HowItWorks from "../../components/admin/ui/HowItWorks.astro";
-import { agenda as ajudaAgenda } from "../../lib/ajuda/agenda";
-import { countSituations } from "../../components/admin/agenda/situationStyle";
-import { serviceBesideCategory, serviceLook, serviceTints } from "../../components/admin/agenda/categoryStyle";
+import { appointmentSituation } from "../../components/admin/agenda/situationStyle";
+import { serviceLook, serviceTints } from "../../components/admin/agenda/categoryStyle";
 import Icon from "../../components/admin/Icon.astro";
 import FlashMessage from "../../components/admin/FlashMessage.astro";
 import Button from "../../components/admin/ui/Button.astro";
 import StatusPill from "../../components/admin/ui/StatusPill.astro";
 import Tag from "../../components/admin/ui/Tag.astro";
-import DateStepper from "../../components/admin/ui/DateStepper.astro";
 import { addDays, formatCalendarDate, formatInstant, isCalendarDate, localDateOf, todayIn } from "../../lib/clinicTime";
 import { canAccessArea } from "../../lib/clinicAccess";
 import { createUserClient } from "../../lib/data/clients";
 import { loadAgendaScope } from "../../lib/data/agenda/scope";
+import { listFreeGaps, loadClinicHolidays } from "../../lib/data/agenda/slots";
+import { listNationalHolidays } from "../../lib/holidays";
+import Notice from "../../components/admin/ui/Notice.astro";
 import { buildDayItems, itemAgendaId, listAgendaAppointments, listAgendaBlocks, listNoShowStats, listOrigins } from "../../lib/data/agenda/view";
 import { listReturnReady } from "../../lib/data/agenda/returnReady";
 import { listServiceRefs } from "../../lib/data/config/services";
@@ -30,7 +34,10 @@ import { activeWaitlistAppointmentIds } from "../../lib/data/waitlist/entries";
 import { listGuidanceResendable } from "../../lib/data/whatsapp/guidance";
 import { listPreparationResendable } from "../../lib/data/whatsapp/preparation";
 import { listReminderActions } from "../../lib/data/whatsapp/reminders";
-import { vocabularyFor } from "../../lib/vocabulary";
+import { logError } from "../../lib/log";
+import HowItWorks from "../../components/admin/ui/HowItWorks.astro";
+import { agenda as ajudaAgenda } from "../../lib/ajuda/agenda";
+import { capitalize, vocabularyFor } from "../../lib/vocabulary";
 
 const clinic = Astro.locals.clinic!;
 const db = createUserClient(Astro.request, Astro.cookies);
@@ -41,14 +48,20 @@ const date = dateParam && isCalendarDate(dateParam) ? dateParam : today;
 
 const scope = await loadAgendaScope(db, clinic.clinicId, Astro.url, Astro.cookies);
 const range = { fromDate: date, toDate: date, timeZone: clinic.timezone, agendaIds: scope.agendaIds };
-const [appointments, blocks, serviceRefs] = await Promise.all([
+// Horário livre (RX8): lacunas de cada agenda; se a leitura falhar, a Agenda abre sem as linhas "Livre".
+const [appointments, blocks, serviceRefs, gaps] = await Promise.all([
   listAgendaAppointments(db, clinic.clinicId, range),
   listAgendaBlocks(db, clinic.clinicId, { ...range, agendaNames: scope.agendaNames }),
   listServiceRefs(db, clinic.clinicId),
+  listFreeGaps(db, clinic.clinicId, { date, agendaIds: scope.agendaIds, timeZone: clinic.timezone }, now).catch((error: unknown) => {
+    logError("agenda: horários livres não carregaram", error, { clinica: clinic.clinicId });
+    return [];
+  }),
 ]);
 // Cor de cada serviço na faixa do cartão (cliente, 19/out/2026).
 const tints = serviceTints(serviceRefs);
-const items = buildDayItems(appointments, blocks);
+const items = buildDayItems(appointments, blocks, gaps.map((gap) => ({ ...gap, agendaName: scope.agendaNames.get(gap.agendaId) ?? "" })));
+const hasContent = items.some((item) => item.kind !== "free");
 
 const activeFuture = appointments.filter((a) => (a.status === "scheduled" || a.status === "confirmed") && a.scheduledAt > now).map((a) => a.id);
 const examsFuture = appointments.filter((a) => a.category === "exam" && activeFuture.includes(a.id)).map((a) => a.id);
@@ -81,12 +94,6 @@ const returnTo = `/admin/agenda?date=${date}`;
 // em cada cartão (cliente, 15/out/2026). As colunas viram uma lista só e cada
 // item leva a posição dele no dia (a lista `items` já vem por horário).
 const orderOf = (item: (typeof items)[number]) => (byColumn ? items.indexOf(item) : undefined);
-const counts = countSituations(appointments, blocks.length);
-const activeCount = appointments.filter((a) => a.status !== "canceled").length;
-const subtitle = [
-  formatCalendarDate(date, "EEEE, d 'de' MMMM 'de' yyyy"),
-  `${activeCount} ${activeCount === 1 ? "atendimento" : "atendimentos"}${byColumn ? ` em ${columns.length} agendas` : ""}`,
-].join(" · ");
 // Bloqueio de vários dias: data junto do horário quando não é o dia aberto.
 const blockTime = (d: Date) => formatInstant(d, clinic.timezone, localDateOf(d, clinic.timezone) === date ? "HH:mm" : "dd/MM HH:mm");
 const time = (d: Date) => formatInstant(d, clinic.timezone, "HH:mm");
@@ -109,207 +116,253 @@ const cardProps = (a: (typeof appointments)[number]) => ({
   payment: paymentStates ? (paymentStates.get(a.id) ?? "none") : undefined,
   returnReady: returnReady.get(a.id),
 });
+// Painel (opção B): o item escolhido; as ações voltam com ele aberto.
+const base = `/admin/agenda?date=${date}`;
+const sel = Astro.url.searchParams.get("sel") ?? "";
+const itemKey = (item: (typeof items)[number]) =>
+  item.kind === "appointment" ? item.appointment.id : item.kind === "group" ? `turma-${item.agendaId}-${item.start.getTime()}` : item.kind === "block" ? `bloqueio-${item.block.id}` : "";
+const selHref = (key: string) => `${base}&sel=${encodeURIComponent(key)}`;
+const selected = items.find((item) => item.kind !== "free" && itemKey(item) === sel);
+// Feriado: a Agenda não mostra horários livres (a mesma regra do bot e do Marcar); um aviso diz por quê.
+const holidayName =
+  listNationalHolidays(Number(date.slice(0, 4))).find((h) => h.date === date)?.name ??
+  ((await loadClinicHolidays(db, clinic.clinicId, date, date).catch(() => new Set<string>())).has(date) ? "feriado da clínica" : null);
+const panelItems = items.filter((item) => item.kind !== "free");
+const tomorrow = addDays(today, 1);
+const dayText = date === today ? "Hoje" : date === tomorrow ? "Amanhã" : capitalize(formatCalendarDate(date, "EEE dd/MM"));
+const title = `${formatCalendarDate(date, "EEEE").replace("-feira", "")}, ${formatCalendarDate(date, date.slice(0, 4) === today.slice(0, 4) ? "d 'de' MMMM" : "d 'de' MMMM 'de' yyyy")}`;
+const panelProps = (a: (typeof appointments)[number]) => ({ ...cardProps(a), returnTo: selHref(a.id), dayText, closeHref: base });
+const rowBase = "flex min-h-12 items-center gap-2.5 border-t border-[#e7eeeb] px-3.5 py-2 no-underline first:border-t-0 sm:first:border-t";
 ---
 
 <AdminLayout title="Agenda" autoRefresh>
-  <AgendaHeader view="dia" date={date} agendas={scope.selectable} selectedAgendaId={scope.selectedAgendaId} subtitle={subtitle}>
-    <DateStepper
-      slot="nav"
-      action="/admin/agenda"
-      date={date}
-      prevHref={`/admin/agenda?date=${addDays(date, -1)}`}
-      nextHref={`/admin/agenda?date=${addDays(date, 1)}`}
-      todayHref={date !== today ? "/admin/agenda" : undefined}
-    />
+  <AgendaHeader view="dia" date={date} agendas={scope.selectable} selectedAgendaId={scope.selectedAgendaId} subtitle={title}>
+    <div slot="nav" class="flex items-center gap-1.5">
+      <Button href={`/admin/agenda?date=${addDays(date, -1)}`} aria-label="Dia anterior" class="w-9 px-0">
+        <Icon name="chevron-left" class="h-5 w-5 shrink-0" strokeWidth={2.2} />
+      </Button>
+      <Button href="/admin/agenda" aria-current={date === today ? "date" : undefined} class="px-3">Hoje</Button>
+      <Button href={`/admin/agenda?date=${addDays(date, 1)}`} aria-label="Próximo dia" class="w-9 px-0">
+        <Icon name="chevron-right" class="h-5 w-5 shrink-0" strokeWidth={2.2} />
+      </Button>
+    </div>
+    {/* O dia é o título; tocar nele abre o calendário do aparelho para ir a outro dia. */}
+    <form slot="title" method="GET" action="/admin/agenda" class="relative">
+      <h1 class="font-display text-[18px] leading-tight font-bold whitespace-nowrap text-ink first-letter:uppercase xl:text-[19px]">{title}</h1>
+      <label class="absolute inset-0 cursor-pointer rounded-md focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-brand" title="Escolher o dia">
+        <span class="sr-only">Escolher o dia</span>
+        <input type="date" name="date" value={date} data-autosubmit class="absolute inset-0 h-full w-full cursor-pointer opacity-0" />
+      </label>
+    </form>
   </AgendaHeader>
 
-  <FlashMessage />
-  <HowItWorks id="situacoes" topic={ajudaAgenda.comoFunciona.situacoes} class="mt-4">
-    <SituationLegend counts={counts} class="" />
+  <HowItWorks id="situacoes-dia" topic={ajudaAgenda.comoFunciona.situacoes} class="mt-2">
+    <p class="text-[14.5px] text-ink-soft">Toque numa linha para ver as ações do atendimento.</p>
   </HowItWorks>
-
+  <FlashMessage />
   {
-    byColumn && (
-      <div data-columns-top class="mt-4 hidden overflow-x-auto sm:block" aria-hidden="true">
-        <div data-columns-top-inner class="h-px" />
-      </div>
+    holidayName && (
+      <Notice tone="info" class="mt-4">
+        Feriado ({holidayName}): neste dia a Agenda não mostra horários livres e o bot não oferece horários. Para marcar assim mesmo, use "+ Marcar
+        consulta".
+      </Notice>
     )
   }
-  <div data-columns-frame class={`relative ${byColumn ? "mt-1 sm:mt-1" : "mt-4"}`}>
+
+  <div class="mt-4 flex flex-wrap items-start gap-[18px]">
     <div
-      data-columns
-      class={byColumn
-        ? "flex flex-col gap-2.5 pb-2 sm:grid sm:auto-cols-[minmax(230px,1fr)] sm:grid-flow-col sm:items-start sm:gap-4 sm:overflow-x-auto"
-        : "flex max-w-3xl flex-col gap-2.5 pb-2"}
+      class={`min-w-0 flex-[999_1_460px] ${byColumn ? "grid grid-cols-[repeat(auto-fill,minmax(250px,1fr))] gap-3.5 max-sm:flex max-sm:flex-col max-sm:gap-0 max-sm:overflow-hidden max-sm:rounded-xl max-sm:border max-sm:border-line max-sm:bg-white" : "grid"}`}
     >
       {
         columns.map((column) => (
-          <section class={byColumn ? "flex min-w-0 flex-col gap-2.5 max-sm:contents" : "contents"} aria-label={byColumn ? column.name : undefined}>
-            {byColumn && (
-              <div class="hidden items-baseline justify-between gap-2 border-b-2 border-line px-0.5 pt-1 pb-1.5 sm:flex">
-                <h2 class="truncate text-base leading-snug font-bold text-ink">{column.name}</h2>
-                <span class="text-[13px] whitespace-nowrap text-ink-soft">
-                  {(() => {
-                    // Como no título do dia: o cancelado não conta.
-                    const live = (a: { status: string }) => (a.status === "canceled" ? 0 : 1);
-                    const n = column.items.reduce((sum, item) => sum + (item.kind === "appointment" ? live(item.appointment) : item.kind === "group" ? item.appointments.reduce((t, a) => t + live(a), 0) : 0), 0);
-                    const b = column.items.filter((item) => item.kind === "block").length;
-                    return [n > 0 || b === 0 ? `${n} ${n === 1 ? "atendimento" : "atendimentos"}` : "", b > 0 ? `${b} ${b === 1 ? "bloqueio" : "bloqueios"}` : ""].filter(Boolean).join(" · ");
-                  })()}
-                </span>
-              </div>
-            )}
-            {column.items.map((item) =>
-              item.kind === "appointment" ? (
-                <AppointmentCard {...cardProps(item.appointment)} order={orderOf(item)} />
-              ) : item.kind === "group" ? (
-                <article class="flex min-w-0 flex-col gap-1.5 rounded-xl border border-line bg-white px-3 pt-3 pb-2.5" style={orderOf(item) !== undefined ? `order: ${orderOf(item)}` : undefined}>
-                  {/* Faixa do tipo, como no cartão do atendimento (1C; turma decidida pelo cliente, S-01, 19/out/2026). */}
-                  {(() => {
-                    const first = item.appointments[0];
-                    if (!first) return null;
-                    const category = first.category;
-                    const style = serviceLook(category, tints.get(first.serviceId));
-                    const service = serviceBesideCategory(item.serviceName, category);
-                    return (
-                      <div class={`-mx-3 -mt-3 mb-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 rounded-t-[11px] border-b px-3 py-2 ${style.band}`}>
-                        <span class={`inline-flex items-center gap-1.5 font-display text-[17px] leading-tight font-bold ${style.text}`}>
-                          <Icon name={style.icon} class="h-[18px] w-[18px] shrink-0" strokeWidth={2.2} />
-                          {style.label}
-                        </span>
-                        {service && <span class={`text-[15px] leading-snug sm:text-sm ${style.detail}`}>{service}</span>}
-                      </div>
-                    );
-                  })()}
-                  <div class="flex items-center justify-between gap-2">
-                    <span class="text-base leading-tight font-bold whitespace-nowrap text-ink tabular-nums">
-                      {time(item.start)} – {time(item.end)}
+          <section
+            class={`min-w-0 overflow-hidden rounded-xl border border-line bg-white ${byColumn ? "max-sm:contents" : ""}`}
+            aria-label={column.name || scope.agendaNames.get(scope.selectedAgendaId ?? "") || "Agenda"}
+          >
+            <strong class={`block border-b border-line px-3.5 py-3 text-[15.5px] ${byColumn ? "max-sm:hidden" : ""}`}>
+              {column.name || scope.agendaNames.get(scope.selectedAgendaId ?? "") || "Agenda"}
+            </strong>
+            {column.items.map((item) => {
+              const order = orderOf(item);
+              const style = order !== undefined ? `order: ${order}` : undefined;
+              const agendaOnPhone = byColumn && <span class="text-[12.5px] text-ink-soft sm:hidden"> · {item.kind === "appointment" ? item.appointment.agendaName : item.agendaName}</span>;
+              if (item.kind === "free") {
+                return (
+                  <a
+                    href={withReturn(`/admin/agenda/marcar?date=${date}&agenda_id=${item.agendaId}&hora=${item.time}`, returnTo)}
+                    aria-label={`Livre das ${item.time} às ${item.endTime}${byColumn ? `, ${item.agendaName}` : ""}: marcar`}
+                    class={`${rowBase} bg-conf-50 text-[14px] font-semibold text-brand-ink hover:bg-conf-100 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-brand`}
+                    style={style}
+                  >
+                    <span class="min-w-11 tabular-nums">{item.time}</span>
+                    <span class="flex-1">Livre{agendaOnPhone}</span>
+                    <span>+ Marcar</span>
+                  </a>
+                );
+              }
+              const key = itemKey(item);
+              const isSel = key === sel;
+              const rowClass = `${rowBase} text-ink hover:bg-canvas focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-brand data-[selected]:bg-conf-50 data-[selected]:shadow-[inset_3px_0_0_var(--color-brand)]`;
+              if (item.kind === "appointment") {
+                const a = item.appointment;
+                const canceled = a.status === "canceled";
+                return (
+                  <a href={selHref(key)} data-select={key} data-selected={isSel || undefined} aria-current={isSel ? "true" : undefined} class={rowClass} style={style}>
+                    <strong class={`min-w-11 text-[14.5px] tabular-nums ${canceled ? "text-ink-soft line-through" : ""}`}>{time(a.scheduledAt)}</strong>
+                    <span class="flex min-w-0 flex-1 flex-col">
+                      <span class={`truncate text-[15px] font-bold ${canceled ? "text-ink-soft line-through" : ""}`}>{a.patientName}</span>
+                      <span class="text-[13px] text-ink-soft">{serviceLook(a.category).label}{agendaOnPhone}</span>
                     </span>
-                    <span class="inline-flex items-center rounded-md bg-[#f6e6da] px-1.5 text-[13px] leading-normal font-semibold text-[#7a3d12]">Turma</span>
-                  </div>
-                  <p class="text-[15px] font-semibold text-ink">
-                    {item.appointments.filter((a) => a.status !== "canceled").length} {vocabulary.patients}
-                  </p>
-                  <div class="flex flex-wrap gap-1.5">
-                    {byColumn && <Tag strong class="sm:hidden">{item.agendaName}</Tag>}
-                    <Tag>{item.locationName}</Tag>
-                  </div>
-                  <div class="mt-1 flex flex-col gap-1.5">
-                    {item.appointments.map((a) => (
-                      <AppointmentCard {...cardProps(a)} compact />
-                    ))}
-                  </div>
-                </article>
-              ) : (
-                <article class="flex min-w-0 flex-col gap-1.5 rounded-xl border border-blk-200 border-l-[5px] border-l-blk-500 bg-blk-50 px-3 pt-3 pb-2.5" style={orderOf(item) !== undefined ? `order: ${orderOf(item)}` : undefined}>
-                  <div class="flex items-center justify-between gap-2">
-                    <span class="text-base leading-tight font-bold whitespace-nowrap text-ink tabular-nums">
-                      {blockTime(item.start)} – {blockTime(item.end)}
+                    <StatusPill situation={appointmentSituation(a)} />
+                  </a>
+                );
+              }
+              if (item.kind === "group") {
+                const live = item.appointments.filter((a) => a.status !== "canceled").length;
+                return (
+                  <a href={selHref(key)} data-select={key} data-selected={isSel || undefined} aria-current={isSel ? "true" : undefined} class={rowClass} style={style}>
+                    <strong class="min-w-11 text-[14.5px] tabular-nums">{time(item.start)}</strong>
+                    <span class="flex min-w-0 flex-1 flex-col">
+                      <span class="truncate text-[15px] font-bold">Turma · {live} {vocabulary.patients}</span>
+                      <span class="truncate text-[13px] text-ink-soft">{item.serviceName}{agendaOnPhone}</span>
                     </span>
-                    <StatusPill situation="block" />
-                  </div>
-                  <p class="text-[15px] text-blk-800">{item.block.reason}</p>
-                  {byColumn && (
-                    <div class="flex flex-wrap gap-1.5 sm:hidden">
-                      <Tag strong>{item.agendaName}</Tag>
-                    </div>
-                  )}
-                  <div class="mt-0.5 flex items-center justify-between gap-1.5 border-t border-ink/10 pt-2.5 sm:pt-2">
-                    <Button size="sm" href={withReturn(`/admin/agenda/bloqueios/${item.block.id}`, returnTo)}>
-                      Editar
-                    </Button>
-                    <form method="POST" action={`/api/admin/agenda/bloqueios/${item.block.id}`} class="contents">
-                      <input type="hidden" name="acao" value="remover" />
-                      <input type="hidden" name="return_to" value={returnTo} />
-                      <Button
-                        type="submit"
-                        size="sm"
-                        variant="danger-quiet"
-                        class="js-confirm-delete"
-                        data-confirm-title="Remover o bloqueio?"
-                        data-confirm-message={`${item.block.reason}. Os horários voltam a ser oferecidos.`}
-                        data-confirm-label="Remover"
-                      >
-                        Remover
-                      </Button>
-                    </form>
-                  </div>
-                </article>
-              ),
-            )}
-            {column.items.length === 0 && (
-              <p class={`rounded-xl border border-dashed border-line-strong px-3 py-5 text-center text-[15px] text-ink-soft ${byColumn ? "hidden sm:block" : ""}`}>
-                {byColumn ? "Nenhum atendimento." : "Nenhum atendimento neste dia."}
-              </p>
-            )}
+                    <span class="inline-flex items-center rounded-md bg-[#f6e6da] px-1.5 text-[12px] leading-normal font-semibold text-[#7a3d12]">Turma</span>
+                  </a>
+                );
+              }
+              return (
+                <a href={selHref(key)} data-select={key} data-selected={isSel || undefined} aria-current={isSel ? "true" : undefined} class={`${rowClass} bg-blk-50`} style={style}>
+                  <strong class="min-w-11 text-[14.5px] tabular-nums">{blockTime(item.start)}</strong>
+                  <span class="flex min-w-0 flex-1 flex-col">
+                    <span class="truncate text-[15px] font-bold text-blk-800">Bloqueio até {blockTime(item.end)}</span>
+                    <span class="truncate text-[13px] text-ink-soft">{item.block.reason}{agendaOnPhone}</span>
+                  </span>
+                  <StatusPill situation="block" />
+                </a>
+              );
+            })}
+            {column.items.length === 0 && <p class={`px-3.5 py-4 text-[15px] text-ink-soft ${byColumn ? "max-sm:hidden" : ""}`}>Nenhum atendimento.</p>}
           </section>
         ))
       }
-      {byColumn && items.length === 0 && (
-        <p class="rounded-xl border border-dashed border-line-strong px-3 py-5 text-center text-[15px] text-ink-soft sm:hidden">Nenhum atendimento neste dia.</p>
-      )}
+      {byColumn && !hasContent && <p class="px-3.5 py-4 text-[15px] text-ink-soft sm:hidden">Nenhum atendimento neste dia.</p>}
     </div>
+
+    <aside
+      id="painel"
+      aria-label="Atendimento selecionado"
+      data-agenda-panel
+      data-has-selection={selected ? "" : undefined}
+      class="min-w-0 flex-[1_1_330px] self-stretch overflow-hidden rounded-xl border-2 border-brand bg-white lg:sticky lg:top-4 lg:max-h-[calc(100vh-2rem)] lg:self-start lg:overflow-y-auto max-lg:fixed max-lg:inset-x-0 max-lg:bottom-0 max-lg:z-30 max-lg:max-h-[80vh] max-lg:overflow-y-auto max-lg:rounded-b-none max-lg:shadow-[0_-10px_30px_rgba(18,48,42,.2)] max-lg:[&:not([data-has-selection])]:hidden"
+    >
+      <div data-panel="" hidden={!!selected} class="flex h-full min-h-40 flex-col items-center justify-center gap-1 px-6 py-10 text-center">
+        <p class="text-[15px] font-semibold text-ink">Escolha um atendimento</p>
+        <p class="text-sm text-ink-soft">Toque numa linha para ver o paciente, o telefone e as ações aqui.</p>
+      </div>
+      {
+        panelItems.map((item) => {
+          const key = itemKey(item);
+          return (
+            <div data-panel={key} hidden={key !== sel} class="h-full">
+              {item.kind === "appointment" ? (
+                <AgendaPanel {...panelProps(item.appointment)} />
+              ) : item.kind === "group" ? (
+                <div class="flex flex-col">
+                  <p class="bg-[#f6e6da] px-[18px] py-1.5 text-[12.5px] font-bold tracking-[.04em] text-[#7a3d12] uppercase">Turma · {item.serviceName}</p>
+                  <div class="flex items-center justify-between gap-2 border-b border-[#e7eeeb] px-[18px] py-3.5">
+                    <strong class="text-base tabular-nums">{dayText}, {time(item.start)}–{time(item.end)} · {item.agendaName}</strong>
+                    <a href={base} data-panel-close aria-label="Fechar" class="inline-flex min-h-8 items-center rounded-lg px-1.5 text-brand hover:bg-brand-soft">
+                      <Icon name="x-mark" class="h-[18px] w-[18px]" strokeWidth={2.2} />
+                    </a>
+                  </div>
+                  <div class="flex flex-col gap-1.5 px-[18px] py-4">
+                    <h2 data-panel-title tabindex="-1" class="font-display text-[20px] font-bold outline-none">{item.appointments.filter((a) => a.status !== "canceled").length} {vocabulary.patients}</h2>
+                    <Tag>{item.locationName}</Tag>
+                    {item.appointments.map((a) => (
+                      <AppointmentCard {...cardProps(a)} returnTo={selHref(key)} compact />
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <div class="flex flex-col">
+                  <p class="bg-blk-100 px-[18px] py-1.5 text-[12.5px] font-bold tracking-[.04em] text-blk-800 uppercase">Bloqueio</p>
+                  <div class="flex items-center justify-between gap-2 border-b border-[#e7eeeb] px-[18px] py-3.5">
+                    <strong class="text-base tabular-nums">{blockTime(item.start)} – {blockTime(item.end)} · {item.agendaName}</strong>
+                    <a href={base} data-panel-close aria-label="Fechar" class="inline-flex min-h-8 items-center rounded-lg px-1.5 text-brand hover:bg-brand-soft">
+                      <Icon name="x-mark" class="h-[18px] w-[18px]" strokeWidth={2.2} />
+                    </a>
+                  </div>
+                  <div class="flex flex-col gap-3 px-[18px] py-4">
+                    <h2 data-panel-title tabindex="-1" class="text-[17px] font-semibold text-blk-800 outline-none">{item.block.reason}</h2>
+                    <div class="grid grid-cols-2 gap-2">
+                      <Button size="sm" href={withReturn(`/admin/agenda/bloqueios/${item.block.id}`, returnTo)} class="w-full">
+                        Editar
+                      </Button>
+                      <form method="POST" action={`/api/admin/agenda/bloqueios/${item.block.id}`} class="contents">
+                        <input type="hidden" name="acao" value="remover" />
+                        <input type="hidden" name="return_to" value={returnTo} />
+                        <Button
+                          type="submit"
+                          size="sm"
+                          variant="danger"
+                          class="js-confirm-delete w-full"
+                          data-confirm-title="Remover o bloqueio?"
+                          data-confirm-message={`${item.block.reason}. Os horários voltam a ser oferecidos.`}
+                          data-confirm-label="Remover"
+                        >
+                          Remover
+                        </Button>
+                      </form>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        })
+      }
+    </aside>
   </div>
   <ConfirmDeleteDialog />
 
   <script>
-    // Colunas por agenda: uma barra de rolagem também acima dos nomes
-    // (cliente, 05/out/2026), andando junto com a de baixo, e uma sombra na
-    // borda quando há mais agendas de lado (redesign, 15/out/2026).
-    const top = document.querySelector<HTMLElement>("[data-columns-top]");
-    const inner = document.querySelector<HTMLElement>("[data-columns-top-inner]");
-    const columns = document.querySelector<HTMLElement>("[data-columns]");
-    const frame = document.querySelector<HTMLElement>("[data-columns-frame]");
-    if (top && inner && columns && frame) {
-      const edges = () => {
-        const max = columns.scrollWidth - columns.clientWidth;
-        frame.toggleAttribute("data-more-left", columns.scrollLeft > 1);
-        frame.toggleAttribute("data-more-right", columns.scrollLeft < max - 1);
+    // Opção B: tocar numa linha abre o atendimento no painel, sem recarregar; o endereço guarda a escolha
+    // (`sel`), para a atualização automática e o "Voltar" manterem o painel aberto. Fechar limpa a escolha.
+    const panel = document.querySelector<HTMLElement>("[data-agenda-panel]");
+    if (panel) {
+      const show = (key: string) => {
+        panel.querySelectorAll<HTMLElement>("[data-panel]").forEach((p) => (p.hidden = p.dataset.panel !== key));
+        panel.toggleAttribute("data-has-selection", key !== "");
+        document.querySelectorAll<HTMLElement>("[data-select]").forEach((row) => {
+          const on = row.dataset.select === key;
+          row.toggleAttribute("data-selected", on);
+          if (on) row.setAttribute("aria-current", "true");
+          else row.removeAttribute("aria-current");
+        });
+        const url = new URL(location.href);
+        if (key) url.searchParams.set("sel", key);
+        else url.searchParams.delete("sel");
+        history.replaceState(null, "", url);
+        if (key) panel.querySelector<HTMLElement>(`[data-panel="${CSS.escape(key)}"] [data-panel-title]`)?.focus({ preventScroll: window.matchMedia("(min-width: 1024px)").matches });
       };
-      const size = () => {
-        inner.style.width = `${columns.scrollWidth}px`;
-        top.hidden = columns.scrollWidth <= columns.clientWidth;
-        edges();
-      };
-      let syncing = false;
-      const follow = (from: HTMLElement, to: HTMLElement) => () => {
-        if (syncing) return;
-        syncing = true;
-        to.scrollLeft = from.scrollLeft;
-        requestAnimationFrame(() => (syncing = false));
-      };
-      top.addEventListener("scroll", follow(top, columns));
-      columns.addEventListener("scroll", follow(columns, top));
-      columns.addEventListener("scroll", edges, { passive: true });
-      new ResizeObserver(size).observe(columns);
-      size();
+      document.addEventListener("click", (event) => {
+        if (event.metaKey || event.ctrlKey || event.shiftKey || event.button !== 0) return;
+        const target = event.target as Element | null;
+        const row = target?.closest<HTMLElement>("[data-select]");
+        const close = target?.closest("[data-panel-close]");
+        if (row) {
+          event.preventDefault();
+          show(row.dataset.select ?? "");
+        } else if (close) {
+          event.preventDefault();
+          const key = new URL(location.href).searchParams.get("sel") ?? "";
+          show("");
+          document.querySelector<HTMLElement>(`[data-select="${CSS.escape(key)}"]`)?.focus();
+        }
+      });
+      document.addEventListener("keydown", (event) => {
+        if (event.key === "Escape" && panel.hasAttribute("data-has-selection") && !document.querySelector("dialog[open], :popover-open")) show("");
+      });
     }
   </script>
-
-  <style>
-    [data-columns-frame]::before,
-    [data-columns-frame]::after {
-      content: "";
-      position: absolute;
-      top: 0;
-      bottom: 0.5rem;
-      width: 24px;
-      pointer-events: none;
-      opacity: 0;
-      transition: opacity 150ms;
-      z-index: 1;
-    }
-    [data-columns-frame]::before {
-      left: 0;
-      background: linear-gradient(to right, rgb(18 48 42 / 0.12), transparent);
-    }
-    [data-columns-frame]::after {
-      right: 0;
-      background: linear-gradient(to left, rgb(18 48 42 / 0.12), transparent);
-    }
-    [data-columns-frame][data-more-left]::before,
-    [data-columns-frame][data-more-right]::after {
-      opacity: 1;
-    }
-  </style>
 </AdminLayout>

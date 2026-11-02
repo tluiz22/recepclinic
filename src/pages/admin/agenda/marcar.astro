@@ -29,7 +29,7 @@ import { buttonClass, CONTROL } from "../../../components/admin/ui/styles";
 import { isOverConsultationAgeLimit, formatAge, formatAgeAndBirth } from "../../../lib/age";
 import { slotValue } from "../../../lib/agendaSlot";
 import { isUuid } from "../../../lib/clinicAccess";
-import { formatCalendarDate, formatInstant, isCalendarDate, localDateOf, todayIn, toInstant } from "../../../lib/clinicTime";
+import { formatCalendarDate, formatInstant, isCalendarDate, isClockTime, localDateOf, todayIn, toInstant } from "../../../lib/clinicTime";
 import { pickOne, readOtherTime } from "../../../lib/otherTime";
 import { buildDayStrip } from "../../../lib/dayStrip";
 import { createUserClient } from "../../../lib/data/clients";
@@ -101,13 +101,18 @@ const state = {
   agenda_id: params.get("agenda_id") ?? editing?.agendaId ?? "",
   date: validDate(params.get("date")) || (editing ? localDateOf(editing.scheduledAt, clinic.timezone) : ""),
   de: validDate(params.get("de")),
+  // Hora de início vinda do "Livre · + Marcar" da Agenda (RX8): só pré-marca o horário, se ele estiver livre para
+  // o serviço escolhido; nada é pulado (a conferência ao marcar é a de sempre).
+  hora: isClockTime(params.get("hora") ?? "") ? params.get("hora")! : "",
   // Tipo aberto na escolha do serviço (C6): o do endereço; sem ele, o do serviço escolhido.
   tipo: params.get("tipo") ?? "",
   volta: volta ?? "",
 };
 const link = (changes: Partial<typeof state> & { busca?: string }) => {
   const next = new URLSearchParams();
-  for (const [key, value] of Object.entries({ ...state, ...changes })) if (value) next.set(key, value);
+  // Outro dia: a hora pedida não vale mais.
+  const merged = { ...state, ...changes, ...(changes.date !== undefined && changes.date !== state.date ? { hora: "" } : {}) };
+  for (const [key, value] of Object.entries(merged)) if (value) next.set(key, value);
   return `/admin/agenda/marcar?${next}`;
 };
 const busca = (params.get("busca") ?? "").trim();
@@ -244,6 +249,8 @@ if (patient && service && searchAgendas.length) {
     }
   }
 }
+// Horário pedido pela Agenda (RX8): vem marcado se estiver entre os livres do dia escolhido.
+const wantedSlot = !editing && !isGroup && state.hora && strip.selected === state.date ? slotOptions.find((option) => option.label === state.hora) : undefined;
 // Outro horário (cliente, 28/out/2026): a equipe marca em qualquer dia e hora;
 // conferido aqui (os avisos aparecem antes) e de novo ao marcar.
 // Com atendimento futuro na agenda (duplicidade), o Outro horário continua
@@ -645,12 +652,12 @@ const remarcarHref = (a: UpcomingAppointment) => `/admin/agenda/remarcar?id=${a.
                   strip={strip}
                   href={(date, start) => link({ date, de: start })}
                   action="/admin/agenda/marcar"
-                  hidden={{ ...state, date: "", de: "" }}
+                  hidden={{ ...state, date: "", de: "", hora: "" }}
                   min={today}
                 />
               )}
               {!isGroup && !strip.selected && !strip.unavailable && <p class="text-[15px] text-ink-soft">Sem horários livres nos próximos 60 dias.</p>}
-              {slotOptions.length > 0 && <SlotPicker options={slotOptions} form={FORM} byPeriod={!isGroup} />}
+              {slotOptions.length > 0 && <SlotPicker options={slotOptions} form={FORM} byPeriod={!isGroup} checked={wantedSlot?.value} />}
               {(isGroup || strip.selected) && slotOptions.length === 0 && (
                 <p class="text-[15px] text-ink-soft">{isGroup ? "Nenhuma turma com vaga." : "Nenhum horário livre nesta data."}</p>
               )}

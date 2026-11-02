@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { computeFreeSlots, type BusyInterval, type SlotStrategy, type SlotWindow } from "./freeSlots";
+import { computeFreeGaps, computeFreeSlots, type BusyInterval, type SlotStrategy, type SlotWindow } from "./freeSlots";
 
 // Mesmos casos de computeAvailableSlots (F1), no cálculo novo com fuso.
 // Quarta-feira, 14/10/2026; "agora" na véspera, salvo nos testes de horário passado.
@@ -141,5 +141,32 @@ describe("fuso da clínica", () => {
       now: new Date("2018-11-01T00:00:00Z"),
     });
     expect(result.map((slot) => slot.time)).toEqual(["01:00", "01:30"]);
+  });
+});
+
+describe("horários livres da Agenda › Dia (uma linha por horário)", () => {
+  const rows = ({ windows = [morning], busy = [] as BusyInterval[], bufferMinutes = 0, stepMinutes = 60, now = local("12:00", "2026-10-13") } = {}) =>
+    computeFreeGaps({ date: DATE, timeZone: FORTALEZA, windows, busy, bufferMinutes, stepMinutes, now }).map((g) => g.time);
+
+  it("corta a janela no passo do menor serviço", () => {
+    expect(rows()).toEqual(["08:00", "09:00", "10:00", "11:00"]);
+  });
+
+  it("desconta o ocupado e o intervalo da agenda", () => {
+    expect(rows({ busy: [busyAt("09:00", "10:00")] })).toEqual(["08:00", "10:00", "11:00"]);
+    expect(rows({ busy: [busyAt("09:00", "09:30")], stepMinutes: 30, bufferMinutes: 10 })).toEqual(["08:00", "09:40", "10:10", "10:40", "11:10"]);
+  });
+
+  it("sobra menor que o passo não vira linha", () => {
+    expect(rows({ busy: [busyAt("08:20", "12:00")], stepMinutes: 30 })).toEqual([]);
+  });
+
+  it("hoje, só os que ainda não começaram", () => {
+    expect(rows({ now: local("09:07") })).toEqual(["10:00", "11:00"]);
+    expect(rows({ now: local("12:00") })).toEqual([]);
+  });
+
+  it("junta janelas que se sobrepõem", () => {
+    expect(rows({ windows: [morning, { locationId: "loc-b", startTime: "11:00", endTime: "14:00" }] })).toEqual(["08:00", "09:00", "10:00", "11:00", "12:00", "13:00"]);
   });
 });

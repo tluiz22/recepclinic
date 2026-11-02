@@ -13,10 +13,12 @@ interface Props {
   variant?: ButtonVariant;
   /** Dentro do menu "Mais". */
   inMenu?: boolean;
+  /** Classes a mais (ex.: largura toda, no painel da Agenda). */
+  class?: string;
 }
 
-const { action, endpoint, returnTo, variant = "secondary", inMenu = false } = Astro.props;
-const classes = inMenu ? menuItemClass(action.kind === "form" && action.danger) : buttonClass(variant, "sm");
+const { action, endpoint, returnTo, variant = "secondary", inMenu = false, class: extra = "" } = Astro.props;
+const classes = `${inMenu ? menuItemClass(action.kind === "form" && action.danger) : buttonClass(variant, "sm")} ${extra}`;
 const showIcon = inMenu || variant === "primary";
 ---
 

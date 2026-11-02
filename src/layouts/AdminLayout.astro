@@ -9,8 +9,7 @@ import type { IconName } from "../components/admin/Icon.astro";
 import { canAccessArea, roleLabel as describeRoles } from "../lib/clinicAccess";
 import { pageFlash } from "../lib/flash";
 import { createUserClient } from "../lib/data/clients";
-import { loadRelationshipLists, MENU_TABS, menuTotal, relationshipCounts, relationshipTabs } from "../lib/data/relationship";
-import { countAwaitingClinic } from "../lib/data/whatsapp/attention";
+import { getMeuDiaCount } from "../lib/data/dashboard";
 import { logError } from "../lib/log";
 import { articleForPath } from "../lib/central";
 import { canSeeArticle } from "../lib/central/access";
@@ -33,17 +32,18 @@ const { title, platform = false, autoRefresh = false, sideTitle } = Astro.props;
 const hasSide = Astro.slots.has("side");
 const frame = "max-w-6xl";
 
-type NavItem = { label: string; href: string; icon: IconName; badge?: number; badgeLabel?: string };
+// `match`: outras rotas que deixam o item marcado (o Atendimento é do Meu dia; o Relatório do dia, da Agenda; o
+// Relacionamento antigo, de Pacientes).
+type NavItem = { label: string; href: string; icon: IconName; badge?: number; badgeLabel?: string; match?: string[]; shortLabel?: string };
 
-// Os 4 primeiros são a barra inferior de abas no celular (uso frequente,
-// toque de um dedo só); Configurações/Relatórios ficam dentro de "Mais" —
-// ver decisão de navegação mobile no plano, seção Fase 9.
+// Menu novo (RX6 do redesign da Recepção, RX-D1; cliente, 02/nov/2026): os lugares de trabalho, que também são a
+// barra inferior de abas no celular e no tablet (mais o "Mais"). Os demais itens ficam no grupo "Mais".
 const primaryNavItems: NavItem[] = [
-  { label: "Início", href: "/admin/dashboard", icon: "home" },
+  { label: "Meu dia", href: "/admin/dashboard", icon: "home", match: ["/admin/atendimento"] },
   { label: "Agenda", href: "/admin/agenda", icon: "calendar" },
-  { label: "Pacientes", href: "/admin/pacientes", icon: "users" },
-  // "Consultas" renomeado a pedido do cliente (Fase 23); a tela continua em /admin/consultas.
-  { label: "Resumo do Dia", href: "/admin/consultas", icon: "check-circle" },
+  // Relatório do dia (antigo Resumo do Dia) no menu, à vista (cliente, 02/nov/2026); também no "Mais" da Agenda.
+  { label: "Relatório do dia", shortLabel: "Relatório", href: "/admin/consultas", icon: "check-circle", match: ["/admin/envios"] },
+  { label: "Pacientes", href: "/admin/pacientes", icon: "users", match: ["/admin/relacionamento"] },
 ];
 
 // Papéis do login na clínica ativa, resolvidos pelo middleware (F3.2, D6).
@@ -57,59 +57,31 @@ pageFlash(Astro);
 const access = clinic ?? { roles: [], isPlatformStaff: false };
 const roleLabel = describeRoles(access);
 
-// Atendimento humano (F8.5a, cliente, 27/out/2026): com o bot, toda a equipe vê as conversas que aguardam a
-// clínica; o contador fica no menu (e no "Mais" do celular). Falha na contagem não derruba a tela.
-const attentionCount =
-  clinic && !platform && clinic.features.includes("whatsapp_bot")
-    ? await countAwaitingClinic(createUserClient(Astro.request, Astro.cookies), clinic.clinicId).catch((error: unknown) => {
-        logError("atendimento humano: contador do menu", error, { clinica: clinic.clinicId });
-        return 0;
-      })
-    : null;
+// Contador do Meu dia (RX6, decisão 5.1; cliente, 02/nov/2026): conversas aguardando atendimento humano, conversas
+// que a clínica assumiu e ainda não devolveu ao bot, consultas sem presença registrada e contatos a conferir. A tela
+// do Meu dia informa o número que já leu; nas outras, ele é lido aqui. Falha na contagem não derruba o menu.
+const meuDiaCount =
+  clinic && !platform
+    ? (Astro.locals.meuDiaCount ??
+      (await getMeuDiaCount(createUserClient(Astro.request, Astro.cookies), clinic.clinicId, clinic.features, (label, error) =>
+        logError(`meu dia: contador do menu (${label})`, error, { clinica: clinic.clinicId }),
+      )))
+    : 0;
 
-// Relacionamento (CRM A1, cliente, 27/out/2026): Administrador e Recepção, com o item. No celular fica no
-// "Mais", ao lado do Atendimento (Q1). O contador soma as pendências que pedem contato (menuTotal); falha
-// numa lista não derruba a tela nem o menu.
-const relationshipOn = clinic && !platform && canAccessArea(clinic, "relationship");
-const relationshipCount = !relationshipOn
-  ? 0
-  : (Astro.locals.relationshipMenuTotal ??
-    menuTotal(
-      relationshipCounts(
-        await loadRelationshipLists(
-          createUserClient(Astro.request, Astro.cookies),
-          clinic.clinicId,
-          relationshipTabs(clinic.features).filter((tab) => MENU_TABS.includes(tab)),
-          (tab, error) => logError(`relacionamento: contador do menu (${tab})`, error, { clinica: clinic.clinicId }),
-          { timeZone: clinic.timezone },
-        ),
-      ),
-    ));
-
-// Grupos por tarefa (menu lateral, M2; cliente, 30/out/2026): Hoje, Pacientes e Gestão.
-const [homeItem, agendaItem, patientsItem, summaryItem] = primaryNavItems;
-const contactItems: NavItem[] = [
-  ...(attentionCount !== null ? [{ label: "Atendimento", href: "/admin/atendimento", icon: "chat-bubble" as IconName, badge: attentionCount }] : []),
-  ...(relationshipOn
-    ? [{ label: "Relacionamento", href: "/admin/relacionamento", icon: "user-check" as IconName, badge: relationshipCount, badgeLabel: `${relationshipCount} pendência(s)` }]
-    : []),
-];
-const managementItems: NavItem[] = [
-  // Envios automáticos virou aba de Métricas (Fase 23 · etapa 5).
-  ...(canAccessArea(access, "metrics")
-    ? [{ label: "Métricas", href: "/admin/metricas", icon: "funnel" as IconName }]
-    : []),
+const [homeItem, agendaItem, reportItem, patientsItem] = primaryNavItems;
+// Grupo "Mais" (RX-D1): o que a pessoa tem acesso, na ordem do desenho; sem acesso, o item some.
+const moreItems: NavItem[] = [
   // Módulo financeiro (F11): Administrador e Recepção, com o item liberado.
-  ...(canAccessArea(access, "finance")
-    ? [{ label: "Financeiro", href: "/admin/financeiro", icon: "banknotes" as IconName }]
-    : []),
-  ...(canAccessArea(access, "settings")
-    ? [{ label: "Configurações", href: "/admin/configuracoes", icon: "settings" as IconName }]
-    : []),
+  ...(canAccessArea(access, "finance") ? [{ label: "Financeiro", href: "/admin/financeiro", icon: "banknotes" as IconName }] : []),
+  // Envios automáticos virou aba de Métricas (Fase 23 · etapa 5).
+  ...(canAccessArea(access, "metrics") ? [{ label: "Métricas", href: "/admin/metricas", icon: "funnel" as IconName }] : []),
+  ...(canAccessArea(access, "settings") ? [{ label: "Configurações", href: "/admin/configuracoes", icon: "settings" as IconName }] : []),
 ];
 
 // Central de Ajuda (cliente, 01/nov/2026): item permanente, para todos os papéis e para o Suporte.
 const helpItem: NavItem = { label: "Central de Ajuda", href: "/admin/ajuda", icon: "life-buoy" };
+// O Meu dia leva o número das pendências (nos itens da lateral e da barra do celular).
+const withCount = (item: NavItem): NavItem => (item === homeItem && meuDiaCount > 0 ? { ...item, badge: meuDiaCount, badgeLabel: `${meuDiaCount} pendência(s) no Meu dia` } : item);
 
 // Administração do sistema (F4.2, F4.4a, F9.3 e F9.5): só o Suporte.
 const systemNavItems: NavItem[] =
@@ -135,30 +107,24 @@ const sideGroups: NavGroup[] = (
   platform
     ? [{ items: systemNavItems }, { title: "Ajuda", items: [helpItem] }]
     : [
-        { title: "Hoje", items: [homeItem, agendaItem, summaryItem] },
-        { title: "Pacientes", items: [patientsItem, ...contactItems] },
-        { title: "Gestão", items: managementItems },
-        { title: "Ajuda", items: [helpItem] },
+        { items: [withCount(homeItem), agendaItem, reportItem, patientsItem] },
+        { title: "Mais", items: [...moreItems, helpItem] },
         { title: SYSTEM_TITLE, support: true, items: systemNavItems },
       ]
 ).filter((group) => group.items.length > 0);
 
 // Celular e tablet (M6): a barra inferior de sempre e o "Mais" com os mesmos grupos,
 // sem os itens que já estão na barra.
-const tabBarItems = platform ? systemNavItems.slice(0, 4) : primaryNavItems;
+const tabBarItems = platform ? systemNavItems.slice(0, 4) : primaryNavItems.map(withCount);
 const moreGroups: NavGroup[] = (
   platform
     ? [{ items: systemNavItems.slice(4) }, { title: "Ajuda", items: [helpItem] }]
     : [
-        { title: "Pacientes", items: contactItems },
-        { title: "Gestão", items: managementItems },
-        { title: "Ajuda", items: [helpItem] },
+        { items: [...moreItems, helpItem] },
         { title: SYSTEM_TITLE, support: true, items: systemNavItems },
       ]
 ).filter((group) => group.items.length > 0);
 const moreNavItems = moreGroups.flatMap((group) => group.items);
-// O "Mais" soma as pendências de Atendimento e Relacionamento.
-const moreBadge = (attentionCount ?? 0) + relationshipCount;
 
 // Quem está no painel, no pé da lateral (o "Sair" fica ao lado).
 const whoLabel = platform || clinic?.isPlatformStaff ? "Suporte RecepClinic" : roleLabel;
@@ -180,8 +146,8 @@ const helpArticle = (() => {
   const found = articleForPath(currentPath);
   return found && canSeeArticle(access as Parameters<typeof canSeeArticle>[0], found) ? found : undefined;
 })();
-const isActive = (href: string) => currentPath.startsWith(href);
-const isMoreActive = moreNavItems.some((item) => isActive(item.href));
+const isActive = (item: NavItem) => [item.href, ...(item.match ?? [])].some((path) => currentPath.startsWith(path));
+const isMoreActive = moreNavItems.some((item) => isActive(item));
 const sideLinkClass = (active: boolean) =>
   `group/side flex h-10 items-center gap-3 rounded-[10px] px-2.5 text-[15px] no-underline ${
     active ? "bg-brand-soft font-bold text-brand-ink" : "font-semibold text-ink hover:bg-canvas"
@@ -292,10 +258,10 @@ const sideLinkClass = (active: boolean) =>
                 <span class={`px-2.5 pb-1 text-[13px] leading-none font-semibold ${group.support ? "text-pend-800" : "text-ink-soft"}`}>{group.title}</span>
               )}
               {group.items.map((item) => (
-                <a href={item.href} aria-current={isActive(item.href) ? "page" : undefined} class={sideLinkClass(isActive(item.href))}>
+                <a href={item.href} aria-current={isActive(item) ? "page" : undefined} class={sideLinkClass(isActive(item))}>
                   <Icon
                     name={item.icon}
-                    class={`h-5 w-5 shrink-0 ${isActive(item.href) ? "text-brand" : "text-ink-soft group-hover/side:text-ink"}`}
+                    class={`h-5 w-5 shrink-0 ${isActive(item) ? "text-brand" : "text-ink-soft group-hover/side:text-ink"}`}
                     strokeWidth={1.8}
                   />
                   <span class="min-w-0 flex-1 truncate">{item.label}</span>
@@ -404,13 +370,20 @@ const sideLinkClass = (active: boolean) =>
         tabBarItems.map((item) => (
           <a
             href={item.href}
-            aria-current={isActive(item.href) ? "page" : undefined}
+            aria-current={isActive(item) ? "page" : undefined}
             class={`flex min-w-0 flex-1 flex-col items-center gap-0.5 py-2 text-center text-[11.5px] font-semibold leading-tight no-underline ${
-              isActive(item.href) ? "text-brand" : "text-ink-soft"
+              isActive(item) ? "text-brand" : "text-ink-soft"
             }`}
           >
-            <Icon name={item.icon} class="h-6 w-6 shrink-0" />
-            {item.label}
+            <span class="relative">
+              <Icon name={item.icon} class="h-6 w-6 shrink-0" />
+              {item.badge ? (
+                <span class="absolute -top-1.5 -right-3 rounded-full bg-can-500 px-1.5 text-[11px] leading-[18px] font-bold text-white" aria-label={item.badgeLabel ?? `${item.badge} aguardando`}>
+                  {item.badge}
+                </span>
+              ) : null}
+            </span>
+            {item.shortLabel ?? item.label}
           </a>
         ))
       }
@@ -423,11 +396,6 @@ const sideLinkClass = (active: boolean) =>
         >
           <span class="relative">
             <Icon name="more" class="h-6 w-6" />
-            {moreBadge ? (
-              <span class="absolute -top-1.5 -right-2.5 rounded-full bg-can-500 px-1.5 text-[11px] leading-[18px] font-bold text-white" aria-label={`${moreBadge} pendência(s) em Atendimento e Relacionamento`}>
-                {moreBadge}
-              </span>
-            ) : null}
           </span>
           Mais
         </summary>
@@ -442,9 +410,9 @@ const sideLinkClass = (active: boolean) =>
                 {group.items.map((item) => (
                   <a
                     href={item.href}
-                    aria-current={isActive(item.href) ? "page" : undefined}
+                    aria-current={isActive(item) ? "page" : undefined}
                     class={`flex min-h-11 items-center gap-2 rounded-md px-3 font-medium ${
-                      isActive(item.href) ? "bg-brand-soft text-brand-ink" : "text-ink hover:bg-canvas"
+                      isActive(item) ? "bg-brand-soft text-brand-ink" : "text-ink hover:bg-canvas"
                     }`}
                   >
                     <Icon name={item.icon} class="h-5 w-5" />

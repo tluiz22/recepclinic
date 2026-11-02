@@ -12,7 +12,7 @@ export const POST: APIRoute = async (context) => {
   const clinic = locals.clinic!;
   const form = await request.formData().catch(() => null);
   const db = createUserClient(request, cookies);
-  const page = safeReturnPath(formText(form, "return_to"), "/admin/relacionamento?tab=retomar_contato");
+  const page = safeReturnPath(formText(form, "return_to"), "/admin/pacientes/para-contatar?lista=retomar_contato");
 
   return runFormAction(
     context,

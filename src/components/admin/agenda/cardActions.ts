@@ -6,7 +6,7 @@
 // - à vista: Remarcar, Marcar retorno, Pagamento, Faltou e a ação que resolve
 //   um sinal (Reenviar lembrete, preparo ou orientações);
 // - "Mais": Alterar (C4, 28/out/2026; no "Mais" desde 31/out, para o cartão ter menos botões) e as raras
-//   (lista de espera, correções, série, Trilha);
+//   (lista de espera, correções, série, Histórico);
 // - à parte, à direita e em vermelho: Cancelar.
 // Toda ação de formulário pede confirmação (cliente, 05/out/2026).
 import type { IconName } from "../Icon.astro";
@@ -180,8 +180,8 @@ export function cardActions(input: CardActionInput): CardActions {
 
   if (a.seriesId) result.more.push({ kind: "link", href: withReturn(`/admin/agenda/serie/${a.seriesId}`, returnTo), label: "Ver série", icon: "calendar" });
 
-  // Trilha: à vista no cancelado (é a única ação dele); nos outros, no "Mais".
-  const trail: CardAction = { kind: "link", href: `/admin/agenda/trilha/${a.id}?volta=${encodeURIComponent(returnTo)}`, label: "Trilha", icon: "queue-list" };
+  // Histórico: à vista no cancelado (é a única ação dele); nos outros, no "Mais".
+  const trail: CardAction = { kind: "link", href: `/admin/agenda/trilha/${a.id}?volta=${encodeURIComponent(returnTo)}`, label: "Histórico", icon: "queue-list" };
   if (a.status === "canceled") result.visible.push(trail);
   else result.more.push(trail);
 
@@ -214,3 +214,41 @@ export function cardActions(input: CardActionInput): CardActions {
   return result;
 }
 
+
+// ---------------------------------------------------------------------------
+// Sinais do atendimento (só informação; cor quando pedem ação). Usados no cartão e no painel da Agenda (opção B).
+// ---------------------------------------------------------------------------
+
+export type CardSignalTone = "warning" | "success" | "alert" | "info" | "neutral";
+export type CardSignal = { label: string; tone: CardSignalTone; icon: IconName };
+
+export function cardSignals(input: {
+  appointment: Pick<AgendaAppointment, "status" | "scheduledAt" | "patientConfirmedAt" | "reminderResponse">;
+  now: Date;
+  reminderAction?: ReminderAction;
+  preparationResendable: boolean;
+  guidanceResendable: boolean;
+  onWaitlist: boolean;
+  payment?: PaymentState;
+}): CardSignal[] {
+  const { appointment: a, now } = input;
+  const isActive = a.status === "scheduled" || a.status === "confirmed";
+  const isPast = a.scheduledAt.getTime() <= now.getTime();
+  const reminder: Record<ReminderAction, { label: string; tone: CardSignalTone }> = {
+    send: { label: "Sem lembrete automático", tone: "neutral" },
+    resend: { label: "Lembrete não entregue", tone: "warning" },
+    resend_unanswered: { label: "Lembrete sem resposta", tone: "warning" },
+  };
+  const signals: CardSignal[] = [];
+  // O "confirmo" do lembrete também grava a presença: ele vem primeiro.
+  if (isActive && !isPast && confirmedByReminder(a.reminderResponse)) signals.push({ label: "Confirmou pelo lembrete", tone: "success", icon: "check" });
+  else if (isActive && !isPast && a.patientConfirmedAt) signals.push({ label: "Presença confirmada", tone: "success", icon: "check" });
+  if (input.reminderAction) signals.push({ ...reminder[input.reminderAction], icon: "paper-airplane" });
+  if (input.preparationResendable) signals.push({ label: "Preparo não entregue", tone: "warning", icon: "paper-airplane" });
+  if (input.guidanceResendable) signals.push({ label: "Orientações não entregues", tone: "warning", icon: "paper-airplane" });
+  if (input.onWaitlist) signals.push({ label: "Na lista de espera", tone: "info", icon: "clock" });
+  if (isActive && isPast) signals.push({ label: "Já passou: registre o comparecimento", tone: "warning", icon: "clock" });
+  if (input.payment === "paid") signals.push({ label: "Pago", tone: "success", icon: "banknotes" });
+  else if (input.payment === "partial") signals.push({ label: "Pago em parte", tone: "warning", icon: "banknotes" });
+  return signals;
+}

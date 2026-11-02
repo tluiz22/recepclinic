@@ -46,7 +46,6 @@ const nextMonth = addDays(grid.last, 1);
       <Button href={`?date=${prevMonth}`} aria-label="Mês anterior" class="w-11 px-0 sm:w-10">
         <Icon name="chevron-left" class="h-5 w-5 shrink-0" strokeWidth={2.2} />
       </Button>
-      <span class="min-w-0 flex-1 px-1 text-center text-[15px] font-semibold text-ink first-letter:uppercase sm:flex-none">{formatCalendarDate(grid.first, "MMMM 'de' yyyy")}</span>
       <Button href={`?date=${nextMonth}`} aria-label="Próximo mês" class="w-11 px-0 sm:w-10">
         <Icon name="chevron-right" class="h-5 w-5 shrink-0" strokeWidth={2.2} />
       </Button>

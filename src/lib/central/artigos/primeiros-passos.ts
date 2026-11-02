@@ -1,6 +1,6 @@
 import { article } from "./helper";
 
-// Primeiros passos: o painel, o Início e a ordem de montar a clínica.
+// Primeiros passos: o painel, o Meu dia e a ordem de montar a clínica.
 // Fontes: src/layouts/AdminLayout.astro (menu), src/lib/clinicAccess.ts (papéis),
 // src/pages/admin/dashboard.astro e src/lib/data/config/setup.ts (a jornada de configuração).
 
@@ -18,37 +18,38 @@ export const primeirosPassos = [
     order: 1,
     intro: "O menu lateral agrupa o painel por tarefa. Itens que a sua função ou o plano da clínica não liberam não aparecem.",
     fields: [
-      { name: "Hoje: Início, Agenda e Resumo do Dia", text: "O dia a dia da recepção: números de hoje, marcar e acompanhar atendimentos, registrar comparecimento." },
-      { name: "Pacientes: Pacientes, Atendimento e Relacionamento", text: "Cadastro e ficha; as conversas do WhatsApp que esperam a clínica (só com o bot); e as pendências que pedem contato da equipe (Administrador e Recepção, com o item liberado)." },
-      { name: "Gestão: Métricas, Financeiro e Configurações", text: "Indicadores, pagamentos e nota fiscal, e a montagem da clínica. Cada um depende do papel e do plano." },
-      { name: "Central de Ajuda", text: "Este manual. Fica no menu para todos os papéis." },
+      { name: "Meu dia", text: "O que precisa de você agora: conversas do WhatsApp à espera da clínica (só com o bot), consultas para registrar presença, contatos a conferir e quem ainda não respondeu ao lembrete." },
+      { name: "Agenda", text: "O dia, a semana e o mês, com Marcar, Bloquear e, no Mais, Bloqueios, Buscar paciente e o Relatório do dia." },
+      { name: "Relatório do dia", text: "Resumo do dia, Lembretes e as consultas A registrar (Compareceu ou Faltou), num item próprio do menu (e também no Mais da Agenda)." },
+      { name: "Pacientes", text: "Fichas e contatos, e a lista Para contatar: as pendências que pedem contato da equipe (Administrador e Recepção, com o item liberado)." },
+      { name: "Mais", text: "Financeiro, Métricas, Configurações e a Central de Ajuda (este manual). Cada um depende do papel e do plano; o que a pessoa não acessa não aparece." },
       { name: "Trocar clínica", text: "Aparece no alto do menu para quem tem acesso a mais de uma clínica." },
     ],
     notes: [
-      "No celular, a barra de baixo mostra Início, Agenda, Pacientes, Resumo do Dia e Mais; o Mais traz os outros grupos.",
-      "Um número vermelho ao lado de Atendimento ou Relacionamento é quantas conversas ou pendências esperam a equipe.",
+      "No celular, a barra de baixo mostra Meu dia, Agenda, Relatório do dia, Pacientes e Mais; o Mais traz Financeiro, Métricas, Configurações e a Central de Ajuda.",
+      "O número vermelho do Meu dia soma as conversas à espera da clínica, as que a clínica ainda não devolveu ao bot, as consultas sem presença registrada e os contatos a conferir.",
     ],
   }),
   article({
     id: "inicio-do-painel",
-    title: "Entender a tela Início",
-    summary: "Os números de hoje, os avisos e os atalhos.",
+    title: "Entender a tela Meu dia",
+    summary: "A linha do dia, o que precisa de você e quem ainda não respondeu.",
     category: "primeiros-passos",
-    module: "Início",
-    where: "Início",
-    keywords: ["início", "hoje", "avisos", "comparecimento a registrar", "presença não confirmada"],
-    synonyms: ["tela inicial", "resumo", "dashboard"],
+    module: "Meu dia",
+    where: "Meu dia",
+    keywords: ["meu dia", "início", "hoje", "precisa de você", "comparecimento a registrar", "esperando o paciente"],
+    synonyms: ["tela inicial", "resumo", "dashboard", "início"],
     related: ["resumo-do-dia", "contatos-para-revisar", "visao-geral-do-painel"],
     order: 2,
-    intro: "O Início mostra o dia da clínica: quantos atendimentos há hoje, o que ainda pede ação e os avisos do sistema. Cartões e atalhos seguem os itens liberados para a clínica.",
+    intro: "O Meu dia mostra o dia da clínica: quantos atendimentos há hoje, o que ainda pede ação e quem ainda não respondeu. O que aparece segue os itens liberados para a clínica e o seu papel.",
     fields: [
-      { name: "Consultas hoje / Exames hoje", text: "Atendimentos do dia, sem os cancelados. Exames aparece só com o item Exames e procedimentos." },
-      { name: "Comparecimento a registrar", text: "Atendimentos que já passaram e ainda não têm Compareceu ou Faltou. Registre no cartão da Agenda ou no Resumo do Dia." },
-      { name: "Presença não confirmada", text: "Atendimentos por vir em que o paciente ainda não confirmou presença." },
-      { name: "Contatos para revisar", text: "Com o bot: números que bateram um limite do bot nos últimos 7 dias. Veja o artigo sobre Contatos para revisar." },
-      { name: "Avisos", text: "Envios automáticos que falharam e outros alertas do sistema." },
+      { name: "Linha do dia", text: "Quantos atendimentos há hoje (sem os cancelados), com a barra de quem já foi atendido e confirmou, e o link para a agenda de hoje." },
+      { name: "Precisa de você", text: "Conversas aguardando atendimento humano e as que a clínica ainda não devolveu ao bot (levam a Atendimento), consultas para registrar presença e contatos a conferir. Cada linha some quando alguém resolve." },
+      { name: "Esperando o paciente", text: "Lembretes de hoje e de amanhã sem resposta, com o WhatsApp do contato, Confirmar presença e Remarcar (com confirmação)." },
+      { name: "Próximas consultas", text: "As de hoje que ainda não foram registradas, com Compareceu a partir do horário." },
+      { name: "Buscar paciente", text: "Leva à lista de Pacientes com a busca feita." },
     ],
-    notes: ["A tela se atualiza sozinha a cada minuto enquanto está à vista."],
+    notes: ["A tela se atualiza sozinha a cada minuto enquanto está à vista.", "O número vermelho no menu soma as linhas de Precisa de você.", "Os avisos técnicos (WhatsApp, mensagens na Meta, certificado e envios com falha) aparecem só para o Suporte do RecepClinic."],
     contextual: ["/admin/dashboard"],
   }),
   article({

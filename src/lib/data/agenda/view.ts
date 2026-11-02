@@ -58,7 +58,9 @@ export type AgendaItem =
       locationName: string;
       appointments: AgendaAppointment[];
     }
-  | { kind: "block"; start: Date; end: Date; agendaName: string; block: ScheduleBlock };
+  | { kind: "block"; start: Date; end: Date; agendaName: string; block: ScheduleBlock }
+  /** Lacuna livre (RX8): "Livre · + Marcar". */
+  | { kind: "free"; start: Date; end: Date; agendaId: string; agendaName: string; time: string; endTime: string };
 
 export const AGENDA_COLUMNS = `id, agenda_id, service_id, scheduled_at, duration_minutes, status, is_group_session, series_id, home_visit_address,
   patient_confirmed_at, reminder_response, created_by, booking_channel, canceled_by, canceled_at,
@@ -221,14 +223,18 @@ export async function getAgendaAppointment(db: DbClient, clinicId: string, id: s
 
 /** Agenda de um item do dia (para as colunas por agenda). */
 export function itemAgendaId(item: AgendaItem): string {
-  return item.kind === "appointment" ? item.appointment.agendaId : item.kind === "group" ? item.agendaId : item.block.agendaId;
+  return item.kind === "appointment" ? item.appointment.agendaId : item.kind === "group" || item.kind === "free" ? item.agendaId : item.block.agendaId;
 }
 
 /**
  * Itens de um dia em ordem de horário: atendimentos, turmas (um item por
  * agenda, serviço e horário) e bloqueios. Cancelados ficam, apagados.
  */
-export function buildDayItems(appointments: AgendaAppointment[], blocks: (ScheduleBlock & { agendaName: string })[]): AgendaItem[] {
+export function buildDayItems(
+  appointments: AgendaAppointment[],
+  blocks: (ScheduleBlock & { agendaName: string })[],
+  gaps: { agendaId: string; agendaName: string; start: Date; end: Date; time: string; endTime: string }[] = [],
+): AgendaItem[] {
   const items: AgendaItem[] = [];
   const groups = new Map<string, Extract<AgendaItem, { kind: "group" }>>();
   for (const appointment of appointments) {
@@ -255,6 +261,7 @@ export function buildDayItems(appointments: AgendaAppointment[], blocks: (Schedu
     group.appointments.push(appointment);
   }
   for (const block of blocks) items.push({ kind: "block", start: block.startsAt, end: block.endsAt, agendaName: block.agendaName, block });
+  for (const gap of gaps) items.push({ kind: "free", ...gap });
   return items.sort((a, b) => a.start.getTime() - b.start.getTime() || a.kind.localeCompare(b.kind));
 }
 

@@ -50,9 +50,6 @@ const blocksOf = (day: string) =>
       <Button href={`?date=${addDays(monday, -7)}`} aria-label="Semana anterior" class="w-11 px-0 sm:w-10">
         <Icon name="chevron-left" class="h-5 w-5 shrink-0" strokeWidth={2.2} />
       </Button>
-      <span class="min-w-0 flex-1 px-1 text-center text-[15px] font-semibold text-ink tabular-nums sm:flex-none">
-        {formatCalendarDate(days[0], "dd/MM")} a {formatCalendarDate(days[6], "dd/MM/yyyy")}
-      </span>
       <Button href={`?date=${addDays(monday, 7)}`} aria-label="Próxima semana" class="w-11 px-0 sm:w-10">
         <Icon name="chevron-right" class="h-5 w-5 shrink-0" strokeWidth={2.2} />
       </Button>

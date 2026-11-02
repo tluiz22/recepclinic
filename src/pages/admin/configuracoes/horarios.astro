@@ -31,7 +31,11 @@ const [agendas, locations, services, serviceRefs] = await Promise.all([
 ]);
 // Cor de cada serviço, a mesma da Agenda (cliente, 19/out/2026).
 const tints = serviceTints(serviceRefs);
-const agenda = agendas.find((a) => a.id === Astro.url.searchParams.get("agenda")) ?? agendas[0] ?? null;
+// Com mais de uma agenda, a pessoa escolhe qual vai incluir ou alterar (cliente, 02/nov/2026): sem escolha, nenhuma vem
+// marcada, para não cadastrar horário na agenda errada. Com uma só, ela já vem.
+const picked = agendas.find((a) => a.id === Astro.url.searchParams.get("agenda")) ?? null;
+const needsChoice = !picked && agendas.length > 1;
+const agenda = picked ?? (agendas.length === 1 ? agendas[0] : null);
 const windows = agenda ? await listAvailability(db, clinic.clinicId, agenda.id, { includeInactive: showInactive }) : [];
 
 const locationName = new Map(locations.map((l) => [l.id, l.name]));
@@ -129,7 +133,20 @@ import { configuracoes } from "../../../lib/ajuda/configuracoes";
 <ConfigShell current="horarios" title="Horários" subtitle="Quando cada agenda atende, em que local e com quais serviços.">
 
   {
-    !agenda ? (
+    needsChoice ? (
+      <form method="GET" class="mt-1 flex flex-col gap-3 rounded-xl border border-line bg-white p-4 sm:p-5">
+        <label for="agenda" class="text-[15px] font-semibold text-ink">Escolha a agenda para ver, incluir ou alterar os horários</label>
+        <select id="agenda" name="agenda" required class={`${INPUT_INLINE} min-w-0 sm:w-72`} data-autosubmit>
+          <option value="">Escolha a agenda…</option>
+          {agendas.map((a) => (
+            <option value={a.id}>{a.name}</option>
+          ))}
+        </select>
+        <noscript>
+          <button type="submit" class={SECONDARY_BUTTON}>Ver horários</button>
+        </noscript>
+      </form>
+    ) : !agenda ? (
       <p class="mt-4 text-sm text-ink-soft">
         Nenhuma agenda ativa. Cadastre uma em{" "}
         <a href="/admin/configuracoes/agendas" class="text-brand hover:underline">

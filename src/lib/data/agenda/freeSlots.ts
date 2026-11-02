@@ -116,3 +116,61 @@ export function computeFreeSlots({
     .slice(0, MAX_RETURN_VISIT_SUGGESTIONS)
     .sort((a, b) => a.start.getTime() - b.start.getTime());
 }
+
+export type FreeGap = { start: Date; end: Date; time: string; endTime: string };
+
+/**
+ * Horários livres de uma agenda num dia, um por linha, como no protótipo da Agenda (opção B; cliente, 02/nov/2026):
+ * o que sobra das janelas, descontado o ocupado (com o intervalo da agenda), cortado em passos de `stepMinutes` (o
+ * menor serviço individual da agenda), a partir do começo de cada intervalo livre. Só os que ainda não começaram.
+ */
+export function computeFreeGaps({
+  date,
+  timeZone,
+  windows,
+  busy,
+  bufferMinutes,
+  stepMinutes,
+  now,
+}: {
+  date: string;
+  timeZone: string;
+  windows: Pick<SlotWindow, "startTime" | "endTime">[];
+  busy: BusyInterval[];
+  bufferMinutes: number;
+  stepMinutes: number;
+  now: Date;
+}): FreeGap[] {
+  if (stepMinutes <= 0) return [];
+  const merged = mergeBusy(busy, date, timeZone, bufferMinutes);
+  // Janelas de locais ou serviços diferentes podem se sobrepor: o livre é do horário, não do local.
+  const spans: Interval[] = [];
+  for (const window of [...windows].sort((a, b) => a.startTime.localeCompare(b.startTime))) {
+    const span = { start: toMinutes(window.startTime), end: toMinutes(window.endTime) };
+    const last = spans[spans.length - 1];
+    if (last && span.start <= last.end) last.end = Math.max(last.end, span.end);
+    else spans.push(span);
+  }
+  const gaps: Interval[] = [];
+  for (const span of spans) {
+    let cursor = span.start;
+    for (const interval of merged) {
+      const gapEnd = Math.min(interval.start, span.end);
+      if (gapEnd > cursor) gaps.push({ start: cursor, end: gapEnd });
+      cursor = Math.max(cursor, Math.min(interval.end, span.end));
+      if (cursor >= span.end) break;
+    }
+    if (cursor < span.end) gaps.push({ start: cursor, end: span.end });
+  }
+  const result: FreeGap[] = [];
+  for (const gap of gaps) {
+    for (let minute = gap.start; minute + stepMinutes <= gap.end; minute += stepMinutes) {
+      const time = toClock(minute);
+      const endTime = toClock(minute + stepMinutes);
+      const start = toInstant(date, time, timeZone);
+      // Hora que não existe no dia (horário de verão) cai noutra: não oferece.
+      if (start > now && localTimeOf(start, timeZone) === time) result.push({ start, end: toInstant(date, endTime, timeZone), time, endTime });
+    }
+  }
+  return result;
+}

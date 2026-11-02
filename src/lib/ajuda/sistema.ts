@@ -11,7 +11,7 @@ export const itensDaMatriz: Record<string, string> = {
   whatsapp_bot:
     "Desligado, o bot não responde quem escreve para a clínica. Sai junto a Lista de espera, que depende dele. Métricas › Agendamento digital é um item à parte, liberado pelo Suporte.",
   reminders:
-    "Desligado, o lembrete automático não sai para o paciente e somem a aba Lembretes do Resumo do Dia e o lembrete ao paciente em Configurações › Lembretes.",
+    "Desligado, o lembrete automático não sai para o paciente e somem a aba Lembretes do Relatório do dia e o lembrete ao paciente em Configurações › Lembretes.",
   daily_summary: "Desligado, o profissional deixa de receber pelo WhatsApp a lista dos atendimentos das agendas dele.",
   team_summary:
     "Desligado, a equipe deixa de receber pelo WhatsApp a lista do dia, e a tela de contatos dela sai de Configurações.",
@@ -19,7 +19,7 @@ export const itensDaMatriz: Record<string, string> = {
     "Desligado, o tipo Exame some do cadastro de serviços, da Agenda e do bot, com a agenda da equipe e o envio do preparo.",
   knowledge_base:
     "Desligado, o bot não responde as perguntas frequentes digitadas (horário, endereço, convênios…) e segue com o \"não entendi\".",
-  waitlist: "Desligado, somem a aba Lista de espera do Resumo do Dia e a opção no bot, e nenhuma vaga é oferecida.",
+  waitlist: "Desligado, some a lista Lista de espera de Pacientes › Para contatar e a opção no bot, e nenhuma vaga é oferecida.",
   metrics: "Desligado, some o menu Métricas, com as abas (menos o Agendamento digital) e as métricas pessoais do profissional.",
   metrics_funnel: "Desligado, some a aba Métricas › Agendamento digital. O Suporte libera clínica a clínica, depois de avaliar a jornada no WhatsApp; vale com ou sem o bot ligado.",
   custom_messages:
@@ -29,5 +29,5 @@ export const itensDaMatriz: Record<string, string> = {
   series: "Desligado, some o \"Repetir\" do Marcar, e a rotina diária para de marcar as próximas sessões das séries sem fim.",
   finance: "Desligado, somem o menu Financeiro, a Nota fiscal em Configurações e os pagamentos na ficha do paciente e na Agenda.",
   relationship:
-    "Desligado, some o menu Relacionamento (pendências que pedem contato da equipe). As mesmas listas continuam no Resumo do Dia, nas Métricas e no Início.",
+    "Desligado, some a aba Para contatar de Pacientes (pendências que pedem contato da equipe). As mesmas informações continuam nas Métricas e no Meu dia.",
 };
