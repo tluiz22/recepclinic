@@ -168,4 +168,4 @@ primeiro backup diário (27/out).
 alerta) até a primeira execução. Logo depois de a Vercel publicar, chamar uma vez:
 `curl -s -H "Authorization: Bearer <CRON_SECRET da produção>" https://app.recepclinic.com.br/api/cron/<rotina>` (GET; o
 POST de fora é recusado pela proteção do Astro).
-
+| 02/nov | `76d2688` | `20261114120000_migrar_agenda` | Redesign da Recepção (Meu dia, Agenda opção B, Pacientes/Para contatar, Relatório do dia opção C, menu novo), Central de Ajuda e ajuda contextual atualizadas (25 capturas), botão da agenda da equipe e **Migrar de agenda** (horários e atendimentos futuros; Horários exige escolher a agenda). Simulação → aplicação → conferência (função `migrate_agenda` responde "Sem acesso" a agendas inexistentes) antes do push; saúde `ok` depois. |

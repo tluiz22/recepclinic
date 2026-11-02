@@ -7,17 +7,15 @@
 > tela mudar). Falta informar o WhatsApp do suporte (Sistema › Suporte), se ainda não foi. Detalhes em
 > [`ajuda-contextual.md`](ajuda-contextual.md), fim. Cliente vai pedir novos ajustes.
 >
-> **Em produção (cliente, 02/nov):** `d6bc2d6` (1 migração): data sem barras com confirmação, local com link do Maps após a
-> presença e Agendamento digital como item próprio da matriz. Antes: recesso, Base de Conhecimento (ligada na clínica
-> piloto, WhatsApp do suporte informado), Sim/Não em botões, encaixe com tipo. Captura `bloquear` refeita
-> (`d47f445`). Detalhe no [`historico.md`](historico.md) ("Recesso").
+> **Em produção (cliente, 02/nov):** `76d2688` (1 migração, `migrar_agenda`): redesign da Recepção, Central de Ajuda
+> atualizada e Migrar de agenda. Detalhe no [`producao.md`](producao.md) (Publicações).
 >
 > **Ambientes**
-> - **Produção** (`app.recepclinic.com.br`, branch `producao`) = `main` em `d47f445` (ver acima). Fluxo em [`producao.md`](producao.md).
+> - **Produção** (`app.recepclinic.com.br`, branch `producao`) = `main` em `76d2688` (ver acima). Fluxo em [`producao.md`](producao.md).
 > - **Staging** (`teste.recepclinic.com.br`, branch `main`): produção + redesign da Recepção (RX1 a RX9, sem migração) +
 >   cartão do Asaas (`ASAAS_PREVIEW=1`) + Base de Conhecimento do bot (migração aplicada).
 >   Roteiros em [`staging.md`](staging.md).
-> - **Branch `faturamento`** (só local, sem push): todo código do financeiro. Tem a `main` até `d6bc2d6`; atualizar
+> - **Branch `faturamento`** (só local, sem push): todo código do financeiro. Tem a `main` até `76d2688` (merge de 02/nov); atualizar
 >   só quando o cliente pedir (cliente, 01/nov).
 >
 > **Frentes**
