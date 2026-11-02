@@ -83,7 +83,7 @@ describe("quem grava e quem lê", () => {
 
   it("item sem o item de que depende é recusado (aplicação e banco); item desconhecido também", async () => {
     expect(await codeOf(() => setFeatures(["waitlist"]))).toBe("invalid");
-    const { error } = await support.client.rpc("set_clinic_features", { p_clinic_id: clinicId, p_features: ["metrics_funnel"] });
+    const { error } = await support.client.rpc("set_clinic_features", { p_clinic_id: clinicId, p_features: ["knowledge_base"] });
     expect(error?.message).toContain("depende de");
     const { error: unknown } = await support.client.rpc("set_clinic_features", { p_clinic_id: clinicId, p_features: ["xyz"] });
     expect(unknown?.code).toBe("22023");

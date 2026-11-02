@@ -9,7 +9,7 @@
  */
 export const itensDaMatriz: Record<string, string> = {
   whatsapp_bot:
-    "Desligado, o bot não responde quem escreve para a clínica. Saem junto a Lista de espera e as Métricas › Agendamento digital, que dependem dele.",
+    "Desligado, o bot não responde quem escreve para a clínica. Sai junto a Lista de espera, que depende dele. Métricas › Agendamento digital é um item à parte, liberado pelo Suporte.",
   reminders:
     "Desligado, o lembrete automático não sai para o paciente e somem a aba Lembretes do Resumo do Dia e o lembrete ao paciente em Configurações › Lembretes.",
   daily_summary: "Desligado, o profissional deixa de receber pelo WhatsApp a lista dos atendimentos das agendas dele.",

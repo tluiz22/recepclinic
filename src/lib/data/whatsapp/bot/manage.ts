@@ -373,6 +373,7 @@ async function confirmFromEntry(b: Bot, appointment: ManagedAppointment): Promis
     ? `${custom}${isExam ? "\n\nLembre-se de seguir as orientações de preparo do exame que enviamos anteriormente." : ""}`
     : t.presenceConfirmed(appointment.patientName, whenLabel, isExam);
   await say(b, "bot_presence_confirmed", body);
+  await sendLocationAfterConfirm(b, appointment.id);
 }
 
 // ---------------------------------------------------------------------------
@@ -441,6 +442,25 @@ async function handlePresenceConfirm(b: Bot, selection: Selection): Promise<void
   await confirmPresence(b, ctx.pendingId ?? "");
 }
 
+/**
+ * Depois da presença confirmada: o local (nome, endereço e link do Maps) numa mensagem à parte, para o link abrir
+ * com prévia. Só local da clínica com endereço (o domiciliar é o endereço do paciente). Falha aqui não desfaz nada.
+ */
+async function sendLocationAfterConfirm(b: Bot, appointmentId: string): Promise<void> {
+  try {
+    const row = unwrap(
+      await b.db.from("appointments").select("locations ( name, type, address )").eq("clinic_id", b.clinicId).eq("id", appointmentId).maybeSingle(),
+      "Atendimento",
+    ) as { locations: { name: string; type: Enums<"location_type">; address: string | null } | null } | null;
+    const location = row?.locations;
+    const address = location?.address?.trim();
+    if (!location || location.type !== "clinic" || !address) return;
+    await say(b, "bot_presence_location", t.locationAfterConfirm(location.name, address));
+  } catch (error) {
+    logError("bot: local depois da confirmação", error, { clinica: b.clinicId, atendimento: appointmentId });
+  }
+}
+
 /** Mesmo registro do botão "Confirmar presença" do lembrete. */
 async function confirmPresence(b: Bot, appointmentId: string): Promise<void> {
   const result = await recordReminderTap(b.db, b.clinicId, { button: "confirm", appointmentId, phone: b.phone, waMessageId: b.incomingId }, b.now);
@@ -455,6 +475,7 @@ async function confirmPresence(b: Bot, appointmentId: string): Promise<void> {
     ? `${custom}${isExam ? "\n\nLembre-se de seguir as orientações de preparo do exame que enviamos anteriormente." : ""}`
     : t.presenceConfirmed(appointment.patientName, whenLabel, isExam);
   await say(b, "bot_presence_confirmed", body);
+  await sendLocationAfterConfirm(b, appointment.id);
 }
 
 // ---------------------------------------------------------------------------

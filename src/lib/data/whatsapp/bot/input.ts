@@ -91,6 +91,14 @@ export function parseBirthdate(text: string, today: string): string | null {
   return iso >= "1900-01-01" && iso <= today ? iso : null;
 }
 
+/** "10032020" (8 dígitos, sem barras) → "10/03/2020" se for uma data válida; senão null. */
+export function slashlessBirthdate(text: string, today: string): string | null {
+  const match = text.trim().match(/^(\d{2})(\d{2})(\d{4})$/);
+  if (!match) return null;
+  const typed = `${match[1]}/${match[2]}/${match[3]}`;
+  return parseBirthdate(typed, today) ? typed : null;
+}
+
 /** "2020-03-10" → "10/03/2020". */
 export function formatBirthdate(iso: string): string {
   return iso.split("-").reverse().join("/");
