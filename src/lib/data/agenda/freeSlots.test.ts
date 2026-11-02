@@ -144,30 +144,29 @@ describe("fuso da clínica", () => {
   });
 });
 
-describe("lacunas livres (Agenda › Dia)", () => {
-  const gaps = ({ windows = [morning], busy = [] as BusyInterval[], bufferMinutes = 0, minMinutes = 30, now = local("12:00", "2026-10-13") } = {}) =>
-    computeFreeGaps({ date: DATE, timeZone: FORTALEZA, windows, busy, bufferMinutes, minMinutes, now }).map((g) => `${g.time}-${g.endTime}`);
+describe("horários livres da Agenda › Dia (uma linha por horário)", () => {
+  const rows = ({ windows = [morning], busy = [] as BusyInterval[], bufferMinutes = 0, stepMinutes = 60, now = local("12:00", "2026-10-13") } = {}) =>
+    computeFreeGaps({ date: DATE, timeZone: FORTALEZA, windows, busy, bufferMinutes, stepMinutes, now }).map((g) => g.time);
 
-  it("a janela inteira quando nada está ocupado", () => {
-    expect(gaps()).toEqual(["08:00-12:00"]);
+  it("corta a janela no passo do menor serviço", () => {
+    expect(rows()).toEqual(["08:00", "09:00", "10:00", "11:00"]);
   });
 
   it("desconta o ocupado e o intervalo da agenda", () => {
-    expect(gaps({ busy: [busyAt("09:00", "10:00")] })).toEqual(["08:00-09:00", "10:00-12:00"]);
-    expect(gaps({ busy: [busyAt("09:00", "10:00")], bufferMinutes: 10 })).toEqual(["08:00-08:50", "10:10-12:00"]);
+    expect(rows({ busy: [busyAt("09:00", "10:00")] })).toEqual(["08:00", "10:00", "11:00"]);
+    expect(rows({ busy: [busyAt("09:00", "09:30")], stepMinutes: 30, bufferMinutes: 10 })).toEqual(["08:00", "09:40", "10:10", "10:40", "11:10"]);
   });
 
-  it("ignora lacuna menor que o menor serviço", () => {
-    expect(gaps({ busy: [busyAt("08:20", "12:00")], minMinutes: 30 })).toEqual([]);
-    expect(gaps({ busy: [busyAt("08:30", "12:00")], minMinutes: 30 })).toEqual(["08:00-08:30"]);
+  it("sobra menor que o passo não vira linha", () => {
+    expect(rows({ busy: [busyAt("08:20", "12:00")], stepMinutes: 30 })).toEqual([]);
   });
 
-  it("hoje começa no próximo múltiplo de 5 minutos depois de agora", () => {
-    expect(gaps({ now: local("09:07") })).toEqual(["09:10-12:00"]);
-    expect(gaps({ now: local("12:00") })).toEqual([]);
+  it("hoje, só os que ainda não começaram", () => {
+    expect(rows({ now: local("09:07") })).toEqual(["10:00", "11:00"]);
+    expect(rows({ now: local("12:00") })).toEqual([]);
   });
 
-  it("junta janelas que se sobrepõem (locais diferentes)", () => {
-    expect(gaps({ windows: [morning, { locationId: "loc-b", startTime: "11:00", endTime: "14:00" }] })).toEqual(["08:00-14:00"]);
+  it("junta janelas que se sobrepõem", () => {
+    expect(rows({ windows: [morning, { locationId: "loc-b", startTime: "11:00", endTime: "14:00" }] })).toEqual(["08:00", "09:00", "10:00", "11:00", "12:00", "13:00"]);
   });
 });

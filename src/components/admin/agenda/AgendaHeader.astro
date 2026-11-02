@@ -56,7 +56,7 @@ const hasFilters = agendas.length > 1 || searching;
   <slot name="nav" />
   {Astro.slots.has("title") ? <slot name="title" /> : <h1 class="font-display text-[22px] leading-tight font-bold whitespace-nowrap text-ink first-letter:uppercase">{subtitle ?? "Agenda"}</h1>}
   <SegmentedControl
-    class="[&>a]:px-2.5"
+    class="[&>a]:px-2"
     label="Visualização"
     current={view === "busca" ? undefined : view}
     items={views.map((v) => ({ id: v.id, label: v.label, href: `${v.href}?date=${date}` }))}

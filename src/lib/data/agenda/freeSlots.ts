@@ -120,9 +120,9 @@ export function computeFreeSlots({
 export type FreeGap = { start: Date; end: Date; time: string; endTime: string };
 
 /**
- * Lacunas livres de uma agenda num dia (RX8 do redesign da Recepção; cliente, 02/nov/2026): o que sobra das janelas,
- * descontado o ocupado (com o intervalo da agenda), sem depender de serviço. Só do que ainda não passou (hoje, a
- * partir do próximo múltiplo de 5 minutos) e com pelo menos `minMinutes`, para caber algum serviço.
+ * Horários livres de uma agenda num dia, um por linha, como no protótipo da Agenda (opção B; cliente, 02/nov/2026):
+ * o que sobra das janelas, descontado o ocupado (com o intervalo da agenda), cortado em passos de `stepMinutes` (o
+ * menor serviço individual da agenda), a partir do começo de cada intervalo livre. Só os que ainda não começaram.
  */
 export function computeFreeGaps({
   date,
@@ -130,7 +130,7 @@ export function computeFreeGaps({
   windows,
   busy,
   bufferMinutes,
-  minMinutes,
+  stepMinutes,
   now,
 }: {
   date: string;
@@ -138,11 +138,12 @@ export function computeFreeGaps({
   windows: Pick<SlotWindow, "startTime" | "endTime">[];
   busy: BusyInterval[];
   bufferMinutes: number;
-  minMinutes: number;
+  stepMinutes: number;
   now: Date;
 }): FreeGap[] {
+  if (stepMinutes <= 0) return [];
   const merged = mergeBusy(busy, date, timeZone, bufferMinutes);
-  // Janelas de locais diferentes podem se sobrepor: a lacuna é do horário, não do local.
+  // Janelas de locais ou serviços diferentes podem se sobrepor: o livre é do horário, não do local.
   const spans: Interval[] = [];
   for (const window of [...windows].sort((a, b) => a.startTime.localeCompare(b.startTime))) {
     const span = { start: toMinutes(window.startTime), end: toMinutes(window.endTime) };
@@ -150,8 +151,6 @@ export function computeFreeGaps({
     if (last && span.start <= last.end) last.end = Math.max(last.end, span.end);
     else spans.push(span);
   }
-  const nowMinutes = minutesIntoDay(now, date, timeZone);
-  const earliest = Number.isFinite(nowMinutes) ? Math.ceil((nowMinutes + 1) / 5) * 5 : nowMinutes;
   const gaps: Interval[] = [];
   for (const span of spans) {
     let cursor = span.start;
@@ -163,14 +162,15 @@ export function computeFreeGaps({
     }
     if (cursor < span.end) gaps.push({ start: cursor, end: span.end });
   }
-  return gaps
-    .map((gap) => ({ start: Math.max(gap.start, earliest), end: gap.end }))
-    .filter((gap) => gap.end - gap.start >= minMinutes)
-    .map((gap) => {
-      const time = toClock(gap.start);
-      const endTime = toClock(gap.end);
-      return { start: toInstant(date, time, timeZone), end: toInstant(date, endTime, timeZone), time, endTime };
-    })
-    // Hora que não existe no dia (horário de verão) cai noutra: não oferece.
-    .filter((gap) => localTimeOf(gap.start, timeZone) === gap.time);
+  const result: FreeGap[] = [];
+  for (const gap of gaps) {
+    for (let minute = gap.start; minute + stepMinutes <= gap.end; minute += stepMinutes) {
+      const time = toClock(minute);
+      const endTime = toClock(minute + stepMinutes);
+      const start = toInstant(date, time, timeZone);
+      // Hora que não existe no dia (horário de verão) cai noutra: não oferece.
+      if (start > now && localTimeOf(start, timeZone) === time) result.push({ start, end: toInstant(date, endTime, timeZone), time, endTime });
+    }
+  }
+  return result;
 }

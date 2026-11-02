@@ -541,11 +541,12 @@ export async function getFreeSlotsBefore(
 }
 
 /**
- * Lacunas livres de cada agenda num dia, para a linha "Livre · + Marcar" da Agenda › Dia (RX8; cliente, 02/nov/2026).
- * Só leitura, com o login de quem olha (o RLS limita às agendas que ele vê). Regras: de hoje em diante; fora de
- * feriado; só agenda ativa, nas janelas gerais do dia da semana (as de um serviço só, e as de turma, ficam de fora);
+ * Horários livres de cada agenda num dia, uma linha "Livre · + Marcar" por horário na Agenda › Dia (RX8 e opção B;
+ * cliente, 02/nov/2026). Só leitura, com o login de quem olha (o RLS limita às agendas que ele vê). Regras: de hoje em
+ * diante; fora de feriado; só agenda ativa, nas janelas do dia da semana (gerais e de serviço individual; as de turma
+ * ficam de fora);
  * ocupado = atendimentos ativos (sem exame, que corre em paralelo) e bloqueios, com o intervalo da agenda; a lacuna
- * tem de caber o menor serviço individual ativo da agenda (exame não conta).
+ * em passos do menor serviço individual ativo da agenda (exame não conta).
  */
 export async function listFreeGaps(
   db: DbClient,
@@ -560,25 +561,26 @@ export async function listFreeGaps(
     db.from("agendas").select("id, buffer_minutes").eq("clinic_id", clinicId).eq("is_active", true).in("id", agendaIds).then((r) => unwrap(r, "Agendas")),
     db
       .from("availability_windows")
-      .select("agenda_id, start_time, end_time")
+      .select("agenda_id, service_id, start_time, end_time")
       .eq("clinic_id", clinicId)
       .eq("is_active", true)
       .eq("weekday", weekdayOf(date))
-      .is("service_id", null)
       .in("agenda_id", agendaIds)
       .then((r) => unwrap(r, "Horários de atendimento")),
     db
       .from("services")
-      .select("duration_minutes, service_agendas ( agenda_id )")
+      .select("id, duration_minutes, scheduling_mode, category, service_agendas ( agenda_id )")
       .eq("clinic_id", clinicId)
       .eq("is_active", true)
-      .neq("scheduling_mode", "group")
-      .neq("category", "exam")
       .then((r) => unwrap(r, "Serviços")),
   ]);
   if (holidays.has(date)) return [];
+  const rows = services as unknown as { id: string; duration_minutes: number; scheduling_mode: string; category: string; service_agendas: { agenda_id: string }[] }[];
+  // Turma tem horário próprio (a sessão): as janelas dela não viram "Livre".
+  const groupIds = new Set(rows.filter((service) => service.scheduling_mode === "group").map((service) => service.id));
   const minByAgenda = new Map<string, number>();
-  for (const service of services as unknown as { duration_minutes: number; service_agendas: { agenda_id: string }[] }[]) {
+  for (const service of rows) {
+    if (service.scheduling_mode === "group" || service.category === "exam") continue;
     for (const link of service.service_agendas) {
       minByAgenda.set(link.agenda_id, Math.min(minByAgenda.get(link.agenda_id) ?? Infinity, service.duration_minutes));
     }
@@ -586,7 +588,8 @@ export async function listFreeGaps(
   const result: (FreeGap & { agendaId: string })[] = [];
   for (const agenda of agendas) {
     const minMinutes = minByAgenda.get(agenda.id);
-    const own = windows.filter((w) => w.agenda_id === agenda.id);
+    // Janelas gerais e as de um serviço individual (cliente, 02/nov/2026: a linha "Livre" aparece em toda agenda aberta).
+    const own = windows.filter((w) => w.agenda_id === agenda.id && !(w.service_id && groupIds.has(w.service_id)));
     if (!minMinutes || own.length === 0) continue;
     const busy = await loadBusy(db, clinicId, agenda.id, start, end);
     const gaps = computeFreeGaps({
@@ -595,7 +598,7 @@ export async function listFreeGaps(
       windows: own.map((w) => ({ startTime: w.start_time.slice(0, 5), endTime: w.end_time.slice(0, 5) })),
       busy,
       bufferMinutes: agenda.buffer_minutes,
-      minMinutes,
+      stepMinutes: minMinutes,
       now,
     });
     result.push(...gaps.map((gap) => ({ ...gap, agendaId: agenda.id })));

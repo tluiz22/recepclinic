@@ -23,7 +23,9 @@ import { addDays, formatCalendarDate, formatInstant, isCalendarDate, localDateOf
 import { canAccessArea } from "../../lib/clinicAccess";
 import { createUserClient } from "../../lib/data/clients";
 import { loadAgendaScope } from "../../lib/data/agenda/scope";
-import { listFreeGaps } from "../../lib/data/agenda/slots";
+import { listFreeGaps, loadClinicHolidays } from "../../lib/data/agenda/slots";
+import { listNationalHolidays } from "../../lib/holidays";
+import Notice from "../../components/admin/ui/Notice.astro";
 import { buildDayItems, itemAgendaId, listAgendaAppointments, listAgendaBlocks, listNoShowStats, listOrigins } from "../../lib/data/agenda/view";
 import { listReturnReady } from "../../lib/data/agenda/returnReady";
 import { listServiceRefs } from "../../lib/data/config/services";
@@ -119,6 +121,10 @@ const itemKey = (item: (typeof items)[number]) =>
   item.kind === "appointment" ? item.appointment.id : item.kind === "group" ? `turma-${item.agendaId}-${item.start.getTime()}` : item.kind === "block" ? `bloqueio-${item.block.id}` : "";
 const selHref = (key: string) => `${base}&sel=${encodeURIComponent(key)}`;
 const selected = items.find((item) => item.kind !== "free" && itemKey(item) === sel);
+// Feriado: a Agenda não mostra horários livres (a mesma regra do bot e do Marcar); um aviso diz por quê.
+const holidayName =
+  listNationalHolidays(Number(date.slice(0, 4))).find((h) => h.date === date)?.name ??
+  ((await loadClinicHolidays(db, clinic.clinicId, date, date).catch(() => new Set<string>())).has(date) ? "feriado da clínica" : null);
 const panelItems = items.filter((item) => item.kind !== "free");
 const tomorrow = addDays(today, 1);
 const dayText = date === today ? "Hoje" : date === tomorrow ? "Amanhã" : capitalize(formatCalendarDate(date, "EEE dd/MM"));
@@ -140,7 +146,7 @@ const rowBase = "flex min-h-12 items-center gap-2.5 border-t border-[#e7eeeb] px
     </div>
     {/* O dia é o título; tocar nele abre o calendário do aparelho para ir a outro dia. */}
     <form slot="title" method="GET" action="/admin/agenda" class="relative">
-      <h1 class="font-display text-[22px] leading-tight font-bold whitespace-nowrap text-ink first-letter:uppercase">{title}</h1>
+      <h1 class="font-display text-[18px] leading-tight font-bold whitespace-nowrap text-ink first-letter:uppercase xl:text-[19px]">{title}</h1>
       <label class="absolute inset-0 cursor-pointer rounded-md focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-brand" title="Escolher o dia">
         <span class="sr-only">Escolher o dia</span>
         <input type="date" name="date" value={date} data-autosubmit class="absolute inset-0 h-full w-full cursor-pointer opacity-0" />
@@ -149,6 +155,14 @@ const rowBase = "flex min-h-12 items-center gap-2.5 border-t border-[#e7eeeb] px
   </AgendaHeader>
 
   <FlashMessage />
+  {
+    holidayName && (
+      <Notice tone="info" class="mt-4">
+        Feriado ({holidayName}): neste dia a Agenda não mostra horários livres e o bot não oferece horários. Para marcar assim mesmo, use "+ Marcar
+        consulta".
+      </Notice>
+    )
+  }
 
   <div class="mt-4 flex flex-wrap items-start gap-[18px]">
     <div
@@ -176,7 +190,7 @@ const rowBase = "flex min-h-12 items-center gap-2.5 border-t border-[#e7eeeb] px
                     style={style}
                   >
                     <span class="min-w-11 tabular-nums">{item.time}</span>
-                    <span class="flex-1">Livre <span class="font-normal text-ink-soft">até {item.endTime}</span>{agendaOnPhone}</span>
+                    <span class="flex-1">Livre{agendaOnPhone}</span>
                     <span>+ Marcar</span>
                   </a>
                 );
@@ -222,7 +236,7 @@ const rowBase = "flex min-h-12 items-center gap-2.5 border-t border-[#e7eeeb] px
                 </a>
               );
             })}
-            {column.items.every((item) => item.kind === "free") && <p class={`px-3.5 py-4 text-[15px] text-ink-soft ${byColumn ? "max-sm:hidden" : ""}`}>Nenhum atendimento.</p>}
+            {column.items.length === 0 && <p class={`px-3.5 py-4 text-[15px] text-ink-soft ${byColumn ? "max-sm:hidden" : ""}`}>Nenhum atendimento.</p>}
           </section>
         ))
       }
