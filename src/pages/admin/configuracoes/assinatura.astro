@@ -147,7 +147,11 @@ const H2 = "font-display text-[17px] leading-tight font-bold text-ink sm:text-lg
           {charges.length > 0 && (
             <Card>
               <h2 class={H2}>Cobranças</h2>
-              <p class="mt-1 text-sm text-ink-soft">"Pagar" abre a fatura no Asaas, com o Pix (ou o cartão, se for a forma do contrato).</p>
+              <p class="mt-1 text-sm text-ink-soft">
+                {(contract ?? next)?.paymentMethod === "credit_card"
+                  ? "No cartão: na 1ª cobrança, toque em \"Pagar\" e informe o cartão na página do Asaas; nos meses seguintes, o Asaas cobra o mesmo cartão no vencimento. O RecepClinic não guarda dados do cartão. Para trocar o cartão, fale com o Suporte do RecepClinic."
+                  : "\"Pagar\" abre a fatura no Asaas, com o Pix."}
+              </p>
               <div class="mt-2">
                 <ChargesList charges={charges} timezone={clinic.timezone} />
               </div>

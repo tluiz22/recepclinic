@@ -45,7 +45,14 @@
 > não saem atrasados) e envia; cobrança paga gera `payment_confirmed` (sai pela `faturamento-eventos`, a cada 10 min) e
 > cancela os de atraso pendentes; na hora de enviar confere de novo; falha tenta até 5 vezes; trilha `notice_sent` /
 > `notice_failed`. Textos em `billingNoticeEmail` (`src/lib/email.ts`), com a data do 15º dia: **cliente revisa**.
-> **Próximo: F12.8** (cartão pela página do Asaas).
+> **F12.8 feita (02/nov):** confirmado no sandbox (cliente e assinatura de teste criados e apagados) que o Asaas aceita
+> assinatura `CREDIT_CARD` sem os dados do cartão: a cobrança nasce em aberto, com fatura, onde a clínica informa o
+> cartão; pela documentação, os ciclos seguintes são cobrados no mesmo cartão no vencimento (não testado: exige pagar
+> a fatura no sandbox, fica para a validação). O RecepClinic não guarda dado de cartão (11.9). A Assinatura orienta a
+> clínica no cartão. Troca de cartão: pelo Suporte (a API exige os dados do cartão). Em produção, a **tokenização**
+> depende de liberação do Asaas, e mudar valor ou vencimento de assinatura no cartão a exige: pedir antes da F12.11.
+> **Próximo: F12.11** (homologação e produção), depois de: advogado (texto do contrato e 11.16), chave e webhook do
+> Asaas de produção, valor combinado com a clínica piloto. Antes, validar F12.2b a F12.8 no local/staging.
 > **Ordem decidida (cliente, 30/out):** cobrança primeiro, até cobrar a clínica piloto em produção, **só com aviso por
 > e-mail**: F12.2b, F12.3, F12.3b, F12.4 a F12.8 e F12.11 (itens 18 a 26 da seção 11). Depois: F12.9 (decisão 11.10),
 > F12.10 (Pix Automático) e a nota fiscal pelo Asaas (N0–N6). **Próximo:** validação da F12.2b no local e o OK para a

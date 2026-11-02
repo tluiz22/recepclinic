@@ -126,6 +126,14 @@ describe("cobrança no Asaas no aceite (F12.4)", () => {
     expect(second.log).toEqual(["customer:cus_new"]);
   });
 
+  it("cartão (F12.8): assinatura e implantação no cartão, sem dados do cartão (o cliente informa na fatura)", async () => {
+    const memory = memoryStore(snapshot({ paymentMethod: "credit_card" }));
+    const { api, calls } = fakeApi();
+    await syncContractWithAsaas(memory.store, api, "contract-1", TODAY);
+    expect(calls.filter((c) => c.name !== "createCustomer").map((c) => (c.args as { billingType: string }).billingType)).toEqual(["CREDIT_CARD", "CREDIT_CARD"]);
+    expect(JSON.stringify(calls)).not.toMatch(/creditCard/);
+  });
+
   it("detalhes", () => {
     expect(asaasMobilePhone("+5584988880000")).toBe("84988880000");
     expect(asaasMobilePhone("+351912345678")).toBeNull();
