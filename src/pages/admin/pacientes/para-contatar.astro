@@ -1,0 +1,146 @@
+---
+// Pacientes › Para contatar (RX4 do redesign da Recepção, RX-D7 opção A; cliente, 02/nov/2026): as listas de contato do
+// Relacionamento, uma por vez: à esquerda as listas com o número de cada uma; à direita a escolhida, com as ações de
+// sempre. Mesmas listas, componentes, ações e permissões do Relacionamento (Administrador e Recepção, com o item
+// "Relacionamento"); /admin/relacionamento continua aberto até a RX9. Atendimento, Contatos para revisar e Lembretes
+// sem resposta ficam no Meu dia.
+import AdminLayout from "../../../layouts/AdminLayout.astro";
+import ConfirmDeleteDialog from "../../../components/admin/ConfirmDeleteDialog.astro";
+import FlashMessage from "../../../components/admin/FlashMessage.astro";
+import PacientesTabs from "../../../components/admin/PacientesTabs.astro";
+import AguardandoTab from "../../../components/admin/resumo/AguardandoTab.astro";
+import ListaEsperaTab from "../../../components/admin/resumo/ListaEsperaTab.astro";
+import FaltososTab from "../../../components/admin/relacionamento/FaltososTab.astro";
+import LembretesEquipeTab from "../../../components/admin/relacionamento/LembretesEquipeTab.astro";
+import RetomarContatoTab from "../../../components/admin/relacionamento/RetomarContatoTab.astro";
+import RetornoTab from "../../../components/admin/relacionamento/RetornoTab.astro";
+import EmptyState from "../../../components/admin/ui/EmptyState.astro";
+import PageHeader from "../../../components/admin/ui/PageHeader.astro";
+import Icon from "../../../components/admin/Icon.astro";
+import Button from "../../../components/admin/ui/Button.astro";
+import { serviceTags } from "../../../components/admin/agenda/categoryStyle";
+import { relacionamento } from "../../../lib/ajuda/relacionamento";
+import { todayIn } from "../../../lib/clinicTime";
+import { createUserClient } from "../../../lib/data/clients";
+import { loadActorLabels } from "../../../lib/data/agenda/trail";
+import { listServiceRefs } from "../../../lib/data/config/services";
+import {
+  CONTACT_COUNT_TABS,
+  CONTACT_LISTS,
+  loadRelationshipLists,
+  RELATIONSHIP_TABS,
+  relationshipCounts,
+  relationshipTabs,
+  type RelationshipTab,
+} from "../../../lib/data/relationship";
+import { listRecentOffers } from "../../../lib/data/waitlist/entries";
+import { withReturn } from "../../../lib/returnPath";
+import { logError } from "../../../lib/log";
+import { capitalize, vocabularyFor } from "../../../lib/vocabulary";
+
+const clinic = Astro.locals.clinic!;
+const db = createUserClient(Astro.request, Astro.cookies);
+const vocabulary = vocabularyFor(clinic.clinicProfile);
+const now = new Date();
+
+const available = relationshipTabs(clinic.features).filter((id) => CONTACT_LISTS.includes(id));
+const ordered = CONTACT_LISTS.filter((id) => available.includes(id));
+const failed = (tab: RelationshipTab, error: unknown) => logError(`pacientes: ${tab} não carregou`, error, { clinica: clinic.clinicId });
+const lists = await loadRelationshipLists(db, clinic.clinicId, ordered, failed, { timeZone: clinic.timezone, now });
+const counts = relationshipCounts(lists);
+
+// Sem lista no endereço, abre a primeira com pendência (ou a primeira).
+const asked = Astro.url.searchParams.get("lista");
+const list: RelationshipTab = ordered.find((id) => id === asked) ?? ordered.find((id) => (counts[id] ?? 0) > 0 && id !== "retomar_contato") ?? ordered[0];
+const listHref = (id: RelationshipTab) => `/admin/pacientes/para-contatar?lista=${id}`;
+const returnTo = listHref(list);
+
+let loadFailed = lists[list] === null;
+const awaiting = lists.aguardando_remarcacao ?? [];
+let offers: Awaited<ReturnType<typeof listRecentOffers>> = [];
+if (list === "lista_espera" && !loadFailed) {
+  try {
+    offers = await listRecentOffers(db, clinic.clinicId);
+  } catch (error) {
+    failed(list, error);
+    loadFailed = true;
+  }
+}
+const [actors, serviceRefs] = await Promise.all([
+  loadActorLabels(db, clinic.clinicId, list === "aguardando_remarcacao" ? awaiting.map((a) => a.canceledBy) : []),
+  listServiceRefs(db, clinic.clinicId),
+]);
+const tags = serviceTags(serviceRefs);
+
+const labelOf = (id: RelationshipTab) => RELATIONSHIP_TABS.find((t) => t.id === id)!.label;
+// Número de cada lista: "Retomar contato" fica sem número (abandonar a conversa é normal, cliente, 31/out/2026);
+// leitura que falhou vira aviso, nunca 0.
+const countText = (id: RelationshipTab) => {
+  const n = counts[id];
+  if (id === "retomar_contato") return null;
+  if (n === null || n === undefined) return { text: "!", label: "Não foi possível contar", alert: true };
+  if (n === 0) return null;
+  return { text: String(n), label: `${n} ${id === "lista_espera" ? "na lista" : "pendente(s)"}`, alert: false };
+};
+const contactCount = CONTACT_COUNT_TABS.reduce((total, id) => total + (counts[id] ?? 0), 0);
+const anyCountFailed = CONTACT_COUNT_TABS.some((id) => available.includes(id) && counts[id] === null);
+---
+
+<AdminLayout title={capitalize(vocabulary.patients)}>
+  <PageHeader title={capitalize(vocabulary.patients)}>
+    <Button slot="actions" href={withReturn("/admin/pacientes/novo", returnTo)} variant="primary">
+      <Icon name="plus" class="h-[18px] w-[18px]" strokeWidth={2.2} /> Cadastrar {vocabulary.patient}
+    </Button>
+  </PageHeader>
+  <PacientesTabs active="para-contatar" vocabulary={vocabulary} showContact contactCount={anyCountFailed ? null : contactCount} />
+  <FlashMessage />
+
+  <div class="mt-4 grid gap-4 lg:grid-cols-[260px_minmax(0,1fr)] lg:items-start">
+    <nav aria-label="Listas para contatar" class="rounded-xl border border-line bg-white p-1.5">
+      <ul class="flex flex-col">
+        {
+          ordered.map((id) => {
+            const count = countText(id);
+            const active = id === list;
+            return (
+              <li>
+                <a
+                  href={listHref(id)}
+                  aria-current={active ? "page" : undefined}
+                  class={`flex min-h-11 items-center justify-between gap-3 rounded-lg px-3 py-2 text-[15px] no-underline ${active ? "bg-[#e3efec] font-bold text-ink" : "font-semibold text-ink-mid hover:bg-[#f2f7f6]"}`}
+                >
+                  <span>{labelOf(id)}</span>
+                  {count && (
+                    <span
+                      aria-label={count.label}
+                      class={`min-w-6 rounded-full px-2 py-0.5 text-center text-[13px] font-bold tabular-nums ${count.alert ? "bg-pend-100 text-pend-800" : "bg-white text-ink ring-1 ring-line"}`}
+                    >
+                      {count.text}
+                    </span>
+                  )}
+                </a>
+              </li>
+            );
+          })
+        }
+      </ul>
+    </nav>
+
+    <div class="min-w-0">
+      {loadFailed && <EmptyState variant="dashed" title="Não foi possível carregar esta lista" text="As outras listas continuam disponíveis. Tente abrir esta de novo daqui a pouco." />}
+      {!loadFailed && list === "retomar_contato" && <RetomarContatoTab groups={lists.retomar_contato ?? []} timeZone={clinic.timezone} vocabulary={vocabulary} />}
+      {!loadFailed && list === "retorno" && <RetornoTab opportunities={lists.retorno ?? []} timeZone={clinic.timezone} vocabulary={vocabulary} returnTo={returnTo} />}
+      {!loadFailed && list === "faltosos" && <FaltososTab patients={lists.faltosos ?? []} timeZone={clinic.timezone} vocabulary={vocabulary} />}
+      {
+        !loadFailed && list === "aguardando_remarcacao" && (
+          awaiting.length > 0
+            ? <AguardandoTab tags={tags} appointments={awaiting} actors={actors} timeZone={clinic.timezone} vocabulary={vocabulary} returnTo={returnTo} />
+            : <EmptyState variant="dashed" title={relacionamento.vazios.aguardando.titulo} text={relacionamento.vazios.aguardando.texto} />
+        )
+      }
+      {!loadFailed && list === "lista_espera" && <ListaEsperaTab tags={tags} entries={lists.lista_espera ?? []} offers={offers} timeZone={clinic.timezone} returnTo={returnTo} />}
+      {!loadFailed && list === "lembretes_equipe" && <LembretesEquipeTab reminders={lists.lembretes_equipe ?? []} today={todayIn(clinic.timezone, now)} vocabulary={vocabulary} returnTo={returnTo} />}
+    </div>
+  </div>
+  <ConfirmDeleteDialog />
+</AdminLayout>

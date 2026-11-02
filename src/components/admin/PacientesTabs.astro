@@ -1,0 +1,39 @@
+---
+// Abas de Pacientes (RX4 do redesign da Recepção, cliente, 02/nov/2026): Todos, Contatos (pelo vocabulário da
+// clínica) e Para contatar (Administrador e Recepção, com o item "Relacionamento"), com o contador das pendências.
+import Tabs from "./ui/Tabs.astro";
+import { capitalize, type Vocabulary } from "../../lib/vocabulary";
+
+interface Props {
+  active: "todos" | "contatos" | "para-contatar";
+  vocabulary: Vocabulary;
+  /** Sem acesso ao Relacionamento, a aba não aparece. */
+  showContact: boolean;
+  /** Pendências da aba Para contatar; null = a leitura falhou. */
+  contactCount: number | null;
+}
+
+const { active, vocabulary, showContact, contactCount } = Astro.props;
+const contactTab = !showContact
+  ? []
+  : [
+      {
+        label: "Para contatar",
+        href: "/admin/pacientes/para-contatar",
+        active: active === "para-contatar",
+        ...(contactCount === null
+          ? { alert: true, countLabel: "Não foi possível contar" }
+          : { count: contactCount, countLabel: `${contactCount} ${contactCount === 1 ? "pendência" : "pendências"}` }),
+      },
+    ];
+---
+
+<Tabs
+  label="Listas"
+  class="mt-4"
+  tabs={[
+    { label: "Todos", href: "/admin/pacientes", active: active === "todos" },
+    { label: capitalize(vocabulary.contacts), href: "/admin/pacientes?tab=contatos", active: active === "contatos" },
+    ...contactTab,
+  ]}
+/>

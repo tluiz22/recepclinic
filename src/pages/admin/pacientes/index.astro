@@ -16,7 +16,7 @@ import PhoneLinks from "../../../components/admin/PhoneLinks.astro";
 import Button from "../../../components/admin/ui/Button.astro";
 import PageHeader from "../../../components/admin/ui/PageHeader.astro";
 import Pill from "../../../components/admin/ui/Pill.astro";
-import Tabs from "../../../components/admin/ui/Tabs.astro";
+import PacientesTabs from "../../../components/admin/PacientesTabs.astro";
 import Tag from "../../../components/admin/ui/Tag.astro";
 import { buttonClass } from "../../../components/admin/ui/styles";
 import { formatAgeAndBirth } from "../../../lib/age";
@@ -25,6 +25,9 @@ import { createUserClient } from "../../../lib/data/clients";
 import { listNoShowStats } from "../../../lib/data/agenda/view";
 import { listInsurancePlans } from "../../../lib/data/config/insurance";
 import { listContactsPage, listPatientsPage } from "../../../lib/data/patients";
+import { canAccessArea } from "../../../lib/clinicAccess";
+import { contactTabCount } from "../../../lib/data/relationship";
+import { logError } from "../../../lib/log";
 import { capitalize, vocabularyFor } from "../../../lib/vocabulary";
 
 const clinic = Astro.locals.clinic!;
@@ -46,6 +49,10 @@ const [plans, noShows] = await Promise.all([
 ]);
 const planName = new Map(plans.map((p) => [p.id, p.name]));
 const result = patients ?? contacts!;
+const showContact = canAccessArea(clinic, "relationship");
+const contactCount = showContact
+  ? await contactTabCount(db, clinic.clinicId, clinic.features, clinic.timezone, (tab, error) => logError(`pacientes: contador de Para contatar (${tab})`, error, { clinica: clinic.clinicId }))
+  : null;
 const here = currentPath(Astro.url);
 
 const link = (changes: Record<string, string>) => {
@@ -67,14 +74,7 @@ const pageLink = `${buttonClass("secondary", "sm")}`;
       <Icon name="plus" class="h-[18px] w-[18px]" strokeWidth={2.2} /> Cadastrar {vocabulary.patient}
     </Button>
   </PageHeader>
-  <Tabs
-    label="Listas"
-    class="mt-4"
-    tabs={[
-      { label: capitalize(vocabulary.patients), href: "/admin/pacientes", active: tab === "pacientes" },
-      { label: capitalize(vocabulary.contacts), href: "/admin/pacientes?tab=contatos", active: tab === "contatos" },
-    ]}
-  />
+  <PacientesTabs active={tab === "contatos" ? "contatos" : "todos"} vocabulary={vocabulary} showContact={showContact} contactCount={contactCount} />
   <FlashMessage />
 
   <form method="GET" role="search" class={`${card} mt-4 flex flex-wrap items-end gap-x-3 gap-y-2 p-3.5 sm:px-4`}>

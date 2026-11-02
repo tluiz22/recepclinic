@@ -143,6 +143,8 @@ describe("papéis e áreas do painel (D6)", () => {
   it("Relacionamento (CRM A1, Q2): Administrador e Recepção, com o item; o Profissional não; nenhuma rota das Métricas", () => {
     const none = new URLSearchParams();
     expect(areaOfPath("/admin/relacionamento")).toBe("relationship");
+    expect(areaOfPath("/admin/pacientes/para-contatar")).toBe("relationship");
+    expect(areaOfPath("/admin/pacientes/abc")).toBe("shared");
     expect(areaOfPath("/api/admin/relacionamento/qualquer")).toBe("relationship");
     expect(areaOfPath("/admin/relacionamento-extra")).toBe("shared");
     const on: FeatureKey[] = ["relationship"];

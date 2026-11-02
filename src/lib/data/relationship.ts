@@ -297,6 +297,33 @@ export function relationshipCounts(lists: RelationshipLists): RelationshipCounts
  */
 export const MENU_TABS: readonly RelationshipTab[] = ["retorno", "lembretes", "lembretes_equipe", "aguardando_remarcacao", "revisar"];
 
+/**
+ * Pacientes › Para contatar (RX4 do redesign da Recepção, cliente, 02/nov/2026): as listas de contato do Relacionamento,
+ * na ordem da tela. Atendimento e Contatos para revisar vão para o Meu dia (RX2) e os Lembretes, para o Meu dia
+ * (sem resposta) e o Relatório do dia (não entregues).
+ */
+export const CONTACT_LISTS: readonly RelationshipTab[] = ["retomar_contato", "retorno", "faltosos", "aguardando_remarcacao", "lista_espera", "lembretes_equipe"];
+
+/** O que soma no contador da aba "Para contatar": as listas de CONTACT_LISTS que também contam no menu. */
+export const CONTACT_COUNT_TABS: readonly RelationshipTab[] = CONTACT_LISTS.filter((tab) => MENU_TABS.includes(tab));
+
+/** Contador da aba "Para contatar"; `null` = a leitura falhou (a aba aparece sem número, nunca com 0). */
+export async function contactTabCount(db: DbClient, clinicId: string, features: readonly string[], timeZone: string, onError: (tab: RelationshipTab, error: unknown) => void): Promise<number | null> {
+  let failedRead = false;
+  const lists = await loadRelationshipLists(
+    db,
+    clinicId,
+    relationshipTabs(features).filter((tab) => CONTACT_COUNT_TABS.includes(tab)),
+    (tab, error) => {
+      failedRead = true;
+      onError(tab, error);
+    },
+    { timeZone },
+  );
+  if (failedRead) return null;
+  return CONTACT_COUNT_TABS.reduce((total, tab) => total + (relationshipCounts(lists)[tab] ?? 0), 0);
+}
+
 export function menuTotal(counts: RelationshipCounts): number {
   return MENU_TABS.reduce((total, tab) => total + (counts[tab] ?? 0), 0);
 }

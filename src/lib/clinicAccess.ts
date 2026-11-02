@@ -125,6 +125,8 @@ const AREA_PREFIXES: [string, PanelArea][] = [
   ["/admin/financeiro", "finance"],
   ["/api/admin/financeiro", "finance"],
   ["/admin/relacionamento", "relationship"],
+  // Pacientes › Para contatar (RX4): as mesmas listas, com o mesmo acesso.
+  ["/admin/pacientes/para-contatar", "relationship"],
   ["/api/admin/relacionamento", "relationship"],
 ];
 
