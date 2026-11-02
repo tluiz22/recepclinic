@@ -34,7 +34,7 @@ const professionalName = new Map(professionals.map((p) => [p.id, p.displayName])
 const servicesOf = (agendaId: string) => services.filter((s) => s.agendaIds.includes(agendaId)).map((s) => s.name);
 // Uma agenda por profissional e no máximo uma da equipe, só com o item
 // "Exames e procedimentos" (cliente, 21/out/2026): "Nova agenda" só quando
-// algum profissional ativo ainda não tem; senão, a da equipe pelo link discreto.
+// algum profissional ativo ainda não tem; senão, o mesmo botão cria a da equipe (cliente, 02/nov/2026).
 const canCreateProfessional = professionalsWithoutAgenda(professionals, all).length > 0;
 const canCreateTeam = clinic.features.includes("exams") && !all.some((a) => a.kind === "resource");
 const cols = "lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1.4fr)_minmax(0,2fr)_36px]";
@@ -44,9 +44,9 @@ import { configuracoes } from "../../../lib/ajuda/configuracoes";
 
 <ConfigShell current="agendas" title="Agendas" subtitle="De um profissional ou da equipe (Exames), com os serviços que atendem." setup={setup}>
   {
-    canCreateProfessional && (
-      <Button slot="actions" href="/admin/configuracoes/agendas/novo" variant="primary">
-        <Icon name="plus" class="h-[18px] w-[18px]" strokeWidth={2.2} /> Nova agenda
+    (canCreateProfessional || canCreateTeam) && (
+      <Button slot="actions" href={canCreateProfessional ? "/admin/configuracoes/agendas/novo" : "/admin/configuracoes/agendas/novo?tipo=equipe"} variant="primary">
+        <Icon name="plus" class="h-[18px] w-[18px]" strokeWidth={2.2} /> {canCreateProfessional ? "Nova agenda" : "Nova agenda da equipe (exames)"}
       </Button>
     )
   }
@@ -58,16 +58,6 @@ import { configuracoes } from "../../../lib/ajuda/configuracoes";
   <div class="flex flex-wrap items-center justify-between gap-3">
     <p class="text-sm text-ink-soft" role="status">
       {agendas.length} {agendas.length === 1 ? "agenda" : "agendas"}{agendas.length === 1 ? (showInactive ? " desativada" : " ativa") : showInactive ? " desativadas" : " ativas"}
-      {
-        !canCreateProfessional && canCreateTeam && all.length > 0 && (
-          <>
-            {" · "}
-            <a href="/admin/configuracoes/agendas/novo?tipo=equipe" class="font-semibold text-brand hover:underline">
-              Criar a agenda da equipe (exames)
-            </a>
-          </>
-        )
-      }
     </p>
     <ActiveFilter showInactive={showInactive} active={active.length} inactive={all.length - active.length} feminine />
   </div>
