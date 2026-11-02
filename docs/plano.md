@@ -1549,6 +1549,18 @@ criar ou atualizar as demos, criar a senha dos logins e mover o chip; o roteiro 
     eletrocardiograma com preparo, consulta domiciliar, 3 convênios, bloqueio, lista de espera,
     um "Aguardando remarcação" e as últimas semanas para as métricas (com o funil do bot);
     `demo.completo@recepclinic.com.br`.
+  - **Clínica Demonstração RecepClinic** (02/nov/2026; tudo ligado menos o Financeiro, inclusive
+    Relacionamento e séries): clínica médica (com domiciliar), ortopedia, pediatria, psicologia (3 séries
+    semanais), agenda de exames (eletrocardiograma e ultrassom), 4 convênios, anotações e lembretes da
+    equipe; `demo.recepclinic@recepclinic.com.br` (o `analista.meta` continua vinculado e bloqueado).
+  - **Carga completa (cliente, 02/nov/2026):** agenda gerada (semente fixa por dia) das 3 últimas semanas
+    até 2 semanas à frente, cerca de 65% dos horários ocupados, com todos os cenários: atendido, faltou,
+    cancelado pelo paciente e pela recepção, remarcado, lembrete confirmado, sem resposta e não entregue,
+    retorno ligado à consulta, bloqueio com cancelamento em massa (Aguardando remarcação), feriado da
+    clínica, lista de espera (na fila e um antecipado por oferta aceita), conversas na Recepção, tentativas
+    do bot paradas no meio, faltosos, contato para revisar e perguntas que o bot não reconheceu. **Sem o
+    módulo Financeiro** nas 4 (cliente: o módulo não está pronto). O Consultório da Dra. Ana Karina foi
+    excluído do staging no mesmo dia (os logins ficaram).
   - Logins de Administrador (+ Profissional), senha por `scripts/link-de-senha.mjs`. Telefones
     fictícios (+55 11 9000x-xxxx); sem conexão de WhatsApp, nada é enviado.
   - **Chip de testes** (cliente: só com pedido): `--chip-para-demo` passa a conexão da Consultorio

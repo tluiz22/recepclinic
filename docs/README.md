@@ -42,6 +42,10 @@
 >   produção. **Central de Ajuda atualizada com o redesign (02/nov):** artigos e as 25 capturas refeitas, no staging após o push; falta o cliente validar. Avisos técnicos só do Suporte; tela
 >   de pendências do Suporte pendente em [`painel-suporte.md`](painel-suporte.md).
 >
+> **Clínicas de demonstração (02/nov):** as 4 demos do staging recarregadas com todos os cenários de 5 semanas, sem o
+> Financeiro; Consultório da Dra. Ana Karina excluído do staging. Cliente valida. **Antes de cada apresentação:**
+> `node --env-file=.env.staging scripts/demo-clinicas.mjs --confirmar` (plano, item 9b).
+>
 > **Pendências**
 > - **Cliente valida no staging (no fim):** F8.1, F8.2, F8.2b, F8.3, ajuda contextual e menu lateral.
 > - **F11:** roteiro a partir do T3.1; Produção Restrita (A1), template `rc_nota_fiscal_v1`, termo com o advogado.
