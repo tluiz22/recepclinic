@@ -6,7 +6,7 @@
 // - à vista: Remarcar, Marcar retorno, Pagamento, Faltou e a ação que resolve
 //   um sinal (Reenviar lembrete, preparo ou orientações);
 // - "Mais": Alterar (C4, 28/out/2026; no "Mais" desde 31/out, para o cartão ter menos botões) e as raras
-//   (lista de espera, correções, série, Trilha);
+//   (lista de espera, correções, série, Histórico);
 // - à parte, à direita e em vermelho: Cancelar.
 // Toda ação de formulário pede confirmação (cliente, 05/out/2026).
 import type { IconName } from "../Icon.astro";
@@ -180,8 +180,8 @@ export function cardActions(input: CardActionInput): CardActions {
 
   if (a.seriesId) result.more.push({ kind: "link", href: withReturn(`/admin/agenda/serie/${a.seriesId}`, returnTo), label: "Ver série", icon: "calendar" });
 
-  // Trilha: à vista no cancelado (é a única ação dele); nos outros, no "Mais".
-  const trail: CardAction = { kind: "link", href: `/admin/agenda/trilha/${a.id}?volta=${encodeURIComponent(returnTo)}`, label: "Trilha", icon: "queue-list" };
+  // Histórico: à vista no cancelado (é a única ação dele); nos outros, no "Mais".
+  const trail: CardAction = { kind: "link", href: `/admin/agenda/trilha/${a.id}?volta=${encodeURIComponent(returnTo)}`, label: "Histórico", icon: "queue-list" };
   if (a.status === "canceled") result.visible.push(trail);
   else result.more.push(trail);
 

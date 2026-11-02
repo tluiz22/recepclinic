@@ -193,7 +193,7 @@ export type GuidanceResendOutcome = "sent" | "failed" | "no_template" | "not_con
 
 export const GUIDANCE_RESEND_MESSAGES: Record<GuidanceResendOutcome, { text: string; ok: boolean }> = {
   sent: { text: "Orientações reenviadas.", ok: true },
-  failed: { text: "As orientações não foram enviadas: o WhatsApp recusou o envio. Veja a trilha do atendimento.", ok: false },
+  failed: { text: "As orientações não foram enviadas: o WhatsApp recusou o envio. Veja o histórico do atendimento.", ok: false },
   no_template: { text: "As orientações não foram enviadas: o template das orientações gerais não está aprovado.", ok: false },
   not_connected: { text: "As orientações não foram enviadas: o WhatsApp da clínica não está conectado.", ok: false },
   not_enabled: { text: "O envio das orientações gerais está desligado (Configurações › Mensagens).", ok: false },

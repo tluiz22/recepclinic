@@ -44,7 +44,7 @@ export const problemasArtigos = [
       "Confira Configurações › WhatsApp: a conexão deve estar Conectada e as mensagens automáticas aprovadas (pendentes ou recusadas não saem).",
       "Confira a forma de pagamento na Meta: sem ela, as mensagens automáticas não saem.",
       "Atendimento marcado depois do horário do envio fica sem lembrete: use Enviar lembrete no cartão da Agenda.",
-      "Falha técnica é tentada de novo sozinha (10 e 30 minutos). A trilha do atendimento registra o motivo.",
+      "Falha técnica é tentada de novo sozinha (10 e 30 minutos). O histórico do atendimento registra o motivo.",
     ],
   }),
   article({

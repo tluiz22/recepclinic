@@ -225,7 +225,7 @@ export const configuracoes = {
         "O paciente responde pelos botões \"Confirmar presença\", \"Remarcar\" ou \"Cancelar\".",
         "Atendimento marcado depois do envio fica sem lembrete automático: na Agenda, o botão \"Enviar lembrete\" resolve. Remarcar zera o lembrete.",
         "Falha técnica no envio é tentada de novo sozinha, em 10 e 30 minutos.",
-        "Sem o WhatsApp conectado ou sem a mensagem aprovada pela Meta, o lembrete não sai e a trilha do atendimento registra o motivo.",
+        "Sem o WhatsApp conectado ou sem a mensagem aprovada pela Meta, o lembrete não sai e o histórico do atendimento registra o motivo.",
       ],
       depende: [
         { texto: "WhatsApp: a conexão e as mensagens aprovadas pela Meta.", href: "/admin/configuracoes/whatsapp" },

@@ -98,7 +98,7 @@ const COLS = "lg:grid-cols-[minmax(0,2fr)_minmax(0,1.3fr)_150px_36px]";
       <>
         <SystemHeader
           title="Matriz de acesso"
-          subtitle="O que cada clínica tem liberado. Sempre ligado em toda clínica: agenda (dia, semana, mês), bloqueios e trilha; marcar, remarcar e cancelar consulta e retorno; pacientes; Resumo do dia e comparecimento; configurações básicas."
+          subtitle="O que cada clínica tem liberado. Sempre ligado em toda clínica: agenda (dia, semana, mês), bloqueios e histórico; marcar, remarcar e cancelar consulta e retorno; pacientes; Resumo do dia e comparecimento; configurações básicas."
         />
         {erro && ERRORS[erro] && <FormMessage tone="error">{ERRORS[erro]}</FormMessage>}
         <section aria-label="Clínicas" class={`mt-5 ${LIST}`}>

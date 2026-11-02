@@ -25,12 +25,12 @@ const backTo = safeReturnPath(back, `/admin/agenda?date=${localDateOf(appointmen
 const tone = { neutral: "text-ink", success: "text-conf-800", danger: "font-semibold text-danger" };
 ---
 
-<AdminLayout title="Trilha do atendimento">
+<AdminLayout title="Histórico do atendimento">
   <a href={backTo} class="inline-flex min-h-8 items-center gap-1 text-[15px] font-semibold text-brand no-underline hover:underline">
     <Icon name="chevron-left" class="h-[18px] w-[18px]" strokeWidth={2.2} />
     Voltar
   </a>
-  <PageHeader title="Trilha do atendimento" class="mt-2" />
+  <PageHeader title="Histórico do atendimento" class="mt-2" />
   {/* Para que serve (ajuda contextual, 23/out/2026): os exemplos são tipos de evento de lib/data/agenda/trail.ts. */}
   <p class="mt-1 max-w-2xl text-[15px] text-ink-soft">
     Tudo o que aconteceu com este atendimento, do mais antigo ao mais recente, e quem fez: marcação, remarcações e cancelamento, presença confirmada,
@@ -46,7 +46,7 @@ const tone = { neutral: "text-ink", success: "text-conf-800", danger: "font-semi
     </section>
     {
       entries.length ? (
-        <section class={PANEL} aria-label="Trilha">
+        <section class={PANEL} aria-label="Histórico">
           <ol class="flex flex-col divide-y divide-[#e6ecea]">
             {entries.map((entry) => (
               <li class="flex flex-col gap-0.5 py-2 text-[15px] sm:flex-row sm:gap-3">

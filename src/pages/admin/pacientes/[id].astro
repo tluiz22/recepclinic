@@ -10,7 +10,7 @@
 // Redesign R6 (proposta aprovada pelo cliente em 16/out/2026): no alto, o
 // paciente com os selos, o contato e as ações (Marcar e o "Mais" com
 // Desativar e Anonimizar); à esquerda, os atendimentos em abas, só informação,
-// com "Abrir na Agenda" e "Trilha"; à direita, os cartões em modo leitura com
+// com "Abrir na Agenda" e "Histórico"; à direita, os cartões em modo leitura com
 // "Editar". Quem vê o Financeiro vê também "Pago"/"Pago em parte" nos
 // atendimentos e a nota de cada pagamento. No celular, os cartões recolhidos e
 // "Marcar" na barra fixa.
@@ -400,7 +400,7 @@ const canBook = patient.isActive && !anonymized;
                   Abrir na Agenda
                 </Button>
                 <Button href={withReturn(`/admin/agenda/trilha/${a.id}`, here)} size="sm" variant="quiet">
-                  Trilha
+                  Histórico
                 </Button>
               </div>
             </li>

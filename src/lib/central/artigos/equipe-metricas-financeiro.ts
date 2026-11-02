@@ -42,7 +42,7 @@ export const equipeMetricasFinanceiro = [
     intro: "A equipe entra por convite: não há cadastro aberto.",
     steps: [
       "Abra Configurações › Equipe e toque em Convidar pessoa.",
-      "Informe o e-mail (a pessoa recebe o convite para criar a senha; se já tem login no RecepClinic, entra direto e recebe um aviso) e o nome (aparece na trilha dos atendimentos, ex.: \"Marcado por Maria\").",
+      "Informe o e-mail (a pessoa recebe o convite para criar a senha; se já tem login no RecepClinic, entra direto e recebe um aviso) e o nome (aparece no histórico dos atendimentos, ex.: \"Marcado por Maria\").",
       "Marque os papéis. Com o papel Profissional, escolha o Cadastro de profissional: é obrigatório e é o que mostra a ele a própria agenda.",
       "Em Acesso às agendas, escolha Todas ou Selecionadas. Restrito: a pessoa vê só a agenda do profissional ligado a ela e as marcadas aqui; sem nenhuma, não vê agenda. O Administrador sempre vê todas.",
       "Toque em Convidar. O convite não aceito aparece como \"Convite pendente\"; use Reenviar convite se precisar.",

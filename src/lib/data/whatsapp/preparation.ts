@@ -225,7 +225,7 @@ export type PreparationResendOutcome = "sent" | "failed" | "no_template" | "not_
 
 export const PREPARATION_RESEND_MESSAGES: Record<PreparationResendOutcome, { text: string; ok: boolean }> = {
   sent: { text: "Preparo do exame reenviado.", ok: true },
-  failed: { text: "O preparo não foi enviado: o WhatsApp recusou o envio. Veja a trilha do atendimento.", ok: false },
+  failed: { text: "O preparo não foi enviado: o WhatsApp recusou o envio. Veja o histórico do atendimento.", ok: false },
   no_template: { text: "O preparo não foi enviado: o template do preparo do exame não está aprovado.", ok: false },
   not_connected: { text: "O preparo não foi enviado: o WhatsApp da clínica não está conectado.", ok: false },
   not_enabled: { text: "Exames não estão liberados para a clínica.", ok: false },

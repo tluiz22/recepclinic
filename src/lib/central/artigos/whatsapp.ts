@@ -55,7 +55,7 @@ export const whatsappArtigos = [
       { name: "Atendimento marcado depois do envio", text: "Fica sem lembrete automático: na Agenda, o botão Enviar lembrete resolve. Remarcar zera o lembrete." },
       { name: "Falha técnica", text: "O envio é tentado de novo sozinho, em 10 e 30 minutos." },
     ],
-    notes: ["Sem o WhatsApp conectado ou sem a mensagem aprovada pela Meta, o lembrete não sai, e a trilha do atendimento registra o motivo.", "A Meta cobra da clínica as mensagens automáticas; sem forma de pagamento na Meta elas não saem, e o bot continua respondendo quem escreve."],
+    notes: ["Sem o WhatsApp conectado ou sem a mensagem aprovada pela Meta, o lembrete não sai, e o histórico do atendimento registra o motivo.", "A Meta cobra da clínica as mensagens automáticas; sem forma de pagamento na Meta elas não saem, e o bot continua respondendo quem escreve."],
   }),
   article({
     id: "perguntas-frequentes-no-bot",

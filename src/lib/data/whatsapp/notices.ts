@@ -30,7 +30,7 @@ export type NoticeStatus = "sent" | "failed" | "skipped_no_template" | "not_conn
 /** Frase curta para o aviso de salvo da tela. */
 export const NOTICE_RESULT_TEXT: Record<NoticeStatus, string> = {
   sent: "Aviso enviado ao paciente pelo WhatsApp.",
-  failed: "O aviso pelo WhatsApp não saiu: o WhatsApp recusou o envio (veja a trilha).",
+  failed: "O aviso pelo WhatsApp não saiu: o WhatsApp recusou o envio (veja o histórico).",
   skipped_no_template: "O aviso pelo WhatsApp não saiu: o template ainda não está aprovado.",
   not_connected: "Sem aviso pelo WhatsApp: o WhatsApp da clínica não está conectado.",
 };

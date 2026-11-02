@@ -56,7 +56,7 @@ export const agenda = {
         "A confirmação mostra o que muda (antes → depois). O paciente recebe mensagem no WhatsApp só se mudar data, hora, profissional ou local para uma data futura; aí o lembrete e a presença confirmada recomeçam.",
         "O valor segue o serviço e o local novos. Pagamentos já registrados não mudam: a confirmação avisa se fica faltando ou sobrando.",
         "Sessão de série ainda por vir: \"Só esta sessão\" ou \"Esta e as próximas\". Com Compareceu ou Faltou registrado, a data fica no passado; o cancelado não se altera.",
-        "Tudo fica na Trilha do atendimento: o que mudou, quando e quem fez.",
+        "Tudo fica no Histórico do atendimento: o que mudou, quando e quem fez.",
       ],
       exemplo:
         "Marcou Consulta, mas era Avaliação inicial: em Alterar, troque o serviço e confirme. O horário continua o mesmo, o valor passa a ser o da Avaliação e o paciente não recebe mensagem.",
