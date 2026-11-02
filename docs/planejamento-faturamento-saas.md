@@ -12,8 +12,12 @@
 > (Administrador só na Assinatura, outros em `/admin/clinica-suspensa`, API 403), `/agendar`, `/preparo` e
 > `/orientacoes` com "indisponível no momento", bot e envios (`createClinicSender` nulo; a mensagem fica no histórico,
 > sem aviso à equipe); rotinas já pulavam. `/formulario` e `/importar` (links da clínica com o Suporte) seguem abertos.
-> Testes: `tests/db/suspensao.test.ts`, `clinicaEmImplantacao.test.ts`. **Próximo: F12.3b** (o banco recusa as
-> gravações operacionais da clínica suspensa).
+> Testes: `tests/db/suspensao.test.ts`, `clinicaEmImplantacao.test.ts`.
+> **F12.3b feita** (`20261119120000_suspensao_no_banco.sql`): gatilho `app.guard_suspended_clinic_write` em toda tabela
+> com `clinic_id` (fora `app.suspension_free_tables()`: billing_*, clinic_suspensions, registros e push) e na própria
+> `clinics`; recusa a gravação de login da clínica (não o Suporte) na clínica suspensa; `clinic_service` e service
+> role seguem. **Tabela nova com `clinic_id` precisa do gatilho** (o teste `suspensao-banco` confere). Arquivos do
+> Storage (logo) não entram. **Próximo: F12.4** (cliente e cobranças no Asaas sandbox): precisa da conta de testes.
 > **Ordem decidida (cliente, 30/out):** cobrança primeiro, até cobrar a clínica piloto em produção, **só com aviso por
 > e-mail**: F12.2b, F12.3, F12.3b, F12.4 a F12.8 e F12.11 (itens 18 a 26 da seção 11). Depois: F12.9 (decisão 11.10),
 > F12.10 (Pix Automático) e a nota fiscal pelo Asaas (N0–N6). **Próximo:** validação da F12.2b no local e o OK para a
