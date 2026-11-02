@@ -121,6 +121,9 @@ describe("tela inicial", () => {
     expect(await getDashboardCounts(asDb(reception), clinicId, "America/Fortaleza", at(MON1, "12:00"))).toEqual({
       consultationsToday: 1,
       examsToday: 1,
+      totalToday: 2,
+      confirmedToday: 0,
+      completedToday: 0,
       pendingAttendance: 2,
       unansweredReminders: 1,
     });
