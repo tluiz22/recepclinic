@@ -20,12 +20,13 @@ export const primeirosPassos = [
     fields: [
       { name: "Meu dia", text: "O que precisa de você agora: conversas do WhatsApp à espera da clínica (só com o bot), consultas para registrar presença, contatos a conferir e quem ainda não respondeu ao lembrete." },
       { name: "Agenda", text: "O dia, a semana e o mês, com Marcar, Bloquear e, no Mais, Bloqueios, Buscar paciente e o Relatório do dia." },
+      { name: "Relatório do dia", text: "Lembretes, lista de espera, aguardando remarcação, consultas a registrar e envios do dia, num item próprio do menu (e também no Mais da Agenda)." },
       { name: "Pacientes", text: "Fichas e contatos, e a lista Para contatar: as pendências que pedem contato da equipe (Administrador e Recepção, com o item liberado)." },
       { name: "Mais", text: "Financeiro, Métricas, Configurações e a Central de Ajuda (este manual). Cada um depende do papel e do plano; o que a pessoa não acessa não aparece." },
       { name: "Trocar clínica", text: "Aparece no alto do menu para quem tem acesso a mais de uma clínica." },
     ],
     notes: [
-      "No celular, a barra de baixo mostra Meu dia, Agenda, Pacientes e Mais; o Mais traz Financeiro, Métricas, Configurações e a Central de Ajuda.",
+      "No celular, a barra de baixo mostra Meu dia, Agenda, Relatório do dia, Pacientes e Mais; o Mais traz Financeiro, Métricas, Configurações e a Central de Ajuda.",
       "O número vermelho do Meu dia soma as conversas à espera da clínica, as que a clínica ainda não devolveu ao bot, as consultas sem presença registrada e os contatos a conferir.",
     ],
   }),

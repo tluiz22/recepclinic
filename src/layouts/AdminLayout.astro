@@ -34,13 +34,15 @@ const frame = "max-w-6xl";
 
 // `match`: outras rotas que deixam o item marcado (o Atendimento é do Meu dia; o Relatório do dia, da Agenda; o
 // Relacionamento antigo, de Pacientes).
-type NavItem = { label: string; href: string; icon: IconName; badge?: number; badgeLabel?: string; match?: string[] };
+type NavItem = { label: string; href: string; icon: IconName; badge?: number; badgeLabel?: string; match?: string[]; shortLabel?: string };
 
-// Menu novo (RX6 do redesign da Recepção, RX-D1; cliente, 02/nov/2026): três lugares de trabalho, que também são a
+// Menu novo (RX6 do redesign da Recepção, RX-D1; cliente, 02/nov/2026): os lugares de trabalho, que também são a
 // barra inferior de abas no celular e no tablet (mais o "Mais"). Os demais itens ficam no grupo "Mais".
 const primaryNavItems: NavItem[] = [
   { label: "Meu dia", href: "/admin/dashboard", icon: "home", match: ["/admin/atendimento"] },
-  { label: "Agenda", href: "/admin/agenda", icon: "calendar", match: ["/admin/consultas", "/admin/envios"] },
+  { label: "Agenda", href: "/admin/agenda", icon: "calendar" },
+  // Relatório do dia (antigo Resumo do Dia) no menu, à vista (cliente, 02/nov/2026); também no "Mais" da Agenda.
+  { label: "Relatório do dia", shortLabel: "Relatório", href: "/admin/consultas", icon: "check-circle", match: ["/admin/envios"] },
   { label: "Pacientes", href: "/admin/pacientes", icon: "users", match: ["/admin/relacionamento"] },
 ];
 
@@ -66,7 +68,7 @@ const meuDiaCount =
       )))
     : 0;
 
-const [homeItem, agendaItem, patientsItem] = primaryNavItems;
+const [homeItem, agendaItem, reportItem, patientsItem] = primaryNavItems;
 // Grupo "Mais" (RX-D1): o que a pessoa tem acesso, na ordem do desenho; sem acesso, o item some.
 const moreItems: NavItem[] = [
   // Módulo financeiro (F11): Administrador e Recepção, com o item liberado.
@@ -105,7 +107,7 @@ const sideGroups: NavGroup[] = (
   platform
     ? [{ items: systemNavItems }, { title: "Ajuda", items: [helpItem] }]
     : [
-        { items: [withCount(homeItem), agendaItem, patientsItem] },
+        { items: [withCount(homeItem), agendaItem, reportItem, patientsItem] },
         { title: "Mais", items: [...moreItems, helpItem] },
         { title: SYSTEM_TITLE, support: true, items: systemNavItems },
       ]
@@ -381,7 +383,7 @@ const sideLinkClass = (active: boolean) =>
                 </span>
               ) : null}
             </span>
-            {item.label}
+            {item.shortLabel ?? item.label}
           </a>
         ))
       }

@@ -33,12 +33,13 @@ Propostas: [página de propostas](https://claude.ai/artifact/43h7JwJQhXYhjr8pLXi
 - **M6. Celular igual a hoje na barra inferior. (Substituída na RX6: ver M6′.)** (Início, Agenda, Pacientes, Resumo do Dia, Mais); o "Mais" mostra os
   grupos da lateral em cartões, com o total de Atendimento + Relacionamento no botão. Configurações no celular segue
   com o botão "Seção: …" de hoje.
-- **M2′. Menu com três lugares de trabalho (RX6, RX-D1, cliente, 02/nov/2026).** Sem título de grupo: **Meu dia**,
-  **Agenda** e **Pacientes**. Grupo **Mais**: Financeiro, Métricas, Configurações e Central de Ajuda (cada um some sem
+- **M2′. Menu com os lugares de trabalho (RX6, RX-D1, cliente, 02/nov/2026).** Sem título de grupo: **Meu dia**,
+  **Agenda**, **Relatório do dia** (acrescentado em 02/nov, a pedido do cliente: estava escondido no "Mais" da
+  Agenda, que continua com o atalho) e **Pacientes**. Grupo **Mais**: Financeiro, Métricas, Configurações e Central de Ajuda (cada um some sem
   acesso). Sistema · só o Suporte, como antes. Atendimento, Relacionamento e Resumo do Dia deixaram de ser itens: o
   Atendimento abre pelas linhas do Meu dia, o Relatório do dia pelo "Mais" da Agenda e as listas de contato por
   Pacientes › Para contatar. As rotas antigas continuam abertas; cada uma deixa marcado o item que a contém.
-- **M6′. Celular e tablet: barra inferior com Meu dia, Agenda, Pacientes e Mais.** O "Mais" mostra o grupo Mais e o
+- **M6′. Celular e tablet: barra inferior com Meu dia, Agenda, Relatório do dia, Pacientes e Mais.** O "Mais" mostra o grupo Mais e o
   Sistema; a pílula vermelha do Meu dia aparece também na barra.
 - **Contador (decisão 5.1, RX6).** Um número vermelho, no Meu dia: conversas aguardando atendimento humano + conversas
   que a clínica assumiu e ainda não devolveu ao bot + consultas sem presença registrada + contatos a conferir. Fora

@@ -17,7 +17,7 @@ export const equipeMetricasFinanceiro = [
     order: 80,
     intro: "Uma pessoa pode ter mais de um papel (ex.: Administrador e Profissional). O que ela vê é a soma dos papéis. O Suporte do RecepClinic vale por todos os papéis, e cada leitura dele numa clínica é registrada.",
     fields: [
-      { name: "Todos os papéis", text: "Meu dia, Agenda (com o Relatório do dia), Pacientes e a Central de Ajuda." },
+      { name: "Todos os papéis", text: "Meu dia, Agenda, Relatório do dia, Pacientes e a Central de Ajuda." },
       { name: "Administrador", text: "Também Configurações, Equipe, Métricas, Financeiro e Pacientes › Para contatar (os dois últimos dependem do item liberado para a clínica)." },
       { name: "Recepção", text: "Também Financeiro e Pacientes › Para contatar, com o item liberado. Não abre Configurações nem Métricas." },
       { name: "Profissional", text: "Métricas pessoais (só a própria agenda) com o item liberado. Vê só as próprias agendas." },
