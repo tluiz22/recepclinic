@@ -189,13 +189,13 @@ const rowBase = "flex min-h-12 items-center gap-2.5 border-t border-[#e7eeeb] px
               if (item.kind === "free") {
                 return (
                   <a
-                    href={withReturn(`/admin/agenda/marcar?date=${date}&agenda_id=${item.agendaId}&hora=${item.time}`, returnTo)}
-                    aria-label={`Livre das ${item.time} às ${item.endTime}${byColumn ? `, ${item.agendaName}` : ""}: marcar`}
+                    href={withReturn(`/admin/agenda/marcar?date=${date}&agenda_id=${item.agendaId}&hora=${item.time}${item.group ? `&service_id=${item.group.serviceId}` : ""}`, returnTo)}
+                    aria-label={`Livre das ${item.time} às ${item.endTime}${item.group ? `, ${item.group.serviceName}, ${item.group.spots} vagas` : ""}${byColumn ? `, ${item.agendaName}` : ""}: marcar`}
                     class={`${rowBase} bg-conf-50 text-[14px] font-semibold text-brand-ink hover:bg-conf-100 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-brand`}
                     style={style}
                   >
                     <span class="min-w-11 tabular-nums">{item.time}</span>
-                    <span class="flex-1">Livre{agendaOnPhone}</span>
+                    <span class="flex-1">Livre{item.group ? ` · ${item.group.serviceName}, ${item.group.spots} ${item.group.spots === 1 ? "vaga" : "vagas"}` : ""}{agendaOnPhone}</span>
                     <span>+ Marcar</span>
                   </a>
                 );

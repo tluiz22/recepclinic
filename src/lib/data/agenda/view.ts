@@ -60,7 +60,7 @@ export type AgendaItem =
     }
   | { kind: "block"; start: Date; end: Date; agendaName: string; block: ScheduleBlock }
   /** Lacuna livre (RX8): "Livre · + Marcar". */
-  | { kind: "free"; start: Date; end: Date; agendaId: string; agendaName: string; time: string; endTime: string };
+  | { kind: "free"; start: Date; end: Date; agendaId: string; agendaName: string; time: string; endTime: string; group?: FreeGroupInfo };
 
 export const AGENDA_COLUMNS = `id, agenda_id, service_id, scheduled_at, duration_minutes, status, is_group_session, series_id, home_visit_address,
   patient_confirmed_at, reminder_response, created_by, booking_channel, canceled_by, canceled_at,
@@ -222,6 +222,9 @@ export async function getAgendaAppointment(db: DbClient, clinicId: string, id: s
 }
 
 /** Agenda de um item do dia (para as colunas por agenda). */
+/** Sessão de turma sem ninguém marcado: o serviço e as vagas (a linha "Livre" mostra "N vagas"). */
+export type FreeGroupInfo = { serviceId: string; serviceName: string; spots: number };
+
 export function itemAgendaId(item: AgendaItem): string {
   return item.kind === "appointment" ? item.appointment.agendaId : item.kind === "group" || item.kind === "free" ? item.agendaId : item.block.agendaId;
 }
@@ -233,7 +236,7 @@ export function itemAgendaId(item: AgendaItem): string {
 export function buildDayItems(
   appointments: AgendaAppointment[],
   blocks: (ScheduleBlock & { agendaName: string })[],
-  gaps: { agendaId: string; agendaName: string; start: Date; end: Date; time: string; endTime: string }[] = [],
+  gaps: { agendaId: string; agendaName: string; start: Date; end: Date; time: string; endTime: string; group?: FreeGroupInfo }[] = [],
 ): AgendaItem[] {
   const items: AgendaItem[] = [];
   const groups = new Map<string, Extract<AgendaItem, { kind: "group" }>>();

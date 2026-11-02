@@ -554,7 +554,7 @@ export async function listFreeGaps(
   clinicId: string,
   { date, agendaIds, timeZone }: { date: string; agendaIds: string[]; timeZone: string },
   now: Date = new Date(),
-): Promise<(FreeGap & { agendaId: string })[]> {
+): Promise<(FreeGap & { agendaId: string; group?: { serviceId: string; serviceName: string; spots: number } })[]> {
   if (agendaIds.length === 0 || date < todayIn(timeZone, now) || isNationalHoliday(date)) return [];
   const { start, end } = dayBounds(date, timeZone);
   const [holidays, agendas, windows, services] = await Promise.all([
@@ -562,7 +562,7 @@ export async function listFreeGaps(
     db.from("agendas").select("id, buffer_minutes").eq("clinic_id", clinicId).eq("is_active", true).in("id", agendaIds).then((r) => unwrap(r, "Agendas")),
     db
       .from("availability_windows")
-      .select("agenda_id, service_id, start_time, end_time")
+      .select("agenda_id, service_id, start_time, end_time, capacity")
       .eq("clinic_id", clinicId)
       .eq("is_active", true)
       .eq("weekday", weekdayOf(date))
@@ -570,13 +570,13 @@ export async function listFreeGaps(
       .then((r) => unwrap(r, "Horários de atendimento")),
     db
       .from("services")
-      .select("id, duration_minutes, scheduling_mode, category, service_agendas ( agenda_id )")
+      .select("id, name, duration_minutes, scheduling_mode, category, service_agendas ( agenda_id )")
       .eq("clinic_id", clinicId)
       .eq("is_active", true)
       .then((r) => unwrap(r, "Serviços")),
   ]);
   if (holidays.has(date)) return [];
-  const rows = services as unknown as { id: string; duration_minutes: number; scheduling_mode: string; category: string; service_agendas: { agenda_id: string }[] }[];
+  const rows = services as unknown as { id: string; name: string; duration_minutes: number; scheduling_mode: string; category: string; service_agendas: { agenda_id: string }[] }[];
   // Turma tem horário próprio (a sessão): as janelas dela não viram "Livre".
   const groupIds = new Set(rows.filter((service) => service.scheduling_mode === "group").map((service) => service.id));
   const byId = new Map(rows.map((service) => [service.id, service]));
@@ -587,7 +587,7 @@ export async function listFreeGaps(
     if (service.scheduling_mode === "group") continue;
     for (const link of service.service_agendas) individualOf.set(link.agenda_id, [...(individualOf.get(link.agenda_id) ?? []), service]);
   }
-  const result: (FreeGap & { agendaId: string })[] = [];
+  const result: (FreeGap & { agendaId: string; group?: { serviceId: string; serviceName: string; spots: number } })[] = [];
   for (const agenda of agendas) {
     const services = individualOf.get(agenda.id) ?? [];
     const nonExam = services.filter((service) => service.category !== "exam");
@@ -606,10 +606,47 @@ export async function listFreeGaps(
         };
       })
       .filter((w) => Number.isFinite(w.stepMinutes) && w.stepMinutes > 0);
-    if (own.length === 0) continue;
+    // Turma (cliente, 02/nov/2026): a sessão sem ninguém marcado vira uma linha "Livre · N vagas" (com gente, a turma já
+    // aparece como item do dia). Só os bloqueios a ocupam.
+    const groupWindows = windows.filter((w) => w.agenda_id === agenda.id && w.service_id && groupIds.has(w.service_id));
+    if (own.length === 0 && groupWindows.length === 0) continue;
     // Exame corre em paralelo (28/out): só os bloqueios o ocupam; os demais, também os atendimentos.
     const [busyAll, busyBlocksOnly] = await Promise.all([loadBusy(db, clinicId, agenda.id, start, end), loadBusy(db, clinicId, agenda.id, start, end, null, true)]);
     const seen = new Set<number>();
+    if (groupWindows.length > 0) {
+      const taken = unwrap(
+        await db
+          .from("appointments")
+          .select("service_id, scheduled_at")
+          .eq("clinic_id", clinicId)
+          .eq("agenda_id", agenda.id)
+          .in("status", ["scheduled", "confirmed"])
+          .eq("is_group_session", true)
+          .gte("scheduled_at", start.toISOString())
+          .lt("scheduled_at", end.toISOString()),
+        "Atendimentos da turma",
+      );
+      for (const w of groupWindows) {
+        const service = byId.get(w.service_id!);
+        const capacity = (w as { capacity?: number | null }).capacity;
+        if (!service || !capacity) continue;
+        const from = toInstant(date, w.start_time.slice(0, 5), timeZone);
+        if (from <= now || localTimeOf(from, timeZone) !== w.start_time.slice(0, 5)) continue;
+        const to = new Date(from.getTime() + service.duration_minutes * 60_000);
+        if (busyBlocksOnly.some((b) => b.start < to && b.end > from)) continue;
+        const booked = taken.filter((t) => t.service_id === service.id && new Date(t.scheduled_at).getTime() === from.getTime()).length;
+        if (booked > 0 || seen.has(from.getTime())) continue;
+        seen.add(from.getTime());
+        result.push({
+          start: from,
+          end: to,
+          time: w.start_time.slice(0, 5),
+          endTime: localTimeOf(to, timeZone),
+          agendaId: agenda.id,
+          group: { serviceId: service.id, serviceName: service.name, spots: capacity },
+        });
+      }
+    }
     for (const [isExam, busy] of [[false, busyAll], [true, busyBlocksOnly]] as const) {
       const group = own.filter((w) => w.isExam === isExam);
       if (group.length === 0) continue;

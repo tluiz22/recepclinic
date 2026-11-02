@@ -1,7 +1,8 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { bookAppointment } from "../../src/lib/data/agenda/appointments";
 import { listFreeGaps } from "../../src/lib/data/agenda/slots";
 import { addAvailabilityWindow } from "../../src/lib/data/config/availability";
-import { asDb, NOW, MON1, setupAgendaClinic, type AgendaFixture } from "./agendaFixture";
+import { asDb, at, NOW, MON1, setupAgendaClinic, type AgendaFixture } from "./agendaFixture";
 
 // Linhas "Livre" da Agenda › Dia (cliente, 02/nov/2026): o passo é a duração do serviço de cada janela, e a agenda de
 // exames também tem linhas.
@@ -14,13 +15,24 @@ afterAll(async () => {
 });
 
 const WED = "2031-03-12";
-const times = (gaps: { agendaId: string; time: string }[], agendaId: string) => gaps.filter((g) => g.agendaId === agendaId).map((g) => g.time);
+const times = (gaps: { agendaId: string; time: string }[], agendaId: string) => gaps.filter((g) => g.agendaId === agendaId).map((g) => g.time).sort();
 
 describe("horários livres por serviço", () => {
   it("a agenda de exames mostra as linhas, no passo do exame", async () => {
     const { ids, admin, clinicId } = fixture;
     const gaps = await listFreeGaps(asDb(admin), clinicId, { date: MON1, agendaIds: [ids.agendaExams], timeZone: "America/Fortaleza" }, NOW);
-    expect(times(gaps, ids.agendaExams)).toEqual(["08:00", "08:20", "08:40"]);
+    expect(times(gaps, ids.agendaExams)).toEqual(["08:00", "08:20", "08:40", "10:00"]);
+  });
+
+  it("a sessão de turma sem ninguém marcado vira linha com as vagas; com gente, deixa de ser linha livre", async () => {
+    const { ids, admin, clinicId } = fixture;
+    const a = asDb(admin);
+    const gaps = await listFreeGaps(a, clinicId, { date: MON1, agendaIds: [ids.agendaExams], timeZone: "America/Fortaleza" }, NOW);
+    const turma = gaps.find((g) => g.time === "10:00");
+    expect(turma?.group).toMatchObject({ serviceId: ids.turma, serviceName: "Turma", spots: 2 });
+    await bookAppointment(a, clinicId, { patientId: ids.p1, serviceId: ids.turma, agendaId: ids.agendaExams, start: at(MON1, "10:00"), channel: "admin", actorId: admin.id }, NOW);
+    const after = await listFreeGaps(a, clinicId, { date: MON1, agendaIds: [ids.agendaExams], timeZone: "America/Fortaleza" }, NOW);
+    expect(times(after, ids.agendaExams)).toEqual(["08:00", "08:20", "08:40"]);
   });
 
   it("cada janela usa a duração do seu serviço", async () => {
