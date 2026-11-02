@@ -1,6 +1,6 @@
 import type { ModuloDeAjuda } from "./tipos";
 
-// Ajuda contextual da Agenda e do Relatório do dia (inventário de 23/out/2026).
+// Ajuda contextual da Agenda (inventário de 23/out/2026; textos do Dia revistos em 02/nov/2026, redesign da Recepção).
 
 export const agenda = {
   dicas: {
@@ -25,11 +25,11 @@ export const agenda = {
     // src/components/admin/agenda/situationStyle.ts (appointmentSituation); botão "Confirmar presença" do
     // lembrete (src/lib/data/whatsapp/templates.ts) e do bot (bot/manage.ts, confirmPresence); cardActions.ts.
     situacoes: {
-      serve: "A cor e o selo de cada atendimento dizem em que pé ele está.",
+      serve: "A cor e o selo de cada atendimento dizem em que pé ele está. Toque na linha para abrir as ações ao lado.",
       como: [
         "Não confirmado: o paciente ainda não confirmou a presença.",
-        "Confirmado: o paciente tocou em \"Confirmar presença\" no lembrete do WhatsApp (ou confirmou pelo bot), ou a recepção usou \"Confirmar presença\" no cartão.",
-        "Compareceu e Faltou: a recepção registra no cartão do atendimento.",
+        "Confirmado: o paciente tocou em \"Confirmar presença\" no lembrete do WhatsApp (ou confirmou pelo bot), ou a recepção usou \"Confirmar presença\" nas ações do atendimento (toque na linha).",
+        "Compareceu e Faltou: a recepção registra nas ações do atendimento (toque na linha) ou em Relatório do dia › A registrar.",
         "Cancelado: pela clínica, ou pelo paciente no WhatsApp.",
         "Bloqueio: período em que a agenda não recebe marcações.",
       ],
@@ -68,6 +68,6 @@ export const agenda = {
 /** Consequência de cada saída do Bloquear (docs/plano.md F6.5; AguardandoTab.astro), visível antes de confirmar. */
 export const bloquear = {
   cancelar:
-    "Bloquear e cancelar: os atendimentos do período são cancelados; cada paciente recebe o aviso pelo WhatsApp da clínica, com o link para remarcar, e passa para \"Aguardando remarcação\" no Relatório do dia.",
+    "Bloquear e cancelar: os atendimentos do período são cancelados; cada paciente recebe o aviso pelo WhatsApp da clínica, com o link para remarcar, e passa para \"Aguardando remarcação\" em Pacientes › Para contatar.",
   manter: "Bloquear e manter: os atendimentos continuam marcados; só os horários livres do período deixam de ser oferecidos.",
 };

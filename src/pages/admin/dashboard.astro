@@ -17,6 +17,7 @@ import Button from "../../components/admin/ui/Button.astro";
 import Notice, { type NoticeTone } from "../../components/admin/ui/Notice.astro";
 import HowItWorks from "../../components/admin/ui/HowItWorks.astro";
 import { relacionamento } from "../../lib/ajuda/relacionamento";
+import { meuDia } from "../../lib/ajuda/meu-dia";
 import { createUserClient } from "../../lib/data/clients";
 import { getDashboardCounts } from "../../lib/data/dashboard";
 import { describeSendsAlert, getSendsAlert } from "../../lib/data/sends";
@@ -395,7 +396,9 @@ const sectionTitle = "font-display text-[17px] leading-tight font-bold text-ink 
             Esperando o paciente
             {waiting.length > 0 && <span class="rounded-full bg-pend-100 px-2.5 py-px font-sans text-sm font-bold text-pend-800">{waiting.length}</span>}
           </h2>
-          <p class="text-[14.5px] text-ink-soft">O lembrete foi enviado e o paciente ainda não respondeu. Nada a fazer, a não ser que queira insistir.</p>
+          <HowItWorks id="esperando-paciente" topic={meuDia.comoFunciona.esperando} class="mt-1">
+            <p class="text-[14.5px] text-ink-soft">O lembrete foi enviado e o paciente ainda não respondeu. Nada a fazer, a não ser que queira insistir.</p>
+          </HowItWorks>
         </div>
         {pendingReminders === null && <div class="px-4 pb-4 sm:px-[18px]"><Notice tone="warning">Não foi possível carregar os lembretes sem resposta. Tente atualizar a página.</Notice></div>}
         {pendingReminders !== null && waiting.length === 0 && <p class="border-t border-[#e7eeeb] px-4 py-4 text-[15px] text-ink-soft sm:px-[18px]">Nenhum lembrete de hoje ou de amanhã sem resposta.</p>}

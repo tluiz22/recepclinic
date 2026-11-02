@@ -16,6 +16,8 @@ import { formatPhoneBR } from "../../../lib/phone";
 import { withReturn } from "../../../lib/returnPath";
 import ConfirmDeleteDialog from "../../../components/admin/ConfirmDeleteDialog.astro";
 import FlashMessage from "../../../components/admin/FlashMessage.astro";
+import HowItWorks from "../../../components/admin/ui/HowItWorks.astro";
+import { resumo as ajudaResumo } from "../../../lib/ajuda/resumo";
 import EnviosTab from "../../../components/admin/resumo/EnviosTab.astro";
 import LembretesTab from "../../../components/admin/resumo/LembretesTab.astro";
 import ResumoDia from "../../../components/admin/resumo/ResumoDia.astro";
@@ -176,10 +178,12 @@ const tabClass = (on: boolean) =>
       <section aria-labelledby="registrar-titulo" class="mt-4 overflow-hidden rounded-xl border border-line bg-white">
         <div class="flex flex-col gap-0.5 px-4 pt-4 pb-3 sm:px-[18px]">
           <h2 id="registrar-titulo" class="font-display text-[21px] leading-tight font-bold text-ink">Consultas sem presença registrada</h2>
+          <HowItWorks id="a-registrar" topic={ajudaResumo.comoFunciona.aRegistrar} class="mt-1">
           <p class="text-[14.5px] text-ink-soft">
             Já passaram e estão sem "Compareceu" ou "Faltou", de qualquer dia (até 60 dias), a mais antiga primeiro. Errou um registro? Corrija pela
             Agenda, no atendimento.
           </p>
+          </HowItWorks>
         </div>
         {cards.map((a) => {
           const { came, missed } = registerActions(a);

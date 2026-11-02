@@ -35,6 +35,8 @@ import { listGuidanceResendable } from "../../lib/data/whatsapp/guidance";
 import { listPreparationResendable } from "../../lib/data/whatsapp/preparation";
 import { listReminderActions } from "../../lib/data/whatsapp/reminders";
 import { logError } from "../../lib/log";
+import HowItWorks from "../../components/admin/ui/HowItWorks.astro";
+import { agenda as ajudaAgenda } from "../../lib/ajuda/agenda";
 import { capitalize, vocabularyFor } from "../../lib/vocabulary";
 
 const clinic = Astro.locals.clinic!;
@@ -154,6 +156,9 @@ const rowBase = "flex min-h-12 items-center gap-2.5 border-t border-[#e7eeeb] px
     </form>
   </AgendaHeader>
 
+  <HowItWorks id="situacoes-dia" topic={ajudaAgenda.comoFunciona.situacoes} class="mt-2">
+    <p class="text-[14.5px] text-ink-soft">Toque numa linha para ver as ações do atendimento.</p>
+  </HowItWorks>
   <FlashMessage />
   {
     holidayName && (
