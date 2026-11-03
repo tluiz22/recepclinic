@@ -192,7 +192,8 @@ describe("varredura de isolamento (dados de teste)", () => {
   });
 
   it("todas as tabelas do banco entraram na varredura ou têm exceção registrada", () => {
-    const covered = new Set([...dataTables, ...NOT_IN_DATA_SWEEP, ...KNOWLEDGE_BASE, "platform_staff", "platform_settings", "features", "cron_heartbeats"]);
+    // known_issues: Problemas conhecidos (IS5, 03/nov/2026), da plataforma (sem clinic_id); só o Suporte lê e grava.
+    const covered = new Set([...dataTables, ...NOT_IN_DATA_SWEEP, ...KNOWLEDGE_BASE, "platform_staff", "platform_settings", "features", "cron_heartbeats", "known_issues"]);
     expect(allTables.filter((name) => !covered.has(name))).toEqual([]);
   });
 });

@@ -1,8 +1,8 @@
 # Implantação segura do WhatsApp (IS): pré-requisitos, mensagem de teste, checklist e problemas conhecidos
 
-> **Retomar daqui (03/nov/2026).** IS1 e IS2 no staging. **IS3 feita na `main` local** (migração
-> `20261204120000_checklist_implantacao.sql`), testes de banco pelo CI. Próximo: CI verde → migração no staging → push;
-> depois IS4 e IS5 (cliente, 03/nov: as três direto na `main`, uma de cada vez, e o passo a passo de validação no fim).
+> **Retomar daqui (03/nov/2026).** IS1, IS2 e IS3 no staging (migrações `20261203120000` e `20261204120000`
+> aplicadas). **IS4 e IS5 feitas na `main` local** (IS5 com a migração `20261205120000_problemas_conhecidos.sql`),
+> testes de banco pelo CI. Próximo: CI verde → migração da IS5 no staging → push; cliente valida tudo no staging.
 
 Pedido do cliente em 03/nov/2026, depois de dois incidentes na produção (clínica piloto) no mesmo dia: impedir que
 se repitam nas próximas clínicas.
@@ -176,7 +176,16 @@ Plano original:
 - Atualiza o fluxograma da Jornada do bot (`botJourney.ts`, `JOURNEY_UPDATED`) no mesmo commit (regra do projeto).
 - Risco aceito: uma resposta humana muito rápida (resposta rápida do app) nesses segundos também não pausa.
 
-### IS5 — Problemas conhecidos
+### IS5 — Problemas conhecidos (feita, 03/nov)
+
+Feito: tabela `known_issues` (da plataforma; RLS: só o Suporte; fora da varredura de isolamento, com o motivo) com
+os 5 casos de 03/nov na migração (links para os guias públicos, não para os rascunhos do claude.ai).
+`knownIssues.ts` (lista com busca sem acento, salvar com validação, excluir; links "Rótulo | endereço" por linha,
+só http(s) e caminhos do sistema). Tela Sistema › Problemas conhecidos (menu do Sistema, ícone de boia): busca,
+"Novo problema conhecido", "Alterar" e "Excluir" com confirmação. Testes: `knownIssues.test.ts`,
+`tests/db/problemas-conhecidos.test.ts`.
+
+Plano original:
 
 - Sistema › Problemas conhecidos (só Suporte): lista com busca; cada registro com título, sintoma (o que a clínica
   relata), causa, solução, links e data; criar e editar pela tela.

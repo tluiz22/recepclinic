@@ -933,6 +933,20 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"known_issues": {
+                  Row: {
+                    "cause": string,"created_at": string,"id": string,"links": string,"solution": string,"symptom": string,"title": string,"updated_at": string,"updated_by": string | null
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "cause"?: string,"created_at"?: string,"id"?: string,"links"?: string,"solution": string,"symptom": string,"title": string,"updated_at"?: string,"updated_by"?: string | null
+                  }
+                  Update: {
+                    "cause"?: string,"created_at"?: string,"id"?: string,"links"?: string,"solution"?: string,"symptom"?: string,"title"?: string,"updated_at"?: string,"updated_by"?: string | null
+                  }
+                  Relationships: [
+                    
+                  ]
                 },"locations": {
                   Row: {
                     "address": string | null,"clinic_id": string,"created_at": string,"id": string,"is_active": boolean,"name": string,"type": Database["public"]['Enums']["location_type"],"updated_at": string

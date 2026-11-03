@@ -1,0 +1,141 @@
+---
+// Problemas conhecidos (IS5; cliente, 03/nov/2026; docs/implantacao-segura.md): o registro do Suporte com o que já
+// aconteceu e como resolver (sintoma, causa, solução e links). Só o Suporte (menu Sistema). Busca no título, no
+// sintoma, na causa e na solução; cadastrar, alterar e excluir (com confirmação) na própria tela.
+import AdminLayout from "../../../layouts/AdminLayout.astro";
+import ConfirmDeleteDialog from "../../../components/admin/ConfirmDeleteDialog.astro";
+import FlashMessage from "../../../components/admin/FlashMessage.astro";
+import SystemHeader from "../../../components/admin/sistema/SystemHeader.astro";
+import Button from "../../../components/admin/ui/Button.astro";
+import { CARD, HINT, INPUT, LABEL, PANEL, PRIMARY_BUTTON, SECTION_TITLE } from "../../../components/admin/config/formStyles";
+import { DEFAULT_TIMEZONE, formatInstant } from "../../../lib/clinicTime";
+import { createUserClient } from "../../../lib/data/clients";
+import { listKnownIssues, type KnownIssue } from "../../../lib/data/knownIssues";
+
+const db = createUserClient(Astro.request, Astro.cookies);
+const search = Astro.url.searchParams.get("busca")?.trim() ?? "";
+const issues = await listKnownIssues(db, search);
+const action = "/api/admin/sistema/problemas";
+const TEXTAREA = `${INPUT} min-h-[96px]`;
+const fieldsOf = (issue: KnownIssue | null, prefix: string) => [
+  { name: "titulo", label: "Título", value: issue?.title ?? "", rows: 0, hint: "" },
+  { name: "sintoma", label: "Sintoma (o que a clínica relata)", value: issue?.symptom ?? "", rows: 3, hint: "" },
+  { name: "causa", label: "Causa", value: issue?.cause ?? "", rows: 3, hint: "" },
+  { name: "solucao", label: "Solução", value: issue?.solution ?? "", rows: 4, hint: "" },
+  { name: "links", label: "Links", value: issue?.linksText ?? "", rows: 2, hint: 'Um por linha: "Rótulo | https://…" ou "Rótulo | /guia/…".' },
+].map((f) => ({ ...f, id: `${prefix}-${f.name}` }));
+---
+
+<AdminLayout title="Problemas conhecidos" platform>
+  <SystemHeader title="Problemas conhecidos" subtitle="O que já aconteceu nas clínicas e como resolver: sintoma, causa, solução e links." />
+  <FlashMessage />
+
+  <div class="mt-5 flex flex-col gap-4">
+    <form method="GET" class="flex flex-wrap items-end gap-2">
+      <div class="min-w-0 flex-[1_1_260px]">
+        <label for="busca" class={LABEL}>Buscar</label>
+        <input id="busca" name="busca" type="search" value={search} placeholder="Ex.: lembrete, 131042, bot não responde" class={INPUT} />
+      </div>
+      <Button type="submit">Buscar</Button>
+      {search && <Button href="/admin/sistema/problemas">Limpar</Button>}
+    </form>
+
+    <details class={PANEL}>
+      <summary class="cursor-pointer text-[15px] font-bold text-brand">Novo problema conhecido</summary>
+      <form method="POST" action={action} class="mt-3 flex flex-col gap-3">
+        <input type="hidden" name="acao" value="salvar" />
+        {
+          fieldsOf(null, "novo").map((f) => (
+            <div>
+              <label for={f.id} class={LABEL}>{f.label}</label>
+              {f.rows ? <textarea id={f.id} name={f.name} rows={f.rows} class={TEXTAREA}>{f.value}</textarea> : <input id={f.id} name={f.name} value={f.value} class={INPUT} />}
+              {f.hint && <p class={HINT}>{f.hint}</p>}
+            </div>
+          ))
+        }
+        <button type="submit" data-sending-label="Salvando…" class={`${PRIMARY_BUTTON} self-start`}>Cadastrar</button>
+      </form>
+    </details>
+
+    <p class="text-sm text-ink-soft">
+      {issues.length} {issues.length === 1 ? "problema" : "problemas"}{search ? ` para "${search}"` : ""}.
+    </p>
+    <ul class="flex flex-col gap-3">
+      {
+        issues.map((issue) => (
+          <li class={`${CARD} flex flex-col gap-3 px-4 py-4 sm:px-5`}>
+            <h2 class={SECTION_TITLE}>{issue.title}</h2>
+            <dl class="grid gap-x-4 gap-y-2 text-[15px] sm:grid-cols-[130px_minmax(0,1fr)]">
+              <dt class="font-semibold text-ink-soft">Sintoma</dt>
+              <dd class="whitespace-pre-line text-ink">{issue.symptom}</dd>
+              {issue.cause && (
+                <>
+                  <dt class="font-semibold text-ink-soft">Causa</dt>
+                  <dd class="whitespace-pre-line text-ink">{issue.cause}</dd>
+                </>
+              )}
+              <dt class="font-semibold text-ink-soft">Solução</dt>
+              <dd class="whitespace-pre-line text-ink">{issue.solution}</dd>
+              {issue.links.length > 0 && (
+                <>
+                  <dt class="font-semibold text-ink-soft">Links</dt>
+                  <dd class="flex flex-col gap-1">
+                    {issue.links.map((link) => (
+                      <a href={link.href} target="_blank" rel="noopener" class="font-semibold break-words text-brand">
+                        {link.label}
+                      </a>
+                    ))}
+                  </dd>
+                </>
+              )}
+            </dl>
+            <p class="text-[13px] text-ink-soft">Atualizado em {formatInstant(issue.updatedAt, DEFAULT_TIMEZONE, "dd/MM/yyyy")}</p>
+            <details>
+              <summary class="cursor-pointer text-sm font-semibold text-brand">Alterar</summary>
+              <form method="POST" action={action} class="mt-3 flex flex-col gap-3">
+                <input type="hidden" name="acao" value="salvar" />
+                <input type="hidden" name="id" value={issue.id} />
+                {fieldsOf(issue, issue.id).map((f) => (
+                  <div>
+                    <label for={f.id} class={LABEL}>
+                      {f.label}
+                    </label>
+                    {f.rows ? (
+                      <textarea id={f.id} name={f.name} rows={f.rows} class={TEXTAREA}>
+                        {f.value}
+                      </textarea>
+                    ) : (
+                      <input id={f.id} name={f.name} value={f.value} class={INPUT} />
+                    )}
+                    {f.hint && <p class={HINT}>{f.hint}</p>}
+                  </div>
+                ))}
+                <div class="flex flex-wrap gap-2">
+                  <button type="submit" data-sending-label="Salvando…" class={PRIMARY_BUTTON}>
+                    Salvar
+                  </button>
+                </div>
+              </form>
+              <form method="POST" action={action} class="mt-2">
+                <input type="hidden" name="acao" value="excluir" />
+                <input type="hidden" name="id" value={issue.id} />
+                <Button
+                  type="submit"
+                  size="sm"
+                  class="js-confirm-delete text-danger"
+                  data-confirm-title="Excluir este problema conhecido?"
+                  data-confirm-message={`"${issue.title}" sai da lista. Não dá para desfazer.`}
+                  data-confirm-label="Excluir"
+                >
+                  Excluir
+                </Button>
+              </form>
+            </details>
+          </li>
+        ))
+      }
+      {issues.length === 0 && <li class="rounded-xl border border-dashed border-line-strong px-3 py-5 text-center text-[15px] text-ink-soft">Nenhum problema encontrado.</li>}
+    </ul>
+  </div>
+  <ConfirmDeleteDialog />
+</AdminLayout>
