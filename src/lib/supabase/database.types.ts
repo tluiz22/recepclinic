@@ -537,6 +537,26 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"clinic_onboarding_checks": {
+                  Row: {
+                    "checked_at": string,"checked_by": string | null,"clinic_id": string,"item_key": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "checked_at"?: string,"checked_by"?: string | null,"clinic_id": string,"item_key": string
+                  }
+                  Update: {
+                    "checked_at"?: string,"checked_by"?: string | null,"clinic_id"?: string,"item_key"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "clinic_onboarding_checks_clinic_id_fkey"
+      columns: ["clinic_id"]
+isOneToOne: false
+      referencedRelation: "clinics"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"clinic_settings": {
                   Row: {
                     "booking_horizon_days": number,"bot_insurance_info": string | null,"bot_max_future_appointments": number,"bot_max_new_patients": number,"bot_max_no_shows": number,"bot_notes": string | null,"bot_payment_info": string | null,"brand_color": string | null,"clinic_id": string,"consultation_age_limit_years": number | null,"guidance_enabled": boolean,"logo_url": string | null,"message_article": string,"message_noun": string,"message_noun_article": string,"professional_summary_enabled": boolean,"professional_summary_hour": number,"professional_summary_timing": string,"profile": Database["public"]['Enums']["clinic_profile"],"reception_hours": Json | null,"reception_summary_sent_on": string | null,"reminder_enabled": boolean,"reminder_hour": number,"reminder_timing": string,"require_insurance_details": boolean,"team_summary_enabled": boolean,"team_summary_hour": number,"team_summary_timing": string,"timezone": string,"updated_at": string,"website_url": string | null

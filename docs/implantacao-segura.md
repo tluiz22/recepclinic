@@ -1,9 +1,8 @@
 # Implantação segura do WhatsApp (IS): pré-requisitos, mensagem de teste, checklist e problemas conhecidos
 
-> **Retomar daqui (03/nov/2026).** **IS1 e IS2 na `main` e no staging** (migração `20261203120000` aplicada e
-> conferida no staging). Cliente valida. Nas clínicas existentes (staging e, depois, produção): "Enviar à Meta as que
-> faltam" (modelo `rc_teste_envio_v1`) e, aprovado, o teste. Captura `config-whatsapp` na fila (autorização).
-> Próximo: IS3 (checklist de implantação).
+> **Retomar daqui (03/nov/2026).** IS1 e IS2 no staging. **IS3 feita na `main` local** (migração
+> `20261204120000_checklist_implantacao.sql`), testes de banco pelo CI. Próximo: CI verde → migração no staging → push;
+> depois IS4 e IS5 (cliente, 03/nov: as três direto na `main`, uma de cada vez, e o passo a passo de validação no fim).
 
 Pedido do cliente em 03/nov/2026, depois de dois incidentes na produção (clínica piloto) no mesmo dia: impedir que
 se repitam nas próximas clínicas.
@@ -117,7 +116,22 @@ Plano original:
   aprovado; 141010/limite; 131049; 130472; 368; genérico com o código).
 - Sai a marcação manual "Forma de pagamento conferida" (cartão, Situação da clínica, Implantação, Central de Ajuda).
 
-### IS3 — Checklist de implantação (Situação da clínica)
+### IS3 — Checklist de implantação (feita, 03/nov)
+
+Feito: tabela `clinic_onboarding_checks` (itens do Suporte; RLS: membros da clínica leem, só o Suporte grava;
+auditoria do Suporte; linha no seed). `onboardingChecklist.ts`: `MANUAL_ITEMS` (obrigatórios: contract,
+facebook_login, whatsapp_business, automations_off, card_default; recomendados: agenda_import,
+business_verification, support_number) e os automáticos (convite aceito, configuração mínima pelo
+`loadSetupStatus`, conectado, templates aprovados, teste entregue; o teste do bot, em "Depois de ativar", recomendado:
+**em implantação o bot não responde**, então ele não pode bloquear — ajuste ao plano). Situação da clínica: a
+checklist por grupo, "Marcar"/"Desmarcar", data de quem marcou, "Para ativar, falta…" e o botão desligado. Rota:
+`marcar_item`/`desmarcar_item`; "Ativar" confere a checklist. Banco: `app.clinic_activation_missing` e o gatilho
+`clinics_guard_status_activation` (depois de `clinics_guard_status`) recusam (23514) a ativação por login sem os
+cinco itens, o convite aceito, a conexão e o teste entregue; configuração mínima e templates ficam na tela e na rota.
+Testes: `onboardingChecklist.test.ts`, `tests/db/checklist-implantacao.test.ts`; `readyToActivate` em
+`tests/db/helpers.ts` (usado em `clinicaEmImplantacao.test.ts`).
+
+Plano original:
 
 Itens (A = automático, S = Suporte marca; R = recomendado, não bloqueia):
 

@@ -22,8 +22,8 @@ import { getLatestAgendaImport } from "../../../../lib/data/agendaImport";
 import { createUserClient } from "../../../../lib/data/clients";
 import { listInfoRequests, listInvitations } from "../../../../lib/data/onboarding";
 import { getWhatsappConnection, listWhatsappTemplates } from "../../../../lib/data/whatsapp/connection";
-import { getDeliveredConnectionTest, getLatestConnectionTest } from "../../../../lib/data/whatsapp/connectionTest";
-import { describeSendFailure } from "../../../../lib/whatsappErrors";
+import { CHECKLIST_GROUPS, loadOnboardingChecklist } from "../../../../lib/data/onboardingChecklist";
+import { getSupportWhatsapp } from "../../../../lib/data/platformSettings";
 import { describeTemplateApproval, templateApproval, templatesInUse } from "../../../../lib/data/whatsapp/templates";
 import { isFeatureKey } from "../../../../lib/features";
 import { REQUEST_STATUS, ROLE_NAMES } from "../../../../lib/onboardingLabels";
@@ -33,7 +33,7 @@ import { GUIDE_BEFORE_CONNECT_PATH, GUIDE_META_PAYMENT_PATH } from "../../../../
 const { id } = Astro.params;
 if (!isUuid(id)) return Astro.redirect("/admin/sistema/clinicas");
 const db = createUserClient(Astro.request, Astro.cookies);
-const [{ data: clinic }, { data: settings }, invitations, requests, agendaImport, connection, templates, deliveredTest, lastTest] = await Promise.all([
+const [{ data: clinic }, { data: settings }, invitations, requests, agendaImport, connection, templates, supportPhone] = await Promise.all([
   db
     .from("clinics")
     .select("id, name, status, created_at, max_professionals, clinic_features ( feature_key ), professionals ( is_active )")
@@ -45,9 +45,7 @@ const [{ data: clinic }, { data: settings }, invitations, requests, agendaImport
   getLatestAgendaImport(db, id),
   getWhatsappConnection(db, id),
   listWhatsappTemplates(db, id),
-  // IS2 (cliente, 03/nov/2026): a ativação exige uma mensagem de teste entregue.
-  getDeliveredConnectionTest(db, id),
-  getLatestConnectionTest(db, id),
+  getSupportWhatsapp(db).catch(() => null),
 ]);
 if (!clinic || !settings) return Astro.redirect("/admin/sistema/clinicas");
 const when = (date: Date) => formatInstant(date, settings.timezone, "dd/MM/yyyy 'às' HH:mm");
@@ -76,13 +74,10 @@ const templatesLine =
 const guideUrl = `${Astro.url.origin}${GUIDE_BEFORE_CONNECT_PATH}`;
 const paymentGuideUrl = `${Astro.url.origin}${GUIDE_META_PAYMENT_PATH}`;
 const guideWhatsapp = `https://wa.me/?text=${encodeURIComponent(`Olá! Antes de conectarmos o WhatsApp da ${clinic.name} ao RecepClinic, veja o que preparar: ${guideUrl}`)}`;
-const testLine = deliveredTest
-  ? `Mensagem de teste entregue em ${formatInstant(deliveredTest.at, settings.timezone, "dd/MM/yyyy 'às' HH:mm")}`
-  : lastTest?.status === "failed"
-    ? `Mensagem de teste não entregue: ${describeSendFailure(lastTest.failureCode, lastTest.failureReason).title}`
-    : lastTest
-      ? "Mensagem de teste enviada, ainda sem confirmação de entrega"
-      : "Mensagem de teste ainda não enviada (Configurações › WhatsApp)";
+// Checklist de implantação (IS3, cliente, 03/nov/2026): obrigatórios bloqueiam "Ativar a clínica" (também na rota e no banco).
+const checklist = await loadOnboardingChecklist(db, id, features, { supportPhone });
+const canActivate = checklist.missingRequired.length === 0;
+const doneCount = checklist.items.filter((i) => i.done).length;
 const ordered = [...requests].sort((a, b) => b.requestedAt.getTime() - a.requestedAt.getTime());
 // Agenda atual (F10.1a): pedido em andamento, ou nenhum (pode pedir).
 const importOpen = !!agendaImport && isImportOpen(agendaImport.status);
@@ -215,12 +210,68 @@ const importAppointments = agendaImport ? countAppointments(agendaImport.entries
             <ul class="flex flex-col gap-1 text-sm text-ink">
               <li>{whatsappLine}</li>
               {templatesLine && <li>{templatesLine}</li>}
-              <li class:list={[!deliveredTest && "text-pend-800"]}>{testLine}</li>
             </ul>
-            {clinic.status === "onboarding" && !deliveredTest && (
-              <p class="text-sm text-ink-soft">
-                Para ativar, envie a mensagem de teste em Configurações › WhatsApp (Abrir a clínica para configurar) e espere a entrega: ela confirma o cartão na
-                Meta e o modelo aprovado.
+            <div class="flex flex-col gap-3 border-t border-line pt-3" id="checklist">
+              <p class="text-[15px] font-bold text-ink">
+                Checklist de implantação <span class="font-normal text-ink-soft">· {doneCount} de {checklist.items.length}</span>
+              </p>
+              {CHECKLIST_GROUPS.map((group) => (
+                <div class="flex flex-col gap-1.5">
+                  <p class="text-[12.5px] font-bold tracking-[.06em] text-ink-soft uppercase">{group}</p>
+                  <ul class="flex flex-col gap-2">
+                    {checklist.items
+                      .filter((item) => item.group === group)
+                      .map((item) => (
+                        <li class="flex items-start gap-2 text-sm">
+                          <span
+                            aria-hidden="true"
+                            class:list={[
+                              "mt-0.5 flex h-[18px] w-[18px] flex-none items-center justify-center rounded border text-[12px] font-bold",
+                              item.done ? "border-conf-500 bg-conf-500 text-white" : "border-line-strong bg-white",
+                            ]}
+                          >
+                            {item.done ? "✓" : ""}
+                          </span>
+                          <span class="flex min-w-0 flex-1 flex-col gap-0.5">
+                            <span class:list={["text-ink", !item.done && item.required && "font-semibold"]}>
+                              <span class="sr-only">{item.done ? "Feito: " : "Falta: "}</span>
+                              {item.label}
+                              {!item.required && <span class="font-normal text-ink-soft"> (recomendado)</span>}
+                              {item.link && (
+                                <>
+                                  {" "}
+                                  <a href={item.link.href} target="_blank" rel="noopener" class="font-semibold text-brand">
+                                    {item.link.label}
+                                  </a>
+                                </>
+                              )}
+                            </span>
+                            <span class="text-[13px] text-ink-soft">
+                              {item.kind === "auto"
+                                ? `Conferido pelo sistema${item.detail ? `: ${item.detail}` : ""}`
+                                : item.done && item.checkedAt
+                                  ? `Marcado pelo Suporte em ${formatInstant(item.checkedAt, settings.timezone, "dd/MM/yyyy")}`
+                                  : "O Suporte marca"}
+                            </span>
+                          </span>
+                          {item.kind === "manual" && (
+                            <form method="POST" action={action}>
+                              <input type="hidden" name="acao" value={item.done ? "desmarcar_item" : "marcar_item"} />
+                              <input type="hidden" name="item" value={item.key} />
+                              <Button type="submit" size="sm" data-sending-label="Salvando…">
+                                {item.done ? "Desmarcar" : "Marcar"}
+                              </Button>
+                            </form>
+                          )}
+                        </li>
+                      ))}
+                  </ul>
+                </div>
+              ))}
+            </div>
+            {clinic.status === "onboarding" && !canActivate && (
+              <p class="text-sm text-pend-800">
+                Para ativar, falta: {checklist.missingRequired.map((i) => i.label.split(" (")[0].split(";")[0].toLowerCase()).join("; ")}.
               </p>
             )}
             <form method="POST" action={action}>
@@ -229,7 +280,7 @@ const importAppointments = agendaImport ? countAppointments(agendaImport.entries
                   <input type="hidden" name="acao" value="ativar_clinica" />
                   <button
                     type="submit"
-                    disabled={!deliveredTest}
+                    disabled={!canActivate}
                     class={`${PRIMARY_BUTTON} js-confirm-delete`}
                     data-confirm-title="Ativar a clínica?"
                     data-confirm-message={`${clinic.name} passa a falar com os pacientes pelo WhatsApp: o bot responde, e os avisos e os envios automáticos (lembretes, resumo do dia) começam a sair.`}

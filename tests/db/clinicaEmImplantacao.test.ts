@@ -6,7 +6,7 @@ import { createClinicSender } from "../../src/lib/data/whatsapp/send";
 import { listHumanAttention } from "../../src/lib/data/whatsapp/attention";
 import { pauseForHuman } from "../../src/lib/data/whatsapp/conversations";
 import { processWebhook, type WebhookDeps } from "../../src/lib/data/whatsapp/webhook";
-import { addMember, adminClient, clinicServiceClient, createClinic, createUser, deleteClinics, deleteUsers, makePlatformStaff, type TestUser } from "./helpers";
+import { addMember, adminClient, clinicServiceClient, createClinic, createUser, deleteClinics, deleteUsers, makePlatformStaff, readyToActivate, type TestUser } from "./helpers";
 
 // F8.2b: clínica em implantação. Só o Suporte muda a situação; enquanto em
 // implantação, ninguém envia pela clínica (bot, avisos e envios automáticos
@@ -29,6 +29,8 @@ beforeAll(async () => {
   phoneNumberId = `${Date.now()}9`;
   await adminClient().from("whatsapp_connections").insert({ clinic_id: clinicId, phone_number_id: phoneNumberId, waba_id: "impl-waba", status: "connected" });
   await setWhatsappAccessToken(asDb(support.client), clinicId, "token-impl");
+  // IS3: a ativação pelo Suporte confere a checklist no banco (testes próprios em checklist-implantacao.test.ts).
+  await readyToActivate(clinicId);
 });
 
 afterAll(async () => {
@@ -87,7 +89,8 @@ describe("clínica em implantação (F8.2b)", () => {
       ],
     };
     expect(await processWebhook(payload, deps)).toMatchObject({ inbound: 0, echoes: 0, onboarding: 2, errors: 0 });
-    const { data: saved } = await adminClient().from("whatsapp_messages").select("id").eq("clinic_id", clinicId);
+    // (A mensagem de teste entregue de readyToActivate não conta.)
+    const { data: saved } = await adminClient().from("whatsapp_messages").select("id").eq("clinic_id", clinicId).neq("message_type", "connection_test");
     expect(saved).toEqual([]);
     const { data: paused } = await adminClient().from("conversation_state").select("id").eq("clinic_id", clinicId);
     expect(paused).toEqual([]);
