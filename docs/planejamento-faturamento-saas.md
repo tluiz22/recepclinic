@@ -71,6 +71,11 @@
 > devolução total** (estorno no Asaas). Tela: resumo da renovação antes do aceite ("R$ X todo dia D, até cancelar"),
 > duas caixas desmarcadas (aceite e autorização da cobrança automática), link do contrato completo. Tela da
 > Assinatura no modelo "passo a passo" (opção B do desenho de 03/nov).
+> **Texto do contrato aprovado (cliente, 03/nov)**, provisório até o advogado: 10 cláusulas (objeto; prazo e renovação
+> automática; valores; forma de pagamento; [NF] emissão de nota; reajuste IPCA e mudança de valores; atraso e
+> suspensão; arrependimento em 7 dias; cancelamento e fim; dados pessoais). **Motivo do cancelamento:** lista
+> obrigatória (Preço; Não usamos o suficiente; Faltou uma função; Problemas no WhatsApp/bot; Vamos usar outro sistema;
+> A clínica fechou ou pausou; Outro) e comentário opcional (obrigatório em "Outro"); o Suporte vê e conta os motivos.
 > **Próximo: F12.11** (homologação e produção), depois de: advogado (texto do contrato e 11.16), chave e webhook do
 > Asaas de produção, valor combinado com a clínica piloto. Antes, validar F12.2b a F12.8 no local/staging.
 > **Ordem decidida (cliente, 30/out):** cobrança primeiro, até cobrar a clínica piloto em produção, **só com aviso por
