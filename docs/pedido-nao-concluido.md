@@ -1,8 +1,8 @@
 # Pedido não concluído (PN): retomada pelo bot e lembrete só com a ação concluída
 
-> **Retomar daqui (03/nov/2026).** **PN1 na `main` e no staging** (`e8990d3`, migração `20261201120000`).
-> **PN2 feita na branch `pedido-nao-concluido-2`** (migração `20261202120000_link_nao_concluido.sql`), testes de
-> banco pelo CI do PR. Próximo: CI verde → migração no staging → `main` → cliente valida PN1 e PN2 juntas no staging.
+> **Retomar daqui (03/nov/2026).** **PN1 e PN2 na `main` e no staging** (migrações `20261201120000` e
+> `20261202120000` aplicadas no staging e conferidas; CI verde, com os testes de banco). Cliente valida as duas juntas no
+> staging. Depois: produção, com autorização (as duas migrações antes do push para `producao`).
 
 Pedido do cliente em 03/nov/2026, depois de um caso na produção (clínica piloto).
 

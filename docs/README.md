@@ -16,7 +16,7 @@
 > **Ambientes**
 > - **Produção** (`app.recepclinic.com.br`, branch `producao`) = `main` em `1ceb6a4` (ver acima). Fluxo em [`producao.md`](producao.md).
 > - **Staging** (`teste.recepclinic.com.br`, branch `main`): produção + redesign da Recepção (RX1 a RX9, sem migração) +
->   cartão do Asaas (`ASAAS_PREVIEW=1`) + Base de Conhecimento do bot (migração aplicada) + PN1 (migração aplicada).
+>   cartão do Asaas (`ASAAS_PREVIEW=1`) + Base de Conhecimento do bot (migração aplicada) + PN1 e PN2 (migrações aplicadas).
 >   Roteiros em [`staging.md`](staging.md).
 > - **Branch `faturamento`** (só local, sem push): todo código do financeiro, até a F12.2h (`cf33616`; 963 testes de
 >   unidade e 886 de banco passando). Tem a `main` até `7c64a68` (03/nov); atualizar só quando o cliente pedir (cliente, 01/nov).
@@ -39,8 +39,9 @@
 > - **Pedido não concluído** ([`pedido-nao-concluido.md`](pedido-nao-concluido.md)), após o caso de 03/nov (tocou em
 >   Remarcar no lembrete e não concluiu): mensagem padrão com Novo link / Falar com a recepção / Desistir quando o link
 >   vence ou o cancelamento fica sem resposta; lembrete só muda com a ação concluída; grupo "Não concluiu".
->   **PN1 no staging (03/nov, `e8990d3`, migração `20261201120000` aplicada)**: grupo "Não concluíram" no Relatório do
->   dia e nas Métricas. Cliente valida no staging; próximo: PN2.
+>   **PN1 e PN2 no staging (03/nov; migrações `20261201120000` e `20261202120000` aplicadas)**: grupo "Não concluíram"
+>   no Relatório do dia e nas Métricas; mensagem "Não concluímos…" quando o link vence ou o cancelamento fica sem
+>   resposta. Cliente valida as duas juntas no staging; produção só com autorização.
 > - **NFS-e pelo Asaas** (`planejamento-nfse-asaas.md`, seção 13): N0; formulário BaaS enviado (30/out). Aguarda
 >   Asaas e contador (PIS/COFINS, e-CNPJ A1).
 > - **Piloto (F10, [plano](plano.md)):** clínica piloto criada na produção, WhatsApp conectado, templates em análise
