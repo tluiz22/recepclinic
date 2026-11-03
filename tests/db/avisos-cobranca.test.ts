@@ -1,3 +1,4 @@
+import { BILLING_CONTRACT_TERMS_VERSION_NF } from "../../src/lib/billingContractText";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import type { AsaasBillingApi, AsaasPayment } from "../../src/lib/asaas/billingApi";
 import { acceptBillingContract, activateBillingContract, saveBillingAccount, saveBillingContractDraft } from "../../src/lib/data/billing";
@@ -64,7 +65,7 @@ beforeAll(async () => {
     { invoicing: true },
   );
   contractId = (await activateBillingContract(asDb(support), clinicId)).id;
-  await acceptBillingContract(asDb(fixture.admin), clinicId, contractId, null);
+  await acceptBillingContract(asDb(fixture.admin), clinicId, contractId, BILLING_CONTRACT_TERMS_VERSION_NF, null);
 });
 
 afterAll(async () => {

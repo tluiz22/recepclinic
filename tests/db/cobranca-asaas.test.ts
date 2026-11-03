@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import type { AsaasBillingApi, AsaasPayment } from "../../src/lib/asaas/billingApi";
-import { BILLING_CONTRACT_TERMS_VERSION } from "../../src/lib/billingContractText";
+import { BILLING_CONTRACT_TERMS_VERSION_NF } from "../../src/lib/billingContractText";
 import {
   acceptBillingContract,
   activateBillingContract,
@@ -78,7 +78,7 @@ describe("Cobrança no Asaas (F12.4)", () => {
   });
 
   it("aceito: cliente, assinatura e as cobranças no espelho, na trilha", async () => {
-    await acceptBillingContract(asDb(fixture.admin), clinicId, contractId, null);
+    await acceptBillingContract(asDb(fixture.admin), clinicId, contractId, BILLING_CONTRACT_TERMS_VERSION_NF, null);
     expect(await syncContractWithAsaas(store(), api(), contractId, today)).toEqual({ status: "synced" });
     expect((await getBillingAccount(asDb(support), clinicId))?.asaasCustomerId).toBe(`cus_${stamp}`);
     const contract = (await listBillingContracts(asDb(support), clinicId)).find((c) => c.id === contractId)!;
@@ -168,6 +168,6 @@ describe("Cobrança no Asaas (F12.4)", () => {
 
   it("o contrato guarda a versão do texto aceita", async () => {
     const contract = (await listBillingContracts(asDb(support), clinicId)).find((c) => c.id === contractId)!;
-    expect(contract.termsVersion).toBe(BILLING_CONTRACT_TERMS_VERSION);
+    expect(contract.termsVersion).toBe(BILLING_CONTRACT_TERMS_VERSION_NF);
   });
 });

@@ -1,4 +1,4 @@
-import { BILLING_CONTRACT_TERMS_VERSION } from "../billingContractText";
+import { billingContractTerms, billingTermsVersion, billingTermsVersionFor } from "../billingContractText";
 import { BILLING_OPT_IN_VERSION } from "../billingOptIn";
 import { isCalendarDate } from "../clinicTime";
 import { formatCnpj, normalizeCnpj } from "../cnpj";
@@ -433,19 +433,31 @@ export async function discardBillingContractDraft(db: DbClient, clinicId: string
  * (mudança com o mesmo texto), o servidor envia os novos termos por e-mail.
  */
 export async function activateBillingContract(db: DbClient, clinicId: string): Promise<BillingContract> {
-  const { error } = await db.rpc("activate_billing_contract", { p_clinic_id: clinicId, p_terms_version: BILLING_CONTRACT_TERMS_VERSION });
+  // O texto com nota fiscal só para o contrato que cobra nota (cliente, 03/nov/2026).
+  // Sem rascunho visível, o banco responde (sem permissão ou sem rascunho).
+  const draft = (await listBillingContracts(db, clinicId)).find((c) => c.status === "draft");
+  const terms = draft ? billingTermsVersionFor(draft) : billingTermsVersion(false);
+  const { error } = await db.rpc("activate_billing_contract", { p_clinic_id: clinicId, p_terms_version: terms });
   if (error) throw fromDbError(error, "Contrato");
   const active = (await listBillingContracts(db, clinicId)).find((c) => c.status === "active");
   if (!active) throw new DataError("not_found", "Contrato: não encontrado");
   return active;
 }
 
-/** Só o Administrador da clínica: aceita na tela o contrato com o texto mostrado (F12.2b). */
-export async function acceptBillingContract(db: DbClient, clinicId: string, contractId: string, ip: string | null): Promise<void> {
+/**
+ * Só o Administrador da clínica: aceita na tela o contrato com o texto mostrado
+ * (F12.2b); `termsVersion` é a versão do texto que a tela mostrou (o banco
+ * confere com a do contrato).
+ */
+export async function acceptBillingContract(db: DbClient, clinicId: string, contractId: string, termsVersion: string, ip: string | null): Promise<void> {
+  // Texto que não está mais aqui não se aceita: o Suporte ativa uma nova versão.
+  if (!billingContractTerms(termsVersion)) {
+    throw new DataError("invalid", "Aceite do contrato: este contrato usa um texto que não está mais disponível. Fale com o Suporte do RecepClinic.");
+  }
   const { error } = await db.rpc("accept_billing_contract", {
     p_clinic_id: clinicId,
     p_contract_id: contractId,
-    p_terms_version: BILLING_CONTRACT_TERMS_VERSION,
+    p_terms_version: termsVersion,
     p_ip: ip ?? "",
   });
   if (error) throw fromDbError(error, "Aceite do contrato");

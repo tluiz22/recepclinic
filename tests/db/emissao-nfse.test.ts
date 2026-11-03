@@ -8,7 +8,7 @@ import { SIMULATED_NOTICE } from "../../src/lib/nfse/simulator";
 import { getContact, getPatient } from "../../src/lib/data/patients";
 import { deletePayment, registerPayment } from "../../src/lib/data/payments";
 import { gunzipBase64, gzipBase64, type SefinTransport } from "../../src/lib/nfse/client";
-import { addMember, adminClient, createClinic, createUser, deleteClinics, deleteUsers, makePlatformStaff, type TestUser } from "./helpers";
+import { addMember, adminClient, createClinic, createUser, deleteClinics, deleteUsers, makePlatformStaff, type TestUser, signInvoicingContract } from "./helpers";
 import { asDb, codeOf, setupAgendaClinic, type AgendaFixture } from "./agendaFixture";
 import { makeTestPfx } from "./pfx";
 
@@ -71,6 +71,7 @@ async function newPayment(input: { payer?: string; payerName?: string; payerCpf?
 beforeAll(async () => {
   fixture = await setupAgendaClinic("Clínica do teste da emissão", "+55619900000");
   clinicId = fixture.clinicId;
+  await signInvoicingContract(clinicId);
   professional = await createUser("nfse-prof");
   await addMember(clinicId, professional.id, ["professional"]);
   support = await createUser("nfse-suporte");

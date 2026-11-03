@@ -17,6 +17,7 @@ import ContractAcceptanceInfo from "../../../components/admin/billing/ContractAc
 import ChargesList from "../../../components/admin/billing/ChargesList.astro";
 import ContractTerms from "../../../components/admin/billing/ContractTerms.astro";
 import ContractText from "../../../components/admin/billing/ContractText.astro";
+import { billingContractTerms } from "../../../lib/billingContractText";
 import HelpTip from "../../../components/admin/ui/HelpTip.astro";
 import HowItWorks from "../../../components/admin/ui/HowItWorks.astro";
 import { configuracoes } from "../../../lib/ajuda/configuracoes";
@@ -90,10 +91,13 @@ const H2 = "font-display text-[17px] leading-tight font-bold text-ink sm:text-lg
               <ContractTerms contract={pending} />
               <ContractText version={pending.termsVersion ?? ""} open />
             </div>
-            {isClinicAdmin ? (
+            {!billingContractTerms(pending.termsVersion ?? "") ? (
+              <p class="mt-4 border-t border-[#e6ecea] pt-3 text-sm text-ink-soft">Este contrato usa um texto que não está mais disponível. O Suporte do RecepClinic vai enviar uma nova versão para aceitar.</p>
+            ) : isClinicAdmin ? (
               <form method="POST" action={action} class="mt-4 flex flex-col gap-3 border-t border-[#e6ecea] pt-4">
                 <input type="hidden" name="acao" value="contrato_aceitar" />
                 <input type="hidden" name="contract_id" value={pending.id} />
+                <input type="hidden" name="terms_version" value={pending.termsVersion ?? ""} />
                 <label class="flex items-start gap-2 text-sm text-ink-mid">
                   <input type="checkbox" name="aceite" value="1" required class="mt-0.5 h-[18px] w-[18px] shrink-0 accent-brand" />
                   <span>Li e aceito o contrato, em nome da clínica.</span>

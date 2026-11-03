@@ -6,6 +6,13 @@
 > Assinatura (data, hora, quem, IP, versão do texto); texto **provisório** em `src/lib/billingContractText.ts`; mudança
 > com o mesmo texto = aceite tácito, início só 30 dias depois da ativação, e-mail dos novos termos ao financeiro (envio
 > ou falha na trilha; reenvio na aba Faturamento). Regra para a F12.4: só cobrar contrato com aceite.
+> **F12.2c feita (cliente, 03/nov)** (`20261124120000_contrato_nota_fiscal.sql`): o texto só fala de nota fiscal quando o
+> contrato cobra nota (duas versões em `billingContractText.ts`; a com nota termina em `-nf`, o banco confere na
+> ativação junto com o Módulo financeiro). Liberou ou desligou o "finance" na Matriz: o sistema monta o **rascunho** da
+> nova versão (com o preço por nota padrão, ou sem nota) a partir da vigente; o Suporte confere e ativa; texto diferente
+> = a clínica assina na tela. Sem contrato nenhum, nada é criado. **A emissão de nota só sai com contrato em vigor,
+> aceito e com preço por nota** (também sem contrato nenhum: os testes da F11 no staging precisam de contrato manual
+> aceito). Contrato com texto antigo (fora do código) não se aceita: o Suporte ativa uma nova versão.
 > **F12.3 feita** (`20261118120000_suspensao_da_clinica.sql`): `clinic_suspensions` (administrativo e fim do contrato;
 > inadimplência recusada até a F12.4, item 28), situação anterior guardada e devolvida, "suspensa" só pelas funções;
 > aba Suspensão da clínica (aba própria desde 03/nov, antes um cartão no Faturamento; alerta e confirmação a mais sem o app, item 23). Bloqueio no código: painel

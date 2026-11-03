@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { BILLING_CONTRACT_TERMS_VERSION } from "../../src/lib/billingContractText";
+import { BILLING_CONTRACT_TERMS_VERSION_NF } from "../../src/lib/billingContractText";
 import {
   acceptBillingContract,
   activateBillingContract,
@@ -61,13 +61,13 @@ describe("Aceite do contrato (F12.2b)", () => {
   it("o 1º contrato fica aguardando o aceite, com a versão do texto", async () => {
     await save();
     const contract = await activateBillingContract(asDb(support), clinicId);
-    expect(contract).toMatchObject({ version: 1, acceptance: "pending", termsVersion: BILLING_CONTRACT_TERMS_VERSION, acceptedAt: null });
+    expect(contract).toMatchObject({ version: 1, acceptance: "pending", termsVersion: BILLING_CONTRACT_TERMS_VERSION_NF, acceptedAt: null });
   });
 
   it("só o Administrador da clínica aceita; texto diferente do mostrado é recusado", async () => {
     const contract = await active();
-    expect(await codeOf(() => acceptBillingContract(asDb(fixture.reception), clinicId, contract.id, "203.0.113.7"))).toBe("forbidden");
-    expect(await codeOf(() => acceptBillingContract(asDb(support), clinicId, contract.id, "203.0.113.7"))).toBe("forbidden");
+    expect(await codeOf(() => acceptBillingContract(asDb(fixture.reception), clinicId, contract.id, BILLING_CONTRACT_TERMS_VERSION_NF, "203.0.113.7"))).toBe("forbidden");
+    expect(await codeOf(() => acceptBillingContract(asDb(support), clinicId, contract.id, BILLING_CONTRACT_TERMS_VERSION_NF, "203.0.113.7"))).toBe("forbidden");
     const { error } = await fixture.admin.client.rpc("accept_billing_contract", {
       p_clinic_id: clinicId,
       p_contract_id: contract.id,
@@ -79,18 +79,18 @@ describe("Aceite do contrato (F12.2b)", () => {
 
   it("aceite grava data, quem, IP e fica na trilha; aceitar de novo não muda nada", async () => {
     const { id } = await active();
-    await acceptBillingContract(asDb(fixture.admin), clinicId, id, "203.0.113.7");
+    await acceptBillingContract(asDb(fixture.admin), clinicId, id, BILLING_CONTRACT_TERMS_VERSION_NF, "203.0.113.7");
     const contract = await active();
     expect(contract).toMatchObject({ acceptance: "explicit", acceptedBy: fixture.admin.id, acceptedIp: "203.0.113.7" });
     expect(contract.acceptedAt).toBeInstanceOf(Date);
     expect((await listBillingAudit(asDb(fixture.admin), clinicId))[0]).toMatchObject({ action: "contract_accepted", actorKind: "clinic" });
-    await acceptBillingContract(asDb(fixture.admin), clinicId, id, "198.51.100.1");
+    await acceptBillingContract(asDb(fixture.admin), clinicId, id, BILLING_CONTRACT_TERMS_VERSION_NF, "198.51.100.1");
     expect((await active()).acceptedIp).toBe("203.0.113.7");
   });
 
   it("mudança com o mesmo texto: só 30 dias depois da ativação; vale pelo uso", async () => {
     await save({ monthly: "349", startsOn: plusDays(29), firstDueDate: plusDays(29) });
-    const { error } = await support.client.rpc("activate_billing_contract", { p_clinic_id: clinicId, p_terms_version: BILLING_CONTRACT_TERMS_VERSION });
+    const { error } = await support.client.rpc("activate_billing_contract", { p_clinic_id: clinicId, p_terms_version: BILLING_CONTRACT_TERMS_VERSION_NF });
     expect(error?.hint).toBe("billing_notice_period");
     expect(noticeStartDate(today)).toBe(plusDays(30));
     await save({ monthly: "349", startsOn: plusDays(30), firstDueDate: plusDays(30) });
@@ -129,12 +129,12 @@ describe("Aceite do contrato (F12.2b)", () => {
 
   it("texto do contrato trocado: a nova versão pede aceite de novo, sem o prazo de 30 dias", async () => {
     await save({ monthly: "399", startsOn: plusDays(31), firstDueDate: plusDays(31) });
-    const { error } = await support.client.rpc("activate_billing_contract", { p_clinic_id: clinicId, p_terms_version: "texto-do-advogado" });
+    const { error } = await support.client.rpc("activate_billing_contract", { p_clinic_id: clinicId, p_terms_version: "texto-do-advogado-nf" });
     expect(error).toBeNull();
     const v3 = await active();
-    expect(v3).toMatchObject({ version: 3, acceptance: "pending", termsVersion: "texto-do-advogado" });
+    expect(v3).toMatchObject({ version: 3, acceptance: "pending", termsVersion: "texto-do-advogado-nf" });
     // IP inválido não impede o aceite (fica sem IP).
-    const accepted = await fixture.admin.client.rpc("accept_billing_contract", { p_clinic_id: clinicId, p_contract_id: v3.id, p_terms_version: "texto-do-advogado", p_ip: "lixo" });
+    const accepted = await fixture.admin.client.rpc("accept_billing_contract", { p_clinic_id: clinicId, p_contract_id: v3.id, p_terms_version: "texto-do-advogado-nf", p_ip: "lixo" });
     expect(accepted.error).toBeNull();
     expect(await active()).toMatchObject({ acceptance: "explicit", acceptedIp: null });
   });

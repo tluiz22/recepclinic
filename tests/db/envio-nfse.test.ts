@@ -12,7 +12,7 @@ import { registerPayment } from "../../src/lib/data/payments";
 import type { SendOutcome } from "../../src/lib/data/whatsapp/messages";
 import type { ClinicSender } from "../../src/lib/data/whatsapp/send";
 import { gzipBase64, type SefinTransport } from "../../src/lib/nfse/client";
-import { addMember, adminClient, createUser, deleteUsers, makePlatformStaff, type TestUser } from "./helpers";
+import { addMember, adminClient, createUser, deleteUsers, makePlatformStaff, type TestUser, signInvoicingContract } from "./helpers";
 import { asDb, codeOf, setupAgendaClinic, type AgendaFixture } from "./agendaFixture";
 import { makeTestPfx } from "./pfx";
 
@@ -96,6 +96,7 @@ async function issuedInvoice(): Promise<{ invoiceId: string; patientId: string }
 beforeAll(async () => {
   fixture = await setupAgendaClinic("Clínica do teste do envio da nota", "+55619911000");
   clinicId = fixture.clinicId;
+  await signInvoicingContract(clinicId);
   professional = await createUser("envio-prof");
   await addMember(clinicId, professional.id, ["professional"]);
   support = await createUser("envio-suporte");

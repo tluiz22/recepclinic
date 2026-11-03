@@ -16,7 +16,7 @@ import ContractAcceptanceInfo from "./ContractAcceptanceInfo.astro";
 import ChargesList from "./ChargesList.astro";
 import ContractTerms from "./ContractTerms.astro";
 import { CHECK, CHOICE, HINT, INPUT, LABEL, LEGEND, PRIMARY_BUTTON, SECONDARY_BUTTON } from "../config/formStyles";
-import { BILLING_CONTRACT_TERMS_VERSION } from "../../../lib/billingContractText";
+import { billingTermsVersion } from "../../../lib/billingContractText";
 import { formatCalendarDate, formatInstant, todayIn } from "../../../lib/clinicTime";
 import { platformEnv } from "../../../lib/env";
 import { loadActorLabels } from "../../../lib/data/agenda/trail";
@@ -73,7 +73,9 @@ const history = contracts.filter((c) => c.status === "ended" && c.id !== current
 const date = (value: string) => formatCalendarDate(value, "dd/MM/yyyy");
 // F12.2b: com a vigente aceita e o mesmo texto, a nova versão vale pelo uso e
 // só começa 30 dias depois da ativação (dias corridos, data de Brasília).
-const tacitNext = !!active && (active.acceptance === "explicit" || active.acceptance === "tacit") && active.termsVersion === BILLING_CONTRACT_TERMS_VERSION;
+// O texto da próxima versão depende de ela cobrar nota fiscal (cliente, 03/nov/2026).
+const nextTerms = billingTermsVersion(draft ? draft.invoiceUnitPriceCents !== null : invoicing);
+const tacitNext = !!active && (active.acceptance === "explicit" || active.acceptance === "tacit") && active.termsVersion === nextTerms;
 const earliestStart = noticeStartDate(todayIn("America/Sao_Paulo"));
 // O formulário parte do rascunho; sem ele, da versão vigente; sem nada, das sugestões.
 const base = draft ?? active;

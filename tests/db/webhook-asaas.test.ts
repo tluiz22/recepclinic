@@ -1,3 +1,4 @@
+import { BILLING_CONTRACT_TERMS_VERSION_NF } from "../../src/lib/billingContractText";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import type { AsaasBillingApi, AsaasPayment } from "../../src/lib/asaas/billingApi";
 import { acceptBillingContract, activateBillingContract, listBillingCharges, saveBillingAccount, saveBillingContractDraft } from "../../src/lib/data/billing";
@@ -47,7 +48,7 @@ beforeAll(async () => {
     { invoicing: true },
   );
   contractId = (await activateBillingContract(asDb(support), clinicId)).id;
-  await acceptBillingContract(asDb(fixture.admin), clinicId, contractId, null);
+  await acceptBillingContract(asDb(fixture.admin), clinicId, contractId, BILLING_CONTRACT_TERMS_VERSION_NF, null);
   current = { id: `pay_w_${stamp}`, subscription: `sub_w_${stamp}`, externalReference: null, dueDate: today, valueCents: 19900, billingType: "PIX", status: "PENDING", paidAt: null, invoiceUrl: "https://f" };
 });
 

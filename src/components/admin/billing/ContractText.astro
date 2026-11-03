@@ -1,7 +1,7 @@
 ---
 // Faturamento (F12.2b): o texto do contrato (provisório até o do advogado),
 // com a versão. Aberto na tela de aceite; recolhido nos demais lugares.
-import { BILLING_CONTRACT_TERMS, BILLING_CONTRACT_TERMS_VERSION } from "../../../lib/billingContractText";
+import { billingContractTerms } from "../../../lib/billingContractText";
 
 interface Props {
   /** Versão do texto que o contrato guardou; outra que não a atual mostra só o aviso. */
@@ -10,15 +10,16 @@ interface Props {
 }
 
 const { version, open = false } = Astro.props;
-const current = version === BILLING_CONTRACT_TERMS_VERSION;
+// Com nota fiscal ou sem (cliente, 03/nov/2026): o texto da versão guardada.
+const sections = billingContractTerms(version);
 ---
 
 <details class="rounded-lg border border-line text-sm text-ink-mid" open={open}>
   <summary class="cursor-pointer px-3 py-2 font-medium text-ink">Texto do contrato</summary>
   <div class="max-h-80 overflow-y-auto border-t border-line px-3 py-2">
     {
-      current ? (
-        BILLING_CONTRACT_TERMS.map((section) => (
+      sections ? (
+        sections.map((section) => (
           <section class="mt-2 first:mt-0">
             <h3 class="font-semibold text-ink">{section.title}</h3>
             {section.paragraphs.map((p) => (

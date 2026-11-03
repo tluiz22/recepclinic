@@ -1883,6 +1883,9 @@ isOneToOne: false
 "billing_finish_provider_event":
 { Args: { "p_error": string,"p_id": string,"p_status": string }; Returns: undefined
                            },
+"billing_invoicing_signed":
+{ Args: { "p_clinic_id": string }; Returns: boolean
+                           },
 "billing_link_asaas_customer":
 { Args: { "p_clinic_id": string,"p_customer_id": string }; Returns: undefined
                            },

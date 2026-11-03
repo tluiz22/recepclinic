@@ -45,7 +45,7 @@ export const POST: APIRoute = async (context) => {
           if (!formChecked(form, "aceite")) throw new DataError("invalid", "Aceite do contrato: marque o aceite", { aceite: "Marque o aceite." });
         {
           const contractId = formText(form, "contract_id");
-          await acceptBillingContract(db, clinic.clinicId, contractId, requestIp(context));
+          await acceptBillingContract(db, clinic.clinicId, contractId, formText(form, "terms_version"), requestIp(context));
           // F12.4 (item 29): aceito, a cobrança nasce no Asaas na hora (modo automático).
           const sync = await syncContractNow(contractId);
           const message =
