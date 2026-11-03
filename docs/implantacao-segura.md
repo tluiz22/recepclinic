@@ -3,6 +3,12 @@
 > **Retomar daqui (03/nov/2026).** **IS1 feita** (guias públicos `/guia/antes-de-conectar` e `/guia/pagamento-meta`,
 > "Guia para o Administrador" na tela da clínica no Sistema, link no convite e na faixa de implantação, roteiro de
 > Implantação atualizado), sem migração. Cliente valida no staging. Próximo: IS2 (mensagem de teste).
+> **IS2 começada (03/nov), sem código ainda.** Texto do template aprovado pelo cliente: `rc_teste_envio_v1` =
+> "Olá, {{1}}! Aqui é {{2}}.\nOs avisos de agendamento (lembretes, confirmações e remarcações) da clínica pelo WhatsApp
+> estão ativos neste número.\n\nEsta é uma mensagem automática do RecepClinic. Não é preciso responder." Achados:
+> `createClinicSender` devolve null em implantação (o teste precisa de uma opção para sair nessa fase); chave nova
+> `connection_test` exige migração da restrição `whatsapp_templates_template_key_check`; o aviso "forma de pagamento
+> não conferida" do Início (`dashboard.astro`) e a rota `whatsapp-pagamento.ts` saem junto com a marcação manual.
 
 Pedido do cliente em 03/nov/2026, depois de dois incidentes na produção (clínica piloto) no mesmo dia: impedir que
 se repitam nas próximas clínicas.
