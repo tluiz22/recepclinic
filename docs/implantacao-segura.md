@@ -1,14 +1,9 @@
 # Implantação segura do WhatsApp (IS): pré-requisitos, mensagem de teste, checklist e problemas conhecidos
 
-> **Retomar daqui (03/nov/2026).** **IS1 feita** (guias públicos `/guia/antes-de-conectar` e `/guia/pagamento-meta`,
-> "Guia para o Administrador" na tela da clínica no Sistema, link no convite e na faixa de implantação, roteiro de
-> Implantação atualizado), sem migração. Cliente valida no staging. Próximo: IS2 (mensagem de teste).
-> **IS2 começada (03/nov), sem código ainda.** Texto do template aprovado pelo cliente: `rc_teste_envio_v1` =
-> "Olá, {{1}}! Aqui é {{2}}.\nOs avisos de agendamento (lembretes, confirmações e remarcações) da clínica pelo WhatsApp
-> estão ativos neste número.\n\nEsta é uma mensagem automática do RecepClinic. Não é preciso responder." Achados:
-> `createClinicSender` devolve null em implantação (o teste precisa de uma opção para sair nessa fase); chave nova
-> `connection_test` exige migração da restrição `whatsapp_templates_template_key_check`; o aviso "forma de pagamento
-> não conferida" do Início (`dashboard.astro`) e a rota `whatsapp-pagamento.ts` saem junto com a marcação manual.
+> **Retomar daqui (03/nov/2026).** IS1 no staging. **IS2 feita na branch `implantacao-is2`** (migração
+> `20261203120000_mensagem_de_teste.sql`), testes de banco pelo CI do PR. Próximo: CI verde → migração no staging →
+> `main`; depois, em cada clínica do staging e da produção, "Enviar à Meta as que faltam" (o modelo novo) e o teste.
+> Cliente valida no staging. Depois: IS3 (checklist).
 
 Pedido do cliente em 03/nov/2026, depois de dois incidentes na produção (clínica piloto) no mesmo dia: impedir que
 se repitam nas próximas clínicas.
@@ -90,7 +85,27 @@ Plano original:
 - Vendas › Implantação: pré-requisitos e etapa "Contratação" apontam para o guia; etapa "Forma de pagamento" e
   "Ativação e testes" atualizadas (mensagem de teste, automações, teste de outro número que não o do Suporte).
 
-### IS2 — Mensagem de teste
+### IS2 — Mensagem de teste (feita, 03/nov)
+
+Feito: modelo `connection_test` (`rc_teste_envio_v1`, texto aprovado: "Olá, {{1}}! Aqui é {{2}}. Os avisos de
+agendamento (lembretes, confirmações e remarcações) da clínica pelo WhatsApp estão ativos neste número. Esta é uma
+mensagem automática do RecepClinic. Não é preciso responder.") no catálogo, em toda clínica, fora da aba Mensagens
+(sem texto próprio); migração da restrição `whatsapp_templates_template_key_check`. `connectionTest.ts`:
+`sendConnectionTest` (número digitado, {{1}} = "equipe"; erro sem modelo aprovado, sem conexão ou número inválido;
+recusado na hora grava `failure_code`/`failure_reason`, sem reenvio), `getLatestConnectionTest`,
+`getDeliveredConnectionTest`. `createClinicSender`/`clinicSenderFor` com `allowOnboarding` (só o teste sai em
+implantação). Configurações › WhatsApp (Administrador e Suporte): bloco "Mensagem de teste" (`#teste`) com o último
+envio (Lida/Entregue/Enviada/Não entregue), o motivo em português com o que fazer e o guia
+(`src/lib/whatsappErrors.ts`, tabela de códigos da Meta: 131042, 131026, 131031, 131047…) e o formulário; rota
+`whatsapp-teste.ts` no lugar de `whatsapp-pagamento.ts` (removida; a função e a coluna `payment_checked_*` ficam sem
+tela). Sistema › Clínicas › clínica › Situação: linha do teste e "Ativar a clínica" desabilitado sem teste entregue;
+a rota recusa também. Início do Suporte: "Falta uma mensagem de teste entregue" no lugar de "falta conferir a forma
+de pagamento". Roteiro de Implantação e Central de Ajuda (Configurações › WhatsApp, problemas) atualizados; captura
+`config-whatsapp` na fila. Testes: `whatsappErrors.test.ts`, `templates.test.ts`, `tests/db/mensagem-de-teste.test.ts`.
+A tabela de motivos ainda não foi levada aos Envios e ao histórico do atendimento (fica para depois, se o cliente
+quiser).
+
+Plano original:
 
 - Template novo no catálogo, `rc_teste_envio_v1` (utilidade), criado na conexão como os outros. Texto a aprovar, ex.:
   "Teste do RecepClinic: o WhatsApp da {{1}} está enviando mensagens automáticas normalmente. Não é preciso responder."

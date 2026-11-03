@@ -380,7 +380,7 @@ export async function disconnectWhatsapp(
   return { coexistence: connection.coexistence, problems };
 }
 
-/** Suporte (F8.3): "Forma de pagamento conferida" na conta atual, ou desmarca. */
+/** Suporte (F8.3): "Forma de pagamento conferida" na conta atual, ou desmarca. Sem tela desde a IS2 (03/nov/2026): a mensagem de teste entregue substitui a marcação. */
 export async function setWhatsappPaymentChecked(db: DbClient, clinicId: string, checked: boolean): Promise<void> {
   unwrap(await db.rpc("set_whatsapp_payment_checked", { p_clinic_id: clinicId, p_checked: checked }), "Conexão do WhatsApp");
 }
@@ -410,6 +410,7 @@ export const TEMPLATE_KEYS = [
   "daily_summary_consultations_today",
   "daily_summary_exams_today",
   "nfse_document",
+  "connection_test",
 ] as const;
 
 export type TemplateKey = (typeof TEMPLATE_KEYS)[number];

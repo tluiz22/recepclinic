@@ -7,6 +7,7 @@ import { runFormAction } from "../../../../../lib/data/formAction";
 import { createInfoRequest, markInfoRequestReviewed, resendInvitation, sendConnectGuide, setClinicStatus } from "../../../../../lib/data/onboarding";
 import { onboardingDeps } from "../../../../../lib/data/onboardingDeps";
 import { formText } from "../../../../../lib/forms";
+import { getDeliveredConnectionTest } from "../../../../../lib/data/whatsapp/connectionTest";
 
 // Ações do Suporte numa clínica (F4.4a): reenviar convite, pedir as
 // informações por e-mail e marcar as respostas como revisadas; pedir a agenda
@@ -107,6 +108,12 @@ export const POST: APIRoute = async (context) => {
           };
         }
         case "ativar_clinica":
+          // IS2 (cliente, 03/nov/2026): só com uma mensagem de teste entregue (cartão na Meta e modelo aprovado).
+          if (!(await getDeliveredConnectionTest(db, clinicId))) {
+            throw new DataError("invalid", "Ativar: falta a mensagem de teste", {
+              acao: "Para ativar, envie a mensagem de teste em Configurações › WhatsApp da clínica e espere a entrega.",
+            });
+          }
           await setClinicStatus(db, clinicId, "active");
           return { redirectTo: page, message: `${clinic.name} ativada: o bot, os avisos e os envios automáticos pelo WhatsApp passam a sair para os pacientes.` };
         case "voltar_implantacao":

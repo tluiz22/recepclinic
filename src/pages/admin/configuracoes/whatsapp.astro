@@ -23,15 +23,18 @@ import { GRAPH_API_VERSION } from "../../../lib/data/whatsapp/graph";
 import { DEFAULT_TEMPLATES, templateApproval, templatesInUse, templateStatusFromMeta } from "../../../lib/data/whatsapp/templates";
 import { listUnusedTemplates, namesInWaba } from "../../../lib/data/whatsapp/templateSync";
 import { listLatestWhatsappMessages } from "../../../lib/data/whatsapp/messages";
+import { getLatestConnectionTest } from "../../../lib/data/whatsapp/connectionTest";
 import { formatPhoneBR } from "../../../lib/phone";
 
 const clinic = Astro.locals.clinic!;
 const db = createUserClient(Astro.request, Astro.cookies);
 const isSupport = clinic.isPlatformStaff;
-const [connection, latest, templates] = await Promise.all([
+const [connection, latest, templates, lastTest] = await Promise.all([
   getWhatsappConnection(db, clinic.clinicId),
   isSupport ? listLatestWhatsappMessages(db, clinic.clinicId, 10) : Promise.resolve([]),
   listWhatsappTemplates(db, clinic.clinicId),
+  // Mensagem de teste (IS2): o último envio, para o Administrador e o Suporte.
+  getLatestConnectionTest(db, clinic.clinicId),
 ]);
 // Janela da Meta (F8.1): com o App ID, o App Secret e a configuração do Embedded Signup.
 const env = platformEnv();
@@ -62,6 +65,7 @@ const TEMPLATE_LABELS: Record<string, string> = {
   reminder: "Lembrete",
   exam_preparation: "Preparo do exame",
   consultation_guidance: "Orientações gerais da consulta",
+  connection_test: "Mensagem de teste",
 };
 // Só o token pela credencial da clínica (como na rota dos templates).
 const unused = connection && Astro.url.searchParams.has("sem-uso")
@@ -83,7 +87,7 @@ import { configuracoes } from "../../../lib/ajuda/configuracoes";
   </HowItWorks>
 
   <div class="flex max-w-2xl flex-col gap-4">
-    <WhatsappConnectionCard connection={connection} timeZone={clinic.timezone} manage={{ signup, pendingSync: pendingCoexistenceSync(connection), templates: templateApproval(templatesInUse(clinic.features), templates), isSupport }} />
+    <WhatsappConnectionCard connection={connection} timeZone={clinic.timezone} manage={{ signup, pendingSync: pendingCoexistenceSync(connection), templates: templateApproval(templatesInUse(clinic.features), templates), isSupport, canTest: isSupport || clinic.roles.includes("admin"), test: lastTest }} />
 
     {
       isSupport && (

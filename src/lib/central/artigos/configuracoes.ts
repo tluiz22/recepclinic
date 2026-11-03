@@ -234,7 +234,7 @@ export const configuracoesArtigos = [
     module: "Configurações › WhatsApp",
     where: "Configurações › WhatsApp",
     screen: C("/admin/configuracoes/whatsapp"),
-    keywords: ["whatsapp", "conectar", "meta", "número", "coexistência", "app whatsapp business", "templates", "forma de pagamento na meta", "desconectar"],
+    keywords: ["whatsapp", "conectar", "meta", "número", "coexistência", "app whatsapp business", "templates", "forma de pagamento na meta", "mensagem de teste", "desconectar"],
     synonyms: ["configurar whatsapp", "ligar o whatsapp", "integração com whatsapp", "trocar de número"],
     related: ["como-funciona-o-bot", "lembretes-e-confirmacoes", "whatsapp-nao-conecta"],
     order: 70,
@@ -248,7 +248,8 @@ export const configuracoesArtigos = [
     fields: [
       { name: "Situação", text: "Conectado, Em configuração ou Desconectado, com o número e a data." },
       { name: "Mensagens automáticas na Meta", text: "A análise da Meta leva de minutos a algumas horas e a aprovação chega sozinha. Até lá esses envios não saem. Recusada: o suporte do RecepClinic ajusta o texto e reenvia." },
-      { name: "Forma de pagamento na Meta", text: "A Meta cobra da clínica, direto, as mensagens automáticas; sem a forma de pagamento elas não saem, e o bot continua respondendo quem escreve. O Suporte confere e marca a data." },
+      { name: "Forma de pagamento na Meta", text: "A Meta cobra da clínica, direto, as mensagens automáticas; sem o cartão definido como padrão na conta do WhatsApp elas não saem, e o bot continua respondendo quem escreve." },
+      { name: "Mensagem de teste", text: "O Administrador ou o Suporte envia um teste para um celular e vê se foi entregue; se falhar, a tela diz o motivo e o que fazer. A clínica só é ativada com um teste entregue." },
     ],
     notes: ["Para trocar de número: desconecte e conecte de novo com o número novo.", "Se aparecer \"A conexão pela Meta ainda não está ligada no sistema\", fale com o suporte do RecepClinic."],
     contextual: ["/admin/configuracoes/whatsapp"],

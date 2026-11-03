@@ -272,7 +272,8 @@ describe("situação dos templates em uso (F8.2)", () => {
 
   it("só os templates dos itens liberados contam", () => {
     const keys = (features: Parameters<typeof templatesInUse>[0]) => templatesInUse(features).map((t) => t.key);
-    expect(keys([])).toEqual(["confirmation", "reschedule", "cancellation", "clinic_cancellation", "reminder", "consultation_guidance"]);
+    // A mensagem de teste (IS2, 03/nov/2026) vale para toda clínica.
+    expect(keys([])).toEqual(["confirmation", "reschedule", "cancellation", "clinic_cancellation", "reminder", "consultation_guidance", "connection_test"]);
     expect(keys(["exams", "daily_summary", "waitlist", "finance"])).toHaveLength(DEFAULT_TEMPLATES.length);
     expect(keys(["daily_summary"])).toContain("daily_summary_consultations_today");
     expect(keys(["daily_summary"])).not.toContain("daily_summary_exams");
@@ -290,8 +291,8 @@ describe("situação dos templates em uso (F8.2)", () => {
       // Proposta da clínica que ainda não foi à Meta não conta.
       saved("reminder", "pending", 2, "proposed"),
     ]);
-    expect(summary).toEqual({ approved: 2, pending: 1, rejected: 1, missing: 2 });
-    expect(describeTemplateApproval(summary)).toBe("2 aprovadas, 1 em análise, 1 recusada, 2 ainda não enviadas");
+    expect(summary).toEqual({ approved: 2, pending: 1, rejected: 1, missing: 3 });
+    expect(describeTemplateApproval(summary)).toBe("2 aprovadas, 1 em análise, 1 recusada, 3 ainda não enviadas");
     expect(describeTemplateApproval({ approved: 6, pending: 0, rejected: 0, missing: 0 })).toBeNull();
     expect(describeTemplateApproval({ approved: 0, pending: 0, rejected: 0, missing: 1 })).toBe("1 ainda não enviada");
   });
