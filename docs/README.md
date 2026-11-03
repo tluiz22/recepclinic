@@ -20,7 +20,7 @@
 >   cartão do Asaas (`ASAAS_PREVIEW=1`) + Base de Conhecimento do bot (migração aplicada).
 >   Roteiros em [`staging.md`](staging.md).
 > - **Branch `faturamento`** (só local, sem push): todo código do financeiro, até a F12.8 (`5714645`; 944 testes de
->   unidade e 872 de banco passando). Tem a `main` até `4d17a7f`; atualizar só quando o cliente pedir (cliente, 01/nov).
+>   unidade e 872 de banco passando). Tem a `main` até `7c64a68` (03/nov); atualizar só quando o cliente pedir (cliente, 01/nov).
 >
 > **Frentes**
 > - **Ajustes da produção (C1–C16) e revisão da jornada do bot:** todos na produção; nada pendente. Decisões da
@@ -46,6 +46,9 @@
 > Financeiro; Consultório da Dra. Ana Karina excluído do staging. Logins e senhas em Sistema › Vendas › Demonstração.
 > Cliente valida. **Antes de cada apresentação:**
 > `node --env-file=.env.staging scripts/demo-clinicas.mjs --confirmar` (plano, item 9b).
+>
+> **Ajustes de 03/nov (staging, `51b5558`):** ficha do paciente sem a aba "Todos"; ajuda do "Faltou X de Y" no painel
+> da Agenda abre abaixo do selo (antes saía cortada). Cliente valida.
 >
 > **Pendências**
 > - **Cliente valida no staging (no fim):** F8.1, F8.2, F8.2b, F8.3, ajuda contextual e menu lateral.
