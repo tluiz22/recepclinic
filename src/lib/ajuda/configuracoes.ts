@@ -212,15 +212,15 @@ export const configuracoes = {
       ],
       alimenta: [{ texto: "Financeiro: a nota é emitida na tela do pagamento." }],
     },
-    // configuracoes/assinatura.astro (F12.1): conta de cobrança, contatos e WhatsApp financeiro; aceite do contrato (F12.2b).
+    // configuracoes/assinatura.astro (F12.1): conta de cobrança, contatos e WhatsApp financeiro; aceite do contrato (F12.2b); passo a passo e renovação (F12.2e).
     assinatura: {
       serve: "Guardar quem paga o RecepClinic e para onde vão as cobranças e os avisos.",
       como: [
         "O Suporte cadastra o pagador e o contrato (mensalidade e, com a nota fiscal liberada, o preço por nota e a franquia); para mudar, fale com o Suporte.",
-        "O Administrador lê e aceita o contrato nesta tela; a cobrança só começa depois do aceite. Ficam registrados data, hora, quem aceitou, IP e versão do texto.",
-        "Mudança de valor chega por e-mail ao financeiro e só vale 30 dias depois; continuar usando vale como aceite. Texto do contrato novo pede aceite de novo.",
-        "Os avisos de cobrança (vencimento, atraso e pagamento reconhecido) sempre vão para o e-mail financeiro, que o Administrador mantém em dia.",
-        "Com o WhatsApp financeiro autorizado, os mesmos avisos também vão para o telefone financeiro.",
+        "Com contrato novo, a tela guia em passos: 1) ler e aceitar o contrato, marcando também a autorização da cobrança mensal; 2) se quiser, autorizar os avisos pelo WhatsApp. Ficam registrados data, hora, quem aceitou, IP, versão do texto e a autorização.",
+        "A assinatura é mensal e se renova sozinha no dia do vencimento, até o cancelamento. No cartão, a clínica informa o cartão uma vez (\"Informar o cartão e pagar\") e os meses seguintes são cobrados nele; no Pix, cada cobrança tem o \"Pagar com Pix\".",
+        "Reajuste anual pelo IPCA e outras mudanças de valor chegam ao e-mail financeiro e à tela 30 dias antes; continuar usando vale como aceite. Texto do contrato novo pede aceite de novo.",
+        "Os avisos de cobrança (vencimento, atraso e pagamento reconhecido) sempre vão para o e-mail financeiro; com o WhatsApp financeiro autorizado, também para o telefone financeiro.",
       ],
       erro: "Com o e-mail errado, a clínica perde os avisos de cobrança: confira depois de salvar.",
     },

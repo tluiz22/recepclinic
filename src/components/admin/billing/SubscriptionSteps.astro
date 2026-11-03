@@ -1,0 +1,39 @@
+---
+// Assinatura em passo a passo (F12.2e; opção B do desenho de 03/nov/2026):
+// Contrato → WhatsApp (opcional) → Pronto. O passo atual em destaque; os já
+// feitos com o visto.
+interface Props {
+  current: 1 | 2;
+  /** O WhatsApp financeiro já estava autorizado (o passo 2 nem aparece). */
+  whatsappDone?: boolean;
+}
+
+const { current, whatsappDone = false } = Astro.props;
+const steps = [
+  { n: 1, label: current > 1 ? "Contrato aceito" : "Contrato", done: current > 1 },
+  { n: 2, label: whatsappDone ? "WhatsApp autorizado" : "WhatsApp (opcional)", done: whatsappDone },
+  { n: 3, label: "Pronto", done: false },
+];
+---
+
+<ol class="flex flex-wrap items-center gap-x-3 gap-y-2 text-[15px]" aria-label="Passos da assinatura">
+  {
+    steps.map((step, index) => (
+      <>
+        {index > 0 && <li aria-hidden="true" class={`hidden h-0.5 min-w-6 flex-1 sm:block ${steps[index - 1].done ? "bg-brand" : "bg-line"}`} />}
+        <li class={`flex items-center gap-2 ${step.n === current ? "font-semibold text-ink" : step.done ? "text-brand" : "text-ink-soft"}`} aria-current={step.n === current ? "step" : undefined}>
+          {step.done ? (
+            <span class="flex h-8 w-8 items-center justify-center rounded-full bg-brand-soft text-brand">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M5 12l5 5L20 7" />
+              </svg>
+            </span>
+          ) : (
+            <span class={`flex h-8 w-8 items-center justify-center rounded-full font-bold ${step.n === current ? "bg-brand text-white" : "border-2 border-line text-ink-soft"}`}>{step.n}</span>
+          )}
+          {step.label}
+        </li>
+      </>
+    ))
+  }
+</ol>

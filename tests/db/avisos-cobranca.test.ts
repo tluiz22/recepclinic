@@ -65,7 +65,7 @@ beforeAll(async () => {
     { invoicing: true },
   );
   contractId = (await activateBillingContract(asDb(support), clinicId)).id;
-  await acceptBillingContract(asDb(fixture.admin), clinicId, contractId, BILLING_CONTRACT_TERMS_VERSION_NF, null);
+  await acceptBillingContract(asDb(fixture.admin), clinicId, contractId, BILLING_CONTRACT_TERMS_VERSION_NF, null, "Autorizo a cobrança mensal.");
 });
 
 afterAll(async () => {

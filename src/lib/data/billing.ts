@@ -33,6 +33,8 @@ export type BillingAccount = {
   whatsappOptIn: { at: Date; version: string } | null;
   /** F12.4: cliente no Asaas (null = ainda não criado). */
   asaasCustomerId: string | null;
+  /** F12.2e: "Agora não" no passo do WhatsApp financeiro. */
+  whatsappPromptDismissedAt: Date | null;
   updatedAt: Date;
 };
 
@@ -53,6 +55,7 @@ type AccountRow = {
   whatsapp_opt_in_at: string | null;
   whatsapp_opt_in_version: string | null;
   asaas_customer_id: string | null;
+  whatsapp_prompt_dismissed_at: string | null;
   updated_at: string;
 };
 
@@ -60,7 +63,7 @@ export async function getBillingAccount(db: DbClient, clinicId: string): Promise
   const row = unwrap(
     await db
       .from("billing_accounts")
-      .select("payer_name, payer_document, finance_email, finance_phone, whatsapp_opt_in_at, whatsapp_opt_in_version, asaas_customer_id, updated_at")
+      .select("payer_name, payer_document, finance_email, finance_phone, whatsapp_opt_in_at, whatsapp_opt_in_version, asaas_customer_id, whatsapp_prompt_dismissed_at, updated_at")
       .eq("clinic_id", clinicId)
       .maybeSingle(),
     "Conta de cobrança",
@@ -73,6 +76,7 @@ export async function getBillingAccount(db: DbClient, clinicId: string): Promise
     financePhone: row.finance_phone,
     whatsappOptIn: row.whatsapp_opt_in_at ? { at: new Date(row.whatsapp_opt_in_at), version: row.whatsapp_opt_in_version ?? "" } : null,
     asaasCustomerId: row.asaas_customer_id,
+    whatsappPromptDismissedAt: row.whatsapp_prompt_dismissed_at ? new Date(row.whatsapp_prompt_dismissed_at) : null,
     updatedAt: new Date(row.updated_at),
   };
 }
@@ -123,6 +127,12 @@ export async function saveBillingContacts(db: DbClient, clinicId: string, input:
 /** Só o Administrador da clínica: autoriza (com o texto da versão atual) ou retira o WhatsApp financeiro. */
 export async function setBillingWhatsappOptIn(db: DbClient, clinicId: string, optIn: boolean): Promise<void> {
   const { error } = await db.rpc("set_billing_whatsapp_opt_in", { p_clinic_id: clinicId, p_opt_in: optIn, p_text_version: BILLING_OPT_IN_VERSION });
+  if (error) throw fromDbError(error, "WhatsApp financeiro");
+}
+
+/** F12.2e: "Agora não" no passo do WhatsApp financeiro (só o Administrador). */
+export async function dismissBillingWhatsappPrompt(db: DbClient, clinicId: string): Promise<void> {
+  const { error } = await db.rpc("dismiss_billing_whatsapp_prompt", { p_clinic_id: clinicId });
   if (error) throw fromDbError(error, "WhatsApp financeiro");
 }
 
@@ -264,6 +274,8 @@ export type BillingContract = {
   acceptedAt: Date | null;
   acceptedBy: string | null;
   acceptedIp: string | null;
+  /** F12.2e: a frase da autorização da cobrança recorrente marcada no aceite. */
+  recurringConsent: string | null;
   noticeSentAt: Date | null;
   /** F12.4: assinatura no Asaas, última sincronização e o erro da última tentativa. */
   asaasSubscriptionId: string | null;
@@ -294,6 +306,7 @@ type ContractRow = {
   accepted_at: string | null;
   accepted_by: string | null;
   accepted_ip: string | null;
+  recurring_consent: string | null;
   notice_sent_at: string | null;
   asaas_subscription_id: string | null;
   asaas_synced_at: string | null;
@@ -306,7 +319,7 @@ export async function listBillingContracts(db: DbClient, clinicId: string): Prom
     await db
       .from("billing_contracts")
       .select(
-        "id, version, status, billing_mode, monthly_cents, setup_cents, payment_method, first_due_date, invoice_unit_price_cents, invoice_monthly_allowance, plan_snapshot, notes, starts_on, ends_on, activated_at, terms_version, acceptance, accepted_at, accepted_by, accepted_ip, notice_sent_at, asaas_subscription_id, asaas_synced_at, asaas_sync_error",
+        "id, version, status, billing_mode, monthly_cents, setup_cents, payment_method, first_due_date, invoice_unit_price_cents, invoice_monthly_allowance, plan_snapshot, notes, starts_on, ends_on, activated_at, terms_version, acceptance, accepted_at, accepted_by, accepted_ip, recurring_consent, notice_sent_at, asaas_subscription_id, asaas_synced_at, asaas_sync_error",
       )
       .eq("clinic_id", clinicId)
       .order("created_at", { ascending: false }),
@@ -333,6 +346,7 @@ export async function listBillingContracts(db: DbClient, clinicId: string): Prom
     acceptedAt: row.accepted_at ? new Date(row.accepted_at) : null,
     acceptedBy: row.accepted_by,
     acceptedIp: row.accepted_ip,
+    recurringConsent: row.recurring_consent,
     noticeSentAt: row.notice_sent_at ? new Date(row.notice_sent_at) : null,
     asaasSubscriptionId: row.asaas_subscription_id,
     asaasSyncedAt: row.asaas_synced_at ? new Date(row.asaas_synced_at) : null,
@@ -449,7 +463,14 @@ export async function activateBillingContract(db: DbClient, clinicId: string): P
  * (F12.2b); `termsVersion` é a versão do texto que a tela mostrou (o banco
  * confere com a do contrato).
  */
-export async function acceptBillingContract(db: DbClient, clinicId: string, contractId: string, termsVersion: string, ip: string | null): Promise<void> {
+export async function acceptBillingContract(
+  db: DbClient,
+  clinicId: string,
+  contractId: string,
+  termsVersion: string,
+  ip: string | null,
+  recurringConsent: string,
+): Promise<void> {
   // Texto que não está mais aqui não se aceita: o Suporte ativa uma nova versão.
   if (!billingContractTerms(termsVersion)) {
     throw new DataError("invalid", "Aceite do contrato: este contrato usa um texto que não está mais disponível. Fale com o Suporte do RecepClinic.");
@@ -459,6 +480,7 @@ export async function acceptBillingContract(db: DbClient, clinicId: string, cont
     p_contract_id: contractId,
     p_terms_version: termsVersion,
     p_ip: ip ?? "",
+    p_recurring_consent: recurringConsent,
   });
   if (error) throw fromDbError(error, "Aceite do contrato");
 }

@@ -163,7 +163,8 @@ export function canAccessPath(context: AccessHolder, pathname: string, searchPar
 // Administrador fica só na Assinatura (para regularizar) e os outros papéis só na tela de aviso.
 export const SUSPENDED_PAGE = "/admin/clinica-suspensa";
 export const SUSPENDED_ADMIN_PAGE = "/admin/configuracoes/assinatura";
-const SUSPENDED_ADMIN_PATHS = [SUSPENDED_ADMIN_PAGE, "/api/admin/configuracoes/assinatura"];
+// F12.2e: o contrato completo (para ler antes de aceitar ou pagar) também abre.
+const SUSPENDED_ADMIN_PATHS = [SUSPENDED_ADMIN_PAGE, `${SUSPENDED_ADMIN_PAGE}/contrato`, "/api/admin/configuracoes/assinatura"];
 
 /** Para onde vai quem abre `pathname` na clínica suspensa; null = pode abrir. */
 export function suspendedLanding(context: Pick<ClinicContext, "clinicStatus" | "roles" | "isPlatformStaff">, pathname: string): string | null {

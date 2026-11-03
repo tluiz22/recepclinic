@@ -23,6 +23,7 @@ const contract = (over: Partial<BillingContract>): BillingContract => ({
   acceptedAt: null,
   acceptedBy: null,
   acceptedIp: null,
+  recurringConsent: null,
   noticeSentAt: null,
   asaasSubscriptionId: null,
   asaasSyncedAt: null,

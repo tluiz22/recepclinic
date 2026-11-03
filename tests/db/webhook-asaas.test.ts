@@ -48,7 +48,7 @@ beforeAll(async () => {
     { invoicing: true },
   );
   contractId = (await activateBillingContract(asDb(support), clinicId)).id;
-  await acceptBillingContract(asDb(fixture.admin), clinicId, contractId, BILLING_CONTRACT_TERMS_VERSION_NF, null);
+  await acceptBillingContract(asDb(fixture.admin), clinicId, contractId, BILLING_CONTRACT_TERMS_VERSION_NF, null, "Autorizo a cobrança mensal.");
   current = { id: `pay_w_${stamp}`, subscription: `sub_w_${stamp}`, externalReference: null, dueDate: today, valueCents: 19900, billingType: "PIX", status: "PENDING", paidAt: null, invoiceUrl: "https://f" };
 });
 

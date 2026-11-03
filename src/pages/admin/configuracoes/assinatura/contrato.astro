@@ -1,0 +1,62 @@
+---
+// Configurações › Assinatura › Contrato completo (F12.2e; CDC: os termos num
+// link visível na tela do aceite e do pagamento). Uma versão ativada do
+// contrato da clínica, com os valores e o texto inteiro, pronta para imprimir.
+// Só quem vê a Assinatura (Administrador e Suporte; o rascunho não aparece).
+import ConfigShell from "../../../../components/admin/config/ConfigShell.astro";
+import Card from "../../../../components/admin/config/Panel.astro";
+import ContractAcceptanceInfo from "../../../../components/admin/billing/ContractAcceptanceInfo.astro";
+import ContractTerms from "../../../../components/admin/billing/ContractTerms.astro";
+import { SECONDARY_BUTTON } from "../../../../components/admin/config/formStyles";
+import { billingContractTerms } from "../../../../lib/billingContractText";
+import { renewalSummary } from "../../../../lib/billingRenewal";
+import { loadActorLabels } from "../../../../lib/data/agenda/trail";
+import { listBillingContracts } from "../../../../lib/data/billing";
+import { createUserClient } from "../../../../lib/data/clients";
+
+const clinic = Astro.locals.clinic!;
+const db = createUserClient(Astro.request, Astro.cookies);
+const contracts = (await listBillingContracts(db, clinic.clinicId)).filter((c) => c.status === "active" || c.status === "ended");
+const requested = Astro.url.searchParams.get("id");
+const contract = contracts.find((c) => c.id === requested) ?? contracts.find((c) => c.status === "active") ?? null;
+const sections = contract ? billingContractTerms(contract.termsVersion ?? "") : null;
+const actors = contract ? await loadActorLabels(db, clinic.clinicId, [contract.acceptedBy]) : new Map();
+---
+
+<ConfigShell current="assinatura" title="Contrato" subtitle="O contrato da clínica com o RecepClinic, completo." back={{ href: "/admin/configuracoes/assinatura", label: "Assinatura" }}>
+  {
+    !contract ? (
+      <Card>
+        <p class="text-[15px] text-ink-soft">Ainda não há contrato ativado. Ele aparece aqui quando o Suporte do RecepClinic o ativar.</p>
+      </Card>
+    ) : (
+      <Card class="flex flex-col gap-4">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <h2 class="font-display text-[19px] leading-tight font-bold text-ink">Contrato{contract.version ? ` · versão ${contract.version}` : ""}</h2>
+          <button type="button" class={`${SECONDARY_BUTTON} print:hidden`} onclick="window.print()">Imprimir ou salvar em PDF</button>
+        </div>
+        <ContractAcceptanceInfo contract={contract} actors={actors} timezone={clinic.timezone} />
+        <ContractTerms contract={contract} />
+        <p class="rounded-lg border border-pend-200 bg-pend-50 px-4 py-3 text-[15px] text-ink">
+          <strong>Assinatura mensal, com renovação automática.</strong> {renewalSummary(contract)}
+        </p>
+        {contract.recurringConsent && <p class="text-sm text-ink-soft">Autorização marcada no aceite: “{contract.recurringConsent}”</p>}
+        {sections ? (
+          <div class="flex flex-col gap-3 text-[15px] leading-relaxed text-ink-mid">
+            {sections.map((section) => (
+              <section>
+                <h3 class="font-semibold text-ink">{section.title}</h3>
+                {section.paragraphs.map((p) => (
+                  <p class="mt-1">{p}</p>
+                ))}
+              </section>
+            ))}
+          </div>
+        ) : (
+          <p class="text-[15px] text-ink-soft">Este contrato usa um texto anterior. Para recebê-lo, fale com o Suporte do RecepClinic.</p>
+        )}
+        <p class="text-xs text-ink-soft">Versão do texto: {contract.termsVersion ?? "—"}.</p>
+      </Card>
+    )
+  }
+</ConfigShell>

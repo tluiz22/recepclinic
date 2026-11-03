@@ -7,7 +7,9 @@
 // preço por nota e franquia), só leitura. F12.2b: o aceite do contrato (só o
 // Administrador; texto versionado) e a situação do aceite. Cobranças entram
 // nas próximas fases. F12.3: na suspensão, é a única tela do Administrador,
-// com o motivo (sem o texto do Suporte).
+// com o motivo (sem o texto do Suporte). F12.2e (cliente, 03/nov/2026): passo
+// a passo (aceite com a autorização da cobrança mensal → WhatsApp opcional →
+// Pronto) e as cobranças no topo, com a ação de cada forma de pagamento.
 import ConfigShell from "../../../components/admin/config/ConfigShell.astro";
 import Badge from "../../../components/admin/config/Badge.astro";
 import Card from "../../../components/admin/config/Panel.astro";
@@ -17,7 +19,10 @@ import ContractAcceptanceInfo from "../../../components/admin/billing/ContractAc
 import ChargesList from "../../../components/admin/billing/ChargesList.astro";
 import ContractTerms from "../../../components/admin/billing/ContractTerms.astro";
 import ContractText from "../../../components/admin/billing/ContractText.astro";
-import { billingContractTerms } from "../../../lib/billingContractText";
+import AcceptContractStep from "../../../components/admin/billing/AcceptContractStep.astro";
+import SubscriptionSteps from "../../../components/admin/billing/SubscriptionSteps.astro";
+import WhatsappStep from "../../../components/admin/billing/WhatsappStep.astro";
+import { hasCardOnFile, renewalLine } from "../../../lib/billingRenewal";
 import HelpTip from "../../../components/admin/ui/HelpTip.astro";
 import HowItWorks from "../../../components/admin/ui/HowItWorks.astro";
 import { configuracoes } from "../../../lib/ajuda/configuracoes";
@@ -47,6 +52,19 @@ const actors = await loadActorLabels(db, clinic.clinicId, [...audit.map((a) => a
 // O opt-in é o consentimento da clínica: só o Administrador dela (o Suporte vê).
 const isClinicAdmin = clinic.roles.includes("admin");
 const action = "/api/admin/configuracoes/assinatura";
+const page = "/admin/configuracoes/assinatura";
+// F12.2e: passo a passo. 1 = aceitar o contrato; 2 = WhatsApp financeiro
+// (opcional, só o Administrador, depois de um contrato aceito e enquanto não
+// autorizou nem disse "Agora não"); depois, o aviso "Pronto" (?pronto=1).
+const accepted = contracts.find((c) => c.status !== "draft" && (c.acceptance === "explicit" || c.acceptance === "tacit")) ?? null;
+const whatsappNeeded = isClinicAdmin && !!account && !account.whatsappOptIn && !account.whatsappPromptDismissedAt;
+const wizardStep: 1 | 2 | null = pending ? 1 : whatsappNeeded && accepted ? 2 : null;
+const acceptedNow = contracts.find((c) => c.acceptance === "explicit" && c.acceptedAt) ?? null;
+const showDone = !wizardStep && Astro.url.searchParams.get("pronto") === "1" && !!accepted;
+// Contrato que gera as cobranças (o de hoje ou o próximo).
+const billed = contract ?? next;
+const cardOnFile = hasCardOnFile(charges);
+const openCharges = charges.filter((c) => c.status === "pending" || c.status === "overdue").length;
 const H2 = "font-display text-[17px] leading-tight font-bold text-ink sm:text-lg";
 ---
 
@@ -75,41 +93,68 @@ const H2 = "font-display text-[17px] leading-tight font-bold text-ink sm:text-lg
         <p class="mt-1 text-[15px] text-ink-soft">O Suporte do RecepClinic cadastra a conta de cobrança na contratação. Depois disso, os contatos financeiros aparecem aqui.</p>
       </Card>
     ) : (
-      <div class="grid gap-4 lg:grid-cols-2">
-        {pending && (
-          <Card class="lg:col-span-2">
-            <div class="flex flex-wrap items-center gap-2">
-              <h2 class={H2}>Aceite do contrato</h2>
-              <Badge variant="warning">Aguardando aceite</Badge>
-            </div>
-            <p class="mt-1 text-[15px] text-ink-soft">
-              {pending.version === 1 || !contracts.some((c) => c.acceptance === "explicit" || c.acceptance === "tacit")
-                ? "Leia os termos e o texto do contrato. A cobrança só começa depois do aceite."
-                : "O texto do contrato mudou: leia e aceite a nova versão."}
+      <div class="flex flex-col gap-4">
+        {wizardStep && (
+          <>
+            <p class="text-[16px] text-ink-soft">
+              {wizardStep === 1 && whatsappNeeded ? "Faltam dois passos rápidos." : "Falta um passo rápido."} O resto da assinatura está logo abaixo.
             </p>
-            <div class="mt-3 grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)]">
-              <ContractTerms contract={pending} />
-              <ContractText version={pending.termsVersion ?? ""} open />
+            <SubscriptionSteps current={wizardStep} whatsappDone={!!account.whatsappOptIn} />
+            {wizardStep === 2 && acceptedNow && (
+              <p class="rounded-lg bg-brand-soft px-4 py-3 text-[15px] text-brand-ink">
+                Contrato aceito em {formatInstant(acceptedNow.acceptedAt!, clinic.timezone, "dd/MM/yyyy 'às' HH:mm")}
+                {acceptedNow.acceptedBy ? ` por ${actors.get(acceptedNow.acceptedBy)?.name ?? "Administrador"}` : ""}.
+                {charges.length > 0 ? " As cobranças estão em Cobranças, logo abaixo." : ""}
+              </p>
+            )}
+            {wizardStep === 1 && pending && (
+              <AcceptContractStep
+                contract={pending}
+                isClinicAdmin={isClinicAdmin}
+                changed={pending.version !== 1 && contracts.some((c) => c.acceptance === "explicit" || c.acceptance === "tacit")}
+                twoSteps={whatsappNeeded}
+                action={action}
+              />
+            )}
+            {wizardStep === 2 && <WhatsappStep account={account} action={action} />}
+          </>
+        )}
+        {showDone && (
+          <section class="flex items-start gap-4 rounded-xl border border-conf-200 bg-conf-100 px-5 py-4">
+            <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-brand text-white">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M5 12l5 5L20 7" />
+              </svg>
+            </span>
+            <div class="flex flex-1 flex-col gap-1">
+              <h2 class={H2}>Pronto: a assinatura está em dia</h2>
+              <p class="text-[15px] text-ink">
+                {contract?.acceptedAt ? `Contrato aceito em ${formatInstant(contract.acceptedAt, clinic.timezone, "dd/MM/yyyy 'às' HH:mm")}. ` : ""}
+                {account.whatsappOptIn
+                  ? "Avisos de cobrança pelo e-mail e pelo WhatsApp."
+                  : "Avisos de cobrança só pelo e-mail. Para receber também pelo WhatsApp, autorize em WhatsApp financeiro, abaixo."}
+                {charges.some((c) => c.status === "pending" || c.status === "overdue") ? " A primeira cobrança está logo abaixo." : ""}
+              </p>
             </div>
-            {!billingContractTerms(pending.termsVersion ?? "") ? (
-              <p class="mt-4 border-t border-[#e6ecea] pt-3 text-sm text-ink-soft">Este contrato usa um texto que não está mais disponível. O Suporte do RecepClinic vai enviar uma nova versão para aceitar.</p>
-            ) : isClinicAdmin ? (
-              <form method="POST" action={action} class="mt-4 flex flex-col gap-3 border-t border-[#e6ecea] pt-4">
-                <input type="hidden" name="acao" value="contrato_aceitar" />
-                <input type="hidden" name="contract_id" value={pending.id} />
-                <input type="hidden" name="terms_version" value={pending.termsVersion ?? ""} />
-                <label class="flex items-start gap-2 text-sm text-ink-mid">
-                  <input type="checkbox" name="aceite" value="1" required class="mt-0.5 h-[18px] w-[18px] shrink-0 accent-brand" />
-                  <span>Li e aceito o contrato, em nome da clínica.</span>
-                </label>
-                <p class={HINT}>Ficam registrados a data, a hora, quem aceitou, o endereço de internet (IP) e a versão do texto.</p>
-                <button type="submit" data-sending-label="Salvando…" class={`${PRIMARY_BUTTON} self-start`}>Aceitar o contrato</button>
-              </form>
-            ) : (
-              <p class="mt-4 border-t border-[#e6ecea] pt-3 text-sm text-ink-soft">Só o Administrador da clínica aceita o contrato.</p>
+            <a href={page} aria-label="Fechar o aviso" class="flex h-11 w-11 items-center justify-center rounded-lg text-[22px] text-brand-ink no-underline hover:bg-white/60">×</a>
+          </section>
+        )}
+        {charges.length > 0 && (
+          <Card>
+            <div class="flex flex-wrap items-center gap-2">
+              <h2 class={H2}>Cobranças</h2>
+              {openCharges > 0 && <Badge variant="warning">{openCharges === 1 ? "1 em aberto" : `${openCharges} em aberto`}</Badge>}
+            </div>
+            <div class="mt-2">
+              <ChargesList charges={charges} timezone={clinic.timezone} paymentMethod={billed?.paymentMethod ?? null} cardOnFile={cardOnFile} />
+            </div>
+            {billed && billed.acceptance !== "pending" && <p class="mt-2 text-sm text-ink-soft">{renewalLine(billed)}</p>}
+            {billed?.paymentMethod === "credit_card" && (
+              <p class="mt-1 text-sm text-ink-soft">O RecepClinic não guarda dados do cartão. Para trocar o cartão, fale com o Suporte do RecepClinic.</p>
             )}
           </Card>
         )}
+      <div class="grid gap-4 lg:grid-cols-2">
         <div class="flex flex-col gap-4">
           <Card>
             <div class="flex flex-wrap items-center gap-2">
@@ -120,7 +165,7 @@ const H2 = "font-display text-[17px] leading-tight font-bold text-ink sm:text-lg
               ) : (
                 <h2 class={H2}>Contrato</h2>
               )}
-              {contract && <Badge variant="success">Vigente</Badge>}
+              {contract && contract.acceptance !== "pending" && <Badge variant="success">Vigente</Badge>}
             </div>
             {contract ? (
               <div class="mt-3 flex flex-col gap-3">
@@ -144,20 +189,6 @@ const H2 = "font-display text-[17px] leading-tight font-bold text-ink sm:text-lg
                   <p class="text-sm text-ink-soft">Continuar usando o RecepClinic a partir de {formatCalendarDate(next.startsOn, "dd/MM/yyyy")} vale como aceite. Se não concordar, fale com o Suporte antes dessa data.</p>
                 )}
                 <ContractTerms contract={next} />
-              </div>
-            </Card>
-          )}
-
-          {charges.length > 0 && (
-            <Card>
-              <h2 class={H2}>Cobranças</h2>
-              <p class="mt-1 text-sm text-ink-soft">
-                {(contract ?? next)?.paymentMethod === "credit_card"
-                  ? "No cartão: na 1ª cobrança, toque em \"Pagar\" e informe o cartão na página do Asaas; nos meses seguintes, o Asaas cobra o mesmo cartão no vencimento. O RecepClinic não guarda dados do cartão. Para trocar o cartão, fale com o Suporte do RecepClinic."
-                  : "\"Pagar\" abre a fatura no Asaas, com o Pix."}
-              </p>
-              <div class="mt-2">
-                <ChargesList charges={charges} timezone={clinic.timezone} />
               </div>
             </Card>
           )}
@@ -229,6 +260,8 @@ const H2 = "font-display text-[17px] leading-tight font-bold text-ink sm:text-lg
                     Retirar a autorização
                   </button>
                 </form>
+              ) : wizardStep && whatsappNeeded ? (
+                <p class="mt-3 text-sm text-ink-soft">{wizardStep === 1 ? "Depois do aceite do contrato, o passo 2 pergunta sobre o WhatsApp." : "Autorize no passo 2, acima."}</p>
               ) : !account.financePhone ? (
                 <p class="mt-3 text-sm text-pend-800">Salve um telefone financeiro para autorizar o WhatsApp.</p>
               ) : (
@@ -254,6 +287,7 @@ const H2 = "font-display text-[17px] leading-tight font-bold text-ink sm:text-lg
 
           <BillingTrail entries={audit} actors={actors} timezone={clinic.timezone} />
         </div>
+      </div>
       </div>
     )
   }

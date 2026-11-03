@@ -239,9 +239,9 @@ begin
     values (c_a, 'support', 'account_created', '{"payer_name": "Clínica Exemplo Saúde Ltda", "finance_email": "financeiro@exemplo-saude.local"}');
   -- Contrato vigente (F12.2): manual, sem a cobrança automática; aceito pelo Administrador (F12.2b).
   insert into public.billing_contracts (clinic_id, version, status, billing_mode, monthly_cents, setup_cents, first_due_date,
-      invoice_unit_price_cents, invoice_monthly_allowance, plan_snapshot, starts_on, activated_at, terms_version, acceptance, accepted_at, accepted_ip)
+      invoice_unit_price_cents, invoice_monthly_allowance, plan_snapshot, starts_on, activated_at, terms_version, acceptance, accepted_at, accepted_ip, recurring_consent)
     values (c_a, 1, 'active', 'manual', 29900, 29700, current_date + 10, 80, 50, '{"kind": "complete", "label": "Completo"}', current_date, now(),
-      'seed', 'explicit', now(), '203.0.113.10');
+      'provisorio-2026-11-03b-nf', 'explicit', now(), '203.0.113.10', 'Entendo que a mensalidade é cobrada todo mês, até o cancelamento.');
   -- Cobrança paga à mão (F12.4: o espelho também guarda o modo manual), da implantação do contrato manual.
   insert into public.billing_charges (clinic_id, contract_id, origin, kind, due_date, value_cents, status, paid_at)
     select c_a, id, 'manual', 'setup', current_date, 29700, 'paid', now() from public.billing_contracts where clinic_id = c_a and version = 1;

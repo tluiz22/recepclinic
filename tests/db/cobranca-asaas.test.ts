@@ -78,7 +78,7 @@ describe("Cobrança no Asaas (F12.4)", () => {
   });
 
   it("aceito: cliente, assinatura e as cobranças no espelho, na trilha", async () => {
-    await acceptBillingContract(asDb(fixture.admin), clinicId, contractId, BILLING_CONTRACT_TERMS_VERSION_NF, null);
+    await acceptBillingContract(asDb(fixture.admin), clinicId, contractId, BILLING_CONTRACT_TERMS_VERSION_NF, null, "Autorizo a cobrança mensal.");
     expect(await syncContractWithAsaas(store(), api(), contractId, today)).toEqual({ status: "synced" });
     expect((await getBillingAccount(asDb(support), clinicId))?.asaasCustomerId).toBe(`cus_${stamp}`);
     const contract = (await listBillingContracts(asDb(support), clinicId)).find((c) => c.id === contractId)!;

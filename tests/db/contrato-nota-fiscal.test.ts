@@ -61,7 +61,7 @@ describe("Contrato e nota fiscal (F12.2c)", () => {
     await saveBillingContractDraft(asDb(support), clinicId, DRAFT, {}, { invoicing: false });
     const active = await activateBillingContract(asDb(support), clinicId);
     expect(active).toMatchObject({ termsVersion: BILLING_CONTRACT_TERMS_VERSION, invoiceUnitPriceCents: null, acceptance: "pending" });
-    await acceptBillingContract(asDb(fixture.admin), clinicId, active.id, BILLING_CONTRACT_TERMS_VERSION, null);
+    await acceptBillingContract(asDb(fixture.admin), clinicId, active.id, BILLING_CONTRACT_TERMS_VERSION, null, "Autorizo a cobrança mensal.");
     expect(await signed()).toBe(false);
   });
 
@@ -78,7 +78,7 @@ describe("Contrato e nota fiscal (F12.2c)", () => {
     const active = await activateBillingContract(asDb(support), clinicId);
     expect(active).toMatchObject({ termsVersion: BILLING_CONTRACT_TERMS_VERSION_NF, invoiceUnitPriceCents: 80, acceptance: "pending" });
     expect(await signed()).toBe(false);
-    await acceptBillingContract(asDb(fixture.admin), clinicId, active.id, BILLING_CONTRACT_TERMS_VERSION_NF, null);
+    await acceptBillingContract(asDb(fixture.admin), clinicId, active.id, BILLING_CONTRACT_TERMS_VERSION_NF, null, "Autorizo a cobrança mensal.");
     expect(await signed()).toBe(true);
   });
 

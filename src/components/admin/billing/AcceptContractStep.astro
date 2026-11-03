@@ -1,0 +1,114 @@
+---
+// Passo 1 da Assinatura (F12.2e): ler e aceitar o contrato. Antes do aceite,
+// o resumo da renovação automática (valor, dia, forma, prazo indeterminado e
+// cancelamento) e o link do contrato completo; duas caixas obrigatórias e
+// desmarcadas: o aceite e a autorização da cobrança mensal (CDC; cliente,
+// 03/nov/2026). Só o Administrador aceita; os outros veem o aviso.
+import Badge from "../config/Badge.astro";
+import Card from "../config/Panel.astro";
+import ContractText from "./ContractText.astro";
+import { CHECK, PRIMARY_BUTTON } from "../config/formStyles";
+import { billingContractTerms } from "../../../lib/billingContractText";
+import { recurringConsentText, renewalSummary } from "../../../lib/billingRenewal";
+import { formatCalendarDate } from "../../../lib/clinicTime";
+import { describeAllowance, PAYMENT_METHODS, type BillingContract } from "../../../lib/data/billing";
+import { formatCentsBRL } from "../../../lib/money";
+
+interface Props {
+  contract: BillingContract;
+  isClinicAdmin: boolean;
+  /** Já houve versão aceita: o texto mudou. */
+  changed: boolean;
+  /** Mostra "Passo 1 de 2" (o passo do WhatsApp vem depois). */
+  twoSteps: boolean;
+  action: string;
+}
+
+const { contract, isClinicAdmin, changed, twoSteps, action } = Astro.props;
+const invoicing = contract.invoiceUnitPriceCents !== null;
+const known = !!billingContractTerms(contract.termsVersion ?? "");
+const date = (value: string) => formatCalendarDate(value, "dd/MM/yyyy");
+const TILE = "rounded-lg bg-canvas px-3 py-2.5";
+const TILE_NF = "rounded-lg bg-brand-soft px-3 py-2.5";
+---
+
+<Card class="flex flex-col gap-4">
+  <div class="flex flex-wrap items-center gap-2">
+    <h2 class="font-display text-[19px] leading-tight font-bold text-ink sm:text-xl">
+      {twoSteps ? "Passo 1 de 2 · " : ""}Leia e aceite o contrato
+    </h2>
+    {invoicing && <Badge variant="accent">Com emissão de nota fiscal</Badge>}
+  </div>
+  <p class="text-[15px] text-ink-soft">
+    {changed ? "O texto do contrato mudou: leia e aceite a nova versão. " : ""}
+    {invoicing ? "A cobrança e a emissão de notas fiscais só começam depois do aceite." : "A cobrança só começa depois do aceite."}
+  </p>
+  <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
+    <div class={TILE}>
+      <div class="text-[13px] text-ink-soft">Mensalidade</div>
+      <div class="text-[17px] font-bold text-ink">{formatCentsBRL(contract.monthlyCents)}</div>
+    </div>
+    <div class={TILE}>
+      <div class="text-[13px] text-ink-soft">Implantação</div>
+      <div class="text-[17px] font-bold text-ink">{contract.setupCents === 0 ? "isenta" : formatCentsBRL(contract.setupCents)}</div>
+    </div>
+    <div class={TILE}>
+      <div class="text-[13px] text-ink-soft">Pagamento</div>
+      <div class="text-[17px] font-bold text-ink">{contract.paymentMethod ? PAYMENT_METHODS[contract.paymentMethod] : "Combinado com o Suporte"}</div>
+    </div>
+    <div class={TILE}>
+      <div class="text-[13px] text-ink-soft">Início · 1º vencimento</div>
+      <div class="text-[17px] font-bold text-ink">{date(contract.startsOn)} · {date(contract.firstDueDate)}</div>
+    </div>
+    {
+      invoicing && (
+        <>
+          <div class={TILE_NF}>
+            <div class="text-[13px] text-brand-ink">Preço por nota fiscal</div>
+            <div class="text-[17px] font-bold text-ink">{formatCentsBRL(contract.invoiceUnitPriceCents!)}</div>
+          </div>
+          <div class={`${TILE_NF} col-span-2 sm:col-span-3`}>
+            <div class="text-[13px] text-brand-ink">Franquia de notas</div>
+            <div class="text-[17px] font-bold text-ink">{describeAllowance(contract.invoiceMonthlyAllowance)} · a sobra não acumula</div>
+          </div>
+        </>
+      )
+    }
+  </div>
+  <ContractText version={contract.termsVersion ?? ""} open />
+  {
+    !known ? (
+      <p class="border-t border-line pt-3 text-sm text-ink-soft">Este contrato usa um texto que não está mais disponível. O Suporte do RecepClinic vai enviar uma nova versão para aceitar.</p>
+    ) : (
+      <>
+        <div class="rounded-lg border border-pend-200 bg-pend-50 px-4 py-3 text-[15.5px] leading-relaxed text-ink">
+          <strong>Assinatura mensal, com renovação automática.</strong> {renewalSummary(contract)}{" "}
+          <a href={`/admin/configuracoes/assinatura/contrato?id=${contract.id}`} target="_blank" rel="noopener" class="font-semibold text-brand">
+            Abrir o contrato completo
+          </a>
+        </div>
+        {isClinicAdmin ? (
+          <form method="POST" action={action} class="flex flex-col gap-3">
+            <input type="hidden" name="acao" value="contrato_aceitar" />
+            <input type="hidden" name="contract_id" value={contract.id} />
+            <input type="hidden" name="terms_version" value={contract.termsVersion ?? ""} />
+            <label class="flex items-start gap-2 text-[15.5px] text-ink">
+              <input type="checkbox" name="aceite" value="1" required class={`${CHECK} mt-0.5`} />
+              <span>Li e aceito o contrato, em nome da clínica.</span>
+            </label>
+            <label class="flex items-start gap-2 text-[15.5px] text-ink">
+              <input type="checkbox" name="recorrencia" value="1" required class={`${CHECK} mt-0.5`} />
+              <span>{recurringConsentText(contract.paymentMethod)}</span>
+            </label>
+            <p class="text-sm text-ink-soft">Ficam registrados a data, a hora, quem aceitou, o endereço de internet (IP), a versão do texto e a autorização.</p>
+            <button type="submit" data-sending-label="Salvando…" class={`${PRIMARY_BUTTON} self-end`}>
+              {twoSteps ? "Aceitar e continuar" : "Aceitar o contrato"}
+            </button>
+          </form>
+        ) : (
+          <p class="border-t border-line pt-3 text-sm text-ink-soft">Só o Administrador da clínica aceita o contrato.</p>
+        )}
+      </>
+    )
+  }
+</Card>
