@@ -35,7 +35,8 @@
 > - **Implantação segura do WhatsApp** ([`implantacao-segura.md`](implantacao-segura.md)), após os incidentes de 03/nov
 >   na clínica piloto (erro 131042 de pagamento na Meta; mensagem automática do app pausando o bot): guias públicos
 >   para o dono da clínica, mensagem de teste exigida para ativar, checklist de implantação, aviso de mensagem
->   automática e Sistema › Problemas conhecidos. Planejamento aprovado; próximo: IS1.
+>   automática e Sistema › Problemas conhecidos. **IS1 no staging (03/nov, sem migração)**: guias públicos
+>   `/guia/antes-de-conectar` e `/guia/pagamento-meta` e envio ao Administrador. Cliente valida; próximo: IS2.
 > - **Pedido não concluído** ([`pedido-nao-concluido.md`](pedido-nao-concluido.md)), após o caso de 03/nov (tocou em
 >   Remarcar no lembrete e não concluiu): mensagem padrão com Novo link / Falar com a recepção / Desistir quando o link
 >   vence ou o cancelamento fica sem resposta; lembrete só muda com a ação concluída; grupo "Não concluiu".
