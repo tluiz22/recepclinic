@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { cancellationPreview, chargeAction, dueDay, hasCardOnFile, nextDueAfter, recurringConsentText, renewalLine, renewalSummary } from "./billingRenewal";
+import { cancellationPreview, ipcaReminder, chargeAction, dueDay, hasCardOnFile, nextDueAfter, recurringConsentText, renewalLine, renewalSummary } from "./billingRenewal";
 
 // F12.2e (cliente, 03/nov/2026): renovação explicada antes do aceite e a ação
 // de cada cobrança conforme a forma de pagamento.
@@ -58,5 +58,21 @@ describe("renovação da assinatura", () => {
       nextDue: "2027-02-03",
     });
     expect(cancellationPreview({ acceptance: "tacit", acceptedAt: null, firstDueDate: "2026-12-03" }, "2027-01-20").kind).toBe("cancel");
+  });
+
+  it("reajuste IPCA: lembra 45 dias antes do aniversário; some com a versão nova montada", () => {
+    const v1 = { version: 1, status: "active", startsOn: "2026-01-10", cancel: null, activatedAt: new Date("2026-01-05") };
+    expect(ipcaReminder([v1], "2026-11-20")).toBeNull();
+    expect(ipcaReminder([v1], "2026-11-26")).toEqual({ anniversary: "2027-01-10", daysLeft: 45 });
+    expect(ipcaReminder([v1], "2027-01-10")).toEqual({ anniversary: "2027-01-10", daysLeft: 0 });
+    // A versão 2 (mudança no meio do ano) não muda o aniversário.
+    const ended = { ...v1, status: "ended" };
+    const v2 = { version: 2, status: "active", startsOn: "2026-06-01", cancel: null, activatedAt: new Date("2026-05-01") };
+    expect(ipcaReminder([ended, v2], "2026-12-20")).toEqual({ anniversary: "2027-01-10", daysLeft: 21 });
+    // Reajuste já montado: a versão que começa no aniversário.
+    const v3 = { version: 3, status: "active", startsOn: "2027-01-10", cancel: null, activatedAt: new Date("2026-12-01") };
+    expect(ipcaReminder([ended, { ...v2, status: "ended" }, v3], "2026-12-20")).toBeNull();
+    // Sem contrato ativo, nada.
+    expect(ipcaReminder([ended], "2026-12-20")).toBeNull();
   });
 });

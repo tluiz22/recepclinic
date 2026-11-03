@@ -105,3 +105,34 @@ export function cancellationPreview(
   const nextDue = nextDueAfter(contract.firstDueDate, today);
   return { kind: withdrawal ? "withdrawal" : "cancel", accessUntil: withdrawal ? today : dayBefore(nextDue), nextDue };
 }
+
+/**
+ * F12.2h (cliente, 03/nov/2026): lembrete do reajuste anual pelo IPCA para o
+ * Suporte, 45 dias antes do aniversário do contrato (início da 1ª versão, sem
+ * contar o que veio antes de um cancelamento). Some quando já há uma versão
+ * que começa no aniversário ou depois (o reajuste já foi montado).
+ */
+export const IPCA_REMINDER_DAYS = 45;
+
+export function ipcaReminder(
+  contracts: { version: number | null; status: string; startsOn: string; cancel: unknown | null; activatedAt: Date | null }[],
+  today: string,
+): { anniversary: string; daysLeft: number } | null {
+  const versions = contracts.filter((c) => c.version !== null && (c.status === "active" || c.status === "ended"));
+  if (!versions.some((c) => c.status === "active")) return null;
+  const lastCancel = versions.filter((c) => c.cancel).map((c) => c.activatedAt?.getTime() ?? 0).sort((a, b) => b - a)[0] ?? -1;
+  const current = versions.filter((c) => !c.cancel && (c.activatedAt?.getTime() ?? 0) > lastCancel);
+  if (current.length === 0) return null;
+  const start = current.map((c) => c.startsOn).sort()[0];
+  const [y, m, d] = start.split("-").map(Number);
+  let anniversary = "";
+  for (let years = 1; ; years += 1) {
+    const last = new Date(Date.UTC(y + years, m, 0)).getUTCDate();
+    anniversary = new Date(Date.UTC(y + years, m - 1, Math.min(d, last))).toISOString().slice(0, 10);
+    if (anniversary >= today) break;
+  }
+  const daysLeft = Math.round((Date.parse(`${anniversary}T12:00:00Z`) - Date.parse(`${today}T12:00:00Z`)) / 86_400_000);
+  if (daysLeft > IPCA_REMINDER_DAYS) return null;
+  if (current.some((c) => c.status === "active" && c.startsOn >= anniversary)) return null;
+  return { anniversary, daysLeft };
+}

@@ -8,6 +8,7 @@
 // novos termos. A suspensão fica na aba Suspensão (F12.3; cliente, 03/nov/2026).
 // F12.4: cobrança no Asaas (ids, sincronização, erro) e as cobranças.
 // F12.2f: o cancelamento pelo Administrador (motivo, acesso, ajuste no Asaas).
+// F12.2h: o lembrete do reajuste anual pelo IPCA.
 // Cobranças entram nas próximas fases.
 import Badge from "../config/Badge.astro";
 import Card from "../config/Panel.astro";
@@ -18,6 +19,7 @@ import ChargesList from "./ChargesList.astro";
 import ContractTerms from "./ContractTerms.astro";
 import { CHECK, CHOICE, HINT, INPUT, LABEL, LEGEND, PRIMARY_BUTTON, SECONDARY_BUTTON } from "../config/formStyles";
 import { billingTermsVersion } from "../../../lib/billingContractText";
+import { ipcaReminder } from "../../../lib/billingRenewal";
 import { formatCalendarDate, formatInstant, todayIn } from "../../../lib/clinicTime";
 import { platformEnv } from "../../../lib/env";
 import { loadActorLabels } from "../../../lib/data/agenda/trail";
@@ -68,6 +70,8 @@ const actors = await loadActorLabels(db, clinicId, [...audit.map((a) => a.actorI
 const action = `/api/admin/sistema/clinicas/${clinicId}`;
 const H2 = "font-display text-[17px] leading-tight font-bold text-ink sm:text-lg";
 const active = contracts.find((c) => c.status === "active") ?? null;
+// F12.2h: lembrete do reajuste anual pelo IPCA (45 dias antes do aniversário).
+const ipca = ipcaReminder(contracts, todayIn(timezone));
 // F12.2f: o último cancelamento, enquanto não houver contrato ativo de novo.
 const canceled = active ? null : (contracts.find((c) => c.cancel) ?? null);
 const KV_STYLE = "grid gap-x-4 gap-y-2 text-[15px] sm:grid-cols-[160px_minmax(0,1fr)]";
@@ -100,6 +104,21 @@ const form = {
 
 <div class="mt-4 grid items-start gap-4 lg:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)]">
   <div class="flex min-w-0 flex-col gap-4">
+    {
+      ipca && (
+        <Card class="border-pend-200 bg-pend-50">
+          <div class="flex flex-wrap items-center gap-2">
+            <h2 class={H2}>Reajuste anual pelo IPCA</h2>
+            <Badge variant="warning">{ipca.daysLeft === 0 ? "Hoje" : `Em ${ipca.daysLeft} ${ipca.daysLeft === 1 ? "dia" : "dias"}`}</Badge>
+          </div>
+          <p class="mt-1 text-[15px] text-ink">
+            O contrato faz aniversário em {date(ipca.anniversary)}. Para corrigir os valores pela variação do IPCA (IBGE) dos 12 meses anteriores, monte o
+            rascunho abaixo com os valores corrigidos e ative: a clínica recebe os novos termos por e-mail e o novo valor só vale 30 dias depois do aviso
+            {ipca.daysLeft < 30 ? " (já não dá para começar exatamente no aniversário)" : ""}. Sem reajuste este ano, nada a fazer.
+          </p>
+        </Card>
+      )
+    }
     {
       canceled?.cancel && (
         <Card class="border-can-200">
