@@ -113,12 +113,12 @@ const phoneOk = !isAnonymizedPhone(a.contactPhone);
     <h2 data-panel-title tabindex="-1" class={`font-display text-[23px] leading-tight font-bold outline-none ${canceled ? "text-ink-soft line-through" : "text-ink"}`}>{a.patientName}</h2>
     {
       noShow && (
-        <span class="inline-flex items-center gap-1">
+        // Texto abaixo do selo, na largura do painel (o balão "pop" saía cortado; cliente, 03/nov/2026).
+        <HelpTip subject={`Faltou ${noShow.noShows} de ${noShow.total}`} text={ajudaAgenda.dicas.seloFaltas} id={`painel-faltas-${a.id}`}>
           <Signal tone="alert" icon="warning">
             Faltou {noShow.noShows} de {noShow.total}
           </Signal>
-          <HelpTip variant="pop" subject={`Faltou ${noShow.noShows} de ${noShow.total}`} text={ajudaAgenda.dicas.seloFaltas} id={`painel-faltas-${a.id}`} />
-        </span>
+        </HelpTip>
       )
     }
     <div class="flex flex-wrap items-center gap-x-2.5 gap-y-1.5 text-[15px]">

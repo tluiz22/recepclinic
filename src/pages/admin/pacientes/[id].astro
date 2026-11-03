@@ -167,6 +167,7 @@ const planName = (planId: string) => plans.find((plan) => plan.id === planId)?.n
 const planLabel = patient.insurance ? planName(patient.insurance.planId) : "Particular";
 
 // Abas dos atendimentos: links que mantêm a origem do "Voltar".
+// Sem a aba "Todos" (não cabia; cliente, 03/nov/2026).
 const tab =
   !anonymized && Astro.url.searchParams.get("aba") === "documentos"
     ? "documentos"
@@ -176,11 +177,9 @@ const tab =
         ? "lembretes"
       : Astro.url.searchParams.get("atendimentos") === "anteriores"
       ? "anteriores"
-      : Astro.url.searchParams.get("atendimentos") === "todos"
-      ? "todos"
       : "proximos";
-const tabQuery: Record<string, string> = { proximos: "", anteriores: "?atendimentos=anteriores", todos: "?atendimentos=todos", documentos: "?aba=documentos", anotacoes: "?aba=anotacoes", lembretes: "?aba=lembretes" };
-const isAppointments = tab === "proximos" || tab === "anteriores" || tab === "todos";
+const tabQuery: Record<string, string> = { proximos: "", anteriores: "?atendimentos=anteriores", documentos: "?aba=documentos", anotacoes: "?aba=anotacoes", lembretes: "?aba=lembretes" };
+const isAppointments = tab === "proximos" || tab === "anteriores";
 const tabHref = (value: string) => withReturn(`/admin/pacientes/${patient.id}${tabQuery[value]}`, volta);
 // Filtro por tipo na aba Documentos (só os tipos que o paciente tem).
 const kindFilter = DOCUMENT_KINDS.find((k) => k.key === Astro.url.searchParams.get("tipo"))?.key ?? null;
@@ -188,7 +187,7 @@ const shownDocuments = kindFilter ? documents.filter((d) => d.kind === kindFilte
 const kindsPresent = DOCUMENT_KINDS.filter((k) => documents.some((d) => d.kind === k.key));
 const kindHref = (key: string | null) => withReturn(`/admin/pacientes/${patient.id}?aba=documentos${key ? `&tipo=${key}` : ""}`, volta);
 const plural = (n: number) => `${n} ${n === 1 ? "atendimento" : "atendimentos"}`;
-const rows = tab === "anteriores" ? previous : tab === "todos" ? history : upcoming;
+const rows = tab === "anteriores" ? previous : upcoming;
 // "Paciente desde" (protótipo da ficha A; cliente, 02/nov/2026): o ano do cadastro.
 const createdAt = await db
   .from("patients")
@@ -393,7 +392,6 @@ const canBook = patient.isActive && !anonymized;
             countTone: "neutral",
             countLabel: plural(previous.length),
           },
-          { label: "Todos", href: tabHref("todos"), active: tab === "todos", count: history.length, countTone: "neutral", countLabel: plural(history.length) },
           ...(anonymized
             ? []
             : [
@@ -472,7 +470,7 @@ const canBook = patient.isActive && !anonymized;
       </ul>}
       {
         isAppointments && rows.length === 0 && (
-          <p class="py-3 text-[15px] text-ink-soft">{tab === "anteriores" ? "Nenhum atendimento anterior." : tab === "todos" ? "Nenhum atendimento." : "Nenhum atendimento marcado."}</p>
+          <p class="py-3 text-[15px] text-ink-soft">{tab === "anteriores" ? "Nenhum atendimento anterior." : "Nenhum atendimento marcado."}</p>
         )
       }
       {
