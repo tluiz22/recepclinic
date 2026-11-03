@@ -44,6 +44,8 @@ export type AgendaAppointment = {
   bookingChannel: string;
   canceledBy: string | null;
   canceledAt: Date | null;
+  /** Última remarcação (pedido não concluído do lembrete, 03/nov/2026). */
+  rescheduledAt: Date | null;
 };
 
 export type AgendaItem =
@@ -63,7 +65,7 @@ export type AgendaItem =
   | { kind: "free"; start: Date; end: Date; agendaId: string; agendaName: string; time: string; endTime: string; group?: FreeGroupInfo };
 
 export const AGENDA_COLUMNS = `id, agenda_id, service_id, scheduled_at, duration_minutes, status, is_group_session, series_id, home_visit_address,
-  patient_confirmed_at, reminder_response, created_by, booking_channel, canceled_by, canceled_at,
+  patient_confirmed_at, reminder_response, created_by, booking_channel, canceled_by, canceled_at, rescheduled_at,
   origin_appointment_id, agenda_import_id,
   agendas ( name ), services ( name, category ), locations ( name, type ),
   patients ( id, full_name, birthdate, is_contact_self, contacts ( full_name, phone ) )`;
@@ -84,6 +86,7 @@ export type AgendaRow = {
   booking_channel: string;
   canceled_by: string | null;
   canceled_at: string | null;
+  rescheduled_at: string | null;
   origin_appointment_id: string | null;
   agenda_import_id: string | null;
   agendas: { name: string };
@@ -123,6 +126,7 @@ export const toAgendaAppointment = (row: AgendaRow): AgendaAppointment => {
     imported: row.agenda_import_id !== null,
     canceledBy: row.canceled_by,
     canceledAt: row.canceled_at ? new Date(row.canceled_at) : null,
+    rescheduledAt: row.rescheduled_at ? new Date(row.rescheduled_at) : null,
   };
 };
 

@@ -1,7 +1,9 @@
 # Pedido não concluído (PN): retomada pelo bot e lembrete só com a ação concluída
 
-> **Retomar daqui (03/nov/2026).** Planejamento aprovado pelo cliente (decisões na seção 3). Nada implementado.
-> Próximo: PN1, com validação do cliente.
+> **Retomar daqui (03/nov/2026).** **PN1 feita na branch `pedido-nao-concluido`** (da `main`; pasta de trabalho
+> `../recepclinic-main`), com a migração `20261201120000_lembrete_nao_concluido.sql` (só a função `metrics_reminders`).
+> Testes de unidade passando; **testes de banco pendentes** (o banco local está com a branch `faturamento`, em
+> validação pelo cliente). Próximo: rodar `npm run test:db` quando o banco local estiver livre, validar e juntar.
 
 Pedido do cliente em 03/nov/2026, depois de um caso na produção (clínica piloto).
 
@@ -42,7 +44,19 @@ O link venceu às 15:34 sem aviso nenhum. O atendimento ficou marcado, sem confi
 
 ## 4. Fases
 
-### PN1 — Lembrete só com a ação concluída
+### PN1 — Lembrete só com a ação concluída (feita, 03/nov)
+
+Feito: o toque continua gravado como antes (`recordReminderTap`, inclusive `reminder_response`, que a rotina usa para
+não reenviar); muda só a leitura. `reminderGroup` (`daily.ts`) recebe o toque com a hora e o estado do atendimento:
+Remarcar conta se `rescheduled_at` ≥ hora do toque; Cancelar, se cancelado com `canceled_at` ≥ hora do toque; senão,
+`not_completed` com o botão tocado ("Tocou em Remarcar e não remarcou"). O atendimento da Agenda ganhou
+`rescheduledAt`. Relatório do dia › Lembretes: grupo "Não concluíram" primeiro e aberto quando tem alguém; o contador
+da aba soma esse grupo. Métricas › Desempenho: desfecho `not_completed` (migração) e "Não concluíram" na barra e na
+legenda. Ajuda da aba encurtada (limite de 280). Sem captura afetada (as da Central mostram a aba Resumo e a Visão
+geral). Testes: `trail.test.ts` (regra, com o caso da produção); `metricas-contas.test.ts` (toque antes do
+cancelamento).
+
+Plano original:
 
 - `recordReminderTap`: o toque em Remarcar/Cancelar continua gravado na mensagem recebida (`reminder_reschedule`,
   `reminder_cancel`, para o histórico), mas o atendimento só recebe a resposta quando a ação conclui (remarcação pelo

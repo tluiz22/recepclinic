@@ -62,10 +62,30 @@ describe("trilha do atendimento (F4.8)", () => {
 });
 
 it("grupo do lembrete: botão tocado; sem toque, entregue ou não", () => {
-  expect(reminderGroup("confirmed", "read")).toBe("confirm");
+  const tap = (response: string, at: Date | null = null) => ({ response, at });
+  expect(reminderGroup(tap("confirmed"), "read")).toEqual({ group: "confirm" });
   // O valor do botão não é o que o banco guarda (15/out/2026).
-  expect(reminderGroup("confirm", "read")).toBe("no_answer");
-  expect(reminderGroup("cancel", null)).toBe("cancel");
-  expect(reminderGroup(null, "delivered")).toBe("no_answer");
-  expect(reminderGroup(null, "failed")).toBe("not_delivered");
+  expect(reminderGroup(tap("confirm"), "read")).toEqual({ group: "no_answer" });
+  expect(reminderGroup(null, "delivered")).toEqual({ group: "no_answer" });
+  expect(reminderGroup(null, "failed")).toEqual({ group: "not_delivered" });
+});
+
+it("pedido não concluído: Remarcar e Cancelar só contam com a ação feita depois do toque (03/nov/2026)", () => {
+  const tappedAt = new Date("2026-11-03T18:04:05Z");
+  const before = new Date("2026-11-03T17:00:00Z");
+  const after = new Date("2026-11-03T18:10:00Z");
+  const scheduled = { status: "scheduled", canceledAt: null, rescheduledAt: null };
+  // Tocou em Remarcar, abriu o link e não escolheu horário (caso da produção).
+  expect(reminderGroup({ response: "reschedule", at: tappedAt }, "read", scheduled)).toEqual({ group: "not_completed", tapped: "reschedule" });
+  expect(reminderGroup({ response: "reschedule", at: tappedAt }, "read", { ...scheduled, rescheduledAt: after })).toEqual({ group: "reschedule" });
+  // Remarcação antiga (antes do toque) não conta.
+  expect(reminderGroup({ response: "reschedule", at: tappedAt }, "read", { ...scheduled, rescheduledAt: before })).toEqual({
+    group: "not_completed",
+    tapped: "reschedule",
+  });
+  expect(reminderGroup({ response: "cancel", at: tappedAt }, "read", scheduled)).toEqual({ group: "not_completed", tapped: "cancel" });
+  expect(reminderGroup({ response: "cancel", at: tappedAt }, "read", { status: "canceled", canceledAt: after, rescheduledAt: null })).toEqual({ group: "cancel" });
+  // Sem a mensagem do toque (só a resposta gravada no atendimento): vale o estado atual.
+  expect(reminderGroup({ response: "cancel", at: null }, null, { status: "canceled", canceledAt: before, rescheduledAt: null })).toEqual({ group: "cancel" });
+  expect(reminderGroup({ response: "cancel", at: null }, null)).toEqual({ group: "not_completed", tapped: "cancel" });
 });

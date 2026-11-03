@@ -32,6 +32,7 @@ const appointment = (overrides: Partial<AgendaAppointment>): AgendaAppointment =
   imported: false,
   canceledBy: null,
   canceledAt: null,
+  rescheduledAt: null,
   ...overrides,
 });
 
