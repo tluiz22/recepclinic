@@ -26,7 +26,7 @@ const NUMBER = "f96-numero";
 const PHONE = "+5584991229699";
 const NEUTRAL_HANDOFF = "Para esse agendamento, vou passar sua conversa para a recepção, que responde por aqui assim que possível.";
 const NEUTRAL_NO_RECEPTION = "Para esse agendamento, a recepção vai entrar em contato com você.";
-const MAIN_MENU = ["1. Consultas", "2. Exames", "3. Informações"];
+const MAIN_MENU = ["1. Consultas", "2. Exames", "3. Informações gerais"];
 
 type Sent = { to: string; kind: "text" | "list" | "buttons"; body: string; options: { id: string; title: string }[] };
 
