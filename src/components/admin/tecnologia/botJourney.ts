@@ -284,7 +284,10 @@ export const JOURNEY: JourneySection[] = [
         "\"Para agilizar, poderia me contar brevemente qual assunto deseja tratar com a secretária?\"",
         "Uma vez por transferência, e só quando o motivo ainda não foi contado. A primeira resposta em texto (antes de a recepção responder) aparece na tela Atendimento; sem resposta: \"Assunto ainda não informado\".",
       ),
-      reception("Responde pelo app WhatsApp Business, no celular ou no computador", "Responder pelo app também pausa o bot. A tela Atendimento mostra quem espera."),
+      reception(
+        "Responde pelo app WhatsApp Business, no celular ou no computador",
+        "Responder pelo app também pausa o bot. A tela Atendimento mostra quem espera. Exceção: mensagem que sai do app até 5 segundos depois da do paciente ou do bot (saudação ou ausência automática) não pausa; o Início e Configurações › WhatsApp avisam para desligar.",
+      ),
       reception("Manda #bot ou toca em \"Devolver ao bot\" no painel: o bot volta a atender essa conversa"),
     ],
   },
@@ -341,6 +344,7 @@ export const JOURNEY_RULES = [
   "\"voltar\" ou \"menu anterior\" digitado: no meio de um caminho, o submenu de onde veio (Consultas ou Exames); no preparo de exame, Informações gerais; nos menus, o menu principal.",
   "Conversa parada por 15 minutos: o bot encerra com aviso; a próxima mensagem começa de novo. Exceção: o cancelamento sem resposta ao \"Confirma o cancelamento?\" recebe a mensagem do pedido não concluído (item 10).",
   "Os botões do lembrete e da oferta de vaga funcionam em qualquer ponto da conversa.",
+  "Mensagem automática do app WhatsApp Business (saudação, ausência), até 5 segundos depois da do paciente ou do bot: não pausa o bot; aviso para desligar no app.",
   "Clínica em implantação: o bot não responde e nenhuma mensagem automática sai.",
   "Número sem WhatsApp Business (só no sistema): não há \"Falar com a recepção\".",
 ];

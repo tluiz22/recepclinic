@@ -40,6 +40,8 @@ import { vocabularyFor } from "../../lib/vocabulary";
 import { certificateStatus } from "../../lib/certificate";
 import { getFiscalCertificate } from "../../lib/data/fiscal";
 import { getWhatsappConnection, listWhatsappTemplates } from "../../lib/data/whatsapp/connection";
+import { latestAutomaticEcho } from "../../lib/data/whatsapp/conversations";
+import { GUIDE_AUTOMATIONS_ANCHOR, GUIDE_BEFORE_CONNECT_PATH } from "../../lib/guides";
 import { getDeliveredConnectionTest } from "../../lib/data/whatsapp/connectionTest";
 import { describeTemplateApproval, templateApproval, templatesInUse } from "../../lib/data/whatsapp/templates";
 
@@ -53,7 +55,7 @@ const isSupport = clinic.isPlatformStaff;
 const certificateOn = has("finance") && isSupport;
 // Todos os avisos técnicos do Meu dia são do Suporte (cliente, 02/nov/2026): desconexão avisada pela Meta, envios
 // com falha e os de cima. O Suporte acompanha as clínicas; a tela de pendências do Suporte está em docs/painel-suporte.md.
-const [counts, sendsAlert, toReview, certificate, connection, templates, attention, deliveredTest] = await Promise.all([
+const [counts, sendsAlert, toReview, certificate, connection, templates, attention, deliveredTest, autoReplyAt] = await Promise.all([
   getDashboardCounts(db, clinic.clinicId, clinic.timezone),
   getSendsAlert(db, clinic.clinicId),
   has("whatsapp_bot") ? listContactsToReview(db, clinic.clinicId) : Promise.resolve(null),
@@ -62,6 +64,8 @@ const [counts, sendsAlert, toReview, certificate, connection, templates, attenti
   isSupport ? listWhatsappTemplates(db, clinic.clinicId) : Promise.resolve([]),
   has("whatsapp_bot") ? listHumanAttention(db, clinic.clinicId) : Promise.resolve([]),
   isSupport ? getDeliveredConnectionTest(db, clinic.clinicId) : Promise.resolve(null),
+  // IS4: mensagem automática do app nos últimos 7 dias (Administrador e Suporte).
+  has("whatsapp_bot") && (isSupport || clinic.roles.includes("admin")) ? latestAutomaticEcho(db, clinic.clinicId) : Promise.resolve(null),
 ]);
 // Atendimento humano (F8.5a, cliente, 27/out/2026): faixa com as conversas que aguardam a clínica.
 const awaiting = attention.filter((item) => item.status === "waiting");
@@ -220,7 +224,7 @@ const sectionTitle = "font-display text-[17px] leading-tight font-bold text-ink 
 
   {/* Avisos que ficavam no Início continuam no alto (RX2). */}
   {
-    (sendsAlertLines.length > 0 || certificateAlert || templatesAlert || paymentAlert || disconnectedAlert) && (
+    (sendsAlertLines.length > 0 || certificateAlert || templatesAlert || paymentAlert || disconnectedAlert || autoReplyAt) && (
       <section aria-label="Avisos" class="mt-4 flex flex-col gap-2">
         {sendsAlertLines.length > 0 && (
           <Notice tone="danger" href="/admin/consultas?tab=envios" linkLabel="Ver os envios">
@@ -237,6 +241,13 @@ const sectionTitle = "font-display text-[17px] leading-tight font-bold text-ink 
           <Notice tone="warning" href={withReturn("/admin/configuracoes/whatsapp#teste", here)} linkLabel="Enviar o teste">
             Falta uma mensagem de teste entregue: ela confirma o cartão na Meta e o modelo aprovado. Sem o cartão, os lembretes e os avisos automáticos não
             saem.
+          </Notice>
+        )}
+        {autoReplyAt && (
+          <Notice tone="warning" href={`${GUIDE_BEFORE_CONNECT_PATH}#${GUIDE_AUTOMATIONS_ANCHOR}`} linkLabel="Como desligar">
+            O app WhatsApp Business da clínica mandou uma mensagem automática (saudação ou ausência) em{" "}
+            {formatInstant(autoReplyAt, clinic.timezone, "dd/MM 'às' HH:mm")}, segundos depois da mensagem do paciente. O bot seguiu atendendo, mas o paciente
+            recebeu duas respostas. Desligue a saudação e a ausência no app.
           </Notice>
         )}
         {templatesAlert && (

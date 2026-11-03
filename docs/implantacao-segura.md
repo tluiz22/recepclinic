@@ -156,7 +156,17 @@ Itens (A = automático, S = Suporte marca; R = recomendado, não bloqueia):
   calculados. "Ativar a clínica" bloqueado na tela e **no banco** (a função de ativação confere os obrigatórios).
 - Clínica piloto (já ativa): a checklist aparece só como consulta.
 
-### IS4 — Mensagem automática do app
+### IS4 — Mensagem automática do app (feita, 03/nov)
+
+Feito: no webhook, o eco do app com a hora da Meta (`timestamp`, sempre presente nos eventos reais) até 5 s depois
+(ou 2 s antes) de uma mensagem do paciente ou do bot naquela conversa vira `app_auto_reply`
+(`isLikelyAutomaticEcho`/`markAutomaticEcho` em `conversations.ts`): não pausa e não conta como resposta da recepção.
+"#bot" e eco sem `timestamp` seguem a regra de antes. Aviso (`latestAutomaticEcho`, últimos 7 dias) no Início
+(Administrador e Suporte) e em Configurações › WhatsApp, com o link do guia; o item "teste do bot" da checklist não
+fica feito se houve mensagem automática depois da conexão. Jornada do bot: nota no item 8 e regra geral. Sem
+migração. Teste: `tests/db/mensagem-automatica.test.ts`.
+
+Plano original:
 
 - Eco do app (`message_echoes`) até ~5 s depois de uma mensagem recebida do paciente ou de uma mensagem do bot naquela
   conversa: **não pausa**; fica registrado como suspeita de mensagem automática.

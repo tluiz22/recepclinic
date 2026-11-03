@@ -5,6 +5,7 @@ import { loadSetupStatus } from "./config/setup";
 import { DataError, unwrap } from "./errors";
 import { getWhatsappConnection, listWhatsappTemplates } from "./whatsapp/connection";
 import { getDeliveredConnectionTest, getLatestConnectionTest } from "./whatsapp/connectionTest";
+import { APP_AUTO_REPLY_TYPE } from "./whatsapp/conversations";
 import { templateApproval, templatesInUse, describeTemplateApproval } from "./whatsapp/templates";
 import { describeSendFailure } from "../whatsappErrors";
 
@@ -102,6 +103,13 @@ const ORDER = [
   "support_number",
 ];
 
+/** IS4: mensagem automática do app depois da conexão (o teste do bot não fica feito). */
+async function automaticEchoSince(db: DbClient, clinicId: string, since: Date | null): Promise<boolean> {
+  let query = db.from("whatsapp_messages").select("id").eq("clinic_id", clinicId).eq("message_type", APP_AUTO_REPLY_TYPE).limit(1);
+  if (since) query = query.gte("created_at", since.toISOString());
+  return unwrap(await query, "Mensagens do WhatsApp").length > 0;
+}
+
 /** O teste do bot: o bot respondeu alguém (fora do número do Suporte) depois da conexão. */
 async function botAnswered(db: DbClient, clinicId: string, since: Date | null, supportPhone: string | null): Promise<boolean> {
   let query = db
@@ -109,7 +117,7 @@ async function botAnswered(db: DbClient, clinicId: string, since: Date | null, s
     .select("id")
     .eq("clinic_id", clinicId)
     .eq("direction", "outbound")
-    .like("message_type", "bot\\_%")
+    .like("message_type", "bot_%")
     .limit(1);
   if (since) query = query.gte("created_at", since.toISOString());
   if (supportPhone) query = query.neq("contact_phone", supportPhone);
@@ -194,7 +202,14 @@ export async function loadOnboardingChecklist(
       label: "Teste do bot de outro número (não o do Suporte): o bot respondeu e nenhuma mensagem do app saiu sozinha",
       kind: "auto",
       required: false,
-      done: connected && (await botAnswered(db, clinicId, connection?.connectedAt ?? null, supportPhone)),
+      ...(await (async () => {
+        if (!connected) return { done: false };
+        const since = connection?.connectedAt ?? null;
+        const [answered, automatic] = await Promise.all([botAnswered(db, clinicId, since, supportPhone), automaticEchoSince(db, clinicId, since)]);
+        return automatic
+          ? { done: false, detail: "o app mandou uma mensagem automática: desligue a saudação e a ausência" }
+          : { done: answered };
+      })()),
     },
   ];
   items.sort((a, b) => ORDER.indexOf(a.key) - ORDER.indexOf(b.key));
