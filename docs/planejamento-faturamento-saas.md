@@ -25,7 +25,9 @@
 > tem "Tentar de novo"/"Atualizar do Asaas" na aba Faturamento. Assinatura mostra as Cobranças com "Pagar" (fatura do
 > Asaas). Inadimplência liberada: o banco exige cobrança do Asaas em aberto no 15º dia de atraso ou depois.
 > Variáveis: `ASAAS_API_KEY` e `ASAAS_BASE_URL` (sandbox ou produção); sem elas, a aba avisa "não configurado". Para
-> testar no local, copiar as duas do `.env.asaas-sandbox` para o `.env`. Código: `src/lib/asaas/billingApi.ts`,
+> testar no local, copiar as duas do `.env.asaas-sandbox` para o `.env`. **Atenção (03/nov):** a chave começa com
+> `$` e o Vite a lê como variável (chega vazia, painel com erro 500): no `.env` escrever `'\$aact…'`. Com a barra,
+> o `node --env-file=.env` lê a chave errada; staging e produção não usam o arquivo. Código: `src/lib/asaas/billingApi.ts`,
 > `src/lib/data/billingAsaas.ts`, `platformBillingStore` em `platform.ts`. **Ficam para depois:** mudança de versão e
 > troca de modo de quem já tem assinatura (pula com aviso); cartão segue pela fatura do Asaas (F12.8).
 > **F12.5 feita** (`20261121120000_webhook_asaas.sql`): `POST /api/asaas/webhook` confere `asaas-access-token` em tempo
