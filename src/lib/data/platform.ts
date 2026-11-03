@@ -156,6 +156,26 @@ export async function createPasswordLink(
   return { userId: data.user.id, tokenHash: data.properties.hashed_token, type };
 }
 
+/**
+ * Senhas dos logins das clínicas de demonstração (Vendas › Demonstração,
+ * cliente, 02/nov/2026). O scripts/demo-clinicas.mjs cria a senha e guarda no
+ * app_metadata do login (só a service role escreve ali); fora do código, porque
+ * o repositório é público. Só e-mails demo.*@recepclinic.com.br.
+ */
+export async function loadDemoPasswords(emails: readonly string[], env: ServiceEnv = platformEnv()): Promise<Map<string, string>> {
+  const client = platformClient(env);
+  const passwords = new Map<string, string>();
+  for (const email of emails.filter((e) => /^demo\.[a-z]+@recepclinic\.com\.br$/.test(e))) {
+    const id = await findUserIdByEmail(email, env);
+    if (!id) continue;
+    const { data, error } = await client.auth.admin.getUserById(id);
+    if (error) throw new PlatformAuthError("senha da demonstração", error);
+    const password = data.user?.app_metadata?.demo_password;
+    if (typeof password === "string") passwords.set(email, password);
+  }
+  return passwords;
+}
+
 // ---------------------------------------------------------------------------
 // Erros e saúde do sistema (F9.3): gravados e lidos só pela plataforma
 // ---------------------------------------------------------------------------

@@ -28,6 +28,11 @@
 // Uso (na raiz do projeto):
 //   node --env-file=.env.staging scripts/demo-clinicas.mjs              → só mostra o que faria
 //   node --env-file=.env.staging scripts/demo-clinicas.mjs --confirmar  → monta as 4 clínicas
+//   ... --confirmar --trocar-senhas                                     → e troca as senhas dos logins
+//
+// Senhas (cliente, 02/nov/2026): o login que ainda não tem ganha uma senha, guardada
+// no app_metadata.demo_password dele (o repositório é público: nada de senha no
+// código). Vendas › Demonstração mostra as senhas ao Suporte.
 //
 // O chip de testes (só com pedido do cliente): passa a conexão de WhatsApp da
 // clínica de testes para a Vida Plena, e devolve. Com o chip, a Vida Plena
@@ -38,7 +43,7 @@
 // Com o .env local, usa o banco local (senha dos logins: recepclinic-local).
 
 import { readFileSync } from "node:fs";
-import { randomUUID } from "node:crypto";
+import { randomInt, randomUUID } from "node:crypto";
 import pg from "pg";
 import { createClient } from "@supabase/supabase-js";
 import { isNationalHoliday } from "../src/lib/holidays.ts";
@@ -53,6 +58,7 @@ if (process.env.RECEPCLINIC_PRODUCAO === "1" || /^https:\/\/app\.recepclinic\.co
 const confirm = process.argv.includes("--confirmar");
 const chipToDemo = process.argv.includes("--chip-para-demo");
 const chipBack = process.argv.includes("--chip-devolver");
+const newPasswords = process.argv.includes("--trocar-senhas");
 
 const { PUBLIC_SUPABASE_URL: url, SUPABASE_SERVICE_ROLE_KEY: key, SUPABASE_DB_PASSWORD: dbPassword } = process.env;
 if (!url || !key) {
@@ -434,12 +440,27 @@ async function findUser(email) {
   }
 }
 
+// Sem letras e números que se confundem (O/0, I/l/1).
+const ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
+const newPassword = () => `Demo-${Array.from({ length: 4 }, () => ALPHABET[randomInt(ALPHABET.length)]).join("")}-${Array.from({ length: 4 }, () => ALPHABET[randomInt(ALPHABET.length)]).join("")}`;
+
 async function ensureUser(email) {
-  const existing = await findUser(email);
-  if (existing) return existing;
-  const { data, error } = await auth.auth.admin.createUser({ email, email_confirm: true, ...(local ? { password: "recepclinic-local" } : {}) });
+  let id = await findUser(email);
+  if (!id) {
+    const { data, error } = await auth.auth.admin.createUser({ email, email_confirm: true });
+    if (error) throw error;
+    id = data.user.id;
+  }
+  const { data, error } = await auth.auth.admin.getUserById(id);
   if (error) throw error;
-  return data.user.id;
+  const current = data.user.app_metadata?.demo_password;
+  if (!current || newPasswords) {
+    const password = local ? "recepclinic-local" : newPassword();
+    const { error: updateError } = await auth.auth.admin.updateUserById(id, { password, app_metadata: { ...data.user.app_metadata, demo_password: password } });
+    if (updateError) throw updateError;
+    console.log(`  senha ${current ? "trocada" : "criada"}: ${email}`);
+  }
+  return id;
 }
 
 // ---------------------------------------------------------------------------
@@ -1103,7 +1124,7 @@ try {
         throw new Error(`${clinic.name}: ${error.message}`);
       }
     }
-    if (confirm) console.log(`Pronto. Senha de cada login: scripts/link-de-senha.mjs <e-mail>.`);
+    if (confirm) console.log("Pronto. Logins e senhas: Sistema › Vendas › Demonstração.");
   }
 } finally {
   await db.end();

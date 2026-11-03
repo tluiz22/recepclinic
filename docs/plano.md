@@ -1561,7 +1561,11 @@ criar ou atualizar as demos, criar a senha dos logins e mover o chip; o roteiro 
     do bot paradas no meio, faltosos, contato para revisar e perguntas que o bot não reconheceu. **Sem o
     módulo Financeiro** nas 4 (cliente: o módulo não está pronto). O Consultório da Dra. Ana Karina foi
     excluído do staging no mesmo dia (os logins ficaram).
-  - Logins de Administrador (+ Profissional), senha por `scripts/link-de-senha.mjs`. Telefones
+  - **Senhas (cliente, 02/nov/2026):** o script cria a senha de cada login que não tem e guarda no
+    `app_metadata.demo_password` do login (o repositório é público: nada de senha no código);
+    `--trocar-senhas` troca todas. Sistema › Vendas › Demonstração mostra logins, senhas e onde está
+    cada cenário, só ao Suporte (`loadDemoPasswords` em `platform.ts`).
+  - Logins de Administrador (+ Profissional). Telefones
     fictícios (+55 11 9000x-xxxx); sem conexão de WhatsApp, nada é enviado.
   - **Chip de testes** (cliente: só com pedido): `--chip-para-demo` passa a conexão da Consultorio
     Tluiz22 para a Vida Plena (copia os templates e desliga os envios automáticos dela, porque os

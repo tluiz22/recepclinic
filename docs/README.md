@@ -43,7 +43,8 @@
 >   de pendências do Suporte pendente em [`painel-suporte.md`](painel-suporte.md).
 >
 > **Clínicas de demonstração (02/nov):** as 4 demos do staging recarregadas com todos os cenários de 5 semanas, sem o
-> Financeiro; Consultório da Dra. Ana Karina excluído do staging. Cliente valida. **Antes de cada apresentação:**
+> Financeiro; Consultório da Dra. Ana Karina excluído do staging. Logins e senhas em Sistema › Vendas › Demonstração.
+> Cliente valida. **Antes de cada apresentação:**
 > `node --env-file=.env.staging scripts/demo-clinicas.mjs --confirmar` (plano, item 9b).
 >
 > **Pendências**
