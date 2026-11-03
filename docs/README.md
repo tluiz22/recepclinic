@@ -16,7 +16,7 @@
 > **Ambientes**
 > - **Produção** (`app.recepclinic.com.br`, branch `producao`) = `main` em `1ceb6a4` (ver acima). Fluxo em [`producao.md`](producao.md).
 > - **Staging** (`teste.recepclinic.com.br`, branch `main`): produção + redesign da Recepção (RX1 a RX9, sem migração) +
->   cartão do Asaas (`ASAAS_PREVIEW=1`) + Base de Conhecimento do bot (migração aplicada) + PN1 e PN2 (migrações aplicadas).
+>   cartão do Asaas (`ASAAS_PREVIEW=1`) + Base de Conhecimento do bot (migração aplicada) + PN1, PN2 e IS2 (migrações aplicadas) + IS1.
 >   Roteiros em [`staging.md`](staging.md).
 > - **Branch `faturamento`** (só local, sem push): todo código do financeiro, até a F12.2h (`cf33616`; 963 testes de
 >   unidade e 886 de banco passando). Tem a `main` até `7c64a68` (03/nov); atualizar só quando o cliente pedir (cliente, 01/nov).
@@ -36,7 +36,9 @@
 >   na clínica piloto (erro 131042 de pagamento na Meta; mensagem automática do app pausando o bot): guias públicos
 >   para o dono da clínica, mensagem de teste exigida para ativar, checklist de implantação, aviso de mensagem
 >   automática e Sistema › Problemas conhecidos. **IS1 no staging (03/nov, sem migração)**: guias públicos
->   `/guia/antes-de-conectar` e `/guia/pagamento-meta` e envio ao Administrador. Cliente valida; próximo: IS2.
+>   `/guia/antes-de-conectar` e `/guia/pagamento-meta` e envio ao Administrador. **IS2 no staging (03/nov,
+>   migração `20261203120000`)**: mensagem de teste com o motivo da falha; ativação só com teste entregue. Cliente
+>   valida; nas clínicas existentes, "Enviar à Meta as que faltam" antes do teste. Próximo: IS3.
 > - **Pedido não concluído** ([`pedido-nao-concluido.md`](pedido-nao-concluido.md)), após o caso de 03/nov (tocou em
 >   Remarcar no lembrete e não concluiu): mensagem padrão com Novo link / Falar com a recepção / Desistir quando o link
 >   vence ou o cancelamento fica sem resposta; lembrete só muda com a ação concluída; grupo "Não concluiu".

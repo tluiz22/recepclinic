@@ -1,9 +1,9 @@
 # Implantação segura do WhatsApp (IS): pré-requisitos, mensagem de teste, checklist e problemas conhecidos
 
-> **Retomar daqui (03/nov/2026).** IS1 no staging. **IS2 feita na branch `implantacao-is2`** (migração
-> `20261203120000_mensagem_de_teste.sql`), testes de banco pelo CI do PR. Próximo: CI verde → migração no staging →
-> `main`; depois, em cada clínica do staging e da produção, "Enviar à Meta as que faltam" (o modelo novo) e o teste.
-> Cliente valida no staging. Depois: IS3 (checklist).
+> **Retomar daqui (03/nov/2026).** **IS1 e IS2 na `main` e no staging** (migração `20261203120000` aplicada e
+> conferida no staging). Cliente valida. Nas clínicas existentes (staging e, depois, produção): "Enviar à Meta as que
+> faltam" (modelo `rc_teste_envio_v1`) e, aprovado, o teste. Captura `config-whatsapp` na fila (autorização).
+> Próximo: IS3 (checklist de implantação).
 
 Pedido do cliente em 03/nov/2026, depois de dois incidentes na produção (clínica piloto) no mesmo dia: impedir que
 se repitam nas próximas clínicas.
