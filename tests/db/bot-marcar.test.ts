@@ -103,7 +103,7 @@ describe("bot: marcar consulta (número novo)", () => {
   it("boas-vindas e menu só com o que funciona", async () => {
     const reply = await say(phone, "Oi");
     expect(reply[0]).toMatchObject({ kind: "text", body: "Olá! 👋 Aqui é da Clínica Bot F63.\n\nSou a assistente virtual e estou aqui para ajudar.\nVocê pode escrever o que precisa ou escolher uma das opções abaixo." });
-    expect(titles(reply)).toEqual(["1. Consultas", "2. Exames", "3. Informações"]);
+    expect(titles(reply)).toEqual(["1. Consultas", "2. Exames", "3. Informações gerais"]);
     expect(titles(await say(phone, "1"))).toEqual(["1. Marcar consulta", "2. Marcar retorno", "3. Remarcar", "4. Cancelar", "5. Encaixe ou antecipar", "6. Voltar ao menu"]);
   });
 
@@ -264,7 +264,7 @@ describe("bot: exame para o contato já cadastrado", () => {
     await say(phone, "oi");
     await say(phone, "2");
     const reply = await say(phone, "0");
-    expect(titles(reply)).toEqual(["1. Consultas", "2. Exames", "3. Informações"]);
+    expect(titles(reply)).toEqual(["1. Consultas", "2. Exames", "3. Informações gerais"]);
     expect((await conversation(phone)).state).toBe("MENU");
   });
 });
@@ -319,7 +319,7 @@ describe("bot: retorno e idade limite", () => {
     reply = await say(phone, "01/01/2020");
     expect(reply.at(-1)).toMatchObject({ kind: "buttons", body: "Dr. Segundo atende pacientes até 4 anos.\n\nDeseja agendar para outra pessoa?" });
     reply = await say(phone, { id: "no" });
-    expect(titles(reply)).toEqual(["1. Consultas", "2. Exames", "3. Informações"]);
+    expect(titles(reply)).toEqual(["1. Consultas", "2. Exames", "3. Informações gerais"]);
     await adminClient().from("clinic_settings").update({ consultation_age_limit_years: null }).eq("clinic_id", f.clinicId);
   });
 });
