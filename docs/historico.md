@@ -875,3 +875,16 @@ qualquer perfil e data sem atendimento só com "Tentar outra data" e "Voltar ao 
   sobre consultas (e exames)", que não cabem nos 24 caracteres do título da lista). Atualizados o fluxograma (Tecnologia ›
   Jornada do bot), a Central de Ajuda, a prévia de Configurações › Mensagens, os textos de Configurações › Clínica e o
   Roteiro de vendas. As capturas da ajuda não mostram o item: nada a recapturar.
+
+## Ajustes da produção, 2ª leva (03/nov/2026)
+
+Pedidos do cliente após o uso da secretária na produção, em etapas A a D (ordem aprovada pelo cliente): A (Marcar com
+um só serviço), B (busca por nome parecido), C (cadastro com nomes parecidos e conferência), D (volta ao bot em 24 h;
+desfaz a C10).
+
+- **C17 (etapa A) Marcar: tipo com um só serviço** (03/nov): escolher o tipo (Consulta, Retorno, Exame) que tem um só
+  serviço já escolhe o serviço e mostra as datas, sem cartões (só o nome e a duração, com o sinal de escolhido); com
+  mais de um, aviso em destaque "Escolha um dos N … abaixo para ver as datas". `onlyServiceOf` em
+  `src/lib/servicePicker.ts` (teste), `ServicePicker.astro` e `marcar.astro` (também com `?tipo=` no endereço). Horários
+  (Configurações) fica como estava. Artigo "Marcar um atendimento" atualizado; a captura `marcar` mostra só o passo 1:
+  nada a recapturar. Sem migração.

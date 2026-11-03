@@ -4,8 +4,11 @@
 // serviços em cartões com nome e duração (sem valor, decisão do cliente). Cada
 // escolha é um link que recarrega a tela, como o resto do Marcar. A busca
 // filtra os cartões no navegador e só aparece com mais de SEARCH_FROM serviços.
+// Tipo com um só serviço (cliente, 03/nov/2026): sem cartões, só o serviço já
+// escolhido; com mais de um e nenhum escolhido, aviso em destaque.
 import { CATEGORY_LABELS } from "../../../lib/serviceLabels";
 import { SEARCH_FROM, SERVICE_TYPE_PLURAL as plural, serviceCardClass as card, serviceTypes, typeChipClass as chip, type ServiceCategory } from "../../../lib/servicePicker";
+import Icon from "../Icon.astro";
 import { CONTROL } from "../ui/styles";
 
 type PickerService = { id: string; name: string; category: ServiceCategory; durationMinutes: number; schedulingMode: string };
@@ -21,6 +24,8 @@ interface Props {
 const { services, open, selectedId, typeHref, serviceHref } = Astro.props;
 const types = serviceTypes(services);
 const shown = open ? services.filter((s) => s.category === open) : [];
+const single = shown.length === 1 ? shown[0] : null;
+const duration = (s: PickerService) => `${s.durationMinutes} min${s.schedulingMode === "group" ? " · turma" : ""}`;
 ---
 
 <div class="flex flex-col gap-3" data-service-picker>
@@ -36,7 +41,25 @@ const shown = open ? services.filter((s) => s.category === open) : [];
   </div>
   {!open && <p class="text-[15px] text-ink-soft">Escolha o tipo de atendimento para ver os serviços.</p>}
   {
-    open && shown.length > SEARCH_FROM && (
+    single && (
+      <p class="flex items-start gap-2 text-[15px] text-ink" data-service-single>
+        <Icon name="check-circle" class="mt-0.5 h-[18px] w-[18px] shrink-0 text-brand" />
+        <span>
+          <span class="font-bold">{single.name}</span> <span class="text-ink-soft">· {duration(single)}</span>
+        </span>
+      </p>
+    )
+  }
+  {
+    open && !single && !shown.some((s) => s.id === selectedId) && (
+      <p role="status" class="flex items-start gap-2 rounded-[10px] border border-pend-200 bg-pend-100 px-3 py-2.5 text-[15px] leading-snug font-semibold text-pend-800">
+        <Icon name="warning" class="mt-0.5 h-[18px] w-[18px] shrink-0" />
+        Escolha um dos {shown.length} {plural[open]} abaixo para ver as datas.
+      </p>
+    )
+  }
+  {
+    open && !single && shown.length > SEARCH_FROM && (
       <label class="flex flex-col gap-1 text-sm font-semibold text-ink">
         Buscar em {plural[open]}
         <input type="search" data-service-search placeholder="Digite parte do nome" class={`${CONTROL} w-full font-normal sm:max-w-[420px]`} />
@@ -44,15 +67,13 @@ const shown = open ? services.filter((s) => s.category === open) : [];
     )
   }
   {
-    open && (
+    open && !single && (
       <ul class="grid grid-cols-1 gap-2 sm:grid-cols-2" aria-label={`Serviços: ${plural[open]}`}>
         {shown.map((s) => (
           <li data-service-name={s.name.toLocaleLowerCase("pt-BR")}>
             <a href={serviceHref(s)} class={card(s.id === selectedId)} aria-current={s.id === selectedId ? "true" : undefined}>
               <span class="text-base leading-snug font-bold text-ink">{s.name}</span>
-              <span class="text-sm text-ink-soft">
-                {s.durationMinutes} min{s.schedulingMode === "group" ? " · turma" : ""}
-              </span>
+              <span class="text-sm text-ink-soft">{duration(s)}</span>
             </a>
           </li>
         ))}

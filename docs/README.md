@@ -22,8 +22,10 @@
 >   unidade e 886 de banco passando). Tem a `main` até `7c64a68` (03/nov); atualizar só quando o cliente pedir (cliente, 01/nov).
 >
 > **Frentes**
-> - **Ajustes da produção (C1–C16) e revisão da jornada do bot:** todos na produção; nada pendente. Decisões da
+> - **Ajustes da produção (C1–C16) e revisão da jornada do bot:** todos na produção. Decisões da
 >   revisão no [`historico.md`](historico.md) (busca "Revisão da jornada do bot").
+>   **2ª leva (03/nov, etapas A a D; `historico.md`, "2ª leva"):** A (C17, Marcar com um só serviço) feita; próximas:
+>   B busca por nome parecido, C cadastro com nomes parecidos e conferência, D volta ao bot em 24 h (desfaz a C10).
 > - **Evolução do assistente** ([`evolucao-assistente.md`](evolucao-assistente.md)): texto livre na entrada, motivo antes
 >   da recepção e taxa de resolução sem a recepção. **Na produção (02/nov, `c9418ac`)**, migração aplicada no staging
 >   e na produção. Próximo: acompanhar a taxa e as perguntas não reconhecidas da BC.

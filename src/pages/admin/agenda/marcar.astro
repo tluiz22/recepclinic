@@ -55,7 +55,7 @@ import {
 } from "../../../lib/data/agenda/appointments";
 import { snapshotOf, whenText } from "../../../lib/appointmentChanges";
 import { setFlash } from "../../../lib/flash";
-import { openType } from "../../../lib/servicePicker";
+import { onlyServiceOf, openType } from "../../../lib/servicePicker";
 import ServicePicker from "../../../components/admin/agenda/ServicePicker.astro";
 import { SERIES_HORIZON_MONTHS } from "../../../lib/data/agenda/series";
 import { listAgendas } from "../../../lib/data/config/agendas";
@@ -129,8 +129,16 @@ const [services, agendas, locations, settings, connection, plans] = await Promis
 const examsOn = clinic.features.includes("exams");
 // Alterar: o serviço atual aparece mesmo desativado.
 const serviceOptions = services.filter((s) => (s.isActive || s.id === editing?.serviceId) && (examsOn || s.category !== "exam" || s.id === editing?.serviceId));
-const service = serviceOptions.find((s) => s.id === state.service_id) ?? null;
+let service = serviceOptions.find((s) => s.id === state.service_id) ?? null;
 const openTipo = openType(state.tipo || null, serviceOptions, service);
+// Tipo com um só serviço (cliente, 03/nov/2026): o tipo aberto já escolhe o serviço.
+if (!service) {
+  const only = onlyServiceOf(serviceOptions, openTipo);
+  if (only) {
+    service = only;
+    state.service_id = only.id;
+  }
+}
 const agendaName = new Map(agendas.map((a) => [a.id, a.name]));
 const location = new Map(locations.map((l) => [l.id, l]));
 
@@ -547,7 +555,7 @@ const remarcarHref = (a: UpcomingAppointment) => `/admin/agenda/remarcar?id=${a.
             services={serviceOptions}
             open={openTipo}
             selectedId={service?.id ?? null}
-            typeHref={(tipo) => link({ tipo, service_id: tipo === service?.category ? state.service_id : "", de: "" })}
+            typeHref={(tipo) => link({ tipo, service_id: onlyServiceOf(serviceOptions, tipo)?.id ?? (tipo === service?.category ? state.service_id : ""), de: "" })}
             serviceHref={(s) => link({ tipo: s.category, service_id: s.id, de: "" })}
           />
           {service && serviceAgendaIds.length === 0 && (
