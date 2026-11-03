@@ -437,8 +437,13 @@ export type RegisterPatientInput = {
   notes?: string | null;
   insurance?: PatientInsuranceInput;
   contact: ContactChoice;
-  /** A equipe viu o aviso de possível duplicado e confirmou. */
+  /** A equipe viu o aviso de possível duplicado (mesmo nascimento ou nome parecido no responsável) e disse que é outro paciente. */
   confirmDuplicate?: boolean;
+  /**
+   * Resposta ao responsável com nome parecido e outro WhatsApp (C19): usar o
+   * cadastrado com o WhatsApp novo ou cadastrar um novo responsável.
+   */
+  similarContact?: { action: "update_phone"; contactId: string } | { action: "new" };
   /** Cadastro pelo bot: conta no limite de cadastros do contato (F9.6a). Padrão: a equipe. */
   createdVia?: "admin" | "whatsapp";
 };
@@ -447,8 +452,18 @@ export type RegisterPatientResult =
   | { status: "created"; patient: Patient; contact: Contact; overConsultationAgeLimit: boolean }
   /** Telefone já é de um contato: confirmar que é a mesma pessoa (modo "self"). */
   | { status: "confirm_same_person"; contact: Contact }
-  /** O contato já tem paciente ativo com a mesma data de nascimento. */
-  | { status: "possible_duplicate"; contact: Contact; existingNames: string[] };
+  /** O contato já tem paciente ativo com a mesma data de nascimento ou o nome parecido (C19). */
+  | { status: "possible_duplicate"; contact: Contact; existingNames: string[]; existing: SimilarPatient[] }
+  /** Telefone novo, mas há responsável com o nome parecido (C19): mesma pessoa com outro WhatsApp? */
+  | { status: "similar_contact"; phone: string; matches: SimilarContact[] };
+
+export type SimilarPatient = { id: string; fullName: string; birthdate: string; sameBirthdate: boolean };
+
+export type SimilarContact = {
+  contact: Contact;
+  /** Pacientes ativos dele (nome e nascimento). */
+  patients: { id: string; fullName: string; birthdate: string; isContactSelf: boolean }[];
+};
 
 /**
  * Cadastra um paciente (tela ou bot). `today` é a data de hoje no fuso da
@@ -470,6 +485,8 @@ export async function registerPatient(
   v.throwIfInvalid("Paciente");
 
   const fullName = cleanText(input.fullName)!;
+  // Nomes parecidos (C19): só no cadastro pela equipe; o bot tem o próprio caminho.
+  const checkSimilar = (input.createdVia ?? "admin") === "admin";
   let contact: Contact;
   let contactExisted: boolean;
 
@@ -477,8 +494,13 @@ export async function registerPatient(
     contact = await getContact(db, clinicId, input.contact.contactId);
     contactExisted = true;
   } else if (input.contact.mode === "self") {
-    const existing = await findContactByPhone(db, clinicId, phone!);
+    let existing = await findContactByPhone(db, clinicId, phone!);
     if (existing && input.contact.confirmedContactId !== existing.id) return { status: "confirm_same_person", contact: existing };
+    if (!existing && checkSimilar) {
+      const step = await similarContactStep(db, clinicId, fullName, phone!, input.similarContact);
+      if ("ask" in step) return step.ask;
+      existing = step.contact;
+    }
     contact = existing ?? (await contactForPhone(db, clinicId, phone!, fullName));
     contactExisted = existing !== null;
     if (existing) {
@@ -493,20 +515,34 @@ export async function registerPatient(
       if (!existing.isActive) await setContactActive(db, clinicId, existing.id, true);
     }
   } else {
-    const existing = await findContactByPhone(db, clinicId, phone!);
-    contact = await contactForPhone(db, clinicId, phone!, cleanText(input.contact.fullName)!);
+    const contactName = cleanText(input.contact.fullName)!;
+    let existing = await findContactByPhone(db, clinicId, phone!);
+    if (!existing && checkSimilar) {
+      const step = await similarContactStep(db, clinicId, contactName, phone!, input.similarContact);
+      if ("ask" in step) return step.ask;
+      existing = step.contact;
+    }
+    contact = existing ?? (await contactForPhone(db, clinicId, phone!, contactName));
     contactExisted = existing !== null;
   }
 
   if (contactExisted && !input.confirmDuplicate) {
-    const { data: twins } = await db
-      .from("patients")
-      .select("full_name")
-      .eq("clinic_id", clinicId)
-      .eq("contact_id", contact.id)
-      .eq("is_active", true)
-      .eq("birthdate", input.birthdate);
-    if (twins?.length) return { status: "possible_duplicate", contact, existingNames: twins.map((t) => t.full_name) };
+    // Mesmo nascimento (F3.5) ou, pela equipe, nome parecido (C19), entre os pacientes do mesmo responsável.
+    const [{ data: twins }, similarIds] = await Promise.all([
+      db.from("patients").select("id").eq("clinic_id", clinicId).eq("contact_id", contact.id).eq("is_active", true).eq("birthdate", input.birthdate),
+      checkSimilar
+        ? db.rpc("similar_patient_ids", { p_clinic_id: clinicId, p_name: fullName, p_contact_id: contact.id }).then((r) => unwrap(r, "Pacientes parecidos"))
+        : Promise.resolve([] as string[]),
+    ]);
+    const ids = [...new Set([...(twins ?? []).map((t) => t.id), ...similarIds])];
+    if (ids.length) {
+      const rows = unwrap(
+        await db.from("patients").select("id, full_name, birthdate").eq("clinic_id", clinicId).in("id", ids).order("full_name"),
+        "Pacientes parecidos",
+      );
+      const existing = rows.map((row) => ({ id: row.id, fullName: row.full_name, birthdate: row.birthdate, sameBirthdate: row.birthdate === input.birthdate }));
+      return { status: "possible_duplicate", contact, existingNames: existing.map((e) => e.fullName), existing };
+    }
   }
 
   const { data, error } = await db
@@ -539,6 +575,51 @@ export async function registerPatient(
     patient,
     contact: { ...contact, isActive: true },
     overConsultationAgeLimit: limit !== null && isOverConsultationAgeLimit(input.birthdate, today, limit),
+  };
+}
+
+/**
+ * Responsável com o nome parecido e outro WhatsApp (C19; cliente, 03/nov/2026):
+ * sem resposta, devolve os parecidos para a tela perguntar; "update_phone"
+ * passa o WhatsApp digitado para o responsável escolhido (vale para todos os
+ * pacientes dele) e o usa; "new" segue com um responsável novo.
+ */
+async function similarContactStep(
+  db: DbClient,
+  clinicId: string,
+  name: string,
+  phone: string,
+  choice: RegisterPatientInput["similarContact"],
+): Promise<{ ask: RegisterPatientResult } | { contact: Contact | null }> {
+  if (choice?.action === "new") return { contact: null };
+  if (choice?.action === "update_phone") {
+    const chosen = await getContact(db, clinicId, choice.contactId);
+    if (!chosen.isActive) await setContactActive(db, clinicId, chosen.id, true);
+    return { contact: await updateContact(db, clinicId, chosen.id, { fullName: chosen.fullName, phone }) };
+  }
+  const ids = unwrap(await db.rpc("similar_contact_ids", { p_clinic_id: clinicId, p_name: name }), "Responsáveis parecidos");
+  if (ids.length === 0) return { contact: null };
+  const rows = unwrap(
+    await db
+      .from("contacts")
+      .select(`${CONTACT_COLUMNS}, patients ( id, full_name, birthdate, is_active, is_contact_self )`)
+      .eq("clinic_id", clinicId)
+      .in("id", ids)
+      .order("full_name"),
+    "Responsáveis parecidos",
+  ) as unknown as (ContactRow & { patients: { id: string; full_name: string; birthdate: string; is_active: boolean; is_contact_self: boolean }[] })[];
+  return {
+    ask: {
+      status: "similar_contact",
+      phone,
+      matches: rows.map((row) => ({
+        contact: toContact(row),
+        patients: row.patients
+          .filter((p) => p.is_active)
+          .map((p) => ({ id: p.id, fullName: p.full_name, birthdate: p.birthdate, isContactSelf: p.is_contact_self }))
+          .sort((a, b) => a.fullName.localeCompare(b.fullName)),
+      })),
+    },
   };
 }
 

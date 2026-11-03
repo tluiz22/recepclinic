@@ -9,6 +9,12 @@ import { logError } from "../../../lib/log";
 // mesma recebe o envio: as confirmações (mesma pessoa, possível repetido)
 // voltam na tela com os dados, nunca no endereço.
 //
+// Nomes parecidos e conferência (C19; cliente, 03/nov/2026): "Cadastrar"
+// abre a conferência dos dados (nascimento com a idade); antes de gravar, a
+// tela mostra os pacientes do mesmo responsável com nome parecido ("É este":
+// abre a ficha dele) e os responsáveis com nome parecido e outro WhatsApp
+// (atualizar o WhatsApp dele ou cadastrar um novo).
+//
 // Redesign R6 (proposta aprovada pelo cliente em 16/out/2026): 3 blocos
 // numerados (paciente, quem fala pelo WhatsApp, plano de saúde), "quem fala"
 // em cartões de escolha e cada aviso junto do campo dele.
@@ -25,7 +31,10 @@ import { createUserClient } from "../../../lib/data/clients";
 import { listInsurancePlans } from "../../../lib/data/config/insurance";
 import { DataError } from "../../../lib/data/errors";
 import { describeDataError } from "../../../lib/data/formAction";
-import { getContact, registerPatient, type ContactChoice } from "../../../lib/data/patients";
+import { getContact, registerPatient, type ContactChoice, type SimilarContact, type SimilarPatient } from "../../../lib/data/patients";
+import ConfirmDeleteDialog from "../../../components/admin/ConfirmDeleteDialog.astro";
+import { formatAge } from "../../../lib/age";
+import { formatCalendarDate } from "../../../lib/clinicTime";
 import { setFlash } from "../../../lib/flash";
 import { formChecked, formOptionalText, formText } from "../../../lib/forms";
 import { formatPhoneBR } from "../../../lib/phone";
@@ -64,6 +73,11 @@ const invalidAttrs = (name: string, describedBy?: string): { "aria-invalid"?: "t
     : describedBy
       ? { "aria-describedby": describedBy }
       : {};
+/** "É este": a ficha do paciente que já existe (vindo do Marcar, volta ao Marcar com ele escolhido). */
+const existingHref = (id: string) =>
+  backToBooking ? `${backToBooking}${backToBooking.includes("?") ? "&" : "?"}patient_id=${id}` : withReturn(`/admin/pacientes/${id}`, origin);
+const birthText = (birthdate: string) => `nasc. ${formatCalendarDate(birthdate, "dd/MM/yyyy")} · ${formatAge(birthdate, today)}`;
+const optionCard = "flex flex-col gap-2 rounded-[10px] border border-line-strong bg-white px-3.5 py-3";
 const alertBox = "flex items-start gap-2.5 rounded-[10px] border border-pend-200 bg-pend-50 px-3.5 py-3 text-[15px] leading-snug text-pend-800";
 
 const values = {
@@ -92,6 +106,11 @@ const FIELD_OF: Record<string, string> = {
 let fieldErrors: Record<string, string> = {};
 let notice: string | null = null;
 let askDuplicate = false;
+/** Pacientes do mesmo responsável parecidos com o digitado (C19). */
+let similarPatients: SimilarPatient[] = [];
+/** Responsáveis com nome parecido e outro WhatsApp (C19). */
+let similarContacts: SimilarContact[] = [];
+let typedPhone = "";
 /** O aviso do número já cadastrado fica junto do WhatsApp; o do repetido, junto da confirmação. */
 let samePerson = false;
 
@@ -105,6 +124,7 @@ if (Astro.request.method === "POST") {
       : values.mode === "self"
         ? { mode: "self", phone: values.phone, confirmedContactId: formOptionalText(form, "confirmed_contact_id") ?? undefined }
         : { mode: "new", fullName: values.contact_name, phone: values.phone };
+  const similarChoice = formText(form, "similar_contact");
   try {
     const result = await registerPatient(
       db,
@@ -116,6 +136,7 @@ if (Astro.request.method === "POST") {
         insurance: insuranceOn && values.plan_id ? { planId: values.plan_id, cardNumber: values.card_number, cardValidUntil: values.card_valid_until } : null,
         contact,
         confirmDuplicate: formChecked(form, "confirm_duplicate"),
+        similarContact: similarChoice === "new" ? { action: "new" } : isUuid(similarChoice) ? { action: "update_phone", contactId: similarChoice } : undefined,
       },
       today,
     );
@@ -125,13 +146,17 @@ if (Astro.request.method === "POST") {
       const to = backToBooking ? `${backToBooking}${backToBooking.includes("?") ? "&" : "?"}patient_id=${result.patient.id}` : withReturn(`/admin/pacientes/${result.patient.id}`, origin);
       return Astro.redirect(to, 303);
     }
-    if (result.status === "confirm_same_person") {
+    if (result.status === "similar_contact") {
+      similarContacts = result.matches;
+      typedPhone = result.phone;
+    } else if (result.status === "confirm_same_person") {
       values.confirmed_contact_id = result.contact.id;
       samePerson = true;
       notice = `Este WhatsApp já é de ${result.contact.fullName}. Se for a mesma pessoa, confirme abaixo.`;
     } else {
       askDuplicate = true;
-      notice = `Este ${vocabulary.contact} já tem ${result.existingNames.join(", ")} com a mesma data de nascimento. Se for outra pessoa, marque a confirmação abaixo.`;
+      similarPatients = result.existing;
+      notice = `Este ${vocabulary.contact} já tem cadastro com o nome parecido ou o mesmo nascimento. É a mesma pessoa?`;
     }
   } catch (caught) {
     if (!(caught instanceof DataError)) logError("paciente novo", caught);
@@ -160,13 +185,13 @@ import { pacientes } from "../../../lib/ajuda/pacientes";
   <PageHeader title={`Cadastrar ${vocabulary.patient}`} class="mt-2" />
   {error && <FormMessage tone="error">{error}</FormMessage>}
 
-  <form method="POST" class="mt-4 flex max-w-[680px] flex-col gap-4">
+  <form method="POST" class="mt-4 flex max-w-[680px] flex-col gap-4" data-confirm-data data-today={today}>
     <input type="hidden" name="confirmed_contact_id" value={values.confirmed_contact_id} />
     <section aria-labelledby="bloco-paciente" class={card}>
       <h2 id="bloco-paciente" class={blockTitle}><span class={number} aria-hidden="true">1</span>{capitalize(vocabulary.patient)}</h2>
       <div class={field}>
         <label for="full_name" class={fieldLabel}>Nome do {vocabulary.patient}</label>
-        <input id="full_name" name="full_name" required value={values.full_name} {...invalidAttrs("full_name")} class={`${CONTROL}`} />
+        <input id="full_name" name="full_name" required value={values.full_name} data-confirm-label="Nome" {...invalidAttrs("full_name")} class={`${CONTROL}`} />
         {fieldErrors.full_name && (
                 <p id="full_name-erro" class={fieldError}>
                   <Icon name="warning" class="mt-0.5 h-4 w-4 shrink-0" strokeWidth={2.2} />
@@ -183,6 +208,8 @@ import { pacientes } from "../../../lib/ajuda/pacientes";
           required
           max={today}
           value={values.birthdate}
+          data-confirm-label="Nascimento"
+          data-confirm-age
           {...invalidAttrs("birthdate")}
           class={`${CONTROL} w-52`}
         />
@@ -208,6 +235,7 @@ import { pacientes } from "../../../lib/ajuda/pacientes";
         fixedContact ? (
           <p class="text-[15px] text-ink">
             <span class="font-semibold">{fixedContact.fullName}</span> · {formatPhoneBR(fixedContact.phone)}
+            <input type="hidden" data-confirm-label={capitalize(vocabulary.contact)} value={`${fixedContact.fullName} · ${formatPhoneBR(fixedContact.phone)}`} />
           </p>
         ) : (
           <>
@@ -215,14 +243,14 @@ import { pacientes } from "../../../lib/ajuda/pacientes";
               <legend class="sr-only">Quem fala com a clínica pelo WhatsApp</legend>
               <div class="flex flex-col gap-2.5 sm:flex-row">
                 <label class={choice}>
-                  <input type="radio" name="mode" value="self" checked={values.mode === "self"} autofocus={firstInvalid("mode") && values.mode === "self"} class="mt-0.5 h-[18px] w-[18px] shrink-0 accent-brand" />
+                  <input type="radio" name="mode" value="self" data-confirm-label="Quem fala" data-confirm-text={`O próprio ${vocabulary.patient}`} checked={values.mode === "self"} autofocus={firstInvalid("mode") && values.mode === "self"} class="mt-0.5 h-[18px] w-[18px] shrink-0 accent-brand" />
                   <span class="flex flex-col gap-0.5">
                     <span class="text-[15.5px] leading-snug font-semibold text-ink">O próprio {vocabulary.patient}</span>
                     <span class={hint}>Maior de 18 anos</span>
                   </span>
                 </label>
                 <label class={choice}>
-                  <input type="radio" name="mode" value="new" checked={values.mode === "new"} autofocus={firstInvalid("mode") && values.mode === "new"} class="mt-0.5 h-[18px] w-[18px] shrink-0 accent-brand" />
+                  <input type="radio" name="mode" value="new" data-confirm-label="Quem fala" data-confirm-text={`Um ${vocabulary.contact}`} checked={values.mode === "new"} autofocus={firstInvalid("mode") && values.mode === "new"} class="mt-0.5 h-[18px] w-[18px] shrink-0 accent-brand" />
                   <span class="flex flex-col gap-0.5">
                     <span class="text-[15.5px] leading-snug font-semibold text-ink">Um {vocabulary.contact}</span>
                     <span class={hint}>Outra pessoa fala por ele</span>
@@ -244,6 +272,7 @@ import { pacientes } from "../../../lib/ajuda/pacientes";
                 id="contact_name"
                 name="contact_name"
                 value={values.contact_name}
+                data-confirm-label={capitalize(vocabulary.contact)}
                 {...invalidAttrs("contact_name")}
                 class={`${CONTROL}`}
               />
@@ -263,6 +292,7 @@ import { pacientes } from "../../../lib/ajuda/pacientes";
                 required
                 placeholder="(84) 99999-9999"
                 value={values.phone}
+                data-confirm-label="WhatsApp"
                 {...invalidAttrs("phone", samePerson ? "phone-aviso phone-hint" : "phone-hint")}
                 class={`${CONTROL} w-full sm:w-64 ${samePerson ? "border-pend-500" : ""}`}
               />
@@ -280,6 +310,47 @@ import { pacientes } from "../../../lib/ajuda/pacientes";
               )}
               <p id="phone-hint" class={hint}>Se o número já for de um {vocabulary.contact} cadastrado, o {vocabulary.patient} entra junto dele.</p>
             </div>
+            {similarContacts.length > 0 && (
+              <div class="flex flex-col gap-2.5" data-similar-contacts>
+                <p role="alert" tabindex="-1" data-form-error class={alertBox}>
+                  <Icon name="warning" class="mt-0.5 h-[18px] w-[18px] shrink-0" strokeWidth={2} />
+                  <span>
+                    {values.mode === "self"
+                      ? `Já existe cadastro com o nome parecido, com outro WhatsApp. É a mesma pessoa?`
+                      : `Já existe ${similarContacts.length === 1 ? `um ${vocabulary.contact}` : `${vocabulary.contacts}`} com o nome parecido, com outro WhatsApp. É a mesma pessoa?`}
+                  </span>
+                </p>
+                {similarContacts.map((match) => {
+                  const self = values.mode === "self" ? match.patients.find((p) => p.isContactSelf) : undefined;
+                  return (
+                    <div class={optionCard}>
+                      <p class="text-[15.5px] leading-snug font-bold text-ink">{match.contact.fullName}</p>
+                      <p class="text-[14.5px] text-ink-mid">
+                        WhatsApp cadastrado: <span class="font-semibold text-ink">{formatPhoneBR(match.contact.phone)}</span> · digitado agora:{" "}
+                        <span class="font-semibold text-ink">{formatPhoneBR(typedPhone)}</span>
+                      </p>
+                      {match.patients.length > 0 && (
+                        <p class="text-[14.5px] text-ink-mid">
+                          {capitalize(vocabulary.patients)}: {match.patients.map((p) => `${p.fullName} (${birthText(p.birthdate)})`).join("; ")}
+                        </p>
+                      )}
+                      {self ? (
+                        <Button href={existingHref(self.id)} variant="primary" class="self-start">
+                          Sim, é a mesma pessoa: abrir a ficha
+                        </Button>
+                      ) : (
+                        <Button type="submit" name="similar_contact" value={match.contact.id} variant="primary" class="self-start" data-sending-label="Cadastrando…">
+                          Sim, é a mesma pessoa: atualizar o WhatsApp e cadastrar
+                        </Button>
+                      )}
+                    </div>
+                  );
+                })}
+                <Button type="submit" name="similar_contact" value="new" class="self-start" data-sending-label="Cadastrando…">
+                  {values.mode === "self" ? "Não, é outra pessoa: cadastrar" : `Não, cadastrar um novo ${vocabulary.contact}`}
+                </Button>
+              </div>
+            )}
           </>
         )
       }
@@ -291,7 +362,7 @@ import { pacientes } from "../../../lib/ajuda/pacientes";
           <h2 id="bloco-plano" class={blockTitle}><span class={number} aria-hidden="true">3</span>Plano de saúde</h2>
           <div class={field}>
             <label for="plan_id" class={fieldLabel}>Plano</label>
-            <select id="plan_id" name="plan_id" class={`${CONTROL} w-full sm:w-80`}>
+            <select id="plan_id" name="plan_id" data-confirm-label="Plano" class={`${CONTROL} w-full sm:w-80`}>
               <option value="">Particular</option>
               {plans.map((plan) => (
                 <option value={plan.id} selected={plan.id === values.plan_id}>
@@ -303,7 +374,7 @@ import { pacientes } from "../../../lib/ajuda/pacientes";
           <div class="grid gap-4 sm:grid-cols-2">
             <div class={field}>
               <label for="card_number" class={fieldLabel}>Carteirinha <span class={optional}>(opcional)</span></label>
-              <input id="card_number" name="card_number" value={values.card_number} class={CONTROL} />
+              <input id="card_number" name="card_number" value={values.card_number} data-confirm-label="Carteirinha" class={CONTROL} />
             </div>
             <div class={field}>
               <label for="card_valid_until" class={fieldLabel}>Validade <span class={optional}>(opcional)</span></label>
@@ -312,6 +383,7 @@ import { pacientes } from "../../../lib/ajuda/pacientes";
                 name="card_valid_until"
                 type="date"
                 value={values.card_valid_until}
+                data-confirm-label="Validade"
                 {...invalidAttrs("card_valid_until")}
                 class={`${CONTROL}`}
               />
@@ -329,23 +401,50 @@ import { pacientes } from "../../../lib/ajuda/pacientes";
 
     {
       askDuplicate && notice && (
-        <div class="flex flex-col gap-2.5">
+        <div class="flex flex-col gap-2.5" data-similar-patients>
           <p role="alert" tabindex="-1" data-form-error class={alertBox}>
             <Icon name="warning" class="mt-0.5 h-[18px] w-[18px] shrink-0" strokeWidth={2} />
             {notice}
           </p>
-          <label class="flex min-h-11 items-center gap-2.5 text-[15px] text-ink">
-            <input type="checkbox" name="confirm_duplicate" class="h-[18px] w-[18px] accent-brand" /> Confirmo que é outra pessoa
-          </label>
+          {similarPatients.map((p) => (
+            <div class={optionCard}>
+              <p class="text-[15.5px] leading-snug font-bold text-ink">{p.fullName}</p>
+              <p class="text-[14.5px] text-ink-mid">
+                {birthText(p.birthdate)}
+                {p.sameBirthdate ? " · mesmo nascimento" : ""}
+              </p>
+              <Button href={existingHref(p.id)} variant="primary" class="self-start">
+                Sim, é a mesma pessoa: abrir a ficha
+              </Button>
+            </div>
+          ))}
+          <Button type="submit" name="confirm_duplicate" value="on" class="self-start" data-sending-label="Cadastrando…">
+            Não, é outra pessoa: cadastrar
+          </Button>
         </div>
       )
     }
-    <div>
-      <Button type="submit" variant="primary" class="h-12 px-[22px] text-base sm:h-12" data-sending-label="Cadastrando…">
-        {notice ? "Confirmar e cadastrar" : `Cadastrar ${vocabulary.patient}`}
-      </Button>
-    </div>
+    {
+      !(askDuplicate || similarContacts.length > 0) && (
+        <div>
+          <Button
+            type="submit"
+            variant="primary"
+            class="js-confirm-delete h-12 px-[22px] text-base sm:h-12"
+            data-sending-label="Cadastrando…"
+            data-confirm-title="Confira os dados"
+            data-confirm-message={`Confira antes de cadastrar, principalmente a data de nascimento: ela define a idade do ${vocabulary.patient}.`}
+            data-confirm-label="Confirmar e cadastrar"
+            data-confirm-tone="primary"
+          >
+            {notice ? "Confirmar e cadastrar" : `Cadastrar ${vocabulary.patient}`}
+          </Button>
+        </div>
+      )
+    }
   </form>
+  <ConfirmDeleteDialog />
+  <script src="../../../scripts/confirmFormData.ts"></script>
 
   <script>
     // Nome do responsável só quando não é o próprio paciente.

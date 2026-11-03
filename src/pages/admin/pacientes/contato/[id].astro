@@ -316,11 +316,11 @@ const dd = "font-semibold text-ink";
           }
         </dl>
         <p class={hint}>É pelo WhatsApp que a clínica conversa com ele e envia lembretes.</p>
-        <form slot="edit" method="POST" action={action} class="flex flex-col gap-4">
+        <form slot="edit" method="POST" action={action} class="flex flex-col gap-4" data-confirm-data>
           <input type="hidden" name="acao" value="salvar" />
           <div class={field}>
             <label for="full_name" class={fieldLabel}>Nome</label>
-            <input id="full_name" name="full_name" required value={contact.anonymizedAt ? "" : contact.fullName} class={CONTROL} />
+            <input id="full_name" name="full_name" required value={contact.anonymizedAt ? "" : contact.fullName} data-confirm-label="Nome" class={CONTROL} />
           </div>
           <div class={field}>
             <label for="phone" class={fieldLabel}>WhatsApp</label>
@@ -330,6 +330,7 @@ const dd = "font-semibold text-ink";
               type="tel"
               required
               value={contact.anonymizedAt ? "" : formatPhoneBR(contact.phone)}
+              data-confirm-label="WhatsApp"
               aria-describedby="phone-hint"
               class={`${CONTROL} w-full sm:w-64`}
             />
@@ -345,6 +346,7 @@ const dd = "font-semibold text-ink";
                   id="default_home_address"
                   name="default_home_address"
                   value={contact.defaultHomeAddress ?? ""}
+                  data-confirm-label="Endereço"
                   aria-describedby="address-hint"
                   class={CONTROL}
                 />
@@ -353,7 +355,19 @@ const dd = "font-semibold text-ink";
             )
           }
           <div class="flex gap-2">
-            <Button type="submit" variant="primary" data-sending-label="Salvando…">Salvar</Button>
+            {/* Conferência antes de salvar (C19): o diálogo mostra o que muda. */}
+            <Button
+              type="submit"
+              variant="primary"
+              class="js-confirm-delete"
+              data-sending-label="Salvando…"
+              data-confirm-title="Confira os dados"
+              data-confirm-message="Confira antes de salvar, principalmente o WhatsApp: é por ele que a clínica conversa e envia os lembretes."
+              data-confirm-label="Confirmar e salvar"
+              data-confirm-tone="primary"
+            >
+              Salvar
+            </Button>
             <Button href={here} data-edit-cancel>Cancelar</Button>
           </div>
         </form>
@@ -413,4 +427,5 @@ const dd = "font-semibold text-ink";
     </div>
   </div>
   <ConfirmDeleteDialog />
+  <script src="../../../../scripts/confirmFormData.ts"></script>
 </AdminLayout>

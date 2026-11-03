@@ -42,7 +42,9 @@ export const pacientesArtigos = [
       "No bloco do paciente, preencha o nome e a data de nascimento. A anotação é opcional.",
       "No bloco de contato, diga se o paciente fala por si (maior de 18 anos) ou se outra pessoa fala por ele; informe o nome do contato e o WhatsApp.",
       "Com Convênios, escolha o plano; carteirinha e validade são opcionais.",
-      "Toque em Cadastrar.",
+      "Toque em Cadastrar e confira os dados na janela que abre (o nascimento aparece com a idade). Toque em Confirmar e cadastrar.",
+      "Se o contato já tem alguém com o nome parecido ou o mesmo nascimento, a tela pergunta se é a mesma pessoa: Sim abre a ficha que já existe; Não cadastra.",
+      "Se já existe um contato com o nome parecido e outro WhatsApp, escolha atualizar o WhatsApp dele (o paciente entra junto dele) ou cadastrar um novo contato.",
     ],
     fields: [
       { name: "Anotação (opcional)", text: "Vira a primeira anotação do paciente, com a data e o seu nome. Só a equipe vê." },

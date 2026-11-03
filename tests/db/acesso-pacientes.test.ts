@@ -92,7 +92,12 @@ describe("cadastro com responsável (outra pessoa)", () => {
 
     const twin = { fullName: "Bia Souza", birthdate: yearsAgo(5), contact: { mode: "existing" as const, contactId: contact.id } };
     const warning = await registerPatient(db(reception), clinicId, twin, TODAY);
-    expect(warning).toEqual({ status: "possible_duplicate", contact: expect.objectContaining({ id: contact.id }), existingNames: ["Ana Souza"] });
+    expect(warning).toMatchObject({
+      status: "possible_duplicate",
+      contact: expect.objectContaining({ id: contact.id }),
+      existingNames: ["Ana Souza"],
+      existing: [{ fullName: "Ana Souza", sameBirthdate: true }],
+    });
     created(await registerPatient(db(reception), clinicId, { ...twin, confirmDuplicate: true }, TODAY));
     expect((await listContactPatients(db(reception), clinicId, contact.id)).map((p) => p.fullName)).toEqual([
       "Ana Souza",
@@ -121,6 +126,81 @@ describe("cadastro com responsável (outra pessoa)", () => {
     );
     expect(again.contact).toMatchObject({ id: first.contact.id, isActive: true });
     expect((await findContactByPhone(db(reception), clinicId, "85999990002"))?.isActive).toBe(true);
+  });
+});
+
+describe("nomes parecidos no cadastro (C19)", () => {
+  it("criança com nome parecido no mesmo responsável: pergunta; com outro responsável, não", async () => {
+    const mother = created(
+      await registerPatient(
+        db(reception),
+        clinicId,
+        { fullName: "João Pedro", birthdate: yearsAgo(6), contact: { mode: "new", fullName: "Rita Moura", phone: "85999990030" } },
+        TODAY,
+      ),
+    );
+    const again = { fullName: "Joao Pedro Moura", birthdate: yearsAgo(4), contact: { mode: "existing" as const, contactId: mother.contact.id } };
+    const ask = await registerPatient(db(reception), clinicId, again, TODAY);
+    expect(ask).toMatchObject({ status: "possible_duplicate", existing: [{ id: mother.patient.id, fullName: "João Pedro", sameBirthdate: false }] });
+    // Outra criança do mesmo responsável, sem nome parecido: cadastra direto.
+    created(await registerPatient(db(reception), clinicId, { ...again, fullName: "Lia Moura" }, TODAY));
+    // "Não, é outra pessoa": cadastra.
+    created(await registerPatient(db(reception), clinicId, { ...again, confirmDuplicate: true }, TODAY));
+  });
+
+  it("responsável com nome parecido e outro WhatsApp: pergunta; atualizar o WhatsApp ou cadastrar novo", async () => {
+    const base = { fullName: "Davi Moura", birthdate: yearsAgo(3) };
+    const contact = { mode: "new" as const, fullName: "Rita de Moura", phone: "85999990031" };
+    const ask = await registerPatient(db(reception), clinicId, { ...base, contact }, TODAY);
+    if (ask.status !== "similar_contact") throw new Error(`esperava similar_contact, veio ${ask.status}`);
+    expect(ask.phone).toBe("+5585999990031");
+    const rita = ask.matches.find((m) => m.contact.fullName === "Rita Moura")!;
+    expect(rita.contact.phone).toBe("+5585999990030");
+    expect(rita.patients.map((p) => p.fullName)).toEqual(["João Pedro", "Joao Pedro Moura", "Lia Moura"]);
+
+    // Atualizar o WhatsApp: o paciente entra junto da Rita, que passa a ter o número novo.
+    const joined = created(
+      await registerPatient(db(reception), clinicId, { ...base, contact, similarContact: { action: "update_phone", contactId: rita.contact.id } }, TODAY),
+    );
+    expect(joined.contact).toMatchObject({ id: rita.contact.id, fullName: "Rita Moura", phone: "+5585999990031" });
+
+    // Cadastrar novo: outro responsável, com o número digitado.
+    const other = created(
+      await registerPatient(
+        db(reception),
+        clinicId,
+        { fullName: "Eva Lopes", birthdate: yearsAgo(2), contact: { mode: "new", fullName: "Rita Mora", phone: "85999990032" }, similarContact: { action: "new" } },
+        TODAY,
+      ),
+    );
+    expect(other.contact).toMatchObject({ fullName: "Rita Mora", phone: "+5585999990032" });
+    expect(other.contact.id).not.toBe(rita.contact.id);
+  });
+
+  it("adulto com nome parecido de quem já é o próprio contato: pergunta; o bot não pergunta", async () => {
+    created(
+      await registerPatient(db(reception), clinicId, { fullName: "Otávio Brandão", birthdate: yearsAgo(50), contact: { mode: "self", phone: "85999990033" } }, TODAY),
+    );
+    const ask = await registerPatient(
+      db(reception),
+      clinicId,
+      { fullName: "Otavio Brandao", birthdate: yearsAgo(50), contact: { mode: "self", phone: "85999990034" } },
+      TODAY,
+    );
+    expect(ask).toMatchObject({ status: "similar_contact", matches: [{ patients: [{ fullName: "Otávio Brandão", isContactSelf: true }] }] });
+    const bot = createClinicServiceClient(clinicId, {
+      supabaseUrl: process.env.SUPABASE_LOCAL_API_URL!,
+      supabaseAnonKey: process.env.SUPABASE_LOCAL_ANON_KEY!,
+      supabaseJwtSecret: process.env.SUPABASE_LOCAL_JWT_SECRET!,
+    });
+    created(
+      await registerPatient(
+        bot,
+        clinicId,
+        { fullName: "Otavio Brandao", birthdate: yearsAgo(50), contact: { mode: "self", phone: "85999990035" }, confirmDuplicate: true, createdVia: "whatsapp" },
+        TODAY,
+      ),
+    );
   });
 });
 

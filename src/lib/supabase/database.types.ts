@@ -2020,6 +2020,12 @@ isOneToOne: false
 "set_whatsapp_payment_checked":
 { Args: { "p_checked": boolean,"p_clinic_id": string }; Returns: undefined
                            },
+"similar_contact_ids":
+{ Args: { "p_clinic_id": string,"p_name": string }; Returns: string[]
+                           },
+"similar_patient_ids":
+{ Args: { "p_clinic_id": string,"p_contact_id"?: string,"p_name": string }; Returns: string[]
+                           },
 "support_latest_messages":
 { Args: { "p_clinic_id": string,"p_limit"?: number }; Returns: {
               "appointment_id": string,"body": string,"contact_id": string,"contact_phone": string,"created_at": string,"direction": string,"id": string,"message_type": string,"status": string,"template_name": string

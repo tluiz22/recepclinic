@@ -899,3 +899,16 @@ desfaz a C10).
   Financeiro e Métricas); telefone e nascimento como estavam. Listas com páginas: até 500 parecidos (Financeiro "sem
   CPF": 150, em ordem de nome). Teste de banco em `acesso-pacientes.test.ts`; artigo "Buscar pacientes" atualizado,
   sem captura a refazer.
+- **C19 (etapa C) Cadastro com nomes parecidos e conferência** (03/nov): **decisões do cliente (03/nov):** responsável
+  com nome parecido e outro WhatsApp: a tela mostra os dois números e pergunta; "Sim" atualiza o WhatsApp do
+  cadastrado (vale para todos os pacientes dele) e cadastra junto dele; "Não" cadastra um novo responsável. Criança
+  com nome parecido (ou mesmo nascimento) no **mesmo** responsável: "Sim" abre a ficha que já existe (vindo do
+  Marcar, volta ao Marcar com ela escolhida); "Não" cadastra. Adulto (próprio contato) com nome parecido de quem já é
+  o próprio contato: "Sim" abre a ficha. Parecido nas duas direções, só pelas palavras (`app.names_look_alike`,
+  `public.similar_patient_ids` e `public.similar_contact_ids`, na mesma migração da C18). Só no cadastro pela
+  equipe; o bot segue como estava. `registerPatient`: `similarContact` na entrada; `possible_duplicate` com
+  `existing` e o resultado novo `similar_contact`. **Conferência antes de gravar:** Cadastrar (Pacientes › Novo) e
+  Salvar dos Dados do paciente e do responsável abrem o diálogo "Confira os dados" com os campos (nascimento com a
+  idade; na edição, "antes → depois"): `src/lib/confirmData.ts` (teste) e `src/scripts/confirmFormData.ts`, no
+  diálogo de sempre. Testes de banco em `acesso-pacientes.test.ts`; artigo "Cadastrar um paciente" atualizado; as
+  capturas não mostram o que mudou (o diálogo só abre no clique).

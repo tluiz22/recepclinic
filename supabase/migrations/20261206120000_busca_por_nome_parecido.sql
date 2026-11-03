@@ -142,6 +142,53 @@ as $$
   limit least(greatest(coalesce(p_limit, 200), 1), 500)
 $$;
 
+-- Nome parecido no cadastro (C19; cliente, 03/nov/2026): antes de cadastrar,
+-- a tela mostra os pacientes do mesmo responsável e os responsáveis da clínica
+-- com o nome parecido. Parecido nas duas direções ("João Pedro" e "João Pedro
+-- Lima"), só pelas palavras (o trecho solto, como "Ana" em "Mariana", não conta).
+create function app.names_look_alike(p_a text, p_b text)
+returns boolean
+language sql
+immutable
+set search_path = ''
+as $$
+  select coalesce(app.search_name_score(p_a, p_b), 0) > 1 or coalesce(app.search_name_score(p_b, p_a), 0) > 1
+$$;
+
+/** Pacientes ativos com o nome parecido: do responsável (p_contact_id) ou, sem ele, os que são o próprio contato. */
+create function public.similar_patient_ids(p_clinic_id uuid, p_name text, p_contact_id uuid default null)
+returns setof uuid
+language sql
+stable
+set search_path = ''
+as $$
+  select p.id
+  from public.patients p
+  where p.clinic_id = p_clinic_id
+    and p.is_active
+    and (case when p_contact_id is null then p.is_contact_self else p.contact_id = p_contact_id end)
+    and app.names_look_alike(p_name, p.full_name)
+  order by p.full_name, p.id
+  limit 10
+$$;
+
+/** Responsáveis (contatos) ativos com o nome parecido. */
+create function public.similar_contact_ids(p_clinic_id uuid, p_name text)
+returns setof uuid
+language sql
+stable
+set search_path = ''
+as $$
+  select c.id
+  from public.contacts c
+  where c.clinic_id = p_clinic_id
+    and c.is_active
+    and c.anonymized_at is null
+    and app.names_look_alike(p_name, c.full_name)
+  order by c.full_name, c.id
+  limit 10
+$$;
+
 grant execute on function app.search_name_words(text) to authenticated, clinic_service;
 grant execute on function app.search_typo_distance(text, text) to authenticated, clinic_service;
 grant execute on function app.search_word_score(text, text) to authenticated, clinic_service;
@@ -150,3 +197,8 @@ grant execute on function public.search_patient_ids(uuid, text, boolean, integer
 grant execute on function public.search_contact_ids(uuid, text, boolean, integer) to authenticated, clinic_service;
 revoke execute on function public.search_patient_ids(uuid, text, boolean, integer) from anon, public;
 revoke execute on function public.search_contact_ids(uuid, text, boolean, integer) from anon, public;
+grant execute on function app.names_look_alike(text, text) to authenticated, clinic_service;
+grant execute on function public.similar_patient_ids(uuid, text, uuid) to authenticated, clinic_service;
+grant execute on function public.similar_contact_ids(uuid, text) to authenticated, clinic_service;
+revoke execute on function public.similar_patient_ids(uuid, text, uuid) from anon, public;
+revoke execute on function public.similar_contact_ids(uuid, text) from anon, public;
