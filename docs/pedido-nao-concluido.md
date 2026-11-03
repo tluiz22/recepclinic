@@ -1,9 +1,9 @@
 # Pedido não concluído (PN): retomada pelo bot e lembrete só com a ação concluída
 
-> **Retomar daqui (03/nov/2026).** **PN1 feita na branch `pedido-nao-concluido`** (da `main`; pasta de trabalho
-> `../recepclinic-main`), com a migração `20261201120000_lembrete_nao_concluido.sql` (só a função `metrics_reminders`).
-> Testes de unidade passando; **testes de banco pendentes** (o banco local está com a branch `faturamento`, em
-> validação pelo cliente). Próximo: rodar `npm run test:db` quando o banco local estiver livre, validar e juntar.
+> **Retomar daqui (03/nov/2026).** **PN1 na `main` e no staging** (`e8990d3`; migração
+> `20261201120000_lembrete_nao_concluido.sql` aplicada no staging por `db push --remote` e conferida no histórico).
+> Testes de banco pelo CI (o banco local estava com a branch `faturamento`). Cliente valida no staging (Relatório do
+> dia › Lembretes e Métricas › Desempenho). Próximo: PN2.
 
 Pedido do cliente em 03/nov/2026, depois de um caso na produção (clínica piloto).
 
