@@ -42,6 +42,7 @@ import {
 } from "./texts";
 import { blockedContactByPhone, blockedNoticeDue, markBlockedNotice } from "../contactBlock";
 import { listBotMessages } from "../customMessages";
+import { handleNotCompleted, NOT_COMPLETED, promptExpiredLinks, promptPendingCancel } from "./notCompleted";
 import { askReceptionReason, firstMessageAnswer, handleKnowledgeReply, handleReceptionReason, knowledgeHookFor, pendingReasonOf, performTakeover, REASON_KEY } from "./knowledge/respond";
 import { logError } from "../../../log";
 
@@ -277,6 +278,9 @@ async function dispatch(env: BotEnv, b: Bot, convo: Conversation, phone: string,
   if (typedDate === "handled") return;
   if (typedDate) selection = typedDate;
 
+  // Pedido não concluído (PN2): os três botões; outra mensagem recomeça a conversa (cai no começo, abaixo).
+  if (convo.state === NOT_COMPLETED && (await handleNotCompleted(b, selection))) return;
+
   if (ENTRY_STATES.has(convo.state)) {
     await handleEntryState(b, convo.state, selection);
     return;
@@ -339,6 +343,12 @@ export async function closeIdleConversations(db: DbClient, clinicId: string, sen
   if (!sender || !(await hasFeature(db, clinicId, "whatsapp_bot"))) return 0;
   // Texto próprio da clínica (F6.6), com o item liberado.
   const idleText = (await hasFeature(db, clinicId, "custom_messages")) ? ((await listBotMessages(db, clinicId)).get("idle_closed") ?? IDLE_CLOSED) : IDLE_CLOSED;
+  // Pedido não concluído (PN2): links do bot que venceram sem uso.
+  try {
+    await promptExpiredLinks(db, clinicId, sender, now);
+  } catch (error) {
+    logError("bot: pedido não concluído", error, { clinica: clinicId });
+  }
   const before = new Date(now.getTime() - IDLE_TIMEOUT_MINUTES * 60_000);
   const rows = unwrap(
     await db
@@ -357,6 +367,12 @@ export async function closeIdleConversations(db: DbClient, clinicId: string, sen
       const convo = await openConversation(db, clinicId, phone, await contactIdByPhone(db, clinicId, phone));
       // Respondeu enquanto a rotina rodava.
       if (AT_REST.includes(convo.state) || !isPastIdleTimeout(convo.updatedAt, now)) continue;
+      // Cancelamento sem resposta ao "Tem certeza?" (PN2): a mensagem do pedido não concluído no lugar do "encerramos".
+      if (convo.state === "CANCEL_CONFIRM" && (await promptPendingCancel(await createBot({ db, clinicId, sender, now }, convo)))) {
+        await logAbandonment(db, clinicId, convo, "timeout", now);
+        closed++;
+        continue;
+      }
       const outcome = await sender.text(phone, idleText);
       await recordOutboundMessage(
         db,

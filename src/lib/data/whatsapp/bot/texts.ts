@@ -494,3 +494,43 @@ export const KB_MENU_LABEL = "Voltar ao menu";
 /** "Agendar Atendimento" sem serviço na resposta: o tipo, só entre o que a clínica marca pelo bot (cliente, 02/nov/2026). */
 export const KB_BOOK_TYPE_QUESTION = "O que você quer agendar?";
 export const KB_BOOK_TYPE_LABELS = { consultation: "Consulta", return_visit: "Retorno", exam: "Exame" } as const;
+
+// ---------------------------------------------------------------------------
+// Pedido não concluído (PN2; cliente, 03/nov/2026)
+// ---------------------------------------------------------------------------
+
+export type NotCompletedKind = "booking" | "reschedule" | "cancel";
+
+const NOT_COMPLETED_WHAT: Record<NotCompletedKind, string> = {
+  booking: "a marcação",
+  reschedule: "a remarcação",
+  cancel: "o cancelamento",
+};
+
+export const NOT_COMPLETED_IDS = { retry: "nc_retry", reception: "nc_reception", giveUp: "nc_give_up" } as const;
+
+/** Link vencido sem uso ou cancelamento sem resposta: a mensagem padrão (decisão 1 do plano). */
+export const notCompleted = (kind: NotCompletedKind, patientName: string) =>
+  `Não concluímos ${NOT_COMPLETED_WHAT[kind]} de *${patientName}*. Como prefere seguir?`;
+
+/** Novo link (no cancelamento, "Cancelar agora"); "Falar com a recepção" só com a recepção no app. */
+export const notCompletedButtons = (kind: NotCompletedKind, receptionAvailable: boolean): ReplyButton[] => [
+  button(NOT_COMPLETED_IDS.retry, kind === "cancel" ? "Cancelar agora" : "Novo link"),
+  ...(receptionAvailable ? [button(NOT_COMPLETED_IDS.reception, "Falar com a recepção")] : []),
+  button(NOT_COMPLETED_IDS.giveUp, "Desistir"),
+];
+
+/** Novo link do pedido não concluído. */
+export const notCompletedNewLink = (kind: NotCompletedKind, patientName: string, url: string) =>
+  `Aqui está um novo link para ${kind === "reschedule" ? "remarcar" : "marcar"} o atendimento de ${patientName}:\n${url}\n\nO link vale por 30 minutos.`;
+
+/** Assunto da transferência (aparece em Atendimento humano). */
+export const notCompletedSubject = (kind: NotCompletedKind, patientName: string) =>
+  `Não concluiu ${NOT_COMPLETED_WHAT[kind]} de ${patientName} pelo WhatsApp.`;
+
+/** Desistir na remarcação ou no cancelamento: o atendimento segue marcado. */
+export const notCompletedKept = (phrase: string, end: "a" | "o", patientName: string, when: string) =>
+  `Tudo bem, ${phrase} de ${patientName} continua marcad${end} para ${when}.`;
+
+/** Desistir na marcação (ou quando não há atendimento marcado). */
+export const NOT_COMPLETED_GIVE_UP = "Tudo bem. Quando quiser, é só mandar uma mensagem.";

@@ -1,9 +1,8 @@
 # Pedido não concluído (PN): retomada pelo bot e lembrete só com a ação concluída
 
-> **Retomar daqui (03/nov/2026).** **PN1 na `main` e no staging** (`e8990d3`; migração
-> `20261201120000_lembrete_nao_concluido.sql` aplicada no staging por `db push --remote` e conferida no histórico).
-> Testes de banco pelo CI (o banco local estava com a branch `faturamento`). Cliente valida no staging (Relatório do
-> dia › Lembretes e Métricas › Desempenho). Próximo: PN2.
+> **Retomar daqui (03/nov/2026).** **PN1 na `main` e no staging** (`e8990d3`, migração `20261201120000`).
+> **PN2 feita na branch `pedido-nao-concluido-2`** (migração `20261202120000_link_nao_concluido.sql`), testes de
+> banco pelo CI do PR. Próximo: CI verde → migração no staging → `main` → cliente valida PN1 e PN2 juntas no staging.
 
 Pedido do cliente em 03/nov/2026, depois de um caso na produção (clínica piloto).
 
@@ -66,7 +65,23 @@ Plano original:
 - Central de Ajuda (`ajuda/resumo.ts`, artigos de lembretes) e capturas do Relatório do dia, se houver (anotar em
   `capturas-pendentes.md`).
 
-### PN2 — Mensagem de pedido não concluído
+### PN2 — Mensagem de pedido não concluído (feita, 03/nov)
+
+Feito (`bot/notCompleted.ts`): a rotina da conversa parada (minuto a minuto) chama `promptExpiredLinks`: link do bot
+vencido na última hora, sem uso e sem `booking_links.not_completed_prompted_at` (coluna nova; marcada antes do envio,
+também quando pula). Pula se: conversa pausada ou fora do começo (`WELCOME`), link mais novo para o número,
+remarcação já feita/atendimento inativo, marcação já feita para o paciente depois do link, última mensagem do
+paciente com mais de 24 h. Senão: "Não concluímos…" com os botões e o passo `NOT_COMPLETED`. Cancelamento parado em
+`CANCEL_CONFIRM` por 15 min: `promptPendingCancel` no lugar do "encerramos". Botões: Novo link (copia o link vencido,
+30 min) ou Cancelar agora (`askCancel` de novo); Falar com a recepção (`handoff` com origem `not_completed` e o
+assunto "Não concluiu a … de [paciente] pelo WhatsApp."); Desistir (o atendimento segue marcado, com a data; na
+marcação, "Quando quiser…"). Outra mensagem recomeça a conversa; sem resposta, o "encerramos" de sempre em 15 min.
+`list_clinics_with_idle_conversations` passa a incluir as clínicas com link vencido não tratado. Link de 2 dias
+(cancelamento pela clínica) entra pela mesma regra, com o texto de remarcação; fora da janela de 24 h, pula. Jornada do
+bot: item 10 e notas nos itens 2 e 4 (`JOURNEY_UPDATED` 03/11). Sem passo novo no funil (a escolha aparece pela
+conversa e pela transferência com a origem). Testes: `tests/db/bot-nao-concluido.test.ts`, `texts.test.ts`.
+
+Plano original:
 
 - Rotina (junto da `closeIdleConversations`): link vencido sem uso e sem pedido concluído na sessão do funil →
   a mensagem; cancelamento parado em `CANCEL_CONFIRM` por 15 min → a mensagem (em vez do "encerramos").

@@ -295,7 +295,7 @@ export function checkHandoff(conversation: Conversation): "active" | "paused" {
  * De onde veio o pedido de recepção (cliente, 30/out/2026): opção do menu, ações do agendamento na entrada, data
  * não encontrada, botão de saída de uma resposta não entendida (C12) ou pedido digitado ("atendente").
  */
-export type HandoffOrigin = "menu" | "entry_actions" | "identity_not_found" | "way_out" | "typed" | "kb_answer";
+export type HandoffOrigin = "menu" | "entry_actions" | "identity_not_found" | "way_out" | "typed" | "kb_answer" | "not_completed";
 
 export async function pauseForHuman(
   db: DbClient,
