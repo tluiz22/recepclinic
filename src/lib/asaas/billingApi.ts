@@ -45,6 +45,8 @@ async function call<T>(env: AsaasEnv, fetcher: Fetcher, method: "GET" | "POST" |
 }
 
 const reais = (cents: number) => Math.round(cents) / 100;
+// O Checkout exige uma imagem por item: 1 pixel na cor do RecepClinic.
+const CHECKOUT_IMAGE = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==";
 const cents = (value: number) => Math.round(value * 100);
 
 export type AsaasBillingType = "PIX" | "CREDIT_CARD";
@@ -203,6 +205,42 @@ export function asaasBillingApi(env: AsaasEnv, fetcher: Fetcher = fetch) {
     /** Estorno integral de uma cobrança paga (Pix ou cartão). */
     async refundPayment(id: string): Promise<void> {
       await post(`/payments/${encodeURIComponent(id)}/refund`, {});
+    },
+
+    /**
+     * F12.2g: Checkout do Asaas para a clínica informar outro cartão. Cria uma
+     * assinatura nova no cartão, com a 1ª cobrança em `nextDueDate` (nada é
+     * cobrado na hora; testado no sandbox em 03/nov/2026). Devolve o link.
+     */
+    async createCardCheckout(input: {
+      customer: string;
+      valueCents: number;
+      nextDueDate: string;
+      itemName: string;
+      description: string;
+      successUrl: string;
+      cancelUrl: string;
+      externalReference: string;
+    }): Promise<{ id: string; link: string }> {
+      const created = await post<{ id: string; link: string }>("/checkouts", {
+        billingTypes: ["CREDIT_CARD"],
+        chargeTypes: ["RECURRENT"],
+        minutesToExpire: 60,
+        callback: { successUrl: input.successUrl, cancelUrl: input.cancelUrl, expiredUrl: input.cancelUrl },
+        items: [{ name: input.itemName.slice(0, 30), description: input.description.slice(0, 150), quantity: 1, value: reais(input.valueCents), imageBase64: CHECKOUT_IMAGE }],
+        subscription: { cycle: "MONTHLY", nextDueDate: input.nextDueDate },
+        customer: input.customer,
+        externalReference: input.externalReference,
+      });
+      return { id: created.id, link: created.link };
+    },
+
+    /** Assinaturas do cliente (não removidas), para achar a criada pelo Checkout. */
+    async listCustomerSubscriptions(customer: string): Promise<{ id: string; billingType: string; nextDueDate: string; dateCreated: string }[]> {
+      const list = await get<List<{ id: string; billingType: string; nextDueDate: string; dateCreated: string; deleted?: boolean; status?: string }>>(
+        `/subscriptions?${q({ customer, limit: "100" })}`,
+      );
+      return list.data.filter((sub) => !sub.deleted && sub.status !== "INACTIVE").map(({ id, billingType, nextDueDate, dateCreated }) => ({ id, billingType, nextDueDate, dateCreated }));
     },
   };
 }

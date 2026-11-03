@@ -468,6 +468,58 @@ export function platformBillingCancelStore(env: ServiceEnv = platformEnv()): Bil
   };
 }
 
+// Troca de cartão pelo Administrador (F12.2g): o pedido (Checkout do Asaas) e
+// a troca da assinatura no contrato.
+export type CardChangeRequest = { checkoutId: string; requestedAt: Date; nextDue: string };
+
+export type BillingCardChangeStore = Pick<BillingStore, "load" | "upsertCharge"> & {
+  loadCardChange(contractId: string): Promise<CardChangeRequest | null>;
+  recordCardChangeRequest(contractId: string, checkoutId: string, nextDue: string, actorId: string | null): Promise<void>;
+  finishCardChange(contractId: string, newSubscriptionId: string | null, error: string | null): Promise<void>;
+  openCharges(contractId: string): Promise<{ paymentId: string; kind: "monthly" | "setup" | "other"; status: string; dueDate: string }[]>;
+  openCardChanges(): Promise<string[]>;
+};
+
+export function platformBillingCardChangeStore(env: ServiceEnv = platformEnv()): BillingCardChangeStore {
+  const db = platformClient(env);
+  const billing = platformBillingStore(env);
+  const call = async <T>(name: string, args: Record<string, unknown>): Promise<T> => {
+    const { data, error } = await (db.rpc as unknown as (n: string, a: Record<string, unknown>) => Promise<{ data: T; error: unknown }>)(name, args);
+    if (error) throw new PlatformLookupError(name, error);
+    return data;
+  };
+  return {
+    load: billing.load,
+    upsertCharge: billing.upsertCharge,
+    async loadCardChange(contractId) {
+      if (!isUuid(contractId)) return null;
+      const { data, error } = await db
+        .from("billing_contracts")
+        .select("card_change_checkout_id, card_change_requested_at, card_change_next_due")
+        .eq("id", contractId)
+        .maybeSingle();
+      if (error) throw new PlatformLookupError("contrato", error);
+      if (!data?.card_change_checkout_id || !data.card_change_requested_at || !data.card_change_next_due) return null;
+      return { checkoutId: data.card_change_checkout_id, requestedAt: new Date(data.card_change_requested_at), nextDue: data.card_change_next_due };
+    },
+    recordCardChangeRequest: (contractId, checkoutId, nextDue, actorId) =>
+      call<null>("billing_record_card_change_request", { p_contract_id: contractId, p_checkout_id: checkoutId, p_next_due: nextDue, p_actor: actorId }).then(() => undefined),
+    finishCardChange: (contractId, newSubscriptionId, error) =>
+      call<null>("billing_finish_card_change", { p_contract_id: contractId, p_new_subscription_id: newSubscriptionId, p_error: error ?? "" }).then(() => undefined),
+    async openCharges(contractId) {
+      const { data, error } = await db
+        .from("billing_charges")
+        .select("asaas_payment_id, kind, status, due_date")
+        .eq("contract_id", contractId)
+        .in("status", ["pending", "overdue"])
+        .not("asaas_payment_id", "is", null);
+      if (error) throw new PlatformLookupError("cobranças", error);
+      return (data ?? []).map((c) => ({ paymentId: c.asaas_payment_id!, kind: c.kind as "monthly" | "setup" | "other", status: c.status, dueDate: c.due_date }));
+    },
+    openCardChanges: async () => (await call<string[] | null>("billing_card_changes_open", {})) ?? [],
+  };
+}
+
 // Fila de eventos do webhook do Asaas e conciliação (F12.5).
 export type BillingProviderEvent = { id: string; providerEventId: string; event: string; resourceId: string | null; attempts: number };
 

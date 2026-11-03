@@ -218,7 +218,7 @@ export const configuracoes = {
       como: [
         "O Suporte cadastra o pagador e o contrato (mensalidade e, com a nota fiscal liberada, o preço por nota e a franquia); para mudar, fale com o Suporte.",
         "Com contrato novo, a tela guia em passos: 1) ler e aceitar o contrato, marcando também a autorização da cobrança mensal; 2) se quiser, autorizar os avisos pelo WhatsApp. Ficam registrados data, hora, quem aceitou, IP, versão do texto e a autorização.",
-        "A assinatura é mensal e se renova sozinha no dia do vencimento, até o cancelamento. No cartão, a clínica informa o cartão uma vez (\"Informar o cartão e pagar\") e os meses seguintes são cobrados nele; no Pix, cada cobrança tem o \"Pagar com Pix\".",
+        "A assinatura é mensal e se renova sozinha no dia do vencimento, até o cancelamento. No cartão, a clínica informa o cartão uma vez (\"Informar o cartão e pagar\") e os meses seguintes são cobrados nele (\"Trocar o cartão\" abre a página do Asaas para outro cartão); no Pix, cada cobrança tem o \"Pagar com Pix\".",
         "Reajuste anual pelo IPCA e outras mudanças de valor chegam ao e-mail financeiro e à tela 30 dias antes; continuar usando vale como aceite. Texto do contrato novo pede aceite de novo.",
         "Os avisos de cobrança (vencimento, atraso e pagamento reconhecido) sempre vão para o e-mail financeiro; com o WhatsApp financeiro autorizado, também para o telefone financeiro.",
       ],

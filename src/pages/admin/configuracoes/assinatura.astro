@@ -164,7 +164,15 @@ const H2 = "font-display text-[17px] leading-tight font-bold text-ink sm:text-lg
             </div>
             {billed && billed.status === "active" && billed.acceptance !== "pending" && <p class="mt-2 text-sm text-ink-soft">{renewalLine(billed)}</p>}
             {billed?.paymentMethod === "credit_card" && (
-              <p class="mt-1 text-sm text-ink-soft">O RecepClinic não guarda dados do cartão. Para trocar o cartão, fale com o Suporte do RecepClinic.</p>
+              <div class="mt-2 flex flex-wrap items-center justify-between gap-2">
+                <p class="text-sm text-ink-soft">O RecepClinic não guarda dados do cartão: ele é informado na página do Asaas.</p>
+                {isClinicAdmin && billed.status === "active" && billed.billingMode === "asaas" && cardOnFile && (
+                  <form method="POST" action={action}>
+                    <input type="hidden" name="acao" value="cartao_trocar" />
+                    <button type="submit" data-sending-label="Abrindo…" class={SECONDARY_BUTTON}>Trocar o cartão</button>
+                  </form>
+                )}
+              </div>
             )}
           </Card>
         )}

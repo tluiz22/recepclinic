@@ -161,6 +161,9 @@ export const BILLING_ACTIONS = {
   contract_canceled: "Assinatura cancelada pelo Administrador",
   asaas_cancel_done: "Cancelamento aplicado no Asaas",
   asaas_cancel_failed: "Cancelamento não aplicado no Asaas",
+  card_change_requested: "Troca de cartão pedida (Checkout do Asaas)",
+  card_changed: "Cartão trocado",
+  card_change_failed: "Troca de cartão não concluída",
 } as const;
 
 /** Suporte: clínicas que cancelaram a assinatura e não têm contrato ativo (selo na lista de clínicas; F12.2f). */

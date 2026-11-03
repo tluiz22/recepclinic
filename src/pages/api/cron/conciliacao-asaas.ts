@@ -3,7 +3,8 @@ import { heartbeat } from "../../../lib/cron/route";
 import { todayIn } from "../../../lib/clinicTime";
 import { applyCancellationInAsaas } from "../../../lib/data/billingCancel";
 import { reconcileBilling } from "../../../lib/data/billingEvents";
-import { platformBillingCancelStore } from "../../../lib/data/platform";
+import { finishCardChangeNow } from "../../../lib/data/billingAsaasDeps";
+import { platformBillingCancelStore, platformBillingCardChangeStore } from "../../../lib/data/platform";
 import { billingEventDeps } from "../../../lib/data/billingEventsDeps";
 import { platformEnv } from "../../../lib/env";
 import { logError } from "../../../lib/log";
@@ -12,7 +13,8 @@ import { logError } from "../../../lib/log";
 // contrato automático aceito (corrige o que o webhook perdeu e refaz a criação
 // que falhou). Cada falha fica no contrato e na trilha. F12.2f: refaz o ajuste
 // do cancelamento que falhou no Asaas e suspende (fim do contrato) a clínica
-// que passou do último dia de acesso depois de cancelar.
+// que passou do último dia de acesso depois de cancelar. F12.2g: termina a
+// troca de cartão que ficou pela metade.
 const route: APIRoute = async ({ request }) => {
   if (request.headers.get("authorization") !== `Bearer ${platformEnv().cronSecret}`) {
     return new Response(JSON.stringify({ error: "não autorizado" }), { status: 401 });
@@ -26,7 +28,12 @@ const route: APIRoute = async ({ request }) => {
     if ((await applyCancellationInAsaas(cancelStore, api, contractId)).status === "failed") cancelFailed += 1;
   }
   const suspended = await cancelStore.suspendEnded();
-  const failed = result.failed + cancelFailed;
+  // F12.2g: troca de cartão que não voltou do Checkout: conclui ou descarta (1 dia).
+  let cardFailed = 0;
+  for (const contractId of await platformBillingCardChangeStore().openCardChanges()) {
+    if ((await finishCardChangeNow(contractId)).status === "failed") cardFailed += 1;
+  }
+  const failed = result.failed + cancelFailed + cardFailed;
   if (failed) logError("conciliacao-asaas", new Error(`${failed} contrato(s) com erro no Asaas`));
   await heartbeat("conciliacao-asaas", result.contracts + cancels.length, failed);
   return new Response(JSON.stringify({ ...result, cancels: cancels.length, cancelFailed, suspended }), { headers: { "Content-Type": "application/json" } });
