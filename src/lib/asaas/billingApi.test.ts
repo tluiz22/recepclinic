@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { AsaasApiError, asaasBillingApi } from "./billingApi";
 
 // F12.4: cliente da API do Asaas para cobrar as clínicas (fetch de mentira).
-const env = { apiKey: "chave-teste", baseUrl: "https://api-sandbox.asaas.com/v3" };
+const env = { apiKey: "chave-teste", baseUrl: "https://api-sandbox.asaas.com/v3", webhookToken: null };
 
 function fakeFetch(responses: Record<string, unknown>, calls: { url: string; init: RequestInit }[] = [], status = 200) {
   return (async (url: string, init: RequestInit) => {
