@@ -1,10 +1,9 @@
 # RecepClinic
 
-> **Estado atual (retomar daqui), 02/nov/2026.** Detalhes e datas no [`historico.md`](historico.md) (só por busca).
+> **Estado atual (retomar daqui), 03/nov/2026.** Detalhes e datas no [`historico.md`](historico.md) (só por busca).
 >
-> **Próxima sessão (cliente, 02/nov):** começar **listando ao cliente o passo a passo para validar** o faturamento
-> F12.2b a F12.8 no local (branch `faturamento`; resumo e pendências no bloco de retomada do
-> `planejamento-faturamento-saas.md` da branch). Cliente já copiou `ASAAS_API_KEY` e `ASAAS_BASE_URL` (sandbox) para o `.env`.
+> **Próxima sessão (cliente, 03/nov):** cliente valida no local o faturamento **F12.2b a F12.2h** (branch `faturamento`),
+> pelo [`roteiro-validacao-faturamento.md`](roteiro-validacao-faturamento.md) **da branch**. Ambiente local pronto na branch.
 >
 > **Próximo (cliente, 01/nov):** validado no staging: Base de Conhecimento, "Como funciona?" de Configurações e Central de
 > Ajuda. No staging para validar: **25 capturas reais de tela** nos artigos da Central (`public/ajuda/`, refazer quando a
@@ -19,8 +18,8 @@
 > - **Staging** (`teste.recepclinic.com.br`, branch `main`): produção + redesign da Recepção (RX1 a RX9, sem migração) +
 >   cartão do Asaas (`ASAAS_PREVIEW=1`) + Base de Conhecimento do bot (migração aplicada).
 >   Roteiros em [`staging.md`](staging.md).
-> - **Branch `faturamento`** (só local, sem push): todo código do financeiro, até a F12.8 (`5714645`; 944 testes de
->   unidade e 872 de banco passando). Tem a `main` até `7c64a68` (03/nov); atualizar só quando o cliente pedir (cliente, 01/nov).
+> - **Branch `faturamento`** (só local, sem push): todo código do financeiro, até a F12.2h (`cf33616`; 963 testes de
+>   unidade e 886 de banco passando). Tem a `main` até `7c64a68` (03/nov); atualizar só quando o cliente pedir (cliente, 01/nov).
 >
 > **Frentes**
 > - **Ajustes da produção (C1–C16) e revisão da jornada do bot:** todos na produção; nada pendente. Decisões da
@@ -28,10 +27,11 @@
 > - **Evolução do assistente** ([`evolucao-assistente.md`](evolucao-assistente.md)): texto livre na entrada, motivo antes
 >   da recepção e taxa de resolução sem a recepção. **Na produção (02/nov, `c9418ac`)**, migração aplicada no staging
 >   e na produção. Próximo: acompanhar a taxa e as perguntas não reconhecidas da BC.
-> - **Faturamento do SaaS:** F12.1 e F12.2 validadas; **F12.2b a F12.8 feitas na branch (02/nov), cliente valida no
->   fim** (aceite, suspensão, Asaas sandbox, webhook, reativação, avisos, cartão). Revisar: textos dos e-mails e o
->   contrato provisório. Fora do código: token e cadastro do webhook no Asaas, tokenização em produção, advogado.
->   Depois: F12.11. Retomar pelo `planejamento-faturamento-saas.md` **na branch**.
+> - **Faturamento do SaaS:** F12.1 e F12.2 validadas; **F12.2b a F12.8 e F12.2c a F12.2h feitas na branch, cliente valida
+>   no fim**. 03/nov: contrato com nota fiscal só com o Módulo financeiro (e nota só com contrato assinado), texto
+>   aprovado (renovação automática, IPCA, arrependimento, cancelamento), Assinatura em passo a passo, cancelamento e
+>   troca de cartão pelo Administrador, lembrete do IPCA. Revisar: textos dos e-mails. Fora do código: token e webhook do
+>   Asaas, tokenização em produção, advogado. Depois: F12.11. Retomar pelo `planejamento-faturamento-saas.md` **na branch**.
 > - **NFS-e pelo Asaas** (`planejamento-nfse-asaas.md`, seção 13): N0; formulário BaaS enviado (30/out). Aguarda
 >   Asaas e contador (PIS/COFINS, e-CNPJ A1).
 > - **Piloto (F10, [plano](plano.md)):** clínica piloto criada na produção, WhatsApp conectado, templates em análise
