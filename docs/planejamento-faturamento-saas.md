@@ -64,6 +64,13 @@
 > (`chargeTypes: RECURRENT`), que cria uma nova assinatura no novo cartão; o RecepClinic cancela a antiga (mantém a
 > 11.9). A API de troca (`POST /v3/subscriptions/{id}/updateCreditCard`) exige o cartão ou token: recusada. **Antes de
 > implementar:** testar no sandbox se a nova assinatura começa só no próximo vencimento, sem cobrança na hora.
+> **Cobrança recorrente e CDC (cliente, 03/nov):** contrato com prazo indeterminado e renovação automática mensal;
+> cláusula da forma de pagamento (cartão salvo no Asaas / Pix mensal); **reajuste anual pelo IPCA** no aniversário,
+> aviso 30 dias antes (e-mail e Assinatura), cancelar sem multa antes; **cancelamento pelo Administrador na
+> Assinatura**, na hora (cancela no Asaas, trilha, aviso ao Suporte e ao financeiro); **arrependimento em 7 dias com
+> devolução total** (estorno no Asaas). Tela: resumo da renovação antes do aceite ("R$ X todo dia D, até cancelar"),
+> duas caixas desmarcadas (aceite e autorização da cobrança automática), link do contrato completo. Tela da
+> Assinatura no modelo "passo a passo" (opção B do desenho de 03/nov).
 > **Próximo: F12.11** (homologação e produção), depois de: advogado (texto do contrato e 11.16), chave e webhook do
 > Asaas de produção, valor combinado com a clínica piloto. Antes, validar F12.2b a F12.8 no local/staging.
 > **Ordem decidida (cliente, 30/out):** cobrança primeiro, até cobrar a clínica piloto em produção, **só com aviso por
