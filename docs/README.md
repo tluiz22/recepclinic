@@ -11,11 +11,11 @@
 > tela mudar). Falta informar o WhatsApp do suporte (Sistema › Suporte), se ainda não foi. Detalhes em
 > [`ajuda-contextual.md`](ajuda-contextual.md), fim. Cliente vai pedir novos ajustes.
 >
-> **Em produção (cliente, 02/nov):** `c9418ac`: evolução do assistente (migração `evolucao_do_assistente`), sobre o
-> `93ab8cd` (redesign da Recepção, Central de Ajuda atualizada, Migrar de agenda, linhas "Livre"). Detalhe no [`producao.md`](producao.md) (Publicações).
+> **Em produção (cliente, 02/nov):** `6b0df0b`: menu do bot "Informações gerais" e Vendas › Demonstração nova, sobre o
+> `c9418ac` (evolução do assistente). Detalhe no [`producao.md`](producao.md) (Publicações).
 >
 > **Ambientes**
-> - **Produção** (`app.recepclinic.com.br`, branch `producao`) = `main` em `c9418ac` (ver acima). Fluxo em [`producao.md`](producao.md).
+> - **Produção** (`app.recepclinic.com.br`, branch `producao`) = `main` em `6b0df0b` (ver acima). Fluxo em [`producao.md`](producao.md).
 > - **Staging** (`teste.recepclinic.com.br`, branch `main`): produção + redesign da Recepção (RX1 a RX9, sem migração) +
 >   cartão do Asaas (`ASAAS_PREVIEW=1`) + Base de Conhecimento do bot (migração aplicada).
 >   Roteiros em [`staging.md`](staging.md).
