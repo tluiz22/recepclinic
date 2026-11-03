@@ -1,7 +1,9 @@
 # Faturamento recorrente do SaaS (Asaas)
 
-> **Estado atual (retomar daqui), 02/nov/2026.** Branch **`faturamento`**, local, sem push. F12.1 e F12.2 validadas
+> **Estado atual (retomar daqui), 03/nov/2026.** Branch **`faturamento`**, local, sem push. F12.1 e F12.2 validadas
 > no local. **Cliente valida no fim (02/nov):** seguir as fases sem parar; validar tudo junto no local.
+> **03/nov: F12.2c a F12.2h feitas** (abaixo); roteiro de validação em [`roteiro-validacao-faturamento.md`](roteiro-validacao-faturamento.md).
+> Próximo: cliente valida F12.2b a F12.2h no local; depois, F12.11.
 > **F12.2b feita** (`20261117120000_aceite_do_contrato.sql`): aceite do contrato pelo Administrador em Configurações ›
 > Assinatura (data, hora, quem, IP, versão do texto); texto **provisório** em `src/lib/billingContractText.ts`; mudança
 > com o mesmo texto = aceite tácito, início só 30 dias depois da ativação, e-mail dos novos termos ao financeiro (envio
@@ -76,6 +78,16 @@
 > suspensão; arrependimento em 7 dias; cancelamento e fim; dados pessoais). **Motivo do cancelamento:** lista
 > obrigatória (Preço; Não usamos o suficiente; Faltou uma função; Problemas no WhatsApp/bot; Vamos usar outro sistema;
 > A clínica fechou ou pausou; Outro) e comentário opcional (obrigatório em "Outro"); o Suporte vê e conta os motivos.
+> **F12.2d a F12.2h feitas (03/nov):** **d** texto aprovado (`provisorio-2026-11-03b`, com e sem `-nf`). **e**
+> (`20261125120000`): Assinatura em passo a passo (aceite + autorização da cobrança mensal guardada em
+> `recurring_consent`; WhatsApp opcional com "Agora não"; aviso "Pronto"); cobranças no topo com a ação da forma de
+> pagamento; página "contrato completo". **f** (`20261126120000`): cancelamento pelo Administrador
+> (`/admin/configuracoes/assinatura/cancelar`; arrependimento 7 dias = estorno e suspensão na hora; senão acesso até a
+> véspera do próximo vencimento, que continua devido, e a `conciliacao-asaas` suspende depois; Asaas: `endDate` ou
+> estorno/remoção, testados no sandbox, menos o estorno); e-mail ao financeiro; Suporte vê na aba Faturamento e selo
+> na lista. **g** (`20261127120000`): "Trocar o cartão" pelo Checkout do Asaas (sandbox: nada cobrado na hora, 1ª
+> cobrança no vencimento pedido; aceita `customer`; a assinatura nova vem sem a nossa referência); com cobrança
+> vencida, pede para pagar antes. **h**: lembrete do IPCA na aba Faturamento 45 dias antes do aniversário.
 > **Próximo: F12.11** (homologação e produção), depois de: advogado (texto do contrato e 11.16), chave e webhook do
 > Asaas de produção, valor combinado com a clínica piloto. Antes, validar F12.2b a F12.8 no local/staging.
 > **Ordem decidida (cliente, 30/out):** cobrança primeiro, até cobrar a clínica piloto em produção, **só com aviso por
