@@ -11,11 +11,11 @@
 > tela mudar). Falta informar o WhatsApp do suporte (Sistema › Suporte), se ainda não foi. Detalhes em
 > [`ajuda-contextual.md`](ajuda-contextual.md), fim. Cliente vai pedir novos ajustes.
 >
-> **Em produção (cliente, 02/nov):** `6b0df0b`: menu do bot "Informações gerais" e Vendas › Demonstração nova, sobre o
-> `c9418ac` (evolução do assistente). Detalhe no [`producao.md`](producao.md) (Publicações).
+> **Em produção (cliente, 03/nov):** `1ceb6a4`: ficha sem a aba "Todos" e ajuda do "Faltou X de Y" no painel, sobre o
+> `6b0df0b` ("Informações gerais" e Vendas › Demonstração). Detalhe no [`producao.md`](producao.md) (Publicações).
 >
 > **Ambientes**
-> - **Produção** (`app.recepclinic.com.br`, branch `producao`) = `main` em `6b0df0b` (ver acima). Fluxo em [`producao.md`](producao.md).
+> - **Produção** (`app.recepclinic.com.br`, branch `producao`) = `main` em `1ceb6a4` (ver acima). Fluxo em [`producao.md`](producao.md).
 > - **Staging** (`teste.recepclinic.com.br`, branch `main`): produção + redesign da Recepção (RX1 a RX9, sem migração) +
 >   cartão do Asaas (`ASAAS_PREVIEW=1`) + Base de Conhecimento do bot (migração aplicada).
 >   Roteiros em [`staging.md`](staging.md).
@@ -46,9 +46,6 @@
 > Financeiro; Consultório da Dra. Ana Karina excluído do staging. Logins e senhas em Sistema › Vendas › Demonstração.
 > Cliente valida. **Antes de cada apresentação:**
 > `node --env-file=.env.staging scripts/demo-clinicas.mjs --confirmar` (plano, item 9b).
->
-> **Ajustes de 03/nov (staging, `51b5558`):** ficha do paciente sem a aba "Todos"; ajuda do "Faltou X de Y" no painel
-> da Agenda abre abaixo do selo (antes saía cortada). Cliente valida.
 >
 > **Pendências**
 > - **Cliente valida no staging (no fim):** F8.1, F8.2, F8.2b, F8.3, ajuda contextual e menu lateral.
