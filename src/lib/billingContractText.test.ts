@@ -32,5 +32,20 @@ describe("texto do contrato", () => {
     expect(billingTermsVersionFor({ invoiceUnitPriceCents: null })).toBe(BILLING_CONTRACT_TERMS_VERSION);
     expect(billingTermsVersionFor({ invoiceUnitPriceCents: 0 })).toBe(BILLING_CONTRACT_TERMS_VERSION_NF);
     expect(billingContractTerms("provisorio-2026-11-02")).toBeNull();
+    expect(billingContractTerms("provisorio-2026-11-03")).toBeNull();
+  });
+
+  it("F12.2d: renovação automática, forma de pagamento, IPCA, arrependimento e cancelamento na tela", () => {
+    for (const version of [BILLING_CONTRACT_TERMS_VERSION, BILLING_CONTRACT_TERMS_VERSION_NF]) {
+      const all = text(version);
+      expect(all).toMatch(/prazo indeterminado/);
+      expect(all).toMatch(/renova automaticamente todo mês/);
+      expect(all).toMatch(/cobrança automática da mensalidade nesse cartão/);
+      expect(all).toMatch(/IPCA/);
+      expect(all).toMatch(/Em até 7 dias do aceite/);
+      expect(all).toMatch(/Cancelar a assinatura/);
+    }
+    expect(billingContractTerms(BILLING_CONTRACT_TERMS_VERSION)).toHaveLength(9);
+    expect(billingContractTerms(BILLING_CONTRACT_TERMS_VERSION_NF)).toHaveLength(10);
   });
 });
