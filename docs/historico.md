@@ -868,3 +868,10 @@ qualquer perfil e data sem atendimento só com "Tentar outra data" e "Voltar ao 
 - `scripts/demo-clinicas.mjs` reescrito: agenda gerada por semente (das 3 últimas semanas a 2 semanas à frente) com os
   cenários listados no plano (item 9b). Aplicado no staging em 02/nov; nada de código do app mudou.
 
+
+## Menu do bot: "Informações gerais" (cliente, 02/nov/2026)
+
+- O item "Informações" do menu principal do WhatsApp passou a "Informações gerais" (o cliente pediu no lugar de "Informações
+  sobre consultas (e exames)", que não cabem nos 24 caracteres do título da lista). Atualizados o fluxograma (Tecnologia ›
+  Jornada do bot), a Central de Ajuda, a prévia de Configurações › Mensagens, os textos de Configurações › Clínica e o
+  Roteiro de vendas. As capturas da ajuda não mostram o item: nada a recapturar.

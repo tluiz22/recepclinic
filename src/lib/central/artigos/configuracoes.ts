@@ -26,7 +26,7 @@ export const configuracoesArtigos = [
       { name: "Prazo para oferecer horários", text: "Até quantos dias à frente o bot e o link de agendamento mostram horários livres. A recepção, pelo painel, não tem esse limite." },
       { name: "Idade limite para consulta", text: "Para clínicas que atendem Consulta só até certa idade (pediatria). Quem passou da idade não marca Consulta pelo bot (Retorno e Exame seguem); no painel, o Marcar e a ficha avisam, sem impedir." },
       { name: "Páginas públicas", text: "Logo (PNG, JPG ou WebP, até 1 MB), cor da clínica (fundo do topo) e site (com ele, as páginas mostram \"Voltar para o site\")." },
-      { name: "Informações que o bot responde (com o bot)", text: "Formas de pagamento (fim de Informações › Valores), Convênios e Observações. Vazio faz a opção sumir do bot (formas de pagamento: os valores aparecem sem elas)." },
+      { name: "Informações que o bot responde (com o bot)", text: "Formas de pagamento (fim de Informações gerais › Valores), Convênios e Observações. Vazio faz a opção sumir do bot (formas de pagamento: os valores aparecem sem elas)." },
       { name: "Horário da recepção (com o bot)", text: "Quando a clínica atende pelo WhatsApp. Fora dele, as conversas que precisam da clínica entram em Atendimento sem notificação. Feriados contam como fechado." },
       { name: "Limites do bot por contato (com o bot)", text: "Atendimentos futuros, pacientes cadastrados e faltas, por número. Padrão 5; 0 desliga." },
     ],
@@ -72,7 +72,7 @@ export const configuracoesArtigos = [
       { name: "Consultório", text: "O paciente vai até a clínica. O endereço vai no lembrete e na confirmação, com o link do mapa. Consultório sem endereço aparece com o selo \"sem endereço\"." },
       { name: "Domiciliar", text: "A equipe vai até o paciente; o endereço é pedido ao marcar. Precisa do item Atendimento domiciliar liberado para a clínica (senão o selo \"não liberado\" aparece)." },
     ],
-    notes: ["O tipo do local não muda depois de criado.", "O endereço também alimenta a opção Endereço de Informações no bot."],
+    notes: ["O tipo do local não muda depois de criado.", "O endereço também alimenta a opção Endereço de Informações gerais no bot."],
     contextual: ["/admin/configuracoes/locais"],
   }),
   article({
