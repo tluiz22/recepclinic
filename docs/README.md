@@ -32,6 +32,10 @@
 >   aprovado (renovação automática, IPCA, arrependimento, cancelamento), Assinatura em passo a passo, cancelamento e
 >   troca de cartão pelo Administrador, lembrete do IPCA. Revisar: textos dos e-mails. Fora do código: token e webhook do
 >   Asaas, tokenização em produção, advogado. Depois: F12.11. Retomar pelo `planejamento-faturamento-saas.md` **na branch**.
+> - **Implantação segura do WhatsApp** ([`implantacao-segura.md`](implantacao-segura.md)), após os incidentes de 03/nov
+>   na clínica piloto (erro 131042 de pagamento na Meta; mensagem automática do app pausando o bot): guias públicos
+>   para o dono da clínica, mensagem de teste exigida para ativar, checklist de implantação, aviso de mensagem
+>   automática e Sistema › Problemas conhecidos. Planejamento aprovado; próximo: IS1.
 > - **NFS-e pelo Asaas** (`planejamento-nfse-asaas.md`, seção 13): N0; formulário BaaS enviado (30/out). Aguarda
 >   Asaas e contador (PIS/COFINS, e-CNPJ A1).
 > - **Piloto (F10, [plano](plano.md)):** clínica piloto criada na produção, WhatsApp conectado, templates em análise
@@ -51,6 +55,8 @@
 > - **Cliente valida no staging (no fim):** F8.1, F8.2, F8.2b, F8.3, ajuda contextual e menu lateral.
 > - **F11:** roteiro a partir do T3.1; Produção Restrita (A1), template `rc_nota_fiscal_v1`, termo com o advogado.
 > - **Operação:** 1º backup diário da produção; sessão do painel que caiu (parte P do `staging.md`).
+> - **Clínica piloto (03/nov):** conferir os lembretes de hoje (1º lote depois do cartão na Meta); verificação da
+>   empresa na Meta não iniciada.
 > - **Do cliente:** advogado (páginas legais, [pedidos de autoridades](politica-pedidos-de-autoridades.md), contrato,
 >   termo de dados); número do app antigo como 2ª clínica de testes do staging.
 >
