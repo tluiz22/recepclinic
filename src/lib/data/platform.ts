@@ -410,6 +410,64 @@ export function platformBillingStore(env: ServiceEnv = platformEnv()): BillingSt
   };
 }
 
+// Cancelamento da assinatura (F12.2f): o servidor ajusta o Asaas depois do
+// cancelamento gravado pelo Administrador e a rotina diária suspende quem
+// passou do último dia de acesso.
+export type BillingCancelSnapshot = {
+  contractId: string;
+  kind: "cancel" | "withdrawal";
+  billingMode: string;
+  subscriptionId: string | null;
+  nextDue: string | null;
+  charges: { paymentId: string; kind: "monthly" | "setup" | "other"; status: string; dueDate: string }[];
+};
+
+export type BillingCancelStore = Pick<BillingStore, "upsertCharge"> & {
+  loadCancel(contractId: string): Promise<BillingCancelSnapshot | null>;
+  recordCancelSync(contractId: string, error: string | null): Promise<void>;
+  cancelsToSync(): Promise<string[]>;
+  suspendEnded(): Promise<number>;
+};
+
+export function platformBillingCancelStore(env: ServiceEnv = platformEnv()): BillingCancelStore {
+  const db = platformClient(env);
+  const call = async <T>(name: string, args: Record<string, unknown>): Promise<T> => {
+    const { data, error } = await (db.rpc as unknown as (n: string, a: Record<string, unknown>) => Promise<{ data: T; error: unknown }>)(name, args);
+    if (error) throw new PlatformLookupError(name, error);
+    return data;
+  };
+  return {
+    upsertCharge: platformBillingStore(env).upsertCharge,
+    async loadCancel(contractId) {
+      if (!isUuid(contractId)) return null;
+      const { data: contract, error } = await db
+        .from("billing_contracts")
+        .select("id, cancel_kind, billing_mode, asaas_subscription_id, cancel_next_due")
+        .eq("id", contractId)
+        .maybeSingle();
+      if (error) throw new PlatformLookupError("contrato", error);
+      if (!contract || !contract.cancel_kind) return null;
+      const { data: charges, error: chargesError } = await db
+        .from("billing_charges")
+        .select("asaas_payment_id, kind, status, due_date")
+        .eq("contract_id", contractId)
+        .not("asaas_payment_id", "is", null);
+      if (chargesError) throw new PlatformLookupError("cobranças", chargesError);
+      return {
+        contractId: contract.id,
+        kind: contract.cancel_kind as "cancel" | "withdrawal",
+        billingMode: contract.billing_mode,
+        subscriptionId: contract.asaas_subscription_id,
+        nextDue: contract.cancel_next_due,
+        charges: (charges ?? []).map((c) => ({ paymentId: c.asaas_payment_id!, kind: c.kind as "monthly" | "setup" | "other", status: c.status, dueDate: c.due_date })),
+      };
+    },
+    recordCancelSync: (contractId, error) => call<null>("billing_record_cancel_sync", { p_contract_id: contractId, p_error: error ?? "" }).then(() => undefined),
+    cancelsToSync: async () => (await call<string[] | null>("billing_cancels_to_sync", {})) ?? [],
+    suspendEnded: async () => (await call<number | null>("billing_suspend_ended_contracts", {})) ?? 0,
+  };
+}
+
 // Fila de eventos do webhook do Asaas e conciliação (F12.5).
 export type BillingProviderEvent = { id: string; providerEventId: string; event: string; resourceId: string | null; attempts: number };
 

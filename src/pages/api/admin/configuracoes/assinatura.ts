@@ -1,7 +1,12 @@
 import type { APIRoute } from "astro";
 import { recurringConsentText } from "../../../../lib/billingRenewal";
-import { acceptBillingContract, dismissBillingWhatsappPrompt, getBillingAccount, listBillingContracts, saveBillingContacts, setBillingWhatsappOptIn } from "../../../../lib/data/billing";
-import { syncContractNow } from "../../../../lib/data/billingAsaasDeps";
+import { acceptBillingContract, cancelBillingSubscription, dismissBillingWhatsappPrompt, getBillingAccount, listBillingContracts, saveBillingContacts, setBillingWhatsappOptIn } from "../../../../lib/data/billing";
+import { applyCancellationNow, syncContractNow } from "../../../../lib/data/billingAsaasDeps";
+import { formatCalendarDate, todayIn } from "../../../../lib/clinicTime";
+import { billingCancelEmail, smtpSender } from "../../../../lib/email";
+import { platformEnv } from "../../../../lib/env";
+import { logError } from "../../../../lib/log";
+import { formatCentsBRL } from "../../../../lib/money";
 import { createUserClient } from "../../../../lib/data/clients";
 import { DataError } from "../../../../lib/data/errors";
 import { runFormAction } from "../../../../lib/data/formAction";
@@ -15,6 +20,8 @@ import { formChecked, formOptionalText, formText } from "../../../../lib/forms";
 // cobrança mensal (2ª caixa; a frase guardada é a da forma de pagamento do
 // contrato); o passo do WhatsApp tem "Agora não" e "Salvar e autorizar";
 // terminado o passo a passo, a tela mostra o aviso "Pronto" (?pronto=1).
+// F12.2f: cancelamento pelo Administrador (motivo; ajusta o Asaas e manda a
+// confirmação ao e-mail financeiro; falhas não desfazem o cancelamento).
 // IP de quem aceitou: o 1º do x-forwarded-for (Vercel), senão o da conexão.
 function requestIp(context: { request: Request; clientAddress?: string }): string | null {
   const forwarded = context.request.headers.get("x-forwarded-for")?.split(",")[0]?.trim();
@@ -78,6 +85,34 @@ export const POST: APIRoute = async (context) => {
           const account = await getBillingAccount(db, clinic.clinicId);
           const whatsappNext = !!account && !account.whatsappOptIn && !account.whatsappPromptDismissedAt;
           return { redirectTo: whatsappNext ? page : done, message };
+        }
+        case "cancelar": {
+          if (!formChecked(form, "confirmo")) throw new DataError("invalid", "Cancelamento: confirme o cancelamento", { confirmo: "Marque a confirmação." });
+          const result = await cancelBillingSubscription(db, clinic.clinicId, { reason: formText(form, "motivo"), comment: formOptionalText(form, "comentario") });
+          await applyCancellationNow(result.contractId);
+          const [account, contracts] = await Promise.all([getBillingAccount(db, clinic.clinicId), listBillingContracts(db, clinic.clinicId)]);
+          const contract = contracts.find((c) => c.id === result.contractId);
+          const date = (value: string) => formatCalendarDate(value, "dd/MM/yyyy");
+          if (account) {
+            await smtpSender(platformEnv().email)(
+              billingCancelEmail(account.financeEmail, {
+                clinicName: clinic.clinicName,
+                kind: result.kind,
+                canceledOn: date(todayIn(clinic.timezone)),
+                accessUntil: date(result.accessUntil),
+                nextDue: date(result.nextDue),
+                amount: contract ? formatCentsBRL(contract.monthlyCents) : "",
+                panelLink: new URL(page, request.url).toString(),
+              }),
+            ).catch((error) => logError("faturamento: e-mail do cancelamento", error, { clinica: clinic.clinicId }));
+          }
+          return {
+            redirectTo: page,
+            message:
+              result.kind === "withdrawal"
+                ? "Assinatura cancelada no prazo de arrependimento: o que foi pago será devolvido e o acesso terminou."
+                : `Assinatura cancelada. A clínica usa o RecepClinic até ${date(result.accessUntil)}.`,
+          };
         }
         case "whatsapp_retirar":
           await setBillingWhatsappOptIn(db, clinic.clinicId, false);

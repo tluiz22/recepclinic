@@ -1,0 +1,94 @@
+---
+// Configurações › Assinatura › Cancelar (F12.2f; cliente, 03/nov/2026): só o
+// Administrador. Antes de confirmar, o que acontece (arrependimento até 7 dias
+// do aceite: devolução e fim do acesso na hora; depois: acesso até a véspera
+// do próximo vencimento, que continua devido), o motivo (lista obrigatória e
+// comentário, obrigatório em "Outro") e a confirmação.
+import ConfigShell from "../../../../components/admin/config/ConfigShell.astro";
+import Card from "../../../../components/admin/config/Panel.astro";
+import { CHECK, CHOICE, DANGER_BUTTON, HINT, INPUT, LABEL, LEGEND, SECONDARY_BUTTON } from "../../../../components/admin/config/formStyles";
+import { cancellationPreview } from "../../../../lib/billingRenewal";
+import { formatCalendarDate, todayIn } from "../../../../lib/clinicTime";
+import { CANCEL_REASONS, contractsInForce, listBillingCharges, listBillingContracts } from "../../../../lib/data/billing";
+import { createUserClient } from "../../../../lib/data/clients";
+import { formatCentsBRL } from "../../../../lib/money";
+
+const clinic = Astro.locals.clinic!;
+const db = createUserClient(Astro.request, Astro.cookies);
+const today = todayIn(clinic.timezone);
+const [contracts, charges] = await Promise.all([listBillingContracts(db, clinic.clinicId), listBillingCharges(db, clinic.clinicId)]);
+const { current, next } = contractsInForce(contracts, today);
+const contract = [current, next].find((c) => c?.status === "active") ?? null;
+const isClinicAdmin = clinic.roles.includes("admin");
+const preview = contract ? cancellationPreview(contract, today) : null;
+const date = (value: string) => formatCalendarDate(value, "dd/MM/yyyy");
+const paid = charges.filter((c) => c.status === "paid").reduce((sum, c) => sum + c.valueCents, 0);
+const open = charges.filter((c) => c.status === "pending" || c.status === "overdue");
+const page = "/admin/configuracoes/assinatura";
+---
+
+<ConfigShell current="assinatura" title="Cancelar a assinatura" subtitle="Sem multa e sem prazo mínimo." back={{ href: page, label: "Assinatura" }}>
+  {
+    !contract || !preview ? (
+      <Card>
+        <p class="text-[15px] text-ink-soft">Não há assinatura ativa para cancelar.</p>
+      </Card>
+    ) : !isClinicAdmin ? (
+      <Card>
+        <p class="text-[15px] text-ink-soft">Só o Administrador da clínica cancela a assinatura.</p>
+      </Card>
+    ) : (
+      <Card class="flex flex-col gap-4">
+        <h2 class="font-display text-[19px] leading-tight font-bold text-ink">O que acontece</h2>
+        {preview.kind === "withdrawal" ? (
+          <ul class="list-disc space-y-1.5 pl-5 text-[15.5px] text-ink">
+            <li>Você está no prazo de arrependimento (até 7 dias do aceite do contrato).</li>
+            <li>
+              Tudo o que foi pago{paid > 0 ? ` (${formatCentsBRL(paid)})` : ""} é devolvido na mesma forma de pagamento; as cobranças em aberto são canceladas.
+            </li>
+            <li>
+              <strong>O acesso termina agora:</strong> o painel fica restrito a esta tela, o bot para de responder e nada sai pelo WhatsApp.
+            </li>
+            <li>Os dados ficam disponíveis para exportação por 60 dias, com o Suporte do RecepClinic.</li>
+          </ul>
+        ) : (
+          <ul class="list-disc space-y-1.5 pl-5 text-[15.5px] text-ink">
+            <li>
+              <strong>A clínica usa o RecepClinic até {date(preview.accessUntil)}.</strong>
+            </li>
+            <li>
+              A mensalidade de {date(preview.nextDue)} ({formatCentsBRL(contract.monthlyCents)}), referente ao período em uso, continua devida. Depois dela, nada mais é cobrado.
+            </li>
+            {open.length > 0 && <li>Cobranças já vencidas continuam devidas.</li>}
+            <li>Os dados ficam disponíveis para exportação por 60 dias depois do fim, com o Suporte do RecepClinic.</li>
+          </ul>
+        )}
+        <form method="POST" action="/api/admin/configuracoes/assinatura" class="flex flex-col gap-4 border-t border-line pt-4">
+          <input type="hidden" name="acao" value="cancelar" />
+          <fieldset class="flex flex-col gap-1">
+            <legend class={LEGEND}>Por que a clínica está cancelando?</legend>
+            {Object.entries(CANCEL_REASONS).map(([key, label]) => (
+              <label class={CHOICE}>
+                <input type="radio" name="motivo" value={key} required class={CHECK} />
+                {label}
+              </label>
+            ))}
+          </fieldset>
+          <div>
+            <label for="comentario" class={LABEL}>Comentário (obrigatório em "Outro")</label>
+            <textarea id="comentario" name="comentario" rows="3" maxlength="1000" class={INPUT}></textarea>
+            <p class={HINT}>Ajuda o RecepClinic a melhorar. Só o Suporte vê.</p>
+          </div>
+          <label class="flex items-start gap-2 text-[15.5px] text-ink">
+            <input type="checkbox" name="confirmo" value="1" required class={`${CHECK} mt-0.5`} />
+            <span>Quero cancelar a assinatura da clínica, nas condições acima.</span>
+          </label>
+          <div class="flex flex-wrap justify-end gap-3">
+            <a href={page} class={SECONDARY_BUTTON}>Voltar sem cancelar</a>
+            <button type="submit" data-sending-label="Cancelando…" class={DANGER_BUTTON}>Cancelar a assinatura</button>
+          </div>
+        </form>
+      </Card>
+    )
+  }
+</ConfigShell>

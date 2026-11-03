@@ -72,3 +72,36 @@ export function chargeAction(
 export function hasCardOnFile(charges: { status: string; billingType: string | null }[]): boolean {
   return charges.some((c) => c.status === "paid" && c.billingType === "CREDIT_CARD");
 }
+
+/** Próximo vencimento depois de hoje (mesmo dia do mês do 1º vencimento); igual a app.billing_next_due. */
+export function nextDueAfter(firstDueDate: string, today: string): string {
+  const [y, m, d] = firstDueDate.split("-").map(Number);
+  for (let months = 0; ; months += 1) {
+    // Mês sem o dia (ex.: 31): o último dia do mês, como o Postgres faz.
+    const last = new Date(Date.UTC(y, m - 1 + months + 1, 0)).getUTCDate();
+    const due = new Date(Date.UTC(y, m - 1 + months, Math.min(d, last))).toISOString().slice(0, 10);
+    if (due > today) return due;
+  }
+}
+
+/** Véspera de uma data (AAAA-MM-DD). */
+export function dayBefore(date: string): string {
+  const day = new Date(`${date}T12:00:00Z`);
+  day.setUTCDate(day.getUTCDate() - 1);
+  return day.toISOString().slice(0, 10);
+}
+
+/**
+ * O que o cancelamento faz hoje (F12.2f; igual a cancel_billing_subscription):
+ * até 7 dias do aceite, arrependimento (devolve tudo, acesso acaba hoje);
+ * depois, acesso até a véspera do próximo vencimento, que continua devido.
+ */
+export function cancellationPreview(
+  contract: { acceptance: string | null; acceptedAt: Date | null; firstDueDate: string },
+  today: string,
+  now: Date = new Date(),
+): { kind: "cancel" | "withdrawal"; accessUntil: string; nextDue: string } {
+  const withdrawal = contract.acceptance === "explicit" && !!contract.acceptedAt && now.getTime() - contract.acceptedAt.getTime() <= 7 * 24 * 60 * 60 * 1000;
+  const nextDue = nextDueAfter(contract.firstDueDate, today);
+  return { kind: withdrawal ? "withdrawal" : "cancel", accessUntil: withdrawal ? today : dayBefore(nextDue), nextDue };
+}

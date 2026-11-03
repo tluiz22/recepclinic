@@ -317,13 +317,13 @@ isOneToOne: false
                   ]
                 },"billing_contracts": {
                   Row: {
-                    "acceptance": string | null,"accepted_at": string | null,"accepted_by": string | null,"accepted_ip": unknown,"activated_at": string | null,"activated_by": string | null,"asaas_subscription_id": string | null,"asaas_sync_error": string | null,"asaas_synced_at": string | null,"billing_mode": string,"clinic_id": string,"created_at": string,"created_by": string | null,"ends_on": string | null,"first_due_date": string,"id": string,"invoice_monthly_allowance": number | null,"invoice_unit_price_cents": number | null,"monthly_cents": number,"notes": string | null,"notice_sent_at": string | null,"payment_method": string | null,"plan_snapshot": NonNullable<Json>,"recurring_consent": string | null,"replaces_contract_id": string | null,"setup_cents": number,"starts_on": string,"status": string,"terms_version": string | null,"updated_at": string,"version": number | null
+                    "acceptance": string | null,"accepted_at": string | null,"accepted_by": string | null,"accepted_ip": unknown,"activated_at": string | null,"activated_by": string | null,"asaas_cancel_error": string | null,"asaas_cancel_synced_at": string | null,"asaas_subscription_id": string | null,"asaas_sync_error": string | null,"asaas_synced_at": string | null,"billing_mode": string,"cancel_comment": string | null,"cancel_kind": string | null,"cancel_next_due": string | null,"cancel_reason": string | null,"canceled_at": string | null,"canceled_by": string | null,"clinic_id": string,"created_at": string,"created_by": string | null,"ends_on": string | null,"first_due_date": string,"id": string,"invoice_monthly_allowance": number | null,"invoice_unit_price_cents": number | null,"monthly_cents": number,"notes": string | null,"notice_sent_at": string | null,"payment_method": string | null,"plan_snapshot": NonNullable<Json>,"recurring_consent": string | null,"replaces_contract_id": string | null,"setup_cents": number,"starts_on": string,"status": string,"terms_version": string | null,"updated_at": string,"version": number | null
                   }
                   Insert: {
-                    "acceptance"?: string | null,"accepted_at"?: string | null,"accepted_by"?: string | null,"accepted_ip"?: unknown,"activated_at"?: string | null,"activated_by"?: string | null,"asaas_subscription_id"?: string | null,"asaas_sync_error"?: string | null,"asaas_synced_at"?: string | null,"billing_mode": string,"clinic_id": string,"created_at"?: string,"created_by"?: string | null,"ends_on"?: string | null,"first_due_date": string,"id"?: string,"invoice_monthly_allowance"?: number | null,"invoice_unit_price_cents"?: number | null,"monthly_cents": number,"notes"?: string | null,"notice_sent_at"?: string | null,"payment_method"?: string | null,"plan_snapshot"?: NonNullable<Json>,"recurring_consent"?: string | null,"replaces_contract_id"?: string | null,"setup_cents"?: number,"starts_on": string,"status"?: string,"terms_version"?: string | null,"updated_at"?: string,"version"?: number | null
+                    "acceptance"?: string | null,"accepted_at"?: string | null,"accepted_by"?: string | null,"accepted_ip"?: unknown,"activated_at"?: string | null,"activated_by"?: string | null,"asaas_cancel_error"?: string | null,"asaas_cancel_synced_at"?: string | null,"asaas_subscription_id"?: string | null,"asaas_sync_error"?: string | null,"asaas_synced_at"?: string | null,"billing_mode": string,"cancel_comment"?: string | null,"cancel_kind"?: string | null,"cancel_next_due"?: string | null,"cancel_reason"?: string | null,"canceled_at"?: string | null,"canceled_by"?: string | null,"clinic_id": string,"created_at"?: string,"created_by"?: string | null,"ends_on"?: string | null,"first_due_date": string,"id"?: string,"invoice_monthly_allowance"?: number | null,"invoice_unit_price_cents"?: number | null,"monthly_cents": number,"notes"?: string | null,"notice_sent_at"?: string | null,"payment_method"?: string | null,"plan_snapshot"?: NonNullable<Json>,"recurring_consent"?: string | null,"replaces_contract_id"?: string | null,"setup_cents"?: number,"starts_on": string,"status"?: string,"terms_version"?: string | null,"updated_at"?: string,"version"?: number | null
                   }
                   Update: {
-                    "acceptance"?: string | null,"accepted_at"?: string | null,"accepted_by"?: string | null,"accepted_ip"?: unknown,"activated_at"?: string | null,"activated_by"?: string | null,"asaas_subscription_id"?: string | null,"asaas_sync_error"?: string | null,"asaas_synced_at"?: string | null,"billing_mode"?: string,"clinic_id"?: string,"created_at"?: string,"created_by"?: string | null,"ends_on"?: string | null,"first_due_date"?: string,"id"?: string,"invoice_monthly_allowance"?: number | null,"invoice_unit_price_cents"?: number | null,"monthly_cents"?: number,"notes"?: string | null,"notice_sent_at"?: string | null,"payment_method"?: string | null,"plan_snapshot"?: NonNullable<Json>,"recurring_consent"?: string | null,"replaces_contract_id"?: string | null,"setup_cents"?: number,"starts_on"?: string,"status"?: string,"terms_version"?: string | null,"updated_at"?: string,"version"?: number | null
+                    "acceptance"?: string | null,"accepted_at"?: string | null,"accepted_by"?: string | null,"accepted_ip"?: unknown,"activated_at"?: string | null,"activated_by"?: string | null,"asaas_cancel_error"?: string | null,"asaas_cancel_synced_at"?: string | null,"asaas_subscription_id"?: string | null,"asaas_sync_error"?: string | null,"asaas_synced_at"?: string | null,"billing_mode"?: string,"cancel_comment"?: string | null,"cancel_kind"?: string | null,"cancel_next_due"?: string | null,"cancel_reason"?: string | null,"canceled_at"?: string | null,"canceled_by"?: string | null,"clinic_id"?: string,"created_at"?: string,"created_by"?: string | null,"ends_on"?: string | null,"first_due_date"?: string,"id"?: string,"invoice_monthly_allowance"?: number | null,"invoice_unit_price_cents"?: number | null,"monthly_cents"?: number,"notes"?: string | null,"notice_sent_at"?: string | null,"payment_method"?: string | null,"plan_snapshot"?: NonNullable<Json>,"recurring_consent"?: string | null,"replaces_contract_id"?: string | null,"setup_cents"?: number,"starts_on"?: string,"status"?: string,"terms_version"?: string | null,"updated_at"?: string,"version"?: number | null
                   }
                   Relationships: [
                     {
@@ -1871,6 +1871,9 @@ isOneToOne: false
 "billing_can_suspend_for_non_payment":
 { Args: { "p_clinic_id": string }; Returns: boolean
                            },
+"billing_cancels_to_sync":
+{ Args: Record<PropertyKey, never>; Returns: string[]
+                           },
 "billing_contract_for_payment":
 { Args: { "p_external_reference": string,"p_subscription_id": string }; Returns: string
                            },
@@ -1919,10 +1922,16 @@ isOneToOne: false
 "billing_record_asaas_sync":
 { Args: { "p_contract_id": string,"p_error": string }; Returns: undefined
                            },
+"billing_record_cancel_sync":
+{ Args: { "p_contract_id": string,"p_error": string }; Returns: undefined
+                           },
 "billing_record_provider_event":
 { Args: { "p_event": string,"p_payload": Json,"p_provider_event_id": string,"p_resource_id": string }; Returns: string
                            },
 "billing_schedule_overdue_notices":
+{ Args: Record<PropertyKey, never>; Returns: number
+                           },
+"billing_suspend_ended_contracts":
 { Args: Record<PropertyKey, never>; Returns: number
                            },
 "billing_upsert_asaas_charge":
@@ -1930,6 +1939,9 @@ isOneToOne: false
                            },
 "book_group_session":
 { Args: { "p_agenda_id": string,"p_booking_channel": Database["public"]['Enums']["action_channel"],"p_location_id": string,"p_patient_id": string,"p_scheduled_at": string,"p_service_id": string,"p_trail"?: Json }; Returns: string
+                           },
+"cancel_billing_subscription":
+{ Args: { "p_clinic_id": string,"p_comment": string,"p_reason": string }; Returns: Json
                            },
 "change_group_session":
 { Args: { "p_agenda_id": string,"p_appointment_id": string,"p_scheduled_at": string,"p_service_id": string,"p_trail"?: Json }; Returns: undefined

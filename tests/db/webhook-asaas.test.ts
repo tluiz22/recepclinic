@@ -32,6 +32,7 @@ const api = (): AsaasBillingApi => ({
   },
   listSubscriptionPayments: async () => [current],
   getPayment: async () => current,
+  endSubscriptionOn: async () => {}, deleteSubscription: async () => {}, deletePayment: async () => {}, refundPayment: async () => {},
 });
 
 beforeAll(async () => {

@@ -65,6 +65,8 @@ const showDone = !wizardStep && Astro.url.searchParams.get("pronto") === "1" && 
 const billed = contract ?? next;
 const cardOnFile = hasCardOnFile(charges);
 const openCharges = charges.filter((c) => c.status === "pending" || c.status === "overdue").length;
+// F12.2f: o último cancelamento (some quando houver contrato ativo de novo).
+const canceled = contracts.some((c) => c.status === "active") ? null : (contracts.find((c) => c.cancel) ?? null);
 const H2 = "font-display text-[17px] leading-tight font-bold text-ink sm:text-lg";
 ---
 
@@ -139,6 +141,18 @@ const H2 = "font-display text-[17px] leading-tight font-bold text-ink sm:text-lg
             <a href={page} aria-label="Fechar o aviso" class="flex h-11 w-11 items-center justify-center rounded-lg text-[22px] text-brand-ink no-underline hover:bg-white/60">×</a>
           </section>
         )}
+        {canceled?.cancel && (
+          <Card class="border-can-200 bg-can-100">
+            <h2 class={`${H2} text-can-800`}>Assinatura cancelada</h2>
+            <p class="mt-1 text-[15px] text-can-800">
+              Cancelada em {formatInstant(canceled.cancel.at, clinic.timezone, "dd/MM/yyyy 'às' HH:mm")}
+              {canceled.cancel.kind === "withdrawal"
+                ? ", no prazo de arrependimento: o que foi pago será devolvido e o acesso terminou."
+                : `. A clínica usa o RecepClinic até ${formatCalendarDate(canceled.endsOn!, "dd/MM/yyyy")}; a mensalidade de ${formatCalendarDate(canceled.cancel.nextDue!, "dd/MM/yyyy")} continua devida e nada mais é cobrado depois dela.`}{" "}
+              Para voltar a assinar, fale com o Suporte do RecepClinic.
+            </p>
+          </Card>
+        )}
         {charges.length > 0 && (
           <Card>
             <div class="flex flex-wrap items-center gap-2">
@@ -148,7 +162,7 @@ const H2 = "font-display text-[17px] leading-tight font-bold text-ink sm:text-lg
             <div class="mt-2">
               <ChargesList charges={charges} timezone={clinic.timezone} paymentMethod={billed?.paymentMethod ?? null} cardOnFile={cardOnFile} />
             </div>
-            {billed && billed.acceptance !== "pending" && <p class="mt-2 text-sm text-ink-soft">{renewalLine(billed)}</p>}
+            {billed && billed.status === "active" && billed.acceptance !== "pending" && <p class="mt-2 text-sm text-ink-soft">{renewalLine(billed)}</p>}
             {billed?.paymentMethod === "credit_card" && (
               <p class="mt-1 text-sm text-ink-soft">O RecepClinic não guarda dados do cartão. Para trocar o cartão, fale com o Suporte do RecepClinic.</p>
             )}
@@ -172,6 +186,11 @@ const H2 = "font-display text-[17px] leading-tight font-bold text-ink sm:text-lg
                 <ContractAcceptanceInfo contract={contract} actors={actors} timezone={clinic.timezone} />
                 <ContractTerms contract={contract} />
                 {contract.termsVersion && <ContractText version={contract.termsVersion} />}
+                {isClinicAdmin && contract.status === "active" && (
+                  <a href="/admin/configuracoes/assinatura/cancelar" class="self-start text-sm font-semibold text-can-800">
+                    Cancelar a assinatura
+                  </a>
+                )}
               </div>
             ) : (
               !next && <p class="mt-1 text-sm text-ink-soft">O contrato aparece aqui quando o Suporte do RecepClinic o ativar.</p>
@@ -186,7 +205,7 @@ const H2 = "font-display text-[17px] leading-tight font-bold text-ink sm:text-lg
               <div class="mt-3 flex flex-col gap-3">
                 <ContractAcceptanceInfo contract={next} actors={actors} timezone={clinic.timezone} />
                 {next.acceptance === "tacit" && (
-                  <p class="text-sm text-ink-soft">Continuar usando o RecepClinic a partir de {formatCalendarDate(next.startsOn, "dd/MM/yyyy")} vale como aceite. Se não concordar, fale com o Suporte antes dessa data.</p>
+                  <p class="text-sm text-ink-soft">Continuar usando o RecepClinic a partir de {formatCalendarDate(next.startsOn, "dd/MM/yyyy")} vale como aceite. Se não concordar, cancele nesta tela antes dessa data, sem multa.</p>
                 )}
                 <ContractTerms contract={next} />
               </div>

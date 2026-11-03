@@ -145,12 +145,39 @@ export function contractChangeEmail(
     [
       `O contrato da ${clinicName} com o RecepClinic tem uma nova versão (${contract.version ?? "nova"}), que vale a partir de ${startsOn}:`,
       ...contract.terms,
-      `Continuar usando o RecepClinic a partir de ${startsOn} vale como aceite destes termos. Se não concordar, fale com o Suporte do RecepClinic antes dessa data; o cancelamento é sem multa.`,
+      `Continuar usando o RecepClinic a partir de ${startsOn} vale como aceite destes termos. Se não concordar, cancele antes dessa data em Configurações › Assinatura, sem multa.`,
       "Os termos também ficam no painel, em Configurações › Assinatura.",
     ],
     { label: "Ver a assinatura", href: link },
   );
   return { to, subject: `Novos termos do contrato da ${clinicName} no RecepClinic`, ...body };
+}
+
+/**
+ * Confirmação do cancelamento da assinatura (F12.2f; cliente, 03/nov/2026), ao
+ * e-mail financeiro: arrependimento (devolução e fim do acesso na hora) ou
+ * cancelamento (acesso até a véspera do próximo vencimento, que continua
+ * devido). **Texto para o cliente revisar.**
+ */
+export function billingCancelEmail(
+  to: string,
+  input: { clinicName: string; kind: "cancel" | "withdrawal"; canceledOn: string; accessUntil: string; nextDue: string; amount: string; panelLink: string },
+): Email {
+  const { clinicName, kind, canceledOn, accessUntil, nextDue, amount, panelLink } = input;
+  const paragraphs =
+    kind === "withdrawal"
+      ? [
+          `A assinatura da ${clinicName} no RecepClinic foi cancelada em ${canceledOn}, dentro do prazo de arrependimento de 7 dias.`,
+          "Tudo o que foi pago será devolvido na mesma forma de pagamento; o prazo do estorno depende do banco ou do cartão. Cobranças em aberto foram canceladas.",
+          "O acesso ao painel terminou hoje. Os dados da clínica ficam disponíveis para exportação por 60 dias: para isso, fale com o Suporte do RecepClinic.",
+        ]
+      : [
+          `A assinatura da ${clinicName} no RecepClinic foi cancelada em ${canceledOn}.`,
+          `A clínica continua usando o RecepClinic até ${accessUntil}. A mensalidade de ${nextDue} (${amount}), referente ao período em uso, continua devida; depois dela, nada mais é cobrado.`,
+          "Terminado o acesso, os dados da clínica ficam disponíveis para exportação por 60 dias: para isso, fale com o Suporte do RecepClinic.",
+        ];
+  const body = layout("Assinatura cancelada", paragraphs, { label: "Ver a assinatura", href: panelLink });
+  return { to, subject: `Assinatura cancelada: ${clinicName} no RecepClinic`, ...body };
 }
 
 /**

@@ -7,6 +7,7 @@
 // o aviso de 30 dias na mudança aceita pelo uso e o reenvio do e-mail com os
 // novos termos. A suspensão fica na aba Suspensão (F12.3; cliente, 03/nov/2026).
 // F12.4: cobrança no Asaas (ids, sincronização, erro) e as cobranças.
+// F12.2f: o cancelamento pelo Administrador (motivo, acesso, ajuste no Asaas).
 // Cobranças entram nas próximas fases.
 import Badge from "../config/Badge.astro";
 import Card from "../config/Panel.astro";
@@ -22,6 +23,7 @@ import { platformEnv } from "../../../lib/env";
 import { loadActorLabels } from "../../../lib/data/agenda/trail";
 import {
   BILLING_MODES,
+  CANCEL_REASONS,
   CONTRACT_STATUS,
   contractsInForce,
   formatPayerDocument,
@@ -62,10 +64,13 @@ const [account, audit, contracts, defaultPrice, charges] = await Promise.all([
 // F12.4: ambiente do Asaas (sandbox ou produção), ou sem Asaas.
 const asaasEnv = platformEnv().asaas;
 const asaasLabel = !asaasEnv ? "não configurado neste ambiente" : asaasEnv.baseUrl.includes("sandbox") ? "sandbox (testes)" : "produção";
-const actors = await loadActorLabels(db, clinicId, [...audit.map((a) => a.actorId), ...contracts.map((c) => c.acceptedBy)]);
+const actors = await loadActorLabels(db, clinicId, [...audit.map((a) => a.actorId), ...contracts.map((c) => c.acceptedBy), ...contracts.map((c) => c.cancel?.by ?? null)]);
 const action = `/api/admin/sistema/clinicas/${clinicId}`;
 const H2 = "font-display text-[17px] leading-tight font-bold text-ink sm:text-lg";
 const active = contracts.find((c) => c.status === "active") ?? null;
+// F12.2f: o último cancelamento, enquanto não houver contrato ativo de novo.
+const canceled = active ? null : (contracts.find((c) => c.cancel) ?? null);
+const KV_STYLE = "grid gap-x-4 gap-y-2 text-[15px] sm:grid-cols-[160px_minmax(0,1fr)]";
 const draft = contracts.find((c) => c.status === "draft") ?? null;
 const { current, next } = contractsInForce(contracts, todayIn(timezone));
 // Versões que não são a de hoje nem a próxima.
@@ -95,6 +100,58 @@ const form = {
 
 <div class="mt-4 grid items-start gap-4 lg:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)]">
   <div class="flex min-w-0 flex-col gap-4">
+    {
+      canceled?.cancel && (
+        <Card class="border-can-200">
+          <div class="flex flex-wrap items-center gap-2">
+            <h2 class={H2}>Assinatura cancelada</h2>
+            <Badge variant="danger">{canceled.cancel.kind === "withdrawal" ? "Arrependimento (7 dias)" : "Cancelamento"}</Badge>
+          </div>
+          <dl class={`${KV_STYLE} mt-3`}>
+            <dt class="text-ink-soft">Quando</dt>
+            <dd class="font-semibold text-ink">
+              {formatInstant(canceled.cancel.at, timezone, "dd/MM/yyyy 'às' HH:mm")}
+              {canceled.cancel.by ? ` · ${actors.get(canceled.cancel.by)?.name ?? "Administrador"}` : ""}
+            </dd>
+            <dt class="text-ink-soft">Motivo</dt>
+            <dd class="font-semibold text-ink">{CANCEL_REASONS[canceled.cancel.reason]}</dd>
+            {canceled.cancel.comment && (
+              <>
+                <dt class="text-ink-soft">Comentário</dt>
+                <dd class="text-ink">{canceled.cancel.comment}</dd>
+              </>
+            )}
+            <dt class="text-ink-soft">Acesso até</dt>
+            <dd class="font-semibold text-ink">{canceled.endsOn ? date(canceled.endsOn) : "—"}</dd>
+            {canceled.cancel.nextDue && (
+              <>
+                <dt class="text-ink-soft">Última mensalidade</dt>
+                <dd class="font-semibold text-ink">{date(canceled.cancel.nextDue)} (continua devida)</dd>
+              </>
+            )}
+            <dt class="text-ink-soft">Asaas</dt>
+            <dd class="font-semibold text-ink">
+              {canceled.billingMode !== "asaas"
+                ? canceled.cancel.kind === "withdrawal"
+                  ? "Modo manual: devolva por fora o que foi pago."
+                  : "Modo manual: nada a ajustar."
+                : canceled.cancel.asaasSyncedAt
+                  ? `Ajustado em ${formatInstant(canceled.cancel.asaasSyncedAt, timezone, "dd/MM/yyyy 'às' HH:mm")}`
+                  : canceled.cancel.asaasError
+                    ? `Falhou: ${canceled.cancel.asaasError}`
+                    : "Pendente"}
+            </dd>
+          </dl>
+          {canceled.billingMode === "asaas" && !canceled.cancel.asaasSyncedAt && (
+            <form method="POST" action={action} class="mt-3">
+              <input type="hidden" name="acao" value="asaas_cancelamento" />
+              <input type="hidden" name="contract_id" value={canceled.id} />
+              <button type="submit" data-sending-label="Tentando…" class={SECONDARY_BUTTON}>Aplicar no Asaas de novo</button>
+            </form>
+          )}
+        </Card>
+      )
+    }
     <Card>
       <div class="flex flex-wrap items-center gap-2">
         <h2 class={H2}>Contrato</h2>

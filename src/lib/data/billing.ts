@@ -158,7 +158,48 @@ export const BILLING_ACTIONS = {
   notice_failed: "Aviso de cobrança não saiu",
   clinic_suspended: "Clínica suspensa",
   suspension_released: "Motivo da suspensão liberado",
+  contract_canceled: "Assinatura cancelada pelo Administrador",
+  asaas_cancel_done: "Cancelamento aplicado no Asaas",
+  asaas_cancel_failed: "Cancelamento não aplicado no Asaas",
 } as const;
+
+/** Suporte: clínicas que cancelaram a assinatura e não têm contrato ativo (selo na lista de clínicas; F12.2f). */
+export async function listCanceledClinicIds(db: DbClient): Promise<Set<string>> {
+  const rows = unwrap(await db.from("billing_contracts").select("clinic_id, status, canceled_at"), "Contrato") as { clinic_id: string; status: string; canceled_at: string | null }[];
+  const active = new Set(rows.filter((r) => r.status === "active").map((r) => r.clinic_id));
+  return new Set(rows.filter((r) => r.canceled_at && !active.has(r.clinic_id)).map((r) => r.clinic_id));
+}
+
+/** F12.2f (cliente, 03/nov/2026): motivos do cancelamento; "Outro" pede o comentário. */
+export const CANCEL_REASONS = {
+  price: "Preço",
+  low_usage: "Não usamos o suficiente",
+  missing_feature: "Faltou uma função",
+  whatsapp_issues: "Problemas no WhatsApp ou no bot",
+  other_system: "Vamos usar outro sistema",
+  clinic_closed: "A clínica fechou ou pausou",
+  other: "Outro",
+} as const;
+export type CancelReason = keyof typeof CANCEL_REASONS;
+
+export type CancelResult = { kind: "cancel" | "withdrawal"; contractId: string; accessUntil: string; nextDue: string };
+
+/**
+ * Só o Administrador da clínica: cancela a assinatura (F12.2f). Até 7 dias do
+ * aceite é arrependimento (devolução e fim do acesso na hora); depois, o acesso
+ * vai até a véspera do próximo vencimento e essa mensalidade continua devida.
+ */
+export async function cancelBillingSubscription(db: DbClient, clinicId: string, input: { reason: string; comment: string | null }): Promise<CancelResult> {
+  const v = new Validation();
+  v.check(input.reason in CANCEL_REASONS, "motivo", "Escolha o motivo do cancelamento.");
+  v.check(input.reason !== "other" || !!input.comment?.trim(), "comentario", "Conte o motivo do cancelamento.");
+  v.check((input.comment ?? "").length <= 1000, "comentario", "Comentário longo demais (até 1.000 caracteres).");
+  v.throwIfInvalid("Cancelamento");
+  const { data, error } = await db.rpc("cancel_billing_subscription", { p_clinic_id: clinicId, p_reason: input.reason, p_comment: input.comment ?? "" });
+  if (error) throw fromDbError(error, "Cancelamento");
+  const row = data as { kind: "cancel" | "withdrawal"; contract_id: string; access_until: string; next_due: string };
+  return { kind: row.kind, contractId: row.contract_id, accessUntil: row.access_until, nextDue: row.next_due };
+}
 
 export type BillingAuditEntry = {
   action: keyof typeof BILLING_ACTIONS;
@@ -276,6 +317,17 @@ export type BillingContract = {
   acceptedIp: string | null;
   /** F12.2e: a frase da autorização da cobrança recorrente marcada no aceite. */
   recurringConsent: string | null;
+  /** F12.2f: cancelamento pelo Administrador (null = não cancelado). */
+  cancel: {
+    at: Date;
+    by: string | null;
+    kind: "cancel" | "withdrawal";
+    reason: CancelReason;
+    comment: string | null;
+    nextDue: string | null;
+    asaasSyncedAt: Date | null;
+    asaasError: string | null;
+  } | null;
   noticeSentAt: Date | null;
   /** F12.4: assinatura no Asaas, última sincronização e o erro da última tentativa. */
   asaasSubscriptionId: string | null;
@@ -307,6 +359,14 @@ type ContractRow = {
   accepted_by: string | null;
   accepted_ip: string | null;
   recurring_consent: string | null;
+  canceled_at: string | null;
+  canceled_by: string | null;
+  cancel_kind: string | null;
+  cancel_reason: string | null;
+  cancel_comment: string | null;
+  cancel_next_due: string | null;
+  asaas_cancel_synced_at: string | null;
+  asaas_cancel_error: string | null;
   notice_sent_at: string | null;
   asaas_subscription_id: string | null;
   asaas_synced_at: string | null;
@@ -319,7 +379,7 @@ export async function listBillingContracts(db: DbClient, clinicId: string): Prom
     await db
       .from("billing_contracts")
       .select(
-        "id, version, status, billing_mode, monthly_cents, setup_cents, payment_method, first_due_date, invoice_unit_price_cents, invoice_monthly_allowance, plan_snapshot, notes, starts_on, ends_on, activated_at, terms_version, acceptance, accepted_at, accepted_by, accepted_ip, recurring_consent, notice_sent_at, asaas_subscription_id, asaas_synced_at, asaas_sync_error",
+        "id, version, status, billing_mode, monthly_cents, setup_cents, payment_method, first_due_date, invoice_unit_price_cents, invoice_monthly_allowance, plan_snapshot, notes, starts_on, ends_on, activated_at, terms_version, acceptance, accepted_at, accepted_by, accepted_ip, recurring_consent, canceled_at, canceled_by, cancel_kind, cancel_reason, cancel_comment, cancel_next_due, asaas_cancel_synced_at, asaas_cancel_error, notice_sent_at, asaas_subscription_id, asaas_synced_at, asaas_sync_error",
       )
       .eq("clinic_id", clinicId)
       .order("created_at", { ascending: false }),
@@ -347,6 +407,18 @@ export async function listBillingContracts(db: DbClient, clinicId: string): Prom
     acceptedBy: row.accepted_by,
     acceptedIp: row.accepted_ip,
     recurringConsent: row.recurring_consent,
+    cancel: row.canceled_at
+      ? {
+          at: new Date(row.canceled_at),
+          by: row.canceled_by,
+          kind: row.cancel_kind as "cancel" | "withdrawal",
+          reason: row.cancel_reason as CancelReason,
+          comment: row.cancel_comment,
+          nextDue: row.cancel_next_due,
+          asaasSyncedAt: row.asaas_cancel_synced_at ? new Date(row.asaas_cancel_synced_at) : null,
+          asaasError: row.asaas_cancel_error,
+        }
+      : null,
     noticeSentAt: row.notice_sent_at ? new Date(row.notice_sent_at) : null,
     asaasSubscriptionId: row.asaas_subscription_id,
     asaasSyncedAt: row.asaas_synced_at ? new Date(row.asaas_synced_at) : null,

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { chargeAction, dueDay, hasCardOnFile, recurringConsentText, renewalLine, renewalSummary } from "./billingRenewal";
+import { cancellationPreview, chargeAction, dueDay, hasCardOnFile, nextDueAfter, recurringConsentText, renewalLine, renewalSummary } from "./billingRenewal";
 
 // F12.2e (cliente, 03/nov/2026): renovação explicada antes do aceite e a ação
 // de cada cobrança conforme a forma de pagamento.
@@ -39,5 +39,24 @@ describe("renovação da assinatura", () => {
   it("cartão já informado = alguma cobrança paga no cartão", () => {
     expect(hasCardOnFile([{ status: "paid", billingType: "PIX" }])).toBe(false);
     expect(hasCardOnFile([{ status: "paid", billingType: "CREDIT_CARD" }])).toBe(true);
+  });
+
+  it("cancelamento: próximo vencimento depois de hoje, véspera como último dia; 7 dias = arrependimento", () => {
+    expect(nextDueAfter("2026-12-03", "2027-01-20")).toBe("2027-02-03");
+    expect(nextDueAfter("2026-12-03", "2026-11-20")).toBe("2026-12-03");
+    expect(nextDueAfter("2026-12-03", "2027-02-03")).toBe("2027-03-03");
+    expect(nextDueAfter("2027-01-31", "2027-02-10")).toBe("2027-02-28");
+    const accepted = new Date("2027-01-15T12:00:00Z");
+    expect(cancellationPreview({ acceptance: "explicit", acceptedAt: accepted, firstDueDate: "2026-12-03" }, "2027-01-20", new Date("2027-01-20T12:00:00Z"))).toEqual({
+      kind: "withdrawal",
+      accessUntil: "2027-01-20",
+      nextDue: "2027-02-03",
+    });
+    expect(cancellationPreview({ acceptance: "explicit", acceptedAt: accepted, firstDueDate: "2026-12-03" }, "2027-01-23", new Date("2027-01-23T12:00:00Z"))).toEqual({
+      kind: "cancel",
+      accessUntil: "2027-02-02",
+      nextDue: "2027-02-03",
+    });
+    expect(cancellationPreview({ acceptance: "tacit", acceptedAt: null, firstDueDate: "2026-12-03" }, "2027-01-20").kind).toBe("cancel");
   });
 });

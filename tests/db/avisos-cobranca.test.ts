@@ -41,6 +41,7 @@ const api = (): AsaasBillingApi => ({
   },
   listSubscriptionPayments: async () => payments,
   getPayment: async () => payments[0],
+  endSubscriptionOn: async () => {}, deleteSubscription: async () => {}, deletePayment: async () => {}, refundPayment: async () => {},
 });
 const sync = () => syncContractWithAsaas(platformBillingStore(env), api(), contractId, today);
 const notices = async () =>

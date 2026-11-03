@@ -5,7 +5,9 @@ import type { AsaasEnv } from "../env";
 // assinatura, cobrança avulsa e a leitura das cobranças. Valores em reais na
 // API e em centavos aqui. Timeout de 60 s (recomendação do Asaas); pedido que
 // falhou não é repetido às cegas: quem chama procura antes pela referência
-// externa (externalReference).
+// externa (externalReference). F12.2f: o cancelamento encerra a assinatura
+// numa data (endDate, testado no sandbox em 03/nov/2026), remove assinatura e
+// cobranças em aberto e estorna as pagas (arrependimento).
 
 export type Fetcher = typeof fetch;
 
@@ -21,7 +23,7 @@ export class AsaasApiError extends Error {
 
 type AsaasErrorBody = { errors?: { code?: string; description?: string }[] };
 
-async function call<T>(env: AsaasEnv, fetcher: Fetcher, method: "GET" | "POST", path: string, body?: Record<string, unknown>): Promise<T> {
+async function call<T>(env: AsaasEnv, fetcher: Fetcher, method: "GET" | "POST" | "DELETE", path: string, body?: Record<string, unknown>): Promise<T> {
   let response: Response;
   try {
     response = await fetcher(`${env.baseUrl}${path}`, {
@@ -57,6 +59,8 @@ export type AsaasPayment = {
   status: string;
   paidAt: string | null;
   invoiceUrl: string | null;
+  /** Removida no Asaas (F12.2f: cancelamento). */
+  deleted?: boolean;
 };
 
 type RawPayment = {
@@ -71,6 +75,7 @@ type RawPayment = {
   clientPaymentDate?: string | null;
   confirmedDate?: string | null;
   invoiceUrl?: string | null;
+  deleted?: boolean;
 };
 
 type List<T> = { data: T[]; hasMore?: boolean };
@@ -88,6 +93,7 @@ function toPayment(raw: RawPayment): AsaasPayment {
     // O Asaas manda só a data; meio-dia de Brasília evita virar o dia.
     paidAt: paid ? `${paid}T12:00:00-03:00` : null,
     invoiceUrl: raw.invoiceUrl ?? null,
+    deleted: raw.deleted === true,
   };
 }
 
@@ -96,6 +102,7 @@ export type AsaasBillingApi = ReturnType<typeof asaasBillingApi>;
 export function asaasBillingApi(env: AsaasEnv, fetcher: Fetcher = fetch) {
   const get = <T>(path: string) => call<T>(env, fetcher, "GET", path);
   const post = <T>(path: string, body: Record<string, unknown>) => call<T>(env, fetcher, "POST", path, body);
+  const del = <T>(path: string) => call<T>(env, fetcher, "DELETE", path);
   const q = (params: Record<string, string>) => new URLSearchParams(params).toString();
 
   return {
@@ -177,6 +184,25 @@ export function asaasBillingApi(env: AsaasEnv, fetcher: Fetcher = fetch) {
     async listSubscriptionPayments(subscription: string): Promise<AsaasPayment[]> {
       const list = await get<List<RawPayment>>(`/subscriptions/${encodeURIComponent(subscription)}/payments?${q({ limit: "100" })}`);
       return list.data.map(toPayment);
+    },
+
+    /** Nenhuma mensalidade com vencimento depois de `endDate` (a desse dia ainda sai). */
+    async endSubscriptionOn(subscription: string, endDate: string): Promise<void> {
+      await post(`/subscriptions/${encodeURIComponent(subscription)}`, { endDate });
+    },
+
+    /** Remove a assinatura; o Asaas remove junto as cobranças dela em aberto. */
+    async deleteSubscription(subscription: string): Promise<void> {
+      await del(`/subscriptions/${encodeURIComponent(subscription)}`);
+    },
+
+    async deletePayment(id: string): Promise<void> {
+      await del(`/payments/${encodeURIComponent(id)}`);
+    },
+
+    /** Estorno integral de uma cobrança paga (Pix ou cartão). */
+    async refundPayment(id: string): Promise<void> {
+      await post(`/payments/${encodeURIComponent(id)}/refund`, {});
     },
   };
 }

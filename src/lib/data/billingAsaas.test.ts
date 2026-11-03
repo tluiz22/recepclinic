@@ -66,6 +66,7 @@ function fakeApi(found: { customer?: string; subscription?: string; setup?: Asaa
     createPayment: async (args) => (calls.push({ name: "createPayment", args }), payment("pay_setup")),
     listSubscriptionPayments: async () => [payment("pay_m1", { dueDate: "2026-11-10", valueCents: 29900 })],
     getPayment: async (id) => payment(id),
+    endSubscriptionOn: async () => {}, deleteSubscription: async () => {}, deletePayment: async () => {}, refundPayment: async () => {},
   };
   return { api, calls };
 }

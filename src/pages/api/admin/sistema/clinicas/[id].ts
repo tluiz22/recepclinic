@@ -17,7 +17,7 @@ import { createInfoRequest, markInfoRequestReviewed, resendInvitation, setClinic
 import { releaseClinicSuspension, suspendClinic } from "../../../../../lib/data/suspension";
 import { onboardingDeps } from "../../../../../lib/data/onboardingDeps";
 import { isFeatureKey } from "../../../../../lib/features";
-import { syncContractNow } from "../../../../../lib/data/billingAsaasDeps";
+import { applyCancellationNow, syncContractNow } from "../../../../../lib/data/billingAsaasDeps";
 import { smtpSender } from "../../../../../lib/email";
 import { platformEnv } from "../../../../../lib/env";
 import { formChecked, formOptionalText, formText } from "../../../../../lib/forms";
@@ -42,7 +42,7 @@ export const POST: APIRoute = async (context) => {
   const billingPage = `${page}?tab=faturamento`;
   const suspensionPage = `${page}?tab=suspensao`;
   const acao = formText(form, "acao");
-  const failureTo = ["devolver_agenda", "autorizar_carga", "desfazer_carga"].includes(acao) ? `${page}/agenda-atual` : acao === "suspender" || acao === "liberar_suspensao" ? suspensionPage : acao === "conta_cobranca" || acao.startsWith("contrato_") || acao === "asaas_sincronizar" ? billingPage : page;
+  const failureTo = ["devolver_agenda", "autorizar_carga", "desfazer_carga"].includes(acao) ? `${page}/agenda-atual` : acao === "suspender" || acao === "liberar_suspensao" ? suspensionPage : acao === "conta_cobranca" || acao.startsWith("contrato_") || acao.startsWith("asaas_") ? billingPage : page;
   const db = createUserClient(request, cookies);
 
   return runFormAction(
@@ -184,6 +184,16 @@ export const POST: APIRoute = async (context) => {
         case "contrato_descartar":
           await discardBillingContractDraft(db, clinicId);
           return { redirectTo: billingPage, message: "Rascunho do contrato descartado." };
+        case "asaas_cancelamento": {
+          // F12.2f: refaz o ajuste do cancelamento no Asaas (a conciliação diária também refaz).
+          const contract = (await listBillingContracts(db, clinicId)).find((c) => c.id === formText(form, "contract_id") && c.cancel);
+          if (!contract) throw new DataError("not_found", "Contrato cancelado: não encontrado");
+          const result = await applyCancellationNow(contract.id);
+          return {
+            redirectTo: billingPage,
+            message: result.status === "synced" ? "Cancelamento aplicado no Asaas." : result.status === "failed" ? `Asaas recusou: ${result.reason}` : `Nada a fazer: ${result.reason}.`,
+          };
+        }
         case "asaas_sincronizar": {
           const contract = (await listBillingContracts(db, clinicId)).find((c) => c.status === "active");
           if (!contract) throw new DataError("not_found", "Asaas: não há contrato vigente");

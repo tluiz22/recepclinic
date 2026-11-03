@@ -216,6 +216,7 @@ describe("clínica suspensa (F12.3)", () => {
     expect(suspendedLanding(ctx(["admin"]), "/admin/configuracoes/assinatura")).toBeNull();
     expect(suspendedLanding(ctx(["admin"]), "/api/admin/configuracoes/assinatura")).toBeNull();
     expect(suspendedLanding(ctx(["admin"]), "/admin/configuracoes/assinatura/contrato")).toBeNull();
+    expect(suspendedLanding(ctx(["admin"]), "/admin/configuracoes/assinatura/cancelar")).toBeNull();
     expect(suspendedLanding(ctx(["admin"]), "/admin/configuracoes/equipe")).toBe("/admin/configuracoes/assinatura");
   });
 
