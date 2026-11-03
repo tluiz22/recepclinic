@@ -60,6 +60,10 @@
 > a fatura no sandbox, fica para a validação). O RecepClinic não guarda dado de cartão (11.9). A Assinatura orienta a
 > clínica no cartão. Troca de cartão: pelo Suporte (a API exige os dados do cartão). Em produção, a **tokenização**
 > depende de liberação do Asaas, e mudar valor ou vencimento de assinatura no cartão a exige: pedir antes da F12.11.
+> **Troca de cartão pelo Administrador (cliente, 03/nov):** "Trocar o cartão" na Assinatura abre o Checkout do Asaas
+> (`chargeTypes: RECURRENT`), que cria uma nova assinatura no novo cartão; o RecepClinic cancela a antiga (mantém a
+> 11.9). A API de troca (`POST /v3/subscriptions/{id}/updateCreditCard`) exige o cartão ou token: recusada. **Antes de
+> implementar:** testar no sandbox se a nova assinatura começa só no próximo vencimento, sem cobrança na hora.
 > **Próximo: F12.11** (homologação e produção), depois de: advogado (texto do contrato e 11.16), chave e webhook do
 > Asaas de produção, valor combinado com a clínica piloto. Antes, validar F12.2b a F12.8 no local/staging.
 > **Ordem decidida (cliente, 30/out):** cobrança primeiro, até cobrar a clínica piloto em produção, **só com aviso por
