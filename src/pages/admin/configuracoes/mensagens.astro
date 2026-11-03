@@ -164,7 +164,7 @@ const botRows = BOT_MESSAGES.map((def) => {
     ...def,
     custom,
     preview: custom ? renderMarkers(custom, example) : botDefaults[def.key],
-    buttons: def.key === "menu" ? ["1. Consultas", "2. Exames", "3. Informações"] : [],
+    buttons: def.key === "menu" ? ["1. Consultas", "2. Exames", "3. Informações gerais"] : [],
   };
 });
 const guidance = customTexts.get(GUIDANCE_KEY as never) ?? null;

@@ -126,6 +126,11 @@ Lembrete automático, Lista de espera, os 2 resumos do dia, Mensagens do bot, Me
 Exemplo, Exame Exemplo (com preparo) e 4 exames marcados de Paciente Exemplo 1 a 4. Telefones fictícios corrigidos para a regra nova em 17/out (`+55 99 99999-0001` a `-0004` e, da
 Dra. Exemplo, `+55 99 99999-9999`).
 
+**02/nov/2026:** a clínica passou a ser também demonstração de venda e foi refeita por
+`scripts/demo-clinicas.mjs` (4 profissionais, tudo ligado menos o Financeiro, agenda de 5 semanas, dados
+fictícios). Os dados acima (Dra. Exemplo, Paciente Exemplo) não existem mais; o login do analista continua
+vinculado como Administrador e bloqueado. Numa nova análise da Meta, conferir a clínica antes de desbloquear.
+
 Campos da tela *Instruções para o analista*:
 
 - **URL do site** (Edite o URL de login): `https://app.recepclinic.com.br/admin/login`

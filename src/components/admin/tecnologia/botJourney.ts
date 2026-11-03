@@ -30,7 +30,7 @@ const auto = (text: string, note?: string): FlowNode => ({ kind: "auto", text, n
 const reception = (text: string, note?: string): FlowNode => ({ kind: "reception", text, note });
 const branch = (...options: [string, FlowItem[]][]): FlowBranch => ({ kind: "branch", options: options.map(([label, flow]) => ({ label, flow })) });
 
-const MENU = "Menu principal: Consultas · Exames · Informações · Falar com a recepção";
+const MENU = "Menu principal: Consultas · Exames · Informações gerais · Falar com a recepção";
 
 export type JourneySection = { id: string; title: string; intro: string; flow: FlowItem[] };
 
@@ -200,7 +200,7 @@ export const JOURNEY: JourneySection[] = [
   },
   {
     id: "informacoes",
-    title: "6. Informações",
+    title: "6. Informações gerais",
     intro: "Só aparecem os itens que a clínica preencheu em Configurações.",
     flow: [
       bot("O que você gostaria de saber?"),
@@ -318,7 +318,7 @@ export const JOURNEY: JourneySection[] = [
 /** Regras gerais, fora do desenho. */
 export const JOURNEY_RULES = [
   "A qualquer momento: \"0\" ou \"Voltar ao menu\" volta ao menu principal.",
-  "\"voltar\" ou \"menu anterior\" digitado: no meio de um caminho, o submenu de onde veio (Consultas ou Exames); no preparo de exame, Informações; nos menus, o menu principal.",
+  "\"voltar\" ou \"menu anterior\" digitado: no meio de um caminho, o submenu de onde veio (Consultas ou Exames); no preparo de exame, Informações gerais; nos menus, o menu principal.",
   "Conversa parada por 15 minutos: o bot encerra com aviso; a próxima mensagem começa de novo.",
   "Os botões do lembrete e da oferta de vaga funcionam em qualquer ponto da conversa.",
   "Clínica em implantação: o bot não responde e nenhuma mensagem automática sai.",

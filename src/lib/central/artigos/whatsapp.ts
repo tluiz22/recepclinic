@@ -17,13 +17,13 @@ export const whatsappArtigos = [
     related: ["atendimento-humano", "lembretes-e-confirmacoes", "perguntas-frequentes-no-bot", "bot-nao-agenda"],
     order: 50,
     intro:
-      "O paciente manda qualquer mensagem para o número da clínica, a qualquer hora. O bot responde sozinho, com o menu: Consultas, Exames, Informações e Falar com a recepção (só aparecem as opções que a clínica usa).",
+      "O paciente manda qualquer mensagem para o número da clínica, a qualquer hora. O bot responde sozinho, com o menu: Consultas, Exames, Informações gerais e Falar com a recepção (só aparecem as opções que a clínica usa).",
     fields: [
       { name: "Marcar consulta ou exame", text: "O bot pergunta o serviço, o profissional (se houver mais de um), consultório ou domiciliar, particular ou convênio, e identifica o paciente. Depois manda um link (válido por 30 minutos) para o paciente escolher o dia e o horário numa página com a agenda real e confirmar." },
       { name: "Marcar retorno", text: "Só para quem tem direito (consulta recente, dentro do prazo, sem retorno marcado), com o profissional da consulta de origem." },
       { name: "Remarcar ou cancelar", text: "Pede a data de nascimento, mostra o atendimento e segue: remarcar manda o link do novo horário; cancelar pede confirmação. Com a Lista de espera ligada, a vaga é oferecida." },
       { name: "Encaixe ou antecipar", text: "Com a Lista de espera: oferece horários mais cedo ou coloca o paciente na lista." },
-      { name: "Informações", text: "Valores, convênios, endereço, preparo de exames e outras informações, conforme o que a clínica preencheu." },
+      { name: "Informações gerais", text: "Valores, convênios, endereço, preparo de exames e outras informações, conforme o que a clínica preencheu." },
       { name: "Depois de marcar", text: "Saem sozinhos a confirmação (com preparo ou orientações, quando houver) e o lembrete com os botões Confirmar presença, Remarcar e Cancelar." },
     ],
     notes: [

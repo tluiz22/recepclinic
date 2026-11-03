@@ -1,22 +1,26 @@
 # RecepClinic
 
-> **Estado atual (retomar daqui), 31/out/2026.** Detalhes e datas no [`historico.md`](historico.md) (só por busca).
+> **Estado atual (retomar daqui), 02/nov/2026.** Detalhes e datas no [`historico.md`](historico.md) (só por busca).
+>
+> **Próxima sessão (cliente, 02/nov):** começar **listando ao cliente o passo a passo para validar** o faturamento
+> F12.2b a F12.8 no local (branch `faturamento`; resumo e pendências no bloco de retomada do
+> `planejamento-faturamento-saas.md` da branch). Cliente já copiou `ASAAS_API_KEY` e `ASAAS_BASE_URL` (sandbox) para o `.env`.
 >
 > **Próximo (cliente, 01/nov):** validado no staging: Base de Conhecimento, "Como funciona?" de Configurações e Central de
 > Ajuda. No staging para validar: **25 capturas reais de tela** nos artigos da Central (`public/ajuda/`, refazer quando a
 > tela mudar). Falta informar o WhatsApp do suporte (Sistema › Suporte), se ainda não foi. Detalhes em
 > [`ajuda-contextual.md`](ajuda-contextual.md), fim. Cliente vai pedir novos ajustes.
 >
-> **Em produção (cliente, 02/nov):** `c9418ac`: evolução do assistente (migração `evolucao_do_assistente`), sobre o
-> `93ab8cd` (redesign da Recepção, Central de Ajuda atualizada, Migrar de agenda, linhas "Livre"). Detalhe no [`producao.md`](producao.md) (Publicações).
+> **Em produção (cliente, 02/nov):** `6b0df0b`: menu do bot "Informações gerais" e Vendas › Demonstração nova, sobre o
+> `c9418ac` (evolução do assistente). Detalhe no [`producao.md`](producao.md) (Publicações).
 >
 > **Ambientes**
-> - **Produção** (`app.recepclinic.com.br`, branch `producao`) = `main` em `c9418ac` (ver acima). Fluxo em [`producao.md`](producao.md).
+> - **Produção** (`app.recepclinic.com.br`, branch `producao`) = `main` em `6b0df0b` (ver acima). Fluxo em [`producao.md`](producao.md).
 > - **Staging** (`teste.recepclinic.com.br`, branch `main`): produção + redesign da Recepção (RX1 a RX9, sem migração) +
 >   cartão do Asaas (`ASAAS_PREVIEW=1`) + Base de Conhecimento do bot (migração aplicada).
 >   Roteiros em [`staging.md`](staging.md).
-> - **Branch `faturamento`** (só local, sem push): todo código do financeiro. Tem a `main` até `76d2688` (merge de 02/nov); atualizar
->   só quando o cliente pedir (cliente, 01/nov).
+> - **Branch `faturamento`** (só local, sem push): todo código do financeiro, até a F12.8 (`5714645`; 944 testes de
+>   unidade e 872 de banco passando). Tem a `main` até `4d17a7f`; atualizar só quando o cliente pedir (cliente, 01/nov).
 >
 > **Frentes**
 > - **Ajustes da produção (C1–C16) e revisão da jornada do bot:** todos na produção; nada pendente. Decisões da
@@ -24,8 +28,10 @@
 > - **Evolução do assistente** ([`evolucao-assistente.md`](evolucao-assistente.md)): texto livre na entrada, motivo antes
 >   da recepção e taxa de resolução sem a recepção. **Na produção (02/nov, `c9418ac`)**, migração aplicada no staging
 >   e na produção. Próximo: acompanhar a taxa e as perguntas não reconhecidas da BC.
-> - **Faturamento do SaaS:** F12.1 e F12.2 validadas no local. Próximo: **F12.2b** (aceite do contrato e aviso de 30
->   dias); texto do contrato com o advogado. Retomar pelo `planejamento-faturamento-saas.md` **na branch**.
+> - **Faturamento do SaaS:** F12.1 e F12.2 validadas; **F12.2b a F12.8 feitas na branch (02/nov), cliente valida no
+>   fim** (aceite, suspensão, Asaas sandbox, webhook, reativação, avisos, cartão). Revisar: textos dos e-mails e o
+>   contrato provisório. Fora do código: token e cadastro do webhook no Asaas, tokenização em produção, advogado.
+>   Depois: F12.11. Retomar pelo `planejamento-faturamento-saas.md` **na branch**.
 > - **NFS-e pelo Asaas** (`planejamento-nfse-asaas.md`, seção 13): N0; formulário BaaS enviado (30/out). Aguarda
 >   Asaas e contador (PIS/COFINS, e-CNPJ A1).
 > - **Piloto (F10, [plano](plano.md)):** clínica piloto criada na produção, WhatsApp conectado, templates em análise
@@ -35,6 +41,11 @@
 >   (Meu dia, Agenda opção B, Pacientes/ficha A, Relatório do dia opção C) **na `main` e no staging (02/nov)**, sem
 >   produção. **Central de Ajuda atualizada com o redesign (02/nov):** artigos e as 25 capturas refeitas, no staging após o push; falta o cliente validar. Avisos técnicos só do Suporte; tela
 >   de pendências do Suporte pendente em [`painel-suporte.md`](painel-suporte.md).
+>
+> **Clínicas de demonstração (02/nov):** as 4 demos do staging recarregadas com todos os cenários de 5 semanas, sem o
+> Financeiro; Consultório da Dra. Ana Karina excluído do staging. Logins e senhas em Sistema › Vendas › Demonstração.
+> Cliente valida. **Antes de cada apresentação:**
+> `node --env-file=.env.staging scripts/demo-clinicas.mjs --confirmar` (plano, item 9b).
 >
 > **Pendências**
 > - **Cliente valida no staging (no fim):** F8.1, F8.2, F8.2b, F8.3, ajuda contextual e menu lateral.

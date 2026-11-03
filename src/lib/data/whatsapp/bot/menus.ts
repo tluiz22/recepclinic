@@ -10,7 +10,7 @@ import { askReceptionReason } from "./knowledge/respond";
 // Menus do bot, na estrutura do piloto: Consultas › Marcar consulta / Marcar
 // retorno / Remarcar / Cancelar / Encaixe ou antecipar; Exames › Marcar exame
 // / Remarcar / Cancelar / Encaixe ou antecipar (F6.4; o Encaixe só com o item
-// "Lista de espera"); Informações (itens com conteúdo); Falar com a recepção
+// "Lista de espera"); Informações gerais (itens com conteúdo; nome de 02/nov/2026); Falar com a recepção
 // só com o número em coexistência (cliente, 07/out).
 
 type Item = { id: string; label: string; description?: string | null };
@@ -20,7 +20,7 @@ async function mainItems(b: Bot): Promise<Item[]> {
   const items: Item[] = [];
   if (servicesOf(catalog, "consultation").length || servicesOf(catalog, "return_visit").length) items.push({ id: "menu_consultations", label: "Consultas" });
   if (servicesOf(catalog, "exam").length) items.push({ id: "menu_exams", label: "Exames" });
-  if ((await infoItems(b)).length) items.push({ id: "menu_info", label: "Informações" });
+  if ((await infoItems(b)).length) items.push({ id: "menu_info", label: "Informações gerais" });
   if (b.receptionAvailable) items.push({ id: "menu_reception", label: "Falar com a recepção" });
   return items;
 }

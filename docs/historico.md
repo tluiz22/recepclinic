@@ -858,3 +858,20 @@ qualquer perfil e data sem atendimento só com "Tentar outra data" e "Voltar ao 
 - Recesso: `schedule_blocks.recess_message` (`{data}` = dia seguinte ao fim). Vale qualquer bloqueio de recesso cobrindo agora (de qualquer agenda; o que termina mais tarde). Substitui o aviso comum, inclusive na transferência por "não entendi"; a conversa pausa igual.
 - Tela Bloquear: caixa "Recesso da clínica", mensagem padrão editável com prévia, pergunta acima de 5 dias, confirmação se faltar agenda, "Como funciona?". Regras puras em `src/lib/recess.ts`.
 - Central de Ajuda: artigo `bloquear-agenda`, FAQ "recesso" e nota no artigo do bot.
+
+## Clínicas de demonstração para a venda (cliente, 02/nov/2026)
+
+- Pedido: carga para apresentar o RecepClinic a clientes. Decisões do cliente: excluir o Consultório da Dra. Ana Karina do
+  staging (só a clínica; os logins `soukarina`, `tluiz22casa` e `tluiz22projetos` ficaram, este no Suporte); Exemplo Saúde
+  como está; sem o módulo Financeiro (`finance`) nas demos (Métricas › Financeiro fica); Demonstração RecepClinic com
+  tudo ligado e login novo `demo.recepclinic@recepclinic.com.br` (o `analista.meta` segue vinculado e bloqueado).
+- `scripts/demo-clinicas.mjs` reescrito: agenda gerada por semente (das 3 últimas semanas a 2 semanas à frente) com os
+  cenários listados no plano (item 9b). Aplicado no staging em 02/nov; nada de código do app mudou.
+
+
+## Menu do bot: "Informações gerais" (cliente, 02/nov/2026)
+
+- O item "Informações" do menu principal do WhatsApp passou a "Informações gerais" (o cliente pediu no lugar de "Informações
+  sobre consultas (e exames)", que não cabem nos 24 caracteres do título da lista). Atualizados o fluxograma (Tecnologia ›
+  Jornada do bot), a Central de Ajuda, a prévia de Configurações › Mensagens, os textos de Configurações › Clínica e o
+  Roteiro de vendas. As capturas da ajuda não mostram o item: nada a recapturar.
