@@ -8,7 +8,7 @@
 > ou falha na trilha; reenvio na aba Faturamento). Regra para a F12.4: só cobrar contrato com aceite.
 > **F12.3 feita** (`20261118120000_suspensao_da_clinica.sql`): `clinic_suspensions` (administrativo e fim do contrato;
 > inadimplência recusada até a F12.4, item 28), situação anterior guardada e devolvida, "suspensa" só pelas funções;
-> cartão Suspensão na aba Faturamento (alerta e confirmação a mais sem o app, item 23). Bloqueio no código: painel
+> aba Suspensão da clínica (aba própria desde 03/nov, antes um cartão no Faturamento; alerta e confirmação a mais sem o app, item 23). Bloqueio no código: painel
 > (Administrador só na Assinatura, outros em `/admin/clinica-suspensa`, API 403), `/agendar`, `/preparo` e
 > `/orientacoes` com "indisponível no momento", bot e envios (`createClinicSender` nulo; a mensagem fica no histórico,
 > sem aviso à equipe); rotinas já pulavam. `/formulario` e `/importar` (links da clínica com o Suporte) seguem abertos.

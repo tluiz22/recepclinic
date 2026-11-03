@@ -40,8 +40,9 @@ export const POST: APIRoute = async (context) => {
   const page = `/admin/sistema/clinicas/${clinicId}`;
   // Erro ao devolver: volta à conferência, com o comentário marcado.
   const billingPage = `${page}?tab=faturamento`;
+  const suspensionPage = `${page}?tab=suspensao`;
   const acao = formText(form, "acao");
-  const failureTo = ["devolver_agenda", "autorizar_carga", "desfazer_carga"].includes(acao) ? `${page}/agenda-atual` : acao === "conta_cobranca" || acao.startsWith("contrato_") || acao === "asaas_sincronizar" || acao === "suspender" || acao === "liberar_suspensao" ? billingPage : page;
+  const failureTo = ["devolver_agenda", "autorizar_carga", "desfazer_carga"].includes(acao) ? `${page}/agenda-atual` : acao === "suspender" || acao === "liberar_suspensao" ? suspensionPage : acao === "conta_cobranca" || acao.startsWith("contrato_") || acao === "asaas_sincronizar" ? billingPage : page;
   const db = createUserClient(request, cookies);
 
   return runFormAction(
@@ -196,10 +197,10 @@ export const POST: APIRoute = async (context) => {
             note: formText(form, "suspension_note"),
             noAppConfirmed: formChecked(form, "no_app_confirmed"),
           });
-          return { redirectTo: billingPage, message: "Clínica suspensa." };
+          return { redirectTo: suspensionPage, message: "Clínica suspensa." };
         case "liberar_suspensao":
           await releaseClinicSuspension(db, formText(form, "suspension_id"), formText(form, "release_note"));
-          return { redirectTo: billingPage, message: "Motivo liberado." };
+          return { redirectTo: suspensionPage, message: "Motivo liberado." };
         case "marcar_revisado":
           await markInfoRequestReviewed(db, locals.userId!, formText(form, "request_id"));
           return { redirectTo: page, message: "Respostas marcadas como revisadas." };
