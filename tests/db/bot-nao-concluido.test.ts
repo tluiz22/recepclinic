@@ -68,10 +68,10 @@ async function say(phone: string, input: string | { id: string }): Promise<Sent[
   return sent;
 }
 
-/** A rotina de minuto em minuto (conversa parada + pedido não concluído). */
-async function routine(): Promise<Sent[]> {
+/** A rotina de minuto em minuto (conversa parada + pedido não concluído), agora ou `minutes` à frente. */
+async function routine(minutes = 0): Promise<Sent[]> {
   sent = [];
-  await closeIdleConversations(createClinicServiceClient(f.clinicId, env()), f.clinicId, sender, new Date());
+  await closeIdleConversations(createClinicServiceClient(f.clinicId, env()), f.clinicId, sender, new Date(Date.now() + minutes * 60_000));
   return sent;
 }
 
@@ -199,12 +199,8 @@ describe("cancelamento sem resposta", () => {
     reply = await say(P3, { id: "manage_cancel" });
     if (reply.at(-1)?.body === ASK_BIRTHDATE) reply = await say(P3, "01/01/2020");
     expect(reply[0].body).toMatch(/^Confirma o cancelamento do exame Exame de \*Paciente Três\*/);
-    await adminClient()
-      .from("conversation_state")
-      .update({ updated_at: new Date(Date.now() - 16 * 60_000).toISOString() })
-      .eq("clinic_id", f.clinicId)
-      .eq("contact_phone", P3);
-    reply = await routine();
+    // 16 minutos depois (o banco grava a hora da conversa sozinho).
+    reply = (await routine(16)).filter((m) => m.to === P3);
     expect(reply).toEqual([expect.objectContaining({ to: P3, kind: "buttons", body: "Não concluímos o cancelamento de *Paciente Três*. Como prefere seguir?" })]);
     expect(titles(reply)).toEqual(["Cancelar agora", "Falar com a recepção", "Desistir"]);
 
