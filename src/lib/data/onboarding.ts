@@ -1,6 +1,7 @@
 import { createHash, randomBytes } from "node:crypto";
 import { formatInstant, isValidTimeZone } from "../clinicTime";
-import { addedToClinicEmail, EmailNotConfiguredError, infoRequestEmail, inviteEmail, type EmailSender } from "../email";
+import { addedToClinicEmail, EmailNotConfiguredError, guideEmail, infoRequestEmail, inviteEmail, type EmailSender } from "../email";
+import { GUIDE_BEFORE_CONNECT_PATH } from "../guides";
 import { normalizeAnswers, submitProblem, type OnboardingAnswers } from "../onboardingForm";
 import type { Json } from "../supabase/database.types";
 import type { DbClient } from "./clients";
@@ -74,7 +75,8 @@ const passwordLink = (deps: OnboardingDeps, tokenHash: string, type: "invite" | 
 export async function inviteToClinic(
   db: DbClient,
   actorId: string,
-  clinic: { id: string; name: string },
+  /** `guideLink`: o convite do primeiro Administrador da clínica nova leva o guia "Antes de conectar" (IS1). */
+  clinic: { id: string; name: string; guideLink?: string },
   email: string,
   roles: ("admin" | "professional" | "reception")[],
   deps: OnboardingDeps,
@@ -105,7 +107,7 @@ export async function inviteToClinic(
 
   const message = existing
     ? addedToClinicEmail(address, { clinicName: clinic.name, loginUrl: `${deps.baseUrl}/admin/login` })
-    : inviteEmail(address, { clinicName: clinic.name, link: passwordLink(deps, link!.tokenHash, link!.type) });
+    : inviteEmail(address, { clinicName: clinic.name, link: passwordLink(deps, link!.tokenHash, link!.type), guideLink: clinic.guideLink });
   return { userId, existingUser: !!existing, email: await trySend(() => deps.sendEmail(message)) };
 }
 
@@ -131,7 +133,8 @@ export async function createClinicWithAdmin(
         .maybeSingle(),
       "Configuração da clínica",
     );
-    const { existingUser, email } = await inviteToClinic(db, actorId, { id: clinicId, name: clean.name }, clean.adminEmail, ["admin"], deps, now);
+    const guideLink = `${deps.baseUrl}${GUIDE_BEFORE_CONNECT_PATH}`;
+    const { existingUser, email } = await inviteToClinic(db, actorId, { id: clinicId, name: clean.name, guideLink }, clean.adminEmail, ["admin"], deps, now);
     return { clinicId, existingUser, email };
   } catch (error) {
     // Sem o Administrador, a clínica não fica pela metade.
@@ -285,6 +288,18 @@ const toRequest = (row: RequestRow): InfoRequest => ({
   submittedAt: row.submitted_at ? new Date(row.submitted_at) : null,
   reviewedAt: row.reviewed_at ? new Date(row.reviewed_at) : null,
 });
+
+/** Suporte (IS1, 03/nov/2026): envia ao Administrador o guia "Antes de conectar ao RecepClinic". */
+export async function sendConnectGuide(
+  clinic: { name: string },
+  email: string,
+  deps: Pick<OnboardingDeps, "sendEmail" | "baseUrl">,
+): Promise<{ email: EmailOutcome; link: string }> {
+  const address = normalizeEmail(email);
+  if (!EMAIL_RE.test(address)) throw new DataError("invalid", "Guia: e-mail inválido", { email: "E-mail inválido." });
+  const link = `${deps.baseUrl}${GUIDE_BEFORE_CONNECT_PATH}`;
+  return { email: await trySend(() => deps.sendEmail(guideEmail(address, { clinicName: clinic.name, link }))), link };
+}
 
 /** Suporte: cria o pedido e envia o e-mail com o link (válido por 30 dias). */
 export async function createInfoRequest(

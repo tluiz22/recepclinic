@@ -26,6 +26,7 @@ import { describeTemplateApproval, templateApproval, templatesInUse } from "../.
 import { isFeatureKey } from "../../../../lib/features";
 import { REQUEST_STATUS, ROLE_NAMES } from "../../../../lib/onboardingLabels";
 import { PLAN_LABELS, clinicPlan } from "../../../../lib/plans";
+import { GUIDE_BEFORE_CONNECT_PATH, GUIDE_META_PAYMENT_PATH } from "../../../../lib/guides";
 
 const { id } = Astro.params;
 if (!isUuid(id)) return Astro.redirect("/admin/sistema/clinicas");
@@ -66,6 +67,10 @@ const templatesLine =
   connection?.status === "connected"
     ? `Mensagens automáticas na Meta: ${describeTemplateApproval(templateApproval(templatesInUse(features), templates)) ?? "todas aprovadas"}`
     : null;
+// Guias para o dono da clínica (IS1, 03/nov/2026).
+const guideUrl = `${Astro.url.origin}${GUIDE_BEFORE_CONNECT_PATH}`;
+const paymentGuideUrl = `${Astro.url.origin}${GUIDE_META_PAYMENT_PATH}`;
+const guideWhatsapp = `https://wa.me/?text=${encodeURIComponent(`Olá! Antes de conectarmos o WhatsApp da ${clinic.name} ao RecepClinic, veja o que preparar: ${guideUrl}`)}`;
 const ordered = [...requests].sort((a, b) => b.requestedAt.getTime() - a.requestedAt.getTime());
 // Agenda atual (F10.1a): pedido em andamento, ou nenhum (pode pedir).
 const importOpen = !!agendaImport && isImportOpen(agendaImport.status);
@@ -234,6 +239,28 @@ const importAppointments = agendaImport ? countAppointments(agendaImport.entries
           </section>
         )
       }
+      <section class={`${PANEL} flex flex-col gap-4`} aria-labelledby="t-guia">
+        <div class="flex flex-col gap-1">
+          <h2 id="t-guia" class={SECTION_TITLE}>Guia para o Administrador</h2>
+          <p class="text-[15px] text-ink-soft">
+            O que a clínica prepara antes de conectar o WhatsApp: login do Facebook, WhatsApp Business, mensagens automáticas do app desligadas e cartão na
+            Meta, com o motivo e o passo a passo. O convite do primeiro Administrador já leva o link.
+          </p>
+          <p class="flex flex-wrap gap-x-4 gap-y-1 text-[15px]">
+            <a href={guideUrl} target="_blank" rel="noopener" class="font-semibold text-brand">Abrir o guia</a>
+            <a href={paymentGuideUrl} target="_blank" rel="noopener" class="font-semibold text-brand">Guia do pagamento na Meta</a>
+            <a href={guideWhatsapp} target="_blank" rel="noopener" class="font-semibold text-brand">Enviar pelo WhatsApp</a>
+          </p>
+        </div>
+        <form method="POST" action={action} class="flex flex-col gap-4">
+          <input type="hidden" name="acao" value="enviar_guia" />
+          <div>
+            <label for="guia-email" class={LABEL}>E-mail</label>
+            <input id="guia-email" name="email" type="email" required value={firstAdmin} class={INPUT} />
+          </div>
+          <button type="submit" data-sending-label="Enviando…" class={`${PRIMARY_BUTTON} self-start`}>Enviar o guia por e-mail</button>
+        </form>
+      </section>
       <section class={`${PANEL} flex flex-col gap-4`} aria-labelledby="t-pedir">
         <div class="flex flex-col gap-1">
           <h2 id="t-pedir" class={SECTION_TITLE}>Pedir as informações ao Administrador</h2>

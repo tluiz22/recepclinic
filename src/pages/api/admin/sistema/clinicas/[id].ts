@@ -4,7 +4,7 @@ import { authorizeAgendaImport, requestAgendaImport, returnAgendaImport, undoAge
 import { createUserClient } from "../../../../../lib/data/clients";
 import { DataError } from "../../../../../lib/data/errors";
 import { runFormAction } from "../../../../../lib/data/formAction";
-import { createInfoRequest, markInfoRequestReviewed, resendInvitation, setClinicStatus } from "../../../../../lib/data/onboarding";
+import { createInfoRequest, markInfoRequestReviewed, resendInvitation, sendConnectGuide, setClinicStatus } from "../../../../../lib/data/onboarding";
 import { onboardingDeps } from "../../../../../lib/data/onboardingDeps";
 import { formText } from "../../../../../lib/forms";
 
@@ -13,7 +13,7 @@ import { formText } from "../../../../../lib/forms";
 // atual para a importação ou mandar um link novo (F10.1a) e devolver a agenda
 // enviada à clínica, com comentário (F10.1b); autorizar a carga (F10.1c) e
 // desfazer a carga (F10.1d); ativar a clínica em implantação ou voltar para
-// a implantação (F8.2b).
+// a implantação (F8.2b); enviar o guia "Antes de conectar" ao Administrador (IS1).
 export const POST: APIRoute = async (context) => {
   const { request, cookies, locals, params, url } = context;
   const clinicId = params.id!;
@@ -50,6 +50,14 @@ export const POST: APIRoute = async (context) => {
           const message = result.email.sent
             ? "Pedido de informações criado. E-mail enviado."
             : `Pedido de informações criado, mas o e-mail não saiu (${result.email.reason}). Envie este link ao Administrador (ele não aparece de novo): ${result.link}`;
+          return { redirectTo: page, message };
+        }
+        case "enviar_guia": {
+          // Guia "Antes de conectar ao RecepClinic" (IS1, 03/nov/2026).
+          const result = await sendConnectGuide(clinic, formText(form, "email"), onboardingDeps(url));
+          const message = result.email.sent
+            ? "Guia enviado por e-mail ao Administrador."
+            : `O e-mail não saiu (${result.email.reason}). Envie o link do guia pelo WhatsApp: ${result.link}`;
           return { redirectTo: page, message };
         }
         case "pedir_agenda": {

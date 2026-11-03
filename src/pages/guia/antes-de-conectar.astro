@@ -1,0 +1,257 @@
+---
+// Guia "Antes de conectar ao RecepClinic" (IS1; cliente, 03/nov/2026; docs/implantacao-segura.md): o que o dono da
+// clínica faz antes da sessão de conexão do WhatsApp. Só o que é da clínica (o que é do Suporte fica na tela da
+// clínica no Sistema). Conteúdo aprovado no rascunho de 03/nov (claude.ai/artifact/VUyQ2qjT3ekZRBMsPHMfB4).
+// Pública, sem login, com a marca do RecepClinic.
+import PublicLayout from "../../layouts/PublicLayout.astro";
+import {
+  GUIDE_H2,
+  GUIDE_H3,
+  GUIDE_LEAD,
+  GUIDE_LINK,
+  GUIDE_NOTE,
+  GUIDE_OL,
+  GUIDE_P,
+  GUIDE_SECTION,
+  GUIDE_TITLE,
+  GUIDE_UL,
+} from "../../components/public/guideStyles";
+import { GUIDE_AUTOMATIONS_ANCHOR, GUIDE_META_PAYMENT_PATH } from "../../lib/guides";
+
+const before = [
+  "Perfil pessoal do Facebook com login funcionando: senha conhecida e código de confirmação chegando",
+  "Número da clínica no app WhatsApp Business, atualizado, com perfil comercial preenchido",
+  "Mensagens automáticas desligadas: saudação, ausência e automações do Meta Business Suite, inclusive as programadas para o horário comercial",
+  "Cartão de crédito habilitado para compras internacionais, para a Meta",
+  "Endereço do site da clínica (se não tiver, usamos o do RecepClinic)",
+  "Computador com navegador, o celular do número da clínica e um segundo celular para o teste",
+];
+const after = [
+  "Cartão cadastrado e definido como padrão na conta do WhatsApp da clínica",
+  "Mensagem de teste do RecepClinic recebida no celular",
+  "Verificação da empresa iniciada na Meta (recomendado)",
+];
+const sections = [
+  { id: "checklist", label: "Checklist" },
+  { id: "facebook-whatsapp", label: "Facebook e WhatsApp Business" },
+  { id: GUIDE_AUTOMATIONS_ANCHOR, label: "Desligar as mensagens automáticas" },
+  { id: "cartao", label: "Cartão de crédito na Meta" },
+  { id: "verificacao", label: "Verificação da empresa" },
+  { id: "dia-da-conexao", label: "No dia da conexão" },
+];
+---
+
+<PublicLayout title="Antes de conectar ao RecepClinic">
+  <div class="flex flex-col gap-2">
+    <h1 class={GUIDE_TITLE}>Antes de conectar ao RecepClinic</h1>
+    <p class={GUIDE_LEAD}>
+      Este é o passo a passo que o responsável pela clínica faz antes da sessão de conexão com o RecepClinic. Com tudo pronto, a conexão leva cerca de 30
+      minutos e os pacientes já recebem lembretes e confirmações no mesmo dia.
+    </p>
+  </div>
+
+  <nav aria-label="Nesta página" class="flex flex-wrap gap-2">
+    {sections.map((s) => <a href={`#${s.id}`} class="rounded-full border border-line bg-white px-3 py-1.5 text-sm font-semibold text-ink no-underline hover:border-brand hover:text-brand">{s.label}</a>)}
+  </nav>
+
+  <section id="checklist" class={GUIDE_SECTION} aria-labelledby="t-checklist">
+    <h2 id="t-checklist" class={GUIDE_H2}>Checklist</h2>
+    <p class={GUIDE_P}>Marque cada item quando estiver pronto. As seções abaixo explicam o motivo e o passo a passo de cada um.</p>
+    <h3 class={GUIDE_H3}>Antes da sessão de conexão</h3>
+    <ul class="flex flex-col gap-2">
+      {
+        before.map((item, i) => (
+          <li>
+            <label class="flex items-start gap-2.5 text-[16px] leading-snug text-ink">
+              <input type="checkbox" class="mt-1 h-[18px] w-[18px] flex-none accent-brand" id={`antes-${i}`} />
+              <span>{item}</span>
+            </label>
+          </li>
+        ))
+      }
+    </ul>
+    <h3 class={GUIDE_H3}>Logo depois da conexão</h3>
+    <ul class="flex flex-col gap-2">
+      {
+        after.map((item, i) => (
+          <li>
+            <label class="flex items-start gap-2.5 text-[16px] leading-snug text-ink">
+              <input type="checkbox" class="mt-1 h-[18px] w-[18px] flex-none accent-brand" id={`depois-${i}`} />
+              <span>{item}</span>
+            </label>
+          </li>
+        ))
+      }
+    </ul>
+  </section>
+
+  <section id="facebook-whatsapp" class={GUIDE_SECTION} aria-labelledby="t-facebook">
+    <h2 id="t-facebook" class={GUIDE_H2}>Facebook e WhatsApp Business</h2>
+    <p class={GUIDE_P}>
+      <strong>Por que o Facebook?</strong> O WhatsApp pertence à Meta, a mesma empresa do Facebook. A Meta só permite que um sistema como o RecepClinic envie
+      e receba mensagens pelo número da clínica por meio de uma conta empresarial dela, e essa conta é criada e administrada com um perfil do Facebook. Na
+      sessão de conexão, com esse perfil, a clínica cria o seu portfólio empresarial (que é da clínica, não do RecepClinic) e autoriza o RecepClinic a usar
+      o número. O mesmo login serve depois para cadastrar o cartão e acompanhar a conta. O RecepClinic não tem acesso ao perfil pessoal e não publica nada
+      nele.
+    </p>
+    <ol class={GUIDE_OL}>
+      <li>Entre em <a class={GUIDE_LINK} href="https://www.facebook.com" target="_blank" rel="noopener">facebook.com</a> no computador e confira que o login funciona.</li>
+      <li>Confira que o código de confirmação (SMS ou app autenticador) chega. Sem ele, a sessão para no meio.</li>
+      <li>
+        Se a pessoa já criou muitos portfólios empresariais, a Meta pode recusar um novo ("limite do número de negócios"). Nesse caso, outra pessoa de
+        confiança da clínica faz a conexão e adiciona o administrador depois.
+      </li>
+    </ol>
+    <p class={GUIDE_P}>
+      <strong>App WhatsApp Business.</strong> O número da clínica precisa estar no app <strong>WhatsApp Business</strong> (não no WhatsApp comum), no celular
+      com o chip do número.
+    </p>
+    <ol class={GUIDE_OL}>
+      <li>Atualize o app pela App Store ou pelo Google Play (versão 2.24.17 ou mais nova).</li>
+      <li>
+        Se o número ainda está no WhatsApp comum, passe para o WhatsApp Business antes. As conversas vêm junto. O suporte do RecepClinic envia o roteiro para
+        iPhone ou Android.
+      </li>
+      <li>Preencha o perfil comercial: nome da clínica, categoria <strong>Saúde</strong> (ou Médico), endereço e horário.</li>
+      <li>Confira que o app envia e recebe mensagens normalmente.</li>
+    </ol>
+    <p class={GUIDE_P}>Depois da conexão, o app continua funcionando no celular da recepção. As mensagens do assistente do RecepClinic também aparecem nele.</p>
+  </section>
+
+  <section id={GUIDE_AUTOMATIONS_ANCHOR} class={GUIDE_SECTION} aria-labelledby="t-automaticas">
+    <h2 id="t-automaticas" class={GUIDE_H2}>Desligar as mensagens automáticas</h2>
+    <p class={GUIDE_P}>
+      Este é o item mais importante. Toda mensagem que sai pelo app é entendida pelo RecepClinic como a recepção assumindo a conversa: o assistente para de
+      responder aquele paciente, e a conversa fica esperando atendimento humano. Uma mensagem de saudação ou de ausência ligada faz isso com todo paciente
+      novo.
+    </p>
+    <p class={GUIDE_NOTE}>
+      <strong>Atenção ao horário:</strong> a mensagem de ausência costuma estar programada só para certos dias e horários. Ela pode não aparecer num teste
+      feito à noite e disparar no dia seguinte, no horário comercial. Por isso, desligue as duas, mesmo que pareçam inativas.
+    </p>
+    <h3 class={GUIDE_H3}>No iPhone (app WhatsApp Business)</h3>
+    <ol class={GUIDE_OL}>
+      <li>Abra o WhatsApp Business e toque em <strong>Configurações</strong> (canto inferior direito).</li>
+      <li>Toque em <strong>Ferramentas comerciais</strong>.</li>
+      <li>Toque em <strong>Mensagem de saudação</strong> e desligue a chave <strong>Enviar mensagem de saudação</strong>. Salve.</li>
+      <li>Volte e toque em <strong>Mensagem de ausência</strong>. Desligue a chave <strong>Enviar mensagem de ausência</strong>. Salve.</li>
+    </ol>
+    <h3 class={GUIDE_H3}>No Android (app WhatsApp Business)</h3>
+    <ol class={GUIDE_OL}>
+      <li>Abra o WhatsApp Business e toque nos três pontos (⋮), canto superior direito.</li>
+      <li>Toque em <strong>Ferramentas comerciais</strong>.</li>
+      <li>Toque em <strong>Mensagem de saudação</strong> e desligue <strong>Enviar mensagem de saudação</strong>. Toque em <strong>Salvar</strong>.</li>
+      <li>Volte, toque em <strong>Mensagem de ausência</strong> e desligue <strong>Enviar mensagem de ausência</strong>. Toque em <strong>Salvar</strong>.</li>
+    </ol>
+    <h3 class={GUIDE_H3}>No Meta Business Suite (se a clínica usa)</h3>
+    <ol class={GUIDE_OL}>
+      <li>Abra <a class={GUIDE_LINK} href="https://business.facebook.com" target="_blank" rel="noopener">business.facebook.com</a> e vá em <strong>Caixa de entrada</strong>.</li>
+      <li>Abra <strong>Automações</strong> (ícone de raio ou menu da caixa de entrada).</li>
+      <li>Desligue qualquer automação ligada ao WhatsApp: mensagem instantânea, ausência, perguntas frequentes e respostas por palavra-chave.</li>
+    </ol>
+    <p class={GUIDE_P}>
+      <strong>Outros robôs.</strong> Se a clínica usa outro sistema de atendimento ou chatbot no mesmo número, ele precisa ser desligado antes da conexão.
+    </p>
+    <p class={GUIDE_P}>
+      <strong>Como conferir.</strong> Tire um print das telas de saudação e ausência desligadas e envie ao suporte do RecepClinic. Na sessão de conexão,
+      conferimos juntos.
+    </p>
+    <p class={GUIDE_P}>As respostas rápidas (as mensagens salvas que a recepção escolhe com "/") podem continuar: elas só saem quando alguém as envia.</p>
+  </section>
+
+  <section id="cartao" class={GUIDE_SECTION} aria-labelledby="t-cartao">
+    <h2 id="t-cartao" class={GUIDE_H2}>Cartão de crédito na Meta</h2>
+    <p class={GUIDE_P}>
+      <strong>Por que o cartão?</strong> A Meta cobra, direto da clínica, as mensagens que a clínica envia por iniciativa própria: lembretes, confirmações,
+      remarcações e cancelamentos. É a regra dela para todas as empresas que usam o WhatsApp por um sistema. Sem cartão válido, a Meta não entrega essas
+      mensagens, e os pacientes ficam sem lembrete. Essa cobrança é à parte da mensalidade do RecepClinic.
+    </p>
+    <p class={GUIDE_P}>
+      <strong>O custo é baixo.</strong> Cada lembrete ou confirmação custa cerca de <strong>R$ 0,04 a R$ 0,08</strong>. Uma clínica com 20 atendimentos por
+      dia, com lembrete e confirmação para cada um, envia cerca de 900 mensagens por mês: algo entre <strong>R$ 35 e R$ 70 por mês</strong>, bem menos do que
+      uma falta evitada. As respostas do assistente quando o paciente escreve primeiro são gratuitas. Os valores são aproximados e definidos pela Meta; o
+      extrato fica no Gerenciador do WhatsApp.
+    </p>
+    <p class={GUIDE_P}>
+      A conta do WhatsApp da clínica é criada na sessão de conexão. Por isso, o cartão é cadastrado <strong>logo depois dela</strong>, ainda com o suporte
+      acompanhando:
+    </p>
+    <ol class={GUIDE_OL}>
+      <li>
+        Abra o <a class={GUIDE_LINK} href="https://business.facebook.com/wa/manage/home/" target="_blank" rel="noopener">Gerenciador do WhatsApp</a> com o mesmo
+        perfil do Facebook da conexão e escolha o portfólio da clínica.
+      </li>
+      <li>Abra <strong>Configurações de pagamento</strong> (ou <strong>Formas de pagamento</strong>).</li>
+      <li>Clique em <strong>Adicionar forma de pagamento</strong> e cadastre o cartão de crédito.</li>
+      <li>No menu de três pontos (⋯) ao lado do cartão, escolha <strong>Definir como principal</strong> (ou <strong>Marcar como padrão</strong>).</li>
+      <li>Confira a moeda em <strong>reais (BRL)</strong> e o fuso de <strong>Brasília</strong>.</li>
+    </ol>
+    <p class={GUIDE_P}>Cuidados:</p>
+    <ul class={GUIDE_UL}>
+      <li>O cartão vai na <strong>conta do WhatsApp</strong> da clínica, não no Gerenciador de Anúncios nem só no portfólio.</li>
+      <li>Use cartão de <strong>crédito habilitado para compras internacionais</strong>. Cartões de débito e alguns virtuais são recusados.</li>
+      <li>
+        Se o número já foi usado com outro fornecedor de WhatsApp, peça a ele que remova a linha de crédito da conta antes. Sem isso, a Meta não deixa definir
+        o cartão da clínica como padrão.
+      </li>
+    </ul>
+    <p class={GUIDE_P}>
+      Depois do cartão, o RecepClinic envia uma <strong>mensagem de teste</strong> para o celular indicado. Se ela chegar, está tudo certo. Se o cartão não
+      ficar como padrão, veja o <a class={GUIDE_LINK} href={GUIDE_META_PAYMENT_PATH}>passo a passo do pagamento na Meta</a>.
+    </p>
+  </section>
+
+  <section id="verificacao" class={GUIDE_SECTION} aria-labelledby="t-verificacao">
+    <h2 id="t-verificacao" class={GUIDE_H2}>Verificação da empresa (recomendado)</h2>
+    <p class={GUIDE_P}>Não é obrigatória para usar o RecepClinic. A verificação é a Meta confirmar que a empresa existe, pelos documentos dela.</p>
+    <ul class={GUIDE_UL}>
+      <li>
+        <strong>Sem verificação:</strong> tudo funciona, mas a Meta limita as conversas que a clínica inicia (lembretes, confirmações, avisos) a cerca de{" "}
+        <strong>250 pacientes diferentes a cada 24 horas</strong>. Respostas a quem escreve primeiro não entram nesse limite. Para a maioria das clínicas,
+        isso basta: um dia de lembretes costuma ficar entre 20 e 80.
+      </li>
+      <li>
+        <strong>Com verificação:</strong> o limite sobe (1.000, 10.000 e mais, conforme o uso), o que importa para clínicas com muitos atendimentos por dia ou
+        várias unidades no mesmo portfólio.
+      </li>
+    </ul>
+    <p class={GUIDE_P}>Como fazer, depois da conexão:</p>
+    <ol class={GUIDE_OL}>
+      <li>
+        Abra <a class={GUIDE_LINK} href="https://business.facebook.com" target="_blank" rel="noopener">business.facebook.com</a>, escolha o portfólio da clínica e
+        vá em <strong>Configurações › Central de segurança</strong>.
+      </li>
+      <li>Clique em <strong>Iniciar verificação</strong> (Verificação da empresa).</li>
+      <li>Informe razão social, CNPJ, endereço, telefone e site, exatamente como no cartão CNPJ.</li>
+      <li>Envie um documento da empresa (cartão CNPJ ou contrato social) e um comprovante de endereço ou telefone em nome dela.</li>
+      <li>Confirme o contato pelo método que a Meta oferecer (e-mail, telefone ou domínio do site).</li>
+    </ol>
+    <p class={GUIDE_P}>
+      A análise leva de alguns dias a algumas semanas. Os limites da Meta mudam de tempos em tempos; o limite atual aparece no Gerenciador do WhatsApp, em
+      Ferramentas da conta › Limites de mensagens.
+    </p>
+  </section>
+
+  <section id="dia-da-conexao" class={GUIDE_SECTION} aria-labelledby="t-dia">
+    <h2 id="t-dia" class={GUIDE_H2}>No dia da conexão</h2>
+    <p class={GUIDE_P}>A sessão é por chamada de vídeo, com a tela do computador compartilhada e o suporte do RecepClinic orientando cada passo.</p>
+    <p class={GUIDE_P}>Tenha em mãos:</p>
+    <ul class={GUIDE_UL}>
+      <li><strong>Computador com navegador</strong> (Chrome, Edge ou Safari). A janela da Meta não funciona no navegador do celular.</li>
+      <li><strong>Celular com o WhatsApp Business</strong> do número da clínica, ao lado do computador, para ler o QR code.</li>
+      <li><strong>Login do Facebook</strong> e o celular que recebe o código de confirmação.</li>
+      <li><strong>Cartão de crédito</strong> para a Meta.</li>
+      <li>
+        <strong>Endereço do site da clínica.</strong> A Meta pede um site no perfil comercial da empresa, para identificar quem está enviando as mensagens. Se a
+        clínica não tiver site, não tem problema: usamos o endereço do RecepClinic.
+      </li>
+      <li><strong>Um segundo celular</strong> (pessoal, que não seja o da clínica) para o teste final: mandar "oi" e ver o assistente responder.</li>
+    </ul>
+    <p class={GUIDE_P}>
+      A configuração da clínica no RecepClinic (profissionais, serviços, horários e consultas já marcadas) não precisa estar pronta antes: ela é feita junto
+      com o suporte ou pelo formulário que enviamos por link.
+    </p>
+    <p class={GUIDE_P}>Dúvidas: fale com o suporte do RecepClinic pelo WhatsApp.</p>
+  </section>
+  <div class="pb-8"></div>
+</PublicLayout>

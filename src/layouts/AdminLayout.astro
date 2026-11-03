@@ -1,5 +1,6 @@
 ---
 // Fontes da marca no próprio servidor (redesign R0; a CSP não carrega fontes de fora).
+import { GUIDE_BEFORE_CONNECT_PATH } from "../lib/guides";
 import "@fontsource-variable/bricolage-grotesque/opsz.css";
 import "@fontsource-variable/source-sans-3";
 import "../styles/global.css";
@@ -338,6 +339,10 @@ const sideLinkClass = (active: boolean) =>
         !platform && clinic?.clinicStatus === "onboarding" && (
           <div class="border-b border-amber-200 bg-amber-50 px-4 py-2 text-center text-xs text-amber-800">
             Clínica em implantação: nada sai para os pacientes pelo WhatsApp (bot, avisos e lembretes) até o Suporte do RecepClinic ativar.
+            {/* IS1 (03/nov/2026): o que preparar antes de conectar o WhatsApp. */}
+            <a href={GUIDE_BEFORE_CONNECT_PATH} target="_blank" rel="noopener" class="ml-1 font-semibold whitespace-nowrap text-amber-900 underline">
+              Antes de conectar o WhatsApp: veja o guia
+            </a>
           </div>
         )
       }

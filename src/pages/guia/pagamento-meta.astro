@@ -1,0 +1,166 @@
+---
+// Guia "Pagamento do WhatsApp na Meta" (IS1; cliente, 03/nov/2026; docs/implantacao-segura.md): cadastrar o cartão e
+// defini-lo como padrão na conta do WhatsApp da clínica, o que fazer quando não fica como padrão e a mensagem para o
+// suporte da Meta (que não atende por e-mail). Veio do rascunho de 03/nov feito para a clínica piloto
+// (claude.ai/artifact/597uX5NDYhbLdUGRi2bC12), sem os ids dela. Pública, sem login, com a marca do RecepClinic.
+import PublicLayout from "../../layouts/PublicLayout.astro";
+import { GUIDE_CODE, GUIDE_H2, GUIDE_H3, GUIDE_LEAD, GUIDE_LINK, GUIDE_OL, GUIDE_P, GUIDE_SECTION, GUIDE_TITLE, GUIDE_UL } from "../../components/public/guideStyles";
+import { GUIDE_BEFORE_CONNECT_PATH } from "../../lib/guides";
+
+const messagePt = `Assunto: Não consigo definir a forma de pagamento padrão da conta do WhatsApp Business (erro 131042)
+
+Olá, equipe de suporte da Meta.
+
+Sou administrador(a) do portfólio empresarial "[nome da clínica]" e preciso de ajuda com o pagamento da nossa conta do WhatsApp Business.
+
+Dados da conta:
+- Portfólio empresarial (Business ID): [ID do portfólio]
+- Conta do WhatsApp Business (WABA ID): [ID da conta do WhatsApp]
+- Número de telefone: [número do WhatsApp da clínica, com DDD]
+- Moeda da conta: BRL
+
+O problema:
+- As mensagens de modelo (templates) enviadas pela API são recusadas com o erro 131042, "Business eligibility payment issue".
+- Cadastramos um cartão de crédito nas configurações de pagamento da conta do WhatsApp, mas não conseguimos defini-lo como forma de pagamento padrão.
+- [Descreva o que aparece: a opção fica cinza, não aparece ou dá erro ao clicar, e o texto do aviso, se houver.]
+
+Pedimos que verifiquem:
+1. O que impede definir o cartão como forma de pagamento padrão desta conta do WhatsApp.
+2. Se há algum saldo em aberto, restrição ou linha de crédito antiga vinculada à conta.
+3. Se a falta de verificação da empresa influencia o pagamento.
+
+Seguem em anexo prints da tela de pagamento.
+
+Obrigado(a),
+[Nome completo]
+[Cargo] – [nome da clínica]
+[E-mail e telefone para contato]`;
+
+const messageEn = `Subject: Unable to set default payment method on WhatsApp Business Account (error 131042)
+
+Hello Meta Support team,
+
+I am an admin of the business portfolio "[clinic name]" and need help with billing for our WhatsApp Business Account.
+
+Account details:
+- Business ID: [Business ID]
+- WhatsApp Business Account (WABA) ID: [WABA ID]
+- Phone number: [clinic WhatsApp number, with area code]
+- Account currency: BRL
+
+The issue:
+- Template messages sent through the API fail with error 131042, "Business eligibility payment issue".
+- We added a credit card in the WhatsApp account payment settings, but we cannot set it as the default payment method.
+- [Describe what happens: the option is greyed out, missing, or shows an error, and the exact message, if any.]
+
+Please check:
+1. What prevents us from setting the card as the default payment method for this WhatsApp account.
+2. Whether there is any outstanding balance, restriction or old credit line attached to the account.
+3. Whether the pending business verification affects billing.
+
+Screenshots of the payment settings are attached.
+
+Thank you,
+[Full name]
+[Role] – [clinic name]
+[Contact e-mail and phone]`;
+---
+
+<PublicLayout title="Pagamento do WhatsApp na Meta">
+  <div class="flex flex-col gap-2">
+    <h1 class={GUIDE_TITLE}>Pagamento do WhatsApp na Meta</h1>
+    <p class={GUIDE_LEAD}>
+      A conta do WhatsApp Business da clínica precisa de uma forma de pagamento válida, definida como padrão na Meta. Sem ela, os avisos automáticos aos
+      pacientes (lembretes, confirmações, remarcações) não são entregues.
+    </p>
+  </div>
+
+  <section class={GUIDE_SECTION} aria-labelledby="t-por-que">
+    <h2 id="t-por-que" class={GUIDE_H2}>Por que</h2>
+    <p class={GUIDE_P}>
+      A Meta cobra da clínica, direto no cartão dela, cada mensagem que o sistema envia por conta própria: lembretes, confirmações, remarcações,
+      cancelamentos e resumos da equipe. O custo é baixo, cerca de R$ 0,04 a R$ 0,08 por mensagem. Sem cartão válido, nenhuma dessas mensagens é entregue, e
+      a Meta devolve o erro <strong>131042</strong> ("problema de pagamento da empresa"). As respostas do assistente, quando o paciente escreve primeiro, são
+      gratuitas e continuam chegando.
+    </p>
+  </section>
+
+  <section class={GUIDE_SECTION} aria-labelledby="t-passos">
+    <h2 id="t-passos" class={GUIDE_H2}>Passo a passo</h2>
+    <p class={GUIDE_P}>
+      Feito no computador, com o perfil do Facebook que administra o portfólio empresarial da clínica (o mesmo usado para conectar o WhatsApp ao
+      RecepClinic). Leva cerca de 5 minutos.
+    </p>
+    <ol class={GUIDE_OL}>
+      <li>Acesse <a class={GUIDE_LINK} href="https://business.facebook.com" target="_blank" rel="noopener">business.facebook.com</a> e entre com esse perfil.</li>
+      <li>No seletor de portfólio, no canto superior esquerdo, escolha o portfólio da clínica.</li>
+      <li>Abra <strong>Configurações</strong> (ícone de engrenagem) e, no menu, <strong>Contas › Contas do WhatsApp</strong>.</li>
+      <li>Escolha a conta do WhatsApp da clínica e clique em <strong>Gerenciador do WhatsApp</strong>.</li>
+      <li>No Gerenciador do WhatsApp, abra <strong>Configurações de pagamento</strong> (às vezes aparece como <strong>Faturamento</strong> ou <strong>Pagamentos</strong>).</li>
+      <li>
+        Clique em <strong>Adicionar forma de pagamento</strong> e cadastre um cartão de crédito em nome da clínica. Se já houver um cartão com aviso de
+        recusado ou vencido, atualize os dados ou troque por outro.
+      </li>
+      <li>No menu de três pontos (⋯) ao lado do cartão, escolha <strong>Definir como principal</strong> (ou <strong>Marcar como padrão</strong>).</li>
+      <li>Confira os dados da empresa pedidos na mesma tela (nome, endereço, moeda em reais e fuso de Brasília) e salve.</li>
+      <li>Volte à página inicial da conta do WhatsApp e confira se não há mais nenhum alerta de "problema de pagamento" ou "conta restrita".</li>
+    </ol>
+    <p class={GUIDE_P}>
+      Atalho para o Gerenciador do WhatsApp: <a class={GUIDE_LINK} href="https://business.facebook.com/wa/manage/home/" target="_blank" rel="noopener">business.facebook.com/wa/manage/home</a>.
+      Os nomes dos menus mudam de vez em quando na Meta: se algum não aparecer exatamente assim, procure por "pagamento" dentro da conta do WhatsApp.
+    </p>
+    <p class={GUIDE_P}>Pronto: avise o suporte do RecepClinic, que confere o próximo envio para garantir que a mensagem foi entregue.</p>
+  </section>
+
+  <section class={GUIDE_SECTION} aria-labelledby="t-nao-encontra">
+    <h2 id="t-nao-encontra" class={GUIDE_H2}>Se não encontrar</h2>
+    <ul class={GUIDE_UL}>
+      <li>
+        <strong>O portfólio da clínica não aparece no seletor:</strong> o perfil usado não tem acesso. Entre com o perfil de quem conectou o WhatsApp da
+        clínica, ou peça a essa pessoa que adicione você como administrador em <strong>Configurações › Usuários › Pessoas</strong>.
+      </li>
+      <li>
+        <strong>A opção de pagamento não aparece:</strong> só um administrador do portfólio consegue mexer no pagamento. Peça o acesso de administrador como no
+        item anterior.
+      </li>
+      <li>
+        <strong>O cartão é recusado:</strong> use um cartão de crédito habilitado para compras internacionais. A Meta cobra a partir do exterior, e alguns
+        cartões de débito ou virtuais são recusados.
+      </li>
+    </ul>
+    <p class={GUIDE_P}>O RecepClinic não tem acesso ao pagamento da conta da clínica na Meta. Esse passo só pode ser feito pela própria clínica.</p>
+  </section>
+
+  <section class={GUIDE_SECTION} aria-labelledby="t-padrao">
+    <h2 id="t-padrao" class={GUIDE_H2}>Se o cartão não fica como padrão</h2>
+    <p class={GUIDE_P}>Trocar de cartão não resolve quando o bloqueio está na conta. Nesse caso:</p>
+    <ol class={GUIDE_OL}>
+      <li>
+        <strong>Linha de crédito de outro fornecedor:</strong> se o número já foi usado com outro fornecedor de WhatsApp, peça a ele que remova a linha de
+        crédito da conta. Enquanto ela existir, a Meta não deixa definir o cartão da clínica como padrão.
+      </li>
+      <li><strong>Saldo em aberto:</strong> se aparecer algum valor devido ou o botão "Pagar agora", quite antes de tentar definir o cartão como padrão.</li>
+      <li>
+        <strong>Peça ajuda à Meta:</strong> com a mensagem abaixo. A verificação da empresa também pode ajudar; veja o{" "}
+        <a class={GUIDE_LINK} href={`${GUIDE_BEFORE_CONNECT_PATH}#verificacao`}>guia antes de conectar</a>.
+      </li>
+    </ol>
+    <h3 class={GUIDE_H3}>Mensagem para o suporte da Meta</h3>
+    <p class={GUIDE_P}>
+      A Meta não atende por e-mail: o pedido é feito por formulário, no Suporte ao negócio. Entre em{" "}
+      <a class={GUIDE_LINK} href="https://business.facebook.com/business-support-home" target="_blank" rel="noopener">business.facebook.com/business-support-home</a>{" "}
+      com o perfil de administrador, escolha o portfólio da clínica, clique em <strong>Obter suporte</strong> (ou <strong>Fale conosco</strong>), escolha{" "}
+      <strong>WhatsApp Business</strong> e o assunto de pagamento ou faturamento. Cole o texto abaixo na descrição, troque o que está entre colchetes e
+      anexe os prints. Se aparecer a opção de conversar pelo chat, use-a: costuma ser mais rápida. A resposta da Meta chega pelo e-mail do perfil e fica no
+      próprio Suporte ao negócio.
+    </p>
+    <p class={GUIDE_P}>
+      <strong>Onde achar os números:</strong> o ID do portfólio fica em Configurações › Informações do negócio; o ID da conta do WhatsApp, em Configurações ›
+      Contas › Contas do WhatsApp, ao escolher a conta. O suporte do RecepClinic também pode informar os dois.
+    </p>
+    <pre class={GUIDE_CODE}>{messagePt}</pre>
+    <p class={GUIDE_P}>Se o atendimento for em inglês:</p>
+    <pre class={GUIDE_CODE}>{messageEn}</pre>
+  </section>
+  <div class="pb-8"></div>
+</PublicLayout>

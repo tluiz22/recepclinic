@@ -47,7 +47,8 @@ const createdUsers: string[] = [];
 const asDb = (client: unknown) => client as DbClient;
 const newEmail = (label: string) => `${label}-${randomUUID().slice(0, 8)}@teste.recepclinic.local`;
 const linkParams = (email: Email) => {
-  const href = email.text.match(/https?:\/\/\S+/)![0];
+  // O link de criar a senha (o convite da clínica nova também leva o guia "Antes de conectar", IS1).
+  const href = email.text.match(/https?:\/\/\S+\/api\/admin\/auth\/confirmar\S*/)![0];
   const url = new URL(href);
   return { url, tokenHash: url.searchParams.get("token_hash")!, type: url.searchParams.get("type")! };
 };
@@ -78,6 +79,8 @@ describe("nova clínica", () => {
     const email = sent.at(-1)!;
     expect(email.to).toBe(adminEmail);
     expect(email.subject).toBe("Convite para o painel da Clínica Nova");
+    // IS1 (03/nov/2026): o guia do que preparar antes de conectar o WhatsApp.
+    expect(email.text).toContain("/guia/antes-de-conectar");
     const { url, tokenHash, type } = linkParams(email);
     expect(url.pathname).toBe("/api/admin/auth/confirmar");
     expect(type).toBe("invite");

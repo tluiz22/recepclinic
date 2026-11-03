@@ -57,12 +57,14 @@ ${button ? `<p style="margin:24px 0"><a href="${escapeHtml(button.href)}" style=
 }
 
 /** Convite para o painel: o link abre a tela de criar a senha. */
-export function inviteEmail(to: string, { clinicName, link }: { clinicName: string; link: string }): Email {
+export function inviteEmail(to: string, { clinicName, link, guideLink }: { clinicName: string; link: string; guideLink?: string }): Email {
   const body = layout(
     `Você foi convidado para o painel da ${clinicName}`,
     [
       `A ${clinicName} liberou o seu acesso ao RecepClinic, o painel da recepção da clínica.`,
       "Para entrar, crie a sua senha pelo botão abaixo. O link vale por 24 horas.",
+      // Primeiro Administrador da clínica nova (IS1, 03/nov/2026): o guia do que fazer antes de conectar o WhatsApp.
+      ...(guideLink ? [`Antes de conectar o WhatsApp da clínica, veja o que preparar (Facebook, WhatsApp Business, mensagens automáticas e cartão na Meta): ${guideLink}`] : []),
       "Se você não esperava este convite, ignore esta mensagem.",
     ],
     { label: "Criar minha senha", href: link },
@@ -81,6 +83,20 @@ export function addedToClinicEmail(to: string, { clinicName, loginUrl }: { clini
     { label: "Entrar no painel", href: loginUrl },
   );
   return { to, subject: `Acesso à ${clinicName} no RecepClinic`, ...body };
+}
+
+/** Guia "Antes de conectar ao RecepClinic" (IS1, 03/nov/2026), enviado pelo Suporte ao Administrador da clínica. */
+export function guideEmail(to: string, { clinicName, link }: { clinicName: string; link: string }): Email {
+  const body = layout(
+    `Antes de conectar o WhatsApp da ${clinicName}`,
+    [
+      "Para a conexão com o RecepClinic correr bem, separe antes: o login do Facebook de quem administra a clínica, o número no app WhatsApp Business, as mensagens automáticas do app desligadas e um cartão de crédito para a Meta.",
+      "O guia pelo botão abaixo explica o motivo e o passo a passo de cada item, com uma lista para marcar. Leva poucos minutos.",
+      "Dúvidas: fale com o suporte do RecepClinic pelo WhatsApp.",
+    ],
+    { label: "Abrir o guia", href: link },
+  );
+  return { to, subject: `Antes de conectar o WhatsApp da ${clinicName} ao RecepClinic`, ...body };
 }
 
 /** Pedido das informações para o Suporte configurar a clínica. */

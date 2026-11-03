@@ -1,8 +1,8 @@
 # Implantação segura do WhatsApp (IS): pré-requisitos, mensagem de teste, checklist e problemas conhecidos
 
-> **Retomar daqui (03/nov/2026).** Planejamento aprovado pelo cliente (decisões na seção 3). Nada implementado.
-> Próximo: IS1 (páginas públicas dos guias), uma fase por vez, com validação do cliente. Rascunhos aprovados dos
-> guias no claude.ai (seção 4).
+> **Retomar daqui (03/nov/2026).** **IS1 feita** (guias públicos `/guia/antes-de-conectar` e `/guia/pagamento-meta`,
+> "Guia para o Administrador" na tela da clínica no Sistema, link no convite e na faixa de implantação, roteiro de
+> Implantação atualizado), sem migração. Cliente valida no staging. Próximo: IS2 (mensagem de teste).
 
 Pedido do cliente em 03/nov/2026, depois de dois incidentes na produção (clínica piloto) no mesmo dia: impedir que
 se repitam nas próximas clínicas.
@@ -62,7 +62,19 @@ da clínica piloto no Gerenciador do WhatsApp para calibrar.
 
 ## 5. Fases
 
-### IS1 — Guias públicos e envio ao Administrador
+### IS1 — Guias públicos e envio ao Administrador (feita, 03/nov)
+
+Feito: `src/pages/guia/antes-de-conectar.astro` e `pagamento-meta.astro` (PublicLayout, marca do RecepClinic, sem
+login; caminhos em `src/lib/guides.ts`), com o texto aprovado nos rascunhos (o de pagamento sem os ids da clínica
+piloto, com onde achar os ids). Sistema › Clínicas › clínica: cartão "Guia para o Administrador" (abrir, guia do
+pagamento, enviar pelo WhatsApp com `wa.me/?text=` e "Enviar o guia por e-mail", ação `enviar_guia` →
+`sendConnectGuide`, e-mail `guideEmail`). Convite do primeiro Administrador da clínica nova (`createClinicWithAdmin`)
+com o parágrafo do guia. Faixa "Clínica em implantação" (AdminLayout) com "Antes de conectar o WhatsApp: veja o guia".
+Vendas › Implantação: pré-requisito novo "Mensagens automáticas do app desligadas", cartão definido como padrão com o
+custo, envio do guia na Contratação, conferência das automações e teste de outro número que não o do Suporte. Sem
+captura afetada. Testes: `src/lib/guides.test.ts`; `novas-clinicas.test.ts` (o convite leva o guia).
+
+Plano original:
 
 - Páginas `/guia/antes-de-conectar` e `/guia/pagamento-meta` (públicas, sem login, layout das páginas do paciente com
   a marca do RecepClinic), com o conteúdo da seção 4.
