@@ -8,6 +8,8 @@ import {
   findContactByPhone,
   getPatient,
   listContactPatients,
+  listContactsPage,
+  listPatientsPage,
   registerPatient,
   searchContacts,
   searchPatients,
@@ -224,6 +226,45 @@ describe("edição, plano e desativação", () => {
     expect((await searchPatients(db(reception), clinicId, "99999-0002")).map((p) => p.fullName)).toEqual(["Clara Lima"]);
     expect((await searchContacts(db(reception), clinicId, "Paula")).map((c) => c.phone)).toEqual(["+5585999990002"]);
     expect(await searchPatients(db(reception), clinicId, "a")).toEqual([]);
+  });
+
+  it("nome parecido (C18): sem acento, sem 'da', com letra errada, os mais parecidos primeiro", async () => {
+    const aurora = created(
+      await registerPatient(
+        db(reception),
+        clinicId,
+        { fullName: "Aurora Oliveira da Costa", birthdate: yearsAgo(40), contact: { mode: "self", phone: "85999990020" } },
+        TODAY,
+      ),
+    );
+    created(
+      await registerPatient(
+        db(reception),
+        clinicId,
+        { fullName: "Aurora Silva", birthdate: yearsAgo(41), contact: { mode: "self", phone: "85999990021" } },
+        TODAY,
+      ),
+    );
+    const names = async (q: string) => (await searchPatients(db(reception), clinicId, q)).map((p) => p.fullName);
+    expect(await names("Aurora oliveira Costa")).toEqual(["Aurora Oliveira da Costa"]);
+    expect(await names("AURORA OLIVERA")).toEqual(["Aurora Oliveira da Costa"]);
+    expect(await names("aurora olivra costa")).toEqual(["Aurora Oliveira da Costa"]);
+    expect(await names("aur cos")).toEqual(["Aurora Oliveira da Costa"]);
+    expect(await names("liveira")).toEqual(["Aurora Oliveira da Costa"]);
+    // "Aurora" inteira vale mais que "Aurora" com letra errada; empate, em ordem de nome.
+    expect(await names("Aurora")).toEqual(["Aurora Oliveira da Costa", "Aurora Silva"]);
+    expect(await names("Aurora Sliva")).toEqual(["Aurora Silva"]);
+    expect((await searchContacts(db(reception), clinicId, "aurora d'oliveira costa")).map((c) => c.fullName)).toEqual(["Aurora Oliveira da Costa"]);
+
+    const page = await listPatientsPage(db(reception), clinicId, { query: "Aurora Costa" });
+    expect(page).toMatchObject({ total: 1, pageCount: 1 });
+    expect(page.items.map((p) => p.id)).toEqual([aurora.patient.id]);
+    expect((await listContactsPage(db(reception), clinicId, { query: "aurora silva" })).items.map((c) => c.fullName)).toEqual(["Aurora Silva"]);
+
+    await setPatientActive(db(reception), clinicId, aurora.patient.id, false);
+    expect(await names("Aurora Costa")).toEqual([]);
+    expect((await listPatientsPage(db(reception), clinicId, { query: "Aurora Costa", includeInactive: true })).total).toBe(1);
+    await setPatientActive(db(reception), clinicId, aurora.patient.id, true);
   });
 
   it("% e _ na busca são texto, não curinga", async () => {

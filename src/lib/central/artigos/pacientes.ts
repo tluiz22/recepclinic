@@ -19,6 +19,7 @@ export const pacientesArtigos = [
     intro: "A lista tem duas abas: Pacientes e Responsáveis/Contatos (o nome segue o vocabulário da clínica). Toda a equipe vê todos os pacientes.",
     steps: [
       "Abra Pacientes e digite na busca: o nome, o telefone (só números, 4 ou mais) ou o nascimento no formato dd/mm/aaaa.",
+      "Pelo nome, a busca ignora acentos, maiúsculas e as partes pequenas (de, da, dos, jr…), aceita as palavras em qualquer ordem e uma letra errada: \"Aurora oliveira Costa\" acha \"Aurora Oliveira da Costa\". Os mais parecidos vêm primeiro.",
       "Para incluir os cadastros desativados, use \"Mostrar desativados\".",
       "Toque no nome para abrir a ficha. São 20 por página.",
       "Sem resultado, use \"Limpar a busca\" ou \"Novo paciente\".",

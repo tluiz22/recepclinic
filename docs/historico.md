@@ -888,3 +888,14 @@ desfaz a C10).
   `src/lib/servicePicker.ts` (teste), `ServicePicker.astro` e `marcar.astro` (também com `?tipo=` no endereço). Horários
   (Configurações) fica como estava. Artigo "Marcar um atendimento" atualizado; a captura `marcar` mostra só o passo 1:
   nada a recapturar. Sem migração.
+- **C18 (etapa B) Busca por nome parecido** (03/nov): migração `20261206120000_busca_por_nome_parecido.sql`
+  (extensão `fuzzystrmatch`; `app.search_name_words`, `app.search_typo_distance`, `app.search_word_score`,
+  `app.search_name_score`; `public.search_patient_ids` e `public.search_contact_ids`, com as permissões de quem chama).
+  Regra: sem acento, maiúsculas e sinais; sem de, da, do, das, dos, e, d, jr, junior, filho(a), neto(a), sobrinho(a);
+  cada palavra digitada combina com alguma palavra do nome, em qualquer ordem: igual (30), começo (20) ou com letra
+  errada (9 ou 8; 1 erro com 4 e 5 letras, 2 a partir de 6; duas vizinhas trocadas = 1 erro); sem isso, o trecho do
+  nome, como antes (1). Os mais parecidos primeiro; empate em ordem de nome. Vale em `searchPatients`,
+  `searchContacts`, `listPatientsPage` e `listContactsPage` (Pacientes, Responsáveis, Marcar, Agenda › Buscar,
+  Financeiro e Métricas); telefone e nascimento como estavam. Listas com páginas: até 500 parecidos (Financeiro "sem
+  CPF": 150, em ordem de nome). Teste de banco em `acesso-pacientes.test.ts`; artigo "Buscar pacientes" atualizado,
+  sem captura a refazer.

@@ -185,11 +185,16 @@ export async function searchContacts(db: DbClient, clinicId: string, query: stri
   const term = parseSearch(query);
   if (!term || query.trim().length < 2) return [];
   let request = db.from("contacts").select(CONTACT_COLUMNS).eq("clinic_id", clinicId).eq("is_active", true);
+  if (term.kind === "name") {
+    const ids = await idsByName(db, "contacts", clinicId, term.text, false, 10);
+    if (ids.length === 0) return [];
+    return inIdOrder(unwrap(await request.in("id", ids), "Busca de contatos"), ids).map(toContact);
+  }
   if (term.kind === "birthdate") {
     const ids = await contactIdsBornOn(db, clinicId, term.date);
     if (ids.length === 0) return [];
     request = request.in("id", ids);
-  } else request = term.kind === "phone" ? request.ilike("phone", `%${term.digits}%`) : request.ilike("full_name", `%${escapeLike(term.text)}%`);
+  } else request = request.ilike("phone", `%${term.digits}%`);
   return unwrap(await request.order("full_name").limit(10), "Busca de contatos").map(toContact);
 }
 
@@ -281,10 +286,16 @@ export async function searchPatients(db: DbClient, clinicId: string, query: stri
     .select(`${PATIENT_COLUMNS}, contacts!${byPhone ? "inner" : "left"} ( ${CONTACT_COLUMNS} )`)
     .eq("clinic_id", clinicId)
     .eq("is_active", true);
-  request = filterPatients(request, term);
-  const rows = unwrap(await request.order("full_name").limit(10), "Busca de pacientes") as unknown as (PatientRow & {
+  let ids: string[] | null = null;
+  if (term.kind === "name") {
+    ids = await idsByName(db, "patients", clinicId, term.text, false, 10);
+    if (ids.length === 0) return [];
+    request = request.in("id", ids);
+  } else request = filterPatients(request, term);
+  const found = unwrap(await request.order("full_name").limit(10), "Busca de pacientes") as unknown as (PatientRow & {
     contacts: ContactRow;
   })[];
+  const rows = ids ? inIdOrder(found, ids) : found;
   return rows.map((row) => ({ ...toPatient(row), contact: toContact(row.contacts) }));
 }
 
@@ -320,6 +331,22 @@ export async function listPatientsPage(
   const term = parseSearch(query);
   const { current, from, to } = pageRange(page);
   const columns = `${PATIENT_COLUMNS}, contacts!inner ( ${CONTACT_COLUMNS} )`;
+  // Nome (C18): os parecidos, os mais parecidos primeiro; a página sai da lista de ids.
+  if (term?.kind === "name" && !missingPayerCpf) {
+    const ids = await idsByName(db, "patients", clinicId, term.text, includeInactive, NAME_MATCH_LIMIT);
+    const pageIds = ids.slice(from, to + 1);
+    const pageCount = Math.max(1, Math.ceil(ids.length / PATIENTS_PAGE_SIZE));
+    if (pageIds.length === 0) return { items: [], total: ids.length, page: current, pageCount };
+    const found = unwrap(await db.from("patients").select(columns).eq("clinic_id", clinicId).in("id", pageIds), "Pacientes") as unknown as (PatientRow & {
+      contacts: ContactRow;
+    })[];
+    return {
+      items: inIdOrder(found, pageIds).map((row) => ({ ...toPatient(row), contact: toContact(row.contacts) })),
+      total: ids.length,
+      page: current,
+      pageCount,
+    };
+  }
   let request = (
     missingPayerCpf
       ? db.rpc("finance_patients_missing_payer_cpf", { p_clinic_id: clinicId }, { count: "exact" }).select(columns)
@@ -334,6 +361,11 @@ export async function listPatientsPage(
     const contactIds = unwrap({ data: contactRows, error: contactError }, "Pacientes").map((c) => c.id);
     if (contactIds.length === 0) return { items: [], total: 0, page: current, pageCount: 1 };
     request = request.in("contact_id", contactIds);
+  } else if (term?.kind === "name") {
+    // Sem o CPF de quem paga: os parecidos (até 150, para caber no endereço) pela função, em ordem de nome.
+    const ids = await idsByName(db, "patients", clinicId, term.text, includeInactive, 150);
+    if (ids.length === 0) return { items: [], total: 0, page: current, pageCount: 1 };
+    request = request.in("id", ids);
   } else if (term) request = filterPatients(request, term);
   const { data, error, count } = await request.order("full_name").range(from, to);
   const rows = unwrap({ data, error }, "Pacientes") as unknown as (PatientRow & { contacts: ContactRow })[];
@@ -361,14 +393,24 @@ export async function listContactsPage(
     .select(`${CONTACT_COLUMNS}, patients ( full_name, is_active )`, { count: "exact" })
     .eq("clinic_id", clinicId);
   if (!includeInactive) request = request.eq("is_active", true);
-  if (term?.kind === "birthdate") {
+  let total: number | null = null;
+  let order: string[] | null = null;
+  if (term?.kind === "name") {
+    // Nome (C18): os parecidos, os mais parecidos primeiro; a página sai da lista de ids.
+    const ids = await idsByName(db, "contacts", clinicId, term.text, includeInactive, NAME_MATCH_LIMIT);
+    order = ids.slice(from, to + 1);
+    total = ids.length;
+    if (order.length === 0) return { items: [], total, page: current, pageCount: Math.max(1, Math.ceil(total / PATIENTS_PAGE_SIZE)) };
+    request = request.in("id", order);
+  } else if (term?.kind === "birthdate") {
     const ids = await contactIdsBornOn(db, clinicId, term.date);
     if (ids.length === 0) return { items: [], total: 0, page: current, pageCount: 1 };
     request = request.in("id", ids);
-  } else if (term) request = term.kind === "phone" ? request.ilike("phone", `%${term.digits}%`) : request.ilike("full_name", `%${escapeLike(term.text)}%`);
-  const { data, error, count } = await request.order("full_name").range(from, to);
-  const rows = unwrap({ data, error }, "Contatos") as unknown as (ContactRow & { patients: { full_name: string; is_active: boolean }[] })[];
-  const total = count ?? 0;
+  } else if (term) request = request.ilike("phone", `%${term.digits}%`);
+  const { data, error, count } = await (order ? request : request.order("full_name").range(from, to));
+  const found = unwrap({ data, error }, "Contatos") as unknown as (ContactRow & { patients: { full_name: string; is_active: boolean }[] })[];
+  const rows = order ? inIdOrder(found, order) : found;
+  total ??= count ?? 0;
   return {
     items: rows.map((row) => ({
       ...toContact(row),
@@ -561,14 +603,40 @@ export async function setPatientActive(db: DbClient, clinicId: string, id: strin
 
 /** `%` e `_` digitados viram texto, não curinga, na busca por nome. */
 /** Filtro da busca de pacientes: nome, telefone do contato (embutido) ou data de nascimento. */
-function filterPatients<Q extends { ilike(column: string, pattern: string): Q; eq(column: string, value: string): Q }>(request: Q, term: SearchTerm): Q {
+/** Telefone do contato ou data de nascimento (o nome vai pela função do banco, C18). */
+function filterPatients<Q extends { ilike(column: string, pattern: string): Q; eq(column: string, value: string): Q }>(
+  request: Q,
+  term: Exclude<SearchTerm, { kind: "name" }>,
+): Q {
   if (term.kind === "phone") return request.ilike("contacts.phone", `%${term.digits}%`);
-  if (term.kind === "birthdate") return request.eq("birthdate", term.date);
-  return request.ilike("full_name", `%${escapeLike(term.text)}%`);
+  return request.eq("birthdate", term.date);
 }
 
-function escapeLike(text: string): string {
-  return text.replace(/[\\%_]/g, (char) => `\\${char}`);
+/** Quantos nomes parecidos as listas com páginas consideram, no máximo. */
+const NAME_MATCH_LIMIT = 500;
+
+/**
+ * Busca por nome parecido (C18; cliente, 03/nov/2026): sem acento e caixa
+ * alta, sem as partes pequenas (de, da, jr…) e com letra errada, os mais
+ * parecidos primeiro (`search_patient_ids`/`search_contact_ids` no banco).
+ */
+async function idsByName(
+  db: DbClient,
+  table: "patients" | "contacts",
+  clinicId: string,
+  text: string,
+  includeInactive: boolean,
+  limit: number,
+): Promise<string[]> {
+  const args = { p_clinic_id: clinicId, p_query: text, p_include_inactive: includeInactive, p_limit: limit };
+  const result = table === "patients" ? await db.rpc("search_patient_ids", args) : await db.rpc("search_contact_ids", args);
+  return unwrap(result, "Busca por nome").map((row) => row.id);
+}
+
+/** As linhas na ordem dos ids (a do mais parecido). */
+function inIdOrder<T extends { id: string }>(rows: T[], ids: string[]): T[] {
+  const position = new Map(ids.map((id, index) => [id, index]));
+  return [...rows].sort((a, b) => (position.get(a.id) ?? 0) - (position.get(b.id) ?? 0));
 }
 
 // ---------------------------------------------------------------------------

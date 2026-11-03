@@ -1981,9 +1981,19 @@ isOneToOne: false
 "revoke_fiscal_certificate":
 { Args: { "p_clinic_id": string }; Returns: undefined
                            },
+"search_contact_ids":
+{ Args: { "p_clinic_id": string,"p_include_inactive"?: boolean,"p_limit"?: number,"p_query": string }; Returns: {
+              "id": string,"score": number
+            }[]
+                           },
 "search_insurance_plans":
 { Args: { "p_clinic_id": string,"p_query": string }; Returns: {
               "id": string,"name": string,"score": number
+            }[]
+                           },
+"search_patient_ids":
+{ Args: { "p_clinic_id": string,"p_include_inactive"?: boolean,"p_limit"?: number,"p_query": string }; Returns: {
+              "id": string,"score": number
             }[]
                            },
 "set_clinic_features":
