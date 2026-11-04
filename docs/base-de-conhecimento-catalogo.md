@@ -32,6 +32,11 @@ Total: **31 entradas** em 18 categorias (a 15, documentos, fica de fora) + dicio
 - **Sinônimos:** que horas vocês abrem; que horas fecha; até que horas funciona; qual o horário de atendimento;
   vocês abrem sábado; atendem aos sábados; atende domingo; funciona hoje; está aberto agora; abre feriado;
   horário da clínica; que horas começa o atendimento.
+  **Dias de atendimento (C28, 04/nov/2026):** vocês atendem na segunda; atende na terça; atendem na quarta-feira;
+  abre na quinta; tem atendimento na sexta; quais dias vocês atendem; que dias tem atendimento; dias de atendimento;
+  atende todos os dias; atende de segunda a sexta; funciona durante a semana; abre no fim de semana; qual dia vocês
+  atendem; segunda vocês atendem; atendem segunda; vocês funcionam na terça (migração `20261208120000`). Os nomes
+  dos dias não viram palavra-chave: tiravam "quero agendar para quarta" da M1 e "a Dra. Ana atende na quarta?" da P2.
 - **Palavras-chave:** horário, hora(s), abre, abrem, fecha, funciona, funcionamento, aberto, sábado, domingo,
   feriado.
 - **Tipo / fontes:** `modelo` · `horario_recepcao` (decisão 7; sem horário salvo, o sugerido pelas agendas, como
