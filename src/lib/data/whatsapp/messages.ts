@@ -1,6 +1,7 @@
 import type { DbClient } from "../clients";
 import { DataError, unwrap } from "../errors";
 import { deliveryRank, isDeliveryStatus, reachedPhone, toE164, type WaMessage } from "./meta";
+import { COURTESY_MESSAGE_TYPE, isCourtesyMessage } from "./courtesy";
 import { MAX_ATTEMPTS, nextRetryAt, RETRYABLE_MESSAGE_TYPES, type RetryContext, type SendFailure } from "./retryRules";
 
 // Registro das mensagens do WhatsApp (F3.9a), com a credencial da clínica.
@@ -56,7 +57,8 @@ export async function recordInboundMessage(db: DbClient, clinicId: string, msg: 
     contact_id: contactId,
     contact_phone: phone,
     direction: "inbound",
-    message_type: msg.type ?? "unknown",
+    // Cortesia ("ok", "obrigado", 👍) vira o tipo `courtesy` (C27): o atendimento humano não volta para "Aguardando".
+    message_type: isCourtesyMessage(msg) ? COURTESY_MESSAGE_TYPE : (msg.type ?? "unknown"),
     // O texto fica só no app do WhatsApp (cliente, 28/out/2026, D12).
     body: null,
     status: "received",

@@ -21,7 +21,8 @@ export const atendimentoArtigos = [
     fields: [
       { name: "Quando a conversa entra", text: "O paciente pede para falar com a clínica; a recepção responde pelo app do WhatsApp Business; ou o bot não entende, não acha horário livre ou bate um limite do contato. Em todos os casos, o bot pergunta antes de transferir, exceto no limite de marcações." },
       { name: "Aguardando a clínica", text: "Ninguém respondeu ainda, ou o paciente escreveu de novo." },
-      { name: "Em atendimento pela clínica", text: "A recepção já respondeu." },
+      { name: "Em atendimento pela clínica", text: "A recepção já respondeu. Agradecimento ou despedida do paciente depois disso (\"ok\", \"obrigado\", \"tchau\", 👍) mantém a conversa aqui." },
+      { name: "Devolver ao bot em Aguardando", text: "Quando a clínica já respondeu e o paciente escreveu de novo sem precisar de resposta, dá para devolver ao bot direto do cartão Aguardando (com confirmação)." },
       { name: "Assunto", text: "Ao transferir, o bot pergunta o assunto uma vez; a primeira resposta aparece aqui (\"Assunto ainda não informado\" até o paciente responder)." },
     ],
     steps: [

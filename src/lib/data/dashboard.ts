@@ -2,7 +2,7 @@ import { dayBounds, todayIn } from "../clinicTime";
 import type { Enums } from "../supabase/database.types";
 import type { DbClient } from "./clients";
 import { unwrap } from "./errors";
-import { listReminderTaps } from "./daily";
+import { confirmedByReminder } from "../reminderResponse";
 import { listHumanAttention } from "./whatsapp/attention";
 import { listContactsToReview } from "./whatsapp/botLimits";
 
@@ -15,31 +15,50 @@ export const PENDING_ATTENDANCE_DAYS = 60;
 export type DashboardCounts = {
   consultationsToday: number;
   examsToday: number;
-  /** Meu dia, linha do dia (RX2): atendimentos de hoje sem os cancelados, por situação. */
+  /**
+   * Meu dia, linha do dia (RX2; C25, cliente, 04/nov/2026, opção B): atendimentos de hoje sem os cancelados, cada
+   * um num grupo só (a soma dá o total): já atendidas, faltaram, confirmadas (pelo lembrete ou pela recepção) e a
+   * confirmar (o resto: sem resposta ao lembrete ou sem lembrete ainda).
+   */
   totalToday: number;
-  confirmedToday: number;
   completedToday: number;
+  noShowToday: number;
+  confirmedToday: number;
+  toConfirmToday: number;
   /** Ainda marcados ou confirmados, já passados: falta registrar realizado ou falta. */
   pendingAttendance: number;
-  /** Lembretes enviados hoje sem resposta (nenhum botão tocado). */
-  unansweredReminders: number;
 };
+
+type TodayRow = {
+  status: Enums<"appointment_status">;
+  patient_confirmed_at: string | null;
+  reminder_response: string | null;
+  services: { category: Enums<"service_category"> };
+};
+
+/** O grupo do atendimento de hoje na linha do dia (C25). */
+export function todayGroup(row: Omit<TodayRow, "services">): "completed" | "no_show" | "confirmed" | "to_confirm" {
+  if (row.status === "completed") return "completed";
+  if (row.status === "no_show") return "no_show";
+  if (row.status === "confirmed" || row.patient_confirmed_at !== null || confirmedByReminder(row.reminder_response)) return "confirmed";
+  return "to_confirm";
+}
 
 export async function getDashboardCounts(db: DbClient, clinicId: string, timeZone: string, now: Date = new Date()): Promise<DashboardCounts> {
   const today = dayBounds(todayIn(timeZone, now), timeZone);
   const pendingSince = new Date(now.getTime() - PENDING_ATTENDANCE_DAYS * 24 * 60 * 60_000);
 
-  const [todayRows, pending, reminders] = await Promise.all([
+  const [todayRows, pending] = await Promise.all([
     unwrap(
       await db
         .from("appointments")
-        .select("status, services ( category )")
+        .select("status, patient_confirmed_at, reminder_response, services ( category )")
         .eq("clinic_id", clinicId)
         .neq("status", "canceled")
         .gte("scheduled_at", today.start.toISOString())
         .lt("scheduled_at", today.end.toISOString()),
       "Atendimentos de hoje",
-    ) as unknown as { status: Enums<"appointment_status">; services: { category: Enums<"service_category"> } }[],
+    ) as unknown as TodayRow[],
     db
       .from("appointments")
       .select("id", { count: "exact", head: true })
@@ -47,51 +66,21 @@ export async function getDashboardCounts(db: DbClient, clinicId: string, timeZon
       .in("status", ["scheduled", "confirmed"])
       .lt("scheduled_at", now.toISOString())
       .gte("scheduled_at", pendingSince.toISOString()),
-    unwrap(
-      await db
-        .from("whatsapp_messages")
-        .select("appointment_id, created_at")
-        .eq("clinic_id", clinicId)
-        .eq("direction", "outbound")
-        .eq("message_type", "appointment_reminder")
-        .not("appointment_id", "is", null)
-        .gte("created_at", today.start.toISOString())
-        .lt("created_at", today.end.toISOString())
-        .order("created_at"),
-      "Lembretes de hoje",
-    ),
   ]);
   if (pending.error) unwrap(pending, "Comparecimento a registrar");
 
-  const sentAt = new Map<string, { at: Date }>();
-  for (const r of reminders) sentAt.set(r.appointment_id!, { at: new Date(r.created_at) });
-  const remindedIds = [...sentAt.keys()];
-  // Quem tocou num botão e depois remarcou continua respondido (a remarcação zera a resposta no atendimento).
-  const [withoutResponse, taps] = remindedIds.length
-    ? await Promise.all([
-        unwrap(
-          await db
-            .from("appointments")
-            .select("id")
-            .eq("clinic_id", clinicId)
-            .in("id", remindedIds)
-            .is("reminder_response", null),
-          "Lembretes sem resposta",
-        ),
-        listReminderTaps(db, clinicId, sentAt),
-      ])
-    : [[], new Map<string, string>()];
-  const unanswered = withoutResponse.filter((row) => !taps.has(row.id)).length;
-
+  const groups = { completed: 0, no_show: 0, confirmed: 0, to_confirm: 0 };
+  for (const row of todayRows) groups[todayGroup(row)] += 1;
   const examsToday = todayRows.filter((row) => row.services.category === "exam").length;
   return {
     consultationsToday: todayRows.length - examsToday,
     examsToday,
     totalToday: todayRows.length,
-    confirmedToday: todayRows.filter((row) => row.status === "confirmed").length,
-    completedToday: todayRows.filter((row) => row.status === "completed").length,
+    completedToday: groups.completed,
+    noShowToday: groups.no_show,
+    confirmedToday: groups.confirmed,
+    toConfirmToday: groups.to_confirm,
     pendingAttendance: pending.count ?? 0,
-    unansweredReminders: unanswered,
   };
 }
 

@@ -557,3 +557,28 @@ Demonstração (ou a clínica de testes).
    novo. "atendente" e depois uma pergunta: segue com "Conseguiu resolver ou ainda quer falar com a recepção?". Nas
    Métricas › Agendamento digital, a dúvida aparece em andamento e, 30 minutos depois, resolvida (se não pediu a
    recepção).
+
+## T. 3ª leva de ajustes da produção (C22 a C28, 04/nov)
+
+Migração `20261208120000_base_de_conhecimento_dias.sql` aplicada em 04/nov (sem tabela nova).
+
+1. **C22 Rodapé do celular.** Arrastar rápido a barra de rolagem em telas longas (Pacientes, Agenda, ficha): o rodapé e
+   a barra de ação ficam no fundo da tela.
+2. **C23 Busca do Meu dia.** Rótulo "Buscar paciente", campo alto com borda verde; buscar por nome e por telefone.
+3. **C23 Esperando o paciente.** Só Confirmar presença, Reenviar lembrete e Remarcar (com confirmação). A linha sai na
+   hora da consulta, mesmo com a busca em uso (o número ao lado do título baixa).
+4. **C24 Cancelar na Agenda.** Consulta futura selecionada: Cancelar separado por linha tracejada, fundo vermelho claro;
+   pede confirmação.
+5. **C25 Linha do dia.** Já atendidas · faltaram · confirmadas · a confirmar; a soma dá o total. Confirmar presença
+   pela recepção leva para confirmadas; Faltou e Compareceu mudam os grupos.
+6. **C26 Conversa na ficha.** Pelo WhatsApp de testes, "falar com a recepção": na ficha do paciente (Quem fala com a
+   clínica) e na do responsável aparece "Aguardando a clínica há …" com Abrir no WhatsApp. Respondida pelo app: "Em
+   atendimento" com Devolver ao bot (volta para a ficha).
+7. **C27 Cortesia.** Com a conversa em atendimento, "Ok, obrigado 👍" (ou reação 👍) mantém "Em atendimento"; "e o
+   exame?" vai para Aguardando, com Devolver ao bot no cartão.
+8. **C28 Dias de atendimento.** Sistema › Base de conhecimento › Testar: "vocês atendem na segunda?", "atende terça?",
+   "que dias tem atendimento" → F1; "quero agendar para quarta" segue na marcação. **Publicar**; pelo WhatsApp de
+   testes, "vocês atendem sábado?" responde o horário da semana.
+9. **C29 Dias da semana.** Base de conhecimento › Testar: "Atende na sexta?", "vocês atendem quinta-feira?", "abre na
+   sexta?" → F1; "tem horário na sexta?" e "quero marcar para sexta" → M1; "o dr ... atende na sexta?" → P2.
+   **Publicar**; pelo WhatsApp de testes, "Atende na sexta?" responde o horário da semana.

@@ -2,8 +2,12 @@
 
 > **Estado atual (retomar daqui), 04/nov/2026.** Detalhes e datas no [`historico.md`](historico.md) (só por busca).
 >
-> **Próxima sessão (cliente, 03/nov):** cliente valida no local o faturamento **F12.2b a F12.2h** (branch `faturamento`),
-> pelo [`roteiro-validacao-faturamento.md`](roteiro-validacao-faturamento.md) **da branch**. Ambiente local pronto na branch.
+> **3ª leva (C22 a C29, 04/nov):** na `main` e no **staging** (migrações `20261208120000` e `20261209120000`
+> aplicadas); cliente valida pelo `staging.md`, parte T (C28/C29: publicar a base no staging). Captura pendente: `inicio` (e `atendimento`). Depois: produção.
+>
+> **Próxima sessão (cliente, 04/nov):** melhorias na `main` para implantar na produção (cliente traz os pedidos).
+> Trabalhar na worktree `recepclinic-main` (a pasta `recepclinic` está na branch `faturamento`). Pendente da branch: o
+> cliente valida no local o faturamento **F12.2b a F12.2h** pelo `roteiro-validacao-faturamento.md` **da branch**.
 >
 > **Próximo (cliente, 01/nov):** validado no staging: Base de Conhecimento, "Como funciona?" de Configurações e Central de
 > Ajuda. No staging para validar: **25 capturas reais de tela** nos artigos da Central (`public/ajuda/`, refazer quando a
@@ -18,8 +22,8 @@
 > - **Staging** (`teste.recepclinic.com.br`, branch `main`): produção + redesign da Recepção (RX1 a RX9, sem migração) +
 >   cartão do Asaas (`ASAAS_PREVIEW=1`) + Base de Conhecimento do bot (migração aplicada) + PN1, PN2, IS2 a IS5 (migrações aplicadas) + IS1 + C17 a C20 (03/nov; migração `20261206120000` aplicada) + C21 (04/nov).
 >   Roteiros em [`staging.md`](staging.md).
-> - **Branch `faturamento`** (só local, sem push): todo código do financeiro, até a F12.2h; com a `main` até `aae0195`
->   (a produção, 03/nov; merge `cf3e5ef`, 980 testes de unidade e todos os de banco passando; migração nova `20261207120000`).
+> - **Branch `faturamento`** (só local, sem push): todo código do financeiro, até a F12.2h; com a `main` até `e7c4f1d`
+>   (a produção com a C21, 04/nov; merge `47b93ce`, 982 testes de unidade e 909 de banco passando; migração nova `20261207120000`).
 >   Na publicação, as migrações da branch são anteriores às da produção: `db push --include-all`. Atualizar só quando o cliente pedir.
 >
 > **Frentes**

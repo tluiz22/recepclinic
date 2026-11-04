@@ -40,6 +40,8 @@ import { isAnonymizedPhone } from "../../../lib/anonymization";
 import { whatsappHref } from "../../../lib/phone";
 import { appointmentSituation } from "../../../components/admin/agenda/situationStyle";
 import Button from "../../../components/admin/ui/Button.astro";
+import HumanConversation from "../../../components/admin/HumanConversation.astro";
+import { listHumanAttention } from "../../../lib/data/whatsapp/attention";
 import EditCard from "../../../components/admin/ui/EditCard.astro";
 import MoreMenu from "../../../components/admin/ui/MoreMenu.astro";
 import Pill, { type PillTone } from "../../../components/admin/ui/Pill.astro";
@@ -198,6 +200,11 @@ const createdAt = await db
   .then((r) => r.data?.created_at ?? null, () => null);
 const sinceText = createdAt ? `${vocabulary.patient === "paciente" ? "paciente" : "na clínica"} desde ${createdAt.slice(0, 4)}` : null;
 const phoneOk = !isAnonymizedPhone(contact.phone);
+// C26: conversa do contato no atendimento humano (aguardando ou em atendimento), para dar andamento daqui.
+const humanConversation =
+  clinic.features.includes("whatsapp_bot") && !anonymized && phoneOk
+    ? await listHumanAttention(db, clinic.clinicId, contact.phone).then((items) => items[0], () => undefined)
+    : undefined;
 
 // Nota de cada pagamento: a ativa (emitida, emitindo ou cancelando); sem ela, "Sem nota".
 const INVOICE_PILL: Partial<Record<InvoiceStatus, { tone: PillTone; text: (n: string | null) => string }>> = {
@@ -824,6 +831,7 @@ const canBook = patient.isActive && !anonymized;
             <p class="text-[14.5px] leading-snug text-ink-mid">
               {patient.isContactSelf ? `O próprio ${vocabulary.patient}` : `${contact.fullName} (${vocabulary.contact})`} · {phoneOk ? formatPhoneBR(contact.phone) : "telefone anonimizado"}
             </p>
+            <HumanConversation item={humanConversation} timeZone={clinic.timezone} returnTo={here} name={contact.fullName} />
           </section>
         )
       }
@@ -1039,7 +1047,7 @@ const canBook = patient.isActive && !anonymized;
     canBook && (
       <>
         <div class="h-20 sm:hidden" aria-hidden="true" />
-        <div class="fixed inset-x-0 bottom-[calc(61px+env(safe-area-inset-bottom))] z-10 flex items-center gap-3 border-t border-line bg-white px-4 py-2.5 shadow-[0_-4px_14px_rgba(18,48,42,.08)] sm:hidden">
+        <div class="fixed-bar fixed inset-x-0 bottom-[calc(61px+env(safe-area-inset-bottom))] z-10 flex items-center gap-3 border-t border-line bg-white px-4 py-2.5 shadow-[0_-4px_14px_rgba(18,48,42,.08)] sm:hidden">
           <span class="min-w-0 flex-1 truncate text-base font-semibold text-ink">{patient.fullName}</span>
           <Button href={withReturn(`/admin/agenda/marcar?patient_id=${patient.id}`, here)} variant="primary" class="h-12 px-6 text-base">
             Marcar

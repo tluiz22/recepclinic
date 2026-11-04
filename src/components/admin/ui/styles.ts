@@ -2,7 +2,7 @@
 // os casos em que o elemento não pode ser um <Button> (ex.: o <summary> de um
 // <details>, o botão que abre o menu "Mais"). Um só botão cheio por tela ou
 // cartão; 44px de toque no celular e 32px nos compactos do computador.
-export type ButtonVariant = "primary" | "secondary" | "danger" | "danger-quiet" | "quiet";
+export type ButtonVariant = "primary" | "secondary" | "danger" | "danger-soft" | "danger-quiet" | "quiet";
 export type ButtonSize = "md" | "sm";
 
 const BASE =
@@ -17,6 +17,8 @@ const VARIANTS: Record<ButtonVariant, string> = {
   primary: "border-transparent bg-brand text-white hover:bg-brand-strong",
   secondary: "border-line-strong bg-white text-ink hover:bg-canvas",
   danger: "border-danger-line bg-white text-danger hover:bg-can-50",
+  // Cancelar no painel da Agenda (C24, cliente, 04/nov/2026, opção C): fundo vermelho claro, em negrito.
+  "danger-soft": "border-can-200 bg-can-100 font-bold text-can-800 hover:bg-can-200",
   "danger-quiet": "border-transparent bg-transparent px-2 text-danger hover:bg-can-50 sm:px-1.5",
   quiet: "border-transparent bg-transparent px-2 text-brand hover:bg-brand-soft sm:px-2",
 };

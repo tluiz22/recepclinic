@@ -291,7 +291,7 @@ export const JOURNEY: JourneySection[] = [
       reception("Manda #bot ou toca em \"Devolver ao bot\" no painel: o bot volta a atender essa conversa"),
       bot(
         "Sem #bot nem \"Devolver ao bot\": 12 h depois da última resposta da recepção, sem nova mensagem do paciente, a conversa volta ao bot e ele envia \"Como não tivemos resposta nas últimas horas, encerramos este atendimento…\"",
-        "Só quando a recepção já respondeu (paciente esperando resposta continua com a clínica). A mensagem sai sem template só até 24 h depois da última mensagem do paciente; depois disso, a conversa volta sem mensagem. A próxima mensagem do paciente começa do início.",
+        "Só quando a recepção já respondeu (paciente esperando resposta continua com a clínica). Cortesia do paciente depois da resposta (\"ok\", \"obrigado\", \"tchau\", 👍) não conta como esperando resposta: a conversa segue em atendimento e volta ao bot nas 12 h. Paciente que escreveu de novo também pode ser devolvido pelo painel. A mensagem sai sem template só até 24 h depois da última mensagem do paciente; depois disso, a conversa volta sem mensagem. A próxima mensagem do paciente começa do início.",
       ),
     ],
   },

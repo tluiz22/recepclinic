@@ -33,7 +33,7 @@ import { listAgendaAppointments, type AgendaAppointment } from "../../lib/data/a
 import { listPendingReminders } from "../../lib/data/relationship";
 import { listPendingAttendance } from "../../lib/data/daily";
 import { isAnonymizedPhone } from "../../lib/anonymization";
-import { formatPhoneBR, whatsappHref } from "../../lib/phone";
+import { formatPhoneBR } from "../../lib/phone";
 import { serviceLook } from "../../components/admin/agenda/categoryStyle";
 import { logError } from "../../lib/log";
 import { vocabularyFor } from "../../lib/vocabulary";
@@ -128,6 +128,8 @@ const rowActions = (a: AgendaAppointment) =>
   cardActions({
     appointment: a,
     now: nowAt,
+    // C23: quem está em "Esperando o paciente" tem lembrete sem resposta, que pode ser reenviado.
+    reminderAction: "resend_unanswered",
     who: `${a.patientName}, ${formatInstant(a.scheduledAt, clinic.timezone, "dd/MM 'às' HH:mm")}`,
     contact: vocabulary.contact,
     returnTo: here,
@@ -172,11 +174,15 @@ const memberName = await db
   .then((r) => r.data?.display_name ?? null, () => null);
 const firstName = memberName?.trim().split(/\s+/)[0] ?? "";
 const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
-// Linha do dia (RX2): atendidas e confirmadas sobre o total de hoje; o resto ainda não confirmou.
-const pct = (n: number) => (counts.totalToday > 0 ? Math.round((n / counts.totalToday) * 100) : 0);
-const donePct = pct(counts.completedToday);
-const confirmedPct = pct(counts.confirmedToday);
-const unansweredPct = has("reminders") ? pct(counts.unansweredReminders) : 0;
+// Linha do dia (RX2; C25, cliente, 04/nov, opção B): cada atendimento de hoje num grupo só, a soma dá o total.
+// Aparecem só os grupos com algum atendimento; a barra segue a mesma ordem.
+const pct = (n: number) => (counts.totalToday > 0 ? (n / counts.totalToday) * 100 : 0);
+const dayGroups = [
+  { n: counts.completedToday, text: plural(counts.completedToday, "já atendida", "já atendidas"), color: "bg-att-500" },
+  { n: counts.noShowToday, text: plural(counts.noShowToday, "faltou", "faltaram"), color: "bg-ns-500" },
+  { n: counts.confirmedToday, text: plural(counts.confirmedToday, "confirmada", "confirmadas"), color: "bg-conf-500" },
+  { n: counts.toConfirmToday, text: `${counts.toConfirmToday} a confirmar`, color: "bg-pend-500" },
+].filter((g) => g.n > 0);
 // "Registrar presença": as primeiras consultas, em ordem de horário, para o detalhe da linha.
 const pendingSorted = [...(pendingAttendanceList ?? [])].sort((a, b) => a.scheduledAt.getTime() - b.scheduledAt.getTime());
 const pendingNames = (() => {
@@ -202,11 +208,12 @@ const sectionTitle = "font-display text-[17px] leading-tight font-bold text-ink 
       <h1 class="font-display text-[28px] leading-[1.1] font-bold text-ink sm:text-[32px]">{firstName ? `${greeting}, ${firstName}` : greeting}</h1>
     </div>
     <div class="flex flex-wrap items-center gap-2.5 max-sm:w-full">
-      <form method="GET" action="/admin/pacientes" role="search" class="w-full sm:w-[300px]">
-        <label for="buscar-paciente" class="sr-only">Buscar paciente por nome, telefone ou nascimento</label>
-        <div class="flex h-[42px] items-center gap-2 rounded-[9px] border border-line-strong bg-white px-3 focus-within:border-brand focus-within:ring-1 focus-within:ring-brand">
-          <Icon name="magnifying-glass" class="h-[18px] w-[18px] shrink-0 text-ink-soft" strokeWidth={2} />
-          <input id="buscar-paciente" name="q" type="search" placeholder="Buscar paciente" class="min-w-0 flex-1 border-0 bg-transparent p-0 text-[15px] text-ink outline-none focus:ring-0" />
+      {/* C23 (cliente, 04/nov, opção A): busca com rótulo à vista, mais alta e com a borda da marca. */}
+      <form method="GET" action="/admin/pacientes" role="search" class="w-full sm:w-[360px]">
+        <label for="buscar-paciente" class="mb-1.5 block text-[15px] font-bold text-ink">Buscar paciente</label>
+        <div class="flex h-[54px] items-center gap-2.5 rounded-xl border-2 border-brand bg-white px-3.5 shadow-[0_4px_14px_rgba(11,122,98,.14)] focus-within:ring-2 focus-within:ring-brand/40">
+          <Icon name="magnifying-glass" class="h-[22px] w-[22px] shrink-0 text-brand" strokeWidth={2.4} />
+          <input id="buscar-paciente" name="q" type="search" placeholder="Nome, telefone ou nascimento" class="min-w-0 flex-1 border-0 bg-transparent p-0 text-[17px] text-ink outline-none focus:ring-0" />
         </div>
       </form>
       <Button href={withReturn("/admin/agenda/marcar", here)} variant="primary" class="max-sm:hidden">
@@ -272,11 +279,9 @@ const sectionTitle = "font-display text-[17px] leading-tight font-bold text-ink 
       {
         counts.totalToday > 0 && (
           <>
-            <span class="inline-flex items-center gap-1.5"><span class="h-2.5 w-2.5 rounded-[3px] bg-conf-500" aria-hidden="true"></span>{plural(counts.confirmedToday, "confirmada", "confirmadas")}</span>
-            {has("reminders") && (
-              <span class="inline-flex items-center gap-1.5"><span class="h-2.5 w-2.5 rounded-[3px] bg-pend-500" aria-hidden="true"></span>{counts.unansweredReminders} sem resposta</span>
-            )}
-            <span class="inline-flex items-center gap-1.5"><span class="h-2.5 w-2.5 rounded-[3px] bg-att-500" aria-hidden="true"></span>{plural(counts.completedToday, "já atendida", "já atendidas")}</span>
+            {dayGroups.map((g) => (
+              <span class="inline-flex items-center gap-1.5"><span class={`h-2.5 w-2.5 rounded-[3px] ${g.color}`} aria-hidden="true"></span>{g.text}</span>
+            ))}
           </>
         )
       }
@@ -287,11 +292,9 @@ const sectionTitle = "font-display text-[17px] leading-tight font-bold text-ink 
         <div
           class="flex h-2 gap-0.5 overflow-hidden rounded-full bg-line"
           role="img"
-          aria-label={`${counts.completedToday} já atendidas, ${counts.confirmedToday} confirmadas${has("reminders") ? ` e ${counts.unansweredReminders} sem resposta` : ""}, de ${counts.totalToday} hoje`}
+          aria-label={`${dayGroups.map((g) => g.text).join(", ")}, de ${counts.totalToday} hoje`}
         >
-          <span class="bg-att-500" style={`width:${donePct}%`}></span>
-          <span class="bg-conf-500" style={`width:${confirmedPct}%`}></span>
-          <span class="bg-pend-500" style={`width:${unansweredPct}%`}></span>
+          {dayGroups.map((g) => <span class={g.color} style={`width:${pct(g.n)}%`}></span>)}
         </div>
       )
     }
@@ -408,22 +411,23 @@ const sectionTitle = "font-display text-[17px] leading-tight font-bold text-ink 
         <div class="flex flex-col gap-0.5 px-4 pt-4 pb-3 sm:px-[18px]">
           <h2 id="esperando" class="flex items-center gap-2.5 font-display text-[21px] leading-tight font-bold text-ink">
             Esperando o paciente
-            {waiting.length > 0 && <span class="rounded-full bg-pend-100 px-2.5 py-px font-sans text-sm font-bold text-pend-800">{waiting.length}</span>}
+            {waiting.length > 0 && <span data-waiting-count class="rounded-full bg-pend-100 px-2.5 py-px font-sans text-sm font-bold text-pend-800">{waiting.length}</span>}
           </h2>
           <HowItWorks id="esperando-paciente" topic={meuDia.comoFunciona.esperando} class="mt-1">
-            <p class="text-[14.5px] text-ink-soft">O lembrete foi enviado e o paciente ainda não respondeu. Nada a fazer, a não ser que queira insistir.</p>
+            <p class="text-[14.5px] text-ink-soft">O lembrete foi enviado e o paciente ainda não respondeu. Se quiser insistir, reenvie o lembrete; se ele confirmou por outro meio, confirme a presença. Sai da lista na hora da consulta.</p>
           </HowItWorks>
         </div>
         {pendingReminders === null && <div class="px-4 pb-4 sm:px-[18px]"><Notice tone="warning">Não foi possível carregar os lembretes sem resposta. Tente atualizar a página.</Notice></div>}
-        {pendingReminders !== null && waiting.length === 0 && <p class="border-t border-[#e7eeeb] px-4 py-4 text-[15px] text-ink-soft sm:px-[18px]">Nenhum lembrete de hoje ou de amanhã sem resposta.</p>}
+        <p data-waiting-empty hidden={pendingReminders === null || waiting.length > 0} class="border-t border-[#e7eeeb] px-4 py-4 text-[15px] text-ink-soft sm:px-[18px]">Nenhum lembrete de hoje ou de amanhã sem resposta.</p>
         {
           waiting.map(({ appointment: a, sentAt }) => {
             const actions = rowActions(a);
             const confirm = actions.primary?.kind === "form" && actions.primary.acao === "confirmar_presenca" ? actions.primary : undefined;
+            const resend = actions.visible.find((x) => x.kind === "form" && x.acao === "lembrete");
             const rebook = actions.visible.find((x) => x.kind === "link" && x.label === "Remarcar");
             const phone = formatPhoneBR(a.contactPhone);
             return (
-              <div class="flex flex-wrap items-center gap-3 border-t border-[#e7eeeb] px-4 py-3.5 sm:px-[18px]">
+              <div data-waiting-row data-starts-at={a.scheduledAt.toISOString()} class="flex flex-wrap items-center gap-3 border-t border-[#e7eeeb] px-4 py-3.5 sm:px-[18px]">
                 <div class="flex min-w-[56px] flex-col">
                   <strong class="text-base tabular-nums">{hhmm(a.scheduledAt)}</strong>
                   <span class="text-[13.5px] text-ink-soft">{dayLabel(a)}</span>
@@ -438,19 +442,10 @@ const sectionTitle = "font-display text-[17px] leading-tight font-bold text-ink 
                     {isAnonymizedPhone(a.contactPhone) ? "telefone anonimizado" : phone} · {sentText(sentAt)}
                   </span>
                 </div>
+                {/* C23 (cliente, 04/nov): só Confirmar presença, Reenviar lembrete e Remarcar. */}
                 <div class="flex flex-wrap gap-2">
-                  {!isAnonymizedPhone(a.contactPhone) && (
-                    <a
-                      href={whatsappHref(a.contactPhone)}
-                      target="_blank"
-                      rel="noopener"
-                      aria-label={`Abrir conversa no WhatsApp com ${phone}`}
-                      class="inline-flex min-h-11 items-center justify-center rounded-[9px] border border-conf-500 bg-conf-500 px-3.5 text-[14.5px] font-semibold text-white no-underline hover:bg-conf-800 sm:min-h-8"
-                    >
-                      WhatsApp
-                    </a>
-                  )}
-                  {confirm && <CardActionButton action={confirm} endpoint={endpointOf(a)} returnTo={here} />}
+                  {confirm && <CardActionButton action={confirm} endpoint={endpointOf(a)} returnTo={here} variant="primary" />}
+                  {resend && <CardActionButton action={resend} endpoint={endpointOf(a)} returnTo={here} />}
                   {rebook && <CardActionButton action={rebook} endpoint={endpointOf(a)} returnTo={here} variant="quiet" />}
                 </div>
               </div>
@@ -498,11 +493,31 @@ const sectionTitle = "font-display text-[17px] leading-tight font-bold text-ink 
   </aside>
   </div>
 
+  {/* C23: na hora da consulta, a linha sai de "Esperando o paciente" sem esperar a recarga (que não acontece com a
+      busca em uso). */}
+  <script>
+    const hidePast = () => {
+      const rows = [...document.querySelectorAll<HTMLElement>("[data-waiting-row]")];
+      if (rows.length === 0) return;
+      const now = Date.now();
+      for (const row of rows) if (new Date(row.dataset.startsAt ?? "").getTime() <= now) row.remove();
+      const left = document.querySelectorAll("[data-waiting-row]").length;
+      const count = document.querySelector<HTMLElement>("[data-waiting-count]");
+      if (count) count.textContent = String(left);
+      if (left === 0) {
+        count?.remove();
+        document.querySelector<HTMLElement>("[data-waiting-empty]")?.removeAttribute("hidden");
+      }
+    };
+    hidePast();
+    setInterval(hidePast, 15_000);
+  </script>
+
   {/* Um só diálogo de confirmação para todas as ações da tela. */}
   <ConfirmDeleteDialog />
 
   <div class="h-20 sm:hidden" aria-hidden="true" />
-  <div class="fixed inset-x-0 bottom-[calc(61px+env(safe-area-inset-bottom))] z-10 flex items-center gap-3 border-t border-line bg-white px-4 py-2.5 shadow-[0_-4px_14px_rgba(18,48,42,.08)] sm:hidden">
+  <div class="fixed-bar fixed inset-x-0 bottom-[calc(61px+env(safe-area-inset-bottom))] z-10 flex items-center gap-3 border-t border-line bg-white px-4 py-2.5 shadow-[0_-4px_14px_rgba(18,48,42,.08)] sm:hidden">
     <span class="min-w-0 flex-1 truncate text-base font-semibold text-ink">Meu dia</span>
     <Button href={withReturn("/admin/agenda/marcar", here)} variant="primary" class="h-12 px-6 text-base">Marcar consulta</Button>
   </div>

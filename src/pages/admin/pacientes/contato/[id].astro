@@ -21,6 +21,9 @@ import FlashMessage from "../../../../components/admin/FlashMessage.astro";
 import Icon from "../../../../components/admin/Icon.astro";
 import PhoneLinks from "../../../../components/admin/PhoneLinks.astro";
 import Button from "../../../../components/admin/ui/Button.astro";
+import HumanConversation from "../../../../components/admin/HumanConversation.astro";
+import { listHumanAttention } from "../../../../lib/data/whatsapp/attention";
+import { isAnonymizedPhone } from "../../../../lib/anonymization";
 import EditCard from "../../../../components/admin/ui/EditCard.astro";
 import MoreMenu from "../../../../components/admin/ui/MoreMenu.astro";
 import Pill from "../../../../components/admin/ui/Pill.astro";
@@ -84,6 +87,11 @@ const limitLine = (event: BotLimitEvent) => `${BOT_LIMIT_LABELS[event.reason]}: 
 const blocking = hasBot && canBlock && !block && Astro.url.searchParams.get("bloquear") === "1";
 const blockHref = `${withReturn(`/admin/pacientes/contato/${contact.id}?bloquear=1`, volta)}#bloqueio`;
 const pageHref = withReturn(`/admin/pacientes/contato/${contact.id}`, volta);
+// C26: conversa deste número no atendimento humano (aguardando ou em atendimento), para dar andamento daqui.
+const humanConversation =
+  hasBot && !isAnonymizedPhone(contact.phone)
+    ? await listHumanAttention(db, clinic.clinicId, contact.phone).then((items) => items[0], () => undefined)
+    : undefined;
 const showMenu = !contact.anonymizedAt || (hasBot && canExempt && limitsStatus);
 
 const card = "flex flex-col gap-3 rounded-xl border border-line bg-white p-3.5 sm:px-5 sm:py-[18px]";
@@ -113,6 +121,7 @@ const dd = "font-semibold text-ink";
           {pendingLimit && <Pill tone="warning" icon="warning">Para revisar</Pill>}
         </div>
         <PhoneLinks phone={contact.phone} plain class="text-[15.5px] text-ink" />
+        <HumanConversation item={humanConversation} timeZone={clinic.timezone} returnTo={here} name={contact.fullName} />
       </div>
       {
         showMenu && (
