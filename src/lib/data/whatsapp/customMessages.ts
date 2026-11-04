@@ -117,7 +117,7 @@ export type BotMessageDef = {
 
 export const BOT_MESSAGES: BotMessageDef[] = [
   { key: "welcome", label: "Boas-vindas", markers: ["clinica"], required: [], defaultText: "Olá! 👋 Aqui é {clinica}.\n\nSou a assistente virtual e estou aqui para ajudar.\nVocê pode escrever o que precisa ou escolher uma das opções abaixo." },
-  { key: "menu", label: "Menu", markers: [], required: [], defaultText: "Escolha uma opção abaixo (ou digite o número)." },
+  { key: "menu", label: "Menu", markers: [], required: [], defaultText: "Escolha uma opção abaixo ou faça uma pergunta." },
   {
     key: "not_understood",
     label: "Não entendi",

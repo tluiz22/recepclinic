@@ -58,6 +58,30 @@ describe("desfecho de cada necessidade", () => {
     expect(r.rate).toBeCloseTo(1 / 3);
   });
 
+  it("dúvida no menu sem confirmação (implicit, 04/nov/2026): resolvida sem recepção em 30 min; recepção em 30 min liga à dúvida; depois, conta à parte", () => {
+    const r = report([
+      // A: só a resposta → resolvida.
+      ev("i1", "info", "started", 0, A, { origin: "menu", implicit: true }),
+      ev("i1", "info", "answered", 0, A),
+      // B: pediu a recepção 10 min depois → recepção, o pedido não conta à parte.
+      ev("i2", "info", "started", 0, B, { origin: "menu", implicit: true }),
+      ev("i2", "info", "answered", 0, B),
+      ev("h2", "handoff", "requested", 10, B, { origin: "typed" }),
+      // C: pediu a recepção 40 min depois → a dúvida resolvida e o pedido de recepção à parte.
+      ev("i3", "info", "started", 0, C, { origin: "menu", implicit: true }),
+      ev("i3", "info", "answered", 0, C),
+      ev("h3", "handoff", "requested", 40, C, { origin: "typed" }),
+    ]);
+    expect(r.byType.find((t) => t.type === "duvida")).toMatchObject({ total: 3, resolved: 2, human: 1, inconclusive: 0 });
+    expect(r.byType.find((t) => t.type === "recepcao")).toMatchObject({ total: 1, human: 1 });
+    expect(r.unconfirmed).toBe(0);
+  });
+
+  it("dúvida no menu sem confirmação: em andamento nos primeiros 30 minutos", () => {
+    const r = report([ev("i1", "info", "started", 0, A, { origin: "menu", implicit: true }), ev("i1", "info", "answered", 0, A)], new Date(T0.getTime() + 10 * 60_000));
+    expect(r).toMatchObject({ total: 1, inProgress: 1, eligible: 0 });
+  });
+
   it("conversa abandonada e pedido de recepção no meio da marcação: inconclusiva e recepção", () => {
     const r = report([
       ev("a", "booking", "started", 0, A),

@@ -14,6 +14,9 @@ import { IN_PROGRESS_MS, sessionOutcome, sessionStep, type FunnelSession } from 
 //   = inconclusiva.
 // - Dúvida (flow "info"): "Resolvido" (ou "Marcar" depois da resposta) = resolvida; "Falar com a recepção" =
 //   recepção; sem confirmação = inconclusiva (decisão 8), ou em andamento nos primeiros 30 minutos.
+//   Dúvida respondida no menu ou num submenu, sem a pergunta de confirmação (`implicit`; cliente, 04/nov/2026):
+//   pedido de recepção do mesmo contato nos 30 minutos seguintes = recepção (o pedido não conta à parte); sem ele,
+//   resolvida depois dos 30 minutos.
 // - Transferência sem tentativa nem dúvida ligada (pedido de recepção, "não entendi", sem horário, recepção que
 //   assumiu): pedido de recepção, sempre recepção.
 //
@@ -72,19 +75,40 @@ export function classifyNeedItems(sessions: FunnelSession[], now: Date): NeedIte
     for (const key of ["journey_session_id", "info_session_id"] as const) if (typeof meta[key] === "string") linked.add(meta[key] as string);
   }
   const known = new Set(sessions.map((s) => s.sessionId));
+  // Dúvida sem confirmação seguida de um pedido de recepção em 30 minutos: o pedido fica ligado a ela.
+  const implicitLinked = new Set<string>();
+  const freeHandoffs = handoffs
+    .filter((h) => {
+      const meta = h.events[0]?.metadata ?? {};
+      return ![meta.journey_session_id, meta.info_session_id].some((id) => typeof id === "string" && known.has(id));
+    })
+    .sort((a, b) => a.startedAt.getTime() - b.startedAt.getTime());
+  for (const s of sessions) {
+    if (s.flow !== "info" || sessionStep(s, "started")?.metadata.implicit !== true) continue;
+    const start = s.startedAt.getTime();
+    const h = freeHandoffs.find((h) => h.phone === s.phone && !implicitLinked.has(h.sessionId) && h.startedAt.getTime() >= start && h.startedAt.getTime() - start < IN_PROGRESS_MS);
+    if (!h) continue;
+    linked.add(s.sessionId);
+    implicitLinked.add(h.sessionId);
+  }
   const items: NeedItem[] = [];
   for (const s of sessions) {
     const base = { phone: s.phone, startedAt: s.startedAt, inPeriod: s.inPeriod, unconfirmed: false };
     if (s.flow === "handoff") {
       const meta = s.events[0]?.metadata ?? {};
       const link = [meta.journey_session_id, meta.info_session_id].find((id) => typeof id === "string" && known.has(id));
-      if (link) continue;
+      if (link || implicitLinked.has(s.sessionId)) continue;
       items.push({ ...base, type: "recepcao", outcome: "human" });
       continue;
     }
     const type = TYPE_OF_FLOW[s.flow];
     if (!type) continue;
     if (type === "duvida") {
+      if (sessionStep(s, "started")?.metadata.implicit === true) {
+        const outcome: NeedOutcome = linked.has(s.sessionId) ? "human" : now.getTime() - s.startedAt.getTime() >= IN_PROGRESS_MS ? "resolved" : "in_progress";
+        items.push({ ...base, type, outcome });
+        continue;
+      }
       const outcome: NeedOutcome = sessionStep(s, "resolved")
         ? "resolved"
         : sessionStep(s, "escalated") || linked.has(s.sessionId)

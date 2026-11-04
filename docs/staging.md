@@ -551,3 +551,9 @@ Demonstração (ou a clínica de testes).
    não tivemos resposta nas últimas horas, encerramos este atendimento…"; a próxima mensagem é atendida pelo bot, do
    começo. Paciente esperando resposta ("Aguardando a clínica") não volta. Para não esperar 12 h, pedir ao Claude
    para adiantar a hora da resposta no banco do staging.
+7. **C21 Menu no lugar do "Isso resolve?"** (04/nov). Pelo WhatsApp de testes: "Oi" mostra as boas-vindas e o menu com
+   "Escolha uma opção abaixo ou faça uma pergunta.". Perguntar "qual o endereço?": vem a resposta e o menu de novo, sem
+   "Isso resolve sua dúvida?". Tocar em Consultas e perguntar "aceitam Unimed?": a resposta e o submenu Consultas de
+   novo. "atendente" e depois uma pergunta: segue com "Conseguiu resolver ou ainda quer falar com a recepção?". Nas
+   Métricas › Agendamento digital, a dúvida aparece em andamento e, 30 minutos depois, resolvida (se não pediu a
+   recepção).
