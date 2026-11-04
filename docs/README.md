@@ -30,7 +30,7 @@
 >   resposta da clínica (desfaz a C10). **No staging e na produção (03/nov)**; cliente valida (roteiro em `staging.md`, parte "2ª leva").
 >   **C21 (04/nov):** dúvida respondida fora de um fluxo mostra o menu (ou o submenu) de novo, sem "Isso resolve sua
 >   dúvida?"; menu com "Escolha uma opção abaixo ou faça uma pergunta."; nas Métricas, resolvida sem recepção em 30 min.
->   **No staging (sem migração)**; cliente valida (`staging.md`, parte S, item 7). Captura `config-mensagens` na fila.
+>   **No staging (sem migração)**; cliente valida (`staging.md`, parte S, item 7).
 > - **Evolução do assistente** ([`evolucao-assistente.md`](evolucao-assistente.md)): texto livre na entrada, motivo antes
 >   da recepção e taxa de resolução sem a recepção. **Na produção (02/nov, `c9418ac`)**, migração aplicada no staging
 >   e na produção. Próximo: acompanhar a taxa e as perguntas não reconhecidas da BC.

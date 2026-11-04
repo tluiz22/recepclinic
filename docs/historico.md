@@ -933,5 +933,5 @@ desfaz a C10).
   a recepção nos 30 minutos seguintes; pedindo, conta como recepção e o pedido não conta à parte; nos primeiros
   30 minutos, em andamento (`botResolution.ts`, teste). Saiu o "Agendar Atendimento" depois da resposta no menu (o
   menu já tem as marcações). `respond.ts` (`logAnsweredInfo`), `menus.ts`, `texts.ts`; artigo das Métricas e
-  fluxograma da jornada atualizados; captura `config-mensagens` na fila. Testes de banco em
+  fluxograma da jornada atualizados; a captura `config-mensagens` não mostra a prévia do menu (nada a recapturar). Testes de banco em
   `bot-base-de-conhecimento.test.ts`. Sem migração.
