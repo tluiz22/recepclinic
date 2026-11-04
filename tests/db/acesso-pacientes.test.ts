@@ -135,13 +135,13 @@ describe("nomes parecidos no cadastro (C19)", () => {
       await registerPatient(
         db(reception),
         clinicId,
-        { fullName: "João Pedro", birthdate: yearsAgo(6), contact: { mode: "new", fullName: "Rita Moura", phone: "85999990030" } },
+        { fullName: "Heitor Dantas", birthdate: yearsAgo(6), contact: { mode: "new", fullName: "Rita Moura", phone: "85999990030" } },
         TODAY,
       ),
     );
-    const again = { fullName: "Joao Pedro Moura", birthdate: yearsAgo(4), contact: { mode: "existing" as const, contactId: mother.contact.id } };
+    const again = { fullName: "Heitor Dantas Moura", birthdate: yearsAgo(4), contact: { mode: "existing" as const, contactId: mother.contact.id } };
     const ask = await registerPatient(db(reception), clinicId, again, TODAY);
-    expect(ask).toMatchObject({ status: "possible_duplicate", existing: [{ id: mother.patient.id, fullName: "João Pedro", sameBirthdate: false }] });
+    expect(ask).toMatchObject({ status: "possible_duplicate", existing: [{ id: mother.patient.id, fullName: "Heitor Dantas", sameBirthdate: false }] });
     // Outra criança do mesmo responsável, sem nome parecido: cadastra direto.
     created(await registerPatient(db(reception), clinicId, { ...again, fullName: "Lia Moura" }, TODAY));
     // "Não, é outra pessoa": cadastra.
@@ -156,7 +156,7 @@ describe("nomes parecidos no cadastro (C19)", () => {
     expect(ask.phone).toBe("+5585999990031");
     const rita = ask.matches.find((m) => m.contact.fullName === "Rita Moura")!;
     expect(rita.contact.phone).toBe("+5585999990030");
-    expect(rita.patients.map((p) => p.fullName)).toEqual(["João Pedro", "Joao Pedro Moura", "Lia Moura"]);
+    expect(rita.patients.map((p) => p.fullName)).toEqual(["Heitor Dantas", "Heitor Dantas Moura", "Lia Moura"]);
 
     // Atualizar o WhatsApp: o paciente entra junto da Rita, que passa a ter o número novo.
     const joined = created(

@@ -516,14 +516,16 @@ export async function registerPatient(
     }
   } else {
     const contactName = cleanText(input.contact.fullName)!;
-    let existing = await findContactByPhone(db, clinicId, phone!);
-    if (!existing && checkSimilar) {
+    const byPhone = await findContactByPhone(db, clinicId, phone!);
+    let chosen: Contact | null = null;
+    if (!byPhone && checkSimilar) {
       const step = await similarContactStep(db, clinicId, contactName, phone!, input.similarContact);
       if ("ask" in step) return step.ask;
-      existing = step.contact;
+      chosen = step.contact;
     }
-    contact = existing ?? (await contactForPhone(db, clinicId, phone!, contactName));
-    contactExisted = existing !== null;
+    // Pelo telefone, o existente volta ativo se estava desativado (contactForPhone).
+    contact = chosen ?? (await contactForPhone(db, clinicId, phone!, contactName));
+    contactExisted = byPhone !== null || chosen !== null;
   }
 
   if (contactExisted && !input.confirmDuplicate) {
