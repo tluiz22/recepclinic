@@ -1,0 +1,100 @@
+---
+// Conversa no atendimento humano dentro do cartão do contato (C26, cliente, 04/nov/2026, opção B): na ficha do
+// paciente ("Quem fala com a clínica") e na do responsável. Mesmo conteúdo da tela Atendimento humano: aguardando
+// (há quanto tempo, motivo, Abrir no WhatsApp) ou em atendimento (quando a clínica respondeu, Abrir no WhatsApp e
+// Devolver ao bot, com confirmação). Sem conversa aberta, nada aparece.
+import Icon from "./Icon.astro";
+import Button from "./ui/Button.astro";
+import { formatInstant, localDateOf } from "../../lib/clinicTime";
+import { isAnonymizedPhone } from "../../lib/anonymization";
+import { whatsappAppHref, whatsappHref } from "../../lib/phone";
+import { handoffReasonLabel, type AttentionItem } from "../../lib/data/whatsapp/attention";
+import { withReturn } from "../../lib/returnPath";
+
+interface Props {
+  item: AttentionItem | undefined;
+  timeZone: string;
+  /** Para onde "Devolver ao bot" volta (a própria ficha). */
+  returnTo: string;
+  /** Nome no texto da confirmação. */
+  name: string;
+}
+
+const { item, timeZone, returnTo, name } = Astro.props;
+const now = new Date();
+const LATE_MINUTES = 15;
+const minutesSince = (instant: Date) => Math.max(0, Math.floor((now.getTime() - instant.getTime()) / 60_000));
+const describeWait = (minutes: number) => {
+  if (minutes < 1) return "agora";
+  if (minutes < 60) return `há ${minutes} min`;
+  const hours = Math.floor(minutes / 60);
+  const rest = minutes % 60;
+  return rest ? `há ${hours} h ${rest} min` : `há ${hours} h`;
+};
+const today = localDateOf(now, timeZone);
+const whenLabel = (instant: Date) =>
+  localDateOf(instant, timeZone) === today ? `às ${formatInstant(instant, timeZone, "HH:mm")}` : `em ${formatInstant(instant, timeZone, "dd/MM 'às' HH:mm")}`;
+const waiting = item?.status === "waiting";
+const minutes = waiting && item.waitingSince ? minutesSince(item.waitingSince) : 0;
+const late = minutes >= LATE_MINUTES;
+const whatsappButton =
+  "inline-flex min-h-11 items-center justify-center gap-2 rounded-[10px] px-4 text-base font-bold no-underline focus-visible:outline-2 focus-visible:outline-offset-2 sm:min-h-10";
+---
+
+{
+  item && (
+    <div class="mt-2.5 flex flex-col gap-2 border-t border-[#e7eeeb] pt-2.5" data-human-conversation>
+      <div class="flex flex-wrap items-center gap-2">
+        {waiting ? (
+          <span class:list={["rounded-md px-2 py-0.5 text-[13px] font-bold", late ? "bg-can-100 text-can-800" : "bg-pend-100 text-pend-800"]}>
+            Aguardando a clínica {describeWait(minutes)}
+          </span>
+        ) : (
+          <span class="rounded-md bg-att-100 px-2 py-0.5 text-[13px] font-bold text-att-800">
+            Em atendimento · a clínica respondeu {item.lastAgentAt ? whenLabel(item.lastAgentAt) : ""}
+          </span>
+        )}
+      </div>
+      <p class="text-[14.5px] text-ink-mid">
+        <strong>{handoffReasonLabel(item.reason)}</strong> · {whenLabel(item.startedAt)}
+      </p>
+      <div class="flex flex-wrap gap-2">
+        {!isAnonymizedPhone(item.phone) && (
+          <a
+            href={whatsappHref(item.phone)}
+            data-whatsapp-app={whatsappAppHref(item.phone)}
+            target="_blank"
+            rel="noopener"
+            class:list={[
+              whatsappButton,
+              "flex-[1_1_180px]",
+              waiting ? "bg-conf-500 text-white hover:bg-conf-800 focus-visible:outline-conf-500" : "border border-conf-500 bg-white text-conf-800 hover:bg-conf-50 focus-visible:outline-conf-500",
+            ]}
+          >
+            <Icon name="chat-bubble" class="h-5 w-5" /> Abrir no WhatsApp
+          </a>
+        )}
+        {!waiting && (
+          <form method="POST" action="/api/admin/atendimento" class="flex flex-[1_1_180px]">
+            <input type="hidden" name="acao" value="devolver" />
+            <input type="hidden" name="telefone" value={item.phone} />
+            <input type="hidden" name="return_to" value={returnTo} />
+            <Button
+              type="submit"
+              variant="primary"
+              class="js-confirm-delete min-h-11 w-full gap-2 text-base font-bold sm:min-h-10"
+              data-confirm-title="Devolver a conversa ao bot?"
+              data-confirm-message={`O bot volta a atender ${name} na próxima mensagem, do começo. Nada é enviado ao paciente agora.`}
+              data-confirm-label="Devolver ao bot"
+            >
+              <Icon name="arrow-uturn-left" class="h-5 w-5" /> Devolver ao bot
+            </Button>
+          </form>
+        )}
+      </div>
+      <a href={withReturn(`/admin/atendimento?conversa=${encodeURIComponent(item.phone)}`, returnTo)} class="text-[14.5px] font-bold text-brand no-underline hover:underline">
+        Ver em Atendimento ›
+      </a>
+    </div>
+  )
+}

@@ -3,15 +3,17 @@ import { createUserClient } from "../../../lib/data/clients";
 import { DataError } from "../../../lib/data/errors";
 import { runFormAction } from "../../../lib/data/formAction";
 import { giveBackToBot } from "../../../lib/data/whatsapp/attention";
-import { formText } from "../../../lib/forms";
+import { formOptionalText, formText } from "../../../lib/forms";
+import { safeReturnPath } from "../../../lib/returnPath";
 
 // Atendimento humano (F8.5a): "Devolver ao bot", com confirmação na tela
-// (cliente, 27/out/2026). Toda a equipe da clínica; o banco confere o papel.
+// (cliente, 27/out/2026). Toda a equipe da clínica; o banco confere o papel. Da ficha do paciente ou do
+// responsável (C26), volta para a ficha (`return_to`).
 export const POST: APIRoute = async (context) => {
   const { request, cookies, locals } = context;
   const clinic = locals.clinic!;
-  const page = "/admin/atendimento";
   const form = await request.formData().catch(() => null);
+  const page = safeReturnPath(formOptionalText(form, "return_to"), "/admin/atendimento");
 
   return runFormAction(
     context,
