@@ -5,7 +5,7 @@
 // (CLAUDE.md): mudou a jornada do bot, atualizar este arquivo no mesmo commit,
 // junto com JOURNEY_UPDATED.
 
-export const JOURNEY_UPDATED = "03/11/2026";
+export const JOURNEY_UPDATED = "04/11/2026";
 
 export type NodeKind = "patient" | "bot" | "page" | "auto" | "reception" | "decision";
 
@@ -30,7 +30,7 @@ const auto = (text: string, note?: string): FlowNode => ({ kind: "auto", text, n
 const reception = (text: string, note?: string): FlowNode => ({ kind: "reception", text, note });
 const branch = (...options: [string, FlowItem[]][]): FlowBranch => ({ kind: "branch", options: options.map(([label, flow]) => ({ label, flow })) });
 
-const MENU = "Menu principal: Consultas · Exames · Informações gerais · Falar com a recepção";
+const MENU = "Menu principal (\"Escolha uma opção abaixo ou faça uma pergunta.\"; sem Perguntas frequentes, \"(ou digite o número)\"): Consultas · Exames · Informações gerais · Falar com a recepção";
 
 export type JourneySection = { id: string; title: string; intro: string; flow: FlowItem[] };
 
@@ -53,7 +53,7 @@ export const JOURNEY: JourneySection[] = [
             check("A mensagem já diz o que a pessoa precisa?", "Com \"Perguntas frequentes no bot\" (vem ligado com o bot; item 9). \"Oi\" sozinho: não."),
             branch(
               ["Pedido claro (marcar, remarcar, cancelar…)", [bot("Abre esse caminho direto, sem o menu")]],
-              ["Pergunta (\"vocês aceitam Unimed?\")", [bot("A resposta e \"Isso resolve sua dúvida?\" com Resolvido · Voltar ao menu · Falar com a recepção", "Sem o menu repetido (item 9).")]],
+              ["Pergunta (\"vocês aceitam Unimed?\")", [bot("A resposta e o menu principal (\"Escolha uma opção abaixo ou faça uma pergunta.\")", "Sem o \"Isso resolve sua dúvida?\" (item 9).")]],
               ["Não", [bot(MENU, "Só aparecem as opções que a clínica usa.")]],
             ),
           ],
@@ -308,8 +308,8 @@ export const JOURNEY: JourneySection[] = [
           "Sim",
           [
             bot(
-              "Fora de um caminho: responde com os dados da clínica e pergunta \"Isso resolve sua dúvida?\" com Resolvido · Voltar ao menu · Falar com a recepção",
-              "Quando a resposta leva a uma marcação (\"vocês fazem exame?\"): Resolvido · Agendar Atendimento · Voltar ao menu. \"Obrigado\" digitado vale como Resolvido; \"Obrigado\" sozinho (cortesia) só responde. Só com \"Resolvido\" a dúvida conta como resolvida nas Métricas.",
+              "Fora de um caminho: responde com os dados da clínica e mostra de novo o menu em que a pessoa estava",
+              "No menu principal: \"Escolha uma opção abaixo ou faça uma pergunta.\"; nos submenus (Consultas, Exames, Informações gerais), o próprio submenu. Sem o \"Isso resolve sua dúvida?\" (cliente, 04/nov/2026). Nas Métricas, a dúvida conta como resolvida se o paciente não pedir a recepção nos 30 minutos seguintes.",
             ),
             bot("No meio de um caminho: responde e repete a pergunta em que a pessoa estava", "A marcação continua de onde estava. \"Quanto custa?\" depois de escolher o serviço: o valor dele."),
             bot("Pedido de marcar, remarcar, cancelar ou confirmar: abre esse caminho", "Marcar consulta ou exame abre o submenu Consultas ou Exames (marcar, retorno, remarcar, cancelar, encaixe). Remarcar e cancelar como no item 4; nada de data digitada. Encaixe, adiantar ou antecipar: o Encaixe ou antecipar (sem a Lista de espera, pergunta se quer falar com a recepção)."),

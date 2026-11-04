@@ -12,3 +12,4 @@ a captura e o motivo, avisar o cliente no fim da etapa e esperar a autorização
 - `config-agendas` — o botão "Nova agenda" (ou "Nova agenda da equipe (exames)") agora aparece também quando só falta a agenda da equipe; o link discreto saiu (02/11/2026)
 - `config-horarios` — com mais de uma agenda, nenhuma vem escolhida; o roteiro agora abre com `?agenda=` (a Helena do seed) (02/11/2026)
 - `config-whatsapp` — o bloco "Forma de pagamento na Meta" (marcação do Suporte) saiu; entrou "Mensagem de teste" com o último envio e o motivo da falha (IS2, 03/11/2026)
+- `config-mensagens` — a prévia da mensagem "Menu" agora diz "Escolha uma opção abaixo ou faça uma pergunta." com a base de conhecimento ligada (C21, 04/11/2026)

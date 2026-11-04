@@ -151,8 +151,13 @@ async function deliver(b: Bot, session: Session, data: KbClinicData, entry: KbEn
 
 async function send(b: Bot, answer: KbAnswer, entry: KbEntry, terms: DetectedTerms, data: KbClinicData, text: string): Promise<"answered" | KnowledgeTakeover> {
   const kind = `bot_kb_${entry.code.toLowerCase()}`;
-  // Fora de um fluxo (ou no motivo de um pedido de recepção): a resposta e "Resolvido?" no lugar do menu repetido (EA).
-  const confirm = (book?: Book) => new KnowledgeTakeover({ kind: "confirm", code: entry.code, book, message: text } satisfies Takeover);
+  // No motivo de um pedido de recepção: a resposta e "Conseguiu resolver…?" (EA). Fora de um fluxo: a resposta e o
+  // passo de novo (menu ou submenu), sem o "Isso resolve sua dúvida?" (cliente, 04/nov/2026).
+  const confirm = async (book?: Book): Promise<"answered" | KnowledgeTakeover> => {
+    if (receptionAsks.has(b)) return new KnowledgeTakeover({ kind: "confirm", code: entry.code, book, message: text } satisfies Takeover);
+    await logAnsweredInfo(b, entry.code);
+    return "answered";
+  };
   switch (answer.kind) {
     case "flow":
       return new KnowledgeTakeover({ kind: "flow", flow: answer.flow, group: groupOf(terms, data, text), typed: typedCategory(terms, data, text) } satisfies Takeover);
@@ -167,8 +172,8 @@ async function send(b: Bot, answer: KbAnswer, entry: KbEntry, terms: DetectedTer
     }
     case "text":
       await say(b, kind, answer.text);
-      // Fora de um fluxo: "Resolvido?", com "Marcar" quando a resposta leva a uma marcação (o botão traz a recepção).
-      // Cortesia ("obrigado"): só a resposta e o menu, como antes.
+      // Fora de um fluxo: a dúvida no funil e o menu de novo; no pedido de recepção, "Conseguiu resolver…?" com
+      // "Marcar" quando a resposta leva a uma marcação. Cortesia ("obrigado"): só a resposta e o menu, como antes.
       if (!inFlow(b) && entry.answerType !== "fixed") return confirm(answer.book);
       // Dentro: só a resposta e o passo de novo.
       if (answer.offerReception) return new KnowledgeTakeover({ kind: "offer_reception" } satisfies Takeover);
@@ -218,31 +223,36 @@ async function askBookType(b: Bot): Promise<void> {
   await sendButtons(b, "bot_kb_book_type", t.KB_BOOK_TYPE_QUESTION, types.map((category) => t.button(bookId({ category }), t.KB_BOOK_TYPE_LABELS[category])));
 }
 
-/** Botões do "Resolvido?": no pedido de recepção, a recepção em 2º; fora dele, o menu (e "Marcar" quando a resposta leva a uma marcação). */
-async function confirmButtons(b: Bot, origin: ConfirmOrigin, book: Book | undefined) {
+/** Botões do "Conseguiu resolver…?" (pedido de recepção): Resolvido, a recepção e "Marcar" quando a resposta leva a uma marcação. */
+async function confirmButtons(b: Bot, book: Book | undefined) {
   const resolved = t.button(t.KB_CONFIRM_IDS.resolved, t.KB_RESOLVED_LABEL);
   const reception = b.receptionAvailable ? [t.button(t.KB_CONFIRM_IDS.reception, t.KB_RECEPTION_LABEL)] : [];
-  const menu = t.button(t.KB_CONFIRM_IDS.menu, t.KB_MENU_LABEL);
-  if (origin === "reception") {
-    // Serviço citado na resposta: abre ele; senão, "Agendar Atendimento" pergunta o tipo (cliente, 02/nov/2026).
-    const marcar = book ? [t.button(bookId(book), t.KB_BOOK)] : (await bookTypes(b)).length ? [t.button(BOOK_ANY_ID, t.KB_BOOK)] : [];
-    return [resolved, ...reception, ...marcar];
-  }
-  if (book) return [resolved, t.button(bookId(book), t.KB_BOOK), menu];
-  return [resolved, menu, ...reception];
+  // Serviço citado na resposta: abre ele; senão, "Agendar Atendimento" pergunta o tipo (cliente, 02/nov/2026).
+  const marcar = book ? [t.button(bookId(book), t.KB_BOOK)] : (await bookTypes(b)).length ? [t.button(BOOK_ANY_ID, t.KB_BOOK)] : [];
+  return [resolved, ...reception, ...marcar];
+}
+
+/**
+ * Dúvida respondida fora de um fluxo, sem pergunta de confirmação (cliente, 04/nov/2026): a tentativa no funil
+ * marcada `implicit`. Nas Métricas, conta como resolvida se o paciente não pedir a recepção nos 30 minutos seguintes.
+ */
+async function logAnsweredInfo(b: Bot, code: string): Promise<void> {
+  const origin: ConfirmOrigin = b.convo.state === WELCOME ? "first_message" : "menu";
+  const sessionId = crypto.randomUUID();
+  await logInfo(b, sessionId, "started", { code, origin, implicit: true });
+  await logInfo(b, sessionId, "answered");
 }
 
 async function askConfirmation(b: Bot, takeover: Extract<Takeover, { kind: "confirm" }>): Promise<void> {
-  const ask = receptionAsks.get(b);
-  const origin: ConfirmOrigin = ask ? "reception" : b.convo.state === WELCOME ? "first_message" : "menu";
+  const ask = receptionAsks.get(b)!;
   const sessionId = crypto.randomUUID();
-  await logInfo(b, sessionId, "started", { code: takeover.code, origin });
+  await logInfo(b, sessionId, "started", { code: takeover.code, origin: "reception" });
   await logInfo(b, sessionId, "answered");
   // Respondida na 1ª mensagem: a conversa sai do começo (a próxima mensagem não recebe as boas-vindas de novo).
   if (b.convo.state === WELCOME) await go(b, "MENU");
-  const pending: PendingConfirm = { sessionId, origin, handoffOrigin: ask?.origin ?? "kb_answer", subject: ask?.subject ?? takeover.message };
+  const pending: PendingConfirm = { sessionId, origin: "reception", handoffOrigin: ask.origin, subject: ask.subject };
   await mergeContext(b, { [CONFIRM_KEY]: pending });
-  await sendButtons(b, "bot_kb_confirm", origin === "reception" ? t.KB_CONFIRM_AFTER_RECEPTION : t.KB_CONFIRM_QUESTION, await confirmButtons(b, origin, takeover.book));
+  await sendButtons(b, "bot_kb_confirm", t.KB_CONFIRM_AFTER_RECEPTION, await confirmButtons(b, takeover.book));
 }
 
 const RESOLVED_WORDS = /^(?:sim\b|s\b|resolvid[oa]|resolveu|resolve|ajudou|obrigad[oa]|obg|valeu|vlw|ok\b|okay|certo|perfeito|otimo|entendi|beleza|blz)/;
@@ -498,7 +508,7 @@ export async function firstMessageAnswer(b: Bot): Promise<(() => Promise<boolean
   const answer = composeAnswer(session.kb, match.entry, match.terms, text, data);
   if (!answer) return undefined;
   return async () => {
-    // Resposta de texto: "Resolvido?" no lugar do menu (EA); fluxo: abre o fluxo.
+    // Resposta de texto: a resposta e o menu (cliente, 04/nov/2026); fluxo: abre o fluxo.
     const outcome = await send(b, answer, match.entry, match.terms, data, text);
     if (outcome === "answered") return true;
     await performTakeover(b, outcome.action);

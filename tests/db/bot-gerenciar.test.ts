@@ -152,7 +152,7 @@ describe("cancelar pelo menu", () => {
     expect(reply[0].body).toBe(
       "Não encontramos nenhuma consulta futura para cancelar neste número. Se o agendamento foi feito por outro número, escreva por aquele número.",
     );
-    expect(reply[1].body).toBe("Escolha uma opção abaixo (ou digite o número).");
+    expect(reply[1].body).toBe("Escolha uma opção abaixo ou faça uma pergunta.");
 
     const stranger = "+5584991226499";
     await hello(stranger);
@@ -161,7 +161,7 @@ describe("cancelar pelo menu", () => {
     expect(strangerReply[0].body).toBe(
       "Não encontramos agendamento marcado para esse número de telefone. Se o agendamento foi feito por outro número, escreva por aquele número.",
     );
-    expect(strangerReply[1].body).toBe("Escolha uma opção abaixo (ou digite o número).");
+    expect(strangerReply[1].body).toBe("Escolha uma opção abaixo ou faça uma pergunta.");
   });
 });
 
@@ -376,7 +376,7 @@ describe("recepção e pausa", () => {
 });
 
 describe("não achou neste número (cliente, 11/out/2026)", () => {
-  const MENU = "Escolha uma opção abaixo (ou digite o número).";
+  const MENU = "Escolha uma opção abaixo ou faça uma pergunta.";
   const fresh = (phone: string) =>
     adminClient().from("conversation_state").update({ state: "WELCOME", context: {}, human_handoff: false }).eq("clinic_id", f.clinicId).eq("contact_phone", phone);
 

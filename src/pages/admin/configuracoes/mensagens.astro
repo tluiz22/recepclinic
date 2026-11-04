@@ -151,7 +151,7 @@ const rows = visibleTemplates.map((standard) => {
 
 const botDefaults: Record<string, string> = {
   welcome: bot.welcome(label),
-  menu: bot.MENU_BODY,
+  menu: clinic.features.includes("knowledge_base") ? bot.MENU_BODY_ASK : bot.MENU_BODY,
   not_understood: bot.notUnderstood(),
   handoff: bot.HANDOFF,
   booking_link: bot.bookingLink(example.servico, example.paciente, link),

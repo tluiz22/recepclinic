@@ -1,6 +1,6 @@
 # RecepClinic
 
-> **Estado atual (retomar daqui), 03/nov/2026.** Detalhes e datas no [`historico.md`](historico.md) (só por busca).
+> **Estado atual (retomar daqui), 04/nov/2026.** Detalhes e datas no [`historico.md`](historico.md) (só por busca).
 >
 > **Próxima sessão (cliente, 03/nov):** cliente valida no local o faturamento **F12.2b a F12.2h** (branch `faturamento`),
 > pelo [`roteiro-validacao-faturamento.md`](roteiro-validacao-faturamento.md) **da branch**. Ambiente local pronto na branch.
@@ -16,7 +16,7 @@
 > **Ambientes**
 > - **Produção** (`app.recepclinic.com.br`, branch `producao`) = `main` em 03/nov (ver acima). Fluxo em [`producao.md`](producao.md).
 > - **Staging** (`teste.recepclinic.com.br`, branch `main`): produção + redesign da Recepção (RX1 a RX9, sem migração) +
->   cartão do Asaas (`ASAAS_PREVIEW=1`) + Base de Conhecimento do bot (migração aplicada) + PN1, PN2, IS2 a IS5 (migrações aplicadas) + IS1 + C17 a C20 (03/nov; migração `20261206120000` aplicada).
+>   cartão do Asaas (`ASAAS_PREVIEW=1`) + Base de Conhecimento do bot (migração aplicada) + PN1, PN2, IS2 a IS5 (migrações aplicadas) + IS1 + C17 a C20 (03/nov; migração `20261206120000` aplicada) + C21 (04/nov).
 >   Roteiros em [`staging.md`](staging.md).
 > - **Branch `faturamento`** (só local, sem push): todo código do financeiro, até a F12.2h; com a `main` até `aae0195`
 >   (a produção, 03/nov; merge `cf3e5ef`, 980 testes de unidade e todos os de banco passando; migração nova `20261207120000`).
@@ -28,6 +28,9 @@
 >   **2ª leva (03/nov; `historico.md`, "2ª leva"):** C17 Marcar com um só serviço, C18 busca por nome parecido, C19
 >   cadastro com nomes parecidos e conferência (migração `20261206120000` nas duas) e C20 volta ao bot 12 h depois da
 >   resposta da clínica (desfaz a C10). **No staging e na produção (03/nov)**; cliente valida (roteiro em `staging.md`, parte "2ª leva").
+>   **C21 (04/nov):** dúvida respondida fora de um fluxo mostra o menu (ou o submenu) de novo, sem "Isso resolve sua
+>   dúvida?"; menu com "Escolha uma opção abaixo ou faça uma pergunta."; nas Métricas, resolvida sem recepção em 30 min.
+>   **No staging (sem migração)**; cliente valida (`staging.md`, parte S, item 7). Captura `config-mensagens` na fila.
 > - **Evolução do assistente** ([`evolucao-assistente.md`](evolucao-assistente.md)): texto livre na entrada, motivo antes
 >   da recepção e taxa de resolução sem a recepção. **Na produção (02/nov, `c9418ac`)**, migração aplicada no staging
 >   e na produção. Próximo: acompanhar a taxa e as perguntas não reconhecidas da BC.

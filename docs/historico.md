@@ -923,3 +923,15 @@ desfaz a C10).
   `atendimento-humano` (a cada 5 min); `AttentionItem.lastPatientAt`. Textos: Atendimento, Meu dia, lembrete no
   celular, "Como funciona?" do Atendimento, artigo da Central e fluxograma da jornada (Tecnologia › Jornada do bot).
   Teste de banco em `atendimento-humano.test.ts`. Sem migração.
+- **C21 Menu no lugar do "Isso resolve sua dúvida?"** (04/nov): **decisões do cliente (04/nov):** dúvida respondida pela
+  base fora de um fluxo não pergunta mais "Isso resolve sua dúvida?"; vem a resposta e o passo de novo: no menu
+  principal (e na 1ª mensagem), o menu; nos submenus (Consultas, Exames, Informações gerais), o próprio submenu. O menu
+  principal passa a dizer "Escolha uma opção abaixo ou faça uma pergunta." (`MENU_BODY_ASK`) com a base ligada; sem
+  ela, o texto de antes (mesma regra das boas-vindas). Texto personalizado da clínica (Configurações › Mensagens) segue
+  valendo. O "Conseguiu resolver ou ainda quer falar com a recepção?" do pedido de recepção não muda. **Métricas:** a
+  dúvida vai ao funil com `implicit: true` (`started` → `answered`) e conta como resolvida se o mesmo contato não pedir
+  a recepção nos 30 minutos seguintes; pedindo, conta como recepção e o pedido não conta à parte; nos primeiros
+  30 minutos, em andamento (`botResolution.ts`, teste). Saiu o "Agendar Atendimento" depois da resposta no menu (o
+  menu já tem as marcações). `respond.ts` (`logAnsweredInfo`), `menus.ts`, `texts.ts`; artigo das Métricas e
+  fluxograma da jornada atualizados; captura `config-mensagens` na fila. Testes de banco em
+  `bot-base-de-conhecimento.test.ts`. Sem migração.

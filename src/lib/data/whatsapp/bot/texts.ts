@@ -81,6 +81,8 @@ export const welcome = (clinicLabel: string, invite = true) =>
     ? `Olá! 👋 Aqui é ${clinicLabel}.\n\nSou a assistente virtual e estou aqui para ajudar.\nVocê pode escrever o que precisa ou escolher uma das opções abaixo.`
     : `Olá! 👋 Aqui é ${clinicLabel}.`;
 export const MENU_BODY = "Escolha uma opção abaixo (ou digite o número).";
+/** Menu com a base de conhecimento ligada: convida a perguntar (cliente, 04/nov/2026). */
+export const MENU_BODY_ASK = "Escolha uma opção abaixo ou faça uma pergunta.";
 
 // Entrada com atendimento marcado no número (cliente, 23/out/2026): pergunta
 // antes do menu; os detalhes só depois da data de nascimento.
@@ -483,14 +485,15 @@ export const RECEPTION_NOW_BUTTONS = [button(RECEPTION_NOW_ID, "Falar com a rece
 /** Motivo sem resposta segura na base (situação B). */
 export const KB_NO_SAFE_ANSWER = "Não encontrei uma informação segura para responder sua dúvida. Vou encaminhar sua solicitação para a recepção, que poderá ajudar você.";
 
-/** Confirmação depois da resposta da base: no pedido de recepção e fora de um fluxo. */
+/**
+ * Confirmação depois da resposta da base, só no motivo de um pedido de recepção. Fora de um fluxo, o menu (ou o
+ * submenu) de novo, sem o "Isso resolve sua dúvida?" (cliente, 04/nov/2026).
+ */
 export const KB_CONFIRM_AFTER_RECEPTION = "Espero ter ajudado! 😊 Conseguiu resolver ou ainda quer falar com a recepção?";
-export const KB_CONFIRM_QUESTION = "Isso resolve sua dúvida?";
 export const KB_RESOLVED_THANKS = "Que bom! Se precisar, é só escrever por aqui.";
 export const KB_CONFIRM_IDS = { resolved: "kb_resolved", reception: "kb_reception", menu: "kb_menu" } as const;
 export const KB_RESOLVED_LABEL = "Resolvido";
 export const KB_RECEPTION_LABEL = "Falar com a recepção";
-export const KB_MENU_LABEL = "Voltar ao menu";
 /** "Agendar Atendimento" sem serviço na resposta: o tipo, só entre o que a clínica marca pelo bot (cliente, 02/nov/2026). */
 export const KB_BOOK_TYPE_QUESTION = "O que você quer agendar?";
 export const KB_BOOK_TYPE_LABELS = { consultation: "Consulta", return_visit: "Retorno", exam: "Exame" } as const;

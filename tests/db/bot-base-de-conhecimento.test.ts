@@ -75,9 +75,8 @@ async function say(phone: string, input: string | { id: string }): Promise<Sent[
 
 const bodies = (reply: Sent[]) => reply.map((m) => m.body);
 const optionId = (reply: Sent[], title: string) => reply.at(-1)!.options.find((o) => o.title.includes(title))!.id;
-const MENU = "Escolha uma opção abaixo (ou digite o número).";
+const MENU = "Escolha uma opção abaixo ou faça uma pergunta.";
 const WELCOME = "Olá! 👋 Aqui é da Clínica Base.\n\nSou a assistente virtual e estou aqui para ajudar.\nVocê pode escrever o que precisa ou escolher uma das opções abaixo.";
-const RESOLVED_Q = "Isso resolve sua dúvida?";
 const titles = (reply: Sent[]) => reply.at(-1)!.options.map((o) => o.title);
 
 async function reset(phone: string, state = "MENU") {
@@ -114,11 +113,10 @@ afterAll(async () => {
 });
 
 describe("primeira mensagem", () => {
-  it("pergunta da base: boas-vindas, a resposta e \"Isso resolve sua dúvida?\" no lugar do menu (EA, 02/nov/2026)", async () => {
+  it("pergunta da base: boas-vindas, a resposta e o menu, sem \"Isso resolve sua dúvida?\" (cliente, 04/nov/2026)", async () => {
     const reply = await say("+5584991337001", "Oi, vocês aceitam Unimed?");
-    expect(bodies(reply)).toEqual([WELCOME, "Sim, atendemos *Unimed*.", RESOLVED_Q]);
-    // Sem recepção no app: sem o botão da recepção.
-    expect(titles(reply)).toEqual(["Resolvido", "Voltar ao menu"]);
+    expect(bodies(reply)).toEqual([WELCOME, "Sim, atendemos *Unimed*.", MENU]);
+    expect((await convo("+5584991337001")).state).toBe("MENU");
   });
 
   it("só \"oi\": boas-vindas (convidando a escrever) e o menu", async () => {
@@ -135,12 +133,13 @@ describe("primeira mensagem", () => {
 describe("no menu", () => {
   const phone = "+5584991337010";
 
-  it("responde e pergunta se resolveu (sem repetir o menu), sem \"não entendi\" e sem contar", async () => {
+  it("responde e mostra o menu de novo (sem \"Isso resolve?\"), sem \"não entendi\" e sem contar", async () => {
     await say(phone, "Oi");
     const reply = await say(phone, "qual o endereço?");
+    expect(reply).toHaveLength(2);
     expect(reply[0].body).toContain("Rua A, 1");
     expect(reply[0].body).toContain("https://www.google.com/maps/search/");
-    expect(reply.at(-1)!.body).toBe(RESOLVED_Q);
+    expect(reply.at(-1)!.body).toBe(MENU);
     expect(bodies(reply).join("\n")).not.toContain("Não entendi");
     expect((await convo(phone)).not_understood_count).toBe(0);
   });
@@ -180,13 +179,20 @@ describe("no menu", () => {
     expect((await convo(phone)).state).toBe("EXAMES_MENU");
   });
 
-  it("serviço citado: a resposta com \"Marcar\", que abre a marcação dele", async () => {
+  it("serviço citado: a resposta e o menu, de onde a marcação segue", async () => {
     await reset(phone);
     const reply = await say(phone, "vocês fazem exame?");
-    expect(bodies(reply)).toEqual(["Sim, fazemos *Exame*.", RESOLVED_Q]);
-    expect(titles(reply)).toEqual(["Resolvido", "Agendar Atendimento", "Voltar ao menu"]);
-    const booking = await say(phone, { id: optionId(reply, "Agendar Atendimento") });
-    expect(booking[0].body).toBe("Vamos marcar *Exame*.");
+    expect(bodies(reply)).toEqual(["Sim, fazemos *Exame*.", MENU]);
+  });
+
+  it("no submenu: a resposta e o próprio submenu de novo (cliente, 04/nov/2026)", async () => {
+    await reset(phone);
+    await say(phone, "1"); // Consultas
+    const reply = await say(phone, "qual o endereço?");
+    expect(reply).toHaveLength(2);
+    expect(reply[0].body).toContain("Rua A, 1");
+    expect(reply.at(-1)!.body).toBe("O que você precisa sobre consultas?");
+    expect((await convo(phone)).state).toBe("CONSULTAS_MENU");
   });
 });
 
@@ -353,42 +359,31 @@ async function funnel(phone: string, flow: "info" | "handoff") {
 const ALWAYS_OPEN = Array.from({ length: 7 }, () => ({ open: "00:00", close: "23:59" }));
 const setReceptionHours = (hours: unknown) => adminClient().from("clinic_settings").update({ reception_hours: hours as never }).eq("clinic_id", f.clinicId);
 
-describe("dúvida respondida: \"Resolvido?\" (EA)", () => {
-  it("\"Resolvido\": agradece, volta ao começo, sem pendência para a recepção; o funil registra a resolução", async () => {
+describe("dúvida respondida fora de um fluxo: sem confirmação (cliente, 04/nov/2026)", () => {
+  it("no menu: a dúvida no funil (started → answered), marcada sem confirmação", async () => {
     const phone = "+5584991337060";
     await say(phone, "Oi");
     const reply = await say(phone, "qual o endereço?");
-    expect(reply.at(-1)!.body).toBe(RESOLVED_Q);
-    expect(bodies(await say(phone, { id: "kb_resolved" }))).toEqual(["Que bom! Se precisar, é só escrever por aqui."]);
-    expect(await handoffOf(phone)).toMatchObject({ state: "WELCOME", human_handoff: false });
+    expect(reply.at(-1)!.body).toBe(MENU);
+    expect(await handoffOf(phone)).toMatchObject({ state: "MENU", human_handoff: false });
     const steps = await funnel(phone, "info");
-    expect(steps.map((s) => s.step)).toEqual(["started", "answered", "resolved"]);
-    expect(steps[0].metadata).toMatchObject({ origin: "menu" });
-    expect(new Set(steps.map((s) => s.session_id)).size).toBe(1);
+    expect(steps.map((s) => s.step)).toEqual(["started", "answered"]);
+    expect(steps[0].metadata).toMatchObject({ origin: "menu", implicit: true });
   });
 
-  it("\"Voltar ao menu\": o menu; a dúvida fica sem confirmação (inconclusiva)", async () => {
+  it("na 1ª mensagem: origem first_message", async () => {
     const phone = "+5584991337061";
     await say(phone, "Oi, qual o endereço?");
-    expect(bodies(await say(phone, { id: "kb_menu" }))).toEqual([MENU]);
-    expect((await funnel(phone, "info")).map((s) => s.step)).toEqual(["started", "answered"]);
+    expect((await funnel(phone, "info"))[0].metadata).toMatchObject({ origin: "first_message", implicit: true });
   });
 
-  it("\"obrigado\" digitado depois da resposta conta como resolvido", async () => {
-    const phone = "+5584991337062";
-    await say(phone, "Oi, qual o endereço?");
-    expect(bodies(await say(phone, "obrigada!"))).toEqual(["Que bom! Se precisar, é só escrever por aqui."]);
-    expect((await funnel(phone, "info")).at(-1)!.step).toBe("resolved");
-  });
-
-  it("outra pergunta depois da resposta: responde de novo, e a primeira fica inconclusiva", async () => {
+  it("outra pergunta depois da resposta: responde de novo e o menu; duas dúvidas no funil", async () => {
     const phone = "+5584991337063";
     await say(phone, "Oi, qual o endereço?");
     const reply = await say(phone, "vocês aceitam Unimed?");
-    expect(bodies(reply)).toEqual(["Sim, atendemos *Unimed*.", RESOLVED_Q]);
+    expect(bodies(reply)).toEqual(["Sim, atendemos *Unimed*.", MENU]);
     const steps = await funnel(phone, "info");
     expect(steps.filter((s) => s.step === "started")).toHaveLength(2);
-    expect(steps.some((s) => s.step === "resolved")).toBe(false);
   });
 
   it("no meio de uma marcação: só a resposta e o passo, sem \"Resolvido?\" nem dúvida no funil", async () => {
@@ -546,6 +541,16 @@ describe("pedido de recepção: o motivo antes de transferir (EA)", () => {
     await setReceptionHours(ALWAYS_OPEN);
   });
 
+  it("dúvida respondida no menu e depois o pedido de recepção: a transferência fica ligada à dúvida", async () => {
+    const phone = "+5584991337095";
+    const a = await say(phone, "Oi, qual o endereço?");
+    const b2 = await say(phone, "atendente");
+    expect(bodies(a).at(-1)).toBe(MENU);
+    expect(bodies(b2)).toEqual([REASON_Q]);
+    await say(phone, { id: "reception_now" });
+    expect((await handoffOf(phone)).human_handoff).toBe(true);
+  });
+
   it("no meio de uma marcação: a tentativa para (pediu a recepção) e a resposta vem com \"Resolvido?\"", async () => {
     const phone = "+5584991337081";
     await say(phone, "Oi");
@@ -568,10 +573,16 @@ describe("Métricas: resolução sem a recepção a partir das conversas acima (
   };
   const type = (r: Awaited<ReturnType<typeof reportFor>>, t: string) => r.byType.find((x) => x.type === t)!;
 
-  it("dúvida com \"Resolvido\": resolvida; \"Voltar ao menu\": inconclusiva, sem confirmação", async () => {
+  it("dúvida no menu sem pedido de recepção: resolvida depois dos 30 minutos", async () => {
     const r = await reportFor(["+5584991337060", "+5584991337061"]);
-    expect(type(r, "duvida")).toMatchObject({ total: 2, resolved: 1, inconclusive: 1 });
-    expect(r).toMatchObject({ unconfirmed: 1, rate: 0.5 });
+    expect(type(r, "duvida")).toMatchObject({ total: 2, resolved: 2, inconclusive: 0 });
+    expect(r).toMatchObject({ unconfirmed: 0, rate: 1 });
+  });
+
+  it("dúvida no menu seguida do pedido de recepção em 30 minutos: recepção, contada uma vez", async () => {
+    const r = await reportFor(["+5584991337095"]);
+    expect(type(r, "duvida")).toMatchObject({ total: 1, human: 1 });
+    expect(type(r, "recepcao").total).toBe(0);
   });
 
   it("resolvida no pedido de recepção: sem transferência; \"Falar com a recepção\" depois da resposta: recepção, contada uma vez", async () => {

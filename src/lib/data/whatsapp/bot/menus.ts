@@ -49,7 +49,9 @@ export async function showMenu(b: Bot, { withWelcome = false, notUnderstood = fa
   // Clínica sem nada para o bot marcar: depois das boas-vindas, a recepção assume (cliente, 11/out/2026).
   if (!items.length) return handOver(b, "bot_nothing_to_book", t.NOTHING_TO_BOOK, "no_service", "no_availability", true);
   if (notUnderstood) await say(b, "bot_not_understood", textFor(b, "not_understood", t.notUnderstood(true)));
-  await sendList(b, "bot_menu", textFor(b, "menu", t.MENU_BODY), t.numberedList(items, false));
+  // Com a base, convida a perguntar; sem ela, o texto livre não seria entendido (cliente, 04/nov/2026).
+  const body = b.features.includes("knowledge_base") ? t.MENU_BODY_ASK : t.MENU_BODY;
+  await sendList(b, "bot_menu", textFor(b, "menu", body), t.numberedList(items, false));
   await go(b, "MENU");
 }
 

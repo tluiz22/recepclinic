@@ -105,7 +105,7 @@ const fresh = (phone: string) =>
   adminClient().from("conversation_state").update({ state: "WELCOME", context: {}, human_handoff: false }).eq("clinic_id", f.clinicId).eq("contact_phone", phone);
 
 const WELCOME = "Olá! 👋 Aqui é da Clínica Bot Entrada.\n\nSou a assistente virtual e estou aqui para ajudar.\nVocê pode escrever o que precisa ou escolher uma das opções abaixo.";
-const MENU = "Escolha uma opção abaixo (ou digite o número).";
+const MENU = "Escolha uma opção abaixo ou faça uma pergunta.";
 const ASK_ONE = "Identificamos um agendamento associado a este número. Você deseja tratar desse agendamento?";
 const ASK_MANY = "Encontramos mais de um agendamento associado a este número. Você deseja consultar ou alterar algum deles?";
 const ASK_BIRTHDATE = "Para sua segurança, antes de mostrar o agendamento precisamos confirmar a identidade.\n\nQual a data de nascimento do paciente? (formato dd/mm/aaaa)";
