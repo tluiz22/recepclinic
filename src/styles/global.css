@@ -110,3 +110,17 @@ button[aria-busy="true"] {
     scroll-padding-bottom: 150px;
   }
 }
+
+/* Celular (cliente, 04/nov): ao arrastar a barra de rolagem, a barra de baixo às vezes
+   parava no meio da tela. Camada própria no compositor (fica presa ao fundo da tela
+   enquanto a barra do navegador some e volta) e nada mais largo que a tela (conteúdo
+   largo alargava a área de layout e deslocava o que é fixo). */
+@media (max-width: 1023px) {
+  html {
+    overflow-x: clip;
+  }
+  .fixed-bar {
+    transform: translateZ(0);
+    backface-visibility: hidden;
+  }
+}
