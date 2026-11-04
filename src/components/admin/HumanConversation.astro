@@ -74,7 +74,8 @@ const whatsappButton =
             <Icon name="chat-bubble" class="h-5 w-5" /> Abrir no WhatsApp
           </a>
         )}
-        {!waiting && (
+        {/* C27: também em Aguardando quando a clínica já respondeu (o paciente só agradeceu, por exemplo). */}
+        {(!waiting || item.lastAgentAt) && (
           <form method="POST" action="/api/admin/atendimento" class="flex flex-[1_1_180px]">
             <input type="hidden" name="acao" value="devolver" />
             <input type="hidden" name="telefone" value={item.phone} />

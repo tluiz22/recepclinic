@@ -128,6 +128,23 @@ const whatsappButton =
                       <Icon name="chat-bubble" class="h-5 w-5" /> Abrir no WhatsApp
                     </a>
                   )}
+                  {/* C27: a clínica já respondeu e o paciente escreveu de novo (ex.: só agradeceu): dá para devolver daqui. */}
+                  {item.lastAgentAt && (
+                    <form method="POST" action="/api/admin/atendimento">
+                      <input type="hidden" name="acao" value="devolver" />
+                      <input type="hidden" name="telefone" value={item.phone} />
+                      <Button
+                        type="submit"
+                        variant="secondary"
+                        class="js-confirm-delete min-h-11 w-full gap-2 text-base font-bold"
+                        data-confirm-title="Devolver a conversa ao bot?"
+                        data-confirm-message={`${displayName(item)} escreveu depois da última resposta da clínica. Devolva só se não precisar de resposta (ex.: só agradeceu). O bot volta a atender na próxima mensagem, do começo. Nada é enviado ao paciente agora.`}
+                        data-confirm-label="Devolver ao bot"
+                      >
+                        <Icon name="arrow-uturn-left" class="h-5 w-5" /> Devolver ao bot
+                      </Button>
+                    </form>
+                  )}
                 </div>
               </li>
             );

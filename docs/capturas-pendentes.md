@@ -13,3 +13,4 @@ a captura e o motivo, avisar o cliente no fim da etapa e esperar a autorização
 - `config-horarios` — com mais de uma agenda, nenhuma vem escolhida; o roteiro agora abre com `?agenda=` (a Helena do seed) (02/11/2026)
 - `config-whatsapp` — o bloco "Forma de pagamento na Meta" (marcação do Suporte) saiu; entrou "Mensagem de teste" com o último envio e o motivo da falha (IS2, 03/11/2026)
 - `inicio` — busca com rótulo e borda verde; em "Esperando o paciente", só Confirmar presença, Reenviar lembrete e Remarcar (sem o WhatsApp) (C23); linha do dia com já atendidas, faltaram, confirmadas e a confirmar (C25) (04/11/2026)
+- `atendimento` — cartão Aguardando em que a clínica já respondeu ganhou "Devolver ao bot" (C27, 04/11/2026); recapturar só se o seed tiver esse caso

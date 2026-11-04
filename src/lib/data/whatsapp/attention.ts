@@ -2,13 +2,15 @@ import type { DbClient } from "../clients";
 import { unwrap } from "../errors";
 import { getSupportWhatsapp } from "../platformSettings";
 import { returnToBot } from "./conversations";
+import { COURTESY_MESSAGE_TYPE } from "./courtesy";
 
 // Atendimento humano (F8.5a, cliente, 27/out/2026): as conversas em que o bot
 // parou e a clínica precisa responder. Na coexistência tudo o que o bot fala
 // aparece no app da recepção; esta lista diz, de relance, o que é com ela.
 //
 // "Aguardando a clínica": a pausa começou e a clínica ainda não respondeu
-// pelo app, ou o paciente escreveu de novo depois da última resposta.
+// pelo app, ou o paciente escreveu de novo depois da última resposta (cortesia como
+// "ok", "obrigado" ou 👍 não conta: C27, courtesy.ts; cliente, 04/nov/2026).
 // "Em atendimento": a clínica respondeu e o paciente não escreveu depois.
 // A conversa sai da lista com o "Devolver ao bot", com o "#bot" ou, "Em
 // atendimento", 12 h depois da última resposta da clínica sem o paciente
@@ -140,11 +142,13 @@ export async function listHumanAttention(
   const items = open.map(({ row }): AttentionItem => {
     const own = messages.filter((m) => m.contact_phone === row.contact_phone);
     const patient = own.filter((m) => m.direction === "inbound");
+    // C27: cortesia depois da resposta da clínica ("ok", "obrigado", 👍) não deixa a conversa aguardando.
+    const needsAnswer = patient.filter((m) => m.message_type !== COURTESY_MESSAGE_TYPE);
     const agent = own.filter((m) => m.message_type === "agent_reply");
     const startedAt = new Date(row.handoff_started_at ?? row.human_handoff_at!);
     const situation = classifyAttention(
       startedAt,
-      patient.map((m) => new Date(m.created_at)),
+      needsAnswer.map((m) => new Date(m.created_at)),
       agent.map((m) => new Date(m.created_at)),
     );
     const last = patient[0];

@@ -96,6 +96,22 @@ describe("atendimento humano (F8.5a)", () => {
     expect(await listHumanAttention(asDb(outsider.client), clinic)).toEqual([]);
   });
 
+  it("cortesia depois da resposta da clínica (C27) segue em atendimento; o texto não fica guardado", async () => {
+    const thanked = "+5584977720006";
+    await inbound(thanked, "Falar com a recepção", at("2031-03-11T05:00:00"));
+    await pauseForHuman(bot, clinic, thanked, { contactId: null, reason: "requested" }, at("2031-03-11T05:00:01"));
+    await agent(thanked, "Confirmado para amanhã às 9h.", at("2031-03-11T05:10:00"));
+    await inbound(thanked, "Ok, muito obrigada! 👍", at("2031-03-11T05:12:00"));
+    const [item] = await listHumanAttention(asDb(professional.client), clinic, thanked);
+    expect(item).toMatchObject({ status: "in_progress", lastAgentAt: at("2031-03-11T05:10:00"), lastPatientAt: at("2031-03-11T05:12:00") });
+    const { data: rows } = await adminClient().from("whatsapp_messages").select("message_type, body").eq("clinic_id", clinic).eq("contact_phone", thanked).eq("direction", "inbound").order("created_at");
+    expect(rows).toEqual([{ message_type: "text", body: null }, { message_type: "courtesy", body: null }]);
+    // Pergunta depois volta para Aguardando.
+    await inbound(thanked, "Ah, preciso levar algum exame?", at("2031-03-11T05:20:00"));
+    expect((await listHumanAttention(asDb(professional.client), clinic, thanked))[0]).toMatchObject({ status: "waiting", waitingSince: at("2031-03-11T05:20:00") });
+    await giveBackToBot(bot, clinic, thanked);
+  });
+
   it("sem a rotina, a conversa segue na lista, mesmo dias depois", async () => {
     const items = await listHumanAttention(asDb(professional.client), clinic);
     expect(items.map((i) => i.phone)).toEqual([PHONE_WROTE_AGAIN, PHONE_REQUESTED, PHONE_TOOK_OVER]);
