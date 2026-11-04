@@ -45,7 +45,7 @@ export const primeirosPassos = [
     fields: [
       { name: "Linha do dia", text: "Quantos atendimentos há hoje (sem os cancelados), com a barra de quem já foi atendido e confirmou, e o link para a agenda de hoje." },
       { name: "Precisa de você", text: "Conversas aguardando atendimento humano e as que a clínica ainda não devolveu ao bot (levam a Atendimento), consultas para registrar presença e contatos a conferir. Cada linha some quando alguém resolve." },
-      { name: "Esperando o paciente", text: "Lembretes de hoje e de amanhã sem resposta, com o WhatsApp do contato, Confirmar presença e Remarcar (com confirmação)." },
+      { name: "Esperando o paciente", text: "Lembretes de hoje e de amanhã sem resposta, com Confirmar presença, Reenviar lembrete e Remarcar (com confirmação). Sai da lista na hora da consulta." },
       { name: "Próximas consultas", text: "As de hoje que ainda não foram registradas, com Compareceu a partir do horário." },
       { name: "Buscar paciente", text: "Leva à lista de Pacientes com a busca feita." },
     ],
