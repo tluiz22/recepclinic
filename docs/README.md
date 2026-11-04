@@ -2,8 +2,9 @@
 
 > **Estado atual (retomar daqui), 04/nov/2026.** Detalhes e datas no [`historico.md`](historico.md) (só por busca).
 >
-> **Próxima sessão (cliente, 03/nov):** cliente valida no local o faturamento **F12.2b a F12.2h** (branch `faturamento`),
-> pelo [`roteiro-validacao-faturamento.md`](roteiro-validacao-faturamento.md) **da branch**. Ambiente local pronto na branch.
+> **Próxima sessão (cliente, 04/nov):** melhorias na `main` para implantar na produção (cliente traz os pedidos).
+> Trabalhar na worktree `recepclinic-main` (a pasta `recepclinic` está na branch `faturamento`). Pendente da branch: o
+> cliente valida no local o faturamento **F12.2b a F12.2h** pelo `roteiro-validacao-faturamento.md` **da branch**.
 >
 > **Próximo (cliente, 01/nov):** validado no staging: Base de Conhecimento, "Como funciona?" de Configurações e Central de
 > Ajuda. No staging para validar: **25 capturas reais de tela** nos artigos da Central (`public/ajuda/`, refazer quando a
