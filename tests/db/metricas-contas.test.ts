@@ -117,8 +117,11 @@ beforeAll(async () => {
   await message(ids.A2, "outbound", "appointment_reminder", eve, "delivered");
   await message(ids.A2, "inbound", "reminder_confirm", at("2031-03-09", "11:00"));
   await message(ids.A2, "outbound", "appointment_reminder", later, "delivered");
-  await message(ids.A3, "outbound", "appointment_reminder", eve, "read");
-  await message(ids.A3, "inbound", "reminder_cancel", at("2031-03-09", "12:00"));
+  // Pedido não concluído (03/nov/2026): o toque em Cancelar só conta com o cancelamento depois dele. A3 foi
+  // cancelado agora (acima); o lembrete e o toque ficam antes disso.
+  const beforeCancel = (hours: number) => new Date(Date.now() - hours * 3_600_000);
+  await message(ids.A3, "outbound", "appointment_reminder", beforeCancel(3), "read");
+  await message(ids.A3, "inbound", "reminder_cancel", beforeCancel(2));
   await message(ids.A4, "outbound", "appointment_reminder", eve, "failed");
   await message(ids.A5, "outbound", "appointment_reminder", eve, "delivered");
 });

@@ -42,7 +42,7 @@ export const problemasArtigos = [
     steps: [
       "Veja Relatório do dia › Lembretes, aba Não entregue. Se o problema persistir, peça ao Suporte do RecepClinic para olhar os Envios (rotinas e falhas).",
       "Confira Configurações › WhatsApp: a conexão deve estar Conectada e as mensagens automáticas aprovadas (pendentes ou recusadas não saem).",
-      "Confira a forma de pagamento na Meta: sem ela, as mensagens automáticas não saem.",
+      "Confira a forma de pagamento na Meta: sem ela, as mensagens automáticas não saem. Em Configurações › WhatsApp, a Mensagem de teste mostra se a Meta está entregando e, se não, o motivo.",
       "Atendimento marcado depois do horário do envio fica sem lembrete: use Enviar lembrete no cartão da Agenda.",
       "Falha técnica é tentada de novo sozinha (10 e 30 minutos). O histórico do atendimento registra o motivo.",
     ],

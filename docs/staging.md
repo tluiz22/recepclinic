@@ -524,3 +524,30 @@ em nenhuma clínica). A publicação vale para **todas** as clínicas com o item
 6. **Desligar** o item na matriz: o bot volta ao "não entendi" de antes.
 
 Aprovado aqui, a ativação na produção é planejada à parte (quais entradas, quais clínicas, o valor do item).
+
+## S. 2ª leva de ajustes da produção (C17 a C20, 03/nov)
+
+Migração `20261206120000_busca_por_nome_parecido.sql` aplicada em 03/nov. Logins das demos em Sistema › Vendas ›
+Demonstração (ou a clínica de testes).
+
+1. **C17 Marcar.** Agenda › Marcar, escolher o paciente. Tipo com 1 serviço (botão "· 1"): tocar já escolhe o serviço
+   (nome e duração com o sinal verde) e as datas aparecem. Tipo com mais de 1: aviso amarelo "Escolha um dos N … abaixo
+   para ver as datas"; escolhido o serviço, o aviso some.
+2. **C18 Busca.** Em Pacientes, cadastrar (ou usar) "Aurora Oliveira da Costa". Buscar "Aurora oliveira Costa",
+   "AURORA OLIVERA", "aur cos" e "Costa Aurora": todas acham. "Sliva" acha "Silva". Conferir também a busca do
+   Marcar, de Agenda › Mais › Buscar paciente, da aba Responsáveis/Contatos e das Métricas.
+3. **C19 Conferência.** Pacientes › Novo: preencher e tocar em Cadastrar; abre "Confira os dados" com nome, nascimento
+   com a idade, quem fala, responsável, WhatsApp e plano. "Voltar" deixa corrigir; "Confirmar e cadastrar" grava. Na
+   ficha, Dados › Editar › Salvar e, no responsável, Editar › Salvar: o diálogo mostra o que muda ("antes → depois").
+4. **C19 Criança parecida.** No responsável que já tem "Heitor Dantas", "cadastrar outro" com "Heitor Dantas Moura":
+   a tela mostra o cadastrado (nascimento e idade) e pergunta. "Sim, é a mesma pessoa: abrir a ficha" abre a ficha
+   (vindo do Marcar, volta ao Marcar com ele escolhido); "Não, é outra pessoa: cadastrar" cadastra.
+5. **C19 Responsável parecido.** Novo paciente com um responsável novo de nome parecido com um existente ("Rita de
+   Moura" × "Rita Moura") e outro WhatsApp: a tela mostra os dois números. "Sim, é a mesma pessoa: atualizar o WhatsApp
+   e cadastrar" põe o paciente junto do cadastrado, com o número novo; "Não, cadastrar um novo responsável" cria
+   outro. Adulto (o próprio paciente) com nome parecido de quem já é paciente: "Sim" abre a ficha.
+6. **C20 Volta ao bot.** Pelo WhatsApp de testes, pedir "falar com a recepção"; responder pelo app (vira "Em
+   atendimento"); não escrever mais. 12 h depois da resposta, a conversa sai do Atendimento e o paciente recebe "Como
+   não tivemos resposta nas últimas horas, encerramos este atendimento…"; a próxima mensagem é atendida pelo bot, do
+   começo. Paciente esperando resposta ("Aguardando a clínica") não volta. Para não esperar 12 h, pedir ao Claude
+   para adiantar a hora da resposta no banco do staging.

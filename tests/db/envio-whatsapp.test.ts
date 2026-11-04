@@ -113,9 +113,11 @@ describe("templates padrão na conta da clínica (Suporte)", () => {
       ["waitlist_offer", "pending", null],
       // F11.5: a nota fiscal leva um PDF de exemplo, que sobe pelo app (sem o ID dele, fica para depois).
       ["nfse_document", null, "falta a variável WHATSAPP_APP_ID (ID do app RecepClinic na Meta) para enviar o PDF de exemplo"],
+      // IS2 (03/nov/2026): a mensagem de teste, em toda clínica.
+      ["connection_test", "pending", null],
     ]);
     const created = meta.calls.filter((c) => c.method === "POST");
-    expect(created.map((c) => c.path)).toEqual(Array(11).fill(`/${WABA}/message_templates`));
+    expect(created.map((c) => c.path)).toEqual(Array(12).fill(`/${WABA}/message_templates`));
     expect(created[0].body).toMatchObject({ name: "rc_confirmacao_v1", language: "pt_BR", category: "UTILITY" });
     // Exemplo de cada variável, exigido pela Meta.
     const body = (created[0].body!.components as { type: string; example?: { body_text: string[][] } }[])[0];
@@ -147,6 +149,7 @@ describe("templates padrão na conta da clínica (Suporte)", () => {
       reminder: ["approved", null],
       exam_preparation: ["rejected", "INVALID_FORMAT"],
       consultation_guidance: ["pending", null],
+      connection_test: ["pending", null],
     });
   });
 

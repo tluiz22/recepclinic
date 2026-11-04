@@ -5,6 +5,8 @@ import type { Enums } from "./supabase/database.types";
 // cartões. Nenhum tipo vem escolhido; com o serviço já definido (Marcar
 // retorno, Alterar, volta com erro), abre no tipo dele. A busca dentro do tipo
 // só aparece com mais de SEARCH_FROM serviços.
+// Tipo com um só serviço (cliente, 03/nov/2026): escolher o tipo já escolhe o
+// serviço, sem cartões; com mais de um, um aviso em destaque pede o serviço.
 
 export type ServiceCategory = Enums<"service_category">;
 
@@ -46,4 +48,11 @@ export function openType(
   const types = serviceTypes(services).map((t) => t.category);
   if (requested && types.includes(requested as ServiceCategory)) return requested as ServiceCategory;
   return chosen && types.includes(chosen.category) ? chosen.category : null;
+}
+
+/** O serviço único do tipo aberto (escolher o tipo basta); com nenhum ou mais de um, nulo. */
+export function onlyServiceOf<S extends { category: ServiceCategory }>(services: S[], category: ServiceCategory | null): S | null {
+  if (!category) return null;
+  const ofType = services.filter((s) => s.category === category);
+  return ofType.length === 1 ? ofType[0] : null;
 }

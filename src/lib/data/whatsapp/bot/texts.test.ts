@@ -37,3 +37,19 @@ describe("textos do bot: não achou neste número", () => {
     expect(t.willReply(consultorio)).toBe("O consultório responderá sua mensagem em breve.");
   });
 });
+
+describe("pedido não concluído (PN2, 03/nov/2026)", () => {
+  it("mensagem e botões (até 20 caracteres, limite da Meta)", () => {
+    expect(t.notCompleted("booking", "Ana")).toBe("Não concluímos a marcação de *Ana*. Como prefere seguir?");
+    expect(t.notCompleted("reschedule", "Ana")).toBe("Não concluímos a remarcação de *Ana*. Como prefere seguir?");
+    expect(t.notCompleted("cancel", "Ana")).toBe("Não concluímos o cancelamento de *Ana*. Como prefere seguir?");
+    expect(t.notCompletedButtons("booking", true).map((b) => b.title)).toEqual(["Novo link", "Falar com a recepção", "Desistir"]);
+    expect(t.notCompletedButtons("cancel", false).map((b) => b.title)).toEqual(["Cancelar agora", "Desistir"]);
+    for (const b of t.notCompletedButtons("cancel", true)) expect(b.title.length).toBeLessThanOrEqual(20);
+  });
+
+  it("desistir e assunto da transferência", () => {
+    expect(t.notCompletedKept("o exame Raio X", "o", "Ana", "segunda, 10/03 às 08:00")).toBe("Tudo bem, o exame Raio X de Ana continua marcado para segunda, 10/03 às 08:00.");
+    expect(t.notCompletedSubject("booking", "Ana")).toBe("Não concluiu a marcação de Ana pelo WhatsApp.");
+  });
+});

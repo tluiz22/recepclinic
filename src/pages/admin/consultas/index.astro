@@ -103,7 +103,7 @@ const tags = serviceTags(serviceRefs);
 const counts = await getResumoTabCounts(db, clinic.clinicId, { timeZone: clinic.timezone, reminders: has("reminders"), waitlist: false, sends: sendsOn && clinic.isPlatformStaff }, now);
 const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
 const tabCount: Partial<Record<Tab, Pick<TabItem, "count" | "countTone" | "alert" | "countLabel">>> = {
-  lembretes: { count: counts.reminders, countLabel: `${counts.reminders ?? 0} sem resposta ou não entregue(s) hoje` },
+  lembretes: { count: counts.reminders, countLabel: `${counts.reminders ?? 0} sem resposta, não concluído(s) ou não entregue(s) hoje` },
   pendentes: { count: counts.pendingAttendance, countLabel: `${counts.pendingAttendance} a registrar` },
   envios: { alert: counts.sendsAlert, countLabel: "Há envios que pedem atenção" },
 };

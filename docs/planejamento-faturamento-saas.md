@@ -4,6 +4,11 @@
 > no local. **Cliente valida no fim (02/nov):** seguir as fases sem parar; validar tudo junto no local.
 > **03/nov: F12.2c a F12.2h feitas** (abaixo); roteiro de validação em [`roteiro-validacao-faturamento.md`](roteiro-validacao-faturamento.md).
 > Próximo: cliente valida F12.2b a F12.2h no local; depois, F12.11.
+> **Main trazida em 03/nov (até `aae0195`, a produção):** PN1–PN2, IS1–IS5 e C17–C20; conflitos só de juntar os dois
+> lados (envio: suspensa não envia nem a mensagem de teste; implantação só a de teste). Migração nova
+> `20261207120000_suspensa_checklist_implantacao.sql` (gatilho de suspensa em `clinic_onboarding_checks`, IS3). Banco local
+> com as 7 aplicadas. **Atenção na publicação:** as migrações da branch (`20261117` a `20261127`) são anteriores às já
+> aplicadas no staging e na produção (`20261201` a `20261206`): o `db push` precisa de `--include-all` (simular antes).
 > **F12.2b feita** (`20261117120000_aceite_do_contrato.sql`): aceite do contrato pelo Administrador em Configurações ›
 > Assinatura (data, hora, quem, IP, versão do texto); texto **provisório** em `src/lib/billingContractText.ts`; mudança
 > com o mesmo texto = aceite tácito, início só 30 dias depois da ativação, e-mail dos novos termos ao financeiro (envio

@@ -10,7 +10,7 @@ import Pill, { type PillTone } from "../ui/Pill.astro";
 import HelpTip from "../ui/HelpTip.astro";
 import { resumo } from "../../../lib/ajuda/resumo";
 import { formatInstant, localDateOf } from "../../../lib/clinicTime";
-import { REMINDER_GROUP_LABELS, type ReminderGroup, type ReminderOfDay } from "../../../lib/data/daily";
+import { NOT_COMPLETED_TAP_LABELS, REMINDER_GROUP_LABELS, type ReminderGroup, type ReminderOfDay } from "../../../lib/data/daily";
 import { capitalize, type Vocabulary } from "../../../lib/vocabulary";
 
 import ServiceTag, { type ServiceTagInfo } from "../agenda/ServiceTag.astro";
@@ -25,15 +25,17 @@ interface Props {
 }
 
 const { reminders, timeZone, vocabulary, openGroup, tags } = Astro.props;
-const order: ReminderGroup[] = ["no_answer", "not_delivered", "reschedule", "cancel", "confirm"];
+const order: ReminderGroup[] = ["not_completed", "no_answer", "not_delivered", "reschedule", "cancel", "confirm"];
 const tone: Record<ReminderGroup, PillTone> = {
   confirm: "success",
   reschedule: "warning",
   cancel: "danger",
+  not_completed: "warning",
   no_answer: "warning",
   not_delivered: "danger",
 };
-const needsAction = new Set<ReminderGroup>(["no_answer", "not_delivered"]);
+// Pedido não concluído (cliente, 03/nov/2026): tocou em Remarcar ou Cancelar e não concluiu; a recepção age.
+const needsAction = new Set<ReminderGroup>(["not_completed", "no_answer", "not_delivered"]);
 const groups = order.map((group) => ({ group, items: reminders.filter((r) => r.group === group) }));
 const isOpen = (group: ReminderGroup, count: number) => (openGroup ? openGroup === group : needsAction.has(group) && count > 0);
 ---
@@ -67,11 +69,12 @@ const isOpen = (group: ReminderGroup, count: number) => (openGroup ? openGroup =
               <Icon name="chevron-down" class="h-4 w-4 shrink-0 transition-transform group-open:rotate-180" strokeWidth={2.4} />
             </summary>
             <ul class="divide-y divide-[#e6ecea] border-t border-line px-4">
-              {items.map(({ appointment: a }) => (
+              {items.map(({ appointment: a, tapped }) => (
                 <li class="flex flex-col gap-0.5 py-3">
                   <a href={`/admin/agenda?date=${localDateOf(a.scheduledAt, timeZone)}`} class="text-base font-semibold text-ink no-underline hover:text-brand hover:underline">
                     <span class="capitalize">{formatInstant(a.scheduledAt, timeZone, "EEE dd/MM HH:mm")}</span> · {a.patientName}
                   </a>
+                  {tapped && <span class="text-sm font-semibold text-pend-800">{NOT_COMPLETED_TAP_LABELS[tapped]}</span>}
                   <span class="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-sm text-ink-soft">
                     <ServiceTag info={tags.get(a.serviceId)} />
                     {[serviceBesideCategory(a.serviceName, a.category), a.agendaName].filter(Boolean).join(" · ")}

@@ -1,37 +1,55 @@
 # RecepClinic
 
-> **Estado atual (retomar daqui), 02/nov/2026.** Detalhes e datas no [`historico.md`](historico.md) (só por busca).
+> **Estado atual (retomar daqui), 03/nov/2026.** Detalhes e datas no [`historico.md`](historico.md) (só por busca).
 >
-> **Próxima sessão (cliente, 02/nov):** começar **listando ao cliente o passo a passo para validar** o faturamento
-> F12.2b a F12.8 no local (branch `faturamento`; resumo e pendências no bloco de retomada do
-> `planejamento-faturamento-saas.md` da branch). Cliente já copiou `ASAAS_API_KEY` e `ASAAS_BASE_URL` (sandbox) para o `.env`.
+> **Próxima sessão (cliente, 03/nov):** cliente valida no local o faturamento **F12.2b a F12.2h** (branch `faturamento`),
+> pelo [`roteiro-validacao-faturamento.md`](roteiro-validacao-faturamento.md) **da branch**. Ambiente local pronto na branch.
 >
 > **Próximo (cliente, 01/nov):** validado no staging: Base de Conhecimento, "Como funciona?" de Configurações e Central de
 > Ajuda. No staging para validar: **25 capturas reais de tela** nos artigos da Central (`public/ajuda/`, refazer quando a
 > tela mudar). Falta informar o WhatsApp do suporte (Sistema › Suporte), se ainda não foi. Detalhes em
 > [`ajuda-contextual.md`](ajuda-contextual.md), fim. Cliente vai pedir novos ajustes.
 >
-> **Em produção (cliente, 02/nov):** `6b0df0b`: menu do bot "Informações gerais" e Vendas › Demonstração nova, sobre o
-> `c9418ac` (evolução do assistente). Detalhe no [`producao.md`](producao.md) (Publicações).
+> **Em produção (cliente, 03/nov):** a `main` inteira até a 2ª leva de ajustes: PN1–PN2, IS1–IS5 e C17–C20 (6 migrações,
+> `20261201120000` a `20261206120000`), sobre o `1ceb6a4`. Cliente valida no uso. Detalhe no [`producao.md`](producao.md) (Publicações).
 >
 > **Ambientes**
-> - **Produção** (`app.recepclinic.com.br`, branch `producao`) = `main` em `6b0df0b` (ver acima). Fluxo em [`producao.md`](producao.md).
+> - **Produção** (`app.recepclinic.com.br`, branch `producao`) = `main` em 03/nov (ver acima). Fluxo em [`producao.md`](producao.md).
 > - **Staging** (`teste.recepclinic.com.br`, branch `main`): produção + redesign da Recepção (RX1 a RX9, sem migração) +
->   cartão do Asaas (`ASAAS_PREVIEW=1`) + Base de Conhecimento do bot (migração aplicada).
+>   cartão do Asaas (`ASAAS_PREVIEW=1`) + Base de Conhecimento do bot (migração aplicada) + PN1, PN2, IS2 a IS5 (migrações aplicadas) + IS1 + C17 a C20 (03/nov; migração `20261206120000` aplicada).
 >   Roteiros em [`staging.md`](staging.md).
-> - **Branch `faturamento`** (só local, sem push): todo código do financeiro, até a F12.8 (`5714645`; 944 testes de
->   unidade e 872 de banco passando). Tem a `main` até `4d17a7f`; atualizar só quando o cliente pedir (cliente, 01/nov).
+> - **Branch `faturamento`** (só local, sem push): todo código do financeiro, até a F12.2h (`cf33616`; 963 testes de
+>   unidade e 886 de banco passando). Tem a `main` até `7c64a68` (03/nov); atualizar só quando o cliente pedir (cliente, 01/nov).
 >
 > **Frentes**
-> - **Ajustes da produção (C1–C16) e revisão da jornada do bot:** todos na produção; nada pendente. Decisões da
+> - **Ajustes da produção (C1–C16) e revisão da jornada do bot:** todos na produção. Decisões da
 >   revisão no [`historico.md`](historico.md) (busca "Revisão da jornada do bot").
+>   **2ª leva (03/nov; `historico.md`, "2ª leva"):** C17 Marcar com um só serviço, C18 busca por nome parecido, C19
+>   cadastro com nomes parecidos e conferência (migração `20261206120000` nas duas) e C20 volta ao bot 12 h depois da
+>   resposta da clínica (desfaz a C10). **No staging e na produção (03/nov)**; cliente valida (roteiro em `staging.md`, parte "2ª leva").
 > - **Evolução do assistente** ([`evolucao-assistente.md`](evolucao-assistente.md)): texto livre na entrada, motivo antes
 >   da recepção e taxa de resolução sem a recepção. **Na produção (02/nov, `c9418ac`)**, migração aplicada no staging
 >   e na produção. Próximo: acompanhar a taxa e as perguntas não reconhecidas da BC.
-> - **Faturamento do SaaS:** F12.1 e F12.2 validadas; **F12.2b a F12.8 feitas na branch (02/nov), cliente valida no
->   fim** (aceite, suspensão, Asaas sandbox, webhook, reativação, avisos, cartão). Revisar: textos dos e-mails e o
->   contrato provisório. Fora do código: token e cadastro do webhook no Asaas, tokenização em produção, advogado.
->   Depois: F12.11. Retomar pelo `planejamento-faturamento-saas.md` **na branch**.
+> - **Faturamento do SaaS:** F12.1 e F12.2 validadas; **F12.2b a F12.8 e F12.2c a F12.2h feitas na branch, cliente valida
+>   no fim**. 03/nov: contrato com nota fiscal só com o Módulo financeiro (e nota só com contrato assinado), texto
+>   aprovado (renovação automática, IPCA, arrependimento, cancelamento), Assinatura em passo a passo, cancelamento e
+>   troca de cartão pelo Administrador, lembrete do IPCA. Revisar: textos dos e-mails. Fora do código: token e webhook do
+>   Asaas, tokenização em produção, advogado. Depois: F12.11. Retomar pelo `planejamento-faturamento-saas.md` **na branch**.
+> - **Implantação segura do WhatsApp** ([`implantacao-segura.md`](implantacao-segura.md)), após os incidentes de 03/nov
+>   na clínica piloto (erro 131042 de pagamento na Meta; mensagem automática do app pausando o bot): guias públicos
+>   para o dono da clínica, mensagem de teste exigida para ativar, checklist de implantação, aviso de mensagem
+>   automática e Sistema › Problemas conhecidos. **IS1 no staging (03/nov, sem migração)**: guias públicos
+>   `/guia/antes-de-conectar` e `/guia/pagamento-meta` e envio ao Administrador. **IS2 no staging (03/nov,
+>   migração `20261203120000`)**: mensagem de teste com o motivo da falha; ativação só com teste entregue. Cliente
+>   valida; nas clínicas existentes, "Enviar à Meta as que faltam" antes do teste. **IS3 a IS5 (03/nov)**: checklist
+>   de implantação (migração `20261204120000`), mensagem automática do app sem pausar o bot e Sistema › Problemas
+>   conhecidos (migração `20261205120000`). Na produção em 03/nov (cliente pediu, sem validar antes no staging).
+> - **Pedido não concluído** ([`pedido-nao-concluido.md`](pedido-nao-concluido.md)), após o caso de 03/nov (tocou em
+>   Remarcar no lembrete e não concluiu): mensagem padrão com Novo link / Falar com a recepção / Desistir quando o link
+>   vence ou o cancelamento fica sem resposta; lembrete só muda com a ação concluída; grupo "Não concluiu".
+>   **PN1 e PN2 no staging (03/nov; migrações `20261201120000` e `20261202120000` aplicadas)**: grupo "Não concluíram"
+>   no Relatório do dia e nas Métricas; mensagem "Não concluímos…" quando o link vence ou o cancelamento fica sem
+>   resposta. Na produção em 03/nov (cliente pediu, sem validar antes no staging).
 > - **NFS-e pelo Asaas** (`planejamento-nfse-asaas.md`, seção 13): N0; formulário BaaS enviado (30/out). Aguarda
 >   Asaas e contador (PIS/COFINS, e-CNPJ A1).
 > - **Piloto (F10, [plano](plano.md)):** clínica piloto criada na produção, WhatsApp conectado, templates em análise
@@ -51,6 +69,8 @@
 > - **Cliente valida no staging (no fim):** F8.1, F8.2, F8.2b, F8.3, ajuda contextual e menu lateral.
 > - **F11:** roteiro a partir do T3.1; Produção Restrita (A1), template `rc_nota_fiscal_v1`, termo com o advogado.
 > - **Operação:** 1º backup diário da produção; sessão do painel que caiu (parte P do `staging.md`).
+> - **Clínica piloto (03/nov):** conferir os lembretes de hoje (1º lote depois do cartão na Meta); verificação da
+>   empresa na Meta não iniciada.
 > - **Do cliente:** advogado (páginas legais, [pedidos de autoridades](politica-pedidos-de-autoridades.md), contrato,
 >   termo de dados); número do app antigo como 2ª clínica de testes do staging.
 >

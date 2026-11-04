@@ -7,6 +7,7 @@
 import Card from "../config/Panel.astro";
 import { formatCentsBRL } from "../../../lib/money";
 import { PRICES } from "../../../lib/plans";
+import { GUIDE_BEFORE_CONNECT_PATH, GUIDE_META_PAYMENT_PATH } from "../../../lib/guides";
 
 const setup = formatCentsBRL(PRICES.setupCents);
 
@@ -32,8 +33,14 @@ const prereqs = [
     text: "A janela de conexão da Meta não funciona no navegador do celular. Na sessão, o celular do número fica ao lado do computador (para ler o QR code).",
   },
   {
+    title: "Mensagens automáticas do app desligadas",
+    text: "Saudação, ausência e automações do Meta Business Suite. Toda mensagem que sai pelo app pausa o bot naquela conversa; a ausência costuma disparar só no horário comercial (incidente da clínica piloto, 03/nov/2026). Conferir por print antes da sessão.",
+    links: [{ label: "Guia: desligar as mensagens automáticas", href: `${GUIDE_BEFORE_CONNECT_PATH}#mensagens-automaticas` }],
+  },
+  {
     title: "Cartão de crédito para a Meta",
-    text: "As mensagens automáticas (lembretes, avisos) são cobradas pela Meta direto da clínica, à parte do RecepClinic. O cartão é cadastrado no Gerenciador do WhatsApp da clínica.",
+    text: "As mensagens automáticas (lembretes, avisos) são cobradas pela Meta direto da clínica, à parte do RecepClinic (cerca de R$ 0,04 a R$ 0,08 por mensagem). O cartão é cadastrado logo depois da conexão, na conta do WhatsApp da clínica, e definido como padrão; sem isso, a Meta recusa os envios (erro 131042).",
+    links: [{ label: "Guia do pagamento na Meta", href: GUIDE_META_PAYMENT_PATH }],
   },
   {
     title: "Endereço de site",
@@ -57,12 +64,12 @@ const steps: { title: string; when?: string; support: Lane; clinic: Lane; note?:
     support: [
       "Simula o plano com a clínica em Vendas › Planos (Básico ou Completo, adicionais, profissionais).",
       `Envia o contrato e o termo de tratamento de dados; cobra a implantação (${setup}, salvo se isenta).`,
-      "Manda à clínica a lista de pré-requisitos (quadro acima).",
+      "Envia ao Administrador o guia \"Antes de conectar\" (Sistema › Clínicas › clínica › Guia para o Administrador; o convite já leva o link).",
     ],
     clinic: [
       "Assina o contrato e o termo de tratamento de dados.",
       "Paga a implantação.",
-      "Separa os pré-requisitos.",
+      "Segue o guia \"Antes de conectar\" e separa os pré-requisitos.",
     ],
   },
   {
@@ -82,10 +89,12 @@ const steps: { title: string; when?: string; support: Lane; clinic: Lane; note?:
     support: [
       "Envia o roteiro do aparelho (iPhone ou Android) se o número ainda está no WhatsApp comum.",
       "Confere com a clínica: app atualizado, perfil comercial com nome e categoria Saúde.",
+      "Confere por print que a saudação e a ausência estão desligadas, inclusive as programadas para o horário comercial, e marca na checklist (Sistema › Clínicas › clínica › Situação).",
     ],
     clinic: [
       "Passa o número para o WhatsApp Business, se ainda não estiver.",
       "Atualiza o app e confere que envia e recebe mensagens.",
+      "Desliga a mensagem de saudação, a de ausência e as automações do Meta Business Suite.",
     ],
   },
   {
@@ -119,12 +128,12 @@ const steps: { title: string; when?: string; support: Lane; clinic: Lane; note?:
   {
     title: "Forma de pagamento e templates",
     support: [
-      "Depois do cartão cadastrado, marca \"Forma de pagamento conferida\" em Configurações › WhatsApp.",
+      "Depois do cartão cadastrado, envia a mensagem de teste em Configurações › WhatsApp (Abrir a clínica para configurar) para o celular do Administrador e confere a entrega: sem teste entregue, a clínica não é ativada. Falhou: a tela mostra o motivo e o que fazer.",
       "Acompanha os templates até \"Aprovado\" (Atualizar situação).",
       "Clínica com exames: Criar na Meta os templates do preparo do exame e do arquivo do preparo.",
     ],
     clinic: [
-      "No Gerenciador do WhatsApp (business.facebook.com/wa/manage/home/), Visão geral › Adicionar forma de pagamento.",
+      "No Gerenciador do WhatsApp (business.facebook.com/wa/manage/home/), Configurações de pagamento › Adicionar forma de pagamento, e Definir como principal (guia do pagamento na Meta).",
     ],
   },
   {
@@ -141,11 +150,11 @@ const steps: { title: string; when?: string; support: Lane; clinic: Lane; note?:
   {
     title: "Ativação e testes",
     support: [
-      "Sistema › Clínicas › clínica › Situação: confere WhatsApp, forma de pagamento e templates; Ativar a clínica.",
+      "Sistema › Clínicas › clínica › Situação: completa a checklist de implantação (marca os itens do Suporte; os outros o sistema confere) e Ativa a clínica. Sem os obrigatórios, o botão fica desligado.",
       "Acompanha os testes ao lado da clínica.",
     ],
     clinic: [
-      "De um celular pessoal, manda \"oi\" para o número: o bot responde.",
+      "De um celular pessoal (que não seja o número do Suporte do RecepClinic, que não fala com o bot), manda \"oi\" para o número: o bot responde e nenhuma mensagem do app sai sozinha.",
       "A recepção responde pelo WhatsApp Business: o bot pausa naquela conversa.",
       "Manda #bot pelo app: a conversa volta para o bot.",
       "Marca um atendimento de teste para amanhã e confere o lembrete com os botões.",

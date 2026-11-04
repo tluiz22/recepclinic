@@ -558,6 +558,7 @@ const HANDOFF_ORIGINS: Record<string, string> = {
   way_out: "Botão de saída (resposta não entendida)",
   typed: "Digitaram (ex.: \"atendente\")",
   kb_answer: "Depois de uma resposta da base",
+  not_completed: "Pedido não concluído (link vencido ou cancelamento sem resposta)",
 };
 
 const reached = (s: Session, steps: string[]) => s.events.some((e) => steps.includes(e.step));

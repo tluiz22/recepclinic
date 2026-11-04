@@ -126,7 +126,8 @@ const STATUS = {
   disabled: { label: "Desativado", variant: "neutral" },
 } as const;
 
-const visibleTemplates = templatesInUse(clinic.features);
+// A mensagem de teste (IS2) não tem texto próprio da clínica.
+const visibleTemplates = templatesInUse(clinic.features).filter((t) => t.key !== "connection_test");
 const rows = visibleTemplates.map((standard) => {
   const versions = templates.filter((t) => t.key === standard.key);
   const approved = versions.filter((t) => t.stage === "meta" && t.status === "approved").sort((a, b) => b.version - a.version)[0] ?? null;

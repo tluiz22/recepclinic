@@ -13,9 +13,11 @@ import {
 import { createUserClient } from "../../../../../lib/data/clients";
 import { DataError } from "../../../../../lib/data/errors";
 import { runFormAction } from "../../../../../lib/data/formAction";
-import { createInfoRequest, markInfoRequestReviewed, resendInvitation, setClinicStatus } from "../../../../../lib/data/onboarding";
+import { createInfoRequest, markInfoRequestReviewed, resendInvitation, sendConnectGuide, setClinicStatus } from "../../../../../lib/data/onboarding";
 import { releaseClinicSuspension, suspendClinic } from "../../../../../lib/data/suspension";
 import { onboardingDeps } from "../../../../../lib/data/onboardingDeps";
+import { loadOnboardingChecklist, setOnboardingCheck } from "../../../../../lib/data/onboardingChecklist";
+import { getSupportWhatsapp } from "../../../../../lib/data/platformSettings";
 import { isFeatureKey } from "../../../../../lib/features";
 import { applyCancellationNow, syncContractNow } from "../../../../../lib/data/billingAsaasDeps";
 import { smtpSender } from "../../../../../lib/email";
@@ -28,7 +30,8 @@ import { clinicPlan, PLAN_LABELS } from "../../../../../lib/plans";
 // atual para a importação ou mandar um link novo (F10.1a) e devolver a agenda
 // enviada à clínica, com comentário (F10.1b); autorizar a carga (F10.1c) e
 // desfazer a carga (F10.1d); ativar a clínica em implantação ou voltar para
-// a implantação (F8.2b); cadastrar ou alterar a conta de cobrança (F12.1,
+// a implantação (F8.2b); enviar o guia "Antes de conectar" ao Administrador (IS1); marcar os itens da
+// checklist de implantação e ativar só com os obrigatórios (IS3); cadastrar ou alterar a conta de cobrança (F12.1,
 // aba Faturamento); rascunho, ativação e descarte do contrato (F12.2); aviso
 // por e-mail da nova versão com aceite tácito, na ativação ou de novo (F12.2b);
 // suspender por um motivo e liberar um motivo (F12.3); sincronizar o contrato
@@ -50,7 +53,7 @@ export const POST: APIRoute = async (context) => {
     async () => {
       if (!isUuid(clinicId)) throw new DataError("not_found", "Clínica: não encontrada");
       const [{ data: clinic }, { data: settings }] = await Promise.all([
-        db.from("clinics").select("id, name").eq("id", clinicId).maybeSingle(),
+        db.from("clinics").select("id, name, clinic_features ( feature_key )").eq("id", clinicId).maybeSingle(),
         db.from("clinic_settings").select("timezone").eq("clinic_id", clinicId).maybeSingle(),
       ]);
       if (!clinic || !settings) throw new DataError("not_found", "Clínica: não encontrada");
@@ -77,6 +80,14 @@ export const POST: APIRoute = async (context) => {
           const message = result.email.sent
             ? "Pedido de informações criado. E-mail enviado."
             : `Pedido de informações criado, mas o e-mail não saiu (${result.email.reason}). Envie este link ao Administrador (ele não aparece de novo): ${result.link}`;
+          return { redirectTo: page, message };
+        }
+        case "enviar_guia": {
+          // Guia "Antes de conectar ao RecepClinic" (IS1, 03/nov/2026).
+          const result = await sendConnectGuide(clinic, formText(form, "email"), onboardingDeps(url));
+          const message = result.email.sent
+            ? "Guia enviado por e-mail ao Administrador."
+            : `O e-mail não saiu (${result.email.reason}). Envie o link do guia pelo WhatsApp: ${result.link}`;
           return { redirectTo: page, message };
         }
         case "pedir_agenda": {
@@ -125,9 +136,24 @@ export const POST: APIRoute = async (context) => {
             message: `Carga desfeita: ${n(undone.appointmentsRemoved, "consulta removida", "consultas removidas")}, ${n(undone.patientsRemoved, "paciente", "pacientes")} e ${n(undone.contactsRemoved, "contato", "contatos")}.${kept ? ` Ficou: ${n(undone.appointmentsKept.length, "consulta já mexida", "consultas já mexidas")} e ${n(undone.patientsKept.length + undone.contactsKept.length, "cadastro em uso", "cadastros em uso")}, como a prévia mostrou.` : ""}`,
           };
         }
-        case "ativar_clinica":
+        case "ativar_clinica": {
+          // IS3 (cliente, 03/nov/2026): só com os obrigatórios da checklist (o banco confere de novo os dele).
+          const features = clinic.clinic_features.map((grant) => grant.feature_key).filter(isFeatureKey);
+          const checklist = await loadOnboardingChecklist(db, clinicId, features, { supportPhone: await getSupportWhatsapp(db).catch(() => null) });
+          if (checklist.missingRequired.length) {
+            throw new DataError("invalid", "Ativar: falta item da checklist", {
+              acao: `Para ativar, falta: ${checklist.missingRequired.map((i) => i.label).join("; ")}.`,
+            });
+          }
           await setClinicStatus(db, clinicId, "active");
           return { redirectTo: page, message: `${clinic.name} ativada: o bot, os avisos e os envios automáticos pelo WhatsApp passam a sair para os pacientes.` };
+        }
+        case "marcar_item":
+        case "desmarcar_item": {
+          const checked = formText(form, "acao") === "marcar_item";
+          await setOnboardingCheck(db, clinicId, formText(form, "item"), checked, locals.userId!);
+          return { redirectTo: `${page}#checklist`, message: checked ? "Item marcado na checklist." : "Item desmarcado na checklist." };
+        }
         case "voltar_implantacao":
           await setClinicStatus(db, clinicId, "onboarding");
           return { redirectTo: page, message: `${clinic.name} voltou para "Em implantação": nada sai para os pacientes pelo WhatsApp até ativar de novo.` };

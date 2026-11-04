@@ -783,18 +783,30 @@ const canBook = patient.isActive && !anonymized;
           <EditCard id="dados" title="Dados" summary={`Nasc. ${formatCalendarDate(patient.birthdate, "dd/MM/yyyy")}`}>
             {/* Cartões curtos, como na ficha A do protótipo: um resumo de uma linha; "Editar" abre o formulário completo. */}
             <p class="text-[14.5px] leading-snug text-ink-mid">Nascimento {formatCalendarDate(patient.birthdate, "dd/MM/yyyy")}{finance ? " · CPF no Financeiro" : ""}</p>
-            <form slot="edit" method="POST" action={action} class="flex flex-col gap-4">
+            {/* Conferência antes de salvar (C19): o diálogo mostra o que muda, com a idade. */}
+            <form slot="edit" method="POST" action={action} class="flex flex-col gap-4" data-confirm-data data-today={today}>
               <input type="hidden" name="acao" value="salvar" />
               <div class={field}>
                 <label for="full_name" class={fieldLabel}>Nome</label>
-                <input id="full_name" name="full_name" required value={patient.fullName} class={CONTROL} />
+                <input id="full_name" name="full_name" required value={patient.fullName} data-confirm-label="Nome" class={CONTROL} />
               </div>
               <div class={field}>
                 <label for="birthdate" class={fieldLabel}>Data de nascimento</label>
-                <input id="birthdate" name="birthdate" type="date" required max={today} value={patient.birthdate} class={`${CONTROL} w-48`} />
+                <input id="birthdate" name="birthdate" type="date" required max={today} value={patient.birthdate} data-confirm-label="Nascimento" data-confirm-age class={`${CONTROL} w-48`} />
               </div>
               <div class="flex gap-2">
-                <Button type="submit" variant="primary" data-sending-label="Salvando…">Salvar</Button>
+                <Button
+                  type="submit"
+                  variant="primary"
+                  class="js-confirm-delete"
+                  data-sending-label="Salvando…"
+                  data-confirm-title="Confira os dados"
+                  data-confirm-message="Confira antes de salvar, principalmente a data de nascimento."
+                  data-confirm-label="Confirmar e salvar"
+                  data-confirm-tone="primary"
+                >
+                  Salvar
+                </Button>
                 <Button href={here} data-edit-cancel>Cancelar</Button>
               </div>
             </form>
@@ -1037,6 +1049,7 @@ const canBook = patient.isActive && !anonymized;
     )
   }
   {!anonymized && <ConfirmDeleteDialog />}
+  <script src="../../../scripts/confirmFormData.ts"></script>
 </AdminLayout>
 
 <script>

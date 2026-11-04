@@ -15,29 +15,55 @@ import { confirmedByReminder, REMINDER_TAP_MESSAGE_TYPES, responseFromTapMessage
 // Lembretes do dia
 // ---------------------------------------------------------------------------
 
-export type ReminderGroup = "confirm" | "reschedule" | "cancel" | "no_answer" | "not_delivered";
+export type ReminderGroup = "confirm" | "reschedule" | "cancel" | "not_completed" | "no_answer" | "not_delivered";
 
 export const REMINDER_GROUP_LABELS: Record<ReminderGroup, string> = {
   confirm: "Confirmaram",
   reschedule: "Pediram para remarcar",
   cancel: "Pediram para cancelar",
+  not_completed: "Não concluíram",
   no_answer: "Não responderam",
   not_delivered: "Não entregue",
 };
 
+/** "Não concluíram": o botão que o contato tocou. */
+export const NOT_COMPLETED_TAP_LABELS: Record<"reschedule" | "cancel", string> = {
+  reschedule: "Tocou em Remarcar e não remarcou",
+  cancel: "Tocou em Cancelar e não cancelou",
+};
+
 const NOT_DELIVERED = new Set(["failed", "skipped_no_template"]);
+
+/** Toque no lembrete: a resposta (como o banco guarda) e quando, se a mensagem recebida existe. */
+export type ReminderTap = { response: string; at: Date | null };
+
+/** O que o atendimento virou depois do toque (remarcado ou cancelado de fato). */
+export type ReminderOutcomeState = { status: string; canceledAt: Date | null; rescheduledAt: Date | null };
 
 /**
  * Em que grupo fica o atendimento: o botão tocado (o banco guarda "confirmed"
- * para o "confirm"); sem toque, se a última tentativa não chegou.
+ * para o "confirm"); sem toque, se a última tentativa não chegou. Pedido não
+ * concluído (cliente, 03/nov/2026): Remarcar e Cancelar só contam quando a
+ * remarcação ou o cancelamento aconteceu depois do toque; antes disso, "Não
+ * concluíram" (`tapped` diz o botão).
  */
-export function reminderGroup(response: string | null, lastStatus: string | null): ReminderGroup {
-  if (confirmedByReminder(response)) return "confirm";
-  if (response === "reschedule" || response === "cancel") return response;
-  return NOT_DELIVERED.has(lastStatus ?? "") ? "not_delivered" : "no_answer";
+export function reminderGroup(
+  tap: ReminderTap | null,
+  lastStatus: string | null,
+  state?: ReminderOutcomeState,
+): { group: ReminderGroup; tapped?: "reschedule" | "cancel" } {
+  const response = tap?.response ?? null;
+  if (confirmedByReminder(response)) return { group: "confirm" };
+  if (response === "reschedule" || response === "cancel") {
+    const after = (when: Date | null) => when !== null && (tap!.at === null || when.getTime() >= tap!.at.getTime());
+    const done =
+      response === "reschedule" ? after(state?.rescheduledAt ?? null) : state?.status === "canceled" && after(state.canceledAt);
+    return done ? { group: response } : { group: "not_completed", tapped: response };
+  }
+  return { group: NOT_DELIVERED.has(lastStatus ?? "") ? "not_delivered" : "no_answer" };
 }
 
-export type ReminderOfDay = { appointment: AgendaAppointment; group: ReminderGroup; sentAt: Date };
+export type ReminderOfDay = { appointment: AgendaAppointment; group: ReminderGroup; tapped?: "reschedule" | "cancel"; sentAt: Date };
 
 /** Lembretes enviados no dia (no fuso da clínica), um por atendimento (a última tentativa). */
 export async function listRemindersOfDay(db: DbClient, clinicId: string, date: string, timeZone: string): Promise<ReminderOfDay[]> {
@@ -69,8 +95,8 @@ export async function listRemindersOfDay(db: DbClient, clinicId: string, date: s
     const appointment = toAgendaAppointment(row);
     const sent = last.get(appointment.id)!;
     // O toque gravado nas mensagens vale mesmo depois de remarcar (que zera a resposta no atendimento).
-    const response = taps.get(appointment.id) ?? appointment.reminderResponse;
-    return { appointment, group: reminderGroup(response, sent.status), sentAt: sent.at };
+    const tap = taps.get(appointment.id) ?? (appointment.reminderResponse ? { response: appointment.reminderResponse, at: null } : null);
+    return { appointment, ...reminderGroup(tap, sent.status, appointment), sentAt: sent.at };
   });
 }
 
@@ -81,8 +107,8 @@ export async function listRemindersOfDay(db: DbClient, clinicId: string, date: s
  * (a data nova pede outro lembrete); a mensagem fica (cliente, 15/out/2026:
  * quem remarcou pelo lembrete aparecia em "Não responderam").
  */
-export async function listReminderTaps(db: DbClient, clinicId: string, sentAt: Map<string, { at: Date }>): Promise<Map<string, string>> {
-  const taps = new Map<string, string>();
+export async function listReminderTaps(db: DbClient, clinicId: string, sentAt: Map<string, { at: Date }>): Promise<Map<string, ReminderTap>> {
+  const taps = new Map<string, ReminderTap>();
   if (!sentAt.size) return taps;
   const since = new Date(Math.min(...[...sentAt.values()].map((s) => s.at.getTime())));
   const messages = unwrap(
@@ -100,7 +126,8 @@ export async function listReminderTaps(db: DbClient, clinicId: string, sentAt: M
   for (const m of messages) {
     const sent = sentAt.get(m.appointment_id!);
     const response = responseFromTapMessage(m.message_type);
-    if (sent && response && new Date(m.created_at) >= sent.at) taps.set(m.appointment_id!, response);
+    const at = new Date(m.created_at);
+    if (sent && response && at >= sent.at) taps.set(m.appointment_id!, { response, at });
   }
   return taps;
 }
@@ -285,7 +312,7 @@ export async function getResumoTabCounts(
   return {
     pendingAttendance: pending.count ?? 0,
     awaitingRebooking: awaiting.length,
-    reminders: ofDay ? ofDay.filter((r) => r.group === "no_answer" || r.group === "not_delivered").length : undefined,
+    reminders: ofDay ? ofDay.filter((r) => r.group === "not_completed" || r.group === "no_answer" || r.group === "not_delivered").length : undefined,
     waitlist: waiting ? waiting.length : undefined,
     sendsAlert: alert ? describeSendsAlert(alert).length > 0 : undefined,
   };

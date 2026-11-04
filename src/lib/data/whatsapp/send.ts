@@ -81,10 +81,21 @@ const failure = (error: unknown): SendOutcome => ({
 export async function createClinicSender(
   serviceDb: DbClient,
   clinicId: string,
-  { baseUrl, fetcher = fetch }: { baseUrl: string; fetcher?: Fetcher },
+  {
+    baseUrl,
+    fetcher = fetch,
+    allowOnboarding = false,
+  }: {
+    baseUrl: string;
+    fetcher?: Fetcher;
+    /** Mensagem de teste (IS2): sai também em implantação, para o número de quem testa (nunca para pacientes). */
+    allowOnboarding?: boolean;
+  },
 ): Promise<ClinicSender | null> {
   const clinic = unwrapOne(await serviceDb.from("clinics").select("name, status").eq("id", clinicId).maybeSingle(), "Clínica");
-  if (clinic.status === "onboarding" || clinic.status === "suspended") return null;
+  // Suspensa (F12.3): nada sai, nem a mensagem de teste. Em implantação, só a mensagem de teste (IS2).
+  if (clinic.status === "suspended") return null;
+  if (clinic.status === "onboarding" && !allowOnboarding) return null;
   const setup = await getSendingSetup(serviceDb, clinicId);
   if (!setup) return null;
   const settings = unwrapOne(

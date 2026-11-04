@@ -45,7 +45,7 @@ export const agendaArtigos = [
     prerequisites: ["Serviço ativo com horário de atendimento (Configurações › Serviços e Horários).", "Paciente cadastrado, ou cadastre pelo próprio passo 1."],
     steps: [
       "Paciente: busque o paciente pelo nome ou telefone. Se não existir, use o link \"Cadastrar … novo\" do próprio passo (o nome segue o vocabulário da clínica: paciente, cliente…).",
-      "Serviço: escolha o serviço do catálogo (Consulta, Retorno ou Exame, conforme a clínica).",
+      "Serviço: escolha o tipo (Consulta, Retorno ou Exame, conforme a clínica). Se o tipo tem um só serviço, ele já fica escolhido; se tem mais de um, escolha o serviço nos cartões para ver as datas.",
       "Com quem (só aparece quando há o que escolher): escolha a agenda ou \"Primeiro horário disponível\". Quando só há uma opção, a tela já a escolhe.",
       "Data e horário: escolha na faixa de 7 dias com setas e nos horários por turno. Em exame em turma, escolha a sessão com vaga.",
       "Confira o resumo e toque em Marcar. No celular, o botão fica na barra fixa de baixo.",

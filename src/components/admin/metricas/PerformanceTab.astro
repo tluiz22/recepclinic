@@ -170,7 +170,7 @@ const h3 = "font-display text-base leading-tight font-bold text-ink";
 const sub = "text-sm leading-relaxed text-ink-soft";
 const COLORS = { created: "#0b7a62", rescheduled: "#8fb8e6", canceled: "#d0620f" };
 const failed = (what: string) => `Não foi possível carregar "${what}".`;
-const remindersTotal = s.reminders.confirmed + s.reminders.reschedule + s.reminders.cancel + s.reminders.noAnswer;
+const remindersTotal = s.reminders.confirmed + s.reminders.reschedule + s.reminders.cancel + s.reminders.notCompleted + s.reminders.noAnswer;
 const segment = (n: number) => (remindersTotal ? (n / remindersTotal) * 100 : 0);
 import HelpTip from "../ui/HelpTip.astro";
 import { metricas } from "../../../lib/ajuda/metricas";
@@ -474,23 +474,25 @@ import { metricas } from "../../../lib/ajuda/metricas";
               <div
                 class="flex h-9 overflow-hidden rounded-lg text-[13px] font-bold"
                 role="img"
-                aria-label={`${remindersTotal} lembretes com o prazo encerrado: confirmaram ${s.reminders.confirmed}, pediram para remarcar ${s.reminders.reschedule}, pediram para cancelar ${s.reminders.cancel}, não responderam ${s.reminders.noAnswer}`}
+                aria-label={`${remindersTotal} lembretes com o prazo encerrado: confirmaram ${s.reminders.confirmed}, pediram para remarcar ${s.reminders.reschedule}, pediram para cancelar ${s.reminders.cancel}, não concluíram ${s.reminders.notCompleted}, não responderam ${s.reminders.noAnswer}`}
               >
                 <div class="flex items-center overflow-hidden bg-brand pl-2.5 whitespace-nowrap text-white" style={`width:${segment(s.reminders.confirmed)}%`}>
                   {segment(s.reminders.confirmed) > 22 && `${s.reminders.confirmed} confirmaram`}
                 </div>
                 <div class="bg-[#8fb8e6]" style={`width:${segment(s.reminders.reschedule)}%`} />
                 <div class="bg-ns-500" style={`width:${segment(s.reminders.cancel)}%`} />
+                <div class="bg-pend-500" style={`width:${segment(s.reminders.notCompleted)}%`} />
                 <div class="flex items-center overflow-hidden bg-canvas-deep bg-[repeating-linear-gradient(45deg,transparent_0_6px,rgba(18,48,42,0.08)_6px_12px)] pl-2 whitespace-nowrap text-ink" style={`width:${segment(s.reminders.noAnswer)}%`}>
                   {segment(s.reminders.noAnswer) > 14 && String(s.reminders.noAnswer)}
                 </div>
               </div>
             )}
-            <dl class="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <dl class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
               {[
                 ["Confirmaram", s.reminders.confirmed, "bg-brand"],
                 ["Pediram para remarcar", s.reminders.reschedule, "bg-[#8fb8e6]"],
                 ["Pediram para cancelar", s.reminders.cancel, "bg-ns-500"],
+                ["Não concluíram", s.reminders.notCompleted, "bg-pend-500"],
                 ["Não responderam", s.reminders.noAnswer, "bg-canvas-deep border border-line-strong"],
               ].map(([labelText, value, swatch]) => (
                 <div class="flex flex-col gap-0.5">

@@ -2,7 +2,7 @@ import { createHmac, timingSafeEqual } from "node:crypto";
 import type { DbClient } from "../clients";
 import { toE164, type WaMessage } from "./meta";
 import { hasFeature } from "../features";
-import { handleAgentEcho } from "./conversations";
+import { handleAgentEcho, isLikelyAutomaticEcho, markAutomaticEcho } from "./conversations";
 import { recordAgentEcho, recordInboundMessage, updateDeliveryStatus, type RecordResult } from "./messages";
 import { sendPreparationAfterDelivery } from "./preparation";
 import { sendGuidanceAfterDelivery } from "./guidance";
@@ -252,8 +252,15 @@ export async function processWebhook(payload: unknown, deps: WebhookDeps, now: D
         const result = await recordAgentEcho(db, clinicId, echo, now);
         count(result, "echoes");
         if (isSupportPhone(toE164(echo.to), support.phone)) return;
+        if (!result.recorded || !(await hasFeature(db, clinicId, "whatsapp_bot"))) return;
+        // Mensagem automática do app (IS4, cliente, 03/nov/2026): segundos depois do paciente ou do bot, não pausa; avisa.
+        if (await isLikelyAutomaticEcho(db, clinicId, echo, result.id)) {
+          await markAutomaticEcho(db, clinicId, result.id);
+          logWarn("whatsapp: mensagem automática do app (não pausou o bot)", { clinica: clinicId });
+          return;
+        }
         // A recepção respondeu pelo app (coexistência): pausa o bot naquela conversa; "#bot" devolve (F6.4).
-        if (result.recorded && (await hasFeature(db, clinicId, "whatsapp_bot"))) await handleAgentEcho(db, clinicId, echo, result.contactId, now);
+        await handleAgentEcho(db, clinicId, echo, result.contactId, now);
       });
     }
   }

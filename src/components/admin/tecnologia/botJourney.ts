@@ -5,7 +5,7 @@
 // (CLAUDE.md): mudou a jornada do bot, atualizar este arquivo no mesmo commit,
 // junto com JOURNEY_UPDATED.
 
-export const JOURNEY_UPDATED = "02/11/2026";
+export const JOURNEY_UPDATED = "03/11/2026";
 
 export type NodeKind = "patient" | "bot" | "page" | "auto" | "reception" | "decision";
 
@@ -121,7 +121,7 @@ export const JOURNEY: JourneySection[] = [
               [
                 "Não",
                 [
-                  bot("Manda o link para escolher dia e horário", "O link vale 30 minutos."),
+                  bot("Manda o link para escolher dia e horário", "O link vale 30 minutos. Venceu sem marcar: item 10."),
                   page("Escolhe o dia e o horário livres e confirma", "Antes de gravar, confirma num quadro com o atendimento, o dia e o horário, o profissional e o local."),
                   auto("Confirmação da marcação, com dia, hora e local"),
                   auto("Preparo do exame (texto ou arquivo) ou orientações da consulta", "Quando o serviço tem."),
@@ -165,7 +165,7 @@ export const JOURNEY: JourneySection[] = [
           "Remarcar",
           [
             bot("Domiciliar: confirma o endereço. Retorno: confere o prazo"),
-            bot("Manda o link para o novo dia e horário"),
+            bot("Manda o link para o novo dia e horário", "Venceu sem remarcar: item 10."),
             page("Escolhe o novo horário e confirma", "O quadro de confirmação mostra o horário atual e o novo."),
             auto("Confirmação da remarcação"),
           ],
@@ -176,6 +176,7 @@ export const JOURNEY: JourneySection[] = [
             bot("\"Confirma o cancelamento?\" com os botões Sim e Não", "Toda confirmação de Sim ou Não do bot (dados, paciente, endereço, cancelamento) vem com esses botões; digitar sim ou não também vale."),
             branch(
               ["Sim", [bot("\"Prontinho, cancelamos…\""), auto("A vaga é oferecida à lista de espera", "Com a Lista de espera ligada.")]],
+              ["Sem resposta por 15 minutos", [bot("A mensagem do pedido não concluído (item 10)")]],
               ["Não", [bot("Mantém o atendimento e pergunta se quer confirmar a presença")]],
             ),
           ],
@@ -283,8 +284,15 @@ export const JOURNEY: JourneySection[] = [
         "\"Para agilizar, poderia me contar brevemente qual assunto deseja tratar com a secretária?\"",
         "Uma vez por transferência, e só quando o motivo ainda não foi contado. A primeira resposta em texto (antes de a recepção responder) aparece na tela Atendimento; sem resposta: \"Assunto ainda não informado\".",
       ),
-      reception("Responde pelo app WhatsApp Business, no celular ou no computador", "Responder pelo app também pausa o bot. A tela Atendimento mostra quem espera."),
+      reception(
+        "Responde pelo app WhatsApp Business, no celular ou no computador",
+        "Responder pelo app também pausa o bot. A tela Atendimento mostra quem espera. Exceção: mensagem que sai do app até 5 segundos depois da do paciente ou do bot (saudação ou ausência automática) não pausa; o Início e Configurações › WhatsApp avisam para desligar.",
+      ),
       reception("Manda #bot ou toca em \"Devolver ao bot\" no painel: o bot volta a atender essa conversa"),
+      bot(
+        "Sem #bot nem \"Devolver ao bot\": 12 h depois da última resposta da recepção, sem nova mensagem do paciente, a conversa volta ao bot e ele envia \"Como não tivemos resposta nas últimas horas, encerramos este atendimento…\"",
+        "Só quando a recepção já respondeu (paciente esperando resposta continua com a clínica). A mensagem sai sem template só até 24 h depois da última mensagem do paciente; depois disso, a conversa volta sem mensagem. A próxima mensagem do paciente começa do início.",
+      ),
     ],
   },
   {
@@ -313,14 +321,34 @@ export const JOURNEY: JourneySection[] = [
       ),
     ],
   },
+  {
+    id: "nao-concluido",
+    title: "10. Pedido não concluído",
+    intro: "O link de marcar ou remarcar venceu sem uso (30 minutos; 2 dias no cancelamento pela clínica), ou o cancelamento ficou sem resposta por 15 minutos.",
+    flow: [
+      check(
+        "O pedido ainda está em aberto?",
+        "Não manda nada se: a conversa está com a recepção ou em outro caminho, já há um link mais novo, o atendimento foi remarcado, cancelado ou marcado de outro jeito, ou a última mensagem do paciente tem mais de 24 horas. Sai uma vez por pedido.",
+      ),
+      bot("\"Não concluímos a marcação | remarcação | o cancelamento de [paciente]. Como prefere seguir?\" com Novo link (no cancelamento, Cancelar agora) · Falar com a recepção · Desistir"),
+      branch(
+        ["Novo link", [bot("Um novo link igual ao anterior, que vale 30 minutos")]],
+        ["Cancelar agora", [bot("\"Confirma o cancelamento?\" de novo, com Sim e Não")]],
+        ["Falar com a recepção", [reception("A conversa vai para Atendimento humano, com o assunto \"Não concluiu a … de [paciente] pelo WhatsApp.\"")]],
+        ["Desistir", [bot("\"Tudo bem, a consulta de [paciente] continua marcada para [data].\"", "Na marcação: \"Tudo bem. Quando quiser, é só mandar uma mensagem.\"")]],
+        ["Sem resposta", [bot("Depois de 15 minutos, o aviso de encerramento de sempre")]],
+      ),
+    ],
+  },
 ];
 
 /** Regras gerais, fora do desenho. */
 export const JOURNEY_RULES = [
   "A qualquer momento: \"0\" ou \"Voltar ao menu\" volta ao menu principal.",
   "\"voltar\" ou \"menu anterior\" digitado: no meio de um caminho, o submenu de onde veio (Consultas ou Exames); no preparo de exame, Informações gerais; nos menus, o menu principal.",
-  "Conversa parada por 15 minutos: o bot encerra com aviso; a próxima mensagem começa de novo.",
+  "Conversa parada por 15 minutos: o bot encerra com aviso; a próxima mensagem começa de novo. Exceção: o cancelamento sem resposta ao \"Confirma o cancelamento?\" recebe a mensagem do pedido não concluído (item 10).",
   "Os botões do lembrete e da oferta de vaga funcionam em qualquer ponto da conversa.",
+  "Mensagem automática do app WhatsApp Business (saudação, ausência), até 5 segundos depois da do paciente ou do bot: não pausa o bot; aviso para desligar no app.",
   "Clínica em implantação: o bot não responde e nenhuma mensagem automática sai.",
   "Clínica suspensa: o bot não responde, nenhuma mensagem automática sai e os links (agendar, preparo, orientações) mostram \"indisponível no momento\"; a mensagem do paciente fica no histórico.",
   "Número sem WhatsApp Business (só no sistema): não há \"Falar com a recepção\".",

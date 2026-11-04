@@ -380,7 +380,7 @@ async function confirmFromEntry(b: Bot, appointment: ManagedAppointment): Promis
 // Cancelar
 // ---------------------------------------------------------------------------
 
-async function askCancel(b: Bot, ctx: ManageContext, appointment: ManagedAppointment): Promise<void> {
+export async function askCancel(b: Bot, ctx: ManageContext, appointment: ManagedAppointment): Promise<void> {
   await sendButtons(b, "bot_cancel_confirm", t.confirmCancel(words(appointment).phrase, appointment.patientName, when(b, appointment)), t.YES_NO_BUTTONS);
   await go(b, "CANCEL_CONFIRM", { ...ctx, action: "cancel", group: groupOf(appointment), pendingId: appointment.id, candidates: undefined });
 }

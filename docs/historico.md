@@ -875,3 +875,51 @@ qualquer perfil e data sem atendimento só com "Tentar outra data" e "Voltar ao 
   sobre consultas (e exames)", que não cabem nos 24 caracteres do título da lista). Atualizados o fluxograma (Tecnologia ›
   Jornada do bot), a Central de Ajuda, a prévia de Configurações › Mensagens, os textos de Configurações › Clínica e o
   Roteiro de vendas. As capturas da ajuda não mostram o item: nada a recapturar.
+
+## Ajustes da produção, 2ª leva (03/nov/2026)
+
+Pedidos do cliente após o uso da secretária na produção, em etapas A a D (ordem aprovada pelo cliente): A (Marcar com
+um só serviço), B (busca por nome parecido), C (cadastro com nomes parecidos e conferência), D (volta ao bot em 24 h;
+desfaz a C10).
+
+- **C17 (etapa A) Marcar: tipo com um só serviço** (03/nov): escolher o tipo (Consulta, Retorno, Exame) que tem um só
+  serviço já escolhe o serviço e mostra as datas, sem cartões (só o nome e a duração, com o sinal de escolhido); com
+  mais de um, aviso em destaque "Escolha um dos N … abaixo para ver as datas". `onlyServiceOf` em
+  `src/lib/servicePicker.ts` (teste), `ServicePicker.astro` e `marcar.astro` (também com `?tipo=` no endereço). Horários
+  (Configurações) fica como estava. Artigo "Marcar um atendimento" atualizado; a captura `marcar` mostra só o passo 1:
+  nada a recapturar. Sem migração.
+- **C18 (etapa B) Busca por nome parecido** (03/nov): migração `20261206120000_busca_por_nome_parecido.sql`
+  (extensão `fuzzystrmatch`; `app.search_name_words`, `app.search_typo_distance`, `app.search_word_score`,
+  `app.search_name_score`; `public.search_patient_ids` e `public.search_contact_ids`, com as permissões de quem chama).
+  Regra: sem acento, maiúsculas e sinais; sem de, da, do, das, dos, e, d, jr, junior, filho(a), neto(a), sobrinho(a);
+  cada palavra digitada combina com alguma palavra do nome, em qualquer ordem: igual (30), começo (20) ou com letra
+  errada (9 ou 8; 1 erro com 4 e 5 letras, 2 a partir de 6; duas vizinhas trocadas = 1 erro); sem isso, o trecho do
+  nome, como antes (1). Os mais parecidos primeiro; empate em ordem de nome. Vale em `searchPatients`,
+  `searchContacts`, `listPatientsPage` e `listContactsPage` (Pacientes, Responsáveis, Marcar, Agenda › Buscar,
+  Financeiro e Métricas); telefone e nascimento como estavam. Listas com páginas: até 500 parecidos (Financeiro "sem
+  CPF": 150, em ordem de nome). Teste de banco em `acesso-pacientes.test.ts`; artigo "Buscar pacientes" atualizado,
+  sem captura a refazer.
+- **C19 (etapa C) Cadastro com nomes parecidos e conferência** (03/nov): **decisões do cliente (03/nov):** responsável
+  com nome parecido e outro WhatsApp: a tela mostra os dois números e pergunta; "Sim" atualiza o WhatsApp do
+  cadastrado (vale para todos os pacientes dele) e cadastra junto dele; "Não" cadastra um novo responsável. Criança
+  com nome parecido (ou mesmo nascimento) no **mesmo** responsável: "Sim" abre a ficha que já existe (vindo do
+  Marcar, volta ao Marcar com ela escolhida); "Não" cadastra. Adulto (próprio contato) com nome parecido de quem já é
+  o próprio contato: "Sim" abre a ficha. Parecido nas duas direções, só pelas palavras (`app.names_look_alike`,
+  `public.similar_patient_ids` e `public.similar_contact_ids`, na mesma migração da C18). Só no cadastro pela
+  equipe; o bot segue como estava. `registerPatient`: `similarContact` na entrada; `possible_duplicate` com
+  `existing` e o resultado novo `similar_contact`. **Conferência antes de gravar:** Cadastrar (Pacientes › Novo) e
+  Salvar dos Dados do paciente e do responsável abrem o diálogo "Confira os dados" com os campos (nascimento com a
+  idade; na edição, "antes → depois"): `src/lib/confirmData.ts` (teste) e `src/scripts/confirmFormData.ts`, no
+  diálogo de sempre. Testes de banco em `acesso-pacientes.test.ts`; artigo "Cadastrar um paciente" atualizado; as
+  capturas não mostram o que mudou (o diálogo só abre no clique).
+- **C20 (etapa D) Volta ao bot 12 h depois da resposta da clínica** (03/nov; desfaz a C10): **decisão do cliente
+  (03/nov):** conversa "Em atendimento" (a clínica respondeu e o paciente não escreveu depois) volta ao bot 12 h depois
+  da última resposta da clínica, do começo; "Aguardando a clínica" (paciente esperando resposta) não volta sozinha
+  (recusados: 12 h ou 24 h sem mensagem de ninguém). Ao voltar, o paciente recebe "Como não tivemos resposta nas
+  últimas horas, encerramos este atendimento…" (`HANDOFF_CLOSED`, texto fixo, tipo `bot_handoff_closed`) só se
+  escreveu nas últimas 24 h (texto livre na janela da Meta); fora dela, volta calada (sem template). Explicado ao
+  cliente: não há número padrão de mercado; bot sozinho costuma encerrar em 10 a 30 min, com atendente em algumas
+  horas até 24 h (o teto da Meta). `src/lib/data/whatsapp/handoffReturn.ts` (teste), chamada pela rotina
+  `atendimento-humano` (a cada 5 min); `AttentionItem.lastPatientAt`. Textos: Atendimento, Meu dia, lembrete no
+  celular, "Como funciona?" do Atendimento, artigo da Central e fluxograma da jornada (Tecnologia › Jornada do bot).
+  Teste de banco em `atendimento-humano.test.ts`. Sem migração.

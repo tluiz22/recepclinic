@@ -16,6 +16,8 @@ export interface WaMessage {
   };
   /** Mensagem respondida: num toque de lista ou botão, a mensagem que tinha as opções. */
   context?: { id?: string };
+  /** Hora do evento na Meta, em segundos (IS4: a hora do eco do app). */
+  timestamp?: string;
 }
 
 /**

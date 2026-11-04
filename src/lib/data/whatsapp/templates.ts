@@ -132,6 +132,14 @@ export const DEFAULT_TEMPLATES: DefaultTemplate[] = [
     examples: ["Maria", "da Clínica Sorriso", "123", "R$ 300,00", "João Souza", "05/10/2026"],
     documentHeader: true,
   },
+  {
+    // Mensagem de teste (IS2; texto aprovado pelo cliente em 03/nov/2026): confirma que o WhatsApp da clínica entrega
+    // mensagens automáticas (cartão na Meta e template aprovado) antes de ativar a clínica. Em toda clínica.
+    key: "connection_test",
+    name: "rc_teste_envio_v1",
+    body: `${GREETING}\nOs avisos de agendamento (lembretes, confirmações e remarcações) da clínica pelo WhatsApp estão ativos neste número.\n\nEsta é uma mensagem automática do RecepClinic. Não é preciso responder.`,
+    examples: ["Ana", "da Clínica Sorriso"],
+  },
 ];
 
 /** Texto da v2 do preparo (com o link), para quem ainda só tem ela aprovada (C7.4). */

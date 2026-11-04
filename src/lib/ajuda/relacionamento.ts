@@ -19,20 +19,20 @@ export const relacionamento = {
         "Maria já tem 5 consultas marcadas para os filhos e pede a 6ª pelo WhatsApp. O bot não marca, passa a conversa para a recepção, e Maria aparece aqui com \"Limite de atendimentos futuros\". A recepção confere, marca pelo painel se fizer sentido e toca em \"Revisado\".",
     },
     // listHumanAttention e classifyAttention em src/lib/data/whatsapp/attention.ts; pauseForHuman, checkHandoff e
-    // handleAgentEcho em whatsapp/conversations.ts (cliente, 30/out/2026: a conversa não volta sozinha ao bot).
+    // handleAgentEcho em whatsapp/conversations.ts; volta em 12 h em whatsapp/handoffReturn.ts (C20, cliente, 03/nov/2026).
     atendimento: {
       serve:
         "Mostra as conversas do WhatsApp pendentes de atendimento humano: o bot parou de responder e alguém da clínica precisa atender. O bot é o atendimento automático do RecepClinic no WhatsApp da clínica (responde, marca, remarca e cancela sem ninguém da equipe).",
       como: [
         "A conversa entra aqui quando o paciente pede para falar com a clínica, quando a recepção responde pelo app do WhatsApp Business ou quando o bot não entende, não acha horário livre ou bate um limite do contato.",
-        "Enquanto a conversa está aqui, o bot fica calado só com esse paciente. Ela não volta sozinha ao bot.",
+        "Enquanto a conversa está aqui, o bot fica calado com esse paciente. Em atendimento, se o paciente não escrever mais, ela volta sozinha ao bot 12 horas depois da última resposta da clínica, com a mensagem de encerramento. Aguardando a clínica, não volta.",
         "Ao transferir, o bot pergunta o assunto uma vez e mostra aqui a primeira resposta do paciente (\"Assunto ainda não informado\" até ele responder). O assunto é apagado quando a conversa volta ao bot.",
         "\"Aguardando a clínica\": ninguém respondeu ainda, ou o paciente escreveu de novo. \"Em atendimento pela clínica\": a recepção já respondeu.",
         "Ao terminar o atendimento, clique em \"Devolver ao bot\": o bot volta a responder esse paciente na próxima mensagem, do começo. Nada é enviado ao paciente na hora. Escrever #bot na conversa, pelo app, faz o mesmo.",
       ],
       exemplo:
         "Maria escreve \"quero falar com a recepção\" às 9h e a conversa aparece em Aguardando. A recepção responde pelo app e ela passa para Em atendimento. Resolvido, a recepção clica em \"Devolver ao bot\" e, na próxima mensagem da Maria, o bot responde.",
-      erro: "Esqueceu de devolver? O bot continua calado com esse paciente e a conversa segue aqui (o Meu dia também avisa). Clique em \"Devolver ao bot\" assim que terminar.",
+      erro: "Esqueceu de devolver? Até 12 horas depois da sua última resposta o bot continua calado com esse paciente e a conversa segue aqui (o Meu dia também avisa). Clique em \"Devolver ao bot\" assim que terminar.",
     },
     // listPendingReminders e pendingReminderKind em src/lib/data/relationship.ts; reminderAction em whatsapp/reminders.ts (UNANSWERED_BUTTON_MS).
     lembretes: {

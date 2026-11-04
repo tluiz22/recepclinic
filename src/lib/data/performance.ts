@@ -49,7 +49,7 @@ export type AttendanceRow = {
   upcoming: number;
 };
 
-export type ReminderOutcome = "confirmed" | "reschedule" | "cancel" | "not_delivered" | "waiting" | "no_answer" | "canceled_no_answer" | "none";
+export type ReminderOutcome = "confirmed" | "reschedule" | "cancel" | "not_completed" | "not_delivered" | "waiting" | "no_answer" | "canceled_no_answer" | "none";
 
 export type ReminderRow = { outcome: ReminderOutcome; status: Status; total: number };
 
@@ -201,6 +201,8 @@ export type PerformanceSummary = {
     confirmed: number;
     reschedule: number;
     cancel: number;
+    /** Tocou em Remarcar ou Cancelar e não concluiu (pedido não concluído, 03/nov/2026). */
+    notCompleted: number;
     noAnswer: number;
     notDelivered: number;
     waiting: number;
@@ -236,8 +238,9 @@ export function summarizePerformance(data: PerformanceData): PerformanceSummary 
   const confirmed = rem("confirmed");
   const reschedule = rem("reschedule");
   const cancel = rem("cancel");
+  const notCompleted = rem("not_completed");
   const noAnswer = rem("no_answer");
-  const remindersBase = confirmed + reschedule + cancel + noAnswer;
+  const remindersBase = confirmed + reschedule + cancel + notCompleted + noAnswer;
   const byReminder = (outcomes: ReminderOutcome[]) => {
     const rows = data.reminders.filter((r) => outcomes.includes(r.outcome));
     const ns = sum(rows.filter((r) => r.status === "no_show"), (r) => r.total);
@@ -270,6 +273,7 @@ export function summarizePerformance(data: PerformanceData): PerformanceSummary 
       confirmed,
       reschedule,
       cancel,
+      notCompleted,
       noAnswer,
       notDelivered: rem("not_delivered"),
       waiting: rem("waiting"),

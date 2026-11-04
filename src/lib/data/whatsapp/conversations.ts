@@ -295,7 +295,7 @@ export function checkHandoff(conversation: Conversation): "active" | "paused" {
  * De onde veio o pedido de recepção (cliente, 30/out/2026): opção do menu, ações do agendamento na entrada, data
  * não encontrada, botão de saída de uma resposta não entendida (C12) ou pedido digitado ("atendente").
  */
-export type HandoffOrigin = "menu" | "entry_actions" | "identity_not_found" | "way_out" | "typed" | "kb_answer";
+export type HandoffOrigin = "menu" | "entry_actions" | "identity_not_found" | "way_out" | "typed" | "kb_answer" | "not_completed";
 
 export async function pauseForHuman(
   db: DbClient,
@@ -446,6 +446,65 @@ export async function recordHandoffSubject(db: DbClient, clinicId: string, convo
     "Conversa do WhatsApp",
   );
   return row !== null;
+}
+
+// ---------------------------------------------------------------------------
+// Mensagem automática do app (IS4; cliente, 03/nov/2026)
+// ---------------------------------------------------------------------------
+
+/** Tipo da mensagem do app que saiu sozinha (saudação, ausência): não conta como resposta da recepção. */
+export const APP_AUTO_REPLY_TYPE = "app_auto_reply";
+/** Eco do app até 5 s depois da mensagem do paciente ou do bot: mensagem automática, não gente. */
+export const AUTO_REPLY_WINDOW_MS = 5_000;
+
+/**
+ * O eco do app parece mensagem automática (incidente da clínica piloto, 03/nov/2026: a mensagem de ausência saía
+ * 2 a 3 s depois do "oi" e pausava o bot)? Só com a hora da Meta no eco (`timestamp`, sempre presente nos eventos
+ * reais): até 5 s depois (ou 2 s antes, pelo relógio) de uma mensagem do paciente ou do bot naquela conversa.
+ */
+export async function isLikelyAutomaticEcho(db: DbClient, clinicId: string, echo: WaMessage, echoRecordId: string): Promise<boolean> {
+  const phone = toE164(echo.to);
+  const seconds = Number(echo.timestamp);
+  if (!phone || !echo.timestamp || !Number.isFinite(seconds) || isReturnToBotKeyword(messageBody(echo))) return false;
+  const at = seconds * 1000;
+  const rows = unwrap(
+    await db
+      .from("whatsapp_messages")
+      .select("id")
+      .eq("clinic_id", clinicId)
+      .eq("contact_phone", phone)
+      .neq("id", echoRecordId)
+      .or("direction.eq.inbound,message_type.like.bot_*")
+      .gte("created_at", new Date(at - AUTO_REPLY_WINDOW_MS).toISOString())
+      .lte("created_at", new Date(at + 2_000).toISOString())
+      .limit(1),
+    "Mensagens do WhatsApp",
+  );
+  return rows.length > 0;
+}
+
+/** O eco vira "mensagem automática do app": não pausa o bot e não conta como resposta da recepção. */
+export async function markAutomaticEcho(db: DbClient, clinicId: string, echoRecordId: string): Promise<void> {
+  unwrap(
+    await db.from("whatsapp_messages").update({ message_type: APP_AUTO_REPLY_TYPE }).eq("clinic_id", clinicId).eq("id", echoRecordId),
+    "Mensagem do WhatsApp",
+  );
+}
+
+/** A última mensagem automática do app nos últimos `days` dias (aviso no Início e em Configurações › WhatsApp). */
+export async function latestAutomaticEcho(db: DbClient, clinicId: string, now: Date = new Date(), days = 7): Promise<Date | null> {
+  const rows = unwrap(
+    await db
+      .from("whatsapp_messages")
+      .select("created_at")
+      .eq("clinic_id", clinicId)
+      .eq("message_type", APP_AUTO_REPLY_TYPE)
+      .gte("created_at", new Date(now.getTime() - days * 24 * 60 * 60_000).toISOString())
+      .order("created_at", { ascending: false })
+      .limit(1),
+    "Mensagens do WhatsApp",
+  );
+  return rows.length ? new Date(rows[0].created_at) : null;
 }
 
 /**

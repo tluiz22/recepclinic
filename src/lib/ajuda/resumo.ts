@@ -6,9 +6,10 @@ export const resumo = {
   dicas: {
     // reminderGroup em src/lib/data/daily.ts (o botão tocado; sem toque, a última tentativa: failed ou skipped_no_template).
     lembretesGrupos: [
-      { termo: "Confirmaram, Pediram para remarcar e Pediram para cancelar", texto: "o botão que o paciente tocou no lembrete." },
-      { termo: "Não responderam", texto: "o lembrete saiu, mas ninguém tocou nos botões." },
-      { termo: "Não entregue", texto: "o WhatsApp recusou o envio, ou a mensagem do lembrete ainda não foi aprovada pela Meta." },
+      { termo: "Confirmaram, Pediram para remarcar e cancelar", texto: "botão tocado e ação feita." },
+      { termo: "Não concluíram", texto: "tocou em Remarcar ou Cancelar e não terminou." },
+      { termo: "Não responderam", texto: "ninguém tocou nos botões." },
+      { termo: "Não entregue", texto: "o WhatsApp recusou o envio ou a mensagem não foi aprovada pela Meta." },
     ],
     // listAppointmentsWithFailedSends e retryingSends em src/lib/data/sends.ts; retryRules.ts (MAX_ATTEMPTS, 10 e 30 minutos).
     enviosFalha:

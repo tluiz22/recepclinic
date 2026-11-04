@@ -30,7 +30,8 @@ export const atendimentoArtigos = [
       "Quando terminar, toque em \"Devolver ao bot\" (ou escreva #bot na conversa pelo app). Nada é enviado ao paciente na hora; na próxima mensagem dele o bot volta a responder, do começo.",
     ],
     notes: [
-      "A conversa não volta sozinha ao bot: se esquecer de devolver, o bot continua calado com esse paciente.",
+      "Em atendimento pela clínica e sem nova mensagem do paciente, a conversa volta sozinha ao bot 12 horas depois da última resposta da clínica. O paciente recebe a mensagem de encerramento (\"Como não tivemos resposta nas últimas horas…\"), se escreveu nas últimas 24 horas; senão, volta sem mensagem (regra da Meta).",
+      "Aguardando a clínica (o paciente espera resposta), a conversa não volta sozinha ao bot.",
       "O número do suporte do RecepClinic nunca passa pelo bot nem entra nesta lista.",
       "Clínica em implantação não recebe nem registra conversas; a lista começa ao ativar.",
     ],

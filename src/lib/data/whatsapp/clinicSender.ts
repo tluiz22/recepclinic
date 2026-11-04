@@ -12,6 +12,6 @@ export function publicBaseUrl(requestUrl: URL | string): string {
   return platformEnv().siteUrl ?? new URL(requestUrl).origin;
 }
 
-export function clinicSenderFor(clinicId: string, requestUrl: URL | string): Promise<ClinicSender | null> {
-  return createClinicSender(createClinicServiceClient(clinicId), clinicId, { baseUrl: publicBaseUrl(requestUrl) });
+export function clinicSenderFor(clinicId: string, requestUrl: URL | string, { allowOnboarding = false }: { allowOnboarding?: boolean } = {}): Promise<ClinicSender | null> {
+  return createClinicSender(createClinicServiceClient(clinicId), clinicId, { baseUrl: publicBaseUrl(requestUrl), allowOnboarding });
 }

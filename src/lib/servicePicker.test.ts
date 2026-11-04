@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { openType, serviceTypes } from "./servicePicker";
+import { onlyServiceOf, openType, serviceTypes } from "./servicePicker";
 
 const services = [
   { category: "exam" as const },
@@ -22,5 +22,17 @@ describe("escolha do serviço no Marcar (C6)", () => {
     expect(openType(null, services, { category: "exam" })).toBe("exam");
     expect(openType("consultation", services, { category: "exam" })).toBe("consultation");
     expect(openType("qualquer", services, { category: "consultation" })).toBe("consultation");
+  });
+
+  it("tipo com um só serviço: o tipo já escolhe o serviço (cliente, 03/nov)", () => {
+    const list = [
+      { id: "e1", category: "exam" as const },
+      { id: "c1", category: "consultation" as const },
+      { id: "c2", category: "consultation" as const },
+    ];
+    expect(onlyServiceOf(list, "exam")?.id).toBe("e1");
+    expect(onlyServiceOf(list, "consultation")).toBeNull();
+    expect(onlyServiceOf(list, "return_visit")).toBeNull();
+    expect(onlyServiceOf(list, null)).toBeNull();
   });
 });

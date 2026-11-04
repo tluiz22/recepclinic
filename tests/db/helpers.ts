@@ -140,3 +140,25 @@ export async function signInvoicingContract(clinicId: string): Promise<void> {
   });
   if (error) throw error;
 }
+
+/**
+ * Checklist de implantação (IS3): deixa a clínica com o que o banco confere na ativação pelo Suporte (os cinco itens
+ * marcados, o convite do Administrador aceito, o WhatsApp conectado e uma mensagem de teste entregue).
+ */
+export async function readyToActivate(clinicId: string): Promise<void> {
+  const db = adminClient();
+  const items = ["contract", "facebook_login", "whatsapp_business", "automations_off", "card_default"];
+  await db.from("clinic_onboarding_checks").upsert(items.map((item_key) => ({ clinic_id: clinicId, item_key })), { onConflict: "clinic_id,item_key" });
+  await db.from("clinic_invitations").insert({ clinic_id: clinicId, email: `adm-${clinicId.slice(0, 8)}@exemplo.test`, roles: ["admin"], accepted_at: new Date().toISOString() });
+  const { data: connection } = await db.from("whatsapp_connections").select("clinic_id").eq("clinic_id", clinicId).maybeSingle();
+  if (!connection) {
+    await db.from("whatsapp_connections").insert({ clinic_id: clinicId, phone_number_id: `pronta-${clinicId.slice(0, 8)}`, waba_id: "pronta-waba", status: "connected" });
+  }
+  await db.from("whatsapp_messages").insert({
+    clinic_id: clinicId,
+    contact_phone: "+5561999990000",
+    direction: "outbound",
+    message_type: "connection_test",
+    status: "delivered",
+  });
+}
