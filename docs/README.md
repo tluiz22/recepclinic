@@ -10,11 +10,11 @@
 > tela mudar). Falta informar o WhatsApp do suporte (Sistema › Suporte), se ainda não foi. Detalhes em
 > [`ajuda-contextual.md`](ajuda-contextual.md), fim. Cliente vai pedir novos ajustes.
 >
-> **Em produção (cliente, 03/nov):** `1ceb6a4`: ficha sem a aba "Todos" e ajuda do "Faltou X de Y" no painel, sobre o
-> `6b0df0b` ("Informações gerais" e Vendas › Demonstração). Detalhe no [`producao.md`](producao.md) (Publicações).
+> **Em produção (cliente, 03/nov):** a `main` inteira até a 2ª leva de ajustes: PN1–PN2, IS1–IS5 e C17–C20 (6 migrações,
+> `20261201120000` a `20261206120000`), sobre o `1ceb6a4`. Cliente valida no uso. Detalhe no [`producao.md`](producao.md) (Publicações).
 >
 > **Ambientes**
-> - **Produção** (`app.recepclinic.com.br`, branch `producao`) = `main` em `1ceb6a4` (ver acima). Fluxo em [`producao.md`](producao.md).
+> - **Produção** (`app.recepclinic.com.br`, branch `producao`) = `main` em 03/nov (ver acima). Fluxo em [`producao.md`](producao.md).
 > - **Staging** (`teste.recepclinic.com.br`, branch `main`): produção + redesign da Recepção (RX1 a RX9, sem migração) +
 >   cartão do Asaas (`ASAAS_PREVIEW=1`) + Base de Conhecimento do bot (migração aplicada) + PN1, PN2, IS2 a IS5 (migrações aplicadas) + IS1 + C17 a C20 (03/nov; migração `20261206120000` aplicada).
 >   Roteiros em [`staging.md`](staging.md).
@@ -26,7 +26,7 @@
 >   revisão no [`historico.md`](historico.md) (busca "Revisão da jornada do bot").
 >   **2ª leva (03/nov; `historico.md`, "2ª leva"):** C17 Marcar com um só serviço, C18 busca por nome parecido, C19
 >   cadastro com nomes parecidos e conferência (migração `20261206120000` nas duas) e C20 volta ao bot 12 h depois da
->   resposta da clínica (desfaz a C10). **No staging (03/nov)**; cliente valida tudo junto (roteiro em `staging.md`, parte "2ª leva").
+>   resposta da clínica (desfaz a C10). **No staging e na produção (03/nov)**; cliente valida (roteiro em `staging.md`, parte "2ª leva").
 > - **Evolução do assistente** ([`evolucao-assistente.md`](evolucao-assistente.md)): texto livre na entrada, motivo antes
 >   da recepção e taxa de resolução sem a recepção. **Na produção (02/nov, `c9418ac`)**, migração aplicada no staging
 >   e na produção. Próximo: acompanhar a taxa e as perguntas não reconhecidas da BC.
@@ -43,13 +43,13 @@
 >   migração `20261203120000`)**: mensagem de teste com o motivo da falha; ativação só com teste entregue. Cliente
 >   valida; nas clínicas existentes, "Enviar à Meta as que faltam" antes do teste. **IS3 a IS5 (03/nov)**: checklist
 >   de implantação (migração `20261204120000`), mensagem automática do app sem pausar o bot e Sistema › Problemas
->   conhecidos (migração `20261205120000`). Cliente valida tudo no staging; produção só com autorização.
+>   conhecidos (migração `20261205120000`). Na produção em 03/nov (cliente pediu, sem validar antes no staging).
 > - **Pedido não concluído** ([`pedido-nao-concluido.md`](pedido-nao-concluido.md)), após o caso de 03/nov (tocou em
 >   Remarcar no lembrete e não concluiu): mensagem padrão com Novo link / Falar com a recepção / Desistir quando o link
 >   vence ou o cancelamento fica sem resposta; lembrete só muda com a ação concluída; grupo "Não concluiu".
 >   **PN1 e PN2 no staging (03/nov; migrações `20261201120000` e `20261202120000` aplicadas)**: grupo "Não concluíram"
 >   no Relatório do dia e nas Métricas; mensagem "Não concluímos…" quando o link vence ou o cancelamento fica sem
->   resposta. Cliente valida as duas juntas no staging; produção só com autorização.
+>   resposta. Na produção em 03/nov (cliente pediu, sem validar antes no staging).
 > - **NFS-e pelo Asaas** (`planejamento-nfse-asaas.md`, seção 13): N0; formulário BaaS enviado (30/out). Aguarda
 >   Asaas e contador (PIS/COFINS, e-CNPJ A1).
 > - **Piloto (F10, [plano](plano.md)):** clínica piloto criada na produção, WhatsApp conectado, templates em análise
