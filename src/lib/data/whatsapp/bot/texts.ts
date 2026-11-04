@@ -534,3 +534,7 @@ export const notCompletedKept = (phrase: string, end: "a" | "o", patientName: st
 
 /** Desistir na marcação (ou quando não há atendimento marcado). */
 export const NOT_COMPLETED_GIVE_UP = "Tudo bem. Quando quiser, é só mandar uma mensagem.";
+
+/** Conversa com a clínica que volta ao bot 12 h depois da última resposta dela (C20; cliente, 03/nov/2026). */
+export const HANDOFF_CLOSED =
+  "Como não tivemos resposta nas últimas horas, encerramos este atendimento. Quando quiser, é só mandar uma mensagem que começamos de novo. 😊";

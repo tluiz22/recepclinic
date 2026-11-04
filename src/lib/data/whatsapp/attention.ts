@@ -10,8 +10,10 @@ import { returnToBot } from "./conversations";
 // "Aguardando a clínica": a pausa começou e a clínica ainda não respondeu
 // pelo app, ou o paciente escreveu de novo depois da última resposta.
 // "Em atendimento": a clínica respondeu e o paciente não escreveu depois.
-// A conversa sai da lista só com o "Devolver ao bot" ou com o "#bot": não volta
-// sozinha ao bot (cliente, 30/out/2026).
+// A conversa sai da lista com o "Devolver ao bot", com o "#bot" ou, "Em
+// atendimento", 12 h depois da última resposta da clínica sem o paciente
+// escrever (C20, handoffReturn.ts; cliente, 03/nov/2026; de 30/out a 03/nov
+// não voltava sozinha).
 
 export type HandoffReason = "requested" | "agent_took_over" | "bot_limit" | "no_availability" | "not_understood";
 
@@ -63,6 +65,8 @@ export type AttentionItem = {
   lastAgentAt: Date | null;
   /** Última mensagem da conversa na pausa (paciente ou recepção pelo app). */
   lastActivityAt: Date;
+  /** Última mensagem do paciente (janela de 24 h da Meta para texto livre). */
+  lastPatientAt: Date | null;
   /** Notificações (F8.5c): último aviso de "aguardando" e último lembrete do "#bot". */
   notifiedAt: Date | null;
   remindedAt: Date | null;
@@ -156,6 +160,7 @@ export async function listHumanAttention(
       startedAt,
       ...situation,
       lastActivityAt: new Date(Math.max(...activity.map((t) => t.getTime()))),
+      lastPatientAt: last ? new Date(last.created_at) : null,
       notifiedAt: row.handoff_notified_at ? new Date(row.handoff_notified_at) : null,
       remindedAt: row.handoff_reminded_at ? new Date(row.handoff_reminded_at) : null,
     };

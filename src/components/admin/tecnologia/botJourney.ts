@@ -289,6 +289,10 @@ export const JOURNEY: JourneySection[] = [
         "Responder pelo app também pausa o bot. A tela Atendimento mostra quem espera. Exceção: mensagem que sai do app até 5 segundos depois da do paciente ou do bot (saudação ou ausência automática) não pausa; o Início e Configurações › WhatsApp avisam para desligar.",
       ),
       reception("Manda #bot ou toca em \"Devolver ao bot\" no painel: o bot volta a atender essa conversa"),
+      bot(
+        "Sem #bot nem \"Devolver ao bot\": 12 h depois da última resposta da recepção, sem nova mensagem do paciente, a conversa volta ao bot e ele envia \"Como não tivemos resposta nas últimas horas, encerramos este atendimento…\"",
+        "Só quando a recepção já respondeu (paciente esperando resposta continua com a clínica). A mensagem sai sem template só até 24 h depois da última mensagem do paciente; depois disso, a conversa volta sem mensagem. A próxima mensagem do paciente começa do início.",
+      ),
     ],
   },
   {

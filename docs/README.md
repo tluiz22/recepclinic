@@ -24,8 +24,9 @@
 > **Frentes**
 > - **Ajustes da produção (C1–C16) e revisão da jornada do bot:** todos na produção. Decisões da
 >   revisão no [`historico.md`](historico.md) (busca "Revisão da jornada do bot").
->   **2ª leva (03/nov, etapas A a D; `historico.md`, "2ª leva"):** A (C17, Marcar com um só serviço) , B (C18, busca por nome parecido, migração `20261206120000`) e C (C19, cadastro com nomes parecidos e conferência, mesma migração) feitas; próxima:
->   D volta ao bot em 24 h (desfaz a C10).
+>   **2ª leva (03/nov; `historico.md`, "2ª leva"):** C17 Marcar com um só serviço, C18 busca por nome parecido, C19
+>   cadastro com nomes parecidos e conferência (migração `20261206120000` nas duas) e C20 volta ao bot 12 h depois da
+>   resposta da clínica (desfaz a C10). Cliente valida tudo junto no staging.
 > - **Evolução do assistente** ([`evolucao-assistente.md`](evolucao-assistente.md)): texto livre na entrada, motivo antes
 >   da recepção e taxa de resolução sem a recepção. **Na produção (02/nov, `c9418ac`)**, migração aplicada no staging
 >   e na produção. Próximo: acompanhar a taxa e as perguntas não reconhecidas da BC.

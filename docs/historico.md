@@ -912,3 +912,14 @@ desfaz a C10).
   idade; na edição, "antes → depois"): `src/lib/confirmData.ts` (teste) e `src/scripts/confirmFormData.ts`, no
   diálogo de sempre. Testes de banco em `acesso-pacientes.test.ts`; artigo "Cadastrar um paciente" atualizado; as
   capturas não mostram o que mudou (o diálogo só abre no clique).
+- **C20 (etapa D) Volta ao bot 12 h depois da resposta da clínica** (03/nov; desfaz a C10): **decisão do cliente
+  (03/nov):** conversa "Em atendimento" (a clínica respondeu e o paciente não escreveu depois) volta ao bot 12 h depois
+  da última resposta da clínica, do começo; "Aguardando a clínica" (paciente esperando resposta) não volta sozinha
+  (recusados: 12 h ou 24 h sem mensagem de ninguém). Ao voltar, o paciente recebe "Como não tivemos resposta nas
+  últimas horas, encerramos este atendimento…" (`HANDOFF_CLOSED`, texto fixo, tipo `bot_handoff_closed`) só se
+  escreveu nas últimas 24 h (texto livre na janela da Meta); fora dela, volta calada (sem template). Explicado ao
+  cliente: não há número padrão de mercado; bot sozinho costuma encerrar em 10 a 30 min, com atendente em algumas
+  horas até 24 h (o teto da Meta). `src/lib/data/whatsapp/handoffReturn.ts` (teste), chamada pela rotina
+  `atendimento-humano` (a cada 5 min); `AttentionItem.lastPatientAt`. Textos: Atendimento, Meu dia, lembrete no
+  celular, "Como funciona?" do Atendimento, artigo da Central e fluxograma da jornada (Tecnologia › Jornada do bot).
+  Teste de banco em `atendimento-humano.test.ts`. Sem migração.

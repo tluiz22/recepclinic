@@ -2,7 +2,10 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import type { DbClient } from "../../src/lib/data/clients";
 import { countAwaitingClinic, giveBackToBot, listHumanAttention } from "../../src/lib/data/whatsapp/attention";
 import { getConversation, handleAgentEcho, pauseForHuman } from "../../src/lib/data/whatsapp/conversations";
+import { HANDOFF_CLOSED } from "../../src/lib/data/whatsapp/bot/texts";
+import { returnDueConversations } from "../../src/lib/data/whatsapp/handoffReturn";
 import { recordAgentEcho, recordInboundMessage } from "../../src/lib/data/whatsapp/messages";
+import type { ClinicSender } from "../../src/lib/data/whatsapp/send";
 import { addMember, adminClient, clinicServiceClient, createClinic, createUser, deleteClinics, deleteUsers, type TestUser } from "./helpers";
 
 // F8.5a — Atendimento humano: motivo e início da pausa, a lista "Aguardando a
@@ -93,7 +96,47 @@ describe("atendimento humano (F8.5a)", () => {
     expect(await listHumanAttention(asDb(outsider.client), clinic)).toEqual([]);
   });
 
-  it("a conversa não sai sozinha da lista, nem dias depois (cliente, 30/out/2026)", async () => {
+  it("sem a rotina, a conversa segue na lista, mesmo dias depois", async () => {
+    const items = await listHumanAttention(asDb(professional.client), clinic);
+    expect(items.map((i) => i.phone)).toEqual([PHONE_WROTE_AGAIN, PHONE_REQUESTED, PHONE_TOOK_OVER]);
+  });
+
+  it("volta ao bot 12 h depois da resposta da clínica (C20): com a mensagem na janela de 24 h; calada fora dela", async () => {
+    const answered = "+5584977720004";
+    const silent = "+5584977720005";
+    // Pediu às 6h59 e a clínica respondeu às 7h10 de terça.
+    await inbound(answered, "Falar com a recepção", at("2031-03-11T06:59:00"));
+    await pauseForHuman(bot, clinic, answered, { contactId: null, reason: "requested" }, at("2031-03-11T07:00:00"));
+    await agent(answered, "Oi! Já vejo para você.", at("2031-03-11T07:10:00"));
+    // Segunda: o paciente escreveu às 6h e a clínica respondeu às 7h; nada depois.
+    await inbound(silent, "Oi", at("2031-03-10T06:00:00"));
+    await agent(silent, "Bom dia!", at("2031-03-10T07:00:00"));
+
+    const sent: [string, string][] = [];
+    const sender = {
+      text: async (phone: string, body: string) => {
+        sent.push([phone, body]);
+        return { sent: true, messageId: `wamid.fim${stamp}.${sent.length}` };
+      },
+    } as unknown as ClinicSender;
+
+    // 19h09: ainda não deu 12 h da resposta das 7h10.
+    expect(await returnDueConversations(bot, clinic, sender, at("2031-03-11T19:09:00"))).toBe(1);
+    expect(sent).toEqual([]);
+    expect(await getConversation(bot, clinic, silent)).toMatchObject({ humanHandoff: false, state: "WELCOME" });
+
+    expect(await returnDueConversations(bot, clinic, sender, at("2031-03-11T19:10:00"))).toBe(1);
+    expect(sent).toEqual([[answered, HANDOFF_CLOSED]]);
+    expect(await getConversation(bot, clinic, answered)).toMatchObject({ humanHandoff: false, state: "WELCOME" });
+    const { data: closing } = await adminClient()
+      .from("whatsapp_messages")
+      .select("message_type, status")
+      .eq("clinic_id", clinic)
+      .eq("contact_phone", answered)
+      .eq("message_type", "bot_handoff_closed");
+    expect(closing).toEqual([{ message_type: "bot_handoff_closed", status: "sent" }]);
+
+    // Aguardando a clínica (paciente esperando resposta) e "Em atendimento" com menos de 12 h ficam.
     const items = await listHumanAttention(asDb(professional.client), clinic);
     expect(items.map((i) => i.phone)).toEqual([PHONE_WROTE_AGAIN, PHONE_REQUESTED, PHONE_TOOK_OVER]);
   });

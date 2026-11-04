@@ -3,8 +3,9 @@
 // parou e a clínica precisa responder, para a equipe acompanhar pelo
 // RecepClinic sem vigiar o app do WhatsApp Business. "Abrir no WhatsApp" abre
 // a conversa no WhatsApp do aparelho (o da clínica, no celular dela ou no
-// WhatsApp Web). A conversa não volta sozinha ao bot (cliente, 30/out/2026):
-// ao terminar, "Devolver ao bot" (ou "#bot" na conversa pelo app).
+// WhatsApp Web). Ao terminar, "Devolver ao bot" (ou "#bot" na conversa pelo
+// app); "Em atendimento" volta sozinha ao bot 12 h depois da última resposta
+// da clínica, sem o paciente escrever (C20, cliente, 03/nov/2026).
 import { currentPath, withReturn } from "../../lib/returnPath";
 import AdminLayout from "../../layouts/AdminLayout.astro";
 import ConfirmDeleteDialog from "../../components/admin/ConfirmDeleteDialog.astro";
@@ -202,8 +203,9 @@ const whatsappButton =
               <p role="note" class="flex items-start gap-2.5 rounded-lg border border-pend-200 bg-pend-50 px-3.5 py-2.5 text-[15px] text-pend-800">
                 <Icon name="information-circle" class="mt-0.5 h-5 w-5 flex-none" />
                 <span>
-                  <strong>Conversa pendente com a clínica.</strong> O bot está calado com este paciente e não volta sozinho. Ao terminar o atendimento,
-                  clique em <strong>Devolver ao bot</strong>.
+                  <strong>Conversa pendente com a clínica.</strong> O bot está calado com este paciente. Ao terminar o atendimento,
+                  clique em <strong>Devolver ao bot</strong>. Se a clínica já respondeu e o paciente não escrever mais, a conversa volta sozinha ao
+                  bot 12 horas depois da última resposta.
                 </span>
               </p>
             </li>
