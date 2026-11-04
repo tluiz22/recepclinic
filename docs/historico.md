@@ -935,3 +935,17 @@ desfaz a C10).
   menu já tem as marcações). `respond.ts` (`logAnsweredInfo`), `menus.ts`, `texts.ts`; artigo das Métricas e
   fluxograma da jornada atualizados; a captura `config-mensagens` não mostra a prévia do menu (nada a recapturar). Testes de banco em
   `bot-base-de-conhecimento.test.ts`. Sem migração.
+
+## Ajustes da produção, 3ª leva (04/nov/2026)
+
+Pedidos do cliente vindos do uso da produção; decisões pelo canvas "Meu dia: busca e Esperando o paciente".
+- **C22:** rodapé e barras de ação do celular presos ao fundo (camada própria; `overflow-x: clip`).
+- **C23 (opção A):** busca do Meu dia em destaque; Esperando o paciente só com Confirmar presença, Reenviar lembrete e
+  Remarcar (WhatsApp sai da linha); a linha sai na hora da consulta sem esperar a recarga.
+- **C24 (opção C):** Cancelar do item selecionado da Agenda separado por linha, fundo vermelho claro.
+- **C25 (opção B):** linha do dia com já atendidas, faltaram, confirmadas (lembrete ou recepção) e a confirmar. Antes,
+  "sem resposta" contava os lembretes enviados hoje (os de amanhã) e a confirmação pela recepção não contava.
+- **C26 (opção B):** conversa do atendimento humano em "Quem fala com a clínica" (ficha do paciente e do responsável).
+- **C27 (opção 1):** cortesia ("ok", "obrigado", 👍, reação) depois da resposta da clínica grava o tipo `courtesy`
+  (sem texto, D12) e não volta para Aguardando; Devolver ao bot também em Aguardando quando a clínica já respondeu.
+- **C28:** 16 frases de dias de atendimento na F1 (migração `20261208120000`); dias não viram palavra-chave.
