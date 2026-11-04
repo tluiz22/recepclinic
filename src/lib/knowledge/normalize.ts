@@ -37,6 +37,13 @@ const ABBREVIATIONS: Record<string, string> = {
   agr: "agora",
 };
 
+/**
+ * Dias da semana viram uma palavra só (homologação, 04/nov/2026): "atende na sexta?" e "atende na terça?" são a
+ * mesma pergunta, e "tem horário na quinta?" a mesma de "tem horário na sexta?". "Feira" depois do dia sai.
+ */
+export const WEEKDAY_TOKEN = "diadasemana";
+const WEEKDAY = /^(segunda|terca|quarta|quinta|sexta|sabado|domingo)s?$/;
+
 export function normalizeText(text: string): string {
   const plain = text
     .toLowerCase()
@@ -45,9 +52,10 @@ export function normalizeText(text: string): string {
     .replace(/[^a-z0-9]+/g, " ")
     .trim();
   if (!plain) return "";
-  return plain
-    .split(" ")
-    .map((token) => ABBREVIATIONS[token] ?? token)
+  const tokens = plain.split(" ").flatMap((token) => (ABBREVIATIONS[token] ?? token).split(" "));
+  return tokens
+    .map((token) => (WEEKDAY.test(token) ? WEEKDAY_TOKEN : token))
+    .filter((token, i, all) => !(/^feiras?$/.test(token) && all[i - 1] === WEEKDAY_TOKEN))
     .join(" ");
 }
 

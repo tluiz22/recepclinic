@@ -949,3 +949,7 @@ Pedidos do cliente vindos do uso da produção; decisões pelo canvas "Meu dia: 
 - **C27 (opção 1):** cortesia ("ok", "obrigado", 👍, reação) depois da resposta da clínica grava o tipo `courtesy`
   (sem texto, D12) e não volta para Aguardando; Devolver ao bot também em Aguardando quando a clínica já respondeu.
 - **C28:** 16 frases de dias de atendimento na F1 (migração `20261208120000`); dias não viram palavra-chave.
+- **C29 (staging, 04/nov):** "Atende na sexta?" ainda caía no "não entendi" (a F1 só passa com palavra-chave, e os
+  sinônimos da C28 só cobriam o dia escrito). Dias da semana viram uma palavra só no reconhecimento (`normalize.ts`),
+  dias úteis como palavra-chave da F1, frases com dia na M1 e na P2 (migração `20261209120000`). Decisão do cliente:
+  "tem horário na sexta?" vai para a marcação.

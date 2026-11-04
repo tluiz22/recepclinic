@@ -234,7 +234,12 @@
     "aberto",
     "sábado",
     "domingo",
-    "feriado"
+    "feriado",
+    "segunda",
+    "terça",
+    "quarta",
+    "quinta",
+    "sexta"
    ],
    "question": "Qual o horário de funcionamento?",
    "synonyms": [
@@ -243,6 +248,7 @@
     "abre no fim de semana",
     "atende de segunda a sexta",
     "atende domingo",
+    "atende na sexta",
     "atende na terça",
     "atende todos os dias",
     "atendem aos sábados",
@@ -515,11 +521,14 @@
     "marcar horário",
     "marcar para meu filho",
     "marcar para outra pessoa",
+    "marcar para segunda",
     "primeira consulta",
     "qual o próximo horário",
+    "quero agendar para quarta",
     "quero uma consulta",
     "tem horário",
     "tem horário amanhã",
+    "tem horário na sexta",
     "tem vaga"
    ],
    "template": null,
@@ -578,6 +587,7 @@
    "question": "O(a) {profissional} atende aí?",
    "synonyms": [
     "a doutora atende",
+    "a doutora atende na quarta",
     "atende em qual dia",
     "o doutor ainda atende",
     "qual a especialidade do doutor"

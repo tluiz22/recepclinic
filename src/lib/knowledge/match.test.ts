@@ -31,6 +31,8 @@ describe("normalização", () => {
     expect(normalizeText("Vcs ATENDEM hj?? Até q horas!")).toBe("voces atendem hoje ate que horas");
     expect(normalizeText("Dra. Ana")).toBe("doutora ana");
     expect(normalizeText("   ")).toBe("");
+    // Dias da semana: uma palavra só, sem o "feira".
+    expect(normalizeText("Atende na Sexta-feira? e sábados")).toBe("atende na diadasemana e diadasemana");
   });
 });
 
@@ -49,6 +51,14 @@ describe("perguntas do catálogo", () => {
     ["que dias tem atendimento", "F1"],
     ["atende todos os dias?", "F1"],
     ["funciona segunda-feira?", "F1"],
+    // Homologação no staging (04/nov/2026): "Atende na sexta?" ia para o "não entendi".
+    ["Atende na sexta?", "F1"],
+    ["atende na quinta?", "F1"],
+    ["vocês atendem quinta-feira?", "F1"],
+    ["tem atendimento na terça?", "F1"],
+    ["abre na sexta?", "F1"],
+    ["funciona no sábado?", "F1"],
+    ["vcs abrem segunda feira?", "F1"],
     ["onde fica a clinica?", "E1"],
     ["manda a localização por favor", "E1"],
     ["qual o endereço", "E1"],
@@ -61,6 +71,7 @@ describe("perguntas do catálogo", () => {
     ["quem atende aí?", "P1"],
     ["a dra karina atende ai?", "P2"],
     ["a Dra. Ana Karina atende na quarta?", "P2"],
+    ["o dr joão atende na sexta?", "P2"],
     ["qual o crm da doutora?", "P3"],
     ["quanto custa a consulta?", "V1"],
     ["qual o valor?", "V1"],
@@ -75,6 +86,10 @@ describe("perguntas do catálogo", () => {
     // C28: o dia na frase não tira a marcação nem a pergunta do profissional.
     ["quero marcar consulta na terça", "M1"],
     ["tem vaga na terça?", "M1"],
+    ["tem horário na sexta?", "M1"],
+    ["quero agendar para quarta", "M1"],
+    ["tem horário na quinta?", "M1"],
+    ["quero marcar para sexta", "M1"],
     ["quero marcar um exame", "X1"],
     ["Encaixe", "EN1"],
     ["Preciso de um encaixe", "EN1"],

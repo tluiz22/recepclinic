@@ -37,7 +37,13 @@ Total: **31 entradas** em 18 categorias (a 15, documentos, fica de fora) + dicio
   atende todos os dias; atende de segunda a sexta; funciona durante a semana; abre no fim de semana; qual dia vocês
   atendem; segunda vocês atendem; atendem segunda; vocês funcionam na terça (migração `20261208120000`). Os nomes
   dos dias não viram palavra-chave: tiravam "quero agendar para quarta" da M1 e "a Dra. Ana atende na quarta?" da P2.
+  **Dias da semana (C29, 04/nov/2026):** "Atende na sexta?" ainda não era reconhecida (os sinônimos só valiam para o
+  dia escrito neles). O reconhecimento trata os sete dias como uma palavra só ("feira" sai), os dias úteis viram
+  palavra-chave da F1 e entra "atende na sexta"; para a marcação e o profissional seguirem certos, entram "tem horário
+  na sexta", "quero agendar para quarta" e "marcar para segunda" na M1 (o cliente: "tem horário na sexta?" é
+  marcação) e "a doutora atende na quarta" na P2 (migração `20261209120000`).
 - **Palavras-chave:** horário, hora(s), abre, abrem, fecha, funciona, funcionamento, aberto, sábado, domingo,
+  segunda, terça, quarta, quinta, sexta (C29),
   feriado.
 - **Tipo / fontes:** `modelo` · `horario_recepcao` (decisão 7; sem horário salvo, o sugerido pelas agendas, como
   na F8.5b), `feriado_hoje`.

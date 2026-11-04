@@ -579,3 +579,6 @@ Migração `20261208120000_base_de_conhecimento_dias.sql` aplicada em 04/nov (se
 8. **C28 Dias de atendimento.** Sistema › Base de conhecimento › Testar: "vocês atendem na segunda?", "atende terça?",
    "que dias tem atendimento" → F1; "quero agendar para quarta" segue na marcação. **Publicar**; pelo WhatsApp de
    testes, "vocês atendem sábado?" responde o horário da semana.
+9. **C29 Dias da semana.** Base de conhecimento › Testar: "Atende na sexta?", "vocês atendem quinta-feira?", "abre na
+   sexta?" → F1; "tem horário na sexta?" e "quero marcar para sexta" → M1; "o dr ... atende na sexta?" → P2.
+   **Publicar**; pelo WhatsApp de testes, "Atende na sexta?" responde o horário da semana.

@@ -2,8 +2,8 @@
 
 > **Estado atual (retomar daqui), 04/nov/2026.** Detalhes e datas no [`historico.md`](historico.md) (só por busca).
 >
-> **3ª leva (C22 a C28, 04/nov):** na `main` e no **staging** (migração `20261208120000` aplicada); cliente valida
-> pelo `staging.md`, parte T (C28: publicar a base no staging). Captura pendente: `inicio` (e `atendimento`). Depois: produção.
+> **3ª leva (C22 a C29, 04/nov):** na `main` e no **staging** (migrações `20261208120000` e `20261209120000`
+> aplicadas); cliente valida pelo `staging.md`, parte T (C28/C29: publicar a base no staging). Captura pendente: `inicio` (e `atendimento`). Depois: produção.
 >
 > **Próxima sessão (cliente, 04/nov):** melhorias na `main` para implantar na produção (cliente traz os pedidos).
 > Trabalhar na worktree `recepclinic-main` (a pasta `recepclinic` está na branch `faturamento`). Pendente da branch: o
