@@ -19,7 +19,7 @@ interface Props {
 
 const { action, endpoint, returnTo, variant = "secondary", inMenu = false, class: extra = "" } = Astro.props;
 const classes = `${inMenu ? menuItemClass(action.kind === "form" && action.danger) : buttonClass(variant, "sm")} ${extra}`;
-const showIcon = inMenu || variant === "primary";
+const showIcon = inMenu || variant === "primary" || variant === "danger-soft";
 ---
 
 {

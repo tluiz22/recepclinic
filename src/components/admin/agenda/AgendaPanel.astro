@@ -176,7 +176,14 @@ const phoneOk = !isAnonymizedPhone(a.contactPhone);
         </div>
       )
     }
-    {actions.aside && <CardActionButton action={actions.aside} endpoint={endpoint} returnTo={returnTo} variant="danger" class="w-full" />}
+    {/* C24 (cliente, 04/nov, opção C): Cancelar separado das outras ações por uma linha, com fundo vermelho claro. */}
+    {
+      actions.aside && (
+        <div class="mt-1.5 border-t border-dashed border-can-200 pt-3">
+          <CardActionButton action={actions.aside} endpoint={endpoint} returnTo={returnTo} variant="danger-soft" class="w-full" />
+        </div>
+      )
+    }
   </div>
 
   <a href={withReturn(`/admin/pacientes/${a.patientId}`, returnTo)} class="mt-auto border-t border-[#e7eeeb] px-[18px] py-3 text-[14.5px] font-bold text-brand no-underline hover:underline">
