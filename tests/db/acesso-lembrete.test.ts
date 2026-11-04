@@ -1,7 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { bookAppointment, cancelAppointment, rescheduleAppointment } from "../../src/lib/data/agenda/appointments";
 import type { DbClient } from "../../src/lib/data/clients";
-import { getDashboardCounts } from "../../src/lib/data/dashboard";
 import { listRemindersOfDay } from "../../src/lib/data/daily";
 import { recordInboundMessage, recordOutboundMessage, updateDeliveryStatus } from "../../src/lib/data/whatsapp/messages";
 import {
@@ -205,8 +204,6 @@ describe("resposta aos botões do lembrete", () => {
     // (cliente, 15/out/2026: quem remarcou pelo lembrete aparecia em "Não responderam").
     const ofDay = await listRemindersOfDay(db(reception), clinicId, SUN, "America/Fortaleza");
     expect(ofDay.find((r) => r.appointment.id === appt.a5)?.group).toBe("confirm");
-    const unanswered = ofDay.filter((r) => r.group === "no_answer").map((r) => r.appointment.id);
-    expect((await getDashboardCounts(db(reception), clinicId, "America/Fortaleza", at(SUN, "16:20"))).unansweredReminders).toBe(unanswered.length);
     const phone = await phoneOfPatient(ids.p2);
     expect(await recordReminderTap(bot, clinicId, { button: "cancel", appointmentId: appt.a5, phone, waMessageId: null }, at(SUN, "16:30"))).toEqual({ result: "inactive" });
   });

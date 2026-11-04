@@ -106,7 +106,7 @@ describe("tela inicial", () => {
   let fixture: AgendaFixture;
   afterAll(async () => fixture?.cleanup());
 
-  it("conta os atendimentos de hoje por tipo, o comparecimento a registrar e os lembretes sem resposta", async () => {
+  it("conta os atendimentos de hoje por tipo e por grupo e o comparecimento a registrar", async () => {
     fixture = await setupAgendaClinic("Clínica do teste da tela inicial", "849777600");
     const { clinicId, reception, ids } = fixture;
     const book = async (patient: string, service: string, agenda: string, start: Date) =>
@@ -122,10 +122,11 @@ describe("tela inicial", () => {
       consultationsToday: 1,
       examsToday: 1,
       totalToday: 2,
-      confirmedToday: 0,
       completedToday: 0,
+      noShowToday: 0,
+      confirmedToday: 0,
+      toConfirmToday: 2,
       pendingAttendance: 2,
-      unansweredReminders: 1,
     });
     // Contadores das abas do Resumo do Dia (R3): as mesmas regras das abas.
     const flags = { timeZone: "America/Fortaleza", reminders: true, waitlist: true, sends: false };
@@ -138,7 +139,8 @@ describe("tela inicial", () => {
     });
     await adminClient().from("appointments").update({ reminder_response: "confirmed", reminder_response_at: at(MON1, "07:30").toISOString() }).eq("id", c1);
     expect((await getResumoTabCounts(asDb(reception), clinicId, flags, at(MON1, "12:00"))).reminders).toBe(0);
-    expect((await getDashboardCounts(asDb(reception), clinicId, "America/Fortaleza", at(MON1, "12:00"))).unansweredReminders).toBe(0);
+    // C25: quem confirmou pelo lembrete conta em confirmadas; a soma dos grupos dá o total.
+    expect(await getDashboardCounts(asDb(reception), clinicId, "America/Fortaleza", at(MON1, "12:00"))).toMatchObject({ totalToday: 2, confirmedToday: 1, toConfirmToday: 1 });
     // Resumo › Lembretes: quem tocou em "confirmo" fica em "Confirmaram" (o banco guarda "confirmed"; 15/out/2026).
     const reminders = await listRemindersOfDay(asDb(reception), clinicId, MON1, "America/Fortaleza");
     expect(reminders.map((r) => [r.appointment.id, r.group])).toEqual([[c1, "confirm"]]);

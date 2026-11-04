@@ -174,11 +174,15 @@ const memberName = await db
   .then((r) => r.data?.display_name ?? null, () => null);
 const firstName = memberName?.trim().split(/\s+/)[0] ?? "";
 const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
-// Linha do dia (RX2): atendidas e confirmadas sobre o total de hoje; o resto ainda não confirmou.
-const pct = (n: number) => (counts.totalToday > 0 ? Math.round((n / counts.totalToday) * 100) : 0);
-const donePct = pct(counts.completedToday);
-const confirmedPct = pct(counts.confirmedToday);
-const unansweredPct = has("reminders") ? pct(counts.unansweredReminders) : 0;
+// Linha do dia (RX2; C25, cliente, 04/nov, opção B): cada atendimento de hoje num grupo só, a soma dá o total.
+// Aparecem só os grupos com algum atendimento; a barra segue a mesma ordem.
+const pct = (n: number) => (counts.totalToday > 0 ? (n / counts.totalToday) * 100 : 0);
+const dayGroups = [
+  { n: counts.completedToday, text: plural(counts.completedToday, "já atendida", "já atendidas"), color: "bg-att-500" },
+  { n: counts.noShowToday, text: plural(counts.noShowToday, "faltou", "faltaram"), color: "bg-ns-500" },
+  { n: counts.confirmedToday, text: plural(counts.confirmedToday, "confirmada", "confirmadas"), color: "bg-conf-500" },
+  { n: counts.toConfirmToday, text: `${counts.toConfirmToday} a confirmar`, color: "bg-pend-500" },
+].filter((g) => g.n > 0);
 // "Registrar presença": as primeiras consultas, em ordem de horário, para o detalhe da linha.
 const pendingSorted = [...(pendingAttendanceList ?? [])].sort((a, b) => a.scheduledAt.getTime() - b.scheduledAt.getTime());
 const pendingNames = (() => {
@@ -275,11 +279,9 @@ const sectionTitle = "font-display text-[17px] leading-tight font-bold text-ink 
       {
         counts.totalToday > 0 && (
           <>
-            <span class="inline-flex items-center gap-1.5"><span class="h-2.5 w-2.5 rounded-[3px] bg-conf-500" aria-hidden="true"></span>{plural(counts.confirmedToday, "confirmada", "confirmadas")}</span>
-            {has("reminders") && (
-              <span class="inline-flex items-center gap-1.5"><span class="h-2.5 w-2.5 rounded-[3px] bg-pend-500" aria-hidden="true"></span>{counts.unansweredReminders} sem resposta</span>
-            )}
-            <span class="inline-flex items-center gap-1.5"><span class="h-2.5 w-2.5 rounded-[3px] bg-att-500" aria-hidden="true"></span>{plural(counts.completedToday, "já atendida", "já atendidas")}</span>
+            {dayGroups.map((g) => (
+              <span class="inline-flex items-center gap-1.5"><span class={`h-2.5 w-2.5 rounded-[3px] ${g.color}`} aria-hidden="true"></span>{g.text}</span>
+            ))}
           </>
         )
       }
@@ -290,11 +292,9 @@ const sectionTitle = "font-display text-[17px] leading-tight font-bold text-ink 
         <div
           class="flex h-2 gap-0.5 overflow-hidden rounded-full bg-line"
           role="img"
-          aria-label={`${counts.completedToday} já atendidas, ${counts.confirmedToday} confirmadas${has("reminders") ? ` e ${counts.unansweredReminders} sem resposta` : ""}, de ${counts.totalToday} hoje`}
+          aria-label={`${dayGroups.map((g) => g.text).join(", ")}, de ${counts.totalToday} hoje`}
         >
-          <span class="bg-att-500" style={`width:${donePct}%`}></span>
-          <span class="bg-conf-500" style={`width:${confirmedPct}%`}></span>
-          <span class="bg-pend-500" style={`width:${unansweredPct}%`}></span>
+          {dayGroups.map((g) => <span class={g.color} style={`width:${pct(g.n)}%`}></span>)}
         </div>
       )
     }
