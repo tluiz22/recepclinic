@@ -95,6 +95,13 @@ beforeEach(async () => {
 const OFFER = "Não consegui entender sua mensagem.\n\nVocê quer falar com a recepção? A conversa passa para a nossa equipe.";
 
 describe("bot que não entende (F8.5d)", () => {
+  it("1º menu com recepção no número: a apresentação cita a recepção (cliente, 04/nov/2026)", async () => {
+    const phone = "+5584991227700";
+    const reply = await message(phone, "oi");
+    expect(reply.at(-1)).toContain("👩‍💼 Falar diretamente com a recepção, se precisar de ajuda.");
+    expect(reply.at(-1)).toMatch(/^Estamos aqui para ajudar você! 😊/);
+  });
+
   it("áudio e figurinha: aviso próprio no lugar do 'não entendi'", async () => {
     const phone = "+5584991227701";
     await message(phone, "oi");

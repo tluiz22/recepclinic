@@ -5,6 +5,9 @@
 > **3ª leva (C22 a C30, 04/nov):** no **staging e na produção** (`bf97b07`; migrações `20261208120000` e `20261209120000`
 > aplicadas nos dois). Falta **publicar a base na produção** (C28/C29). Cliente valida pelo `staging.md`, parte T. Captura pendente: `inicio` (e `atendimento`).
 >
+> **C31 (04/nov):** apresentação do 1º menu do bot, descrições nas opções e botão "Ver opções". Na `main` e no
+> **staging** (sem migração); cliente valida pelo `staging.md`, parte U. Depois: produção.
+>
 > **Decisão pendente:** testes de tela automáticos (Playwright); conversar prós e contras com o cliente (`historico.md`, "C30").
 >
 > **Próxima sessão (cliente, 04/nov):** uma **evolução do bot** (cliente traz o pedido). A `faturamento` ainda não tem a C22 a C30

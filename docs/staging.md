@@ -585,3 +585,14 @@ Migração `20261208120000_base_de_conhecimento_dias.sql` aplicada em 04/nov (se
    **Publicar**; pelo WhatsApp de testes, "Atende na sexta?" responde o horário da semana.
 10. **C30 Cabeçalho do Meu dia no computador.** "Boa noite", o campo Buscar paciente e Marcar consulta alinhados pela
     base; o campo e o botão com a mesma altura.
+
+## U. Apresentação do menu do bot (C31, 04/nov)
+
+Sem migração; publica com o push na `main`.
+
+1. Pelo WhatsApp de testes, uma conversa nova ("oi"): depois das boas-vindas, "Estamos aqui para ajudar você! 😊" com o
+   que dá para resolver (só as linhas do que a clínica usa; a recepção só com coexistência) e "Como podemos ajudar?".
+2. Botão **Ver opções**: Consultas, Exames, Informações gerais e Falar com a recepção, cada uma com a descrição.
+3. Tocar em cada opção: os mesmos caminhos de antes. Digitar "menu" depois: volta o texto curto ("Escolha uma opção
+   abaixo ou faça uma pergunta."). As outras listas do bot também mostram "Ver opções".
+4. Com atendimento marcado no número: "Não, outro assunto" leva ao menu com a apresentação.

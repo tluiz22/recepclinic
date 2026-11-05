@@ -22,7 +22,8 @@ async function mainItems(b: Bot): Promise<Item[]> {
   if (servicesOf(catalog, "exam").length) items.push({ id: "menu_exams", label: "Exames" });
   if ((await infoItems(b)).length) items.push({ id: "menu_info", label: "Informações gerais" });
   if (b.receptionAvailable) items.push({ id: "menu_reception", label: "Falar com a recepção" });
-  return items;
+  // Descrição em cada opção (cliente, 04/nov/2026).
+  return items.map((item) => ({ ...item, description: t.MAIN_MENU_DESCRIPTIONS[item.id as keyof typeof t.MAIN_MENU_DESCRIPTIONS] }));
 }
 
 async function consultationItems(b: Bot): Promise<Item[]> {
@@ -42,15 +43,32 @@ const manageItems = (b: Bot): Item[] => [
 
 const examItems = (b: Bot): Item[] => [{ id: "book_exam", label: "Marcar exame" }, ...manageItems(b)];
 
-/** Menu principal; clínica sem nada para mostrar recebe o aviso e a recepção assume. */
-export async function showMenu(b: Bot, { withWelcome = false, notUnderstood = false } = {}): Promise<void> {
+/**
+ * Menu principal; clínica sem nada para mostrar recebe o aviso e a recepção assume. O 1º menu da conversa (com as
+ * boas-vindas, ou `intro`) vem com a apresentação do que dá para resolver (cliente, 04/nov/2026).
+ */
+export async function showMenu(b: Bot, { withWelcome = false, notUnderstood = false, intro = false } = {}): Promise<void> {
   if (withWelcome) await say(b, "bot_welcome", welcomeText(b));
   const items = await mainItems(b);
   // Clínica sem nada para o bot marcar: depois das boas-vindas, a recepção assume (cliente, 11/out/2026).
   if (!items.length) return handOver(b, "bot_nothing_to_book", t.NOTHING_TO_BOOK, "no_service", "no_availability", true);
   if (notUnderstood) await say(b, "bot_not_understood", textFor(b, "not_understood", t.notUnderstood(true)));
   // Com a base, convida a perguntar; sem ela, o texto livre não seria entendido (cliente, 04/nov/2026).
-  const body = b.features.includes("knowledge_base") ? t.MENU_BODY_ASK : t.MENU_BODY;
+  const ask = b.features.includes("knowledge_base");
+  const has = (id: string) => items.some((i) => i.id === id);
+  const body =
+    withWelcome || intro
+      ? t.menuIntro({
+          consultations: has("menu_consultations"),
+          exams: has("menu_exams"),
+          waitlist: b.features.includes("waitlist"),
+          info: has("menu_info"),
+          reception: has("menu_reception"),
+          ask,
+        })
+      : ask
+        ? t.MENU_BODY_ASK
+        : t.MENU_BODY;
   await sendList(b, "bot_menu", textFor(b, "menu", body), t.numberedList(items, false));
   await go(b, "MENU");
 }

@@ -30,7 +30,11 @@ const auto = (text: string, note?: string): FlowNode => ({ kind: "auto", text, n
 const reception = (text: string, note?: string): FlowNode => ({ kind: "reception", text, note });
 const branch = (...options: [string, FlowItem[]][]): FlowBranch => ({ kind: "branch", options: options.map(([label, flow]) => ({ label, flow })) });
 
-const MENU = "Menu principal (\"Escolha uma opção abaixo ou faça uma pergunta.\"; sem Perguntas frequentes, \"(ou digite o número)\"): Consultas · Exames · Informações gerais · Falar com a recepção";
+// 1º menu da conversa, logo após as boas-vindas (cliente, 04/nov/2026).
+const FIRST_MENU =
+  "Menu principal com a apresentação: \"Estamos aqui para ajudar você! 😊 Por aqui, você pode: 📅 Agendar ou remarcar consultas e exames. 🔄 Solicitar cancelamentos ou entrar na fila de espera. ℹ️ Consultar informações sobre atendimentos. 👩‍💼 Falar diretamente com a recepção, se precisar de ajuda. Como podemos ajudar? Escolha uma das opções abaixo ou escreva sua pergunta.\" Botão \"Ver opções\": Consultas · Exames · Informações gerais · Falar com a recepção, cada uma com descrição";
+const FIRST_MENU_NOTE =
+  "Só aparecem as opções (e as linhas da apresentação) que a clínica usa: sem exames, \"consultas\"; sem Lista de espera, sem a fila; recepção só com coexistência. Sem Perguntas frequentes, termina em \"Escolha uma das opções abaixo.\" Nas outras vezes, o menu curto (\"Escolha uma opção abaixo ou faça uma pergunta.\").";
 
 export type JourneySection = { id: string; title: string; intro: string; flow: FlowItem[] };
 
@@ -53,8 +57,8 @@ export const JOURNEY: JourneySection[] = [
             check("A mensagem já diz o que a pessoa precisa?", "Com \"Perguntas frequentes no bot\" (vem ligado com o bot; item 9). \"Oi\" sozinho: não."),
             branch(
               ["Pedido claro (marcar, remarcar, cancelar…)", [bot("Abre esse caminho direto, sem o menu")]],
-              ["Pergunta (\"vocês aceitam Unimed?\")", [bot("A resposta e o menu principal (\"Escolha uma opção abaixo ou faça uma pergunta.\")", "Sem o \"Isso resolve sua dúvida?\" (item 9).")]],
-              ["Não", [bot(MENU, "Só aparecem as opções que a clínica usa.")]],
+              ["Pergunta (\"vocês aceitam Unimed?\")", [bot("A resposta e o menu principal com a apresentação", "Sem o \"Isso resolve sua dúvida?\" (item 9).")]],
+              ["Não", [bot(FIRST_MENU, FIRST_MENU_NOTE)]],
             ),
           ],
         ],
@@ -62,7 +66,7 @@ export const JOURNEY: JourneySection[] = [
           "Sim",
           [
             bot("Boas-vindas e \"Identificamos um agendamento associado a este número. Você deseja tratar desse agendamento?\""),
-            patient("Sim, quero", "\"Não, outro assunto\": vai para o menu principal."),
+            patient("Sim, quero", "\"Não, outro assunto\": vai para o menu principal, com a apresentação."),
             bot("Pede a data de nascimento do paciente, por segurança", "Nada do atendimento aparece antes disso. Data digitada sem as barras (10032020): pergunta \"Você quis dizer 10/03/2020?\" com Sim · Não; vale em todo pedido de data."),
             check("A data confere com um paciente com atendimento?", "Não: \"Não encontramos agendamentos para essa data de nascimento.\" com Tentar outra data · Voltar ao menu."),
             bot("Mostra o atendimento (dia e hora) e pergunta o que fazer: Confirmar presença · Remarcar · Cancelar · Encaixe ou antecipar · Falar com a recepção"),

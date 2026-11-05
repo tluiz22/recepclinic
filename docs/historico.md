@@ -963,3 +963,15 @@ Pedidos do cliente vindos do uso da produção; decisões pelo canvas "Meu dia: 
   larguras, alinhamentos, nada fora da tela, sem rolagem lateral, comparação com imagem de referência). Prós: pega
   regressão visual sem depender de conferência manual. Contras: manutenção das imagens de referência a cada mudança
   de tela, CI mais lento e banco de teste com dados fixos. Conversar com o cliente antes de implementar.
+
+## C31: apresentação do menu principal do bot (04/nov/2026)
+
+Pedido do cliente: o paciente entender, antes de abrir o menu, o que resolve pelo atendimento automático. Decisões do
+cliente: o texto novo ("Estamos aqui para ajudar você! 😊 … Como podemos ajudar?") só no 1º menu da conversa (após as
+boas-vindas, inclusive depois de uma pergunta respondida na 1ª mensagem e de "Não, outro assunto"); nas outras vezes,
+o menu curto. Com a base ligada, termina em "Escolha uma das opções abaixo ou escreva sua pergunta."; sem ela, "Escolha
+uma das opções abaixo.". As linhas só citam o que a clínica usa (exames, lista de espera, informações; recepção só com
+coexistência). Descrições fixas nas 4 opções (Consultas e Exames: "Agendamentos, retornos, remarcações e
+cancelamentos."; Informações gerais: "Dúvidas sobre consultas e exames."; Recepção: "Precisa de ajuda? Fale com nossa
+equipe."). Botão "Ver opções" em todas as listas (era "Escolher opção"). Ids, destinos e encaminhamento à recepção sem
+mudança; o texto próprio de "Menu" da clínica, quando existe, continua valendo no lugar da apresentação.
