@@ -20,8 +20,8 @@
 > Custo da Meta, ativação pelo Administrador e calculadora: seção 14 do plano (decidida).
 >
 > **FE, falhas de envio (05/nov):** conferência do número ao marcar/cadastrar, aviso de entrega na Agenda, "Corrigir
-> número" no Início, reenvio do bot (30 s e 2 min), detalhes e "Descartar" na aba Envios. No **staging** (migração
-> `20261213120000` aplicada); produção em seguida. Cliente valida pelo `staging.md`, parte W. Plano em
+> número" no Início, reenvio do bot (30 s e 2 min), detalhes e "Descartar" na aba Envios. No **staging e na produção**
+> (`ed2931d`; migração `20261213120000` aplicada nos dois). Falta o Suporte descartar a remarcação de 03/nov na produção. Cliente valida pelo `staging.md`, parte W. Plano em
 > [`falhas-de-envio.md`](falhas-de-envio.md). Captura pendente: `inicio`.
 >
 > **Decisão pendente:** testes de tela automáticos (Playwright); conversar prós e contras com o cliente (`historico.md`, "C30").
