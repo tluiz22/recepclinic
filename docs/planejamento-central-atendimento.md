@@ -3,8 +3,8 @@
 > **Retomar daqui (05/nov/2026).** Só plano, nada implementado. Decididas: seção 11 (1 a 12), seção 14 (custo da
 > Meta, ativação pelo Administrador, medição, calculadora com IA) e os alertas da 5.1 (v4 do cadastro vai junto com a
 > Central; rotina de acompanhamento da Meta é pós-implantação). **Revisão do plano inteiro (05/nov):** texto alinhado às
-> decisões e lacunas técnicas incluídas (seção 12 com a ordem única). **Próximo:** perguntas da revisão (liberação de
-> 30 min fora do horário, transferir na Etapa 1, conversas do histórico importado), depois desenhar as telas
+> decisões e lacunas técnicas incluídas (seção 12 com a ordem única). **Próximo:** perguntas da revisão (R1 respondida;
+> faltam transferir na Etapa 1, conversas do histórico importado), depois desenhar as telas
 > (Conversas, menu, Configurações › WhatsApp, calculadora em Sistema › Vendas) com opções no canvas.
 
 Pedido do cliente (05/nov/2026): secretárias, profissionais e outros usuários autorizados veem e respondem as
@@ -200,8 +200,8 @@ waiting_clinic ──Assumir──▶ waiting_clinic (responsável = eu)   [sem 
 waiting_clinic ──resposta pelo painel──▶ in_progress (sem dona: assume; com outra dona: confirma antes)
 in_progress ──paciente escreve (não cortesia)──▶ waiting_clinic (responsável continua)
 qualquer aberta ──Transferir──▶ mesma situação, responsável = outro (evento transferred)
-waiting_clinic com responsável, 30 min sem resposta ──rotina──▶ sem responsável (evento released; notifica todas;
-                                                                 se era Profissional, volta para a Recepção)
+waiting_clinic com responsável, 30 min de espera no horário da clínica ──rotina──▶ sem responsável (evento
+                    released; sem notificação; se era Profissional, volta para a Recepção)
 qualquer ──Finalizar / #bot / 12 h──▶ bot (responsável apagado, handoff_id encerra)
 bot ──paciente escreve depois de finalizado──▶ bot responde (regra da CA)
 ```
@@ -249,7 +249,7 @@ transferida a outro, deixa de ver (inclusive o histórico).
 | Recepção no app e no painel (coexistência) | Decisão 2: os dois juntos, sem configuração. O eco (`agent_reply`, agora com texto) entra no histórico marcado "Respondida pelo app do WhatsApp", sem usuário; pausa o bot; não muda o responsável. A mensagem automática do app (IS4) não conta |
 | Mensagem editada ou apagada no app | `smb_message_echoes` com edição/`revoke`: atualiza a linha original (texto novo + "editada"; ou "Mensagem apagada", `body` nulo) **[criar]** |
 | Fora da janela de 24 h | Decisão 7: caixa de texto trava com aviso e botão "Retomar conversa" (modelo de utilidade aprovado, pago); sem "Abrir no WhatsApp" (exceção: 8c) |
-| Liberação em 30 min | Decisão 5: rotina por pg_cron; `update` condicional (só se o paciente ainda espera e o responsável não mudou); evento `released`; push para todas |
+| Liberação em 30 min | Decisão 5 e R1: rotina por pg_cron; os 30 min contam **só no horário da clínica** (fora dele a espera não corre); `update` condicional (só se o paciente ainda espera e o responsável não mudou); evento `released`; **sem notificação** |
 | Histórico importado na conexão | Decisão 10: gravado com a data original, **sem** chamar o bot, sem contar como não lida, sem reabrir atendimento nem mexer em `human_handoff` (ver 4.7) |
 | Central desligada pelo Administrador | Seção 14: mensagens novas sem texto (como a D12); o guardado fica sem aparecer até religar |
 
@@ -525,7 +525,6 @@ Limite: respostas pelo app (eco) não têm usuário.
 | Profissional sem acesso hoje (D6) | Regra nova de visibilidade | Decisão explícita e teste de RLS |
 | Nome "Atendimento" já usado (agenda e atendimento humano) | Confusão de tela | Decisão 12: a tela vira "Conversas" |
 | Histórico importado grande (até 180 dias, milhares por evento) | Webhook lento, timeout | Gravar o evento bruto e processar por rotina, em lotes (4.7) |
-| Liberação em 30 min notificando à noite | Notificação fora de hora | **[decidir]** (seção 11, pendentes) |
 | Central de Ajuda e capturas | Telas mudam | Anotar em `capturas-pendentes.md` (regra do projeto) |
 | Jornada do bot | Fluxograma desatualizado | Atualizar `botJourney.ts` se a transferência mudar |
 
@@ -559,9 +558,12 @@ Limite: respostas pelo app (eco) não têm usuário.
    segundo recebe "Ana assumiu agora" e a mensagem não é enviada. Resposta pelo app (eco) não define responsável.
    O responsável não esconde a conversa: Administrador e Recepção veem todas e podem assumir ou transferir.
    **Liberação automática (decidido, 05/nov):** paciente esperando **30 min** sem resposta da responsável → volta
-   para "Sem responsável" e todas recebem a notificação ("Maria Souza aguarda há 30 min"); se estava com um
-   Profissional, volta para a Recepção. Rotina por pg_cron (como a de 12 h), evento `released` na `handoff_events`.
-   Prazo ajustável por clínica: avaliar no CN4.
+   para "Sem responsável"; se estava com um Profissional, volta para a Recepção. Rotina por pg_cron (como a de
+   12 h), evento `released` na `handoff_events`. Prazo ajustável por clínica: avaliar no CN4.
+   **Revisto (R1, 05/nov):** os 30 min contam **só no horário de atendimento da clínica** (mensagem às 22h libera 30
+   min depois da abertura) e a liberação **não envia notificação** (a conversa só muda na lista). Horário da clínica
+   = algum horário de agenda aberto naquele dia e hora, fora dos feriados (`clinic_holidays`); a fonte exata se
+   confirma no CN4.
 6. **Não lidas:** **Decidido (05/nov): por pessoa** (tabela `conversation_reads`, 4.4): abrir a conversa zera só para
    quem abriu.
 7. **Fora das 24 h:** **Decidido (05/nov).** A conversa continua "Aguardando a clínica" no fim de semana e no
@@ -603,7 +605,7 @@ Limite: respostas pelo app (eco) não têm usuário.
 
 **Perguntas da revisão do plano (05/nov), uma por vez:**
 
-- **R1.** Liberação em 30 min (decisão 5) fora do horário da clínica (noite, fim de semana, feriado): conta ou não?
+- **R1.** ~~Liberação em 30 min fora do horário~~ **Decidido (05/nov): só no horário da clínica, sem notificação** (decisão 5).
 - **R2.** Transferir na Etapa 1 (simples, sem motivo; o motivo fica na Etapa 2)? Sem isso, o Profissional não vê
   nenhuma conversa (decisão 4).
 - **R3.** Histórico importado (decisão 10) de telefone que nunca falou com o bot: cria a conversa em Finalizadas ou
@@ -678,7 +680,8 @@ gerenciar, limites, não entende, base de conhecimento, não concluído, assunto
 - RLS: login de outra clínica não lê mensagem, mídia nem caminho do Storage; login direto pela API não lê `body`;
   Profissional só vê a conversa transferida a ele e perde o acesso ao ser finalizada, liberada ou transferida a outro.
 - Responder com outra dona: confirma; envio simultâneo: só o primeiro sai.
-- Liberação em 30 min: volta sem responsável, evento `released`, notifica; não libera se o responsável respondeu ou
+- Liberação em 30 min: volta sem responsável, evento `released`, sem notificação; conta só no horário da clínica
+  (mensagem à noite libera 30 min depois da abertura; feriado não conta); não libera se o responsável respondeu ou
   mudou no meio.
 - Central desligada: mensagem nova sem texto; religada: histórico guardado volta a aparecer.
 - Retenção: mídia de 12 meses e texto de 5 anos apagados pela rotina.
