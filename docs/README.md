@@ -24,7 +24,7 @@
 > `20261201120000` a `20261206120000`), sobre o `1ceb6a4`. Cliente valida no uso. Detalhe no [`producao.md`](producao.md) (Publicações).
 >
 > **Ambientes**
-> - **Produção** (`app.recepclinic.com.br`, branch `producao`) = `main` em 04/nov (até a C30). Fluxo em [`producao.md`](producao.md).
+> - **Produção** (`app.recepclinic.com.br`, branch `producao`) = `main` em 04/nov (até a C31). Fluxo em [`producao.md`](producao.md).
 > - **Staging** (`teste.recepclinic.com.br`, branch `main`): produção + redesign da Recepção (RX1 a RX9, sem migração) +
 >   cartão do Asaas (`ASAAS_PREVIEW=1`) + Base de Conhecimento do bot (migração aplicada) + PN1, PN2, IS2 a IS5 (migrações aplicadas) + IS1 + C17 a C20 (03/nov; migração `20261206120000` aplicada) + C21 (04/nov).
 >   Roteiros em [`staging.md`](staging.md).
