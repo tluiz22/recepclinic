@@ -9,8 +9,8 @@
 > produção** (`d2744f9`, sem migração); cliente valida pelo `staging.md`, parte U.
 >
 > **CA, ciclo do atendimento humano (04/nov):** situação guardada, Finalizar atendimento sem mensagem, abas na tela
-> Atendimento e encerramento silencioso em 12 h. Na `main`, **sem commit** (migração `20261211120000` só no banco
-> local); próximo: cliente autoriza commit e staging. Plano em [`ciclo-atendimento-humano.md`](ciclo-atendimento-humano.md).
+> Atendimento e encerramento silencioso em 12 h. Na `main` e no **staging** (`961e703`; migração `20261211120000`
+> aplicada); cliente valida pelo `staging.md`, parte V. Captura pendente: `atendimento`. Depois: produção. Plano em [`ciclo-atendimento-humano.md`](ciclo-atendimento-humano.md).
 >
 > **Decisão pendente:** testes de tela automáticos (Playwright); conversar prós e contras com o cliente (`historico.md`, "C30").
 >
