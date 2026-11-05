@@ -12,6 +12,9 @@
 > Atendimento e encerramento silencioso em 12 h. No **staging e na produção** (`1bfd20f`, 05/nov; migração
 > `20261211120000` aplicada nos dois); cliente valida pelo `staging.md`, parte V. Captura pendente: `atendimento`. Plano em [`ciclo-atendimento-humano.md`](ciclo-atendimento-humano.md).
 >
+> **Central de Atendimento Humano (05/nov):** só planejamento, em [`planejamento-central-atendimento.md`](planejamento-central-atendimento.md).
+> Aguarda o cliente aprovar e responder às decisões (seção 11; a 1ª é rever a D12). Nada implementado.
+>
 > **Decisão pendente:** testes de tela automáticos (Playwright); conversar prós e contras com o cliente (`historico.md`, "C30").
 >
 > **Próxima sessão:** cliente valida a C31 e a CA (`staging.md`, partes U e V) e traz novos pedidos. A `faturamento` está
