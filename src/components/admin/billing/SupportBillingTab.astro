@@ -8,6 +8,7 @@
 // novos termos. A suspensão fica na aba Suspensão (F12.3; cliente, 03/nov/2026).
 // F12.4: cobrança no Asaas (ids, sincronização, erro) e as cobranças.
 // F12.2f: o cancelamento pelo Administrador (motivo, acesso, ajuste no Asaas).
+// F12.2i: selo "Sem cartão" e o final do cartão da assinatura.
 // F12.2h: o lembrete do reajuste anual pelo IPCA.
 // Cobranças entram nas próximas fases.
 import Badge from "../config/Badge.astro";
@@ -224,6 +225,9 @@ const form = {
             ) : (
               <Badge variant="warning">{active.acceptance === "pending" ? "Aguarda o aceite" : "Não criada"}</Badge>
             )}
+            {active.billingMode === "asaas" && active.paymentMethod === "credit_card" && active.acceptance !== "pending" && !active.cardRegisteredAt && (
+              <Badge variant="warning">Sem cartão</Badge>
+            )}
           </div>
           <p class="mt-1 text-sm text-ink-soft">
             {active.billingMode === "manual"
@@ -238,6 +242,16 @@ const form = {
                 <dd class="font-medium break-all text-ink">{account?.asaasCustomerId ?? "—"}</dd>
                 <dt class="text-ink-soft">Assinatura</dt>
                 <dd class="font-medium break-all text-ink">{active.asaasSubscriptionId ?? "—"}</dd>
+                {active.paymentMethod === "credit_card" && (
+                  <>
+                    <dt class="text-ink-soft">Cartão</dt>
+                    <dd class="font-medium text-ink">
+                      {active.cardRegisteredAt
+                        ? `${active.cardLast4 ? `Final ${active.cardLast4}, ` : ""}cadastrado em ${formatInstant(active.cardRegisteredAt, timezone, "dd/MM/yyyy 'às' HH:mm")}`
+                        : "Ainda não informado pela clínica (passo Cartão da Assinatura)"}
+                    </dd>
+                  </>
+                )}
                 <dt class="text-ink-soft">Última sincronização</dt>
                 <dd class="font-medium text-ink">{active.asaasSyncedAt ? formatInstant(active.asaasSyncedAt, timezone, "dd/MM/yyyy 'às' HH:mm") : "—"}</dd>
               </dl>

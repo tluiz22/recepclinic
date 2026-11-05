@@ -23,7 +23,7 @@ export class AsaasApiError extends Error {
 
 type AsaasErrorBody = { errors?: { code?: string; description?: string }[] };
 
-async function call<T>(env: AsaasEnv, fetcher: Fetcher, method: "GET" | "POST" | "DELETE", path: string, body?: Record<string, unknown>): Promise<T> {
+async function call<T>(env: AsaasEnv, fetcher: Fetcher, method: "GET" | "POST" | "PUT" | "DELETE", path: string, body?: Record<string, unknown>): Promise<T> {
   let response: Response;
   try {
     response = await fetcher(`${env.baseUrl}${path}`, {
@@ -63,7 +63,11 @@ export type AsaasPayment = {
   invoiceUrl: string | null;
   /** Removida no Asaas (F12.2f: cancelamento). */
   deleted?: boolean;
+  /** F12.2i: cartão que pagou (token do Asaas e o final), para ligá-lo à assinatura. */
+  card?: { token: string | null; last4: string | null } | null;
 };
+
+type RawCard = { creditCardNumber?: string | null; creditCardToken?: string | null } | null;
 
 type RawPayment = {
   id: string;
@@ -78,6 +82,7 @@ type RawPayment = {
   confirmedDate?: string | null;
   invoiceUrl?: string | null;
   deleted?: boolean;
+  creditCard?: RawCard;
 };
 
 type List<T> = { data: T[]; hasMore?: boolean };
@@ -96,6 +101,7 @@ function toPayment(raw: RawPayment): AsaasPayment {
     paidAt: paid ? `${paid}T12:00:00-03:00` : null,
     invoiceUrl: raw.invoiceUrl ?? null,
     deleted: raw.deleted === true,
+    card: raw.creditCard ? { token: raw.creditCard.creditCardToken ?? null, last4: raw.creditCard.creditCardNumber ?? null } : null,
   };
 }
 
@@ -105,6 +111,7 @@ export function asaasBillingApi(env: AsaasEnv, fetcher: Fetcher = fetch) {
   const get = <T>(path: string) => call<T>(env, fetcher, "GET", path);
   const post = <T>(path: string, body: Record<string, unknown>) => call<T>(env, fetcher, "POST", path, body);
   const del = <T>(path: string) => call<T>(env, fetcher, "DELETE", path);
+  const put = <T>(path: string, body: Record<string, unknown>) => call<T>(env, fetcher, "PUT", path, body);
   const q = (params: Record<string, string>) => new URLSearchParams(params).toString();
 
   return {
@@ -233,6 +240,22 @@ export function asaasBillingApi(env: AsaasEnv, fetcher: Fetcher = fetch) {
         externalReference: input.externalReference,
       });
       return { id: created.id, link: created.link };
+    },
+
+    /**
+     * F12.2i: liga à assinatura o cartão que pagou a implantação, pelo token
+     * do pagamento, sem cobrar nada (testado no sandbox em 04/nov/2026).
+     * `remoteIp`: o IP de quem informou o cartão (exigência do Asaas).
+     */
+    async setSubscriptionCard(subscription: string, token: string, remoteIp: string): Promise<{ last4: string | null }> {
+      const sub = await put<{ creditCard?: RawCard }>(`/subscriptions/${encodeURIComponent(subscription)}/creditCard`, { creditCardToken: token, remoteIp });
+      return { last4: sub.creditCard?.creditCardNumber ?? null };
+    },
+
+    /** F12.2i: o final do cartão da assinatura (null = sem cartão). */
+    async getSubscriptionCard(subscription: string): Promise<{ last4: string | null } | null> {
+      const sub = await get<{ creditCard?: RawCard }>(`/subscriptions/${encodeURIComponent(subscription)}`);
+      return sub.creditCard ? { last4: sub.creditCard.creditCardNumber ?? null } : null;
     },
 
     /** Assinaturas do cliente (não removidas), para achar a criada pelo Checkout. */

@@ -136,6 +136,12 @@ export async function dismissBillingWhatsappPrompt(db: DbClient, clinicId: strin
   if (error) throw fromDbError(error, "WhatsApp financeiro");
 }
 
+/** F12.2i: Pix, "Pagar depois" no passo Pagamento (só o Administrador). */
+export async function dismissBillingPaymentStep(db: DbClient, clinicId: string, contractId: string): Promise<void> {
+  const { error } = await db.rpc("dismiss_billing_payment_step", { p_clinic_id: clinicId, p_contract_id: contractId });
+  if (error) throw fromDbError(error, "Pagamento");
+}
+
 export const BILLING_ACTIONS = {
   account_created: "Conta de cobrança criada",
   account_updated: "Conta de cobrança alterada",
@@ -164,6 +170,7 @@ export const BILLING_ACTIONS = {
   card_change_requested: "Troca de cartão pedida (Checkout do Asaas)",
   card_changed: "Cartão trocado",
   card_change_failed: "Troca de cartão não concluída",
+  card_registered: "Cartão cadastrado na assinatura",
 } as const;
 
 /** Suporte: clínicas que cancelaram a assinatura e não têm contrato ativo (selo na lista de clínicas; F12.2f). */
@@ -171,6 +178,22 @@ export async function listCanceledClinicIds(db: DbClient): Promise<Set<string>> 
   const rows = unwrap(await db.from("billing_contracts").select("clinic_id, status, canceled_at"), "Contrato") as { clinic_id: string; status: string; canceled_at: string | null }[];
   const active = new Set(rows.filter((r) => r.status === "active").map((r) => r.clinic_id));
   return new Set(rows.filter((r) => r.canceled_at && !active.has(r.clinic_id)).map((r) => r.clinic_id));
+}
+
+/** Suporte: clínicas com contrato no cartão aceito e sem o cartão informado (selo "Sem cartão"; F12.2i). */
+export async function listClinicIdsWithoutCard(db: DbClient): Promise<Set<string>> {
+  const rows = unwrap(
+    await db
+      .from("billing_contracts")
+      .select("clinic_id")
+      .eq("status", "active")
+      .eq("billing_mode", "asaas")
+      .eq("payment_method", "credit_card")
+      .in("acceptance", ["explicit", "tacit"])
+      .is("card_registered_at", null),
+    "Contrato",
+  ) as { clinic_id: string }[];
+  return new Set(rows.map((r) => r.clinic_id));
 }
 
 /** F12.2f (cliente, 03/nov/2026): motivos do cancelamento; "Outro" pede o comentário. */
@@ -336,6 +359,13 @@ export type BillingContract = {
   asaasSubscriptionId: string | null;
   asaasSyncedAt: Date | null;
   asaasSyncError: string | null;
+  /** F12.2i: cartão ligado à assinatura no Asaas (null = ainda não) e o final dele. */
+  cardRegisteredAt: Date | null;
+  cardLast4: string | null;
+  /** F12.2g/F12.2i: Checkout do Asaas aberto, à espera do cartão. */
+  cardCheckoutOpen: boolean;
+  /** F12.2i: no Pix, "Pagar depois" no passo Pagamento. */
+  paymentStepDismissedAt: Date | null;
 };
 
 export type ContractAcceptance = "pending" | "explicit" | "tacit";
@@ -374,6 +404,10 @@ type ContractRow = {
   asaas_subscription_id: string | null;
   asaas_synced_at: string | null;
   asaas_sync_error: string | null;
+  card_registered_at: string | null;
+  card_last4: string | null;
+  card_change_checkout_id: string | null;
+  payment_step_dismissed_at: string | null;
 };
 
 /** Contratos da clínica, o mais novo primeiro. O Administrador vê só o vigente e os encerrados. */
@@ -382,7 +416,7 @@ export async function listBillingContracts(db: DbClient, clinicId: string): Prom
     await db
       .from("billing_contracts")
       .select(
-        "id, version, status, billing_mode, monthly_cents, setup_cents, payment_method, first_due_date, invoice_unit_price_cents, invoice_monthly_allowance, plan_snapshot, notes, starts_on, ends_on, activated_at, terms_version, acceptance, accepted_at, accepted_by, accepted_ip, recurring_consent, canceled_at, canceled_by, cancel_kind, cancel_reason, cancel_comment, cancel_next_due, asaas_cancel_synced_at, asaas_cancel_error, notice_sent_at, asaas_subscription_id, asaas_synced_at, asaas_sync_error",
+        "id, version, status, billing_mode, monthly_cents, setup_cents, payment_method, first_due_date, invoice_unit_price_cents, invoice_monthly_allowance, plan_snapshot, notes, starts_on, ends_on, activated_at, terms_version, acceptance, accepted_at, accepted_by, accepted_ip, recurring_consent, canceled_at, canceled_by, cancel_kind, cancel_reason, cancel_comment, cancel_next_due, asaas_cancel_synced_at, asaas_cancel_error, notice_sent_at, asaas_subscription_id, asaas_synced_at, asaas_sync_error, card_registered_at, card_last4, card_change_checkout_id, payment_step_dismissed_at",
       )
       .eq("clinic_id", clinicId)
       .order("created_at", { ascending: false }),
@@ -426,6 +460,10 @@ export async function listBillingContracts(db: DbClient, clinicId: string): Prom
     asaasSubscriptionId: row.asaas_subscription_id,
     asaasSyncedAt: row.asaas_synced_at ? new Date(row.asaas_synced_at) : null,
     asaasSyncError: row.asaas_sync_error,
+    cardRegisteredAt: row.card_registered_at ? new Date(row.card_registered_at) : null,
+    cardLast4: row.card_last4,
+    cardCheckoutOpen: !!row.card_change_checkout_id,
+    paymentStepDismissedAt: row.payment_step_dismissed_at ? new Date(row.payment_step_dismissed_at) : null,
   }));
 }
 

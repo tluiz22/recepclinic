@@ -32,7 +32,7 @@ const api = (): AsaasBillingApi => ({
   },
   listSubscriptionPayments: async () => [current],
   getPayment: async () => current,
-  endSubscriptionOn: async () => {}, deleteSubscription: async () => {}, deletePayment: async () => {}, refundPayment: async () => {}, createCardCheckout: async () => ({ id: "chk", link: "" }), listCustomerSubscriptions: async () => [],
+  endSubscriptionOn: async () => {}, deleteSubscription: async () => {}, deletePayment: async () => {}, refundPayment: async () => {}, createCardCheckout: async () => ({ id: "chk", link: "" }), listCustomerSubscriptions: async () => [], setSubscriptionCard: async () => ({ last4: null }), getSubscriptionCard: async () => null,
 });
 
 beforeAll(async () => {

@@ -1,5 +1,5 @@
 ---
-// Passo 2 da Assinatura (F12.2e): os avisos de cobrança também pelo WhatsApp,
+// Passo do WhatsApp da Assinatura (F12.2e; F12.2i: depois do pagamento): os avisos de cobrança também pelo WhatsApp,
 // opcional. Com o telefone financeiro, o texto da autorização; sem ele, o campo
 // do telefone e "Salvar e autorizar". "Agora não" fica registrado e o passo
 // não volta (autorizar depois, no cartão WhatsApp financeiro).
@@ -12,14 +12,16 @@ import { formatPhoneBR } from "../../../lib/phone";
 interface Props {
   account: BillingAccount;
   action: string;
+  /** "Passo 3 de 3" (F12.2i: depois do contrato e do pagamento). */
+  stepLabel: string;
 }
 
-const { account, action } = Astro.props;
+const { account, action, stepLabel } = Astro.props;
 const TILE = "rounded-lg bg-canvas px-3 py-2.5";
 ---
 
 <Card class="flex flex-col gap-4">
-  <h2 class="font-display text-[19px] leading-tight font-bold text-ink sm:text-xl">Passo 2 de 2 · Avisos de cobrança também pelo WhatsApp?</h2>
+  <h2 class="font-display text-[19px] leading-tight font-bold text-ink sm:text-xl">{stepLabel} · Avisos de cobrança também pelo WhatsApp?</h2>
   <p class="text-[15px] text-ink-soft">Os avisos já vão para o e-mail financeiro. Pelo WhatsApp, a clínica recebe também no celular. É opcional e pode ser desfeito nesta tela.</p>
   <div class="grid gap-3 sm:grid-cols-2">
     <div class={TILE}>

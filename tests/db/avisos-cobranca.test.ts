@@ -41,7 +41,7 @@ const api = (): AsaasBillingApi => ({
   },
   listSubscriptionPayments: async () => payments,
   getPayment: async () => payments[0],
-  endSubscriptionOn: async () => {}, deleteSubscription: async () => {}, deletePayment: async () => {}, refundPayment: async () => {}, createCardCheckout: async () => ({ id: "chk", link: "" }), listCustomerSubscriptions: async () => [],
+  endSubscriptionOn: async () => {}, deleteSubscription: async () => {}, deletePayment: async () => {}, refundPayment: async () => {}, createCardCheckout: async () => ({ id: "chk", link: "" }), listCustomerSubscriptions: async () => [], setSubscriptionCard: async () => ({ last4: null }), getSubscriptionCard: async () => null,
 });
 const sync = () => syncContractWithAsaas(platformBillingStore(env), api(), contractId, today);
 const notices = async () =>

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { cancellationPreview, ipcaReminder, chargeAction, dueDay, hasCardOnFile, nextDueAfter, recurringConsentText, renewalLine, renewalSummary } from "./billingRenewal";
+import { cancellationPreview, ipcaReminder, chargeAction, dueDay, nextDueAfter, recurringConsentText, renewalLine, renewalSummary } from "./billingRenewal";
 
 // F12.2e (cliente, 03/nov/2026): renovação explicada antes do aceite e a ação
 // de cada cobrança conforme a forma de pagamento.
@@ -23,9 +23,10 @@ describe("renovação da assinatura", () => {
     expect(dueDay("2026-12-28")).toBe(28);
   });
 
-  it("cartão: a 1ª pede o cartão; depois, automática; vencida (recusada), Pagar", () => {
+  it("cartão: sem o cartão, espera o passo Cartão; depois, automática; vencida, Pagar", () => {
     const open = { status: "pending", invoiceUrl: "https://fatura" };
-    expect(chargeAction(open, "credit_card", false)).toEqual({ kind: "link", label: "Informar o cartão e pagar" });
+    expect(chargeAction(open, "credit_card", false)).toEqual({ kind: "note", label: "Aguarda o cartão (passo Cartão, acima)" });
+    expect(chargeAction({ ...open, status: "overdue" }, "credit_card", false)).toEqual({ kind: "link", label: "Informar o cartão e pagar" });
     expect(chargeAction(open, "credit_card", true)).toEqual({ kind: "note", label: "Cobrança automática no cartão" });
     expect(chargeAction({ ...open, status: "overdue" }, "credit_card", true)).toEqual({ kind: "link", label: "Pagar" });
     expect(chargeAction({ ...open, status: "paid" }, "credit_card", true)).toBeNull();
@@ -34,11 +35,6 @@ describe("renovação da assinatura", () => {
   it("Pix: Pagar com Pix; sem fatura (manual), nada", () => {
     expect(chargeAction({ status: "overdue", invoiceUrl: "https://fatura" }, "pix", false)).toEqual({ kind: "link", label: "Pagar com Pix" });
     expect(chargeAction({ status: "pending", invoiceUrl: null }, null, false)).toBeNull();
-  });
-
-  it("cartão já informado = alguma cobrança paga no cartão", () => {
-    expect(hasCardOnFile([{ status: "paid", billingType: "PIX" }])).toBe(false);
-    expect(hasCardOnFile([{ status: "paid", billingType: "CREDIT_CARD" }])).toBe(true);
   });
 
   it("cancelamento: próximo vencimento depois de hoje, véspera como último dia; 7 dias = arrependimento", () => {

@@ -22,7 +22,7 @@ export async function startCardChange(
   store: BillingCardChangeStore,
   api: AsaasBillingApi | null,
   contractId: string,
-  input: { today: string; actorId: string | null; successUrl: string; cancelUrl: string },
+  input: { today: string; actorId: string | null; successUrl: string; cancelUrl: string; purpose?: "change" | "register" },
 ): Promise<CardChangeStart> {
   const snapshot = await store.load(contractId);
   const contract = snapshot?.contract;
@@ -43,7 +43,7 @@ export async function startCardChange(
     valueCents: contract.monthlyCents,
     nextDueDate: nextDue,
     itemName: "Mensalidade RecepClinic",
-    description: `Mensalidade do RecepClinic (${snapshot.clinicName}), no cartão novo, a partir de ${nextDue.split("-").reverse().join("/")}.`,
+    description: `Mensalidade do RecepClinic (${snapshot.clinicName}), ${input.purpose === "register" ? "no cartão" : "no cartão novo"}, a partir de ${nextDue.split("-").reverse().join("/")}.`,
     successUrl: input.successUrl,
     cancelUrl: input.cancelUrl,
     externalReference: `card:${contractId}`,

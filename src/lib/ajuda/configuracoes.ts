@@ -212,13 +212,13 @@ export const configuracoes = {
       ],
       alimenta: [{ texto: "Financeiro: a nota é emitida na tela do pagamento." }],
     },
-    // configuracoes/assinatura.astro (F12.1): conta de cobrança, contatos e WhatsApp financeiro; aceite do contrato (F12.2b); passo a passo e renovação (F12.2e).
+    // configuracoes/assinatura.astro (F12.1): conta de cobrança, contatos e WhatsApp financeiro; aceite do contrato (F12.2b); passo a passo e renovação (F12.2e); passo Cartão ou Pagamento (F12.2i).
     assinatura: {
       serve: "Guardar quem paga o RecepClinic e para onde vão as cobranças e os avisos.",
       como: [
         "O Suporte cadastra o pagador e o contrato (mensalidade e, com a nota fiscal liberada, o preço por nota e a franquia); para mudar, fale com o Suporte.",
-        "Com contrato novo, a tela guia em passos: 1) ler e aceitar o contrato, marcando também a autorização da cobrança mensal; 2) se quiser, autorizar os avisos pelo WhatsApp. Ficam registrados data, hora, quem aceitou, IP, versão do texto e a autorização.",
-        "A assinatura é mensal e se renova sozinha no vencimento, até o cancelamento. No cartão, ele é informado uma vez (\"Informar o cartão e pagar\") e os meses seguintes são cobrados nele; \"Trocar o cartão\" abre a página do Asaas. No Pix, cada cobrança tem o \"Pagar com Pix\".",
+        "Com contrato novo, a tela guia em passos: aceitar o contrato (com a autorização da cobrança mensal); informar o cartão (ou, no Pix, pagar a implantação); se quiser, autorizar os avisos pelo WhatsApp. Ficam registrados data, hora, quem aceitou, IP e versão do texto.",
+        "A assinatura é mensal e se renova sozinha no vencimento, até o cancelamento. O cartão é informado uma vez, na página do Asaas, e os meses seguintes são cobrados nele; \"Trocar o cartão\" usa outro. No Pix, cada cobrança tem o \"Pagar com Pix\".",
         "Reajuste anual pelo IPCA e outras mudanças de valor chegam ao e-mail financeiro e à tela 30 dias antes; continuar usando vale como aceite. Texto do contrato novo pede aceite de novo.",
         "Os avisos de cobrança (vencimento, atraso e pagamento reconhecido) sempre vão para o e-mail financeiro; com o WhatsApp financeiro autorizado, também para o telefone financeiro.",
       ],

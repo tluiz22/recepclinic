@@ -520,6 +520,52 @@ export function platformBillingCardChangeStore(env: ServiceEnv = platformEnv()):
   };
 }
 
+// F12.2i: o cartão da assinatura (passo Cartão da Assinatura).
+export type CardRegistration = { registeredAt: Date | null; acceptedIp: string | null; setupPaymentId: string | null };
+
+export type BillingCardRegisterStore = BillingCardChangeStore & {
+  cardRegistration(contractId: string): Promise<CardRegistration | null>;
+  recordCardRegistered(contractId: string, last4: string | null, source: "setup" | "checkout"): Promise<void>;
+  contractsWithoutCard(): Promise<string[]>;
+};
+
+export function platformBillingCardRegisterStore(env: ServiceEnv = platformEnv()): BillingCardRegisterStore {
+  const db = platformClient(env);
+  const change = platformBillingCardChangeStore(env);
+  const call = async <T>(name: string, args: Record<string, unknown>): Promise<T> => {
+    const { data, error } = await (db.rpc as unknown as (n: string, a: Record<string, unknown>) => Promise<{ data: T; error: unknown }>)(name, args);
+    if (error) throw new PlatformLookupError(name, error);
+    return data;
+  };
+  return {
+    ...change,
+    async cardRegistration(contractId) {
+      if (!isUuid(contractId)) return null;
+      const { data, error } = await db.from("billing_contracts").select("card_registered_at, accepted_ip").eq("id", contractId).maybeSingle();
+      if (error) throw new PlatformLookupError("contrato", error);
+      if (!data) return null;
+      const { data: setup, error: setupError } = await db
+        .from("billing_charges")
+        .select("asaas_payment_id")
+        .eq("contract_id", contractId)
+        .eq("kind", "setup")
+        .not("asaas_payment_id", "is", null)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (setupError) throw new PlatformLookupError("cobranças", setupError);
+      return {
+        registeredAt: data.card_registered_at ? new Date(data.card_registered_at) : null,
+        acceptedIp: typeof data.accepted_ip === "string" ? data.accepted_ip : null,
+        setupPaymentId: setup?.asaas_payment_id ?? null,
+      };
+    },
+    recordCardRegistered: (contractId, last4, source) =>
+      call<null>("billing_record_card_registered", { p_contract_id: contractId, p_last4: last4 ?? "", p_source: source }).then(() => undefined),
+    contractsWithoutCard: async () => (await call<string[] | null>("billing_contracts_without_card", {})) ?? [],
+  };
+}
+
 // Fila de eventos do webhook do Asaas e conciliação (F12.5).
 export type BillingProviderEvent = { id: string; providerEventId: string; event: string; resourceId: string | null; attempts: number };
 

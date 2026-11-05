@@ -61,16 +61,13 @@ export function chargeAction(
   if (charge.status !== "pending" && charge.status !== "overdue") return null;
   if (paymentMethod === "credit_card") {
     if (charge.status === "pending" && cardOnFile) return { kind: "note", label: "Cobrança automática no cartão" };
+    // F12.2i: sem o cartão, a em aberto espera o passo Cartão (pagar a mensalidade aqui a anteciparia).
+    if (charge.status === "pending") return { kind: "note", label: "Aguarda o cartão (passo Cartão, acima)" };
     if (!charge.invoiceUrl) return null;
     return { kind: "link", label: cardOnFile ? "Pagar" : "Informar o cartão e pagar" };
   }
   if (!charge.invoiceUrl) return null;
   return { kind: "link", label: paymentMethod === "pix" ? "Pagar com Pix" : "Pagar" };
-}
-
-/** Já há cartão no Asaas: alguma cobrança paga no cartão. */
-export function hasCardOnFile(charges: { status: string; billingType: string | null }[]): boolean {
-  return charges.some((c) => c.status === "paid" && c.billingType === "CREDIT_CARD");
 }
 
 /** Próximo vencimento depois de hoje (mesmo dia do mês do 1º vencimento); igual a app.billing_next_due. */

@@ -28,12 +28,21 @@ Rotinas na mão (no Terminal, na raiz do projeto):
 2. Aceitar e continuar: passo 2 (WhatsApp) com "Agora não, só e-mail" e "Autorizar e concluir"; depois, "Pronto".
 3. Asaas sandbox: cliente, assinatura e implantação criados; Cobranças: "Informar o cartão e pagar".
 
-## 3. Cartão (F12.2e, F12.2g)
-1. "Informar o cartão e pagar": cartão de teste 5162 3062 1937 8829, validade futura, CVV 318.
-2. "Atualizar do Asaas" (Suporte) ou a `conciliacao-asaas`: a implantação paga; as próximas mostram
-   "Cobrança automática no cartão".
-3. "Trocar o cartão" → Checkout do Asaas → outro cartão de teste → volta com "Cartão trocado"; a mensalidade em aberto
-   passa para a assinatura nova (Suporte: trilha "Cartão trocado").
+## 3. Passo Cartão (F12.2i) e troca de cartão (F12.2g)
+1. Logo depois do aceite: Contrato aceito → **Cartão** → WhatsApp → Pronto. "Cobrado agora: Implantação"; "Depois, no
+   mesmo cartão: R$ … todo dia …". Em Cobranças, a mensalidade em aberto diz "Aguarda o cartão (passo Cartão, acima)".
+2. "Informar o cartão no Asaas" abre o Asaas em outra aba (a da implantação); esta aba vira "Confirmando o pagamento no
+   Asaas…". Pague com o cartão de teste 5162 3062 1937 8829, validade futura, CVV 318 (dados do titular: os da
+   clínica). Volte à aba: em até 5 s ela segue sozinha (ou "Já paguei, conferir agora") para o WhatsApp ou o Pronto.
+   O Pronto diz "Cartão final 8829 cadastrado"; em Cobranças, implantação Paga e a mensalidade "Cobrança automática no
+   cartão". Suporte › Faturamento: "Cartão: Final 8829…"; trilha "Cartão cadastrado na assinatura".
+3. Sem pagar: feche a aba do Asaas e recarregue a Assinatura (sem `?passo=`): passo laranja "Cartão (pendente)" e
+   "Falta informar o cartão"; não há como pular. Suporte: selo "Sem cartão" na lista de clínicas e na aba Faturamento.
+4. Contrato sem implantação (Suporte: implantação 0 numa versão nova): "Cobrado agora: Nada: o cartão só fica
+   cadastrado"; abre o Checkout do Asaas; volta com "Cartão cadastrado"; nada é cobrado antes do vencimento.
+5. "Trocar o cartão" → Checkout do Asaas → outro cartão de teste → volta com "Cartão trocado" e o final novo.
+6. Pix (contrato no Pix com implantação): passo **Pagamento** com "Pagar com Pix" e "Pagar depois" (segue para o
+   WhatsApp; a cobrança fica em Cobranças).
 
 ## 4. Suspensão (F12.3, F12.3b)
 Aba Suspensão da clínica (Suporte): suspender (administrativo), conferir as telas (Admin só Assinatura; Recepção em

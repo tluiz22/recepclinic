@@ -10,6 +10,8 @@
 // com o motivo (sem o texto do Suporte). F12.2e (cliente, 03/nov/2026): passo
 // a passo (aceite com a autorização da cobrança mensal → WhatsApp opcional →
 // Pronto) e as cobranças no topo, com a ação de cada forma de pagamento.
+// F12.2i (cliente, 04/nov/2026): o passo Cartão (ou Pagamento, no Pix) logo
+// depois do contrato; sem o cartão, o passo fica pendente e o Pronto não sai.
 import ConfigShell from "../../../components/admin/config/ConfigShell.astro";
 import Badge from "../../../components/admin/config/Badge.astro";
 import Card from "../../../components/admin/config/Panel.astro";
@@ -22,7 +24,9 @@ import ContractText from "../../../components/admin/billing/ContractText.astro";
 import AcceptContractStep from "../../../components/admin/billing/AcceptContractStep.astro";
 import SubscriptionSteps from "../../../components/admin/billing/SubscriptionSteps.astro";
 import WhatsappStep from "../../../components/admin/billing/WhatsappStep.astro";
-import { hasCardOnFile, renewalLine } from "../../../lib/billingRenewal";
+import PaymentStep from "../../../components/admin/billing/PaymentStep.astro";
+import { dueDay, renewalLine } from "../../../lib/billingRenewal";
+import { paymentStep, subscriptionSteps, type StepKey } from "../../../lib/billingSteps";
 import HelpTip from "../../../components/admin/ui/HelpTip.astro";
 import HowItWorks from "../../../components/admin/ui/HowItWorks.astro";
 import { configuracoes } from "../../../lib/ajuda/configuracoes";
@@ -53,17 +57,30 @@ const actors = await loadActorLabels(db, clinic.clinicId, [...audit.map((a) => a
 const isClinicAdmin = clinic.roles.includes("admin");
 const action = "/api/admin/configuracoes/assinatura";
 const page = "/admin/configuracoes/assinatura";
-// F12.2e: passo a passo. 1 = aceitar o contrato; 2 = WhatsApp financeiro
-// (opcional, só o Administrador, depois de um contrato aceito e enquanto não
+// F12.2e/F12.2i: passo a passo. Contrato (aceite) → Cartão ou Pagamento (só
+// o Administrador; cartão: até o cartão estar na assinatura; Pix: implantação
+// em aberto, até "Pagar depois") → WhatsApp financeiro (opcional, enquanto não
 // autorizou nem disse "Agora não"); depois, o aviso "Pronto" (?pronto=1).
 const accepted = contracts.find((c) => c.status !== "draft" && (c.acceptance === "explicit" || c.acceptance === "tacit")) ?? null;
+const activeAccepted = contracts.find((c) => c.status === "active" && (c.acceptance === "explicit" || c.acceptance === "tacit")) ?? null;
+const openSetup = charges.find((c) => c.kind === "setup" && (c.status === "pending" || c.status === "overdue")) ?? null;
 const whatsappNeeded = isClinicAdmin && !!account && !account.whatsappOptIn && !account.whatsappPromptDismissedAt;
-const wizardStep: 1 | 2 | null = pending ? 1 : whatsappNeeded && accepted ? 2 : null;
+const payment = isClinicAdmin ? paymentStep(activeAccepted, !!openSetup) : null;
+// O passo do pagamento aparece na sequência do contrato no cartão (sempre) e no Pix com implantação.
+const flowContract = pending ?? activeAccepted;
+const paymentInFlow =
+  flowContract?.billingMode !== "asaas" ? null : flowContract.paymentMethod === "credit_card" ? "card" : flowContract.paymentMethod === "pix" && flowContract.setupCents > 0 ? "pix" : null;
+const currentStep: StepKey | null = pending ? "contract" : payment ? "payment" : whatsappNeeded && accepted ? "whatsapp" : null;
+const flow = currentStep ? subscriptionSteps({ current: currentStep, payment: isClinicAdmin ? paymentInFlow : null, whatsapp: whatsappNeeded }) : null;
+const stepLabel = flow ? `Passo ${flow.position} de ${flow.total}` : "";
+const remaining = flow ? flow.total - flow.position + 1 : 0;
+// Voltou à tela sem concluir o pagamento (não veio direto do aceite): passo pendente.
+const late = currentStep === "payment" && Astro.url.searchParams.get("passo") !== "pagamento";
 const acceptedNow = contracts.find((c) => c.acceptance === "explicit" && c.acceptedAt) ?? null;
-const showDone = !wizardStep && Astro.url.searchParams.get("pronto") === "1" && !!accepted;
+const showDone = !currentStep && Astro.url.searchParams.get("pronto") === "1" && !!accepted;
 // Contrato que gera as cobranças (o de hoje ou o próximo).
 const billed = contract ?? next;
-const cardOnFile = hasCardOnFile(charges);
+const cardOnFile = !!billed?.cardRegisteredAt;
 const openCharges = charges.filter((c) => c.status === "pending" || c.status === "overdue").length;
 // F12.2f: o último cancelamento (some quando houver contrato ativo de novo).
 const canceled = contracts.some((c) => c.status === "active") ? null : (contracts.find((c) => c.cancel) ?? null);
@@ -96,29 +113,32 @@ const H2 = "font-display text-[17px] leading-tight font-bold text-ink sm:text-lg
       </Card>
     ) : (
       <div class="flex flex-col gap-4">
-        {wizardStep && (
+        {currentStep && flow && (
           <>
             <p class="text-[16px] text-ink-soft">
-              {wizardStep === 1 && whatsappNeeded ? "Faltam dois passos rápidos." : "Falta um passo rápido."} O resto da assinatura está logo abaixo.
+              {remaining === 1 ? "Falta um passo rápido." : `Faltam ${["", "", "dois", "três"][remaining] ?? remaining} passos rápidos.`} O resto da assinatura está logo abaixo.
             </p>
-            <SubscriptionSteps current={wizardStep} whatsappDone={!!account.whatsappOptIn} />
-            {wizardStep === 2 && acceptedNow && (
+            <SubscriptionSteps steps={flow.steps} current={currentStep} late={late} />
+            {currentStep !== "contract" && !late && acceptedNow && (
               <p class="rounded-lg bg-brand-soft px-4 py-3 text-[15px] text-brand-ink">
                 Contrato aceito em {formatInstant(acceptedNow.acceptedAt!, clinic.timezone, "dd/MM/yyyy 'às' HH:mm")}
                 {acceptedNow.acceptedBy ? ` por ${actors.get(acceptedNow.acceptedBy)?.name ?? "Administrador"}` : ""}.
                 {charges.length > 0 ? " As cobranças estão em Cobranças, logo abaixo." : ""}
               </p>
             )}
-            {wizardStep === 1 && pending && (
+            {currentStep === "contract" && pending && (
               <AcceptContractStep
                 contract={pending}
                 isClinicAdmin={isClinicAdmin}
                 changed={pending.version !== 1 && contracts.some((c) => c.acceptance === "explicit" || c.acceptance === "tacit")}
-                twoSteps={whatsappNeeded}
+                totalSteps={flow.total}
                 action={action}
               />
             )}
-            {wizardStep === 2 && <WhatsappStep account={account} action={action} />}
+            {currentStep === "payment" && payment && activeAccepted && (
+              <PaymentStep kind={payment} contract={activeAccepted} setup={openSetup} stepLabel={stepLabel} late={late} waiting={activeAccepted.cardCheckoutOpen} action={action} />
+            )}
+            {currentStep === "whatsapp" && <WhatsappStep account={account} action={action} stepLabel={stepLabel} />}
           </>
         )}
         {showDone && (
@@ -132,6 +152,9 @@ const H2 = "font-display text-[17px] leading-tight font-bold text-ink sm:text-lg
               <h2 class={H2}>Pronto: a assinatura está em dia</h2>
               <p class="text-[15px] text-ink">
                 {contract?.acceptedAt ? `Contrato aceito em ${formatInstant(contract.acceptedAt, clinic.timezone, "dd/MM/yyyy 'às' HH:mm")}. ` : ""}
+                {contract?.cardRegisteredAt
+                  ? `Cartão${contract.cardLast4 ? ` final ${contract.cardLast4}` : ""} cadastrado: as mensalidades são cobradas nele todo dia ${dueDay(contract.firstDueDate)}. `
+                  : ""}
                 {account.whatsappOptIn
                   ? "Avisos de cobrança pelo e-mail e pelo WhatsApp."
                   : "Avisos de cobrança só pelo e-mail. Para receber também pelo WhatsApp, autorize em WhatsApp financeiro, abaixo."}
@@ -165,7 +188,9 @@ const H2 = "font-display text-[17px] leading-tight font-bold text-ink sm:text-lg
             {billed && billed.status === "active" && billed.acceptance !== "pending" && <p class="mt-2 text-sm text-ink-soft">{renewalLine(billed)}</p>}
             {billed?.paymentMethod === "credit_card" && (
               <div class="mt-2 flex flex-wrap items-center justify-between gap-2">
-                <p class="text-sm text-ink-soft">O RecepClinic não guarda dados do cartão: ele é informado na página do Asaas.</p>
+                <p class="text-sm text-ink-soft">
+                  {billed.cardRegisteredAt && billed.cardLast4 ? `Cartão final ${billed.cardLast4}. ` : ""}O RecepClinic não guarda dados do cartão: ele é informado na página do Asaas.
+                </p>
                 {isClinicAdmin && billed.status === "active" && billed.billingMode === "asaas" && cardOnFile && (
                   <form method="POST" action={action}>
                     <input type="hidden" name="acao" value="cartao_trocar" />
@@ -287,8 +312,8 @@ const H2 = "font-display text-[17px] leading-tight font-bold text-ink sm:text-lg
                     Retirar a autorização
                   </button>
                 </form>
-              ) : wizardStep && whatsappNeeded ? (
-                <p class="mt-3 text-sm text-ink-soft">{wizardStep === 1 ? "Depois do aceite do contrato, o passo 2 pergunta sobre o WhatsApp." : "Autorize no passo 2, acima."}</p>
+              ) : currentStep && whatsappNeeded ? (
+                <p class="mt-3 text-sm text-ink-soft">{currentStep === "whatsapp" ? "Autorize no passo do WhatsApp, acima." : "Um dos próximos passos, acima, pergunta sobre o WhatsApp."}</p>
               ) : !account.financePhone ? (
                 <p class="mt-3 text-sm text-pend-800">Salve um telefone financeiro para autorizar o WhatsApp.</p>
               ) : (

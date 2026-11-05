@@ -19,12 +19,13 @@ interface Props {
   isClinicAdmin: boolean;
   /** Já houve versão aceita: o texto mudou. */
   changed: boolean;
-  /** Mostra "Passo 1 de 2" (o passo do WhatsApp vem depois). */
-  twoSteps: boolean;
+  /** Quantos passos tem o passo a passo (mais de 1: "Passo 1 de N" e "Aceitar e continuar"). */
+  totalSteps: number;
   action: string;
 }
 
-const { contract, isClinicAdmin, changed, twoSteps, action } = Astro.props;
+const { contract, isClinicAdmin, changed, totalSteps, action } = Astro.props;
+const twoSteps = totalSteps > 1;
 const invoicing = contract.invoiceUnitPriceCents !== null;
 const known = !!billingContractTerms(contract.termsVersion ?? "");
 const date = (value: string) => formatCalendarDate(value, "dd/MM/yyyy");
@@ -35,7 +36,7 @@ const TILE_NF = "rounded-lg bg-brand-soft px-3 py-2.5";
 <Card class="flex flex-col gap-4">
   <div class="flex flex-wrap items-center gap-2">
     <h2 class="font-display text-[19px] leading-tight font-bold text-ink sm:text-xl">
-      {twoSteps ? "Passo 1 de 2 · " : ""}Leia e aceite o contrato
+      {twoSteps ? `Passo 1 de ${totalSteps} · ` : ""}Leia e aceite o contrato
     </h2>
     {invoicing && <Badge variant="accent">Com emissão de nota fiscal</Badge>}
   </div>

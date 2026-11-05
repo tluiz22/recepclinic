@@ -165,7 +165,7 @@ export const SUSPENDED_PAGE = "/admin/clinica-suspensa";
 export const SUSPENDED_ADMIN_PAGE = "/admin/configuracoes/assinatura";
 // F12.2e: o contrato completo (para ler antes de aceitar ou pagar) também abre;
 // F12.2f: e o cancelamento; F12.2g: a volta da troca de cartão.
-const SUSPENDED_ADMIN_PATHS = [SUSPENDED_ADMIN_PAGE, `${SUSPENDED_ADMIN_PAGE}/contrato`, `${SUSPENDED_ADMIN_PAGE}/cancelar`, "/api/admin/configuracoes/assinatura", "/api/admin/configuracoes/assinatura/cartao"];
+const SUSPENDED_ADMIN_PATHS = [SUSPENDED_ADMIN_PAGE, `${SUSPENDED_ADMIN_PAGE}/contrato`, `${SUSPENDED_ADMIN_PAGE}/cancelar`, "/api/admin/configuracoes/assinatura", "/api/admin/configuracoes/assinatura/cartao", "/api/admin/configuracoes/assinatura/pagamento"];
 
 /** Para onde vai quem abre `pathname` na clínica suspensa; null = pode abrir. */
 export function suspendedLanding(context: Pick<ClinicContext, "clinicStatus" | "roles" | "isPlatformStaff">, pathname: string): string | null {

@@ -1,7 +1,19 @@
 import type { APIRoute } from "astro";
 import { recurringConsentText } from "../../../../lib/billingRenewal";
-import { acceptBillingContract, cancelBillingSubscription, dismissBillingWhatsappPrompt, getBillingAccount, listBillingContracts, saveBillingContacts, setBillingWhatsappOptIn } from "../../../../lib/data/billing";
-import { applyCancellationNow, startCardChangeNow, syncContractNow } from "../../../../lib/data/billingAsaasDeps";
+import { paymentStep } from "../../../../lib/billingSteps";
+import {
+  acceptBillingContract,
+  cancelBillingSubscription,
+  dismissBillingPaymentStep,
+  dismissBillingWhatsappPrompt,
+  getBillingAccount,
+  listBillingCharges,
+  listBillingContracts,
+  saveBillingContacts,
+  setBillingWhatsappOptIn,
+} from "../../../../lib/data/billing";
+import { applyCancellationNow, startCardChangeNow, startCardRegistrationNow, syncContractNow } from "../../../../lib/data/billingAsaasDeps";
+import { requestIp } from "../../../../lib/requestIp";
 import { formatCalendarDate, todayIn } from "../../../../lib/clinicTime";
 import { billingCancelEmail, smtpSender } from "../../../../lib/email";
 import { platformEnv } from "../../../../lib/env";
@@ -23,18 +35,9 @@ import { formChecked, formOptionalText, formText } from "../../../../lib/forms";
 // F12.2f: cancelamento pelo Administrador (motivo; ajusta o Asaas e manda a
 // confirmação ao e-mail financeiro; falhas não desfazem o cancelamento).
 // F12.2g: "Trocar o cartão" abre o Checkout do Asaas (volta em .../cartao).
-// IP de quem aceitou: o 1º do x-forwarded-for (Vercel), senão o da conexão.
-function requestIp(context: { request: Request; clientAddress?: string }): string | null {
-  const forwarded = context.request.headers.get("x-forwarded-for")?.split(",")[0]?.trim();
-  if (forwarded) return forwarded;
-  // O Astro lança erro quando o adaptador não informa o endereço.
-  try {
-    return context.clientAddress ?? null;
-  } catch {
-    return null;
-  }
-}
-
+// F12.2i: depois do aceite, o passo Cartão (ou Pagamento, no Pix): "Informar o
+// cartão no Asaas" abre a página do Asaas em outra aba (a tela confere em
+// .../pagamento); no Pix, "Pagar depois".
 export const POST: APIRoute = async (context) => {
   const { request, cookies, locals } = context;
   const form = await request.formData().catch(() => null);
@@ -42,6 +45,11 @@ export const POST: APIRoute = async (context) => {
   const db = createUserClient(request, cookies);
   const page = "/admin/configuracoes/assinatura";
   const done = `${page}?pronto=1`;
+  // Depois do pagamento: o WhatsApp (se ainda não respondido) ou o Pronto.
+  const afterPayment = async () => {
+    const account = await getBillingAccount(db, clinic.clinicId);
+    return account && !account.whatsappOptIn && !account.whatsappPromptDismissedAt ? page : done;
+  };
 
   return runFormAction(
     context,
@@ -83,9 +91,32 @@ export const POST: APIRoute = async (context) => {
               : sync.status === "failed"
                 ? "Contrato aceito. As cobranças ainda não foram geradas; o Suporte do RecepClinic vai cuidar disso."
                 : "Contrato aceito.";
-          const account = await getBillingAccount(db, clinic.clinicId);
-          const whatsappNext = !!account && !account.whatsappOptIn && !account.whatsappPromptDismissedAt;
-          return { redirectTo: whatsappNext ? page : done, message };
+          // F12.2i: o passo do pagamento vem logo depois do aceite.
+          const [contracts, charges] = await Promise.all([listBillingContracts(db, clinic.clinicId), listBillingCharges(db, clinic.clinicId)]);
+          const acceptedContract = contracts.find((c) => c.id === contractId) ?? null;
+          const openSetup = charges.some((c) => c.kind === "setup" && (c.status === "pending" || c.status === "overdue"));
+          if (paymentStep(acceptedContract, openSetup)) return { redirectTo: `${page}?passo=pagamento`, message: "Contrato aceito." };
+          return { redirectTo: await afterPayment(), message };
+        }
+        case "cartao_informar": {
+          // F12.2i: a página do Asaas (implantação ou Checkout) abre em outra aba.
+          if (!clinic.roles.includes("admin")) throw new DataError("forbidden", "Cartão: só o Administrador da clínica");
+          const contract = (await listBillingContracts(db, clinic.clinicId)).find((c) => c.status === "active" && c.paymentMethod === "credit_card");
+          if (!contract) throw new DataError("not_found", "Cartão: não há assinatura no cartão");
+          const back = new URL("/api/admin/configuracoes/assinatura/cartao", request.url).toString();
+          const started = await startCardRegistrationNow(contract.id, {
+            actorId: locals.userId ?? null,
+            successUrl: `${back}?resultado=ok`,
+            cancelUrl: `${back}?resultado=cancelado`,
+          });
+          return { redirectTo: started.link, message: "Informe o cartão na página do Asaas." };
+        }
+        case "pagamento_depois": {
+          // F12.2i: Pix, a implantação fica em Cobranças até o vencimento.
+          const contract = (await listBillingContracts(db, clinic.clinicId)).find((c) => c.status === "active" && c.paymentMethod === "pix");
+          if (!contract) throw new DataError("not_found", "Pagamento: não há assinatura no Pix");
+          await dismissBillingPaymentStep(db, clinic.clinicId, contract.id);
+          return { redirectTo: await afterPayment(), message: "A cobrança da implantação está em Cobranças, para pagar até o vencimento." };
         }
         case "cancelar": {
           if (!formChecked(form, "confirmo")) throw new DataError("invalid", "Cancelamento: confirme o cancelamento", { confirmo: "Marque a confirmação." });
