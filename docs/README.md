@@ -15,7 +15,9 @@
 > **Central de Atendimento Humano (05/nov):** só planejamento, em [`planejamento-central-atendimento.md`](planejamento-central-atendimento.md).
 > Decisões 1 a 12 respondidas (D12 revista); CN0 feito. **Alertas para a produção (seção 5.1):** a Meta cobra as
 > mensagens de serviço desde 01/out (1.000 grátis/mês por número; sem pagamento, para de entregar) e descontinuou o
-> Embedded Signup v3 (o botão de conexão usa a v3) em 15/out. Cliente decide o próximo passo.
+> Embedded Signup v3 (o botão de conexão usa a v3) em 15/out. **Cliente (05/nov):** medir outubro na produção (CU1,
+> só leitura) e conferir a forma de pagamento das clínicas na Meta; corrigir o cadastro v3 → v4 já, antes da Central.
+> Custo da Meta, ativação pelo Administrador e calculadora: seção 14 do plano (decidida).
 >
 > **Decisão pendente:** testes de tela automáticos (Playwright); conversar prós e contras com o cliente (`historico.md`, "C30").
 >

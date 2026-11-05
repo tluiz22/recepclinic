@@ -321,7 +321,9 @@ Páginas lidas em 05/nov: [Onboard WhatsApp Business app users](https://develope
 [Non-template messages pricing](https://developers.facebook.com/documentation/business-messaging/whatsapp/pricing/non-template-messages),
 [Media](https://developers.facebook.com/docs/whatsapp/cloud-api/reference/media/).
 
-**Alertas que valem já para a produção (fora da Central):**
+**Alertas que valem já para a produção (fora da Central):** decisão do cliente (05/nov): (1) medir outubro na
+produção (CU1, só leitura) e o cliente confere a forma de pagamento de cada clínica no Gerenciador do WhatsApp;
+(2) corrigir o cadastro v3 → v4 já, antes da Central (guia de migração, teste no staging, etapa curta na `main`).
 
 1. **Mensagens de serviço passaram a ser cobradas em 01/out/2026.** Toda mensagem fora de template dentro da janela
    (respostas do bot, listas, botões e, depois, a Central) é cobrada por mensagem; **1.000 grátis por mês por

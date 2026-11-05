@@ -614,3 +614,23 @@ Migração `20261211120000_ciclo_do_atendimento_humano.sql` (aplicar antes do pu
    escreveu de novo. Confira a conversa no WhatsApp antes de finalizar."
 6. **Ficha do paciente** (Quem fala com a clínica): Abrir no WhatsApp e Finalizar atendimento também em Aguardando.
 7. **12 h.** Em atendimento sem nenhuma mensagem por 12 h volta ao bot sozinha, sem mensagem ao paciente.
+
+## W. Falhas de envio (FE, 05/nov)
+
+Migração `20261213120000_falhas_de_envio_descartadas.sql` (aplicar antes do push). Detalhe em
+[`falhas-de-envio.md`](falhas-de-envio.md).
+
+1. **Conferência ao marcar.** Marcar um atendimento futuro: a confirmação mostra o WhatsApp que recebe a mensagem, em
+   destaque, e "Marcar" só libera com "Conferi o número com o paciente" marcado. Data passada: sem o quadro.
+2. **Conferência no cadastro.** Pacientes › Novo paciente: o mesmo quadro com o número digitado. Na tela do contato,
+   só quando o WhatsApp muda.
+3. **Aviso depois de marcar.** No topo da Agenda: "Enviando…" e, em segundos, "A confirmação chegou" (verde). Com um
+   número sem WhatsApp: "A confirmação não chegou", com o motivo, "Corrigir o número" e "O número está certo".
+4. **Corrigir o número.** Na janela, o número certo → "Salvar e reenviar": o cadastro muda e o aviso do topo volta a
+   acompanhar a confirmação nova.
+5. **Início.** O número sem WhatsApp aparece em "Precisa de você" como "Corrigir número" (com o número e a data), conta
+   no número do menu e some ao corrigir, quando uma mensagem chega a ele ou em "O número está certo".
+6. **Envios (Suporte).** Relatório do dia › Envios: tocar na linha abre cada envio com falha (o que era, quando, para
+   que número, o motivo e o que fazer). "Descartar" tira o envio da lista e do alerta do Início.
+7. **Bot.** Falha passageira da Meta numa resposta do bot: nova tentativa em até 1 minuto (30 s, depois 2 min), só se
+   a conversa não andou. Conferir pela trilha das mensagens (Sistema › Erros, quando houver).
