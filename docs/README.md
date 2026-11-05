@@ -9,8 +9,8 @@
 > produção** (`d2744f9`, sem migração); cliente valida pelo `staging.md`, parte U.
 >
 > **CA, ciclo do atendimento humano (04/nov):** situação guardada, Finalizar atendimento sem mensagem, abas na tela
-> Atendimento e encerramento silencioso em 12 h. Na `main` e no **staging** (`961e703`; migração `20261211120000`
-> aplicada); cliente valida pelo `staging.md`, parte V. Captura pendente: `atendimento`. Depois: produção. Plano em [`ciclo-atendimento-humano.md`](ciclo-atendimento-humano.md).
+> Atendimento e encerramento silencioso em 12 h. No **staging e na produção** (`1bfd20f`, 05/nov; migração
+> `20261211120000` aplicada nos dois); cliente valida pelo `staging.md`, parte V. Captura pendente: `atendimento`. Plano em [`ciclo-atendimento-humano.md`](ciclo-atendimento-humano.md).
 >
 > **Decisão pendente:** testes de tela automáticos (Playwright); conversar prós e contras com o cliente (`historico.md`, "C30").
 >
@@ -28,7 +28,7 @@
 > `20261201120000` a `20261206120000`), sobre o `1ceb6a4`. Cliente valida no uso. Detalhe no [`producao.md`](producao.md) (Publicações).
 >
 > **Ambientes**
-> - **Produção** (`app.recepclinic.com.br`, branch `producao`) = `main` em 04/nov (até a C31). Fluxo em [`producao.md`](producao.md).
+> - **Produção** (`app.recepclinic.com.br`, branch `producao`) = `main` em 04/nov (até a CA, 05/nov). Fluxo em [`producao.md`](producao.md).
 > - **Staging** (`teste.recepclinic.com.br`, branch `main`): produção + redesign da Recepção (RX1 a RX9, sem migração) +
 >   cartão do Asaas (`ASAAS_PREVIEW=1`) + Base de Conhecimento do bot (migração aplicada) + PN1, PN2, IS2 a IS5 (migrações aplicadas) + IS1 + C17 a C20 (03/nov; migração `20261206120000` aplicada) + C21 (04/nov).
 >   Roteiros em [`staging.md`](staging.md).

@@ -1,8 +1,7 @@
 # Ciclo de vida do atendimento humano (CA)
 
-> **Retomar daqui (04/nov/2026).** Etapas 1 e 2 na `main` e no staging (`961e703`, 04/nov; migração
-> `20261211120000` aplicada e conferida antes do push). Próximo: o cliente valida pelo `staging.md`, parte V; depois,
-> produção (a migração antes do push).
+> **Retomar daqui (04/nov/2026).** Na `main`, no staging e na produção (`1bfd20f`, 05/nov; migração
+> `20261211120000` aplicada e conferida antes do push nos dois). Próximo: o cliente valida pelo `staging.md`, parte V.
 
 Pedido do cliente (04/nov/2026): a recepção controla quando o atendimento humano termina; o bot volta na hora, sem
 mandar nada ao paciente; mensagens depois do fim são do bot.
