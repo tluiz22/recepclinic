@@ -337,9 +337,9 @@ const sectionTitle = "font-display text-[17px] leading-tight font-bold text-ink 
     }
     {
       inProgress.length > 0 && (
-        // Conversas que a clínica assumiu e ainda não devolveu ao bot (cliente, 27/out/2026).
+        // Conversas que a clínica assumiu e ainda não finalizou (cliente, 27/out/2026; CA, 04/nov/2026).
         <a
-          href="/admin/atendimento"
+          href="/admin/atendimento?aba=atendimento"
           class="flex flex-wrap items-center gap-3.5 border-t border-pend-200 bg-pend-50 px-4 py-3.5 text-pend-800 no-underline hover:bg-pend-100/60 sm:px-[18px]"
         >
           <span class="flex h-11 w-11 flex-none items-center justify-center rounded-full bg-pend-500 font-display text-xl font-bold text-ink">{inProgress.length}</span>
@@ -347,7 +347,7 @@ const sectionTitle = "font-display text-[17px] leading-tight font-bold text-ink 
             <strong class="text-[17px]">
               {inProgress.length === 1 ? "1 conversa está com a clínica e ainda não voltou ao bot" : `${inProgress.length} conversas estão com a clínica e ainda não voltaram ao bot`}
             </strong>
-            <span class="text-[15px] text-ink-mid">{inProgressNames}. Ao terminar, use "Devolver ao bot" em Atendimento (sem nova mensagem do paciente, volta sozinha 12 h depois da última resposta da clínica).</span>
+            <span class="text-[15px] text-ink-mid">{inProgressNames}. Ao terminar, use "Finalizar atendimento" em Atendimento (sem nova mensagem, volta sozinha 12 h depois da última).</span>
           </span>
           <span class="flex-none text-[15px] font-bold">Ver conversas ›</span>
         </a>

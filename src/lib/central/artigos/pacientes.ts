@@ -70,7 +70,7 @@ export const pacientesArtigos = [
     order: 32,
     intro: "A ficha reúne os dados, quem fala com a clínica, o plano de saúde, o histórico de atendimentos e as abas Documentos, Anotações e Lembretes.",
     fields: [
-      { name: "Quem fala com a clínica", text: "O contato e o telefone. Com uma conversa no atendimento humano, mostra se está aguardando ou em atendimento, com Abrir no WhatsApp e, em atendimento, Devolver ao bot. Aparece também na ficha do responsável." },
+      { name: "Quem fala com a clínica", text: "O contato e o telefone. Com uma conversa no atendimento humano, mostra se está aguardando ou em atendimento, com Abrir no WhatsApp e Finalizar atendimento. Aparece também na ficha do responsável." },
       { name: "Histórico", text: "Os atendimentos próximos e anteriores, das agendas que a sua função vê (o Profissional vê só as próprias)." },
       { name: "Anotações", text: "Texto livre com data e autor. A equipe vê." },
       { name: "Documentos", text: "Arquivos do paciente, com filtro por tipo." },

@@ -1,21 +1,18 @@
 import type { DbClient } from "../clients";
 import { unwrap } from "../errors";
 import { getSupportWhatsapp } from "../platformSettings";
-import { returnToBot } from "./conversations";
-import { COURTESY_MESSAGE_TYPE } from "./courtesy";
+import { getConversation, returnToBot, type HandoffStatus } from "./conversations";
 
 // Atendimento humano (F8.5a, cliente, 27/out/2026): as conversas em que o bot
 // parou e a clínica precisa responder. Na coexistência tudo o que o bot fala
 // aparece no app da recepção; esta lista diz, de relance, o que é com ela.
 //
-// "Aguardando a clínica": a pausa começou e a clínica ainda não respondeu
-// pelo app, ou o paciente escreveu de novo depois da última resposta (cortesia como
-// "ok", "obrigado" ou 👍 não conta: C27, courtesy.ts; cliente, 04/nov/2026).
-// "Em atendimento": a clínica respondeu e o paciente não escreveu depois.
-// A conversa sai da lista com o "Devolver ao bot", com o "#bot" ou, "Em
-// atendimento", 12 h depois da última resposta da clínica sem o paciente
-// escrever (C20, handoffReturn.ts; cliente, 03/nov/2026; de 30/out a 03/nov
-// não voltava sozinha).
+// A situação fica guardada na conversa (CA, cliente, 04/nov/2026; antes era
+// calculada pela última mensagem): "Aguardando a clínica" (a pausa começou ou
+// o paciente escreveu de novo; cortesia como "ok", "obrigado" ou 👍 não conta,
+// C27) ou "Em atendimento" (a clínica respondeu pelo app). A conversa sai da
+// lista com o "Finalizar atendimento", com o "#bot" ou, "Em atendimento", 12 h
+// depois da última mensagem (handoffReturn.ts); sempre sem mandar nada.
 
 export type HandoffReason = "requested" | "agent_took_over" | "bot_limit" | "no_availability" | "not_understood";
 
@@ -32,25 +29,10 @@ export function handoffReasonLabel(reason: string | null): string {
   return reason && reason in HANDOFF_REASON_LABELS ? HANDOFF_REASON_LABELS[reason as HandoffReason] : "Atendimento pela clínica";
 }
 
+/** Na tela: "waiting" = Aguardando a clínica; "in_progress" = Em atendimento. */
 export type AttentionStatus = "waiting" | "in_progress";
 
-/**
- * Situação de uma conversa pausada, pelas horas das mensagens do paciente e
- * das respostas da recepção pelo app desde o início da pausa.
- */
-export function classifyAttention(
-  startedAt: Date,
-  patientTimes: Date[],
-  agentTimes: Date[],
-): { status: AttentionStatus; waitingSince: Date | null; lastAgentAt: Date | null } {
-  const afterStart = (t: Date) => t.getTime() >= startedAt.getTime();
-  const lastAgentAt = agentTimes.filter(afterStart).reduce<Date | null>((max, t) => (!max || t > max ? t : max), null);
-  if (!lastAgentAt) return { status: "waiting", waitingSince: startedAt, lastAgentAt: null };
-  const unanswered = patientTimes.filter((t) => t.getTime() > lastAgentAt.getTime());
-  if (unanswered.length === 0) return { status: "in_progress", waitingSince: null, lastAgentAt };
-  const first = unanswered.reduce((min, t) => (t < min ? t : min));
-  return { status: "waiting", waitingSince: first, lastAgentAt };
-}
+const STATUS: Record<HandoffStatus, AttentionStatus> = { waiting_clinic: "waiting", in_progress: "in_progress" };
 
 export type AttentionItem = {
   phone: string;
@@ -64,6 +46,8 @@ export type AttentionItem = {
   status: AttentionStatus;
   /** Desde quando a clínica deve uma resposta (só em "Aguardando"). */
   waitingSince: Date | null;
+  /** Hora da última mudança de situação (CA): a rotina de 12 h confere que não mudou. */
+  statusAt: Date;
   lastAgentAt: Date | null;
   /** Última mensagem da conversa na pausa (paciente ou recepção pelo app). */
   lastActivityAt: Date;
@@ -84,12 +68,15 @@ type PausedRow = {
   handoff_reminded_at: string | null;
   handoff_subject: string | null;
   handoff_subject_asked_at: string | null;
+  handoff_status: string | null;
+  handoff_status_at: string | null;
   contacts: { full_name: string } | null;
 };
 
 /**
- * Conversas pausadas da clínica, "Aguardando" primeiro (a mais antiga no topo),
- * depois "Em atendimento". `phone`: só a conversa desse número.
+ * Conversas pausadas da clínica, "Aguardando a clínica" primeiro (a mais antiga
+ * no topo), depois "Em atendimento" (a mais recente no topo). `phone`: só a
+ * conversa desse número.
  */
 export async function listHumanAttention(
   db: DbClient,
@@ -102,7 +89,7 @@ export async function listHumanAttention(
 
   let query = db
     .from("conversation_state")
-    .select("contact_phone, contact_id, handoff_reason, handoff_started_at, human_handoff_at, handoff_notified_at, handoff_reminded_at, handoff_subject, handoff_subject_asked_at, contacts ( full_name )")
+    .select("contact_phone, contact_id, handoff_reason, handoff_started_at, human_handoff_at, handoff_notified_at, handoff_reminded_at, handoff_subject, handoff_subject_asked_at, handoff_status, handoff_status_at, contacts ( full_name )")
     .eq("clinic_id", clinicId)
     .eq("human_handoff", true);
   if (phone) query = query.eq("contact_phone", phone);
@@ -142,18 +129,15 @@ export async function listHumanAttention(
   const items = open.map(({ row }): AttentionItem => {
     const own = messages.filter((m) => m.contact_phone === row.contact_phone);
     const patient = own.filter((m) => m.direction === "inbound");
-    // C27: cortesia depois da resposta da clínica ("ok", "obrigado", 👍) não deixa a conversa aguardando.
-    const needsAnswer = patient.filter((m) => m.message_type !== COURTESY_MESSAGE_TYPE);
-    const agent = own.filter((m) => m.message_type === "agent_reply");
     const startedAt = new Date(row.handoff_started_at ?? row.human_handoff_at!);
-    const situation = classifyAttention(
-      startedAt,
-      needsAnswer.map((m) => new Date(m.created_at)),
-      agent.map((m) => new Date(m.created_at)),
-    );
+    const agent = own.find((m) => m.message_type === "agent_reply" && new Date(m.created_at) >= startedAt);
+    const lastAgentAt = agent ? new Date(agent.created_at) : null;
+    // A situação guardada (CA); conversa sem ela (não deveria haver): aguardando desde o início.
+    const status = STATUS[(row.handoff_status as HandoffStatus | null) ?? "waiting_clinic"] ?? "waiting";
+    const statusAt = new Date(row.handoff_status_at ?? startedAt);
     const last = patient[0];
     const known = byPhone.get(row.contact_phone);
-    const activity = [startedAt, situation.lastAgentAt, last ? new Date(last.created_at) : null].filter((t): t is Date => !!t);
+    const activity = [startedAt, statusAt, lastAgentAt, last ? new Date(last.created_at) : null].filter((t): t is Date => !!t);
     return {
       phone: row.contact_phone,
       contactId: row.contact_id ?? known?.id ?? null,
@@ -162,7 +146,10 @@ export async function listHumanAttention(
       subject: row.handoff_subject,
       subjectAsked: !!row.handoff_subject_asked_at,
       startedAt,
-      ...situation,
+      status,
+      waitingSince: status === "waiting" ? statusAt : null,
+      statusAt,
+      lastAgentAt,
       lastActivityAt: new Date(Math.max(...activity.map((t) => t.getTime()))),
       lastPatientAt: last ? new Date(last.created_at) : null,
       notifiedAt: row.handoff_notified_at ? new Date(row.handoff_notified_at) : null,
@@ -171,7 +158,7 @@ export async function listHumanAttention(
   });
 
   const waiting = items.filter((i) => i.status === "waiting").sort((a, b) => a.waitingSince!.getTime() - b.waitingSince!.getTime());
-  const inProgress = items.filter((i) => i.status === "in_progress").sort((a, b) => b.lastAgentAt!.getTime() - a.lastAgentAt!.getTime());
+  const inProgress = items.filter((i) => i.status === "in_progress").sort((a, b) => b.lastActivityAt.getTime() - a.lastActivityAt.getTime());
   return [...waiting, ...inProgress];
 }
 
@@ -181,15 +168,23 @@ export async function countAwaitingClinic(db: DbClient, clinicId: string): Promi
 }
 
 /**
- * "Devolver ao bot" (cliente, 27/out/2026): o mesmo que o "#bot", sem mandar
- * nada ao paciente. false = a conversa já não estava com a clínica.
+ * "Finalizar atendimento" (CA, cliente, 04/nov/2026; era "Devolver ao bot"): o mesmo que o "#bot". O bot volta na
+ * hora, sem mandar nada ao paciente nem mostrar o menu; o evento guarda quem finalizou (login da tela). false = a
+ * conversa já não estava com a clínica (nada muda, nada é registrado de novo).
  */
-export async function giveBackToBot(db: DbClient, clinicId: string, phone: string): Promise<boolean> {
-  const paused = unwrap(
-    await db.from("conversation_state").select("id").eq("clinic_id", clinicId).eq("contact_phone", phone).eq("human_handoff", true).maybeSingle(),
-    "Atendimento humano",
-  );
-  if (!paused) return false;
-  await returnToBot(db, clinicId, phone);
-  return true;
+export async function finishAttendance(
+  db: DbClient,
+  clinicId: string,
+  phone: string,
+  { now = new Date(), seenStatusAt }: { now?: Date; seenStatusAt?: Date | null } = {},
+): Promise<"finished" | "already" | "patient_wrote"> {
+  const current = await getConversation(db, clinicId, phone);
+  if (!current?.humanHandoff || !current.handoffStatus || !current.handoffStatusAt) return "already";
+  // O paciente escreveu depois que a tela foi aberta: a recepção confere antes (a mensagem não fica sem resposta).
+  if (seenStatusAt && current.handoffStatus === "waiting_clinic" && current.handoffStatusAt.getTime() > seenStatusAt.getTime()) return "patient_wrote";
+  // Só se nada mudou desde a leitura (uma mensagem que chega no mesmo instante não se perde).
+  const finished = await returnToBot(db, clinicId, phone, { origin: "reception", now, expected: { status: current.handoffStatus, statusAt: current.handoffStatusAt } });
+  if (finished) return "finished";
+  const after = await getConversation(db, clinicId, phone);
+  return after?.humanHandoff ? "patient_wrote" : "already";
 }

@@ -12,9 +12,10 @@ import { logError } from "../../log";
 //
 // Pausa da recepção: quando a recepção escreve pelo app do WhatsApp Business
 // (eco), o paciente pede atendimento humano ou o bot não consegue seguir, o
-// bot fica em silêncio. A conversa só volta ao bot pelo "Devolver ao bot" da
-// tela Atendimento ou pelo "#bot" da recepção: não há prazo para voltar
-// sozinha (cliente, 30/out/2026; antes, 24h em dia útil).
+// bot fica em silêncio. A conversa volta ao bot pelo "Finalizar atendimento"
+// da tela Atendimento, pelo "#bot" da recepção ou pela rotina de 12 h
+// (handoffReturn.ts), sempre sem mandar nada ao paciente (CA, cliente,
+// 04/nov/2026; docs/ciclo-atendimento-humano.md).
 
 /** Conversa parada fora do repouso por mais que isso recomeça do zero (piloto). */
 export const IDLE_TIMEOUT_MINUTES = 15;
@@ -69,9 +70,22 @@ export type Conversation = {
   /** Assunto da transferência (jornada E4): quando o bot perguntou e a resposta. */
   handoffSubjectAskedAt: Date | null;
   handoffSubject: string | null;
+  /** Situação com a clínica (CA); nula com o bot. */
+  handoffStatus: HandoffStatus | null;
+  /** Hora da última mudança de situação ou de responsável. */
+  handoffStatusAt: Date | null;
 };
 
-const COLUMNS = "id, contact_phone, contact_id, state, context, human_handoff, human_handoff_at, funnel_session_id, funnel_flow, updated_at, not_understood_count, handoff_subject_asked_at, handoff_subject";
+/**
+ * Situação da conversa com a clínica (CA, cliente, 04/nov/2026), guardada no banco: "Aguardando a clínica" ou "Em
+ * atendimento" (a clínica respondeu). Só duas (com dezenas de conversas, três confundiriam). Cada mudança vira um
+ * evento em `handoff_events` (gatilho no banco).
+ */
+export type HandoffStatus = "waiting_clinic" | "in_progress";
+/** Quem mudou a situação ou o responsável. */
+export type HandoffActor = "patient" | "reception" | "system" | "bot";
+
+const COLUMNS = "id, contact_phone, contact_id, state, context, human_handoff, human_handoff_at, funnel_session_id, funnel_flow, updated_at, not_understood_count, handoff_subject_asked_at, handoff_subject, handoff_status, handoff_status_at";
 
 type Row = {
   id: string;
@@ -87,6 +101,8 @@ type Row = {
   not_understood_count: number;
   handoff_subject_asked_at: string | null;
   handoff_subject: string | null;
+  handoff_status: string | null;
+  handoff_status_at: string | null;
 };
 
 const toConversation = (row: Row): Conversation => ({
@@ -103,6 +119,8 @@ const toConversation = (row: Row): Conversation => ({
   notUnderstoodCount: row.not_understood_count ?? 0,
   handoffSubjectAskedAt: row.handoff_subject_asked_at ? new Date(row.handoff_subject_asked_at) : null,
   handoffSubject: row.handoff_subject ?? null,
+  handoffStatus: (row.handoff_status as HandoffStatus | null) ?? null,
+  handoffStatusAt: row.handoff_status_at ? new Date(row.handoff_status_at) : null,
 });
 
 export async function getConversation(db: DbClient, clinicId: string, phone: string): Promise<Conversation | null> {
@@ -245,14 +263,52 @@ export async function logAbandonment(
 // Pausa da recepção
 // ---------------------------------------------------------------------------
 
-/** Devolve a conversa ao bot, do começo (o paciente pode não lembrar onde parou). */
-export async function returnToBot(db: DbClient, clinicId: string, phone: string): Promise<void> {
+/**
+ * Fim do atendimento humano (CA): a conversa volta ao bot, do começo (o paciente pode não lembrar onde parou), sem
+ * mandar nada nem mostrar o menu; o bot só fala na próxima mensagem do paciente. O histórico fica. Só muda conversa
+ * que está com a clínica (repetir não muda nada nem registra de novo); `expected`: só se a situação e a hora dela
+ * ainda forem as lidas (a rotina de 12 h não encerra conversa que mudou nesse meio-tempo). true = voltou agora.
+ */
+export async function returnToBot(
+  db: DbClient,
+  clinicId: string,
+  phone: string,
+  { origin, now = new Date(), expected }: { origin: HandoffActor; now?: Date; expected?: { status: HandoffStatus; statusAt: Date } },
+): Promise<boolean> {
+  let query = db
+    .from("conversation_state")
+    .update({
+      human_handoff: false,
+      state: WELCOME,
+      context: {},
+      funnel_session_id: null,
+      funnel_flow: null,
+      not_understood_count: 0,
+      handoff_status_at: now.toISOString(),
+      handoff_changed_by: origin,
+    })
+    .eq("clinic_id", clinicId)
+    .eq("contact_phone", phone)
+    .eq("human_handoff", true);
+  if (expected) query = query.eq("handoff_status", expected.status).eq("handoff_status_at", expected.statusAt.toISOString());
+  const rows = unwrap(await query.select("id"), "Conversa do WhatsApp");
+  return rows.length > 0;
+}
+
+/**
+ * Mensagem do paciente (que não seja cortesia, C27) numa conversa com a clínica (CA): "Em atendimento" volta para
+ * "Aguardando a clínica" (precisa de ação). O bot segue desligado. Chamada só para mensagem gravada agora (a repetida
+ * pela Meta não muda nada).
+ */
+export async function markPatientWrote(db: DbClient, clinicId: string, phone: string, now: Date = new Date()): Promise<void> {
   unwrap(
     await db
       .from("conversation_state")
-      .update({ human_handoff: false, state: WELCOME, context: {}, funnel_session_id: null, funnel_flow: null, not_understood_count: 0 })
+      .update({ handoff_status: "waiting_clinic", handoff_status_at: now.toISOString(), handoff_changed_by: "patient" })
       .eq("clinic_id", clinicId)
-      .eq("contact_phone", phone),
+      .eq("contact_phone", phone)
+      .eq("human_handoff", true)
+      .eq("handoff_status", "in_progress"),
     "Conversa do WhatsApp",
   );
 }
@@ -317,6 +373,16 @@ export async function pauseForHuman(
 ): Promise<void> {
   const current = await getConversation(db, clinicId, phone);
   const pauseActive = !!current?.humanHandoff;
+  // Situação (CA): pausa nova pela resposta da clínica já nasce "Em atendimento"; as outras, "Aguardando a clínica".
+  // Na pausa em andamento, só a resposta da clínica muda: "Aguardando a clínica" vira "Em atendimento".
+  const tookOver = reason === "agent_took_over";
+  const status: HandoffStatus | null = !pauseActive
+    ? tookOver
+      ? "in_progress"
+      : "waiting_clinic"
+    : tookOver && current?.handoffStatus === "waiting_clinic"
+      ? "in_progress"
+      : null;
 
   if (!pauseActive) {
     await logFunnelEvent(
@@ -362,6 +428,9 @@ export async function pauseForHuman(
         not_understood_count: 0,
         // Atendimento humano (F8.5a): o motivo e o início são da pausa que começa; numa pausa em andamento, ficam.
         ...(pauseActive ? {} : { handoff_reason: reason, handoff_started_at: now.toISOString() }),
+        ...(status
+          ? { handoff_status: status, handoff_status_at: now.toISOString(), handoff_changed_by: tookOver ? "reception" : reason === "requested" ? "patient" : "bot" }
+          : {}),
         funnel_session_id: null,
         funnel_flow: null,
       },
@@ -522,8 +591,9 @@ export async function handleAgentEcho(
 ): Promise<"returned_to_bot" | "paused" | "ignored"> {
   const phone = toE164(echo.to);
   if (!phone) return "ignored";
+  // "#bot" no app: a recepção finaliza o atendimento (CA), sem mensagem ao paciente.
   if (isReturnToBotKeyword(messageBody(echo))) {
-    await returnToBot(db, clinicId, phone);
+    await returnToBot(db, clinicId, phone, { origin: "reception", now });
     return "returned_to_bot";
   }
   await pauseForHuman(db, clinicId, phone, { contactId, reason: "agent_took_over" }, now);

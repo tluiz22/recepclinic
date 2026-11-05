@@ -19,7 +19,7 @@ export const problemasArtigos = [
       "A clínica está em implantação? Nesse estado o bot não responde e nenhuma mensagem automática sai. O Suporte ativa a clínica.",
       "O WhatsApp está Conectado? Veja em Configurações › WhatsApp. Desconectado ou Em configuração, o bot não recebe as mensagens.",
       "O item Bot de WhatsApp está liberado para a clínica? Sem ele, Atendimento nem aparece no menu.",
-      "A conversa está pausada para humano? Se estiver em Atendimento, o bot fica calado com esse paciente até alguém tocar em Devolver ao bot.",
+      "A conversa está pausada para humano? Se estiver em Atendimento, o bot fica calado com esse paciente até alguém tocar em Finalizar atendimento.",
       "O contato bateu um limite? Veja Contatos para revisar no Meu dia; a equipe marca pelo painel e o Administrador pode liberar o número.",
       "Há horário livre? O bot só oferece serviço com horário livre dentro do prazo de oferta (Configurações › Clínica). Confira Horários, feriados e bloqueios.",
       "O serviço tem agenda, local e horário? O selo em Serviços diz o que falta.",

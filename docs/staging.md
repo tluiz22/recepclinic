@@ -596,3 +596,21 @@ Sem migração; publica com o push na `main`.
 3. Tocar em cada opção: os mesmos caminhos de antes. Digitar "menu" depois: volta o texto curto ("Escolha uma opção
    abaixo ou faça uma pergunta."). As outras listas do bot também mostram "Ver opções".
 4. Com atendimento marcado no número: "Não, outro assunto" leva ao menu com a apresentação.
+
+## V. Ciclo do atendimento humano (CA, 04/nov)
+
+Migração `20261211120000_ciclo_do_atendimento_humano.sql` (aplicar antes do push). Detalhe em
+[`ciclo-atendimento-humano.md`](ciclo-atendimento-humano.md).
+
+1. **Abas.** Atendimento humano: Aguardando a clínica e Em atendimento, com contador; Notificações só com o cartão de
+   ativar. No celular: "Aguardando", "Atendimento" e "Notificações" lado a lado, contador embaixo.
+2. **Pedido.** Pelo WhatsApp de testes, "falar com a recepção": a conversa aparece em Aguardando a clínica; o bot não
+   responde mais (fora o agradecimento do assunto).
+3. **Resposta da recepção.** Responder pelo app: a conversa passa para Em atendimento. "Obrigado" ou 👍 do paciente:
+   continua em Em atendimento. Uma pergunta do paciente: volta para Aguardando a clínica.
+4. **Finalizar atendimento** (com confirmação): a conversa sai da lista; nada chega ao paciente (nem o menu). A próxima
+   mensagem do paciente ("oi") é respondida pelo bot, do começo.
+5. **Tela desatualizada.** Abrir a tela, o paciente escrever de novo e, sem recarregar, Finalizar: aparece "O paciente
+   escreveu de novo. Confira a conversa no WhatsApp antes de finalizar."
+6. **Ficha do paciente** (Quem fala com a clínica): Abrir no WhatsApp e Finalizar atendimento também em Aguardando.
+7. **12 h.** Em atendimento sem nenhuma mensagem por 12 h volta ao bot sozinha, sem mensagem ao paciente.

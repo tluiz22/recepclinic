@@ -292,10 +292,13 @@ export const JOURNEY: JourneySection[] = [
         "Responde pelo app WhatsApp Business, no celular ou no computador",
         "Responder pelo app também pausa o bot. A tela Atendimento mostra quem espera. Exceção: mensagem que sai do app até 5 segundos depois da do paciente ou do bot (saudação ou ausência automática) não pausa; o Início e Configurações › WhatsApp avisam para desligar.",
       ),
-      reception("Manda #bot ou toca em \"Devolver ao bot\" no painel: o bot volta a atender essa conversa"),
+      reception(
+        "Manda #bot ou toca em \"Finalizar atendimento\" no painel: o bot volta a atender essa conversa, sem mandar nada nem mostrar o menu",
+        "O bot só responde na próxima mensagem do paciente, do começo. Se o paciente escreveu depois que a tela abriu, o painel avisa para conferir antes (CA, cliente, 04/nov/2026).",
+      ),
       bot(
-        "Sem #bot nem \"Devolver ao bot\": 12 h depois da última resposta da recepção, sem nova mensagem do paciente, a conversa volta ao bot e ele envia \"Como não tivemos resposta nas últimas horas, encerramos este atendimento…\"",
-        "Só quando a recepção já respondeu (paciente esperando resposta continua com a clínica). Cortesia do paciente depois da resposta (\"ok\", \"obrigado\", \"tchau\", 👍) não conta como esperando resposta: a conversa segue em atendimento e volta ao bot nas 12 h. Paciente que escreveu de novo também pode ser devolvido pelo painel. A mensagem sai sem template só até 24 h depois da última mensagem do paciente; depois disso, a conversa volta sem mensagem. A próxima mensagem do paciente começa do início.",
+        "Sem #bot nem \"Finalizar atendimento\": \"Em atendimento\" sem nenhuma mensagem há 12 h volta ao bot, em silêncio",
+        "Só quando a recepção já respondeu (\"Aguardando a clínica\" continua com a clínica). Cortesia do paciente depois da resposta (\"ok\", \"obrigado\", \"tchau\", 👍) não volta para Aguardando. Nada é enviado ao paciente (CA, cliente, 04/nov/2026; a C20 mandava uma mensagem de encerramento). A próxima mensagem do paciente começa do início.",
       ),
     ],
   },

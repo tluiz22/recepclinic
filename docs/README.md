@@ -8,6 +8,10 @@
 > **C31 (04/nov):** apresentação do 1º menu do bot, descrições nas opções e botão "Ver opções". No **staging e na
 > produção** (`d2744f9`, sem migração); cliente valida pelo `staging.md`, parte U.
 >
+> **CA, ciclo do atendimento humano (04/nov):** situação guardada, Finalizar atendimento sem mensagem, abas na tela
+> Atendimento e encerramento silencioso em 12 h. Na `main`, **sem commit** (migração `20261211120000` só no banco
+> local); próximo: cliente autoriza commit e staging. Plano em [`ciclo-atendimento-humano.md`](ciclo-atendimento-humano.md).
+>
 > **Decisão pendente:** testes de tela automáticos (Playwright); conversar prós e contras com o cliente (`historico.md`, "C30").
 >
 > **Próxima sessão (cliente, 04/nov):** uma **evolução do bot** (cliente traz o pedido). A `faturamento` ainda não tem a C22 a C30
