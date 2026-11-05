@@ -782,5 +782,15 @@ paciente).
   Central ligada** (`conversation_state.profile_name`, do `contacts[].profile.name` do webhook; mesma regra de guarda
   do texto); usado para preencher o cadastro.
 
-**Ainda a desenhar:** o painel do paciente no celular (C só no computador ou também no celular), lugar no menu,
-onde ficam as Notificações, Configurações › WhatsApp (ativação e medição) e a calculadora em Sistema › Vendas.
+- **T5. Painel no celular: P2**: faixa fixa abaixo do topo da conversa com a próxima consulta ("Próxima: qui, 13/nov,
+  10:00 · Dra. Ana Karina") e "Ver paciente", que abre o painel completo em tela própria (com "Voltar para a conversa").
+  Responsável com vários pacientes: a faixa mostra a próxima consulta entre eles; o painel, a lista da T2.
+- **T6. Menu: M1**: item **Conversas** logo abaixo do Meu dia, com o número das que aguardam a clínica; no celular, entra
+  na barra de baixo no lugar de "Relatório", que vai para o "Mais" (no computador o Relatório do dia continua no menu).
+  O número do Meu dia deixa de contar conversas. Item só aparece com a Central ligada; o Profissional vê o item com as
+  conversas transferidas a ele. Muda capturas da Central de Ajuda (anotar no CN3).
+- **T7. Notificações: N1**: botão "Notificações" no topo da tela Conversas abre a janela (ativar neste aparelho, lista
+  de aparelhos, remover); sai a aba Notificações da tela de hoje.
+
+**Ainda a desenhar:** Configurações › WhatsApp (ativação da Central, custo da Meta e medição do mês) e a calculadora em
+Sistema › Vendas.
