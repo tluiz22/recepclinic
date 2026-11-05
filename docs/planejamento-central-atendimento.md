@@ -612,6 +612,14 @@ O cliente quer o custo claro para a clínica antes de ela usar o atendimento pel
    atendimento por semana, média de atendimentos por dia. Resultado: valor médio das mensagens que o RecepClinic já
    envia hoje (avisos e bot), estimativa com o atendimento pelo RecepClinic (Central) e o total.
 
+4. **Comparação com IA na calculadora** (cliente, 05/nov): a mesma aba mostra a estimativa do que a clínica pagaria
+   com uma solução de atendimento por IA, para comparar com o RecepClinic. Base da Meta (seção 5.1): **IA de
+   terceiros** pela API = a mesma cobrança por mensagem da Meta **mais** o custo do provedor de IA (por token), em
+   geral com mais mensagens por conversa; **IA da Meta (Meta Business Agent)** = US$ 2,00 por milhão de tokens
+   (a Meta estima ~4 a 5 centavos de dólar por mensagem). Parâmetros (mensagens por conversa com IA, tokens por
+   mensagem, preço do provedor) editáveis pelo Suporte, com valor padrão e a fonte citada na tela. **[decidir:
+   quais cenários de IA mostrar]**
+
 **O que existe [reaproveitar]:** `clinic_usage_monthly` (mensagens e atendimentos por clínica e mês, `app.bump_usage`)
 e a tela Sistema › Uso, que separa templates das demais mensagens. **[alterar]** O texto da tela Uso diz "respostas
 do bot e da conversa (sem custo na janela de 24h)", que deixou de valer em 01/out.
