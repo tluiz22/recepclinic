@@ -809,4 +809,19 @@ paciente).
   **Valores padrão: conferir antes do CU1** (cliente, 05/nov): tabela oficial da Meta para o Brasil e preços de IA
   vigentes, cada valor com a fonte, para aprovação do cliente.
 
-**Desenho das telas concluído** (T1 a T10).
+- **T11. Valores padrão da calculadora (conferidos e aprovados, cliente, 05/nov)**:
+
+  | Parâmetro | Padrão | Fonte |
+  |---|---|---|
+  | Preço por mensagem (utilidade, autenticação, serviço; Brasil) | R$ 0,0350 (US$ 0,0068) | Meta, página de preços (USD, vigente desde 01/out/2026); BRL pela tabela "BRL list rates" da Meta, lida via terceiro (Vectalk), arquivo oficial não aberto: reconferir na implementação |
+  | Serviço grátis | 1.000 por número por mês, sem acumular | Meta, desde 01/out/2026 |
+  | Modelo de utilidade respondendo ao paciente | cobrado | Meta, desde 01/out/2026 |
+  | Câmbio (só IA) | R$ 5,15 fixo | relação das tabelas da Meta (0,0350 ÷ 0,0068); Suporte altera |
+  | IA da Meta (Meta Business Agent) | US$ 2 por milhão de tokens, 22.500 tokens por mensagem (≈ US$ 0,045); **sem** a tarifa de serviço (são excludentes) | Meta, desde 01/ago/2026 |
+  | IA de outra empresa | tarifa de serviço da Meta + Claude Sonnet 5.5 (US$ 2 entrada / US$ 10 saída por milhão), 3.000 + 200 tokens por mensagem | Anthropic (preço); tokens: suposição |
+  | Médias (suposição marcada) | 2 modelos e 4 mensagens do assistente por atendimento; 30% vão à recepção; 5 respostas; 12 mensagens por conversa com IA | sem dados de produção; recalibrar com mais clínicas |
+
+  Exemplo (3 profissionais, 5 dias, 12/dia ≈ 780 atendimentos): hoje R$ 128,80; Central + R$ 40,95; total R$ 169,75;
+  IA de outra empresa R$ 732,83; IA da Meta R$ 2.223,78. O aviso abaixo dos gráficos cita esses preços e médias.
+
+**Desenho das telas concluído** (T1 a T11).

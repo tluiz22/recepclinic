@@ -19,7 +19,7 @@
 > forma de pagamento da piloto na Meta; cadastro v3 → v4 vai junto com a Central (cliente, 05/nov).
 > **Pós-implantação:** rotina semanal que acompanha as mudanças da Meta (plano, seção 5.1).
 > Custo da Meta, ativação pelo Administrador e calculadora: seção 14 do plano (decidida).
-> **Revisão do plano (05/nov):** texto alinhado e lacunas incluídas (seção 12, ordem única). R1 a R3 respondidas. Telas T1 a T10 decididas (seção 15), desenho concluído. **Próximo:** conferir os valores padrão da calculadora (Meta Brasil e IA, com fonte), depois implementação (CU1).
+> **Revisão do plano (05/nov):** texto alinhado e lacunas incluídas (seção 12, ordem única). R1 a R3 respondidas. Telas T1 a T10 decididas (seção 15), desenho concluído. Valores da calculadora conferidos (T11). **Próximo:** implementação a partir do CU1, quando o cliente autorizar.
 >
 > **FE, falhas de envio (05/nov):** conferência do número ao marcar/cadastrar, aviso de entrega na Agenda, "Corrigir
 > número" no Início, reenvio do bot (30 s e 2 min), detalhes e "Descartar" na aba Envios. No **staging e na produção**
