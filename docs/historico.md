@@ -1012,3 +1012,33 @@ modelos + assistente acima da franquia; Central = respostas da recepção acima 
 empresa = modelos + mensagens de IA acima da franquia + tokens da empresa de IA; IA da Meta = modelos + tokens da Meta
 (sem tarifa de serviço). O exemplo da T11 bate centavo a centavo (teste). Rótulo "Atendimentos por dia (média, por
 profissional)", para deixar claro que multiplica pelos profissionais. Parâmetros não gravam (recarregar volta ao padrão).
+
+## CN1: base de dados da Central de atendimento (05/nov/2026)
+
+Na branch `central-atendimento`. Migração `20261215120000_central_base.sql`, aditiva, sem mudar o bot nem as telas:
+
+- **Matriz:** item `central_attendance` ("Central de atendimento", depende do bot), fora da tabela de preços até a
+  decisão 9 (preço/pacote). **Liga/desliga pelo Administrador:** `set_central_enabled` grava cada troca em
+  `central_switches` (só por essa função; ligar exige o item); `app.central_active` = item liberado e última troca
+  ligada. A tela vem no CU4.
+- **Mensagens:** `author` (paciente, bot, sistema, pelo app, pelo painel; carga pelo tipo, e o gatilho preenche quando
+  quem grava não informa; a mensagem automática do app vira "sistema"), `sent_by`, `handoff_id`, `wa_timestamp`,
+  `sort_at` (ordem do histórico; carga = `created_at`), `source` (ao vivo/histórico), `edited_at`, `revoked_at`,
+  `media_id`, `client_key` (único por clínica). Índice do histórico `(clinic_id, contact_phone, sort_at desc, id desc)`.
+- **Anexos:** `whatsapp_media` (só a credencial da clínica lê e grava) e o bucket privado `whatsapp-media` (16 MB;
+  pasta da clínica; `clinic_service` passa a gravar e apagar no Storage, só nessa pasta).
+- **Conversa:** `assigned_to`/`assigned_at`, `last_message_at`, `last_message_preview`, `last_message_author`,
+  `last_patient_at`; de volta ao bot o responsável sai (gatilho). A prévia fica fora da leitura direta pela API
+  (`grant` por coluna na `conversation_state`).
+- **Eventos:** `handoff_events.kind` (situação, assumida, transferida, liberada, finalizada; os antigos de volta ao bot
+  viraram "finalizada") e o responsável de antes e de depois.
+- **Não lidas e registro:** `conversation_reads` (cada login só a própria linha) e `conversation_access_log` (quem abriu
+  e quem baixou; o Administrador da clínica e o Suporte leem).
+- **Leitura:** `central_conversation_messages` (paginada por `sort_at`+`id`; a 1ª página registra a abertura e marca como
+  lida, menos para o Suporte; mensagem apagada no app sem texto) e `central_media_access`; as duas exigem a Central
+  ligada e a regra da decisão 4 (`app.can_view_conversation`).
+- **Código:** `src/lib/data/central.ts`, item em `features.ts`, `plans.ts` (fora da tabela) e o texto do item na ajuda do
+  Suporte. Testes: `tests/db/central-base.test.ts`; `whatsapp_media` e `conversation_reads` nas exceções da varredura
+  de isolamento (teste próprio). Seed: Central ligada na Clínica Exemplo Saúde.
+- **Ao juntar com a `faturamento`:** as tabelas novas com `clinic_id` (`central_switches`, `whatsapp_media`,
+  `conversation_reads`, `conversation_access_log`) precisam do bloqueio de clínica suspensa (teste `suspensao-banco`).

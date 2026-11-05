@@ -411,6 +411,26 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"central_switches": {
+                  Row: {
+                    "actor_id": string | null,"clinic_id": string,"enabled": boolean,"id": number,"occurred_at": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "actor_id"?: string | null,"clinic_id": string,"enabled": boolean,"id"?: never,"occurred_at"?: string
+                  }
+                  Update: {
+                    "actor_id"?: string | null,"clinic_id"?: string,"enabled"?: boolean,"id"?: never,"occurred_at"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "central_switches_clinic_id_fkey"
+      columns: ["clinic_id"]
+isOneToOne: false
+      referencedRelation: "clinics"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"clinic_features": {
                   Row: {
                     "clinic_id": string,"enabled_at": string,"enabled_by": string | null,"feature_key": string
@@ -663,16 +683,56 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
-                },"conversation_state": {
+                },"conversation_access_log": {
                   Row: {
-                    "clinic_id": string,"contact_id": string | null,"contact_phone": string,"context": NonNullable<Json>,"funnel_flow": string | null,"funnel_session_id": string | null,"handoff_changed_by": string | null,"handoff_id": string | null,"handoff_notified_at": string | null,"handoff_reason": string | null,"handoff_reminded_at": string | null,"handoff_started_at": string | null,"handoff_status": string | null,"handoff_status_at": string | null,"handoff_subject": string | null,"handoff_subject_asked_at": string | null,"human_handoff": boolean,"human_handoff_at": string | null,"id": string,"not_understood_count": number,"state": string,"updated_at": string
+                    "action": string,"clinic_id": string,"contact_phone": string,"id": number,"media_id": string | null,"occurred_at": string,"user_id": string | null
                   }
                   ComputedFields: never
                   Insert: {
-                    "clinic_id": string,"contact_id"?: string | null,"contact_phone": string,"context"?: NonNullable<Json>,"funnel_flow"?: string | null,"funnel_session_id"?: string | null,"handoff_changed_by"?: string | null,"handoff_id"?: string | null,"handoff_notified_at"?: string | null,"handoff_reason"?: string | null,"handoff_reminded_at"?: string | null,"handoff_started_at"?: string | null,"handoff_status"?: string | null,"handoff_status_at"?: string | null,"handoff_subject"?: string | null,"handoff_subject_asked_at"?: string | null,"human_handoff"?: boolean,"human_handoff_at"?: string | null,"id"?: string,"not_understood_count"?: number,"state"?: string,"updated_at"?: string
+                    "action": string,"clinic_id": string,"contact_phone": string,"id"?: never,"media_id"?: string | null,"occurred_at"?: string,"user_id"?: string | null
                   }
                   Update: {
-                    "clinic_id"?: string,"contact_id"?: string | null,"contact_phone"?: string,"context"?: NonNullable<Json>,"funnel_flow"?: string | null,"funnel_session_id"?: string | null,"handoff_changed_by"?: string | null,"handoff_id"?: string | null,"handoff_notified_at"?: string | null,"handoff_reason"?: string | null,"handoff_reminded_at"?: string | null,"handoff_started_at"?: string | null,"handoff_status"?: string | null,"handoff_status_at"?: string | null,"handoff_subject"?: string | null,"handoff_subject_asked_at"?: string | null,"human_handoff"?: boolean,"human_handoff_at"?: string | null,"id"?: string,"not_understood_count"?: number,"state"?: string,"updated_at"?: string
+                    "action"?: string,"clinic_id"?: string,"contact_phone"?: string,"id"?: never,"media_id"?: string | null,"occurred_at"?: string,"user_id"?: string | null
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "conversation_access_log_clinic_id_fkey"
+      columns: ["clinic_id"]
+isOneToOne: false
+      referencedRelation: "clinics"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"conversation_reads": {
+                  Row: {
+                    "clinic_id": string,"contact_phone": string,"last_read_at": string,"user_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "clinic_id": string,"contact_phone": string,"last_read_at"?: string,"user_id": string
+                  }
+                  Update: {
+                    "clinic_id"?: string,"contact_phone"?: string,"last_read_at"?: string,"user_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "conversation_reads_clinic_id_fkey"
+      columns: ["clinic_id"]
+isOneToOne: false
+      referencedRelation: "clinics"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"conversation_state": {
+                  Row: {
+                    "assigned_at": string | null,"assigned_to": string | null,"clinic_id": string,"contact_id": string | null,"contact_phone": string,"context": NonNullable<Json>,"funnel_flow": string | null,"funnel_session_id": string | null,"handoff_changed_by": string | null,"handoff_id": string | null,"handoff_notified_at": string | null,"handoff_reason": string | null,"handoff_reminded_at": string | null,"handoff_started_at": string | null,"handoff_status": string | null,"handoff_status_at": string | null,"handoff_subject": string | null,"handoff_subject_asked_at": string | null,"human_handoff": boolean,"human_handoff_at": string | null,"id": string,"last_message_at": string | null,"last_message_author": string | null,"last_message_preview": string | null,"last_patient_at": string | null,"not_understood_count": number,"state": string,"updated_at": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "assigned_at"?: string | null,"assigned_to"?: string | null,"clinic_id": string,"contact_id"?: string | null,"contact_phone": string,"context"?: NonNullable<Json>,"funnel_flow"?: string | null,"funnel_session_id"?: string | null,"handoff_changed_by"?: string | null,"handoff_id"?: string | null,"handoff_notified_at"?: string | null,"handoff_reason"?: string | null,"handoff_reminded_at"?: string | null,"handoff_started_at"?: string | null,"handoff_status"?: string | null,"handoff_status_at"?: string | null,"handoff_subject"?: string | null,"handoff_subject_asked_at"?: string | null,"human_handoff"?: boolean,"human_handoff_at"?: string | null,"id"?: string,"last_message_at"?: string | null,"last_message_author"?: string | null,"last_message_preview"?: string | null,"last_patient_at"?: string | null,"not_understood_count"?: number,"state"?: string,"updated_at"?: string
+                  }
+                  Update: {
+                    "assigned_at"?: string | null,"assigned_to"?: string | null,"clinic_id"?: string,"contact_id"?: string | null,"contact_phone"?: string,"context"?: NonNullable<Json>,"funnel_flow"?: string | null,"funnel_session_id"?: string | null,"handoff_changed_by"?: string | null,"handoff_id"?: string | null,"handoff_notified_at"?: string | null,"handoff_reason"?: string | null,"handoff_reminded_at"?: string | null,"handoff_started_at"?: string | null,"handoff_status"?: string | null,"handoff_status_at"?: string | null,"handoff_subject"?: string | null,"handoff_subject_asked_at"?: string | null,"human_handoff"?: boolean,"human_handoff_at"?: string | null,"id"?: string,"last_message_at"?: string | null,"last_message_author"?: string | null,"last_message_preview"?: string | null,"last_patient_at"?: string | null,"not_understood_count"?: number,"state"?: string,"updated_at"?: string
                   }
                   Relationships: [
                     {
@@ -765,14 +825,14 @@ isOneToOne: false
                   ]
                 },"handoff_events": {
                   Row: {
-                    "actor_id": string | null,"clinic_id": string,"contact_id": string | null,"contact_phone": string,"from_status": string,"handoff_id": string | null,"id": number,"occurred_at": string,"origin": string,"to_status": string
+                    "actor_id": string | null,"assigned_from": string | null,"assigned_to": string | null,"clinic_id": string,"contact_id": string | null,"contact_phone": string,"from_status": string,"handoff_id": string | null,"id": number,"kind": string,"occurred_at": string,"origin": string,"to_status": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "actor_id"?: string | null,"clinic_id": string,"contact_id"?: string | null,"contact_phone": string,"from_status": string,"handoff_id"?: string | null,"id"?: never,"occurred_at"?: string,"origin": string,"to_status": string
+                    "actor_id"?: string | null,"assigned_from"?: string | null,"assigned_to"?: string | null,"clinic_id": string,"contact_id"?: string | null,"contact_phone": string,"from_status": string,"handoff_id"?: string | null,"id"?: never,"kind"?: string,"occurred_at"?: string,"origin": string,"to_status": string
                   }
                   Update: {
-                    "actor_id"?: string | null,"clinic_id"?: string,"contact_id"?: string | null,"contact_phone"?: string,"from_status"?: string,"handoff_id"?: string | null,"id"?: never,"occurred_at"?: string,"origin"?: string,"to_status"?: string
+                    "actor_id"?: string | null,"assigned_from"?: string | null,"assigned_to"?: string | null,"clinic_id"?: string,"contact_id"?: string | null,"contact_phone"?: string,"from_status"?: string,"handoff_id"?: string | null,"id"?: never,"kind"?: string,"occurred_at"?: string,"origin"?: string,"to_status"?: string
                   }
                   Relationships: [
                     {
@@ -1807,16 +1867,36 @@ isOneToOne: true
       referencedColumns: ["id"]
     }
                   ]
-                },"whatsapp_messages": {
+                },"whatsapp_media": {
                   Row: {
-                    "appointment_id": string | null,"attempt": number,"body": string | null,"clinic_id": string,"contact_id": string | null,"contact_phone": string | null,"created_at": string,"direction": string,"failure_code": number | null,"failure_reason": string | null,"first_attempt_id": string | null,"id": string,"message_type": string,"retry_at": string | null,"retry_payload": Json | null,"status": string | null,"template_name": string | null,"wa_message_id": string | null
+                    "attempts": number,"clinic_id": string,"created_at": string,"deleted_at": string | null,"direction": string,"error": string | null,"file_name": string | null,"id": string,"message_id": string | null,"meta_media_id": string | null,"mime_type": string | null,"sha256": string | null,"size_bytes": number | null,"status": string,"storage_path": string | null,"stored_at": string | null
                   }
                   ComputedFields: never
                   Insert: {
-                    "appointment_id"?: string | null,"attempt"?: number,"body"?: string | null,"clinic_id": string,"contact_id"?: string | null,"contact_phone"?: string | null,"created_at"?: string,"direction": string,"failure_code"?: number | null,"failure_reason"?: string | null,"first_attempt_id"?: string | null,"id"?: string,"message_type": string,"retry_at"?: string | null,"retry_payload"?: Json | null,"status"?: string | null,"template_name"?: string | null,"wa_message_id"?: string | null
+                    "attempts"?: number,"clinic_id": string,"created_at"?: string,"deleted_at"?: string | null,"direction": string,"error"?: string | null,"file_name"?: string | null,"id"?: string,"message_id"?: string | null,"meta_media_id"?: string | null,"mime_type"?: string | null,"sha256"?: string | null,"size_bytes"?: number | null,"status"?: string,"storage_path"?: string | null,"stored_at"?: string | null
                   }
                   Update: {
-                    "appointment_id"?: string | null,"attempt"?: number,"body"?: string | null,"clinic_id"?: string,"contact_id"?: string | null,"contact_phone"?: string | null,"created_at"?: string,"direction"?: string,"failure_code"?: number | null,"failure_reason"?: string | null,"first_attempt_id"?: string | null,"id"?: string,"message_type"?: string,"retry_at"?: string | null,"retry_payload"?: Json | null,"status"?: string | null,"template_name"?: string | null,"wa_message_id"?: string | null
+                    "attempts"?: number,"clinic_id"?: string,"created_at"?: string,"deleted_at"?: string | null,"direction"?: string,"error"?: string | null,"file_name"?: string | null,"id"?: string,"message_id"?: string | null,"meta_media_id"?: string | null,"mime_type"?: string | null,"sha256"?: string | null,"size_bytes"?: number | null,"status"?: string,"storage_path"?: string | null,"stored_at"?: string | null
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "whatsapp_media_clinic_id_fkey"
+      columns: ["clinic_id"]
+isOneToOne: false
+      referencedRelation: "clinics"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"whatsapp_messages": {
+                  Row: {
+                    "appointment_id": string | null,"attempt": number,"author": string,"body": string | null,"client_key": string | null,"clinic_id": string,"contact_id": string | null,"contact_phone": string | null,"created_at": string,"direction": string,"edited_at": string | null,"failure_code": number | null,"failure_reason": string | null,"first_attempt_id": string | null,"handoff_id": string | null,"id": string,"media_id": string | null,"message_type": string,"retry_at": string | null,"retry_payload": Json | null,"revoked_at": string | null,"sent_by": string | null,"sort_at": string,"source": string,"status": string | null,"template_name": string | null,"wa_message_id": string | null,"wa_timestamp": string | null
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "appointment_id"?: string | null,"attempt"?: number,"author": string,"body"?: string | null,"client_key"?: string | null,"clinic_id": string,"contact_id"?: string | null,"contact_phone"?: string | null,"created_at"?: string,"direction": string,"edited_at"?: string | null,"failure_code"?: number | null,"failure_reason"?: string | null,"first_attempt_id"?: string | null,"handoff_id"?: string | null,"id"?: string,"media_id"?: string | null,"message_type": string,"retry_at"?: string | null,"retry_payload"?: Json | null,"revoked_at"?: string | null,"sent_by"?: string | null,"sort_at": string,"source"?: string,"status"?: string | null,"template_name"?: string | null,"wa_message_id"?: string | null,"wa_timestamp"?: string | null
+                  }
+                  Update: {
+                    "appointment_id"?: string | null,"attempt"?: number,"author"?: string,"body"?: string | null,"client_key"?: string | null,"clinic_id"?: string,"contact_id"?: string | null,"contact_phone"?: string | null,"created_at"?: string,"direction"?: string,"edited_at"?: string | null,"failure_code"?: number | null,"failure_reason"?: string | null,"first_attempt_id"?: string | null,"handoff_id"?: string | null,"id"?: string,"media_id"?: string | null,"message_type"?: string,"retry_at"?: string | null,"retry_payload"?: Json | null,"revoked_at"?: string | null,"sent_by"?: string | null,"sort_at"?: string,"source"?: string,"status"?: string | null,"template_name"?: string | null,"wa_message_id"?: string | null,"wa_timestamp"?: string | null
                   }
                   Relationships: [
                     {
@@ -1843,6 +1923,12 @@ isOneToOne: false
 isOneToOne: false
       referencedRelation: "whatsapp_messages"
       referencedColumns: ["id"]
+    },{
+      foreignKeyName: "whatsapp_messages_media_fkey"
+      columns: ["clinic_id","media_id"]
+isOneToOne: false
+      referencedRelation: "whatsapp_media"
+      referencedColumns: ["clinic_id","id"]
     }
                   ]
                 },"whatsapp_templates": {
@@ -1882,6 +1968,16 @@ isOneToOne: false
                            },
 "book_group_session":
 { Args: { "p_agenda_id": string,"p_booking_channel": Database["public"]['Enums']["action_channel"],"p_location_id": string,"p_patient_id": string,"p_scheduled_at": string,"p_service_id": string,"p_trail"?: Json }; Returns: string
+                           },
+"central_conversation_messages":
+{ Args: { "p_before_id"?: string,"p_before_sort_at"?: string,"p_clinic_id": string,"p_contact_phone": string,"p_limit"?: number }; Returns: {
+              "author": string,"body": string,"created_at": string,"direction": string,"edited_at": string,"failure_code": number,"failure_reason": string,"handoff_id": string,"id": string,"media_id": string,"message_type": string,"revoked_at": string,"sent_by": string,"sort_at": string,"source": string,"status": string,"template_name": string
+            }[]
+                           },
+"central_media_access":
+{ Args: { "p_clinic_id": string,"p_media_id": string }; Returns: {
+              "file_name": string,"mime_type": string,"size_bytes": number,"storage_path": string
+            }[]
                            },
 "change_group_session":
 { Args: { "p_agenda_id": string,"p_appointment_id": string,"p_scheduled_at": string,"p_service_id": string,"p_trail"?: Json }; Returns: undefined
@@ -2075,6 +2171,9 @@ isOneToOne: false
 { Args: { "p_clinic_id": string,"p_include_inactive"?: boolean,"p_limit"?: number,"p_query": string }; Returns: {
               "id": string,"score": number
             }[]
+                           },
+"set_central_enabled":
+{ Args: { "p_clinic_id": string,"p_enabled": boolean }; Returns: boolean
                            },
 "set_clinic_features":
 { Args: { "p_clinic_id": string,"p_features": (string)[] }; Returns: undefined

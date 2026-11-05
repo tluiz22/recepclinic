@@ -352,6 +352,17 @@ begin
   insert into public.send_failure_dismissals (clinic_id, message_id, scope)
     select c_a, id, 'envios' from public.whatsapp_messages where clinic_id = c_a and wa_message_id = 'wamid.local.4';
 
+  -- Central de atendimento (CN1, 05/nov/2026): ligada pelo Administrador; a conversa do Carlos aberta pela Recepção
+  -- (registro de acesso e não lidas) e um anexo ainda por baixar.
+  insert into public.central_switches (clinic_id, enabled, actor_id, occurred_at)
+    values (c_a, true, u_a_admin, now() - interval '3 days');
+  insert into public.conversation_reads (clinic_id, contact_phone, user_id, last_read_at)
+    values (c_a, '+5584988880002', u_a_rec, now() - interval '1 hour');
+  insert into public.conversation_access_log (clinic_id, contact_phone, user_id, action, occurred_at)
+    values (c_a, '+5584988880002', u_a_rec, 'open', now() - interval '1 hour');
+  insert into public.whatsapp_media (clinic_id, direction, meta_media_id, mime_type, size_bytes, file_name, status)
+    values (c_a, 'inbound', 'media.local.1', 'application/pdf', 120000, 'pedido-de-exame.pdf', 'pending');
+
   insert into public.bot_funnel_events (clinic_id, session_id, flow, step, contact_phone, contact_id) values
     (c_a, '0a0f0000-0000-4000-8000-000000000001', 'booking', 'started', '+5584988880001', ct_maria),
     (c_a, '0a0f0000-0000-4000-8000-000000000001', 'booking', 'confirmed', '+5584988880001', ct_maria);

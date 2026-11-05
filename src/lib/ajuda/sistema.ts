@@ -19,6 +19,8 @@ export const itensDaMatriz: Record<string, string> = {
     "Desligado, o tipo Exame some do cadastro de serviços, da Agenda e do bot, com a agenda da equipe e o envio do preparo.",
   knowledge_base:
     "Desligado, o bot não responde as perguntas frequentes digitadas (horário, endereço, convênios…) e segue com o \"não entendi\".",
+  central_attendance:
+    "Desligado, a clínica não pode ligar a Central de atendimento (conversas no painel) e, se estava ligada, o histórico guardado deixa de aparecer. Depende do bot.",
   waitlist: "Desligado, some a lista Lista de espera de Pacientes › Para contatar e a opção no bot, e nenhuma vaga é oferecida.",
   metrics: "Desligado, some o menu Métricas, com as abas (menos o Agendamento digital) e as métricas pessoais do profissional.",
   metrics_funnel: "Desligado, some a aba Métricas › Agendamento digital. O Suporte libera clínica a clínica, depois de avaliar a jornada no WhatsApp; vale com ou sem o bot ligado.",

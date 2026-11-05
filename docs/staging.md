@@ -661,3 +661,13 @@ Sem migração. Login do Suporte.
 2. Mudar um campo (ex.: 5 profissionais): os cartões, as barras e o aviso mudam na hora (Total R$ 306,25).
 3. Parâmetros: preço, franquia e câmbio vêm de Sistema › Preços da Meta; mudar um parâmetro muda o aviso abaixo das
    barras. Recarregar a página volta aos valores padrão (não grava).
+
+## Z. Base da Central de atendimento (CN1, 05/nov)
+
+Migração `20261215120000_central_base.sql` (aplicar antes do push). Sem tela nova: o que dá para ver é pouco.
+
+1. **Matriz.** Sistema › Clínicas › (clínica) › Matriz: item novo "Central de atendimento", fora da tabela de preços;
+   marcar sem o Bot de WhatsApp: "depende de Bot de WhatsApp".
+2. **Nada muda no bot nem nas telas de hoje.** Pelo WhatsApp de testes: "oi", "falar com a recepção", resposta pelo
+   app e Finalizar atendimento funcionam como antes (partes U e V).
+3. Ligar a Central, a conversa no painel e o registro de acesso aparecem no CU4 e no CN3.
