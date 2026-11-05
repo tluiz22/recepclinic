@@ -7,7 +7,8 @@
 >
 > **Decisão pendente:** testes de tela automáticos (Playwright); conversar prós e contras com o cliente (`historico.md`, "C30").
 >
-> **Próxima sessão (cliente, 04/nov):** melhorias na `main` para implantar na produção (cliente traz os pedidos).
+> **Próxima sessão (cliente, 04/nov):** uma **evolução do bot** (cliente traz o pedido). A `faturamento` ainda não tem a C22 a C30
+> (merge da `main` só quando o cliente pedir).
 > Trabalhar na worktree `recepclinic-main` (a pasta `recepclinic` está na branch `faturamento`). Pendente da branch: o
 > cliente valida no local o faturamento **F12.2b a F12.2h** pelo `roteiro-validacao-faturamento.md` **da branch**.
 >
