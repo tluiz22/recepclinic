@@ -651,3 +651,13 @@ Migração `20261214120000_precos_da_meta.sql` (aplicar antes do push). Login do
    Pelo app (grátis) e Estimativa da Meta; meses antes de out/2026 mostram "sem tabela". Na clínica de testes, depois
    de uma confirmação e de uma resposta pelo app: modelos +1 (R$ 0,04 a mais) e pelo app +1.
 6. **Clínica.** Um Administrador de clínica não vê Preços da Meta nem Uso (menu Sistema só do Suporte).
+
+## Y. Calculadora do custo da Meta (CU3, 05/nov)
+
+Sem migração. Login do Suporte.
+
+1. Sistema › Vendas › **Custo da Meta**. Com 3 profissionais, 5 dias e 12 por dia: "Cerca de 780 atendimentos por
+   mês"; Hoje R$ 128,80, Central + R$ 40,95, Total R$ 169,75; IA de outra empresa R$ 732,83; IA da Meta R$ 2.223,78.
+2. Mudar um campo (ex.: 5 profissionais): os cartões, as barras e o aviso mudam na hora (Total R$ 306,25).
+3. Parâmetros: preço, franquia e câmbio vêm de Sistema › Preços da Meta; mudar um parâmetro muda o aviso abaixo das
+   barras. Recarregar a página volta aos valores padrão (não grava).

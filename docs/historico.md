@@ -1002,3 +1002,13 @@ Primeiro passo da implementação da Central de Atendimento (ordem da seção 12
   (grátis) e Estimativa da Meta. Antes, as respostas pelo app (eco) entravam em "Bot e conversa".
 - **Testes:** `src/lib/data/metaPricing.test.ts` e `tests/db/precos-da-meta.test.ts`; `meta_price_versions` nas exceções
   da varredura de isolamento (tabela da plataforma).
+
+## CU3: calculadora do custo da Meta (05/nov/2026)
+
+Na branch `central-atendimento` (era `central-cu2`; cliente, 05/nov: staging e produção só com a Central pronta).
+Aba Sistema › Vendas › Custo da Meta (tela K2, valores T11), sem migração. Contas em `src/lib/metaCostCalculator.ts`
+(as mesmas no servidor e no navegador): atendimentos = profissionais × dias × atendimentos por dia × 52/12; hoje =
+modelos + assistente acima da franquia; Central = respostas da recepção acima do que sobrar da franquia; IA de outra
+empresa = modelos + mensagens de IA acima da franquia + tokens da empresa de IA; IA da Meta = modelos + tokens da Meta
+(sem tarifa de serviço). O exemplo da T11 bate centavo a centavo (teste). Rótulo "Atendimentos por dia (média, por
+profissional)", para deixar claro que multiplica pelos profissionais. Parâmetros não gravam (recarregar volta ao padrão).
