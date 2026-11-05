@@ -1,4 +1,5 @@
 import { confirmDetails, type FieldReading } from "../lib/confirmData";
+import { formatPhoneBR, normalizePhone } from "../lib/phone";
 
 // Conferência dos dados antes de cadastrar ou alterar (C19; cliente,
 // 03/nov/2026). Formulário com `data-confirm-data` (e `data-today`, a data de
@@ -7,6 +8,8 @@ import { confirmDetails, type FieldReading } from "../lib/confirmData";
 // lista em `data-confirm-details` do botão (src/scripts/confirmDelete.ts).
 // Campo dentro de um bloco escondido fica de fora; data com
 // `data-confirm-age` mostra a idade; opção (radio) usa `data-confirm-text`.
+// Campo com `data-confirm-whatsapp` (o título do quadro; cliente, 05/nov/2026, opção A2): o número digitado aparece
+// em destaque na confirmação, com "Conferi o número com o paciente" obrigatório.
 
 function readField(el: HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement): FieldReading | null {
   if (el.closest("[hidden]")) return null;
@@ -34,6 +37,13 @@ document.querySelectorAll<HTMLFormElement>("form[data-confirm-data]").forEach((f
         .map(readField)
         .filter((field): field is FieldReading => field !== null);
       button.dataset.confirmDetails = JSON.stringify(confirmDetails(fields, form.dataset.today ?? new Date().toISOString().slice(0, 10)));
+      // `data-confirm-whatsapp-changed` (tela do contato): só quando o número muda.
+      const whatsapp = [...form.querySelectorAll<HTMLInputElement>("input[data-confirm-whatsapp]")].find(
+        (el) => !el.closest("[hidden]") && !(el.dataset.confirmWhatsappChanged !== undefined && normalizePhone(el.value) === normalizePhone(el.defaultValue)),
+      );
+      const phone = whatsapp ? normalizePhone(whatsapp.value) : null;
+      button.dataset.confirmWhatsapp = phone ? formatPhoneBR(phone) : (whatsapp?.value.trim() ?? "");
+      button.dataset.confirmWhatsappLabel = whatsapp?.dataset.confirmWhatsapp ?? "";
     },
     // Antes do clique chegar ao botão (o diálogo abre no clique dele).
     true,

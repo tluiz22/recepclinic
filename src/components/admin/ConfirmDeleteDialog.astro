@@ -8,6 +8,9 @@
 // "Retirar da lista de espera"). Ver src/scripts/confirmDelete.ts.
 // Marcar e Alterar (cliente, 28/out/2026): a lista dos dados
 // (data-confirm-details) e o aviso do WhatsApp (data-confirm-notice).
+// Conferência do WhatsApp (cliente, 05/nov/2026, opção A2): com `data-confirm-whatsapp` (o número, formatado), o
+// número aparece em destaque e o botão de confirmar só libera com "Conferi o número com o paciente" marcado.
+// `data-confirm-whatsapp-label`: o título do quadro; `data-confirm-whatsapp-fix`: o link "Corrigir o número".
 ---
 
 <dialog
@@ -25,6 +28,15 @@
       class="grid grid-cols-[88px_minmax(0,1fr)] gap-x-3 gap-y-1.5 rounded-[10px] border border-line bg-canvas px-3 py-2.5 text-[15px] leading-snug"
     >
     </dl>
+    <div id="delete_dialog_whatsapp" hidden class="flex flex-col gap-2 rounded-xl border-2 border-conf-500 bg-conf-50 px-3.5 py-3">
+      <span id="delete_dialog_whatsapp_label" class="text-[13px] font-bold tracking-wide text-conf-800 uppercase">WhatsApp que recebe a confirmação</span>
+      <span id="delete_dialog_whatsapp_number" class="font-display text-[26px] leading-tight font-bold text-ink tabular-nums"></span>
+      <label class="flex min-h-11 cursor-pointer items-center gap-2.5 rounded-lg border border-conf-200 bg-white px-2.5 text-[15.5px] font-semibold text-ink">
+        <input id="delete_dialog_whatsapp_ok" type="checkbox" class="h-5 w-5 flex-none accent-brand" />
+        Conferi o número com o paciente
+      </label>
+      <a id="delete_dialog_whatsapp_fix" hidden href="#" class="self-start text-[14.5px] font-semibold text-brand-ink hover:underline">Corrigir o número</a>
+    </div>
     <p id="delete_dialog_notice" hidden class="flex items-start gap-2 rounded-[10px] border border-conf-200 bg-conf-100/60 px-3 py-2.5 text-[14.5px] leading-snug text-conf-800">
     </p>
     <div class="mt-1 flex flex-wrap justify-end gap-2">
@@ -38,7 +50,7 @@
       <button
         type="button"
         id="delete_dialog_accept"
-        class="h-11 rounded-lg bg-danger-solid px-4 text-[15px] font-semibold text-white hover:bg-danger-solid-strong sm:h-10"
+        class="h-11 rounded-lg bg-danger-solid px-4 text-[15px] font-semibold text-white hover:bg-danger-solid-strong disabled:cursor-not-allowed disabled:opacity-50 sm:h-10"
       >
         Excluir
       </button>

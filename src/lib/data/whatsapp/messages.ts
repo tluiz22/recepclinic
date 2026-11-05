@@ -123,7 +123,7 @@ function retryColumns(message: OutboundMessage, now: Date) {
   const attempt = message.attempt ?? 1;
   const failure = outcome && !outcome.sent ? outcome : null;
   const request = outcome?.request ?? null;
-  const retryAt = failure?.failure?.technical && request ? nextRetryAt(attempt, now) : null;
+  const retryAt = failure?.failure?.technical && request ? nextRetryAt(attempt, now, message.retry?.context.bot === true) : null;
   return {
     attempt,
     first_attempt_id: message.firstAttemptId ?? null,

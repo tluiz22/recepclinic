@@ -2,9 +2,12 @@
 // Resumo do Dia › Envios (F4.8; cliente, 05/out/2026: no Resumo do Dia, para
 // toda a equipe; o Profissional vê só as próprias agendas): se os envios
 // automáticos rodaram e quais atendimentos por vir têm envio com falha. Sem
-// botão de reenvio aqui: cada atendimento leva à Agenda do dia, onde ficam
-// "Enviar/Reenviar lembrete" e "Reenviar preparo" (como no piloto).
+// botão de reenvio aqui: a Agenda do dia tem "Enviar/Reenviar lembrete" e
+// "Reenviar preparo" (como no piloto).
 // Redesign R3 (15/out/2026): aviso no topo e selos no padrão novo.
+// Detalhes da falha (cliente, 05/nov/2026, opção 1): o clique na linha abre, logo abaixo, cada envio com falha
+// (o que era, para que número, quando saiu cada tentativa, o motivo da Meta e o que fazer) e o botão "Descartar"
+// (sem confirmação) para o erro já conhecido e resolvido; a Agenda fica num link dentro dos detalhes.
 import Icon from "../Icon.astro";
 import Pill, { type PillTone } from "../ui/Pill.astro";
 import HelpTip from "../ui/HelpTip.astro";
@@ -12,6 +15,9 @@ import { resumo } from "../../../lib/ajuda/resumo";
 import { formatInstant, localDateOf } from "../../../lib/clinicTime";
 import { jobRunState, type JobRun, type AppointmentWithFailedSends, type JobRunState } from "../../../lib/data/sends";
 import { MAX_ATTEMPTS } from "../../../lib/data/whatsapp/retryRules";
+import { MESSAGE_LABELS, NOT_SENT_REASONS, OTHER_MESSAGE } from "../../../lib/data/agenda/trail";
+import { describeSendFailure } from "../../../lib/whatsappErrors";
+import { formatPhoneBR } from "../../../lib/phone";
 
 import ServiceTag, { type ServiceTagInfo } from "../agenda/ServiceTag.astro";
 import { serviceBesideCategory } from "../agenda/categoryStyle";
@@ -66,25 +72,97 @@ const BOX_TITLE = "text-[15px] font-bold text-ink";
       <ul class="divide-y divide-[#e6ecea] px-4">
         {
           failed.map((a) => (
-            <li class="flex flex-wrap items-center justify-between gap-2 py-3">
-              <a href={`/admin/agenda?date=${localDateOf(a.scheduledAt, timeZone)}`} class="flex min-w-0 flex-col gap-0.5 no-underline">
-                <span class="text-[15px] font-semibold text-ink hover:text-brand hover:underline">
-                  <span class="capitalize">{formatInstant(a.scheduledAt, timeZone, "EEE dd/MM HH:mm")}</span> · {a.patientName}
-                </span>
-                <span class="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-sm text-ink-soft">
-                  <ServiceTag info={tags.get(a.serviceId)} />
-                  {(() => {
-                    const category = tags.get(a.serviceId)?.category;
-                    return category ? serviceBesideCategory(a.serviceName, category) : a.serviceName;
-                  })()}
-                </span>
-              </a>
-              <span class="flex flex-wrap gap-1.5">
-                {a.retrying.map((attempt) => (
-                  <Pill tone="info">{`Tentando de novo (${attempt} de ${MAX_ATTEMPTS})`}</Pill>
-                ))}
-                {a.failedSends > 0 && <Pill tone="danger">{`${a.failedSends} ${a.failedSends === 1 ? "envio com falha" : "envios com falha"}`}</Pill>}
-              </span>
+            <li>
+              <details class="group" data-keep-open>
+                <summary class="flex cursor-pointer list-none flex-wrap items-center justify-between gap-2 py-3 [&::-webkit-details-marker]:hidden">
+                  <span class="flex min-w-0 flex-col gap-0.5">
+                    <span class="text-[15px] font-semibold text-ink group-hover:text-brand">
+                      <span class="capitalize">{formatInstant(a.scheduledAt, timeZone, "EEE dd/MM HH:mm")}</span> · {a.patientName}
+                    </span>
+                    <span class="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-sm text-ink-soft">
+                      <ServiceTag info={tags.get(a.serviceId)} />
+                      {(() => {
+                        const category = tags.get(a.serviceId)?.category;
+                        return category ? serviceBesideCategory(a.serviceName, category) : a.serviceName;
+                      })()}
+                    </span>
+                  </span>
+                  <span class="flex flex-wrap items-center gap-1.5">
+                    {a.retrying.map((attempt) => (
+                      <Pill tone="info">{`Tentando de novo (${attempt} de ${MAX_ATTEMPTS})`}</Pill>
+                    ))}
+                    {a.failedSends > 0 && <Pill tone="danger">{`${a.failedSends} ${a.failedSends === 1 ? "envio com falha" : "envios com falha"}`}</Pill>}
+                    <Icon name="chevron-down" class="h-4 w-4 text-ink-soft transition-transform group-open:rotate-180" strokeWidth={2.2} />
+                  </span>
+                </summary>
+                <div class="flex flex-col gap-2.5 pb-3.5">
+                  {a.sends.map((send) => {
+                    const label = (MESSAGE_LABELS[send.messageType] ?? OTHER_MESSAGE).label;
+                    const info = send.eventId !== null ? null : describeSendFailure(send.failureCode, send.failureReason);
+                    const at = (d: Date) => formatInstant(d, timeZone, "EEE, dd/MM 'às' HH:mm");
+                    return (
+                      <div
+                        class={`flex flex-col gap-2 rounded-[10px] border px-3.5 py-3 ${send.retrying ? "border-att-200 bg-att-50" : "border-danger-line bg-[#fdf6f5]"}`}
+                      >
+                        <div class="flex flex-wrap items-baseline justify-between gap-2">
+                          <strong class="text-[15px] text-ink">{label}</strong>
+                          {send.failureCode !== null && <span class="text-[13px] text-ink-soft">código {send.failureCode}</span>}
+                        </div>
+                        <dl class="grid grid-cols-[100px_minmax(0,1fr)] gap-x-2.5 gap-y-1 text-[14.5px] leading-snug sm:grid-cols-[110px_minmax(0,1fr)]">
+                          <dt class="text-ink-soft">{send.eventId !== null ? "Quando" : "Enviada em"}</dt>
+                          <dd class="text-ink first-letter:uppercase">{at(send.firstAt)}</dd>
+                          {send.phone && (
+                            <>
+                              <dt class="text-ink-soft">Para</dt>
+                              <dd class="text-ink">{formatPhoneBR(send.phone)}</dd>
+                            </>
+                          )}
+                          <dt class="text-ink-soft">Motivo</dt>
+                          <dd class={`font-semibold ${send.retrying ? "text-att-800" : "text-danger"}`}>
+                            {info ? info.title : `Não enviado: ${NOT_SENT_REASONS[send.notSentReason ?? ""] ?? "motivo não registrado"}.`}
+                          </dd>
+                          <dt class="text-ink-soft">O que fazer</dt>
+                          <dd class="text-ink">
+                            {send.retrying && send.retryAt
+                              ? `Nada por enquanto: o sistema tenta de novo às ${formatInstant(send.retryAt, timeZone, "HH:mm")}.`
+                              : info
+                                ? info.action
+                                : "Confira a conexão em Configurações › WhatsApp e envie de novo pela Agenda."}
+                          </dd>
+                          {send.attempts.length > 0 && (
+                            <>
+                              <dt class="text-ink-soft">Tentativas</dt>
+                              <dd class="text-ink">
+                                {send.attempts.map((t, i) => `${i + 1}ª ${formatInstant(t.at, timeZone, "dd/MM HH:mm")}`).join(" · ")}
+                                {` (${send.attempts.length} de ${MAX_ATTEMPTS})`}
+                              </dd>
+                            </>
+                          )}
+                        </dl>
+                        <div class="flex flex-wrap items-center justify-between gap-2">
+                          <a href={`/admin/agenda?date=${localDateOf(a.scheduledAt, timeZone)}`} class="text-[14.5px] font-semibold text-brand-ink hover:underline">
+                            Abrir o atendimento na Agenda
+                          </a>
+                          {!send.retrying && (
+                            <form method="POST" action="/api/admin/envios/falha" class="contents">
+                              <input type="hidden" name="acao" value="descartar" />
+                              {send.messageId && <input type="hidden" name="mensagem" value={send.messageId} />}
+                              {send.eventId !== null && <input type="hidden" name="evento" value={String(send.eventId)} />}
+                              <input type="hidden" name="return_to" value="/admin/consultas?tab=envios" />
+                              <button
+                                type="submit"
+                                class="h-11 rounded-lg border border-line-strong bg-white px-4 text-[15px] font-semibold text-ink hover:bg-canvas sm:h-10"
+                              >
+                                Descartar
+                              </button>
+                            </form>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </details>
             </li>
           ))
         }

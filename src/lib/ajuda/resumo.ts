@@ -13,7 +13,7 @@ export const resumo = {
     ],
     // listAppointmentsWithFailedSends e retryingSends em src/lib/data/sends.ts; retryRules.ts (MAX_ATTEMPTS, 10 e 30 minutos).
     enviosFalha:
-      "Atendimentos por vir com algum envio pelo WhatsApp que não saiu. Falha técnica é tentada de novo sozinha, 10 e 30 minutos depois (\"Tentando de novo\"). O horário e o nome levam à Agenda do dia, onde fica o reenvio.",
+      "Atendimentos por vir com algum envio pelo WhatsApp que não saiu. Falha técnica é tentada de novo sozinha, 10 e 30 minutos depois (\"Tentando de novo\"). Toque na linha para ver quando saiu, para que número e o motivo. \"Descartar\" tira o erro já resolvido.",
     // jobRuns.ts (JobName) e jobRunState em sends.ts (STUCK_AFTER_MS = 15 minutos).
     enviosRotinas:
       "Cada vez que o sistema roda os lembretes, o resumo do dia ou as ofertas da lista de espera, fica uma linha aqui. Rodou: terminou. Rodando: ainda em andamento. Travou: rodando há mais de 15 minutos. Erro: parou com uma falha.",

@@ -1,0 +1,153 @@
+---
+// Situação da confirmação depois de marcar (cliente, 05/nov/2026, opção C; docs/falhas-de-envio.md): aviso no topo
+// da Agenda que muda sozinho conforme a Meta responde. Enviando → entregue (verde); enviada, ainda sem chegar ao
+// celular (desligado, sem internet); instabilidade da Meta (tenta de novo sozinho); ou não chegou (vermelho), com o
+// motivo, "Corrigir o número" (FixNumberDialog) e "O número está certo" (só fecha o aviso).
+// A rota de marcar/remarcar/alterar põe `?envio=<atendimento>` no endereço; fechar o aviso tira o parâmetro.
+import Icon from "../Icon.astro";
+
+interface Props {
+  appointmentId: string;
+}
+const { appointmentId } = Astro.props;
+const box = "flex items-start gap-3 rounded-xl border px-4 py-3.5 text-[15.5px] leading-snug";
+const closeButton =
+  "-mr-2 -mt-1.5 ml-auto flex h-11 w-11 flex-none items-center justify-center rounded-lg border-0 bg-transparent hover:bg-black/5 focus-visible:outline-2 focus-visible:outline-brand";
+---
+
+<section class="mt-4" aria-live="polite" data-send-tracker data-appointment={appointmentId}>
+  <div class={`${box} border-line-strong bg-white`} data-state="sending">
+    <Icon name="arrow-path" class="mt-0.5 h-5 w-5 flex-none animate-spin text-brand" strokeWidth={2.2} />
+    <p class="flex flex-col gap-0.5">
+      <strong>Enviando <span data-what>a confirmação</span> pelo WhatsApp…</strong>
+      <span class="text-ink-mid">Para <span data-phone></span>. Este aviso mostra se chegou.</span>
+    </p>
+  </div>
+
+  <div class={`${box} border-conf-200 bg-conf-50 text-conf-800`} data-state="delivered" hidden>
+    <Icon name="check-circle" class="mt-0.5 h-5 w-5 flex-none" strokeWidth={2.2} />
+    <p class="flex flex-col gap-0.5">
+      <strong><span data-what-cap>A confirmação</span> chegou.</strong>
+      <span>Chegou ao WhatsApp de <span data-name></span>, <span data-phone></span>.</span>
+    </p>
+    <button type="button" class={closeButton} aria-label="Fechar aviso" data-close><Icon name="x-mark" class="h-5 w-5" /></button>
+  </div>
+
+  <div class={`${box} border-line-strong bg-white`} data-state="sent" hidden>
+    <Icon name="check" class="mt-0.5 h-5 w-5 flex-none text-ink-mid" strokeWidth={2.2} />
+    <p class="flex flex-col gap-0.5">
+      <strong>Enviamos <span data-what>a confirmação</span>.</strong>
+      <span class="text-ink-mid">O WhatsApp aceitou a mensagem; ela chega quando o celular de <span data-name></span> ficar on-line.</span>
+    </p>
+    <button type="button" class={closeButton} aria-label="Fechar aviso" data-close><Icon name="x-mark" class="h-5 w-5" /></button>
+  </div>
+
+  <div class={`${box} border-att-200 bg-att-50 text-att-800`} data-state="retrying" hidden>
+    <Icon name="clock" class="mt-0.5 h-5 w-5 flex-none" strokeWidth={2.2} />
+    <p class="flex flex-col gap-0.5">
+      <strong>A Meta teve uma instabilidade e <span data-what>a confirmação</span> ainda não saiu.</strong>
+      <span>O sistema tenta de novo sozinho em alguns minutos; este aviso mostra quando chegar.</span>
+    </p>
+    <button type="button" class={closeButton} aria-label="Fechar aviso" data-close><Icon name="x-mark" class="h-5 w-5" /></button>
+  </div>
+
+  <div class="flex flex-col gap-3 rounded-xl border-2 border-danger-line bg-[#fdf3f2] px-4 py-3.5 text-[15.5px] leading-snug" role="alert" data-state="failed" hidden>
+    <div class="flex items-start gap-3">
+      <Icon name="warning" class="mt-0.5 h-5 w-5 flex-none text-danger" strokeWidth={2.2} />
+      <p class="flex flex-col gap-1">
+        <strong class="text-danger"><span data-what-cap>A confirmação</span> não chegou ao WhatsApp <span data-phone></span>.</strong>
+        <span class="text-ink" data-reason></span>
+        <span class="text-ink-mid">O atendimento continua marcado. <span data-action></span></span>
+      </p>
+    </div>
+    <div class="flex flex-wrap gap-2 sm:pl-8">
+      <button
+        type="button"
+        class="js-fix-number h-11 rounded-lg bg-brand px-4 text-[15px] font-semibold text-white hover:bg-brand-strong sm:h-10"
+        data-resend="1"
+        data-fix-button
+      >
+        Corrigir o número
+      </button>
+      <button type="button" class="h-11 rounded-lg border border-line-strong bg-white px-4 text-[15px] font-semibold text-ink hover:bg-canvas sm:h-10" data-close>
+        O número está certo
+      </button>
+    </div>
+  </div>
+</section>
+
+<script>
+  type Tracking = {
+    state: "none" | "sent" | "delivered" | "retrying" | "failed";
+    reschedule?: boolean;
+    messageId?: string;
+    phone?: string;
+    contactName?: string | null;
+    sentAt?: string;
+    failure?: { title: string; action: string; numberProblem: boolean } | null;
+  };
+
+  const POLL_MS = 3_000;
+  // Sem resposta da Meta em 20 s: "enviada, chega quando o celular ficar on-line"; continua olhando até 3 min.
+  const SENT_AFTER_MS = 20_000;
+  const STOP_AFTER_MS = 3 * 60_000;
+
+  document.querySelectorAll<HTMLElement>("[data-send-tracker]").forEach((tracker) => {
+    const id = tracker.dataset.appointment!;
+    const startedAt = Date.now();
+    let timer: number | undefined;
+
+    const show = (state: string) => {
+      tracker.querySelectorAll<HTMLElement>("[data-state]").forEach((el) => (el.hidden = el.dataset.state !== state));
+    };
+    const fill = (selector: string, text: string) => tracker.querySelectorAll<HTMLElement>(selector).forEach((el) => (el.textContent = text));
+    const close = () => {
+      window.clearTimeout(timer);
+      tracker.hidden = true;
+      // Recarregar a Agenda não traz o aviso de volta.
+      const url = new URL(location.href);
+      url.searchParams.delete("envio");
+      history.replaceState(history.state, "", url);
+    };
+    tracker.querySelectorAll<HTMLButtonElement>("[data-close]").forEach((button) => button.addEventListener("click", close));
+
+    const poll = async () => {
+      let data: Tracking | null = null;
+      try {
+        const response = await fetch(`/api/admin/agenda/atendimentos/${id}/envio`, { headers: { accept: "application/json" } });
+        if (response.ok) data = (await response.json()) as Tracking;
+      } catch {
+        data = null;
+      }
+      if (data && data.state === "none") {
+        tracker.hidden = true;
+        return;
+      }
+      if (data) {
+        fill("[data-phone]", data.phone ?? "");
+        fill("[data-name]", data.contactName ?? "o paciente");
+        fill("[data-what]", data.reschedule ? "o aviso de remarcação" : "a confirmação");
+        fill("[data-what-cap]", data.reschedule ? "O aviso de remarcação" : "A confirmação");
+        if (data.state === "failed") {
+          fill("[data-reason]", data.failure?.title ?? "");
+          fill("[data-action]", data.failure?.action ?? "");
+          const fix = tracker.querySelector<HTMLElement>("[data-fix-button]")!;
+          fix.dataset.messageId = data.messageId ?? "";
+          fix.dataset.contactName = data.contactName ?? "";
+          fix.dataset.phone = data.phone ?? "";
+          show("failed");
+          return;
+        }
+        if (data.state === "delivered") {
+          show("delivered");
+          return;
+        }
+        if (data.state === "retrying") show("retrying");
+        else show(Date.now() - startedAt > SENT_AFTER_MS ? "sent" : "sending");
+      }
+      if (Date.now() - startedAt < STOP_AFTER_MS) timer = window.setTimeout(poll, POLL_MS);
+      else if (!data || data.state === "sent") show("sent");
+    };
+    poll();
+  });
+</script>

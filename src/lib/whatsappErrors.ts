@@ -19,6 +19,10 @@ const KNOWN: Record<number, SendFailureInfo> = {
     action: "Cadastre o cartão de crédito no Gerenciador do WhatsApp da clínica e defina-o como principal; depois, envie o teste de novo.",
     guide: GUIDE_META_PAYMENT_PATH,
   },
+  131000: {
+    title: "Instabilidade passageira da Meta (\"algo deu errado\"): não é problema do número nem da clínica.",
+    action: "O sistema tenta de novo sozinho; se as tentativas acabarem, envie de novo pela Agenda ou pelo WhatsApp da clínica.",
+  },
   131026: {
     title: "A Meta não conseguiu entregar: o número não tem WhatsApp, o app está muito desatualizado ou o destinatário não aceitou os termos novos do WhatsApp.",
     action: "Confira o número (com DDD) e se o WhatsApp dele está atualizado; tente outro número.",

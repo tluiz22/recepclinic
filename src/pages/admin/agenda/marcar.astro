@@ -14,7 +14,7 @@
 // preenchida com o atendimento (o paciente não muda) para trocar serviço,
 // agenda, local, convênio, endereço, data e hora. O próprio atendimento não
 // ocupa horário nem trava a duplicidade; a confirmação mostra "antes → depois".
-import { receivedReturn } from "../../../lib/returnPath";
+import { currentPath, receivedReturn, withReturn } from "../../../lib/returnPath";
 import AdminLayout from "../../../layouts/AdminLayout.astro";
 import ConfirmDeleteDialog from "../../../components/admin/ConfirmDeleteDialog.astro";
 import FlashMessage from "../../../components/admin/FlashMessage.astro";
@@ -416,6 +416,11 @@ const confirmInsurance = insuranceOn ? (planName ?? "Particular") : "";
 const recipient = patient?.isContactSelf ? (vocabulary.patient === "criança" ? "a criança" : `o ${vocabulary.patient}`) : `o ${vocabulary.contact}`;
 const sends = sendsPatientMessages(clinic.clinicStatus, connection?.status);
 const confirmNotice = service && sends ? whatsappNoticeText(recipient, editing ? "alteracao" : "marcacao", service.category) : "";
+// Conferência do WhatsApp (cliente, 05/nov/2026, opção A2): ao marcar, o número que recebe a confirmação em destaque,
+// com "Conferi o número com o paciente" obrigatório (só quando a mensagem sai de verdade e no futuro).
+const confirmWhatsapp = contact && sends && !editing ? formatPhoneBR(contact.phone) : "";
+const confirmWhatsappLabel = patient?.isContactSelf ? "WhatsApp que recebe a confirmação" : `WhatsApp de ${contact?.fullName ?? ""} (recebe a confirmação)`;
+const confirmWhatsappFix = contact ? withReturn(`/admin/pacientes/contato/${contact.id}`, currentPath(Astro.url)) : "";
 
 // Alterar: os dados de antes (a confirmação compara com os escolhidos), o
 // convênio para escolher e o endereço atual.
@@ -828,6 +833,9 @@ const remarcarHref = (a: UpcomingAppointment) => `/admin/agenda/remarcar?id=${a.
           data-confirm-insurance={confirmInsurance}
           data-confirm-notice=""
           data-whatsapp-notice={confirmNotice}
+          data-whatsapp-phone={confirmWhatsapp || undefined}
+          data-confirm-whatsapp-label={confirmWhatsappLabel}
+          data-confirm-whatsapp-fix={confirmWhatsappFix || undefined}
           data-confirm-before={confirmBefore || undefined}
           data-before-price-cents={editing?.priceCents ?? undefined}
           data-paid-cents={paidCents || undefined}
@@ -865,6 +873,9 @@ const remarcarHref = (a: UpcomingAppointment) => `/admin/agenda/remarcar?id=${a.
             data-confirm-insurance={confirmInsurance}
             data-confirm-notice=""
             data-whatsapp-notice={confirmNotice}
+          data-whatsapp-phone={confirmWhatsapp || undefined}
+          data-confirm-whatsapp-label={confirmWhatsappLabel}
+          data-confirm-whatsapp-fix={confirmWhatsappFix || undefined}
             data-confirm-before={confirmBefore || undefined}
             data-before-price-cents={editing?.priceCents ?? undefined}
             data-paid-cents={paidCents || undefined}
@@ -998,6 +1009,7 @@ const remarcarHref = (a: UpcomingAppointment) => `/admin/agenda/remarcar?id=${a.
         else if (price) details.push({ label: "Valor", value: price });
         submit.dataset.confirmDetails = JSON.stringify(details);
         submit.dataset.confirmNotice = chosenIsPast() ? "" : (submit.dataset.whatsappNotice ?? "");
+        submit.dataset.confirmWhatsapp = chosenIsPast() ? "" : (submit.dataset.whatsappPhone ?? "");
         submit.dataset.confirmMessage = [series ? SERIES_SKIP_NOTE : "", warnings].filter(Boolean).join(" ");
       });
     };

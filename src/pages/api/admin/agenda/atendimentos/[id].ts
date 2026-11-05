@@ -53,17 +53,22 @@ export const POST: APIRoute = async (context) => {
   const failTo = safeReturn(formOptionalText(form, "back"), returnTo);
   const acao = formText(form, "acao");
   // Aviso ao paciente depois da ação (só atendimento futuro); a frase vai para o aviso de salvo.
+  // Confirmação (ou remarcação) que saiu ou falhou: a Agenda mostra no topo se chegou (cliente, 05/nov/2026, opção C).
+  let tracked: string | null = null;
   const notify = async (kind: NoticeKind, appointment: { id: string; scheduledAt: Date } | null): Promise<string> => {
     if (!appointment || appointment.scheduledAt.getTime() <= Date.now()) return "";
     const sender = await clinicSenderFor(clinic.clinicId, request.url);
-    return ` ${NOTICE_RESULT_TEXT[await sendAppointmentNotice(db, clinic.clinicId, appointment.id, kind, sender)]}`;
+    const status = await sendAppointmentNotice(db, clinic.clinicId, appointment.id, kind, sender);
+    if ((kind === "confirmation" || kind === "reschedule") && (status === "sent" || status === "failed")) tracked = appointment.id;
+    return ` ${NOTICE_RESULT_TEXT[status]}`;
   };
+  const withTracking = (to: string) => (tracked && to.startsWith("/admin/agenda?") ? `${to}&envio=${tracked}` : to);
 
   return runFormAction(
     context,
     async () => {
       if (acao !== "marcar" && !isUuid(id)) throw new DataError("not_found", "Atendimento: não encontrado");
-      const done = (message: string, to = returnTo) => ({ redirectTo: to, message });
+      const done = (message: string, to = returnTo) => ({ redirectTo: withTracking(to), message });
       switch (acao) {
         case "marcar": {
           const slot = parseSlot(formText(form, "slot"));

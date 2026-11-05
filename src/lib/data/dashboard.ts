@@ -5,6 +5,7 @@ import { unwrap } from "./errors";
 import { confirmedByReminder } from "../reminderResponse";
 import { listHumanAttention } from "./whatsapp/attention";
 import { listContactsToReview } from "./whatsapp/botLimits";
+import { listNumbersWithoutWhatsapp } from "./whatsapp/undeliverable";
 
 // Números da tela inicial do painel (Fase 9 do piloto, F4.1), no dia da
 // clínica e só das agendas que o login vê (RLS).
@@ -121,6 +122,7 @@ export async function getMeuDiaCount(
       return count ?? 0;
     }),
     bot ? safe("contatos a conferir", async () => (await listContactsToReview(db, clinicId, now)).length) : 0,
+    safe("números sem WhatsApp", async () => (await listNumbersWithoutWhatsapp(db, clinicId, now)).length),
   ]);
   return parts.reduce((total, n) => total + n, 0);
 }

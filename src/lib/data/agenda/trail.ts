@@ -49,8 +49,8 @@ const VIA: Record<TrailChannel, string> = {
 
 // Nome de cada mensagem, com o gênero para a situação concordar (cliente,
 // 18/out/2026: a trilha mostrava o nome interno, como "consultation_guidance").
-type Gender = "m" | "f" | "fp";
-const MESSAGE_LABELS: Record<string, { label: string; gender: Gender }> = {
+export type Gender = "m" | "f" | "fp";
+export const MESSAGE_LABELS: Record<string, { label: string; gender: Gender }> = {
   appointment_reminder: { label: "Lembrete", gender: "m" },
   exam_preparation: { label: "Preparo do exame", gender: "m" },
   consultation_guidance: { label: "Orientações gerais da consulta", gender: "fp" },
@@ -63,11 +63,11 @@ const MESSAGE_LABELS: Record<string, { label: string; gender: Gender }> = {
   exam_preparation_file: { label: "Arquivo do preparo do exame", gender: "m" },
 };
 /** Tipo sem nome cadastrado: "Mensagem", nunca o nome interno. */
-const OTHER_MESSAGE = { label: "Mensagem", gender: "f" as Gender };
+export const OTHER_MESSAGE = { label: "Mensagem", gender: "f" as Gender };
 
 /** Mensagem não enviada, pelo `kind` gravado na trilha. */
 const NOT_SENT_KINDS: Record<string, string> = { reminder: "appointment_reminder" };
-const NOT_SENT_REASONS: Record<string, string> = {
+export const NOT_SENT_REASONS: Record<string, string> = {
   template_disabled: "mensagem não aprovada pela Meta",
   not_connected: "WhatsApp da clínica não conectado",
 };

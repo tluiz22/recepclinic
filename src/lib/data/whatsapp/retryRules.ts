@@ -11,6 +11,16 @@ export const MAX_ATTEMPTS = 3;
 export const RETRY_DELAYS_MINUTES = [10, 20] as const;
 
 /**
+ * Mensagens do bot (cliente, 05/nov/2026): as mesmas 3 tentativas, mas 30 s e 2 min depois da primeira falha, para a
+ * resposta chegar enquanto o paciente ainda está na conversa. A rotina roda de minuto em minuto: a 2ª sai no minuto
+ * seguinte à falha.
+ */
+export const BOT_RETRY_DELAYS_MINUTES = [0.5, 1.5] as const;
+
+/** Prazo do reenvio do bot: depois disso a resposta chegaria fora de contexto. */
+export const BOT_RETRY_WINDOW_MINUTES = 5;
+
+/**
  * Códigos da Meta de falha passageira: instabilidade, manutenção ou limite de
  * vazão. Os outros (número sem WhatsApp, template, pagamento, permissão,
  * parâmetro) dão o mesmo erro de novo e não são reenviados.
@@ -31,7 +41,7 @@ export const TECHNICAL_META_CODES: ReadonlySet<number> = new Set([
   133004, // servidor temporariamente indisponível
 ]);
 
-/** Envios automáticos com reenvio (cliente, 23/out): o bot fica de fora (a resposta chegaria fora de contexto). */
+/** Envios automáticos com reenvio (cliente, 23/out). O bot entra pelo contexto (`bot`, cliente, 05/nov/2026). */
 export const RETRYABLE_MESSAGE_TYPES: ReadonlySet<string> = new Set([
   "appointment_reminder",
   "appointment_confirmation",
@@ -71,6 +81,8 @@ export function classifySendError(error: unknown): SendFailure {
 
 /** O que conferir antes de reenviar (o atendimento não mudou, a oferta segue de pé, o resumo ainda vale). */
 export type RetryContext = {
+  /** Mensagem do bot (resposta, menu, "conversa encerrada"): reenvio rápido, só se a conversa não andou. */
+  bot?: boolean;
   /** Data do atendimento no envio: remarcado ou cancelado depois, não reenvia. */
   scheduledAt?: string;
   /** Até quando o envio faz sentido (resumo: o fim do dia do resumo). */
@@ -79,11 +91,21 @@ export type RetryContext = {
   invoiceId?: string;
 };
 
-/** Hora da próxima tentativa depois da falha da tentativa `attempt`; null = não há. */
-export function nextRetryAt(attempt: number, failedAt: Date): Date | null {
+/** Hora da próxima tentativa depois da falha da tentativa `attempt`; null = não há. `bot`: os prazos curtos do bot. */
+export function nextRetryAt(attempt: number, failedAt: Date, bot = false): Date | null {
   if (attempt >= MAX_ATTEMPTS) return null;
-  const minutes = RETRY_DELAYS_MINUTES[attempt - 1];
+  const minutes = (bot ? BOT_RETRY_DELAYS_MINUTES : RETRY_DELAYS_MINUTES)[attempt - 1];
   return minutes === undefined ? null : new Date(failedAt.getTime() + minutes * 60_000);
+}
+
+/** O envio entra no reenvio: os automáticos da lista ou uma mensagem do bot. */
+export function isRetryable(messageType: string, context: RetryContext | null | undefined): boolean {
+  return RETRYABLE_MESSAGE_TYPES.has(messageType) || context?.bot === true;
+}
+
+/** Contexto do reenvio de uma mensagem do bot: vale por alguns minutos. */
+export function botRetryContext(now: Date): RetryContext {
+  return { bot: true, until: new Date(now.getTime() + BOT_RETRY_WINDOW_MINUTES * 60_000).toISOString() };
 }
 
 /** Falta para a última tentativa possível de uma falha agora (a oferta de vaga fica reservada até lá). */

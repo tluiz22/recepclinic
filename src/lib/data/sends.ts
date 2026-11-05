@@ -81,16 +81,33 @@ const FAILED = new Set(["failed", "skipped_no_template"]);
 const NOT_SENT_KIND_MESSAGE_TYPE: Record<string, string> = { reminder: "appointment_reminder" };
 
 /** `retryAt`: nova tentativa prevista (reenvio automático, cliente, 23/out); `attempt`: o número desta. */
-export type SentMessage = { messageType: string; status: string | null; createdAt: Date; attempt?: number; retryAt?: Date | null };
-export type NotSentEvent = { kind: string; scheduledAt: Date | null; occurredAt: Date };
+export type SentMessage = {
+  messageType: string;
+  status: string | null;
+  createdAt: Date;
+  attempt?: number;
+  retryAt?: Date | null;
+  /** Para os detalhes da falha (cliente, 05/nov/2026). */
+  id?: string;
+  firstAttemptId?: string | null;
+  phone?: string | null;
+  failureCode?: number | null;
+  failureReason?: string | null;
+};
+export type NotSentEvent = { kind: string; scheduledAt: Date | null; occurredAt: Date; id?: number; reason?: string | null };
+
+/** Falha ainda não resolvida: a última tentativa de um tipo de mensagem, ou um "não enviado" da trilha. */
+export type PendingFailure = { source: "message"; message: SentMessage; retrying: boolean } | { source: "event"; event: NotSentEvent; retrying: false };
 
 /**
  * Envios com falha ainda não resolvidos de um atendimento (regra do piloto):
  * a última tentativa de cada tipo de mensagem falhou ou não saiu (confirmação
  * com falha deixa de contar se um aviso de remarcação saiu depois), ou há
  * "não enviado" da data atual sem envio do mesmo tipo com sucesso depois.
+ * Com nova tentativa prevista, `retrying` (aparece como "Tentando de novo").
+ * Mensagem descartada pelo Suporte chega com a situação "dismissed" e não conta.
  */
-export function countFailedSends(messages: SentMessage[], notSent: NotSentEvent[], scheduledAt: Date): number {
+export function pendingFailures(messages: SentMessage[], notSent: NotSentEvent[], scheduledAt: Date): PendingFailure[] {
   const sorted = [...messages].sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
   const latestByType = new Map<string, SentMessage>();
   for (const message of sorted) latestByType.set(message.messageType, message);
@@ -99,10 +116,11 @@ export function countFailedSends(messages: SentMessage[], notSent: NotSentEvent[
     sorted.some(
       (later) => later.messageType === "appointment_reschedule" && DELIVERED.has(later.status ?? "") && later.createdAt.getTime() > m.createdAt.getTime(),
     );
-  // Com nova tentativa prevista, ainda não é falha: aparece como "Tentando de novo" (retryingSends).
-  let failed = [...latestByType.values()].filter((m) => FAILED.has(m.status ?? "") && !m.retryAt && !supersededByReschedule(m)).length;
+  const failures: PendingFailure[] = [...latestByType.values()]
+    .filter((m) => FAILED.has(m.status ?? "") && (m.retryAt || !supersededByReschedule(m)))
+    .map((m) => ({ source: "message", message: m, retrying: !!m.retryAt }));
 
-  const pending = new Set<string>();
+  const pending = new Map<string, NotSentEvent>();
   for (const event of [...notSent].sort((a, b) => a.occurredAt.getTime() - b.occurredAt.getTime())) {
     // Remarcou: o "não enviado" da data antiga não pesa mais.
     if (event.scheduledAt && event.scheduledAt.getTime() !== scheduledAt.getTime()) continue;
@@ -111,13 +129,17 @@ export function countFailedSends(messages: SentMessage[], notSent: NotSentEvent[
       (m) => m.messageType === messageType && DELIVERED.has(m.status ?? "") && m.createdAt.getTime() > event.occurredAt.getTime(),
     );
     if (resolved) pending.delete(event.kind);
-    else pending.add(event.kind);
+    else pending.set(event.kind, event);
   }
   // Lembrete com falha já contado pela última tentativa não conta duas vezes.
-  for (const kind of pending) {
-    if (!FAILED.has(latestByType.get(NOT_SENT_KIND_MESSAGE_TYPE[kind])?.status ?? "")) failed++;
+  for (const [kind, event] of pending) {
+    if (!FAILED.has(latestByType.get(NOT_SENT_KIND_MESSAGE_TYPE[kind])?.status ?? "")) failures.push({ source: "event", event, retrying: false });
   }
-  return failed;
+  return failures;
+}
+
+export function countFailedSends(messages: SentMessage[], notSent: NotSentEvent[], scheduledAt: Date): number {
+  return pendingFailures(messages, notSent, scheduledAt).filter((f) => !f.retrying).length;
 }
 
 /** Próxima tentativa (2 ou 3) de cada envio que falhou e ainda vai ser tentado de novo. */
@@ -125,6 +147,66 @@ export function retryingSends(messages: SentMessage[]): number[] {
   const latestByType = new Map<string, SentMessage>();
   for (const message of [...messages].sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime())) latestByType.set(message.messageType, message);
   return [...latestByType.values()].filter((m) => FAILED.has(m.status ?? "") && m.retryAt).map((m) => (m.attempt ?? 1) + 1);
+}
+
+/**
+ * Um envio com falha, para os detalhes da aba Envios (cliente, 05/nov/2026): o que era, para que número, quando saiu
+ * cada tentativa e o motivo da Meta. `messageId`/`eventId`: o que o botão "Descartar" descarta.
+ */
+export type FailedSendDetail = {
+  messageId: string | null;
+  eventId: number | null;
+  messageType: string;
+  phone: string | null;
+  /** Primeira tentativa (ou a hora do "não enviado"). */
+  firstAt: Date;
+  /** Todas as tentativas, da primeira à última. */
+  attempts: { at: Date; status: string | null }[];
+  failureCode: number | null;
+  failureReason: string | null;
+  /** "Não enviado" da trilha: o motivo gravado (ex.: "not_connected"). */
+  notSentReason: string | null;
+  retrying: boolean;
+  retryAt: Date | null;
+};
+
+export function failedSendDetails(messages: SentMessage[], notSent: NotSentEvent[], scheduledAt: Date): FailedSendDetail[] {
+  return pendingFailures(messages, notSent, scheduledAt).map((failure) => {
+    if (failure.source === "event") {
+      const { event } = failure;
+      return {
+        messageId: null,
+        eventId: event.id ?? null,
+        messageType: NOT_SENT_KIND_MESSAGE_TYPE[event.kind] ?? event.kind,
+        phone: null,
+        firstAt: event.occurredAt,
+        attempts: [],
+        failureCode: null,
+        failureReason: null,
+        notSentReason: event.reason ?? null,
+        retrying: false,
+        retryAt: null,
+      };
+    }
+    const { message } = failure;
+    const root = message.firstAttemptId ?? message.id;
+    const chain = messages
+      .filter((m) => m === message || (root !== undefined && (m.id === root || m.firstAttemptId === root)))
+      .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
+    return {
+      messageId: message.id ?? null,
+      eventId: null,
+      messageType: message.messageType,
+      phone: message.phone ?? null,
+      firstAt: chain[0]?.createdAt ?? message.createdAt,
+      attempts: chain.map((m) => ({ at: m.createdAt, status: m.status })),
+      failureCode: message.failureCode ?? null,
+      failureReason: message.failureReason ?? null,
+      notSentReason: null,
+      retrying: failure.retrying,
+      retryAt: message.retryAt ?? null,
+    };
+  });
 }
 
 export type AppointmentWithFailedSends = {
@@ -136,6 +218,8 @@ export type AppointmentWithFailedSends = {
   failedSends: number;
   /** Envios que falharam e vão ser tentados de novo: o número da próxima tentativa. */
   retrying: number[];
+  /** Cada envio com falha (e os que vão ser tentados de novo), para os detalhes. */
+  sends: FailedSendDetail[];
 };
 
 /**
@@ -214,7 +298,7 @@ export async function listAppointmentsWithFailedSends(
       (chunk, from, to) =>
         db
           .from("whatsapp_messages")
-          .select("appointment_id, message_type, status, created_at, attempt, retry_at")
+          .select("id, appointment_id, message_type, status, created_at, attempt, retry_at, first_attempt_id, contact_phone, failure_code, failure_reason")
           .eq("clinic_id", clinicId)
           .eq("direction", "outbound")
           .in("appointment_id", chunk)
@@ -227,7 +311,7 @@ export async function listAppointmentsWithFailedSends(
       (chunk, from, to) =>
         db
           .from("appointment_events")
-          .select("appointment_id, details, occurred_at")
+          .select("id, appointment_id, details, occurred_at")
           .eq("clinic_id", clinicId)
           .eq("event_type", "message_not_sent")
           .in("appointment_id", chunk)
@@ -237,22 +321,61 @@ export async function listAppointmentsWithFailedSends(
     ),
   ]);
 
+  // Descartados pelo Suporte (cliente, 05/nov/2026): o erro conhecido e resolvido sai da lista e do alerta.
+  type Dismissal = { message_id: string | null; event_id: number | null };
+  const dismissalsOf = async (column: "message_id" | "event_id", keys: string[]): Promise<Dismissal[]> =>
+    keys.length
+      ? ((await unwrapAllIn(
+          keys,
+          (chunk, from, to) =>
+            db
+              .from("send_failure_dismissals")
+              .select("message_id, event_id")
+              .eq("clinic_id", clinicId)
+              .eq("scope", "envios")
+              .in(column, chunk)
+              .order("id")
+              .range(from, to),
+          "Falhas descartadas",
+        )) as Dismissal[])
+      : [];
+  const dismissals = (
+    await Promise.all([
+      dismissalsOf("message_id", messages.filter((m) => FAILED.has(m.status ?? "")).map((m) => m.id)),
+      dismissalsOf("event_id", events.map((e) => String(e.id))),
+    ])
+  ).flat();
+  const dismissedMessages = new Set(dismissals.map((d) => d.message_id).filter((id): id is string => !!id));
+  const dismissedEvents = new Set(dismissals.map((d) => d.event_id).filter((id): id is number => id !== null));
+
   return appointments
     .map((a) => {
-      const own = messages
+      const own: SentMessage[] = messages
         .filter((m) => m.appointment_id === a.id)
         .map((m) => ({
+          id: m.id,
           messageType: m.message_type,
-          status: m.status,
+          // Descartada: deixa de ser falha, sem trazer de volta uma tentativa anterior.
+          status: dismissedMessages.has(m.id) ? "dismissed" : m.status,
           createdAt: new Date(m.created_at),
           attempt: m.attempt,
           retryAt: m.retry_at ? new Date(m.retry_at) : null,
+          firstAttemptId: m.first_attempt_id,
+          phone: m.contact_phone,
+          failureCode: m.failure_code,
+          failureReason: m.failure_reason,
         }));
       const notSent = events
-        .filter((e) => e.appointment_id === a.id)
+        .filter((e) => e.appointment_id === a.id && !dismissedEvents.has(e.id))
         .map((e) => {
-          const details = (e.details ?? {}) as { kind?: string; scheduled_at?: string };
-          return { kind: String(details.kind ?? ""), scheduledAt: details.scheduled_at ? new Date(details.scheduled_at) : null, occurredAt: new Date(e.occurred_at) };
+          const details = (e.details ?? {}) as { kind?: string; scheduled_at?: string; reason?: string };
+          return {
+            id: e.id,
+            kind: String(details.kind ?? ""),
+            reason: details.reason ?? null,
+            scheduledAt: details.scheduled_at ? new Date(details.scheduled_at) : null,
+            occurredAt: new Date(e.occurred_at),
+          };
         });
       const scheduledAt = new Date(a.scheduled_at);
       return {
@@ -263,6 +386,7 @@ export async function listAppointmentsWithFailedSends(
         serviceName: a.services.name,
         failedSends: countFailedSends(own, notSent, scheduledAt),
         retrying: retryingSends(own),
+        sends: failedSendDetails(own, notSent, scheduledAt),
       };
     })
     .filter((a) => a.failedSends > 0 || a.retrying.length > 0);

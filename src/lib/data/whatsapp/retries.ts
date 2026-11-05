@@ -2,7 +2,7 @@ import type { DbClient } from "../clients";
 import { unwrap } from "../errors";
 import { holdOfferForRetry, isOfferAwaitingSend, markOfferSent, skipOfferAfterRetries } from "../waitlist/offers";
 import { recordOutboundMessage, type SendOutcome } from "./messages";
-import { MAX_ATTEMPTS, isTechnicalCode, nextRetryAt, RETRYABLE_MESSAGE_TYPES, type RetryContext } from "./retryRules";
+import { MAX_ATTEMPTS, isRetryable, isTechnicalCode, nextRetryAt, type RetryContext } from "./retryRules";
 import type { ClinicSender } from "./send";
 
 // Reenvio automático de envios com falha técnica (cliente, 23/out/2026): de
@@ -132,8 +132,10 @@ export async function runSendRetries(db: DbClient, clinicId: string, sender: Cli
 
 /** O envio ainda faz sentido agora? */
 async function stillMakesSense(db: DbClient, clinicId: string, row: DueRow, context: RetryContext, now: Date): Promise<boolean> {
-  if (!RETRYABLE_MESSAGE_TYPES.has(row.message_type)) return false;
+  if (!isRetryable(row.message_type, context)) return false;
   if (context.until && now.getTime() >= Date.parse(context.until)) return false;
+  // Bot: a conversa andou (outra mensagem saiu depois para o número), a resposta antiga não vale mais.
+  if (context.bot) return !(await hasNewerOutbound(db, clinicId, row));
 
   if (ACTIVE_APPOINTMENT_TYPES.has(row.message_type) || CANCELLATION_TYPES.has(row.message_type)) {
     if (!row.appointment_id) return false;
@@ -199,7 +201,8 @@ export async function scheduleRetryAfterLateFailure(
   if (!row) return false;
 
   const technical = isTechnicalCode(error.code);
-  const retryAt = technical && row.retry_payload && RETRYABLE_MESSAGE_TYPES.has(row.message_type) ? nextRetryAt(row.attempt, now) : null;
+  const context = row.retry_payload?.context;
+  const retryAt = technical && row.retry_payload && isRetryable(row.message_type, context) ? nextRetryAt(row.attempt, now, context?.bot === true) : null;
   const newer = retryAt ? await hasNewerSend(db, clinicId, row) : false;
   const schedule = retryAt && !newer;
   unwrap(
@@ -222,6 +225,26 @@ export async function scheduleRetryAfterLateFailure(
     else if (technical) await skipOfferAfterRetries(db, clinicId, offerId, error.title ?? "a Meta não entregou a oferta");
   }
   return !!schedule;
+}
+
+/** Saiu outra mensagem para o mesmo número depois desta (qualquer tipo): a conversa do bot andou. */
+async function hasNewerOutbound(db: DbClient, clinicId: string, row: { id: string; contact_phone: string; first_attempt_id: string | null }): Promise<boolean> {
+  const first = row.first_attempt_id ?? row.id;
+  const created = unwrap(await db.from("whatsapp_messages").select("created_at").eq("clinic_id", clinicId).eq("id", first).maybeSingle(), "Mensagem do WhatsApp");
+  if (!created) return false;
+  const newer = unwrap(
+    await db
+      .from("whatsapp_messages")
+      .select("id, first_attempt_id")
+      .eq("clinic_id", clinicId)
+      .eq("direction", "outbound")
+      .eq("contact_phone", row.contact_phone)
+      .gt("created_at", created.created_at)
+      .limit(20),
+    "Mensagem do WhatsApp",
+  );
+  // As tentativas desta mesma mensagem não contam.
+  return newer.some((m) => m.id !== first && m.first_attempt_id !== first);
 }
 
 async function hasNewerSend(
