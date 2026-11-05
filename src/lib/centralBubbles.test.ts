@@ -43,6 +43,7 @@ describe("bolhas da conversa (CN3a)", () => {
   it("situação da entrega", () => {
     expect(deliveryLabel("read")).toBe("lida");
     expect(deliveryLabel("delivered")).toBe("entregue");
+    expect(deliveryLabel("sending")).toBe("enviando");
     expect(deliveryLabel("sent")).toBeNull();
   });
 });

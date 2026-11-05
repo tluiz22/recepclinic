@@ -4,7 +4,7 @@
 > telas T1 a T11 (seção 15; canvas https://claude.ai/artifact/SiRBQtc2kSnQoMrgGnRn4y). **Próximo (cliente, 05/nov):**
 > implementar a partir do **CU2** (ordem na seção 12; CU1 resolvido pela T11), em branch curta criada da `main`.
 > **CU2, CU3, CN1, CU4, CN2, CN3a e CN3b feitos na branch `central-atendimento` (05/nov)**. Staging e produção só com a
-> Central pronta (cliente, 05/nov). Próximo: CN4 (enviar, assumir, transferir, Retomar conversa).
+> Central pronta (cliente, 05/nov). CN4a feito (enviar, assumir, transferir). Próximo: CN4b (Retomar conversa, liberação em 30 min).
 
 Pedido do cliente (05/nov/2026): secretárias, profissionais e outros usuários autorizados veem e respondem as
 conversas do WhatsApp **dentro do RecepClinic**, com o mesmo histórico do bot, sem abrir o app do WhatsApp.
@@ -643,6 +643,8 @@ Ordem única (revisão de 05/nov; inclui as etapas CU da seção 14 e o cadastro
 | CN3a | **Feito na branch (05/nov)**, migração `20261217120000`: tela `/admin/conversas` (Abertas/Finalizadas, busca, "Mostrar", não lidas por pessoa, conversa só leitura paginada de 50 em 50, "Finalizar atendimento"), item Conversas no menu com as que aguardam (M1; no celular no lugar do Relatório, que vai ao "Mais"), Meu dia sem contar conversas, Notificações num botão (N1), `/admin/atendimento` redireciona com a Central ligada; abertura registrada uma vez a cada 15 min (a tela recarrega a cada minuto) | Sim |
 | CN3b | Painel do paciente (T1 opção C, T2, T3, T4, T5) e os eventos do atendimento na conversa. **Feito na branch (05/nov)**, migração `20261218120000` (`profile_name`, guardado só com a Central, fora da leitura direta; a lista o devolve): painel em 3 colunas a partir de 1280px, abaixo disso a faixa "Próxima" com "Ver paciente"; número sem cadastro com "Cadastrar paciente" (telefone e nome do WhatsApp preenchidos) e "É de um paciente já cadastrado" (busca, confirmação, muda o WhatsApp do contato); eventos (encaminhada com o assunto, assumiu, transferida, liberada, finalizada); Conversas entra nas telas de volta. **CN7:** a anonimização também apaga o `profile_name` | Sim |
 | CN4 | Enviar texto (janela de 24 h, idempotência, pausa antes, falha com "Tentar de novo"); responder assume, assumir, transferir (R2, simples), finalizar; não lidas; modelo "Retomar conversa"; rotina de liberação em 30 min | Talvez |
+| CN4a | **Feito na branch (05/nov)**, migração `20261219120000`: caixa de resposta na conversa (dentro das 24 h; Ctrl+Enter envia), mensagem gravada "enviando" antes de sair (chave da tela: o mesmo envio não sai duas vezes), "Não enviada · Tentar de novo"; responder assume e põe "Em atendimento" (com outra dona, confirma "Está com Ana. Responder e assumir?"; envio simultâneo: o segundo recebe "Ana assumiu agora" e o texto volta ao campo); responder em Finalizadas pausa o bot, como a resposta pelo app; Assumir e Transferir (Administrador e Recepção, para qualquer pessoa da equipe, inclusive Profissional); o responsável só muda pelas funções do banco (o login perdeu o update direto da coluna); o Profissional responde só na que está com ele | Sim |
+| CN4b | Modelo "Retomar conversa" (texto a aprovar pelo cliente), rotina de liberação em 30 min no horário da clínica, o bot reler a pausa antes de cada envio | Talvez |
 | CN5 | Mídia recebida (rotina de download, visualização por URL assinada, avisos da 8c) | — |
 | CN6 | Enviar foto (5 MB) e PDF (10 MB) | — |
 | CN7 | Retenção (rotina diária) e anonimização apagando texto e mídia | — |

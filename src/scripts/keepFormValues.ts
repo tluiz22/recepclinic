@@ -62,7 +62,7 @@ function restore(): HTMLFormElement | null {
     return null;
   }
   if (!saved || saved.path !== location.pathname) return null;
-  if (!document.querySelector("[data-flash='error']")) return null;
+  if (!document.querySelector("[data-flash='error']:not([data-no-restore])")) return null;
   const form = [...document.querySelectorAll<HTMLFormElement>("form[method='POST' i]")].filter(
     (f) => (f.getAttribute("action") ?? "") === saved!.action,
   )[saved.index];

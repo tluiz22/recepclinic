@@ -1969,6 +1969,11 @@ isOneToOne: false
 "book_group_session":
 { Args: { "p_agenda_id": string,"p_booking_channel": Database["public"]['Enums']["action_channel"],"p_location_id": string,"p_patient_id": string,"p_scheduled_at": string,"p_service_id": string,"p_trail"?: Json }; Returns: string
                            },
+"central_assign":
+{ Args: { "p_clinic_id": string,"p_contact_phone": string,"p_expected_assigned": string | null,"p_to"?: string | null }; Returns: {
+              "assigned_name": string | null,"assigned_to": string | null,"outcome": string
+            }[]
+                           },
 "central_conversation_messages":
 { Args: { "p_before_id"?: string,"p_before_sort_at"?: string,"p_clinic_id": string,"p_contact_phone": string,"p_limit"?: number }; Returns: {
               "author": string,"body": string,"created_at": string,"direction": string,"edited_at": string,"failure_code": number,"failure_reason": string,"handoff_id": string,"id": string,"media_id": string,"message_type": string,"revoked_at": string,"sent_by": string,"sort_at": string,"source": string,"status": string,"template_name": string
@@ -1986,6 +1991,21 @@ isOneToOne: false
                            },
 "central_enabled":
 { Args: { "p_clinic_id": string }; Returns: boolean
+                           },
+"central_send_prepare":
+{ Args: { "p_body": string,"p_client_key": string,"p_clinic_id": string,"p_contact_phone": string,"p_expected_assigned": string | null }; Returns: {
+              "assigned_name": string | null,"assigned_to": string | null,"message_id": string | null,"outcome": string
+            }[]
+                           },
+"central_send_retry":
+{ Args: { "p_clinic_id": string,"p_message_id": string }; Returns: {
+              "body": string | null,"contact_phone": string,"outcome": string
+            }[]
+                           },
+"central_team":
+{ Args: { "p_clinic_id": string }; Returns: {
+              "name": string,"roles": Database["public"]["Enums"]["clinic_role"][],"user_id": string
+            }[]
                            },
 "central_waiting_count":
 { Args: { "p_clinic_id": string }; Returns: number

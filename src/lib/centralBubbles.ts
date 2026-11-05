@@ -22,6 +22,7 @@ export function deliveryLabel(status: string | null): string | null {
   if (status === "read") return "lida";
   if (status === "delivered") return "entregue";
   if (status === "failed") return "não entregue";
+  if (status === "sending") return "enviando";
   return null;
 }
 

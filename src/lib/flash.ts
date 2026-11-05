@@ -9,38 +9,79 @@ import type { AstroCookies } from "astro";
  * `fieldMessages`: a mensagem de cada um, para aparecer embaixo do campo (ajuda
  * contextual, 23/out/2026); `text` continua com todas, para a tela sem JavaScript.
  */
-export type Flash = { tone: "success" | "error"; text: string; fields?: string[]; fieldMessages?: Record<string, string> };
+export type Flash = {
+  tone: "success" | "error";
+  text: string;
+  fields?: string[];
+  fieldMessages?: Record<string, string>;
+  /** Erro em que o que foi digitado já ficou guardado (ex.: a mensagem que não saiu, CN4a): o formulário volta vazio. */
+  noRestore?: boolean;
+};
 
 const FIELD_NAME = /^[A-Za-z0-9_]{1,60}$/;
 
 const COOKIE = "rc_aviso";
 
 /** `path`: onde o aviso vale (painel por padrão; o formulário público usa o dele). */
-export function setFlash(cookies: AstroCookies, flash: Flash, path = "/admin"): void {
-  cookies.set(COOKIE, Buffer.from(JSON.stringify(flash)).toString("base64url"), {
-    path,
-    httpOnly: true,
-    sameSite: "lax",
-    maxAge: 60,
-  });
+export function setFlash(
+  cookies: AstroCookies,
+  flash: Flash,
+  path = "/admin",
+): void {
+  cookies.set(
+    COOKIE,
+    Buffer.from(JSON.stringify(flash)).toString("base64url"),
+    {
+      path,
+      httpOnly: true,
+      sameSite: "lax",
+      maxAge: 60,
+    },
+  );
 }
 
-export function takeFlash(cookies: AstroCookies, path = "/admin"): Flash | null {
+export function takeFlash(
+  cookies: AstroCookies,
+  path = "/admin",
+): Flash | null {
   const raw = cookies.get(COOKIE)?.value;
   if (!raw) return null;
   cookies.delete(COOKIE, { path });
   try {
-    const flash = JSON.parse(Buffer.from(raw, "base64url").toString("utf8")) as Partial<Flash>;
-    if ((flash.tone === "success" || flash.tone === "error") && typeof flash.text === "string") {
-      const fields = Array.isArray(flash.fields) ? flash.fields.filter((f): f is string => typeof f === "string" && FIELD_NAME.test(f)).slice(0, 10) : [];
-      const messages = Object.entries(flash.fieldMessages && typeof flash.fieldMessages === "object" ? flash.fieldMessages : {})
-        .filter((entry): entry is [string, string] => fields.includes(entry[0]) && typeof entry[1] === "string" && entry[1].trim() !== "")
+    const flash = JSON.parse(
+      Buffer.from(raw, "base64url").toString("utf8"),
+    ) as Partial<Flash>;
+    if (
+      (flash.tone === "success" || flash.tone === "error") &&
+      typeof flash.text === "string"
+    ) {
+      const fields = Array.isArray(flash.fields)
+        ? flash.fields
+            .filter(
+              (f): f is string => typeof f === "string" && FIELD_NAME.test(f),
+            )
+            .slice(0, 10)
+        : [];
+      const messages = Object.entries(
+        flash.fieldMessages && typeof flash.fieldMessages === "object"
+          ? flash.fieldMessages
+          : {},
+      )
+        .filter(
+          (entry): entry is [string, string] =>
+            fields.includes(entry[0]) &&
+            typeof entry[1] === "string" &&
+            entry[1].trim() !== "",
+        )
         .map(([field, message]) => [field, message.slice(0, 200)]);
       return {
         tone: flash.tone,
         text: flash.text.slice(0, 500),
         ...(fields.length ? { fields } : {}),
-        ...(messages.length ? { fieldMessages: Object.fromEntries(messages) } : {}),
+        ...(messages.length
+          ? { fieldMessages: Object.fromEntries(messages) }
+          : {}),
+        ...(flash.noRestore === true ? { noRestore: true } : {}),
       };
     }
   } catch {
@@ -53,8 +94,12 @@ export function takeFlash(cookies: AstroCookies, path = "/admin"): Flash | null 
  * O aviso da tela, lido uma vez só por pedido (QA-09 da R8): o FlashMessage e
  * o EditCard leem o mesmo, sem depender da ordem em que são montados.
  */
-export function pageFlash(astro: { cookies: AstroCookies; locals: App.Locals }): Flash | null {
-  if (astro.locals.flash === undefined) astro.locals.flash = takeFlash(astro.cookies);
+export function pageFlash(astro: {
+  cookies: AstroCookies;
+  locals: App.Locals;
+}): Flash | null {
+  if (astro.locals.flash === undefined)
+    astro.locals.flash = takeFlash(astro.cookies);
   return astro.locals.flash;
 }
 

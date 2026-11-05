@@ -5,7 +5,8 @@
 // lado, a conversa (só leitura nesta etapa: responder, assumir e transferir chegam no CN4) e o painel do paciente (CN3b,
 // T1 opção C; abaixo de 1280px, a faixa da próxima consulta com "Ver paciente", T5). No celular, a lista, a conversa e o
 // painel em telas separadas, com "Voltar". Administrador, Recepção e Suporte veem
-// todas; o Profissional, só as que estão com ele. Notificações num botão no topo (N1).
+// todas; o Profissional, só as que estão com ele. Notificações num botão no topo (N1). Responder (dentro das 24 h),
+// Assumir e Transferir (CN4a; decisão 5 e R2): quem responde assume; com outra dona, a tela confirma antes.
 import AdminLayout from "../../layouts/AdminLayout.astro";
 import ConfirmDeleteDialog from "../../components/admin/ConfirmDeleteDialog.astro";
 import FinishForm from "../../components/admin/FinishAttendanceForm.astro";
@@ -29,11 +30,14 @@ import {
   type MessageCursor,
 } from "../../lib/data/central";
 import { loadActorLabels } from "../../lib/data/agenda/trail";
-import { describeHandoffEvent, loadConversationPanel, type ConversationPanel as Panel } from "../../lib/data/centralPanel";
+import { describeHandoffEvent, firstNameOf, loadConversationPanel, type ConversationPanel as Panel } from "../../lib/data/centralPanel";
 import { searchPatients, type PatientWithContact } from "../../lib/data/patients";
 import { DataError } from "../../lib/data/errors";
 import { handoffReasonLabel } from "../../lib/data/whatsapp/attention";
 import { listMyDevices } from "../../lib/data/whatsapp/attentionPush";
+import { CUSTOMER_SERVICE_WINDOW_MS } from "../../lib/data/whatsapp/messages";
+import { listCentralTeam, type TeamOption } from "../../lib/data/centralSend";
+import { ROLE_LABELS } from "../../lib/data/config/team";
 import { platformEnv } from "../../lib/env";
 import { formatPhoneBR } from "../../lib/phone";
 
@@ -89,7 +93,7 @@ if (selected) {
 }
 const chronological = thread ? [...thread.messages].reverse() : [];
 const names = new Map(
-  [...(await loadActorLabels(db, clinic.clinicId, chronological.map((m) => m.sentBy))).entries()].map(([id, label]) => [id, label.name.split(/\s+/)[0]]),
+  [...(await loadActorLabels(db, clinic.clinicId, chronological.map((m) => m.sentBy))).entries()].map(([id, label]) => [id, label.isSupport ? "Suporte" : firstNameOf(label.name)]),
 );
 
 // Painel do paciente (CN3b) e os eventos do atendimento na conversa.
@@ -98,6 +102,16 @@ const panel: Panel | null =
 const showPanel = params.get("painel") === "1";
 const canEdit = clinic.isPlatformStaff || clinic.roles.some((role) => role === "admin" || role === "reception");
 const linking = !!selected && !panel?.contact && canEdit && params.get("ligar") === "1";
+// Responder, assumir e transferir (CN4a). O Profissional responde só na que está com ele; a janela de 24 h conta da
+// última mensagem do paciente (fora dela, só o modelo "Retomar conversa", CN4b).
+const isMine = !!selected?.assignedTo && selected.assignedTo === clinic.userId;
+const otherOwner = !!selected?.assignedTo && !isMine;
+const ownerFirst = selected?.assignedName ? firstNameOf(selected.assignedName) : "outra pessoa";
+const canReply = !!selected && !!thread && (canEdit || (selected.open && isMine));
+const windowOpen = !!selected?.lastPatientAt && Date.now() - selected.lastPatientAt.getTime() < CUSTOMER_SERVICE_WINDOW_MS;
+const team: TeamOption[] = selected?.open && canEdit && thread ? (await listCentralTeam(db, clinic.clinicId)).filter((m) => m.userId !== selected.assignedTo && m.userId !== clinic.userId) : [];
+const clientKey = crypto.randomUUID();
+const rolesOf = (member: TeamOption) => member.roles.map((role) => ROLE_LABELS[role]).join(", ");
 const linkQuery = (params.get("paciente") ?? "").trim().slice(0, 80);
 const linkResults: PatientWithContact[] = linking && linkQuery.length >= 2 ? await searchPatients(db, clinic.clinicId, linkQuery) : [];
 const nextOfPanel = panel?.patients
@@ -118,7 +132,10 @@ const lines: Line[] = [
       return text ? { kind: "event" as const, at: event.at, text: `${text} · ${formatInstant(event.at, clinic.timezone, "HH:mm")}${subject}` } : null;
     })
     .filter((line): line is NonNullable<typeof line> => !!line),
-].sort((a, b) => (a.kind === "message" ? a.message.sortAt : a.at).getTime() - (b.kind === "message" ? b.message.sortAt : b.at).getTime());
+].sort(
+  // Na mesma hora, o evento antes da mensagem ("Ana assumiu" e a resposta dela).
+  (a, b) => (a.kind === "message" ? a.message.sortAt : a.at).getTime() - (b.kind === "message" ? b.message.sortAt : b.at).getTime() || (a.kind === "event" ? -1 : 0) + (b.kind === "event" ? 1 : 0),
+);
 const lineAt = (line: Line) => (line.kind === "message" ? line.message.sortAt : line.at);
 
 // Links: a tela guarda a aba, o "Mostrar" e a busca.
@@ -170,6 +187,8 @@ const BUBBLE_TONE = {
   app: "self-end rounded-[12px_12px_4px_12px] border border-dashed border-line-strong bg-white",
   panel: "self-end rounded-[12px_12px_4px_12px] bg-brand-soft",
 } as const;
+const ACTION =
+  "inline-flex min-h-11 items-center justify-center rounded-lg border border-line-strong bg-white px-2.5 text-sm font-semibold whitespace-nowrap text-ink no-underline hover:bg-canvas sm:min-h-10";
 const tabClass = (active: boolean) =>
   `flex min-h-12 flex-1 items-center justify-center border-b-[3px] text-[15px] no-underline ${active ? "border-brand font-semibold text-brand-ink" : "border-transparent text-ink-soft hover:text-ink"}`;
 ---
@@ -300,8 +319,34 @@ const tabClass = (active: boolean) =>
                   </span>
                 </div>
               </div>
-              {selected.open && selected.statusAt && (
-                <FinishForm item={{ phone: selected.phone, name: displayName(selected), statusAt: selected.statusAt }} primary={false} returnTo={backHref} class="max-sm:w-full" />
+              {selected.open && (
+                <div class="flex flex-wrap items-center gap-1.5 max-sm:w-full max-sm:[&>*]:flex-1">
+                  {canEdit && !isMine && thread && (
+                    <form method="POST" action="/api/admin/conversas/responsavel" class="flex">
+                      <input type="hidden" name="acao" value="assumir" />
+                      <input type="hidden" name="telefone" value={selected.phone} />
+                      <input type="hidden" name="responsavel_visto" value={selected.assignedTo ?? ""} />
+                      <input type="hidden" name="return_to" value={threadHref} />
+                      <button
+                        type="submit"
+                        class:list={[ACTION, "w-full", otherOwner && "js-confirm-delete"]}
+                        data-confirm-title={otherOwner ? `Está com ${ownerFirst}. Assumir a conversa?` : undefined}
+                        data-confirm-message={otherOwner ? `Você passa a ser responsável pela conversa. ${ownerFirst} deixa de ser.` : undefined}
+                        data-confirm-label={otherOwner ? "Assumir" : undefined}
+                      >
+                        Assumir
+                      </button>
+                    </form>
+                  )}
+                  {team.length > 0 && (
+                    <button type="button" class={ACTION} data-transfer-open>
+                      Transferir
+                    </button>
+                  )}
+                  {selected.statusAt && (
+                    <FinishForm item={{ phone: selected.phone, name: displayName(selected), statusAt: selected.statusAt }} primary={false} returnTo={backHref} compact />
+                  )}
+                </div>
               )}
             </header>
 
@@ -363,8 +408,23 @@ const tabClass = (active: boolean) =>
                       <span class="self-end text-[11px] text-ink-soft">
                         {formatInstant(message.sortAt, clinic.timezone, "HH:mm")}
                         {bubble.edited && " · editada"}
-                        {delivery && ` · ${delivery}`}
+                        {delivery && !(bubble.failed && message.author === "agent_panel") && ` · ${delivery}`}
                       </span>
+                      {bubble.failed && message.author === "agent_panel" && (
+                        <span class="flex flex-wrap items-center justify-end gap-x-2 text-[13px] font-semibold text-danger">
+                          Não enviada
+                          {canReply && windowOpen && (
+                            <form method="POST" action="/api/admin/conversas/enviar?tentar=1" class="inline">
+                              <input type="hidden" name="acao" value="tentar" />
+                              <input type="hidden" name="mensagem" value={message.id} />
+                              <input type="hidden" name="return_to" value={threadHref} />
+                              <button type="submit" class="min-h-9 font-semibold text-brand-ink underline">
+                                Tentar de novo
+                              </button>
+                            </form>
+                          )}
+                        </span>
+                      )}
                     </div>
                   </>
                 );
@@ -372,11 +432,50 @@ const tabClass = (active: boolean) =>
             </div>
 
             {selected.open && (
-              <p class="border-t border-line px-4 py-3 text-sm text-ink-soft">
+              <p class="border-t border-line px-4 pt-2.5 text-[13px] text-ink-soft">
                 {handoffReasonLabel(selected.reason)}
                 {selected.subject && ` · Assunto: ${selected.subject}`}
               </p>
             )}
+            {canReply &&
+              (windowOpen ? (
+                <form method="POST" action="/api/admin/conversas/enviar" class:list={["flex items-end gap-2 px-3 py-2.5 sm:px-4", !selected.open && "border-t border-line"]} data-composer>
+                  <input type="hidden" name="acao" value="enviar" />
+                  <input type="hidden" name="telefone" value={selected.phone} />
+                  <input type="hidden" name="chave" value={clientKey} />
+                  <input type="hidden" name="responsavel_visto" value={selected.assignedTo ?? ""} />
+                  <input type="hidden" name="return_to" value={threadHref} />
+                  <label for="resposta" class="sr-only">
+                    Mensagem para o paciente
+                  </label>
+                  <textarea
+                    id="resposta"
+                    name="texto"
+                    rows="1"
+                    maxlength="4096"
+                    required
+                    placeholder={selected.open ? "Escreva a resposta" : "Escreva para reabrir o atendimento"}
+                    class="max-h-40 min-h-11 flex-1 resize-none rounded-lg border border-line-strong bg-white px-3 py-2.5 text-[15px] leading-snug text-ink"
+                    data-composer-text></textarea>
+                  <button
+                    type="submit"
+                    class:list={[
+                      "inline-flex min-h-11 flex-none items-center justify-center rounded-lg bg-brand px-4 text-[15px] font-semibold text-white hover:bg-brand-ink",
+                      otherOwner && "js-confirm-delete",
+                    ]}
+                    data-confirm-title={otherOwner ? `Está com ${ownerFirst}. Responder e assumir?` : undefined}
+                    data-confirm-message={otherOwner ? `A mensagem sai e você passa a ser responsável pela conversa. ${ownerFirst} deixa de ser.` : undefined}
+                    data-confirm-label={otherOwner ? "Responder e assumir" : undefined}
+                  >
+                    Enviar
+                  </button>
+                </form>
+              ) : (
+                <p class:list={["px-4 py-3 text-sm text-ink-mid", !selected.open && "border-t border-line"]}>
+                  <strong class="text-ink">Sem mensagem do paciente nas últimas 24 horas.</strong> Pelo WhatsApp, a clínica só manda texto livre até 24
+                  horas depois da última mensagem do paciente.
+                </p>
+              ))}
           </>
         )
       }
@@ -424,6 +523,49 @@ const tabClass = (active: boolean) =>
     </div>
   </dialog>
 
+  {
+    team.length > 0 && selected && (
+      <dialog
+        id="transfer_dialog"
+        aria-labelledby="transfer_title"
+        class="m-auto w-[calc(100%-2rem)] max-w-[440px] rounded-[14px] border border-line bg-white p-0 text-ink shadow-[0_20px_50px_rgba(18,48,42,.22)] backdrop:bg-ink/40"
+      >
+        <form method="POST" action="/api/admin/conversas/responsavel" class="flex flex-col gap-3 p-4">
+          <strong id="transfer_title" class="font-display text-lg text-ink">
+            Transferir conversa
+          </strong>
+          <p class="text-sm text-ink-mid">
+            A conversa com {displayName(selected)} passa para a pessoa escolhida. Hoje: {ownerLabel(selected, clinic.userId).toLowerCase()}. Um Profissional vê só as
+            conversas que estão com ele.
+          </p>
+          <input type="hidden" name="acao" value="transferir" />
+          <input type="hidden" name="telefone" value={selected.phone} />
+          <input type="hidden" name="responsavel_visto" value={selected.assignedTo ?? ""} />
+          <input type="hidden" name="return_to" value={threadHref} />
+          <label for="transfer_para" class="text-sm font-semibold text-ink">
+            Para quem
+          </label>
+          <select id="transfer_para" name="para" required class={`${CONTROL} w-full`}>
+            <option value="">Escolha</option>
+            {team.map((member) => (
+              <option value={member.userId}>
+                {member.name} · {rolesOf(member)}
+              </option>
+            ))}
+          </select>
+          <div class="mt-1 flex justify-end gap-2">
+            <button type="button" class={ACTION} data-transfer-close>
+              Cancelar
+            </button>
+            <button type="submit" class="inline-flex min-h-11 items-center justify-center rounded-lg bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-ink sm:min-h-10">
+              Transferir
+            </button>
+          </div>
+        </form>
+      </dialog>
+    )
+  }
+
   <ConfirmDeleteDialog />
 </AdminLayout>
 
@@ -439,6 +581,29 @@ const tabClass = (active: boolean) =>
   document.querySelectorAll<HTMLSelectElement>("[data-submit-on-change]").forEach((select) => {
     select.addEventListener("change", () => select.form?.requestSubmit());
   });
+  // Caixa de resposta: cresce com o texto; Ctrl+Enter (ou Cmd+Enter) envia; um envio por vez.
+  const composer = document.querySelector<HTMLFormElement>("[data-composer]");
+  const text = composer?.querySelector<HTMLTextAreaElement>("[data-composer-text]");
+  const grow = () => {
+    if (!text) return;
+    text.style.height = "auto";
+    text.style.height = `${Math.min(text.scrollHeight + 2, 160)}px`;
+  };
+  text?.addEventListener("input", grow);
+  grow();
+  text?.addEventListener("keydown", (event) => {
+    if (event.key === "Enter" && (event.ctrlKey || event.metaKey)) {
+      event.preventDefault();
+      composer?.querySelector<HTMLButtonElement>("button[type=submit]")?.click();
+    }
+  });
+  composer?.addEventListener("submit", () => {
+    window.setTimeout(() => composer.querySelector<HTMLButtonElement>("button[type=submit]")?.setAttribute("disabled", ""), 0);
+  });
+  const transfer = document.getElementById("transfer_dialog") as HTMLDialogElement | null;
+  document.querySelector("[data-transfer-open]")?.addEventListener("click", () => transfer?.showModal());
+  transfer?.querySelector("[data-transfer-close]")?.addEventListener("click", () => transfer.close());
+
   const dialog = document.getElementById("notifications_dialog") as HTMLDialogElement | null;
   document.querySelector("[data-notifications-open]")?.addEventListener("click", () => dialog?.showModal());
   dialog?.querySelector("[data-notifications-close]")?.addEventListener("click", () => dialog.close());

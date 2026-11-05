@@ -15,10 +15,12 @@ interface Props {
   name?: string;
   /** Para onde volta depois (a ficha); sem ele, a tela Atendimento. */
   returnTo?: string;
+  /** Menor, sem o ícone (topo da conversa na Central, ao lado de Assumir e Transferir). */
+  compact?: boolean;
   class?: string;
 }
 
-const { item, primary, name, returnTo, class: className = "" } = Astro.props;
+const { item, primary, name, returnTo, compact = false, class: className = "" } = Astro.props;
 const who = name ?? item.name ?? "este número";
 ---
 
@@ -30,11 +32,11 @@ const who = name ?? item.name ?? "este número";
   <Button
     type="submit"
     variant={primary ? "primary" : "secondary"}
-    class="js-confirm-delete min-h-11 w-full gap-2 text-base font-bold whitespace-nowrap"
+    class={`js-confirm-delete w-full gap-2 whitespace-nowrap ${compact ? "px-2.5! text-sm!" : "min-h-11 text-base font-bold"}`}
     data-confirm-title="Finalizar o atendimento?"
     data-confirm-message={`O bot volta a atender ${who} na próxima mensagem, do começo. Nada é enviado ao paciente agora.`}
     data-confirm-label="Finalizar atendimento"
   >
-    <Icon name="check-circle" class="h-5 w-5" /> Finalizar atendimento
+    {!compact && <Icon name="check-circle" class="h-5 w-5" />} Finalizar atendimento
   </Button>
 </form>
