@@ -2,6 +2,7 @@ import type { DbClient } from "../clients";
 import { DataError, unwrap } from "../errors";
 import { deliveryRank, isDeliveryStatus, reachedPhone, toE164, type WaMessage } from "./meta";
 import { COURTESY_MESSAGE_TYPE, isCourtesyMessage } from "./courtesy";
+import { markPatientWrote } from "./conversations";
 import { MAX_ATTEMPTS, nextRetryAt, RETRYABLE_MESSAGE_TYPES, type RetryContext, type SendFailure } from "./retryRules";
 
 // Registro das mensagens do WhatsApp (F3.9a), com a credencial da clínica.
@@ -52,20 +53,24 @@ export async function recordInboundMessage(db: DbClient, clinicId: string, msg: 
   const phone = toE164(msg.from);
   if (!phone) return { recorded: false, reason: "invalid_phone" };
   const contactId = await contactIdByPhone(db, clinicId, phone);
+  const courtesy = isCourtesyMessage(msg);
   const id = await insertOnce(db, {
     clinic_id: clinicId,
     contact_id: contactId,
     contact_phone: phone,
     direction: "inbound",
     // Cortesia ("ok", "obrigado", 👍) vira o tipo `courtesy` (C27): o atendimento humano não volta para "Aguardando".
-    message_type: isCourtesyMessage(msg) ? COURTESY_MESSAGE_TYPE : (msg.type ?? "unknown"),
+    message_type: courtesy ? COURTESY_MESSAGE_TYPE : (msg.type ?? "unknown"),
     // O texto fica só no app do WhatsApp (cliente, 28/out/2026, D12).
     body: null,
     status: "received",
     wa_message_id: msg.id ?? null,
     created_at: now.toISOString(),
   });
-  return id ? { recorded: true, id, contactId } : { recorded: false, reason: "duplicate" };
+  if (!id) return { recorded: false, reason: "duplicate" };
+  // Atendimento humano (CA): o paciente escreveu (sem ser cortesia) e a conversa volta para "Aguardando a clínica".
+  if (!courtesy) await markPatientWrote(db, clinicId, phone, now);
+  return { recorded: true, id, contactId };
 }
 
 /**

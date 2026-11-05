@@ -1,15 +1,14 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import type { DbClient } from "../../src/lib/data/clients";
-import { countAwaitingClinic, giveBackToBot, listHumanAttention } from "../../src/lib/data/whatsapp/attention";
+import { countAwaitingClinic, finishAttendance, listHumanAttention } from "../../src/lib/data/whatsapp/attention";
 import { getConversation, handleAgentEcho, pauseForHuman } from "../../src/lib/data/whatsapp/conversations";
-import { HANDOFF_CLOSED } from "../../src/lib/data/whatsapp/bot/texts";
 import { returnDueConversations } from "../../src/lib/data/whatsapp/handoffReturn";
 import { recordAgentEcho, recordInboundMessage } from "../../src/lib/data/whatsapp/messages";
-import type { ClinicSender } from "../../src/lib/data/whatsapp/send";
 import { addMember, adminClient, clinicServiceClient, createClinic, createUser, deleteClinics, deleteUsers, type TestUser } from "./helpers";
 
 // F8.5a — Atendimento humano: motivo e início da pausa, a lista "Aguardando a
-// clínica" / "Em atendimento", quem vê e o "Devolver ao bot".
+// clínica" / "Em atendimento", quem vê e o "Finalizar atendimento" (era
+// "Devolver ao bot"; CA, 04/nov/2026: o ciclo completo em ciclo-atendimento-humano.test.ts).
 
 const asDb = (client: unknown) => client as DbClient;
 const at = (iso: string) => new Date(`${iso}-03:00`);
@@ -109,7 +108,7 @@ describe("atendimento humano (F8.5a)", () => {
     // Pergunta depois volta para Aguardando.
     await inbound(thanked, "Ah, preciso levar algum exame?", at("2031-03-11T05:20:00"));
     expect((await listHumanAttention(asDb(professional.client), clinic, thanked))[0]).toMatchObject({ status: "waiting", waitingSince: at("2031-03-11T05:20:00") });
-    await giveBackToBot(bot, clinic, thanked);
+    await finishAttendance(bot, clinic, thanked);
   });
 
   it("sem a rotina, a conversa segue na lista, mesmo dias depois", async () => {
@@ -117,7 +116,7 @@ describe("atendimento humano (F8.5a)", () => {
     expect(items.map((i) => i.phone)).toEqual([PHONE_WROTE_AGAIN, PHONE_REQUESTED, PHONE_TOOK_OVER]);
   });
 
-  it("volta ao bot 12 h depois da resposta da clínica (C20): com a mensagem na janela de 24 h; calada fora dela", async () => {
+  it("volta ao bot 12 h depois da última mensagem, sem mandar nada (C20; CA, 04/nov/2026)", async () => {
     const answered = "+5584977720004";
     const silent = "+5584977720005";
     // Pediu às 6h59 e a clínica respondeu às 7h10 de terça.
@@ -128,38 +127,30 @@ describe("atendimento humano (F8.5a)", () => {
     await inbound(silent, "Oi", at("2031-03-10T06:00:00"));
     await agent(silent, "Bom dia!", at("2031-03-10T07:00:00"));
 
-    const sent: [string, string][] = [];
-    const sender = {
-      text: async (phone: string, body: string) => {
-        sent.push([phone, body]);
-        return { sent: true, messageId: `wamid.fim${stamp}.${sent.length}` };
-      },
-    } as unknown as ClinicSender;
-
     // 19h09: ainda não deu 12 h da resposta das 7h10.
-    expect(await returnDueConversations(bot, clinic, sender, at("2031-03-11T19:09:00"))).toBe(1);
-    expect(sent).toEqual([]);
+    expect(await returnDueConversations(bot, clinic, at("2031-03-11T19:09:00"))).toBe(1);
     expect(await getConversation(bot, clinic, silent)).toMatchObject({ humanHandoff: false, state: "WELCOME" });
 
-    expect(await returnDueConversations(bot, clinic, sender, at("2031-03-11T19:10:00"))).toBe(1);
-    expect(sent).toEqual([[answered, HANDOFF_CLOSED]]);
+    expect(await returnDueConversations(bot, clinic, at("2031-03-11T19:10:00"))).toBe(1);
     expect(await getConversation(bot, clinic, answered)).toMatchObject({ humanHandoff: false, state: "WELCOME" });
-    const { data: closing } = await adminClient()
+    // Em silêncio: nenhuma mensagem do sistema depois da resposta da clínica.
+    const { data: outbound } = await adminClient()
       .from("whatsapp_messages")
-      .select("message_type, status")
+      .select("message_type")
       .eq("clinic_id", clinic)
-      .eq("contact_phone", answered)
-      .eq("message_type", "bot_handoff_closed");
-    expect(closing).toEqual([{ message_type: "bot_handoff_closed", status: "sent" }]);
+      .in("contact_phone", [answered, silent])
+      .eq("direction", "outbound")
+      .neq("message_type", "agent_reply");
+    expect(outbound).toEqual([]);
 
     // Aguardando a clínica (paciente esperando resposta) e "Em atendimento" com menos de 12 h ficam.
     const items = await listHumanAttention(asDb(professional.client), clinic);
     expect(items.map((i) => i.phone)).toEqual([PHONE_WROTE_AGAIN, PHONE_REQUESTED, PHONE_TOOK_OVER]);
   });
 
-  it("Devolver ao bot: a conversa volta ao bot e sai da lista; de novo, já tinha voltado", async () => {
+  it("Finalizar atendimento: a conversa volta ao bot e sai da lista; de novo, já tinha voltado", async () => {
     const db = asDb(professional.client);
-    expect(await giveBackToBot(db, clinic, PHONE_TOOK_OVER)).toBe(true);
+    expect(await finishAttendance(db, clinic, PHONE_TOOK_OVER)).toBe("finished");
     expect(await getConversation(bot, clinic, PHONE_TOOK_OVER)).toMatchObject({ humanHandoff: false, state: "WELCOME" });
     const { data } = await adminClient()
       .from("conversation_state")
@@ -168,13 +159,13 @@ describe("atendimento humano (F8.5a)", () => {
       .eq("contact_phone", PHONE_TOOK_OVER)
       .single();
     expect(data).toEqual({ handoff_reason: null, handoff_started_at: null });
-    expect(await giveBackToBot(db, clinic, PHONE_TOOK_OVER)).toBe(false);
+    expect(await finishAttendance(db, clinic, PHONE_TOOK_OVER)).toBe("already");
     const items = await listHumanAttention(db, clinic);
     expect(items.map((i) => i.phone)).not.toContain(PHONE_TOOK_OVER);
   });
 
-  it("login de outra clínica não devolve conversa daqui", async () => {
-    expect(await giveBackToBot(asDb(outsider.client), clinic, PHONE_REQUESTED)).toBe(false);
+  it("login de outra clínica não finaliza conversa daqui", async () => {
+    expect(await finishAttendance(asDb(outsider.client), clinic, PHONE_REQUESTED)).toBe("already");
     expect(await getConversation(bot, clinic, PHONE_REQUESTED)).toMatchObject({ humanHandoff: true });
   });
 

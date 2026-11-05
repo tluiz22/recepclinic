@@ -948,8 +948,30 @@ Pedidos do cliente vindos do uso da produção; decisões pelo canvas "Meu dia: 
 - **C26 (opção B):** conversa do atendimento humano em "Quem fala com a clínica" (ficha do paciente e do responsável).
 - **C27 (opção 1):** cortesia ("ok", "obrigado", 👍, reação) depois da resposta da clínica grava o tipo `courtesy`
   (sem texto, D12) e não volta para Aguardando; Devolver ao bot também em Aguardando quando a clínica já respondeu.
+  Validação no staging (cliente, 04/nov): "Sim" e depois "Obrigada" voltou para Aguardando. Decisão do cliente: fica
+  assim; "sim" e "não" respondem a uma pergunta da clínica e pedem ação (sem ação, Devolver ao bot).
 - **C28:** 16 frases de dias de atendimento na F1 (migração `20261208120000`); dias não viram palavra-chave.
 - **C29 (staging, 04/nov):** "Atende na sexta?" ainda caía no "não entendi" (a F1 só passa com palavra-chave, e os
   sinônimos da C28 só cobriam o dia escrito). Dias da semana viram uma palavra só no reconhecimento (`normalize.ts`),
   dias úteis como palavra-chave da F1, frases com dia na M1 e na P2 (migração `20261209120000`). Decisão do cliente:
   "tem horário na sexta?" vai para a marcação.
+- **C30 (staging, 04/nov):** no computador, a busca da C23 (com rótulo em cima) e Marcar consulta ficavam desalinhados
+  (botão centralizado com rótulo + campo). Agora alinham pela base, com 54px de altura. Não houve teste que pegasse:
+  o projeto não tem testes de tela, e a C23 foi conferida só na largura do celular. Regra nova (cliente, 04/nov):
+  toda mudança de tela é conferida em captura a 390px e a 1280px antes do commit.
+- **Decisão pendente (cliente, 04/nov): testes de tela automáticos** (`@playwright/test`: telas principais nas duas
+  larguras, alinhamentos, nada fora da tela, sem rolagem lateral, comparação com imagem de referência). Prós: pega
+  regressão visual sem depender de conferência manual. Contras: manutenção das imagens de referência a cada mudança
+  de tela, CI mais lento e banco de teste com dados fixos. Conversar com o cliente antes de implementar.
+
+## C31: apresentação do menu principal do bot (04/nov/2026)
+
+Pedido do cliente: o paciente entender, antes de abrir o menu, o que resolve pelo atendimento automático. Decisões do
+cliente: o texto novo ("Estamos aqui para ajudar você! 😊 … Como podemos ajudar?") só no 1º menu da conversa (após as
+boas-vindas, inclusive depois de uma pergunta respondida na 1ª mensagem e de "Não, outro assunto"); nas outras vezes,
+o menu curto. Com a base ligada, termina em "Escolha uma das opções abaixo ou escreva sua pergunta."; sem ela, "Escolha
+uma das opções abaixo.". As linhas só citam o que a clínica usa (exames, lista de espera, informações; recepção só com
+coexistência). Descrições fixas nas 4 opções (Consultas e Exames: "Agendamentos, retornos, remarcações e
+cancelamentos."; Informações gerais: "Dúvidas sobre consultas e exames."; Recepção: "Precisa de ajuda? Fale com nossa
+equipe."). Botão "Ver opções" em todas as listas (era "Escolher opção"). Ids, destinos e encaminhamento à recepção sem
+mudança; o texto próprio de "Menu" da clínica, quando existe, continua valendo no lugar da apresentação.

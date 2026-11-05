@@ -55,7 +55,7 @@ export async function startConversation(b: Bot, { afterWelcome }: { afterWelcome
   if (!count && !afterWelcome) return showMenu(b, { withWelcome: true });
   await say(b, "bot_welcome", welcomeText(b));
   if (afterWelcome && !(await afterWelcome())) return;
-  if (!count) return showMenu(b);
+  if (!count) return showMenu(b, { intro: true });
   await askAbout(b, count);
 }
 
@@ -83,7 +83,8 @@ async function askAbout(b: Bot, count: number): Promise<void> {
 
 async function handleAsk(b: Bot, selection: Selection): Promise<void> {
   const answer = yesNo(selection, t.ENTRY_IDS);
-  if (answer === false) return showMenu(b);
+  // "Não, outro assunto": o 1º menu da conversa, com a apresentação.
+  if (answer === false) return showMenu(b, { intro: true });
   if (answer === null) {
     await say(b, "bot_not_understood", t.ENTRY_NOT_UNDERSTOOD);
     const count = (b.convo.context as { count?: number }).count ?? 1;

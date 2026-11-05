@@ -8,6 +8,8 @@ export type TabCountTone = "warning" | "info" | "alert" | "neutral";
 
 export interface TabItem {
   label: string;
+  /** Rótulo no celular, quando o completo não cabe (ex.: "Aguardando"). */
+  shortLabel?: string;
   href: string;
   active: boolean;
   /** Número de pendências (0 ou ausente: sem contador). */
@@ -24,10 +26,12 @@ interface Props {
   label: string;
   /** Dentro de um cartão (R6, ficha): sem ficar fixa no topo nem sair das margens. */
   inCard?: boolean;
+  /** Poucas abas que precisam caber no celular sem rolar (CA, Atendimento): dividem a largura, com menos margem. */
+  fit?: boolean;
   class?: string;
 }
 
-const { tabs, label, inCard = false, class: className = "" } = Astro.props;
+const { tabs, label, inCard = false, fit = false, class: className = "" } = Astro.props;
 const tones: Record<TabCountTone, string> = {
   warning: "bg-pend-100 text-pend-800",
   info: "bg-att-100 text-att-800",
@@ -45,11 +49,18 @@ const frame = inCard ? "" : "sticky top-0 z-10 -mx-4 bg-canvas/95 px-4 backdrop-
           href={tab.href}
           aria-current={tab.active ? "page" : undefined}
           data-active={tab.active ? "true" : undefined}
-          class={`relative -mb-px inline-flex shrink-0 items-center gap-1.5 border-b-[3px] px-2.5 pt-3 pb-[11px] text-[15px] leading-none whitespace-nowrap no-underline sm:px-3.5 ${
+          class={`relative -mb-px inline-flex shrink-0 items-center gap-1.5 border-b-[3px] ${fit ? "flex-1 flex-col justify-center gap-1 px-1 sm:flex-none sm:flex-row sm:gap-1.5 sm:px-3.5" : "px-2.5"} pt-3 pb-[11px] text-[15px] leading-none whitespace-nowrap no-underline sm:px-3.5 ${
             tab.active ? "border-brand font-bold text-brand-ink" : "border-transparent font-semibold text-ink-soft hover:border-line-strong hover:text-ink"
           }`}
         >
-          {tab.label}
+          {tab.shortLabel ? (
+            <>
+              <span class="sm:hidden">{tab.shortLabel}</span>
+              <span class="hidden sm:inline">{tab.label}</span>
+            </>
+          ) : (
+            tab.label
+          )}
           {tab.alert ? (
             <span role="img" aria-label={tab.countLabel ?? "Pede atenção"} class={`inline-flex h-[22px] min-w-[22px] items-center justify-center rounded-full px-1.5 text-[12.5px] font-bold ${tones.alert}`}>
               !

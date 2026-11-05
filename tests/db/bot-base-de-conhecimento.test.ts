@@ -22,7 +22,7 @@ const env = () => ({
 });
 
 const NUMBER = "bc-numero";
-type Sent = { to: string; kind: "text" | "list" | "buttons"; body: string; options: { id: string; title: string }[] };
+type Sent = { to: string; kind: "text" | "list" | "buttons"; body: string; options: { id: string; title: string; description?: string }[]; button?: string };
 
 let f: AgendaFixture;
 let sent: Sent[] = [];
@@ -36,8 +36,8 @@ const sender: ClinicSender = {
   baseUrl: "https://app.exemplo.test",
   template: async () => ({ sent: false, reason: "sem template no teste" }),
   text: async (to, body) => (sent.push({ to, kind: "text", body, options: [] }), { sent: true, messageId: `wamid.bc.out.${++seq}`, body }),
-  list: async (to: string, body: string, _button: string, sections: ListSection[]) => (
-    sent.push({ to, kind: "list", body, options: sections.flatMap((s) => s.rows.map((r) => ({ id: r.id, title: r.title }))) }),
+  list: async (to: string, body: string, button: string, sections: ListSection[]) => (
+    sent.push({ to, kind: "list", body, button, options: sections.flatMap((s) => s.rows.map((r) => ({ id: r.id, title: r.title, description: r.description }))) }),
     { sent: true, messageId: `wamid.bc.out.${++seq}` }
   ),
   buttons: async (to: string, body: string, buttons: ReplyButton[]) => (
@@ -76,6 +76,9 @@ async function say(phone: string, input: string | { id: string }): Promise<Sent[
 const bodies = (reply: Sent[]) => reply.map((m) => m.body);
 const optionId = (reply: Sent[], title: string) => reply.at(-1)!.options.find((o) => o.title.includes(title))!.id;
 const MENU = "Escolha uma opção abaixo ou faça uma pergunta.";
+// 1º menu da conversa: a apresentação do que dá para resolver (cliente, 04/nov/2026); sem coexistência, sem a recepção.
+const MENU_INTRO =
+  "Estamos aqui para ajudar você! 😊\n\nPor aqui, você pode:\n\n📅 Agendar ou remarcar consultas e exames.\n\n🔄 Solicitar cancelamentos ou entrar na fila de espera.\n\nℹ️ Consultar informações sobre atendimentos.\n\nComo podemos ajudar?\nEscolha uma das opções abaixo ou escreva sua pergunta.";
 const WELCOME = "Olá! 👋 Aqui é da Clínica Base.\n\nSou a assistente virtual e estou aqui para ajudar.\nVocê pode escrever o que precisa ou escolher uma das opções abaixo.";
 const titles = (reply: Sent[]) => reply.at(-1)!.options.map((o) => o.title);
 
@@ -115,13 +118,32 @@ afterAll(async () => {
 describe("primeira mensagem", () => {
   it("pergunta da base: boas-vindas, a resposta e o menu, sem \"Isso resolve sua dúvida?\" (cliente, 04/nov/2026)", async () => {
     const reply = await say("+5584991337001", "Oi, vocês aceitam Unimed?");
-    expect(bodies(reply)).toEqual([WELCOME, "Sim, atendemos *Unimed*.", MENU]);
+    expect(bodies(reply)).toEqual([WELCOME, "Sim, atendemos *Unimed*.", MENU_INTRO]);
     expect((await convo("+5584991337001")).state).toBe("MENU");
   });
 
   it("só \"oi\": boas-vindas (convidando a escrever) e o menu", async () => {
     const reply = await say("+5584991337002", "Oi");
-    expect(bodies(reply)).toEqual([WELCOME, MENU]);
+    expect(bodies(reply)).toEqual([WELCOME, MENU_INTRO]);
+  });
+
+  it("1º menu: opções com descrição e \"Ver opções\"; nas outras vezes, o menu curto (cliente, 04/nov/2026)", async () => {
+    const phone = "+5584991337099";
+    const first = await say(phone, "Oi");
+    expect(first.at(-1)!.button).toBe("Ver opções");
+    expect(first.at(-1)!.options).toEqual([
+      { id: "menu_consultations", title: "1. Consultas", description: "Agendamentos, retornos, remarcações e cancelamentos." },
+      { id: "menu_exams", title: "2. Exames", description: "Agendamentos, retornos, remarcações e cancelamentos." },
+      { id: "menu_info", title: "3. Informações gerais", description: "Dúvidas sobre consultas e exames." },
+    ]);
+    // Os destinos de sempre.
+    await say(phone, { id: "menu_consultations" });
+    expect((await convo(phone)).state).toBe("CONSULTAS_MENU");
+    const again = await say(phone, "menu");
+    expect(bodies(again)).toEqual([MENU]);
+    expect(again.at(-1)!.options.map((o) => o.id)).toEqual(["menu_consultations", "menu_exams", "menu_info"]);
+    await say(phone, "2");
+    expect((await convo(phone)).state).toBe("EXAMES_MENU");
   });
 
   it("pedido claro na 1ª mensagem: abre o fluxo, sem o menu", async () => {
@@ -545,7 +567,8 @@ describe("pedido de recepção: o motivo antes de transferir (EA)", () => {
     const phone = "+5584991337095";
     const a = await say(phone, "Oi, qual o endereço?");
     const b2 = await say(phone, "atendente");
-    expect(bodies(a).at(-1)).toBe(MENU);
+    // Com recepção no número, a apresentação cita a recepção.
+    expect(bodies(a).at(-1)).toBe(MENU_INTRO.replace("\n\nComo podemos", "\n\n👩‍💼 Falar diretamente com a recepção, se precisar de ajuda.\n\nComo podemos"));
     expect(bodies(b2)).toEqual([REASON_Q]);
     await say(phone, { id: "reception_now" });
     expect((await handoffOf(phone)).human_handoff).toBe(true);

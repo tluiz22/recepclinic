@@ -2,10 +2,20 @@
 
 > **Estado atual (retomar daqui), 04/nov/2026.** Detalhes e datas no [`historico.md`](historico.md) (só por busca).
 >
-> **3ª leva (C22 a C29, 04/nov):** na `main` e no **staging** (migrações `20261208120000` e `20261209120000`
-> aplicadas); cliente valida pelo `staging.md`, parte T (C28/C29: publicar a base no staging). Captura pendente: `inicio` (e `atendimento`). Depois: produção.
+> **3ª leva (C22 a C30, 04/nov):** no **staging e na produção** (`bf97b07`; migrações `20261208120000` e `20261209120000`
+> aplicadas nos dois). Falta **publicar a base na produção** (C28/C29). Cliente valida pelo `staging.md`, parte T. Captura pendente: `inicio` (e `atendimento`).
 >
-> **Próxima sessão (cliente, 04/nov):** melhorias na `main` para implantar na produção (cliente traz os pedidos).
+> **C31 (04/nov):** apresentação do 1º menu do bot, descrições nas opções e botão "Ver opções". No **staging e na
+> produção** (`d2744f9`, sem migração); cliente valida pelo `staging.md`, parte U.
+>
+> **CA, ciclo do atendimento humano (04/nov):** situação guardada, Finalizar atendimento sem mensagem, abas na tela
+> Atendimento e encerramento silencioso em 12 h. No **staging e na produção** (`1bfd20f`, 05/nov; migração
+> `20261211120000` aplicada nos dois); cliente valida pelo `staging.md`, parte V. Captura pendente: `atendimento`. Plano em [`ciclo-atendimento-humano.md`](ciclo-atendimento-humano.md).
+>
+> **Decisão pendente:** testes de tela automáticos (Playwright); conversar prós e contras com o cliente (`historico.md`, "C30").
+>
+> **Próxima sessão (cliente, 04/nov):** uma **evolução do bot** (cliente traz o pedido). A `faturamento` ainda não tem a C22 a C30
+> (merge da `main` só quando o cliente pedir).
 > Trabalhar na worktree `recepclinic-main` (a pasta `recepclinic` está na branch `faturamento`). Pendente da branch: o
 > cliente valida no local o faturamento **F12.2b a F12.2h** pelo `roteiro-validacao-faturamento.md` **da branch**.
 >
@@ -14,11 +24,11 @@
 > tela mudar). Falta informar o WhatsApp do suporte (Sistema › Suporte), se ainda não foi. Detalhes em
 > [`ajuda-contextual.md`](ajuda-contextual.md), fim. Cliente vai pedir novos ajustes.
 >
-> **Em produção (cliente, 04/nov):** a `main` inteira até a C21: PN1–PN2, IS1–IS5, C17–C20 e C21 (6 migrações,
+> **Em produção (cliente, 04/nov):** a `main` inteira até a C30 (3ª leva, acima); antes, até a C21: PN1–PN2, IS1–IS5, C17–C20 e C21 (6 migrações,
 > `20261201120000` a `20261206120000`), sobre o `1ceb6a4`. Cliente valida no uso. Detalhe no [`producao.md`](producao.md) (Publicações).
 >
 > **Ambientes**
-> - **Produção** (`app.recepclinic.com.br`, branch `producao`) = `main` em 04/nov (até a C21). Fluxo em [`producao.md`](producao.md).
+> - **Produção** (`app.recepclinic.com.br`, branch `producao`) = `main` em 05/nov (até a CA). Fluxo em [`producao.md`](producao.md).
 > - **Staging** (`teste.recepclinic.com.br`, branch `main`): produção + redesign da Recepção (RX1 a RX9, sem migração) +
 >   cartão do Asaas (`ASAAS_PREVIEW=1`) + Base de Conhecimento do bot (migração aplicada) + PN1, PN2, IS2 a IS5 (migrações aplicadas) + IS1 + C17 a C20 (03/nov; migração `20261206120000` aplicada) + C21 (04/nov).
 >   Roteiros em [`staging.md`](staging.md).

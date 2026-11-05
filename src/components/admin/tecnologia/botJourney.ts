@@ -30,7 +30,11 @@ const auto = (text: string, note?: string): FlowNode => ({ kind: "auto", text, n
 const reception = (text: string, note?: string): FlowNode => ({ kind: "reception", text, note });
 const branch = (...options: [string, FlowItem[]][]): FlowBranch => ({ kind: "branch", options: options.map(([label, flow]) => ({ label, flow })) });
 
-const MENU = "Menu principal (\"Escolha uma opção abaixo ou faça uma pergunta.\"; sem Perguntas frequentes, \"(ou digite o número)\"): Consultas · Exames · Informações gerais · Falar com a recepção";
+// 1º menu da conversa, logo após as boas-vindas (cliente, 04/nov/2026).
+const FIRST_MENU =
+  "Menu principal com a apresentação: \"Estamos aqui para ajudar você! 😊 Por aqui, você pode: 📅 Agendar ou remarcar consultas e exames. 🔄 Solicitar cancelamentos ou entrar na fila de espera. ℹ️ Consultar informações sobre atendimentos. 👩‍💼 Falar diretamente com a recepção, se precisar de ajuda. Como podemos ajudar? Escolha uma das opções abaixo ou escreva sua pergunta.\" Botão \"Ver opções\": Consultas · Exames · Informações gerais · Falar com a recepção, cada uma com descrição";
+const FIRST_MENU_NOTE =
+  "Só aparecem as opções (e as linhas da apresentação) que a clínica usa: sem exames, \"consultas\"; sem Lista de espera, sem a fila; recepção só com coexistência. Sem Perguntas frequentes, termina em \"Escolha uma das opções abaixo.\" Nas outras vezes, o menu curto (\"Escolha uma opção abaixo ou faça uma pergunta.\").";
 
 export type JourneySection = { id: string; title: string; intro: string; flow: FlowItem[] };
 
@@ -53,8 +57,8 @@ export const JOURNEY: JourneySection[] = [
             check("A mensagem já diz o que a pessoa precisa?", "Com \"Perguntas frequentes no bot\" (vem ligado com o bot; item 9). \"Oi\" sozinho: não."),
             branch(
               ["Pedido claro (marcar, remarcar, cancelar…)", [bot("Abre esse caminho direto, sem o menu")]],
-              ["Pergunta (\"vocês aceitam Unimed?\")", [bot("A resposta e o menu principal (\"Escolha uma opção abaixo ou faça uma pergunta.\")", "Sem o \"Isso resolve sua dúvida?\" (item 9).")]],
-              ["Não", [bot(MENU, "Só aparecem as opções que a clínica usa.")]],
+              ["Pergunta (\"vocês aceitam Unimed?\")", [bot("A resposta e o menu principal com a apresentação", "Sem o \"Isso resolve sua dúvida?\" (item 9).")]],
+              ["Não", [bot(FIRST_MENU, FIRST_MENU_NOTE)]],
             ),
           ],
         ],
@@ -62,7 +66,7 @@ export const JOURNEY: JourneySection[] = [
           "Sim",
           [
             bot("Boas-vindas e \"Identificamos um agendamento associado a este número. Você deseja tratar desse agendamento?\""),
-            patient("Sim, quero", "\"Não, outro assunto\": vai para o menu principal."),
+            patient("Sim, quero", "\"Não, outro assunto\": vai para o menu principal, com a apresentação."),
             bot("Pede a data de nascimento do paciente, por segurança", "Nada do atendimento aparece antes disso. Data digitada sem as barras (10032020): pergunta \"Você quis dizer 10/03/2020?\" com Sim · Não; vale em todo pedido de data."),
             check("A data confere com um paciente com atendimento?", "Não: \"Não encontramos agendamentos para essa data de nascimento.\" com Tentar outra data · Voltar ao menu."),
             bot("Mostra o atendimento (dia e hora) e pergunta o que fazer: Confirmar presença · Remarcar · Cancelar · Encaixe ou antecipar · Falar com a recepção"),
@@ -288,10 +292,13 @@ export const JOURNEY: JourneySection[] = [
         "Responde pelo app WhatsApp Business, no celular ou no computador",
         "Responder pelo app também pausa o bot. A tela Atendimento mostra quem espera. Exceção: mensagem que sai do app até 5 segundos depois da do paciente ou do bot (saudação ou ausência automática) não pausa; o Início e Configurações › WhatsApp avisam para desligar.",
       ),
-      reception("Manda #bot ou toca em \"Devolver ao bot\" no painel: o bot volta a atender essa conversa"),
+      reception(
+        "Manda #bot ou toca em \"Finalizar atendimento\" no painel: o bot volta a atender essa conversa, sem mandar nada nem mostrar o menu",
+        "O bot só responde na próxima mensagem do paciente, do começo. Se o paciente escreveu depois que a tela abriu, o painel avisa para conferir antes (CA, cliente, 04/nov/2026).",
+      ),
       bot(
-        "Sem #bot nem \"Devolver ao bot\": 12 h depois da última resposta da recepção, sem nova mensagem do paciente, a conversa volta ao bot e ele envia \"Como não tivemos resposta nas últimas horas, encerramos este atendimento…\"",
-        "Só quando a recepção já respondeu (paciente esperando resposta continua com a clínica). Cortesia do paciente depois da resposta (\"ok\", \"obrigado\", \"tchau\", 👍) não conta como esperando resposta: a conversa segue em atendimento e volta ao bot nas 12 h. Paciente que escreveu de novo também pode ser devolvido pelo painel. A mensagem sai sem template só até 24 h depois da última mensagem do paciente; depois disso, a conversa volta sem mensagem. A próxima mensagem do paciente começa do início.",
+        "Sem #bot nem \"Finalizar atendimento\": \"Em atendimento\" sem nenhuma mensagem há 12 h volta ao bot, em silêncio",
+        "Só quando a recepção já respondeu (\"Aguardando a clínica\" continua com a clínica). Cortesia do paciente depois da resposta (\"ok\", \"obrigado\", \"tchau\", 👍) não volta para Aguardando. Nada é enviado ao paciente (CA, cliente, 04/nov/2026; a C20 mandava uma mensagem de encerramento). A próxima mensagem do paciente começa do início.",
       ),
     ],
   },

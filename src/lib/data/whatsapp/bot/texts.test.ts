@@ -53,3 +53,47 @@ describe("pedido não concluído (PN2, 03/nov/2026)", () => {
     expect(t.notCompletedSubject("booking", "Ana")).toBe("Não concluiu a marcação de Ana pelo WhatsApp.");
   });
 });
+
+describe("apresentação do menu principal (cliente, 04/nov/2026)", () => {
+  const all = { consultations: true, exams: true, waitlist: true, info: true, reception: true, ask: true };
+
+  it("tudo ligado: o que dá para resolver, a recepção e o convite a perguntar", () => {
+    expect(t.menuIntro(all)).toBe(
+      "Estamos aqui para ajudar você! 😊\n\nPor aqui, você pode:\n\n📅 Agendar ou remarcar consultas e exames.\n\n🔄 Solicitar cancelamentos ou entrar na fila de espera.\n\nℹ️ Consultar informações sobre atendimentos.\n\n👩‍💼 Falar diretamente com a recepção, se precisar de ajuda.\n\nComo podemos ajudar?\nEscolha uma das opções abaixo ou escreva sua pergunta.",
+    );
+  });
+
+  it("só cita o que a clínica oferece; sem a base, não convida a perguntar", () => {
+    const text = t.menuIntro({ ...all, exams: false, waitlist: false, reception: false, ask: false });
+    expect(text).toContain("📅 Agendar ou remarcar consultas.");
+    expect(text).toContain("🔄 Solicitar cancelamentos.");
+    expect(text).not.toMatch(/fila de espera|recepção|escreva sua pergunta/);
+    expect(text.endsWith("Como podemos ajudar?\nEscolha uma das opções abaixo.")).toBe(true);
+    expect(t.menuIntro({ ...all, consultations: false })).toContain("📅 Agendar ou remarcar exames.");
+    const onlyInfo = t.menuIntro({ ...all, consultations: false, exams: false });
+    expect(onlyInfo).not.toMatch(/📅|🔄/);
+    expect(onlyInfo).toContain("ℹ️ Consultar informações sobre atendimentos.");
+  });
+
+  it("limites da Meta: corpo até 1024, descrição até 72, botão até 20", () => {
+    expect(t.menuIntro(all).length).toBeLessThanOrEqual(1024);
+    for (const d of Object.values(t.MAIN_MENU_DESCRIPTIONS)) expect(d.length).toBeLessThanOrEqual(72);
+    expect(t.LIST_BUTTON).toBe("Ver opções");
+    expect(t.LIST_BUTTON.length).toBeLessThanOrEqual(20);
+  });
+
+  it("descrições das quatro opções, pelos ids de sempre", () => {
+    expect(t.MAIN_MENU_DESCRIPTIONS).toEqual({
+      menu_consultations: "Agendamentos, retornos, remarcações e cancelamentos.",
+      menu_exams: "Agendamentos, retornos, remarcações e cancelamentos.",
+      menu_info: "Dúvidas sobre consultas e exames.",
+      menu_reception: "Precisa de ajuda? Fale com nossa equipe.",
+    });
+    const rows = t.numberedList(
+      Object.entries(t.MAIN_MENU_DESCRIPTIONS).map(([id, description], i) => ({ id, label: ["Consultas", "Exames", "Informações gerais", "Falar com a recepção"][i], description })),
+      false,
+    )[0].rows;
+    expect(rows.map((r) => r.title)).toEqual(["1. Consultas", "2. Exames", "3. Informações gerais", "4. Falar com a recepção"]);
+    expect(rows.map((r) => r.description)).toEqual(Object.values(t.MAIN_MENU_DESCRIPTIONS));
+  });
+});

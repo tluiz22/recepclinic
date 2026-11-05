@@ -558,7 +558,7 @@ Demonstração (ou a clínica de testes).
    Métricas › Agendamento digital, a dúvida aparece em andamento e, 30 minutos depois, resolvida (se não pediu a
    recepção).
 
-## T. 3ª leva de ajustes da produção (C22 a C28, 04/nov)
+## T. 3ª leva de ajustes da produção (C22 a C30, 04/nov)
 
 Migração `20261208120000_base_de_conhecimento_dias.sql` aplicada em 04/nov (sem tabela nova).
 
@@ -575,10 +575,42 @@ Migração `20261208120000_base_de_conhecimento_dias.sql` aplicada em 04/nov (se
    clínica) e na do responsável aparece "Aguardando a clínica há …" com Abrir no WhatsApp. Respondida pelo app: "Em
    atendimento" com Devolver ao bot (volta para a ficha).
 7. **C27 Cortesia.** Com a conversa em atendimento, "Ok, obrigado 👍" (ou reação 👍) mantém "Em atendimento"; "e o
-   exame?" vai para Aguardando, com Devolver ao bot no cartão.
+   exame?" vai para Aguardando, com Devolver ao bot no cartão. "Sim" e "não" também vão para Aguardando (decisão do
+   cliente, 04/nov: respondem a uma pergunta da clínica).
 8. **C28 Dias de atendimento.** Sistema › Base de conhecimento › Testar: "vocês atendem na segunda?", "atende terça?",
    "que dias tem atendimento" → F1; "quero agendar para quarta" segue na marcação. **Publicar**; pelo WhatsApp de
    testes, "vocês atendem sábado?" responde o horário da semana.
 9. **C29 Dias da semana.** Base de conhecimento › Testar: "Atende na sexta?", "vocês atendem quinta-feira?", "abre na
    sexta?" → F1; "tem horário na sexta?" e "quero marcar para sexta" → M1; "o dr ... atende na sexta?" → P2.
    **Publicar**; pelo WhatsApp de testes, "Atende na sexta?" responde o horário da semana.
+10. **C30 Cabeçalho do Meu dia no computador.** "Boa noite", o campo Buscar paciente e Marcar consulta alinhados pela
+    base; o campo e o botão com a mesma altura.
+
+## U. Apresentação do menu do bot (C31, 04/nov)
+
+Sem migração; publica com o push na `main`.
+
+1. Pelo WhatsApp de testes, uma conversa nova ("oi"): depois das boas-vindas, "Estamos aqui para ajudar você! 😊" com o
+   que dá para resolver (só as linhas do que a clínica usa; a recepção só com coexistência) e "Como podemos ajudar?".
+2. Botão **Ver opções**: Consultas, Exames, Informações gerais e Falar com a recepção, cada uma com a descrição.
+3. Tocar em cada opção: os mesmos caminhos de antes. Digitar "menu" depois: volta o texto curto ("Escolha uma opção
+   abaixo ou faça uma pergunta."). As outras listas do bot também mostram "Ver opções".
+4. Com atendimento marcado no número: "Não, outro assunto" leva ao menu com a apresentação.
+
+## V. Ciclo do atendimento humano (CA, 04/nov)
+
+Migração `20261211120000_ciclo_do_atendimento_humano.sql` (aplicar antes do push). Detalhe em
+[`ciclo-atendimento-humano.md`](ciclo-atendimento-humano.md).
+
+1. **Abas.** Atendimento humano: Aguardando a clínica e Em atendimento, com contador; Notificações só com o cartão de
+   ativar. No celular: "Aguardando", "Atendimento" e "Notificações" lado a lado, contador embaixo.
+2. **Pedido.** Pelo WhatsApp de testes, "falar com a recepção": a conversa aparece em Aguardando a clínica; o bot não
+   responde mais (fora o agradecimento do assunto).
+3. **Resposta da recepção.** Responder pelo app: a conversa passa para Em atendimento. "Obrigado" ou 👍 do paciente:
+   continua em Em atendimento. Uma pergunta do paciente: volta para Aguardando a clínica.
+4. **Finalizar atendimento** (com confirmação): a conversa sai da lista; nada chega ao paciente (nem o menu). A próxima
+   mensagem do paciente ("oi") é respondida pelo bot, do começo.
+5. **Tela desatualizada.** Abrir a tela, o paciente escrever de novo e, sem recarregar, Finalizar: aparece "O paciente
+   escreveu de novo. Confira a conversa no WhatsApp antes de finalizar."
+6. **Ficha do paciente** (Quem fala com a clínica): Abrir no WhatsApp e Finalizar atendimento também em Aguardando.
+7. **12 h.** Em atendimento sem nenhuma mensagem por 12 h volta ao bot sozinha, sem mensagem ao paciente.

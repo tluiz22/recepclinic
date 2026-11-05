@@ -801,13 +801,13 @@ isOneToOne: false
                   ]
                 },"conversation_state": {
                   Row: {
-                    "clinic_id": string,"contact_id": string | null,"contact_phone": string,"context": NonNullable<Json>,"funnel_flow": string | null,"funnel_session_id": string | null,"handoff_notified_at": string | null,"handoff_reason": string | null,"handoff_reminded_at": string | null,"handoff_started_at": string | null,"handoff_subject": string | null,"handoff_subject_asked_at": string | null,"human_handoff": boolean,"human_handoff_at": string | null,"id": string,"not_understood_count": number,"state": string,"updated_at": string
+                    "clinic_id": string,"contact_id": string | null,"contact_phone": string,"context": NonNullable<Json>,"funnel_flow": string | null,"funnel_session_id": string | null,"handoff_changed_by": string | null,"handoff_id": string | null,"handoff_notified_at": string | null,"handoff_reason": string | null,"handoff_reminded_at": string | null,"handoff_started_at": string | null,"handoff_status": string | null,"handoff_status_at": string | null,"handoff_subject": string | null,"handoff_subject_asked_at": string | null,"human_handoff": boolean,"human_handoff_at": string | null,"id": string,"not_understood_count": number,"state": string,"updated_at": string
                   }
                   Insert: {
-                    "clinic_id": string,"contact_id"?: string | null,"contact_phone": string,"context"?: NonNullable<Json>,"funnel_flow"?: string | null,"funnel_session_id"?: string | null,"handoff_notified_at"?: string | null,"handoff_reason"?: string | null,"handoff_reminded_at"?: string | null,"handoff_started_at"?: string | null,"handoff_subject"?: string | null,"handoff_subject_asked_at"?: string | null,"human_handoff"?: boolean,"human_handoff_at"?: string | null,"id"?: string,"not_understood_count"?: number,"state"?: string,"updated_at"?: string
+                    "clinic_id": string,"contact_id"?: string | null,"contact_phone": string,"context"?: NonNullable<Json>,"funnel_flow"?: string | null,"funnel_session_id"?: string | null,"handoff_changed_by"?: string | null,"handoff_id"?: string | null,"handoff_notified_at"?: string | null,"handoff_reason"?: string | null,"handoff_reminded_at"?: string | null,"handoff_started_at"?: string | null,"handoff_status"?: string | null,"handoff_status_at"?: string | null,"handoff_subject"?: string | null,"handoff_subject_asked_at"?: string | null,"human_handoff"?: boolean,"human_handoff_at"?: string | null,"id"?: string,"not_understood_count"?: number,"state"?: string,"updated_at"?: string
                   }
                   Update: {
-                    "clinic_id"?: string,"contact_id"?: string | null,"contact_phone"?: string,"context"?: NonNullable<Json>,"funnel_flow"?: string | null,"funnel_session_id"?: string | null,"handoff_notified_at"?: string | null,"handoff_reason"?: string | null,"handoff_reminded_at"?: string | null,"handoff_started_at"?: string | null,"handoff_subject"?: string | null,"handoff_subject_asked_at"?: string | null,"human_handoff"?: boolean,"human_handoff_at"?: string | null,"id"?: string,"not_understood_count"?: number,"state"?: string,"updated_at"?: string
+                    "clinic_id"?: string,"contact_id"?: string | null,"contact_phone"?: string,"context"?: NonNullable<Json>,"funnel_flow"?: string | null,"funnel_session_id"?: string | null,"handoff_changed_by"?: string | null,"handoff_id"?: string | null,"handoff_notified_at"?: string | null,"handoff_reason"?: string | null,"handoff_reminded_at"?: string | null,"handoff_started_at"?: string | null,"handoff_status"?: string | null,"handoff_status_at"?: string | null,"handoff_subject"?: string | null,"handoff_subject_asked_at"?: string | null,"human_handoff"?: boolean,"human_handoff_at"?: string | null,"id"?: string,"not_understood_count"?: number,"state"?: string,"updated_at"?: string
                   }
                   Relationships: [
                     {
@@ -888,6 +888,32 @@ isOneToOne: false
                   Relationships: [
                     {
       foreignKeyName: "fiscal_audit_log_clinic_id_fkey"
+      columns: ["clinic_id"]
+isOneToOne: false
+      referencedRelation: "clinics"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"handoff_events": {
+                  Row: {
+                    "actor_id": string | null,"clinic_id": string,"contact_id": string | null,"contact_phone": string,"from_status": string,"handoff_id": string | null,"id": number,"occurred_at": string,"origin": string,"to_status": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "actor_id"?: string | null,"clinic_id": string,"contact_id"?: string | null,"contact_phone": string,"from_status": string,"handoff_id"?: string | null,"id"?: never,"occurred_at"?: string,"origin": string,"to_status": string
+                  }
+                  Update: {
+                    "actor_id"?: string | null,"clinic_id"?: string,"contact_id"?: string | null,"contact_phone"?: string,"from_status"?: string,"handoff_id"?: string | null,"id"?: never,"occurred_at"?: string,"origin"?: string,"to_status"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "handoff_events_clinic_id_contact_id_fkey"
+      columns: ["clinic_id","contact_id"]
+isOneToOne: false
+      referencedRelation: "contacts"
+      referencedColumns: ["clinic_id","id"]
+    },{
+      foreignKeyName: "handoff_events_clinic_id_fkey"
       columns: ["clinic_id"]
 isOneToOne: false
       referencedRelation: "clinics"

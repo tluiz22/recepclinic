@@ -1,10 +1,10 @@
 ---
 // Conversa no atendimento humano dentro do cartão do contato (C26, cliente, 04/nov/2026, opção B): na ficha do
 // paciente ("Quem fala com a clínica") e na do responsável. Mesmo conteúdo da tela Atendimento humano: aguardando
-// (há quanto tempo, motivo, Abrir no WhatsApp) ou em atendimento (quando a clínica respondeu, Abrir no WhatsApp e
-// Devolver ao bot, com confirmação). Sem conversa aberta, nada aparece.
+// (há quanto tempo, motivo) ou em atendimento (quando a clínica respondeu), com Abrir no WhatsApp e Finalizar atendimento
+// (CA, cliente, 04/nov/2026; era "Devolver ao bot"). Sem conversa aberta, nada aparece.
 import Icon from "./Icon.astro";
-import Button from "./ui/Button.astro";
+import FinishAttendanceForm from "./FinishAttendanceForm.astro";
 import { formatInstant, localDateOf } from "../../lib/clinicTime";
 import { isAnonymizedPhone } from "../../lib/anonymization";
 import { whatsappAppHref, whatsappHref } from "../../lib/phone";
@@ -14,7 +14,7 @@ import { withReturn } from "../../lib/returnPath";
 interface Props {
   item: AttentionItem | undefined;
   timeZone: string;
-  /** Para onde "Devolver ao bot" volta (a própria ficha). */
+  /** Para onde "Finalizar atendimento" volta (a própria ficha). */
   returnTo: string;
   /** Nome no texto da confirmação. */
   name: string;
@@ -74,24 +74,7 @@ const whatsappButton =
             <Icon name="chat-bubble" class="h-5 w-5" /> Abrir no WhatsApp
           </a>
         )}
-        {/* C27: também em Aguardando quando a clínica já respondeu (o paciente só agradeceu, por exemplo). */}
-        {(!waiting || item.lastAgentAt) && (
-          <form method="POST" action="/api/admin/atendimento" class="flex flex-[1_1_180px]">
-            <input type="hidden" name="acao" value="devolver" />
-            <input type="hidden" name="telefone" value={item.phone} />
-            <input type="hidden" name="return_to" value={returnTo} />
-            <Button
-              type="submit"
-              variant="primary"
-              class="js-confirm-delete min-h-11 w-full gap-2 text-base font-bold sm:min-h-10"
-              data-confirm-title="Devolver a conversa ao bot?"
-              data-confirm-message={`O bot volta a atender ${name} na próxima mensagem, do começo. Nada é enviado ao paciente agora.`}
-              data-confirm-label="Devolver ao bot"
-            >
-              <Icon name="arrow-uturn-left" class="h-5 w-5" /> Devolver ao bot
-            </Button>
-          </form>
-        )}
+        <FinishAttendanceForm item={item} primary={!waiting} name={name} returnTo={returnTo} class="flex-[1_1_180px]" />
       </div>
       <a href={withReturn(`/admin/atendimento?conversa=${encodeURIComponent(item.phone)}`, returnTo)} class="text-[14.5px] font-bold text-brand no-underline hover:underline">
         Ver em Atendimento ›

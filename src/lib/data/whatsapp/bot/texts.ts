@@ -25,7 +25,8 @@ export function wordsFor(profile: ClinicProfile): Words {
 const of = (w: Words) => `${w.feminine ? "da" : "do"} ${w.patient}`;
 const other = (w: Words) => `${w.feminine ? "Outra" : "Outro"} ${w.patient}`;
 
-export const LIST_BUTTON = "Escolher opção";
+/** Botão das listas (cliente, 04/nov/2026: era "Escolher opção"). */
+export const LIST_BUTTON = "Ver opções";
 export const MAX_LIST_ROWS = 10;
 const MAX_ROW_TITLE = 24;
 const MAX_ROW_DESCRIPTION = 72;
@@ -83,6 +84,42 @@ export const welcome = (clinicLabel: string, invite = true) =>
 export const MENU_BODY = "Escolha uma opção abaixo (ou digite o número).";
 /** Menu com a base de conhecimento ligada: convida a perguntar (cliente, 04/nov/2026). */
 export const MENU_BODY_ASK = "Escolha uma opção abaixo ou faça uma pergunta.";
+
+/** O que a clínica oferece no menu principal, para o texto de apresentação. */
+export type MenuOffer = {
+  consultations: boolean;
+  exams: boolean;
+  waitlist: boolean;
+  info: boolean;
+  reception: boolean;
+  /** Base de conhecimento ligada: convida a perguntar. */
+  ask: boolean;
+};
+
+/**
+ * Apresentação do 1º menu da conversa, logo após as boas-vindas (cliente, 04/nov/2026): diz o que dá para resolver
+ * antes de abrir a lista. Só cita o que a clínica oferece; nas outras vezes, o menu curto (MENU_BODY_ASK/MENU_BODY).
+ */
+export function menuIntro(o: MenuOffer): string {
+  const what = o.consultations && o.exams ? "consultas e exames" : o.consultations ? "consultas" : "exames";
+  const lines = [
+    ...(o.consultations || o.exams
+      ? [`📅 Agendar ou remarcar ${what}.`, `🔄 Solicitar cancelamentos${o.waitlist ? " ou entrar na fila de espera" : ""}.`]
+      : []),
+    ...(o.info ? ["ℹ️ Consultar informações sobre atendimentos."] : []),
+    ...(o.reception ? ["👩‍💼 Falar diretamente com a recepção, se precisar de ajuda."] : []),
+  ];
+  const close = o.ask ? "Escolha uma das opções abaixo ou escreva sua pergunta." : "Escolha uma das opções abaixo.";
+  return `Estamos aqui para ajudar você! 😊\n\nPor aqui, você pode:\n\n${lines.join("\n\n")}\n\nComo podemos ajudar?\n${close}`;
+}
+
+/** Descrições das opções do menu principal (cliente, 04/nov/2026; até 72 caracteres, limite da Meta). */
+export const MAIN_MENU_DESCRIPTIONS = {
+  menu_consultations: "Agendamentos, retornos, remarcações e cancelamentos.",
+  menu_exams: "Agendamentos, retornos, remarcações e cancelamentos.",
+  menu_info: "Dúvidas sobre consultas e exames.",
+  menu_reception: "Precisa de ajuda? Fale com nossa equipe.",
+} as const;
 
 // Entrada com atendimento marcado no número (cliente, 23/out/2026): pergunta
 // antes do menu; os detalhes só depois da data de nascimento.
@@ -538,6 +575,3 @@ export const notCompletedKept = (phrase: string, end: "a" | "o", patientName: st
 /** Desistir na marcação (ou quando não há atendimento marcado). */
 export const NOT_COMPLETED_GIVE_UP = "Tudo bem. Quando quiser, é só mandar uma mensagem.";
 
-/** Conversa com a clínica que volta ao bot 12 h depois da última resposta dela (C20; cliente, 03/nov/2026). */
-export const HANDOFF_CLOSED =
-  "Como não tivemos resposta nas últimas horas, encerramos este atendimento. Quando quiser, é só mandar uma mensagem que começamos de novo. 😊";

@@ -62,7 +62,7 @@ export function waitingMessage(item: AttentionItem): PushMessage {
 export function reminderMessage(item: AttentionItem): PushMessage {
   return {
     title: `${who(item)} segue com a clínica`,
-    body: "Se já terminou, toque aqui e use \"Devolver ao bot\". Sem nova mensagem do paciente, volta sozinha ao bot 12 h depois da sua última resposta.",
+    body: "Se já terminou, toque aqui e use \"Finalizar atendimento\". Sem nova mensagem, volta sozinha ao bot 12 h depois da última.",
     url: conversationUrl(item.phone),
     tag: `atendimento-${item.phone}`,
   };

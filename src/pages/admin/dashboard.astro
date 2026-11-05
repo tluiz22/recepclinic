@@ -207,7 +207,8 @@ const sectionTitle = "font-display text-[17px] leading-tight font-bold text-ink 
       <p class="text-[15px] text-ink-soft first-letter:uppercase">{today}</p>
       <h1 class="font-display text-[28px] leading-[1.1] font-bold text-ink sm:text-[32px]">{firstName ? `${greeting}, ${firstName}` : greeting}</h1>
     </div>
-    <div class="flex flex-wrap items-center gap-2.5 max-sm:w-full">
+    <div class="flex flex-wrap items-end gap-2.5 max-sm:w-full">
+      {/* C30 (cliente, 04/nov): no computador, a busca (com rótulo) e Marcar consulta alinham pela base, na mesma altura (54px). */}
       {/* C23 (cliente, 04/nov, opção A): busca com rótulo à vista, mais alta e com a borda da marca. */}
       <form method="GET" action="/admin/pacientes" role="search" class="w-full sm:w-[360px]">
         <label for="buscar-paciente" class="mb-1.5 block text-[15px] font-bold text-ink">Buscar paciente</label>
@@ -216,7 +217,7 @@ const sectionTitle = "font-display text-[17px] leading-tight font-bold text-ink 
           <input id="buscar-paciente" name="q" type="search" placeholder="Nome, telefone ou nascimento" class="min-w-0 flex-1 border-0 bg-transparent p-0 text-[17px] text-ink outline-none focus:ring-0" />
         </div>
       </form>
-      <Button href={withReturn("/admin/agenda/marcar", here)} variant="primary" class="max-sm:hidden">
+      <Button href={withReturn("/admin/agenda/marcar", here)} variant="primary" class="max-sm:hidden sm:h-[54px] sm:px-5 sm:text-base">
         <Icon name="plus" class="h-[18px] w-[18px]" strokeWidth={2.2} /> Marcar consulta
       </Button>
     </div>
@@ -336,9 +337,9 @@ const sectionTitle = "font-display text-[17px] leading-tight font-bold text-ink 
     }
     {
       inProgress.length > 0 && (
-        // Conversas que a clínica assumiu e ainda não devolveu ao bot (cliente, 27/out/2026).
+        // Conversas que a clínica assumiu e ainda não finalizou (cliente, 27/out/2026; CA, 04/nov/2026).
         <a
-          href="/admin/atendimento"
+          href="/admin/atendimento?aba=atendimento"
           class="flex flex-wrap items-center gap-3.5 border-t border-pend-200 bg-pend-50 px-4 py-3.5 text-pend-800 no-underline hover:bg-pend-100/60 sm:px-[18px]"
         >
           <span class="flex h-11 w-11 flex-none items-center justify-center rounded-full bg-pend-500 font-display text-xl font-bold text-ink">{inProgress.length}</span>
@@ -346,7 +347,7 @@ const sectionTitle = "font-display text-[17px] leading-tight font-bold text-ink 
             <strong class="text-[17px]">
               {inProgress.length === 1 ? "1 conversa está com a clínica e ainda não voltou ao bot" : `${inProgress.length} conversas estão com a clínica e ainda não voltaram ao bot`}
             </strong>
-            <span class="text-[15px] text-ink-mid">{inProgressNames}. Ao terminar, use "Devolver ao bot" em Atendimento (sem nova mensagem do paciente, volta sozinha 12 h depois da última resposta da clínica).</span>
+            <span class="text-[15px] text-ink-mid">{inProgressNames}. Ao terminar, use "Finalizar atendimento" em Atendimento (sem nova mensagem, volta sozinha 12 h depois da última).</span>
           </span>
           <span class="flex-none text-[15px] font-bold">Ver conversas ›</span>
         </a>

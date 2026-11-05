@@ -1,0 +1,39 @@
+---
+// "Finalizar atendimento" (CA, cliente, 04/nov/2026; era "Devolver ao bot"): na tela Atendimento humano e na ficha
+// (C26). Com confirmação. O bot volta na hora, sem mandar nada ao paciente nem mostrar o menu; responde na próxima
+// mensagem. Leva a hora da situação que a tela mostrou: se o paciente escreveu depois, o servidor recusa e avisa.
+import Icon from "./Icon.astro";
+import Button from "./ui/Button.astro";
+import type { AttentionItem } from "../../lib/data/whatsapp/attention";
+
+interface Props {
+  item: AttentionItem;
+  /** Botão principal (Em atendimento) ou secundário (Aguardando a clínica, onde o principal é o WhatsApp). */
+  primary: boolean;
+  /** Nome no texto da confirmação; sem ele, o da conversa. */
+  name?: string;
+  /** Para onde volta depois (a ficha); sem ele, a tela Atendimento. */
+  returnTo?: string;
+  class?: string;
+}
+
+const { item, primary, name, returnTo, class: className = "" } = Astro.props;
+const who = name ?? item.name ?? "este número";
+---
+
+<form method="POST" action="/api/admin/atendimento" class={`flex ${className}`}>
+  <input type="hidden" name="acao" value="finalizar" />
+  <input type="hidden" name="telefone" value={item.phone} />
+  <input type="hidden" name="situacao_em" value={item.statusAt.toISOString()} />
+  {returnTo && <input type="hidden" name="return_to" value={returnTo} />}
+  <Button
+    type="submit"
+    variant={primary ? "primary" : "secondary"}
+    class="js-confirm-delete min-h-11 w-full gap-2 text-base font-bold whitespace-nowrap"
+    data-confirm-title="Finalizar o atendimento?"
+    data-confirm-message={`O bot volta a atender ${who} na próxima mensagem, do começo. Nada é enviado ao paciente agora.`}
+    data-confirm-label="Finalizar atendimento"
+  >
+    <Icon name="check-circle" class="h-5 w-5" /> Finalizar atendimento
+  </Button>
+</form>

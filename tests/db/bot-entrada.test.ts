@@ -106,6 +106,9 @@ const fresh = (phone: string) =>
 
 const WELCOME = "Olá! 👋 Aqui é da Clínica Bot Entrada.\n\nSou a assistente virtual e estou aqui para ajudar.\nVocê pode escrever o que precisa ou escolher uma das opções abaixo.";
 const MENU = "Escolha uma opção abaixo ou faça uma pergunta.";
+// 1º menu da conversa: a apresentação do que dá para resolver (cliente, 04/nov/2026); sem coexistência, sem a recepção.
+const MENU_INTRO =
+  "Estamos aqui para ajudar você! 😊\n\nPor aqui, você pode:\n\n📅 Agendar ou remarcar consultas e exames.\n\n🔄 Solicitar cancelamentos ou entrar na fila de espera.\n\nℹ️ Consultar informações sobre atendimentos.\n\nComo podemos ajudar?\nEscolha uma das opções abaixo ou escreva sua pergunta.";
 const ASK_ONE = "Identificamos um agendamento associado a este número. Você deseja tratar desse agendamento?";
 const ASK_MANY = "Encontramos mais de um agendamento associado a este número. Você deseja consultar ou alterar algum deles?";
 const ASK_BIRTHDATE = "Para sua segurança, antes de mostrar o agendamento precisamos confirmar a identidade.\n\nQual a data de nascimento do paciente? (formato dd/mm/aaaa)";
@@ -164,14 +167,14 @@ afterAll(async () => {
 describe("sem atendimento relevante", () => {
   it("1. número sem atendimento (ou sem cadastro): o menu direto, sem pedir a data de nascimento", async () => {
     const reply = await say(STRANGER, "oi");
-    expect(reply.map((m) => m.body)).toEqual([WELCOME, MENU]);
+    expect(reply.map((m) => m.body)).toEqual([WELCOME, MENU_INTRO]);
     expect(titles(reply)).toContain("1. Consultas");
     expect((await conversation(STRANGER)).state).toBe("MENU");
   });
 
   it("10. passado, cancelado e realizado não contam: o menu direto", async () => {
     const reply = await say(P3, "oi");
-    expect(reply.map((m) => m.body)).toEqual([WELCOME, MENU]);
+    expect(reply.map((m) => m.body)).toEqual([WELCOME, MENU_INTRO]);
   });
 });
 
@@ -182,7 +185,7 @@ describe("um atendimento", () => {
     expect(titles(reply)).toEqual(["Sim, quero", "Não, outro assunto"]);
     expect(bodies(reply)).not.toMatch(/Paciente|10\/03/);
     reply = await say(P2, { id: "entry_no" });
-    expect(reply.map((m) => m.body)).toEqual([MENU]);
+    expect(reply.map((m) => m.body)).toEqual([MENU_INTRO]);
     expect((await conversation(P2)).state).toBe("MENU");
   });
 
@@ -276,7 +279,7 @@ describe("vários atendimentos", () => {
     expect(reply.map((m) => m.body)).toEqual([WELCOME, ASK_MANY]);
     expect(titles(reply)).toEqual(["Sim, consultar", "Não, outro assunto"]);
     reply = await say(P1, "2");
-    expect(reply.map((m) => m.body)).toEqual([MENU]);
+    expect(reply.map((m) => m.body)).toEqual([MENU_INTRO]);
   });
 
   it("9. \"Sim\" pede a data antes da lista; a lista mostra só os atendimentos do paciente validado", async () => {
@@ -509,7 +512,7 @@ describe("robustez", () => {
     failAppointments = true;
     try {
       let reply = await say(P1, "oi");
-      expect(reply.map((m) => m.body)).toEqual([WELCOME, MENU]);
+      expect(reply.map((m) => m.body)).toEqual([WELCOME, MENU_INTRO]);
       failAppointments = false;
       await fresh(P1);
       await say(P1, "oi");
@@ -604,7 +607,7 @@ describe("robustez", () => {
 
   it("16. isolamento entre clínicas: o mesmo telefone na outra clínica não vê estes atendimentos", async () => {
     const reply = await say(P1, "oi", NUMBER_B);
-    expect(reply.map((m) => m.body)).toEqual([WELCOME, MENU]);
+    expect(reply.map((m) => m.body)).toEqual([WELCOME, MENU_INTRO]);
     expect((await conversation(P1, g.clinicId)).state).toBe("MENU");
     // O cliente do bot da outra clínica não lê o atendimento daqui (RLS).
     const { data } = await createClinicServiceClient(g.clinicId, env()).from("appointments").select("id").eq("id", consultP1);

@@ -37,7 +37,7 @@ const GROUPS: string[][] = [
   ["nota fiscal", "nfse", "nota", "recibo"],
   ["pagamento", "pagar", "cobranca", "pago", "receber"],
   ["relatorio", "metricas", "indicadores", "numeros", "grafico", "estatistica"],
-  ["transferir", "atendimento humano", "falar com a recepcao", "pausar bot", "devolver ao bot"],
+  ["transferir", "atendimento humano", "falar com a recepcao", "pausar bot", "devolver ao bot", "finalizar atendimento"],
   ["exame", "procedimento", "preparo"],
   ["feriado", "dia sem atendimento", "recesso"],
   ["local", "consultorio", "endereco", "domiciliar", "visita"],
