@@ -2,8 +2,10 @@
 
 > **Retomar daqui (05/nov/2026).** Só plano, nada implementado. Decididas: seção 11 (1 a 12), seção 14 (custo da
 > Meta, ativação pelo Administrador, medição, calculadora com IA) e os alertas da 5.1 (v4 do cadastro vai junto com a
-> Central; rotina de acompanhamento da Meta é pós-implantação). **Próximo:** desenhar as telas (Conversas, menu,
-> Configurações › WhatsApp, calculadora em Sistema › Vendas) com opções no canvas, ou revisar o plano inteiro.
+> Central; rotina de acompanhamento da Meta é pós-implantação). **Revisão do plano inteiro (05/nov):** texto alinhado às
+> decisões e lacunas técnicas incluídas (seção 12 com a ordem única). **Próximo:** perguntas da revisão (liberação de
+> 30 min fora do horário, transferir na Etapa 1, conversas do histórico importado), depois desenhar as telas
+> (Conversas, menu, Configurações › WhatsApp, calculadora em Sistema › Vendas) com opções no canvas.
 
 Pedido do cliente (05/nov/2026): secretárias, profissionais e outros usuários autorizados veem e respondem as
 conversas do WhatsApp **dentro do RecepClinic**, com o mesmo histórico do bot, sem abrir o app do WhatsApp.
@@ -28,19 +30,18 @@ paralelas de conversa:
   com download **fora** do webhook.
 - Mesmo webhook (`/api/whatsapp/webhook`), mesmo envio (`createClinicSender`), mesmo token no Vault.
 
-**O que impede começar hoje.** A **D12** (28/out/2026) proíbe guardar o texto das mensagens do paciente e das
-respostas da recepção pelo app, e a migração `20261028150000_mensagens_sem_texto.sql` apagou o texto antigo e
-fechou a leitura do `body` pelo login. A Central **não existe sem guardar o texto e as mídias**. É a primeira
-decisão do cliente, com impacto em LGPD, contrato e política de privacidade.
+**D12 revista (05/nov).** A D12 (28/out/2026) proibia guardar o texto do paciente e da recepção pelo app (a
+migração `20261028150000_mensagens_sem_texto.sql` apagou o texto antigo e fechou a leitura do `body` pelo login).
+Revista: o texto e as mídias são guardados **só nas clínicas com a Central ligada pelo Administrador**, com retenção
+(texto 5 anos, mídia 12 meses) e leitura registrada. Falta o advogado (termo, contrato, política de privacidade).
 
 **Principais riscos.** (1) Guardar dado de saúde em texto e anexos (LGPD, vazamento, retenção). (2) Coexistência:
 a recepção no app e outra pessoa no painel respondendo o mesmo paciente. (3) O bot responder ao mesmo tempo que a
 recepção numa conversa que acabou de ser assumida. (4) O webhook processa tudo em linha (bot incluso); mídia e
 volume maior exigem trabalho assíncrono. (5) Clínicas em produção: nenhuma mudança pode alterar o caminho do bot.
 
-**Decisões antes de implementar** (seção 11): rever a D12; coexistência junto com a Central; situações do
-atendimento (as 2 da CA ou as 5 pedidas); quem vê o quê; assumir antes de responder; não lidas por usuário ou
-por clínica; o que fazer fora da janela de 24 h; retenção; item da matriz (D11) e preço.
+**Decisões:** as 12 da seção 11 e as da seção 14 estão tomadas (05/nov). Em aberto: preço/pacote do item, texto
+do modelo "Retomar conversa", advogado e as perguntas da revisão (seção 11, "Ainda pendentes").
 
 ---
 
@@ -146,7 +147,7 @@ acessado pelo `supabase-js` (HTTP/PostgREST, que já faz o pool de conexões). R
 | Rotina de 12 h | **[reaproveitar]** `handoffReturn.ts` | Avaliar com responsável (ver 3.2) |
 | Anonimização | **[alterar]** `anonymize_patient` | Apagar texto e mídias do paciente |
 | Leitura do texto pelo login | **[alterar]** | Hoje fechada (D12); reabrir só por função com checagem de papel |
-| Item da matriz (D11) | **[criar] [decidir]** | Ex.: "Central de atendimento" |
+| Item da matriz (D11) | **[criar]** | "Central de atendimento" (decisão 9); preço a decidir |
 | Métricas | **[reaproveitar]** | `handoff_events` + mensagens com autor |
 
 ---
@@ -175,38 +176,44 @@ Recepção (painel) ─▶ /admin/atendimento (Central)
 Sem fila nova na Etapa 1: só a mídia sai do webhook (rotina). Fila para o bot fica para quando o volume pedir
 (seção 7).
 
-### 3.2 Situações e máquina de estados [decidir]
+### 3.2 Situações e máquina de estados (decidido, 05/nov: decisões 3, 5 e 11)
 
-A CA (04/nov) decidiu **duas** situações, sem "Aguardar paciente", após ver as opções desenhadas. O pedido traz
-cinco. Proposta que atende os dois sem estado inconsistente: **guardar pouco e derivar o resto**.
+**Lista única** (decisão 3): abas "Abertas" e "Finalizadas"; nas Abertas, selo da situação e responsável,
+"Aguardando a clínica" no topo; filtro Todas / Não atribuídas / Minhas / Aguardando paciente. No banco, as **2
+situações da CA + responsável**; o resto é calculado.
 
-| Guardado (`conversation_state`) | Pedido | Como se obtém |
+| Guardado (`conversation_state`) | Na tela | Como se obtém |
 |---|---|---|
-| `human_handoff = false` | Finalizado / com o bot | Já existe |
-| `waiting_clinic`, sem responsável | **Não atribuído** | `assigned_to is null` |
-| `waiting_clinic`, com responsável | **Aguardando atendimento** | Paciente escreveu por último |
-| `in_progress`, com responsável | **Em atendimento** | Clínica respondeu por último |
-| `in_progress` + última mensagem da clínica há X min | **Aguardando paciente** | Derivado (filtro), não estado |
+| `human_handoff = false` | Finalizadas | Já existe |
+| `waiting_clinic`, sem responsável | Aguardando a clínica · filtro "Não atribuídas" | `assigned_to is null` |
+| `waiting_clinic`, com responsável | Aguardando a clínica · nome do responsável | Paciente escreveu por último |
+| `in_progress` | Em atendimento · nome do responsável (ou "pelo app") | Clínica respondeu por último |
+| `in_progress` + última mensagem da clínica | Filtro "Aguardando paciente" | Derivado, não estado |
 
 Transições (todas por `update` condicional, como `finishAttendance` já faz):
 
 ```
 bot ──pedido/limite/não entendeu──▶ waiting_clinic (sem responsável)
-bot ──recepção escreve (painel ou app)──▶ in_progress (responsável = quem escreveu; app = sem usuário)
-waiting_clinic ──Assumir──▶ waiting_clinic (responsável = eu)   [só se assigned_to is null ou confirmar troca]
-waiting_clinic ──resposta da clínica──▶ in_progress
+bot ──recepção escreve pelo painel──▶ in_progress (responsável = quem escreveu)
+bot ──recepção escreve pelo app (eco)──▶ in_progress (responsável não muda; "pelo app")
+waiting_clinic ──Assumir──▶ waiting_clinic (responsável = eu)   [sem dona, ou confirmar troca]
+waiting_clinic ──resposta pelo painel──▶ in_progress (sem dona: assume; com outra dona: confirma antes)
 in_progress ──paciente escreve (não cortesia)──▶ waiting_clinic (responsável continua)
-qualquer ──Transferir──▶ mesma situação, responsável = outro
+qualquer aberta ──Transferir──▶ mesma situação, responsável = outro (evento transferred)
+waiting_clinic com responsável, 30 min sem resposta ──rotina──▶ sem responsável (evento released; notifica todas;
+                                                                 se era Profissional, volta para a Recepção)
 qualquer ──Finalizar / #bot / 12 h──▶ bot (responsável apagado, handoff_id encerra)
 bot ──paciente escreve depois de finalizado──▶ bot responde (regra da CA)
 ```
 
-**Assumir ao mesmo tempo:** `update … set assigned_to = eu where id = … and assigned_to is null` (ou
-`= quem eu vi`); 0 linhas = "Fulana assumiu agora"; a tela recarrega. Responder sem assumir: **[decidir]** se
-assume sozinho (recomendado) ou se exige assumir antes.
+**Responder assume** (decisão 5): `update … set assigned_to = eu where id = … and (assigned_to is null or
+assigned_to = quem eu vi)`; 0 linhas = "Ana assumiu agora", a mensagem **não** sai e a tela recarrega.
 
-**Rotina de 12 h:** hoje encerra "Em atendimento" parado. Com responsável, pode continuar igual (segurança
-quando ninguém finaliza) **[decidir]**.
+**Rotina de 12 h** (decisão 11): mantém, igual para todas, com ou sem responsável; o responsável sai e a conversa
+vai para Finalizadas.
+
+**Profissional** (decisão 4): vê a conversa só enquanto ela está transferida a ele; finalizada, liberada (30 min) ou
+transferida a outro, deixa de ver (inclusive o histórico).
 
 ### 3.3 Fluxo completo de mensagens
 
@@ -239,8 +246,12 @@ quando ninguém finaliza) **[decidir]**.
 | Falha temporária da Meta | Envio do painel **não** entra no reenvio automático: mostra "Não enviada · Tentar de novo" (o atendente decide) |
 | Enviada, não entregue | `status` fica em `sent`; `failed` mostra o motivo (`failure_code`) |
 | Bot e atendente juntos | O envio do painel primeiro pausa (`pauseForHuman`) e só depois envia; o bot relê `human_handoff` antes de responder. Janela residual: bot já no meio da resposta (ms). Mitigação: reler a pausa antes de cada envio do bot **[alterar, avaliar]** |
-| Recepção no app e no painel (coexistência) | O app continua gerando eco (`agent_reply`, agora com texto); a Central mostra "pelo app" sem usuário. Risco de resposta dupla: só se resolve com regra de uso **[decidir]** |
-| Fora da janela de 24 h | Texto livre bloqueado (já é regra do envio); só template aprovado **[decidir]** |
+| Recepção no app e no painel (coexistência) | Decisão 2: os dois juntos, sem configuração. O eco (`agent_reply`, agora com texto) entra no histórico marcado "Respondida pelo app do WhatsApp", sem usuário; pausa o bot; não muda o responsável. A mensagem automática do app (IS4) não conta |
+| Mensagem editada ou apagada no app | `smb_message_echoes` com edição/`revoke`: atualiza a linha original (texto novo + "editada"; ou "Mensagem apagada", `body` nulo) **[criar]** |
+| Fora da janela de 24 h | Decisão 7: caixa de texto trava com aviso e botão "Retomar conversa" (modelo de utilidade aprovado, pago); sem "Abrir no WhatsApp" (exceção: 8c) |
+| Liberação em 30 min | Decisão 5: rotina por pg_cron; `update` condicional (só se o paciente ainda espera e o responsável não mudou); evento `released`; push para todas |
+| Histórico importado na conexão | Decisão 10: gravado com a data original, **sem** chamar o bot, sem contar como não lida, sem reabrir atendimento nem mexer em `human_handoff` (ver 4.7) |
+| Central desligada pelo Administrador | Seção 14: mensagens novas sem texto (como a D12); o guardado fica sem aparecer até religar |
 
 ---
 
@@ -253,12 +264,16 @@ quando ninguém finaliza) **[decidir]**.
 | `author` | text (`patient`, `bot`, `system`, `agent_app`, `agent_panel`) | Quem escreveu, sem depender do `message_type`; carga pelo tipo atual |
 | `sent_by` | uuid → `auth.users` | Usuário do painel |
 | `handoff_id` | uuid | Atendimento a que a mensagem pertence (métricas) |
-| `wa_timestamp` | timestamptz | Hora da Meta (`timestamp` do evento); ordem: `coalesce(wa_timestamp, created_at), id` |
+| `wa_timestamp` | timestamptz | Hora da Meta (`timestamp` do evento) |
+| `sort_at` | timestamptz, não nulo | Ordem do histórico: `coalesce(wa_timestamp, created_at)` gravado (o histórico importado chega hoje com data antiga; ordenar por `created_at` sairia fora de ordem) |
+| `source` | text (`live`, `history`) | Mensagem importada do histórico na conexão (decisão 10): não aciona bot, não conta como não lida |
+| `edited_at`, `revoked_at` | timestamptz | Edição/exclusão feita no app (`smb_message_echoes`) |
 | `media_id` | uuid → `whatsapp_media` | Anexo |
 | `client_key` | uuid, único por clínica | Idempotência do envio pelo painel (duplo clique, recarregar) |
-| `body` | (existe) | Voltar a guardar entrada e `agent_reply` **só com a D12 revista** e, recomendado, só nas clínicas com a Central |
+| `body` | (existe) | Volta a guardar entrada e `agent_reply` **só nas clínicas com a Central ligada pelo Administrador** (D12 revista) |
 
-Índice novo: `(clinic_id, contact_phone, created_at desc, id)` **sem filtro de direção** (paginação do histórico).
+Índice novo: `(clinic_id, contact_phone, sort_at desc, id)` **sem filtro de direção** (paginação do histórico por
+cursor `sort_at,id`).
 
 ### 4.2 `whatsapp_media` [criar]
 
@@ -268,20 +283,22 @@ quando ninguém finaliza) **[decidir]**.
 
 ### 4.3 `conversation_state` [alterar]
 
-`assigned_to` (uuid), `assigned_at`, `last_message_at`, `last_message_preview` (até 120 caracteres, **[decidir]**
-com a D12), `last_message_author`, `last_patient_at` (janela de 24 h sem consulta extra), `unread_count` (se não
-lidas por clínica). Índice `(clinic_id, human_handoff, last_message_at desc)` para a caixa de entrada.
+`assigned_to` (uuid), `assigned_at`, `last_message_at`, `last_message_preview` (até 120 caracteres; só com a
+Central ligada, mesma regra do `body`), `last_message_author`, `last_patient_at` (janela de 24 h e liberação de 30
+min sem consulta extra). Índice `(clinic_id, human_handoff, last_message_at desc)` para a caixa de entrada. Mensagem
+importada (`source = 'history'`) atualiza `last_message_at` só se for mais nova; não mexe em `human_handoff`.
 
-### 4.4 Não lidas [criar] [decidir]
+### 4.4 Não lidas [criar] (decisão 6: por pessoa)
 
-- **Por clínica** (simples): `unread_count` zera quando alguém abre. Bom para equipe pequena.
-- **Por usuário** (recomendado para várias secretárias): tabela `conversation_reads (clinic_id, contact_phone,
-  user_id, last_read_at)`; não lidas = mensagens do paciente depois de `last_read_at`.
+Tabela `conversation_reads (clinic_id, contact_phone, user_id, last_read_at)`; não lidas = mensagens do paciente
+(`source = 'live'`) depois de `last_read_at`. Abrir a conversa zera só para quem abriu.
 
 ### 4.5 Auditoria [alterar] [criar]
 
-- `handoff_events`: + `kind` (`status`, `assigned`, `transferred`, `finished`) e `assigned_from`/`assigned_to`;
-  continua só por gatilho.
+- `handoff_events`: + `kind` (`status`, `assigned`, `transferred`, `released`, `finished`) e
+  `assigned_from`/`assigned_to`; continua só por gatilho (o gatilho passa a olhar também `assigned_to`).
+- Ligar/desligar a Central pelo Administrador: registro próprio (quem, quando), para saber em que período o texto
+  foi guardado.
 - `conversation_access_log` [criar]: quem abriu qual conversa e quem baixou qual anexo (exigência de LGPD para
   dado de saúde; o Suporte já tem leituras registradas pela D6).
 
@@ -294,7 +311,15 @@ o histórico. Uma conversa por telefone + `handoff_id` por atendimento cobre "co
 ### 4.7 Histórico existente
 
 Mensagens antes da Central não têm texto (apagado em 28/out, sem volta): a conversa mostra "Mensagem anterior à
-Central de Atendimento" com tipo e hora. Carga do `author` pelo `message_type`/`direction`.
+Central de Atendimento" com tipo e hora. Carga do `author` pelo `message_type`/`direction` e do `sort_at` pelo
+`created_at`.
+
+**Histórico do app na conexão (decisão 10):** o webhook só grava o evento `history` bruto (tabela de entrada, com
+`chunk_order` e `progress`); uma rotina processa depois, em lotes: grava cada mensagem com `source = 'history'`,
+`wa_timestamp` original e o mesmo `wa_message_id` (o índice único evita duplicar com o eco ao vivo); mídias como
+`media_placeholder` (baixa só as que a Meta ainda entrega, dos últimos 14 dias). Telefone sem linha em
+`conversation_state`: **[decidir]** se cria a conversa (em Finalizadas) ou só guarda o histórico. O prazo de guarda
+conta da data original.
 
 ---
 
@@ -307,10 +332,10 @@ Central de Atendimento" com tipo e hora. Carga do `author` pelo `message_type`/`
 | Campos do webhook | `messages`, ecos, templates, `account_update` | Conferir no painel do app os campos assinados (inclui `history` e `smb_app_state_sync`) **[validar]** |
 | Mídia recebida | Não baixada hoje | `GET /{media-id}` devolve URL temporária (minutos) que exige o token; baixar logo (rotina) **[validar prazos na doc atual]** |
 | Mídia enviada | `uploadMedia` existe | Subir e enviar por `media_id`; limites de tamanho por tipo **[validar na doc atual]** |
-| Janela de 24 h | Regra no envio (`CUSTOMER_SERVICE_WINDOW_MS`) | Fora dela, só template; criar um de utilidade "retomar conversa" pode ser classificado como marketing **[decidir/validar]** |
+| Janela de 24 h | Regra no envio (`CUSTOMER_SERVICE_WINDOW_MS`) | Fora dela, só template (decisão 7): modelo de utilidade "Retomar conversa", texto a aprovar pelo cliente no CN4; risco de a Meta classificar como marketing **[validar na aprovação]** |
 | Token | Por clínica, no Vault, do Embedded Signup | Sem renovação nova; erro 190 já leva à desconexão |
-| Histórico antigo | `requestCoexistenceSync('history')` pedido e descartado | A Meta só envia o histórico do app **uma vez, na conexão** (período limitado). Clínicas já conectadas perderam essa janela; para clínicas novas, guardar o que chega **[decidir]**. Não há API genérica para buscar mensagens antigas |
-| Custo | Conversa de serviço | Respostas na janela não pagam template; conferir a tabela de preços vigente **[validar]** |
+| Histórico antigo | `requestCoexistenceSync('history')` pedido e descartado | A Meta só envia o histórico do app **uma vez, na conexão** (período limitado). Clínicas já conectadas perderam essa janela; para clínicas novas com a Central, guardar o que chega (decisão 10; 4.7). Não há API genérica para buscar mensagens antigas |
+| Custo | Mensagem de serviço | Cobrada por mensagem desde 01/out/2026, com 1.000 grátis/mês por número (5.1; seção 14) |
 
 ### 5.1 Conferência na documentação da Meta (CN0, 05/nov/2026)
 
@@ -322,7 +347,8 @@ Páginas lidas em 05/nov: [Onboard WhatsApp Business app users](https://develope
 
 **Alertas que valem já para a produção (fora da Central):** decisão do cliente (05/nov): (1) sem medição (só a
 clínica piloto na produção); o cliente confere a forma de pagamento da piloto no Gerenciador do WhatsApp;
-(2) corrigir o cadastro v3 → v4 já, antes da Central (guia de migração, teste no staging, etapa curta na `main`).
+(2) cadastro v3 → v4: primeiro o cliente pediu "já, antes da Central"; **revisto no mesmo dia: vai junto com a
+Central** (abaixo; passo CV na seção 12).
 
 **Cadastro v4: o que a Meta diz** ([Versions](https://developers.facebook.com/documentation/business-messaging/whatsapp/embedded-signup/versions),
 [Version 4](https://developers.facebook.com/documentation/business-messaging/whatsapp/embedded-signup/version-4),
@@ -362,7 +388,7 @@ preços da seção 14) e avisa o cliente só quando algo nos afeta. Até lá: av
    `/guia/pagamento-meta` da IS1 já pede a forma de pagamento; conferir as clínicas em produção).
 2. **Embedded Signup v2 e v3 descontinuados em 15/out/2026** (a página manda migrar para a v4). O botão de conexão
    usa `sessionInfoVersion: "3"` (`src/components/admin/WhatsappSignupButton.astro:132`). Conexões já feitas não
-   mudam; **conexões novas podem falhar**. Conferir e migrar antes da próxima clínica.
+   mudam; **conexões novas podem falhar**. Migração junto com a Central (decisão do cliente acima; risco aceito).
 
 **Central (o que muda no plano):**
 
@@ -393,11 +419,13 @@ preços da seção 14) e avisa o cliente só quando algo nos afeta. Até lá: av
   corpo da requisição a poucos MB); a rota lê do Storage, `uploadMedia` e envia.
 - **Leitura:** URL assinada de curta duração (ex.: 5 min), gerada só pela rota que confere o acesso e registra
   em `conversation_access_log`.
-- **Tipos e limites [decidir]:** proposta Etapa 1 — imagens (JPG, PNG, WEBP), PDF, áudio (OGG/MP3/AAC) recebidos;
-  enviar imagem e PDF até 10 MB (igual a documentos do paciente). Vídeo e figurinha: mostrar "não suportado,
-  abra no app".
-- **Retenção [decidir]:** proposta — mídias por 12 meses (configurável por clínica), texto pelo prazo do
-  contrato; apagar arquivo e marcar `deleted`; anonimização apaga na hora.
+- **Tipos e limites (decisões 8b e 8c; 5.1):** recebe e mostra foto, documento/PDF (baixar, até 16 MB) e áudio
+  (tocador); vídeo, figurinha e arquivo acima do limite: aviso só naquela mensagem, com "Abrir no WhatsApp" (sem
+  coexistência: "peça ao paciente para enviar como foto ou PDF"), sem guardar o arquivo. Envia foto (JPEG/PNG) até
+  **5 MB** (limite da Meta para imagem) e PDF até 10 MB.
+- **Retenção (decisão 8):** prazo fixo, igual para todas: mídia 12 meses, texto 5 anos (advogado confirma). Rotina
+  diária (pg_cron) apaga o vencido: arquivo removido e `whatsapp_media.status = 'deleted'`; texto com `body` nulo.
+  Anonimização apaga na hora. "Salvar nos documentos do paciente": Etapa 2.
 - **Antivírus:** o Supabase não verifica arquivo; documento recebido abre só para download (sem pré-visualização
   de HTML/SVG; `content-disposition: attachment`).
 
@@ -422,7 +450,7 @@ Supabase Pro inclui disco e Storage com cota e cobra o excedente por GB; conferi
 | Estratégia | Quando | Agora? |
 |---|---|---|
 | Índice do histórico e da caixa de entrada (4.1, 4.3) | Etapa 1 | **Sim** |
-| Paginação (últimas 50, "carregar anteriores" por cursor `created_at,id`) | Etapa 1 | **Sim** |
+| Paginação (últimas 50, "carregar anteriores" por cursor `sort_at,id`) | Etapa 1 | **Sim** |
 | Lista separada do histórico | Etapa 1 (lista lê só `conversation_state`) | **Sim** |
 | Idempotência (Meta e painel) | Etapa 1 | **Sim** (Meta já tem) |
 | Mídia assíncrona | Etapa 1 | **Sim** |
@@ -442,20 +470,23 @@ Backup: diário do Pro já ativo; avaliar PITR quando o histórico de conversa v
 
 ## 8. Segurança e LGPD
 
-- **Base:** dado de saúde (art. 11). Guardar texto e anexos reverte a D12; exige atualizar **termo de tratamento,
-  contrato e política de privacidade** (pendência com advogado, como na D6) **[decidir]**.
-- **Minimização:** guardar o texto **só nas clínicas com a Central ligada**; as outras seguem a D12 como hoje.
+- **Base:** dado de saúde (art. 11). D12 revista (05/nov); exige atualizar **termo de tratamento, contrato e
+  política de privacidade** (pendência com o advogado, como na D6).
+- **Minimização:** guardar o texto **só nas clínicas com a Central ligada pelo Administrador**; as outras seguem a
+  D12 como hoje.
 - **Isolamento:** `clinic_id` em todas as tabelas novas, RLS por clínica, caminho do Storage começando pela
   clínica, cliente de serviço limitado à clínica (D1).
 - **Leitura do texto:** continua **fechada** para o login direto pela API (`grant` por coluna da migração
   `20261028150000`); a tela lê por função `security definer` que confere papel, item da matriz e atribuição, e
   registra a leitura. Evita que um login leia tudo pela API do Supabase.
-- **Perfis [decidir]:** proposta — Administrador e Recepção: todas as conversas da clínica; Profissional: só as
-  atribuídas a ele (por transferência); Suporte: todas, com registro (D6).
+- **Perfis (decisão 4):** Administrador e Recepção: todas as conversas da clínica; Profissional: só as
+  transferidas a ele, enquanto estiverem com ele; Suporte: todas, com registro (D6). Vale na função de leitura, no
+  Storage e na tela.
 - **Anexos:** URL assinada curta, gerada só após a checagem; sem URL pública.
 - **Tokens:** seguem no Vault; nunca no navegador.
 - **Webhook:** assinatura HMAC já conferida; nada muda.
-- **Retenção e exclusão:** prazo por clínica; anonimização apaga texto e mídia; exclusão da clínica apaga o bucket.
+- **Retenção e exclusão:** prazo fixo (texto 5 anos, mídia 12 meses); anonimização apaga texto e mídia; exclusão
+  da clínica apaga a pasta dela no bucket.
 - **Backup:** texto apagado some do backup no prazo de retenção do backup (informar no termo).
 - **Risco de acesso indevido:** login compartilhado na recepção, celular perdido com sessão aberta, captura de
   tela. Mitigações: sessão com prazo, registro de leitura, Etapa 2: aviso de acesso fora do horário.
@@ -486,13 +517,15 @@ Limite: respostas pelo app (eco) não têm usuário.
 |---|---|---|
 | Rever a D12 (dado de saúde guardado) | Jurídico/LGPD | Só com a Central ligada, leitura registrada, retenção, termo revisado |
 | Mudança quebrar o bot em produção | Clínicas reais sem atendimento | Tudo aditivo; caminho do bot intocado; suítes do bot como portão (seção 13); staging antes |
-| Coexistência: resposta dupla app + painel | Paciente confuso | Mostrar "respondido pelo app às…" ao vivo; regra de uso **[decidir]** |
+| Coexistência: resposta dupla app + painel | Paciente confuso | Decisão 2: os dois juntos; eco aparece em segundos marcado "Respondida pelo app do WhatsApp"; Central de Ajuda explica os dois caminhos |
 | Corrida bot × atendente | Mensagem do bot no meio do atendimento | Pausar antes de enviar; reler pausa antes do envio do bot |
 | Webhook lento com mídia/volume | Meta reenvia, eventos duplicados | Mídia assíncrona; fila depois |
 | Hora de chegada ≠ hora da Meta | Ordem errada | `wa_timestamp` |
 | Custo de Storage | Fatura | Retenção, limites, só tipos aceitos |
 | Profissional sem acesso hoje (D6) | Regra nova de visibilidade | Decisão explícita e teste de RLS |
-| Nome "Atendimento" já usado (agenda e atendimento humano) | Confusão de tela | Nome da tela **[decidir]** |
+| Nome "Atendimento" já usado (agenda e atendimento humano) | Confusão de tela | Decisão 12: a tela vira "Conversas" |
+| Histórico importado grande (até 180 dias, milhares por evento) | Webhook lento, timeout | Gravar o evento bruto e processar por rotina, em lotes (4.7) |
+| Liberação em 30 min notificando à noite | Notificação fora de hora | **[decidir]** (seção 11, pendentes) |
 | Central de Ajuda e capturas | Telas mudam | Anotar em `capturas-pendentes.md` (regra do projeto) |
 | Jornada do bot | Fluxograma desatualizado | Atualizar `botJourney.ts` se a transferência mudar |
 
@@ -544,13 +577,15 @@ Limite: respostas pelo app (eco) não têm usuário.
    **Tipos de mídia (8b, decidido 05/nov):** recebe e mostra foto, PDF/documento (baixar) e áudio (tocador); vídeo e
    figurinha só com aviso, sem guardar o arquivo. Envia foto e PDF até 10 MB. Gravar áudio pelo painel: Etapa 2.
    **Fora do limite (8c, decidido 05/nov):** documento recebido até 16 MB é guardado; vídeo ou arquivo acima do
-   limite mostra, **só naquela mensagem**, o aviso "O paciente enviou um vídeo (35 MB). A Central não mostra
+   limite mostra, **só naquela mensagem**, o aviso (ajuste da 5.1, 05/nov: foto enviada até **5 MB**, limite da
+   Meta para imagem; PDF segue até 10 MB) "O paciente enviou um vídeo (35 MB). A Central não mostra
    vídeos: veja e responda esta mensagem pelo app do WhatsApp." **com o botão "Abrir no WhatsApp"** (única exceção
    à decisão 7; o app recebe tudo na coexistência). Clínica sem
    coexistência: "peça ao paciente para enviar como foto ou PDF", sem botão.
 9. **Matriz (D11) e preço:** **Decidido (05/nov): item novo "Central de atendimento", liberado pelo Suporte,
    depende do bot** (só liga com o bot; desligar o bot desliga a Central). Central sem bot: avaliar na Etapa 2.
-   Ligar o item ativa a guarda do texto e das mídias (D12 revista). Preço/pacote: a decidir.
+   A guarda do texto e das mídias (D12 revista) começa quando o **Administrador** liga a Central em Configurações,
+   não ao liberar o item (seção 14, decidido depois). Preço/pacote: a decidir.
 10. **Histórico do app na conexão:** **Decidido (05/nov): guardar.** Na conexão (ou reconexão) de clínica com a
     Central ligada, o histórico do app que a Meta envia uma única vez (`requestCoexistenceSync('history')`, hoje
     descartado) entra no histórico da Central, com a data original e o mesmo prazo de guarda (texto 5 anos, mídia 12
@@ -566,6 +601,17 @@ Limite: respostas pelo app (eco) não têm usuário.
 **Ainda pendentes:** preço/pacote do item (9); texto do modelo "Retomar conversa" (7, no CN4); desenho das telas
 (CN3, com as opções desenhadas); advogado (D12 revista, prazos da 8a); conferências da Meta (seção 5).
 
+**Perguntas da revisão do plano (05/nov), uma por vez:**
+
+- **R1.** Liberação em 30 min (decisão 5) fora do horário da clínica (noite, fim de semana, feriado): conta ou não?
+- **R2.** Transferir na Etapa 1 (simples, sem motivo; o motivo fica na Etapa 2)? Sem isso, o Profissional não vê
+  nenhuma conversa (decisão 4).
+- **R3.** Histórico importado (decisão 10) de telefone que nunca falou com o bot: cria a conversa em Finalizadas ou
+  só guarda?
+
+**Técnicas, decidir na implementação:** o bot reler a pausa antes de cada envio (3.4, CN4); cópia do bucket
+`whatsapp-media` (o Storage não entra no backup do banco) e PITR (7.2), antes da produção.
+
 **Validações técnicas (sem decisão de negócio):** campos assinados do webhook no app da Meta; prazos e limites de
 mídia e do histórico na documentação atual; preços da Meta e do Supabase; política de nova análise do app;
 termo/contrato com advogado.
@@ -580,14 +626,27 @@ Cada passo: staging, roteiro no `staging.md`, validação do cliente, depois pro
 
 | Passo | Conteúdo | Migração |
 |---|---|---|
-| CN0 | Decisões da seção 11; termo/contrato; conferências da Meta | — |
-| CN1 | Colunas novas (4.1, 4.3), `whatsapp_media`, bucket, item da matriz, funções de leitura com registro, carga do `author` | Sim (aditiva) |
-| CN2 | Gravar texto (entrada e eco) e `wa_timestamp` nas clínicas com a Central; `last_message_at`/prévia por gatilho | — |
-| CN3 | Caixa de entrada (filtros, busca por nome/telefone, ordem) e tela da conversa só leitura, paginada | — |
-| CN4 | Enviar texto (janela de 24 h, idempotência, pausa antes, falha com "Tentar de novo"); assumir e finalizar; não lidas | Talvez (`conversation_reads`) |
-| CN5 | Mídia recebida (rotina de download, visualização por URL assinada) | — |
-| CN6 | Enviar imagem e PDF | — |
-| CN7 | Ajuda, capturas pendentes, Jornada do bot, roteiro de staging | — |
+Ordem única (revisão de 05/nov; inclui as etapas CU da seção 14 e o cadastro v4):
+
+| Passo | Conteúdo | Migração |
+|---|---|---|
+| CN0 | Decisões da seção 11; termo/contrato; conferências da Meta | — (feito) |
+| CU1 | Valores padrão da calculadora por estimativa (sem medição, seção 14) | — |
+| CU2 | Tabela de preços da Meta com vigência e câmbio em Sistema; contagem por categoria; texto da tela Uso | Sim |
+| CU3 | Aba da calculadora em Sistema › Vendas (atual, com a Central, total, os dois cenários de IA) | — |
+| CN1 | Colunas novas (4.1, 4.3: `author`, `sent_by`, `handoff_id`, `wa_timestamp`, `sort_at`, `source`, `edited_at`/`revoked_at`, `client_key`, `media_id`, responsável), `whatsapp_media`, `conversation_reads`, `kind` na `handoff_events`, bucket, item da matriz, ligar/desligar pelo Administrador com registro, funções de leitura com registro e regra do Profissional, carga do `author` e do `sort_at` | Sim (aditiva) |
+| CU4 | Configurações › WhatsApp: medição do mês (todas as clínicas) e ativação/desativação da Central com o custo da Meta | — |
+| CN2 | Gravar texto (entrada e eco) e `wa_timestamp` só com a Central ligada; edição/exclusão pelo app; `last_message_at`/prévia por gatilho | — |
+| CN3 | Tela "Conversas": lista única (Abertas/Finalizadas, filtros, busca, ordem), conversa só leitura paginada, lugar no menu e das Notificações | — |
+| CN4 | Enviar texto (janela de 24 h, idempotência, pausa antes, falha com "Tentar de novo"); responder assume, assumir, transferir (se R2), finalizar; não lidas; modelo "Retomar conversa"; rotina de liberação em 30 min | Talvez |
+| CN5 | Mídia recebida (rotina de download, visualização por URL assinada, avisos da 8c) | — |
+| CN6 | Enviar foto (5 MB) e PDF (10 MB) | — |
+| CN7 | Retenção (rotina diária) e anonimização apagando texto e mídia | — |
+| CN8 | Histórico do app na conexão (evento bruto + rotina em lotes, 4.7) e cadastro v4 (CV: tirar `sessionInfoVersion`, número pela conta, `ACCOUNT_RECONNECTED`; cliente cria a configuração v4 e troca `WHATSAPP_ES_CONFIG_ID`) | Sim |
+| CN9 | Ajuda, capturas pendentes, Jornada do bot, roteiro de staging | — |
+
+O CN8 vai junto na mesma publicação da produção (decisão do v4); o teste do cadastro exige desconectar e
+reconectar o número de testes do staging.
 
 **Etapa 2 — Gestão:** transferência com motivo, notas internas (não vão ao paciente), respostas rápidas por
 clínica, notificações "atribuída a mim", alertas de espera, pendências.
@@ -615,9 +674,17 @@ gerenciar, limites, não entende, base de conhecimento, não concluído, assunto
 - Paciente escreve depois de finalizado: bot responde.
 - Fora da janela de 24 h: envio recusado.
 - Falha da Meta no envio: `failed` com motivo; "Tentar de novo" não duplica (chave do formulário).
-- Ordem por `wa_timestamp` com eventos fora de ordem.
+- Ordem por `sort_at` com eventos fora de ordem e com histórico importado.
 - RLS: login de outra clínica não lê mensagem, mídia nem caminho do Storage; login direto pela API não lê `body`;
-  Profissional só vê o atribuído (se decidido).
+  Profissional só vê a conversa transferida a ele e perde o acesso ao ser finalizada, liberada ou transferida a outro.
+- Responder com outra dona: confirma; envio simultâneo: só o primeiro sai.
+- Liberação em 30 min: volta sem responsável, evento `released`, notifica; não libera se o responsável respondeu ou
+  mudou no meio.
+- Central desligada: mensagem nova sem texto; religada: histórico guardado volta a aparecer.
+- Retenção: mídia de 12 meses e texto de 5 anos apagados pela rotina.
+- Histórico importado: não chama o bot, não conta como não lida, não reabre atendimento; repetido não duplica.
+- Edição e exclusão pelo app atualizam a mensagem original.
+- Fora das 24 h: caixa travada; "Retomar conversa" envia o modelo.
 - Anonimização apaga texto e mídia.
 - Leitura e download registrados em `conversation_access_log`.
 - Tela: 390 px e 1280 px (regra do projeto).
@@ -674,7 +741,7 @@ do bot e da conversa (sem custo na janela de 24h)", que deixou de valer em 01/ou
   recepção, respostas por atendimento humano) com valor padrão tirado da produção (média real das clínicas) e
   editáveis pelo Suporte; a calculadora só lê, não grava.
 
-**Etapas propostas (antes do CN3, porque a ativação depende delas):**
+**Etapas propostas (antes do CN3, porque a ativação depende delas; ordem final na seção 12):**
 
 | Passo | Conteúdo |
 |---|---|
