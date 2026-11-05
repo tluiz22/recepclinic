@@ -1,7 +1,10 @@
 # Central de Atendimento Humano: planejamento
 
 > **Retomar daqui (05/nov/2026).** Só análise e plano, sem código, migração ou configuração. Aguarda o cliente
-> aprovar o plano e responder às decisões da seção 11 (a primeira é rever a **D12**). Nada implementado.
+> aprovar o plano e responder às decisões da seção 11. Nada implementado.
+> **Decididas:** 1 (D12 revista: texto e mídias só nas clínicas com a Central, 05/nov); 2 (cada clínica escolhe
+> "app e Central" ou "só Central", 05/nov); 3 (lista única, opção C do canvas, 05/nov); 4 (Profissional só as transferidas a ele, 05/nov); 5 (responder assume; responsável sai após 30 min com o paciente
+> esperando, 05/nov); 6 (não lidas por pessoa, 05/nov); 7 (após 24 h, só "Retomar conversa", 05/nov).
 
 Pedido do cliente (05/nov/2026): secretárias, profissionais e outros usuários autorizados veem e respondem as
 conversas do WhatsApp **dentro do RecepClinic**, com o mesmo histórico do bot, sem abrir o app do WhatsApp.
@@ -432,16 +435,41 @@ Limite: respostas pelo app (eco) não têm usuário.
 
 **Decisões (uma por vez, pela ferramenta de perguntas, nesta ordem):**
 
-1. **Rever a D12:** guardar texto e mídias do paciente e da recepção — recomendado: só nas clínicas com a
-   Central ligada, com retenção e leitura registrada.
-2. **Coexistência:** a recepção continua podendo usar o app junto com a Central? (recomendado: sim, com o eco
-   mostrado como "pelo app").
-3. **Situações:** manter as 2 da CA + responsável, com "Não atribuídas" e "Aguardando paciente" como filtros
-   (recomendado), ou 5 situações guardadas.
-4. **Quem vê:** Profissional só o que for transferido a ele? Recepção restrita?
-5. **Responder assume sozinho** ou exige "Assumir" antes (recomendado: responder assume).
-6. **Não lidas:** por usuário (recomendado) ou por clínica.
-7. **Fora das 24 h:** criar template de utilidade para retomar contato, ou só avisar "fora da janela".
+1. **Rever a D12:** ~~guardar texto e mídias do paciente e da recepção~~ **Decidido (05/nov): só nas clínicas com a
+   Central ligada, com retenção e leitura registrada** (revisão registrada na D12, `arquitetura.md`).
+2. **Coexistência:** **Decidido (05/nov): cada clínica escolhe** em Configurações, "Responder por: app e Central" ou
+   "só Central". Nos dois, a resposta pelo app (eco) entra no histórico como "pelo app", com texto e sem usuário; em
+   "só Central", a tela mostra um aviso nessa mensagem e as orientações pedem responder só pelo painel (o app não
+   pode ser bloqueado: a coexistência é da Meta). Cria a configuração por clínica no CN1. **[Quem configura:
+   decidir com o item 9]**
+3. **Situações:** **Decidido (05/nov): lista única** (opção C do canvas
+   https://claude.ai/artifact/X5J2LaD5AshozLPrKqV6fa). Abas "Abertas" e "Finalizadas"; nas Abertas, cada conversa
+   com o selo da situação (Aguardando a clínica / Em atendimento) e o responsável, "Aguardando a clínica" no topo;
+   filtro numa caixa de seleção (Todas, Não atribuídas, Minhas, Aguardando paciente). No banco, continuam as 2
+   situações da CA + responsável (3.2); as demais são calculadas. Muda a tela de abas da CA (Aguardando a clínica /
+   Em atendimento / Notificações): onde ficam as Notificações, decidir no desenho da tela (CN3).
+4. **Quem vê:** **Decidido (05/nov): Administrador e Recepção veem todas as conversas da clínica; o Profissional só
+   as transferidas a ele** (responde e finaliza; depois de finalizada ou transferida a outro, deixa de ver). Suporte:
+   todas, com registro (D6). Vale no banco (função de leitura e Storage) e na tela. A conversa não tem agenda, então
+   não há restrição da Recepção por agenda.
+5. **Responder assume:** **Decidido (05/nov).** Quem envia numa conversa sem responsável vira o responsável; com
+   outra dona, a tela confirma antes ("Está com Ana. Responder e assumir?"); envio simultâneo: só o primeiro sai, o
+   segundo recebe "Ana assumiu agora" e a mensagem não é enviada. Resposta pelo app (eco) não define responsável.
+   O responsável não esconde a conversa: Administrador e Recepção veem todas e podem assumir ou transferir.
+   **Liberação automática (decidido, 05/nov):** paciente esperando **30 min** sem resposta da responsável → volta
+   para "Sem responsável" e todas recebem a notificação ("Maria Souza aguarda há 30 min"); se estava com um
+   Profissional, volta para a Recepção. Rotina por pg_cron (como a de 12 h), evento `released` na `handoff_events`.
+   Prazo ajustável por clínica: avaliar no CN4.
+6. **Não lidas:** **Decidido (05/nov): por pessoa** (tabela `conversation_reads`, 4.4): abrir a conversa zera só para
+   quem abriu.
+7. **Fora das 24 h:** **Decidido (05/nov).** A conversa continua "Aguardando a clínica" no fim de semana e no
+   feriado (regra da CA, sem mudança). Passadas 24 h da última mensagem do paciente, a caixa de texto trava com o
+   aviso e o botão **"Retomar conversa"**, que envia um modelo de utilidade aprovado pela Meta (pago por envio, na
+   conta da clínica); a resposta do paciente reabre a janela. Vale para "app e Central" e "só Central". **A Central
+   não tem o botão "Abrir no WhatsApp"** (cliente: gera confusão); na clínica com "app e Central", usar o app segue
+   possível por conta da equipe. Padrão do mercado (caixas sobre a Cloud API): o mesmo. Criar o modelo (texto,
+   classificação de utilidade) no CN4; texto a aprovar pelo cliente. Mídia que a Central não mostra (vídeo,
+   figurinha): aviso na mensagem, sem botão para o app; texto a definir no CN5.
 8. **Retenção** de texto e mídias (prazo) e tipos de mídia aceitos.
 9. **Matriz (D11) e preço:** item novo "Central de atendimento"; depende do bot ou não; entra em qual pacote.
 10. **Histórico do app na conexão:** guardar o que a Meta envia nas clínicas novas.

@@ -507,6 +507,12 @@ vez o assunto; a primeira resposta em texto (até 300 caracteres) fica guardada 
 Atendimento para a equipe da clínica e é apagada quando a conversa volta ao bot. Nenhum outro texto do paciente é
 guardado. Revisão da jornada do bot, E4 ([`historico.md`](historico.md), busca "Revisão da jornada do bot").
 
+**Revisão (cliente, 05/nov/2026): Central de Atendimento.** Nas clínicas **com a Central de Atendimento ligada**, o
+RecepClinic passa a guardar o texto e as mídias das conversas (paciente e recepção), a partir da ativação (o texto
+apagado em 28/out não volta). Leitura só pela tela, por função que confere o acesso e registra quem abriu, com prazo
+de guarda. As clínicas sem a Central seguem a D12 como acima. Antes da produção: termo de tratamento, contrato e
+política de privacidade revisados pelo advogado. Plano em [`planejamento-central-atendimento.md`](planejamento-central-atendimento.md).
+
 ## D13 — Nota fiscal das clínicas pelo Asaas (29/out/2026)
 
 **Decisão: a NFS-e que as clínicas emitem aos pacientes sai pelo Asaas, com uma subconta por clínica criada pelo
