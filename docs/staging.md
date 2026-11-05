@@ -575,7 +575,8 @@ Migração `20261208120000_base_de_conhecimento_dias.sql` aplicada em 04/nov (se
    clínica) e na do responsável aparece "Aguardando a clínica há …" com Abrir no WhatsApp. Respondida pelo app: "Em
    atendimento" com Devolver ao bot (volta para a ficha).
 7. **C27 Cortesia.** Com a conversa em atendimento, "Ok, obrigado 👍" (ou reação 👍) mantém "Em atendimento"; "e o
-   exame?" vai para Aguardando, com Devolver ao bot no cartão.
+   exame?" vai para Aguardando, com Devolver ao bot no cartão. "Sim" e "não" também vão para Aguardando (decisão do
+   cliente, 04/nov: respondem a uma pergunta da clínica).
 8. **C28 Dias de atendimento.** Sistema › Base de conhecimento › Testar: "vocês atendem na segunda?", "atende terça?",
    "que dias tem atendimento" → F1; "quero agendar para quarta" segue na marcação. **Publicar**; pelo WhatsApp de
    testes, "vocês atendem sábado?" responde o horário da semana.
