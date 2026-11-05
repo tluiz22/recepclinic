@@ -1495,6 +1495,7 @@ isOneToOne: false
                   Row: {
                     "clinic_id": string,"dismissed_at": string,"dismissed_by": string | null,"event_id": number | null,"id": number,"message_id": string | null,"scope": string
                   }
+                  ComputedFields: never
                   Insert: {
                     "clinic_id": string,"dismissed_at"?: string,"dismissed_by"?: string | null,"event_id"?: number | null,"id"?: never,"message_id"?: string | null,"scope": string
                   }
