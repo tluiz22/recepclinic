@@ -3,7 +3,7 @@
 > **Estado atual (retomar daqui), 03/nov/2026.** Branch **`faturamento`**, local, sem push. F12.1 e F12.2 validadas
 > no local. **Cliente valida no fim (02/nov):** seguir as fases sem parar; validar tudo junto no local.
 > **03/nov: F12.2c a F12.2h feitas** (abaixo); roteiro de validação em [`roteiro-validacao-faturamento.md`](roteiro-validacao-faturamento.md).
-> Próximo: cliente valida F12.2b a F12.2h no local; depois, F12.11.
+> Próximo: F12.2i (passo do pagamento); cliente valida F12.2b a F12.2i no local; depois, F12.11.
 > **Main trazida em 03/nov (até `aae0195`, a produção):** PN1–PN2, IS1–IS5 e C17–C20; conflitos só de juntar os dois
 > lados (envio: suspensa não envia nem a mensagem de teste; implantação só a de teste). Migração nova
 > `20261207120000_suspensa_checklist_implantacao.sql` (gatilho de suspensa em `clinic_onboarding_checks`, IS3). Banco local
@@ -93,6 +93,14 @@
 > na lista. **g** (`20261127120000`): "Trocar o cartão" pelo Checkout do Asaas (sandbox: nada cobrado na hora, 1ª
 > cobrança no vencimento pedido; aceita `customer`; a assinatura nova vem sem a nossa referência); com cobrança
 > vencida, pede para pagar antes. **h**: lembrete do IPCA na aba Faturamento 45 dias antes do aniversário.
+> **F12.2i: passo do pagamento na Assinatura (cliente, 04/nov; canvas "Assinatura: aceite e WhatsApp", linha "Passo do
+> cartão").** Na validação, o cartão ficava solto em Cobranças e o "Pronto" saía sem forma de pagamento. Decisões:
+> sequência **Contrato → Cartão (ou Pagamento, no Pix) → WhatsApp → Pronto**; **sem "Informar depois"** (o passo fica
+> pendente, com "Falta informar o cartão", até o cartão; o Pronto só depois); a página do Asaas abre em outra aba e a
+> nossa mostra "Confirmando o pagamento…" (confere sozinha; "Já paguei, conferir agora"; "Abrir de novo"; recusa:
+> "Tentar com outro cartão"); **Pix: passo "Pagamento"** com "Pagar com Pix" (implantação) e "Pagar depois"; sem
+> implantação, o Pix não tem o passo; **cartão sem implantação: cadastra sem cobrar** (Checkout do Asaas, como a troca
+> de cartão; 1ª mensalidade só no vencimento); **selo "Sem cartão"** para o Suporte (lista e aba Faturamento).
 > **Próximo: F12.11** (homologação e produção), depois de: advogado (texto do contrato e 11.16), chave e webhook do
 > Asaas de produção, valor combinado com a clínica piloto. Antes, validar F12.2b a F12.8 no local/staging.
 > **Ordem decidida (cliente, 30/out):** cobrança primeiro, até cobrar a clínica piloto em produção, **só com aviso por
