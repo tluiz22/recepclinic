@@ -1,11 +1,9 @@
 # Central de Atendimento Humano: planejamento
 
-> **Retomar daqui (05/nov/2026).** Só análise e plano, sem código, migração ou configuração. Aguarda o cliente
-> aprovar o plano e responder às decisões da seção 11. Nada implementado.
-> **Decididas:** 1 (D12 revista: texto e mídias só nas clínicas com a Central, 05/nov); 2 (sem configuração: app e
-> Central juntos, resposta pelo app marcada "pelo app", 05/nov); 3 (lista única, opção C do canvas, 05/nov); 4 (Profissional só as transferidas a ele, 05/nov); 5 (responder assume; responsável sai após 30 min com o paciente
-> esperando, 05/nov); 6 (não lidas por pessoa, 05/nov); 7 (após 24 h, só "Retomar conversa", 05/nov); 8a (texto 5 anos, mídia 12 meses, 05/nov); 8b (mídias: foto, PDF, áudio; envia foto e PDF, 05/nov); 8c (fora do limite: aviso + botão só nessa
-> mensagem, 05/nov); 9 (item da matriz, depende do bot, 05/nov); 10 (guardar o histórico do app na conexão, 05/nov); 11 (12 h mantidas, 05/nov); 12 (tela "Conversas", 05/nov). Todas as 12 decididas; pendentes no fim da seção 11.
+> **Retomar daqui (05/nov/2026).** Só plano, nada implementado. Decisões 1 a 12 respondidas (seção 11); CN0
+> (conferência da Meta) feito: seção 5.1, com **2 alertas para a produção** (mensagens de serviço cobradas desde
+> 01/out; Embedded Signup v3 descontinuado em 15/out). Próximo: o cliente decide o que fazer com os alertas; depois,
+> desenho das telas (CN3) ou CN1. Pendentes: fim da seção 11.
 
 Pedido do cliente (05/nov/2026): secretárias, profissionais e outros usuários autorizados veem e respondem as
 conversas do WhatsApp **dentro do RecepClinic**, com o mesmo histórico do bot, sem abrir o app do WhatsApp.
@@ -313,6 +311,43 @@ Central de Atendimento" com tipo e hora. Carga do `author` pelo `message_type`/`
 | Token | Por clínica, no Vault, do Embedded Signup | Sem renovação nova; erro 190 já leva à desconexão |
 | Histórico antigo | `requestCoexistenceSync('history')` pedido e descartado | A Meta só envia o histórico do app **uma vez, na conexão** (período limitado). Clínicas já conectadas perderam essa janela; para clínicas novas, guardar o que chega **[decidir]**. Não há API genérica para buscar mensagens antigas |
 | Custo | Conversa de serviço | Respostas na janela não pagam template; conferir a tabela de preços vigente **[validar]** |
+
+### 5.1 Conferência na documentação da Meta (CN0, 05/nov/2026)
+
+Páginas lidas em 05/nov: [Onboard WhatsApp Business app users](https://developers.facebook.com/documentation/business-messaging/whatsapp/embedded-signup/onboarding-business-app-users/),
+[history webhook](https://developers.facebook.com/documentation/business-messaging/whatsapp/webhooks/reference/history),
+[Pricing](https://developers.facebook.com/documentation/business-messaging/whatsapp/pricing),
+[Non-template messages pricing](https://developers.facebook.com/documentation/business-messaging/whatsapp/pricing/non-template-messages),
+[Media](https://developers.facebook.com/docs/whatsapp/cloud-api/reference/media/).
+
+**Alertas que valem já para a produção (fora da Central):**
+
+1. **Mensagens de serviço passaram a ser cobradas em 01/out/2026.** Toda mensagem fora de template dentro da janela
+   (respostas do bot, listas, botões e, depois, a Central) é cobrada por mensagem; **1.000 grátis por mês por
+   número** (não acumula). Preço no Brasil igual ao de utilidade (referência da Meta: US$ 0,0068 por mensagem em
+   jul/2026; tabela em BRL não lida). Utilidade dentro da janela também passou a ser cobrada (antes grátis).
+   **Sem forma de pagamento na conta da clínica, a Meta para de entregar depois das 1.000 do mês.** Impacto: custo
+   do bot para as clínicas (contrato, venda) e risco de o bot parar numa clínica sem pagamento (o guia
+   `/guia/pagamento-meta` da IS1 já pede a forma de pagamento; conferir as clínicas em produção).
+2. **Embedded Signup v2 e v3 descontinuados em 15/out/2026** (a página manda migrar para a v4). O botão de conexão
+   usa `sessionInfoVersion: "3"` (`src/components/admin/WhatsappSignupButton.astro:132`). Conexões já feitas não
+   mudam; **conexões novas podem falhar**. Conferir e migrar antes da próxima clínica.
+
+**Central (o que muda no plano):**
+
+| Item | Resultado |
+|---|---|
+| Campos do webhook na coexistência | `account_update`, `history`, `smb_app_state_sync`, `smb_message_echoes` (+ `messages`). Conferir no painel do app que os quatro estão assinados |
+| Ecos | Edição e exclusão feitas no app chegam como `smb_message_echoes` (objeto de edição/`revoke`): a Central precisa mostrar "mensagem apagada/editada" **[criar]** |
+| App × janela | "Mensagens enviadas pelo app não estão sujeitas à janela e não afetam janelas nem preços da Cloud API" (confirma a decisão 7) |
+| Espelhamento | Mensagens da Cloud API (bot, Central) aparecem no app, e as do app chegam como eco |
+| Limitações da coexistência | Sem grupos, mensagem temporária, visualização única, localização em tempo real, chamadas; respostas rápidas, saudação e ausência do app não suportadas. Dispositivos companheiros sem suporte (ex.: WhatsApp para Windows) não geram eco |
+| Vazão | 20 mensagens/s por número em coexistência (sobra para os cenários da seção 7) |
+| Histórico (decisão 10) | Pedir em até **24 h** após a conexão, **uma única vez** (repetir só desconectando e refazendo o cadastro). Até **180 dias**, em 3 fases (dia 0–1, 1–90, 90–180), em partes fora de ordem (`chunk_order`, `progress` até 100), com milhares de mensagens por evento: **gravar o evento e processar depois** (rotina, não no webhook). Sem grupos. Mídia vem como `media_placeholder`; o conteúdo só das mídias dos últimos 14 dias (a página se contradiz: "14 dias da conexão" × "duas semanas da consulta"). Recusa da clínica: erro `2593109` |
+| Mídia recebida | URL vale **5 min** (pedir de novo pelo id); Cloud API aceita até 100 MB (acima: erro `131052`). Limites: imagem 5 MB (JPEG/PNG), áudio 16 MB (AAC, AMR, MP3, M4A, OGG/OPUS), vídeo 16 MB (MP4/3GP), documento 100 MB, figurinha 100–500 KB |
+| Mídia enviada | Mesmos limites; a Central envia foto até **5 MB** (limite da Meta para imagem) e PDF até 10 MB (decisão 8b ajustada) |
+| Nova análise do app | Nada nas páginas lidas exige nova análise para uso novo da mesma permissão; manter como verificação ao publicar |
+| Janela só depois da conexão | Paciente que escreveu antes da conexão: só template até ele escrever de novo |
 
 ---
 
