@@ -14,8 +14,8 @@
 >
 > **Decisão pendente:** testes de tela automáticos (Playwright); conversar prós e contras com o cliente (`historico.md`, "C30").
 >
-> **Próxima sessão (cliente, 04/nov):** uma **evolução do bot** (cliente traz o pedido). A `faturamento` ainda não tem a C22 a C30
-> (merge da `main` só quando o cliente pedir).
+> **Próxima sessão:** cliente valida a C31 e a CA (`staging.md`, partes U e V) e traz novos pedidos. A `faturamento` está
+> com a `main` até a CA (05/nov).
 > Trabalhar na worktree `recepclinic-main` (a pasta `recepclinic` está na branch `faturamento`). Pendente da branch: o
 > cliente valida no local o faturamento **F12.2b a F12.2h** pelo `roteiro-validacao-faturamento.md` **da branch**.
 >
@@ -32,8 +32,9 @@
 > - **Staging** (`teste.recepclinic.com.br`, branch `main`): produção + redesign da Recepção (RX1 a RX9, sem migração) +
 >   cartão do Asaas (`ASAAS_PREVIEW=1`) + Base de Conhecimento do bot (migração aplicada) + PN1, PN2, IS2 a IS5 (migrações aplicadas) + IS1 + C17 a C20 (03/nov; migração `20261206120000` aplicada) + C21 (04/nov).
 >   Roteiros em [`staging.md`](staging.md).
-> - **Branch `faturamento`** (só local, sem push): todo código do financeiro, até a F12.2h; com a `main` até `e7c4f1d`
->   (a produção com a C21, 04/nov; merge `47b93ce`, 982 testes de unidade e 909 de banco passando; migração nova `20261207120000`).
+> - **Branch `faturamento`** (só local, sem push): todo código do financeiro, até a F12.2h; com a `main` até `534bdf8`
+>   (a produção com a CA, 05/nov; merge `4b45e18`, 1048 testes de unidade e 928 de banco passando; o `contexto` já falhava
+>   antes; migrações próprias `20261207120000`, `20261210120000` e `20261212120000`, bloqueio de suspensa na `handoff_events`).
 >   Na publicação, as migrações da branch são anteriores às da produção: `db push --include-all`. Atualizar só quando o cliente pedir.
 >
 > **Frentes**
