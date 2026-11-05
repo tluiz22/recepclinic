@@ -1,9 +1,17 @@
 name: CI
 
 on:
+  # Push só de documentação (docs/ e arquivos .md) não roda o CI (cliente, 05/nov/2026). O GitHub olha todos os
+  # commits do push: com algum arquivo de código junto, roda.
   push:
     branches: [main]
+    paths-ignore:
+      - "docs/**"
+      - "**.md"
   pull_request:
+    paths-ignore:
+      - "docs/**"
+      - "**.md"
 
 jobs:
   build:
