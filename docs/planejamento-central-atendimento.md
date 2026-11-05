@@ -3,7 +3,8 @@
 > **Retomar daqui (05/nov/2026).** Só plano, nada implementado. Decisões 1 a 12 respondidas (seção 11); CN0
 > (conferência da Meta) feito: seção 5.1, com **2 alertas para a produção** (mensagens de serviço cobradas desde
 > 01/out; Embedded Signup v3 descontinuado em 15/out). Próximo: o cliente decide o que fazer com os alertas; depois,
-> desenho das telas (CN3) ou CN1. Pendentes: fim da seção 11.
+> desenho das telas (CN3) ou CN1. Pendentes: fim da seção 11. **Novo (05/nov): seção 14** (ativação pelo
+> Administrador com o custo da Meta, medição e calculadora em Sistema › Vendas), decisões abertas lá.
 
 Pedido do cliente (05/nov/2026): secretárias, profissionais e outros usuários autorizados veem e respondem as
 conversas do WhatsApp **dentro do RecepClinic**, com o mesmo histórico do bot, sem abrir o app do WhatsApp.
@@ -590,3 +591,56 @@ gerenciar, limites, não entende, base de conhecimento, não concluído, assunto
 - Anonimização apaga texto e mídia.
 - Leitura e download registrados em `conversation_access_log`.
 - Tela: 390 px e 1280 px (regra do projeto).
+
+---
+
+## 14. Custo da Meta: ativação pela clínica, medição e calculadora (cliente, 05/nov/2026)
+
+**Por quê:** desde 01/out/2026 a Meta cobra cada mensagem que sai pela API (bot, Central, avisos), com 1.000
+mensagens de serviço grátis por mês e por número (seção 5.1); as respostas pelo app do WhatsApp não são cobradas.
+O cliente quer o custo claro para a clínica antes de ela usar o atendimento pelo RecepClinic.
+
+**Pedido do cliente:**
+
+1. **Ativação pelo Administrador da clínica.** A Central (tela "Conversas") é ligada pelo Administrador da clínica,
+   numa tela que mostra com clareza o valor cobrado pela Meta. **[decidir: relação com o item da matriz liberado
+   pelo Suporte, decisão 9]**
+2. **Medição em tempo real** nessa mesma tela: mensagens enviadas no mês (por tipo) e o valor estimado a ser cobrado
+   pela Meta.
+3. **Calculadora no Suporte:** Sistema › Vendas ganha uma aba (ao lado de Planos, Demonstração, Roteiro de vendas e
+   Implantação) para estimar o valor médio pago à Meta por clínica. Campos: quantidade de profissionais, dias de
+   atendimento por semana, média de atendimentos por dia. Resultado: valor médio das mensagens que o RecepClinic já
+   envia hoje (avisos e bot), estimativa com o atendimento pelo RecepClinic (Central) e o total.
+
+**O que existe [reaproveitar]:** `clinic_usage_monthly` (mensagens e atendimentos por clínica e mês, `app.bump_usage`)
+e a tela Sistema › Uso, que separa templates das demais mensagens. **[alterar]** O texto da tela Uso diz "respostas
+do bot e da conversa (sem custo na janela de 24h)", que deixou de valer em 01/out.
+
+**Proposta técnica (a confirmar com as decisões):**
+
+- **Contagem:** pelas próprias mensagens (`whatsapp_messages`, saída, entregues ou enviadas), por categoria: modelo de
+  utilidade (confirmação, lembrete, preparo por modelo, retomar conversa), serviço (bot, avisos de texto, Central).
+  Resposta pelo app (eco) aparece só como "grátis, pelo app". A franquia de 1.000 de serviço é descontada no mês.
+- **Preço:** tabela da Meta no Brasil guardada em Sistema (valor por categoria, moeda, data de vigência), editada pelo
+  Suporte quando a Meta muda; câmbio também em Sistema (ou a clínica que paga em reais usa o valor em BRL da tabela).
+  A Meta não tem uma API simples de preço por mensagem para a clínica; a fatura real fica no Gerenciador do WhatsApp da
+  clínica. A tela diz "estimativa" e onde ver o valor oficial.
+- **"Tempo real":** a contagem lida a cada abertura da tela (consulta somada no mês, com índice por clínica e data);
+  sem rotina nova.
+- **Calculadora:** parâmetros médios (mensagens por atendimento por tipo, % de atendimentos que vão para a
+  recepção, respostas por atendimento humano) com valor padrão tirado da produção (média real das clínicas) e
+  editáveis pelo Suporte; a calculadora só lê, não grava.
+
+**Etapas propostas (antes do CN3, porque a ativação depende delas):**
+
+| Passo | Conteúdo |
+|---|---|
+| CU1 | Medir a produção: mensagens por clínica em outubro, por tipo, e médias por atendimento (só leitura, para calibrar) |
+| CU2 | Tabela de preços da Meta e câmbio em Sistema; contagem por categoria; corrigir o texto da tela Uso |
+| CU3 | Aba da calculadora em Sistema › Vendas |
+| CU4 | Tela de ativação da Central pelo Administrador, com o valor da Meta e a medição do mês (junto com o CN1/CN3) |
+
+**Decisões abertas:** relação entre a ativação pelo Administrador e o item da matriz; o que acontece com o texto
+guardado quando o Administrador desliga a Central; onde fica a medição (Configurações › WhatsApp ou a própria tela
+de ativação); se a medição também aparece para clínicas sem a Central (custo do bot); se a tabela de preços tem
+histórico por vigência.
