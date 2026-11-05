@@ -603,10 +603,15 @@ O cliente quer o custo claro para a clínica antes de ela usar o atendimento pel
 **Pedido do cliente:**
 
 1. **Ativação pelo Administrador da clínica.** A Central (tela "Conversas") é ligada pelo Administrador da clínica,
-   numa tela que mostra com clareza o valor cobrado pela Meta. **[decidir: relação com o item da matriz liberado
-   pelo Suporte, decisão 9]**
+   numa tela que mostra com clareza o valor cobrado pela Meta. **Decidido (05/nov): dois passos** — o Suporte libera
+   o item na matriz (decisão 9, o que foi vendido) e a Central só começa quando o Administrador liga em
+   Configurações, depois de ver o custo da Meta; ele pode desligar quando quiser. A guarda do texto (D12 revista)
+   começa quando o Administrador liga. **Desligar (decidido, 05/nov):** para de guardar mensagens novas; o que já foi
+   guardado fica pelo prazo (texto 5 anos, mídia 12 meses), sem aparecer; religando, o histórico volta (com o
+   intervalo desligado sem texto). A tela avisa isso ao desligar.
 2. **Medição em tempo real** nessa mesma tela: mensagens enviadas no mês (por tipo) e o valor estimado a ser cobrado
-   pela Meta.
+   pela Meta. **Decidido (05/nov): para todas as clínicas**, em Configurações › WhatsApp (avisos, bot e, com a
+   Central, as respostas pela Central; resposta pelo app como grátis); a ativação da Central fica na mesma tela.
 3. **Calculadora no Suporte:** Sistema › Vendas ganha uma aba (ao lado de Planos, Demonstração, Roteiro de vendas e
    Implantação) para estimar o valor médio pago à Meta por clínica. Campos: quantidade de profissionais, dias de
    atendimento por semana, média de atendimentos por dia. Resultado: valor médio das mensagens que o RecepClinic já
@@ -648,7 +653,7 @@ do bot e da conversa (sem custo na janela de 24h)", que deixou de valer em 01/ou
 | CU3 | Aba da calculadora em Sistema › Vendas (atual, com a Central, total e comparação com IA) |
 | CU4 | Tela de ativação da Central pelo Administrador, com o valor da Meta e a medição do mês (junto com o CN1/CN3) |
 
-**Decisões abertas:** relação entre a ativação pelo Administrador e o item da matriz; o que acontece com o texto
-guardado quando o Administrador desliga a Central; onde fica a medição (Configurações › WhatsApp ou a própria tela
-de ativação); se a medição também aparece para clínicas sem a Central (custo do bot); se a tabela de preços tem
-histórico por vigência.
+**Decidido (05/nov): tabela de preços com histórico por vigência** (cada preço com data de início; mês passado
+calculado com o preço daquele mês; registro de quem mudou). **Cenários de IA (item 4, decidido 05/nov): os dois**,
+lado a lado com o RecepClinic: "IA de outra empresa" (Meta por mensagem + custo da empresa de IA) e "IA da Meta"
+(Meta Business Agent, por volume de texto). Seção 14 sem decisões abertas.
