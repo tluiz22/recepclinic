@@ -1,6 +1,6 @@
 import type { DbClient } from "../clients";
 import { DataError, unwrap } from "../errors";
-import { deliveryRank, isDeliveryStatus, reachedPhone, toE164, type WaMessage } from "./meta";
+import { deliveryRank, isDeliveryStatus, reachedPhone, storedText, toE164, waTimestamp, type WaMessage } from "./meta";
 import { COURTESY_MESSAGE_TYPE, isCourtesyMessage } from "./courtesy";
 import { markPatientWrote } from "./conversations";
 import { MAX_ATTEMPTS, nextRetryAt, RETRYABLE_MESSAGE_TYPES, type RetryContext, type SendFailure } from "./retryRules";
@@ -61,8 +61,9 @@ export async function recordInboundMessage(db: DbClient, clinicId: string, msg: 
     direction: "inbound",
     // Cortesia ("ok", "obrigado", 👍) vira o tipo `courtesy` (C27): o atendimento humano não volta para "Aguardando".
     message_type: courtesy ? COURTESY_MESSAGE_TYPE : (msg.type ?? "unknown"),
-    // O texto fica só no app do WhatsApp (cliente, 28/out/2026, D12).
-    body: null,
+    // Texto e hora da Meta (CN2): o banco só guarda o texto com a Central ligada (D12 revista, cliente, 05/nov/2026).
+    body: storedText(msg),
+    wa_timestamp: waTimestamp(msg)?.toISOString() ?? null,
     status: "received",
     wa_message_id: msg.id ?? null,
     created_at: now.toISOString(),
@@ -88,12 +89,38 @@ export async function recordAgentEcho(db: DbClient, clinicId: string, echo: WaMe
     contact_phone: phone,
     direction: "outbound",
     message_type: "agent_reply",
-    body: null,
+    // Como na mensagem recebida (CN2): o texto só fica com a Central ligada.
+    body: storedText(echo),
+    wa_timestamp: waTimestamp(echo)?.toISOString() ?? null,
     status: "sent",
     wa_message_id: echo.id ?? null,
     created_at: now.toISOString(),
   });
   return id ? { recorded: true, id, contactId } : { recorded: false, reason: "duplicate" };
+}
+
+/**
+ * Mensagem editada ou apagada no app do WhatsApp (CN2; smb_message_echoes `edit`/`revoke`): muda a linha original,
+ * sem gravar mensagem nova. Apagada: o texto sai. false = a original não está no histórico.
+ */
+export async function applyEchoChange(
+  db: DbClient,
+  clinicId: string,
+  change: { kind: "edit"; originalId: string; text: string | null } | { kind: "revoke"; originalId: string },
+  now: Date = new Date(),
+): Promise<boolean> {
+  const values = change.kind === "edit" ? { body: change.text, edited_at: now.toISOString() } : { body: null, revoked_at: now.toISOString() };
+  const rows = unwrap(
+    await db
+      .from("whatsapp_messages")
+      .update(values)
+      .eq("clinic_id", clinicId)
+      .eq("direction", "outbound")
+      .eq("wa_message_id", change.originalId)
+      .select("id"),
+    "Mensagem editada no app",
+  );
+  return rows.length > 0;
 }
 
 export type OutboundMessage = {

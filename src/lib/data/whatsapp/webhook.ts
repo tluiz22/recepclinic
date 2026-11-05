@@ -1,9 +1,9 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 import type { DbClient } from "../clients";
-import { toE164, type WaMessage } from "./meta";
+import { echoChange, toE164, type WaMessage } from "./meta";
 import { hasFeature } from "../features";
 import { handleAgentEcho, isLikelyAutomaticEcho, markAutomaticEcho } from "./conversations";
-import { recordAgentEcho, recordInboundMessage, updateDeliveryStatus, type RecordResult } from "./messages";
+import { applyEchoChange, recordAgentEcho, recordInboundMessage, updateDeliveryStatus, type RecordResult } from "./messages";
 import { sendPreparationAfterDelivery } from "./preparation";
 import { sendGuidanceAfterDelivery } from "./guidance";
 import { scheduleRetryAfterLateFailure } from "./retries";
@@ -245,6 +245,13 @@ export async function processWebhook(payload: unknown, deps: WebhookDeps, now: D
     }
     for (const echo of onboarding ? [] : (change.message_echoes ?? [])) {
       await attempt("eco da recepção", async () => {
+        // Editada ou apagada no app (CN2): muda a original; não é resposta nova, não pausa o bot.
+        const change = echoChange(echo);
+        if (change) {
+          await applyEchoChange(db, clinicId, change, now);
+          return;
+        }
+        if (echo.type === "edit" || echo.type === "revoke") return;
         const result = await recordAgentEcho(db, clinicId, echo, now);
         count(result, "echoes");
         if (isSupportPhone(toE164(echo.to), support.phone)) return;

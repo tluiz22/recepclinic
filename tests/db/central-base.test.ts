@@ -45,6 +45,9 @@ beforeAll(async () => {
     makePlatformStaff(support.id),
   ]);
   const base = { clinic_id: clinicId, contact_phone: PHONE };
+  // O texto só fica com a Central ligada (CN2): liga por um instante para gravar o histórico de exemplo; o teste de
+  // ligar e desligar começa com a Central desligada.
+  await db().from("central_switches").insert({ clinic_id: clinicId, enabled: true });
   const { error } = await db()
     .from("whatsapp_messages")
     .insert([
@@ -57,6 +60,7 @@ beforeAll(async () => {
       { ...base, direction: "inbound", message_type: "text", body: "apagada", status: "received", revoked_at: "2026-11-05T12:03:00Z", created_at: "2026-11-05T12:03:00Z" },
     ]);
   if (error) throw error;
+  await db().from("central_switches").delete().eq("clinic_id", clinicId);
   await db().from("conversation_state").insert([
     { clinic_id: clinicId, contact_phone: PHONE, human_handoff: true, handoff_status: "waiting_clinic", handoff_id: crypto.randomUUID() },
     { clinic_id: clinicId, contact_phone: OTHER_PHONE, human_handoff: false },

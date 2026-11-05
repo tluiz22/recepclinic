@@ -17,7 +17,41 @@ export interface WaMessage {
   /** Mensagem respondida: num toque de lista ou botão, a mensagem que tinha as opções. */
   context?: { id?: string };
   /** Hora do evento na Meta, em segundos (IS4: a hora do eco do app). */
-  timestamp?: string;
+  timestamp?: string | number;
+  /** Anexos: só a legenda importa aqui (o arquivo é do CN5). */
+  image?: { caption?: string };
+  video?: { caption?: string };
+  document?: { caption?: string; filename?: string };
+  /** Eco de mensagem editada no app (smb_message_echoes, `type: "edit"`): o conteúdo novo da original. */
+  edit?: { original_message_id?: string; message?: WaMessage };
+  /** Eco de mensagem apagada no app (`type: "revoke"`). */
+  revoke?: { original_message_id?: string };
+}
+
+/**
+ * Texto guardado no histórico da Central (CN2): o que a pessoa escreveu ou tocou, ou a legenda do anexo; sem os
+ * marcadores "[image]". O banco só guarda com a Central ligada (D12 revista).
+ */
+export function storedText(msg: WaMessage): string | null {
+  const reply = msg.interactive?.list_reply ?? msg.interactive?.button_reply;
+  const text = msg.text?.body ?? reply?.title ?? msg.button?.text ?? msg.image?.caption ?? msg.video?.caption ?? msg.document?.caption ?? null;
+  return text?.trim() ? text : null;
+}
+
+/** Hora do evento na Meta (segundos, em texto ou número) → instante; null se não vier ou não for válida. */
+export function waTimestamp(msg: WaMessage): Date | null {
+  const seconds = Number(msg.timestamp);
+  if (msg.timestamp == null || msg.timestamp === "" || !Number.isFinite(seconds) || seconds <= 0) return null;
+  return new Date(seconds * 1000);
+}
+
+/** Eco que muda uma mensagem já enviada pelo app (edição ou exclusão), em vez de ser uma resposta nova. */
+export function echoChange(echo: WaMessage): { kind: "edit"; originalId: string; text: string | null } | { kind: "revoke"; originalId: string } | null {
+  if (echo.type === "edit" && echo.edit?.original_message_id) {
+    return { kind: "edit", originalId: echo.edit.original_message_id, text: echo.edit.message ? storedText(echo.edit.message) : null };
+  }
+  if (echo.type === "revoke" && echo.revoke?.original_message_id) return { kind: "revoke", originalId: echo.revoke.original_message_id };
+  return null;
 }
 
 /**
