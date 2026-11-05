@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { AsaasBillingApi, AsaasPayment } from "../asaas/billingApi";
-import { confirmCardRegistration, startCardRegistration } from "./billingCardRegister";
+import { asaasIp, confirmCardRegistration, startCardRegistration } from "./billingCardRegister";
 import type { BillingCardRegisterStore, BillingSyncSnapshot, CardChangeRequest, CardRegistration } from "./platform";
 
 // F12.2i: passo Cartão. Com implantação, o cartão que a pagou vai para a
@@ -138,5 +138,14 @@ describe("passo Cartão: confirmar", () => {
     const { store, api, log } = setup({ registration: { registeredAt: new Date() } });
     expect(await confirmCardRegistration(store, api, "c1", "1.2.3.4")).toEqual({ status: "registered" });
     expect(log).toEqual([]);
+  });
+});
+
+describe("IP para o Asaas", () => {
+  it("IPv4 quando há; o local vira 127.0.0.1", () => {
+    expect(asaasIp("::1")).toBe("127.0.0.1");
+    expect(asaasIp("::ffff:10.0.0.7")).toBe("10.0.0.7");
+    expect(asaasIp("177.10.20.30/32")).toBe("177.10.20.30");
+    expect(asaasIp(null)).toBeNull();
   });
 });

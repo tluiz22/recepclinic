@@ -16,6 +16,14 @@ import type { BillingCardRegisterStore } from "./platform";
 export type CardRegisterStart = { link: string; mode: "invoice" | "checkout" };
 export type CardRegisterStatus = { status: "registered" } | { status: "pending" } | { status: "none" } | { status: "failed"; reason: string };
 
+/** O Asaas recebe o IP no formato IPv4 quando há (local: "::1" → 127.0.0.1; "::ffff:1.2.3.4" → 1.2.3.4). */
+export function asaasIp(ip: string | null): string | null {
+  if (!ip) return null;
+  const clean = ip.trim().replace(/\/\d+$/, "");
+  if (clean === "::1") return "127.0.0.1";
+  return clean.replace(/^::ffff:/i, "");
+}
+
 const PAID = new Set(["CONFIRMED", "RECEIVED", "RECEIVED_IN_CASH"]);
 
 export async function startCardRegistration(
@@ -71,7 +79,7 @@ export async function confirmCardRegistration(
     const snapshot = await store.load(contractId);
     const subscription = snapshot?.contract.subscriptionId ?? null;
     if (!subscription) return { status: "failed", reason: "Contrato sem assinatura no Asaas" };
-    const ip = remoteIp ?? registration.acceptedIp;
+    const ip = asaasIp(remoteIp ?? registration.acceptedIp);
     if (!ip) return { status: "failed", reason: "Sem o IP de quem informou o cartão" };
     const card = await api.setSubscriptionCard(subscription, token, ip);
     await store.upsertCharge({
