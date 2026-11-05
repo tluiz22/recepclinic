@@ -3,14 +3,14 @@
 > **Estado atual (retomar daqui), 04/nov/2026.** Detalhes e datas no [`historico.md`](historico.md) (só por busca).
 >
 > **3ª leva (C22 a C30, 04/nov):** no **staging e na produção** (`bf97b07`; migrações `20261208120000` e `20261209120000`
-> aplicadas nos dois). Falta **publicar a base na produção** (C28/C29). Cliente valida pelo `staging.md`, parte T. Captura pendente: `inicio` (e `atendimento`).
+> aplicadas nos dois; base publicada). **Validada pelo cliente (05/nov).**
 >
 > **C31 (04/nov):** apresentação do 1º menu do bot, descrições nas opções e botão "Ver opções". No **staging e na
-> produção** (`d2744f9`, sem migração); cliente valida pelo `staging.md`, parte U.
+> produção** (`d2744f9`, sem migração). **Validada (05/nov).**
 >
 > **CA, ciclo do atendimento humano (04/nov):** situação guardada, Finalizar atendimento sem mensagem, abas na tela
 > Atendimento e encerramento silencioso em 12 h. No **staging e na produção** (`1bfd20f`, 05/nov; migração
-> `20261211120000` aplicada nos dois); cliente valida pelo `staging.md`, parte V. Captura pendente: `atendimento`. Plano em [`ciclo-atendimento-humano.md`](ciclo-atendimento-humano.md).
+> `20261211120000` aplicada nos dois). **Validada (05/nov).** Plano em [`ciclo-atendimento-humano.md`](ciclo-atendimento-humano.md).
 >
 > **Central de Atendimento Humano (05/nov):** só planejamento, em [`planejamento-central-atendimento.md`](planejamento-central-atendimento.md).
 > Decisões 1 a 12 respondidas (D12 revista); CN0 feito. **Alertas para a produção (seção 5.1):** a Meta cobra as
@@ -23,25 +23,23 @@
 >
 > **FE, falhas de envio (05/nov):** conferência do número ao marcar/cadastrar, aviso de entrega na Agenda, "Corrigir
 > número" no Início, reenvio do bot (30 s e 2 min), detalhes e "Descartar" na aba Envios. No **staging e na produção**
-> (`ed2931d`; migração `20261213120000` aplicada nos dois). Falta o Suporte descartar a remarcação de 03/nov na produção. Cliente valida pelo `staging.md`, parte W. Plano em
-> [`falhas-de-envio.md`](falhas-de-envio.md). Captura pendente: `inicio`.
+> (`ed2931d`; migração `20261213120000` aplicada nos dois). **Validada (05/nov).** Plano em
+> [`falhas-de-envio.md`](falhas-de-envio.md).
 >
 > **Decisão pendente:** testes de tela automáticos (Playwright); conversar prós e contras com o cliente (`historico.md`, "C30").
 >
 > **Próxima sessão (cliente, 05/nov):** começar a implementação da Central de Atendimento pelo **CU2** (plano, seções 12,
-> 14 e 15; desenho T1 a T11 no canvas), em branch curta criada da `main`. Seguem pendentes: validação da C31 e da CA
-> (`staging.md`, partes U e V). A `faturamento` está
+> 14 e 15; desenho T1 a T11 no canvas), em branch curta criada da `main`. Partes S a W do `staging.md` validadas (05/nov). A `faturamento` está
 > com a `main` até a CA (05/nov).
 > Trabalhar na worktree `recepclinic-main` (a pasta `recepclinic` está na branch `faturamento`). Pendente da branch: o
 > cliente valida no local o faturamento **F12.2b a F12.2h** pelo `roteiro-validacao-faturamento.md` **da branch**.
 >
 > **Próximo (cliente, 01/nov):** validado no staging: Base de Conhecimento, "Como funciona?" de Configurações e Central de
-> Ajuda. No staging para validar: **25 capturas reais de tela** nos artigos da Central (`public/ajuda/`, refazer quando a
-> tela mudar). Falta informar o WhatsApp do suporte (Sistema › Suporte), se ainda não foi. Detalhes em
+> Ajuda, com as **25 capturas reais de tela** (`public/ajuda/`, refazer quando a tela mudar) e o WhatsApp do suporte (05/nov). Detalhes em
 > [`ajuda-contextual.md`](ajuda-contextual.md), fim. Cliente vai pedir novos ajustes.
 >
 > **Em produção (cliente, 04/nov):** a `main` inteira até a C30 (3ª leva, acima); antes, até a C21: PN1–PN2, IS1–IS5, C17–C20 e C21 (6 migrações,
-> `20261201120000` a `20261206120000`), sobre o `1ceb6a4`. Cliente valida no uso. Detalhe no [`producao.md`](producao.md) (Publicações).
+> `20261201120000` a `20261206120000`), sobre o `1ceb6a4`. Validado (05/nov). Detalhe no [`producao.md`](producao.md) (Publicações).
 >
 > **Ambientes**
 > - **Produção** (`app.recepclinic.com.br`, branch `producao`) = `main` em 05/nov (até a CA). Fluxo em [`producao.md`](producao.md).
@@ -58,10 +56,10 @@
 >   revisão no [`historico.md`](historico.md) (busca "Revisão da jornada do bot").
 >   **2ª leva (03/nov; `historico.md`, "2ª leva"):** C17 Marcar com um só serviço, C18 busca por nome parecido, C19
 >   cadastro com nomes parecidos e conferência (migração `20261206120000` nas duas) e C20 volta ao bot 12 h depois da
->   resposta da clínica (desfaz a C10). **No staging e na produção (03/nov)**; cliente valida (roteiro em `staging.md`, parte "2ª leva").
+>   resposta da clínica (desfaz a C10). **No staging e na produção (03/nov)**; validada (05/nov).
 >   **C21 (04/nov):** dúvida respondida fora de um fluxo mostra o menu (ou o submenu) de novo, sem "Isso resolve sua
 >   dúvida?"; menu com "Escolha uma opção abaixo ou faça uma pergunta."; nas Métricas, resolvida sem recepção em 30 min.
->   **No staging e na produção (04/nov, sem migração)**; cliente valida (`staging.md`, parte S, item 7).
+>   **No staging e na produção (04/nov, sem migração)**; validada (05/nov).
 > - **Evolução do assistente** ([`evolucao-assistente.md`](evolucao-assistente.md)): texto livre na entrada, motivo antes
 >   da recepção e taxa de resolução sem a recepção. **Na produção (02/nov, `c9418ac`)**, migração aplicada no staging
 >   e na produção. Próximo: acompanhar a taxa e as perguntas não reconhecidas da BC.
@@ -92,7 +90,7 @@
 >   staging e etapa B.
 > - **Redesign da Recepção (UX)** ([`redesign-recepcao.md`](redesign-recepcao.md)): RX1 a RX9 e os ajustes da validação
 >   (Meu dia, Agenda opção B, Pacientes/ficha A, Relatório do dia opção C) **na `main` e no staging (02/nov)**, sem
->   produção. **Central de Ajuda atualizada com o redesign (02/nov):** artigos e as 25 capturas refeitas, no staging após o push; falta o cliente validar. Avisos técnicos só do Suporte; tela
+>   produção. **Central de Ajuda atualizada com o redesign (02/nov):** artigos e as 25 capturas refeitas, validadas (05/nov). Avisos técnicos só do Suporte; tela
 >   de pendências do Suporte pendente em [`painel-suporte.md`](painel-suporte.md).
 >
 > **Clínicas de demonstração (02/nov):** as 4 demos do staging recarregadas com todos os cenários de 5 semanas, sem o
