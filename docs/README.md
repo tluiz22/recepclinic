@@ -2,8 +2,8 @@
 
 > **Estado atual (retomar daqui), 04/nov/2026.** Detalhes e datas no [`historico.md`](historico.md) (só por busca).
 >
-> **3ª leva (C22 a C30, 04/nov):** na `main` e no **staging** (migrações `20261208120000` e `20261209120000`
-> aplicadas); cliente valida pelo `staging.md`, parte T (C28/C29: publicar a base no staging). Captura pendente: `inicio` (e `atendimento`). Depois: produção.
+> **3ª leva (C22 a C30, 04/nov):** no **staging e na produção** (`bf97b07`; migrações `20261208120000` e `20261209120000`
+> aplicadas nos dois). Falta **publicar a base na produção** (C28/C29). Cliente valida pelo `staging.md`, parte T. Captura pendente: `inicio` (e `atendimento`).
 >
 > **Decisão pendente:** testes de tela automáticos (Playwright); conversar prós e contras com o cliente (`historico.md`, "C30").
 >
@@ -16,11 +16,11 @@
 > tela mudar). Falta informar o WhatsApp do suporte (Sistema › Suporte), se ainda não foi. Detalhes em
 > [`ajuda-contextual.md`](ajuda-contextual.md), fim. Cliente vai pedir novos ajustes.
 >
-> **Em produção (cliente, 04/nov):** a `main` inteira até a C21: PN1–PN2, IS1–IS5, C17–C20 e C21 (6 migrações,
+> **Em produção (cliente, 04/nov):** a `main` inteira até a C30 (3ª leva, acima); antes, até a C21: PN1–PN2, IS1–IS5, C17–C20 e C21 (6 migrações,
 > `20261201120000` a `20261206120000`), sobre o `1ceb6a4`. Cliente valida no uso. Detalhe no [`producao.md`](producao.md) (Publicações).
 >
 > **Ambientes**
-> - **Produção** (`app.recepclinic.com.br`, branch `producao`) = `main` em 04/nov (até a C21). Fluxo em [`producao.md`](producao.md).
+> - **Produção** (`app.recepclinic.com.br`, branch `producao`) = `main` em 04/nov (até a C30). Fluxo em [`producao.md`](producao.md).
 > - **Staging** (`teste.recepclinic.com.br`, branch `main`): produção + redesign da Recepção (RX1 a RX9, sem migração) +
 >   cartão do Asaas (`ASAAS_PREVIEW=1`) + Base de Conhecimento do bot (migração aplicada) + PN1, PN2, IS2 a IS5 (migrações aplicadas) + IS1 + C17 a C20 (03/nov; migração `20261206120000` aplicada) + C21 (04/nov).
 >   Roteiros em [`staging.md`](staging.md).
