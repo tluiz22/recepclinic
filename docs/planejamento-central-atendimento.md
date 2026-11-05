@@ -3,8 +3,8 @@
 > **Retomar daqui (05/nov/2026).** Só plano, nada implementado. Decididas: seção 11 (1 a 12), seção 14 (custo da
 > Meta, ativação pelo Administrador, medição, calculadora com IA) e os alertas da 5.1 (v4 do cadastro vai junto com a
 > Central; rotina de acompanhamento da Meta é pós-implantação). **Revisão do plano inteiro (05/nov):** texto alinhado às
-> decisões e lacunas técnicas incluídas (seção 12 com a ordem única). **Próximo:** perguntas da revisão (R1 respondida;
-> faltam transferir na Etapa 1, conversas do histórico importado), depois desenhar as telas
+> decisões e lacunas técnicas incluídas (seção 12 com a ordem única). **Próximo:** perguntas da revisão (R1 e R2 respondidas;
+> falta conversas do histórico importado), depois desenhar as telas
 > (Conversas, menu, Configurações › WhatsApp, calculadora em Sistema › Vendas) com opções no canvas.
 
 Pedido do cliente (05/nov/2026): secretárias, profissionais e outros usuários autorizados veem e respondem as
@@ -606,8 +606,8 @@ Limite: respostas pelo app (eco) não têm usuário.
 **Perguntas da revisão do plano (05/nov), uma por vez:**
 
 - **R1.** ~~Liberação em 30 min fora do horário~~ **Decidido (05/nov): só no horário da clínica, sem notificação** (decisão 5).
-- **R2.** Transferir na Etapa 1 (simples, sem motivo; o motivo fica na Etapa 2)? Sem isso, o Profissional não vê
-  nenhuma conversa (decisão 4).
+- **R2.** **Decidido (05/nov): Transferir entra na Etapa 1, simples** (Administrador e Recepção passam a conversa
+  para outra pessoa da equipe, inclusive Profissional; registra de quem para quem; sem motivo, que fica na Etapa 2).
 - **R3.** Histórico importado (decisão 10) de telefone que nunca falou com o bot: cria a conversa em Finalizadas ou
   só guarda?
 
@@ -640,7 +640,7 @@ Ordem única (revisão de 05/nov; inclui as etapas CU da seção 14 e o cadastro
 | CU4 | Configurações › WhatsApp: medição do mês (todas as clínicas) e ativação/desativação da Central com o custo da Meta | — |
 | CN2 | Gravar texto (entrada e eco) e `wa_timestamp` só com a Central ligada; edição/exclusão pelo app; `last_message_at`/prévia por gatilho | — |
 | CN3 | Tela "Conversas": lista única (Abertas/Finalizadas, filtros, busca, ordem), conversa só leitura paginada, lugar no menu e das Notificações | — |
-| CN4 | Enviar texto (janela de 24 h, idempotência, pausa antes, falha com "Tentar de novo"); responder assume, assumir, transferir (se R2), finalizar; não lidas; modelo "Retomar conversa"; rotina de liberação em 30 min | Talvez |
+| CN4 | Enviar texto (janela de 24 h, idempotência, pausa antes, falha com "Tentar de novo"); responder assume, assumir, transferir (R2, simples), finalizar; não lidas; modelo "Retomar conversa"; rotina de liberação em 30 min | Talvez |
 | CN5 | Mídia recebida (rotina de download, visualização por URL assinada, avisos da 8c) | — |
 | CN6 | Enviar foto (5 MB) e PDF (10 MB) | — |
 | CN7 | Retenção (rotina diária) e anonimização apagando texto e mídia | — |
@@ -650,7 +650,7 @@ Ordem única (revisão de 05/nov; inclui as etapas CU da seção 14 e o cadastro
 O CN8 vai junto na mesma publicação da produção (decisão do v4); o teste do cadastro exige desconectar e
 reconectar o número de testes do staging.
 
-**Etapa 2 — Gestão:** transferência com motivo, notas internas (não vão ao paciente), respostas rápidas por
+**Etapa 2 — Gestão:** motivo na transferência, notas internas (não vão ao paciente), respostas rápidas por
 clínica, notificações "atribuída a mim", alertas de espera, pendências.
 
 **Etapa 3 — Inteligência:** indicadores (seção 9) nas Métricas, produtividade por usuário, gargalos, sugestão de
