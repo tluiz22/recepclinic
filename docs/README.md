@@ -12,7 +12,7 @@
 > Atendimento e encerramento silencioso em 12 h. No **staging e na produção** (`1bfd20f`, 05/nov; migração
 > `20261211120000` aplicada nos dois). **Validada (05/nov).** Plano em [`ciclo-atendimento-humano.md`](ciclo-atendimento-humano.md).
 >
-> **Central de Atendimento Humano (05/nov):** só planejamento, em [`planejamento-central-atendimento.md`](planejamento-central-atendimento.md).
+> **Central de Atendimento Humano (05/nov):** planejamento em [`planejamento-central-atendimento.md`](planejamento-central-atendimento.md).
 > Decisões 1 a 12 respondidas (D12 revista); CN0 feito. **Alertas para a produção (seção 5.1):** a Meta cobra as
 > mensagens de serviço desde 01/out (1.000 grátis/mês por número; sem pagamento, para de entregar) e descontinuou o
 > Embedded Signup v3 (o botão de conexão usa a v3) em 15/out. **Cliente (05/nov):** sem medição (só a clínica piloto na produção); o cliente confere a
@@ -28,8 +28,13 @@
 >
 > **Decisão pendente:** testes de tela automáticos (Playwright); conversar prós e contras com o cliente (`historico.md`, "C30").
 >
-> **Próxima sessão (cliente, 05/nov):** começar a implementação da Central de Atendimento pelo **CU2** (plano, seções 12,
-> 14 e 15; desenho T1 a T11 no canvas), em branch curta criada da `main`. Partes S a W do `staging.md` validadas (05/nov). A `faturamento` está
+> **Central em implementação, branch `central-atendimento`** (só local, sem push): **CU2** (Sistema › Preços da Meta, tela
+> P1; Uso por categoria; migração `20261214120000`), **CU3** (Vendas › Custo da Meta) e **CN1** (base de dados; migração
+> `20261215120000`) feitos em 05/nov, com testes. Migrações aplicadas só no banco local. **Staging e produção só com a
+> Central pronta** (cliente, 05/nov). Detalhe no `historico.md` ("CU2", "CU3", "CN1") e roteiros no `staging.md`, X a Z.
+>
+> **Próxima sessão (cliente, 05/nov):** **CU4** na branch `central-atendimento` (Configurações › WhatsApp: Custo da Meta
+> do mês, telas W2 e L1 no canvas; ligar/desligar a Central). Depois CN2. Partes S a W do `staging.md` validadas (05/nov). A `faturamento` está
 > com a `main` até a FE e as capturas (05/nov).
 > Trabalhar na worktree `recepclinic-main` (a pasta `recepclinic` está na branch `faturamento`). Pendente da branch: o
 > cliente valida no local o faturamento **F12.2b a F12.2h** pelo `roteiro-validacao-faturamento.md` **da branch**.
