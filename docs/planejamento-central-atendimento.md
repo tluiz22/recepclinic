@@ -2,9 +2,10 @@
 
 > **Retomar daqui (05/nov/2026).** Só análise e plano, sem código, migração ou configuração. Aguarda o cliente
 > aprovar o plano e responder às decisões da seção 11. Nada implementado.
-> **Decididas:** 1 (D12 revista: texto e mídias só nas clínicas com a Central, 05/nov); 2 (cada clínica escolhe
-> "app e Central" ou "só Central", 05/nov); 3 (lista única, opção C do canvas, 05/nov); 4 (Profissional só as transferidas a ele, 05/nov); 5 (responder assume; responsável sai após 30 min com o paciente
-> esperando, 05/nov); 6 (não lidas por pessoa, 05/nov); 7 (após 24 h, só "Retomar conversa", 05/nov).
+> **Decididas:** 1 (D12 revista: texto e mídias só nas clínicas com a Central, 05/nov); 2 (sem configuração: app e
+> Central juntos, resposta pelo app marcada "pelo app", 05/nov); 3 (lista única, opção C do canvas, 05/nov); 4 (Profissional só as transferidas a ele, 05/nov); 5 (responder assume; responsável sai após 30 min com o paciente
+> esperando, 05/nov); 6 (não lidas por pessoa, 05/nov); 7 (após 24 h, só "Retomar conversa", 05/nov); 8a (texto 5 anos, mídia 12 meses, 05/nov); 8b (mídias: foto, PDF, áudio; envia foto e PDF, 05/nov); 8c (fora do limite: aviso + botão só nessa
+> mensagem, 05/nov); 9 (item da matriz, depende do bot, 05/nov).
 
 Pedido do cliente (05/nov/2026): secretárias, profissionais e outros usuários autorizados veem e respondem as
 conversas do WhatsApp **dentro do RecepClinic**, com o mesmo histórico do bot, sem abrir o app do WhatsApp.
@@ -437,11 +438,13 @@ Limite: respostas pelo app (eco) não têm usuário.
 
 1. **Rever a D12:** ~~guardar texto e mídias do paciente e da recepção~~ **Decidido (05/nov): só nas clínicas com a
    Central ligada, com retenção e leitura registrada** (revisão registrada na D12, `arquitetura.md`).
-2. **Coexistência:** **Decidido (05/nov): cada clínica escolhe** em Configurações, "Responder por: app e Central" ou
-   "só Central". Nos dois, a resposta pelo app (eco) entra no histórico como "pelo app", com texto e sem usuário; em
-   "só Central", a tela mostra um aviso nessa mensagem e as orientações pedem responder só pelo painel (o app não
-   pode ser bloqueado: a coexistência é da Meta). Cria a configuração por clínica no CN1. **[Quem configura:
-   decidir com o item 9]**
+2. **Coexistência:** **Decidido (05/nov): app e Central juntos, sem configuração.** Primeiro o cliente escolheu
+   "cada clínica escolhe" (app e Central / só Central); depois das decisões 7 e 8c a diferença ficou só no aviso da
+   resposta pelo app, e o cliente tirou a configuração. Resposta pelo app (eco): chega ao paciente normalmente
+   (a Meta não deixa bloquear), entra no histórico da Central em segundos com o texto, marcada "Respondida pelo app
+   do WhatsApp" (sem o nome de quem respondeu); pausa o bot e põe "Em atendimento" como hoje; não muda o
+   responsável; `#bot` no app segue finalizando; a mensagem automática do app (IS4) não conta como resposta.
+   A Central de Ajuda explica os dois caminhos.
 3. **Situações:** **Decidido (05/nov): lista única** (opção C do canvas
    https://claude.ai/artifact/X5J2LaD5AshozLPrKqV6fa). Abas "Abertas" e "Finalizadas"; nas Abertas, cada conversa
    com o selo da situação (Aguardando a clínica / Em atendimento) e o responsável, "Aguardando a clínica" no topo;
@@ -465,13 +468,23 @@ Limite: respostas pelo app (eco) não têm usuário.
 7. **Fora das 24 h:** **Decidido (05/nov).** A conversa continua "Aguardando a clínica" no fim de semana e no
    feriado (regra da CA, sem mudança). Passadas 24 h da última mensagem do paciente, a caixa de texto trava com o
    aviso e o botão **"Retomar conversa"**, que envia um modelo de utilidade aprovado pela Meta (pago por envio, na
-   conta da clínica); a resposta do paciente reabre a janela. Vale para "app e Central" e "só Central". **A Central
-   não tem o botão "Abrir no WhatsApp"** (cliente: gera confusão); na clínica com "app e Central", usar o app segue
-   possível por conta da equipe. Padrão do mercado (caixas sobre a Cloud API): o mesmo. Criar o modelo (texto,
-   classificação de utilidade) no CN4; texto a aprovar pelo cliente. Mídia que a Central não mostra (vídeo,
-   figurinha): aviso na mensagem, sem botão para o app; texto a definir no CN5.
-8. **Retenção** de texto e mídias (prazo) e tipos de mídia aceitos.
-9. **Matriz (D11) e preço:** item novo "Central de atendimento"; depende do bot ou não; entra em qual pacote.
+   conta da clínica); a resposta do paciente reabre a janela. **A Central não tem o botão "Abrir no WhatsApp"**
+   (cliente: gera confusão; exceção só na 8c); usar o app segue possível por conta da equipe. Padrão do mercado
+   (caixas sobre a Cloud API): o mesmo. Criar o modelo (texto, classificação de utilidade) no CN4; texto a aprovar
+   pelo cliente.
+8. **Retenção:** **Decidido (05/nov): texto 5 anos, mídias 12 meses**; vencido, uma rotina apaga (mídia: arquivo
+   apagado e `whatsapp_media.status = 'deleted'`; texto: `body` nulo). Anonimização apaga na hora. Documento
+   importante: botão "Salvar nos documentos do paciente" (Etapa 2), fora desse prazo. Advogado confirma o prazo.
+   **Tipos de mídia (8b, decidido 05/nov):** recebe e mostra foto, PDF/documento (baixar) e áudio (tocador); vídeo e
+   figurinha só com aviso, sem guardar o arquivo. Envia foto e PDF até 10 MB. Gravar áudio pelo painel: Etapa 2.
+   **Fora do limite (8c, decidido 05/nov):** documento recebido até 16 MB é guardado; vídeo ou arquivo acima do
+   limite mostra, **só naquela mensagem**, o aviso "O paciente enviou um vídeo (35 MB). A Central não mostra
+   vídeos: veja e responda esta mensagem pelo app do WhatsApp." **com o botão "Abrir no WhatsApp"** (única exceção
+   à decisão 7; o app recebe tudo na coexistência). Clínica sem
+   coexistência: "peça ao paciente para enviar como foto ou PDF", sem botão.
+9. **Matriz (D11) e preço:** **Decidido (05/nov): item novo "Central de atendimento", liberado pelo Suporte,
+   depende do bot** (só liga com o bot; desligar o bot desliga a Central). Central sem bot: avaliar na Etapa 2.
+   Ligar o item ativa a guarda do texto e das mídias (D12 revista). Preço/pacote: a decidir.
 10. **Histórico do app na conexão:** guardar o que a Meta envia nas clínicas novas.
 11. **Rotina de 12 h** com responsável: mantém?
 12. **Nome da tela** (Central de Atendimento / Conversas).
