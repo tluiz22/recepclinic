@@ -637,7 +637,7 @@ do bot e da conversa (sem custo na janela de 24h)", que deixou de valer em 01/ou
 |---|---|
 | CU1 | Medir a produção: mensagens por clínica em outubro, por tipo, e médias por atendimento (só leitura, para calibrar) |
 | CU2 | Tabela de preços da Meta e câmbio em Sistema; contagem por categoria; corrigir o texto da tela Uso |
-| CU3 | Aba da calculadora em Sistema › Vendas |
+| CU3 | Aba da calculadora em Sistema › Vendas (atual, com a Central, total e comparação com IA) |
 | CU4 | Tela de ativação da Central pelo Administrador, com o valor da Meta e a medição do mês (junto com o CN1/CN3) |
 
 **Decisões abertas:** relação entre a ativação pelo Administrador e o item da matriz; o que acontece com o texto
