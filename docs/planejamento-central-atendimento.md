@@ -321,8 +321,8 @@ Páginas lidas em 05/nov: [Onboard WhatsApp Business app users](https://develope
 [Non-template messages pricing](https://developers.facebook.com/documentation/business-messaging/whatsapp/pricing/non-template-messages),
 [Media](https://developers.facebook.com/docs/whatsapp/cloud-api/reference/media/).
 
-**Alertas que valem já para a produção (fora da Central):** decisão do cliente (05/nov): (1) medir outubro na
-produção (CU1, só leitura) e o cliente confere a forma de pagamento de cada clínica no Gerenciador do WhatsApp;
+**Alertas que valem já para a produção (fora da Central):** decisão do cliente (05/nov): (1) sem medição (só a
+clínica piloto na produção); o cliente confere a forma de pagamento da piloto no Gerenciador do WhatsApp;
 (2) corrigir o cadastro v3 → v4 já, antes da Central (guia de migração, teste no staging, etapa curta na `main`).
 
 1. **Mensagens de serviço passaram a ser cobradas em 01/out/2026.** Toda mensagem fora de template dentro da janela
@@ -650,7 +650,7 @@ do bot e da conversa (sem custo na janela de 24h)", que deixou de valer em 01/ou
 
 | Passo | Conteúdo |
 |---|---|
-| CU1 | Medir a produção: mensagens por clínica em outubro, por tipo, e médias por atendimento (só leitura, para calibrar) |
+| CU1 | ~~Medir a produção~~ (cliente, 05/nov: só a piloto, sem base para média). Valores padrão da calculadora por estimativa, editáveis pelo Suporte; recalibrar quando houver mais clínicas |
 | CU2 | Tabela de preços da Meta e câmbio em Sistema; contagem por categoria; corrigir o texto da tela Uso |
 | CU3 | Aba da calculadora em Sistema › Vendas (atual, com a Central, total e comparação com IA) |
 | CU4 | Tela de ativação da Central pelo Administrador, com o valor da Meta e a medição do mês (junto com o CN1/CN3) |
