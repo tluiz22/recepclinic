@@ -2,8 +2,10 @@
 
 > **Estado atual (retomar daqui), 04/nov/2026.** Detalhes e datas no [`historico.md`](historico.md) (só por busca).
 >
-> **3ª leva (C22 a C29, 04/nov):** na `main` e no **staging** (migrações `20261208120000` e `20261209120000`
+> **3ª leva (C22 a C30, 04/nov):** na `main` e no **staging** (migrações `20261208120000` e `20261209120000`
 > aplicadas); cliente valida pelo `staging.md`, parte T (C28/C29: publicar a base no staging). Captura pendente: `inicio` (e `atendimento`). Depois: produção.
+>
+> **Decisão pendente:** testes de tela automáticos (Playwright); conversar prós e contras com o cliente (`historico.md`, "C30").
 >
 > **Próxima sessão (cliente, 04/nov):** melhorias na `main` para implantar na produção (cliente traz os pedidos).
 > Trabalhar na worktree `recepclinic-main` (a pasta `recepclinic` está na branch `faturamento`). Pendente da branch: o

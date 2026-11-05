@@ -558,7 +558,7 @@ Demonstração (ou a clínica de testes).
    Métricas › Agendamento digital, a dúvida aparece em andamento e, 30 minutos depois, resolvida (se não pediu a
    recepção).
 
-## T. 3ª leva de ajustes da produção (C22 a C28, 04/nov)
+## T. 3ª leva de ajustes da produção (C22 a C30, 04/nov)
 
 Migração `20261208120000_base_de_conhecimento_dias.sql` aplicada em 04/nov (sem tabela nova).
 
@@ -582,3 +582,5 @@ Migração `20261208120000_base_de_conhecimento_dias.sql` aplicada em 04/nov (se
 9. **C29 Dias da semana.** Base de conhecimento › Testar: "Atende na sexta?", "vocês atendem quinta-feira?", "abre na
    sexta?" → F1; "tem horário na sexta?" e "quero marcar para sexta" → M1; "o dr ... atende na sexta?" → P2.
    **Publicar**; pelo WhatsApp de testes, "Atende na sexta?" responde o horário da semana.
+10. **C30 Cabeçalho do Meu dia no computador.** "Boa noite", o campo Buscar paciente e Marcar consulta alinhados pela
+    base; o campo e o botão com a mesma altura.

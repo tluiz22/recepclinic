@@ -953,3 +953,11 @@ Pedidos do cliente vindos do uso da produção; decisões pelo canvas "Meu dia: 
   sinônimos da C28 só cobriam o dia escrito). Dias da semana viram uma palavra só no reconhecimento (`normalize.ts`),
   dias úteis como palavra-chave da F1, frases com dia na M1 e na P2 (migração `20261209120000`). Decisão do cliente:
   "tem horário na sexta?" vai para a marcação.
+- **C30 (staging, 04/nov):** no computador, a busca da C23 (com rótulo em cima) e Marcar consulta ficavam desalinhados
+  (botão centralizado com rótulo + campo). Agora alinham pela base, com 54px de altura. Não houve teste que pegasse:
+  o projeto não tem testes de tela, e a C23 foi conferida só na largura do celular. Regra nova (cliente, 04/nov):
+  toda mudança de tela é conferida em captura a 390px e a 1280px antes do commit.
+- **Decisão pendente (cliente, 04/nov): testes de tela automáticos** (`@playwright/test`: telas principais nas duas
+  larguras, alinhamentos, nada fora da tela, sem rolagem lateral, comparação com imagem de referência). Prós: pega
+  regressão visual sem depender de conferência manual. Contras: manutenção das imagens de referência a cada mudança
+  de tela, CI mais lento e banco de teste com dados fixos. Conversar com o cliente antes de implementar.
