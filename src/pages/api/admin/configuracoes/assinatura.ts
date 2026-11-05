@@ -12,8 +12,8 @@ import {
   saveBillingContacts,
   setBillingWhatsappOptIn,
 } from "../../../../lib/data/billing";
-import { applyCancellationNow, startCardChangeNow, startCardRegistrationNow, syncContractNow } from "../../../../lib/data/billingAsaasDeps";
-import { requestIp } from "../../../../lib/requestIp";
+import { applyCancellationNow, confirmCardRegistrationNow, startCardChangeNow, startCardRegistrationNow, syncContractNow } from "../../../../lib/data/billingAsaasDeps";
+import { asaasCallbackUrl, requestIp } from "../../../../lib/requestIp";
 import { formatCalendarDate, todayIn } from "../../../../lib/clinicTime";
 import { billingCancelEmail, smtpSender } from "../../../../lib/email";
 import { platformEnv } from "../../../../lib/env";
@@ -103,7 +103,11 @@ export const POST: APIRoute = async (context) => {
           if (!clinic.roles.includes("admin")) throw new DataError("forbidden", "Cartão: só o Administrador da clínica");
           const contract = (await listBillingContracts(db, clinic.clinicId)).find((c) => c.status === "active" && c.paymentMethod === "credit_card");
           if (!contract) throw new DataError("not_found", "Cartão: não há assinatura no cartão");
-          const back = new URL("/api/admin/configuracoes/assinatura/cartao", request.url).toString();
+          // Já pago (a clínica fechou a aba antes da confirmação): liga o cartão e segue.
+          if ((await confirmCardRegistrationNow(contract.id, requestIp(context))).status === "registered") {
+            return { redirectTo: await afterPayment(), message: "Cartão cadastrado: as mensalidades serão cobradas nele." };
+          }
+          const back = asaasCallbackUrl("/api/admin/configuracoes/assinatura/cartao", request.url);
           const started = await startCardRegistrationNow(contract.id, {
             actorId: locals.userId ?? null,
             successUrl: `${back}?resultado=ok`,
@@ -151,11 +155,11 @@ export const POST: APIRoute = async (context) => {
           if (!clinic.roles.includes("admin")) throw new DataError("forbidden", "Troca de cartão: só o Administrador da clínica");
           const contract = (await listBillingContracts(db, clinic.clinicId)).find((c) => c.status === "active" && c.paymentMethod === "credit_card");
           if (!contract) throw new DataError("not_found", "Troca de cartão: não há assinatura no cartão");
-          const back = new URL("/api/admin/configuracoes/assinatura/cartao", request.url);
+          const back = asaasCallbackUrl("/api/admin/configuracoes/assinatura/cartao", request.url);
           const link = await startCardChangeNow(contract.id, {
             actorId: locals.userId ?? null,
-            successUrl: `${back.toString()}?resultado=ok`,
-            cancelUrl: `${back.toString()}?resultado=cancelado`,
+            successUrl: `${back}?resultado=ok`,
+            cancelUrl: `${back}?resultado=cancelado`,
           });
           return { redirectTo: link, message: "Informe o novo cartão na página do Asaas." };
         }

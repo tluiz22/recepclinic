@@ -29,13 +29,17 @@ Rotinas na mão (no Terminal, na raiz do projeto):
 3. Asaas sandbox: cliente, assinatura e implantação criados; Cobranças: "Informar o cartão e pagar".
 
 ## 3. Passo Cartão (F12.2i) e troca de cartão (F12.2g)
-1. Logo depois do aceite: Contrato aceito → **Cartão** → WhatsApp → Pronto. "Cobrado agora: Implantação"; "Depois, no
+1. Logo depois do aceite: Contrato aceito → **Cartão** → WhatsApp → Pronto (o WhatsApp aparece sempre; já respondido,
+   com o visto: "WhatsApp autorizado" ou "WhatsApp: só e-mail"). "Cobrado agora: Implantação"; "Depois, no
    mesmo cartão: R$ … todo dia …". Em Cobranças, a mensalidade em aberto diz "Aguarda o cartão (passo Cartão, acima)".
 2. "Informar o cartão no Asaas" abre o Asaas em outra aba (a da implantação); esta aba vira "Confirmando o pagamento no
    Asaas…". Pague com o cartão de teste 5162 3062 1937 8829, validade futura, CVV 318 (dados do titular: os da
    clínica). Volte à aba: em até 5 s ela segue sozinha (ou "Já paguei, conferir agora") para o WhatsApp ou o Pronto.
    O Pronto diz "Cartão final 8829 cadastrado"; em Cobranças, implantação Paga e a mensalidade "Cobrança automática no
    cartão". Suporte › Faturamento: "Cartão: Final 8829…"; trilha "Cartão cadastrado na assinatura".
+   Fechou a aba antes de voltar (implantação paga, cartão ainda não ligado): ao abrir a Assinatura, a tela já confere
+   e segue sozinha. No local, a volta do Checkout do Asaas abre em `127.0.0.1` (o Asaas recusa `localhost`) e pede
+   login: use a aba do RecepClinic, que confere sozinha.
 3. Sem pagar: feche a aba do Asaas e recarregue a Assinatura (sem `?passo=`): passo laranja "Cartão (pendente)" e
    "Falta informar o cartão"; não há como pular. Suporte: selo "Sem cartão" na lista de clínicas e na aba Faturamento.
 4. Contrato sem implantação (Suporte: implantação 0 numa versão nova): "Cobrado agora: Nada: o cartão só fica

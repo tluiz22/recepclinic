@@ -71,11 +71,16 @@ const flowContract = pending ?? activeAccepted;
 const paymentInFlow =
   flowContract?.billingMode !== "asaas" ? null : flowContract.paymentMethod === "credit_card" ? "card" : flowContract.paymentMethod === "pix" && flowContract.setupCents > 0 ? "pix" : null;
 const currentStep: StepKey | null = pending ? "contract" : payment ? "payment" : whatsappNeeded && accepted ? "whatsapp" : null;
-const flow = currentStep ? subscriptionSteps({ current: currentStep, payment: isClinicAdmin ? paymentInFlow : null, whatsapp: whatsappNeeded }) : null;
+// O WhatsApp aparece sempre na sequência do Administrador (já respondido, com o visto).
+const whatsappState = !isClinicAdmin || !account ? null : account.whatsappOptIn ? "authorized" : account.whatsappPromptDismissedAt ? "dismissed" : "pending";
+const flow = currentStep ? subscriptionSteps({ current: currentStep, payment: isClinicAdmin ? paymentInFlow : null, whatsapp: whatsappState }) : null;
 const stepLabel = flow ? `Passo ${flow.position} de ${flow.total}` : "";
-const remaining = flow ? flow.total - flow.position + 1 : 0;
-// Voltou à tela sem concluir o pagamento (não veio direto do aceite): passo pendente.
-const late = currentStep === "payment" && Astro.url.searchParams.get("passo") !== "pagamento";
+const remaining = flow?.remaining ?? 0;
+// Implantação já paga e cartão ainda não ligado (fechou a aba antes): a tela abre conferindo.
+const paidSetup = charges.some((c) => c.kind === "setup" && c.status === "paid");
+const paymentWaiting = !!activeAccepted && (activeAccepted.cardCheckoutOpen || (payment === "card" && paidSetup));
+// Voltou à tela sem concluir o pagamento (não veio do aceite nem há o que conferir): passo pendente.
+const late = currentStep === "payment" && Astro.url.searchParams.get("passo") !== "pagamento" && !paymentWaiting;
 const acceptedNow = contracts.find((c) => c.acceptance === "explicit" && c.acceptedAt) ?? null;
 const showDone = !currentStep && Astro.url.searchParams.get("pronto") === "1" && !!accepted;
 // Contrato que gera as cobranças (o de hoje ou o próximo).
@@ -136,7 +141,7 @@ const H2 = "font-display text-[17px] leading-tight font-bold text-ink sm:text-lg
               />
             )}
             {currentStep === "payment" && payment && activeAccepted && (
-              <PaymentStep kind={payment} contract={activeAccepted} setup={openSetup} stepLabel={stepLabel} late={late} waiting={activeAccepted.cardCheckoutOpen} action={action} />
+              <PaymentStep kind={payment} contract={activeAccepted} setup={openSetup} stepLabel={stepLabel} late={late} waiting={paymentWaiting} action={action} />
             )}
             {currentStep === "whatsapp" && <WhatsappStep account={account} action={action} stepLabel={stepLabel} />}
           </>

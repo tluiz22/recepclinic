@@ -26,19 +26,29 @@ export function paymentStep(contract: StepContract | null, openSetup: boolean): 
 export type StepKey = "contract" | "payment" | "whatsapp";
 export type Step = { key: StepKey | "done"; label: string; done: boolean };
 
-/** Os passos mostrados (o do pagamento e o do WhatsApp só quando fazem parte). */
+/**
+ * Os passos mostrados. O WhatsApp aparece sempre que o Administrador vê o
+ * passo a passo (cliente, 04/nov/2026): já respondido, com o visto ("WhatsApp
+ * autorizado" ou "WhatsApp: só e-mail"). O pagamento, quando faz parte.
+ */
 export function subscriptionSteps(input: {
   current: StepKey;
   payment: "card" | "pix" | null;
-  whatsapp: boolean;
-}): { steps: Step[]; position: number; total: number } {
+  whatsapp: "pending" | "authorized" | "dismissed" | null;
+}): { steps: Step[]; position: number; total: number; remaining: number } {
+  const order: StepKey[] = ["contract", "payment", "whatsapp"];
+  const after = (key: StepKey) => order.indexOf(input.current) > order.indexOf(key);
   const steps: Step[] = [{ key: "contract", label: input.current === "contract" ? "Contrato" : "Contrato aceito", done: input.current !== "contract" }];
-  if (input.payment) {
-    const label = input.payment === "card" ? "Cartão" : "Pagamento";
-    steps.push({ key: "payment", label, done: input.current === "whatsapp" });
+  if (input.payment) steps.push({ key: "payment", label: input.payment === "card" ? "Cartão" : "Pagamento", done: after("payment") });
+  if (input.whatsapp) {
+    const answered = input.whatsapp !== "pending";
+    const label = input.whatsapp === "authorized" ? "WhatsApp autorizado" : input.whatsapp === "dismissed" ? "WhatsApp: só e-mail" : "WhatsApp (opcional)";
+    steps.push({ key: "whatsapp", label, done: answered || after("whatsapp") });
   }
-  if (input.whatsapp) steps.push({ key: "whatsapp", label: "WhatsApp (opcional)", done: false });
   steps.push({ key: "done", label: "Pronto", done: false });
   const actions = steps.filter((s) => s.key !== "done");
-  return { steps, position: actions.findIndex((s) => s.key === input.current) + 1, total: actions.length };
+  const position = actions.findIndex((s) => s.key === input.current) + 1;
+  // Os que ainda faltam: o atual e os seguintes não feitos.
+  const remaining = actions.filter((s, i) => i + 1 >= position && !(s.done && s.key !== input.current)).length;
+  return { steps, position, total: actions.length, remaining };
 }

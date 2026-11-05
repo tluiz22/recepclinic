@@ -21,7 +21,7 @@ interface Props {
   stepLabel: string;
   /** Voltou à tela sem concluir (aviso laranja "Falta informar o cartão"). */
   late: boolean;
-  /** O Checkout do Asaas já foi aberto e espera o cartão. */
+  /** Já há o que conferir (Checkout aberto ou implantação paga): a tela abre conferindo. */
   waiting: boolean;
   action: string;
 }
@@ -33,7 +33,9 @@ const TILE = "rounded-lg bg-canvas px-3 py-2.5";
 const OPEN_ICON = "M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5";
 ---
 
-<Card class={`flex flex-col gap-4 ${late ? "border-pend-200" : ""}`} data-payment-step data-check-url="/api/admin/configuracoes/assinatura/pagamento" data-waiting={waiting ? "1" : undefined}>
+<Card class={late ? "border-pend-200" : ""}>
+  <!-- O Card não repassa atributos data-*: o script acha o passo por este bloco. -->
+  <div class="flex flex-col gap-4" data-payment-step data-check-url="/api/admin/configuracoes/assinatura/pagamento" data-waiting={waiting ? "1" : undefined}>
   <div data-payment-idle class="flex flex-col gap-4">
     <h2 class="font-display text-[19px] leading-tight font-bold text-ink sm:text-xl">
       {stepLabel} · {kind === "card" ? "Cartão de crédito da assinatura" : "Pagar a implantação"}
@@ -118,6 +120,7 @@ const OPEN_ICON = "M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1
       <button type="button" class={SECONDARY_BUTTON} data-payment-reopen>Abrir de novo a página do Asaas</button>
       <button type="button" class={PRIMARY_BUTTON} data-payment-check>Já paguei, conferir agora</button>
     </div>
+  </div>
   </div>
 </Card>
 

@@ -11,3 +11,13 @@ export function requestIp(context: { request: Request; clientAddress?: string })
     return null;
   }
 }
+
+/**
+ * Endereço de volta para o Asaas (Checkout): o Asaas recusa o nome
+ * "localhost" (sandbox, 04/nov/2026) e aceita 127.0.0.1. Fora do local, igual.
+ */
+export function asaasCallbackUrl(path: string, base: string): string {
+  const url = new URL(path, base);
+  if (url.hostname === "localhost") url.hostname = "127.0.0.1";
+  return url.toString();
+}

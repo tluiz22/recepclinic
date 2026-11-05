@@ -34,19 +34,28 @@ describe("passo do pagamento", () => {
 
 describe("os passos mostrados", () => {
   it("contrato no cartão, com o WhatsApp: 3 passos e o Pronto", () => {
-    const flow = subscriptionSteps({ current: "contract", payment: "card", whatsapp: true });
+    const flow = subscriptionSteps({ current: "contract", payment: "card", whatsapp: "pending" });
     expect(flow.steps.map((s) => s.label)).toEqual(["Contrato", "Cartão", "WhatsApp (opcional)", "Pronto"]);
     expect([flow.position, flow.total]).toEqual([1, 3]);
   });
 
   it("no WhatsApp, o contrato e o cartão aparecem feitos", () => {
-    const flow = subscriptionSteps({ current: "whatsapp", payment: "card", whatsapp: true });
+    const flow = subscriptionSteps({ current: "whatsapp", payment: "card", whatsapp: "pending" });
     expect(flow.steps.map((s) => s.done)).toEqual([true, true, false, false]);
+    expect(flow.remaining).toBe(1);
     expect([flow.position, flow.total]).toEqual([3, 3]);
   });
 
-  it("Pix sem o WhatsApp: Pagamento é o passo 2 de 2", () => {
-    const flow = subscriptionSteps({ current: "payment", payment: "pix", whatsapp: false });
+  it("WhatsApp já respondido: aparece com o visto e não conta como falta", () => {
+    const flow = subscriptionSteps({ current: "payment", payment: "card", whatsapp: "dismissed" });
+    expect(flow.steps.map((s) => s.label)).toEqual(["Contrato aceito", "Cartão", "WhatsApp: só e-mail", "Pronto"]);
+    expect(flow.steps.map((s) => s.done)).toEqual([true, false, true, false]);
+    expect([flow.position, flow.total, flow.remaining]).toEqual([2, 3, 1]);
+    expect(subscriptionSteps({ current: "payment", payment: "card", whatsapp: "authorized" }).steps[2].label).toBe("WhatsApp autorizado");
+  });
+
+  it("Pix sem a conta (Suporte): Pagamento é o passo 2 de 2", () => {
+    const flow = subscriptionSteps({ current: "payment", payment: "pix", whatsapp: null });
     expect(flow.steps.map((s) => s.label)).toEqual(["Contrato aceito", "Pagamento", "Pronto"]);
     expect([flow.position, flow.total]).toEqual([2, 2]);
   });
