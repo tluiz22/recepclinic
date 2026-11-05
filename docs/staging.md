@@ -634,3 +634,20 @@ Migração `20261213120000_falhas_de_envio_descartadas.sql` (aplicar antes do pu
    que número, o motivo e o que fazer). "Descartar" tira o envio da lista e do alerta do Início.
 7. **Bot.** Falha passageira da Meta numa resposta do bot: nova tentativa em até 1 minuto (30 s, depois 2 min), só se
    a conversa não andou. Conferir pela trilha das mensagens (Sistema › Erros, quando houver).
+
+## X. Preços da Meta e uso por categoria (CU2, 05/nov)
+
+Migração `20261214120000_precos_da_meta.sql` (aplicar antes do push). Login do Suporte. Plano em
+[`planejamento-central-atendimento.md`](planejamento-central-atendimento.md), seção 14.
+
+1. **Menu.** Sistema › **Preços da Meta**, abaixo de Uso.
+2. **Vigente.** "Vigente desde 01/10/2026", Em uso: utilidade, autenticação e serviço R$ 0,0350; 1.000 grátis por
+   mês; câmbio R$ 5,15; a fonte embaixo.
+3. **Nova vigência.** Abrir "Nova vigência": vem o próximo mês e os preços atuais. Mudar um preço, informar a fonte e
+   Salvar vigência (pede confirmação): aparece "Vigência futura, a partir de 01/…" e uma linha nova no Histórico.
+   Mês passado: a tela recusa. Mesmo mês de novo: "Já existe uma vigência nesta data".
+4. **Apagar.** Na vigência futura, Apagar (com confirmação): ela sai. A vigente não tem Apagar.
+5. **Uso.** Sistema › Uso: colunas Modelos (cobrados), Assistente e avisos (com "de 1.000 grátis" ou "N cobradas"),
+   Pelo app (grátis) e Estimativa da Meta; meses antes de out/2026 mostram "sem tabela". Na clínica de testes, depois
+   de uma confirmação e de uma resposta pelo app: modelos +1 (R$ 0,04 a mais) e pelo app +1.
+6. **Clínica.** Um Administrador de clínica não vê Preços da Meta nem Uso (menu Sistema só do Suporte).

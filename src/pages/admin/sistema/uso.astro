@@ -1,49 +1,72 @@
 ---
 // Uso (F9.5, L49): por clínica, nos últimos 6 meses, os atendimentos criados e
-// as mensagens que saíram pelo WhatsApp, separando os templates (a Meta cobra
-// da clínica) das respostas do bot e da conversa (sem custo na janela de 24h).
-// Sem cobrança: só para acompanhar. Também as vezes que um limite do contato
-// barrou o bot (F9.6a). R10 (cliente, 17/out/2026): a tabela do painel, a
-// linha "Total em 6 meses" e o filtro "Clínica" (abre em Todas).
+// as vezes que um limite do contato barrou o bot (F9.6a). R10 (cliente,
+// 17/out/2026): a tabela do painel, a linha "Total em 6 meses" e o filtro
+// "Clínica" (abre em Todas). CU2 (cliente, 05/nov/2026): desde 01/out/2026 a
+// Meta cobra cada mensagem que sai pela API; as mensagens vêm por categoria
+// (modelos, assistente e avisos, pelo app) com a estimativa do mês pelos Preços
+// da Meta. Sem cobrança do RecepClinic: só para acompanhar.
 import AdminLayout from "../../../layouts/AdminLayout.astro";
 import SystemHeader from "../../../components/admin/sistema/SystemHeader.astro";
-import DataTable from "../../../components/admin/ui/DataTable.astro";
+import DataTable, { type Cell } from "../../../components/admin/ui/DataTable.astro";
 import { CARD, LABEL, SECONDARY_BUTTON, SECTION_TITLE } from "../../../components/admin/config/formStyles";
 import { CONTROL } from "../../../components/admin/ui/styles";
 import { isUuid } from "../../../lib/clinicAccess";
 import { DEFAULT_TIMEZONE, formatInstant, todayIn } from "../../../lib/clinicTime";
 import { createUserClient } from "../../../lib/data/clients";
 import { listClinicsOverview } from "../../../lib/data/onboarding";
+import { estimateMonth, listMessageCounts, listMetaPriceVersions, priceForMonth } from "../../../lib/data/metaPricing";
 import { lastMonths, listMonthlyUsage } from "../../../lib/data/usage";
 
 const db = createUserClient(Astro.request, Astro.cookies);
 const months = lastMonths(todayIn(DEFAULT_TIMEZONE), 6);
-const [allClinics, usage] = await Promise.all([listClinicsOverview(db), listMonthlyUsage(db, months[months.length - 1])]);
+const from = months[months.length - 1];
+const [allClinics, usage, counts, prices] = await Promise.all([listClinicsOverview(db), listMonthlyUsage(db, from), listMessageCounts(db, from), listMetaPriceVersions(db)]);
 const chosen = Astro.url.searchParams.get("clinica");
 const clinicId = chosen && isUuid(chosen) && allClinics.some((clinic) => clinic.id === chosen) ? chosen : null;
 const clinics = clinicId ? allClinics.filter((clinic) => clinic.id === clinicId) : allClinics;
 const byClinicMonth = new Map(usage.map((row) => [`${row.clinicId}|${row.month}`, row]));
+const countsByClinicMonth = new Map(counts.map((row) => [`${row.clinicId}|${row.month}`, row]));
+const currentMonth = months[0];
+const money = (value: number) => value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 const monthLabel = (month: string) => {
   const label = formatInstant(new Date(`${month}T12:00:00Z`), DEFAULT_TIMEZONE, "MMM/yyyy");
   return label.charAt(0).toLocaleUpperCase("pt-BR") + label.slice(1);
 };
 const number = (value: number) => value.toLocaleString("pt-BR");
 
-function rowsOf(id: string): string[][] {
+function rowsOf(id: string): Cell[][] {
   const lines = months.map((month) => {
     const row = byClinicMonth.get(`${id}|${month}`);
+    const messages = countsByClinicMonth.get(`${id}|${month}`);
+    const price = priceForMonth(prices, month);
+    const templates = messages?.templates ?? 0;
+    const service = messages?.service ?? 0;
+    const estimate = estimateMonth({ templates, service }, price);
     return {
-      month: monthLabel(month),
+      month: monthLabel(month) + (month === currentMonth ? " (até hoje)" : ""),
       appointments: row?.appointmentsCreated ?? 0,
-      templates: row?.templatesSent ?? 0,
-      conversation: (row?.messagesSent ?? 0) - (row?.templatesSent ?? 0),
+      templates,
+      service,
+      serviceNote: price ? (estimate.chargedService > 0 ? `${number(estimate.chargedService)} cobradas` : `de ${number(price.freeServicePerMonth)} grátis`) : undefined,
+      app: messages?.appReplies ?? 0,
+      estimate: estimate.totalBrl,
       limits: row?.botLimitHits ?? 0,
     };
   });
-  const sum = (key: "appointments" | "templates" | "conversation" | "limits") => lines.reduce((total, line) => total + line[key], 0);
+  const sum = (key: "appointments" | "templates" | "service" | "app" | "limits") => lines.reduce((total, line) => total + line[key], 0);
+  const estimated = lines.reduce((total, line) => total + (line.estimate ?? 0), 0);
   return [
-    ...lines.map((line) => [line.month, number(line.appointments), number(line.templates), number(line.conversation), number(line.limits)]),
-    ["Total em 6 meses", number(sum("appointments")), number(sum("templates")), number(sum("conversation")), number(sum("limits"))],
+    ...lines.map((line) => [
+      line.month,
+      number(line.appointments),
+      number(line.templates),
+      line.serviceNote ? { main: number(line.service), sub: line.serviceNote } : number(line.service),
+      number(line.app),
+      line.estimate === null ? "sem tabela" : money(line.estimate),
+      number(line.limits),
+    ]),
+    ["Total em 6 meses", number(sum("appointments")), number(sum("templates")), number(sum("service")), number(sum("app")), money(estimated), number(sum("limits"))],
   ];
 }
 ---
@@ -51,7 +74,7 @@ function rowsOf(id: string): string[][] {
 <AdminLayout title="Uso" platform>
   <SystemHeader
     title="Uso"
-    subtitle="Por clínica, nos últimos 6 meses. Mensagens: só as que saíram pelo WhatsApp. Os templates são cobrados pela Meta direto da clínica; as respostas do bot e da conversa não têm custo dentro da janela de 24 horas. Limites do bot: vezes que o bot deixou de marcar por um limite do contato."
+    subtitle="Por clínica, nos últimos 6 meses. Desde 01/out/2026 a Meta cobra da clínica cada mensagem que sai pela API: modelos (confirmações, lembretes) e mensagens de serviço (assistente, avisos), estas com uma franquia grátis por mês. Respostas pelo app do WhatsApp não são cobradas. O valor é uma estimativa pelos Preços da Meta; a fatura oficial fica no Gerenciador do WhatsApp da clínica. Limites do bot: vezes que o bot deixou de marcar por um limite do contato."
   >
     <form slot="actions" method="get" class="flex items-end gap-2">
       <div>
@@ -65,6 +88,9 @@ function rowsOf(id: string): string[][] {
     </form>
   </SystemHeader>
 
+  <p class="mt-3 text-sm text-ink-soft">
+    Estimativa: modelos × preço de utilidade + serviço acima da franquia × preço de serviço, com o preço vigente em cada mês. "Sem tabela": mês antes da primeira vigência. <a href="/admin/sistema/precos-meta" class="font-semibold text-brand">Ver os Preços da Meta</a>
+  </p>
   <div class="mt-5 flex flex-col gap-4">
     {
       clinics.map((clinic) => (
@@ -72,7 +98,7 @@ function rowsOf(id: string): string[][] {
           <h2 id={`uso-${clinic.id}`} class={SECTION_TITLE}>
             {clinic.name}
           </h2>
-          <DataTable label={`Uso da ${clinic.name}`} headers={["Mês", "Atendimentos", "Templates", "Bot e conversa", "Limites do bot"]} rows={rowsOf(clinic.id)} total />
+          <DataTable label={`Uso da ${clinic.name}`} headers={["Mês", "Atendimentos", "Modelos (cobrados)", "Assistente e avisos", "Pelo app (grátis)", "Estimativa da Meta", "Limites do bot"]} rows={rowsOf(clinic.id)} total />
         </section>
       ))
     }

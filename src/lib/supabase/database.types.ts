@@ -1025,6 +1025,20 @@ isOneToOne: false
       referencedColumns: ["clinic_id","user_id"]
     }
                   ]
+                },"meta_price_versions": {
+                  Row: {
+                    "authentication_brl": number,"created_at": string,"created_by": string | null,"free_service_per_month": number,"id": string,"service_brl": number,"source": string,"usd_brl": number,"utility_brl": number,"valid_from": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "authentication_brl": number,"created_at"?: string,"created_by"?: string | null,"free_service_per_month": number,"id"?: string,"service_brl": number,"source": string,"usd_brl": number,"utility_brl": number,"valid_from": string
+                  }
+                  Update: {
+                    "authentication_brl"?: number,"created_at"?: string,"created_by"?: string | null,"free_service_per_month"?: number,"id"?: string,"service_brl"?: number,"source"?: string,"usd_brl"?: number,"utility_brl"?: number,"valid_from"?: string
+                  }
+                  Relationships: [
+                    
+                  ]
                 },"nfse_deliveries": {
                   Row: {
                     "automatic": boolean,"channel": string,"clinic_id": string,"created_at": string,"destination": string,"error": string | null,"id": string,"invoice_id": string,"sent_by": string | null,"status": string,"target": string,"whatsapp_message_id": string | null
@@ -1967,6 +1981,11 @@ isOneToOne: false
                            },
 "mark_whatsapp_synced":
 { Args: { "p_clinic_id": string,"p_kind": string }; Returns: undefined
+                           },
+"meta_message_counts":
+{ Args: { "p_clinic_id"?: string,"p_from": string }; Returns: {
+              "app_replies": number,"clinic_id": string,"month": string,"service": number,"templates": number
+            }[]
                            },
 "metrics_activity":
 { Args: { "p_agenda_ids": (string)[],"p_clinic_id": string,"p_end": string,"p_location_ids"?: (string)[],"p_service_ids"?: (string)[],"p_start": string }; Returns: {

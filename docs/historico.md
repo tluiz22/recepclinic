@@ -984,3 +984,21 @@ ficava fora) e 131026 (número cadastrado errado, confirmação de 05/nov). Deci
 [`falhas-de-envio.md`](falhas-de-envio.md): conferência do número (A2), aviso de entrega na Agenda (C), "Corrigir
 número" no Início, reenvio do bot (30 s e 2 min), detalhes e "Descartar" na aba Envios. Migração
 `20261213120000_falhas_de_envio_descartadas`. Roteiro: `staging.md`, parte W.
+
+## CU2: preços da Meta e uso por categoria (05/nov/2026)
+
+Primeiro passo da implementação da Central de Atendimento (ordem da seção 12 do
+`planejamento-central-atendimento.md`). Branch `central-cu2`, criada da `main`.
+
+- **Tela (cliente, 05/nov): P1**, página própria Sistema › Preços da Meta (canvas, linha "CU2"), com o vigente em
+  destaque, "Nova vigência" (com confirmação), vigências futuras com Apagar e o Histórico. P2 (cartão no topo do
+  Uso) recusada.
+- **Migração `20261214120000_precos_da_meta.sql`:** tabela `meta_price_versions` (vigência no dia 1º, do mês atual em
+  diante; sem UPDATE; apaga só a futura; leitura de todos os logins, escrita só do Suporte) com a vigência de
+  01/out/2026 (R$ 0,0350; 1.000 grátis; câmbio R$ 5,15; preço em reais reconferido em 05/nov, fonte de terceiro, a
+  tabela oficial da Meta não foi aberta); função `meta_message_counts` (por clínica e mês no fuso da clínica:
+  modelos, serviço e pelo app; sem falhas e puladas; credencial de quem chama).
+- **Uso:** texto corrigido (a cobrança desde 01/out), colunas Modelos (cobrados), Assistente e avisos, Pelo app
+  (grátis) e Estimativa da Meta. Antes, as respostas pelo app (eco) entravam em "Bot e conversa".
+- **Testes:** `src/lib/data/metaPricing.test.ts` e `tests/db/precos-da-meta.test.ts`; `meta_price_versions` nas exceções
+  da varredura de isolamento (tabela da plataforma).

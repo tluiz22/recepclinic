@@ -3,6 +3,7 @@
 > **Retomar daqui (05/nov/2026).** Só plano, nada implementado. Decididas: seção 11 (1 a 12 e R1 a R3), seção 14 e as
 > telas T1 a T11 (seção 15; canvas https://claude.ai/artifact/SiRBQtc2kSnQoMrgGnRn4y). **Próximo (cliente, 05/nov):**
 > implementar a partir do **CU2** (ordem na seção 12; CU1 resolvido pela T11), em branch curta criada da `main`.
+> **CU2 feito na branch `central-cu2` (05/nov)**; próximo: staging do CU2, depois o CU3.
 
 Pedido do cliente (05/nov/2026): secretárias, profissionais e outros usuários autorizados veem e respondem as
 conversas do WhatsApp **dentro do RecepClinic**, com o mesmo histórico do bot, sem abrir o app do WhatsApp.
@@ -632,7 +633,7 @@ Ordem única (revisão de 05/nov; inclui as etapas CU da seção 14 e o cadastro
 |---|---|---|
 | CN0 | Decisões da seção 11; termo/contrato; conferências da Meta | — (feito) |
 | CU1 | Valores padrão da calculadora por estimativa (sem medição, seção 14) | — |
-| CU2 | Tabela de preços da Meta com vigência e câmbio em Sistema; contagem por categoria; texto da tela Uso | Sim |
+| CU2 | Tabela de preços da Meta com vigência e câmbio em Sistema (tela P1, página própria Sistema › Preços da Meta, cliente, 05/nov); contagem por categoria; texto da tela Uso. **Feito na branch `central-cu2` (05/nov)**, migração `20261214120000` | Sim |
 | CU3 | Aba da calculadora em Sistema › Vendas (atual, com a Central, total, os dois cenários de IA) | — |
 | CN1 | Colunas novas (4.1, 4.3: `author`, `sent_by`, `handoff_id`, `wa_timestamp`, `sort_at`, `source`, `edited_at`/`revoked_at`, `client_key`, `media_id`, responsável), `whatsapp_media`, `conversation_reads`, `kind` na `handoff_events`, bucket, item da matriz, ligar/desligar pelo Administrador com registro, funções de leitura com registro e regra do Profissional, carga do `author` e do `sort_at` | Sim (aditiva) |
 | CU4 | Configurações › WhatsApp: medição do mês (todas as clínicas) e ativação/desativação da Central com o custo da Meta | — |
