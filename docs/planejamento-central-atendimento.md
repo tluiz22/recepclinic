@@ -3,9 +3,9 @@
 > **Retomar daqui (05/nov/2026).** Só plano, nada implementado. Decididas: seção 11 (1 a 12), seção 14 (custo da
 > Meta, ativação pelo Administrador, medição, calculadora com IA) e os alertas da 5.1 (v4 do cadastro vai junto com a
 > Central; rotina de acompanhamento da Meta é pós-implantação). **Revisão do plano inteiro (05/nov):** texto alinhado às
-> decisões e lacunas técnicas incluídas (seção 12 com a ordem única). **Próximo:** perguntas da revisão (R1 e R2 respondidas;
-> falta conversas do histórico importado), depois desenhar as telas
-> (Conversas, menu, Configurações › WhatsApp, calculadora em Sistema › Vendas) com opções no canvas.
+> decisões e lacunas técnicas incluídas (seção 12 com a ordem única); perguntas R1 a R3 respondidas (seção 11).
+> **Próximo:** desenhar as telas (Conversas, menu, Configurações › WhatsApp, calculadora em Sistema › Vendas) com
+> opções no canvas.
 
 Pedido do cliente (05/nov/2026): secretárias, profissionais e outros usuários autorizados veem e respondem as
 conversas do WhatsApp **dentro do RecepClinic**, com o mesmo histórico do bot, sem abrir o app do WhatsApp.
@@ -318,8 +318,9 @@ Central de Atendimento" com tipo e hora. Carga do `author` pelo `message_type`/`
 `chunk_order` e `progress`); uma rotina processa depois, em lotes: grava cada mensagem com `source = 'history'`,
 `wa_timestamp` original e o mesmo `wa_message_id` (o índice único evita duplicar com o eco ao vivo); mídias como
 `media_placeholder` (baixa só as que a Meta ainda entrega, dos últimos 14 dias). Telefone sem linha em
-`conversation_state`: **[decidir]** se cria a conversa (em Finalizadas) ou só guarda o histórico. O prazo de guarda
-conta da data original.
+`conversation_state`: **só guarda** (R3, 05/nov): não cria conversa nem entra em Finalizadas; o histórico aparece
+quando o paciente escrever de novo (a conversa nasce nessa hora e já mostra o passado). Telefone que já tem
+conversa: o histórico entra nela, sem mudar a situação. O prazo de guarda conta da data original.
 
 ---
 
@@ -608,8 +609,8 @@ Limite: respostas pelo app (eco) não têm usuário.
 - **R1.** ~~Liberação em 30 min fora do horário~~ **Decidido (05/nov): só no horário da clínica, sem notificação** (decisão 5).
 - **R2.** **Decidido (05/nov): Transferir entra na Etapa 1, simples** (Administrador e Recepção passam a conversa
   para outra pessoa da equipe, inclusive Profissional; registra de quem para quem; sem motivo, que fica na Etapa 2).
-- **R3.** Histórico importado (decisão 10) de telefone que nunca falou com o bot: cria a conversa em Finalizadas ou
-  só guarda?
+- **R3.** **Decidido (05/nov): só guardar.** Histórico importado (decisão 10) de telefone sem conversa não cria
+  conversa nem entra em Finalizadas; aparece quando o paciente escrever de novo (4.7).
 
 **Técnicas, decidir na implementação:** o bot reler a pausa antes de cada envio (3.4, CN4); cópia do bucket
 `whatsapp-media` (o Storage não entra no backup do banco) e PITR (7.2), antes da produção.
