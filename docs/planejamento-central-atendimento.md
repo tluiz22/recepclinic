@@ -802,6 +802,11 @@ paciente).
   prazo, religar traz o histórico, assistente segue).
 - **T10. Calculadora: K2**: aba "Custo da Meta" em Sistema › Vendas; campos à esquerda (profissionais, dias por semana,
   atendimentos por dia) e parâmetros recolhíveis do Suporte; à direita cartões Hoje, Central e Total e barras com IA de
-  outra empresa e IA da Meta. Valores padrão: hoje suposições do desenho (a conferir antes do CU1).
+  outra empresa e IA da Meta. **Abaixo dos gráficos, aviso de estimativa** (cliente, 05/nov): "Estes valores são uma
+  estimativa, não uma medição", com as médias usadas (modelos e mensagens do assistente por atendimento, % para a
+  recepção, respostas por atendimento, preço, câmbio, 1.000 grátis), que a Central supõe tudo respondido por ela (o app
+  é grátis, o real tende a ser menor) e as premissas da comparação com IA; os números do aviso acompanham os parâmetros.
+  **Valores padrão: conferir antes do CU1** (cliente, 05/nov): tabela oficial da Meta para o Brasil e preços de IA
+  vigentes, cada valor com a fonte, para aprovação do cliente.
 
 **Desenho das telas concluído** (T1 a T10).
