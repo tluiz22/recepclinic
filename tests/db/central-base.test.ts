@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import type { DbClient } from "../../src/lib/data/clients";
-import { listConversationMessages, setCentralEnabled } from "../../src/lib/data/central";
+import { getCentralSwitch, listConversationMessages, setCentralEnabled } from "../../src/lib/data/central";
 import { addMember, adminClient, clinicServiceClient, createClinic, createUser, deleteClinics, deleteUsers, makePlatformStaff, type TestUser } from "./helpers";
 
 // CN1 — base da Central de Atendimento (cliente, 05/nov/2026): liga/desliga pelo Administrador com registro, autor e
@@ -70,10 +70,12 @@ afterAll(async () => {
 
 describe("ligar e desligar a Central", () => {
   it("só o Administrador liga; exige o item da matriz; cada troca fica registrada", async () => {
+    expect(await getCentralSwitch(asDb(admin.client), clinicId)).toEqual({ enabled: false, at: null });
     expect(await codeOf(() => setCentralEnabled(asDb(reception.client), clinicId, true))).toBe("forbidden");
     expect(await codeOf(() => setCentralEnabled(asDb(admin.client), noFeatureClinicId, true))).toBe("not_enabled");
     expect(await setCentralEnabled(asDb(admin.client), clinicId, true)).toBe(true);
     expect(await setCentralEnabled(asDb(admin.client), clinicId, true)).toBe(false);
+    expect(await getCentralSwitch(asDb(admin.client), clinicId)).toMatchObject({ enabled: true });
     const { data } = await admin.client.from("central_switches").select("enabled, actor_id").eq("clinic_id", clinicId);
     expect(data).toEqual([{ enabled: true, actor_id: admin.id }]);
     expect((await reception.client.from("central_switches").select("id").eq("clinic_id", clinicId)).data).toEqual([]);

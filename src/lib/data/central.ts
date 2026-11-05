@@ -73,3 +73,21 @@ export async function listConversationMessages(
   const last = rows[rows.length - 1];
   return { messages, next: rows.length === limit && last ? { sortAt: last.sort_at, id: last.id } : null };
 }
+
+export type CentralSwitch = { enabled: boolean; at: Date | null };
+
+/** Última troca do Administrador (sem troca = desligada). Lê só o Administrador e o Suporte. */
+export async function getCentralSwitch(db: DbClient, clinicId: string): Promise<CentralSwitch> {
+  const rows = unwrap(
+    await db
+      .from("central_switches")
+      .select("enabled, occurred_at")
+      .eq("clinic_id", clinicId)
+      .order("occurred_at", { ascending: false })
+      .order("id", { ascending: false })
+      .limit(1),
+    "Central de atendimento",
+  );
+  const last = rows[0];
+  return last ? { enabled: last.enabled, at: new Date(last.occurred_at) } : { enabled: false, at: null };
+}

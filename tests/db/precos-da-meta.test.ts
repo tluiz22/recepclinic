@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { DEFAULT_TIMEZONE, todayIn } from "../../src/lib/clinicTime";
 import type { DbClient } from "../../src/lib/data/clients";
-import { createMetaPriceVersion, deleteMetaPriceVersion, listMessageCounts, listMetaPriceVersions } from "../../src/lib/data/metaPricing";
+import { countServiceByOrigin, createMetaPriceVersion, deleteMetaPriceVersion, listMessageCounts, listMetaPriceVersions } from "../../src/lib/data/metaPricing";
 import { addMember, adminClient, createClinic, createUser, deleteClinics, deleteUsers, makePlatformStaff, type TestUser } from "./helpers";
 
 // CU2 — Preços da Meta e mensagens por categoria (cliente, 05/nov/2026): todos leem os preços; só o Suporte cadastra
@@ -103,6 +103,40 @@ describe("mensagens por categoria", () => {
     expect((await listMessageCounts(asDb(admin.client), month)).map((r) => r.clinicId)).toEqual([clinicId]);
     const all = await listMessageCounts(asDb(support.client), month);
     expect(all.find((r) => r.clinicId === otherClinicId)).toMatchObject({ templates: 0, service: 1, appReplies: 0 });
+  });
+});
+
+describe("serviço por origem (CU4)", () => {
+  it("divide o serviço do mês em assistente, avisos e Central, com as regras da contagem", async () => {
+    const splitClinicId = await createClinic("Clínica CU4");
+    try {
+      await addMember(splitClinicId, admin.id, ["admin"]);
+      // Lote com chaves diferentes: a API manda null nas que faltam, então todas levam a hora e o autor.
+      const base = { clinic_id: splitClinicId, direction: "outbound", contact_phone: "+5584999990002", template_name: null, author: null, created_at: new Date().toISOString() };
+      const { error } = await adminClient().from("whatsapp_messages").insert([
+        { ...base, message_type: "bot_reply", status: "sent" },
+        { ...base, message_type: "bot_reply", status: null },
+        { ...base, message_type: "bot_reply", status: "failed" },
+        { ...base, message_type: "waitlist_offer", status: "delivered" },
+        { ...base, message_type: "panel_reply", author: "agent_panel", status: "sent" },
+        { ...base, message_type: "panel_reply", author: "agent_panel", status: "skipped_window" },
+        { ...base, message_type: "agent_reply", status: "sent" },
+        { ...base, message_type: "appointment_reminder", template_name: "lembrete", status: "sent" },
+        // Mês passado: fora.
+        { ...base, message_type: "bot_reply", status: "sent", created_at: "2026-01-15T12:00:00Z" },
+      ]);
+      if (error) throw error;
+      const start = new Date(`${today.slice(0, 7)}-01T03:00:00Z`);
+      const split = await countServiceByOrigin(asDb(admin.client), splitClinicId, start, new Date(Date.now() + 60_000));
+      expect(split).toEqual({ assistant: 2, notices: 1, central: 1 });
+      // A soma bate com o serviço da contagem do mês.
+      const [counts] = await listMessageCounts(asDb(admin.client), `${today.slice(0, 7)}-01`, splitClinicId);
+      expect(counts.service).toBe(split.assistant + split.notices + split.central);
+      // Outra clínica não lê.
+      expect(await countServiceByOrigin(asDb(admin.client), otherClinicId, start, new Date(Date.now() + 60_000))).toEqual({ assistant: 0, notices: 0, central: 0 });
+    } finally {
+      await deleteClinics([splitClinicId]);
+    }
   });
 });
 

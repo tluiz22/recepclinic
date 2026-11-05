@@ -1,0 +1,139 @@
+---
+// Central de atendimento em Configurações › WhatsApp (CU4; telas W2, L1 e "Desligar", cliente, 05/nov/2026). Aparece
+// quando o Suporte libera o item na matriz; só o Administrador liga ou desliga. Ligar abre uma janela com o custo
+// por mensagem da Meta, o que muda e "Li e estou de acordo"; desligar, uma janela com o que acontece.
+import Badge from "./Badge.astro";
+import Panel from "./Panel.astro";
+import { PRIMARY_BUTTON, SECONDARY_BUTTON, SECTION_TITLE } from "./formStyles";
+import { formatInstant } from "../../../lib/clinicTime";
+import type { CentralSwitch } from "../../../lib/data/central";
+import type { MetaPriceVersion } from "../../../lib/data/metaPricing";
+
+interface Props {
+  state: CentralSwitch;
+  price: MetaPriceVersion | null;
+  canSwitch: boolean;
+  timeZone: string;
+}
+
+const { state, price, canSwitch, timeZone } = Astro.props;
+const unitBrl = (value: number) => value.toLocaleString("pt-BR", { style: "currency", currency: "BRL", minimumFractionDigits: 4 });
+const unitUsd = (value: number) => `US$\u00a0${value.toLocaleString("pt-BR", { minimumFractionDigits: 4, maximumFractionDigits: 4 })}`;
+const priceText = price
+  ? `${unitBrl(price.serviceBrl)} (${unitUsd(price.serviceBrl / price.usdBrl)}) cada, depois das ${price.freeServicePerMonth.toLocaleString("pt-BR")} grátis do mês`
+  : "pelo preço de serviço da tabela da Meta";
+const DIALOG =
+  "m-auto w-[calc(100%-2rem)] max-w-[560px] rounded-[14px] border border-line bg-white p-0 text-ink shadow-[0_20px_50px_rgba(18,48,42,.22)] backdrop:bg-ink/40";
+const CANCEL = "h-11 rounded-lg border border-line-strong bg-white px-4 text-[15px] font-semibold text-ink hover:bg-canvas sm:h-10";
+---
+
+<Panel id="central">
+  <div class="flex flex-wrap items-center justify-between gap-3">
+    <h2 class={SECTION_TITLE}>Central de atendimento</h2>
+    <Badge variant={state.enabled ? "success" : "neutral"}>{state.enabled ? "Ligada" : "Desligada"}</Badge>
+  </div>
+  <p class="mt-2 text-[15px] text-ink-mid">
+    A equipe vê e responde as conversas do WhatsApp dentro do RecepClinic, na tela Conversas, com o histórico do assistente.
+  </p>
+  <p class="mt-2 text-[15px] text-ink-mid">
+    Cada resposta enviada pela Central é cobrada pela Meta, como as do assistente. Você pode acompanhar a evolução dos custos acima, em "Custo da Meta".
+    Respostas pelo app do WhatsApp continuam sem custo.
+  </p>
+  {state.at && <p class="mt-2 text-sm text-ink-soft">{state.enabled ? "Ligada" : "Desligada"} em {formatInstant(state.at, timeZone, "dd/MM/yyyy 'às' HH:mm")}.</p>}
+  {
+    canSwitch ? (
+      <div class="mt-3">
+        {state.enabled ? (
+          <button type="button" class={`${SECONDARY_BUTTON} text-danger`} data-central-open="central_off_dialog">
+            Desligar a Central
+          </button>
+        ) : (
+          <button type="button" class={PRIMARY_BUTTON} data-central-open="central_on_dialog">
+            Ligar a Central
+          </button>
+        )}
+      </div>
+    ) : (
+      <p class="mt-3 text-sm text-ink-soft">Só o Administrador da clínica liga ou desliga a Central.</p>
+    )
+  }
+</Panel>
+
+{
+  canSwitch && !state.enabled && (
+    <dialog id="central_on_dialog" aria-labelledby="central_on_title" class={DIALOG}>
+      <form method="POST" action="/api/admin/configuracoes/central" class="flex flex-col gap-3.5 p-[22px]">
+        <input type="hidden" name="acao" value="ligar" />
+        <h2 id="central_on_title" class="font-display text-[22px] leading-tight font-bold text-ink">Ligar a Central de atendimento</h2>
+        <div class="flex flex-col gap-1 rounded-[10px] border border-pend-200 bg-pend-50 px-3.5 py-3">
+          <span class="text-sm font-bold text-pend-800">Custo da Meta</span>
+          <span class="text-[15px] text-ink">
+            Cada resposta pela Central é uma mensagem cobrada pela Meta, na conta da clínica: {priceText}. Você pode acompanhar a evolução dos custos em
+            Configurações › WhatsApp.
+          </span>
+          <span class="text-[13px] text-ink-soft">Responder pelo app do WhatsApp continua sem custo.</span>
+        </div>
+        <h3 class="font-display text-base font-bold text-ink">O que muda</h3>
+        <ul class="flex list-disc flex-col gap-1.5 pl-5 text-[15px] leading-snug text-ink-mid">
+          <li>O sistema passa a guardar o texto, fotos e documentos das conversas: texto por 5 anos, arquivos por 12 meses.</li>
+          <li>Administrador e Recepção veem todas as conversas; o Profissional, só as transferidas a ele. Cada leitura fica registrada.</li>
+          <li>Pode desligar quando quiser; o que já foi guardado fica pelo prazo, sem aparecer.</li>
+        </ul>
+        <label class="flex min-h-11 cursor-pointer items-start gap-2.5 text-[15px] text-ink">
+          <input type="checkbox" name="aceite" value="1" required class="mt-0.5 h-5 w-5 flex-none accent-brand" data-central-accept />
+          Li e estou de acordo com o custo e a guarda das conversas.
+        </label>
+        <div class="mt-1 flex flex-wrap justify-end gap-2">
+          <button type="button" class={CANCEL} data-central-close>Cancelar</button>
+          <button type="submit" class="h-11 rounded-lg bg-brand px-4 text-[15px] font-semibold text-white hover:bg-brand-strong disabled:cursor-not-allowed disabled:opacity-50 sm:h-10" data-central-submit>
+            Ligar a Central
+          </button>
+        </div>
+      </form>
+    </dialog>
+  )
+}
+
+{
+  canSwitch && state.enabled && (
+    <dialog id="central_off_dialog" aria-labelledby="central_off_title" class={DIALOG}>
+      <form method="POST" action="/api/admin/configuracoes/central" class="flex flex-col gap-3.5 p-[22px]">
+        <input type="hidden" name="acao" value="desligar" />
+        <h2 id="central_off_title" class="font-display text-[22px] leading-tight font-bold text-ink">Desligar a Central de atendimento?</h2>
+        <ul class="flex list-disc flex-col gap-1.5 pl-5 text-[15px] leading-snug text-ink-mid">
+          <li>A tela Conversas sai do menu e as mensagens novas deixam de ser guardadas.</li>
+          <li>O que já foi guardado fica pelo prazo (texto 5 anos, arquivos 12 meses), sem aparecer.</li>
+          <li>Religando, o histórico volta; o período desligado fica sem texto.</li>
+          <li>O assistente continua funcionando normalmente.</li>
+        </ul>
+        <div class="mt-1 flex flex-wrap justify-end gap-2">
+          <button type="button" class={CANCEL} data-central-close>Cancelar</button>
+          <button type="submit" class="h-11 rounded-lg bg-danger-solid px-4 text-[15px] font-semibold text-white hover:bg-danger-solid-strong sm:h-10">
+            Desligar
+          </button>
+        </div>
+      </form>
+    </dialog>
+  )
+}
+
+<script>
+  document.querySelectorAll<HTMLButtonElement>("[data-central-open]").forEach((button) => {
+    const dialog = document.getElementById(button.dataset.centralOpen ?? "") as HTMLDialogElement | null;
+    if (!dialog) return;
+    const accept = dialog.querySelector<HTMLInputElement>("[data-central-accept]");
+    const submit = dialog.querySelector<HTMLButtonElement>("[data-central-submit]");
+    accept?.addEventListener("change", () => {
+      if (submit) submit.disabled = !accept.checked;
+    });
+    button.addEventListener("click", () => {
+      if (accept) accept.checked = false;
+      if (submit && accept) submit.disabled = true;
+      dialog.showModal();
+    });
+    dialog.querySelector("[data-central-close]")?.addEventListener("click", () => dialog.close());
+    dialog.addEventListener("click", (event) => {
+      if (event.target === dialog) dialog.close();
+    });
+  });
+</script>

@@ -1,5 +1,5 @@
 import type { DbClient } from "./clients";
-import { DataError, unwrap, unwrapOne, Validation, cleanText } from "./errors";
+import { DataError, fromDbError, unwrap, unwrapOne, Validation, cleanText } from "./errors";
 import { isCalendarDate } from "../clinicTime";
 
 // Preços da Meta e contagem das mensagens por categoria (CU2; plano da Central, seção 14; tela P1, cliente,
@@ -164,4 +164,32 @@ export async function listMessageCounts(db: DbClient, fromMonth: string, clinicI
     service: row.service,
     appReplies: row.app_replies,
   }));
+}
+
+/** Mensagens de serviço do mês por origem (CU4, tela W2 "Ver detalhes"): as mesmas regras da `meta_message_counts`. */
+export type ServiceSplit = { assistant: number; notices: number; central: number };
+
+const SERVICE_AUTHORS = { assistant: "bot", notices: "system", central: "agent_panel" } as const;
+
+/** Divide as mensagens de serviço de `[start, end)` entre assistente, avisos de texto e Central. */
+export async function countServiceByOrigin(db: DbClient, clinicId: string, start: Date, end: Date): Promise<ServiceSplit> {
+  const entries = await Promise.all(
+    (Object.entries(SERVICE_AUTHORS) as [keyof ServiceSplit, string][]).map(async ([key, author]) => {
+      const { count, error } = await db
+        .from("whatsapp_messages")
+        .select("id", { count: "exact", head: true })
+        .eq("clinic_id", clinicId)
+        .eq("direction", "outbound")
+        .eq("author", author)
+        .is("template_name", null)
+        .not("message_type", "in", "(agent_reply,app_auto_reply)")
+        // Saiu: nem falha, nem pulada (status vazio conta, como no banco).
+        .or("status.is.null,and(status.neq.failed,status.not.like.skipped*)")
+        .gte("created_at", start.toISOString())
+        .lt("created_at", end.toISOString());
+      if (error) throw fromDbError(error, "Mensagens por origem");
+      return [key, count ?? 0] as const;
+    }),
+  );
+  return Object.fromEntries(entries) as ServiceSplit;
 }

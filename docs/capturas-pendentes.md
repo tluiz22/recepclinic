@@ -9,4 +9,4 @@ a captura e o motivo, avisar o cliente no fim da etapa e esperar a autorização
 
 ## Pendentes
 
-(nenhuma)
+- `config-whatsapp` — cartões "Custo da Meta" e "Central de atendimento" (CU4, branch `central-atendimento`; recapturar com a Central pronta) (05/11/2026)

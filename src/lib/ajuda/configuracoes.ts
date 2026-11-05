@@ -154,6 +154,8 @@ export const configuracoes = {
         "Conectar o número é o que permite ao bot receber e responder as mensagens.",
         "Os avisos que a clínica manda primeiro usam modelos aprovados pela Meta; sem aprovação, não saem.",
         "A situação da conexão e dos modelos aparece aqui; o cadastro técnico e os modelos são do Suporte.",
+        "\"Custo da Meta\" estima o que a Meta cobra no mês (modelos e mensagens do assistente acima das 1.000 grátis); a fatura oficial fica no Gerenciador do WhatsApp.",
+        "Com a Central de atendimento liberada pelo Suporte, o Administrador liga e desliga aqui, depois de ver o custo.",
       ],
       depende: [{ texto: "Clínica: o nome e os dados que vão nas mensagens.", href: "/admin/configuracoes" }],
       alimenta: [
