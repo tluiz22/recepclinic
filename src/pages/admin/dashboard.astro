@@ -203,6 +203,7 @@ const tagClass = "rounded-md px-2 py-0.5 text-[12.5px] font-bold whitespace-nowr
 // "Precisa de você": some a linha de quem não tem pendência; vazio mostra um texto de tudo em dia.
 // O menu usa este número (mesma conta de getMeuDiaCount) sem ler de novo.
 Astro.locals.meuDiaCount = awaiting.length + inProgress.length + counts.pendingAttendance + (toReview?.length ?? 0) + toFix.length;
+Astro.locals.meuDiaConversations = awaiting.length + inProgress.length;
 const hasPending = awaiting.length > 0 || inProgress.length > 0 || counts.pendingAttendance > 0 || (toReview?.length ?? 0) > 0 || toFix.length > 0;
 const RESENDABLE = new Set(["appointment_confirmation", "appointment_reschedule"]);
 const sectionTitle = "font-display text-[17px] leading-tight font-bold text-ink sm:text-lg";

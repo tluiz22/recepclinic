@@ -1,0 +1,361 @@
+---
+// Conversas (Central de Atendimento, CN3a; plano em docs/planejamento-central-atendimento.md, decisões 3, 4, 6 e 12,
+// telas T1, T6 e T7, cliente, 05/nov/2026): a equipe vê as conversas do WhatsApp dentro do RecepClinic, com o
+// histórico do assistente. Lista única com Abertas (com a clínica) e Finalizadas (com o bot), busca e "Mostrar"; ao
+// lado, a conversa (só leitura nesta etapa: responder, assumir e transferir chegam no CN4; o painel do paciente, no
+// CN3b). No celular, a lista e a conversa em telas separadas, com "Voltar". Administrador, Recepção e Suporte veem
+// todas; o Profissional, só as que estão com ele. Notificações num botão no topo (N1).
+import AdminLayout from "../../layouts/AdminLayout.astro";
+import ConfirmDeleteDialog from "../../components/admin/ConfirmDeleteDialog.astro";
+import FinishForm from "../../components/admin/FinishAttendanceForm.astro";
+import FlashMessage from "../../components/admin/FlashMessage.astro";
+import Icon from "../../components/admin/Icon.astro";
+import NotificationsCard from "../../components/admin/NotificationsCard.astro";
+import { CONTROL } from "../../components/admin/ui/styles";
+import { bubbleOf, deliveryLabel } from "../../lib/centralBubbles";
+import { formatInstant, localDateOf } from "../../lib/clinicTime";
+import { createUserClient } from "../../lib/data/clients";
+import {
+  filterConversations,
+  isCentralActive,
+  listConversationMessages,
+  listConversations,
+  ownerLabel,
+  type CentralMessage,
+  type ConversationFilter,
+  type ConversationSummary,
+  type MessageCursor,
+} from "../../lib/data/central";
+import { loadActorLabels } from "../../lib/data/agenda/trail";
+import { DataError } from "../../lib/data/errors";
+import { handoffReasonLabel } from "../../lib/data/whatsapp/attention";
+import { listMyDevices } from "../../lib/data/whatsapp/attentionPush";
+import { platformEnv } from "../../lib/env";
+import { formatPhoneBR } from "../../lib/phone";
+
+const clinic = Astro.locals.clinic!;
+const db = createUserClient(Astro.request, Astro.cookies);
+const allowed = clinic.isPlatformStaff || clinic.roles.some((role) => role === "admin" || role === "reception" || role === "professional");
+if (!allowed || !clinic.features.includes("central_attendance") || !(await isCentralActive(db, clinic.clinicId))) {
+  return Astro.redirect("/admin/dashboard?aviso=acesso_negado");
+}
+
+const params = Astro.url.searchParams;
+const FILTERS: Record<ConversationFilter, string> = {
+  todas: "Todas",
+  "nao-atribuidas": "Não atribuídas",
+  minhas: "Minhas",
+  "aguardando-paciente": "Aguardando paciente",
+};
+const search = (params.get("busca") ?? "").trim().slice(0, 80);
+const filter: ConversationFilter = (params.get("mostrar") as ConversationFilter) in FILTERS ? (params.get("mostrar") as ConversationFilter) : "todas";
+const selectedPhone = /^\+\d{10,15}$/.test(params.get("conversa") ?? "") ? params.get("conversa")! : null;
+const cursorParam = params.get("antes");
+const cursor: MessageCursor | null = (() => {
+  const [sortAt, id] = (cursorParam ?? "").split("_");
+  return sortAt && id && !Number.isNaN(Date.parse(sortAt)) && /^[0-9a-f-]{36}$/.test(id) ? { sortAt, id } : null;
+})();
+
+const [openItems, devices] = await Promise.all([
+  listConversations(db, clinic.clinicId, { search }),
+  listMyDevices(db, clinic.clinicId, clinic.userId),
+]);
+// Aba: a pedida; vindo de uma notificação ou de um link, a da conversa escolhida.
+let finished = params.get("aba") === "finalizadas";
+let finishedItems: ConversationSummary[] = finished ? await listConversations(db, clinic.clinicId, { finished: true, search }) : [];
+if (selectedPhone && !finished && !openItems.some((item) => item.phone === selectedPhone)) {
+  finishedItems = await listConversations(db, clinic.clinicId, { finished: true });
+  if (finishedItems.some((item) => item.phone === selectedPhone)) finished = true;
+}
+const shown = finished ? finishedItems : filterConversations(openItems, filter, clinic.userId);
+const selected = selectedPhone ? ([...openItems, ...finishedItems].find((item) => item.phone === selectedPhone) ?? null) : null;
+
+// A conversa: 50 mensagens (as mais novas, ou as anteriores ao cursor), em ordem de hora.
+let thread: { messages: CentralMessage[]; next: MessageCursor | null } | null = null;
+let threadError: string | null = null;
+if (selected) {
+  try {
+    thread = await listConversationMessages(db, clinic.clinicId, selected.phone, cursor ? { before: cursor } : {});
+  } catch (error) {
+    if (!(error instanceof DataError)) throw error;
+    threadError = error.code === "forbidden" ? "Esta conversa não está com você." : "Não foi possível abrir a conversa. Tente de novo.";
+  }
+} else if (selectedPhone) {
+  threadError = "Esta conversa não está na sua lista.";
+}
+const chronological = thread ? [...thread.messages].reverse() : [];
+const names = new Map(
+  [...(await loadActorLabels(db, clinic.clinicId, chronological.map((m) => m.sentBy))).entries()].map(([id, label]) => [id, label.name.split(/\s+/)[0]]),
+);
+
+// Links: a tela guarda a aba, o "Mostrar" e a busca.
+const hrefWith = (change: Record<string, string | null>) => {
+  const next = new URLSearchParams();
+  const base: Record<string, string | null> = { aba: finished ? "finalizadas" : null, mostrar: filter === "todas" ? null : filter, busca: search || null, conversa: null, antes: null, ...change };
+  for (const [key, value] of Object.entries(base)) if (value) next.set(key, value);
+  const query = next.toString();
+  return `/admin/conversas${query ? `?${query}` : ""}`;
+};
+const conversationHref = (phone: string) => hrefWith({ conversa: phone });
+const backHref = hrefWith({});
+
+const now = new Date();
+const today = localDateOf(now, clinic.timezone);
+const yesterday = localDateOf(new Date(now.getTime() - 24 * 60 * 60_000), clinic.timezone);
+const ago = (instant: Date | null) => {
+  if (!instant) return "";
+  const minutes = Math.max(0, Math.floor((now.getTime() - instant.getTime()) / 60_000));
+  if (minutes < 1) return "agora";
+  if (minutes < 60) return `há ${minutes} min`;
+  if (minutes < 24 * 60) return `há ${Math.floor(minutes / 60)} h`;
+  return formatInstant(instant, clinic.timezone, localDateOf(instant, clinic.timezone).slice(0, 4) === today.slice(0, 4) ? "dd/MM" : "dd/MM/yy");
+};
+const dayLabel = (instant: Date) => {
+  const day = localDateOf(instant, clinic.timezone);
+  if (day === today) return "Hoje";
+  if (day === yesterday) return "Ontem";
+  return formatInstant(instant, clinic.timezone, "EEE, dd/MM/yyyy");
+};
+const displayName = (item: ConversationSummary) => item.name ?? formatPhoneBR(item.phone);
+const previewOf = (item: ConversationSummary) => {
+  const prefix = item.lastMessageAuthor === "agent_panel" ? "Equipe: " : item.lastMessageAuthor === "agent_app" ? "Pelo app: " : item.lastMessageAuthor === "bot" ? "Assistente: " : "";
+  return item.preview ? `${prefix}${item.preview}` : item.lastMessageAt ? "Mensagem sem texto" : "Sem mensagens";
+};
+const STATUS = {
+  waiting_clinic: { label: "Aguardando a clínica", tone: "bg-pend-100 text-pend-800" },
+  in_progress: { label: "Em atendimento", tone: "bg-brand-soft text-brand-ink" },
+} as const;
+const statusOf = (item: ConversationSummary) => (item.status ? STATUS[item.status] : null);
+const waitingFor = (item: ConversationSummary) => (item.status === "waiting_clinic" && item.statusAt ? `aguarda ${ago(item.statusAt)}` : null);
+
+const BUBBLE_TONE = {
+  patient: "self-start rounded-[12px_12px_12px_4px] border border-line bg-white",
+  bot: "self-end rounded-[12px_12px_4px_12px] bg-canvas-deep",
+  system: "self-end rounded-[12px_12px_4px_12px] border border-pend-200 bg-pend-50",
+  app: "self-end rounded-[12px_12px_4px_12px] border border-dashed border-line-strong bg-white",
+  panel: "self-end rounded-[12px_12px_4px_12px] bg-brand-soft",
+} as const;
+const tabClass = (active: boolean) =>
+  `flex min-h-12 flex-1 items-center justify-center border-b-[3px] text-[15px] no-underline ${active ? "border-brand font-semibold text-brand-ink" : "border-transparent text-ink-soft hover:text-ink"}`;
+---
+
+<AdminLayout title="Conversas" autoRefresh>
+  <div class:list={["flex flex-wrap items-center justify-between gap-3", selected && "max-lg:hidden"]}>
+    <h1 class="font-display text-[28px] leading-[1.1] font-bold text-ink sm:text-[30px]">Conversas</h1>
+    <button
+      type="button"
+      class="inline-flex min-h-11 items-center gap-2 rounded-lg border border-line-strong bg-white px-3 text-[15px] font-semibold text-ink hover:bg-canvas sm:min-h-10"
+      data-notifications-open
+    >
+      <Icon name="bell" class="h-5 w-5" /> Notificações
+    </button>
+  </div>
+  <FlashMessage />
+
+  <div class="mt-4 grid gap-4 lg:h-[calc(100dvh-10rem)] lg:min-h-[560px] lg:grid-cols-[320px_minmax(0,1fr)]">
+    <!-- Lista -->
+    <section aria-label="Lista de conversas" class:list={["flex min-h-0 flex-col overflow-hidden rounded-xl border border-line bg-white", selected && "max-lg:hidden"]}>
+      <nav class="flex border-b border-line" aria-label="Abertas ou finalizadas">
+        <a href={hrefWith({ aba: null })} class={tabClass(!finished)} aria-current={!finished ? "page" : undefined}>Abertas ({openItems.length})</a>
+        <a href={hrefWith({ aba: "finalizadas", mostrar: null })} class={tabClass(finished)} aria-current={finished ? "page" : undefined}>Finalizadas</a>
+      </nav>
+      <form method="get" action="/admin/conversas" class="flex flex-wrap items-end gap-2 border-b border-line p-3" data-conversations-filter>
+        {finished && <input type="hidden" name="aba" value="finalizadas" />}
+        <div class="flex min-w-0 flex-[3_1_160px] flex-col gap-1">
+          <label for="conversas_busca" class="text-[13px] font-semibold text-ink-mid">Buscar</label>
+          <input id="conversas_busca" name="busca" type="search" value={search} placeholder="Nome ou telefone" class={`${CONTROL} w-full`} />
+        </div>
+        {
+          !finished && (
+            <div class="flex min-w-0 flex-[2_1_120px] flex-col gap-1">
+              <label for="conversas_mostrar" class="text-[13px] font-semibold text-ink-mid">Mostrar</label>
+              <select id="conversas_mostrar" name="mostrar" class={`${CONTROL} w-full`} data-submit-on-change>
+                {Object.entries(FILTERS).map(([value, label]) => (
+                  <option value={value} selected={value === filter}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )
+        }
+        <button type="submit" class="sr-only focus:not-sr-only">Buscar</button>
+      </form>
+      <ul class="min-h-0 flex-1 overflow-y-auto">
+        {
+          shown.length === 0 && (
+            <li class="px-4 py-6 text-[15px] text-ink-soft">
+              {search
+                ? "Nenhuma conversa com esse nome ou telefone."
+                : finished
+                  ? "Nenhuma conversa finalizada ainda."
+                  : filter === "todas"
+                    ? "Nenhuma conversa aberta. Quando o paciente pedir para falar com a clínica, a conversa aparece aqui."
+                    : "Nenhuma conversa neste filtro."}
+            </li>
+          )
+        }
+        {
+          shown.map((item) => {
+            const status = statusOf(item);
+            const active = item.phone === selected?.phone;
+            return (
+              <li>
+                <a
+                  href={conversationHref(item.phone)}
+                  aria-current={active ? "true" : undefined}
+                  class:list={[
+                    "flex flex-col gap-1 border-b border-canvas-deep px-3.5 py-3 text-ink no-underline hover:bg-canvas",
+                    active && "bg-brand-soft hover:bg-brand-soft",
+                  ]}
+                >
+                  <span class="flex items-baseline justify-between gap-2">
+                    <strong class="min-w-0 truncate text-[15px]">{displayName(item)}</strong>
+                    <span class="flex-none text-xs text-ink-soft">{ago(item.lastMessageAt)}</span>
+                  </span>
+                  <span class="truncate text-sm text-ink-mid">{previewOf(item)}</span>
+                  <span class="flex flex-wrap items-center gap-2 text-xs">
+                    {status && <span class={`rounded-full px-2 py-0.5 font-semibold ${status.tone}`}>{status.label}</span>}
+                    <span class="text-ink-soft">{ownerLabel(item, clinic.userId)}</span>
+                    {item.unread > 0 && (
+                      <span class="ml-auto inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-brand px-1.5 font-bold text-white" aria-label={`${item.unread} não lidas`}>
+                        {item.unread}
+                      </span>
+                    )}
+                  </span>
+                </a>
+              </li>
+            );
+          })
+        }
+      </ul>
+    </section>
+
+    <!-- Conversa -->
+    <section aria-label="Conversa" class:list={["flex min-h-0 flex-col overflow-hidden rounded-xl border border-line bg-white", !selected && !threadError && "max-lg:hidden"]}>
+      {
+        !selected ? (
+          <div class="flex flex-1 flex-col items-center justify-center gap-2 p-8 text-center">
+            <Icon name="chat-bubble" class="h-8 w-8 text-ink-soft" />
+            <p class="text-[15px] text-ink-soft">{threadError ?? "Escolha uma conversa na lista."}</p>
+            {threadError && (
+              <a href={backHref} class="text-[15px] font-semibold text-brand-ink">
+                Voltar para a lista
+              </a>
+            )}
+          </div>
+        ) : (
+          <>
+            <header class="flex flex-wrap items-center justify-between gap-3 border-b border-line px-3 py-2.5 sm:px-4">
+              <div class="flex min-w-0 items-center gap-1.5">
+                <a href={backHref} aria-label="Voltar para a lista" class="inline-flex h-11 w-11 flex-none items-center justify-center rounded-lg text-ink hover:bg-canvas lg:hidden">
+                  <Icon name="chevron-left" class="h-6 w-6" />
+                </a>
+                <div class="flex min-w-0 flex-col gap-1">
+                  <span class="flex flex-wrap items-baseline gap-x-2.5">
+                    <strong class="truncate text-[17px] text-ink">{displayName(selected)}</strong>
+                    {selected.name && <span class="text-sm text-ink-soft tabular-nums">{formatPhoneBR(selected.phone)}</span>}
+                  </span>
+                  <span class="flex flex-wrap items-center gap-2 text-[13px]">
+                    {statusOf(selected) && <span class={`rounded-full px-2 py-0.5 font-semibold ${statusOf(selected)!.tone}`}>{statusOf(selected)!.label}</span>}
+                    <span class="text-ink-soft">
+                      {ownerLabel(selected, clinic.userId)}
+                      {waitingFor(selected) && ` · ${waitingFor(selected)}`}
+                    </span>
+                  </span>
+                </div>
+              </div>
+              {selected.open && selected.statusAt && (
+                <FinishForm item={{ phone: selected.phone, name: displayName(selected), statusAt: selected.statusAt }} primary={false} returnTo={backHref} class="max-sm:w-full" />
+              )}
+            </header>
+
+            <div class="flex min-h-0 flex-1 flex-col gap-2.5 overflow-y-auto bg-canvas px-3 py-4 sm:px-4" data-thread>
+              {thread?.next && (
+                <a href={hrefWith({ conversa: selected.phone, antes: `${thread.next.sortAt}_${thread.next.id}` })} class="self-center text-sm font-semibold text-brand-ink">
+                  Ver mensagens anteriores
+                </a>
+              )}
+              {cursor && (
+                <a href={hrefWith({ conversa: selected.phone })} class="self-center text-sm font-semibold text-brand-ink">
+                  Ir para as mais recentes
+                </a>
+              )}
+              {threadError && <p class="self-center text-[15px] text-danger">{threadError}</p>}
+              {thread && chronological.length === 0 && <p class="self-center text-[15px] text-ink-soft">Nenhuma mensagem nesta conversa.</p>}
+              {chronological.map((message, index) => {
+                const bubble = bubbleOf(message, names);
+                const day = dayLabel(message.sortAt);
+                const newDay = index === 0 || dayLabel(chronological[index - 1].sortAt) !== day;
+                const delivery = message.direction === "outbound" ? deliveryLabel(message.status) : null;
+                return (
+                  <>
+                    {newDay && <span class="self-center rounded-full bg-canvas-deep px-2.5 py-0.5 text-xs text-ink-soft">{day}</span>}
+                    <div class={`flex max-w-[85%] flex-col gap-0.5 px-3 py-2 sm:max-w-[75%] ${BUBBLE_TONE[bubble.tone]}`}>
+                      {bubble.label && <span class="text-xs font-bold text-ink-mid">{bubble.label}</span>}
+                      {bubble.text ? (
+                        <span class="text-[15px] whitespace-pre-wrap break-words text-ink">{bubble.text}</span>
+                      ) : (
+                        <span class="text-[15px] text-ink-soft italic">{bubble.placeholder}</span>
+                      )}
+                      <span class="self-end text-[11px] text-ink-soft">
+                        {formatInstant(message.sortAt, clinic.timezone, "HH:mm")}
+                        {bubble.edited && " · editada"}
+                        {delivery && ` · ${delivery}`}
+                      </span>
+                    </div>
+                  </>
+                );
+              })}
+            </div>
+
+            {selected.open && (
+              <p class="border-t border-line px-4 py-3 text-sm text-ink-soft">
+                {handoffReasonLabel(selected.reason)}
+                {selected.subject && ` · Assunto: ${selected.subject}`}
+              </p>
+            )}
+          </>
+        )
+      }
+    </section>
+  </div>
+
+  <dialog
+    id="notifications_dialog"
+    aria-label="Notificações"
+    class="m-auto w-[calc(100%-2rem)] max-w-[480px] rounded-[14px] border border-line bg-white p-0 text-ink shadow-[0_20px_50px_rgba(18,48,42,.22)] backdrop:bg-ink/40"
+  >
+    <div class="flex items-center justify-between gap-2 px-4 pt-3">
+      <strong class="font-display text-lg text-ink">Notificações</strong>
+      <button type="button" aria-label="Fechar" class="inline-flex h-11 w-11 items-center justify-center rounded-lg text-ink hover:bg-canvas" data-notifications-close>
+        <Icon name="x-mark" class="h-5 w-5" />
+      </button>
+    </div>
+    <div class="px-3 pb-3 [&>section]:mt-1 [&>section]:border-0">
+      <NotificationsCard publicKey={platformEnv().webPush?.publicKey ?? null} devices={devices} timeZone={clinic.timezone} />
+    </div>
+  </dialog>
+
+  <ConfirmDeleteDialog />
+</AdminLayout>
+
+<script>
+  // A conversa abre na mensagem mais nova (o fim da lista).
+  const thread = document.querySelector<HTMLElement>("[data-thread]");
+  // No computador a conversa rola dentro do quadro; no celular, a página inteira.
+  if (thread && !new URLSearchParams(location.search).has("antes")) {
+    thread.scrollTop = thread.scrollHeight;
+    if (window.matchMedia("(max-width: 1023px)").matches) window.scrollTo(0, document.documentElement.scrollHeight);
+  }
+  // "Mostrar" aplica na hora (sem JavaScript, o botão Buscar envia).
+  document.querySelectorAll<HTMLSelectElement>("[data-submit-on-change]").forEach((select) => {
+    select.addEventListener("change", () => select.form?.requestSubmit());
+  });
+  const dialog = document.getElementById("notifications_dialog") as HTMLDialogElement | null;
+  document.querySelector("[data-notifications-open]")?.addEventListener("click", () => dialog?.showModal());
+  dialog?.querySelector("[data-notifications-close]")?.addEventListener("click", () => dialog.close());
+  dialog?.addEventListener("click", (event) => {
+    if (event.target === dialog) dialog.close();
+  });
+</script>

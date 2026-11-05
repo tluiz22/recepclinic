@@ -7,7 +7,8 @@ import Button from "./ui/Button.astro";
 import type { AttentionItem } from "../../lib/data/whatsapp/attention";
 
 interface Props {
-  item: AttentionItem;
+  /** A conversa (da tela Atendimento, da ficha ou da Central): telefone, nome e a hora da situação mostrada. */
+  item: Pick<AttentionItem, "phone" | "name" | "statusAt">;
   /** Botão principal (Em atendimento) ou secundário (Aguardando a clínica, onde o principal é o WhatsApp). */
   primary: boolean;
   /** Nome no texto da confirmação; sem ele, o da conversa. */

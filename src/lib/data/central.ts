@@ -91,3 +91,95 @@ export async function getCentralSwitch(db: DbClient, clinicId: string): Promise<
   const last = rows[0];
   return last ? { enabled: last.enabled, at: new Date(last.occurred_at) } : { enabled: false, at: null };
 }
+
+/** A Central vale para a clínica (item liberado e ligada pelo Administrador): menu, tela Conversas e o Atendimento antigo. */
+export async function isCentralActive(db: DbClient, clinicId: string): Promise<boolean> {
+  return unwrap(await db.rpc("central_enabled", { p_clinic_id: clinicId }), "Central de atendimento") === true;
+}
+
+/** Conversas que aguardam a clínica e a pessoa vê (o número do item Conversas no menu). */
+export async function countWaitingConversations(db: DbClient, clinicId: string): Promise<number> {
+  return (unwrap(await db.rpc("central_waiting_count", { p_clinic_id: clinicId }), "Conversas") as number) ?? 0;
+}
+
+export type ConversationSummary = {
+  phone: string;
+  contactId: string | null;
+  name: string | null;
+  open: boolean;
+  /** "waiting_clinic" = Aguardando a clínica; "in_progress" = Em atendimento; null = com o bot. */
+  status: "waiting_clinic" | "in_progress" | null;
+  statusAt: Date | null;
+  startedAt: Date | null;
+  reason: string | null;
+  subject: string | null;
+  assignedTo: string | null;
+  assignedName: string | null;
+  lastMessageAt: Date | null;
+  lastMessageAuthor: MessageAuthor | null;
+  /** Prévia (até 120 caracteres); null = sem texto guardado (Central desligada, anexo ou apagada). */
+  preview: string | null;
+  lastPatientAt: Date | null;
+  unread: number;
+};
+
+/** Filtro "Mostrar" das Abertas (decisão 3). */
+export type ConversationFilter = "todas" | "nao-atribuidas" | "minhas" | "aguardando-paciente";
+
+const date = (value: string | null) => (value ? new Date(value) : null);
+
+/** Abertas (com a clínica) ou Finalizadas (com o bot), na ordem da tela; o banco aplica quem vê o quê. */
+export async function listConversations(
+  db: DbClient,
+  clinicId: string,
+  options: { finished?: boolean; search?: string | null } = {},
+): Promise<ConversationSummary[]> {
+  const rows = unwrap(
+    await db.rpc("central_conversations", {
+      p_clinic_id: clinicId,
+      p_finished: options.finished ?? false,
+      ...(options.search?.trim() ? { p_search: options.search.trim().slice(0, 80) } : {}),
+    }),
+    "Conversas",
+  );
+  return rows.map((row) => ({
+    phone: row.contact_phone,
+    contactId: row.contact_id,
+    name: row.name,
+    open: row.human_handoff,
+    status: row.human_handoff ? ((row.handoff_status as ConversationSummary["status"]) ?? "waiting_clinic") : null,
+    statusAt: date(row.handoff_status_at),
+    startedAt: date(row.handoff_started_at),
+    reason: row.handoff_reason,
+    subject: row.handoff_subject,
+    assignedTo: row.assigned_to,
+    assignedName: row.assigned_name,
+    lastMessageAt: date(row.last_message_at),
+    lastMessageAuthor: row.last_message_author as MessageAuthor | null,
+    preview: row.last_message_preview,
+    lastPatientAt: date(row.last_patient_at),
+    unread: row.unread ?? 0,
+  }));
+}
+
+/** Aplica o "Mostrar" sobre as Abertas. "Aguardando paciente" = a clínica já respondeu (Em atendimento). */
+export function filterConversations(items: ConversationSummary[], filter: ConversationFilter, userId: string): ConversationSummary[] {
+  switch (filter) {
+    case "nao-atribuidas":
+      return items.filter((item) => !item.assignedTo);
+    case "minhas":
+      return items.filter((item) => item.assignedTo === userId);
+    case "aguardando-paciente":
+      return items.filter((item) => item.status === "in_progress");
+    default:
+      return items;
+  }
+}
+
+/** Quem está com a conversa, na lista e no topo da conversa. */
+export function ownerLabel(item: Pick<ConversationSummary, "open" | "assignedTo" | "assignedName">, userId: string): string {
+  if (!item.open) return "Com o assistente";
+  if (!item.assignedTo) return "Sem responsável";
+  if (item.assignedTo === userId) return "Com você";
+  return `Com ${item.assignedName ?? "outra pessoa da equipe"}`;
+}

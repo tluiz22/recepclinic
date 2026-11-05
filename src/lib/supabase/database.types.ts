@@ -1979,6 +1979,17 @@ isOneToOne: false
               "file_name": string,"mime_type": string,"size_bytes": number,"storage_path": string
             }[]
                            },
+"central_conversations":
+{ Args: { "p_clinic_id": string,"p_finished"?: boolean,"p_limit"?: number,"p_search"?: string }; Returns: {
+              "assigned_name": string | null,"assigned_to": string | null,"contact_id": string | null,"contact_phone": string,"handoff_reason": string | null,"handoff_started_at": string | null,"handoff_status": string | null,"handoff_status_at": string | null,"handoff_subject": string | null,"human_handoff": boolean,"last_message_at": string | null,"last_message_author": string | null,"last_message_preview": string | null,"last_patient_at": string | null,"name": string | null,"unread": number
+            }[]
+                           },
+"central_enabled":
+{ Args: { "p_clinic_id": string }; Returns: boolean
+                           },
+"central_waiting_count":
+{ Args: { "p_clinic_id": string }; Returns: number
+                           },
 "change_group_session":
 { Args: { "p_agenda_id": string,"p_appointment_id": string,"p_scheduled_at": string,"p_service_id": string,"p_trail"?: Json }; Returns: undefined
                            },

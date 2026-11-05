@@ -38,5 +38,7 @@ declare namespace App {
     flash?: import("./lib/flash").Flash | null;
     /** Contador do Meu dia no menu (RX6); a tela do Meu dia o informa para o menu não ler de novo. */
     meuDiaCount?: number;
+    /** Conversas somadas no número do Meu dia (a tela Meu dia informa); com a Central ligada, o menu tira (T6). */
+    meuDiaConversations?: number;
   }
 }

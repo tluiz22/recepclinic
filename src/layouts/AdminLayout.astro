@@ -11,6 +11,7 @@ import { canAccessArea, roleLabel as describeRoles } from "../lib/clinicAccess";
 import { pageFlash } from "../lib/flash";
 import { createUserClient } from "../lib/data/clients";
 import { getMeuDiaCount } from "../lib/data/dashboard";
+import { countWaitingConversations, isCentralActive } from "../lib/data/central";
 import { logError } from "../lib/log";
 import { articleForPath } from "../lib/central";
 import { canSeeArticle } from "../lib/central/access";
@@ -61,15 +62,38 @@ const roleLabel = describeRoles(access);
 // Contador do Meu dia (RX6, decisão 5.1; cliente, 02/nov/2026): conversas aguardando atendimento humano, conversas
 // que a clínica assumiu e ainda não devolveu ao bot, consultas sem presença registrada e contatos a conferir. A tela
 // do Meu dia informa o número que já leu; nas outras, ele é lido aqui. Falha na contagem não derruba o menu.
+// Central de atendimento (CN3a; tela T6, cliente, 05/nov/2026): com ela ligada, o item Conversas logo abaixo do Meu dia,
+// com as conversas que aguardam a clínica, e o Meu dia deixa de contar conversas. Falha na leitura: menu sem o item.
+const db = clinic && !platform ? createUserClient(Astro.request, Astro.cookies) : null;
+const centralRoles = clinic && (clinic.isPlatformStaff || clinic.roles.some((role) => role === "admin" || role === "reception" || role === "professional"));
+const centralOn =
+  !!db && !!clinic && !!centralRoles && clinic.features.includes("central_attendance")
+    ? await isCentralActive(db, clinic.clinicId).catch((error) => (logError("conversas: menu", error, { clinica: clinic.clinicId }), false))
+    : false;
+const conversationsWaiting = centralOn ? await countWaitingConversations(db!, clinic!.clinicId).catch(() => 0) : 0;
 const meuDiaCount =
-  clinic && !platform
-    ? (Astro.locals.meuDiaCount ??
-      (await getMeuDiaCount(createUserClient(Astro.request, Astro.cookies), clinic.clinicId, clinic.features, (label, error) =>
-        logError(`meu dia: contador do menu (${label})`, error, { clinica: clinic.clinicId }),
-      )))
+  clinic && db
+    ? Astro.locals.meuDiaCount !== undefined
+      ? Math.max(0, Astro.locals.meuDiaCount - (centralOn ? (Astro.locals.meuDiaConversations ?? 0) : 0))
+      : await getMeuDiaCount(
+          db,
+          clinic.clinicId,
+          clinic.features,
+          (label, error) => logError(`meu dia: contador do menu (${label})`, error, { clinica: clinic.clinicId }),
+          new Date(),
+          { conversations: !centralOn },
+        )
     : 0;
 
 const [homeItem, agendaItem, reportItem, patientsItem] = primaryNavItems;
+const conversationsItem: NavItem | null = centralOn
+  ? {
+      label: "Conversas",
+      href: "/admin/conversas",
+      icon: "chat-bubble",
+      ...(conversationsWaiting > 0 ? { badge: conversationsWaiting, badgeLabel: `${conversationsWaiting} aguardando a clínica` } : {}),
+    }
+  : null;
 // Grupo "Mais" (RX-D1): o que a pessoa tem acesso, na ordem do desenho; sem acesso, o item some.
 const moreItems: NavItem[] = [
   // Módulo financeiro (F11): Administrador e Recepção, com o item liberado.
@@ -110,7 +134,7 @@ const sideGroups: NavGroup[] = (
   platform
     ? [{ items: systemNavItems }, { title: "Ajuda", items: [helpItem] }]
     : [
-        { items: [withCount(homeItem), agendaItem, reportItem, patientsItem] },
+        { items: [withCount(homeItem), ...(conversationsItem ? [conversationsItem] : []), agendaItem, reportItem, patientsItem] },
         { title: "Mais", items: [...moreItems, helpItem] },
         { title: SYSTEM_TITLE, support: true, items: systemNavItems },
       ]
@@ -118,12 +142,17 @@ const sideGroups: NavGroup[] = (
 
 // Celular e tablet (M6): a barra inferior de sempre e o "Mais" com os mesmos grupos,
 // sem os itens que já estão na barra.
-const tabBarItems = platform ? systemNavItems.slice(0, 4) : primaryNavItems.map(withCount);
+// Com a Central (M1): Conversas entra na barra no lugar do Relatório do dia, que vai para o "Mais".
+const tabBarItems = platform
+  ? systemNavItems.slice(0, 4)
+  : conversationsItem
+    ? [withCount(homeItem), conversationsItem, agendaItem, patientsItem]
+    : primaryNavItems.map(withCount);
 const moreGroups: NavGroup[] = (
   platform
     ? [{ items: systemNavItems.slice(4) }, { title: "Ajuda", items: [helpItem] }]
     : [
-        { items: [...moreItems, helpItem] },
+        { items: [...(conversationsItem ? [reportItem] : []), ...moreItems, helpItem] },
         { title: SYSTEM_TITLE, support: true, items: systemNavItems },
       ]
 ).filter((group) => group.items.length > 0);
