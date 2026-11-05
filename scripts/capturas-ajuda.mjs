@@ -43,7 +43,8 @@ export const CAPTURAS = [
   ["config-locais", "/admin/configuracoes/locais", ["Novo local"], []],
   ["config-agendas", "/admin/configuracoes/agendas", ["Nova agenda"], []],
   ["config-servicos", "/admin/configuracoes/servicos", ["Novo serviço"], []],
-  ["config-horarios", "/admin/configuracoes/horarios?agenda=67ded4dd-3f96-45c8-aac3-e4b27cd69a7e", [], ["#agenda"]],
+  // O id da agenda muda a cada seed: "?agenda=@Nome" escolhe a opção pelo nome (ver abaixo).
+  ["config-horarios", "/admin/configuracoes/horarios?agenda=@Dra. Helena Costa", [], ["#agenda"]],
   ["config-feriados", "/admin/configuracoes/feriados", ["Adicionar"], []],
   ["config-convenios", "/admin/configuracoes/convenios", ["Novo plano"], []],
   ["config-lembretes", "/admin/configuracoes/lembretes", [], []],
@@ -101,7 +102,22 @@ try {
   let done = 0;
   for (const [name, path, texts, selectors] of CAPTURAS) {
     if (wanted.length && !wanted.includes(name)) continue;
-    const response = await page.goto(BASE + path, { waitUntil: "networkidle" });
+    let url = BASE + path;
+    const byName = path.match(/\?agenda=@(.+)$/);
+    if (byName) {
+      await page.goto(BASE + path.replace(/\?.*$/, ""), { waitUntil: "networkidle" });
+      const id = await page.evaluate(
+        (label) => [...document.querySelectorAll("#agenda option")].find((o) => o.textContent.trim() === label)?.value,
+        byName[1],
+      );
+      if (!id) {
+        console.error(`✗ ${name}: agenda "${byName[1]}" não encontrada`);
+        process.exitCode = 1;
+        continue;
+      }
+      url = `${BASE}${path.replace(/\?.*$/, "")}?agenda=${id}`;
+    }
+    const response = await page.goto(url, { waitUntil: "networkidle" });
     if (!response || response.status() >= 400) {
       console.error(`✗ ${name}: ${path} respondeu ${response?.status()}`);
       process.exitCode = 1;

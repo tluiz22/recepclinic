@@ -243,15 +243,14 @@ export const configuracoesArtigos = [
       "Abra Configurações › WhatsApp e toque em Conectar WhatsApp.",
       "Na janela da Meta, entre com o seu Facebook, escolha o portfólio da clínica e o número.",
       "Se a recepção já usa o número no app WhatsApp Business, escolha conectar o app (tenha o celular à mão para o código): ela continua atendendo por ele e o bot atende pelo sistema. Ou cadastre um número novo, só para o sistema.",
-      "Quando aparecer \"Conectado\", confira a situação das mensagens automáticas e a forma de pagamento na Meta.",
+      "Quando aparecer \"Conectado\", confira a situação das mensagens automáticas e envie a mensagem de teste.",
     ],
     fields: [
       { name: "Situação", text: "Conectado, Em configuração ou Desconectado, com o número e a data." },
       { name: "Mensagens automáticas na Meta", text: "A análise da Meta leva de minutos a algumas horas e a aprovação chega sozinha. Até lá esses envios não saem. Recusada: o suporte do RecepClinic ajusta o texto e reenvia." },
-      { name: "Forma de pagamento na Meta", text: "A Meta cobra da clínica, direto, as mensagens automáticas; sem o cartão definido como padrão na conta do WhatsApp elas não saem, e o bot continua respondendo quem escreve." },
       { name: "Mensagem de teste", text: "O Administrador ou o Suporte envia um teste para um celular e vê se foi entregue; se falhar, a tela diz o motivo e o que fazer. A clínica só é ativada com um teste entregue." },
     ],
-    notes: ["Para trocar de número: desconecte e conecte de novo com o número novo.", "Se aparecer \"A conexão pela Meta ainda não está ligada no sistema\", fale com o suporte do RecepClinic."],
+    notes: ["A Meta cobra da clínica, direto, as mensagens: sem um cartão definido como padrão na conta do WhatsApp, na Meta, elas deixam de sair. O teste mostra quando é isso.", "Para trocar de número: desconecte e conecte de novo com o número novo.", "Se aparecer \"A conexão pela Meta ainda não está ligada no sistema\", fale com o suporte do RecepClinic."],
     contextual: ["/admin/configuracoes/whatsapp"],
   }),
   article({
