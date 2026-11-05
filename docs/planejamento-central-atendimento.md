@@ -346,6 +346,8 @@ evento vier sem `phone_number_id`, buscar o número pela conta (`GET /{waba_id}/
 **No painel da Meta (cliente):** criar a configuração v4 e trocar `WHATSAPP_ES_CONFIG_ID` na Vercel (staging e
 produção); conferir os 4 campos do webhook (`account_update`, `history`, `smb_app_state_sync`, `smb_message_echoes`).
 **Teste:** só com um número para conectar (o de testes do staging precisa ser desconectado e reconectado).
+**Decisão do cliente (05/nov): a migração para a v4 vai junto com a Central** (mesma publicação), não antes. Risco
+aceito: até lá, a conexão de uma clínica nova pode falhar (a Meta já serve a v3 como v4 desde 15/out).
 
 1. **Mensagens de serviço passaram a ser cobradas em 01/out/2026.** Toda mensagem fora de template dentro da janela
    (respostas do bot, listas, botões e, depois, a Central) é cobrada por mensagem; **1.000 grátis por mês por

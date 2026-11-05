@@ -16,7 +16,7 @@
 > Decisões 1 a 12 respondidas (D12 revista); CN0 feito. **Alertas para a produção (seção 5.1):** a Meta cobra as
 > mensagens de serviço desde 01/out (1.000 grátis/mês por número; sem pagamento, para de entregar) e descontinuou o
 > Embedded Signup v3 (o botão de conexão usa a v3) em 15/out. **Cliente (05/nov):** sem medição (só a clínica piloto na produção); o cliente confere a
-> forma de pagamento da piloto na Meta; corrigir o cadastro v3 → v4 já, antes da Central.
+> forma de pagamento da piloto na Meta; cadastro v3 → v4 vai junto com a Central (cliente, 05/nov).
 > Custo da Meta, ativação pelo Administrador e calculadora: seção 14 do plano (decidida).
 >
 > **FE, falhas de envio (05/nov):** conferência do número ao marcar/cadastrar, aviso de entrega na Agenda, "Corrigir
