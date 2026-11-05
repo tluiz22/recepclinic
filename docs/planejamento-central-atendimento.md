@@ -5,7 +5,7 @@
 > **Decididas:** 1 (D12 revista: texto e mídias só nas clínicas com a Central, 05/nov); 2 (sem configuração: app e
 > Central juntos, resposta pelo app marcada "pelo app", 05/nov); 3 (lista única, opção C do canvas, 05/nov); 4 (Profissional só as transferidas a ele, 05/nov); 5 (responder assume; responsável sai após 30 min com o paciente
 > esperando, 05/nov); 6 (não lidas por pessoa, 05/nov); 7 (após 24 h, só "Retomar conversa", 05/nov); 8a (texto 5 anos, mídia 12 meses, 05/nov); 8b (mídias: foto, PDF, áudio; envia foto e PDF, 05/nov); 8c (fora do limite: aviso + botão só nessa
-> mensagem, 05/nov); 9 (item da matriz, depende do bot, 05/nov).
+> mensagem, 05/nov); 9 (item da matriz, depende do bot, 05/nov); 10 (guardar o histórico do app na conexão, 05/nov); 11 (12 h mantidas, 05/nov); 12 (tela "Conversas", 05/nov). Todas as 12 decididas; pendentes no fim da seção 11.
 
 Pedido do cliente (05/nov/2026): secretárias, profissionais e outros usuários autorizados veem e respondem as
 conversas do WhatsApp **dentro do RecepClinic**, com o mesmo histórico do bot, sem abrir o app do WhatsApp.
@@ -485,9 +485,20 @@ Limite: respostas pelo app (eco) não têm usuário.
 9. **Matriz (D11) e preço:** **Decidido (05/nov): item novo "Central de atendimento", liberado pelo Suporte,
    depende do bot** (só liga com o bot; desligar o bot desliga a Central). Central sem bot: avaliar na Etapa 2.
    Ligar o item ativa a guarda do texto e das mídias (D12 revista). Preço/pacote: a decidir.
-10. **Histórico do app na conexão:** guardar o que a Meta envia nas clínicas novas.
-11. **Rotina de 12 h** com responsável: mantém?
-12. **Nome da tela** (Central de Atendimento / Conversas).
+10. **Histórico do app na conexão:** **Decidido (05/nov): guardar.** Na conexão (ou reconexão) de clínica com a
+    Central ligada, o histórico do app que a Meta envia uma única vez (`requestCoexistenceSync('history')`, hoje
+    descartado) entra no histórico da Central, com a data original e o mesmo prazo de guarda (texto 5 anos, mídia 12
+    meses, contados da data original; tipos da 8b). Clínicas já conectadas (inclusive a piloto) não recebem.
+    Período e formato do evento `history`: conferir na documentação atual da Meta.
+11. **Rotina de 12 h:** **Decidido (05/nov): mantém, igual para todas** (com ou sem responsável). "Em atendimento"
+    sem mensagem há 12 h volta ao bot em silêncio, o responsável sai e a conversa vai para Finalizadas; se o paciente
+    escrever depois, o bot responde e, pedindo a recepção, a conversa volta sem responsável, com todo o histórico.
+12. **Nome da tela:** **Decidido (05/nov): "Conversas"** (substitui "Atendimento humano"); o botão segue "Finalizar
+    atendimento"; o item da matriz pode continuar "Central de atendimento". Lugar no menu: no desenho da tela (CN3).
+    Muda Central de Ajuda, notificações e capturas (anotar em `capturas-pendentes.md` no CN3).
+
+**Ainda pendentes:** preço/pacote do item (9); texto do modelo "Retomar conversa" (7, no CN4); desenho das telas
+(CN3, com as opções desenhadas); advogado (D12 revista, prazos da 8a); conferências da Meta (seção 5).
 
 **Validações técnicas (sem decisão de negócio):** campos assinados do webhook no app da Meta; prazos e limites de
 mídia e do histórico na documentação atual; preços da Meta e do Supabase; política de nova análise do app;

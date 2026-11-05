@@ -13,7 +13,7 @@
 > `20261211120000` aplicada nos dois); cliente valida pelo `staging.md`, parte V. Captura pendente: `atendimento`. Plano em [`ciclo-atendimento-humano.md`](ciclo-atendimento-humano.md).
 >
 > **Central de Atendimento Humano (05/nov):** só planejamento, em [`planejamento-central-atendimento.md`](planejamento-central-atendimento.md).
-> Aguarda o cliente aprovar e responder às decisões (seção 11; a 1ª é rever a D12). Nada implementado.
+> Decisões 1 a 12 respondidas (D12 revista); falta aprovar o plano para começar o CN1. Nada implementado.
 >
 > **Decisão pendente:** testes de tela automáticos (Playwright); conversar prós e contras com o cliente (`historico.md`, "C30").
 >
