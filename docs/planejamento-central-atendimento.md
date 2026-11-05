@@ -325,6 +325,28 @@ Páginas lidas em 05/nov: [Onboard WhatsApp Business app users](https://develope
 clínica piloto na produção); o cliente confere a forma de pagamento da piloto no Gerenciador do WhatsApp;
 (2) corrigir o cadastro v3 → v4 já, antes da Central (guia de migração, teste no staging, etapa curta na `main`).
 
+**Cadastro v4: o que a Meta diz** ([Versions](https://developers.facebook.com/documentation/business-messaging/whatsapp/embedded-signup/versions),
+[Version 4](https://developers.facebook.com/documentation/business-messaging/whatsapp/embedded-signup/version-4),
+[Implementation](https://developers.facebook.com/documentation/business-messaging/whatsapp/embedded-signup/implementation/), lidas em 05/nov):
+- v2 e v3 descontinuadas em 15/out/2026; pedidos v3 **são atendidos como v4** (não dão erro), e o que não existe na
+  v4 deixa de valer. Já existe a v5 (20/out/2026), com a coexistência ligada por padrão.
+- **A v4 se escolhe pela configuração do Facebook Login for Business** (novo `config_id` criado no painel do app,
+  variação "Embedded Signup", produtos marcados), não pelo `sessionInfoVersion` (que não existe na v4). O painel tem
+  "WhatsApp › Embedded Signup Builder › Check a launch config" para conferir.
+- `featureType: "whatsapp_business_app_onboarding"` continua valendo na v4 (sem ele, número do app é recusado).
+- Evento de fim da coexistência: o exemplo só traz `waba_id` (sem `phone_number_id`); o código vale 30 s; fechar na
+  última tela conta como fim, sem código.
+- Depois do fluxo: trocar o código, assinar o app na conta; **não registrar** número da coexistência; `waba_id` agora
+  se chama "Messaging account ID", mesmo valor e formato.
+
+**Nosso código** (`WhatsappSignupButton.astro`, `connection.ts`, config em `WHATSAPP_ES_CONFIG_ID`): já não registra na
+coexistência, já confere a origem e trata desistência. **Mudar:** (a) tirar `sessionInfoVersion: "3"`; (b) se o
+evento vier sem `phone_number_id`, buscar o número pela conta (`GET /{waba_id}/phone_numbers`) em vez de recusar
+(hoje `META_ID.test(phoneNumberId)` recusa); (c) `account_update` com `ACCOUNT_RECONNECTED` (hoje ignorado).
+**No painel da Meta (cliente):** criar a configuração v4 e trocar `WHATSAPP_ES_CONFIG_ID` na Vercel (staging e
+produção); conferir os 4 campos do webhook (`account_update`, `history`, `smb_app_state_sync`, `smb_message_echoes`).
+**Teste:** só com um número para conectar (o de testes do staging precisa ser desconectado e reconectado).
+
 1. **Mensagens de serviço passaram a ser cobradas em 01/out/2026.** Toda mensagem fora de template dentro da janela
    (respostas do bot, listas, botões e, depois, a Central) é cobrada por mensagem; **1.000 grátis por mês por
    número** (não acumula). Preço no Brasil igual ao de utilidade (referência da Meta: US$ 0,0068 por mensagem em
