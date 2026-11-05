@@ -3,8 +3,8 @@
 > **Retomar daqui (05/nov/2026).** Só plano, nada implementado. Decididas: seção 11 (1 a 12 e R1 a R3), seção 14 e as
 > telas T1 a T11 (seção 15; canvas https://claude.ai/artifact/SiRBQtc2kSnQoMrgGnRn4y). **Próximo (cliente, 05/nov):**
 > implementar a partir do **CU2** (ordem na seção 12; CU1 resolvido pela T11), em branch curta criada da `main`.
-> **CU2, CU3, CN1, CU4, CN2 e CN3a feitos na branch `central-atendimento` (05/nov)**. Staging e produção só com a Central
-> pronta (cliente, 05/nov). Próximo: CN3b (painel do paciente).
+> **CU2, CU3, CN1, CU4, CN2, CN3a e CN3b feitos na branch `central-atendimento` (05/nov)**. Staging e produção só com a
+> Central pronta (cliente, 05/nov). Próximo: CN4 (enviar, assumir, transferir, Retomar conversa).
 
 Pedido do cliente (05/nov/2026): secretárias, profissionais e outros usuários autorizados veem e respondem as
 conversas do WhatsApp **dentro do RecepClinic**, com o mesmo histórico do bot, sem abrir o app do WhatsApp.
@@ -641,7 +641,7 @@ Ordem única (revisão de 05/nov; inclui as etapas CU da seção 14 e o cadastro
 | CN2 | Gravar texto (entrada e eco) e `wa_timestamp` só com a Central ligada; edição/exclusão pelo app; `last_message_at`/prévia por gatilho. **Feito na branch (05/nov)**, migração `20261216120000`: a guarda do texto fica num gatilho do banco (quem grava manda sempre; com a Central desligada não chega à tabela); eco `edit`/`revoke` (formato conferido na referência da Meta, `original_message_id`) muda a original sem pausar o bot; a última mensagem não mexe no `updated_at` da conversa (o bot mede o tempo parado por ele) | Sim |
 | CN3 | Tela "Conversas": lista única (Abertas/Finalizadas, filtros, busca, ordem), conversa só leitura paginada, lugar no menu e das Notificações | — |
 | CN3a | **Feito na branch (05/nov)**, migração `20261217120000`: tela `/admin/conversas` (Abertas/Finalizadas, busca, "Mostrar", não lidas por pessoa, conversa só leitura paginada de 50 em 50, "Finalizar atendimento"), item Conversas no menu com as que aguardam (M1; no celular no lugar do Relatório, que vai ao "Mais"), Meu dia sem contar conversas, Notificações num botão (N1), `/admin/atendimento` redireciona com a Central ligada; abertura registrada uma vez a cada 15 min (a tela recarrega a cada minuto) | Sim |
-| CN3b | Painel do paciente (T1 opção C, T2 responsável com vários pacientes, T3 número sem cadastro com "É de um paciente já cadastrado", T4 nome do perfil, T5 faixa no celular) e os eventos do atendimento na conversa ("Encaminhada à recepção · Assunto") | Talvez (T4) |
+| CN3b | Painel do paciente (T1 opção C, T2, T3, T4, T5) e os eventos do atendimento na conversa. **Feito na branch (05/nov)**, migração `20261218120000` (`profile_name`, guardado só com a Central, fora da leitura direta; a lista o devolve): painel em 3 colunas a partir de 1280px, abaixo disso a faixa "Próxima" com "Ver paciente"; número sem cadastro com "Cadastrar paciente" (telefone e nome do WhatsApp preenchidos) e "É de um paciente já cadastrado" (busca, confirmação, muda o WhatsApp do contato); eventos (encaminhada com o assunto, assumiu, transferida, liberada, finalizada); Conversas entra nas telas de volta. **CN7:** a anonimização também apaga o `profile_name` | Sim |
 | CN4 | Enviar texto (janela de 24 h, idempotência, pausa antes, falha com "Tentar de novo"); responder assume, assumir, transferir (R2, simples), finalizar; não lidas; modelo "Retomar conversa"; rotina de liberação em 30 min | Talvez |
 | CN5 | Mídia recebida (rotina de download, visualização por URL assinada, avisos da 8c) | — |
 | CN6 | Enviar foto (5 MB) e PDF (10 MB) | — |

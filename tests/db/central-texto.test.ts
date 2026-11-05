@@ -256,6 +256,22 @@ describe("Central ligada", () => {
     });
   });
 
+  it("nome no perfil do WhatsApp (T4): guardado com a Central, sem mexer no tempo parado do bot", async () => {
+    const phone = "+5584991300006";
+    await say(phone, "Oi");
+    await webhook({
+      contacts: [{ wa_id: phone.slice(1), profile: { name: "Fernanda" } }],
+      messages: [{ id: `wamid.cn2.in.${++seq}`, from: phone.slice(1), type: "text", text: { body: "Tudo bem?" } }],
+    });
+    const row = () => adminClient().from("conversation_state").select("profile_name, updated_at").eq("clinic_id", f.clinicId).eq("contact_phone", phone).single();
+    const { data } = await row();
+    expect(data!.profile_name).toBe("Fernanda");
+    // O nome sozinho não muda o updated_at (o bot mede o tempo parado por ele).
+    await adminClient().from("conversation_state").update({ profile_name: "Fernanda S." }).eq("clinic_id", f.clinicId).eq("contact_phone", phone);
+    const after = await row();
+    expect(after.data).toEqual({ profile_name: "Fernanda S.", updated_at: data!.updated_at });
+  });
+
   it("desligada de novo: mensagens novas sem texto", async () => {
     expect(await setCentralEnabled(asDb(f.admin), f.clinicId, false)).toBe(
       true,
@@ -265,5 +281,9 @@ describe("Central ligada", () => {
     expect(
       (await messages(phone)).find((m) => m.direction === "inbound")?.body,
     ).toBeNull();
+    // Nem o nome do perfil.
+    await adminClient().from("conversation_state").update({ profile_name: "Outro nome" }).eq("clinic_id", f.clinicId).eq("contact_phone", phone);
+    const { data } = await adminClient().from("conversation_state").select("profile_name").eq("clinic_id", f.clinicId).eq("contact_phone", phone).single();
+    expect(data!.profile_name).toBeNull();
   });
 });

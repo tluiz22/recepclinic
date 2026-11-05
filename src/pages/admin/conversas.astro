@@ -2,8 +2,9 @@
 // Conversas (Central de Atendimento, CN3a; plano em docs/planejamento-central-atendimento.md, decisões 3, 4, 6 e 12,
 // telas T1, T6 e T7, cliente, 05/nov/2026): a equipe vê as conversas do WhatsApp dentro do RecepClinic, com o
 // histórico do assistente. Lista única com Abertas (com a clínica) e Finalizadas (com o bot), busca e "Mostrar"; ao
-// lado, a conversa (só leitura nesta etapa: responder, assumir e transferir chegam no CN4; o painel do paciente, no
-// CN3b). No celular, a lista e a conversa em telas separadas, com "Voltar". Administrador, Recepção e Suporte veem
+// lado, a conversa (só leitura nesta etapa: responder, assumir e transferir chegam no CN4) e o painel do paciente (CN3b,
+// T1 opção C; abaixo de 1280px, a faixa da próxima consulta com "Ver paciente", T5). No celular, a lista, a conversa e o
+// painel em telas separadas, com "Voltar". Administrador, Recepção e Suporte veem
 // todas; o Profissional, só as que estão com ele. Notificações num botão no topo (N1).
 import AdminLayout from "../../layouts/AdminLayout.astro";
 import ConfirmDeleteDialog from "../../components/admin/ConfirmDeleteDialog.astro";
@@ -11,6 +12,7 @@ import FinishForm from "../../components/admin/FinishAttendanceForm.astro";
 import FlashMessage from "../../components/admin/FlashMessage.astro";
 import Icon from "../../components/admin/Icon.astro";
 import NotificationsCard from "../../components/admin/NotificationsCard.astro";
+import ConversationPanel from "../../components/admin/central/ConversationPanel.astro";
 import { CONTROL } from "../../components/admin/ui/styles";
 import { bubbleOf, deliveryLabel } from "../../lib/centralBubbles";
 import { formatInstant, localDateOf } from "../../lib/clinicTime";
@@ -27,6 +29,8 @@ import {
   type MessageCursor,
 } from "../../lib/data/central";
 import { loadActorLabels } from "../../lib/data/agenda/trail";
+import { describeHandoffEvent, loadConversationPanel, type ConversationPanel as Panel } from "../../lib/data/centralPanel";
+import { searchPatients, type PatientWithContact } from "../../lib/data/patients";
 import { DataError } from "../../lib/data/errors";
 import { handoffReasonLabel } from "../../lib/data/whatsapp/attention";
 import { listMyDevices } from "../../lib/data/whatsapp/attentionPush";
@@ -88,16 +92,47 @@ const names = new Map(
   [...(await loadActorLabels(db, clinic.clinicId, chronological.map((m) => m.sentBy))).entries()].map(([id, label]) => [id, label.name.split(/\s+/)[0]]),
 );
 
+// Painel do paciente (CN3b) e os eventos do atendimento na conversa.
+const panel: Panel | null =
+  selected && thread ? await loadConversationPanel(db, clinic.clinicId, { contactId: selected.contactId, phone: selected.phone }, { insurance: clinic.features.includes("insurance"), now: new Date() }) : null;
+const showPanel = params.get("painel") === "1";
+const canEdit = clinic.isPlatformStaff || clinic.roles.some((role) => role === "admin" || role === "reception");
+const linking = !!selected && !panel?.contact && canEdit && params.get("ligar") === "1";
+const linkQuery = (params.get("paciente") ?? "").trim().slice(0, 80);
+const linkResults: PatientWithContact[] = linking && linkQuery.length >= 2 ? await searchPatients(db, clinic.clinicId, linkQuery) : [];
+const nextOfPanel = panel?.patients
+  .map((p) => p.next)
+  .filter((a): a is NonNullable<typeof a> => !!a)
+  .sort((a, b) => a.scheduledAt.getTime() - b.scheduledAt.getTime())[0];
+// Eventos (encaminhada, assumiu, transferida, finalizada) entre as mensagens mostradas.
+const firstShown = chronological[0]?.sortAt ?? null;
+const lastShown = cursor ? (chronological.at(-1)?.sortAt ?? null) : null;
+type Line = { kind: "message"; message: CentralMessage } | { kind: "event"; at: Date; text: string };
+const lines: Line[] = [
+  ...chronological.map((message) => ({ kind: "message" as const, message })),
+  ...(panel?.events ?? [])
+    .filter((event) => (!firstShown || event.at >= firstShown || !thread?.next) && (!lastShown || event.at <= lastShown))
+    .map((event) => {
+      const text = describeHandoffEvent(event, panel!.names);
+      const subject = event.kind === "status" && event.handoffId && event.handoffId === selected?.handoffId && selected?.subject ? ` · Assunto: ${selected.subject}` : "";
+      return text ? { kind: "event" as const, at: event.at, text: `${text} · ${formatInstant(event.at, clinic.timezone, "HH:mm")}${subject}` } : null;
+    })
+    .filter((line): line is NonNullable<typeof line> => !!line),
+].sort((a, b) => (a.kind === "message" ? a.message.sortAt : a.at).getTime() - (b.kind === "message" ? b.message.sortAt : b.at).getTime());
+const lineAt = (line: Line) => (line.kind === "message" ? line.message.sortAt : line.at);
+
 // Links: a tela guarda a aba, o "Mostrar" e a busca.
 const hrefWith = (change: Record<string, string | null>) => {
   const next = new URLSearchParams();
-  const base: Record<string, string | null> = { aba: finished ? "finalizadas" : null, mostrar: filter === "todas" ? null : filter, busca: search || null, conversa: null, antes: null, ...change };
+  const base: Record<string, string | null> = { aba: finished ? "finalizadas" : null, mostrar: filter === "todas" ? null : filter, busca: search || null, conversa: null, antes: null, painel: null, ligar: null, ...change };
   for (const [key, value] of Object.entries(base)) if (value) next.set(key, value);
   const query = next.toString();
   return `/admin/conversas${query ? `?${query}` : ""}`;
 };
 const conversationHref = (phone: string) => hrefWith({ conversa: phone });
 const backHref = hrefWith({});
+const threadHref = selected ? hrefWith({ conversa: selected.phone }) : backHref;
+const linkParams: Record<string, string> = Object.fromEntries(new URL(hrefWith({ conversa: selected?.phone ?? null, ligar: "1", painel: showPanel ? "1" : null }), "http://x").searchParams);
 
 const now = new Date();
 const today = localDateOf(now, clinic.timezone);
@@ -152,9 +187,9 @@ const tabClass = (active: boolean) =>
   </div>
   <FlashMessage />
 
-  <div class="mt-4 grid gap-4 lg:h-[calc(100dvh-10rem)] lg:min-h-[560px] lg:grid-cols-[320px_minmax(0,1fr)]">
+  <div class:list={["mt-4 grid gap-4 lg:h-[calc(100dvh-10rem)] lg:min-h-[560px] lg:grid-cols-[300px_minmax(0,1fr)]", panel && "xl:grid-cols-[280px_minmax(0,1fr)_280px]", panel && showPanel && "lg:max-xl:grid-cols-1"]}>
     <!-- Lista -->
-    <section aria-label="Lista de conversas" class:list={["flex min-h-0 flex-col overflow-hidden rounded-xl border border-line bg-white", selected && "max-lg:hidden"]}>
+    <section aria-label="Lista de conversas" class:list={["flex min-h-0 flex-col overflow-hidden rounded-xl border border-line bg-white", selected && "max-lg:hidden", selected && showPanel && "max-xl:hidden"]}>
       <nav class="flex border-b border-line" aria-label="Abertas ou finalizadas">
         <a href={hrefWith({ aba: null })} class={tabClass(!finished)} aria-current={!finished ? "page" : undefined}>Abertas ({openItems.length})</a>
         <a href={hrefWith({ aba: "finalizadas", mostrar: null })} class={tabClass(finished)} aria-current={finished ? "page" : undefined}>Finalizadas</a>
@@ -232,7 +267,7 @@ const tabClass = (active: boolean) =>
     </section>
 
     <!-- Conversa -->
-    <section aria-label="Conversa" class:list={["flex min-h-0 flex-col overflow-hidden rounded-xl border border-line bg-white", !selected && !threadError && "max-lg:hidden"]}>
+    <section aria-label="Conversa" class:list={["flex min-h-0 flex-col overflow-hidden rounded-xl border border-line bg-white", !selected && !threadError && "max-lg:hidden", panel && showPanel && "max-xl:hidden"]}>
       {
         !selected ? (
           <div class="flex flex-1 flex-col items-center justify-center gap-2 p-8 text-center">
@@ -270,6 +305,24 @@ const tabClass = (active: boolean) =>
               )}
             </header>
 
+            {panel && (
+              <div class="flex items-center gap-2.5 border-b border-pend-200 bg-pend-50 px-3.5 py-2.5 xl:hidden">
+                <span class="min-w-0 flex-1 text-sm text-ink">
+                  {nextOfPanel ? (
+                    <>
+                      <strong>Próxima:</strong> {formatInstant(nextOfPanel.scheduledAt, clinic.timezone, "EEE, dd/MM, HH:mm")} · {nextOfPanel.agendaName}
+                    </>
+                  ) : panel.contact ? (
+                    "Sem consulta marcada."
+                  ) : (
+                    "Número sem cadastro."
+                  )}
+                </span>
+                <a href={hrefWith({ conversa: selected.phone, painel: "1" })} class="flex-none text-sm font-semibold whitespace-nowrap text-brand-ink">
+                  Ver paciente
+                </a>
+              </div>
+            )}
             <div class="flex min-h-0 flex-1 flex-col gap-2.5 overflow-y-auto bg-canvas px-3 py-4 sm:px-4" data-thread>
               {thread?.next && (
                 <a href={hrefWith({ conversa: selected.phone, antes: `${thread.next.sortAt}_${thread.next.id}` })} class="self-center text-sm font-semibold text-brand-ink">
@@ -283,10 +336,19 @@ const tabClass = (active: boolean) =>
               )}
               {threadError && <p class="self-center text-[15px] text-danger">{threadError}</p>}
               {thread && chronological.length === 0 && <p class="self-center text-[15px] text-ink-soft">Nenhuma mensagem nesta conversa.</p>}
-              {chronological.map((message, index) => {
+              {lines.map((line, index) => {
+                const day = dayLabel(lineAt(line));
+                const newDay = index === 0 || dayLabel(lineAt(lines[index - 1])) !== day;
+                if (line.kind === "event") {
+                  return (
+                    <>
+                      {newDay && <span class="self-center rounded-full bg-canvas-deep px-2.5 py-0.5 text-xs text-ink-soft">{day}</span>}
+                      <span class="self-center rounded-lg border border-pend-200 bg-pend-50 px-3 py-1 text-center text-[13px] text-ink-mid">{line.text}</span>
+                    </>
+                  );
+                }
+                const message = line.message;
                 const bubble = bubbleOf(message, names);
-                const day = dayLabel(message.sortAt);
-                const newDay = index === 0 || dayLabel(chronological[index - 1].sortAt) !== day;
                 const delivery = message.direction === "outbound" ? deliveryLabel(message.status) : null;
                 return (
                   <>
@@ -319,6 +381,31 @@ const tabClass = (active: boolean) =>
         )
       }
     </section>
+
+    <!-- Painel do paciente -->
+    {
+      panel && selected && (
+        <aside aria-label="Paciente" class:list={["min-h-0 overflow-y-auto rounded-xl border border-line bg-white p-4", !showPanel && "max-xl:hidden"]}>
+          <a href={threadHref} class="mb-3 inline-flex min-h-11 items-center gap-1 text-[15px] font-semibold text-brand-ink no-underline xl:hidden">
+            <Icon name="chevron-left" class="h-5 w-5" /> Voltar para a conversa
+          </a>
+          <ConversationPanel
+            panel={panel}
+            phone={selected.phone}
+            profileName={selected.profileName}
+            timeZone={clinic.timezone}
+            here={hrefWith({ conversa: selected.phone, painel: showPanel ? "1" : null })}
+            canEdit={canEdit}
+            link={{
+              openHref: hrefWith({ conversa: selected.phone, ligar: "1", painel: showPanel ? "1" : null }),
+              closeHref: hrefWith({ conversa: selected.phone, painel: showPanel ? "1" : null }),
+              params: linkParams,
+              open: linking ? { query: linkQuery, results: linkResults } : null,
+            }}
+          />
+        </aside>
+      )
+    }
   </div>
 
   <dialog

@@ -3,7 +3,7 @@ import type { DbClient } from "../clients";
 import { echoChange, toE164, type WaMessage } from "./meta";
 import { hasFeature } from "../features";
 import { handleAgentEcho, isLikelyAutomaticEcho, markAutomaticEcho } from "./conversations";
-import { applyEchoChange, recordAgentEcho, recordInboundMessage, updateDeliveryStatus, type RecordResult } from "./messages";
+import { applyEchoChange, recordAgentEcho, saveProfileName, recordInboundMessage, updateDeliveryStatus, type RecordResult } from "./messages";
 import { sendPreparationAfterDelivery } from "./preparation";
 import { sendGuidanceAfterDelivery } from "./guidance";
 import { scheduleRetryAfterLateFailure } from "./retries";
@@ -47,6 +47,8 @@ export type WebhookChange = {
   messages?: WaMessage[];
   statuses?: WaStatus[];
   message_echoes?: WaMessage[];
+  /** Quem escreveu (`profile.name`: o nome no perfil do WhatsApp). */
+  contacts?: { wa_id?: string; profile?: { name?: string } }[];
 };
 
 type TemplateStatusValue = {
@@ -206,6 +208,9 @@ export async function processWebhook(payload: unknown, deps: WebhookDeps, now: D
           if (sender && (await handleIncomingMessage({ db, clinicId, sender, now }, message)) === "handled") summary.botReplies += 1;
         });
       }
+      // Nome no perfil do WhatsApp (CN2/T4): o banco só guarda com a Central ligada; depois do bot, a conversa já existe.
+      const profile = change.contacts?.find((c) => c.wa_id === message.from)?.profile?.name ?? change.contacts?.[0]?.profile?.name;
+      if (profile) await attempt("nome do perfil", () => saveProfileName(db, clinicId, toE164(message.from), profile));
       // Conversa que passou a aguardar a clínica (pedido, sem horário, limite ou o paciente escreveu de novo): avisa (F8.5c).
       const phone = toE164(message.from);
       if (deps.push && phone) await notifyWaitingConversation(db, clinicId, phone, deps.push, now);

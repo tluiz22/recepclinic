@@ -345,3 +345,10 @@ export async function listLatestWhatsappMessages(db: DbClient, clinicId: string,
     createdAt: new Date(row.created_at),
   }));
 }
+
+/** Nome no perfil do WhatsApp na conversa (T4): o banco só guarda com a Central ligada. */
+export async function saveProfileName(db: DbClient, clinicId: string, phone: string | null, name: string): Promise<void> {
+  const clean = name.trim().slice(0, 120);
+  if (!phone || !clean) return;
+  unwrap(await db.from("conversation_state").update({ profile_name: clean }).eq("clinic_id", clinicId).eq("contact_phone", phone).select("id"), "Nome do perfil");
+}

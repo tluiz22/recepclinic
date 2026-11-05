@@ -121,6 +121,10 @@ export type ConversationSummary = {
   preview: string | null;
   lastPatientAt: Date | null;
   unread: number;
+  /** Nome no perfil do WhatsApp (T4; só com a Central ligada). */
+  profileName: string | null;
+  /** O atendimento atual (eventos e assunto). */
+  handoffId: string | null;
 };
 
 /** Filtro "Mostrar" das Abertas (decisão 3). */
@@ -159,6 +163,8 @@ export async function listConversations(
     preview: row.last_message_preview,
     lastPatientAt: date(row.last_patient_at),
     unread: row.unread ?? 0,
+    profileName: row.profile_name,
+    handoffId: row.handoff_id,
   }));
 }
 
