@@ -1,10 +1,9 @@
 # Central de Atendimento Humano: planejamento
 
-> **Retomar daqui (05/nov/2026).** Só plano, nada implementado. Decisões 1 a 12 respondidas (seção 11); CN0
-> (conferência da Meta) feito: seção 5.1, com **2 alertas para a produção** (mensagens de serviço cobradas desde
-> 01/out; Embedded Signup v3 descontinuado em 15/out). Próximo: o cliente decide o que fazer com os alertas; depois,
-> desenho das telas (CN3) ou CN1. Pendentes: fim da seção 11. **Novo (05/nov): seção 14** (ativação pelo
-> Administrador com o custo da Meta, medição e calculadora em Sistema › Vendas), decisões abertas lá.
+> **Retomar daqui (05/nov/2026).** Só plano, nada implementado. Decididas: seção 11 (1 a 12), seção 14 (custo da
+> Meta, ativação pelo Administrador, medição, calculadora com IA) e os alertas da 5.1 (v4 do cadastro vai junto com a
+> Central; rotina de acompanhamento da Meta é pós-implantação). **Próximo:** desenhar as telas (Conversas, menu,
+> Configurações › WhatsApp, calculadora em Sistema › Vendas) com opções no canvas, ou revisar o plano inteiro.
 
 Pedido do cliente (05/nov/2026): secretárias, profissionais e outros usuários autorizados veem e respondem as
 conversas do WhatsApp **dentro do RecepClinic**, com o mesmo histórico do bot, sem abrir o app do WhatsApp.

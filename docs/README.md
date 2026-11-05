@@ -19,6 +19,7 @@
 > forma de pagamento da piloto na Meta; cadastro v3 → v4 vai junto com a Central (cliente, 05/nov).
 > **Pós-implantação:** rotina semanal que acompanha as mudanças da Meta (plano, seção 5.1).
 > Custo da Meta, ativação pelo Administrador e calculadora: seção 14 do plano (decidida).
+> **Próximo:** desenhar as telas (canvas com opções) ou revisar o plano inteiro; cliente parou aqui em 05/nov.
 >
 > **FE, falhas de envio (05/nov):** conferência do número ao marcar/cadastrar, aviso de entrega na Agenda, "Corrigir
 > número" no Início, reenvio do bot (30 s e 2 min), detalhes e "Descartar" na aba Envios. No **staging e na produção**
