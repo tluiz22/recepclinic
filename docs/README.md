@@ -28,7 +28,9 @@
 >
 > **Decisão pendente:** testes de tela automáticos (Playwright); conversar prós e contras com o cliente (`historico.md`, "C30").
 >
-> **Próxima sessão:** cliente valida a C31 e a CA (`staging.md`, partes U e V) e traz novos pedidos. A `faturamento` está
+> **Próxima sessão (cliente, 05/nov):** começar a implementação da Central de Atendimento pelo **CU2** (plano, seções 12,
+> 14 e 15; desenho T1 a T11 no canvas), em branch curta criada da `main`. Seguem pendentes: validação da C31 e da CA
+> (`staging.md`, partes U e V). A `faturamento` está
 > com a `main` até a CA (05/nov).
 > Trabalhar na worktree `recepclinic-main` (a pasta `recepclinic` está na branch `faturamento`). Pendente da branch: o
 > cliente valida no local o faturamento **F12.2b a F12.2h** pelo `roteiro-validacao-faturamento.md` **da branch**.

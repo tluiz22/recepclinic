@@ -1,11 +1,8 @@
 # Central de Atendimento Humano: planejamento
 
-> **Retomar daqui (05/nov/2026).** Só plano, nada implementado. Decididas: seção 11 (1 a 12), seção 14 (custo da
-> Meta, ativação pelo Administrador, medição, calculadora com IA) e os alertas da 5.1 (v4 do cadastro vai junto com a
-> Central; rotina de acompanhamento da Meta é pós-implantação). **Revisão do plano inteiro (05/nov):** texto alinhado às
-> decisões e lacunas técnicas incluídas (seção 12 com a ordem única); perguntas R1 a R3 respondidas (seção 11).
-> **Próximo:** desenhar as telas (Conversas, menu, Configurações › WhatsApp, calculadora em Sistema › Vendas) com
-> opções no canvas.
+> **Retomar daqui (05/nov/2026).** Só plano, nada implementado. Decididas: seção 11 (1 a 12 e R1 a R3), seção 14 e as
+> telas T1 a T11 (seção 15; canvas https://claude.ai/artifact/SiRBQtc2kSnQoMrgGnRn4y). **Próximo (cliente, 05/nov):**
+> implementar a partir do **CU2** (ordem na seção 12; CU1 resolvido pela T11), em branch curta criada da `main`.
 
 Pedido do cliente (05/nov/2026): secretárias, profissionais e outros usuários autorizados veem e respondem as
 conversas do WhatsApp **dentro do RecepClinic**, com o mesmo histórico do bot, sem abrir o app do WhatsApp.
