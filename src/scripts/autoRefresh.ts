@@ -11,7 +11,7 @@ const INTERVAL_MS = 60_000;
 const CHECK_MS = 5_000;
 // Em uso: confirmação, menu "Mais" (popover e o do celular), ajuda "i" e cartão em edição. Blocos que já abrem
 // expandidos (filtros da Agenda, grupos de Lembretes) e o "Como funciona?" (lembrado na recarga) não contam.
-const IN_USE = "dialog[open], details.more-menu[open], details[data-help][open], details[data-edit][open]";
+const IN_USE = "dialog[open], details.more-menu[open], details[data-help][open], details[data-edit][open], details[data-keep-open][open]";
 
 if (document.body.hasAttribute("data-auto-refresh")) {
   const loadedAt = Date.now();

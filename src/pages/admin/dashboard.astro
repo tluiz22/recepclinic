@@ -10,6 +10,7 @@
 import { currentPath, withReturn } from "../../lib/returnPath";
 import AdminLayout from "../../layouts/AdminLayout.astro";
 import ConfirmDeleteDialog from "../../components/admin/ConfirmDeleteDialog.astro";
+import FixNumberDialog from "../../components/admin/FixNumberDialog.astro";
 import FlashMessage from "../../components/admin/FlashMessage.astro";
 import Icon from "../../components/admin/Icon.astro";
 import PhoneLinks from "../../components/admin/PhoneLinks.astro";
@@ -43,6 +44,8 @@ import { getWhatsappConnection, listWhatsappTemplates } from "../../lib/data/wha
 import { latestAutomaticEcho } from "../../lib/data/whatsapp/conversations";
 import { GUIDE_AUTOMATIONS_ANCHOR, GUIDE_BEFORE_CONNECT_PATH } from "../../lib/guides";
 import { getDeliveredConnectionTest } from "../../lib/data/whatsapp/connectionTest";
+import { listNumbersWithoutWhatsapp } from "../../lib/data/whatsapp/undeliverable";
+import { MESSAGE_LABELS, OTHER_MESSAGE } from "../../lib/data/agenda/trail";
 import { describeTemplateApproval, templateApproval, templatesInUse } from "../../lib/data/whatsapp/templates";
 
 const clinic = Astro.locals.clinic!;
@@ -111,7 +114,7 @@ const load = async <T,>(label: string, run: () => Promise<T>): Promise<T | null>
     return null;
   }
 };
-const [pendingReminders, todayAppointments, pendingAttendanceList] = await Promise.all([
+const [pendingReminders, todayAppointments, pendingAttendanceList, numbersToFix] = await Promise.all([
   has("reminders") ? load("lembretes sem resposta", () => listPendingReminders(db, clinic.clinicId, nowAt)) : Promise.resolve([]),
   load("próximas consultas", async () => {
     const agendas = await listAgendas(db, clinic.clinicId, { includeInactive: true });
@@ -119,7 +122,10 @@ const [pendingReminders, todayAppointments, pendingAttendanceList] = await Promi
   }),
   // Nomes da linha "Registrar presença" (só se há algo a registrar; a contagem vem de getDashboardCounts).
   counts.pendingAttendance > 0 ? load("consultas a registrar", () => listPendingAttendance(db, clinic.clinicId, nowAt)) : Promise.resolve([]),
+  // Número sem WhatsApp (cliente, 05/nov/2026): a recepção corrige o cadastro ou diz que o número está certo.
+  load("números sem WhatsApp", () => listNumbersWithoutWhatsapp(db, clinic.clinicId, nowAt)),
 ]);
+const toFix = numbersToFix ?? [];
 const waiting = pendingReminders?.filter((r) => r.kind === "no_answer" && r.appointment.scheduledAt > nowAt && r.appointment.scheduledAt < tomorrowEnd).map((r) => ({ appointment: r.appointment, sentAt: r.sentAt })) ?? [];
 const upcoming = todayAppointments?.filter((a) => a.status === "scheduled" || a.status === "confirmed") ?? [];
 const hhmm = (d: Date) => formatInstant(d, clinic.timezone, "HH:mm");
@@ -192,12 +198,13 @@ const pendingNames = (() => {
 })();
 const pendingFirstDate = pendingSorted[0] ? localDay(pendingSorted[0].scheduledAt) : todayDate;
 // Linhas de "Precisa de você" (o número ao lado do título; o do menu soma os itens).
-const precisaLines = (awaiting.length > 0 ? 1 : 0) + (inProgress.length > 0 ? 1 : 0) + (counts.pendingAttendance > 0 ? 1 : 0) + (toReview?.length ?? 0);
+const precisaLines = (awaiting.length > 0 ? 1 : 0) + (inProgress.length > 0 ? 1 : 0) + (counts.pendingAttendance > 0 ? 1 : 0) + (toReview?.length ?? 0) + toFix.length;
 const tagClass = "rounded-md px-2 py-0.5 text-[12.5px] font-bold whitespace-nowrap";
 // "Precisa de você": some a linha de quem não tem pendência; vazio mostra um texto de tudo em dia.
 // O menu usa este número (mesma conta de getMeuDiaCount) sem ler de novo.
-Astro.locals.meuDiaCount = awaiting.length + inProgress.length + counts.pendingAttendance + (toReview?.length ?? 0);
-const hasPending = awaiting.length > 0 || inProgress.length > 0 || counts.pendingAttendance > 0 || (toReview?.length ?? 0) > 0;
+Astro.locals.meuDiaCount = awaiting.length + inProgress.length + counts.pendingAttendance + (toReview?.length ?? 0) + toFix.length;
+const hasPending = awaiting.length > 0 || inProgress.length > 0 || counts.pendingAttendance > 0 || (toReview?.length ?? 0) > 0 || toFix.length > 0;
+const RESENDABLE = new Set(["appointment_confirmation", "appointment_reschedule"]);
 const sectionTitle = "font-display text-[17px] leading-tight font-bold text-ink sm:text-lg";
 ---
 
@@ -404,6 +411,61 @@ const sectionTitle = "font-display text-[17px] leading-tight font-bold text-ink 
         </div>
       ))
     }
+    {
+      toFix.map((item) => {
+        const label = (MESSAGE_LABELS[item.messageType] ?? OTHER_MESSAGE).label.toLowerCase();
+        const resend = RESENDABLE.has(item.messageType) && !!item.appointment && item.appointment.scheduledAt > nowAt;
+        return (
+          <div class="flex flex-wrap items-center gap-3 border-t border-[#e7eeeb] px-4 py-3.5 sm:px-[18px]">
+            <span class={`${tagClass} bg-[#fbe4e1] text-danger`}>Corrigir número</span>
+            <div class="flex min-w-0 flex-[1_1_200px] flex-col gap-0.5">
+              <span class="text-base">
+                <strong>{item.contactName}</strong> não recebeu a mensagem ({label}): o número não tem WhatsApp
+              </span>
+              <span class="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-ink-soft">
+                <span class="font-semibold text-ink">{formatPhoneBR(item.phone)}</span>
+                <span class="tabular-nums">{formatInstant(item.failedAt, clinic.timezone, "dd/MM HH:mm")}</span>
+                {item.appointment && (
+                  <span>
+                    · {item.appointment.patientName}, {formatInstant(item.appointment.scheduledAt, clinic.timezone, "dd/MM 'às' HH:mm")}
+                  </span>
+                )}
+              </span>
+            </div>
+            {canReview && (
+              <div class="flex flex-wrap gap-2">
+                <Button
+                  type="button"
+                  class="js-fix-number"
+                  data-message-id={item.messageId}
+                  data-contact-name={item.contactName}
+                  data-phone={formatPhoneBR(item.phone)}
+                  data-resend={resend ? "1" : "0"}
+                >
+                  Corrigir número
+                </Button>
+                <form method="POST" action="/api/admin/envios/falha" class="contents">
+                  <input type="hidden" name="acao" value="numero_certo" />
+                  <input type="hidden" name="mensagem" value={item.messageId} />
+                  <input type="hidden" name="return_to" value="/admin/dashboard" />
+                  <Button
+                    type="submit"
+                    variant="quiet"
+                    class="js-confirm-delete"
+                    data-confirm-title="O número está certo?"
+                    data-confirm-message={`O aviso de ${item.contactName} sai do Início. Se uma próxima mensagem também não chegar, ele volta.`}
+                    data-confirm-label="O número está certo"
+                    data-confirm-tone="primary"
+                  >
+                    O número está certo
+                  </Button>
+                </form>
+              </div>
+            )}
+          </div>
+        );
+      })
+    }
   </section>
 
   {
@@ -516,6 +578,7 @@ const sectionTitle = "font-display text-[17px] leading-tight font-bold text-ink 
 
   {/* Um só diálogo de confirmação para todas as ações da tela. */}
   <ConfirmDeleteDialog />
+  <FixNumberDialog />
 
   <div class="h-20 sm:hidden" aria-hidden="true" />
   <div class="fixed-bar fixed inset-x-0 bottom-[calc(61px+env(safe-area-inset-bottom))] z-10 flex items-center gap-3 border-t border-line bg-white px-4 py-2.5 shadow-[0_-4px_14px_rgba(18,48,42,.08)] sm:hidden">

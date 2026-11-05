@@ -44,7 +44,7 @@ export const primeirosPassos = [
     intro: "O Meu dia mostra o dia da clínica: quantos atendimentos há hoje, o que ainda pede ação e quem ainda não respondeu. O que aparece segue os itens liberados para a clínica e o seu papel.",
     fields: [
       { name: "Linha do dia", text: "Quantos atendimentos há hoje (sem os cancelados), cada um num grupo só: já atendidas, faltaram, confirmadas (pelo lembrete ou pela recepção) e a confirmar. A soma dá o total; a barra mostra os mesmos grupos. Tem o link para a agenda de hoje." },
-      { name: "Precisa de você", text: "Conversas aguardando atendimento humano e as que a clínica ainda não devolveu ao bot (levam a Atendimento), consultas para registrar presença e contatos a conferir. Cada linha some quando alguém resolve." },
+      { name: "Precisa de você", text: "Conversas aguardando atendimento humano e as que estão com a clínica (levam a Atendimento), consultas para registrar presença, contatos a conferir e números sem WhatsApp (Corrigir número, com Salvar e reenviar, ou O número está certo). Cada linha some quando alguém resolve." },
       { name: "Esperando o paciente", text: "Lembretes de hoje e de amanhã sem resposta, com Confirmar presença, Reenviar lembrete e Remarcar (com confirmação). Sai da lista na hora da consulta." },
       { name: "Próximas consultas", text: "As de hoje que ainda não foram registradas, com Compareceu a partir do horário." },
       { name: "Buscar paciente", text: "Leva à lista de Pacientes com a busca feita." },

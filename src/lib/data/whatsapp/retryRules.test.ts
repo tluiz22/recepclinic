@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { describeTrail } from "../agenda/trail";
-import { countFailedSends, retryingSends } from "../sends";
+import { countFailedSends, failedSendDetails, retryingSends } from "../sends";
 import { GraphRequestError } from "./graph";
-import { classifySendError, isTechnicalCode, lastRetryWithin, nextRetryAt } from "./retryRules";
+import { botRetryContext, classifySendError, isRetryable, isTechnicalCode, lastRetryWithin, nextRetryAt } from "./retryRules";
 
 // Reenvio automático de envios com falha técnica (cliente, 23/out/2026).
 
@@ -97,5 +97,77 @@ describe("aba Envios e trilha", () => {
     });
     expect(describeTrail(row(2, "delivered", null), new Map(), "America/Fortaleza")).toMatchObject({ text: "WhatsApp: Lembrete entregue (tentativa 2 de 3)", tone: "success" });
     expect(describeTrail(row(3, "failed", null), new Map(), "America/Fortaleza")).toMatchObject({ text: "WhatsApp: Lembrete não entregue (tentativa 3 de 3)", tone: "danger" });
+  });
+});
+
+describe("mensagens do bot (cliente, 05/nov/2026)", () => {
+  const failedAt = new Date("2026-11-05T17:34:00Z");
+
+  it("3 tentativas: 30 s e 2 min depois da primeira falha", () => {
+    expect(nextRetryAt(1, failedAt, true)).toEqual(new Date("2026-11-05T17:34:30Z"));
+    const second = new Date("2026-11-05T17:34:30Z");
+    expect(nextRetryAt(2, second, true)).toEqual(new Date("2026-11-05T17:36:00Z"));
+    expect(nextRetryAt(3, second, true)).toBeNull();
+  });
+
+  it("entram no reenvio pelo contexto; sem ele, só os automáticos da lista", () => {
+    expect(isRetryable("bot_idle_closed", botRetryContext(failedAt))).toBe(true);
+    expect(isRetryable("bot_idle_closed", {})).toBe(false);
+    expect(isRetryable("appointment_reminder", {})).toBe(true);
+  });
+
+  it("valem por 5 minutos", () => {
+    expect(botRetryContext(failedAt)).toEqual({ bot: true, until: "2026-11-05T17:39:00.000Z" });
+  });
+});
+
+describe("detalhes da falha e descarte (cliente, 05/nov/2026)", () => {
+  const scheduledAt = new Date("2026-11-12T16:15:00Z");
+  const base = { messageType: "appointment_reschedule", phone: "+5584999990000" };
+
+  it("cada tentativa, o número e o motivo da Meta", () => {
+    const messages = [
+      { ...base, id: "a", status: "failed", createdAt: new Date("2026-11-03T13:38:00Z"), attempt: 1, failureCode: 131042, failureReason: "Business eligibility payment issue" },
+    ];
+    expect(failedSendDetails(messages, [], scheduledAt)).toEqual([
+      {
+        messageId: "a",
+        eventId: null,
+        messageType: "appointment_reschedule",
+        phone: "+5584999990000",
+        firstAt: new Date("2026-11-03T13:38:00Z"),
+        attempts: [{ at: new Date("2026-11-03T13:38:00Z"), status: "failed" }],
+        failureCode: 131042,
+        failureReason: "Business eligibility payment issue",
+        notSentReason: null,
+        retrying: false,
+        retryAt: null,
+      },
+    ]);
+  });
+
+  it("reenvios aparecem na mesma falha, da primeira à última tentativa", () => {
+    const messages = [
+      { ...base, id: "a", status: "failed", createdAt: new Date("2026-11-03T13:38:00Z"), attempt: 1 },
+      { ...base, id: "b", firstAttemptId: "a", status: "failed", createdAt: new Date("2026-11-03T13:48:00Z"), attempt: 2 },
+    ];
+    const [detail] = failedSendDetails(messages, [], scheduledAt);
+    expect(detail.messageId).toBe("b");
+    expect(detail.firstAt).toEqual(new Date("2026-11-03T13:38:00Z"));
+    expect(detail.attempts.map((t) => t.status)).toEqual(["failed", "failed"]);
+  });
+
+  it("descartada pelo Suporte: sai da lista, sem trazer de volta a tentativa anterior", () => {
+    const messages = [
+      { ...base, id: "a", status: "failed", createdAt: new Date("2026-11-03T13:38:00Z"), attempt: 1 },
+      { ...base, id: "b", firstAttemptId: "a", status: "dismissed", createdAt: new Date("2026-11-03T13:48:00Z"), attempt: 2 },
+    ];
+    expect(countFailedSends(messages, [], scheduledAt)).toBe(0);
+    expect(failedSendDetails(messages, [], scheduledAt)).toEqual([]);
+  });
+
+  it("'não enviado' da trilha: o motivo gravado", () => {
+    const notSent = [{ id: 7, kind: "reminder", reason: "not_connected", scheduledAt, occurredAt: new Date("2026-11-11T21:00:00Z") }];
+    expect(failedSendDetails([], notSent, scheduledAt)).toMatchObject([{ eventId: 7, messageId: null, messageType: "appointment_reminder", notSentReason: "not_connected" }]);
   });
 });

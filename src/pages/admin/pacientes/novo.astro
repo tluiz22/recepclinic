@@ -293,6 +293,7 @@ import { pacientes } from "../../../lib/ajuda/pacientes";
                 placeholder="(84) 99999-9999"
                 value={values.phone}
                 data-confirm-label="WhatsApp"
+                data-confirm-whatsapp="WhatsApp que recebe as mensagens"
                 {...invalidAttrs("phone", samePerson ? "phone-aviso phone-hint" : "phone-hint")}
                 class={`${CONTROL} w-full sm:w-64 ${samePerson ? "border-pend-500" : ""}`}
               />

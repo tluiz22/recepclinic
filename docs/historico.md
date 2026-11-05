@@ -975,3 +975,12 @@ coexistência). Descrições fixas nas 4 opções (Consultas e Exames: "Agendame
 cancelamentos."; Informações gerais: "Dúvidas sobre consultas e exames."; Recepção: "Precisa de ajuda? Fale com nossa
 equipe."). Botão "Ver opções" em todas as listas (era "Escolher opção"). Ids, destinos e encaminhamento à recepção sem
 mudança; o texto próprio de "Menu" da clínica, quando existe, continua valendo no lugar da apresentação.
+
+## FE: falhas de envio pelo WhatsApp (05/nov/2026)
+
+Investigação da produção (05/nov): 439 envios em 3 dias, 3 falhas: 131042 (pagamento da Meta, 03/nov, remarcação de um
+paciente já avisado), 131000 (instabilidade da Meta no "conversa encerrada" do bot, 04/nov, sem reenvio porque o bot
+ficava fora) e 131026 (número cadastrado errado, confirmação de 05/nov). Decisões e implementação em
+[`falhas-de-envio.md`](falhas-de-envio.md): conferência do número (A2), aviso de entrega na Agenda (C), "Corrigir
+número" no Início, reenvio do bot (30 s e 2 min), detalhes e "Descartar" na aba Envios. Migração
+`20261213120000_falhas_de_envio_descartadas`. Roteiro: `staging.md`, parte W.

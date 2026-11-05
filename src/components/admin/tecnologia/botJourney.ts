@@ -5,7 +5,7 @@
 // (CLAUDE.md): mudou a jornada do bot, atualizar este arquivo no mesmo commit,
 // junto com JOURNEY_UPDATED.
 
-export const JOURNEY_UPDATED = "04/11/2026";
+export const JOURNEY_UPDATED = "05/11/2026";
 
 export type NodeKind = "patient" | "bot" | "page" | "auto" | "reception" | "decision";
 
@@ -355,6 +355,7 @@ export const JOURNEY_RULES = [
   "\"voltar\" ou \"menu anterior\" digitado: no meio de um caminho, o submenu de onde veio (Consultas ou Exames); no preparo de exame, Informações gerais; nos menus, o menu principal.",
   "Conversa parada por 15 minutos: o bot encerra com aviso; a próxima mensagem começa de novo. Exceção: o cancelamento sem resposta ao \"Confirma o cancelamento?\" recebe a mensagem do pedido não concluído (item 10).",
   "Os botões do lembrete e da oferta de vaga funcionam em qualquer ponto da conversa.",
+  "Mensagem que não sai por instabilidade da Meta (ex.: \"131000 Something went wrong\"): 3 tentativas. Do bot, 30 segundos e 2 minutos depois, só se a conversa não andou; as automáticas (confirmação, lembrete, avisos), 10 e 30 minutos depois (cliente, 05/nov/2026).",
   "Mensagem automática do app WhatsApp Business (saudação, ausência), até 5 segundos depois da do paciente ou do bot: não pausa o bot; aviso para desligar no app.",
   "Clínica em implantação: o bot não responde e nenhuma mensagem automática sai.",
   "Clínica suspensa: o bot não responde, nenhuma mensagem automática sai e os links (agendar, preparo, orientações) mostram \"indisponível no momento\"; a mensagem do paciente fica no histórico.",

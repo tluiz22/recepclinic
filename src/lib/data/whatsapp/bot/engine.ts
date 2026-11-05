@@ -9,6 +9,7 @@ import { getWhatsappConnection } from "../connection";
 import { listBotMessages, renderMarkers, type BotMessageKey } from "../customMessages";
 import { logFunnelStep, markHandoffSubjectAsked, setConversationState, WELCOME, type Conversation } from "../conversations";
 import { recordOutboundMessage, type SendOutcome } from "../messages";
+import { botRetryContext } from "../retryRules";
 import { sendPreparationFile, type ClinicSender, type ListSection, type ReplyButton } from "../send";
 import { downloadPreparationFile } from "../preparation";
 import type { PreparationFile } from "../../config/preparationFile";
@@ -227,6 +228,8 @@ async function record(b: Bot, kind: string, outcome: SendOutcome, body: string):
       body: outcome.body ?? body,
       status: outcome.sent ? "sent" : "failed",
       waMessageId: outcome.sent ? outcome.messageId : null,
+      // Falha passageira da Meta: reenvio rápido (cliente, 05/nov/2026).
+      retry: { outcome, context: botRetryContext(b.now) },
     },
     tick(b),
   );

@@ -5,6 +5,28 @@ const acceptBtn = document.getElementById("delete_dialog_accept") as HTMLButtonE
 const titleEl = document.getElementById("delete_dialog_title") as HTMLHeadingElement;
 const detailsEl = document.getElementById("delete_dialog_details") as HTMLDListElement;
 const noticeEl = document.getElementById("delete_dialog_notice") as HTMLParagraphElement;
+const whatsappEl = document.getElementById("delete_dialog_whatsapp") as HTMLDivElement;
+const whatsappLabel = document.getElementById("delete_dialog_whatsapp_label") as HTMLSpanElement;
+const whatsappNumber = document.getElementById("delete_dialog_whatsapp_number") as HTMLSpanElement;
+const whatsappOk = document.getElementById("delete_dialog_whatsapp_ok") as HTMLInputElement;
+const whatsappFix = document.getElementById("delete_dialog_whatsapp_fix") as HTMLAnchorElement;
+
+// Conferência do WhatsApp (cliente, 05/nov/2026, opção A2): o número em destaque e o confirmar só com a caixa marcada.
+function renderWhatsapp(btn: HTMLButtonElement) {
+  const phone = btn.dataset.confirmWhatsapp ?? "";
+  whatsappEl.hidden = !phone;
+  whatsappOk.checked = false;
+  acceptBtn.disabled = !!phone;
+  if (!phone) return;
+  whatsappLabel.textContent = btn.dataset.confirmWhatsappLabel || "WhatsApp que recebe a confirmação";
+  whatsappNumber.textContent = phone;
+  const fix = btn.dataset.confirmWhatsappFix ?? "";
+  whatsappFix.hidden = !fix;
+  whatsappFix.href = fix || "#";
+}
+whatsappOk.addEventListener("change", () => {
+  acceptBtn.disabled = !whatsappOk.checked;
+});
 
 // Dados do atendimento na confirmação (Marcar e Alterar; cliente, 28/out/2026):
 // `data-confirm-details` é uma lista JSON de ConfirmDetail; com `before`, a
@@ -66,6 +88,7 @@ document.querySelectorAll<HTMLButtonElement>(".js-confirm-delete").forEach((btn)
     renderDetails(btn.dataset.confirmDetails);
     noticeEl.textContent = btn.dataset.confirmNotice ?? "";
     noticeEl.hidden = !noticeEl.textContent;
+    renderWhatsapp(btn);
     titleEl.textContent = btn.dataset.confirmTitle ?? "Excluir?";
     acceptBtn.textContent = btn.dataset.confirmLabel ?? "Excluir";
     const tone = btn.dataset.confirmTone === "primary" ? "primary" : "danger";
@@ -81,6 +104,7 @@ dialog.addEventListener("click", (event) => {
 });
 
 acceptBtn.addEventListener("click", () => {
+  if (acceptBtn.disabled) return;
   // Já enviado (src/scripts/sendOnce.ts): um segundo aceite não envia de novo.
   if (pendingForm?.dataset.sending !== undefined) {
     dialog.close();

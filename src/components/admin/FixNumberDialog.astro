@@ -1,0 +1,73 @@
+---
+// Corrigir o WhatsApp de quem não recebeu uma mensagem (cliente, 05/nov/2026, opção C2; docs/falhas-de-envio.md).
+// Abre por qualquer botão `.js-fix-number` com `data-message-id` (a mensagem que falhou), `data-contact-name`,
+// `data-phone` (o número de hoje, formatado) e `data-resend` ("1" quando a confirmação sai de novo ao salvar).
+// Salva pelo /api/admin/envios/falha (acao=corrigir) e volta para a mesma tela.
+import { CONTROL } from "./ui/styles";
+---
+
+<dialog
+  id="fix_number_dialog"
+  aria-labelledby="fix_number_title"
+  class="m-auto w-[calc(100%-2rem)] max-w-[420px] rounded-[14px] border border-line bg-white p-0 text-ink shadow-[0_20px_50px_rgba(18,48,42,.22)] backdrop:bg-ink/40"
+>
+  <form method="POST" action="/api/admin/envios/falha" class="flex flex-col gap-3.5 p-[22px]" data-fix-number-form>
+    <input type="hidden" name="acao" value="corrigir" />
+    <input type="hidden" name="mensagem" value="" data-fix-message />
+    <input type="hidden" name="return_to" value="" data-fix-return />
+    <h2 id="fix_number_title" class="font-display text-xl leading-tight font-bold text-ink">Corrigir o WhatsApp</h2>
+    <p class="text-[15px] leading-normal text-ink-mid">
+      A mensagem não chegou ao número cadastrado: <strong class="whitespace-nowrap text-danger" data-fix-old></strong>.
+    </p>
+    <div class="flex flex-col gap-1.5">
+      <label for="fix_number_phone" class="text-[15px] font-semibold text-ink">Número certo, com DDD</label>
+      <input id="fix_number_phone" name="phone" type="tel" required placeholder="(84) 99999-9999" autocomplete="off" class={`${CONTROL} w-full text-lg sm:text-lg`} />
+      <p class="text-sm text-ink-soft">Confira dígito por dígito com o paciente.</p>
+    </div>
+    <p class="rounded-[10px] border border-conf-200 bg-conf-100/60 px-3 py-2.5 text-[14.5px] leading-snug text-conf-800" data-fix-note></p>
+    <div class="mt-1 flex flex-wrap justify-end gap-2">
+      <button type="button" class="h-11 rounded-lg border border-line-strong bg-white px-4 text-[15px] font-semibold text-ink hover:bg-canvas sm:h-10" data-fix-cancel>
+        Voltar
+      </button>
+      <button type="submit" class="h-11 rounded-lg bg-brand px-4 text-[15px] font-semibold text-white hover:bg-brand-strong sm:h-10" data-fix-submit>
+        Salvar
+      </button>
+    </div>
+  </form>
+</dialog>
+
+<script>
+  const dialog = document.getElementById("fix_number_dialog") as HTMLDialogElement | null;
+  if (dialog) {
+    const field = <T extends HTMLElement>(selector: string) => dialog.querySelector<T>(selector)!;
+    const title = field<HTMLHeadingElement>("#fix_number_title");
+    const phone = field<HTMLInputElement>("#fix_number_phone");
+    const note = field<HTMLParagraphElement>("[data-fix-note]");
+    const submit = field<HTMLButtonElement>("[data-fix-submit]");
+    const open = (button: HTMLElement) => {
+      field<HTMLInputElement>("[data-fix-message]").value = button.dataset.messageId ?? "";
+      field<HTMLInputElement>("[data-fix-return]").value = `${location.pathname}${location.search}`;
+      title.textContent = `Corrigir o WhatsApp de ${button.dataset.contactName ?? "contato"}`;
+      field<HTMLElement>("[data-fix-old]").textContent = button.dataset.phone ?? "";
+      phone.value = "";
+      const resend = button.dataset.resend === "1";
+      note.textContent = resend
+        ? "Ao salvar, o número muda no cadastro e a confirmação é enviada de novo para ele."
+        : "Ao salvar, o número muda no cadastro; as próximas mensagens vão para ele.";
+      submit.textContent = resend ? "Salvar e reenviar" : "Salvar";
+      dialog.showModal();
+      phone.focus();
+    };
+    // Delegado: o aviso da Agenda cria o botão depois de a tela carregar.
+    document.addEventListener("click", (event) => {
+      const button = (event.target as HTMLElement).closest<HTMLElement>(".js-fix-number");
+      if (!button) return;
+      event.preventDefault();
+      open(button);
+    });
+    field<HTMLButtonElement>("[data-fix-cancel]").addEventListener("click", () => dialog.close());
+    dialog.addEventListener("click", (event) => {
+      if (event.target === dialog) dialog.close();
+    });
+  }
+</script>

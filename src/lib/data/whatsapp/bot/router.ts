@@ -15,6 +15,7 @@ import {
   type Conversation,
 } from "../conversations";
 import { contactIdByPhone, recordOutboundMessage } from "../messages";
+import { botRetryContext } from "../retryRules";
 import { messageBody, toE164, type WaMessage } from "../meta";
 import type { ClinicSender } from "../send";
 import { BOOKING_STATES, handleBookingState } from "./booking";
@@ -384,6 +385,8 @@ export async function closeIdleConversations(db: DbClient, clinicId: string, sen
           body: idleText,
           status: outcome.sent ? "sent" : "failed",
           waMessageId: outcome.sent ? outcome.messageId : null,
+          // Falha passageira da Meta: reenvio rápido (cliente, 05/nov/2026).
+          retry: { outcome, context: botRetryContext(now) },
         },
         now,
       );

@@ -366,6 +366,12 @@ begin
     (c_a, ap_first, ct_maria, '+5584988880001', 'outbound', 'template', 'recepclinic_confirmacao', null, 'delivered', 'wamid.local.2'),
     (c_a, ap_first, ct_maria, '+5584988880001', 'outbound', 'template', 'recepclinic_lembrete', null, 'read', 'wamid.local.3');
 
+  -- Número sem WhatsApp (05/nov/2026): aparece no Início ("Corrigir número"); já descartado pelo Suporte na aba Envios.
+  insert into public.whatsapp_messages (clinic_id, contact_id, contact_phone, direction, message_type, template_name, status, wa_message_id, failure_code, failure_reason, created_at)
+    values (c_a, ct_carlos, '+5584988880002', 'outbound', 'appointment_confirmation', 'recepclinic_confirmacao', 'failed', 'wamid.local.4', 131026, 'Message undeliverable', now() - interval '1 day');
+  insert into public.send_failure_dismissals (clinic_id, message_id, scope)
+    select c_a, id, 'envios' from public.whatsapp_messages where clinic_id = c_a and wa_message_id = 'wamid.local.4';
+
   insert into public.bot_funnel_events (clinic_id, session_id, flow, step, contact_phone, contact_id) values
     (c_a, '0a0f0000-0000-4000-8000-000000000001', 'booking', 'started', '+5584988880001', ct_maria),
     (c_a, '0a0f0000-0000-4000-8000-000000000001', 'booking', 'confirmed', '+5584988880001', ct_maria);

@@ -1590,6 +1590,38 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"send_failure_dismissals": {
+                  Row: {
+                    "clinic_id": string,"dismissed_at": string,"dismissed_by": string | null,"event_id": number | null,"id": number,"message_id": string | null,"scope": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "clinic_id": string,"dismissed_at"?: string,"dismissed_by"?: string | null,"event_id"?: number | null,"id"?: never,"message_id"?: string | null,"scope": string
+                  }
+                  Update: {
+                    "clinic_id"?: string,"dismissed_at"?: string,"dismissed_by"?: string | null,"event_id"?: number | null,"id"?: never,"message_id"?: string | null,"scope"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "send_failure_dismissals_clinic_id_fkey"
+      columns: ["clinic_id"]
+isOneToOne: false
+      referencedRelation: "clinics"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "send_failure_dismissals_event_id_fkey"
+      columns: ["event_id"]
+isOneToOne: false
+      referencedRelation: "appointment_events"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "send_failure_dismissals_message_id_fkey"
+      columns: ["message_id"]
+isOneToOne: false
+      referencedRelation: "whatsapp_messages"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"service_agendas": {
                   Row: {
                     "agenda_id": string,"clinic_id": string,"service_id": string
@@ -2043,6 +2075,9 @@ isOneToOne: false
                            },
 "dismiss_billing_whatsapp_prompt":
 { Args: { "p_clinic_id": string }; Returns: undefined
+                           },
+"dismiss_send_failure":
+{ Args: { "p_clinic_id": string,"p_event_id"?: number,"p_message_id"?: string,"p_scope": string }; Returns: undefined
                            },
 "finance_patients_missing_payer_cpf":
 { Args: { "p_clinic_id": string }; Returns: {
