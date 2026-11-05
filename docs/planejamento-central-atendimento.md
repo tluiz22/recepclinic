@@ -758,3 +758,29 @@ do bot e da conversa (sem custo na janela de 24h)", que deixou de valer em 01/ou
 calculado com o preço daquele mês; registro de quem mudou). **Cenários de IA (item 4, decidido 05/nov): os dois**,
 lado a lado com o RecepClinic: "IA de outra empresa" (Meta por mensagem + custo da empresa de IA) e "IA da Meta"
 (Meta Business Agent, por volume de texto). Seção 14 sem decisões abertas.
+
+---
+
+## 15. Telas (desenho no canvas, cliente, 05/nov/2026)
+
+Canvas: https://claude.ai/artifact/SiRBQtc2kSnQoMrgGnRn4y (tela Conversas no computador A/B/C, celular e painel do
+paciente).
+
+**Decidido (05/nov):**
+
+- **T1. Layout no computador: opção C**: lista, conversa e **painel do paciente** lado a lado. Painel: paciente
+  (convênio, "Abrir ficha"), próxima consulta com Remarcar e Marcar consulta, anotações, atendimentos anteriores.
+  No celular: lista → conversa (com "Voltar"); fora das 24 h, aviso e "Retomar conversa" no lugar da caixa de texto.
+- **T2. Responsável com 2 ou mais pacientes: C1, todos em lista**: no topo "Quem fala com a clínica" (nome, papel,
+  "Abrir contato"); abaixo, um cartão por paciente com a próxima consulta e os botões (Remarcar ou Marcar consulta,
+  Abrir ficha). Com um só paciente: o responsável no topo e o painel normal do paciente.
+- **T3. Número sem cadastro**: "Cadastrar paciente" (cadastro com o telefone preenchido) e **"É de um paciente já
+  cadastrado"**, que busca o paciente e liga o número a ele **com confirmação** ("O WhatsApp de Maria Souza muda de …
+  para …"). Contato registrado pelo bot sem paciente: nome do contato + "Cadastrar paciente". Técnico: o telefone é do
+  contato (`contacts.phone`); se o contato tiver outros pacientes, a confirmação diz que muda para todos.
+- **T4. Nome do perfil do WhatsApp**: guardado e mostrado ("Nome no WhatsApp: Fernanda") **só nas clínicas com a
+  Central ligada** (`conversation_state.profile_name`, do `contacts[].profile.name` do webhook; mesma regra de guarda
+  do texto); usado para preencher o cadastro.
+
+**Ainda a desenhar:** o painel do paciente no celular (C só no computador ou também no celular), lugar no menu,
+onde ficam as Notificações, Configurações › WhatsApp (ativação e medição) e a calculadora em Sistema › Vendas.
