@@ -792,5 +792,16 @@ paciente).
 - **T7. Notificações: N1**: botão "Notificações" no topo da tela Conversas abre a janela (ativar neste aparelho, lista
   de aparelhos, remover); sai a aba Notificações da tela de hoje.
 
-**Ainda a desenhar:** Configurações › WhatsApp (ativação da Central, custo da Meta e medição do mês) e a calculadora em
-Sistema › Vendas.
+- **T8. Configurações › WhatsApp: W2**: cartões Conexão, "Custo da Meta em <mês>" em resumo (valor do mês em
+  destaque, barra das 1.000 mensagens de serviço grátis, 3 cartões: confirmações e lembretes; assistente, avisos e
+  Central; pelo app, grátis) com "Ver detalhes" (tabela por tipo) e "Central de atendimento" (Ligada/Desligada, botão).
+  Texto do cartão sem valor estimado: "Você pode acompanhar a evolução dos custos acima, em 'Custo da Meta'."
+- **T9. Ligar a Central: L1, uma janela**: custo por mensagem da Meta e "Você pode acompanhar a evolução dos custos em
+  Configurações › WhatsApp" (sem estimativa de valor, cliente, 05/nov), o que muda (guarda das conversas, quem vê, pode
+  desligar), "Li e estou de acordo" e Ligar. Desligar: janela com o que acontece (some do menu, guardado fica pelo
+  prazo, religar traz o histórico, assistente segue).
+- **T10. Calculadora: K2**: aba "Custo da Meta" em Sistema › Vendas; campos à esquerda (profissionais, dias por semana,
+  atendimentos por dia) e parâmetros recolhíveis do Suporte; à direita cartões Hoje, Central e Total e barras com IA de
+  outra empresa e IA da Meta. Valores padrão: hoje suposições do desenho (a conferir antes do CU1).
+
+**Desenho das telas concluído** (T1 a T10).
