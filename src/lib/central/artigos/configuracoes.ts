@@ -249,6 +249,8 @@ export const configuracoesArtigos = [
       { name: "Situação", text: "Conectado, Em configuração ou Desconectado, com o número e a data." },
       { name: "Mensagens automáticas na Meta", text: "A análise da Meta leva de minutos a algumas horas e a aprovação chega sozinha. Até lá esses envios não saem. Recusada: o suporte do RecepClinic ajusta o texto e reenvia." },
       { name: "Mensagem de teste", text: "O Administrador ou o Suporte envia um teste para um celular e vê se foi entregue; se falhar, a tela diz o motivo e o que fazer. A clínica só é ativada com um teste entregue." },
+      { name: "Custo da Meta", text: "As mensagens do mês por origem e a estimativa do que a Meta cobra da clínica (\"Ver detalhes\")." },
+      { name: "Central de atendimento", text: "Com o item liberado pelo Suporte, o Administrador liga ou desliga a tela Conversas. Ligada, o RecepClinic passa a guardar o texto e os anexos das conversas." },
     ],
     notes: ["A Meta cobra da clínica, direto, as mensagens: sem um cartão definido como padrão na conta do WhatsApp, na Meta, elas deixam de sair. O teste mostra quando é isso.", "Para trocar de número: desconecte e conecte de novo com o número novo.", "Se aparecer \"A conexão pela Meta ainda não está ligada no sistema\", fale com o suporte do RecepClinic."],
     contextual: ["/admin/configuracoes/whatsapp"],

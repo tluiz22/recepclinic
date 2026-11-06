@@ -144,6 +144,9 @@ const PATH_RULES: PathRule[] = [
   { prefix: "/api/admin/configuracoes/contatos", feature: "team_summary" },
   { prefix: "/api/admin/configuracoes/lembrete", feature: "reminders" },
   // Resumo do dia: o item do público (profissional ou equipe) é conferido na rota.
+  // Central de atendimento (CN9): a tela Conversas e as gravações dela (a tela também confere se está ligada).
+  { prefix: "/admin/conversas", feature: "central_attendance" },
+  { prefix: "/api/admin/conversas", feature: "central_attendance" },
   // Módulo financeiro (F11): menu Financeiro e as gravações dele.
   { prefix: "/admin/financeiro", feature: "finance" },
   { prefix: "/api/admin/financeiro", feature: "finance" },

@@ -671,3 +671,47 @@ Migração `20261215120000_central_base.sql` (aplicar antes do push). Sem tela n
 2. **Nada muda no bot nem nas telas de hoje.** Pelo WhatsApp de testes: "oi", "falar com a recepção", resposta pelo
    app e Finalizar atendimento funcionam como antes (partes U e V).
 3. Ligar a Central, a conversa no painel e o registro de acesso aparecem no CU4 e no CN3.
+
+## AA. Central de atendimento (CU4, CN2 a CN9, 05/nov)
+
+Migrações `20261216120000` a `20261224120000` (`central_texto`, `central_lista`, `central_perfil`, `central_envio`,
+`central_retomar`, `central_midias`, `central_envio_midia`, `central_guarda`, `central_historico`), aplicadas antes do
+push. Plano em [`planejamento-central-atendimento.md`](planejamento-central-atendimento.md), seção 12.
+
+**Antes (Suporte/cliente):** na clínica de testes, liberar o item "Central de atendimento" na Matriz (com o Bot);
+criar o modelo "Retomar conversa" (`rc_retomar_conversa_v1`) e esperar a aprovação da Meta; conferir no painel do app
+da Meta os campos do webhook `account_update`, `history`, `smb_app_state_sync` e `smb_message_echoes`; criar a
+configuração v4 do cadastro e trocar `WHATSAPP_ES_CONFIG_ID` na Vercel (staging).
+
+1. **Ligar (CU4).** Configurações › WhatsApp (Administrador): cartão "Custo da Meta" (mês atual, "Ver detalhes") e
+   "Central de atendimento" com Ligar (janela com o custo). Ligada: o menu ganha **Conversas** e Atendimento abre
+   Conversas. A Recepção não vê o cartão.
+2. **Lista (CN3a).** Pelo WhatsApp de testes, "oi" e "falar com a recepção": a conversa aparece em Abertas, "Aguardando
+   a clínica", "Sem responsável", com a prévia do texto e o número de não lidas no menu. Busca por nome e telefone;
+   Mostrar (Todas, Não atribuídas, Minhas, Aguardando paciente); aba Finalizadas.
+3. **Conversa (CN2, CN3b).** Abrir: o histórico com o assistente (rótulos Assistente, Aviso automático, Respondida pelo
+   app), 50 por vez ("Mensagens anteriores"); editar ou apagar no app muda a mensagem ("editada", "Mensagem apagada").
+   Painel do paciente à direita (1280px) ou "Ver paciente" (celular); número sem cadastro: Cadastrar paciente e "É de um
+   paciente já cadastrado".
+4. **Responder, assumir, transferir (CN4a).** Responder pela caixa (Ctrl+Enter): chega no WhatsApp de testes; a
+   conversa vai para "Em atendimento", "Com você". Com outra pessoa responsável: confirma "Está com … Responder e
+   assumir?". Transferir para um Profissional: ele vê só essa conversa. Finalizar atendimento: vai para Finalizadas.
+5. **Foto e PDF (CN6).** O clipe ao lado da caixa: foto JPG/PNG (até 5 MB) com legenda e um PDF (até 10 MB) chegam no
+   WhatsApp de testes e aparecem na conversa. Foto de 6 MB, PDF de 11 MB ou arquivo .docx: a janela recusa com o
+   motivo, sem enviar.
+6. **Mídia recebida (CN5).** Do WhatsApp de testes, mandar foto, áudio e PDF: em até 1 minuto aparecem na conversa
+   (foto, tocador, "Baixar"). Vídeo: o aviso "A Central não mostra vídeos…" e, com o app no número, "Abrir no WhatsApp".
+7. **24 h e Retomar conversa (CN4b).** Numa conversa sem mensagem do paciente há mais de 24 h: no lugar da caixa, o
+   aviso e "Retomar conversa" (confirmação com o texto e o custo). Enviado: "Retomar conversa enviado…"; quando o
+   paciente responde, a caixa volta.
+8. **30 minutos (CN4b).** Assumir e não responder: depois de 30 min no horário da clínica, volta para "Sem responsável".
+9. **Guarda e anonimização (CN7).** Anonimizar um paciente de teste com conversa e anexo: a conversa some das
+   Conversas; o anexo deixa de abrir. Sistema › Saúde: rotinas `midias` e `guarda-conversas` em dia (a de guarda roda
+   às 03h40).
+10. **Histórico e cadastro v4 (CN8).** Só com número para reconectar: desconectar o número de testes e conectar de novo
+    (coexistência) com a Central já ligada. A conexão termina normalmente; em alguns minutos, as conversas antigas do
+    app aparecem no histórico quando o paciente escrever de novo (antigos anexos: "Anexo enviado antes da conexão").
+11. **Desligar.** Configurações › WhatsApp › Desligar: o menu perde Conversas e o Atendimento volta ao de antes; o
+    que já foi guardado fica (prazo de guarda).
+12. **Ajuda.** Central de Ajuda: artigo "Conversas: a Central de atendimento"; Tecnologia › Jornada do bot com a
+    resposta pela Central (texto, foto e PDF).
