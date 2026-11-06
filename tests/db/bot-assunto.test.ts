@@ -171,7 +171,8 @@ describe("assunto da transferência", () => {
     await say(phone, "Oi");
     await say(phone, "1"); // Consultas
     await say(phone, "1"); // Marcar consulta (consulta única): "Com qual profissional?"
-    const reply = await say(phone, "quero falar com atendente");
+    await say(phone, "quero falar com atendente"); // "Você quer falar com a recepção?" (cliente, 06/nov/2026)
+    const reply = await say(phone, "sim");
     expect(reply.at(-1)).toBe(QUESTION);
     const { data } = await adminClient()
       .from("bot_funnel_events")

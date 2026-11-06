@@ -453,10 +453,12 @@ describe("robustez", () => {
 
     await adminClient().from("whatsapp_connections").update({ coexistence: true }).eq("clinic_id", f.clinicId);
     try {
-      // Digitado: transfere direto, sem perguntar o motivo (cliente, 06/nov/2026); a origem e a etapa ficam no registro.
+      // Digitado: confirma antes (cliente, 06/nov/2026); com o Sim, a origem e a etapa ficam no registro.
       await fresh(P1);
       await say(P1, "oi");
       reply = await say(P1, "atendente");
+      expect(reply.at(-1)!.body).toBe("Você quer falar com a recepção? A conversa passa para a nossa equipe.");
+      reply = await say(P1, "sim");
       expect(reply[0].body).toContain("Vou te transferir para a recepção");
       expect(await conversation(P1)).toMatchObject({ state: "HUMAN_HANDOFF", human_handoff: true });
       expect(await lastHandoff()).toMatchObject({ step: "requested", metadata: { origin: "typed", journey_state: "ENTRY_ASK" } });

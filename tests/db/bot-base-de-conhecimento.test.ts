@@ -417,21 +417,33 @@ describe("dúvida respondida fora de um fluxo: sem confirmação (cliente, 04/no
   });
 });
 
-describe("pedido de recepção: transfere direto; o motivo na mesma mensagem vai para a base (cliente, 06/nov/2026)", () => {
+describe("pedido de recepção: o digitado confirma, o menu transfere; o motivo na mesma mensagem vai para a base (cliente, 06/nov/2026)", () => {
   beforeAll(async () => {
     await setCoexistence(true);
     await setReceptionHours(ALWAYS_OPEN);
   });
   afterAll(async () => setCoexistence(false));
 
-  it("sem motivo, digitado: transfere direto e pergunta o assunto", async () => {
+  it("sem motivo, digitado: confirma (Sim · Não); Sim transfere e pergunta o assunto", async () => {
     const phone = "+5584991337070";
     await say(phone, "Oi");
-    const reply = await say(phone, "atendente");
+    const ask = await say(phone, "atendente");
+    expect(ask.at(-1)).toMatchObject({ kind: "buttons", body: "Você quer falar com a recepção? A conversa passa para a nossa equipe." });
+    expect((await handoffOf(phone)).human_handoff).toBe(false);
+    const reply = await say(phone, { id: "reception_yes" });
     expect(reply[0].body).toContain("Vou te transferir para a recepção");
     expect(reply.at(-1)!.body).toBe(SUBJECT_Q);
     expect((await handoffOf(phone)).human_handoff).toBe(true);
     expect((await funnel(phone, "handoff"))[0].metadata).toMatchObject({ origin: "typed" });
+  });
+
+  it("sem motivo, digitado (\"secretária\"): Não mantém com o bot e mostra o menu", async () => {
+    const phone = "+5584991337096";
+    await say(phone, "Oi");
+    await say(phone, "secretária");
+    const reply = await say(phone, { id: "reception_no" });
+    expect(reply[0].body).toBe("Tudo bem, seguimos por aqui.");
+    expect((await handoffOf(phone)).human_handoff).toBe(false);
   });
 
   it("sem motivo, pelo menu: transfere direto", async () => {
@@ -497,19 +509,25 @@ describe("pedido de recepção: transfere direto; o motivo na mesma mensagem vai
     expect(data!.map((d) => d.flow)).toEqual(["return_booking"]);
   });
 
-  it("motivo sem resposta segura na mesma mensagem: transfere direto e pergunta o assunto", async () => {
+  it("motivo sem resposta segura na mesma mensagem: confirma; Sim transfere e pergunta o assunto", async () => {
     const phone = "+5584991337075";
     await say(phone, "Oi");
-    const reply = await say(phone, "atendente, tem estacionamento?");
+    const ask = await say(phone, "atendente, tem estacionamento?");
+    expect(ask.at(-1)).toMatchObject({ kind: "buttons", body: "Você quer falar com a recepção? A conversa passa para a nossa equipe." });
+    expect((await handoffOf(phone)).human_handoff).toBe(false);
+    const reply = await say(phone, { id: "reception_yes" });
     expect(reply[0].body).toContain("Vou te transferir para a recepção");
     expect(reply.at(-1)!.body).toBe(SUBJECT_Q);
     expect((await handoffOf(phone)).human_handoff).toBe(true);
   });
 
-  it("entrada do tipo recepção na mesma mensagem (resultado de exame): transfere direto", async () => {
+  it("entrada do tipo recepção na mesma mensagem (resultado de exame): confirma; Sim transfere", async () => {
     const phone = "+5584991337076";
     await say(phone, "Oi");
-    const reply = await say(phone, "atendente, o resultado do meu exame já saiu?");
+    const ask = await say(phone, "atendente, o resultado do meu exame já saiu?");
+    expect(ask.at(-1)).toMatchObject({ kind: "buttons", body: "Você quer falar com a recepção? A conversa passa para a nossa equipe." });
+    expect((await handoffOf(phone)).human_handoff).toBe(false);
+    const reply = await say(phone, { id: "reception_yes" });
     expect(reply[0].body).toContain("Vou te transferir para a recepção");
     expect((await handoffOf(phone)).human_handoff).toBe(true);
   });
@@ -534,7 +552,8 @@ describe("pedido de recepção: transfere direto; o motivo na mesma mensagem vai
     const phone = "+5584991337080";
     await setReceptionHours(Array.from({ length: 7 }, () => null));
     await say(phone, "Oi");
-    const reply = await say(phone, "atendente");
+    await say(phone, "atendente");
+    const reply = await say(phone, { id: "reception_yes" });
     expect(reply[0].body).toContain("No momento a recepção está fora do horário de atendimento; responderemos assim que possível.");
     await setReceptionHours(ALWAYS_OPEN);
   });
@@ -542,7 +561,8 @@ describe("pedido de recepção: transfere direto; o motivo na mesma mensagem vai
   it("dúvida respondida no menu e depois o pedido de recepção: a transferência fica ligada à dúvida", async () => {
     const phone = "+5584991337095";
     const a = await say(phone, "Oi, qual o endereço?");
-    const b2 = await say(phone, "atendente");
+    await say(phone, "atendente");
+    const b2 = await say(phone, { id: "reception_yes" });
     // Com recepção no número, a apresentação cita a recepção.
     expect(bodies(a).at(-1)).toBe(MENU_INTRO.replace("\n\nComo podemos", "\n\n👩‍💼 Falar diretamente com a recepção, se precisar de ajuda.\n\nComo podemos"));
     expect(b2[0].body).toContain("Vou te transferir para a recepção");

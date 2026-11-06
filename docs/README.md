@@ -15,6 +15,10 @@
 > (migração `20261225120000` aplicada no staging; produção não). Na `main` (staging); cliente valida. Captura
 > `config-agendas` pendente. **Push na `main` só com autorização do cliente (06/nov).**
 >
+> **Conversas como o WhatsApp + anexo + bot (06/nov):** tela na altura da janela no computador, conversa em tela cheia
+> no celular com a caixa fixa, CSP liberando o Storage (anexo) e confirmação do pedido de recepção digitado. Commit
+> local, sem push (aguarda o cliente). Captura `conversas` pendente.
+>
 > **C31 (04/nov):** apresentação do 1º menu do bot, descrições nas opções e botão "Ver opções". No **staging e na
 > produção** (`d2744f9`, sem migração). **Validada (05/nov).**
 >

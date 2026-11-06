@@ -222,7 +222,7 @@ const tabClass = (active: boolean) =>
   `flex min-h-12 flex-1 items-center justify-center border-b-[3px] text-[15px] no-underline ${active ? "border-brand font-semibold text-brand-ink" : "border-transparent text-ink-soft hover:text-ink"}`;
 ---
 
-<AdminLayout title="Conversas" autoRefresh wide>
+<AdminLayout title="Conversas" autoRefresh wide fill>
   <div class:list={["flex flex-wrap items-center justify-between gap-3", selected && "max-lg:hidden"]}>
     <h1 class="font-display text-[28px] leading-[1.1] font-bold text-ink sm:text-[30px]">Conversas</h1>
     <button
@@ -235,7 +235,7 @@ const tabClass = (active: boolean) =>
   </div>
   <FlashMessage />
 
-  <div class:list={["mt-4 grid gap-4 lg:h-[calc(100dvh-10rem)] lg:min-h-[560px] lg:grid-cols-[300px_minmax(0,1fr)]", panel && "xl:grid-cols-[280px_minmax(0,1fr)_280px]", panel && showPanel && "lg:max-xl:grid-cols-1"]}>
+  <div class:list={["mt-4 grid gap-4 lg:min-h-[480px] lg:flex-1 lg:grid-cols-[300px_minmax(0,1fr)]", panel && "xl:grid-cols-[280px_minmax(0,1fr)_280px]", panel && showPanel && "lg:max-xl:grid-cols-1"]}>
     <!-- Lista -->
     <section aria-label="Lista de conversas" class:list={["flex min-h-0 flex-col overflow-hidden rounded-xl border border-line bg-white", selected && "max-lg:hidden", selected && showPanel && "max-xl:hidden"]}>
       <nav class="flex border-b border-line" aria-label="Abertas ou finalizadas" data-live="tabs">
@@ -315,7 +315,18 @@ const tabClass = (active: boolean) =>
     </section>
 
     <!-- Conversa -->
-    <section aria-label="Conversa" class:list={["flex min-h-0 flex-col rounded-xl lg:overflow-hidden border border-line bg-white", !selected && !threadError && "max-lg:hidden", panel && showPanel && "max-xl:hidden"]}>
+    {/* No celular, a conversa aberta ocupa a tela toda, como no app do WhatsApp (cliente, 06/nov/2026): o cabeçalho no
+        topo, as mensagens rolando no meio e a caixa de resposta fixa embaixo. A altura acompanha o teclado (script). */}
+    <section
+      aria-label="Conversa"
+      class:list={[
+        "flex min-h-0 flex-col overflow-hidden rounded-xl border border-line bg-white",
+        !selected && !threadError && "max-lg:hidden",
+        selected && "max-lg:fixed max-lg:inset-x-0 max-lg:top-[var(--app-top,0px)] max-lg:z-30 max-lg:h-[var(--app-height,100dvh)] max-lg:rounded-none max-lg:border-0",
+        panel && showPanel && "max-xl:hidden",
+      ]}
+      data-conversation={selected ? "" : undefined}
+    >
       {
         !selected ? (
           <div class="flex flex-1 flex-col items-center justify-center gap-2 p-8 text-center">
@@ -329,8 +340,7 @@ const tabClass = (active: boolean) =>
           </div>
         ) : (
           <>
-            {/* No celular, o cabeçalho e o "Ver paciente" ficam presos no topo enquanto a conversa rola (cliente, 06/nov/2026). */}
-            <div class="z-10 rounded-t-xl bg-white max-lg:sticky max-lg:top-0">
+            <div class="flex-none bg-white pt-[env(safe-area-inset-top)] lg:pt-0">
             <header class="flex flex-wrap items-center justify-between gap-3 border-b border-line px-3 py-2.5 sm:px-4">
               <div class="flex min-w-0 items-center gap-1.5">
                 <a href={backHref} aria-label="Voltar para a lista" class="inline-flex h-11 w-11 flex-none items-center justify-center rounded-lg text-ink hover:bg-canvas lg:hidden">
@@ -488,14 +498,16 @@ const tabClass = (active: boolean) =>
             </div>
 
             {selected.open && (
-              <p class="border-t border-line px-4 pt-2.5 text-[13px] text-ink-soft" data-live="reason">
+              <p class="flex-none border-t border-line px-4 pt-2.5 text-[13px] text-ink-soft" data-live="reason">
                 {handoffReasonLabel(selected.reason)}
                 {selected.subject && ` · Assunto: ${selected.subject}`}
               </p>
             )}
             {canReply &&
               (windowOpen ? (
-                <form method="POST" action="/api/admin/conversas/enviar" class:list={["flex items-end gap-2 px-3 py-2.5 sm:px-4", !selected.open && "border-t border-line"]} data-composer>
+                <form method="POST" action="/api/admin/conversas/enviar" class:list={["flex flex-none items-end gap-2 px-3 pt-2.5 pb-[calc(0.625rem+env(safe-area-inset-bottom))] sm:px-4 lg:pb-2.5", !selected.open && "border-t border-line"]}
+                  data-composer
+                >
                   <input type="hidden" name="acao" value="enviar" />
                   <input type="hidden" name="telefone" value={selected.phone} />
                   <input type="hidden" name="chave" value={clientKey} />
@@ -536,7 +548,7 @@ const tabClass = (active: boolean) =>
                   </button>
                 </form>
               ) : (
-                <div class:list={["flex flex-col gap-2 px-4 py-3 text-sm text-ink-mid", !selected.open && "border-t border-line"]}>
+                <div class:list={["flex flex-none flex-col gap-2 px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] text-sm text-ink-mid lg:pb-3", !selected.open && "border-t border-line"]}>
                   {resume?.sentAt ? (
                     <p>
                       <strong class="text-ink">"Retomar conversa" enviado {dayLabel(resume.sentAt).toLowerCase()}, às {formatInstant(resume.sentAt, clinic.timezone, "HH:mm")}.</strong>{" "}
@@ -717,18 +729,28 @@ const tabClass = (active: boolean) =>
 <script>
   // A conversa abre na mensagem mais nova (o fim da lista).
   const thread = document.querySelector<HTMLElement>("[data-thread]");
-  const mobile = () => window.matchMedia("(max-width: 1023px)").matches;
-  // No computador a conversa rola dentro do quadro; no celular, a página inteira.
+  // A conversa rola dentro do quadro, no computador e no celular.
   const toEnd = () => {
-    if (!thread) return;
-    thread.scrollTop = thread.scrollHeight;
-    if (mobile()) window.scrollTo(0, document.documentElement.scrollHeight);
+    if (thread) thread.scrollTop = thread.scrollHeight;
   };
-  const atEnd = () =>
-    !!thread &&
-    (mobile()
-      ? document.documentElement.scrollHeight - window.scrollY - window.innerHeight < 120
-      : thread.scrollHeight - thread.scrollTop - thread.clientHeight < 120);
+  const atEnd = () => !!thread && thread.scrollHeight - thread.scrollTop - thread.clientHeight < 120;
+  // Celular com a conversa aberta (tela cheia, como no WhatsApp): a página atrás não rola, e o quadro acompanha a área
+  // visível, para a caixa de resposta ficar logo acima do teclado.
+  if (document.querySelector("[data-conversation]")) {
+    const root = document.documentElement;
+    root.classList.add("max-lg:overflow-hidden");
+    const viewport = window.visualViewport;
+    const fit = () => {
+      if (!viewport) return;
+      const follow = atEnd();
+      root.style.setProperty("--app-height", `${viewport.height}px`);
+      root.style.setProperty("--app-top", `${viewport.offsetTop}px`);
+      if (follow) toEnd();
+    };
+    viewport?.addEventListener("resize", fit);
+    viewport?.addEventListener("scroll", fit);
+    fit();
+  }
   if (thread && !new URLSearchParams(location.search).has("antes")) {
     toEnd();
     // As fotos (CN5) carregam depois: a conversa segue no fim, se ninguém rolou.

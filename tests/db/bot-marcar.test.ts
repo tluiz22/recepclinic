@@ -225,8 +225,10 @@ describe("bot: pedido de recepção digitado nos passos de texto livre (cliente,
       reply = await say(other, "Maria Secretária");
       expect(reply[0].body).toBe("Qual a data de nascimento do paciente? (formato dd/mm/aaaa)");
       expect((await conversation(other)).state).toBe("BOOK_PATIENT_NEW");
-      // Fora desses passos, o mesmo texto é um pedido de recepção: transfere direto (cliente, 06/nov/2026).
+      // Fora desses passos, o mesmo texto é um pedido de recepção: confirma e transfere (cliente, 06/nov/2026).
       reply = await say(other, "quero falar com a secretária");
+      expect(reply.at(-1)!.body).toBe("Você quer falar com a recepção? A conversa passa para a nossa equipe.");
+      reply = await say(other, "sim");
       expect(reply[0].body).toContain("Vou te transferir para a recepção");
       expect((await conversation(other)).state).toBe("HUMAN_HANDOFF");
     } finally {

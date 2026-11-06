@@ -1077,3 +1077,18 @@ procedimentos", a agenda da equipe é criada sozinha; desligar o item desativa a
   artigo de Agendas e o item Exames da Matriz atualizados. `seed.sql` usa a "Exames" automática.
 - Testes de banco ajustados (`teamAgendaId`); casos novos: renomear o profissional e ligar/desligar o item.
 
+## Conversas como o WhatsApp, anexo e confirmação da recepção (06/nov/2026)
+
+Pedido do cliente depois do staging:
+- **Computador:** a tela Conversas ocupa a altura da janela (`AdminLayout`, `fill`), sem a barra de rolagem da página;
+  só a lista, a conversa e o painel rolam por dentro.
+- **Celular:** a conversa aberta ocupa a tela toda, como no app do WhatsApp: cabeçalho no topo, mensagens rolando no
+  meio e a caixa de resposta fixa embaixo (acompanha o teclado pelo `visualViewport`); a página atrás não rola, sem
+  barra horizontal. Sai o cabeçalho preso (`sticky`) da manhã.
+- **Anexo "Failed to fetch":** a CSP bloqueava a subida direta ao Storage; `connect-src 'self' https://*.supabase.co`
+  (`astro.config.mjs`).
+- **Bot:** pedido de recepção digitado sem motivo ("secretária", "atendente", ou um motivo que a base não responde)
+  pergunta "Você quer falar com a recepção?" com Sim · Não também com a base de conhecimento; a opção do menu continua
+  transferindo direto. Jornada do bot atualizada; testes do bot ajustados (154 passando).
+- Testes de tela (skill playwright-ui-form-best-practices): 1280, 1440 e 390 px; relatório entregue ao cliente.
+
