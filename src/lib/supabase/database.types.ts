@@ -1992,6 +1992,14 @@ isOneToOne: false
 "central_enabled":
 { Args: { "p_clinic_id": string }; Returns: boolean
                            },
+"central_release_idle":
+{ Args: { "p_clinic_id": string,"p_minutes"?: number }; Returns: number
+                           },
+"central_resume_prepare":
+{ Args: { "p_body": string,"p_client_key": string,"p_clinic_id": string,"p_contact_phone": string,"p_expected_assigned": string | null,"p_template_name": string }; Returns: {
+              "assigned_name": string | null,"assigned_to": string | null,"message_id": string | null,"outcome": string
+            }[]
+                           },
 "central_send_prepare":
 { Args: { "p_body": string,"p_client_key": string,"p_clinic_id": string,"p_contact_phone": string,"p_expected_assigned": string | null }; Returns: {
               "assigned_name": string | null,"assigned_to": string | null,"message_id": string | null,"outcome": string

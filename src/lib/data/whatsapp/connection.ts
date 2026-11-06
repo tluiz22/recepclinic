@@ -411,6 +411,7 @@ export const TEMPLATE_KEYS = [
   "daily_summary_exams_today",
   "nfse_document",
   "connection_test",
+  "conversation_resume",
 ] as const;
 
 export type TemplateKey = (typeof TEMPLATE_KEYS)[number];

@@ -293,6 +293,10 @@ export const JOURNEY: JourneySection[] = [
         "Responder pelo app também pausa o bot. A tela Atendimento mostra quem espera. Exceção: mensagem que sai do app até 5 segundos depois da do paciente ou do bot (saudação ou ausência automática) não pausa; o Início e Configurações › WhatsApp avisam para desligar.",
       ),
       reception(
+        "Com a Central de atendimento ligada: responde pela tela Conversas, dentro das 24 h da última mensagem do paciente",
+        "Quem responde assume a conversa; responder numa conversa finalizada pausa o bot, como pelo app. Se a equipe assume enquanto o bot ainda está respondendo, o bot para ali e não manda mais nada. Passadas 24 h, só o modelo \"Retomar conversa\" (\"Olá, Maria! Aqui é da Clínica X. Sobre a sua mensagem de 04/11: temos um retorno para você. Pode responder esta mensagem para continuarmos o atendimento?\"), um por vez; a resposta do paciente reabre a conversa. Paciente esperando 30 min sem resposta, no horário da clínica: a conversa volta para \"Sem responsável\", sem aviso (Central, cliente, 05/nov/2026).",
+      ),
+      reception(
         "Manda #bot ou toca em \"Finalizar atendimento\" no painel: o bot volta a atender essa conversa, sem mandar nada nem mostrar o menu",
         "O bot só responde na próxima mensagem do paciente, do começo. Se o paciente escreveu depois que a tela abriu, o painel avisa para conferir antes (CA, cliente, 04/nov/2026).",
       ),

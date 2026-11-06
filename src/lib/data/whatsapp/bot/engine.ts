@@ -82,7 +82,34 @@ export type Bot = BotEnv & {
   incomingText?: string | null;
   /** Base de conhecimento (BC, Etapa 4): consultada no lugar do primeiro "não entendi" da mensagem. */
   knowledge?: KnowledgeHook;
+  /** A equipe assumiu a conversa enquanto o bot respondia (CN4b): nada mais sai nesta mensagem. */
+  heldByStaff?: boolean;
 };
+
+/**
+ * O bot relê a pausa antes de cada envio (Central de atendimento, CN4b; plano, seção 3.4): se a equipe assumiu a
+ * conversa (resposta pela Central ou pelo app) depois que o bot começou a responder, ele para. A pausa pedida pelo
+ * próprio fluxo (o paciente pediu a recepção, limite do contato) não conta: ali o bot ainda avisa o paciente.
+ */
+async function staffTookOver(b: Bot): Promise<boolean> {
+  if (b.heldByStaff) return true;
+  if (b.convo.humanHandoff) return false;
+  let data: { human_handoff: boolean; handoff_changed_by: string | null } | null = null;
+  try {
+    const result = await b.db
+      .from("conversation_state")
+      .select("human_handoff, handoff_changed_by")
+      .eq("clinic_id", b.clinicId)
+      .eq("contact_phone", b.phone)
+      .maybeSingle();
+    data = result.error ? null : result.data;
+  } catch {
+    // Sem a leitura, o bot segue (como antes da Central).
+  }
+  if (!data) return false;
+  b.heldByStaff = data.human_handoff && data.handoff_changed_by === "reception";
+  return b.heldByStaff;
+}
 
 /**
  * Base de conhecimento no "não entendi" (BC, Etapa 4): o router liga com a base
@@ -238,7 +265,7 @@ async function record(b: Bot, kind: string, outcome: SendOutcome, body: string):
 /** Texto livre (sempre dentro da janela de 24h: o paciente acabou de escrever). */
 export async function say(b: Bot, kind: string, body: string): Promise<void> {
   const text = kind === NOT_UNDERSTOOD_KIND ? await notUnderstood(b, body) : body;
-  if (text === null) return;
+  if (text === null || (await staffTookOver(b))) return;
   await record(b, kind, await b.sender.text(b.phone, text), text);
 }
 
@@ -250,6 +277,7 @@ function withoutNotUnderstood(body: string): string {
 
 /** Preparo com arquivo (C7.5): o documento com a legenda, como na confirmação. */
 export async function sayPreparationFile(b: Bot, kind: string, examName: string, file: PreparationFile): Promise<void> {
+  if (await staffTookOver(b)) return;
   let outcome: SendOutcome;
   try {
     outcome = await sendPreparationFile(b.sender, b.phone, examName, await downloadPreparationFile(b.db, file), null);
@@ -261,6 +289,7 @@ export async function sayPreparationFile(b: Bot, kind: string, examName: string,
 
 export async function sendList(b: Bot, kind: string, body: string, sections: ListSection[]): Promise<void> {
   if (kind === NOT_UNDERSTOOD_KIND && (await notUnderstood(b, body)) === null) body = withoutNotUnderstood(body);
+  if (await staffTookOver(b)) return;
   const outcome = await b.sender.list(b.phone, body, LIST_BUTTON, sections);
   await record(b, kind, outcome, body);
   await rememberPrompt(b, outcome.sent ? outcome.messageId : null);
@@ -269,6 +298,7 @@ export async function sendList(b: Bot, kind: string, body: string, sections: Lis
 
 export async function sendButtons(b: Bot, kind: string, body: string, buttons: ReplyButton[]): Promise<void> {
   if (kind === NOT_UNDERSTOOD_KIND && (await notUnderstood(b, body)) === null) body = withoutNotUnderstood(body);
+  if (await staffTookOver(b)) return;
   const outcome = await b.sender.buttons(b.phone, body, buttons);
   await record(b, kind, outcome, body);
   await rememberPrompt(b, outcome.sent ? outcome.messageId : null);
@@ -286,6 +316,7 @@ export async function sayInvalidBirthdate(b: Bot): Promise<void> {
   // A base respondeu: a pergunta da data de novo, sem o "não entendi".
   if (body === null) return say(b, "bot_ask_birthdate_again", ASK_BIRTHDATE_AGAIN);
   if (again) return sendButtons(b, "bot_invalid_birthdate", body, wayOutButtons(b.receptionAvailable));
+  if (await staffTookOver(b)) return;
   await record(b, "bot_invalid_birthdate", await b.sender.text(b.phone, body), body);
 }
 

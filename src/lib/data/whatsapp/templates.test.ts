@@ -274,7 +274,10 @@ describe("situação dos templates em uso (F8.2)", () => {
     const keys = (features: Parameters<typeof templatesInUse>[0]) => templatesInUse(features).map((t) => t.key);
     // A mensagem de teste (IS2, 03/nov/2026) vale para toda clínica.
     expect(keys([])).toEqual(["confirmation", "reschedule", "cancellation", "clinic_cancellation", "reminder", "consultation_guidance", "connection_test"]);
-    expect(keys(["exams", "daily_summary", "waitlist", "finance"])).toHaveLength(DEFAULT_TEMPLATES.length);
+    expect(keys(["exams", "daily_summary", "waitlist", "finance", "central_attendance"])).toHaveLength(DEFAULT_TEMPLATES.length);
+    // "Retomar conversa" (CN4b): só com a Central de atendimento.
+    expect(keys(["central_attendance"])).toContain("conversation_resume");
+    expect(keys(["finance"])).not.toContain("conversation_resume");
     expect(keys(["daily_summary"])).toContain("daily_summary_consultations_today");
     expect(keys(["daily_summary"])).not.toContain("daily_summary_exams");
   });

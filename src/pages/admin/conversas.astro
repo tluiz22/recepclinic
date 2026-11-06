@@ -36,7 +36,10 @@ import { DataError } from "../../lib/data/errors";
 import { handoffReasonLabel } from "../../lib/data/whatsapp/attention";
 import { listMyDevices } from "../../lib/data/whatsapp/attentionPush";
 import { CUSTOMER_SERVICE_WINDOW_MS } from "../../lib/data/whatsapp/messages";
-import { listCentralTeam, type TeamOption } from "../../lib/data/centralSend";
+import { listCentralTeam, resumeParams, resumeText, type TeamOption } from "../../lib/data/centralSend";
+import { getClinicSettings } from "../../lib/data/config/clinic";
+import { getApprovedTemplate } from "../../lib/data/whatsapp/connection";
+import { clinicLabel } from "../../lib/data/whatsapp/templates";
 import { ROLE_LABELS } from "../../lib/data/config/team";
 import { platformEnv } from "../../lib/env";
 import { formatPhoneBR } from "../../lib/phone";
@@ -112,6 +115,22 @@ const windowOpen = !!selected?.lastPatientAt && Date.now() - selected.lastPatien
 const team: TeamOption[] = selected?.open && canEdit && thread ? (await listCentralTeam(db, clinic.clinicId)).filter((m) => m.userId !== selected.assignedTo && m.userId !== clinic.userId) : [];
 const clientKey = crypto.randomUUID();
 const rolesOf = (member: TeamOption) => member.roles.map((role) => ROLE_LABELS[role]).join(", ");
+// Fora das 24 h (CN4b; decisão 7): o "Retomar conversa", com o texto que o paciente vai receber na confirmação. Já
+// enviado depois da última mensagem do paciente (e não falhou): aguarda a resposta, sem outro envio.
+const resume =
+  canReply && !windowOpen && selected
+    ? await (async () => {
+        const [template, settings] = await Promise.all([getApprovedTemplate(db, clinic.clinicId, "conversation_resume"), getClinicSettings(db, clinic.clinicId)]);
+        const sentAfter = chronological.findLast(
+          (m) => m.messageType === "conversation_resume" && m.status !== "failed" && (!selected.lastPatientAt || m.sortAt > selected.lastPatientAt),
+        );
+        const params = resumeParams(
+          { clinicLabel: clinicLabel(settings.name, settings.messageArticle) },
+          { name: selected.name ?? selected.profileName, lastPatientAt: selected.lastPatientAt ?? selected.lastMessageAt, timeZone: clinic.timezone },
+        );
+        return { approved: !!template, text: resumeText(template, params), sentAt: sentAfter?.sortAt ?? null };
+      })()
+    : null;
 const linkQuery = (params.get("paciente") ?? "").trim().slice(0, 80);
 const linkResults: PatientWithContact[] = linking && linkQuery.length >= 2 ? await searchPatients(db, clinic.clinicId, linkQuery) : [];
 const nextOfPanel = panel?.patients
@@ -413,7 +432,7 @@ const tabClass = (active: boolean) =>
                       {bubble.failed && message.author === "agent_panel" && (
                         <span class="flex flex-wrap items-center justify-end gap-x-2 text-[13px] font-semibold text-danger">
                           Não enviada
-                          {canReply && windowOpen && (
+                          {canReply && (windowOpen || message.messageType === "conversation_resume") && (
                             <form method="POST" action="/api/admin/conversas/enviar?tentar=1" class="inline">
                               <input type="hidden" name="acao" value="tentar" />
                               <input type="hidden" name="mensagem" value={message.id} />
@@ -471,10 +490,42 @@ const tabClass = (active: boolean) =>
                   </button>
                 </form>
               ) : (
-                <p class:list={["px-4 py-3 text-sm text-ink-mid", !selected.open && "border-t border-line"]}>
-                  <strong class="text-ink">Sem mensagem do paciente nas últimas 24 horas.</strong> Pelo WhatsApp, a clínica só manda texto livre até 24
-                  horas depois da última mensagem do paciente.
-                </p>
+                <div class:list={["flex flex-col gap-2 px-4 py-3 text-sm text-ink-mid", !selected.open && "border-t border-line"]}>
+                  {resume?.sentAt ? (
+                    <p>
+                      <strong class="text-ink">"Retomar conversa" enviado {dayLabel(resume.sentAt).toLowerCase()}, às {formatInstant(resume.sentAt, clinic.timezone, "HH:mm")}.</strong>{" "}
+                      Quando o paciente responder, a caixa de mensagem volta.
+                    </p>
+                  ) : (
+                    <p>
+                      <strong class="text-ink">Sem mensagem do paciente nas últimas 24 horas.</strong> Pelo WhatsApp, a clínica só manda texto livre até 24
+                      horas depois da última mensagem do paciente. Para voltar a falar, envie o "Retomar conversa": quando ele responder, a conversa reabre.
+                    </p>
+                  )}
+                  {resume && !resume.sentAt && resume.approved && (
+                    <form method="POST" action="/api/admin/conversas/enviar?retomar=1" class="flex">
+                      <input type="hidden" name="acao" value="retomar" />
+                      <input type="hidden" name="telefone" value={selected.phone} />
+                      <input type="hidden" name="chave" value={clientKey} />
+                      <input type="hidden" name="responsavel_visto" value={selected.assignedTo ?? ""} />
+                      <input type="hidden" name="return_to" value={threadHref} />
+                      <button
+                        type="submit"
+                        class="js-confirm-delete inline-flex min-h-11 items-center justify-center rounded-lg bg-brand px-4 text-[15px] font-semibold text-white hover:bg-brand-ink max-sm:w-full"
+                        data-confirm-title={otherOwner ? `Está com ${ownerFirst}. Retomar e assumir?` : "Enviar o \"Retomar conversa\"?"}
+                        data-confirm-message={`O paciente recebe:\n\n${resume.text}\n\nA Meta cobra este envio na conta da clínica.${otherOwner ? ` Você passa a ser responsável pela conversa.` : ""}`}
+                        data-confirm-label="Enviar"
+                      >
+                        Retomar conversa
+                      </button>
+                    </form>
+                  )}
+                  {resume && !resume.sentAt && !resume.approved && (
+                    <p class="rounded-lg bg-pend-50 px-3 py-2 text-ink">
+                      O modelo "Retomar conversa" ainda não foi aprovado pela Meta para esta clínica. Peça ao suporte do RecepClinic para criar o modelo.
+                    </p>
+                  )}
+                </div>
               ))}
           </>
         )

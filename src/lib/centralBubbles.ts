@@ -1,5 +1,6 @@
 import type { CentralMessage } from "./data/central";
 import { MESSAGE_LABELS } from "./data/agenda/trail";
+import { capitalize } from "./vocabulary";
 
 // Como cada mensagem aparece na conversa da Central (CN3a; telas T1 e da conversa no celular, cliente, 05/nov/2026):
 // o paciente à esquerda; o assistente, os avisos automáticos e a equipe à direita, cada um com o seu rótulo; a
@@ -51,7 +52,8 @@ export function bubbleOf(message: CentralMessage, names: Map<string, string> = n
       break;
     case "agent_panel": {
       const who = message.sentBy ? names.get(message.sentBy) : null;
-      bubble = { ...base, side: "right", tone: "panel", label: who ? `${who} · pela Central` : "Pela Central" };
+      const via = message.messageType === "conversation_resume" ? "Retomar conversa" : "pela Central";
+      bubble = { ...base, side: "right", tone: "panel", label: who ? `${who} · ${via}` : capitalize(via) };
       break;
     }
     default: {

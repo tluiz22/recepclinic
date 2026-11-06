@@ -1,28 +1,10 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import type { DbClient } from "../../src/lib/data/clients";
-import {
-  setCentralEnabled,
-  listConversations,
-} from "../../src/lib/data/central";
-import {
-  assignConversation,
-  listCentralTeam,
-  retryFromCentral,
-  sendFromCentral,
-  type SendDeps,
-} from "../../src/lib/data/centralSend";
+import { setCentralEnabled, listConversations } from "../../src/lib/data/central";
+import { assignConversation, listCentralTeam, retryFromCentral, sendFromCentral, type SendDeps } from "../../src/lib/data/centralSend";
 import type { ClinicSender } from "../../src/lib/data/whatsapp/send";
 import type { SendOutcome } from "../../src/lib/data/whatsapp/messages";
-import {
-  addMember,
-  adminClient,
-  clinicServiceClient,
-  createClinic,
-  createUser,
-  deleteClinics,
-  deleteUsers,
-  type TestUser,
-} from "./helpers";
+import { addMember, adminClient, clinicServiceClient, createClinic, createUser, deleteClinics, deleteUsers, type TestUser } from "./helpers";
 
 // CN4a — responder, assumir e transferir pela Central (decisões 5 e 7 e R2, cliente, 05/nov/2026).
 
@@ -35,8 +17,7 @@ let reception: TestUser;
 let professional: TestUser;
 const asDb = (user: TestUser) => user.client as unknown as DbClient;
 const db = () => adminClient();
-const at = (minutesAgo: number) =>
-  new Date(Date.now() - minutesAgo * 60_000).toISOString();
+const at = (minutesAgo: number) => new Date(Date.now() - minutesAgo * 60_000).toISOString();
 const codeOf = async (run: () => Promise<unknown>) => {
   try {
     await run();
@@ -81,21 +62,13 @@ const messageByKey = async (key: string) =>
 
 beforeAll(async () => {
   clinicId = await createClinic("Clínica CN4");
-  [admin, reception, professional] = await Promise.all([
-    createUser("cn4-admin"),
-    createUser("cn4-recepcao"),
-    createUser("cn4-prof"),
-  ]);
+  [admin, reception, professional] = await Promise.all([createUser("cn4-admin"), createUser("cn4-recepcao"), createUser("cn4-prof")]);
   await Promise.all([
     addMember(clinicId, admin.id, ["admin"]),
     addMember(clinicId, reception.id, ["reception"]),
     addMember(clinicId, professional.id, ["professional"]),
   ]);
-  await db()
-    .from("clinic_members")
-    .update({ display_name: "Ana Recepção" })
-    .eq("clinic_id", clinicId)
-    .eq("user_id", reception.id);
+  await db().from("clinic_members").update({ display_name: "Ana Recepção" }).eq("clinic_id", clinicId).eq("user_id", reception.id);
   await setCentralEnabled(asDb(admin), clinicId, true);
   const inbound = (phone: string, minutesAgo: number) => ({
     clinic_id: clinicId,
@@ -160,9 +133,7 @@ describe("responder", () => {
       handoff_status: "in_progress",
       assigned_to: reception.id,
     });
-    const listed = (await listConversations(asDb(reception), clinicId)).find(
-      (c) => c.phone === WAITING,
-    )!;
+    const listed = (await listConversations(asDb(reception), clinicId)).find((c) => c.phone === WAITING)!;
     expect(listed).toMatchObject({
       unread: 0,
       lastMessageAuthor: "agent_panel",
@@ -290,9 +261,7 @@ describe("assumir e transferir", () => {
         expected: null,
       }),
     ).toEqual({ kind: "ok", name: "Ana" });
-    expect(
-      await assignConversation(asDb(admin), clinicId, OLD, { expected: null }),
-    ).toEqual({ kind: "changed", name: "Ana" });
+    expect(await assignConversation(asDb(admin), clinicId, OLD, { expected: null })).toEqual({ kind: "changed", name: "Ana" });
     expect(
       await assignConversation(asDb(reception), clinicId, OLD, {
         expected: reception.id,
@@ -302,9 +271,7 @@ describe("assumir e transferir", () => {
 
   it("transferir para um Profissional: ele passa a ver e responder; ele não transfere", async () => {
     const team = await listCentralTeam(asDb(reception), clinicId);
-    expect(team.map((m) => m.userId).sort()).toEqual(
-      [admin.id, reception.id, professional.id].sort(),
-    );
+    expect(team.map((m) => m.userId).sort()).toEqual([admin.id, reception.id, professional.id].sort());
     expect(
       (
         await assignConversation(asDb(reception), clinicId, WAITING, {
@@ -313,11 +280,7 @@ describe("assumir e transferir", () => {
         })
       ).kind,
     ).toBe("ok");
-    expect(
-      (await listConversations(asDb(professional), clinicId)).map(
-        (c) => c.phone,
-      ),
-    ).toEqual([WAITING]);
+    expect((await listConversations(asDb(professional), clinicId)).map((c) => c.phone)).toEqual([WAITING]);
     expect(
       await sendFromCentral(deps(professional), clinicId, {
         phone: WAITING,
@@ -334,9 +297,7 @@ describe("assumir e transferir", () => {
         }),
       ),
     ).toBe("forbidden");
-    expect(
-      await codeOf(() => listCentralTeam(asDb(professional), clinicId)),
-    ).toBe("forbidden");
+    expect(await codeOf(() => listCentralTeam(asDb(professional), clinicId))).toBe("forbidden");
   });
 
   it("os eventos guardam quem assumiu e a transferência", async () => {
@@ -347,11 +308,7 @@ describe("assumir e transferir", () => {
       .eq("contact_phone", WAITING)
       .neq("kind", "status")
       .order("id");
-    expect(data!.map((e) => e.kind)).toEqual([
-      "assigned",
-      "transferred",
-      "transferred",
-    ]);
+    expect(data!.map((e) => e.kind)).toEqual(["assigned", "transferred", "transferred"]);
     expect(data!.at(-1)).toMatchObject({
       assigned_from: admin.id,
       assigned_to: professional.id,
