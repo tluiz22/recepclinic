@@ -31,12 +31,13 @@
 > **Central de Atendimento (CU2 a CN9) na `main` e no staging (05/nov):** a branch `central-atendimento` foi juntada
 > na `main`; migrações `20261214120000` a `20261224120000` aplicadas no staging (só lá). **Cliente valida** pela parte
 > **AA** do [`staging.md`](staging.md). Antes: liberar o item na Matriz da clínica de testes, criar o modelo "Retomar
-> conversa", conferir os campos do webhook e criar a configuração v4 (`WHATSAPP_ES_CONFIG_ID`). Capturas `conversas`,
-> `atendimento`, `config-whatsapp` e `config-mensagens` na fila (`capturas-pendentes.md`), aguardando autorização.
+> conversa", conferir os campos do webhook e criar a configuração v4 (`WHATSAPP_ES_CONFIG_ID`). Capturas da Central feitas e no
+> staging (06/nov, `55403e0`): `conversas` (nova), `config-whatsapp`, `config-mensagens`; `atendimento` mantida.
 > Produção só com autorização. Detalhe na seção 12 do plano da Central.
-> **Próxima sessão (cliente, 06/nov):** abrir trazendo os itens pendentes: passos do cliente antes da parte AA, recaptura
-> das capturas na fila, desenho do envio de foto/PDF (padrão, sem rodada de telas), resposta que falha contando no uso
-> do mês (CN4a), `ACCOUNT_RECONNECTED` só no log e produção da Central.
+> **Próxima sessão (cliente, 06/nov):** cliente traz ajustes. Etapas pedidas e ainda por fazer, uma por vez: (3) trazer a
+> `main` para a `faturamento` (conflitos da forma recomendada); (4) todos os testes na `faturamento`, inclusive Playwright.
+> Seguem pendentes: passos do cliente antes da parte AA, desenho do envio de foto/PDF (padrão), resposta que falha
+> contando no uso do mês (CN4a), `ACCOUNT_RECONNECTED` só no log e produção da Central.
 >
 > Partes S a W do `staging.md` validadas (05/nov). A `faturamento` está com a `main` até a FE e as capturas (05/nov).
 > Trabalhar na worktree `recepclinic-main` (a pasta `recepclinic` está na branch `faturamento`). Pendente da branch: o
