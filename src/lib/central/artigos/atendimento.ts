@@ -72,6 +72,7 @@ export const atendimentoArtigos = [
       "Aguardando a clínica (o paciente espera resposta), a conversa não volta sozinha ao bot.",
       "O número do suporte do RecepClinic nunca passa pelo bot nem entra nesta lista.",
       "Clínica em implantação não recebe nem registra conversas; a lista começa ao ativar.",
+      "Com a Central de atendimento ligada, Atendimento abre a tela Conversas, onde a equipe responde pelo RecepClinic (artigo \"Conversas: a Central de atendimento\").",
     ],
     contextual: ["/admin/atendimento"],
   }),

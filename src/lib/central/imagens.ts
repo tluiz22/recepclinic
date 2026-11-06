@@ -16,6 +16,7 @@ export const IMAGENS: Record<string, ArticleImage[]> = {
   "cadastrar-paciente": [shot("paciente-novo", "Formulário de cadastro de paciente, com o botão de cadastrar destacado.", "Pacientes › Novo paciente: paciente, contato e, com Convênios, o plano.")],
   "resumo-do-dia": [shot("resumo-do-dia", "Relatório do dia, com as abas Resumo do dia, Lembretes e A registrar.", "Relatório do dia: o resumo, os lembretes e as consultas a registrar.")],
   "atendimento-humano": [shot("atendimento", "Tela Atendimento, com as conversas que aguardam a clínica.", "Atendimento: conversas em que o bot parou. Use Finalizar atendimento ao terminar.")],
+  "central-de-atendimento": [shot("conversas", "Tela Conversas da Central de atendimento, com a lista de conversas e a conversa aberta.", "Conversas: as conversas do WhatsApp num lugar só; assuma, responda, envie foto ou PDF e finalize.")],
   relacionamento: [shot("relacionamento", "Pacientes › Para contatar, com as listas à esquerda e a escolhida à direita.", "Para contatar: uma lista para cada motivo de contato.")],
   "metricas-visao-geral": [shot("metricas", "Tela de Métricas, com as abas e o seletor de período.", "Métricas: escolha o período e a aba.")],
   "financeiro-quem-paga": [shot("financeiro", "Tela Financeiro, com o filtro Falta CPF destacado.", "Financeiro: os pacientes com o responsável financeiro e o CPF.")],
