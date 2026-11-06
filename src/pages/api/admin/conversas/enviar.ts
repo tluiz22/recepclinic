@@ -2,6 +2,7 @@ import type { APIRoute } from "astro";
 import { isUuid } from "../../../../lib/clinicAccess";
 import { createUserClient } from "../../../../lib/data/clients";
 import { createClinicServiceClient } from "../../../../lib/data/clinicService";
+import { listConversations } from "../../../../lib/data/central";
 import { resumeFromCentral, retryFromCentral, sendFromCentral, sendMessageText, type SendResult } from "../../../../lib/data/centralSend";
 import { DataError } from "../../../../lib/data/errors";
 import { runFormAction } from "../../../../lib/data/formAction";
@@ -42,7 +43,21 @@ export const POST: APIRoute = async (context) => {
           if (!body.trim()) throw new DataError("invalid", "Conversas: escreva a mensagem antes de enviar", { texto: "Escreva a mensagem." });
           result = await sendFromCentral(deps, clinic.clinicId, { phone, clientKey, body, expectedAssigned });
         } else {
-          result = await resumeFromCentral(deps, clinic.clinicId, { phone, clientKey, expectedAssigned });
+          // Dia da última mensagem do paciente pela lista da Central.
+          const digits = phone.replace(/\D/g, "");
+          const [open, finished] = await Promise.all([
+            listConversations(db, clinic.clinicId, { search: digits }),
+            listConversations(db, clinic.clinicId, { search: digits, finished: true }),
+          ]);
+          const conversation = [...open, ...finished].find((item) => item.phone === phone);
+          if (!conversation) throw new DataError("not_found", "Conversas: conversa não encontrada");
+          result = await resumeFromCentral(deps, clinic.clinicId, {
+            phone,
+            clientKey,
+            expectedAssigned,
+            lastPatientAt: conversation.lastPatientAt ?? conversation.lastMessageAt,
+            timeZone: clinic.timezone,
+          });
         }
       } else {
         throw new DataError("invalid", "Conversas: ação desconhecida");

@@ -141,12 +141,13 @@ export const DEFAULT_TEMPLATES: DefaultTemplate[] = [
     examples: ["Ana", "da Clínica Sorriso"],
   },
   {
-    // "Retomar conversa" da Central de atendimento (CN4b; decisão 7, texto do cliente em 05/nov/2026, sem variáveis
-    // nem botão): fora das 24 h, a equipe volta a falar com o paciente; a resposta dele reabre a janela.
+    // "Retomar conversa" da Central de atendimento (CN4b; decisão 7, texto aprovado pelo cliente em 05/nov/2026, opção
+    // A, sem botão): fora das 24 h, a equipe volta a falar com o paciente; a resposta dele reabre a janela. {{1}} = "da
+    // Clínica X"; {{2}} = dia da última mensagem do paciente.
     key: "conversation_resume",
     name: "rc_retomar_conversa_v1",
-    body: "Olá! Vi que a nossa conversa ficou pendente. Quer continuar de onde paramos?",
-    examples: [],
+    body: "Olá! Aqui é {{1}}.\nVi que a nossa conversa de {{2}} ficou pendente.\nQuer continuar de onde paramos?",
+    examples: ["da Clínica Sorriso", "04/11"],
   },
 ];
 

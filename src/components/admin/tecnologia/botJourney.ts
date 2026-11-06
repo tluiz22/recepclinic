@@ -294,7 +294,7 @@ export const JOURNEY: JourneySection[] = [
       ),
       reception(
         "Com a Central de atendimento ligada: responde pela tela Conversas, dentro das 24 h da última mensagem do paciente",
-        "Quem responde assume a conversa; responder numa conversa finalizada pausa o bot, como pelo app. Se a equipe assume enquanto o bot ainda está respondendo, o bot para ali e não manda mais nada. Passadas 24 h, só o modelo \"Retomar conversa\" (\"Olá! Vi que a nossa conversa ficou pendente. Quer continuar de onde paramos?\"), um por vez; a resposta do paciente reabre a conversa. Paciente esperando 30 min sem resposta, no horário da clínica: a conversa volta para \"Sem responsável\", sem aviso (Central, cliente, 05/nov/2026).",
+        "Quem responde assume a conversa; responder numa conversa finalizada pausa o bot, como pelo app. Se a equipe assume enquanto o bot ainda está respondendo, o bot para ali e não manda mais nada. Passadas 24 h, só o modelo \"Retomar conversa\" (\"Olá! Aqui é da Clínica X. Vi que a nossa conversa de 04/11 ficou pendente. Quer continuar de onde paramos?\"), um por vez; a resposta do paciente reabre a conversa. Paciente esperando 30 min sem resposta, no horário da clínica: a conversa volta para \"Sem responsável\", sem aviso (Central, cliente, 05/nov/2026).",
       ),
       reception(
         "Manda #bot ou toca em \"Finalizar atendimento\" no painel: o bot volta a atender essa conversa, sem mandar nada nem mostrar o menu",

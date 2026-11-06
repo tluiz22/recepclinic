@@ -36,7 +36,9 @@ import { DataError } from "../../lib/data/errors";
 import { handoffReasonLabel } from "../../lib/data/whatsapp/attention";
 import { listMyDevices } from "../../lib/data/whatsapp/attentionPush";
 import { CUSTOMER_SERVICE_WINDOW_MS } from "../../lib/data/whatsapp/messages";
-import { listCentralTeam, resumeText, type TeamOption } from "../../lib/data/centralSend";
+import { listCentralTeam, resumeParams, resumeText, type TeamOption } from "../../lib/data/centralSend";
+import { getClinicSettings } from "../../lib/data/config/clinic";
+import { clinicLabel } from "../../lib/data/whatsapp/templates";
 import { getApprovedTemplate } from "../../lib/data/whatsapp/connection";
 import { ROLE_LABELS } from "../../lib/data/config/team";
 import { platformEnv } from "../../lib/env";
@@ -118,11 +120,15 @@ const rolesOf = (member: TeamOption) => member.roles.map((role) => ROLE_LABELS[r
 const resume =
   canReply && !windowOpen && selected
     ? await (async () => {
-        const template = await getApprovedTemplate(db, clinic.clinicId, "conversation_resume");
+        const [template, settings] = await Promise.all([getApprovedTemplate(db, clinic.clinicId, "conversation_resume"), getClinicSettings(db, clinic.clinicId)]);
         const sentAfter = chronological.findLast(
           (m) => m.messageType === "conversation_resume" && m.status !== "failed" && (!selected.lastPatientAt || m.sortAt > selected.lastPatientAt),
         );
-        return { approved: !!template, text: resumeText(template), sentAt: sentAfter?.sortAt ?? null };
+        const params = resumeParams(
+          { clinicLabel: clinicLabel(settings.name, settings.messageArticle) },
+          { lastPatientAt: selected.lastPatientAt ?? selected.lastMessageAt, timeZone: clinic.timezone },
+        );
+        return { approved: !!template, text: resumeText(template, params), sentAt: sentAfter?.sortAt ?? null };
       })()
     : null;
 const linkQuery = (params.get("paciente") ?? "").trim().slice(0, 80);

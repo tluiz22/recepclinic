@@ -1,4 +1,5 @@
 import type { ClinicRole } from "../clinicAccess";
+import { formatInstant } from "../clinicTime";
 import type { DbClient } from "./clients";
 import type { Json } from "../supabase/database.types";
 import { DataError, unwrap } from "./errors";
@@ -7,7 +8,7 @@ import { getApprovedTemplate, type ApprovedTemplate } from "./whatsapp/connectio
 import type { SendOutcome } from "./whatsapp/messages";
 import type { ClinicSender } from "./whatsapp/send";
 import { pauseForHuman } from "./whatsapp/conversations";
-import { defaultTemplate } from "./whatsapp/templates";
+import { defaultTemplate, fillTemplate } from "./whatsapp/templates";
 
 // Responder, assumir e transferir pela Central (CN4a; plano em docs/planejamento-central-atendimento.md, decisões 5
 // e 7 e R2, cliente, 05/nov/2026) e o "Retomar conversa" fora das 24 h (CN4b). O banco confere quem pode, a janela de
@@ -106,11 +107,23 @@ export async function sendFromCentral(deps: SendDeps, clinicId: string, input: S
   return outcomeOf(prepared) ?? deliver(deps, clinicId, prepared.message_id!, (sender) => sender.text(input.phone, body));
 }
 
-export type ResumeInput = { phone: string; clientKey: string; expectedAssigned: string | null };
+export type ResumeInput = {
+  phone: string;
+  clientKey: string;
+  expectedAssigned: string | null;
+  /** {{2}}: hora da última mensagem do paciente (conversa anterior à Central, sem ela: a última da conversa). */
+  lastPatientAt: Date | null;
+  timeZone: string;
+};
 
-/** Texto que o paciente vê no "Retomar conversa" (o aprovado na conta da clínica ou o padrão; sem variáveis). */
-export function resumeText(template: Pick<ApprovedTemplate, "body"> | null): string {
-  return template?.body ?? defaultTemplate("conversation_resume")!.body;
+/** Variáveis do "Retomar conversa": "da Clínica X" e o dia da última mensagem do paciente. */
+export function resumeParams(sender: Pick<ClinicSender, "clinicLabel">, input: Pick<ResumeInput, "lastPatientAt" | "timeZone">): string[] {
+  return [sender.clinicLabel, formatInstant(input.lastPatientAt ?? new Date(), input.timeZone, "dd/MM")];
+}
+
+/** Texto que o paciente vê no "Retomar conversa" (o aprovado na conta da clínica ou o padrão). */
+export function resumeText(template: Pick<ApprovedTemplate, "body"> | null, params: string[]): string {
+  return fillTemplate(template?.body ?? defaultTemplate("conversation_resume")!.body, params);
 }
 
 /**
@@ -120,7 +133,8 @@ export function resumeText(template: Pick<ApprovedTemplate, "body"> | null): str
 export async function resumeFromCentral(deps: SendDeps, clinicId: string, input: ResumeInput): Promise<SendResult> {
   const template = await getApprovedTemplate(deps.serviceDb, clinicId, "conversation_resume");
   if (!template) return { kind: "no_template" };
-  const body = resumeText(template);
+  const params = resumeParams(deps.sender ?? { clinicLabel: "da clínica" }, input);
+  const body = resumeText(template, params);
   const prepared = await prepareWithPause(deps, clinicId, input.phone, async (expected) =>
     unwrap(
       await deps.db.rpc("central_resume_prepare", {
@@ -134,7 +148,7 @@ export async function resumeFromCentral(deps: SendDeps, clinicId: string, input:
       "Conversas",
     )[0],
   );
-  return outcomeOf(prepared) ?? deliver(deps, clinicId, prepared.message_id!, (sender) => sender.template(input.phone, "conversation_resume", template, []));
+  return outcomeOf(prepared) ?? deliver(deps, clinicId, prepared.message_id!, (sender) => sender.template(input.phone, "conversation_resume", template, params));
 }
 
 /** "Tentar de novo" numa mensagem que não saiu (texto ou "Retomar conversa", com o mesmo pedido à Meta). */
