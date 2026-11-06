@@ -10,3 +10,4 @@ a captura e o motivo, avisar o cliente no fim da etapa e esperar a autorização
 ## Pendentes
 
 - `config-whatsapp` — cartões "Custo da Meta" e "Central de atendimento" (CU4, branch `central-atendimento`; recapturar com a Central pronta) (05/11/2026)
+- `config-mensagens` — linha nova "Retomar conversa" nas mensagens da Meta, com a Central liberada (CN4b, branch `central-atendimento`; recapturar com a Central pronta) (05/11/2026)
