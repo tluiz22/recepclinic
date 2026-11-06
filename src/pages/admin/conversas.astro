@@ -15,12 +15,13 @@ import Icon from "../../components/admin/Icon.astro";
 import NotificationsCard from "../../components/admin/NotificationsCard.astro";
 import ConversationPanel from "../../components/admin/central/ConversationPanel.astro";
 import { CONTROL } from "../../components/admin/ui/styles";
-import { bubbleOf, deliveryLabel } from "../../lib/centralBubbles";
+import { attachmentOf, bubbleOf, deliveryLabel } from "../../lib/centralBubbles";
 import { formatInstant, localDateOf } from "../../lib/clinicTime";
 import { createUserClient } from "../../lib/data/clients";
 import {
   filterConversations,
   isCentralActive,
+  listConversationMedia,
   listConversationMessages,
   listConversations,
   ownerLabel,
@@ -39,10 +40,10 @@ import { CUSTOMER_SERVICE_WINDOW_MS } from "../../lib/data/whatsapp/messages";
 import { listCentralTeam, resumeParams, resumeText, type TeamOption } from "../../lib/data/centralSend";
 import { getClinicSettings } from "../../lib/data/config/clinic";
 import { clinicLabel } from "../../lib/data/whatsapp/templates";
-import { getApprovedTemplate } from "../../lib/data/whatsapp/connection";
+import { getApprovedTemplate, getWhatsappConnection } from "../../lib/data/whatsapp/connection";
 import { ROLE_LABELS } from "../../lib/data/config/team";
 import { platformEnv } from "../../lib/env";
-import { formatPhoneBR } from "../../lib/phone";
+import { formatPhoneBR, whatsappHref } from "../../lib/phone";
 
 const clinic = Astro.locals.clinic!;
 const db = createUserClient(Astro.request, Astro.cookies);
@@ -95,6 +96,15 @@ if (selected) {
   threadError = "Esta conversa não está na sua lista.";
 }
 const chronological = thread ? [...thread.messages].reverse() : [];
+// Anexos das mensagens mostradas (CN5) e se o número está também no app (o aviso da 8c leva "Abrir no WhatsApp").
+const mediaIds = chronological.map((m) => m.mediaId).filter((id): id is string => !!id);
+const [mediaOf, coexistence] =
+  selected && mediaIds.length
+    ? await Promise.all([
+        listConversationMedia(db, clinic.clinicId, selected.phone, mediaIds),
+        getWhatsappConnection(db, clinic.clinicId).then((c) => c?.coexistence ?? false).catch(() => false),
+      ])
+    : [new Map(), false];
 const names = new Map(
   [...(await loadActorLabels(db, clinic.clinicId, chronological.map((m) => m.sentBy))).entries()].map(([id, label]) => [id, label.isSupport ? "Suporte" : firstNameOf(label.name)]),
 );
@@ -413,16 +423,40 @@ const tabClass = (active: boolean) =>
                 }
                 const message = line.message;
                 const bubble = bubbleOf(message, names);
+                const attachment = message.mediaId ? attachmentOf(message.messageType, mediaOf.get(message.mediaId), coexistence) : null;
                 const delivery = message.direction === "outbound" ? deliveryLabel(message.status) : null;
                 return (
                   <>
                     {newDay && <span class="self-center rounded-full bg-canvas-deep px-2.5 py-0.5 text-xs text-ink-soft">{day}</span>}
                     <div class={`flex max-w-[85%] flex-col gap-0.5 px-3 py-2 sm:max-w-[75%] ${BUBBLE_TONE[bubble.tone]}`}>
                       {bubble.label && <span class="text-xs font-bold text-ink-mid">{bubble.label}</span>}
+                      {attachment?.kind === "image" && (
+                        <a href={attachment.href} target="_blank" rel="noopener" class="block">
+                          <img src={attachment.href} alt="Foto enviada pelo paciente" class="max-h-72 max-w-full rounded-lg object-contain" />
+                        </a>
+                      )}
+                      {attachment?.kind === "audio" && <audio controls preload="none" src={attachment.href} class="max-w-full" aria-label="Áudio enviado pelo paciente" />}
+                      {attachment?.kind === "document" && (
+                        <a href={attachment.href} class="flex items-center gap-2 rounded-lg border border-line bg-canvas px-3 py-2 text-ink no-underline hover:bg-canvas-deep">
+                          <Icon name="arrow-down-tray" class="h-5 w-5 flex-none text-ink-mid" />
+                          <span class="flex min-w-0 flex-col">
+                            <strong class="truncate text-[15px]">{attachment.name}</strong>
+                            <span class="text-[13px] text-ink-soft">{[attachment.size, "Baixar"].filter(Boolean).join(" · ")}</span>
+                          </span>
+                        </a>
+                      )}
+                      {(attachment?.kind === "notice" || attachment?.kind === "pending") && (
+                        <span class:list={["text-[15px]", attachment.kind === "pending" ? "text-ink-soft italic" : "text-ink-mid"]}>{attachment.text}</span>
+                      )}
+                      {attachment?.kind === "notice" && attachment.openInApp && (
+                        <a href={whatsappHref(selected.phone)} target="_blank" rel="noopener" class="self-start text-sm font-semibold text-brand-ink">
+                          Abrir no WhatsApp
+                        </a>
+                      )}
                       {bubble.text ? (
                         <span class="text-[15px] whitespace-pre-wrap break-words text-ink">{bubble.text}</span>
                       ) : (
-                        <span class="text-[15px] text-ink-soft italic">{bubble.placeholder}</span>
+                        !attachment && <span class="text-[15px] text-ink-soft italic">{bubble.placeholder}</span>
                       )}
                       <span class="self-end text-[11px] text-ink-soft">
                         {formatInstant(message.sortAt, clinic.timezone, "HH:mm")}
@@ -625,8 +659,17 @@ const tabClass = (active: boolean) =>
   const thread = document.querySelector<HTMLElement>("[data-thread]");
   // No computador a conversa rola dentro do quadro; no celular, a página inteira.
   if (thread && !new URLSearchParams(location.search).has("antes")) {
-    thread.scrollTop = thread.scrollHeight;
-    if (window.matchMedia("(max-width: 1023px)").matches) window.scrollTo(0, document.documentElement.scrollHeight);
+    const toEnd = () => {
+      thread.scrollTop = thread.scrollHeight;
+      if (window.matchMedia("(max-width: 1023px)").matches) window.scrollTo(0, document.documentElement.scrollHeight);
+    };
+    toEnd();
+    // As fotos (CN5) carregam depois: a conversa segue no fim, se ninguém rolou.
+    let moved = false;
+    thread.addEventListener("wheel", () => (moved = true), { once: true, passive: true });
+    thread.addEventListener("touchmove", () => (moved = true), { once: true, passive: true });
+    thread.querySelectorAll("img").forEach((img) => img.addEventListener("load", () => !moved && toEnd(), { once: true }));
+    window.addEventListener("load", () => !moved && toEnd(), { once: true });
   }
   // "Mostrar" aplica na hora (sem JavaScript, o botão Buscar envia).
   document.querySelectorAll<HTMLSelectElement>("[data-submit-on-change]").forEach((select) => {

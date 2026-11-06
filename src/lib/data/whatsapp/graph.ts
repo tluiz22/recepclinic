@@ -285,6 +285,30 @@ export async function deleteTemplate(wabaId: string, name: string, token: string
 // de exemplo do template da nota sobe pelo envio retomável do app.
 // ---------------------------------------------------------------------------
 
+export type MediaInfo = { url: string; mimeType: string | null; sizeBytes: number | null; sha256: string | null };
+
+/** Dados de uma mídia recebida (GET /{media-id}): a URL vale 5 minutos e exige o token (CN5). */
+export async function fetchMediaInfo(mediaId: string, token: string, fetcher: Fetcher = fetch): Promise<MediaInfo> {
+  const body = await call<{ url?: string; mime_type?: string; file_size?: number | string; sha256?: string }>(
+    fetcher,
+    "Anexo do WhatsApp",
+    `${GRAPH}/${encodeURIComponent(mediaId)}`,
+    token,
+  );
+  if (!body.url) throw new GraphRequestError("Anexo do WhatsApp", { code: null, message: "sem o endereço da mídia" });
+  const size = Number(body.file_size);
+  return { url: body.url, mimeType: body.mime_type ?? null, sizeBytes: Number.isFinite(size) && size >= 0 ? size : null, sha256: body.sha256 ?? null };
+}
+
+/** Baixa o arquivo da URL da mídia (com o token), até `maxBytes`. */
+export async function downloadMedia(url: string, token: string, maxBytes: number, fetcher: Fetcher = fetch): Promise<Uint8Array> {
+  const response = await fetcher(url, { headers: { Authorization: `Bearer ${token}` } });
+  if (!response.ok) throw new GraphRequestError("Anexo do WhatsApp", { code: null, message: `HTTP ${response.status}`, httpStatus: response.status });
+  const bytes = new Uint8Array(await response.arrayBuffer());
+  if (bytes.byteLength > maxBytes) throw new GraphRequestError("Anexo do WhatsApp", { code: null, message: "arquivo acima do limite" });
+  return bytes;
+}
+
 /** Sobe o arquivo para o número da clínica (POST /{phone}/media) e devolve o id da mídia. */
 export async function uploadMedia(
   phoneNumberId: string,

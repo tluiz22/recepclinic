@@ -1974,6 +1974,11 @@ isOneToOne: false
               "assigned_name": string | null,"assigned_to": string | null,"outcome": string
             }[]
                            },
+"central_conversation_media":
+{ Args: { "p_clinic_id": string,"p_contact_phone": string,"p_media_ids": string[] }; Returns: {
+              "file_name": string | null,"id": string,"mime_type": string | null,"size_bytes": number | null,"status": string
+            }[]
+                           },
 "central_conversation_messages":
 { Args: { "p_before_id"?: string,"p_before_sort_at"?: string,"p_clinic_id": string,"p_contact_phone": string,"p_limit"?: number }; Returns: {
               "author": string,"body": string,"created_at": string,"direction": string,"edited_at": string,"failure_code": number,"failure_reason": string,"handoff_id": string,"id": string,"media_id": string,"message_type": string,"revoked_at": string,"sent_by": string,"sort_at": string,"source": string,"status": string,"template_name": string

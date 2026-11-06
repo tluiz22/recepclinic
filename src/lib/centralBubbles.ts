@@ -76,3 +76,50 @@ export function bubbleOf(message: CentralMessage, names: Map<string, string> = n
   if (message.author === "system" && message.templateName) return { ...bubble, placeholder: "Texto do aviso não guardado" };
   return { ...bubble, placeholder: "Mensagem anterior à Central de atendimento" };
 }
+
+// ---------------------------------------------------------------------------
+// Anexos (CN5; decisões 8b e 8c, cliente, 05/nov/2026)
+// ---------------------------------------------------------------------------
+
+/** "1,2 MB", "350 KB". */
+export function formatFileSize(bytes: number): string {
+  if (bytes >= 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1).replace(".", ",").replace(/,0$/, "")} MB`;
+  return `${Math.max(1, Math.round(bytes / 1024))} KB`;
+}
+
+export type AttachmentMedia = { id: string; status: string; mimeType: string | null; sizeBytes: number | null; fileName: string | null };
+
+export type Attachment =
+  | { kind: "image" | "audio"; href: string }
+  | { kind: "document"; href: string; name: string; size: string | null }
+  /** Aviso no lugar do arquivo; `openInApp` = mostrar "Abrir no WhatsApp" (só com coexistência, 8c). */
+  | { kind: "notice"; text: string; openInApp: boolean }
+  | { kind: "pending"; text: string };
+
+const ARTICLE: Record<string, string> = { image: "uma foto", audio: "um áudio", document: "um documento", video: "um vídeo", sticker: "uma figurinha" };
+
+/** Como o anexo aparece na mensagem (null = sem anexo guardado: vale o texto ou o marcador de antes). */
+export function attachmentOf(messageType: string, media: AttachmentMedia | undefined, coexistence: boolean): Attachment | null {
+  if (!media) return null;
+  const href = `/api/admin/conversas/midia/${media.id}`;
+  const what = ARTICLE[messageType] ?? "um arquivo";
+  const size = media.sizeBytes !== null ? formatFileSize(media.sizeBytes) : null;
+  const viaApp = coexistence ? "veja e responda esta mensagem pelo app do WhatsApp." : "peça ao paciente para enviar como foto ou PDF.";
+  switch (media.status) {
+    case "stored":
+      if (messageType === "image") return { kind: "image", href };
+      if (messageType === "audio") return { kind: "audio", href };
+      return { kind: "document", href: `${href}?baixar=1`, name: media.fileName ?? "Documento", size };
+    case "pending":
+      return { kind: "pending", text: `Recebendo ${what}…` };
+    case "unsupported":
+      if (messageType === "sticker") return { kind: "notice", text: "O paciente enviou uma figurinha. A Central não mostra figurinhas.", openInApp: false };
+      return { kind: "notice", text: `O paciente enviou ${what}${size ? ` (${size})` : ""}. A Central não mostra vídeos: ${viaApp}`, openInApp: coexistence };
+    case "too_large":
+      return { kind: "notice", text: `O paciente enviou ${what}${size ? ` (${size})` : ""}, acima do limite da Central: ${viaApp}`, openInApp: coexistence };
+    case "deleted":
+      return { kind: "notice", text: "Anexo apagado: passou o prazo de guarda (12 meses).", openInApp: false };
+    default:
+      return { kind: "notice", text: `Não foi possível receber ${what}. Peça ao paciente para enviar de novo.`, openInApp: false };
+  }
+}

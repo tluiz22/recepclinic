@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { bubbleOf, deliveryLabel } from "./centralBubbles";
+import { attachmentOf, bubbleOf, deliveryLabel, formatFileSize, type AttachmentMedia } from "./centralBubbles";
 import type { CentralMessage } from "./data/central";
 
 const message = (over: Partial<CentralMessage>): CentralMessage => ({
@@ -45,5 +45,41 @@ describe("bolhas da conversa (CN3a)", () => {
     expect(deliveryLabel("delivered")).toBe("entregue");
     expect(deliveryLabel("sending")).toBe("enviando");
     expect(deliveryLabel("sent")).toBeNull();
+  });
+});
+
+describe("anexos (CN5)", () => {
+  const media = (status: string, extra: Partial<AttachmentMedia> = {}): AttachmentMedia => ({ id: "m1", status, mimeType: null, sizeBytes: null, fileName: null, ...extra });
+
+  it("guardado: foto e áudio na conversa; documento para baixar com nome e tamanho", () => {
+    expect(attachmentOf("image", media("stored"), true)).toEqual({ kind: "image", href: "/api/admin/conversas/midia/m1" });
+    expect(attachmentOf("audio", media("stored"), true)).toEqual({ kind: "audio", href: "/api/admin/conversas/midia/m1" });
+    expect(attachmentOf("document", media("stored", { fileName: "exame.pdf", sizeBytes: 1258291 }), true)).toEqual({
+      kind: "document",
+      href: "/api/admin/conversas/midia/m1?baixar=1",
+      name: "exame.pdf",
+      size: "1,2 MB",
+    });
+  });
+
+  it("vídeo e arquivo grande: o aviso, com Abrir no WhatsApp só com coexistência", () => {
+    expect(attachmentOf("video", media("unsupported", { sizeBytes: 35 * 1024 * 1024 }), true)).toEqual({
+      kind: "notice",
+      text: "O paciente enviou um vídeo (35 MB). A Central não mostra vídeos: veja e responda esta mensagem pelo app do WhatsApp.",
+      openInApp: true,
+    });
+    expect(attachmentOf("document", media("too_large", { sizeBytes: 20 * 1024 * 1024 }), false)).toEqual({
+      kind: "notice",
+      text: "O paciente enviou um documento (20 MB), acima do limite da Central: peça ao paciente para enviar como foto ou PDF.",
+      openInApp: false,
+    });
+  });
+
+  it("pendente, figurinha, falha; sem anexo guardado, nada", () => {
+    expect(attachmentOf("image", media("pending"), true)).toEqual({ kind: "pending", text: "Recebendo uma foto…" });
+    expect(attachmentOf("sticker", media("unsupported"), true)).toMatchObject({ kind: "notice", openInApp: false });
+    expect(attachmentOf("audio", media("failed"), true)).toMatchObject({ text: "Não foi possível receber um áudio. Peça ao paciente para enviar de novo." });
+    expect(attachmentOf("image", undefined, true)).toBeNull();
+    expect(formatFileSize(350 * 1024)).toBe("350 KB");
   });
 });

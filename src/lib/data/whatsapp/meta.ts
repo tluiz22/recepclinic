@@ -2,6 +2,20 @@
 // webhook (F6) e a camada de mensagens e conversas usam estas funções.
 
 /** Mensagem recebida (ou eco da recepção) no webhook, só com o que usamos. */
+/** Anexo no webhook: o id para baixar da Meta, o tipo e o hash (o tamanho só vem na consulta da mídia). */
+export type WaMedia = { id?: string; mime_type?: string; sha256?: string };
+
+export type IncomingMediaKind = "image" | "audio" | "document" | "video" | "sticker";
+
+/** Anexo da mensagem recebida (null = sem anexo, ou um tipo que a Central não trata, como localização). */
+export function incomingMedia(msg: WaMessage): { kind: IncomingMediaKind; metaId: string; mimeType: string | null; fileName: string | null } | null {
+  for (const kind of ["image", "audio", "document", "video", "sticker"] as const) {
+    const media = msg[kind] as (WaMedia & { filename?: string }) | undefined;
+    if (msg.type === kind && media?.id) return { kind, metaId: media.id, mimeType: media.mime_type ?? null, fileName: media.filename?.trim() || null };
+  }
+  return null;
+}
+
 export interface WaMessage {
   id?: string;
   from?: string;
@@ -18,10 +32,12 @@ export interface WaMessage {
   context?: { id?: string };
   /** Hora do evento na Meta, em segundos (IS4: a hora do eco do app). */
   timestamp?: string | number;
-  /** Anexos: só a legenda importa aqui (o arquivo é do CN5). */
-  image?: { caption?: string };
-  video?: { caption?: string };
-  document?: { caption?: string; filename?: string };
+  /** Anexos: a legenda vira o texto (CN2); o arquivo, pelo id da mídia na Meta (CN5). */
+  image?: WaMedia & { caption?: string };
+  video?: WaMedia & { caption?: string };
+  document?: WaMedia & { caption?: string; filename?: string };
+  audio?: WaMedia & { voice?: boolean };
+  sticker?: WaMedia & { animated?: boolean };
   /** Eco de mensagem editada no app (smb_message_echoes, `type: "edit"`): o conteúdo novo da original. */
   edit?: { original_message_id?: string; message?: WaMessage };
   /** Eco de mensagem apagada no app (`type: "revoke"`). */

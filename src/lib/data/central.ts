@@ -30,6 +30,15 @@ export type CentralMessage = {
 
 export type MessageCursor = { sortAt: string; id: string };
 
+export type ConversationMedia = { id: string; status: string; mimeType: string | null; sizeBytes: number | null; fileName: string | null };
+
+/** Anexos das mensagens mostradas (CN5): situação, tipo, tamanho e nome. O arquivo sai pela rota do anexo. */
+export async function listConversationMedia(db: DbClient, clinicId: string, phone: string, ids: string[]): Promise<Map<string, ConversationMedia>> {
+  if (!ids.length) return new Map();
+  const rows = unwrap(await db.rpc("central_conversation_media", { p_clinic_id: clinicId, p_contact_phone: phone, p_media_ids: ids }), "Anexos");
+  return new Map(rows.map((row) => [row.id, { id: row.id, status: row.status, mimeType: row.mime_type, sizeBytes: row.size_bytes, fileName: row.file_name }]));
+}
+
 /** Liga ou desliga a Central (só o Administrador; ligar exige o item da matriz). true = mudou. */
 export async function setCentralEnabled(db: DbClient, clinicId: string, enabled: boolean): Promise<boolean> {
   return unwrap(await db.rpc("set_central_enabled", { p_clinic_id: clinicId, p_enabled: enabled }), "Central de atendimento") as boolean;

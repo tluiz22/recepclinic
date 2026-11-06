@@ -3,6 +3,8 @@ import { DataError, unwrap } from "../errors";
 import { deliveryRank, isDeliveryStatus, reachedPhone, storedText, toE164, waTimestamp, type WaMessage } from "./meta";
 import { COURTESY_MESSAGE_TYPE, isCourtesyMessage } from "./courtesy";
 import { markPatientWrote } from "./conversations";
+import { queueIncomingMedia } from "./media";
+import { logError } from "../../log";
 import { MAX_ATTEMPTS, nextRetryAt, RETRYABLE_MESSAGE_TYPES, type RetryContext, type SendFailure } from "./retryRules";
 
 // Registro das mensagens do WhatsApp (F3.9a), com a credencial da clínica.
@@ -69,6 +71,8 @@ export async function recordInboundMessage(db: DbClient, clinicId: string, msg: 
     created_at: now.toISOString(),
   });
   if (!id) return { recorded: false, reason: "duplicate" };
+  // Anexo (CN5): anotado como pendente para a rotina baixar; só com a Central ligada (o banco confere).
+  await queueIncomingMedia(db, clinicId, id, msg).catch((error) => logError("central: anexo não anotado", error, { clinica: clinicId }));
   // Atendimento humano (CA): o paciente escreveu (sem ser cortesia) e a conversa volta para "Aguardando a clínica".
   if (!courtesy) await markPatientWrote(db, clinicId, phone, now);
   return { recorded: true, id, contactId };
