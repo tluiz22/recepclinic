@@ -19,7 +19,7 @@
 > forma de pagamento da piloto na Meta; cadastro v3 → v4 vai junto com a Central (cliente, 05/nov).
 > **Pós-implantação:** rotina semanal que acompanha as mudanças da Meta (plano, seção 5.1).
 > Custo da Meta, ativação pelo Administrador e calculadora: seção 14 do plano (decidida).
-> **Revisão do plano (05/nov):** texto alinhado e lacunas incluídas (seção 12, ordem única). R1 a R3 respondidas. Telas T1 a T10 decididas (seção 15), desenho concluído. Valores da calculadora conferidos (T11). **Próximo:** implementação a partir do CU1, quando o cliente autorizar.
+> **Revisão do plano (05/nov):** R1 a R3 respondidas, telas T1 a T10 decididas, calculadora conferida (T11). Implementação abaixo.
 >
 > **FE, falhas de envio (05/nov):** conferência do número ao marcar/cadastrar, aviso de entrega na Agenda, "Corrigir
 > número" no Início, reenvio do bot (30 s e 2 min), detalhes e "Descartar" na aba Envios. No **staging e na produção**
@@ -28,15 +28,14 @@
 >
 > **Decisão pendente:** testes de tela automáticos (Playwright); conversar prós e contras com o cliente (`historico.md`, "C30").
 >
-> **Central em implementação, branch `central-atendimento`** (só local, sem push; último commit `5bc6750`): **CU2, CU3,
-> CN1, CU4, CN2, CN3a, CN3b, CN4a, CN4b e CN5** feitos em 05/nov, com testes (migrações `20261214120000` a
-> `20261221120000`, aplicadas só no banco local). Texto do "Retomar conversa" aprovado (opção A, com a clínica e o dia).
-> **Staging e produção só com a Central pronta** (cliente, 05/nov). Detalhe por etapa na seção 12 do plano da Central
-> (na branch); capturas na fila em `capturas-pendentes.md` (na branch).
+> **Central de Atendimento (CU2 a CN9) na `main` e no staging (05/nov):** a branch `central-atendimento` foi juntada
+> na `main`; migrações `20261214120000` a `20261224120000` aplicadas no staging (só lá). **Cliente valida** pela parte
+> **AA** do [`staging.md`](staging.md). Antes: liberar o item na Matriz da clínica de testes, criar o modelo "Retomar
+> conversa", conferir os campos do webhook e criar a configuração v4 (`WHATSAPP_ES_CONFIG_ID`). Capturas `conversas`,
+> `atendimento`, `config-whatsapp` e `config-mensagens` na fila (`capturas-pendentes.md`), aguardando autorização.
+> Produção só com autorização. Detalhe na seção 12 do plano da Central.
 >
-> **Próxima sessão (cliente, 05/nov):** **CN6** na branch `central-atendimento` (enviar foto até 5 MB e PDF até 10 MB).
-> Depois CN7 a CN9. Partes S a W do `staging.md` validadas (05/nov). A `faturamento` está com a `main` até a FE e as
-> capturas (05/nov).
+> Partes S a W do `staging.md` validadas (05/nov). A `faturamento` está com a `main` até a FE e as capturas (05/nov).
 > Trabalhar na worktree `recepclinic-main` (a pasta `recepclinic` está na branch `faturamento`). Pendente da branch: o
 > cliente valida no local o faturamento **F12.2b a F12.2h** pelo `roteiro-validacao-faturamento.md` **da branch**.
 >
@@ -50,7 +49,7 @@
 > **Ambientes**
 > - **Produção** (`app.recepclinic.com.br`, branch `producao`) = `main` em 05/nov (até a CA). Fluxo em [`producao.md`](producao.md).
 > - **Staging** (`teste.recepclinic.com.br`, branch `main`): produção + redesign da Recepção (RX1 a RX9, sem migração) +
->   cartão do Asaas (`ASAAS_PREVIEW=1`) + Base de Conhecimento do bot (migração aplicada) + PN1, PN2, IS2 a IS5 (migrações aplicadas) + IS1 + C17 a C20 (03/nov; migração `20261206120000` aplicada) + C21 (04/nov).
+>   cartão do Asaas (`ASAAS_PREVIEW=1`) + Base de Conhecimento do bot (migração aplicada) + PN1, PN2, IS2 a IS5 (migrações aplicadas) + IS1 + C17 a C20 (03/nov; migração `20261206120000` aplicada) + C21 (04/nov) + **Central de Atendimento** (05/nov, 11 migrações aplicadas).
 >   Roteiros em [`staging.md`](staging.md).
 > - **Branch `faturamento`** (só local, sem push): todo código do financeiro, até a F12.2h; com a `main` até `55216d2`
 >   (FE e capturas da Central, 05/nov; merge `ba36cd6`, 1055 testes de unidade e 939 de banco passando; o `contexto` já falhava
