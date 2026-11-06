@@ -42,6 +42,9 @@ export type SendDeps = {
   sender: ClinicSender | null;
 };
 
+/** Argumento que aceita null no banco (os tipos gerados do Supabase marcam todo argumento de função como obrigatório). */
+const orNull = (value: string | null) => value as string;
+
 type Prepared = { outcome: string; message_id: string | null; assigned_to: string | null; assigned_name: string | null };
 
 export type SendInput = { phone: string; clientKey: string; body: string; expectedAssigned: string | null };
@@ -102,7 +105,7 @@ export async function sendFromCentral(deps: SendDeps, clinicId: string, input: S
         p_contact_phone: input.phone,
         p_client_key: input.clientKey,
         p_body: input.body,
-        p_expected_assigned: expected === undefined ? input.expectedAssigned : expected,
+        p_expected_assigned: orNull(expected === undefined ? input.expectedAssigned : expected),
       }),
       "Conversas",
     )[0],
@@ -155,7 +158,7 @@ export async function sendMediaFromCentral(deps: SendDeps, clinicId: string, inp
         p_size_bytes: file.bytes.byteLength,
         p_file_name: fileName,
         p_sha256: file.sha256,
-        p_expected_assigned: expected === undefined ? input.expectedAssigned : expected,
+        p_expected_assigned: orNull(expected === undefined ? input.expectedAssigned : expected),
       }),
       "Conversas",
     )[0],
@@ -199,7 +202,7 @@ export async function resumeFromCentral(deps: SendDeps, clinicId: string, input:
         p_client_key: input.clientKey,
         p_body: body,
         p_template_name: template.name,
-        p_expected_assigned: expected === undefined ? input.expectedAssigned : expected,
+        p_expected_assigned: orNull(expected === undefined ? input.expectedAssigned : expected),
       }),
       "Conversas",
     )[0],
@@ -249,7 +252,7 @@ export async function assignConversation(
   { expected, to = null }: { expected: string | null; to?: string | null },
 ): Promise<AssignResult> {
   const rows = unwrap(
-    await db.rpc("central_assign", { p_clinic_id: clinicId, p_contact_phone: phone, p_expected_assigned: expected, p_to: to }),
+    await db.rpc("central_assign", { p_clinic_id: clinicId, p_contact_phone: phone, p_expected_assigned: orNull(expected), p_to: to ?? undefined }),
     "Conversas",
   );
   return { kind: rows[0].outcome as AssignResult["kind"], name: rows[0].assigned_name };

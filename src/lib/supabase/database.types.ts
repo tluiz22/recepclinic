@@ -1990,13 +1990,13 @@ isOneToOne: false
 { Args: { "p_agenda_id": string,"p_booking_channel": Database["public"]['Enums']["action_channel"],"p_location_id": string,"p_patient_id": string,"p_scheduled_at": string,"p_service_id": string,"p_trail"?: Json }; Returns: string
                            },
 "central_assign":
-{ Args: { "p_clinic_id": string,"p_contact_phone": string,"p_expected_assigned": string | null,"p_to"?: string | null }; Returns: {
-              "assigned_name": string | null,"assigned_to": string | null,"outcome": string
+{ Args: { "p_clinic_id": string,"p_contact_phone": string,"p_expected_assigned": string,"p_to"?: string }; Returns: {
+              "assigned_name": string,"assigned_to": string,"outcome": string
             }[]
                            },
 "central_conversation_media":
-{ Args: { "p_clinic_id": string,"p_contact_phone": string,"p_media_ids": string[] }; Returns: {
-              "file_name": string | null,"id": string,"mime_type": string | null,"size_bytes": number | null,"status": string
+{ Args: { "p_clinic_id": string,"p_contact_phone": string,"p_media_ids": (string)[] }; Returns: {
+              "file_name": string,"id": string,"mime_type": string,"size_bytes": number,"status": string
             }[]
                            },
 "central_conversation_messages":
@@ -2004,14 +2004,20 @@ isOneToOne: false
               "author": string,"body": string,"created_at": string,"direction": string,"edited_at": string,"failure_code": number,"failure_reason": string,"handoff_id": string,"id": string,"media_id": string,"message_type": string,"revoked_at": string,"sent_by": string,"sort_at": string,"source": string,"status": string,"template_name": string
             }[]
                            },
+"central_conversations":
+{ Args: { "p_clinic_id": string,"p_finished"?: boolean,"p_limit"?: number,"p_search"?: string }; Returns: {
+              "assigned_name": string,"assigned_to": string,"contact_id": string,"contact_phone": string,"handoff_id": string,"handoff_reason": string,"handoff_started_at": string,"handoff_status": string,"handoff_status_at": string,"handoff_subject": string,"human_handoff": boolean,"last_message_at": string,"last_message_author": string,"last_message_preview": string,"last_patient_at": string,"name": string,"profile_name": string,"unread": number
+            }[]
+                           },
+"central_enabled":
+{ Args: { "p_clinic_id": string }; Returns: boolean
+                           },
+"central_history_process":
+{ Args: { "p_clinic_id": string,"p_limit"?: number }; Returns: Json
+                           },
 "central_media_access":
 { Args: { "p_clinic_id": string,"p_media_id": string }; Returns: {
               "file_name": string,"mime_type": string,"size_bytes": number,"storage_path": string
-            }[]
-                           },
-"central_media_send_prepare":
-{ Args: { "p_caption": string,"p_client_key": string,"p_clinic_id": string,"p_contact_phone": string,"p_expected_assigned": string | null,"p_file_name": string,"p_mime_type": string,"p_sha256": string,"p_size_bytes": number,"p_storage_path": string }; Returns: {
-              "assigned_name": string,"assigned_to": string,"message_id": string,"outcome": string
             }[]
                            },
 "central_media_purge_list":
@@ -2022,41 +2028,35 @@ isOneToOne: false
 "central_media_purged":
 { Args: { "p_clinic_id": string,"p_paths": (string)[] }; Returns: number
                            },
-"central_retention":
-{ Args: { "p_clinic_id": string,"p_now"?: string }; Returns: Json
-                           },
-"central_conversations":
-{ Args: { "p_clinic_id": string,"p_finished"?: boolean,"p_limit"?: number,"p_search"?: string }; Returns: {
-              "assigned_name": string | null,"assigned_to": string | null,"contact_id": string | null,"contact_phone": string,"handoff_reason": string | null,"handoff_started_at": string | null,"handoff_status": string | null,"handoff_status_at": string | null,"handoff_subject": string | null,"human_handoff": boolean,"last_message_at": string | null,"last_message_author": string | null,"last_message_preview": string | null,"last_patient_at": string | null,"name": string | null,"unread": number,"profile_name": string | null,"handoff_id": string | null
+"central_media_send_prepare":
+{ Args: { "p_caption": string,"p_client_key": string,"p_clinic_id": string,"p_contact_phone": string,"p_expected_assigned": string,"p_file_name": string,"p_mime_type": string,"p_sha256": string,"p_size_bytes": number,"p_storage_path": string }; Returns: {
+              "assigned_name": string,"assigned_to": string,"message_id": string,"outcome": string
             }[]
-                           },
-"central_enabled":
-{ Args: { "p_clinic_id": string }; Returns: boolean
-                           },
-"central_history_process":
-{ Args: { "p_clinic_id": string,"p_limit"?: number }; Returns: Json
                            },
 "central_release_idle":
 { Args: { "p_clinic_id": string,"p_minutes"?: number }; Returns: number
                            },
 "central_resume_prepare":
-{ Args: { "p_body": string,"p_client_key": string,"p_clinic_id": string,"p_contact_phone": string,"p_expected_assigned": string | null,"p_template_name": string }; Returns: {
-              "assigned_name": string | null,"assigned_to": string | null,"message_id": string | null,"outcome": string
+{ Args: { "p_body": string,"p_client_key": string,"p_clinic_id": string,"p_contact_phone": string,"p_expected_assigned": string,"p_template_name": string }; Returns: {
+              "assigned_name": string,"assigned_to": string,"message_id": string,"outcome": string
             }[]
                            },
+"central_retention":
+{ Args: { "p_clinic_id": string,"p_now"?: string }; Returns: Json
+                           },
 "central_send_prepare":
-{ Args: { "p_body": string,"p_client_key": string,"p_clinic_id": string,"p_contact_phone": string,"p_expected_assigned": string | null }; Returns: {
-              "assigned_name": string | null,"assigned_to": string | null,"message_id": string | null,"outcome": string
+{ Args: { "p_body": string,"p_client_key": string,"p_clinic_id": string,"p_contact_phone": string,"p_expected_assigned": string }; Returns: {
+              "assigned_name": string,"assigned_to": string,"message_id": string,"outcome": string
             }[]
                            },
 "central_send_retry":
 { Args: { "p_clinic_id": string,"p_message_id": string }; Returns: {
-              "body": string | null,"contact_phone": string,"outcome": string
+              "body": string,"contact_phone": string,"outcome": string
             }[]
                            },
 "central_team":
 { Args: { "p_clinic_id": string }; Returns: {
-              "name": string,"roles": Database["public"]["Enums"]["clinic_role"][],"user_id": string
+              "name": string,"roles": (Database["public"]['Enums']["clinic_role"])[],"user_id": string
             }[]
                            },
 "central_waiting_count":
