@@ -34,6 +34,9 @@
 > conversa", conferir os campos do webhook e criar a configuração v4 (`WHATSAPP_ES_CONFIG_ID`). Capturas `conversas`,
 > `atendimento`, `config-whatsapp` e `config-mensagens` na fila (`capturas-pendentes.md`), aguardando autorização.
 > Produção só com autorização. Detalhe na seção 12 do plano da Central.
+> **Próxima sessão (cliente, 06/nov):** abrir trazendo os itens pendentes: passos do cliente antes da parte AA, recaptura
+> das capturas na fila, desenho do envio de foto/PDF (padrão, sem rodada de telas), resposta que falha contando no uso
+> do mês (CN4a), `ACCOUNT_RECONNECTED` só no log e produção da Central.
 >
 > Partes S a W do `staging.md` validadas (05/nov). A `faturamento` está com a `main` até a FE e as capturas (05/nov).
 > Trabalhar na worktree `recepclinic-main` (a pasta `recepclinic` está na branch `faturamento`). Pendente da branch: o
