@@ -192,3 +192,71 @@ export async function signedMediaUrl(serviceDb: DbClient, path: string, download
   if (error || !data) throw new Error(`Anexo: ${error?.message ?? "sem URL"}`);
   return data.signedUrl;
 }
+
+// ---------------------------------------------------------------------------
+// Mídia enviada pela Central (CN6; seção 6 e decisão 8b, cliente, 05/nov/2026)
+// ---------------------------------------------------------------------------
+
+/** O que a Central envia: foto JPEG/PNG até 5 MB (limite da Meta para imagem) e PDF até 10 MB. */
+export const OUTBOUND_LIMITS: Record<string, number> = {
+  "image/jpeg": 5 * MB,
+  "image/png": 5 * MB,
+  "application/pdf": 10 * MB,
+};
+
+export type OutboundCheck = { ok: true; mimeType: string } | { ok: false; message: string };
+
+/** Confere o arquivo escolhido (pelo tipo informado) antes de subir. */
+export function checkOutboundFile(mimeType: string, sizeBytes: number): OutboundCheck {
+  const limit = OUTBOUND_LIMITS[mimeType];
+  if (!limit) return { ok: false, message: "Envie uma foto (JPG ou PNG) ou um PDF." };
+  if (!(sizeBytes > 0)) return { ok: false, message: "O arquivo está vazio." };
+  if (sizeBytes > limit) return { ok: false, message: mimeType === "application/pdf" ? "O PDF vai até 10 MB." : "A foto vai até 5 MB." };
+  return { ok: true, mimeType };
+}
+
+/** Tipo real pelo começo do arquivo (não confia no nome nem no que o navegador disse). */
+export function sniffMimeType(bytes: Uint8Array): string | null {
+  if (bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) return "image/jpeg";
+  if (bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4e && bytes[3] === 0x47) return "image/png";
+  if (bytes[0] === 0x25 && bytes[1] === 0x50 && bytes[2] === 0x44 && bytes[3] === 0x46) return "application/pdf";
+  return null;
+}
+
+/** "<clínica>/<telefone>/env-<chave da tela>.<ext>": a chave liga o arquivo ao envio (o mesmo envio, o mesmo arquivo). */
+export function outboundPath(clinicId: string, phone: string, clientKey: string, mimeType: string): string {
+  return `${clinicId}/${phone.replace(/\D/g, "")}/env-${clientKey}.${mediaExtension(mimeType, null)}`;
+}
+
+/** Link de envio de uso único para o navegador subir o arquivo direto ao bucket (sem passar pela função da Vercel). */
+export async function createOutboundUploadUrl(serviceDb: DbClient, path: string): Promise<string> {
+  const { data, error } = await serviceDb.storage.from(MEDIA_BUCKET).createSignedUploadUrl(path);
+  if (error || !data) throw new Error(`Anexo: link de envio não gerado (${error?.message ?? "sem resposta"})`);
+  return data.signedUrl;
+}
+
+/** Lê o arquivo subido e confere tipo e tamanho; fora da regra, apaga. */
+export async function readOutboundFile(serviceDb: DbClient, path: string): Promise<{ bytes: Uint8Array; mimeType: string; sha256: string } | { error: string }> {
+  const { data, error } = await serviceDb.storage.from(MEDIA_BUCKET).download(path);
+  if (error || !data) return { error: "O arquivo não chegou. Tente anexar de novo." };
+  const bytes = new Uint8Array(await data.arrayBuffer());
+  const mimeType = sniffMimeType(bytes);
+  const check = mimeType ? checkOutboundFile(mimeType, bytes.byteLength) : ({ ok: false, message: "Envie uma foto (JPG ou PNG) ou um PDF." } as const);
+  if (!check.ok) {
+    await serviceDb.storage.from(MEDIA_BUCKET).remove([path]);
+    return { error: check.message };
+  }
+  return { bytes, mimeType: check.mimeType, sha256: await sha256Hex(bytes) };
+}
+
+/** Arquivo já guardado de uma mensagem (o "Tentar de novo" sobe de novo à Meta). */
+export async function readStoredMedia(serviceDb: DbClient, clinicId: string, mediaId: string): Promise<{ bytes: Uint8Array; mimeType: string; fileName: string | null } | null> {
+  const row = unwrap(
+    await serviceDb.from("whatsapp_media").select("storage_path, mime_type, file_name, status").eq("clinic_id", clinicId).eq("id", mediaId).maybeSingle(),
+    "Anexo",
+  );
+  if (!row?.storage_path || row.status !== "stored") return null;
+  const { data, error } = await serviceDb.storage.from(MEDIA_BUCKET).download(row.storage_path);
+  if (error || !data) return null;
+  return { bytes: new Uint8Array(await data.arrayBuffer()), mimeType: row.mime_type ?? "application/octet-stream", fileName: row.file_name };
+}

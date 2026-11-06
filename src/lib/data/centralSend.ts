@@ -8,6 +8,7 @@ import { getApprovedTemplate, type ApprovedTemplate } from "./whatsapp/connectio
 import type { SendOutcome } from "./whatsapp/messages";
 import type { ClinicSender } from "./whatsapp/send";
 import { pauseForHuman } from "./whatsapp/conversations";
+import { readOutboundFile, readStoredMedia } from "./whatsapp/media";
 import { defaultTemplate, fillTemplate } from "./whatsapp/templates";
 
 // Responder, assumir e transferir pela Central (CN4a; plano em docs/planejamento-central-atendimento.md, decisões 5
@@ -28,7 +29,9 @@ export type SendResult =
   /** Já foi um "Retomar conversa" depois da última mensagem do paciente: aguardar a resposta. */
   | { kind: "pending" }
   /** O modelo "Retomar conversa" ainda não está aprovado na conta da clínica. */
-  | { kind: "no_template" };
+  | { kind: "no_template" }
+  /** Anexo fora da regra (tipo ou tamanho) ou que não chegou ao bucket: nada foi gravado. */
+  | { kind: "bad_file"; message: string };
 
 export type SendDeps = {
   /** Login de quem envia (confere o acesso e o responsável). */
@@ -107,6 +110,59 @@ export async function sendFromCentral(deps: SendDeps, clinicId: string, input: S
   return outcomeOf(prepared) ?? deliver(deps, clinicId, prepared.message_id!, (sender) => sender.text(input.phone, body));
 }
 
+export type MediaSendInput = {
+  phone: string;
+  clientKey: string;
+  /** Caminho no bucket, gerado pelo servidor no "preparar" (outboundPath). */
+  path: string;
+  fileName: string;
+  caption: string | null;
+  expectedAssigned: string | null;
+};
+
+/** Sobe o arquivo à Meta e envia como foto ou documento (com a legenda). */
+function sendFile(sender: ClinicSender, phone: string, file: { bytes: Uint8Array; mimeType: string; fileName: string }, caption: string | null): Promise<SendOutcome> {
+  if (!sender.uploadDocument || !sender.image || !sender.document) return Promise.resolve({ sent: false, reason: "envio de arquivo indisponível" });
+  const { uploadDocument, image, document } = sender;
+  return uploadDocument({ bytes: file.bytes, filename: file.fileName, mimeType: file.mimeType }).then(
+    (mediaId) => (file.mimeType === "application/pdf" ? document(phone, { mediaId, filename: file.fileName }, caption ?? "") : image(phone, { mediaId }, caption)),
+    (error: unknown) => ({ sent: false as const, reason: `arquivo não subiu ao WhatsApp: ${error instanceof Error ? error.message : String(error)}` }),
+  );
+}
+
+/** Nome do arquivo para o paciente: o escolhido, sem pastas; PDF sempre com ".pdf". */
+export function outboundFileName(name: string, mimeType: string): string {
+  const base = (name.split(/[\\/]/).pop() ?? "").trim().slice(0, 200) || (mimeType === "application/pdf" ? "documento" : "foto");
+  if (mimeType === "application/pdf" && !/\.pdf$/i.test(base)) return `${base}.pdf`;
+  return base;
+}
+
+/** Foto ou PDF pela Central (CN6): as regras da resposta em texto, com o anexo e a legenda opcional. */
+export async function sendMediaFromCentral(deps: SendDeps, clinicId: string, input: MediaSendInput): Promise<SendResult> {
+  const file = await readOutboundFile(deps.serviceDb, input.path);
+  if ("error" in file) return { kind: "bad_file", message: file.error };
+  const fileName = outboundFileName(input.fileName, file.mimeType);
+  const caption = input.caption?.trim() || null;
+  const prepared = await prepareWithPause(deps, clinicId, input.phone, async (expected) =>
+    unwrap(
+      await deps.db.rpc("central_media_send_prepare", {
+        p_clinic_id: clinicId,
+        p_contact_phone: input.phone,
+        p_client_key: input.clientKey,
+        p_caption: caption ?? "",
+        p_storage_path: input.path,
+        p_mime_type: file.mimeType,
+        p_size_bytes: file.bytes.byteLength,
+        p_file_name: fileName,
+        p_sha256: file.sha256,
+        p_expected_assigned: expected === undefined ? input.expectedAssigned : expected,
+      }),
+      "Conversas",
+    )[0],
+  );
+  return outcomeOf(prepared) ?? deliver(deps, clinicId, prepared.message_id!, (sender) => sendFile(sender, input.phone, { ...file, fileName }, caption));
+}
+
 export type ResumeInput = {
   phone: string;
   clientKey: string;
@@ -170,6 +226,16 @@ export async function retryFromCentral(deps: SendDeps, clinicId: string, message
       sender.resend ? sender.resend(request, row.body ?? "") : Promise.resolve({ sent: false, reason: "reenvio indisponível" }),
     );
   }
+  if (row.outcome === "media") {
+    const saved = unwrap(await deps.serviceDb.from("whatsapp_messages").select("media_id").eq("clinic_id", clinicId).eq("id", messageId).maybeSingle(), "Conversas");
+    const file = saved?.media_id ? await readStoredMedia(deps.serviceDb, clinicId, saved.media_id) : null;
+    if (!file) {
+      await deps.serviceDb.from("whatsapp_messages").update({ status: "failed" }).eq("clinic_id", clinicId).eq("id", messageId);
+      return { kind: "failed", reason: "arquivo do envio não encontrado" };
+    }
+    const fileName = outboundFileName(file.fileName ?? "", file.mimeType);
+    return deliver(deps, clinicId, messageId, (sender) => sendFile(sender, row.contact_phone, { ...file, fileName }, row.body));
+  }
   return deliver(deps, clinicId, messageId, (sender) => sender.text(row.contact_phone, row.body ?? ""));
 }
 
@@ -223,6 +289,8 @@ export function sendMessageText(result: SendResult | { kind: "already" }): { ton
       return { tone: "error", text: "O paciente escreveu nas últimas 24 horas: responda pela caixa de mensagem, sem o modelo." };
     case "pending":
       return { tone: "success", text: "O \"Retomar conversa\" já foi enviado. Quando o paciente responder, a conversa volta a aceitar texto." };
+    case "bad_file":
+      return { tone: "error", text: result.message };
     case "no_template":
       return {
         tone: "error",

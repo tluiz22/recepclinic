@@ -82,4 +82,12 @@ describe("anexos (CN5)", () => {
     expect(attachmentOf("image", undefined, true)).toBeNull();
     expect(formatFileSize(350 * 1024)).toBe("350 KB");
   });
+
+  it("enviado pela Central (CN6): foto ou documento pelo tipo do arquivo", () => {
+    expect(attachmentOf("panel_reply", media("stored", { mimeType: "image/png" }), true)).toEqual({ kind: "image", href: "/api/admin/conversas/midia/m1" });
+    expect(attachmentOf("panel_reply", media("stored", { mimeType: "application/pdf", fileName: "guia.pdf", sizeBytes: 2048 }), true)).toMatchObject({
+      kind: "document",
+      name: "guia.pdf",
+    });
+  });
 });

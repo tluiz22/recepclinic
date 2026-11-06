@@ -432,7 +432,7 @@ const tabClass = (active: boolean) =>
                       {bubble.label && <span class="text-xs font-bold text-ink-mid">{bubble.label}</span>}
                       {attachment?.kind === "image" && (
                         <a href={attachment.href} target="_blank" rel="noopener" class="block">
-                          <img src={attachment.href} alt="Foto enviada pelo paciente" class="max-h-72 max-w-full rounded-lg object-contain" />
+                          <img src={attachment.href} alt={bubble.side === "left" ? "Foto enviada pelo paciente" : "Foto enviada ao paciente"} class="max-h-72 max-w-full rounded-lg object-contain" />
                         </a>
                       )}
                       {attachment?.kind === "audio" && <audio controls preload="none" src={attachment.href} class="max-w-full" aria-label="Áudio enviado pelo paciente" />}
@@ -498,6 +498,15 @@ const tabClass = (active: boolean) =>
                   <input type="hidden" name="chave" value={clientKey} />
                   <input type="hidden" name="responsavel_visto" value={selected.assignedTo ?? ""} />
                   <input type="hidden" name="return_to" value={threadHref} />
+                  <button
+                    type="button"
+                    aria-label="Anexar foto ou PDF"
+                    title="Anexar foto ou PDF"
+                    class="inline-flex h-11 w-11 flex-none items-center justify-center rounded-lg border border-line-strong bg-white text-ink-mid hover:bg-canvas"
+                    data-attach-open
+                  >
+                    <Icon name="paper-clip" class="h-5 w-5" />
+                  </button>
                   <label for="resposta" class="sr-only">
                     Mensagem para o paciente
                   </label>
@@ -651,6 +660,54 @@ const tabClass = (active: boolean) =>
     )
   }
 
+  {
+    canReply && windowOpen && selected && (
+      <dialog
+        id="attach_dialog"
+        aria-labelledby="attach_title"
+        class="m-auto w-[calc(100%-2rem)] max-w-[440px] rounded-[14px] border border-line bg-white p-0 text-ink shadow-[0_20px_50px_rgba(18,48,42,.22)] backdrop:bg-ink/40"
+      >
+        <form class="flex flex-col gap-3 p-4" data-attach-form data-api="/api/admin/conversas/anexo">
+          <strong id="attach_title" class="font-display text-lg text-ink">
+            Enviar foto ou PDF
+          </strong>
+          <p class="text-sm text-ink-mid">
+            Para {displayName(selected)}. Foto em JPG ou PNG até 5 MB; PDF até 10 MB.
+            {otherOwner && ` A conversa está com ${ownerFirst}: ao enviar, você passa a ser responsável.`}
+          </p>
+          <input type="hidden" name="telefone" value={selected.phone} />
+          <input type="hidden" name="responsavel_visto" value={selected.assignedTo ?? ""} />
+          <input type="hidden" name="return_to" value={threadHref} />
+          <label for="attach_file" class="text-sm font-semibold text-ink">
+            Arquivo
+          </label>
+          <input
+            id="attach_file"
+            name="arquivo"
+            type="file"
+            required
+            accept="image/jpeg,image/png,application/pdf"
+            class="block w-full text-sm text-ink file:mr-3 file:min-h-11 file:rounded-lg file:border file:border-line-strong file:bg-white file:px-3 file:text-sm file:font-semibold file:text-ink"
+          />
+          <label for="attach_caption" class="text-sm font-semibold text-ink">
+            Legenda <span class="font-normal text-ink-soft">(opcional)</span>
+          </label>
+          <textarea id="attach_caption" name="legenda" rows="2" maxlength="1024" class={`${CONTROL} w-full resize-none`}></textarea>
+          <p class="hidden rounded-lg border border-danger-line bg-can-50 px-3 py-2 text-sm text-danger" role="alert" data-attach-error></p>
+          <p class="text-sm text-ink-soft" aria-live="polite" data-attach-status></p>
+          <div class="mt-1 flex justify-end gap-2">
+            <button type="button" class={ACTION} data-attach-close>
+              Cancelar
+            </button>
+            <button type="submit" class="inline-flex min-h-11 items-center justify-center rounded-lg bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-ink sm:min-h-10">
+              Enviar
+            </button>
+          </div>
+        </form>
+      </dialog>
+    )
+  }
+
   <ConfirmDeleteDialog />
 </AdminLayout>
 
@@ -694,6 +751,64 @@ const tabClass = (active: boolean) =>
   composer?.addEventListener("submit", () => {
     window.setTimeout(() => composer.querySelector<HTMLButtonElement>("button[type=submit]")?.setAttribute("disabled", ""), 0);
   });
+  // Foto ou PDF (CN6): confere, sobe direto ao armazenamento pelo link de uso único e envia.
+  const attach = document.getElementById("attach_dialog") as HTMLDialogElement | null;
+  const attachForm = attach?.querySelector<HTMLFormElement>("[data-attach-form]");
+  if (attach && attachForm) {
+    const error = attachForm.querySelector<HTMLElement>("[data-attach-error]")!;
+    const status = attachForm.querySelector<HTMLElement>("[data-attach-status]")!;
+    const submit = attachForm.querySelector<HTMLButtonElement>("button[type=submit]")!;
+    const field = (name: string) => (attachForm.elements.namedItem(name) as HTMLInputElement).value;
+    const LIMITS: Record<string, number> = { "image/jpeg": 5, "image/png": 5, "application/pdf": 10 };
+    const fail = (text: string) => {
+      error.textContent = text;
+      error.classList.remove("hidden");
+      status.textContent = "";
+      submit.disabled = false;
+    };
+    document.querySelector("[data-attach-open]")?.addEventListener("click", () => attach.showModal());
+    attach.querySelector("[data-attach-close]")?.addEventListener("click", () => attach.close());
+    const post = async (body: Record<string, unknown>) => {
+      const response = await fetch(attachForm.dataset.api!, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+      const data = await response.json().catch(() => ({ error: "Não deu certo. Tente de novo." }));
+      if (!response.ok) throw new Error(data.error ?? "Não deu certo. Tente de novo.");
+      return data;
+    };
+    attachForm.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      error.classList.add("hidden");
+      const file = (attachForm.elements.namedItem("arquivo") as HTMLInputElement).files?.[0];
+      if (!file) return fail("Escolha o arquivo.");
+      const limit = LIMITS[file.type];
+      if (!limit) return fail("Envie uma foto (JPG ou PNG) ou um PDF.");
+      if (file.size > limit * 1024 * 1024) return fail(file.type === "application/pdf" ? "O PDF vai até 10 MB." : "A foto vai até 5 MB.");
+      // Chave nova a cada tentativa: o arquivo vai para um caminho próprio (o anterior, recusado, não atrapalha); dentro
+      // da tentativa, o mesmo envio não sai duas vezes.
+      const base = { telefone: field("telefone"), chave: crypto.randomUUID(), tipo: file.type, tamanho: file.size, nome: file.name };
+      submit.disabled = true;
+      try {
+        status.textContent = "Preparando…";
+        const { uploadUrl } = await post({ acao: "preparar", ...base });
+        status.textContent = "Enviando o arquivo…";
+        const body = new FormData();
+        body.append("cacheControl", "3600");
+        body.append("", file);
+        const upload = await fetch(uploadUrl, { method: "PUT", headers: { "x-upsert": "false" }, body });
+        if (!upload.ok) throw new Error("O arquivo não foi enviado. Confira a internet e tente de novo.");
+        status.textContent = "Enviando ao paciente…";
+        const { redirectTo } = await post({
+          acao: "enviar",
+          ...base,
+          legenda: field("legenda"),
+          responsavel_visto: field("responsavel_visto"),
+          return_to: field("return_to"),
+        });
+        window.location.href = redirectTo;
+      } catch (e) {
+        fail(e instanceof Error && e.message ? e.message : "Não deu certo. Tente de novo.");
+      }
+    });
+  }
   const transfer = document.getElementById("transfer_dialog") as HTMLDialogElement | null;
   document.querySelector("[data-transfer-open]")?.addEventListener("click", () => transfer?.showModal());
   transfer?.querySelector("[data-transfer-close]")?.addEventListener("click", () => transfer.close());

@@ -99,8 +99,10 @@ export type Attachment =
 const ARTICLE: Record<string, string> = { image: "uma foto", audio: "um áudio", document: "um documento", video: "um vídeo", sticker: "uma figurinha" };
 
 /** Como o anexo aparece na mensagem (null = sem anexo guardado: vale o texto ou o marcador de antes). */
-export function attachmentOf(messageType: string, media: AttachmentMedia | undefined, coexistence: boolean): Attachment | null {
+export function attachmentOf(type: string, media: AttachmentMedia | undefined, coexistence: boolean): Attachment | null {
   if (!media) return null;
+  // Enviada pela Central (CN6): a mensagem é "panel_reply"; o tipo vem do arquivo.
+  const messageType = type in ARTICLE ? type : media.mimeType?.startsWith("image/") ? "image" : "document";
   const href = `/api/admin/conversas/midia/${media.id}`;
   const what = ARTICLE[messageType] ?? "um arquivo";
   const size = media.sizeBytes !== null ? formatFileSize(media.sizeBytes) : null;

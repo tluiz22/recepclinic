@@ -1989,6 +1989,11 @@ isOneToOne: false
               "file_name": string,"mime_type": string,"size_bytes": number,"storage_path": string
             }[]
                            },
+"central_media_send_prepare":
+{ Args: { "p_caption": string,"p_client_key": string,"p_clinic_id": string,"p_contact_phone": string,"p_expected_assigned": string | null,"p_file_name": string,"p_mime_type": string,"p_sha256": string,"p_size_bytes": number,"p_storage_path": string }; Returns: {
+              "assigned_name": string,"assigned_to": string,"message_id": string,"outcome": string
+            }[]
+                           },
 "central_conversations":
 { Args: { "p_clinic_id": string,"p_finished"?: boolean,"p_limit"?: number,"p_search"?: string }; Returns: {
               "assigned_name": string | null,"assigned_to": string | null,"contact_id": string | null,"contact_phone": string,"handoff_reason": string | null,"handoff_started_at": string | null,"handoff_status": string | null,"handoff_status_at": string | null,"handoff_subject": string | null,"human_handoff": boolean,"last_message_at": string | null,"last_message_author": string | null,"last_message_preview": string | null,"last_patient_at": string | null,"name": string | null,"unread": number,"profile_name": string | null,"handoff_id": string | null
