@@ -260,3 +260,30 @@ export async function readStoredMedia(serviceDb: DbClient, clinicId: string, med
   if (error || !data) return null;
   return { bytes: new Uint8Array(await data.arrayBuffer()), mimeType: row.mime_type ?? "application/octet-stream", fileName: row.file_name };
 }
+
+// ---------------------------------------------------------------------------
+// Prazo de guarda e anonimização (CN7; decisão 8, cliente, 05/nov/2026)
+// ---------------------------------------------------------------------------
+
+/** Rotina diária: texto com mais de 5 anos fica nulo; anexo com mais de 12 meses fica "apagado". */
+export async function applyConversationRetention(serviceDb: DbClient, clinicId: string, now: Date = new Date()): Promise<{ texts: number; media: number }> {
+  const result = unwrap(await serviceDb.rpc("central_retention", { p_clinic_id: clinicId, p_now: now.toISOString() }), "Prazo de guarda") as {
+    texts?: number;
+    media?: number;
+  } | null;
+  return { texts: result?.texts ?? 0, media: result?.media ?? 0 };
+}
+
+/**
+ * Remove do bucket os arquivos dos anexos apagados (prazo de guarda ou anonimização) e os enviados pela Central que
+ * não viraram mensagem. O banco não apaga do Storage: lista, remove e confirma.
+ */
+export async function purgeDeletedMedia(serviceDb: DbClient, clinicId: string): Promise<number> {
+  const rows = unwrap(await serviceDb.rpc("central_media_purge_list", { p_clinic_id: clinicId }), "Anexos apagados");
+  const paths = [...new Set(rows.map((row) => row.path).filter((path): path is string => !!path))];
+  if (!paths.length) return 0;
+  const { error } = await serviceDb.storage.from(MEDIA_BUCKET).remove(paths);
+  if (error) throw new Error(`Anexos apagados: ${error.message}`);
+  unwrap(await serviceDb.rpc("central_media_purged", { p_clinic_id: clinicId, p_paths: paths }), "Anexos apagados");
+  return paths.length;
+}

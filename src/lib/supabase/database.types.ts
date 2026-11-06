@@ -1994,6 +1994,17 @@ isOneToOne: false
               "assigned_name": string,"assigned_to": string,"message_id": string,"outcome": string
             }[]
                            },
+"central_media_purge_list":
+{ Args: { "p_clinic_id": string,"p_limit"?: number }; Returns: {
+              "path": string
+            }[]
+                           },
+"central_media_purged":
+{ Args: { "p_clinic_id": string,"p_paths": (string)[] }; Returns: number
+                           },
+"central_retention":
+{ Args: { "p_clinic_id": string,"p_now"?: string }; Returns: Json
+                           },
 "central_conversations":
 { Args: { "p_clinic_id": string,"p_finished"?: boolean,"p_limit"?: number,"p_search"?: string }; Returns: {
               "assigned_name": string | null,"assigned_to": string | null,"contact_id": string | null,"contact_phone": string,"handoff_reason": string | null,"handoff_started_at": string | null,"handoff_status": string | null,"handoff_status_at": string | null,"handoff_subject": string | null,"human_handoff": boolean,"last_message_at": string | null,"last_message_author": string | null,"last_message_preview": string | null,"last_patient_at": string | null,"name": string | null,"unread": number,"profile_name": string | null,"handoff_id": string | null

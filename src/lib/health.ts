@@ -4,19 +4,22 @@
 /**
  * Rotinas do agendador (pg_cron, migrações 20261007130000, 20261007170000 e
  * 20261012160000, a das notas fiscais; 20261023140000, a dos reenvios;
- * 20261027160000, a do atendimento humano) e
+ * 20261027160000, a do atendimento humano; 20261221120000, a dos anexos da Central; 20261223120000, a do prazo de
+ * guarda das conversas) e
  * o atraso tolerado desde a última execução terminada: a frequência com folga
  * para uma ou duas falhas seguidas e para a demora da própria execução.
  */
 export const CRON_JOBS: Readonly<Record<string, { every: string; maxDelayMinutes: number }>> = {
   "conversas-paradas": { every: "a cada minuto", maxDelayMinutes: 10 },
   reenvios: { every: "a cada minuto", maxDelayMinutes: 10 },
+  midias: { every: "a cada minuto", maxDelayMinutes: 10 },
   "resumo-do-dia": { every: "a cada 5 minutos", maxDelayMinutes: 20 },
   "lista-de-espera": { every: "a cada 5 minutos", maxDelayMinutes: 20 },
   "atendimento-humano": { every: "a cada 5 minutos", maxDelayMinutes: 20 },
   lembretes: { every: "a cada hora", maxDelayMinutes: 90 },
   series: { every: "uma vez por dia", maxDelayMinutes: 26 * 60 },
   "notas-fiscais": { every: "uma vez por dia", maxDelayMinutes: 26 * 60 },
+  "guarda-conversas": { every: "uma vez por dia", maxDelayMinutes: 26 * 60 },
 };
 
 /** Janela da /api/saude/erros: erro mais novo que isso deixa o monitor vermelho. */
