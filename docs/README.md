@@ -28,14 +28,15 @@
 >
 > **Decisão pendente:** testes de tela automáticos (Playwright); conversar prós e contras com o cliente (`historico.md`, "C30").
 >
-> **Central em implementação, branch `central-atendimento`** (só local, sem push): **CU2** (Sistema › Preços da Meta, tela
-> P1; Uso por categoria; migração `20261214120000`), **CU3** (Vendas › Custo da Meta) e **CN1** (base de dados; migração
-> `20261215120000`) feitos em 05/nov, com testes. Migrações aplicadas só no banco local. **Staging e produção só com a
-> Central pronta** (cliente, 05/nov). Detalhe no `historico.md` ("CU2", "CU3", "CN1") e roteiros no `staging.md`, X a Z.
+> **Central em implementação, branch `central-atendimento`** (só local, sem push; último commit `5bc6750`): **CU2, CU3,
+> CN1, CU4, CN2, CN3a, CN3b, CN4a, CN4b e CN5** feitos em 05/nov, com testes (migrações `20261214120000` a
+> `20261221120000`, aplicadas só no banco local). Texto do "Retomar conversa" aprovado (opção A, com a clínica e o dia).
+> **Staging e produção só com a Central pronta** (cliente, 05/nov). Detalhe por etapa na seção 12 do plano da Central
+> (na branch); capturas na fila em `capturas-pendentes.md` (na branch).
 >
-> **Próxima sessão (cliente, 05/nov):** **CU4** na branch `central-atendimento` (Configurações › WhatsApp: Custo da Meta
-> do mês, telas W2 e L1 no canvas; ligar/desligar a Central). Depois CN2. Partes S a W do `staging.md` validadas (05/nov). A `faturamento` está
-> com a `main` até a FE e as capturas (05/nov).
+> **Próxima sessão (cliente, 05/nov):** **CN6** na branch `central-atendimento` (enviar foto até 5 MB e PDF até 10 MB).
+> Depois CN7 a CN9. Partes S a W do `staging.md` validadas (05/nov). A `faturamento` está com a `main` até a FE e as
+> capturas (05/nov).
 > Trabalhar na worktree `recepclinic-main` (a pasta `recepclinic` está na branch `faturamento`). Pendente da branch: o
 > cliente valida no local o faturamento **F12.2b a F12.2h** pelo `roteiro-validacao-faturamento.md` **da branch**.
 >
