@@ -467,7 +467,6 @@ export const OFFER_NOT_FOUND = "Essa oferta não está mais ativa.";
 // Pedido de recepção digitado: confirma antes de transferir; "Não" volta ao menu (cliente, 30/out/2026).
 // Assunto da transferência (cliente, 31/out/2026): perguntado uma vez, depois do aviso de transferência.
 export const HANDOFF_SUBJECT_QUESTION = "Para agilizar, poderia me contar brevemente qual assunto deseja tratar com a secretária?";
-export const HANDOFF_SUBJECT_THANKS = "Obrigado! Já repassamos para a nossa equipe.";
 
 export const RECEPTION_CONFIRM = "Você quer falar com a recepção? A conversa passa para a nossa equipe.";
 export const RECEPTION_CONFIRM_IDS = { yes: "reception_yes", no: "reception_no" } as const;
@@ -514,9 +513,6 @@ export const KB_NO_APPOINTMENTS = "Não encontramos atendimento marcado para est
 // Evolução do assistente (EA, cliente, 02/nov/2026)
 // ---------------------------------------------------------------------------
 
-/** Pedido de recepção sem motivo: o bot pergunta o motivo, com a recepção a um toque. */
-export const RECEPTION_REASON_QUESTION =
-  "Claro! 😊 Poderia me contar brevemente o que você precisa?\n\nAssim, talvez eu consiga ajudar você agora. Se preferir, toque abaixo e passo para a recepção.";
 export const RECEPTION_NOW_ID = "reception_now";
 export const RECEPTION_NOW_BUTTONS = [button(RECEPTION_NOW_ID, "Falar com a recepção")];
 /** Motivo sem resposta segura na base (situação B). */

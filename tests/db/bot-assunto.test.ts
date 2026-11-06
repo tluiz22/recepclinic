@@ -22,7 +22,6 @@ const env = () => ({
 
 const NUMBER = "e4-numero";
 const QUESTION = "Para agilizar, poderia me contar brevemente qual assunto deseja tratar com a secretária?";
-const THANKS = "Obrigado! Já repassamos para a nossa equipe.";
 type Sent = { kind: "text" | "list" | "buttons"; body: string; options: { id: string; title: string }[] };
 
 let f: AgendaFixture;
@@ -87,11 +86,10 @@ async function state(phone: string) {
 
 const attentionOf = async (phone: string) => (await listHumanAttention(asDb(f.reception), f.clinicId, phone))[0];
 
-/** "Oi" › "Falar com a recepção" do menu (o bot pergunta o motivo, EA) › toque em "Falar com a recepção". */
+/** "Oi" › "Falar com a recepção" do menu: transfere direto (cliente, 06/nov/2026). */
 async function askReception(phone: string): Promise<string[]> {
   await say(phone, "Oi");
-  expect((await say(phone, "4")).at(-1)).toContain("Poderia me contar brevemente o que você precisa?");
-  return say(phone, { id: "reception_now" });
+  return say(phone, "4");
 }
 
 beforeAll(async () => {
@@ -119,7 +117,7 @@ describe("assunto da transferência", () => {
 
   it("a primeira resposta em texto vira o assunto, aparece para a recepção e não é perguntada de novo", async () => {
     const phone = "+5584991229099";
-    expect(await say(phone, "Quero saber se a Dra. atende sábado")).toEqual([THANKS]);
+    expect(await say(phone, "Quero saber se a Dra. atende sábado")).toEqual([]);
     expect((await state(phone)).handoff_subject).toBe("Quero saber se a Dra. atende sábado");
     expect(await attentionOf(phone)).toMatchObject({ subject: "Quero saber se a Dra. atende sábado", subjectAsked: true });
     // Depois disso o bot fica calado e não regrava.
@@ -141,9 +139,9 @@ describe("assunto da transferência", () => {
   it("áudio não é o assunto; o texto seguinte é. Até 300 caracteres", async () => {
     const phone = "+5584991229098";
     await askReception(phone);
-    expect((await say(phone, { audio: true })).join("")).not.toContain(THANKS);
+    expect(await say(phone, { audio: true })).toEqual([]);
     expect((await state(phone)).handoff_subject).toBeNull();
-    expect(await say(phone, `  ${"a".repeat(350)}  `)).toEqual([THANKS]);
+    expect(await say(phone, `  ${"a".repeat(350)}  `)).toEqual([]);
     expect((await state(phone)).handoff_subject).toBe("a".repeat(300));
   });
 
@@ -164,7 +162,7 @@ describe("assunto da transferência", () => {
     await say(phone, "kkk"); // "Você quer falar com a recepção?" (cliente, 31/out/2026)
     const reply = await say(phone, "sim");
     expect(reply.at(-1)).toBe(QUESTION);
-    expect(await say(phone, "Resultado de exame")).toEqual([THANKS]);
+    expect(await say(phone, "Resultado de exame")).toEqual([]);
     expect(await state(phone)).toMatchObject({ handoff_reason: "not_understood", handoff_subject: "Resultado de exame" });
   });
 
@@ -173,8 +171,7 @@ describe("assunto da transferência", () => {
     await say(phone, "Oi");
     await say(phone, "1"); // Consultas
     await say(phone, "1"); // Marcar consulta (consulta única): "Com qual profissional?"
-    expect((await say(phone, "quero falar com atendente")).at(-1)).toContain("Poderia me contar brevemente");
-    const reply = await say(phone, { id: "reception_now" });
+    const reply = await say(phone, "quero falar com atendente");
     expect(reply.at(-1)).toBe(QUESTION);
     const { data } = await adminClient()
       .from("bot_funnel_events")

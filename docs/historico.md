@@ -1042,3 +1042,13 @@ Na branch `central-atendimento`. Migração `20261215120000_central_base.sql`, a
   de isolamento (teste próprio). Seed: Central ligada na Clínica Exemplo Saúde.
 - **Ao juntar com a `faturamento`:** as tabelas novas com `clinic_id` (`central_switches`, `whatsapp_media`,
   `conversation_reads`, `conversation_access_log`) precisam do bloqueio de clínica suspensa (teste `suspensao-banco`).
+
+## Ajustes do bot após o staging (06/nov/2026)
+
+Pedido do cliente depois dos testes no staging:
+- **Fora "Obrigado! Já repassamos para a nossa equipe."**: a resposta ao assunto da transferência é guardada sem
+  resposta do bot (`router.ts`).
+- **Fora "Claro! 😊 Poderia me contar brevemente o que você precisa?…"**: "Falar com a recepção" do menu ou "atendente"
+  digitado transferem direto, com a pergunta do assunto depois. O motivo já na mesma mensagem ("atendente, qual o
+  endereço?") continua indo para a base (`askReceptionReason`, `respond.ts`). Decisão do cliente: transferir direto.
+- Jornada do bot (Tecnologia) atualizada; testes de banco do bot ajustados (165 passando).

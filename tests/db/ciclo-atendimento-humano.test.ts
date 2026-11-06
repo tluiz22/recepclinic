@@ -67,11 +67,10 @@ async function say(phone: string, input: string | { id: string }, id = `wamid.ca
 const agentReply = (phone: string, body: string, id = `wamid.ca.echo.${++seq}`) =>
   webhook({ message_echoes: [{ id, from: "5584000000000", to: phone.slice(1), type: "text", text: { body } }] });
 
-/** "Oi" › "Falar com a recepção" › toque em "Falar com a recepção" (o bot pergunta o motivo antes, EA). */
+/** "Oi" › "Falar com a recepção": transfere direto (cliente, 06/nov/2026). */
 async function askReception(phone: string) {
   await say(phone, "Oi");
   await say(phone, "4");
-  await say(phone, { id: "reception_now" });
 }
 
 const reception = () => asDb(f.reception);
@@ -125,7 +124,7 @@ describe("ciclo do atendimento humano (CA)", () => {
     await askReception(P);
     expect(await conversation(P)).toMatchObject({ human_handoff: true, handoff_status: "waiting_clinic" });
     // A primeira mensagem é o assunto (jornada E4), com o agradecimento de sempre; depois, o bot fica calado.
-    expect(await say(P, "Quero remarcar a consulta de amanhã")).toEqual(["Obrigado! Já repassamos para a nossa equipe."]);
+    expect(await say(P, "Quero remarcar a consulta de amanhã")).toEqual([]);
     expect(await say(P, "É urgente")).toEqual([]);
     expect(await transitions(P)).toEqual(["bot>waiting_clinic:patient"]);
   });
@@ -193,7 +192,6 @@ describe("ciclo do atendimento humano (CA)", () => {
 
   it("um atendimento novo tem id próprio", async () => {
     await say(P, "4");
-    await say(P, { id: "reception_now" });
     const ids = new Set((await events(P)).map((e) => e.handoff_id));
     expect(ids.size).toBe(2);
     await finishAttendance(reception(), f.clinicId, P);

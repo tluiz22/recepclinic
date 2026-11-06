@@ -227,7 +227,7 @@ describe("bot: limites do contato, com coexistência", () => {
     expect(count).toBe(1);
 
     // Pausado: a 1ª resposta é o assunto (cliente, 31/out/2026); depois, o bot fica calado.
-    expect((await say("Quero marcar para minha filha")).map((m) => m.body)).toEqual(["Obrigado! Já repassamos para a nossa equipe."]);
+    expect((await say("Quero marcar para minha filha")).map((m) => m.body)).toEqual([]);
     expect(await say("oi")).toEqual([]);
   });
 });

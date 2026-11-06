@@ -370,7 +370,7 @@ describe("robustez", () => {
       expect(reply[0].body).toContain("Vou te transferir para a recepção");
       expect((await conversation(P1)).human_handoff).toBe(true);
       // Assunto da transferência (cliente, 31/out/2026): a 1ª resposta é o assunto; depois, o bot fica calado.
-      expect((await say(P1, "alô?")).map((m) => m.body)).toEqual(["Obrigado! Já repassamos para a nossa equipe."]);
+      expect((await say(P1, "alô?")).map((m) => m.body)).toEqual([]);
       expect(await say(P1, "tem alguém aí?")).toEqual([]);
     } finally {
       await fresh(P1);
@@ -453,32 +453,13 @@ describe("robustez", () => {
 
     await adminClient().from("whatsapp_connections").update({ coexistence: true }).eq("clinic_id", f.clinicId);
     try {
-      // Digitado: pergunta o motivo, com a recepção a um toque (EA, 02/nov/2026). "menu" volta ao menu; uma
-      // resposta sem letras vale para o passo; pedir de novo transfere.
+      // Digitado: transfere direto, sem perguntar o motivo (cliente, 06/nov/2026); a origem e a etapa ficam no registro.
       await fresh(P1);
       await say(P1, "oi");
-      reply = await say(P1, "Quero falar com a recepção");
-      expect(reply).toMatchObject([{ kind: "buttons", body: expect.stringContaining("Poderia me contar brevemente o que você precisa?") }]);
-      expect(titles(reply)).toEqual(["Falar com a recepção"]);
-      expect((await conversation(P1)).human_handoff).toBe(false);
-      reply = await say(P1, "menu");
-      expect(reply.map((m) => m.body)).toEqual([MENU]);
-      expect((await conversation(P1)).state).toBe("MENU");
-
-      await fresh(P1);
-      await say(P1, "oi");
-      await say(P1, "atendente");
       reply = await say(P1, "atendente");
       expect(reply[0].body).toContain("Vou te transferir para a recepção");
       expect(await conversation(P1)).toMatchObject({ state: "HUMAN_HANDOFF", human_handoff: true });
       expect(await lastHandoff()).toMatchObject({ step: "requested", metadata: { origin: "typed", journey_state: "ENTRY_ASK" } });
-
-      await fresh(P1);
-      await say(P1, "oi");
-      await say(P1, { id: "entry_yes" });
-      await say(P1, "atendente");
-      reply = await say(P1, "01/01/2020");
-      expect(reply).toMatchObject([{ kind: "list", body: "Qual agendamento você quer consultar ou alterar?" }]);
 
       // Pela ação do agendamento: a etapa da entrada fica registrada (antes aparecia como o começo da conversa).
       await fresh(P1);

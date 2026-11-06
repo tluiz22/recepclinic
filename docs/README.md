@@ -5,6 +5,9 @@
 > **3ª leva (C22 a C30, 04/nov):** no **staging e na produção** (`bf97b07`; migrações `20261208120000` e `20261209120000`
 > aplicadas nos dois; base publicada). **Validada pelo cliente (05/nov).**
 >
+> **Ajustes do bot (06/nov):** sem "Obrigado! Já repassamos…" e sem a pergunta do motivo antes da recepção (transfere
+> direto). Na `main` (staging); cliente valida. Detalhe no `historico.md`.
+>
 > **C31 (04/nov):** apresentação do 1º menu do bot, descrições nas opções e botão "Ver opções". No **staging e na
 > produção** (`d2744f9`, sem migração). **Validada (05/nov).**
 >

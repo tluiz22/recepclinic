@@ -125,6 +125,9 @@ Decisões do cliente:
 
 ### 4.3 Atendimento humano
 
+- **Revisto pelo cliente (06/nov/2026):** o bot não pergunta mais o motivo ("Claro! 😊 Poderia me contar brevemente…");
+  o pedido sem motivo transfere direto. Motivo já na mensagem: segue para a base, como abaixo. O resto desta seção
+  vale para as conversas que já estavam esperando o motivo.
 - "atendente" digitado (≤ 60 caracteres) e "Falar com a recepção" do menu, com a BC ligada: `askReceptionReason`
   pergunta o motivo (`_reception_reason` no contexto) com [Falar com a recepção]. Motivo já na mensagem
   (`withoutReceptionWords` + BC): segue direto. Sem a BC: o Sim/Não (digitado) e a transferência direta (menu), como antes.
