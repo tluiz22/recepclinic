@@ -35,14 +35,7 @@ const sender = {
 } as unknown as ClinicSender;
 const deps = (user: TestUser): SendDeps => ({ db: asDb(user), serviceDb: clinicServiceClient(clinicId) as unknown as DbClient, sender });
 const service = () => clinicServiceClient(clinicId) as unknown as DbClient;
-const input = (phone: string) => ({
-  phone,
-  clientKey: crypto.randomUUID(),
-  expectedAssigned: null,
-  name: "Maria Souza",
-  lastPatientAt: new Date(Date.now() - 25 * 60 * 60_000),
-  timeZone: TZ,
-});
+const input = (phone: string) => ({ phone, clientKey: crypto.randomUUID(), expectedAssigned: null });
 const stateOf = async (phone: string) =>
   (await db().from("conversation_state").select("handoff_status, assigned_to").eq("clinic_id", clinicId).eq("contact_phone", phone).single()).data!;
 
@@ -93,12 +86,12 @@ afterAll(async () => {
 });
 
 describe("Retomar conversa", () => {
-  it("fora das 24 h: o modelo sai com o nome, a clínica e o dia; quem retoma assume", async () => {
+  it("fora das 24 h: o modelo sai (sem variáveis); quem retoma assume", async () => {
     expect(await resumeFromCentral(deps(reception), clinicId, input(OLD))).toEqual({ kind: "sent" });
-    expect(templates.at(-1)).toMatchObject({ to: OLD, params: ["Maria", "da Clínica CN4b", expect.stringMatching(/^\d{2}\/\d{2}$/)] });
+    expect(templates.at(-1)).toEqual({ to: OLD, params: [] });
     const { data } = await db().from("whatsapp_messages").select("message_type, author, sent_by, template_name, status, body").eq("clinic_id", clinicId).eq("contact_phone", OLD).eq("direction", "outbound").single();
     expect(data).toMatchObject({ message_type: "conversation_resume", author: "agent_panel", sent_by: reception.id, template_name: "rc_retomar_conversa_v1", status: "sent" });
-    expect(data!.body).toContain("temos um retorno para você");
+    expect(data!.body).toBe("Olá! Vi que a nossa conversa ficou pendente. Quer continuar de onde paramos?");
     expect(await stateOf(OLD)).toEqual({ handoff_status: "in_progress", assigned_to: reception.id });
   });
 

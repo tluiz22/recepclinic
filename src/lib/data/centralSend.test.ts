@@ -1,26 +1,17 @@
 import { describe, expect, it } from "vitest";
-import { resumeParams, resumeText, sendMessageText } from "./centralSend";
+import { resumeText, sendMessageText } from "./centralSend";
+import { defaultTemplate, templateCreationPayload } from "./whatsapp/templates";
 
-// "Retomar conversa" (CN4b; texto aprovado pelo cliente em 05/nov/2026, opção C).
+// "Retomar conversa" (CN4b; texto do cliente em 05/nov/2026, sem variáveis).
 describe("Retomar conversa", () => {
-  const sender = { clinicLabel: "da Clínica Sorriso" };
-
-  it("primeiro nome, a clínica e o dia da última mensagem do paciente, no fuso da clínica", () => {
-    expect(resumeParams(sender, { name: "Maria Souza", lastPatientAt: new Date("2026-11-04T02:30:00Z"), timeZone: "America/Fortaleza" })).toEqual([
-      "Maria",
-      "da Clínica Sorriso",
-      "03/11",
-    ]);
+  it("o texto do cliente, sem variáveis; o aprovado na conta vale quando existe", () => {
+    expect(resumeText(null)).toBe("Olá! Vi que a nossa conversa ficou pendente. Quer continuar de onde paramos?");
+    expect(resumeText({ body: "Outro texto" })).toBe("Outro texto");
   });
 
-  it("sem nome, \"paciente\"", () => {
-    expect(resumeParams(sender, { name: null, lastPatientAt: null, timeZone: "America/Fortaleza" })[0]).toBe("paciente");
-  });
-
-  it("o texto aprovado, preenchido", () => {
-    expect(resumeText(null, ["Maria", "da Clínica Sorriso", "04/11"])).toBe(
-      "Olá, Maria! Aqui é da Clínica Sorriso.\nSobre a sua mensagem de 04/11: temos um retorno para você.\n\nPode responder esta mensagem para continuarmos o atendimento?",
-    );
+  it("vai à Meta sem exemplo de variável", () => {
+    const body = (templateCreationPayload(defaultTemplate("conversation_resume")!).components as Record<string, unknown>[])[0];
+    expect(body).toEqual({ type: "BODY", text: "Olá! Vi que a nossa conversa ficou pendente. Quer continuar de onde paramos?" });
   });
 
   it("avisos da tela", () => {

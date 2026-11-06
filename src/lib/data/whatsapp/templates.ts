@@ -141,13 +141,12 @@ export const DEFAULT_TEMPLATES: DefaultTemplate[] = [
     examples: ["Ana", "da Clínica Sorriso"],
   },
   {
-    // "Retomar conversa" da Central de atendimento (CN4b; decisão 7, texto aprovado pelo cliente em 05/nov/2026, opção
-    // C, sem botão): fora das 24 h, a equipe volta a falar com o paciente; a resposta dele reabre a janela. {{3}} = dia
-    // da última mensagem do paciente.
+    // "Retomar conversa" da Central de atendimento (CN4b; decisão 7, texto do cliente em 05/nov/2026, sem variáveis
+    // nem botão): fora das 24 h, a equipe volta a falar com o paciente; a resposta dele reabre a janela.
     key: "conversation_resume",
     name: "rc_retomar_conversa_v1",
-    body: `${GREETING}\nSobre a sua mensagem de {{3}}: temos um retorno para você.\n\nPode responder esta mensagem para continuarmos o atendimento?`,
-    examples: ["Maria", "da Clínica Sorriso", "04/11"],
+    body: "Olá! Vi que a nossa conversa ficou pendente. Quer continuar de onde paramos?",
+    examples: [],
   },
 ];
 
@@ -293,7 +292,8 @@ export function appointmentParams(clinic: string, a: AppointmentForMessage): str
 export function templateCreationPayload(template: DefaultTemplate, headerHandle?: string): Record<string, unknown> {
   const components: Record<string, unknown>[] = [];
   if (template.documentHeader) components.push({ type: "HEADER", format: "DOCUMENT", example: { header_handle: [headerHandle ?? ""] } });
-  components.push({ type: "BODY", text: template.body, example: { body_text: [template.examples] } });
+  // Sem variáveis (ex.: "Retomar conversa"), a Meta não aceita exemplo.
+  components.push({ type: "BODY", text: template.body, ...(template.examples.length ? { example: { body_text: [template.examples] } } : {}) });
   if (template.quickReplies?.length) {
     components.push({ type: "BUTTONS", buttons: template.quickReplies.map((text) => ({ type: "QUICK_REPLY", text })) });
   }
