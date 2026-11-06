@@ -362,6 +362,9 @@ begin
     values (c_a, '+5584988880002', u_a_rec, 'open', now() - interval '1 hour');
   insert into public.whatsapp_media (clinic_id, direction, meta_media_id, mime_type, size_bytes, file_name, status)
     values (c_a, 'inbound', 'media.local.1', 'application/pdf', 120000, 'pedido-de-exame.pdf', 'pending');
+  -- Histórico do app na conexão (CN8): um bloco já processado.
+  insert into public.whatsapp_history_events (clinic_id, kind, phase, chunk_order, progress, payload, status, processed_at)
+    values (c_a, 'chunk', 0, 1, 100, '{"threads": []}', 'done', now() - interval '3 days');
 
   insert into public.bot_funnel_events (clinic_id, session_id, flow, step, contact_phone, contact_id) values
     (c_a, '0a0f0000-0000-4000-8000-000000000001', 'booking', 'started', '+5584988880001', ct_maria),

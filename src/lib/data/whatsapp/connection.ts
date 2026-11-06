@@ -5,6 +5,7 @@ import {
   deregisterPhoneNumber,
   exchangeSignupCode,
   fetchPhoneNumberInfo,
+  fetchWabaPhoneNumbers,
   GraphRequestError,
   registerPhoneNumber,
   requestCoexistenceSync,
@@ -237,7 +238,7 @@ const randomPin = () => String(randomInt(0, 1_000_000)).padStart(6, "0");
  * (vale 30 segundos), confere o número, inscreve o app na conta e, no número
  * novo, registra na Cloud API com o PIN sorteado; na coexistência, o número
  * já está registrado e a Meta exige as sincronizações dos contatos e do
- * histórico (o conteúdo que chega no webhook é descartado; cliente, 24/out).
+ * histórico (cliente, 24/out; com a Central ligada, o histórico entra nas Conversas, CN8).
  * Grava tudo de uma vez (connect_whatsapp: só o Administrador ou o Suporte).
  */
 export async function connectWithSignup(db: DbClient, clinicId: string, input: SignupInput, deps: SignupDeps): Promise<SignupResult> {
@@ -249,14 +250,27 @@ export async function connectWithSignup(db: DbClient, clinicId: string, input: S
   }
   const code = cleanText(input.code) ?? "";
   const wabaId = cleanText(input.wabaId) ?? "";
-  const phoneNumberId = cleanText(input.phoneNumberId) ?? "";
-  if (!code || !META_ID.test(wabaId) || !META_ID.test(phoneNumberId) || !SIGNUP_EVENTS.includes(input.event as SignupEvent)) {
+  let phoneNumberId = cleanText(input.phoneNumberId) ?? "";
+  // Cadastro v4 (CN8): o fim da coexistência pode vir só com a conta; o número é buscado nela, depois do token.
+  if (!code || !META_ID.test(wabaId) || (phoneNumberId && !META_ID.test(phoneNumberId)) || !SIGNUP_EVENTS.includes(input.event as SignupEvent)) {
     throw new DataError("invalid", "Conexão do WhatsApp: resposta da Meta incompleta", {
       signup: "A janela da Meta não devolveu o número e a conta. Tente de novo.",
     });
   }
 
   const token = await exchangeSignupCode(deps.appId, deps.appSecret, code, fetcher);
+  if (!phoneNumberId) {
+    const numbers = await fetchWabaPhoneNumbers(wabaId, token, fetcher);
+    if (numbers.length !== 1 || !META_ID.test(numbers[0].id)) {
+      throw new DataError("invalid", `Conexão do WhatsApp: a conta tem ${numbers.length} números e a Meta não disse qual`, {
+        signup:
+          numbers.length === 0
+            ? "A Meta conectou a conta, mas sem número. Abra a janela de novo e escolha o número da clínica."
+            : "A conta da Meta tem mais de um número e a janela não disse qual foi escolhido. Fale com o suporte do RecepClinic.",
+      });
+    }
+    phoneNumberId = numbers[0].id;
+  }
   const info = await fetchPhoneNumberInfo(phoneNumberId, token, fetcher);
   const coexistence = input.event === "FINISH_WHATSAPP_BUSINESS_APP_ONBOARDING" || info.isOnBizApp;
   await subscribeAppToWaba(wabaId, token, fetcher, deps.webhookOverride ?? null);

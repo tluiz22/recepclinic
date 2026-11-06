@@ -1867,6 +1867,26 @@ isOneToOne: true
       referencedColumns: ["id"]
     }
                   ]
+                },"whatsapp_history_events": {
+                  Row: {
+                    "attempts": number,"chunk_order": number | null,"clinic_id": string,"error": string | null,"id": number,"kind": string,"payload": NonNullable<Json>,"phase": number | null,"processed_at": string | null,"progress": number | null,"received_at": string,"status": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "attempts"?: number,"chunk_order"?: number | null,"clinic_id": string,"error"?: string | null,"id"?: never,"kind": string,"payload": NonNullable<Json>,"phase"?: number | null,"processed_at"?: string | null,"progress"?: number | null,"received_at"?: string,"status"?: string
+                  }
+                  Update: {
+                    "attempts"?: number,"chunk_order"?: number | null,"clinic_id"?: string,"error"?: string | null,"id"?: never,"kind"?: string,"payload"?: NonNullable<Json>,"phase"?: number | null,"processed_at"?: string | null,"progress"?: number | null,"received_at"?: string,"status"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "whatsapp_history_events_clinic_id_fkey"
+      columns: ["clinic_id"]
+isOneToOne: false
+      referencedRelation: "clinics"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"whatsapp_media": {
                   Row: {
                     "attempts": number,"clinic_id": string,"created_at": string,"deleted_at": string | null,"direction": string,"error": string | null,"file_name": string | null,"id": string,"message_id": string | null,"meta_media_id": string | null,"mime_type": string | null,"sha256": string | null,"size_bytes": number | null,"status": string,"storage_path": string | null,"stored_at": string | null
@@ -2012,6 +2032,9 @@ isOneToOne: false
                            },
 "central_enabled":
 { Args: { "p_clinic_id": string }; Returns: boolean
+                           },
+"central_history_process":
+{ Args: { "p_clinic_id": string,"p_limit"?: number }; Returns: Json
                            },
 "central_release_idle":
 { Args: { "p_clinic_id": string,"p_minutes"?: number }; Returns: number

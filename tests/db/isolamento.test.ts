@@ -36,7 +36,8 @@ const CLINIC_B = "0b000000-0000-4000-8000-000000000001"; // Odonto Exemplo
 const NO_DIRECT_FK = new Set(["platform_audit_log", "platform_access_log", "system_errors"]);
 const NO_AUDIT_TRIGGER = new Set(["platform_audit_log", "platform_access_log", "clinic_usage_monthly", "system_errors", "kb_unmatched"]);
 // whatsapp_media: o login não lê (só pela central_media_access); conversation_reads: cada login só a própria linha
-// (CN1, 05/nov/2026). Os dois têm teste próprio em central-base.test.ts.
+// (CN1, 05/nov/2026). Os dois têm teste próprio em central-base.test.ts. whatsapp_history_events: o login não lê
+// (só a rotina da clínica; CN8), teste em central-historico.test.ts.
 const NOT_IN_DATA_SWEEP = new Set([
   "platform_audit_log",
   "system_errors",
@@ -45,6 +46,7 @@ const NOT_IN_DATA_SWEEP = new Set([
   "kb_unmatched",
   "whatsapp_media",
   "conversation_reads",
+  "whatsapp_history_events",
 ]);
 const KNOWLEDGE_BASE = ["kb_categories", "kb_entries", "kb_synonyms", "kb_specialties", "kb_clinical_terms", "kb_revisions", "kb_publications"];
 

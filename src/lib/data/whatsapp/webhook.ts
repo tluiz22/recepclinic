@@ -15,6 +15,7 @@ import { handleIncomingMessage } from "./bot/router";
 import { getSupportWhatsapp, isSupportPhone } from "../platformSettings";
 import { logError, logWarn } from "../../log";
 import { unwrap } from "../errors";
+import type { Json } from "../../supabase/database.types";
 
 // Webhook do WhatsApp por clínica (F6.1, D3a). Cada evento traz o número que
 // recebeu (`metadata.phone_number_id`); a plataforma descobre a clínica dele
@@ -102,13 +103,74 @@ export function accountDisconnections(payload: unknown): { wabaId: string; event
   );
 }
 
-/** As mudanças do corpo do webhook (entry[].changes[].value), em ordem. */
-export function webhookChanges(payload: unknown): WebhookChange[] {
-  const entries = (payload as { entry?: { changes?: { value?: WebhookChange }[] }[] } | null)?.entry;
+/** O fim da conexão foi desfeito: a clínica voltou a ligar a conta ao RecepClinic (ACCOUNT_RECONNECTED, CN8). */
+export function accountReconnections(payload: unknown): string[] {
+  type Value = { event?: string; waba_info?: { waba_id?: string | number } };
+  const entries = (payload as { entry?: { id?: string; changes?: { field?: string; value?: Value }[] }[] } | null)?.entry;
   if (!Array.isArray(entries)) return [];
-  return entries.flatMap((entry) => (Array.isArray(entry?.changes) ? entry.changes : []).map((change) => change?.value)).filter(
-    (value): value is WebhookChange => Boolean(value),
+  return entries.flatMap((entry) =>
+    (Array.isArray(entry?.changes) ? entry.changes : [])
+      .filter((change) => change?.field === "account_update" && change.value?.event === "ACCOUNT_RECONNECTED")
+      .map((change) => String(change.value!.waba_info?.waba_id ?? entry.id ?? ""))
+      .filter(Boolean),
   );
+}
+
+/**
+ * As mudanças do corpo do webhook (entry[].changes[].value), em ordem. O histórico do app (field `history`, CN8)
+ * fica fora: os anexos dele chegam em `messages`, mas são do passado (nem gravados como novos nem respondidos).
+ */
+export function webhookChanges(payload: unknown): WebhookChange[] {
+  const entries = (payload as { entry?: { changes?: { field?: string; value?: WebhookChange }[] }[] } | null)?.entry;
+  if (!Array.isArray(entries)) return [];
+  return entries
+    .flatMap((entry) => (Array.isArray(entry?.changes) ? entry.changes : []).filter((change) => change?.field !== "history").map((change) => change?.value))
+    .filter((value): value is WebhookChange => Boolean(value));
+}
+
+export type HistoryEvent =
+  | { kind: "chunk"; phase: number | null; chunkOrder: number | null; progress: number | null; payload: Record<string, unknown> }
+  | { kind: "declined"; payload: Record<string, unknown> }
+  | { kind: "media"; payload: { messages: unknown[] } };
+
+const intOrNull = (value: unknown) => (typeof value === "number" && Number.isInteger(value) ? value : typeof value === "string" && /^\d+$/.test(value) ? Number(value) : null);
+
+/**
+ * Histórico do app na conexão (field `history`, decisão 10): cada bloco (`history[]`, com fase, ordem e progresso),
+ * a recusa da clínica (erro 2593109) e os anexos que a Meta manda depois (`messages`), com o número que recebeu.
+ * A recusa às vezes vem sem o envelope `entry` (exemplo da Meta): aceita os dois.
+ */
+export function historyChanges(payload: unknown): { phoneNumberId: string; events: HistoryEvent[] }[] {
+  type Value = { metadata?: { phone_number_id?: string }; history?: Record<string, unknown>[]; messages?: unknown[] };
+  const root = payload as { entry?: { changes?: { field?: string; value?: Value }[] }[] } & Value;
+  const values: Value[] = Array.isArray(root?.entry)
+    ? root.entry.flatMap((entry) => (Array.isArray(entry?.changes) ? entry.changes : []).filter((c) => c?.field === "history" && c.value).map((c) => c.value!))
+    : root && Array.isArray(root.history)
+      ? [root]
+      : [];
+  return values
+    .map((value) => {
+      const events: HistoryEvent[] = [];
+      for (const item of Array.isArray(value.history) ? value.history : []) {
+        if (!item || typeof item !== "object") continue;
+        if (Array.isArray(item.errors) && item.errors.length) {
+          events.push({ kind: "declined", payload: { errors: item.errors } });
+          continue;
+        }
+        const meta = (item.metadata ?? {}) as Record<string, unknown>;
+        const progress = intOrNull(meta.progress);
+        events.push({
+          kind: "chunk",
+          phase: intOrNull(meta.phase),
+          chunkOrder: intOrNull(meta.chunk_order),
+          progress: progress === null ? null : Math.min(100, Math.max(0, progress)),
+          payload: { threads: Array.isArray(item.threads) ? item.threads : [] },
+        });
+      }
+      if (Array.isArray(value.messages) && value.messages.length) events.push({ kind: "media", payload: { messages: value.messages } });
+      return { phoneNumberId: String(value.metadata?.phone_number_id ?? ""), events };
+    })
+    .filter((item) => item.events.length);
 }
 
 export type WebhookDeps = {
@@ -137,6 +199,8 @@ export type WebhookSummary = {
   templates: number;
   /** Clínicas desconectadas pelo aviso da Meta (F8.3). */
   disconnections: number;
+  /** Blocos do histórico do app guardados para a rotina (CN8). */
+  history: number;
   /** Mensagens respondidas pelo bot. */
   botReplies: number;
   /** Mensagens e ecos ignorados: clínica em implantação. */
@@ -146,7 +210,7 @@ export type WebhookSummary = {
 
 /** Registra os eventos. Erro num evento não para os outros (vai para o log). */
 export async function processWebhook(payload: unknown, deps: WebhookDeps, now: Date = new Date()): Promise<WebhookSummary> {
-  const summary: WebhookSummary = { inbound: 0, echoes: 0, statuses: 0, duplicates: 0, unknownNumbers: 0, preparations: 0, templates: 0, disconnections: 0, botReplies: 0, onboarding: 0, errors: 0 };
+  const summary: WebhookSummary = { inbound: 0, echoes: 0, statuses: 0, duplicates: 0, unknownNumbers: 0, preparations: 0, templates: 0, disconnections: 0, history: 0, botReplies: 0, onboarding: 0, errors: 0 };
   const count = (result: RecordResult, kind: "inbound" | "echoes") => {
     if (result.recorded) summary[kind] += 1;
     else if (result.reason === "duplicate") summary.duplicates += 1;
@@ -273,6 +337,29 @@ export async function processWebhook(payload: unknown, deps: WebhookDeps, now: D
     }
   }
 
+  // Histórico do app (CN8): só guarda o evento bruto; a rotina de cada minuto grava as mensagens. O banco descarta
+  // com a Central desligada (D12 revista).
+  for (const { phoneNumberId, events } of historyChanges(payload)) {
+    await attempt("histórico do app", async () => {
+      const clinicId = phoneNumberId ? await deps.resolveClinic(phoneNumberId) : null;
+      if (!clinicId) {
+        summary.unknownNumbers += events.length;
+        return;
+      }
+      const rows = events.map((event) => ({
+        clinic_id: clinicId,
+        kind: event.kind,
+        payload: event.payload as unknown as NonNullable<Json>,
+        ...(event.kind === "chunk" ? { phase: event.phase, chunk_order: event.chunkOrder, progress: event.progress } : {}),
+      }));
+      unwrap(await deps.clientFor(clinicId).from("whatsapp_history_events").insert(rows), "Histórico do app");
+      summary.history += events.filter((event) => event.kind !== "declined").length;
+      if (events.some((event) => event.kind === "declined")) {
+        logWarn("whatsapp: a clínica não compartilhou o histórico do app (2593109)", { clinica: clinicId });
+      }
+    });
+  }
+
   for (const { wabaId, ...event } of templateStatusChanges(payload)) {
     if (!deps.resolveClinicsByWaba) break;
     await attempt("situação do template", async () => {
@@ -295,6 +382,10 @@ export async function processWebhook(payload: unknown, deps: WebhookDeps, now: D
         });
       }
     });
+  }
+  // A clínica voltou a ligar a conta (CN8): a conexão no RecepClinic é refeita pela tela (o token antigo não vale).
+  for (const wabaId of accountReconnections(payload)) {
+    logWarn("whatsapp: a Meta avisou ACCOUNT_RECONNECTED; se a clínica está desconectada, conectar de novo em Configurações › WhatsApp", { waba_id: wabaId });
   }
   return summary;
 }

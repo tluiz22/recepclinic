@@ -95,7 +95,7 @@ type MediaUpdate = Database["public"]["Tables"]["whatsapp_media"]["Update"];
 
 export type MediaRunResult = { stored: number; skipped: number; failed: number };
 
-/** Rotina (a cada minuto): baixa os anexos pendentes da clínica, até `limit` por vez. */
+/** Rotina (a cada minuto): baixa os anexos pendentes da clínica, até `limit` por vez (os do paciente e os do histórico do app, CN8). */
 export async function processPendingMedia(
   db: DbClient,
   clinicId: string,
@@ -108,7 +108,6 @@ export async function processPendingMedia(
       .select("id, message_id, meta_media_id, mime_type, file_name, attempts")
       .eq("clinic_id", clinicId)
       .eq("status", "pending")
-      .eq("direction", "inbound")
       .order("created_at")
       .limit(limit),
     "Anexos pendentes",
@@ -286,4 +285,18 @@ export async function purgeDeletedMedia(serviceDb: DbClient, clinicId: string): 
   if (error) throw new Error(`Anexos apagados: ${error.message}`);
   unwrap(await serviceDb.rpc("central_media_purged", { p_clinic_id: clinicId, p_paths: paths }), "Anexos apagados");
   return paths.length;
+}
+
+// ---------------------------------------------------------------------------
+// Histórico do app na conexão (CN8; decisão 10, cliente, 05/nov/2026)
+// ---------------------------------------------------------------------------
+
+/** Rotina (a cada minuto): grava as mensagens dos blocos do histórico guardados pelo webhook, alguns por vez. */
+export async function processHistoryEvents(serviceDb: DbClient, clinicId: string, limit = 5): Promise<{ events: number; messages: number; media: number }> {
+  const result = unwrap(await serviceDb.rpc("central_history_process", { p_clinic_id: clinicId, p_limit: limit }), "Histórico do app") as {
+    events?: number;
+    messages?: number;
+    media?: number;
+  } | null;
+  return { events: result?.events ?? 0, messages: result?.messages ?? 0, media: result?.media ?? 0 };
 }

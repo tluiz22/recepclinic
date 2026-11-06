@@ -35,6 +35,8 @@ const MEDIA_WORDS: Record<string, string> = {
   sticker: "Figurinha",
   location: "Localização",
   contacts: "Contato",
+  // Histórico do app (CN8): a Meta só manda os anexos das últimas 2 semanas.
+  media_placeholder: "Anexo enviado antes da conexão (não disponível)",
 };
 
 export function bubbleOf(message: CentralMessage, names: Map<string, string> = new Map()): Bubble {

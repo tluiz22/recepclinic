@@ -81,6 +81,17 @@ export async function fetchPhoneNumberInfo(phoneNumberId: string, token: string,
   };
 }
 
+/** Números da conta (cadastro v4, CN8: o fim da coexistência às vezes vem só com a conta). */
+export async function fetchWabaPhoneNumbers(wabaId: string, token: string, fetcher: Fetcher = fetch): Promise<{ id: string; displayPhoneNumber: string | null }[]> {
+  const body = await call<{ data?: { id?: string; display_phone_number?: string }[] }>(
+    fetcher,
+    "Números da conta",
+    `${GRAPH}/${encodeURIComponent(wabaId)}/phone_numbers?fields=id,display_phone_number`,
+    token,
+  );
+  return (body.data ?? []).filter((n): n is { id: string; display_phone_number?: string } => !!n.id).map((n) => ({ id: n.id, displayPhoneNumber: n.display_phone_number ?? null }));
+}
+
 /**
  * Desvio da conta (F10.0a): a Meta manda os eventos da conta para `url` (o
  * webhook do staging) no lugar do webhook principal do app. Antes, confere o
@@ -164,7 +175,7 @@ export async function exchangeSignupCode(appId: string, appSecret: string, code:
 /**
  * Coexistência: pede à Meta a sincronização dos contatos (`smb_app_state_sync`)
  * ou do histórico (`history`) do app. A Meta exige as duas em até 24 horas
- * depois da conexão, uma vez cada; o que chega no webhook é descartado.
+ * depois da conexão, uma vez cada; o histórico só é guardado com a Central ligada (CN8).
  */
 export async function requestCoexistenceSync(
   phoneNumberId: string,
