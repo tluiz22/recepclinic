@@ -88,10 +88,11 @@ export const configuracoesArtigos = [
     related: ["config-profissionais", "config-servicos", "config-horarios"],
     order: 63,
     intro: "A agenda é onde os atendimentos são marcados. Cada profissional ativo tem a sua.",
-    steps: ["Toque em Nova agenda e escolha \"De um profissional\" (só aparecem os sem agenda) ou \"Da equipe (exames)\".", "Informe o nome e o intervalo entre atendimentos (tempo livre deixado depois de cada atendimento dela).", "Salve e cadastre serviços e horários para ela."],
+    steps: ["Toque em Nova agenda e escolha o profissional (só aparecem os sem agenda).", "Informe o intervalo entre atendimentos (tempo livre deixado depois de cada atendimento dela).", "Salve e cadastre serviços e horários para ela."],
     fields: [{ name: "Migrar para outra agenda", text: "Na agenda aberta, o botão Migrar horários e atendimentos passa os horários de atendimento e os atendimentos de hoje em diante para outra agenda ativa (só o Administrador). Você marca os serviços que migram (já vêm marcados os que a nova agenda atende; o resto, como Consulta e Retorno numa agenda de exames, fica na antiga) e vê quantos são antes de confirmar. O histórico fica na antiga, o paciente não recebe aviso e cada atendimento guarda a troca no Histórico." }],
     notes: [
-      "A agenda da equipe atende os exames que não são de um profissional cadastrado; a clínica só pode ter uma, e ela só atende serviços do tipo exame. Seu nome é sempre \"Exames\".",
+      "A agenda tem sempre o nome do profissional: renomeado em Profissionais, ela muda junto (na Agenda, no link de agendamento e nas mensagens).",
+      "A agenda da equipe atende os exames que não são de um profissional cadastrado; a clínica só pode ter uma, e ela só atende serviços do tipo exame. Seu nome é sempre \"Exames\". Ela é criada sozinha quando o item \"Exames e procedimentos\" é liberado, e fica desativada quando o item é desligado.",
       "O tipo e o profissional não mudam depois de criada.",
       "Se um atendimento migrado cairia sobre outro já marcado na agenda nova (exame não conflita), ele fica na antiga e a tela avisa quem é, para você remarcar ou alterar.",
       "Agenda sem serviço ou sem horário de atendimento não recebe marcações; a lista mostra o selo do que falta.",

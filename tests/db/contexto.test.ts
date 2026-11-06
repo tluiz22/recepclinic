@@ -31,9 +31,11 @@ function okContext(result: Awaited<ReturnType<typeof loadClinicContext>>) {
 const agendas = (...names: string[]) => names.map((name) => agendaIds.get(name)).sort();
 
 beforeAll(async () => {
-  const { data, error } = await adminClient().from("agendas").select("id, name");
+  // Só as duas clínicas do seed: o nome "Exames" se repete (cada clínica com o item tem a sua; cliente, 06/nov/2026).
+  // As da clínica B levam "B:" na frente.
+  const { data, error } = await adminClient().from("agendas").select("id, name, clinic_id").in("clinic_id", [CLINIC_A, CLINIC_B]);
   if (error) throw error;
-  for (const row of data) agendaIds.set(row.name, row.id);
+  for (const row of data) agendaIds.set(row.clinic_id === CLINIC_B ? `B:${row.name}` : row.name, row.id);
 });
 
 afterAll(async () => {
@@ -73,7 +75,7 @@ describe("contexto de cada papel", () => {
     expect(context.clinicId).toBe(CLINIC_B);
     expect(context.clinicProfile).toBe("adult");
     expect([...context.roles].sort()).toEqual(["admin", "professional"]);
-    expect(context.agendaIds).toEqual(agendas("Dra. Beatriz Nunes"));
+    expect([...context.agendaIds].sort()).toEqual(agendas("B:Dra. Beatriz Nunes", "B:Exames"));
   });
 
   it("cookie de outra clínica não abre a outra clínica", async () => {
@@ -114,7 +116,7 @@ describe("membro de duas clínicas", () => {
     expect(result.remembered).toBe(true);
     expect(result.context.clinicId).toBe(CLINIC_B);
     expect(result.context.roles).toEqual(["admin"]);
-    expect(result.context.agendaIds).toEqual(agendas("Dra. Beatriz Nunes"));
+    expect([...result.context.agendaIds].sort()).toEqual(agendas("B:Dra. Beatriz Nunes", "B:Exames"));
   });
 });
 

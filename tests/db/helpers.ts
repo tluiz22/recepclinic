@@ -80,6 +80,13 @@ export async function createClinic(name: string, features?: string[]): Promise<s
   return id;
 }
 
+/** A agenda da equipe ("Exames"), criada sozinha com o item "Exames e procedimentos" (cliente, 06/nov/2026). */
+export async function teamAgendaId(clinicId: string): Promise<string> {
+  const { data, error } = await adminClient().from("agendas").select("id").eq("clinic_id", clinicId).eq("kind", "resource").single();
+  if (error) throw error;
+  return data.id as string;
+}
+
 export async function addMember(clinicId: string, userId: string, roles: string[]): Promise<void> {
   const { error } = await adminClient().from("clinic_members").insert({ clinic_id: clinicId, user_id: userId, roles });
   if (error) throw error;

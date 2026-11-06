@@ -16,7 +16,7 @@ export const itensDaMatriz: Record<string, string> = {
   team_summary:
     "Desligado, a equipe deixa de receber pelo WhatsApp a lista do dia, e a tela de contatos dela sai de Configurações.",
   exams:
-    "Desligado, o tipo Exame some do cadastro de serviços, da Agenda e do bot, com a agenda da equipe e o envio do preparo.",
+    "Ligado, a agenda da equipe (\"Exames\") é criada sozinha (ou reativada, com os horários e serviços de antes). Desligado, o tipo Exame some do cadastro de serviços, da Agenda e do bot, a agenda da equipe é desativada e o preparo deixa de ir.",
   knowledge_base:
     "Desligado, o bot não responde as perguntas frequentes digitadas (horário, endereço, convênios…) e segue com o \"não entendi\".",
   central_attendance:

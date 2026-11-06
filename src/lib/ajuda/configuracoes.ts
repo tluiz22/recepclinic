@@ -94,7 +94,8 @@ export const configuracoes = {
     agendas: {
       serve: "Definir a agenda de cada profissional (ou da equipe, para exames). É nela que os atendimentos são marcados.",
       como: [
-        "Cada profissional tem uma agenda; a da equipe atende só exames que não são de um profissional cadastrado, e a clínica só pode ter uma.",
+        "Cada profissional tem uma agenda, sempre com o nome dele: renomeado em Profissionais, a agenda muda junto.",
+        "A da equipe (\"Exames\") atende só exames que não são de um profissional cadastrado; é criada sozinha com o item Exames e procedimentos.",
         "O intervalo entre atendimentos é o tempo livre deixado depois de cada atendimento dela.",
         "Agenda sem serviço ou sem horário de atendimento não recebe marcações; a lista mostra o selo do que falta.",
         "O tipo e o profissional não mudam depois de criada.",

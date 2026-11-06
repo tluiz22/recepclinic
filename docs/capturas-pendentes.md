@@ -9,4 +9,5 @@ a captura e o motivo, avisar o cliente no fim da etapa e esperar a autorização
 
 ## Pendentes
 
+- `config-agendas` — sem "Nova agenda da equipe"; formulário sem o campo Nome (06/11/2026)
 (nenhuma)

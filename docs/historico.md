@@ -1064,3 +1064,16 @@ Pedido do cliente depois dos testes no staging:
 - **Computador:** a tela Conversas sai da moldura de 1152px e vai até 1760px (`AdminLayout`, `wide`).
 - Captura `conversas` na fila de `capturas-pendentes.md`.
 
+## Nome da agenda e agenda Exames automática (06/nov/2026)
+
+Erro achado pelo cliente no staging: renomeado o profissional, a Agenda, o link de agendamento e as mensagens seguiam com
+o nome antigo ("Dr Fulano"). Causa: a agenda guardava um nome próprio, preenchido com o do profissional só na criação.
+Decisão do cliente (opção C): a agenda de profissional mostra sempre o nome do profissional; com o item "Exames e
+procedimentos", a agenda da equipe é criada sozinha; desligar o item desativa a agenda e religar reativa a mesma.
+- Migração `20261225120000_agenda_nome_do_profissional`: `app.check_team_agenda` grava o nome do profissional (ou
+  "Exames"); gatilho em `professionals` renomeia a agenda; gatilho em `clinic_features` cria, reativa ou desativa a
+  "Exames"; acerta os nomes que já existem e cria a "Exames" das clínicas com o item e sem ela.
+- Telas: sem o campo Nome na agenda; "Nova agenda" só de profissional; sem o botão da agenda da equipe. Ajuda e
+  artigo de Agendas e o item Exames da Matriz atualizados. `seed.sql` usa a "Exames" automática.
+- Testes de banco ajustados (`teamAgendaId`); casos novos: renomear o profissional e ligar/desligar o item.
+

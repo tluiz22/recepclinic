@@ -128,8 +128,8 @@ begin
     values (c_a, 'Marina Alves', 'professional', p_psi) returning id into ag_psi;
   insert into public.agendas (clinic_id, name, kind, professional_id)
     values (c_a, 'Rafael Lima', 'professional', p_fis) returning id into ag_fis;
-  insert into public.agendas (clinic_id, name, kind)
-    values (c_a, 'Exames', 'resource') returning id into ag_exams;
+  -- A agenda da equipe ("Exames") nasce com o item "Exames e procedimentos" (cliente, 06/nov/2026).
+  select id into ag_exams from public.agendas where clinic_id = c_a and kind = 'resource';
 
   insert into public.member_agenda_grants (clinic_id, user_id, agenda_id) values
     (c_a, u_a_rec2, ag_psi),

@@ -138,7 +138,10 @@ describe("travas no banco com o item desligado", () => {
   it("consulta continua; exame, domiciliar e série não marcam", async () => {
     const book = (serviceId: string, agendaId: string, start: Date, extra = {}) =>
       bookAppointment(db(reception), clinicId, { patientId: ids.p1, serviceId, agendaId, start, channel: "admin", actorId: reception.id, ...extra }, NOW);
-    expect(await codeOf(() => book(ids.exame, ids.agendaExams, at(MON1, "08:00")))).toBe("not_enabled");
+    // Sem o item, a agenda da equipe fica desativada (cliente, 06/nov/2026): o exame não marca nela.
+    const { data: team } = await adminClient().from("agendas").select("is_active").eq("id", ids.agendaExams).single();
+    expect(team?.is_active).toBe(false);
+    expect(await codeOf(() => book(ids.exame, ids.agendaExams, at(MON1, "08:00")))).not.toBe("ok");
     expect(await codeOf(() => book(ids.consulta, ids.agendaDra, at(MON1, "14:00"), { homeVisitAddress: "Rua B, 2" }))).toBe("not_enabled");
     expect(
       await codeOf(() =>

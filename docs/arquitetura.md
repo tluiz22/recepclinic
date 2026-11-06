@@ -37,6 +37,9 @@ todas) e protege contra o maior risco da evolução: 309 consultas espalhadas e 
 
 - Cada clínica tem uma ou mais **agendas**: um profissional ou um recurso (ex.: "Exames", quando a
   secretária faz o exame sem a médica).
+- **Nome e agenda da equipe (revisto pelo cliente, 06/nov/2026):** a agenda de um profissional não tem nome próprio,
+  é sempre o nome dele (renomeá-lo renomeia a agenda); a da equipe é sempre "Exames" e segue o item "Exames e
+  procedimentos": liberar o item cria (ou reativa) a agenda, tirar o item a desativa. Banco: migração `20261225120000`.
 - Atendimentos e bloqueios pertencem a uma agenda. A **trava de horários e o cálculo de horários
   livres valem por agenda**, não mais pela clínica inteira. Disponibilidade também é por agenda.
 - **1ª versão**: o tipo de atendimento ou o exame define a agenda. O bot **não pergunta "com

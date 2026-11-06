@@ -4,7 +4,7 @@ import { setCentralEnabled } from "../../src/lib/data/central";
 import { releaseIdleConversations, resumeFromCentral, retryFromCentral, type SendDeps } from "../../src/lib/data/centralSend";
 import type { SendOutcome } from "../../src/lib/data/whatsapp/messages";
 import type { ClinicSender } from "../../src/lib/data/whatsapp/send";
-import { addMember, adminClient, clinicServiceClient, createClinic, createUser, deleteClinics, deleteUsers, type TestUser } from "./helpers";
+import { addMember, adminClient, clinicServiceClient, createClinic, createUser, deleteClinics, deleteUsers, teamAgendaId, type TestUser } from "./helpers";
 
 // CN4b — "Retomar conversa" fora das 24 h (decisão 7, texto aprovado em 05/nov) e a liberação em 30 min no horário
 // da clínica (decisão 5 e R1).
@@ -123,7 +123,7 @@ describe("Retomar conversa", () => {
 describe("liberação em 30 min", () => {
   beforeAll(async () => {
     // Agenda aberta o dia todo, todos os dias.
-    const { data: agenda } = await db().from("agendas").insert({ clinic_id: clinicId, name: "Sala 1", kind: "resource" }).select("id").single();
+    const agenda = { id: await teamAgendaId(clinicId) };
     const { data: location } = await db().from("locations").insert({ clinic_id: clinicId, name: "Consultório", type: "clinic" }).select("id").single();
     await db()
       .from("availability_windows")

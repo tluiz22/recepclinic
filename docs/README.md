@@ -11,6 +11,10 @@
 > **Ajustes da tela Conversas (06/nov):** cabeçalho preso no topo no celular, conversa e lista atualizando a cada 10 s,
 > tela mais larga no computador. Na `main` (staging); cliente valida. Captura `conversas` refeita.
 >
+> **Nome da agenda (06/nov):** agenda de profissional sempre com o nome dele; "Exames" automática com o item
+> (migração `20261225120000`, aplicada só no banco local). **Só commit local, sem push: o cliente autoriza o push**
+> (pode juntar outros ajustes). No push: aplicar a migração no staging antes. Captura `config-agendas` pendente.
+>
 > **C31 (04/nov):** apresentação do 1º menu do bot, descrições nas opções e botão "Ver opções". No **staging e na
 > produção** (`d2744f9`, sem migração). **Validada (05/nov).**
 >

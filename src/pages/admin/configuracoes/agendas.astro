@@ -32,11 +32,9 @@ const active = all.filter((a) => a.isActive);
 const agendas = showInactive ? all.filter((a) => !a.isActive) : active;
 const professionalName = new Map(professionals.map((p) => [p.id, p.displayName]));
 const servicesOf = (agendaId: string) => services.filter((s) => s.agendaIds.includes(agendaId)).map((s) => s.name);
-// Uma agenda por profissional e no máximo uma da equipe, só com o item
-// "Exames e procedimentos" (cliente, 21/out/2026): "Nova agenda" só quando
-// algum profissional ativo ainda não tem; senão, o mesmo botão cria a da equipe (cliente, 02/nov/2026).
+// Uma agenda por profissional (cliente, 21/out/2026): "Nova agenda" só quando algum profissional ativo ainda não tem. A
+// da equipe ("Exames") nasce com o item "Exames e procedimentos" (cliente, 06/nov/2026), sem botão.
 const canCreateProfessional = professionalsWithoutAgenda(professionals, all).length > 0;
-const canCreateTeam = clinic.features.includes("exams") && !all.some((a) => a.kind === "resource");
 const cols = "lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1.4fr)_minmax(0,2fr)_36px]";
 import HowItWorks from "../../../components/admin/ui/HowItWorks.astro";
 import { configuracoes } from "../../../lib/ajuda/configuracoes";
@@ -44,9 +42,9 @@ import { configuracoes } from "../../../lib/ajuda/configuracoes";
 
 <ConfigShell current="agendas" title="Agendas" subtitle="De um profissional ou da equipe (Exames), com os serviços que atendem." setup={setup}>
   {
-    (canCreateProfessional || canCreateTeam) && (
-      <Button slot="actions" href={canCreateProfessional ? "/admin/configuracoes/agendas/novo" : "/admin/configuracoes/agendas/novo?tipo=equipe"} variant="primary">
-        <Icon name="plus" class="h-[18px] w-[18px]" strokeWidth={2.2} /> {canCreateProfessional ? "Nova agenda" : "Nova agenda da equipe (exames)"}
+    canCreateProfessional && (
+      <Button slot="actions" href="/admin/configuracoes/agendas/novo" variant="primary">
+        <Icon name="plus" class="h-[18px] w-[18px]" strokeWidth={2.2} /> Nova agenda
       </Button>
     )
   }

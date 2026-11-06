@@ -7,7 +7,7 @@ import NextStep from "../../../../components/admin/setup/NextStep.astro";
 import { loadSetupStatus } from "../../../../lib/data/config/setup";
 import { CARD, HINT, INPUT, INPUT_INLINE, LABEL, PRIMARY_BUTTON, SECONDARY_BUTTON } from "../../../../components/admin/config/formStyles";
 import { createUserClient } from "../../../../lib/data/clients";
-import { listAgendas, professionalsWithoutAgenda, TEAM_AGENDA_NAME } from "../../../../lib/data/config/agendas";
+import { listAgendas, professionalsWithoutAgenda } from "../../../../lib/data/config/agendas";
 import { listProfessionals } from "../../../../lib/data/config/professionals";
 import { originPage, setupOrigin, setupParam, withParams } from "../../../../lib/setupFlow";
 
@@ -21,22 +21,15 @@ const [agendas, professionals] = await Promise.all([
 ]);
 const agenda = isNew ? null : (agendas.find((a) => a.id === id) ?? null);
 if (!isNew && !agenda) return Astro.redirect("/admin/configuracoes/agendas");
-// Vinda do "próximo passo" do profissional ou do local (F6.3b): já escolhido,
-// com o nome dele.
-// Uma agenda por profissional e no máximo uma da equipe, só com o item "Exames
-// e procedimentos" (cliente, 21/out/2026; a desativada conta: reativa-se a
-// antiga). Só aparecem os profissionais sem agenda; o link "Criar a agenda da
-// equipe" da lista já vem nela, com o nome "Exames".
+// Vinda do "próximo passo" do profissional ou do local (F6.3b): já escolhido.
+// Uma agenda por profissional (cliente, 21/out/2026; a desativada conta: reativa-se a antiga). Só aparecem os
+// profissionais sem agenda. Sem nome próprio (cliente, 06/nov/2026): a agenda tem sempre o nome do profissional; a da
+// equipe ("Exames") nasce com o item "Exames e procedimentos" e não é criada aqui.
 const available = isNew ? professionalsWithoutAgenda(professionals, agendas) : [];
-const teamAllowed = isNew && clinic.features.includes("exams") && !agendas.some((a) => a.kind === "resource");
-const onlyTeam = isNew && available.length === 0 && teamAllowed;
-const nothingToCreate = isNew && available.length === 0 && !teamAllowed;
+const nothingToCreate = isNew && available.length === 0;
 const prefill = isNew ? (available.find((p) => p.id === Astro.url.searchParams.get("profissional")) ?? null) : null;
-const startTeam = onlyTeam || (teamAllowed && !prefill && Astro.url.searchParams.get("tipo") === "equipe");
 // A agenda da equipe desativada: reativa-se a antiga (cliente, 21/out/2026).
 const inactiveTeam = isNew ? agendas.find((a) => a.kind === "resource" && !a.isActive) : undefined;
-// O nome da agenda da equipe é sempre "Exames" (cliente, 21/out/2026).
-const fixedName = agenda?.kind === "resource" || startTeam;
 const professionalName = agenda?.professionalId ? professionals.find((p) => p.id === agenda.professionalId)?.displayName : null;
 // Aberto da lista em "Todos": o filtro vai e volta (teste da R9, NAV-06).
 const all = allFilterOn(Astro.url);
@@ -76,8 +69,7 @@ const agendaIssues = setup?.issues.agendas.get(id!) ?? [];
     {
       nothingToCreate && !inactiveTeam && (
         <p class={`${CARD} p-4 text-[15px] text-ink sm:p-5`}>
-          Não há agenda para criar: cada profissional ativo já tem a sua
-          {clinic.features.includes("exams") ? " e a clínica já tem a agenda da equipe." : "."} Para um profissional novo, cadastre-o antes em Profissionais.
+          Não há agenda para criar: cada profissional ativo já tem a sua. Para um profissional novo, cadastre-o antes em Profissionais.
         </p>
       )
     }
@@ -92,57 +84,42 @@ const agendaIssues = setup?.issues.agendas.get(id!) ?? [];
     }
     <form method="POST" action={action} class={`${CARD} flex flex-col gap-5 p-4 sm:p-5`} hidden={nothingToCreate}>
       <input type="hidden" name="acao" value="salvar" />
-      <div>
-        <label for="name" class={LABEL}>Nome</label>
-        <input
-          id="name"
-          name="name"
-          required
-          placeholder="Dra. Ana…"
-          value={fixedName ? TEAM_AGENDA_NAME : (agenda?.name ?? prefill?.displayName ?? "")}
-          readonly={fixedName}
-          class={`${INPUT} read-only:bg-canvas read-only:text-ink-mid`}
-        />
-        <p class={HINT} data-team-name hidden={!fixedName}>A agenda da equipe sempre se chama "Exames".</p>
-      </div>
       {
         isNew ? (
-          <>
-            <div>
-              <label for="kind" class={LABEL}>
-                De quem é
-              </label>
-              <select id="kind" name="kind" class={INPUT}>
-                {available.length > 0 && <option value="professional">De um profissional</option>}
-                {teamAllowed && (
-                  <option value="resource" selected={startTeam}>
-                    Da equipe (exames)
-                  </option>
-                )}
-              </select>
-              <p class="mt-2 rounded-lg bg-canvas px-3 py-2.5 text-sm text-ink" data-team-note>
-                Esta agenda será usada para os <strong>exames que não são realizados por um dos profissionais cadastrados</strong>. A
-                clínica só pode ter uma agenda da equipe, e ela só atende serviços do tipo exame.
-              </p>
-            </div>
-            <div data-professional>
-              <label for="professional_id" class={LABEL}>
-                Profissional
-              </label>
-              <select id="professional_id" name="professional_id" class={INPUT}>
-                <option value="">Escolha…</option>
-                {available.map((p) => (
-                    <option value={p.id} selected={prefill?.id === p.id}>
-                      {p.displayName}
-                    </option>
-                ))}
-              </select>
-              <p class={HINT}>Só aparecem os profissionais sem agenda. O tipo e o profissional não mudam depois de criada.</p>
-            </div>
-          </>
+          <div>
+            <input type="hidden" name="kind" value="professional" />
+            <label for="professional_id" class={LABEL}>
+              Profissional
+            </label>
+            <select id="professional_id" name="professional_id" required class={INPUT}>
+              <option value="">Escolha…</option>
+              {available.map((p) => (
+                <option value={p.id} selected={prefill?.id === p.id}>
+                  {p.displayName}
+                </option>
+              ))}
+            </select>
+            <p class={HINT}>
+              A agenda tem sempre o nome do profissional: renomeado em Profissionais, ela muda junto. Só aparecem os profissionais sem agenda; o profissional não
+              muda depois de criada.
+            </p>
+          </div>
+        ) : agenda!.kind === "professional" ? (
+          <p class="text-sm text-ink-mid">
+            Agenda de {professionalName ?? "profissional"}. O nome é sempre o do profissional: para mudar, renomeie em{" "}
+            {agenda!.professionalId ? (
+              <a href={`/admin/configuracoes/profissionais/${agenda!.professionalId}`} class="font-semibold text-brand-ink">
+                Profissionais
+              </a>
+            ) : (
+              "Profissionais"
+            )}
+            .
+          </p>
         ) : (
           <p class="text-sm text-ink-mid">
-            {agenda!.kind === "professional" ? `Agenda de ${professionalName ?? "profissional"}` : "Agenda da equipe: exames que não são realizados por um dos profissionais cadastrados"}
+            Agenda da equipe: exames que não são realizados por um dos profissionais cadastrados. Sempre se chama "Exames" e acompanha o item "Exames e
+            procedimentos".
           </p>
         )
       }
@@ -168,26 +145,4 @@ const agendaIssues = setup?.issues.agendas.get(id!) ?? [];
     {!isNew && <ActiveToggle action={action} isActive={agenda!.isActive} what="a agenda" />}
   </div>
 
-  <script>
-    // A agenda da equipe não tem profissional e já vem com o nome "Exames".
-    const kind = document.getElementById("kind") as HTMLSelectElement | null;
-    const professional = document.querySelector<HTMLElement>("[data-professional]");
-    const note = document.querySelector<HTMLElement>("[data-team-note]");
-    const name = document.getElementById("name") as HTMLInputElement | null;
-    const nameHint = document.querySelector<HTMLElement>("[data-team-name]");
-    const sync = () => {
-      if (!kind) return;
-      const team = kind.value === "resource";
-      if (professional) professional.hidden = team;
-      if (note) note.hidden = !team;
-      if (nameHint) nameHint.hidden = !team;
-      if (name) {
-        if (team) name.value = "Exames";
-        else if (name.readOnly) name.value = "";
-        name.readOnly = team;
-      }
-    };
-    kind?.addEventListener("change", sync);
-    sync();
-  </script>
 </ConfigShell>
