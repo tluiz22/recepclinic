@@ -1052,3 +1052,15 @@ Pedido do cliente depois dos testes no staging:
   digitado transferem direto, com a pergunta do assunto depois. O motivo já na mesma mensagem ("atendente, qual o
   endereço?") continua indo para a base (`askReceptionReason`, `respond.ts`). Decisão do cliente: transferir direto.
 - Jornada do bot (Tecnologia) atualizada; testes de banco do bot ajustados (165 passando).
+
+## Ajustes da tela Conversas após o staging (06/nov/2026)
+
+Pedido do cliente depois dos testes no staging:
+- **Celular:** o cabeçalho da conversa (nome, situação, Assumir/Transferir/Finalizar) e a faixa "Próxima · Ver paciente"
+  ficam presos no topo enquanto a conversa rola (`sticky` abaixo de 1024px).
+- **Atualização sozinha:** a cada 10 s, com a aba à vista, a tela busca a própria página e troca só a lista, as abas, a
+  conversa e a situação (`data-live`); a caixa de resposta, as janelas e os botões não mudam. Quem está no fim da
+  conversa segue no fim; com áudio tocando, a conversa espera. A recarga inteira de 1 minuto continua (fora de uso).
+- **Computador:** a tela Conversas sai da moldura de 1152px e vai até 1760px (`AdminLayout`, `wide`).
+- Captura `conversas` na fila de `capturas-pendentes.md`.
+

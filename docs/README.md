@@ -8,6 +8,9 @@
 > **Ajustes do bot (06/nov):** sem "Obrigado! Já repassamos…" e sem a pergunta do motivo antes da recepção (transfere
 > direto). Na `main` (staging); cliente valida. Detalhe no `historico.md`.
 >
+> **Ajustes da tela Conversas (06/nov):** cabeçalho preso no topo no celular, conversa e lista atualizando a cada 10 s,
+> tela mais larga no computador. Na `main` (staging); cliente valida. Captura `conversas` pendente de autorização.
+>
 > **C31 (04/nov):** apresentação do 1º menu do bot, descrições nas opções e botão "Ver opções". No **staging e na
 > produção** (`d2744f9`, sem migração). **Validada (05/nov).**
 >

@@ -9,4 +9,4 @@ a captura e o motivo, avisar o cliente no fim da etapa e esperar a autorização
 
 ## Pendentes
 
-(nenhuma)
+- `conversas` — tela mais larga no computador; cabeçalho preso no topo no celular (06/11/2026)

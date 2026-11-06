@@ -222,7 +222,7 @@ const tabClass = (active: boolean) =>
   `flex min-h-12 flex-1 items-center justify-center border-b-[3px] text-[15px] no-underline ${active ? "border-brand font-semibold text-brand-ink" : "border-transparent text-ink-soft hover:text-ink"}`;
 ---
 
-<AdminLayout title="Conversas" autoRefresh>
+<AdminLayout title="Conversas" autoRefresh wide>
   <div class:list={["flex flex-wrap items-center justify-between gap-3", selected && "max-lg:hidden"]}>
     <h1 class="font-display text-[28px] leading-[1.1] font-bold text-ink sm:text-[30px]">Conversas</h1>
     <button
@@ -238,7 +238,7 @@ const tabClass = (active: boolean) =>
   <div class:list={["mt-4 grid gap-4 lg:h-[calc(100dvh-10rem)] lg:min-h-[560px] lg:grid-cols-[300px_minmax(0,1fr)]", panel && "xl:grid-cols-[280px_minmax(0,1fr)_280px]", panel && showPanel && "lg:max-xl:grid-cols-1"]}>
     <!-- Lista -->
     <section aria-label="Lista de conversas" class:list={["flex min-h-0 flex-col overflow-hidden rounded-xl border border-line bg-white", selected && "max-lg:hidden", selected && showPanel && "max-xl:hidden"]}>
-      <nav class="flex border-b border-line" aria-label="Abertas ou finalizadas">
+      <nav class="flex border-b border-line" aria-label="Abertas ou finalizadas" data-live="tabs">
         <a href={hrefWith({ aba: null })} class={tabClass(!finished)} aria-current={!finished ? "page" : undefined}>Abertas ({openItems.length})</a>
         <a href={hrefWith({ aba: "finalizadas", mostrar: null })} class={tabClass(finished)} aria-current={finished ? "page" : undefined}>Finalizadas</a>
       </nav>
@@ -264,7 +264,7 @@ const tabClass = (active: boolean) =>
         }
         <button type="submit" class="sr-only focus:not-sr-only">Buscar</button>
       </form>
-      <ul class="min-h-0 flex-1 overflow-y-auto">
+      <ul class="min-h-0 flex-1 overflow-y-auto" data-live="list">
         {
           shown.length === 0 && (
             <li class="px-4 py-6 text-[15px] text-ink-soft">
@@ -315,7 +315,7 @@ const tabClass = (active: boolean) =>
     </section>
 
     <!-- Conversa -->
-    <section aria-label="Conversa" class:list={["flex min-h-0 flex-col overflow-hidden rounded-xl border border-line bg-white", !selected && !threadError && "max-lg:hidden", panel && showPanel && "max-xl:hidden"]}>
+    <section aria-label="Conversa" class:list={["flex min-h-0 flex-col rounded-xl lg:overflow-hidden border border-line bg-white", !selected && !threadError && "max-lg:hidden", panel && showPanel && "max-xl:hidden"]}>
       {
         !selected ? (
           <div class="flex flex-1 flex-col items-center justify-center gap-2 p-8 text-center">
@@ -329,6 +329,8 @@ const tabClass = (active: boolean) =>
           </div>
         ) : (
           <>
+            {/* No celular, o cabeçalho e o "Ver paciente" ficam presos no topo enquanto a conversa rola (cliente, 06/nov/2026). */}
+            <div class="z-10 rounded-t-xl bg-white max-lg:sticky max-lg:top-0">
             <header class="flex flex-wrap items-center justify-between gap-3 border-b border-line px-3 py-2.5 sm:px-4">
               <div class="flex min-w-0 items-center gap-1.5">
                 <a href={backHref} aria-label="Voltar para a lista" class="inline-flex h-11 w-11 flex-none items-center justify-center rounded-lg text-ink hover:bg-canvas lg:hidden">
@@ -339,7 +341,7 @@ const tabClass = (active: boolean) =>
                     <strong class="truncate text-[17px] text-ink">{displayName(selected)}</strong>
                     {selected.name && <span class="text-sm text-ink-soft tabular-nums">{formatPhoneBR(selected.phone)}</span>}
                   </span>
-                  <span class="flex flex-wrap items-center gap-2 text-[13px]">
+                  <span class="flex flex-wrap items-center gap-2 text-[13px]" data-live="status">
                     {statusOf(selected) && <span class={`rounded-full px-2 py-0.5 font-semibold ${statusOf(selected)!.tone}`}>{statusOf(selected)!.label}</span>}
                     <span class="text-ink-soft">
                       {ownerLabel(selected, clinic.userId)}
@@ -397,7 +399,8 @@ const tabClass = (active: boolean) =>
                 </a>
               </div>
             )}
-            <div class="flex min-h-0 flex-1 flex-col gap-2.5 overflow-y-auto bg-canvas px-3 py-4 sm:px-4" data-thread>
+            </div>
+            <div class="flex min-h-0 flex-1 flex-col gap-2.5 overflow-y-auto bg-canvas px-3 py-4 sm:px-4" data-thread data-live="thread">
               {thread?.next && (
                 <a href={hrefWith({ conversa: selected.phone, antes: `${thread.next.sortAt}_${thread.next.id}` })} class="self-center text-sm font-semibold text-brand-ink">
                   Ver mensagens anteriores
@@ -485,7 +488,7 @@ const tabClass = (active: boolean) =>
             </div>
 
             {selected.open && (
-              <p class="border-t border-line px-4 pt-2.5 text-[13px] text-ink-soft">
+              <p class="border-t border-line px-4 pt-2.5 text-[13px] text-ink-soft" data-live="reason">
                 {handoffReasonLabel(selected.reason)}
                 {selected.subject && ` · Assunto: ${selected.subject}`}
               </p>
@@ -714,12 +717,19 @@ const tabClass = (active: boolean) =>
 <script>
   // A conversa abre na mensagem mais nova (o fim da lista).
   const thread = document.querySelector<HTMLElement>("[data-thread]");
+  const mobile = () => window.matchMedia("(max-width: 1023px)").matches;
   // No computador a conversa rola dentro do quadro; no celular, a página inteira.
+  const toEnd = () => {
+    if (!thread) return;
+    thread.scrollTop = thread.scrollHeight;
+    if (mobile()) window.scrollTo(0, document.documentElement.scrollHeight);
+  };
+  const atEnd = () =>
+    !!thread &&
+    (mobile()
+      ? document.documentElement.scrollHeight - window.scrollY - window.innerHeight < 120
+      : thread.scrollHeight - thread.scrollTop - thread.clientHeight < 120);
   if (thread && !new URLSearchParams(location.search).has("antes")) {
-    const toEnd = () => {
-      thread.scrollTop = thread.scrollHeight;
-      if (window.matchMedia("(max-width: 1023px)").matches) window.scrollTo(0, document.documentElement.scrollHeight);
-    };
     toEnd();
     // As fotos (CN5) carregam depois: a conversa segue no fim, se ninguém rolou.
     let moved = false;
@@ -727,6 +737,44 @@ const tabClass = (active: boolean) =>
     thread.addEventListener("touchmove", () => (moved = true), { once: true, passive: true });
     thread.querySelectorAll("img").forEach((img) => img.addEventListener("load", () => !moved && toEnd(), { once: true }));
     window.addEventListener("load", () => !moved && toEnd(), { once: true });
+  }
+  // Mensagens novas (cliente, 06/nov/2026): a cada 10 s, com a aba à vista, a tela busca a própria página e troca só a
+  // lista, a conversa e a situação. A caixa de resposta, as janelas abertas e os botões ficam como estão; quem estava no
+  // fim da conversa segue no fim. Áudio tocando: a conversa espera. A recarga inteira de 1 minuto (autoRefresh) continua.
+  const LIVE_MS = 10_000;
+  let fetching = false;
+  const live = async () => {
+    if (fetching || document.visibilityState !== "visible" || document.getElementById("page-loading")?.hasAttribute("data-active")) return;
+    fetching = true;
+    try {
+      const response = await fetch(location.href, { credentials: "same-origin", cache: "no-store" });
+      if (!response.ok || response.redirected) return;
+      const next = new DOMParser().parseFromString(await response.text(), "text/html");
+      document.querySelectorAll<HTMLElement>("[data-live]").forEach((current) => {
+        const fresh = next.querySelector<HTMLElement>(`[data-live="${current.dataset.live}"]`);
+        if (!fresh || fresh.innerHTML === current.innerHTML) return;
+        if (current === thread) {
+          if ([...thread.querySelectorAll("audio")].some((audio) => !audio.paused)) return;
+          const follow = atEnd();
+          const top = thread.scrollTop;
+          thread.innerHTML = fresh.innerHTML;
+          if (follow) {
+            toEnd();
+            thread.querySelectorAll("img").forEach((img) => img.addEventListener("load", () => atEnd() || toEnd(), { once: true }));
+          } else thread.scrollTop = top;
+          return;
+        }
+        current.innerHTML = fresh.innerHTML;
+      });
+    } catch {
+      // Sem internet: tenta de novo na próxima vez.
+    } finally {
+      fetching = false;
+    }
+  };
+  if (document.querySelector("[data-live]")) {
+    setInterval(live, LIVE_MS);
+    document.addEventListener("visibilitychange", live);
   }
   // "Mostrar" aplica na hora (sem JavaScript, o botão Buscar envia).
   document.querySelectorAll<HTMLSelectElement>("[data-submit-on-change]").forEach((select) => {

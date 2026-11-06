@@ -22,17 +22,19 @@ interface Props {
   platform?: boolean;
   /** Recarrega sozinha a cada 1 minuto, com a aba à vista (src/scripts/autoRefresh.ts). */
   autoRefresh?: boolean;
+  /** Tela larga (Conversas, cliente, 06/nov/2026): ocupa a largura toda no computador, sem a moldura de 6xl. */
+  wide?: boolean;
   /** Nome da área cujas seções vêm no slot "side" (ex.: "Configurações"), no lugar do menu principal. */
   sideTitle?: string;
 }
 
 // Uma largura só para todas as telas (cliente, 16/out/2026: a Agenda e o Resumo do Dia
 // deixaram a largura de 1600px da R1 para ficar como as outras).
-const { title, platform = false, autoRefresh = false, sideTitle } = Astro.props;
+const { title, platform = false, autoRefresh = false, wide = false, sideTitle } = Astro.props;
 // Seções de uma área na lateral (M5, Configurações; cliente, 30/out/2026): elas aparecem no lugar do menu
 // principal, que volta pelo "‹ Menu principal" sem sair da tela.
 const hasSide = Astro.slots.has("side");
-const frame = "max-w-6xl";
+const frame = wide ? "max-w-[1760px]" : "max-w-6xl";
 
 // `match`: outras rotas que deixam o item marcado (o Atendimento é do Meu dia; o Relatório do dia, da Agenda; o
 // Relacionamento antigo, de Pacientes).
