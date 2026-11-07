@@ -169,7 +169,7 @@ describe("mídia recebida", () => {
     // (Segundos depois do paciente, a regra IS4 pode marcar como mensagem automática do app: o tipo à parte vale igual.)
     expect(of(foto.id!)).toMatchObject({ content_type: "image", body: null });
     expect(["agent_reply", "app_auto_reply"]).toContain(of(foto.id!).message_type);
-    expect(of(local.id!)).toMatchObject({ content_type: "location", body: "Localização: Clínica CN5, Rua X, 123" });
+    expect(of(local.id!)).toMatchObject({ content_type: "location", body: "Localização: Clínica CN5, Rua X, 123 (-5.800000, -35.200000)" });
     expect(of(desconhecida.id!)).toMatchObject({ content_type: "poll", body: null });
     expect(await mediaOfMessage(of(foto.id!).id)).toMatchObject({ status: "stored" });
     const { data: media } = await db().from("whatsapp_media").select("direction").eq("message_id", of(foto.id!).id).single();

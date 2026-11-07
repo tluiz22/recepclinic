@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { attachmentOf, bubbleOf, deliveryLabel, formatFileSize, type AttachmentMedia } from "./centralBubbles";
+import { attachmentOf, bubbleOf, deliveryLabel, formatFileSize, mapHrefOf, type AttachmentMedia } from "./centralBubbles";
 import type { CentralMessage } from "./data/central";
 
 const message = (over: Partial<CentralMessage>): CentralMessage => ({
@@ -53,6 +53,17 @@ describe("bolhas da conversa (CN3a)", () => {
     // Gravada com a Central desligada: continua "anterior".
     expect(bubbleOf(message({ ...app, centralOn: false })).placeholder).toBe("Mensagem anterior à Central de atendimento");
     expect(bubbleOf(message({ ...app, body: "Localização: Rua X, 123", contentType: "location" })).text).toBe("Localização: Rua X, 123");
+  });
+
+  it("localização com coordenadas: link do mapa (validação no staging, 07/nov/2026)", () => {
+    expect(mapHrefOf("Localização: -5.800000, -35.200000")).toBe("https://www.google.com/maps?q=-5.800000,-35.200000");
+    expect(mapHrefOf("Localização: Clínica, Rua X, 123 (-5.800000, -35.200000)")).toBe("https://www.google.com/maps?q=-5.800000,-35.200000");
+    expect(mapHrefOf("Localização: Rua X, 123")).toBeNull();
+    expect(mapHrefOf("Oi")).toBeNull();
+    const located = message({ body: "Localização: -5.800000, -35.200000", messageType: "location", centralOn: true });
+    expect(bubbleOf(located).mapHref).toBe("https://www.google.com/maps?q=-5.800000,-35.200000");
+    // Texto comum que parece coordenada não vira mapa.
+    expect(bubbleOf(message({ body: "Localização: -5.800000, -35.200000" })).mapHref).toBeNull();
   });
 
   it("situação da entrega", () => {

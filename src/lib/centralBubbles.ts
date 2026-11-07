@@ -20,7 +20,18 @@ export type Bubble = {
   placeholder: string | null;
   edited: boolean;
   failed: boolean;
+  /** Localização com coordenadas: o link do mapa (validação no staging, 07/nov/2026). */
+  mapHref: string | null;
 };
+
+/** "Localização: … (-5.790000, -35.200000)" ou "Localização: -5.790000, -35.200000" → link do Google Maps. */
+export function mapHrefOf(text: string | null): string | null {
+  const match = text?.match(/^Localização: (?:.*\()?(-?\d{1,2}\.\d+), (-?\d{1,3}\.\d+)\)?$/);
+  if (!match) return null;
+  const [lat, lng] = [Number(match[1]), Number(match[2])];
+  if (Math.abs(lat) > 90 || Math.abs(lng) > 180) return null;
+  return `https://www.google.com/maps?q=${match[1]},${match[2]}`;
+}
 
 /** "Visto"/"entregue" ao lado da hora, nas mensagens que saíram (como no WhatsApp). */
 export function deliveryLabel(status: string | null): string | null {
@@ -45,7 +56,14 @@ const MEDIA_WORDS: Record<string, string> = {
 };
 
 export function bubbleOf(message: CentralMessage, names: Map<string, string> = new Map()): Bubble {
-  const base = { text: message.body, placeholder: null as string | null, edited: !!message.editedAt && !message.revokedAt, failed: message.status === "failed" };
+  const isLocation = (message.contentType ?? message.messageType) === "location";
+  const base = {
+    text: message.body,
+    placeholder: null as string | null,
+    edited: !!message.editedAt && !message.revokedAt,
+    failed: message.status === "failed",
+    mapHref: isLocation ? mapHrefOf(message.body) : null,
+  };
   let bubble: Bubble;
   switch (message.author) {
     case "patient":

@@ -878,3 +878,6 @@ conversa (`central_conversation_messages`) devolve `content_type` e `central_on`
 do WhatsApp."; desligada → "anterior à Central". As mensagens antigas (sem o tipo) não se recuperam. Testado com
 Playwright local (localização, reação e enquete pelo app; localização do paciente), em 390 e 1280 px. Captura
 `conversas` não muda (só texto). Jornada do bot não muda.
+**Localização atual (validação no staging, 07/nov/2026):** a "localização atual" vem só com as coordenadas; agora o texto
+guarda as coordenadas ("Localização: -5.795000, -35.209000", ou com nome e endereço antes) e a Central mostra "Ver no
+mapa" (Google Maps, outra aba). A localização mandada antes desta correção segue só com "Localização".

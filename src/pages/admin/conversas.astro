@@ -538,6 +538,11 @@ const tabClass = (active: boolean) =>
                       ) : (
                         !attachment && <span class="text-[15px] text-ink-soft italic">{bubble.placeholder}</span>
                       )}
+                      {bubble.mapHref && (
+                        <a href={bubble.mapHref} target="_blank" rel="noopener" class="self-start text-sm font-semibold text-brand-ink">
+                          Ver no mapa
+                        </a>
+                      )}
                       <span class="self-end text-[11px] text-ink-soft">
                         {formatInstant(message.sortAt, clinic.timezone, "HH:mm")}
                         {bubble.edited && " · editada"}

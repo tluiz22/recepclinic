@@ -73,8 +73,12 @@ describe("texto guardado e eco que muda a mensagem (CN2)", () => {
   });
 
   it("EC (cliente, 07/nov/2026): localização, contato e reação em texto; tipo do eco à parte", () => {
-    expect(storedText({ type: "location", location: { latitude: -5.8, longitude: -35.2, name: "Clínica", address: "Rua X, 123" } })).toBe("Localização: Clínica, Rua X, 123");
-    expect(storedText({ type: "location", location: { latitude: -5.8, longitude: -35.2 } })).toBeNull();
+    expect(storedText({ type: "location", location: { latitude: -5.8, longitude: -35.2, name: "Clínica", address: "Rua X, 123" } })).toBe(
+      "Localização: Clínica, Rua X, 123 (-5.800000, -35.200000)",
+    );
+    // "Localização atual": só as coordenadas (validação no staging, 07/nov/2026).
+    expect(storedText({ type: "location", location: { latitude: -5.8, longitude: -35.2 } })).toBe("Localização: -5.800000, -35.200000");
+    expect(storedText({ type: "location", location: {} })).toBeNull();
     expect(storedText({ type: "contacts", contacts: [{ name: { formatted_name: "Maria Souza" } }] })).toBe("Contato: Maria Souza");
     expect(storedText({ type: "contacts", contacts: [{ name: { formatted_name: "A" } }, { name: { first_name: "B" } }] })).toBe("Contatos: A, B");
     expect(storedText({ type: "reaction", reaction: { message_id: "w1", emoji: "👍" } })).toBe("Reagiu com 👍");

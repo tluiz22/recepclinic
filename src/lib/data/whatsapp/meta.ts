@@ -65,7 +65,15 @@ export function storedText(msg: WaMessage): string | null {
 function describedText(msg: WaMessage): string | null {
   if (msg.type === "location" && msg.location) {
     const place = [msg.location.name, msg.location.address].map((v) => v?.trim()).filter(Boolean).join(", ");
-    return place ? `Localização: ${place}` : null;
+    // A "localização atual" vem só com as coordenadas (validação no staging, 07/nov/2026): guardadas para o mapa.
+    const { latitude, longitude } = msg.location;
+    const coords =
+      typeof latitude === "number" && typeof longitude === "number" && Number.isFinite(latitude) && Number.isFinite(longitude)
+        ? `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`
+        : null;
+    if (place && coords) return `Localização: ${place} (${coords})`;
+    if (place || coords) return `Localização: ${place || coords}`;
+    return null;
   }
   if (msg.type === "contacts" && msg.contacts?.length) {
     const names = msg.contacts.map((c) => c.name?.formatted_name?.trim() || c.name?.first_name?.trim()).filter(Boolean);
