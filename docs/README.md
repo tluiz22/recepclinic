@@ -13,11 +13,11 @@
 >
 > **Nome da agenda (06/nov):** agenda de profissional sempre com o nome dele; "Exames" automática com o item
 > (migração `20261225120000` aplicada no staging; produção não). Na `main` (staging); cliente valida. Captura
-> `config-agendas` pendente. **Push na `main` só com autorização do cliente (06/nov).**
+> `config-agendas` refeita. **Push na `main` só com autorização do cliente (06/nov).**
 >
 > **Conversas como o WhatsApp + anexo + bot (06/nov):** tela na altura da janela no computador, conversa em tela cheia
 > no celular com a caixa fixa, CSP liberando o Storage (anexo) e confirmação do pedido de recepção digitado. Commit
-> local, sem push (aguarda o cliente). Captura `conversas` pendente.
+> no staging (06/nov). Captura `conversas` refeita.
 >
 > **Aviso da mensagem automática do app em 6 h (06/nov):** era 7 dias. Vai para a produção **junto com a Central**
 > (cliente, 06/nov), não sozinho.
