@@ -1,8 +1,9 @@
 # Emissão de NFS-e pelo Asaas (substitui o emissor direto da F11)
 
 > **Estado atual (retomar daqui), 07/nov/2026.** **Asaas pediu ajustes na análise BaaS (13.10):** cláusula do Asaas nos
-> termos e no contrato e selo sem registro de carregamento. Ajustes feitos (commit local no app e no site, sem push);
-> falta o push, a publicação e o pedido de reanálise pelo cliente. Código das fases direto na `main`, só com o OK do
+> termos e no contrato e selo sem registro de carregamento. Ajustes no ar (07/nov): site `beb9e1c` e app `305efd7` no staging e
+> na produção. **Reanálise pedida pelo cliente (07/nov)**, com o print da habilitação fiscal; aguardando o Asaas.
+> **Próxima sessão:** revisar este planejamento com o cliente. Código das fases direto na `main`, só com o OK do
 > cliente (a branch `faturamento` foi aposentada em 07/nov).
 > **N0 em andamento (29/out):** documentação conferida, nota de referência lida e **roteiro do Sandbox executado**
 > (seção 13.6: emissão em Mossoró funciona ponta a ponta). **Asaas respondeu (13.7):** exige BaaS; chaves seguem
