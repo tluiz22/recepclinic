@@ -19,8 +19,11 @@
 > no celular com a caixa fixa, CSP liberando o Storage (anexo) e confirmação do pedido de recepção digitado. Commit
 > no staging (06/nov). Captura `conversas` refeita.
 >
-> **Aviso da mensagem automática do app em 6 h (06/nov):** era 7 dias. Vai para a produção **junto com a Central**
-> (cliente, 06/nov), não sozinho.
+> **Produção (06/nov, `552019b`):** a `main` inteira, com a Central (12 migrações aplicadas; item `central_attendance`
+> liberado em nenhuma clínica) e todos os ajustes de 06/nov. Saúde `ok`. Antes de liberar a Central numa clínica
+> (cliente): configuração v4 na Meta e `WHATSAPP_ES_CONFIG_ID`, campos do webhook, modelo "Retomar conversa", cópia do
+> bucket/PITR. Detalhe no `producao.md`. **`faturamento` com a `main` até `552019b`** (merge `882427f`, migração própria
+> `20261225130000` do bloqueio de suspensa nas tabelas da Central; 1086 de unidade e 1005 de banco passando).
 >
 > **C31 (04/nov):** apresentação do 1º menu do bot, descrições nas opções e botão "Ver opções". No **staging e na
 > produção** (`d2744f9`, sem migração). **Validada (05/nov).**
