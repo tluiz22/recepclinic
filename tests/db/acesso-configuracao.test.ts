@@ -19,10 +19,10 @@ import { getClinicSettings, updateClinicSettings } from "../../src/lib/data/conf
 import { addClinicHoliday, listClinicHolidays, removeClinicHoliday } from "../../src/lib/data/config/holidays";
 import {
   createInsurancePlan,
-  listProfessionalExclusions,
+  listProfessionalPlans,
   searchInsurancePlans,
   setInsurancePlanActive,
-  setProfessionalExclusions,
+  setProfessionalPlans,
 } from "../../src/lib/data/config/insurance";
 import { createLocation, listLocations, setLocationActive, type Location } from "../../src/lib/data/config/locations";
 import {
@@ -534,7 +534,7 @@ describe("feriados, contatos do resumo e planos", () => {
     expect(await listNotificationRecipients(db(admin), clinicId)).toEqual([]);
   });
 
-  it("planos: busca por nome parecido, nome repetido recusado, exceções por profissional", async () => {
+  it("planos: busca por nome parecido, nome repetido recusado, convênios do profissional (MC)", async () => {
     const unimed = await createInsurancePlan(db(admin), clinicId, { name: "Unimed", alternativeNames: ["Uni med"], ansCode: null });
     const hapvida = await createInsurancePlan(db(admin), clinicId, { name: "Hapvida", alternativeNames: [], ansCode: null });
     expect(await codeOf(() => createInsurancePlan(db(admin), clinicId, { name: "UNIMED", alternativeNames: [], ansCode: null }))).toBe(
@@ -545,9 +545,27 @@ describe("feriados, contatos do resumo e planos", () => {
     expect(found[0]?.id).toBe(unimed.id);
     expect(await searchInsurancePlans(db(reception), clinicId, "  ")).toEqual([]);
 
-    expect(await setProfessionalExclusions(db(admin), clinicId, professional.id, [hapvida.id])).toEqual([hapvida.id]);
-    expect(await listProfessionalExclusions(db(reception), clinicId, professional.id)).toEqual([hapvida.id]);
-    expect(await setProfessionalExclusions(db(admin), clinicId, professional.id, [])).toEqual([]);
+    // Começa só particular; o Administrador associa; a Recepção sem a permissão só lê.
+    expect(await listProfessionalPlans(db(admin), clinicId, professional.id)).toEqual([]);
+    expect(await setProfessionalPlans(db(admin), clinicId, professional.id, [hapvida.id, unimed.id])).toEqual([hapvida.id, unimed.id].sort());
+    expect(await listProfessionalPlans(db(reception), clinicId, professional.id)).toEqual([hapvida.id, unimed.id].sort());
+    expect(await codeOf(() => setProfessionalPlans(db(reception), clinicId, professional.id, [unimed.id]))).toBe("forbidden");
+    expect(await codeOf(() => createInsurancePlan(db(reception), clinicId, { name: "Amil", alternativeNames: [], ansCode: null }))).toBe("forbidden");
+    // Com a permissão marcada pelo Administrador em Equipe (M4), a Recepção cadastra e associa.
+    await adminClient().from("clinic_members").update({ can_manage_insurance: true }).eq("clinic_id", clinicId).eq("user_id", reception.id);
+    try {
+      const amil = await createInsurancePlan(db(reception), clinicId, { name: "Amil", alternativeNames: [], ansCode: null });
+      expect(await setProfessionalPlans(db(reception), clinicId, professional.id, [amil.id])).toEqual([amil.id]);
+      // A trilha registra quem fez (só o Administrador lê).
+      const { data: log } = await db(admin).from("insurance_change_log").select("action, actor_user_id, insurance_plan_id").eq("clinic_id", clinicId).eq("actor_user_id", reception.id);
+      expect((log ?? []).map((l) => l.action).sort()).toEqual(["linked", "plan_created", "unlinked", "unlinked"]);
+      expect((await db(reception).from("insurance_change_log").select("id").eq("clinic_id", clinicId)).data).toEqual([]);
+      // A permissão não abre o resto de Configurações.
+      expect(await codeOf(() => updateClinicSettings(db(reception), clinicId, { requireInsuranceDetails: true }))).not.toBe("ok");
+    } finally {
+      await adminClient().from("clinic_members").update({ can_manage_insurance: false }).eq("clinic_id", clinicId).eq("user_id", reception.id);
+    }
+    expect(await setProfessionalPlans(db(admin), clinicId, professional.id, [])).toEqual([]);
 
     await setInsurancePlanActive(db(admin), clinicId, hapvida.id, false);
     expect((await searchInsurancePlans(db(reception), clinicId, "hapvida")).length).toBe(0);

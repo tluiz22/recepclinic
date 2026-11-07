@@ -104,7 +104,7 @@ beforeAll(async () => {
   a.unimed = await insert("insurance_plans", { clinic_id: clinicA, name: "Unimed", alternative_names: ["Unimed Natal", "Unimed RN"] });
   a.bradesco = await insert("insurance_plans", { clinic_id: clinicA, name: "Bradesco Saúde" });
   a.hapvida = await insert("insurance_plans", { clinic_id: clinicA, name: "Hapvida" });
-  await link("professional_insurance_exclusions", { clinic_id: clinicA, professional_id: a.ana, insurance_plan_id: a.unimed });
+  await link("professional_insurance_plans", { clinic_id: clinicA, professional_id: a.ana, insurance_plan_id: a.unimed });
 
   b.prof = await insert("professionals", { clinic_id: clinicB, user_id: adminB.id, display_name: "Dra. B", profession: "Dentista" });
   b.office = await insert("locations", { clinic_id: clinicB, name: "Consultório B", type: "clinic" });
@@ -431,8 +431,8 @@ describe("busca de convênio por nome parecido (D10)", () => {
     await adminClient().from("insurance_plans").update({ is_active: true }).eq("id", a.hapvida);
   });
 
-  it("exceção por profissional fica registrada (a Dra. Ana não atende Unimed)", async () => {
-    const { data } = await receptionA.client.from("professional_insurance_exclusions").select("professional_id, insurance_plan_id");
+  it("convênio por profissional fica registrado (a Dra. Ana atende Unimed; MC)", async () => {
+    const { data } = await receptionA.client.from("professional_insurance_plans").select("professional_id, insurance_plan_id");
     expect(data).toEqual([{ professional_id: a.ana, insurance_plan_id: a.unimed }]);
   });
 });

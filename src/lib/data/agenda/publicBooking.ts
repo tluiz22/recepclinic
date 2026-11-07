@@ -107,21 +107,21 @@ async function loadAppointmentView(db: DbClient, clinicId: string, id: string): 
   };
 }
 
-/** Agendas sem profissional ou com profissional que atende o plano (exceções em `professional_insurance_exclusions`). */
+/** Agendas sem profissional (exames) ou com profissional que atende o plano (MC: `professional_insurance_plans`). */
 export async function agendasAcceptingPlan(db: DbClient, clinicId: string, agendaIds: string[], insurancePlanId: string): Promise<string[]> {
   if (!agendaIds.length) return [];
-  const [agendas, excluded] = await Promise.all([
+  const [agendas, accepting] = await Promise.all([
     db.from("agendas").select("id, professional_id").eq("clinic_id", clinicId).in("id", agendaIds).then((r) => unwrap(r, "Agendas")),
     db
-      .from("professional_insurance_exclusions")
+      .from("professional_insurance_plans")
       .select("professional_id")
       .eq("clinic_id", clinicId)
       .eq("insurance_plan_id", insurancePlanId)
       .then((r) => unwrap(r, "Convênios do profissional")),
   ]);
-  const out = new Set(excluded.map((e) => e.professional_id));
-  const accepting = new Set(agendas.filter((a) => !a.professional_id || !out.has(a.professional_id)).map((a) => a.id));
-  return agendaIds.filter((id) => accepting.has(id));
+  const accepts = new Set(accepting.map((e) => e.professional_id));
+  const ok = new Set(agendas.filter((a) => !a.professional_id || accepts.has(a.professional_id)).map((a) => a.id));
+  return agendaIds.filter((id) => ok.has(id));
 }
 
 /** Agendas (a do link, a do atendimento remarcado ou todas as do serviço) e locais (do serviço, filtrados pelo link). */

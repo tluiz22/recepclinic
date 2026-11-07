@@ -145,13 +145,14 @@ export const configuracoes = {
       serve: "Cadastrar os planos de saúde atendidos e como o paciente os escreve no WhatsApp.",
       como: [
         "Os outros nomes ajudam o bot a reconhecer o plano que o paciente escreve.",
-        "Cada plano indica os profissionais que o atendem.",
+        "Cada plano indica os profissionais que o atendem; profissional sem nenhum plano marcado atende só particular.",
+        "Além do Administrador, pode cuidar dos convênios quem tiver a permissão marcada em Equipe.",
         "A opção de carteirinha e validade pede os dois dados ao marcar por plano, no painel e na página de horário.",
         "Plano não aceito: o bot avisa e pergunta se o paciente quer seguir como particular.",
       ],
       depende: [{ texto: "Profissionais: cada plano indica quais o atendem.", href: "/admin/configuracoes/profissionais" }],
       alimenta: [
-        { texto: "Bot e Marcar: oferecem só os planos cadastrados." },
+        { texto: "Bot e link de agendar: oferecem só os planos que o profissional escolhido atende. Marcar avisa quando o profissional não atende o plano do paciente." },
         { texto: "Informações do bot (Clínica): o texto de Convênios é escrito à parte.", href: "/admin/configuracoes" },
       ],
     },

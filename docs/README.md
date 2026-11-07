@@ -1,7 +1,7 @@
 # RecepClinic
 
-> **Multiprofissional (07/nov):** M1 a M8 decididas; **etapa ME (especialidades) feita na `main` local, sem push**
-> (migração `20261229120000` ainda não aplicada no staging). Próximo: OK do cliente para staging. Retomar pelo
+> **Multiprofissional (07/nov):** M1 a M8 decididas; **ME e MC no staging** (migrações `20261229120000` e
+> `20261229130000`); o cliente valida no staging depois. Próximo: MI + MB. Retomar pelo
 > [`planejamento-multiprofissional.md`](planejamento-multiprofissional.md). NFS-e por profissional (N-P1 a N-P7) depois.
 >
 > **Próxima sessão (cliente, 07/nov):** **revisar o planejamento da NFS-e pelo Asaas** com o cliente

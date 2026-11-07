@@ -6,7 +6,7 @@ import { createProfessional } from "../../src/lib/data/config/professionals";
 import { createService, setServiceAgendas, setServiceLocations, type ServiceInput } from "../../src/lib/data/config/services";
 import { DataError } from "../../src/lib/data/errors";
 import { registerPatient } from "../../src/lib/data/patients";
-import { addMember, createClinic, createUser, deleteClinics, deleteUsers, teamAgendaId, type TestUser } from "./helpers";
+import { addMember, adminClient, createClinic, createUser, deleteClinics, deleteUsers, teamAgendaId, type TestUser } from "./helpers";
 
 // Clínica de teste da agenda (F3.6): duas agendas de profissional, uma de
 // exames, consultório e domiciliar, consulta/retorno/exame/turma, horários
@@ -109,4 +109,15 @@ export async function setupAgendaClinic(name: string, phonePrefix: string): Prom
       await deleteUsers([admin, reception]);
     },
   };
+}
+
+/** Todos os profissionais da clínica atendem o plano (MC, 07/nov/2026: a ligação é positiva). */
+export async function linkPlanToAllProfessionals(clinicId: string, planId: string): Promise<void> {
+  const { data: pros, error } = await adminClient().from("professionals").select("id").eq("clinic_id", clinicId);
+  if (error) throw error;
+  const rows = (pros ?? []).map((p) => ({ clinic_id: clinicId, professional_id: p.id, insurance_plan_id: planId }));
+  if (rows.length) {
+    const { error: linkError } = await adminClient().from("professional_insurance_plans").insert(rows);
+    if (linkError) throw linkError;
+  }
 }

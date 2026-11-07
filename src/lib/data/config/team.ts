@@ -32,6 +32,8 @@ export type TeamMember = {
   grantedAgendaIds: string[];
   /** Cadastro de profissional ligado ao login. */
   professionalId: string | null;
+  /** Cadastra e associa convênios sem ser Administrador (MC, M4). */
+  canManageInsurance: boolean;
   joinedAt: Date;
   /** Convite pelo painel (quem entrou antes dos convites não tem). */
   invitation: { id: string; lastSentAt: Date | null; acceptedAt: Date | null } | null;
@@ -44,6 +46,8 @@ export type MemberAccessInput = {
   professionalId: string | null;
   agendaScope: AgendaScope;
   grantedAgendaIds: string[];
+  /** "Cadastrar e associar convênios" (MC, cliente, 07/nov/2026); ausente, fica como está. */
+  canManageInsurance?: boolean;
 };
 
 /** Confere e arruma papéis, ligação ao profissional e acesso às agendas. */
@@ -61,6 +65,8 @@ export function validateMemberAccess(input: MemberAccessInput): MemberAccessInpu
     professionalId: isProfessional ? input.professionalId : null,
     agendaScope: input.agendaScope,
     grantedAgendaIds: input.agendaScope === "all" ? [] : [...new Set(input.grantedAgendaIds)],
+    // O Administrador já pode tudo: a permissão só vale para os outros papéis.
+    ...(input.canManageInsurance === undefined ? {} : { canManageInsurance: input.canManageInsurance && !roles.includes("admin") }),
   };
 }
 
@@ -68,7 +74,7 @@ export async function listTeam(db: DbClient, clinicId: string): Promise<TeamMemb
   const [members, emails, invitations, professionals, grants] = await Promise.all([
     db
       .from("clinic_members")
-      .select("user_id, display_name, roles, agenda_scope, created_at")
+      .select("user_id, display_name, roles, agenda_scope, can_manage_insurance, created_at")
       .eq("clinic_id", clinicId)
       .then((r) => unwrap(r, "Equipe")),
     db.rpc("list_clinic_member_emails", { p_clinic_id: clinicId }).then((r) => unwrap(r, "E-mails da equipe")),
@@ -98,6 +104,7 @@ export async function listTeam(db: DbClient, clinicId: string): Promise<TeamMemb
         agendaScope: member.agenda_scope,
         grantedAgendaIds: grants.filter((g) => g.user_id === member.user_id).map((g) => g.agenda_id).sort(),
         professionalId: professionals.find((p) => p.user_id === member.user_id)?.id ?? null,
+        canManageInsurance: member.can_manage_insurance,
         joinedAt: new Date(member.created_at),
         invitation: invitation ? { id: invitation.id, lastSentAt: invitation.lastSentAt, acceptedAt: invitation.acceptedAt } : null,
       };
@@ -159,6 +166,9 @@ export async function inviteMember(
 
   const result = await inviteToClinic(db, actorId, clinic, address, access.roles, deps);
   if (access.displayName) await setDisplayName(db, clinic.id, result.userId, access.displayName);
+  if (access.canManageInsurance) {
+    unwrap(await db.from("clinic_members").update({ can_manage_insurance: true }).eq("clinic_id", clinic.id).eq("user_id", result.userId), "Equipe");
+  }
   await linkProfessional(db, clinic.id, result.userId, access.professionalId);
   await setMemberAgendaAccess(db, clinic.id, result.userId, access.agendaScope, access.grantedAgendaIds);
   return result;
@@ -189,7 +199,11 @@ export async function updateMember(
   unwrapOne(
     await db
       .from("clinic_members")
-      .update({ roles: access.roles, display_name: access.displayName ?? null })
+      .update({
+        roles: access.roles,
+        display_name: access.displayName ?? null,
+        ...(access.canManageInsurance === undefined ? {} : { can_manage_insurance: access.canManageInsurance }),
+      })
       .eq("clinic_id", clinicId)
       .eq("user_id", userId)
       .select("user_id")

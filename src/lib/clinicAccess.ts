@@ -25,6 +25,8 @@ export type Membership = {
   roles: ClinicRole[];
   /** Quando a pessoa entrou na clínica (desempate quando não há última usada). */
   joinedAt: string;
+  /** Cadastra e associa convênios sem ser Administrador (MC, M4; marcado em Equipe). */
+  canManageInsurance?: boolean;
 };
 
 /** O que cada requisição do painel sabe sobre quem está usando e em qual clínica. */
@@ -45,6 +47,8 @@ export type ClinicContext = {
   features: FeatureKey[];
   /** Pode trocar de clínica: membro de mais de uma, ou Suporte (F4.1). */
   canSwitchClinic: boolean;
+  /** Cadastra e associa convênios sem ser Administrador (MC, cliente, 07/nov/2026). */
+  canManageInsurance: boolean;
 };
 
 /**
@@ -97,7 +101,7 @@ export function chooseActiveClinic(input: {
 
 type RoleHolder = Pick<ClinicContext, "roles" | "isPlatformStaff">;
 /** Sem `features`, nenhum item da matriz está liberado. */
-type AccessHolder = RoleHolder & { features?: readonly FeatureKey[] };
+type AccessHolder = RoleHolder & { features?: readonly FeatureKey[]; canManageInsurance?: boolean };
 
 /** Tem algum dos papéis na clínica ativa. O Suporte vale por todos, como no banco. */
 export function hasRole(context: RoleHolder, ...roles: ClinicRole[]): boolean {
@@ -115,9 +119,14 @@ export function hasRole(context: RoleHolder, ...roles: ClinicRole[]): boolean {
 //   - Relacionamento (CRM A1, cliente, 27/out/2026, Q2): o Administrador e a
 //     Recepção, com o item "Relacionamento"; o Profissional não entra. Não
 //     abre nenhuma rota das Métricas.
-export type PanelArea = "settings" | "metrics" | "finance" | "relationship" | "shared";
+//   - Convênios (MC, cliente, 07/nov/2026, M4): o Administrador e quem ele
+//     autoriza em Equipe ("Cadastrar e associar convênios").
+export type PanelArea = "settings" | "insurance" | "metrics" | "finance" | "relationship" | "shared";
 
+// A primeira que casa vale: Convênios antes de Configurações.
 const AREA_PREFIXES: [string, PanelArea][] = [
+  ["/admin/configuracoes/convenios", "insurance"],
+  ["/api/admin/configuracoes/convenios", "insurance"],
   ["/admin/configuracoes", "settings"],
   ["/api/admin/configuracoes", "settings"],
   ["/admin/metricas", "metrics"],
@@ -132,6 +141,7 @@ const AREA_PREFIXES: [string, PanelArea][] = [
 
 const AREA_ROLES: Record<PanelArea, ClinicRole[]> = {
   settings: ["admin"],
+  insurance: ["admin"],
   metrics: ["admin", "professional"],
   finance: ["admin", "reception"],
   relationship: ["admin", "reception"],
@@ -146,6 +156,7 @@ export function areaOfPath(pathname: string): PanelArea {
 const METRICS_TABS = FEATURES.filter((feature) => feature.area === "metrics" && feature.key !== "metrics_personal").map((f) => f.key);
 
 export function canAccessArea(context: AccessHolder, area: PanelArea): boolean {
+  if (area === "insurance") return hasRole(context, "admin") || !!context.canManageInsurance;
   if (area === "finance" || area === "relationship") return hasRole(context, ...AREA_ROLES[area]) && (context.features ?? []).includes(area);
   if (area !== "metrics") return hasRole(context, ...AREA_ROLES[area]);
   const features = context.features ?? [];

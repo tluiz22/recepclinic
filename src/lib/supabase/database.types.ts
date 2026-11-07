@@ -685,14 +685,14 @@ isOneToOne: false
                   ]
                 },"clinic_members": {
                   Row: {
-                    "agenda_scope": Database["public"]['Enums']["agenda_scope"],"clinic_id": string,"created_at": string,"display_name": string | null,"roles": (Database["public"]['Enums']["clinic_role"])[],"updated_at": string,"user_id": string
+                    "agenda_scope": Database["public"]['Enums']["agenda_scope"],"can_manage_insurance": boolean,"clinic_id": string,"created_at": string,"display_name": string | null,"roles": (Database["public"]['Enums']["clinic_role"])[],"updated_at": string,"user_id": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "agenda_scope": Database["public"]['Enums']["agenda_scope"],"clinic_id": string,"created_at"?: string,"display_name"?: string | null,"roles": (Database["public"]['Enums']["clinic_role"])[],"updated_at"?: string,"user_id": string
+                    "agenda_scope": Database["public"]['Enums']["agenda_scope"],"can_manage_insurance"?: boolean,"clinic_id": string,"created_at"?: string,"display_name"?: string | null,"roles": (Database["public"]['Enums']["clinic_role"])[],"updated_at"?: string,"user_id": string
                   }
                   Update: {
-                    "agenda_scope"?: Database["public"]['Enums']["agenda_scope"],"clinic_id"?: string,"created_at"?: string,"display_name"?: string | null,"roles"?: (Database["public"]['Enums']["clinic_role"])[],"updated_at"?: string,"user_id"?: string
+                    "agenda_scope"?: Database["public"]['Enums']["agenda_scope"],"can_manage_insurance"?: boolean,"clinic_id"?: string,"created_at"?: string,"display_name"?: string | null,"roles"?: (Database["public"]['Enums']["clinic_role"])[],"updated_at"?: string,"user_id"?: string
                   }
                   Relationships: [
                     {
@@ -1009,6 +1009,26 @@ isOneToOne: false
       referencedColumns: ["clinic_id","id"]
     },{
       foreignKeyName: "handoff_events_clinic_id_fkey"
+      columns: ["clinic_id"]
+isOneToOne: false
+      referencedRelation: "clinics"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"insurance_change_log": {
+                  Row: {
+                    "action": string,"actor_user_id": string | null,"clinic_id": string,"created_at": string,"id": number,"insurance_plan_id": string | null,"professional_id": string | null
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "action": string,"actor_user_id"?: string | null,"clinic_id": string,"created_at"?: string,"id"?: never,"insurance_plan_id"?: string | null,"professional_id"?: string | null
+                  }
+                  Update: {
+                    "action"?: string,"actor_user_id"?: string | null,"clinic_id"?: string,"created_at"?: string,"id"?: never,"insurance_plan_id"?: string | null,"professional_id"?: string | null
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "insurance_change_log_clinic_id_fkey"
       columns: ["clinic_id"]
 isOneToOne: false
       referencedRelation: "clinics"
@@ -1607,36 +1627,36 @@ isOneToOne: false
                   Relationships: [
                     
                   ]
-                },"professional_insurance_exclusions": {
+                },"professional_insurance_plans": {
                   Row: {
-                    "clinic_id": string,"insurance_plan_id": string,"professional_id": string
+                    "clinic_id": string,"created_at": string,"insurance_plan_id": string,"professional_id": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "clinic_id": string,"insurance_plan_id": string,"professional_id": string
+                    "clinic_id": string,"created_at"?: string,"insurance_plan_id": string,"professional_id": string
                   }
                   Update: {
-                    "clinic_id"?: string,"insurance_plan_id"?: string,"professional_id"?: string
+                    "clinic_id"?: string,"created_at"?: string,"insurance_plan_id"?: string,"professional_id"?: string
                   }
                   Relationships: [
                     {
-      foreignKeyName: "professional_insurance_exclusi_clinic_id_insurance_plan_id_fkey"
+      foreignKeyName: "professional_insurance_plans_clinic_id_fkey"
+      columns: ["clinic_id"]
+isOneToOne: false
+      referencedRelation: "clinics"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "professional_insurance_plans_clinic_id_insurance_plan_id_fkey"
       columns: ["clinic_id","insurance_plan_id"]
 isOneToOne: false
       referencedRelation: "insurance_plans"
       referencedColumns: ["clinic_id","id"]
     },{
-      foreignKeyName: "professional_insurance_exclusion_clinic_id_professional_id_fkey"
+      foreignKeyName: "professional_insurance_plans_clinic_id_professional_id_fkey"
       columns: ["clinic_id","professional_id"]
 isOneToOne: false
       referencedRelation: "professionals"
       referencedColumns: ["clinic_id","id"]
-    },{
-      foreignKeyName: "professional_insurance_exclusions_clinic_id_fkey"
-      columns: ["clinic_id"]
-isOneToOne: false
-      referencedRelation: "clinics"
-      referencedColumns: ["id"]
     }
                   ]
                 },"professional_specialties": {

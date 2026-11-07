@@ -61,7 +61,7 @@ function clinicA(): KbClinicData {
       professional("p-ana", "Dra. Ana Karina", { specialty: "Pneumologia pediátrica", rqe: "678" }),
       professional("p-joao", "Dr. João Lima", { specialty: "Pediatria" }),
     ],
-    insurance: { enabled: true, plans: [{ id: "u", name: "Unimed", alternativeNames: ["Unimed Fortaleza"] }, { id: "b", name: "Bradesco Saúde", alternativeNames: [] }], exclusions: [{ professionalId: "p-joao", planId: "u" }] },
+    insurance: { enabled: true, plans: [{ id: "u", name: "Unimed", alternativeNames: ["Unimed Fortaleza"] }, { id: "b", name: "Bradesco Saúde", alternativeNames: [] }], links: [{ professionalId: "p-ana", planId: "u" }, { professionalId: "p-ana", planId: "b" }, { professionalId: "p-joao", planId: "b" }] },
     receptionHours: [null, { open: "08:00", close: "18:00" }, { open: "08:00", close: "18:00" }, { open: "08:00", close: "18:00" }, { open: "08:00", close: "18:00" }, { open: "08:00", close: "17:30" }, { open: "08:00", close: "12:00" }],
     holidayToday: null,
     website: "https://clinica-a.com.br",
@@ -79,7 +79,7 @@ function clinicB(): KbClinicData {
     paymentInfo: null,
     catalog: { services: [service("s-b", "Consulta clínica", "consultation", { agendas: [], locationPrices: { clinic: 15000 }, priceCents: 15000 })], locations: [] },
     professionals: [],
-    insurance: { enabled: false, plans: [], exclusions: [] },
+    insurance: { enabled: false, plans: [], links: [] },
     receptionHours: null,
     website: null,
     reminder: null,
@@ -144,8 +144,15 @@ describe("respostas com os dados da clínica", () => {
     expect(answer("quanto custa pelo convênio?")).toBeNull();
   });
 
-  it("convênios: aceito, não encontrado, exceção do profissional, lista e texto livre", () => {
-    expect(textOf(answer("vocês aceitam unimed?"))).toBe("Sim, atendemos *Unimed*.");
+  it("convênios: aceito, não encontrado, quem não atende, lista e texto livre (MC: ligação positiva)", () => {
+    // Só a Dra. Ana atende Unimed: diz com quem; Bradesco os dois atendem.
+    expect(textOf(answer("vocês aceitam unimed?"))).toBe("Sim, atendemos *Unimed* com *Dra. Ana Karina*.");
+    expect(textOf(answer("vocês aceitam bradesco saúde?"))).toBe("Sim, atendemos *Bradesco Saúde*.");
+    // Plano cadastrado que ninguém atende fica fora da lista e é dito assim.
+    const nobody = { ...clinicA(), insurance: { ...clinicA().insurance, links: clinicA().insurance.links.filter((l) => l.planId !== "u") } };
+    expect(textOf(answer("vocês aceitam unimed?", nobody))).toBe("No momento, nenhum profissional atende *Unimed* por aqui. Convênios atendidos: Bradesco Saúde.");
+    // Ninguém ligado a convênio nenhum: só particular (o texto livre, se houver).
+    expect(answer("quais convênios vocês aceitam?", { ...clinicA(), insuranceInfo: null, insurance: { ...clinicA().insurance, links: [] } })).toBeNull();
     expect(textOf(answer("aceitam amil?"))).toBe("Não encontrei *Amil* entre os convênios que atendemos: Unimed e Bradesco Saúde.");
     expect(textOf(answer("o dr joão atende unimed?"))).toBe("*Dr. João Lima* não atende *Unimed*. Atende *Unimed* por aqui: *Dra. Ana Karina*.");
     expect(textOf(answer("quais convênios vocês aceitam?"))).toBe("Atendemos os convênios: Unimed e Bradesco Saúde.");

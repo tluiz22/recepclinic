@@ -107,12 +107,25 @@ describe("papéis e áreas do painel (D6)", () => {
   const support = { roles: [] as ClinicRole[], isPlatformStaff: true };
 
   it("Configurações: só Administrador (e Suporte)", () => {
+    expect(areaOfPath("/admin/configuracoes/convenios")).toBe("insurance");
+    expect(areaOfPath("/api/admin/configuracoes/convenios/novo")).toBe("insurance");
     expect(areaOfPath("/admin/configuracoes")).toBe("settings");
     expect(areaOfPath("/api/admin/configuracoes/servicos/1")).toBe("settings");
     expect(canAccessArea(as("admin"), "settings")).toBe(true);
     expect(canAccessArea(as("professional"), "settings")).toBe(false);
     expect(canAccessArea(as("reception"), "settings")).toBe(false);
     expect(canAccessArea(support, "settings")).toBe(true);
+  });
+
+  it("Convênios (MC, M4): Administrador e quem tem a permissão; o resto de Configurações não abre", () => {
+    const on: FeatureKey[] = ["insurance"];
+    const allowed = { ...as("reception"), features: on, canManageInsurance: true };
+    expect(canAccessPath(allowed, "/admin/configuracoes/convenios", new URLSearchParams())).toBe(true);
+    expect(canAccessPath(allowed, "/api/admin/configuracoes/convenios/novo", new URLSearchParams())).toBe(true);
+    expect(canAccessPath(allowed, "/admin/configuracoes/profissionais", new URLSearchParams())).toBe(false);
+    expect(canAccessPath({ ...as("reception"), features: on }, "/admin/configuracoes/convenios", new URLSearchParams())).toBe(false);
+    expect(canAccessPath({ ...as("admin"), features: on }, "/admin/configuracoes/convenios", new URLSearchParams())).toBe(true);
+    expect(canAccessPath({ ...allowed, features: [] }, "/admin/configuracoes/convenios", new URLSearchParams())).toBe(false);
   });
 
   it("Métricas e relatórios (D11): Administrador com aba liberada; Profissional só com as métricas pessoais", () => {

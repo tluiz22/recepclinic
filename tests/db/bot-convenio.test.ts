@@ -110,10 +110,17 @@ async function handoff(phone: string) {
   return data!.human_handoff;
 }
 
+/** Plano novo, atendido por todos os profissionais da clínica (MC: a ligação é positiva). */
 async function addPlan(name: string, extra: { is_active?: boolean; alternative_names?: string[] } = {}) {
   const { data, error } = await adminClient().from("insurance_plans").insert({ clinic_id: f.clinicId, name, ...extra }).select("id").single();
   if (error) throw error;
   plans[name] = data.id;
+  const { data: pros } = await adminClient().from("professionals").select("id").eq("clinic_id", f.clinicId);
+  const links = (pros ?? []).map((p) => ({ clinic_id: f.clinicId, professional_id: p.id, insurance_plan_id: data.id }));
+  if (links.length && extra.is_active !== false) {
+    const { error: linkError } = await adminClient().from("professional_insurance_plans").insert(links);
+    if (linkError) throw linkError;
+  }
   return data.id as string;
 }
 
@@ -174,7 +181,7 @@ describe("clínica com convênios", () => {
     await addPlan("Bradesco Saúde", { is_active: false });
     // O Dr. Segundo não atende Amil.
     const { data: agenda } = await adminClient().from("agendas").select("professional_id").eq("id", f.ids.agendaDra2).single();
-    await adminClient().from("professional_insurance_exclusions").insert({ clinic_id: f.clinicId, professional_id: agenda!.professional_id, insurance_plan_id: plans.Amil });
+    await adminClient().from("professional_insurance_plans").delete().eq("professional_id", agenda!.professional_id).eq("insurance_plan_id", plans.Amil);
   });
 
   it("pergunta particular ou convênio; particular: valor e formas de pagamento", async () => {
@@ -194,7 +201,7 @@ describe("clínica com convênios", () => {
     await upToProfessional(phone, "Dr. Segundo");
     let reply = await say(phone, "convênio");
     expect(reply.at(-1)!.body).toBe("Qual é o seu convênio?");
-    expect(titles(reply)).toEqual(["1. Amil", "2. Unimed", "3. Outro convênio", "4. Voltar ao menu"]);
+    expect(titles(reply)).toEqual(["1. Unimed", "2. Outro convênio", "3. Voltar ao menu"]);
     reply = await say(phone, { id: optionId(reply, "Unimed") });
     expect(bodies(reply)).toEqual(["Atendemos pelo convênio *Unimed*.", "É para você ou para outra pessoa?"]);
     await say(phone, { id: "for_other" });
@@ -219,17 +226,22 @@ describe("clínica com convênios", () => {
     expect(patient!.insurance_plan_id).toBe(plans.Unimed);
   });
 
-  it("profissional que não atende o plano: avisa, oferece particular e, com Sim, mostra o valor", async () => {
+  it("profissional que não atende o plano: o plano nem aparece na lista dele (MC)", async () => {
     await upToProfessional(phone, "Dr. Segundo");
-    let reply = await say(phone, { id: "coverage_insurance" });
-    reply = await say(phone, { id: optionId(reply, "Amil") });
-    expect(reply.at(-1)).toMatchObject({
-      kind: "buttons",
-      body: "Infelizmente a clínica não atende pelo convênio *Amil* neste atendimento.\n\nQuer seguir com o atendimento particular?",
-    });
-    reply = await say(phone, "sim");
-    expect(reply[0].body).toMatch(/^O valor da consulta é R\$ 300,00\./);
-    expect(reply.at(-1)!.body).toBe("É para você ou para outra pessoa?");
+    const reply = await say(phone, { id: "coverage_insurance" });
+    expect(titles(reply)).toEqual(["1. Unimed", "2. Outro convênio", "3. Voltar ao menu"]);
+  });
+
+  it("profissional só particular: o bot não pergunta convênio e mostra o valor (MC)", async () => {
+    const { data: agenda } = await adminClient().from("agendas").select("professional_id").eq("id", f.ids.agendaDra2).single();
+    const { data: saved } = await adminClient().from("professional_insurance_plans").delete().eq("professional_id", agenda!.professional_id).select();
+    try {
+      await reset(phone);
+      const reply = await upToProfessional(phone, "Dr. Segundo");
+      expect(reply[0].body).toMatch(/^O valor da consulta é R\$ 300,00\./);
+    } finally {
+      await adminClient().from("professional_insurance_plans").insert(saved!);
+    }
   });
 
   it("\"Primeiro horário\" com plano que um dos profissionais não atende: aceito, e a página só oferece quem atende", async () => {

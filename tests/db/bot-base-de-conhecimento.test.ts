@@ -5,7 +5,7 @@ import type { ClinicSender, ListSection, ReplyButton } from "../../src/lib/data/
 import { processWebhook, type WebhookDeps } from "../../src/lib/data/whatsapp/webhook";
 import { listFunnelSessions } from "../../src/lib/data/botFunnel";
 import { buildResolutionReport } from "../../src/lib/data/botResolution";
-import { asDb, setupAgendaClinic, type AgendaFixture } from "./agendaFixture";
+import { asDb, setupAgendaClinic, type AgendaFixture, linkPlanToAllProfessionals } from "./agendaFixture";
 import { adminClient, createUser, deleteUsers } from "./helpers";
 
 // Base de Conhecimento no bot (BC, Etapa 4): conversas inteiras pelo webhook,
@@ -99,7 +99,8 @@ beforeAll(async () => {
   f = await setupAgendaClinic("Clínica Base", "+55849913370");
   await adminClient().from("whatsapp_connections").insert({ clinic_id: f.clinicId, phone_number_id: NUMBER, waba_id: "bc-waba", status: "connected" });
   await adminClient().from("clinic_settings").update({ bot_payment_info: "PIX ou cartão." }).eq("clinic_id", f.clinicId);
-  await adminClient().from("insurance_plans").insert({ clinic_id: f.clinicId, name: "Unimed" });
+  const { data: unimed } = await adminClient().from("insurance_plans").insert({ clinic_id: f.clinicId, name: "Unimed" }).select("id").single();
+  await linkPlanToAllProfessionals(f.clinicId, unimed!.id);
   // Catálogo inicial ativo e publicado só para este teste.
   const { data: drafts } = await adminClient().from("kb_entries").select("code").eq("status", "draft").not("code", "like", "Z%");
   activated = drafts!.map((d) => d.code);

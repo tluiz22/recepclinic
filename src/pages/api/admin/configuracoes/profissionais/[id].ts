@@ -8,6 +8,7 @@ import {
   type ProfessionalInput,
 } from "../../../../../lib/data/config/professionals";
 import { DataError } from "../../../../../lib/data/errors";
+import { listInsurancePlans, listProfessionalPlans, setProfessionalPlans } from "../../../../../lib/data/config/insurance";
 import { runFormAction } from "../../../../../lib/data/formAction";
 import { allFilterOn, withAllFilter } from "../../../../../lib/returnPath";
 import { formAll, formOptionalText, formText } from "../../../../../lib/forms";
@@ -31,6 +32,14 @@ export const POST: APIRoute = async (context) => {
   return runFormAction(
     context,
     async () => {
+      if (acao === "convenios") {
+        // Convênios atendidos (MC): os planos ativos marcados; a ligação a planos desativados fica.
+        const [active, current] = await Promise.all([listInsurancePlans(db, clinic.clinicId), listProfessionalPlans(db, clinic.clinicId, id)]);
+        const activeIds = new Set(active.map((p) => p.id));
+        const marked = formAll(form, "plan_id").filter((pid) => activeIds.has(pid));
+        await setProfessionalPlans(db, clinic.clinicId, id, [...marked, ...current.filter((pid) => !activeIds.has(pid))]);
+        return { redirectTo: page(id), message: marked.length ? "Convênios salvos." : "Convênios salvos: só particular." };
+      }
       if (acao === "desativar" || acao === "reativar") {
         await setProfessionalActive(db, clinic.clinicId, id, acao === "reativar");
         return { redirectTo: page(id), message: acao === "reativar" ? "Profissional reativado." : "Profissional desativado." };

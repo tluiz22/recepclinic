@@ -1,13 +1,13 @@
 ---
 // Configurações › Convênios › novo ou editar (F4.4b, D10): nome, outros nomes
 // (para a busca do bot), código ANS e quais profissionais atendem o plano
-// (por padrão, todos; desmarcar vira exceção).
+// (MC, 07/nov/2026: os marcados; plano novo começa sem ninguém).
 import ConfigShell from "../../../../components/admin/config/ConfigShell.astro";
 import { allFilterOn, withAllFilter } from "../../../../lib/returnPath";
 import ActiveToggle from "../../../../components/admin/ActiveToggle.astro";
 import { CARD, CHECK, CHOICE, HINT, INPUT, INPUT_INLINE, LABEL, PRIMARY_BUTTON, SECONDARY_BUTTON } from "../../../../components/admin/config/formStyles";
 import { createUserClient } from "../../../../lib/data/clients";
-import { listInsurancePlans, listPlanExclusions } from "../../../../lib/data/config/insurance";
+import { listInsurancePlans, listPlanProfessionals } from "../../../../lib/data/config/insurance";
 import { listProfessionals } from "../../../../lib/data/config/professionals";
 import HelpTip from "../../../../components/admin/ui/HelpTip.astro";
 import { configuracoes } from "../../../../lib/ajuda/configuracoes";
@@ -16,10 +16,10 @@ const clinic = Astro.locals.clinic!;
 const db = createUserClient(Astro.request, Astro.cookies);
 const { id } = Astro.params;
 const isNew = id === "novo";
-const [plans, professionals, exclusions] = await Promise.all([
+const [plans, professionals, accepting] = await Promise.all([
   isNew ? Promise.resolve([]) : listInsurancePlans(db, clinic.clinicId, { includeInactive: true }),
   listProfessionals(db, clinic.clinicId),
-  isNew ? Promise.resolve([] as string[]) : listPlanExclusions(db, clinic.clinicId, id!),
+  isNew ? Promise.resolve([] as string[]) : listPlanProfessionals(db, clinic.clinicId, id!),
 ]);
 const plan = isNew ? null : (plans.find((p) => p.id === id) ?? null);
 if (!isNew && !plan) return Astro.redirect("/admin/configuracoes/convenios");
@@ -58,14 +58,17 @@ const action = withAllFilter(`/api/admin/configuracoes/convenios/${id}`, all);
             <div class="mt-1 flex flex-col gap-2">
               {professionals.map((p) => (
                 <label class={CHOICE}>
-                  <input type="checkbox" name="accepts" value={p.id} checked={!exclusions.includes(p.id)} class={CHECK} />
-                  {p.displayName}
+                  <input type="checkbox" name="accepts" value={p.id} checked={accepting.includes(p.id)} class={CHECK} />
+                  <span>
+                    {p.displayName}
+                    {p.specialty && <span class="text-sm text-ink-soft"> · {p.specialty}</span>}
+                  </span>
                 </label>
               ))}
             </div>
           )
         }
-        <p class={HINT}>Desmarque quem não atende este plano.</p>
+        <p class={HINT}>Marque quem atende este plano. Quem não está marcado não é oferecido a pacientes deste convênio no WhatsApp nem no link de agendar.</p>
       </fieldset>
       <div class="flex flex-wrap gap-2 border-t border-[#e6ecea] pt-4">
         <button type="submit" class={PRIMARY_BUTTON} data-sending-label="Salvando…">{isNew ? "Cadastrar" : "Salvar"}</button>

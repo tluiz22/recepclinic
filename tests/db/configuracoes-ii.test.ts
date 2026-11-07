@@ -5,7 +5,7 @@ import { createAgenda, getMemberAgendaAccess, type Agenda } from "../../src/lib/
 import { addAvailabilityWindows, listAvailability, setAvailabilityWindowActive, updateAvailabilityWindow } from "../../src/lib/data/config/availability";
 import { updateClinicSettings } from "../../src/lib/data/config/clinic";
 import { addClinicHoliday } from "../../src/lib/data/config/holidays";
-import { createInsurancePlan, listPlanExclusions, listProfessionalExclusions, setPlanExclusions } from "../../src/lib/data/config/insurance";
+import { createInsurancePlan, listPlanProfessionals, listProfessionalPlans, setPlanProfessionals } from "../../src/lib/data/config/insurance";
 import { createLocation, type Location } from "../../src/lib/data/config/locations";
 import { createProfessional, listProfessionals, type Professional } from "../../src/lib/data/config/professionals";
 import { createService, setServiceAgendas, setServiceLocations } from "../../src/lib/data/config/services";
@@ -102,12 +102,13 @@ it("feriado repetido na mesma data: aviso próprio", async () => {
   expect(error).toMatchObject({ code: "duplicate", fields: { date: "Já existe um feriado nessa data." } });
 });
 
-it("convênio: quem não atende, visto pelo plano, é a mesma exceção do profissional", async () => {
+it("convênio: quem atende, visto pelo plano, é a mesma ligação do profissional (MC)", async () => {
   const plan = await createInsurancePlan(db(admin), clinicId, { name: "Unimed", alternativeNames: [], ansCode: null });
-  expect(await setPlanExclusions(db(admin), clinicId, plan.id, [doctorB.id])).toEqual([doctorB.id]);
-  expect(await listProfessionalExclusions(db(admin), clinicId, doctorB.id)).toEqual([plan.id]);
-  expect(await setPlanExclusions(db(admin), clinicId, plan.id, [])).toEqual([]);
-  expect(await listPlanExclusions(db(admin), clinicId, plan.id)).toEqual([]);
+  expect(await listPlanProfessionals(db(admin), clinicId, plan.id)).toEqual([]);
+  expect(await setPlanProfessionals(db(admin), clinicId, plan.id, [doctorB.id])).toEqual([doctorB.id]);
+  expect(await listProfessionalPlans(db(admin), clinicId, doctorB.id)).toEqual([plan.id]);
+  expect(await setPlanProfessionals(db(admin), clinicId, plan.id, [])).toEqual([]);
+  expect(await listProfessionalPlans(db(admin), clinicId, doctorB.id)).toEqual([]);
 });
 
 it("hora do lembrete: só das 6h às 20h (cliente, 09/out), também no banco", async () => {

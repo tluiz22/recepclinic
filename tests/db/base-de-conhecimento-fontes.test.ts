@@ -8,7 +8,7 @@ import { loadKbClinicData } from "../../src/lib/data/whatsapp/bot/knowledge/clin
 import { compileKnowledge, matchQuestion, type KbContent } from "../../src/lib/knowledge/match";
 import catalog from "../../src/lib/knowledge/__fixtures__/catalogo-inicial.json";
 import type { ClinicSender } from "../../src/lib/data/whatsapp/send";
-import { asDb, setupAgendaClinic, type AgendaFixture } from "./agendaFixture";
+import { asDb, setupAgendaClinic, type AgendaFixture, linkPlanToAllProfessionals } from "./agendaFixture";
 import { adminClient } from "./helpers";
 
 // BC 3.2 — fontes da base: os dados saem só da clínica da credencial do bot.
@@ -49,8 +49,10 @@ async function ask(clinicId: string, text: string) {
 beforeAll(async () => {
   a = await setupAgendaClinic("Clínica A das fontes", "859771100");
   b = await setupAgendaClinic("Clínica B das fontes", "859771200");
-  await createInsurancePlan(asDb(a.admin), a.clinicId, { name: "Unimed", alternativeNames: [], ansCode: null });
-  await createInsurancePlan(asDb(b.admin), b.clinicId, { name: "Amil", alternativeNames: [], ansCode: null });
+  const unimed = await createInsurancePlan(asDb(a.admin), a.clinicId, { name: "Unimed", alternativeNames: [], ansCode: null });
+  const amil = await createInsurancePlan(asDb(b.admin), b.clinicId, { name: "Amil", alternativeNames: [], ansCode: null });
+  await linkPlanToAllProfessionals(a.clinicId, unimed.id);
+  await linkPlanToAllProfessionals(b.clinicId, amil.id);
   await adminClient().from("clinic_settings").update({ bot_payment_info: "Pix da clínica A", website_url: "https://a.exemplo.test" }).eq("clinic_id", a.clinicId);
   await adminClient().from("clinic_settings").update({ bot_payment_info: "Dinheiro da clínica B", website_url: null }).eq("clinic_id", b.clinicId);
   await adminClient().from("services").update({ price_cents: 99900 }).eq("id", b.ids.consulta);

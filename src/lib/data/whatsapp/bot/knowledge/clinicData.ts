@@ -44,16 +44,16 @@ export async function kbSourceEnv(db: DbClient, clinicId: string, now: Date): Pr
 
 export async function loadKbClinicData(b: KbSourceEnv): Promise<KbClinicData> {
   const insuranceOn = b.features.includes("insurance");
-  const [catalog, professionals, plans, exclusions, reception, holidays, settings] = await Promise.all([
+  const [catalog, professionals, plans, links, reception, holidays, settings] = await Promise.all([
     b.catalog(),
     listProfessionals(b.db, b.clinicId),
     insuranceOn ? listInsurancePlans(b.db, b.clinicId) : Promise.resolve([]),
     insuranceOn
       ? b.db
-          .from("professional_insurance_exclusions")
+          .from("professional_insurance_plans")
           .select("professional_id, insurance_plan_id")
           .eq("clinic_id", b.clinicId)
-          .then((r) => unwrap(r, "Planos não atendidos"))
+          .then((r) => unwrap(r, "Convênios atendidos"))
       : Promise.resolve([]),
     getReceptionHours(b.db, b.clinicId),
     listClinicHolidays(b.db, b.clinicId, b.clinic.today),
@@ -81,7 +81,7 @@ export async function loadKbClinicData(b: KbSourceEnv): Promise<KbClinicData> {
     insurance: {
       enabled: insuranceOn,
       plans: plans.filter((p) => p.isActive).map((p) => ({ id: p.id, name: p.name, alternativeNames: p.alternativeNames })),
-      exclusions: exclusions.map((x) => ({ professionalId: x.professional_id, planId: x.insurance_plan_id })),
+      links: links.map((x) => ({ professionalId: x.professional_id, planId: x.insurance_plan_id })),
     },
     receptionHours: reception.hours.some(Boolean) ? reception.hours : null,
     holidayToday,

@@ -261,9 +261,10 @@ describe("cadastros simples", () => {
   });
 
   it("profissional atende plano ativo fora das exceções", () => {
-    expect(professionalAcceptsPlan({ id: "a", isActive: true }, [])).toBe(true);
-    expect(professionalAcceptsPlan({ id: "a", isActive: true }, ["a"])).toBe(false);
-    expect(professionalAcceptsPlan({ id: "a", isActive: false }, [])).toBe(false);
+    // MC (07/nov/2026): só os planos ligados ao profissional; sem nenhum, só particular.
+    expect(professionalAcceptsPlan({ id: "a", isActive: true }, [])).toBe(false);
+    expect(professionalAcceptsPlan({ id: "a", isActive: true }, ["a"])).toBe(true);
+    expect(professionalAcceptsPlan({ id: "a", isActive: false }, ["a"])).toBe(false);
   });
 });
 

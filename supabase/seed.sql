@@ -109,6 +109,8 @@ begin
     (c_a, u_a_rec, '{reception}'),
     (c_a, u_a_rec2, '{reception}');
   update public.clinic_members set agenda_scope = 'restricted' where clinic_id = c_a and user_id = u_a_rec2;
+  -- A recepção (todas as agendas) mantém os convênios (MC, 07/nov/2026).
+  update public.clinic_members set can_manage_insurance = true where clinic_id = c_a and user_id = u_a_rec;
 
   insert into public.professionals (clinic_id, user_id, display_name, profession, specialty, council, council_number, council_state)
     values (c_a, u_a_ped, 'Dra. Helena Costa', 'Médica', 'Pediatria', 'CRM', '12345', 'RN') returning id into p_ped;
@@ -186,9 +188,11 @@ begin
     values (c_a, 'Unimed', '{"Unimed Natal","Unimed RN"}', '339679') returning id into ip_unimed;
   insert into public.insurance_plans (clinic_id, name) values (c_a, 'Bradesco Saúde') returning id into ip_bradesco;
   insert into public.insurance_plans (clinic_id, name) values (c_a, 'Hapvida') returning id into ip_hapvida;
-  -- O fisioterapeuta não atende Hapvida.
-  insert into public.professional_insurance_exclusions (clinic_id, professional_id, insurance_plan_id)
-    values (c_a, p_fis, ip_hapvida);
+  -- Convênios que cada profissional atende (MC, 07/nov/2026): o fisioterapeuta não atende Hapvida.
+  insert into public.professional_insurance_plans (clinic_id, professional_id, insurance_plan_id) values
+    (c_a, p_ped, ip_unimed), (c_a, p_ped, ip_bradesco), (c_a, p_ped, ip_hapvida),
+    (c_a, p_psi, ip_unimed), (c_a, p_psi, ip_bradesco), (c_a, p_psi, ip_hapvida),
+    (c_a, p_fis, ip_unimed), (c_a, p_fis, ip_bradesco);
 
   insert into public.contacts (clinic_id, full_name, phone, default_home_address)
     values (c_a, 'Maria Souza', '+5584988880001', 'Rua A, 10 – Nova Betânia') returning id into ct_maria;

@@ -28,7 +28,7 @@ export async function loadClinicContext(
   preferredClinicId: string | null | undefined,
 ): Promise<ClinicContextResult> {
   const [memberRows, staffRow] = await Promise.all([
-    db.from("clinic_members").select("clinic_id, roles, created_at").eq("user_id", userId).then((r) => check("membros", r)),
+    db.from("clinic_members").select("clinic_id, roles, created_at, can_manage_insurance").eq("user_id", userId).then((r) => check("membros", r)),
     db.from("platform_staff").select("user_id").eq("user_id", userId).maybeSingle().then((r) => check("suporte", r)),
   ]);
 
@@ -36,6 +36,7 @@ export async function loadClinicContext(
     clinicId: row.clinic_id,
     roles: row.roles,
     joinedAt: row.created_at,
+    canManageInsurance: row.can_manage_insurance,
   }));
   const isPlatformStaff = staffRow !== null;
 
@@ -80,6 +81,7 @@ export async function loadClinicContext(
       agendaIds: (agendas ?? []).map((agenda) => agenda.id),
       features: (features ?? []).map((row) => row.feature_key).filter(isFeatureKey),
       canSwitchClinic: isPlatformStaff || memberships.filter((membership) => membership.roles.length > 0).length > 1,
+      canManageInsurance: memberships.find((membership) => membership.clinicId === clinicId)?.canManageInsurance ?? false,
     },
   };
 }

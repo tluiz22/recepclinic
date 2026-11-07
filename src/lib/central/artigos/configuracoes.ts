@@ -180,10 +180,10 @@ export const configuracoesArtigos = [
     fields: [
       { name: "Outros nomes", text: "Um por linha: como o paciente pode escrever o plano no WhatsApp (ajuda o bot a reconhecer)." },
       { name: "Código ANS (opcional)", text: "Número de registro do plano na ANS. Por enquanto só aparece aqui." },
-      { name: "Profissionais que atendem este plano", text: "Marque quem atende. Plano não atendido pelo profissional escolhido: o bot avisa e pergunta se o paciente quer particular." },
+      { name: "Profissionais que atendem este plano", text: "Marque quem atende. Plano novo começa sem ninguém; profissional sem nenhum plano atende só particular. No WhatsApp, o paciente só vê os planos que o profissional escolhido atende. Também dá para marcar no cadastro do profissional, em Convênios atendidos." },
       { name: "Pedir carteirinha e validade", text: "Opção da tela: pede os dois dados na marcação por plano, na página de data e horário e no painel." },
     ],
-    notes: ["Só planos ativos aparecem no bot."],
+    notes: ["Só planos ativos aparecem no bot.", "Além do Administrador, pode cadastrar e associar convênios quem tiver a permissão marcada em Configurações › Equipe."],
     contextual: ["/admin/configuracoes/convenios"],
   }),
   article({

@@ -12,6 +12,7 @@ import { CARD, CHECK, CHOICE, HINT, LEGEND, SECTION_TITLE, INPUT, LABEL, PRIMARY
 import { BRAZIL_STATES, COUNCIL_SUGGESTIONS } from "../../../../lib/brazilStates";
 import { createUserClient } from "../../../../lib/data/clients";
 import { listProfessionals, listSpecialtyOptions, professionalRegistry } from "../../../../lib/data/config/professionals";
+import { listInsurancePlans, listProfessionalPlans } from "../../../../lib/data/config/insurance";
 import { formatPhoneBR } from "../../../../lib/phone";
 import HelpTip from "../../../../components/admin/ui/HelpTip.astro";
 import { configuracoes } from "../../../../lib/ajuda/configuracoes";
@@ -37,6 +38,14 @@ const professionalIssues = setup?.issues.professionals.get(id!) ?? [];
 const chosen = professional?.specialties ?? [];
 const chosenIds = new Set(chosen.map((s) => s.id));
 const specialtyOptions = [...chosen, ...(await listSpecialtyOptions(createUserClient(Astro.request, Astro.cookies))).filter((s) => !chosenIds.has(s.id))];
+// Convênios atendidos (MC, 07/nov/2026): só com o item "Convênios"; nenhum = só particular.
+const insuranceOn = clinic.features.includes("insurance") && !isNew;
+const [plans, acceptedPlans] = insuranceOn
+  ? await Promise.all([
+      listInsurancePlans(createUserClient(Astro.request, Astro.cookies), clinic.clinicId),
+      listProfessionalPlans(createUserClient(Astro.request, Astro.cookies), clinic.clinicId, id!),
+    ])
+  : [[], [] as string[]];
 const searchKey = (text: string) => text.normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase();
 ---
 
@@ -168,6 +177,44 @@ const searchKey = (text: string) => text.normalize("NFD").replace(/\p{Diacritic}
         <a href={list} class={SECONDARY_BUTTON}>Cancelar</a>
       </div>
     </form>
+    {
+      insuranceOn && (
+        <form method="POST" action={action} class={`${CARD} flex flex-col gap-4 p-4 sm:p-5`} aria-labelledby="convenios-titulo">
+          <input type="hidden" name="acao" value="convenios" />
+          <div>
+            <h2 id="convenios-titulo" class={SECTION_TITLE}>Convênios atendidos</h2>
+            <p class={HINT}>
+              Nenhum marcado: só particular. No WhatsApp e no link de agendar, o paciente de um convênio só vê quem o atende.
+            </p>
+          </div>
+          {plans.length === 0 ? (
+            <p class={HINT}>
+              Nenhum convênio cadastrado. Cadastre em <a href="/admin/configuracoes/convenios" class="text-brand hover:underline">Convênios</a>.
+            </p>
+          ) : (
+            <fieldset class="min-w-0">
+              <legend class="sr-only">Convênios atendidos</legend>
+              <div class="grid gap-x-6 sm:grid-cols-2">
+                {plans.map((plan) => (
+                  <label class={`${CHOICE} py-1`}>
+                    <input type="checkbox" name="plan_id" value={plan.id} checked={acceptedPlans.includes(plan.id)} class={CHECK} />
+                    {plan.name}
+                  </label>
+                ))}
+              </div>
+            </fieldset>
+          )}
+          {plans.length > 0 && (
+            <div class="flex flex-wrap items-center gap-3 border-t border-[#e6ecea] pt-4">
+              <button type="submit" class={SECONDARY_BUTTON} data-sending-label="Salvando…">Salvar convênios</button>
+              <span class="text-sm text-ink-soft" role="status">
+                {acceptedPlans.filter((pid) => plans.some((p) => p.id === pid)).length === 0 ? "Hoje: só particular." : ""}
+              </span>
+            </div>
+          )}
+        </form>
+      )
+    }
     {!isNew && <ActiveToggle action={action} isActive={professional!.isActive} what="o profissional" />}
   </div>
 </ConfigShell>

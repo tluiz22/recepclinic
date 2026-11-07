@@ -321,9 +321,27 @@ async function handleAddress(b: Bot, selection: Selection): Promise<void> {
 /** Planos com lista (mais o "Outro convênio" e o "Voltar ao menu"); acima disso, o paciente escreve. */
 const MAX_PLANS_IN_LIST = t.MAX_LIST_ROWS - 2;
 
-async function activePlans(b: Bot): Promise<Plan[]> {
+/**
+ * Planos ativos que o caminho escolhido atende (MC, 07/nov/2026): os ligados a
+ * algum profissional das agendas do caminho; agenda sem profissional (exames)
+ * atende todos. Sem nenhum (profissional só particular), o bot não pergunta.
+ */
+async function activePlans(b: Bot, ctx: BookingContext): Promise<Plan[]> {
   if (!b.features.includes("insurance")) return [];
-  return unwrap(await b.db.from("insurance_plans").select("id, name").eq("clinic_id", b.clinicId).eq("is_active", true).order("name"), "Convênios");
+  const plans: Plan[] = unwrap(await b.db.from("insurance_plans").select("id, name").eq("clinic_id", b.clinicId).eq("is_active", true).order("name"), "Convênios");
+  const service = await serviceOf(b, ctx);
+  if (!plans.length || !service) return plans;
+  const ids = new Set(pathAgendas(service, ctx));
+  const agendas = service.agendas.filter((a) => ids.has(a.id));
+  if (agendas.some((a) => !a.professionalId)) return plans;
+  const professionalIds = agendas.map((a) => a.professionalId!);
+  if (!professionalIds.length) return [];
+  const links = unwrap(
+    await b.db.from("professional_insurance_plans").select("insurance_plan_id").eq("clinic_id", b.clinicId).in("professional_id", professionalIds),
+    "Convênios atendidos",
+  );
+  const accepted = new Set(links.map((l) => l.insurance_plan_id));
+  return plans.filter((p) => accepted.has(p.id));
 }
 
 /** Agendas do caminho escolhido: a do profissional ou, no "Primeiro horário", as com horário no local escolhido. */
@@ -335,7 +353,7 @@ function pathAgendas(service: BotService, ctx: BookingContext): string[] {
 }
 
 async function enterCoverage(b: Bot, ctx: BookingContext): Promise<void> {
-  if (!(await activePlans(b)).length) return choosePrivate(b, ctx);
+  if (!(await activePlans(b, ctx)).length) return choosePrivate(b, ctx);
   await sendButtons(b, "bot_book_coverage", t.COVERAGE_QUESTION, t.COVERAGE_BUTTONS);
   await go(b, "BOOK_COVERAGE", { ...ctx, awaiting: "coverage" });
 }
@@ -359,7 +377,7 @@ async function askPlanChoice(b: Bot, ctx: BookingContext, plans: Plan[]): Promis
 }
 
 async function askPlan(b: Bot, ctx: BookingContext): Promise<void> {
-  const plans = await activePlans(b);
+  const plans = await activePlans(b, ctx);
   if (plans.length <= MAX_PLANS_IN_LIST) return askPlanChoice(b, ctx, plans);
   await say(b, "bot_book_plan_ask", t.PLAN_TEXT_QUESTION);
   await go(b, "BOOK_COVERAGE", { ...ctx, awaiting: "plan_name" });

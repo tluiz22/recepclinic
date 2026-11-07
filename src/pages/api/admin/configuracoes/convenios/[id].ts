@@ -2,9 +2,9 @@ import type { APIRoute } from "astro";
 import { createUserClient } from "../../../../../lib/data/clients";
 import {
   createInsurancePlan,
-  listPlanExclusions,
+  listPlanProfessionals,
   setInsurancePlanActive,
-  setPlanExclusions,
+  setPlanProfessionals,
   updateInsurancePlan,
 } from "../../../../../lib/data/config/insurance";
 import { listProfessionals } from "../../../../../lib/data/config/professionals";
@@ -12,9 +12,10 @@ import { runFormAction } from "../../../../../lib/data/formAction";
 import { allFilterOn, withAllFilter } from "../../../../../lib/returnPath";
 import { formAll, formOptionalText, formText } from "../../../../../lib/forms";
 
-// Plano de saúde (F4.4b): criar (`novo`), salvar, desativar e reativar. Os
-// profissionais ativos desmarcados viram exceção; as exceções de
-// profissionais desativados ficam como estão.
+// Plano de saúde (F4.4b): criar (`novo`), salvar, desativar e reativar, e
+// quais profissionais atendem (MC, 07/nov/2026: os marcados; a ligação de
+// profissionais desativados fica como está). O Administrador e quem ele
+// autoriza em Equipe (o banco confere).
 export const POST: APIRoute = async (context) => {
   const { request, cookies, locals, params } = context;
   const id = params.id!;
@@ -42,10 +43,10 @@ export const POST: APIRoute = async (context) => {
       const planId = id === "novo" ? (createdId = (await createInsurancePlan(db, clinicId, input)).id) : (await updateInsurancePlan(db, clinicId, id, input)).id;
 
       const accepts = formAll(form, "accepts");
-      const [active, current] = await Promise.all([listProfessionals(db, clinicId), listPlanExclusions(db, clinicId, planId)]);
+      const [active, current] = await Promise.all([listProfessionals(db, clinicId), listPlanProfessionals(db, clinicId, planId)]);
       const activeIds = new Set(active.map((p) => p.id));
-      const excluded = [...active.filter((p) => !accepts.includes(p.id)).map((p) => p.id), ...current.filter((pid) => !activeIds.has(pid))];
-      await setPlanExclusions(db, clinicId, planId, excluded);
+      const linked = [...active.filter((p) => accepts.includes(p.id)).map((p) => p.id), ...current.filter((pid) => !activeIds.has(pid))];
+      await setPlanProfessionals(db, clinicId, planId, linked);
       return { redirectTo: page(planId), message: id === "novo" ? "Plano cadastrado." : "Plano salvo." };
     },
     () => page(createdId ?? id),

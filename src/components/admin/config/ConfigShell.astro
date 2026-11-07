@@ -14,7 +14,7 @@ import AdminLayout from "../../../layouts/AdminLayout.astro";
 import FlashMessage from "../FlashMessage.astro";
 import Icon from "../Icon.astro";
 import { createUserClient } from "../../../lib/data/clients";
-import { inSuspendedView } from "../../../lib/clinicAccess";
+import { canAccessArea, inSuspendedView } from "../../../lib/clinicAccess";
 import { pageFlash } from "../../../lib/flash";
 import { loadSetupStatus, type SetupStatus } from "../../../lib/data/config/setup";
 import { configSections, type SectionId } from "./sections";
@@ -39,8 +39,11 @@ const flash = pageFlash(Astro);
 const clinic = Astro.locals.clinic!;
 const setup = given ?? (await loadSetupStatus(createUserClient(Astro.request, Astro.cookies), clinic.clinicId, clinic.features));
 // Clínica suspensa (F12.3): só a Assinatura no menu, para quem não é o Suporte.
+// Sem acesso a Configurações (só a permissão de convênios, MC): só Convênios no menu.
+const onlyInsurance = !canAccessArea(clinic, "settings");
 const groups = configSections(clinic.features, clinic.isPlatformStaff, setup)
   .map((group) => (inSuspendedView(clinic) ? { ...group, items: group.items.filter((item) => item.id === "assinatura") } : group))
+  .map((group) => (onlyInsurance ? { ...group, items: group.items.filter((item) => item.id === "convenios") } : group))
   .filter((group) => group.items.length > 0);
 const all = groups.flatMap((g) => g.items);
 const active = all.find((s) => s.id === current);

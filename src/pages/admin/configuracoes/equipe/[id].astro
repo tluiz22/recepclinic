@@ -142,6 +142,23 @@ import { configuracoes } from "../../../../lib/ajuda/configuracoes";
         </p>
       </Field>
 
+      {
+        // MC (cliente, 07/nov/2026, M4): o Administrador autoriza quem mantém os convênios.
+        clinic.features.includes("insurance") && (
+          <div data-insurance-permission>
+            <h2 class={`${SECTION_TITLE} border-t border-[#e6ecea] pt-5`}>Permissões</h2>
+            <label class={`${CHOICE} mt-3 items-start`}>
+              <input type="checkbox" name="can_manage_insurance" checked={member?.canManageInsurance ?? false} class={`${CHECK} mt-0.5`} />
+              <span>
+                Cadastrar e associar convênios
+                <span class="mt-0.5 block text-sm text-ink-soft">Abre Configurações › Convênios: cadastrar planos e marcar quais profissionais atendem cada um.</span>
+              </span>
+            </label>
+            <p class={`${HINT} hidden`} data-admin-has-it>O Administrador já pode cadastrar e associar convênios.</p>
+          </div>
+        )
+      }
+
       <div class="flex flex-wrap gap-2 border-t border-[#e6ecea] pt-4">
         <button type="submit" class={PRIMARY_BUTTON} data-sending-label="Salvando…">{isNew ? "Convidar" : "Salvar"}</button>
         <a href={"/admin/configuracoes/equipe"} class={SECONDARY_BUTTON}>Cancelar</a>
@@ -190,6 +207,14 @@ import { configuracoes } from "../../../../lib/ajuda/configuracoes";
       professional.hidden = !roles.includes("professional");
       if (!scopeTouched) setScope(roles.includes("admin") || roles.includes("reception") || !roles.length ? "all" : "restricted");
       agendaList.hidden = form.querySelector<HTMLInputElement>("input[name='agenda_scope']:checked")?.value !== "restricted";
+      // Administrador: a permissão de convênios já vem com o papel.
+      const insurance = form.querySelector<HTMLInputElement>("input[name='can_manage_insurance']");
+      const adminNote = form.querySelector<HTMLElement>("[data-admin-has-it]");
+      if (insurance && adminNote) {
+        const isAdmin = roles.includes("admin");
+        insurance.closest("label")!.hidden = isAdmin;
+        adminNote.classList.toggle("hidden", !isAdmin);
+      }
     };
     form.addEventListener("change", (event) => {
       if ((event.target as HTMLInputElement).name === "agenda_scope") scopeTouched = true;

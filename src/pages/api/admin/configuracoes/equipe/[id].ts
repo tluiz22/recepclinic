@@ -7,7 +7,7 @@ import { DataError } from "../../../../../lib/data/errors";
 import { runFormAction } from "../../../../../lib/data/formAction";
 import { resendInvitation } from "../../../../../lib/data/onboarding";
 import { onboardingDeps } from "../../../../../lib/data/onboardingDeps";
-import { formAll, formOptionalText, formText } from "../../../../../lib/forms";
+import { formAll, formChecked, formOptionalText, formText } from "../../../../../lib/forms";
 
 // Equipe (F4.4b): convidar (`novo`), salvar papéis, profissional e acesso às
 // agendas, reenviar o convite e remover da clínica.
@@ -27,6 +27,8 @@ export const POST: APIRoute = async (context) => {
     professionalId: formOptionalText(form, "professional_id"),
     agendaScope: formText(form, "agenda_scope") as AgendaScope,
     grantedAgendaIds: formAll(form, "agenda_id"),
+    // Só com o item "Convênios" ligado o campo aparece; sem ele, fica como está.
+    canManageInsurance: clinic.features.includes("insurance") ? formChecked(form, "can_manage_insurance") : undefined,
   });
 
   return runFormAction(

@@ -29,7 +29,7 @@ export type KbClinicData = {
   catalog: BotCatalog;
   /** Profissionais ativos com agenda no catálogo do bot. */
   professionals: Professional[];
-  insurance: { enabled: boolean; plans: { id: string; name: string; alternativeNames: string[] }[]; exclusions: { professionalId: string; planId: string }[] };
+  insurance: { enabled: boolean; plans: { id: string; name: string; alternativeNames: string[] }[]; links: { professionalId: string; planId: string }[] };
   /** null = sem nenhum dia com horário. */
   receptionHours: ReceptionHours | null;
   /** Nome do feriado de hoje (nacional ou da clínica). */
@@ -201,18 +201,29 @@ const INSURANCE_INTENT = new Set([
 ]);
 
 function insurance({ data, terms, tokens }: Input): KbAnswer | null {
-  const plans = data.insurance.enabled ? data.insurance.plans : [];
+  // MC (07/nov/2026): só os planos que algum profissional atende (ligação positiva).
+  const accepts = (professionalId: string, planId: string) => data.insurance.links.some((x) => x.professionalId === professionalId && x.planId === planId);
+  const whoAccepts = (planId: string) => data.professionals.filter((p) => accepts(p.id, planId));
+  const plans = data.insurance.enabled ? data.insurance.plans.filter((plan) => whoAccepts(plan.id).length > 0) : [];
   if (!plans.length) return data.insuranceInfo ? text(data.insuranceInfo) : null;
   const all = plans.map((p) => p.name);
-  const named = plans.filter((p) => terms.planIds.includes(p.id));
+  const registered = data.insurance.enabled ? data.insurance.plans : [];
+  const named = registered.filter((p) => terms.planIds.includes(p.id));
   if (named.length) {
     const professionals = data.professionals.filter((p) => terms.professionalIds.includes(p.id));
-    const excluded = (professionalId: string, planId: string) => data.insurance.exclusions.some((x) => x.professionalId === professionalId && x.planId === planId);
-    const notAccepted = professionals.flatMap((p) => named.filter((plan) => excluded(p.id, plan.id)).map((plan) => ({ p, plan })));
+    const notAccepted = professionals.flatMap((p) => named.filter((plan) => !accepts(p.id, plan.id)).map((plan) => ({ p, plan })));
     if (notAccepted.length) {
       const { p, plan } = notAccepted[0];
-      const others = data.professionals.filter((o) => o.id !== p.id && !excluded(o.id, plan.id)).map((o) => bold(o.displayName));
+      const others = whoAccepts(plan.id).filter((o) => o.id !== p.id).map((o) => bold(o.displayName));
       return text(`${bold(p.displayName)} não atende ${bold(plan.name)}.${others.length ? ` Atende${others.length > 1 ? "m" : ""} ${bold(plan.name)} por aqui: ${joinNames(others)}.` : ""}`);
+    }
+    const nobody = named.filter((plan) => !whoAccepts(plan.id).length);
+    if (nobody.length) return text(`No momento, nenhum profissional atende ${joinNames(nobody.map((p) => bold(p.name)))} por aqui. Convênios atendidos: ${joinNames(all)}.`);
+    // Nem todos atendem: diz quem (clínica com vários profissionais).
+    const partial = !professionals.length && named.length === 1 && whoAccepts(named[0].id).length < data.professionals.length;
+    if (partial) {
+      const names = whoAccepts(named[0].id).map((p) => bold(p.displayName));
+      return text(`Sim, atendemos ${bold(named[0].name)} com ${joinNames(names)}.`);
     }
     return text(`Sim, atendemos ${joinNames(named.map((p) => bold(p.name)))}.`);
   }

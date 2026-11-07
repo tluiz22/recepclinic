@@ -89,7 +89,7 @@ export const JOURNEY: JourneySection[] = [
           [
             bot("Com qual profissional? (ou \"Primeiro horário\")", "Só quando mais de um profissional atende o serviço."),
             bot("Consultório ou atendimento domiciliar?", "Só quando o serviço tem os dois, sem preço. Domiciliar: pede e confirma o endereço."),
-            check("A clínica aceita convênios?", "Recurso Convênios ligado e pelo menos um plano ativo."),
+            check("O caminho escolhido aceita convênios?", "Recurso Convênios ligado e algum plano ativo ligado ao profissional escolhido (agenda de exames: todos os planos). Profissional só particular: não pergunta (MC, 07/11/2026)."),
             branch(
               ["Não", [bot("Valor e formas de pagamento", "\"O valor da consulta (ou do exame) é R$ …\" e o texto de formas de pagamento das Configurações.")]],
               [
@@ -101,7 +101,7 @@ export const JOURNEY: JourneySection[] = [
                     [
                       "Convênio",
                       [
-                        bot("Qual é o seu convênio?", "Até 8 planos: lista com \"Outro convênio\"; mais que isso, o paciente escreve e confirma na lista. Só planos ativos."),
+                        bot("Qual é o seu convênio?", "Até 8 planos: lista com \"Outro convênio\"; mais que isso, o paciente escreve e confirma na lista. Só os planos ativos que o caminho atende."),
                         check("O plano é atendido pelo profissional escolhido (ou por algum, no \"Primeiro horário\")?"),
                         branch(
                           ["Sim", [bot("\"Atendemos pelo convênio *X*\"", "Sem valor. O plano fica no atendimento; a página só oferece quem atende o plano.")]],

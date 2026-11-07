@@ -1,11 +1,9 @@
 # Clínica com vários profissionais: especialidades, convênios e informações do bot por profissional
 
-> **Estado atual (retomar daqui), 07/nov/2026.** M1 a M8 decididas (seção 6). **ME feita na `main` local (sem push)**:
-> migração `20261229120000` (ligação N:N com a lista global, função de gravação, conversão do texto antigo), tela
-> Profissionais (busca, várias, principal, pendência "sem especialidade"), Base de Conhecimento pelas especialidades
-> ligadas; testes de unidade, banco e Playwright passando. **Próximo:** com o OK do cliente, conferir no staging e na
-> produção os textos que não casam com a lista (seção 2), aplicar a migração no staging e fazer o push. Depois, MC.
-> Telas com a skill `frontend-design`; testes de cada etapa com `playwright-ui-form-best-practices` (cliente, 07/nov).
+> **Estado atual (retomar daqui), 07/nov/2026.** M1 a M8 decididas (seção 6). **ME no staging** (migração
+> `20261229120000`, push `89b3094`). **MC feita** (migração `20261229130000`): ligação positiva, permissão em Equipe,
+> trilha, telas e bot; no staging junto com este commit. Cliente valida a frente no staging depois (07/nov).
+> **Próximo:** MI + MB. Telas com `frontend-design`; testes de cada etapa com `playwright-ui-form-best-practices`.
 
 Marcas como no plano da NFS-e: **[Código]**, **[Cliente]**, **[Hipótese]**, **[Pendência]**.
 
@@ -71,6 +69,15 @@ Captura `config-profissionais` na fila.
 - **Telas:** Configurações › Convênios (lista; cada convênio mostra quantos profissionais atendem) e, no cadastro do
   profissional, a seção "Convênios atendidos" (só particular / marcar os planos). Atalho "associar a vários
   profissionais" no convênio.
+**Feito (07/nov, MC):** `professional_insurance_plans` (vazia na publicação; `professional_insurance_exclusions` apagada),
+`clinic_members.can_manage_insurance` + `app.can_manage_insurance()` na RLS de `insurance_plans` e da ligação, trilha
+`insurance_change_log` (gatilho; só o Administrador lê). Área "insurance" no acesso: quem tem a permissão vê só
+Convênios (menu "Mais" e menu lateral). Telas: Convênios com "Quem atende" e aviso enquanto nenhum plano tem
+profissional; plano com "Profissionais que atendem" (marcar); Profissional com "Convênios atendidos"; Equipe com
+"Cadastrar e associar convênios". Bot: só planos do caminho (profissional só particular: não pergunta); dúvidas de
+convênio dizem com quem. Marcar (Recepção): aviso quando o profissional não atende o plano do paciente. Captura
+`config-convenios` na fila.
+
 - **Consulta única** `professional_accepts_plan(profissional, plano)` e "profissionais que atendem o plano X na
   especialidade Y", usada pelo bot (resposta "atende o convênio X?"), pela marcação da Recepção (aviso ao escolher
   agenda de quem não atende o plano do paciente) e pela página pública (`publicBooking.ts`).
