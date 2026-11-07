@@ -843,3 +843,28 @@ paciente).
   IA de outra empresa R$ 732,83; IA da Meta R$ 2.223,78. O aviso abaixo dos gráficos cita esses preços e médias.
 
 **Desenho das telas concluído** (T1 a T11).
+
+## 16. EC, mensagens que a Central não mostra (cliente, 07/nov/2026)
+
+**Problema (produção, 07/nov):** com a Central ligada (06/nov, 22:53), 2 de 3 respostas pelo app do WhatsApp ficaram
+sem texto e apareceram como "Respondida pelo app do WhatsApp" + "Mensagem anterior à Central de atendimento". No
+staging, o cliente reproduziu com localização, foto e áudio enviados pelo app. Causa: o eco do app
+(`recordAgentEcho`, `messages.ts`) grava sempre `message_type = 'agent_reply'`, só com texto, botão ou legenda; sem o
+tipo nem o anexo, a tela cai no "anterior à Central" (`centralBubbles.ts`). O que o paciente envia já guarda o tipo.
+
+**Decisões (cliente, 07/nov/2026):**
+- Corrigir para **todo tipo de mensagem**, do app e do paciente.
+- Foto, áudio, vídeo, documento e figurinha enviados pelo app: **baixar e mostrar** como os do paciente (mesmas
+  regras: 12 meses, limite de tamanho, vídeo não exibido).
+- Localização, contato e reação: em texto ("Localização: …", "Contato: …", "Reagiu com …").
+- Tipo que a Central não mostra (novo ou desconhecido, do app ou do paciente): **sempre o mesmo texto**, "A Central não
+  mostra esta mensagem. Veja no app do WhatsApp."
+- "Mensagem anterior à Central de atendimento" só para mensagem de antes de ligar a Central (pela hora em
+  `central_switches`).
+- Implementar na `main`; sobe para a produção **junto com o faturamento**.
+
+**Passos:** (1) migração: a guarda do texto (`whatsapp_message_body_guard`) passa a olhar o autor (`agent_app`), não só
+o `message_type`, para a legenda do app não ficar guardada com a Central desligada; (2) eco grava o tipo e liga o
+anexo (fila de mídias da CN5); (3) rótulos da conversa e da prévia da lista; (4) testes de unidade e de banco
+(guarda com a Central desligada, cada tipo de eco) e Playwright na tela Conversas; (5) staging; o cliente valida.
+Jornada do bot não muda; sem captura nova da Central de Ajuda (conferir na implementação).

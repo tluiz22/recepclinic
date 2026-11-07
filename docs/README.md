@@ -1,7 +1,9 @@
 # RecepClinic
 
 > **Próxima sessão (cliente, 07/nov):** (1) **troca cartão ↔ Pix pela tela, pelo Administrador**: desenho B e regras
-> decididos (07/nov; plano do faturamento, "Troca cartão ↔ Pix"); próximo: implementar na `main`; (2) item 5 da lista: validar F8.1,
+> decididos (07/nov; plano do faturamento, "Troca cartão ↔ Pix"); próximo: implementar na `main`; (1b) **EC, mensagens que a Central não mostra** (resposta pelo app com foto,
+> áudio, localização etc. aparecia "anterior à Central"; decidida, plano da Central, seção 16; sobe junto com o
+> faturamento); (2) item 5 da lista: validar F8.1,
 > F8.2, F8.2b, F8.3, ajuda contextual e menu lateral no staging; depois, os pendentes de "Pendências", abaixo.
 > **Staging = `main` (`5f9537f`)**, com o financeiro e as migrações `20261227120000` (fim do contrato) e `20261227130000`
 > (endereço do pagador). **Produção (`d4aff65`) sem o financeiro:** a próxima publicação leva o financeiro e 20
