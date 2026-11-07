@@ -525,6 +525,8 @@ const sideLinkClass = (active: boolean) =>
         if (!link || !link.href || link.target || link.hasAttribute("download")) return;
         const url = new URL(link.href, location.href);
         if (url.origin !== location.origin) return;
+        // Arquivo (anexo da conversa, XML da nota): baixa sem sair da página, então a barra ficaria girando (06/nov/2026).
+        if (url.pathname.startsWith("/api/")) return;
         if (url.pathname === location.pathname && url.search === location.search && url.hash) return;
         // Deixa outros handlers do mesmo clique decidirem antes.
         setTimeout(() => {

@@ -1094,4 +1094,7 @@ Pedido do cliente depois do staging:
 - **Foto do iPhone "Não enviada" (06/nov, staging):** erro 131053 da Meta ("Media upload error"); o print do iPhone é PNG
   de 16 bits (Display P3), que o WhatsApp recusa. A tela converte toda foto para JPEG de 8 bits antes de subir (até
   2560 px, fundo branco na transparência), como o app do WhatsApp. O arquivo de 3,2 MB virou 323 KB.
+- **Barra de carregamento sem parar no download (06/nov, staging):** o link do documento recebido baixava o arquivo sem
+  trocar de página, e a barra ligada no clique nunca desligava. A barra não liga mais em links de arquivo (`/api/`,
+  também o XML da nota no Financeiro) e o documento tem `download`.
 

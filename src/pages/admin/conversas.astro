@@ -450,7 +450,7 @@ const tabClass = (active: boolean) =>
                       )}
                       {attachment?.kind === "audio" && <audio controls preload="none" src={attachment.href} class="max-w-full" aria-label="Áudio enviado pelo paciente" />}
                       {attachment?.kind === "document" && (
-                        <a href={attachment.href} class="flex items-center gap-2 rounded-lg border border-line bg-canvas px-3 py-2 text-ink no-underline hover:bg-canvas-deep">
+                        <a href={attachment.href} download={attachment.name} class="flex items-center gap-2 rounded-lg border border-line bg-canvas px-3 py-2 text-ink no-underline hover:bg-canvas-deep">
                           <Icon name="arrow-down-tray" class="h-5 w-5 flex-none text-ink-mid" />
                           <span class="flex min-w-0 flex-col">
                             <strong class="truncate text-[15px]">{attachment.name}</strong>
