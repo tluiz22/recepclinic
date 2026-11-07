@@ -545,7 +545,8 @@ tinha selo e o CSP dele (`public/_headers`) bloqueava imagens do `baas.asaas.com
   (a `b-nf` segue legível, sem a cláusula; contrato já aceito não muda, a próxima ativação pede o aceite).
 
 **Publicado (07/nov):** site `beb9e1c` (selo carregando em `/termos`, 188 px, CSP ok) e app `305efd7` no staging e na
-produção (Nota fiscal exige login; o cliente abre). Variável `ASAAS_PREVIEW` da Vercel do staging pode ser apagada.
+produção. A Nota fiscal só aparece para o Administrador de clínica com o Módulo financeiro: a piloto da produção não
+tem o módulo e não vê o cartão (conferido em 07/nov); o registro do selo vem dos termos públicos. Variável `ASAAS_PREVIEW` da Vercel do staging pode ser apagada.
 
 **Para conferir depois da publicação:** abrir `/termos` do site e a Nota fiscal da produção; no DevTools, o selo
 carrega (200) sem bloqueio do CSP. Texto da reanálise para o cliente: "Ajustes feitos: (1) os termos de uso
