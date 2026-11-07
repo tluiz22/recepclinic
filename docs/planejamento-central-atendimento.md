@@ -1,10 +1,12 @@
 # Central de Atendimento Humano: planejamento
 
-> **Retomar daqui (05/nov/2026).** Só plano, nada implementado. Decididas: seção 11 (1 a 12 e R1 a R3), seção 14 e as
-> telas T1 a T11 (seção 15; canvas https://claude.ai/artifact/SiRBQtc2kSnQoMrgGnRn4y). **Próximo (cliente, 05/nov):**
-> implementar a partir do **CU2** (ordem na seção 12; CU1 resolvido pela T11), em branch curta criada da `main`.
-> **CU2, CU3, CN1, CU4, CN2, CN3a e CN3b feitos na branch `central-atendimento` (05/nov)**. Staging e produção só com a
-> Central pronta (cliente, 05/nov). CN4a e CN4b feitos (enviar, assumir, transferir, Retomar conversa, liberação em 30 min). CN5 feito (mídia recebida). CN6 feito (enviar foto e PDF). CN7 feito (prazo de guarda e anonimização). CN8 feito (histórico do app e cadastro v4; falta a configuração v4 na Meta, pelo cliente). CN9 feito (ajuda, Jornada, roteiro AA do staging). Etapa 1 completa na branch; próximo: merge na main, testes e staging.
+> **Retomar daqui (07/nov/2026).** **Etapa 1 (CU2 a CN9) no staging e na produção** desde 06/nov (`552019b`, 12
+> migrações), validada; depois, também na produção: NA (`conversas-nao-atendimento.md`), EC (mensagens que a Central
+> não mostra), áudio e cadastro v4 + campos do webhook (07/nov). Item `central_attendance` liberado em **nenhuma**
+> clínica. Antes de liberar numa clínica (cliente): modelo "Retomar conversa" aprovado na Meta e cópia do bucket/PITR.
+> Em aberto: preço/pacote do item e advogado (termo, contrato, política). **Próximo:** só com o cliente; candidata a
+> Etapa 2 (Gestão, seção 12). Decisões: seção 11, seção 14 e telas T1 a T11 (seção 15; canvas
+> https://claude.ai/artifact/SiRBQtc2kSnQoMrgGnRn4y).
 
 Pedido do cliente (05/nov/2026): secretárias, profissionais e outros usuários autorizados veem e respondem as
 conversas do WhatsApp **dentro do RecepClinic**, com o mesmo histórico do bot, sem abrir o app do WhatsApp.
