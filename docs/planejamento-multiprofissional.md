@@ -1,8 +1,9 @@
 # Clínica com vários profissionais: especialidades, convênios e informações do bot por profissional
 
 > **Estado atual (retomar daqui), 07/nov/2026.** Planejamento pedido pelo cliente (07/nov) junto com a revisão da
-> NFS-e (seção 14 do [`planejamento-nfse-asaas.md`](planejamento-nfse-asaas.md)). Diagnóstico do código feito; **M1 a M6 e M8 decididas** (ME pronta para planejar o código); **M7
-> abertas** (seção 6), uma por vez com o cliente. Sem código antes das decisões e do OK.
+> NFS-e (seção 14 do [`planejamento-nfse-asaas.md`](planejamento-nfse-asaas.md)). Diagnóstico do código feito; **M1 a M8 decididas** (seção 6). Ordem: ME → MC → MI + MB; NFS-e por profissional
+> depois. **Próximo:** iniciar a ME com o OK do cliente (código direto na `main`). Implementação com a skill
+> `frontend-design`; testes de cada etapa com a skill `playwright-ui-form-best-practices` (cliente, 07/nov).
 
 Marcas como no plano da NFS-e: **[Código]**, **[Cliente]**, **[Hipótese]**, **[Pendência]**.
 
@@ -110,7 +111,7 @@ muitos médicos); especialidade e informações do bot são da clínica inteira.
 | M4 | Quem mantém convênios e associações? | **Decidido (07/nov): Administrador + quem ele autorizar no cadastro da equipe** |
 | M5 | Informações do bot: padrão da clínica + profissional, ou só por profissional? | **Decidido (07/nov): só por profissional**; bot escolhe especialidade e profissional no início (seção 5) |
 | M6 | Especialidade obrigatória para todas as profissões ou só para médico? | **Decidido (07/nov): todas** (o Suporte cadastra as de cada profissão) |
-| M7 | Ordem das etapas | ME → MC → MI + MB juntas; NFS-e por profissional (seção 14 da NFS-e) em paralelo ao planejamento, código depois da ME |
+| M7 | Ordem das etapas | **Decidido (07/nov): ME → MC → MI + MB**; NFS-e por profissional depois (depende de Asaas, contador e advogado) |
 | M8 | Exames (agenda sem profissional) na clínica com vários profissionais | **Decidido (07/nov): opção "Exames" na pergunta da especialidade**, direto ao fluxo de exames |
 
 ## 7. Etapas
@@ -121,4 +122,5 @@ muitos médicos); especialidade e informações do bot são da clínica inteira.
 | MC | Convênios por profissional (associação positiva, Recepção mantém, telas, consulta única) | M3, M4, ME |
 | MI + MB | Informações do bot por profissional; especialidade → profissional no início do bot, na marcação e na página pública | ME, MC, M8 |
 
-Cada etapa: testes de unidade e de banco, Playwright nas telas (390 px e 1280 px), staging, validação do cliente.
+Cada etapa: telas com a skill `frontend-design`; testes de unidade e de banco e testes de tela com a skill
+`playwright-ui-form-best-practices` (390 px e 1280 px); staging; validação do cliente (cliente, 07/nov).

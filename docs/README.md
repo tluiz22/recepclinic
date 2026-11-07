@@ -1,9 +1,9 @@
 # RecepClinic
 
-> **Próxima sessão (cliente, 07/nov):** decidir, uma por vez, as perguntas da **revisão multiprofissional**: NFS-e e
-> cobrança por profissional (N-P1 a N-P7, seção 14 do [`planejamento-nfse-asaas.md`](planejamento-nfse-asaas.md)) e
-> especialidades, convênios e informações do bot por profissional (M1 a M8,
-> [`planejamento-multiprofissional.md`](planejamento-multiprofissional.md)). Sem código antes das decisões.
+> **Próxima sessão (cliente, 07/nov):** revisão multiprofissional planejada e **M1 a M8 decididas**
+> ([`planejamento-multiprofissional.md`](planejamento-multiprofissional.md)). Próximo: **etapa ME** (especialidades)
+> com o OK do cliente, depois MC e MI + MB. NFS-e e cobrança por profissional (seção 14 do
+> [`planejamento-nfse-asaas.md`](planejamento-nfse-asaas.md), N-P1 a N-P7 abertas) depois.
 >
 > **Próxima sessão (cliente, 07/nov):** **revisar o planejamento da NFS-e pelo Asaas** com o cliente
 > ([`planejamento-nfse-asaas.md`](planejamento-nfse-asaas.md), bloco de retomada e seções 11 a 13). Sem código antes da revisão.
