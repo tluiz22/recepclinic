@@ -9,4 +9,16 @@ a captura e o motivo, avisar o cliente no fim da etapa e esperar a autorização
 
 ## Pendentes
 
-Nenhuma (recapturadas em 07/11/2026: as 26 da "Ajuda desta tela" e as da NA, `conversas` e `atendimento`).
+- `config-clinica` — item "Assinatura" novo no grupo "A clínica" do menu de Configurações (faturamento na main, 07/11/2026)
+- `config-profissionais` — item "Assinatura" novo no grupo "A clínica" do menu de Configurações (faturamento na main, 07/11/2026)
+- `config-locais` — item "Assinatura" novo no grupo "A clínica" do menu de Configurações (faturamento na main, 07/11/2026)
+- `config-agendas` — item "Assinatura" novo no grupo "A clínica" do menu de Configurações (faturamento na main, 07/11/2026)
+- `config-servicos` — item "Assinatura" novo no grupo "A clínica" do menu de Configurações (faturamento na main, 07/11/2026)
+- `config-horarios` — item "Assinatura" novo no grupo "A clínica" do menu de Configurações (faturamento na main, 07/11/2026)
+- `config-feriados` — item "Assinatura" novo no grupo "A clínica" do menu de Configurações (faturamento na main, 07/11/2026)
+- `config-convenios` — item "Assinatura" novo no grupo "A clínica" do menu de Configurações (faturamento na main, 07/11/2026)
+- `config-lembretes` — item "Assinatura" novo no grupo "A clínica" do menu de Configurações (faturamento na main, 07/11/2026)
+- `config-mensagens` — item "Assinatura" novo no grupo "A clínica" do menu de Configurações (faturamento na main, 07/11/2026)
+- `config-whatsapp` — item "Assinatura" novo no grupo "A clínica" do menu de Configurações (faturamento na main, 07/11/2026)
+- `config-nota-fiscal` — item "Assinatura" novo no grupo "A clínica" do menu de Configurações (faturamento na main, 07/11/2026)
+- `equipe` — item "Assinatura" novo no grupo "A clínica" do menu de Configurações (faturamento na main, 07/11/2026)
