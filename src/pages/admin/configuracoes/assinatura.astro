@@ -86,7 +86,9 @@ const showDone = !currentStep && Astro.url.searchParams.get("pronto") === "1" &&
 // Contrato que gera as cobranças (o de hoje ou o próximo).
 const billed = contract ?? next;
 const cardOnFile = !!billed?.cardRegisteredAt;
-const openCharges = charges.filter((c) => c.status === "pending" || c.status === "overdue").length;
+// Cliente, 07/nov/2026: o selo só conta cobrança em atraso (vencida e não paga), não a que ainda vai vencer.
+const today = todayIn(clinic.timezone);
+const overdueCharges = charges.filter((c) => c.status === "overdue" || (c.status === "pending" && c.dueDate < today)).length;
 // F12.2f: o último cancelamento (some quando houver contrato ativo de novo).
 const canceled = contracts.some((c) => c.status === "active") ? null : (contracts.find((c) => c.cancel) ?? null);
 const H2 = "font-display text-[17px] leading-tight font-bold text-ink sm:text-lg";
@@ -185,7 +187,7 @@ const H2 = "font-display text-[17px] leading-tight font-bold text-ink sm:text-lg
           <Card>
             <div class="flex flex-wrap items-center gap-2">
               <h2 class={H2}>Cobranças</h2>
-              {openCharges > 0 && <Badge variant="warning">{openCharges === 1 ? "1 em aberto" : `${openCharges} em aberto`}</Badge>}
+              {overdueCharges > 0 && <Badge variant="warning">{overdueCharges === 1 ? "1 em atraso" : `${overdueCharges} em atraso`}</Badge>}
             </div>
             <div class="mt-2">
               <ChargesList charges={charges} timezone={clinic.timezone} paymentMethod={billed?.paymentMethod ?? null} cardOnFile={cardOnFile} />
