@@ -1,5 +1,10 @@
 # RecepClinic
 
+> **BaaS do Asaas (07/nov):** o Asaas pediu ajustes (cláusula nos termos e selo sem registro). Feitos e **com commit local,
+> sem push**: termos do site (seção 4, selo, CSP) e app (selo na Nota fiscal em todo ambiente, contrato `c-nf`). Próximo:
+> OK do cliente para o push (site publica sozinho; app no staging e depois produção), conferir o selo carregando e o
+> cliente pedir a reanálise. Detalhe na seção 13.10 do [`planejamento-nfse-asaas.md`](planejamento-nfse-asaas.md).
+>
 > **Próxima sessão (cliente, 07/nov):** **Central de Atendimento finalizada** (etapa 1 na produção, ligada na piloto,
 > funcionando). Retomar o planejamento e a implementação da **NFS-e pelo Asaas**: ler o bloco de retomada do
 > [`planejamento-nfse-asaas.md`](planejamento-nfse-asaas.md); código só com o OK do cliente, direto na `main`.

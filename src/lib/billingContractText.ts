@@ -19,9 +19,24 @@
 // mensalidade (opção 1; repasse pelo RecepClinic recusado: exigiria Solution
 // Partner na Meta, risco de inadimplência e imposto). Lista na seção 12. Versão b (mesmo dia): exportação
 // dos dados no fim do contrato a pedido ao Suporte (seção 10).
+//
+// Versão c-nf (cliente, 07/nov/2026, análise BaaS do Asaas): a seção de notas
+// fiscais ganha a cláusula-modelo do playbook do Asaas (prestador dos serviços
+// financeiros da emissão) e os canais de suporte dele. Só a versão com nota muda.
 
 export const BILLING_CONTRACT_TERMS_VERSION = "provisorio-2026-11-07b";
-export const BILLING_CONTRACT_TERMS_VERSION_NF = "provisorio-2026-11-07b-nf";
+export const BILLING_CONTRACT_TERMS_VERSION_NF = "provisorio-2026-11-07c-nf";
+
+/**
+ * Cláusula-modelo do playbook BaaS do Asaas (Resolução Conjunta nº 16/2025): o
+ * Asaas presta os serviços financeiros da emissão da nota. Igual à seção 4 dos
+ * termos de uso do site (recepclinic.com.br/termos).
+ */
+const ASAAS_PROVIDER_CLAUSE = [
+  "Os serviços financeiros e de pagamentos disponibilizados por meio da plataforma RecepClinic para a emissão de nota fiscal, incluindo a abertura e a manutenção da conta de pagamento da clínica, as tarifas da emissão, as transferências e as demais movimentações de valores, são prestados pelo ASAAS GESTÃO FINANCEIRA INSTITUIÇÃO DE PAGAMENTOS S.A., instituição de pagamento autorizada a funcionar pelo Banco Central do Brasil.",
+  "O RecepClinic atua exclusivamente como integrador tecnológico e distribuidor da experiência do produto, não sendo instituição financeira ou de pagamento, nem realizando intermediação financeira em nome próprio.",
+  "A clínica declara ciência de que o relacionamento financeiro e de pagamentos e a responsabilidade regulatória pelos serviços acima descritos são do ASAAS GESTÃO FINANCEIRA S.A., nos termos da regulamentação vigente. Suporte do Asaas: 0800 009 0037 (somente pessoa jurídica) · contato@asaas.com.br.",
+];
 
 /** Um parágrafo, ou uma lista de itens (um array de textos). */
 export type ContractParagraph = string | string[];
@@ -42,14 +57,18 @@ export function billingTermsVersionFor(contract: { invoiceUnitPriceCents: number
 export function billingContractTerms(version: string): ContractTermsSection[] | null {
   if (version === BILLING_CONTRACT_TERMS_VERSION) return build(false);
   if (version === BILLING_CONTRACT_TERMS_VERSION_NF) return build(true);
-  // Versão anterior (07/nov/2026, antes da exportação a pedido ao Suporte): continua legível para quem a aceitou.
-  if (version === "provisorio-2026-11-07") return build(false, false);
-  if (version === "provisorio-2026-11-07-nf") return build(true, false);
+  // Versões anteriores: continuam legíveis para quem as aceitou.
+  if (version === "provisorio-2026-11-07b-nf") return build(true, true, false); // antes da cláusula do Asaas
+  if (version === "provisorio-2026-11-07") return build(false, false, false); // antes da exportação a pedido ao Suporte
+  if (version === "provisorio-2026-11-07-nf") return build(true, false, false);
   return null;
 }
 
-/** `exportBySupport`: a exportação dos dados no fim do contrato é a pedido ao Suporte (cliente, 07/nov/2026, versão b). */
-function build(invoicing: boolean, exportBySupport = true): ContractTermsSection[] {
+/**
+ * `exportBySupport`: a exportação dos dados no fim do contrato é a pedido ao Suporte (cliente, 07/nov/2026, versão b).
+ * `asaasProvider`: cláusula do Asaas como prestador dos serviços financeiros da nota (versão c-nf, playbook BaaS).
+ */
+function build(invoicing: boolean, exportBySupport = true, asaasProvider = true): ContractTermsSection[] {
   const sections: (ContractTermsSection | null)[] = [
     {
       title: "Objeto",
@@ -106,6 +125,7 @@ function build(invoicing: boolean, exportBySupport = true): ContractTermsSection
             "Quando exigido, a clínica também é responsável por fornecer e manter válido o certificado digital utilizado na emissão.",
             "O RecepClinic atua como ferramenta tecnológica de apoio à emissão, não substituindo as obrigações fiscais e tributárias da clínica.",
             "A emissão depende da disponibilidade e do funcionamento dos sistemas das prefeituras e dos demais serviços de terceiros envolvidos, podendo ocorrer indisponibilidades ou atrasos alheios ao controle do RecepClinic.",
+            ...(asaasProvider ? ASAAS_PROVIDER_CLAUSE : []),
           ],
         }
       : null,

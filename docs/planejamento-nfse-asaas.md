@@ -1,8 +1,9 @@
 # Emissão de NFS-e pelo Asaas (substitui o emissor direto da F11)
 
-> **Estado atual (retomar daqui), 29/out/2026.** **Planejamento concluído** (cliente, 29/out). Nada implementado.
-> A implementação será feita numa branch **`faturamento`** recriada da `main` ao começar o código, só com a autorização
-> do cliente, na ordem da seção 12.
+> **Estado atual (retomar daqui), 07/nov/2026.** **Asaas pediu ajustes na análise BaaS (13.10):** cláusula do Asaas nos
+> termos e no contrato e selo sem registro de carregamento. Ajustes feitos (commit local no app e no site, sem push);
+> falta o push, a publicação e o pedido de reanálise pelo cliente. Código das fases direto na `main`, só com o OK do
+> cliente (a branch `faturamento` foi aposentada em 07/nov).
 > **N0 em andamento (29/out):** documentação conferida, nota de referência lida e **roteiro do Sandbox executado**
 > (seção 13.6: emissão em Mossoró funciona ponta a ponta). **Asaas respondeu (13.7):** exige BaaS; chaves seguem
 > válidas no BaaS. Decisões do cliente registradas; conta de produção aberta; avaliação BaaS e formulário de IP enviados.
@@ -494,7 +495,7 @@ onde o selo aparece): a tela precisa existir antes do envio. **Decidido (cliente
 habilitação fiscal** (Configurações › Nota fiscal) na branch `faturamento` recriada da `main`, no staging: selo com
 link, texto de que a nota é emitida pelo Asaas, canais de suporte do Asaas e botão desativado ("aguardando
 liberação"), sem chamar o Asaas. O cliente tira o print e envia o formulário; a N2 completa a tela. **Feito (30/out,
-`src/lib/asaas/brand.ts`):** o cartão só aparece com a variável **`ASAAS_PREVIEW=1`** (só na Vercel do staging;
+`src/lib/asaas/brand.ts`):** o cartão só aparecia com a variável **`ASAAS_PREVIEW=1`** (removida em 07/nov, 13.10) (só na Vercel do staging;
 a produção não tem a variável e não mostra nada, a pedido do cliente). **Validado pelo cliente no staging (30/out)**
 (a tela exige o Módulo financeiro na Matriz da clínica).
 **Formulário enviado pelo cliente (30/out)** com o e-mail `tluiz22projetos@gmail.com`; 13 e 14 sem estimativa
@@ -523,6 +524,31 @@ a produção não tem a variável e não mostra nada, a pedido do cliente). **Va
 | 17 | Avalia o atendimento | **[Cliente]** |
 | 18 | Modelo de subconta | Subcontas BaaS (documentos pela URL dedicada, sem painel do Asaas) |
 | — | Comentários | Uso restrito à NFS-e; preço por nota cobrado pela plataforma como parte do software; sem IP fixo (formulário de IP enviado em 29/out). |
+
+### 13.10 Análise BaaS: ajustes pedidos pelo Asaas (07/nov/2026)
+
+**E-mail do Asaas (Experiência do Cliente):** operação ainda não aderente. (1) Os termos de uso não citam o Asaas como
+provedor dos serviços financeiros; (2) a busca dos registros do selo não achou nada. Depois dos ajustes, o cliente
+responde o e-mail pedindo a reanálise.
+
+**Causa do selo [Código]:** o cartão só aparecia com `ASAAS_PREVIEW=1` (staging), com login e só em clínica com o
+Módulo financeiro; a produção (`app.recepclinic.com.br`, o domínio do formulário) nunca carregava o selo. O site não
+tinha selo e o CSP dele (`public/_headers`) bloqueava imagens do `baas.asaas.com`.
+
+**Decidido (cliente, 07/nov):**
+- **Selo nos termos públicos e na produção.** Site: seção 4 nova dos termos (`recepclinic.com.br/termos#servicos-financeiros`),
+  sem login, com o selo com link, a cláusula e os canais do Asaas; `img-src` do CSP com `https://baas.asaas.com`. App:
+  cartão "Emissão pelo Asaas" em Configurações › Nota fiscal em todo ambiente (variável `ASAAS_PREVIEW` removida do código;
+  a da Vercel do staging pode sair).
+- **Cláusula nos termos e no contrato.** Cláusula-modelo do playbook (nome e escopo da nota fiscal ajustados) nos termos
+  (seções seguintes renumeradas, versão de 07/11/2026) e no contrato do app, só na versão com nota: `provisorio-2026-11-07c-nf`
+  (a `b-nf` segue legível, sem a cláusula; contrato já aceito não muda, a próxima ativação pede o aceite).
+
+**Para conferir depois da publicação:** abrir `/termos` do site e a Nota fiscal da produção; no DevTools, o selo
+carrega (200) sem bloqueio do CSP. Texto da reanálise para o cliente: "Ajustes feitos: (1) os termos de uso
+(https://www.recepclinic.com.br/termos#servicos-financeiros) e o contrato com a clínica trazem a cláusula de prestação
+de serviços financeiros do Asaas; (2) o selo está aplicado conforme o playbook (link para asaas.com, sem no-referrer)
+nos termos públicos e na tela de habilitação fiscal do painel (app.recepclinic.com.br). Peço a reanálise."
 
 ## Fontes (consultadas em 29/out/2026)
 

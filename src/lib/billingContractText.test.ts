@@ -82,4 +82,19 @@ describe("texto do contrato", () => {
       expect(text(version)).toMatch(/disponíveis para exportação, mediante solicitação ao Suporte do RecepClinic, durante 60 dias/);
     }
   });
+
+  it("cliente, 07/nov (versão c-nf, BaaS do Asaas): o Asaas presta os serviços financeiros da nota", () => {
+    const nf = text(BILLING_CONTRACT_TERMS_VERSION_NF);
+    expect(nf).toMatch(/são prestados pelo ASAAS GESTÃO FINANCEIRA INSTITUIÇÃO DE PAGAMENTOS S\.A\./);
+    expect(nf).toMatch(/integrador tecnológico/);
+    expect(nf).toMatch(/0800 009 0037/);
+    expect(text(BILLING_CONTRACT_TERMS_VERSION)).not.toMatch(/ASAAS GESTÃO/);
+    expect(billingContractTerms(BILLING_CONTRACT_TERMS_VERSION_NF)).toHaveLength(13);
+  });
+
+  it("versão b-nf, aceita antes da cláusula do Asaas, continua legível e sem a cláusula", () => {
+    const old = text("provisorio-2026-11-07b-nf");
+    expect(old).toMatch(/Emissão de notas fiscais/);
+    expect(old).not.toMatch(/ASAAS GESTÃO/);
+  });
 });
