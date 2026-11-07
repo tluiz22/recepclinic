@@ -210,6 +210,22 @@ describe("ciclo do atendimento humano (CA)", () => {
     expect(await finishAttendance(reception(), f.clinicId, phone, { seenStatusAt: fresh.statusAt })).toBe("finished");
   });
 
+  it("hora da situação com microssegundos (gravada pelo banco): finaliza com a tela em dia (cliente, 06/nov/2026)", async () => {
+    const phone = "+5584991233003";
+    await askReception(phone);
+    await say(phone, "Mais uma dúvida");
+    // A tela lê milissegundos; o banco guardava microssegundos e a igualdade nunca batia.
+    const { error } = await adminClient()
+      .from("conversation_state")
+      .update({ handoff_status_at: "2026-11-06T12:00:00.123456Z" })
+      .eq("clinic_id", f.clinicId)
+      .eq("contact_phone", phone);
+    expect(error).toBeNull();
+    const [shown] = await listHumanAttention(reception(), f.clinicId, phone);
+    expect(shown.statusAt.toISOString()).toBe("2026-11-06T12:00:00.123Z");
+    expect(await finishAttendance(reception(), f.clinicId, phone, { seenStatusAt: shown.statusAt })).toBe("finished");
+  });
+
   it("#bot no app finaliza pela recepção, sem mensagem ao paciente", async () => {
     const phone = "+5584991233003";
     await askReception(phone);

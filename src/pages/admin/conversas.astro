@@ -788,6 +788,13 @@ const tabClass = (active: boolean) =>
         }
         current.innerHTML = fresh.innerHTML;
       });
+      // O que os botões guardam do que a tela mostrou (hora da situação, responsável): acompanha a atualização, senão
+      // "Finalizar atendimento" recusava ("O paciente escreveu de novo") uma mensagem que já estava na tela.
+      for (const name of ["situacao_em", "responsavel_visto"]) {
+        const mine = document.querySelectorAll<HTMLInputElement>(`input[type=hidden][name="${name}"]`);
+        const theirs = next.querySelectorAll<HTMLInputElement>(`input[type=hidden][name="${name}"]`);
+        if (mine.length === theirs.length) mine.forEach((input, index) => (input.value = theirs[index].value));
+      }
     } catch {
       // Sem internet: tenta de novo na próxima vez.
     } finally {

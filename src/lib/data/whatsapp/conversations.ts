@@ -290,7 +290,14 @@ export async function returnToBot(
     .eq("clinic_id", clinicId)
     .eq("contact_phone", phone)
     .eq("human_handoff", true);
-  if (expected) query = query.eq("handoff_status", expected.status).eq("handoff_status_at", expected.statusAt.toISOString());
+  // O banco guarda microssegundos e a tela lê milissegundos: compara o milissegundo inteiro (cliente, 06/nov/2026: com a
+  // hora gravada pelo banco quando o paciente escreve, a igualdade nunca batia e "Finalizar atendimento" recusava sempre).
+  if (expected) {
+    query = query
+      .eq("handoff_status", expected.status)
+      .gte("handoff_status_at", expected.statusAt.toISOString())
+      .lt("handoff_status_at", new Date(expected.statusAt.getTime() + 1).toISOString());
+  }
   const rows = unwrap(await query.select("id"), "Conversa do WhatsApp");
   return rows.length > 0;
 }

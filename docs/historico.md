@@ -1103,4 +1103,10 @@ Pedido do cliente depois do staging:
   "atendimento humano", "falar com o atendimento"); pede a confirmação como os outros. "Horário de atendimento",
   "atendimento domiciliar" e outras dúvidas seguem para a base (`input.ts`, `ATTENDANCE_REQUEST`). Jornada do bot
   atualizada; 155 testes do bot passando.
+- **"O paciente escreveu de novo" ao finalizar, com a mensagem na tela (06/nov, staging):** duas causas. (1) A
+  conferência do banco comparava a hora da situação por igualdade: o banco grava microssegundos e a tela lê
+  milissegundos, então, com a hora gravada pelo banco, finalizar recusava sempre; agora compara o milissegundo inteiro
+  (`returnToBot`). (2) A atualização de 10 s da tela Conversas não renovava a hora guardada no botão (nem o responsável
+  visto de Assumir/Transferir/Enviar); agora renova. A proteção continua: mensagem que a tela ainda não mostrou recusa.
+  Teste de banco novo (falha sem a correção).
 
