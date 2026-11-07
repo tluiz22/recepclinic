@@ -193,3 +193,17 @@ por agenda: com um dono só, o "Com quem" do serviço deixa de existir (já é d
 | S2 | Serviço de vários profissionais hoje | **Decidido (07/nov): copiar para cada um**, com as mesmas características; atendimentos e horários próprios do serviço vão para a cópia do profissional da agenda |
 | S3 | Exames da agenda da equipe | **Decidido (07/nov): serviços da equipe** (sem profissional; só o Administrador; no bot, em "Exames") |
 | S4 | Lista de Serviços com vários profissionais | **Decidido (07/nov): opção D, busca de profissional** (um campo com sugestões agrupadas por especialidade e quantos serviços cada um tem; a lista mostra só os serviços do escolhido; a última escolha fica lembrada; o profissional com login vê só os dele). Desenhos: canvas "Serviços por profissional (S4)" |
+
+**Decisões da implementação (cliente, 07/nov):**
+
+- **Ordem:** S2 → S3 → S1 → S4, uma etapa por vez, sem parar; staging depois da S4 para o cliente validar.
+- **Serviço sem nenhuma agenda** (na migração): com um profissional só na clínica, vai para ele; com vários, é
+  **desativado** e o Administrador reativa escolhendo o dono.
+- **O dono não muda** depois de criado (como a categoria); para outro profissional, cadastra-se um serviço novo.
+- **S1, alcance do profissional com login:** em Configurações o menu mostra só o que é dele, em 4 telas:
+  Profissionais (só o próprio cadastro: dados, especialidades, convênios que atende, informações do bot), Agenda (só a
+  dele), Horários (só os da agenda dele) e Serviços (cadastrar, editar, desativar os dele). Desativar o próprio
+  cadastro ou a agenda, Equipe/login, Locais, Feriados e o resto da clínica seguem só com o Administrador.
+- **Marcar (Recepção): opção A** do canvas "Marcar com serviços por profissional (MS)": passo "Com quem" antes do
+  serviço, com busca por profissional ou especialidade (e "Equipe (exames)"); depois só os serviços do escolhido. Sai o
+  "Primeiro horário disponível" entre profissionais (como no bot); com um profissional só, o passo já vem escolhido.
