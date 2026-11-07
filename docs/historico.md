@@ -1091,4 +1091,7 @@ Pedido do cliente depois do staging:
   pergunta "Você quer falar com a recepção?" com Sim · Não também com a base de conhecimento; a opção do menu continua
   transferindo direto. Jornada do bot atualizada; testes do bot ajustados (154 passando).
 - Testes de tela (skill playwright-ui-form-best-practices): 1280, 1440 e 390 px; relatório entregue ao cliente.
+- **Foto do iPhone "Não enviada" (06/nov, staging):** erro 131053 da Meta ("Media upload error"); o print do iPhone é PNG
+  de 16 bits (Display P3), que o WhatsApp recusa. A tela converte toda foto para JPEG de 8 bits antes de subir (até
+  2560 px, fundo branco na transparência), como o app do WhatsApp. O arquivo de 3,2 MB virou 323 KB.
 

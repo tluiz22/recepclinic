@@ -830,6 +830,30 @@ const tabClass = (active: boolean) =>
     const submit = attachForm.querySelector<HTMLButtonElement>("button[type=submit]")!;
     const field = (name: string) => (attachForm.elements.namedItem(name) as HTMLInputElement).value;
     const LIMITS: Record<string, number> = { "image/jpeg": 5, "image/png": 5, "application/pdf": 10 };
+    // Foto como o app do WhatsApp manda (cliente, 06/nov/2026): JPEG de 8 bits, até 2560 px no lado maior, fundo branco
+    // no lugar da transparência. O WhatsApp recusa PNG de 16 bits (o print do iPhone, Display P3) com o erro 131053.
+    // Sem como converter (navegador antigo), vai o arquivo original.
+    const MAX_SIDE = 2560;
+    const asJpeg = async (original: File): Promise<File> => {
+      try {
+        const bitmap = await createImageBitmap(original);
+        const scale = Math.min(1, MAX_SIDE / Math.max(bitmap.width, bitmap.height));
+        const canvas = document.createElement("canvas");
+        canvas.width = Math.round(bitmap.width * scale);
+        canvas.height = Math.round(bitmap.height * scale);
+        const context = canvas.getContext("2d");
+        if (!context) return original;
+        context.fillStyle = "#fff";
+        context.fillRect(0, 0, canvas.width, canvas.height);
+        context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+        bitmap.close();
+        const blob = await new Promise<Blob | null>((done) => canvas.toBlob(done, "image/jpeg", 0.85));
+        if (!blob) return original;
+        return new File([blob], `${original.name.replace(/\.[^.]+$/, "") || "foto"}.jpg`, { type: "image/jpeg" });
+      } catch {
+        return original;
+      }
+    };
     const fail = (text: string) => {
       error.textContent = text;
       error.classList.remove("hidden");
@@ -847,10 +871,13 @@ const tabClass = (active: boolean) =>
     attachForm.addEventListener("submit", async (event) => {
       event.preventDefault();
       error.classList.add("hidden");
-      const file = (attachForm.elements.namedItem("arquivo") as HTMLInputElement).files?.[0];
-      if (!file) return fail("Escolha o arquivo.");
+      const chosen = (attachForm.elements.namedItem("arquivo") as HTMLInputElement).files?.[0];
+      if (!chosen) return fail("Escolha o arquivo.");
+      if (!LIMITS[chosen.type]) return fail("Envie uma foto (JPG ou PNG) ou um PDF.");
+      submit.disabled = true;
+      status.textContent = "Preparando…";
+      const file = chosen.type === "application/pdf" ? chosen : await asJpeg(chosen);
       const limit = LIMITS[file.type];
-      if (!limit) return fail("Envie uma foto (JPG ou PNG) ou um PDF.");
       if (file.size > limit * 1024 * 1024) return fail(file.type === "application/pdf" ? "O PDF vai até 10 MB." : "A foto vai até 5 MB.");
       // Chave nova a cada tentativa: o arquivo vai para um caminho próprio (o anterior, recusado, não atrapalha); dentro
       // da tentativa, o mesmo envio não sai duas vezes.
