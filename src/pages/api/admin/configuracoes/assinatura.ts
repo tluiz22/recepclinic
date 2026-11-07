@@ -14,7 +14,16 @@ import {
   saveBillingContacts,
   setBillingWhatsappOptIn,
 } from "../../../../lib/data/billing";
-import { applyCancellationNow, confirmCardRegistrationNow, startCardChangeNow, startCardRegistrationNow, syncContractNow } from "../../../../lib/data/billingAsaasDeps";
+import {
+  applyCancellationNow,
+  confirmCardRegistrationNow,
+  startCardChangeNow,
+  startCardRegistrationNow,
+  startSwitchToCardNow,
+  switchToPixNow,
+  syncContractNow,
+} from "../../../../lib/data/billingAsaasDeps";
+import { loadActorLabels } from "../../../../lib/data/agenda/trail";
 import { asaasCallbackUrl, requestIp } from "../../../../lib/requestIp";
 import { formatCalendarDate, todayIn } from "../../../../lib/clinicTime";
 import { billingCancelEmail, smtpSender } from "../../../../lib/email";
@@ -39,7 +48,9 @@ import { formChecked, formOptionalText, formText } from "../../../../lib/forms";
 // F12.2g: "Trocar o cartão" abre o Checkout do Asaas (volta em .../cartao).
 // F12.2i: depois do aceite, o passo Cartão (ou Pagamento, no Pix): "Informar o
 // cartão no Asaas" abre a página do Asaas em outra aba (a tela confere em
-// .../pagamento); no Pix, "Pagar depois".
+// .../pagamento); no Pix, "Pagar depois". Troca cartão ↔ Pix (cliente, 07/nov/2026): "forma_pix" (Administrador
+// ou Suporte) muda o Asaas e o contrato na hora; "forma_cartao" (só o Administrador) abre o Checkout da troca de
+// cartão, e a forma vira cartão quando ele termina (volta em .../cartao).
 export const POST: APIRoute = async (context) => {
   const { request, cookies, locals } = context;
   const form = await request.formData().catch(() => null);
@@ -168,6 +179,37 @@ export const POST: APIRoute = async (context) => {
             cancelUrl: `${back}?resultado=cancelado`,
           });
           return { redirectTo: link, message: "Informe o novo cartão na página do Asaas." };
+        }
+        case "forma_pix": {
+          if (!clinic.roles.includes("admin") && !clinic.isPlatformStaff) throw new DataError("forbidden", "Forma de pagamento: só o Administrador da clínica ou o Suporte");
+          const contract = (await listBillingContracts(db, clinic.clinicId)).find((c) => c.status === "active" && c.billingMode === "asaas" && c.acceptance !== "pending");
+          if (!contract) throw new DataError("not_found", "Forma de pagamento: não há assinatura ativa no Asaas");
+          const support = clinic.isPlatformStaff && !clinic.roles.includes("admin");
+          const name = support ? null : (await loadActorLabels(db, clinic.clinicId, [locals.userId ?? null])).get(locals.userId ?? "")?.name;
+          const result = await switchToPixNow(contract.id, {
+            actorId: locals.userId ?? null,
+            actorKind: support ? "support" : "clinic",
+            changedBy: support ? "pelo Suporte do RecepClinic" : name ? `por ${name} (Administrador)` : "pelo Administrador da clínica",
+          });
+          return {
+            redirectTo: page,
+            message:
+              result.status === "unchanged"
+                ? "A forma de pagamento já é Pix."
+                : `Forma de pagamento mudada para Pix${result.nextDue ? `: a mensalidade de ${formatCalendarDate(result.nextDue, "dd/MM/yyyy")} já vem em Pix` : ""}. O cartão deixou de ser cobrado.`,
+          };
+        }
+        case "forma_cartao": {
+          if (!clinic.roles.includes("admin")) throw new DataError("forbidden", "Forma de pagamento: só o Administrador da clínica informa o cartão");
+          const contract = (await listBillingContracts(db, clinic.clinicId)).find((c) => c.status === "active" && c.billingMode === "asaas" && c.paymentMethod === "pix");
+          if (!contract) throw new DataError("not_found", "Forma de pagamento: a assinatura não é no Pix");
+          const back = asaasCallbackUrl("/api/admin/configuracoes/assinatura/cartao", request.url);
+          const link = await startSwitchToCardNow(contract.id, {
+            actorId: locals.userId ?? null,
+            successUrl: `${back}?resultado=ok`,
+            cancelUrl: `${back}?resultado=cancelado`,
+          });
+          return { redirectTo: link, message: "Informe o cartão na página do Asaas." };
         }
         case "whatsapp_retirar":
           await setBillingWhatsappOptIn(db, clinic.clinicId, false);

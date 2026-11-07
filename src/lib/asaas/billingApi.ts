@@ -197,6 +197,16 @@ export function asaasBillingApi(env: AsaasEnv, fetcher: Fetcher = fetch) {
       await post(`/subscriptions/${encodeURIComponent(subscription)}`, { ...LATE_PAYMENT, updatePendingPayments: true });
     },
 
+    /** Troca cartão → Pix (cliente, 07/nov/2026): a assinatura e as cobranças pendentes dela (sandbox, 07/nov/2026). */
+    async setSubscriptionBillingType(subscription: string, billingType: AsaasBillingType): Promise<void> {
+      await post(`/subscriptions/${encodeURIComponent(subscription)}`, { billingType, updatePendingPayments: true });
+    },
+
+    /** Uma cobrança em aberto (a vencida e a avulsa, que a assinatura não muda; sandbox, 07/nov/2026). */
+    async setPaymentBillingType(id: string, billingType: AsaasBillingType): Promise<void> {
+      await post(`/payments/${encodeURIComponent(id)}`, { billingType });
+    },
+
     async findPayment(externalReference: string): Promise<AsaasPayment | null> {
       const list = await get<List<RawPayment & { deleted?: boolean }>>(`/payments?${q({ externalReference })}`);
       const found = list.data.find((p) => !p.deleted);

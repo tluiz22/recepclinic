@@ -197,6 +197,32 @@ export function billingCancelEmail(
 }
 
 /**
+ * Troca da forma de pagamento (cliente, 07/nov/2026): confirmação ao e-mail financeiro, com quem mudou; protege
+ * contra uma troca que a clínica não reconheça.
+ */
+export function billingPaymentMethodEmail(
+  to: string,
+  input: { clinicName: string; method: "pix" | "credit_card"; changedOn: string; /** Com a preposição: "pelo Suporte do RecepClinic", "por Ana (Administrador)". */ changedBy: string; fromDue: string | null; cardLast4: string | null; panelLink: string },
+): Email {
+  const { clinicName, method, changedOn, changedBy, fromDue, cardLast4, panelLink } = input;
+  const from = fromDue ? `a partir da mensalidade de ${fromDue}` : "a partir da próxima mensalidade";
+  const paragraphs =
+    method === "pix"
+      ? [
+          `A forma de pagamento da ${clinicName} no RecepClinic mudou para Pix em ${changedOn}, ${changedBy}.`,
+          `As mensalidades, ${from}, chegam por e-mail e ficam em Configurações › Assinatura, para pagar até o vencimento. O cartão deixou de ser cobrado.`,
+          "Se a clínica não reconhece esta mudança, fale com o Suporte do RecepClinic.",
+        ]
+      : [
+          `A forma de pagamento da ${clinicName} no RecepClinic mudou para cartão de crédito em ${changedOn}, ${changedBy}.`,
+          `As mensalidades, ${from}, são cobradas automaticamente no cartão${cardLast4 ? ` final ${cardLast4}` : ""}, a cada mês, até o cancelamento.`,
+          "Se a clínica não reconhece esta mudança, fale com o Suporte do RecepClinic.",
+        ];
+  const body = layout("Forma de pagamento alterada", paragraphs, { label: "Ver a assinatura", href: panelLink });
+  return { to, subject: `Forma de pagamento alterada: ${clinicName} no RecepClinic`, ...body };
+}
+
+/**
  * Avisos de cobrança do RecepClinic à clínica (F12.7; itens 20 e 22 do
  * planejamento-faturamento-saas.md): atraso no 3º, 7º e 14º dia, sempre com a
  * data a partir da qual a clínica pode ser suspensa (15º dia), e pagamento

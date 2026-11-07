@@ -59,7 +59,7 @@ function fakeApi(found: { customer?: string; subscription?: string; setup?: Asaa
   const calls: { name: string; args: unknown }[] = [];
   const api: AsaasBillingApi = {
     findCustomer: async () => found.customer ?? null,
-    createCustomer: async (args) => (calls.push({ name: "createCustomer", args }), "cus_new"), updateCustomerAddress: async () => {}, setSubscriptionLatePayment: async () => {},
+    createCustomer: async (args) => (calls.push({ name: "createCustomer", args }), "cus_new"), updateCustomerAddress: async () => {}, setSubscriptionLatePayment: async () => {}, setSubscriptionBillingType: async () => {}, setPaymentBillingType: async () => {},
     findSubscription: async () => found.subscription ?? null,
     createSubscription: async (args) => (calls.push({ name: "createSubscription", args }), "sub_new"),
     findPayment: async () => found.setup ?? null,

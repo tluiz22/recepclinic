@@ -1,0 +1,120 @@
+---
+// Forma de pagamento na Assinatura (cliente, 07/nov/2026; desenho B do canvas, plano do faturamento, "Troca cartão ↔
+// Pix"): as duas opções, a atual marcada; escolhendo a outra, o que muda e o botão. Cartão → Pix: Administrador ou
+// Suporte, com confirmação. Pix → cartão: só o Administrador, pelo Checkout do Asaas (até lá, segue em Pix); com
+// cobrança vencida, pede para pagar antes; sem o endereço do pagador, pede o endereço (o Asaas exige).
+import Badge from "../config/Badge.astro";
+import Card from "../config/Panel.astro";
+import { PRIMARY_BUTTON } from "../config/formStyles";
+import { dueDay } from "../../../lib/billingRenewal";
+import { formatCalendarDate } from "../../../lib/clinicTime";
+import type { BillingCharge, BillingContract } from "../../../lib/data/billing";
+
+interface Props {
+  contract: BillingContract;
+  charges: BillingCharge[];
+  today: string;
+  isClinicAdmin: boolean;
+  isPlatformStaff: boolean;
+  hasAddress: boolean;
+  action: string;
+}
+
+const { contract, charges, today, isClinicAdmin, isPlatformStaff, hasAddress, action } = Astro.props;
+const card = contract.paymentMethod === "credit_card";
+const open = charges.filter((c) => c.status === "pending" || c.status === "overdue");
+const overdue = open.some((c) => c.status === "overdue" || c.dueDate < today);
+const nextDue = open.filter((c) => c.kind === "monthly" && c.dueDate >= today).map((c) => c.dueDate).sort()[0] ?? null;
+// Na troca para Pix, todas as cobranças em aberto passam a Pix (a vencida e a implantação também).
+const otherOpen = open.some((c) => c.kind !== "monthly" || c.dueDate !== nextDue);
+const date = (value: string) => formatCalendarDate(value, "dd/MM/yyyy");
+const last4 = contract.cardLast4 ? ` final ${contract.cardLast4}` : "";
+// Quem troca: para Pix, o Administrador ou o Suporte; para o cartão, só o Administrador (ele informa o cartão).
+const canChange = card ? isClinicAdmin || isPlatformStaff : isClinicAdmin;
+const H2 = "font-display text-[17px] leading-tight font-bold text-ink sm:text-lg";
+const OPTION = "flex items-start gap-3 rounded-xl border border-line px-4 py-3 has-checked:border-brand has-checked:bg-brand-soft has-checked:ring-1 has-checked:ring-brand";
+const RADIO = "mt-0.5 h-[18px] w-[18px] shrink-0 accent-brand";
+const cardLine = card
+  ? contract.cardRegisteredAt
+    ? `Cartão${last4}, cobrado todo dia ${dueDay(contract.firstDueDate)}.`
+    : "Cobrança automática no cartão, todo mês."
+  : "Cobrança automática no cartão, todo mês, até o cancelamento.";
+const pixLine = "A cobrança de cada mês chega por e-mail e fica em Cobranças, para pagar até o vencimento.";
+---
+
+<Card>
+  <h2 class={H2}>Forma de pagamento</h2>
+  {
+    !canChange ? (
+      <p class="mt-1 text-[15px] text-ink-mid">
+        {card ? `Cartão de crédito. ${cardLine}` : `Pix. ${pixLine}`}{" "}
+        {isPlatformStaff ? "Para mudar para o cartão, o Administrador da clínica informa o cartão nesta tela." : "Só o Administrador da clínica muda a forma de pagamento."}
+      </p>
+    ) : (
+      <form method="POST" action={action} class="group mt-3 flex flex-col gap-3">
+        <input type="hidden" name="acao" value={card ? "forma_pix" : "forma_cartao"} />
+        <label class={OPTION}>
+          <input type="radio" name="forma" value="credit_card" checked={card} class={`${RADIO} ${card ? "" : "js-forma-alt"}`} />
+          <span class="flex min-w-0 flex-col gap-0.5">
+            <span class="flex flex-wrap items-center gap-2 text-[16px] font-semibold text-ink">
+              Cartão de crédito {card && <Badge variant="accent">Atual</Badge>}
+            </span>
+            <span class="text-[15px] text-ink-mid">{cardLine}</span>
+          </span>
+        </label>
+        <label class={OPTION}>
+          <input type="radio" name="forma" value="pix" checked={!card} class={`${RADIO} ${card ? "js-forma-alt" : ""}`} />
+          <span class="flex min-w-0 flex-col gap-0.5">
+            <span class="flex flex-wrap items-center gap-2 text-[16px] font-semibold text-ink">
+              Pix {!card && <Badge variant="accent">Atual</Badge>}
+            </span>
+            <span class="text-[15px] text-ink-mid">{pixLine}</span>
+          </span>
+        </label>
+        <div class="hidden flex-col gap-3 group-has-[.js-forma-alt:checked]:flex" data-forma-detalhe>
+          {card ? (
+            contract.cardCheckoutOpen ? (
+              <p class="rounded-lg border border-pend-200 bg-pend-100 px-4 py-3 text-[15px] text-pend-800">
+                Há uma troca de cartão em andamento na página do Asaas. Conclua ou espere até amanhã para mudar para Pix.
+              </p>
+            ) : (
+              <>
+                <p class="rounded-lg border border-pend-200 bg-pend-100 px-4 py-3 text-[15px] text-pend-800">
+                  Mudando para Pix: {nextDue ? `a mensalidade de ${date(nextDue)} já vem em Pix` : "as próximas mensalidades vêm em Pix"}
+                  {otherOpen ? ", e as outras cobranças em aberto também passam a Pix" : ""}. O cartão{last4} deixa de ser cobrado.
+                </p>
+                <button
+                  type="submit"
+                  class={`${PRIMARY_BUTTON} js-confirm-delete self-start`}
+                  data-confirm-title="Mudar para Pix?"
+                  data-confirm-message={`${nextDue ? `A partir da mensalidade de ${date(nextDue)}` : "A partir da próxima mensalidade"}, a cobrança chega por e-mail e fica em Cobranças para pagar até o vencimento. O cartão${last4} deixa de ser cobrado. O e-mail financeiro recebe a confirmação.`}
+                  data-confirm-label="Mudar para Pix"
+                >
+                  Mudar para Pix
+                </button>
+              </>
+            )
+          ) : overdue ? (
+            <p class="rounded-lg border border-pend-200 bg-pend-100 px-4 py-3 text-[15px] text-pend-800">
+              Há cobrança vencida: pague em "Pagar", em Cobranças; depois mude para o cartão.
+            </p>
+          ) : !hasAddress ? (
+            <p class="rounded-lg border border-pend-200 bg-pend-100 px-4 py-3 text-[15px] text-pend-800">
+              Antes, preencha o Endereço do pagador, nesta tela: o Asaas exige para cadastrar o cartão.
+            </p>
+          ) : (
+            <>
+              <p class="text-[15px] text-ink-mid">
+                {contract.cardCheckoutOpen ? "A página do Asaas já foi aberta; se não terminou, abra de novo. " : ""}O cartão é informado na página segura do Asaas
+                (o RecepClinic não guarda dados do cartão). A cobrança passa para o cartão {nextDue ? `a partir da mensalidade de ${date(nextDue)}` : "a partir da próxima mensalidade"} quando ele for cadastrado; até lá, segue em Pix. Ao informar o cartão, a clínica autoriza a cobrança automática da mensalidade nele, a cada mês, até o cancelamento.
+              </p>
+              <button type="submit" data-sending-label="Abrindo…" class={`${PRIMARY_BUTTON} self-start`}>
+                Informar o cartão no Asaas
+              </button>
+            </>
+          )}
+        </div>
+      </form>
+    )
+  }
+</Card>

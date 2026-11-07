@@ -21,7 +21,7 @@ import { onboardingDeps } from "../../../../../lib/data/onboardingDeps";
 import { loadOnboardingChecklist, setOnboardingCheck } from "../../../../../lib/data/onboardingChecklist";
 import { getSupportWhatsapp } from "../../../../../lib/data/platformSettings";
 import { isFeatureKey } from "../../../../../lib/features";
-import { applyCancellationNow, syncContractNow } from "../../../../../lib/data/billingAsaasDeps";
+import { applyCancellationNow, switchToPixNow, syncContractNow } from "../../../../../lib/data/billingAsaasDeps";
 import { smtpSender } from "../../../../../lib/email";
 import { platformEnv } from "../../../../../lib/env";
 import { formChecked, formOptionalText, formText } from "../../../../../lib/forms";
@@ -231,6 +231,13 @@ export const POST: APIRoute = async (context) => {
           const sync = await syncContractNow(contract.id);
           if (sync.status === "failed") throw new DataError("unexpected", `Asaas: ${sync.reason}`);
           return { redirectTo: billingPage, message: sync.status === "synced" ? "Cobranças atualizadas do Asaas." : `Nada a fazer no Asaas: ${sync.reason}.` };
+        }
+        case "forma_pix": {
+          // Cliente, 07/nov/2026: o Suporte também passa para Pix (a pedido da clínica); Pix → cartão é da clínica.
+          const contract = (await listBillingContracts(db, clinicId)).find((c) => c.status === "active" && c.billingMode === "asaas" && c.acceptance !== "pending");
+          if (!contract) throw new DataError("not_found", "Forma de pagamento: não há assinatura ativa no Asaas");
+          const result = await switchToPixNow(contract.id, { actorId: locals.userId ?? null, actorKind: "support", changedBy: "pelo Suporte do RecepClinic" });
+          return { redirectTo: billingPage, message: result.status === "unchanged" ? "A forma de pagamento já é Pix." : "Forma de pagamento mudada para Pix; a clínica recebeu a confirmação por e-mail." };
         }
         case "suspender":
           await suspendClinic(db, clinicId, {

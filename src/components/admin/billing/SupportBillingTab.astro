@@ -265,6 +265,21 @@ const form = {
                   </button>
                 </form>
               )}
+              {active.paymentMethod === "credit_card" && active.acceptance !== "pending" && active.asaasSubscriptionId && (
+                // Cliente, 07/nov/2026: o Suporte passa para Pix a pedido da clínica; voltar ao cartão é com a clínica.
+                <form method="POST" action={action} class="mt-3">
+                  <input type="hidden" name="acao" value="forma_pix" />
+                  <button
+                    type="submit"
+                    class={`${SECONDARY_BUTTON} js-confirm-delete`}
+                    data-confirm-title="Mudar para Pix?"
+                    data-confirm-message="A assinatura e as cobranças em aberto passam a Pix no Asaas e o cartão deixa de ser cobrado. A clínica recebe a confirmação por e-mail; para voltar ao cartão, o Administrador informa o cartão na Assinatura."
+                    data-confirm-label="Mudar para Pix"
+                  >
+                    Mudar para Pix
+                  </button>
+                </form>
+              )}
             </>
           )}
           <h3 class="mt-4 text-sm font-semibold text-ink">Cobranças</h3>

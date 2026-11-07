@@ -2236,6 +2236,9 @@ isOneToOne: false
 "billing_schedule_overdue_notices":
 { Args: Record<PropertyKey, never>; Returns: number
                            },
+"billing_set_payment_method":
+{ Args: { "p_actor": string,"p_actor_kind": string,"p_contract_id": string,"p_method": string }; Returns: boolean
+                           },
 "billing_suspend_ended_contracts":
 { Args: Record<PropertyKey, never>; Returns: number
                            },

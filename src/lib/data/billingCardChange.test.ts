@@ -82,6 +82,21 @@ describe("troca de cartão", () => {
     expect(log).toEqual([]);
   });
 
+  it("Pix → cartão (cliente, 07/nov/2026): o mesmo Checkout, só com o contrato no Pix", async () => {
+    const pix = setup();
+    const loaded = await pix.store.load("c1");
+    pix.store.load = async () => ({ ...loaded!, contract: { ...loaded!.contract, paymentMethod: "pix" } });
+    expect(await startCardChange(pix.store, pix.api, "c1", { ...urls, purpose: "switch" })).toEqual({ link: "https://sandbox.asaas.com/checkout" });
+    expect(pix.log).toEqual(["endereço cus_1 01310100", "checkout cus_1 2027-01-03", "request chk_1 2027-01-03"]);
+    // No cartão, "switch" recusa; no Pix, a troca de cartão comum recusa.
+    const card = setup();
+    await expect(startCardChange(card.store, card.api, "c1", { ...urls, purpose: "switch" })).rejects.toThrow(/não é no Pix/);
+    await expect(startCardChange(pix.store, pix.api, "c1", urls)).rejects.toThrow(/não é no cartão/);
+    const overdue = setup({ open: [{ paymentId: "p0", kind: "monthly", status: "overdue", dueDate: "2026-12-03" }] });
+    overdue.store.load = pix.store.load;
+    await expect(startCardChange(overdue.store, overdue.api, "c1", { ...urls, purpose: "switch" })).rejects.toThrow(/depois mude para o cartão/);
+  });
+
   it("com cobrança vencida, pede para pagar antes", async () => {
     const { store, api } = setup({ open: [{ paymentId: "p0", kind: "monthly", status: "overdue", dueDate: "2026-12-03" }] });
     await expect(startCardChange(store, api, "c1", urls)).rejects.toThrow(/cobrança vencida/);

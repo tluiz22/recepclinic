@@ -25,18 +25,25 @@ export async function startCardChange(
   store: BillingCardChangeStore,
   api: AsaasBillingApi | null,
   contractId: string,
-  input: { today: string; actorId: string | null; successUrl: string; cancelUrl: string; purpose?: "change" | "register" },
+  input: { today: string; actorId: string | null; successUrl: string; cancelUrl: string; purpose?: "change" | "register" | "switch" },
 ): Promise<CardChangeStart> {
   const snapshot = await store.load(contractId);
   const contract = snapshot?.contract;
   if (!snapshot || !contract || contract.status !== "active") throw new DataError("not_found", "Troca de cartão: não há assinatura ativa");
-  if (contract.billingMode !== "asaas" || contract.paymentMethod !== "credit_card" || !contract.subscriptionId || !snapshot.account?.customerId) {
-    throw new DataError("invalid", "Troca de cartão: a assinatura não é no cartão de crédito");
+  // Pix → cartão (cliente, 07/nov/2026): o mesmo Checkout; ao concluir, a forma do contrato vira cartão.
+  const method = input.purpose === "switch" ? "pix" : "credit_card";
+  if (contract.billingMode !== "asaas" || contract.paymentMethod !== method || !contract.subscriptionId || !snapshot.account?.customerId) {
+    throw new DataError("invalid", method === "pix" ? "Mudar para cartão: a assinatura não é no Pix" : "Troca de cartão: a assinatura não é no cartão de crédito");
   }
   if (!api) throw new DataError("invalid", "Troca de cartão: Asaas não configurado neste ambiente");
   const open = await store.openCharges(contractId);
   if (open.some((c) => c.status === "overdue")) {
-    throw new DataError("invalid", "Troca de cartão: há cobrança vencida. Pague-a primeiro em \"Pagar\" (dá para usar outro cartão); depois troque o cartão.");
+    throw new DataError(
+      "invalid",
+      method === "pix"
+        ? "Mudar para cartão: há cobrança vencida. Pague-a primeiro em \"Pagar\", em Cobranças; depois mude para o cartão."
+        : "Troca de cartão: há cobrança vencida. Pague-a primeiro em \"Pagar\" (dá para usar outro cartão); depois troque o cartão.",
+    );
   }
   // A próxima mensalidade em aberto (que passa para o cartão novo), ou a próxima a gerar.
   const pendingMonthly = open.filter((c) => c.kind === "monthly" && c.dueDate >= input.today).map((c) => c.dueDate).sort()[0];
@@ -49,7 +56,7 @@ export async function startCardChange(
     valueCents: contract.monthlyCents,
     nextDueDate: nextDue,
     itemName: "Mensalidade RecepClinic",
-    description: `Mensalidade do RecepClinic (${snapshot.clinicName}), ${input.purpose === "register" ? "no cartão" : "no cartão novo"}, a partir de ${nextDue.split("-").reverse().join("/")}.`,
+    description: `Mensalidade do RecepClinic (${snapshot.clinicName}), ${input.purpose === "change" || !input.purpose ? "no cartão novo" : "no cartão"}, a partir de ${nextDue.split("-").reverse().join("/")}.`,
     successUrl: input.successUrl,
     cancelUrl: input.cancelUrl,
     externalReference: `card:${contractId}`,

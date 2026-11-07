@@ -268,6 +268,7 @@ export const BILLING_ACTIONS = {
   card_changed: "Cartão trocado",
   card_change_failed: "Troca de cartão não concluída",
   card_registered: "Cartão cadastrado na assinatura",
+  payment_method_changed: "Forma de pagamento alterada",
 } as const;
 
 /** Suporte: clínicas que cancelaram a assinatura e não têm contrato ativo (selo na lista de clínicas; F12.2f). */

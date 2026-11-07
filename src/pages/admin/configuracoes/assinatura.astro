@@ -26,6 +26,7 @@ import SubscriptionSteps from "../../../components/admin/billing/SubscriptionSte
 import WhatsappStep from "../../../components/admin/billing/WhatsappStep.astro";
 import PayerAddressForm from "../../../components/admin/billing/PayerAddressForm.astro";
 import PaymentStep from "../../../components/admin/billing/PaymentStep.astro";
+import PaymentMethodCard from "../../../components/admin/billing/PaymentMethodCard.astro";
 import { dueDay, renewalLine } from "../../../lib/billingRenewal";
 import { paymentStep, subscriptionSteps, type StepKey } from "../../../lib/billingSteps";
 import HelpTip from "../../../components/admin/ui/HelpTip.astro";
@@ -94,6 +95,9 @@ const overdueCharges = charges.filter((c) => c.status === "overdue" || (c.status
 const needsAddress = payment === "card" && !openSetup && !paymentWaiting && !!account && !account.address;
 // F12.2f: o último cancelamento (some quando houver contrato ativo de novo).
 const canceled = contracts.some((c) => c.status === "active") ? null : (contracts.find((c) => c.cancel) ?? null);
+// Cliente, 07/nov/2026: troca cartão ↔ Pix, com o contrato vigente aceito no Asaas e fora do passo a passo.
+const showPaymentMethod =
+  !!billed && billed.status === "active" && billed.billingMode === "asaas" && billed.acceptance !== "pending" && !!billed.asaasSubscriptionId && currentStep !== "payment";
 const H2 = "font-display text-[17px] leading-tight font-bold text-ink sm:text-lg";
 ---
 
@@ -225,6 +229,17 @@ const H2 = "font-display text-[17px] leading-tight font-bold text-ink sm:text-lg
               </div>
             )}
           </Card>
+        )}
+        {showPaymentMethod && billed && (
+          <PaymentMethodCard
+            contract={billed}
+            charges={charges}
+            today={today}
+            isClinicAdmin={isClinicAdmin}
+            isPlatformStaff={clinic.isPlatformStaff}
+            hasAddress={!!account.address}
+            action={action}
+          />
         )}
       <div class="grid gap-4 lg:grid-cols-2">
         <div class="flex flex-col gap-4">

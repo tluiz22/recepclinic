@@ -537,6 +537,30 @@ export function platformBillingCardChangeStore(env: ServiceEnv = platformEnv()):
   };
 }
 
+// Troca cartão → Pix (cliente, 07/nov/2026): o contrato muda depois do Asaas.
+export type BillingPaymentMethodStore = Pick<BillingCardChangeStore, "load" | "upsertCharge" | "openCharges" | "loadCardChange"> & {
+  setPaymentMethod(contractId: string, method: "pix" | "credit_card", actorId: string | null, actorKind: "clinic" | "support"): Promise<boolean>;
+};
+
+export function platformBillingPaymentMethodStore(env: ServiceEnv = platformEnv()): BillingPaymentMethodStore {
+  const db = platformClient(env);
+  const change = platformBillingCardChangeStore(env);
+  return {
+    load: change.load,
+    upsertCharge: change.upsertCharge,
+    openCharges: change.openCharges,
+    loadCardChange: change.loadCardChange,
+    async setPaymentMethod(contractId, method, actorId, actorKind) {
+      const { data, error } = await (db.rpc as unknown as (n: string, a: Record<string, unknown>) => Promise<{ data: boolean | null; error: unknown }>)(
+        "billing_set_payment_method",
+        { p_contract_id: contractId, p_method: method, p_actor: actorId, p_actor_kind: actorKind },
+      );
+      if (error) throw new PlatformLookupError("billing_set_payment_method", error);
+      return data === true;
+    },
+  };
+}
+
 // F12.2i: o cartão da assinatura (passo Cartão da Assinatura).
 export type CardRegistration = { registeredAt: Date | null; acceptedIp: string | null; setupPaymentId: string | null };
 

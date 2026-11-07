@@ -127,6 +127,12 @@
 > de cartão: assinatura nova no cartão a partir da próxima mensalidade em aberto, a antiga sai com as cobranças em
 > aberto dela); até o cartão ser cadastrado, segue em Pix. Com mensalidade vencida e não paga, pede para pagar antes
 > (como na troca de cartão). Exige o endereço do pagador (Checkout).
+> **Implementada (07/nov/2026, migração `20261228120000`):** card "Forma de pagamento" (`PaymentMethodCard.astro`) e,
+> a pedido do cliente, **também o Suporte** passa para Pix (aba Faturamento; Pix → cartão segue com a clínica);
+> **e-mail de confirmação** ao financeiro (com quem mudou). `billing_set_payment_method` (só service role, trilha
+> `payment_method_changed`) e `billing_finish_card_change` (no Pix → cartão, forma vira cartão com o cartão
+> cadastrado). Sandbox (07/nov): assinatura com `updatePendingPayments` muda as pendentes; cobrança avulsa muda com
+> `POST /payments/{id}`. Testado com Playwright local + sandbox (cartão → Pix, Pix → cartão pelo Checkout, Suporte).
 > **Fim do contrato só sai pelo contrato novo (cliente, 07/nov/2026, migração `20261227120000`):** o Suporte não
 > libera a suspensão por fim do contrato (como a inadimplência, que sai pelo pagamento). Contrato novo ativo, aceito
 > depois da suspensão e não cancelado libera sozinho: cartão → com o cartão cadastrado; Pix com implantação → com a
