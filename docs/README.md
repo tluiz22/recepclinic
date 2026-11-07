@@ -1,6 +1,14 @@
 # RecepClinic
 
-> **Estado atual (retomar daqui), 04/nov/2026.** Detalhes e datas no [`historico.md`](historico.md) (só por busca).
+> **Próxima sessão (cliente, 06/nov):** o cliente traz melhorias para a versão da produção (`552019b`, com a Central).
+> Para ligar a Central numa clínica: item na Matriz + o Administrador liga em Configurações › WhatsApp (já explicado ao
+> cliente). Pendentes do cliente antes de usar com pacientes: modelo "Retomar conversa", campos do webhook, v4/
+> `WHATSAPP_ES_CONFIG_ID`, cópia do bucket/PITR. Push na `main` só com autorização (regra da sessão de 06/nov).
+>
+> **Conversas que não são atendimento (NA, 06/nov):** análise, decisões 1 a 5 e telas (NA0) aprovadas; próximo: NA1 na
+> branch `nao-atendimento`. Plano em [`conversas-nao-atendimento.md`](conversas-nao-atendimento.md).
+>
+> **Estado atual (retomar daqui), 06/nov/2026.** Detalhes e datas no [`historico.md`](historico.md) (só por busca).
 >
 > **3ª leva (C22 a C30, 04/nov):** no **staging e na produção** (`bf97b07`; migrações `20261208120000` e `20261209120000`
 > aplicadas nos dois; base publicada). **Validada pelo cliente (05/nov).**
@@ -19,8 +27,14 @@
 > no celular com a caixa fixa, CSP liberando o Storage (anexo) e confirmação do pedido de recepção digitado. Commit
 > no staging (06/nov). Captura `conversas` refeita.
 >
-> **Aviso da mensagem automática do app em 6 h (06/nov):** era 7 dias. Vai para a produção **junto com a Central**
-> (cliente, 06/nov), não sozinho.
+> **Áudio da Conversas (07/nov, `7e8613c`):** não tocava (CSP) e demorava (só a rotina de 1 min); corrigido, validado
+> no staging e **na produção**. Detalhe no `producao.md`.
+>
+> **Produção (06/nov, `552019b`):** a `main` inteira, com a Central (12 migrações aplicadas; item `central_attendance`
+> liberado em nenhuma clínica) e todos os ajustes de 06/nov. Saúde `ok`. Antes de liberar a Central numa clínica
+> (cliente): configuração v4 na Meta e `WHATSAPP_ES_CONFIG_ID`, campos do webhook, modelo "Retomar conversa", cópia do
+> bucket/PITR. Detalhe no `producao.md`. **`faturamento` com a `main` até `552019b`** (merge `882427f`, migração própria
+> `20261225130000` do bloqueio de suspensa nas tabelas da Central; 1086 de unidade e 1005 de banco passando).
 >
 > **C31 (04/nov):** apresentação do 1º menu do bot, descrições nas opções e botão "Ver opções". No **staging e na
 > produção** (`d2744f9`, sem migração). **Validada (05/nov).**
