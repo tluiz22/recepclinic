@@ -6,8 +6,8 @@
 > `WHATSAPP_ES_CONFIG_ID`, cópia do bucket/PITR. Push na `main` só com autorização (regra da sessão de 06/nov).
 >
 > **NA, conversas que não são atendimento (07/nov):** NA1 a NA6 feitas, **no staging e na produção** (`d4aff65`,
-> migrações `20261226120000`, `20261226130000` e `20261226140000` aplicadas nos dois). **Cliente valida** pelo roteiro
-> no fim do [`conversas-nao-atendimento.md`](conversas-nao-atendimento.md).
+> migrações `20261226120000`, `20261226130000` e `20261226140000` aplicadas nos dois). **Validada (07/nov)** pelo
+> roteiro no fim do [`conversas-nao-atendimento.md`](conversas-nao-atendimento.md).
 >
 > **Ajuda desta tela (07/nov, `32df66f`):** no pé do menu lateral e, no celular, ícone "?" no cabeçalho. No staging e
 > na produção (`d4aff65`). As 28 capturas refeitas (fila vazia). **`faturamento` com a `main` até `d4aff65`** (merge
