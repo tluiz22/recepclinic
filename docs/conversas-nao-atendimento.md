@@ -1,7 +1,7 @@
 # Conversas que não são atendimento (NA)
 
 > **Retomar daqui (06/nov/2026).** Etapa 1 (análise), decisões 1 a 5 e **NA0 (telas) aprovados** pelo cliente.
-> **Próximo:** NA1 em branch própria (`nao-atendimento`, criada da `main`). Nada implementado.
+> **Próximo:** NA1 na branch `nao-atendimento` (criada da `main` em 07/nov, só local). Nada implementado.
 
 ## Objetivo
 
