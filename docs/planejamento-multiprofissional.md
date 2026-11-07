@@ -1,7 +1,7 @@
 # Clínica com vários profissionais: especialidades, convênios e informações do bot por profissional
 
 > **Estado atual (retomar daqui), 07/nov/2026.** Planejamento pedido pelo cliente (07/nov) junto com a revisão da
-> NFS-e (seção 14 do [`planejamento-nfse-asaas.md`](planejamento-nfse-asaas.md)). Diagnóstico do código feito; **M1, M2, M3 e M6 decididas** (ME pronta para planejar o código); **M4, M5, M7 e M8
+> NFS-e (seção 14 do [`planejamento-nfse-asaas.md`](planejamento-nfse-asaas.md)). Diagnóstico do código feito; **M1 a M4 e M6 decididas** (ME pronta para planejar o código); **M5, M7 e M8
 > abertas** (seção 6), uma por vez com o cliente. Sem código antes das decisões e do OK.
 
 Marcas como no plano da NFS-e: **[Código]**, **[Cliente]**, **[Hipótese]**, **[Pendência]**.
@@ -52,9 +52,11 @@ muitos médicos); especialidade e informações do bot são da clínica inteira.
   particular" e `professional_insurance_exclusions` sai; a secretária associa os convênios. **Atenção:** até a
   associação, o bot e a página pública não oferecem convênio: avisar as clínicas com o item `insurance` ligado e
   mostrar a pendência "convênios não associados" na tela Convênios e no Início do Administrador.
-- **Quem mantém:** a **Recepção (secretária)** passa a cadastrar convênios e associar aos profissionais (pedido do
-  cliente); hoje é só o Administrador. Muda a RLS de `insurance_plans` e da associação para `admin` + `reception`, com
-  trilha de quem mudou. **Ver M4.**
+- **Quem mantém (decidido, cliente, 07/nov, M4):** o **Administrador** sempre; os demais membros só com a
+  permissão **"Cadastrar e associar convênios"**, que o Administrador marca no cadastro da equipe (Configurações ›
+  Equipe, por pessoa). **[Código]** hoje a equipe só tem papéis (`clinic_members.roles`) e o alcance das agendas
+  (`agenda_scope`), sem permissão avulsa: coluna nova `clinic_members.can_manage_insurance` (padrão desligada) e RLS
+  de `insurance_plans` e da associação = `admin` ou membro com a permissão, com trilha de quem mudou.
 - **Telas:** Configurações › Convênios (lista; cada convênio mostra quantos profissionais atendem) e, no cadastro do
   profissional, a seção "Convênios atendidos" (só particular / marcar os planos). Atalho "associar a vários
   profissionais" no convênio.
@@ -89,7 +91,7 @@ muitos médicos); especialidade e informações do bot são da clínica inteira.
 | M1 | Especialidades: lista da clínica ou lista global fechada do Suporte? | **Decidido (07/nov): lista global fechada** |
 | M2 | Profissional sem especialidade na publicação: pendência visível ou bloqueio? | **Decidido (07/nov): pendência visível; salvar exige** |
 | M3 | Exceções de convênio de hoje: converter ou começar vazio? | **Decidido (07/nov): começar vazio** (todos "só particular" até a associação) |
-| M4 | Recepção mantém convênios e associações (hoje só o Administrador)? | Sim, com trilha |
+| M4 | Quem mantém convênios e associações? | **Decidido (07/nov): Administrador + quem ele autorizar no cadastro da equipe** |
 | M5 | Informações do bot: por profissional com o texto da clínica como padrão, ou só por profissional? | Padrão da clínica + texto do profissional |
 | M6 | Especialidade obrigatória para todas as profissões ou só para médico? | **Decidido (07/nov): todas** (o Suporte cadastra as de cada profissão) |
 | M7 | Ordem das etapas | ME → MC → MI → MB; NFS-e por profissional (seção 14 da NFS-e) em paralelo ao planejamento, código depois da ME |
