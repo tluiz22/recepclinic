@@ -1,6 +1,11 @@
 # RecepClinic
 
-> **Estado atual (retomar daqui), 04/nov/2026.** Detalhes e datas no [`historico.md`](historico.md) (só por busca).
+> **Próxima sessão (cliente, 06/nov):** o cliente traz melhorias para a versão da produção (`552019b`, com a Central).
+> Para ligar a Central numa clínica: item na Matriz + o Administrador liga em Configurações › WhatsApp (já explicado ao
+> cliente). Pendentes do cliente antes de usar com pacientes: modelo "Retomar conversa", campos do webhook, v4/
+> `WHATSAPP_ES_CONFIG_ID`, cópia do bucket/PITR. Push na `main` só com autorização (regra da sessão de 06/nov).
+>
+> **Estado atual (retomar daqui), 06/nov/2026.** Detalhes e datas no [`historico.md`](historico.md) (só por busca).
 >
 > **3ª leva (C22 a C30, 04/nov):** no **staging e na produção** (`bf97b07`; migrações `20261208120000` e `20261209120000`
 > aplicadas nos dois; base publicada). **Validada pelo cliente (05/nov).**
