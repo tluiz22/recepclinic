@@ -1,7 +1,7 @@
 # Clínica com vários profissionais: especialidades, convênios e informações do bot por profissional
 
 > **Estado atual (retomar daqui), 07/nov/2026.** Planejamento pedido pelo cliente (07/nov) junto com a revisão da
-> NFS-e (seção 14 do [`planejamento-nfse-asaas.md`](planejamento-nfse-asaas.md)). Diagnóstico do código feito; **M1 a M4 e M6 decididas** (ME pronta para planejar o código); **M5, M7 e M8
+> NFS-e (seção 14 do [`planejamento-nfse-asaas.md`](planejamento-nfse-asaas.md)). Diagnóstico do código feito; **M1 a M6 decididas** (ME pronta para planejar o código); **M7 e M8
 > abertas** (seção 6), uma por vez com o cliente. Sem código antes das decisões e do OK.
 
 Marcas como no plano da NFS-e: **[Código]**, **[Cliente]**, **[Hipótese]**, **[Pendência]**.
@@ -66,23 +66,36 @@ muitos médicos); especialidade e informações do bot são da clínica inteira.
 
 ## 4. Informações do bot por profissional (etapa MI)
 
-- `professional_bot_info` (profissional, formas de pagamento, texto de convênios, observações), todos opcionais: vazio
-  = usa o texto da clínica (o de hoje vira o **padrão da clínica**). **Ver M5.**
+- **Só por profissional (decidido, cliente, 07/nov, M5):** `professional_bot_info` (profissional, formas de pagamento,
+  texto de convênios, observações). Sai o texto da clínica (`clinic_settings.bot_payment_info`, `bot_insurance_info`,
+  `bot_notes`). Profissional sem texto: o bot não responde aquela informação.
+- **Migração [Hipótese]:** o texto atual da clínica é copiado para **cada profissional ativo** (clínica de um
+  profissional, como a piloto, não muda nada para o paciente); depois a clínica ajusta o de cada um.
 - A lista de convênios do profissional sai da associação (seção 3); o texto livre fica para observações ("convênio X
   só para consulta, não para retorno").
-- No bot, "Informações gerais › Valores/Convênios": com mais de um profissional, pergunta antes **de qual profissional**
-  (ou especialidade, depois da etapa MB); com o profissional já citado na mensagem, responde direto.
-- Tela: em Configurações › Profissionais, seção "Informações que o bot responde"; em Configurações › Clínica, o bloco
-  atual vira "Padrão da clínica".
+- No bot, as informações respondidas são as **do profissional escolhido no início da conversa** (seção 5).
+- Tela: em Configurações › Profissionais, seção "Informações que o bot responde"; o bloco de Configurações › Clínica
+  sai (com aviso apontando para Profissionais).
 
-## 5. Escolha por especialidade no bot e na marcação (etapa MB, depois)
+## 5. Escolha da especialidade e do profissional no início do bot (etapa MB)
 
-- Bot: **especialidade → profissional → serviço → data e horário**. Pula o passo que tiver uma opção só (clínica de um
-  médico continua como hoje). Convênio do paciente filtra os profissionais quando já conhecido.
+**Decidido (cliente, 07/nov, junto da M5):**
+- **Clínica com um profissional** (como a piloto): **nada muda**; o bot segue como hoje.
+- **Clínica com mais de um profissional:** no início da conversa o bot pergunta **a especialidade**, depois mostra
+  **os profissionais dela** para escolher; se a especialidade tiver **um só**, só mostra o nome dele (sem pergunta).
+  Em seguida, o **menu principal de hoje**, já no contexto daquele profissional: marcação, informações gerais
+  (formas de pagamento, convênios, observações dele), remarcar, cancelar etc.
+- Especialidade com o mesmo profissional em mais de uma: ele aparece em cada uma.
+- **[Hipótese]** remarcar, cancelar e "minhas consultas" continuam mostrando todas as consultas do paciente na clínica
+  (não só as do profissional escolhido), para o paciente não precisar voltar ao início; trocar de profissional fica
+  como opção no menu ("Escolher outro profissional"). A confirmar no desenho das telas do bot.
+- Convênio do paciente filtra os profissionais quando já conhecido.
 - Marcação da Recepção e página pública: o mesmo filtro (especialidade, depois profissional).
 - Atualiza no mesmo commit o fluxograma de Tecnologia › Jornada do bot (`botJourney.ts`, `JOURNEY_UPDATED`) e as
   capturas afetadas vão para `docs/capturas-pendentes.md`.
-- Funil (`bot_funnel_events`) ganha o passo `specialty`.
+- Funil (`bot_funnel_events`) ganha os passos `specialty` e `professional`.
+- **Dependência nova:** como as informações do bot passam a ser só do profissional, a MI precisa da escolha do
+  profissional no início: **MI e MB saem juntas** (ver M7).
 
 ## 6. Decisões abertas (uma por vez, com o cliente)
 
@@ -92,9 +105,9 @@ muitos médicos); especialidade e informações do bot são da clínica inteira.
 | M2 | Profissional sem especialidade na publicação: pendência visível ou bloqueio? | **Decidido (07/nov): pendência visível; salvar exige** |
 | M3 | Exceções de convênio de hoje: converter ou começar vazio? | **Decidido (07/nov): começar vazio** (todos "só particular" até a associação) |
 | M4 | Quem mantém convênios e associações? | **Decidido (07/nov): Administrador + quem ele autorizar no cadastro da equipe** |
-| M5 | Informações do bot: por profissional com o texto da clínica como padrão, ou só por profissional? | Padrão da clínica + texto do profissional |
+| M5 | Informações do bot: padrão da clínica + profissional, ou só por profissional? | **Decidido (07/nov): só por profissional**; bot escolhe especialidade e profissional no início (seção 5) |
 | M6 | Especialidade obrigatória para todas as profissões ou só para médico? | **Decidido (07/nov): todas** (o Suporte cadastra as de cada profissão) |
-| M7 | Ordem das etapas | ME → MC → MI → MB; NFS-e por profissional (seção 14 da NFS-e) em paralelo ao planejamento, código depois da ME |
+| M7 | Ordem das etapas | ME → MC → MI + MB juntas; NFS-e por profissional (seção 14 da NFS-e) em paralelo ao planejamento, código depois da ME |
 | M8 | Agenda de exame/equipamento (sem profissional): entra na escolha por especialidade (ex.: "Exames") ou segue no menu de exames? | Segue no menu de exames |
 
 ## 7. Etapas
@@ -103,7 +116,6 @@ muitos médicos); especialidade e informações do bot são da clínica inteira.
 |---|---|---|
 | ME | Especialidades (lista global do Suporte), vínculo N:N, obrigatória, migração do texto atual, Base de Conhecimento | M1, M2, M6 |
 | MC | Convênios por profissional (associação positiva, Recepção mantém, telas, consulta única) | M3, M4, ME |
-| MI | Informações do bot por profissional | M5, MC |
-| MB | Especialidade → profissional no bot, na marcação e na página pública | ME, MC, M8 |
+| MI + MB | Informações do bot por profissional; especialidade → profissional no início do bot, na marcação e na página pública | ME, MC, M8 |
 
 Cada etapa: testes de unidade e de banco, Playwright nas telas (390 px e 1280 px), staging, validação do cliente.
