@@ -11,6 +11,7 @@
 // F12.2i: selo "Sem cartão" e o final do cartão da assinatura.
 // F12.2h: o lembrete do reajuste anual pelo IPCA.
 // Cobranças entram nas próximas fases.
+import PayerAddressForm from "./PayerAddressForm.astro";
 import Badge from "../config/Badge.astro";
 import Card from "../config/Panel.astro";
 import ConfirmDeleteDialog from "../ConfirmDeleteDialog.astro";
@@ -463,6 +464,23 @@ const form = {
         <button type="submit" data-sending-label="Salvando…" class={`${PRIMARY_BUTTON} self-start`}>{account ? "Salvar a conta" : "Cadastrar a conta"}</button>
       </form>
     </Card>
+
+    {
+      account && (
+        <Card>
+          <div class="flex flex-wrap items-center gap-2">
+            <h2 class={H2}>Endereço do pagador</h2>
+            {!account.address && <Badge variant="warning">Não preenchido</Badge>}
+          </div>
+          <p class="mt-1 text-sm text-ink-soft">
+            O Asaas exige para cadastrar o cartão sem implantação e para trocar o cartão. O Administrador da clínica também corrige, em Configurações › Assinatura.
+          </p>
+          <div class="mt-3">
+            <PayerAddressForm action={action} acao="endereco_pagador" address={account.address} idPrefix="suporte_endereco" />
+          </div>
+        </Card>
+      )
+    }
   </div>
 
   <div class="flex min-w-0 flex-col gap-4">

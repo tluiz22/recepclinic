@@ -1,0 +1,109 @@
+---
+// Endereço do pagador (cliente, 07/nov/2026): o Checkout do Asaas (cartão sem
+// implantação e troca de cartão) exige. O Suporte preenche no cadastro; o
+// Administrador da clínica também corrige em Configurações › Assinatura. O CEP
+// preenche rua, bairro, cidade e UF (busca no servidor; sem resposta, à mão).
+import { formatPostalCode, type PayerAddress } from "../../../lib/data/billing";
+import { HINT, INPUT, LABEL, PRIMARY_BUTTON } from "../config/formStyles";
+
+interface Props {
+  action: string;
+  /** Valor do campo "acao" do formulário. */
+  acao: string;
+  address: PayerAddress | null;
+  /** Prefixo dos ids (duas cópias na mesma tela não se confundem). */
+  idPrefix?: string;
+}
+
+const { action, acao, address, idPrefix = "endereco" } = Astro.props;
+const id = (name: string) => `${idPrefix}_${name}`;
+const UF = ["AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO", "MA", "MT", "MS", "MG", "PA", "PB", "PR", "PE", "PI", "RJ", "RN", "RS", "RO", "RR", "SC", "SP", "SE", "TO"];
+---
+
+<form method="POST" action={action} class="flex flex-col gap-3" data-payer-address>
+  <input type="hidden" name="acao" value={acao} />
+  <div class="grid gap-3 sm:grid-cols-[minmax(0,180px)_minmax(0,1fr)]">
+    <div>
+      <label for={id("cep")} class={LABEL}>CEP</label>
+      <input
+        id={id("cep")}
+        name="postal_code"
+        required
+        inputmode="numeric"
+        autocomplete="postal-code"
+        placeholder="00000-000"
+        maxlength="9"
+        value={address ? formatPostalCode(address.postalCode) : ""}
+        class={INPUT}
+        data-cep
+      />
+    </div>
+    <p class={`${HINT} self-end`} data-cep-status aria-live="polite">Digite o CEP: rua, bairro, cidade e UF vêm sozinhos.</p>
+  </div>
+  <div>
+    <label for={id("rua")} class={LABEL}>Rua</label>
+    <input id={id("rua")} name="street" required maxlength="200" autocomplete="address-line1" value={address?.street ?? ""} class={INPUT} data-cep-street />
+  </div>
+  <div class="grid gap-3 sm:grid-cols-2">
+    <div>
+      <label for={id("numero")} class={LABEL}>Número</label>
+      <input id={id("numero")} name="address_number" required maxlength="20" placeholder="Ou S/N" value={address?.number ?? ""} class={INPUT} data-cep-number />
+    </div>
+    <div>
+      <label for={id("complemento")} class={LABEL}>Complemento (opcional)</label>
+      <input id={id("complemento")} name="address_complement" maxlength="100" autocomplete="address-line2" value={address?.complement ?? ""} class={INPUT} />
+    </div>
+  </div>
+  <div>
+    <label for={id("bairro")} class={LABEL}>Bairro</label>
+    <input id={id("bairro")} name="district" required maxlength="100" value={address?.district ?? ""} class={INPUT} data-cep-district />
+  </div>
+  <div class="grid gap-3 grid-cols-[minmax(0,1fr)_96px]">
+    <div>
+      <label for={id("cidade")} class={LABEL}>Cidade</label>
+      <input id={id("cidade")} name="city" required maxlength="100" autocomplete="address-level2" value={address?.city ?? ""} class={INPUT} data-cep-city />
+    </div>
+    <div>
+      <label for={id("uf")} class={LABEL}>UF</label>
+      <select id={id("uf")} name="state" required class={INPUT} data-cep-state>
+        <option value="">—</option>
+        {UF.map((uf) => <option value={uf} selected={address?.state === uf}>{uf}</option>)}
+      </select>
+    </div>
+  </div>
+  <button type="submit" data-sending-label="Salvando…" class={`${PRIMARY_BUTTON} self-start`}>{address ? "Salvar endereço" : "Salvar o endereço"}</button>
+</form>
+
+<script>
+  // Busca do CEP: o servidor consulta e devolve rua, bairro, cidade e UF.
+  for (const form of document.querySelectorAll<HTMLFormElement>("[data-payer-address]")) {
+    const cep = form.querySelector<HTMLInputElement>("[data-cep]")!;
+    const status = form.querySelector<HTMLElement>("[data-cep-status]")!;
+    const field = <T extends HTMLElement>(name: string) => form.querySelector<T>(`[data-cep-${name}]`)!;
+    let last = cep.value.replace(/\D/g, "");
+    const lookup = async () => {
+      const digits = cep.value.replace(/\D/g, "");
+      if (digits.length === 8) cep.value = `${digits.slice(0, 5)}-${digits.slice(5)}`;
+      if (digits.length !== 8 || digits === last) return;
+      last = digits;
+      status.textContent = "Buscando o CEP…";
+      try {
+        const response = await fetch(`/api/admin/configuracoes/assinatura/cep?cep=${digits}`, { headers: { accept: "application/json" } });
+        if (!response.ok) throw new Error(String(response.status));
+        const found = (await response.json()) as { street: string; district: string; city: string; state: string };
+        if (found.street) field<HTMLInputElement>("street").value = found.street;
+        if (found.district) field<HTMLInputElement>("district").value = found.district;
+        field<HTMLInputElement>("city").value = found.city;
+        field<HTMLSelectElement>("state").value = found.state;
+        status.textContent = "Endereço preenchido pelo CEP: confira e informe o número.";
+        field<HTMLInputElement>(found.street ? "number" : "street").focus();
+      } catch {
+        status.textContent = "Não achamos este CEP: preencha o endereço à mão.";
+      }
+    };
+    cep.addEventListener("input", () => {
+      if (cep.value.replace(/\D/g, "").length === 8) void lookup();
+    });
+    cep.addEventListener("change", () => void lookup());
+  }
+</script>

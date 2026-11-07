@@ -70,3 +70,8 @@ Depois do cancelamento, a aba Suspensão não tem "Liberar" para o fim do contra
 novo: Suporte ativa um contrato; o Administrador aceita e cadastra o cartão (ou paga a implantação, no Pix). Manual ou
 Pix sem implantação: volta no aceite. A trilha mostra "Reativação automática: …".
 
+## 9. Endereço do pagador (cliente, 07/nov/2026)
+Suporte › Faturamento e Admin › Assinatura: quadro "Endereço do pagador"; o CEP preenche rua, bairro, cidade e UF.
+Contrato no cartão **sem implantação**, sem endereço: o passo Cartão pede o endereço antes do botão; com o endereço,
+"Informar o cartão no Asaas" abre o Checkout. "Trocar o cartão" também usa o endereço.
+

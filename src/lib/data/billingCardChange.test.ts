@@ -3,6 +3,8 @@ import type { AsaasBillingApi, AsaasPayment } from "../asaas/billingApi";
 import { finishCardChange, startCardChange } from "./billingCardChange";
 import type { BillingCardChangeStore, BillingSyncSnapshot, CardChangeRequest } from "./platform";
 
+const ADDRESS = { postalCode: "01310100", street: "Avenida Paulista", number: "1000", complement: null, district: "Bela Vista" };
+
 // F12.2g: troca de cartão pelo Checkout do Asaas (assinatura nova no cartão
 // novo; a antiga sai quando o Checkout termina).
 const snapshot: BillingSyncSnapshot = {
@@ -21,7 +23,7 @@ const snapshot: BillingSyncSnapshot = {
     subscriptionId: "sub_old",
     replacedSubscriptionId: null,
   },
-  account: { payerName: "Clínica", payerDocument: "11222333000181", financeEmail: "f@x", financePhone: null, customerId: "cus_1" },
+  account: { payerName: "Clínica", payerDocument: "11222333000181", financeEmail: "f@x", financePhone: null, customerId: "cus_1", address: ADDRESS },
 } as BillingSyncSnapshot;
 
 function setup(options: { open?: { paymentId: string; kind: "monthly" | "setup" | "other"; status: string; dueDate: string }[]; request?: CardChangeRequest | null; subs?: { id: string; billingType: string; nextDueDate: string; dateCreated: string }[] } = {}) {
@@ -36,6 +38,7 @@ function setup(options: { open?: { paymentId: string; kind: "monthly" | "setup" 
     openCardChanges: async () => [],
   };
   const api = {
+    updateCustomerAddress: async (customer: string, address: { postalCode: string }) => void log.push(`endereço ${customer} ${address.postalCode}`),
     createCardCheckout: async (input: { nextDueDate: string; customer: string }) => {
       log.push(`checkout ${input.customer} ${input.nextDueDate}`);
       return { id: "chk_1", link: "https://sandbox.asaas.com/checkout" };
@@ -64,10 +67,18 @@ describe("troca de cartão", () => {
   it("abre o Checkout no vencimento da mensalidade em aberto (ou no próximo) e registra o pedido", async () => {
     const withOpen = setup({ open: [{ paymentId: "p1", kind: "monthly", status: "pending", dueDate: "2027-01-03" }] });
     expect(await startCardChange(withOpen.store, withOpen.api, "c1", urls)).toEqual({ link: "https://sandbox.asaas.com/checkout" });
-    expect(withOpen.log).toEqual(["checkout cus_1 2027-01-03", "request chk_1 2027-01-03"]);
+    expect(withOpen.log).toEqual(["endereço cus_1 01310100", "checkout cus_1 2027-01-03", "request chk_1 2027-01-03"]);
     const none = setup();
     await startCardChange(none.store, none.api, "c1", urls);
-    expect(none.log[0]).toBe("checkout cus_1 2027-01-03");
+    expect(none.log[1]).toBe("checkout cus_1 2027-01-03");
+  });
+
+  it("sem o endereço do pagador, não abre o Checkout (o Asaas exige; cliente, 07/nov/2026)", async () => {
+    const { store, api, log } = setup();
+    const loaded = await store.load("c1");
+    store.load = async () => ({ ...loaded!, account: { ...loaded!.account!, address: null } });
+    await expect(startCardChange(store, api, "c1", urls)).rejects.toThrow(/endereço do pagador/);
+    expect(log).toEqual([]);
   });
 
   it("com cobrança vencida, pede para pagar antes", async () => {

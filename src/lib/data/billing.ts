@@ -35,8 +35,43 @@ export type BillingAccount = {
   asaasCustomerId: string | null;
   /** F12.2e: "Agora não" no passo do WhatsApp financeiro. */
   whatsappPromptDismissedAt: Date | null;
+  /** Endereço do pagador (cliente, 07/nov/2026): exigido pelo Checkout do Asaas; null = não preenchido. */
+  address: PayerAddress | null;
   updatedAt: Date;
 };
+
+export type PayerAddress = {
+  /** CEP com 8 números, sem máscara. */
+  postalCode: string;
+  street: string;
+  number: string;
+  complement: string | null;
+  district: string;
+  city: string;
+  /** UF, 2 letras. */
+  state: string;
+};
+
+export const ADDRESS_MESSAGES = {
+  postalCode: "Informe o CEP (8 números).",
+  street: "Informe a rua.",
+  number: "Informe o número (ou S/N).",
+  complement: "Complemento longo demais (até 100 caracteres).",
+  district: "Informe o bairro.",
+  city: "Informe a cidade.",
+  state: "Informe a UF (2 letras).",
+} as const;
+
+/** CEP só com números (8), ou null. */
+export function normalizePostalCode(value: string | null | undefined): string | null {
+  const digits = (value ?? "").replace(/\D/g, "");
+  return digits.length === 8 ? digits : null;
+}
+
+/** CEP com máscara: 01310-100. */
+export function formatPostalCode(value: string): string {
+  return value.length === 8 ? `${value.slice(0, 5)}-${value.slice(5)}` : value;
+}
 
 export const BILLING_MESSAGES = {
   payerName: "Informe o nome ou a razão social do pagador.",
@@ -56,6 +91,13 @@ type AccountRow = {
   whatsapp_opt_in_version: string | null;
   asaas_customer_id: string | null;
   whatsapp_prompt_dismissed_at: string | null;
+  postal_code: string | null;
+  street: string | null;
+  address_number: string | null;
+  address_complement: string | null;
+  district: string | null;
+  city: string | null;
+  state: string | null;
   updated_at: string;
 };
 
@@ -63,7 +105,9 @@ export async function getBillingAccount(db: DbClient, clinicId: string): Promise
   const row = unwrap(
     await db
       .from("billing_accounts")
-      .select("payer_name, payer_document, finance_email, finance_phone, whatsapp_opt_in_at, whatsapp_opt_in_version, asaas_customer_id, whatsapp_prompt_dismissed_at, updated_at")
+      .select(
+        "payer_name, payer_document, finance_email, finance_phone, whatsapp_opt_in_at, whatsapp_opt_in_version, asaas_customer_id, whatsapp_prompt_dismissed_at, postal_code, street, address_number, address_complement, district, city, state, updated_at",
+      )
       .eq("clinic_id", clinicId)
       .maybeSingle(),
     "Conta de cobrança",
@@ -77,6 +121,17 @@ export async function getBillingAccount(db: DbClient, clinicId: string): Promise
     whatsappOptIn: row.whatsapp_opt_in_at ? { at: new Date(row.whatsapp_opt_in_at), version: row.whatsapp_opt_in_version ?? "" } : null,
     asaasCustomerId: row.asaas_customer_id,
     whatsappPromptDismissedAt: row.whatsapp_prompt_dismissed_at ? new Date(row.whatsapp_prompt_dismissed_at) : null,
+    address: row.postal_code
+      ? {
+          postalCode: row.postal_code,
+          street: row.street ?? "",
+          number: row.address_number ?? "",
+          complement: row.address_complement,
+          district: row.district ?? "",
+          city: row.city ?? "",
+          state: row.state ?? "",
+        }
+      : null,
     updatedAt: new Date(row.updated_at),
   };
 }
@@ -122,6 +177,48 @@ export async function saveBillingContacts(db: DbClient, clinicId: string, input:
 
   const { error } = await db.rpc("save_billing_contacts", { p_clinic_id: clinicId, p_finance_email: email, p_finance_phone: phone ?? "" });
   if (error) throw fromDbError(error, "Contatos financeiros");
+}
+
+export type PayerAddressInput = {
+  postalCode: string;
+  street: string;
+  number: string;
+  complement?: string | null;
+  district: string;
+  city: string;
+  state: string;
+};
+
+/** Suporte ou Administrador da clínica: o endereço do pagador (cliente, 07/nov/2026). */
+export async function saveBillingAddress(db: DbClient, clinicId: string, input: PayerAddressInput): Promise<void> {
+  const v = new Validation();
+  const postalCode = normalizePostalCode(input.postalCode);
+  v.check(postalCode !== null, "postal_code", ADDRESS_MESSAGES.postalCode);
+  const street = cleanText(input.street);
+  v.check(street !== null && street.length <= 200, "street", ADDRESS_MESSAGES.street);
+  const number = cleanText(input.number);
+  v.check(number !== null && number.length <= 20, "address_number", ADDRESS_MESSAGES.number);
+  const complement = cleanText(input.complement);
+  v.check(complement === null || complement.length <= 100, "address_complement", ADDRESS_MESSAGES.complement);
+  const district = cleanText(input.district);
+  v.check(district !== null && district.length <= 100, "district", ADDRESS_MESSAGES.district);
+  const city = cleanText(input.city);
+  v.check(city !== null && city.length <= 100, "city", ADDRESS_MESSAGES.city);
+  const state = (input.state ?? "").trim().toUpperCase();
+  v.check(/^[A-Z]{2}$/.test(state), "state", ADDRESS_MESSAGES.state);
+  v.throwIfInvalid("Endereço do pagador");
+
+  const { error } = await db.rpc("save_billing_address", {
+    p_clinic_id: clinicId,
+    p_postal_code: postalCode!,
+    p_street: street!,
+    p_number: number!,
+    p_complement: complement ?? "",
+    p_district: district!,
+    p_city: city!,
+    p_state: state,
+  });
+  if (error) throw fromDbError(error, "Endereço do pagador");
 }
 
 /** Só o Administrador da clínica: autoriza (com o texto da versão atual) ou retira o WhatsApp financeiro. */

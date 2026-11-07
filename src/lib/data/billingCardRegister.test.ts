@@ -3,6 +3,8 @@ import type { AsaasBillingApi, AsaasPayment } from "../asaas/billingApi";
 import { asaasIp, confirmCardRegistration, startCardRegistration } from "./billingCardRegister";
 import type { BillingCardRegisterStore, BillingSyncSnapshot, CardChangeRequest, CardRegistration } from "./platform";
 
+const ADDRESS = { postalCode: "01310100", street: "Avenida Paulista", number: "1000", complement: null, district: "Bela Vista" };
+
 // F12.2i: passo Cartão. Com implantação, o cartão que a pagou vai para a
 // assinatura (token); sem implantação, o Checkout do Asaas (como a troca).
 const snapshot = {
@@ -21,7 +23,7 @@ const snapshot = {
     subscriptionId: "sub_1",
     replacedSubscriptionId: null,
   },
-  account: { payerName: "Clínica", payerDocument: "11222333000181", financeEmail: "f@x", financePhone: null, customerId: "cus_1" },
+  account: { payerName: "Clínica", payerDocument: "11222333000181", financeEmail: "f@x", financePhone: null, customerId: "cus_1", address: ADDRESS },
 } as BillingSyncSnapshot;
 
 const payment = (over: Partial<AsaasPayment> = {}): AsaasPayment => ({
@@ -68,6 +70,7 @@ function setup(
       return { last4: "8829" };
     },
     getSubscriptionCard: async () => ({ last4: "1111" }),
+    updateCustomerAddress: async (customer: string, address: { postalCode: string }) => void log.push(`endereço ${customer} ${address.postalCode}`),
     createCardCheckout: async (input: { nextDueDate: string }) => {
       log.push(`checkout ${input.nextDueDate}`);
       return { id: "chk_1", link: "https://sandbox.asaas.com/checkout" };
@@ -90,7 +93,7 @@ describe("passo Cartão: abrir a página do Asaas", () => {
   it("sem implantação: o Checkout, com a 1ª cobrança no vencimento (nada agora)", async () => {
     const { store, api, log } = setup();
     expect(await startCardRegistration(store, api, "c1", urls)).toEqual({ link: "https://sandbox.asaas.com/checkout", mode: "checkout" });
-    expect(log).toEqual(["checkout 2026-11-14", "request chk_1 2026-11-14"]);
+    expect(log).toEqual(["endereço cus_1 01310100", "checkout 2026-11-14", "request chk_1 2026-11-14"]);
   });
 
   it("cartão já cadastrado: recusa (é \"Trocar o cartão\")", async () => {

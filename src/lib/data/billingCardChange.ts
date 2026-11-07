@@ -18,6 +18,9 @@ export type CardChangeFinish = { status: "changed" } | { status: "pending" } | {
 
 const EXPIRY_MS = 24 * 60 * 60 * 1000;
 
+/** Sem endereço do pagador, o Checkout do Asaas recusa (cartão sem implantação e troca de cartão). */
+export const ADDRESS_MISSING = "Cartão: falta o endereço do pagador. Preencha em \"Endereço do pagador\", nesta tela, e tente de novo.";
+
 export async function startCardChange(
   store: BillingCardChangeStore,
   api: AsaasBillingApi | null,
@@ -38,6 +41,9 @@ export async function startCardChange(
   // A próxima mensalidade em aberto (que passa para o cartão novo), ou a próxima a gerar.
   const pendingMonthly = open.filter((c) => c.kind === "monthly" && c.dueDate >= input.today).map((c) => c.dueDate).sort()[0];
   const nextDue = pendingMonthly ?? nextDueAfter(contract.firstDueDate, input.today);
+  // Cliente, 07/nov/2026: o Checkout do Asaas exige o endereço do cliente; vai sempre o da conta de cobrança.
+  if (!snapshot.account.address) throw new DataError("invalid", ADDRESS_MISSING, { address: ADDRESS_MISSING });
+  await api.updateCustomerAddress(snapshot.account.customerId, snapshot.account.address);
   const checkout = await api.createCardCheckout({
     customer: snapshot.account.customerId,
     valueCents: contract.monthlyCents,

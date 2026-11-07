@@ -105,6 +105,16 @@ function toPayment(raw: RawPayment): AsaasPayment {
   };
 }
 
+export type AsaasCustomerAddress = { postalCode: string; street: string; number: string; complement: string | null; district: string };
+
+const customerAddress = (a: AsaasCustomerAddress) => ({
+  postalCode: a.postalCode,
+  address: a.street,
+  addressNumber: a.number,
+  ...(a.complement ? { complement: a.complement } : {}),
+  province: a.district,
+});
+
 export type AsaasBillingApi = ReturnType<typeof asaasBillingApi>;
 
 export function asaasBillingApi(env: AsaasEnv, fetcher: Fetcher = fetch) {
@@ -122,16 +132,32 @@ export function asaasBillingApi(env: AsaasEnv, fetcher: Fetcher = fetch) {
     },
 
     /** Cliente novo, com os avisos do Asaas desligados (decisão 11.11: só os nossos). */
-    async createCustomer(input: { name: string; cpfCnpj: string; email: string; mobilePhone: string | null; externalReference: string }): Promise<string> {
+    async createCustomer(input: {
+      name: string;
+      cpfCnpj: string;
+      email: string;
+      mobilePhone: string | null;
+      externalReference: string;
+      address?: AsaasCustomerAddress | null;
+    }): Promise<string> {
       const created = await post<{ id: string }>("/customers", {
         name: input.name,
         cpfCnpj: input.cpfCnpj,
         email: input.email,
         ...(input.mobilePhone ? { mobilePhone: input.mobilePhone } : {}),
+        ...(input.address ? customerAddress(input.address) : {}),
         externalReference: input.externalReference,
         notificationDisabled: true,
       });
       return created.id;
+    },
+
+    /**
+     * Endereço do cliente (cliente, 07/nov/2026): o Checkout do Asaas o exige.
+     * O Asaas completa cidade e UF pelo CEP (conferido no sandbox, 07/nov/2026).
+     */
+    async updateCustomerAddress(customer: string, address: AsaasCustomerAddress): Promise<void> {
+      await post(`/customers/${encodeURIComponent(customer)}`, customerAddress(address));
     },
 
     async findSubscription(externalReference: string): Promise<string | null> {

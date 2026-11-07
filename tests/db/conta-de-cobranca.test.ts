@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { getBillingAccount, listBillingAudit, saveBillingAccount, saveBillingContacts, setBillingWhatsappOptIn, type BillingAccountInput } from "../../src/lib/data/billing";
+import { getBillingAccount, listBillingAudit, saveBillingAccount, saveBillingAddress, saveBillingContacts, setBillingWhatsappOptIn, type BillingAccountInput } from "../../src/lib/data/billing";
 import { addMember, clinicServiceClient, createClinic, createUser, deleteClinics, deleteUsers, makePlatformStaff, type TestUser } from "./helpers";
 import { asDb, codeOf, setupAgendaClinic, type AgendaFixture } from "./agendaFixture";
 
@@ -135,4 +135,34 @@ describe("Conta de cobrança (F12.1)", () => {
     expect((await bot.from("billing_accounts").select("clinic_id")).error?.code).toBe("42501");
     expect((await bot.rpc("save_billing_contacts", { p_clinic_id: clinicId, p_finance_email: "a@b.co", p_finance_phone: "" })).error?.code).toBe("42501");
   });
+
+  it("endereço do pagador (cliente, 07/nov/2026): Suporte e Administrador; Recepção, Profissional e outra clínica não", async () => {
+    const address = { postalCode: "01310-100", street: "Avenida Paulista", number: "1000", complement: "Sala 1", district: "Bela Vista", city: "São Paulo", state: "sp" };
+    await saveBillingAddress(asDb(support), clinicId, address);
+    expect((await getBillingAccount(asDb(fixture.admin), clinicId))!.address).toEqual({
+      postalCode: "01310100", street: "Avenida Paulista", number: "1000", complement: "Sala 1", district: "Bela Vista", city: "São Paulo", state: "SP",
+    });
+    await saveBillingAddress(asDb(fixture.admin), clinicId, { ...address, number: "1200", complement: "" });
+    expect((await getBillingAccount(asDb(fixture.admin), clinicId))!.address).toMatchObject({ number: "1200", complement: null });
+    const audit = await listBillingAudit(asDb(support), clinicId);
+    expect(audit[0]).toMatchObject({ action: "account_updated", reason: "Endereço do pagador." });
+
+    for (const user of [fixture.reception, professional, outsider]) {
+      expect(await codeOf(() => saveBillingAddress(asDb(user), clinicId, address))).toBe("forbidden");
+    }
+    // Validação no banco também (chamada direta).
+    const call = (over: Record<string, string>) =>
+      fixture.admin.client.rpc("save_billing_address", {
+        p_clinic_id: clinicId, p_postal_code: "01310100", p_street: "Rua", p_number: "1", p_complement: "", p_district: "Centro", p_city: "São Paulo", p_state: "SP", ...over,
+      });
+    expect((await call({ p_postal_code: "0131" })).error?.hint).toBe("billing_postal_code");
+    expect((await call({ p_street: " " })).error?.hint).toBe("billing_street");
+    expect((await call({ p_number: "" })).error?.hint).toBe("billing_address_number");
+    expect((await call({ p_district: "" })).error?.hint).toBe("billing_district");
+    expect((await call({ p_city: "" })).error?.hint).toBe("billing_city");
+    expect((await call({ p_state: "S" })).error?.hint).toBe("billing_state");
+    expect(await codeOf(() => saveBillingAddress(asDb(fixture.admin), clinicId, { ...address, postalCode: "123" }))).toBe("invalid");
+    expect(await codeOf(() => saveBillingAddress(asDb(support), otherClinic, address))).toBe("invalid");
+  });
 });
+

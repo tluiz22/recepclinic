@@ -1,3 +1,4 @@
+import { addressFromForm } from "../../../../../lib/billingAddressForm";
 import type { APIRoute } from "astro";
 import { isUuid } from "../../../../../lib/clinicAccess";
 import { authorizeAgendaImport, requestAgendaImport, returnAgendaImport, undoAgendaImport } from "../../../../../lib/data/agendaImport";
@@ -6,6 +7,7 @@ import {
   discardBillingContractDraft,
   listBillingContracts,
   saveBillingAccount,
+  saveBillingAddress,
   saveBillingContractDraft,
   sendBillingContractNotice,
   type ContractNoticeResult,
@@ -165,6 +167,9 @@ export const POST: APIRoute = async (context) => {
             financePhone: formOptionalText(form, "finance_phone"),
           });
           return { redirectTo: billingPage, message: "Conta de cobrança salva." };
+        case "endereco_pagador":
+          await saveBillingAddress(db, clinicId, addressFromForm(form));
+          return { redirectTo: billingPage, message: "Endereço do pagador salvo." };
         case "contrato_rascunho": {
           // Retrato do plano de referência (informativo), pela matriz de hoje.
           const { data: access } = await db.from("clinics").select("max_professionals, clinic_features ( feature_key )").eq("id", clinicId).maybeSingle();

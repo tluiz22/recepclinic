@@ -57,6 +57,7 @@ export async function syncContractWithAsaas(store: BillingStore, api: AsaasBilli
           email: account.financeEmail,
           mobilePhone: asaasMobilePhone(account.financePhone),
           externalReference: clinicId,
+          address: account.address,
         }));
       await store.linkCustomer(clinicId, customer);
     }

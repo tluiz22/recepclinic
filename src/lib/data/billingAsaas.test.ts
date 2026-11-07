@@ -24,7 +24,7 @@ function snapshot(over: Partial<BillingSyncSnapshot["contract"]> = {}, account: 
       replacedSubscriptionId: null,
       ...over,
     },
-    account: { payerName: "Clínica Ltda", payerDocument: "11222333000181", financeEmail: "fin@x.y", financePhone: "+5584988880000", customerId: null, ...account },
+    account: { payerName: "Clínica Ltda", payerDocument: "11222333000181", financeEmail: "fin@x.y", financePhone: "+5584988880000", customerId: null, address: null, ...account },
   };
 }
 
@@ -59,7 +59,7 @@ function fakeApi(found: { customer?: string; subscription?: string; setup?: Asaa
   const calls: { name: string; args: unknown }[] = [];
   const api: AsaasBillingApi = {
     findCustomer: async () => found.customer ?? null,
-    createCustomer: async (args) => (calls.push({ name: "createCustomer", args }), "cus_new"),
+    createCustomer: async (args) => (calls.push({ name: "createCustomer", args }), "cus_new"), updateCustomerAddress: async () => {},
     findSubscription: async () => found.subscription ?? null,
     createSubscription: async (args) => (calls.push({ name: "createSubscription", args }), "sub_new"),
     findPayment: async () => found.setup ?? null,

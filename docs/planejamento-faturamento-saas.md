@@ -121,6 +121,13 @@
 > depois da suspensão e não cancelado libera sozinho: cartão → com o cartão cadastrado; Pix com implantação → com a
 > implantação paga; Pix sem implantação ou cobrança manual → no aceite. Outro motivo aberto mantém a suspensão.
 > Correção junto: cobrança removida no Asaas (`deleted`) vira cancelada ao reler (antes voltava a pendente).
+> **Endereço do pagador (cliente, 07/nov/2026, migração `20261227130000`):** o Checkout do Asaas (cartão sem
+> implantação e troca de cartão) exige o endereço do cliente; antes falhava ("O campo address deve existir"). Na conta
+> de cobrança: CEP, rua, número, complemento, bairro, cidade e UF (tudo ou nada). Suporte (aba Faturamento) e
+> Administrador (Assinatura; também com a clínica suspensa) editam; o CEP preenche rua, bairro, cidade e UF (ViaCEP, no
+> servidor: `/api/admin/configuracoes/assinatura/cep`). Vai ao Asaas ao criar o cliente e é atualizado no cliente antes
+> de cada Checkout; sem endereço, o passo Cartão (sem implantação) pede o endereço antes do botão. O Asaas completa a
+> cidade pelo CEP (sandbox, 07/nov).
 > **Próximo: F12.11** (homologação e produção), depois de: advogado (texto do contrato e 11.16), chave e webhook do
 > Asaas de produção, valor combinado com a clínica piloto. Antes, validar F12.2b a F12.8 no local/staging.
 > **Ordem decidida (cliente, 30/out):** cobrança primeiro, até cobrar a clínica piloto em produção, **só com aviso por

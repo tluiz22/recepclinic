@@ -1,3 +1,4 @@
+import { addressFromForm } from "../../../../lib/billingAddressForm";
 import type { APIRoute } from "astro";
 import { recurringConsentText } from "../../../../lib/billingRenewal";
 import { paymentStep } from "../../../../lib/billingSteps";
@@ -9,6 +10,7 @@ import {
   getBillingAccount,
   listBillingCharges,
   listBillingContracts,
+  saveBillingAddress,
   saveBillingContacts,
   setBillingWhatsappOptIn,
 } from "../../../../lib/data/billing";
@@ -55,6 +57,10 @@ export const POST: APIRoute = async (context) => {
     context,
     async () => {
       switch (formText(form, "acao")) {
+        case "endereco_pagador":
+          // Cliente, 07/nov/2026: o Administrador (ou o Suporte) corrige o endereço do pagador.
+          await saveBillingAddress(db, clinic.clinicId, addressFromForm(form));
+          return { redirectTo: page, message: "Endereço do pagador salvo." };
         case "contatos":
           await saveBillingContacts(db, clinic.clinicId, { financeEmail: formText(form, "finance_email"), financePhone: formOptionalText(form, "finance_phone") });
           return { redirectTo: page, message: "Contatos financeiros salvos." };

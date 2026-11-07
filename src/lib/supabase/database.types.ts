@@ -261,14 +261,14 @@ isOneToOne: false
                   ]
                 },"billing_accounts": {
                   Row: {
-                    "asaas_customer_id": string | null,"clinic_id": string,"created_at": string,"finance_email": string,"finance_phone": string | null,"payer_document": string,"payer_name": string,"updated_at": string,"updated_by": string | null,"whatsapp_opt_in_at": string | null,"whatsapp_opt_in_by": string | null,"whatsapp_opt_in_version": string | null,"whatsapp_prompt_dismissed_at": string | null
+                    "address_complement": string | null,"address_number": string | null,"asaas_customer_id": string | null,"city": string | null,"clinic_id": string,"created_at": string,"district": string | null,"finance_email": string,"finance_phone": string | null,"payer_document": string,"payer_name": string,"postal_code": string | null,"state": string | null,"street": string | null,"updated_at": string,"updated_by": string | null,"whatsapp_opt_in_at": string | null,"whatsapp_opt_in_by": string | null,"whatsapp_opt_in_version": string | null,"whatsapp_prompt_dismissed_at": string | null
                   }
                   ComputedFields: never
                   Insert: {
-                    "asaas_customer_id"?: string | null,"clinic_id": string,"created_at"?: string,"finance_email": string,"finance_phone"?: string | null,"payer_document": string,"payer_name": string,"updated_at"?: string,"updated_by"?: string | null,"whatsapp_opt_in_at"?: string | null,"whatsapp_opt_in_by"?: string | null,"whatsapp_opt_in_version"?: string | null,"whatsapp_prompt_dismissed_at"?: string | null
+                    "address_complement"?: string | null,"address_number"?: string | null,"asaas_customer_id"?: string | null,"city"?: string | null,"clinic_id": string,"created_at"?: string,"district"?: string | null,"finance_email": string,"finance_phone"?: string | null,"payer_document": string,"payer_name": string,"postal_code"?: string | null,"state"?: string | null,"street"?: string | null,"updated_at"?: string,"updated_by"?: string | null,"whatsapp_opt_in_at"?: string | null,"whatsapp_opt_in_by"?: string | null,"whatsapp_opt_in_version"?: string | null,"whatsapp_prompt_dismissed_at"?: string | null
                   }
                   Update: {
-                    "asaas_customer_id"?: string | null,"clinic_id"?: string,"created_at"?: string,"finance_email"?: string,"finance_phone"?: string | null,"payer_document"?: string,"payer_name"?: string,"updated_at"?: string,"updated_by"?: string | null,"whatsapp_opt_in_at"?: string | null,"whatsapp_opt_in_by"?: string | null,"whatsapp_opt_in_version"?: string | null,"whatsapp_prompt_dismissed_at"?: string | null
+                    "address_complement"?: string | null,"address_number"?: string | null,"asaas_customer_id"?: string | null,"city"?: string | null,"clinic_id"?: string,"created_at"?: string,"district"?: string | null,"finance_email"?: string,"finance_phone"?: string | null,"payer_document"?: string,"payer_name"?: string,"postal_code"?: string | null,"state"?: string | null,"street"?: string | null,"updated_at"?: string,"updated_by"?: string | null,"whatsapp_opt_in_at"?: string | null,"whatsapp_opt_in_by"?: string | null,"whatsapp_opt_in_version"?: string | null,"whatsapp_prompt_dismissed_at"?: string | null
                   }
                   Relationships: [
                     {
@@ -2519,6 +2519,9 @@ isOneToOne: false
                            },
 "save_billing_account":
 { Args: { "p_clinic_id": string,"p_finance_email": string,"p_finance_phone": string,"p_payer_document": string,"p_payer_name": string }; Returns: undefined
+                           },
+"save_billing_address":
+{ Args: { "p_city": string,"p_clinic_id": string,"p_complement": string,"p_district": string,"p_number": string,"p_postal_code": string,"p_state": string,"p_street": string }; Returns: undefined
                            },
 "save_billing_contacts":
 { Args: { "p_clinic_id": string,"p_finance_email": string,"p_finance_phone": string }; Returns: undefined

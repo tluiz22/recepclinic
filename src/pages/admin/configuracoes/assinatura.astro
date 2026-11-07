@@ -24,6 +24,7 @@ import ContractText from "../../../components/admin/billing/ContractText.astro";
 import AcceptContractStep from "../../../components/admin/billing/AcceptContractStep.astro";
 import SubscriptionSteps from "../../../components/admin/billing/SubscriptionSteps.astro";
 import WhatsappStep from "../../../components/admin/billing/WhatsappStep.astro";
+import PayerAddressForm from "../../../components/admin/billing/PayerAddressForm.astro";
 import PaymentStep from "../../../components/admin/billing/PaymentStep.astro";
 import { dueDay, renewalLine } from "../../../lib/billingRenewal";
 import { paymentStep, subscriptionSteps, type StepKey } from "../../../lib/billingSteps";
@@ -34,7 +35,7 @@ import { DD, DT, HINT, INPUT, KV, LABEL, PRIMARY_BUTTON, SECONDARY_BUTTON } from
 import { BILLING_OPT_IN_TEXT, BILLING_OPT_IN_VERSION } from "../../../lib/billingOptIn";
 import { formatCalendarDate, formatInstant, todayIn } from "../../../lib/clinicTime";
 import { loadActorLabels } from "../../../lib/data/agenda/trail";
-import { contractsInForce, formatPayerDocument, getBillingAccount, listBillingAudit, listBillingCharges, listBillingContracts } from "../../../lib/data/billing";
+import { contractsInForce, formatPayerDocument, formatPostalCode, getBillingAccount, listBillingAudit, listBillingCharges, listBillingContracts } from "../../../lib/data/billing";
 import { createUserClient } from "../../../lib/data/clients";
 import { activeSuspensionReasons, describeReasons } from "../../../lib/data/suspension";
 import { formatPhoneBR } from "../../../lib/phone";
@@ -89,6 +90,8 @@ const cardOnFile = !!billed?.cardRegisteredAt;
 // Cliente, 07/nov/2026: o selo só conta cobrança em atraso (vencida e não paga), não a que ainda vai vencer.
 const today = todayIn(clinic.timezone);
 const overdueCharges = charges.filter((c) => c.status === "overdue" || (c.status === "pending" && c.dueDate < today)).length;
+// Cliente, 07/nov/2026: cartão sem implantação vai pelo Checkout do Asaas, que exige o endereço do pagador.
+const needsAddress = payment === "card" && !openSetup && !paymentWaiting && !!account && !account.address;
 // F12.2f: o último cancelamento (some quando houver contrato ativo de novo).
 const canceled = contracts.some((c) => c.status === "active") ? null : (contracts.find((c) => c.cancel) ?? null);
 const H2 = "font-display text-[17px] leading-tight font-bold text-ink sm:text-lg";
@@ -143,7 +146,22 @@ const H2 = "font-display text-[17px] leading-tight font-bold text-ink sm:text-lg
               />
             )}
             {currentStep === "payment" && payment && activeAccepted && (
-              <PaymentStep kind={payment} contract={activeAccepted} setup={openSetup} stepLabel={stepLabel} late={late} waiting={paymentWaiting} action={action} />
+              needsAddress ? (
+                // Cliente, 07/nov/2026: sem implantação, o cartão é cadastrado no Checkout do Asaas, que exige o endereço.
+                <Card>
+                  <p class="text-[13px] font-semibold text-ink-soft">{stepLabel}</p>
+                  <h2 class={`${H2} mt-1`}>Endereço do pagador</h2>
+                  <p class="mt-1 text-[15px] text-ink-mid">
+                    Antes de informar o cartão, preencha o endereço de quem paga: o Asaas exige para cadastrar o cartão. Depois, o botão para informar o cartão
+                    aparece aqui.
+                  </p>
+                  <div class="mt-3">
+                    <PayerAddressForm action={action} acao="endereco_pagador" address={null} idPrefix="passo_endereco" />
+                  </div>
+                </Card>
+              ) : (
+                <PaymentStep kind={payment} contract={activeAccepted} setup={openSetup} stepLabel={stepLabel} late={late} waiting={paymentWaiting} action={action} />
+              )
             )}
             {currentStep === "whatsapp" && <WhatsappStep account={account} action={action} stepLabel={stepLabel} />}
           </>
@@ -295,6 +313,27 @@ const H2 = "font-display text-[17px] leading-tight font-bold text-ink sm:text-lg
               </div>
               <button type="submit" data-sending-label="Salvando…" class={`${PRIMARY_BUTTON} self-start`}>Salvar contatos</button>
             </form>
+          </Card>
+
+          <Card>
+            <div class="flex flex-wrap items-center gap-2">
+              <h2 class={H2}>Endereço do pagador</h2>
+              {!account.address && <Badge variant="warning">Não preenchido</Badge>}
+            </div>
+            <p class="mt-1 text-sm text-ink-soft">O Asaas exige para cadastrar e trocar o cartão de crédito.</p>
+            {isClinicAdmin || clinic.isPlatformStaff ? (
+              <div class="mt-3">
+                <PayerAddressForm action={action} acao="endereco_pagador" address={account.address} />
+              </div>
+            ) : account.address ? (
+              <p class="mt-3 text-[15px] text-ink">
+                {account.address.street}, {account.address.number}
+                {account.address.complement ? ` (${account.address.complement})` : ""} · {account.address.district} · {account.address.city}/{account.address.state} ·
+                CEP {formatPostalCode(account.address.postalCode)}
+              </p>
+            ) : (
+              <p class={HINT}>Só o Administrador da clínica preenche.</p>
+            )}
           </Card>
         </div>
 

@@ -1,4 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
+import type { AsaasCustomerAddress } from "../asaas/billingApi";
 import { isUuid } from "../clinicAccess";
 import { platformEnv, type PlatformEnv } from "../env";
 import type { Database } from "../supabase/database.types";
@@ -319,7 +320,15 @@ export type BillingSyncSnapshot = {
     /** Assinatura da versão que esta substitui (mudança de versão). */
     replacedSubscriptionId: string | null;
   };
-  account: { payerName: string; payerDocument: string; financeEmail: string; financePhone: string | null; customerId: string | null } | null;
+  account: {
+    payerName: string;
+    payerDocument: string;
+    financeEmail: string;
+    financePhone: string | null;
+    customerId: string | null;
+    /** Endereço do pagador (cliente, 07/nov/2026); null = não preenchido. */
+    address: AsaasCustomerAddress | null;
+  } | null;
 };
 
 export type BillingChargeInput = {
@@ -360,7 +369,11 @@ export function platformBillingStore(env: ServiceEnv = platformEnv()): BillingSt
       if (!contract) return null;
       const [{ data: clinic }, { data: account }, replaced] = await Promise.all([
         db.from("clinics").select("name").eq("id", contract.clinic_id).maybeSingle(),
-        db.from("billing_accounts").select("payer_name, payer_document, finance_email, finance_phone, asaas_customer_id").eq("clinic_id", contract.clinic_id).maybeSingle(),
+        db
+          .from("billing_accounts")
+          .select("payer_name, payer_document, finance_email, finance_phone, asaas_customer_id, postal_code, street, address_number, address_complement, district")
+          .eq("clinic_id", contract.clinic_id)
+          .maybeSingle(),
         contract.replaces_contract_id
           ? db.from("billing_contracts").select("asaas_subscription_id").eq("id", contract.replaces_contract_id).maybeSingle()
           : Promise.resolve({ data: null }),
@@ -388,6 +401,10 @@ export function platformBillingStore(env: ServiceEnv = platformEnv()): BillingSt
               financeEmail: account.finance_email,
               financePhone: account.finance_phone,
               customerId: account.asaas_customer_id,
+              address:
+                account.postal_code && account.street && account.address_number && account.district
+                  ? { postalCode: account.postal_code, street: account.street, number: account.address_number, complement: account.address_complement, district: account.district }
+                  : null,
             }
           : null,
       };
