@@ -47,7 +47,8 @@ export const POST: APIRoute = async (context) => {
       const activeIds = new Set(active.map((p) => p.id));
       const linked = [...active.filter((p) => accepts.includes(p.id)).map((p) => p.id), ...current.filter((pid) => !activeIds.has(pid))];
       await setPlanProfessionals(db, clinicId, planId, linked);
-      return { redirectTo: page(planId), message: id === "novo" ? "Plano cadastrado." : "Plano salvo." };
+      // Salvo: volta à lista de convênios, na aba de onde veio (cliente, 07/nov/2026).
+      return { redirectTo: withAllFilter("/admin/configuracoes/convenios", all), message: id === "novo" ? "Plano cadastrado." : "Plano salvo." };
     },
     () => page(createdId ?? id),
   );
