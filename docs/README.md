@@ -1,10 +1,11 @@
 # RecepClinic
 
-> **BaaS do Asaas (07/nov):** o Asaas pediu ajustes (cláusula nos termos e selo sem registro). Feitos e **no ar**: site
-> (`beb9e1c`, termos seção 4 com o selo, carregando) e app no staging e na produção (`305efd7`, selo na Nota fiscal,
-> contrato `c-nf`; migração `20261228140000` nos dois). Próximo: o cliente pede a reanálise ao Asaas (o selo dos termos já
-> carregou; a piloto não tem o Módulo financeiro e não vê o cartão) (texto na seção 13.10 do [`planejamento-nfse-asaas.md`](planejamento-nfse-asaas.md)). Cliente
-> valida o `9b22e00` da Central (foi junto).
+> **Próxima sessão (cliente, 07/nov):** **revisar o planejamento da NFS-e pelo Asaas** com o cliente
+> ([`planejamento-nfse-asaas.md`](planejamento-nfse-asaas.md), bloco de retomada e seções 11 a 13). Sem código antes da revisão.
+>
+> **BaaS do Asaas (07/nov):** ajustes pedidos pelo Asaas (cláusula nos termos e selo sem registro) no ar: site `beb9e1c`
+> e app `305efd7` (staging e produção; migração `20261228140000` nos dois). **E-mail de reanálise enviado pelo cliente
+> (07/nov)**, com o print da habilitação fiscal; aguardando o Asaas. Cliente valida o `9b22e00` da Central (foi junto).
 >
 > **Próxima sessão (cliente, 07/nov):** **Central de Atendimento finalizada** (etapa 1 na produção, ligada na piloto,
 > funcionando). Retomar o planejamento e a implementação da **NFS-e pelo Asaas**: ler o bloco de retomada do
