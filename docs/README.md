@@ -1,5 +1,13 @@
 # RecepClinic
 
+> **Faturamento na `main` e no staging (07/nov, `3919ca4`, a pedido do cliente):** branch `faturamento` juntada na
+> `main` (F12.1 a F12.8, F12.2b a F12.2i) depois de trazer a `main` para ela; 1087 de unidade, 1034 de banco, check e
+> build passando; Playwright nas telas do financeiro. 18 migrações da branch aplicadas no staging (`--include-all`,
+> simuladas e conferidas); rotinas `faturamento-eventos`, `conciliacao-asaas` e `avisos-cobranca` chamadas, saúde `ok`.
+> **Cliente valida no staging** pelo `roteiro-validacao-faturamento.md` (Asaas sandbox na Vercel do staging). Produção:
+> não; **atenção:** a próxima publicação da `main` leva o financeiro e as 18 migrações (`db push --include-all`).
+> 13 capturas `config-*`/`equipe` na fila (item Assinatura no menu).
+>
 > **Próxima sessão (cliente, 06/nov):** o cliente traz melhorias para a versão da produção (`552019b`, com a Central).
 > Para ligar a Central numa clínica: item na Matriz + o Administrador liga em Configurações › WhatsApp (já explicado ao
 > cliente). Pendentes do cliente antes de usar com pacientes: modelo "Retomar conversa" e cópia do
@@ -57,8 +65,8 @@
 > contando no uso do mês (CN4a), `ACCOUNT_RECONNECTED` só no log e produção da Central.
 >
 > Partes S a W do `staging.md` validadas (05/nov). A `faturamento` está com a `main` até a FE e as capturas (05/nov).
-> Trabalhar na worktree `recepclinic-main` (a pasta `recepclinic` está na branch `faturamento`). Pendente da branch: o
-> cliente valida no local o faturamento **F12.2b a F12.2h** pelo `roteiro-validacao-faturamento.md` **da branch**.
+> Trabalhar na worktree `recepclinic-main` (a pasta `recepclinic` está na branch `faturamento`). Faturamento: ver o bloco
+> do topo (07/nov, na `main`).
 >
 > **Próximo (cliente, 01/nov):** validado no staging: Base de Conhecimento, "Como funciona?" de Configurações e Central de
 > Ajuda, com as **25 capturas reais de tela** (`public/ajuda/`, refazer quando a tela mudar) e o WhatsApp do suporte (05/nov). Detalhes em
@@ -72,11 +80,8 @@
 > - **Staging** (`teste.recepclinic.com.br`, branch `main`): produção + redesign da Recepção (RX1 a RX9, sem migração) +
 >   cartão do Asaas (`ASAAS_PREVIEW=1`) + Base de Conhecimento do bot (migração aplicada) + PN1, PN2, IS2 a IS5 (migrações aplicadas) + IS1 + C17 a C20 (03/nov; migração `20261206120000` aplicada) + C21 (04/nov) + **Central de Atendimento** (05/nov, 11 migrações aplicadas).
 >   Roteiros em [`staging.md`](staging.md).
-> - **Branch `faturamento`** (só local, sem push): todo código do financeiro, até a F12.2h; com a `main` até `55216d2`
->   (FE e capturas da Central, 05/nov; merge `ba36cd6`, 1055 testes de unidade e 939 de banco passando; o `contexto` já falhava
->   antes; migrações próprias `20261207120000`, `20261210120000`, `20261212120000` e `20261213130000`, bloqueio de suspensa
->   na `handoff_events` e na `send_failure_dismissals`).
->   Na publicação, as migrações da branch são anteriores às da produção: `db push --include-all`. Atualizar só quando o cliente pedir.
+> - **Branch `faturamento`**: juntada na `main` em 07/nov (`3919ca4`); igual à `main`. Na produção, as 18 migrações dela
+>   são anteriores às de lá: `db push --include-all`.
 >
 > **Frentes**
 > - **Ajustes da produção (C1–C16) e revisão da jornada do bot:** todos na produção. Decisões da
@@ -90,11 +95,11 @@
 > - **Evolução do assistente** ([`evolucao-assistente.md`](evolucao-assistente.md)): texto livre na entrada, motivo antes
 >   da recepção e taxa de resolução sem a recepção. **Na produção (02/nov, `c9418ac`)**, migração aplicada no staging
 >   e na produção. Próximo: acompanhar a taxa e as perguntas não reconhecidas da BC.
-> - **Faturamento do SaaS:** F12.1 e F12.2 validadas; **F12.2b a F12.8 e F12.2c a F12.2h feitas na branch, cliente valida
->   no fim**. 03/nov: contrato com nota fiscal só com o Módulo financeiro (e nota só com contrato assinado), texto
+> - **Faturamento do SaaS:** F12.1 e F12.2 validadas; **F12.2b a F12.8 e F12.2c a F12.2h na `main` e no staging (07/nov),
+>   cliente valida**. 03/nov: contrato com nota fiscal só com o Módulo financeiro (e nota só com contrato assinado), texto
 >   aprovado (renovação automática, IPCA, arrependimento, cancelamento), Assinatura em passo a passo, cancelamento e
 >   troca de cartão pelo Administrador, lembrete do IPCA. Revisar: textos dos e-mails. Fora do código: token e webhook do
->   Asaas, tokenização em produção, advogado. Depois: F12.11. Retomar pelo `planejamento-faturamento-saas.md` **na branch**.
+>   Asaas, tokenização em produção, advogado. Depois: F12.11. Retomar pelo `planejamento-faturamento-saas.md`.
 > - **Implantação segura do WhatsApp** ([`implantacao-segura.md`](implantacao-segura.md)), após os incidentes de 03/nov
 >   na clínica piloto (erro 131042 de pagamento na Meta; mensagem automática do app pausando o bot): guias públicos
 >   para o dono da clínica, mensagem de teste exigida para ativar, checklist de implantação, aviso de mensagem
