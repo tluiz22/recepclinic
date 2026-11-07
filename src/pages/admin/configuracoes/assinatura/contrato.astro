@@ -35,7 +35,7 @@ const actors = contract ? await loadActorLabels(db, clinic.clinicId, [contract.a
       <Card id="contrato-impressao" class="flex flex-col gap-4">
         <div class="flex flex-wrap items-center justify-between gap-2">
           <h2 class="font-display text-[19px] leading-tight font-bold text-ink">Contrato{contract.version ? ` · versão ${contract.version}` : ""}</h2>
-          <button type="button" class={`${SECONDARY_BUTTON} print:hidden`} onclick="window.print()">Imprimir ou salvar em PDF</button>
+          <button type="button" class={`${SECONDARY_BUTTON} print:hidden`} data-print-page>Imprimir ou salvar em PDF</button>
         </div>
         <ContractAcceptanceInfo contract={contract} actors={actors} timezone={clinic.timezone} />
         <ContractTerms contract={contract} />
@@ -109,3 +109,11 @@ const actors = contract ? await loadActorLabels(db, clinic.clinicId, [contract.a
     }
   }
 </style>
+
+<script>
+  // A CSP do site bloqueia onclick no HTML (só scripts do próprio site): o botão
+  // "Imprimir ou salvar em PDF" abre a impressão por aqui (cliente, 07/nov/2026).
+  for (const button of document.querySelectorAll<HTMLButtonElement>("[data-print-page]")) {
+    button.addEventListener("click", () => window.print());
+  }
+</script>
