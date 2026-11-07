@@ -1,3 +1,4 @@
+import { waitUntil } from "@vercel/functions";
 import type { APIRoute } from "astro";
 import { createClinicServiceClient } from "../../../lib/data/clinicService";
 import { resolveClinicByPhoneNumberId, resolveClinicsByWabaId } from "../../../lib/data/platform";
@@ -50,6 +51,7 @@ export const POST: APIRoute = async ({ request, url }) => {
     resolveClinicsByWaba: (wabaId) => resolveClinicsByWabaId(wabaId),
     senderFor: (clinicId) => clinicSenderFor(clinicId, url),
     push: pushContextFrom(platformEnv().webPush, platformEnv().siteUrl),
+    defer: waitUntil,
   });
   if (summary.errors || summary.unknownNumbers) logWarn("whatsapp webhook", { ...summary });
   return new Response(null, { status: 200 });

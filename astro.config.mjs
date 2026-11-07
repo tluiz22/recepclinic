@@ -14,7 +14,7 @@ export default defineConfig({
   // site. O CSP sai como cabeçalho nas páginas do servidor (não vale no
   // `npm run dev`): scripts e estilos só do próprio domínio, com o hash dos
   // embutidos pelo Astro; estilo em atributo liberado (cor da marca, barras do
-  // funil); imagens também de https (logos no Storage do Supabase); conexões ao Supabase (anexo da Central). Os demais
+  // funil); imagens também de https (logos no Storage do Supabase); conexões e áudio do Supabase (anexo da Central). Os demais
   // cabeçalhos ficam em src/lib/securityHeaders.ts.
   security: {
     checkOrigin: true,
@@ -24,6 +24,8 @@ export default defineConfig({
         "img-src 'self' data: https:",
         // Foto e PDF da Central (CN6): o arquivo sobe direto ao Storage do Supabase pelo link de uso único.
         "connect-src 'self' https://*.supabase.co",
+        // Áudio da Central: o player vai para a URL assinada do Storage (sem isto, vale o default-src e o áudio não toca).
+        "media-src 'self' https://*.supabase.co",
         "object-src 'none'",
         "base-uri 'self'",
         "form-action 'self'",

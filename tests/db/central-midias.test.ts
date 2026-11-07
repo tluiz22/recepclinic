@@ -4,6 +4,7 @@ import { listConversationMedia, setCentralEnabled } from "../../src/lib/data/cen
 import { setWhatsappAccessToken } from "../../src/lib/data/whatsapp/connection";
 import { processPendingMedia } from "../../src/lib/data/whatsapp/media";
 import { recordInboundMessage } from "../../src/lib/data/whatsapp/messages";
+import { processWebhook } from "../../src/lib/data/whatsapp/webhook";
 import type { WaMessage } from "../../src/lib/data/whatsapp/meta";
 import { addMember, adminClient, clinicServiceClient, createClinic, createUser, deleteClinics, deleteUsers, makePlatformStaff, type TestUser } from "./helpers";
 
@@ -118,5 +119,28 @@ describe("mídia recebida", () => {
     const broken: typeof fetch = async () => Response.json({ error: { code: 131052, message: "Media download error" } }, { status: 400 });
     for (let i = 0; i < 3; i++) await processPendingMedia(service(), clinicId, { fetcher: broken });
     expect(await mediaOfMessage(result.id)).toMatchObject({ status: "failed" });
+  });
+
+  it("áudio pelo webhook: baixado na hora, sem esperar a rotina (correção de 07/nov)", async () => {
+    files["meta-audio"] = { mime: "audio/ogg; codecs=opus", size: 3000 };
+    const msg = inbound("audio", { id: "meta-audio", mime_type: "audio/ogg; codecs=opus", voice: true });
+    const deferred: Promise<unknown>[] = [];
+    await processWebhook(
+      { entry: [{ changes: [{ field: "messages", value: { metadata: { phone_number_id: "pn-cn5-webhook" }, messages: [msg] } }] }] },
+      { resolveClinic: async () => clinicId, clientFor: () => service(), defer: (work) => deferred.push(work), mediaFetcher: fakeMeta },
+    );
+    expect(deferred).toHaveLength(1);
+    await Promise.all(deferred);
+    const { data } = await db().from("whatsapp_messages").select("id").eq("clinic_id", clinicId).eq("wa_message_id", msg.id!).single();
+    expect(await mediaOfMessage(data!.id)).toMatchObject({ status: "stored", storage_path: `${clinicId}/${PHONE.slice(1)}/${data!.id}.ogg` });
+  });
+
+  it("mensagem de texto pelo webhook não pede download", async () => {
+    const deferred: Promise<unknown>[] = [];
+    await processWebhook(
+      { entry: [{ changes: [{ field: "messages", value: { metadata: { phone_number_id: "pn-cn5-webhook" }, messages: [{ id: `wamid.cn5.texto.${Date.now()}`, from: PHONE.slice(1), type: "text", text: { body: "Oi" } }] } }] }] },
+      { resolveClinic: async () => clinicId, clientFor: () => service(), defer: (work) => deferred.push(work) },
+    );
+    expect(deferred).toHaveLength(0);
   });
 });

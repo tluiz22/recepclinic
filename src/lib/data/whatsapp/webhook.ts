@@ -14,6 +14,8 @@ import { notifyWaitingConversation, type PushContext } from "./attentionPush";
 import { handleIncomingMessage } from "./bot/router";
 import { getSupportWhatsapp, isSupportPhone } from "../platformSettings";
 import { logError, logWarn } from "../../log";
+import { mediaKindOf, processPendingMedia } from "./media";
+import type { Fetcher } from "./graph";
 import { unwrap } from "../errors";
 import type { Json } from "../../supabase/database.types";
 
@@ -184,6 +186,13 @@ export type WebhookDeps = {
   senderFor?: (clinicId: string) => Promise<ClinicSender | null>;
   /** Notificações do atendimento humano (F8.5c); null ou ausente = desligadas. */
   push?: PushContext | null;
+  /**
+   * Trabalho depois do 200 à Meta (na Vercel, waitUntil): o anexo recebido é baixado na hora, sem esperar a rotina de
+   * cada minuto (que segue como reserva). Ausente = só a rotina.
+   */
+  defer?: (work: Promise<unknown>) => void;
+  /** Busca na Meta usada no download imediato (testes). */
+  mediaFetcher?: Fetcher;
 };
 
 export type WebhookSummary = {
@@ -257,6 +266,7 @@ export async function processWebhook(payload: unknown, deps: WebhookDeps, now: D
       });
     }
 
+    let mediaQueued = false;
     for (const message of onboarding ? [] : (change.messages ?? [])) {
       let recorded = false;
       await attempt("mensagem recebida", async () => {
@@ -265,6 +275,7 @@ export async function processWebhook(payload: unknown, deps: WebhookDeps, now: D
         recorded = result.recorded;
       });
       if (!recorded) continue;
+      if (message.type && mediaKindOf(message.type)) mediaQueued = true;
       if (isSupportPhone(toE164(message.from), support.phone)) continue;
       if (deps.senderFor) {
         await attempt("bot", async () => {
@@ -278,6 +289,13 @@ export async function processWebhook(payload: unknown, deps: WebhookDeps, now: D
       // Conversa que passou a aguardar a clínica (pedido, sem horário, limite ou o paciente escreveu de novo): avisa (F8.5c).
       const phone = toE164(message.from);
       if (deps.push && phone) await notifyWaitingConversation(db, clinicId, phone, deps.push, now);
+    }
+    // Anexo recebido (foto, áudio, documento): baixa depois do 200, uma vez por evento (a rotina de cada minuto segue
+    // como reserva; com a Central desligada não há pendente e nada acontece).
+    if (mediaQueued && deps.defer) {
+      deps.defer(
+        processPendingMedia(db, clinicId, { fetcher: deps.mediaFetcher }).catch((error) => logError("central: anexo não baixado na hora", error, { clinica: clinicId })),
+      );
     }
     for (const status of change.statuses ?? []) {
       if (status.status === "failed" && status.errors?.length) {
