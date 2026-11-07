@@ -674,6 +674,8 @@ Migração `20261215120000_central_base.sql` (aplicar antes do push). Sem tela n
 
 ## AA. Central de atendimento (CU4, CN2 a CN9, 05/nov)
 
+**Validada pelo cliente (07/nov/2026), menos o passo 10** (depende da configuração v4).
+
 Migrações `20261216120000` a `20261224120000` (`central_texto`, `central_lista`, `central_perfil`, `central_envio`,
 `central_retomar`, `central_midias`, `central_envio_midia`, `central_guarda`, `central_historico`), aplicadas antes do
 push. Plano em [`planejamento-central-atendimento.md`](planejamento-central-atendimento.md), seção 12.

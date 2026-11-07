@@ -46,9 +46,9 @@
 > **Decisão pendente:** testes de tela automáticos (Playwright); conversar prós e contras com o cliente (`historico.md`, "C30").
 >
 > **Central de Atendimento (CU2 a CN9) na `main` e no staging (05/nov):** a branch `central-atendimento` foi juntada
-> na `main`; migrações `20261214120000` a `20261224120000` aplicadas no staging (só lá). **Cliente valida** pela parte
-> **AA** do [`staging.md`](staging.md). Antes: liberar o item na Matriz da clínica de testes, criar o modelo "Retomar
-> conversa", conferir os campos do webhook e criar a configuração v4 (`WHATSAPP_ES_CONFIG_ID`). Capturas da Central feitas e no
+> na `main`; migrações `20261214120000` a `20261224120000` aplicadas no staging (só lá). Parte **AA** do
+> [`staging.md`](staging.md) **validada (07/nov)**, menos o passo 10 (histórico e cadastro v4): falta a configuração v4
+> na Meta e o `WHATSAPP_ES_CONFIG_ID` do staging (cliente, em andamento). Capturas da Central feitas e no
 > staging (06/nov, `55403e0`): `conversas` (nova), `config-whatsapp`, `config-mensagens`; `atendimento` mantida.
 > Produção só com autorização. Detalhe na seção 12 do plano da Central.
 > **Próxima sessão (cliente, 06/nov):** cliente traz ajustes. Etapas pedidas e ainda por fazer, uma por vez: (3) trazer a
