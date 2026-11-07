@@ -74,7 +74,12 @@ export type Conversation = {
   handoffStatus: HandoffStatus | null;
   /** Hora da última mudança de situação ou de responsável. */
   handoffStatusAt: Date | null;
+  /** Atendimento (padrão) ou número marcado como Pessoal ou Administrativo/outros (NA): sem bot, fora das métricas. */
+  classification: ConversationClassification;
 };
+
+/** NA (cliente, 06/nov/2026): "patient" = atendimento; os outros dois tiram o número do bot, das métricas e dos pendentes. */
+export type ConversationClassification = "patient" | "personal" | "administrative";
 
 /**
  * Situação da conversa com a clínica (CA, cliente, 04/nov/2026), guardada no banco: "Aguardando a clínica" ou "Em
@@ -85,7 +90,7 @@ export type HandoffStatus = "waiting_clinic" | "in_progress";
 /** Quem mudou a situação ou o responsável. */
 export type HandoffActor = "patient" | "reception" | "system" | "bot";
 
-const COLUMNS = "id, contact_phone, contact_id, state, context, human_handoff, human_handoff_at, funnel_session_id, funnel_flow, updated_at, not_understood_count, handoff_subject_asked_at, handoff_subject, handoff_status, handoff_status_at";
+const COLUMNS = "id, contact_phone, contact_id, state, context, human_handoff, human_handoff_at, funnel_session_id, funnel_flow, updated_at, not_understood_count, handoff_subject_asked_at, handoff_subject, handoff_status, handoff_status_at, classification";
 
 type Row = {
   id: string;
@@ -103,6 +108,7 @@ type Row = {
   handoff_subject: string | null;
   handoff_status: string | null;
   handoff_status_at: string | null;
+  classification: string;
 };
 
 const toConversation = (row: Row): Conversation => ({
@@ -121,6 +127,7 @@ const toConversation = (row: Row): Conversation => ({
   handoffSubject: row.handoff_subject ?? null,
   handoffStatus: (row.handoff_status as HandoffStatus | null) ?? null,
   handoffStatusAt: row.handoff_status_at ? new Date(row.handoff_status_at) : null,
+  classification: (row.classification as ConversationClassification | undefined) ?? "patient",
 });
 
 export async function getConversation(db: DbClient, clinicId: string, phone: string): Promise<Conversation | null> {
@@ -609,3 +616,27 @@ export async function handleAgentEcho(
   await pauseForHuman(db, clinicId, phone, { contactId, reason: "agent_took_over" }, now);
   return "paused";
 }
+
+// ---------------------------------------------------------------------------
+// Conversas que não são atendimento (NA; cliente, 06/nov/2026; docs/conversas-nao-atendimento.md)
+// ---------------------------------------------------------------------------
+
+/**
+ * Marca o número como Pessoal ou Administrativo/outros, ou devolve para atendimento ("patient"). Só Administrador e
+ * Recepção (o banco confere). Ao marcar, o bot volta ao começo e o atendimento aberto sai de Aguardando/Em atendimento
+ * sem mensagem; ao voltar, a próxima mensagem segue as regras de sempre. true = mudou; false = já estava assim.
+ */
+export async function setConversationClassification(
+  db: DbClient,
+  clinicId: string,
+  phone: string,
+  classification: ConversationClassification,
+): Promise<boolean> {
+  return unwrap(
+    await db.rpc("set_conversation_classification", { p_clinic_id: clinicId, p_contact_phone: phone, p_classification: classification }),
+    "Conversa do WhatsApp",
+  ) as boolean;
+}
+
+/** Número marcado (Pessoal ou Administrativo/outros): fora do bot, das métricas e dos pendentes. */
+export const isClassifiedOut = (conversation: Pick<Conversation, "classification">) => conversation.classification !== "patient";
