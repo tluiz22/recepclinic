@@ -44,7 +44,6 @@ const groups = configSections(clinic.features, clinic.isPlatformStaff, setup)
   .filter((group) => group.items.length > 0);
 const all = groups.flatMap((g) => g.items);
 const active = all.find((s) => s.id === current);
-const totalPending = all.reduce((sum, s) => sum + s.pending, 0);
 const pendingLabel = (n: number) => `${n} ${n === 1 ? "pendência" : "pendências"}`;
 const count = "rounded-full bg-pend-100 px-2 text-[12.5px] leading-normal font-semibold text-pend-800";
 const support = "rounded-md bg-blk-100 px-1.5 text-[11.5px] leading-normal font-semibold text-blk-800";
@@ -115,7 +114,8 @@ const support = "rounded-md bg-blk-100 px-1.5 text-[11.5px] leading-normal font-
             Seção: <strong>{active?.label ?? title}</strong>
           </span>
           <span class="flex items-center gap-2">
-            {totalPending > 0 && <span class={count}>{pendingLabel(totalPending)}</span>}
+            {/* Cliente, 07/nov/2026: só as pendências da seção aberta (o total confundia: "Assinatura · 3 pendências" eram de Locais e Agendas). */}
+            {!!active?.pending && <span class={count}>{pendingLabel(active.pending)}</span>}
             <Icon name="chevron-down" class="h-[18px] w-[18px] transition-transform group-open/sec:rotate-180" strokeWidth={2.2} />
           </span>
         </summary>
