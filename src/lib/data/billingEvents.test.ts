@@ -70,6 +70,14 @@ describe("webhook do Asaas (F12.5)", () => {
     ]);
   });
 
+  it("cobrança removida no Asaas (PAYMENT_DELETED) vira cancelada, não volta a pendente (validação de 07/nov)", async () => {
+    // O Asaas devolve a cobrança removida com deleted: true e o status de antes (PENDING).
+    const api = { getPayment: async (id: string) => payment({ id, status: "PENDING", paidAt: null, deleted: true }) } as unknown as AsaasBillingApi;
+    const m = memory([event("1", "PAYMENT_DELETED")], { sub_1: "c1" });
+    expect(await processBillingEvents(m.store, api)).toEqual({ processed: 1, ignored: 0, failed: 0 });
+    expect(m.charges.map((c) => c.rawStatus)).toEqual(["DELETED"]);
+  });
+
   it("erro na API ou sem Asaas: falhou, para tentar de novo", async () => {
     const api = {
       getPayment: async () => {

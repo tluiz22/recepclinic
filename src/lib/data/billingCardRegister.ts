@@ -89,7 +89,7 @@ export async function confirmCardRegistration(
       dueDate: payment.dueDate,
       valueCents: payment.valueCents,
       billingType: payment.billingType,
-      rawStatus: payment.status,
+      rawStatus: payment.deleted ? "DELETED" : payment.status,
       paidAt: payment.paidAt,
       invoiceUrl: payment.invoiceUrl,
     });
