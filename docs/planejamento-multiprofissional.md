@@ -1,7 +1,7 @@
 # Clínica com vários profissionais: especialidades, convênios e informações do bot por profissional
 
 > **Estado atual (retomar daqui), 07/nov/2026.** Planejamento pedido pelo cliente (07/nov) junto com a revisão da
-> NFS-e (seção 14 do [`planejamento-nfse-asaas.md`](planejamento-nfse-asaas.md)). Diagnóstico do código feito; **M1 a M6 decididas** (ME pronta para planejar o código); **M7 e M8
+> NFS-e (seção 14 do [`planejamento-nfse-asaas.md`](planejamento-nfse-asaas.md)). Diagnóstico do código feito; **M1 a M6 e M8 decididas** (ME pronta para planejar o código); **M7
 > abertas** (seção 6), uma por vez com o cliente. Sem código antes das decisões e do OK.
 
 Marcas como no plano da NFS-e: **[Código]**, **[Cliente]**, **[Hipótese]**, **[Pendência]**.
@@ -86,6 +86,9 @@ muitos médicos); especialidade e informações do bot são da clínica inteira.
   Em seguida, o **menu principal de hoje**, já no contexto daquele profissional: marcação, informações gerais
   (formas de pagamento, convênios, observações dele), remarcar, cancelar etc.
 - Especialidade com o mesmo profissional em mais de uma: ele aparece em cada uma.
+- **Exames (decidido, cliente, 07/nov, M8):** na pergunta da especialidade aparece também **"Exames"** (só se a
+  clínica tiver agenda de exame/equipamento ativa); escolhendo, o bot vai direto ao fluxo de exames de hoje, sem
+  escolher profissional.
 - **[Hipótese]** remarcar, cancelar e "minhas consultas" continuam mostrando todas as consultas do paciente na clínica
   (não só as do profissional escolhido), para o paciente não precisar voltar ao início; trocar de profissional fica
   como opção no menu ("Escolher outro profissional"). A confirmar no desenho das telas do bot.
@@ -108,7 +111,7 @@ muitos médicos); especialidade e informações do bot são da clínica inteira.
 | M5 | Informações do bot: padrão da clínica + profissional, ou só por profissional? | **Decidido (07/nov): só por profissional**; bot escolhe especialidade e profissional no início (seção 5) |
 | M6 | Especialidade obrigatória para todas as profissões ou só para médico? | **Decidido (07/nov): todas** (o Suporte cadastra as de cada profissão) |
 | M7 | Ordem das etapas | ME → MC → MI + MB juntas; NFS-e por profissional (seção 14 da NFS-e) em paralelo ao planejamento, código depois da ME |
-| M8 | Agenda de exame/equipamento (sem profissional): entra na escolha por especialidade (ex.: "Exames") ou segue no menu de exames? | Segue no menu de exames |
+| M8 | Exames (agenda sem profissional) na clínica com vários profissionais | **Decidido (07/nov): opção "Exames" na pergunta da especialidade**, direto ao fluxo de exames |
 
 ## 7. Etapas
 
