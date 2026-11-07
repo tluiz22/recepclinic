@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import type { DbClient } from "../../src/lib/data/clients";
 import { setClinicStatus } from "../../src/lib/data/onboarding";
+import { listClinicSuspensions, releaseClinicSuspension, suspendClinic } from "../../src/lib/data/suspension";
 import { setWhatsappAccessToken } from "../../src/lib/data/whatsapp/connection";
 import { createClinicSender } from "../../src/lib/data/whatsapp/send";
 import { listHumanAttention } from "../../src/lib/data/whatsapp/attention";
@@ -100,5 +101,48 @@ describe("clínica em implantação (F8.2b)", () => {
     expect(await listHumanAttention(asDb(admin.client), clinicId)).toEqual([]);
     await setClinicStatus(asDb(support.client), clinicId, "active");
     expect((await listHumanAttention(asDb(admin.client), clinicId)).map((i) => i.phone)).toEqual(["+5584977730002"]);
+  });
+});
+
+// F12.3: clínica suspensa (decisão 11.4). A mensagem do paciente fica no
+// histórico, mas ninguém envia pela clínica (o bot fica calado) e as rotinas
+// de envio pulam; liberada, volta a enviar.
+describe("clínica suspensa (F12.3)", () => {
+  it("suspensa, ninguém envia e o bot não responde; a mensagem fica gravada; liberada, envia", async () => {
+    await setClinicStatus(asDb(support.client), clinicId, "active");
+    await suspendClinic(asDb(support.client), clinicId, { reason: "administrative", note: "Teste da suspensão.", noAppConfirmed: true });
+    expect(await statusOf()).toBe("suspended");
+    expect(await sender()).toBeNull();
+    const { data: active } = await adminClient().rpc("list_active_clinics");
+    expect(active).not.toContain(clinicId);
+    const { data: inService } = await adminClient().rpc("list_clinics_in_service");
+    expect(inService).not.toContain(clinicId);
+
+    const deps: WebhookDeps = {
+      resolveClinic: async (id) => (id === phoneNumberId ? clinicId : null),
+      clientFor: (id) => asDb(clinicServiceClient(id)),
+      senderFor: async () => sender(),
+    };
+    const payload = {
+      entry: [
+        {
+          changes: [
+            {
+              field: "messages",
+              value: {
+                metadata: { phone_number_id: phoneNumberId },
+                messages: [{ id: `wamid.susp.${Date.now()}.1`, from: "5584977730009", type: "text", text: { body: "Oi, quero marcar" } }],
+              },
+            },
+          ],
+        },
+      ],
+    };
+    expect(await processWebhook(payload, deps)).toMatchObject({ inbound: 1, botReplies: 0, errors: 0 });
+
+    const [suspension] = await listClinicSuspensions(asDb(support.client), clinicId);
+    await releaseClinicSuspension(asDb(support.client), suspension.id, "Fim do teste.");
+    expect(await statusOf()).toBe("active");
+    expect(await sender()).not.toBeNull();
   });
 });

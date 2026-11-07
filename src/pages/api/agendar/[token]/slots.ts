@@ -3,6 +3,7 @@ import { formatInstant, isCalendarDate } from "../../../../lib/clinicTime";
 import { createClinicServiceClient } from "../../../../lib/data/clinicService";
 import { listLinkSlots, loadBookingPage, logBookingPageStep, slotChoiceValue, slotDetails } from "../../../../lib/data/agenda/publicBooking";
 import { DataError } from "../../../../lib/data/errors";
+import { isClinicSuspended } from "../../../../lib/data/config/brand";
 import { resolveClinicByBookingLink } from "../../../../lib/data/platform";
 import { parsePublicId } from "../../../../lib/publicId";
 
@@ -18,6 +19,8 @@ export const GET: APIRoute = async ({ params, url }) => {
   const clinicId = await resolveClinicByBookingLink(token);
   if (!clinicId) return json({ error: "link inválido" }, 404);
   const db = createClinicServiceClient(clinicId);
+  // Clínica suspensa (F12.3): sem horários.
+  if (await isClinicSuspended(db, clinicId)) return json({ error: "agendamento indisponível" }, 503);
   const page = await loadBookingPage(db, clinicId, token).catch((error) => {
     if (error instanceof DataError && error.code === "not_found") return null;
     throw error;

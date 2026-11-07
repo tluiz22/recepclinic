@@ -166,9 +166,17 @@ export async function getInvoice(db: DbClient, clinicId: string, invoiceId: stri
   return row ? { ...toInvoice(row), dpsId: row.dps_id } : null;
 }
 
-/** A clínica já pode emitir? (dados fiscais e certificado em dia) */
+/** A clínica já pode emitir? (contrato com nota assinado, dados fiscais e certificado em dia) */
 export async function nfseReadiness(db: DbClient, clinicId: string, now: Date = new Date()): Promise<{ ready: boolean; environment: NfseEnvironment | null; reason: string | null }> {
-  const [settings, certificate] = await Promise.all([getFiscalSettings(db, clinicId), getFiscalCertificate(db, clinicId)]);
+  const [settings, certificate, signed] = await Promise.all([
+    getFiscalSettings(db, clinicId),
+    getFiscalCertificate(db, clinicId),
+    db.rpc("billing_invoicing_signed", { p_clinic_id: clinicId }),
+  ]);
+  // Cliente, 03/nov/2026: só emite com o contrato com nota fiscal assinado.
+  if (signed.data !== true) {
+    return { ready: false, environment: settings?.environment ?? null, reason: "Falta o Administrador assinar o contrato com nota fiscal (Configurações › Assinatura)." };
+  }
   if (!settings) return { ready: false, environment: null, reason: "Faltam os dados fiscais da clínica (Configurações › Nota fiscal)." };
   if (!certificate) return { ready: false, environment: settings.environment, reason: "Falta o certificado digital A1 (Configurações › Nota fiscal)." };
   if (certificate.validUntil <= now) return { ready: false, environment: settings.environment, reason: "O certificado digital A1 venceu." };

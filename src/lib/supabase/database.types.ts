@@ -259,6 +259,152 @@ isOneToOne: false
       referencedColumns: ["clinic_id","id"]
     }
                   ]
+                },"billing_accounts": {
+                  Row: {
+                    "asaas_customer_id": string | null,"clinic_id": string,"created_at": string,"finance_email": string,"finance_phone": string | null,"payer_document": string,"payer_name": string,"updated_at": string,"updated_by": string | null,"whatsapp_opt_in_at": string | null,"whatsapp_opt_in_by": string | null,"whatsapp_opt_in_version": string | null,"whatsapp_prompt_dismissed_at": string | null
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "asaas_customer_id"?: string | null,"clinic_id": string,"created_at"?: string,"finance_email": string,"finance_phone"?: string | null,"payer_document": string,"payer_name": string,"updated_at"?: string,"updated_by"?: string | null,"whatsapp_opt_in_at"?: string | null,"whatsapp_opt_in_by"?: string | null,"whatsapp_opt_in_version"?: string | null,"whatsapp_prompt_dismissed_at"?: string | null
+                  }
+                  Update: {
+                    "asaas_customer_id"?: string | null,"clinic_id"?: string,"created_at"?: string,"finance_email"?: string,"finance_phone"?: string | null,"payer_document"?: string,"payer_name"?: string,"updated_at"?: string,"updated_by"?: string | null,"whatsapp_opt_in_at"?: string | null,"whatsapp_opt_in_by"?: string | null,"whatsapp_opt_in_version"?: string | null,"whatsapp_prompt_dismissed_at"?: string | null
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "billing_accounts_clinic_id_fkey"
+      columns: ["clinic_id"]
+isOneToOne: true
+      referencedRelation: "clinics"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"billing_audit_log": {
+                  Row: {
+                    "action": string,"actor_id": string | null,"actor_kind": string,"after": Json | null,"before": Json | null,"clinic_id": string,"created_at": string,"id": string,"reason": string | null
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "action": string,"actor_id"?: string | null,"actor_kind": string,"after"?: Json | null,"before"?: Json | null,"clinic_id": string,"created_at"?: string,"id"?: string,"reason"?: string | null
+                  }
+                  Update: {
+                    "action"?: string,"actor_id"?: string | null,"actor_kind"?: string,"after"?: Json | null,"before"?: Json | null,"clinic_id"?: string,"created_at"?: string,"id"?: string,"reason"?: string | null
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "billing_audit_log_clinic_id_fkey"
+      columns: ["clinic_id"]
+isOneToOne: false
+      referencedRelation: "clinics"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"billing_charges": {
+                  Row: {
+                    "asaas_payment_id": string | null,"billing_type": string | null,"clinic_id": string,"contract_id": string | null,"created_at": string,"due_date": string,"id": string,"invoice_url": string | null,"kind": string,"last_synced_at": string | null,"origin": string,"paid_at": string | null,"raw_status": string | null,"status": string,"updated_at": string,"value_cents": number
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "asaas_payment_id"?: string | null,"billing_type"?: string | null,"clinic_id": string,"contract_id"?: string | null,"created_at"?: string,"due_date": string,"id"?: string,"invoice_url"?: string | null,"kind": string,"last_synced_at"?: string | null,"origin"?: string,"paid_at"?: string | null,"raw_status"?: string | null,"status": string,"updated_at"?: string,"value_cents": number
+                  }
+                  Update: {
+                    "asaas_payment_id"?: string | null,"billing_type"?: string | null,"clinic_id"?: string,"contract_id"?: string | null,"created_at"?: string,"due_date"?: string,"id"?: string,"invoice_url"?: string | null,"kind"?: string,"last_synced_at"?: string | null,"origin"?: string,"paid_at"?: string | null,"raw_status"?: string | null,"status"?: string,"updated_at"?: string,"value_cents"?: number
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "billing_charges_clinic_id_fkey"
+      columns: ["clinic_id"]
+isOneToOne: false
+      referencedRelation: "clinics"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "billing_charges_contract_id_fkey"
+      columns: ["contract_id"]
+isOneToOne: false
+      referencedRelation: "billing_contracts"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"billing_contracts": {
+                  Row: {
+                    "acceptance": string | null,"accepted_at": string | null,"accepted_by": string | null,"accepted_ip": unknown,"activated_at": string | null,"activated_by": string | null,"asaas_cancel_error": string | null,"asaas_cancel_synced_at": string | null,"asaas_subscription_id": string | null,"asaas_sync_error": string | null,"asaas_synced_at": string | null,"billing_mode": string,"cancel_comment": string | null,"cancel_kind": string | null,"cancel_next_due": string | null,"cancel_reason": string | null,"canceled_at": string | null,"canceled_by": string | null,"card_change_checkout_id": string | null,"card_change_next_due": string | null,"card_change_requested_at": string | null,"card_last4": string | null,"card_registered_at": string | null,"clinic_id": string,"created_at": string,"created_by": string | null,"ends_on": string | null,"first_due_date": string,"id": string,"invoice_monthly_allowance": number | null,"invoice_unit_price_cents": number | null,"monthly_cents": number,"notes": string | null,"notice_sent_at": string | null,"payment_method": string | null,"payment_step_dismissed_at": string | null,"plan_snapshot": NonNullable<Json>,"recurring_consent": string | null,"replaces_contract_id": string | null,"setup_cents": number,"starts_on": string,"status": string,"terms_version": string | null,"updated_at": string,"version": number | null
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "acceptance"?: string | null,"accepted_at"?: string | null,"accepted_by"?: string | null,"accepted_ip"?: unknown,"activated_at"?: string | null,"activated_by"?: string | null,"asaas_cancel_error"?: string | null,"asaas_cancel_synced_at"?: string | null,"asaas_subscription_id"?: string | null,"asaas_sync_error"?: string | null,"asaas_synced_at"?: string | null,"billing_mode": string,"cancel_comment"?: string | null,"cancel_kind"?: string | null,"cancel_next_due"?: string | null,"cancel_reason"?: string | null,"canceled_at"?: string | null,"canceled_by"?: string | null,"card_change_checkout_id"?: string | null,"card_change_next_due"?: string | null,"card_change_requested_at"?: string | null,"card_last4"?: string | null,"card_registered_at"?: string | null,"clinic_id": string,"created_at"?: string,"created_by"?: string | null,"ends_on"?: string | null,"first_due_date": string,"id"?: string,"invoice_monthly_allowance"?: number | null,"invoice_unit_price_cents"?: number | null,"monthly_cents": number,"notes"?: string | null,"notice_sent_at"?: string | null,"payment_method"?: string | null,"payment_step_dismissed_at"?: string | null,"plan_snapshot"?: NonNullable<Json>,"recurring_consent"?: string | null,"replaces_contract_id"?: string | null,"setup_cents"?: number,"starts_on": string,"status"?: string,"terms_version"?: string | null,"updated_at"?: string,"version"?: number | null
+                  }
+                  Update: {
+                    "acceptance"?: string | null,"accepted_at"?: string | null,"accepted_by"?: string | null,"accepted_ip"?: unknown,"activated_at"?: string | null,"activated_by"?: string | null,"asaas_cancel_error"?: string | null,"asaas_cancel_synced_at"?: string | null,"asaas_subscription_id"?: string | null,"asaas_sync_error"?: string | null,"asaas_synced_at"?: string | null,"billing_mode"?: string,"cancel_comment"?: string | null,"cancel_kind"?: string | null,"cancel_next_due"?: string | null,"cancel_reason"?: string | null,"canceled_at"?: string | null,"canceled_by"?: string | null,"card_change_checkout_id"?: string | null,"card_change_next_due"?: string | null,"card_change_requested_at"?: string | null,"card_last4"?: string | null,"card_registered_at"?: string | null,"clinic_id"?: string,"created_at"?: string,"created_by"?: string | null,"ends_on"?: string | null,"first_due_date"?: string,"id"?: string,"invoice_monthly_allowance"?: number | null,"invoice_unit_price_cents"?: number | null,"monthly_cents"?: number,"notes"?: string | null,"notice_sent_at"?: string | null,"payment_method"?: string | null,"payment_step_dismissed_at"?: string | null,"plan_snapshot"?: NonNullable<Json>,"recurring_consent"?: string | null,"replaces_contract_id"?: string | null,"setup_cents"?: number,"starts_on"?: string,"status"?: string,"terms_version"?: string | null,"updated_at"?: string,"version"?: number | null
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "billing_contracts_clinic_id_fkey"
+      columns: ["clinic_id"]
+isOneToOne: false
+      referencedRelation: "clinics"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "billing_contracts_replaces_contract_id_fkey"
+      columns: ["replaces_contract_id"]
+isOneToOne: false
+      referencedRelation: "billing_contracts"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"billing_notifications": {
+                  Row: {
+                    "attempts": number,"charge_id": string,"clinic_id": string,"created_at": string,"id": string,"kind": string,"last_error": string | null,"scheduled_for": string,"sent_at": string | null,"sent_to": string | null,"status": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "attempts"?: number,"charge_id": string,"clinic_id": string,"created_at"?: string,"id"?: string,"kind": string,"last_error"?: string | null,"scheduled_for": string,"sent_at"?: string | null,"sent_to"?: string | null,"status"?: string
+                  }
+                  Update: {
+                    "attempts"?: number,"charge_id"?: string,"clinic_id"?: string,"created_at"?: string,"id"?: string,"kind"?: string,"last_error"?: string | null,"scheduled_for"?: string,"sent_at"?: string | null,"sent_to"?: string | null,"status"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "billing_notifications_charge_id_fkey"
+      columns: ["charge_id"]
+isOneToOne: false
+      referencedRelation: "billing_charges"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "billing_notifications_clinic_id_fkey"
+      columns: ["clinic_id"]
+isOneToOne: false
+      referencedRelation: "clinics"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"billing_provider_events": {
+                  Row: {
+                    "attempts": number,"event": string,"id": string,"last_error": string | null,"payload": NonNullable<Json>,"processed_at": string | null,"provider_event_id": string,"received_at": string,"resource_id": string | null,"status": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "attempts"?: number,"event": string,"id"?: string,"last_error"?: string | null,"payload"?: NonNullable<Json>,"processed_at"?: string | null,"provider_event_id": string,"received_at"?: string,"resource_id"?: string | null,"status"?: string
+                  }
+                  Update: {
+                    "attempts"?: number,"event"?: string,"id"?: string,"last_error"?: string | null,"payload"?: NonNullable<Json>,"processed_at"?: string | null,"provider_event_id"?: string,"received_at"?: string,"resource_id"?: string | null,"status"?: string
+                  }
+                  Relationships: [
+                    
+                  ]
+                },"billing_settings": {
+                  Row: {
+                    "default_invoice_unit_price_cents": number | null,"id": boolean,"updated_at": string,"updated_by": string | null
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "default_invoice_unit_price_cents"?: number | null,"id"?: boolean,"updated_at"?: string,"updated_by"?: string | null
+                  }
+                  Update: {
+                    "default_invoice_unit_price_cents"?: number | null,"id"?: boolean,"updated_at"?: string,"updated_by"?: string | null
+                  }
+                  Relationships: [
+                    
+                  ]
                 },"booking_links": {
                   Row: {
                     "agenda_id": string | null,"appointment_id": string | null,"canceled_appointment_id": string | null,"clinic_id": string,"contact_id": string,"contact_phone": string,"created_at": string,"expires_at": string,"funnel_session_id": string | null,"home_visit_address": string | null,"id": string,"insurance_plan_id": string | null,"join_waitlist": boolean,"location_category": Database["public"]['Enums']["location_type"] | null,"location_id": string | null,"mode": Database["public"]['Enums']["booking_link_mode"],"not_completed_prompted_at": string | null,"origin_appointment_id": string | null,"patient_id": string,"return_deadline_waived": boolean,"service_id": string,"used_at": string | null
@@ -597,6 +743,26 @@ isOneToOne: true
       referencedColumns: ["id"]
     }
                   ]
+                },"clinic_suspensions": {
+                  Row: {
+                    "clinic_id": string,"created_at": string,"created_by": string | null,"id": string,"note": string,"reason": string,"release_note": string | null,"released_at": string | null,"released_by": string | null
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "clinic_id": string,"created_at"?: string,"created_by"?: string | null,"id"?: string,"note": string,"reason": string,"release_note"?: string | null,"released_at"?: string | null,"released_by"?: string | null
+                  }
+                  Update: {
+                    "clinic_id"?: string,"created_at"?: string,"created_by"?: string | null,"id"?: string,"note"?: string,"reason"?: string,"release_note"?: string | null,"released_at"?: string | null,"released_by"?: string | null
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "clinic_suspensions_clinic_id_fkey"
+      columns: ["clinic_id"]
+isOneToOne: false
+      referencedRelation: "clinics"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"clinic_usage_monthly": {
                   Row: {
                     "appointments_created": number,"bot_limit_hits": number,"clinic_id": string,"messages_sent": number,"month": string,"templates_sent": number
@@ -619,14 +785,14 @@ isOneToOne: false
                   ]
                 },"clinics": {
                   Row: {
-                    "created_at": string,"id": string,"max_professionals": number,"name": string,"status": Database["public"]['Enums']["clinic_status"],"updated_at": string
+                    "created_at": string,"id": string,"max_professionals": number,"name": string,"status": Database["public"]['Enums']["clinic_status"],"status_before_suspension": Database["public"]['Enums']["clinic_status"] | null,"updated_at": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "created_at"?: string,"id"?: string,"max_professionals"?: number,"name": string,"status"?: Database["public"]['Enums']["clinic_status"],"updated_at"?: string
+                    "created_at"?: string,"id"?: string,"max_professionals"?: number,"name": string,"status"?: Database["public"]['Enums']["clinic_status"],"status_before_suspension"?: Database["public"]['Enums']["clinic_status"] | null,"updated_at"?: string
                   }
                   Update: {
-                    "created_at"?: string,"id"?: string,"max_professionals"?: number,"name"?: string,"status"?: Database["public"]['Enums']["clinic_status"],"updated_at"?: string
+                    "created_at"?: string,"id"?: string,"max_professionals"?: number,"name"?: string,"status"?: Database["public"]['Enums']["clinic_status"],"status_before_suspension"?: Database["public"]['Enums']["clinic_status"] | null,"updated_at"?: string
                   }
                   Relationships: [
                     
@@ -1977,7 +2143,13 @@ isOneToOne: false
             [_ in never]: never
           }
           Functions: {
-            "anonymize_patient":
+            "accept_billing_contract":
+{ Args: { "p_clinic_id": string,"p_contract_id": string,"p_ip": string,"p_recurring_consent": string,"p_terms_version": string }; Returns: undefined
+                           },
+"activate_billing_contract":
+{ Args: { "p_clinic_id": string,"p_terms_version": string }; Returns: undefined
+                           },
+"anonymize_patient":
 { Args: { "p_clinic_id": string,"p_patient_id": string }; Returns: Json
                            },
 "begin_nfse_cancel":
@@ -1986,8 +2158,95 @@ isOneToOne: false
 "begin_nfse_issue":
 { Args: { "p_payment_id": string }; Returns: Json
                            },
+"billing_can_suspend_for_non_payment":
+{ Args: { "p_clinic_id": string }; Returns: boolean
+                           },
+"billing_cancels_to_sync":
+{ Args: Record<PropertyKey, never>; Returns: string[]
+                           },
+"billing_card_changes_open":
+{ Args: Record<PropertyKey, never>; Returns: string[]
+                           },
+"billing_contract_for_payment":
+{ Args: { "p_external_reference": string,"p_subscription_id": string }; Returns: string
+                           },
+"billing_contracts_to_reconcile":
+{ Args: Record<PropertyKey, never>; Returns: string[]
+                           },
+"billing_contracts_without_card":
+{ Args: Record<PropertyKey, never>; Returns: string[]
+                           },
+"billing_finish_card_change":
+{ Args: { "p_contract_id": string,"p_error": string,"p_new_subscription_id": string }; Returns: undefined
+                           },
+"billing_finish_notice":
+{ Args: { "p_error": string,"p_id": string,"p_sent_to": string,"p_status": string }; Returns: undefined
+                           },
+"billing_finish_provider_event":
+{ Args: { "p_error": string,"p_id": string,"p_status": string }; Returns: undefined
+                           },
+"billing_invoicing_signed":
+{ Args: { "p_clinic_id": string }; Returns: boolean
+                           },
+"billing_link_asaas_customer":
+{ Args: { "p_clinic_id": string,"p_customer_id": string }; Returns: undefined
+                           },
+"billing_link_asaas_subscription":
+{ Args: { "p_contract_id": string,"p_subscription_id": string }; Returns: undefined
+                           },
+"billing_open_notices":
+{ Args: { "p_limit": number }; Returns: {
+              "charge_kind": string,"charge_status": string,"clinic_id": string,"clinic_name": string,"due_date": string,"finance_email": string,"id": string,"invoice_url": string,"kind": string,"paid_at": string,"value_cents": number
+            }[]
+                           },
+"billing_open_provider_events":
+{ Args: { "p_limit": number }; Returns: {
+              "attempts": number,
+"event": string,
+"id": string,
+"last_error": string | null,
+"payload": NonNullable<Json>,
+"processed_at": string | null,
+"provider_event_id": string,
+"received_at": string,
+"resource_id": string | null,
+"status": string
+            }[]
+                          SetofOptions: {
+        from: "*"
+        to: "billing_provider_events"
+        isOneToOne: false
+        isSetofReturn: true
+      } },
+"billing_record_asaas_sync":
+{ Args: { "p_contract_id": string,"p_error": string }; Returns: undefined
+                           },
+"billing_record_cancel_sync":
+{ Args: { "p_contract_id": string,"p_error": string }; Returns: undefined
+                           },
+"billing_record_card_change_request":
+{ Args: { "p_actor": string,"p_checkout_id": string,"p_contract_id": string,"p_next_due": string }; Returns: undefined
+                           },
+"billing_record_card_registered":
+{ Args: { "p_contract_id": string,"p_last4": string,"p_source": string }; Returns: undefined
+                           },
+"billing_record_provider_event":
+{ Args: { "p_event": string,"p_payload": Json,"p_provider_event_id": string,"p_resource_id": string }; Returns: string
+                           },
+"billing_schedule_overdue_notices":
+{ Args: Record<PropertyKey, never>; Returns: number
+                           },
+"billing_suspend_ended_contracts":
+{ Args: Record<PropertyKey, never>; Returns: number
+                           },
+"billing_upsert_asaas_charge":
+{ Args: { "p_billing_type": string,"p_contract_id": string,"p_due_date": string,"p_invoice_url": string,"p_kind": string,"p_paid_at": string,"p_payment_id": string,"p_raw_status": string,"p_value_cents": number }; Returns: undefined
+                           },
 "book_group_session":
 { Args: { "p_agenda_id": string,"p_booking_channel": Database["public"]['Enums']["action_channel"],"p_location_id": string,"p_patient_id": string,"p_scheduled_at": string,"p_service_id": string,"p_trail"?: Json }; Returns: string
+                           },
+"cancel_billing_subscription":
+{ Args: { "p_clinic_id": string,"p_comment": string,"p_reason": string }; Returns: Json
                            },
 "central_assign":
 { Args: { "p_clinic_id": string,"p_contact_phone": string,"p_expected_assigned": string,"p_to"?: string }; Returns: {
@@ -2070,11 +2329,23 @@ isOneToOne: false
               "is_support": boolean,"name": string,"roles": (Database["public"]['Enums']["clinic_role"])[],"user_id": string
             }[]
                            },
+"clinic_suspension_reasons":
+{ Args: { "p_clinic_id": string }; Returns: string[]
+                           },
 "connect_whatsapp":
 { Args: { "p_clinic_id": string,"p_coexistence": boolean,"p_contacts_synced"?: boolean,"p_display_phone": string,"p_history_synced"?: boolean,"p_phone_number_id": string,"p_pin"?: string,"p_token": string,"p_waba_id": string }; Returns: undefined
                            },
+"discard_billing_contract_draft":
+{ Args: { "p_clinic_id": string }; Returns: undefined
+                           },
 "disconnect_whatsapp":
 { Args: { "p_clinic_id": string }; Returns: boolean
+                           },
+"dismiss_billing_payment_step":
+{ Args: { "p_clinic_id": string,"p_contract_id": string }; Returns: undefined
+                           },
+"dismiss_billing_whatsapp_prompt":
+{ Args: { "p_clinic_id": string }; Returns: undefined
                            },
 "dismiss_send_failure":
 { Args: { "p_clinic_id": string,"p_event_id"?: number,"p_message_id"?: string,"p_scope": string }; Returns: undefined
@@ -2216,6 +2487,12 @@ isOneToOne: false
 "publish_knowledge_base":
 { Args: Record<PropertyKey, never>; Returns: number
                            },
+"record_billing_contract_notice":
+{ Args: { "p_clinic_id": string,"p_contract_id": string,"p_error": string,"p_sent_to": string }; Returns: undefined
+                           },
+"release_clinic_suspension":
+{ Args: { "p_note": string,"p_suspension_id": string }; Returns: undefined
+                           },
 "reschedule_group_session":
 { Args: { "p_appointment_id": string,"p_channel": Database["public"]['Enums']["action_channel"],"p_scheduled_at": string,"p_trail"?: Json }; Returns: undefined
                            },
@@ -2240,6 +2517,15 @@ isOneToOne: false
 "revoke_fiscal_certificate":
 { Args: { "p_clinic_id": string }; Returns: undefined
                            },
+"save_billing_account":
+{ Args: { "p_clinic_id": string,"p_finance_email": string,"p_finance_phone": string,"p_payer_document": string,"p_payer_name": string }; Returns: undefined
+                           },
+"save_billing_contacts":
+{ Args: { "p_clinic_id": string,"p_finance_email": string,"p_finance_phone": string }; Returns: undefined
+                           },
+"save_billing_contract_draft":
+{ Args: { "p_billing_mode": string,"p_clinic_id": string,"p_first_due_date": string,"p_invoice_monthly_allowance": number,"p_invoice_unit_price_cents": number,"p_monthly_cents": number,"p_notes": string,"p_payment_method": string,"p_plan_snapshot": Json,"p_setup_cents": number,"p_starts_on": string }; Returns: string
+                           },
 "search_contact_ids":
 { Args: { "p_clinic_id": string,"p_include_inactive"?: boolean,"p_limit"?: number,"p_query": string }; Returns: {
               "id": string,"score": number
@@ -2254,6 +2540,12 @@ isOneToOne: false
 { Args: { "p_clinic_id": string,"p_include_inactive"?: boolean,"p_limit"?: number,"p_query": string }; Returns: {
               "id": string,"score": number
             }[]
+                           },
+"set_billing_default_invoice_price":
+{ Args: { "p_cents": number }; Returns: undefined
+                           },
+"set_billing_whatsapp_opt_in":
+{ Args: { "p_clinic_id": string,"p_opt_in": boolean,"p_text_version": string }; Returns: undefined
                            },
 "set_central_enabled":
 { Args: { "p_clinic_id": string,"p_enabled": boolean }; Returns: boolean
@@ -2295,6 +2587,9 @@ isOneToOne: false
 { Args: { "p_clinic_id": string,"p_limit"?: number }; Returns: {
               "appointment_id": string,"body": string,"contact_id": string,"contact_phone": string,"created_at": string,"direction": string,"id": string,"message_type": string,"status": string,"template_name": string
             }[]
+                           },
+"suspend_clinic":
+{ Args: { "p_clinic_id": string,"p_no_app_confirmed"?: boolean,"p_note": string,"p_reason": string }; Returns: string
                            },
 "undo_agenda_import":
 { Args: { "p_apply": boolean,"p_request_id": string }; Returns: Json

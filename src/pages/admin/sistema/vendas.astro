@@ -5,6 +5,7 @@
 // 17/out/2026): as abas sublinhadas do painel. CU3 (cliente, 05/nov/2026): a
 // aba Custo da Meta, a calculadora do que a clínica paga à Meta.
 import AdminLayout from "../../../layouts/AdminLayout.astro";
+import FlashMessage from "../../../components/admin/FlashMessage.astro";
 import SystemHeader from "../../../components/admin/sistema/SystemHeader.astro";
 import Tabs from "../../../components/admin/ui/Tabs.astro";
 import PlanosTab from "../../../components/admin/vendas/PlanosTab.astro";
@@ -28,6 +29,7 @@ const tab: TabKey = TABS.find((t) => t.key === requested)?.key ?? "planos";
 
 <AdminLayout title="Vendas" platform>
   <SystemHeader title="Vendas" subtitle="Apresentação e venda do RecepClinic. Só o Suporte vê esta página." />
+  <FlashMessage />
   <Tabs class="mt-4" label="Abas de Vendas" tabs={TABS.map((t) => ({ label: t.label, href: `/admin/sistema/vendas?tab=${t.key}`, active: t.key === tab }))} />
   {tab === "planos" && <PlanosTab />}
   {tab === "demonstracao" && <DemonstracaoTab />}

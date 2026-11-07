@@ -349,5 +349,6 @@ export const JOURNEY_RULES = [
   "Mensagem automática do app WhatsApp Business (saudação, ausência), até 5 segundos depois da do paciente ou do bot: não pausa o bot; aviso para desligar no app.",
   "Número marcado pela equipe como Pessoal ou Administrativo/outros (Conversas ou Atendimento, só Administrador e Recepção): o bot não responde, a resposta da equipe pelo app não abre atendimento e o número fica fora das métricas e dos pendentes. Os botões do lembrete e da oferta de vaga continuam valendo, com o caminho que abrem (confirmar, remarcar, cancelar). Ao marcar, o atendimento aberto sai sem mensagem; \"Voltar para atendimento\" devolve o número ao bot, também sem mensagem (cliente, 06/nov/2026).",
   "Clínica em implantação: o bot não responde e nenhuma mensagem automática sai.",
+  "Clínica suspensa: o bot não responde, nenhuma mensagem automática sai e os links (agendar, preparo, orientações) mostram \"indisponível no momento\"; a mensagem do paciente fica no histórico.",
   "Número sem WhatsApp Business (só no sistema): não há \"Falar com a recepção\".",
 ];

@@ -1,0 +1,352 @@
+---
+// Configurações › Assinatura (F12.1, faturamento do SaaS; plano em
+// docs/planejamento-faturamento-saas.md): a conta de cobrança da clínica no
+// RecepClinic. O pagador (nome e CNPJ/CPF) é do Suporte; o Administrador da
+// clínica altera os contatos financeiros e só ele autoriza ou retira o
+// WhatsApp financeiro. F12.2: o contrato vigente (mensalidade, implantação,
+// preço por nota e franquia), só leitura. F12.2b: o aceite do contrato (só o
+// Administrador; texto versionado) e a situação do aceite. Cobranças entram
+// nas próximas fases. F12.3: na suspensão, é a única tela do Administrador,
+// com o motivo (sem o texto do Suporte). F12.2e (cliente, 03/nov/2026): passo
+// a passo (aceite com a autorização da cobrança mensal → WhatsApp opcional →
+// Pronto) e as cobranças no topo, com a ação de cada forma de pagamento.
+// F12.2i (cliente, 04/nov/2026): o passo Cartão (ou Pagamento, no Pix) logo
+// depois do contrato; sem o cartão, o passo fica pendente e o Pronto não sai.
+import ConfigShell from "../../../components/admin/config/ConfigShell.astro";
+import Badge from "../../../components/admin/config/Badge.astro";
+import Card from "../../../components/admin/config/Panel.astro";
+import ConfirmDeleteDialog from "../../../components/admin/ConfirmDeleteDialog.astro";
+import BillingTrail from "../../../components/admin/billing/BillingTrail.astro";
+import ContractAcceptanceInfo from "../../../components/admin/billing/ContractAcceptanceInfo.astro";
+import ChargesList from "../../../components/admin/billing/ChargesList.astro";
+import ContractTerms from "../../../components/admin/billing/ContractTerms.astro";
+import ContractText from "../../../components/admin/billing/ContractText.astro";
+import AcceptContractStep from "../../../components/admin/billing/AcceptContractStep.astro";
+import SubscriptionSteps from "../../../components/admin/billing/SubscriptionSteps.astro";
+import WhatsappStep from "../../../components/admin/billing/WhatsappStep.astro";
+import PaymentStep from "../../../components/admin/billing/PaymentStep.astro";
+import { dueDay, renewalLine } from "../../../lib/billingRenewal";
+import { paymentStep, subscriptionSteps, type StepKey } from "../../../lib/billingSteps";
+import HelpTip from "../../../components/admin/ui/HelpTip.astro";
+import HowItWorks from "../../../components/admin/ui/HowItWorks.astro";
+import { configuracoes } from "../../../lib/ajuda/configuracoes";
+import { DD, DT, HINT, INPUT, KV, LABEL, PRIMARY_BUTTON, SECONDARY_BUTTON } from "../../../components/admin/config/formStyles";
+import { BILLING_OPT_IN_TEXT, BILLING_OPT_IN_VERSION } from "../../../lib/billingOptIn";
+import { formatCalendarDate, formatInstant, todayIn } from "../../../lib/clinicTime";
+import { loadActorLabels } from "../../../lib/data/agenda/trail";
+import { contractsInForce, formatPayerDocument, getBillingAccount, listBillingAudit, listBillingCharges, listBillingContracts } from "../../../lib/data/billing";
+import { createUserClient } from "../../../lib/data/clients";
+import { activeSuspensionReasons, describeReasons } from "../../../lib/data/suspension";
+import { formatPhoneBR } from "../../../lib/phone";
+
+const clinic = Astro.locals.clinic!;
+const db = createUserClient(Astro.request, Astro.cookies);
+const [account, audit, contracts, charges, suspensionReasons] = await Promise.all([
+  getBillingAccount(db, clinic.clinicId),
+  listBillingAudit(db, clinic.clinicId),
+  listBillingContracts(db, clinic.clinicId),
+  listBillingCharges(db, clinic.clinicId),
+  clinic.clinicStatus === "suspended" ? activeSuspensionReasons(db, clinic.clinicId) : Promise.resolve([]),
+]);
+// O Administrador vê o vigente e os encerrados (o rascunho é só do Suporte).
+const { current: contract, next } = contractsInForce(contracts, todayIn(clinic.timezone));
+// A versão ativada que falta aceitar (a de hoje ou a próxima).
+const pending = contracts.find((c) => c.status === "active" && c.acceptance === "pending") ?? null;
+const actors = await loadActorLabels(db, clinic.clinicId, [...audit.map((a) => a.actorId), ...contracts.map((c) => c.acceptedBy)]);
+// O opt-in é o consentimento da clínica: só o Administrador dela (o Suporte vê).
+const isClinicAdmin = clinic.roles.includes("admin");
+const action = "/api/admin/configuracoes/assinatura";
+const page = "/admin/configuracoes/assinatura";
+// F12.2e/F12.2i: passo a passo. Contrato (aceite) → Cartão ou Pagamento (só
+// o Administrador; cartão: até o cartão estar na assinatura; Pix: implantação
+// em aberto, até "Pagar depois") → WhatsApp financeiro (opcional, enquanto não
+// autorizou nem disse "Agora não"); depois, o aviso "Pronto" (?pronto=1).
+const accepted = contracts.find((c) => c.status !== "draft" && (c.acceptance === "explicit" || c.acceptance === "tacit")) ?? null;
+const activeAccepted = contracts.find((c) => c.status === "active" && (c.acceptance === "explicit" || c.acceptance === "tacit")) ?? null;
+const openSetup = charges.find((c) => c.kind === "setup" && (c.status === "pending" || c.status === "overdue")) ?? null;
+const whatsappNeeded = isClinicAdmin && !!account && !account.whatsappOptIn && !account.whatsappPromptDismissedAt;
+const payment = isClinicAdmin ? paymentStep(activeAccepted, !!openSetup) : null;
+// O passo do pagamento aparece na sequência do contrato no cartão (sempre) e no Pix com implantação.
+const flowContract = pending ?? activeAccepted;
+const paymentInFlow =
+  flowContract?.billingMode !== "asaas" ? null : flowContract.paymentMethod === "credit_card" ? "card" : flowContract.paymentMethod === "pix" && flowContract.setupCents > 0 ? "pix" : null;
+const currentStep: StepKey | null = pending ? "contract" : payment ? "payment" : whatsappNeeded && accepted ? "whatsapp" : null;
+// O WhatsApp aparece sempre na sequência do Administrador (já respondido, com o visto).
+const whatsappState = !isClinicAdmin || !account ? null : account.whatsappOptIn ? "authorized" : account.whatsappPromptDismissedAt ? "dismissed" : "pending";
+const flow = currentStep ? subscriptionSteps({ current: currentStep, payment: isClinicAdmin ? paymentInFlow : null, whatsapp: whatsappState }) : null;
+const stepLabel = flow ? `Passo ${flow.position} de ${flow.total}` : "";
+const remaining = flow?.remaining ?? 0;
+// Implantação já paga e cartão ainda não ligado (fechou a aba antes): a tela abre conferindo.
+const paidSetup = charges.some((c) => c.kind === "setup" && c.status === "paid");
+const paymentWaiting = !!activeAccepted && (activeAccepted.cardCheckoutOpen || (payment === "card" && paidSetup));
+// Voltou à tela sem concluir o pagamento (não veio do aceite nem há o que conferir): passo pendente.
+const late = currentStep === "payment" && Astro.url.searchParams.get("passo") !== "pagamento" && !paymentWaiting;
+const acceptedNow = contracts.find((c) => c.acceptance === "explicit" && c.acceptedAt) ?? null;
+const showDone = !currentStep && Astro.url.searchParams.get("pronto") === "1" && !!accepted;
+// Contrato que gera as cobranças (o de hoje ou o próximo).
+const billed = contract ?? next;
+const cardOnFile = !!billed?.cardRegisteredAt;
+const openCharges = charges.filter((c) => c.status === "pending" || c.status === "overdue").length;
+// F12.2f: o último cancelamento (some quando houver contrato ativo de novo).
+const canceled = contracts.some((c) => c.status === "active") ? null : (contracts.find((c) => c.cancel) ?? null);
+const H2 = "font-display text-[17px] leading-tight font-bold text-ink sm:text-lg";
+---
+
+<ConfigShell current="assinatura" title="Assinatura" subtitle="A conta da clínica no RecepClinic: quem paga e para onde vão os avisos de cobrança.">
+  {
+    clinic.clinicStatus === "suspended" && (
+      <Card class="mb-4 border-can-200 bg-can-100">
+        <h2 class={`${H2} text-can-800`}>Clínica suspensa</h2>
+        <p class="mt-1 text-[15px] text-can-800">
+          {suspensionReasons.length > 0 ? `Motivo: ${describeReasons(suspensionReasons).toLowerCase()}. ` : ""}
+          Enquanto isso, o painel fica restrito a esta tela, o bot não responde, os links de agendamento estão indisponíveis e nada sai pelo WhatsApp. Os dados continuam guardados.{" "}
+          {suspensionReasons.includes("non_payment")
+            ? "Pague as cobranças vencidas em Cobranças, abaixo: reconhecido o pagamento, a clínica volta sozinha (outros motivos, com o Suporte do RecepClinic)."
+            : "Para regularizar, fale com o Suporte do RecepClinic."}
+        </p>
+      </Card>
+    )
+  }
+  <HowItWorks id="assinatura" topic={configuracoes.comoFunciona.assinatura} class="mb-4">
+    <p class="text-[15px] text-ink-soft">Quem paga e para onde vão os avisos.</p>
+  </HowItWorks>
+  {
+    !account ? (
+      <Card>
+        <h2 class={H2}>Conta de cobrança</h2>
+        <p class="mt-1 text-[15px] text-ink-soft">O Suporte do RecepClinic cadastra a conta de cobrança na contratação. Depois disso, os contatos financeiros aparecem aqui.</p>
+      </Card>
+    ) : (
+      <div class="flex flex-col gap-4">
+        {currentStep && flow && (
+          <>
+            <p class="text-[16px] text-ink-soft">
+              {remaining === 1 ? "Falta um passo rápido." : `Faltam ${["", "", "dois", "três"][remaining] ?? remaining} passos rápidos.`} O resto da assinatura está logo abaixo.
+            </p>
+            <SubscriptionSteps steps={flow.steps} current={currentStep} late={late} />
+            {currentStep !== "contract" && !late && acceptedNow && (
+              <p class="rounded-lg bg-brand-soft px-4 py-3 text-[15px] text-brand-ink">
+                Contrato aceito em {formatInstant(acceptedNow.acceptedAt!, clinic.timezone, "dd/MM/yyyy 'às' HH:mm")}
+                {acceptedNow.acceptedBy ? ` por ${actors.get(acceptedNow.acceptedBy)?.name ?? "Administrador"}` : ""}.
+                {charges.length > 0 ? " As cobranças estão em Cobranças, logo abaixo." : ""}
+              </p>
+            )}
+            {currentStep === "contract" && pending && (
+              <AcceptContractStep
+                contract={pending}
+                isClinicAdmin={isClinicAdmin}
+                changed={pending.version !== 1 && contracts.some((c) => c.acceptance === "explicit" || c.acceptance === "tacit")}
+                totalSteps={flow.total}
+                action={action}
+              />
+            )}
+            {currentStep === "payment" && payment && activeAccepted && (
+              <PaymentStep kind={payment} contract={activeAccepted} setup={openSetup} stepLabel={stepLabel} late={late} waiting={paymentWaiting} action={action} />
+            )}
+            {currentStep === "whatsapp" && <WhatsappStep account={account} action={action} stepLabel={stepLabel} />}
+          </>
+        )}
+        {showDone && (
+          <section class="flex items-start gap-4 rounded-xl border border-conf-200 bg-conf-100 px-5 py-4">
+            <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-brand text-white">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M5 12l5 5L20 7" />
+              </svg>
+            </span>
+            <div class="flex flex-1 flex-col gap-1">
+              <h2 class={H2}>Pronto: a assinatura está em dia</h2>
+              <p class="text-[15px] text-ink">
+                {contract?.acceptedAt ? `Contrato aceito em ${formatInstant(contract.acceptedAt, clinic.timezone, "dd/MM/yyyy 'às' HH:mm")}. ` : ""}
+                {contract?.cardRegisteredAt
+                  ? `Cartão${contract.cardLast4 ? ` final ${contract.cardLast4}` : ""} cadastrado: as mensalidades são cobradas nele todo dia ${dueDay(contract.firstDueDate)}. `
+                  : ""}
+                {account.whatsappOptIn
+                  ? "Avisos de cobrança pelo e-mail e pelo WhatsApp."
+                  : "Avisos de cobrança só pelo e-mail. Para receber também pelo WhatsApp, autorize em WhatsApp financeiro, abaixo."}
+                {charges.some((c) => c.status === "pending" || c.status === "overdue") ? " A primeira cobrança está logo abaixo." : ""}
+              </p>
+            </div>
+            <a href={page} aria-label="Fechar o aviso" class="flex h-11 w-11 items-center justify-center rounded-lg text-[22px] text-brand-ink no-underline hover:bg-white/60">×</a>
+          </section>
+        )}
+        {canceled?.cancel && (
+          <Card class="border-can-200 bg-can-100">
+            <h2 class={`${H2} text-can-800`}>Assinatura cancelada</h2>
+            <p class="mt-1 text-[15px] text-can-800">
+              Cancelada em {formatInstant(canceled.cancel.at, clinic.timezone, "dd/MM/yyyy 'às' HH:mm")}
+              {canceled.cancel.kind === "withdrawal"
+                ? ", no prazo de arrependimento: o que foi pago será devolvido e o acesso terminou."
+                : `. A clínica usa o RecepClinic até ${formatCalendarDate(canceled.endsOn!, "dd/MM/yyyy")}; a mensalidade de ${formatCalendarDate(canceled.cancel.nextDue!, "dd/MM/yyyy")} continua devida e nada mais é cobrado depois dela.`}{" "}
+              Para voltar a assinar, fale com o Suporte do RecepClinic.
+            </p>
+          </Card>
+        )}
+        {charges.length > 0 && (
+          <Card>
+            <div class="flex flex-wrap items-center gap-2">
+              <h2 class={H2}>Cobranças</h2>
+              {openCharges > 0 && <Badge variant="warning">{openCharges === 1 ? "1 em aberto" : `${openCharges} em aberto`}</Badge>}
+            </div>
+            <div class="mt-2">
+              <ChargesList charges={charges} timezone={clinic.timezone} paymentMethod={billed?.paymentMethod ?? null} cardOnFile={cardOnFile} />
+            </div>
+            {billed && billed.status === "active" && billed.acceptance !== "pending" && <p class="mt-2 text-sm text-ink-soft">{renewalLine(billed)}</p>}
+            {billed?.paymentMethod === "credit_card" && (
+              <div class="mt-2 flex flex-wrap items-center justify-between gap-2">
+                <p class="text-sm text-ink-soft">
+                  {billed.cardRegisteredAt && billed.cardLast4 ? `Cartão final ${billed.cardLast4}. ` : ""}O RecepClinic não guarda dados do cartão: ele é informado na página do Asaas.
+                </p>
+                {isClinicAdmin && billed.status === "active" && billed.billingMode === "asaas" && cardOnFile && (
+                  <form method="POST" action={action}>
+                    <input type="hidden" name="acao" value="cartao_trocar" />
+                    <button type="submit" data-sending-label="Abrindo…" class={SECONDARY_BUTTON}>Trocar o cartão</button>
+                  </form>
+                )}
+              </div>
+            )}
+          </Card>
+        )}
+      <div class="grid gap-4 lg:grid-cols-2">
+        <div class="flex flex-col gap-4">
+          <Card>
+            <div class="flex flex-wrap items-center gap-2">
+              {contract?.invoiceUnitPriceCents != null ? (
+                <HelpTip subject="Franquia de notas" text={configuracoes.dicas.assinaturaFranquia} id="contrato">
+                  <h2 class={H2}>Contrato</h2>
+                </HelpTip>
+              ) : (
+                <h2 class={H2}>Contrato</h2>
+              )}
+              {contract && contract.acceptance !== "pending" && <Badge variant="success">Vigente</Badge>}
+            </div>
+            {contract ? (
+              <div class="mt-3 flex flex-col gap-3">
+                <ContractAcceptanceInfo contract={contract} actors={actors} timezone={clinic.timezone} />
+                <ContractTerms contract={contract} />
+                {contract.termsVersion && <ContractText version={contract.termsVersion} />}
+                {isClinicAdmin && contract.status === "active" && (
+                  <a href="/admin/configuracoes/assinatura/cancelar" class="self-start text-sm font-semibold text-can-800">
+                    Cancelar a assinatura
+                  </a>
+                )}
+              </div>
+            ) : (
+              !next && <p class="mt-1 text-sm text-ink-soft">O contrato aparece aqui quando o Suporte do RecepClinic o ativar.</p>
+            )}
+          </Card>
+          {next && (
+            <Card>
+              <div class="flex flex-wrap items-center gap-2">
+                <h2 class={H2}>Próxima versão do contrato</h2>
+                <Badge variant="info">A partir de {formatCalendarDate(next.startsOn, "dd/MM/yyyy")}</Badge>
+              </div>
+              <div class="mt-3 flex flex-col gap-3">
+                <ContractAcceptanceInfo contract={next} actors={actors} timezone={clinic.timezone} />
+                {next.acceptance === "tacit" && (
+                  <p class="text-sm text-ink-soft">Continuar usando o RecepClinic a partir de {formatCalendarDate(next.startsOn, "dd/MM/yyyy")} vale como aceite. Se não concordar, cancele nesta tela antes dessa data, sem multa.</p>
+                )}
+                <ContractTerms contract={next} />
+              </div>
+            </Card>
+          )}
+
+          <Card>
+            <h2 class={H2}>Conta de cobrança</h2>
+            <dl class={`${KV} mt-3`}>
+              <dt class={DT}>Pagador</dt>
+              <dd class={DD}>{account.payerName}</dd>
+              <dt class={DT}>{account.payerDocument.length === 14 ? "CNPJ" : "CPF"}</dt>
+              <dd class={DD}>{formatPayerDocument(account.payerDocument)}</dd>
+            </dl>
+            <p class={HINT}>Para mudar o pagador, fale com o Suporte do RecepClinic.</p>
+          </Card>
+
+          <Card>
+            <h2 class={H2}>Contatos financeiros</h2>
+            <p class="mt-1 text-sm text-ink-soft">Para onde vão as cobranças e os avisos de vencimento e de pagamento.</p>
+            <form method="POST" action={action} class="mt-3 flex flex-col gap-3">
+              <input type="hidden" name="acao" value="contatos" />
+              <div>
+                <label for="finance_email" class={LABEL}>E-mail financeiro</label>
+                <input id="finance_email" name="finance_email" type="email" required value={account.financeEmail} class={INPUT} />
+              </div>
+              <div>
+                <HelpTip subject="Telefone financeiro" text={configuracoes.dicas.assinaturaTelefone} id="finance_phone">
+                  <label for="finance_phone" class={LABEL}>Telefone financeiro (opcional)</label>
+                </HelpTip>
+                <input
+                  id="finance_phone"
+                  name="finance_phone"
+                  type="tel"
+                  inputmode="tel"
+                  placeholder="(84) 98188-0777"
+                  value={account.financePhone ? formatPhoneBR(account.financePhone) : ""}
+                  class={INPUT}
+                />
+                <p class={HINT}>Trocar ou apagar o telefone retira a autorização do WhatsApp financeiro.</p>
+              </div>
+              <button type="submit" data-sending-label="Salvando…" class={`${PRIMARY_BUTTON} self-start`}>Salvar contatos</button>
+            </form>
+          </Card>
+        </div>
+
+        <div class="flex flex-col gap-4">
+          <Card>
+            <div class="flex flex-wrap items-center gap-2">
+              <HelpTip subject="WhatsApp financeiro" text={configuracoes.dicas.assinaturaWhatsapp} id="whatsapp_financeiro">
+                <h2 class={H2}>WhatsApp financeiro</h2>
+              </HelpTip>
+              {account.whatsappOptIn ? <Badge variant="success">Autorizado</Badge> : <Badge>Não autorizado</Badge>}
+            </div>
+            <p class="mt-1 text-sm text-ink-soft">
+              {account.whatsappOptIn
+                ? `Autorizado em ${formatInstant(account.whatsappOptIn.at, clinic.timezone, "dd/MM/yyyy 'às' HH:mm")}. Os avisos também vão para o telefone financeiro.`
+                : "Sem a autorização, os avisos de cobrança vão só por e-mail."}
+            </p>
+            {isClinicAdmin ? (
+              account.whatsappOptIn ? (
+                <form method="POST" action={action} class="mt-3">
+                  <input type="hidden" name="acao" value="whatsapp_retirar" />
+                  <button
+                    type="submit"
+                    class={`${SECONDARY_BUTTON} js-confirm-delete`}
+                    data-confirm-title="Retirar a autorização?"
+                    data-confirm-message="Os avisos de cobrança passam a ir só por e-mail."
+                    data-confirm-label="Retirar"
+                  >
+                    Retirar a autorização
+                  </button>
+                </form>
+              ) : currentStep && whatsappNeeded ? (
+                <p class="mt-3 text-sm text-ink-soft">{currentStep === "whatsapp" ? "Autorize no passo do WhatsApp, acima." : "Um dos próximos passos, acima, pergunta sobre o WhatsApp."}</p>
+              ) : !account.financePhone ? (
+                <p class="mt-3 text-sm text-pend-800">Salve um telefone financeiro para autorizar o WhatsApp.</p>
+              ) : (
+                <form method="POST" action={action} class="mt-3 flex flex-col gap-3">
+                  <input type="hidden" name="acao" value="whatsapp_autorizar" />
+                  <div class="rounded-lg border border-line p-3 text-sm text-ink-mid">
+                    <p>{BILLING_OPT_IN_TEXT}</p>
+                    <p class="mt-2 text-xs text-ink-soft">
+                      Telefone: {formatPhoneBR(account.financePhone)} · versão {BILLING_OPT_IN_VERSION}.
+                    </p>
+                  </div>
+                  <label class="flex items-start gap-2 text-sm text-ink-mid">
+                    <input type="checkbox" name="aceite" value="1" required class="mt-0.5 h-[18px] w-[18px] shrink-0 accent-brand" />
+                    <span>Li e autorizo, em nome da clínica.</span>
+                  </label>
+                  <button type="submit" data-sending-label="Salvando…" class={`${PRIMARY_BUTTON} self-start`}>Autorizar o WhatsApp</button>
+                </form>
+              )
+            ) : (
+              <p class="mt-3 border-t border-[#e6ecea] pt-3 text-sm text-ink-soft">Só o Administrador da clínica autoriza ou retira o WhatsApp financeiro.</p>
+            )}
+          </Card>
+
+          <BillingTrail entries={audit} actors={actors} timezone={clinic.timezone} />
+        </div>
+      </div>
+      </div>
+    )
+  }
+  <ConfirmDeleteDialog />
+</ConfigShell>

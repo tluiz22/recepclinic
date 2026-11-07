@@ -234,6 +234,26 @@ begin
   insert into public.fiscal_audit_log (clinic_id, event, details)
     values (c_a, 'certificate_uploaded', '{"subject_name": "CLINICA EXEMPLO SAUDE LTDA", "cnpj": "11222333000181"}');
 
+  -- Conta de cobrança no RecepClinic (F12.1, faturamento do SaaS) e a trilha.
+  insert into public.billing_accounts (clinic_id, payer_name, payer_document, finance_email, finance_phone)
+    values (c_a, 'Clínica Exemplo Saúde Ltda', '11222333000181', 'financeiro@exemplo-saude.local', '+5584988880100');
+  insert into public.billing_audit_log (clinic_id, actor_kind, action, after)
+    values (c_a, 'support', 'account_created', '{"payer_name": "Clínica Exemplo Saúde Ltda", "finance_email": "financeiro@exemplo-saude.local"}');
+  -- Contrato vigente (F12.2): manual, sem a cobrança automática; aceito pelo Administrador (F12.2b).
+  insert into public.billing_contracts (clinic_id, version, status, billing_mode, monthly_cents, setup_cents, first_due_date,
+      invoice_unit_price_cents, invoice_monthly_allowance, plan_snapshot, starts_on, activated_at, terms_version, acceptance, accepted_at, accepted_ip, recurring_consent)
+    values (c_a, 1, 'active', 'manual', 29900, 29700, current_date + 10, 80, 50, '{"kind": "complete", "label": "Completo"}', current_date, now(),
+      'provisorio-2026-11-03b-nf', 'explicit', now(), '203.0.113.10', 'Entendo que a mensalidade é cobrada todo mês, até o cancelamento.');
+  -- Cobrança paga à mão (F12.4: o espelho também guarda o modo manual), da implantação do contrato manual.
+  insert into public.billing_charges (clinic_id, contract_id, origin, kind, due_date, value_cents, status, paid_at)
+    select c_a, id, 'manual', 'setup', current_date, 29700, 'paid', now() from public.billing_contracts where clinic_id = c_a and version = 1;
+  -- Aviso de pagamento reconhecido já enviado (F12.7).
+  insert into public.billing_notifications (clinic_id, charge_id, kind, scheduled_for, status, attempts, sent_at, sent_to)
+    select c_a, id, 'payment_confirmed', current_date, 'sent', 1, now(), 'financeiro@exemplo-saude.local' from public.billing_charges where clinic_id = c_a limit 1;
+  -- Suspensão já liberada (F12.3): a clínica de exemplo segue ativa.
+  insert into public.clinic_suspensions (clinic_id, reason, note, created_at, released_at, release_note)
+    values (c_a, 'administrative', 'Exemplo: pausa pedida pela clínica.', now() - interval '40 days', now() - interval '30 days', 'Exemplo: retomada.');
+
   -- Atendimentos da próxima semana.
   insert into public.appointments (clinic_id, patient_id, service_id, agenda_id, location_id, scheduled_at, duration_minutes, booking_channel, status)
     values (c_a, pt_joao, s_consulta, ag_ped, l_office, (monday + time '08:00') at time zone tz, 30, 'whatsapp_bot', 'confirmed')

@@ -7,7 +7,7 @@ import "../styles/global.css";
 import AppInstallHead from "../components/admin/AppInstallHead.astro";
 import Icon from "../components/admin/Icon.astro";
 import type { IconName } from "../components/admin/Icon.astro";
-import { canAccessArea, roleLabel as describeRoles } from "../lib/clinicAccess";
+import { canAccessArea, inSuspendedView, roleLabel as describeRoles, SUSPENDED_ADMIN_PAGE } from "../lib/clinicAccess";
 import { pageFlash } from "../lib/flash";
 import { createUserClient } from "../lib/data/clients";
 import { getMeuDiaCount } from "../lib/data/dashboard";
@@ -62,6 +62,8 @@ const clinic = Astro.locals.clinic;
 // apagado, e o aviso aparecia de novo na tela seguinte (como o QA-02 da R9).
 pageFlash(Astro);
 const access = clinic ?? { roles: [], isPlatformStaff: false };
+// Clínica suspensa (F12.3): fora o Suporte, o menu tem só a Assinatura (Administrador) e nada mais.
+const suspendedView = !platform && inSuspendedView(clinic);
 const roleLabel = describeRoles(access);
 
 // Contador do Meu dia (RX6, decisão 5.1; cliente, 02/nov/2026): conversas aguardando atendimento humano, conversas
@@ -72,12 +74,12 @@ const roleLabel = describeRoles(access);
 const db = clinic && !platform ? createUserClient(Astro.request, Astro.cookies) : null;
 const centralRoles = clinic && (clinic.isPlatformStaff || clinic.roles.some((role) => role === "admin" || role === "reception" || role === "professional"));
 const centralOn =
-  !!db && !!clinic && !!centralRoles && clinic.features.includes("central_attendance")
+  !suspendedView && !!db && !!clinic && !!centralRoles && clinic.features.includes("central_attendance")
     ? await isCentralActive(db, clinic.clinicId).catch((error) => (logError("conversas: menu", error, { clinica: clinic.clinicId }), false))
     : false;
 const conversationsWaiting = centralOn ? await countWaitingConversations(db!, clinic!.clinicId).catch(() => 0) : 0;
 const meuDiaCount =
-  clinic && db
+  clinic && db && !suspendedView
     ? Astro.locals.meuDiaCount !== undefined
       ? Math.max(0, Astro.locals.meuDiaCount - (centralOn ? (Astro.locals.meuDiaConversations ?? 0) : 0))
       : await getMeuDiaCount(
@@ -135,11 +137,15 @@ const systemNavItems: NavItem[] =
 // Na Administração do sistema (sem clínica aberta), só os itens do Sistema.
 type NavGroup = { title?: string; support?: boolean; items: NavItem[] };
 const SYSTEM_TITLE = "Sistema · só o Suporte";
+const subscriptionItem: NavItem = { label: "Assinatura", href: SUSPENDED_ADMIN_PAGE, icon: "banknotes" };
+const suspendedItems: NavItem[] = clinic?.roles.includes("admin") ? [subscriptionItem] : [];
 const sideGroups: NavGroup[] = (
   platform
     ? [{ items: systemNavItems }, { title: "Ajuda", items: [helpItem] }]
-    : [
-        { items: [withCount(homeItem), ...(conversationsItem ? [conversationsItem] : []), agendaItem, reportItem, patientsItem] },
+    : suspendedView
+      ? [{ items: suspendedItems }]
+      : [
+          { items: [withCount(homeItem), ...(conversationsItem ? [conversationsItem] : []), agendaItem, reportItem, patientsItem] },
         { title: "Mais", items: [...moreItems, helpItem] },
         { title: SYSTEM_TITLE, support: true, items: systemNavItems },
       ]
@@ -147,17 +153,22 @@ const sideGroups: NavGroup[] = (
 
 // Celular e tablet (M6): a barra inferior de sempre e o "Mais" com os mesmos grupos,
 // sem os itens que já estão na barra.
-// Com a Central (M1): Conversas entra na barra no lugar do Relatório do dia, que vai para o "Mais".
+// Com a Central (M1): Conversas entra na barra no lugar do Relatório do dia, que vai para o "Mais". Clínica suspensa: só
+// os itens da suspensão.
 const tabBarItems = platform
   ? systemNavItems.slice(0, 4)
-  : conversationsItem
-    ? [withCount(homeItem), conversationsItem, agendaItem, patientsItem]
-    : primaryNavItems.map(withCount);
+  : suspendedView
+    ? suspendedItems
+    : conversationsItem
+      ? [withCount(homeItem), conversationsItem, agendaItem, patientsItem]
+      : primaryNavItems.map(withCount);
 const moreGroups: NavGroup[] = (
   platform
     ? [{ items: systemNavItems.slice(4) }, { title: "Ajuda", items: [helpItem] }]
-    : [
-        { items: [...(conversationsItem ? [reportItem] : []), ...moreItems, helpItem] },
+    : suspendedView
+      ? []
+      : [
+          { items: [...(conversationsItem ? [reportItem] : []), ...moreItems, helpItem] },
         { title: SYSTEM_TITLE, support: true, items: systemNavItems },
       ]
 ).filter((group) => group.items.length > 0);
@@ -180,6 +191,7 @@ const initials = platform
 const currentPath = Astro.url.pathname;
 // "Ajuda desta tela": o artigo da Central ligado a esta rota, se a pessoa pode ver (painel lateral).
 const helpArticle = (() => {
+  if (suspendedView) return undefined;
   const found = articleForPath(currentPath);
   return found && canSeeArticle(access as Parameters<typeof canSeeArticle>[0], found) ? found : undefined;
 })();
@@ -399,6 +411,15 @@ const sideLinkClass = (active: boolean) =>
         clinic?.isPlatformStaff && (
           <div class="border-b border-amber-200 bg-amber-50 px-4 py-2 text-center text-xs text-amber-800">
             Você está como Suporte RecepClinic nesta clínica: cada tela aberta fica registrada.
+          </div>
+        )
+      }
+      {
+        !platform && clinic?.clinicStatus === "suspended" && (
+          <div class="border-b border-can-200 bg-can-100 px-4 py-2 text-center text-xs text-can-800">
+            {clinic.isPlatformStaff
+              ? "Clínica suspensa: o bot não responde, os links para os pacientes estão indisponíveis e nada sai pelo WhatsApp. A equipe da clínica só vê a Assinatura (Administrador)."
+              : "Clínica suspensa: o painel fica restrito à Assinatura até a regularização. O bot não responde e os links de agendamento estão indisponíveis. Fale com o Suporte do RecepClinic."}
           </div>
         )
       }

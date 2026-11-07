@@ -1,11 +1,122 @@
 # Faturamento recorrente do SaaS (Asaas)
 
-> **Estado atual (retomar daqui), 29/out/2026.** **Planejamento concluído** (cliente, 28/out), **ampliado em 29/out** com
-> a cobrança por nota fiscal emitida (seção 3 e [`planejamento-nfse-asaas.md`](planejamento-nfse-asaas.md)). Nada implementado:
-> sem tabela, rota, variável ou conta no Asaas. **Próximo passo: começar a F12.1** (conta de cobrança: contatos
-> financeiros, opt-in e trilha, sem Asaas) **na branch `faturamento`**, com o OK do cliente para iniciar. Antes de
-> publicar a F12.1 no endereço de teste da branch: o cliente confere na Vercel as variáveis do ambiente de testes
-> (Preview) da branch.
+> **Estado atual (retomar daqui), 03/nov/2026.** Branch **`faturamento`**, local, sem push. F12.1 e F12.2 validadas
+> no local. **Cliente valida no fim (02/nov):** seguir as fases sem parar; validar tudo junto no local.
+> **03/nov: F12.2c a F12.2h feitas** (abaixo); roteiro de validação em [`roteiro-validacao-faturamento.md`](roteiro-validacao-faturamento.md).
+> **04/nov: F12.2i feita** (passo do pagamento). Próximo: cliente valida F12.2b a F12.2i no local; depois, F12.11.
+> **Main trazida em 03/nov (até `aae0195`, a produção):** PN1–PN2, IS1–IS5 e C17–C20; conflitos só de juntar os dois
+> lados (envio: suspensa não envia nem a mensagem de teste; implantação só a de teste). Migração nova
+> `20261207120000_suspensa_checklist_implantacao.sql` (gatilho de suspensa em `clinic_onboarding_checks`, IS3). Banco local
+> com as 7 aplicadas. **Atenção na publicação:** as migrações da branch (`20261117` a `20261127`) são anteriores às já
+> aplicadas no staging e na produção (`20261201` a `20261206`): o `db push` precisa de `--include-all` (simular antes).
+> **F12.2b feita** (`20261117120000_aceite_do_contrato.sql`): aceite do contrato pelo Administrador em Configurações ›
+> Assinatura (data, hora, quem, IP, versão do texto); texto **provisório** em `src/lib/billingContractText.ts`; mudança
+> com o mesmo texto = aceite tácito, início só 30 dias depois da ativação, e-mail dos novos termos ao financeiro (envio
+> ou falha na trilha; reenvio na aba Faturamento). Regra para a F12.4: só cobrar contrato com aceite.
+> **F12.2c feita (cliente, 03/nov)** (`20261124120000_contrato_nota_fiscal.sql`): o texto só fala de nota fiscal quando o
+> contrato cobra nota (duas versões em `billingContractText.ts`; a com nota termina em `-nf`, o banco confere na
+> ativação junto com o Módulo financeiro). Liberou ou desligou o "finance" na Matriz: o sistema monta o **rascunho** da
+> nova versão (com o preço por nota padrão, ou sem nota) a partir da vigente; o Suporte confere e ativa; texto diferente
+> = a clínica assina na tela. Sem contrato nenhum, nada é criado. **A emissão de nota só sai com contrato em vigor,
+> aceito e com preço por nota** (também sem contrato nenhum: os testes da F11 no staging precisam de contrato manual
+> aceito). Contrato com texto antigo (fora do código) não se aceita: o Suporte ativa uma nova versão.
+> **F12.3 feita** (`20261118120000_suspensao_da_clinica.sql`): `clinic_suspensions` (administrativo e fim do contrato;
+> inadimplência recusada até a F12.4, item 28), situação anterior guardada e devolvida, "suspensa" só pelas funções;
+> aba Suspensão da clínica (aba própria desde 03/nov, antes um cartão no Faturamento; alerta e confirmação a mais sem o app, item 23). Bloqueio no código: painel
+> (Administrador só na Assinatura, outros em `/admin/clinica-suspensa`, API 403), `/agendar`, `/preparo` e
+> `/orientacoes` com "indisponível no momento", bot e envios (`createClinicSender` nulo; a mensagem fica no histórico,
+> sem aviso à equipe); rotinas já pulavam. `/formulario` e `/importar` (links da clínica com o Suporte) seguem abertos.
+> Testes: `tests/db/suspensao.test.ts`, `clinicaEmImplantacao.test.ts`.
+> **F12.3b feita** (`20261119120000_suspensao_no_banco.sql`): gatilho `app.guard_suspended_clinic_write` em toda tabela
+> com `clinic_id` (fora `app.suspension_free_tables()`: billing_*, clinic_suspensions, registros e push) e na própria
+> `clinics`; recusa a gravação de login da clínica (não o Suporte) na clínica suspensa; `clinic_service` e service
+> role seguem. **Tabela nova com `clinic_id` precisa do gatilho** (o teste `suspensao-banco` confere). Arquivos do
+> Storage (logo) não entram.
+> **F12.4 feita** (`20261120120000_cobranca_asaas.sql`; itens 28 e 29): no aceite (modo automático), o servidor cria no
+> Asaas o cliente (procura pelo CNPJ/CPF; avisos do Asaas desligados), a assinatura (1º vencimento do contrato, ou hoje
+> se já passou) e a implantação **com vencimento no dia do aceite**; espelho em `billing_charges` (paga = CONFIRMED,
+> RECEIVED ou RECEIVED_IN_CASH); tudo idempotente pela referência externa. Falha fica no contrato e na trilha; o Suporte
+> tem "Tentar de novo"/"Atualizar do Asaas" na aba Faturamento. Assinatura mostra as Cobranças com "Pagar" (fatura do
+> Asaas). Inadimplência liberada: o banco exige cobrança do Asaas em aberto no 15º dia de atraso ou depois.
+> Variáveis: `ASAAS_API_KEY` e `ASAAS_BASE_URL` (sandbox ou produção); sem elas, a aba avisa "não configurado". Para
+> testar no local, copiar as duas do `.env.asaas-sandbox` para o `.env`. **Atenção (03/nov):** a chave começa com
+> `$` e o Vite a lê como variável (chega vazia, painel com erro 500): no `.env` escrever `'\$aact…'`. Com a barra,
+> o `node --env-file=.env` lê a chave errada; staging e produção não usam o arquivo. Código: `src/lib/asaas/billingApi.ts`,
+> `src/lib/data/billingAsaas.ts`, `platformBillingStore` em `platform.ts`. **Ficam para depois:** mudança de versão e
+> troca de modo de quem já tem assinatura (pula com aviso); cartão segue pela fatura do Asaas (F12.8).
+> **F12.5 feita** (`20261121120000_webhook_asaas.sql`): `POST /api/asaas/webhook` confere `asaas-access-token` em tempo
+> constante (`ASAAS_WEBHOOK_TOKEN`, 32+ caracteres), grava em `billing_provider_events` (id único: repetido ignorado),
+> responde 200 e processa em segundo plano consultando a cobrança na API (ordem não importa); evento sem contrato nosso
+> ou de assinatura = ignorado; falha volta à fila até 10 vezes. Rotinas: `faturamento-eventos` (10 min) e
+> `conciliacao-asaas` (6h15 de Brasília: sincroniza todo contrato automático aceito e refaz criação que falhou), as duas
+> na `/api/saude`. **Falta, fora do código:** gerar o token, pôr no ambiente e cadastrar o webhook no painel do Asaas
+> (fila não sequencial, eventos de cobrança); no local o Asaas não alcança a máquina, então o teste de verdade é no
+> staging, quando a branch subir.
+> **F12.6 feita** (`20261122120000_reativacao_automatica.sql`): toda cobrança que fica paga tenta reativar, na trava da
+> conta de cobrança; libera só a inadimplência e só sem cobrança do Asaas vencida em aberto; sem outro motivo, volta à
+> situação de antes; liberado pelo sistema, com o pagamento na trilha. A Assinatura da clínica suspensa por
+> inadimplência diz para pagar em Cobranças.
+> **F12.7 feita** (`20261123120000_avisos_de_cobranca.sql`): `billing_notifications` (um por cobrança e tipo); rotina
+> `avisos-cobranca` às 9h de Brasília agenda o aviso de atraso mais recente que cabe (3º, 7º ou 14º dia; os anteriores
+> não saem atrasados) e envia; cobrança paga gera `payment_confirmed` (sai pela `faturamento-eventos`, a cada 10 min) e
+> cancela os de atraso pendentes; na hora de enviar confere de novo; falha tenta até 5 vezes; trilha `notice_sent` /
+> `notice_failed`. Textos em `billingNoticeEmail` (`src/lib/email.ts`), com a data do 15º dia: **cliente revisa**.
+> **F12.8 feita (02/nov):** confirmado no sandbox (cliente e assinatura de teste criados e apagados) que o Asaas aceita
+> assinatura `CREDIT_CARD` sem os dados do cartão: a cobrança nasce em aberto, com fatura, onde a clínica informa o
+> cartão; pela documentação, os ciclos seguintes são cobrados no mesmo cartão no vencimento (não testado: exige pagar
+> a fatura no sandbox, fica para a validação). O RecepClinic não guarda dado de cartão (11.9). A Assinatura orienta a
+> clínica no cartão. Troca de cartão: pelo Suporte (a API exige os dados do cartão). Em produção, a **tokenização**
+> depende de liberação do Asaas, e mudar valor ou vencimento de assinatura no cartão a exige: pedir antes da F12.11.
+> **Troca de cartão pelo Administrador (cliente, 03/nov):** "Trocar o cartão" na Assinatura abre o Checkout do Asaas
+> (`chargeTypes: RECURRENT`), que cria uma nova assinatura no novo cartão; o RecepClinic cancela a antiga (mantém a
+> 11.9). A API de troca (`POST /v3/subscriptions/{id}/updateCreditCard`) exige o cartão ou token: recusada. **Antes de
+> implementar:** testar no sandbox se a nova assinatura começa só no próximo vencimento, sem cobrança na hora.
+> **Cobrança recorrente e CDC (cliente, 03/nov):** contrato com prazo indeterminado e renovação automática mensal;
+> cláusula da forma de pagamento (cartão salvo no Asaas / Pix mensal); **reajuste anual pelo IPCA** no aniversário,
+> aviso 30 dias antes (e-mail e Assinatura), cancelar sem multa antes; **cancelamento pelo Administrador na
+> Assinatura**, na hora (cancela no Asaas, trilha, aviso ao Suporte e ao financeiro); **arrependimento em 7 dias com
+> devolução total** (estorno no Asaas). Tela: resumo da renovação antes do aceite ("R$ X todo dia D, até cancelar"),
+> duas caixas desmarcadas (aceite e autorização da cobrança automática), link do contrato completo. Tela da
+> Assinatura no modelo "passo a passo" (opção B do desenho de 03/nov).
+> **Texto do contrato aprovado (cliente, 03/nov)**, provisório até o advogado: 10 cláusulas (objeto; prazo e renovação
+> automática; valores; forma de pagamento; [NF] emissão de nota; reajuste IPCA e mudança de valores; atraso e
+> suspensão; arrependimento em 7 dias; cancelamento e fim; dados pessoais). **Motivo do cancelamento:** lista
+> obrigatória (Preço; Não usamos o suficiente; Faltou uma função; Problemas no WhatsApp/bot; Vamos usar outro sistema;
+> A clínica fechou ou pausou; Outro) e comentário opcional (obrigatório em "Outro"); o Suporte vê e conta os motivos.
+> **F12.2d a F12.2h feitas (03/nov):** **d** texto aprovado (`provisorio-2026-11-03b`, com e sem `-nf`). **e**
+> (`20261125120000`): Assinatura em passo a passo (aceite + autorização da cobrança mensal guardada em
+> `recurring_consent`; WhatsApp opcional com "Agora não"; aviso "Pronto"); cobranças no topo com a ação da forma de
+> pagamento; página "contrato completo". **f** (`20261126120000`): cancelamento pelo Administrador
+> (`/admin/configuracoes/assinatura/cancelar`; arrependimento 7 dias = estorno e suspensão na hora; senão acesso até a
+> véspera do próximo vencimento, que continua devido, e a `conciliacao-asaas` suspende depois; Asaas: `endDate` ou
+> estorno/remoção, testados no sandbox, menos o estorno); e-mail ao financeiro; Suporte vê na aba Faturamento e selo
+> na lista. **g** (`20261127120000`): "Trocar o cartão" pelo Checkout do Asaas (sandbox: nada cobrado na hora, 1ª
+> cobrança no vencimento pedido; aceita `customer`; a assinatura nova vem sem a nossa referência); com cobrança
+> vencida, pede para pagar antes. **h**: lembrete do IPCA na aba Faturamento 45 dias antes do aniversário.
+> **F12.2i: passo do pagamento na Assinatura (cliente, 04/nov; canvas "Assinatura: aceite e WhatsApp", linha "Passo do
+> cartão").** Na validação, o cartão ficava solto em Cobranças e o "Pronto" saía sem forma de pagamento. Decisões:
+> sequência **Contrato → Cartão (ou Pagamento, no Pix) → WhatsApp → Pronto**; **sem "Informar depois"** (o passo fica
+> pendente, com "Falta informar o cartão", até o cartão; o Pronto só depois); a página do Asaas abre em outra aba e a
+> nossa mostra "Confirmando o pagamento…" (confere sozinha; "Já paguei, conferir agora"; "Abrir de novo"; recusa:
+> "Tentar com outro cartão"); **Pix: passo "Pagamento"** com "Pagar com Pix" (implantação) e "Pagar depois"; sem
+> implantação, o Pix não tem o passo; **cartão sem implantação: cadastra sem cobrar** (Checkout do Asaas, como a troca
+> de cartão; 1ª mensalidade só no vencimento); **selo "Sem cartão"** para o Suporte (lista e aba Faturamento).
+> **F12.2i feita (04/nov, `20261210120000`):** sandbox (04/nov): pagar a implantação (cobrança avulsa) no cartão **não**
+> liga o cartão à assinatura (a versão anterior mostrava "Cobrança automática no cartão" sem cartão na assinatura);
+> o pagamento traz o token e `PUT /v3/subscriptions/{id}/creditCard` (token + IP de quem informou) liga o cartão sem
+> cobrar. O RecepClinic não guarda o token, só o final (`card_last4`) e `card_registered_at`. Sem implantação, o
+> Checkout (F12.2g). A tela confere em `/api/admin/configuracoes/assinatura/pagamento` (a cada 5 s, até 10 min); a
+> `conciliacao-asaas` confere os que ficaram sem cartão (IP do aceite). A recusa do cartão aparece na página do
+> Asaas (a nossa segue esperando). **Pendências:** o token exige a tokenização liberada na conta de produção do Asaas
+> (pedir antes da F12.11, como já anotado); confirmar no sandbox, no vencimento, que a 1ª mensalidade (gerada antes
+> de ligar o cartão) é cobrada no cartão.
+> **Próximo: F12.11** (homologação e produção), depois de: advogado (texto do contrato e 11.16), chave e webhook do
+> Asaas de produção, valor combinado com a clínica piloto. Antes, validar F12.2b a F12.8 no local/staging.
+> **Ordem decidida (cliente, 30/out):** cobrança primeiro, até cobrar a clínica piloto em produção, **só com aviso por
+> e-mail**: F12.2b, F12.3, F12.3b, F12.4 a F12.8 e F12.11 (itens 18 a 26 da seção 11). Depois: F12.9 (decisão 11.10),
+> F12.10 (Pix Automático) e a nota fiscal pelo Asaas (N0–N6). **Próximo:** validação da F12.2b no local e o OK para a
+> F12.3. Antes da F12.11: advogado (11.16 e texto do contrato), chave e webhook do Asaas de produção, avisos do Asaas
+> desligados (11.11) e o valor combinado com a clínica piloto.
 >
 > Decisões já respondidas (28/out): **11.1** (motivos registrados), **modo de cobrança manual** (seção 3) e **11.2**
 > (pago = `CONFIRMED` ou `RECEIVED`) **11.3** (bloqueio no painel primeiro, banco depois) **11.4** (bot calado, link com aviso) **11.5** (Assinatura só para o Administrador) **11.6** (estorno marca e avisa o Suporte) **11.7** (novo valor no próximo ciclo, sem proporcional) **11.8** (implantação ao ativar, conta igual) **11.9** (cartão na página do Asaas). **11.10 fica pendente** (número do WhatsApp, decidir antes da F12.9).
@@ -18,6 +129,9 @@
 - **Planejamento na `main`** (cliente, 30/out): a branch `faturamento` (criada em 28/out, só com documentos) entrou na
   `main` e foi excluída. Ela é **recriada da `main` só quando o código começar** (F12.1 ou N1), e segue as regras de
   branch paralela do `CLAUDE.md`.
+- **Ajuda contextual (cliente, 30/out):** cada fase entra com a ajuda das próprias telas ("i" nos campos e "Como
+  funciona?", padrão de [`ajuda-contextual.md`](ajuda-contextual.md); textos em `src/lib/ajuda/`). A F12.1 já entrou com
+  a da tela Assinatura (WhatsApp financeiro e telefone financeiro).
 - **Parar e voltar à `main`:** commit e push do que estiver em andamento na `faturamento`, atualizar o bloco "Estado
   atual" deste arquivo e `git switch main`.
 - **Publicação (cliente, 28/out):** cada fase vai para o **endereço de teste da branch** na Vercel (Preview da
@@ -356,23 +470,72 @@ stateDiagram-v2
     faturamento não trata nota fiscal e a emissão automática do Asaas fica desligada.
 15. **IP fixo na Vercel.** **Decidido (cliente, 28/out):** não por agora; a chave fica só nas variáveis da Vercel
     (nunca no código ou nos registros), com troca periódica; reavaliar quando houver mais clínicas pagando.
-16. **Jurídico (pendência do cliente com o advogado, antes da F12.11):** Asaas como operador, texto do opt-in, prazo
+16. **Jurídico (respondido pelo advogado em 30/out, item 18):** Asaas como operador, texto do opt-in, prazo
     de guarda e forma de devolução ou exportação dos dados no fim do contrato.
 17. **Troca de modo.** **Decidido (cliente, 28/out):** só por nova versão do contrato, com data de início; para o
     automático, cria a assinatura no Asaas a partir dessa data; para o manual, cancela a assinatura e as cobranças em
     aberto no Asaas (com trilha) e o Suporte passa a cobrar por fora.
 
+18. **Parecer do advogado (30/out/2026; [documento](https://claude.ai/artifact/8zajhx22J5AGXDyqEn64F7)).** Confirmados: papéis
+    (clínica controladora dos pacientes; RecepClinic operador deles e controlador dos dados de cobrança; Asaas
+    suboperador só da cobrança), cancelamento sem multa com acesso até o fim do período pago, guarda de 5 anos dos
+    dados financeiros e da trilha, opt-in do WhatsApp livre (e-mail continua obrigatório). Para a F12.9: mensagem
+    identificada ("Mensagem oficial do RecepClinic") e saída imediata por "SAIR". Política de privacidade (no site):
+    seção de suboperadores com o Asaas. Decisões do cliente sobre o parecer: itens 19 a 26.
+19. **Juros e multa.** **Decidido (cliente, 30/out):** multa de 2% e juros de 1% ao mês, configurados na cobrança do
+    Asaas (F12.4); sem correção monetária. No modo manual, o Suporte decide.
+20. **Prazo da suspensão.** **Decidido (cliente, 30/out; muda o fluxo 7):** a suspensão por inadimplência só pode ser
+    feita a partir do **15º dia** de atraso (o banco recusa antes); os avisos informam a data a partir da qual a
+    clínica pode ser suspensa.
+22. **Avisos de atraso.** **Decidido (cliente, 30/out; muda D+3/D+7):** e-mail no **3º, 7º e 14º dia** de atraso
+    (`overdue_d3`, `overdue_d7`, `overdue_d14`); o do 14º diz que a clínica pode ser suspensa a partir do dia seguinte.
+23. **Clínica sem o app WhatsApp Business** (número só no sistema). **Decidido (cliente, 30/out):** na suspensão
+    ninguém recebe as mensagens dos pacientes; a tela de suspender mostra um alerta forte e pede uma confirmação a
+    mais. Com o app (coexistência), o app segue normal e a recepção responde; só o bot e os envios automáticos param.
+21. **Clínicas em atraso para o Suporte (cliente, 30/out):** o Suporte consulta numa lista todas as clínicas com
+    cobrança vencida (dias de atraso, valor, avisos enviados, situação), além da aba de cada clínica.
+
+24. **Aceite do contrato.** **Decidido (cliente, 30/out):** o 1º contrato é aceito pelo Administrador da clínica em
+    Configurações › Assinatura (caixa de aceite; data, hora, IP e versão do texto registrados); a cobrança só começa
+    depois do aceite. Mudança de valor: ao ativar a nova versão, e-mail ao financeiro com os novos termos; a nova
+    versão só pode começar **30 dias** depois da ativação; o uso continuado vale como aceite. O texto do contrato vem
+    do advogado (versionado no sistema). Fase **F12.2b**.
+25. **Preço por nota.** **Decidido (cliente, 30/out):** vale o do contrato (como na F12.2); a cláusula do advogado
+    troca "tabela vigente" por "preço previsto no contrato".
+26. **Fim do contrato.** **Decidido (cliente, 30/out):** dados da clínica disponíveis para exportação por **60 dias**,
+    depois exclusão ou anonimização (dados financeiros da cobrança: 5 anos). Fase **F12.12**, depois do lançamento.
+
+27. **Nota fiscal no contrato só quando liberada.** **Decidido (cliente, 30/out):** preço por nota e franquia só
+    entram no contrato da clínica com a emissão de nota fiscal liberada (item "finance" da matriz); sem ela, o
+    contrato não fala de nota (colunas nulas, o banco confere). Liberada depois, cobrar exige nova versão do contrato.
+
+28. **Inadimplência antes das cobranças.** **Decidido (cliente, 02/nov):** a F12.3 entrega os motivos administrativo e
+    fim do contrato e todo o bloqueio; o motivo inadimplência fica pronto no banco, mas é recusado até a F12.4, quando o
+    banco passa a conferir a cobrança vencida há 15 dias ou mais (modo automático). No modo manual, decidir depois.
+
+29. **Quando a cobrança nasce no Asaas.** **Decidido (cliente, 02/nov):** no aceite do contrato, sozinha: o sistema cria
+    o cliente, a assinatura (a partir do 1º vencimento do contrato) e a cobrança da implantação; falha fica na aba
+    Faturamento com "Tentar de novo". **A implantação é cobrada na hora: vence no dia do aceite** (substitui o
+    "vencimento que o Suporte informar" da decisão 11.8).
+
 ## 12. Roadmap
 
 Cada fase vai ao staging e depende da validação do cliente.
+
+**Ordem revista (cliente, 30/out/2026):** a cobrança vem antes da nota fiscal. Até a produção (cobrar a clínica
+piloto): F12.2b, F12.3, F12.3b, F12.4, F12.5, F12.6, F12.7, F12.8 e F12.11, **só com aviso por e-mail**. Depois:
+F12.12, F12.9, F12.10 e N1–N6. F12.2b = aceite do contrato na tela e aviso de 30 dias (item 24); F12.12 = exportação
+e exclusão no fim do contrato (item 26); a lista das clínicas em atraso (item 21) entra na F12.5; aviso do 14º dia
+(item 22) na F12.7; suspensão só a partir do 15º dia (item 20) na F12.3. Preço por nota e franquia ficam no contrato, mas só valem quando a nota fiscal entrar.
 
 | Fase | Entrega | Depende de |
 |---|---|---|
 | F12.0 | Este documento e as decisões 1 a 3 | cliente |
 | F12.1 | Conta de cobrança: contatos financeiros, opt-in, trilha (sem Asaas) | F12.0 |
 | F12.2 | Contrato e versões, valor negociado e implantação, **preço por nota e franquia, preço padrão do Suporte** (sem Asaas) | F12.1 |
+| F12.2b | Aceite do contrato pelo Administrador (texto versionado), aviso de 30 dias e e-mail dos novos termos (item 24) | F12.2 |
 | N1–N6 | Nota fiscal pelo Asaas, apuração e detalhamento das notas ([`planejamento-nfse-asaas.md`](planejamento-nfse-asaas.md), seção 12) | F12.2, N0 |
-| F12.3 | Suspensão manual por motivos e bloqueio no painel, páginas públicas, bot e rotinas | decisões 1, 3, 4 |
+| F12.3 | Suspensão manual por motivos e bloqueio no painel, páginas públicas, bot e rotinas (inadimplência a partir da F12.4, item 28) | decisões 1, 3, 4 |
 | F12.3b | Bloqueio no banco: gravações operacionais recusadas para a clínica suspensa (a tela Assinatura e o Suporte seguem) | F12.3 |
 | F12.4 | Cliente e cobranças no Asaas (sandbox): assinatura Pix convencional, implantação, espelho local | conta de testes |
 | F12.5 | Webhook, fila de eventos, processamento idempotente, conciliação, saúde | F12.4 |

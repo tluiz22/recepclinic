@@ -1,0 +1,525 @@
+---
+// Sistema › Clínicas › clínica › Faturamento (F12.1, faturamento do SaaS):
+// a conta de cobrança, que só o Suporte cria e altera (pagador e contatos), a
+// situação do WhatsApp financeiro (só o Administrador da clínica autoriza) e
+// a trilha. F12.2: o contrato vigente, o rascunho (cria, altera, descarta e
+// ativa; mudança = nova versão) e as versões. F12.2b: a situação do aceite,
+// o aviso de 30 dias na mudança aceita pelo uso e o reenvio do e-mail com os
+// novos termos. A suspensão fica na aba Suspensão (F12.3; cliente, 03/nov/2026).
+// F12.4: cobrança no Asaas (ids, sincronização, erro) e as cobranças.
+// F12.2f: o cancelamento pelo Administrador (motivo, acesso, ajuste no Asaas).
+// F12.2i: selo "Sem cartão" e o final do cartão da assinatura.
+// F12.2h: o lembrete do reajuste anual pelo IPCA.
+// Cobranças entram nas próximas fases.
+import Badge from "../config/Badge.astro";
+import Card from "../config/Panel.astro";
+import ConfirmDeleteDialog from "../ConfirmDeleteDialog.astro";
+import BillingTrail from "./BillingTrail.astro";
+import ContractAcceptanceInfo from "./ContractAcceptanceInfo.astro";
+import ChargesList from "./ChargesList.astro";
+import ContractTerms from "./ContractTerms.astro";
+import { CHECK, CHOICE, HINT, INPUT, LABEL, LEGEND, PRIMARY_BUTTON, SECONDARY_BUTTON } from "../config/formStyles";
+import { billingTermsVersion } from "../../../lib/billingContractText";
+import { ipcaReminder } from "../../../lib/billingRenewal";
+import { formatCalendarDate, formatInstant, todayIn } from "../../../lib/clinicTime";
+import { platformEnv } from "../../../lib/env";
+import { loadActorLabels } from "../../../lib/data/agenda/trail";
+import {
+  BILLING_MODES,
+  CANCEL_REASONS,
+  CONTRACT_STATUS,
+  contractsInForce,
+  formatPayerDocument,
+  getBillingAccount,
+  getDefaultInvoicePrice,
+  listBillingAudit,
+  listBillingCharges,
+  listBillingContracts,
+  noticeStartDate,
+  PAYMENT_METHODS,
+} from "../../../lib/data/billing";
+import type { DbClient } from "../../../lib/data/clients";
+import { centsToInput } from "../../../lib/forms";
+import { formatCentsBRL } from "../../../lib/money";
+import { formatPhoneBR } from "../../../lib/phone";
+import { PRICES } from "../../../lib/plans";
+
+interface Props {
+  db: DbClient;
+  clinicId: string;
+  timezone: string;
+  /** Sugestão de e-mail financeiro na conta nova (o do Administrador convidado). */
+  suggestedEmail: string;
+  /** Plano de referência da matriz (sugestão da mensalidade no 1º contrato). */
+  reference: { label: string; monthlyCents: number | null };
+  /** A clínica tem a emissão de nota fiscal (item "finance"): só então o contrato fala de nota. */
+  invoicing: boolean;
+}
+
+const { db, clinicId, timezone, suggestedEmail, reference, invoicing } = Astro.props;
+const [account, audit, contracts, defaultPrice, charges] = await Promise.all([
+  getBillingAccount(db, clinicId),
+  listBillingAudit(db, clinicId),
+  listBillingContracts(db, clinicId),
+  getDefaultInvoicePrice(db),
+  listBillingCharges(db, clinicId),
+]);
+// F12.4: ambiente do Asaas (sandbox ou produção), ou sem Asaas.
+const asaasEnv = platformEnv().asaas;
+const asaasLabel = !asaasEnv ? "não configurado neste ambiente" : asaasEnv.baseUrl.includes("sandbox") ? "sandbox (testes)" : "produção";
+const actors = await loadActorLabels(db, clinicId, [...audit.map((a) => a.actorId), ...contracts.map((c) => c.acceptedBy), ...contracts.map((c) => c.cancel?.by ?? null)]);
+const action = `/api/admin/sistema/clinicas/${clinicId}`;
+const H2 = "font-display text-[17px] leading-tight font-bold text-ink sm:text-lg";
+const active = contracts.find((c) => c.status === "active") ?? null;
+// F12.2h: lembrete do reajuste anual pelo IPCA (45 dias antes do aniversário).
+const ipca = ipcaReminder(contracts, todayIn(timezone));
+// F12.2f: o último cancelamento, enquanto não houver contrato ativo de novo.
+const canceled = active ? null : (contracts.find((c) => c.cancel) ?? null);
+const KV_STYLE = "grid gap-x-4 gap-y-2 text-[15px] sm:grid-cols-[160px_minmax(0,1fr)]";
+const draft = contracts.find((c) => c.status === "draft") ?? null;
+const { current, next } = contractsInForce(contracts, todayIn(timezone));
+// Versões que não são a de hoje nem a próxima.
+const history = contracts.filter((c) => c.status === "ended" && c.id !== current?.id);
+const date = (value: string) => formatCalendarDate(value, "dd/MM/yyyy");
+// F12.2b: com a vigente aceita e o mesmo texto, a nova versão vale pelo uso e
+// só começa 30 dias depois da ativação (dias corridos, data de Brasília).
+// O texto da próxima versão depende de ela cobrar nota fiscal (cliente, 03/nov/2026).
+const nextTerms = billingTermsVersion(draft ? draft.invoiceUnitPriceCents !== null : invoicing);
+const tacitNext = !!active && (active.acceptance === "explicit" || active.acceptance === "tacit") && active.termsVersion === nextTerms;
+const earliestStart = noticeStartDate(todayIn("America/Sao_Paulo"));
+// O formulário parte do rascunho; sem ele, da versão vigente; sem nada, das sugestões.
+const base = draft ?? active;
+const form = {
+  mode: base?.billingMode ?? "",
+  monthly: centsToInput(base?.monthlyCents ?? reference.monthlyCents),
+  setup: centsToInput(draft ? draft.setupCents : active ? 0 : PRICES.setupCents),
+  method: base?.paymentMethod ?? "",
+  price: centsToInput(base?.invoiceUnitPriceCents ?? defaultPrice),
+  unlimited: base ? base.invoiceMonthlyAllowance === null : false,
+  allowance: base?.invoiceMonthlyAllowance?.toString() ?? "",
+  startsOn: draft?.startsOn ?? (active ? "" : todayIn(timezone)),
+  firstDueDate: draft?.firstDueDate ?? "",
+  notes: draft?.notes ?? "",
+};
+---
+
+<div class="mt-4 grid items-start gap-4 lg:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)]">
+  <div class="flex min-w-0 flex-col gap-4">
+    {
+      ipca && (
+        <Card class="border-pend-200 bg-pend-50">
+          <div class="flex flex-wrap items-center gap-2">
+            <h2 class={H2}>Reajuste anual pelo IPCA</h2>
+            <Badge variant="warning">{ipca.daysLeft === 0 ? "Hoje" : `Em ${ipca.daysLeft} ${ipca.daysLeft === 1 ? "dia" : "dias"}`}</Badge>
+          </div>
+          <p class="mt-1 text-[15px] text-ink">
+            O contrato faz aniversário em {date(ipca.anniversary)}. Para corrigir os valores pela variação do IPCA (IBGE) dos 12 meses anteriores, monte o
+            rascunho abaixo com os valores corrigidos e ative: a clínica recebe os novos termos por e-mail e o novo valor só vale 30 dias depois do aviso
+            {ipca.daysLeft < 30 ? " (já não dá para começar exatamente no aniversário)" : ""}. Sem reajuste este ano, nada a fazer.
+          </p>
+        </Card>
+      )
+    }
+    {
+      canceled?.cancel && (
+        <Card class="border-can-200">
+          <div class="flex flex-wrap items-center gap-2">
+            <h2 class={H2}>Assinatura cancelada</h2>
+            <Badge variant="danger">{canceled.cancel.kind === "withdrawal" ? "Arrependimento (7 dias)" : "Cancelamento"}</Badge>
+          </div>
+          <dl class={`${KV_STYLE} mt-3`}>
+            <dt class="text-ink-soft">Quando</dt>
+            <dd class="font-semibold text-ink">
+              {formatInstant(canceled.cancel.at, timezone, "dd/MM/yyyy 'às' HH:mm")}
+              {canceled.cancel.by ? ` · ${actors.get(canceled.cancel.by)?.name ?? "Administrador"}` : ""}
+            </dd>
+            <dt class="text-ink-soft">Motivo</dt>
+            <dd class="font-semibold text-ink">{CANCEL_REASONS[canceled.cancel.reason]}</dd>
+            {canceled.cancel.comment && (
+              <>
+                <dt class="text-ink-soft">Comentário</dt>
+                <dd class="text-ink">{canceled.cancel.comment}</dd>
+              </>
+            )}
+            <dt class="text-ink-soft">Acesso até</dt>
+            <dd class="font-semibold text-ink">{canceled.endsOn ? date(canceled.endsOn) : "—"}</dd>
+            {canceled.cancel.nextDue && (
+              <>
+                <dt class="text-ink-soft">Última mensalidade</dt>
+                <dd class="font-semibold text-ink">{date(canceled.cancel.nextDue)} (continua devida)</dd>
+              </>
+            )}
+            <dt class="text-ink-soft">Asaas</dt>
+            <dd class="font-semibold text-ink">
+              {canceled.billingMode !== "asaas"
+                ? canceled.cancel.kind === "withdrawal"
+                  ? "Modo manual: devolva por fora o que foi pago."
+                  : "Modo manual: nada a ajustar."
+                : canceled.cancel.asaasSyncedAt
+                  ? `Ajustado em ${formatInstant(canceled.cancel.asaasSyncedAt, timezone, "dd/MM/yyyy 'às' HH:mm")}`
+                  : canceled.cancel.asaasError
+                    ? `Falhou: ${canceled.cancel.asaasError}`
+                    : "Pendente"}
+            </dd>
+          </dl>
+          {canceled.billingMode === "asaas" && !canceled.cancel.asaasSyncedAt && (
+            <form method="POST" action={action} class="mt-3">
+              <input type="hidden" name="acao" value="asaas_cancelamento" />
+              <input type="hidden" name="contract_id" value={canceled.id} />
+              <button type="submit" data-sending-label="Tentando…" class={SECONDARY_BUTTON}>Aplicar no Asaas de novo</button>
+            </form>
+          )}
+        </Card>
+      )
+    }
+    <Card>
+      <div class="flex flex-wrap items-center gap-2">
+        <h2 class={H2}>Contrato</h2>
+        {current ? <Badge variant="success">Versão {current.version} vigente</Badge> : <Badge variant="warning">{next ? "Ainda não começou" : "Sem contrato ativo"}</Badge>}
+      </div>
+      {
+        current ? (
+          <div class="mt-3 flex flex-col gap-3">
+            <ContractAcceptanceInfo contract={current} actors={actors} timezone={timezone} internal />
+            <ContractTerms contract={current} internal />
+          </div>
+        ) : (
+          !next && <p class="mt-1 text-sm text-ink-soft">Monte o rascunho abaixo e ative. Ativar exige a conta de cobrança.</p>
+        )
+      }
+    </Card>
+    {
+      next && (
+        <Card>
+          <div class="flex flex-wrap items-center gap-2">
+            <h2 class={H2}>Próxima versão</h2>
+            <Badge variant="info">Versão {next.version} a partir de {date(next.startsOn)}</Badge>
+          </div>
+          <div class="mt-3 flex flex-col gap-3">
+            <ContractAcceptanceInfo contract={next} actors={actors} timezone={timezone} internal />
+            <ContractTerms contract={next} internal />
+            {next.acceptance === "tacit" && (
+              <form method="POST" action={action}>
+                <input type="hidden" name="acao" value="contrato_reenviar_aviso" />
+                <button type="submit" data-sending-label="Enviando…" class={SECONDARY_BUTTON}>
+                  {next.noticeSentAt ? "Reenviar o e-mail dos novos termos" : "Enviar o e-mail dos novos termos"}
+                </button>
+              </form>
+            )}
+          </div>
+        </Card>
+      )
+    }
+
+    {
+      active && (
+        <Card>
+          <div class="flex flex-wrap items-center gap-2">
+            <h2 class={H2}>Cobrança no Asaas</h2>
+            {active.billingMode === "manual" ? (
+              <Badge>Modo manual</Badge>
+            ) : active.asaasSyncError ? (
+              <Badge variant="danger">Com erro</Badge>
+            ) : active.asaasSubscriptionId ? (
+              <Badge variant="success">Em dia</Badge>
+            ) : (
+              <Badge variant="warning">{active.acceptance === "pending" ? "Aguarda o aceite" : "Não criada"}</Badge>
+            )}
+            {active.billingMode === "asaas" && active.paymentMethod === "credit_card" && active.acceptance !== "pending" && !active.cardRegisteredAt && (
+              <Badge variant="warning">Sem cartão</Badge>
+            )}
+          </div>
+          <p class="mt-1 text-sm text-ink-soft">
+            {active.billingMode === "manual"
+              ? "No manual, nada vai ao Asaas: o Suporte cobra por fora."
+              : "Criada sozinha no aceite do contrato: cliente, assinatura da mensalidade e a implantação, que vence no dia do aceite."}{" "}
+            Asaas: {asaasLabel}.
+          </p>
+          {active.billingMode === "asaas" && (
+            <>
+              <dl class="mt-2 grid gap-x-4 gap-y-1 text-sm sm:grid-cols-[160px_minmax(0,1fr)]">
+                <dt class="text-ink-soft">Cliente</dt>
+                <dd class="font-medium break-all text-ink">{account?.asaasCustomerId ?? "—"}</dd>
+                <dt class="text-ink-soft">Assinatura</dt>
+                <dd class="font-medium break-all text-ink">{active.asaasSubscriptionId ?? "—"}</dd>
+                {active.paymentMethod === "credit_card" && (
+                  <>
+                    <dt class="text-ink-soft">Cartão</dt>
+                    <dd class="font-medium text-ink">
+                      {active.cardRegisteredAt
+                        ? `${active.cardLast4 ? `Final ${active.cardLast4}, ` : ""}cadastrado em ${formatInstant(active.cardRegisteredAt, timezone, "dd/MM/yyyy 'às' HH:mm")}`
+                        : "Ainda não informado pela clínica (passo Cartão da Assinatura)"}
+                    </dd>
+                  </>
+                )}
+                <dt class="text-ink-soft">Última sincronização</dt>
+                <dd class="font-medium text-ink">{active.asaasSyncedAt ? formatInstant(active.asaasSyncedAt, timezone, "dd/MM/yyyy 'às' HH:mm") : "—"}</dd>
+              </dl>
+              {active.asaasSyncError && <p class="mt-2 text-sm text-can-800">Erro: {active.asaasSyncError}</p>}
+              {active.acceptance !== "pending" && (
+                <form method="POST" action={action} class="mt-3">
+                  <input type="hidden" name="acao" value="asaas_sincronizar" />
+                  <button type="submit" data-sending-label="Falando com o Asaas…" class={SECONDARY_BUTTON}>
+                    {active.asaasSubscriptionId && !active.asaasSyncError ? "Atualizar do Asaas" : "Tentar de novo"}
+                  </button>
+                </form>
+              )}
+            </>
+          )}
+          <h3 class="mt-4 text-sm font-semibold text-ink">Cobranças</h3>
+          <div class="mt-1">
+            <ChargesList charges={charges} timezone={timezone} internal />
+          </div>
+        </Card>
+      )
+    }
+
+    <Card>
+      <div class="flex flex-wrap items-center gap-2">
+        <h2 class={H2}>{draft ? "Rascunho" : active ? "Nova versão do contrato" : "Rascunho do contrato"}</h2>
+        {draft && <Badge variant="warning">Rascunho</Badge>}
+      </div>
+      <p class="mt-1 text-sm text-ink-soft">
+        {
+          active
+            ? `Mudança de valor, preço por nota, franquia ou modo é uma nova versão, com início depois de ${date(active.startsOn)}; ao ativar, a versão ${active.version} termina na véspera. Cobranças já geradas não mudam.`
+            : "O rascunho não vale nada até ser ativado, e a clínica não o vê. Ativado, o Administrador da clínica aceita em Configurações › Assinatura; a cobrança só começa depois do aceite."
+        }
+      </p>
+      {
+        active && (
+          <p class="mt-1 text-sm text-ink-soft">
+            {tacitNext
+              ? `Com o contrato já aceito, a nova versão vale pelo uso continuado: só pode começar a partir de ${date(earliestStart)} (30 dias depois da ativação), e o e-mail financeiro recebe os novos termos ao ativar.`
+              : "A versão vigente ainda não foi aceita (ou o texto do contrato mudou): a nova versão também pede o aceite do Administrador."}
+          </p>
+        )
+      }
+      <form method="POST" action={action} class="mt-3 flex flex-col gap-3">
+        <input type="hidden" name="acao" value="contrato_rascunho" />
+        <fieldset class="min-w-0">
+          <legend class={LEGEND}>Modo de cobrança</legend>
+          <div class="mt-1.5 flex flex-col gap-1">
+            {
+              Object.entries(BILLING_MODES).map(([value, label]) => (
+                <label class={CHOICE}>
+                  <input type="radio" name="billing_mode" value={value} required checked={form.mode === value} class={CHECK} />
+                  {label}
+                </label>
+              ))
+            }
+          </div>
+          <p class={HINT}>No manual, a clínica nunca fica em atraso pelo sistema: o Suporte registra os pagamentos à mão.</p>
+        </fieldset>
+        <div class="grid gap-3 sm:grid-cols-2">
+          <div>
+            <label for="monthly" class={LABEL}>Mensalidade (R$)</label>
+            <input id="monthly" name="monthly" required inputmode="decimal" value={form.monthly} class={INPUT} />
+            {!base && reference.monthlyCents !== null && <p class={HINT}>Sugestão: tabela do plano {reference.label}.</p>}
+          </div>
+          <div>
+            <label for="setup" class={LABEL}>Implantação (R$)</label>
+            <input id="setup" name="setup" required inputmode="decimal" value={form.setup} class={INPUT} />
+            <p class={HINT}>0 = isenta. Cobrada quando o contrato é ativado.</p>
+          </div>
+        </div>
+        <fieldset class="min-w-0" data-asaas-only>
+          <legend class={LEGEND}>Forma de pagamento (automático)</legend>
+          <div class="mt-1.5 flex flex-wrap gap-x-5 gap-y-1">
+            {
+              Object.entries(PAYMENT_METHODS).map(([value, label]) => (
+                <label class={CHOICE}>
+                  <input type="radio" name="payment_method" value={value} checked={form.method === value} class={CHECK} />
+                  {label}
+                </label>
+              ))
+            }
+          </div>
+        </fieldset>
+        <div class="grid gap-3 sm:grid-cols-2">
+          <div>
+            <label for="starts_on" class={LABEL}>Início</label>
+            <input id="starts_on" name="starts_on" type="date" required value={form.startsOn} class={INPUT} />
+          </div>
+          <div>
+            <label for="first_due_date" class={LABEL}>1º vencimento</label>
+            <input id="first_due_date" name="first_due_date" type="date" required value={form.firstDueDate} class={INPUT} />
+          </div>
+        </div>
+        {invoicing && active && active.invoiceUnitPriceCents === null && (
+          <p class="text-sm text-pend-800">A emissão de nota fiscal foi liberada, mas o contrato vigente não cobra nota: para cobrar, ative uma nova versão com o preço por nota.</p>
+        )}
+        {invoicing ? (
+        <div class="grid gap-3 sm:grid-cols-2">
+          <div>
+            <label for="invoice_price" class={LABEL}>Preço por nota fiscal (R$)</label>
+            <input id="invoice_price" name="invoice_price" required inputmode="decimal" value={form.price} class={INPUT} />
+            <p class={HINT}>
+              {defaultPrice === null ? "Preço padrão ainda não definido (Vendas › Planos)." : `Padrão: ${formatCentsBRL(defaultPrice)}; negociável aqui.`}
+            </p>
+          </div>
+          <fieldset class="min-w-0">
+            <legend class={LEGEND}>Franquia de notas por mês</legend>
+            <div class="mt-1.5 flex flex-col gap-1">
+              <label class={CHOICE}>
+                <input type="radio" name="allowance_kind" value="ilimitada" required checked={!!base && form.unlimited} class={CHECK} />
+                Ilimitada
+              </label>
+              <label class={CHOICE}>
+                <input type="radio" name="allowance_kind" value="limitada" checked={!!base && !form.unlimited} class={CHECK} />
+                Até
+                <input name="allowance" inputmode="numeric" aria-label="Notas por mês" value={form.allowance} class="w-20 rounded-md border border-line-strong px-2 py-1 text-[15px]" />
+                notas
+              </label>
+            </div>
+            <p class={HINT}>Passou da franquia, cada nota a mais pelo preço por nota. Sobra não acumula.</p>
+          </fieldset>
+        </div>
+        ) : (
+          <p class={HINT}>Sem a emissão de nota fiscal liberada (Módulo financeiro na matriz), o contrato não tem preço por nota nem franquia.</p>
+        )}
+        <div>
+          <label for="notes" class={LABEL}>Observações (só o Suporte vê)</label>
+          <textarea id="notes" name="notes" rows="2" maxlength="1000" class={INPUT}>{form.notes}</textarea>
+        </div>
+        <button type="submit" data-sending-label="Salvando…" class={`${PRIMARY_BUTTON} self-start`}>Salvar rascunho</button>
+      </form>
+      {
+        draft && (
+          <div class="mt-4 flex flex-wrap gap-2 border-t border-[#e6ecea] pt-4">
+            <form method="POST" action={action}>
+              <input type="hidden" name="acao" value="contrato_ativar" />
+              <button
+                type="submit"
+                class={`${PRIMARY_BUTTON} js-confirm-delete`}
+                disabled={!account}
+                data-confirm-title="Ativar o contrato?"
+                data-confirm-message={
+                  active
+                    ? `A versão ${active.version} termina em ${date(draft.startsOn)} menos um dia, e a nova vale a partir de ${date(draft.startsOn)}. ${tacitNext ? "Os novos termos vão por e-mail ao financeiro da clínica." : "A clínica precisa aceitar a nova versão."} Depois de ativo, o contrato só muda por nova versão.`
+                    : `O contrato vale a partir de ${date(draft.startsOn)}, depois do aceite do Administrador da clínica. Depois de ativo, só muda por nova versão.`
+                }
+                data-confirm-label="Ativar"
+                data-confirm-tone="primary"
+              >
+                Ativar o contrato
+              </button>
+            </form>
+            <form method="POST" action={action}>
+              <input type="hidden" name="acao" value="contrato_descartar" />
+              <button
+                type="submit"
+                class={`${SECONDARY_BUTTON} js-confirm-delete`}
+                data-confirm-title="Descartar o rascunho?"
+                data-confirm-message="O rascunho sai da tela; fica só no histórico."
+                data-confirm-label="Descartar"
+              >
+                Descartar rascunho
+              </button>
+            </form>
+            {!account && <p class="w-full text-sm text-pend-800">Cadastre a conta de cobrança antes de ativar.</p>}
+          </div>
+        )
+      }
+    </Card>
+
+    <Card>
+      <div class="flex flex-wrap items-center gap-2">
+        <h2 class={H2}>Conta de cobrança</h2>
+        {!account && <Badge variant="warning">Não cadastrada</Badge>}
+      </div>
+      <p class="mt-1 text-sm text-ink-soft">
+        Quem paga o RecepClinic e para onde vão as cobranças. O Administrador da clínica também altera os contatos, em Configurações › Assinatura.
+      </p>
+      <form method="POST" action={action} class="mt-3 flex flex-col gap-3">
+        <input type="hidden" name="acao" value="conta_cobranca" />
+        <div>
+          <label for="payer_name" class={LABEL}>Nome ou razão social do pagador</label>
+          <input id="payer_name" name="payer_name" required maxlength="200" value={account?.payerName ?? ""} class={INPUT} />
+        </div>
+        <div>
+          <label for="payer_document" class={LABEL}>CNPJ ou CPF</label>
+          <input id="payer_document" name="payer_document" required value={account ? formatPayerDocument(account.payerDocument) : ""} class={INPUT} />
+        </div>
+        <div class="grid gap-3 sm:grid-cols-2">
+          <div>
+            <label for="finance_email" class={LABEL}>E-mail financeiro</label>
+            <input id="finance_email" name="finance_email" type="email" required value={account?.financeEmail ?? suggestedEmail} class={INPUT} />
+          </div>
+          <div>
+            <label for="finance_phone" class={LABEL}>Telefone financeiro (opcional)</label>
+            <input
+              id="finance_phone"
+              name="finance_phone"
+              type="tel"
+              inputmode="tel"
+              placeholder="(84) 98188-0777"
+              value={account?.financePhone ? formatPhoneBR(account.financePhone) : ""}
+              class={INPUT}
+            />
+          </div>
+        </div>
+        {account?.whatsappOptIn && <p class={HINT}>Trocar ou apagar o telefone retira a autorização do WhatsApp financeiro.</p>}
+        <button type="submit" data-sending-label="Salvando…" class={`${PRIMARY_BUTTON} self-start`}>{account ? "Salvar a conta" : "Cadastrar a conta"}</button>
+      </form>
+    </Card>
+  </div>
+
+  <div class="flex min-w-0 flex-col gap-4">
+    {
+      account && (
+        <Card>
+          <div class="flex flex-wrap items-center gap-2">
+            <h2 class={H2}>WhatsApp financeiro</h2>
+            {account.whatsappOptIn ? <Badge variant="success">Autorizado</Badge> : <Badge>Não autorizado</Badge>}
+          </div>
+          <p class="mt-1 text-sm text-ink-soft">
+            {account.whatsappOptIn
+              ? `Autorizado pelo Administrador da clínica em ${formatInstant(account.whatsappOptIn.at, timezone, "dd/MM/yyyy 'às' HH:mm")} (texto ${account.whatsappOptIn.version}).`
+              : "Só o Administrador da clínica autoriza, em Configurações › Assinatura. Sem a autorização, os avisos vão só por e-mail."}
+          </p>
+        </Card>
+      )
+    }
+    {
+      history.length > 0 && (
+        <Card>
+          <h2 class={H2}>Versões anteriores</h2>
+          <ul class="mt-2 divide-y divide-[#e6ecea]">
+            {history.map((contract) => (
+              <li class="py-2 text-sm">
+                <span class="flex flex-wrap items-center gap-1.5 font-medium text-ink">
+                  Versão {contract.version} <Badge>{CONTRACT_STATUS[contract.status].label}</Badge>
+                </span>
+                <span class="block text-ink-soft">
+                  {date(contract.startsOn)}
+                  {contract.endsOn ? ` a ${date(contract.endsOn)}` : ""} · {formatCentsBRL(contract.monthlyCents)} por mês · {BILLING_MODES[contract.billingMode]}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </Card>
+      )
+    }
+    <BillingTrail entries={audit} actors={actors} timezone={timezone} />
+  </div>
+</div>
+<ConfirmDeleteDialog />
+
+<script>
+  // A forma de pagamento só vale (e só vai) no modo automático.
+  const box = document.querySelector<HTMLElement>("[data-asaas-only]");
+  const modes = document.querySelectorAll<HTMLInputElement>('input[name="billing_mode"]');
+  if (box && modes.length) {
+    const sync = () => {
+      const on = [...modes].some((m) => m.checked && m.value === "asaas");
+      box.hidden = !on;
+      box.querySelectorAll<HTMLInputElement>("input").forEach((input) => {
+        input.disabled = !on;
+        input.required = on;
+      });
+    };
+    modes.forEach((m) => m.addEventListener("change", sync));
+    sync();
+  }
+</script>

@@ -1,0 +1,68 @@
+---
+// Faturamento (F12.4): as cobranças da clínica (espelho do Asaas), na tela
+// Assinatura (Administrador: "Pagar" abre a fatura do Asaas) e na aba
+// Faturamento (Suporte: com o id do Asaas). F12.2e: para o Administrador, a
+// ação segue a forma de pagamento (cartão: só a 1ª pede o cartão; Pix: "Pagar
+// com Pix").
+import Badge from "../config/Badge.astro";
+import { formatCalendarDate, formatInstant } from "../../../lib/clinicTime";
+import { CHARGE_KINDS, CHARGE_STATUS, type BillingCharge } from "../../../lib/data/billing";
+import { formatCentsBRL } from "../../../lib/money";
+import { chargeAction } from "../../../lib/billingRenewal";
+
+interface Props {
+  charges: BillingCharge[];
+  timezone: string;
+  internal?: boolean;
+  /** Forma de pagamento do contrato (Administrador). */
+  paymentMethod?: "pix" | "credit_card" | null;
+  /** Já há cartão no Asaas (alguma cobrança paga no cartão). */
+  cardOnFile?: boolean;
+}
+
+const { charges, timezone, internal = false, paymentMethod = null, cardOnFile = false } = Astro.props;
+---
+
+{
+  charges.length === 0 ? (
+    <p class="text-sm text-ink-soft">Nenhuma cobrança ainda.</p>
+  ) : (
+    <ul class="divide-y divide-[#e6ecea]">
+      {charges.map((charge) => (
+        <li class="flex flex-wrap items-center justify-between gap-2 py-2 text-sm">
+          <span class="min-w-0">
+            <span class="block font-medium text-ink">
+              {CHARGE_KINDS[charge.kind]} · {formatCentsBRL(charge.valueCents)}
+            </span>
+            <span class="block text-ink-soft">
+              Vence em {formatCalendarDate(charge.dueDate, "dd/MM/yyyy")}
+              {charge.paidAt ? ` · paga em ${formatInstant(charge.paidAt, timezone, "dd/MM/yyyy")}` : ""}
+              {internal && charge.asaasPaymentId ? ` · ${charge.asaasPaymentId} (${charge.rawStatus ?? "?"})` : ""}
+            </span>
+          </span>
+          <span class="flex items-center gap-2">
+            <Badge variant={CHARGE_STATUS[charge.status].variant}>{CHARGE_STATUS[charge.status].label}</Badge>
+            {internal
+              ? (charge.status === "pending" || charge.status === "overdue") &&
+                charge.invoiceUrl && (
+                  <a href={charge.invoiceUrl} target="_blank" rel="noopener noreferrer" class="font-semibold text-brand">
+                    Fatura
+                  </a>
+                )
+              : (() => {
+                  const next = chargeAction(charge, paymentMethod, cardOnFile);
+                  if (!next) return null;
+                  return next.kind === "note" ? (
+                    <span class="text-ink-soft">{next.label}</span>
+                  ) : (
+                    <a href={charge.invoiceUrl!} target="_blank" rel="noopener noreferrer" class="font-semibold text-brand">
+                      {next.label}
+                    </a>
+                  );
+                })()}
+          </span>
+        </li>
+      ))}
+    </ul>
+  )
+}

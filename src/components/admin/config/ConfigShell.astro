@@ -14,6 +14,7 @@ import AdminLayout from "../../../layouts/AdminLayout.astro";
 import FlashMessage from "../FlashMessage.astro";
 import Icon from "../Icon.astro";
 import { createUserClient } from "../../../lib/data/clients";
+import { inSuspendedView } from "../../../lib/clinicAccess";
 import { pageFlash } from "../../../lib/flash";
 import { loadSetupStatus, type SetupStatus } from "../../../lib/data/config/setup";
 import { configSections, type SectionId } from "./sections";
@@ -37,7 +38,10 @@ const { current, title, subtitle, pageTitle, back, setup: given } = Astro.props;
 const flash = pageFlash(Astro);
 const clinic = Astro.locals.clinic!;
 const setup = given ?? (await loadSetupStatus(createUserClient(Astro.request, Astro.cookies), clinic.clinicId, clinic.features));
-const groups = configSections(clinic.features, clinic.isPlatformStaff, setup);
+// Clínica suspensa (F12.3): só a Assinatura no menu, para quem não é o Suporte.
+const groups = configSections(clinic.features, clinic.isPlatformStaff, setup)
+  .map((group) => (inSuspendedView(clinic) ? { ...group, items: group.items.filter((item) => item.id === "assinatura") } : group))
+  .filter((group) => group.items.length > 0);
 const all = groups.flatMap((g) => g.items);
 const active = all.find((s) => s.id === current);
 const totalPending = all.reduce((sum, s) => sum + s.pending, 0);

@@ -1,0 +1,40 @@
+---
+// Faturamento (F12.2b): a situação do aceite de uma versão do contrato, na aba
+// Faturamento (Suporte, com o IP) e na tela Assinatura (Administrador).
+import Badge from "../config/Badge.astro";
+import { formatInstant } from "../../../lib/clinicTime";
+import type { ActorLabel } from "../../../lib/data/agenda/trail";
+import { CONTRACT_ACCEPTANCE, type BillingContract } from "../../../lib/data/billing";
+
+interface Props {
+  contract: BillingContract;
+  actors: Map<string, ActorLabel>;
+  timezone: string;
+  /** Mostra o IP do aceite (só o Suporte). */
+  internal?: boolean;
+}
+
+const { contract, actors, timezone, internal = false } = Astro.props;
+const when = (at: Date) => formatInstant(at, timezone, "dd/MM/yyyy 'às' HH:mm");
+const acceptance = contract.acceptance;
+const who = contract.acceptedBy ? actors.get(contract.acceptedBy)?.name : null;
+---
+
+{
+  acceptance && (
+    <p class="flex flex-wrap items-center gap-1.5 text-sm text-ink-soft">
+      <Badge variant={CONTRACT_ACCEPTANCE[acceptance].variant}>{CONTRACT_ACCEPTANCE[acceptance].label}</Badge>
+      {acceptance === "explicit" && contract.acceptedAt && (
+        <span>
+          em {when(contract.acceptedAt)}
+          {who ? ` por ${who}` : ""}
+          {internal && contract.acceptedIp ? ` (IP ${contract.acceptedIp})` : ""}
+        </span>
+      )}
+      {acceptance === "tacit" && (
+        <span>{contract.noticeSentAt ? `novos termos enviados por e-mail em ${when(contract.noticeSentAt)}` : "e-mail dos novos termos ainda não saiu"}</span>
+      )}
+      {acceptance === "pending" && <span>falta o Administrador da clínica aceitar, em Configurações › Assinatura</span>}
+    </p>
+  )
+}

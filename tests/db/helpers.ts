@@ -127,6 +127,28 @@ export async function withDatabase<T>(run: (db: pg.Client) => Promise<T>): Promi
 }
 
 /**
+ * Contrato com nota fiscal já aceito (cliente, 03/nov/2026): a emissão de nota
+ * só sai com ele. Gravado direto, sem o fluxo de ativação e aceite.
+ */
+export async function signInvoicingContract(clinicId: string): Promise<void> {
+  const today = new Date().toISOString().slice(0, 10);
+  const { error } = await adminClient().from("billing_contracts").insert({
+    clinic_id: clinicId,
+    version: 1,
+    status: "active",
+    billing_mode: "manual",
+    monthly_cents: 10000,
+    first_due_date: today,
+    starts_on: "2020-01-01",
+    invoice_unit_price_cents: 100,
+    terms_version: "teste-nf",
+    acceptance: "explicit",
+    accepted_at: new Date().toISOString(),
+  });
+  if (error) throw error;
+}
+
+/**
  * Checklist de implantação (IS3): deixa a clínica com o que o banco confere na ativação pelo Suporte (os cinco itens
  * marcados, o convite do Administrador aceito, o WhatsApp conectado e uma mensagem de teste entregue).
  */

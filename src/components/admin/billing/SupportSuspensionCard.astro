@@ -1,0 +1,163 @@
+---
+// Sistema › Clínicas › clínica › aba Suspensão (F12.3; aba própria, cliente, 03/nov/2026): a suspensão por
+// motivos. O Suporte suspende (motivo e texto; sem o app WhatsApp Business,
+// alerta forte e uma confirmação a mais, item 23) e libera cada motivo; sem
+// outro ativo, a clínica volta à situação de antes. Inadimplência entra com as
+// cobranças (F12.4; cliente, 02/nov/2026) e só o pagamento a libera.
+import Badge from "../config/Badge.astro";
+import Card from "../config/Panel.astro";
+import { CHECK, CHOICE, DANGER_BUTTON, HINT, INPUT, LABEL, LEGEND, SECONDARY_BUTTON } from "../config/formStyles";
+import { formatInstant } from "../../../lib/clinicTime";
+import { loadActorLabels } from "../../../lib/data/agenda/trail";
+import type { DbClient } from "../../../lib/data/clients";
+import { canSuspendForNonPayment } from "../../../lib/data/billing";
+import { describeReasons, listClinicSuspensions, MANUAL_SUSPENSION_REASONS, SUSPENSION_REASONS, type SuspensionReason } from "../../../lib/data/suspension";
+
+interface Props {
+  db: DbClient;
+  clinicId: string;
+  timezone: string;
+}
+
+const { db, clinicId, timezone } = Astro.props;
+const [suspensions, { data: clinic }, { data: connection }, nonPayment] = await Promise.all([
+  listClinicSuspensions(db, clinicId),
+  db.from("clinics").select("status, status_before_suspension").eq("id", clinicId).maybeSingle(),
+  db.from("whatsapp_connections").select("status, coexistence").eq("clinic_id", clinicId).maybeSingle(),
+  canSuspendForNonPayment(db, clinicId),
+]);
+const actors = await loadActorLabels(db, clinicId, suspensions.flatMap((s) => [s.createdBy, s.releasedBy]));
+const active = suspensions.filter((s) => s.releasedAt === null);
+const released = suspensions.filter((s) => s.releasedAt !== null).slice(0, 10);
+// Inadimplência só com uma cobrança do Asaas em aberto no 15º dia de atraso ou depois (item 20; o banco confere).
+const reasons: SuspensionReason[] = nonPayment ? ["non_payment", ...MANUAL_SUSPENSION_REASONS] : MANUAL_SUSPENSION_REASONS;
+const available = reasons.filter((reason) => !active.some((s) => s.reason === reason));
+// Item 23: número só na API (sem o app), ninguém recebe as mensagens na suspensão.
+const noApp = connection?.status === "connected" && !connection.coexistence;
+const action = `/api/admin/sistema/clinicas/${clinicId}`;
+const H2 = "font-display text-[17px] leading-tight font-bold text-ink sm:text-lg";
+const when = (at: Date) => formatInstant(at, timezone, "dd/MM/yyyy 'às' HH:mm");
+const who = (id: string | null) => (id ? (actors.get(id)?.name ?? "Suporte") : "sistema");
+const before = clinic?.status_before_suspension === "onboarding" ? "em implantação" : "ativa";
+---
+
+<Card id="suspensao">
+  <div class="flex flex-wrap items-center gap-2">
+    <h2 class={H2}>Suspensão</h2>
+    {active.length > 0 ? <Badge variant="danger">Suspensa: {describeReasons(active.map((s) => s.reason))}</Badge> : <Badge variant="success">Não suspensa</Badge>}
+  </div>
+  <p class="mt-1 text-sm text-ink-soft">
+    {
+      active.length > 0
+        ? `Painel da clínica restrito à Assinatura (Administrador), bot calado, links para os pacientes indisponíveis e nada sai pelo WhatsApp. Liberado o último motivo, a clínica volta a ficar ${before}.`
+        : "Suspender fecha o painel da clínica (o Administrador fica só na Assinatura), cala o bot, deixa os links para os pacientes indisponíveis e para os envios. Os dados ficam guardados."
+    }
+  </p>
+
+  {
+    active.length > 0 && (
+      <ul class="mt-3 flex flex-col gap-3">
+        {active.map((suspension) => (
+          <li class="rounded-lg border border-can-200 p-3">
+            <p class="text-sm font-semibold text-ink">{SUSPENSION_REASONS[suspension.reason]}</p>
+            <p class="text-sm text-ink-soft">
+              Desde {when(suspension.createdAt)} · {who(suspension.createdBy)}
+            </p>
+            <p class="mt-1 text-sm text-ink-mid">{suspension.note}</p>
+            {suspension.reason === "non_payment" ? (
+              <p class={HINT}>Liberada pelo pagamento das cobranças vencidas.</p>
+            ) : (
+              <form method="POST" action={action} class="mt-2 flex flex-col gap-2">
+                <input type="hidden" name="acao" value="liberar_suspensao" />
+                <input type="hidden" name="suspension_id" value={suspension.id} />
+                <label for={`release_${suspension.id}`} class={LABEL}>
+                  Motivo da liberação
+                </label>
+                <textarea id={`release_${suspension.id}`} name="release_note" rows="2" required minlength="3" maxlength="1000" class={INPUT} />
+                <button
+                  type="submit"
+                  class={`${SECONDARY_BUTTON} js-confirm-delete self-start`}
+                  data-confirm-title="Liberar este motivo?"
+                  data-confirm-message={active.length > 1 ? "A clínica continua suspensa pelos outros motivos." : `A clínica volta a ficar ${before}: painel, bot, links e envios voltam a funcionar.`}
+                  data-confirm-label="Liberar"
+                  data-confirm-tone="primary"
+                >
+                  Liberar {SUSPENSION_REASONS[suspension.reason].toLowerCase()}
+                </button>
+              </form>
+            )}
+          </li>
+        ))}
+      </ul>
+    )
+  }
+
+  {
+    available.length > 0 && (
+      <form method="POST" action={action} class="mt-4 flex flex-col gap-3 border-t border-[#e6ecea] pt-4">
+        <input type="hidden" name="acao" value="suspender" />
+        <fieldset class="min-w-0">
+          <legend class={LEGEND}>{active.length > 0 ? "Suspender também por" : "Motivo da suspensão"}</legend>
+          <div class="mt-1.5 flex flex-col gap-1">
+            {available.map((reason) => (
+              <label class={CHOICE}>
+                <input type="radio" name="suspension_reason" value={reason} required class={CHECK} />
+                {SUSPENSION_REASONS[reason]}
+              </label>
+            ))}
+          </div>
+          {!nonPayment && <p class={HINT}>Inadimplência só aparece com uma cobrança em aberto a partir do 15º dia de atraso.</p>}
+        </fieldset>
+        <div>
+          <label for="suspension_note" class={LABEL}>
+            O que aconteceu (só o Suporte vê)
+          </label>
+          <textarea id="suspension_note" name="suspension_note" rows="2" required minlength="3" maxlength="1000" class={INPUT} />
+        </div>
+        {noApp && active.length === 0 && (
+          <div class="rounded-lg border-2 border-can-800 bg-can-100 p-3 text-sm text-can-800" role="alert">
+            <p class="font-bold">Esta clínica não usa o app WhatsApp Business.</p>
+            <p class="mt-1">Suspensa, ninguém vai receber as mensagens dos pacientes: o bot fica calado e não há app onde a recepção responda.</p>
+            <label class="mt-2 flex items-start gap-2 font-semibold">
+              <input type="checkbox" name="no_app_confirmed" value="1" required class={`${CHECK} mt-0.5`} />
+              <span>Entendi: os pacientes ficam sem resposta enquanto a clínica estiver suspensa.</span>
+            </label>
+          </div>
+        )}
+        <button
+          type="submit"
+          class={`${DANGER_BUTTON} js-confirm-delete self-start`}
+          data-confirm-title={active.length > 0 ? "Acrescentar o motivo?" : "Suspender a clínica?"}
+          data-confirm-message={
+            active.length > 0
+              ? "A clínica continua suspensa e passa a ter mais este motivo."
+              : "O painel da clínica fecha (o Administrador fica só na Assinatura), o bot para de responder, os links para os pacientes ficam indisponíveis e nada sai pelo WhatsApp."
+          }
+          data-confirm-label="Suspender"
+        >
+          {active.length > 0 ? "Acrescentar o motivo" : "Suspender a clínica"}
+        </button>
+      </form>
+    )
+  }
+
+  {
+    released.length > 0 && (
+      <details class="mt-4 border-t border-[#e6ecea] pt-3 text-sm">
+        <summary class="cursor-pointer font-semibold text-ink">Suspensões anteriores</summary>
+        <ul class="mt-2 divide-y divide-[#e6ecea]">
+          {released.map((suspension) => (
+            <li class="py-2">
+              <span class="font-medium text-ink">{SUSPENSION_REASONS[suspension.reason]}</span>
+              <span class="block text-ink-soft">
+                {when(suspension.createdAt)} a {when(suspension.releasedAt!)} · liberada por {who(suspension.releasedBy)}
+              </span>
+              <span class="block text-ink-soft">{suspension.note}</span>
+              {suspension.releaseNote && <span class="block text-ink-soft">Liberação: {suspension.releaseNote}</span>}
+            </li>
+          ))}
+        </ul>
+      </details>
+    )
+  }
+</Card>

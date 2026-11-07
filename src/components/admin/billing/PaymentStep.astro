@@ -1,0 +1,127 @@
+---
+// Passo Cartão (ou Pagamento, no Pix) da Assinatura (F12.2i; cliente,
+// 04/nov/2026; canvas "Assinatura: aceite e WhatsApp", linha "Passo do
+// cartão"). A página do Asaas abre em outra aba; esta mostra "Confirmando o
+// pagamento…" e confere sozinha (.../assinatura/pagamento) até o Asaas
+// confirmar, então segue para o próximo passo. No cartão não há "Informar
+// depois": voltando à tela sem o cartão, o passo aparece pendente. No Pix,
+// "Pagar com Pix" (implantação) e "Pagar depois".
+import Card from "../config/Panel.astro";
+import { PRIMARY_BUTTON, SECONDARY_BUTTON } from "../config/formStyles";
+import type { BillingCharge, BillingContract } from "../../../lib/data/billing";
+import { formatCalendarDate } from "../../../lib/clinicTime";
+import { dueDay } from "../../../lib/billingRenewal";
+import { formatCentsBRL } from "../../../lib/money";
+
+interface Props {
+  kind: "card" | "pix";
+  contract: BillingContract;
+  /** A implantação em aberto (no Pix, o passo só existe com ela). */
+  setup: BillingCharge | null;
+  stepLabel: string;
+  /** Voltou à tela sem concluir (aviso laranja "Falta informar o cartão"). */
+  late: boolean;
+  /** Já há o que conferir (Checkout aberto ou implantação paga): a tela abre conferindo. */
+  waiting: boolean;
+  action: string;
+}
+
+const { kind, contract, setup, stepLabel, late, waiting, action } = Astro.props;
+const date = (value: string) => formatCalendarDate(value, "dd/MM/yyyy");
+const monthly = `${formatCentsBRL(contract.monthlyCents)} todo dia ${dueDay(contract.firstDueDate)}, a partir de ${date(contract.firstDueDate)}`;
+const TILE = "rounded-lg bg-canvas px-3 py-2.5";
+const OPEN_ICON = "M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5";
+---
+
+<Card class={late ? "border-pend-200" : ""}>
+  <!-- O Card não repassa atributos data-*: o script acha o passo por este bloco. -->
+  <div class="flex flex-col gap-4" data-payment-step data-check-url="/api/admin/configuracoes/assinatura/pagamento" data-waiting={waiting ? "1" : undefined}>
+  <div data-payment-idle class="flex flex-col gap-4">
+    <h2 class="font-display text-[19px] leading-tight font-bold text-ink sm:text-xl">
+      {stepLabel} · {kind === "card" ? "Cartão de crédito da assinatura" : "Pagar a implantação"}
+    </h2>
+    {
+      late && (
+        <p class="rounded-lg bg-pend-100 px-4 py-3 text-[15px] text-pend-800">
+          <strong>{kind === "card" ? "Falta informar o cartão." : "Falta pagar a implantação."}</strong>{" "}
+          {setup
+            ? `A implantação de ${formatCentsBRL(setup.valueCents)} vence em ${date(setup.dueDate)}.`
+            : `A 1ª mensalidade vence em ${date(contract.firstDueDate)}.`}{" "}
+          {kind === "card" ? "Enquanto o cartão não for informado, nada é cobrado." : ""}
+        </p>
+      )
+    }
+    <p class="text-[15px] text-ink-soft">
+      {
+        kind === "card"
+          ? "O cartão é informado na página segura do Asaas, a empresa que processa os pagamentos do RecepClinic. O RecepClinic não vê nem guarda o número do cartão."
+          : "No Pix, cada cobrança é paga uma de cada vez: ela chega ao e-mail financeiro e fica em Cobranças, nesta tela."
+      }
+    </p>
+    <div class="grid gap-3 sm:grid-cols-2">
+      <div class={TILE}>
+        <div class="text-[13px] text-ink-soft">{kind === "card" ? "Cobrado agora" : "Agora"}</div>
+        <div class="text-[17px] font-bold text-ink">
+          {setup ? `Implantação · ${formatCentsBRL(setup.valueCents)}${kind === "pix" ? ` · vence ${date(setup.dueDate)}` : ""}` : "Nada: o cartão só fica cadastrado"}
+        </div>
+      </div>
+      <div class={TILE}>
+        <div class="text-[13px] text-ink-soft">{kind === "card" ? "Depois, no mesmo cartão" : "Depois"}</div>
+        <div class="text-[17px] font-bold text-ink">{kind === "card" ? monthly : `${monthly}, um Pix por mês`}</div>
+      </div>
+    </div>
+    {
+      kind === "card" ? (
+        <form method="POST" action={action} target="_blank" class="flex flex-col items-end gap-2" data-payment-open>
+          <input type="hidden" name="acao" value="cartao_informar" />
+          <button type="submit" class={`${PRIMARY_BUTTON} inline-flex items-center gap-2`}>
+            Informar o cartão no Asaas
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d={OPEN_ICON} />
+            </svg>
+          </button>
+          <span class="text-sm text-ink-soft">Abre em outra aba. Depois de informar o cartão, volte para esta aba.</span>
+        </form>
+      ) : (
+        <div class="flex flex-col items-end gap-2">
+          <div class="flex flex-wrap justify-end gap-3">
+            <form method="POST" action={action}>
+              <input type="hidden" name="acao" value="pagamento_depois" />
+              <button type="submit" data-sending-label="Salvando…" class={SECONDARY_BUTTON}>Pagar depois</button>
+            </form>
+            {setup?.invoiceUrl && (
+              <a href={setup.invoiceUrl} target="_blank" rel="noopener" class={`${PRIMARY_BUTTON} inline-flex items-center gap-2 no-underline`} data-payment-open>
+                Pagar com Pix
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d={OPEN_ICON} />
+                </svg>
+              </a>
+            )}
+          </div>
+          <span class="text-sm text-ink-soft">"Pagar depois": a cobrança fica em Cobranças até o vencimento.</span>
+        </div>
+      )
+    }
+  </div>
+
+  <div data-payment-waiting hidden class="flex flex-col gap-4">
+    <div class="flex items-center gap-4">
+      <svg class="h-11 w-11 shrink-0 animate-spin text-brand motion-reduce:animate-none" viewBox="0 0 44 44" aria-hidden="true">
+        <circle cx="22" cy="22" r="18" fill="none" stroke="currentColor" stroke-opacity="0.18" stroke-width="5" />
+        <path d="M22 4a18 18 0 0 1 18 18" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round" />
+      </svg>
+      <div role="status">
+        <h2 class="font-display text-[19px] leading-tight font-bold text-ink sm:text-xl">Confirmando o pagamento no Asaas…</h2>
+        <p class="mt-1 text-[15px] text-ink-soft">Assim que o Asaas confirmar, esta tela avança sozinha. Costuma levar menos de 1 minuto.</p>
+      </div>
+    </div>
+    <p data-payment-message hidden class="rounded-lg bg-pend-100 px-4 py-3 text-[15px] text-pend-800"></p>
+    <div class="flex flex-wrap justify-end gap-3">
+      <button type="button" class={SECONDARY_BUTTON} data-payment-reopen>Abrir de novo a página do Asaas</button>
+      <button type="button" class={PRIMARY_BUTTON} data-payment-check>Já paguei, conferir agora</button>
+    </div>
+  </div>
+  </div>
+</Card>
+
+<script src="../../../scripts/paymentStep.ts"></script>

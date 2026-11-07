@@ -54,7 +54,10 @@ if (clinicId && db) {
     getPublicClinicBrand(db, clinicId),
   ]);
 }
-if (!page) Astro.response.status = 404;
+// Clínica suspensa (F12.3, decisão 11.4): só "Agendamento indisponível", sem falar de cobrança.
+const suspended = brand?.suspended ?? false;
+if (suspended) page = null;
+if (!page && !suspended) Astro.response.status = 404;
 
 const param = (name: string) => {
   const value = Astro.url.searchParams.get(name);
@@ -149,7 +152,9 @@ const dayHref = (date: string, start: string) => `?${new URLSearchParams({ date,
 const confirmed = page?.state === "used" ? page.appointment : null;
 const confirmedActive = confirmed && (confirmed.status === "scheduled" || confirmed.status === "confirmed");
 // O título da aba é o da página (teste da R11, QA-02): confirmado, remarcado, cancelado ou já usado.
-const pageTitle = !page
+const pageTitle = suspended
+  ? "Agendamento indisponível"
+  : !page
   ? "Link inválido"
   : page.state === "expired"
     ? "Link expirado"
@@ -176,7 +181,14 @@ const unavailableNote = !strip?.unavailable
 
 <PatientLayout title={pageTitle} brand={brand} width={page?.state === "form" ? "wide" : "reading"}>
   {
-    !page && (
+    suspended && (
+      <LinkNotice icon="information-circle" title="Agendamento indisponível">
+        Agendamento indisponível no momento. Fale com a clínica.
+      </LinkNotice>
+    )
+  }
+  {
+    !page && !suspended && (
       <LinkNotice icon="warning" title="Link inválido">
         Este link de agendamento não existe. Volte à conversa no WhatsApp e peça um novo.
       </LinkNotice>

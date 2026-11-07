@@ -1,6 +1,6 @@
 import { waitUntil } from "@vercel/functions";
 import { defineMiddleware, sequence } from "astro:middleware";
-import { ACTIVE_CLINIC_COOKIE, activeClinicCookieOptions, canAccessPath, expectsPage } from "./lib/clinicAccess";
+import { ACTIVE_CLINIC_COOKIE, activeClinicCookieOptions, canAccessPath, expectsPage, suspendedLanding } from "./lib/clinicAccess";
 import { createUserClient } from "./lib/data/clients";
 import { isPlatformStaff } from "./lib/data/clinicChoice";
 import { loadClinicContext, logPlatformAccess } from "./lib/data/clinicContext";
@@ -119,6 +119,12 @@ const access = defineMiddleware(async (context, next) => {
   const { context: clinic } = result;
   if (!result.remembered) {
     cookies.set(ACTIVE_CLINIC_COOKIE, clinic.clinicId, activeClinicCookieOptions(url));
+  }
+
+  // Clínica suspensa (F12.3): o Administrador só na Assinatura; os outros, no aviso; o Suporte, em tudo.
+  const landing = suspendedLanding(clinic, url.pathname);
+  if (landing) {
+    return isApi ? json(403, { error: "clinic_suspended" }) : redirect(landing);
   }
 
   if (!canAccessPath(clinic, url.pathname, url.searchParams)) {

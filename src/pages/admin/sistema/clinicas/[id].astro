@@ -6,13 +6,18 @@
 // linhas e os pedidos num cartão, o mais novo em cima. F10.1a (cliente,
 // 20/out/2026): "Agenda atual", o pedido do link para a importação. F8.2b
 // (cliente, 25/out/2026): "Situação", com "Ativar a clínica" em implantação
-// e o que conferir antes (WhatsApp e templates).
+// e o que conferir antes (WhatsApp e templates). F12.1 (faturamento do SaaS):
+// abas Implantação (o de antes) e Faturamento (conta de cobrança e trilha);
+// F12.3: aba Suspensão (motivos e liberação; cliente, 03/nov/2026).
 import AdminLayout from "../../../../layouts/AdminLayout.astro";
 import Badge from "../../../../components/admin/config/Badge.astro";
 import ConfirmDeleteDialog from "../../../../components/admin/ConfirmDeleteDialog.astro";
 import FlashMessage from "../../../../components/admin/FlashMessage.astro";
 import OnboardingAnswersView from "../../../../components/admin/OnboardingAnswersView.astro";
+import SupportBillingTab from "../../../../components/admin/billing/SupportBillingTab.astro";
+import SupportSuspensionCard from "../../../../components/admin/billing/SupportSuspensionCard.astro";
 import SystemHeader from "../../../../components/admin/sistema/SystemHeader.astro";
+import Tabs from "../../../../components/admin/ui/Tabs.astro";
 import Button from "../../../../components/admin/ui/Button.astro";
 import { CARD, INPUT, LABEL, PANEL, PRIMARY_BUTTON, SECTION_TITLE } from "../../../../components/admin/config/formStyles";
 import { countAppointments, IMPORT_STATUS, isImportOpen } from "../../../../lib/agendaImport";
@@ -55,7 +60,8 @@ const now = Date.now();
 // Vencido sem ter sido enviado ao Suporte.
 const expired = (request: (typeof requests)[number]) => (request.status === "sent" || request.status === "draft") && request.expiresAt.getTime() < now;
 const features = clinic.clinic_features.map((grant) => grant.feature_key).filter(isFeatureKey);
-const plan = PLAN_LABELS[clinicPlan(features, clinic.max_professionals).kind];
+const planInfo = clinicPlan(features, clinic.max_professionals);
+const plan = PLAN_LABELS[planInfo.kind];
 const active = clinic.professionals.filter((p) => p.is_active).length;
 const summary = [
   `Criada em ${formatInstant(new Date(clinic.created_at), settings.timezone, "dd/MM/yyyy")}`,
@@ -85,6 +91,13 @@ const importActive = importOpen || agendaImport?.status === "submitted";
 const importExpired = importOpen && agendaImport!.expiresAt.getTime() < now;
 const importPatients = agendaImport?.entries.length ?? 0;
 const importAppointments = agendaImport ? countAppointments(agendaImport.entries) : 0;
+const TABS = [
+  { key: "implantacao", label: "Implantação" },
+  { key: "faturamento", label: "Faturamento" },
+  { key: "suspensao", label: "Suspensão" },
+] as const;
+const requestedTab = Astro.url.searchParams.get("tab");
+const tab = TABS.find((t) => t.key === requestedTab)?.key ?? "implantacao";
 ---
 
 <AdminLayout title={clinic.name} platform>
@@ -101,7 +114,15 @@ const importAppointments = agendaImport ? countAppointments(agendaImport.entries
     </SystemHeader>
   </div>
   <FlashMessage />
+  <Tabs class="mt-4" label="Abas da clínica" tabs={TABS.map((t) => ({ label: t.label, href: `/admin/sistema/clinicas/${clinic.id}?tab=${t.key}`, active: t.key === tab }))} />
+  {tab === "faturamento" && <SupportBillingTab db={db} clinicId={clinic.id} timezone={settings.timezone} suggestedEmail={firstAdmin} reference={{ label: plan, monthlyCents: planInfo.kind === "none" ? null : planInfo.monthlyCents }} invoicing={features.includes("finance")} />}
+  {tab === "suspensao" && (
+    <div class="mt-4 max-w-3xl">
+      <SupportSuspensionCard db={db} clinicId={clinic.id} timezone={settings.timezone} />
+    </div>
+  )}
 
+  {tab === "implantacao" && (
   <div class="mt-5 grid items-start gap-4 lg:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)]">
     <div class="flex min-w-0 flex-col gap-4">
       <section class={`${CARD} overflow-hidden`} aria-labelledby="t-convites">
@@ -193,6 +214,24 @@ const importAppointments = agendaImport ? countAppointments(agendaImport.entries
     </div>
 
     <div class="flex min-w-0 flex-col gap-4">
+      {
+        clinic.status === "suspended" && (
+          <section class={`${PANEL} flex flex-col gap-3`} aria-labelledby="t-situacao">
+            <div class="flex flex-wrap items-center gap-2">
+              <h2 id="t-situacao" class={SECTION_TITLE}>
+                Situação
+              </h2>
+              <Badge variant="danger">Suspensa</Badge>
+            </div>
+            <p class="text-[15px] text-ink-soft">
+              Painel da clínica restrito à Assinatura, bot calado, links para os pacientes indisponíveis e nada sai pelo WhatsApp. Os motivos e a liberação ficam na aba Suspensão.
+            </p>
+            <a href={`/admin/sistema/clinicas/${clinic.id}?tab=suspensao`} class="self-start text-[15px] font-semibold text-brand">
+              Ver os motivos
+            </a>
+          </section>
+        )
+      }
       {
         clinic.status !== "suspended" && (
           <section class={`${PANEL} flex flex-col gap-3`} aria-labelledby="t-situacao">
@@ -428,4 +467,5 @@ const importAppointments = agendaImport ? countAppointments(agendaImport.entries
       </section>
     </div>
   </div>
+  )}
 </AdminLayout>

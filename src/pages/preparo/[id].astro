@@ -38,10 +38,12 @@ if (clinicId) {
   ]);
 }
 
-const preparation = exam?.category === "exam" ? exam.preparationInstructions?.trim() || null : null;
-if (!preparation) Astro.response.status = 404;
+// Clínica suspensa (F12.3, decisão 11.4): "indisponível no momento", sem falar de cobrança.
+const suspended = brand?.suspended ?? false;
+const preparation = !suspended && exam?.category === "exam" ? exam.preparationInstructions?.trim() || null : null;
+if (!preparation && !suspended) Astro.response.status = 404;
 
-const pageTitle = exam && preparation ? `Preparo: ${exam.name}` : "Preparo não encontrado";
+const pageTitle = suspended ? "Página indisponível" : exam && preparation ? `Preparo: ${exam.name}` : "Preparo não encontrado";
 // "fale com o consultório": como a clínica é chamada (cliente, 11/out/2026).
 const clinicWord = designationText(brand?.designation ?? DEFAULT_DESIGNATION);
 ---
@@ -56,6 +58,10 @@ const clinicWord = designationText(brand?.designation ?? DEFAULT_DESIGNATION);
         </div>
         <div class={PATIENT_TEXT} set:html={whatsAppTextToHtml(preparation)} />
       </>
+    ) : suspended ? (
+      <LinkNotice icon="information-circle" title="Página indisponível">
+        Página indisponível no momento. Fale com a clínica.
+      </LinkNotice>
     ) : (
       <LinkNotice icon="information-circle" title="Preparo não encontrado" whatsappPhone={brand?.whatsappPhone} clinicWord={clinicWord}>
         Não há instruções de preparo para este exame. Em caso de dúvida, fale com {clinicWord} pelo WhatsApp.

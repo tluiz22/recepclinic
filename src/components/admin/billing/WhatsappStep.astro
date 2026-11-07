@@ -1,0 +1,75 @@
+---
+// Passo do WhatsApp da Assinatura (F12.2e; F12.2i: depois do pagamento): os avisos de cobrança também pelo WhatsApp,
+// opcional. Com o telefone financeiro, o texto da autorização; sem ele, o campo
+// do telefone e "Salvar e autorizar". "Agora não" fica registrado e o passo
+// não volta (autorizar depois, no cartão WhatsApp financeiro).
+import Card from "../config/Panel.astro";
+import { CHECK, INPUT, LABEL, PRIMARY_BUTTON, SECONDARY_BUTTON } from "../config/formStyles";
+import { BILLING_OPT_IN_TEXT, BILLING_OPT_IN_VERSION } from "../../../lib/billingOptIn";
+import type { BillingAccount } from "../../../lib/data/billing";
+import { formatPhoneBR } from "../../../lib/phone";
+
+interface Props {
+  account: BillingAccount;
+  action: string;
+  /** "Passo 3 de 3" (F12.2i: depois do contrato e do pagamento). */
+  stepLabel: string;
+}
+
+const { account, action, stepLabel } = Astro.props;
+const TILE = "rounded-lg bg-canvas px-3 py-2.5";
+---
+
+<Card class="flex flex-col gap-4">
+  <h2 class="font-display text-[19px] leading-tight font-bold text-ink sm:text-xl">{stepLabel} · Avisos de cobrança também pelo WhatsApp?</h2>
+  <p class="text-[15px] text-ink-soft">Os avisos já vão para o e-mail financeiro. Pelo WhatsApp, a clínica recebe também no celular. É opcional e pode ser desfeito nesta tela.</p>
+  <div class="grid gap-3 sm:grid-cols-2">
+    <div class={TILE}>
+      <div class="text-[13px] text-ink-soft">E-mail financeiro (sempre)</div>
+      <div class="text-[17px] font-bold break-words text-ink">{account.financeEmail}</div>
+    </div>
+    <div class={TILE}>
+      <div class="text-[13px] text-ink-soft">Telefone financeiro</div>
+      <div class="text-[17px] font-bold text-ink">
+        {account.financePhone ? formatPhoneBR(account.financePhone) : "não informado"}
+        {account.financePhone && <a href="#finance_phone" class="ml-1 text-[15px] font-semibold text-brand">trocar</a>}
+      </div>
+    </div>
+  </div>
+  <form id="whatsapp-agora-nao" method="POST" action={action}>
+    <input type="hidden" name="acao" value="whatsapp_agora_nao" />
+  </form>
+  <form method="POST" action={action} class="flex flex-col gap-3">
+    {
+      account.financePhone ? (
+        <>
+          <input type="hidden" name="acao" value="whatsapp_autorizar" />
+          <input type="hidden" name="origem" value="passo" />
+          <div class="rounded-lg border border-line px-4 py-3 text-[15px] leading-relaxed text-ink-mid">
+            <p>{BILLING_OPT_IN_TEXT}</p>
+            <p class="mt-2 text-xs text-ink-soft">Versão {BILLING_OPT_IN_VERSION}.</p>
+          </div>
+        </>
+      ) : (
+        <>
+          <input type="hidden" name="acao" value="whatsapp_telefone_autorizar" />
+          <div>
+            <label for="step_finance_phone" class={LABEL}>Telefone financeiro (com WhatsApp)</label>
+            <input id="step_finance_phone" name="finance_phone" type="tel" inputmode="tel" required placeholder="(84) 98188-0777" class={INPUT} />
+          </div>
+          <div class="rounded-lg border border-line px-4 py-3 text-[15px] leading-relaxed text-ink-mid">
+            <p>{BILLING_OPT_IN_TEXT}</p>
+          </div>
+        </>
+      )
+    }
+    <label class="flex items-start gap-2 text-[15.5px] text-ink">
+      <input type="checkbox" name="aceite" value="1" required class={`${CHECK} mt-0.5`} />
+      <span>Li e autorizo, em nome da clínica.</span>
+    </label>
+    <div class="flex flex-wrap justify-end gap-3">
+      <button type="submit" form="whatsapp-agora-nao" formnovalidate class={SECONDARY_BUTTON}>Agora não, só e-mail</button>
+      <button type="submit" data-sending-label="Salvando…" class={PRIMARY_BUTTON}>{account.financePhone ? "Autorizar e concluir" : "Salvar e autorizar"}</button>
+    </div>
+  </form>
+</Card>

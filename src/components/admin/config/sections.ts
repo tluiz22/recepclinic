@@ -18,7 +18,8 @@ export type SectionId =
   | "lembretes"
   | "mensagens"
   | "whatsapp"
-  | "nota_fiscal";
+  | "nota_fiscal"
+  | "assinatura";
 
 export interface SectionItem {
   id: SectionId;
@@ -53,6 +54,7 @@ const SECTION_ICONS: Record<SectionId, IconName> = {
   mensagens: "chat-bubble",
   whatsapp: "device-phone",
   nota_fiscal: "receipt",
+  assinatura: "banknotes",
 };
 
 // Passo do guia → seção do menu.
@@ -90,7 +92,11 @@ export function configSections(
     ...extra,
   });
   const groups: SectionGroup[] = [
-    { title: "A clínica", items: [item("clinica", "Clínica", ""), item("equipe", "Equipe", "/equipe")] },
+    {
+      title: "A clínica",
+      // Assinatura (F12.1, faturamento do SaaS): conta de cobrança e contatos financeiros.
+      items: [item("clinica", "Clínica", ""), item("equipe", "Equipe", "/equipe"), item("assinatura", "Assinatura", "/assinatura")],
+    },
     {
       title: "Atendimento",
       items: [
