@@ -17,10 +17,12 @@ interface Props {
   isClinicAdmin: boolean;
   isPlatformStaff: boolean;
   hasAddress: boolean;
+  /** Cliente, 07/nov/2026: o Checkout do Asaas exige o celular do pagador. */
+  hasPhone: boolean;
   action: string;
 }
 
-const { contract, charges, today, isClinicAdmin, isPlatformStaff, hasAddress, action } = Astro.props;
+const { contract, charges, today, isClinicAdmin, isPlatformStaff, hasAddress, hasPhone, action } = Astro.props;
 const card = contract.paymentMethod === "credit_card";
 const open = charges.filter((c) => c.status === "pending" || c.status === "overdue");
 const overdue = open.some((c) => c.status === "overdue" || c.dueDate < today);
@@ -101,6 +103,11 @@ const pixLine = "A cobrança de cada mês chega por e-mail e fica em Cobranças,
           ) : !hasAddress ? (
             <p class="rounded-lg border border-pend-200 bg-pend-100 px-4 py-3 text-[15px] text-pend-800">
               Antes, preencha o Endereço do pagador, nesta tela: o Asaas exige para cadastrar o cartão.
+            </p>
+          ) : !hasPhone ? (
+            <p class="rounded-lg border border-pend-200 bg-pend-100 px-4 py-3 text-[15px] text-pend-800">
+              Antes, salve um celular em <a href="#finance_phone" class="font-semibold text-pend-800 underline">Contatos financeiros</a>, nesta tela: o Asaas
+              exige para cadastrar o cartão.
             </p>
           ) : (
             <>

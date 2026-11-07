@@ -133,6 +133,11 @@
 > `payment_method_changed`) e `billing_finish_card_change` (no Pix → cartão, forma vira cartão com o cartão
 > cadastrado). Sandbox (07/nov): assinatura com `updatePendingPayments` muda as pendentes; cobrança avulsa muda com
 > `POST /payments/{id}`. Testado com Playwright local + sandbox (cartão → Pix, Pix → cartão pelo Checkout, Suporte).
+> **Celular do pagador (cliente, 07/nov/2026):** o Checkout do Asaas também exige o e-mail e o celular do cliente ("O
+> campo phone deve existir", visto no teste). Decidido: pedir o celular antes, como o endereço. O passo Cartão (sem
+> implantação) pede o telefone financeiro antes do botão; o card Forma de pagamento (Pix → cartão) e o "Trocar o
+> cartão" avisam e levam a Contatos financeiros; o servidor recusa sem celular do Brasil e atualiza e-mail e celular
+> do cliente no Asaas antes de cada Checkout.
 > **Fim do contrato só sai pelo contrato novo (cliente, 07/nov/2026, migração `20261227120000`):** o Suporte não
 > libera a suspensão por fim do contrato (como a inadimplência, que sai pelo pagamento). Contrato novo ativo, aceito
 > depois da suspensão e não cancelado libera sozinho: cartão → com o cartão cadastrado; Pix com implantação → com a

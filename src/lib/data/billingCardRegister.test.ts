@@ -23,7 +23,7 @@ const snapshot = {
     subscriptionId: "sub_1",
     replacedSubscriptionId: null,
   },
-  account: { payerName: "Clínica", payerDocument: "11222333000181", financeEmail: "f@x", financePhone: null, customerId: "cus_1", address: ADDRESS },
+  account: { payerName: "Clínica", payerDocument: "11222333000181", financeEmail: "f@x", financePhone: "+5584988880100", customerId: "cus_1", address: ADDRESS },
 } as BillingSyncSnapshot;
 
 const payment = (over: Partial<AsaasPayment> = {}): AsaasPayment => ({

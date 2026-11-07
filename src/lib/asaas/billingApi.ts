@@ -162,8 +162,9 @@ export function asaasBillingApi(env: AsaasEnv, fetcher: Fetcher = fetch) {
      * Endereço do cliente (cliente, 07/nov/2026): o Checkout do Asaas o exige.
      * O Asaas completa cidade e UF pelo CEP (conferido no sandbox, 07/nov/2026).
      */
-    async updateCustomerAddress(customer: string, address: AsaasCustomerAddress): Promise<void> {
-      await post(`/customers/${encodeURIComponent(customer)}`, customerAddress(address));
+    async updateCustomerAddress(customer: string, address: AsaasCustomerAddress, contact?: { email: string; mobilePhone: string }): Promise<void> {
+      // Cliente, 07/nov/2026: o Checkout também exige o e-mail e o celular do cliente (sandbox: "O campo phone deve existir").
+      await post(`/customers/${encodeURIComponent(customer)}`, { ...customerAddress(address), ...(contact ?? {}) });
     },
 
     async findSubscription(externalReference: string): Promise<string | null> {

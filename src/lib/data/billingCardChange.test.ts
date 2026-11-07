@@ -23,7 +23,7 @@ const snapshot: BillingSyncSnapshot = {
     subscriptionId: "sub_old",
     replacedSubscriptionId: null,
   },
-  account: { payerName: "Clínica", payerDocument: "11222333000181", financeEmail: "f@x", financePhone: null, customerId: "cus_1", address: ADDRESS },
+  account: { payerName: "Clínica", payerDocument: "11222333000181", financeEmail: "f@x", financePhone: "+5584988880100", customerId: "cus_1", address: ADDRESS },
 } as BillingSyncSnapshot;
 
 function setup(options: { open?: { paymentId: string; kind: "monthly" | "setup" | "other"; status: string; dueDate: string }[]; request?: CardChangeRequest | null; subs?: { id: string; billingType: string; nextDueDate: string; dateCreated: string }[] } = {}) {
@@ -95,6 +95,14 @@ describe("troca de cartão", () => {
     const overdue = setup({ open: [{ paymentId: "p0", kind: "monthly", status: "overdue", dueDate: "2026-12-03" }] });
     overdue.store.load = pix.store.load;
     await expect(startCardChange(overdue.store, overdue.api, "c1", { ...urls, purpose: "switch" })).rejects.toThrow(/depois mude para o cartão/);
+  });
+
+  it("sem celular no telefone financeiro, não abre o Checkout (o Asaas exige; cliente, 07/nov/2026)", async () => {
+    const { store, api, log } = setup();
+    const loaded = await store.load("c1");
+    store.load = async () => ({ ...loaded!, account: { ...loaded!.account!, financePhone: null } });
+    await expect(startCardChange(store, api, "c1", urls)).rejects.toThrow(/telefone financeiro/);
+    expect(log).toEqual([]);
   });
 
   it("com cobrança vencida, pede para pagar antes", async () => {

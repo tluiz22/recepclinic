@@ -1,5 +1,6 @@
 import type { AsaasBillingApi } from "../asaas/billingApi";
 import { nextDueAfter } from "../billingRenewal";
+import { asaasMobilePhone } from "./billingAsaas";
 import { DataError } from "./errors";
 import type { BillingCardChangeStore } from "./platform";
 
@@ -20,6 +21,9 @@ const EXPIRY_MS = 24 * 60 * 60 * 1000;
 
 /** Sem endereço do pagador, o Checkout do Asaas recusa (cartão sem implantação e troca de cartão). */
 export const ADDRESS_MISSING = "Cartão: falta o endereço do pagador. Preencha em \"Endereço do pagador\", nesta tela, e tente de novo.";
+
+/** Cliente, 07/nov/2026: o Checkout também exige o celular do cliente (telefone financeiro, celular do Brasil). */
+export const PHONE_MISSING = "Cartão: falta o telefone financeiro (celular). Preencha em \"Contatos financeiros\", nesta tela, e tente de novo.";
 
 export async function startCardChange(
   store: BillingCardChangeStore,
@@ -50,7 +54,9 @@ export async function startCardChange(
   const nextDue = pendingMonthly ?? nextDueAfter(contract.firstDueDate, input.today);
   // Cliente, 07/nov/2026: o Checkout do Asaas exige o endereço do cliente; vai sempre o da conta de cobrança.
   if (!snapshot.account.address) throw new DataError("invalid", ADDRESS_MISSING, { address: ADDRESS_MISSING });
-  await api.updateCustomerAddress(snapshot.account.customerId, snapshot.account.address);
+  const mobilePhone = asaasMobilePhone(snapshot.account.financePhone);
+  if (!mobilePhone) throw new DataError("invalid", PHONE_MISSING, { finance_phone: PHONE_MISSING });
+  await api.updateCustomerAddress(snapshot.account.customerId, snapshot.account.address, { email: snapshot.account.financeEmail, mobilePhone });
   const checkout = await api.createCardCheckout({
     customer: snapshot.account.customerId,
     valueCents: contract.monthlyCents,
