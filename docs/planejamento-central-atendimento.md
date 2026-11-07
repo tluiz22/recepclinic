@@ -374,6 +374,13 @@ produção); conferir os 4 campos do webhook (`account_update`, `history`, `smb_
 **Decisão do cliente (05/nov): a migração para a v4 vai junto com a Central** (mesma publicação), não antes. Risco
 aceito: até lá, a conexão de uma clínica nova pode falhar (a Meta já serve a v3 como v4 desde 15/out).
 
+**Configuração v4 criada (cliente, 07/nov/2026):** ID `3784178581733719` (Login do Facebook para Empresas, variação
+WhatsApp Embedded Signup, produto Cloud API; a tela não tem campo de versão: escolher o produto define a v4).
+"Check a launch config" com o `extras` do botão: v4, `cloud_api`, onboarding do app WhatsApp Business ativado, igual
+hoje e depois de 15/out ("Session info version: 3" é só o formato do evento; o código aceita com e sem
+`phone_number_id`). Staging: trocar o `WHATSAPP_ES_CONFIG_ID` e testar o passo 10 da parte AA. Produção: só com
+autorização (mesmo ID, no projeto da produção).
+
 **Pendência pós-implantação (cliente, 05/nov): acompanhar as mudanças da Meta.** Depois da Central (e da v4) na
 produção: rotina agendada semanal (agente na nuvem, `/schedule`) que lê o changelog do WhatsApp, a página de versões
 do cadastro e a de preços, compara com o que o RecepClinic usa (Graph API `v24.0` em `graph.ts`, versão do cadastro,
