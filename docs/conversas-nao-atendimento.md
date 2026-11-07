@@ -1,8 +1,7 @@
 # Conversas que não são atendimento (NA)
 
-> **Retomar daqui (06/nov/2026).** Etapa 1 (análise) feita e decisões 1 a 5 respondidas pelo cliente. **Próximo:**
-> desenhar as telas (aba nova da Conversas, ação de marcar, seção da Atendimento) para o cliente escolher; depois o
-> código em branch própria (`nao-atendimento`, criada da `main`). Nada implementado.
+> **Retomar daqui (06/nov/2026).** Etapa 1 (análise), decisões 1 a 5 e **NA0 (telas) aprovados** pelo cliente.
+> **Próximo:** NA1 em branch própria (`nao-atendimento`, criada da `main`). Nada implementado.
 
 ## Objetivo
 
@@ -25,6 +24,21 @@ métricas e dos pendentes, e as mensagens dele aparecem numa aba própria.
 5. **Telas:** na **Conversas** (Central ligada), **aba nova** que lista esses contatos e conta as mensagens novas (não
    lidas por pessoa, `conversation_reads`). **Também na Atendimento** (clínica sem a Central): botão para marcar e
    seção "Pessoal e administrativo" com número e hora da última mensagem (sem texto, que só a Central guarda).
+
+## Telas aprovadas (NA0, 06/nov)
+
+Canvas: https://claude.ai/artifact/2WRXb3QDsLy2SFdZbqLrX6 (privado do cliente).
+
+- **Conversas, lista:** três abas: **Abertas**, **Finalizadas**, **Pessoal e admin.** (com a contagem de mensagens
+  novas). Em Abertas, filtros **Todas / Minhas** abaixo das abas, no lugar do "Mostrar". Na aba Pessoal e admin., sem
+  filtro; o selo (Pessoal / Administrativo) em cada item.
+- **Marcar:** pelo menu **⋯** da conversa ("Marcar como Pessoal" / "Marcar como Administrativo/outros"), com
+  confirmação. Escolhida a opção 2B (menu) e não o botão visível.
+- **Conversa marcada:** selo, quem marcou e quando, aviso no histórico ("Marcada como Pessoal · o bot não responde este
+  número"); **um só botão: "Voltar para atendimento"** (sem "Mudar"; para trocar o tipo, volta e marca de novo).
+- **Atendimento (sem a Central):** aba "Pessoal e administrativo" (número, tipo, hora da última mensagem, aviso de
+  mensagem nova, "Abrir no WhatsApp", "Voltar para atendimento"); botão "Não é atendimento" nos cartões.
+- **Celular:** igual (três abas, Todas/Minhas em Abertas, conversa marcada só com "Voltar para atendimento").
 
 Classificação por IA: fora desta frente (pedido do cliente).
 
@@ -67,7 +81,7 @@ vierem, seguem a mesma exclusão.
 
 | Etapa | O quê |
 |---|---|
-| NA0 | Desenho das telas (canvas) e escolha do cliente |
+| NA0 | Desenho das telas (canvas) e escolha do cliente. **Feito (06/nov)** |
 | NA1 | Migração, função e gatilho; testes de banco (clínica, perfil, auditoria) |
 | NA2 | Bot e webhook; testes (calado, eco, lembrete, reativação) |
 | NA3 | Métricas e contadores; testes (antigas iguais para operacionais) |

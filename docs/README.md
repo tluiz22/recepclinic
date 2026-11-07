@@ -5,8 +5,8 @@
 > cliente). Pendentes do cliente antes de usar com pacientes: modelo "Retomar conversa", campos do webhook, v4/
 > `WHATSAPP_ES_CONFIG_ID`, cópia do bucket/PITR. Push na `main` só com autorização (regra da sessão de 06/nov).
 >
-> **Conversas que não são atendimento (NA, 06/nov):** análise feita e decisões 1 a 5 respondidas; próximo: desenho das
-> telas (NA0). Plano em [`conversas-nao-atendimento.md`](conversas-nao-atendimento.md).
+> **Conversas que não são atendimento (NA, 06/nov):** análise, decisões 1 a 5 e telas (NA0) aprovadas; próximo: NA1 na
+> branch `nao-atendimento`. Plano em [`conversas-nao-atendimento.md`](conversas-nao-atendimento.md).
 >
 > **Estado atual (retomar daqui), 06/nov/2026.** Detalhes e datas no [`historico.md`](historico.md) (só por busca).
 >
