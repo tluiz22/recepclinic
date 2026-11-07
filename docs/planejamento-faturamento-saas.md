@@ -115,8 +115,18 @@
 > da mensalidade; repasse pelo RecepClinic recusado: Solution Partner na Meta, risco de inadimplência e imposto) e a 12
 > com lista. **Divergências com o sistema, decididas (cliente, 07/nov/2026):** (a) multa de 2% e juros de 1% ao mês
 > **cobrados pelo Asaas** (assinatura, implantação e a assinatura que o Checkout cria; feito; a do staging ajustada à
-> mão); (b) troca cartão ↔ Pix **pela tela, pelo Administrador**: etapa nova, **a fazer** (desenhar as opções antes);
+> mão); (b) troca cartão ↔ Pix **pela tela, pelo Administrador**: etapa nova, **decidida, a implementar** (abaixo);
 > (c) exportação **a pedido ao Suporte**: texto da seção 10 (versão `provisorio-2026-11-07b`; a anterior segue legível).
+> **Troca cartão ↔ Pix (cliente, 07/nov/2026; desenho B do canvas `https://claude.ai/artifact/5YdynL6WaKXr74GvMd7Qjd`):**
+> card próprio **"Forma de pagamento"** na Assinatura, abaixo de Cobranças, só no modo `asaas` e com contrato ativo: as
+> duas opções (cartão / Pix), a atual marcada com "Atual"; escolhendo a outra, um aviso do que muda e o botão (com
+> confirmação). Só o Administrador troca; os outros veem a forma atual. **Contrato:** altera o vigente (sem nova versão
+> nem novo aceite; a seção 5 já prevê a troca), com registro na trilha (quem, quando, de/para). **Cartão → Pix:** a
+> assinatura do Asaas passa a Pix junto com as cobranças pendentes e vencidas (`updatePendingPayments`); o cartão deixa
+> de ser cobrado e o final do cartão sai do contrato. **Pix → cartão:** "Informar o cartão no Asaas" (o Checkout da troca
+> de cartão: assinatura nova no cartão a partir da próxima mensalidade em aberto, a antiga sai com as cobranças em
+> aberto dela); até o cartão ser cadastrado, segue em Pix. Com mensalidade vencida e não paga, pede para pagar antes
+> (como na troca de cartão). Exige o endereço do pagador (Checkout).
 > **Fim do contrato só sai pelo contrato novo (cliente, 07/nov/2026, migração `20261227120000`):** o Suporte não
 > libera a suspensão por fim do contrato (como a inadimplência, que sai pelo pagamento). Contrato novo ativo, aceito
 > depois da suspensão e não cancelado libera sozinho: cartão → com o cartão cadastrado; Pix com implantação → com a
