@@ -224,6 +224,12 @@ const H2 = "font-display text-[17px] leading-tight font-bold text-ink sm:text-lg
                 <ContractAcceptanceInfo contract={contract} actors={actors} timezone={clinic.timezone} />
                 <ContractTerms contract={contract} />
                 {contract.termsVersion && <ContractText version={contract.termsVersion} />}
+                {contract.acceptance !== "pending" && (
+                  // Cliente, 07/nov/2026: depois do aceite, a cópia do contrato (imprimir ou salvar em PDF).
+                  <a href={`/admin/configuracoes/assinatura/contrato?id=${contract.id}`} class="self-start text-sm font-semibold text-brand">
+                    Ver o contrato completo (imprimir ou salvar em PDF)
+                  </a>
+                )}
                 {isClinicAdmin && contract.status === "active" && (
                   <a href="/admin/configuracoes/assinatura/cancelar" class="self-start text-sm font-semibold text-can-800">
                     Cancelar a assinatura
